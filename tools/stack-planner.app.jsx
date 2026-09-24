@@ -525,7 +525,8 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     }
     cone(drvR, drvAbsY, subZ, drvX, subGroup);
     // duct structure inside: top shelf, two fins (slot version only)
-    const ductLen = s.d - T - 3; // from the frame face back, 3" turning gap
+    const wantLen = pg.tubeLen != null ? pg.tubeLen : s.d - T - 3;
+    const ductLen = Math.max(2, Math.min(wantLen, s.d - T - ductH)); // from the frame face back, open gap behind
     if (portStyle === "folded") {
       // floor leg to a rear channel, then up the back wall; open at the top of the rear channel
       const bz = -s.d / 2 + T;                          // inside face of the back panel
@@ -540,10 +541,15 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
         fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, roofZ);
         subGroup.add(fin);
       });
-      const RISE_UP = 4.5;                              // rear leg above the floor leg's roof
-      const rw = new THREE.Mesh(new THREE.BoxGeometry(innerW, ductH + T + RISE_UP, T), plyIn);
-      rw.position.set(0, pl + T + ductH + T + RISE_UP / 2 - (ductH + T) / 2 + (ductH + T) / 2, wallZ);
-      rw.position.y = pl + T + ductH / 2 + (ductH + T + RISE_UP) / 2 - ductH / 2;
+      // the rear channel rises until the centreline adds up to the set duct length
+      // The wall starts at the floor leg's roof, so the floor leg runs on under it into the
+      // rear channel, turns, and rises between this wall and the back panel.
+      const floorRun = roofLen + T + ductH / 2;
+      const wallBot = pl + T + ductH;
+      const wallTop = Math.min(pl + s.h - T - 1, Math.max(wallBot + 1, pl + T + ductH / 2 + (wantLen - floorRun)));
+      const wallH = wallTop - wallBot;
+      const rw = new THREE.Mesh(new THREE.BoxGeometry(innerW, wallH, T), plyIn);
+      rw.position.set(0, wallBot + wallH / 2, wallZ);
       subGroup.add(rw);
     }
     if (portStyle === "slots") {
@@ -1056,7 +1062,7 @@ function StackPlanner() {
       if (portStyle === "slots" || portStyle === "folded") {
         const h = cVent.slotH, area = h * (iw - 2 * PT), seg = (iw - 2 * PT) / 3;       // two 3/4\u2033 fins
         return { area, len: cVent.len, dh: (4 * (h * seg)) / (2 * (h + seg)),
-                 desc: `letterbox, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` };
+                 desc: `letterbox, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` + (portStyle === "folded" ? ", folded up the back wall" : "") };
       }
       const r = cVent.dia / 2;
       return { area: cVent.nt * Math.PI * r * r, len: cVent.len, dh: cVent.dia,
@@ -1285,10 +1291,17 @@ function StackPlanner() {
                 const clearH = subBox.h - (portStyle === "slots" || portStyle === "folded" ? cVent.slotH + PT : 0);
                 if (Math.min(clearW, clearH) < need)
                   F.push(["bad", "Driver won't fit", `The baffle needs about ${need.toFixed(1)}″ clear; after the vents it has ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`]);
-                const clear = subBox.d - 1.5 - 1, maxRun = clear + (subBox.h - 1.5 - 1);
-                if (cVent.len > clear)
-                  F.push([cVent.len > maxRun ? "bad" : "warn", cVent.len > maxRun ? "Duct too long" : "Duct must fold",
-                    `A ${cVent.len.toFixed(1)}″ duct exceeds the ${clear.toFixed(1)}″ of clear depth` + (cVent.len > maxRun ? ", and a single fold up the back won't take it either." : " — it has to turn and run up the back wall.")]);
+                // longest duct each layout can hold, leaving an opening at least as wide as the duct
+                const inD = subBox.d - PT, inH = subBox.h - 2 * PT, sH = cVent.slotH;
+                const maxStraight = inD - sH;                                           // bottom slot
+                const maxFold = (inD - (sH + PT) + sH / 2) + (inH - sH - 1);            // floor run + rise up the back
+                const maxSide = inD - cVent.throat;                                     // side ducts
+                const maxTube = subBox.d - 0.75 - 2 * PT - cVent.dia / 2;                // round tubes off the baffle
+                const fit = portStyle === "slots" ? maxStraight : portStyle === "folded" ? maxFold
+                  : portStyle.startsWith("round") ? maxTube : maxSide;
+                if (cVent.len > fit)
+                  F.push(["bad", "Duct too long", `${cVent.len.toFixed(1)}″ won't fit; this layout holds about ${fit.toFixed(1)}″.`
+                    + (portStyle === "slots" && cVent.len <= maxFold ? " Switch to Bottom, folded." : "")]);
                 F.push(subLbLoaded > 125
                   ? ["warn", "Over 125 lb", `${subLbLoaded.toFixed(0)} lb loaded. Past the one-person lift limit.`]
                   : ["ok", "Inside 125 lb", `${subLbLoaded.toFixed(0)} lb loaded.`]);
