@@ -1235,22 +1235,15 @@ function StackPlanner() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
                 ["Gross internal", `${grossL.toFixed(0)} L`],
-                ["Net volume", `${netL.toFixed(0)} L`, "after driver, ducts and bracing"],
                 ["Vent", port.desc],
                 ["Port area", `${port.area.toFixed(1)} in²`, `${((port.area / (sub.ts.Sd / 6.4516)) * 100).toFixed(0)}% of cone area`],
                 ["Duct length", `${port.len.toFixed(2)}″`],
                 ["Hydraulic diameter", `${port.dh.toFixed(2)}″`, port.dh < 2 ? "low — flare the mouths" : "acceptable with flares"],
-                ["Tuning Fb", `${mdl.Fb.toFixed(1)} Hz`],
-                ["System F3", `${mdl.f3.toFixed(1)} Hz`, `with the ${HPF} Hz highpass`],
                 ["Midband sensitivity", `${(mdl.ref - 20 * Math.log10(AMP_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
-                ["SPL at 35 Hz", `${mdl.spl35.toFixed(1)} dB`],
-                ["SPL at 45 Hz", `${mdl.spl45.toFixed(1)} dB`],
-                ["Peak port velocity", `${mdl.peakVel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz; chuffing near 17–20`],
-                ["Peak excursion", `${mdl.peakX.toFixed(1)} mm`, `${mdl.xmaxPct.toFixed(0)}% of Xmax at ${ampW} W`],
-                ["First limit reached", lim.who, `at about ${Math.round(lim.W / 10) * 10} W per channel @ 8 \u03a9 (port 17 m/s, Xmax, ${2 * sub.ts.aes} W program = 2 \u00d7 AES, or ${ampW} W amp)`],
-                ["Port air speed there", `${lim.vel.toFixed(1)} m/s`, "17 m/s is the chuffing threshold"],
-                ["Cone travel there", `${lim.xPct.toFixed(0)}% of Xmax`],
-                ["Max SPL at 30 / 35 / 45 Hz", `${lim.spl30.toFixed(1)} / ${lim.spl35.toFixed(1)} / ${lim.spl45.toFixed(1)} dB`, "sine at that limit; music averages ~6 dB lower"],
+                ["First limit reached", lim.who, `at about ${Math.round(lim.W / 10) * 10} W per channel @ 8 \u03a9 (port 17 m/s, Xmax, ${2 * sub.ts.aes} W program = 2 \u00d7 AES, or ${ampW} W amp). Everything below is at this power.`],
+                ["Max SPL at 30 / 35 / 45 Hz", `${lim.spl30.toFixed(1)} / ${lim.spl35.toFixed(1)} / ${lim.spl45.toFixed(1)} dB`, "sine; music averages ~6 dB lower"],
+                ["Peak port velocity", `${lim.vel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz; chuffing near 17\u201320`],
+                ["Peak excursion", `${(mdl.peakX * lim.V / AMP_V).toFixed(1)} mm`, `${lim.xPct.toFixed(0)}% of Xmax`],
               ].map(([k, v, note]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
                   <span className="text-stone-500 shrink-0">{k}</span>
