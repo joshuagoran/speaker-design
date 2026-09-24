@@ -1370,9 +1370,6 @@ function StackPlanner() {
               <Slider label="Width"  value={cDim.w} min={18} max={40} step={0.5} unit="&#8243;" onChange={(v) => setC("w", v)} />
               <Slider label="Height" value={cDim.h} min={18} max={42} step={0.5} unit="&#8243;" onChange={(v) => setC("h", v)} />
               <Slider label="Depth"  value={cDim.d} min={14} max={32} step={0.5} unit="&#8243;" onChange={(v) => setC("d", v)} />
-              <div className="text-xs text-stone-500">
-                {subBox.w}&#8243; &#215; {subBox.h}&#8243; &#215; {subBox.d}&#8243; external, {grossL.toFixed(0)} L gross.
-              </div>
             </div>
             <div className="text-xs text-stone-500 mt-2 mb-1">Start from a published cabinet</div>
             <select
