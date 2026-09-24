@@ -1240,7 +1240,7 @@ function StackPlanner() {
                 ["Duct length", `${port.len.toFixed(2)}″`],
                 ["Hydraulic diameter", `${port.dh.toFixed(2)}″`, port.dh < 2 ? "low — flare the mouths" : "acceptable with flares"],
                 ["Midband sensitivity", `${(mdl.ref - 20 * Math.log10(AMP_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
-                ["First limit reached", lim.who, `at about ${Math.round(lim.W / 10) * 10} W per channel @ 8 \u03a9 (port 17 m/s, Xmax, ${2 * sub.ts.aes} W program = 2 \u00d7 AES, or ${ampW} W amp). Everything below is at this power.`],
+                ["First limit reached", lim.who, `at ${Math.round(lim.W / 10) * 10} W; the figures below are at this power`],
                 ["Max SPL at 30 Hz", `${lim.spl30.toFixed(1)} dB`, "sine; music averages ~6 dB lower"],
                 ["Max SPL at 35 Hz", `${lim.spl35.toFixed(1)} dB`],
                 ["Max SPL at 45 Hz", `${lim.spl45.toFixed(1)} dB`],
