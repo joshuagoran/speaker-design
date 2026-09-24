@@ -973,7 +973,96 @@ function Slider({ label, value, min, max, step, unit, onChange }) {
   );
 }
 
+// ---------------------------------------------------------------
+// Notes page: project decisions that aren't planner output
+// ---------------------------------------------------------------
+function NotesPage() {
+  return (
+    <main className="max-w-6xl mx-auto px-8 pb-16 flex flex-col gap-2">
+        <section className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "system-ui, sans-serif" }}>
+          {RACKS.map((r) => {
+            const total = r.items.reduce((a, [, c]) => a + c, 0);
+            return (
+              <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
+                <div className="flex justify-between items-baseline mb-1">
+                  <h2 className="text-xl" style={{ fontFamily: "Georgia, serif" }}>{r.name}</h2>
+                  <span className="text-sm tabular-nums text-stone-600">≈ ${total.toLocaleString()}</span>
+                </div>
+                <p className="text-xs text-stone-500 mb-3">{r.note}</p>
+                <ul className="text-sm text-stone-700 space-y-1">
+                  {r.items.map(([label, cost]) => (
+                    <li key={label} className="flex justify-between gap-3"><span>{label}</span><span className="tabular-nums text-stone-500">${cost}</span></li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </section>
+
+        <section className="mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Signal path (mains rack)</h2>
+          <div className="max-w-4xl"><SignalPath /></div>
+          <p className="text-sm text-stone-700 max-w-3xl mt-3">
+            Division of labour: the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs.
+            Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and
+            impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled
+            preset, which a level limiter cannot.
+          </p>
+        </section>
+        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Materials</h2>
+          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+            {[
+              ["Prototype in particleboard", "Cheap and flat. Build it to verify duct tuning, then transfer interior dimensions \u2014 not the cut list \u2014 to the real material."],
+              ["Consider 5/8\" or 1/2\" for the final boxes", "Sub column drops 119 \u2192 107 \u2192 95 lb loaded. Needs more bracing, and the extra interior volume lowers Fb, so the duct gets shorter."],
+              ["MDO for the baffles", "Paints far better than birch, no edge penalty since no baffle edge is exposed."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span><span className="font-medium">{t}.</span> {d}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Still to decide</h2>
+          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+            {[
+              ["Baffle mounting", "Cleats (forgiving, costs 3/4\" of interior on each side) or a stopped rabbet in the frame panels (tighter, squares the box, needs a dado). Baffle size changes with the choice."],
+              ["Bracing", "Not drawn. Volume and weight allow for two braces. Centre ribs, slat ladder or windowed shelves — decide once handle recesses are placed, since they compete for the same panel area."],
+              ["Handles", "Recess type, depth and position on the sub. Interacts with bracing."],
+              ["Driver margins", "Currently equal at top and sides. One recommendation is to offset deliberately so baffle modes and diffraction paths don't coincide — likely inaudible below 100 Hz, so mostly a visual decision."],
+              ["Port edge finish", "The letterbox mouths are cut in the shell's nose band, so this is a shell-material question, not a baffle one. Paint carried into the ducts, or masked so the ply edge shows — end grain in the mouth needs sealing either way."],
+              ["Duct tuning", "Verify Fb by impedance sweep on the particleboard prototype and trim the duct before cutting birch. End correction is the largest source of error in the modelled Fb."],
+              ["Sensitivity", "SB's 99 dB claim is 3 dB above what their own published T/S parameters give (95.9 dB/2.83V). Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure."],
+              ["Driver clearance", "Check the Nero's frame and 8.4\" mounting depth against the baffle margin and anything that ends up behind the magnet."],
+              ["Compression driver", "DE360 at $117 is the default; crossover floor on the A400G2 needs a distortion sweep to confirm ~1.1 kHz."],
+              ["Horn print", "A400G2 in one piece needs a 400 mm+ bed; otherwise sectioned. Filament, print service, or buy the RX-28 instead."],
+              ["Prototype material", "3/4\" particleboard for the first sub, then transfer verified interior dimensions to birch."],
+              ["Final panel thickness", "3/4\", 5/8\" or 1/2\" birch. 1/2\" saves 24 lb on the sub column but needs bracing on roughly 12\" centres and a doubler at the driver cutout. Decide before the prototype, since wall thickness changes the interior volume and therefore the duct length."],
+              ["Baffle material", "MDO if the baffles are painted — no baffle edge is exposed in any of the current configurations, so there is no reason not to. Birch only if the baffle is ever meant to be clear-finished."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span><span className="font-medium">{t}.</span> {d}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+    </main>
+  );
+}
+
 function StackPlanner() {
+  const viewOf = () => (window.location.hash === "#notes" ? "notes" : "planner");
+  const [view, setView] = useState(viewOf);
+  useEffect(() => {
+    const on = () => setView(viewOf());
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, []);
   const [sub, setSub] = useState(SUB_OPTIONS.find((o) => o.id === "sbnero18"));
   const [mid, setMid] = useState(MID_OPTIONS.find((o) => o.id === "sbnero12"));
   const [horn, setHorn] = useState(HORN_OPTIONS.find((h) => h.id === "a400g2"));
@@ -1185,7 +1274,15 @@ function StackPlanner() {
     <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
       <header className="px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
         <h1 className="text-3xl md:text-4xl leading-tight" aria-label="Speaker Planner">𝒮𝓅ℯ𝒶𝓀ℯ𝓇 𝒫𝓁𝒶𝓃𝓃ℯ𝓇</h1>
+        <nav className="flex gap-1 mt-3" style={{ fontFamily: "system-ui, sans-serif" }} aria-label="Pages">
+          {[["planner", "Planner", "#"], ["notes", "Notes", "#notes"]].map(([v, label, href]) => (
+            <a key={v} href={href} aria-current={view === v ? "page" : undefined}
+              onClick={(e) => { e.preventDefault(); try { history.replaceState(null, "", v === "planner" ? " " : href); } catch {} setView(v); window.scrollTo(0, 0); }}
+              className={`px-3 py-1.5 rounded border text-sm ${view === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</a>
+          ))}
+        </nav>
       </header>
+      {view === "notes" ? <NotesPage /> : <>
 
       {saved !== null && (
         <section className="max-w-6xl mx-auto px-8 pb-2" style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -1322,9 +1419,7 @@ function StackPlanner() {
             </div>
           )}
           <p className="text-xs text-stone-500 mt-3">
-            Modelled, not measured. Port end correction is the standard both-end approximation and is the
-            largest source of error in Fb; a divided or flared duct will measure a little differently.
-            {sub.id === "sbnero18" ? <>SB claim 99 dB for this driver, but their own published T/S give {mdl ? (mdl.ref - 20 * Math.log10(AMP_V / 2.83)).toFixed(1) : "—"} dB/2.83 V in this box. </> : null}Verify Fb with an impedance sweep on the prototype before cutting birch.
+            Modelled, not measured. Verify the tuning with an impedance sweep on the prototype before cutting birch.
           </p>
         </section>
 
@@ -1441,30 +1536,16 @@ function StackPlanner() {
 
         <section className="md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6 mt-4" style={{ fontFamily: "system-ui, sans-serif" }}>
           <div>
-            <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Sub column</h2>
+            <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Sub</h2>
             <p className="text-sm text-stone-700">
-              {sub.name}, {sub.size}" in a {subBox.w}×{subBox.h}×{subBox.d} in cabinet.
-              Gross internal {subL.toFixed(0)} L, ~174 L net after the port, braces and driver.
-              {portStyle === "folded"
-                ? " Port [modelled]: 3\" tall letterbox along the bottom, split three ways by two fins, running back along the floor and turning up the back wall to 15.75\" total so it fits an 18\" deep shell. 58.5 in², tunes to about 36 Hz like the compact column."
-                : portStyle === "slots"
-                ? " Port [modelled]: 3\" tall duct along the bottom, split into three 6\" openings by two 3/4\" fins, running 15.75\" back from the frame face with a 3\" turning gap behind the shelf. 54 in², about 43% of cone area. Tunes to 32.8 Hz; peak port velocity 14.2 m/s at 800 W with the 33 Hz highpass in place. The 17.25\" duct in the earlier draft did not fit: 17.25\" of duct plus a 3\" gap needs 20.25\" of a 19.5\" internal depth, so the duct shortens to 15.75\". The baffle starts above the duct's top shelf."
-                : portStyle === "round1"
-                ? " Port: one 8\" flared tube, 11\" straight section, low on a full-height baffle. 50 in², ~10 m/s at full excursion."
-                : " Port: two 5\" flared tubes, 9.8\" straight sections, centred 10\" up a full-height baffle. 39 in², ~13 m/s at full excursion."}
-              {" "}Driver set with an equal 1.65" margin at the top and both sides, mounted on a baffle recessed 3/4" behind the
-              frame, which carries a 1/4" roundover on both front arrises. High-pass 33 Hz BW24, at tuning rather than below it.
-              <span className="block mt-2 text-stone-500">
-                Open question: one recommendation says to avoid equal margins deliberately, offsetting the driver so the baffle's
-                panel modes and diffraction paths don't coincide. The effect is above this driver's passband, so it's a visual call
-                here, but worth resolving before cutting.
-              </span>
+              {sub.name} in a {subBox.w}×{subBox.h}×{subBox.d} in cabinet, {grossL.toFixed(0)} L gross, {netL.toFixed(0)} L net.
+              Vent: {port.desc}. Baffle recessed 3/4" behind the frame, 1/4" roundovers on the front edges.
             </p>
           </div>
           <div>
             <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Mid-bass cube</h2>
             <p className="text-sm text-stone-700">
-              {mid.name} in a {midBox.box.w}×{midBox.box.h}×{midBox.box.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed. Width sits at the RX-28 limit for an 1100 Hz crossover.
+              {mid.name} in a {midBox.box.w}×{midBox.box.h}×{midBox.box.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed.
               Covers ~90 Hz to the horn crossover. Same 18 mm birch, flush-mounted driver.
             </p>
             {mid.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{mid.name}.</span> {mid.note}</p>}
@@ -1514,79 +1595,8 @@ function StackPlanner() {
           <p className="text-xs text-stone-500 mt-2">Cabinet weight assumes 3/4" birch at 2.3 lb/ft² ; the sub allows two braces and 6 lb of hardware, the mid box one brace. Particleboard runs ~30% heavier. Driver weights are approximate where the datasheet wasn't checked. Heaviest single lift is the sub column.</p>
         </section>
 
-        <section className="md:col-span-5 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "system-ui, sans-serif" }}>
-          {RACKS.map((r) => {
-            const total = r.items.reduce((a, [, c]) => a + c, 0);
-            return (
-              <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
-                <div className="flex justify-between items-baseline mb-1">
-                  <h2 className="text-xl" style={{ fontFamily: "Georgia, serif" }}>{r.name}</h2>
-                  <span className="text-sm tabular-nums text-stone-600">≈ ${total.toLocaleString()}</span>
-                </div>
-                <p className="text-xs text-stone-500 mb-3">{r.note}</p>
-                <ul className="text-sm text-stone-700 space-y-1">
-                  {r.items.map(([label, cost]) => (
-                    <li key={label} className="flex justify-between gap-3"><span>{label}</span><span className="tabular-nums text-stone-500">${cost}</span></li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </section>
-
-        <section className="md:col-span-5 mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Signal path (mains rack)</h2>
-          <div className="max-w-4xl"><SignalPath /></div>
-          <p className="text-sm text-stone-700 max-w-3xl mt-3">
-            Division of labour: the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs.
-            Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and
-            impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled
-            preset, which a level limiter cannot.
-          </p>
-        </section>
-        <section className="md:col-span-5 mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Materials</h2>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
-            {[
-              ["Prototype in particleboard", "Cheap and flat. Build it to verify duct tuning, then transfer interior dimensions \u2014 not the cut list \u2014 to the real material."],
-              ["Consider 5/8\" or 1/2\" for the final boxes", "Sub column drops 119 \u2192 107 \u2192 95 lb loaded. Needs more bracing, and the extra interior volume lowers Fb, so the duct gets shorter."],
-              ["MDO for the baffles", "Paints far better than birch, no edge penalty since no baffle edge is exposed."],
-            ].map(([t, d]) => (
-              <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
-                <span><span className="font-medium">{t}.</span> {d}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="md:col-span-5 mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Still to decide</h2>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
-            {[
-              ["Baffle mounting", "Cleats (forgiving, costs 3/4\" of interior on each side) or a stopped rabbet in the frame panels (tighter, squares the box, needs a dado). Baffle size changes with the choice."],
-              ["Bracing", "None modelled yet. Centre ribs, slat ladder or windowed shelves — decide once handle recesses are placed, since they compete for the same panel area."],
-              ["Handles", "Recess type, depth and position on the sub. Interacts with bracing."],
-              ["Driver margins", "Currently equal at top and sides. One recommendation is to offset deliberately so baffle modes and diffraction paths don't coincide — likely inaudible below 100 Hz, so mostly a visual decision."],
-              ["Port edge finish", "The letterbox mouths are cut in the shell's nose band, so this is a shell-material question, not a baffle one. Paint carried into the ducts, or masked so the ply edge shows — end grain in the mouth needs sealing either way."],
-              ["Duct tuning", "Model says 3\" duct, 15.75\" long, 54 in², Fb 32.8 Hz. The earlier 17.25\" figure did not fit the box: duct plus turning gap exceeded the internal depth. Verify by impedance sweep on the particleboard prototype and trim before cutting birch."],
-              ["Sensitivity", "SB's 99 dB claim is 3 dB above what their own published T/S parameters give (95.9 dB/2.83V). Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure."],
-              ["Driver clearance", "Check the Nero's frame and 8.4\" mounting depth against the baffle margin and anything that ends up behind the magnet."],
-              ["Compression driver", "DE360 at $117 is the default; crossover floor on the A400G2 needs a distortion sweep to confirm ~1.1 kHz."],
-              ["Horn print", "A400G2 in one piece needs a 400 mm+ bed; otherwise sectioned. Filament, print service, or buy the RX-28 instead."],
-              ["Prototype material", "3/4\" particleboard for the first sub, then transfer verified interior dimensions to birch."],
-              ["Final panel thickness", "3/4\", 5/8\" or 1/2\" birch. 1/2\" saves 24 lb on the sub column but needs bracing on roughly 12\" centres and a doubler at the driver cutout. Decide before the prototype, since wall thickness changes the interior volume and therefore the duct length."],
-              ["Baffle material", "MDO if the baffles are painted — no baffle edge is exposed in any of the current configurations, so there is no reason not to. Birch only if the baffle is ever meant to be clear-finished."],
-            ].map(([t, d]) => (
-              <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
-                <span><span className="font-medium">{t}.</span> {d}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
       </main>
+      </>}
     </div>
   );
 }
