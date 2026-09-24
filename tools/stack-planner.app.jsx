@@ -893,7 +893,7 @@ function SignalPath() {
 // ---------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------
-function Pick({ label, options, value, onChange, hideNote }) {
+function Pick({ label, options, value, onChange }) {
   return (
     <div className="mb-4">
       <div className="text-sm text-stone-500 mb-1">{label}</div>
@@ -908,7 +908,6 @@ function Pick({ label, options, value, onChange, hideNote }) {
           </option>
         ))}
       </select>
-      {!hideNote && value?.note && <div className="text-xs text-stone-500 mt-1">{value.note}</div>}
     </div>
   );
 }
@@ -1322,12 +1321,9 @@ function StackPlanner() {
               ))}
             </div>
           </div>
-          <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} hideNote />
+          <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} />
           <Pick label={`Mid-bass ${format.mid}"`} options={midList} value={mid} onChange={setMid} />
           <Pick label="Mid-bass box" options={boxList} value={midBox} onChange={setMidBox} />
-          <div className="mb-5 text-sm text-stone-600">
-            3" plinth, recessed 1.5" per side, matching the duct height. {layout === "satellite" ? "Satellite" : layout === "pole" ? "Spacer" : layout === "tower" ? "Tower" : "Stack"} {stackH.toFixed(0)}" tall, horn centre at {hornCenter.toFixed(0)}".
-          </div>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Baffle colour</div>
             <div className="flex flex-wrap gap-1.5 items-center">
@@ -1359,7 +1355,6 @@ function StackPlanner() {
                 <button key={label} onClick={() => setCutaway(v)} className={`px-3 py-2 rounded border text-sm ${cutaway === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
               ))}
             </div>
-            <div className="text-xs text-stone-500 mt-1">Cutaway ghosts the shell and hides the drivers to show the ducts.</div>
           </div>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Layout</div>
@@ -1368,7 +1363,6 @@ function StackPlanner() {
                 <button key={v} onClick={() => setLayout(v)} className={`px-3 py-2 rounded border text-sm ${layout === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
               ))}
             </div>
-            <div className="text-xs text-stone-500 mt-1">Satellite mode puts one sub centred with the tops on 8 in round columns, 34 in tall. Tower builds each side as one enclosure: sub, a full-depth sealed mid chamber, and a horn section, all on the sub's footprint. Pair it with the 18 in deep tower column for the 69 in version. About 160 lb in 3/4 in birch, a two-person lift.</div>
           </div>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Cabinet</div>
@@ -1391,9 +1385,6 @@ function StackPlanner() {
                 return <option key={cb.id} value={cb.id}>{cb.name} — {dd.w} × {dd.h} × {dd.d}&#8243;</option>;
               })}
             </select>
-            <div className="text-xs text-stone-500 mt-1">
-              Loads that cabinet into the sliders, then it is yours to move. Save what you land on above; saved configurations are how you get back to it.
-            </div>
           </div>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Vent</div>
@@ -1425,7 +1416,7 @@ function StackPlanner() {
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
             </div>
           </div>
-          <Pick label="Compression driver (1&quot;)" options={CD_OPTIONS} value={cd} onChange={setCd} />
+          <Pick label="Compression driver" options={CD_OPTIONS} value={cd} onChange={setCd} />
           <Pick label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} />
           {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}" vs {cd.exit}").</div>}
         </aside>
@@ -1458,13 +1449,17 @@ function StackPlanner() {
               {mid.name} in a {midBox.box.w}×{midBox.box.h}×{midBox.box.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed. Width sits at the RX-28 limit for an 1100 Hz crossover.
               Covers ~90 Hz to the horn crossover. Same 18 mm birch, flush-mounted driver.
             </p>
+            {mid.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{mid.name}.</span> {mid.note}</p>}
+            {midBox.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{midBox.name}.</span> {midBox.note}</p>}
           </div>
           <div>
             <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Horn</h2>
             <p className="text-sm text-stone-700">
               {horn.name} with {cd.name}, crossed at {horn.xo}. Sits on a short block so the mouth clears the cube.
-              Total stack height about {stackH.toFixed(0)} in.
+              Total stack height about {stackH.toFixed(0)} in, horn centre at {hornCenter.toFixed(0)} in.
             </p>
+            {cd.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{cd.name}.</span> {cd.note}</p>}
+            {horn.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{horn.name}.</span> {horn.note}</p>}
           </div>
         </section>
 
