@@ -8,15 +8,18 @@ Design tools for a DIY sound-system-style rig: two full-range stacks for rooms o
 | File | What it does |
 |---|---|
 | `tools/vented-sub-bench.html` | Standalone, self-contained. Sliders for cabinet W/H/D, vent type (letterbox / round tubes / side ducts), duct length and highpass. Reports net volume, tuning, F3, the limit that bites first, max SPL and weight. |
-| `tools/stack-planner.app.jsx` | The full stack planner: driver and cabinet options, 3D view, cost roll-up, alignment table. Built with esbuild. |
+| `tools/stack-planner.app.jsx` | The full stack planner: driver and cabinet options, live 3D view, cost roll-up, alignment table. Custom-cabinet mode drives the 3D model from W/H/D and vent sliders. Saved configurations persist in the artifact's document store. Built with `tools/build.sh`. |
 | `model/vented-box.js` | The shared physics. Lumped-element vented-box model plus the limit taxonomy. Both tools use the same maths. |
 
 ## Building the planner
 
 ```sh
-npx esbuild tools/stack-planner.app.jsx --loader:.jsx=jsx --jsx=transform --outfile=app.js
-{ cat head.html; cat app.js; echo "</script>"; } > stack-planner.html
+tools/build.sh          # -> dist/stack-planner.html
 ```
+
+The planner declares the artifact `db` capability for saved configurations.
+Running it from a plain file server works, minus saving: the page detects the
+missing runtime and says so rather than breaking.
 
 The sub bench needs no build. Open it directly, or serve the directory.
 
