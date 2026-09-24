@@ -1241,7 +1241,9 @@ function StackPlanner() {
                 ["Hydraulic diameter", `${port.dh.toFixed(2)}″`, port.dh < 2 ? "low — flare the mouths" : "acceptable with flares"],
                 ["Midband sensitivity", `${(mdl.ref - 20 * Math.log10(AMP_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
                 ["First limit reached", lim.who, `at about ${Math.round(lim.W / 10) * 10} W per channel @ 8 \u03a9 (port 17 m/s, Xmax, ${2 * sub.ts.aes} W program = 2 \u00d7 AES, or ${ampW} W amp). Everything below is at this power.`],
-                ["Max SPL at 30 / 35 / 45 Hz", `${lim.spl30.toFixed(1)} / ${lim.spl35.toFixed(1)} / ${lim.spl45.toFixed(1)} dB`, "sine; music averages ~6 dB lower"],
+                ["Max SPL at 30 Hz", `${lim.spl30.toFixed(1)} dB`, "sine; music averages ~6 dB lower"],
+                ["Max SPL at 35 Hz", `${lim.spl35.toFixed(1)} dB`],
+                ["Max SPL at 45 Hz", `${lim.spl45.toFixed(1)} dB`],
                 ["Peak port velocity", `${lim.vel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz; chuffing near 17\u201320`],
                 ["Peak excursion", `${(mdl.peakX * lim.V / AMP_V).toFixed(1)} mm`, `${lim.xPct.toFixed(0)}% of Xmax`],
               ].map(([k, v, note]) => (
