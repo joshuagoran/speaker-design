@@ -1316,7 +1316,6 @@ function StackPlanner() {
               {FORMATS.map((f) => (
                 <button key={f.id} onClick={() => setFormat(f)} className={`text-left px-3 py-2 rounded border ${format.id === f.id ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>
                   <div className="font-medium">{f.name}</div>
-                  <div className={`text-xs ${format.id === f.id ? "text-stone-300" : "text-stone-500"}`}>{f.note}</div>
                 </button>
               ))}
             </div>
