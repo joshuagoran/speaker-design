@@ -937,7 +937,7 @@ function ResponseChart({ curve, scale, Fb }) {
   }
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Sound pressure level against frequency for this cabinet" style={{ display: "block", width: "100%", height: "auto" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Maximum sound pressure level against frequency for this cabinet" style={{ display: "block", width: "100%", height: "auto" }}>
         {grid}
         {Fb > fmin && Fb < fmax && <>
           <line x1={px(Fb)} y1={y0} x2={px(Fb)} y2={y1} stroke="#a8a29e" strokeWidth="1" strokeDasharray="3 4" />
@@ -985,6 +985,7 @@ function StackPlanner() {
   const [cVent, setCVent] = useState({ slotH: 3, nt: 2, dia: 6, throat: 3, len: 14 });
   const [hpf, setHpf] = useState(33);
   const [ampW, setAmpW] = useState(800);   // amp power per sub channel, into 8 Ω
+  const [portMax, setPortMax] = useState(20);   // peak port air speed allowed, m/s
   const setC = (k, v) => setCDim((p) => ({ ...p, [k]: v }));
   const setV = (k, v) => setCVent((p) => ({ ...p, [k]: v }));
 
@@ -1098,20 +1099,32 @@ function StackPlanner() {
     // Port and cone limits use that sine's peaks. The thermal limit is program power, 2 \u00d7 AES: AES
     // noise has a 6 dB crest, so a sine with the same peak voltage carries twice the AES power, and
     // music with at least that crest factor keeps the voice coil's average at or under the AES rating.
-    const vp = (AMP_V * 17) / mdl.peakVel, vx = (AMP_V * 100) / mdl.xmaxPct, vt = Math.sqrt(2 * sub.ts.aes * 8);
+    const vp = (AMP_V * portMax) / mdl.peakVel, vx = (AMP_V * 100) / mdl.xmaxPct, vt = Math.sqrt(2 * sub.ts.aes * 8);
     const L = Math.min(vp, vx, vt, AMP_V);
     const sc = 20 * Math.log10(L / AMP_V);
     return { who: L === vp ? "port air speed" : L === vx ? "cone travel (Xmax)" : L === vt ? "driver program rating" : "amplifier power",
              V: L, W: (L * L) / 8, vel: mdl.peakVel * L / AMP_V, xPct: mdl.xmaxPct * L / AMP_V,
              spl30: mdl.spl30 + sc, spl35: mdl.spl35 + sc, spl45: mdl.spl45 + sc };
   })() : null;
+  // Max SPL for a sine at each frequency: each frequency meets its own port and excursion
+  // limits, so 45 Hz is not held back by port speed at tuning. The broadband limit above is
+  // what applies to music, which has energy at every frequency at once.
+  const vThermal = Math.sqrt(2 * (sub.ts ? sub.ts.aes : 0) * 8);
+  const maxAt = (o) => {
+    const vp = (AMP_V * portMax) / o.vel, vx = (AMP_V * sub.ts.Xmax) / o.xmm;
+    const V = Math.min(vp, vx, vThermal, AMP_V);
+    return { f: o.f, spl: o.spl + 20 * Math.log10(V / AMP_V),
+             who: V === vp ? "port" : V === vx ? "Xmax" : V === vThermal ? "thermal" : "amp" };
+  };
+  const maxCurve = mdl ? mdl.curve.map(maxAt) : null;
+  const maxNear = (f) => maxCurve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 
   const portGeom = { ductH: cVent.slotH, nPorts: cVent.nt, portR: cVent.dia / 2, tubeLen: cVent.len, throat: cVent.throat };
 
   // One named snapshot of the whole system.
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
-    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, ampW,
+    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, ampW, portMax,
     layout, cutaway, baffleColor,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
@@ -1127,6 +1140,7 @@ function StackPlanner() {
     if (c.cVent) setCVent(c.cVent);
     if (typeof c.hpf === "number") setHpf(c.hpf);
     if (typeof c.ampW === "number") setAmpW(c.ampW);
+    if (typeof c.portMax === "number") setPortMax(c.portMax);
     if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
     if (c.layout) setLayout(c.layout);
     if (c.baffleColor) setBaffleColor(c.baffleColor);
@@ -1220,7 +1234,7 @@ function StackPlanner() {
                 ["Net volume", netL.toFixed(0), "L"],
                 ["Tuning Fb", mdl.Fb.toFixed(1), "Hz"],
                 ["System F3", mdl.f3.toFixed(0), "Hz"],
-                ["SPL @ 35 Hz", lim.spl35.toFixed(1), "dB"],
+                ["Max SPL @ 35 Hz", maxNear(35).spl.toFixed(1), "dB"],
                 ["Weight", subLbLoaded.toFixed(0), "lb"],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
@@ -1230,7 +1244,7 @@ function StackPlanner() {
               ))}
             </div>
           )}
-          {mdl && lim && <div className="mb-4"><ResponseChart curve={mdl.curve} scale={20 * Math.log10(lim.V / AMP_V)} Fb={mdl.Fb} /></div>}
+          {mdl && lim && <div className="mb-4"><ResponseChart curve={maxCurve} scale={0} Fb={mdl.Fb} /></div>}
           {mdl ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
@@ -1240,11 +1254,10 @@ function StackPlanner() {
                 ["Duct length", `${port.len.toFixed(2)}″`],
                 ["Hydraulic diameter", `${port.dh.toFixed(2)}″`, port.dh < 2 ? "low — flare the mouths" : "acceptable with flares"],
                 ["Midband sensitivity", `${(mdl.ref - 20 * Math.log10(AMP_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
-                ["First limit reached", lim.who, `at ${Math.round(lim.W / 10) * 10} W; the figures below are at this power`],
-                ["Max SPL at 30 Hz", `${lim.spl30.toFixed(1)} dB`, "sine; music averages ~6 dB lower"],
-                ["Max SPL at 35 Hz", `${lim.spl35.toFixed(1)} dB`],
-                ["Max SPL at 45 Hz", `${lim.spl45.toFixed(1)} dB`],
-                ["Peak port velocity", `${lim.vel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz; chuffing near 17\u201320`],
+                ...[30, 35, 45].map((f) => { const m = maxNear(f);
+                  return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
+                ["First limit, music", lim.who, `at ${Math.round(lim.W / 10) * 10} W; the two rows below are at this power`],
+                ["Peak port velocity", `${lim.vel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz, where port output peaks near Fb`],
                 ["Peak excursion", `${(mdl.peakX * lim.V / AMP_V).toFixed(1)} mm`, `${lim.xPct.toFixed(0)}% of Xmax`],
               ].map(([k, v, note]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
@@ -1403,6 +1416,7 @@ function StackPlanner() {
               </>}
               <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="&#8243;" onChange={(v) => setV("len", v)} />
               <Slider label="Highpass (BW24)" value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} />
+              <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
               <Slider label="Amp power per channel @ 8 Ω" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} />
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
             </div>

@@ -97,6 +97,7 @@ collection `configs`, one document per configuration:
   "cVent": { "slotH": 3, "nt": 2, "dia": 6, "throat": 3, "len": 14 },
   "hpf": 33,
   "ampW": 800,                        // amp power per sub channel into 8 Ω; caps max SPL
+  "portMax": 20,                      // peak port air speed limit, m/s
   "layout": "stack", "cutaway": false, "baffleColor": "#e8b4a8",
   "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz"
 }
@@ -141,11 +142,15 @@ These drive every choice in the tools:
 ## Model assumptions
 
 Half space, 1 m, one cabinet, no room gain. Everything is a sine at the amp's
-rated power into 8 Ω (the amp slider). Port limit at 17 m/s peak air speed and
-excursion limit at Xmax, both at that sine's peaks. Thermal limit at program
+rated power into 8 Ω (the amp slider). Port limit at a peak air speed you set
+(default 20 m/s) and excursion limit at Xmax,
+both at that sine's peaks. Thermal limit at program
 power, 2 × the driver's AES rating: AES pink noise has a 6 dB crest factor, so
 music with at least that much crest keeps the coil's average at or under AES.
-Max SPL figures are sine levels at the limit; music averages about 6 dB lower. Port end
+The chart and the max SPL rows are per frequency: a sine at each frequency
+meets its own limit. The "first limit, music" row is the broadband limit,
+since music has energy at every frequency at once. Music averages about 6 dB
+below the sine figures. Port end
 correction is the standard both-end approximation and is the largest source of
 error in Fb — a divided or flared duct measures a little differently. Cabinet
 weight assumes 3/4" birch at 2.3 lb/ft² with two braces, plus driver and 6 lb of
