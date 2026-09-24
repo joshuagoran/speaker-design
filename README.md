@@ -92,12 +92,12 @@ collection `configs`, one document per configuration:
   "cd": "n314t",                      // CD_OPTIONS id
   "horn": "a460g2_14",                // HORN_OPTIONS id
   "cabinet": "column",                // last "Start from" choice, label only
-  "portStyle": "slots",               // slots | folded | vslots | round2
+  "portStyle": "slots",               // slots (bottom) | folded | vslots (both sides) | vslot1 (one side) | round2
   "cDim":  { "w": 28, "h": 32, "d": 24 },        // external inches
   "cVent": { "slotH": 3, "nt": 2, "dia": 6, "throat": 3, "len": 14 },
   "hpf": 33,
-  "layout": "stack", "braceStyle": "shelf2",
-  "subHoriz": false, "cutaway": false, "baffleColor": "#e8b4a8",
+  "ampW": 800,                        // amp power per sub channel into 8 Ω; caps max SPL
+  "layout": "stack", "cutaway": false, "baffleColor": "#e8b4a8",
   "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz"
 }
 ```
@@ -141,7 +141,8 @@ These drive every choice in the tools:
 ## Model assumptions
 
 Half space, 1 m, one cabinet, no room gain. Port limit at 17 m/s peak air speed,
-thermal limit at the driver's AES rating, excursion limit at Xmax. Port end
+thermal limit at the driver's AES rating, excursion limit at Xmax, and the amp's
+rated power into 8 Ω. Port end
 correction is the standard both-end approximation and is the largest source of
 error in Fb — a divided or flared duct measures a little differently. Cabinet
 weight assumes 3/4" birch at 2.3 lb/ft² with two braces, plus driver and 6 lb of

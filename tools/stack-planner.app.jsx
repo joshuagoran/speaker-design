@@ -241,7 +241,7 @@ const inToL = (w, h, d) => ((w - 2 * PLY) * (h - 2 * PLY) * (d - 2 * PLY) * 16.3
 // ---------------------------------------------------------------
 // 3D view
 // ---------------------------------------------------------------
-function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, layout, subHoriz, baffleColor, portGeom }) {
+function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom }) {
   const mount = useRef(null);
   const state = useRef({ rotY: 0.6, rotX: 0.35, drag: false, lx: 0, ly: 0 });
 
@@ -371,17 +371,17 @@ function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, lay
       parent.add(cap);
     };
 
-    const horiz = subHoriz;
     const subGroup = new THREE.Group();
     group.add(subGroup);
     // plinth / toe-kick, inset so the column appears to float
     // the 4-corner port needs a square baffle, so it implies the symmetric box
     const cornerPort = portStyle === "round4";
-    const vSlot = portStyle === "vslots" || portStyle === "vwide";
+    const vSlot = portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1";
+    const sides = portStyle === "vslot1" ? [1] : [-1, 1];   // side ducts: one wall or both
     const vWide = portStyle === "vwide";
     const s = sub.box;
     const pg = portGeom || {};   // explicit vent geometry when the cabinet is custom
-    const pl = subHoriz ? 0 : plinth || 0;
+    const pl = plinth || 0;
     if (pl > 0) {
       const p = new THREE.Mesh(new THREE.BoxGeometry(s.w - 3, pl, s.d - 3), birch);
       p.position.set(0, pl / 2, 0);
@@ -390,7 +390,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, lay
     // sub column: driver cutout high on the baffle, three duct cutouts across the bottom
     const ductH = pg.ductH != null ? pg.ductH : 3, innerW = s.w - 2 * T, ductW = (innerW - 2 * T) / 3;
     const drvR = sub.size / 2 - 0.9;
-    const round = !["slots", "folded", "vslots", "vwide"].includes(portStyle); // round-tube ports only
+    const round = !["slots", "folded", "vslots", "vwide", "vslot1"].includes(portStyle); // round-tube ports only
     // one place that decides the box's shape and what internal structure it needs
     const boxKind = vSlot ? "block" : cornerPort ? "cube" : "column";
     const corners = portStyle === "round4";
@@ -407,7 +407,10 @@ function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, lay
     const baffleH = s.h + extH - 2 * T - bandH;
     const baffleCy = pl + T + bandH + baffleH / 2; // absolute centre of the baffle
     const drvAbsY = corners || vSlot ? pl + s.h / 2 : pl + s.h - T - innerW / 2; // centred when symmetric
-    const holes = [circPath(0, drvAbsY - baffleCy, drvR)];
+    const vThroat = pg.throat != null ? pg.throat : Math.round(((sub.size >= 18 ? 66 : 54) / (2 * (s.h - 2 * T))) * 100) / 100;
+    // a single side duct pushes the driver into the middle of the remaining baffle
+    const drvX = sides.length === 1 && vSlot ? -sides[0] * (vThroat + 0.43 + T) / 2 : 0;
+    const holes = [circPath(drvX, drvAbsY - baffleCy, drvR)];
     let portCy = 0;
     if (round) {
       // 8" sits low on the baffle; 5" pair centred 10" up
@@ -421,10 +424,10 @@ function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, lay
     if (vSlot) {
       // full-height ducts using the side walls as their outer face
       const slotH = s.h - 2 * T;
-      const throat = pg.throat != null ? pg.throat : Math.round(((sub.size >= 18 ? 66 : 54) / (2 * slotH)) * 100) / 100;
+      const throat = vThroat;
       const mouth = throat + 0.43;                 // flat strip set at 20 deg: 0.43 in rise
       const sx = innerW / 2 - mouth / 2;
-      [-1, 1].forEach((k) => holes.push(rectPath(k * sx, pl + s.h / 2 - baffleCy, mouth, slotH, 0.12)));
+      sides.forEach((k) => holes.push(rectPath(k * sx, pl + s.h / 2 - baffleCy, mouth, slotH, 0.12)));
     }
     if (towerMode) {
       holes.push(circPath(0, pl + s.h + TW_MID / 2 - baffleCy, (mid.size || 12) / 2 - 0.9));
@@ -448,7 +451,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, lay
       // thickness panel chamfered 20 deg at both ends, so the duct runs a
       // straight throat with a flared mouth front and rear.
       const slotH = s.h - 2 * T;
-      const throat = pg.throat != null ? pg.throat : Math.round(((sub.size >= 18 ? 66 : 54) / (2 * slotH)) * 100) / 100;
+      const throat = vThroat;
       const mouth = throat + 0.43;
       const FL = 0.43 / Math.tan((20 * Math.PI) / 180);   // 1.18 in along the duct
       const yc = pl + s.h / 2;
@@ -457,7 +460,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, lay
       const zr = zb + throat;                              // rear end of the duct; gap = throat width
       const sideLen = zf - zr;
 
-      [-1, 1].forEach((k) => {
+      sides.forEach((k) => {
         const xo = k * (innerW / 2);                       // inside face of the side wall
         const xT = xo - k * throat;                        // duct face at the throat
         const xM = xo - k * mouth;                         // duct face at a flared end
@@ -519,7 +522,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, lay
         });
       });
     }
-    cone(drvR, drvAbsY, subZ, 0, subGroup);
+    cone(drvR, drvAbsY, subZ, drvX, subGroup);
     // duct structure inside: top shelf, two fins (slot version only)
     const ductLen = s.d - T - 3; // from the frame face back, 3" turning gap
     if (portStyle === "folded") {
@@ -553,40 +556,6 @@ function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, lay
       subGroup.add(fin);
     });
     }
-    const innerD = s.d - REVEAL - 2 * T;
-    const braceZ = subZ - T - innerD / 2;
-    const frontZ = subZ - T, backZ = -s.d / 2 + T;
-    if (boxKind === "block") {
-      // no shelves: each duct is a closed section running the full depth and around the rear corner,
-      // tying the sides, top, bottom and back together on its own
-    } else if (boxKind === "cube") {
-      // one windowed shelf at mid height, passing between the corner tubes
-      if (braceStyle !== "none") {
-        const cs = rr(innerW, innerD, 0.12);
-        cs.holes.push(rr(innerW - 6, innerD - 6, 1.5));
-        const cm = new THREE.Mesh(new THREE.ExtrudeGeometry(cs, { depth: T, bevelEnabled: false }), plyIn);
-        cm.rotation.x = -Math.PI / 2;
-        cm.position.set(0, pl + s.h / 2, braceZ);
-        subGroup.add(cm);
-      }
-    } else if (braceStyle === "shelf2") {
-      const lo = rr(innerW, innerD, 0.12);
-      lo.holes.push(rr(innerW - 5, innerD - 5, 1.5));
-      const loM = new THREE.Mesh(new THREE.ExtrudeGeometry(lo, { depth: T, bevelEnabled: false }), plyIn);
-      loM.rotation.x = -Math.PI / 2;
-      const portTop = portStyle === "round1" ? pl + T + 2 * (portR + 0.75) + 1 : portStyle === "round2" ? pl + 10 + portR + 0.75 : pl + T + ductH + T;
-      const loY = portStyle === "slots" || portStyle === "folded" ? pl + 11.5 : (portTop + (drvAbsY - drvR)) / 2;
-      loM.position.set(0, loY, braceZ);
-      subGroup.add(loM);
-      const UD = 9;
-      const hi = rr(innerW, UD, 0.12);
-      hi.holes.push(rr(innerW - 5, UD - 4, 1.2));
-      const hiM = new THREE.Mesh(new THREE.ExtrudeGeometry(hi, { depth: T, bevelEnabled: false }), plyIn);
-      hiM.rotation.x = -Math.PI / 2;
-      hiM.position.set(0, pl + s.h * 0.69, backZ + UD / 2);
-      subGroup.add(hiM);
-    }
-
     // mid cube: on the sub, or on round columns either side of it
     const tower = layout === "tower";
     // Tower: one enclosure per side. The mid chamber and horn section share the
@@ -597,7 +566,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, lay
     const pole = layout === "pole";
     const COL_D = 8, COL_H = 34;                       // column diameter and height
     const satX = s.w / 2 + COL_D / 2 + 6;              // columns clear of the sub
-    const subTop = (horiz ? s.w : pl + s.h);
+    const subTop = pl + s.h;
     const POLE_RISE = 20;                              // exposed pole above the sub top
     const midBaseY = sat ? COL_H : pole ? subTop + POLE_RISE : tower ? subTop : subTop + gap;
     const midXs = sat ? [-satX, satX] : [0];
@@ -861,7 +830,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, lay
       renderer.dispose();
       el.removeChild(renderer.domElement);
     };
-  }, [sub, mid, horn, plinth, cutaway, braceStyle, portStyle, layout, subHoriz, baffleColor, portGeom]);
+  }, [sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom]);
 
   return <div ref={mount} className="w-full h-full cursor-grab" />;
 }
@@ -924,7 +893,7 @@ function SignalPath() {
 // ---------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------
-function Pick({ label, options, value, onChange }) {
+function Pick({ label, options, value, onChange, hideNote }) {
   return (
     <div className="mb-4">
       <div className="text-sm text-stone-500 mb-1">{label}</div>
@@ -939,7 +908,7 @@ function Pick({ label, options, value, onChange }) {
           </option>
         ))}
       </select>
-      {value?.note && <div className="text-xs text-stone-500 mt-1">{value.note}</div>}
+      {!hideNote && value?.note && <div className="text-xs text-stone-500 mt-1">{value.note}</div>}
     </div>
   );
 }
@@ -1006,17 +975,16 @@ function StackPlanner() {
   const [midBox, setMidBox] = useState(MID_BOXES.find((o) => o.id === "b15"));
   const plinth = 3; // fixed, matches the duct height
   const [cutaway, setCutaway] = useState(false);
-  const [braceStyle, setBraceStyle] = useState("shelf2");
   const [cabinet, setCabinet] = useState(CABINETS[0]);
   const [portStyle, setPortStyle] = useState("slots");
   const [layout, setLayout] = useState("stack");
   const [format, setFormat] = useState(FORMATS[0]);
-  const [subHoriz, setSubHoriz] = useState(false);
   const [baffleColor, setBaffleColor] = useState("#e8b4a8");
   // Every cabinet is custom; the preset list below is only a starting point.
   const [cDim, setCDim] = useState({ w: 28, h: 32, d: 24 });
   const [cVent, setCVent] = useState({ slotH: 3, nt: 2, dia: 6, throat: 3, len: 14 });
   const [hpf, setHpf] = useState(33);
+  const [ampW, setAmpW] = useState(800);   // amp power per sub channel, into 8 Ω
   const setC = (k, v) => setCDim((p) => ({ ...p, [k]: v }));
   const setV = (k, v) => setCVent((p) => ({ ...p, [k]: v }));
 
@@ -1078,10 +1046,11 @@ function StackPlanner() {
   const port = (() => {
     const iw = subBox.w - 2 * PT, ih = subBox.h - 2 * PT, idp = subBox.d - 2 * PT;
     {
-      if (portStyle === "vslots" || portStyle === "vwide") {
-        const t = cVent.throat, area = 2 * t * ih, seg = ih / 3;
+      if (portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1") {
+        const n = portStyle === "vslot1" ? 1 : 2;
+        const t = cVent.throat, area = n * t * ih, seg = ih / 3;
         return { area, len: cVent.len, dh: (4 * (t * seg)) / (2 * (t + seg)),
-                 desc: `two ducts, ${t.toFixed(2)}\u2033 throat \u00d7 ${ih.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` };
+                 desc: `${n === 1 ? "one side duct" : "two side ducts"}, ${t.toFixed(2)}\u2033 throat \u00d7 ${ih.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` };
       }
       if (portStyle === "slots" || portStyle === "folded") {
         const h = cVent.slotH, area = h * iw, seg = iw / 3;
@@ -1122,13 +1091,13 @@ function StackPlanner() {
   const grossL = inToL(subBox.w, subBox.h, subBox.d);
   const ductL = (port.area * port.len * 16.387) / 1000;
   const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - 3);
-  const HPF = hpf, AMP_V = 80;
+  const HPF = hpf, AMP_V = Math.sqrt(ampW * 8);
   const mdl = sub.ts ? boxModel(sub.ts, netL, port.area, port.len, HPF, AMP_V) : null;
   const lim = mdl ? (() => {
     const vp = (AMP_V * 17) / mdl.peakVel, vx = (AMP_V * 100) / mdl.xmaxPct, vt = Math.sqrt(sub.ts.aes * 8);
-    const L = Math.min(vp, vx, vt);
+    const L = Math.min(vp, vx, vt, AMP_V);
     const sc = 20 * Math.log10(L / AMP_V);
-    return { who: L === vp ? "port air speed" : L === vx ? "cone travel (Xmax)" : "driver power rating",
+    return { who: L === vp ? "port air speed" : L === vx ? "cone travel (Xmax)" : L === vt ? "driver power rating" : "amplifier power",
              V: L, W: (L * L) / 8, vel: mdl.peakVel * L / AMP_V, xPct: mdl.xmaxPct * L / AMP_V,
              spl30: mdl.spl30 + sc, spl35: mdl.spl35 + sc, spl45: mdl.spl45 + sc };
   })() : null;
@@ -1138,8 +1107,8 @@ function StackPlanner() {
   // One named snapshot of the whole system.
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
-    cabinet: cabinet.id, portStyle, cDim, cVent, hpf,
-    layout, braceStyle, subHoriz, cutaway, baffleColor,
+    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, ampW,
+    layout, cutaway, baffleColor,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
   const restore = (c) => {
@@ -1153,9 +1122,8 @@ function StackPlanner() {
     if (c.cDim) setCDim(c.cDim);
     if (c.cVent) setCVent(c.cVent);
     if (typeof c.hpf === "number") setHpf(c.hpf);
-    if (typeof c.subHoriz === "boolean") setSubHoriz(c.subHoriz);
+    if (typeof c.ampW === "number") setAmpW(c.ampW);
     if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
-    if (c.braceStyle) setBraceStyle(c.braceStyle);
     if (c.layout) setLayout(c.layout);
     if (c.baffleColor) setBaffleColor(c.baffleColor);
     if (c.portStyle) setPortStyle(c.portStyle);
@@ -1182,7 +1150,7 @@ function StackPlanner() {
 
   const subL = inToL(subBox.w, subBox.h, subBox.d);
   const midL = inToL(midBox.box.w, midBox.box.h, midBox.box.d);
-  const subTopH = subHoriz ? subBox.w : plinth + subBox.h;
+  const subTopH = plinth + subBox.h;
   const isTower = layout === "tower";
   const baseH = layout === "satellite" ? 34 : layout === "pole" ? subTopH + 20 : isTower ? subTopH : subTopH + 0.4;
   const archT = isTower && !!horn.profile && !horn.scaleX && subBox.w / 2 - 0.75 > horn.size.w / 2;
@@ -1242,15 +1210,10 @@ function StackPlanner() {
       <main className="max-w-6xl mx-auto px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8">
         <div className="md:col-span-3 flex flex-col gap-5">
         <section className="rounded-lg overflow-hidden border border-stone-300 bg-stone-50" style={{ height: "clamp(320px, 56vh, 560px)" }}>
-          <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} braceStyle={braceStyle} portStyle={portStyle} layout={layout} subHoriz={subHoriz} baffleColor={baffleColor} portGeom={portGeom} />
+          <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} />
         </section>
 
         <section className="mt-1" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-1" style={{ fontFamily: "Georgia, serif" }}>Alignment for this cabinet</h2>
-          <p className="text-sm text-stone-600 mb-3">
-            Computed live from the selected driver, cabinet and vent, with a {HPF} Hz BW24 highpass
-            and {AMP_V} V drive (800 W into 8 Ω).
-          </p>
           {mdl && lim && (
             <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200"
                  style={{ gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))" }}>
@@ -1284,8 +1247,8 @@ function StackPlanner() {
                 ["SPL at 35 Hz", `${mdl.spl35.toFixed(1)} dB`],
                 ["SPL at 45 Hz", `${mdl.spl45.toFixed(1)} dB`],
                 ["Peak port velocity", `${mdl.peakVel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz; chuffing near 17–20`],
-                ["Peak excursion", `${mdl.peakX.toFixed(1)} mm`, `${mdl.xmaxPct.toFixed(0)}% of Xmax at 800 W`],
-                ["First limit reached", lim.who, `at about ${Math.round(lim.W / 10) * 10} W (port 17 m/s, Xmax, or ${sub.ts.aes} W rating)`],
+                ["Peak excursion", `${mdl.peakX.toFixed(1)} mm`, `${mdl.xmaxPct.toFixed(0)}% of Xmax at ${ampW} W`],
+                ["First limit reached", lim.who, `at about ${Math.round(lim.W / 10) * 10} W (port 17 m/s, Xmax, ${sub.ts.aes} W rating, or ${ampW} W amp)`],
                 ["Port air speed there", `${lim.vel.toFixed(1)} m/s`, "17 m/s is the chuffing threshold"],
                 ["Cone travel there", `${lim.xPct.toFixed(0)}% of Xmax`],
                 ["Max SPL at 30 / 35 / 45 Hz", `${lim.spl30.toFixed(1)} / ${lim.spl35.toFixed(1)} / ${lim.spl45.toFixed(1)} dB`, "at that limit"],
@@ -1310,8 +1273,11 @@ function StackPlanner() {
               {(() => {
                 const F = [];
                 const need = format.sub + 1.9;
-                if (Math.min(subBox.w, subBox.h) < need)
-                  F.push(["bad", "Driver won't fit", `The baffle needs about ${need.toFixed(1)}″ clear; the smallest face is ${Math.min(subBox.w, subBox.h).toFixed(1)}″.`]);
+                const nSide = portStyle === "vslot1" ? 1 : portStyle === "vslots" || portStyle === "vwide" ? 2 : 0;
+                const clearW = subBox.w - nSide * (cVent.throat + 0.43 + PT);
+                const clearH = subBox.h - (portStyle === "slots" || portStyle === "folded" ? cVent.slotH + PT : 0);
+                if (Math.min(clearW, clearH) < need)
+                  F.push(["bad", "Driver won't fit", `The baffle needs about ${need.toFixed(1)}″ clear; after the vents it has ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`]);
                 const clear = subBox.d - 1.5 - 1, maxRun = clear + (subBox.h - 1.5 - 1);
                 if (cVent.len > clear)
                   F.push([cVent.len > maxRun ? "bad" : "warn", cVent.len > maxRun ? "Duct too long" : "Duct must fold",
@@ -1323,6 +1289,8 @@ function StackPlanner() {
                   ? ["warn", "Port-limited", `The vent chokes at ${Math.round(lim.W)} W, below the driver's ${sub.ts.aes} W rating. Open the port up or lengthen it.`]
                   : lim.who === "cone travel (Xmax)"
                   ? ["warn", "Excursion-limited", `The cone reaches Xmax at ${Math.round(lim.W)} W, below the ${sub.ts.aes} W rating. A bigger box or higher tuning helps; a bigger port does not.`]
+                  : lim.who === "amplifier power"
+                  ? ["warn", "Amp-limited", `The ${ampW} W amp runs out before the port, the cone or the driver's ${sub.ts.aes} W rating.`]
                   : ["ok", "Thermally limited", `Reaches the full ${sub.ts.aes} W rating before the port or the cone gives out.`]);
                 return F.map(([kind, head, body]) => (
                   <div key={head} className="flex gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
@@ -1354,7 +1322,7 @@ function StackPlanner() {
               ))}
             </div>
           </div>
-          <Pick label="Sub driver and column" options={subList} value={sub} onChange={setSub} />
+          <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} hideNote />
           <Pick label={`Mid-bass ${format.mid}"`} options={midList} value={mid} onChange={setMid} />
           <Pick label="Mid-bass box" options={boxList} value={midBox} onChange={setMidBox} />
           <div className="mb-5 text-sm text-stone-600">
@@ -1391,7 +1359,7 @@ function StackPlanner() {
                 <button key={label} onClick={() => setCutaway(v)} className={`px-3 py-2 rounded border text-sm ${cutaway === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
               ))}
             </div>
-            <div className="text-xs text-stone-500 mt-1">Cutaway ghosts the shell and hides the drivers to show the duct and brace.</div>
+            <div className="text-xs text-stone-500 mt-1">Cutaway ghosts the shell and hides the drivers to show the ducts.</div>
           </div>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Layout</div>
@@ -1401,12 +1369,6 @@ function StackPlanner() {
               ))}
             </div>
             <div className="text-xs text-stone-500 mt-1">Satellite mode puts one sub centred with the tops on 8 in round columns, 34 in tall. Tower builds each side as one enclosure: sub, a full-depth sealed mid chamber, and a horn section, all on the sub's footprint. Pair it with the 18 in deep tower column for the 69 in version. About 160 lb in 3/4 in birch, a two-person lift.</div>
-            <div className="flex gap-1 mt-2">
-              {[["Sub upright", false], ["Sub on its side", true]].map(([label, v]) => (
-                <button key={label} onClick={() => setSubHoriz(v)} className={`px-3 py-2 rounded border text-sm ${subHoriz === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
-              ))}
-            </div>
-            <div className="text-xs text-stone-500 mt-1">On its side the plinth comes off and the box is {subBox.w}" tall; ports run up one edge.</div>
           </div>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Cabinet</div>
@@ -1436,34 +1398,31 @@ function StackPlanner() {
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Vent</div>
             <div className="flex flex-wrap gap-1">
-              {[["slots", "Letterbox slot"], ["folded", "Letterbox, folded"], ["vslots", "Side ducts"], ["round2", "Round tubes"]].map(([v, label]) => (
-                <button key={v} onClick={() => setPortStyle(v)} className={`px-3 py-2 rounded border text-sm ${portStyle === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
+              {[["Rectangular", !portStyle.startsWith("round"), "slots"], ["Round tubes", portStyle.startsWith("round"), "round2"]].map(([label, on, v]) => (
+                <button key={label} onClick={() => { if (!on) setPortStyle(v); }} className={`px-3 py-2 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
               ))}
             </div>
+            {!portStyle.startsWith("round") && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {[["slots", "Bottom"], ["folded", "Bottom, folded"], ["vslots", "Both sides"], ["vslot1", "One side"]].map(([v, label]) => {
+                  const on = portStyle === v || (v === "vslots" && portStyle === "vwide");
+                  return <button key={v} onClick={() => setPortStyle(v)} className={`px-3 py-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>;
+                })}
+              </div>
+            )}
             <div className="rounded border border-stone-300 bg-white px-3 py-3 mt-2">
               {(portStyle === "slots" || portStyle === "folded") &&
                 <Slider label="Slot height" value={cVent.slotH} min={1.5} max={9} step={0.25} unit="&#8243;" onChange={(v) => setV("slotH", v)} />}
-              {(portStyle === "vslots" || portStyle === "vwide") &&
-                <Slider label="Duct throat" value={cVent.throat} min={1} max={7} step={0.25} unit="&#8243;" onChange={(v) => setV("throat", v)} />}
+              {(portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1") &&
+                <Slider label="Duct throat" value={cVent.throat} min={1} max={portStyle === "vslot1" ? 10 : 7} step={0.25} unit="&#8243;" onChange={(v) => setV("throat", v)} />}
               {portStyle.startsWith("round") && <>
                 <Slider label="Tubes" value={cVent.nt} min={1} max={6} step={1} unit="" onChange={(v) => setV("nt", v)} />
                 <Slider label="Tube diameter" value={cVent.dia} min={3} max={10} step={0.25} unit="&#8243;" onChange={(v) => setV("dia", v)} />
               </>}
               <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="&#8243;" onChange={(v) => setV("len", v)} />
               <Slider label="Highpass (BW24)" value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} />
+              <Slider label="Amp power (8 Ω)" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} />
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
-            </div>
-          </div>
-          <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">Bracing</div>
-            <div className="flex gap-1">
-              {[["Two shelves", "shelf2"], ["None", "none"]].map(([label, v]) => (
-                <button key={label} onClick={() => setBraceStyle(v)} className={`px-3 py-2 rounded border text-sm ${braceStyle === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
-              ))}
-            </div>
-            <div className="text-xs text-stone-500 mt-1">
-              Column boxes: a full-depth windowed shelf between the port and the driver cutout, plus a 9 in deep shelf near the top against the back.
-              The cube gets one shelf at mid height between the corner tubes. The block needs none — each duct is a closed section running the full depth and folding along the rear panel.
             </div>
           </div>
           <Pick label="Compression driver (1&quot;)" options={CD_OPTIONS} value={cd} onChange={setCd} />
