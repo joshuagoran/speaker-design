@@ -1159,7 +1159,7 @@ function StackPlanner() {
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
       <header className="px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl md:text-4xl leading-tight">Three-box stack, one per side</h1>
+        <h1 className="text-3xl md:text-4xl leading-tight" aria-label="Speaker Planner">𝒮𝓅ℯ𝒶𝓀ℯ𝓇 𝒫𝓁𝒶𝓃𝓃ℯ𝓇</h1>
       </header>
 
       {saved !== null && (
