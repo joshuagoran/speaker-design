@@ -1247,7 +1247,7 @@ function StackPlanner() {
                 ["SPL at 45 Hz", `${mdl.spl45.toFixed(1)} dB`],
                 ["Peak port velocity", `${mdl.peakVel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz; chuffing near 17–20`],
                 ["Peak excursion", `${mdl.peakX.toFixed(1)} mm`, `${mdl.xmaxPct.toFixed(0)}% of Xmax at ${ampW} W`],
-                ["First limit reached", lim.who, `at about ${Math.round(lim.W / 10) * 10} W sine into 8 \u03a9 (port 17 m/s, Xmax, ${2 * sub.ts.aes} W program = 2 \u00d7 AES, or ${ampW} W amp)`],
+                ["First limit reached", lim.who, `at about ${Math.round(lim.W / 10) * 10} W per channel @ 8 \u03a9 (port 17 m/s, Xmax, ${2 * sub.ts.aes} W program = 2 \u00d7 AES, or ${ampW} W amp)`],
                 ["Port air speed there", `${lim.vel.toFixed(1)} m/s`, "17 m/s is the chuffing threshold"],
                 ["Cone travel there", `${lim.xPct.toFixed(0)}% of Xmax`],
                 ["Max SPL at 30 / 35 / 45 Hz", `${lim.spl30.toFixed(1)} / ${lim.spl35.toFixed(1)} / ${lim.spl45.toFixed(1)} dB`, "sine at that limit; music averages ~6 dB lower"],
@@ -1408,7 +1408,7 @@ function StackPlanner() {
               </>}
               <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="&#8243;" onChange={(v) => setV("len", v)} />
               <Slider label="Highpass (BW24)" value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} />
-              <Slider label="Amp power, sine into 8 Ω" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} />
+              <Slider label="Amp power per channel @ 8 Ω" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} />
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
             </div>
           </div>
