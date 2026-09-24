@@ -216,9 +216,10 @@ function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts) {
     const Ut = { re: Ud.re - Up.re, im: Ud.im - Up.im };
     const hp = Math.pow(f / hpf, 4) / Math.sqrt(1 + Math.pow(f / hpf, 8));  // BW24
     const p = (rho * w * cabs(Ut)) / (2 * Math.PI);
+    // volts is RMS; x1.414 turns RMS travel and air speed into sine peaks, which Xmax and the 17 m/s limit mean
     out.push({ f, spl: 20 * Math.log10((p * hp) / 2e-5),
-               xmm: (cabs(Ud) / (w * Sd)) * hp * 1000,
-               vel: (cabs(Up) / Sp) * hp });
+               xmm: Math.SQRT2 * (cabs(Ud) / (w * Sd)) * hp * 1000,
+               vel: Math.SQRT2 * (cabs(Up) / Sp) * hp });
   }
   const band = out.filter((o) => o.f > 80 && o.f < 200);
   const ref = band.reduce((a, o) => a + o.spl, 0) / band.length;
@@ -1047,12 +1048,12 @@ function StackPlanner() {
     {
       if (portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1") {
         const n = portStyle === "vslot1" ? 1 : 2;
-        const t = cVent.throat, area = n * t * ih, seg = ih / 3;
+        const t = cVent.throat, area = n * t * (ih - 2 * 0.5), seg = (ih - 2 * 0.5) / 3;   // two 1/2\u2033 dividers per duct
         return { area, len: cVent.len, dh: (4 * (t * seg)) / (2 * (t + seg)),
                  desc: `${n === 1 ? "one side duct" : "two side ducts"}, ${t.toFixed(2)}\u2033 throat \u00d7 ${ih.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` };
       }
       if (portStyle === "slots" || portStyle === "folded") {
-        const h = cVent.slotH, area = h * iw, seg = iw / 3;
+        const h = cVent.slotH, area = h * (iw - 2 * PT), seg = (iw - 2 * PT) / 3;       // two 3/4\u2033 fins
         return { area, len: cVent.len, dh: (4 * (h * seg)) / (2 * (h + seg)),
                  desc: `letterbox, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` };
       }
@@ -1087,7 +1088,7 @@ function StackPlanner() {
              desc: `${n} × ${(2 * r).toFixed(0)}″ round, 11″ long` };
   })();
 
-  const grossL = inToL(subBox.w, subBox.h, subBox.d);
+  const grossL = inToL(subBox.w, subBox.h, subBox.d - 0.75);   // baffle is recessed 3/4\u2033 into the frame
   const ductL = (port.area * port.len * 16.387) / 1000;
   const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - 3);
   const HPF = hpf, AMP_V = Math.sqrt(ampW * 8);
@@ -1147,7 +1148,7 @@ function StackPlanner() {
 
   const subLbLoaded = ((2 * (subBox.w * subBox.h + subBox.w * subBox.d + subBox.h * subBox.d) + 2 * subBox.w * subBox.d) / 144) * 2.3 + (sub.lb || 0) + 6;
 
-  const subL = inToL(subBox.w, subBox.h, subBox.d);
+  const subL = grossL;
   const midL = inToL(midBox.box.w, midBox.box.h, midBox.box.d);
   const subTopH = plinth + subBox.h;
   const isTower = layout === "tower";
@@ -1237,7 +1238,7 @@ function StackPlanner() {
                 ["Hydraulic diameter", `${port.dh.toFixed(2)}″`, port.dh < 2 ? "low — flare the mouths" : "acceptable with flares"],
                 ["Tuning Fb", `${mdl.Fb.toFixed(1)} Hz`],
                 ["System F3", `${mdl.f3.toFixed(1)} Hz`, `with the ${HPF} Hz highpass`],
-                ["Midband reference", `${mdl.ref.toFixed(1)} dB`],
+                ["Midband sensitivity", `${(mdl.ref - 20 * Math.log10(AMP_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
                 ["SPL at 35 Hz", `${mdl.spl35.toFixed(1)} dB`],
                 ["SPL at 45 Hz", `${mdl.spl45.toFixed(1)} dB`],
                 ["Peak port velocity", `${mdl.peakVel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz; chuffing near 17–20`],
@@ -1298,7 +1299,7 @@ function StackPlanner() {
           <p className="text-xs text-stone-500 mt-3">
             Modelled, not measured. Port end correction is the standard both-end approximation and is the
             largest source of error in Fb; a divided or flared duct will measure a little differently.
-            {sub.id === "sbnero18" ? <>SB claim 99 dB for this driver, but their own published T/S give {mdl ? mdl.ref.toFixed(1) : "—"} dB in this box. </> : null}Verify Fb with an impedance sweep on the prototype before cutting birch.
+            {sub.id === "sbnero18" ? <>SB claim 99 dB for this driver, but their own published T/S give {mdl ? (mdl.ref - 20 * Math.log10(AMP_V / 2.83)).toFixed(1) : "—"} dB/2.83 V in this box. </> : null}Verify Fb with an impedance sweep on the prototype before cutting birch.
           </p>
         </section>
 
@@ -1459,7 +1460,7 @@ function StackPlanner() {
           {(() => {
             const PLY_LB_FT2 = 2.3; // 3/4" birch
             const boxLb = (b) => ((2 * (b.w * b.h + b.w * b.d + b.h * b.d) + b.w * b.d) / 144) * PLY_LB_FT2; // six panels + one brace/shelf
-            const subBoxLb = boxLb(subBox) + (sub.size === 18 ? 6 : 0); // port shelf and fold
+            const subBoxLb = subLbLoaded - (sub.lb || 0); // same estimate as the stats row
             const midBoxLb = boxLb(midBox.box);
             const rows = [
               ["Sub column", sub.price, sub.lb, subBoxLb, subBox.h],
@@ -1484,7 +1485,7 @@ function StackPlanner() {
               </table></div>
             );
           })()}
-          <p className="text-xs text-stone-500 mt-2">Cabinet weight assumes 3/4" birch at 2.3 lb/ft² with one brace; particleboard runs ~30% heavier. Driver weights are approximate where the datasheet wasn't checked. Heaviest single lift is the sub column.</p>
+          <p className="text-xs text-stone-500 mt-2">Cabinet weight assumes 3/4" birch at 2.3 lb/ft² ; the sub allows two braces and 6 lb of hardware, the mid box one brace. Particleboard runs ~30% heavier. Driver weights are approximate where the datasheet wasn't checked. Heaviest single lift is the sub column.</p>
         </section>
 
         <section className="md:col-span-5 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "system-ui, sans-serif" }}>

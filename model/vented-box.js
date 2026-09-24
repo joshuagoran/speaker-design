@@ -59,8 +59,9 @@ export function ventedBox(ts, VbL, SpIn2, LpIn, hpf, volts, opts = {}) {
     out.push({
       f,
       spl: 20 * Math.log10((p * hp) / 2e-5),
-      xmm: (cabs(Ud) / (w * Sd)) * hp * 1000,      // one-way cone travel, mm
-      vel: (cabs(Up) / Sp) * hp                    // port air speed, m/s
+      // drive voltage is RMS; x1.414 gives sine peaks, which is what Xmax and the port limit mean
+      xmm: Math.SQRT2 * (cabs(Ud) / (w * Sd)) * hp * 1000,  // peak one-way cone travel, mm
+      vel: Math.SQRT2 * (cabs(Up) / Sp) * hp                // peak port air speed, m/s
     });
   }
 

@@ -191,7 +191,7 @@ function boxModel(ts,VbL,SpIn2,LpIn,hpf,volts){
     var hp=Math.pow(f/hpf,4)/Math.sqrt(1+Math.pow(f/hpf,8));
     var p=(RHO*w*cabs(Ut))/(2*Math.PI);
     out.push({f:f, spl:20*Math.log10((p*hp)/2e-5),
-              xmm:(cabs(Ud)/(w*Sd))*hp*1000, vel:(cabs(Up)/Sp)*hp});
+              xmm:Math.SQRT2*(cabs(Ud)/(w*Sd))*hp*1000, vel:Math.SQRT2*(cabs(Up)/Sp)*hp});
   }
   var band=out.filter(function(o){return o.f>80&&o.f<200});
   var ref=band.reduce(function(a,o){return a+o.spl},0)/(band.length||1);
