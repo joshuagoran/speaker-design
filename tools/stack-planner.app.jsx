@@ -1,0 +1,1351 @@
+const { useEffect, useRef, useState } = React;
+
+// ---------------------------------------------------------------
+// Editable config. Dimensions in inches (outer). Volumes are gross
+// internal, before driver/port/bracing displacement. Verify every
+// driver spec and price against the vendor before ordering.
+// ---------------------------------------------------------------
+const PLY = 0.75; // 3/4" birch
+const ST260_PROFILE = [[1.89,0.0],[0.5,0.0],[0.507,0.036],[0.515,0.078],[0.526,0.125],[0.54,0.177],[0.557,0.232],[0.578,0.291],[0.601,0.354],[0.629,0.42],[0.66,0.488],[0.695,0.56],[0.775,0.706],[0.87,0.863],[0.979,1.025],[1.1,1.192],[1.232,1.361],[1.374,1.533],[1.528,1.706],[1.688,1.877],[1.857,2.045],[2.035,2.209],[2.217,2.366],[2.404,2.514],[2.597,2.654],[2.794,2.784],[2.996,2.904],[3.201,3.012],[3.406,3.105],[3.51,3.146],[3.617,3.183],[3.726,3.215],[3.834,3.241],[3.944,3.26],[4.055,3.272],[4.165,3.277],[4.276,3.273],[4.384,3.26],[4.493,3.236],[4.596,3.203],[4.696,3.159],[4.795,3.1],[4.884,3.031],[4.959,2.953],[5.023,2.865],[5.074,2.769],[5.107,2.668],[5.124,2.569],[5.126,2.525],[5.125,2.486],[4.968,2.494],[4.969,2.525],[4.967,2.56],[4.952,2.64],[4.923,2.72],[4.88,2.797],[4.826,2.867],[4.761,2.929],[4.684,2.984],[4.601,3.03],[4.516,3.065],[4.426,3.091],[4.334,3.108],[4.24,3.117],[4.144,3.119],[4.048,3.114],[3.951,3.102],[3.855,3.084],[3.759,3.061],[3.663,3.032],[3.475,2.963],[3.29,2.881],[3.105,2.784],[2.922,2.679],[2.743,2.564],[2.566,2.439],[2.396,2.308],[2.228,2.169],[2.064,2.023],[1.907,1.873],[1.755,1.719],[1.61,1.562],[1.472,1.405],[1.407,1.327],[1.346,1.253],[1.279,1.167],[1.251,1.13],[1.231,1.104],[1.177,1.023],[1.133,0.938],[1.101,0.849],[1.079,0.755],[1.065,0.655],[1.058,0.549],[1.055,0.435],[1.054,0.315],[1.89,0.315],[1.89,0.0]]; // [radius, depth] in inches, from ST260-19.stl cross-section
+
+
+const SUB_OPTIONS = [
+  { id: "bc18tbx", lb: 28, name: "B&C 18TBX100", price: 458, src: "US Speaker", size: 18, box: { w: 20, h: 36, d: 20 }, tune: "per cabinet [modelled]",
+    ts: { Fs: 34, Qts: 0.35, Qes: 0.37, Qms: 7.2, Vas: 212, Sd: 1210, Xmax: 9, Re: 5.1, Bl: 25.5, Mms: 209, aes: 1200, disp: 10.5 },
+    note: "[datasheet, bcspeakers.com] Ferrite, Fs 34 Hz, Qts 0.35, Vas 212 L, Xmax 9 mm, 1200 W, 10.5 L displacement, 28 lb. [modelled] In the compact block: F3 ~40 Hz, ~121 dB at 35 Hz, limited by excursion near 1 kW." },
+  { id: "sbnero18", lb: 45, pick: true, name: "SB Audience Nero-18SW1100D", price: 290,
+    ts: { Fs: 36, Qts: 0.33, Qes: 0.34, Qms: 11.83, Vas: 153.1, Sd: 1256.6, Xmax: 12.2, Re: 5.0, Bl: 30.9, Mms: 294, aes: 1100, disp: 10.5 }, src: "US vendor, Sep 2026 (Madisound stocks)", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "32.8 Hz [modelled]", note: "[datasheet] Fs 36 Hz, Qts 0.33, Vas 153 L, Sd 1257 cm², Xmax 12.2 mm, Re 5.0, Bl 30.9, 1100 W AES, 10.5 L displacement, 45.6 lb. [modelled] 95.9 dB/2.83V half-space from those parameters; SB claims 99 dB, which their own T/S do not support. In 174 L with the 54 in² duct: Fb 33.1 Hz, system F3 ~36 Hz with the 33 Hz highpass, 121.4 dB at 35 Hz on 800 W. In the slot and duct cabinets it reaches its 1100 W rating before the port or cone limit; the round-port cabinets are port-limited near 600–700 W." },
+  { id: "sbnero15sym", lb: 31, name: "SB Nero 15 — symmetric box", price: null, src: "same driver, symmetric box", size: 15, box: { w: 23, h: 23, d: 19 }, tune: "36 Hz (≈115 L net)", note: "23 in square baffle, driver centred, four 3.5 in flared corner ports. Rotatable. Use the 4-corner port option." },
+  { id: "sbnero15", lb: 31, name: "SB Audience Nero-15SW800", price: null, src: "not priced yet", size: 15, box: { w: 19, h: 28, d: 19 }, tune: "36 Hz (114 L net, modeled)", note: "Ferrite, 96 dB, 800 W AES, 14.3 mm Xmax, 4.5\" coil, Fs 31, Vas 137, 6.45 L displacement. Modeled in 19×28×19: F3 ~34 Hz, ~122 dB at 35 Hz. A 141 L box would gain 2 Hz and 1 dB for 30% more volume." },
+  { id: "sbnero18sym", lb: 45, name: "SB Nero 18 — symmetric cube", price: 290, src: "same driver, symmetric box", size: 18, box: { w: 25, h: 25, d: 25 }, tune: "33 Hz (≈192 L net)", note: "25 in cube, driver centred, four 4 in flared corner ports. Reads the same in any rotation — for a single sub on its side. Use the 4-corner port option." },
+  { id: "emnsw4018", lb: 20.9, name: "Eminence NSW4018-8", price: 580, src: "US vendor, Sep 2026 (per Josh)", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "per cabinet [modelled]",
+    ts: { Fs: 36, Qts: 0.38, Qes: 0.39, Qms: 8.46, Vas: 164, Sd: 1217, Xmax: 15.2, Re: 5.9, Bl: 28.2, Mms: 237, aes: 1600, disp: 10.5 },
+    note: "[datasheet, loudspeakerdatabase.com] Neo, Fs 36 Hz, Qts 0.38, Vas 164 L, Xmax 15.2 mm, 1600 W, 20.9 lb. Displacement not published; 10.5 L assumed. [modelled] Thermally limited, not excursion or port limited: only 69% of Xmax at its 1600 W rating in 160 L. The lightest 18 here by 3 lb and the only one that leaves weight for a 250 L cabinet inside a 125 lb limit: 250 L with a 90 in\u00b2 port gives 125.4 dB at 35 Hz and F3 34 Hz." },
+  { id: "em4018", lb: 24, name: "Eminence Definimax 4018LF", price: 329, src: "local vendor, Sep 2026", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "per cabinet [modelled]",
+    ts: { Fs: 30, Qts: 0.34, Qes: 0.35, Qms: 11.95, Vas: 255, Sd: 1188, Xmax: 8.6, Re: 6.1, Bl: 26.8, Mms: 217, aes: 1200, disp: 10.5 },
+    note: "[datasheet, loudspeakerdatabase.com] Ferrite, Fs 30 Hz, Qts 0.34, Vas 255 L, Xmax 8.6 mm, 1200 W, 24 lb. Displacement not published; 10.5 L assumed. [modelled] In the compact block: F3 ~39 Hz, ~120 dB at 35 Hz, limited by excursion near 950 W. Lightest option; about 2 dB down on the Nero at 35 Hz." },
+  { id: "lv18403", lb: 36, name: "Lavoce SAF184.03", price: null, src: "Parts Express (out of stock), Loudspeakers Plus", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "32.8 Hz [modelled]", note: "Ferrite, 96 dB, 1500 W AES, 13 mm Xmax, 4\" coil, 36 lb. Modeled: F3 ~36 Hz, ~123 dB at 35 Hz on 1.2 kW; 3 dB behind the Nero." },
+  { id: "lv18402", lb: 36, name: "Lavoce SAF184.02", price: 319, src: "Parts Express / Loudspeakers Plus", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "32.8 Hz [modelled]", note: "Ferrite, 97 dB, 1200 W AES, 8.4 mm Xmax, Fs 38. Modeled: F3 ~35 Hz, ~124 dB at 35 Hz but excursion-limited near 1 kW." },
+  { id: "lv18n403", lb: 26, name: "Lavoce SAN184.03 (neo)", price: 489, src: "Loudspeakers Plus sale", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "32.8 Hz [modelled]", note: "Neo version of the SAF184.03, 26 lb, 12.5 mm Xmax. The light option if weight matters more than $200." },
+  { id: "18s-kit", lb: 29, name: "18Sound 18\" sub kit (18LW1400)", price: null, src: "driver not priced yet", size: 18, box: { w: 23.2, h: 35.6, d: 19.7 }, tune: "per 18Sound app note (28 Hz HPF)", note: "Published 905 H × 590 W × 500 D mm reflex box, 15 mm birch, ~230 L gross. Five 18Sound driver options; DSP settings included." },
+  { id: "bc18sw", lb: 26, name: "B&C 18SW115", price: 739, src: "current US price per Josh, Sep 2026", size: 18, box: { w: 20, h: 36, d: 20 }, tune: "per cabinet [modelled]",
+    ts: { Fs: 32, Qts: 0.30, Qes: 0.32, Qms: 5.6, Vas: 187, Sd: 1210, Xmax: 14, Re: 5.3, Bl: 30.3, Mms: 275, aes: 1700, disp: 10.5 },
+    note: "[datasheet, bcspeakers.com] Neo, Fs 32 Hz, Qts 0.30, Vas 187 L, Xmax 14 mm, 1700 W, 26 lb. Displacement not published; 10.5 L assumed. [modelled] In the compact block: F3 ~36 Hz, ~123 dB at 35 Hz, port-limited near 1.35 kW. Matches the Nero's output 20 lb lighter." },
+];
+
+const MID_OPTIONS = [
+  { id: "bc12ndl", lb: 8, name: "B&C 12NDL76", price: 281, src: "Parts Express", box: { w: 14, h: 14, d: 18 }, note: "Sealed ~40 L. Neo, 100 dB, 400 W AES. Cheapest and most sensitive." },
+  { id: "f12pr", lb: 7, name: "Faital 12PR320", price: 310, src: "US Speaker", box: { w: 14, h: 14, d: 18 }, note: "Sealed ~40 L. Neo, 97 dB, 300 W AES, 7.4 mm Xmax." },
+  { id: "em2512", lb: 7, name: "Eminence Deltalite II 2512", price: 195, src: "eBay / Best Buy listings", box: { w: 14, h: 14, d: 18 }, note: "Sealed ~40 L. Neo, 99.6 dB, 250 W RMS, 4.9 mm Xmax. Cheapest; less excursion headroom." },
+  { id: "sbnero12", lb: 10, size: 12, pick: true, name: "SB Audience Nero-12MWN700D", price: 247, src: "Madisound", box: { w: 14, h: 14, d: 18 }, note: "Neo, 97 dB, 700 W, 7.3 mm Xmax, 3\" coil, Le 0.32 mH. Vas 52 L: ~40 L sealed gives Qtc ~0.58, Fc ~80 Hz. On AudioHorn's RX-28 list." },
+  { id: "sbnero10", lb: 7, size: 10, name: "SB Audience Nero-10MWN600D", price: null, src: "not priced yet", box: { w: 13, h: 13, d: 13 }, note: "Neo 10\", 94 dB, 7.3 mm Xmax, Fs 68 Hz. Sealed ~25 L. Pairs with the 15\" sub for the smaller stack; still crosses fine at 1.1 kHz." },
+  { id: "em3012", lb: 7.1, name: "Eminence KappaLite 3012HO", price: 250, src: "US Speaker, Sep 2026",
+    ts: { Fs: 52, Qts: 0.32, Qes: 0.33, Qms: 8.39, Vas: 81.1, Sd: 532, Xmax: 6.2, Re: 5.5, Bl: 15.9, Mms: 47, aes: 400 },
+    box: { w: 14, h: 14, d: 18 },
+    note: "[datasheet, loudspeakerdatabase.com] Neo, Fs 52 Hz, Qts 0.32, Vas 81 L, Xmax 6.2 mm, 400 W, 3 in coil, 7.1 lb. 97.1 dB/1W from those parameters (Eminence claim 99). [modelled] In 40 L sealed: Qtc 0.56, F3 ~120 Hz, so it meets a 120 Hz crossover with almost no shelf EQ. Needs 238 W for 115 dB at 1 m against the Nero-12's 416 W." },
+  { id: "18s12lw", lb: 20, name: "18Sound 12LW1400", price: null, src: "not priced yet", box: { w: 14, h: 14, d: 18 }, note: "AudioHorn's recommended 12 for the X-Shape 34." },
+];
+
+const MID_BOXES = [
+  { id: "b14", name: "14 × 14 × 18 in", box: { w: 14, h: 14, d: 18 }, note: "Within the RX-28's 14.2\" width limit at 1100 Hz." },
+  { id: "b13", name: "13 × 13 × 13 in", box: { w: 13, h: 13, d: 13 }, note: "Cube for a 10\" mid, ~25 L sealed." },
+  { id: "b15", pick: true, name: "15 × 15 × 15 in", box: { w: 15, h: 15, d: 15 }, note: "Cube. Exceeds the RX-28 width guidance; fine under a round ATH horn." },
+];
+
+const CD_OPTIONS = [
+  { id: "hf10ak", lb: 2, name: "Faital HF10AK (1\")", exit: 1, price: 282, src: "US Speaker", note: "Ketone polymer, 110 dB, 60 W AES, 1.3 kHz rec. crossover. Smooth; pair with RX-Shape 28." },
+  { id: "de250", lb: 3.3, name: "B&C DE250 (1\")", exit: 1, price: 170, src: "US Speaker", note: "Ferrite, 108.5 dB, 60 W AES, 1.6 kHz rec. crossover. The DIY standard; a bit high for the RX-28's 1.2 kHz." },
+  { id: "nd1tp", lb: 1.5, name: "18Sound ND1TP-16 (1\")", exit: 1, price: null, src: "EU order, price TBD", note: "AudioHorn's budget pick for the RX-28. 16 Ω version as specified; ships from Europe." },
+  { id: "nd1090", lb: 1.5, name: "18Sound ND1090-16 (1\")", exit: 1, price: null, src: "EU order, price TBD", note: "AudioHorn's measured driver on the RX-28. Also NSD1095N as the premium option." },
+  { id: "hf108", lb: 2, name: "Faital HF108 (1\")", exit: 1, price: 259, src: "Parts Express", note: "Marcel Batík's standard 1\" pairing for the A400G2/A460G2; measured polars on at-horns.eu." },
+  { id: "n314t", lb: 4.8, name: 'Eminence N314T-8 (1.4")', exit: 1.4, price: 249, src: "Parts Express, Sep 2026 (per Josh)", note: "3 in titanium diaphragm, D3 surround. Minimum crossover 800 Hz at 12 dB/oct, 110 dB, 100 W AES, 4.8 lb. Exit is a 7.3\u00b0 included conical flare, so an ATH throat adapter has to be generated for it \u2014 none published yet. The only driver here rated below 1 kHz." },
+  { id: "de360", lb: 3, pick: true, name: "B&C DE360 (1\")", exit: 1, price: 117, src: "Parts Express", note: "Ketone polymer 1\" measured on the ATH Gen2 waveguides. Sheet says 1.8 kHz min; ~1.1–1.3 kHz LR4 works on the A400G2, verify with a distortion sweep." },
+  { id: "lavoce171", lb: 1.5, name: "Lavoce DF10.171K (1\")", exit: 1, price: 109, src: "Parts Express", note: "Budget 1\" measured by Marcel Batík on ATH waveguides. Pair with the ST260 print." },
+  { id: "n151m", lb: 1, name: "Eminence N151M (1\")", exit: 1, price: 95, src: "Adorama / eBay (backordered)", note: "Ring radiator, 1.8 kHz rec. crossover, 45 W. Too high a crossover for a 12\"; listed for price reference only." },
+];
+
+const HORN_OPTIONS = [
+  { id: "rx28", lb: 2, name: "AudioHorn RX-Shape 28", exit: 1, price: 320, src: "audiohorn.net: 275€ PLA, 355€ PETG, plus shipping", size: { w: 13.3, h: 9.1, d: 6 }, driver: "18Sound ND1TP-16 / 1095N / 1090", xo: "1100–1200 Hz", note: "Free-standing 1\" horn for 10/12\" woofers. Supporting cabinet must be ~34 cm (13.4\") wide with a 4 mm roundover." },
+  { id: "st260", lb: 1, name: "ATH ST260 (printed)", exit: 1, profile: ST260_PROFILE, price: 40, src: "free STL; ~$40 filament self-printed, $80–150 via service", size: { w: 10.25, h: 10.25, d: 3.3 }, driver: "Lavoce DF10.171K / Faital HF108", xo: "1200–1500 Hz", note: "Round free-standing waveguide, ~110° coverage. No cabinet-width constraint." },
+  { id: "a400g2", lb: 2.5, pick: true, name: "ATH A400G2 (printed, approx.)", exit: 1, profile: ST260_PROFILE, scale: 400 / 260, price: 60, src: "free STL from at-horns.eu; ~$60 filament, more via service", size: { w: 15.75, h: 15.75, d: 5.1 }, driver: "Faital HF108 / B&C DE360 / Lavoce DF10.171K", xo: "800–1000 Hz", note: "Shown as the ST260 profile scaled 1.54×; the real Gen2 profile is deeper. 15.7\" round mouth." },
+  { id: "a460g2_14", lb: 3.5, name: "ATH A460G2 + 1.4 in adapter (printed, approx.)", exit: 1.4, profile: ST260_PROFILE, scale: 460 / 260, price: 80, src: "free STL from at-horns.eu; ~$80 filament, more via service", size: { w: 18.1, h: 18.1, d: 5.8 }, driver: "Eminence N314T-8 / SB Rosso-65CD-T / 18Sound ND3T", xo: "900\u20131000 Hz", note: "Same print as the A460G2 with a 36 mm throat adapter. 18.1 in mouth controls pattern to about 750 Hz, so it supports a 900 Hz\u20131 kHz crossover. Adapter must match the driver's exit angle (7.3\u00b0 for the N314T-8); Bat\u00edk publishes them per driver." },
+  { id: "a460g2", lb: 3.5, name: "ATH A460G2 (printed, approx.)", exit: 1, profile: ST260_PROFILE, scale: 460 / 260, price: 80, src: "free STL from at-horns.eu; ~$80 filament, more via service", size: { w: 18.1, h: 18.1, d: 5.8 }, driver: "1\" or 1.4\" via adapter; measured pairings on at-horns.eu", xo: "600–800 Hz", note: "Shown as the ST260 profile scaled 1.77×; the real Gen2 profile is deeper. 18.1\" round mouth, Marcel's pick for 1\" drivers." },
+  { id: "athRect", lb: 3.5, name: "Rectangular full-width waveguide (concept)", exit: 1, rect: true, price: 90, src: "would need generating in ATH and printing in sections", size: { w: 19, h: 11, d: 7 }, driver: "1\" with a 60 W class driver (DE250 / HF10AK)", xo: "~1.2 kHz", note: "Round 1\" throat morphing to a rounded rectangle as wide as the cabinet. Horizontal loading to ~710 Hz, vertical only to ~1.2 kHz. Wide horizontal, narrow vertical suits a dance floor. Drawn as a generic flare, not a real ATH profile." },
+  { id: "iwata600", lb: 2.5, name: "Iwata 600 (printed, approx.)", exit: 1, profile: ST260_PROFILE, scaleX: 290 / 260, scaleY: 185 / 260, scaleZ: 245 / 83, price: 50, src: "STL on Cults3D; ~$50 filament", size: { w: 11.4, h: 7.3, d: 9.6 }, driver: "B&C DE250 / Faital HF10AK", xo: "1200–1500 Hz", note: "Shown as the ST260 profile stretched to 290 × 185 × 245 mm deep; flare shape approximate. Elliptical 600 Hz horn, 1\" throat." },
+];
+
+// Prices are US dollars, checked Sep 2026, single unit, before tax/shipping.
+
+const RACKS = [
+  {
+    id: "mains", name: "Mains rack", note: "PA2 does the system tuning; each amp channel runs full-range with its own driver limiter.",
+    items: [
+      ["dbx DriveRack PA2 (used) — input EQ, master level, 6 outputs: XO, delay, driver EQ", 300],
+      ["dbx RTA-M mic — for the PA2's RTA/AutoEQ", 100],
+      ["QSC GXD8 (used) — subs, 800 W/ch at 8 Ω, limiter set by power + impedance", 600],
+      ["QSC GXD4 (used) — mids, 400 W/ch at 8 Ω", 400],
+      ["QSC GXD4 (used) — horns, gain trimmed, safety HPF ~500 Hz in the amp", 400],
+      ["Furman PL-8 / M-8x2 (used) — 1U 15 A power conditioner", 90],
+      ["Optional: GL.iNet travel router in the rack — PA2 app over its own Wi-Fi", 25],
+      ["8U rack case, 6× XLR looms, 1U blank panel on the rear rail with 4× NL4MP sockets", 250],
+    ],
+  },
+  {
+    id: "battery", name: "Battery rack", note: "~70% sub output, ~90% mids/highs; 5–7 h on a 1 kWh pack.",
+    items: [
+      ["48 V 20 Ah LiFePO4 pack + fused disconnect", 350],
+      ["miniDSP 2x4 HD (12 V) — copy of the dbx settings, run mono", 220],
+      ["2× TPA3255 boards bridged mono (Fosi/3e Audio) — subs", 180],
+      ["1× TPA3255 stereo board — mids", 90],
+      ["1× small Class D board — horns", 60],
+      ["48→12 V buck, wiring, panel-mount Speakon/XLR", 60],
+      ["Small flight case", 120],
+    ],
+  },
+  {
+    id: "shared", name: "Shared", note: "Travels with whichever rack is in use.",
+    items: [
+      ["UMIK-1 measurement mic + REW", 100],
+      ["6× XLR + 6× Speakon cables, Speakon panel jacks on all boxes", 120],
+    ],
+  },
+];
+
+const SWATCHES = [
+  ["#e8b4a8", "Dusty pink"],
+  ["#2b2725", "Near black"],
+  ["#c8cdc4", "Pale sage"],
+  ["#eeff00", "Acid yellow"],
+  ["#8fa3ad", "Slate blue"],
+  ["#b23a2f", "Oxide red"],
+  ["#efe8dc", "Bone"],
+  ["#4a5d4e", "Deep green"],
+];
+
+const CABINETS = [
+  { id: "column", name: "Upright column", vents: ["slots", "round1", "round2"],
+    dims: { 18: { w: 21, h: 35, d: 21 }, 15: { w: 19, h: 28, d: 19 } },
+    note: "Tallest, smallest footprint, stacks into itself. 174 L for an 18." },
+  { id: "compactColumn", name: "Compact column", vents: ["slots", "round1", "round2"],
+    dims: { 18: { w: 21, h: 31, d: 21 }, 15: { w: 19, h: 26, d: 19 } },
+    note: "The column at the compact volume. 155 L net, 4\" shorter and 6 lb lighter than the tall one for 0.9 dB at 35 Hz. Best duct hydraulic diameter of any option." },
+  { id: "blockTall", name: "Block, tall", vents: ["vslots"],
+    dims: { 18: { w: 25, h: 28, d: 24 }, 15: { w: 22, h: 25, d: 21 } },
+    note: "Full-height side ducts, no braces needed. 178 L for an 18." },
+  { id: "blockCompact", name: "Compact block", vents: ["vslots"],
+    dims: { 18: { w: 26, h: 26, d: 21 }, 15: { w: 22, h: 22, d: 19 } },
+    note: "Squarest of the vented blocks. 159 L net, Fb 34.3 Hz, 121.0 dB at 35 Hz. Two flared side ducts." },
+  { id: "wideCompact", name: "Compact wide", vents: ["vslots"],
+    dims: { 18: { w: 32, h: 22, d: 20 }, 15: { w: 27, h: 19, d: 18 } },
+    note: "Block-wide proportions at the compact volume. 159 L net, widest ducts of the compact set." },
+  { id: "blockWide", name: "Block, wide", vents: ["vwide"],
+    dims: { 18: { w: 32, h: 22, d: 24 }, 15: { w: 28, h: 20, d: 21 } },
+    note: "Low and wide, widest ducts of any version. 181 L for an 18." },
+  { id: "towerCol", name: "Tower column, 18 deep", vents: ["folded"],
+    dims: { 18: { w: 21, h: 37, d: 18 }, 15: { w: 19, h: 31, d: 16 } },
+    note: "For the Tower layout. 155 L net in an 18 in deep shell; the letterbox duct runs back along the floor and turns up the back wall to get its length." },
+  { id: "cube", name: "Cube", vents: ["round4"],
+    dims: { 18: { w: 25, h: 25, d: 25 }, 15: { w: 23, h: 23, d: 19 } },
+    note: "Square baffle, centred driver, corner ports. Reads the same in any rotation." },
+];
+
+const VENT_NAMES = {
+  slots: '3 slots along the bottom',
+  round1: '1 × 8" flared tube',
+  round2: '2 × 5" flared tubes',
+  vslots: 'Full-height side ducts',
+  vwide: 'Full-height side ducts',
+  round4: '4 flared corner tubes',
+  folded: '3 slots, folded up the back',
+};
+
+const FORMATS = [
+  { id: "full", name: 'Full — 18" sub, 12" mid', sub: 18, mid: 12,
+    note: "~110-123 lb sub depending on cabinet. System F3 ~37 Hz, ~121 dB at 35 Hz per box. The show system." },
+  { id: "mid", name: 'Middle — 15" sub, 12" mid', sub: 15, mid: 12,
+    note: "19 in square footprint, ~80 lb sub, 62 in stack. About 3 dB down on the 18. Best compromise if home use matters." },
+  { id: "compact", name: 'Compact — 15" sub, 10" mid', sub: 15, mid: 10,
+    note: "Smallest boxes, 10 in mid is 3 dB down on the 12. Fits a room; least headroom outdoors." },
+];
+
+const sortPicks = (arr) => [...arr].sort((a, b) => (b.pick ? 1 : 0) - (a.pick ? 1 : 0));
+[SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS].forEach((arr) => arr.splice(0, arr.length, ...sortPicks(arr)));
+
+// ---------------------------------------------------------------
+// Vented-box model. Same lumped-element circuit used to check this
+// design offline; see the provenance note under the table.
+// Complex helpers kept local and minimal.
+// ---------------------------------------------------------------
+const cx = (re, im = 0) => ({ re, im });
+const cadd = (a, b) => ({ re: a.re + b.re, im: a.im + b.im });
+const cmul = (a, b) => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re });
+const cdiv = (a, b) => { const d = b.re * b.re + b.im * b.im; return { re: (a.re * b.re + a.im * b.im) / d, im: (a.im * b.re - a.re * b.im) / d }; };
+const cinv = (a) => cdiv(cx(1), a);
+const cabs = (a) => Math.hypot(a.re, a.im);
+
+function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts) {
+  if (!ts || !VbL || !SpIn2 || LpIn <= 0) return null;
+  const rho = 1.18, c = 343;
+  const Sd = ts.Sd / 10000;                 // cm^2 -> m^2
+  const Mms = ts.Mms / 1000;                // g -> kg
+  const Vas = ts.Vas / 1000, Vb = VbL / 1000;
+  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
+  const Mas = Mms / (Sd * Sd);
+  const Cas = Cms * Sd * Sd;
+  const Ras = ((2 * Math.PI * ts.Fs * Mms) / ts.Qms) / (Sd * Sd);
+  const Rae = ((ts.Bl * ts.Bl) / ts.Re) / (Sd * Sd);
+  const Cab = Vb / (rho * c * c);
+  const Sp = SpIn2 * 0.00064516;
+  const reff = Math.sqrt(Sp / Math.PI);
+  const Leff = LpIn * 0.0254 + 1.46 * reff;  // both-end correction
+  const Map = (rho * Leff) / Sp;
+  const Fb = (c / (2 * Math.PI)) * Math.sqrt(Sp / (Vb * Leff));
+  const Ral = 7 / (2 * Math.PI * Fb * Cab);
+  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
+
+  const N = 420, out = [];
+  for (let i = 0; i < N; i++) {
+    const f = 12 * Math.pow(300 / 12, i / (N - 1));
+    const w = 2 * Math.PI * f, s = cx(0, w);
+    const Zd = cadd(cx(Ras + Rae), cadd(cmul(s, cx(Mas)), cinv(cmul(s, cx(Cas)))));
+    const Zc = cinv(cmul(s, cx(Cab)));
+    const Zp = cadd(cmul(s, cx(Map)), cx(0.3));
+    const Zbox = cinv(cadd(cadd(cinv(Zc), cinv(Zp)), cinv(cx(Ral))));
+    const Ud = cdiv(cx(Pg), cadd(Zd, Zbox));
+    const Up = cdiv(cmul(Ud, Zbox), Zp);
+    const Ut = { re: Ud.re - Up.re, im: Ud.im - Up.im };
+    const hp = Math.pow(f / hpf, 4) / Math.sqrt(1 + Math.pow(f / hpf, 8));  // BW24
+    const p = (rho * w * cabs(Ut)) / (2 * Math.PI);
+    out.push({ f, spl: 20 * Math.log10((p * hp) / 2e-5),
+               xmm: (cabs(Ud) / (w * Sd)) * hp * 1000,
+               vel: (cabs(Up) / Sp) * hp });
+  }
+  const band = out.filter((o) => o.f > 80 && o.f < 200);
+  const ref = band.reduce((a, o) => a + o.spl, 0) / band.length;
+  const f3 = (out.find((o) => o.spl >= ref - 3) || out[0]).f;
+  const at = (t) => out.reduce((b, o) => (Math.abs(o.f - t) < Math.abs(b.f - t) ? o : b));
+  const lo = out.filter((o) => o.f > 20 && o.f < 90);
+  return {
+    Fb, f3, ref,
+    spl35: at(35).spl, spl45: at(45).spl,
+    peakVel: Math.max(...lo.map((o) => o.vel)),
+    peakVelF: lo.reduce((b, o) => (o.vel > b.vel ? o : b)).f,
+    peakX: Math.max(...lo.map((o) => o.xmm)),
+    xmaxPct: (Math.max(...lo.map((o) => o.xmm)) / ts.Xmax) * 100,
+  };
+}
+
+const inToL = (w, h, d) => ((w - 2 * PLY) * (h - 2 * PLY) * (d - 2 * PLY) * 16.387) / 1000;
+
+// ---------------------------------------------------------------
+// 3D view
+// ---------------------------------------------------------------
+function StackView({ sub, mid, horn, plinth, cutaway, braceStyle, portStyle, layout, subHoriz, baffleColor }) {
+  const mount = useRef(null);
+  const state = useRef({ rotY: 0.6, rotX: 0.35, drag: false, lx: 0, ly: 0 });
+
+  useEffect(() => {
+    const el = mount.current;
+    const W = el.clientWidth || 640, H = el.clientHeight || 560;
+    const scene = new THREE.Scene();
+    const cam = new THREE.PerspectiveCamera(32, W / H, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(W, H);
+    el.appendChild(renderer.domElement);
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x777766, 1.1));
+    const key = new THREE.DirectionalLight(0xffffff, 0.6);
+    key.position.set(40, 80, 30);
+    scene.add(key);
+
+    const birch = new THREE.MeshStandardMaterial({ color: 0xd7b98a, roughness: 0.85 });
+    const edge = new THREE.LineBasicMaterial({ color: 0x5a4a30 });
+    const black = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.9 });
+    const cream = new THREE.MeshStandardMaterial({ color: 0xece4c8, roughness: 0.55 });
+    const painted = new THREE.MeshStandardMaterial({ color: new THREE.Color(baffleColor), roughness: 0.9 });
+    const ghost = new THREE.MeshStandardMaterial({ color: 0xd7b98a, roughness: 0.9, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide });
+    const shellMat = cutaway ? ghost : birch;
+    const plyIn = new THREE.MeshStandardMaterial({ color: 0xc9a875, roughness: 0.9 });
+    const hardwood = new THREE.MeshStandardMaterial({ color: 0xa8763c, roughness: 0.6 });
+    const portMat = new THREE.MeshStandardMaterial({ color: 0x8a7458, roughness: 0.95, side: THREE.DoubleSide });
+    const baffleMat = cutaway ? new THREE.MeshStandardMaterial({ color: new THREE.Color(baffleColor), roughness: 0.9, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }) : painted;
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    // cabinet: four perimeter panels with 1/4" roundovers front and back,
+    // baffle set back 3/4" on cleats, painted. Returns the z of the baffle face.
+    const T = 0.75, REVEAL = 0.75, RO = 0.25;
+    const rr = (w, h, r) => {
+      const x = w / 2, y = h / 2, sh = new THREE.Shape();
+      sh.moveTo(-x + r, -y);
+      sh.lineTo(x - r, -y); sh.quadraticCurveTo(x, -y, x, -y + r);
+      sh.lineTo(x, y - r); sh.quadraticCurveTo(x, y, x - r, y);
+      sh.lineTo(-x + r, y); sh.quadraticCurveTo(-x, y, -x, y - r);
+      sh.lineTo(-x, -y + r); sh.quadraticCurveTo(-x, -y, -x + r, -y);
+      return sh;
+    };
+    const rectPath = (cx, cy, w, h, r) => {
+      const x = w / 2, y = h / 2, p = new THREE.Path();
+      p.moveTo(cx - x + r, cy - y);
+      p.lineTo(cx + x - r, cy - y); p.quadraticCurveTo(cx + x, cy - y, cx + x, cy - y + r);
+      p.lineTo(cx + x, cy + y - r); p.quadraticCurveTo(cx + x, cy + y, cx + x - r, cy + y);
+      p.lineTo(cx - x + r, cy + y); p.quadraticCurveTo(cx - x, cy + y, cx - x, cy + y - r);
+      p.lineTo(cx - x, cy - y + r); p.quadraticCurveTo(cx - x, cy - y, cx - x + r, cy - y);
+      return p;
+    };
+    const circPath = (cx, cy, r) => { const p = new THREE.Path(); p.absarc(cx, cy, r, 0, Math.PI * 2, true); return p; };
+    const cabinet = (w, h, d, y, holes, baffleBottom = 0, x = 0, parent = group) => {
+      const iw = w - 2 * T, ih = h - 2 * T - baffleBottom;
+      const shape = rr(w, h, RO * 1.5);
+      shape.holes.push(rr(iw + 2 * RO, h - 2 * T + 2 * RO, 0.12));
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: d - 2 * RO, bevelEnabled: true, bevelSize: RO, bevelThickness: RO, bevelSegments: 4,
+      });
+      const frame = new THREE.Mesh(geo, shellMat);
+      frame.position.set(x, y + h / 2, -d / 2 + RO);
+      parent.add(frame);
+      const bshape = rr(iw, ih, 0.12);
+      (holes || []).forEach((hp) => bshape.holes.push(hp));
+      const baffle = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(bshape, { depth: T, bevelEnabled: false }),
+        [baffleMat, cutaway ? baffleMat : plyIn] // caps painted, cut edges left as bare ply
+      );
+      baffle.position.set(x, y + T + baffleBottom + ih / 2, d / 2 - REVEAL - T);
+      parent.add(baffle);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(iw, h - 2 * T, T), shellMat);
+      back.position.set(x, y + h / 2, -d / 2 + T / 2);
+      parent.add(back);
+      return d / 2 - REVEAL;
+    };
+    // Same construction with a semicircular top the full width of the cabinet.
+    // Holes use the same baffle-centred coordinates as cabinet().
+    const archOutline = (P, hw, yb, acy, r) => {
+      P.moveTo(-hw, yb); P.lineTo(hw, yb); P.lineTo(hw, acy);
+      P.absarc(0, acy, r, 0, Math.PI, false); P.lineTo(-hw, yb);
+      return P;
+    };
+    const archCabinet = (w, h, d, y, holes, baffleBottom = 0, x = 0, parent = group) => {
+      const R = w / 2, acy = h / 2 - R;                  // arch centre, frame-centred coords
+      const shape = archOutline(new THREE.Shape(), R, -h / 2, acy, R);
+      shape.holes.push(archOutline(new THREE.Path(), R - T + RO, -h / 2 + T - RO, acy, R - T + RO));
+      const frame = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {
+        depth: d - 2 * RO, bevelEnabled: true, bevelSize: RO, bevelThickness: RO, bevelSegments: 4,
+        curveSegments: 48 }), shellMat);
+      frame.position.set(x, y + h / 2, -d / 2 + RO);
+      parent.add(frame);
+      const ih = h - 2 * T - baffleBottom, bcy = y + T + baffleBottom + ih / 2;
+      const bshape = archOutline(new THREE.Shape(), R - T, -ih / 2, (y + h - R) - bcy, R - T);
+      (holes || []).forEach((hp) => bshape.holes.push(hp));
+      const baffle = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(bshape, { depth: T, bevelEnabled: false, curveSegments: 48 }),
+        [baffleMat, cutaway ? baffleMat : plyIn]);
+      baffle.position.set(x, bcy, d / 2 - REVEAL - T);
+      parent.add(baffle);
+      const bk = archOutline(new THREE.Shape(), R - T, -h / 2 + T, acy, R - T);
+      const back = new THREE.Mesh(new THREE.ExtrudeGeometry(bk, { depth: T, bevelEnabled: false, curveSegments: 48 }), shellMat);
+      back.position.set(x, y + h / 2, -d / 2);
+      parent.add(back);
+      return d / 2 - REVEAL;
+    };
+    const cone = (r, y, z, x = 0, parent = group) => {
+      if (cutaway) return;
+      // membrane: a filled disc just behind the baffle face
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(r * 0.99, 48), black);
+      disc.position.set(x, y, z - 0.3);
+      parent.add(disc);
+      // shallow cone from the surround down to the dust cap
+      const c = new THREE.Mesh(new THREE.ConeGeometry(r * 0.9, r * 0.22, 48, 1, true), black);
+      c.rotation.x = -Math.PI / 2;
+      c.position.set(x, y, z - 0.3 - r * 0.11);
+      parent.add(c);
+      const surround = new THREE.Mesh(new THREE.TorusGeometry(r * 0.93, r * 0.055, 12, 48), black);
+      surround.position.set(x, y, z - 0.18);
+      parent.add(surround);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(r * 0.26, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), black);
+      cap.scale.set(1, 0.45, 1);
+      cap.rotation.x = Math.PI / 2;
+      cap.position.set(x, y, z - 0.42);
+      parent.add(cap);
+    };
+
+    const horiz = subHoriz;
+    const subGroup = new THREE.Group();
+    group.add(subGroup);
+    // plinth / toe-kick, inset so the column appears to float
+    // the 4-corner port needs a square baffle, so it implies the symmetric box
+    const cornerPort = portStyle === "round4";
+    const vSlot = portStyle === "vslots" || portStyle === "vwide";
+    const vWide = portStyle === "vwide";
+    const s = sub.box;
+    const pl = subHoriz ? 0 : plinth || 0;
+    if (pl > 0) {
+      const p = new THREE.Mesh(new THREE.BoxGeometry(s.w - 3, pl, s.d - 3), birch);
+      p.position.set(0, pl / 2, 0);
+      subGroup.add(p);
+    }
+    // sub column: driver cutout high on the baffle, three duct cutouts across the bottom
+    const ductH = 3, innerW = s.w - 2 * T, ductW = (innerW - 2 * T) / 3;
+    const drvR = sub.size / 2 - 0.9;
+    const round = !["slots", "folded", "vslots", "vwide"].includes(portStyle); // round-tube ports only
+    // one place that decides the box's shape and what internal structure it needs
+    const boxKind = vSlot ? "block" : cornerPort ? "cube" : "column";
+    const corners = portStyle === "round4";
+    const nPorts = portStyle === "round1" ? 1 : corners ? 4 : 2;
+    const portR = (portStyle === "round1" ? 8 : corners ? (sub.size >= 18 ? 4 : 3.5) : 5) / 2;
+    const bandH = round || vSlot ? 0 : ductH + T;           // slots: baffle starts above the duct shelf
+    // Tower: one shell and one continuous baffle; sections are divided internally.
+    const towerMode = layout === "tower";
+    const TW_MID = 15.5;
+    const archTop = towerMode && !!horn.profile && !horn.scaleX && s.w / 2 - T > horn.size.w / 2;
+    // arched: horn centred on the arch, equal margin below and around it
+    const twHsH = archTop ? (s.w / 2 - T) + s.w / 2 : horn.size.h + 2;
+    const extH = towerMode ? TW_MID + twHsH : 0;
+    const baffleH = s.h + extH - 2 * T - bandH;
+    const baffleCy = pl + T + bandH + baffleH / 2; // absolute centre of the baffle
+    const drvAbsY = corners || vSlot ? pl + s.h / 2 : pl + s.h - T - innerW / 2; // centred when symmetric
+    const holes = [circPath(0, drvAbsY - baffleCy, drvR)];
+    let portCy = 0;
+    if (round) {
+      // 8" sits low on the baffle; 5" pair centred 10" up
+      portCy = corners ? 0 : (portStyle === "round1" ? pl + T + portR + 0.75 + 1 : pl + 10) - baffleCy;
+      if (corners) {
+        const off = innerW / 2 - portR - 0.75 - 0.4;
+        [-1, 1].forEach((kx) => [-1, 1].forEach((ky) => holes.push(circPath(kx * off, ky * off, portR))));
+      } else if (nPorts === 1) holes.push(circPath(0, portCy, portR));
+      else [-1, 1].forEach((k) => holes.push(circPath(k * (portR + 2.6), portCy, portR)));
+    }
+    if (vSlot) {
+      // full-height ducts using the side walls as their outer face
+      const slotH = s.h - 2 * T;
+      const throat = Math.round(((sub.size >= 18 ? 66 : 54) / (2 * slotH)) * 100) / 100;
+      const mouth = throat + 0.43;                 // flat strip set at 20 deg: 0.43 in rise
+      const sx = innerW / 2 - mouth / 2;
+      [-1, 1].forEach((k) => holes.push(rectPath(k * sx, pl + s.h / 2 - baffleCy, mouth, slotH, 0.12)));
+    }
+    if (towerMode) {
+      holes.push(circPath(0, pl + s.h + TW_MID / 2 - baffleCy, (mid.size || 12) / 2 - 0.9));
+      const hy = (archTop ? pl + s.h + TW_MID + (s.w / 2 - T) : pl + s.h + TW_MID + twHsH / 2) - baffleCy;
+      holes.push(horn.rect ? rectPath(0, hy, innerW - 1, horn.size.h, 1.2)
+        : horn.profile ? circPath(0, hy, Math.min(horn.size.w, horn.size.h) / 2 - 0.2)
+        : rectPath(0, hy, horn.size.w, horn.size.h, 1));
+    }
+    const subZ = (archTop ? archCabinet : cabinet)(s.w, s.h + extH, s.d, pl, holes, bandH, 0, subGroup);
+    if (towerMode) {
+      // internal partitions: sub/mid floor, mid/horn floor, and the mid chamber's back wall
+      const zF = s.d / 2 - REVEAL - T, zB = -s.d / 2 + T, dep = zF - zB;
+      [pl + s.h - T / 2, pl + s.h + TW_MID - T / 2].forEach((py) => {
+        const pp = new THREE.Mesh(new THREE.BoxGeometry(innerW, T, dep), plyIn);
+        pp.position.set(0, py, (zF + zB) / 2);
+        subGroup.add(pp);
+      });
+    }
+    if (vSlot) {
+      // Full-height duct against each side wall. The inner wall is a constant
+      // thickness panel chamfered 20 deg at both ends, so the duct runs a
+      // straight throat with a flared mouth front and rear.
+      const slotH = s.h - 2 * T;
+      const throat = Math.round(((sub.size >= 18 ? 66 : 54) / (2 * slotH)) * 100) / 100;
+      const mouth = throat + 0.43;
+      const FL = 0.43 / Math.tan((20 * Math.PI) / 180);   // 1.18 in along the duct
+      const yc = pl + s.h / 2;
+      const zf = s.d / 2;                                  // duct mouth, flush with the frame face
+      const zb = -s.d / 2 + T;                             // inside face of the back panel
+      const zr = zb + throat;                              // rear end of the duct; gap = throat width
+      const sideLen = zf - zr;
+
+      [-1, 1].forEach((k) => {
+        const xo = k * (innerW / 2);                       // inside face of the side wall
+        const xT = xo - k * throat;                        // duct face at the throat
+        const xM = xo - k * mouth;                         // duct face at a flared end
+        // profile in world XZ; shape coords are (x, -z) so the extrusion runs along +Y
+        const sh = new THREE.Shape();
+        sh.moveTo(xM, -zf);
+        sh.lineTo(xT, -(zf - FL));
+        sh.lineTo(xT, -(zr + FL));
+        sh.lineTo(xM, -zr);
+        sh.lineTo(xM - k * T, -zr);
+        sh.lineTo(xT - k * T, -(zr + FL));
+        sh.lineTo(xT - k * T, -(zf - FL));
+        sh.lineTo(xM - k * T, -zf);
+        sh.closePath();
+        const wall = new THREE.Mesh(
+          new THREE.ExtrudeGeometry(sh, { depth: slotH, bevelEnabled: false }), plyIn);
+        wall.rotation.x = -Math.PI / 2;
+        wall.position.set(0, yc - slotH / 2, 0);
+        subGroup.add(wall);
+
+        // two 1/2 in dividers per duct, bracing the inner wall to the side wall
+        [-1, 1].forEach((f) => {
+          const div = new THREE.Mesh(new THREE.BoxGeometry(throat, 0.5, sideLen), plyIn);
+          div.position.set(k * (innerW / 2 - throat / 2), yc + (f * slotH) / 6, zr + sideLen / 2);
+          subGroup.add(div);
+        });
+      });
+        } else if (!round) {
+      // duct mouths sit flush with the frame face; the box bottom is the duct floor
+      const band = rr(innerW, bandH, 0.12);
+      for (let k = -1; k <= 1; k++) band.holes.push(rectPath(k * (ductW + T), -T / 2, ductW, ductH, 0.25));
+      const nose = new THREE.Mesh(new THREE.ExtrudeGeometry(band, { depth: REVEAL, bevelEnabled: false }), shellMat);
+      nose.position.set(0, pl + T + bandH / 2, s.d / 2 - REVEAL);
+      subGroup.add(nose);
+    } else {
+      // flared tubes behind the baffle: bell, straight section, inner bell
+      const tubeLen = portStyle === "round1" ? 11 : corners ? 11.5 : 9.8;
+      const off = innerW / 2 - portR - 0.75 - 0.4;
+      const spots = corners
+        ? [[-off, -off], [off, -off], [-off, off], [off, off]].map(([a, b]) => [a, pl + s.h / 2 + b])
+        : (nPorts === 1 ? [0] : [-(portR + 2.6), portR + 2.6]).map((a) => [a, baffleCy + portCy]);
+      spots.forEach(([x, yy]) => {
+        const tube = new THREE.Mesh(new THREE.CylinderGeometry(portR, portR, tubeLen, 32, 1, true), portMat);
+        tube.rotation.x = Math.PI / 2;
+        tube.position.set(x, yy, subZ - tubeLen / 2); // starts at the baffle face, runs back
+        subGroup.add(tube);
+        // quarter-round flares, tangent to the tube at the throat
+        const RB = 0.75, seg = 10;
+        const prof = [];
+        for (let i = 0; i <= seg; i++) {
+          const t = (i / seg) * (Math.PI / 2);
+          prof.push(new THREE.Vector2(portR + RB * (1 - Math.cos(t)), RB * Math.sin(t)));
+        }
+        [[subZ, 1], [subZ - tubeLen, -1]].forEach(([z, dir]) => {
+          const bell = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), portMat);
+          bell.rotation.x = dir > 0 ? Math.PI / 2 : -Math.PI / 2; // opens away from the tube at each end
+          bell.position.set(x, yy, z);
+          subGroup.add(bell);
+        });
+      });
+    }
+    cone(drvR, drvAbsY, subZ, 0, subGroup);
+    // duct structure inside: top shelf, two fins (slot version only)
+    const ductLen = s.d - T - 3; // from the frame face back, 3" turning gap
+    if (portStyle === "folded") {
+      // floor leg to a rear channel, then up the back wall; open at the top of the rear channel
+      const bz = -s.d / 2 + T;                          // inside face of the back panel
+      const wallZ = bz + ductH + T / 2;                 // rear channel's front wall
+      const roofLen = s.d / 2 - (wallZ + T / 2);
+      const roofZ = s.d / 2 - roofLen / 2;
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(innerW, T, roofLen), plyIn);
+      roof.position.set(0, pl + T + ductH + T / 2, roofZ);
+      subGroup.add(roof);
+      [-1, 1].forEach((k) => {
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(T, ductH, roofLen), plyIn);
+        fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, roofZ);
+        subGroup.add(fin);
+      });
+      const RISE_UP = 4.5;                              // rear leg above the floor leg's roof
+      const rw = new THREE.Mesh(new THREE.BoxGeometry(innerW, ductH + T + RISE_UP, T), plyIn);
+      rw.position.set(0, pl + T + ductH + T + RISE_UP / 2 - (ductH + T) / 2 + (ductH + T) / 2, wallZ);
+      rw.position.y = pl + T + ductH / 2 + (ductH + T + RISE_UP) / 2 - ductH / 2;
+      subGroup.add(rw);
+    }
+    if (portStyle === "slots") {
+    const ductZ = s.d / 2 - ductLen / 2;
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(innerW, T, ductLen), plyIn);
+    shelf.position.set(0, pl + T + ductH + T / 2, ductZ);
+    subGroup.add(shelf);
+    [-1, 1].forEach((k) => {
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(T, ductH, ductLen), plyIn);
+      fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, ductZ);
+      subGroup.add(fin);
+    });
+    }
+    const innerD = s.d - REVEAL - 2 * T;
+    const braceZ = subZ - T - innerD / 2;
+    const frontZ = subZ - T, backZ = -s.d / 2 + T;
+    if (boxKind === "block") {
+      // no shelves: each duct is a closed section running the full depth and around the rear corner,
+      // tying the sides, top, bottom and back together on its own
+    } else if (boxKind === "cube") {
+      // one windowed shelf at mid height, passing between the corner tubes
+      if (braceStyle !== "none") {
+        const cs = rr(innerW, innerD, 0.12);
+        cs.holes.push(rr(innerW - 6, innerD - 6, 1.5));
+        const cm = new THREE.Mesh(new THREE.ExtrudeGeometry(cs, { depth: T, bevelEnabled: false }), plyIn);
+        cm.rotation.x = -Math.PI / 2;
+        cm.position.set(0, pl + s.h / 2, braceZ);
+        subGroup.add(cm);
+      }
+    } else if (braceStyle === "shelf2") {
+      const lo = rr(innerW, innerD, 0.12);
+      lo.holes.push(rr(innerW - 5, innerD - 5, 1.5));
+      const loM = new THREE.Mesh(new THREE.ExtrudeGeometry(lo, { depth: T, bevelEnabled: false }), plyIn);
+      loM.rotation.x = -Math.PI / 2;
+      const portTop = portStyle === "round1" ? pl + T + 2 * (portR + 0.75) + 1 : portStyle === "round2" ? pl + 10 + portR + 0.75 : pl + T + ductH + T;
+      const loY = portStyle === "slots" || portStyle === "folded" ? pl + 11.5 : (portTop + (drvAbsY - drvR)) / 2;
+      loM.position.set(0, loY, braceZ);
+      subGroup.add(loM);
+      const UD = 9;
+      const hi = rr(innerW, UD, 0.12);
+      hi.holes.push(rr(innerW - 5, UD - 4, 1.2));
+      const hiM = new THREE.Mesh(new THREE.ExtrudeGeometry(hi, { depth: T, bevelEnabled: false }), plyIn);
+      hiM.rotation.x = -Math.PI / 2;
+      hiM.position.set(0, pl + s.h * 0.69, backZ + UD / 2);
+      subGroup.add(hiM);
+    }
+
+    // mid cube: on the sub, or on round columns either side of it
+    const tower = layout === "tower";
+    // Tower: one enclosure per side. The mid chamber and horn section share the
+    // sub's footprint and sit directly on it, so the three read as one cabinet.
+    const m = tower ? { w: s.w, h: 15.5, d: s.d } : mid.box;
+    const gap = 0.4;
+    const sat = layout === "satellite";
+    const pole = layout === "pole";
+    const COL_D = 8, COL_H = 34;                       // column diameter and height
+    const satX = s.w / 2 + COL_D / 2 + 6;              // columns clear of the sub
+    const subTop = (horiz ? s.w : pl + s.h);
+    const POLE_RISE = 20;                              // exposed pole above the sub top
+    const midBaseY = sat ? COL_H : pole ? subTop + POLE_RISE : tower ? subTop : subTop + gap;
+    const midXs = sat ? [-satX, satX] : [0];
+    if (pole) {
+      // Three-post spacer: 6 in discs top and bottom, three 1.25 in posts on a
+      // 4 in circle, 35 mm spigots into the cabinets at each end.
+      const DR = 3, DT = 1, PR = 0.625, PCIRC = 2, SPIG = 0.69;
+      const yBot = subTop, yTop = subTop + POLE_RISE;
+      [yBot + DT / 2, yTop - DT / 2].forEach((y) => {
+        const d = new THREE.Mesh(new THREE.CylinderGeometry(DR, DR, DT, 44), hardwood);
+        d.position.set(0, y, 0);
+        subGroup.add(d);
+      });
+      const postLen = POLE_RISE - 2 * DT;
+      for (let i = 0; i < 3; i++) {
+        const a = (i * 2 * Math.PI) / 3 + Math.PI / 6;
+        const p = new THREE.Mesh(new THREE.CylinderGeometry(PR, PR, postLen, 28), hardwood);
+        p.position.set(PCIRC * Math.cos(a), yBot + DT + postLen / 2, PCIRC * Math.sin(a));
+        subGroup.add(p);
+        // threaded rod up the middle of each post, visible in cutaway
+        const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, POLE_RISE, 12), black);
+        rod.position.set(PCIRC * Math.cos(a), yBot + POLE_RISE / 2, PCIRC * Math.sin(a));
+        subGroup.add(rod);
+      }
+      // spigots buried in each cabinet
+      [[yBot - 1.25, 2.5], [yTop + 1.25, 2.5]].forEach(([y, len]) => {
+        const sp = new THREE.Mesh(new THREE.CylinderGeometry(SPIG, SPIG, len, 20), black);
+        sp.position.set(0, y, 0);
+        subGroup.add(sp);
+      });
+    }
+    if (sat) {
+      midXs.forEach((x) => {
+        const col = new THREE.Mesh(new THREE.CylinderGeometry(COL_D / 2, COL_D / 2, COL_H, 40), birch);
+        col.position.set(x, COL_H / 2, 0);
+        group.add(col);
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(COL_D / 2 + 1, COL_D / 2 + 1, 1, 40), birch);
+        cap.position.set(x, COL_H + 0.5, 0);
+        group.add(cap);
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(COL_D / 2 + 2.5, COL_D / 2 + 2.5, 1.5, 40), birch);
+        base.position.set(x, 0.75, 0);
+        group.add(base);
+      });
+    }
+    let midZ = 0;
+    midXs.forEach((x) => {
+      midZ = tower ? subZ : cabinet(m.w, m.h, m.d, midBaseY, [circPath(0, 0, (mid.size || 12) / 2 - 0.9)], 0, x);
+      cone((mid.size || 12) / 2 - 0.9, midBaseY + m.h / 2, midZ, x);
+    });
+
+    // horn
+    const hz = horn.size;
+    const hornY = midBaseY + m.h;
+    let hornCY = null, hornZ = null;
+    if (tower) {
+      hornCY = archTop ? hornY + (s.w / 2 - T) : hornY + (hz.h + 2) / 2;
+      hornZ = subZ - hz.d + 0.2;            // mouth flush with the shared baffle face
+    }
+    if (!horn.profile && !horn.rect && !tower) {
+      const stand = new THREE.Mesh(new THREE.BoxGeometry(hz.w * 0.5, 1.2, hz.d * 0.5), black);
+      stand.position.set(midXs[0], hornY + 0.6, 0);
+      group.add(stand);
+    }
+    const rectHornGeo = (mw, mh, depth, tr = 0.5) => {
+      const NS = 40, NP = 112, pos = [], idx = [];
+      for (let i = 0; i <= NS; i++) {
+        const t = i / NS, g = Math.pow(t, 1.7);
+        const a = tr + (mw / 2 - tr) * g, b = tr + (mh / 2 - tr) * g;
+        const n = 2 + 7 * Math.pow(t, 1.4);          // superellipse exponent: circle -> squarish
+        for (let j = 0; j < NP; j++) {
+          const th = (j / NP) * Math.PI * 2, c = Math.cos(th), sn = Math.sin(th);
+          pos.push(a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n),
+                   b * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / n), depth * t);
+        }
+      }
+      for (let i = 0; i < NS; i++) for (let j = 0; j < NP; j++) {
+        const a0 = i * NP + j, a1 = i * NP + ((j + 1) % NP);
+        idx.push(a0, a0 + NP, a1, a1, a0 + NP, a1 + NP);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      geo.setIndex(idx); geo.computeVertexNormals();
+      return geo;
+    };
+    midXs.forEach((hx) => {
+    if (horn.rect) {
+      const mw = tower ? innerW - 1 : m.w;
+      const rm = new THREE.Mesh(rectHornGeo(mw, hz.h, hz.d),
+        new THREE.MeshStandardMaterial({ color: 0xece4c8, roughness: 0.55, side: THREE.DoubleSide }));
+      rm.position.set(hx, tower ? hornCY : hornY + hz.h / 2 + 0.3, tower ? hornZ : m.d / 2 - hz.d + 1);
+      group.add(rm);
+      const th = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
+      th.rotation.x = Math.PI / 2; th.position.set(hx, rm.position.y, rm.position.z - 2); group.add(th);
+    } else if (horn.profile) {
+      const sc = horn.scale || 1;
+      const pts = horn.profile.map(([r, x]) => new THREE.Vector2(r * sc, x * sc));
+      const lathe = new THREE.LatheGeometry(pts, 96);
+      const lm = new THREE.Mesh(lathe, new THREE.MeshStandardMaterial({ color: 0xece4c8, roughness: 0.55, side: THREE.DoubleSide }));
+      lm.rotation.x = Math.PI / 2; // lathe axis (y) -> z, mouth toward +z
+      if (horn.scaleX || horn.scaleY || horn.scaleZ) lm.scale.set(horn.scaleX || 1, horn.scaleZ || 1, horn.scaleY || 1); // local x=width, y=depth, z=height
+      lm.position.set(hx, tower ? hornCY : hornY + hz.h / 2 + 0.3, tower ? hornZ : m.d / 2 - hz.d + 1);
+      group.add(lm);
+      const th = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
+      th.rotation.x = Math.PI / 2; th.position.set(hx, lm.position.y, tower ? hornZ - 2 : -2.2); group.add(th);
+    } else {
+    const hornShape = new THREE.Shape();
+    const rw = hz.w / 2, rh = hz.h / 2, r = Math.min(rw, rh) * 0.5;
+    hornShape.moveTo(-rw + r, -rh);
+    hornShape.lineTo(rw - r, -rh); hornShape.quadraticCurveTo(rw, -rh, rw, -rh + r);
+    hornShape.lineTo(rw, rh - r); hornShape.quadraticCurveTo(rw, rh, rw - r, rh);
+    hornShape.lineTo(-rw + r, rh); hornShape.quadraticCurveTo(-rw, rh, -rw, rh - r);
+    hornShape.lineTo(-rw, -rh + r); hornShape.quadraticCurveTo(-rw, -rh, -rw + r, -rh);
+    const hornGeo = new THREE.ExtrudeGeometry(hornShape, { depth: hz.d, bevelEnabled: true, bevelSize: 1.6, bevelThickness: 1.2, bevelSegments: 6 });
+    const hornMesh = new THREE.Mesh(hornGeo, cream);
+    hornMesh.position.set(hx, tower ? hornCY : hornY + 1.2 + rh + 1, tower ? hornZ : -hz.d / 2 + 2);
+    group.add(hornMesh);
+    const throat = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
+    throat.rotation.x = Math.PI / 2;
+    throat.position.set(hx, hornMesh.position.y, tower ? hornZ - 2.5 : -hz.d / 2 - 0.5);
+    group.add(throat);
+    }
+    });
+
+    // 5 ft 9 in scale figure: standard pictogram silhouette, billboarded
+    const figure = (() => {
+      const H = 69, u = H / 100;
+      const g = new THREE.Group();
+      const mat = new THREE.MeshBasicMaterial({ color: 0x8b847d, transparent: true, opacity: 0.38, side: THREE.DoubleSide });
+      const body = new THREE.Shape();
+      const P = [
+        [6.5, 85], [10.0, 82], [11.0, 70], [8.0, 50], [6.5, 30], [5.5, 1],
+        [1.0, 1], [0, 40], [-1.0, 1], [-5.5, 1], [-6.5, 30], [-8.0, 50],
+        [-11.0, 70], [-10.0, 82], [-6.5, 85],
+      ];
+      body.moveTo(P[0][0] * u, P[0][1] * u);
+      P.slice(1).forEach(([x, y]) => body.lineTo(x * u, y * u));
+      body.closePath();
+      g.add(new THREE.Mesh(new THREE.ShapeGeometry(body), mat));
+      const head = new THREE.Shape();
+      head.absarc(0, 92.5 * u, 6 * u, 0, Math.PI * 2, false);
+      g.add(new THREE.Mesh(new THREE.ShapeGeometry(head), mat));
+      g.position.set(-s.w * 1.4, 0, 3);
+      group.add(g);
+      return g;
+    })();
+
+    // floor
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0xf2eee6, roughness: 1 }));
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+    scene.add(new THREE.GridHelper(120, 10, 0xd9d2c4, 0xe6e0d4));
+
+    group.position.y = 0;
+
+    // Frame from the real bounding box so nothing is cropped at any aspect
+    // ratio. The horizontal radius is taken as the diagonal of the footprint
+    // so the fit holds through a full rotation rather than only head-on.
+    const bbox = new THREE.Box3().setFromObject(group);
+    const bc = bbox.getCenter(new THREE.Vector3());
+    const bs = bbox.getSize(new THREE.Vector3());
+    const target = new THREE.Vector3(bc.x, bc.y, bc.z);
+    const halfH = bs.y / 2;
+    const halfW = Math.sqrt(bs.x * bs.x + bs.z * bs.z) / 2;
+    const tanV = Math.tan((cam.fov * Math.PI) / 360);
+    let baseDist = halfH / tanV;
+    const fit = (aspect) => {
+      baseDist = Math.max(halfH / tanV, halfW / (aspect * tanV)) * 1.18;
+    };
+    fit(W / H);
+
+    const st = state.current;
+    if (st.zoom == null) st.zoom = 1;
+
+    // Pointer handling. touch-action on the canvas is pan-y, so a mostly
+    // vertical swipe scrolls the page and anything else reaches us here.
+    const pts = new Map();
+    let pinch0 = 0, zoom0 = 1;
+
+    const onDown = (e) => {
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      try { el.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
+      if (pts.size === 2) {
+        const [a, b] = [...pts.values()];
+        pinch0 = Math.hypot(a.x - b.x, a.y - b.y);
+        zoom0 = st.zoom;
+      }
+      st.drag = true; st.lx = e.clientX; st.ly = e.clientY;
+    };
+
+    const onMove = (e) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size >= 2) {
+        const [a, b] = [...pts.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch0 > 0) st.zoom = Math.max(0.45, Math.min(2.2, zoom0 * (pinch0 / d)));
+        return; // pinching, not rotating
+      }
+      if (!st.drag) return;
+      st.rotY += (e.clientX - st.lx) * 0.01;
+      st.rotX = Math.max(0.05, Math.min(1.2, st.rotX + (e.clientY - st.ly) * 0.006));
+      st.lx = e.clientX; st.ly = e.clientY;
+    };
+
+    const onUp = (e) => {
+      pts.delete(e.pointerId);
+      try { el.releasePointerCapture(e.pointerId); } catch (err) { /* already gone */ }
+      if (pts.size < 2) pinch0 = 0;
+      if (pts.size === 0) st.drag = false;
+      else { const p = [...pts.values()][0]; st.lx = p.x; st.ly = p.y; }
+    };
+
+    const onWheel = (e) => {
+      e.preventDefault();
+      st.zoom = Math.max(0.45, Math.min(2.2, st.zoom * (1 + e.deltaY * 0.0012)));
+    };
+
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", onUp);
+    el.addEventListener("pointercancel", onUp);
+    el.addEventListener("wheel", onWheel, { passive: false });
+
+    // Keep the canvas and the framing correct through rotation and resize.
+    const resize = () => {
+      const w = el.clientWidth || W, h = el.clientHeight || H;
+      if (!w || !h) return;
+      renderer.setSize(w, h);
+      cam.aspect = w / h;
+      cam.updateProjectionMatrix();
+      fit(w / h);
+    };
+    const ro = new ResizeObserver(resize);
+    ro.observe(el);
+    window.addEventListener("orientationchange", resize);
+
+    let raf;
+    const tick = () => {
+      const dist = baseDist * st.zoom;
+      cam.position.set(
+        target.x + dist * Math.sin(st.rotY) * Math.cos(st.rotX),
+        target.y + dist * Math.sin(st.rotX),
+        target.z + dist * Math.cos(st.rotY) * Math.cos(st.rotX)
+      );
+      cam.lookAt(target);
+      if (figure) figure.quaternion.copy(cam.quaternion);
+      renderer.render(scene, cam);
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener("orientationchange", resize);
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", onUp);
+      el.removeEventListener("pointercancel", onUp);
+      el.removeEventListener("wheel", onWheel);
+      renderer.dispose();
+      el.removeChild(renderer.domElement);
+    };
+  }, [sub, mid, horn, plinth, cutaway, braceStyle, portStyle, layout, subHoriz, baffleColor]);
+
+  return <div ref={mount} className="w-full h-full cursor-grab" />;
+}
+
+function SignalPath() {
+  const ink = "#292524", mute = "#78716c", line = "#57534e";
+  const col = { pa2: "#7c3aed", sub: "#0f766e", mid: "#c2410c", hf: "#b45309", grey: "#a8a29e" };
+  const Box = ({ x, y, w, h, c, children }) => (
+    <g>
+      <rect x={x} y={y} width={w} height={h} rx="6" fill="#fafaf9" stroke={c} strokeWidth="1.5" />
+      {children}
+    </g>
+  );
+  const T = ({ x, y, s = 11, c = ink, a = "middle", b }) => (
+    <text x={x} y={y} fontSize={s} fill={c} textAnchor={a} fontFamily="system-ui, sans-serif" fontWeight={b ? 600 : 400}>{b}</text>
+  );
+  const A = ({ d, c = line }) => <path d={d} fill="none" stroke={c} strokeWidth="1.3" markerEnd="url(#sp-ar)" />;
+  return (
+    <svg viewBox="0 0 860 400" width="100%" role="img" aria-label="Mains rack signal path">
+      <defs><marker id="sp-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke={line} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></marker></defs>
+
+      <T x={60} y={22} c={mute} b="Source" /><T x={215} y={22} c={mute} b="Processor" /><T x={415} y={22} c={mute} b="Amps" /><T x={600} y={22} c={mute} b="Rear panel" /><T x={770} y={22} c={mute} b="Stacks" />
+
+      <Box x={15} y={190} w={90} h={52} c={col.grey}><T x={60} y={212} b="DJ mixer" /><T x={60} y={230} s={10} c={mute} b="master L/R" /></Box>
+      <A d="M105 216 L150 216" /><T x={127} y={208} s={10} c={mute} b="XLR" />
+
+      <Box x={150} y={110} w={130} h={220} c={col.pa2}>
+        <T x={215} y={132} b="dbx DriveRack PA2" /><T x={215} y={148} s={10} c={mute} b="2 in / 6 out" />
+        <T x={215} y={176} s={10} c={mute} b="inputs: venue EQ" /><T x={215} y={190} s={10} c={mute} b="outputs: XO, EQ, delay, limit" />
+        <T x={272} y={230} s={10} a="end" c={col.sub} b="Sub L / R" /><T x={272} y={270} s={10} a="end" c={col.mid} b="Mid L / R" /><T x={272} y={310} s={10} a="end" c={col.hf} b="Horn L / R" />
+      </Box>
+
+      <Box x={350} y={205} w={130} h={44} c={col.sub}><T x={415} y={223} b="QSC GXD8" /><T x={415} y={239} s={10} c={mute} b="800 W/ch @ 8 Ω" /></Box>
+      <Box x={350} y={262} w={130} h={44} c={col.mid}><T x={415} y={280} b="QSC GXD4" /><T x={415} y={296} s={10} c={mute} b="400 W/ch @ 8 Ω" /></Box>
+      <Box x={350} y={319} w={130} h={44} c={col.hf}><T x={415} y={337} b="QSC GXD4" /><T x={415} y={353} s={10} c={mute} b="gain trimmed · HPF 500 Hz" /></Box>
+      <A d="M280 226 L350 226" c={col.sub} /><A d="M280 266 L350 283" c={col.mid} /><A d="M280 306 L350 340" c={col.hf} />
+
+      <Box x={555} y={150} w={90} h={230} c={col.grey}><T x={600} y={170} b="Speakon" /><T x={600} y={184} s={10} c={mute} b="4× NL4MP" /></Box>
+      <rect x={565} y={200} width={70} height={22} rx="4" fill="none" stroke={col.sub} /><T x={600} y={215} s={10} c={col.sub} b="SUB L · 1±" />
+      <rect x={565} y={228} width={70} height={22} rx="4" fill="none" stroke={col.sub} /><T x={600} y={243} s={10} c={col.sub} b="SUB R · 1±" />
+      <rect x={565} y={290} width={70} height={36} rx="4" fill="none" stroke={col.mid} /><T x={600} y={304} s={10} c={col.mid} b="TOP L" /><T x={600} y={318} s={9} c={mute} b="1± mid · 2± horn" />
+      <rect x={565} y={332} width={70} height={36} rx="4" fill="none" stroke={col.mid} /><T x={600} y={346} s={10} c={col.mid} b="TOP R" /><T x={600} y={360} s={9} c={mute} b="1± mid · 2± horn" />
+      <A d="M480 222 L565 211" c={col.sub} /><A d="M480 232 L565 239" c={col.sub} />
+      <A d="M480 278 L565 300" c={col.mid} /><A d="M480 290 L565 342" c={col.mid} />
+      <A d="M480 335 L565 318" c={col.hf} /><A d="M480 347 L565 360" c={col.hf} />
+      <T x={518} y={196} s={9} c={mute} b="binding posts, 12 AWG" />
+
+      <Box x={690} y={196} w={110} h={26} c={col.sub}><T x={745} y={213} s={10} b="Sub L" /></Box>
+      <Box x={690} y={226} w={110} h={26} c={col.sub}><T x={745} y={243} s={10} b="Sub R" /></Box>
+      <Box x={690} y={288} w={110} h={40} c={col.mid}><T x={745} y={304} s={10} b="Mid box L" /><T x={745} y={319} s={9} c={mute} b="posts → horn L" /></Box>
+      <Box x={690} y={332} w={110} h={40} c={col.mid}><T x={745} y={348} s={10} b="Mid box R" /><T x={745} y={363} s={9} c={mute} b="posts → horn R" /></Box>
+      <A d="M645 211 L690 209" /><A d="M645 239 L690 239" /><T x={667} y={202} s={9} c={mute} b="NL2" />
+      <A d="M645 308 L690 308" /><A d="M645 352 L690 352" /><T x={667} y={300} s={9} c={mute} b="NL4" />
+
+      <T x={15} y={394} s={10} a="start" c={mute} b="Crossovers in the PA2: sub HPF ~32 Hz BW24 · sub/mid 100–120 Hz LR4 · mid/horn ~1.1 kHz LR4. Amps run full-range; limiters set per driver in each amp." />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------
+function Pick({ label, options, value, onChange }) {
+  return (
+    <div className="mb-4">
+      <div className="text-sm text-stone-500 mb-1">{label}</div>
+      <select
+        value={value?.id ?? ""}
+        onChange={(e) => onChange(options.find((o) => o.id === e.target.value))}
+        className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500 focus:outline-none focus:border-stone-900"
+      >
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.pick ? "● " : ""}{o.name}{o.price ? ` — $${o.price}` : ""}
+          </option>
+        ))}
+      </select>
+      {value?.note && <div className="text-xs text-stone-500 mt-1">{value.note}</div>}
+    </div>
+  );
+}
+
+function StackPlanner() {
+  const [sub, setSub] = useState(SUB_OPTIONS.find((o) => o.id === "sbnero18"));
+  const [mid, setMid] = useState(MID_OPTIONS.find((o) => o.id === "sbnero12"));
+  const [horn, setHorn] = useState(HORN_OPTIONS.find((h) => h.id === "a400g2"));
+  const [cd, setCd] = useState(CD_OPTIONS.find((c) => c.id === "de360"));
+  const [midBox, setMidBox] = useState(MID_BOXES.find((o) => o.id === "b15"));
+  const plinth = 3; // fixed, matches the duct height
+  const [cutaway, setCutaway] = useState(false);
+  const [braceStyle, setBraceStyle] = useState("shelf2");
+  const [cabinet, setCabinet] = useState(CABINETS[0]);
+  const [portStyle, setPortStyle] = useState("slots");
+  const [layout, setLayout] = useState("stack");
+  const [format, setFormat] = useState(FORMATS[0]);
+  const [subHoriz, setSubHoriz] = useState(false);
+  const [baffleColor, setBaffleColor] = useState("#e8b4a8");
+  const midSel = { ...mid, box: midBox.box };
+  const subList = SUB_OPTIONS.filter((o) => o.size === format.sub);
+  const midList = MID_OPTIONS.filter((o) => (o.size || 12) === format.mid);
+  const boxList = MID_BOXES.filter((b) => (format.mid === 10 ? b.id === "b13" : b.id !== "b13"));
+  useEffect(() => {
+    setPortStyle(cabinet.vents[0]);
+  }, [cabinet]);
+  const subBox = cabinet.dims[format.sub];
+  const subSel = { ...sub, box: subBox };
+  useEffect(() => {
+    const pickOf = (list) => list.find((o) => o.pick) || list[0];
+    if (subList.length) setSub(pickOf(subList));
+    if (midList.length) setMid(pickOf(midList));
+    if (boxList.length) setMidBox(pickOf(boxList));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [format]);
+  const mismatch = horn.exit !== cd.exit;
+
+  // Port geometry, matching what the 3D view draws, so the table and the
+  // model describe the same box.
+  const PT = 0.75;
+  const port = (() => {
+    const iw = subBox.w - 2 * PT, ih = subBox.h - 2 * PT, idp = subBox.d - 2 * PT;
+    if (portStyle === "vslots" || portStyle === "vwide") {
+      const throat = Math.round(((format.sub >= 18 ? 66 : 54) / (2 * ih)) * 100) / 100;
+      const nDiv = 2, tDiv = 0.5;
+      const area = 2 * (throat * ih - nDiv * throat * tDiv);
+      const len = idp - PT - throat;                 // rear gap equals the throat width
+      const seg = (ih - nDiv * tDiv) / (nDiv + 1);
+      return { area, len, dh: (4 * (throat * seg)) / (2 * (throat + seg)),
+               desc: `two ducts, ${throat.toFixed(2)}″ throat × ${ih.toFixed(1)}″, 20° flare to ${(throat + 0.43).toFixed(2)}″` };
+    }
+    if (portStyle === "folded") {
+      const h = 3, w = iw, area = h * w, seg = w / 3;
+      return { area, len: 15.75, dh: (4 * (h * seg)) / (2 * (h + seg)),
+               desc: `letterbox, ${h}″ × ${w.toFixed(1)}″, folded up the back wall to 15.75″` };
+    }
+    if (portStyle === "slots") {
+      const h = 3, w = iw, area = h * w, gap = h;
+      const len = idp - gap - PT;
+      const seg = w / 3;
+      return { area, len, dh: (4 * (h * seg)) / (2 * (h + seg)),
+               desc: `letterbox, ${h}″ × ${w.toFixed(1)}″, ${gap}″ turning gap` };
+    }
+    const n = portStyle === "round4" ? 4 : portStyle === "round1" ? 1 : 2;
+    const r = portStyle === "round1" ? 4 : portStyle === "round4" ? 2 : 2.5;
+    return { area: n * Math.PI * r * r, len: 11, dh: 2 * r,
+             desc: `${n} × ${(2 * r).toFixed(0)}″ round, 11″ long` };
+  })();
+
+  const grossL = inToL(subBox.w, subBox.h, subBox.d);
+  const ductL = (port.area * port.len * 16.387) / 1000;
+  const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - 3);
+  const HPF = 33, AMP_V = 80;
+  const mdl = sub.ts ? boxModel(sub.ts, netL, port.area, port.len, HPF, AMP_V) : null;
+  const lim = mdl ? (() => {
+    const vp = (AMP_V * 17) / mdl.peakVel, vx = (AMP_V * 100) / mdl.xmaxPct, vt = Math.sqrt(sub.ts.aes * 8);
+    const L = Math.min(vp, vx, vt);
+    return { who: L === vp ? "port air speed" : L === vx ? "cone travel (Xmax)" : "driver power rating",
+             W: (L * L) / 8, spl35: mdl.spl35 + 20 * Math.log10(L / AMP_V), spl45: mdl.spl45 + 20 * Math.log10(L / AMP_V) };
+  })() : null;
+
+  const subL = inToL(subBox.w, subBox.h, subBox.d);
+  const midL = inToL(midBox.box.w, midBox.box.h, midBox.box.d);
+  const subTopH = subHoriz ? subBox.w : plinth + subBox.h;
+  const isTower = layout === "tower";
+  const baseH = layout === "satellite" ? 34 : layout === "pole" ? subTopH + 20 : isTower ? subTopH : subTopH + 0.4;
+  const archT = isTower && !!horn.profile && !horn.scaleX && subBox.w / 2 - 0.75 > horn.size.w / 2;
+  const stackH = isTower ? baseH + 15.5 + (archT ? subBox.w - 0.75 : horn.size.h + 2) : baseH + midBox.box.h + 1.2 + horn.size.h + 2;
+  const hornCenter = isTower ? baseH + 15.5 + (archT ? subBox.w / 2 - 0.75 : (horn.size.h + 2) / 2) : baseH + midBox.box.h + 1.2 + 1 + horn.size.h / 2;
+
+  return (
+    <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+      <header className="px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
+        <h1 className="text-3xl md:text-4xl leading-tight">Three-box stack, one per side</h1>
+        <p className="text-stone-600 mt-2 max-w-2xl" style={{ fontFamily: "system-ui, sans-serif" }}>
+          Ported sub column, sealed 12" mid-bass cube, 1" compression driver on a free-standing horn.
+          Drag to rotate, pinch or scroll to zoom. Pick components below; the model and volumes update.
+          <span className="inline-block w-2 h-2 rounded-full bg-amber-600 ml-3 mr-1 align-middle" /> current default plan.
+        </p>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8">
+        <div className="md:col-span-3 flex flex-col gap-5">
+        <section className="rounded-lg overflow-hidden border border-stone-300 bg-stone-50" style={{ height: "clamp(320px, 56vh, 560px)" }}>
+          <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} braceStyle={braceStyle} portStyle={portStyle} layout={layout} subHoriz={subHoriz} baffleColor={baffleColor} />
+        </section>
+
+        <section className="mt-1" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-1" style={{ fontFamily: "Georgia, serif" }}>Alignment for this cabinet</h2>
+          <p className="text-sm text-stone-600 mb-3">
+            Computed live from the selected driver, cabinet and vent, with a {HPF} Hz BW24 highpass
+            and {AMP_V} V drive (800 W into 8 Ω).
+          </p>
+          {mdl ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
+              {[
+                ["Gross internal", `${grossL.toFixed(0)} L`],
+                ["Net volume", `${netL.toFixed(0)} L`, "after driver, ducts and bracing"],
+                ["Vent", port.desc],
+                ["Port area", `${port.area.toFixed(1)} in²`, `${((port.area / (sub.ts.Sd / 6.4516)) * 100).toFixed(0)}% of cone area`],
+                ["Duct length", `${port.len.toFixed(2)}″`],
+                ["Hydraulic diameter", `${port.dh.toFixed(2)}″`, port.dh < 2 ? "low — flare the mouths" : "acceptable with flares"],
+                ["Tuning Fb", `${mdl.Fb.toFixed(1)} Hz`],
+                ["System F3", `${mdl.f3.toFixed(1)} Hz`, `with the ${HPF} Hz highpass`],
+                ["Midband reference", `${mdl.ref.toFixed(1)} dB`],
+                ["SPL at 35 Hz", `${mdl.spl35.toFixed(1)} dB`],
+                ["SPL at 45 Hz", `${mdl.spl45.toFixed(1)} dB`],
+                ["Peak port velocity", `${mdl.peakVel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz; chuffing near 17–20`],
+                ["Peak excursion", `${mdl.peakX.toFixed(1)} mm`, `${mdl.xmaxPct.toFixed(0)}% of Xmax at 800 W`],
+                ["First limit reached", lim.who, `at about ${Math.round(lim.W / 10) * 10} W (port 17 m/s, Xmax, or ${sub.ts.aes} W rating)`],
+                ["Max SPL at 35 / 45 Hz", `${lim.spl35.toFixed(1)} / ${lim.spl45.toFixed(1)} dB`, "at that limit"],
+              ].map(([k, v, note]) => (
+                <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
+                  <span className="text-stone-500 shrink-0">{k}</span>
+                  <span className="text-right">
+                    <span className="font-medium tabular-nums">{v}</span>
+                    {note ? <span className="block text-xs text-stone-500">{note}</span> : null}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-stone-600 ">
+              No verified T/S parameters for {sub.name} yet, so nothing is computed here. The Nero-18,
+              Definimax 4018LF, B&C 18TBX100 and 18SW115 have been checked against their datasheets.
+            </p>
+          )}
+          <p className="text-xs text-stone-500 mt-3">
+            Modelled, not measured. Port end correction is the standard both-end approximation and is the
+            largest source of error in Fb; a divided or flared duct will measure a little differently.
+            {sub.id === "sbnero18" ? <>SB claim 99 dB for this driver, but their own published T/S give {mdl ? mdl.ref.toFixed(1) : "—"} dB in this box. </> : null}Verify Fb with an impedance sweep on the prototype before cutting birch.
+          </p>
+        </section>
+
+        </div>
+
+        <aside className="md:col-span-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Format</div>
+            <div className="flex flex-col gap-1">
+              {FORMATS.map((f) => (
+                <button key={f.id} onClick={() => setFormat(f)} className={`text-left px-3 py-2 rounded border ${format.id === f.id ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>
+                  <div className="font-medium">{f.name}</div>
+                  <div className={`text-xs ${format.id === f.id ? "text-stone-300" : "text-stone-500"}`}>{f.note}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <Pick label="Sub driver and column" options={subList} value={sub} onChange={setSub} />
+          <Pick label={`Mid-bass ${format.mid}"`} options={midList} value={mid} onChange={setMid} />
+          <Pick label="Mid-bass box" options={boxList} value={midBox} onChange={setMidBox} />
+          <div className="mb-5 text-sm text-stone-600">
+            3" plinth, recessed 1.5" per side, matching the duct height. {layout === "satellite" ? "Satellite" : layout === "pole" ? "Spacer" : layout === "tower" ? "Tower" : "Stack"} {stackH.toFixed(0)}" tall, horn centre at {hornCenter.toFixed(0)}".
+          </div>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Baffle colour</div>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {SWATCHES.map(([hex, name]) => (
+                <button
+                  key={hex}
+                  title={name}
+                  onClick={() => setBaffleColor(hex)}
+                  className={`w-7 h-7 rounded-full border-2 ${baffleColor.toLowerCase() === hex ? "border-stone-900" : "border-stone-300"}`}
+                  style={{ background: hex }}
+                />
+              ))}
+              <label className="w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom">
+                <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
+                <input
+                  type="color"
+                  value={baffleColor}
+                  onChange={(e) => setBaffleColor(e.target.value)}
+                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                />
+              </label>
+              <span className="text-xs text-stone-500 ml-1 tabular-nums">{baffleColor}</span>
+            </div>
+          </div>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">View</div>
+            <div className="flex gap-1">
+              {[["Finished", false], ["Cutaway", true]].map(([label, v]) => (
+                <button key={label} onClick={() => setCutaway(v)} className={`px-3 py-2 rounded border text-sm ${cutaway === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
+              ))}
+            </div>
+            <div className="text-xs text-stone-500 mt-1">Cutaway ghosts the shell and hides the drivers to show the duct and brace.</div>
+          </div>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Layout</div>
+            <div className="flex gap-1">
+              {[["Two stacks", "stack"], ["Tops on spacers", "pole"], ["Tower", "tower"], ["One sub + satellites", "satellite"]].map(([label, v]) => (
+                <button key={v} onClick={() => setLayout(v)} className={`px-3 py-2 rounded border text-sm ${layout === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
+              ))}
+            </div>
+            <div className="text-xs text-stone-500 mt-1">Satellite mode puts one sub centred with the tops on 8 in round columns, 34 in tall. Tower builds each side as one enclosure: sub, a full-depth sealed mid chamber, and a horn section, all on the sub's footprint. Pair it with the 18 in deep tower column for the 69 in version. About 160 lb in 3/4 in birch, a two-person lift.</div>
+            <div className="flex gap-1 mt-2">
+              {[["Sub upright", false], ["Sub on its side", true]].map(([label, v]) => (
+                <button key={label} onClick={() => setSubHoriz(v)} className={`px-3 py-2 rounded border text-sm ${subHoriz === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
+              ))}
+            </div>
+            <div className="text-xs text-stone-500 mt-1">On its side the plinth comes off and the box is {subBox.w}" tall; ports run up one edge.</div>
+          </div>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Cabinet</div>
+            <div className="flex flex-col gap-1">
+              {CABINETS.map((cb) => {
+                const dd = cb.dims[format.sub];
+                return (
+                  <button key={cb.id} onClick={() => setCabinet(cb)} className={`text-left px-3 py-2 rounded border ${cabinet.id === cb.id ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>
+                    <div className="font-medium flex justify-between gap-3"><span>{cb.name}</span><span className="tabular-nums text-xs">{dd.w} × {dd.h} × {dd.d}″</span></div>
+                    <div className={`text-xs ${cabinet.id === cb.id ? "text-stone-300" : "text-stone-500"}`}>{cb.note}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Vent</div>
+            <div className="flex flex-wrap gap-1">
+              {cabinet.vents.map((v) => (
+                <button key={v} onClick={() => setPortStyle(v)} className={`px-3 py-2 rounded border text-sm ${portStyle === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{VENT_NAMES[v]}</button>
+              ))}
+            </div>
+            <div className="text-xs text-stone-500 mt-1">3 slots: 54 in² along the bottom. 2 vertical: horizontal block, full-height ducts against each side wall, 66 in² either way. Tall: 25 × 28 × 24, 1.25 in slots. Wide: 32 × 22 × 24, 1.6 in slots — same output, less duct friction. Neither needs braces. Round: full-height baffle, flared tubes behind it — 8" low on the baffle, or 2 × 5" centred 10" up.</div>
+          </div>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Bracing</div>
+            <div className="flex gap-1">
+              {[["Two shelves", "shelf2"], ["None", "none"]].map(([label, v]) => (
+                <button key={label} onClick={() => setBraceStyle(v)} className={`px-3 py-2 rounded border text-sm ${braceStyle === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
+              ))}
+            </div>
+            <div className="text-xs text-stone-500 mt-1">
+              Column boxes: a full-depth windowed shelf between the port and the driver cutout, plus a 9 in deep shelf near the top against the back.
+              The cube gets one shelf at mid height between the corner tubes. The block needs none — each duct is a closed section running the full depth and folding along the rear panel.
+            </div>
+          </div>
+          <Pick label="Compression driver (1&quot;)" options={CD_OPTIONS} value={cd} onChange={setCd} />
+          <Pick label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} />
+          {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}" vs {cd.exit}").</div>}
+        </aside>
+
+        <section className="md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6 mt-4" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <div>
+            <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Sub column</h2>
+            <p className="text-sm text-stone-700">
+              {sub.name}, {sub.size}" in a {cabinet.name.toLowerCase()}, {subBox.w}×{subBox.h}×{subBox.d} in.
+              Gross internal {subL.toFixed(0)} L, ~174 L net after the port, braces and driver.
+              {portStyle === "folded"
+                ? " Port [modelled]: 3\" tall letterbox along the bottom, split three ways by two fins, running back along the floor and turning up the back wall to 15.75\" total so it fits an 18\" deep shell. 58.5 in², tunes to about 36 Hz like the compact column."
+                : portStyle === "slots"
+                ? " Port [modelled]: 3\" tall duct along the bottom, split into three 6\" openings by two 3/4\" fins, running 15.75\" back from the frame face with a 3\" turning gap behind the shelf. 54 in², about 43% of cone area. Tunes to 32.8 Hz; peak port velocity 14.2 m/s at 800 W with the 33 Hz highpass in place. The 17.25\" duct in the earlier draft did not fit: 17.25\" of duct plus a 3\" gap needs 20.25\" of a 19.5\" internal depth, so the duct shortens to 15.75\". The baffle starts above the duct's top shelf."
+                : portStyle === "round1"
+                ? " Port: one 8\" flared tube, 11\" straight section, low on a full-height baffle. 50 in², ~10 m/s at full excursion."
+                : " Port: two 5\" flared tubes, 9.8\" straight sections, centred 10\" up a full-height baffle. 39 in², ~13 m/s at full excursion."}
+              {" "}Driver set with an equal 1.65" margin at the top and both sides, mounted on a baffle recessed 3/4" behind the
+              frame, which carries a 1/4" roundover on both front arrises. High-pass 33 Hz BW24, at tuning rather than below it.
+              <span className="block mt-2 text-stone-500">
+                Open question: one recommendation says to avoid equal margins deliberately, offsetting the driver so the baffle's
+                panel modes and diffraction paths don't coincide. The effect is above this driver's passband, so it's a visual call
+                here, but worth resolving before cutting.
+              </span>
+            </p>
+          </div>
+          <div>
+            <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Mid-bass cube</h2>
+            <p className="text-sm text-stone-700">
+              {mid.name} in a {midBox.box.w}×{midBox.box.h}×{midBox.box.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed. Width sits at the RX-28 limit for an 1100 Hz crossover.
+              Covers ~90 Hz to the horn crossover. Same 18 mm birch, flush-mounted driver.
+            </p>
+          </div>
+          <div>
+            <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Horn</h2>
+            <p className="text-sm text-stone-700">
+              {horn.name} with {cd.name}, crossed at {horn.xo}. Sits on a short block so the mouth clears the cube.
+              Total stack height about {stackH.toFixed(0)} in.
+            </p>
+          </div>
+        </section>
+
+        <section className="md:col-span-5 mt-6" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Totals for the current selection</h2>
+          {(() => {
+            const PLY_LB_FT2 = 2.3; // 3/4" birch
+            const boxLb = (b) => ((2 * (b.w * b.h + b.w * b.d + b.h * b.d) + b.w * b.d) / 144) * PLY_LB_FT2; // six panels + one brace/shelf
+            const subBoxLb = boxLb(subBox) + (sub.size === 18 ? 6 : 0); // port shelf and fold
+            const midBoxLb = boxLb(midBox.box);
+            const rows = [
+              ["Sub column", sub.price, sub.lb, subBoxLb, subBox.h],
+              ["Mid-bass box", mid.price, mid.lb, midBoxLb, midBox.box.h],
+              ["Compression driver", cd.price, cd.lb || 0, 0, 0],
+              ["Horn", horn.price, (horn.lb || 0) + 1, 0, horn.size.h + 1],
+            ];
+            const sum = (i) => rows.reduce((a, r) => a + (r[i] || 0), 0);
+            const stackLb = sum(2) + sum(3) + (plinth ? 6 : 0);
+            return (
+              <div className="overflow-x-auto max-w-3xl"><table className="text-sm w-full min-w-[340px] border-collapse">
+                <thead><tr className="text-stone-500 text-left border-b border-stone-300">
+                  <th className="py-1 pr-4 font-normal">Per stack</th><th className="py-1 pr-4 font-normal text-right">Drivers $</th><th className="py-1 pr-4 font-normal text-right">Driver lb</th><th className="py-1 pr-4 font-normal text-right">Cabinet lb</th><th className="py-1 pr-4 font-normal text-right">Box lb</th><th className="py-1 font-normal text-right">Height in</th>
+                </tr></thead>
+                <tbody>
+                  {rows.map(([n, pr, dl, cl, h]) => (
+                    <tr key={n} className="border-b border-stone-200"><td className="py-1 pr-4">{n}</td><td className="py-1 pr-4 text-right tabular-nums">{pr ? `$${pr}` : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{dl.toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{cl ? cl.toFixed(0) : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{(dl + cl).toFixed(0)}</td><td className="py-1 text-right tabular-nums">{h.toFixed(1)}</td></tr>
+                  ))}
+                  <tr className="font-medium"><td className="py-1 pr-4">One stack{plinth ? ` + ${plinth}" plinth` : ""}</td><td className="py-1 pr-4 text-right tabular-nums">${sum(1).toLocaleString()}</td><td className="py-1 pr-4 text-right tabular-nums">{sum(2).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(sum(3) + (plinth ? 6 : 0)).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{stackLb.toFixed(0)}</td><td className="py-1 text-right tabular-nums">{stackH.toFixed(0)}</td></tr>
+                  <tr className="font-medium text-stone-900"><td className="py-1 pr-4">Pair</td><td className="py-1 pr-4 text-right tabular-nums">${(2 * sum(1)).toLocaleString()}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * sum(2)).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * (sum(3) + (plinth ? 6 : 0))).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * stackLb).toFixed(0)}</td><td></td></tr>
+                </tbody>
+              </table></div>
+            );
+          })()}
+          <p className="text-xs text-stone-500 mt-2">Cabinet weight assumes 3/4" birch at 2.3 lb/ft² with one brace; particleboard runs ~30% heavier. Driver weights are approximate where the datasheet wasn't checked. Heaviest single lift is the sub column.</p>
+        </section>
+
+        <section className="md:col-span-5 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "system-ui, sans-serif" }}>
+          {RACKS.map((r) => {
+            const total = r.items.reduce((a, [, c]) => a + c, 0);
+            return (
+              <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
+                <div className="flex justify-between items-baseline mb-1">
+                  <h2 className="text-xl" style={{ fontFamily: "Georgia, serif" }}>{r.name}</h2>
+                  <span className="text-sm tabular-nums text-stone-600">≈ ${total.toLocaleString()}</span>
+                </div>
+                <p className="text-xs text-stone-500 mb-3">{r.note}</p>
+                <ul className="text-sm text-stone-700 space-y-1">
+                  {r.items.map(([label, cost]) => (
+                    <li key={label} className="flex justify-between gap-3"><span>{label}</span><span className="tabular-nums text-stone-500">${cost}</span></li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </section>
+
+        <section className="md:col-span-5 mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Signal path (mains rack)</h2>
+          <div className="max-w-4xl"><SignalPath /></div>
+          <p className="text-sm text-stone-700 max-w-3xl mt-3">
+            Division of labour: the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs.
+            Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and
+            impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled
+            preset, which a level limiter cannot.
+          </p>
+        </section>
+        <section className="md:col-span-5 mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Materials</h2>
+          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+            {[
+              ["Prototype in particleboard", "Cheap and flat. Build it to verify duct tuning, then transfer interior dimensions \u2014 not the cut list \u2014 to the real material."],
+              ["Consider 5/8\" or 1/2\" for the final boxes", "Sub column drops 119 \u2192 107 \u2192 95 lb loaded. Needs more bracing, and the extra interior volume lowers Fb, so the duct gets shorter."],
+              ["MDO for the baffles", "Paints far better than birch, no edge penalty since no baffle edge is exposed."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span><span className="font-medium">{t}.</span> {d}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="md:col-span-5 mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Still to decide</h2>
+          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+            {[
+              ["Baffle mounting", "Cleats (forgiving, costs 3/4\" of interior on each side) or a stopped rabbet in the frame panels (tighter, squares the box, needs a dado). Baffle size changes with the choice."],
+              ["Bracing", "None modelled yet. Centre ribs, slat ladder or windowed shelves — decide once handle recesses are placed, since they compete for the same panel area."],
+              ["Handles", "Recess type, depth and position on the sub. Interacts with bracing."],
+              ["Driver margins", "Currently equal at top and sides. One recommendation is to offset deliberately so baffle modes and diffraction paths don't coincide — likely inaudible below 100 Hz, so mostly a visual decision."],
+              ["Port edge finish", "The letterbox mouths are cut in the shell's nose band, so this is a shell-material question, not a baffle one. Paint carried into the ducts, or masked so the ply edge shows — end grain in the mouth needs sealing either way."],
+              ["Duct tuning", "Model says 3\" duct, 15.75\" long, 54 in², Fb 32.8 Hz. The earlier 17.25\" figure did not fit the box: duct plus turning gap exceeded the internal depth. Verify by impedance sweep on the particleboard prototype and trim before cutting birch."],
+              ["Sensitivity", "SB's 99 dB claim is 3 dB above what their own published T/S parameters give (95.9 dB/2.83V). Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure."],
+              ["Driver clearance", "Check the Nero's frame and 8.4\" mounting depth against the baffle margin and anything that ends up behind the magnet."],
+              ["Compression driver", "DE360 at $117 is the default; crossover floor on the A400G2 needs a distortion sweep to confirm ~1.1 kHz."],
+              ["Horn print", "A400G2 in one piece needs a 400 mm+ bed; otherwise sectioned. Filament, print service, or buy the RX-28 instead."],
+              ["Prototype material", "3/4\" particleboard for the first sub, then transfer verified interior dimensions to birch."],
+              ["Final panel thickness", "3/4\", 5/8\" or 1/2\" birch. 1/2\" saves 24 lb on the sub column but needs bracing on roughly 12\" centres and a doubler at the driver cutout. Decide before the prototype, since wall thickness changes the interior volume and therefore the duct length."],
+              ["Baffle material", "MDO if the baffles are painted — no baffle edge is exposed in any of the current configurations, so there is no reason not to. Birch only if the baffle is ever meant to be clear-finished."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span><span className="font-medium">{t}.</span> {d}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(StackPlanner));

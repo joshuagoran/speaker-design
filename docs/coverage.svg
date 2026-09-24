@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 880" width="900" height="880" font-family="system-ui, sans-serif">
+<rect width="900" height="880" fill="#faf9f5"/>
+
+<!-- ============ PANEL A ============ -->
+<text x="60" y="44" font-size="20" fill="#1c1917" font-weight="600">A. Two boxes at 100°, flanking the booth</text>
+<text x="60" y="66" font-size="14" fill="#57534e">25 × 20 ft room. Shaded = inside the −6 dB coverage of that box.</text>
+
+<clipPath id="roomA"><rect x="60" y="86" width="400" height="320"/></clipPath>
+<g clip-path="url(#roomA)">
+  <polygon points="164,111 624,497 -296,497" fill="#0f766e" opacity="0.18"/>
+  <polygon points="356,111 816,497 -104,497" fill="#b45309" opacity="0.18"/>
+</g>
+<rect x="60" y="86" width="400" height="320" fill="none" stroke="#44403c" stroke-width="2"/>
+
+<!-- booth + boxes -->
+<rect x="222" y="92" width="76" height="22" fill="#e7e5e4" stroke="#57534e"/>
+<text x="260" y="107" font-size="11" fill="#44403c" text-anchor="middle">booth</text>
+<rect x="152" y="99" width="24" height="16" fill="#1c1917"/>
+<rect x="344" y="99" width="24" height="16" fill="#1c1917"/>
+
+<!-- axes -->
+<line x1="164" y1="115" x2="164" y2="406" stroke="#0f766e" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="356" y1="115" x2="356" y2="406" stroke="#b45309" stroke-width="1" stroke-dasharray="4 4"/>
+
+<!-- listener -->
+<circle cx="95" cy="360" r="7" fill="#1c1917"/>
+<line x1="95" y1="360" x2="164" y2="111" stroke="#0f766e" stroke-width="1.2"/>
+<line x1="95" y1="360" x2="356" y2="111" stroke="#b45309" stroke-width="1.2"/>
+<text x="108" y="380" font-size="12" fill="#1c1917">far corner listener</text>
+<text x="108" y="396" font-size="12" fill="#0f766e">15° off the near box</text>
+<text x="252" y="396" font-size="12" fill="#b45309">45° off the far box</text>
+
+<!-- scale bar -->
+<line x1="60" y1="424" x2="140" y2="424" stroke="#44403c" stroke-width="2"/>
+<text x="146" y="428" font-size="12" fill="#57534e">5 ft</text>
+
+<!-- note -->
+<text x="500" y="120" font-size="14" fill="#1c1917" font-weight="600">Coverage is not the problem</text>
+<text x="500" y="146" font-size="13" fill="#44403c">100° = ±50°. At 10 ft that is ±11.9 ft wide,</text>
+<text x="500" y="166" font-size="13" fill="#44403c">so the two patterns overlap across the whole</text>
+<text x="500" y="186" font-size="13" fill="#44403c">floor. Even the far corner sits well inside</text>
+<text x="500" y="206" font-size="13" fill="#44403c">the near box's pattern.</text>
+<text x="500" y="240" font-size="13" fill="#44403c">A constant 100° means everyone in the shaded</text>
+<text x="500" y="260" font-size="13" fill="#44403c">area hears the same tonal balance, just at</text>
+<text x="500" y="280" font-size="13" fill="#44403c">different levels.</text>
+
+<line x1="60" y1="450" x2="840" y2="450" stroke="#d6d3d1" stroke-width="1"/>
+
+<!-- ============ PANEL B ============ -->
+<text x="60" y="490" font-size="20" fill="#1c1917" font-weight="600">B. One bare 12-inch cone: the pattern changes with frequency</text>
+<text x="60" y="512" font-size="14" fill="#57534e">Same room, one box. Each wedge is that frequency's −6 dB coverage.</text>
+
+<clipPath id="roomB"><rect x="60" y="532" width="400" height="320"/></clipPath>
+<g clip-path="url(#roomB)">
+  <polygon points="260,545 1157,623 -637,623" fill="#7c3aed" opacity="0.13"/>
+  <polygon points="260,545 1076,925 -556,925" fill="#7c3aed" opacity="0.15"/>
+  <polygon points="260,545 896,1181 -376,1181" fill="#7c3aed" opacity="0.22"/>
+</g>
+<rect x="60" y="532" width="400" height="320" fill="none" stroke="#44403c" stroke-width="2"/>
+<rect x="248" y="533" width="24" height="16" fill="#1c1917"/>
+<line x1="260" y1="549" x2="260" y2="852" stroke="#7c3aed" stroke-width="1" stroke-dasharray="4 4"/>
+
+<text x="500" y="576" font-size="14" fill="#1c1917" font-weight="600">Why this matters</text>
+<text x="500" y="602" font-size="13" fill="#44403c">400 Hz: ~170°, nearly omnidirectional</text>
+<text x="500" y="622" font-size="13" fill="#44403c">1 kHz: ~130°</text>
+<text x="500" y="642" font-size="13" fill="#44403c">1.3 kHz: ~90°</text>
+<text x="500" y="676" font-size="13" fill="#44403c">Stand 45° off-axis and the low mids arrive at</text>
+<text x="500" y="696" font-size="13" fill="#44403c">full level while the upper mids are several dB</text>
+<text x="500" y="716" font-size="13" fill="#44403c">down. The sound gets thick and dull as you</text>
+<text x="500" y="736" font-size="13" fill="#44403c">move sideways, even though you are still</text>
+<text x="500" y="756" font-size="13" fill="#44403c">"covered".</text>
+<text x="500" y="790" font-size="13" fill="#44403c">The frequencies that go wide also spray the</text>
+<text x="500" y="810" font-size="13" fill="#44403c">side walls, which is where room thickness in</text>
+<text x="500" y="830" font-size="13" fill="#44403c">the low mids comes from.</text>
+</svg>
