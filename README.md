@@ -140,9 +140,12 @@ These drive every choice in the tools:
 
 ## Model assumptions
 
-Half space, 1 m, one cabinet, no room gain. Port limit at 17 m/s peak air speed,
-thermal limit at the driver's AES rating, excursion limit at Xmax, and the amp's
-rated power into 8 Ω. Port end
+Half space, 1 m, one cabinet, no room gain. Everything is a sine at the amp's
+rated power into 8 Ω (the amp slider). Port limit at 17 m/s peak air speed and
+excursion limit at Xmax, both at that sine's peaks. Thermal limit at program
+power, 2 × the driver's AES rating: AES pink noise has a 6 dB crest factor, so
+music with at least that much crest keeps the coil's average at or under AES.
+Max SPL figures are sine levels at the limit; music averages about 6 dB lower. Port end
 correction is the standard both-end approximation and is the largest source of
 error in Fb — a divided or flared duct measures a little differently. Cabinet
 weight assumes 3/4" birch at 2.3 lb/ft² with two braces, plus driver and 6 lb of

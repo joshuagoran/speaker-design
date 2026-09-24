@@ -82,13 +82,14 @@ export function ventedBox(ts, VbL, SpIn2, LpIn, hpf, volts, opts = {}) {
 
 /**
  * Which limit bites first, and the SPL at that limit.
- * Port limit taken at 17 m/s peak air speed.
+ * Limits are amp voltages for a sine into Z. Port (17 m/s) and Xmax use that sine's peaks;
+ * thermal is program power, 2 x AES (AES noise has a 6 dB crest).
  */
 export function firstLimit(model, ts, refVolts, Z = 8, maxVel = 17) {
   if (!model) return null;
   const vPort = (refVolts * maxVel) / model.peakVel;
   const vXmax = (refVolts * 100) / model.xmaxPct;
-  const vTherm = Math.sqrt(ts.aes * Z);
+  const vTherm = Math.sqrt(2 * ts.aes * Z);
   const V = Math.min(vPort, vXmax, vTherm);
   const scale = 20 * Math.log10(V / refVolts);
   return {
@@ -97,7 +98,7 @@ export function firstLimit(model, ts, refVolts, Z = 8, maxVel = 17) {
     who: V === vPort ? 'port' : V === vXmax ? 'xmax' : 'thermal',
     label: V === vPort ? 'port air speed'
          : V === vXmax ? 'cone travel (Xmax)'
-         : 'driver power rating',
+         : 'driver program rating',
     velocity: model.peakVel * V / refVolts,
     xmaxPct:  model.xmaxPct * V / refVolts,
     spl30: model.spl30 + scale,

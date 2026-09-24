@@ -1094,10 +1094,14 @@ function StackPlanner() {
   const HPF = hpf, AMP_V = Math.sqrt(ampW * 8);
   const mdl = sub.ts ? boxModel(sub.ts, netL, port.area, port.len, HPF, AMP_V) : null;
   const lim = mdl ? (() => {
-    const vp = (AMP_V * 17) / mdl.peakVel, vx = (AMP_V * 100) / mdl.xmaxPct, vt = Math.sqrt(sub.ts.aes * 8);
+    // Every limit is expressed as amp output voltage: a sine at the amp's rated power into 8 \u03a9.
+    // Port and cone limits use that sine's peaks. The thermal limit is program power, 2 \u00d7 AES: AES
+    // noise has a 6 dB crest, so a sine with the same peak voltage carries twice the AES power, and
+    // music with at least that crest factor keeps the voice coil's average at or under the AES rating.
+    const vp = (AMP_V * 17) / mdl.peakVel, vx = (AMP_V * 100) / mdl.xmaxPct, vt = Math.sqrt(2 * sub.ts.aes * 8);
     const L = Math.min(vp, vx, vt, AMP_V);
     const sc = 20 * Math.log10(L / AMP_V);
-    return { who: L === vp ? "port air speed" : L === vx ? "cone travel (Xmax)" : L === vt ? "driver power rating" : "amplifier power",
+    return { who: L === vp ? "port air speed" : L === vx ? "cone travel (Xmax)" : L === vt ? "driver program rating" : "amplifier power",
              V: L, W: (L * L) / 8, vel: mdl.peakVel * L / AMP_V, xPct: mdl.xmaxPct * L / AMP_V,
              spl30: mdl.spl30 + sc, spl35: mdl.spl35 + sc, spl45: mdl.spl45 + sc };
   })() : null;
@@ -1243,10 +1247,10 @@ function StackPlanner() {
                 ["SPL at 45 Hz", `${mdl.spl45.toFixed(1)} dB`],
                 ["Peak port velocity", `${mdl.peakVel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz; chuffing near 17–20`],
                 ["Peak excursion", `${mdl.peakX.toFixed(1)} mm`, `${mdl.xmaxPct.toFixed(0)}% of Xmax at ${ampW} W`],
-                ["First limit reached", lim.who, `at about ${Math.round(lim.W / 10) * 10} W (port 17 m/s, Xmax, ${sub.ts.aes} W rating, or ${ampW} W amp)`],
+                ["First limit reached", lim.who, `at about ${Math.round(lim.W / 10) * 10} W sine into 8 \u03a9 (port 17 m/s, Xmax, ${2 * sub.ts.aes} W program = 2 \u00d7 AES, or ${ampW} W amp)`],
                 ["Port air speed there", `${lim.vel.toFixed(1)} m/s`, "17 m/s is the chuffing threshold"],
                 ["Cone travel there", `${lim.xPct.toFixed(0)}% of Xmax`],
-                ["Max SPL at 30 / 35 / 45 Hz", `${lim.spl30.toFixed(1)} / ${lim.spl35.toFixed(1)} / ${lim.spl45.toFixed(1)} dB`, "at that limit"],
+                ["Max SPL at 30 / 35 / 45 Hz", `${lim.spl30.toFixed(1)} / ${lim.spl35.toFixed(1)} / ${lim.spl45.toFixed(1)} dB`, "sine at that limit; music averages ~6 dB lower"],
               ].map(([k, v, note]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
                   <span className="text-stone-500 shrink-0">{k}</span>
@@ -1281,12 +1285,12 @@ function StackPlanner() {
                   ? ["warn", "Over 125 lb", `${subLbLoaded.toFixed(0)} lb loaded. Past the one-person lift limit.`]
                   : ["ok", "Inside 125 lb", `${subLbLoaded.toFixed(0)} lb loaded.`]);
                 F.push(lim.who === "port air speed"
-                  ? ["warn", "Port-limited", `The vent chokes at ${Math.round(lim.W)} W, below the driver's ${sub.ts.aes} W rating. Open the port up or lengthen it.`]
+                  ? ["warn", "Port-limited", `The vent chokes at ${Math.round(lim.W)} W, below the driver's ${2 * sub.ts.aes} W program rating. Open the port up or lengthen it.`]
                   : lim.who === "cone travel (Xmax)"
-                  ? ["warn", "Excursion-limited", `The cone reaches Xmax at ${Math.round(lim.W)} W, below the ${sub.ts.aes} W rating. A bigger box or higher tuning helps; a bigger port does not.`]
+                  ? ["warn", "Excursion-limited", `The cone reaches Xmax at ${Math.round(lim.W)} W, below the ${2 * sub.ts.aes} W program rating. A bigger box or higher tuning helps; a bigger port does not.`]
                   : lim.who === "amplifier power"
-                  ? ["warn", "Amp-limited", `The ${ampW} W amp runs out before the port, the cone or the driver's ${sub.ts.aes} W rating.`]
-                  : ["ok", "Thermally limited", `Reaches the full ${sub.ts.aes} W rating before the port or the cone gives out.`]);
+                  ? ["warn", "Amp-limited", `The ${ampW} W amp runs out before the port, the cone or the driver's ${2 * sub.ts.aes} W program rating (2 \u00d7 ${sub.ts.aes} W AES).`]
+                  : ["ok", "Thermally limited", `Reaches its ${2 * sub.ts.aes} W program rating (2 \u00d7 ${sub.ts.aes} W AES) before the port or the cone gives out.`]);
                 return F.map(([kind, head, body]) => (
                   <div key={head} className="flex gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
                     <b className={`shrink-0 font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
@@ -1404,7 +1408,7 @@ function StackPlanner() {
               </>}
               <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="&#8243;" onChange={(v) => setV("len", v)} />
               <Slider label="Highpass (BW24)" value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} />
-              <Slider label="Amp power (8 Ω)" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} />
+              <Slider label="Amp power, sine into 8 Ω" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} />
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
             </div>
           </div>

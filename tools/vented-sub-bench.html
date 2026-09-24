@@ -226,10 +226,10 @@ function compute(){
   var m=net>15?boxModel(ts,net,v.area,S.PL,S.hp,REF_V):null;
   var lim=null;
   if(m){
-    var vp=(REF_V*17)/m.peakVel, vxx=(REF_V*100)/m.xmaxPct, vt=Math.sqrt(ts.aes*8);
+    var vp=(REF_V*17)/m.peakVel, vxx=(REF_V*100)/m.xmaxPct, vt=Math.sqrt(2*ts.aes*8);  // program power = 2 x AES (6 dB crest)
     var L=Math.min(vp,vxx,vt);
     lim={V:L, W:(L*L)/8,
-      who: L===vp?"port air speed" : (L===vxx?"cone travel (Xmax)":"driver power rating"),
+      who: L===vp?"port air speed" : (L===vxx?"cone travel (Xmax)":"driver program rating"),
       sc: 20*Math.log10(L/REF_V)};
   }
   var lbs=((2*(S.W*S.H+S.W*S.Dd+S.H*S.Dd)+2*S.W*S.Dd)/144)*2.3 + ts.lb + 6;
@@ -346,11 +346,11 @@ function render(){
   else { F.push(["ok","Inside 125 lb",n(r.lbs,0)+" lb loaded."]); }
   if(lim){
     if(lim.who==="port air speed"){
-      F.push(["warn","Port-limited","The vent chokes at "+n(lim.W,0)+" W, below the driver's "+ts.aes+" W rating. Open the port up or lengthen it."]);
+      F.push(["warn","Port-limited","The vent chokes at "+n(lim.W,0)+" W, below the driver's "+(2*ts.aes)+" W program rating. Open the port up or lengthen it."]);
     } else if(lim.who==="cone travel (Xmax)"){
-      F.push(["warn","Excursion-limited","The cone reaches Xmax at "+n(lim.W,0)+" W, below the "+ts.aes+" W rating. A bigger box or higher tuning helps; a bigger port does not."]);
+      F.push(["warn","Excursion-limited","The cone reaches Xmax at "+n(lim.W,0)+" W, below the "+(2*ts.aes)+" W program rating. A bigger box or higher tuning helps; a bigger port does not."]);
     } else {
-      F.push(["ok","Thermally limited","Reaches the full "+ts.aes+" W rating before the port or the cone gives out. This is what you want."]);
+      F.push(["ok","Thermally limited","Reaches its "+(2*ts.aes)+" W program rating (2 x AES) before the port or the cone gives out. This is what you want."]);
     }
   }
   document.getElementById("flags").innerHTML=F.map(function(f){
