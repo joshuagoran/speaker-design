@@ -94,3 +94,20 @@ notch, and it is a top-of-band problem:
 
 Keep the sub on the floor for a clean crossover region, not for deep bass.
 Halfway up is the worst place; if it must be raised, go higher rather than partway.
+
+## Planner conventions
+
+Every cabinet in the planner is custom: W/H/D and vent geometry are sliders, and
+the 3D view, the alignment table, the response chart and the limit flags all
+recompute from them. The eight published cabinets (upright column, compact
+column, block tall/compact/wide, tower column, cube) survive only as starting
+points in a "Start from" list and as seeded saved configurations; they are no
+longer a separate mode.
+
+Saved configurations are the way back to a setup. Each one is a whole-system
+snapshot — sub box and vent, mid, horn, compression driver, crossover, colours,
+layout, bracing — kept in the artifact's document store, so they persist across
+republishes and can be read back later.
+
+Chart scale is fixed at 80–135 dB so configurations compare directly rather than
+rescaling under you.
