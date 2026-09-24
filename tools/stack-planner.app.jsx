@@ -1160,11 +1160,6 @@ function StackPlanner() {
     <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
       <header className="px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
         <h1 className="text-3xl md:text-4xl leading-tight">Three-box stack, one per side</h1>
-        <p className="text-stone-600 mt-2 max-w-2xl" style={{ fontFamily: "system-ui, sans-serif" }}>
-          Ported sub column, sealed 12" mid-bass cube, 1" compression driver on a free-standing horn.
-          Drag to rotate, pinch or scroll to zoom. Pick components below; the model and volumes update.
-          <span className="inline-block w-2 h-2 rounded-full bg-amber-600 ml-3 mr-1 align-middle" /> current default plan.
-        </p>
       </header>
 
       {saved !== null && (
