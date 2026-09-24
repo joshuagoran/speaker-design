@@ -3,25 +3,129 @@
 Design tools for a DIY sound-system-style rig: two full-range stacks for rooms of
 500–1000 sq ft, sometimes outdoors, plus loud home listening.
 
-## Tools
+Everything here is modelled, not measured. The numbers are good enough to choose
+between cabinets and catch a bad alignment before you cut plywood; they are not a
+substitute for an impedance sweep on the prototype.
 
-| File | What it does |
-|---|---|
-| `tools/vented-sub-bench.html` | Standalone, self-contained. Sliders for cabinet W/H/D, vent type (letterbox / round tubes / side ducts), duct length and highpass. Reports net volume, tuning, F3, the limit that bites first, max SPL and weight. |
-| `tools/stack-planner.app.jsx` | The full stack planner: driver and cabinet options, live 3D view, cost roll-up, alignment table. Custom-cabinet mode drives the 3D model from W/H/D and vent sliders. Saved configurations persist in the artifact's document store. Built with `tools/build.sh`. |
-| `model/vented-box.js` | The shared physics. Lumped-element vented-box model plus the limit taxonomy. Both tools use the same maths. |
+---
 
-## Building the planner
+## Layout
+
+```
+model/vented-box.js          the physics — lumped-element vented box + limit taxonomy
+tools/stack-planner.app.jsx  the planner (JSX, built with esbuild)
+tools/stack-planner.head.html  its <head>: styles and the four CDN script tags
+tools/vented-sub-bench.html  the standalone bench, no build step
+tools/build.sh               planner -> dist/stack-planner.html
+tools/serve.sh               build + vendor libs + serve on :8901
+docs/design-notes.md         findings behind the current configuration
+docs/*.svg                   crossover null cone, horn coverage
+dist/                        build output (gitignored)
+```
+
+## Prerequisites
+
+Node (for `npx esbuild`) and Python 3 (for the preview server). Nothing to
+install — esbuild is fetched by `npx` on first run.
+
+## Build
 
 ```sh
 tools/build.sh          # -> dist/stack-planner.html
 ```
 
-The planner declares the artifact `db` capability for saved configurations.
-Running it from a plain file server works, minus saving: the page detects the
-missing runtime and says so rather than breaking.
+It runs esbuild over the JSX, then concatenates `stack-planner.head.html` + the
+bundle + a closing `</script>` into one self-contained page. That page loads
+React, ReactDOM, three.js and Tailwind from cdnjs at runtime; nothing else is
+external.
 
-The sub bench needs no build. Open it directly, or serve the directory.
+The bench needs no build. Open `tools/vented-sub-bench.html` directly.
+
+## Local preview
+
+```sh
+tools/serve.sh          # http://127.0.0.1:8901/index.html  and  /bench.html
+```
+
+It builds, downloads the four libraries into `dist/preview/` if they aren't
+already there, rewrites the CDN URLs to local paths, and serves. The download
+step needs network access to cdnjs; if it fails it tells you which file to place
+by hand. Tailwind's play CDN generates CSS at runtime, so for preview drop any
+Tailwind 3 stylesheet at `dist/preview/tw.css` — without it the page works but
+renders unstyled.
+
+Saving is unavailable in local preview (see below). The planner detects that and
+says so rather than breaking.
+
+## Publishing the planner
+
+The planner is published as a claude.ai Artifact. It must declare the `db`
+capability or saved configurations silently do nothing:
+
+```
+Artifact publish
+  file_path:    dist/stack-planner.html
+  url:          <the artifact's URL, to update in place>
+  capabilities: {"db": {}}
+```
+
+Two consequences of declaring `db`:
+
+- The artifact becomes organization-internal. It can no longer be shared by
+  public link, only with people in the owner's organization.
+- Omitting `capabilities` on a later publish carries the declaration forward.
+  Passing `{}` clears it, which would break saving.
+
+## Saved configurations
+
+The planner keeps whole-system snapshots in the artifact's document store,
+collection `configs`, one document per configuration:
+
+```jsonc
+{
+  "name": "NSW 266 L reference",
+  "savedAt": 1758738000000,          // epoch ms, the list sorts on this
+  "format": "full",                   // FORMATS id
+  "sub": "emnsw4018",                 // SUB_OPTIONS id
+  "mid": "em3012",                    // MID_OPTIONS id
+  "midBox": "b15",                    // MID_BOXES id
+  "cd": "n314t",                      // CD_OPTIONS id
+  "horn": "a460g2_14",                // HORN_OPTIONS id
+  "cabinet": "column",                // last "Start from" choice, label only
+  "portStyle": "slots",               // slots | folded | vslots | round2
+  "cDim":  { "w": 28, "h": 32, "d": 24 },        // external inches
+  "cVent": { "slotH": 3, "nt": 2, "dia": 6, "throat": 3, "len": 14 },
+  "hpf": 33,
+  "layout": "stack", "braceStyle": "shelf2",
+  "subHoriz": false, "cutaway": false, "baffleColor": "#e8b4a8",
+  "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz"
+}
+```
+
+Unknown ids fall back to whatever is currently selected, so a config saved
+before a driver was added still loads.
+
+Read or seed the collection from a Claude session with the `ArtifactData` tool
+(`action: "list" | "get" | "set" | "batch"`, `collection: "configs"`). The eight
+published cabinets are seeded as `preset-<id>` documents; they are ordinary
+configurations and can be edited or deleted like any other.
+
+## How the planner is put together
+
+- `SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`,
+  `FORMATS` — the component data at the top of the file. Drivers with a `ts`
+  block get modelled; ones without show a note instead.
+- `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts)` — the vented-box model. Returns
+  the response `curve` plus `Fb`, `f3`, `ref`, SPL at 30/35/45, peak port
+  velocity and peak excursion.
+- `StackView` — the three.js scene. Takes `sub` (whose `.box` carries the
+  dimensions) and `portGeom` (explicit vent geometry), so the drawn box always
+  matches the modelled one. Its `useEffect` rebuilds the whole scene; the
+  dependency array must include anything that changes the geometry.
+- `ResponseChart` — the SPL curve, fixed 80–135 dB so configurations compare
+  directly instead of rescaling under you.
+- `StackPlanner` — state and layout. Every cabinet is custom: `cDim` and `cVent`
+  hold the geometry and `CABINETS` only supplies starting points.
 
 ## Design constraints
 
@@ -36,10 +140,11 @@ These drive every choice in the tools:
 
 ## Model assumptions
 
-Half space, 1 m, one cabinet, no room gain. Port limit at 17 m/s peak air speed.
-Thermal limit at the driver's AES rating. Cabinet weight assumes 3/4" birch at
-2.3 lb/ft² with two braces, plus driver and 6 lb of hardware.
-
-Verify Fb with an impedance sweep on the prototype before cutting birch.
+Half space, 1 m, one cabinet, no room gain. Port limit at 17 m/s peak air speed,
+thermal limit at the driver's AES rating, excursion limit at Xmax. Port end
+correction is the standard both-end approximation and is the largest source of
+error in Fb — a divided or flared duct measures a little differently. Cabinet
+weight assumes 3/4" birch at 2.3 lb/ft² with two braces, plus driver and 6 lb of
+hardware.
 
 See `docs/design-notes.md` for the findings behind the current configuration.
