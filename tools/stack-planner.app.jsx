@@ -10,27 +10,46 @@ const ST260_PROFILE = [[1.89,0.0],[0.5,0.0],[0.507,0.036],[0.515,0.078],[0.526,0
 
 
 const SUB_OPTIONS = [
-  { id: "bc18tbx", lb: 28, name: "B&C 18TBX100", price: 458, src: "US Speaker", size: 18, box: { w: 20, h: 36, d: 20 }, tune: "per cabinet [modelled]",
-    ts: { Fs: 34, Qts: 0.35, Qes: 0.37, Qms: 7.2, Vas: 212, Sd: 1210, Xmax: 9, Re: 5.1, Bl: 25.5, Mms: 209, aes: 1200, disp: 10.5 },
-    note: "[datasheet, bcspeakers.com] Ferrite, Fs 34 Hz, Qts 0.35, Vas 212 L, Xmax 9 mm, 1200 W, 10.5 L displacement, 28 lb. [modelled] In the compact block: F3 ~40 Hz, ~121 dB at 35 Hz, limited by excursion near 1 kW." },
-  { id: "sbnero18", lb: 45, pick: true, name: "SB Audience Nero-18SW1100D", price: 290,
-    ts: { Fs: 36, Qts: 0.33, Qes: 0.34, Qms: 11.83, Vas: 153.1, Sd: 1256.6, Xmax: 12.2, Re: 5.0, Bl: 30.9, Mms: 294, aes: 1100, disp: 10.5 }, src: "US vendor, Sep 2026 (Madisound stocks)", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "32.8 Hz [modelled]", note: "[datasheet] Fs 36 Hz, Qts 0.33, Vas 153 L, Sd 1257 cm², Xmax 12.2 mm, Re 5.0, Bl 30.9, 1100 W AES, 10.5 L displacement, 45.6 lb. [modelled] 95.9 dB/2.83V half-space from those parameters; SB claims 99 dB, which their own T/S do not support. In 174 L with the 54 in² duct: Fb 33.1 Hz, system F3 ~36 Hz with the 33 Hz highpass, 121.4 dB at 35 Hz on 800 W. In the slot and duct cabinets it reaches its 1100 W rating before the port or cone limit; the round-port cabinets are port-limited near 600–700 W." },
-  { id: "sbnero15sym", lb: 31, name: "SB Nero 15 — symmetric box", price: null, src: "same driver, symmetric box", size: 15, box: { w: 23, h: 23, d: 19 }, tune: "36 Hz (≈115 L net)", note: "23 in square baffle, driver centred, four 3.5 in flared corner ports. Rotatable. Use the 4-corner port option." },
-  { id: "sbnero15", lb: 31, name: "SB Audience Nero-15SW800", price: null, src: "not priced yet", size: 15, box: { w: 19, h: 28, d: 19 }, tune: "36 Hz (114 L net, modeled)", note: "Ferrite, 96 dB, 800 W AES, 14.3 mm Xmax, 4.5\" coil, Fs 31, Vas 137, 6.45 L displacement. Modeled in 19×28×19: F3 ~34 Hz, ~122 dB at 35 Hz. A 141 L box would gain 2 Hz and 1 dB for 30% more volume." },
-  { id: "sbnero18sym", lb: 45, name: "SB Nero 18 — symmetric cube", price: 290, src: "same driver, symmetric box", size: 18, box: { w: 25, h: 25, d: 25 }, tune: "33 Hz (≈192 L net)", note: "25 in cube, driver centred, four 4 in flared corner ports. Reads the same in any rotation — for a single sub on its side. Use the 4-corner port option." },
-  { id: "emnsw4018", lb: 20.9, name: "Eminence NSW4018-8", price: 580, src: "US vendor, Sep 2026 (per Josh)", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "per cabinet [modelled]",
-    ts: { Fs: 36, Qts: 0.38, Qes: 0.39, Qms: 8.46, Vas: 164, Sd: 1217, Xmax: 15.2, Re: 5.9, Bl: 28.2, Mms: 237, aes: 1600, disp: 10.5 },
-    note: "[datasheet, loudspeakerdatabase.com] Neo, Fs 36 Hz, Qts 0.38, Vas 164 L, Xmax 15.2 mm, 1600 W, 20.9 lb. Displacement not published; 10.5 L assumed. [modelled] Thermally limited, not excursion or port limited: only 69% of Xmax at its 1600 W rating in 160 L. The lightest 18 here by 3 lb and the only one that leaves weight for a 250 L cabinet inside a 125 lb limit: 250 L with a 90 in\u00b2 port gives 125.4 dB at 35 Hz and F3 34 Hz." },
-  { id: "em4018", lb: 24, name: "Eminence Definimax 4018LF", price: 329, src: "local vendor, Sep 2026", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "per cabinet [modelled]",
-    ts: { Fs: 30, Qts: 0.34, Qes: 0.35, Qms: 11.95, Vas: 255, Sd: 1188, Xmax: 8.6, Re: 6.1, Bl: 26.8, Mms: 217, aes: 1200, disp: 10.5 },
-    note: "[datasheet, loudspeakerdatabase.com] Ferrite, Fs 30 Hz, Qts 0.34, Vas 255 L, Xmax 8.6 mm, 1200 W, 24 lb. Displacement not published; 10.5 L assumed. [modelled] In the compact block: F3 ~39 Hz, ~120 dB at 35 Hz, limited by excursion near 950 W. Lightest option; about 2 dB down on the Nero at 35 Hz." },
-  { id: "lv18403", lb: 36, name: "Lavoce SAF184.03", price: null, src: "Parts Express (out of stock), Loudspeakers Plus", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "32.8 Hz [modelled]", note: "Ferrite, 96 dB, 1500 W AES, 13 mm Xmax, 4\" coil, 36 lb. Modeled: F3 ~36 Hz, ~123 dB at 35 Hz on 1.2 kW; 3 dB behind the Nero." },
-  { id: "lv18402", lb: 36, name: "Lavoce SAF184.02", price: 319, src: "Parts Express / Loudspeakers Plus", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "32.8 Hz [modelled]", note: "Ferrite, 97 dB, 1200 W AES, 8.4 mm Xmax, Fs 38. Modeled: F3 ~35 Hz, ~124 dB at 35 Hz but excursion-limited near 1 kW." },
-  { id: "lv18n403", lb: 26, name: "Lavoce SAN184.03 (neo)", price: 489, src: "Loudspeakers Plus sale", size: 18, box: { w: 21, h: 35, d: 21 }, tune: "32.8 Hz [modelled]", note: "Neo version of the SAF184.03, 26 lb, 12.5 mm Xmax. The light option if weight matters more than $200." },
-  { id: "18s-kit", lb: 29, name: "18Sound 18\" sub kit (18LW1400)", price: null, src: "driver not priced yet", size: 18, box: { w: 23.2, h: 35.6, d: 19.7 }, tune: "per 18Sound app note (28 Hz HPF)", note: "Published 905 H × 590 W × 500 D mm reflex box, 15 mm birch, ~230 L gross. Five 18Sound driver options; DSP settings included." },
-  { id: "bc18sw", lb: 26, name: "B&C 18SW115", price: 739, src: "current US price per Josh, Sep 2026", size: 18, box: { w: 20, h: 36, d: 20 }, tune: "per cabinet [modelled]",
-    ts: { Fs: 32, Qts: 0.30, Qes: 0.32, Qms: 5.6, Vas: 187, Sd: 1210, Xmax: 14, Re: 5.3, Bl: 30.3, Mms: 275, aes: 1700, disp: 10.5 },
-    note: "[datasheet, bcspeakers.com] Neo, Fs 32 Hz, Qts 0.30, Vas 187 L, Xmax 14 mm, 1700 W, 26 lb. Displacement not published; 10.5 L assumed. [modelled] In the compact block: F3 ~36 Hz, ~123 dB at 35 Hz, port-limited near 1.35 kW. Matches the Nero's output 20 lb lighter." },
+  { id: "sbnero18", lb: 45, pick: true, name: "SB Audience Nero-18SW1100D", price: 290, src: "Madisound, Sep 2026", size: 18, ts: { Fs: 36, Qts: 0.33, Qes: 0.34, Qms: 11.83, Vas: 153.1, Sd: 1256.6, Xmax: 12.2, Re: 5.0, Bl: 30.9, Mms: 294, aes: 1100, disp: 10.5 },
+    note: "[datasheet] Ferrite, 1100 W AES, 10.5 L displacement, 45.6 lb. SB claim 99 dB; their own T/S give about 96 dB/2.83 V." },
+  { id: "emnsw4018", lb: 20.9, name: "Eminence NSW4018-8", price: 580, src: "US vendor, Sep 2026 (per Josh)", size: 18, ts: { Fs: 36, Qts: 0.38, Qes: 0.39, Qms: 8.46, Vas: 164, Sd: 1217, Xmax: 15.2, Re: 5.9, Bl: 28.2, Mms: 237, aes: 1600, disp: 10.5 },
+    note: "[datasheet, loudspeakerdatabase.com] Neo, 1600 W (AES or program not stated), 20.9 lb. Displacement not published; 10.5 L assumed." },
+  { id: "em4018", lb: 24, name: "Eminence Definimax 4018LF", price: 329, src: "local vendor, Sep 2026", size: 18, ts: { Fs: 30, Qts: 0.34, Qes: 0.35, Qms: 11.95, Vas: 255, Sd: 1188, Xmax: 8.6, Re: 6.1, Bl: 26.8, Mms: 217, aes: 1200, disp: 10.5 },
+    note: "[datasheet, loudspeakerdatabase.com] Ferrite, 1200 W, 24 lb. Displacement not published; 10.5 L assumed." },
+  { id: "bc18tbx", lb: 28, name: "B&C 18TBX100", price: 458, src: "US Speaker", size: 18, ts: { Fs: 34, Qts: 0.35, Qes: 0.37, Qms: 7.2, Vas: 212, Sd: 1210, Xmax: 9, Re: 5.1, Bl: 25.5, Mms: 209, aes: 1200, disp: 10.5 },
+    note: "[datasheet, bcspeakers.com] Ferrite, 1200 W, 10.5 L displacement, 28 lb." },
+  { id: "bc18sw", lb: 26, name: "B&C 18SW115", price: 739, src: "current US price per Josh, Sep 2026", size: 18, ts: { Fs: 32, Qts: 0.3, Qes: 0.32, Qms: 5.6, Vas: 187, Sd: 1210, Xmax: 14, Re: 5.3, Bl: 30.3, Mms: 275, aes: 1700, disp: 10.5 },
+    note: "[datasheet, bcspeakers.com] Neo, 1700 W, 26 lb. Displacement not published; 10.5 L assumed." },
+  { id: "bc18tbw", lb: 33.3, name: "B&C 18TBW100", price: 472, src: "US Speaker, Sep 2026", size: 18, ts: { Fs: 35, Qts: 0.39, Qes: 0.41, Qms: 8, Vas: 175, Sd: 1210, Xmax: 12, Re: 5.0, Bl: 26.4, Mms: 245, aes: 1500, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 1500 W AES / 3000 W program, 96 dB, 33.3 lb. Displacement not published; 10.5 L assumed." },
+  { id: "bc18ps", lb: 22.5, name: "B&C 18PS100", price: null, src: "Parts Express (out of stock)", size: 18, ts: { Fs: 30, Qts: 0.39, Qes: 0.41, Qms: 4.6, Vas: 251, Sd: 1210, Xmax: 8, Re: 5.0, Bl: 22.5, Mms: 239, aes: 700, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 700 W AES / 1400 W program, 95.5 dB, 22.5 lb. One listing gives Mms 202 g / Vas 244 L; the 239 g / 251 L set fits Fs better." },
+  { id: "lv18403", lb: 35.4, name: "Lavoce SAF184.03", price: 369, src: "Parts Express (back-ordered)", size: 18, ts: { Fs: 30, Qts: 0.33, Qes: 0.34, Qms: 6.68, Vas: 245.8, Sd: 1225.4, Xmax: 13, Re: 5.8, Bl: 28.1, Mms: 250.2, aes: 1500, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 1500 W AES / 3000 W program, 96 dB, 35.4 lb. Displacement not published; 10.5 L assumed." },
+  { id: "lv18402", lb: 29.8, name: "Lavoce SAF184.02", price: 319, src: "Parts Express", size: 18, ts: { Fs: 38, Qts: 0.41, Qes: 0.43, Qms: 6.48, Vas: 136.6, Sd: 1225, Xmax: 9.75, Re: 4.8, Bl: 25.5, Mms: 239.2, aes: 1200, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 1200 W AES, 97 dB, 29.8 lb. Xmax 9.75 mm per datasheet (one listing says 8.4)." },
+  { id: "lv18n403", lb: 24.3, name: "Lavoce SAN184.03 (neo)", price: 489, src: "Parts Express", size: 18,
+    note: "[web search, Sep 2026; not checked against the datasheet] Neo, 1500 W AES, 95 dB, 24.3 lb, Fs 36, Qts 0.41, Vas 158 L, Xmax 12.5 mm. Not modelled: Re and Bl not found (only Bl/√Re = 11.6)." },
+  { id: "ciare18sw", lb: 34.6, name: "Ciare 18.00SW-8", price: null, src: "Parts Express (discontinued)", size: 18, ts: { Fs: 36.4, Qts: 0.44, Qes: 0.47, Qms: 6.7, Vas: 93, Sd: 1104, Xmax: 14, Re: 6.8, Bl: 35.11, Mms: 377, aes: 1000, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 1000 W AES / 2000 W program, 91.5 dB, 34.6 lb. Uses the Parts Express sheet (Re 6.8, Bl 35.1, Sd 1104); loudspeakerdatabase's set is internally inconsistent." },
+  { id: "f18fh510", lb: 19.4, name: "FaitalPRO 18FH510", price: null, src: "no listed US vendor price", size: 18, ts: { Fs: 30, Qts: 0.3, Qes: 0.3, Qms: 13.6, Vas: 369.5, Sd: 1134, Xmax: 9.25, Re: 5.1, Bl: 21, Mms: 139, aes: 600, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 600 W AES / 1200 W program, 98 dB, 19.4 lb. Sd 1134 cm² is from one source and may be generic." },
+  { id: "f18fh500", lb: 10.1, name: "FaitalPRO 18FH500", price: 504, src: "Parts Express", size: 18, ts: { Fs: 30, Qts: 0.35, Qes: 0.36, Qms: 12.5, Vas: 418, Sd: 1207, Xmax: 9.3, Re: 5.1, Bl: 19, Mms: 137, aes: 600, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Neo, 600 W AES / 1200 W program, 99 dB, 10.1 lb." },
+  { id: "f18fx600", lb: 13.4, name: "FaitalPRO 18FX600", price: 460, src: "Parts Express", size: 18, ts: { Fs: 32, Qts: 0.3, Qes: 0.31, Qms: 9.8, Vas: 257, Sd: 1213, Xmax: 11.3, Re: 5.0, Bl: 24.5, Mms: 175, aes: 700, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Neo, 700 W AES / 1400 W program, 99 dB, 13.4 lb. Published Vas is 11% below what its Mms and Sd imply; check the datasheet." },
+  { id: "f18hp1010", lb: 22.3, name: "FaitalPRO 18HP1010", price: null, src: "no listed US vendor price", size: 18, ts: { Fs: 35, Qts: 0.4, Qes: 0.42, Qms: 7.8, Vas: 240.1, Sd: 1207, Xmax: 9.75, Re: 5.3, Bl: 22, Mms: 175.2, aes: 1000, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 1000 W AES / 2000 W program, 98 dB, 22.3 lb." },
+  { id: "by18pwb", lb: 30, name: "Beyma 18PWB1000Fe/S", price: null, src: "no listed US vendor price", size: 18, ts: { Fs: 27, Qts: 0.38, Qes: 0.4, Qms: 8.2, Vas: 317, Sd: 1255, Xmax: 12.5, Re: 6.0, Bl: 25, Mms: 245, aes: 1000, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 1000 W AES / 2000 W program, 96 dB, 30 lb. Some values may be from the non-/S datasheet." },
+  { id: "by18lex", lb: 18.7, name: "Beyma 18LEX1200Nd", price: null, src: "no listed US vendor price", size: 18, ts: { Fs: 36, Qts: 0.33, Qes: 0.35, Qms: 10.9, Vas: 219, Sd: 1255, Xmax: 11, Re: 5.3, Bl: 26.4, Mms: 200, aes: 1200, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Neo, 1200 W AES / 2400 W program, 98 dB, 18.7 lb." },
+  { id: "es18lw2420", lb: 27.3, name: "18Sound 18LW2420", price: null, src: "Loudspeakers Plus (no price shown)", size: 18, ts: { Fs: 33, Qts: 0.31, Qes: 0.33, Qms: 7, Vas: 255, Sd: 1225, Xmax: 10, Re: 5.0, Bl: 24.6, Mms: 192, aes: 1300, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] 1300 W AES / 2600 W program, 98 dB, 27.3 lb." },
+  { id: "es18lw1400", lb: 29.3, name: "18Sound 18LW1400", price: null, src: "Loudspeakers Plus (no price shown)", size: 18, ts: { Fs: 31, Qts: 0.29, Qes: 0.31, Qms: 7.2, Vas: 297, Sd: 1225, Xmax: 9, Re: 5.0, Bl: 24.7, Mms: 190, aes: 1000, disp: 10.5 },
+    note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 1000 W AES, 98 dB, 29.3 lb. 18Sound publish a 905 × 590 × 500 mm reflex box for it; it's in the cabinet presets." },
+  { id: "sbnero15", lb: 35.9, name: "SB Audience Nero-15SW800", price: 295, src: "Madisound (out of stock)", size: 15, ts: { Fs: 31, Qts: 0.34, Qes: 0.36, Qms: 7.59, Vas: 137, Sd: 861, Xmax: 14.3, Re: 5.3, Bl: 24.4, Mms: 207, aes: 800, disp: 6.45 },
+    note: "[web search, Sep 2026; not checked against the datasheet] 800 W AES / 1600 W program, 6.45 L displacement, 35.9 lb (may be shipping weight)." },
 ];
 
 const MID_OPTIONS = [
@@ -144,6 +163,9 @@ const CABINETS = [
   { id: "towerCol", name: "Tower column, 18 deep", vents: ["folded"],
     dims: { 18: { w: 21, h: 37, d: 18 }, 15: { w: 19, h: 31, d: 16 } },
     note: "For the Tower layout. 155 L net in an 18 in deep shell; the letterbox duct runs back along the floor and turns up the back wall to get its length." },
+  { id: "es18app", name: "18Sound reflex (app note)", vents: ["slots"],
+    dims: { 18: { w: 23.25, h: 35.5, d: 19.75 }, 15: { w: 23.25, h: 35.5, d: 19.75 } },
+    note: "18Sound's published 905 H \u00d7 590 W \u00d7 500 D mm reflex box, 15 mm birch, ~230 L gross, 28 Hz HPF. Their vent isn't modelled; a bottom slot is loaded instead." },
   { id: "cube", name: "Cube", vents: ["round4"],
     dims: { 18: { w: 25, h: 25, d: 25 }, 15: { w: 23, h: 23, d: 19 } },
     note: "Square baffle, centred driver, corner ports. Reads the same in any rotation." },
@@ -1374,8 +1396,7 @@ function StackPlanner() {
             </div>
           ) : (
             <p className="text-sm text-stone-600 ">
-              No verified T/S parameters for {sub.name} yet, so nothing is computed here. The Nero-18,
-              Definimax 4018LF, B&C 18TBX100 and 18SW115 have been checked against their datasheets.
+              {sub.name} can't be modelled yet: its parameters are incomplete. {sub.note}
             </p>
           )}
           {mdl && lim && (
