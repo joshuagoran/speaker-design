@@ -98,6 +98,10 @@ collection `configs`, one document per configuration:
   "hpf": 33,
   "ampW": 800,                        // amp power per sub channel into 8 Ω; caps max SPL
   "portMax": 20,                      // peak port air speed limit, m/s
+  "mDim":  { "w": 15, "h": 15, "d": 15 },         // mid-bass box, external inches (sealed)
+  "mStuff": true,                     // light stuffing, ~15% more effective volume
+  "xoLo": 120, "xoHi": 950,           // crossovers, sub->mid and mid->horn, LR24
+  "mAmpW": 400,                       // amp power per mid channel into 8 Ω
   "layout": "stack", "cutaway": false, "baffleColor": "#e8b4a8",
   "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz"
 }
@@ -116,6 +120,7 @@ configurations and can be edited or deleted like any other.
 - `SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`,
   `FORMATS` — the component data at the top of the file. Drivers with a `ts`
   block get modelled; ones without show a note instead.
+- `closedBox(ts, VbL, hp, lp, volts)` — the sealed mid-bass model, LR24 crossovers at `hp`/`lp`. Returns the curve plus `Fc`, `Qtc`, box `f3`, midband `ref` and peak excursion. Coil inductance is not modelled.
 - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts)` — the vented-box model. Returns
   the response `curve` plus `Fb`, `f3`, `ref`, SPL at 30/35/45, peak port
   velocity and peak excursion.
@@ -123,8 +128,8 @@ configurations and can be edited or deleted like any other.
   dimensions) and `portGeom` (explicit vent geometry), so the drawn box always
   matches the modelled one. Its `useEffect` rebuilds the whole scene; the
   dependency array must include anything that changes the geometry.
-- `ResponseChart` — the SPL curve, fixed 80–135 dB so configurations compare
-  directly instead of rescaling under you.
+- `ResponseChart` — max-SPL curves (sub through its lowpass, mid-bass through
+  its crossovers), fixed 80–135 dB so configurations compare directly.
 - `StackPlanner` — state and layout. Every cabinet is custom: `cDim` and `cVent`
   hold the geometry and `CABINETS` only supplies starting points.
 

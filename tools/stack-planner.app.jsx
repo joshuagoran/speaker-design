@@ -53,16 +53,102 @@ const SUB_OPTIONS = [
 ];
 
 const MID_OPTIONS = [
-  { id: "bc12ndl", lb: 8, name: "B&C 12NDL76", price: 281, src: "Parts Express", box: { w: 14, h: 14, d: 18 }, note: "Sealed ~40 L. Neo, 100 dB, 400 W AES. Cheapest and most sensitive." },
-  { id: "f12pr", lb: 7, name: "Faital 12PR320", price: 310, src: "US Speaker", box: { w: 14, h: 14, d: 18 }, note: "Sealed ~40 L. Neo, 97 dB, 300 W AES, 7.4 mm Xmax." },
-  { id: "em2512", lb: 7, name: "Eminence Deltalite II 2512", price: 195, src: "eBay / Best Buy listings", box: { w: 14, h: 14, d: 18 }, note: "Sealed ~40 L. Neo, 99.6 dB, 250 W RMS, 4.9 mm Xmax. Cheapest; less excursion headroom." },
-  { id: "sbnero12", lb: 10, size: 12, pick: true, name: "SB Audience Nero-12MWN700D", price: 247, src: "Madisound", box: { w: 14, h: 14, d: 18 }, note: "Neo, 97 dB, 700 W, 7.3 mm Xmax, 3\" coil, Le 0.32 mH. Vas 52 L: ~40 L sealed gives Qtc ~0.58, Fc ~80 Hz. On AudioHorn's RX-28 list." },
-  { id: "sbnero10", lb: 7, size: 10, name: "SB Audience Nero-10MWN600D", price: null, src: "not priced yet", box: { w: 13, h: 13, d: 13 }, note: "Neo 10\", 94 dB, 7.3 mm Xmax, Fs 68 Hz. Sealed ~25 L. Pairs with the 15\" sub for the smaller stack; still crosses fine at 1.1 kHz." },
-  { id: "em3012", lb: 7.1, name: "Eminence KappaLite 3012HO", price: 250, src: "US Speaker, Sep 2026",
-    ts: { Fs: 52, Qts: 0.32, Qes: 0.33, Qms: 8.39, Vas: 81.1, Sd: 532, Xmax: 6.2, Re: 5.5, Bl: 15.9, Mms: 47, aes: 400 },
-    box: { w: 14, h: 14, d: 18 },
-    note: "[datasheet, loudspeakerdatabase.com] Neo, Fs 52 Hz, Qts 0.32, Vas 81 L, Xmax 6.2 mm, 400 W, 3 in coil, 7.1 lb. 97.1 dB/1W from those parameters (Eminence claim 99). [modelled] In 40 L sealed: Qtc 0.56, F3 ~120 Hz, so it meets a 120 Hz crossover with almost no shelf EQ. Needs 238 W for 115 dB at 1 m against the Nero-12's 416 W." },
-  { id: "18s12lw", lb: 20, name: "18Sound 12LW1400", price: null, src: "not priced yet", box: { w: 14, h: 14, d: 18 }, note: "AudioHorn's recommended 12 for the X-Shape 34." },
+  { id: "sbnero12", size: 12, lb: 9.15, pick: true, name: "SB Audience Nero-12MWN700D", price: 247, src: "Madisound",
+    ts: { Fs: 52.7, Qts: 0.38, Qes: 0.4, Qms: 8.9, Vas: 52.5, Sd: 543.3, Xmax: 7.3, Re: 5.3, Bl: 17.9, Mms: 72.5, aes: 700, disp: 2.15 },
+    note: "[datasheet, sbaudience.com R.1 2024] Neo, 700 W AES / 1400 W max, 97 dB, 3 in coil, Le 0.32 mH, 2.15 L displacement. Xmax = (Hvc \u2212 Hg)/2 + Hg/3." },
+  { id: "bc12ndl76", size: 12, lb: 8.6, name: "B&C 12NDL76", price: 281.52, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 50, Qts: 0.2, Qes: 0.21, Qms: 4.2, Vas: 73, Sd: 522, Xmax: 6.5, Re: 5.3, Bl: 20.1, Mms: 53, aes: 400, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 400 W nominal / 800 W continuous, 100 dB, Le 1.0 mH. Displacement not published; 2.5 L assumed." },
+  { id: "bc12ndl88", size: 12, lb: 8.6, name: "B&C 12NDL88", price: 355.92, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 51, Qts: 0.27, Qes: 0.29, Qms: 5.0, Vas: 52, Sd: 522, Xmax: 8, Re: 5.0, Bl: 19.9, Mms: 71, aes: 700, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 700 W nominal / 1400 W continuous, 98 dB, 3.5 in coil. Displacement not published; 2.5 L assumed." },
+  { id: "bc12nw76", size: 12, lb: 10.6, name: "B&C 12NW76", price: 343.5, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 40, Qts: 0.16, Qes: 0.17, Qms: 3.7, Vas: 76, Sd: 522, Xmax: 8, Re: 5.3, Bl: 25.5, Mms: 77, aes: 500, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 500 W nominal / 1000 W continuous, 98.5 dB. Displacement not published; 2.5 L assumed." },
+  { id: "bc12fw76", size: 12, lb: 18.7, name: "B&C 12FW76", price: 256.74, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 54, Qts: 0.17, Qes: 0.18, Qms: 3.8, Vas: 45, Sd: 522, Xmax: 7, Re: 5.1, Bl: 26.4, Mms: 75, aes: 500, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Ferrite, 500 W nominal / 1000 W continuous, 100 dB, 18.7 lb. Displacement not published; 2.5 L assumed." },
+  { id: "bc12cl64", size: 12, lb: 4.2, name: "B&C 12CL64", price: 184.2, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 52, Qts: 0.3, Qes: 0.32, Qms: 4.3, Vas: 64, Sd: 522, Xmax: 4.5, Re: 5.5, Bl: 17.5, Mms: 55, aes: 250, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 250 W nominal / 500 W continuous, 98 dB, 4.2 lb. Short 4.5 mm Xmax. Displacement not published; 2.5 L assumed." },
+  { id: "f12pr320", size: 12, lb: 6.1, name: "FaitalPRO 12PR320", price: 309.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 42, Qts: 0.37, Qes: 0.39, Qms: 7.8, Vas: 94.8, Sd: 489, Xmax: 7.37, Re: 5.3, Bl: 13.5, Mms: 51.4, aes: 300, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 300 W AES / 600 W program, 97 dB, Le 0.67 mH. Displacement not published; 2.5 L assumed." },
+  { id: "f12pr310", size: 12, lb: 9.37, name: "FaitalPRO 12PR310", price: 247.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 54, Qts: 0.4, Qes: 0.41, Qms: 11.6, Vas: 62.83, Sd: 489, Xmax: 4.92, Re: 5.4, Bl: 14.4, Mms: 46.9, aes: 300, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Ferrite, 300 W AES / 600 W program, 99 dB. Displacement not published; 2.5 L assumed." },
+  { id: "f12pr330", size: 12, lb: 9.5, name: "FaitalPRO 12PR330", price: 265.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 50, Qts: 0.4, Qes: 0.42, Qms: 10.9, Vas: 67.7, Sd: 489, Xmax: 7.37, Re: 5.3, Bl: 14.2, Mms: 50.8, aes: 300, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Ferrite, 300 W AES / 600 W program, 98 dB. Displacement not published; 2.5 L assumed." },
+  { id: "f12fh500", size: 12, lb: 8.8, name: "FaitalPRO 12FH500", price: 359.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 45, Qts: 0.25, Qes: 0.26, Qms: 6.9, Vas: 75.1, Sd: 487, Xmax: 7.5, Re: 5.1, Bl: 17.5, Mms: 56, aes: 500, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 500 W AES / 1000 W program, 97 dB. Displacement not published; 2.5 L assumed." },
+  { id: "es12mb700", size: 12, lb: 17.7, name: "18Sound 12MB700", price: 294.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 49, Qts: 0.19, Qes: 0.2, Qms: 4.7, Vas: 101, Sd: 531, Xmax: 4.5, Re: 5.0, Bl: 17.8, Mms: 41, aes: 450, disp: null },
+    note: "[usspeaker.com; Mms from the 18Sound datasheet] Ferrite, 450 W AES, 101.5 dB, Le 0.9 mH. Displacement not published; 2.5 L assumed." },
+  { id: "es12mb1000", size: 12, lb: 21.2, name: "18Sound 12MB1000", price: 409.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 54, Qts: 0.19, Qes: 0.2, Qms: 6.0, Vas: 60, Sd: 531, Xmax: 2.5, Re: 5.8, Bl: 23.5, Mms: 55.5, aes: 600, disp: null },
+    note: "[usspeaker.com; Mms from the 18Sound datasheet] Ferrite, 600 W AES, 102 dB. Xmax only 2.5 mm: built for efficiency, not excursion. Displacement not published; 2.5 L assumed." },
+  { id: "es12nlw9300", size: 12, lb: 13.7, name: "18Sound 12NLW9300", price: 369.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 47, Qts: 0.42, Qes: 0.45, Qms: 5.5, Vas: 56, Sd: 531, Xmax: 8, Re: 4.7, Bl: 17, Mms: 82, aes: 800, disp: null },
+    note: "[datasheet, eighteensound.it] Neo, 800 W AES / 1200 W continuous, 97 dB, Le 0.53 mH. usspeaker lists older figures (Fs 40, Vas 87 L). Displacement not published; 2.5 L assumed." },
+  { id: "es12lw1400", size: 12, lb: 24, name: "18Sound 12LW1400", price: null, src: "not on usspeaker",
+    ts: { Fs: 45, Qts: 0.3, Qes: 0.32, Qms: 5.0, Vas: 55, Sd: 531, Xmax: 8.25, Re: 5.2, Bl: 20, Mms: 88, aes: 900, disp: null },
+    note: "[datasheet, eighteensound.it] 900 W AES / 1400 W continuous, 96 dB, 4 in coil. AudioHorn's recommended 12 for the X-Shape 34; 18Sound now list the 12NLW9300 as its successor. Displacement not published; 2.5 L assumed." },
+  { id: "by12mc700nd", size: 12, lb: 8.2, name: "Beyma 12MC700Nd", price: 342.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 51, Qts: 0.24, Qes: 0.26, Qms: 4.1, Vas: 58, Sd: 550, Xmax: 7, Re: 5.2, Bl: 21.6, Mms: 72, aes: 700, disp: 2.0 },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 700 W AES / 1400 W program, 99 dB, 2.0 L displacement." },
+  { id: "by12lx60", size: 12, lb: 21.4, name: "Beyma 12LX60v2", price: 249.75, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 49, Qts: 0.39, Qes: 0.4, Qms: 15.3, Vas: 43, Sd: 550, Xmax: 9, Re: 5.1, Bl: 20, Mms: 102, aes: 700, disp: 5.5 },
+    note: "[usspeaker.com spec table, Sep 2026] Ferrite, 700 W AES / 1400 W program, 96 dB, 5.5 L displacement, 21.4 lb." },
+  { id: "by12p80nd", size: 12, lb: 12.3, name: "Beyma 12P80Nd", price: 474.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 47, Qts: 0.19, Qes: 0.2, Qms: 5.2, Vas: 65, Sd: 550, Xmax: 7.5, Re: 5.0, Bl: 23.7, Mms: 74, aes: 700, disp: 4.0 },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 700 W AES / 1400 W program, 100 dB, 4.0 L displacement." },
+  { id: "em3012", size: 12, lb: 11, name: "Eminence KappaLite 3012HO", price: 249.99, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 51.5, Qts: 0.32, Qes: 0.33, Qms: 8.39, Vas: 81.1, Sd: 532.4, Xmax: 6.2, Re: 5.5, Bl: 15.9, Mms: 46.9, aes: 400, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 400 W / 800 W program, 100.5 dB claimed, Le 0.57 mH. Displacement not published; 2.5 L assumed." },
+  { id: "em3012lf", size: 12, lb: 11, name: "Eminence KappaLite 3012LF", price: 254.99, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 37.02, Qts: 0.32, Qes: 0.34, Qms: 6.94, Vas: 105.42, Sd: 545.4, Xmax: 9.1, Re: 5.6, Bl: 16.7, Mms: 72.4, aes: 450, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 450 W / 900 W program, 95.5 dB, 9.1 mm Xmax. Displacement not published; 2.5 L assumed." },
+  { id: "em2512", size: 12, lb: 7, name: "Eminence Deltalite II 2512", price: 194.99, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 44, Qts: 0.41, Qes: 0.45, Qms: 4.17, Vas: 134.88, Sd: 519.5, Xmax: 4.9, Re: 5.17, Bl: 10.69, Mms: 37, aes: 250, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 250 W / 500 W program, 99.9 dB claimed, 4.9 mm Xmax. Displacement not published; 2.5 L assumed." },
+  { id: "ci12ndh3", size: 12, lb: 11, name: "Ciare 12NDH3", price: 319.08, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 55.1, Qts: 0.23, Qes: 0.23, Qms: 11.36, Vas: 66.42, Sd: 530, Xmax: 6.5, Re: 6.1, Bl: 21.36, Mms: 49.5, aes: 400, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 800 W program (400 W AES assumed), 100 dB, Le 0.54 mH. Displacement not published; 2.5 L assumed." },
+  { id: "lv123n", size: 12, lb: 11.4, name: "Lavoce WAN123.00", price: 249, src: "Parts Express, Sep 2026",
+    ts: { Fs: 48, Qts: 0.27, Qes: 0.28, Qms: 6.2, Vas: 73, Sd: 531, Xmax: 7, Re: 4.8, Bl: 17.8, Mms: 61, aes: 500, disp: 2.4 },
+    note: "[datasheet, Lavoce] Neo, 500 W AES / 1000 W program, 99 dB, Le 0.7 mH, 2.4 L displacement. Xmax = (Hvc \u2212 Hg)/2 + Hg/4." },
+  { id: "lv123f", size: 12, lb: 18.9, name: "Lavoce WAF123.01", price: 199, src: "Parts Express, Sep 2026",
+    ts: { Fs: 65, Qts: 0.39, Qes: 0.42, Qms: 6.3, Vas: 42, Sd: 531, Xmax: 7.5, Re: 4.8, Bl: 17, Mms: 63, aes: 500, disp: 2.8 },
+    note: "[datasheet, Lavoce] Ferrite, 500 W AES / 1000 W program, 98 dB, 2.8 L displacement." },
+  { id: "lv124f", size: 12, lb: 26.6, name: "Lavoce WAF124.01", price: 289, src: "Parts Express, Sep 2026",
+    ts: { Fs: 42, Qts: 0.22, Qes: 0.23, Qms: 6.3, Vas: 49, Sd: 540, Xmax: 9, Re: 5.1, Bl: 26.4, Mms: 120, aes: 1000, disp: 3.2 },
+    note: "[datasheet, Lavoce] Ferrite, 1000 W AES / 2000 W program, 95 dB, 4 in coil, 3.2 L displacement, 26.6 lb." },
+  { id: "sbnero10", size: 10, lb: 8.6, name: "SB Audience Nero-10MWN600D", price: null, src: "not priced yet",
+    ts: { Fs: 68.1, Qts: 0.34, Qes: 0.36, Qms: 5.88, Vas: 18.8, Sd: 356.3, Xmax: 7.3, Re: 5.4, Bl: 18.2, Mms: 52.2, aes: 600, disp: 2.55 },
+    note: "[datasheet, sbaudience.com R.1 2024] Neo, 600 W AES / 1200 W max, 96 dB, 2.55 L displacement." },
+  { id: "bc10ndl64", size: 10, lb: 6.4, name: "B&C 10NDL64", price: 233.88, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 56, Qts: 0.27, Qes: 0.29, Qms: 3.4, Vas: 31, Sd: 320, Xmax: 6, Re: 5.7, Bl: 16.2, Mms: 37, aes: 250, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 250 W nominal / 500 W continuous, 97 dB. Displacement not published; 2.5 L assumed." },
+  { id: "bc10nw64", size: 10, lb: 6.4, name: "B&C 10NW64", price: 224.22, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 50, Qts: 0.25, Qes: 0.27, Qms: 4.5, Vas: 27.5, Sd: 320, Xmax: 8, Re: 5.2, Bl: 17.5, Mms: 47, aes: 300, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 300 W nominal / 600 W continuous, 96 dB. Displacement not published; 2.5 L assumed." },
+  { id: "f10pr320", size: 10, lb: 5.6, name: "FaitalPRO 10PR320", price: 284.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 48, Qts: 0.29, Qes: 0.31, Qms: 4.6, Vas: 45.9, Sd: 321, Xmax: 7.37, Re: 5.3, Bl: 13.5, Mms: 35, aes: 300, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 300 W AES / 600 W program, 96 dB. Displacement not published; 2.5 L assumed." },
+  { id: "es10mb600", size: 10, lb: 15.9, name: "18Sound 10MB600", price: 249.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 58, Qts: 0.22, Qes: 0.23, Qms: 5.5, Vas: 33.4, Sd: 350, Xmax: 6.5, Re: 5.7, Bl: 18.6, Mms: 38, aes: 450, disp: null },
+    note: "[usspeaker.com; Mms from the 18Sound datasheet] Ferrite, 450 W AES, 98 dB. Displacement not published; 2.5 L assumed." },
+  { id: "by10mc500nd", size: 10, lb: 6.8, name: "Beyma 10MC500Nd", price: 280.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 58, Qts: 0.25, Qes: 0.26, Qms: 4.7, Vas: 29, Sd: 350, Xmax: 8, Re: 5.5, Bl: 18.7, Mms: 45, aes: 500, disp: 2.0 },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 500 W AES / 1000 W program, 97 dB, 2.0 L displacement." },
+  { id: "lv102n", size: 10, lb: 6.2, name: "Lavoce WAN102.50", price: 179, src: "Parts Express, Sep 2026",
+    ts: { Fs: 77, Qts: 0.35, Qes: 0.38, Qms: 4.7, Vas: 21.5, Sd: 343, Xmax: 5.1, Re: 5.6, Bl: 15.3, Mms: 32.6, aes: 300, disp: 1.2 },
+    note: "[datasheet, Lavoce] Neo, 300 W AES / 600 W program, 97 dB, 1.2 L displacement." },
+  { id: "lv102f", size: 10, lb: 10.2, name: "Lavoce WAF102.50", price: 159, src: "Parts Express, Sep 2026",
+    ts: { Fs: 71, Qts: 0.31, Qes: 0.33, Qms: 5.3, Vas: 23.6, Sd: 347, Xmax: 5, Re: 5.5, Bl: 16, Mms: 34.6, aes: 250, disp: 1.5 },
+    note: "[datasheet, Lavoce; sheet titled WAF102.50A] Ferrite, 250 W AES / 500 W program, 98 dB, 1.5 L displacement." },
 ];
 
 const MID_BOXES = [
@@ -261,6 +347,43 @@ function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts) {
     peakX: Math.max(...lo.map((o) => o.xmm)),
     xmaxPct: (Math.max(...lo.map((o) => o.xmm)) / ts.Xmax) * 100,
   };
+}
+
+// ---------------------------------------------------------------
+// Sealed-box model for the mid-bass: the same driver circuit with the box
+// compliance in series and no port. hp and lp are the crossover corners,
+// Linkwitz-Riley 24 dB/oct. Voice-coil inductance is not modelled, so the top
+// octave reads a little high. Excursion is the sine peak, as in boxModel.
+// ---------------------------------------------------------------
+function closedBox(ts, VbL, hp, lp, volts) {
+  if (!ts || !VbL || VbL <= 0) return null;
+  const rho = 1.18, c = 343;
+  const Sd = ts.Sd / 10000, Mms = ts.Mms / 1000, Vb = VbL / 1000;
+  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
+  const Mas = Mms / (Sd * Sd), Cas = Cms * Sd * Sd;
+  const Ras = ((2 * Math.PI * ts.Fs * Mms) / ts.Qms) / (Sd * Sd);
+  const Rae = ((ts.Bl * ts.Bl) / ts.Re) / (Sd * Sd);
+  const Cab = Vb / (rho * c * c);
+  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
+  const Ctot = (Cas * Cab) / (Cas + Cab);
+  const Fc = 1 / (2 * Math.PI * Math.sqrt(Mas * Ctot));
+  const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl);
+  const Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
+  const Qtc = Qts * (Fc / ts.Fs);
+  const N = 420, out = [];
+  for (let i = 0; i < N; i++) {
+    const f = 20 * Math.pow(2000 / 20, i / (N - 1));
+    const w = 2 * Math.PI * f, s = cx(0, w);
+    const Z = cadd(cx(Ras + Rae), cadd(cmul(s, cx(Mas)), cadd(cinv(cmul(s, cx(Cas))), cinv(cmul(s, cx(Cab))))));
+    const U = cabs(cdiv(cx(Pg), Z));
+    const g = (hp ? Math.pow(f / hp, 2) / (1 + Math.pow(f / hp, 2)) : 1) * (lp ? 1 / (1 + Math.pow(f / lp, 2)) : 1);
+    const raw = 20 * Math.log10((rho * w * U) / (2 * Math.PI) / 2e-5);
+    out.push({ f, raw, spl: raw + 20 * Math.log10(g), xmm: Math.SQRT2 * (U / (w * Sd)) * g * 1000 });
+  }
+  const band = out.filter((o) => o.f > 200 && o.f < 500);
+  const ref = band.reduce((a, o) => a + o.raw, 0) / band.length;
+  const f3 = (out.find((o) => o.raw >= ref - 3) || out[0]).f;
+  return { curve: out, Fc, Qtc, f3, ref, peakX: Math.max(...out.map((o) => o.xmm)) };
 }
 
 const inToL = (w, h, d) => ((w - 2 * PLY) * (h - 2 * PLY) * (d - 2 * PLY) * 16.387) / 1000;
@@ -945,22 +1068,24 @@ function Pick({ label, options, value, onChange }) {
   );
 }
 
-function ResponseChart({ curve, scale, Fb }) {
+// Max-SPL chart: one or more curves ({f, spl}), fixed 80-135 dB so setups compare directly.
+function ResponseChart({ series, marks = [], fmax = 200 }) {
   const W = 760, H = 300, L = 52, R = 14, TT = 16, B = 36;
   const x0 = L, x1 = W - R, y0 = TT, y1 = H - B;
-  const TOP = 135, BOT = 80, fmin = 15, fmax = 200;
+  const TOP = 135, BOT = 80, fmin = 15;
   const px = (f) => x0 + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (x1 - x0);
   const py = (v) => y1 - ((Math.max(BOT, Math.min(TOP, v)) - BOT) / (TOP - BOT)) * (y1 - y0);
-  const pts = curve.filter((o) => o.f >= fmin && o.f <= fmax).map((o) => ({ f: o.f, y: o.spl + scale }));
-  if (!pts.length) return null;
-  const d = pts.map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.y).toFixed(1)).join("");
-  const fill = d + `L${px(pts[pts.length - 1].f).toFixed(1)},${y1} L${px(pts[0].f).toFixed(1)},${y1} Z`;
-  const p45 = pts.reduce((b, p) => (Math.abs(p.f - 45) < Math.abs(b.f - 45) ? p : b));
+  const paths = series.map((sr) => {
+    const pts = sr.curve.filter((o) => o.f >= fmin && o.f <= fmax);
+    const d = pts.map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1)).join("");
+    return { ...sr, d, fill: pts.length ? d + `L${px(pts[pts.length - 1].f).toFixed(1)},${y1} L${px(pts[0].f).toFixed(1)},${y1} Z` : "" };
+  });
+  const ticks = [20, 30, 50, 100, 200, 500, 1000, 2000].filter((f) => f <= fmax);
   const grid = [];
-  [20, 30, 40, 50, 70, 100, 150, 200].forEach((f) => {
+  ticks.forEach((f) => {
     const X = px(f);
     grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke="#e7e5e4" strokeWidth="1" />);
-    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{f}</text>);
+    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{f >= 1000 ? f / 1000 + "k" : f}</text>);
   });
   for (let v = BOT; v <= TOP; v += 5) {
     const Y = py(v);
@@ -969,17 +1094,24 @@ function ResponseChart({ curve, scale, Fb }) {
   }
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Maximum sound pressure level against frequency for this cabinet" style={{ display: "block", width: "100%", height: "auto" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Maximum sound pressure level against frequency" style={{ display: "block", width: "100%", height: "auto" }}>
         {grid}
-        {Fb > fmin && Fb < fmax && <>
-          <line x1={px(Fb)} y1={y0} x2={px(Fb)} y2={y1} stroke="#a8a29e" strokeWidth="1" strokeDasharray="3 4" />
-          <text x={px(Fb) + 5} y={y0 + 13} fill="#a8a29e" fontSize="10.5" fontFamily="system-ui, sans-serif">Fb</text>
-        </>}
-        <path d={fill} fill="rgba(41,37,36,0.07)" />
-        <path d={d} fill="none" stroke="#292524" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-        <circle cx={px(p45.f)} cy={py(p45.y)} r="4.5" fill="#292524" stroke="#fafaf9" strokeWidth="2" />
+        {marks.filter((m) => m.f > fmin && m.f < fmax).map((m) => (
+          <g key={m.label}>
+            <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke="#a8a29e" strokeWidth="1" strokeDasharray="3 4" />
+            <text x={px(m.f) + 5} y={y0 + 13} fill="#a8a29e" fontSize="10.5" fontFamily="system-ui, sans-serif">{m.label}</text>
+          </g>
+        ))}
+        {paths.map((p) => <path key={p.label + "f"} d={p.fill} fill={p.tint} />)}
+        {paths.map((p) => <path key={p.label} d={p.d} fill="none" stroke={p.stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />)}
+        {paths.map((p, i) => (
+          <g key={p.label + "k"}>
+            <line x1={x0 + 10} y1={y0 + 8 + i * 16} x2={x0 + 30} y2={y0 + 8 + i * 16} stroke={p.stroke} strokeWidth="2" />
+            <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#57534e" fontSize="11" fontFamily="system-ui, sans-serif">{p.label}</text>
+          </g>
+        ))}
         <text x={W / 2} y={H - 4} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">frequency, Hz</text>
-        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">dB SPL @ 1 m</text>
+        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">max dB SPL @ 1 m</text>
       </svg>
     </div>
   );
@@ -1093,7 +1225,13 @@ function StackPlanner() {
   const [mid, setMid] = useState(MID_OPTIONS.find((o) => o.id === "sbnero12"));
   const [horn, setHorn] = useState(HORN_OPTIONS.find((h) => h.id === "a400g2"));
   const [cd, setCd] = useState(CD_OPTIONS.find((c) => c.id === "de360"));
-  const [midBox, setMidBox] = useState(MID_BOXES.find((o) => o.id === "b15"));
+  const [midBox, setMidBox] = useState(MID_BOXES.find((o) => o.id === "b15"));   // last preset loaded
+  const [mDim, setMDim] = useState({ ...MID_BOXES.find((o) => o.id === "b15").box });
+  const [mStuff, setMStuff] = useState(true);    // light stuffing: ~15% more effective volume
+  const [xoLo, setXoLo] = useState(120);         // sub -> mid crossover, LR24
+  const [xoHi, setXoHi] = useState(950);         // mid -> horn crossover, LR24
+  const [mAmpW, setMAmpW] = useState(400);       // amp power per mid channel, into 8 Ω
+  const setM = (k, v) => setMDim((p) => ({ ...p, [k]: v }));
   const plinth = 3; // fixed, matches the duct height
   const [cutaway, setCutaway] = useState(false);
   const [cabinet, setCabinet] = useState(CABINETS[0]);
@@ -1133,7 +1271,9 @@ function StackPlanner() {
     );
     return un;
   }, [db]);
-  const midSel = { ...mid, box: midBox.box };
+  // In the tower layout the mid chamber is the sub's footprint, 15.5 in tall.
+  const midDims = layout === "tower" ? { w: cDim.w, h: 15.5, d: cDim.d } : mDim;
+  const midSel = { ...mid, box: midDims };
   const subList = SUB_OPTIONS.filter((o) => o.size === format.sub);
   const midList = MID_OPTIONS.filter((o) => (o.size || 12) === format.mid);
   const boxList = MID_BOXES.filter((b) => (format.mid === 10 ? b.id === "b13" : b.id !== "b13"));
@@ -1158,7 +1298,7 @@ function StackPlanner() {
     const pickOf = (list) => list.find((o) => o.pick) || list[0];
     if (subList.length) setSub(pickOf(subList));
     if (midList.length) setMid(pickOf(midList));
-    if (boxList.length) setMidBox(pickOf(boxList));
+    if (boxList.length) { const b = pickOf(boxList); setMidBox(b); setMDim({ ...b.box }); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [format]);
   const mismatch = horn.exit !== cd.exit;
@@ -1241,12 +1381,35 @@ function StackPlanner() {
   const maxCurve = mdl ? mdl.curve.map(maxAt) : null;
   const maxNear = (f) => maxCurve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 
+  // ---- mid-bass: sealed box ----
+  const MID_V = Math.sqrt(mAmpW * 8);
+  const midGrossL = inToL(midDims.w, midDims.h, midDims.d - 0.75);   // baffle recessed 3/4"
+  const midDisp = mid.ts && mid.ts.disp != null ? mid.ts.disp : 2.5;   // assumed where not published
+  const midNetL = Math.max(5, midGrossL - midDisp);
+  const midEffL = midNetL * (mStuff ? 1.15 : 1);
+  const mMdl = mid.ts ? closedBox(mid.ts, midEffL, xoLo, xoHi, MID_V) : null;
+  const vMidTherm = mid.ts ? Math.sqrt(2 * mid.ts.aes * 8) : 0;
+  const midMaxAt = (o) => {
+    const vx = (MID_V * mid.ts.Xmax) / o.xmm, V = Math.min(vx, vMidTherm, MID_V);
+    return { f: o.f, spl: o.spl + 20 * Math.log10(V / MID_V), who: V === vx ? "Xmax" : V === vMidTherm ? "thermal" : "amp" };
+  };
+  const midMax = mMdl ? mMdl.curve.map(midMaxAt) : null;
+  const midNear = (f) => midMax.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
+  // Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter.
+  const subSys = mdl ? mdl.curve.map((o) => {
+    const g = 1 / (1 + Math.pow(o.f / xoLo, 2));
+    const vp = (AMP_V * portMax) / (o.vel * g), vx = (AMP_V * sub.ts.Xmax) / (o.xmm * g);
+    const V = Math.min(vp, vx, vThermal, AMP_V);
+    return { f: o.f, spl: o.spl + 20 * Math.log10(g) + 20 * Math.log10(V / AMP_V) };
+  }) : null;
+  const subAtXo = subSys ? subSys.reduce((b, o) => (Math.abs(o.f - xoLo) < Math.abs(b.f - xoLo) ? o : b)).spl : null;
+
   const portGeom = { ductH: cVent.slotH, nPorts: cVent.nt, portR: cVent.dia / 2, tubeLen: cVent.len, throat: cVent.throat };
 
   // One named snapshot of the whole system.
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
-    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, ampW, portMax,
+    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, ampW, portMax, mDim, mStuff, xoLo, xoHi, mAmpW,
     layout, cutaway, baffleColor,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
@@ -1263,6 +1426,11 @@ function StackPlanner() {
     if (typeof c.hpf === "number") setHpf(c.hpf);
     if (typeof c.ampW === "number") setAmpW(c.ampW);
     if (typeof c.portMax === "number") setPortMax(c.portMax);
+    if (c.mDim) setMDim(c.mDim); else if (c.midBox) { const b = MID_BOXES.find((x) => x.id === c.midBox); if (b) setMDim({ ...b.box }); }
+    if (typeof c.mStuff === "boolean") setMStuff(c.mStuff);
+    if (typeof c.xoLo === "number") setXoLo(c.xoLo);
+    if (typeof c.xoHi === "number") setXoHi(c.xoHi);
+    if (typeof c.mAmpW === "number") setMAmpW(c.mAmpW);
     if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
     if (c.layout) setLayout(c.layout);
     if (c.baffleColor) setBaffleColor(c.baffleColor);
@@ -1289,13 +1457,13 @@ function StackPlanner() {
   const subLbLoaded = ((2 * (subBox.w * subBox.h + subBox.w * subBox.d + subBox.h * subBox.d) + 2 * subBox.w * subBox.d) / 144) * 2.3 + (sub.lb || 0) + 6;
 
   const subL = grossL;
-  const midL = inToL(midBox.box.w, midBox.box.h, midBox.box.d);
+  const midL = midGrossL;
   const subTopH = plinth + subBox.h;
   const isTower = layout === "tower";
   const baseH = layout === "satellite" ? 34 : layout === "pole" ? subTopH + 20 : isTower ? subTopH : subTopH + 0.4;
   const archT = isTower && !!horn.profile && !horn.scaleX && subBox.w / 2 - 0.75 > horn.size.w / 2;
-  const stackH = isTower ? baseH + 15.5 + (archT ? subBox.w - 0.75 : horn.size.h + 2) : baseH + midBox.box.h + 1.2 + horn.size.h + 2;
-  const hornCenter = isTower ? baseH + 15.5 + (archT ? subBox.w / 2 - 0.75 : (horn.size.h + 2) / 2) : baseH + midBox.box.h + 1.2 + 1 + horn.size.h / 2;
+  const stackH = isTower ? baseH + 15.5 + (archT ? subBox.w - 0.75 : horn.size.h + 2) : baseH + midDims.h + 1.2 + horn.size.h + 2;
+  const hornCenter = isTower ? baseH + 15.5 + (archT ? subBox.w / 2 - 0.75 : (horn.size.h + 2) / 2) : baseH + midDims.h + 1.2 + 1 + horn.size.h / 2;
 
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
@@ -1374,7 +1542,7 @@ function StackPlanner() {
               ))}
             </div>
           )}
-          {mdl && lim && <div className="mb-4"><ResponseChart curve={maxCurve} scale={0} Fb={mdl.Fb} /></div>}
+          {mdl && lim && <div className="mb-4"><ResponseChart fmax={2000} series={[{ curve: subSys, label: "Sub", stroke: "#292524", tint: "rgba(41,37,36,0.07)" }, ...(midMax ? [{ curve: midMax, label: "Mid-bass", stroke: "#b45309", tint: "rgba(180,83,9,0.06)" }] : [])]} marks={[{ f: mdl.Fb, label: "Fb" }, { f: xoLo, label: "XO" }, { f: xoHi, label: "XO" }]} /></div>}
           {mdl ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
@@ -1449,6 +1617,72 @@ function StackPlanner() {
           </p>
         </section>
 
+        <section className="mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Mid-bass</h2>
+          {mMdl ? (<>
+            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200"
+                 style={{ gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))" }}>
+              {[
+                ["Net volume", midNetL.toFixed(0), "L"],
+                ["Box resonance Fc", mMdl.Fc.toFixed(0), "Hz"],
+                ["Qtc", mMdl.Qtc.toFixed(2), ""],
+                ["Box F3", mMdl.f3.toFixed(0), "Hz"],
+                [`Max SPL @ ${xoLo} Hz`, midNear(xoLo).spl.toFixed(1), "dB"],
+              ].map(([k, v, u]) => (
+                <div key={k} className="bg-stone-50 px-3 py-2.5">
+                  <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+                  <div className="text-xl font-medium tabular-nums mt-0.5">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
+              {[
+                ["Gross internal", `${midGrossL.toFixed(0)} L`, mStuff ? `acts like ${midEffL.toFixed(0)} L stuffed` : "unstuffed"],
+                ["Midband sensitivity", `${(mMdl.ref - 20 * Math.log10(MID_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
+                ...[xoLo, 200, 500].map((f) => { const m = midNear(f);
+                  return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
+                ["Peak excursion", `${mMdl.peakX.toFixed(1)} mm`, `${(mMdl.peakX / mid.ts.Xmax * 100).toFixed(0)}% of Xmax at ${mAmpW} W, with the ${xoLo} Hz highpass`],
+              ].map(([k, v, note]) => (
+                <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
+                  <span className="text-stone-500 shrink-0">{k}</span>
+                  <span className="text-right">
+                    <span className="font-medium tabular-nums">{v}</span>
+                    {note ? <span className="block text-xs text-stone-500">{note}</span> : null}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-1.5 mt-4">
+              {(() => {
+                const F = [];
+                const need = format.mid + 1.2;
+                if (Math.min(midDims.w, midDims.h) < need)
+                  F.push(["bad", "Driver won't fit", `A ${format.mid}\u2033 driver needs about ${need.toFixed(1)}\u2033 of baffle; the smallest face is ${Math.min(midDims.w, midDims.h)}\u2033.`]);
+                F.push(mMdl.Qtc > 0.8 ? ["warn", `Qtc ${mMdl.Qtc.toFixed(2)}`, "Peaky and loose; the box is small for this driver."]
+                  : mMdl.Qtc < 0.5 ? ["warn", `Qtc ${mMdl.Qtc.toFixed(2)}`, "Very damped. Fine above the crossover, but the box could be smaller."]
+                  : ["ok", `Qtc ${mMdl.Qtc.toFixed(2)}`, "Well damped."]);
+                if (mMdl.f3 > xoLo)
+                  F.push(["warn", "Rolls off above the crossover", `The box is 3 dB down at ${mMdl.f3.toFixed(0)} Hz, above the ${xoLo} Hz crossover. Raise the crossover or use more volume.`]);
+                const lam = 13504 / xoHi;   // wavelength in inches
+                if (midDims.w > lam)
+                  F.push(["warn", "Baffle wider than a wavelength at the horn crossover", `${midDims.w}\u2033 against ${lam.toFixed(1)}\u2033 at ${xoHi} Hz: the mid beams before the horn takes over.`]);
+                const gap = midNear(xoLo).spl - subAtXo;
+                F.push(gap < -1 ? ["warn", "Mid runs out first at the crossover", `${(-gap).toFixed(1)} dB below the sub at ${xoLo} Hz. More mid amp, a higher crossover, or a driver with more excursion.`]
+                  : ["ok", "Keeps up with the sub", `${gap >= 0 ? gap.toFixed(1) + " dB above" : (-gap).toFixed(1) + " dB below"} the sub at ${xoLo} Hz.`]);
+                return F.map(([kind, head, body]) => (
+                  <div key={head} className="flex gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+                    <b className={`shrink-0 font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+                    <span className="text-stone-600">{body}</span>
+                  </div>
+                ));
+              })()}
+            </div>
+            <p className="text-xs text-stone-500 mt-3">Sealed, LR24 crossovers at {xoLo} Hz and {xoHi} Hz. Coil inductance isn't modelled, so the top octave reads a little high.</p>
+          </>) : (
+            <p className="text-sm text-stone-600">{mid.name} can't be modelled yet: its parameters are incomplete. {mid.note}</p>
+          )}
+        </section>
+
         </div>
 
         <aside className="md:col-span-2" style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -1464,7 +1698,6 @@ function StackPlanner() {
           </div>
           <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} />
           <Pick label={`Mid-bass ${format.mid}"`} options={midList} value={mid} onChange={setMid} />
-          <Pick label="Mid-bass box" options={boxList} value={midBox} onChange={setMidBox} />
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Baffle colour</div>
             <div className="flex flex-wrap gap-1.5 items-center">
@@ -1555,6 +1788,34 @@ function StackPlanner() {
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
             </div>
           </div>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
+            <div className="rounded border border-stone-300 bg-white px-3 py-3">
+              {layout === "tower" ? (
+                <div className="text-xs text-stone-500 mb-3">Tower layout: the mid chamber is the sub's footprint, {cDim.w}″ × 15.5″ × {cDim.d}″.</div>
+              ) : (<>
+                <Slider label="Width"  value={mDim.w} min={10} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("w", v)} />
+                <Slider label="Height" value={mDim.h} min={10} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("h", v)} />
+                <Slider label="Depth"  value={mDim.d} min={8} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("d", v)} />
+              </>)}
+              <div className="flex gap-1 mb-3">
+                {[["Stuffed", true], ["Empty", false]].map(([label, v]) => (
+                  <button key={label} onClick={() => setMStuff(v)} className={`px-3 py-1.5 rounded border text-xs ${mStuff === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
+                ))}
+              </div>
+              <Slider label="Crossover, sub to mid" value={xoLo} min={60} max={250} step={5} unit=" Hz" onChange={setXoLo} />
+              <Slider label="Crossover, mid to horn" value={xoHi} min={500} max={2000} step={50} unit=" Hz" onChange={setXoHi} />
+              <Slider label="Mid amp power per channel @ 8 Ω" value={mAmpW} min={50} max={2000} step={25} unit=" W" onChange={setMAmpW} />
+            </div>
+            {layout !== "tower" && (<>
+              <div className="text-xs text-stone-500 mt-2 mb-1">Start from a preset box</div>
+              <select value="" onChange={(e) => { const b = MID_BOXES.find((x) => x.id === e.target.value); if (b) { setMidBox(b); setMDim({ ...b.box }); } e.target.value = ""; }}
+                className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500 focus:outline-none focus:border-stone-900">
+                <option value="">Load dimensions&hellip;</option>
+                {boxList.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </>)}
+          </div>
           <Pick label="Compression driver" options={CD_OPTIONS} value={cd} onChange={setCd} />
           <Pick label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} />
           {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}" vs {cd.exit}").</div>}
@@ -1571,11 +1832,10 @@ function StackPlanner() {
           <div>
             <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Mid-bass cube</h2>
             <p className="text-sm text-stone-700">
-              {mid.name} in a {midBox.box.w}×{midBox.box.h}×{midBox.box.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed.
+              {mid.name} in a {midDims.w}×{midDims.h}×{midDims.d} in sealed box, gross {midL.toFixed(0)} L{mStuff ? ", lightly stuffed" : ""}.
               Covers ~90 Hz to the horn crossover. Same 18 mm birch, flush-mounted driver.
             </p>
             {mid.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{mid.name}.</span> {mid.note}</p>}
-            {midBox.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{midBox.name}.</span> {midBox.note}</p>}
           </div>
           <div>
             <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Horn</h2>
@@ -1594,10 +1854,10 @@ function StackPlanner() {
             const PLY_LB_FT2 = 2.3; // 3/4" birch
             const boxLb = (b) => ((2 * (b.w * b.h + b.w * b.d + b.h * b.d) + b.w * b.d) / 144) * PLY_LB_FT2; // six panels + one brace/shelf
             const subBoxLb = subLbLoaded - (sub.lb || 0); // same estimate as the stats row
-            const midBoxLb = boxLb(midBox.box);
+            const midBoxLb = boxLb(midDims);
             const rows = [
               ["Sub column", sub.price, sub.lb, subBoxLb, subBox.h],
-              ["Mid-bass box", mid.price, mid.lb, midBoxLb, midBox.box.h],
+              ["Mid-bass box", mid.price, mid.lb, midBoxLb, midDims.h],
               ["Compression driver", cd.price, cd.lb || 0, 0, 0],
               ["Horn", horn.price, (horn.lb || 0) + 1, 0, horn.size.h + 1],
             ];
