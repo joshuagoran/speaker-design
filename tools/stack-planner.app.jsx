@@ -1231,6 +1231,7 @@ function StackPlanner() {
   const [xoLo, setXoLo] = useState(120);         // sub -> mid crossover, LR24
   const [xoHi, setXoHi] = useState(950);         // mid -> horn crossover, LR24
   const [mAmpW, setMAmpW] = useState(400);       // amp power per mid channel, into 8 Ω
+  const [tilt, setTilt] = useState(6);           // how much less the mid band needs than the sub band, dB
   const setM = (k, v) => setMDim((p) => ({ ...p, [k]: v }));
   const plinth = 3; // fixed, matches the duct height
   const [cutaway, setCutaway] = useState(false);
@@ -1407,13 +1408,19 @@ function StackPlanner() {
     return { f: o.f, spl: o.spl + 20 * Math.log10(g) + 20 * Math.log10(V / AMP_V) };
   }) : null;
   const subAtXo = subSys ? subSys.reduce((b, o) => (Math.abs(o.f - xoLo) < Math.abs(b.f - xoLo) ? o : b)).spl : null;
+  // What the mid actually has to match: the sub at its music limit (one drive level for
+  // the whole band), through its lowpass, less the music-balance allowance.
+  const subMusicAtXo = mdl && lim ? (() => {
+    const o = mdl.curve.reduce((b, x) => (Math.abs(x.f - xoLo) < Math.abs(b.f - xoLo) ? x : b));
+    return o.spl + 20 * Math.log10(1 / (1 + Math.pow(o.f / xoLo, 2))) + 20 * Math.log10(lim.V / AMP_V);
+  })() : null;
 
   const portGeom = { ductH: cVent.slotH, nPorts: cVent.nt, portR: cVent.dia / 2, tubeLen: cVent.len, throat: cVent.throat };
 
   // One named snapshot of the whole system.
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
-    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, ampW, portMax, mDim, mStuff, xoLo, xoHi, mAmpW,
+    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, ampW, portMax, mDim, mStuff, xoLo, xoHi, mAmpW, tilt,
     layout, cutaway, baffleColor,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
@@ -1435,6 +1442,7 @@ function StackPlanner() {
     if (typeof c.xoLo === "number") setXoLo(c.xoLo);
     if (typeof c.xoHi === "number") setXoHi(c.xoHi);
     if (typeof c.mAmpW === "number") setMAmpW(c.mAmpW);
+    if (typeof c.tilt === "number") setTilt(c.tilt);
     if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
     if (c.layout) setLayout(c.layout);
     if (c.baffleColor) setBaffleColor(c.baffleColor);
@@ -1677,9 +1685,17 @@ function StackPlanner() {
                   : vMidTherm < MID_V
                   ? ["ok", "Thermally limited", `Reaches its ${2 * mid.ts.aes} W program rating (2 \u00d7 ${mid.ts.aes} W AES) before Xmax; the ${mAmpW} W amp has more than it can use.`]
                   : ["ok", "Amp-limited", `The ${mAmpW} W amp runs out before Xmax or the ${2 * mid.ts.aes} W program rating.`]);
-                const gap = midNear(xoLo).spl - subAtXo;
-                F.push(gap < -1 ? ["warn", "Mid runs out first at the crossover", `${(-gap).toFixed(1)} dB below the sub at ${xoLo} Hz. ${midNear(xoLo).who === "amp" ? "More mid amp or a higher crossover." : midNear(xoLo).who === "thermal" ? "A driver with more power handling, or a higher crossover." : "A higher crossover or a driver with more excursion."}`]
-                  : ["ok", "Keeps up with the sub", `${gap >= 0 ? gap.toFixed(1) + " dB above" : (-gap).toFixed(1) + " dB below"} the sub at ${xoLo} Hz.`]);
+                if (subMusicAtXo != null) {
+                  const need = subMusicAtXo - tilt, m = midNear(xoLo), gap = m.spl - need;
+                  // amp power that would close the gap, if the amp is what's short
+                  const wNeed = Math.pow(MID_V * Math.pow(10, -gap / 20), 2) / 8;
+                  F.push(gap < -0.5
+                    ? ["warn", "Mid runs out first", `${(-gap).toFixed(1)} dB short at ${xoLo} Hz of the sub at its music limit, less ${tilt} dB for the mid band. ` +
+                        (m.who === "amp" ? (wNeed <= 2 * mid.ts.aes ? `About ${Math.ceil(wNeed / 25) * 25} W per mid channel would cover it.` : "More amp won't get there: it passes the driver's program rating first.")
+                        : m.who === "thermal" ? "A driver with more power handling, or a higher crossover." : "A higher crossover or a driver with more excursion.")]
+                    : ["ok", "Keeps up with the sub", `${gap.toFixed(1)} dB to spare at ${xoLo} Hz against the sub at its music limit, less ${tilt} dB for the mid band.` +
+                        (m.who === "amp" && gap > 1 ? ` About ${Math.max(25, Math.ceil(wNeed / 25) * 25)} W per mid channel would still cover it.` : "")]);
+                }
                 return F.map(([kind, head, body]) => (
                   <div key={head} className="flex gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
                     <b className={`shrink-0 font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
@@ -1817,6 +1833,8 @@ function StackPlanner() {
               <Slider label="Crossover, sub to mid" value={xoLo} min={60} max={250} step={5} unit=" Hz" onChange={setXoLo} />
               <Slider label="Crossover, mid to horn" value={xoHi} min={500} max={2000} step={50} unit=" Hz" onChange={setXoHi} />
               <Slider label="Mid amp power per channel @ 8 Ω" value={mAmpW} min={50} max={2000} step={25} unit=" W" onChange={setMAmpW} />
+              <Slider label="Music balance: mid band needs less by" value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
+              <div className="text-xs text-stone-500">0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.</div>
             </div>
             {layout !== "tower" && (<>
               <div className="text-xs text-stone-500 mt-2 mb-1">Start from a preset box</div>

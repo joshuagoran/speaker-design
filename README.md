@@ -102,6 +102,7 @@ collection `configs`, one document per configuration:
   "mStuff": true,                     // light stuffing, ~15% more effective volume
   "xoLo": 120, "xoHi": 950,           // crossovers, sub->mid and mid->horn, LR24
   "mAmpW": 400,                       // amp power per mid channel into 8 Ω
+  "tilt": 6,                          // dB less the mid band needs than the sub band (music balance)
   "layout": "stack", "cutaway": false, "baffleColor": "#e8b4a8",
   "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz"
 }
