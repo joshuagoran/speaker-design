@@ -166,6 +166,10 @@ const CABINETS = [
   { id: "es18app", name: "18Sound reflex (app note)", vents: ["slots"],
     dims: { 18: { w: 23.25, h: 35.5, d: 19.75 }, 15: { w: 23.25, h: 35.5, d: 19.75 } },
     note: "18Sound's published 905 H \u00d7 590 W \u00d7 500 D mm reflex box, 15 mm birch, ~230 L gross, 28 Hz HPF. Their vent isn't modelled; a bottom slot is loaded instead." },
+  // internal 22.5 x 28.5 x 20.875 in; external adds two 3/4" walls and the 3/4" baffle recess
+  { id: "ciareRef", name: "Ciare 18.00SW reflex (vendor)", vents: ["slots"], vent: { slotH: 2, len: 16.625 },
+    dims: { 18: { w: 24, h: 30, d: 23 }, 15: { w: 24, h: 30, d: 23 } },
+    note: "Vendor-suggested box for the Ciare 18.00SW: 7.55 ft\u00b3 internal, 22 \u00d7 2 in slot, 16.625 in deep, tuned 29 Hz, F3 28.5 Hz." },
   { id: "cube", name: "Cube", vents: ["round4"],
     dims: { 18: { w: 25, h: 25, d: 25 }, 15: { w: 23, h: 23, d: 19 } },
     note: "Square baffle, centred driver, corner ports. Reads the same in any rotation." },
@@ -1147,6 +1151,7 @@ function StackPlanner() {
     else if (v === "folded") setCVent((p) => ({ ...p, slotH: 3, len: 15.75 }));
     else if (v === "vslots" || v === "vwide") setCVent((p) => ({ ...p, throat: 1.4, len: d.d - 3 }));
     else setCVent((p) => ({ ...p, slotH: 3, len: d.d - 4.5 }));
+    if (cb.vent) setCVent((p) => ({ ...p, ...cb.vent }));   // published vent overrides the generic one
   };
   const subSel = { ...sub, box: subBox };
   useEffect(() => {
