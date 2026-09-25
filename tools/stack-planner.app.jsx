@@ -1394,6 +1394,7 @@ function StackPlanner() {
     return { f: o.f, spl: o.spl + 20 * Math.log10(V / MID_V), who: V === vx ? "Xmax" : V === vMidTherm ? "thermal" : "amp" };
   };
   const midMax = mMdl ? mMdl.curve.map(midMaxAt) : null;
+  const midUseV = Math.min(vMidTherm, MID_V);   // most the mid is driven: amp or program rating
   const midNear = (f) => midMax.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
   // Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter.
   const subSys = mdl ? mdl.curve.map((o) => {
@@ -1641,7 +1642,7 @@ function StackPlanner() {
                 ["Midband sensitivity", `${(mMdl.ref - 20 * Math.log10(MID_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
                 ...[xoLo, 200, 500].map((f) => { const m = midNear(f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
-                ["Peak excursion", `${mMdl.peakX.toFixed(1)} mm`, `${(mMdl.peakX / mid.ts.Xmax * 100).toFixed(0)}% of Xmax at ${mAmpW} W, with the ${xoLo} Hz highpass`],
+                ["Peak excursion", `${(mMdl.peakX * midUseV / MID_V).toFixed(1)} mm`, `${(mMdl.peakX * midUseV / MID_V / mid.ts.Xmax * 100).toFixed(0)}% of Xmax at ${Math.round(midUseV * midUseV / 8)} W, with the ${xoLo} Hz highpass`],
               ].map(([k, v, note]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
                   <span className="text-stone-500 shrink-0">{k}</span>
@@ -1666,8 +1667,14 @@ function StackPlanner() {
                 const lam = 13504 / xoHi;   // wavelength in inches
                 if (midDims.w > lam)
                   F.push(["warn", "Baffle wider than a wavelength at the horn crossover", `${midDims.w}\u2033 against ${lam.toFixed(1)}\u2033 at ${xoHi} Hz: the mid beams before the horn takes over.`]);
+                const xPct = mMdl.peakX * midUseV / MID_V / mid.ts.Xmax * 100;
+                F.push(xPct > 100
+                  ? ["warn", "Excursion-limited", `The cone reaches Xmax at ${Math.round(Math.pow(MID_V * 100 / (mMdl.peakX / mid.ts.Xmax * 100), 2) / 8)} W, below ${vMidTherm < MID_V ? `its ${2 * mid.ts.aes} W program rating` : `the ${mAmpW} W amp`}. A higher crossover helps.`]
+                  : vMidTherm < MID_V
+                  ? ["ok", "Thermally limited", `Reaches its ${2 * mid.ts.aes} W program rating (2 \u00d7 ${mid.ts.aes} W AES) before Xmax; the ${mAmpW} W amp has more than it can use.`]
+                  : ["ok", "Amp-limited", `The ${mAmpW} W amp runs out before Xmax or the ${2 * mid.ts.aes} W program rating.`]);
                 const gap = midNear(xoLo).spl - subAtXo;
-                F.push(gap < -1 ? ["warn", "Mid runs out first at the crossover", `${(-gap).toFixed(1)} dB below the sub at ${xoLo} Hz. More mid amp, a higher crossover, or a driver with more excursion.`]
+                F.push(gap < -1 ? ["warn", "Mid runs out first at the crossover", `${(-gap).toFixed(1)} dB below the sub at ${xoLo} Hz. ${midNear(xoLo).who === "amp" ? "More mid amp or a higher crossover." : midNear(xoLo).who === "thermal" ? "A driver with more power handling, or a higher crossover." : "A higher crossover or a driver with more excursion."}`]
                   : ["ok", "Keeps up with the sub", `${gap >= 0 ? gap.toFixed(1) + " dB above" : (-gap).toFixed(1) + " dB below"} the sub at ${xoLo} Hz.`]);
                 return F.map(([kind, head, body]) => (
                   <div key={head} className="flex gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
