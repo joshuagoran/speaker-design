@@ -309,7 +309,17 @@ const cdiv = (a, b) => { const d = b.re * b.re + b.im * b.im; return { re: (a.re
 const cinv = (a) => cdiv(cx(1), a);
 const cabs = (a) => Math.hypot(a.re, a.im);
 
-function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts) {
+// Filter magnitudes. Butterworth order n: x^n / sqrt(1 + x^2n). Linkwitz-Riley 2m: a
+// Butterworth m squared, x^2m / (1 + x^2m). LR24 is -6 dB at the corner, BW24 -3 dB.
+const HP_TYPES = { BW24: ["bw", 4], LR24: ["lr", 4], BW48: ["bw", 8], LR48: ["lr", 8] };
+const hpGain = (f, fc, type = "BW24") => {
+  const [kind, n] = HP_TYPES[type] || HP_TYPES.BW24, x = f / fc;
+  return kind === "bw" ? Math.pow(x, n) / Math.sqrt(1 + Math.pow(x, 2 * n)) : Math.pow(x, n) / (1 + Math.pow(x, n));
+};
+const lr24lp = (f, fc) => 1 / (1 + Math.pow(f / fc, 4));   // Linkwitz-Riley 24 dB/oct lowpass
+const lr24hp = (f, fc) => hpGain(f, fc, "LR24");
+
+function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24") {
   if (!ts || !VbL || !SpIn2 || LpIn <= 0) return null;
   const rho = 1.18, c = 343;
   const Sd = ts.Sd / 10000;                 // cm^2 -> m^2
@@ -340,7 +350,7 @@ function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts) {
     const Ud = cdiv(cx(Pg), cadd(Zd, Zbox));
     const Up = cdiv(cmul(Ud, Zbox), Zp);
     const Ut = { re: Ud.re - Up.re, im: Ud.im - Up.im };
-    const hp = Math.pow(f / hpf, 4) / Math.sqrt(1 + Math.pow(f / hpf, 8));  // BW24
+    const hp = hpGain(f, hpf, hpType);
     const p = (rho * w * cabs(Ut)) / (2 * Math.PI);
     // volts is RMS; x1.414 turns RMS travel and air speed into sine peaks, which Xmax and the 17 m/s limit mean
     out.push({ f, spl: 20 * Math.log10((p * hp) / 2e-5),
@@ -390,7 +400,7 @@ function closedBox(ts, VbL, hp, lp, volts) {
     const w = 2 * Math.PI * f, s = cx(0, w);
     const Z = cadd(cx(Ras + Rae), cadd(cmul(s, cx(Mas)), cadd(cinv(cmul(s, cx(Cas))), cinv(cmul(s, cx(Cab))))));
     const U = cabs(cdiv(cx(Pg), Z));
-    const g = (hp ? Math.pow(f / hp, 2) / (1 + Math.pow(f / hp, 2)) : 1) * (lp ? 1 / (1 + Math.pow(f / lp, 2)) : 1);
+    const g = (hp ? lr24hp(f, hp) : 1) * (lp ? lr24lp(f, lp) : 1);
     const raw = 20 * Math.log10((rho * w * U) / (2 * Math.PI) / 2e-5);
     out.push({ f, raw, spl: raw + 20 * Math.log10(g), xmm: Math.SQRT2 * (U / (w * Sd)) * g * 1000 });
   }
@@ -1185,6 +1195,42 @@ function NotesPage() {
           </p>
         </section>
         <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Amp DSP: QSC GXD4 / GXD8</h2>
+          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+            {[
+              ["Power per channel", "GXD4: 400 W into 8 \u03a9, 600 W into 4 \u03a9. GXD8: 800 W into 8 \u03a9, 1200 W into 4 \u03a9. Continuous, both channels driven. Voltage gain 33.5 dB (GXD4), 36.5 dB (GXD8)."],
+              ["Filters", "Linkwitz-Riley 24 dB/oct only. Highpass 20 Hz\u20134 kHz, lowpass 60 Hz\u20134 kHz. No Butterworth and nothing steeper. Plus a 4-band PEQ (\u00b112 dB, 0.1\u20133 oct) and 50 ms of delay."],
+              ["Limiter", "\u201cSmart Speaker Protection\u201d: Mild, Medium or Aggressive; a speaker power of 5\u2013800 W (GXD8) or 5\u2013400 W (GXD4); and 4 or 8 \u03a9. QSC say to set the power to the speaker's continuous rating."],
+              ["What it can't do", "No threshold in volts, no attack or release settings, no limiting confined to one band. QSC don't say how the power setting maps to a threshold (the spec sheet calls it a peak limiter, the manual an RMS limiter)."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span><span className="font-medium">{t}.</span> {d}</span>
+              </li>
+            ))}
+          </ul>
+          <h3 className="text-base font-medium mt-5 mb-2">Protecting an excursion-limited sub with a GXD</h3>
+          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+            {[
+              ["1. Highpass", "At or a little above tuning, LR24. Set the planner's highpass to LR24 to match."],
+              ["2. Limiter power", "The lower of the planner's \u201ccone reaches Xmax at X W\u201d and the driver's rating; Medium or Aggressive. On a GXD8 the ceiling is 800 W, which is just the amp's own limit."],
+              ["3. Check it", "Play a sine at the frequency where excursion peaks (the planner's port-velocity row, just above tuning), raise it until the limit indicator lights, and measure AC volts at the speaker terminals. Compare with \u221a(W \u00d7 8)."],
+              ["4. Steeper or in volts", "Do it in the PA2 ahead of the amps and keep the GXD limiter as a backstop. Not yet checked against the PA2 manual."],
+              ["Horns", "A GXD4 puts 400 W on a 35 W AES driver like the DE360. Its limiter, set to the driver's rating, is the protection; set the planner's HF amp slider to the same power so its numbers match."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span><span className="font-medium">{t}.</span> {d}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-stone-500 mt-3 max-w-3xl">
+            Xmax is where distortion climbs, not where damage starts; the mechanical limit is usually 2–3× further, so 1.2–1.4× the Xmax voltage is a common setting once you've listened.
+            Sources: <a className="underline" href="https://www.qscaudio.com/resource-files/productresources/amp/gxd/q_amp_gxd_usermanual.pdf">GXD user manual</a>, <a className="underline" href="https://www.qscaudio.com/resource-files/productresources/amp/gxd/q_amp_gxd_specsheet.pdf">GXD spec sheet</a>.
+          </p>
+        </section>
+
+        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
           <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Materials</h2>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
@@ -1263,6 +1309,7 @@ function StackPlanner() {
   const [cDim, setCDim] = useState({ w: 28, h: 32, d: 24 });
   const [cVent, setCVent] = useState({ slotH: 3, nt: 2, dia: 6, throat: 3, len: 14 });
   const [hpf, setHpf] = useState(33);
+  const [hpType, setHpType] = useState("BW24");   // sub highpass alignment
   const [ampW, setAmpW] = useState(800);   // amp power per sub channel, into 8 Ω
   const [portMax, setPortMax] = useState(20);   // peak port air speed allowed, m/s
   const setC = (k, v) => setCDim((p) => ({ ...p, [k]: v }));
@@ -1375,7 +1422,7 @@ function StackPlanner() {
   const ductL = (port.area * port.len * 16.387) / 1000;
   const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - 3);
   const HPF = hpf, AMP_V = Math.sqrt(ampW * 8);
-  const mdl = sub.ts ? boxModel(sub.ts, netL, port.area, port.len, HPF, AMP_V) : null;
+  const mdl = sub.ts ? boxModel(sub.ts, netL, port.area, port.len, HPF, AMP_V, hpType) : null;
   const lim = mdl ? (() => {
     // Every limit is expressed as amp output voltage: a sine at the amp's rated power into 8 \u03a9.
     // Port and cone limits use that sine's peaks. The thermal limit is program power, 2 \u00d7 AES: AES
@@ -1421,7 +1468,7 @@ function StackPlanner() {
   const midNear = (f) => midMax.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
   // Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter.
   const subSys = mdl ? mdl.curve.map((o) => {
-    const g = 1 / (1 + Math.pow(o.f / xoLo, 2));
+    const g = lr24lp(o.f, xoLo);
     const vp = (AMP_V * portMax) / (o.vel * g), vx = (AMP_V * sub.ts.Xmax) / (o.xmm * g);
     const V = Math.min(vp, vx, vThermal, AMP_V);
     return { f: o.f, spl: o.spl + 20 * Math.log10(g) + 20 * Math.log10(V / AMP_V) };
@@ -1445,7 +1492,7 @@ function StackPlanner() {
     const curve = [];
     for (let i = 0; i < 300; i++) {
       const f = 300 * Math.pow(20000 / 300, i / 299);
-      const g = (Math.pow(f / xoHi, 2) / (1 + Math.pow(f / xoHi, 2))) * (low ? Math.min(1, Math.pow(f / low, 2)) : 1);
+      const g = lr24hp(f, xoHi) * (low ? Math.min(1, Math.pow(f / low, 2)) : 1);
       curve.push({ f, spl: hf.sens + 10 * Math.log10(P) + 20 * Math.log10(g) });
     }
     return { curve, P, pAmp, pProg, derate, imp, who: P === pAmp ? "amp" : "program rating",
@@ -1460,7 +1507,7 @@ function StackPlanner() {
 
   const subMusicAtXo = mdl && lim ? (() => {
     const o = mdl.curve.reduce((b, x) => (Math.abs(x.f - xoLo) < Math.abs(b.f - xoLo) ? x : b));
-    return o.spl + 20 * Math.log10(1 / (1 + Math.pow(o.f / xoLo, 2))) + 20 * Math.log10(lim.V / AMP_V);
+    return o.spl + 20 * Math.log10(lr24lp(o.f, xoLo)) + 20 * Math.log10(lim.V / AMP_V);
   })() : null;
 
   const portGeom = { ductH: cVent.slotH, nPorts: cVent.nt, portR: cVent.dia / 2, tubeLen: cVent.len, throat: cVent.throat };
@@ -1468,7 +1515,7 @@ function StackPlanner() {
   // One named snapshot of the whole system.
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
-    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, ampW, portMax, mDim, mStuff, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
+    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, hpType, ampW, portMax, mDim, mStuff, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
     layout, cutaway, baffleColor,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
@@ -1483,6 +1530,7 @@ function StackPlanner() {
     if (c.cDim) setCDim(c.cDim);
     if (c.cVent) setCVent(c.cVent);
     if (typeof c.hpf === "number") setHpf(c.hpf);
+    if (c.hpType && HP_TYPES[c.hpType]) setHpType(c.hpType);
     if (typeof c.ampW === "number") setAmpW(c.ampW);
     if (typeof c.portMax === "number") setPortMax(c.portMax);
     if (c.mDim) setMDim(c.mDim); else if (c.midBox) { const b = MID_BOXES.find((x) => x.id === c.midBox); if (b) setMDim({ ...b.box }); }
@@ -1911,7 +1959,12 @@ function StackPlanner() {
                 <Slider label="Tube diameter" value={cVent.dia} min={3} max={10} step={0.25} unit="&#8243;" onChange={(v) => setV("dia", v)} />
               </>}
               <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="&#8243;" onChange={(v) => setV("len", v)} />
-              <Slider label="Highpass (BW24)" value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} />
+              <Slider label={`Highpass (${hpType})`} value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} />
+              <div className="flex flex-wrap gap-1 -mt-1 mb-3">
+                {Object.keys(HP_TYPES).map((t) => (
+                  <button key={t} onClick={() => setHpType(t)} className={`px-2.5 py-1 rounded border text-xs ${hpType === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{t}</button>
+                ))}
+              </div>
               <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
               <Slider label="Amp power per channel @ 8 Ω" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} />
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>

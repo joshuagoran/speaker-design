@@ -95,7 +95,7 @@ collection `configs`, one document per configuration:
   "portStyle": "slots",               // slots (bottom) | folded | vslots (both sides) | vslot1 (one side) | round2
   "cDim":  { "w": 28, "h": 32, "d": 24 },        // external inches
   "cVent": { "slotH": 3, "nt": 2, "dia": 6, "throat": 3, "len": 14 },
-  "hpf": 33,
+  "hpf": 33, "hpType": "BW24",       // sub highpass: BW24 | LR24 | BW48 | LR48
   "ampW": 800,                        // amp power per sub channel into 8 Ω; caps max SPL
   "portMax": 20,                      // peak port air speed limit, m/s
   "mDim":  { "w": 15, "h": 15, "d": 15 },         // mid-bass box, external inches (sealed)
