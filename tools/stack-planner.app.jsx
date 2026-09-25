@@ -1231,6 +1231,31 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Crossover / DSP: PA2 and alternatives</h2>
+          <p className="text-sm text-stone-700 mb-3 max-w-3xl">What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set in volts or dBu with attack and release, a slower RMS limiter, PEQ and delay. At ~15 ft from the mixer keep the inputs balanced; outputs to amps in the same rack matter less.</p>
+          <div className="overflow-x-auto"><table className="text-sm w-full min-w-[720px] border-collapse">
+            <thead><tr className="text-stone-500 text-left border-b border-stone-300">
+              {["Unit", "I/O", "Slopes", "Limiter", "PEQ / out", "Price (US)", "Notes"].map((h) => <th key={h} className="py-1 pr-4 font-normal">{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {[
+              ["dbx DriveRack 260", "2×6 XLR", "LR to 48 (BW to 24)", "dBu threshold; attack, hold, release", "4", "$995 new, ~$390 used", "Best value: limits set straight from the amp's gain. Only 4 PEQ bands per output."],
+              ["dbx DriveRack VENU360", "3×6 XLR", "BW / LR to 48", "Attack, hold, release; threshold vs full scale", "8", "$1,149 new, ~$750 used", "Best overall: independent outputs, up to 1 s delay, app control."],
+              ["Behringer DCX2496", "3×6 XLR (+AES)", "BW / LR to 48", "Per output, release only; units unclear", "Shared pool", "~$339", "Budget pick. Steep slopes use up EQ filters. PC control over RS-232/485."],
+              ["Behringer DCX2496LE", "2×6 XLR", "BW / LR to 48", "Same as DCX2496", "Shared pool", "~$289", "Same DSP, but no third input, no digital I/O and no PC port: front panel only."],
+              ["t.racks DSP 408", "4×8 XLR", "up to 48 (unconfirmed)", "Attack, release; units unclear", "9", "$439", "Thomann only in the US."],
+              ["dbx DriveRack PA2 (current)", "2×6 XLR", "BW / LR to 48", "No attack or release; up to 3 dB overshoot", "8, linked L/R", "~$599, ~$366 used", "Left and right share EQ and delay per band; 10 ms output delay."],
+              ].map((r) => (
+                <tr key={r[0]} className="border-b border-stone-200 align-top">
+                  {r.map((c, i) => <td key={i} className={`py-1.5 pr-4 ${i === 0 ? "font-medium whitespace-nowrap" : ""}`}>{c}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+          <p className="text-xs text-stone-500 mt-2 max-w-3xl">Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026. Pick: a used DriveRack 260, or the VENU360 for independent per-side tuning. Keep the GXD limiters as a backstop either way.</p>
+        </section>
+
+        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
           <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Materials</h2>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
