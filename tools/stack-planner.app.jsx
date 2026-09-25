@@ -52,8 +52,6 @@ const SUB_OPTIONS = [
     note: "[usspeaker.com spec table, Sep 2026] Neo, 1200 W AES / 2400 W program, 98 dB, 19.8 lb. Displacement not published; 10.5 L assumed." },
   { id: "es18lw2420", lb: 27.3, name: "18Sound 18LW2420", price: 439.95, src: "usspeaker.com, Sep 2026", size: 18, ts: { Fs: 33, Qts: 0.31, Qes: 0.33, Qms: 7, Vas: 255, Sd: 1225, Xmax: 10, Re: 5.0, Bl: 24.6, Mms: 192, aes: 1300, disp: 10.5 },
     note: "[usspeaker.com spec table, Sep 2026] 1300 W AES / 2600 W program, 97 dB, 27.3 lb. Displacement not published; 10.5 L assumed." },
-  { id: "es18lw1400", lb: 29.3, name: "18Sound 18LW1400", price: 169.99, src: "usspeaker.com, Sep 2026 (unusually low; confirm it is the driver, not a recone kit)", size: 18, ts: { Fs: 31, Qts: 0.29, Qes: 0.31, Qms: 7.2, Vas: 297, Sd: 1225, Xmax: 9, Re: 5.0, Bl: 24.7, Mms: 190, aes: 1000, disp: 10.5 },
-    note: "[usspeaker.com spec table, Sep 2026] Ferrite, 1000 W AES / 2000 W program, 98 dB, 29.3 lb. 18Sound publish a 905 × 590 × 500 mm reflex box for it; it's in the cabinet presets." },
   { id: "sbnero15", lb: 35.9, name: "SB Audience Nero-15SW800", price: 295, src: "Madisound (out of stock)", size: 15, ts: { Fs: 31, Qts: 0.34, Qes: 0.36, Qms: 7.59, Vas: 137, Sd: 861, Xmax: 14.3, Re: 5.3, Bl: 24.4, Mms: 207, aes: 800, disp: 6.45 },
     note: "[web search, Sep 2026; not checked against the datasheet] 800 W AES / 1600 W program, 6.45 L displacement, 35.9 lb (may be shipping weight)." },
 ];
