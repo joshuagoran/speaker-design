@@ -634,7 +634,9 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
       const yc = pl + s.h / 2;
       const zf = s.d / 2;                                  // duct mouth, flush with the frame face
       const zb = -s.d / 2 + T;                             // inside face of the back panel
-      const zr = zb + throat;                              // rear end of the duct; gap = throat width
+      // rear end of the duct: the set duct length back from the mouth, leaving at least a
+      // throat-width gap to the back panel
+      const zr = Math.max(zb + throat, zf - (pg.tubeLen != null ? pg.tubeLen : zf - zb));
       const sideLen = zf - zr;
 
       sides.forEach((k) => {
