@@ -1089,7 +1089,7 @@ function ResponseChart({ series, marks = [], fmax = 200 }) {
     const d = pts.map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1)).join("");
     return { ...sr, d, fill: pts.length ? d + `L${px(pts[pts.length - 1].f).toFixed(1)},${y1} L${px(pts[0].f).toFixed(1)},${y1} Z` : "" };
   });
-  const ticks = [20, 30, 50, 100, 200, 500, 1000, 2000].filter((f) => f <= fmax);
+  const ticks = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000].filter((f) => f <= fmax);
   const grid = [];
   ticks.forEach((f) => {
     const X = px(f);
@@ -1238,9 +1238,11 @@ function StackPlanner() {
   const [mDim, setMDim] = useState({ ...MID_BOXES.find((o) => o.id === "b15").box });
   const [mStuff, setMStuff] = useState(true);    // light stuffing: ~15% more effective volume
   const [xoLo, setXoLo] = useState(120);         // sub -> mid crossover, LR24
-  const [xoHi, setXoHi] = useState(950);         // mid -> horn crossover, LR24
+  const [xoHi, setXoHi] = useState(900);         // mid -> horn crossover, LR24
   const [mAmpW, setMAmpW] = useState(400);       // amp power per mid channel, into 8 Ω
   const [tilt, setTilt] = useState(6);           // how much less the mid band needs than the sub band, dB
+  const [hfAmpW, setHfAmpW] = useState(100);     // amp power per HF channel, rated into 8 Ω
+  const [hfTilt, setHfTilt] = useState(6);       // how much less the horn band needs than the mid band, dB
   const setM = (k, v) => setMDim((p) => ({ ...p, [k]: v }));
   const plinth = 3; // fixed, matches the duct height
   const [cutaway, setCutaway] = useState(false);
@@ -1419,6 +1421,35 @@ function StackPlanner() {
   const subAtXo = subSys ? subSys.reduce((b, o) => (Math.abs(o.f - xoLo) < Math.abs(b.f - xoLo) ? o : b)).spl : null;
   // What the mid actually has to match: the sub at its music limit (one drive level for
   // the whole band), through its lowpass, less the music-balance allowance.
+  // ---- horn + compression driver ----
+  // Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24
+  // highpass at the crossover and a 12 dB/oct rolloff below the horn's loading limit.
+  // Power: amp voltage into the driver's impedance, capped at program (2 x AES), derated
+  // 6 dB per octave when crossing below the frequency the AES rating was measured at.
+  const hf = cd.hf, hz = horn.hf || {};
+  const hornModel = hf && hf.sens != null && hf.aes ? (() => {
+    const imp = hf.imp || 8;
+    const pAmp = (hfAmpW * 8) / imp;                      // same amp voltage into 8 or 16 Ω
+    const derate = hf.aesXo && xoHi < hf.aesXo ? Math.pow(xoHi / hf.aesXo, 2) : 1;
+    const pProg = 2 * hf.aes * derate;
+    const P = Math.min(pAmp, pProg);
+    const low = hz.lowHz || 0;
+    const curve = [];
+    for (let i = 0; i < 300; i++) {
+      const f = 300 * Math.pow(20000 / 300, i / 299);
+      const g = (Math.pow(f / xoHi, 2) / (1 + Math.pow(f / xoHi, 2))) * (low ? Math.min(1, Math.pow(f / low, 2)) : 1);
+      curve.push({ f, spl: hf.sens + 10 * Math.log10(P) + 20 * Math.log10(g) });
+    }
+    return { curve, P, pAmp, pProg, derate, imp, who: P === pAmp ? "amp" : "program rating",
+             flat: hf.sens + 10 * Math.log10(P) };
+  })() : null;
+  const hornAt = (f) => hornModel.curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b)).spl;
+  // mid beamwidth at the horn crossover, as a rigid piston: -6 dB where ka sin(theta) = 2.2
+  const midBeam = mid.ts ? (() => {
+    const ka = (2 * Math.PI * xoHi / 343) * Math.sqrt(mid.ts.Sd / 10000 / Math.PI);
+    return ka <= 2.2 ? 180 : 2 * Math.asin(2.2 / ka) * 180 / Math.PI;
+  })() : null;
+
   const subMusicAtXo = mdl && lim ? (() => {
     const o = mdl.curve.reduce((b, x) => (Math.abs(x.f - xoLo) < Math.abs(b.f - xoLo) ? x : b));
     return o.spl + 20 * Math.log10(1 / (1 + Math.pow(o.f / xoLo, 2))) + 20 * Math.log10(lim.V / AMP_V);
@@ -1429,7 +1460,7 @@ function StackPlanner() {
   // One named snapshot of the whole system.
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
-    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, ampW, portMax, mDim, mStuff, xoLo, xoHi, mAmpW, tilt,
+    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, ampW, portMax, mDim, mStuff, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
     layout, cutaway, baffleColor,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
@@ -1452,6 +1483,8 @@ function StackPlanner() {
     if (typeof c.xoHi === "number") setXoHi(c.xoHi);
     if (typeof c.mAmpW === "number") setMAmpW(c.mAmpW);
     if (typeof c.tilt === "number") setTilt(c.tilt);
+    if (typeof c.hfAmpW === "number") setHfAmpW(c.hfAmpW);
+    if (typeof c.hfTilt === "number") setHfTilt(c.hfTilt);
     if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
     if (c.layout) setLayout(c.layout);
     if (c.baffleColor) setBaffleColor(c.baffleColor);
@@ -1563,7 +1596,7 @@ function StackPlanner() {
               ))}
             </div>
           )}
-          {mdl && lim && <div className="mb-4"><ResponseChart fmax={2000} series={[{ curve: subSys, label: "Sub", stroke: "#292524", tint: "rgba(41,37,36,0.07)" }, ...(midMax ? [{ curve: midMax, label: "Mid-bass", stroke: "#b45309", tint: "rgba(180,83,9,0.06)" }] : [])]} marks={[{ f: mdl.Fb, label: "Fb" }, { f: xoLo, label: "XO" }, { f: xoHi, label: "XO" }]} /></div>}
+          {mdl && lim && <div className="mb-4"><ResponseChart fmax={20000} series={[{ curve: subSys, label: "Sub", stroke: "#292524", tint: "rgba(41,37,36,0.07)" }, ...(midMax ? [{ curve: midMax, label: "Mid-bass", stroke: "#b45309", tint: "rgba(180,83,9,0.06)" }] : []), ...(hornModel ? [{ curve: hornModel.curve, label: "Horn", stroke: "#0f766e", tint: "rgba(15,118,110,0.06)" }] : [])]} marks={[{ f: mdl.Fb, label: "Fb" }, { f: xoLo, label: "XO" }, { f: xoHi, label: "XO" }]} /></div>}
           {mdl ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
@@ -1719,6 +1752,59 @@ function StackPlanner() {
           )}
         </section>
 
+        <section className="mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Horn</h2>
+          {hornModel ? (<>
+            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200"
+                 style={{ gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))" }}>
+              {[
+                ["Sensitivity", hf.sens.toFixed(1), "dB"],
+                ["Power used", Math.round(hornModel.P), "W"],
+                ["Max SPL", hornModel.flat.toFixed(1), "dB"],
+                ["Coverage", hz.covH ? `${hz.covH}\u00b0\u00d7${hz.covV || "?"}\u00b0` : "\u2014", ""],
+                ["Mid beam at XO", midBeam ? Math.round(midBeam) : "\u2014", midBeam ? "\u00b0" : ""],
+              ].map(([k, v, u]) => (
+                <div key={k} className="bg-stone-50 px-3 py-2.5">
+                  <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+                  <div className="text-xl font-medium tabular-nums mt-0.5">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {(() => {
+                const F = [];
+                if (hf.minXo && xoHi < hf.minXo)
+                  F.push(["warn", "Below the driver's minimum crossover", `${xoHi} Hz against ${hf.minXo} Hz recommended. Power is derated here and distortion rises; check measurements before relying on it.`]);
+                if (hz.minXo && xoHi < hz.minXo)
+                  F.push(["warn", "Below the horn's crossover range", `${horn.name} is specified from about ${hz.minXo} Hz.`]);
+                if (hz.lowHz && hz.lowHz > xoHi * 0.8)
+                  F.push(["warn", "Horn stops loading near the crossover", `Loading falls away below about ${hz.lowHz} Hz, so the driver works harder right where it's crossed.`]);
+                F.push(hornModel.who === "amp"
+                  ? ["ok", "Amp-limited", `${Math.round(hornModel.pAmp)} W into ${hornModel.imp} \u03a9 from the ${hfAmpW} W amp, under the ${Math.round(hornModel.pProg)} W program limit${hornModel.derate < 1 ? " (derated for the low crossover)" : ""}.`]
+                  : ["ok", "Program-limited", `Capped at ${Math.round(hornModel.pProg)} W: 2 \u00d7 ${hf.aes} W AES${hornModel.derate < 1 ? `, derated ${(-10 * Math.log10(hornModel.derate)).toFixed(1)} dB because ${xoHi} Hz is below the ${hf.aesXo} Hz the rating assumes` : ""}.`]);
+                if (midMax) {
+                  const need = midNear(xoHi).spl - hfTilt, gap = hornAt(xoHi) - need;
+                  const wNeed = hfAmpW * Math.pow(10, -gap / 10);
+                  F.push(gap < -0.5
+                    ? ["warn", "Horn runs out first", `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hfTilt} dB for the HF band. ` + (hornModel.who === "amp" && wNeed * 8 / hornModel.imp <= hornModel.pProg ? `About ${Math.ceil(wNeed / 25) * 25} W per HF channel would cover it.` : "The driver's rating is the limit: raise the crossover or pick a more sensitive driver.")]
+                    : ["ok", "Keeps up with the mid", `${gap.toFixed(1)} dB to spare at ${xoHi} Hz against the mid, less ${hfTilt} dB for the HF band.`]);
+                }
+                if (midBeam && hz.covH && midBeam > hz.covH * 1.4)
+                  F.push(["warn", "Mid much wider than the horn at the crossover", `About ${Math.round(midBeam)}\u00b0 against the horn's ${hz.covH}\u00b0: off-axis energy dips through the crossover. A lower crossover or a wider horn narrows the gap.`]);
+                return F.map(([kind, head, body]) => (
+                  <div key={head} className="flex gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+                    <b className={`shrink-0 font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+                    <span className="text-stone-600">{body}</span>
+                  </div>
+                ));
+              })()}
+            </div>
+            <p className="text-xs text-stone-500 mt-3">From datasheet sensitivity and power, not a T/S model. Sensitivity is as measured on {hf.sensRef || "the maker's reference horn"}; on {horn.name} it may differ by a few dB. Below-rating crossover derating (6 dB per octave) is a rule of thumb.</p>
+          </>) : (
+            <p className="text-sm text-stone-600">{cd.name} can't be modelled yet: sensitivity or power rating missing.</p>
+          )}
+        </section>
+
         </div>
 
         <aside className="md:col-span-2" style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -1856,6 +1942,11 @@ function StackPlanner() {
           </div>
           <Pick label="Compression driver" options={CD_OPTIONS} value={cd} onChange={setCd} />
           <Pick label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} />
+          <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
+            <Slider label="HF amp power per channel @ 8 Ω" value={hfAmpW} min={10} max={500} step={5} unit=" W" onChange={setHfAmpW} />
+            <Slider label="Music balance: HF band needs less by" value={hfTilt} min={0} max={12} step={1} unit=" dB" onChange={setHfTilt} />
+            <div className="text-xs text-stone-500">16 Ω drivers draw half the power from the same amp.</div>
+          </div>
           {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}" vs {cd.exit}").</div>}
         </aside>
 
