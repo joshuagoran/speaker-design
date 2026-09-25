@@ -30,7 +30,7 @@ const SUB_OPTIONS = [
     note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 1200 W AES, 97 dB, 29.8 lb. Xmax 9.75 mm per datasheet (one listing says 8.4)." },
   { id: "lv18n403", lb: 24.3, name: "Lavoce SAN184.03 (neo)", price: 489, src: "Parts Express", size: 18,
     note: "[web search, Sep 2026; not checked against the datasheet] Neo, 1500 W AES, 95 dB, 24.3 lb, Fs 36, Qts 0.41, Vas 158 L, Xmax 12.5 mm. Not modelled: Re and Bl not found (only Bl/√Re = 11.6)." },
-  { id: "ciare18sw", lb: 34.5, name: "Ciare 18.00SW-8", price: null, src: "Parts Express (discontinued)", size: 18, ts: { Fs: 36, Qts: 0.5, Qes: 0.55, Qms: 6.7, Vas: 93, Sd: 1134, Xmax: 14, Re: 7.0, Bl: 32.5, Mms: 377, aes: 1000, disp: 10.5 },
+  { id: "ciare18sw", lb: 34.5, name: "Ciare 18.00SW-8", price: 455, src: "per Josh, Sep 2026", size: 18, ts: { Fs: 36, Qts: 0.5, Qes: 0.55, Qms: 6.7, Vas: 93, Sd: 1134, Xmax: 14, Re: 7.0, Bl: 32.5, Mms: 377, aes: 1000, disp: 10.5 },
     note: "[datasheet, per Josh] Ferrite, 1000 W AES / 2000 W program, 94 dB 1 W/1 m, Le 3 mH, 34.5 lb. Xmax 14 mm as published; 32 mm winding in a 10 mm gap gives 11 mm by the usual formula. Displacement not published; 10.5 L assumed." },
   { id: "f18fh510", lb: 19.4, name: "FaitalPRO 18FH510", price: null, src: "no listed US vendor price", size: 18, ts: { Fs: 30, Qts: 0.3, Qes: 0.3, Qms: 13.6, Vas: 369.5, Sd: 1134, Xmax: 9.25, Re: 5.1, Bl: 21, Mms: 139, aes: 600, disp: 10.5 },
     note: "[web search, Sep 2026; not checked against the datasheet] Ferrite, 600 W AES / 1200 W program, 98 dB, 19.4 lb. Sd 1134 cm² is from one source and may be generic." },
