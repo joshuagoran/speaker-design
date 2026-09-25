@@ -1394,6 +1394,9 @@ function StackPlanner() {
     return { f: o.f, spl: o.spl + 20 * Math.log10(V / MID_V), who: V === vx ? "Xmax" : V === vMidTherm ? "thermal" : "amp" };
   };
   const midMax = mMdl ? mMdl.curve.map(midMaxAt) : null;
+  // 3/4" birch at 2.3 lb/ft\u00b2: six panels plus one brace, the driver, and 2 lb of hardware
+  const midCabLb = ((2 * (midDims.w * midDims.h + midDims.w * midDims.d + midDims.h * midDims.d) + midDims.w * midDims.d) / 144) * 2.3 + 2;
+  const midLbLoaded = midCabLb + (mid.lb || 0);
   const midUseV = Math.min(vMidTherm, MID_V);   // most the mid is driven: amp or program rating
   const midNear = (f) => midMax.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
   // Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter.
@@ -1629,6 +1632,7 @@ function StackPlanner() {
                 ["Qtc", mMdl.Qtc.toFixed(2), ""],
                 ["Box F3", mMdl.f3.toFixed(0), "Hz"],
                 [`Max SPL @ ${xoLo} Hz`, midNear(xoLo).spl.toFixed(1), "dB"],
+                ["Weight", midLbLoaded.toFixed(0), "lb"],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
                   <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
@@ -1861,7 +1865,7 @@ function StackPlanner() {
             const PLY_LB_FT2 = 2.3; // 3/4" birch
             const boxLb = (b) => ((2 * (b.w * b.h + b.w * b.d + b.h * b.d) + b.w * b.d) / 144) * PLY_LB_FT2; // six panels + one brace/shelf
             const subBoxLb = subLbLoaded - (sub.lb || 0); // same estimate as the stats row
-            const midBoxLb = boxLb(midDims);
+            const midBoxLb = midCabLb;   // same estimate as the mid-bass stats row
             const rows = [
               ["Sub column", sub.price, sub.lb, subBoxLb, subBox.h],
               ["Mid-bass box", mid.price, mid.lb, midBoxLb, midDims.h],
