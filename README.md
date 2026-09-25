@@ -103,6 +103,8 @@ collection `configs`, one document per configuration:
   "xoLo": 120, "xoHi": 950,           // crossovers, sub->mid and mid->horn, LR24
   "mAmpW": 400,                       // amp power per mid channel into 8 Ω
   "tilt": 6,                          // dB less the mid band needs than the sub band (music balance)
+  "hfAmpW": 100,                      // amp power per HF channel, rated into 8 Ω
+  "hfTilt": 6,                        // dB less the HF band needs than the mid band
   "layout": "stack", "cutaway": false, "baffleColor": "#e8b4a8",
   "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz"
 }
@@ -121,6 +123,7 @@ configurations and can be edited or deleted like any other.
 - `SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`,
   `FORMATS` — the component data at the top of the file. Drivers with a `ts`
   block get modelled; ones without show a note instead.
+- Horn — datasheet model, not T/S: `cd.hf` (sensitivity and its reference, AES power and the crossover it was rated at, minimum crossover, impedance) and `horn.hf` (coverage, minimum crossover, loading limit `lowHz`). Output is sensitivity + 10 log P through the LR24 highpass and a 12 dB/oct rolloff below `lowHz`; power is capped at 2 × AES, derated 6 dB per octave below the AES rating's crossover.
 - `closedBox(ts, VbL, hp, lp, volts)` — the sealed mid-bass model, LR24 crossovers at `hp`/`lp`. Returns the curve plus `Fc`, `Qtc`, box `f3`, midband `ref` and peak excursion. Coil inductance is not modelled.
 - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts)` — the vented-box model. Returns
   the response `curve` plus `Fb`, `f3`, `ref`, SPL at 30/35/45, peak port
