@@ -1733,7 +1733,6 @@ function StackPlanner() {
             </div>
           </div>
           <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} />
-          <Pick label={`Mid-bass ${format.mid}"`} options={midList} value={mid} onChange={setMid} />
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Baffle colour</div>
             <div className="flex flex-wrap gap-1.5 items-center">
@@ -1824,6 +1823,7 @@ function StackPlanner() {
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
             </div>
           </div>
+          <Pick label={`Mid-bass ${format.mid}"`} options={midList} value={mid} onChange={setMid} />
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
             <div className="rounded border border-stone-300 bg-white px-3 py-3">
