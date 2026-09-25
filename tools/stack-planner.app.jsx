@@ -171,11 +171,11 @@ const MID_BOXES = [
 ];
 
 const CD_OPTIONS = [
-  { id: "hf10ak", lb: 2, name: "Faital HF10AK (1\")", hf: { sens: 110, sensRef: "a 1\u2033 50\u00d740\u00b0 horn", aes: 60, aesXo: 1300, minXo: 1300, imp: 8 }, exit: 1, price: 281.95, src: "usspeaker.com, Sep 2026", note: "Ketone polymer, 110 dB, 60 W AES, 1.3 kHz rec. crossover. Smooth; pair with RX-Shape 28." },
+  { id: "hf10ak", lb: 2, name: "FaitalPRO HF10AK (1\")", hf: { sens: 110, sensRef: "a 1\u2033 50\u00d740\u00b0 horn", aes: 60, aesXo: 1300, minXo: 1300, imp: 8 }, exit: 1, price: 281.95, src: "usspeaker.com, Sep 2026", note: "Ketone polymer, 110 dB, 60 W AES, 1.3 kHz rec. crossover. Smooth; pair with RX-Shape 28." },
   { id: "de250", lb: 3.3, name: "B&C DE250 (1\")", hf: { sens: 108.5, sensRef: "the B&C ME45 horn", aes: 60, aesXo: 1600, minXo: 1600, imp: 8 }, exit: 1, price: 137.46, src: "usspeaker.com, Sep 2026", note: "Ferrite, 108.5 dB, 60 W AES, 1.6 kHz rec. crossover. The DIY standard; a bit high for the RX-28's 1.2 kHz." },
   { id: "nd1tp", lb: 1.5, name: "18Sound ND1TP-16 (1\")", hf: { sens: 110, sensRef: "the 18Sound XR1464C horn", aes: 50, aesXo: 1600, minXo: 1600, imp: 16 }, exit: 1, price: null, src: "EU order, price TBD", note: "AudioHorn's budget pick for the RX-28. 16 Ω version as specified; ships from Europe." },
   { id: "nd1090", lb: 1.5, name: "18Sound ND1090-16 (1\")", hf: { sens: 110, sensRef: "the 18Sound XR1464C horn", aes: 50, aesXo: 1600, minXo: 1600, imp: 16 }, exit: 1, price: null, src: "EU order, price TBD", note: "AudioHorn's measured driver on the RX-28. Also NSD1095N as the premium option." },
-  { id: "hf108", lb: 2, name: "Faital HF108 (1\")", hf: { sens: 109, sensRef: "a 1\u2033 50\u00d740\u00b0 horn", aes: 60, aesXo: 1300, minXo: 1300, imp: 8 }, exit: 1, price: 220.95, src: "usspeaker.com, Sep 2026 (Parts Express $259)", note: "Marcel Batík's standard 1\" pairing for the A400G2/A460G2; measured polars on at-horns.eu." },
+  { id: "hf108", lb: 2, name: "FaitalPRO HF108 (1\")", hf: { sens: 109, sensRef: "a 1\u2033 50\u00d740\u00b0 horn", aes: 60, aesXo: 1300, minXo: 1300, imp: 8 }, exit: 1, price: 220.95, src: "usspeaker.com, Sep 2026 (Parts Express $259)", note: "Marcel Batík's standard 1\" pairing for the A400G2/A460G2; measured polars on at-horns.eu." },
   { id: "n314t", lb: 4.8, name: 'Eminence N314T-8 (1.4")', hf: { sens: 110.9, sensRef: "Eminence's averaged 1 W/1 m figure (no horn named)", aes: 100, aesXo: 800, minXo: 800, imp: 8 }, exit: 1.4, price: 234.99, src: "usspeaker.com, Sep 2026 (Parts Express $249.99)", note: "3 in titanium diaphragm, D3 surround. Minimum crossover 800 Hz at 12 dB/oct, 110 dB, 100 W AES, 4.8 lb. Exit is a 7.3\u00b0 included conical flare, so an ATH throat adapter has to be generated for it \u2014 none published yet. The only driver here rated below 1 kHz." },
   { id: "de360", lb: 3, pick: true, name: "B&C DE360 (1\")", hf: { sens: 110, sensRef: "the B&C ME45 horn", aes: 35, aesXo: 1800, minXo: 1800, imp: 8 }, exit: 1, price: 117.36, src: "Parts Express, Sep 2026", note: "Ketone polymer 1\" measured on the ATH Gen2 waveguides. Sheet says 1.8 kHz min; ~1.1–1.3 kHz LR4 works on the A400G2, verify with a distortion sweep." },
   { id: "lavoce171", lb: 1.5, name: "Lavoce DF10.171K (1\")", exit: 1, price: 109, src: "Parts Express", note: "Budget 1\" measured by Marcel Batík on ATH waveguides. Pair with the ST260 print." },
@@ -293,8 +293,9 @@ const FORMATS = [
     note: "Smallest boxes, 10 in mid is 3 dB down on the 12. Fits a room; least headroom outdoors." },
 ];
 
-const sortPicks = (arr) => [...arr].sort((a, b) => (b.pick ? 1 : 0) - (a.pick ? 1 : 0));
-[SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS].forEach((arr) => arr.splice(0, arr.length, ...sortPicks(arr)));
+// Pickers list alphabetically; the default pick is marked with a dot, not moved to the top.
+const byName = (arr) => [...arr].sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true, sensitivity: "base" }));
+[SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS].forEach((arr) => arr.splice(0, arr.length, ...byName(arr)));
 
 // ---------------------------------------------------------------
 // Vented-box model. Same lumped-element circuit used to check this
