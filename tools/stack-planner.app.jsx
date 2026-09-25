@@ -570,7 +570,10 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     const extH = towerMode ? TW_MID + twHsH : 0;
     const baffleH = s.h + extH - 2 * T - bandH;
     const baffleCy = pl + T + bandH + baffleH / 2; // absolute centre of the baffle
-    const drvAbsY = corners || vSlot ? pl + s.h / 2 : pl + s.h - T - innerW / 2; // centred when symmetric
+    // centred when symmetric; bottom slots: centred in the baffle above the duct (sub section only in a tower)
+    const drvAbsY = corners || vSlot ? pl + s.h / 2
+      : !round ? pl + T + bandH + (s.h - 2 * T - bandH) / 2
+      : pl + s.h - T - innerW / 2;
     const vThroat = pg.throat != null ? pg.throat : Math.round(((sub.size >= 18 ? 66 : 54) / (2 * (s.h - 2 * T))) * 100) / 100;
     // a single side duct pushes the driver into the middle of the remaining baffle
     const drvX = sides.length === 1 && vSlot ? -sides[0] * (vThroat + 0.43 + T) / 2 : 0;
