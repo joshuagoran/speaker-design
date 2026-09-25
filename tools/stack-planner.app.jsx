@@ -1360,8 +1360,8 @@ const FILL_OPTIONS = [
 function FillsPage() {
   const [drv, setDrv] = useState(FILL_OPTIONS.find((o) => o.id === "bc10cxn64"));
   const [boxType, setBoxType] = useState("vented");
-  const [dim, setDim] = useState({ w: 13, h: 19, d: 12 });
-  const [port, setPort] = useState({ n: 1, dia: 4, len: 5 });
+  const [dim, setDim] = useState({ w: 11.5, h: 16, d: 11 });
+  const [port, setPort] = useState({ n: 1, dia: 3, len: 4 });
   const [hp, setHp] = useState(70);          // highpass to the subs, LR24
   const [ampW, setAmpW] = useState(300);     // per box, rated into 8 Ω
   const [portMax, setPortMax] = useState(20);
