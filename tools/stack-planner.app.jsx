@@ -1304,8 +1304,190 @@ function NotesPage() {
   );
 }
 
+// ---------------------------------------------------------------
+// Fills / booth monitors: 8-10" passive coaxials
+// ---------------------------------------------------------------
+// ts: woofer T/S (the model uses Fs, Qms, Re, Bl, Mms, Sd, Xmax; Vas is shown only).
+// hf: compression section, sens 1 W/1 m, aes W, xo recommended minimum Hz, imp Ω, cov degrees.
+const FILL_OPTIONS = [
+  { id: "bc8cxn51", size: 8, lb: 5.5, name: "B&C 8CXN51", price: null, src: "usspeaker.com (no price shown)",
+    ts: { Fs: 68, Qes: 0.29, Qms: 4.7, Vas: 17, Sd: 220, Xmax: 6, Re: 4.9, Bl: 12.6, Mms: 22, aes: 250, disp: null },
+    hf: { sens: 104, aes: 50, xo: 1800, imp: 8, cov: 100 }, lfSens: 97, note: "Neo. 250 W / 500 W program LF." },
+  { id: "bc8fcx51", size: 8, lb: 11.2, name: "B&C 8FCX51", price: null, src: "usspeaker.com (no price shown)",
+    ts: { Fs: 69, Qes: 0.36, Qms: 6.3, Vas: 16, Sd: 220, Xmax: 6.5, Re: 4.9, Bl: 11.5, Mms: 22, aes: 250, disp: null },
+    hf: { sens: 104, aes: 50, xo: 1800, imp: 8, cov: 100 }, lfSens: 96, note: "Ferrite." },
+  { id: "by8cx300fe", size: 8, lb: 10.1, name: "Beyma 8CX300Fe", price: 288.5, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 89, Qes: 0.63, Qms: 4.2, Vas: 10.8, Sd: 220, Xmax: 6, Re: 5.2, Bl: 9.6, Mms: 20, aes: 300, disp: null },
+    hf: { sens: 105, aes: 50, xo: 1800, imp: 16, cov: 70 }, lfSens: 95, note: "Ferrite. High Qts (0.55): wants a small sealed box." },
+  { id: "by8cx300nd", size: 8, lb: 6.1, name: "Beyma 8CX300NdN", price: 428.75, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 61, Qes: 0.28, Qms: 13.3, Vas: 36.2, Sd: 220, Xmax: 6, Re: 5.1, Bl: 9.4, Mms: 12.7, aes: 250, disp: 1.5 },
+    hf: { sens: 104, aes: 50, xo: 1500, imp: 8, cov: 70 }, lfSens: 96, note: "Neo, 1.5 L displacement. Mms not published; 12.7 g derived (Vas and Qes agree)." },
+  { id: "f8hx200", size: 8, lb: 6, name: "FaitalPRO 8HX200", price: 455.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 76, Qes: 0.43, Qms: 9.5, Vas: 11.9, Sd: 205, Xmax: 4.92, Re: 5.5, Bl: 11.6, Mms: 22, aes: 250, disp: null },
+    hf: { sens: 104, aes: 15, xo: 1700, imp: 8, cov: 90 }, lfSens: 94, note: "Neo, dome HF (15 W AES)." },
+  { id: "f8hx230", size: 8, lb: 10.4, name: "FaitalPRO 8HX230", price: 399.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 70, Qes: 0.38, Qms: 7.4, Vas: 8, Sd: 205, Xmax: 6.17, Re: 6.5, Bl: 15.1, Mms: 23.6, aes: 250, disp: null },
+    hf: { sens: 105, aes: 30, xo: 1700, imp: 8, cov: 100 }, lfSens: 94, note: "Ferrite, annular HF. Published Vas doesn't fit its Mms/Sd (not used by the model)." },
+  { id: "f8hx240", size: 8, lb: 8.6, name: "FaitalPRO 8HX240", price: 469.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 70, Qes: 0.31, Qms: 8.1, Vas: 12.9, Sd: 205, Xmax: 6.17, Re: 5, Bl: 13.8, Mms: 27.7, aes: 250, disp: null },
+    hf: { sens: 107, aes: 30, xo: 1700, imp: 8, cov: 100 }, lfSens: 94, note: "Neo, annular HF." },
+  { id: "embeta8cx", size: 8, lb: 6.8, name: "Eminence Beta 8CX", price: 129.99, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 54, Qes: 0.31, Qms: 7.67, Vas: 34.9, Sd: 205.9, Xmax: 3.2, Re: 5.53, Bl: 11.21, Mms: 19, aes: 250, disp: null },
+    hf: null, lfSens: 92, note: "Budget coax; HF section specs not listed on usspeaker, so only the woofer is modelled. Short 3.2 mm Xmax." },
+  { id: "bc10cxn64", size: 10, lb: 7.1, name: "B&C 10CXN64", price: 476.22, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 68, Qes: 0.33, Qms: 5.6, Vas: 23, Sd: 320, Xmax: 5.5, Re: 5.6, Bl: 15.8, Mms: 33.5, aes: 250, disp: null },
+    hf: { sens: 103, aes: 80, xo: 1200, imp: 8, cov: 70 }, lfSens: 97, note: "Neo, 1.4 in HF exit. B&C sell a matching passive network, FB10CX64 ($176.52, 2.1 kHz, 18 dB/oct)." },
+  { id: "bc10fcx64", size: 10, lb: 12.8, name: "B&C 10FCX64", price: 419.88, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 63, Qes: 0.44, Qms: 7.9, Vas: 25, Sd: 320, Xmax: 5.5, Re: 5.5, Bl: 13.4, Mms: 37, aes: 250, disp: null },
+    hf: { sens: 104, aes: 80, xo: 1200, imp: 8, cov: 70 }, lfSens: 95, note: "Ferrite, 1.3 in HF exit, titanium diaphragm. FB10CX64 network also fits." },
+  { id: "by10cx300fe", size: 10, lb: 11.2, name: "Beyma 10CX300Fe", price: 378.5, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 48, Qes: 0.41, Qms: 5.3, Vas: 62.7, Sd: 380, Xmax: 6.75, Re: 5.2, Bl: 11.65, Mms: 35, aes: 300, disp: null },
+    hf: { sens: 104, aes: 50, xo: 2000, imp: 16, cov: 70 }, lfSens: 96.5, note: "Ferrite; lowest Fs of the 10s. HF 16 Ω, rated 50 W AES at 2 kHz." },
+  { id: "cindcx10", size: 10, lb: 9.2, name: "Ciare NDCX10-1.4", price: 399.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 79.5, Qes: 0.32, Qms: 10.25, Vas: 14.79, Sd: 355, Xmax: 6, Re: 5.59, Bl: 16.37, Mms: 31.08, aes: 350, disp: null },
+    hf: { sens: 109, aes: 110, xo: null, imp: 8, cov: null }, lfSens: 97, note: "Neo, 1.4 in throat, 110 W AES HF (the strongest HF here). Published Vas doesn't fit Mms/Sd (not used by the model). Coverage and crossover not listed." },
+  { id: "f10hx230", size: 10, lb: 11, name: "FaitalPRO 10HX230", price: 468.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 65, Qes: 0.37, Qms: 5.8, Vas: 25.8, Sd: 321, Xmax: 7.37, Re: 5.3, Bl: 14.1, Mms: 34, aes: 250, disp: null },
+    hf: { sens: 107, aes: 30, xo: 1700, imp: 8, cov: 110 }, lfSens: 96, note: "Ferrite, annular HF, widest coverage (110°)." },
+  { id: "f10hx240", size: 10, lb: 9, name: "FaitalPRO 10HX240", price: 539.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 65, Qes: 0.37, Qms: 5.8, Vas: 25.8, Sd: 321, Xmax: 7.37, Re: 5.3, Bl: 14.1, Mms: 34, aes: 250, disp: null },
+    hf: { sens: 107, aes: 30, xo: 1700, imp: 8, cov: 110 }, lfSens: 96, note: "Neo version of the 10HX230." },
+  { id: "embeta10cx", size: 10, lb: 7.3, name: "Eminence Beta 10CX", price: null, src: "usspeaker.com (no price shown)",
+    ts: { Fs: 49, Qes: 0.43, Qms: 5.21, Vas: 64.2, Sd: 344.9, Xmax: 5, Re: 5.53, Bl: 10.88, Mms: 29, aes: 250, disp: null },
+    hf: null, lfSens: 93.3, note: "Budget coax; HF section specs not listed, so only the woofer is modelled." },
+].sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
+
+function FillsPage() {
+  const [drv, setDrv] = useState(FILL_OPTIONS.find((o) => o.id === "bc10cxn64"));
+  const [boxType, setBoxType] = useState("vented");
+  const [dim, setDim] = useState({ w: 13, h: 19, d: 12 });
+  const [port, setPort] = useState({ n: 1, dia: 4, len: 5 });
+  const [hp, setHp] = useState(70);          // highpass to the subs, LR24
+  const [ampW, setAmpW] = useState(300);     // per box, rated into 8 Ω
+  const [portMax, setPortMax] = useState(20);
+  const setD = (k, v) => setDim((p) => ({ ...p, [k]: v }));
+  const setP = (k, v) => setPort((p) => ({ ...p, [k]: v }));
+  const ts = drv.ts, V = Math.sqrt(ampW * 8);
+  const gross = inToL(dim.w, dim.h, dim.d);
+  const pArea = boxType === "vented" ? port.n * Math.PI * Math.pow(port.dia / 2, 2) : 0;
+  const pVol = (pArea * port.len * 16.387) / 1000;
+  const disp = ts.disp != null ? ts.disp : drv.size >= 10 ? 1.5 : 1;
+  const net = Math.max(3, gross - disp - (boxType === "vented" ? pVol : 0));
+  const eff = boxType === "sealed" ? net * 1.15 : net;   // sealed boxes are stuffed
+  const vTherm = Math.sqrt(2 * ts.aes * 8);
+  const vM = boxType === "vented" ? boxModel(ts, eff, pArea, port.len, hp, V, "LR24") : null;
+  const sM = boxType === "sealed" ? closedBox(ts, eff, hp, null, V) : null;
+  const curve = vM ? vM.curve : sM.curve;
+  const maxC = curve.map((o) => {
+    const lims = [(V * ts.Xmax) / o.xmm, vTherm, V];
+    if (vM) lims.push((V * portMax) / o.vel);
+    const L = Math.min(...lims);
+    return { f: o.f, spl: o.spl + 20 * Math.log10(L / V), who: L === lims[0] ? "Xmax" : L === vTherm ? "thermal" : L === V ? "amp" : "port" };
+  }).filter((o) => o.f <= 300);
+  const near = (f) => maxC.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
+  const ref = vM ? vM.ref : sM.ref;
+  const sens = ref - 20 * Math.log10(V / 2.83);
+  const f3 = vM ? vM.f3 : sM.f3;
+  // HF through a passive network: padded down to the woofer's level, so it only reaches its
+  // program rating (2 x AES) at an amp power well above what the woofer sees.
+  const hf = drv.hf;
+  const pad = hf ? Math.max(0, hf.sens - (drv.lfSens || sens)) : 0;
+  const hfLimW = hf ? (2 * hf.aes * hf.imp / 8) * Math.pow(10, pad / 10) : null;   // amp watts (8 Ω rating) at the HF limit
+  const lb = ((2 * (dim.w * dim.h + dim.w * dim.d + dim.h * dim.d)) / 144) * 1.6 + drv.lb + 1;   // 1/2" birch ply ~1.6 lb/ft²
+  const kick = near(60).spl, mid = near(150).spl;
+  const tile = (k, v, u) => (
+    <div key={k} className="bg-stone-50 px-3 py-2.5">
+      <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+      <div className="text-xl font-medium tabular-nums mt-0.5">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
+    </div>
+  );
+  const F = [];
+  if (Math.min(dim.w, dim.h) < drv.size + 1)
+    F.push(["bad", "Driver won't fit", `An ${drv.size}″ coax needs about ${drv.size + 1}″ of baffle.`]);
+  if (vM) {
+    const pv = Math.max(...maxC.map((o) => o.who === "port" ? portMax : 0));
+    F.push(vM.Fb < hp * 0.6 ? ["warn", `Tuned low (${vM.Fb.toFixed(0)} Hz)`, "Well below the highpass: the port does little. A shorter or wider port tunes higher."]
+      : ["ok", `Tuned to ${vM.Fb.toFixed(0)} Hz`, `with a ${hp} Hz LR24 highpass to the subs.`]);
+    if (pv) F.push(["warn", "Port-limited", `Port air speed reaches ${portMax} m/s somewhere below 300 Hz; a wider port helps.`]);
+  } else {
+    F.push(sM.Qtc > 0.8 ? ["warn", `Qtc ${sM.Qtc.toFixed(2)}`, "Peaky; a bigger box or a vent."] : sM.Qtc < 0.5 ? ["warn", `Qtc ${sM.Qtc.toFixed(2)}`, "Very damped: rolls off early. Good driver for a vented box."] : ["ok", `Qtc ${sM.Qtc.toFixed(2)}`, "Well damped."]);
+  }
+  F.push(f3 <= 85 ? ["ok", "Some kick", `${f3.toFixed(0)} Hz −3 dB with the highpass; the kick fundamental (50–70 Hz) is partly there and the subs fill the rest.`]
+    : ["warn", "Little kick", `${f3.toFixed(0)} Hz −3 dB; the kick's attack comes through but its body is all subs.`]);
+  if (hf) F.push(hfLimW < ampW
+    ? ["warn", "HF limits first", `Through a ${pad.toFixed(0)} dB pad the HF reaches its ${2 * hf.aes} W program rating at about ${Math.round(hfLimW)} W of amp, under the ${ampW} W you've set.`]
+    : ["ok", "HF has headroom", `Through a ${pad.toFixed(0)} dB pad the HF only reaches its program rating at about ${Math.round(hfLimW)} W of amp.`]);
+  else F.push(["warn", "HF not modelled", "The HF section's specs aren't published on usspeaker."]);
+  return (
+    <main className="max-w-6xl mx-auto px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div className="md:col-span-3 flex flex-col gap-4">
+        <p className="text-sm text-stone-600">Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).</p>
+        <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))" }}>
+          {tile("Net volume", net.toFixed(0), "L")}
+          {vM ? tile("Tuning Fb", vM.Fb.toFixed(0), "Hz") : tile("Qtc", sM.Qtc.toFixed(2), "")}
+          {tile("F3", f3.toFixed(0), "Hz")}
+          {tile("Max @ 60 Hz", kick.toFixed(1), "dB")}
+          {tile("Max @ 150 Hz", mid.toFixed(1), "dB")}
+          {tile("Weight", lb.toFixed(0), "lb")}
+        </div>
+        <ResponseChart fmax={300} series={[{ curve: maxC, label: drv.name, stroke: "#0f766e", tint: "rgba(15,118,110,0.07)" }]} marks={[{ f: hp, label: "HP" }, ...(vM ? [{ f: vM.Fb, label: "Fb" }] : [])]} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
+          {[
+            ["Woofer sensitivity", `${sens.toFixed(1)} dB`, "2.83 V, half space, 1 m, modelled"],
+            ["HF sensitivity", hf ? `${hf.sens} dB` : "—", hf ? `pad about ${pad.toFixed(0)} dB to match` : "not published"],
+            ["HF coverage", hf && hf.cov ? `${hf.cov}° conical` : "—"],
+            ["HF crossover", hf && hf.xo ? `${hf.xo} Hz or higher` : "—", "recommended minimum"],
+            ["Max SPL at 100 Hz", `${near(100).spl.toFixed(1)} dB`, `sine, ${near(100).who}-limited`],
+            ["Price", drv.price ? `$${drv.price}` : "—", drv.src],
+          ].map(([k, v, n]) => (
+            <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
+              <span className="text-stone-500 shrink-0">{k}</span>
+              <span className="text-right"><span className="font-medium tabular-nums">{v}</span>{n ? <span className="block text-xs text-stone-500">{n}</span> : null}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {F.map(([kind, head, body]) => (
+            <div key={head} className="flex gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+              <b className={`shrink-0 font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+              <span className="text-stone-600">{body}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-stone-500"><span className="font-medium text-stone-600">{drv.name}.</span> {drv.note} Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement {ts.disp != null ? "as published" : `not published; ${disp} L assumed`}.</p>
+      </div>
+      <aside className="md:col-span-2">
+        <Pick label="Coaxial driver" options={FILL_OPTIONS} value={drv} onChange={setDrv} />
+        <div className="text-sm text-stone-500 mb-1">Box</div>
+        <div className="flex gap-1 mb-2">
+          {[["Vented", "vented"], ["Sealed", "sealed"]].map(([l, v]) => (
+            <button key={v} onClick={() => setBoxType(v)} className={`px-3 py-1.5 rounded border text-sm ${boxType === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{l}</button>
+          ))}
+        </div>
+        <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
+          <Slider label="Width" value={dim.w} min={9} max={20} step={0.5} unit="&#8243;" onChange={(v) => setD("w", v)} />
+          <Slider label="Height" value={dim.h} min={9} max={28} step={0.5} unit="&#8243;" onChange={(v) => setD("h", v)} />
+          <Slider label="Depth" value={dim.d} min={7} max={20} step={0.5} unit="&#8243;" onChange={(v) => setD("d", v)} />
+          {boxType === "vented" && (<>
+            <Slider label="Ports" value={port.n} min={1} max={3} step={1} unit="" onChange={(v) => setP("n", v)} />
+            <Slider label="Port diameter" value={port.dia} min={1.5} max={5} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />
+            <Slider label="Port length" value={port.len} min={1} max={14} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
+            <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
+          </>)}
+          <div className="text-xs text-stone-500">{gross.toFixed(0)} L gross{boxType === "sealed" ? ", stuffed" : `, ${pArea.toFixed(1)} in² of port`}.</div>
+        </div>
+        <div className="rounded border border-stone-300 bg-white px-3 py-3">
+          <Slider label="Highpass to the subs (LR24)" value={hp} min={50} max={160} step={5} unit=" Hz" onChange={setHp} />
+          <Slider label="Amp power per box @ 8 Ω" value={ampW} min={25} max={800} step={25} unit=" W" onChange={setAmpW} />
+          <div className="text-xs text-stone-500">A freed GXD4 channel with two 8 Ω fills in parallel gives about 300 W each.</div>
+        </div>
+      </aside>
+    </main>
+  );
+}
+
 function StackPlanner() {
-  const viewOf = () => (window.location.hash === "#notes" ? "notes" : "planner");
+  const viewOf = () => (window.location.hash === "#notes" ? "notes" : window.location.hash === "#fills" ? "fills" : "planner");
   const [view, setView] = useState(viewOf);
   useEffect(() => {
     const on = () => setView(viewOf());
@@ -1608,14 +1790,14 @@ function StackPlanner() {
       <header className="px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
         <h1 className="text-3xl md:text-4xl leading-tight" aria-label="Speaker Planner">𝒮𝓅ℯ𝒶𝓀ℯ𝓇 𝒫𝓁𝒶𝓃𝓃ℯ𝓇</h1>
         <nav className="flex gap-1 mt-3" style={{ fontFamily: "system-ui, sans-serif" }} aria-label="Pages">
-          {[["planner", "Planner", "#"], ["notes", "Notes", "#notes"]].map(([v, label, href]) => (
+          {[["planner", "Planner", "#"], ["fills", "Fills", "#fills"], ["notes", "Notes", "#notes"]].map(([v, label, href]) => (
             <a key={v} href={href} aria-current={view === v ? "page" : undefined}
               onClick={(e) => { e.preventDefault(); try { history.replaceState(null, "", v === "planner" ? " " : href); } catch {} setView(v); window.scrollTo(0, 0); }}
               className={`px-3 py-1.5 rounded border text-sm ${view === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</a>
           ))}
         </nav>
       </header>
-      {view === "notes" ? <NotesPage /> : <>
+      {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : <>
 
       {saved !== null && (
         <section className="max-w-6xl mx-auto px-8 pb-2" style={{ fontFamily: "system-ui, sans-serif" }}>
