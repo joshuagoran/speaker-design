@@ -1259,6 +1259,27 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Passive crossover: calibrate and build</h2>
+          <p className="text-sm text-stone-700 mb-3 max-w-3xl">For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80 per box in parts. All values get tuned, not just the pad.</p>
+          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+            {[
+              ["1. Gear (~$150, once)", "UMIK-1 mic, REW (free) to measure, VituixCAD (free) to design, and an impedance jig (Dayton DATS V3, or a resistor + soundcard in REW)."],
+              ["2. Measure in the finished box", "Woofer and HF separately, no crossover: response at 1 m on axis (outdoors or gated), impedance, and a near-field of woofer + port. Don't move the mic between drivers, so the phase stays valid. Optional: 15/30/45° off axis."],
+              ["3. Design", "Import into VituixCAD, start from the textbook network, tune values for a flat sum with no dip at the crossover. Round to real part values; keep the minimum impedance at about 5 Ω or above."],
+              ["4. Prototype on DSP (optional)", "Copy the target curves into the PA2 or GXD, listen and measure, then match the passive design to what you liked."],
+              ["5. Test build", "Clip leads or a loose board outside the box. Measure the whole speaker against the simulation; swap pad resistors to set the HF level (buy a few spare values). Listen at gig level."],
+              ["6. Final build", "Stripboard is fine for the HF side; run the woofer path (~6 A at 300 W) in 14–16 AWG wire, not the strips, or wire point to point on a ply board. Space the coils or turn them 90° apart, away from the woofer magnet. Mount on foam, re-measure installed, copy for the other boxes and spot-check each."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span><span className="font-medium">{t}.</span> {d}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-stone-500 mt-3 max-w-3xl">Roughly a weekend to measure and design, plus an evening to build and verify.</p>
+        </section>
+
+        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
           <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Materials</h2>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
