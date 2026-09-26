@@ -85,7 +85,7 @@ collection `configs`, one document per configuration:
 {
   "name": "NSW 266 L reference",
   "savedAt": 1758738000000,          // epoch ms, the list sorts on this
-  "format": "full",                   // FORMATS id
+  "format": "full",                   // fixed: 18" sub + 12" mid + CD
   "sub": "emnsw4018",                 // SUB_OPTIONS id
   "mid": "em3012",                    // MID_OPTIONS id
   "midBox": "b15",                    // MID_BOXES id
@@ -99,6 +99,7 @@ collection `configs`, one document per configuration:
   "ampW": 800,                        // amp power per sub channel into 8 Ω; caps max SPL
   "portMax": 20,                      // peak port air speed limit, m/s
   "mDim":  { "w": 15, "h": 15, "d": 15 },         // mid-bass box, external inches (sealed)
+  "wall": 0.75,                        // side/top/bottom/back ply, 0.75 or 0.5 (braced); baffles stay 3/4"
   "xoLo": 120, "xoHi": 950,           // crossovers, sub->mid and mid->horn, LR24
   "mAmpW": 400,                       // amp power per mid channel into 8 Ω
   "tilt": 6,                          // dB less the mid band needs than the sub band (music balance)

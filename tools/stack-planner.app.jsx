@@ -412,6 +412,10 @@ function closedBox(ts, VbL, hp, lp, volts) {
 }
 
 const inToL = (w, h, d) => ((w - 2 * PLY) * (h - 2 * PLY) * (d - 2 * PLY) * 16.387) / 1000;
+// Internal litres with walls of thickness t and a 3/4″ baffle recessed 3/4″ into the frame.
+const boxL = (w, h, d, t) => ((w - 2 * t) * (h - 2 * t) * (d - 1.5 - t) * 16.387) / 1000;
+// Plywood weight, lb/ft² (birch). The baffle stays 3/4″ either way.
+const PLY_LB = { 0.75: 2.3, 0.5: 1.6 };
 
 // ---------------------------------------------------------------
 // 3D view
@@ -1332,7 +1336,7 @@ function NotesPage() {
               ["Compression driver", "DE360 at $117 is the default; crossover floor on the A400G2 needs a distortion sweep to confirm ~1.1 kHz."],
               ["Horn print", "A400G2 in one piece needs a 400 mm+ bed; otherwise sectioned. Filament, print service, or buy the RX-28 instead."],
               ["Prototype material", "3/4\" particleboard for the first sub, then transfer verified interior dimensions to birch."],
-              ["Final panel thickness", "3/4\", 5/8\" or 1/2\" birch. 1/2\" saves 24 lb on the sub column but needs bracing on roughly 12\" centres and a doubler at the driver cutout. Decide before the prototype, since wall thickness changes the interior volume and therefore the duct length."],
+              ["Final panel thickness", "3/4\" or braced 1/2\" birch (switch it under Plywood in the planner). 1/2\" needs bracing on roughly 12\" centres and a doubler at the driver cutout. Decide before the prototype, since wall thickness changes the interior volume and therefore the duct length."],
               ["Baffle material", "MDO if the baffles are painted — no baffle edge is exposed in any of the current configurations, so there is no reason not to. Birch only if the baffle is ever meant to be clear-finished."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
@@ -1555,7 +1559,8 @@ function StackPlanner() {
   const [cabinet, setCabinet] = useState(CABINETS[0]);
   const [portStyle, setPortStyle] = useState("slots");
   const [layout, setLayout] = useState("stack");
-  const [format, setFormat] = useState(FORMATS[0]);
+  const format = FORMATS[0];   // 18″ sub + 12″ mid + compression driver only, for now
+  const [wall, setWall] = useState(0.75);   // side/top/bottom/back ply, in
   const [baffleColor, setBaffleColor] = useState("#e8b4a8");
   // Every cabinet is custom; the preset list below is only a starting point.
   const [cDim, setCDim] = useState({ w: 28, h: 32, d: 24 });
@@ -1657,7 +1662,7 @@ function StackPlanner() {
 
   // Port geometry, matching what the 3D view draws, so the table and the
   // model describe the same box.
-  const PT = 0.75;
+  const PT = wall;
   const port = (() => {
     const iw = subBox.w - 2 * PT, ih = subBox.h - 2 * PT, idp = subBox.d - 2 * PT;
     {
@@ -1703,7 +1708,7 @@ function StackPlanner() {
              desc: `${n} × ${(2 * r).toFixed(0)}″ round, 11″ long` };
   })();
 
-  const grossL = inToL(subBox.w, subBox.h, subBox.d - 0.75);   // baffle is recessed 3/4\u2033 into the frame
+  const grossL = boxL(subBox.w, subBox.h, subBox.d, wall);
   const ductL = (port.area * port.len * 16.387) / 1000;
   const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - 3);
   const HPF = hpf, AMP_V = Math.sqrt(ampW * 8);
@@ -1735,7 +1740,7 @@ function StackPlanner() {
 
   // ---- mid-bass: sealed box ----
   const MID_V = Math.sqrt(mAmpW * 8);
-  const midGrossL = inToL(midDims.w, midDims.h, midDims.d - 0.75);   // baffle recessed 3/4"
+  const midGrossL = boxL(midDims.w, midDims.h, midDims.d, wall);
   const midDisp = mid.ts && mid.ts.disp != null ? mid.ts.disp : 2.5;   // assumed where not published
   const midNetL = Math.max(5, midGrossL - midDisp);
   const midEffL = midNetL * 1.15;   // always lightly stuffed: ~15% more effective volume, and it damps box resonances
@@ -1746,8 +1751,8 @@ function StackPlanner() {
     return { f: o.f, spl: o.spl + 20 * Math.log10(V / MID_V), who: V === vx ? "Xmax" : V === vMidTherm ? "thermal" : "amp" };
   };
   const midMax = mMdl ? mMdl.curve.map(midMaxAt) : null;
-  // 3/4" birch at 2.3 lb/ft\u00b2: six panels plus one brace, the driver, and 2 lb of hardware
-  const midCabLb = ((2 * (midDims.w * midDims.h + midDims.w * midDims.d + midDims.h * midDims.d) + midDims.w * midDims.d) / 144) * 2.3 + 2;
+  // 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware
+  const midCabLb = ((midDims.w * midDims.h) * 2.3 + (midDims.w * midDims.h + 2 * midDims.w * midDims.d + 2 * midDims.h * midDims.d + midDims.w * midDims.d) * PLY_LB[wall]) / 144 + 2;
   const midLbLoaded = midCabLb + (mid.lb || 0);
   const midUseV = Math.min(vMidTherm, MID_V);   // most the mid is driven: amp or program rating
   const midNear = (f) => midMax.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
@@ -1800,13 +1805,13 @@ function StackPlanner() {
   // One named snapshot of the whole system.
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
-    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, hpType, ampW, portMax, mDim, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
+    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, hpType, ampW, portMax, mDim, wall, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
     layout, cutaway, baffleColor,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
   const restore = (c) => {
     const find = (list, id, fb) => list.find((o) => o.id === id) || fb;
-    if (c.format) setFormat(find(FORMATS, c.format, format));
+    if (c.wall === 0.5 || c.wall === 0.75) setWall(c.wall); else setWall(0.75);
     if (c.sub) setSub(find(SUB_OPTIONS, c.sub, sub));
     if (c.mid) setMid(find(MID_OPTIONS, c.mid, mid));
     if (c.midBox) setMidBox(find(MID_BOXES, c.midBox, midBox));
@@ -1848,7 +1853,7 @@ function StackPlanner() {
     catch { setCfgMsg("Couldn't delete"); setTimeout(() => setCfgMsg(""), 2500); }
   };
 
-  const subLbLoaded = ((2 * (subBox.w * subBox.h + subBox.w * subBox.d + subBox.h * subBox.d) + 2 * subBox.w * subBox.d) / 144) * 2.3 + (sub.lb || 0) + 6;
+  const subLbLoaded = ((subBox.w * subBox.h) * 2.3 + (subBox.w * subBox.h + 2 * subBox.w * subBox.d + 2 * subBox.h * subBox.d + 2 * subBox.w * subBox.d) * PLY_LB[wall]) / 144 + (sub.lb || 0) + 6;
 
   const subL = grossL;
   const midL = midGrossL;
@@ -2155,12 +2160,10 @@ function StackPlanner() {
 
         <aside className="md:col-span-2" style={{ fontFamily: "system-ui, sans-serif" }}>
           <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">Format</div>
-            <div className="flex flex-col gap-1">
-              {FORMATS.map((f) => (
-                <button key={f.id} onClick={() => setFormat(f)} className={`text-left px-3 py-2 rounded border ${format.id === f.id ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>
-                  <div className="font-medium">{f.name}</div>
-                </button>
+            <div className="text-sm text-stone-500 mb-1">Plywood (baffles stay 3/4″)</div>
+            <div className="flex gap-1">
+              {[[0.75, "3/4″ birch"], [0.5, "1/2″ birch, braced"]].map(([t, label]) => (
+                <button key={t} onClick={() => setWall(t)} className={`px-3 py-1.5 rounded border text-sm ${wall === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
               ))}
             </div>
           </div>
@@ -2326,8 +2329,6 @@ function StackPlanner() {
         <section className="md:col-span-5 mt-6" style={{ fontFamily: "system-ui, sans-serif" }}>
           <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Totals for the current selection</h2>
           {(() => {
-            const PLY_LB_FT2 = 2.3; // 3/4" birch
-            const boxLb = (b) => ((2 * (b.w * b.h + b.w * b.d + b.h * b.d) + b.w * b.d) / 144) * PLY_LB_FT2; // six panels + one brace/shelf
             const subBoxLb = subLbLoaded - (sub.lb || 0); // same estimate as the stats row
             const midBoxLb = midCabLb;   // same estimate as the mid-bass stats row
             const rows = [
@@ -2353,7 +2354,7 @@ function StackPlanner() {
               </table></div>
             );
           })()}
-          <p className="text-xs text-stone-500 mt-2">Cabinet weight assumes 3/4" birch at 2.3 lb/ft² ; the sub allows two braces and 6 lb of hardware, the mid box one brace. Particleboard runs ~30% heavier. Driver weights are approximate where the datasheet wasn't checked. Heaviest single lift is the sub column.</p>
+          <p className="text-xs text-stone-500 mt-2">Cabinet weight: 3/4" birch baffles (2.3 lb/ft²), other panels {wall === 0.5 ? '1/2" birch (1.6 lb/ft²)' : '3/4" birch'}; the sub allows two braces and 6 lb of hardware, the mid box one brace. Particleboard runs ~30% heavier. Driver weights are approximate where the datasheet wasn't checked. Heaviest single lift is the sub column.</p>
         </section>
 
       </main>
