@@ -1259,6 +1259,27 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Home inputs: Gemini MXR-01BT</h2>
+          <p className="text-sm text-stone-700 mb-3 max-w-3xl">Turntable, line and phone into the same DSP and amps, with one master volume. A 2-channel DJ mixer does it all in one box.</p>
+          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+            {[
+              ["What it has", "2 channels, each switchable phono or line, 3-band EQ, Bluetooth input, 1/4″ mic, headphones, all-metal chassis."],
+              ["Outputs", "Balanced 1/4″ TRS master (to the DSP), RCA master, and an RCA booth out with its own level."],
+              ["Hook-up", "Master TRS → TRS-to-XLR-male cables → DSP inputs. Turntable ground wire to the mixer's ground post."],
+              ["Volume", "Use the mixer master. Set DSP input and amp gains so the master at full is the loudest you'll want; the DSP and amp limiters stay as a backstop."],
+              ["Booth out", "Spare RCA with its own level: could feed a fill or booth monitor through the DSP."],
+              ["Turn-on", "Mixer and sources first, amps last; amps off first."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span><span className="font-medium">{t}.</span> {d}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-stone-500 mt-3 max-w-3xl">Source: <a className="underline" href="https://www.geminisound.com/products/mxr-01bt">Gemini MXR-01BT</a>. Alternative without a mixer: a hi-fi preamp with phono, RCA out through an ART CleanBox Pro to balanced.</p>
+        </section>
+
+        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
           <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Passive crossover: calibrate and build</h2>
           <p className="text-sm text-stone-700 mb-3 max-w-3xl">For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80 per box in parts. All values get tuned, not just the pad.</p>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
