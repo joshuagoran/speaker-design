@@ -1573,8 +1573,23 @@ function StackPlanner() {
   const [saved, setSaved] = useState(null);     // null = still loading
   const [cfgName, setCfgName] = useState("");
   const [cfgMsg, setCfgMsg] = useState("");
+  // Firebase (github.io build): signed-in users keep configs under users/{uid}/.
+  const [fbUser, setFbUser] = useState(null);
+  const fb = !(window.claude && window.claude.use) && window.firebase && window.PLANNER_FIREBASE ? window.firebase : null;
   useEffect(() => {
     let live = true;
+    if (fb) {
+      if (!fb.apps.length) fb.initializeApp(window.PLANNER_FIREBASE);
+      const un = fb.auth().onAuthStateChanged((u) => {
+        if (!live) return;
+        setFbUser(u);
+        if (u) {
+          const fs = fb.firestore();
+          setDb({ collection: (name) => fs.collection(`users/${u.uid}/${name}`) });
+        } else { setDb(null); setSaved([]); }
+      });
+      return () => { live = false; un(); };
+    }
     (async () => {
       try {
         const d = window.claude && window.claude.use ? await window.claude.use("db") : null;
@@ -1583,6 +1598,24 @@ function StackPlanner() {
     })();
     return () => { live = false; };
   }, []);
+  const signIn = () => fb.auth().signInWithPopup(new fb.auth.GoogleAuthProvider()).catch(() => { setCfgMsg("Sign-in failed"); setTimeout(() => setCfgMsg(""), 2500); });
+  const signOut = () => fb.auth().signOut();
+  // One-time copy of the configs saved in the claude.ai artifact (data/configs-seed.json).
+  const importSeed = async () => {
+    if (!db) return;
+    setCfgMsg("Importing…");
+    try {
+      const rows = await (await fetch("configs-seed.json")).json();
+      const have = new Set((saved || []).map((c) => c.name));
+      let n = 0;
+      for (const { id, ...c } of rows) {
+        if (have.has(c.name)) continue;
+        await db.collection("configs").doc(id).set(c); n++;
+      }
+      setCfgMsg(n ? `Imported ${n}` : "Nothing new to import");
+    } catch { setCfgMsg("Couldn't import"); }
+    setTimeout(() => setCfgMsg(""), 2500);
+  };
   useEffect(() => {
     if (!db) return;
     const un = db.collection("configs").orderBy("savedAt", "desc").limit(50).onSnapshot(
@@ -1807,7 +1840,7 @@ function StackPlanner() {
       await db.collection("configs").doc().set({ name, savedAt: Date.now(), ...snapshot() });
       setCfgName(""); setCfgMsg("Saved");
     } catch (e) {
-      setCfgMsg(e && e.code === "invalid_argument" ? "You don't have write access here" : "Couldn't save — try again");
+      setCfgMsg(e && (e.code === "invalid_argument" || e.code === "permission-denied") ? "You don't have write access here" : "Couldn't save — try again");
     }
     setTimeout(() => setCfgMsg(""), 2500);
   };
@@ -1854,6 +1887,14 @@ function StackPlanner() {
                   className="px-3 py-1.5 rounded border border-stone-300 bg-white text-sm w-56 focus:outline-none focus:border-stone-900" />
                 <button onClick={saveCfg} disabled={!cfgName.trim()}
                   className="px-3 py-1.5 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-35 disabled:cursor-not-allowed">Save current</button>
+                {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
+                {fbUser && (<span className="ml-auto flex items-center gap-3 text-xs text-stone-500">
+                  <button onClick={importSeed} className="hover:underline">Import saved configs</button>
+                  <button onClick={signOut} className="hover:underline">Sign out</button>
+                </span>)}
+              </>) : fb ? (<>
+                <button onClick={signIn}
+                  className="px-3 py-1.5 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50">Sign in with Google to save</button>
                 {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
               </>) : (
                 <span className="text-xs text-stone-500">Saving is unavailable in this view. Everything else works.</span>

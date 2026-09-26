@@ -166,3 +166,25 @@ weight assumes 3/4" birch at 2.3 lb/ft² with two braces, plus driver and 6 lb o
 hardware.
 
 See `docs/design-notes.md` for the findings behind the current configuration.
+
+## Web app (GitHub Pages + Firestore)
+
+`sh tools/build.sh pages` builds `dist/site/` — the same planner, with saved
+configs in Firebase Firestore instead of the claude.ai artifact store. Pushes
+to `main` deploy it via `.github/workflows/pages.yml`.
+
+One-time setup:
+
+1. [Firebase console](https://console.firebase.google.com): create a project (free Spark plan).
+2. Add a **Web app**; copy its config object into `tools/firebase-config.js`
+   (`window.PLANNER_FIREBASE = { ... }`). These values are public by design.
+3. **Firestore Database → Create** (production mode).
+4. **Authentication → Sign-in method → Google → Enable**; under
+   **Settings → Authorized domains** add `<user>.github.io`.
+5. **Firestore → Rules**: paste `firestore.rules` (each user reads and writes
+   only `users/{uid}/…`) and publish.
+6. GitHub repo **Settings → Pages → Source: GitHub Actions**.
+
+On the site, **Sign in with Google to save**, then **Import saved configs**
+once to copy `data/configs-seed.json` (exported from the artifact) into your
+account. Without a config the page works but can't save.
