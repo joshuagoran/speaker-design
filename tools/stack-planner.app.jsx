@@ -57,6 +57,34 @@ const SUB_OPTIONS = [
 ];
 
 const MID_OPTIONS = [
+  // ---- 15" mid-bass (sealed), for tops crossed low (tapped-horn sub, separated subs) ----
+  { id: "bc15cl76", size: 15, lb: 8.4, name: "B&C 15CL76", price: 246.18, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 42, Qts: 0.33, Qes: 0.34, Qms: 7.9, Vas: 135, Sd: 855, Xmax: 7, Re: 5.1, Bl: 21, Mms: 108, aes: 400, disp: null },
+    note: "[bcspeakers.com, Sep 2026] Neo, 400 W nominal / 800 W continuous, 98.5 dB, Le 1.3 mH, to 3 kHz. Lightest 15 here." },
+  { id: "bc15fw76", size: 15, lb: 20.5, name: "B&C 15FW76", price: 295.8, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 40, Qts: 0.21, Qes: 0.22, Qms: 5.1, Vas: 138, Sd: 855, Xmax: 7, Re: 5.1, Bl: 26.2, Mms: 117, aes: 500, disp: null },
+    note: "[bcspeakers.com, Sep 2026] Ferrite, 500 W nominal / 1000 W continuous, 100 dB, Le 1.4 mH, to 2 kHz. Strong motor but 20.5 lb." },
+  { id: "bc15ndl76", size: 15, lb: 10.4, pick: true, name: "B&C 15NDL76", price: 305.4, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 37, Qts: 0.22, Qes: 0.24, Qms: 4.5, Vas: 195, Sd: 855, Xmax: 7, Re: 5.3, Bl: 22.5, Mms: 96, aes: 500, disp: null },
+    note: "[bcspeakers.com, Sep 2026] Neo, 500 W nominal / 1000 W continuous, 99.5 dB, Le 1.5 mH, to 2 kHz. The 15 sibling of the 12NDL76." },
+  { id: "bc15ndl88", size: 15, lb: 12.6, name: "B&C 15NDL88", price: 388.44, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 45, Qts: 0.34, Qes: 0.36, Qms: 6.1, Vas: 126, Sd: 855, Xmax: 8, Re: 5, Bl: 20.1, Mms: 102, aes: 700, disp: null },
+    note: "[bcspeakers.com, Sep 2026] Neo, 3.5 in coil, 700 W nominal / 1400 W continuous, 99 dB, Le 1.25 mH, to 3 kHz." },
+  { id: "bc15nw76", size: 15, lb: 12.3, name: "B&C 15NW76", price: 379.8, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 42, Qts: 0.22, Qes: 0.23, Qms: 4.3, Vas: 130, Sd: 855, Xmax: 8, Re: 5.3, Bl: 25.5, Mms: 104, aes: 600, disp: null },
+    note: "[bcspeakers.com, Sep 2026] Neo, 600 W nominal / 1200 W continuous, 100.5 dB, Le 1.25 mH, to 2 kHz." },
+  { id: "by15mc700nd", size: 15, lb: 9.2, name: "Beyma 15MC700Nd", price: 374.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 49, Qts: 0.31, Qes: 0.34, Qms: 3.6, Vas: 105, Sd: 880, Xmax: 7, Re: 5.2, Bl: 22.6, Mms: 107, aes: 700, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 700 W AES / 1400 W program, 100 dB, Le 0.8 mH, to 4 kHz." },
+  { id: "es15mb700", size: 15, lb: 18.3, name: "18Sound 15MB700", price: 279.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 42, Qts: 0.29, Qes: 0.31, Qms: 4.5, Vas: 202, Sd: 850, Xmax: 5.5, Re: 5, Bl: 17.6, Mms: 71, aes: 400, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Ferrite, 400 W AES / 800 W program, 103 dB, Le 1.2 mH, to 4.3 kHz. Mms not published; 71 g derived (Qes agrees)." },
+  { id: "f15fh500", size: 15, lb: 9.7, name: "FaitalPRO 15FH500", price: 389.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 35, Qts: 0.31, Qes: 0.32, Qms: 10.4, Vas: 180.5, Sd: 800, Xmax: 9.25, Re: 5.1, Bl: 19.2, Mms: 104, aes: 500, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 500 W AES / 1000 W program, 98 dB, Le 1.3 mH, to 3.15 kHz. Most excursion of the 15s." },
+  { id: "f15pr400", size: 15, lb: 7.9, name: "FaitalPRO 15PR400", price: 359.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 35, Qts: 0.32, Qes: 0.34, Qms: 6, Vas: 223, Sd: 805, Xmax: 5.75, Re: 5.1, Bl: 16.7, Mms: 85.2, aes: 400, disp: null },
+    note: "[usspeaker.com spec table, Sep 2026] Neo, 400 W AES / 800 W program, 100 dB, Le 0.75 mH, to 4 kHz." },
   { id: "sbnero12", size: 12, lb: 9.15, pick: true, name: "SB Audience Nero-12MWN700D", price: 247, src: "Madisound",
     ts: { Fs: 52.7, Qts: 0.38, Qes: 0.4, Qms: 8.9, Vas: 52.5, Sd: 543.3, Xmax: 7.3, Re: 5.3, Bl: 17.9, Mms: 72.5, aes: 700, disp: 2.15 },
     note: "[datasheet, sbaudience.com R.1 2024] Neo, 700 W AES / 1400 W max, 97 dB, 3 in coil, Le 0.32 mH, 2.15 L displacement. Xmax = (Hvc \u2212 Hg)/2 + Hg/3." },
@@ -168,6 +196,8 @@ const MID_BOXES = [
   { id: "b14", name: "14 × 14 × 18 in", box: { w: 14, h: 14, d: 18 }, note: "Within the RX-28's 14.2\" width limit at 1100 Hz." },
   { id: "b13", name: "13 × 13 × 13 in", box: { w: 13, h: 13, d: 13 }, note: "Cube for a 10\" mid, ~25 L sealed." },
   { id: "b15", pick: true, name: "15 × 15 × 15 in", box: { w: 15, h: 15, d: 15 }, note: "Cube. Exceeds the RX-28 width guidance; fine under a round ATH horn." },
+  { id: "b17", size: 15, name: "17 × 17 × 14 in", box: { w: 17, h: 17, d: 14 }, note: "Smallest practical face for a 15, ~45 L." },
+  { id: "b18", size: 15, pick: true, name: "18 × 18 × 16 in", box: { w: 18, h: 18, d: 16 }, note: "~60 L for a 15." },
 ];
 
 const CD_OPTIONS = [
@@ -1559,7 +1589,8 @@ function StackPlanner() {
   const [cabinet, setCabinet] = useState(CABINETS[0]);
   const [portStyle, setPortStyle] = useState("slots");
   const [layout, setLayout] = useState("stack");
-  const format = FORMATS[0];   // 18″ sub + 12″ mid + compression driver only, for now
+  const format = FORMATS[0];   // 18″ sub + compression driver; mid is 12″ or 15″
+  const [midSize, setMidSize] = useState(12);
   const [wall, setWall] = useState(0.75);   // side/top/bottom/back ply, in
   const [baffleColor, setBaffleColor] = useState("#e8b4a8");
   // Every cabinet is custom; the preset list below is only a starting point.
@@ -1632,8 +1663,8 @@ function StackPlanner() {
   const midDims = layout === "tower" ? { w: cDim.w, h: 15.5, d: cDim.d } : mDim;
   const midSel = { ...mid, box: midDims };
   const subList = SUB_OPTIONS.filter((o) => o.size === format.sub);
-  const midList = MID_OPTIONS.filter((o) => (o.size || 12) === format.mid);
-  const boxList = MID_BOXES.filter((b) => (format.mid === 10 ? b.id === "b13" : b.id !== "b13"));
+  const midList = MID_OPTIONS.filter((o) => (o.size || 12) === midSize);
+  const boxList = MID_BOXES.filter((b) => (b.size || 12) === midSize && b.id !== "b13");
   const subBox = cDim;
   // Load a published cabinet into the sliders as a starting point.
   const startFrom = (cb) => {
@@ -1655,9 +1686,17 @@ function StackPlanner() {
     const pickOf = (list) => list.find((o) => o.pick) || list[0];
     if (subList.length) setSub(pickOf(subList));
     if (midList.length) setMid(pickOf(midList));
-    if (boxList.length) { const b = pickOf(boxList); setMidBox(b); setMDim({ ...b.box }); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [format]);
+  // Switching 12/15 picks that size's default driver and box; restoring a config sets them itself.
+  const skipSizeReset = useRef(true);
+  useEffect(() => {
+    if (skipSizeReset.current) { skipSizeReset.current = false; return; }
+    const pickOf = (list) => list.find((o) => o.pick) || list[0];
+    if (midList.length) setMid(pickOf(midList));
+    if (boxList.length) { const b = pickOf(boxList); setMidBox(b); setMDim({ ...b.box }); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [midSize]);
   const mismatch = horn.exit !== cd.exit;
 
   // Port geometry, matching what the 3D view draws, so the table and the
@@ -1741,7 +1780,7 @@ function StackPlanner() {
   // ---- mid-bass: sealed box ----
   const MID_V = Math.sqrt(mAmpW * 8);
   const midGrossL = boxL(midDims.w, midDims.h, midDims.d, wall);
-  const midDisp = mid.ts && mid.ts.disp != null ? mid.ts.disp : 2.5;   // assumed where not published
+  const midDisp = mid.ts && mid.ts.disp != null ? mid.ts.disp : (mid.size === 15 ? 4 : 2.5);   // assumed where not published
   const midNetL = Math.max(5, midGrossL - midDisp);
   const midEffL = midNetL * 1.15;   // always lightly stuffed: ~15% more effective volume, and it damps box resonances
   const mMdl = mid.ts ? closedBox(mid.ts, midEffL, xoLo, xoHi, MID_V) : null;
@@ -1813,7 +1852,7 @@ function StackPlanner() {
     const find = (list, id, fb) => list.find((o) => o.id === id) || fb;
     if (c.wall === 0.5 || c.wall === 0.75) setWall(c.wall); else setWall(0.75);
     if (c.sub) setSub(find(SUB_OPTIONS, c.sub, sub));
-    if (c.mid) setMid(find(MID_OPTIONS, c.mid, mid));
+    if (c.mid) { const m = find(MID_OPTIONS, c.mid, mid); skipSizeReset.current = (m.size || 12) !== midSize; setMidSize(m.size || 12); setMid(m); }
     if (c.midBox) setMidBox(find(MID_BOXES, c.midBox, midBox));
     if (c.cd) setCd(find(CD_OPTIONS, c.cd, cd));
     if (c.horn) setHorn(find(HORN_OPTIONS, c.horn, horn));
@@ -2061,9 +2100,9 @@ function StackPlanner() {
             <div className="flex flex-col gap-1.5 mt-4">
               {(() => {
                 const F = [];
-                const need = format.mid + 1.2;
+                const need = midSize + 1.2;
                 if (Math.min(midDims.w, midDims.h) < need)
-                  F.push(["bad", "Driver won't fit", `A ${format.mid}\u2033 driver needs about ${need.toFixed(1)}\u2033 of baffle; the smallest face is ${Math.min(midDims.w, midDims.h)}\u2033.`]);
+                  F.push(["bad", "Driver won't fit", `A ${midSize}\u2033 driver needs about ${need.toFixed(1)}\u2033 of baffle; the smallest face is ${Math.min(midDims.w, midDims.h)}\u2033.`]);
                 F.push(mMdl.Qtc > 0.8 ? ["warn", `Qtc ${mMdl.Qtc.toFixed(2)}`, "Peaky and loose; the box is small for this driver."]
                   : mMdl.Qtc < 0.5 ? ["warn", `Qtc ${mMdl.Qtc.toFixed(2)}`, "Very damped. Fine above the crossover, but the box could be smaller."]
                   : ["ok", `Qtc ${mMdl.Qtc.toFixed(2)}`, "Well damped."]);
@@ -2263,7 +2302,15 @@ function StackPlanner() {
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
             </div>
           </div>
-          <Pick label={`Mid-bass ${format.mid}"`} options={midList} value={mid} onChange={setMid} />
+          <div className="mb-2">
+            <div className="text-sm text-stone-500 mb-1">Mid-bass size</div>
+            <div className="flex gap-1">
+              {[12, 15].map((n) => (
+                <button key={n} onClick={() => setMidSize(n)} className={`px-3 py-1.5 rounded border text-sm ${midSize === n ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{n}″</button>
+              ))}
+            </div>
+          </div>
+          <Pick label={`Mid-bass ${midSize}"`} options={midList} value={mid} onChange={setMid} />
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
             <div className="rounded border border-stone-300 bg-white px-3 py-3">

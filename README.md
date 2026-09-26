@@ -85,7 +85,7 @@ collection `configs`, one document per configuration:
 {
   "name": "NSW 266 L reference",
   "savedAt": 1758738000000,          // epoch ms, the list sorts on this
-  "format": "full",                   // fixed: 18" sub + 12" mid + CD
+  "format": "full",                   // fixed: 18" sub + CD; mid size (12" or 15") follows the "mid" driver
   "sub": "emnsw4018",                 // SUB_OPTIONS id
   "mid": "em3012",                    // MID_OPTIONS id
   "midBox": "b15",                    // MID_BOXES id
