@@ -1135,10 +1135,10 @@ function Pick({ label, options, value, onChange }) {
 }
 
 // Max-SPL chart: one or more curves ({f, spl}), fixed 80-135 dB so setups compare directly.
-function ResponseChart({ series, marks = [], fmax = 200 }) {
-  const W = 760, H = 300, L = 52, R = 14, TT = 16, B = 36;
+function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, bot = 80, step = 5, yLabel = "max dB SPL @ 1 m", H = 300 }) {
+  const W = 760, L = 52, R = 14, TT = 16, B = 36;
   const x0 = L, x1 = W - R, y0 = TT, y1 = H - B;
-  const TOP = 135, BOT = 80, fmin = 15;
+  const TOP = top, BOT = bot;
   const px = (f) => x0 + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (x1 - x0);
   const py = (v) => y1 - ((Math.max(BOT, Math.min(TOP, v)) - BOT) / (TOP - BOT)) * (y1 - y0);
   const paths = series.map((sr) => {
@@ -1153,19 +1153,19 @@ function ResponseChart({ series, marks = [], fmax = 200 }) {
     grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke="#e7e5e4" strokeWidth="1" />);
     grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{f >= 1000 ? f / 1000 + "k" : f}</text>);
   });
-  for (let v = BOT; v <= TOP; v += 5) {
+  for (let v = BOT; v <= TOP; v += step) {
     const Y = py(v);
     grid.push(<line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke="#e7e5e4" strokeWidth="1" />);
     grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{v}</text>);
   }
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Maximum sound pressure level against frequency" style={{ display: "block", width: "100%", height: "auto" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${yLabel} against frequency`} style={{ display: "block", width: "100%", height: "auto" }}>
         {grid}
-        {marks.filter((m) => m.f > fmin && m.f < fmax).map((m) => (
-          <g key={m.label}>
+        {marks.filter((m) => m.f > fmin && m.f < fmax).map((m, i, ms) => (
+          <g key={m.label + i}>
             <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke="#a8a29e" strokeWidth="1" strokeDasharray="3 4" />
-            <text x={px(m.f) + 5} y={y0 + 13} fill="#a8a29e" fontSize="10.5" fontFamily="system-ui, sans-serif">{m.label}</text>
+            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill="#a8a29e" fontSize="10.5" fontFamily="system-ui, sans-serif">{m.label}</text>
           </g>
         ))}
         {paths.map((p) => <path key={p.label + "f"} d={p.fill} fill={p.tint} />)}
@@ -1177,7 +1177,7 @@ function ResponseChart({ series, marks = [], fmax = 200 }) {
           </g>
         ))}
         <text x={W / 2} y={H - 4} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">frequency, Hz</text>
-        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">max dB SPL @ 1 m</text>
+        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{yLabel}</text>
       </svg>
     </div>
   );
@@ -1835,6 +1835,20 @@ function StackPlanner() {
     const ka = (2 * Math.PI * xoHi / 343) * Math.sqrt(mid.ts.Sd / 10000 / Math.PI);
     return ka <= 2.2 ? 180 : 2 * Math.asin(2.2 / ka) * 180 / Math.PI;
   })() : null;
+  // Horizontal beamwidth (-6 dB) against frequency. Mid: rigid piston as above. Horn: its rated
+  // coverage down to Keele's pattern-control limit f = 25 000 / (mouth width m \u00d7 angle \u00b0),
+  // widening in proportion below it. Rules of thumb, not measurements.
+  const beamCurves = (() => {
+    const hz0 = horn.hf || {};
+    const fK = hz0.covH && horn.size ? 25000 / (horn.size.w * 0.0254 * hz0.covH) : null;
+    const midB = [], hornB = [];
+    for (let i = 0; i < 160; i++) {
+      const f = 200 * Math.pow(10000 / 200, i / 159);
+      if (mid.ts) { const ka = (2 * Math.PI * f / 343) * Math.sqrt(mid.ts.Sd / 10000 / Math.PI); midB.push({ f, spl: ka <= 2.2 ? 180 : 2 * Math.asin(2.2 / ka) * 180 / Math.PI }); }
+      if (fK && f >= (hz0.lowHz || 0) * 0.7) hornB.push({ f, spl: Math.min(180, f >= fK ? hz0.covH : hz0.covH * fK / f) });
+    }
+    return { midB, hornB, fK };
+  })();
 
   const subMusicAtXo = mdl && lim ? (() => {
     const o = mdl.curve.reduce((b, x) => (Math.abs(x.f - xoLo) < Math.abs(b.f - xoLo) ? x : b));
@@ -2110,9 +2124,6 @@ function StackPlanner() {
                   : ["ok", `Qtc ${mMdl.Qtc.toFixed(2)}`, "Well damped."]);
                 if (mMdl.f3 > xoLo)
                   F.push(["warn", "Rolls off above the crossover", `The box is 3 dB down at ${mMdl.f3.toFixed(0)} Hz, above the ${xoLo} Hz crossover. Raise the crossover or use more volume.`]);
-                const lam = 13504 / xoHi;   // wavelength in inches
-                if (midDims.w > lam)
-                  F.push(["warn", "Baffle wider than a wavelength at the horn crossover", `${midDims.w}\u2033 against ${lam.toFixed(1)}\u2033 at ${xoHi} Hz: the mid beams before the horn takes over.`]);
                 const xPct = mMdl.peakX * midUseV / MID_V / mid.ts.Xmax * 100;
                 F.push(xPct > 100
                   ? ["warn", "Excursion-limited", `The cone reaches Xmax at ${Math.round(Math.pow(MID_V * 100 / (mMdl.peakX / mid.ts.Xmax * 100), 2) / 8)} W, below ${vMidTherm < MID_V ? `its ${2 * mid.ts.aes} W program rating` : `the ${mAmpW} W amp`}. A higher crossover helps.`]
@@ -2162,6 +2173,12 @@ function StackPlanner() {
                 </div>
               ))}
             </div>
+            <div className="mb-4">
+              <ResponseChart fmin={200} fmax={10000} top={180} bot={0} step={30} H={220} yLabel="horizontal beamwidth, °"
+                series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: "#b45309", tint: "rgba(180,83,9,0)" }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: "#0f766e", tint: "rgba(15,118,110,0)" }] : [])]}
+                marks={[{ f: xoHi, label: "XO" }, ...(beamCurves.fK ? [{ f: beamCurves.fK, label: "horn control" }] : [])]} />
+              <p className="text-xs text-stone-500 mt-1">Where the lines meet at the crossover, off-axis sound stays even. Mid as a rigid piston; horn at its rated coverage down to its pattern-control limit (from mouth width), wider below. Rules of thumb.</p>
+            </div>
             <div className="flex flex-col gap-1.5">
               {(() => {
                 const F = [];
@@ -2181,6 +2198,10 @@ function StackPlanner() {
                     ? ["warn", "Horn runs out first", `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hfTilt} dB for the HF band. ` + (hornModel.who === "amp" && wNeed * 8 / hornModel.imp <= hornModel.pProg ? `About ${Math.ceil(wNeed / 25) * 25} W per HF channel would cover it.` : "The driver's rating is the limit: raise the crossover or pick a more sensitive driver.")]
                     : ["ok", "Keeps up with the mid", `${gap.toFixed(1)} dB to spare at ${xoHi} Hz against the mid, less ${hfTilt} dB for the HF band.`]);
                 }
+                if (midBeam && hz.covH && midBeam < hz.covH * 0.75)
+                  F.push(["warn", "Mid narrower than the horn at the crossover", `About ${Math.round(midBeam)}\u00b0 against the horn's ${hz.covH}\u00b0: the mid is already beaming, so off-axis sound dips just below the crossover. A lower crossover or a smaller mid meets the horn.`]);
+                if (beamCurves.fK && xoHi < beamCurves.fK * 0.85)
+                  F.push(["warn", "Horn wider than rated at the crossover", `${horn.name} holds ${hz.covH}\u00b0 down to about ${Math.round(beamCurves.fK / 10) * 10} Hz (from its ${horn.size.w}\u2033 mouth); at ${xoHi} Hz it spreads wider.`]);
                 if (midBeam && hz.covH && midBeam > hz.covH * 1.4)
                   F.push(["warn", "Mid much wider than the horn at the crossover", `About ${Math.round(midBeam)}\u00b0 against the horn's ${hz.covH}\u00b0: off-axis energy steps down through the crossover. A higher crossover narrows the mid, a wider horn meets it; a 12\u2033 at this frequency is still close to omnidirectional.`]);
                 return F.map(([kind, head, body]) => (
