@@ -99,7 +99,6 @@ collection `configs`, one document per configuration:
   "ampW": 800,                        // amp power per sub channel into 8 Ω; caps max SPL
   "portMax": 20,                      // peak port air speed limit, m/s
   "mDim":  { "w": 15, "h": 15, "d": 15 },         // mid-bass box, external inches (sealed)
-  "mStuff": true,                     // light stuffing, ~15% more effective volume
   "xoLo": 120, "xoHi": 950,           // crossovers, sub->mid and mid->horn, LR24
   "mAmpW": 400,                       // amp power per mid channel into 8 Ω
   "tilt": 6,                          // dB less the mid band needs than the sub band (music balance)

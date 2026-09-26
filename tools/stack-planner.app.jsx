@@ -1543,7 +1543,6 @@ function StackPlanner() {
   const [cd, setCd] = useState(CD_OPTIONS.find((c) => c.id === "de360"));
   const [midBox, setMidBox] = useState(MID_BOXES.find((o) => o.id === "b15"));   // last preset loaded
   const [mDim, setMDim] = useState({ ...MID_BOXES.find((o) => o.id === "b15").box });
-  const [mStuff, setMStuff] = useState(true);    // light stuffing: ~15% more effective volume
   const [xoLo, setXoLo] = useState(120);         // sub -> mid crossover, LR24
   const [xoHi, setXoHi] = useState(900);         // mid -> horn crossover, LR24
   const [mAmpW, setMAmpW] = useState(400);       // amp power per mid channel, into 8 Ω
@@ -1739,7 +1738,7 @@ function StackPlanner() {
   const midGrossL = inToL(midDims.w, midDims.h, midDims.d - 0.75);   // baffle recessed 3/4"
   const midDisp = mid.ts && mid.ts.disp != null ? mid.ts.disp : 2.5;   // assumed where not published
   const midNetL = Math.max(5, midGrossL - midDisp);
-  const midEffL = midNetL * (mStuff ? 1.15 : 1);
+  const midEffL = midNetL * 1.15;   // always lightly stuffed: ~15% more effective volume, and it damps box resonances
   const mMdl = mid.ts ? closedBox(mid.ts, midEffL, xoLo, xoHi, MID_V) : null;
   const vMidTherm = mid.ts ? Math.sqrt(2 * mid.ts.aes * 8) : 0;
   const midMaxAt = (o) => {
@@ -1801,7 +1800,7 @@ function StackPlanner() {
   // One named snapshot of the whole system.
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
-    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, hpType, ampW, portMax, mDim, mStuff, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
+    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, hpType, ampW, portMax, mDim, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
     layout, cutaway, baffleColor,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
@@ -1820,7 +1819,6 @@ function StackPlanner() {
     if (typeof c.ampW === "number") setAmpW(c.ampW);
     if (typeof c.portMax === "number") setPortMax(c.portMax);
     if (c.mDim) setMDim(c.mDim); else if (c.midBox) { const b = MID_BOXES.find((x) => x.id === c.midBox); if (b) setMDim({ ...b.box }); }
-    if (typeof c.mStuff === "boolean") setMStuff(c.mStuff);
     if (typeof c.xoLo === "number") setXoLo(c.xoLo);
     if (typeof c.xoHi === "number") setXoHi(c.xoHi);
     if (typeof c.mAmpW === "number") setMAmpW(c.mAmpW);
@@ -2040,7 +2038,7 @@ function StackPlanner() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
-                ["Gross internal", `${midGrossL.toFixed(0)} L`, mStuff ? `acts like ${midEffL.toFixed(0)} L stuffed` : "unstuffed"],
+                ["Gross internal", `${midGrossL.toFixed(0)} L`, `acts like ${midEffL.toFixed(0)} L stuffed`],
                 ["Midband sensitivity", `${(mMdl.ref - 20 * Math.log10(MID_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
                 ...[xoLo, 200, 500].map((f) => { const m = midNear(f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
@@ -2273,11 +2271,6 @@ function StackPlanner() {
                 <Slider label="Height" value={mDim.h} min={10} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("h", v)} />
                 <Slider label="Depth"  value={mDim.d} min={8} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("d", v)} />
               </>)}
-              <div className="flex gap-1 mb-3">
-                {[["Stuffed", true], ["Empty", false]].map(([label, v]) => (
-                  <button key={label} onClick={() => setMStuff(v)} className={`px-3 py-1.5 rounded border text-xs ${mStuff === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
-                ))}
-              </div>
               <Slider label="Crossover, sub to mid" value={xoLo} min={60} max={250} step={5} unit=" Hz" onChange={setXoLo} />
               <Slider label="Crossover, mid to horn" value={xoHi} min={500} max={2000} step={50} unit=" Hz" onChange={setXoHi} />
               <Slider label="Mid amp power per channel @ 8 Ω" value={mAmpW} min={50} max={2000} step={25} unit=" W" onChange={setMAmpW} />
@@ -2314,7 +2307,7 @@ function StackPlanner() {
           <div>
             <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Mid-bass cube</h2>
             <p className="text-sm text-stone-700">
-              {mid.name} in a {midDims.w}×{midDims.h}×{midDims.d} in sealed box, gross {midL.toFixed(0)} L{mStuff ? ", lightly stuffed" : ""}.
+              {mid.name} in a {midDims.w}×{midDims.h}×{midDims.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed.
               Covers ~90 Hz to the horn crossover. Same 18 mm birch, flush-mounted driver.
             </p>
             {mid.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{mid.name}.</span> {mid.note}</p>}
