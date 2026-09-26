@@ -369,6 +369,7 @@ function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24") {
     peakVel: Math.max(...lo.map((o) => o.vel)),
     peakVelF: lo.reduce((b, o) => (o.vel > b.vel ? o : b)).f,
     peakX: Math.max(...lo.map((o) => o.xmm)),
+    peakXF: lo.reduce((b, o) => (o.xmm > b.xmm ? o : b)).f,
     xmaxPct: (Math.max(...lo.map((o) => o.xmm)) / ts.Xmax) * 100,
   };
 }
@@ -1909,16 +1910,14 @@ function StackPlanner() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
                 ["Gross internal", `${grossL.toFixed(0)} L`],
-                ["Vent", port.desc],
                 ["Port area", `${port.area.toFixed(1)} in²`, `${((port.area / (sub.ts.Sd / 6.4516)) * 100).toFixed(0)}% of cone area`],
-                ["Duct length", `${port.len.toFixed(2)}″`],
                 ["Hydraulic diameter", `${port.dh.toFixed(2)}″`, port.dh < 2 ? "low — flare the mouths" : "acceptable with flares"],
                 ["Midband sensitivity", `${(mdl.ref - 20 * Math.log10(AMP_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
-                ...[30, 35, 45].map((f) => { const m = maxNear(f);
+                ...[30, 35, 45, 60].map((f) => { const m = maxNear(f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
-                ["First limit, music", lim.who, `at ${Math.round(lim.W / 10) * 10} W; the two rows below are at this power`],
+                ["First limit, music", lim.who, `at ${Math.round(lim.W / 10) * 10} W${lim.who === "cone travel (Xmax)" ? `, reached first at ${mdl.peakXF.toFixed(0)} Hz` : lim.who === "port air speed" ? `, reached first at ${mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power`],
                 ["Peak port velocity", `${lim.vel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz, where port output peaks near Fb`],
-                ["Peak excursion", `${(mdl.peakX * lim.V / AMP_V).toFixed(1)} mm`, `${lim.xPct.toFixed(0)}% of Xmax`],
+                ["Peak excursion", `${(mdl.peakX * lim.V / AMP_V).toFixed(1)} mm`, `${lim.xPct.toFixed(0)}% of Xmax, at ${mdl.peakXF.toFixed(0)} Hz`],
               ].map(([k, v, note]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
                   <span className="text-stone-500 shrink-0">{k}</span>
@@ -1961,7 +1960,7 @@ function StackPlanner() {
                 F.push(lim.who === "port air speed"
                   ? ["warn", "Port-limited", `The vent chokes at ${Math.round(lim.W)} W, below the driver's ${2 * sub.ts.aes} W program rating. Open the port up or lengthen it.`]
                   : lim.who === "cone travel (Xmax)"
-                  ? ["warn", "Excursion-limited", `The cone reaches Xmax at ${Math.round(lim.W)} W, below the ${2 * sub.ts.aes} W program rating. A bigger box or higher tuning helps; a bigger port does not.`]
+                  ? ["warn", "Excursion-limited", `The cone reaches Xmax at ${Math.round(lim.W)} W (first at ${mdl.peakXF.toFixed(0)} Hz), below the ${2 * sub.ts.aes} W program rating. A bigger box or higher tuning helps; a bigger port does not.`]
                   : lim.who === "amplifier power"
                   ? ["warn", "Amp-limited", `The ${ampW} W amp runs out before the port, the cone or the driver's ${2 * sub.ts.aes} W program rating (2 \u00d7 ${sub.ts.aes} W AES).`]
                   : ["ok", "Thermally limited", `Reaches its ${2 * sub.ts.aes} W program rating (2 \u00d7 ${sub.ts.aes} W AES) before the port or the cone gives out.`]);
