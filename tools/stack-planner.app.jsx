@@ -2177,7 +2177,7 @@ function StackPlanner() {
               <ResponseChart fmin={200} fmax={10000} top={180} bot={0} step={30} H={220} yLabel="horizontal beamwidth, °"
                 series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: "#b45309", tint: "rgba(180,83,9,0)" }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: "#0f766e", tint: "rgba(15,118,110,0)" }] : [])]}
                 marks={[{ f: xoHi, label: "XO" }, ...(beamCurves.fK ? [{ f: beamCurves.fK, label: "horn control" }] : [])]} />
-              <p className="text-xs text-stone-500 mt-1">Where the lines meet at the crossover, off-axis sound stays even. Mid as a rigid piston; horn at its rated coverage down to its pattern-control limit (from mouth width), wider below. Rules of thumb.</p>
+              <p className="text-xs text-stone-500 mt-1">How wide each driver spreads sound. Best when the two lines cross near the XO line. Estimated, not measured.</p>
             </div>
             <div className="flex flex-col gap-1.5">
               {(() => {
