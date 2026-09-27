@@ -273,8 +273,8 @@ const SWATCHES = [
 ];
 
 const CAB_FINISHES = {
-  birch: { name: "Birch", color: 0xd7b98a, rough: 0.85, swatch: "#d7b98a" },
-  walnut: { name: "Walnut", color: 0x5c3a24, rough: 0.7, swatch: "#5c3a24" },
+  birch: { name: "Birch", color: 0xd7b98a, inner: 0xc9a875, rough: 0.85, swatch: "#d7b98a" },
+  walnut: { name: "Walnut", color: 0x5c3a24, inner: 0x4f3220, rough: 0.7, swatch: "#5c3a24" },
 };
 
 const CABINETS = [
@@ -485,7 +485,8 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     const painted = new THREE.MeshStandardMaterial({ color: new THREE.Color(baffleColor), roughness: 0.9 });
     const ghost = new THREE.MeshStandardMaterial({ color: 0xd7b98a, roughness: 0.9, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide });
     const shellMat = cutaway ? ghost : birch;
-    const plyIn = new THREE.MeshStandardMaterial({ color: 0xc9a875, roughness: 0.9 });
+    // duct fins, shelves and cut edges follow the cabinet finish, a shade darker
+    const plyIn = new THREE.MeshStandardMaterial({ color: finish ? finish.inner : new THREE.Color(cabFinish).multiplyScalar(0.88), roughness: 0.9 });
     const hardwood = new THREE.MeshStandardMaterial({ color: 0xa8763c, roughness: 0.6 });
     const portMat = new THREE.MeshStandardMaterial({ color: 0x8a7458, roughness: 0.95, side: THREE.DoubleSide });
     const baffleMat = cutaway ? new THREE.MeshStandardMaterial({ color: new THREE.Color(baffleColor), roughness: 0.9, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }) : painted;
