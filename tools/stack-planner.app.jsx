@@ -444,15 +444,15 @@ function closedBox(ts, VbL, hp, lp, volts) {
 }
 
 const inToL = (w, h, d) => ((w - 2 * PLY) * (h - 2 * PLY) * (d - 2 * PLY) * 16.387) / 1000;
-// Internal litres with walls of thickness t and a 3/4″ baffle recessed 3/4″ into the frame.
-const boxL = (w, h, d, t) => ((w - 2 * t) * (h - 2 * t) * (d - 1.5 - t) * 16.387) / 1000;
+// Internal litres with walls of thickness t and a 3/4″ baffle recessed `inset` into the frame.
+const boxL = (w, h, d, t, inset = 0.75) => ((w - 2 * t) * (h - 2 * t) * (d - inset - 0.75 - t) * 16.387) / 1000;
 // Plywood weight, lb/ft² (birch). The baffle stays 3/4″ either way.
 const PLY_LB = { 0.75: 2.3, 0.5: 1.6 };
 
 // ---------------------------------------------------------------
 // 3D view
 // ---------------------------------------------------------------
-function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom }) {
+function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall = 0.75, inset = 0.75 }) {
   const mount = useRef(null);
   const state = useRef({ rotY: 0.6, rotX: 0.35, drag: false, lx: 0, ly: 0 });
 
@@ -486,9 +486,9 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     const group = new THREE.Group();
     scene.add(group);
 
-    // cabinet: four perimeter panels with 1/4" roundovers front and back,
-    // baffle set back 3/4" on cleats, painted. Returns the z of the baffle face.
-    const T = 0.75, REVEAL = 0.75, RO = 0.25;
+    // cabinet: four perimeter panels (wall ply) with 1/4" roundovers front and back,
+    // 3/4" baffle set back by the inset on cleats, painted. Returns the z of the baffle face.
+    const T = wall, BT = 0.75, REVEAL = inset, RO = 0.25;
     const rr = (w, h, r) => {
       const x = w / 2, y = h / 2, sh = new THREE.Shape();
       sh.moveTo(-x + r, -y);
@@ -521,10 +521,10 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
       const bshape = rr(iw, ih, 0.12);
       (holes || []).forEach((hp) => bshape.holes.push(hp));
       const baffle = new THREE.Mesh(
-        new THREE.ExtrudeGeometry(bshape, { depth: T, bevelEnabled: false }),
+        new THREE.ExtrudeGeometry(bshape, { depth: BT, bevelEnabled: false }),
         [baffleMat, cutaway ? baffleMat : plyIn] // caps painted, cut edges left as bare ply
       );
-      baffle.position.set(x, y + T + baffleBottom + ih / 2, d / 2 - REVEAL - T);
+      baffle.position.set(x, y + T + baffleBottom + ih / 2, d / 2 - REVEAL - BT);
       parent.add(baffle);
       const back = new THREE.Mesh(new THREE.BoxGeometry(iw, h - 2 * T, T), shellMat);
       back.position.set(x, y + h / 2, -d / 2 + T / 2);
@@ -551,9 +551,9 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
       const bshape = archOutline(new THREE.Shape(), R - T, -ih / 2, (y + h - R) - bcy, R - T);
       (holes || []).forEach((hp) => bshape.holes.push(hp));
       const baffle = new THREE.Mesh(
-        new THREE.ExtrudeGeometry(bshape, { depth: T, bevelEnabled: false, curveSegments: 48 }),
+        new THREE.ExtrudeGeometry(bshape, { depth: BT, bevelEnabled: false, curveSegments: 48 }),
         [baffleMat, cutaway ? baffleMat : plyIn]);
-      baffle.position.set(x, bcy, d / 2 - REVEAL - T);
+      baffle.position.set(x, bcy, d / 2 - REVEAL - BT);
       parent.add(baffle);
       const bk = archOutline(new THREE.Shape(), R - T, -h / 2 + T, acy, R - T);
       const back = new THREE.Mesh(new THREE.ExtrudeGeometry(bk, { depth: T, bevelEnabled: false, curveSegments: 48 }), shellMat);
@@ -653,7 +653,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     const subZ = (archTop ? archCabinet : cabinet)(s.w, s.h + extH, s.d, pl, holes, bandH, 0, subGroup);
     if (towerMode) {
       // internal partitions: sub/mid floor, mid/horn floor, and the mid chamber's back wall
-      const zF = s.d / 2 - REVEAL - T, zB = -s.d / 2 + T, dep = zF - zB;
+      const zF = s.d / 2 - REVEAL - BT, zB = -s.d / 2 + T, dep = zF - zB;
       [pl + s.h - T / 2, pl + s.h + TW_MID - T / 2].forEach((py) => {
         const pp = new THREE.Mesh(new THREE.BoxGeometry(innerW, T, dep), plyIn);
         pp.position.set(0, py, (zF + zB) / 2);
@@ -708,9 +708,11 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
       // duct mouths sit flush with the frame face; the box bottom is the duct floor
       const band = rr(innerW, bandH, 0.12);
       for (let k = -1; k <= 1; k++) band.holes.push(rectPath(k * (ductW + T), -T / 2, ductW, ductH, 0.25));
-      const nose = new THREE.Mesh(new THREE.ExtrudeGeometry(band, { depth: REVEAL, bevelEnabled: false }), shellMat);
-      nose.position.set(0, pl + T + bandH / 2, s.d / 2 - REVEAL);
-      subGroup.add(nose);
+      if (REVEAL > 0) {
+        const nose = new THREE.Mesh(new THREE.ExtrudeGeometry(band, { depth: REVEAL, bevelEnabled: false }), shellMat);
+        nose.position.set(0, pl + T + bandH / 2, s.d / 2 - REVEAL);
+        subGroup.add(nose);
+      }
     } else {
       // flared tubes behind the baffle: bell, straight section, inner bell
       const tubeLen = pg.tubeLen != null ? pg.tubeLen : (portStyle === "round1" ? 11 : corners ? 11.5 : 9.8);
@@ -1052,7 +1054,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
       renderer.dispose();
       el.removeChild(renderer.domElement);
     };
-  }, [sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom]);
+  }, [sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall, inset]);
 
   return <div ref={mount} className="w-full h-full cursor-grab" />;
 }
@@ -1594,6 +1596,7 @@ function StackPlanner() {
   const format = FORMATS[0];   // 18″ sub + compression driver; mid is 12″ or 15″
   const [midSize, setMidSize] = useState(12);
   const [wall, setWall] = useState(0.75);   // side/top/bottom/back ply, in
+  const [inset, setInset] = useState(0.75); // how far the baffles sit back from the frame front, in
   const [baffleColor, setBaffleColor] = useState("#e8b4a8");
   // Every cabinet is custom; the preset list below is only a starting point.
   const [cDim, setCDim] = useState({ w: 28, h: 32, d: 24 });
@@ -1749,7 +1752,7 @@ function StackPlanner() {
              desc: `${n} × ${(2 * r).toFixed(0)}″ round, 11″ long` };
   })();
 
-  const grossL = boxL(subBox.w, subBox.h, subBox.d, wall);
+  const grossL = boxL(subBox.w, subBox.h, subBox.d, wall, inset);
   const ductL = (port.area * port.len * 16.387) / 1000;
   const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - 3);
   const HPF = hpf, AMP_V = Math.sqrt(ampW * 8);
@@ -1781,7 +1784,7 @@ function StackPlanner() {
 
   // ---- mid-bass: sealed box ----
   const MID_V = Math.sqrt(mAmpW * 8);
-  const midGrossL = boxL(midDims.w, midDims.h, midDims.d, wall);
+  const midGrossL = boxL(midDims.w, midDims.h, midDims.d, wall, inset);
   const midDisp = mid.ts && mid.ts.disp != null ? mid.ts.disp : (mid.size === 15 ? 4 : 2.5);   // assumed where not published
   const midNetL = Math.max(5, midGrossL - midDisp);
   const midEffL = midNetL * 1.15;   // always lightly stuffed: ~15% more effective volume, and it damps box resonances
@@ -1860,13 +1863,14 @@ function StackPlanner() {
   // One named snapshot of the whole system.
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
-    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, hpType, ampW, portMax, mDim, wall, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
+    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, hpType, ampW, portMax, mDim, wall, inset, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
     layout, cutaway, baffleColor,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
   const restore = (c) => {
     const find = (list, id, fb) => list.find((o) => o.id === id) || fb;
     if (c.wall === 0.5 || c.wall === 0.75) setWall(c.wall); else setWall(0.75);
+    setInset(typeof c.inset === "number" ? c.inset : 0.75);
     if (c.sub) setSub(find(SUB_OPTIONS, c.sub, sub));
     if (c.mid) { const m = find(MID_OPTIONS, c.mid, mid); skipSizeReset.current = (m.size || 12) !== midSize; setMidSize(m.size || 12); setMid(m); }
     if (c.midBox) setMidBox(find(MID_BOXES, c.midBox, midBox));
@@ -1983,7 +1987,7 @@ function StackPlanner() {
       <main className="max-w-6xl mx-auto px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8">
         <div className="md:col-span-3 flex flex-col gap-5">
         <section className="rounded-lg overflow-hidden border border-stone-300 bg-stone-50" style={{ height: "clamp(320px, 56vh, 560px)" }}>
-          <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} />
+          <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wall} inset={inset} />
         </section>
 
         <section className="mt-1" style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -2228,6 +2232,7 @@ function StackPlanner() {
                 <button key={t} onClick={() => setWall(t)} className={`px-3 py-1.5 rounded border text-sm ${wall === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
               ))}
             </div>
+            <div className="mt-3"><Slider label="Baffle inset" value={inset} min={0} max={1.5} step={0.25} unit="&#8243;" onChange={setInset} /></div>
           </div>
           <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} />
           <div className="mb-5">
