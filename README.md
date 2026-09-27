@@ -103,6 +103,7 @@ collection `configs`, one document per configuration:
   "inset": 0.75,                       // baffle set back from the frame front, 0–1.5"
   "cabFinish": "birch",                // "birch", "walnut" or a paint hex
   "spacerH": 20,                       // "tops on spacers" spacer height, in
+  "joint": "butt",                     // cutlist corner joints: butt | rabbet | miter
   "xoLo": 120, "xoHi": 950,           // crossovers, sub->mid and mid->horn, LR24
   "mAmpW": 400,                       // amp power per mid channel into 8 Ω
   "tilt": 6,                          // dB less the mid band needs than the sub band (music balance)

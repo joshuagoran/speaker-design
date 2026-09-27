@@ -1574,8 +1574,170 @@ function FillsPage() {
   );
 }
 
+// ---------------------------------------------------------------
+// Cutlist: panels for the sub and mid boxes from the planner's current
+// dimensions, and a simple shelf layout on 4x8 or 5x5 sheets.
+// ---------------------------------------------------------------
+const CUTOUT = { 18: 16.6, 15: 13.9, 12: 11.1, 10: 9.2 };   // typical front-mount cutouts, in
+const SHEETS = { "4x8": { w: 48, h: 96, name: "4 × 8 ft" }, "5x5": { w: 60, h: 60, name: "5 × 5 ft" } };
+const f8 = (x) => {   // inches to the nearest 1/16, as 12 5/8
+  const n = Math.round(x * 16), whole = Math.floor(n / 16), r = n % 16;
+  if (!r) return `${whole}`;
+  let a = r, b = 16; while (a % 2 === 0) { a /= 2; b /= 2; }
+  return whole ? `${whole} ${a}/${b}` : `${a}/${b}`;
+};
+const tName = (t) => (t === 0.75 ? "3/4″" : t === 0.5 ? "1/2″" : `${t}″`);
+
+function boxParts(label, W, H, D, t, inset, joint, extra = {}) {
+  const BT = 0.75, P = [];
+  const topW = joint === "butt" ? W - 2 * t : joint === "rabbet" ? W - t : W;
+  const rearNote = `rabbet ${f8(t)} × ${f8(t / 2)} on rear edge for the back`;
+  const sideNote = joint === "rabbet" ? `rabbet ${f8(t)} × ${f8(t / 2)} top and bottom edges; ${rearNote}`
+    : joint === "miter" ? `45° on top and bottom edges; ${rearNote}` : rearNote;
+  const topNote = joint === "miter" ? `45° on both ends; ${rearNote}` : rearNote;
+  P.push({ box: label, part: "Side", qty: 2, a: D, b: H, t, note: sideNote });
+  P.push({ box: label, part: "Top / bottom", qty: 2, a: D, b: topW, t, note: topNote });
+  P.push({ box: label, part: "Back", qty: 1, a: W - t, b: H - t, t, note: "sits in the rear rabbet" });
+  const iw = W - 2 * t, ih = H - 2 * t, band = extra.band || 0;
+  P.push({ box: label, part: "Baffle", qty: 1, a: iw, b: ih - band, t: BT,
+    note: `set ${f8(inset)}″ back on cleats; ${extra.cutNote || ""}`.replace(/; $/, "") });
+  P.push({ box: label, part: "Baffle cleat", qty: 2, a: 0.75, b: iw, t: BT, note: "glue and screw behind the baffle" });
+  P.push({ box: label, part: "Baffle cleat", qty: 2, a: 0.75, b: ih - band - 1.5, t: BT, note: "" });
+  const inD = D - inset - BT - t;
+  if (extra.braces) P.push({ box: label, part: "Window brace", qty: extra.braces, a: iw, b: inD, t, note: "cut out the centre, leave ~2″ rails" });
+  return { P, iw, ih, inD };
+}
+
+function cutParts({ sub, mid, subBox, midDims, wall, inset, joint, portStyle, cVent, layout }) {
+  const t = wall, all = [];
+  const vent = [];
+  const s = boxParts("Sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
+    braces: wall === 0.5 ? 3 : 2,
+    band: portStyle === "slots" || portStyle === "folded" ? cVent.slotH + t : 0,
+    cutNote: `${f8(CUTOUT[sub.size] || 16.6)}″ driver cutout (check the datasheet)`,
+  });
+  all.push(...s.P);
+  if (portStyle === "slots" || portStyle === "folded") {
+    const len = portStyle === "slots" ? Math.min(cVent.len, subBox.d - t - cVent.slotH) : subBox.d - inset - t - cVent.slotH - 2 * t;
+    all.push({ box: "Sub", part: "Duct shelf", qty: 1, a: s.iw, b: len, t, note: "roof of the bottom slot" });
+    all.push({ box: "Sub", part: "Duct fin", qty: 2, a: cVent.slotH, b: len, t, note: "splits the slot in three" });
+    if (portStyle === "folded") all.push({ box: "Sub", part: "Duct rear wall", qty: 1, a: s.iw, b: Math.max(2, cVent.len - len), t, note: "rear channel, rises up the back" });
+  } else if (portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1") {
+    const n = portStyle === "vslot1" ? 1 : 2;
+    all.push({ box: "Sub", part: "Side duct wall", qty: n, a: s.ih, b: cVent.len, t, note: `${f8(cVent.throat)}″ throat; 20° chamfer both ends` });
+    all.push({ box: "Sub", part: "Duct divider", qty: 2 * n, a: cVent.throat, b: cVent.len, t: 0.5, note: "" });
+  } else {
+    vent.push(`${cVent.nt} × ${f8(cVent.dia)}″ port tube, ${f8(cVent.len)}″ long (buy, flared)`);
+  }
+  if (layout !== "tower") {
+    const m = boxParts("Mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
+      braces: wall === 0.5 ? 2 : 1,
+      cutNote: `${f8(CUTOUT[mid.size || 12] || 11.1)}″ driver cutout (check the datasheet)`,
+    });
+    all.push(...m.P);
+  }
+  return { parts: all, vent };
+}
+
+// Shelf packing with rotation and kerf: largest first, fill rows across the sheet.
+function packSheets(rects, sheet, kerf) {
+  const sheets = [];
+  const items = rects.slice().sort((p, q) => Math.max(q.a, q.b) - Math.max(p.a, p.b) || Math.min(q.a, q.b) - Math.min(p.a, p.b));
+  const tooBig = [];
+  for (const r of items) {
+    const opts = [[r.a, r.b], [r.b, r.a]].filter(([w, h]) => w <= sheet.w && h <= sheet.h);
+    if (!opts.length) { tooBig.push(r); continue; }
+    let placed = false;
+    for (const sh of sheets) {
+      for (const row of sh.rows) {
+        for (const [w, h] of opts) {
+          if (h <= row.h && row.x + w <= sheet.w) { sh.items.push({ ...r, x: row.x, y: row.y, w, h }); row.x += w + kerf; placed = true; break; }
+        }
+        if (placed) break;
+      }
+      if (placed) break;
+      // new row on this sheet: tallest-first orientation that fits
+      for (const [w, h] of opts.slice().sort((p, q) => q[1] - p[1])) {
+        if (sh.y + h <= sheet.h) { sh.rows.push({ y: sh.y, h, x: w + kerf }); sh.items.push({ ...r, x: 0, y: sh.y, w, h }); sh.y += h + kerf; placed = true; break; }
+      }
+      if (placed) break;
+    }
+    if (!placed) {
+      const [w, h] = opts.slice().sort((p, q) => q[1] - p[1])[0];
+      sheets.push({ rows: [{ y: 0, h, x: w + kerf }], items: [{ ...r, x: 0, y: 0, w, h }], y: h + kerf });
+    }
+  }
+  return { sheets, tooBig };
+}
+
+function SheetDrawing({ sheet, S, idx }) {
+  const sc = 4, W = S.w * sc, H = S.h * sc;
+  const colors = { Sub: "#e7d3b3", Mid: "#cfe0d6" };
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="text-xs text-stone-500">Sheet {idx + 1}</div>
+      <svg viewBox={`-2 -2 ${W + 4} ${H + 4}`} style={{ width: S.w === 48 ? 160 : 200, height: "auto" }} role="img" aria-label={`Sheet ${idx + 1} layout`}>
+        <rect x="0" y="0" width={W} height={H} fill="#fafaf9" stroke="#a8a29e" />
+        {sheet.items.map((it, i) => (
+          <g key={i}>
+            <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || "#e7e5e4"} stroke="#57534e" strokeWidth="0.8" />
+            {it.w * sc > 40 && it.h * sc > 14 && (
+              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + 4} textAnchor="middle" fontSize="11" fill="#292524" fontFamily="system-ui, sans-serif">{it.box} {it.part.split(" ")[0]}</text>
+            )}
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function CutlistPage(props) {
+  const { joint, setJoint, sheetKind, setSheetKind, sets, setSets, wall } = props;
+  const { parts, vent } = cutParts(props);
+  const S = SHEETS[sheetKind], kerf = 0.125;
+  const byT = {};
+  parts.forEach((p) => { for (let i = 0; i < p.qty * sets; i++) (byT[p.t] = byT[p.t] || []).push(p); });
+  const packs = Object.keys(byT).sort((a, b) => b - a).map((t) => ({ t: +t, ...packSheets(byT[t], S, kerf) }));
+  const btn = (on) => `px-3 py-1.5 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`;
+  return (
+    <main className="max-w-6xl mx-auto px-8 pb-16" style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div className="flex flex-wrap gap-6 mb-5">
+        <div><div className="text-sm text-stone-500 mb-1">Corner joints</div>
+          <div className="flex gap-1">{[["butt", "Butt"], ["rabbet", "Rabbet"], ["miter", "Miter"]].map(([k, l]) => <button key={k} className={btn(joint === k)} onClick={() => setJoint(k)}>{l}</button>)}</div></div>
+        <div><div className="text-sm text-stone-500 mb-1">Sheet</div>
+          <div className="flex gap-1">{Object.entries(SHEETS).map(([k, s]) => <button key={k} className={btn(sheetKind === k)} onClick={() => setSheetKind(k)}>{s.name}</button>)}</div></div>
+        <div><div className="text-sm text-stone-500 mb-1">Stacks</div>
+          <div className="flex gap-1">{[1, 2, 4].map((n) => <button key={n} className={btn(sets === n)} onClick={() => setSets(n)}>{n}</button>)}</div></div>
+      </div>
+      <p className="text-sm text-stone-600 mb-4 max-w-3xl">From the planner's current boxes: {tName(wall)} walls, 3/4″ baffles set {f8(props.inset)}″ back, back panels in a rabbet. Sizes are finished dimensions in inches (width × length); {f8(kerf)}″ kerf allowed in the layout. Quantities are for {sets} stack{sets > 1 ? "s" : ""}.</p>
+      <div className="overflow-x-auto mb-6"><table className="text-sm w-full min-w-[640px] border-collapse">
+        <thead><tr className="text-stone-500 text-left border-b border-stone-300">
+          <th className="py-1 pr-3 font-normal">Box</th><th className="py-1 pr-3 font-normal">Part</th><th className="py-1 pr-3 font-normal text-right">Qty</th>
+          <th className="py-1 pr-3 font-normal text-right">Width × length</th><th className="py-1 pr-3 font-normal">Ply</th><th className="py-1 font-normal">Notes</th>
+        </tr></thead>
+        <tbody>{parts.map((p, i) => (
+          <tr key={i} className="border-b border-stone-200 align-top">
+            <td className="py-1 pr-3">{p.box}</td><td className="py-1 pr-3">{p.part}</td><td className="py-1 pr-3 text-right tabular-nums">{p.qty * sets}</td>
+            <td className="py-1 pr-3 text-right tabular-nums whitespace-nowrap">{f8(Math.min(p.a, p.b))} × {f8(Math.max(p.a, p.b))}</td>
+            <td className="py-1 pr-3">{tName(p.t)}</td><td className="py-1 text-stone-600">{p.note}</td>
+          </tr>))}</tbody>
+      </table></div>
+      {vent.length > 0 && <p className="text-sm text-stone-600 mb-6">Also: {vent.join("; ")}.</p>}
+      <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Sheet layout, {S.name}</h2>
+      {packs.map((pk) => (
+        <div key={pk.t} className="mb-6">
+          <div className="text-sm font-medium mb-2">{tName(pk.t)} birch: {pk.sheets.length} sheet{pk.sheets.length > 1 ? "s" : ""}</div>
+          {pk.tooBig.length > 0 && <div className="text-sm text-red-700 mb-2">Doesn't fit on one {S.name} sheet: {pk.tooBig.map((r) => `${r.box} ${r.part}`).join(", ")}.</div>}
+          <div className="flex flex-wrap gap-4">{pk.sheets.map((sh, i) => <SheetDrawing key={i} sheet={sh} S={S} idx={i} />)}</div>
+        </div>
+      ))}
+      <p className="text-xs text-stone-500">Simple row-by-row layout, grain direction ignored. Treat it as a sheet count and a starting point for your own cut plan. Driver cutouts are typical values; use the datasheet's.</p>
+    </main>
+  );
+}
+
 function StackPlanner() {
-  const viewOf = () => (window.location.hash === "#notes" ? "notes" : window.location.hash === "#fills" ? "fills" : "planner");
+  const viewOf = () => (window.location.hash === "#notes" ? "notes" : window.location.hash === "#fills" ? "fills" : window.location.hash === "#cutlist" ? "cutlist" : "planner");
   const [view, setView] = useState(viewOf);
   useEffect(() => {
     const on = () => setView(viewOf());
@@ -1607,7 +1769,10 @@ function StackPlanner() {
   const [baffleColor, setBaffleColor] = useState("#e8b4a8");
   const [cabFinish, setCabFinish] = useState("birch");
   const [spacerH, setSpacerH] = useState(20);
-  const [showDetails, setShowDetails] = useState(false);   // "tops on spacers": spacer height, in   // "birch", "walnut" or a paint hex
+  const [showDetails, setShowDetails] = useState(false);
+  const [joint, setJoint] = useState("butt");       // cutlist corner joints
+  const [sheetKind, setSheetKind] = useState("4x8");
+  const [sets, setSets] = useState(2);   // "tops on spacers": spacer height, in   // "birch", "walnut" or a paint hex
   // Every cabinet is custom; the preset list below is only a starting point.
   const [cDim, setCDim] = useState({ w: 28, h: 32, d: 24 });
   const [cVent, setCVent] = useState({ slotH: 3, nt: 2, dia: 6, throat: 3, len: 14 });
@@ -1875,7 +2040,7 @@ function StackPlanner() {
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
     cabinet: cabinet.id, portStyle, cDim, cVent, hpf, hpType, ampW, portMax, mDim, wall, inset, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
-    layout, cutaway, baffleColor, cabFinish, spacerH,
+    layout, cutaway, baffleColor, cabFinish, spacerH, joint,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
   const restore = (c) => {
@@ -1905,6 +2070,7 @@ function StackPlanner() {
     if (c.baffleColor) setBaffleColor(c.baffleColor);
     setCabFinish(c.cabFinish || "birch");
     setSpacerH(typeof c.spacerH === "number" ? c.spacerH : 20);
+    if (c.joint) setJoint(c.joint);
     if (c.portStyle) setPortStyle(c.portStyle);
   };
   const saveCfg = async () => {
@@ -1941,14 +2107,14 @@ function StackPlanner() {
       <header className="px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
         <h1 className="text-3xl md:text-4xl leading-tight" aria-label="Speaker Planner">𝒮𝓅ℯ𝒶𝓀ℯ𝓇 𝒫𝓁𝒶𝓃𝓃ℯ𝓇</h1>
         <nav className="flex gap-1 mt-3" style={{ fontFamily: "system-ui, sans-serif" }} aria-label="Pages">
-          {[["planner", "Planner", "#"], ["fills", "Fills", "#fills"], ["notes", "Notes", "#notes"]].map(([v, label, href]) => (
+          {[["planner", "Planner", "#"], ["cutlist", "Cutlist", "#cutlist"], ["fills", "Fills", "#fills"], ["notes", "Notes", "#notes"]].map(([v, label, href]) => (
             <a key={v} href={href} aria-current={view === v ? "page" : undefined}
               onClick={(e) => { e.preventDefault(); try { history.replaceState(null, "", v === "planner" ? " " : href); } catch {} setView(v); window.scrollTo(0, 0); }}
               className={`px-3 py-1.5 rounded border text-sm ${view === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</a>
           ))}
         </nav>
       </header>
-      {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : <>
+      {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : view === "cutlist" ? <CutlistPage {...{ sub, mid, subBox, midDims, wall, inset, joint, setJoint, sheetKind, setSheetKind, sets, setSets, portStyle, cVent, layout }} /> : <>
 
       {saved !== null && (
         <section className="max-w-6xl mx-auto px-8 pb-2" style={{ fontFamily: "system-ui, sans-serif" }}>
