@@ -457,7 +457,7 @@ const PLY_LB = { 0.75: 2.3, 0.5: 1.6 };
 // ---------------------------------------------------------------
 // 3D view
 // ---------------------------------------------------------------
-function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall = 0.75, inset = 0.75, cabFinish = "birch" }) {
+function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall = 0.75, inset = 0.75, cabFinish = "birch", spacerH = 20 }) {
   const mount = useRef(null);
   const state = useRef({ rotY: 0.6, rotX: 0.35, drag: false, lx: 0, ly: 0 });
 
@@ -487,7 +487,6 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     const shellMat = cutaway ? ghost : birch;
     // duct fins, shelves and cut edges follow the cabinet finish, a shade darker
     const plyIn = new THREE.MeshStandardMaterial({ color: finish ? finish.inner : new THREE.Color(cabFinish).multiplyScalar(0.88), roughness: 0.9 });
-    const hardwood = new THREE.MeshStandardMaterial({ color: 0xa8763c, roughness: 0.6 });
     const portMat = new THREE.MeshStandardMaterial({ color: 0x8a7458, roughness: 0.95, side: THREE.DoubleSide });
     const baffleMat = cutaway ? new THREE.MeshStandardMaterial({ color: new THREE.Color(baffleColor), roughness: 0.9, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }) : painted;
 
@@ -799,7 +798,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     const COL_D = 8, COL_H = 34;                       // column diameter and height
     const satX = s.w / 2 + COL_D / 2 + 6;              // columns clear of the sub
     const subTop = pl + s.h;
-    const POLE_RISE = 20;                              // exposed pole above the sub top
+    const POLE_RISE = spacerH;                         // exposed spacer above the sub top
     const midBaseY = sat ? COL_H : pole ? subTop + POLE_RISE : tower ? subTop : subTop + gap;
     const midXs = sat ? [-satX, satX] : [0];
     if (pole) {
@@ -808,14 +807,14 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
       const DR = 3, DT = 1, PR = 0.625, PCIRC = 2, SPIG = 0.69;
       const yBot = subTop, yTop = subTop + POLE_RISE;
       [yBot + DT / 2, yTop - DT / 2].forEach((y) => {
-        const d = new THREE.Mesh(new THREE.CylinderGeometry(DR, DR, DT, 44), hardwood);
+        const d = new THREE.Mesh(new THREE.CylinderGeometry(DR, DR, DT, 44), birch);   // cabinet finish
         d.position.set(0, y, 0);
         subGroup.add(d);
       });
       const postLen = POLE_RISE - 2 * DT;
       for (let i = 0; i < 3; i++) {
         const a = (i * 2 * Math.PI) / 3 + Math.PI / 6;
-        const p = new THREE.Mesh(new THREE.CylinderGeometry(PR, PR, postLen, 28), hardwood);
+        const p = new THREE.Mesh(new THREE.CylinderGeometry(PR, PR, postLen, 28), birch);
         p.position.set(PCIRC * Math.cos(a), yBot + DT + postLen / 2, PCIRC * Math.sin(a));
         subGroup.add(p);
         // threaded rod up the middle of each post, visible in cutaway
@@ -1062,7 +1061,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
       renderer.dispose();
       el.removeChild(renderer.domElement);
     };
-  }, [sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall, inset, cabFinish]);
+  }, [sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall, inset, cabFinish, spacerH]);
 
   return <div ref={mount} className="w-full h-full cursor-grab" />;
 }
@@ -1606,7 +1605,8 @@ function StackPlanner() {
   const [wall, setWall] = useState(0.75);   // side/top/bottom/back ply, in
   const [inset, setInset] = useState(0.75); // how far the baffles sit back from the frame front, in
   const [baffleColor, setBaffleColor] = useState("#e8b4a8");
-  const [cabFinish, setCabFinish] = useState("birch");   // "birch", "walnut" or a paint hex
+  const [cabFinish, setCabFinish] = useState("birch");
+  const [spacerH, setSpacerH] = useState(20);   // "tops on spacers": spacer height, in   // "birch", "walnut" or a paint hex
   // Every cabinet is custom; the preset list below is only a starting point.
   const [cDim, setCDim] = useState({ w: 28, h: 32, d: 24 });
   const [cVent, setCVent] = useState({ slotH: 3, nt: 2, dia: 6, throat: 3, len: 14 });
@@ -1874,7 +1874,7 @@ function StackPlanner() {
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
     cabinet: cabinet.id, portStyle, cDim, cVent, hpf, hpType, ampW, portMax, mDim, wall, inset, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
-    layout, cutaway, baffleColor, cabFinish,
+    layout, cutaway, baffleColor, cabFinish, spacerH,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
   const restore = (c) => {
@@ -1903,6 +1903,7 @@ function StackPlanner() {
     if (c.layout) setLayout(c.layout);
     if (c.baffleColor) setBaffleColor(c.baffleColor);
     setCabFinish(c.cabFinish || "birch");
+    setSpacerH(typeof c.spacerH === "number" ? c.spacerH : 20);
     if (c.portStyle) setPortStyle(c.portStyle);
   };
   const saveCfg = async () => {
@@ -1929,7 +1930,7 @@ function StackPlanner() {
   const midL = midGrossL;
   const subTopH = plinth + subBox.h;
   const isTower = layout === "tower";
-  const baseH = layout === "satellite" ? 34 : layout === "pole" ? subTopH + 20 : isTower ? subTopH : subTopH + 0.4;
+  const baseH = layout === "satellite" ? 34 : layout === "pole" ? subTopH + spacerH : isTower ? subTopH : subTopH + 0.4;
   const archT = isTower && !!horn.profile && !horn.scaleX && subBox.w / 2 - 0.75 > horn.size.w / 2;
   const stackH = isTower ? baseH + 15.5 + (archT ? subBox.w - 0.75 : horn.size.h + 2) : baseH + midDims.h + 1.2 + horn.size.h + 2;
   const hornCenter = isTower ? baseH + 15.5 + (archT ? subBox.w / 2 - 0.75 : (horn.size.h + 2) / 2) : baseH + midDims.h + 1.2 + 1 + horn.size.h / 2;
@@ -1998,7 +1999,7 @@ function StackPlanner() {
       <main className="max-w-6xl mx-auto px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8">
         <div className="md:col-span-3 flex flex-col gap-5">
         <section className="rounded-lg overflow-hidden border border-stone-300 bg-stone-50" style={{ height: "clamp(320px, 56vh, 560px)" }}>
-          <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wall} inset={inset} cabFinish={cabFinish} />
+          <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wall} inset={inset} cabFinish={cabFinish} spacerH={spacerH} />
         </section>
 
         <section className="mt-1" style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -2306,6 +2307,7 @@ function StackPlanner() {
                 <button key={v} onClick={() => setLayout(v)} className={`px-3 py-2 rounded border text-sm ${layout === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
               ))}
             </div>
+            {layout === "pole" && <div className="mt-3"><Slider label="Spacer height" value={spacerH} min={4} max={36} step={1} unit="&#8243;" onChange={setSpacerH} /></div>}
           </div>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Cabinet</div>
