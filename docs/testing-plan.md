@@ -67,6 +67,24 @@ Move it into a plain module that both the page and the tests import.
   - horn model ignores the horn's own gain (sensitivity is on the maker's reference horn)
   - Keele constant and piston model are rules of thumb (label them in the UI)
 
+## Revisions after review (supersede the rows above where they conflict)
+
+Findings are in `docs/calc-audit.md`. Changes to this plan:
+
+- **Build:** `esbuild --bundle --format=iife`; `build.sh` fails if `dist/app.js` still has `import`/`export` or `</script`. calc.js/data.js never touch React, window or THREE; the JSX keeps using globals.
+- **CI moves to step 2.** Add a `pull_request` trigger (tests only); deploy `needs: test`, main only; move `pages`/`id-token` permissions onto the deploy job; test job builds both outputs. Run `node --test "tests/*.test.js"` with Node pinned (20).
+- **Drop** the cross-implementation test (it's a copy); make `model/vented-box.js` re-export calc.js and point the bench at it.
+- **Constants:** midband reference is 112.07 dB (ρ 1.18, c 343); compute η0 from Bl, Sd, Mms, Re, not table Vas/Qes. Sealed checks use Vas from the model's Cms, and test the curve: −3 dB on the unfiltered response vs closed-form F3(Qtc).
+- **Alignments:** add optional `QL` and `Rp` to boxModel (defaults unchanged); assert lossless B4 (Qts 0.383, α 1.414, h 1 → F3/Fs 1.00 ±2 %) and fL·fH ≈ Fs·Fb from the impedance peaks.
+- **Tighter behaviour tests:** excursion minimum and velocity peak within ±3 % of Fb; tiny-port convergence against the unfiltered curve.
+- **Published designs:** only drivers in the tables, ±2 Hz, prefer measured impedance minima.
+- **Weights and net volume** checked against the cutlist parts (independent), not a hand copy of the formula.
+- **Formula-restating tests** (filters, thermal V, horn P, hfLimW) stay as guards but don't count as double-checks; add behavioural ones (e.g. horn max SPL vs the maker's max-SPL spec).
+- **Warnings:** extract pure `chips(state)` per section and test every threshold on both sides.
+- **Coverage gaps to add:** port geometry per live style incl. `dh`; clamps and fudge factors; `subSys`; nearest-grid lookups; f3 fallback when the curve never drops 3 dB; `PLY_LB` guard.
+- **Golden configs:** add synthetic configs for 1/2″ walls, insets, LR/BW48 highpass, every vent style, 15″ mids, Fills and Cutlist. Before/after refactor diff uses the full page text of all four views.
+- **Fix-first list:** audit items 1–3 (mid F3/sensitivity, multi-port end correction, Fills highpass bias), then 4–8.
+
 ## 5. Verification by two subagents
 
 1. **Plan reviewer**: reads this plan and the code, lists calculations the plan
