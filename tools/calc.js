@@ -238,9 +238,16 @@ export function rectI(a, b) {
 export const rectEndCorr = (a, b) => rectI(a, b) / (2 * Math.PI * a * b);
 // Flanged + free end, as the 1.46 r (0.85 r + 0.61 r) used for round tubes.
 export const BOTH_ENDS = 1 + 0.61 / 0.85;
-// Letterbox on the floor panel: the floor (inside) and the ground (outside, the sub stands on it) mirror
-// the slot, so each end acts as a slot twice as tall (image method). Width is the open width between fins.
-export const slotEndCorr = (h, w) => BOTH_ENDS * rectEndCorr(2 * h, w);
+// Rectangular duct of throat a x height b along a panel: a wall at an end mirrors the mouth, so that end
+// acts as one twice as wide in a (image method). Outer end flanged (baffle), inner end free (0.61/0.85).
+export const ductEndCorr = (a, b, { inner = true, outer = true } = {}) =>
+  rectEndCorr(outer ? 2 * a : a, b) + (0.61 / 0.85) * rectEndCorr(inner ? 2 * a : a, b);
+// Letterbox on the floor panel: the floor (inside) and the ground (outside, the sub stands on it) mirror it.
+// Width is the open width between fins.
+export const slotEndCorr = (h, w) => ductEndCorr(h, w);
+// Side duct against a side wall: the wall mirrors the inner end; the outer mouth sits at the cabinet's
+// edge with open air beside it, so no mirror there. Height is the open height between the dividers' ends.
+export const sideDuctEndCorr = (th, h) => ductEndCorr(th, h, { outer: false });
 
 // Vent geometry for the sub. t is the wall (and fin) ply. n is the number of separate openings,
 // which sets the end correction in boxModel.
@@ -249,7 +256,7 @@ export function ventGeom(portStyle, box, cVent, t) {
   if (portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1") {
     const n = portStyle === "vslot1" ? 1 : 2;
     const th = cVent.throat, area = n * th * (ih - 2 * 0.5), seg = (ih - 2 * 0.5) / 3;   // two 1/2\u2033 dividers per duct
-    return { n, area, len: cVent.len, dh: (4 * (th * seg)) / (2 * (th + seg)),
+    return { n, area, len: cVent.len, ec: sideDuctEndCorr(th, ih - 2 * 0.5), dh: (4 * (th * seg)) / (2 * (th + seg)),
              desc: `${n === 1 ? "one side duct" : "two side ducts"}, ${th.toFixed(2)}\u2033 throat \u00d7 ${ih.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` };
   }
   if (portStyle === "slots" || portStyle === "folded") {

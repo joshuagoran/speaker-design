@@ -26,7 +26,7 @@ Status: **open** until fixed with a test that would have caught it. Fixed items 
 - `model/vented-box.js` now wraps `calc.js`. `tools/vented-sub-bench.html` still has its own old copy (standalone bench, not deployed).
 - Stale `mStuff` field in saved configs.
 - Mid-bass (`midSystem`, `subThroughLp`) and Fills (`fillSystem`) maths moved into calc.js with tests (tests/mid.test.js, tests/fills.test.js) and golden snapshots of every fill driver, vented and sealed.
-- Side ducts (vslots) still use the round-tube 1.46 r; they also sit against walls, so their Fb may read a little high.
+- Side ducts now use the same rectangular-mouth end correction, with the side wall mirroring the inner end only (the outer mouth is at the cabinet edge). A tall thin mouth has less correction than a circle of equal area, so side-duct Fb moved **up**: light block 37.0 → 37.9 Hz. Not mirrored in either vent style: the panels at the ends of the long dimension (side walls for the slot, floor/top for side ducts), which would add a little correction.
 
 ## Documented assumptions (keep, but label and test)
 

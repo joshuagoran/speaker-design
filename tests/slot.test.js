@@ -1,5 +1,5 @@
 import test from "node:test";
-import { rectI, rectEndCorr, slotEndCorr, BOTH_ENDS, ventGeom, boxModel, subSystem } from "../tools/calc.js";
+import { rectI, rectEndCorr, slotEndCorr, sideDuctEndCorr, ductEndCorr, BOTH_ENDS, ventGeom, boxModel, subSystem } from "../tools/calc.js";
 import { SUB_OPTIONS, MID_OPTIONS } from "../tools/data.js";
 import { C, rel, close } from "./helpers.js";
 
@@ -39,9 +39,28 @@ test("letterbox Fb = Helmholtz with the slot end correction", (t) => {
   const Sp = g.area * 0.00064516, Leff = (14 + g.ec) * 0.0254;
   rel(t, m.Fb, (C / (2 * Math.PI)) * Math.sqrt(Sp / (0.12 * Leff)), 1e-9);
 });
-test("round tubes and side ducts keep 1.46 r per opening", (t) => {
+test("round tubes keep 1.46 r per opening", (t) => {
   t.assert.equal(ventGeom("round2", { w: 22, h: 30, d: 20 }, { nt: 2, dia: 4, len: 12 }, 0.75).ec, undefined);
-  t.assert.equal(ventGeom("vslots", { w: 22, h: 30, d: 20 }, { throat: 2, len: 12 }, 0.75).ec, undefined);
+});
+test("side duct: side wall mirrors the inner end only", (t) => {
+  const f = 0.61 / 0.85;
+  close(t, sideDuctEndCorr(2, 27.5), rectEndCorr(2, 27.5) + f * rectEndCorr(4, 27.5), 1e-12);
+  // between no mirrors and both mirrored
+  t.assert.ok(sideDuctEndCorr(2, 27.5) > BOTH_ENDS * rectEndCorr(2, 27.5) && sideDuctEndCorr(2, 27.5) < ductEndCorr(2, 27.5));
+  close(t, slotEndCorr(3, 25), ductEndCorr(3, 25), 1e-12);
+});
+test("side ducts: each opening gets the correction for its own throat x open height", (t) => {
+  const box = { w: 22, h: 30, d: 20 };
+  for (const st of ["vslots", "vslot1"]) {
+    const g = ventGeom(st, box, { throat: 2, len: 12 }, 0.75);
+    close(t, g.ec, sideDuctEndCorr(2, 30 - 1.5 - 1), 1e-12, st);
+  }
+  // per-opening: two ducts tune like one duct in half the volume
+  const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500").ts;
+  const two = ventGeom("vslots", box, { throat: 2, len: 12 }, 0.75), one = ventGeom("vslot1", box, { throat: 2, len: 12 }, 0.75);
+  const a = boxModel(ts, 120, two.area, 12, 25, 20, "BW24", { nPorts: 2, ecIn: two.ec });
+  const b = boxModel(ts, 60, one.area, 12, 25, 20, "BW24", { nPorts: 1, ecIn: one.ec });
+  rel(t, a.Fb, b.Fb, 1e-9);
 });
 test("subSystem passes the slot end correction to the model", (t) => {
   const sub = SUB_OPTIONS.find((o) => o.id === "f18fh500"), mid = MID_OPTIONS[0];

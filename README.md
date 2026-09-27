@@ -126,7 +126,7 @@ configurations and can be edited or deleted like any other.
 
 - `tools/data.js` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
 - `tools/calc.js` — every calculation, pure JS, imported by the page and the tests (`npm test`):
-  - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r); a letterbox passes `ecIn` from `slotEndCorr` (rectangular mouth, floor mirrored at both ends). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.
+  - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r); letterbox and side ducts pass `ecIn` from `slotEndCorr` / `sideDuctEndCorr` (rectangular mouth; floor mirrored at both ends of a letterbox, the side wall at the inner end of a side duct). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.
   - `closedBox(ts, VbL, hp, lp, volts)` — sealed mid-bass, LR24 crossovers. `ref` is the mass-controlled asymptote, so `f3` is right for low-Qtc boxes. Coil inductance is not modelled.
   - `midSystem` (sealed mid volume, model, per-frequency max), `subThroughLp` (sub through the crossover), `fillSystem` (the Fills page).
   - `subSystem` (vent geometry, gross/net volume incl. internal wood from the cutlist parts, model, limits), `subLimits`, `maxCurve`, `hornResponse`, `pistonBeam`, `keeleF`, weights, cutlist (`boxParts`, `cutParts`, `packSheets`).
@@ -164,8 +164,8 @@ The chart and the max SPL rows are per frequency: a sine at each frequency
 meets its own limit. The "first limit, music" row is the broadband limit,
 since music has energy at every frequency at once. Music averages about 6 dB
 below the sine figures. Port end
-correction is the standard both-end approximation (1.46 r) for tubes and side ducts;
-the floor letterbox uses the rectangular-mouth value with the floor as a mirror.
+correction is the standard both-end approximation (1.46 r) for round tubes;
+letterbox and side ducts use the rectangular-mouth value with adjacent walls as mirrors.
 It is the largest source of error in Fb — a divided or flared duct measures a little differently. Cabinet
 weight assumes 3/4" birch at 2.3 lb/ft² with two braces, plus driver and 6 lb of
 hardware.
