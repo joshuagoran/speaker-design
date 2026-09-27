@@ -1621,6 +1621,7 @@ function StackPlanner() {
   const [saved, setSaved] = useState(null);     // null = still loading
   const [cfgName, setCfgName] = useState("");
   const [cfgMsg, setCfgMsg] = useState("");
+  const [selCfg, setSelCfg] = useState("");
   // Firebase (github.io build): signed-in users keep configs under users/{uid}/.
   const [fbUser, setFbUser] = useState(null);
   const fb = !(window.claude && window.claude.use) && window.firebase && window.PLANNER_FIREBASE ? window.firebase : null;
@@ -1971,24 +1972,24 @@ function StackPlanner() {
                 <span className="text-xs text-stone-500">Saving is unavailable in this view. Everything else works.</span>
               )}
             </div>
-            {saved.length > 0 && (
-              <div className="mt-3 flex flex-col gap-1">
-                {saved.map((c) => (
-                  <div key={c.id} className="flex items-center gap-3 border-t border-stone-200 pt-1.5">
-                    <button onClick={() => restore(c)}
-                      className="text-left flex-1 min-w-0 hover:underline">
-                      <span className="text-sm font-medium">{c.name}</span>
-                      <span className="block text-xs text-stone-500 truncate">{c.summary}</span>
-                    </button>
-                    <span className="text-xs text-stone-400 tabular-nums shrink-0">
-                      {c.savedAt ? new Date(c.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : ""}
-                    </span>
-                    <button onClick={() => delCfg(c.id)} aria-label={`Delete ${c.name}`}
-                      className="text-xs text-stone-400 hover:text-red-700 shrink-0 px-1">Delete</button>
-                  </div>
-                ))}
-              </div>
-            )}
+            {saved.length > 0 && (() => {
+              const cur = saved.find((c) => c.id === selCfg);
+              return (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <select value={cur ? cur.id : ""} aria-label="Load a saved configuration"
+                    onChange={(e) => { const c = saved.find((x) => x.id === e.target.value); setSelCfg(e.target.value); if (c) restore(c); }}
+                    className="px-2 py-1.5 rounded border border-stone-300 bg-white text-sm min-w-0 max-w-full flex-1">
+                    <option value="" disabled>Load a saved configuration ({saved.length})…</option>
+                    {saved.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}{c.savedAt ? ` · ${new Date(c.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : ""}</option>
+                    ))}
+                  </select>
+                  {cur && <button onClick={() => { delCfg(cur.id); setSelCfg(""); }} aria-label={`Delete ${cur.name}`}
+                    className="text-xs text-stone-400 hover:text-red-700 px-1">Delete</button>}
+                  {cur && cur.summary && <div className="basis-full text-xs text-stone-500 truncate">{cur.summary}</div>}
+                </div>
+              );
+            })()}
           </div>
         </section>
       )}
