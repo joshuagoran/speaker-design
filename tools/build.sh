@@ -4,7 +4,9 @@
 #   ./build.sh pages   -> ../dist/site/ (GitHub Pages, with Firebase saving)
 set -e
 cd "$(dirname "$0")"
-npx --yes esbuild@0.28.2 stack-planner.app.jsx --loader:.jsx=jsx --jsx=transform --outfile=../dist/app.js
+npx --yes esbuild@0.28.2 stack-planner.app.jsx --bundle --format=iife --loader:.jsx=jsx --jsx=transform --outfile=../dist/app.js
+# the page inlines app.js in a classic <script>: it must be one bundle with no module syntax
+if grep -qE '^(import|export) ' ../dist/app.js || grep -q '</script' ../dist/app.js; then echo 'build.sh: dist/app.js is not a clean bundle' >&2; exit 1; fi
 mkdir -p ../dist
 { cat stack-planner.head.html; cat ../dist/app.js; echo "</script>"; } > ../dist/stack-planner.html
 echo "built ../dist/stack-planner.html"

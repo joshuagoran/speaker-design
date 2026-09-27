@@ -1,0 +1,10 @@
+{
+  "name": "speaker-design",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "sh tools/build.sh pages",
+    "test": "node --test \"tests/*.test.js\""
+  }
+}
