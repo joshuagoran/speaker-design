@@ -100,6 +100,8 @@ collection `configs`, one document per configuration:
   "portMax": 20,                      // peak port air speed limit, m/s
   "mDim":  { "w": 15, "h": 15, "d": 15 },         // mid-bass box, external inches (sealed)
   "wall": 0.75,                        // side/top/bottom/back ply, 0.75 or 0.5 (braced); baffles stay 3/4"
+  "inset": 0.75,                       // baffle set back from the frame front, 0–1.5"
+  "cabFinish": "birch",                // "birch", "walnut" or a paint hex
   "xoLo": 120, "xoHi": 950,           // crossovers, sub->mid and mid->horn, LR24
   "mAmpW": 400,                       // amp power per mid channel into 8 Ω
   "tilt": 6,                          // dB less the mid band needs than the sub band (music balance)

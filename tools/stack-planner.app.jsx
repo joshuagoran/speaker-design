@@ -272,6 +272,11 @@ const SWATCHES = [
   ["#4a5d4e", "Deep green"],
 ];
 
+const CAB_FINISHES = {
+  birch: { name: "Birch", color: 0xd7b98a, rough: 0.85, swatch: "#d7b98a" },
+  walnut: { name: "Walnut", color: 0x5c3a24, rough: 0.7, swatch: "#5c3a24" },
+};
+
 const CABINETS = [
   { id: "column", name: "Upright column", vents: ["slots", "round1", "round2"],
     dims: { 18: { w: 21, h: 35, d: 21 }, 15: { w: 19, h: 28, d: 19 } },
@@ -452,7 +457,7 @@ const PLY_LB = { 0.75: 2.3, 0.5: 1.6 };
 // ---------------------------------------------------------------
 // 3D view
 // ---------------------------------------------------------------
-function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall = 0.75, inset = 0.75 }) {
+function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall = 0.75, inset = 0.75, cabFinish = "birch" }) {
   const mount = useRef(null);
   const state = useRef({ rotY: 0.6, rotX: 0.35, drag: false, lx: 0, ly: 0 });
 
@@ -471,7 +476,9 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     key.position.set(40, 80, 30);
     scene.add(key);
 
-    const birch = new THREE.MeshStandardMaterial({ color: 0xd7b98a, roughness: 0.85 });
+    // cabinet finish: clear birch, walnut veneer, or paint (a hex colour)
+    const finish = CAB_FINISHES[cabFinish];
+    const birch = new THREE.MeshStandardMaterial({ color: finish ? finish.color : new THREE.Color(cabFinish), roughness: finish ? finish.rough : 0.8 });
     const edge = new THREE.LineBasicMaterial({ color: 0x5a4a30 });
     const black = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.9 });
     const cream = new THREE.MeshStandardMaterial({ color: 0xece4c8, roughness: 0.55 });
@@ -1054,7 +1061,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
       renderer.dispose();
       el.removeChild(renderer.domElement);
     };
-  }, [sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall, inset]);
+  }, [sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall, inset, cabFinish]);
 
   return <div ref={mount} className="w-full h-full cursor-grab" />;
 }
@@ -1598,6 +1605,7 @@ function StackPlanner() {
   const [wall, setWall] = useState(0.75);   // side/top/bottom/back ply, in
   const [inset, setInset] = useState(0.75); // how far the baffles sit back from the frame front, in
   const [baffleColor, setBaffleColor] = useState("#e8b4a8");
+  const [cabFinish, setCabFinish] = useState("birch");   // "birch", "walnut" or a paint hex
   // Every cabinet is custom; the preset list below is only a starting point.
   const [cDim, setCDim] = useState({ w: 28, h: 32, d: 24 });
   const [cVent, setCVent] = useState({ slotH: 3, nt: 2, dia: 6, throat: 3, len: 14 });
@@ -1864,7 +1872,7 @@ function StackPlanner() {
   const snapshot = () => ({
     format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
     cabinet: cabinet.id, portStyle, cDim, cVent, hpf, hpType, ampW, portMax, mDim, wall, inset, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
-    layout, cutaway, baffleColor,
+    layout, cutaway, baffleColor, cabFinish,
     summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
   });
   const restore = (c) => {
@@ -1892,6 +1900,7 @@ function StackPlanner() {
     if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
     if (c.layout) setLayout(c.layout);
     if (c.baffleColor) setBaffleColor(c.baffleColor);
+    setCabFinish(c.cabFinish || "birch");
     if (c.portStyle) setPortStyle(c.portStyle);
   };
   const saveCfg = async () => {
@@ -1987,7 +1996,7 @@ function StackPlanner() {
       <main className="max-w-6xl mx-auto px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8">
         <div className="md:col-span-3 flex flex-col gap-5">
         <section className="rounded-lg overflow-hidden border border-stone-300 bg-stone-50" style={{ height: "clamp(320px, 56vh, 560px)" }}>
-          <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wall} inset={inset} />
+          <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wall} inset={inset} cabFinish={cabFinish} />
         </section>
 
         <section className="mt-1" style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -2235,6 +2244,27 @@ function StackPlanner() {
             <div className="mt-3"><Slider label="Baffle inset" value={inset} min={0} max={1.5} step={0.25} unit="&#8243;" onChange={setInset} /></div>
           </div>
           <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} />
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Cabinet finish</div>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {Object.entries(CAB_FINISHES).map(([k, f]) => (
+                <button key={k} title={f.name} onClick={() => setCabFinish(k)}
+                  className={`px-2.5 h-7 rounded-full border-2 text-xs ${cabFinish === k ? "border-stone-900" : "border-stone-300"}`}
+                  style={{ background: f.swatch, color: k === "walnut" ? "#f5f5f4" : "#1c1917" }}>{f.name}</button>
+              ))}
+              {SWATCHES.map(([hex, name]) => (
+                <button key={hex} title={`Painted: ${name}`} onClick={() => setCabFinish(hex)}
+                  className={`w-7 h-7 rounded-full border-2 ${cabFinish.toLowerCase() === hex ? "border-stone-900" : "border-stone-300"}`}
+                  style={{ background: hex }} />
+              ))}
+              <label className="w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom paint">
+                <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
+                <input type="color" value={CAB_FINISHES[cabFinish] ? "#ffffff" : cabFinish} onChange={(e) => setCabFinish(e.target.value)}
+                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
+              </label>
+              <span className="text-xs text-stone-500 ml-1 tabular-nums">{CAB_FINISHES[cabFinish] ? CAB_FINISHES[cabFinish].name : `painted ${cabFinish}`}</span>
+            </div>
+          </div>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Baffle colour</div>
             <div className="flex flex-wrap gap-1.5 items-center">
