@@ -72,7 +72,7 @@ Move it into a plain module that both the page and the tests import.
 Findings are in `docs/calc-audit.md`. Changes to this plan:
 
 - **Build:** `esbuild --bundle --format=iife`; `build.sh` fails if `dist/app.js` still has `import`/`export` or `</script`. calc.js/data.js never touch React, window or THREE; the JSX keeps using globals.
-- **CI moves to step 2.** Add a `pull_request` trigger (tests only); deploy `needs: test`, main only; move `pages`/`id-token` permissions onto the deploy job; test job builds both outputs. Run `node --test "tests/*.test.js"` with Node pinned (20).
+- **CI moves to step 2.** Add a `pull_request` trigger (tests only); deploy `needs: test`, main only; move `pages`/`id-token` permissions onto the deploy job; test job builds both outputs. Run `node --test tests/*.test.js` with Node pinned (20).
 - **Drop** the cross-implementation test (it's a copy); make `model/vented-box.js` re-export calc.js and point the bench at it.
 - **Constants:** midband reference is 112.07 dB (ρ 1.18, c 343); compute η0 from Bl, Sd, Mms, Re, not table Vas/Qes. Sealed checks use Vas from the model's Cms, and test the curve: −3 dB on the unfiltered response vs closed-form F3(Qtc).
 - **Alignments:** add optional `QL` and `Rp` to boxModel (defaults unchanged); assert lossless B4 (Qts 0.383, α 1.414, h 1 → F3/Fs 1.00 ±2 %) and fL·fH ≈ Fs·Fb from the impedance peaks.
