@@ -1606,7 +1606,8 @@ function StackPlanner() {
   const [inset, setInset] = useState(0.75); // how far the baffles sit back from the frame front, in
   const [baffleColor, setBaffleColor] = useState("#e8b4a8");
   const [cabFinish, setCabFinish] = useState("birch");
-  const [spacerH, setSpacerH] = useState(20);   // "tops on spacers": spacer height, in   // "birch", "walnut" or a paint hex
+  const [spacerH, setSpacerH] = useState(20);
+  const [showDetails, setShowDetails] = useState(false);   // "tops on spacers": spacer height, in   // "birch", "walnut" or a paint hex
   // Every cabinet is custom; the preset list below is only a starting point.
   const [cDim, setCDim] = useState({ w: 28, h: 32, d: 24 });
   const [cVent, setCVent] = useState({ slotH: 3, nt: 2, dia: 6, throat: 3, len: 14 });
@@ -2408,32 +2409,36 @@ function StackPlanner() {
           {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}" vs {cd.exit}").</div>}
         </aside>
 
-        <section className="md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6 mt-4" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <div className="md:col-span-5 mt-4" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <button onClick={() => setShowDetails((v) => !v)} aria-expanded={showDetails}
+            className="text-sm px-3 py-1.5 rounded border border-stone-300 hover:border-stone-500">{showDetails ? "Hide" : "Show"} sub, mid-bass and horn details</button>
+        </div>
+        {showDetails && <section className="md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "system-ui, sans-serif" }}>
           <div>
             <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Sub</h2>
             <p className="text-sm text-stone-700">
               {sub.name} in a {subBox.w}×{subBox.h}×{subBox.d} in cabinet, {grossL.toFixed(0)} L gross, {netL.toFixed(0)} L net.
-              Vent: {port.desc}. Baffle recessed 3/4" behind the frame, 1/4" roundovers on the front edges.
+              Vent: {port.desc}. 3/4″ baffle set {inset}″ behind the frame, {wall === 0.5 ? "1/2″" : "3/4″"} birch walls, 1/4″ roundovers on the front edges.
             </p>
           </div>
           <div>
             <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Mid-bass cube</h2>
             <p className="text-sm text-stone-700">
               {mid.name} in a {midDims.w}×{midDims.h}×{midDims.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed.
-              Covers ~90 Hz to the horn crossover. Same 18 mm birch, flush-mounted driver.
+              Covers {xoLo} Hz to {xoHi} Hz. Same construction, flush-mounted driver.
             </p>
             {mid.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{mid.name}.</span> {mid.note}</p>}
           </div>
           <div>
             <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Horn</h2>
             <p className="text-sm text-stone-700">
-              {horn.name} with {cd.name}, crossed at {horn.xo}. Sits on a short block so the mouth clears the cube.
+              {horn.name} with {cd.name}, crossed at {xoHi} Hz (maker suggests {horn.xo}). Sits on a short block so the mouth clears the cube.
               Total stack height about {stackH.toFixed(0)} in, horn centre at {hornCenter.toFixed(0)} in.
             </p>
             {cd.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{cd.name}.</span> {cd.note}</p>}
             {horn.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{horn.name}.</span> {horn.note}</p>}
           </div>
-        </section>
+        </section>}
 
         <section className="md:col-span-5 mt-6" style={{ fontFamily: "system-ui, sans-serif" }}>
           <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Totals for the current selection</h2>
