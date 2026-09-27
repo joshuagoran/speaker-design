@@ -124,14 +124,13 @@ configurations and can be edited or deleted like any other.
 
 ## How the planner is put together
 
-- `SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`,
-  `FORMATS` — the component data at the top of the file. Drivers with a `ts`
-  block get modelled; ones without show a note instead.
+- `tools/data.js` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
+- `tools/calc.js` — every calculation, pure JS, imported by the page and the tests (`npm test`):
+  - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.
+  - `closedBox(ts, VbL, hp, lp, volts)` — sealed mid-bass, LR24 crossovers. `ref` is the mass-controlled asymptote, so `f3` is right for low-Qtc boxes. Coil inductance is not modelled.
+  - `subSystem` (vent geometry, gross/net volume incl. internal wood from the cutlist parts, model, limits), `subLimits`, `maxCurve`, `hornResponse`, `pistonBeam`, `keeleF`, weights, cutlist (`boxParts`, `cutParts`, `packSheets`).
 - Horn — datasheet model, not T/S: `cd.hf` (sensitivity and its reference, AES power and the crossover it was rated at, minimum crossover, impedance) and `horn.hf` (coverage, minimum crossover, loading limit `lowHz`). Output is sensitivity + 10 log P through the LR24 highpass and a 12 dB/oct rolloff below `lowHz`; power is capped at 2 × AES, derated 6 dB per octave below the AES rating's crossover.
-- `closedBox(ts, VbL, hp, lp, volts)` — the sealed mid-bass model, LR24 crossovers at `hp`/`lp`. Returns the curve plus `Fc`, `Qtc`, box `f3`, midband `ref` and peak excursion. Coil inductance is not modelled.
-- `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts)` — the vented-box model. Returns
-  the response `curve` plus `Fb`, `f3`, `ref`, SPL at 30/35/45, peak port
-  velocity and peak excursion.
+- Tests (`tests/`) check each function against an independent reference; `tests/golden.json` snapshots the key outputs of the saved and synthetic configs (regenerate with `node tests/make-golden.js` after an intentional change). CI runs them before every deploy. See `docs/testing-plan.md` and `docs/calc-audit.md`.
 - `StackView` — the three.js scene. Takes `sub` (whose `.box` carries the
   dimensions) and `portGeom` (explicit vent geometry), so the drawn box always
   matches the modelled one. Its `useEffect` rebuilds the whole scene; the

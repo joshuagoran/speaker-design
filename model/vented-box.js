@@ -22,62 +22,11 @@ const cabs = (a) => Math.hypot(a.re, a.im);
  * @param {number} hpf   highpass corner, Hz (BW24)
  * @param {number} volts drive voltage
  */
+// The model now lives in tools/calc.js (the planner and the tests use it); this wraps it so
+// older scripts keep working. opts: { nPorts, QL, Qp } as in boxModel.
+import { boxModel } from "../tools/calc.js";
 export function ventedBox(ts, VbL, SpIn2, LpIn, hpf, volts, opts = {}) {
-  if (!VbL || VbL <= 0 || !SpIn2 || SpIn2 <= 0 || LpIn <= 0) return null;
-  const N = opts.points || 400;
-  const fLo = opts.fLo || 15, fHi = opts.fHi || 300;
-
-  const Sd = ts.Sd / 1e4, Mms = ts.Mms / 1e3, Vb = VbL / 1000;
-  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
-  const Mas = Mms / (Sd * Sd);
-  const Cas = Cms * Sd * Sd;
-  const Ras = ((2 * Math.PI * ts.Fs * Mms) / ts.Qms) / (Sd * Sd);
-  const Rae = ((ts.Bl * ts.Bl) / ts.Re) / (Sd * Sd);
-  const Cab = Vb / (RHO * C * C);
-
-  const Sp   = SpIn2 * 0.00064516;
-  const reff = Math.sqrt(Sp / Math.PI);
-  const Leff = LpIn * 0.0254 + 1.46 * reff;        // flanged both ends
-  const Map  = (RHO * Leff) / Sp;
-  const Fb   = (C / (2 * Math.PI)) * Math.sqrt(Sp / (Vb * Leff));
-  const Ral  = 7 / (2 * Math.PI * Fb * Cab);       // box leakage, Ql = 7
-
-  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
-  const out = [];
-  for (let i = 0; i < N; i++) {
-    const f = fLo * Math.pow(fHi / fLo, i / (N - 1));
-    const w = 2 * Math.PI * f, s = cx(0, w);
-    const Zd   = cadd(cx(Ras + Rae), cadd(cmul(s, cx(Mas)), cinv(cmul(s, cx(Cas)))));
-    const Zc   = cinv(cmul(s, cx(Cab)));
-    const Zp   = cadd(cmul(s, cx(Map)), cx(0.3));
-    const Zbox = cinv(cadd(cadd(cinv(Zc), cinv(Zp)), cinv(cx(Ral))));
-    const Ud = cdiv(cx(Pg), cadd(Zd, Zbox));       // cone volume velocity
-    const Up = cdiv(cmul(Ud, Zbox), Zp);           // port volume velocity
-    const Ut = { re: Ud.re - Up.re, im: Ud.im - Up.im };
-    const hp = Math.pow(f / hpf, 4) / Math.sqrt(1 + Math.pow(f / hpf, 8));
-    const p  = (RHO * w * cabs(Ut)) / (2 * Math.PI);
-    out.push({
-      f,
-      spl: 20 * Math.log10((p * hp) / 2e-5),
-      // drive voltage is RMS; x1.414 gives sine peaks, which is what Xmax and the port limit mean
-      xmm: Math.SQRT2 * (cabs(Ud) / (w * Sd)) * hp * 1000,  // peak one-way cone travel, mm
-      vel: Math.SQRT2 * (cabs(Up) / Sp) * hp                // peak port air speed, m/s
-    });
-  }
-
-  const band = out.filter(o => o.f > 80 && o.f < 200);
-  const ref  = band.reduce((a, o) => a + o.spl, 0) / (band.length || 1);
-  const f3   = (out.find(o => o.spl >= ref - 3) || out[0]).f;
-  const lo   = out.filter(o => o.f > 20 && o.f < 90);
-  const at   = (t) => out.reduce((b, o) => Math.abs(o.f - t) < Math.abs(b.f - t) ? o : b);
-
-  return {
-    curve: out, Fb, f3, ref,
-    spl30: at(30).spl, spl35: at(35).spl, spl45: at(45).spl,
-    peakVel: Math.max(...lo.map(o => o.vel)),
-    peakX:   Math.max(...lo.map(o => o.xmm)),
-    xmaxPct: (Math.max(...lo.map(o => o.xmm)) / ts.Xmax) * 100
-  };
+  return boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, "BW24", opts);
 }
 
 /**

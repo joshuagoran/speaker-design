@@ -1,6 +1,6 @@
 const { useEffect, useRef, useState } = React;
 import { ST260_PROFILE, SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, VENT_NAMES, FORMATS, byName, FILL_OPTIONS } from "./data.js";
-import { PLY, cx, cadd, cmul, cdiv, cinv, cabs, HP_TYPES, hpGain, lr24lp, lr24hp, boxModel, closedBox, inToL, boxL, PLY_LB, CUTOUT, SHEETS, f8, tName, boxParts, cutParts, packSheets } from "./calc.js";
+import { subSystem, ventGeom, internalWoodL, subLimits, maxCurve as maxCurveOf, thermalV, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, plyLb, PLY, cx, cadd, cmul, cdiv, cinv, cabs, HP_TYPES, hpGain, lr24lp, lr24hp, boxModel, closedBox, inToL, boxL, PLY_LB, CUTOUT, SHEETS, f8, tName, boxParts, cutParts, packSheets } from "./calc.js";
 
 
 
@@ -954,14 +954,14 @@ function FillsPage() {
   const setD = (k, v) => setDim((p) => ({ ...p, [k]: v }));
   const setP = (k, v) => setPort((p) => ({ ...p, [k]: v }));
   const ts = drv.ts, V = Math.sqrt(ampW * 8);
-  const gross = inToL(dim.w, dim.h, dim.d);
+  const gross = ((dim.w - 1) * (dim.h - 1) * (dim.d - 1) * 16.387) / 1000;   // 1/2″ walls, as the weight assumes
   const pArea = boxType === "vented" ? port.n * Math.PI * Math.pow(port.dia / 2, 2) : 0;
   const pVol = (pArea * port.len * 16.387) / 1000;
   const disp = ts.disp != null ? ts.disp : drv.size >= 10 ? 1.5 : 1;
   const net = Math.max(3, gross - disp - (boxType === "vented" ? pVol : 0));
   const eff = boxType === "sealed" ? net * 1.15 : net;   // sealed boxes are stuffed
   const vTherm = Math.sqrt(2 * ts.aes * 8);
-  const vM = boxType === "vented" ? boxModel(ts, eff, pArea, port.len, hp, V, "LR24") : null;
+  const vM = boxType === "vented" ? boxModel(ts, eff, pArea, port.len, hp, V, "LR24", { nPorts: port.n }) : null;
   const sM = boxType === "sealed" ? closedBox(ts, eff, hp, null, V) : null;
   const curve = vM ? vM.curve : sM.curve;
   const maxC = curve.map((o) => {
@@ -973,7 +973,8 @@ function FillsPage() {
   const near = (f) => maxC.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
   const ref = vM ? vM.ref : sM.ref;
   const sens = ref - 20 * Math.log10(V / 2.83);
-  const f3 = vM ? vM.f3 : sM.f3;
+  // system -3 dB, highpass included, for both box types (the "Some kick" check says "with the highpass")
+  const f3 = vM ? vM.f3 : (sM.curve.find((o) => o.spl >= sM.ref - 3) || sM.curve[sM.curve.length - 1]).f;
   // HF through a passive network: padded down to the woofer's level, so it only reaches its
   // program rating (2 x AES) at an amp power well above what the woofer sees.
   const hf = drv.hf;
@@ -1285,79 +1286,13 @@ function StackPlanner() {
   // Port geometry, matching what the 3D view draws, so the table and the
   // model describe the same box.
   const PT = wall;
-  const port = (() => {
-    const iw = subBox.w - 2 * PT, ih = subBox.h - 2 * PT, idp = subBox.d - 2 * PT;
-    {
-      if (portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1") {
-        const n = portStyle === "vslot1" ? 1 : 2;
-        const t = cVent.throat, area = n * t * (ih - 2 * 0.5), seg = (ih - 2 * 0.5) / 3;   // two 1/2\u2033 dividers per duct
-        return { area, len: cVent.len, dh: (4 * (t * seg)) / (2 * (t + seg)),
-                 desc: `${n === 1 ? "one side duct" : "two side ducts"}, ${t.toFixed(2)}\u2033 throat \u00d7 ${ih.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` };
-      }
-      if (portStyle === "slots" || portStyle === "folded") {
-        const h = cVent.slotH, area = h * (iw - 2 * PT), seg = (iw - 2 * PT) / 3;       // two 3/4\u2033 fins
-        return { area, len: cVent.len, dh: (4 * (h * seg)) / (2 * (h + seg)),
-                 desc: `letterbox, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` + (portStyle === "folded" ? ", folded up the back wall" : "") };
-      }
-      const r = cVent.dia / 2;
-      return { area: cVent.nt * Math.PI * r * r, len: cVent.len, dh: cVent.dia,
-               desc: `${cVent.nt} \u00d7 ${cVent.dia.toFixed(2)}\u2033 round, ${cVent.len.toFixed(1)}\u2033 long` };
-    }
-    if (portStyle === "vslots" || portStyle === "vwide") {
-      const throat = Math.round(((format.sub >= 18 ? 66 : 54) / (2 * ih)) * 100) / 100;
-      const nDiv = 2, tDiv = 0.5;
-      const area = 2 * (throat * ih - nDiv * throat * tDiv);
-      const len = idp - PT - throat;                 // rear gap equals the throat width
-      const seg = (ih - nDiv * tDiv) / (nDiv + 1);
-      return { area, len, dh: (4 * (throat * seg)) / (2 * (throat + seg)),
-               desc: `two ducts, ${throat.toFixed(2)}″ throat × ${ih.toFixed(1)}″, 20° flare to ${(throat + 0.43).toFixed(2)}″` };
-    }
-    if (portStyle === "folded") {
-      const h = 3, w = iw, area = h * w, seg = w / 3;
-      return { area, len: 15.75, dh: (4 * (h * seg)) / (2 * (h + seg)),
-               desc: `letterbox, ${h}″ × ${w.toFixed(1)}″, folded up the back wall to 15.75″` };
-    }
-    if (portStyle === "slots") {
-      const h = 3, w = iw, area = h * w, gap = h;
-      const len = idp - gap - PT;
-      const seg = w / 3;
-      return { area, len, dh: (4 * (h * seg)) / (2 * (h + seg)),
-               desc: `letterbox, ${h}″ × ${w.toFixed(1)}″, ${gap}″ turning gap` };
-    }
-    const n = portStyle === "round4" ? 4 : portStyle === "round1" ? 1 : 2;
-    const r = portStyle === "round1" ? 4 : portStyle === "round4" ? 2 : 2.5;
-    return { area: n * Math.PI * r * r, len: 11, dh: 2 * r,
-             desc: `${n} × ${(2 * r).toFixed(0)}″ round, 11″ long` };
-  })();
-
-  const grossL = boxL(subBox.w, subBox.h, subBox.d, wall, inset);
-  const ductL = (port.area * port.len * 16.387) / 1000;
-  const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - 3);
-  const HPF = hpf, AMP_V = Math.sqrt(ampW * 8);
-  const mdl = sub.ts ? boxModel(sub.ts, netL, port.area, port.len, HPF, AMP_V, hpType) : null;
-  const lim = mdl ? (() => {
-    // Every limit is expressed as amp output voltage: a sine at the amp's rated power into 8 \u03a9.
-    // Port and cone limits use that sine's peaks. The thermal limit is program power, 2 \u00d7 AES: AES
-    // noise has a 6 dB crest, so a sine with the same peak voltage carries twice the AES power, and
-    // music with at least that crest factor keeps the voice coil's average at or under the AES rating.
-    const vp = (AMP_V * portMax) / mdl.peakVel, vx = (AMP_V * 100) / mdl.xmaxPct, vt = Math.sqrt(2 * sub.ts.aes * 8);
-    const L = Math.min(vp, vx, vt, AMP_V);
-    const sc = 20 * Math.log10(L / AMP_V);
-    return { who: L === vp ? "port air speed" : L === vx ? "cone travel (Xmax)" : L === vt ? "driver program rating" : "amplifier power",
-             V: L, W: (L * L) / 8, vel: mdl.peakVel * L / AMP_V, xPct: mdl.xmaxPct * L / AMP_V,
-             spl30: mdl.spl30 + sc, spl35: mdl.spl35 + sc, spl45: mdl.spl45 + sc };
-  })() : null;
-  // Max SPL for a sine at each frequency: each frequency meets its own port and excursion
-  // limits, so 45 Hz is not held back by port speed at tuning. The broadband limit above is
-  // what applies to music, which has energy at every frequency at once.
-  const vThermal = Math.sqrt(2 * (sub.ts ? sub.ts.aes : 0) * 8);
-  const maxAt = (o) => {
-    const vp = (AMP_V * portMax) / o.vel, vx = (AMP_V * sub.ts.Xmax) / o.xmm;
-    const V = Math.min(vp, vx, vThermal, AMP_V);
-    return { f: o.f, spl: o.spl + 20 * Math.log10(V / AMP_V),
-             who: V === vp ? "port" : V === vx ? "Xmax" : V === vThermal ? "thermal" : "amp" };
-  };
-  const maxCurve = mdl ? mdl.curve.map(maxAt) : null;
+  const { port, grossL, ductL, netL, AMP_V, mdl, lim } = subSystem(sub, mid, {
+    subBox, midDims: mDim, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout });
+  const HPF = hpf;
+  // Max SPL for a sine at each frequency (each frequency meets its own port and excursion limits);
+  // the broadband limit above is what applies to music.
+  const vThermal = thermalV(sub.ts ? sub.ts.aes : 0);
+  const maxCurve = mdl ? maxCurveOf(mdl.curve, sub.ts, AMP_V, portMax) : null;
   const maxNear = (f) => maxCurve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 
   // ---- mid-bass: sealed box ----
@@ -1374,7 +1309,7 @@ function StackPlanner() {
   };
   const midMax = mMdl ? mMdl.curve.map(midMaxAt) : null;
   // 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware
-  const midCabLb = ((midDims.w * midDims.h) * 2.3 + (midDims.w * midDims.h + 2 * midDims.w * midDims.d + 2 * midDims.h * midDims.d + midDims.w * midDims.d) * PLY_LB[wall]) / 144 + 2;
+  const midCabLb = midWeight(midDims, wall);
   const midLbLoaded = midCabLb + (mid.lb || 0);
   const midUseV = Math.min(vMidTherm, MID_V);   // most the mid is driven: amp or program rating
   const midNear = (f) => midMax.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
@@ -1394,39 +1329,20 @@ function StackPlanner() {
   // Power: amp voltage into the driver's impedance, capped at program (2 x AES), derated
   // 6 dB per octave when crossing below the frequency the AES rating was measured at.
   const hf = cd.hf, hz = horn.hf || {};
-  const hornModel = hf && hf.sens != null && hf.aes ? (() => {
-    const imp = hf.imp || 8;
-    const pAmp = (hfAmpW * 8) / imp;                      // same amp voltage into 8 or 16 Ω
-    const derate = hf.aesXo && xoHi < hf.aesXo ? Math.pow(xoHi / hf.aesXo, 2) : 1;
-    const pProg = 2 * hf.aes * derate;
-    const P = Math.min(pAmp, pProg);
-    const low = hz.lowHz || 0;
-    const curve = [];
-    for (let i = 0; i < 300; i++) {
-      const f = 300 * Math.pow(20000 / 300, i / 299);
-      const g = lr24hp(f, xoHi) * (low ? Math.min(1, Math.pow(f / low, 2)) : 1);
-      curve.push({ f, spl: hf.sens + 10 * Math.log10(P) + 20 * Math.log10(g) });
-    }
-    return { curve, P, pAmp, pProg, derate, imp, who: P === pAmp ? "amp" : "program rating",
-             flat: hf.sens + 10 * Math.log10(P) };
-  })() : null;
+  const hornModel = hornResponse(hf, hz, xoHi, hfAmpW);
   const hornAt = (f) => hornModel.curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b)).spl;
   // mid beamwidth at the horn crossover, as a rigid piston: -6 dB where ka sin(theta) = 2.2
-  const midBeam = mid.ts ? (() => {
-    const ka = (2 * Math.PI * xoHi / 343) * Math.sqrt(mid.ts.Sd / 10000 / Math.PI);
-    return ka <= 2.2 ? 180 : 2 * Math.asin(2.2 / ka) * 180 / Math.PI;
-  })() : null;
-  // Horizontal beamwidth (-6 dB) against frequency. Mid: rigid piston as above. Horn: its rated
-  // coverage down to Keele's pattern-control limit f = 25 000 / (mouth width m \u00d7 angle \u00b0),
-  // widening in proportion below it. Rules of thumb, not measurements.
+  const midBeam = mid.ts ? pistonBeam(mid.ts.Sd, xoHi) : null;
+  // Horizontal beamwidth against frequency: mid as a rigid piston, horn at its rated coverage down
+  // to Keele's pattern-control limit and proportionally wider below. Rules of thumb.
   const beamCurves = (() => {
     const hz0 = horn.hf || {};
-    const fK = hz0.covH && horn.size ? 25000 / (horn.size.w * 0.0254 * hz0.covH) : null;
+    const fK = hz0.covH && horn.size ? keeleF(hz0.covH, horn.size.w) : null;
     const midB = [], hornB = [];
     for (let i = 0; i < 160; i++) {
       const f = 200 * Math.pow(10000 / 200, i / 159);
-      if (mid.ts) { const ka = (2 * Math.PI * f / 343) * Math.sqrt(mid.ts.Sd / 10000 / Math.PI); midB.push({ f, spl: ka <= 2.2 ? 180 : 2 * Math.asin(2.2 / ka) * 180 / Math.PI }); }
-      if (fK && f >= (hz0.lowHz || 0) * 0.7) hornB.push({ f, spl: Math.min(180, f >= fK ? hz0.covH : hz0.covH * fK / f) });
+      if (mid.ts) midB.push({ f, spl: pistonBeam(mid.ts.Sd, f) });
+      if (fK && f >= (hz0.lowHz || 0) * 0.7) hornB.push({ f, spl: hornBeam(hz0.covH, fK, f) });
     }
     return { midB, hornB, fK };
   })();
@@ -1493,7 +1409,7 @@ function StackPlanner() {
     catch { setCfgMsg("Couldn't delete"); setTimeout(() => setCfgMsg(""), 2500); }
   };
 
-  const subLbLoaded = ((subBox.w * subBox.h) * 2.3 + (subBox.w * subBox.h + 2 * subBox.w * subBox.d + 2 * subBox.h * subBox.d + 2 * subBox.w * subBox.d) * PLY_LB[wall]) / 144 + (sub.lb || 0) + 6;
+  const subLbLoaded = subWeight(subBox, wall, sub.lb);
 
   const subL = grossL;
   const midL = midGrossL;
@@ -1600,7 +1516,7 @@ function StackPlanner() {
                 ...[30, 35, 45, 60].map((f) => { const m = maxNear(f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
                 ["First limit, music", lim.who, `at ${Math.round(lim.W / 10) * 10} W${lim.who === "cone travel (Xmax)" ? `, reached first at ${mdl.peakXF.toFixed(0)} Hz` : lim.who === "port air speed" ? `, reached first at ${mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power`],
-                ["Peak port velocity", `${lim.vel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz, where port output peaks near Fb`],
+                ["Peak port velocity", `${lim.vel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz`],
                 ["Peak excursion", `${(mdl.peakX * lim.V / AMP_V).toFixed(1)} mm`, `${lim.xPct.toFixed(0)}% of Xmax, at ${mdl.peakXF.toFixed(0)} Hz`],
               ].map(([k, v, note]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
