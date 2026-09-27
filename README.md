@@ -126,8 +126,9 @@ configurations and can be edited or deleted like any other.
 
 - `tools/data.js` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
 - `tools/calc.js` — every calculation, pure JS, imported by the page and the tests (`npm test`):
-  - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.
+  - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r); a letterbox passes `ecIn` from `slotEndCorr` (rectangular mouth, floor mirrored at both ends). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.
   - `closedBox(ts, VbL, hp, lp, volts)` — sealed mid-bass, LR24 crossovers. `ref` is the mass-controlled asymptote, so `f3` is right for low-Qtc boxes. Coil inductance is not modelled.
+  - `midSystem` (sealed mid volume, model, per-frequency max), `subThroughLp` (sub through the crossover), `fillSystem` (the Fills page).
   - `subSystem` (vent geometry, gross/net volume incl. internal wood from the cutlist parts, model, limits), `subLimits`, `maxCurve`, `hornResponse`, `pistonBeam`, `keeleF`, weights, cutlist (`boxParts`, `cutParts`, `packSheets`).
 - Horn — datasheet model, not T/S: `cd.hf` (sensitivity and its reference, AES power and the crossover it was rated at, minimum crossover, impedance) and `horn.hf` (coverage, minimum crossover, loading limit `lowHz`). Output is sensitivity + 10 log P through the LR24 highpass and a 12 dB/oct rolloff below `lowHz`; power is capped at 2 × AES, derated 6 dB per octave below the AES rating's crossover.
 - Tests (`tests/`) check each function against an independent reference; `tests/golden.json` snapshots the key outputs of the saved and synthetic configs (regenerate with `node tests/make-golden.js` after an intentional change). CI runs them before every deploy. See `docs/testing-plan.md` and `docs/calc-audit.md`.
@@ -163,8 +164,9 @@ The chart and the max SPL rows are per frequency: a sine at each frequency
 meets its own limit. The "first limit, music" row is the broadband limit,
 since music has energy at every frequency at once. Music averages about 6 dB
 below the sine figures. Port end
-correction is the standard both-end approximation and is the largest source of
-error in Fb — a divided or flared duct measures a little differently. Cabinet
+correction is the standard both-end approximation (1.46 r) for tubes and side ducts;
+the floor letterbox uses the rectangular-mouth value with the floor as a mirror.
+It is the largest source of error in Fb — a divided or flared duct measures a little differently. Cabinet
 weight assumes 3/4" birch at 2.3 lb/ft² with two braces, plus driver and 6 lb of
 hardware.
 

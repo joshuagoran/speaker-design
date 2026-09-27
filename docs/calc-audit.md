@@ -8,7 +8,7 @@ Status: **open** until fixed with a test that would have caught it. Fixed items 
 | # | Where (tools/stack-planner.app.jsx) | Problem | Size | Fix |
 |---|---|---|---|---|
 | 1 | `closedBox` ref, ~l.445 | "Midband" reference averaged over 200–500 Hz, where low-Qtc boxes are still rising | 12NDL76 at 45 L: Box F3 154 vs 214 Hz, sensitivity 1.8 dB low; 12FW76: 174 vs 285 Hz. Misses "rolls off above the crossover" | Reference to the high-frequency asymptote (analytic), or closed-form F3 from Fc/Qtc — **fixed** (tests/sealed.test.js: F3 vs 2nd-order, ref vs mass line) |
-| 2 | `boxModel` end correction, ~l.376 | End correction from total port area; n tubes / 2 side ducts get √n too much | 2×6″: Fb −1.4 Hz (−4.8 %); 4×4″: −2.2 Hz (−8.3 %) | Pass port count n; `1.46·√(Sp/(n·π))`. Letterbox on the floor may need *more* correction (Fb up to ~6 % high): calibrate — **fixed** for round tubes and side ducts (tests/vented.test.js); letterbox kept as one opening, still to calibrate |
+| 2 | `boxModel` end correction, ~l.376 | End correction from total port area; n tubes / 2 side ducts get √n too much | 2×6″: Fb −1.4 Hz (−4.8 %); 4×4″: −2.2 Hz (−8.3 %) | Pass port count n; `1.46·√(Sp/(n·π))`. Letterbox on the floor may need *more* correction (Fb up to ~6 % high): calibrate — **fixed** for round tubes and side ducts (tests/vented.test.js); letterbox **fixed**: rigid-piston end correction of the rectangular mouth (closed form, checked by numerical integration) with the floor as a mirror at both ends (tests/slot.test.js); slot configs read ~1.5 Hz (4 %) lower |
 | 3 | `FillsPage` sens/f3, ~l.1476–1480 | Vented `ref`/`f3` taken after the LR24 highpass; sealed path ignores it | sens −1.2 dB at hp 70, −3.8 dB at hp 100; f3 82.5 vs 62.1 Hz. Feeds HF pad and "HF limits first", "Some kick" | Compute ref/f3 from unfiltered response in both paths — **fixed**: sensitivity from the unfiltered asymptote, f3 includes the highpass for both box types |
 | 4 | `netL`, ~l.1932 | Duct wood not subtracted (shelf + fins ~5–6 L letterbox; side-duct walls ~7 L each) | net volume high by up to ~5 % | Subtract internal part volumes from the cutlist — **fixed**: net volume subtracts internal wood from the cutlist parts (tests/geometry.test.js) |
 | 5 | `boxModel` radiated sum, ~l.388 | Leakage flow included in radiated volume velocity | +0.35 dB at 20 Hz, 0 above 50 Hz | `Ut = Ud·Zbox/Zc` — **fixed** (tests/vented.test.js tiny-port and B4) |
@@ -25,6 +25,8 @@ Status: **open** until fixed with a test that would have caught it. Fixed items 
 - ~~Dead code in `const port`~~ removed (now `ventGeom` in calc.js).
 - `model/vented-box.js` now wraps `calc.js`. `tools/vented-sub-bench.html` still has its own old copy (standalone bench, not deployed).
 - Stale `mStuff` field in saved configs.
+- Mid-bass (`midSystem`, `subThroughLp`) and Fills (`fillSystem`) maths moved into calc.js with tests (tests/mid.test.js, tests/fills.test.js) and golden snapshots of every fill driver, vented and sealed.
+- Side ducts (vslots) still use the round-tube 1.46 r; they also sit against walls, so their Fb may read a little high.
 
 ## Documented assumptions (keep, but label and test)
 
@@ -53,3 +55,4 @@ Filters (BW/LR shapes, LR24 sum = 1 at xo); boxModel circuit (independent mechan
 - Five more fill drivers have datasheet Vas/Qes that disagree with their Mms/Bl (Ciare NDCX10, FaitalPRO 8HX230/8HX240, Eminence Beta 8CX) — listed as known in tests/drivers.test.js.
 - Port air speed does not always peak at Fb (with Fb above Fs it peaks near the lower impedance peak); the planner row no longer says "near Fb".
 - The Fb shift from the end-correction fix: saved "lil block stack LE (optimized)" (2 × 3.5″ tubes) now reads 33.1 Hz, was 32.0.
+- Slot calibration moved the saved letterbox configs: lil block stack LE 38.7 → 37.1 Hz, lil block stack 39.4 → 37.7, idk tweaked 38.6 → 36.9, idk 36.9 → 35.4, blocky 36.8 → 35.3, lil tower / compact-ish 37.6 → 36.1. Not a measurement: the image method is the textbook treatment for a vent on a boundary; an impedance sweep of the built box is still the check.

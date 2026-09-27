@@ -23,10 +23,11 @@ export const hpGain = (f, fc, type = "BW24") => {
 export const lr24lp = (f, fc) => 1 / (1 + Math.pow(f / fc, 4));   // Linkwitz-Riley 24 dB/oct lowpass
 export const lr24hp = (f, fc) => hpGain(f, fc, "LR24");
 
-// opts: nPorts (separate openings sharing the area), QL (box leakage, default 7), Qp (port losses, default 50).
+// opts: nPorts (separate openings sharing the area), QL (box leakage, default 7), Qp (port losses, default 50),
+// ecIn (total end correction in inches, both ends; default 1.46 r per opening).
 export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts = {}) {
   if (!ts || !VbL || !SpIn2 || LpIn <= 0) return null;
-  const { nPorts = 1, QL = 7, Qp = 50 } = opts;
+  const { nPorts = 1, QL = 7, Qp = 50, ecIn } = opts;
   const rho = 1.18, c = 343;
   const Sd = ts.Sd / 10000;                 // cm^2 -> m^2
   const Mms = ts.Mms / 1000;                // g -> kg
@@ -39,7 +40,7 @@ export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts
   const Cab = Vb / (rho * c * c);
   const Sp = SpIn2 * 0.00064516;
   const reff = Math.sqrt(Sp / nPorts / Math.PI);   // radius of each opening
-  const Leff = LpIn * 0.0254 + 1.46 * reff;  // one flanged + one free end per opening
+  const Leff = LpIn * 0.0254 + (ecIn != null ? ecIn * 0.0254 : 1.46 * reff);  // one flanged + one free end per opening
   const Map = (rho * Leff) / Sp;
   const Fb = (c / (2 * Math.PI)) * Math.sqrt(Sp / (Vb * Leff));
   const Ral = QL / (2 * Math.PI * Fb * Cab);
@@ -226,6 +227,21 @@ export function packSheets(rects, sheet, kerf) {
 }
 
 
+// ---- end correction of a rectangular opening ----
+// Low-frequency radiation mass of a uniform rectangular piston a x b in an infinite baffle is
+// rho*I/(2*pi*S^2), I = the double area integral of 1/distance (closed form below). As a length:
+// end correction = I/(2*pi*a*b). A circle gives the familiar 0.85 r.
+export function rectI(a, b) {
+  const d = Math.hypot(a, b);
+  return (2 / 3) * (a ** 3 + b ** 3 - d ** 3) + 2 * a * b * (a * Math.log((b + d) / a) + b * Math.log((a + d) / b));
+}
+export const rectEndCorr = (a, b) => rectI(a, b) / (2 * Math.PI * a * b);
+// Flanged + free end, as the 1.46 r (0.85 r + 0.61 r) used for round tubes.
+export const BOTH_ENDS = 1 + 0.61 / 0.85;
+// Letterbox on the floor panel: the floor (inside) and the ground (outside, the sub stands on it) mirror
+// the slot, so each end acts as a slot twice as tall (image method). Width is the open width between fins.
+export const slotEndCorr = (h, w) => BOTH_ENDS * rectEndCorr(2 * h, w);
+
 // Vent geometry for the sub. t is the wall (and fin) ply. n is the number of separate openings,
 // which sets the end correction in boxModel.
 export function ventGeom(portStyle, box, cVent, t) {
@@ -238,9 +254,9 @@ export function ventGeom(portStyle, box, cVent, t) {
   }
   if (portStyle === "slots" || portStyle === "folded") {
     // one letterbox split by two fins (wall ply); the fins run the full length but the mouths
-    // sit together, so it is treated as a single opening for the end correction
+    // sit together, so it is treated as a single opening on the floor (see slotEndCorr)
     const h = cVent.slotH, area = h * (iw - 2 * t), seg = (iw - 2 * t) / 3;
-    return { n: 1, area, len: cVent.len, dh: (4 * (h * seg)) / (2 * (h + seg)),
+    return { n: 1, area, len: cVent.len, ec: slotEndCorr(h, iw - 2 * t), dh: (4 * (h * seg)) / (2 * (h + seg)),
              desc: `letterbox, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` + (portStyle === "folded" ? ", folded up the back wall" : "") };
   }
   const r = cVent.dia / 2;
@@ -337,7 +353,63 @@ export function subSystem(sub, mid, cfg) {
     joint: "butt", portStyle: cfg.portStyle, cVent: cfg.cVent, layout: cfg.layout }).parts, "Sub");
   const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - woodL);
   const AMP_V = ampV(cfg.ampW);
-  const mdl = sub.ts ? boxModel(sub.ts, netL, port.area, port.len, cfg.hpf, AMP_V, cfg.hpType, { nPorts: port.n }) : null;
+  const mdl = sub.ts ? boxModel(sub.ts, netL, port.area, port.len, cfg.hpf, AMP_V, cfg.hpType, { nPorts: port.n, ecIn: port.ec }) : null;
   const lim = mdl ? subLimits(mdl, sub.ts, AMP_V, cfg.portMax) : null;
   return { port, grossL, ductL, woodL, netL, AMP_V, mdl, lim };
+}
+
+// Sub through the LR24 lowpass at the crossover, each frequency at its own sine limit (the filter
+// scales excursion and port speed with the output).
+export function subThroughLp(mdl, ts, AMP_V, portMax, xoLo) {
+  const vt = thermalV(ts.aes);
+  return mdl.curve.map((o) => {
+    const g = lr24lp(o.f, xoLo);
+    const vp = (AMP_V * portMax) / (o.vel * g), vx = (AMP_V * ts.Xmax) / (o.xmm * g);
+    const V = Math.min(vp, vx, vt, AMP_V);
+    return { f: o.f, spl: o.spl + 20 * Math.log10(g) + 20 * Math.log10(V / AMP_V) };
+  });
+}
+
+// ---- the mid-bass as the planner computes it: sealed, always lightly stuffed ----
+// cfg: { midDims, wall, inset, xoLo, xoHi, mAmpW }
+export const STUFF = 1.15;   // ~15% more effective volume from light stuffing
+export function midSystem(mid, cfg) {
+  const V = ampV(cfg.mAmpW);
+  const grossL = boxL(cfg.midDims.w, cfg.midDims.h, cfg.midDims.d, cfg.wall, cfg.inset);
+  const disp = mid.ts && mid.ts.disp != null ? mid.ts.disp : (mid.size === 15 ? 4 : 2.5);   // assumed where not published
+  const netL = Math.max(5, grossL - disp);
+  const effL = netL * STUFF;
+  const mdl = mid.ts ? closedBox(mid.ts, effL, cfg.xoLo, cfg.xoHi, V) : null;
+  const vTherm = mid.ts ? thermalV(mid.ts.aes) : 0;
+  const max = mdl ? maxCurve(mdl.curve, mid.ts, V, Infinity) : null;   // no port: Xmax, thermal, amp
+  return { V, grossL, disp, netL, effL, mdl, vTherm, max, useV: Math.min(vTherm, V) };
+}
+
+// ---- passive coaxial fills ----
+// drv: FILL_OPTIONS entry. cfg: { boxType: "vented" | "sealed", dim {w,h,d} external in, port {n, dia, len},
+// hp (LR24 highpass to the subs), ampW (per box, 8 ohm rating), portMax }. 1/2" walls throughout.
+export function fillSystem(drv, cfg) {
+  const { boxType, dim, port, hp, ampW, portMax } = cfg;
+  const ts = drv.ts, V = ampV(ampW), vented = boxType === "vented";
+  const gross = ((dim.w - 1) * (dim.h - 1) * (dim.d - 1) * 16.387) / 1000;
+  const pArea = vented ? port.n * Math.PI * Math.pow(port.dia / 2, 2) : 0;
+  const pVol = (pArea * port.len * 16.387) / 1000;
+  const disp = ts.disp != null ? ts.disp : drv.size >= 10 ? 1.5 : 1;
+  const net = Math.max(3, gross - disp - (vented ? pVol : 0));
+  const eff = vented ? net : net * STUFF;   // sealed boxes are stuffed
+  const vM = vented ? boxModel(ts, eff, pArea, port.len, hp, V, "LR24", { nPorts: port.n }) : null;
+  const sM = vented ? null : closedBox(ts, eff, hp, null, V);
+  const m = vM || sM;
+  const max = maxCurve(m.curve, ts, V, portMax).filter((o) => o.f <= 300);
+  const sens = m.ref - 20 * Math.log10(V / 2.83);
+  // system -3 dB, highpass included, for both box types
+  const f3 = vM ? vM.f3 : (sM.curve.find((o) => o.spl >= sM.ref - 3) || sM.curve[sM.curve.length - 1]).f;
+  // HF through a passive network, padded down to the woofer: reaches its program rating (2 x AES)
+  // only at an amp power well above what the woofer sees
+  const hf = drv.hf;
+  const pad = hf ? Math.max(0, hf.sens - (drv.lfSens || sens)) : 0;
+  const hfLimW = hf ? (2 * hf.aes * hf.imp / 8) * Math.pow(10, pad / 10) : null;   // amp watts (8 ohm rating)
+  const lb = ((2 * (dim.w * dim.h + dim.w * dim.d + dim.h * dim.d)) / 144) * 1.6 + drv.lb + 1;   // 1/2" birch ~1.6 lb/ft2
+  const portLimited = vented && max.some((o) => o.who === "port");
+  return { V, gross, pArea, disp, net, eff, vM, sM, max, sens, f3, pad, hfLimW, lb, portLimited };
 }

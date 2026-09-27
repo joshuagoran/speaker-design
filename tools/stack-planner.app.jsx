@@ -1,6 +1,6 @@
 const { useEffect, useRef, useState } = React;
 import { ST260_PROFILE, SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, VENT_NAMES, FORMATS, byName, FILL_OPTIONS } from "./data.js";
-import { subSystem, ventGeom, internalWoodL, subLimits, maxCurve as maxCurveOf, thermalV, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, plyLb, PLY, cx, cadd, cmul, cdiv, cinv, cabs, HP_TYPES, hpGain, lr24lp, lr24hp, boxModel, closedBox, inToL, boxL, PLY_LB, CUTOUT, SHEETS, f8, tName, boxParts, cutParts, packSheets } from "./calc.js";
+import { subSystem, ventGeom, internalWoodL, subLimits, maxCurve as maxCurveOf, thermalV, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, plyLb, PLY, cx, cadd, cmul, cdiv, cinv, cabs, HP_TYPES, hpGain, lr24lp, lr24hp, boxModel, closedBox, inToL, boxL, PLY_LB, CUTOUT, SHEETS, f8, tName, boxParts, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest } from "./calc.js";
 
 
 
@@ -953,34 +953,11 @@ function FillsPage() {
   const [portMax, setPortMax] = useState(20);
   const setD = (k, v) => setDim((p) => ({ ...p, [k]: v }));
   const setP = (k, v) => setPort((p) => ({ ...p, [k]: v }));
-  const ts = drv.ts, V = Math.sqrt(ampW * 8);
-  const gross = ((dim.w - 1) * (dim.h - 1) * (dim.d - 1) * 16.387) / 1000;   // 1/2″ walls, as the weight assumes
-  const pArea = boxType === "vented" ? port.n * Math.PI * Math.pow(port.dia / 2, 2) : 0;
-  const pVol = (pArea * port.len * 16.387) / 1000;
+  const ts = drv.ts;
+  const { gross, pArea, net, vM, sM, max: maxC, sens, f3, pad, hfLimW, lb, portLimited } = fillSystem(drv, { boxType, dim, port, hp, ampW, portMax });
+  const near = (f) => nearest(maxC, f);
   const disp = ts.disp != null ? ts.disp : drv.size >= 10 ? 1.5 : 1;
-  const net = Math.max(3, gross - disp - (boxType === "vented" ? pVol : 0));
-  const eff = boxType === "sealed" ? net * 1.15 : net;   // sealed boxes are stuffed
-  const vTherm = Math.sqrt(2 * ts.aes * 8);
-  const vM = boxType === "vented" ? boxModel(ts, eff, pArea, port.len, hp, V, "LR24", { nPorts: port.n }) : null;
-  const sM = boxType === "sealed" ? closedBox(ts, eff, hp, null, V) : null;
-  const curve = vM ? vM.curve : sM.curve;
-  const maxC = curve.map((o) => {
-    const lims = [(V * ts.Xmax) / o.xmm, vTherm, V];
-    if (vM) lims.push((V * portMax) / o.vel);
-    const L = Math.min(...lims);
-    return { f: o.f, spl: o.spl + 20 * Math.log10(L / V), who: L === lims[0] ? "Xmax" : L === vTherm ? "thermal" : L === V ? "amp" : "port" };
-  }).filter((o) => o.f <= 300);
-  const near = (f) => maxC.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
-  const ref = vM ? vM.ref : sM.ref;
-  const sens = ref - 20 * Math.log10(V / 2.83);
-  // system -3 dB, highpass included, for both box types (the "Some kick" check says "with the highpass")
-  const f3 = vM ? vM.f3 : (sM.curve.find((o) => o.spl >= sM.ref - 3) || sM.curve[sM.curve.length - 1]).f;
-  // HF through a passive network: padded down to the woofer's level, so it only reaches its
-  // program rating (2 x AES) at an amp power well above what the woofer sees.
   const hf = drv.hf;
-  const pad = hf ? Math.max(0, hf.sens - (drv.lfSens || sens)) : 0;
-  const hfLimW = hf ? (2 * hf.aes * hf.imp / 8) * Math.pow(10, pad / 10) : null;   // amp watts (8 Ω rating) at the HF limit
-  const lb = ((2 * (dim.w * dim.h + dim.w * dim.d + dim.h * dim.d)) / 144) * 1.6 + drv.lb + 1;   // 1/2" birch ply ~1.6 lb/ft²
   const kick = near(60).spl, mid = near(150).spl;
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
@@ -992,10 +969,9 @@ function FillsPage() {
   if (Math.min(dim.w, dim.h) < drv.size + 1)
     F.push(["bad", "Driver won't fit", `An ${drv.size}″ coax needs about ${drv.size + 1}″ of baffle.`]);
   if (vM) {
-    const pv = Math.max(...maxC.map((o) => o.who === "port" ? portMax : 0));
     F.push(vM.Fb < hp * 0.6 ? ["warn", `Tuned low (${vM.Fb.toFixed(0)} Hz)`, "Well below the highpass: the port does little. A shorter or wider port tunes higher."]
       : ["ok", `Tuned to ${vM.Fb.toFixed(0)} Hz`, `with a ${hp} Hz LR24 highpass to the subs.`]);
-    if (pv) F.push(["warn", "Port-limited", `Port air speed reaches ${portMax} m/s somewhere below 300 Hz; a wider port helps.`]);
+    if (portLimited) F.push(["warn", "Port-limited", `Port air speed reaches ${portMax} m/s somewhere below 300 Hz; a wider port helps.`]);
   } else {
     F.push(sM.Qtc > 0.8 ? ["warn", `Qtc ${sM.Qtc.toFixed(2)}`, "Peaky; a bigger box or a vent."] : sM.Qtc < 0.5 ? ["warn", `Qtc ${sM.Qtc.toFixed(2)}`, "Very damped: rolls off early. Good driver for a vented box."] : ["ok", `Qtc ${sM.Qtc.toFixed(2)}`, "Well damped."]);
   }
@@ -1291,35 +1267,18 @@ function StackPlanner() {
   const HPF = hpf;
   // Max SPL for a sine at each frequency (each frequency meets its own port and excursion limits);
   // the broadband limit above is what applies to music.
-  const vThermal = thermalV(sub.ts ? sub.ts.aes : 0);
   const maxCurve = mdl ? maxCurveOf(mdl.curve, sub.ts, AMP_V, portMax) : null;
   const maxNear = (f) => maxCurve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 
   // ---- mid-bass: sealed box ----
-  const MID_V = Math.sqrt(mAmpW * 8);
-  const midGrossL = boxL(midDims.w, midDims.h, midDims.d, wall, inset);
-  const midDisp = mid.ts && mid.ts.disp != null ? mid.ts.disp : (mid.size === 15 ? 4 : 2.5);   // assumed where not published
-  const midNetL = Math.max(5, midGrossL - midDisp);
-  const midEffL = midNetL * 1.15;   // always lightly stuffed: ~15% more effective volume, and it damps box resonances
-  const mMdl = mid.ts ? closedBox(mid.ts, midEffL, xoLo, xoHi, MID_V) : null;
-  const vMidTherm = mid.ts ? Math.sqrt(2 * mid.ts.aes * 8) : 0;
-  const midMaxAt = (o) => {
-    const vx = (MID_V * mid.ts.Xmax) / o.xmm, V = Math.min(vx, vMidTherm, MID_V);
-    return { f: o.f, spl: o.spl + 20 * Math.log10(V / MID_V), who: V === vx ? "Xmax" : V === vMidTherm ? "thermal" : "amp" };
-  };
-  const midMax = mMdl ? mMdl.curve.map(midMaxAt) : null;
+  const { V: MID_V, grossL: midGrossL, netL: midNetL, effL: midEffL, mdl: mMdl, vTherm: vMidTherm, max: midMax, useV: midUseV } =
+    midSystem(mid, { midDims, wall, inset, xoLo, xoHi, mAmpW });
   // 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware
   const midCabLb = midWeight(midDims, wall);
   const midLbLoaded = midCabLb + (mid.lb || 0);
-  const midUseV = Math.min(vMidTherm, MID_V);   // most the mid is driven: amp or program rating
   const midNear = (f) => midMax.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
   // Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter.
-  const subSys = mdl ? mdl.curve.map((o) => {
-    const g = lr24lp(o.f, xoLo);
-    const vp = (AMP_V * portMax) / (o.vel * g), vx = (AMP_V * sub.ts.Xmax) / (o.xmm * g);
-    const V = Math.min(vp, vx, vThermal, AMP_V);
-    return { f: o.f, spl: o.spl + 20 * Math.log10(g) + 20 * Math.log10(V / AMP_V) };
-  }) : null;
+  const subSys = mdl ? subThroughLp(mdl, sub.ts, AMP_V, portMax, xoLo) : null;
   const subAtXo = subSys ? subSys.reduce((b, o) => (Math.abs(o.f - xoLo) < Math.abs(b.f - xoLo) ? o : b)).spl : null;
   // What the mid actually has to match: the sub at its music limit (one drive level for
   // the whole band), through its lowpass, less the music-balance allowance.
