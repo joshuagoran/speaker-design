@@ -1,5 +1,5 @@
 import test from "node:test";
-import { rectI, rectEndCorr, slotEndCorr, sideDuctEndCorr, ductEndCorr, BOTH_ENDS, ventGeom, boxModel, subSystem } from "../tools/calc.js";
+import { rectI, rectEndCorr, slotEndCorr, sideDuctEndCorr, ductEndCorr, duct2DEndCorr, BOTH_ENDS, ventGeom, boxModel, subSystem } from "../tools/calc.js";
 import { SUB_OPTIONS, MID_OPTIONS } from "../tools/data.js";
 import { C, rel, close } from "./helpers.js";
 
@@ -33,7 +33,7 @@ test("slotEndCorr uses the floor image: a slot twice as tall", (t) => {
 test("letterbox Fb = Helmholtz with the slot end correction", (t) => {
   const box = { w: 22, h: 30, d: 20 }, g = ventGeom("slots", box, { slotH: 3, len: 14 }, 0.75);
   const W = box.w - 1.5 - 1.5;
-  close(t, g.ec, slotEndCorr(3, W), 1e-12);
+  close(t, g.ec, slotEndCorr(3, W, 30 - 1.5, 20 - 0.75 - 0.75 - 14), 1e-12);
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500").ts;
   const m = boxModel(ts, 120, g.area, g.len, 25, 20, "BW24", { ecIn: g.ec });
   const Sp = g.area * 0.00064516, Leff = (14 + g.ec) * 0.0254;
@@ -53,11 +53,13 @@ test("side ducts: each opening gets the correction for its own throat x open hei
   const box = { w: 22, h: 30, d: 20 };
   for (const st of ["vslots", "vslot1"]) {
     const g = ventGeom(st, box, { throat: 2, len: 12 }, 0.75);
-    close(t, g.ec, sideDuctEndCorr(2, 30 - 1.5 - 1), 1e-12, st);
+    close(t, g.ec, sideDuctEndCorr(2, 30 - 1.5 - 1, st === "vslots" ? (22 - 1.5) / 2 : 22 - 1.5, 20 - 0.75 - 0.75 - 12), 1e-12, st);
   }
-  // per-opening: two ducts tune like one duct in half the volume
+  // per-opening: two ducts tune like one duct in the mirrored half of the box
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500").ts;
-  const two = ventGeom("vslots", box, { throat: 2, len: 12 }, 0.75), one = ventGeom("vslot1", box, { throat: 2, len: 12 }, 0.75);
+  // the mirror image of one half: half the inner width, half the volume
+  const half = { ...box, w: (box.w - 1.5) / 2 + 1.5 };
+  const two = ventGeom("vslots", box, { throat: 2, len: 12 }, 0.75), one = ventGeom("vslot1", half, { throat: 2, len: 12 }, 0.75);
   const a = boxModel(ts, 120, two.area, 12, 25, 20, "BW24", { nPorts: 2, ecIn: two.ec });
   const b = boxModel(ts, 60, one.area, 12, 25, 20, "BW24", { nPorts: 1, ecIn: one.ec });
   rel(t, a.Fb, b.Fb, 1e-9);
@@ -69,4 +71,35 @@ test("subSystem passes the slot end correction to the model", (t) => {
   const s = subSystem(sub, mid, cfg);
   const Sp = s.port.area * 0.00064516, Leff = (s.port.len + s.port.ec) * 0.0254;
   rel(t, s.mdl.Fb, (C / (2 * Math.PI)) * Math.sqrt(Sp / ((s.netL / 1000) * Leff)), 1e-9);
+});
+
+// ---- inner end: the box interior as a duct ----
+const FE = 0.61 / 0.85;
+test("duct2D: a mouth filling the whole duct has no end correction", (t) => close(t, duct2DEndCorr(5, 5), 0, 1e-12));
+test("duct2D: grows with the box like a free strip with the floor mirrored (slope 2h/pi per e-fold)", (t) => {
+  // independent: the closed-form rectangle integral for a long strip of height 2h
+  const dDuct = duct2DEndCorr(1, 400) - duct2DEndCorr(1, 200), dStrip = rectEndCorr(2, 400) - rectEndCorr(2, 200);
+  close(t, dDuct, dStrip, 0.002);
+  close(t, dDuct, (2 / Math.PI) * Math.log(2), 0.002);
+});
+test("duct2D: a back wall adds mass; far away it has no effect; closer than h is clamped to h", (t) => {
+  const free = duct2DEndCorr(3, 30);
+  t.assert.ok(duct2DEndCorr(3, 30, 6) > free);
+  close(t, duct2DEndCorr(3, 30, 500), free, 1e-9);
+  close(t, duct2DEndCorr(3, 30, 1), duct2DEndCorr(3, 30, 3), 1e-12);
+});
+test("duct2D: two ducts on opposite walls = one duct in half the width (symmetry, computed directly)", (t) => {
+  // direct modal sum for the pair: odd modes cancel, even modes double
+  const h = 2, X = 26, pair = (() => { let s = 0; for (let m = 1; m <= 4000; m++) { const c = Math.sin((m * Math.PI * h) / X) * (1 + (-1) ** m); s += (c * c) / (m ** 3); } return (X * X / (Math.PI ** 3 * h)) * s; })();
+  close(t, duct2DEndCorr(h, X / 2), pair, 1e-3);
+});
+test("slot: ground-mirrored outer end + free inner end in the box", (t) => {
+  close(t, slotEndCorr(3, 25, 30.5, 8), rectEndCorr(6, 25) + FE * duct2DEndCorr(3, 30.5, 8), 1e-12);
+});
+test("side duct: outer end mirrored by the ground along its height", (t) => {
+  close(t, sideDuctEndCorr(2, 29, 13, 8), rectEndCorr(2, 58) + FE * duct2DEndCorr(2, 13, 8), 1e-12);
+});
+test("folded letterbox: no back-wall term (mouth faces the lid)", (t) => {
+  const g = ventGeom("folded", { w: 22, h: 30, d: 20 }, { slotH: 3, len: 20 }, 0.75);
+  close(t, g.ec, slotEndCorr(3, 22 - 3, 30 - 1.5, Infinity), 1e-12);
 });

@@ -242,12 +242,30 @@ export const BOTH_ENDS = 1 + 0.61 / 0.85;
 // acts as one twice as wide in a (image method). Outer end flanged (baffle), inner end free (0.61/0.85).
 export const ductEndCorr = (a, b, { inner = true, outer = true } = {}) =>
   rectEndCorr(outer ? 2 * a : a, b) + (0.61 / 0.85) * rectEndCorr(inner ? 2 * a : a, b);
-// Letterbox on the floor panel: the floor (inside) and the ground (outside, the sub stands on it) mirror it.
-// Width is the open width between fins.
-export const slotEndCorr = (h, w) => ductEndCorr(h, w);
-// Side duct against a side wall: the wall mirrors the inner end; the outer mouth sits at the cabinet's
-// edge with open air beside it, so no mirror there. Height is the open height between the dividers' ends.
-export const sideDuctEndCorr = (th, h) => ductEndCorr(th, h, { outer: false });
+// Inner end, inside the box: the vent mouth (height h against one wall, spanning the box from wall to wall)
+// opens into the box interior, a duct of height X that ends at the back wall a distance L away. Low-frequency
+// modal sum for a piston in a rigid 2D duct (the evanescent cross-modes carry the added mass):
+//   end correction = 2 X^2 / (pi^3 h) * sum sin^2(m pi h / X) coth(m pi L / X) / m^3
+// It includes the wall the vent sits on and the opposite wall, and tends to the free-space strip as X grows.
+// The gap to the back wall is taken as at least h: the planner's "Duct too long" check asks for that much,
+// and closer than that the flow turns through the gap and the model no longer holds.
+export function duct2DEndCorr(h, X, L = Infinity) {
+  if (h >= X) return 0;
+  L = Math.max(L, h);
+  let sum = 0;
+  for (let m = 1; m <= 2000; m++) {
+    const k = (m * Math.PI) / X, sn = Math.sin(k * h);
+    sum += (sn * sn) / (m * m * m) * (Number.isFinite(L) ? 1 / Math.tanh(k * L) : 1);
+  }
+  return ((2 * X * X) / (Math.PI ** 3 * h)) * sum;
+}
+const FREE_END = 0.61 / 0.85;   // an unflanged (free) end relative to a flanged one, as in 1.46 r
+// Letterbox on the floor: outside, the ground mirrors the mouth (slot twice as tall, open width w);
+// inside, the box interior (height X, back wall L behind the mouth) with the side walls at both ends.
+export const slotEndCorr = (h, w, X, L) => (X ? rectEndCorr(2 * h, w) + FREE_END * duct2DEndCorr(h, X, L) : ductEndCorr(h, w));
+// Side duct (throat th, open height H) against a side wall: outside, the ground mirrors the bottom of the
+// mouth; inside, the box interior across its width X (for a pair of ducts, half the width: symmetry).
+export const sideDuctEndCorr = (th, H, X, L) => (X ? rectEndCorr(th, 2 * H) + FREE_END * duct2DEndCorr(th, X, L) : ductEndCorr(th, H, { outer: false }));
 
 // Vent geometry for the sub. t is the wall (and fin) ply. n is the number of separate openings,
 // which sets the end correction in boxModel.
@@ -256,14 +274,17 @@ export function ventGeom(portStyle, box, cVent, t) {
   if (portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1") {
     const n = portStyle === "vslot1" ? 1 : 2;
     const th = cVent.throat, area = n * th * (ih - 2 * 0.5), seg = (ih - 2 * 0.5) / 3;   // two 1/2\u2033 dividers per duct
-    return { n, area, len: cVent.len, ec: sideDuctEndCorr(th, ih - 2 * 0.5), dh: (4 * (th * seg)) / (2 * (th + seg)),
+    const L = box.d - 0.75 - t - cVent.len;   // mouth to back wall (duct measured from the baffle front, 3/4" inset)
+    return { n, area, len: cVent.len, ec: sideDuctEndCorr(th, ih - 2 * 0.5, n === 2 ? iw / 2 : iw, L), dh: (4 * (th * seg)) / (2 * (th + seg)),
              desc: `${n === 1 ? "one side duct" : "two side ducts"}, ${th.toFixed(2)}\u2033 throat \u00d7 ${ih.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` };
   }
   if (portStyle === "slots" || portStyle === "folded") {
     // one letterbox split by two fins (wall ply); the fins run the full length but the mouths
     // sit together, so it is treated as a single opening on the floor (see slotEndCorr)
     const h = cVent.slotH, area = h * (iw - 2 * t), seg = (iw - 2 * t) / 3;
-    return { n: 1, area, len: cVent.len, ec: slotEndCorr(h, iw - 2 * t), dh: (4 * (h * seg)) / (2 * (h + seg)),
+    // a folded duct turns up the back wall, so its mouth faces the lid, not the back: no back-wall term
+    const L = portStyle === "folded" ? Infinity : box.d - 0.75 - t - cVent.len;
+    return { n: 1, area, len: cVent.len, ec: slotEndCorr(h, iw - 2 * t, ih, L), dh: (4 * (h * seg)) / (2 * (h + seg)),
              desc: `letterbox, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` + (portStyle === "folded" ? ", folded up the back wall" : "") };
   }
   const r = cVent.dia / 2;
