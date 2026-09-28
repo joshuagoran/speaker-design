@@ -30,9 +30,7 @@ sed -e 's|https://cdn.tailwindcss.com/3.4.16|tw.css|' \
     dist/stack-planner.html > dist/preview/index.html
 sed -i.bak 's|<script src="tw.css"></script>|<link rel="stylesheet" href="tw.css">|' dist/preview/index.html
 rm -f dist/preview/index.html.bak
-cp tools/vented-sub-bench.html dist/preview/bench.html
 
 echo
 echo "planner  http://127.0.0.1:8901/index.html"
-echo "bench    http://127.0.0.1:8901/bench.html"
 cd dist/preview && exec python3 -m http.server 8901

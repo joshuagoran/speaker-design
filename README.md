@@ -15,7 +15,6 @@ substitute for an impedance sweep on the prototype.
 model/vented-box.js          the physics — lumped-element vented box + limit taxonomy
 tools/stack-planner.app.jsx  the planner (JSX, built with esbuild)
 tools/stack-planner.head.html  its <head>: styles and the four CDN script tags
-tools/vented-sub-bench.html  the standalone bench, no build step
 tools/build.sh               planner -> dist/stack-planner.html
 tools/serve.sh               build + vendor libs + serve on :8901
 docs/design-notes.md         findings behind the current configuration
@@ -39,12 +38,10 @@ bundle + a closing `</script>` into one self-contained page. That page loads
 React, ReactDOM, three.js and Tailwind from cdnjs at runtime; nothing else is
 external.
 
-The bench needs no build. Open `tools/vented-sub-bench.html` directly.
-
 ## Local preview
 
 ```sh
-tools/serve.sh          # http://127.0.0.1:8901/index.html  and  /bench.html
+tools/serve.sh          # http://127.0.0.1:8901/index.html
 ```
 
 It builds, downloads the four libraries into `dist/preview/` if they aren't
