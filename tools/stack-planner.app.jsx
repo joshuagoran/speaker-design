@@ -10,6 +10,17 @@ import { subSystem, ventGeom, internalWoodL, subLimits, maxCurve as maxCurveOf, 
 function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall = 0.75, inset = 0.75, cabFinish = "birch", spacerH = 20 }) {
   const mount = useRef(null);
   const state = useRef({ rotY: 0.6, rotX: 0.35, drag: false, lx: 0, ly: 0 });
+  // Rebuild the scene only when the geometry actually changes (the parent recreates these objects every
+  // render), and at most every 120 ms while a slider is dragged, so the controls stay responsive.
+  const geoKey = JSON.stringify([sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall, inset, cabFinish, spacerH]);
+  const [builtKey, setBuiltKey] = useState(geoKey);
+  const lastBuild = useRef(0), pending = useRef(null);
+  useEffect(() => {
+    if (geoKey === builtKey) return;
+    const wait = Math.max(0, 120 - (performance.now() - lastBuild.current));
+    pending.current = setTimeout(() => { lastBuild.current = performance.now(); setBuiltKey(geoKey); }, wait);
+    return () => clearTimeout(pending.current);
+  }, [geoKey, builtKey]);
 
   useEffect(() => {
     const el = mount.current;
@@ -611,7 +622,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
       renderer.dispose();
       el.removeChild(renderer.domElement);
     };
-  }, [sub, mid, horn, plinth, cutaway, portStyle, layout, baffleColor, portGeom, wall, inset, cabFinish, spacerH]);
+  }, [builtKey]);
 
   return <div ref={mount} className="w-full h-full cursor-grab" />;
 }
