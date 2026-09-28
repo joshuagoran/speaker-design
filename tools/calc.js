@@ -1,5 +1,4 @@
 // Calculation functions for the planner. Pure JS, no React, window or THREE.
-export const PLY = 0.75; // 3/4" birch
 
 // ---------------------------------------------------------------
 // Vented-box model. Same lumped-element circuit used to check this
@@ -31,7 +30,7 @@ export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts
   const rho = 1.18, c = 343;
   const Sd = ts.Sd / 10000;                 // cm^2 -> m^2
   const Mms = ts.Mms / 1000;                // g -> kg
-  const Vas = ts.Vas / 1000, Vb = VbL / 1000;
+  const Vb = VbL / 1000;
   const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
   const Mas = Mms / (Sd * Sd);
   const Cas = Cms * Sd * Sd;
@@ -123,7 +122,6 @@ export function closedBox(ts, VbL, hp, lp, volts) {
   return { curve: out, Fc, Qtc, f3, ref, peakX: Math.max(...out.map((o) => o.xmm)) };
 }
 
-export const inToL = (w, h, d) => ((w - 2 * PLY) * (h - 2 * PLY) * (d - 2 * PLY) * 16.387) / 1000;
 // Internal litres with walls of thickness t and a 3/4″ baffle recessed `inset` into the frame.
 export const boxL = (w, h, d, t, inset = 0.75) => ((w - 2 * t) * (h - 2 * t) * (d - inset - 0.75 - t) * 16.387) / 1000;
 // Plywood weight, lb/ft² (birch). The baffle stays 3/4″ either way.

@@ -1,7 +1,7 @@
 import test from "node:test";
 import { boxL, ventGeom, internalWoodL, cutParts, subWeight, midWeight, plyLb } from "../tools/calc.js";
 import { SUB_OPTIONS, MID_OPTIONS } from "../tools/data.js";
-import { close, rel } from "./helpers.js";
+import { close } from "./helpers.js";
 
 const IN3_L = 16.387 / 1000;
 test("boxL: inner width/height lose two walls, depth loses inset + 3/4 baffle + back", (t) => {

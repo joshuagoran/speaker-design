@@ -309,16 +309,6 @@ export const CABINETS = [
     note: "Square baffle, centred driver, corner ports. Reads the same in any rotation." },
 ];
 
-export const VENT_NAMES = {
-  slots: '3 slots along the bottom',
-  round1: '1 × 8" flared tube',
-  round2: '2 × 5" flared tubes',
-  vslots: 'Full-height side ducts',
-  vwide: 'Full-height side ducts',
-  round4: '4 flared corner tubes',
-  folded: '3 slots, folded up the back',
-};
-
 export const FORMATS = [
   { id: "full", name: 'Full — 18" sub, 12" mid', sub: 18, mid: 12,
     note: "~110-123 lb sub depending on cabinet. System F3 ~37 Hz, ~121 dB at 35 Hz per box. The show system." },

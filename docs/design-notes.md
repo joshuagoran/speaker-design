@@ -1,7 +1,7 @@
 # Design notes
 
 Findings that drove the current configuration. Everything modelled with
-`model/vented-box.js` unless a source is cited.
+the planner's model (`tools/calc.js`; earlier notes used `model/vented-box.js`, now removed) unless a source is cited.
 
 ## Current configuration
 

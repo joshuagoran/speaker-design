@@ -1,7 +1,7 @@
 import test from "node:test";
 import { fillSystem, boxModel, closedBox, ampV, thermalV, STUFF, nearest } from "../tools/calc.js";
 import { FILL_OPTIONS } from "../tools/data.js";
-import { close, rel, massLineSPL, db } from "./helpers.js";
+import { close, massLineSPL } from "./helpers.js";
 
 const drv = FILL_OPTIONS.find((o) => o.id === "bc10cxn64");
 const base = { boxType: "vented", dim: { w: 11.5, h: 16, d: 11 }, port: { n: 1, dia: 3, len: 4 }, hp: 70, ampW: 300, portMax: 20 };

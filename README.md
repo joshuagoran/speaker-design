@@ -12,8 +12,11 @@ substitute for an impedance sweep on the prototype.
 ## Layout
 
 ```
-model/vented-box.js          the physics — lumped-element vented box + limit taxonomy
-tools/stack-planner.app.jsx  the planner (JSX, built with esbuild)
+tools/calc.js                every calculation (pure JS, tested)
+tools/data.js                drivers, horns, cabinets
+tools/chips.js               warning chips per section
+tools/stack-planner.app.jsx  the planner UI (JSX, bundled with esbuild)
+tests/                       node:test suites, golden snapshot, mobile layout check
 tools/stack-planner.head.html  its <head>: styles and the four CDN script tags
 tools/build.sh               planner -> dist/stack-planner.html
 tools/serve.sh               build + vendor libs + serve on :8901

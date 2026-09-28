@@ -1,7 +1,7 @@
 const { useEffect, useRef, useState } = React;
 import { subChips, midChips, hornChips, fillChips } from "./chips.js";
-import { ST260_PROFILE, SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, VENT_NAMES, FORMATS, byName, FILL_OPTIONS } from "./data.js";
-import { subSystem, ventGeom, internalWoodL, subLimits, maxCurve as maxCurveOf, thermalV, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, plyLb, PLY, cx, cadd, cmul, cdiv, cinv, cabs, HP_TYPES, hpGain, lr24lp, lr24hp, boxModel, closedBox, inToL, boxL, PLY_LB, CUTOUT, SHEETS, f8, tName, boxParts, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest } from "./calc.js";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS } from "./data.js";
+import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, lr24lp, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest } from "./calc.js";
 
 
 
@@ -41,7 +41,6 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     // cabinet finish: clear birch, walnut veneer, or paint (a hex colour)
     const finish = CAB_FINISHES[cabFinish];
     const birch = new THREE.MeshStandardMaterial({ color: finish ? finish.color : new THREE.Color(cabFinish), roughness: finish ? finish.rough : 0.8 });
-    const edge = new THREE.LineBasicMaterial({ color: 0x5a4a30 });
     const black = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.9 });
     const cream = new THREE.MeshStandardMaterial({ color: 0xece4c8, roughness: 0.55 });
     const painted = new THREE.MeshStandardMaterial({ color: new THREE.Color(baffleColor), roughness: 0.9 });
@@ -154,11 +153,8 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     const subGroup = new THREE.Group();
     group.add(subGroup);
     // plinth / toe-kick, inset so the column appears to float
-    // the 4-corner port needs a square baffle, so it implies the symmetric box
-    const cornerPort = portStyle === "round4";
     const vSlot = portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1";
     const sides = portStyle === "vslot1" ? [1] : [-1, 1];   // side ducts: one wall or both
-    const vWide = portStyle === "vwide";
     const s = sub.box;
     const pg = portGeom || {};   // explicit vent geometry when the cabinet is custom
     const pl = plinth || 0;
@@ -171,8 +167,6 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     const ductH = pg.ductH != null ? pg.ductH : 3, innerW = s.w - 2 * T, ductW = (innerW - 2 * T) / 3;
     const drvR = sub.size / 2 - 0.9;
     const round = !["slots", "folded", "vslots", "vwide", "vslot1"].includes(portStyle); // round-tube ports only
-    // one place that decides the box's shape and what internal structure it needs
-    const boxKind = vSlot ? "block" : cornerPort ? "cube" : "column";
     const corners = portStyle === "round4";
     const nPorts = pg.nPorts != null ? pg.nPorts : (portStyle === "round1" ? 1 : corners ? 4 : 2);
     const portR = pg.portR != null ? pg.portR : (portStyle === "round1" ? 8 : corners ? (sub.size >= 18 ? 4 : 3.5) : 5) / 2;
@@ -1313,9 +1307,8 @@ function StackPlanner() {
   // Port geometry, matching what the 3D view draws, so the table and the
   // model describe the same box.
   const PT = wall;
-  const { port, grossL, ductL, netL, AMP_V, mdl, lim } = subSystem(sub, mid, {
+  const { port, grossL, netL, AMP_V, mdl, lim } = subSystem(sub, mid, {
     subBox, midDims: mDim, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout });
-  const HPF = hpf;
   // Max SPL for a sine at each frequency (each frequency meets its own port and excursion limits);
   // the broadband limit above is what applies to music.
   const maxCurve = mdl ? maxCurveOf(mdl.curve, sub.ts, AMP_V, portMax) : null;
@@ -1330,7 +1323,6 @@ function StackPlanner() {
   const midNear = (f) => midMax.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
   // Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter.
   const subSys = mdl ? subThroughLp(mdl, sub.ts, AMP_V, portMax, xoLo) : null;
-  const subAtXo = subSys ? subSys.reduce((b, o) => (Math.abs(o.f - xoLo) < Math.abs(b.f - xoLo) ? o : b)).spl : null;
   // What the mid actually has to match: the sub at its music limit (one drive level for
   // the whole band), through its lowpass, less the music-balance allowance.
   // ---- horn + compression driver ----
@@ -1421,7 +1413,6 @@ function StackPlanner() {
 
   const subLbLoaded = subWeight(subBox, wall, sub.lb);
 
-  const subL = grossL;
   const midL = midGrossL;
   const subTopH = plinth + subBox.h;
   const isTower = layout === "tower";

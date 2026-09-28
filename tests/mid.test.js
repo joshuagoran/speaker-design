@@ -1,7 +1,7 @@
 import test from "node:test";
-import { midSystem, closedBox, boxL, ampV, thermalV, subThroughLp, boxModel, lr24lp, STUFF, nearest } from "../tools/calc.js";
+import { midSystem, ampV, thermalV, subThroughLp, boxModel, lr24lp, STUFF, nearest } from "../tools/calc.js";
 import { MID_OPTIONS, SUB_OPTIONS } from "../tools/data.js";
-import { close, rel, db } from "./helpers.js";
+import { close, db } from "./helpers.js";
 
 const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76") || MID_OPTIONS.find((o) => o.ts);
 const cfg = { midDims: { w: 15, h: 15, d: 15 }, wall: 0.75, inset: 0.75, xoLo: 120, xoHi: 900, mAmpW: 400 };
