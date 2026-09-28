@@ -38,7 +38,7 @@ The Fills page is fine once #1 is fixed (no overflow).
 10. Charts: measure the container (ResizeObserver) and draw in real pixels so text stays 11–12 px; fewer x-ticks below 400 px (20, 50, 100, 200, 1k, 5k); legend below the plot.
 11. Cutlist sheets: one per row below `sm`, labels scale with the sheet, tap a sheet to zoom.
 
-### Testing
+### Testing — done: `tests/mobile-check.mjs`, run in CI after the build (phone 390 × 844 and tablet 768 × 1024, all views, every fold and settings tab on the phone). Seed configs aren't loaded (they need sign-in on the Pages build).
 - Playwright script (`tests/mobile.spec` run in CI after build, not in `npm test`): load `dist/site/index.html` at 390 × 844 and 768 × 1024 for each view and a few seed configs, and assert
   - `document.documentElement.scrollWidth <= innerWidth` (no horizontal page scroll),
   - every button/select/input ≥ 40 px tall,

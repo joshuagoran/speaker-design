@@ -10,6 +10,7 @@
   /* touch screens: 40 px minimum tap targets */
   @media (pointer: coarse) {
     button, select, nav a { min-height: 40px; }
+    nav a { display: inline-flex; align-items: center; }
     /* a 28 px thumb on a thin track: easier to grab than the default, which iOS requires you to hit */
     input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: 36px; }
     input[type=range]::-webkit-slider-runnable-track { height: 4px; background: #d6d3d1; border-radius: 2px; }
