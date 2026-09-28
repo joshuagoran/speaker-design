@@ -80,7 +80,7 @@ Findings are in `docs/calc-audit.md`. Changes to this plan:
 - **Published designs:** only drivers in the tables, ±2 Hz, prefer measured impedance minima.
 - **Weights and net volume** checked against the cutlist parts (independent), not a hand copy of the formula.
 - **Formula-restating tests** (filters, thermal V, horn P, hfLimW) stay as guards but don't count as double-checks; add behavioural ones (e.g. horn max SPL vs the maker's max-SPL spec).
-- **Warnings:** extract pure `chips(state)` per section and test every threshold on both sides.
+- **Warnings:** extract pure `chips(state)` per section and test every threshold on both sides. — done: `tools/chips.js`, `tests/chips.test.js`.
 - **Coverage gaps to add:** port geometry per live style incl. `dh`; clamps and fudge factors; `subSys`; nearest-grid lookups; f3 fallback when the curve never drops 3 dB; `PLY_LB` guard.
 - **Golden configs:** add synthetic configs for 1/2″ walls, insets, LR/BW48 highpass, every vent style, 15″ mids, Fills and Cutlist. Before/after refactor diff uses the full page text of all four views.
 - **Fix-first list:** audit items 1–3 (mid F3/sensitivity, multi-port end correction, Fills highpass bias), then 4–8.

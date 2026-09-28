@@ -1,4 +1,5 @@
 const { useEffect, useRef, useState } = React;
+import { subChips, midChips, hornChips, fillChips } from "./chips.js";
 import { ST260_PROFILE, SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, VENT_NAMES, FORMATS, byName, FILL_OPTIONS } from "./data.js";
 import { subSystem, ventGeom, internalWoodL, subLimits, maxCurve as maxCurveOf, thermalV, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, plyLb, PLY, cx, cadd, cmul, cdiv, cinv, cabs, HP_TYPES, hpGain, lr24lp, lr24hp, boxModel, closedBox, inToL, boxL, PLY_LB, CUTOUT, SHEETS, f8, tName, boxParts, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest } from "./calc.js";
 
@@ -1011,22 +1012,7 @@ function FillsPage() {
       <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
     </div>
   );
-  const F = [];
-  if (Math.min(dim.w, dim.h) < drv.size + 1)
-    F.push(["bad", "Driver won't fit", `An ${drv.size}″ coax needs about ${drv.size + 1}″ of baffle.`]);
-  if (vM) {
-    F.push(vM.Fb < hp * 0.6 ? ["warn", `Tuned low (${vM.Fb.toFixed(0)} Hz)`, "Well below the highpass: the port does little. A shorter or wider port tunes higher."]
-      : ["ok", `Tuned to ${vM.Fb.toFixed(0)} Hz`, `with a ${hp} Hz LR24 highpass to the subs.`]);
-    if (portLimited) F.push(["warn", "Port-limited", `Port air speed reaches ${portMax} m/s somewhere below 300 Hz; a wider port helps.`]);
-  } else {
-    F.push(sM.Qtc > 0.8 ? ["warn", `Qtc ${sM.Qtc.toFixed(2)}`, "Peaky; a bigger box or a vent."] : sM.Qtc < 0.5 ? ["warn", `Qtc ${sM.Qtc.toFixed(2)}`, "Very damped: rolls off early. Good driver for a vented box."] : ["ok", `Qtc ${sM.Qtc.toFixed(2)}`, "Well damped."]);
-  }
-  F.push(f3 <= 85 ? ["ok", "Some kick", `${f3.toFixed(0)} Hz −3 dB with the highpass; the kick fundamental (50–70 Hz) is partly there and the subs fill the rest.`]
-    : ["warn", "Little kick", `${f3.toFixed(0)} Hz −3 dB; the kick's attack comes through but its body is all subs.`]);
-  if (hf) F.push(hfLimW < ampW
-    ? ["warn", "HF limits first", `Through a ${pad.toFixed(0)} dB pad the HF reaches its ${2 * hf.aes} W program rating at about ${Math.round(hfLimW)} W of amp, under the ${ampW} W you've set.`]
-    : ["ok", "HF has headroom", `Through a ${pad.toFixed(0)} dB pad the HF only reaches its program rating at about ${Math.round(hfLimW)} W of amp.`]);
-  else F.push(["warn", "HF not modelled", "The HF section's specs aren't published on usspeaker."]);
+  const F = fillChips({ drv, dim, Fb: vM ? vM.Fb : null, Qtc: sM ? sM.Qtc : null, hp, portLimited, portMax, f3, hf, hfLimW, ampW, pad });
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "system-ui, sans-serif" }}>
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
@@ -1570,34 +1556,7 @@ function StackPlanner() {
           {mdl && lim && (
             <div className="flex flex-col gap-1.5 mt-4">
               {(() => {
-                const F = [];
-                const need = format.sub + 1.9;
-                const nSide = portStyle === "vslot1" ? 1 : portStyle === "vslots" || portStyle === "vwide" ? 2 : 0;
-                const clearW = subBox.w - nSide * (cVent.throat + 0.43 + PT);
-                const clearH = subBox.h - (portStyle === "slots" || portStyle === "folded" ? cVent.slotH + PT : 0);
-                if (Math.min(clearW, clearH) < need)
-                  F.push(["bad", "Driver won't fit", `The baffle needs about ${need.toFixed(1)}″ clear; after the vents it has ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`]);
-                // longest duct each layout can hold, leaving an opening at least as wide as the duct
-                const inD = subBox.d - PT, inH = subBox.h - 2 * PT, sH = cVent.slotH;
-                const maxStraight = inD - sH;                                           // bottom slot
-                const maxFold = (inD - (sH + PT) + sH / 2) + (inH - sH - 1);            // floor run + rise up the back
-                const maxSide = inD - cVent.throat;                                     // side ducts
-                const maxTube = subBox.d - 0.75 - 2 * PT - cVent.dia / 2;                // round tubes off the baffle
-                const fit = portStyle === "slots" ? maxStraight : portStyle === "folded" ? maxFold
-                  : portStyle.startsWith("round") ? maxTube : maxSide;
-                if (cVent.len > fit)
-                  F.push(["bad", "Duct too long", `${cVent.len.toFixed(1)}″ won't fit; this layout holds about ${fit.toFixed(1)}″.`
-                    + (portStyle === "slots" && cVent.len <= maxFold ? " Switch to Bottom, folded." : "")]);
-                F.push(subLbLoaded > 125
-                  ? ["warn", "Over 125 lb", `${subLbLoaded.toFixed(0)} lb loaded. Past the one-person lift limit.`]
-                  : ["ok", "Inside 125 lb", `${subLbLoaded.toFixed(0)} lb loaded.`]);
-                F.push(lim.who === "port air speed"
-                  ? ["warn", "Port-limited", `The vent chokes at ${Math.round(lim.W)} W, below the driver's ${2 * sub.ts.aes} W program rating. Open the port up or lengthen it.`]
-                  : lim.who === "cone travel (Xmax)"
-                  ? ["warn", "Excursion-limited", `The cone reaches Xmax at ${Math.round(lim.W)} W (first at ${mdl.peakXF.toFixed(0)} Hz), below the ${2 * sub.ts.aes} W program rating. A bigger box or higher tuning helps; a bigger port does not.`]
-                  : lim.who === "amplifier power"
-                  ? ["warn", "Amp-limited", `The ${ampW} W amp runs out before the port, the cone or the driver's ${2 * sub.ts.aes} W program rating (2 \u00d7 ${sub.ts.aes} W AES).`]
-                  : ["ok", "Thermally limited", `Reaches its ${2 * sub.ts.aes} W program rating (2 \u00d7 ${sub.ts.aes} W AES) before the port or the cone gives out.`]);
+                const F = subChips({ subSize: format.sub, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF: mdl.peakXF, aes: sub.ts.aes, ampW });
                 return F.map(([kind, head, body]) => (
                   <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
                     <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
@@ -1651,32 +1610,8 @@ function StackPlanner() {
             </div>
             <div className="flex flex-col gap-1.5 mt-4">
               {(() => {
-                const F = [];
-                const need = midSize + 1.2;
-                if (Math.min(midDims.w, midDims.h) < need)
-                  F.push(["bad", "Driver won't fit", `A ${midSize}\u2033 driver needs about ${need.toFixed(1)}\u2033 of baffle; the smallest face is ${Math.min(midDims.w, midDims.h)}\u2033.`]);
-                F.push(mMdl.Qtc > 0.8 ? ["warn", `Qtc ${mMdl.Qtc.toFixed(2)}`, "Peaky and loose; the box is small for this driver."]
-                  : mMdl.Qtc < 0.5 ? ["warn", `Qtc ${mMdl.Qtc.toFixed(2)}`, "Very damped. Fine above the crossover, but the box could be smaller."]
-                  : ["ok", `Qtc ${mMdl.Qtc.toFixed(2)}`, "Well damped."]);
-                if (mMdl.f3 > xoLo)
-                  F.push(["warn", "Rolls off above the crossover", `The box is 3 dB down at ${mMdl.f3.toFixed(0)} Hz, above the ${xoLo} Hz crossover. Raise the crossover or use more volume.`]);
-                const xPct = mMdl.peakX * midUseV / MID_V / mid.ts.Xmax * 100;
-                F.push(xPct > 100
-                  ? ["warn", "Excursion-limited", `The cone reaches Xmax at ${Math.round(Math.pow(MID_V * 100 / (mMdl.peakX / mid.ts.Xmax * 100), 2) / 8)} W, below ${vMidTherm < MID_V ? `its ${2 * mid.ts.aes} W program rating` : `the ${mAmpW} W amp`}. A higher crossover helps.`]
-                  : vMidTherm < MID_V
-                  ? ["ok", "Thermally limited", `Reaches its ${2 * mid.ts.aes} W program rating (2 \u00d7 ${mid.ts.aes} W AES) before Xmax; the ${mAmpW} W amp has more than it can use.`]
-                  : ["ok", "Amp-limited", `The ${mAmpW} W amp runs out before Xmax or the ${2 * mid.ts.aes} W program rating.`]);
-                if (subMusicAtXo != null) {
-                  const need = subMusicAtXo - tilt, m = midNear(xoLo), gap = m.spl - need;
-                  // amp power that would close the gap, if the amp is what's short
-                  const wNeed = Math.pow(MID_V * Math.pow(10, -gap / 20), 2) / 8;
-                  F.push(gap < -0.5
-                    ? ["warn", "Mid runs out first", `${(-gap).toFixed(1)} dB short at ${xoLo} Hz of the sub at its music limit, less ${tilt} dB for the mid band. ` +
-                        (m.who === "amp" ? (wNeed <= 2 * mid.ts.aes ? `About ${Math.ceil(wNeed / 25) * 25} W per mid channel would cover it.` : "More amp won't get there: it passes the driver's program rating first.")
-                        : m.who === "thermal" ? "A driver with more power handling, or a higher crossover." : "A higher crossover or a driver with more excursion.")]
-                    : ["ok", "Keeps up with the sub", `${gap.toFixed(1)} dB to spare at ${xoLo} Hz against the sub at its music limit, less ${tilt} dB for the mid band.` +
-                        (m.who === "amp" && gap > 1 ? ` About ${Math.max(25, Math.ceil(wNeed / 25) * 25)} W per mid channel would still cover it.` : "")]);
-                }
+                const F = midChips({ midSize, midDims, Qtc: mMdl.Qtc, f3: mMdl.f3, peakX: mMdl.peakX, xoLo, ts: mid.ts, V: MID_V, useV: midUseV, vTherm: vMidTherm, mAmpW,
+                  subMusicAtXo, tilt, midAtXo: subMusicAtXo != null ? midNear(xoLo) : null });
                 return F.map(([kind, head, body]) => (
                   <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
                     <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
@@ -1718,29 +1653,7 @@ function StackPlanner() {
             </div>
             <div className="flex flex-col gap-1.5">
               {(() => {
-                const F = [];
-                if (hf.minXo && xoHi < hf.minXo)
-                  F.push(["warn", "Below the driver's minimum crossover", `${xoHi} Hz against ${hf.minXo} Hz recommended. Power is derated here and distortion rises; check measurements before relying on it.`]);
-                if (hz.minXo && xoHi < hz.minXo)
-                  F.push(["warn", "Below the horn's crossover range", `${horn.name} is specified from about ${hz.minXo} Hz.`]);
-                if (hz.lowHz && hz.lowHz > xoHi * 0.8)
-                  F.push(["warn", "Horn stops loading near the crossover", `Loading falls away below about ${hz.lowHz} Hz, so the driver works harder right where it's crossed.`]);
-                F.push(hornModel.who === "amp"
-                  ? ["ok", "Amp-limited", `${Math.round(hornModel.pAmp)} W into ${hornModel.imp} \u03a9 from the ${hfAmpW} W amp, under the ${Math.round(hornModel.pProg)} W program limit${hornModel.derate < 1 ? " (derated for the low crossover)" : ""}.`]
-                  : ["ok", "Program-limited", `Capped at ${Math.round(hornModel.pProg)} W: 2 \u00d7 ${hf.aes} W AES${hornModel.derate < 1 ? `, derated ${(-10 * Math.log10(hornModel.derate)).toFixed(1)} dB because ${xoHi} Hz is below the ${hf.aesXo} Hz the rating assumes` : ""}.`]);
-                if (midMax) {
-                  const need = midNear(xoHi).spl - hfTilt, gap = hornAt(xoHi) - need;
-                  const wNeed = hfAmpW * Math.pow(10, -gap / 10);
-                  F.push(gap < -0.5
-                    ? ["warn", "Horn runs out first", `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hfTilt} dB for the HF band. ` + (hornModel.who === "amp" && wNeed * 8 / hornModel.imp <= hornModel.pProg ? `About ${Math.ceil(wNeed / 25) * 25} W per HF channel would cover it.` : "The driver's rating is the limit: raise the crossover or pick a more sensitive driver.")]
-                    : ["ok", "Keeps up with the mid", `${gap.toFixed(1)} dB to spare at ${xoHi} Hz against the mid, less ${hfTilt} dB for the HF band.`]);
-                }
-                if (midBeam && hz.covH && midBeam < hz.covH * 0.75)
-                  F.push(["warn", "Mid narrower than the horn at the crossover", `About ${Math.round(midBeam)}\u00b0 against the horn's ${hz.covH}\u00b0: the mid is already beaming, so off-axis sound dips just below the crossover. A lower crossover or a smaller mid meets the horn.`]);
-                if (beamCurves.fK && xoHi < beamCurves.fK * 0.85)
-                  F.push(["warn", "Horn wider than rated at the crossover", `${horn.name} holds ${hz.covH}\u00b0 down to about ${Math.round(beamCurves.fK / 10) * 10} Hz (from its ${horn.size.w}\u2033 mouth); at ${xoHi} Hz it spreads wider.`]);
-                if (midBeam && hz.covH && midBeam > hz.covH * 1.4)
-                  F.push(["warn", "Mid much wider than the horn at the crossover", `About ${Math.round(midBeam)}\u00b0 against the horn's ${hz.covH}\u00b0: off-axis energy steps down through the crossover. A higher crossover narrows the mid, a wider horn meets it; a 12\u2033 at this frequency is still close to omnidirectional.`]);
+                const F = hornChips({ hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi: midMax ? midNear(xoHi).spl : null, hfTilt, hornAtXo: hornAt(xoHi), midBeam, fK: beamCurves.fK });
                 return F.map(([kind, head, body]) => (
                   <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
                     <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
