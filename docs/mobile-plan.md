@@ -21,7 +21,7 @@ The Fills page is fine once #1 is fixed (no overflow).
 
 ## Plan
 
-### Phase 1: quick fixes (one PR)
+### Phase 1: quick fixes (one PR) — done on `mobile-phase1`
 1. Add `<meta name="viewport" content="width=device-width, initial-scale=1">` to both head files; add a build check that it's present.
 2. Gutters `px-4 md:px-8`.
 3. Chips: stack head above body below `sm` (`flex-col sm:flex-row`), drop `shrink-0` on small screens.
@@ -29,8 +29,8 @@ The Fills page is fine once #1 is fixed (no overflow).
 5. Tiles: `grid-cols-2 sm:grid-cols-3`, no filler cells; allow values to wrap or shrink (`text-lg sm:text-xl`).
 6. Tap targets: `min-h-[40px]` on option buttons and swatches, larger slider thumbs (`accent` + `h-6` input on touch).
 
-### Phase 2: layout for phones
-7. **Controls next to results.** Below `md`, move the control panel into a bottom sheet with tabs (Sub · Mid · Horn · Cabinet · Amps) that stays open over the lower half of the screen, with a sticky mini summary on top (Fb, max SPL @ 35 Hz, weight, first limit) so changes show immediately. Desktop keeps the side column.
+### Phase 2: layout for phones — done on `mobile-phase1`
+7. **Controls next to results.** Below `md`, move the control panel into a bottom sheet with tabs (Sub · Mid · Horn · Look; each band's amp slider sits in its own tab) that stays open over the lower half of the screen, with a sticky mini summary on top (Fb, max SPL @ 35 Hz, weight, first limit) so changes show immediately. Desktop keeps the side column.
 8. 3D view: `aspect-[4/3]` on phones (~290 px) with a tap-to-expand full-screen button.
 9. Sections (Sub, Mid-bass, Horn, Totals) collapse to accordions on phones, Sub open by default; remember state per viewer in localStorage.
 

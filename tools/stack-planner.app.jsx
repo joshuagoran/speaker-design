@@ -742,6 +742,17 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   );
 }
 
+// Section heading that folds its section on phones (always open from md up).
+function FoldHead({ id, title, folds, toggle, className = "" }) {
+  return (
+    <h2 className={`text-xl ${className}`} style={{ fontFamily: "Georgia, serif" }}>
+      <button onClick={() => toggle(id)} aria-expanded={!!folds[id]} className="w-full flex justify-between items-center text-left md:pointer-events-none md:cursor-default">
+        <span>{title}</span><span className="md:hidden text-stone-500 text-base" aria-hidden="true">{folds[id] ? "\u2212" : "+"}</span>
+      </button>
+    </h2>
+  );
+}
+
 function Slider({ label, value, min, max, step, unit, onChange }) {
   return (
     <div className="mb-3">
@@ -1149,6 +1160,23 @@ function StackPlanner() {
   const [cabFinish, setCabFinish] = useState("birch");
   const [spacerH, setSpacerH] = useState(20);
   const [showDetails, setShowDetails] = useState(false);
+  // phones: settings live in a bottom sheet with tabs; result sections fold (remembered per viewer)
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [tab, setTab] = useState("sub");
+  const tabCls = (t) => (tab === t ? "" : "max-md:hidden");
+  const [folds, setFolds] = useState(() => {
+    try { return { sub: true, mid: false, horn: false, totals: false, ...JSON.parse(localStorage.getItem("planner.folds") || "{}") }; }
+    catch { return { sub: true, mid: false, horn: false, totals: false }; }
+  });
+  const toggleFold = (id) => setFolds((f) => { const n = { ...f, [id]: !f[id] }; try { localStorage.setItem("planner.folds", JSON.stringify(n)); } catch {} return n; });
+  const foldCls = (id) => (folds[id] ? "" : "max-md:hidden");
+  const [full3d, setFull3d] = useState(false);
+  useEffect(() => {
+    if (!full3d) return;
+    const esc = (e) => { if (e.key === "Escape") setFull3d(false); };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [full3d]);
   const [joint, setJoint] = useState("butt");       // cutlist corner joints
   const [sheetKind, setSheetKind] = useState("4x8");
   const [sets, setSets] = useState(2);   // "tops on spacers": spacer height, in   // "birch", "walnut" or a paint hex
@@ -1440,13 +1468,24 @@ function StackPlanner() {
         </section>
       )}
 
-      <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8">
+      {mdl && lim && (
+        <div className="md:hidden sticky top-0 z-30 bg-stone-100/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center" style={{ fontFamily: "system-ui, sans-serif" }}>
+          {[["Fb", `${mdl.Fb.toFixed(1)}`, "Hz"], ["35 Hz", `${maxNear(35).spl.toFixed(0)}`, "dB"], ["Sub", `${subLbLoaded.toFixed(0)}`, "lb"], ["Limit", { "port air speed": "port", "cone travel (Xmax)": "Xmax", "driver program rating": "thermal", "amplifier power": "amp" }[lim.who] || lim.who, ""]].map(([k, v, u]) => (
+            <div key={k}><div className="text-[10px] uppercase tracking-wider text-stone-500">{k}</div><div className="text-sm font-medium tabular-nums">{v}<span className="text-[10px] text-stone-500 ml-0.5">{u}</span></div></div>
+          ))}
+        </div>
+      )}
+      <main className={`max-w-6xl mx-auto px-4 md:px-8 pb-16 grid ${sheetOpen ? "max-md:pb-[52dvh]" : "max-md:pb-24"} grid-cols-1 md:grid-cols-5 gap-8`}>
         <div className="min-w-0 md:col-span-3 flex flex-col gap-5">
-        <section className="rounded-lg overflow-hidden border border-stone-300 bg-stone-50" style={{ height: "clamp(320px, 56vh, 560px)" }}>
+        <section className={full3d ? "fixed inset-0 z-50 bg-stone-50" : "relative rounded-lg overflow-hidden border border-stone-300 bg-stone-50 h-[300px] md:h-[clamp(320px,56vh,560px)]"}>
+          <button onClick={() => setFull3d((v) => !v)} aria-label={full3d ? "Close full screen" : "Full screen"}
+            className="absolute top-2 right-2 z-10 px-2.5 py-1 rounded border border-stone-300 bg-white/90 text-xs" style={{ fontFamily: "system-ui, sans-serif" }}>{full3d ? "Close" : "Full screen"}</button>
           <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wall} inset={inset} cabFinish={cabFinish} spacerH={spacerH} />
         </section>
 
         <section className="mt-1" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <FoldHead id="sub" title="Sub" folds={folds} toggle={toggleFold} className="mb-3 md:hidden" />
+          <div className={foldCls("sub")}>
           {mdl && lim && (
             <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
@@ -1534,10 +1573,12 @@ function StackPlanner() {
           <p className="text-xs text-stone-500 mt-3">
             Modelled, not measured. Verify the tuning with an impedance sweep on the prototype before cutting birch.
           </p>
+          </div>
         </section>
 
         <section className="mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Mid-bass</h2>
+          <FoldHead id="mid" title="Mid-bass" folds={folds} toggle={toggleFold} className="mb-3" />
+          <div className={foldCls("mid")}>
           {mMdl ? (<>
             <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
@@ -1611,10 +1652,12 @@ function StackPlanner() {
           </>) : (
             <p className="text-sm text-stone-600">{mid.name} can't be modelled yet: its parameters are incomplete. {mid.note}</p>
           )}
+          </div>
         </section>
 
         <section className="mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Horn</h2>
+          <FoldHead id="horn" title="Horn" folds={folds} toggle={toggleFold} className="mb-3" />
+          <div className={foldCls("horn")}>
           {hornModel ? (<>
             <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
@@ -1673,11 +1716,22 @@ function StackPlanner() {
           </>) : (
             <p className="text-sm text-stone-600">{cd.name} can't be modelled yet: sensitivity or power rating missing.</p>
           )}
+          </div>
         </section>
 
         </div>
 
-        <aside className="min-w-0 md:col-span-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <aside className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-100 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-[0_-6px_20px_rgba(0,0,0,0.10)]`} style={{ fontFamily: "system-ui, sans-serif" }} aria-label="Settings">
+          <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
+            {[["sub", "Sub"], ["mid", "Mid"], ["horn", "Horn"], ["look", "Look"]].map(([t, label]) => (
+              <button key={t} role="tab" aria-selected={sheetOpen && tab === t}
+                onClick={() => { if (sheetOpen && tab === t) setSheetOpen(false); else { setTab(t); setSheetOpen(true); } }}
+                className={`flex-1 px-2 py-2 rounded border text-sm ${sheetOpen && tab === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50"}`}>{label}</button>
+            ))}
+            {sheetOpen && <button onClick={() => setSheetOpen(false)} aria-label="Close settings" className="px-3 rounded border border-stone-300 bg-stone-50 text-sm">✕</button>}
+          </div>
+          <div className={`max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${sheetOpen ? "" : "max-md:hidden"}`}>
+          <div className={tabCls("look")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Plywood (baffles stay 3/4″)</div>
             <div className="flex gap-1">
@@ -1687,7 +1741,11 @@ function StackPlanner() {
             </div>
             <div className="mt-3"><Slider label="Baffle inset" value={inset} min={0} max={1.5} step={0.25} unit="&#8243;" onChange={setInset} /></div>
           </div>
+          </div>
+          <div className={tabCls("sub")}>
           <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} />
+          </div>
+          <div className={tabCls("look")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Cabinet finish</div>
             <div className="flex flex-wrap gap-1.5 items-center">
@@ -1709,6 +1767,8 @@ function StackPlanner() {
               <span className="text-xs text-stone-500 ml-1 tabular-nums">{CAB_FINISHES[cabFinish] ? CAB_FINISHES[cabFinish].name : `painted ${cabFinish}`}</span>
             </div>
           </div>
+          </div>
+          <div className={tabCls("look")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Baffle colour</div>
             <div className="flex flex-wrap gap-1.5 items-center">
@@ -1733,6 +1793,8 @@ function StackPlanner() {
               <span className="text-xs text-stone-500 ml-1 tabular-nums">{baffleColor}</span>
             </div>
           </div>
+          </div>
+          <div className={tabCls("look")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">View</div>
             <div className="flex gap-1">
@@ -1741,6 +1803,8 @@ function StackPlanner() {
               ))}
             </div>
           </div>
+          </div>
+          <div className={tabCls("look")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Layout</div>
             <div className="flex gap-1">
@@ -1750,6 +1814,8 @@ function StackPlanner() {
             </div>
             {layout === "pole" && <div className="mt-3"><Slider label="Spacer height" value={spacerH} min={4} max={36} step={1} unit="&#8243;" onChange={setSpacerH} /></div>}
           </div>
+          </div>
+          <div className={tabCls("sub")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Cabinet</div>
             <div className="rounded border border-stone-300 bg-white px-3 py-3">
@@ -1769,6 +1835,8 @@ function StackPlanner() {
               })}
             </select>
           </div>
+          </div>
+          <div className={tabCls("sub")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Vent</div>
             <div className="flex flex-wrap gap-1">
@@ -1805,6 +1873,8 @@ function StackPlanner() {
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
             </div>
           </div>
+          </div>
+          <div className={tabCls("mid")}>
           <div className="mb-2">
             <div className="text-sm text-stone-500 mb-1">Mid-bass size</div>
             <div className="flex gap-1">
@@ -1839,6 +1909,8 @@ function StackPlanner() {
               </select>
             </>)}
           </div>
+          </div>
+          <div className={tabCls("horn")}>
           <Pick label="Compression driver" options={CD_OPTIONS} value={cd} onChange={setCd} />
           <Pick label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} />
           <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
@@ -1847,11 +1919,14 @@ function StackPlanner() {
             <div className="text-xs text-stone-500">16 Ω drivers draw half the power from the same amp.</div>
           </div>
           {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}" vs {cd.exit}").</div>}
+          </div>
+          </div>
         </aside>
 
 
         <section className="md:col-span-5 mt-6" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Totals for the current selection</h2>
+          <FoldHead id="totals" title="Totals for the current selection" folds={folds} toggle={toggleFold} className="mb-2" />
+          <div className={foldCls("totals")}>
           {(() => {
             const subBoxLb = subLbLoaded - (sub.lb || 0); // same estimate as the stats row
             const midBoxLb = midCabLb;   // same estimate as the mid-bass stats row
@@ -1879,6 +1954,7 @@ function StackPlanner() {
             );
           })()}
           <p className="text-xs text-stone-500 mt-2">Cabinet weight: 3/4" birch baffles (2.3 lb/ft²), other panels {wall === 0.5 ? '1/2" birch (1.6 lb/ft²)' : '3/4" birch'}; the sub allows two braces and 6 lb of hardware, the mid box one brace. Particleboard runs ~30% heavier. Driver weights are approximate where the datasheet wasn't checked. Heaviest single lift is the sub column.</p>
+          </div>
         </section>
         <div className="md:col-span-5 mt-4" style={{ fontFamily: "system-ui, sans-serif" }}>
           <button onClick={() => setShowDetails((v) => !v)} aria-expanded={showDetails}
