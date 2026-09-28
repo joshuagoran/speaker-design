@@ -693,9 +693,27 @@ function Pick({ label, options, value, onChange }) {
   );
 }
 
+// Width of an element in CSS px, kept current with a ResizeObserver.
+function useWidth(fallback) {
+  const ref = useRef(null);
+  const [w, setW] = useState(fallback);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => { const cw = el.clientWidth; if (cw) setW(cw); });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, w];
+}
+
 // Max-SPL chart: one or more curves ({f, spl}), fixed 80-135 dB so setups compare directly.
 function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, bot = 80, step = 5, yLabel = "max dB SPL @ 1 m", H = 300 }) {
-  const W = 760, L = 52, R = 14, TT = 16, B = 36;
+  // drawn in real pixels so text stays 11 px at any width
+  const [box, cw] = useWidth(760);
+  const narrow = cw < 500;
+  const W = Math.max(280, cw), L = narrow ? 44 : 52, R = narrow ? 8 : 14, TT = 16, B = 36;
+  if (narrow && H >= 300) H = Math.round(H * 0.8);
   const x0 = L, x1 = W - R, y0 = TT, y1 = H - B;
   const TOP = top, BOT = bot;
   const px = (f) => x0 + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (x1 - x0);
@@ -705,20 +723,21 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
     const d = pts.map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1)).join("");
     return { ...sr, d, fill: pts.length ? d + `L${px(pts[pts.length - 1].f).toFixed(1)},${y1} L${px(pts[0].f).toFixed(1)},${y1} Z` : "" };
   });
-  const ticks = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000].filter((f) => f <= fmax);
+  const ticks = (narrow ? [20, 50, 100, 200, 1000, 5000, 20000] : [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]).filter((f) => f >= fmin && f <= fmax);
   const grid = [];
   ticks.forEach((f) => {
     const X = px(f);
     grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke="#e7e5e4" strokeWidth="1" />);
-    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{f >= 1000 ? f / 1000 + "k" : f}</text>);
+    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{f >= 1000 ? f / 1000 + "k" : f}</text>);
   });
-  for (let v = BOT; v <= TOP; v += step) {
+  const every = ((y1 - y0) * step) / (TOP - BOT) < 16 ? 2 : 1;   // thin the labels when rows get tight
+  for (let v = BOT, k = 0; v <= TOP; v += step, k++) {
     const Y = py(v);
     grid.push(<line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke="#e7e5e4" strokeWidth="1" />);
-    grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{v}</text>);
+    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{v}</text>);
   }
   return (
-    <div className="overflow-x-auto">
+    <div ref={box}>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${yLabel} against frequency`} style={{ display: "block", width: "100%", height: "auto" }}>
         {grid}
         {marks.filter((m) => m.f > fmin && m.f < fmax).map((m, i, ms) => (
@@ -729,7 +748,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         ))}
         {paths.map((p) => <path key={p.label + "f"} d={p.fill} fill={p.tint} />)}
         {paths.map((p) => <path key={p.label} d={p.d} fill="none" stroke={p.stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />)}
-        {paths.map((p, i) => (
+        {!narrow && paths.map((p, i) => (
           <g key={p.label + "k"}>
             <line x1={x0 + 10} y1={y0 + 8 + i * 16} x2={x0 + 30} y2={y0 + 8 + i * 16} stroke={p.stroke} strokeWidth="2" />
             <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#57534e" fontSize="11" fontFamily="system-ui, sans-serif">{p.label}</text>
@@ -738,6 +757,11 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         <text x={W / 2} y={H - 4} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">frequency, Hz</text>
         <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{yLabel}</text>
       </svg>
+      {narrow && paths.length > 0 && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[11px] text-stone-600" style={{ fontFamily: "system-ui, sans-serif" }}>
+          {paths.map((p) => <span key={p.label} className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5" style={{ background: p.stroke }} />{p.label}</span>)}
+        </div>
+      )}
     </div>
   );
 }
@@ -745,7 +769,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
 // Section heading that folds its section on phones (always open from md up).
 function FoldHead({ id, title, folds, toggle, className = "" }) {
   return (
-    <h2 className={`text-xl ${className}`} style={{ fontFamily: "Georgia, serif" }}>
+    <h2 className={`text-xl ${className} ${folds[id] ? "" : "max-md:mb-0"}`} style={{ fontFamily: "Georgia, serif" }}>
       <button onClick={() => toggle(id)} aria-expanded={!!folds[id]} className="w-full flex justify-between items-center text-left md:pointer-events-none md:cursor-default">
         <span>{title}</span><span className="md:hidden text-stone-500 text-base" aria-hidden="true">{folds[id] ? "\u2212" : "+"}</span>
       </button>
@@ -1062,17 +1086,19 @@ function FillsPage() {
 
 function SheetDrawing({ sheet, S, idx }) {
   const sc = 4, W = S.w * sc, H = S.h * sc;
+  const [box, cw] = useWidth(S.w === 48 ? 160 : 200);
+  const fs = (12 * (W + 4)) / cw;   // 12 css px
   const colors = { Sub: "#e7d3b3", Mid: "#cfe0d6" };
   return (
-    <div className="flex flex-col gap-1">
+    <div ref={box} className={`flex flex-col gap-1 w-full ${S.w === 48 ? "max-w-[240px] sm:w-[160px]" : "max-w-[300px] sm:w-[200px]"}`}>
       <div className="text-xs text-stone-500">Sheet {idx + 1}</div>
-      <svg viewBox={`-2 -2 ${W + 4} ${H + 4}`} style={{ width: S.w === 48 ? 160 : 200, height: "auto" }} role="img" aria-label={`Sheet ${idx + 1} layout`}>
+      <svg viewBox={`-2 -2 ${W + 4} ${H + 4}`} style={{ width: "100%", height: "auto" }} role="img" aria-label={`Sheet ${idx + 1} layout`}>
         <rect x="0" y="0" width={W} height={H} fill="#fafaf9" stroke="#a8a29e" />
         {sheet.items.map((it, i) => (
           <g key={i}>
             <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || "#e7e5e4"} stroke="#57534e" strokeWidth="0.8" />
-            {it.w * sc > 40 && it.h * sc > 14 && (
-              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + 4} textAnchor="middle" fontSize="11" fill="#292524" fontFamily="system-ui, sans-serif">{it.box} {it.part.split(" ")[0]}</text>
+            {it.w * sc > fs * 3.6 && it.h * sc > fs * 1.3 && (
+              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + fs * 0.35} textAnchor="middle" fontSize={fs} fill="#292524" fontFamily="system-ui, sans-serif">{it.box} {it.part.split(" ")[0]}</text>
             )}
           </g>
         ))}
@@ -1118,7 +1144,7 @@ function CutlistPage(props) {
         <div key={pk.t} className="mb-6">
           <div className="text-sm font-medium mb-2">{tName(pk.t)} birch: {pk.sheets.length} sheet{pk.sheets.length > 1 ? "s" : ""}</div>
           {pk.tooBig.length > 0 && <div className="text-sm text-red-700 mb-2">Doesn't fit on one {S.name} sheet: {pk.tooBig.map((r) => `${r.box} ${r.part}`).join(", ")}.</div>}
-          <div className="flex flex-wrap gap-4">{pk.sheets.map((sh, i) => <SheetDrawing key={i} sheet={sh} S={S} idx={i} />)}</div>
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">{pk.sheets.map((sh, i) => <SheetDrawing key={i} sheet={sh} S={S} idx={i} />)}</div>
         </div>
       ))}
       <p className="text-xs text-stone-500">Simple row-by-row layout, grain direction ignored. Treat it as a sheet count and a starting point for your own cut plan. Driver cutouts are typical values; use the datasheet's.</p>

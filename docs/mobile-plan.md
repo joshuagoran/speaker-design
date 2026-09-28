@@ -34,7 +34,7 @@ The Fills page is fine once #1 is fixed (no overflow).
 8. 3D view: `aspect-[4/3]` on phones (~290 px) with a tap-to-expand full-screen button.
 9. Sections (Sub, Mid-bass, Horn, Totals) collapse to accordions on phones, Sub open by default; remember state per viewer in localStorage.
 
-### Phase 3: charts and cutlist
+### Phase 3: charts and cutlist — done on `mobile-phase1` (tap-to-zoom on sheets skipped: labels are readable at full width)
 10. Charts: measure the container (ResizeObserver) and draw in real pixels so text stays 11–12 px; fewer x-ticks below 400 px (20, 50, 100, 200, 1k, 5k); legend below the plot.
 11. Cutlist sheets: one per row below `sm`, labels scale with the sheet, tap a sheet to zoom.
 
