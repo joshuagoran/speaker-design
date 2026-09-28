@@ -761,7 +761,7 @@ function Slider({ label, value, min, max, step, unit, onChange }) {
 // ---------------------------------------------------------------
 function NotesPage() {
   return (
-    <main className="max-w-6xl mx-auto px-8 pb-16 flex flex-col gap-2">
+    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 flex flex-col gap-2">
         <section className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "system-ui, sans-serif" }}>
           {RACKS.map((r) => {
             const total = r.items.reduce((a, [, c]) => a + c, 0);
@@ -833,7 +833,7 @@ function NotesPage() {
           <p className="text-sm text-stone-700 mb-3 max-w-3xl">What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set in volts or dBu with attack and release, a slower RMS limiter, PEQ and delay. At ~15 ft from the mixer keep the inputs balanced; outputs to amps in the same rack matter less.</p>
           <div className="overflow-x-auto"><table className="text-sm w-full min-w-[720px] border-collapse">
             <thead><tr className="text-stone-500 text-left border-b border-stone-300">
-              {["Unit", "I/O", "Slopes", "Limiter", "PEQ / out", "Price (US)", "Notes"].map((h) => <th key={h} className="py-1 pr-4 font-normal">{h}</th>)}
+              {["Unit", "I/O", "Slopes", "Limiter", "PEQ / out", "Price (US)", "Notes"].map((h, i) => <th key={h} className={`py-1 pr-4 font-normal ${i === 0 ? "sticky left-0 bg-stone-100" : ""}`}>{h}</th>)}
             </tr></thead>
             <tbody>
               {[
@@ -846,7 +846,7 @@ function NotesPage() {
               ["dbx DriveRack PA2 (current)", "2×6 XLR", "BW / LR to 48", "No attack or release; up to 3 dB overshoot", "8, linked L/R", "~$599, ~$366 used", "Left and right share EQ and delay per band; 10 ms output delay."],
               ].map((r) => (
                 <tr key={r[0]} className="border-b border-stone-200 align-top">
-                  {r.map((c, i) => <td key={i} className={`py-1.5 pr-4 ${i === 0 ? "font-medium whitespace-nowrap" : ""}`}>{c}</td>)}
+                  {r.map((c, i) => <td key={i} className={`py-1.5 pr-4 ${i === 0 ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-100" : ""}`}>{c}</td>)}
                 </tr>
               ))}
             </tbody>
@@ -962,7 +962,7 @@ function FillsPage() {
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
       <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
-      <div className="text-xl font-medium tabular-nums mt-0.5">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
+      <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
     </div>
   );
   const F = [];
@@ -982,10 +982,10 @@ function FillsPage() {
     : ["ok", "HF has headroom", `Through a ${pad.toFixed(0)} dB pad the HF only reaches its program rating at about ${Math.round(hfLimW)} W of amp.`]);
   else F.push(["warn", "HF not modelled", "The HF section's specs aren't published on usspeaker."]);
   return (
-    <main className="max-w-6xl mx-auto px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "system-ui, sans-serif" }}>
-      <div className="md:col-span-3 flex flex-col gap-4">
+    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
         <p className="text-sm text-stone-600">Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).</p>
-        <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))" }}>
+        <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
           {tile("Net volume", net.toFixed(0), "L")}
           {vM ? tile("Tuning Fb", vM.Fb.toFixed(0), "Hz") : tile("Qtc", sM.Qtc.toFixed(2), "")}
           {tile("F3", f3.toFixed(0), "Hz")}
@@ -1011,15 +1011,15 @@ function FillsPage() {
         </div>
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
-            <div key={head} className="flex gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-              <b className={`shrink-0 font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+            <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+              <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
               <span className="text-stone-600">{body}</span>
             </div>
           ))}
         </div>
         <p className="text-xs text-stone-500"><span className="font-medium text-stone-600">{drv.name}.</span> {drv.note} Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement {ts.disp != null ? "as published" : `not published; ${disp} L assumed`}.</p>
       </div>
-      <aside className="md:col-span-2">
+      <aside className="min-w-0 md:col-span-2">
         <Pick label="Coaxial driver" options={FILL_OPTIONS} value={drv} onChange={setDrv} />
         <div className="text-sm text-stone-500 mb-1">Box</div>
         <div className="flex gap-1 mb-2">
@@ -1079,7 +1079,7 @@ function CutlistPage(props) {
   const packs = Object.keys(byT).sort((a, b) => b - a).map((t) => ({ t: +t, ...packSheets(byT[t], S, kerf) }));
   const btn = (on) => `px-3 py-1.5 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`;
   return (
-    <main className="max-w-6xl mx-auto px-8 pb-16" style={{ fontFamily: "system-ui, sans-serif" }}>
+    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16" style={{ fontFamily: "system-ui, sans-serif" }}>
       <div className="flex flex-wrap gap-6 mb-5">
         <div><div className="text-sm text-stone-500 mb-1">Corner joints</div>
           <div className="flex gap-1">{[["butt", "Butt"], ["rabbet", "Rabbet"], ["miter", "Miter"]].map(([k, l]) => <button key={k} className={btn(joint === k)} onClick={() => setJoint(k)}>{l}</button>)}</div></div>
@@ -1089,16 +1089,16 @@ function CutlistPage(props) {
           <div className="flex gap-1">{[1, 2, 4].map((n) => <button key={n} className={btn(sets === n)} onClick={() => setSets(n)}>{n}</button>)}</div></div>
       </div>
       <p className="text-sm text-stone-600 mb-4 max-w-3xl">From the planner's current boxes: {tName(wall)} walls, 3/4″ baffles set {f8(props.inset)}″ back, back panels in a rabbet. Sizes are finished dimensions in inches (width × length); {f8(kerf)}″ kerf allowed in the layout. Quantities are for {sets} stack{sets > 1 ? "s" : ""}.</p>
-      <div className="overflow-x-auto mb-6"><table className="text-sm w-full min-w-[640px] border-collapse">
+      <div className="overflow-x-auto mb-6"><table className="text-sm w-full sm:min-w-[640px] border-collapse">
         <thead><tr className="text-stone-500 text-left border-b border-stone-300">
           <th className="py-1 pr-3 font-normal">Box</th><th className="py-1 pr-3 font-normal">Part</th><th className="py-1 pr-3 font-normal text-right">Qty</th>
-          <th className="py-1 pr-3 font-normal text-right">Width × length</th><th className="py-1 pr-3 font-normal">Ply</th><th className="py-1 font-normal">Notes</th>
+          <th className="py-1 pr-3 font-normal text-right">Width × length</th><th className="py-1 pr-3 font-normal">Ply</th><th className="py-1 font-normal hidden sm:table-cell">Notes</th>
         </tr></thead>
         <tbody>{parts.map((p, i) => (
           <tr key={i} className="border-b border-stone-200 align-top">
-            <td className="py-1 pr-3">{p.box}</td><td className="py-1 pr-3">{p.part}</td><td className="py-1 pr-3 text-right tabular-nums">{p.qty * sets}</td>
+            <td className="py-1 pr-3">{p.box}</td><td className="py-1 pr-3">{p.part}{p.note && <span className="block sm:hidden text-xs text-stone-500">{p.note}</span>}</td><td className="py-1 pr-3 text-right tabular-nums">{p.qty * sets}</td>
             <td className="py-1 pr-3 text-right tabular-nums whitespace-nowrap">{f8(Math.min(p.a, p.b))} × {f8(Math.max(p.a, p.b))}</td>
-            <td className="py-1 pr-3">{tName(p.t)}</td><td className="py-1 text-stone-600">{p.note}</td>
+            <td className="py-1 pr-3">{tName(p.t)}</td><td className="py-1 text-stone-600 hidden sm:table-cell">{p.note}</td>
           </tr>))}</tbody>
       </table></div>
       {vent.length > 0 && <p className="text-sm text-stone-600 mb-6">Also: {vent.join("; ")}.</p>}
@@ -1381,7 +1381,7 @@ function StackPlanner() {
 
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-      <header className="px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
+      <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
         <h1 className="text-3xl md:text-4xl leading-tight" aria-label="Speaker Planner">𝒮𝓅ℯ𝒶𝓀ℯ𝓇 𝒫𝓁𝒶𝓃𝓃ℯ𝓇</h1>
         <nav className="flex gap-1 mt-3" style={{ fontFamily: "system-ui, sans-serif" }} aria-label="Pages">
           {[["planner", "Planner", "#"], ["cutlist", "Cutlist", "#cutlist"], ["fills", "Fills", "#fills"], ["notes", "Notes", "#notes"]].map(([v, label, href]) => (
@@ -1394,7 +1394,7 @@ function StackPlanner() {
       {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : view === "cutlist" ? <CutlistPage {...{ sub, mid, subBox, midDims, wall, inset, joint, setJoint, sheetKind, setSheetKind, sets, setSets, portStyle, cVent, layout }} /> : <>
 
       {saved !== null && (
-        <section className="max-w-6xl mx-auto px-8 pb-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <section className="max-w-6xl mx-auto px-4 md:px-8 pb-2" style={{ fontFamily: "system-ui, sans-serif" }}>
           <div className="rounded-lg border border-stone-300 bg-stone-50 px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-stone-500 mr-1">Saved configurations</span>
@@ -1440,16 +1440,15 @@ function StackPlanner() {
         </section>
       )}
 
-      <main className="max-w-6xl mx-auto px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8">
-        <div className="md:col-span-3 flex flex-col gap-5">
+      <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8">
+        <div className="min-w-0 md:col-span-3 flex flex-col gap-5">
         <section className="rounded-lg overflow-hidden border border-stone-300 bg-stone-50" style={{ height: "clamp(320px, 56vh, 560px)" }}>
           <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wall} inset={inset} cabFinish={cabFinish} spacerH={spacerH} />
         </section>
 
         <section className="mt-1" style={{ fontFamily: "system-ui, sans-serif" }}>
           {mdl && lim && (
-            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200"
-                 style={{ gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))" }}>
+            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
                 ["Net volume", netL.toFixed(0), "L"],
                 ["Tuning Fb", mdl.Fb.toFixed(1), "Hz"],
@@ -1459,7 +1458,7 @@ function StackPlanner() {
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
                   <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
-                  <div className="text-xl font-medium tabular-nums mt-0.5">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
+                  <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
             </div>
@@ -1524,8 +1523,8 @@ function StackPlanner() {
                   ? ["warn", "Amp-limited", `The ${ampW} W amp runs out before the port, the cone or the driver's ${2 * sub.ts.aes} W program rating (2 \u00d7 ${sub.ts.aes} W AES).`]
                   : ["ok", "Thermally limited", `Reaches its ${2 * sub.ts.aes} W program rating (2 \u00d7 ${sub.ts.aes} W AES) before the port or the cone gives out.`]);
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className="flex gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-                    <b className={`shrink-0 font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+                  <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
@@ -1540,8 +1539,7 @@ function StackPlanner() {
         <section className="mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
           <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Mid-bass</h2>
           {mMdl ? (<>
-            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200"
-                 style={{ gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))" }}>
+            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
                 ["Net volume", midNetL.toFixed(0), "L"],
                 ["Box resonance Fc", mMdl.Fc.toFixed(0), "Hz"],
@@ -1551,7 +1549,7 @@ function StackPlanner() {
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
                   <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
-                  <div className="text-xl font-medium tabular-nums mt-0.5">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
+                  <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
             </div>
@@ -1602,8 +1600,8 @@ function StackPlanner() {
                         (m.who === "amp" && gap > 1 ? ` About ${Math.max(25, Math.ceil(wNeed / 25) * 25)} W per mid channel would still cover it.` : "")]);
                 }
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className="flex gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-                    <b className={`shrink-0 font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+                  <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
@@ -1618,8 +1616,7 @@ function StackPlanner() {
         <section className="mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
           <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Horn</h2>
           {hornModel ? (<>
-            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200"
-                 style={{ gridTemplateColumns: "repeat(auto-fit, minmax(112px, 1fr))" }}>
+            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
                 ["Sensitivity", hf.sens.toFixed(1), "dB"],
                 ["Power used", Math.round(hornModel.P), "W"],
@@ -1629,7 +1626,7 @@ function StackPlanner() {
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
                   <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
-                  <div className="text-xl font-medium tabular-nums mt-0.5">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
+                  <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
             </div>
@@ -1665,8 +1662,8 @@ function StackPlanner() {
                 if (midBeam && hz.covH && midBeam > hz.covH * 1.4)
                   F.push(["warn", "Mid much wider than the horn at the crossover", `About ${Math.round(midBeam)}\u00b0 against the horn's ${hz.covH}\u00b0: off-axis energy steps down through the crossover. A higher crossover narrows the mid, a wider horn meets it; a 12\u2033 at this frequency is still close to omnidirectional.`]);
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className="flex gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-                    <b className={`shrink-0 font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+                  <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
@@ -1680,7 +1677,7 @@ function StackPlanner() {
 
         </div>
 
-        <aside className="md:col-span-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <aside className="min-w-0 md:col-span-2" style={{ fontFamily: "system-ui, sans-serif" }}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Plywood (baffles stay 3/4″)</div>
             <div className="flex gap-1">
@@ -1701,10 +1698,10 @@ function StackPlanner() {
               ))}
               {SWATCHES.map(([hex, name]) => (
                 <button key={hex} title={`Painted: ${name}`} onClick={() => setCabFinish(hex)}
-                  className={`w-7 h-7 rounded-full border-2 ${cabFinish.toLowerCase() === hex ? "border-stone-900" : "border-stone-300"}`}
+                  className={`swatch w-7 h-7 rounded-full border-2 ${cabFinish.toLowerCase() === hex ? "border-stone-900" : "border-stone-300"}`}
                   style={{ background: hex }} />
               ))}
-              <label className="w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom paint">
+              <label className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom paint">
                 <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
                 <input type="color" value={CAB_FINISHES[cabFinish] ? "#ffffff" : cabFinish} onChange={(e) => setCabFinish(e.target.value)}
                   className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
@@ -1720,11 +1717,11 @@ function StackPlanner() {
                   key={hex}
                   title={name}
                   onClick={() => setBaffleColor(hex)}
-                  className={`w-7 h-7 rounded-full border-2 ${baffleColor.toLowerCase() === hex ? "border-stone-900" : "border-stone-300"}`}
+                  className={`swatch w-7 h-7 rounded-full border-2 ${baffleColor.toLowerCase() === hex ? "border-stone-900" : "border-stone-300"}`}
                   style={{ background: hex }}
                 />
               ))}
-              <label className="w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom">
+              <label className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom">
                 <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
                 <input
                   type="color"
