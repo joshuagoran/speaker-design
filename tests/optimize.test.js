@@ -13,7 +13,7 @@ const pick = (name) => {
     mDim: { ...(MID_BOXES.find((b) => b.id === c.midBox) || MID_BOXES[0]).box }, ...c };
 };
 const cur = pick("lil block stack LE (optimized)");
-const base = { cur, room: 1000, maxLb: 125, budget: 1100, budgetPer: "stack", locks: {} };
+const base = { cur, room: 1000, maxLb: 125, budget: 1100, locks: {} };
 
 test("evaluate() gives the planner's numbers (golden snapshot)", (t) => {
   for (const name of ["lil block stack LE (optimized)", "blocky", "lil tower"]) {

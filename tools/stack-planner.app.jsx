@@ -1201,7 +1201,7 @@ function Delta({ v, unit, lowerIsBetter, digits = 0 }) {
   const txt = r === 0 ? "±0" : `${r > 0 ? "+" : "\u2212"}${unit === "$" ? money(Math.abs(r)) : Math.abs(r).toFixed(digits) + unit}`;
   return <div className={`text-xs font-semibold ${good ? "text-green-800" : bad ? "text-orange-800" : "text-stone-500"}`}>{txt}{good ? " better" : bad ? " worse" : ""}</div>;
 }
-function OptCard({ k, onPreview, onLoad, onSave, previewing, canSave }) {
+function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
   const c = k.config, m = k.metrics, d = k.delta || {};
   const tile = (label, v, delta) => (
     <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1.5">
@@ -1212,7 +1212,7 @@ function OptCard({ k, onPreview, onLoad, onSave, previewing, canSave }) {
   const sheets = k.build.sheets.map((x) => `${x.n} sheet${x.n > 1 ? "s" : ""} ${x.t === 0.5 ? "1/2″" : x.t === 0.75 ? "3/4″" : x.t + "″"}`).join(" + ");
   return (
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
-      <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label}</div>
+      <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "Georgia, serif" }}>{k.names.sub} · {c.cDim.w} × {c.cDim.h} × {c.cDim.d}″</h3>
       <div className="text-xs text-stone-600 leading-relaxed">
         {k.vent} · Fb {m.Fb.toFixed(0)} Hz · {c.hpType} {c.hpf} Hz{c.wall === 0.5 ? " · 1/2″ braced walls" : ""}<br />
@@ -1220,22 +1220,22 @@ function OptCard({ k, onPreview, onLoad, onSave, previewing, canSave }) {
         Amps {c.ampW} / {c.mAmpW} / {c.hfAmpW} W per channel
       </div>
       <div className="grid grid-cols-2 gap-1.5">
-        {tile("Drivers, per stack", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
-        {tile("Heaviest box", `${m.heaviest.toFixed(0)} lb`, <Delta v={d.heaviest} unit=" lb" lowerIsBetter />)}
-        {tile("Output, 40–90 Hz", `${m.out.toFixed(1)} dB`, <Delta v={d.out} unit=" dB" digits={1} />)}
+        {tile("Per stack", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
+        {tile("Heaviest", `${m.heaviest.toFixed(0)} lb`, <Delta v={d.heaviest} unit=" lb" lowerIsBetter />)}
+        {tile("Output", `${m.out.toFixed(1)} dB`, <Delta v={d.out} unit=" dB" digits={1} />)}
         {tile("F3", `${m.f3.toFixed(0)} Hz`, <Delta v={d.f3} unit=" Hz" lowerIsBetter />)}
       </div>
-      <div className="text-xs leading-snug"><b className="font-semibold">Why:</b> {k.why} <b className="font-semibold">Limited by:</b> {k.limitedBy}.</div>
+      <div className="text-xs leading-snug"><b className="font-semibold">Limited by:</b> {k.limitedBy}</div>
       {k.warnings.filter(([h]) => !/limited$/.test(h)).map(([h, b]) => (
         <div key={h} className="text-xs border border-stone-300 rounded px-2 py-1 bg-stone-50"><b className="font-semibold text-amber-700 mr-1">{h}</b>{b}</div>
       ))}
-      <div className="text-xs text-stone-600">✓ Passes the build checks · {sheets} (4 × 8) · mid Qtc {k.build.qtc.toFixed(2)}</div>
+      <div className="text-xs text-stone-600">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
       <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
       <div className="text-[11px] text-stone-500">Modelled, not measured · prices as listed in the planner (Sep 2026){k.priceKnown ? "" : " · some prices unknown"}</div>
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
         <button onClick={onLoad} className="flex-1 px-3 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50">Load</button>
-        <button onClick={onSave} disabled={!canSave} title={canSave ? "" : "Sign in to save"} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40">Save as</button>
+        <button onClick={onSave} disabled={!canSave} title={canSave ? "" : "Sign in to save"} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40">Save</button>
       </div>
     </div>
   );
@@ -1244,7 +1244,7 @@ const seg = (on) => `px-3 py-2 rounded border text-sm ${on ? "border-stone-900 b
 function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, previewLabel, onPreview, onLoad, onSave, canSave }) {
   const need = roomNeed(optIn.room), target = Math.max(curOut != null ? curOut : need, need);
   const g = optIn.goal;
-  const tgtText = g === "louder" ? `As much as possible, keeping F3 within 3 Hz of your design` : g === "lower" ? `Lowest F3, keeping at least ${(target - 1.5).toFixed(0)} dB` : `Clean ${target.toFixed(0)} dB from 40 to 90 Hz per stack`;
+  const tgtText = g === "louder" ? "as loud as it gets, F3 within 3 Hz" : g === "lower" ? `lowest F3, at least ${(target - 1.5).toFixed(0)} dB per stack` : `clean ${target.toFixed(0)} dB per stack`;
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "system-ui, sans-serif" }}>
       <div className="rounded-lg border border-stone-300 bg-white p-4">
@@ -1253,23 +1253,23 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Room</div>
-            <div className="flex flex-wrap gap-1">{Object.entries(ROOMS).map(([k, r]) => <button key={k} className={seg(String(optIn.room) === k)} onClick={() => setOpt({ room: k === "outdoor" ? k : +k })}>{r.name}</button>)}</div>
+            <div className="flex flex-wrap gap-1">{Object.entries(ROOMS).map(([k, r]) => <button key={k} aria-label={r.name} className={seg(String(optIn.room) === k)} onClick={() => setOpt({ room: k === "outdoor" ? k : +k })}>{r.short}</button>)}</div>
           </div>
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Max per box</div>
-            <div className="flex items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.maxLb} min={30} max={250} onChange={(e) => setOpt({ maxLb: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> lb <span className="text-xs text-stone-500">heaviest single lift (loaded)</span></div>
+            <div className="flex items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.maxLb} min={30} max={250} onChange={(e) => setOpt({ maxLb: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> lb</div>
           </div>
           <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Driver budget</div>
-            <div className="flex flex-wrap items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.budget} min={100} step={25} onChange={(e) => setOpt({ budget: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $
-              <span className="flex gap-1"><button className={seg(optIn.budgetPer === "stack")} onClick={() => setOpt({ budgetPer: "stack" })}>per stack</button><button className={seg(optIn.budgetPer === "pair")} onClick={() => setOpt({ budgetPer: "pair" })}>for the pair</button></span></div>
+            <div className="text-sm text-stone-500 mb-1">Driver budget, per stack</div>
+            <div className="flex flex-wrap items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.budget} min={100} step={25} onChange={(e) => setOpt({ budget: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $</div>
           </div>
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Goal</div>
-            <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => <button key={k} className={seg(g === k)} onClick={() => setOpt({ goal: k })}>{gg.name}</button>)}</div>
+            <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => <button key={k} title={gg.name} className={seg(g === k)} onClick={() => setOpt({ goal: k })}>{gg.short}</button>)}</div>
           </div>
         </div>
-        <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: <b className="font-semibold">{tgtText}</b>{curOut != null && <span className="text-stone-500"> · your design does {curOut.toFixed(0)} dB; {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB (music limit, a rule of thumb)</span>}</div>
+        <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
+          {curOut != null && <div className="text-xs text-stone-500 mt-0.5">Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB · {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB</div>}</div>
         <div className="mt-2 text-xs text-stone-500">Amps: {amps}</div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button onClick={run} disabled={busy} className="px-4 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-50">{busy ? "Searching…" : "Find 3 designs"}</button>
@@ -1279,7 +1279,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
         {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800">Your current design doesn't pass: {res.curProblems.join("; ")}. Results fix that first, so some may cost more or weigh more than it does.</div>}
         {res && !busy && res.cards.length > 0 && (<>
           <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
-            {res.cards.map((k, i) => <OptCard key={i} k={k} previewing={previewLabel === k.label} canSave={canSave}
+            {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} previewing={previewLabel === k.label} canSave={canSave}
               onPreview={() => onPreview(k)} onLoad={() => onLoad(k)} onSave={() => onSave(k)} />)}
           </div>
           {res.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {res.cards.length - 1} more</div>}
@@ -1347,7 +1347,7 @@ function StackPlanner() {
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   const [optOn, setOptOnRaw] = useState(() => lsGet("planner.opt", false));
   const setOptOn = (v) => { setOptOnRaw(v); lsSet("planner.opt", v); };
-  const [optIn, setOptIn] = useState(() => ({ room: 1000, maxLb: 125, budget: 900, budgetPer: "stack", goal: "cheaper", ...lsGet("planner.optIn", {}) }));
+  const [optIn, setOptIn] = useState(() => { const { budgetPer, ...o } = lsGet("planner.optIn", {}); return { room: 1000, maxLb: 125, budget: 900, goal: "cheaper", ...o }; });
   const setOpt = (o) => setOptIn((p) => { const n = { ...p, ...o }; lsSet("planner.optIn", n); return n; });
   const [locks, setLocksRaw] = useState(() => ({ subDim: {}, midDim: {}, ...lsGet("planner.locks", {}) }));
   const setLocks = (f) => setLocksRaw((p) => { const n = f(p); lsSet("planner.locks", n); return n; });
@@ -1586,7 +1586,7 @@ function StackPlanner() {
     setOptBusy(true); setOptErr("");
     try {
       const cur = preview ? preview.before : snapshot();
-      setOptRes(await runOptimizer({ cur, room: inp.room, maxLb: inp.maxLb, budget: inp.budget, budgetPer: inp.budgetPer, goal: inp.goal, locks }));
+      setOptRes(await runOptimizer({ cur, room: inp.room, maxLb: inp.maxLb, budget: inp.budget, goal: inp.goal, locks }));
     } catch (e) { setOptErr("The search failed: " + ((e && e.message) || e)); }
     setOptBusy(false);
   };

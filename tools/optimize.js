@@ -22,15 +22,15 @@ const rangeOf = (mode, cur, [lo, hi]) => (mode === "exact" ? [cur, cur] : mode =
 
 // Clean music-limit SPL per stack at 1 m (45 Hz) for ~105 dB at the listener: distance, two stacks (+6 dB),
 // room gain. A rule of thumb, shown to the user as such.
-export const ROOMS = { 500: { d: 5, gain: 3, name: "500 sq ft" }, 750: { d: 6, gain: 3, name: "750 sq ft" },
-  1000: { d: 7, gain: 3, name: "1000 sq ft" }, outdoor: { d: 10, gain: 0, name: "Outdoor" } };
+export const ROOMS = { 500: { d: 5, gain: 3, name: "500 sq ft", short: "500" }, 750: { d: 6, gain: 3, name: "750 sq ft", short: "750" },
+  1000: { d: 7, gain: 3, name: "1000 sq ft", short: "1000 sq ft" }, outdoor: { d: 10, gain: 0, name: "Outdoor", short: "Out" } };
 export const roomNeed = (room) => { const r = ROOMS[room] || ROOMS[1000]; return 105 + 20 * Math.log10(r.d) - 6 - r.gain; };
 
 export const GOALS = {
-  cheaper: { name: "Same output, cheaper", why: "Cheapest drivers that still reach the target." },
-  lighter: { name: "Same output, lighter", why: "Lightest heaviest box that still reaches the target." },
-  lower: { name: "Go lower", why: "Lowest F3 that keeps the target output." },
-  louder: { name: "Louder", why: "Most output inside your limits." },
+  cheaper: { short: "Cheaper", name: "Same output, cheaper", why: "Cheapest drivers that still reach the target." },
+  lighter: { short: "Lighter", name: "Same output, lighter", why: "Lightest heaviest box that still reaches the target." },
+  lower: { short: "Lower", name: "Go lower", why: "Lowest F3 that keeps the target output." },
+  louder: { short: "Louder", name: "Louder", why: "Most output inside your limits." },
 };
 const ALT_LABEL = { cheaper: "Cheaper", lighter: "Lighter", lower: "Goes lower", louder: "Louder" };
 const ALT_ORDER = { cheaper: ["lighter", "louder"], lighter: ["cheaper", "louder"], lower: ["louder", "cheaper"], louder: ["cheaper", "lighter"] };
@@ -103,14 +103,14 @@ export function problems(m, lim) {
 }
 
 // ---- search ----
-// input: { cur (the planner's snapshot), room, maxLb, budget, budgetPer: "stack"|"pair", goal, locks }
+// input: { cur (the planner's snapshot), room, maxLb, budget (drivers per stack), goal, locks }
 // locks: { sub, mid, cd, horn, vent, wall, hpf, xoLo, xoHi, ampW, mAmpW, hfAmpW, subDim: {w,h,d}, midDim: {w,h,d} }
 // (dims: "free"|"max"|"exact"; an unlocked amp may come back lower, never higher)
 export function optimize(input) {
   const t0 = Date.now();
   const { cur, goal = "cheaper", room = 1000 } = input;
   const locks = { subDim: {}, midDim: {}, ...(input.locks || {}) };
-  const budget = input.budgetPer === "pair" ? input.budget / 2 : input.budget;
+  const budget = input.budget;   // drivers per stack
   const lim = { maxLb: input.maxLb, budget };
   const base = { ...cur };
   const curM = evaluate(base);
