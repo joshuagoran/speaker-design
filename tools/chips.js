@@ -1,17 +1,8 @@
 // Warning chips for each planner section: pure functions of the numbers the page already has.
 // Each returns [kind, head, body][] with kind "ok" | "warn" | "bad". Tested in tests/chips.test.js.
 
-// s: { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW }
-export function subChips(s) {
-  const { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW } = s;
-  const F = [];
-  const need = subSize + 1.9;
-  const nSide = portStyle === "vslot1" ? 1 : portStyle === "vslots" ? 2 : 0;
-  const clearW = subBox.w - nSide * (cVent.throat + 0.43 + PT);
-  const clearH = subBox.h - (portStyle === "slots" || portStyle === "folded" ? cVent.slotH + PT : 0);
-  if (Math.min(clearW, clearH) < need)
-    F.push(["bad", "Driver won't fit", `The baffle needs about ${need.toFixed(1)}″ clear; after the vents it has ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`]);
-  // longest duct each layout can hold, leaving an opening at least as wide as the duct
+// Longest duct each layout can hold, leaving an opening at least as wide as the duct.
+export function ductFit(subBox, portStyle, cVent, PT) {
   const inD = subBox.d - PT, inH = subBox.h - 2 * PT, sH = cVent.slotH;
   const maxStraight = inD - sH;                                           // bottom slot
   const maxFold = (inD - (sH + PT) + sH / 2) + (inH - sH - 1);            // floor run + rise up the back
@@ -19,6 +10,24 @@ export function subChips(s) {
   const maxTube = subBox.d - 0.75 - 2 * PT - cVent.dia / 2;                // round tubes off the baffle
   const fit = portStyle === "slots" ? maxStraight : portStyle === "folded" ? maxFold
     : portStyle.startsWith("round") ? maxTube : maxSide;
+  return { maxStraight, maxFold, maxSide, maxTube, fit };
+}
+// Clear baffle a driver needs: the sub's cone plus its frame.
+export const subNeed = (subSize) => subSize + 1.9;
+export function driverClear(subBox, portStyle, cVent, PT) {
+  const nSide = portStyle === "vslot1" ? 1 : portStyle === "vslots" ? 2 : 0;
+  return { clearW: subBox.w - nSide * (cVent.throat + 0.43 + PT), clearH: subBox.h - (portStyle === "slots" || portStyle === "folded" ? cVent.slotH + PT : 0) };
+}
+
+// s: { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW }
+export function subChips(s) {
+  const { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW } = s;
+  const F = [];
+  const need = subNeed(subSize);
+  const { clearW, clearH } = driverClear(subBox, portStyle, cVent, PT);
+  if (Math.min(clearW, clearH) < need)
+    F.push(["bad", "Driver won't fit", `The baffle needs about ${need.toFixed(1)}″ clear; after the vents it has ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`]);
+  const { maxFold, fit } = ductFit(subBox, portStyle, cVent, PT);
   if (cVent.len > fit)
     F.push(["bad", "Duct too long", `${cVent.len.toFixed(1)}″ won't fit; this layout holds about ${fit.toFixed(1)}″.`
       + (portStyle === "slots" && cVent.len <= maxFold ? " Switch to Bottom, folded." : "")]);

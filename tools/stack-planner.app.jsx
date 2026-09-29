@@ -1,7 +1,7 @@
 const { useEffect, useRef, useState } = React;
 import { subChips, midChips, hornChips, fillChips } from "./chips.js";
 import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS } from "./data.js";
-import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, lr24lp, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest } from "./calc.js";
+import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, lr24lp, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest, subMusicAt } from "./calc.js";
 
 
 
@@ -1349,10 +1349,7 @@ function StackPlanner() {
     return { midB, hornB, fK };
   })();
 
-  const subMusicAtXo = mdl && lim ? (() => {
-    const o = mdl.curve.reduce((b, x) => (Math.abs(x.f - xoLo) < Math.abs(b.f - xoLo) ? x : b));
-    return o.spl + 20 * Math.log10(lr24lp(o.f, xoLo)) + 20 * Math.log10(lim.V / AMP_V);
-  })() : null;
+  const subMusicAtXo = mdl && lim ? subMusicAt(mdl, lim, AMP_V, xoLo) : null;
 
   const portGeom = { ductH: cVent.slotH, nPorts: cVent.nt, portR: cVent.dia / 2, tubeLen: cVent.len, throat: cVent.throat };
 

@@ -22,11 +22,21 @@ export const hpGain = (f, fc, type = "BW24") => {
 export const lr24lp = (f, fc) => 1 / (1 + Math.pow(f / fc, 4));   // Linkwitz-Riley 24 dB/oct lowpass
 export const lr24hp = (f, fc) => hpGain(f, fc, "LR24");
 
+// Vent tuning: effective length (m) and Fb for net volume VbL, total vent area SpIn2 over nPorts equal
+// openings, physical length LpIn, and total end correction ecIn in inches (default 1.46 r per opening).
+export function ventTuning(VbL, SpIn2, LpIn, nPorts = 1, ecIn) {
+  const c = 343, Sp = SpIn2 * 0.00064516, Vb = VbL / 1000;
+  const reff = Math.sqrt(Sp / nPorts / Math.PI);   // radius of each opening
+  const Leff = LpIn * 0.0254 + (ecIn != null ? ecIn * 0.0254 : 1.46 * reff);  // one flanged + one free end per opening
+  return { Leff, Fb: (c / (2 * Math.PI)) * Math.sqrt(Sp / (Vb * Leff)) };
+}
+
 // opts: nPorts (separate openings sharing the area), QL (box leakage, default 7), Qp (port losses, default 50),
-// ecIn (total end correction in inches, both ends; default 1.46 r per opening).
+// ecIn (total end correction in inches, both ends; default 1.46 r per opening), N (frequency points, default 420;
+// fewer only for the optimizer's screening).
 export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts = {}) {
   if (!ts || !VbL || !SpIn2 || LpIn <= 0) return null;
-  const { nPorts = 1, QL = 7, Qp = 50, ecIn } = opts;
+  const { nPorts = 1, QL = 7, Qp = 50, ecIn, N = 420 } = opts;
   const rho = 1.18, c = 343;
   const Sd = ts.Sd / 10000;                 // cm^2 -> m^2
   const Mms = ts.Mms / 1000;                // g -> kg
@@ -38,15 +48,13 @@ export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts
   const Rae = ((ts.Bl * ts.Bl) / ts.Re) / (Sd * Sd);
   const Cab = Vb / (rho * c * c);
   const Sp = SpIn2 * 0.00064516;
-  const reff = Math.sqrt(Sp / nPorts / Math.PI);   // radius of each opening
-  const Leff = LpIn * 0.0254 + (ecIn != null ? ecIn * 0.0254 : 1.46 * reff);  // one flanged + one free end per opening
+  const { Leff, Fb } = ventTuning(VbL, SpIn2, LpIn, nPorts, ecIn);
   const Map = (rho * Leff) / Sp;
-  const Fb = (c / (2 * Math.PI)) * Math.sqrt(Sp / (Vb * Leff));
   const Ral = QL / (2 * Math.PI * Fb * Cab);
   const Rap = Number.isFinite(Qp) ? (2 * Math.PI * Fb * Map) / Qp : 0;   // port friction and turbulence
   const Pg = (volts * ts.Bl) / (ts.Re * Sd);
 
-  const N = 420, out = [];
+  const out = [];
   for (let i = 0; i < N; i++) {
     const f = 12 * Math.pow(300 / 12, i / (N - 1));
     const w = 2 * Math.PI * f, s = cx(0, w);
@@ -90,7 +98,8 @@ export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts
 // Linkwitz-Riley 24 dB/oct. Voice-coil inductance is not modelled, so the top
 // octave reads a little high. Excursion is the sine peak, as in boxModel.
 // ---------------------------------------------------------------
-export function closedBox(ts, VbL, hp, lp, volts) {
+export function closedBox(ts, VbL, hp, lp, volts, opts = {}) {
+  const { N = 420 } = opts;
   if (!ts || !VbL || VbL <= 0) return null;
   const rho = 1.18, c = 343;
   const Sd = ts.Sd / 10000, Mms = ts.Mms / 1000, Vb = VbL / 1000;
@@ -105,7 +114,7 @@ export function closedBox(ts, VbL, hp, lp, volts) {
   const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl);
   const Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
   const Qtc = Qts * (Fc / ts.Fs);
-  const N = 420, out = [];
+  const out = [];
   for (let i = 0; i < N; i++) {
     const f = 20 * Math.pow(2000 / 20, i / (N - 1));
     const w = 2 * Math.PI * f, s = cx(0, w);
@@ -247,15 +256,21 @@ export const ductEndCorr = (a, b, { inner = true, outer = true } = {}) =>
 // It includes the wall the vent sits on and the opposite wall, and tends to the free-space strip as X grows.
 // The gap to the back wall is taken as at least h: the planner's "Duct too long" check asks for that much,
 // and closer than that the flow turns through the gap and the model no longer holds.
+const d2Cache = new Map();
 export function duct2DEndCorr(h, X, L = Infinity) {
   if (h >= X) return 0;
   L = Math.max(L, h);
+  const key = h + "|" + X + "|" + L, hit = d2Cache.get(key);
+  if (hit !== undefined) return hit;
+  if (d2Cache.size > 20000) d2Cache.clear();
   let sum = 0;
   for (let m = 1; m <= 2000; m++) {
     const k = (m * Math.PI) / X, sn = Math.sin(k * h);
     sum += (sn * sn) / (m * m * m) * (Number.isFinite(L) ? 1 / Math.tanh(k * L) : 1);
   }
-  return ((2 * X * X) / (Math.PI ** 3 * h)) * sum;
+  const v = ((2 * X * X) / (Math.PI ** 3 * h)) * sum;
+  d2Cache.set(key, v);
+  return v;
 }
 const FREE_END = 0.61 / 0.85;   // an unflanged (free) end relative to a flanged one, as in 1.46 r
 // Letterbox on the floor: outside, the ground mirrors the mouth (slot twice as tall, open width w);
@@ -330,6 +345,12 @@ export function maxCurve(curve, ts, AMP_V, portMax) {
   });
 }
 export const nearest = (curve, f) => curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
+// The sub at its music limit (one drive level for the whole band) through the LR24 lowpass at xoLo:
+// what the mid has to match.
+export function subMusicAt(mdl, lim, AMP_V, xoLo) {
+  const o = nearest(mdl.curve, xoLo);
+  return o.spl + 20 * Math.log10(lr24lp(o.f, xoLo)) + 20 * Math.log10(lim.V / AMP_V);
+}
 
 // ---- horn ----
 // Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24 highpass at the
@@ -371,13 +392,18 @@ export const midWeight = (b, wall) =>
 
 // ---- the sub as the planner computes it ----
 // cfg: { subBox, midDims, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout }
-export function subSystem(sub, mid, cfg) {
+// Vent and volumes only (no model): what the optimizer's vent solver iterates on.
+export function subGeometry(sub, mid, cfg) {
   const port = ventGeom(cfg.portStyle, cfg.subBox, cfg.cVent, cfg.wall);
   const grossL = boxL(cfg.subBox.w, cfg.subBox.h, cfg.subBox.d, cfg.wall, cfg.inset);
   const ductL = (port.area * port.len * 16.387) / 1000;
   const woodL = internalWoodL(cutParts({ sub, mid, subBox: cfg.subBox, midDims: cfg.midDims, wall: cfg.wall, inset: cfg.inset,
     joint: "butt", portStyle: cfg.portStyle, cVent: cfg.cVent, layout: cfg.layout }).parts, "Sub");
   const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - woodL);
+  return { port, grossL, ductL, woodL, netL, Fb: ventTuning(netL, port.area, port.len, port.n, port.ec).Fb };
+}
+export function subSystem(sub, mid, cfg) {
+  const { port, grossL, ductL, woodL, netL } = subGeometry(sub, mid, cfg);
   const AMP_V = ampV(cfg.ampW);
   const mdl = sub.ts ? boxModel(sub.ts, netL, port.area, port.len, cfg.hpf, AMP_V, cfg.hpType, { nPorts: port.n, ecIn: port.ec }) : null;
   const lim = mdl ? subLimits(mdl, sub.ts, AMP_V, cfg.portMax) : null;
