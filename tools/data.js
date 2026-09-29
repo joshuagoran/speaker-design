@@ -291,7 +291,7 @@ export const CABINETS = [
   { id: "wideCompact", name: "Compact wide", vents: ["vslots"],
     dims: { 18: { w: 32, h: 22, d: 20 }, 15: { w: 27, h: 19, d: 18 } },
     note: "Block-wide proportions at the compact volume. 159 L net, widest ducts of the compact set." },
-  { id: "blockWide", name: "Block, wide", vents: ["vwide"],
+  { id: "blockWide", name: "Block, wide", vents: ["vslots"],
     dims: { 18: { w: 32, h: 22, d: 24 }, 15: { w: 28, h: 20, d: 21 } },
     note: "Low and wide, widest ducts of any version. 181 L for an 18." },
   { id: "towerCol", name: "Tower column, 18 deep", vents: ["folded"],

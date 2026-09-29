@@ -176,7 +176,7 @@ export function cutParts({ sub, mid, subBox, midDims, wall, inset, joint, portSt
     all.push({ box: "Sub", part: "Duct shelf", qty: 1, a: s.iw, b: len, t, note: "roof of the bottom slot" });
     all.push({ box: "Sub", part: "Duct fin", qty: 2, a: cVent.slotH, b: len, t, note: "splits the slot in three" });
     if (portStyle === "folded") all.push({ box: "Sub", part: "Duct rear wall", qty: 1, a: s.iw, b: Math.max(2, cVent.len - len), t, note: "rear channel, rises up the back" });
-  } else if (portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1") {
+  } else if (portStyle === "vslots" || portStyle === "vslot1") {
     const n = portStyle === "vslot1" ? 1 : 2;
     all.push({ box: "Sub", part: "Side duct wall", qty: n, a: s.ih, b: cVent.len, t, note: `${f8(cVent.throat)}″ throat; 20° chamfer both ends` });
     all.push({ box: "Sub", part: "Duct divider", qty: 2 * n, a: cVent.throat, b: cVent.len, t: 0.5, note: "" });
@@ -269,7 +269,7 @@ export const sideDuctEndCorr = (th, H, X, L) => (X ? rectEndCorr(th, 2 * H) + FR
 // which sets the end correction in boxModel.
 export function ventGeom(portStyle, box, cVent, t) {
   const iw = box.w - 2 * t, ih = box.h - 2 * t;
-  if (portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1") {
+  if (portStyle === "vslots" || portStyle === "vslot1") {
     const n = portStyle === "vslot1" ? 1 : 2;
     const th = cVent.throat, area = n * th * (ih - 2 * 0.5), seg = (ih - 2 * 0.5) / 3;   // two 1/2\u2033 dividers per duct
     const L = box.d - 0.75 - t - cVent.len;   // mouth to back wall (duct measured from the baffle front, 3/4" inset)

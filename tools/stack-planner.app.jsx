@@ -153,7 +153,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     const subGroup = new THREE.Group();
     group.add(subGroup);
     // plinth / toe-kick, inset so the column appears to float
-    const vSlot = portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1";
+    const vSlot = portStyle === "vslots" || portStyle === "vslot1";
     const sides = portStyle === "vslot1" ? [1] : [-1, 1];   // side ducts: one wall or both
     const s = sub.box;
     const pg = portGeom || {};   // explicit vent geometry when the cabinet is custom
@@ -166,7 +166,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     // sub column: driver cutout high on the baffle, three duct cutouts across the bottom
     const ductH = pg.ductH != null ? pg.ductH : 3, innerW = s.w - 2 * T, ductW = (innerW - 2 * T) / 3;
     const drvR = sub.size / 2 - 0.9;
-    const round = !["slots", "folded", "vslots", "vwide", "vslot1"].includes(portStyle); // round-tube ports only
+    const round = !["slots", "folded", "vslots", "vslot1"].includes(portStyle); // round-tube ports only
     const corners = portStyle === "round4";
     const nPorts = pg.nPorts != null ? pg.nPorts : (portStyle === "round1" ? 1 : corners ? 4 : 2);
     const portR = pg.portR != null ? pg.portR : (portStyle === "round1" ? 8 : corners ? (sub.size >= 18 ? 4 : 3.5) : 5) / 2;
@@ -1282,7 +1282,7 @@ function StackPlanner() {
     else if (v === "round4") setCVent((p) => ({ ...p, nt: 4, dia: 4, len: 11.5 }));
     else if (v === "round2") setCVent((p) => ({ ...p, nt: 2, dia: 5, len: 9.8 }));
     else if (v === "folded") setCVent((p) => ({ ...p, slotH: 3, len: 15.75 }));
-    else if (v === "vslots" || v === "vwide") setCVent((p) => ({ ...p, throat: 1.4, len: d.d - 3 }));
+    else if (v === "vslots") setCVent((p) => ({ ...p, throat: 1.4, len: d.d - 3 }));
     else setCVent((p) => ({ ...p, slotH: 3, len: d.d - 4.5 }));
     if (cb.vent) setCVent((p) => ({ ...p, ...cb.vent }));   // published vent overrides the generic one
   };
@@ -1788,7 +1788,7 @@ function StackPlanner() {
             {!portStyle.startsWith("round") && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {[["slots", "Bottom"], ["folded", "Bottom, folded"], ["vslots", "Both sides"], ["vslot1", "One side"]].map(([v, label]) => {
-                  const on = portStyle === v || (v === "vslots" && portStyle === "vwide");
+                  const on = portStyle === v;
                   return <button key={v} onClick={() => setPortStyle(v)} className={`px-3 py-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>;
                 })}
               </div>
@@ -1796,7 +1796,7 @@ function StackPlanner() {
             <div className="rounded border border-stone-300 bg-white px-3 py-3 mt-2">
               {(portStyle === "slots" || portStyle === "folded") &&
                 <Slider label="Slot height" value={cVent.slotH} min={1.5} max={9} step={0.25} unit="&#8243;" onChange={(v) => setV("slotH", v)} />}
-              {(portStyle === "vslots" || portStyle === "vwide" || portStyle === "vslot1") &&
+              {(portStyle === "vslots" || portStyle === "vslot1") &&
                 <Slider label="Duct throat" value={cVent.throat} min={1} max={portStyle === "vslot1" ? 10 : 7} step={0.25} unit="&#8243;" onChange={(v) => setV("throat", v)} />}
               {portStyle.startsWith("round") && <>
                 <Slider label="Tubes" value={cVent.nt} min={1} max={6} step={1} unit="" onChange={(v) => setV("nt", v)} />

@@ -6,7 +6,7 @@ export function subChips(s) {
   const { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW } = s;
   const F = [];
   const need = subSize + 1.9;
-  const nSide = portStyle === "vslot1" ? 1 : portStyle === "vslots" || portStyle === "vwide" ? 2 : 0;
+  const nSide = portStyle === "vslot1" ? 1 : portStyle === "vslots" ? 2 : 0;
   const clearW = subBox.w - nSide * (cVent.throat + 0.43 + PT);
   const clearH = subBox.h - (portStyle === "slots" || portStyle === "folded" ? cVent.slotH + PT : 0);
   if (Math.min(clearW, clearH) < need)
