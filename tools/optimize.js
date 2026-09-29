@@ -28,7 +28,7 @@ export const roomNeed = (room) => { const r = ROOMS[room] || ROOMS[1000]; return
 
 export const GOALS = {
   cheaper: { short: "Cheaper", name: "Same output, cheaper", why: "Cheapest drivers that still reach the target." },
-  lighter: { short: "Lighter", name: "Same output, lighter", why: "Lightest heaviest box that still reaches the target." },
+  lighter: { short: "Lighter", name: "Same output, lighter", why: "Lightest boxes that still reach the target." },
   lower: { short: "Lower", name: "Go lower", why: "Lowest F3 that keeps the target output." },
   louder: { short: "Louder", name: "Louder", why: "Most output inside your limits." },
 };
@@ -106,6 +106,10 @@ export function problems(m, lim) {
 // input: { cur (the planner's snapshot), room, maxLb, budget (drivers per stack), goal, locks }
 // locks: { sub, mid, cd, horn, vent, wall, hpf, xoLo, xoHi, ampW, mAmpW, hfAmpW, subDim: {w,h,d}, midDim: {w,h,d} }
 // (dims: "free"|"max"|"exact"; an unlocked amp may come back lower, never higher)
+// The fields a result sets; everything else (finish, colours, layout, balance) stays as the page has it.
+export const OPT_FIELDS = ["sub", "mid", "cd", "horn", "cDim", "cVent", "portStyle", "hpf", "mDim", "wall", "xoLo", "xoHi", "ampW", "mAmpW", "hfAmpW"];
+export const optFields = (c) => Object.fromEntries(OPT_FIELDS.map((k) => [k, c[k]]));
+
 export function optimize(input) {
   const t0 = Date.now();
   const { cur, goal = "cheaper", room = 1000 } = input;
@@ -131,11 +135,14 @@ export function optimize(input) {
   const AMP_V = ampV(cur.ampW);
 
   // box shapes inside the limits with gross volume near G, lightest first, a few distinct depths
-  const shapes = (G, t, lb, n = 3) => {
+  const allExact = sr.w[0] === sr.w[1] && sr.h[0] === sr.h[1] && sr.d[0] === sr.d[1];
+  const shapes = (G, t, lb, size, n = 3) => {
+    if (allExact) { const box = { w: sr.w[0], h: sr.h[0], d: sr.d[0] }; return [{ box, lb: subWeight(box, t, lb) }]; }
     const out = [];
-    const step = (lo, hi) => (lo === hi ? [lo] : Array.from({ length: Math.floor(hi - lo) + 1 }, (_, i) => lo + i));
+    // whole inches from the bottom of the range, plus the top itself (a half-inch "up to" value stays reachable)
+    const step = (lo, hi) => { if (lo === hi) return [lo]; const v = Array.from({ length: Math.floor(hi - lo) + 1 }, (_, i) => lo + i); if (v[v.length - 1] !== hi) v.push(hi); return v; };
     for (const w of step(...sr.w)) for (const h of step(...sr.h)) {
-      if (w < subNeed(18) - 0.01 || h < subNeed(18) - 0.01) continue;
+      if (w < subNeed(size) - 0.01 || h < subNeed(size) - 0.01) continue;
       const D = (G * 1000) / 16.387 / ((w - 2 * t) * (h - 2 * t));      // inner depth needed
       const d = r2(D + cur.inset + 0.75 + t, 0.5);
       if (d < sr.d[0] || d > sr.d[1]) continue;
@@ -155,7 +162,9 @@ export function optimize(input) {
   // 1. screening with an ideal vent (big, never limits), coarse grid
   const seeds = [];
   const Vmax = boxL(sr.w[1], sr.h[1], sr.d[1], 0.5, cur.inset), Vmin = Math.max(40, boxL(sr.w[0], sr.h[0], sr.d[0], 0.75, cur.inset));
-  const vols = []; for (let i = 0; i < 10; i++) vols.push(Vmin * Math.pow(Math.max(Vmax * 0.85, Vmin * 1.01) / Vmin, i / 9));
+  const vols = [];
+  if (allExact) vols.push(Math.max(20, boxL(sr.w[0], sr.h[0], sr.d[0], cur.wall, cur.inset) * 0.9 - 10));   // the one box, roughly net
+  else for (let i = 0; i < 10; i++) vols.push(Vmin * Math.pow(Math.max(Vmax * 0.85, Vmin * 1.01) / Vmin, i / 9));
   const fbs = [28, 31, 34, 37, 40, 43];
   for (const sub of subs) for (const V of vols) for (const Fb of fbs) {
     const hps = locks.hpf ? [cur.hpf] : [Math.max(20, Math.round(Fb * 0.85)), Math.max(20, Math.round(Fb))];
@@ -166,7 +175,7 @@ export function optimize(input) {
       const mdl = boxModel(sub.ts, V, Sp, Lp, hpf, AMP_V, cur.hpType, { N: 70 }); evals++;
       if (!mdl) continue;
       const L = subLimits(mdl, sub.ts, AMP_V, Infinity);
-      const sh = shapes(V + (sub.ts.disp || 10) + 0.08 * V + 3, 0.75, sub.lb, 1)[0];
+      const sh = shapes(V + (sub.ts.disp || 10) + 0.08 * V + 3, 0.75, sub.lb, sub.size, 1)[0];
       seeds.push({ sub, V, Fb, hpf, out: bandOut(mdl, L, AMP_V), f3: mdl.f3, lb: sh ? sh.lb : Infinity, price: sub.price });
     }
   }
@@ -185,7 +194,7 @@ export function optimize(input) {
   for (const sd of seedSet) {
     for (const t of walls) {
       const G = sd.V + (sd.sub.ts.disp || 10) + 0.08 * sd.V + 3;
-      for (const { box } of shapes(G, t, sd.sub.lb)) {
+      for (const { box } of shapes(G, t, sd.sub.lb, sd.sub.size)) {
         for (const style of styles) {
           const mk = (size, len) => ({ ...cur.cVent, ...size, len });
           const geom = (cVent) => subGeometry(sd.sub, midForGeom, { subBox: box, midDims: cur.mDim, wall: t, inset: cur.inset, portStyle: style, cVent, layout: cur.layout });
@@ -197,7 +206,7 @@ export function optimize(input) {
             if (sd.Fb < fbLong) break;              // too big for the room it has: bigger won't fit either
             let a = lo, b = hi;
             for (let i = 0; i < 12; i++) { const m = (a + b) / 2; if (geom(mk(size, m)).Fb > sd.Fb) a = m; else b = m; }
-            const cVent = mk(size, r2((a + b) / 2, 0.25));
+            const cVent = mk(size, Math.min(Math.floor(hi * 4) / 4, r2((a + b) / 2, 0.25)));   // never past the fit
             const { clearW, clearH } = driverClear(box, style, cVent, t);
             if (Math.min(clearW, clearH) < subNeed(sd.sub.size)) continue;
             const c = { ...base, sub: sd.sub.id, cDim: box, wall: t, portStyle: style, cVent, hpf: sd.hpf };
@@ -354,7 +363,9 @@ export function optimize(input) {
     const ok = (cc, mm) => mm && problems(mm, lim).length === 0;
     const lowest = (key, lo, step, good) => {
       if (locks[key] || c[key] <= lo) return;
-      let a = lo, b = c[key];                                  // b is known good
+      const floor = { ...c, [key]: lo }, fm = evaluate(floor); evals++;
+      if (ok(floor, fm) && good(fm)) { c = floor; m = fm; return; }   // the slider minimum is enough
+      let a = lo, b = c[key];                                  // a fails, b is known good
       while (b - a > step) {
         const mid = Math.round((a + b) / 2 / step) * step, cc = { ...c, [key]: mid }, mm = evaluate(cc); evals++;
         if (mid <= a || mid >= b) break;
@@ -379,16 +390,16 @@ export function optimize(input) {
   let cards = chooseAmps(lim, target), nearMiss = null;
   if (!cards) {
     const tries = [
-      { text: `Allow ${Math.round(input.maxLb * 1.1)} lb`, set: { maxLb: Math.round(input.maxLb * 1.1) }, L: { ...lim, maxLb: input.maxLb * 1.1 }, t: target },
-      { text: `Budget +$${Math.round(input.budget * 0.1)}`, set: { budget: Math.round(input.budget * 1.1) }, L: { ...lim, budget: budget * 1.1 }, t: target },
-      { text: `Target ${Math.round(target - 1)} dB`, set: {}, L: lim, t: target - 1 },
+      { text: `Allow ${Math.ceil(input.maxLb * 1.1)} lb`, set: { maxLb: Math.ceil(input.maxLb * 1.1) }, L: { ...lim, maxLb: Math.ceil(input.maxLb * 1.1) }, t: target },
+      { text: `Budget +$${Math.ceil(input.budget * 0.1)}`, set: { budget: input.budget + Math.ceil(input.budget * 0.1) }, L: { ...lim, budget: budget + Math.ceil(input.budget * 0.1) }, t: target },
     ];
     const worked = tries.filter((x) => choose(x.L, x.t));
     const closest = pool.slice().sort((a, b) => problems(a.m, lim).length - problems(b.m, lim).length || obj[goal](metric(a)) - obj[goal](metric(b)))[0];
     const lightest = subCands.length ? Math.min(...subCands.map((x) => x.lb)) : null;
     nearMiss = { options: worked.map(({ text, set }) => ({ text, set })), closest: closest ? card(closest, "Closest", "", curM, cur) : null,
-      blocking: closest ? problems(closest.m, lim)
-        : lightest != null ? [`the lightest sub box that works is ${Math.round(lightest)} lb`] : ["no sub fits these limits and locks"] };
+      blocking: closest ? (problems(closest.m, lim).length ? problems(closest.m, lim) : [`the closest design reaches ${closest.m.out.toFixed(1)} dB, short of the ${target.toFixed(0)} dB target`])
+        : lightest != null ? [`nothing inside the limits reaches the target (the lightest working sub box is ${Math.round(lightest)} lb)`]
+        : ["no sub fits these limits and locks"] };
   }
   return {
     target, need, curM: curM && summary(curM), curProblems: problems(curM, lim),
@@ -416,6 +427,7 @@ function card(p, label, why, curM, cur) {
   if (c.mid !== cur.mid) changed.push("mid driver");
   if (c.mDim.w !== cur.mDim.w || c.mDim.h !== cur.mDim.h || c.mDim.d !== cur.mDim.d) changed.push("mid box");
   if (c.cd !== cur.cd || c.horn !== cur.horn) changed.push("HF");
+  if (c.hpf !== cur.hpf) changed.push("highpass");
   if (c.xoLo !== cur.xoLo || c.xoHi !== cur.xoHi) changed.push("crossovers");
   if (c.ampW !== cur.ampW || c.mAmpW !== cur.mAmpW || c.hfAmpW !== cur.hfAmpW) changed.push("amp power");
   return {

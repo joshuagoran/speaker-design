@@ -90,3 +90,26 @@ test("amps: unlocked amps never go up; locked amps stay; same-output cards keep 
   const locked = optimize({ ...base, goal: "cheaper", locks: { ampW: true, mAmpW: true, hfAmpW: true } });
   for (const k of locked.cards) t.assert.deepEqual([k.config.ampW, k.config.mAmpW, k.config.hfAmpW], [cur.ampW, cur.mAmpW, cur.hfAmpW]);
 });
+
+test("all three sub dimensions exact: tunes that one box (sub locked)", (t) => {
+  const c = { ...pick("light block"), horn: "a460g2_14" };
+  const out = optimize({ ...base, cur: c, goal: "louder", locks: { sub: true, subDim: { w: "exact", h: "exact", d: "exact" } } });
+  t.assert.ok(out.cards.length >= 1, JSON.stringify(out.nearMiss && out.nearMiss.blocking));
+  for (const k of out.cards) t.assert.deepEqual(k.config.cDim, c.cDim);
+});
+
+test("15 in sub: a box narrower than an 18 in needs is allowed", (t) => {
+  const c = { ...cur, sub: "sbnero15", cDim: { w: 19, h: 24, d: 20 }, horn: "a460g2_14" };
+  const out = optimize({ ...base, cur: c, goal: "louder", locks: { sub: true, subDim: { w: "exact", h: "exact", d: "exact" } } });
+  t.assert.ok(out.cards.length >= 1, JSON.stringify(out.nearMiss && out.nearMiss.blocking));
+});
+
+test("a near-miss option, once applied, finds designs", (t) => {
+  const out = optimize({ ...base, goal: "cheaper", maxLb: 100 });
+  if (out.cards.length) return;   // nothing to check: the limit wasn't binding
+  for (const o of out.nearMiss.options) {
+    const again = optimize({ ...base, goal: "cheaper", maxLb: 100, ...o.set });
+    t.assert.ok(again.cards.length >= 1, o.text);
+  }
+  t.assert.ok(out.nearMiss.blocking.length > 0 && out.nearMiss.blocking.every((b) => b.length > 0));
+});
