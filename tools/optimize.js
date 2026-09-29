@@ -23,7 +23,7 @@ const rangeOf = (mode, cur, [lo, hi]) => (mode === "exact" ? [cur, cur] : mode =
 // Clean music-limit SPL per stack at 1 m (45 Hz) for ~105 dB at the listener: distance, two stacks (+6 dB),
 // room gain. A rule of thumb, shown to the user as such.
 export const ROOMS = { 500: { d: 5, gain: 3, name: "500 sq ft", short: "500" }, 750: { d: 6, gain: 3, name: "750 sq ft", short: "750" },
-  1000: { d: 7, gain: 3, name: "1000 sq ft", short: "1000 sq ft" }, outdoor: { d: 10, gain: 0, name: "Outdoors", short: "Outdoors" } };
+  1000: { d: 7, gain: 3, name: "1000 sq ft", short: "1000" }, outdoor: { d: 10, gain: 0, name: "Outdoors", short: "Outdoors" } };
 export const roomNeed = (room) => { const r = ROOMS[room] || ROOMS[1000]; return 105 + 20 * Math.log10(r.d) - 6 - r.gain; };
 
 export const GOALS = {

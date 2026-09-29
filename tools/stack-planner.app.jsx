@@ -1252,7 +1252,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
         <p className="text-xs text-stone-500 mt-1">Starts from your current design. Lock anything you want to keep with the lock buttons next to each setting; box sizes can also be "up to" (≤) or "exactly" (=). Layout and finish stay as they are.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
           <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Room</div>
+            <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>
             <div className="flex flex-wrap gap-1">{Object.entries(ROOMS).map(([k, r]) => <button key={k} aria-label={r.name} className={seg(String(optIn.room) === k)} onClick={() => setOpt({ room: k === "outdoor" ? k : +k })}>{r.short}</button>)}</div>
           </div>
           <div className="mt-3">
