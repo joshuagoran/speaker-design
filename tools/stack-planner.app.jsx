@@ -1235,7 +1235,7 @@ function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
       ))}
       <div className="text-xs text-stone-600">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
       <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
-      <div className="text-[11px] text-stone-500">Modelled, not measured · prices as listed in the planner (Sep 2026){k.priceKnown ? "" : " · some prices unknown"}</div>
+      {!k.priceKnown && <div className="text-[11px] text-stone-500">Some prices unknown</div>}
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
         <button onClick={onLoad} className="flex-1 px-3 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50">Load</button>
@@ -1245,7 +1245,7 @@ function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
   );
 }
 const seg = (on) => `px-3 py-2 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`;
-function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, previewCard, onPreview, onLoad, onSave, canSave, nLocks, clearLocks }) {
+function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, previewCard, onPreview, onLoad, onSave, canSave }) {
   const need = roomNeed(optIn.room), target = Math.max(curOut != null ? curOut : need, need);
   const goals = optIn.goals, g = goals[0];
   // tap adds a goal at the end of the order; tap again removes it (none selected is allowed; the search waits for one)
@@ -1256,7 +1256,6 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
     <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "system-ui, sans-serif" }}>
       <div className="rounded-lg border border-stone-300 bg-white p-4">
         <h2 className="text-xl" style={{ fontFamily: "Georgia, serif" }}>Find a better design</h2>
-        <p className="text-xs text-stone-500 mt-1">Starts from your current design. Lock anything you want to keep with the lock buttons next to each setting; box sizes can also be "up to" (≤) or "exactly" (=). Layout and finish stay as they are.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>
@@ -1279,14 +1278,12 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
           {curOut != null && <div className="text-xs text-stone-500 mt-0.5">Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB · {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB</div>}</div>
         <div className="mt-2 text-xs text-stone-500">Amps: {amps}</div>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-stone-500">{nLocks ? `${nLocks} lock${nLocks > 1 ? "s" : ""} set` : "No locks set"}
-          {nLocks > 0 && <button onClick={clearLocks} className="px-3 py-2 rounded border border-stone-300 bg-stone-50 hover:border-stone-500 text-stone-700">Clear all locks</button>}</div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button onClick={run} disabled={busy || !g} className="px-4 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-50">{busy ? "Searching…" : g ? "Find 3 designs" : "Pick a goal first"}</button>
           {res && !busy && <span className="text-xs text-stone-500">Searched {res.stats.evaluated.toLocaleString()} designs in {(res.stats.ms / 1000).toFixed(1)} s{res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}</span>}
           {err && <span className="text-xs text-red-700">{err}</span>}
         </div>
-        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800">Your current design doesn't pass: {res.curProblems.join("; ")}. Results fix that first, so some may cost more or weigh more than it does.</div>}
+        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800">Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
         {res && !busy && res.cards.length > 0 && (<>
           <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
             {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} previewing={previewCard === k} canSave={canSave}
@@ -1709,13 +1706,17 @@ function StackPlanner() {
       <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3 flex flex-wrap items-center gap-2" style={{ fontFamily: "system-ui, sans-serif" }}>
         <button onClick={() => setOptOn(!optOn)} aria-pressed={optOn}
           className={`px-3 py-2 rounded border text-sm ${optOn ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`}>Optimizer: {optOn ? "on" : "off"}</button>
-        <span className="text-xs text-stone-500">{optOn ? "Lock buttons now show next to each setting." : "Find cheaper, lighter or louder designs inside your limits."}</span>
+        {optOn && (() => {
+          const n = Object.entries(locks).reduce((a, [k, v]) => a + (k.endsWith("Dim") ? Object.values(v).filter((m) => m && m !== "free").length : v ? 1 : 0), 0);
+          const tip = n ? `Clear all ${n} lock${n > 1 ? "s" : ""}` : "No locks set";
+          return <button onClick={() => setLocks(() => ({ subDim: {}, midDim: {} }))} disabled={!n} aria-label={tip} title={tip}
+            className="inline-flex items-center gap-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40"><LockIcon locked={false} />{n ? <span className="text-xs">{n}</span> : null}</button>;
+        })()}
+        {!optOn && <span className="text-xs text-stone-500">Find cheaper, lighter or louder designs inside your limits.</span>}
       </section>
       {optOn && <OptimizerPanel optIn={optIn} setOpt={setOpt} run={runOpt} busy={optBusy} res={optRes} err={optErr} curOut={curOut}
         amps={[["sub", ampW, locks.ampW], ["mid", mAmpW, locks.mAmpW], ["HF", hfAmpW, locks.hfAmpW]].map(([n, w, l]) => `${n} ${l ? "" : "up to "}${w} W`).join(" · ") + " per channel (on Cheaper and Lighter cards, unlocked amps come back at the least power that does the job)"} previewCard={preview && preview.card} canSave={!!db}
-        onPreview={optPreview} onLoad={optLoad} onSave={optSave}
-        nLocks={Object.entries(locks).reduce((a, [k, v]) => a + (k.endsWith("Dim") ? Object.values(v).filter((m) => m && m !== "free").length : v ? 1 : 0), 0)}
-        clearLocks={() => setLocks(() => ({ subDim: {}, midDim: {} }))} />}
+        onPreview={optPreview} onLoad={optLoad} onSave={optSave} />}
       {preview && (
         <div className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-stone-50 px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm" style={{ fontFamily: "system-ui, sans-serif" }}>
           <span>Previewing: <b className="font-semibold">{preview.label}</b></span>
@@ -1805,9 +1806,6 @@ function StackPlanner() {
               })()}
             </div>
           )}
-          <p className="text-xs text-stone-500 mt-3">
-            Modelled, not measured. Verify the tuning with an impedance sweep on the prototype before cutting birch.
-          </p>
           </div>
         </section>
 
@@ -1859,7 +1857,6 @@ function StackPlanner() {
                 ));
               })()}
             </div>
-            <p className="text-xs text-stone-500 mt-3">Sealed, LR24 crossovers at {xoLo} Hz and {xoHi} Hz. Coil inductance isn't modelled, so the top octave reads a little high.</p>
           </>) : (
             <p className="text-sm text-stone-600">{mid.name} can't be modelled yet: its parameters are incomplete. {mid.note}</p>
           )}
@@ -1888,7 +1885,6 @@ function StackPlanner() {
               <ResponseChart fmin={200} fmax={10000} top={180} bot={0} step={30} H={220} yLabel="horizontal beamwidth, °"
                 series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: "#b45309", tint: "rgba(180,83,9,0)" }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: "#0f766e", tint: "rgba(15,118,110,0)" }] : [])]}
                 marks={[{ f: xoHi, label: "XO" }, ...(beamCurves.fK ? [{ f: beamCurves.fK, label: "horn control" }] : [])]} />
-              <p className="text-xs text-stone-500 mt-1">How wide each driver spreads sound. Best when the two lines cross near the XO line. Estimated, not measured.</p>
             </div>
             <div className="flex flex-col gap-1.5">
               {(() => {
@@ -1901,7 +1897,6 @@ function StackPlanner() {
                 ));
               })()}
             </div>
-            <p className="text-xs text-stone-500 mt-3">From datasheet sensitivity and power, not a T/S model. Sensitivity reference: {hf.sensRef || "the maker's reference horn"}. On {horn.name} it may differ by a few dB. Below-rating crossover derating (6 dB per octave) is a rule of thumb.</p>
           </>) : (
             <p className="text-sm text-stone-600">{cd.name} can't be modelled yet: sensitivity or power rating missing.</p>
           )}
@@ -2147,7 +2142,6 @@ function StackPlanner() {
               </table></div>
             );
           })()}
-          <p className="text-xs text-stone-500 mt-2">Cabinet weight: 3/4" birch baffles (2.3 lb/ft²), other panels {wall === 0.5 ? '1/2" birch (1.6 lb/ft²)' : '3/4" birch'}; the sub allows two braces and 6 lb of hardware, the mid box one brace. Particleboard runs ~30% heavier. Driver weights are approximate where the datasheet wasn't checked. Heaviest single lift is the sub column.</p>
           </div>
         </section>
         <div className="min-w-0 md:col-span-5 mt-4" style={{ fontFamily: "system-ui, sans-serif" }}>
