@@ -156,6 +156,7 @@ peak at 45 Hz could otherwise win); the layout, finish and amps are never change
 whole inches; about 1 s in Node, 1–4 s in the page.
 
 ### Stacked goals (branch `stack-goals`)
+Goals start unselected on every load (the search waits for one); tap to select, tap again to deselect.
 Tap more than one goal; the tap order shows on the buttons (1 · Cheaper, 2 · Lighter). The first goal ranks the
 designs; the main card ("Cheaper + lighter") must also beat your design on every other goal. The other cards
 are single-goal options, to show what dropping a goal buys. If nothing beats your design on all of them, the

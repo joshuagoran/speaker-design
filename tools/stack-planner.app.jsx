@@ -1248,9 +1248,9 @@ const seg = (on) => `px-3 py-2 rounded border text-sm ${on ? "border-stone-900 b
 function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, previewCard, onPreview, onLoad, onSave, canSave, nLocks, clearLocks }) {
   const need = roomNeed(optIn.room), target = Math.max(curOut != null ? curOut : need, need);
   const goals = optIn.goals, g = goals[0];
-  // tap adds a goal at the end of the order; tap again removes it (one always stays)
-  const tapGoal = (k) => setOpt({ goals: goals.includes(k) ? (goals.length > 1 ? goals.filter((x) => x !== k) : goals) : [...goals, k] });
-  const tgtText = (g === "louder" ? "as loud as it gets, F3 within 3 Hz" : g === "lower" ? `lowest F3, at least ${(target - 1.5).toFixed(0)} dB per stack` : `clean ${target.toFixed(0)} dB per stack`)
+  // tap adds a goal at the end of the order; tap again removes it (none selected is allowed; the search waits for one)
+  const tapGoal = (k) => setOpt({ goals: goals.includes(k) ? goals.filter((x) => x !== k) : [...goals, k] });
+  const tgtText = !g ? "pick a goal" : (g === "louder" ? "as loud as it gets, F3 within 3 Hz" : g === "lower" ? `lowest F3, at least ${(target - 1.5).toFixed(0)} dB per stack` : `clean ${target.toFixed(0)} dB per stack`)
     + (goals.length > 1 ? `, and ${goals.slice(1).map((x) => ({ cheaper: "cheaper", lighter: "lighter", lower: "lower", louder: "louder" })[x]).join(" and ")} than yours` : "");
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "system-ui, sans-serif" }}>
@@ -1282,7 +1282,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-stone-500">{nLocks ? `${nLocks} lock${nLocks > 1 ? "s" : ""} set` : "No locks set"}
           {nLocks > 0 && <button onClick={clearLocks} className="px-3 py-2 rounded border border-stone-300 bg-stone-50 hover:border-stone-500 text-stone-700">Clear all locks</button>}</div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button onClick={run} disabled={busy} className="px-4 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-50">{busy ? "Searching…" : "Find 3 designs"}</button>
+          <button onClick={run} disabled={busy || !g} className="px-4 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-50">{busy ? "Searching…" : g ? "Find 3 designs" : "Pick a goal first"}</button>
           {res && !busy && <span className="text-xs text-stone-500">Searched {res.stats.evaluated.toLocaleString()} designs in {(res.stats.ms / 1000).toFixed(1)} s{res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}</span>}
           {err && <span className="text-xs text-red-700">{err}</span>}
         </div>
@@ -1358,8 +1358,9 @@ function StackPlanner() {
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   const [optOn, setOptOnRaw] = useState(() => lsGet("planner.opt", false));
   const setOptOn = (v) => { setOptOnRaw(v); lsSet("planner.opt", v); };
-  const [optIn, setOptIn] = useState(() => { const { budgetPer, goal, ...o } = lsGet("planner.optIn", {}) || {};
-    return { room: 1000, maxLb: 125, budget: 900, ...o, goals: Array.isArray(o.goals) && o.goals.length ? o.goals : [goal || "cheaper"] }; });
+  // goals start empty on every load (not restored), so a search always starts from a goal you just picked
+  const [optIn, setOptIn] = useState(() => { const { budgetPer, goal, goals, ...o } = lsGet("planner.optIn", {}) || {};
+    return { room: 1000, maxLb: 125, budget: 900, ...o, goals: [] }; });
   const setOpt = (o) => setOptIn((p) => { const n = { ...p, ...o }; lsSet("planner.optIn", n); return n; });
   const [locks, setLocksRaw] = useState(() => { const l = lsGet("planner.locks", {}) || {}; return { ...l, subDim: { ...(l.subDim || {}) }, midDim: { ...(l.midDim || {}) } }; });
   const setLocks = (f) => setLocksRaw((p) => { const n = f(p); lsSet("planner.locks", n); return n; });
@@ -1595,6 +1596,7 @@ function StackPlanner() {
   const runOpt = async (over) => {
     const inp = { ...optIn, ...(over && over.nativeEvent ? {} : over || {}) };
     if (over && !over.nativeEvent) setOpt(over);
+    if (!inp.goals.length) return;
     setOptBusy(true); setOptErr("");
     try {
       const cur = preview ? preview.before : snapshot();
