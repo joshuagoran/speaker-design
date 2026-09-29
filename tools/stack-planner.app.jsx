@@ -1343,7 +1343,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
             <div className="flex flex-wrap items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.budget} min={100} step={25} onChange={(e) => setOpt({ budget: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $</div>
           </div>
           <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(tap more than one to stack them; the first ranks)</span></div>
+            <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
             <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => { const i = goals.indexOf(k); return (
               <button key={k} title={gg.name} aria-pressed={i >= 0} className={seg(i >= 0)} onClick={() => tapGoal(k)}>{goals.length > 1 && i >= 0 ? `${i + 1} · ` : ""}{gg.short}</button>); })}</div>
           </div>
