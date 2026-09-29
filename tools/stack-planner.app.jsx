@@ -737,6 +737,18 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
     grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke="#e7e5e4" strokeWidth="1" />);
     grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{f >= 1000 ? f / 1000 + "k" : f}</text>);
   });
+  // hover / drag: a crosshair with each curve's value at that frequency
+  const [hf, setHf] = useState(null);
+  const move = (e) => {
+    const r = e.currentTarget.getBoundingClientRect(), X = ((e.clientX - r.left) / r.width) * W;
+    setHf(X >= x0 && X <= x1 ? fmin * Math.pow(fmax / fmin, (X - x0) / (x1 - x0)) : null);
+  };
+  const unit = yLabel.includes("°") ? "°" : " dB";
+  const hits = hf ? paths.map((p) => {
+    const pts = p.curve.filter((o) => o.f >= fmin && o.f <= fmax);
+    const o = pts.length ? pts.reduce((b, q) => (Math.abs(Math.log(q.f / hf)) < Math.abs(Math.log(b.f / hf)) ? q : b)) : null;
+    return o && Math.abs(Math.log(o.f / hf)) < 0.1 ? { ...p, o } : null;
+  }).filter(Boolean) : [];
   const every = ((y1 - y0) * step) / (TOP - BOT) < 16 ? 2 : 1;   // thin the labels when rows get tight
   for (let v = BOT, k = 0; v <= TOP; v += step, k++) {
     const Y = py(v);
@@ -745,7 +757,8 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   }
   return (
     <div ref={box}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${yLabel} against frequency`} style={{ display: "block", width: "100%", height: "auto" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${yLabel} against frequency`} style={{ display: "block", width: "100%", height: "auto", touchAction: "pan-y" }}
+        onPointerMove={move} onPointerDown={move} onPointerLeave={() => setHf(null)}>
         {grid}
         {marks.filter((m) => m.f > fmin && m.f < fmax).map((m, i, ms) => (
           <g key={m.label + i}>
@@ -761,6 +774,13 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
             <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#57534e" fontSize="11" fontFamily="system-ui, sans-serif">{p.label}</text>
           </g>
         ))}
+        {hf && (<g pointerEvents="none">
+          <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke="#78716c" strokeWidth="1" />
+          {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke="#fff" strokeWidth="1.5" />)}
+          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="11" fontFamily="system-ui, sans-serif" fill="#1c1917" stroke="#fff" strokeWidth="3" paintOrder="stroke">
+            {hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz{hits.map((h) => ` · ${h.label} ${h.o.spl.toFixed(0)}${unit}`).join("")}
+          </text>
+        </g>)}
         <text x={W / 2} y={H - 4} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">frequency, Hz</text>
         <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{yLabel}</text>
       </svg>
