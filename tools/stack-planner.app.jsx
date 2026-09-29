@@ -1245,10 +1245,13 @@ function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
   );
 }
 const seg = (on) => `px-3 py-2 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`;
-function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, previewCard, onPreview, onLoad, onSave, canSave }) {
+function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, previewCard, onPreview, onLoad, onSave, canSave, nLocks, clearLocks }) {
   const need = roomNeed(optIn.room), target = Math.max(curOut != null ? curOut : need, need);
-  const g = optIn.goal;
-  const tgtText = g === "louder" ? "as loud as it gets, F3 within 3 Hz" : g === "lower" ? `lowest F3, at least ${(target - 1.5).toFixed(0)} dB per stack` : `clean ${target.toFixed(0)} dB per stack`;
+  const goals = optIn.goals, g = goals[0];
+  // tap adds a goal at the end of the order; tap again removes it (one always stays)
+  const tapGoal = (k) => setOpt({ goals: goals.includes(k) ? (goals.length > 1 ? goals.filter((x) => x !== k) : goals) : [...goals, k] });
+  const tgtText = (g === "louder" ? "as loud as it gets, F3 within 3 Hz" : g === "lower" ? `lowest F3, at least ${(target - 1.5).toFixed(0)} dB per stack` : `clean ${target.toFixed(0)} dB per stack`)
+    + (goals.length > 1 ? `, and ${goals.slice(1).map((x) => ({ cheaper: "cheaper", lighter: "lighter", lower: "lower", louder: "louder" })[x]).join(" and ")} than yours` : "");
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "system-ui, sans-serif" }}>
       <div className="rounded-lg border border-stone-300 bg-white p-4">
@@ -1268,13 +1271,16 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
             <div className="flex flex-wrap items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.budget} min={100} step={25} onChange={(e) => setOpt({ budget: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $</div>
           </div>
           <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Goal</div>
-            <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => <button key={k} title={gg.name} className={seg(g === k)} onClick={() => setOpt({ goal: k })}>{gg.short}</button>)}</div>
+            <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(tap more than one to stack them; the first ranks)</span></div>
+            <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => { const i = goals.indexOf(k); return (
+              <button key={k} title={gg.name} aria-pressed={i >= 0} className={seg(i >= 0)} onClick={() => tapGoal(k)}>{goals.length > 1 && i >= 0 ? `${i + 1} · ` : ""}{gg.short}</button>); })}</div>
           </div>
         </div>
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
           {curOut != null && <div className="text-xs text-stone-500 mt-0.5">Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB · {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB</div>}</div>
         <div className="mt-2 text-xs text-stone-500">Amps: {amps}</div>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-stone-500">{nLocks ? `${nLocks} lock${nLocks > 1 ? "s" : ""} set` : "No locks set"}
+          {nLocks > 0 && <button onClick={clearLocks} className="px-3 py-2 rounded border border-stone-300 bg-stone-50 hover:border-stone-500 text-stone-700">Clear all locks</button>}</div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button onClick={run} disabled={busy} className="px-4 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-50">{busy ? "Searching…" : "Find 3 designs"}</button>
           {res && !busy && <span className="text-xs text-stone-500">Searched {res.stats.evaluated.toLocaleString()} designs in {(res.stats.ms / 1000).toFixed(1)} s{res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}</span>}
@@ -1352,7 +1358,8 @@ function StackPlanner() {
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   const [optOn, setOptOnRaw] = useState(() => lsGet("planner.opt", false));
   const setOptOn = (v) => { setOptOnRaw(v); lsSet("planner.opt", v); };
-  const [optIn, setOptIn] = useState(() => { const { budgetPer, ...o } = lsGet("planner.optIn", {}) || {}; return { room: 1000, maxLb: 125, budget: 900, goal: "cheaper", ...o }; });
+  const [optIn, setOptIn] = useState(() => { const { budgetPer, goal, ...o } = lsGet("planner.optIn", {}) || {};
+    return { room: 1000, maxLb: 125, budget: 900, ...o, goals: Array.isArray(o.goals) && o.goals.length ? o.goals : [goal || "cheaper"] }; });
   const setOpt = (o) => setOptIn((p) => { const n = { ...p, ...o }; lsSet("planner.optIn", n); return n; });
   const [locks, setLocksRaw] = useState(() => { const l = lsGet("planner.locks", {}) || {}; return { ...l, subDim: { ...(l.subDim || {}) }, midDim: { ...(l.midDim || {}) } }; });
   const setLocks = (f) => setLocksRaw((p) => { const n = f(p); lsSet("planner.locks", n); return n; });
@@ -1591,7 +1598,7 @@ function StackPlanner() {
     setOptBusy(true); setOptErr("");
     try {
       const cur = preview ? preview.before : snapshot();
-      setOptRes(await runOptimizer({ cur, room: inp.room, maxLb: inp.maxLb, budget: inp.budget, goal: inp.goal, locks }));
+      setOptRes(await runOptimizer({ cur, room: inp.room, maxLb: inp.maxLb, budget: inp.budget, goals: inp.goals, locks }));
     } catch (e) { setOptErr("The search failed: " + ((e && e.message) || e)); }
     setOptBusy(false);
   };
@@ -1704,7 +1711,9 @@ function StackPlanner() {
       </section>
       {optOn && <OptimizerPanel optIn={optIn} setOpt={setOpt} run={runOpt} busy={optBusy} res={optRes} err={optErr} curOut={curOut}
         amps={[["sub", ampW, locks.ampW], ["mid", mAmpW, locks.mAmpW], ["HF", hfAmpW, locks.hfAmpW]].map(([n, w, l]) => `${n} ${l ? "" : "up to "}${w} W`).join(" · ") + " per channel (on Cheaper and Lighter cards, unlocked amps come back at the least power that does the job)"} previewCard={preview && preview.card} canSave={!!db}
-        onPreview={optPreview} onLoad={optLoad} onSave={optSave} />}
+        onPreview={optPreview} onLoad={optLoad} onSave={optSave}
+        nLocks={Object.entries(locks).reduce((a, [k, v]) => a + (k.endsWith("Dim") ? Object.values(v).filter((m) => m && m !== "free").length : v ? 1 : 0), 0)}
+        clearLocks={() => setLocks(() => ({ subDim: {}, midDim: {} }))} />}
       {preview && (
         <div className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-stone-50 px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm" style={{ fontFamily: "system-ui, sans-serif" }}>
           <span>Previewing: <b className="font-semibold">{preview.label}</b></span>

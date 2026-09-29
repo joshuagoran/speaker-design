@@ -154,3 +154,9 @@ Preview, Load (saves the previous design when signed in), Undo, Save as; the "no
 Changes from the plan: output is scored as the lowest clean music-limit level from 40 to 90 Hz (a response
 peak at 45 Hz could otherwise win); the layout, finish and amps are never changed; box dimensions step in
 whole inches; about 1 s in Node, 1–4 s in the page.
+
+### Stacked goals (branch `stack-goals`)
+Tap more than one goal; the tap order shows on the buttons (1 · Cheaper, 2 · Lighter). The first goal ranks the
+designs; the main card ("Cheaper + lighter") must also beat your design on every other goal. The other cards
+are single-goal options, to show what dropping a goal buys. If nothing beats your design on all of them, the
+panel says so. "Clear all locks" resets every lock and box-size limit.
