@@ -332,7 +332,7 @@ export function optimize(input) {
   };
   // an alternative has to beat the first card on its own axis by a margin that matters
   const beats = {
-    cheaper: (x, y) => x.price <= y.price - 25, lighter: (x, y) => x.heaviest <= y.heaviest - 3,
+    cheaper: (x, y) => x.price < y.price, lighter: (x, y) => x.heaviest <= y.heaviest - 3,
     lower: (x, y) => x.f3 <= y.f3 - 2, louder: (x, y) => x.out >= y.out + 1,
   };
   const finalists = new Map();

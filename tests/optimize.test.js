@@ -58,7 +58,7 @@ test("every card's label is true against the current design", (t) => {
     for (const k of out.cards) {
       const m = k.metrics;
       if (k.label === "Fixes your design") { t.assert.ok(out.curProblems.length > 0, "only when the current design fails a check"); continue; }
-      const beat = { cheaper: m.price <= c.price - 25, lighter: m.heaviest <= c.heaviest - 3, louder: m.out >= c.out + 1, lower: m.f3 <= c.f3 - 2 };
+      const beat = { cheaper: m.price < c.price, lighter: m.heaviest <= c.heaviest - 3, louder: m.out >= c.out + 1, lower: m.f3 <= c.f3 - 2 };
       const axis = { Cheaper: "cheaper", Lighter: "lighter", Louder: "louder", "Goes lower": "lower", "Smallest change": goal === "failing" ? "cheaper" : goal }[k.label]
         || Object.keys(goalName).find((g) => k.label === goalName[g]);
       t.assert.ok(beat[axis], `${goal}: "${k.label}" doesn't beat the current design on ${axis}`);
