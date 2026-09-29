@@ -113,7 +113,9 @@ export const optFields = (c) => Object.fromEntries(OPT_FIELDS.map((k) => [k, c[k
 
 export function optimize(input) {
   const t0 = Date.now();
-  const { cur, goal = "cheaper", room = 1000 } = input;
+  const { goal = "cheaper", room = 1000 } = input;
+  // older saved configs can lack some fields; the page always has them, with these defaults
+  const cur = { xoLo: 120, xoHi: 900, tilt: 6, hfTilt: 6, ampW: 800, mAmpW: 400, hfAmpW: 100, hpType: "BW24", portMax: 20, wall: 0.75, inset: 0.75, layout: "stack", ...input.cur };
   const locks = { subDim: {}, midDim: {}, ...(input.locks || {}) };
   const budget = input.budget;   // drivers per stack
   const lim = { maxLb: input.maxLb, budget };
@@ -182,7 +184,12 @@ export function optimize(input) {
   }
   const pickSeeds = (key, n, ok) => seeds.filter(ok).sort((a, b) => key(a) - key(b)).slice(0, n);
   const meets = (x) => x.out >= target - 0.5 && x.f3 <= curF3 + 2;
+  // the current design itself (its sub, volume, tuning and highpass): small changes such as plywood or a vent
+  // size are always tried, even when the grid above has no point near it
+  const curSeed = curM && curSub && curSub.ts && subs.includes(curSub)
+    ? [{ sub: curSub, V: curM.netL, Fb: curM.Fb, hpf: cur.hpf, out: curM.out, f3: curM.f3, lb: curM.subLb, price: curSub.price }] : [];
   const seedSet = new Set([
+    ...curSeed,
     ...pickSeeds((x) => x.price * 100 + x.lb, 10, meets),
     ...pickSeeds((x) => x.lb, 10, meets),
     ...pickSeeds((x) => x.f3, 8, (x) => x.out >= target - 1.5),
@@ -334,6 +341,11 @@ export function optimize(input) {
     const m = evaluate(x.c); evals++;
     if (m) pool.push({ c: x.c, m, ch: changes(x.c) });
   }
+  // one-change tweaks of the current design, evaluated as they are: the other plywood
+  if (!locks.wall && curM) for (const w of walls) if (w !== cur.wall) {
+    const c = { ...base, wall: w }, m = evaluate(c); evals++;
+    if (m) pool.push({ c, m, ch: changes(c) });
+  }
   const warnCount = (m) => ["sub", "mid", "horn"].reduce((a, k) => a + m.chips[k].filter(([kind, head]) => kind === "warn" && !/limited$/.test(head) && head !== "Over 125 lb").length, 0);
   const metric = (p) => ({ price: p.m.price, heaviest: p.m.heaviest, out: p.m.out, f3: p.m.f3, ch: p.ch, w: warnCount(p.m) });
 
@@ -345,7 +357,14 @@ export function optimize(input) {
     const cards = [{ p: first, label: GOALS[goal].name, why: GOALS[goal].why }];
     const vol = (c) => c.cDim.w * c.cDim.h * c.cDim.d;
     const differs = (p) => cards.every((k) => k.p.c.sub !== p.c.sub || k.p.c.portStyle !== p.c.portStyle || k.p.c.mid !== p.c.mid
-      || Math.abs(vol(p.c) / vol(k.p.c) - 1) >= 0.15);
+      || k.p.c.wall !== p.c.wall || Math.abs(vol(p.c) / vol(k.p.c) - 1) >= 0.15);
+    // the smallest change that already beats your design on the goal (e.g. the same boxes on 1/2" ply)
+    if (curM) {
+      const curMet = { price: curM.price, heaviest: curM.heaviest, out: curM.out, f3: curM.f3 };
+      const small = ok.filter((p) => p.ch <= 1 && differs(p) && beats[goal](metric(p), curMet) && goalOk[goal]({ ...metric(p), out: p.m.out + (target - tgt) }))
+        .sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
+      if (small) cards.push({ p: small, label: "Smallest change", why: "Changes one thing from your design." });
+    }
     const axes = [...ALT_ORDER[goal], ...Object.keys(ALT_LABEL).filter((a) => a !== goal && !ALT_ORDER[goal].includes(a))];
     for (const alt of axes) {
       if (cards.length >= 3) break;
@@ -384,7 +403,7 @@ export function optimize(input) {
   const chooseAmps = (L, tgt) => {
     const cs = choose0(L, tgt);
     if (!cs) return cs;
-    return cs.map((k) => (["louder", "lower"].includes(goal) && k === cs[0]) || k.label === ALT_LABEL.louder || k.label === ALT_LABEL.lower
+    return cs.map((k) => (["louder", "lower"].includes(goal) && k === cs[0]) || k.label === ALT_LABEL.louder || k.label === ALT_LABEL.lower || k.label === "Smallest change"
       ? k : { ...k, p: shrinkAmps(k.p, Math.min(k.p.m.out, tgt)) });
   };
 

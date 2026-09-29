@@ -55,6 +55,7 @@ test("the first card meets the goal; alternatives beat it on their own axis", (t
   t.assert.ok(a.metrics.out >= out.target - 0.5);
   for (const k of alts) {
     const m = k.metrics, f = a.metrics;
+    if (k.label === "Smallest change") { t.assert.ok(k.metrics.price <= out.curM.price - 25, "smallest change beats the current design"); continue; }
     const ok = { Cheaper: m.price <= f.price - 25, Lighter: m.heaviest <= f.heaviest - 3, Louder: m.out >= f.out + 1, "Goes lower": m.f3 <= f.f3 - 2 }[k.label];
     t.assert.ok(ok, `${k.label} card doesn't beat the first`);
     const vol = (c) => c.cDim.w * c.cDim.h * c.cDim.d;
@@ -112,4 +113,29 @@ test("a near-miss option, once applied, finds designs", (t) => {
     t.assert.ok(again.cards.length >= 1, o.text);
   }
   t.assert.ok(out.nearMiss.blocking.length > 0 && out.nearMiss.blocking.every((b) => b.length > 0));
+});
+
+test("Lighter with everything locked but the plywood offers the same design on 1/2 in ply", (t) => {
+  const defaults = { xoLo: 120, xoHi: 900, mAmpW: 400, hfAmpW: 100 };
+  let tried = 0;
+  for (const name of ["lil block stack LE", "blocky", "light block", "lil tower"]) {
+    const c0 = { ...defaults, ...pick(name) };
+    const c = { ...c0, horn: c0.cd === "n314t" && c0.horn === "a460g2" ? "a460g2_14" : c0.horn };
+    if (problems(evaluate(c), { maxLb: 150, budget: 2000 }).length) continue;   // locked as it is, it can't pass anyway
+    tried++;
+    const all = { sub: true, mid: true, cd: true, horn: true, vent: true, hpf: true, xoLo: true, xoHi: true, ampW: true, mAmpW: true, hfAmpW: true,
+      subDim: { w: "exact", h: "exact", d: "exact" }, midDim: { w: "exact", h: "exact", d: "exact" } };
+    const out = optimize({ ...base, cur: c, maxLb: 150, budget: 2000, goal: "lighter", locks: all });
+    t.assert.ok(out.cards.length >= 1, `${name}: ${JSON.stringify(out.nearMiss && out.nearMiss.blocking)}`);
+    t.assert.equal(out.cards[0].config.wall, 0.5, name);
+    t.assert.ok(out.cards[0].metrics.heaviest < evaluate(c).heaviest, name);
+  }
+  t.assert.ok(tried >= 2, "at least two saved designs checked");
+});
+
+test("Lighter with free choices still shows the plywood-only change when it beats the current design", (t) => {
+  const c = { ...pick("light block"), xoLo: 120, xoHi: 900, mAmpW: 400, hfAmpW: 100 };
+  const out = optimize({ ...base, cur: c, maxLb: 150, budget: 2000, goal: "lighter" });
+  const small = out.cards.find((k) => k.config.wall !== c.wall && k.changed.join() === "plywood");
+  t.assert.ok(small || out.cards.some((k) => k.config.wall === 0.5), out.cards.map((k) => `${k.label}: ${k.changed.join("/")}`).join(" | "));
 });
