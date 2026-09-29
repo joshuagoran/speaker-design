@@ -83,3 +83,63 @@ sealed, cheap) ≈ 0.05 s; horns (8 × 9 pairs) trivial; refinement 3 bands × 4
 3. Mid and HF searches, combiner, joint limits.
 4. Worker and UI cards.
 5. Timing and optimality tests in CI.
+
+## Revisions after review (supersede the sections above where they conflict)
+
+Two reviews: technical (search soundness, speed) and usability (inputs, results, flow).
+
+### Usability
+- **Start from what I have.** Pre-fill every input from the current config, the README constraints
+  (125 lb, driver budgets, US vendors) and the current amp settings (shown read-only). Default action:
+  "Find better than my current design".
+- **Visible inputs, four:** room (500 / 750 / 1000 sq ft, outdoor), max lb per box, budget (per stack or
+  for the pair, stated), goal. Everything else under **Advanced** (max W×H×D, locks, vent style, ply,
+  layout, excluded drivers, drivers I already own).
+- **Goals as outcomes, with a number:** "Match my current output, cheapest", "…lightest",
+  "Go as low as possible", "Loudest". The target is shown, e.g. "clean 118 dB at 45 Hz per stack (music
+  limit)", derived from the room size. Scores use `spl30/35/45` (add `spl40`) and say music or sine.
+- **Cards labelled by trade-off, not rank.** Each shows deltas vs the current design (price, heaviest box,
+  F3, max SPL at 45 Hz, first limit), why it won, what limits it, the spec at a glance, its warning chips,
+  a buildability line ("duct 14″ fits; 2 sheets 3/4″ birch"), "modelled, not measured" and price dates.
+  Cards 2 and 3 must differ in driver or vent style.
+- **Never an empty result.** If nothing fits, re-run with each limit relaxed 10–20 % and say which one
+  unlocks results ("nothing under 125 lb reaches it; 140 lb or +$60 would").
+- **Preview, Load, Undo, Save as.** Load snapshots the current design first (persistent Undo); results are
+  full snapshots so `restore()` leaves nothing stale; Save as uses the saved-configs store.
+- **Buildable, boring results.** Must pass every "bad" chip and the cutlist (no oversize parts); round to
+  1/8″, standard tube diameters, 10–15 % port-speed margin, Qtc 0.5–0.8 hard for cards.
+- **Phones:** an "Optimize" button opens a full-screen sheet (not a fifth tab); four inputs stacked,
+  Advanced collapsed; cards stacked one at a time; Load/Undo pinned. Show a spinner, then all three cards
+  once (no reshuffling list).
+
+### Technical
+- **Bands are coupled, so no per-band top-K by a single score.** The mid must keep up with the sub's music
+  limit at xoLo, the horn with the mid at xoHi; price and weight are shared (a knapsack); the tower layout
+  ties mid to sub dimensions. Search xoLo and xoHi explicitly (6–8 values each), keep a Pareto front per
+  band over (quality, price, weight) indexed by crossover, then chain sub[xoLo] → mid[xoLo, xoHi] →
+  HF[xoHi]. A sub is scored by what the best affordable mid can match, not by raw output.
+- **The vent is a 1-D root find, not closed form.** Length sets Leff, the back-wall term of the end
+  correction, the duct volume and the internal wood, so solve length for the target Fb by bisection
+  (3–5 steps; Fb falls with length). Area isn't free: slot or throat size is the variable, width/height
+  come from the box. Pick the smallest vent that keeps the port from being the binding limit, within
+  the fit rules, which the optimizer imports from `chips.js` rather than re-implementing.
+  `duct2DEndCorr` (55–170 µs) gets a cached L = ∞ sum per (h, X) plus the short back-wall correction.
+- **No second physics model.** Instead of a separate screening model: `boxModel` gets an optional coarser
+  grid (a subset of the same 12–300 Hz points, peaks refined by a parabola), used only to rank; final
+  numbers always come from the full `subSystem`/`midSystem`. Tests check ranking agreement (top-K recall)
+  against the full model, not a dB tolerance, and that closed-form internal wood equals the cutlist.
+- **Search (volume, aspect)** with ~5 aspects: shape sets slot width/side-duct height, end corrections and
+  weight, not only fit.
+- **Valid pruning only:** upper bound on SPL per driver (mass-line level at the thermal/amp cap), lower
+  bounds on price and weight, driver-fit by max dimensions. Budget: 0.5–1 s laptop, stream on phones.
+- **Hard constraints added:** horn/driver exit match, mid "driver won't fit", minimum crossovers,
+  stack height and width; which "warn" chips are hard is listed explicitly.
+- **Worker:** second esbuild entry, inlined as `<script type="text/plain">` (same `</script` guard), started
+  from a Blob URL with a run id for cancellation; main-thread fallback where workers are blocked (test in
+  the claude.ai artifact).
+- **Test:** a loaded result reproduces its card's numbers exactly.
+
+### Scope: first version
+Sub + mid jointly with xoLo (the horn follows from xoHi and is cheap to enumerate), pre-filled inputs,
+three cards with deltas, Preview/Load/Undo/Save as, near-miss message, worker. Later: Pareto chain over
+both crossovers, locks, owned/excluded drivers, outdoor target, "explain" view of rejected options.
