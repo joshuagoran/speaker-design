@@ -1288,6 +1288,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
           </div>
           {res.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {res.cards.length - 1} more</div>}
         </>)}
+        {res && !busy && res.goalMissing && <div className="mt-2 text-xs text-amber-800">{res.goalMissing}</div>}
         {res && !busy && !res.cards.length && res.nearMiss && (
           <div className="mt-4 rounded-lg border border-orange-300 bg-orange-50 px-3 py-3">
             <h3 className="text-base" style={{ fontFamily: "Georgia, serif" }}>Nothing fits all your limits</h3>

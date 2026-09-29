@@ -356,31 +356,42 @@ export function optimize(input) {
   const warnCount = (m) => ["sub", "mid", "horn"].reduce((a, k) => a + m.chips[k].filter(([kind, head]) => kind === "warn" && !/limited$/.test(head) && head !== "Over 125 lb").length, 0);
   const metric = (p) => ({ price: p.m.price, heaviest: p.m.heaviest, out: p.m.out, f3: p.m.f3, ch: p.ch, w: warnCount(p.m) });
 
+  // Every card's label has to be true against your design (the deltas it shows): a "Cheaper" card costs less,
+  // a "Lighter" one weighs less, and so on. If nothing beats your design on the goal, that card is left out.
+  const curMet = curM ? { price: curM.price, heaviest: curM.heaviest, out: curM.out, f3: curM.f3 } : null;
+  const curFails = !curM || problems(curM, lim).length > 0;
+  const FIX_WHY = { cheaper: "Cheapest design that passes the checks.", lighter: "Lightest design that passes the checks.",
+    lower: "Lowest F3 that passes the checks.", louder: "Loudest design that passes the checks." };
+  const trueVsCur = (axis, p) => !curMet || beats[axis](metric(p), curMet);
   const choose = (L, tgt) => {
     const ok = pool.filter((p) => problems(p.m, L).length === 0);
-    const first = ok.filter((p) => goalOk[goal]({ ...metric(p), out: p.m.out + (target - tgt) }))
-      .sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
-    if (!first) return null;
-    const cards = [{ p: first, label: GOALS[goal].name, why: GOALS[goal].why }];
+    const meets = (p) => goalOk[goal]({ ...metric(p), out: p.m.out + (target - tgt) });
+    const cards = [];
+    const first = ok.filter((p) => meets(p) && trueVsCur(goal, p)).sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
+    if (first) cards.push({ p: first, label: GOALS[goal].name, why: GOALS[goal].why });
+    // your design fails a check: the goal's best design that passes, labelled as a fix (it may cost or weigh more)
+    else if (curFails) {
+      const fix = ok.filter(meets).sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
+      if (fix) cards.push({ p: fix, label: "Fixes your design", why: FIX_WHY[goal] });
+    }
     const vol = (c) => c.cDim.w * c.cDim.h * c.cDim.d;
     const differs = (p) => cards.every((k) => k.p.c.sub !== p.c.sub || k.p.c.portStyle !== p.c.portStyle || k.p.c.mid !== p.c.mid
       || k.p.c.wall !== p.c.wall || Math.abs(vol(p.c) / vol(k.p.c) - 1) >= 0.15);
     // the smallest change that already beats your design on the goal (e.g. the same boxes on 1/2" ply)
-    if (curM) {
-      const curMet = { price: curM.price, heaviest: curM.heaviest, out: curM.out, f3: curM.f3 };
-      const small = ok.filter((p) => p.ch <= 1 && differs(p) && beats[goal](metric(p), curMet) && goalOk[goal]({ ...metric(p), out: p.m.out + (target - tgt) }))
+    if (curMet) {
+      const small = ok.filter((p) => p.ch <= 1 && differs(p) && meets(p) && trueVsCur(goal, p))
         .sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
       if (small) cards.push({ p: small, label: "Smallest change", why: "Changes one thing from your design." });
     }
     const axes = [...ALT_ORDER[goal], ...Object.keys(ALT_LABEL).filter((a) => a !== goal && !ALT_ORDER[goal].includes(a))];
     for (const alt of axes) {
       if (cards.length >= 3) break;
-      const q = ok.filter((p) => differs(p) && p.m.out >= tgt - 1.5 && beats[alt](metric(p), metric(first)))
+      const q = ok.filter((p) => differs(p) && p.m.out >= tgt - 1.5 && trueVsCur(alt, p) && (!first || beats[alt](metric(p), metric(first))))
         .sort((a, b) => obj[alt](metric(a)) - obj[alt](metric(b)))[0];
-      if (q) cards.push({ p: q, label: ALT_LABEL[alt], why: { louder: "More output than the first design.", lower: "Goes lower than the first design.",
-        cheaper: "Costs less than the first design, close to the target.", lighter: "Lighter than the first design, close to the target." }[alt] });
+      if (q) cards.push({ p: q, label: ALT_LABEL[alt], why: { louder: "More output than your design.", lower: "Goes lower than your design.",
+        cheaper: "Costs less than your design, close to the target.", lighter: "Lighter than your design, close to the target." }[alt] });
     }
-    return cards;
+    return cards.length ? { cards, goalMissing: !first && !curFails } : null;
   };
 
   // Unlocked amps: the least power per channel (in the sliders' steps) that still reaches the target and keeps
@@ -408,13 +419,18 @@ export function optimize(input) {
   };
   const choose0 = choose;
   const chooseAmps = (L, tgt) => {
-    const cs = choose0(L, tgt);
-    if (!cs) return cs;
-    return cs.map((k) => (["louder", "lower"].includes(goal) && k === cs[0]) || k.label === ALT_LABEL.louder || k.label === ALT_LABEL.lower || k.label === "Smallest change"
-      ? k : { ...k, p: shrinkAmps(k.p, Math.min(k.p.m.out, tgt)) });
+    const res = choose0(L, tgt);
+    if (!res) return res;
+    const cs = res.cards;
+    return { ...res, cards: cs.map((k) => (["louder", "lower"].includes(goal) && k === cs[0]) || k.label === ALT_LABEL.louder || k.label === ALT_LABEL.lower || k.label === "Smallest change"
+      ? k : { ...k, p: shrinkAmps(k.p, Math.min(k.p.m.out, tgt)) }),
+    };
   };
 
-  let cards = chooseAmps(lim, target), nearMiss = null;
+  const chosen = chooseAmps(lim, target), cards = chosen ? chosen.cards : null;
+  let nearMiss = null;
+  const GOAL_MISSING = { cheaper: "Nothing cheaper than your design passes the checks.", lighter: "Nothing lighter than your design passes the checks.",
+    lower: "Nothing goes lower than your design and keeps the output.", louder: "Nothing louder than your design passes the checks." };
   if (!cards) {
     const tries = [
       { text: `Allow ${Math.ceil(input.maxLb * 1.1)} lb`, set: { maxLb: Math.ceil(input.maxLb * 1.1) }, L: { ...lim, maxLb: Math.ceil(input.maxLb * 1.1) }, t: target },
@@ -431,6 +447,7 @@ export function optimize(input) {
   return {
     target, need, curM: curM && summary(curM), curProblems: problems(curM, lim),
     cards: cards ? cards.map((k) => card(k.p, k.label, k.why, curM, cur)) : [],
+    goalMissing: chosen && chosen.goalMissing ? GOAL_MISSING[goal] : null,
     nearMiss, stats: { evaluated: evals, ms: Date.now() - t0, subs: subCands.length, combos: combos.length, pool: pool.length },
   };
 }

@@ -49,18 +49,22 @@ for (const goal of ["cheaper", "lighter", "lower", "louder"]) {
   });
 }
 
-test("the first card meets the goal; alternatives beat it on their own axis", (t) => {
-  const out = runs.cheaper || optimize({ ...base, goal: "cheaper" });
-  const [a, ...alts] = out.cards;
-  t.assert.ok(a.metrics.out >= out.target - 0.5);
-  for (const k of alts) {
-    const m = k.metrics, f = a.metrics;
-    if (k.label === "Smallest change") { t.assert.ok(k.metrics.price <= out.curM.price - 25, "smallest change beats the current design"); continue; }
-    const ok = { Cheaper: m.price <= f.price - 25, Lighter: m.heaviest <= f.heaviest - 3, Louder: m.out >= f.out + 1, "Goes lower": m.f3 <= f.f3 - 2 }[k.label];
-    t.assert.ok(ok, `${k.label} card doesn't beat the first`);
-    const vol = (c) => c.cDim.w * c.cDim.h * c.cDim.d;
-    t.assert.ok(k.config.sub !== a.config.sub || k.config.portStyle !== a.config.portStyle || k.config.mid !== a.config.mid
-      || Math.abs(vol(k.config) / vol(a.config) - 1) >= 0.15, "alternatives differ in driver, vent, mid or box size");
+test("every card's label is true against the current design", (t) => {
+  // (also run with a current design that fails: over budget, so the fix card appears)
+  runs.failing = optimize({ ...base, budget: 700, goal: "cheaper" });
+  const goalName = { cheaper: "Same output, cheaper", lighter: "Same output, lighter", lower: "Go lower", louder: "Louder" };
+  for (const goal of ["cheaper", "lighter", "lower", "louder", "failing"]) {
+    const out = runs[goal] || optimize({ ...base, goal }), c = out.curM;
+    for (const k of out.cards) {
+      const m = k.metrics;
+      if (k.label === "Fixes your design") { t.assert.ok(out.curProblems.length > 0, "only when the current design fails a check"); continue; }
+      const beat = { cheaper: m.price <= c.price - 25, lighter: m.heaviest <= c.heaviest - 3, louder: m.out >= c.out + 1, lower: m.f3 <= c.f3 - 2 };
+      const axis = { Cheaper: "cheaper", Lighter: "lighter", Louder: "louder", "Goes lower": "lower", "Smallest change": goal === "failing" ? "cheaper" : goal }[k.label]
+        || Object.keys(goalName).find((g) => k.label === goalName[g]);
+      t.assert.ok(beat[axis], `${goal}: "${k.label}" doesn't beat the current design on ${axis}`);
+    }
+    if (!out.cards.length || out.goalMissing) continue;
+    t.assert.ok(out.cards[0].metrics.out >= out.target - 0.5, `${goal}: first card meets the target`);
   }
 });
 
@@ -87,7 +91,7 @@ test("amps: unlocked amps never go up; locked amps stay; same-output cards keep 
   for (const k of free.cards) {
     t.assert.ok(k.config.ampW <= cur.ampW && k.config.mAmpW <= cur.mAmpW && k.config.hfAmpW <= cur.hfAmpW, k.label);
   }
-  t.assert.ok(free.cards[0].metrics.out >= free.target - 0.5);
+  if (!free.goalMissing) t.assert.ok(free.cards[0].metrics.out >= free.target - 0.5);
   const locked = optimize({ ...base, goal: "cheaper", locks: { ampW: true, mAmpW: true, hfAmpW: true } });
   for (const k of locked.cards) t.assert.deepEqual([k.config.ampW, k.config.mAmpW, k.config.hfAmpW], [cur.ampW, cur.mAmpW, cur.hfAmpW]);
 });
