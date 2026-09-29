@@ -104,7 +104,8 @@ export function problems(m, lim) {
 
 // ---- search ----
 // input: { cur (the planner's snapshot), room, maxLb, budget, budgetPer: "stack"|"pair", goal, locks }
-// locks: { sub, mid, cd, horn, vent, wall, hpf, xoLo, xoHi, subDim: {w,h,d}, midDim: {w,h,d} } (dims: "free"|"max"|"exact")
+// locks: { sub, mid, cd, horn, vent, wall, hpf, xoLo, xoHi, ampW, mAmpW, hfAmpW, subDim: {w,h,d}, midDim: {w,h,d} }
+// (dims: "free"|"max"|"exact"; an unlocked amp may come back lower, never higher)
 export function optimize(input) {
   const t0 = Date.now();
   const { cur, goal = "cheaper", room = 1000 } = input;
@@ -346,7 +347,36 @@ export function optimize(input) {
     return cards;
   };
 
-  let cards = choose(lim, target), nearMiss = null;
+  // Unlocked amps: the least power per channel (in the sliders' steps) that still reaches the target and keeps
+  // each band up with the one below it. Sub first (a quieter sub asks less of the mid), then mid, then HF.
+  const shrinkAmps = (p, tgtOut) => {
+    let c = { ...p.c }, m = p.m;
+    const ok = (cc, mm) => mm && problems(mm, lim).length === 0;
+    const lowest = (key, lo, step, good) => {
+      if (locks[key] || c[key] <= lo) return;
+      let a = lo, b = c[key];                                  // b is known good
+      while (b - a > step) {
+        const mid = Math.round((a + b) / 2 / step) * step, cc = { ...c, [key]: mid }, mm = evaluate(cc); evals++;
+        if (mid <= a || mid >= b) break;
+        if (ok(cc, mm) && good(mm)) b = mid; else a = mid;
+      }
+      const cc = { ...c, [key]: b }, mm = evaluate(cc); evals++;
+      if (ok(cc, mm) && good(mm)) { c = cc; m = mm; }
+    };
+    lowest("ampW", 200, 50, (mm) => mm.out >= tgtOut - 0.05);
+    lowest("mAmpW", 50, 25, (mm) => mm.midGap >= 0);
+    lowest("hfAmpW", 10, 5, (mm) => mm.hornGap == null || mm.hornGap >= 0);
+    return { ...p, c, m };
+  };
+  const choose0 = choose;
+  const chooseAmps = (L, tgt) => {
+    const cs = choose0(L, tgt);
+    if (!cs) return cs;
+    return cs.map((k) => (["louder", "lower"].includes(goal) && k === cs[0]) || k.label === ALT_LABEL.louder || k.label === ALT_LABEL.lower
+      ? k : { ...k, p: shrinkAmps(k.p, Math.min(k.p.m.out, tgt)) });
+  };
+
+  let cards = chooseAmps(lim, target), nearMiss = null;
   if (!cards) {
     const tries = [
       { text: `Allow ${Math.round(input.maxLb * 1.1)} lb`, set: { maxLb: Math.round(input.maxLb * 1.1) }, L: { ...lim, maxLb: input.maxLb * 1.1 }, t: target },
@@ -387,6 +417,7 @@ function card(p, label, why, curM, cur) {
   if (c.mDim.w !== cur.mDim.w || c.mDim.h !== cur.mDim.h || c.mDim.d !== cur.mDim.d) changed.push("mid box");
   if (c.cd !== cur.cd || c.horn !== cur.horn) changed.push("HF");
   if (c.xoLo !== cur.xoLo || c.xoHi !== cur.xoHi) changed.push("crossovers");
+  if (c.ampW !== cur.ampW || c.mAmpW !== cur.mAmpW || c.hfAmpW !== cur.hfAmpW) changed.push("amp power");
   return {
     label, why, config: c, metrics: summary(m),
     delta: curM ? { price: m.price - curM.price, heaviest: m.heaviest - curM.heaviest, out: m.out - curM.out, f3: m.f3 - curM.f3 } : null,

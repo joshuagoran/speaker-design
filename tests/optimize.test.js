@@ -80,3 +80,13 @@ test("impossible limits: no cards, a near-miss that names what blocks it", (t) =
   t.assert.equal(out.cards.length, 0);
   t.assert.ok(out.nearMiss && out.nearMiss.blocking.length > 0);
 });
+
+test("amps: unlocked amps never go up; locked amps stay; same-output cards keep the target", (t) => {
+  const free = runs.cheaper || optimize({ ...base, goal: "cheaper" });
+  for (const k of free.cards) {
+    t.assert.ok(k.config.ampW <= cur.ampW && k.config.mAmpW <= cur.mAmpW && k.config.hfAmpW <= cur.hfAmpW, k.label);
+  }
+  t.assert.ok(free.cards[0].metrics.out >= free.target - 0.5);
+  const locked = optimize({ ...base, goal: "cheaper", locks: { ampW: true, mAmpW: true, hfAmpW: true } });
+  for (const k of locked.cards) t.assert.deepEqual([k.config.ampW, k.config.mAmpW, k.config.hfAmpW], [cur.ampW, cur.mAmpW, cur.hfAmpW]);
+});
