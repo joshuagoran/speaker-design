@@ -1224,7 +1224,7 @@ function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
         Amps {c.ampW} / {c.mAmpW} / {c.hfAmpW} W per channel
       </div>
       <div className="grid grid-cols-2 gap-1.5">
-        {tile("Per stack", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
+        {tile("Drivers", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Heaviest", `${m.heaviest.toFixed(0)} lb`, <Delta v={d.heaviest} unit=" lb" lowerIsBetter />)}
         {tile("Output", `${m.out.toFixed(1)} dB`, <Delta v={d.out} unit=" dB" digits={1} />)}
         {tile("F3", `${m.f3.toFixed(0)} Hz`, <Delta v={d.f3} unit=" Hz" lowerIsBetter />)}
@@ -1264,7 +1264,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
             <div className="flex items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.maxLb} min={30} max={250} onChange={(e) => setOpt({ maxLb: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> lb</div>
           </div>
           <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Driver budget, per stack</div>
+            <div className="text-sm text-stone-500 mb-1">Driver budget, per stack <span className="text-xs">(sub + mid + CD, at the listed prices)</span></div>
             <div className="flex flex-wrap items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.budget} min={100} step={25} onChange={(e) => setOpt({ budget: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $</div>
           </div>
           <div className="mt-3">

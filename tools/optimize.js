@@ -76,9 +76,10 @@ export function evaluate(c) {
     horn: hornModel ? hornChips({ hf: cd.hf, hz, horn, xoHi: c.xoHi, hornModel, hfAmpW: c.hfAmpW, midAtXoHi: midAtHi, hfTilt: c.hfTilt,
       hornAtXo, midBeam: pistonBeam(mid.ts.Sd, c.xoHi), fK: hz.covH && horn.size ? keeleF(hz.covH, horn.size.w) : null }) : [],
   };
-  const parts = [sub, mid, cd, horn];
+  // the driver budget: sub + mid + compression driver (the horn isn't a driver; printed ones are ~$50)
+  const parts = [sub, mid, cd];
   return {
-    price: parts.reduce((a, o) => a + (o.price || 0), 0), priceKnown: parts.every((o) => o.price != null),
+    price: parts.reduce((a, o) => a + (o.price || 0), 0), priceKnown: parts.every((o) => o.price != null), hornPrice: horn.price || 0,
     subLb, midLb, heaviest: Math.max(subLb, midLb),
     out: bandOut(s.mdl, s.lim, s.AMP_V), spl45: s.lim.spl45, spl35: s.lim.spl35, f3: s.mdl.f3, Fb: s.mdl.Fb, who: s.lim.who, limW: s.lim.W, netL: s.netL,
     qtc: mm.Qtc, midF3: mm.f3, midGap: midAtXo.spl - (subMusic - c.tilt), hornGap: hornAtXo != null ? hornAtXo - (midAtHi - c.hfTilt) : null,
@@ -98,7 +99,7 @@ export function problems(m, lim) {
   if (m.qtc < 0.5 || m.qtc > 0.8) out.push(`mid Qtc ${m.qtc.toFixed(2)}`);
   if (m.mismatch) out.push("horn and driver exits differ");
   if (m.heaviest > lim.maxLb + 1e-9) out.push(`${m.heaviest.toFixed(0)} lb box`);
-  if (m.price > lim.budget + 1e-9) out.push(`$${Math.round(m.price)} per stack`);
+  if (m.price > lim.budget + 1e-9) out.push(`drivers $${Math.round(m.price)} per stack`);
   return out;
 }
 
@@ -272,9 +273,9 @@ export function optimize(input) {
       if ((cd.hf.minXo && xoHi < cd.hf.minXo) || (hz.minXo && xoHi < hz.minXo)) continue;
       const hm = hornResponse(cd.hf, hz, xoHi, cur.hfAmpW); evals++;
       if (!hm) continue;
-      hornTable[xoHi].push({ cd, h, at: nearest(hm.curve, xoHi).spl, price: (cd.price || 0) + (h.price || 0), same: cd.id === cur.cd && h.id === cur.horn });
+      hornTable[xoHi].push({ cd, h, at: nearest(hm.curve, xoHi).spl, price: cd.price || 0, horn: h.price || 0, same: cd.id === cur.cd && h.id === cur.horn });
     }
-    hornTable[xoHi].sort((a, b) => (b.same - a.same) || a.price - b.price);
+    hornTable[xoHi].sort((a, b) => (b.same - a.same) || a.price - b.price || a.horn - b.horn);
   }
 
   // combine: for each sub and crossover pair, the mid and horn that keep up, best for each objective
