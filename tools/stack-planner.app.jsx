@@ -777,6 +777,8 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         {hf && (<g pointerEvents="none">
           <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke="#78716c" strokeWidth="1" />
           {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke="#fff" strokeWidth="1.5" />)}
+          {(() => { const t = `${hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz`, w = t.length * 6.5 + 8, X = Math.max(x0 + w / 2, Math.min(x1 - w / 2, px(hf)));
+            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill="#1c1917" /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="11" fontFamily="system-ui, sans-serif" fill="#fafaf9">{t}</text></g>; })()}
           <text x={x1} y={y0 - 4} textAnchor="end" fontSize="11" fontFamily="system-ui, sans-serif" fill="#1c1917" stroke="#fff" strokeWidth="3" paintOrder="stroke">
             {hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz{hits.map((h) => ` · ${h.label} ${h.o.spl.toFixed(0)}${unit}`).join("")}
           </text>
@@ -1291,6 +1293,7 @@ function OutChart({ curve, cur }) {
       {hover ? (<>
         <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke="#78716c" strokeWidth="0.75" />
         <circle cx={x(h1[0])} cy={y(h1[1])} r="2.5" fill="#1c1917" stroke="#fff" strokeWidth="1" />
+        {(() => { const X = Math.max(L + 14, Math.min(W - R - 14, x(hover))); return <g><rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill="#1c1917" /><text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill="#fafaf9">{hover.toFixed(0)} Hz</text></g>; })()}
         <text x={L} y={9} fontSize="8.5" fill="#1c1917">{hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB{h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}</text>
       </>) : (
         <text x={L} y={9} fontSize="8.5" fill="#57534e"><tspan fill="#1c1917">━ this</tspan>{cur ? "  ╌ yours" : ""} · dB, clean</text>
