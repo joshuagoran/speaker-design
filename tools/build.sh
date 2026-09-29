@@ -6,9 +6,15 @@ set -e
 cd "$(dirname "$0")"
 npx --yes esbuild@0.28.2 stack-planner.app.jsx --bundle --format=iife --loader:.jsx=jsx --jsx=transform --outfile=../dist/app.js
 # the page inlines app.js in a classic <script>: it must be one bundle with no module syntax
-if grep -qE '^(import|export) ' ../dist/app.js || grep -q '</script' ../dist/app.js; then echo 'build.sh: dist/app.js is not a clean bundle' >&2; exit 1; fi
+npx --yes esbuild@0.28.2 optimize.worker.js --bundle --format=iife --outfile=../dist/worker.js
+# the page inlines both in <script> tags: each must be one bundle with no module syntax and no "</script"
+for f in ../dist/app.js ../dist/worker.js; do
+  if grep -qE '^(import|export) ' "$f" || grep -q '</script' "$f"; then echo "build.sh: $f is not a clean bundle" >&2; exit 1; fi
+done
 mkdir -p ../dist
-{ cat stack-planner.head.html; cat ../dist/app.js; echo "</script>"; } > ../dist/stack-planner.html
+# the worker goes in as text (type="text/plain"); the page starts it from a Blob URL when needed
+worker() { echo '<script type="text/plain" id="opt-worker">'; cat ../dist/worker.js; echo "</script>"; }
+{ cat stack-planner.head.html; cat ../dist/app.js; echo "</script>"; worker; } > ../dist/stack-planner.html
 grep -q 'name="viewport"' ../dist/stack-planner.html || { echo 'build.sh: viewport meta missing' >&2; exit 1; }
 echo "built ../dist/stack-planner.html"
 if [ "$1" = "pages" ]; then
@@ -17,7 +23,7 @@ if [ "$1" = "pages" ]; then
     echo '<!doctype html><html lang="en"><head><meta charset="utf-8">'
     cat pages.head.html
     echo "<script>"; cat firebase-config.js; echo "</script>"
-    cat stack-planner.head.html; cat ../dist/app.js; echo "</script>"
+    cat stack-planner.head.html; cat ../dist/app.js; echo "</script>"; worker
   } > ../dist/site/index.html
   grep -q 'name="viewport"' ../dist/site/index.html || { echo 'build.sh: viewport meta missing' >&2; exit 1; }
   cp ../data/configs-seed.json ../dist/site/

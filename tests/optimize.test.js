@@ -57,7 +57,9 @@ test("the first card meets the goal; alternatives beat it on their own axis", (t
     const m = k.metrics, f = a.metrics;
     const ok = { Cheaper: m.price <= f.price - 25, Lighter: m.heaviest <= f.heaviest - 3, Louder: m.out >= f.out + 1, "Goes lower": m.f3 <= f.f3 - 2 }[k.label];
     t.assert.ok(ok, `${k.label} card doesn't beat the first`);
-    t.assert.ok(k.config.sub !== a.config.sub || k.config.portStyle !== a.config.portStyle, "alternatives differ in driver or vent");
+    const vol = (c) => c.cDim.w * c.cDim.h * c.cDim.d;
+    t.assert.ok(k.config.sub !== a.config.sub || k.config.portStyle !== a.config.portStyle || k.config.mid !== a.config.mid
+      || Math.abs(vol(k.config) / vol(a.config) - 1) >= 0.15, "alternatives differ in driver, vent, mid or box size");
   }
 });
 

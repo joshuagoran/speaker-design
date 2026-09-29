@@ -332,7 +332,9 @@ export function optimize(input) {
       .sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
     if (!first) return null;
     const cards = [{ p: first, label: GOALS[goal].name, why: GOALS[goal].why }];
-    const differs = (p) => cards.every((k) => k.p.c.sub !== p.c.sub || k.p.c.portStyle !== p.c.portStyle);
+    const vol = (c) => c.cDim.w * c.cDim.h * c.cDim.d;
+    const differs = (p) => cards.every((k) => k.p.c.sub !== p.c.sub || k.p.c.portStyle !== p.c.portStyle || k.p.c.mid !== p.c.mid
+      || Math.abs(vol(p.c) / vol(k.p.c) - 1) >= 0.15);
     const axes = [...ALT_ORDER[goal], ...Object.keys(ALT_LABEL).filter((a) => a !== goal && !ALT_ORDER[goal].includes(a))];
     for (const alt of axes) {
       if (cards.length >= 3) break;
@@ -359,7 +361,7 @@ export function optimize(input) {
         : lightest != null ? [`the lightest sub box that works is ${Math.round(lightest)} lb`] : ["no sub fits these limits and locks"] };
   }
   return {
-    target, need, curM: curM && summary(curM),
+    target, need, curM: curM && summary(curM), curProblems: problems(curM, lim),
     cards: cards ? cards.map((k) => card(k.p, k.label, k.why, curM, cur)) : [],
     nearMiss, stats: { evaluated: evals, ms: Date.now() - t0, subs: subCands.length, combos: combos.length, pool: pool.length },
   };

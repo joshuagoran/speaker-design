@@ -68,6 +68,14 @@ for (const size of sizes) {
       await p.waitForTimeout(300);
       await check(`#planner, ${tab} tab`);
     }
+    // optimizer on: lock buttons in the settings, the panel, and result cards after a search
+    await p.getByRole("button", { name: "Close settings" }).tap().catch(() => {});
+    await p.locator('button:has-text("Optimizer: off")').tap();
+    await p.waitForTimeout(300);
+    await check("#planner, optimizer on");
+    await p.locator('button:has-text("Find 3 designs")').tap();
+    await p.waitForSelector("text=Searched", { timeout: 90000 });
+    await check("#planner, optimizer results");
   }
   for (const e of errs) failures.push(`${size.name}: page error: ${e}`);
   await ctx.close();

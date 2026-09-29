@@ -143,3 +143,14 @@ Two reviews: technical (search soundness, speed) and usability (inputs, results,
 Sub + mid jointly with xoLo (the horn follows from xoHi and is cheap to enumerate), pre-filled inputs,
 three cards with deltas, Preview/Load/Undo/Save as, near-miss message, worker. Later: Pareto chain over
 both crossovers, locks, owned/excluded drivers, outdoor target, "explain" view of rejected options.
+
+## Status (first version, branch `optimizer`)
+
+Built: the Optimizer switch; Keep / Free locks on drivers, vent style, plywood, highpass and crossovers;
+Free / Up to / Exactly on each box dimension; room, weight, budget and goal inputs; three cards (the
+goal's winner, then alternatives that beat it on their own axis by at least $25, 3 lb, 1 dB or 2 Hz);
+Preview, Load (saves the previous design when signed in), Undo, Save as; the "nothing fits" message.
+
+Changes from the plan: output is scored as the lowest clean music-limit level from 40 to 90 Hz (a response
+peak at 45 Hz could otherwise win); the layout, finish and amps are never changed; box dimensions step in
+whole inches; about 1 s in Node, 1–4 s in the page.
