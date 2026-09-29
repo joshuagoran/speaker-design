@@ -125,6 +125,7 @@ configurations and can be edited or deleted like any other.
 ## How the planner is put together
 
 - `tools/data.js` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
+- `tools/optimize.js` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`tools/optimize.worker.js`, inlined by `build.sh`), with a main-thread fallback. See `docs/optimizer-plan.md`.
 - `tools/chips.js` — the warning chips for each section (sub, mid, horn, fills), pure functions tested at each threshold.
 - `tools/calc.js` — every calculation, pure JS, imported by the page and the tests (`npm test`):
   - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r); letterbox and side ducts pass `ecIn` from `slotEndCorr` / `sideDuctEndCorr` (rectangular mouth; floor mirrored at both ends of a letterbox, the side wall at the inner end of a side duct). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.

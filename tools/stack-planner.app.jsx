@@ -1,7 +1,8 @@
 const { useEffect, useRef, useState } = React;
 import { subChips, midChips, hornChips, fillChips } from "./chips.js";
+import { optimize, evaluate as evaluateConfig, roomNeed, ROOMS, GOALS, optFields } from "./optimize.js";
 import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS } from "./data.js";
-import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, lr24lp, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest } from "./calc.js";
+import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, lr24lp, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest, subMusicAt } from "./calc.js";
 
 
 
@@ -680,10 +681,10 @@ function SignalPath() {
 // ---------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------
-function Pick({ label, options, value, onChange }) {
+function Pick({ label, options, value, onChange, extra }) {
   return (
     <div className="mb-4">
-      <div className="text-sm text-stone-500 mb-1">{label}</div>
+      <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>{label}</span>{extra}</div>
       <select
         value={value?.id ?? ""}
         onChange={(e) => onChange(options.find((o) => o.id === e.target.value))}
@@ -783,11 +784,11 @@ function FoldHead({ id, title, folds, toggle, className = "" }) {
   );
 }
 
-function Slider({ label, value, min, max, step, unit, onChange }) {
+function Slider({ label, value, min, max, step, unit, onChange, extra }) {
   return (
     <div className="mb-3">
-      <div className="flex justify-between items-baseline gap-3 mb-1">
-        <span className="text-sm text-stone-600">{label}</span>
+      <div className="flex justify-between items-center gap-3 mb-1">
+        <span className="flex items-center gap-2"><span className="text-sm text-stone-600">{label}</span>{extra}</span>
         <span className="text-sm tabular-nums font-medium">{typeof value === "number" ? value.toFixed(step < 1 ? 2 : 0) : value}{unit}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
@@ -1143,6 +1144,163 @@ function CutlistPage(props) {
   );
 }
 
+// ---------------------------------------------------------------
+// Optimizer: lock buttons on the controls, the panel, result cards.
+// ---------------------------------------------------------------
+function LockIcon({ locked }) {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <rect x="3" y="7" width="10" height="7.5" rx="1.5" fill="currentColor" />
+      <path d={locked ? "M5 7V5a3 3 0 0 1 6 0v2" : "M5 7V5a3 3 0 0 1 5.9-.8"} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  );
+}
+const lockCls = (on) => `inline-flex items-center justify-center gap-0.5 min-w-[28px] h-6 px-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 text-stone-400 bg-white hover:border-stone-500 hover:text-stone-600"}`;
+function LockBtn({ on, onClick, what }) {
+  const tip = on ? `Locked: the optimizer keeps ${what}` : `Unlocked: the optimizer may change ${what}`;
+  return <button type="button" onClick={onClick} aria-pressed={on} aria-label={tip} title={tip} className={lockCls(on)}><LockIcon locked={on} /></button>;
+}
+const DIM_NEXT = { free: "max", max: "exact", exact: "free" };
+function DimLock({ mode = "free", onChange, what }) {
+  const tip = `${what}: ${mode === "free" ? "unlocked, the optimizer may change it" : mode === "max" ? "up to this value" : "locked at exactly this value"} (tap to change)`;
+  return (
+    <button type="button" onClick={() => onChange(DIM_NEXT[mode])} aria-label={tip} title={tip} className={lockCls(mode !== "free")}>
+      <LockIcon locked={mode !== "free"} />{mode === "max" ? <span>≤</span> : mode === "exact" ? <span>=</span> : null}
+    </button>
+  );
+}
+
+// Start the optimizer in the worker inlined by build.sh; fall back to the main thread where workers are blocked.
+let optWorker = null, optNoWorker = false, optSeq = 0;
+function runOptimizer(input) {
+  const id = ++optSeq;
+  const local = () => new Promise((res, rej) => setTimeout(() => { try { res(optimize(input)); } catch (e) { rej(e); } }, 30));
+  if (optNoWorker) return local();
+  try {
+    if (!optWorker) {
+      const src = document.getElementById("opt-worker");
+      if (!src || typeof Worker === "undefined") throw new Error("no worker");
+      optWorker = new Worker(URL.createObjectURL(new Blob([src.textContent], { type: "text/javascript" })));
+    }
+  } catch { optNoWorker = true; return local(); }
+  const w = optWorker;
+  return new Promise((res, rej) => {
+    let timer = null;
+    const done = () => { clearTimeout(timer); w.removeEventListener("message", onMsg); w.removeEventListener("error", onErr); };
+    const onMsg = (e) => { if (e.data.id !== id) return; done(); if (e.data.error) rej(new Error(e.data.error)); else res(e.data.out); };
+    const onErr = () => { done(); optNoWorker = true; if (optWorker === w) optWorker = null; local().then(res, rej); };
+    // a hung worker: stop it and report, rather than leaving the button on "Searching…"
+    timer = setTimeout(() => { done(); try { w.terminate(); } catch {} if (optWorker === w) optWorker = null; rej(new Error("took longer than 60 s")); }, 60000);
+    w.addEventListener("message", onMsg);
+    w.addEventListener("error", onErr);
+    w.postMessage({ id, input });
+  });
+}
+
+const money = (x) => `$${Math.round(x).toLocaleString()}`;
+function Delta({ v, unit, lowerIsBetter, digits = 0 }) {
+  if (v == null) return null;
+  const r = Number(v.toFixed(digits));
+  const good = lowerIsBetter ? r < 0 : r > 0, bad = lowerIsBetter ? r > 0 : r < 0;
+  const txt = r === 0 ? "±0" : `${r > 0 ? "+" : "\u2212"}${unit === "$" ? money(Math.abs(r)) : Math.abs(r).toFixed(digits) + unit}`;
+  return <div className={`text-xs font-semibold ${good ? "text-green-800" : bad ? "text-orange-800" : "text-stone-500"}`}>{txt}{good ? " better" : bad ? " worse" : ""}</div>;
+}
+function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
+  const c = k.config, m = k.metrics, d = k.delta || {};
+  const tile = (label, v, delta) => (
+    <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1.5">
+      <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
+      <div className="tabular-nums">{v}</div>{delta}
+    </div>
+  );
+  const sheets = k.build.sheets.map((x) => `${x.n} sheet${x.n > 1 ? "s" : ""} ${x.t === 0.5 ? "1/2″" : x.t === 0.75 ? "3/4″" : x.t + "″"}`).join(" + ");
+  return (
+    <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
+      <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
+      <h3 className="text-lg leading-snug" style={{ fontFamily: "Georgia, serif" }}>{k.names.sub} · {c.cDim.w} × {c.cDim.h} × {c.cDim.d}″</h3>
+      <div className="text-xs text-stone-600 leading-relaxed">
+        {k.vent} · Fb {m.Fb.toFixed(0)} Hz · {c.hpType} {c.hpf} Hz{c.wall === 0.5 ? " · 1/2″ braced walls" : ""}<br />
+        Mid {k.names.mid} in {c.mDim.w} × {c.mDim.h} × {c.mDim.d}″ · XO {c.xoLo} / {c.xoHi} Hz · {k.names.cd} on {k.names.horn}<br />
+        Amps {c.ampW} / {c.mAmpW} / {c.hfAmpW} W per channel
+      </div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {tile("Per stack", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
+        {tile("Heaviest", `${m.heaviest.toFixed(0)} lb`, <Delta v={d.heaviest} unit=" lb" lowerIsBetter />)}
+        {tile("Output", `${m.out.toFixed(1)} dB`, <Delta v={d.out} unit=" dB" digits={1} />)}
+        {tile("F3", `${m.f3.toFixed(0)} Hz`, <Delta v={d.f3} unit=" Hz" lowerIsBetter />)}
+      </div>
+      <div className="text-xs leading-snug"><b className="font-semibold">Limited by:</b> {k.limitedBy}</div>
+      {k.warnings.filter(([h]) => !/limited$/.test(h)).map(([h, b]) => (
+        <div key={h} className="text-xs border border-stone-300 rounded px-2 py-1 bg-stone-50"><b className="font-semibold text-amber-700 mr-1">{h}</b>{b}</div>
+      ))}
+      <div className="text-xs text-stone-600">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
+      <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
+      <div className="text-[11px] text-stone-500">Modelled, not measured · prices as listed in the planner (Sep 2026){k.priceKnown ? "" : " · some prices unknown"}</div>
+      <div className="flex gap-1.5 mt-auto">
+        <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
+        <button onClick={onLoad} className="flex-1 px-3 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50">Load</button>
+        <button onClick={onSave} disabled={!canSave} title={canSave ? "" : "Sign in to save"} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40">Save</button>
+      </div>
+    </div>
+  );
+}
+const seg = (on) => `px-3 py-2 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`;
+function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, previewCard, onPreview, onLoad, onSave, canSave }) {
+  const need = roomNeed(optIn.room), target = Math.max(curOut != null ? curOut : need, need);
+  const g = optIn.goal;
+  const tgtText = g === "louder" ? "as loud as it gets, F3 within 3 Hz" : g === "lower" ? `lowest F3, at least ${(target - 1.5).toFixed(0)} dB per stack` : `clean ${target.toFixed(0)} dB per stack`;
+  return (
+    <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div className="rounded-lg border border-stone-300 bg-white p-4">
+        <h2 className="text-xl" style={{ fontFamily: "Georgia, serif" }}>Find a better design</h2>
+        <p className="text-xs text-stone-500 mt-1">Starts from your current design. Lock anything you want to keep with the lock buttons next to each setting; box sizes can also be "up to" (≤) or "exactly" (=). Layout and finish stay as they are.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+          <div className="mt-3">
+            <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>
+            <div className="flex flex-wrap gap-1">{Object.entries(ROOMS).map(([k, r]) => <button key={k} aria-label={r.name} className={seg(String(optIn.room) === k)} onClick={() => setOpt({ room: k === "outdoor" ? k : +k })}>{r.short}</button>)}</div>
+          </div>
+          <div className="mt-3">
+            <div className="text-sm text-stone-500 mb-1">Max per box</div>
+            <div className="flex items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.maxLb} min={30} max={250} onChange={(e) => setOpt({ maxLb: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> lb</div>
+          </div>
+          <div className="mt-3">
+            <div className="text-sm text-stone-500 mb-1">Driver budget, per stack</div>
+            <div className="flex flex-wrap items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.budget} min={100} step={25} onChange={(e) => setOpt({ budget: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $</div>
+          </div>
+          <div className="mt-3">
+            <div className="text-sm text-stone-500 mb-1">Goal</div>
+            <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => <button key={k} title={gg.name} className={seg(g === k)} onClick={() => setOpt({ goal: k })}>{gg.short}</button>)}</div>
+          </div>
+        </div>
+        <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
+          {curOut != null && <div className="text-xs text-stone-500 mt-0.5">Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB · {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB</div>}</div>
+        <div className="mt-2 text-xs text-stone-500">Amps: {amps}</div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button onClick={run} disabled={busy} className="px-4 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-50">{busy ? "Searching…" : "Find 3 designs"}</button>
+          {res && !busy && <span className="text-xs text-stone-500">Searched {res.stats.evaluated.toLocaleString()} designs in {(res.stats.ms / 1000).toFixed(1)} s{res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}</span>}
+          {err && <span className="text-xs text-red-700">{err}</span>}
+        </div>
+        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800">Your current design doesn't pass: {res.curProblems.join("; ")}. Results fix that first, so some may cost more or weigh more than it does.</div>}
+        {res && !busy && res.cards.length > 0 && (<>
+          <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
+            {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} previewing={previewCard === k} canSave={canSave}
+              onPreview={() => onPreview(k)} onLoad={() => onLoad(k)} onSave={() => onSave(k)} />)}
+          </div>
+          {res.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {res.cards.length - 1} more</div>}
+        </>)}
+        {res && !busy && !res.cards.length && res.nearMiss && (
+          <div className="mt-4 rounded-lg border border-orange-300 bg-orange-50 px-3 py-3">
+            <h3 className="text-base" style={{ fontFamily: "Georgia, serif" }}>Nothing fits all your limits</h3>
+            <div className="text-xs text-orange-900 mt-1">{res.nearMiss.closest ? `Closest: ${res.nearMiss.closest.names.sub}, ${res.nearMiss.closest.metrics.heaviest.toFixed(0)} lb, ${money(res.nearMiss.closest.metrics.price)} per stack, ${res.nearMiss.closest.metrics.out.toFixed(1)} dB. ` : ""}Blocked by: {res.nearMiss.blocking.join("; ")}.</div>
+            {res.nearMiss.options.length > 0 && <div className="flex flex-wrap gap-1.5 mt-2">{res.nearMiss.options.map((o) => (
+              <button key={o.text} className={seg(false)} onClick={() => run(o.set)}>{o.text}</button>))}</div>}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function StackPlanner() {
   const viewOf = () => (window.location.hash === "#notes" ? "notes" : window.location.hash === "#fills" ? "fills" : window.location.hash === "#cutlist" ? "cutlist" : "planner");
   const [view, setView] = useState(viewOf);
@@ -1188,6 +1346,23 @@ function StackPlanner() {
   const toggleFold = (id) => setFolds((f) => { const n = { ...f, [id]: !f[id] }; try { localStorage.setItem("planner.folds", JSON.stringify(n)); } catch {} return n; });
   const foldCls = (id) => (folds[id] ? "" : "max-md:hidden");
   const [full3d, setFull3d] = useState(false);
+  // optimizer: switch, inputs and locks remembered per viewer
+  const lsGet = (k, fb) => { try { const v = localStorage.getItem(k); return v == null ? fb : JSON.parse(v); } catch { return fb; } };
+  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  const [optOn, setOptOnRaw] = useState(() => lsGet("planner.opt", false));
+  const setOptOn = (v) => { setOptOnRaw(v); lsSet("planner.opt", v); };
+  const [optIn, setOptIn] = useState(() => { const { budgetPer, ...o } = lsGet("planner.optIn", {}) || {}; return { room: 1000, maxLb: 125, budget: 900, goal: "cheaper", ...o }; });
+  const setOpt = (o) => setOptIn((p) => { const n = { ...p, ...o }; lsSet("planner.optIn", n); return n; });
+  const [locks, setLocksRaw] = useState(() => { const l = lsGet("planner.locks", {}) || {}; return { ...l, subDim: { ...(l.subDim || {}) }, midDim: { ...(l.midDim || {}) } }; });
+  const setLocks = (f) => setLocksRaw((p) => { const n = f(p); lsSet("planner.locks", n); return n; });
+  const lk = (key, what) => optOn ? <LockBtn on={!!locks[key]} what={what} onClick={() => setLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null;
+  const dl = (box, dim, what) => optOn ? <DimLock mode={locks[box][dim] || "free"} what={what} onChange={(m) => setLocks((p) => ({ ...p, [box]: { ...p[box], [dim]: m } }))} /> : null;
+  const [optRes, setOptRes] = useState(null);
+  const [optBusy, setOptBusy] = useState(false);
+  const [optErr, setOptErr] = useState("");
+  const [preview, setPreview] = useState(null);   // { label, before }
+  const [undoSnap, setUndoSnap] = useState(null);
+  const [toast, setToast] = useState("");
   useEffect(() => {
     if (!full3d) return;
     const esc = (e) => { if (e.key === "Escape") setFull3d(false); };
@@ -1349,10 +1524,7 @@ function StackPlanner() {
     return { midB, hornB, fK };
   })();
 
-  const subMusicAtXo = mdl && lim ? (() => {
-    const o = mdl.curve.reduce((b, x) => (Math.abs(x.f - xoLo) < Math.abs(b.f - xoLo) ? x : b));
-    return o.spl + 20 * Math.log10(lr24lp(o.f, xoLo)) + 20 * Math.log10(lim.V / AMP_V);
-  })() : null;
+  const subMusicAtXo = mdl && lim ? subMusicAt(mdl, lim, AMP_V, xoLo) : null;
 
   const portGeom = { ductH: cVent.slotH, nPorts: cVent.nt, portR: cVent.dia / 2, tubeLen: cVent.len, throat: cVent.throat };
 
@@ -1410,6 +1582,48 @@ function StackPlanner() {
     try { await db.collection("configs").doc(id).delete(); }
     catch { setCfgMsg("Couldn't delete"); setTimeout(() => setCfgMsg(""), 2500); }
   };
+  // ---- optimizer actions ----
+  const today = () => new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const runOpt = async (over) => {
+    const inp = { ...optIn, ...(over && over.nativeEvent ? {} : over || {}) };
+    if (over && !over.nativeEvent) setOpt(over);
+    setOptBusy(true); setOptErr("");
+    try {
+      const cur = preview ? preview.before : snapshot();
+      setOptRes(await runOptimizer({ cur, room: inp.room, maxLb: inp.maxLb, budget: inp.budget, goal: inp.goal, locks }));
+    } catch (e) { setOptErr("The search failed: " + ((e && e.message) || e)); }
+    setOptBusy(false);
+  };
+  // a result only sets the fields the search changes; finish, colours, layout and balance stay as they are now
+  const optPreview = (k) => {
+    const before = preview ? preview.before : snapshot();
+    restore({ ...snapshot(), ...optFields(k.config) }); setPreview({ label: k.label, before, card: k });
+  };
+  const optBack = () => { if (preview) restore(preview.before); setPreview(null); };
+  const optLoad = async (k) => {
+    const before = preview ? preview.before : snapshot();
+    restore({ ...snapshot(), ...optFields(k.config) }); setPreview(null); setUndoSnap(before);
+    let msg = `Loaded "${k.label}".`;
+    if (db) {
+      const name = `Before optimizer, ${today()}`;
+      try { await db.collection("configs").doc().set({ ...before, name, savedAt: Date.now() }); msg += ` Your previous design was saved as "${name}".`; }
+      catch { msg += " Undo brings your previous design back."; }
+    } else msg += " Undo brings your previous design back.";
+    setToast(msg);
+  };
+  const optUndo = () => { if (undoSnap) restore(undoSnap); setUndoSnap(null); setToast(""); };
+  const optSave = async (k) => {
+    if (!db) return;
+    const name = window.prompt("Name this design", `${k.label} · ${today()}`);
+    if (!name) return;
+    const m = k.metrics;
+    try {
+      await db.collection("configs").doc().set({ ...snapshot(), ...optFields(k.config), name: name.slice(0, 60), savedAt: Date.now(),
+        summary: `${k.names.sub} · ${k.config.cDim.w}×${k.config.cDim.h}×${k.config.cDim.d}″ · ${m.Fb.toFixed(1)} Hz` });
+      setToast(`Saved "${name.slice(0, 60)}".`);
+    } catch { setToast("Couldn't save — try again"); }
+  };
+  const curOut = optOn ? (() => { try { const m = evaluateConfig(preview ? preview.before : snapshot()); return m ? m.out : null; } catch { return null; } })() : null;
 
   const subLbLoaded = subWeight(subBox, wall, sub.lb);
 
@@ -1482,6 +1696,28 @@ function StackPlanner() {
         </section>
       )}
 
+      <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3 flex flex-wrap items-center gap-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <button onClick={() => setOptOn(!optOn)} aria-pressed={optOn}
+          className={`px-3 py-2 rounded border text-sm ${optOn ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`}>Optimizer: {optOn ? "on" : "off"}</button>
+        <span className="text-xs text-stone-500">{optOn ? "Lock buttons now show next to each setting." : "Find cheaper, lighter or louder designs inside your limits."}</span>
+      </section>
+      {optOn && <OptimizerPanel optIn={optIn} setOpt={setOpt} run={runOpt} busy={optBusy} res={optRes} err={optErr} curOut={curOut}
+        amps={[["sub", ampW, locks.ampW], ["mid", mAmpW, locks.mAmpW], ["HF", hfAmpW, locks.hfAmpW]].map(([n, w, l]) => `${n} ${l ? "" : "up to "}${w} W`).join(" · ") + " per channel (on Cheaper and Lighter cards, unlocked amps come back at the least power that does the job)"} previewCard={preview && preview.card} canSave={!!db}
+        onPreview={optPreview} onLoad={optLoad} onSave={optSave} />}
+      {preview && (
+        <div className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-stone-50 px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm" style={{ fontFamily: "system-ui, sans-serif" }}>
+          <span>Previewing: <b className="font-semibold">{preview.label}</b></span>
+          <button onClick={() => optLoad(preview.card)} className="px-3 py-1.5 rounded border border-stone-50 bg-stone-50 text-stone-900">Load</button>
+          <button onClick={optBack} className="px-3 py-1.5 rounded border border-stone-500">Back</button>
+        </div>
+      )}
+      {toast && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-20 md:bottom-6 z-50 w-[calc(100%-2rem)] max-w-xl bg-stone-900 text-stone-50 rounded-lg px-4 py-2.5 flex items-center gap-3 text-sm shadow-lg" style={{ fontFamily: "system-ui, sans-serif" }} role="status">
+          <span className="flex-1">{toast}</span>
+          {undoSnap && <button onClick={optUndo} className="px-3 py-1.5 rounded border border-stone-500">Undo</button>}
+          <button onClick={() => setToast("")} aria-label="Dismiss" className="px-2 py-1.5 rounded border border-stone-700">✕</button>
+        </div>
+      )}
       {mdl && lim && (
         <div className="md:hidden sticky top-0 z-30 bg-stone-100/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center" style={{ fontFamily: "system-ui, sans-serif" }}>
           {[["Fb", `${mdl.Fb.toFixed(1)}`, "Hz"], ["35 Hz", `${maxNear(35).spl.toFixed(0)}`, "dB"], ["Sub", `${subLbLoaded.toFixed(0)}`, "lb"], ["Limit", { "port air speed": "port", "cone travel (Xmax)": "Xmax", "driver program rating": "thermal", "amplifier power": "amp" }[lim.who] || lim.who, ""]].map(([k, v, u]) => (
@@ -1674,7 +1910,7 @@ function StackPlanner() {
           <div className={`max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${sheetOpen ? "" : "max-md:hidden"}`}>
           <div className={tabCls("look")}>
           <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">Plywood (baffles stay 3/4″)</div>
+            <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>Plywood (baffles stay 3/4″)</span>{lk("wall", "the plywood")}</div>
             <div className="flex gap-1">
               {[[0.75, "3/4″ birch"], [0.5, "1/2″ birch, braced"]].map(([t, label]) => (
                 <button key={t} onClick={() => setWall(t)} className={`px-3 py-1.5 rounded border text-sm ${wall === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
@@ -1684,7 +1920,7 @@ function StackPlanner() {
           </div>
           </div>
           <div className={tabCls("sub")}>
-          <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} />
+          <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} extra={lk("sub", "the sub driver")} />
           </div>
           <div className={tabCls("look")}>
           <div className="mb-5">
@@ -1760,9 +1996,9 @@ function StackPlanner() {
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Cabinet</div>
             <div className="rounded border border-stone-300 bg-white px-3 py-3">
-              <Slider label="Width"  value={cDim.w} min={18} max={40} step={0.5} unit="&#8243;" onChange={(v) => setC("w", v)} />
-              <Slider label="Height" value={cDim.h} min={18} max={42} step={0.5} unit="&#8243;" onChange={(v) => setC("h", v)} />
-              <Slider label="Depth"  value={cDim.d} min={14} max={32} step={0.5} unit="&#8243;" onChange={(v) => setC("d", v)} />
+              <Slider label="Width"  value={cDim.w} min={18} max={40} step={0.5} unit="&#8243;" onChange={(v) => setC("w", v)} extra={dl("subDim", "w", "Sub width")} />
+              <Slider label="Height" value={cDim.h} min={18} max={42} step={0.5} unit="&#8243;" onChange={(v) => setC("h", v)} extra={dl("subDim", "h", "Sub height")} />
+              <Slider label="Depth"  value={cDim.d} min={14} max={32} step={0.5} unit="&#8243;" onChange={(v) => setC("d", v)} extra={dl("subDim", "d", "Sub depth")} />
             </div>
             <div className="text-xs text-stone-500 mt-2 mb-1">Start from a published cabinet</div>
             <select
@@ -1779,7 +2015,7 @@ function StackPlanner() {
           </div>
           <div className={tabCls("sub")}>
           <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">Vent</div>
+            <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>Vent</span>{lk("vent", "the vent style")}</div>
             <div className="flex flex-wrap gap-1">
               {[["Rectangular", !portStyle.startsWith("round"), "slots"], ["Round tubes", portStyle.startsWith("round"), "round2"]].map(([label, on, v]) => (
                 <button key={label} onClick={() => { if (!on) setPortStyle(v); }} className={`px-3 py-2 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
@@ -1803,15 +2039,20 @@ function StackPlanner() {
                 <Slider label="Tube diameter" value={cVent.dia} min={3} max={10} step={0.25} unit="&#8243;" onChange={(v) => setV("dia", v)} />
               </>}
               <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="&#8243;" onChange={(v) => setV("len", v)} />
-              <Slider label={`Highpass (${hpType})`} value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} />
+              <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
+              <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
+            </div>
+          </div>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Sub highpass and amp</div>
+            <div className="rounded border border-stone-300 bg-white px-3 py-3">
+              <Slider label={`Highpass (${hpType})`} value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} extra={lk("hpf", "the highpass")} />
               <div className="flex flex-wrap gap-1 -mt-1 mb-3">
                 {Object.keys(HP_TYPES).map((t) => (
                   <button key={t} onClick={() => setHpType(t)} className={`px-2.5 py-1 rounded border text-xs ${hpType === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{t}</button>
                 ))}
               </div>
-              <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
-              <Slider label="Amp power per channel @ 8 Ω" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} />
-              <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
+              <Slider label="Amp power per channel @ 8 Ω" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} extra={lk("ampW", "the sub amp power")} />
             </div>
           </div>
           </div>
@@ -1824,20 +2065,20 @@ function StackPlanner() {
               ))}
             </div>
           </div>
-          <Pick label={`Mid-bass ${midSize}"`} options={midList} value={mid} onChange={setMid} />
+          <Pick label={`Mid-bass ${midSize}"`} options={midList} value={mid} onChange={setMid} extra={lk("mid", "the mid-bass driver")} />
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
             <div className="rounded border border-stone-300 bg-white px-3 py-3">
               {layout === "tower" ? (
                 <div className="text-xs text-stone-500 mb-3">Tower layout: the mid chamber is the sub's footprint, {cDim.w}″ × 15.5″ × {cDim.d}″.</div>
               ) : (<>
-                <Slider label="Width"  value={mDim.w} min={10} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("w", v)} />
-                <Slider label="Height" value={mDim.h} min={10} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("h", v)} />
-                <Slider label="Depth"  value={mDim.d} min={8} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("d", v)} />
+                <Slider label="Width"  value={mDim.w} min={10} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("w", v)} extra={dl("midDim", "w", "Mid width")} />
+                <Slider label="Height" value={mDim.h} min={10} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("h", v)} extra={dl("midDim", "h", "Mid height")} />
+                <Slider label="Depth"  value={mDim.d} min={8} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("d", v)} extra={dl("midDim", "d", "Mid depth")} />
               </>)}
-              <Slider label="Crossover, sub to mid" value={xoLo} min={60} max={250} step={5} unit=" Hz" onChange={setXoLo} />
-              <Slider label="Crossover, mid to horn" value={xoHi} min={500} max={2000} step={50} unit=" Hz" onChange={setXoHi} />
-              <Slider label="Mid amp power per channel @ 8 Ω" value={mAmpW} min={50} max={2000} step={25} unit=" W" onChange={setMAmpW} />
+              <Slider label="Crossover, sub to mid" value={xoLo} min={60} max={250} step={5} unit=" Hz" onChange={setXoLo} extra={lk("xoLo", "the sub-to-mid crossover")} />
+              <Slider label="Crossover, mid to horn" value={xoHi} min={500} max={2000} step={50} unit=" Hz" onChange={setXoHi} extra={lk("xoHi", "the mid-to-horn crossover")} />
+              <Slider label="Mid amp power per channel @ 8 Ω" value={mAmpW} min={50} max={2000} step={25} unit=" W" onChange={setMAmpW} extra={lk("mAmpW", "the mid amp power")} />
               <Slider label="Music balance: mid band needs less by" value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
               <div className="text-xs text-stone-500">0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.</div>
             </div>
@@ -1852,10 +2093,10 @@ function StackPlanner() {
           </div>
           </div>
           <div className={tabCls("horn")}>
-          <Pick label="Compression driver" options={CD_OPTIONS} value={cd} onChange={setCd} />
-          <Pick label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} />
+          <Pick label="Compression driver" options={CD_OPTIONS} value={cd} onChange={setCd} extra={lk("cd", "the compression driver")} />
+          <Pick label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} extra={lk("horn", "the horn")} />
           <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
-            <Slider label="HF amp power per channel @ 8 Ω" value={hfAmpW} min={10} max={500} step={5} unit=" W" onChange={setHfAmpW} />
+            <Slider label="HF amp power per channel @ 8 Ω" value={hfAmpW} min={10} max={500} step={5} unit=" W" onChange={setHfAmpW} extra={lk("hfAmpW", "the HF amp power")} />
             <Slider label="Music balance: HF band needs less by" value={hfTilt} min={0} max={12} step={1} unit=" dB" onChange={setHfTilt} />
             <div className="text-xs text-stone-500">16 Ω drivers draw half the power from the same amp.</div>
           </div>
@@ -1865,7 +2106,7 @@ function StackPlanner() {
         </aside>
 
 
-        <section className="md:col-span-5 mt-6" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <section className="min-w-0 md:col-span-5 mt-6" style={{ fontFamily: "system-ui, sans-serif" }}>
           <FoldHead id="totals" title="Totals for the current selection" folds={folds} toggle={toggleFold} className="mb-2" />
           <div className={foldCls("totals")}>
           {(() => {
@@ -1897,11 +2138,11 @@ function StackPlanner() {
           <p className="text-xs text-stone-500 mt-2">Cabinet weight: 3/4" birch baffles (2.3 lb/ft²), other panels {wall === 0.5 ? '1/2" birch (1.6 lb/ft²)' : '3/4" birch'}; the sub allows two braces and 6 lb of hardware, the mid box one brace. Particleboard runs ~30% heavier. Driver weights are approximate where the datasheet wasn't checked. Heaviest single lift is the sub column.</p>
           </div>
         </section>
-        <div className="md:col-span-5 mt-4" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <div className="min-w-0 md:col-span-5 mt-4" style={{ fontFamily: "system-ui, sans-serif" }}>
           <button onClick={() => setShowDetails((v) => !v)} aria-expanded={showDetails}
             className="text-sm px-3 py-1.5 rounded border border-stone-300 hover:border-stone-500">{showDetails ? "Hide" : "Show"} sub, mid-bass and horn details</button>
         </div>
-        {showDetails && <section className="md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "system-ui, sans-serif" }}>
+        {showDetails && <section className="min-w-0 md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "system-ui, sans-serif" }}>
           <div>
             <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Sub</h2>
             <p className="text-sm text-stone-700">
