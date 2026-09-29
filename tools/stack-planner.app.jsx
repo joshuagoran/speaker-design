@@ -1205,7 +1205,80 @@ function Delta({ v, unit, lowerIsBetter, digits = 0 }) {
   const txt = r === 0 ? "±0" : `${r > 0 ? "+" : "\u2212"}${unit === "$" ? money(Math.abs(r)) : Math.abs(r).toFixed(digits) + unit}`;
   return <div className={`text-xs font-semibold ${good ? "text-green-800" : bad ? "text-orange-800" : "text-stone-500"}`}>{txt}{good ? " better" : bad ? " worse" : ""}</div>;
 }
-function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
+
+// Front view of a design, to scale, with your current design's outline dashed behind it.
+function BoxFront({ g, cur }) {
+  const W = 150, H = 150, pad = 4;
+  // tower: the mid sits in the top of the sub column (drawn as a section of it), the horn on top
+  const tall = (x) => x.sub.h + (x.tower ? 0 : x.mid.h) + (x.horn ? x.horn.h : 0);
+  const wide = (x) => Math.max(x.sub.w, x.mid.w, x.horn ? x.horn.w : 0);
+  const k = Math.min((H - 2 * pad) / Math.max(tall(g), cur ? tall(cur) : 0), (W - 2 * pad) / Math.max(wide(g), cur ? wide(cur) : 0));
+  const cx = W / 2, y0 = H - pad;
+  const stackRects = (x) => {
+    const r = [], put = (w, h, y) => ({ x: cx - (w * k) / 2, y: y - h * k, w: w * k, h: h * k });
+    const sb = put(x.sub.w, x.sub.h, y0), mb = x.tower ? { ...sb, h: x.mid.h * k } : put(x.mid.w, x.mid.h, sb.y), hb = x.horn ? put(x.horn.w, x.horn.h, mb.y) : null;
+    r.push(sb); if (!x.tower) r.push(mb); if (hb) r.push(hb);
+    return { sb, mb, hb, r };
+  };
+  const a = stackRects(g), b = cur ? stackRects(cur) : null, t = g.wall * k, v = g.cVent;
+  const vent = [];
+  if (g.portStyle === "slots" || g.portStyle === "folded") vent.push(<rect key="v" x={a.sb.x + t} y={a.sb.y + a.sb.h - t - v.slotH * k} width={a.sb.w - 2 * t} height={v.slotH * k} fill="#44403c" />);
+  else if (g.portStyle === "vslots" || g.portStyle === "vslot1") {
+    vent.push(<rect key="l" x={a.sb.x + t} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#44403c" />);
+    if (g.portStyle === "vslots") vent.push(<rect key="r" x={a.sb.x + a.sb.w - t - v.throat * k} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#44403c" />);
+  } else for (let i = 0; i < (v.nt || 1); i++) {
+    const n = v.nt || 1, gap = a.sb.w / (n + 1);
+    vent.push(<circle key={i} cx={a.sb.x + gap * (i + 1)} cy={a.sb.y + a.sb.h - t - (v.dia * k) / 2 - 2} r={(v.dia * k) / 2} fill="#44403c" />);
+  }
+  const ventH = g.portStyle === "slots" || g.portStyle === "folded" ? v.slotH * k + t : g.portStyle.startsWith("round") ? v.dia * k + 4 : 0;
+  const driver = (box, size, below = 0) => <circle cx={box.x + box.w / 2} cy={box.y + (box.h - below) / 2} r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2} fill="#d6d3d1" stroke="#78716c" strokeWidth="1" />;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={`Front view: sub ${g.sub.w} × ${g.sub.h}″, mid ${g.mid.w} × ${g.mid.h}″${cur ? "; your design dashed" : ""}`}>
+      {b && b.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} fill="none" stroke="#a8a29e" strokeWidth="1" strokeDasharray="3 2" />)}
+      {a.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} rx="1" fill={q === a.hb ? "#57534e" : "#e7e5e4"} fillOpacity={q === a.hb ? 1 : 0.85} stroke="#292524" strokeWidth="1.2" />)}
+      {vent}
+      {g.tower && <line x1={a.sb.x} x2={a.sb.x + a.sb.w} y1={a.mb.y + a.mb.h} y2={a.mb.y + a.mb.h} stroke="#292524" strokeWidth="1.2" />}
+      {driver(g.tower ? { ...a.sb, y: a.mb.y + a.mb.h, h: a.sb.h - a.mb.h } : a.sb, g.subSize, ventH)}
+      {driver(a.mb, g.midSize)}
+    </svg>
+  );
+}
+
+// The sub's clean output (music limit) against frequency, this design against yours; the scored 40-90 Hz band shaded.
+function OutChart({ curve, cur }) {
+  const [hover, setHover] = useState(null);
+  const W = 220, H = 150, L = 26, R = 6, T = 16, B = 18;
+  const all = [...curve, ...(cur || [])].map((o) => o[1]);
+  const top = Math.ceil(Math.max(...all) / 5) * 5, bot = Math.max(Math.floor(Math.min(...all) / 5) * 5, top - 40);
+  const x = (f) => L + (Math.log(f / 20) / Math.log(10)) * (W - L - R), y = (d) => T + ((top - Math.max(bot, Math.min(top, d))) / (top - bot)) * (H - T - B);
+  const path = (c) => c.map((o, i) => `${i ? "L" : "M"}${x(o[0]).toFixed(1)},${y(o[1]).toFixed(1)}`).join("");
+  const at = (c, f) => c && c.reduce((b, o) => (Math.abs(Math.log(o[0] / f)) < Math.abs(Math.log(b[0] / f)) ? o : b));
+  const move = (e) => {
+    const r = e.currentTarget.getBoundingClientRect(), px = ((e.clientX - r.left) / r.width) * W;
+    const f = 20 * Math.pow(10, (px - L) / (W - L - R));
+    setHover(f >= 20 && f <= 200 ? f : null);
+  };
+  const ticks = []; for (let d = bot; d <= top; d += 10) ticks.push(d);
+  const h1 = hover && at(curve, hover), h2 = hover && at(cur, hover);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto touch-none" onPointerMove={move} onPointerLeave={() => setHover(null)} role="img"
+      aria-label="Clean sub output from 20 to 200 Hz, this design against yours">
+      <rect x={x(40)} y={T} width={x(90) - x(40)} height={H - T - B} fill="#f5f5f4" />
+      {ticks.map((d) => <g key={d}><line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke="#e7e5e4" /><text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill="#78716c">{d}</text></g>)}
+      {[20, 50, 100, 200].map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill="#78716c">{f}</text>)}
+      {cur && <path d={path(cur)} fill="none" stroke="#a8a29e" strokeWidth="1.5" strokeDasharray="4 3" />}
+      <path d={path(curve)} fill="none" stroke="#1c1917" strokeWidth="2" />
+      {hover ? (<>
+        <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke="#78716c" strokeWidth="0.75" />
+        <circle cx={x(h1[0])} cy={y(h1[1])} r="2.5" fill="#1c1917" stroke="#fff" strokeWidth="1" />
+        <text x={L} y={9} fontSize="8.5" fill="#1c1917">{hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB{h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}</text>
+      </>) : (
+        <text x={L} y={9} fontSize="8.5" fill="#57534e"><tspan fill="#1c1917">━ this</tspan>{cur ? "  ╌ yours" : ""} · dB, clean</text>
+      )}
+    </svg>
+  );
+}
+function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave }) {
   const c = k.config, m = k.metrics, d = k.delta || {};
   const tile = (label, v, delta) => (
     <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1.5">
@@ -1218,11 +1291,11 @@ function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
       <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "Georgia, serif" }}>{k.names.sub} · {c.cDim.w} × {c.cDim.h} × {c.cDim.d}″</h3>
-      <div className="text-xs text-stone-600 leading-relaxed">
-        {k.vent} · Fb {m.Fb.toFixed(0)} Hz · {c.hpType} {c.hpf} Hz{c.wall === 0.5 ? " · 1/2″ braced walls" : ""}<br />
-        Mid {k.names.mid} in {c.mDim.w} × {c.mDim.h} × {c.mDim.d}″ · XO {c.xoLo} / {c.xoHi} Hz · {k.names.cd} on {k.names.horn}<br />
-        Amps {c.ampW} / {c.mAmpW} / {c.hfAmpW} W per channel
+      <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
+        {k.geom && <BoxFront g={k.geom} cur={cur && cur.geom} />}
+        {k.curve && <OutChart curve={k.curve} cur={cur && cur.curve} />}
       </div>
+      <div className="text-xs text-stone-600">Mid {k.names.mid} · {k.names.cd} on {k.names.horn}</div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile("Drivers", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Heaviest", `${m.heaviest.toFixed(0)} lb`, <Delta v={d.heaviest} unit=" lb" lowerIsBetter />)}
@@ -1286,7 +1359,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
         {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800">Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
         {res && !busy && res.cards.length > 0 && (<>
           <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
-            {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} previewing={previewCard === k} canSave={canSave}
+            {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} cur={res.cur} previewing={previewCard === k} canSave={canSave}
               onPreview={() => onPreview(k)} onLoad={() => onLoad(k)} onSave={() => onSave(k)} />)}
           </div>
           {res.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {res.cards.length - 1} more</div>}

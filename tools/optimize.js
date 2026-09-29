@@ -84,6 +84,8 @@ export function evaluate(c) {
     out: bandOut(s.mdl, s.lim, s.AMP_V), spl45: s.lim.spl45, spl35: s.lim.spl35, f3: s.mdl.f3, Fb: s.mdl.Fb, who: s.lim.who, limW: s.lim.W, netL: s.netL,
     qtc: mm.Qtc, midF3: mm.f3, midGap: midAtXo.spl - (subMusic - c.tilt), hornGap: hornAtXo != null ? hornAtXo - (midAtHi - c.hfTilt) : null,
     mismatch: horn.exit !== cd.exit, port: s.port, chips,
+    // for the card's chart: the sub's clean music-limit level, 20-200 Hz (the curve bandOut takes its minimum from)
+    curve: s.mdl.curve.filter((o, i) => i % 5 === 0 && o.f >= 20 && o.f <= 200).map((o) => [+o.f.toFixed(1), +(o.spl + 20 * Math.log10(s.lim.V / s.AMP_V)).toFixed(2)]),
   };
 }
 
@@ -462,6 +464,7 @@ export function optimize(input) {
   }
   return {
     target, need, curM: curM && summary(curM), curProblems: problems(curM, lim),
+    cur: curM ? { curve: curM.curve, geom: geom(cur) } : null,
     cards: cards ? cards.map((k) => card(k.p, k.label, k.why, curM, cur)) : [],
     goals,
     goalMissing: chosen && chosen.goalMissing ? (also.length ? `Nothing ${goals.map((g) => THAN[g]).join(" and ")} than your design passes the checks.` : GOAL_MISSING[goal]) : null,
@@ -471,6 +474,14 @@ export function optimize(input) {
 
 const summary = (m) => ({ price: m.price, heaviest: m.heaviest, out: m.out, spl45: m.spl45, f3: m.f3, Fb: m.Fb, who: m.who });
 const WHO = { "port air speed": "port air speed", "cone travel (Xmax)": "cone travel", "driver program rating": "the driver's program rating", "amplifier power": "amplifier power" };
+
+// what the card's front-view drawing needs
+export function geom(c) {
+  const sub = byId(SUB_OPTIONS, c.sub), mid = byId(MID_OPTIONS, c.mid), horn = byId(HORN_OPTIONS, c.horn);
+  return { sub: c.cDim, mid: c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim, tower: c.layout === "tower",
+    horn: horn && horn.size ? { w: horn.size.w, h: horn.size.h } : null, subSize: sub ? sub.size : 18, midSize: mid ? mid.size || 12 : 12,
+    portStyle: c.portStyle, cVent: c.cVent, wall: c.wall };
+}
 
 function card(p, label, why, curM, cur) {
   const { c, m } = p;
@@ -498,6 +509,6 @@ function card(p, label, why, curM, cur) {
     vent: m.port.desc, limitedBy: WHO[m.who] || m.who,
     warnings: [...m.chips.sub, ...m.chips.mid, ...m.chips.horn].filter(([k]) => k !== "ok").map(([, h, b]) => [h, b]),
     build: { qtc: m.qtc, sheets: sheets.sort((a, b) => b.t - a.t) },
-    changed, priceKnown: m.priceKnown,
+    changed, priceKnown: m.priceKnown, curve: m.curve, geom: geom(c),
   };
 }
