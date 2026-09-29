@@ -88,13 +88,15 @@ export function evaluate(c) {
 }
 
 // Reasons a config can't be a card (hard limits and the planner's own warnings that matter for a build).
+// Warnings a card may carry (shown on it). Anything else the planner warns about rules a design out, unless
+// lim.allow lists it (a warning the current design has from parts the user locked, so nothing can fix it).
 const SOFT_OK = new Set(["Over 125 lb", "Amp-limited", "Excursion-limited", "Thermally limited", "Horn wider than rated at the crossover",
-  "Mid narrower than the horn at the crossover", "Mid much wider than the horn at the crossover", "Horn stops loading near the crossover"]);
+  "Mid narrower than the horn at the crossover", "Mid much wider than the horn at the crossover"]);
 export function problems(m, lim) {
   const out = [];
   if (!m) return ["can't be modelled"];
   for (const k of ["sub", "mid", "horn"]) for (const [kind, head] of m.chips[k]) {
-    if (kind === "bad" || (kind === "warn" && !SOFT_OK.has(head) && !head.startsWith("Qtc"))) out.push(head);
+    if (kind === "bad" || (kind === "warn" && !SOFT_OK.has(head) && !head.startsWith("Qtc") && !(lim.allow && lim.allow.has(head)))) out.push(head);
   }
   if (m.qtc < 0.5 || m.qtc > 0.8) out.push(`mid Qtc ${m.qtc.toFixed(2)}`);
   if (m.mismatch) out.push("horn and driver exits differ");
@@ -118,9 +120,13 @@ export function optimize(input) {
   const cur = { xoLo: 120, xoHi: 900, tilt: 6, hfTilt: 6, ampW: 800, mAmpW: 400, hfAmpW: 100, hpType: "BW24", portMax: 20, wall: 0.75, inset: 0.75, layout: "stack", ...input.cur };
   const locks = { subDim: {}, midDim: {}, ...(input.locks || {}) };
   const budget = input.budget;   // drivers per stack
-  const lim = { maxLb: input.maxLb, budget };
+  const lim = { maxLb: input.maxLb, budget, allow: new Set() };
   const base = { ...cur };
   const curM = evaluate(base);
+  // horn loading is fixable by the horn, the driver or the crossover; only when all three are locked and the
+  // current design already has the warning is it allowed through
+  const hornLoadOk = !!(locks.horn && locks.cd && locks.xoHi && curM && curM.chips.horn.some(([, h]) => h === "Horn stops loading near the crossover"));
+  if (hornLoadOk) lim.allow.add("Horn stops loading near the crossover");
   const need = roomNeed(room);
   const target = Math.max(curM ? curM.out : need, need);
   const curF3 = curM ? curM.f3 : 40;
@@ -278,6 +284,7 @@ export function optimize(input) {
       if (h.exit !== cd.exit) continue;
       const hz = h.hf || {};
       if ((cd.hf.minXo && xoHi < cd.hf.minXo) || (hz.minXo && xoHi < hz.minXo)) continue;
+      if (hz.lowHz && hz.lowHz > xoHi * 0.8 && !hornLoadOk) continue;   // horn stops loading near the crossover
       const hm = hornResponse(cd.hf, hz, xoHi, cur.hfAmpW); evals++;
       if (!hm) continue;
       hornTable[xoHi].push({ cd, h, at: nearest(hm.curve, xoHi).spl, price: cd.price || 0, horn: h.price || 0, same: cd.id === cur.cd && h.id === cur.horn });

@@ -139,3 +139,10 @@ test("Lighter with free choices still shows the plywood-only change when it beat
   const small = out.cards.find((k) => k.config.wall !== c.wall && k.changed.join() === "plywood");
   t.assert.ok(small || out.cards.some((k) => k.config.wall === 0.5), out.cards.map((k) => `${k.label}: ${k.changed.join("/")}`).join(" | "));
 });
+
+test("no card carries 'Horn stops loading near the crossover' when the horn, driver or crossover is free", (t) => {
+  for (const goal of ["cheaper", "lighter", "lower", "louder"]) {
+    const out = runs[goal] || optimize({ ...base, goal });
+    for (const k of out.cards) t.assert.ok(!k.warnings.some(([h]) => h === "Horn stops loading near the crossover"), `${goal}: ${k.label}`);
+  }
+});
