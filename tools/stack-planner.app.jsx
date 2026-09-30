@@ -829,7 +829,7 @@ const FT = 0.3048;
 // Level vs angle and frequency, normalised to on-axis (0 dB darkest). Hover or drag to read a cell.
 function DispMap({ map, title }) {
   const [hover, setHover] = useState(null);
-  const W = 640, H = 220, L = 40, R = 8, T = 8, B = 26;
+  const W = 560, H = 240, L = 40, R = 6, T = 6, B = 24;
   const nF = map.freqs.length, nA = map.angles.length;
   const cw = (W - L - R) / nF, ch = (H - T - B) / nA;
   const col = (db) => { const x = Math.max(0, Math.min(1, -db / 18)); const l = 28 + x * 66; return `hsl(174 ${Math.round(60 - x * 45)}% ${l.toFixed(0)}%)`; };
@@ -1036,10 +1036,16 @@ function HifiPage() {
           series={[{ curve: sys.wMax, label: w.name, stroke: "#b45309", tint: "rgba(180,83,9,0.06)" }, { curve: tMax, label: t.name, stroke: "#0f766e", tint: "rgba(15,118,110,0.06)" }]} marks={[{ f: xo, label: "XO" }]} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
           <RoomView spacing={spacing} toe={toe} seat={seat} setSeat={setSeat} angles={[(gL.th * 180) / Math.PI, (gR.th * 180) / Math.PI]} />
-          <div>
-            <div className="flex gap-1 mb-2">{[["Horizontal", "h"], ["Vertical", "v"]].map(([l, v]) => <button key={v} onClick={() => setPlane(v)} className={seg(plane === v)}>{l}</button>)}</div>
-            <DispMap map={map} title={plane === "h" ? "Horizontal dispersion (one speaker)" : "Vertical: below (−) to above (+) the tweeter axis"} />
+          <div className="text-sm text-stone-600 leading-relaxed">
+            <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold mb-1">At the seat</div>
+            {(seatDist / FT).toFixed(1)} ft from the pair; left speaker {((gL.th * 180) / Math.PI).toFixed(0)}° and right {((gR.th * 180) / Math.PI).toFixed(0)}° off axis.<br />
+            Ears {earIn - standIn - sys.lay.tweeterIn >= 0 ? "above" : "below"} the tweeter by {Math.abs(earIn - standIn - sys.lay.tweeterIn).toFixed(1)}″.<br />
+            Clean up to about {atSeat.toFixed(0)} dB here with both speakers.
           </div>
+        </div>
+        <div>
+          <div className="flex gap-1 mb-2">{[["Horizontal", "h"], ["Vertical", "v"]].map(([l, v]) => <button key={v} onClick={() => setPlane(v)} className={seg(plane === v)}>{l}</button>)}</div>
+          <DispMap map={map} title={plane === "h" ? "Horizontal dispersion, one speaker (0° is on axis)" : "Vertical dispersion: below (−) to above (+) the tweeter axis"} />
         </div>
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (

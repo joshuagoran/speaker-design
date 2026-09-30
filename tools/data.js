@@ -378,3 +378,158 @@ export const FILL_OPTIONS = [
     ts: { Fs: 49, Qes: 0.43, Qms: 5.21, Vas: 64.2, Sd: 344.9, Xmax: 5, Re: 5.53, Bl: 10.88, Mms: 29, aes: 250, disp: null },
     hf: null, lfSens: 93.3, note: "Budget coax; HF section specs not listed, so only the woofer is modelled. Eminence PXB2:2K5CX network ($64.99, 250 W, switchable −3 dB HF)." },
 ].sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
+
+// ---- Hi-fi tab: 2-way home speakers (researched Sep 2026) ----
+// DIY 2-way hi-fi driver shortlist. Compiled 30 Sep 2026.
+// Prices come from US vendors only (parts-express.com, madisoundspeakerstore.com, usspeaker.com).
+// Tags in each note say where the specs came from:
+//   [maker]  = checked against the manufacturer datasheet or product page
+//   [vendor] = vendor page only (usually the maker's numbers copied), not checked against the maker
+// Missing specs are null and the note says so. "lb" is net weight where the maker publishes it;
+// otherwise it is the vendor's shipping weight, and the note says so.
+// Madisound pages showed "out of stock" on every product fetched, which may be a page-template
+// artifact; check stock before ordering.
+
+export const HIFI_WOOFERS = [
+  // ---------- Hi-fi long-throw ----------
+  { id: "rs180", size: 7, lb: 4.85, name: "Dayton Audio RS180-8", price: 79.98, src: "parts-express.com, Sep 2026",
+    ts: { Fs: 35.7, Qts: 0.31, Qes: 0.42, Qms: 1.22, Vas: 24.4, Sd: 124.7, Xmax: 6.0, Re: 6.4, Bl: 7.82, Mms: 17.9, Le: 0.73, aes: 60, sens: 87.1, disp: null, imp: 8 },
+    fmax: 3600,
+    note: "[maker: Dayton spec sheet] Aluminum cone, 7\" frame. aes is 60 W RMS (Dayton), 120 W max. sens is 2.83 V/1 m. Vd 74.8 cm³. The low Qms (1.22) is genuine; it comes from the aluminum former. Cone breakup around 5 kHz, so cross at 2 kHz or lower. lb is the PE shipping weight. Displacement not published." },
+  { id: "rs225", size: 8, lb: 6.1, name: "Dayton Audio RS225-8", price: 89.98, src: "parts-express.com, Sep 2026 (backorder)",
+    ts: { Fs: 28.3, Qts: 0.38, Qes: 0.51, Qms: 1.46, Vas: 56.6, Sd: 213.8, Xmax: 7.0, Re: 6.5, Bl: 9.05, Mms: 35.8, Le: 0.86, aes: 80, sens: 86.8, disp: null, imp: 8 },
+    fmax: 2400,
+    note: "[vendor: PE page, Dayton values, not checked against the PDF] Aluminum cone 8\". aes is 80 W RMS, 160 W max. sens is 2.83 V/1 m. Vas is 2.0 ft³ converted. Out of stock at PE (backorder). lb is the PE shipping weight. Displacement not published." },
+  { id: "hds875", size: 6.5, lb: 3.44, name: "Peerless HDS-P830875", price: 49.5, src: "parts-express.com, Sep 2026",
+    ts: { Fs: 45.8, Qts: 0.36, Qes: 0.41, Qms: 3.19, Vas: 21.8, Sd: 143.1, Xmax: 5.3, Re: 6.37, Bl: 8.47, Mms: 15.9, Le: 0.41, aes: 75, sens: 88.6, disp: null, imp: 8 },
+    fmax: 3000,
+    note: "[maker: Tymphany datasheet rev 1] Nomex cone, Cu shorting ring, cast basket. aes is 75 W rated noise power. sens is 88.6 dB 1 W (89.0 dB at 2.83 V). PE lists Fs 46 and omits Vas and Mms; the datasheet values are used. Best value on the list." },
+  { id: "ne180", size: 6.5, lb: 4.59, name: "Peerless NE180W-08", price: 97.98, src: "parts-express.com, Sep 2026 (out of stock)",
+    ts: { Fs: 42.3, Qts: 0.39, Qes: 0.41, Qms: 7.41, Vas: 22.7, Sd: 136.9, Xmax: 5.0, Re: 6.24, Bl: 8.17, Mms: 16.4, Le: 0.12, aes: 80, sens: 86.7, disp: null, imp: 8 },
+    fmax: 4000,
+    note: "[maker: Tymphany datasheet rev 2] Fiber cone. Very low Le (0.12 mH) from its motor design. aes is 80 W rated noise power. sens is 86.7 dB 1 W (87.2 dB at 2.83 V). Out of stock at PE." },
+  { id: "sb17nrx", pick: true, size: 6.5, lb: 3.44, name: "SB Acoustics SB17NRX2C35-8", price: 76.7, src: "madisoundspeakerstore.com, Sep 2026",
+    ts: { Fs: 36.5, Qts: 0.42, Qes: 0.47, Qms: 4.55, Vas: 27, Sd: 118, Xmax: 5.5, Re: 5.7, Bl: 6.25, Mms: 13.9, Le: 0.15, aes: 50, sens: 87, disp: null, imp: 8 },
+    fmax: null,
+    note: "[maker: SB datasheet rev 2, 2019] Norex paper cone. Xmax is derived: 11 mm p-p linear travel / 2. aes is 50 W IEC 268-5. sens is 2.83 V/1 m. SB publishes no fmax; the curve is smooth into the low kHz. Box suggestion: 7 L sealed or 17 L vented." },
+  { id: "sb23nrxs", size: 8, lb: 6.04, name: "SB Acoustics SB23NRXS45-8", price: 116.7, src: "madisoundspeakerstore.com, Sep 2026",
+    ts: { Fs: 27, Qts: 0.38, Qes: 0.41, Qms: 5.4, Vas: 94, Sd: 216, Xmax: 6.5, Re: 5.6, Bl: 7.5, Mms: 24.5, Le: 0.6, aes: 60, sens: 88.5, disp: null, imp: 8 },
+    fmax: null,
+    note: "[maker: SB datasheet rev 1, 2016] Norex paper cone, shallow (80.7 mm deep). Xmax is derived: 13 mm p-p / 2. aes is 60 W IEC 268-5. sens is 2.83 V/1 m. Boxes: 38–75 L sealed, 42–58 L vented. Floorstander woofer. No fmax published." },
+  { id: "ss18w8531", size: 7, lb: 3.75, name: "Scan-Speak 18W/8531G00 (Revelator)", price: 254.2, src: "madisoundspeakerstore.com, Sep 2026",
+    ts: { Fs: 28, Qts: 0.36, Qes: 0.39, Qms: 5.1, Vas: 58.2, Sd: 157, Xmax: 6.5, Re: 5.8, Bl: 6.8, Mms: 17.5, Le: 0.35, aes: 60, sens: 87, disp: 0.47, imp: 8 },
+    fmax: null,
+    note: "[maker: Scan-Speak datasheet] Sliced paper cone, Symmetrical Drive motor. aes is 60 W IEC 18.4 (100 h), 70 W long-term max. sens is 2.83 V/1 m. Premium pick near the top of the budget. Madisound suggests 13–38 L boxes." },
+  { id: "ss15w8434", size: 5.25, lb: 2.65, name: "Scan-Speak 15W/8434G00 (Discovery)", price: 84.8, src: "madisoundspeakerstore.com, Sep 2026",
+    ts: { Fs: 45, Qts: 0.25, Qes: 0.27, Qms: 3.74, Vas: 12.8, Sd: 80, Xmax: 4.2, Re: 5.7, Bl: 7.3, Mms: 8.61, Le: 0.8, aes: 60, sens: 87, disp: 0.23, imp: 8 },
+    fmax: null,
+    note: "[maker: Scan-Speak datasheet] Coated glass-fiber cone, 5.25\". Qts 0.25 suits vented boxes or DSP bass boost. aes is 60 W IEC 18.4, 120 W long-term. sens is 2.83 V/1 m. Small bookshelf option." },
+  { id: "ff165wk", size: 6.5, lb: 4.3, name: "Fostex FF165WK", price: 117.7, src: "madisoundspeakerstore.com, Sep 2026",
+    ts: { Fs: 50, Qts: 0.34, Qes: 0.373, Qms: 4.19, Vas: 27.8, Sd: 132, Xmax: 1.85, Re: null, Bl: 7.23, Mms: 9.5, Le: 0.056, aes: 30, sens: 92, disp: null, imp: 8 },
+    fmax: 21000,
+    note: "[maker: Fostex FF-WK manual + fostex.jp] Double-layer paper full-range cone. Re is not published (Qes and Bl imply about 6.5 Ω, derived only). aes is 30 W rated input, 90 W music. sens is 92 dB 1 W/1 m. Xmax is only 1.85 mm, so high-pass it about 60–80 Hz. It can run to 5 kHz or higher before a super tweeter. Fostex FW168HS and FW208HS woofers are discontinued." },
+  // ---------- Pro high-sensitivity midwoofers ----------
+  { id: "beta8a", size: 8, lb: 6.6, name: "Eminence Beta-8A", price: 89.99, src: "usspeaker.com, Sep 2026 (PE $99.99)",
+    ts: { Fs: 65, Qts: 0.38, Qes: 0.42, Qms: 4.95, Vas: 23.3, Sd: 210, Xmax: 3.0, Re: 5.99, Bl: 9.6, Mms: 16, Le: 0.49, aes: 225, sens: 95.1, disp: 0.76, imp: 8 },
+    fmax: 4500,
+    note: "[maker: eminence.com] US-made pro midbass. aes is 225 W Eminence 'RMS' (not AES), 450 W program. sens is 1 W/1 m. Xmax is only 3 mm, so high-pass it about 80–100 Hz or use a sub. Vd 63 cc. Sealed 5.7–9.9 L." },
+  { id: "bc6ndl38", size: 6.5, lb: 2.6, name: "B&C 6NDL38", price: 161.28, src: "usspeaker.com, Sep 2026 (PE same)",
+    ts: { Fs: 72, Qts: 0.42, Qes: 0.44, Qms: 11.5, Vas: 7, Sd: 132, Xmax: 6, Re: 5.2, Bl: 9.5, Mms: 17, Le: 0.6, aes: 150, sens: 92, disp: null, imp: 8 },
+    fmax: 6000,
+    note: "[maker: bcspeakers.com] Neo 6.5\". aes is 150 W B&C nominal (AES-type), 300 W continuous. sens is 1 W/1 m. Xvar 5.5 mm. B&C suggests a 9 L box. Smooth to 6 kHz, so it suits a small waveguide crossed around 1.5–2 kHz." },
+  { id: "bc8ndl51", size: 8, lb: 4.08, name: "B&C 8NDL51", price: 174.66, src: "usspeaker.com, Sep 2026 (PE same)",
+    ts: { Fs: 66, Qts: 0.37, Qes: 0.41, Qms: 3.6, Vas: 14, Sd: 220, Xmax: 7, Re: 5.3, Bl: 12.4, Mms: 28, Le: 0.5, aes: 200, sens: 94, disp: null, imp: 8 },
+    fmax: 3000,
+    note: "[maker: bcspeakers.com] Neo 8\". aes is 200 W B&C nominal, 400 W continuous. sens is 1 W/1 m. Xvar 7 mm. Re is 5.3 Ω on bcspeakers and 5.4 Ω on usspeaker. Cross at 1.5 kHz or lower (published range ends at 3 kHz)." },
+  { id: "f8pr200", size: 8, lb: 4.6, name: "FaitalPRO 8PR200", price: 229.95, src: "usspeaker.com, Sep 2026 (PE $252)",
+    ts: { Fs: 58, Qts: 0.37, Qes: 0.38, Qms: 9.4, Vas: 16.9, Sd: 209, Xmax: 8.15, Re: 5.1, Bl: 11.5, Mms: 27.2, Le: 0.55, aes: 200, sens: 95, disp: 1.0, imp: 8 },
+    fmax: 5000,
+    note: "[maker: faitalpro.com] Neo 8\" with an aluminum demodulation ring. aes is 200 W AES 2-1984, 400 W max. sens is 1 W/1 m. Faital's Xmax formula adds gap/3; the classic (winding − gap)/2 gives 5.15 mm. PE lists Vas 15 L and Sd 196 cm²; Faital's values are used." },
+  { id: "es8mb500", size: 8, lb: 7.5, name: "18 Sound 8MB500", price: 179.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 74, Qts: 0.43, Qes: 0.451, Qms: 2.66, Vas: 21.5, Sd: 230, Xmax: 6.0, Re: 5.1, Bl: 9.0, Mms: null, Le: 0.6, aes: 280, sens: 95, disp: null, imp: 8 },
+    fmax: 4500,
+    note: "[vendor: usspeaker page; eighteensound.com returned 503] Ferrite 8\" midbass. aes is 280 W AES, 400 W program. sens is 1 W/1 m. 3 kHz recommended crossover. Mms not published for 8 Ω (Fs, Vas and Sd imply about 16 g; the 4 Ω version is listed at 18 g). The listed Qts 0.43 does not match Qes and Qms, which give 0.39. Box 10–40 L." },
+  { id: "by6p200fe", size: 6.5, lb: 6.83, name: "Beyma 6P200Fe", price: 117.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 58, Qts: 0.26, Qes: 0.27, Qms: 4.6, Vas: 11.1, Sd: 135, Xmax: 5.5, Re: 4.9, Bl: 10.5, Mms: 17, Le: 0.3, aes: 200, sens: 93, disp: 0.6, imp: 8 },
+    fmax: 9000,
+    note: "[vendor: usspeaker page, Beyma values, not cross-checked] Ferrite 6.5\" midbass, 2\" coil. aes is 200 W AES, 400 W program. sens is 1 W/1 m. Qts 0.26 suits vented boxes or DSP bass boost. Box 6–20 L. Heavy for its size." },
+  { id: "by8p300", size: 8, lb: 8.82, name: "Beyma 8P300Fe/N", price: 136.95, src: "usspeaker.com, Sep 2026 (PE $137.14)",
+    ts: { Fs: 53, Qts: 0.31, Qes: 0.32, Qms: 14.3, Vas: 24.8, Sd: 220, Xmax: 6.0, Re: 5.2, Bl: 11.6, Mms: 25, Le: 0.4, aes: 300, sens: 94, disp: 1.5, imp: 8 },
+    fmax: 8000,
+    note: "[vendor: usspeaker/PE pages, Beyma values, not cross-checked] Carbon/paper cone, 2.5\" coil, ferrite. aes is 300 W AES, 600 W program. sens is 1 W/1 m. Box 10–30 L. The PE page has a unit error in Sd and Mms (0.022 m² / 0.025 kg)." },
+];
+
+export const HIFI_TWEETERS = [
+  // ---------- Domes (flat baffle) ----------
+  { id: "rst28f", lb: 1.8, name: "Dayton Audio RST28F-4", price: 39.98, src: "parts-express.com, Sep 2026",
+    hf: { sens: 90.5, aes: 80, aesXo: null, minXo: null, imp: 4, fs: 710 },
+    type: "dome", exit: 1.125, faceplate: { diameter: 4.125 }, needsWaveguide: false,
+    note: "[vendor: PE page] 1-1/8\" silk dome, 4 Ω. PE lists 93.5 dB at 2.83 V, which is about 90.5 dB/1 W at 4 Ω. aes is 80 W RMS with no high-pass stated. No minimum crossover published; the usable range starts at 1.4 kHz, so plan on 2 kHz or higher. lb is the PE shipping weight." },
+  { id: "da25tx", lb: 2.31, name: "Peerless DA25TX00-08", price: 56.25, src: "parts-express.com, Sep 2026",
+    hf: { sens: 88.1, aes: 15, aesXo: null, minXo: null, imp: 8, fs: 640 },
+    type: "dome", exit: 1.0, faceplate: { diameter: 4.81 }, needsWaveguide: false,
+    note: "[maker: Tymphany datasheet, Jul 2025] 1\" corundum dome, flat baffle. aes is only 15 W IEC 268-5 (PE says 100 W). Distributor copy claims a 1.2–1.3 kHz minimum crossover; unverified, not on the datasheet. Xmax 1.72 mm. Faceplate size is from PE." },
+  { id: "sb26stcn", pick: true, lb: 0.22, name: "SB Acoustics SB26STCN-C000-4", price: 40.5, src: "madisoundspeakerstore.com, Sep 2026",
+    hf: { sens: 89.5, aes: 120, aesXo: 2600, minXo: null, imp: 4, fs: 960 },
+    type: "dome", exit: 1.0, faceplate: { diameter: 2.83 }, needsWaveguide: false,
+    note: "[maker: SB datasheet] 26 mm textile dome, neo motor, 72 mm faceplate. sens is 92.5 dB at 2.83 V on 4 Ω, about 89.5 dB/1 W. aes is 120 W IEC 268-5 with a 2.6 kHz 12 dB/oct high-pass. No minimum crossover published. The small faceplate lets it sit close to the woofer." },
+  { id: "d2608", lb: 1.54, name: "Scan-Speak D2608/913000 (Discovery)", price: 113.0, src: "madisoundspeakerstore.com, Sep 2026",
+    hf: { sens: 91.5, aes: 80, aesXo: 4000, minXo: null, imp: 8, fs: 700 },
+    type: "dome", exit: 1.02, faceplate: { diameter: 4.09 }, needsWaveguide: false,
+    note: "[maker: Scan-Speak datasheet] 26 mm soft dome. sens is 91.5 dB at 2.83 V on 8 Ω (about 1 W), flat baffle. aes is 80 W IEC 18.4 with a 4 kHz 2nd-order high-pass; 400 W long-term. Madisound says it suits low crossovers, but no minimum is published. 104 mm faceplate." },
+  { id: "ft28d", lb: 1.16, name: "Fostex FT28D", price: 103.0, src: "madisoundspeakerstore.com, Sep 2026",
+    hf: { sens: 90, aes: 40, aesXo: 2000, minXo: 2000, imp: 8, fs: null },
+    type: "dome", exit: 1.1, faceplate: { w: 3.54, h: 3.07 }, needsWaveguide: false,
+    note: "[maker: fostex.jp] 28 mm UFLC soft dome. sens is 90 dB/1 W. aes is 40 W music. Recommended crossover is 2 kHz or higher. The 90 × 78 mm faceplate is from an older Madisound Fostex catalog. lb is gross weight. fs not published. The FT48D is discontinued; this is the current Fostex dome." },
+  // ---------- Horn-loaded (integral horn) ----------
+  { id: "ft17h", lb: 0.75, name: "Fostex FT17H", price: 64.1, src: "madisoundspeakerstore.com, Sep 2026",
+    hf: { sens: 96, aes: 30, aesXo: 5000, minXo: 5000, imp: 8, fs: null },
+    type: "horn-loaded", exit: null, faceplate: { diameter: 3.43 }, needsWaveguide: false,
+    note: "[maker: fostex.jp] Small horn super tweeter. sens is 96 dB/1 W (the older catalog said 98.5 dB). aes is 30 W music. Cross at 5 kHz or higher; horn cutoff is 2.6 kHz. Use it only with a full-range or 3\"–5\" woofer that reaches 5 kHz, such as the FF165WK. The 87 mm flange is from the older catalog. lb is gross weight." },
+  { id: "t90a", lb: 1.76, name: "Fostex T90A", price: 251.5, src: "madisoundspeakerstore.com, Sep 2026",
+    hf: { sens: 106, aes: 50, aesXo: 7000, minXo: 7000, imp: 8, fs: null },
+    type: "horn-loaded", exit: null, faceplate: null, needsWaveguide: false,
+    note: "[maker: fostex.jp] Top-mount alnico horn super tweeter with a ring diaphragm. sens is 106 dB/1 W. aes is 50 W music. Cross at 7 kHz or higher at −12 dB/oct; cutoff is 3.6 kHz. It sits on top of the cabinet, so there is no baffle faceplate (null). Needs a heavy pad. Slightly over the $250 cap. lb is gross weight." },
+  // ---------- 1" compression drivers (need a waveguide) ----------
+  { id: "de250", lb: 4.74, name: "B&C DE250-8", price: 137.46, src: "usspeaker.com, Sep 2026",
+    hf: { sens: 108.5, aes: 60, aesXo: 1600, minXo: 1600, imp: 8, fs: null },
+    type: "compression", exit: 1, faceplate: { diameter: 4.7 }, needsWaveguide: true,
+    note: "[maker: bcspeakers.com] Ferrite, 44 mm polyimide diaphragm. aes is 60 W B&C nominal, 120 W continuous. sens is 108.5 dB on a B&C horn: the repo notes it as the ME45; the web page does not name one. Minimum crossover 1.6 kHz. 2- and 3-bolt mounting. A hi-fi DIY staple. fs not published." },
+  { id: "hf102", lb: 0.7, name: "FaitalPRO HF102", price: 93.95, src: "usspeaker.com, Sep 2026",
+    hf: { sens: 107, aes: 30, aesXo: 2600, minXo: 2600, imp: 8, fs: null },
+    type: "compression", exit: 1, faceplate: { diameter: 3.58 }, needsWaveguide: true,
+    note: "[maker: faitalpro.com] Neo, 25 mm ketone polymer diaphragm. sens is 107 dB averaged, on a 1\" 50×40° horn (LTH102). aes is 30 W AES, 60 W max. Minimum crossover 2.6 kHz at 12 dB/oct or steeper. Very compact (91 mm across, 43 mm deep). Re 6 Ω." },
+  { id: "cd10fen", lb: 2.86, name: "Beyma CD10Fe/N", price: 86.95, src: "usspeaker.com, Sep 2026",
+    hf: { sens: 109, aes: 70, aesXo: 1200, minXo: 1200, imp: 8, fs: null },
+    type: "compression", exit: 1, faceplate: { diameter: 4.0 }, needsWaveguide: true,
+    note: "[vendor: usspeaker page, Beyma values] Ferrite, 44 mm PM4 polymer diaphragm. sens is 109 dB on the Beyma TD-164 horn. aes is 70 W AES above 1.2 kHz, 140 W program. Minimum crossover 1.2 kHz. Re 4.3 Ω. Also sold in 16 Ω. Cheapest low-crossover option on the list." },
+  { id: "nd1060", lb: 2.6, name: "18 Sound ND1060", price: 199.95, src: "usspeaker.com, Sep 2026",
+    hf: { sens: 108, aes: 40, aesXo: 1600, minXo: 1600, imp: 8, fs: null },
+    type: "compression", exit: 1, faceplate: { diameter: 3.6 }, needsWaveguide: true,
+    note: "[vendor: usspeaker page; eighteensound.com returned 503] Neo, 44 mm polyester diaphragm. sens is 108 dB on the 18 Sound XT1086 horn. aes is 40 W AES above 1.6 kHz, 80 W program. Minimum crossover 1.6 kHz at 12 dB/oct. Re 5.3 Ω. Weight is listed as both 2.6 lb and 1.1 kg (2.4 lb)." },
+  { id: "psd2002", lb: 5.9, name: "Eminence PSD:2002-8", price: 87.99, src: "parts-express.com, Sep 2026 (backorder)",
+    hf: { sens: 105, aes: 80, aesXo: 1600, minXo: 1200, imp: 8, fs: 550 },
+    type: "compression", exit: 1, faceplate: { diameter: 5.25 }, needsWaveguide: true,
+    note: "[vendor: PE page, Eminence spec text] US brand. Titanium diaphragm, 2\" voice coil, 1\" exit. sens is 105 dB 1 W/1 m on an unnamed horn. aes is 80 W EIA-426B with a 1.6 kHz 18 dB high-pass. Crossover: 1.2 kHz at 18 dB/oct or 1.8 kHz at 12 dB/oct. Titanium can sound bright; plan on DSP EQ. lb is the PE shipping weight. Also sold in a screw-on version (PSD:2002S)." },
+];
+
+// Fill gaps a model needs from the published parameters (marked in the note), and give every tweeter a faceplate
+// size and radiating diameter the layout and directivity use.
+const RHO_C2 = 1.18 * 343 * 343;
+for (const w of HIFI_WOOFERS) {
+  const ts = w.ts, derived = [];
+  if (ts.Mms == null && ts.Vas && ts.Sd && ts.Fs) {
+    const Sd = ts.Sd / 1e4, Cms = ts.Vas / 1e3 / (RHO_C2 * Sd * Sd);
+    ts.Mms = +(1e3 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Cms)).toFixed(1); derived.push(`Mms ${ts.Mms} g from Vas, Sd and Fs`);
+  }
+  if (ts.Re == null && ts.Qes && ts.Bl && ts.Mms && ts.Fs) {
+    ts.Re = +((ts.Qes * ts.Bl * ts.Bl) / (2 * Math.PI * ts.Fs * (ts.Mms / 1e3))).toFixed(2); derived.push(`Re ${ts.Re} Ω from Qes, Bl, Mms and Fs`);
+  }
+  if (derived.length) w.note += ` Derived for the model: ${derived.join("; ")}.`;
+}
+for (const t of HIFI_TWEETERS) {
+  const fp = t.faceplate;
+  t.faceplate = !fp ? { w: 3.5, h: 3.5 } : fp.diameter ? { w: fp.diameter, h: fp.diameter } : fp;
+  // radiating diameter for the directivity: the dome, or the horn mouth for a horn-loaded tweeter
+  t.domeIn = t.type === "horn-loaded" ? (fp && fp.diameter) || 3 : t.exit || 1;
+}

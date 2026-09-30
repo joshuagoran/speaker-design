@@ -17,9 +17,9 @@ const obj = { smaller: (x) => x.gross, deeper: (x) => x.f3, cheaper: (x) => x.pr
 // what a goal keeps from your design
 const keeps = (cur) => ({
   smaller: (x) => x.f3 <= cur.f3 + 5 && x.level >= cur.level - 1.5,
-  cheaper: (x) => x.f3 <= cur.f3 + 5 && x.level >= cur.level - 1.5,
+  cheaper: (x) => x.f3 <= cur.f3 + 5 && x.level >= cur.level - 1.5 && x.gross <= cur.gross * 1.3,
   deeper: (x) => x.level >= cur.level - 1.5,
-  louder: (x) => x.f3 <= cur.f3 + 5,
+  louder: (x) => x.f3 <= cur.f3 + 5 && x.gross <= cur.gross * 1.3,
 });
 // warnings that rule a design out (the soft ones stay on the card)
 const HARD = new Set(["Below the tweeter's minimum crossover", "Close to the tweeter's resonance", "Woofer past its usable range", "Tweeter runs out first"]);
@@ -116,7 +116,8 @@ export function hifiOptimize(input) {
   for (const g of [...goals, ...Object.keys(obj)].filter((g, i, a) => a.indexOf(g) === i)) {
     if (cards.length >= 3) break;
     if (!also.length && g === goal) continue;
-    const q = sorted(pool.filter((p) => differs(p) && (!curM || beats[g](p.m, curM)) && (!first || beats[g](p.m, first.m))), g)[0];
+    // an alternative keeps what its own goal keeps (a "Smaller" card doesn't give up the bass)
+    const q = sorted(pool.filter((p) => differs(p) && (!K || K[g](p.m)) && (!curM || beats[g](p.m, curM)) && (!first || beats[g](p.m, first.m))), g)[0];
     if (q) cards.push({ ...q, label: HIFI_GOALS[g].name, why: { smaller: "Smaller than your design.", deeper: "Goes deeper than your design.", cheaper: "Costs less than your design.", louder: "Louder than your design." }[g] });
   }
   return {
