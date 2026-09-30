@@ -108,9 +108,11 @@ export function hifiSystem(w, t, cfg) {
   const disp = ts.disp != null ? ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6);
   const net = Math.max(1, gross * 0.97 - disp - pVol);          // 3% for bracing and damping
   const V = ampV(cfg.wAmpW), order = cfg.order || 4, xo = cfg.xo;
-  const opts = { fmin: 15, fmax: Math.max(2000, xo * 3), N: 240 };
-  const vM = vented ? boxModel(ts, net, pA, cfg.port.len, cfg.hpf || 1, V, "BW24", { ...opts, nPorts: cfg.port.n }) : null;
-  const sM = vented ? null : closedBox(ts, net * 1.1, cfg.hpf || null, null, V, opts);   // lightly stuffed
+  const opts = { fmin: 15, fmax: Math.max(2000, xo * 3), N: cfg.N || 240 };
+  // a vented box unloads below its tuning; with DSP you'd highpass it there (default 0.75 × Fb, BW24)
+  const hpf = cfg.hpf != null ? cfg.hpf : vented ? Math.round(0.75 * ventTuning(net, pA, cfg.port.len, cfg.port.n).Fb) : null;
+  const vM = vented ? boxModel(ts, net, pA, cfg.port.len, hpf || 1, V, "BW24", { ...opts, nPorts: cfg.port.n }) : null;
+  const sM = vented ? null : closedBox(ts, net * 1.1, hpf || null, null, V, opts);   // lightly stuffed
   const m = vM || sM;
   if (!m) return null;
   const bw = dim.w, place = cfg.place || "free", wallM = (cfg.wallFt || 2) * 0.3048;
@@ -167,7 +169,7 @@ export function hifiSystem(w, t, cfg) {
   return {
     gross, net, disp, pVol, pArea: pA, vented, Fb: vM ? vM.Fb : null, Qtc: sM ? sM.Qtc : null, f3Box: m.f3, ref, refW,
     woofer, wMax, sMusic, whoW, trim, tSens, tSens283, tLevel, wLevel, maxLevel, who: tLevel < wLevel ? "tweeter" : "woofer",
-    pMax, derate, lb, portFits, lay, f3, bsF3: baffleStepF3(bw), tweeterAt, peakVel: vM ? Math.max(...woofer.map((o) => o.vel || 0)) : null, V,
+    pMax, derate, lb, portFits, lay, f3, hpf, bsF3: baffleStepF3(bw), tweeterAt, peakVel: vM ? Math.max(...woofer.map((o) => o.vel || 0)) : null, V,
   };
 }
 

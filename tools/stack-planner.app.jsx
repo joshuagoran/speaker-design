@@ -1,7 +1,9 @@
 const { useEffect, useRef, useState } = React;
 import { subChips, midChips, hornChips, fillChips } from "./chips.js";
 import { optimize, evaluate as evaluateConfig, roomNeed, ROOMS, GOALS, optFields } from "./optimize.js";
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS } from "./data.js";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS } from "./data.js";
+import { hifiSystem, hifiChips, responseAt, dispersionMap, logFreqs, lr, PLACES as HIFI_PLACES } from "./hifi.js";
+import { hifiOptimize, HIFI_GOALS } from "./hifi-optimize.js";
 import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, lr24lp, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest, subMusicAt } from "./calc.js";
 
 
@@ -821,6 +823,280 @@ function Slider({ label, value, min, max, step, unit, onChange, extra }) {
 }
 
 // ---------------------------------------------------------------
+// Hi-fi page: 2-way home speakers with an active crossover
+// ---------------------------------------------------------------
+const FT = 0.3048;
+// Level vs angle and frequency, normalised to on-axis (0 dB darkest). Hover or drag to read a cell.
+function DispMap({ map, title }) {
+  const [hover, setHover] = useState(null);
+  const W = 640, H = 220, L = 40, R = 8, T = 8, B = 26;
+  const nF = map.freqs.length, nA = map.angles.length;
+  const cw = (W - L - R) / nF, ch = (H - T - B) / nA;
+  const col = (db) => { const x = Math.max(0, Math.min(1, -db / 18)); const l = 28 + x * 66; return `hsl(174 ${Math.round(60 - x * 45)}% ${l.toFixed(0)}%)`; };
+  const fx = (f) => L + (Math.log(f / map.freqs[0]) / Math.log(map.freqs[nF - 1] / map.freqs[0])) * (W - L - R);
+  const move = (e) => {
+    const r = e.currentTarget.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H;
+    const i = Math.floor((x - L) / cw), j = Math.floor((y - T) / ch);
+    setHover(i >= 0 && i < nF && j >= 0 && j < nA ? { i, j } : null);
+  };
+  const ticksA = map.angles.filter((a) => a % 30 === 0);
+  return (
+    <div>
+      <div className="flex justify-between items-baseline text-xs text-stone-500 mb-1"><span>{title}</span>
+        <span className="tabular-nums text-stone-700">{hover ? `${map.angles[hover.j]}° · ${map.freqs[hover.i] >= 1000 ? (map.freqs[hover.i] / 1000).toFixed(1) + "k" : map.freqs[hover.i].toFixed(0)} Hz · ${map.rows[hover.j][hover.i].toFixed(1)} dB` : "dB vs on-axis"}</span></div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" style={{ touchAction: "pan-y" }} onPointerMove={move} onPointerDown={move} onPointerLeave={() => setHover(null)} role="img" aria-label={`${title}: level against angle and frequency`}>
+        {map.rows.map((row, j) => row.map((db, i) => <rect key={j * nF + i} x={L + i * cw} y={T + j * ch} width={cw + 0.5} height={ch + 0.5} fill={col(db)} />))}
+        {ticksA.map((a) => { const j = map.angles.indexOf(a); return <text key={a} x={L - 5} y={T + (j + 0.5) * ch + 3} fontSize="10" textAnchor="end" fill="#78716c">{a}°</text>; })}
+        {[200, 500, 1000, 2000, 5000, 10000, 20000].map((f) => <text key={f} x={fx(f)} y={H - 8} fontSize="10" textAnchor="middle" fill="#78716c">{f >= 1000 ? f / 1000 + "k" : f}</text>)}
+        {hover && <rect x={L + hover.i * cw} y={T + hover.j * ch} width={cw} height={ch} fill="none" stroke="#1c1917" strokeWidth="1.5" />}
+      </svg>
+      <div className="flex items-center gap-2 text-[11px] text-stone-500 mt-1">0 dB<span className="h-2 flex-1 max-w-[160px] rounded" style={{ background: `linear-gradient(to right, ${col(0)}, ${col(-9)}, ${col(-18)})` }} />−18 dB</div>
+    </div>
+  );
+}
+
+// Top-down room: the pair and a seat you can drag. Units: feet.
+function RoomView({ spacing, toe, seat, setSeat, angles }) {
+  const Wd = Math.max(12, spacing + 6), Dp = Math.max(10, seat.y + 3), W = 320, k = W / Wd, H = Dp * k;
+  const px = (x) => W / 2 + x * k, py = (y) => 14 + y * k;
+  const drag = (e) => {
+    if (e.type === "pointermove" && !e.buttons) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * (H + 20);
+    setSeat({ x: Math.round(((x - W / 2) / k) * 4) / 4, y: Math.max(2, Math.round(((y - 14) / k) * 4) / 4) });
+  };
+  const spk = (sx, sign) => {
+    const a = (sign * toe * Math.PI) / 180;
+    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill="#44403c" /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke="#a8a29e" strokeDasharray="2 2" /></g>;
+  };
+  return (
+    <svg viewBox={`0 0 ${W} ${H + 20}`} className="w-full h-auto rounded border border-stone-200 bg-white" style={{ touchAction: "none" }} onPointerDown={drag} onPointerMove={drag} role="img" aria-label="Room seen from above; drag the seat">
+      {[-1, 1].map((sg) => <line key={sg} x1={px((sg * spacing) / 2)} y1={py(0)} x2={px(seat.x)} y2={py(seat.y)} stroke="#d6d3d1" />)}
+      {spk(-spacing / 2, 1)}{spk(spacing / 2, -1)}
+      <circle cx={px(seat.x)} cy={py(seat.y)} r="7" fill="#0f766e" stroke="#fff" strokeWidth="2" />
+      <text x={px(-spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill="#57534e">{angles[0].toFixed(0)}° off</text>
+      <text x={px(spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill="#57534e">{angles[1].toFixed(0)}° off</text>
+      <text x={6} y={H + 14} fontSize="10" fill="#78716c">{Wd.toFixed(0)} ft wide · drag the seat</text>
+    </svg>
+  );
+}
+
+// Front view of the box and drivers, to scale.
+function HifiFront({ dim, w, t, lay, vented, port, guide }) {
+  const k = 120 / Math.max(dim.h, dim.w * 1.2), W = dim.w * k, H = dim.h * k;
+  const face = guide ? { w: guide.w, h: guide.h } : t.faceplate || { w: 4, h: 4 };
+  return (
+    <svg viewBox={`-4 -4 ${W + 8} ${H + 8}`} className="h-40 w-auto" role="img" aria-label={`Front view, ${dim.w} × ${dim.h}″`}>
+      <rect x={0} y={0} width={W} height={H} rx="2" fill="#e7e5e4" stroke="#292524" strokeWidth="1.2" />
+      <rect x={W / 2 - (face.w * k) / 2} y={(dim.h - lay.tweeterIn - face.h / 2) * k} width={face.w * k} height={face.h * k} rx={guide ? 3 : face.w * k / 2} fill="#57534e" />
+      <circle cx={W / 2} cy={(dim.h - lay.tweeterIn) * k} r={0.5 * k} fill="#d6d3d1" />
+      <circle cx={W / 2} cy={(dim.h - lay.wooferIn) * k} r={(w.size * 0.95 * k) / 2} fill="#d6d3d1" stroke="#78716c" />
+      {vented && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill="#292524" />)}
+    </svg>
+  );
+}
+
+function HifiPage() {
+  const guides = HORN_OPTIONS.filter((h) => h.exit === 1 && h.hf && h.hf.covH && h.size);
+  const [w, setW] = useState(HIFI_WOOFERS.find((o) => o.pick) || HIFI_WOOFERS[0]);
+  const [t, setT] = useState(HIFI_TWEETERS.find((o) => o.pick) || HIFI_TWEETERS[0]);
+  const [guideSel, setGuide] = useState(guides.find((g) => g.id === "st260") || guides[0]);
+  const [box, setBox] = useState("vented");
+  const [dim, setDim] = useState({ w: 9, h: 15, d: 11 });
+  const [wall, setWall] = useState(0.75);
+  const [mat, setMat] = useState("ply");
+  const [port, setPort] = useState({ n: 1, dia: 2, len: 6 });
+  const [xo, setXo] = useState(2000);
+  const [order, setOrder] = useState(4);
+  const [wAmpW, setWAmpW] = useState(100);
+  const [tAmpW, setTAmpW] = useState(50);
+  const [bsc, setBsc] = useState(3);
+  const [place, setPlace] = useState("free");
+  const [wallFt, setWallFt] = useState(2);
+  const [spacing, setSpacing] = useState(7);
+  const [toe, setToe] = useState(15);
+  const [seat, setSeat] = useState({ x: 0, y: 8 });
+  const [earIn, setEarIn] = useState(38);
+  const [standIn, setStandIn] = useState(24);
+  const [plane, setPlane] = useState("h");
+  const [hGoals, setHGoals] = useState([]);
+  const [hBudget, setHBudget] = useState(800);
+  const [hLocks, setHLocks] = useState({ dim: {} });
+  const [hRes, setHRes] = useState(null);
+  const [hBusy, setHBusy] = useState(false);
+  const setD = (k, v) => setDim((p) => ({ ...p, [k]: v }));
+  const setP = (k, v) => setPort((p) => ({ ...p, [k]: v }));
+  const guide = t.type === "compression" || t.needsWaveguide ? { covH: guideSel.hf.covH, covV: guideSel.hf.covV || guideSel.hf.covH, w: guideSel.size.w, h: guideSel.size.h, name: guideSel.name } : null;
+  const cfg = { box, dim, wall, mat, port, xo, order, wAmpW, tAmpW, bsc, place, wallFt, portMax: 17, guide };
+  const tt = guide ? { ...t, faceplate: { w: guide.w, h: guide.h } } : t;
+  const sys = hifiSystem(w, tt, cfg);
+  if (!sys) return <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 text-sm">This woofer can't be modelled (its parameters aren't published).</main>;
+  const F = hifiChips(sys, w, tt, cfg);
+  // the seat, relative to each speaker (left at -spacing/2, toed in toward the middle)
+  const geoOf = (sign) => {
+    const sx = (sign * spacing) / 2, vx = seat.x - sx, vy = seat.y, d = Math.hypot(vx, vy);
+    const axis = (-sign * toe * Math.PI) / 180, ang = Math.atan2(vx, vy) - axis;
+    return { th: Math.abs(ang), eyeIn: earIn - standIn, distM: d * FT };
+  };
+  const gL = geoOf(-1), gR = geoOf(1);
+  const freqs = logFreqs(40, 20000, 200);
+  const rL = responseAt(sys, w, tt, cfg, gL, freqs), rR = responseAt(sys, w, tt, cfg, gR, freqs);
+  const on = responseAt(sys, w, tt, cfg, { th: 0, eyeIn: sys.lay.tweeterIn, distM: 1 }, freqs);
+  const pair = rL.map((o, i) => ({ f: o.f, spl: 10 * Math.log10(Math.pow(10, o.spl / 10) + Math.pow(10, rR[i].spl / 10)) }));
+  const seatDist = (gL.distM + gR.distM) / 2;
+  const atSeat = sys.maxLevel - 20 * Math.log10(seatDist) + 3;
+  const tMax = freqs.map((f) => ({ f, spl: sys.tLevel + 20 * Math.log10(Math.max(1e-6, Math.hypot(lr(f, xo, order, "hp").re, lr(f, xo, order, "hp").im))) }));
+  const map = dispersionMap(sys, w, tt, cfg, plane, Math.max(1, seatDist));
+  const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0));
+  const hi = Math.max(...on.map((o) => o.spl), ...pair.map((o) => o.spl)), top = Math.ceil((hi + 4) / 5) * 5;
+  const tile = (k, v, u) => (
+    <div key={k} className="bg-stone-50 px-3 py-2.5">
+      <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+      <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
+    </div>
+  );
+  const seg = (on) => `px-3 py-1.5 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`;
+  const hLk = (key, what) => <LockBtn on={!!hLocks[key]} what={what} onClick={() => setHLocks((p) => ({ ...p, [key]: !p[key] }))} />;
+  const hDl = (dm, what) => <DimLock mode={hLocks.dim[dm] || "free"} what={what} onChange={(m) => setHLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))} />;
+  const runH = () => {
+    setHBusy(true);
+    setTimeout(() => {
+      try { setHRes(hifiOptimize({ cur: { ...cfg, woofer: w.id, tweeter: t.id }, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, goals: hGoals, locks: hLocks, budget: hBudget, seatM: seatDist, guidePrice: guideSel.price || 0 })); }
+      finally { setHBusy(false); }
+    }, 30);
+  };
+  const loadH = (k) => {
+    setW(HIFI_WOOFERS.find((o) => o.id === k.woofer)); setT(HIFI_TWEETERS.find((o) => o.id === k.tweeter));
+    setBox(k.cfg.box); setDim(k.cfg.dim); if (k.cfg.port) setPort(k.cfg.port); setXo(k.cfg.xo);
+  };
+  const tapG = (g) => setHGoals((p) => (p.includes(g) ? p.filter((x) => x !== g) : [...p, g]));
+  const optPanel = (
+    <div className="rounded-lg border border-stone-300 bg-white p-4">
+      <h2 className="text-xl" style={{ fontFamily: "Georgia, serif" }}>Find a better design</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+        <div className="mt-3">
+          <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
+          <div className="flex flex-wrap gap-1">{Object.entries(HIFI_GOALS).map(([k, g]) => { const i = hGoals.indexOf(k); return <button key={k} aria-pressed={i >= 0} className={seg(i >= 0)} onClick={() => tapG(k)}>{hGoals.length > 1 && i >= 0 ? `${i + 1} · ` : ""}{g.short}</button>; })}</div>
+        </div>
+        <div className="mt-3">
+          <div className="text-sm text-stone-500 mb-1">Driver budget, pair</div>
+          <div className="flex items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={hBudget} min={50} step={25} onChange={(e) => setHBudget(+e.target.value || 0)} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $</div>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button onClick={runH} disabled={hBusy || !hGoals.length} className="px-4 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-50">{hBusy ? "Searching…" : hGoals.length ? "Find 3 designs" : "Pick a goal first"}</button>
+        {hRes && !hBusy && <span className="text-xs text-stone-500">Searched {hRes.stats.evaluated.toLocaleString()} designs in {(hRes.stats.ms / 1000).toFixed(1)} s</span>}
+      </div>
+      {hRes && !hBusy && hRes.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800">Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost more.</div>}
+      {hRes && !hBusy && hRes.goalMissing && <div className="mt-2 text-xs text-amber-800">{hRes.goalMissing}</div>}
+      {hRes && !hBusy && hRes.cards.length > 0 && (
+        <div className="mt-3 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
+          {hRes.cards.map((k, i) => {
+            const cw = HIFI_WOOFERS.find((o) => o.id === k.woofer), ct = HIFI_TWEETERS.find((o) => o.id === k.tweeter), m = k.metrics, c0 = hRes.cur;
+            const d = (v, u, lowGood, dig = 0) => { if (!c0) return null; const r = Number(v.toFixed(dig)); const good = lowGood ? r < 0 : r > 0; return <span className={`text-xs ${r === 0 ? "text-stone-500" : good ? "text-green-800" : "text-orange-800"}`}> {r > 0 ? "+" : r < 0 ? "−" : "±"}{Math.abs(r).toFixed(dig)}{u}</span>; };
+            return (
+              <div key={i} className="bg-white border border-stone-300 rounded-lg p-3 flex flex-col gap-2 min-w-full md:min-w-0 snap-start">
+                <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {hRes.cards.length}</div>
+                <h3 className="text-base leading-snug" style={{ fontFamily: "Georgia, serif" }}>{k.names.woofer} + {k.names.tweeter}</h3>
+                <div className="flex gap-3 items-end">
+                  <HifiFront dim={k.cfg.dim} w={cw} t={ct} lay={k.lay} vented={k.cfg.box === "vented"} port={k.cfg.port} guide={k.guided ? guide : null} />
+                  <div className="text-xs text-stone-600 leading-relaxed">{k.cfg.box} · {k.cfg.dim.w} × {k.cfg.dim.h} × {k.cfg.dim.d}″<br />{k.cfg.box === "vented" ? `${k.cfg.port.n} × ${k.cfg.port.dia}″ port, ${k.cfg.port.len}″ · ` : ""}XO {k.cfg.xo} Hz</div>
+                </div>
+                <div className="text-sm grid grid-cols-2 gap-x-3 gap-y-0.5 tabular-nums">
+                  <div>{m.gross.toFixed(1)} L{d(m.gross - (c0 ? c0.gross : 0), " L", true, 1)}</div>
+                  <div>F3 {m.f3.toFixed(0)} Hz{d(m.f3 - (c0 ? c0.f3 : 0), " Hz", true)}</div>
+                  <div>{m.level.toFixed(0)} dB seat{d(m.level - (c0 ? c0.level : 0), " dB", false, 1)}</div>
+                  <div>${Math.round(m.price)}{d(m.price - (c0 ? c0.price : 0), "", true)}</div>
+                </div>
+                {k.warnings.length > 0 && <div className="text-xs text-amber-700">{k.warnings.join(" · ")}</div>}
+                <button onClick={() => loadH(k)} className="mt-auto px-3 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50">Load</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+  return (
+    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+      <div className="md:col-span-5 min-w-0">{optPanel}</div>
+      <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
+        <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+          {tile("Net volume", sys.net.toFixed(1), "L")}
+          {sys.vented ? tile("Tuning Fb", sys.Fb.toFixed(0), "Hz") : tile("Qtc", sys.Qtc.toFixed(2), "")}
+          {tile("F3 in room", sys.f3.toFixed(0), "Hz")}
+          {tile("Max at the seat", atSeat.toFixed(0), "dB")}
+          {tile("Weight", sys.lb.toFixed(0), "lb")}
+          {tile("Pair", `$${Math.round(pairCost)}`, "")}
+        </div>
+        <ResponseChart fmin={30} fmax={20000} top={top} bot={top - 45} yLabel="dB SPL at 2.83 V"
+          series={[{ curve: on, label: "On axis, 1 m", stroke: "#292524", tint: "rgba(0,0,0,0)" }, { curve: pair, label: `Pair at the seat (${(seatDist / FT).toFixed(1)} ft)`, stroke: "#0f766e", tint: "rgba(15,118,110,0.06)" }]}
+          marks={[{ f: xo, label: "XO" }, { f: sys.bsF3, label: "Baffle step" }, ...(sys.Fb ? [{ f: sys.Fb, label: "Fb" }] : [])]} />
+        <ResponseChart fmin={30} fmax={20000} top={Math.ceil((Math.max(sys.tLevel, sys.wLevel) + 8) / 5) * 5} bot={Math.ceil((Math.max(sys.tLevel, sys.wLevel) + 8) / 5) * 5 - 50} yLabel="max dB SPL @ 1 m"
+          series={[{ curve: sys.wMax, label: w.name, stroke: "#b45309", tint: "rgba(180,83,9,0.06)" }, { curve: tMax, label: t.name, stroke: "#0f766e", tint: "rgba(15,118,110,0.06)" }]} marks={[{ f: xo, label: "XO" }]} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+          <RoomView spacing={spacing} toe={toe} seat={seat} setSeat={setSeat} angles={[(gL.th * 180) / Math.PI, (gR.th * 180) / Math.PI]} />
+          <div>
+            <div className="flex gap-1 mb-2">{[["Horizontal", "h"], ["Vertical", "v"]].map(([l, v]) => <button key={v} onClick={() => setPlane(v)} className={seg(plane === v)}>{l}</button>)}</div>
+            <DispMap map={map} title={plane === "h" ? "Horizontal dispersion (one speaker)" : "Vertical: below (−) to above (+) the tweeter axis"} />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {F.map(([kind, head, body]) => (
+            <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+              <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+              <span className="text-stone-600">{body}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-4 items-end">
+          <HifiFront dim={dim} w={w} t={tt} lay={sys.lay} vented={sys.vented} port={port} guide={guide} />
+          <div className="text-xs text-stone-600 leading-relaxed">Woofer {sys.lay.wooferIn.toFixed(1)}″, tweeter {sys.lay.tweeterIn.toFixed(1)}″ from the bottom, {sys.lay.spacingIn.toFixed(1)}″ apart.<br />Tweeter trimmed {sys.trim.toFixed(1)} dB in the DSP to match the woofer.<br />{w.note}</div>
+        </div>
+      </div>
+      <aside className="min-w-0 md:col-span-2">
+        <Pick label="Woofer" options={HIFI_WOOFERS} value={w} onChange={setW} extra={hLk("woofer", "the woofer")} />
+        <Pick label="Tweeter" options={HIFI_TWEETERS} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} />
+        {guide && <Pick label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
+        <div className="text-sm text-stone-500 mb-1 flex items-center justify-between"><span>Box</span>{hLk("box", "sealed or vented")}</div>
+        <div className="flex flex-wrap gap-1 mb-2">
+          {[["Vented", "vented"], ["Sealed", "sealed"]].map(([l, v]) => <button key={v} onClick={() => setBox(v)} className={seg(box === v)}>{l}</button>)}
+          {[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <button key={v} onClick={() => setMat(v)} className={seg(mat === v)}>{l}</button>)}
+          {[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <button key={v} onClick={() => setWall(v)} className={seg(wall === v)}>{l}</button>)}
+        </div>
+        <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
+          <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
+          <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="&#8243;" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
+          <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
+          {box === "vented" && (<>
+            <Slider label="Ports" value={port.n} min={1} max={2} step={1} unit="" onChange={(v) => setP("n", v)} />
+            <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />
+            <Slider label="Port length" value={port.len} min={1} max={14} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
+          </>)}
+          <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of port` : ", lightly stuffed"}.</div>
+        </div>
+        <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
+          <Slider label="Crossover" value={xo} min={800} max={4000} step={50} unit=" Hz" onChange={setXo} extra={hLk("xo", "the crossover")} />
+          <div className="flex gap-1 mb-3">{[[4, "LR24"], [8, "LR48"]].map(([v, l]) => <button key={v} onClick={() => setOrder(v)} className={seg(order === v)}>{l}</button>)}</div>
+          <Slider label="Baffle-step boost" value={bsc} min={0} max={6} step={0.5} unit=" dB" onChange={setBsc} />
+          <Slider label="Woofer amp @ 8 Ω" value={wAmpW} min={10} max={500} step={10} unit=" W" onChange={setWAmpW} />
+          <Slider label="Tweeter amp @ 8 Ω" value={tAmpW} min={5} max={200} step={5} unit=" W" onChange={setTAmpW} />
+        </div>
+        <div className="rounded border border-stone-300 bg-white px-3 py-3">
+          <div className="text-sm text-stone-600 mb-1">Placement</div>
+          <div className="flex flex-wrap gap-1 mb-3">{Object.entries(HIFI_PLACES).map(([k, p]) => <button key={k} onClick={() => setPlace(k)} className={seg(place === k)}>{p.name}</button>)}</div>
+          {place !== "free" && <Slider label="Distance to the wall" value={wallFt} min={0.5} max={6} step={0.25} unit=" ft" onChange={setWallFt} />}
+          <Slider label="Speaker spacing" value={spacing} min={3} max={14} step={0.5} unit=" ft" onChange={setSpacing} />
+          <Slider label="Toe-in" value={toe} min={0} max={35} step={1} unit="°" onChange={setToe} />
+          <Slider label="Box bottom height (stand)" value={standIn} min={0} max={40} step={1} unit="&#8243;" onChange={setStandIn} />
+          <Slider label="Ear height" value={earIn} min={24} max={60} step={1} unit="&#8243;" onChange={setEarIn} />
+        </div>
+      </aside>
+    </main>
+  );
+}
+
+// ---------------------------------------------------------------
 // Notes page: project decisions that aren't planner output
 // ---------------------------------------------------------------
 function NotesPage() {
@@ -1404,7 +1680,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
 }
 
 function StackPlanner() {
-  const viewOf = () => (window.location.hash === "#notes" ? "notes" : window.location.hash === "#fills" ? "fills" : window.location.hash === "#cutlist" ? "cutlist" : "planner");
+  const viewOf = () => (window.location.hash === "#notes" ? "notes" : window.location.hash === "#fills" ? "fills" : window.location.hash === "#hifi" ? "hifi" : window.location.hash === "#cutlist" ? "cutlist" : "planner");
   const [view, setView] = useState(viewOf);
   useEffect(() => {
     const on = () => setView(viewOf());
@@ -1745,14 +2021,14 @@ function StackPlanner() {
       <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
         <h1 className="text-3xl md:text-4xl leading-tight" aria-label="Speaker Planner">𝒮𝓅ℯ𝒶𝓀ℯ𝓇 𝒫𝓁𝒶𝓃𝓃ℯ𝓇</h1>
         <nav className="flex gap-1 mt-3" style={{ fontFamily: "system-ui, sans-serif" }} aria-label="Pages">
-          {[["planner", "Planner", "#"], ["cutlist", "Cutlist", "#cutlist"], ["fills", "Fills", "#fills"], ["notes", "Notes", "#notes"]].map(([v, label, href]) => (
+          {[["planner", "Planner", "#"], ["cutlist", "Cutlist", "#cutlist"], ["fills", "Fills", "#fills"], ["hifi", "Hi-fi", "#hifi"], ["notes", "Notes", "#notes"]].map(([v, label, href]) => (
             <a key={v} href={href} aria-current={view === v ? "page" : undefined}
               onClick={(e) => { e.preventDefault(); try { history.replaceState(null, "", v === "planner" ? " " : href); } catch {} setView(v); window.scrollTo(0, 0); }}
               className={`px-3 py-1.5 rounded border text-sm ${view === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</a>
           ))}
         </nav>
       </header>
-      {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : view === "cutlist" ? <CutlistPage {...{ sub, mid, subBox, midDims, wall, inset, joint, setJoint, sheetKind, setSheetKind, sets, setSets, portStyle, cVent, layout }} /> : <>
+      {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : view === "hifi" ? <HifiPage /> : view === "cutlist" ? <CutlistPage {...{ sub, mid, subBox, midDims, wall, inset, joint, setJoint, sheetKind, setSheetKind, sets, setSets, portStyle, cVent, layout }} /> : <>
 
       {saved !== null && (
         <section className="max-w-6xl mx-auto px-4 md:px-8 pb-2" style={{ fontFamily: "system-ui, sans-serif" }}>
