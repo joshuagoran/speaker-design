@@ -513,6 +513,50 @@ export const HIFI_TWEETERS = [
     note: "[vendor: PE page, Eminence spec text] US brand. Titanium diaphragm, 2\" voice coil, 1\" exit. sens is 105 dB 1 W/1 m on an unnamed horn. aes is 80 W EIA-426B with a 1.6 kHz 18 dB high-pass. Crossover: 1.2 kHz at 18 dB/oct or 1.8 kHz at 12 dB/oct. Titanium can sound bright; plan on DSP EQ. lb is the PE shipping weight. Also sold in a screw-on version (PSD:2002S)." },
 ];
 
+// more woofers sold by usspeaker.com (researched Sep 2026)
+HIFI_WOOFERS.push(...[
+  { id: "ciare_hwg130", size: 5, lb: 3.8, name: "Ciare HWG130-8", price: 137.52, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 40, Qts: 0.28, Qes: 0.30, Qms: 4.8, Vas: 12.5, Sd: 87, Xmax: 6.5, Re: 5.4, Bl: 7.8, Mms: 13.1, Le: 0.7, aes: 130, sens: 88, disp: null, imp: 8 },
+    fmax: 7000,
+    note: "[maker] ciare.com. aes = nominal power (260 W continuous/program). sens 1W/1m. Sd 87 cm² per Ciare (usspeaker lists 95 cm²); usspeaker lists Re 4.8, maker 5.4. Low Qts + low Fs: best in sealed or small vented. disp not published (Ciare's 7 L figure is a recommended box). Maker range 45–7000 Hz." },
+  { id: "faital_5fe125", size: 5, lb: 2.48, name: "FaitalPRO 5FE125", price: 54.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 65, Qts: 0.48, Qes: 0.51, Qms: 7.4, Vas: 5.4, Sd: 84, Xmax: 5.25, Re: 5.4, Bl: 6.9, Mms: 11.0, Le: 0.41, aes: 80, sens: 88, disp: 0.3, imp: 8 },
+    fmax: 6300,
+    note: "[maker] faitalpro.com. aes = AES 80 W (160 W program). sens 1W/1m. Aluminum demodulation ring. usspeaker lists Sd as 0.01307 m² (a mislabeled in² value); maker Sd 84 cm². Qts 0.48 suits sealed. Range 63–6300 Hz." },
+  { id: "ciare_hwg160", size: 6.5, lb: 5.5, name: "Ciare HWG160-8", price: 158.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 39, Qts: 0.27, Qes: 0.28, Qms: 4.9, Vas: 27, Sd: 141, Xmax: 6.5, Re: 5.4, Bl: 8.9, Mms: 16.2, Le: 1.4, aes: 130, sens: 91, disp: null, imp: 8 },
+    fmax: 7000,
+    note: "[maker] ciare.com. aes = nominal power (260 W continuous). sens 1W/1m. Weight 2.5 kg per maker. Very low Qts: vented or EQ-assisted sealed. Le 1.4 mH is fairly high. disp not published. Maker range 45–7000 Hz." },
+  { id: "ciare_hw161n", size: 6.5, lb: 3.08, name: "Ciare HW161N", price: 89.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 47, Qts: 0.37, Qes: 0.46, Qms: 2.01, Vas: 19.9, Sd: 133, Xmax: 5.0, Re: 6.1, Bl: 7.42, Mms: 13.99, Le: 0.69, aes: 80, sens: 90, disp: null, imp: 8 },
+    fmax: 5000,
+    note: "[maker] ciare.com. aes = nominal 80 W (180 W continuous). sens 1W/1m. Xmax 5 mm per maker; usspeaker lists 3.0 mm and Sd 140 cm². Qms 2.01 is unusually low (lossy suspension). usspeaker markets it for 2-way hi-fi (vented 24 L / 50 Hz). fmax from usspeaker (40–5000 Hz). disp not published." },
+  { id: "ciare_hw205", size: 8, lb: 7.27, name: "Ciare HW205", price: 134.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 46, Qts: 0.42, Qes: 0.45, Qms: 6.14, Vas: 25.9, Sd: 203, Xmax: 6.0, Re: 5.99, Bl: 10.05, Mms: 26.05, Le: 0.14, aes: 200, sens: 91, disp: null, imp: 8 },
+    fmax: 5000,
+    note: "[maker] ciare.com. aes = nominal 200 W (400 W continuous). sens 1W/1m. Very low Le (0.14 mH). usspeaker lists Sd 220 cm². Vented example from usspeaker: 42 L / 45 Hz, F3 about 42 Hz. fmax from usspeaker (35–5000 Hz). disp not published." },
+  { id: "ciare_hwb200", size: 8, lb: 6.06, name: "Ciare HWB200-8", price: 145.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 32, Qts: 0.39, Qes: 0.41, Qms: 7.5, Vas: 59, Sd: 223, Xmax: 7.0, Re: 5.5, Bl: 8.9, Mms: 29.5, Le: 0.42, aes: 130, sens: 90, disp: null, imp: 8 },
+    fmax: 2500,
+    note: "[maker] ciare.com. aes = nominal 130 W (260 W continuous). sens 1W/1m. usspeaker lists Vas 57 L. Deepest bass here, but it needs a large box. usspeaker gives 30–2500 Hz (maker says up to 5000 Hz), so fmax is set to 2500 as the safe choice: best crossed low or used in a 3-way. disp not published." },
+  { id: "faital_6fe100", size: 6.5, lb: 2.6, name: "FaitalPRO 6FE100", price: 55.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 61, Qts: 0.55, Qes: 0.60, Qms: 6.0, Vas: 15.1, Sd: 149, Xmax: 5.25, Re: 5.4, Bl: 6.8, Mms: 14.0, Le: 0.5, aes: 100, sens: 91, disp: 0.4, imp: 8 },
+    fmax: 5000,
+    note: "[maker] faitalpro.com. aes = AES 100 W (200 W max). sens 1W/1m. Aluminum demodulation ring. usspeaker lists Sd 143 cm². Qts 0.55 favours sealed; low price. Range 63–5000 Hz. The 6FE125 is almost the same (Vas 15.1 L, Qts 0.55) at the same price." },
+  { id: "faital_8fe300", size: 8, lb: 6.8, name: "FaitalPRO 8FE300", price: 109.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 70, Qts: 0.44, Qes: 0.46, Qms: 13.4, Vas: 15.7, Sd: 223, Xmax: 5.52, Re: 5.8, Bl: 11.3, Mms: 22.9, Le: 0.55, aes: 250, sens: 95, disp: null, imp: 8 },
+    fmax: 5000,
+    note: "[maker] faitalpro.com. aes = AES 250 W (500 W program). sens 1W/1m. High sensitivity, pro midbass with small Vas. Fs 70 is at the woofer limit, so it suits vented or DSP bass boost. Weight from usspeaker. disp not found (null). Range 80–5000 Hz per maker." },
+  { id: "beyma_5mp60n", size: 5, lb: 2.6, name: "Beyma 5MP60/N", price: 69.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 63, Qts: 0.46, Qes: 0.58, Qms: 2.3, Vas: 5.8, Sd: 85, Xmax: 5.5, Re: 5.3, Bl: 6.4, Mms: 11, Le: 0.2, aes: 50, sens: 88, disp: null, imp: 8 },
+    fmax: 5000,
+    note: "[maker] beyma.com datasheet. aes = 50 W RMS (AES2, 100 W program). sens 1W/1m. Beyma's Xmax formula (Lvc-Hag)/2+Hag/3.5 gives 5.5; the usual (Lvc-Hag)/2 gives 4.0 mm. Polypropylene cone with a copper shorting cup. Maker range goes to 12 kHz, but fmax is set to 5000 for a 2-way crossover. Maker box: 8 L vented at 54 Hz. Beyma's Vd of 46 cm³ is swept volume, not box displacement." },
+  { id: "beyma_8g40", size: 8, lb: 7.3, name: "Beyma 8G40", price: 133.95, src: "usspeaker.com, Sep 2026",
+    ts: { Fs: 70, Qts: 0.36, Qes: 0.38, Qms: 6.8, Vas: 17, Sd: 220, Xmax: 6.5, Re: 6.1, Bl: 12.2, Mms: 21, Le: 1.3, aes: 250, sens: 95, disp: null, imp: 8 },
+    fmax: 6000,
+    note: "[maker] beyma.com datasheet. aes = AES 250 W (500 W program). sens 1W/1m. Beyma's Xmax formula gives 6.5; the usual (16-7)/2 gives 4.5 mm (some vendors list 4.5). 2.5\" voice coil. Suits a small vented box (10–30 L). Range 70–6000 Hz. disp not published." },
+]);
+
 // Fill gaps a model needs from the published parameters (marked in the note), and give every tweeter a faceplate
 // size and radiating diameter the layout and directivity use.
 const RHO_C2 = 1.18 * 343 * 343;
