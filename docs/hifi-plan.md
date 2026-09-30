@@ -27,6 +27,16 @@ adds only what a home 2-way needs. Nothing on the PA tabs changes.
   crossover high-pass; its resonance and minimum crossover checked.
 - Listening level: max output at 1 m, less 20·log(distance), plus both speakers (+3 dB in the room).
 
+## Listening position and dispersion
+- Top-down room view with the pair (spacing, toe-in) and a draggable seat; ear height and driver heights.
+- Response at the seat: each driver's off-axis loss (woofer and dome as pistons, 2·J1(x)/x with
+  x = ka·sin θ; a waveguide as constant coverage above its mouth's control frequency, piston-like below),
+  distance loss, and the woofer/tweeter path difference from their vertical spacing, which moves the
+  crossover lobe up or down (summed with phase, not just levels).
+- Dispersion map: level vs horizontal angle (0–90°) and frequency, normalised to on-axis, so beaming and the
+  crossover hand-off show directly; a vertical map for the lobe.
+- The response chart gains an "at the seat" curve next to the on-axis one.
+
 ## Checks (chips)
 - Crossover above the woofer's beaming point (dispersion narrower than the tweeter or waveguide).
 - Crossover below the tweeter's minimum, or within an octave of its resonance.
@@ -53,6 +63,7 @@ specs is kept with the gap marked. Stored as `HIFI_WOOFERS` / `HIFI_TWEETERS` in
 1. Driver data.
 2. Model and chips in `tools/hifi.js`, with tests (baffle step, boundary gain, crossover checks, limits).
 3. Tab UI: controls, charts, tiles, chips; phone layout.
-4. Cutlist and 3D reuse.
-5. Optimizer and cards.
-6. Mobile check in CI covers the new tab.
+4. Listening position, dispersion map.
+5. Cutlist and a front view (the PA 3D scene is built around the stack; a simple front view fits a 2-way).
+6. Optimizer and cards.
+7. Mobile check in CI covers the new tab.
