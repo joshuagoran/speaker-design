@@ -36,7 +36,7 @@ export function ventTuning(VbL, SpIn2, LpIn, nPorts = 1, ecIn) {
 // fewer only for the optimizer's screening).
 export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts = {}) {
   if (!ts || !VbL || !SpIn2 || LpIn <= 0) return null;
-  const { nPorts = 1, QL = 7, Qp = 50, ecIn, N = 420 } = opts;
+  const { nPorts = 1, QL = 7, Qp = 50, ecIn, N = 420, fmin = 12, fmax = 300 } = opts;
   const rho = 1.18, c = 343;
   const Sd = ts.Sd / 10000;                 // cm^2 -> m^2
   const Mms = ts.Mms / 1000;                // g -> kg
@@ -56,7 +56,7 @@ export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts
 
   const out = [];
   for (let i = 0; i < N; i++) {
-    const f = 12 * Math.pow(300 / 12, i / (N - 1));
+    const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
     const w = 2 * Math.PI * f, s = cx(0, w);
     const Zd = cadd(cx(Ras + Rae), cadd(cmul(s, cx(Mas)), cinv(cmul(s, cx(Cas)))));
     const Zc = cinv(cmul(s, cx(Cab)));
@@ -99,7 +99,7 @@ export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts
 // octave reads a little high. Excursion is the sine peak, as in boxModel.
 // ---------------------------------------------------------------
 export function closedBox(ts, VbL, hp, lp, volts, opts = {}) {
-  const { N = 420 } = opts;
+  const { N = 420, fmin = 20, fmax = 2000 } = opts;
   if (!ts || !VbL || VbL <= 0) return null;
   const rho = 1.18, c = 343;
   const Sd = ts.Sd / 10000, Mms = ts.Mms / 1000, Vb = VbL / 1000;
@@ -116,7 +116,7 @@ export function closedBox(ts, VbL, hp, lp, volts, opts = {}) {
   const Qtc = Qts * (Fc / ts.Fs);
   const out = [];
   for (let i = 0; i < N; i++) {
-    const f = 20 * Math.pow(2000 / 20, i / (N - 1));
+    const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
     const w = 2 * Math.PI * f, s = cx(0, w);
     const Z = cadd(cx(Ras + Rae), cadd(cmul(s, cx(Mas)), cadd(cinv(cmul(s, cx(Cas))), cinv(cmul(s, cx(Cab))))));
     const U = cabs(cdiv(cx(Pg), Z));
