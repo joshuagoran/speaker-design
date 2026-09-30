@@ -865,8 +865,7 @@ function RoomView({ spacing, toe, seat, setSeat, angles }) {
     setSeat({ x: Math.round(((x - W / 2) / k) * 4) / 4, y: Math.max(2, Math.round(((y - 14) / k) * 4) / 4) });
   };
   const spk = (sx, sign) => {
-    const a = (sign * toe * Math.PI) / 180;
-    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill="#44403c" /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke="#a8a29e" strokeDasharray="2 2" /></g>;
+    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${-sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill="#44403c" /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke="#a8a29e" strokeDasharray="2 2" /></g>;
   };
   return (
     <svg viewBox={`0 0 ${W} ${H + 20}`} className="w-full h-auto rounded border border-stone-200 bg-white" style={{ touchAction: "none" }} onPointerDown={drag} onPointerMove={drag} role="img" aria-label="Room seen from above; drag the seat">
