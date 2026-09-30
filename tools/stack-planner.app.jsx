@@ -1079,13 +1079,16 @@ function HifiPage() {
         )}
       </div>
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
-        <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+        <div className="flex gap-4 items-center">
+        <div className="shrink-0"><HifiFront dim={dim} w={w} t={tt} lay={sys.lay} vented={sys.vented} port={port} guide={guide} /></div>
+        <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
           {tile("Net volume", sys.net.toFixed(1), "L")}
           {sys.vented ? tile("Tuning Fb", sys.Fb.toFixed(0), "Hz") : tile("Qtc", sys.Qtc.toFixed(2), "")}
           {tile("F3 in room", sys.f3.toFixed(0), "Hz")}
           {tile("Max at the seat", atSeat.toFixed(0), "dB")}
           {tile("Weight", sys.lb.toFixed(0), "lb")}
           {tile("Pair", `$${Math.round(pairCost)}`, "")}
+        </div>
         </div>
         <ResponseChart fmin={30} fmax={20000} top={top} bot={top - 45} yLabel="dB SPL at 2.83 V"
           series={[{ curve: on, label: "On axis, 1 m", stroke: "#292524", tint: "rgba(0,0,0,0)" }, { curve: pair, label: `Pair at the seat (${(seatDist / FT).toFixed(1)} ft)`, stroke: "#0f766e", tint: "rgba(15,118,110,0.06)" }]}
@@ -1113,10 +1116,16 @@ function HifiPage() {
             </div>
           ))}
         </div>
-        <div className="flex gap-4 items-end">
-          <HifiFront dim={dim} w={w} t={tt} lay={sys.lay} vented={sys.vented} port={port} guide={guide} />
-          <div className="text-xs text-stone-600 leading-relaxed">Woofer {sys.lay.wooferIn.toFixed(1)}″, tweeter {sys.lay.tweeterIn.toFixed(1)}″ from the bottom, {sys.lay.spacingIn.toFixed(1)}″ apart.<br />Tweeter trimmed {sys.trim.toFixed(1)} dB in the DSP to match the woofer.<br />{w.note}</div>
-        </div>
+        <details className="text-xs text-stone-600 rounded border border-stone-300 bg-stone-50 px-3 py-2">
+          <summary className="cursor-pointer text-sm text-stone-700 py-1">Details</summary>
+          <div className="leading-relaxed mt-1 flex flex-col gap-1.5">
+            <div>Woofer {sys.lay.wooferIn.toFixed(1)}″ and tweeter {sys.lay.tweeterIn.toFixed(1)}″ from the bottom, {sys.lay.spacingIn.toFixed(1)}″ apart. {sys.gross.toFixed(1)} L gross, {sys.net.toFixed(1)} L net{sys.hpf ? `; DSP highpass ${sys.hpf} Hz (BW24) below the port tuning` : ""}.</div>
+            <div>Tweeter trimmed {sys.trim.toFixed(1)} dB in the DSP to match the woofer; baffle step centred at {sys.bsF3.toFixed(0)} Hz{bsc ? `, ${bsc} dB boost` : ""}.</div>
+            <div><span className="font-medium text-stone-700">{w.name}.</span> {w.note}</div>
+            <div><span className="font-medium text-stone-700">{t.name}.</span> {t.note}</div>
+            {guide && <div><span className="font-medium text-stone-700">{guide.name}.</span> {guideSel.note}</div>}
+          </div>
+        </details>
       </div>
       <aside className="min-w-0 md:col-span-2">
         <Pick label={`Woofer · ${w.size}″`} options={HIFI_WOOFERS_BY_SIZE} value={w} onChange={setW} extra={hLk("woofer", "the woofer")} group={(o) => `${o.size}″ woofers`} />
