@@ -1320,7 +1320,7 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
         {k.geom && <BoxFront g={k.geom} cur={cur && cur.geom} />}
         {k.curve && <OutChart curve={k.curve} cur={cur && cur.curve} />}
       </div>
-      <div className="text-xs text-stone-600">Mid {k.names.mid} · {k.names.cd} on {k.names.horn}</div>
+      <div className="text-xs text-stone-600">Mid {k.names.mid} · {k.names.cd} on {k.names.horn} · amps {c.ampW} / {c.mAmpW} / {c.hfAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile("Drivers", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Heaviest", `${m.heaviest.toFixed(0)} lb`, <Delta v={d.heaviest} unit=" lb" lowerIsBetter />)}
@@ -1820,7 +1820,7 @@ function StackPlanner() {
         {!optOn && <span className="text-xs text-stone-500">Find cheaper, lighter or louder designs inside your limits.</span>}
       </section>
       {optOn && <OptimizerPanel optIn={optIn} setOpt={setOpt} run={runOpt} busy={optBusy} res={optRes} err={optErr} curOut={curOut}
-        amps={[["sub", ampW, locks.ampW], ["mid", mAmpW, locks.mAmpW], ["HF", hfAmpW, locks.hfAmpW]].map(([n, w, l]) => `${n} ${l ? "" : "up to "}${w} W`).join(" · ") + " per channel (on Cheaper and Lighter cards, unlocked amps come back at the least power that does the job)"} previewCard={preview && preview.card} canSave={!!db}
+        amps={[["sub", ampW, locks.ampW, 3000], ["mid", mAmpW, locks.mAmpW, 2000], ["HF", hfAmpW, locks.hfAmpW, 500]].map(([n, w, l, mx]) => `${n} ${l ? `${w} W` : `any up to ${mx} W`}`).join(" · ") + " per channel (unlocked amps come back at the least power that does the job)"} previewCard={preview && preview.card} canSave={!!db}
         onPreview={optPreview} onLoad={optLoad} onSave={optSave} />}
       {preview && (
         <div className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-stone-50 px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm" style={{ fontFamily: "system-ui, sans-serif" }}>

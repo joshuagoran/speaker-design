@@ -112,8 +112,10 @@ export function problems(m, lim) {
 // goals: one or more of GOALS, in tap order. The first ranks the designs; the main card must also beat your
 // design on every other one (e.g. ["cheaper", "lighter"]: the cheapest design that's also lighter). `goal` alone still works.
 // locks: { sub, mid, cd, horn, vent, wall, hpf, xoLo, xoHi, ampW, mAmpW, hfAmpW, subDim: {w,h,d}, midDim: {w,h,d} }
-// (dims: "free"|"max"|"exact"; an unlocked amp may come back lower, never higher)
+// (dims: "free"|"max"|"exact"; an unlocked amp is searched up to AMP_MAX)
 // The fields a result sets; everything else (finish, colours, layout, balance) stays as the page has it.
+// the planner's amp sliders top out here; an unlocked amp is searched up to these
+export const AMP_MAX = { ampW: 3000, mAmpW: 2000, hfAmpW: 500 };
 export const OPT_FIELDS = ["sub", "mid", "cd", "horn", "cDim", "cVent", "portStyle", "hpf", "mDim", "wall", "xoLo", "xoHi", "ampW", "mAmpW", "hfAmpW"];
 export const optFields = (c) => Object.fromEntries(OPT_FIELDS.map((k) => [k, c[k]]));
 
@@ -127,8 +129,11 @@ export function optimize(input) {
   const locks = { subDim: {}, midDim: {}, ...(input.locks || {}) };
   const budget = input.budget;   // drivers per stack
   const lim = { maxLb: input.maxLb, budget, allow: new Set() };
-  const base = { ...cur };
-  const curM = evaluate(base);
+  // Unlocked amps are searched at the top of their slider (so the drivers, not the amp, set the limit), then every
+  // card comes back at the least power that keeps its output and keeps each band up with the one below.
+  const amps = { ampW: locks.ampW ? cur.ampW : AMP_MAX.ampW, mAmpW: locks.mAmpW ? cur.mAmpW : AMP_MAX.mAmpW, hfAmpW: locks.hfAmpW ? cur.hfAmpW : AMP_MAX.hfAmpW };
+  const base = { ...cur, ...amps };
+  const curM = evaluate(cur);
   // horn loading is fixable by the horn, the driver or the crossover; only when all three are locked and the
   // current design already has the warning is it allowed through
   const hornLoadOk = !!(locks.horn && locks.cd && locks.xoHi && curM && curM.chips.horn.some(([, h]) => h === "Horn stops loading near the crossover"));
@@ -147,7 +152,7 @@ export function optimize(input) {
   const xoLos = locks.xoLo ? [cur.xoLo] : [90, 100, 110, 120, 140];
   const xoHis = locks.xoHi ? [cur.xoHi] : [800, 900, 1000, 1200, 1500];
   const sr = { w: rangeOf(locks.subDim.w, cur.cDim.w, SUB_RANGE.w), h: rangeOf(locks.subDim.h, cur.cDim.h, SUB_RANGE.h), d: rangeOf(locks.subDim.d, cur.cDim.d, SUB_RANGE.d) };
-  const AMP_V = ampV(cur.ampW);
+  const AMP_V = ampV(amps.ampW);
 
   // box shapes inside the limits with gross volume near G, lightest first, a few distinct depths
   const allExact = sr.w[0] === sr.w[1] && sr.h[0] === sr.h[1] && sr.d[0] === sr.d[1];
@@ -218,6 +223,7 @@ export function optimize(input) {
         for (const style of styles) {
           const mk = (size, len) => ({ ...cur.cVent, ...size, len });
           const geom = (cVent) => subGeometry(sd.sub, midForGeom, { subBox: box, midDims: cur.mDim, wall: t, inset: cur.inset, portStyle: style, cVent, layout: cur.layout });
+          let pushed = false, fallback = null;
           for (const size of VENT_SIZES[style]) {
             const hi = ductFit(box, style, mk(size, 0), t).fit, lo = 2;
             if (hi < lo + 0.25) continue;
@@ -231,12 +237,25 @@ export function optimize(input) {
             if (Math.min(clearW, clearH) < subNeed(sd.sub.size)) continue;
             const c = { ...base, sub: sd.sub.id, cDim: box, wall: t, portStyle: style, cVent, hpf: sd.hpf };
             const s = subSystem(sd.sub, midForGeom, { subBox: box, midDims: cur.mDim, wall: t, inset: cur.inset, portStyle: style, cVent,
-              hpf: sd.hpf, hpType: cur.hpType, ampW: cur.ampW, portMax: cur.portMax, layout: cur.layout }); evals++;
+              hpf: sd.hpf, hpType: cur.hpType, ampW: amps.ampW, portMax: cur.portMax, layout: cur.layout }); evals++;
             if (!s.mdl) continue;
             const portOk = s.lim.who !== "port air speed" && s.lim.vel <= 0.9 * cur.portMax;
-            if (!portOk) continue;                  // try the next size up
+            if (!portOk) { fallback = { c, cVent, s }; continue; }   // try the next size up
             subCands.push({ c, s, sub: sd.sub, lb: subWeight(box, t, sd.sub.lb), out: bandOut(s.mdl, s.lim, s.AMP_V) });
+            pushed = true;
             break;                                  // smallest vent that doesn't limit
+          }
+          // no vent keeps up at full power (an unlocked amp searched at its maximum): the biggest vent that fits,
+          // with the amp turned down to where the port still has a 10% air-speed margin
+          if (!pushed && fallback && !locks.ampW) {
+            const vW = (Math.pow(fallback.s.AMP_V * (0.9 * cur.portMax) / fallback.s.mdl.peakVel, 2)) / 8;
+            const ampW = Math.floor(vW / 50) * 50;
+            if (ampW >= 200) {
+              const c = { ...fallback.c, ampW };
+              const s = subSystem(sd.sub, midForGeom, { subBox: box, midDims: cur.mDim, wall: t, inset: cur.inset, portStyle: style, cVent: fallback.cVent,
+                hpf: sd.hpf, hpType: cur.hpType, ampW, portMax: cur.portMax, layout: cur.layout }); evals++;
+              if (s.mdl && s.lim.who !== "port air speed") subCands.push({ c, s, sub: sd.sub, lb: subWeight(box, t, sd.sub.lb), out: bandOut(s.mdl, s.lim, s.AMP_V) });
+            }
           }
         }
       }
@@ -274,7 +293,7 @@ export function optimize(input) {
     const disp = m.ts.disp != null ? m.ts.disp : (m.size === 15 ? 4 : 2.5);
     const eff = Math.max(5, boxL(bx.w, bx.h, bx.d, t, cur.inset) - disp) * STUFF;
     for (const xoLo of xoLos) {
-      const V = ampV(cur.mAmpW), mdl = closedBox(m.ts, eff, xoLo, null, V, { N: 120 }); evals++;
+      const V = ampV(amps.mAmpW), mdl = closedBox(m.ts, eff, xoLo, null, V, { N: 120 }); evals++;
       if (!mdl || mdl.Qtc < 0.5 || mdl.Qtc > 0.8 || mdl.f3 > xoLo) continue;
       const max = maxCurve(mdl.curve, m.ts, V, Infinity);
       midTable.push({ m, bx, t, xoLo, atXo: nearest(max, xoLo).spl, max, qtc: mdl.Qtc, lb: midWeight(bx, t) + (m.lb || 0) });
@@ -291,7 +310,7 @@ export function optimize(input) {
       const hz = h.hf || {};
       if ((cd.hf.minXo && xoHi < cd.hf.minXo) || (hz.minXo && xoHi < hz.minXo)) continue;
       if (hz.lowHz && hz.lowHz > xoHi * 0.8 && !hornLoadOk) continue;   // horn stops loading near the crossover
-      const hm = hornResponse(cd.hf, hz, xoHi, cur.hfAmpW); evals++;
+      const hm = hornResponse(cd.hf, hz, xoHi, amps.hfAmpW); evals++;
       if (!hm) continue;
       hornTable[xoHi].push({ cd, h, at: nearest(hm.curve, xoHi).spl, price: cd.price || 0, horn: h.price || 0, same: cd.id === cur.cd && h.id === cur.horn });
     }
@@ -430,7 +449,7 @@ export function optimize(input) {
       const cc = { ...c, [key]: b }, mm = evaluate(cc); evals++;
       if (ok(cc, mm) && good(mm)) { c = cc; m = mm; }
     };
-    lowest("ampW", 200, 50, (mm) => mm.out >= tgtOut - 0.05);
+    lowest("ampW", 200, 50, (mm) => mm.out >= tgtOut - 0.01);
     lowest("mAmpW", 50, 25, (mm) => mm.midGap >= 0);
     lowest("hfAmpW", 10, 5, (mm) => mm.hornGap == null || mm.hornGap >= 0);
     return { ...p, c, m };
@@ -440,8 +459,9 @@ export function optimize(input) {
     const res = choose0(L, tgt);
     if (!res) return res;
     const cs = res.cards;
-    return { ...res, cards: cs.map((k) => (goals.some((g) => ["louder", "lower"].includes(g)) && k === cs[0]) || k.label === ALT_LABEL.louder || k.label === ALT_LABEL.lower || k.label === "Smallest change"
-      ? k : { ...k, p: shrinkAmps(k.p, Math.min(k.p.m.out, tgt)) }),
+    // output-first cards keep all the output they found; the others come down to the target
+    const keepOut = (k) => (goals.some((g) => ["louder", "lower"].includes(g)) && k === cs[0]) || k.label === ALT_LABEL.louder || k.label === ALT_LABEL.lower || k.label === "Smallest change";
+    return { ...res, cards: cs.map((k) => ({ ...k, p: shrinkAmps(k.p, keepOut(k) ? k.p.m.out : Math.min(k.p.m.out, tgt)) })),
     };
   };
 

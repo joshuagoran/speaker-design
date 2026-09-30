@@ -1,6 +1,6 @@
 import test from "node:test";
 import fs from "node:fs";
-import { optimize, evaluate, problems, bandOut, roomNeed, BAND } from "../tools/optimize.js";
+import { optimize, evaluate, problems, bandOut, roomNeed, BAND, AMP_MAX } from "../tools/optimize.js";
 import { boxModel, subLimits, ampV } from "../tools/calc.js";
 import { SUB_OPTIONS, MID_BOXES } from "../tools/data.js";
 import { close } from "./helpers.js";
@@ -86,10 +86,10 @@ test("impossible limits: no cards, a near-miss that names what blocks it", (t) =
   t.assert.ok(out.nearMiss && out.nearMiss.blocking.length > 0);
 });
 
-test("amps: unlocked amps never go up; locked amps stay; same-output cards keep the target", (t) => {
+test("amps: unlocked amps stay within the sliders; locked amps stay; same-output cards keep the target", (t) => {
   const free = runs.cheaper || optimize({ ...base, goal: "cheaper" });
   for (const k of free.cards) {
-    t.assert.ok(k.config.ampW <= cur.ampW && k.config.mAmpW <= cur.mAmpW && k.config.hfAmpW <= cur.hfAmpW, k.label);
+    t.assert.ok(k.config.ampW <= AMP_MAX.ampW && k.config.mAmpW <= AMP_MAX.mAmpW && k.config.hfAmpW <= AMP_MAX.hfAmpW, k.label);
   }
   if (!free.goalMissing) t.assert.ok(free.cards[0].metrics.out >= free.target - 0.5);
   const locked = optimize({ ...base, goal: "cheaper", locks: { ampW: true, mAmpW: true, hfAmpW: true } });
@@ -163,4 +163,19 @@ test("stacked goals: the main card beats the current design on every goal; the f
   }
   const a = optimize({ ...base, goals: ["cheaper", "lighter"] }).cards[0], b = optimize({ ...base, goals: ["lighter", "cheaper"] }).cards[0];
   if (a && b && a.label.includes("+") && b.label.includes("+")) t.assert.ok(a.metrics.price <= b.metrics.price + 1e-9 && b.metrics.heaviest <= a.metrics.heaviest + 1e-9);
+});
+
+test("louder with the sub amp unlocked turns it up when the amp is what limits the sub", (t) => {
+  const locks = { sub: true, mid: true, cd: true, horn: true, vent: true, wall: true, hpf: true, xoLo: true, xoHi: true,
+    subDim: { w: "exact", h: "exact", d: "exact" }, midDim: { w: "exact", h: "exact", d: "exact" } };
+  const c = { xoLo: 120, xoHi: 900, mAmpW: 400, hfAmpW: 100, ...pick("light block"), ampW: 300 };   // a small amp: the sub is amp-limited
+  t.assert.equal(evaluate(c).who, "amplifier power");
+  const out = optimize({ ...base, cur: c, maxLb: 200, budget: 2000, goals: ["louder"], locks });
+  t.assert.ok(out.cards.length >= 1, JSON.stringify(out.nearMiss && out.nearMiss.blocking));
+  const k = out.cards[0];
+  t.assert.ok(k.config.ampW > c.ampW, `amp ${k.config.ampW} W`);
+  t.assert.ok(k.metrics.out >= evaluate(c).out + 1, "louder than the design at 300 W");
+  // and no more power than it uses: 50 W less loses output
+  const less = evaluate({ ...k.config, ampW: k.config.ampW - 50 });
+  t.assert.ok(less.out < k.metrics.out - 0.01 || k.config.ampW - 50 < 200);
 });

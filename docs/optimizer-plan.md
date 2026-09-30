@@ -146,7 +146,7 @@ both crossovers, locks, owned/excluded drivers, outdoor target, "explain" view o
 
 ## Status (first version, branch `optimizer`)
 
-Built: the Optimizer switch; lock icons on drivers, vent style, plywood, highpass, crossovers and the three amp powers (an unlocked amp may come back lower: the least power that meets the target and keeps each band up);
+Built: the Optimizer switch; lock icons on drivers, vent style, plywood, highpass, crossovers and the three amp powers (an unlocked amp is searched up to its slider maximum, then comes back at the least power that keeps the card's output and keeps each band up);
 unlocked / ≤ / = on each box dimension; room, weight, budget and goal inputs; three cards (the
 goal's winner, then alternatives that beat it on their own axis by any saving, or at least 3 lb, 1 dB or 2 Hz);
 Preview, Load (saves the previous design when signed in), Undo, Save as; the "nothing fits" message.
