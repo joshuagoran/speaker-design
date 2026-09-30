@@ -683,7 +683,10 @@ function SignalPath() {
 // ---------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------
-function Pick({ label, options, value, onChange, extra }) {
+// group: optional (option) => heading; options with the same heading are listed together under it, in order of first appearance
+function Pick({ label, options, value, onChange, extra, group }) {
+  const opt = (o) => <option key={o.id} value={o.id}>{o.pick ? "● " : ""}{o.name}{o.price ? ` — $${o.price}` : ""}</option>;
+  const groups = group ? [...new Set(options.map(group))] : null;
   return (
     <div className="mb-4">
       <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>{label}</span>{extra}</div>
@@ -692,11 +695,7 @@ function Pick({ label, options, value, onChange, extra }) {
         onChange={(e) => onChange(options.find((o) => o.id === e.target.value))}
         className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500 focus:outline-none focus:border-stone-900"
       >
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.pick ? "● " : ""}{o.name}{o.price ? ` — $${o.price}` : ""}
-          </option>
-        ))}
+        {groups ? groups.map((g) => <optgroup key={g} label={g}>{options.filter((o) => group(o) === g).map(opt)}</optgroup>) : options.map(opt)}
       </select>
     </div>
   );
@@ -896,6 +895,9 @@ function HifiFront({ dim, w, t, lay, vented, port, guide, small }) {
   );
 }
 
+// woofers listed smallest first, grouped by size in the picker
+const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort((a, b) => a.size - b.size);
+
 // A result card, laid out like the PA optimizer's: what it is, a front view and its bass against yours, the four numbers with deltas.
 function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
   const c = k.config, m = k.metrics, d = k.delta || {};
@@ -910,7 +912,7 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
   return (
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
       <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
-      <h3 className="text-lg leading-snug" style={{ fontFamily: "Georgia, serif" }}>{k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
+      <h3 className="text-lg leading-snug" style={{ fontFamily: "Georgia, serif" }}>{cw.size}″ {k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} guide={k.guided ? guide : null} small />
         <OutChart curve={k.curve} cur={curCurve} fmin={20} fmax={500} band={null} />
@@ -1118,7 +1120,7 @@ function HifiPage() {
         </div>
       </div>
       <aside className="min-w-0 md:col-span-2">
-        <Pick label="Woofer" options={HIFI_WOOFERS} value={w} onChange={setW} extra={hLk("woofer", "the woofer")} />
+        <Pick label={`Woofer · ${w.size}″`} options={HIFI_WOOFERS_BY_SIZE} value={w} onChange={setW} extra={hLk("woofer", "the woofer")} group={(o) => `${o.size}″ woofers`} />
         <Pick label="Tweeter" options={HIFI_TWEETERS} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} />
         {guide && <Pick label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
         <div className="text-sm text-stone-500 mb-1 flex items-center justify-between"><span>Box</span>{hLk("box", "sealed or vented")}</div>
