@@ -1182,6 +1182,8 @@ function LockBtn({ on, onClick, what }) {
   const tip = on ? `Locked: the optimizer keeps ${what}` : `Unlocked: the optimizer may change ${what}`;
   return <button type="button" onClick={onClick} aria-pressed={on} aria-label={tip} title={tip} className={lockCls(on)}><LockIcon locked={on} /></button>;
 }
+// every on/off lock the optimizer reads (box sizes are separate: subDim, midDim)
+const LOCK_KEYS = ["sub", "mid", "cd", "horn", "vent", "wall", "hpf", "xoLo", "xoHi", "ampW", "mAmpW", "hfAmpW"];
 const DIM_NEXT = { free: "max", max: "exact", exact: "free" };
 function DimLock({ mode = "free", onChange, what }) {
   const tip = `${what}: ${mode === "free" ? "unlocked, the optimizer may change it" : mode === "max" ? "up to this value" : "locked at exactly this value"} (tap to change)`;
@@ -1805,8 +1807,15 @@ function StackPlanner() {
         {optOn && (() => {
           const n = Object.entries(locks).reduce((a, [k, v]) => a + (k.endsWith("Dim") ? Object.values(v).filter((m) => m && m !== "free").length : v ? 1 : 0), 0);
           const tip = n ? `Clear all ${n} lock${n > 1 ? "s" : ""}` : "No locks set";
-          return <button onClick={() => setLocks(() => ({ subDim: {}, midDim: {} }))} disabled={!n} aria-label={tip} title={tip}
-            className="inline-flex items-center gap-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40"><LockIcon locked={false} />{n ? <span className="text-xs">{n}</span> : null}</button>;
+          // lock everything (box sizes exact), then unlock the one or two things you want the optimizer to change
+          const all = { ...Object.fromEntries(LOCK_KEYS.map((k) => [k, true])), subDim: { w: "exact", h: "exact", d: "exact" }, midDim: { w: "exact", h: "exact", d: "exact" } };
+          const full = n >= LOCK_KEYS.length + 6;
+          return (<>
+            <button onClick={() => setLocks(() => all)} disabled={full} aria-label="Lock everything" title="Lock everything, then unlock what the optimizer may change"
+              className="inline-flex items-center gap-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40"><LockIcon locked={true} /><span className="text-xs">All</span></button>
+            <button onClick={() => setLocks(() => ({ subDim: {}, midDim: {} }))} disabled={!n} aria-label={tip} title={tip}
+              className="inline-flex items-center gap-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40"><LockIcon locked={false} />{n ? <span className="text-xs">{n}</span> : null}</button>
+          </>);
         })()}
         {!optOn && <span className="text-xs text-stone-500">Find cheaper, lighter or louder designs inside your limits.</span>}
       </section>

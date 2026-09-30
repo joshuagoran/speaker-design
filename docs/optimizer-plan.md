@@ -160,6 +160,6 @@ Goals start unselected on every load (the search waits for one); tap to select, 
 Tap more than one goal; the tap order shows on the buttons (1 · Cheaper, 2 · Lighter). The first goal ranks the
 designs; the main card ("Cheaper + lighter") must also beat your design on every other goal. The other cards
 are single-goal options, to show what dropping a goal buys. If nothing beats your design on all of them, the
-panel says so. "Clear all locks" resets every lock and box-size limit.
+panel says so. "Clear all locks" resets every lock and box-size limit; "Lock all" locks everything (box sizes exact) so you can unlock just the one or two things to change.
 Cards show a to-scale front view (your design's outline dashed behind it) and the sub's clean output from
 20 to 200 Hz against yours, with the scored 40–90 Hz band shaded; hover or drag to read values.
