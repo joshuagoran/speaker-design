@@ -3,18 +3,14 @@
 <title>Speaker Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,500,1,0&icon_names=lock,lock_open&display=block">
 <style>
-  /* CMYK palette: magenta (problems, worse, mid-bass), yellow (warnings, preview, focus), cyan (actions, better, horn),
-     black, white and two grays. Tailwind's colour names are remapped onto it below, so class names stay as they were. */
+  /* CMYK brand palette: cyan (actions, horn/tweeter), magenta (mid-bass/woofer), yellow (accents, focus), black, white and two
+     grays. Status uses its own green / orange / red. Tailwind's colour names are remapped below, so class names stay as they were. */
   :root { --magenta: #e5007e; --yellow: #ffd400; --cyan: #0082c8; --ink: #111111; --ground: #ffffff; --gray1: #e6e6e6; --gray2: #707070;
     --font: "Inconsolata", ui-monospace, "SFMono-Regular", Menlo, monospace; }
   body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font); }
   button, input, select, textarea { font-family: inherit; }
   :focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
-  .ms { font-family: "Material Symbols Outlined"; font-weight: normal; font-style: normal; font-size: 18px; line-height: 1; letter-spacing: normal;
-    text-transform: none; white-space: nowrap; direction: ltr; font-feature-settings: "liga"; -webkit-font-smoothing: antialiased;
-    font-variation-settings: "FILL" 1; display: inline-block; }
   #root { min-height: 100%; }
   /* pan-y lets a vertical swipe scroll the page; anything else rotates */
   canvas { display: block; touch-action: pan-y; }
@@ -34,8 +30,8 @@
 </style>
 <script src="https://cdn.tailwindcss.com/3.4.16"></script>
 <script>
-  // Tailwind's colour names mapped onto the CMYK palette: stone = the grays, green = cyan (good), red = magenta (bad),
-  // orange = yellow/black (notices), amber = black (its text sits on a yellow label); 4 px corners, 6 px for large ones
+  // Tailwind's colour names mapped onto the palette: stone = the grays; green / orange (amber) / red = status; cmy-* = brand
+  // (cyan actions, magenta and cyan chart series, yellow accents); 4 px corners, 6 px for large ones
   (function () {
     var W = "#ffffff", G1 = "#e6e6e6", G2 = "#707070", K = "#111111", M = "#e5007e", Y = "#ffd400", C = "#0082c8";
     var scale = function (a, b, c) { return { 50: a, 100: a, 200: b, 300: b, 400: b, 500: c, 600: c, 700: c, 800: c, 900: c, 950: c }; };
@@ -43,7 +39,9 @@
     tailwind.config = { theme: { extend: {
       colors: {
         stone: { 50: W, 100: W, 200: G1, 300: G1, 400: G2, 500: G2, 600: G2, 700: K, 800: K, 900: K, 950: K },
-        green: scale("#e6f2fa", C, C), red: scale("#fde6f2", M, M), orange: scale(W, Y, K), amber: scale("#fff8cc", Y, K),
+        // status colours stay conventional and separate from the brand colours: green ok, orange warning, red problem
+        green: scale("#e8f5ec", "#1a7f37", "#1a7f37"), red: scale("#fdecec", "#c81e1e", "#c81e1e"),
+        orange: scale("#fff4e5", "#d9730d", "#b35900"), amber: scale("#fff4e5", "#d9730d", "#b35900"),
         cmy: { c: C, m: M, y: Y, k: K },
       },
       borderRadius: { DEFAULT: "4px", lg: "6px" },

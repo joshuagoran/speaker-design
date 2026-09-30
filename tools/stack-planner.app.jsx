@@ -924,7 +924,7 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
         {tile("F3 in room", `${m.f3.toFixed(0)} Hz`, <Delta v={d.f3} unit=" Hz" lowerIsBetter />)}
       </div>
       <div className="text-xs leading-snug"><b className="font-semibold">Limited by:</b> {who}</div>
-      {k.warnings.filter((h) => !/^Woofer limited by/.test(h)).map((h) => <div key={h} className="text-xs border border-stone-300 rounded px-2 py-1 bg-stone-50"><b className="font-semibold bg-cmy-y text-stone-900 px-1 rounded-sm">{h}</b></div>)}
+      {k.warnings.filter((h) => !/^Woofer limited by/.test(h)).map((h) => <div key={h} className="text-xs border border-stone-300 rounded px-2 py-1 bg-stone-50"><b className="font-semibold text-amber-700">{h}</b></div>)}
       <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
@@ -1054,14 +1054,14 @@ function HifiPage() {
         {hRes && !hBusy && <span className="text-xs text-stone-500">Searched {hRes.stats.evaluated.toLocaleString()} designs in {(hRes.stats.ms / 1000).toFixed(1)} s{hRes.cards.length ? " · every design shown passes the checks (warnings are listed on the card)" : ""}</span>}
         {hUndo && !hPreview && <button onClick={() => { applyH(hUndo); setHUndo(null); }} className="px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Undo load</button>}
       </div>
-      {hRes && !hBusy && hRes.curProblems.length > 0 && <div className="mt-2 text-xs text-stone-900 border-l-4 border-cmy-y pl-2 py-0.5">Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
+      {hRes && !hBusy && hRes.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 border-l-4 border-amber-400 pl-2 py-0.5">Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
       {hRes && !hBusy && hRes.cards.length > 0 && (<>
         <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
           {hRes.cards.map((k, i) => <HifiCard key={i} k={k} i={i} n={hRes.cards.length} curCurve={hRes.curCurve} guide={guide} previewing={hPreview && hPreview.card === k} onPreview={() => previewH(k)} onLoad={() => loadH(k)} />)}
         </div>
         {hRes.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {hRes.cards.length - 1} more</div>}
       </>)}
-      {hRes && !hBusy && hRes.goalMissing && <div className="mt-2 text-xs text-stone-900 border-l-4 border-cmy-y pl-2 py-0.5">{hRes.goalMissing}</div>}
+      {hRes && !hBusy && hRes.goalMissing && <div className="mt-2 text-xs text-amber-800 border-l-4 border-amber-400 pl-2 py-0.5">{hRes.goalMissing}</div>}
       {hRes && !hBusy && !hRes.cards.length && !hRes.goalMissing && <div className="mt-3 text-sm text-orange-900">Nothing fits all your limits. A bigger budget or fewer locks would open it up.</div>}
     </div>
   );
@@ -1071,7 +1071,7 @@ function HifiPage() {
         {optBar}
         {optPanel}
         {hPreview && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded bg-cmy-y text-stone-900 px-3 py-2 text-sm font-semibold">
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded bg-stone-900 text-white border-t-4 border-cmy-y px-3 py-2 text-sm font-semibold">
             <span className="flex-1">Previewing “{hPreview.label}”</span>
             <button onClick={() => loadH(hPreview.card)} className="px-3 py-1.5 rounded border border-stone-900 bg-white text-stone-900">Keep</button>
             <button onClick={backH} className="px-3 py-1.5 rounded border border-stone-900 bg-white text-stone-900">Back</button>
@@ -1111,7 +1111,7 @@ function HifiPage() {
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
             <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-              <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "bg-cmy-y text-stone-900 px-1 rounded-sm" : "text-red-700"}`}>{head}</b>
+              <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
               <span className="text-stone-600">{body}</span>
             </div>
           ))}
@@ -1411,7 +1411,7 @@ function FillsPage() {
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
             <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-              <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "bg-cmy-y text-stone-900 px-1 rounded-sm" : "text-red-700"}`}>{head}</b>
+              <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
               <span className="text-stone-600">{body}</span>
             </div>
           ))}
@@ -1519,8 +1519,11 @@ function CutlistPage(props) {
 // ---------------------------------------------------------------
 // Optimizer: lock buttons on the controls, the panel, result cards.
 // ---------------------------------------------------------------
+// Material Symbols "lock" / "lock_open" (filled), drawn inline so they never depend on a font loading
+const LOCK_PATH = "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z";
+const LOCK_OPEN_PATH = "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h2c0-1.66 1.34-3 3-3s3 1.34 3 3v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z";
 function LockIcon({ locked }) {
-  return <span className="ms" aria-hidden="true">{locked ? "lock" : "lock_open"}</span>;
+  return <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d={locked ? LOCK_PATH : LOCK_OPEN_PATH} fill="currentColor" fillRule="evenodd" /></svg>;
 }
 const lockCls = (on) => `inline-flex items-center justify-center gap-0.5 min-w-[28px] h-6 px-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 text-stone-400 bg-white hover:border-stone-500 hover:text-stone-600"}`;
 function LockBtn({ on, onClick, what }) {
@@ -1674,7 +1677,7 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
       </div>
       <div className="text-xs leading-snug"><b className="font-semibold">Limited by:</b> {k.limitedBy}</div>
       {k.warnings.filter(([h]) => !/limited$/.test(h)).map(([h, b]) => (
-        <div key={h} className="text-xs border border-stone-300 rounded px-2 py-1 bg-stone-50"><b className="font-semibold bg-cmy-y text-stone-900 px-1 rounded-sm mr-1">{h}</b>{b}</div>
+        <div key={h} className="text-xs border border-stone-300 rounded px-2 py-1 bg-stone-50"><b className="font-semibold text-amber-700 mr-1">{h}</b>{b}</div>
       ))}
       <div className="text-xs text-stone-600">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
       <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
@@ -1726,7 +1729,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
           {res && !busy && <span className="text-xs text-stone-500">Searched {res.stats.evaluated.toLocaleString()} designs in {(res.stats.ms / 1000).toFixed(1)} s{res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}</span>}
           {err && <span className="text-xs text-red-700">{err}</span>}
         </div>
-        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-stone-900 border-l-4 border-cmy-y pl-2 py-0.5">Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
+        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 border-l-4 border-amber-400 pl-2 py-0.5">Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
         {res && !busy && res.cards.length > 0 && (<>
           <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
             {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} cur={res.cur} previewing={previewCard === k} canSave={canSave}
@@ -1734,7 +1737,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
           </div>
           {res.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {res.cards.length - 1} more</div>}
         </>)}
-        {res && !busy && res.goalMissing && <div className="mt-2 text-xs text-stone-900 border-l-4 border-cmy-y pl-2 py-0.5">{res.goalMissing}</div>}
+        {res && !busy && res.goalMissing && <div className="mt-2 text-xs text-amber-800 border-l-4 border-amber-400 pl-2 py-0.5">{res.goalMissing}</div>}
         {res && !busy && !res.cards.length && res.nearMiss && (
           <div className="mt-4 rounded-lg border border-orange-300 bg-orange-50 px-3 py-3">
             <h3 className="text-base" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Nothing fits all your limits</h3>
@@ -2168,7 +2171,7 @@ function StackPlanner() {
         amps={[["sub", ampW, locks.ampW, 3000], ["mid", mAmpW, locks.mAmpW, 2000], ["HF", hfAmpW, locks.hfAmpW, 500]].map(([n, w, l, mx]) => `${n} ${l ? `${w} W` : `any up to ${mx} W`}`).join(" · ") + " per channel (unlocked amps come back at the least power that does the job)"} previewCard={preview && preview.card} canSave={!!db}
         onPreview={optPreview} onLoad={optLoad} onSave={optSave} />}
       {preview && (
-        <div className="fixed top-0 inset-x-0 z-50 bg-cmy-y text-stone-900 px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm" style={{ fontFamily: "var(--font)" }}>
+        <div className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-white border-b-4 border-cmy-y px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm" style={{ fontFamily: "var(--font)" }}>
           <span>Previewing: <b className="font-semibold">{preview.label}</b></span>
           <button onClick={() => optLoad(preview.card)} className="px-3 py-1.5 rounded border font-semibold border-cmy-c bg-cmy-c text-white">Load</button>
           <button onClick={optBack} className="px-3 py-1.5 rounded border border-stone-900 bg-white">Back</button>
@@ -2249,7 +2252,7 @@ function StackPlanner() {
                 const F = subChips({ subSize: format.sub, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF: mdl.peakXF, aes: sub.ts.aes, ampW });
                 return F.map(([kind, head, body]) => (
                   <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "bg-cmy-y text-stone-900 px-1 rounded-sm" : "text-red-700"}`}>{head}</b>
+                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
@@ -2301,7 +2304,7 @@ function StackPlanner() {
                   subMusicAtXo, tilt, midAtXo: subMusicAtXo != null ? midNear(xoLo) : null });
                 return F.map(([kind, head, body]) => (
                   <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "bg-cmy-y text-stone-900 px-1 rounded-sm" : "text-red-700"}`}>{head}</b>
+                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
@@ -2341,7 +2344,7 @@ function StackPlanner() {
                 const F = hornChips({ hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi: midMax ? midNear(xoHi).spl : null, hfTilt, hornAtXo: hornAt(xoHi), midBeam, fK: beamCurves.fK });
                 return F.map(([kind, head, body]) => (
                   <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "bg-cmy-y text-stone-900 px-1 rounded-sm" : "text-red-700"}`}>{head}</b>
+                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
