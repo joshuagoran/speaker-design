@@ -150,3 +150,17 @@ test("no card carries 'Horn stops loading near the crossover' when the horn, dri
     for (const k of out.cards) t.assert.ok(!k.warnings.some(([h]) => h === "Horn stops loading near the crossover"), `${goal}: ${k.label}`);
   }
 });
+
+test("stacked goals: the main card beats the current design on every goal; the first goal ranks", (t) => {
+  const beat = { cheaper: (m, c) => m.price < c.price, lighter: (m, c) => m.heaviest <= c.heaviest - 3, louder: (m, c) => m.out >= c.out + 1, lower: (m, c) => m.f3 <= c.f3 - 2 };
+  for (const goals of [["cheaper", "lighter"], ["lighter", "cheaper"], ["cheaper", "louder"], ["louder", "lower"]]) {
+    const out = optimize({ ...base, goals });
+    t.assert.deepEqual(out.goals, goals);
+    const main = out.cards.find((k) => k.label.includes(" + "));
+    if (!main) { t.assert.ok(out.goalMissing || out.curProblems.length, `${goals}: no main card and no message`); continue; }
+    t.assert.equal(out.cards[0], main, `${goals}: main card first`);
+    for (const g of goals) t.assert.ok(beat[g](main.metrics, out.curM), `${goals}: main card doesn't beat the current design on ${g}`);
+  }
+  const a = optimize({ ...base, goals: ["cheaper", "lighter"] }).cards[0], b = optimize({ ...base, goals: ["lighter", "cheaper"] }).cards[0];
+  if (a && b && a.label.includes("+") && b.label.includes("+")) t.assert.ok(a.metrics.price <= b.metrics.price + 1e-9 && b.metrics.heaviest <= a.metrics.heaviest + 1e-9);
+});

@@ -84,6 +84,8 @@ export function evaluate(c) {
     out: bandOut(s.mdl, s.lim, s.AMP_V), spl45: s.lim.spl45, spl35: s.lim.spl35, f3: s.mdl.f3, Fb: s.mdl.Fb, who: s.lim.who, limW: s.lim.W, netL: s.netL,
     qtc: mm.Qtc, midF3: mm.f3, midGap: midAtXo.spl - (subMusic - c.tilt), hornGap: hornAtXo != null ? hornAtXo - (midAtHi - c.hfTilt) : null,
     mismatch: horn.exit !== cd.exit, port: s.port, chips,
+    // for the card's chart: the sub's clean music-limit level, 20-200 Hz (the curve bandOut takes its minimum from)
+    curve: s.mdl.curve.filter((o, i) => i % 5 === 0 && o.f >= 20 && o.f <= 200).map((o) => [+o.f.toFixed(1), +(o.spl + 20 * Math.log10(s.lim.V / s.AMP_V)).toFixed(2)]),
   };
 }
 
@@ -106,7 +108,9 @@ export function problems(m, lim) {
 }
 
 // ---- search ----
-// input: { cur (the planner's snapshot), room, maxLb, budget (drivers per stack), goal, locks }
+// input: { cur (the planner's snapshot), room, maxLb, budget (drivers per stack), goals, locks }
+// goals: one or more of GOALS, in tap order. The first ranks the designs; the main card must also beat your
+// design on every other one (e.g. ["cheaper", "lighter"]: the cheapest design that's also lighter). `goal` alone still works.
 // locks: { sub, mid, cd, horn, vent, wall, hpf, xoLo, xoHi, ampW, mAmpW, hfAmpW, subDim: {w,h,d}, midDim: {w,h,d} }
 // (dims: "free"|"max"|"exact"; an unlocked amp may come back lower, never higher)
 // The fields a result sets; everything else (finish, colours, layout, balance) stays as the page has it.
@@ -115,7 +119,9 @@ export const optFields = (c) => Object.fromEntries(OPT_FIELDS.map((k) => [k, c[k
 
 export function optimize(input) {
   const t0 = Date.now();
-  const { goal = "cheaper", room = 1000 } = input;
+  const { room = 1000 } = input;
+  const goals = (input.goals && input.goals.length ? input.goals : [input.goal || "cheaper"]).filter((g, i, a) => GOALS[g] && a.indexOf(g) === i);
+  const goal = goals[0], also = goals.slice(1);
   // older saved configs can lack some fields; the page always has them, with these defaults
   const cur = { xoLo: 120, xoHi: 900, tilt: 6, hfTilt: 6, ampW: 800, mAmpW: 400, hfAmpW: 100, hpType: "BW24", portMax: 20, wall: 0.75, inset: 0.75, layout: "stack", ...input.cur };
   const locks = { subDim: {}, midDim: {}, ...(input.locks || {}) };
@@ -343,6 +349,12 @@ export function optimize(input) {
     add(ranked.filter(inLimits), 14);   // candidates for the cards
     add(ranked, 4);                     // and a few just outside the limits, for the near-miss message
   }
+  if (also.length && curM) {
+    const cm = { price: curM.price, heaviest: curM.heaviest, out: curM.out, f3: curM.f3 };
+    const ranked = combos.filter((x) => goals.every((g) => goalOk[g](x)) && also.every((g) => beats[g](x, cm))).sort((a, b) => obj[goal](a) - obj[goal](b));
+    add(ranked.filter(inLimits), 14);
+    add(ranked, 4);
+  }
   const pool = [];
   for (const x of finalists.values()) {
     const m = evaluate(x.c); evals++;
@@ -362,13 +374,17 @@ export function optimize(input) {
   const curFails = !curM || problems(curM, lim).length > 0;
   const FIX_WHY = { cheaper: "Cheapest design that passes the checks.", lighter: "Lightest design that passes the checks.",
     lower: "Lowest F3 that passes the checks.", louder: "Loudest design that passes the checks." };
+  const THAN = { cheaper: "cheaper", lighter: "lighter", lower: "lower", louder: "louder" };
+  const goalLabel = also.length ? goals.map((g, i) => (i ? THAN[g] : GOALS[g].short)).join(" + ") : GOALS[goal].name;
+  const goalWhy = also.length ? `${GOALS[goal].why.replace(/\.$/, "")}, and ${also.map((g) => ({ cheaper: "costs less", lighter: "weighs less", lower: "goes lower", louder: "is louder" })[g]).join(" and ")} than your design.` : GOALS[goal].why;
   const trueVsCur = (axis, p) => !curMet || beats[axis](metric(p), curMet);
   const choose = (L, tgt) => {
     const ok = pool.filter((p) => problems(p.m, L).length === 0);
-    const meets = (p) => goalOk[goal]({ ...metric(p), out: p.m.out + (target - tgt) });
+    const meets = (p) => goals.every((g) => goalOk[g]({ ...metric(p), out: p.m.out + (target - tgt) }));
+    const beatsAll = (p) => goals.every((g) => trueVsCur(g, p));
     const cards = [];
-    const first = ok.filter((p) => meets(p) && trueVsCur(goal, p)).sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
-    if (first) cards.push({ p: first, label: GOALS[goal].name, why: GOALS[goal].why });
+    const first = ok.filter((p) => meets(p) && beatsAll(p)).sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
+    if (first) cards.push({ p: first, label: goalLabel, why: goalWhy });
     // your design fails a check: the goal's best design that passes, labelled as a fix (it may cost or weigh more)
     else if (curFails) {
       const fix = ok.filter(meets).sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
@@ -379,11 +395,13 @@ export function optimize(input) {
       || k.p.c.wall !== p.c.wall || Math.abs(vol(p.c) / vol(k.p.c) - 1) >= 0.15);
     // the smallest change that already beats your design on the goal (e.g. the same boxes on 1/2" ply)
     if (curMet) {
-      const small = ok.filter((p) => p.ch <= 1 && differs(p) && meets(p) && trueVsCur(goal, p))
+      const small = ok.filter((p) => p.ch <= 1 && differs(p) && meets(p) && beatsAll(p))
         .sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
       if (small) cards.push({ p: small, label: "Smallest change", why: "Changes one thing from your design." });
     }
-    const axes = [...ALT_ORDER[goal], ...Object.keys(ALT_LABEL).filter((a) => a !== goal && !ALT_ORDER[goal].includes(a))];
+    // stacked goals: single-goal options first, so you can see what dropping the others buys
+    const axes = [...(also.length ? goals : []), ...ALT_ORDER[goal], ...Object.keys(ALT_LABEL)]
+      .filter((a, i, arr) => arr.indexOf(a) === i && (also.length || a !== goal));
     for (const alt of axes) {
       if (cards.length >= 3) break;
       const q = ok.filter((p) => differs(p) && p.m.out >= tgt - 1.5 && trueVsCur(alt, p) && (!first || beats[alt](metric(p), metric(first))))
@@ -422,7 +440,7 @@ export function optimize(input) {
     const res = choose0(L, tgt);
     if (!res) return res;
     const cs = res.cards;
-    return { ...res, cards: cs.map((k) => (["louder", "lower"].includes(goal) && k === cs[0]) || k.label === ALT_LABEL.louder || k.label === ALT_LABEL.lower || k.label === "Smallest change"
+    return { ...res, cards: cs.map((k) => (goals.some((g) => ["louder", "lower"].includes(g)) && k === cs[0]) || k.label === ALT_LABEL.louder || k.label === ALT_LABEL.lower || k.label === "Smallest change"
       ? k : { ...k, p: shrinkAmps(k.p, Math.min(k.p.m.out, tgt)) }),
     };
   };
@@ -446,14 +464,24 @@ export function optimize(input) {
   }
   return {
     target, need, curM: curM && summary(curM), curProblems: problems(curM, lim),
+    cur: curM ? { curve: curM.curve, geom: geom(cur) } : null,
     cards: cards ? cards.map((k) => card(k.p, k.label, k.why, curM, cur)) : [],
-    goalMissing: chosen && chosen.goalMissing ? GOAL_MISSING[goal] : null,
+    goals,
+    goalMissing: chosen && chosen.goalMissing ? (also.length ? `Nothing ${goals.map((g) => THAN[g]).join(" and ")} than your design passes the checks.` : GOAL_MISSING[goal]) : null,
     nearMiss, stats: { evaluated: evals, ms: Date.now() - t0, subs: subCands.length, combos: combos.length, pool: pool.length },
   };
 }
 
 const summary = (m) => ({ price: m.price, heaviest: m.heaviest, out: m.out, spl45: m.spl45, f3: m.f3, Fb: m.Fb, who: m.who });
 const WHO = { "port air speed": "port air speed", "cone travel (Xmax)": "cone travel", "driver program rating": "the driver's program rating", "amplifier power": "amplifier power" };
+
+// what the card's front-view drawing needs
+export function geom(c) {
+  const sub = byId(SUB_OPTIONS, c.sub), mid = byId(MID_OPTIONS, c.mid), horn = byId(HORN_OPTIONS, c.horn);
+  return { sub: c.cDim, mid: c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim, tower: c.layout === "tower",
+    horn: horn && horn.size ? { w: horn.size.w, h: horn.size.h } : null, subSize: sub ? sub.size : 18, midSize: mid ? mid.size || 12 : 12,
+    portStyle: c.portStyle, cVent: c.cVent, wall: c.wall };
+}
 
 function card(p, label, why, curM, cur) {
   const { c, m } = p;
@@ -481,6 +509,6 @@ function card(p, label, why, curM, cur) {
     vent: m.port.desc, limitedBy: WHO[m.who] || m.who,
     warnings: [...m.chips.sub, ...m.chips.mid, ...m.chips.horn].filter(([k]) => k !== "ok").map(([, h, b]) => [h, b]),
     build: { qtc: m.qtc, sheets: sheets.sort((a, b) => b.t - a.t) },
-    changed, priceKnown: m.priceKnown,
+    changed, priceKnown: m.priceKnown, curve: m.curve, geom: geom(c),
   };
 }

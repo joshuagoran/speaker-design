@@ -737,6 +737,18 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
     grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke="#e7e5e4" strokeWidth="1" />);
     grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{f >= 1000 ? f / 1000 + "k" : f}</text>);
   });
+  // hover / drag: a crosshair with each curve's value at that frequency
+  const [hf, setHf] = useState(null);
+  const move = (e) => {
+    const r = e.currentTarget.getBoundingClientRect(), X = ((e.clientX - r.left) / r.width) * W;
+    setHf(X >= x0 && X <= x1 ? fmin * Math.pow(fmax / fmin, (X - x0) / (x1 - x0)) : null);
+  };
+  const unit = yLabel.includes("°") ? "°" : " dB";
+  const hits = hf ? paths.map((p) => {
+    const pts = p.curve.filter((o) => o.f >= fmin && o.f <= fmax);
+    const o = pts.length ? pts.reduce((b, q) => (Math.abs(Math.log(q.f / hf)) < Math.abs(Math.log(b.f / hf)) ? q : b)) : null;
+    return o && Math.abs(Math.log(o.f / hf)) < 0.1 ? { ...p, o } : null;
+  }).filter(Boolean) : [];
   const every = ((y1 - y0) * step) / (TOP - BOT) < 16 ? 2 : 1;   // thin the labels when rows get tight
   for (let v = BOT, k = 0; v <= TOP; v += step, k++) {
     const Y = py(v);
@@ -745,7 +757,8 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   }
   return (
     <div ref={box}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${yLabel} against frequency`} style={{ display: "block", width: "100%", height: "auto" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${yLabel} against frequency`} style={{ display: "block", width: "100%", height: "auto", touchAction: "pan-y" }}
+        onPointerMove={move} onPointerDown={move} onPointerLeave={() => setHf(null)}>
         {grid}
         {marks.filter((m) => m.f > fmin && m.f < fmax).map((m, i, ms) => (
           <g key={m.label + i}>
@@ -761,6 +774,15 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
             <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#57534e" fontSize="11" fontFamily="system-ui, sans-serif">{p.label}</text>
           </g>
         ))}
+        {hf && (<g pointerEvents="none">
+          <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke="#78716c" strokeWidth="1" />
+          {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke="#fff" strokeWidth="1.5" />)}
+          {(() => { const t = `${hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz`, w = t.length * 6.5 + 8, X = Math.max(x0 + w / 2, Math.min(x1 - w / 2, px(hf)));
+            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill="#1c1917" /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="11" fontFamily="system-ui, sans-serif" fill="#fafaf9">{t}</text></g>; })()}
+          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="11" fontFamily="system-ui, sans-serif" fill="#1c1917" stroke="#fff" strokeWidth="3" paintOrder="stroke">
+            {hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz{hits.map((h) => ` · ${h.label} ${h.o.spl.toFixed(0)}${unit}`).join("")}
+          </text>
+        </g>)}
         <text x={W / 2} y={H - 4} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">frequency, Hz</text>
         <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{yLabel}</text>
       </svg>
@@ -1160,6 +1182,8 @@ function LockBtn({ on, onClick, what }) {
   const tip = on ? `Locked: the optimizer keeps ${what}` : `Unlocked: the optimizer may change ${what}`;
   return <button type="button" onClick={onClick} aria-pressed={on} aria-label={tip} title={tip} className={lockCls(on)}><LockIcon locked={on} /></button>;
 }
+// every on/off lock the optimizer reads (box sizes are separate: subDim, midDim)
+const LOCK_KEYS = ["sub", "mid", "cd", "horn", "vent", "wall", "hpf", "xoLo", "xoHi", "ampW", "mAmpW", "hfAmpW"];
 const DIM_NEXT = { free: "max", max: "exact", exact: "free" };
 function DimLock({ mode = "free", onChange, what }) {
   const tip = `${what}: ${mode === "free" ? "unlocked, the optimizer may change it" : mode === "max" ? "up to this value" : "locked at exactly this value"} (tap to change)`;
@@ -1205,7 +1229,81 @@ function Delta({ v, unit, lowerIsBetter, digits = 0 }) {
   const txt = r === 0 ? "±0" : `${r > 0 ? "+" : "\u2212"}${unit === "$" ? money(Math.abs(r)) : Math.abs(r).toFixed(digits) + unit}`;
   return <div className={`text-xs font-semibold ${good ? "text-green-800" : bad ? "text-orange-800" : "text-stone-500"}`}>{txt}{good ? " better" : bad ? " worse" : ""}</div>;
 }
-function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
+
+// Front view of a design, to scale, with your current design's outline dashed behind it.
+function BoxFront({ g, cur }) {
+  const W = 150, H = 150, pad = 4;
+  // tower: the mid sits in the top of the sub column (drawn as a section of it), the horn on top
+  const tall = (x) => x.sub.h + (x.tower ? 0 : x.mid.h) + (x.horn ? x.horn.h : 0);
+  const wide = (x) => Math.max(x.sub.w, x.mid.w, x.horn ? x.horn.w : 0);
+  const k = Math.min((H - 2 * pad) / Math.max(tall(g), cur ? tall(cur) : 0), (W - 2 * pad) / Math.max(wide(g), cur ? wide(cur) : 0));
+  const cx = W / 2, y0 = H - pad;
+  const stackRects = (x) => {
+    const r = [], put = (w, h, y) => ({ x: cx - (w * k) / 2, y: y - h * k, w: w * k, h: h * k });
+    const sb = put(x.sub.w, x.sub.h, y0), mb = x.tower ? { ...sb, h: x.mid.h * k } : put(x.mid.w, x.mid.h, sb.y), hb = x.horn ? put(x.horn.w, x.horn.h, mb.y) : null;
+    r.push(sb); if (!x.tower) r.push(mb); if (hb) r.push(hb);
+    return { sb, mb, hb, r };
+  };
+  const a = stackRects(g), b = cur ? stackRects(cur) : null, t = g.wall * k, v = g.cVent;
+  const vent = [];
+  if (g.portStyle === "slots" || g.portStyle === "folded") vent.push(<rect key="v" x={a.sb.x + t} y={a.sb.y + a.sb.h - t - v.slotH * k} width={a.sb.w - 2 * t} height={v.slotH * k} fill="#44403c" />);
+  else if (g.portStyle === "vslots" || g.portStyle === "vslot1") {
+    vent.push(<rect key="l" x={a.sb.x + t} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#44403c" />);
+    if (g.portStyle === "vslots") vent.push(<rect key="r" x={a.sb.x + a.sb.w - t - v.throat * k} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#44403c" />);
+  } else for (let i = 0; i < (v.nt || 1); i++) {
+    const n = v.nt || 1, gap = a.sb.w / (n + 1);
+    vent.push(<circle key={i} cx={a.sb.x + gap * (i + 1)} cy={a.sb.y + a.sb.h - t - (v.dia * k) / 2 - 2} r={(v.dia * k) / 2} fill="#44403c" />);
+  }
+  const ventH = g.portStyle === "slots" || g.portStyle === "folded" ? v.slotH * k + t : g.portStyle.startsWith("round") ? v.dia * k + 4 : 0;
+  const driver = (box, size, below = 0) => <circle cx={box.x + box.w / 2} cy={box.y + (box.h - below) / 2} r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2} fill="#d6d3d1" stroke="#78716c" strokeWidth="1" />;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={`Front view: sub ${g.sub.w} × ${g.sub.h}″, mid ${g.mid.w} × ${g.mid.h}″${cur ? "; your design dashed" : ""}`}>
+      {b && b.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} fill="none" stroke="#a8a29e" strokeWidth="1" strokeDasharray="3 2" />)}
+      {a.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} rx="1" fill={q === a.hb ? "#57534e" : "#e7e5e4"} fillOpacity={q === a.hb ? 1 : 0.85} stroke="#292524" strokeWidth="1.2" />)}
+      {vent}
+      {g.tower && <line x1={a.sb.x} x2={a.sb.x + a.sb.w} y1={a.mb.y + a.mb.h} y2={a.mb.y + a.mb.h} stroke="#292524" strokeWidth="1.2" />}
+      {driver(g.tower ? { ...a.sb, y: a.mb.y + a.mb.h, h: a.sb.h - a.mb.h } : a.sb, g.subSize, ventH)}
+      {driver(a.mb, g.midSize)}
+    </svg>
+  );
+}
+
+// The sub's clean output (music limit) against frequency, this design against yours; the scored 40-90 Hz band shaded.
+function OutChart({ curve, cur }) {
+  const [hover, setHover] = useState(null);
+  const W = 220, H = 150, L = 26, R = 6, T = 16, B = 18;
+  const all = [...curve, ...(cur || [])].map((o) => o[1]);
+  const top = Math.ceil(Math.max(...all) / 5) * 5, bot = Math.max(Math.floor(Math.min(...all) / 5) * 5, top - 40);
+  const x = (f) => L + (Math.log(f / 20) / Math.log(10)) * (W - L - R), y = (d) => T + ((top - Math.max(bot, Math.min(top, d))) / (top - bot)) * (H - T - B);
+  const path = (c) => c.map((o, i) => `${i ? "L" : "M"}${x(o[0]).toFixed(1)},${y(o[1]).toFixed(1)}`).join("");
+  const at = (c, f) => c && c.reduce((b, o) => (Math.abs(Math.log(o[0] / f)) < Math.abs(Math.log(b[0] / f)) ? o : b));
+  const move = (e) => {
+    const r = e.currentTarget.getBoundingClientRect(), px = ((e.clientX - r.left) / r.width) * W;
+    const f = 20 * Math.pow(10, (px - L) / (W - L - R));
+    setHover(f >= 20 && f <= 200 ? f : null);
+  };
+  const ticks = []; for (let d = bot; d <= top; d += 10) ticks.push(d);
+  const h1 = hover && at(curve, hover), h2 = hover && at(cur, hover);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto touch-none" onPointerMove={move} onPointerLeave={() => setHover(null)} role="img"
+      aria-label="Clean sub output from 20 to 200 Hz, this design against yours">
+      <rect x={x(40)} y={T} width={x(90) - x(40)} height={H - T - B} fill="#f5f5f4" />
+      {ticks.map((d) => <g key={d}><line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke="#e7e5e4" /><text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill="#78716c">{d}</text></g>)}
+      {[20, 50, 100, 200].map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill="#78716c">{f}</text>)}
+      {cur && <path d={path(cur)} fill="none" stroke="#a8a29e" strokeWidth="1.5" strokeDasharray="4 3" />}
+      <path d={path(curve)} fill="none" stroke="#1c1917" strokeWidth="2" />
+      {hover ? (<>
+        <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke="#78716c" strokeWidth="0.75" />
+        <circle cx={x(h1[0])} cy={y(h1[1])} r="2.5" fill="#1c1917" stroke="#fff" strokeWidth="1" />
+        {(() => { const X = Math.max(L + 14, Math.min(W - R - 14, x(hover))); return <g><rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill="#1c1917" /><text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill="#fafaf9">{hover.toFixed(0)} Hz</text></g>; })()}
+        <text x={L} y={9} fontSize="8.5" fill="#1c1917">{hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB{h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}</text>
+      </>) : (
+        <text x={L} y={9} fontSize="8.5" fill="#57534e"><tspan fill="#1c1917">━ this</tspan>{cur ? "  ╌ yours" : ""} · dB, clean</text>
+      )}
+    </svg>
+  );
+}
+function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave }) {
   const c = k.config, m = k.metrics, d = k.delta || {};
   const tile = (label, v, delta) => (
     <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1.5">
@@ -1218,11 +1316,11 @@ function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
       <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "Georgia, serif" }}>{k.names.sub} · {c.cDim.w} × {c.cDim.h} × {c.cDim.d}″</h3>
-      <div className="text-xs text-stone-600 leading-relaxed">
-        {k.vent} · Fb {m.Fb.toFixed(0)} Hz · {c.hpType} {c.hpf} Hz{c.wall === 0.5 ? " · 1/2″ braced walls" : ""}<br />
-        Mid {k.names.mid} in {c.mDim.w} × {c.mDim.h} × {c.mDim.d}″ · XO {c.xoLo} / {c.xoHi} Hz · {k.names.cd} on {k.names.horn}<br />
-        Amps {c.ampW} / {c.mAmpW} / {c.hfAmpW} W per channel
+      <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
+        {k.geom && <BoxFront g={k.geom} cur={cur && cur.geom} />}
+        {k.curve && <OutChart curve={k.curve} cur={cur && cur.curve} />}
       </div>
+      <div className="text-xs text-stone-600">Mid {k.names.mid} · {k.names.cd} on {k.names.horn}</div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile("Drivers", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Heaviest", `${m.heaviest.toFixed(0)} lb`, <Delta v={d.heaviest} unit=" lb" lowerIsBetter />)}
@@ -1235,7 +1333,7 @@ function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
       ))}
       <div className="text-xs text-stone-600">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
       <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
-      <div className="text-[11px] text-stone-500">Modelled, not measured · prices as listed in the planner (Sep 2026){k.priceKnown ? "" : " · some prices unknown"}</div>
+      {!k.priceKnown && <div className="text-[11px] text-stone-500">Some prices unknown</div>}
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
         <button onClick={onLoad} className="flex-1 px-3 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50">Load</button>
@@ -1247,13 +1345,15 @@ function OptCard({ k, i, n, onPreview, onLoad, onSave, previewing, canSave }) {
 const seg = (on) => `px-3 py-2 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`;
 function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, previewCard, onPreview, onLoad, onSave, canSave }) {
   const need = roomNeed(optIn.room), target = Math.max(curOut != null ? curOut : need, need);
-  const g = optIn.goal;
-  const tgtText = g === "louder" ? "as loud as it gets, F3 within 3 Hz" : g === "lower" ? `lowest F3, at least ${(target - 1.5).toFixed(0)} dB per stack` : `clean ${target.toFixed(0)} dB per stack`;
+  const goals = optIn.goals, g = goals[0];
+  // tap adds a goal at the end of the order; tap again removes it (none selected is allowed; the search waits for one)
+  const tapGoal = (k) => setOpt({ goals: goals.includes(k) ? goals.filter((x) => x !== k) : [...goals, k] });
+  const tgtText = !g ? "pick a goal" : (g === "louder" ? "as loud as it gets, F3 within 3 Hz" : g === "lower" ? `lowest F3, at least ${(target - 1.5).toFixed(0)} dB per stack` : `clean ${target.toFixed(0)} dB per stack`)
+    + (goals.length > 1 ? `, and ${goals.slice(1).map((x) => ({ cheaper: "cheaper", lighter: "lighter", lower: "lower", louder: "louder" })[x]).join(" and ")} than yours` : "");
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "system-ui, sans-serif" }}>
       <div className="rounded-lg border border-stone-300 bg-white p-4">
         <h2 className="text-xl" style={{ fontFamily: "Georgia, serif" }}>Find a better design</h2>
-        <p className="text-xs text-stone-500 mt-1">Starts from your current design. Lock anything you want to keep with the lock buttons next to each setting; box sizes can also be "up to" (≤) or "exactly" (=). Layout and finish stay as they are.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>
@@ -1268,22 +1368,23 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
             <div className="flex flex-wrap items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.budget} min={100} step={25} onChange={(e) => setOpt({ budget: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $</div>
           </div>
           <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Goal</div>
-            <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => <button key={k} title={gg.name} className={seg(g === k)} onClick={() => setOpt({ goal: k })}>{gg.short}</button>)}</div>
+            <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
+            <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => { const i = goals.indexOf(k); return (
+              <button key={k} title={gg.name} aria-pressed={i >= 0} className={seg(i >= 0)} onClick={() => tapGoal(k)}>{goals.length > 1 && i >= 0 ? `${i + 1} · ` : ""}{gg.short}</button>); })}</div>
           </div>
         </div>
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
           {curOut != null && <div className="text-xs text-stone-500 mt-0.5">Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB · {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB</div>}</div>
         <div className="mt-2 text-xs text-stone-500">Amps: {amps}</div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button onClick={run} disabled={busy} className="px-4 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-50">{busy ? "Searching…" : "Find 3 designs"}</button>
+          <button onClick={run} disabled={busy || !g} className="px-4 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-50">{busy ? "Searching…" : g ? "Find 3 designs" : "Pick a goal first"}</button>
           {res && !busy && <span className="text-xs text-stone-500">Searched {res.stats.evaluated.toLocaleString()} designs in {(res.stats.ms / 1000).toFixed(1)} s{res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}</span>}
           {err && <span className="text-xs text-red-700">{err}</span>}
         </div>
-        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800">Your current design doesn't pass: {res.curProblems.join("; ")}. Results fix that first, so some may cost more or weigh more than it does.</div>}
+        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800">Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
         {res && !busy && res.cards.length > 0 && (<>
           <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
-            {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} previewing={previewCard === k} canSave={canSave}
+            {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} cur={res.cur} previewing={previewCard === k} canSave={canSave}
               onPreview={() => onPreview(k)} onLoad={() => onLoad(k)} onSave={() => onSave(k)} />)}
           </div>
           {res.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {res.cards.length - 1} more</div>}
@@ -1352,7 +1453,9 @@ function StackPlanner() {
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
   const [optOn, setOptOnRaw] = useState(() => lsGet("planner.opt", false));
   const setOptOn = (v) => { setOptOnRaw(v); lsSet("planner.opt", v); };
-  const [optIn, setOptIn] = useState(() => { const { budgetPer, ...o } = lsGet("planner.optIn", {}) || {}; return { room: 1000, maxLb: 125, budget: 900, goal: "cheaper", ...o }; });
+  // goals start empty on every load (not restored), so a search always starts from a goal you just picked
+  const [optIn, setOptIn] = useState(() => { const { budgetPer, goal, goals, ...o } = lsGet("planner.optIn", {}) || {};
+    return { room: 1000, maxLb: 125, budget: 900, ...o, goals: [] }; });
   const setOpt = (o) => setOptIn((p) => { const n = { ...p, ...o }; lsSet("planner.optIn", n); return n; });
   const [locks, setLocksRaw] = useState(() => { const l = lsGet("planner.locks", {}) || {}; return { ...l, subDim: { ...(l.subDim || {}) }, midDim: { ...(l.midDim || {}) } }; });
   const setLocks = (f) => setLocksRaw((p) => { const n = f(p); lsSet("planner.locks", n); return n; });
@@ -1588,10 +1691,11 @@ function StackPlanner() {
   const runOpt = async (over) => {
     const inp = { ...optIn, ...(over && over.nativeEvent ? {} : over || {}) };
     if (over && !over.nativeEvent) setOpt(over);
+    if (!inp.goals.length) return;
     setOptBusy(true); setOptErr("");
     try {
       const cur = preview ? preview.before : snapshot();
-      setOptRes(await runOptimizer({ cur, room: inp.room, maxLb: inp.maxLb, budget: inp.budget, goal: inp.goal, locks }));
+      setOptRes(await runOptimizer({ cur, room: inp.room, maxLb: inp.maxLb, budget: inp.budget, goals: inp.goals, locks }));
     } catch (e) { setOptErr("The search failed: " + ((e && e.message) || e)); }
     setOptBusy(false);
   };
@@ -1700,7 +1804,20 @@ function StackPlanner() {
       <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3 flex flex-wrap items-center gap-2" style={{ fontFamily: "system-ui, sans-serif" }}>
         <button onClick={() => setOptOn(!optOn)} aria-pressed={optOn}
           className={`px-3 py-2 rounded border text-sm ${optOn ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`}>Optimizer: {optOn ? "on" : "off"}</button>
-        <span className="text-xs text-stone-500">{optOn ? "Lock buttons now show next to each setting." : "Find cheaper, lighter or louder designs inside your limits."}</span>
+        {optOn && (() => {
+          const n = Object.entries(locks).reduce((a, [k, v]) => a + (k.endsWith("Dim") ? Object.values(v).filter((m) => m && m !== "free").length : v ? 1 : 0), 0);
+          const tip = n ? `Clear all ${n} lock${n > 1 ? "s" : ""}` : "No locks set";
+          // lock everything (box sizes exact), then unlock the one or two things you want the optimizer to change
+          const all = { ...Object.fromEntries(LOCK_KEYS.map((k) => [k, true])), subDim: { w: "exact", h: "exact", d: "exact" }, midDim: { w: "exact", h: "exact", d: "exact" } };
+          const full = n >= LOCK_KEYS.length + 6;
+          return (<>
+            <button onClick={() => setLocks(() => all)} disabled={full} aria-label="Lock everything" title="Lock everything, then unlock what the optimizer may change"
+              className="inline-flex items-center gap-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40"><LockIcon locked={true} /><span className="text-xs">All</span></button>
+            <button onClick={() => setLocks(() => ({ subDim: {}, midDim: {} }))} disabled={!n} aria-label={tip} title={tip}
+              className="inline-flex items-center gap-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40"><LockIcon locked={false} />{n ? <span className="text-xs">{n}</span> : null}</button>
+          </>);
+        })()}
+        {!optOn && <span className="text-xs text-stone-500">Find cheaper, lighter or louder designs inside your limits.</span>}
       </section>
       {optOn && <OptimizerPanel optIn={optIn} setOpt={setOpt} run={runOpt} busy={optBusy} res={optRes} err={optErr} curOut={curOut}
         amps={[["sub", ampW, locks.ampW], ["mid", mAmpW, locks.mAmpW], ["HF", hfAmpW, locks.hfAmpW]].map(([n, w, l]) => `${n} ${l ? "" : "up to "}${w} W`).join(" · ") + " per channel (on Cheaper and Lighter cards, unlocked amps come back at the least power that does the job)"} previewCard={preview && preview.card} canSave={!!db}
@@ -1794,9 +1911,6 @@ function StackPlanner() {
               })()}
             </div>
           )}
-          <p className="text-xs text-stone-500 mt-3">
-            Modelled, not measured. Verify the tuning with an impedance sweep on the prototype before cutting birch.
-          </p>
           </div>
         </section>
 
@@ -1848,7 +1962,6 @@ function StackPlanner() {
                 ));
               })()}
             </div>
-            <p className="text-xs text-stone-500 mt-3">Sealed, LR24 crossovers at {xoLo} Hz and {xoHi} Hz. Coil inductance isn't modelled, so the top octave reads a little high.</p>
           </>) : (
             <p className="text-sm text-stone-600">{mid.name} can't be modelled yet: its parameters are incomplete. {mid.note}</p>
           )}
@@ -1877,7 +1990,6 @@ function StackPlanner() {
               <ResponseChart fmin={200} fmax={10000} top={180} bot={0} step={30} H={220} yLabel="horizontal beamwidth, °"
                 series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: "#b45309", tint: "rgba(180,83,9,0)" }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: "#0f766e", tint: "rgba(15,118,110,0)" }] : [])]}
                 marks={[{ f: xoHi, label: "XO" }, ...(beamCurves.fK ? [{ f: beamCurves.fK, label: "horn control" }] : [])]} />
-              <p className="text-xs text-stone-500 mt-1">How wide each driver spreads sound. Best when the two lines cross near the XO line. Estimated, not measured.</p>
             </div>
             <div className="flex flex-col gap-1.5">
               {(() => {
@@ -1890,7 +2002,6 @@ function StackPlanner() {
                 ));
               })()}
             </div>
-            <p className="text-xs text-stone-500 mt-3">From datasheet sensitivity and power, not a T/S model. Sensitivity reference: {hf.sensRef || "the maker's reference horn"}. On {horn.name} it may differ by a few dB. Below-rating crossover derating (6 dB per octave) is a rule of thumb.</p>
           </>) : (
             <p className="text-sm text-stone-600">{cd.name} can't be modelled yet: sensitivity or power rating missing.</p>
           )}
@@ -2136,7 +2247,6 @@ function StackPlanner() {
               </table></div>
             );
           })()}
-          <p className="text-xs text-stone-500 mt-2">Cabinet weight: 3/4" birch baffles (2.3 lb/ft²), other panels {wall === 0.5 ? '1/2" birch (1.6 lb/ft²)' : '3/4" birch'}; the sub allows two braces and 6 lb of hardware, the mid box one brace. Particleboard runs ~30% heavier. Driver weights are approximate where the datasheet wasn't checked. Heaviest single lift is the sub column.</p>
           </div>
         </section>
         <div className="min-w-0 md:col-span-5 mt-4" style={{ fontFamily: "system-ui, sans-serif" }}>
