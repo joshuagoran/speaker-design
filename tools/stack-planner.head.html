@@ -6,7 +6,7 @@
 <style>
   /* CMYK brand palette: cyan (actions, horn/tweeter), magenta (mid-bass/woofer), yellow (accents, focus), black, white and two
      grays. Status uses its own green / orange / red. Tailwind's colour names are remapped below, so class names stay as they were. */
-  :root { --magenta: #e5007e; --yellow: #ffd400; --cyan: #0082c8; --ink: #111111; --ground: #ffffff; --gray1: #e6e6e6; --gray2: #595959; --accent: #006ba6;
+  :root { --magenta: #e5007e; --yellow: #ffd400; --cyan: #0082c8; --ink: #111111; --ground: #ffffff; --gray1: #e6e6e6; --gray2: #595959; --accent: #111111;
     --font: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; }
   body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font); }
   button, input, select, textarea { font-family: inherit; }
@@ -33,7 +33,7 @@
   // Tailwind's colour names mapped onto the palette: stone = the grays; green / orange (amber) / red = status; cmy-* = brand
   // (cyan actions, magenta and cyan chart series, yellow accents); 4 px corners, 6 px for large ones
   (function () {
-    var W = "#ffffff", G1 = "#e6e6e6", G2 = "#595959", K = "#111111", M = "#e5007e", Y = "#ffd400", C = "#0082c8", A = "#006ba6";
+    var W = "#ffffff", G1 = "#e6e6e6", G2 = "#595959", K = "#111111", M = "#e5007e", Y = "#ffd400", C = "#0082c8", A = "#111111";
     // a: tint (backgrounds), e: soft edge (borders of tinted notes), b: the colour, c: its dark text shade
     var scale = function (a, b, c, e) { return { 50: a, 100: a, 200: e || b, 300: b, 400: b, 500: c, 600: c, 700: c, 800: c, 900: c, 950: c }; };
     window.tailwind = window.tailwind || {};
