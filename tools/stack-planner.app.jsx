@@ -796,6 +796,125 @@ function ResultCards({ cards, render }) {
   </>);
 }
 
+// Plain-language help for the stat labels, shown as a tooltip on the label
+const STAT_TIPS = {
+  "Gross internal": "Inside volume of the box (outside size minus the walls), before the driver and port take their share.",
+  "Net volume": "Air volume left inside the box once the driver and port have taken their share.",
+  "Port area": "Total cross-section of the port or ports, shown against the cone area. Too small and the air speeds up and gets noisy.",
+  "Hydraulic diameter": "Port cross-section area times four, divided by its perimeter. A small value means more air turbulence; flaring the mouths helps.",
+  "Midband sensitivity": "How loud it plays in the middle of its range for a fixed input voltage. Higher means louder for the same power.",
+  "First limit, music": "What runs out first when playing music at the amp's power: cone travel (Xmax), port air speed, or something else.",
+  "Peak port velocity": "Fastest air speed in the port. High speeds cause chuffing noise and compression.",
+  "Peak excursion": "How far the cone moves at the loudest point, and how much of its rated travel (Xmax) that uses.",
+  "Qtc": "Damping of a sealed box. About 0.7 is flat; higher sounds boomy, lower sounds dry.",
+  "Tuning Fb": "Frequency the port resonates at. Output falls away quickly below it.",
+  "F3 in room": "Frequency where output is 3 dB down from the midband, as heard in the room.",
+  "Max at the seat": "Clean level at the seat with both speakers playing, before a driver or port limit.",
+  "Pair": "Cost of the drivers for both speakers, at the listed prices.",
+};
+function StatLabel({ k }) {
+  const tip = STAT_TIPS[k] || (/^Max SPL at /.test(k) ? "Loudest output at this frequency from a steady sine tone, before the named limit is reached." : null);
+  return tip ? <Tip tip={tip}>{k}</Tip> : k;
+}
+
+// Saved configurations: the claude.ai artifact's database, or Firebase when the page is hosted on GitHub Pages
+function useConfigStore(collection) {
+  const [db, setDb] = useState(null);
+  const [saved, setSaved] = useState(null);     // null = still loading
+  const [fbUser, setFbUser] = useState(null);
+  const [cfgMsg, setCfgMsg] = useState("");
+  const fb = !(window.claude && window.claude.use) && window.firebase && window.PLANNER_FIREBASE ? window.firebase : null;
+  useEffect(() => {
+    let live = true;
+    if (fb) {
+      if (!fb.apps.length) fb.initializeApp(window.PLANNER_FIREBASE);
+      const un = fb.auth().onAuthStateChanged((u) => {
+        if (!live) return;
+        setFbUser(u);
+        if (u) {
+          const fs = fb.firestore();
+          setDb({ collection: (name) => fs.collection(`users/${u.uid}/${name}`) });
+        } else { setDb(null); setSaved([]); }
+      });
+      return () => { live = false; un(); };
+    }
+    (async () => {
+      try {
+        const d = window.claude && window.claude.use ? await window.claude.use("db") : null;
+        if (live) { setDb(d); if (!d) setSaved([]); }
+      } catch { if (live) { setDb(null); setSaved([]); } }
+    })();
+    return () => { live = false; };
+  }, []);
+  useEffect(() => {
+    if (!db) return;
+    const un = db.collection(collection).orderBy("savedAt", "desc").limit(50).onSnapshot(
+      (snap) => setSaved(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      () => setSaved([])
+    );
+    return un;
+  }, [db]);
+  const flash = (m) => { setCfgMsg(m); setTimeout(() => setCfgMsg(""), 2500); };
+  const signIn = () => fb.auth().signInWithPopup(new fb.auth.GoogleAuthProvider()).catch(() => flash("Sign-in failed"));
+  const signOut = () => fb.auth().signOut();
+  const save = async (name, data) => {
+    if (!db || !name) return false;
+    setCfgMsg("Saving…");
+    try { await db.collection(collection).doc().set({ name, savedAt: Date.now(), ...data }); flash("Saved"); return true; }
+    catch (e) { flash(e && (e.code === "invalid_argument" || e.code === "permission-denied") ? "You don't have write access here" : "Couldn't save — try again"); return false; }
+  };
+  const remove = async (id) => {
+    if (!db) return;
+    try { await db.collection(collection).doc(id).delete(); } catch { flash("Couldn't delete"); }
+  };
+  return { db, saved, fb, fbUser, cfgMsg, setCfgMsg, signIn, signOut, save, remove };
+}
+// Name-and-save row plus a menu of saved setups. snapshot() returns what to store (may include a `summary` line); restore(c) loads one.
+function SavedConfigs({ store, snapshot, restore, extra, bare = false }) {
+  const { db, saved, fb, fbUser, cfgMsg, signIn, signOut, save, remove } = store;
+  const [name, setName] = useState("");
+  const [sel, setSel] = useState("");
+  if (saved === null) return null;
+  const cur = saved.find((c) => c.id === sel);
+  const doSave = async () => { if (await save(name.trim(), snapshot())) setName(""); };
+  const Wrap = bare ? "div" : "section";
+  return (
+    <Wrap className={bare ? "mb-3" : "max-w-6xl mx-auto px-4 md:px-8 pb-2"} style={{ fontFamily: "var(--font)" }}>
+      <Card pad="lg" tone="tint">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-stone-500 mr-1">Saved configurations</span>
+          {db ? (<>
+            <input aria-label="Name this setup" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") doSave(); }}
+              placeholder="Name this setup" maxLength={60} className="px-3 py-1.5 rounded border border-stone-300 bg-white text-sm w-56" />
+            <Button variant="dark" onClick={doSave} disabled={!name.trim()}>Save current</Button>
+            {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
+            {fbUser && (<span className="ml-auto flex items-center gap-3 text-xs text-stone-500">{extra}<button onClick={signOut} className="hover:underline">Sign out</button></span>)}
+          </>) : fb ? (<>
+            <Button variant="dark" onClick={signIn}>Sign in with Google to save</Button>
+            {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
+          </>) : (
+            <span className="text-xs text-stone-500">Saving is unavailable in this view. Everything else works.</span>
+          )}
+        </div>
+        {saved.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <select value={cur ? cur.id : ""} aria-label="Load a saved configuration"
+              onChange={(e) => { const c = saved.find((x) => x.id === e.target.value); setSel(e.target.value); if (c) restore(c); }}
+              className="px-2 py-1.5 rounded border border-stone-300 bg-white text-sm min-w-0 max-w-full flex-1">
+              <option value="" disabled>Load a saved configuration ({saved.length})…</option>
+              {saved.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}{c.savedAt ? ` · ${new Date(c.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : ""}</option>
+              ))}
+            </select>
+            {cur && <button onClick={() => { remove(cur.id); setSel(""); }} aria-label={`Delete ${cur.name}`} className="text-xs text-stone-500 hover:text-red-700 px-1">Delete</button>}
+            {cur && cur.summary && <div className="basis-full text-xs text-stone-500 truncate">{cur.summary}</div>}
+          </div>
+        )}
+      </Card>
+    </Wrap>
+  );
+}
+
 // Panel: one outline, one radius. pad: "md" (default) or "lg"; tone: "white" or "tint"
 function Card({ pad = "md", tone = "white", className = "", ...p }) {
   return <div {...p} className={`rounded border border-stone-300 ${tone === "tint" ? "bg-stone-50" : "bg-white"} ${pad === "lg" ? "px-4 py-4" : "px-3 py-3"} ${className}`} />;
@@ -1127,6 +1246,7 @@ function HifiPage() {
   const [earIn, setEarIn] = useState(38);
   const [standIn, setStandIn] = useState(24);
   const [plane, setPlane] = useState("h");
+  const store = useConfigStore("hifiConfigs");
   // optimizer: same rules and layout as the PA planner's (switch, locks on the controls, goals in tap order)
   const ls = { get: (k, fb) => { try { const v = localStorage.getItem(k); return v == null ? fb : JSON.parse(v); } catch { return fb; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
   const [hOn, setHOnRaw] = useState(() => ls.get("hifi.opt", false));
@@ -1167,13 +1287,25 @@ function HifiPage() {
   const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0) + (box === "radiator" ? pr.n * (prDrv.price || 0) : 0));
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
-      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
       <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
     </div>
   );
   const hLk = (key, what) => (hOn ? <LockBtn on={!!hLocks[key]} what={what} onClick={() => setHLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null);
   const hDl = (dm, what) => (hOn ? <DimLock mode={hLocks.dim[dm] || "free"} what={what} onChange={(m) => setHLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))} /> : null);
   const snapH = () => ({ woofer: w.id, tweeter: t.id, box, dim, port, pr: box === "radiator" ? prSel : undefined, wall, xo, wAmpW, tAmpW });
+  // Everything on the page, for saving (undefined fields dropped: the stores reject them)
+  const savedSnapH = () => JSON.parse(JSON.stringify({ ...snapH(), guide: guideSel.id, mat, order, bsc, place, wallFt, spacing, toe, seat, earIn, standIn,
+    summary: `${w.name} + ${t.name} · ${dim.w}×${dim.h}×${dim.d}″ · ${box === "radiator" ? "passive radiator" : box}` }));
+  const restoreH = (c) => {
+    const pick = (list, id) => list.find((o) => o.id === id);
+    const ok = (f, v) => { if (v !== undefined) f(v); };
+    ok(setW, pick(HIFI_WOOFERS, c.woofer)); ok(setT, pick(HIFI_TWEETERS, c.tweeter)); ok(setGuide, pick(guides, c.guide));
+    [[setBox, c.box], [setDim, c.dim], [setPort, c.port], [setPrSel, c.pr], [setWall, c.wall], [setMat, c.mat], [setXo, c.xo], [setOrder, c.order],
+     [setWAmpW, c.wAmpW], [setTAmpW, c.tAmpW], [setBsc, c.bsc], [setPlace, c.place], [setWallFt, c.wallFt], [setSpacing, c.spacing], [setToe, c.toe],
+     [setSeat, c.seat], [setEarIn, c.earIn], [setStandIn, c.standIn]].forEach(([f, v]) => ok(f, v));
+    setHPreview(null); setHUndo(null); setHRes(null);
+  };
   const applyH = (c) => {
     setW(HIFI_WOOFERS.find((o) => o.id === c.woofer)); setT(HIFI_TWEETERS.find((o) => o.id === c.tweeter));
     setBox(c.box); setDim(c.dim); if (c.port) setPort(c.port); if (c.pr) setPrSel(c.pr); setWall(c.wall); setXo(c.xo); setWAmpW(c.wAmpW); setTAmpW(c.tAmpW);
@@ -1218,6 +1350,7 @@ function HifiPage() {
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "var(--font)" }}>
       <div className="md:col-span-5 min-w-0">
+        <SavedConfigs bare store={store} snapshot={savedSnapH} restore={restoreH} />
         {optBar}
         {optPanel}
         {hPreview && (
@@ -1533,7 +1666,7 @@ function FillsPage() {
   const kick = near(60).spl, mid = near(150).spl;
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
-      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
       <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
     </div>
   );
@@ -1561,7 +1694,7 @@ function FillsPage() {
             ["Price", drv.price ? `$${drv.price}` : "—", drv.src],
           ].map(([k, v, n]) => (
             <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
-              <span className="text-stone-500 shrink-0">{k}</span>
+              <span className="text-stone-500 shrink-0"><StatLabel k={k} /></span>
               <span className="text-right"><span className="font-medium tabular-nums">{v}</span>{n ? <span className="block text-xs text-stone-500">{n}</span> : null}</span>
             </div>
           ))}
@@ -1982,38 +2115,8 @@ function StackPlanner() {
   const setV = (k, v) => setCVent((p) => ({ ...p, [k]: v }));
 
   // ---- saved configurations, backed by the artifact's document store ----
-  const [db, setDb] = useState(null);
-  const [saved, setSaved] = useState(null);     // null = still loading
-  const [cfgName, setCfgName] = useState("");
-  const [cfgMsg, setCfgMsg] = useState("");
-  const [selCfg, setSelCfg] = useState("");
-  // Firebase (github.io build): signed-in users keep configs under users/{uid}/.
-  const [fbUser, setFbUser] = useState(null);
-  const fb = !(window.claude && window.claude.use) && window.firebase && window.PLANNER_FIREBASE ? window.firebase : null;
-  useEffect(() => {
-    let live = true;
-    if (fb) {
-      if (!fb.apps.length) fb.initializeApp(window.PLANNER_FIREBASE);
-      const un = fb.auth().onAuthStateChanged((u) => {
-        if (!live) return;
-        setFbUser(u);
-        if (u) {
-          const fs = fb.firestore();
-          setDb({ collection: (name) => fs.collection(`users/${u.uid}/${name}`) });
-        } else { setDb(null); setSaved([]); }
-      });
-      return () => { live = false; un(); };
-    }
-    (async () => {
-      try {
-        const d = window.claude && window.claude.use ? await window.claude.use("db") : null;
-        if (live) { setDb(d); if (!d) setSaved([]); }
-      } catch { if (live) { setDb(null); setSaved([]); } }
-    })();
-    return () => { live = false; };
-  }, []);
-  const signIn = () => fb.auth().signInWithPopup(new fb.auth.GoogleAuthProvider()).catch(() => { setCfgMsg("Sign-in failed"); setTimeout(() => setCfgMsg(""), 2500); });
-  const signOut = () => fb.auth().signOut();
+  const store = useConfigStore("configs");
+  const { db, saved, fb, fbUser, cfgMsg, setCfgMsg, signIn, signOut } = store;
   // One-time copy of the configs saved in the claude.ai artifact (data/configs-seed.json).
   const importSeed = async () => {
     if (!db) return;
@@ -2030,14 +2133,6 @@ function StackPlanner() {
     } catch { setCfgMsg("Couldn't import"); }
     setTimeout(() => setCfgMsg(""), 2500);
   };
-  useEffect(() => {
-    if (!db) return;
-    const un = db.collection("configs").orderBy("savedAt", "desc").limit(50).onSnapshot(
-      (snap) => setSaved(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-      () => setSaved([])
-    );
-    return un;
-  }, [db]);
   // In the tower layout the mid chamber is the sub's footprint, 15.5 in tall.
   const midDims = layout === "tower" ? { w: cDim.w, h: 15.5, d: cDim.d } : mDim;
   const midSel = { ...mid, box: midDims };
@@ -2164,23 +2259,6 @@ function StackPlanner() {
     if (c.joint) setJoint(c.joint);
     if (c.portStyle) setPortStyle(c.portStyle);
   };
-  const saveCfg = async () => {
-    const name = cfgName.trim();
-    if (!db || !name) return;
-    setCfgMsg("Saving…");
-    try {
-      await db.collection("configs").doc().set({ name, savedAt: Date.now(), ...snapshot() });
-      setCfgName(""); setCfgMsg("Saved");
-    } catch (e) {
-      setCfgMsg(e && (e.code === "invalid_argument" || e.code === "permission-denied") ? "You don't have write access here" : "Couldn't save — try again");
-    }
-    setTimeout(() => setCfgMsg(""), 2500);
-  };
-  const delCfg = async (id) => {
-    if (!db) return;
-    try { await db.collection("configs").doc(id).delete(); }
-    catch { setCfgMsg("Couldn't delete"); setTimeout(() => setCfgMsg(""), 2500); }
-  };
   // ---- optimizer actions ----
   const today = () => new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const runOpt = async (over) => {
@@ -2267,50 +2345,8 @@ function StackPlanner() {
       </header>
       {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : view === "hifi" ? <HifiPage /> : view === "cutlist" ? <CutlistPage {...{ sub, mid, subBox, midDims, wall, inset, joint, setJoint, sheetKind, setSheetKind, sets, setSets, portStyle, cVent, layout }} /> : <>
 
-      {saved !== null && (
-        <section className="max-w-6xl mx-auto px-4 md:px-8 pb-2" style={{ fontFamily: "var(--font)" }}>
-          <Card pad="lg" tone="tint">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-stone-500 mr-1">Saved configurations</span>
-              {db ? (<>
-                <input value={cfgName} onChange={(e) => setCfgName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") saveCfg(); }}
-                  placeholder="Name this setup" maxLength={60}
-                  className="px-3 py-1.5 rounded border border-stone-300 bg-white text-sm w-56" />
-                <Button variant="dark" onClick={saveCfg} disabled={!cfgName.trim()}>Save current</Button>
-                {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
-                {fbUser && (<span className="ml-auto flex items-center gap-3 text-xs text-stone-500">
-                  <button onClick={importSeed} className="hover:underline">Import saved configs</button>
-                  <button onClick={signOut} className="hover:underline">Sign out</button>
-                </span>)}
-              </>) : fb ? (<>
-                <Button variant="dark" onClick={signIn}>Sign in with Google to save</Button>
-                {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
-              </>) : (
-                <span className="text-xs text-stone-500">Saving is unavailable in this view. Everything else works.</span>
-              )}
-            </div>
-            {saved.length > 0 && (() => {
-              const cur = saved.find((c) => c.id === selCfg);
-              return (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <select value={cur ? cur.id : ""} aria-label="Load a saved configuration"
-                    onChange={(e) => { const c = saved.find((x) => x.id === e.target.value); setSelCfg(e.target.value); if (c) restore(c); }}
-                    className="px-2 py-1.5 rounded border border-stone-300 bg-white text-sm min-w-0 max-w-full flex-1">
-                    <option value="" disabled>Load a saved configuration ({saved.length})…</option>
-                    {saved.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}{c.savedAt ? ` · ${new Date(c.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : ""}</option>
-                    ))}
-                  </select>
-                  {cur && <button onClick={() => { delCfg(cur.id); setSelCfg(""); }} aria-label={`Delete ${cur.name}`}
-                    className="text-xs text-stone-400 hover:text-red-700 px-1">Delete</button>}
-                  {cur && cur.summary && <div className="basis-full text-xs text-stone-500 truncate">{cur.summary}</div>}
-                </div>
-              );
-            })()}
-          </Card>
-        </section>
-      )}
+      <SavedConfigs store={store} snapshot={snapshot} restore={restore}
+        extra={fbUser && <button onClick={importSeed} className="hover:underline">Import saved configs</button>} />
 
       <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3" style={{ fontFamily: "var(--font)" }}>
         {(() => {
@@ -2366,7 +2402,7 @@ function StackPlanner() {
                 ["Weight", subLbLoaded.toFixed(0), "lb"],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
-                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
                   <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
@@ -2387,7 +2423,7 @@ function StackPlanner() {
                 ["Peak excursion", `${(mdl.peakX * lim.V / AMP_V).toFixed(1)} mm`, `${lim.xPct.toFixed(0)}% of Xmax, at ${mdl.peakXF.toFixed(0)} Hz`],
               ].map(([k, v, note]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
-                  <span className="text-stone-500 shrink-0">{k}</span>
+                  <span className="text-stone-500 shrink-0"><StatLabel k={k} /></span>
                   <span className="text-right">
                     <span className="font-medium tabular-nums">{v}</span>
                     {note ? <span className="block text-xs text-stone-500">{note}</span> : null}
@@ -2429,7 +2465,7 @@ function StackPlanner() {
                 ["Weight", midLbLoaded.toFixed(0), "lb"],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
-                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
                   <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
@@ -2444,7 +2480,7 @@ function StackPlanner() {
                 ["Peak excursion", `${(mMdl.peakX * midUseV / MID_V).toFixed(1)} mm`, `${(mMdl.peakX * midUseV / MID_V / mid.ts.Xmax * 100).toFixed(0)}% of Xmax at ${Math.round(midUseV * midUseV / 8)} W, with the ${xoLo} Hz highpass`],
               ].map(([k, v, note]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
-                  <span className="text-stone-500 shrink-0">{k}</span>
+                  <span className="text-stone-500 shrink-0"><StatLabel k={k} /></span>
                   <span className="text-right">
                     <span className="font-medium tabular-nums">{v}</span>
                     {note ? <span className="block text-xs text-stone-500">{note}</span> : null}
@@ -2483,7 +2519,7 @@ function StackPlanner() {
                 ["Mid beam at XO", midBeam ? Math.round(midBeam) : "\u2014", midBeam ? "\u00b0" : ""],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
-                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
                   <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
