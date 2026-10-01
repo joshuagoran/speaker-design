@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600;700;800&display=swap">
 <style>
-  /* CMYK brand palette: cyan (actions, horn/tweeter), magenta (mid-bass/woofer), yellow (accents, focus), black, white and two
+  /* CMYK brand palette: cyan (horn/tweeter series), magenta (mid-bass/woofer), yellow (accents), black (actions, focus), white and two
      grays. Status uses its own green / orange / red. Tailwind's colour names are remapped below, so class names stay as they were. */
   :root { --magenta: #e5007e; --yellow: #ffd400; --cyan: #0082c8; --ink: #111111; --ground: #ffffff; --gray1: #e6e6e6; --gray2: #595959; --accent: #111111;
     --font: "Inconsolata", ui-monospace, "SFMono-Regular", Menlo, monospace; }
@@ -31,7 +31,7 @@
 <script src="https://cdn.tailwindcss.com/3.4.16"></script>
 <script>
   // Tailwind's colour names mapped onto the palette: stone = the grays; green / orange (amber) / red = status; cmy-* = brand
-  // (cyan actions, magenta and cyan chart series, yellow accents); 4 px corners, 6 px for large ones
+  // (cmy-a = actions and focus, ink today; magenta and cyan chart series; yellow accents); 4 px corners, 6 px for large ones
   (function () {
     var W = "#ffffff", G1 = "#e6e6e6", G2 = "#595959", K = "#111111", M = "#e5007e", Y = "#ffd400", C = "#0082c8", A = "#111111";
     // a: tint (backgrounds), e: soft edge (borders of tinted notes), b: the colour, c: its dark text shade
