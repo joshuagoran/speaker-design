@@ -1159,9 +1159,9 @@ function HifiPage() {
           <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="&#8243;" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
           <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
           <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-600">Ports</span>{hLk("box", "sealed, ported or radiator")}</div>
-          <div className="flex flex-wrap gap-1 mb-3">{[["Sealed", "sealed", 0], ["1 port", "vented", 1], ["2 ports", "vented", 2], ["Radiator", "radiator", 0]].map(([l, v, n]) => {
-            const on = box === v && (v !== "vented" || port.n === n);
-            return <button key={l} onClick={() => { setBox(v); if (n) setP("n", n); }} className={seg(on)}>{l}</button>;
+          <div className="flex flex-wrap gap-1 mb-3">{[["Sealed", "sealed", 0], ["1 port", "vented", 1], ["2 ports", "vented", 2], ["1 radiator", "radiator", 1], ["2 radiators", "radiator", 2]].map(([l, v, n]) => {
+            const on = box === v && (v === "sealed" || (v === "vented" ? port.n : pr.n) === n);
+            return <button key={l} onClick={() => { setBox(v); if (v === "vented") setP("n", n); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }} className={seg(on)}>{l}</button>;
           })}</div>
           {box === "vented" && (<>
             <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />
@@ -1170,7 +1170,6 @@ function HifiPage() {
           </>)}
           {box === "radiator" && (<>
             <Pick label={`Passive radiator · ${prDrv.shape ? "5 × 8″ oval" : `${prDrv.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={prDrv} onChange={(o) => setPrSel((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, prAddMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
-            <div className="flex flex-wrap gap-1 mb-3">{[1, 2].map((n) => <button key={n} onClick={() => setPrSel((p) => ({ ...p, n }))} className={seg(pr.n === n)}>{n === 1 ? "1 radiator" : "2 radiators"}</button>)}</div>
             <Slider label="Added mass, each" value={pr.addG} min={0} max={prAddMax(prDrv)} step={5} unit=" g" onChange={(v) => setPrSel((p) => ({ ...p, addG: v }))} />
           </>)}
           <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of port` : sys.radiator ? `; radiators on the back tune it to ${sys.Fb.toFixed(0)} Hz, with a notch at ${sys.Fp.toFixed(0)} Hz (their own resonance)${prDrv.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}` : ", lightly stuffed"}.</div>
