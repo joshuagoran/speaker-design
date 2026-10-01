@@ -1,5 +1,5 @@
 import test from "node:test";
-import { boxParts, packSheets, f8, SHEETS } from "../tools/calc.js";
+import { boxParts, packSheets, f8, SHEETS } from "../src/lib/pa/calc.js";
 import { close } from "./helpers.js";
 
 const get = (P, name) => P.find((p) => p.part === name);

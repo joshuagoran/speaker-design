@@ -1,6 +1,6 @@
 import test from "node:test";
-import { boxL, ventGeom, internalWoodL, cutParts, subWeight, midWeight, plyLb } from "../tools/calc.js";
-import { SUB_OPTIONS, MID_OPTIONS } from "../tools/data.js";
+import { boxL, ventGeom, internalWoodL, cutParts, subWeight, midWeight, plyLb } from "../src/lib/pa/calc.js";
+import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data.js";
 import { close } from "./helpers.js";
 
 const IN3_L = 16.387 / 1000;

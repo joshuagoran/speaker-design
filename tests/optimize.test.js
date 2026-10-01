@@ -1,8 +1,8 @@
 import test from "node:test";
 import fs from "node:fs";
-import { optimize, evaluate, problems, bandOut, roomNeed, BAND, AMP_MAX } from "../tools/optimize.js";
-import { boxModel, subLimits, ampV } from "../tools/calc.js";
-import { SUB_OPTIONS, MID_BOXES } from "../tools/data.js";
+import { optimize, evaluate, problems, bandOut, roomNeed, BAND, AMP_MAX } from "../src/lib/pa/optimize.js";
+import { boxModel, subLimits, ampV } from "../src/lib/pa/calc.js";
+import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data.js";
 import { close } from "./helpers.js";
 
 const seeds = JSON.parse(fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url)));

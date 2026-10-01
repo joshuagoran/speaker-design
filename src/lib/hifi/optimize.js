@@ -3,8 +3,8 @@
 // every one), each card's label true against your design, unlocked amps searched at their slider maximum and
 // trimmed to the least power that keeps the card's level, and a card applies only the fields searched.
 import { hifiSystem, hifiChips, grossL, lr, logFreqs, portMaxLen, prAddFor, prFits, slotEc, slotWidth, slotMaxLen } from "./hifi.js";
-import { ventTuning } from "./calc.js";
-import { prAddMax } from "./data.js";
+import { ventTuning } from "../pa/calc.js";
+import { prAddMax } from "../data.js";
 
 // the PA planner's goals, in its order
 export const HIFI_GOALS = {

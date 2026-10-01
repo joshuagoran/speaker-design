@@ -17,9 +17,9 @@ tools/data.js                drivers, horns, cabinets
 tools/chips.js               warning chips per section
 tools/stack-planner.app.jsx  the planner UI (JSX, bundled with esbuild)
 tests/                       node:test suites, golden snapshot, mobile layout check
-tools/stack-planner.head.html  its <head>: styles and the four CDN script tags
-tools/build.sh               planner -> dist/stack-planner.html
-tools/serve.sh               build + vendor libs + serve on :8901
+build/stack-planner.head.html  its <head>: styles and the four CDN script tags
+build/build.sh               planner -> dist/stack-planner.html
+build/serve.sh               build + vendor libs + serve on :8901
 docs/design-notes.md         findings behind the current configuration
 docs/*.svg                   crossover null cone, horn coverage
 dist/                        build output (gitignored)
@@ -33,7 +33,7 @@ install — esbuild is fetched by `npx` on first run.
 ## Build
 
 ```sh
-tools/build.sh          # -> dist/stack-planner.html
+build/build.sh          # -> dist/stack-planner.html
 ```
 
 It runs esbuild over the JSX, then concatenates `stack-planner.head.html` + the
@@ -44,7 +44,7 @@ external.
 ## Local preview
 
 ```sh
-tools/serve.sh          # http://127.0.0.1:8901/index.html
+build/serve.sh          # http://127.0.0.1:8901/index.html
 ```
 
 It builds, downloads the four libraries into `dist/preview/` if they aren't
@@ -176,14 +176,14 @@ See `docs/design-notes.md` for the findings behind the current configuration.
 
 ## Web app (GitHub Pages + Firestore)
 
-`sh tools/build.sh pages` builds `dist/site/` — the same planner, with saved
+`sh build/build.sh pages` builds `dist/site/` — the same planner, with saved
 configs in Firebase Firestore instead of the claude.ai artifact store. Pushes
 to `main` deploy it via `.github/workflows/pages.yml`.
 
 One-time setup:
 
 1. [Firebase console](https://console.firebase.google.com): create a project (free Spark plan).
-2. Add a **Web app**; copy its config object into `tools/firebase-config.js`
+2. Add a **Web app**; copy its config object into `build/firebase-config.js`
    (`window.PLANNER_FIREBASE = { ... }`). These values are public by design.
 3. **Firestore Database → Create** (production mode).
 4. **Authentication → Sign-in method → Google → Enable**; under

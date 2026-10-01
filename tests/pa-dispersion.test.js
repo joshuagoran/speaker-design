@@ -1,6 +1,6 @@
 import test from "node:test";
-import { paResponseAt, paDispersionMap, firstNullDeg } from "../tools/pa-dispersion.js";
-import { logFreqs } from "../tools/hifi.js";
+import { paResponseAt, paDispersionMap, firstNullDeg } from "../src/lib/pa/dispersion.js";
+import { logFreqs } from "../src/lib/hifi/hifi.js";
 
 const stack = (gapIn) => ({ sub: { zIn: 12, Sd: 1200 }, mid: { zIn: 40, Sd: 530 }, horn: { zIn: 40 + gapIn, covH: 90, covV: 40, wIn: 12, hIn: 7 }, xoLo: 120, xoHi: 1000, order: 4 });
 

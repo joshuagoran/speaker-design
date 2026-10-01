@@ -4,9 +4,9 @@
 #   ./build.sh pages   -> ../dist/site/ (GitHub Pages, with Firebase saving)
 set -e
 cd "$(dirname "$0")"
-npx --yes esbuild@0.28.2 stack-planner.app.jsx --bundle --format=iife --loader:.jsx=jsx --jsx=transform --outfile=../dist/app.js
+npx --yes esbuild@0.28.2 ../src/app.jsx --bundle --format=iife --loader:.jsx=jsx --jsx=transform --outfile=../dist/app.js
 # the page inlines app.js in a classic <script>: it must be one bundle with no module syntax
-npx --yes esbuild@0.28.2 optimize.worker.js --bundle --format=iife --outfile=../dist/worker.js
+npx --yes esbuild@0.28.2 ../src/lib/pa/optimize.worker.js --bundle --format=iife --outfile=../dist/worker.js
 # the page inlines both in <script> tags: each must be one bundle with no module syntax and no "</script"
 for f in ../dist/app.js ../dist/worker.js; do
   if grep -qE '^(import|export) ' "$f" || grep -q '</script' "$f"; then echo "build.sh: $f is not a clean bundle" >&2; exit 1; fi

@@ -1,6 +1,6 @@
 // Hi-fi 2-way model: woofer (sealed or vented) + tweeter, active crossover, baffle step, placement, and the
 // response at a listening position (off-axis, crossover lobing). Pure functions, no DOM.
-import { boxModel, closedBox, ventTuning, ampV, thermalV, keeleF, plyLb, hpGain, rectEndCorr, duct2DEndCorr } from "./calc.js";
+import { boxModel, closedBox, ventTuning, ampV, thermalV, keeleF, plyLb, hpGain, rectEndCorr, duct2DEndCorr } from "../pa/calc.js";
 
 const C = 343, IN = 0.0254;
 

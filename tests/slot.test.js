@@ -1,6 +1,6 @@
 import test from "node:test";
-import { rectI, rectEndCorr, slotEndCorr, sideDuctEndCorr, ductEndCorr, duct2DEndCorr, BOTH_ENDS, ventGeom, boxModel, subSystem } from "../tools/calc.js";
-import { SUB_OPTIONS, MID_OPTIONS } from "../tools/data.js";
+import { rectI, rectEndCorr, slotEndCorr, sideDuctEndCorr, ductEndCorr, duct2DEndCorr, BOTH_ENDS, ventGeom, boxModel, subSystem } from "../src/lib/pa/calc.js";
+import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data.js";
 import { C, rel, close } from "./helpers.js";
 
 // Independent check of the closed form: integrate the potential of the rectangle numerically.

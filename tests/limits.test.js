@@ -1,6 +1,6 @@
 import test from "node:test";
-import { boxModel, subLimits, maxCurve, thermalV, ampV } from "../tools/calc.js";
-import { SUB_OPTIONS } from "../tools/data.js";
+import { boxModel, subLimits, maxCurve, thermalV, ampV } from "../src/lib/pa/calc.js";
+import { SUB_OPTIONS } from "../src/lib/data.js";
 import { close, near } from "./helpers.js";
 
 const fh = SUB_OPTIONS.find((o) => o.id === "f18fh500").ts;

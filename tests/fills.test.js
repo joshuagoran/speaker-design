@@ -1,6 +1,6 @@
 import test from "node:test";
-import { fillSystem, boxModel, closedBox, ampV, thermalV, STUFF, nearest } from "../tools/calc.js";
-import { FILL_OPTIONS } from "../tools/data.js";
+import { fillSystem, boxModel, closedBox, ampV, thermalV, STUFF, nearest } from "../src/lib/pa/calc.js";
+import { FILL_OPTIONS } from "../src/lib/data.js";
 import { close, massLineSPL } from "./helpers.js";
 
 const drv = FILL_OPTIONS.find((o) => o.id === "bc10cxn64");

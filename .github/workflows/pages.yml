@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 20
       - run: npm test
-      - run: sh tools/build.sh pages
+      - run: sh build/build.sh pages
       # phone and tablet layout check (tests/mobile-check.mjs)
       - run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
       - run: node tests/mobile-check.mjs dist/stack-planner.html
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: sh tools/build.sh pages
+      - run: sh build/build.sh pages
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/site

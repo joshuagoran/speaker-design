@@ -1,6 +1,6 @@
-import * as HIFI from "../tools/hifi.js";
+import * as HIFI from "../src/lib/hifi/hifi.js";
 import test from "node:test";
-import { lr, baffleStep, baffleStepF3, bscEq, boundary, piston, waveguide, hifiSystem, hifiChips, responseAt, dispersionMap, grossL } from "../tools/hifi.js";
+import { lr, baffleStep, baffleStepF3, bscEq, boundary, piston, waveguide, hifiSystem, hifiChips, responseAt, dispersionMap, grossL } from "../src/lib/hifi/hifi.js";
 import { close } from "./helpers.js";
 
 // a generic 6.5" woofer and 1" dome (typical published values), so the tests don't depend on the driver list

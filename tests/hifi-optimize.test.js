@@ -1,7 +1,7 @@
 import test from "node:test";
-import { hifiOptimize, hifiProblems } from "../tools/hifi-optimize.js";
-import { hifiSystem, hifiChips } from "../tools/hifi.js";
-import { HIFI_WOOFERS, HIFI_TWEETERS } from "../tools/data.js";
+import { hifiOptimize, hifiProblems } from "../src/lib/hifi/optimize.js";
+import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi.js";
+import { HIFI_WOOFERS, HIFI_TWEETERS } from "../src/lib/data.js";
 
 const cur = { woofer: "sb17nrx", tweeter: "sb26stcn", box: "vented", dim: { w: 9, h: 15, d: 11 }, wall: 0.75, port: { n: 1, dia: 2, len: 6 },
   xo: 2000, order: 4, wAmpW: 100, tAmpW: 50, bsc: 3, place: "free", wallFt: 2, portMax: 17, guide: null };
@@ -47,8 +47,8 @@ test("hi-fi optimizer: unlocked amps stay within the sliders; locked amps stay; 
 });
 
 test("hi-fi optimizer: radiator designs price their radiators and load back with them", async (t) => {
-  const { hifiOptimize } = await import("../tools/hifi-optimize.js");
-  const { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } = await import("../tools/data.js");
+  const { hifiOptimize } = await import("../src/lib/hifi/optimize.js");
+  const { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } = await import("../src/lib/data.js");
   const w = HIFI_WOOFERS.find((o) => o.pick) || HIFI_WOOFERS[0], tw = HIFI_TWEETERS.find((o) => o.pick && !o.needsWaveguide && o.type !== "compression") || HIFI_TWEETERS[0];
   const drv = HIFI_PASSIVES.find((o) => o.id === "sb16pfcr");
   const cur = { woofer: w.id, tweeter: tw.id, box: "radiator", pr: { drv, n: 2, addG: 0 }, dim: { w: 9, h: 16, d: 11 }, wall: 0.75, port: { n: 1, dia: 2, len: 6 }, xo: 2200, order: 4, wAmpW: 100, tAmpW: 50, bsc: 3, place: "free", wallFt: 2, portMax: 17 };

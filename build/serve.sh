@@ -21,7 +21,7 @@ fetch https://cdnjs.cloudflare.com/ajax/libs/three.js/0.140.0/three.min.js      
 # prebuilt stylesheet is enough. Any Tailwind 3 build works here.
 [ -s dist/preview/tw.css ] || echo "note: put a Tailwind 3 stylesheet at dist/preview/tw.css (the page renders unstyled without it)"
 
-tools/build.sh
+build/build.sh
 
 sed -e 's|https://cdn.tailwindcss.com/3.4.16|tw.css|' \
     -e 's|https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js|react.js|' \

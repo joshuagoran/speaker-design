@@ -1,6 +1,6 @@
 import test from "node:test";
-import { midSystem, ampV, thermalV, subThroughLp, boxModel, lr24lp, STUFF, nearest } from "../tools/calc.js";
-import { MID_OPTIONS, SUB_OPTIONS } from "../tools/data.js";
+import { midSystem, ampV, thermalV, subThroughLp, boxModel, lr24lp, STUFF, nearest } from "../src/lib/pa/calc.js";
+import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data.js";
 import { close, db } from "./helpers.js";
 
 const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76") || MID_OPTIONS.find((o) => o.ts);

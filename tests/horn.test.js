@@ -1,6 +1,6 @@
 import test from "node:test";
-import { hornResponse, pistonBeam, keeleF, hornBeam } from "../tools/calc.js";
-import { CD_OPTIONS } from "../tools/data.js";
+import { hornResponse, pistonBeam, keeleF, hornBeam } from "../src/lib/pa/calc.js";
+import { CD_OPTIONS } from "../src/lib/data.js";
 import { close, near, db } from "./helpers.js";
 
 const n314t = CD_OPTIONS.find((o) => o.id === "n314t").hf;

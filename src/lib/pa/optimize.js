@@ -10,7 +10,7 @@
 import { boxModel, closedBox, subGeometry, subSystem, midSystem, subLimits, ampV, hornResponse, subWeight, midWeight, boxL,
   cutParts, packSheets, SHEETS, nearest, subMusicAt, lr24lp, pistonBeam, keeleF, maxCurve, STUFF } from "./calc.js";
 import { subChips, midChips, hornChips, ductFit, subNeed, driverClear } from "./chips.js";
-import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS } from "./data.js";
+import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS } from "../data.js";
 
 const byId = (list, id) => list.find((o) => o.id === id);
 const r2 = (x, q = 0.5) => Math.round(x / q) * q;

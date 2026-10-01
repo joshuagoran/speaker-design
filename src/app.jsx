@@ -1,11 +1,11 @@
 const { useEffect, useId, useRef, useState } = React;
-import { subChips, midChips, hornChips, fillChips } from "./chips.js";
-import { optimize, evaluate as evaluateConfig, roomNeed, ROOMS, GOALS, optFields } from "./optimize.js";
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, prAddMax } from "./data.js";
-import { hifiSystem, hifiChips, responseAt, dispersionMap, logFreqs, lr, prShape, PLACES as HIFI_PLACES } from "./hifi.js";
-import { hifiOptimize, HIFI_GOALS, HIFI_LOCK_KEYS, HIFI_AMP_MAX } from "./hifi-optimize.js";
-import { paDispersionMap, firstNullDeg } from "./pa-dispersion.js";
-import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, lr24lp, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest, subMusicAt } from "./calc.js";
+import { subChips, midChips, hornChips, fillChips } from "./lib/pa/chips.js";
+import { optimize, evaluate as evaluateConfig, roomNeed, ROOMS, GOALS, optFields } from "./lib/pa/optimize.js";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, prAddMax } from "./lib/data.js";
+import { hifiSystem, hifiChips, responseAt, dispersionMap, logFreqs, lr, prShape, PLACES as HIFI_PLACES } from "./lib/hifi/hifi.js";
+import { hifiOptimize, HIFI_GOALS, HIFI_LOCK_KEYS, HIFI_AMP_MAX } from "./lib/hifi/optimize.js";
+import { paDispersionMap, firstNullDeg } from "./lib/pa/dispersion.js";
+import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, lr24lp, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest, subMusicAt } from "./lib/pa/calc.js";
 
 
 

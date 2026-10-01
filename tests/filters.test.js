@@ -1,5 +1,5 @@
 import test from "node:test";
-import { hpGain, lr24lp, lr24hp } from "../tools/calc.js";
+import { hpGain, lr24lp, lr24hp } from "../src/lib/pa/calc.js";
 import { db, close } from "./helpers.js";
 
 test("Butterworth highpasses are -3.01 dB at the corner", (t) => {
