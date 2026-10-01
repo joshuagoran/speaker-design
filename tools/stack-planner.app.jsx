@@ -2054,7 +2054,7 @@ function StackPlanner() {
   const setM = (k, v) => setMDim((p) => ({ ...p, [k]: v }));
   const plinth = 3; // fixed, matches the duct height
   const [cutaway, setCutaway] = useState(false);
-  const [cabinet, setCabinet] = useState(CABINETS[0]);
+  const [cabinet] = useState(CABINETS[0]);
   const [portStyle, setPortStyle] = useState("slots");
   const [layout, setLayout] = useState("stack");
   const format = FORMATS[0];   // 18″ sub + compression driver; mid is 12″ or 15″
@@ -2140,20 +2140,6 @@ function StackPlanner() {
   const midList = MID_OPTIONS.filter((o) => (o.size || 12) === midSize);
   const boxList = MID_BOXES.filter((b) => (b.size || 12) === midSize && b.id !== "b13");
   const subBox = cDim;
-  const startFrom = (cb) => {
-    const d = cb.dims[format.sub];
-    setCabinet(cb);
-    setCDim({ w: d.w, h: d.h, d: d.d });
-    const v = cb.vents[0];
-    setPortStyle(v === "round1" || v === "round4" ? "round2" : v);
-    if (v === "round1") setCVent((p) => ({ ...p, nt: 1, dia: 8, len: 11 }));
-    else if (v === "round4") setCVent((p) => ({ ...p, nt: 4, dia: 4, len: 11.5 }));
-    else if (v === "round2") setCVent((p) => ({ ...p, nt: 2, dia: 5, len: 9.8 }));
-    else if (v === "folded") setCVent((p) => ({ ...p, slotH: 3, len: 15.75 }));
-    else if (v === "vslots") setCVent((p) => ({ ...p, throat: 1.4, len: d.d - 3 }));
-    else setCVent((p) => ({ ...p, slotH: 3, len: d.d - 4.5 }));
-    if (cb.vent) setCVent((p) => ({ ...p, ...cb.vent }));   // published vent overrides the generic one
-  };
   const subSel = { ...sub, box: subBox };
   useEffect(() => {
     const pickOf = (list) => list.find((o) => o.pick) || list[0];
