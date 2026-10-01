@@ -4,6 +4,7 @@ import { optimize, evaluate as evaluateConfig, roomNeed, ROOMS, GOALS, optFields
 import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, prAddMax } from "./data.js";
 import { hifiSystem, hifiChips, responseAt, dispersionMap, logFreqs, lr, prShape, PLACES as HIFI_PLACES } from "./hifi.js";
 import { hifiOptimize, HIFI_GOALS, HIFI_LOCK_KEYS, HIFI_AMP_MAX } from "./hifi-optimize.js";
+import { paDispersionMap, firstNullDeg } from "./pa-dispersion.js";
 import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, lr24lp, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest, subMusicAt } from "./calc.js";
 
 
@@ -2047,6 +2048,7 @@ function StackPlanner() {
   const [mDim, setMDim] = useState({ ...MID_BOXES.find((o) => o.id === "b15").box });
   const [xoLo, setXoLo] = useState(120);         // sub -> mid crossover, LR24
   const [xoHi, setXoHi] = useState(900);         // mid -> horn crossover, LR24
+  const [paPlane, setPaPlane] = useState("v");    // dispersion map: vertical (lobing) or horizontal
   const [mAmpW, setMAmpW] = useState(400);       // amp power per mid channel, into 8 Ω
   const [tilt, setTilt] = useState(6);           // how much less the mid band needs than the sub band, dB
   const [hfAmpW, setHfAmpW] = useState(100);     // amp power per HF channel, rated into 8 Ω
@@ -2297,6 +2299,14 @@ function StackPlanner() {
   const archT = isTower && !!horn.profile && !horn.scaleX && subBox.w / 2 - 0.75 > horn.size.w / 2;
   const stackH = isTower ? baseH + 15.5 + (archT ? subBox.w - 0.75 : horn.size.h + 2) : baseH + midDims.h + 1.2 + horn.size.h + 2;
   const hornCenter = isTower ? baseH + 15.5 + (archT ? subBox.w / 2 - 0.75 : (horn.size.h + 2) / 2) : baseH + midDims.h + 1.2 + 1 + horn.size.h / 2;
+  // driver heights for the dispersion map: mid centered in its box (or the tower's mid section), sub at its box center
+  const midCenter = isTower ? baseH + 15.5 / 2 : baseH + midDims.h / 2;
+  const PA_MAP_M = 10;
+  const paMap = mid.ts && hz.covH && horn.size ? paDispersionMap({
+    sub: sub.ts ? { zIn: plinth + subBox.h / 2, Sd: sub.ts.Sd } : null, mid: { zIn: midCenter, Sd: mid.ts.Sd },
+    horn: { zIn: hornCenter, covH: hz.covH, covV: hz.covV || hz.covH, wIn: horn.size.w, hIn: horn.size.h }, xoLo, xoHi, order: 4,
+  }, paPlane, PA_MAP_M) : null;
+  const mhGap = hornCenter - midCenter, mhNull = firstNullDeg(mhGap, xoHi);
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900" style={{ fontFamily: "var(--font)" }}>
@@ -2504,6 +2514,11 @@ function StackPlanner() {
                 series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0) }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0) }] : [])]}
                 marks={[{ f: xoHi, label: "XO" }, ...(beamCurves.fK ? [{ f: beamCurves.fK, label: "horn control" }] : [])]} />
             </div>
+            {paMap && (<div className="mb-4">
+              <div className="flex gap-1 mb-2">{[["v", "Vertical"], ["h", "Horizontal"]].map(([v, l]) => <ToggleBtn key={v} size="xs" on={paPlane === v} onClick={() => setPaPlane(v)}>{l}</ToggleBtn>)}</div>
+              <DispMap map={paMap} title={paPlane === "v" ? `Vertical dispersion at ${PA_MAP_M} m: below (−) to above (+) the horn axis` : `Horizontal dispersion at ${PA_MAP_M} m, at horn height (0° is on axis)`} />
+              <div className="text-xs text-stone-500 mt-1">Mid and horn centers {mhGap.toFixed(1)}″ apart: {mhNull ? `the first null at the ${xoHi} Hz crossover is about ${mhNull.toFixed(0)}° above and below the horn axis.` : `under half a wavelength at ${xoHi} Hz, so no null at the crossover.`}</div>
+            </div>)}
             <div className="flex flex-col gap-1.5">
               {(() => {
                 const F = hornChips({ hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi: midMax ? midNear(xoHi).spl : null, hfTilt, hornAtXo: hornAt(xoHi), midBeam, fK: beamCurves.fK });
