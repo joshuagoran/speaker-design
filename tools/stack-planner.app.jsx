@@ -700,6 +700,31 @@ function Button({ variant = "secondary", size = "md", className = "", ...p }) {
     className={`rounded border ${TOGGLE_SIZE[size]} ${BUTTON_VARIANT[variant]} disabled:border-stone-300 disabled:bg-stone-300 disabled:text-stone-600 disabled:cursor-not-allowed ${className}`} />;
 }
 
+// Term with a tooltip. Opens on hover, keyboard focus or tap; Esc or a tap elsewhere closes it.
+function Tip({ tip, children, className = "" }) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [flip, setFlip] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const r = ref.current?.getBoundingClientRect();
+    setFlip(!!r && r.left + 288 > window.innerWidth - 8);
+    const off = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener("pointerdown", off);
+    return () => document.removeEventListener("pointerdown", off);
+  }, [open]);
+  return (
+    <span ref={ref} className={`relative inline-block ${className}`} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <span role="button" tabIndex={0} aria-describedby={open ? id : undefined} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); } }}
+        className="cursor-help border-b-2 border-dotted border-stone-600">{children}</span>
+      {open && <span role="tooltip" id={id} className={`absolute z-30 top-full mt-1 w-max max-w-[18rem] rounded bg-stone-900 text-stone-50 text-xs font-normal normal-case tracking-normal leading-snug px-2 py-1.5 text-left ${flip ? "right-0" : "left-0"}`}>{tip}</span>}
+    </span>
+  );
+}
+
 // Panel: one outline, one radius. pad: "md" (default) or "lg"; tone: "white" or "tint"
 function Card({ pad = "md", tone = "white", className = "", ...p }) {
   return <div {...p} className={`rounded border border-stone-300 ${tone === "tint" ? "bg-stone-50" : "bg-white"} ${pad === "lg" ? "px-4 py-4" : "px-3 py-3"} ${className}`} />;
@@ -1174,9 +1199,10 @@ function HifiPage() {
           <RoomView spacing={spacing} toe={toe} seat={seat} setSeat={setSeat} angles={[(gL.th * 180) / Math.PI, (gR.th * 180) / Math.PI]} />
           <div className="text-sm text-stone-600 leading-relaxed">
             <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold mb-1">At the seat</div>
-            {(seatDist / FT).toFixed(1)} ft from the pair; left speaker {((gL.th * 180) / Math.PI).toFixed(0)}° and right {((gR.th * 180) / Math.PI).toFixed(0)}° off axis.<br />
-            Ears {earIn - standIn - sys.lay.tweeterIn >= 0 ? "above" : "below"} the tweeter by {Math.abs(earIn - standIn - sys.lay.tweeterIn).toFixed(1)}″.<br />
-            Clean up to about {atSeat.toFixed(0)} dB here with both speakers.
+            <div>{(seatDist / FT).toFixed(1)} ft from the pair</div>
+            <div>Off axis: L {((gL.th * 180) / Math.PI).toFixed(0)}°, R {((gR.th * 180) / Math.PI).toFixed(0)}°</div>
+            <div>Ears {earIn - standIn - sys.lay.tweeterIn >= 0 ? "above" : "below"} tweeter {Math.abs(earIn - standIn - sys.lay.tweeterIn).toFixed(1)}″</div>
+            <div><Tip tip={`Clean up to about ${atSeat.toFixed(0)} dB at the seat with both speakers playing.`}>Max level</Tip> {atSeat.toFixed(0)} dB</div>
           </div>
         </div>
         <div>
@@ -1188,9 +1214,9 @@ function HifiPage() {
           <div className="leading-relaxed mt-1 flex flex-col gap-1.5">
             <div>Woofer {sys.lay.wooferIn.toFixed(1)}″ and tweeter {sys.lay.tweeterIn.toFixed(1)}″ from the bottom, {sys.lay.spacingIn.toFixed(1)}″ apart. {sys.gross.toFixed(1)} L gross, {sys.net.toFixed(1)} L net{sys.hpf ? `; DSP highpass ${sys.hpf} Hz (BW24) below the port tuning` : ""}.</div>
             <div>Tweeter trimmed {sys.trim.toFixed(1)} dB in the DSP to match the woofer; baffle step centered at {sys.bsF3.toFixed(0)} Hz{bsc ? `, ${bsc} dB boost` : ""}.</div>
-            <div><span className="font-medium text-stone-700">{w.name}.</span> {w.note}</div>
-            <div><span className="font-medium text-stone-700">{t.name}.</span> {t.note}</div>
-            {guide && <div><span className="font-medium text-stone-700">{guide.name}.</span> {guideSel.note}</div>}
+            <div><Tip tip={w.note}><span className="font-medium text-stone-700">{w.name}</span></Tip></div>
+            <div><Tip tip={t.note}><span className="font-medium text-stone-700">{t.name}</span></Tip></div>
+            {guide && <div><Tip tip={guideSel.note}><span className="font-medium text-stone-700">{guide.name}</span></Tip></div>}
           </div>
         </details>
       </div>
@@ -1262,10 +1288,10 @@ function NotesPage() {
             return (
               <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
                 <div className="flex justify-between items-baseline mb-1">
-                  <SectionHead>{r.name}</SectionHead>
+                  <SectionHead><Tip tip={r.note}>{r.name}</Tip></SectionHead>
                   <span className="text-sm tabular-nums text-stone-600">≈ ${total.toLocaleString()}</span>
                 </div>
-                <p className="text-xs text-stone-500 mb-3">{r.note}</p>
+                <div className="mb-3" />
                 <ul className="text-sm text-stone-700 space-y-1">
                   {r.items.map(([label, cost]) => (
                     <li key={label} className="flex justify-between gap-3"><span>{label}</span><span className="tabular-nums text-stone-500">${cost}</span></li>
@@ -1279,12 +1305,7 @@ function NotesPage() {
         <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
           <SectionHead className="mb-2">Signal path (mains rack)</SectionHead>
           <div className="max-w-4xl"><SignalPath /></div>
-          <p className="text-sm text-stone-700 max-w-3xl mt-3">
-            Division of labour: the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs.
-            Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and
-            impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled
-            preset, which a level limiter cannot.
-          </p>
+          <p className="text-sm text-stone-700 max-w-3xl mt-3"><Tip tip="the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.">How the DSP work is split</Tip></p>
         </section>
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
           <SectionHead className="mb-3">Amp DSP: QSC GXD4 / GXD8</SectionHead>
@@ -1345,7 +1366,7 @@ function NotesPage() {
               ))}
             </tbody>
           </table></div>
-          <p className="text-xs text-stone-500 mt-2 max-w-3xl">Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026. Pick: a used DriveRack 260 on a budget; new, the Ashly AQM408 (limiters in dBu with attack and release, 4×8) or the VENU360 (front panel plus app). Keep the GXD limiters as a backstop either way.</p>
+          <p className="text-sm text-stone-700 mt-2 max-w-3xl">Pick: a used DriveRack 260 on a budget; new, the Ashly AQM408 (limiters in dBu with attack and release, 4×8) or the VENU360 (front panel plus app). Keep the GXD limiters as a backstop either way. <Tip tip="Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026.">Why not the others?</Tip></p>
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
@@ -1387,7 +1408,7 @@ function NotesPage() {
               </li>
             ))}
           </ul>
-          <p className="text-xs text-stone-500 mt-3 max-w-3xl">Roughly a weekend to measure and design, plus an evening to build and verify.</p>
+          <p className="text-sm text-stone-700 mt-3 max-w-3xl"><Tip tip="Roughly a weekend to measure and design, plus an evening to build and verify.">About 1 weekend</Tip></p>
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
@@ -1463,7 +1484,7 @@ function FillsPage() {
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "var(--font)" }}>
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
-        <p className="text-sm text-stone-600">Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).</p>
+        <p className="text-sm text-stone-600"><Tip tip="Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).">Passive fills</Tip></p>
         <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
           {tile("Net volume", net.toFixed(0), "L")}
           {vM ? tile("Tuning Fb", vM.Fb.toFixed(0), "Hz") : tile("Qtc", sM.Qtc.toFixed(2), "")}
@@ -1496,7 +1517,7 @@ function FillsPage() {
             </div>
           ))}
         </div>
-        <p className="text-xs text-stone-500"><span className="font-medium text-stone-600">{drv.name}.</span> {drv.note} Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement {ts.disp != null ? "as published" : `not published; ${disp} L assumed`}.</p>
+        <p className="text-xs text-stone-500"><span className="font-medium text-stone-600">{drv.name}.</span> {drv.note} <Tip tip={`Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement ${ts.disp != null ? "as published" : `not published; ${disp} L assumed`}.`}>Spec notes</Tip></p>
       </div>
       <aside className="min-w-0 md:col-span-2">
         <Pick label="Coaxial driver" options={FILL_OPTIONS} value={drv} onChange={setDrv} />
@@ -1590,7 +1611,7 @@ function CutlistPage(props) {
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">{pk.sheets.map((sh, i) => <SheetDrawing key={i} sheet={sh} S={S} idx={i} />)}</div>
         </div>
       ))}
-      <p className="text-xs text-stone-500">Simple row-by-row layout, grain direction ignored. Treat it as a sheet count and a starting point for your own cut plan. Driver cutouts are typical values; use the datasheet's.</p>
+      <p className="text-sm text-stone-500"><Tip tip="Simple row-by-row layout, grain direction ignored. Treat it as a sheet count and a starting point for your own cut plan. Driver cutouts are typical values; use the datasheet's.">About this layout</Tip></p>
     </main>
   );
 }
@@ -1764,7 +1785,7 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
       ))}
       <div className="text-xs text-stone-600">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
       <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
-      {!k.priceKnown && <div className="text-xs text-stone-500">Some prices unknown</div>}
+      {!k.priceKnown && <div className="text-xs text-stone-500"><Tip tip="Some drivers have no listed price, so the total is a lower bound.">Partial prices</Tip></div>}
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
         <Button variant="primary" onClick={onLoad} className="flex-1">Load</Button>
