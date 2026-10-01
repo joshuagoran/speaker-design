@@ -1272,7 +1272,7 @@ function HifiPage() {
           <div className="flex flex-wrap gap-1 mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip]) => {
             const slotOn = port.shape === "slot";
             const on = box === v && (v === "sealed" || (v === "vented" ? (n === "slot" ? slotOn : !slotOn && port.n === n) : pr.n === n));
-            return <ToggleBtn key={l} title={tip} aria-label={tip} on={on} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}>{l}</ToggleBtn>;
+            return <ToggleBtn key={l} size="xs" title={tip} aria-label={tip} on={on} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}>{l}</ToggleBtn>;
           })}</div>
           {box === "vented" && (<>
             {port.shape === "slot"
@@ -1288,7 +1288,7 @@ function HifiPage() {
         </Card>
         <Card className="mb-4">
           <Slider label="Crossover" value={xo} min={800} max={4000} step={50} unit=" Hz" onChange={setXo} extra={hLk("xo", "the crossover")} />
-          <div className="flex gap-1 mb-3">{[[4, "LR24"], [8, "LR48"]].map(([v, l]) => <ToggleBtn key={v} onClick={() => setOrder(v)} on={order === v}>{l}</ToggleBtn>)}</div>
+          <div className="flex gap-1 mb-3">{[[4, "LR24"], [8, "LR48"]].map(([v, l]) => <ToggleBtn key={v} size="xs" onClick={() => setOrder(v)} on={order === v}>{l}</ToggleBtn>)}</div>
           <Slider label="Baffle-step boost" value={bsc} min={0} max={6} step={0.5} unit=" dB" onChange={setBsc} />
           <Slider label="Woofer amp @ 8 Ω" value={wAmpW} min={10} max={500} step={10} unit=" W" onChange={setWAmpW} extra={hLk("wAmpW", "the woofer amp power")} />
           <Slider label="Tweeter amp @ 8 Ω" value={tAmpW} min={5} max={200} step={5} unit=" W" onChange={setTAmpW} extra={hLk("tAmpW", "the tweeter amp power")} />
