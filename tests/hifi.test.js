@@ -63,13 +63,52 @@ test("response at the seat: on axis matches the design axis; off axis and above 
   t.assert.ok(m.rows[0].every((v) => Math.abs(v) < 1e-9), "0° row is the reference");
 });
 
-test("ports with elbows: longer ports fit, and the check says so", (t) => {
+test("ports with elbows: longer ports fit, and the check says when one is needed", (t) => {
   const { portMaxLen } = HIFI;
   const dim = { w: 8.5, h: 14, d: 10 };
   const s0 = portMaxLen(dim, 0.75, { dia: 2, elbows: 0 }), s1 = portMaxLen(dim, 0.75, { dia: 2, elbows: 1 }), s2 = portMaxLen(dim, 0.75, { dia: 2, elbows: 2 });
   t.assert.ok(s0 < s1 && s1 < s2, `${s0} < ${s1} < ${s2}`);
-  const long = { ...cfg, port: { n: 1, dia: 2, len: s0 + 2 } };
-  t.assert.ok(hifiChips(hifiSystem(W, T, long), W, T, long).some(([, h]) => h === "Port too long"), "straight: too long");
-  const bent = { ...cfg, port: { n: 1, dia: 2, len: s0 + 2, elbows: 1 } };
-  t.assert.ok(!hifiChips(hifiSystem(W, T, bent), W, T, bent).some(([, h]) => h === "Port too long"), "one elbow: fits");
+  const heads = (len) => { const c = { ...cfg, port: { n: 1, dia: 2, len } }; return hifiChips(hifiSystem(W, T, c), W, T, c).map(([, h]) => h); };
+  t.assert.ok(!heads(s0 - 0.5).some((h) => /^Port needs|^Port too long/.test(h)), "straight fits, no note");
+  t.assert.ok(heads(s0 + 0.5).includes("Port needs an elbow"));
+  t.assert.ok(heads(s1 + 0.5).includes("Port needs two elbows"));
+  t.assert.ok(heads(s2 + 0.5).includes("Port too long"));
+});
+
+test("passive radiators: tuning, notch, travel limit and checks", (t) => {
+  const { prTuning, prAddFor } = HIFI;
+  const drv = { id: "p", size: 6.5, Sd: 128.7, Mms: 30.7, Cms: 1.15, Qms: 4.3, Fs: 26.8, Xmax: 8, lb: 0.75, price: 25 };
+  const s0 = hifiSystem(W, T, { ...cfg, box: "sealed" });
+  // Fs of the radiator alone follows from its mass and compliance
+  close(t, prTuning(drv, 1, 0, 1e9).Fp, drv.Fs, 0.5);
+  const add = prAddFor(drv, 2, s0.net, 40);
+  const pc = { ...cfg, box: "radiator", pr: { drv, n: 2, addG: add } };
+  const s = hifiSystem(W, T, pc);
+  close(t, s.Fb, 40, 1, "added mass tunes the box");
+  t.assert.ok(s.Fp < s.Fb, "the radiator's own resonance sits below the tuning");
+  const at = (f) => s.woofer.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
+  // the notch: steep above Fp, shallower below it
+  t.assert.ok(at(s.Fp * 1.25).raw - at(s.Fp).raw > at(s.Fp).raw - at(s.Fp / 1.25).raw, "a notch at Fp");
+  t.assert.ok(at(s.Fb).xmm < at(s.Fb * 1.6).xmm, "the cone barely moves at Fb");
+  t.assert.ok(at(s.Fb).prx > at(s.Fb).xmm, "the radiators move at Fb");
+  // more mass, lower tuning
+  t.assert.ok(hifiSystem(W, T, { ...pc, pr: { drv, n: 2, addG: add + 40 } }).Fb < s.Fb);
+  // one small radiator is flagged; one that doesn't fit is bad
+  const one = { ...pc, pr: { drv: { ...drv, Xmax: 3 }, n: 1, addG: 0 } };
+  t.assert.ok(hifiChips(hifiSystem(W, T, one), W, T, one).some(([, h]) => h === "Radiators small for this woofer"));
+  const big = { ...pc, pr: { drv: { ...drv, size: 10 }, n: 2, addG: 0 } };
+  t.assert.ok(hifiChips(hifiSystem(W, T, big), W, T, big).some(([k, h]) => k === "bad" && h === "Radiators won't fit"));
+});
+
+test("slot vent: tunes like a port of the same area and length, its shelf takes volume, and long slots are flagged", (t) => {
+  const slot = { ...cfg, port: { shape: "slot", h: 1, len: 5 } };
+  const s = hifiSystem(W, T, slot), r = hifiSystem(W, T, cfg);
+  t.assert.ok(s.slot && s.Fb > 20 && s.Fb < 90, `Fb ${s.Fb}`);
+  close(t, s.pArea, 1 * (cfg.dim.w - 1.5), 1e-9, "full inner width");
+  t.assert.ok(s.pVol > (s.pArea * 5 * 16.387) / 1e3, "the shelf is counted");
+  // longer slot, lower tuning
+  t.assert.ok(hifiSystem(W, T, { ...slot, port: { shape: "slot", h: 1, len: 7 } }).Fb < s.Fb);
+  const long = { ...slot, port: { shape: "slot", h: 1, len: 20 } };
+  t.assert.ok(hifiChips(hifiSystem(W, T, long), W, T, long).some(([k, h]) => k === "bad" && h === "Slot too long"));
+  t.assert.ok(r.Fb > 0);
 });

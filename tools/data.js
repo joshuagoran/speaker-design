@@ -310,7 +310,7 @@ export const CABINETS = [
     note: "Vendor-suggested box for the Ciare 18.00SW: 7.55 ft\u00b3 internal, 22 \u00d7 2 in slot, 16.625 in deep, tuned 29 Hz, F3 28.5 Hz." },
   { id: "cube", name: "Cube", vents: ["round4"],
     dims: { 18: { w: 25, h: 25, d: 25 }, 15: { w: 23, h: 23, d: 19 } },
-    note: "Square baffle, centred driver, corner ports. Reads the same in any rotation." },
+    note: "Square baffle, centered driver, corner ports. Reads the same in any rotation." },
 ];
 
 export const FORMATS = [
@@ -577,3 +577,23 @@ for (const t of HIFI_TWEETERS) {
   // radiating diameter for the directivity: the dome, or the horn mouth for a horn-loaded tweeter
   t.domeIn = t.type === "horn-loaded" ? (fp && fp.diameter) || 3 : t.exit || 1;
 }
+
+// Passive radiators for the Hi-fi tab (per unit, US vendors, Oct 2026). Sd cm², Mms g (as shipped), Cms mm/N,
+// Xmax mm one-way (SB, Purifi and Seas publish only the mechanical limit: xmaxKind). No maker states a maximum
+// added mass, so the planner allows up to 3 × Mms.
+export const HIFI_PASSIVES = [
+  { id: "ds135pr", name: "Dayton Audio DS135-PR", size: 5, Sd: 75.4, Mms: 21.8, Cms: 1.52, Qms: 3.93, Fs: 27.7, Xmax: 8, xmaxKind: "linear", lb: 0.5, price: 19.98, src: "parts-express.com, Oct 2026", note: "Paper cone; M5 hole for added mass." },
+  { id: "dsa175pr", name: "Dayton Audio DSA175-PR", size: 6.5, Sd: 128.7, Mms: 30.7, Cms: 1.15, Qms: 4.3, Fs: 26.8, Xmax: 8, xmaxKind: "linear", lb: 0.75, price: 24.98, src: "parts-express.com, Oct 2026", note: "Aluminium cone; M5 screw for added mass. Backordered to late Oct 2026." },
+  { id: "sb16pfcr", name: "SB Acoustics SB16PFCR-00", size: 6, Sd: 124, Mms: 38, Cms: 1.4, Qms: 4.4, Fs: 22, Xmax: 10, xmaxKind: "mechanical", lb: 0.37, price: 28.8, src: "madisound, Oct 2026", note: "M6 thread for SB's 50 g weights (sold separately)." },
+  { id: "ptt525pr", name: "Purifi PTT5.25PR-NF2-01", size: 5.25, Sd: 85, Mms: 50, Cms: 1.28, Qms: 9.9, Fs: 20, Xmax: 14, xmaxKind: "mechanical", lb: null, price: 132, src: "madisound, Oct 2026", note: "M6 mass plug. Weight not published." },
+  { id: "ptt65pr", name: "Purifi PTT6.5PR-NF1-01", size: 6.5, Sd: 133, Mms: 80, Cms: 1.05, Qms: 10.9, Fs: 17, Xmax: 15, xmaxKind: "mechanical", lb: null, price: 145, src: "madisound, Oct 2026", note: "M6 mass plug. Weight not published." },
+  { id: "sp18r", name: "Seas Prestige SP18R (H9944)", size: 6.5, Sd: 130, Mms: 20, Cms: 2.0, Qms: 9.9, Fs: 25, Xmax: 9.5, xmaxKind: "mechanical", lb: null, price: 115.4, src: "madisound, Oct 2026", note: "Light cone meant to be loaded (M4 screw). Qms derived from Rms; specs from a summary of Seas' page, so check the datasheet." },
+  { id: "sb15sfcr", name: "SB Acoustics SB15SFCR-00 (5 × 8″ oval)", size: 6.5, shape: { w: 5.6, h: 8.6 }, Sd: 178, Mms: 62, Cms: 0.93, Qms: 2.7, Fs: 21, Xmax: 11, xmaxKind: "mechanical", lb: null, price: 38.1, src: "madisound, Oct 2026", note: "Racetrack, pairs with the SB15SFCR39 woofers; M6 holes for added mass. Out of stock at Madisound. Outer size approximate." },
+  { id: "dsa215pr", name: "Dayton Audio DSA215-PR", size: 8, Sd: 211.2, Mms: 67, Cms: 0.58, Qms: 7.66, Fs: 25.6, Xmax: 11, xmaxKind: "linear", lb: 1.15, price: 33.98, src: "parts-express.com, Oct 2026", note: "Aluminium cone; M5 hole for added mass." },
+  { id: "ds215pr", name: "Dayton Audio DS215-PR", size: 8, Sd: 211.2, Mms: 68.8, Cms: 0.68, Qms: 7.34, Fs: 23.3, Xmax: 11, xmaxKind: "linear", lb: 1.0, price: 34.98, src: "parts-express.com, Oct 2026", note: "Paper cone; M5 hole for added mass." },
+  { id: "sb20pfcr", name: "SB Acoustics SB20PFCR-00", size: 8, Sd: 216, Mms: 76.7, Cms: 0.83, Qms: 6.8, Fs: 20, Xmax: 11, xmaxKind: "mechanical", lb: 0.53, price: 38.9, src: "madisound, Oct 2026", note: "M6 mass thread. Out of stock at Madisound." },
+  { id: "rss210pr", name: "Dayton Audio RSS210-PR", size: 8, Sd: 213, Mms: 110, Cms: 0.61, Qms: 10.7, Fs: 19.5, Xmax: 20, xmaxKind: "linear", lb: 3.0, price: 84.98, src: "parts-express.com, Oct 2026", note: "Cast frame; four 75 g bolt-on discs included." },
+  { id: "sb23mfcl", name: "SB Acoustics SB23MFCL-00", size: 8, Sd: 210, Mms: 141, Cms: 0.5, Qms: 15.3, Fs: 19, Xmax: 19, xmaxKind: "mechanical", lb: 1.96, price: 85.8, src: "madisound, Oct 2026", note: "Long-stroke, cast frame; M8 mass thread. Datasheet marked preliminary." },
+  { id: "dsa270pr", name: "Dayton Audio DSA270-PR", size: 10, Sd: 353, Mms: 88.4, Cms: 0.6, Qms: 5.26, Fs: 21.9, Xmax: 11, xmaxKind: "linear", lb: 1.9, price: 56.98, src: "parts-express.com, Oct 2026", note: "Aluminium cone; M5 hole for added mass. Check the cutout (listed two ways)." },
+];
+export const prAddMax = (p) => Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
