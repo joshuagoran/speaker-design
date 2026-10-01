@@ -17,7 +17,7 @@ export function usePaDesign({ dispersionPlane }) {
   const { subMidCrossoverHz, setSubMidCrossoverHz, midHornCrossoverHz, setMidHornCrossoverHz } = useCrossovers();
   const { plinthHeightIn, cutaway, setCutaway, cabinet, layout, setLayout, format, wallThicknessIn, setWallThicknessIn, baffleInsetIn, setBaffleInsetIn, baffleColor, setBaffleColor, cabinetFinish, setCabinetFinish, spacerHeightIn, setSpacerHeightIn } = useCabinetStyle();
   const { cornerJoint, setCornerJoint, plywoodSheetKind, setPlywoodSheetKind, boxSetCount, setBoxSetCount } = useCutlistOptions();
-  // In the tower layout the mid chamber is the sub's footprint, 15.5 in tall.
+  /** In the tower layout the mid chamber is the sub's footprint, 15.5 in tall. */
   const effectiveMidBoxDims = layout === "tower" ? { w: subBoxDims.w, h: 15.5, d: subBoxDims.d } : midBoxDims;
   const midWithBox = { ...midDriver, box: effectiveMidBoxDims };
   const subDriverChoices = SUB_OPTIONS.filter((o) => o.size === format.sub);
@@ -31,7 +31,7 @@ export function usePaDesign({ dispersionPlane }) {
     if (midDriverChoices.length) setMidDriver(pickOf(midDriverChoices));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [format]);
-  // Switching 12/15 picks that size's default driver and box; restoring a config sets them itself.
+  /** Switching 12/15 picks that size's default driver and box; restoring a config sets them itself. */
   const skipSizeReset = useRef(true);
   useEffect(() => {
     if (skipSizeReset.current) { skipSizeReset.current = false; return; }
@@ -42,39 +42,45 @@ export function usePaDesign({ dispersionPlane }) {
   }, [midSize]);
   const hornExitMismatch = hornOption.exit !== compressionDriver.exit;
 
-  // Port geometry, matching what the 3D view draws, so the table and the
-  // model describe the same box.
+  /**
+   * Port geometry, matching what the 3D view draws, so the table and the
+   * model describe the same box.
+   */
   const PT = wallThicknessIn;
   const { port, grossL: subGrossLiters, netL: subNetLiters, AMP_V: subAmpVoltage, mdl: subModel, lim: subLimits } = subSystem(subDriver, midDriver, {
     subBox, midDims: midBoxDims, wall: wallThicknessIn, inset: baffleInsetIn, portStyle, cVent: subVentSpec, hpf: subHighpassHz, hpType: subHighpassType, ampW: subAmpWatts, portMax: maxPortAirSpeedMs, layout });
-  // Max SPL for a sine at each frequency (each frequency meets its own port and excursion limits);
-  // the broadband limit above is what applies to music.
+  /**
+   * Max SPL for a sine at each frequency (each frequency meets its own port and excursion limits);
+   * the broadband limit above is what applies to music.
+   */
   const subMaxCurve = subModel ? maxCurveOf(subModel.curve, subDriver.ts, subAmpVoltage, maxPortAirSpeedMs) : null;
   const subMaxCurveNearest = (f) => subMaxCurve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 
   // ---- mid-bass: sealed box ----
   const { V: midVoltage, grossL: midGrossL, netL: midNetL, effL: midEffL, mdl: midModel, vTherm: midThermalVoltage, max: midMaxCurve, useV: midUsedVoltage } =
     midSystem(midDriver, { midDims: effectiveMidBoxDims, wall: wallThicknessIn, inset: baffleInsetIn, xoLo: subMidCrossoverHz, xoHi: midHornCrossoverHz, mAmpW: midAmpWatts });
-  // 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware
+  /** 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware */
   const midCabinetLb = midWeightLb(effectiveMidBoxDims, wallThicknessIn);
   const midWeightLoadedLb = midCabinetLb + (midDriver.lb || 0);
   const midMaxCurveNearest = (f) => midMaxCurve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
-  // Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter.
+  /** Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter. */
   const subThroughLowpassCurve = subModel ? subThroughLowpass(subModel, subDriver.ts, subAmpVoltage, maxPortAirSpeedMs, subMidCrossoverHz) : null;
-  // What the mid actually has to match: the sub at its music limit (one drive level for
-  // the whole band), through its lowpass, less the music-balance allowance.
   // ---- horn + compression driver ----
-  // Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24
-  // highpass at the crossover and a 12 dB/oct rolloff below the horn's loading limit.
-  // Power: amp voltage into the driver's impedance, capped at program (2 x AES), derated
-  // 6 dB per octave when crossing below the frequency the AES rating was measured at.
+  /**
+   * Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24
+   * highpass at the crossover and a 12 dB/oct rolloff below the horn's loading limit.
+   * Power: amp voltage into the driver's impedance, capped at program (2 x AES), derated
+   * 6 dB per octave when crossing below the frequency the AES rating was measured at.
+   */
   const compressionDriverSpec = compressionDriver.hf, hornSpec = hornOption.hf || {};
   const hornModel = hornResponse(compressionDriverSpec, hornSpec, midHornCrossoverHz, hornAmpWatts);
   const hornSplAt = (f) => hornModel.curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b)).spl;
-  // mid beamwidth at the horn crossover, as a rigid piston: -6 dB where ka sin(theta) = 2.2
+  /** mid beamwidth at the horn crossover, as a rigid piston: -6 dB where ka sin(theta) = 2.2 */
   const midBeamWidthDeg = midDriver.ts ? pistonBeamWidthDeg(midDriver.ts.Sd, midHornCrossoverHz) : null;
-  // Horizontal beamwidth against frequency: mid as a rigid piston, horn at its rated coverage down
-  // to Keele's pattern-control limit and proportionally wider below. Rules of thumb.
+  /**
+   * Horizontal beamwidth against frequency: mid as a rigid piston, horn at its rated coverage down
+   * to Keele's pattern-control limit and proportionally wider below. Rules of thumb.
+   */
   const beamCurves = (() => {
     const hz0 = hornOption.hf || {};
     const fK = hz0.covH && hornOption.size ? keeleFrequency(hz0.covH, hornOption.size.w) : null;
@@ -87,11 +93,15 @@ export function usePaDesign({ dispersionPlane }) {
     return { midB, hornB, fK };
   })();
 
+  /**
+   * What the mid actually has to match: the sub at its music limit (one drive level for the whole
+   * band), through its lowpass, less the music-balance allowance.
+   */
   const subMusicAtCrossover = subModel && subLimits ? subMusicOutputAt(subModel, subLimits, subAmpVoltage, subMidCrossoverHz) : null;
 
   const portGeom = { ductH: subVentSpec.slotH, nPorts: subVentSpec.nt, portR: subVentSpec.dia / 2, tubeLen: subVentSpec.len, throat: subVentSpec.throat };
 
-  // One named snapshot of the whole system.
+  /** One named snapshot of the whole system. */
   const snapshot = () => ({
     format: format.id, sub: subDriver.id, mid: midDriver.id, midBox: midBoxPreset.id, cd: compressionDriver.id, horn: hornOption.id,
     cabinet: cabinet.id, portStyle, cDim: subBoxDims, cVent: subVentSpec, hpf: subHighpassHz, hpType: subHighpassType, ampW: subAmpWatts, portMax: maxPortAirSpeedMs, mDim: midBoxDims, wall: wallThicknessIn, inset: baffleInsetIn, xoLo: subMidCrossoverHz, xoHi: midHornCrossoverHz, mAmpW: midAmpWatts, tilt: midBandTiltDb, hfAmpW: hornAmpWatts, hfTilt: hornBandTiltDb,
@@ -137,7 +147,7 @@ export function usePaDesign({ dispersionPlane }) {
   const hasArchedTop = isTower && !!hornOption.profile && !hornOption.scaleX && subBox.w / 2 - 0.75 > hornOption.size.w / 2;
   const stackHeightIn = isTower ? stackBaseHeightIn + 15.5 + (hasArchedTop ? subBox.w - 0.75 : hornOption.size.h + 2) : stackBaseHeightIn + effectiveMidBoxDims.h + 1.2 + hornOption.size.h + 2;
   const hornCenterHeightIn = isTower ? stackBaseHeightIn + 15.5 + (hasArchedTop ? subBox.w / 2 - 0.75 : (hornOption.size.h + 2) / 2) : stackBaseHeightIn + effectiveMidBoxDims.h + 1.2 + 1 + hornOption.size.h / 2;
-  // driver heights for the dispersion map: mid centered in its box (or the tower's mid section), sub at its box center
+  /** driver heights for the dispersion map: mid centered in its box (or the tower's mid section), sub at its box center */
   const midCenterHeightIn = isTower ? stackBaseHeightIn + 15.5 / 2 : stackBaseHeightIn + effectiveMidBoxDims.h / 2;
   const dispersionMapDistanceM = 10;
   const paDispersion = midDriver.ts && hornSpec.covH && hornOption.size ? paDispersionMap({

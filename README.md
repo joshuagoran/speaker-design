@@ -12,11 +12,13 @@ substitute for an impedance sweep on the prototype.
 ## Layout
 
 ```
-src/app.jsx                     page shell and the PA planner (being split up)
-src/components/                 ui/ charts/ drawings/ lock/ optimizer/ saved-configs/
+src/main.jsx                    entry: mounts <App/>
+src/App.jsx                     hash routing, header, and the planner state shared by the PA pages
+src/pages/pa-stack/             PA stack page: PaStackPage, sections/, hooks/ (state: sub, mid, horn, crossovers, ...)
+src/pages/{hifi,fills,cutlist,notes}/   the other pages
+src/components/                 ui/ charts/ drawings/ lock/ optimizer/ stats/ chips/ saved-configs/ stack-view/
 src/hooks/  src/constants/      shared hooks, chart scales, lock keys, units
 src/lib/data.js                 drivers, horns, cabinets
-src/lib/format.js               number formatting
 src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion (pure JS, tested)
 src/lib/hifi/                   hifi model and its optimizer
 tests/                          node:test suites, golden snapshot, mobile layout check

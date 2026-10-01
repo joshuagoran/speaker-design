@@ -5,9 +5,6 @@ import { BoxFront } from "../drawings/BoxFront.jsx";
 import { formatDollars } from "../../lib/format.js";
 import { Delta } from "./Delta.jsx";
 
-/** status notes: a light tint of the status colour with a matching border */
-export const CHIP_BACKGROUND_CLASSES = { ok: "bg-green-50 border-green-200 border-l-4 border-l-green-300", warn: "bg-amber-50 border-amber-200 border-l-4 border-l-amber-300", bad: "bg-red-50 border-red-200 border-l-4 border-l-red-300" };
-
 /** One suggested design with its numbers, preview and load buttons. */
 export function OptimizerResultCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave }) {
   const c = k.config, m = k.metrics, d = k.delta || {};

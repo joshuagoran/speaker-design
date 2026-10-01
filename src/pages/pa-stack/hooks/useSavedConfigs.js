@@ -4,7 +4,7 @@ import { useConfigStore } from "../../../components/saved-configs/useConfigStore
 export function useSavedConfigs() {
   const store = useConfigStore("configs");
   const { db, saved, fb, fbUser, cfgMsg, setCfgMsg, signIn, signOut } = store;
-  // One-time copy of the configs saved in the claude.ai artifact (data/configs-seed.json).
+  /** One-time copy of the configs saved in the claude.ai artifact (data/configs-seed.json). */
   const importSeed = async () => {
     if (!db) return;
     setCfgMsg("Importing…");

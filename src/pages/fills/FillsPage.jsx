@@ -1,11 +1,12 @@
+import { WarningChips } from "../../components/chips/WarningChips.jsx";
+import { StatRowGrid } from "../../components/stats/StatRowGrid.jsx";
+import { StatTile } from "../../components/stats/StatTile.jsx";
 import { ToggleButton } from "../../components/ui/ToggleButton.jsx";
 import { Tooltip } from "../../components/ui/Tooltip.jsx";
 import { Card } from "../../components/ui/Card.jsx";
 import { SelectField } from "../../components/ui/SelectField.jsx";
 import { Slider } from "../../components/ui/Slider.jsx";
 import { ResponseChart } from "../../components/charts/ResponseChart.jsx";
-import { CHIP_BACKGROUND_CLASSES } from "../../components/optimizer/OptimizerResultCard.jsx";
-import { StatLabel, StatRow } from "../../components/optimizer/StatRow.jsx";
 import { fillChips } from "../../lib/pa/chips.js";
 import { FILL_OPTIONS } from "../../lib/data.js";
 import { fillSystem, nearestPoint } from "../../lib/pa/calc.js";
@@ -28,12 +29,7 @@ export function FillsPage() {
   const disp = ts.disp != null ? ts.disp : drv.size >= 10 ? 1.5 : 1;
   const hf = drv.hf;
   const kick = near(60).spl, mid = near(150).spl;
-  const tile = (k, v, u) => (
-    <div key={k} className="bg-stone-50 px-3 py-2.5">
-      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
-      <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
-    </div>
-  );
+  const tile = (k, v, u) => <StatTile key={k} label={k} value={v} unit={u} />;
   const F = fillChips({ drv, dim, Fb: vM ? vM.Fb : null, Qtc: sM ? sM.Qtc : null, hp, portLimited, portMax, f3, hf, hfLimW, ampW, pad });
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "var(--font)" }}>
@@ -48,25 +44,15 @@ export function FillsPage() {
           {tile("Weight", lb.toFixed(0), "lb")}
         </div>
         <ResponseChart fmax={300} series={[{ curve: maxC, label: drv.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.07) }]} marks={[{ f: hp, label: "HP" }, ...(vM ? [{ f: vM.Fb, label: "Fb" }] : [])]} />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
-          {[
+        <StatRowGrid rows={[
             ["Woofer sensitivity", `${sens.toFixed(1)} dB`, "2.83 V, half space, 1 m, modelled"],
             ["HF sensitivity", hf ? `${hf.sens} dB` : "—", hf ? `pad about ${pad.toFixed(0)} dB to match` : "not published"],
             ["HF coverage", hf && hf.cov ? `${hf.cov}° conical` : "—"],
             ["HF crossover", hf && hf.xo ? `${hf.xo} Hz or higher` : "—", "recommended minimum"],
             ["Max SPL at 100 Hz", `${near(100).spl.toFixed(1)} dB`, `sine, ${near(100).who}-limited`],
             ["Price", drv.price ? `$${drv.price}` : "—", drv.src],
-          ]
-.map(([k, v, note, tip]) => <StatRow key={k} k={k} v={v} note={note} tip={tip} />)}
-        </div>
-        <div className="flex flex-col gap-1.5">
-          {F.map(([kind, head, body]) => (
-            <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BACKGROUND_CLASSES[kind] || CHIP_BACKGROUND_CLASSES.ok}`}>
-              <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-              <span className="text-stone-500">{body}</span>
-            </div>
-          ))}
-        </div>
+]} />
+        <WarningChips chips={F} />
         <p className="text-xs text-stone-500"><span className="font-medium text-stone-500">{drv.name}.</span> {drv.note} <Tooltip tip={`Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement ${ts.disp != null ? "as published" : `not published; ${disp} L assumed`}.`}>Spec notes</Tooltip></p>
       </div>
       <aside className="min-w-0 md:col-span-2">

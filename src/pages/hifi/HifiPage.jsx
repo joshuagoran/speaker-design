@@ -1,3 +1,5 @@
+import { WarningChips } from "../../components/chips/WarningChips.jsx";
+import { StatTile } from "../../components/stats/StatTile.jsx";
 import { HIFI_WOOFERS_BY_SIZE, HIFI_PASSIVES_BY_SIZE, isCompressionDriver, HIFI_TWEETERS_BY_TYPE } from "./hifiDriverLists.js";
 import { HifiResultCard } from "./HifiResultCard.jsx";
 import { ToggleButton } from "../../components/ui/ToggleButton.jsx";
@@ -15,12 +17,10 @@ import { RoomView } from "../../components/drawings/RoomView.jsx";
 import { HifiFront } from "../../components/drawings/HifiFront.jsx";
 import { LockButton } from "../../components/lock/LockButton.jsx";
 import { DimensionLock } from "../../components/lock/DimensionLock.jsx";
-import { CHIP_BACKGROUND_CLASSES } from "../../components/optimizer/OptimizerResultCard.jsx";
 import { OptimizerBar } from "../../components/optimizer/OptimizerBar.jsx";
 import { GoalPicker } from "../../components/optimizer/GoalPicker.jsx";
 import { RunRow } from "../../components/optimizer/RunRow.jsx";
 import { ResultCards } from "../../components/optimizer/ResultCards.jsx";
-import { StatLabel } from "../../components/optimizer/StatRow.jsx";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore.js";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs.jsx";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales.js";
@@ -94,12 +94,7 @@ export function HifiPage() {
   const tMax = freqs.map((f) => ({ f, spl: sys.tLevel + 20 * Math.log10(Math.max(1e-6, Math.hypot(linkwitzRileyFilter(f, xo, order, "hp").re, linkwitzRileyFilter(f, xo, order, "hp").im))) }));
   const map = hifiDispersionMap(sys, w, tt, cfg, plane, Math.max(1, seatDist));
   const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0) + (box === "radiator" ? pr.n * (prDrv.price || 0) : 0));
-  const tile = (k, v, u) => (
-    <div key={k} className="bg-stone-50 px-3 py-2.5">
-      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
-      <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
-    </div>
-  );
+  const tile = (k, v, u) => <StatTile key={k} label={k} value={v} unit={u} />;
   const hLk = (key, what) => (hOn ? <LockButton on={!!hLocks[key]} what={what} onClick={() => setHLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null);
   const hDl = (dm, what) => (hOn ? <DimensionLock mode={hLocks.dim[dm] || "free"} what={what} onChange={(m) => setHLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))} /> : null);
   const snapH = () => ({ woofer: w.id, tweeter: t.id, box, dim, port, pr: box === "radiator" ? prSel : undefined, wall, xo, wAmpW, tAmpW });
@@ -186,14 +181,7 @@ export function HifiPage() {
           marks={[{ f: xo, label: "XO" }, { f: sys.bsF3, label: "Baffle step" }, ...(sys.Fb ? [{ f: sys.Fb, label: "Fb" }] : [])]} />
         <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="max dB SPL @ 1 m"
           series={[{ curve: sys.wMax, label: w.name, stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0.06) }, { curve: tMax, label: t.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]} marks={[{ f: xo, label: "XO" }]} />
-        <div className="flex flex-col gap-1.5">
-          {F.map(([kind, head, body]) => (
-            <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BACKGROUND_CLASSES[kind] || CHIP_BACKGROUND_CLASSES.ok}`}>
-              <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-              <span className="text-stone-500">{body}</span>
-            </div>
-          ))}
-        </div>
+        <WarningChips chips={F} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
           <RoomView spacing={spacing} toe={toe} seat={seat} setSeat={setSeat} angles={[(gL.th * 180) / Math.PI, (gR.th * 180) / Math.PI]} />
           <div className="text-sm text-stone-500 leading-relaxed">

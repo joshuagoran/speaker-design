@@ -2,7 +2,7 @@ const { useState } = React;
 
 /** Phone layout: the bottom settings sheet with its tabs, and which result sections are folded open (remembered per viewer). */
 export function usePhoneLayout() {
-  // phones: settings live in a bottom sheet with tabs; result sections fold (remembered per viewer)
+  /** phones: settings live in a bottom sheet with tabs; result sections fold (remembered per viewer) */
   const [isSettingsSheetOpen, setSettingsSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("sub");
   const tabClass = (t) => (activeTab === t ? "" : "max-md:hidden");
