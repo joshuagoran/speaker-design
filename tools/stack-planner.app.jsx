@@ -1,4 +1,4 @@
-const { useEffect, useRef, useState } = React;
+const { useEffect, useId, useRef, useState } = React;
 import { subChips, midChips, hornChips, fillChips } from "./chips.js";
 import { optimize, evaluate as evaluateConfig, roomNeed, ROOMS, GOALS, optFields } from "./optimize.js";
 import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, prAddMax } from "./data.js";
@@ -700,21 +700,58 @@ function Button({ variant = "secondary", size = "md", className = "", ...p }) {
     className={`rounded border ${TOGGLE_SIZE[size]} ${BUTTON_VARIANT[variant]} disabled:border-stone-300 disabled:bg-stone-300 disabled:text-stone-600 disabled:cursor-not-allowed ${className}`} />;
 }
 
+// Panel: one outline, one radius. pad: "md" (default) or "lg"; tone: "white" or "tint"
+function Card({ pad = "md", tone = "white", className = "", ...p }) {
+  return <div {...p} className={`rounded border border-stone-300 ${tone === "tint" ? "bg-stone-50" : "bg-white"} ${pad === "lg" ? "px-4 py-4" : "px-3 py-3"} ${className}`} />;
+}
+// Section heading
+function SectionHead({ className = "", ...p }) {
+  return <h2 {...p} className={`text-xl font-bold ${className}`} />;
+}
+
+// Labelled form row: the label is a real <label> tied to its control, so screen readers name the control
+function Field({ label, htmlFor, extra, className = "mb-4", children }) {
+  return (
+    <div className={className}>
+      <label htmlFor={htmlFor} className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>{label}</span>{extra}</label>
+      {children}
+    </div>
+  );
+}
+// Number input with a unit. Clearing the box does not force 0: the value only changes once a number is typed.
+function NumberField({ label, value, onChange, unit, min, max, step, className = "" }) {
+  const id = useId();
+  const [raw, setRaw] = useState(String(value));
+  useEffect(() => { setRaw((r) => (parseFloat(r) === value ? r : String(value))); }, [value]);
+  return (
+    <Field label={label} htmlFor={id} className={className}>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <input id={id} type="number" inputMode="decimal" value={raw} min={min} max={max} step={step}
+          onChange={(e) => { setRaw(e.target.value); const n = parseFloat(e.target.value); if (Number.isFinite(n)) onChange(n); }}
+          onBlur={() => setRaw(String(value))}
+          className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" />
+        {unit}
+      </div>
+    </Field>
+  );
+}
+
 // group: optional (option) => heading; options with the same heading are listed together under it, in order of first appearance
 function Pick({ label, options, value, onChange, extra, group }) {
   const opt = (o) => <option key={o.id} value={o.id}>{o.name}{o.price ? ` — $${o.price}` : ""}</option>;
   const groups = group ? [...new Set(options.map(group))] : null;
+  const id = useId();
   return (
-    <div className="mb-4">
-      <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>{label}</span>{extra}</div>
+    <Field label={label} htmlFor={id} extra={extra}>
       <select
+        id={id}
         value={value?.id ?? ""}
         onChange={(e) => onChange(options.find((o) => o.id === e.target.value))}
-        className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500 focus:outline-none focus:border-stone-900"
+        className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500"
       >
         {groups ? groups.map((g) => <optgroup key={g} label={g}>{options.filter((o) => group(o) === g).map(opt)}</optgroup>) : options.map(opt)}
       </select>
-    </div>
+    </Field>
   );
 }
 
@@ -753,7 +790,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   ticks.forEach((f) => {
     const X = px(f);
     grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke="#e6e6e6" strokeWidth="1" />);
-    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill="#595959" fontSize="11" fontFamily="JetBrains Mono, monospace">{f >= 1000 ? f / 1000 + "k" : f}</text>);
+    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">{f >= 1000 ? f / 1000 + "k" : f}</text>);
   });
   // hover / drag: a crosshair with each curve's value at that frequency
   const [hf, setHf] = useState(null);
@@ -771,7 +808,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   for (let v = BOT, k = 0; v <= TOP; v += step, k++) {
     const Y = py(v);
     grid.push(<line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke="#e6e6e6" strokeWidth="1" />);
-    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill="#595959" fontSize="11" fontFamily="JetBrains Mono, monospace">{v}</text>);
+    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">{v}</text>);
   }
   return (
     <div ref={box}>
@@ -781,7 +818,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         {marks.filter((m) => m.f > fmin && m.f < fmax).map((m, i, ms) => (
           <g key={m.label + i}>
             <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke="#707070" strokeWidth="1" strokeDasharray="3 4" />
-            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill="#595959" fontSize="10.5" fontFamily="JetBrains Mono, monospace">{m.label}</text>
+            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">{m.label}</text>
           </g>
         ))}
         {paths.map((p) => <path key={p.label + "f"} d={p.fill} fill={p.tint} />)}
@@ -789,23 +826,23 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         {!narrow && paths.map((p, i) => (
           <g key={p.label + "k"}>
             <line x1={x0 + 10} y1={y0 + 8 + i * 16} x2={x0 + 30} y2={y0 + 8 + i * 16} stroke={p.stroke} strokeWidth="2" />
-            <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#595959" fontSize="11" fontFamily="JetBrains Mono, monospace">{p.label}</text>
+            <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">{p.label}</text>
           </g>
         ))}
         {hf && (<g pointerEvents="none">
           <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke="#707070" strokeWidth="1" />
           {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke="#fff" strokeWidth="1.5" />)}
           {(() => { const t = `${hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz`, w = t.length * 6.5 + 8, X = Math.max(x0 + w / 2, Math.min(x1 - w / 2, px(hf)));
-            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill="#111111" /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="11" fontFamily="JetBrains Mono, monospace" fill="#ffffff">{t}</text></g>; })()}
-          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="11" fontFamily="JetBrains Mono, monospace" fill="#111111" stroke="#fff" strokeWidth="3" paintOrder="stroke">
+            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill="#111111" /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="12" fontFamily="JetBrains Mono, monospace" fill="#ffffff">{t}</text></g>; })()}
+          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="12" fontFamily="JetBrains Mono, monospace" fill="#111111" stroke="#fff" strokeWidth="3" paintOrder="stroke">
             {hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz{hits.map((h) => ` · ${h.label} ${h.o.spl.toFixed(0)}${unit}`).join("")}
           </text>
         </g>)}
-        <text x={W / 2} y={H - 4} textAnchor="middle" fill="#595959" fontSize="11" fontFamily="JetBrains Mono, monospace">frequency, Hz</text>
-        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#595959" fontSize="11" fontFamily="JetBrains Mono, monospace">{yLabel}</text>
+        <text x={W / 2} y={H - 4} textAnchor="middle" fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">frequency, Hz</text>
+        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">{yLabel}</text>
       </svg>
       {narrow && paths.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[11px] text-stone-600" style={{ fontFamily: "var(--font)" }}>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-stone-600" style={{ fontFamily: "var(--font)" }}>
           {paths.map((p) => <span key={p.label} className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5" style={{ background: p.stroke }} />{p.label}</span>)}
         </div>
       )}
@@ -825,13 +862,15 @@ function FoldHead({ id, title, folds, toggle, className = "" }) {
 }
 
 function Slider({ label, value, min, max, step, unit, onChange, extra }) {
+  const id = useId();
+  const shown = typeof value === "number" ? value.toFixed(step < 1 ? 2 : 0) : value;
   return (
     <div className="mb-3">
       <div className="flex justify-between items-center gap-3 mb-1">
-        <span className="flex items-center gap-2"><span className="text-sm text-stone-600">{label}</span>{extra}</span>
-        <span className="text-sm tabular-nums font-medium">{typeof value === "number" ? value.toFixed(step < 1 ? 2 : 0) : value}{unit}</span>
+        <span className="flex items-center gap-2"><label htmlFor={id} className="text-sm text-stone-500">{label}</label>{extra}</span>
+        <span className="text-sm tabular-nums font-medium">{shown}{unit}</span>
       </div>
-      <input type="range" min={min} max={max} step={step} value={value}
+      <input id={id} type="range" min={min} max={max} step={step} value={value} aria-valuetext={`${shown}${unit || ""}`}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="w-full accent-stone-900" />
     </div>
@@ -866,7 +905,7 @@ function DispMap({ map, title }) {
         {[200, 500, 1000, 2000, 5000, 10000, 20000].map((f) => <text key={f} x={fx(f)} y={H - 8} fontSize="10" textAnchor="middle" fill="#595959">{f >= 1000 ? f / 1000 + "k" : f}</text>)}
         {hover && <rect x={L + hover.i * cw} y={T + hover.j * ch} width={cw} height={ch} fill="none" stroke="#111111" strokeWidth="1.5" />}
       </svg>
-      <div className="flex items-center gap-2 text-[11px] text-stone-500 mt-1">0 dB<span className="h-2 flex-1 max-w-[160px] rounded" style={{ background: `linear-gradient(to right, ${col(0)}, ${col(-9)}, ${col(-18)})` }} />−18 dB</div>
+      <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">0 dB<span className="h-2 flex-1 max-w-[160px] rounded" style={{ background: `linear-gradient(to right, ${col(0)}, ${col(-9)}, ${col(-18)})` }} />−18 dB</div>
     </div>
   );
 }
@@ -934,14 +973,14 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
   const cw = HIFI_WOOFERS.find((o) => o.id === k.woofer), ct = HIFI_TWEETERS.find((o) => o.id === k.tweeter);
   const tile = (label, v, delta) => (
     <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1.5">
-      <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
+      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
       <div className="tabular-nums">{v}</div>{delta}
     </div>
   );
   const who = { Xmax: "cone travel", port: "port air speed", radiator: "radiator travel", thermal: "the woofer's power rating", amp: "the amp" }[k.whoW] || k.whoW;
   return (
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
-      <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
+      <div className="text-xs uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{cw.size}″ {k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} pr={prOf(c)} guide={k.guided ? guide : null} small />
@@ -1029,7 +1068,7 @@ function HifiPage() {
   const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0) + (box === "radiator" ? pr.n * (prDrv.price || 0) : 0));
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
-      <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
       <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
     </div>
   );
@@ -1065,12 +1104,11 @@ function HifiPage() {
     </div>
   );
   const optPanel = hOn && (
-    <div className="rounded-lg border border-stone-300 bg-white p-4 mt-3">
-      <h2 className="text-xl" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Find a better design</h2>
+    <Card pad="lg" className="mt-3">
+      <SectionHead>Find a better design</SectionHead>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
         <div className="mt-3">
-          <div className="text-sm text-stone-500 mb-1">Driver budget, pair <span className="text-xs">(woofers + tweeters{guide ? " + waveguides" : ""}, at the listed prices)</span></div>
-          <div className="flex flex-wrap items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={hBudget} min={50} step={25} onChange={(e) => { setHBudget(+e.target.value || 0); ls.set("hifi.budget", +e.target.value || 0); }} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $</div>
+          <NumberField label={<>Driver budget, pair <span className="text-xs">(woofers + tweeters{guide ? " + waveguides" : ""}, at the listed prices)</span></>} value={hBudget} min={50} step={25} unit="$" onChange={(n) => { setHBudget(n); ls.set("hifi.budget", n); }} className="" />
         </div>
         <div className="mt-3">
           <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
@@ -1092,7 +1130,7 @@ function HifiPage() {
       </>)}
       {hRes && !hBusy && hRes.goalMissing && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">{hRes.goalMissing}</div>}
       {hRes && !hBusy && !hRes.cards.length && !hRes.goalMissing && <div className="mt-3 text-sm text-orange-900">Nothing fits all your limits. A bigger budget or fewer locks would open it up.</div>}
-    </div>
+    </Card>
   );
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "var(--font)" }}>
@@ -1168,7 +1206,7 @@ function HifiPage() {
           <div className="flex flex-wrap gap-1">{[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <ToggleBtn key={v} onClick={() => setWall(v)} on={wall === v}>{l}</ToggleBtn>)}</div>
           <span>{hLk("wall", "the panel thickness")}</span>
         </div>
-        <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
+        <Card className="mb-4">
           <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
           <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="&#8243;" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
           <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
@@ -1190,15 +1228,15 @@ function HifiPage() {
             <Slider label="Added mass, each" value={pr.addG} min={0} max={prAddMax(prDrv)} step={5} unit=" g" onChange={(v) => setPrSel((p) => ({ ...p, addG: v }))} />
           </>)}
           <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of ${sys.slot ? "slot" : "port"}` : sys.radiator ? `; radiators on the back tune it to ${sys.Fb.toFixed(0)} Hz, with a notch at ${sys.Fp.toFixed(0)} Hz (their own resonance)${prDrv.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}` : ", lightly stuffed"}.</div>
-        </div>
-        <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
+        </Card>
+        <Card className="mb-4">
           <Slider label="Crossover" value={xo} min={800} max={4000} step={50} unit=" Hz" onChange={setXo} extra={hLk("xo", "the crossover")} />
           <div className="flex gap-1 mb-3">{[[4, "LR24"], [8, "LR48"]].map(([v, l]) => <ToggleBtn key={v} onClick={() => setOrder(v)} on={order === v}>{l}</ToggleBtn>)}</div>
           <Slider label="Baffle-step boost" value={bsc} min={0} max={6} step={0.5} unit=" dB" onChange={setBsc} />
           <Slider label="Woofer amp @ 8 Ω" value={wAmpW} min={10} max={500} step={10} unit=" W" onChange={setWAmpW} extra={hLk("wAmpW", "the woofer amp power")} />
           <Slider label="Tweeter amp @ 8 Ω" value={tAmpW} min={5} max={200} step={5} unit=" W" onChange={setTAmpW} extra={hLk("tAmpW", "the tweeter amp power")} />
-        </div>
-        <div className="rounded border border-stone-300 bg-white px-3 py-3">
+        </Card>
+        <Card>
           <div className="text-sm text-stone-600 mb-1">Placement</div>
           <div className="flex flex-wrap gap-1 mb-3">{Object.entries(HIFI_PLACES).map(([k, p]) => <ToggleBtn key={k} onClick={() => setPlace(k)} on={place === k}>{p.name}</ToggleBtn>)}</div>
           {place !== "free" && <Slider label="Distance to the wall" value={wallFt} min={0.5} max={6} step={0.25} unit=" ft" onChange={setWallFt} />}
@@ -1206,7 +1244,7 @@ function HifiPage() {
           <Slider label="Toe-in" value={toe} min={0} max={35} step={1} unit="°" onChange={setToe} />
           <Slider label="Box bottom height (stand)" value={standIn} min={0} max={40} step={1} unit="&#8243;" onChange={setStandIn} />
           <Slider label="Ear height" value={earIn} min={24} max={60} step={1} unit="&#8243;" onChange={setEarIn} />
-        </div>
+        </Card>
       </aside>
     </main>
   );
@@ -1224,7 +1262,7 @@ function NotesPage() {
             return (
               <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
                 <div className="flex justify-between items-baseline mb-1">
-                  <h2 className="text-xl" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{r.name}</h2>
+                  <SectionHead>{r.name}</SectionHead>
                   <span className="text-sm tabular-nums text-stone-600">≈ ${total.toLocaleString()}</span>
                 </div>
                 <p className="text-xs text-stone-500 mb-3">{r.note}</p>
@@ -1239,7 +1277,7 @@ function NotesPage() {
         </section>
 
         <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Signal path (mains rack)</h2>
+          <SectionHead className="mb-2">Signal path (mains rack)</SectionHead>
           <div className="max-w-4xl"><SignalPath /></div>
           <p className="text-sm text-stone-700 max-w-3xl mt-3">
             Division of labour: the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs.
@@ -1249,7 +1287,7 @@ function NotesPage() {
           </p>
         </section>
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Amp DSP: QSC GXD4 / GXD8</h2>
+          <SectionHead className="mb-3">Amp DSP: QSC GXD4 / GXD8</SectionHead>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
               ["Power per channel", "GXD4: 400 W into 8 \u03a9, 600 W into 4 \u03a9. GXD8: 800 W into 8 \u03a9, 1200 W into 4 \u03a9. Continuous, both channels driven. Voltage gain 33.5 dB (GXD4), 36.5 dB (GXD8)."],
@@ -1285,7 +1323,7 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Crossover / DSP: PA2 and alternatives</h2>
+          <SectionHead className="mb-3">Crossover / DSP: PA2 and alternatives</SectionHead>
           <p className="text-sm text-stone-700 mb-3 max-w-3xl">What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set in volts or dBu with attack and release, a slower RMS limiter, PEQ and delay. At ~15 ft from the mixer keep the inputs balanced; outputs to amps in the same rack matter less.</p>
           <div className="overflow-x-auto"><table className="text-sm w-full min-w-[720px] border-collapse">
             <thead><tr className="text-stone-500 text-left border-b border-stone-300">
@@ -1311,7 +1349,7 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Home inputs: Gemini MXR-01BT</h2>
+          <SectionHead className="mb-3">Home inputs: Gemini MXR-01BT</SectionHead>
           <p className="text-sm text-stone-700 mb-3 max-w-3xl">Turntable, line and phone into the same DSP and amps, with one master volume. A 2-channel DJ mixer does it all in one box.</p>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
@@ -1332,7 +1370,7 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Passive crossover: calibrate and build</h2>
+          <SectionHead className="mb-3">Passive crossover: calibrate and build</SectionHead>
           <p className="text-sm text-stone-700 mb-3 max-w-3xl">For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80 per box in parts. All values get tuned, not just the pad.</p>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
@@ -1353,7 +1391,7 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Materials</h2>
+          <SectionHead className="mb-3">Materials</SectionHead>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
               ["Prototype in particleboard", "Cheap and flat. Build it to verify duct tuning, then transfer interior dimensions \u2014 not the cut list \u2014 to the real material."],
@@ -1369,7 +1407,7 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Still to decide</h2>
+          <SectionHead className="mb-3">Still to decide</SectionHead>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
               ["Baffle mounting", "Cleats (forgiving, costs 3/4\" of interior on each side) or a stopped rabbet in the frame panels (tighter, squares the box, needs a dado). Baffle size changes with the choice."],
@@ -1417,7 +1455,7 @@ function FillsPage() {
   const kick = near(60).spl, mid = near(150).spl;
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
-      <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
       <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
     </div>
   );
@@ -1468,7 +1506,7 @@ function FillsPage() {
             <ToggleBtn key={v} onClick={() => setBoxType(v)} on={boxType === v}>{l}</ToggleBtn>
           ))}
         </div>
-        <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
+        <Card className="mb-4">
           <Slider label="Width" value={dim.w} min={9} max={20} step={0.5} unit="&#8243;" onChange={(v) => setD("w", v)} />
           <Slider label="Height" value={dim.h} min={9} max={28} step={0.5} unit="&#8243;" onChange={(v) => setD("h", v)} />
           <Slider label="Depth" value={dim.d} min={7} max={20} step={0.5} unit="&#8243;" onChange={(v) => setD("d", v)} />
@@ -1479,12 +1517,12 @@ function FillsPage() {
             <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
           </>)}
           <div className="text-xs text-stone-500">{gross.toFixed(0)} L gross{boxType === "sealed" ? ", stuffed" : `, ${pArea.toFixed(1)} in² of port`}.</div>
-        </div>
-        <div className="rounded border border-stone-300 bg-white px-3 py-3">
+        </Card>
+        <Card>
           <Slider label="Highpass to the subs (LR24)" value={hp} min={50} max={160} step={5} unit=" Hz" onChange={setHp} />
           <Slider label="Amp power per box @ 8 Ω" value={ampW} min={25} max={800} step={25} unit=" W" onChange={setAmpW} />
           <div className="text-xs text-stone-500">A freed GXD4 channel with two 8 Ω fills in parallel gives about 300 W each.</div>
-        </div>
+        </Card>
       </aside>
     </main>
   );
@@ -1544,7 +1582,7 @@ function CutlistPage(props) {
           </tr>))}</tbody>
       </table></div>
       {vent.length > 0 && <p className="text-sm text-stone-600 mb-6">Also: {vent.join("; ")}.</p>}
-      <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Sheet layout, {S.name}</h2>
+      <SectionHead className="mb-2">Sheet layout, {S.name}</SectionHead>
       {packs.map((pk) => (
         <div key={pk.t} className="mb-6">
           <div className="text-sm font-medium mb-2">{tName(pk.t)} birch: {pk.sheets.length} sheet{pk.sheets.length > 1 ? "s" : ""}</div>
@@ -1566,7 +1604,7 @@ const LOCK_OPEN_PATH = "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h2c0-1.66 1.34-3 
 function LockIcon({ locked }) {
   return <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d={locked ? LOCK_PATH : LOCK_OPEN_PATH} fill="currentColor" fillRule="evenodd" /></svg>;
 }
-const lockCls = (on) => `inline-flex items-center justify-center gap-0.5 min-w-[28px] h-6 px-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 text-stone-400 bg-white hover:border-stone-500 hover:text-stone-600"}`;
+const lockCls = (on) => `inline-flex items-center justify-center gap-0.5 min-w-[32px] h-8 px-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 text-stone-400 bg-white hover:border-stone-500 hover:text-stone-600"}`;
 function LockBtn({ on, onClick, what }) {
   const tip = on ? `Locked: the optimizer keeps ${what}` : `Unlocked: the optimizer may change ${what}`;
   return <button type="button" onClick={onClick} aria-pressed={on} aria-label={tip} title={tip} className={lockCls(on)}><LockIcon locked={on} /></button>;
@@ -1612,7 +1650,7 @@ function runOptimizer(input) {
 
 // a goal's place in the priority order, floating on the button's corner so the label doesn't move
 function RankBadge({ n }) {
-  return <span className="absolute -top-2 -left-2 min-w-[18px] h-[18px] px-1 rounded-full bg-cmy-a text-white text-[11px] font-bold leading-[18px] text-center" aria-label={`priority ${n}`}>{n}</span>;
+  return <span className="absolute -top-2 -left-2 min-w-[18px] h-[18px] px-1 rounded-full bg-cmy-a text-white text-xs font-bold leading-[18px] text-center" aria-label={`priority ${n}`}>{n}</span>;
 }
 // status notes: a light tint of the status colour with a matching border
 const CHIP_BG = { ok: "bg-green-50 border-green-200 border-l-4 border-l-green-300", warn: "bg-amber-50 border-amber-200 border-l-4 border-l-amber-300", bad: "bg-red-50 border-red-200 border-l-4 border-l-red-300" };
@@ -1700,14 +1738,14 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
   const c = k.config, m = k.metrics, d = k.delta || {};
   const tile = (label, v, delta) => (
     <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1.5">
-      <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
+      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
       <div className="tabular-nums">{v}</div>{delta}
     </div>
   );
   const sheets = k.build.sheets.map((x) => `${x.n} sheet${x.n > 1 ? "s" : ""} ${x.t === 0.5 ? "1/2″" : x.t === 0.75 ? "3/4″" : x.t + "″"}`).join(" + ");
   return (
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
-      <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
+      <div className="text-xs uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{k.names.sub} · {c.cDim.w} × {c.cDim.h} × {c.cDim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         {k.geom && <BoxFront g={k.geom} cur={cur && cur.geom} />}
@@ -1726,7 +1764,7 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
       ))}
       <div className="text-xs text-stone-600">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
       <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
-      {!k.priceKnown && <div className="text-[11px] text-stone-500">Some prices unknown</div>}
+      {!k.priceKnown && <div className="text-xs text-stone-500">Some prices unknown</div>}
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
         <Button variant="primary" onClick={onLoad} className="flex-1">Load</Button>
@@ -1744,20 +1782,18 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
     + (goals.length > 1 ? `, and ${goals.slice(1).map((x) => ({ cheaper: "cheaper", lighter: "lighter", lower: "lower", louder: "louder" })[x]).join(" and ")} than yours` : "");
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "var(--font)" }}>
-      <div className="rounded-lg border border-stone-300 bg-white p-4">
-        <h2 className="text-xl" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Find a better design</h2>
+      <Card pad="lg">
+        <SectionHead>Find a better design</SectionHead>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>
             <div className="flex flex-wrap gap-1">{Object.entries(ROOMS).map(([k, r]) => <ToggleBtn key={k} aria-label={r.name} on={String(optIn.room) === k} onClick={() => setOpt({ room: k === "outdoor" ? k : +k })}>{r.short}</ToggleBtn>)}</div>
           </div>
           <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Max per box</div>
-            <div className="flex items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.maxLb} min={30} max={250} onChange={(e) => setOpt({ maxLb: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> lb</div>
+            <NumberField label="Max per box" value={optIn.maxLb} min={30} max={250} unit="lb" onChange={(n) => setOpt({ maxLb: n })} className="" />
           </div>
           <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Driver budget, per stack <span className="text-xs">(sub + mid + CD, at the listed prices)</span></div>
-            <div className="flex flex-wrap items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.budget} min={100} step={25} onChange={(e) => setOpt({ budget: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $</div>
+            <NumberField label={<>Driver budget, per stack <span className="text-xs">(sub + mid + CD, at the listed prices)</span></>} value={optIn.budget} min={100} step={25} unit="$" onChange={(n) => setOpt({ budget: n })} className="" />
           </div>
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
@@ -1790,7 +1826,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
               <ToggleBtn key={o.text} on={false} onClick={() => run(o.set)}>{o.text}</ToggleBtn>))}</div>}
           </div>
         )}
-      </div>
+      </Card>
     </section>
   );
 }
@@ -2166,14 +2202,14 @@ function StackPlanner() {
 
       {saved !== null && (
         <section className="max-w-6xl mx-auto px-4 md:px-8 pb-2" style={{ fontFamily: "var(--font)" }}>
-          <div className="rounded-lg border border-stone-300 bg-stone-50 px-4 py-3">
+          <Card pad="lg" tone="tint">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-stone-500 mr-1">Saved configurations</span>
               {db ? (<>
                 <input value={cfgName} onChange={(e) => setCfgName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") saveCfg(); }}
                   placeholder="Name this setup" maxLength={60}
-                  className="px-3 py-1.5 rounded border border-stone-300 bg-white text-sm w-56 focus:outline-none focus:border-stone-900" />
+                  className="px-3 py-1.5 rounded border border-stone-300 bg-white text-sm w-56" />
                 <Button variant="dark" onClick={saveCfg} disabled={!cfgName.trim()}>Save current</Button>
                 {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
                 {fbUser && (<span className="ml-auto flex items-center gap-3 text-xs text-stone-500">
@@ -2205,7 +2241,7 @@ function StackPlanner() {
                 </div>
               );
             })()}
-          </div>
+          </Card>
         </section>
       )}
 
@@ -2244,7 +2280,7 @@ function StackPlanner() {
       {mdl && lim && (
         <div className="md:hidden sticky top-0 z-30 bg-stone-100/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center" style={{ fontFamily: "var(--font)" }}>
           {[["Fb", `${mdl.Fb.toFixed(1)}`, "Hz"], ["35 Hz", `${maxNear(35).spl.toFixed(0)}`, "dB"], ["Sub", `${subLbLoaded.toFixed(0)}`, "lb"], ["Limit", { "port air speed": "port", "cone travel (Xmax)": "Xmax", "driver program rating": "thermal", "amplifier power": "amp" }[lim.who] || lim.who, ""]].map(([k, v, u]) => (
-            <div key={k}><div className="text-[10px] uppercase tracking-wider text-stone-500">{k}</div><div className="text-sm font-medium tabular-nums">{v}<span className="text-[10px] text-stone-500 ml-0.5">{u}</span></div></div>
+            <div key={k}><div className="text-xs uppercase tracking-wider text-stone-500">{k}</div><div className="text-sm font-medium tabular-nums">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div></div>
           ))}
         </div>
       )}
@@ -2269,7 +2305,7 @@ function StackPlanner() {
                 ["Weight", subLbLoaded.toFixed(0), "lb"],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
-                  <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
                   <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
@@ -2332,7 +2368,7 @@ function StackPlanner() {
                 ["Weight", midLbLoaded.toFixed(0), "lb"],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
-                  <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
                   <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
@@ -2386,7 +2422,7 @@ function StackPlanner() {
                 ["Mid beam at XO", midBeam ? Math.round(midBeam) : "\u2014", midBeam ? "\u00b0" : ""],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
-                  <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
                   <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
@@ -2512,11 +2548,11 @@ function StackPlanner() {
           <div className={tabCls("sub")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Cabinet</div>
-            <div className="rounded border border-stone-300 bg-white px-3 py-3">
+            <Card>
               <Slider label="Width"  value={cDim.w} min={18} max={40} step={0.5} unit="&#8243;" onChange={(v) => setC("w", v)} extra={dl("subDim", "w", "Sub width")} />
               <Slider label="Height" value={cDim.h} min={18} max={42} step={0.5} unit="&#8243;" onChange={(v) => setC("h", v)} extra={dl("subDim", "h", "Sub height")} />
               <Slider label="Depth"  value={cDim.d} min={14} max={32} step={0.5} unit="&#8243;" onChange={(v) => setC("d", v)} extra={dl("subDim", "d", "Sub depth")} />
-            </div>
+            </Card>
           </div>
           </div>
           <div className={tabCls("sub")}>
@@ -2535,7 +2571,7 @@ function StackPlanner() {
                 })}
               </div>
             )}
-            <div className="rounded border border-stone-300 bg-white px-3 py-3 mt-2">
+            <Card className="mt-2">
               {(portStyle === "slots" || portStyle === "folded") &&
                 <Slider label="Slot height" value={cVent.slotH} min={1.5} max={9} step={0.25} unit="&#8243;" onChange={(v) => setV("slotH", v)} />}
               {(portStyle === "vslots" || portStyle === "vslot1") &&
@@ -2547,11 +2583,11 @@ function StackPlanner() {
               <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="&#8243;" onChange={(v) => setV("len", v)} />
               <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
-            </div>
+            </Card>
           </div>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Sub highpass and amp</div>
-            <div className="rounded border border-stone-300 bg-white px-3 py-3">
+            <Card>
               <Slider label={`Highpass (${hpType})`} value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} extra={lk("hpf", "the highpass")} />
               <div className="flex flex-wrap gap-1 -mt-1 mb-3">
                 {Object.keys(HP_TYPES).map((t) => (
@@ -2559,7 +2595,7 @@ function StackPlanner() {
                 ))}
               </div>
               <Slider label="Amp power per channel @ 8 Ω" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} extra={lk("ampW", "the sub amp power")} />
-            </div>
+            </Card>
           </div>
           </div>
           <div className={tabCls("mid")}>
@@ -2574,7 +2610,7 @@ function StackPlanner() {
           <Pick label={`Mid-bass ${midSize}"`} options={midList} value={mid} onChange={setMid} extra={lk("mid", "the mid-bass driver")} />
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
-            <div className="rounded border border-stone-300 bg-white px-3 py-3">
+            <Card>
               {layout === "tower" ? (
                 <div className="text-xs text-stone-500 mb-3">Tower layout: the mid chamber is the sub's footprint, {cDim.w}″ × 15.5″ × {cDim.d}″.</div>
               ) : (<>
@@ -2587,17 +2623,17 @@ function StackPlanner() {
               <Slider label="Mid amp power per channel @ 8 Ω" value={mAmpW} min={50} max={2000} step={25} unit=" W" onChange={setMAmpW} extra={lk("mAmpW", "the mid amp power")} />
               <Slider label="Music balance: mid band needs less by" value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
               <div className="text-xs text-stone-500">0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.</div>
-            </div>
+            </Card>
           </div>
           </div>
           <div className={tabCls("horn")}>
           <Pick label="Compression driver" options={CD_OPTIONS} value={cd} onChange={setCd} extra={lk("cd", "the compression driver")} />
           <Pick label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} extra={lk("horn", "the horn")} />
-          <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
+          <Card className="mb-4">
             <Slider label="HF amp power per channel @ 8 Ω" value={hfAmpW} min={10} max={500} step={5} unit=" W" onChange={setHfAmpW} extra={lk("hfAmpW", "the HF amp power")} />
             <Slider label="Music balance: HF band needs less by" value={hfTilt} min={0} max={12} step={1} unit=" dB" onChange={setHfTilt} />
             <div className="text-xs text-stone-500">16 Ω drivers draw half the power from the same amp.</div>
-          </div>
+          </Card>
           {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}" vs {cd.exit}").</div>}
           </div>
           </div>
@@ -2641,14 +2677,14 @@ function StackPlanner() {
         </div>
         {showDetails && <section className="min-w-0 md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "var(--font)" }}>
           <div>
-            <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Sub</h2>
+            <SectionHead className="mb-2">Sub</SectionHead>
             <p className="text-sm text-stone-700">
               {sub.name} in a {subBox.w}×{subBox.h}×{subBox.d} in cabinet, {grossL.toFixed(0)} L gross, {netL.toFixed(0)} L net.
               Vent: {port.desc}. 3/4″ baffle set {inset}″ behind the frame, {wall === 0.5 ? "1/2″" : "3/4″"} birch walls, 1/4″ roundovers on the front edges.
             </p>
           </div>
           <div>
-            <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Mid-bass cube</h2>
+            <SectionHead className="mb-2">Mid-bass cube</SectionHead>
             <p className="text-sm text-stone-700">
               {mid.name} in a {midDims.w}×{midDims.h}×{midDims.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed.
               Covers {xoLo} Hz to {xoHi} Hz. Same construction, flush-mounted driver.
@@ -2656,7 +2692,7 @@ function StackPlanner() {
             {mid.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{mid.name}.</span> {mid.note}</p>}
           </div>
           <div>
-            <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Horn</h2>
+            <SectionHead className="mb-2">Horn</SectionHead>
             <p className="text-sm text-stone-700">
               {horn.name} with {cd.name}, crossed at {xoHi} Hz (maker suggests {horn.xo}). Sits on a short block so the mouth clears the cube.
               Total stack height about {stackH.toFixed(0)} in, horn center at {hornCenter.toFixed(0)} in.
