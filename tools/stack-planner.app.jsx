@@ -1,4 +1,4 @@
-const { useEffect, useRef, useState } = React;
+const { useEffect, useId, useRef, useState } = React;
 import { subChips, midChips, hornChips, fillChips } from "./chips.js";
 import { optimize, evaluate as evaluateConfig, roomNeed, ROOMS, GOALS, optFields } from "./optimize.js";
 import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, prAddMax } from "./data.js";
@@ -626,11 +626,11 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
 }
 
 function SignalPath() {
-  const ink = "#111111", mute = "#707070", line = "#707070";
-  const col = { pa2: "#707070", sub: "#0082c8", mid: "#e5007e", hf: "#e5007e", grey: "#707070" };
+  const ink = PAL.ink, mute = PAL.muted, line = PAL.muted;
+  const col = { pa2: PAL.muted, sub: PAL.cyan, mid: PAL.magenta, hf: PAL.magenta, grey: PAL.muted };
   const Box = ({ x, y, w, h, c, children }) => (
     <g>
-      <rect x={x} y={y} width={w} height={h} rx="6" fill="#ffffff" stroke={c} strokeWidth="1.5" />
+      <rect x={x} y={y} width={w} height={h} rx="6" fill={PAL.white} stroke={c} strokeWidth="1.5" />
       {children}
     </g>
   );
@@ -683,21 +683,302 @@ function SignalPath() {
 // ---------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------
+// Shared controls: one look for toggle (segment) buttons and for action buttons
+const TOGGLE_SIZE = { md: "px-3 py-2 text-sm", xs: "px-2.5 py-1 text-xs" };
+function ToggleBtn({ on, size = "md", className = "", ...p }) {
+  return <button type="button" aria-pressed={!!on} {...p}
+    className={`rounded border ${TOGGLE_SIZE[size]} ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-white hover:border-stone-500"} ${className}`} />;
+}
+const BUTTON_VARIANT = {
+  primary: "border-cmy-a bg-cmy-a text-white font-semibold",
+  dark: "border-stone-900 bg-stone-900 text-stone-50",
+  secondary: "border-stone-300 bg-white hover:border-stone-500",
+};
+// Disabled = grey fill with dark text (readable), never faded with opacity
+function Button({ variant = "secondary", size = "md", className = "", ...p }) {
+  return <button type="button" {...p}
+    className={`rounded border ${TOGGLE_SIZE[size]} ${BUTTON_VARIANT[variant]} disabled:border-stone-300 disabled:bg-stone-300 disabled:text-stone-500 disabled:cursor-not-allowed ${className}`} />;
+}
+
+// Term with a tooltip. Opens on hover, keyboard focus or tap; Esc or a tap elsewhere closes it.
+function Tip({ tip, children, className = "" }) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [flip, setFlip] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const r = ref.current?.getBoundingClientRect();
+    setFlip(!!r && r.left + 288 > window.innerWidth - 8);
+    const off = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener("pointerdown", off);
+    return () => document.removeEventListener("pointerdown", off);
+  }, [open]);
+  return (
+    <span ref={ref} className={`relative inline-block ${className}`} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <span role="button" tabIndex={0} aria-describedby={open ? id : undefined} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); } }}
+        className="cursor-help border-b-2 border-dotted border-soft">{children}</span>
+      {open && <span role="tooltip" id={id} className={`absolute z-30 top-full mt-1 w-max max-w-[18rem] rounded bg-stone-900 text-stone-50 text-xs font-normal normal-case tracking-normal leading-snug px-2 py-1.5 text-left ${flip ? "right-0" : "left-0"}`}>{tip}</span>}
+    </span>
+  );
+}
+
+// Colour choice: optional named presets, a row of paint swatches and a custom picker
+function SwatchPicker({ label, value, onChange, swatches, presets, titlePrefix = "", note }) {
+  const id = useId();
+  const preset = presets && presets[value];
+  const ring = (on) => (on ? "border-stone-900" : "border-stone-300");
+  return (
+    <div className="mb-5">
+      <div id={id} className="text-sm text-stone-500 mb-1">{label}</div>
+      <div role="group" aria-labelledby={id} className="flex flex-wrap gap-1.5 items-center">
+        {presets && Object.entries(presets).map(([k, f]) => (
+          <button key={k} type="button" title={f.name} aria-pressed={value === k} onClick={() => onChange(k)}
+            className={`px-2.5 h-7 rounded-full border-2 text-xs ${ring(value === k)}`}
+            style={{ background: f.swatch, color: k === "walnut" ? PAL.white : PAL.ink }}>{f.name}</button>
+        ))}
+        {swatches.map(([hex, name]) => (
+          <button key={hex} type="button" title={titlePrefix + name} aria-label={titlePrefix + name} aria-pressed={!preset && value.toLowerCase() === hex} onClick={() => onChange(hex)}
+            className={`swatch w-7 h-7 rounded-full border-2 ${ring(!preset && value.toLowerCase() === hex)}`} style={{ background: hex }} />
+        ))}
+        <label className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom colour">
+          <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
+          <input type="color" aria-label={`Custom ${label.toLowerCase()}`} value={preset ? PAL.white : value} onChange={(e) => onChange(e.target.value)}
+            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
+        </label>
+        <span className="text-xs text-stone-500 ml-1 tabular-nums">{note}</span>
+      </div>
+    </div>
+  );
+}
+
+// ---- Optimizer pieces shared by the Hi-fi and PA stack panels ----
+function OptimizerBar({ on, onToggle, hint, nLocks, lockMax, onLockAll, onClear, children }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ToggleBtn on={on} onClick={onToggle}>Optimizer: {on ? "on" : "off"}</ToggleBtn>
+      {on && (<>
+        <Button onClick={onLockAll} disabled={nLocks >= lockMax} aria-label="Lock everything" title="Lock everything, then unlock what the optimizer may change" className="inline-flex items-center gap-1"><LockIcon locked={true} /><span className="text-xs">All</span></Button>
+        <Button onClick={onClear} disabled={!nLocks} aria-label={nLocks ? `Clear all ${nLocks} lock${nLocks > 1 ? "s" : ""}` : "No locks set"} title={nLocks ? `Clear all ${nLocks} lock${nLocks > 1 ? "s" : ""}` : "No locks set"} className="inline-flex items-center gap-1"><LockIcon locked={false} />{nLocks ? <span className="text-xs">{nLocks}</span> : null}</Button>
+      </>)}
+      {!on && <span className="text-xs text-stone-500">{hint}</span>}
+      {children}
+    </div>
+  );
+}
+function GoalPicker({ defs, selected, onTap }) {
+  return (
+    <div className="mt-3">
+      <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
+      <div className="flex flex-wrap gap-1" role="group" aria-label="Goal">{Object.entries(defs).map(([k, g]) => { const i = selected.indexOf(k); return <ToggleBtn key={k} title={g.name} on={i >= 0} className="relative" onClick={() => onTap(k)}>{selected.length > 1 && i >= 0 && <RankBadge n={i + 1} />}{g.short}</ToggleBtn>; })}</div>
+    </div>
+  );
+}
+function RunRow({ busy, hasGoal, onRun, stats, note, children }) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-3">
+      <Button variant="primary" onClick={onRun} disabled={busy || !hasGoal} className="px-4">{busy ? "Searching…" : hasGoal ? "Find 3 designs" : "Pick a goal first"}</Button>
+      {stats && !busy && <span className="text-xs text-stone-500">Searched {stats.evaluated.toLocaleString()} designs in {(stats.ms / 1000).toFixed(1)} s{note}</span>}
+      {children}
+    </div>
+  );
+}
+function Notice({ children }) {
+  return <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">{children}</div>;
+}
+function ResultCards({ cards, render }) {
+  if (!cards.length) return null;
+  return (<>
+    <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">{cards.map(render)}</div>
+    {cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {cards.length - 1} more</div>}
+  </>);
+}
+
+// Plain-language help for the stat labels, shown as a tooltip on the label
+const STAT_TIPS = {
+  "Gross internal": "Inside volume of the box (outside size minus the walls), before the driver and port take their share.",
+  "Net volume": "Air volume left inside the box once the driver and port have taken their share.",
+  "Port area": "Total cross-section of the port or ports, shown against the cone area. Too small and the air speeds up and gets noisy.",
+  "Hydraulic diameter": "Port cross-section area times four, divided by its perimeter. A small value means more air turbulence; flaring the mouths helps.",
+  "Midband sensitivity": "How loud it plays in the middle of its range for a fixed input voltage. Higher means louder for the same power.",
+  "First limit, music": "What runs out first when playing music at the amp's power: cone travel (Xmax), port air speed, or something else.",
+  "Peak port velocity": "Fastest air speed in the port. High speeds cause chuffing noise and compression.",
+  "Peak excursion": "How far the cone moves at the loudest point, and how much of its rated travel (Xmax) that uses.",
+  "Qtc": "Damping of a sealed box. About 0.7 is flat; higher sounds boomy, lower sounds dry.",
+  "Tuning Fb": "Frequency the port resonates at. Output falls away quickly below it.",
+  "F3 in room": "Frequency where output is 3 dB down from the midband, as heard in the room.",
+  "Max at the seat": "Clean level at the seat with both speakers playing, before a driver or port limit.",
+  "Pair": "Cost of the drivers for both speakers, at the listed prices.",
+};
+function StatLabel({ k, extra }) {
+  const def = STAT_TIPS[k] || (/^Max SPL at /.test(k) ? "Loudest output at this frequency from a steady sine tone, before the named limit is reached." : null);
+  const tip = [def, extra].filter(Boolean).join(" ");
+  return tip ? <Tip tip={tip}>{k}</Tip> : k;
+}
+function StatRow({ k, v, note, tip }) {
+  return (
+    <div className="flex justify-between gap-4 border-b border-stone-300 py-1">
+      <span className="text-stone-500 shrink-0"><StatLabel k={k} extra={tip} /></span>
+      <span className="text-right min-w-0">
+        <span className="font-medium tabular-nums">{v}</span>
+        {note ? <span className="block text-xs text-stone-500 whitespace-nowrap">{note}</span> : null}
+      </span>
+    </div>
+  );
+}
+
+// Saved configurations: the claude.ai artifact's database, or Firebase when the page is hosted on GitHub Pages
+function useConfigStore(collection) {
+  const [db, setDb] = useState(null);
+  const [saved, setSaved] = useState(null);     // null = still loading
+  const [fbUser, setFbUser] = useState(null);
+  const [cfgMsg, setCfgMsg] = useState("");
+  const fb = !(window.claude && window.claude.use) && window.firebase && window.PLANNER_FIREBASE ? window.firebase : null;
+  useEffect(() => {
+    let live = true;
+    if (fb) {
+      if (!fb.apps.length) fb.initializeApp(window.PLANNER_FIREBASE);
+      const un = fb.auth().onAuthStateChanged((u) => {
+        if (!live) return;
+        setFbUser(u);
+        if (u) {
+          const fs = fb.firestore();
+          setDb({ collection: (name) => fs.collection(`users/${u.uid}/${name}`) });
+        } else { setDb(null); setSaved([]); }
+      });
+      return () => { live = false; un(); };
+    }
+    (async () => {
+      try {
+        const d = window.claude && window.claude.use ? await window.claude.use("db") : null;
+        if (live) { setDb(d); if (!d) setSaved([]); }
+      } catch { if (live) { setDb(null); setSaved([]); } }
+    })();
+    return () => { live = false; };
+  }, []);
+  useEffect(() => {
+    if (!db) return;
+    const un = db.collection(collection).orderBy("savedAt", "desc").limit(50).onSnapshot(
+      (snap) => setSaved(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      () => setSaved([])
+    );
+    return un;
+  }, [db]);
+  const flash = (m) => { setCfgMsg(m); setTimeout(() => setCfgMsg(""), 2500); };
+  const signIn = () => fb.auth().signInWithPopup(new fb.auth.GoogleAuthProvider()).catch(() => flash("Sign-in failed"));
+  const signOut = () => fb.auth().signOut();
+  const save = async (name, data) => {
+    if (!db || !name) return false;
+    setCfgMsg("Saving…");
+    try { await db.collection(collection).doc().set({ name, savedAt: Date.now(), ...data }); flash("Saved"); return true; }
+    catch (e) { flash(e && (e.code === "invalid_argument" || e.code === "permission-denied") ? "You don't have write access here" : "Couldn't save — try again"); return false; }
+  };
+  const remove = async (id) => {
+    if (!db) return;
+    try { await db.collection(collection).doc(id).delete(); } catch { flash("Couldn't delete"); }
+  };
+  return { db, saved, fb, fbUser, cfgMsg, setCfgMsg, signIn, signOut, save, remove };
+}
+// Name-and-save row plus a menu of saved setups. snapshot() returns what to store (may include a `summary` line); restore(c) loads one.
+function SavedConfigs({ store, snapshot, restore, extra, bare = false }) {
+  const { db, saved, fb, fbUser, cfgMsg, signIn, signOut, save, remove } = store;
+  const [name, setName] = useState("");
+  const [sel, setSel] = useState("");
+  if (saved === null) return null;
+  const cur = saved.find((c) => c.id === sel);
+  const doSave = async () => { if (await save(name.trim(), snapshot())) setName(""); };
+  const Wrap = bare ? "div" : "section";
+  return (
+    <Wrap className={bare ? "mb-3" : "max-w-6xl mx-auto px-4 md:px-8 pb-2"} style={{ fontFamily: "var(--font)" }}>
+      <Card pad="lg" tone="tint">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-stone-500 mr-1">Saved configurations</span>
+          {db ? (<>
+            <input aria-label="Name this setup" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") doSave(); }}
+              placeholder="Name this setup" maxLength={60} className="px-3 py-1.5 rounded border border-stone-300 bg-white text-sm w-56" />
+            <Button variant="dark" onClick={doSave} disabled={!name.trim()}>Save current</Button>
+            {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
+            {fbUser && (<span className="ml-auto flex items-center gap-3 text-xs text-stone-500">{extra}<button onClick={signOut} className="hover:underline">Sign out</button></span>)}
+          </>) : fb ? (<>
+            <Button variant="dark" onClick={signIn}>Sign in with Google to save</Button>
+            {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
+          </>) : (
+            <span className="text-xs text-stone-500">Saving is unavailable in this view. Everything else works.</span>
+          )}
+        </div>
+        {saved.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <select value={cur ? cur.id : ""} aria-label="Load a saved configuration"
+              onChange={(e) => { const c = saved.find((x) => x.id === e.target.value); setSel(e.target.value); if (c) restore(c); }}
+              className="px-2 py-1.5 rounded border border-stone-300 bg-white text-sm min-w-0 max-w-full flex-1">
+              <option value="" disabled>Load a saved configuration ({saved.length})…</option>
+              {saved.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}{c.savedAt ? ` · ${new Date(c.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : ""}</option>
+              ))}
+            </select>
+            {cur && <button onClick={() => { remove(cur.id); setSel(""); }} aria-label={`Delete ${cur.name}`} className="text-xs text-stone-500 hover:text-red-700 px-1">Delete</button>}
+            {cur && cur.summary && <div className="basis-full text-xs text-stone-500 truncate">{cur.summary}</div>}
+          </div>
+        )}
+      </Card>
+    </Wrap>
+  );
+}
+
+// Panel: one outline, one radius. pad: "md" (default) or "lg"; tone: "white" or "tint"
+function Card({ pad = "md", tone = "white", className = "", ...p }) {
+  return <div {...p} className={`rounded border border-stone-300 ${tone === "tint" ? "bg-stone-50" : "bg-white"} ${pad === "lg" ? "px-4 py-4" : "px-3 py-3"} ${className}`} />;
+}
+// Section heading
+function SectionHead({ className = "", ...p }) {
+  return <h2 {...p} className={`text-xl font-bold ${className}`} />;
+}
+
+// Labelled form row: the label is a real <label> tied to its control, so screen readers name the control
+function Field({ label, htmlFor, extra, className = "mb-4", children }) {
+  return (
+    <div className={className}>
+      <label htmlFor={htmlFor} className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>{label}</span>{extra}</label>
+      {children}
+    </div>
+  );
+}
+// Number input with a unit. Clearing the box does not force 0: the value only changes once a number is typed.
+function NumberField({ label, value, onChange, unit, min, max, step, className = "" }) {
+  const id = useId();
+  const [raw, setRaw] = useState(String(value));
+  useEffect(() => { setRaw((r) => (parseFloat(r) === value ? r : String(value))); }, [value]);
+  return (
+    <Field label={label} htmlFor={id} className={className}>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <input id={id} type="number" inputMode="decimal" value={raw} min={min} max={max} step={step}
+          onChange={(e) => { setRaw(e.target.value); const n = parseFloat(e.target.value); if (Number.isFinite(n)) onChange(n); }}
+          onBlur={() => setRaw(String(value))}
+          className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" />
+        {unit}
+      </div>
+    </Field>
+  );
+}
+
 // group: optional (option) => heading; options with the same heading are listed together under it, in order of first appearance
 function Pick({ label, options, value, onChange, extra, group }) {
   const opt = (o) => <option key={o.id} value={o.id}>{o.name}{o.price ? ` — $${o.price}` : ""}</option>;
   const groups = group ? [...new Set(options.map(group))] : null;
+  const id = useId();
   return (
-    <div className="mb-4">
-      <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>{label}</span>{extra}</div>
+    <Field label={label} htmlFor={id} extra={extra}>
       <select
+        id={id}
         value={value?.id ?? ""}
         onChange={(e) => onChange(options.find((o) => o.id === e.target.value))}
-        className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500 focus:outline-none focus:border-stone-900"
+        className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500"
       >
         {groups ? groups.map((g) => <optgroup key={g} label={g}>{options.filter((o) => group(o) === g).map(opt)}</optgroup>) : options.map(opt)}
       </select>
-    </div>
+    </Field>
   );
 }
 
@@ -735,8 +1016,8 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   const grid = [];
   ticks.forEach((f) => {
     const X = px(f);
-    grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke="#e6e6e6" strokeWidth="1" />);
-    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill="#707070" fontSize="11" fontFamily="Inconsolata, monospace">{f >= 1000 ? f / 1000 + "k" : f}</text>);
+    grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke={PAL.edge} strokeWidth="1" />);
+    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{f >= 1000 ? f / 1000 + "k" : f}</text>);
   });
   // hover / drag: a crosshair with each curve's value at that frequency
   const [hf, setHf] = useState(null);
@@ -753,8 +1034,8 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   const every = ((y1 - y0) * step) / (TOP - BOT) < 16 ? 2 : 1;   // thin the labels when rows get tight
   for (let v = BOT, k = 0; v <= TOP; v += step, k++) {
     const Y = py(v);
-    grid.push(<line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke="#e6e6e6" strokeWidth="1" />);
-    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill="#707070" fontSize="11" fontFamily="Inconsolata, monospace">{v}</text>);
+    grid.push(<line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke={PAL.edge} strokeWidth="1" />);
+    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{v}</text>);
   }
   return (
     <div ref={box}>
@@ -763,32 +1044,26 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         {grid}
         {marks.filter((m) => m.f > fmin && m.f < fmax).map((m, i, ms) => (
           <g key={m.label + i}>
-            <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke="#707070" strokeWidth="1" strokeDasharray="3 4" />
-            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill="#707070" fontSize="10.5" fontFamily="Inconsolata, monospace">{m.label}</text>
+            <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke={PAL.muted} strokeWidth="1" strokeDasharray="3 4" />
+            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{m.label}</text>
           </g>
         ))}
         {paths.map((p) => <path key={p.label + "f"} d={p.fill} fill={p.tint} />)}
         {paths.map((p) => <path key={p.label} d={p.d} fill="none" stroke={p.stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />)}
-        {!narrow && paths.map((p, i) => (
-          <g key={p.label + "k"}>
-            <line x1={x0 + 10} y1={y0 + 8 + i * 16} x2={x0 + 30} y2={y0 + 8 + i * 16} stroke={p.stroke} strokeWidth="2" />
-            <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#707070" fontSize="11" fontFamily="Inconsolata, monospace">{p.label}</text>
-          </g>
-        ))}
         {hf && (<g pointerEvents="none">
-          <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke="#707070" strokeWidth="1" />
-          {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke="#fff" strokeWidth="1.5" />)}
+          <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke={PAL.muted} strokeWidth="1" />
+          {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke={PAL.white} strokeWidth="1.5" />)}
           {(() => { const t = `${hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz`, w = t.length * 6.5 + 8, X = Math.max(x0 + w / 2, Math.min(x1 - w / 2, px(hf)));
-            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill="#111111" /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="11" fontFamily="Inconsolata, monospace" fill="#ffffff">{t}</text></g>; })()}
-          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="11" fontFamily="Inconsolata, monospace" fill="#111111" stroke="#fff" strokeWidth="3" paintOrder="stroke">
+            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill={PAL.ink} /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="12" fontFamily="Inconsolata, monospace" fill={PAL.white}>{t}</text></g>; })()}
+          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="12" fontFamily="Inconsolata, monospace" fill={PAL.ink} stroke={PAL.white} strokeWidth="3" paintOrder="stroke">
             {hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz{hits.map((h) => ` · ${h.label} ${h.o.spl.toFixed(0)}${unit}`).join("")}
           </text>
         </g>)}
-        <text x={W / 2} y={H - 4} textAnchor="middle" fill="#707070" fontSize="11" fontFamily="Inconsolata, monospace">frequency, Hz</text>
-        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#707070" fontSize="11" fontFamily="Inconsolata, monospace">{yLabel}</text>
+        <text x={W / 2} y={H - 4} textAnchor="middle" fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">frequency, Hz</text>
+        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{yLabel}</text>
       </svg>
-      {narrow && paths.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[11px] text-stone-600" style={{ fontFamily: "var(--font)" }}>
+      {paths.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1 text-xs text-stone-500" style={{ fontFamily: "var(--font)" }}>
           {paths.map((p) => <span key={p.label} className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5" style={{ background: p.stroke }} />{p.label}</span>)}
         </div>
       )}
@@ -807,14 +1082,19 @@ function FoldHead({ id, title, folds, toggle, className = "" }) {
   );
 }
 
+// Decimals a slider readout needs: 0 for whole steps, else as many as the step has (0.5 -> 1, 0.25 -> 2)
+const decimalsOf = (step) => { const t = String(step); const i = t.indexOf("."); return i < 0 ? 0 : t.length - i - 1; };
+
 function Slider({ label, value, min, max, step, unit, onChange, extra }) {
+  const id = useId();
+  const shown = typeof value === "number" ? value.toFixed(decimalsOf(step)) : value;
   return (
     <div className="mb-3">
       <div className="flex justify-between items-center gap-3 mb-1">
-        <span className="flex items-center gap-2"><span className="text-sm text-stone-600">{label}</span>{extra}</span>
-        <span className="text-sm tabular-nums font-medium">{typeof value === "number" ? value.toFixed(step < 1 ? 2 : 0) : value}{unit}</span>
+        <span className="flex items-center gap-2"><label htmlFor={id} className="text-sm text-stone-500">{label}</label>{extra}</span>
+        <span className="text-sm tabular-nums font-medium">{shown}{unit}</span>
       </div>
-      <input type="range" min={min} max={max} step={step} value={value}
+      <input id={id} type="range" min={min} max={max} step={step} value={value} aria-valuetext={`${shown}${unit || ""}`}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="w-full accent-stone-900" />
     </div>
@@ -831,7 +1111,7 @@ function DispMap({ map, title }) {
   const W = 560, H = 240, L = 40, R = 6, T = 6, B = 24;
   const nF = map.freqs.length, nA = map.angles.length;
   const cw = (W - L - R) / nF, ch = (H - T - B) / nA;
-  const col = (db) => { const x = Math.max(0, Math.min(1, -db / 18)); const l = 28 + x * 66; return `hsl(201 ${Math.round(100 - x * 70)}% ${l.toFixed(0)}%)`; };
+  const col = (db) => { const x = Math.max(0, Math.min(1, -db / 18)); const l = 28 + x * 66; return `hsl(${PAL.cyanHue} ${Math.round(100 - x * 70)}% ${l.toFixed(0)}%)`; };
   const fx = (f) => L + (Math.log(f / map.freqs[0]) / Math.log(map.freqs[nF - 1] / map.freqs[0])) * (W - L - R);
   const move = (e) => {
     const r = e.currentTarget.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H;
@@ -842,14 +1122,14 @@ function DispMap({ map, title }) {
   return (
     <div>
       <div className="flex justify-between items-baseline text-xs text-stone-500 mb-1"><span>{title}</span>
-        <span className="tabular-nums text-stone-700">{hover ? `${map.angles[hover.j]}° · ${map.freqs[hover.i] >= 1000 ? (map.freqs[hover.i] / 1000).toFixed(1) + "k" : map.freqs[hover.i].toFixed(0)} Hz · ${map.rows[hover.j][hover.i].toFixed(1)} dB` : "dB vs on-axis"}</span></div>
+        <span className="tabular-nums text-stone-900">{hover ? `${map.angles[hover.j]}° · ${map.freqs[hover.i] >= 1000 ? (map.freqs[hover.i] / 1000).toFixed(1) + "k" : map.freqs[hover.i].toFixed(0)} Hz · ${map.rows[hover.j][hover.i].toFixed(1)} dB` : "dB vs on-axis"}</span></div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" style={{ touchAction: "pan-y" }} onPointerMove={move} onPointerDown={move} onPointerLeave={() => setHover(null)} role="img" aria-label={`${title}: level against angle and frequency`}>
         {map.rows.map((row, j) => row.map((db, i) => <rect key={j * nF + i} x={L + i * cw} y={T + j * ch} width={cw + 0.5} height={ch + 0.5} fill={col(db)} />))}
-        {ticksA.map((a) => { const j = map.angles.indexOf(a); return <text key={a} x={L - 5} y={T + (j + 0.5) * ch + 3} fontSize="10" textAnchor="end" fill="#707070">{a}°</text>; })}
-        {[200, 500, 1000, 2000, 5000, 10000, 20000].map((f) => <text key={f} x={fx(f)} y={H - 8} fontSize="10" textAnchor="middle" fill="#707070">{f >= 1000 ? f / 1000 + "k" : f}</text>)}
-        {hover && <rect x={L + hover.i * cw} y={T + hover.j * ch} width={cw} height={ch} fill="none" stroke="#111111" strokeWidth="1.5" />}
+        {ticksA.map((a) => { const j = map.angles.indexOf(a); return <text key={a} x={L - 5} y={T + (j + 0.5) * ch + 3} fontSize="10" textAnchor="end" fill={PAL.muted}>{a}°</text>; })}
+        {[200, 500, 1000, 2000, 5000, 10000, 20000].map((f) => <text key={f} x={fx(f)} y={H - 8} fontSize="10" textAnchor="middle" fill={PAL.muted}>{f >= 1000 ? f / 1000 + "k" : f}</text>)}
+        {hover && <rect x={L + hover.i * cw} y={T + hover.j * ch} width={cw} height={ch} fill="none" stroke={PAL.ink} strokeWidth="1.5" />}
       </svg>
-      <div className="flex items-center gap-2 text-[11px] text-stone-500 mt-1">0 dB<span className="h-2 flex-1 max-w-[160px] rounded" style={{ background: `linear-gradient(to right, ${col(0)}, ${col(-9)}, ${col(-18)})` }} />−18 dB</div>
+      <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">0 dB<span className="h-2 flex-1 max-w-[160px] rounded" style={{ background: `linear-gradient(to right, ${col(0)}, ${col(-9)}, ${col(-18)})` }} />−18 dB</div>
     </div>
   );
 }
@@ -865,16 +1145,16 @@ function RoomView({ spacing, toe, seat, setSeat, angles }) {
     setSeat({ x: Math.round(((x - W / 2) / k) * 4) / 4, y: Math.max(2, Math.round(((y - 14) / k) * 4) / 4) });
   };
   const spk = (sx, sign) => {
-    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${-sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill="#111111" /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke="#707070" strokeDasharray="2 2" /></g>;
+    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${-sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill={PAL.ink} /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke={PAL.muted} strokeDasharray="2 2" /></g>;
   };
   return (
-    <svg viewBox={`0 0 ${W} ${H + 20}`} className="w-full h-auto rounded border border-stone-200 bg-white" style={{ touchAction: "none" }} onPointerDown={drag} onPointerMove={drag} role="img" aria-label="Room seen from above; drag the seat">
-      {[-1, 1].map((sg) => <line key={sg} x1={px((sg * spacing) / 2)} y1={py(0)} x2={px(seat.x)} y2={py(seat.y)} stroke="#e6e6e6" />)}
+    <svg viewBox={`0 0 ${W} ${H + 20}`} className="w-full h-auto rounded border border-stone-300 bg-white" style={{ touchAction: "none" }} onPointerDown={drag} onPointerMove={drag} role="img" aria-label="Room seen from above; drag the seat">
+      {[-1, 1].map((sg) => <line key={sg} x1={px((sg * spacing) / 2)} y1={py(0)} x2={px(seat.x)} y2={py(seat.y)} stroke={PAL.edge} />)}
       {spk(-spacing / 2, 1)}{spk(spacing / 2, -1)}
-      <circle cx={px(seat.x)} cy={py(seat.y)} r="7" fill="#0082c8" stroke="#fff" strokeWidth="2" />
-      <text x={px(-spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill="#707070">{angles[0].toFixed(0)}° off</text>
-      <text x={px(spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill="#707070">{angles[1].toFixed(0)}° off</text>
-      <text x={6} y={H + 14} fontSize="10" fill="#707070">{Wd.toFixed(0)} ft wide · drag the seat</text>
+      <circle cx={px(seat.x)} cy={py(seat.y)} r="7" fill={PAL.cyan} stroke={PAL.white} strokeWidth="2" />
+      <text x={px(-spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill={PAL.muted}>{angles[0].toFixed(0)}° off</text>
+      <text x={px(spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill={PAL.muted}>{angles[1].toFixed(0)}° off</text>
+      <text x={6} y={H + 14} fontSize="10" fill={PAL.muted}>{Wd.toFixed(0)} ft wide · drag the seat</text>
     </svg>
   );
 }
@@ -886,16 +1166,16 @@ function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }) {
   const bx = (W - dim.w * k) / 2, y = (inch) => (dim.h + top - inch) * k;
   return (
     <svg viewBox={`-4 -4 ${W + 8} ${H + 8}`} className={small ? "w-full h-auto max-h-40" : "h-40 w-auto"} role="img" aria-label={`Front view, ${dim.w} × ${dim.h}″${lay.onTop ? ", waveguide on top" : ""}`}>
-      <rect x={bx} y={top * k} width={dim.w * k} height={dim.h * k} rx="2" fill="#e6e6e6" stroke="#111111" strokeWidth="1.2" />
+      <rect x={bx} y={top * k} width={dim.w * k} height={dim.h * k} rx="2" fill={PAL.edge} stroke={PAL.ink} strokeWidth="1.2" />
       {lay.onTop
-        ? <g><rect x={W / 2 - (face.w * k) / 8} y={top * k - 3} width={(face.w * k) / 4} height={3} fill="#111111" /><rect x={W / 2 - (face.w * k) / 2} y={0} width={face.w * k} height={top * k - 3} rx={(face.h * k) / 3} fill="#707070" stroke="#111111" strokeWidth="1" /></g>
-        : <rect x={W / 2 - (face.w * k) / 2} y={y(lay.tweeterIn) - (face.h * k) / 2} width={face.w * k} height={face.h * k} rx={guide ? 3 : face.w * k / 2} fill="#707070" />}
-      <circle cx={W / 2} cy={y(lay.tweeterIn)} r={0.5 * k} fill="#e6e6e6" />
-      <circle cx={W / 2} cy={y(lay.wooferIn)} r={(w.size * 0.95 * k) / 2} fill="#e6e6e6" stroke="#707070" />
+        ? <g><rect x={W / 2 - (face.w * k) / 8} y={top * k - 3} width={(face.w * k) / 4} height={3} fill={PAL.ink} /><rect x={W / 2 - (face.w * k) / 2} y={0} width={face.w * k} height={top * k - 3} rx={(face.h * k) / 3} fill={PAL.muted} stroke={PAL.ink} strokeWidth="1" /></g>
+        : <rect x={W / 2 - (face.w * k) / 2} y={y(lay.tweeterIn) - (face.h * k) / 2} width={face.w * k} height={face.h * k} rx={guide ? 3 : face.w * k / 2} fill={PAL.muted} />}
+      <circle cx={W / 2} cy={y(lay.tweeterIn)} r={0.5 * k} fill={PAL.edge} />
+      <circle cx={W / 2} cy={y(lay.wooferIn)} r={(w.size * 0.95 * k) / 2} fill={PAL.edge} stroke={PAL.muted} />
       {pr && Array.from({ length: pr.n }, (_, i) => { const s = prShape(pr.drv), cy = H - (0.75 + 0.25 + (i + 0.5) * (s.h + 0.5)) * k;
-        return <rect key={`r${i}`} x={W / 2 - (s.w * k) / 2} y={cy - (s.h * k) / 2} width={s.w * k} height={s.h * k} rx={(s.w * k) / 2} fill="none" stroke="#707070" strokeDasharray="3 2" />; })}
-      {vented && port.shape === "slot" && <rect x={bx + 0.75 * k} y={H - (0.75 + port.h) * k} width={(dim.w - 1.5) * k} height={port.h * k} fill="#111111" />}
-      {vented && port.shape !== "slot" && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill="#111111" />)}
+        return <rect key={`r${i}`} x={W / 2 - (s.w * k) / 2} y={cy - (s.h * k) / 2} width={s.w * k} height={s.h * k} rx={(s.w * k) / 2} fill="none" stroke={PAL.muted} strokeDasharray="3 2" />; })}
+      {vented && port.shape === "slot" && <rect x={bx + 0.75 * k} y={H - (0.75 + port.h) * k} width={(dim.w - 1.5) * k} height={port.h * k} fill={PAL.ink} />}
+      {vented && port.shape !== "slot" && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill={PAL.ink} />)}
     </svg>
   );
 }
@@ -916,21 +1196,21 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
   const c = k.config, m = k.metrics, d = k.delta || {};
   const cw = HIFI_WOOFERS.find((o) => o.id === k.woofer), ct = HIFI_TWEETERS.find((o) => o.id === k.tweeter);
   const tile = (label, v, delta) => (
-    <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1.5">
-      <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
+    <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
+      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
       <div className="tabular-nums">{v}</div>{delta}
     </div>
   );
   const who = { Xmax: "cone travel", port: "port air speed", radiator: "radiator travel", thermal: "the woofer's power rating", amp: "the amp" }[k.whoW] || k.whoW;
   return (
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
-      <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
+      <div className="text-xs uppercase tracking-wider font-bold text-stone-500">{k.label} · {i + 1} of {n}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{cw.size}″ {k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} pr={prOf(c)} guide={k.guided ? guide : null} small />
         <OutChart curve={k.curve} cur={curCurve} fmin={15} fmax={20000} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
       </div>
-      <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" && c.port.shape === "slot" ? ` (${c.port.h}″ slot, ${c.port.len}″ long)` : c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : c.box === "radiator" && prOf(c) ? ` (${c.pr.n} × ${prOf(c).drv.name}, +${c.pr.addG} g)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
+      <div className="text-xs text-stone-500">{k.names.tweeter} · {c.box}{c.box === "vented" && c.port.shape === "slot" ? ` (${c.port.h}″ slot, ${c.port.len}″ long)` : c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : c.box === "radiator" && prOf(c) ? ` (${c.pr.n} × ${prOf(c).drv.name}, +${c.pr.addG} g)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile("Drivers, pair", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Weight", `${m.lb.toFixed(0)} lb`, <Delta v={d.lb} unit=" lb" lowerIsBetter digits={1} />)}
@@ -939,10 +1219,10 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
       </div>
       <div className="text-xs leading-snug"><b className="font-semibold">Limited by:</b> {who}</div>
       {k.warnings.filter((h) => !/^Woofer limited by/.test(h)).map((h) => <div key={h} className="text-xs border border-l-4 rounded px-2 py-1 bg-amber-50 border-amber-200 border-l-amber-300"><b className="font-semibold text-amber-700">{h}</b></div>)}
-      <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
+      <div className="text-xs text-stone-500">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
-        <button onClick={onLoad} className="flex-1 px-3 py-2 rounded border text-sm font-semibold border-cmy-c bg-cmy-c text-white">Load</button>
+        <Button variant="primary" onClick={onLoad} className="flex-1">Load</Button>
       </div>
     </div>
   );
@@ -972,6 +1252,7 @@ function HifiPage() {
   const [earIn, setEarIn] = useState(38);
   const [standIn, setStandIn] = useState(24);
   const [plane, setPlane] = useState("h");
+  const store = useConfigStore("hifiConfigs");
   // optimizer: same rules and layout as the PA planner's (switch, locks on the controls, goals in tap order)
   const ls = { get: (k, fb) => { try { const v = localStorage.getItem(k); return v == null ? fb : JSON.parse(v); } catch { return fb; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
   const [hOn, setHOnRaw] = useState(() => ls.get("hifi.opt", false));
@@ -1012,15 +1293,25 @@ function HifiPage() {
   const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0) + (box === "radiator" ? pr.n * (prDrv.price || 0) : 0));
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
-      <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
       <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
     </div>
   );
-  const seg = (on) => `px-3 py-1.5 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`;
-  const optSeg = (on) => `px-3 py-2 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`;
   const hLk = (key, what) => (hOn ? <LockBtn on={!!hLocks[key]} what={what} onClick={() => setHLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null);
   const hDl = (dm, what) => (hOn ? <DimLock mode={hLocks.dim[dm] || "free"} what={what} onChange={(m) => setHLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))} /> : null);
   const snapH = () => ({ woofer: w.id, tweeter: t.id, box, dim, port, pr: box === "radiator" ? prSel : undefined, wall, xo, wAmpW, tAmpW });
+  // Everything on the page, for saving (undefined fields dropped: the stores reject them)
+  const savedSnapH = () => JSON.parse(JSON.stringify({ ...snapH(), guide: guideSel.id, mat, order, bsc, place, wallFt, spacing, toe, seat, earIn, standIn,
+    summary: `${w.name} + ${t.name} · ${dim.w}×${dim.h}×${dim.d}″ · ${box === "radiator" ? "passive radiator" : box}` }));
+  const restoreH = (c) => {
+    const pick = (list, id) => list.find((o) => o.id === id);
+    const ok = (f, v) => { if (v !== undefined) f(v); };
+    ok(setW, pick(HIFI_WOOFERS, c.woofer)); ok(setT, pick(HIFI_TWEETERS, c.tweeter)); ok(setGuide, pick(guides, c.guide));
+    [[setBox, c.box], [setDim, c.dim], [setPort, c.port], [setPrSel, c.pr], [setWall, c.wall], [setMat, c.mat], [setXo, c.xo], [setOrder, c.order],
+     [setWAmpW, c.wAmpW], [setTAmpW, c.tAmpW], [setBsc, c.bsc], [setPlace, c.place], [setWallFt, c.wallFt], [setSpacing, c.spacing], [setToe, c.toe],
+     [setSeat, c.seat], [setEarIn, c.earIn], [setStandIn, c.standIn]].forEach(([f, v]) => ok(f, v));
+    setHPreview(null); setHUndo(null); setHRes(null);
+  };
   const applyH = (c) => {
     setW(HIFI_WOOFERS.find((o) => o.id === c.woofer)); setT(HIFI_TWEETERS.find((o) => o.id === c.tweeter));
     setBox(c.box); setDim(c.dim); if (c.port) setPort(c.port); if (c.pr) setPrSel(c.pr); setWall(c.wall); setXo(c.xo); setWAmpW(c.wAmpW); setTAmpW(c.tAmpW);
@@ -1040,50 +1331,31 @@ function HifiPage() {
   const nLocks = HIFI_LOCK_KEYS.filter((k) => hLocks[k]).length + Object.values(hLocks.dim).filter((m) => m && m !== "free").length;
   const allLocks = { ...Object.fromEntries(HIFI_LOCK_KEYS.map((k) => [k, true])), dim: { w: "exact", h: "exact", d: "exact" } };
   const optBar = (
-    <div className="flex flex-wrap items-center gap-2">
-      <button onClick={() => setHOn(!hOn)} aria-pressed={hOn} className={`px-3 py-2 rounded border text-sm ${hOn ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`}>Optimizer: {hOn ? "on" : "off"}</button>
-      {hOn && (<>
-        <button onClick={() => setHLocks(() => allLocks)} disabled={nLocks >= HIFI_LOCK_KEYS.length + 3} aria-label="Lock everything" title="Lock everything, then unlock what the optimizer may change"
-          className="inline-flex items-center gap-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40"><LockIcon locked={true} /><span className="text-xs">All</span></button>
-        <button onClick={() => setHLocks(() => ({ dim: {} }))} disabled={!nLocks} aria-label={nLocks ? `Clear all ${nLocks} locks` : "No locks set"} title={nLocks ? `Clear all ${nLocks} locks` : "No locks set"}
-          className="inline-flex items-center gap-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40"><LockIcon locked={false} />{nLocks ? <span className="text-xs">{nLocks}</span> : null}</button>
-      </>)}
-      {!hOn && <span className="text-xs text-stone-500">Find cheaper, lighter, deeper or louder designs inside your limits.</span>}
-    </div>
+    <OptimizerBar on={hOn} onToggle={() => setHOn(!hOn)} hint="Find cheaper, lighter, deeper or louder designs inside your limits."
+      nLocks={nLocks} lockMax={HIFI_LOCK_KEYS.length + 3} onLockAll={() => setHLocks(() => allLocks)} onClear={() => setHLocks(() => ({ dim: {} }))} />
   );
   const optPanel = hOn && (
-    <div className="rounded-lg border border-stone-300 bg-white p-4 mt-3">
-      <h2 className="text-xl" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Find a better design</h2>
+    <Card pad="lg" className="mt-3">
+      <SectionHead>Find a better design</SectionHead>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
         <div className="mt-3">
-          <div className="text-sm text-stone-500 mb-1">Driver budget, pair <span className="text-xs">(woofers + tweeters{guide ? " + waveguides" : ""}, at the listed prices)</span></div>
-          <div className="flex flex-wrap items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={hBudget} min={50} step={25} onChange={(e) => { setHBudget(+e.target.value || 0); ls.set("hifi.budget", +e.target.value || 0); }} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $</div>
+          <NumberField label={<>Driver budget, pair <span className="text-xs">(woofers + tweeters{guide ? " + waveguides" : ""}, at the listed prices)</span></>} value={hBudget} min={50} step={25} unit="$" onChange={(n) => { setHBudget(n); ls.set("hifi.budget", n); }} className="" />
         </div>
-        <div className="mt-3">
-          <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
-          <div className="flex flex-wrap gap-1">{Object.entries(HIFI_GOALS).map(([k, g]) => { const i = hGoals.indexOf(k); return <button key={k} title={g.name} aria-pressed={i >= 0} className={`relative ${optSeg(i >= 0)}`} onClick={() => tapG(k)}>{hGoals.length > 1 && i >= 0 && <RankBadge n={i + 1} />}{g.short}</button>; })}</div>
-        </div>
+        <GoalPicker defs={HIFI_GOALS} selected={hGoals} onTap={tapG} />
       </div>
-      <div className="mt-2 text-xs text-stone-500">Amps: woofer {hLocks.wAmpW ? `${wAmpW} W` : `any up to ${HIFI_AMP_MAX.wAmpW} W`} · tweeter {hLocks.tAmpW ? `${tAmpW} W` : `any up to ${HIFI_AMP_MAX.tAmpW} W`} (unlocked amps come back at the least power that does the job)</div>
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button onClick={runH} disabled={hBusy || !hGoals.length} className="px-4 py-2 rounded border text-sm font-semibold border-cmy-c bg-cmy-c text-white disabled:opacity-50">{hBusy ? "Searching…" : hGoals.length ? "Find 3 designs" : "Pick a goal first"}</button>
-        {hRes && !hBusy && <span className="text-xs text-stone-500">Searched {hRes.stats.evaluated.toLocaleString()} designs in {(hRes.stats.ms / 1000).toFixed(1)} s{hRes.cards.length ? " · every design shown passes the checks (warnings are listed on the card)" : ""}</span>}
-        {hUndo && !hPreview && <button onClick={() => { applyH(hUndo); setHUndo(null); }} className="px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Undo load</button>}
-      </div>
-      {hRes && !hBusy && hRes.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
-      {hRes && !hBusy && hRes.cards.length > 0 && (<>
-        <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
-          {hRes.cards.map((k, i) => <HifiCard key={i} k={k} i={i} n={hRes.cards.length} curCurve={hRes.curCurve} guide={guide} previewing={hPreview && hPreview.card === k} onPreview={() => previewH(k)} onLoad={() => loadH(k)} />)}
-        </div>
-        {hRes.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {hRes.cards.length - 1} more</div>}
-      </>)}
-      {hRes && !hBusy && hRes.goalMissing && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">{hRes.goalMissing}</div>}
+      <RunRow busy={hBusy} hasGoal={hGoals.length > 0} onRun={runH} stats={hRes && hRes.stats} note={hRes && hRes.cards.length ? " · every design shown passes the checks (warnings are listed on the card)" : ""}>
+        {hUndo && !hPreview && <Button size="md" onClick={() => { applyH(hUndo); setHUndo(null); }}>Undo load</Button>}
+      </RunRow>
+      {hRes && !hBusy && hRes.curProblems.length > 0 && <Notice>Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost or weigh more.</Notice>}
+      {hRes && !hBusy && <ResultCards cards={hRes.cards} render={(k, i) => <HifiCard key={i} k={k} i={i} n={hRes.cards.length} curCurve={hRes.curCurve} guide={guide} previewing={hPreview && hPreview.card === k} onPreview={() => previewH(k)} onLoad={() => loadH(k)} />} />}
+      {hRes && !hBusy && hRes.goalMissing && <Notice>{hRes.goalMissing}</Notice>}
       {hRes && !hBusy && !hRes.cards.length && !hRes.goalMissing && <div className="mt-3 text-sm text-orange-900">Nothing fits all your limits. A bigger budget or fewer locks would open it up.</div>}
-    </div>
+    </Card>
   );
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "var(--font)" }}>
       <div className="md:col-span-5 min-w-0">
+        <SavedConfigs bare store={store} snapshot={savedSnapH} restore={restoreH} />
         {optBar}
         {optPanel}
         {hPreview && (
@@ -1097,7 +1369,7 @@ function HifiPage() {
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
         <div className="flex gap-4 items-center">
         <div className="shrink-0"><HifiFront dim={dim} w={w} t={tt} lay={sys.lay} vented={sys.vented} port={port} pr={sys.radiator ? pr : null} guide={guide} /></div>
-        <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+        <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
           {tile("Net volume", sys.net.toFixed(1), "L")}
           {sys.Fb != null ? tile("Tuning Fb", sys.Fb.toFixed(0), "Hz") : tile("Qtc", sys.Qtc.toFixed(2), "")}
           {tile("F3 in room", sys.f3.toFixed(0), "Hz")}
@@ -1107,39 +1379,40 @@ function HifiPage() {
         </div>
         </div>
         <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="dB SPL at 2.83 V"
-          series={[{ curve: on, label: "On axis, 1 m", stroke: "#111111", tint: "rgba(0,0,0,0)" }, { curve: pair, label: `Pair at the seat (${(seatDist / FT).toFixed(1)} ft)`, stroke: "#0082c8", tint: "rgba(0,130,200,0.06)" }]}
+          series={[{ curve: on, label: "On axis, 1 m", stroke: PAL.ink, tint: PAL.alpha(PAL.ink, 0) }, { curve: pair, label: `Pair at the seat (${(seatDist / FT).toFixed(1)} ft)`, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]}
           marks={[{ f: xo, label: "XO" }, { f: sys.bsF3, label: "Baffle step" }, ...(sys.Fb ? [{ f: sys.Fb, label: "Fb" }] : [])]} />
         <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="max dB SPL @ 1 m"
-          series={[{ curve: sys.wMax, label: w.name, stroke: "#e5007e", tint: "rgba(229,0,126,0.06)" }, { curve: tMax, label: t.name, stroke: "#0082c8", tint: "rgba(0,130,200,0.06)" }]} marks={[{ f: xo, label: "XO" }]} />
+          series={[{ curve: sys.wMax, label: w.name, stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0.06) }, { curve: tMax, label: t.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]} marks={[{ f: xo, label: "XO" }]} />
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
             <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
               <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-              <span className="text-stone-600">{body}</span>
+              <span className="text-stone-500">{body}</span>
             </div>
           ))}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
           <RoomView spacing={spacing} toe={toe} seat={seat} setSeat={setSeat} angles={[(gL.th * 180) / Math.PI, (gR.th * 180) / Math.PI]} />
-          <div className="text-sm text-stone-600 leading-relaxed">
+          <div className="text-sm text-stone-500 leading-relaxed">
             <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold mb-1">At the seat</div>
-            {(seatDist / FT).toFixed(1)} ft from the pair; left speaker {((gL.th * 180) / Math.PI).toFixed(0)}° and right {((gR.th * 180) / Math.PI).toFixed(0)}° off axis.<br />
-            Ears {earIn - standIn - sys.lay.tweeterIn >= 0 ? "above" : "below"} the tweeter by {Math.abs(earIn - standIn - sys.lay.tweeterIn).toFixed(1)}″.<br />
-            Clean up to about {atSeat.toFixed(0)} dB here with both speakers.
+            <div>{(seatDist / FT).toFixed(1)} ft from the pair</div>
+            <div>Off axis: L {((gL.th * 180) / Math.PI).toFixed(0)}°, R {((gR.th * 180) / Math.PI).toFixed(0)}°</div>
+            <div>Ears {earIn - standIn - sys.lay.tweeterIn >= 0 ? "above" : "below"} tweeter {Math.abs(earIn - standIn - sys.lay.tweeterIn).toFixed(1)}″</div>
+            <div><Tip tip={`Clean up to about ${atSeat.toFixed(0)} dB at the seat with both speakers playing.`}>Max level</Tip> {atSeat.toFixed(0)} dB</div>
           </div>
         </div>
         <div>
-          <div className="flex gap-1 mb-2">{[["Horizontal", "h"], ["Vertical", "v"]].map(([l, v]) => <button key={v} onClick={() => setPlane(v)} className={seg(plane === v)}>{l}</button>)}</div>
+          <div className="flex gap-1 mb-2">{[["Horizontal", "h"], ["Vertical", "v"]].map(([l, v]) => <ToggleBtn key={v} onClick={() => setPlane(v)} on={plane === v}>{l}</ToggleBtn>)}</div>
           <DispMap map={map} title={plane === "h" ? "Horizontal dispersion, one speaker (0° is on axis)" : "Vertical dispersion: below (−) to above (+) the tweeter axis"} />
         </div>
-        <details className="text-xs text-stone-600 rounded border border-stone-300 bg-stone-50 px-3 py-2">
-          <summary className="cursor-pointer text-sm text-stone-700 py-1">Details</summary>
+        <details className="text-xs text-stone-500 rounded border border-stone-300 bg-stone-50 px-3 py-2">
+          <summary className="cursor-pointer text-sm text-stone-900 py-1">Details</summary>
           <div className="leading-relaxed mt-1 flex flex-col gap-1.5">
             <div>Woofer {sys.lay.wooferIn.toFixed(1)}″ and tweeter {sys.lay.tweeterIn.toFixed(1)}″ from the bottom, {sys.lay.spacingIn.toFixed(1)}″ apart. {sys.gross.toFixed(1)} L gross, {sys.net.toFixed(1)} L net{sys.hpf ? `; DSP highpass ${sys.hpf} Hz (BW24) below the port tuning` : ""}.</div>
             <div>Tweeter trimmed {sys.trim.toFixed(1)} dB in the DSP to match the woofer; baffle step centered at {sys.bsF3.toFixed(0)} Hz{bsc ? `, ${bsc} dB boost` : ""}.</div>
-            <div><span className="font-medium text-stone-700">{w.name}.</span> {w.note}</div>
-            <div><span className="font-medium text-stone-700">{t.name}.</span> {t.note}</div>
-            {guide && <div><span className="font-medium text-stone-700">{guide.name}.</span> {guideSel.note}</div>}
+            <div><Tip tip={w.note}><span className="font-medium text-stone-900">{w.name}</span></Tip></div>
+            <div><Tip tip={t.note}><span className="font-medium text-stone-900">{t.name}</span></Tip></div>
+            {guide && <div><Tip tip={guideSel.note}><span className="font-medium text-stone-900">{guide.name}</span></Tip></div>}
           </div>
         </details>
       </div>
@@ -1149,51 +1422,50 @@ function HifiPage() {
         {guide && <Pick label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
         <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
           <span className="text-stone-500">Material</span>
-          <div className="flex flex-wrap gap-1">{[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <button key={v} onClick={() => setMat(v)} className={seg(mat === v)}>{l}</button>)}</div>
+          <div className="flex flex-wrap gap-1">{[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <ToggleBtn key={v} onClick={() => setMat(v)} on={mat === v}>{l}</ToggleBtn>)}</div>
           <span />
           <span className="text-stone-500">Thickness</span>
-          <div className="flex flex-wrap gap-1">{[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <button key={v} onClick={() => setWall(v)} className={seg(wall === v)}>{l}</button>)}</div>
+          <div className="flex flex-wrap gap-1">{[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <ToggleBtn key={v} onClick={() => setWall(v)} on={wall === v}>{l}</ToggleBtn>)}</div>
           <span>{hLk("wall", "the panel thickness")}</span>
         </div>
-        <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
-          <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
-          <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="&#8243;" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
-          <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
-          <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-600">Ports</span>{hLk("box", "sealed, ported or radiator")}</div>
-          <div className="flex mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip], i, all) => {
+        <Card className="mb-4">
+          <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="″" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
+          <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="″" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
+          <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="″" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
+          <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-500">Ports</span>{hLk("box", "sealed, ported or radiator")}</div>
+          <div className="grid grid-cols-3 gap-1 mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip]) => {
             const slotOn = port.shape === "slot";
             const on = box === v && (v === "sealed" || (v === "vented" ? (n === "slot" ? slotOn : !slotOn && port.n === n) : pr.n === n));
-            return <button key={l} title={tip} aria-label={tip} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}
-              className={`flex-1 min-w-0 whitespace-nowrap px-1 py-1.5 border text-xs ${i ? "-ml-px" : "rounded-l"} ${i === all.length - 1 ? "rounded-r" : ""} ${on ? "relative border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{l}</button>;
+            return <ToggleBtn key={l} size="xs" className="min-w-0 whitespace-nowrap" title={tip} aria-label={tip} on={on} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}>{l}</ToggleBtn>;
           })}</div>
           {box === "vented" && (<>
             {port.shape === "slot"
-              ? <Slider label={`Slot height (${sys.slotW.toFixed(1)}″ wide)`} value={port.h || 1} min={0.5} max={3} step={0.125} unit="&#8243;" onChange={(v) => setP("h", v)} />
-              : <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />}
-            <Slider label={port.shape === "slot" ? "Slot length" : "Port length (centerline)"} value={port.len} min={1} max={30} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
+              ? <Slider label={`Slot height (${sys.slotW.toFixed(1)}″ wide)`} value={port.h || 1} min={0.5} max={3} step={0.125} unit="″" onChange={(v) => setP("h", v)} />
+              : <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="″" onChange={(v) => setP("dia", v)} />}
+            <Slider label={port.shape === "slot" ? "Slot length" : "Port length (centerline)"} value={port.len} min={1} max={30} step={0.25} unit="″" onChange={(v) => setP("len", v)} />
           </>)}
           {box === "radiator" && (<>
             <Pick label={`Passive radiator · ${prDrv.shape ? "5 × 8″ oval" : `${prDrv.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={prDrv} onChange={(o) => setPrSel((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, prAddMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
             <Slider label="Added mass, each" value={pr.addG} min={0} max={prAddMax(prDrv)} step={5} unit=" g" onChange={(v) => setPrSel((p) => ({ ...p, addG: v }))} />
           </>)}
           <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of ${sys.slot ? "slot" : "port"}` : sys.radiator ? `; radiators on the back tune it to ${sys.Fb.toFixed(0)} Hz, with a notch at ${sys.Fp.toFixed(0)} Hz (their own resonance)${prDrv.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}` : ", lightly stuffed"}.</div>
-        </div>
-        <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
+        </Card>
+        <Card className="mb-4">
           <Slider label="Crossover" value={xo} min={800} max={4000} step={50} unit=" Hz" onChange={setXo} extra={hLk("xo", "the crossover")} />
-          <div className="flex gap-1 mb-3">{[[4, "LR24"], [8, "LR48"]].map(([v, l]) => <button key={v} onClick={() => setOrder(v)} className={seg(order === v)}>{l}</button>)}</div>
+          <div className="flex gap-1 mb-3">{[[4, "LR24"], [8, "LR48"]].map(([v, l]) => <ToggleBtn key={v} size="xs" onClick={() => setOrder(v)} on={order === v}>{l}</ToggleBtn>)}</div>
           <Slider label="Baffle-step boost" value={bsc} min={0} max={6} step={0.5} unit=" dB" onChange={setBsc} />
           <Slider label="Woofer amp @ 8 Ω" value={wAmpW} min={10} max={500} step={10} unit=" W" onChange={setWAmpW} extra={hLk("wAmpW", "the woofer amp power")} />
           <Slider label="Tweeter amp @ 8 Ω" value={tAmpW} min={5} max={200} step={5} unit=" W" onChange={setTAmpW} extra={hLk("tAmpW", "the tweeter amp power")} />
-        </div>
-        <div className="rounded border border-stone-300 bg-white px-3 py-3">
-          <div className="text-sm text-stone-600 mb-1">Placement</div>
-          <div className="flex flex-wrap gap-1 mb-3">{Object.entries(HIFI_PLACES).map(([k, p]) => <button key={k} onClick={() => setPlace(k)} className={seg(place === k)}>{p.name}</button>)}</div>
+        </Card>
+        <Card>
+          <div className="text-sm text-stone-500 mb-1">Placement</div>
+          <div className="flex flex-wrap gap-1 mb-3">{Object.entries(HIFI_PLACES).map(([k, p]) => <ToggleBtn key={k} onClick={() => setPlace(k)} on={place === k}>{p.name}</ToggleBtn>)}</div>
           {place !== "free" && <Slider label="Distance to the wall" value={wallFt} min={0.5} max={6} step={0.25} unit=" ft" onChange={setWallFt} />}
           <Slider label="Speaker spacing" value={spacing} min={3} max={14} step={0.5} unit=" ft" onChange={setSpacing} />
           <Slider label="Toe-in" value={toe} min={0} max={35} step={1} unit="°" onChange={setToe} />
-          <Slider label="Box bottom height (stand)" value={standIn} min={0} max={40} step={1} unit="&#8243;" onChange={setStandIn} />
-          <Slider label="Ear height" value={earIn} min={24} max={60} step={1} unit="&#8243;" onChange={setEarIn} />
-        </div>
+          <Slider label="Box bottom height (stand)" value={standIn} min={0} max={40} step={1} unit="″" onChange={setStandIn} />
+          <Slider label="Ear height" value={earIn} min={24} max={60} step={1} unit="″" onChange={setEarIn} />
+        </Card>
       </aside>
     </main>
   );
@@ -1211,11 +1483,11 @@ function NotesPage() {
             return (
               <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
                 <div className="flex justify-between items-baseline mb-1">
-                  <h2 className="text-xl" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{r.name}</h2>
-                  <span className="text-sm tabular-nums text-stone-600">≈ ${total.toLocaleString()}</span>
+                  <SectionHead><Tip tip={r.note}>{r.name}</Tip></SectionHead>
+                  <span className="text-sm tabular-nums text-stone-500">≈ ${total.toLocaleString()}</span>
                 </div>
-                <p className="text-xs text-stone-500 mb-3">{r.note}</p>
-                <ul className="text-sm text-stone-700 space-y-1">
+                <div className="mb-3" />
+                <ul className="text-sm text-stone-900 space-y-1">
                   {r.items.map(([label, cost]) => (
                     <li key={label} className="flex justify-between gap-3"><span>{label}</span><span className="tabular-nums text-stone-500">${cost}</span></li>
                   ))}
@@ -1226,18 +1498,13 @@ function NotesPage() {
         </section>
 
         <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Signal path (mains rack)</h2>
+          <SectionHead className="mb-2">Signal path (mains rack)</SectionHead>
           <div className="max-w-4xl"><SignalPath /></div>
-          <p className="text-sm text-stone-700 max-w-3xl mt-3">
-            Division of labour: the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs.
-            Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and
-            impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled
-            preset, which a level limiter cannot.
-          </p>
+          <p className="text-sm text-stone-900 max-w-3xl mt-3"><Tip tip="the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.">How the DSP work is split</Tip></p>
         </section>
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Amp DSP: QSC GXD4 / GXD8</h2>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <SectionHead className="mb-3">Amp DSP: QSC GXD4 / GXD8</SectionHead>
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["Power per channel", "GXD4: 400 W into 8 \u03a9, 600 W into 4 \u03a9. GXD8: 800 W into 8 \u03a9, 1200 W into 4 \u03a9. Continuous, both channels driven. Voltage gain 33.5 dB (GXD4), 36.5 dB (GXD8)."],
               ["Filters", "Linkwitz-Riley 24 dB/oct only. Highpass 20 Hz\u20134 kHz, lowpass 60 Hz\u20134 kHz. No Butterworth and nothing steeper. Plus a 4-band PEQ (\u00b112 dB, 0.1\u20133 oct) and 50 ms of delay."],
@@ -1245,13 +1512,13 @@ function NotesPage() {
               ["What it can't do", "No threshold in volts, no attack or release settings, no limiting confined to one band. QSC don't say how the power setting maps to a threshold (the spec sheet calls it a peak limiter, the manual an RMS limiter)."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
           </ul>
           <h3 className="text-base font-medium mt-5 mb-2">Protecting an excursion-limited sub with a GXD</h3>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["1. Highpass", "At or a little above tuning, LR24. Set the planner's highpass to LR24 to match."],
               ["2. Limiter power", "The lower of the planner's \u201ccone reaches Xmax at X W\u201d and the driver's rating; Medium or Aggressive. On a GXD8 the ceiling is 800 W, which is just the amp's own limit."],
@@ -1260,7 +1527,7 @@ function NotesPage() {
               ["Horns", "A GXD4 puts 400 W on a 35 W AES driver like the DE360. Its limiter, set to the driver's rating, is the protection; set the planner's HF amp slider to the same power so its numbers match."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
@@ -1272,11 +1539,11 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Crossover / DSP: PA2 and alternatives</h2>
-          <p className="text-sm text-stone-700 mb-3 max-w-3xl">What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set in volts or dBu with attack and release, a slower RMS limiter, PEQ and delay. At ~15 ft from the mixer keep the inputs balanced; outputs to amps in the same rack matter less.</p>
+          <SectionHead className="mb-3">Crossover / DSP: PA2 and alternatives</SectionHead>
+          <p className="text-sm text-stone-900 mb-3 max-w-3xl">What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set in volts or dBu with attack and release, a slower RMS limiter, PEQ and delay. At ~15 ft from the mixer keep the inputs balanced; outputs to amps in the same rack matter less.</p>
           <div className="overflow-x-auto"><table className="text-sm w-full min-w-[720px] border-collapse">
             <thead><tr className="text-stone-500 text-left border-b border-stone-300">
-              {["Unit", "I/O", "Slopes", "Limiter", "PEQ / out", "Price (US)", "Notes"].map((h, i) => <th key={h} className={`py-1 pr-4 font-normal ${i === 0 ? "sticky left-0 bg-stone-100" : ""}`}>{h}</th>)}
+              {["Unit", "I/O", "Slopes", "Limiter", "PEQ / out", "Price (US)", "Notes"].map((h, i) => <th key={h} className={`py-1 pr-4 font-normal ${i === 0 ? "sticky left-0 bg-stone-50" : ""}`}>{h}</th>)}
             </tr></thead>
             <tbody>
               {[
@@ -1288,19 +1555,19 @@ function NotesPage() {
               ["t.racks DSP 408", "4×8 XLR", "up to 48 (unconfirmed)", "Attack, release; units unclear", "9", "$439", "Thomann only in the US."],
               ["dbx DriveRack PA2 (current)", "2×6 XLR", "BW / LR to 48", "No attack or release; up to 3 dB overshoot", "8, linked L/R", "~$599, ~$366 used", "Left and right share EQ and delay per band; 10 ms output delay."],
               ].map((r) => (
-                <tr key={r[0]} className="border-b border-stone-200 align-top">
-                  {r.map((c, i) => <td key={i} className={`py-1.5 pr-4 ${i === 0 ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-100" : ""}`}>{c}</td>)}
+                <tr key={r[0]} className="border-b border-stone-300 align-top">
+                  {r.map((c, i) => <td key={i} className={`py-1.5 pr-4 ${i === 0 ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : ""}`}>{c}</td>)}
                 </tr>
               ))}
             </tbody>
           </table></div>
-          <p className="text-xs text-stone-500 mt-2 max-w-3xl">Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026. Pick: a used DriveRack 260 on a budget; new, the Ashly AQM408 (limiters in dBu with attack and release, 4×8) or the VENU360 (front panel plus app). Keep the GXD limiters as a backstop either way.</p>
+          <p className="text-sm text-stone-900 mt-2 max-w-3xl">Pick: a used DriveRack 260 on a budget; new, the Ashly AQM408 (limiters in dBu with attack and release, 4×8) or the VENU360 (front panel plus app). Keep the GXD limiters as a backstop either way. <Tip tip="Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026.">Why not the others?</Tip></p>
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Home inputs: Gemini MXR-01BT</h2>
-          <p className="text-sm text-stone-700 mb-3 max-w-3xl">Turntable, line and phone into the same DSP and amps, with one master volume. A 2-channel DJ mixer does it all in one box.</p>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <SectionHead className="mb-3">Home inputs: Gemini MXR-01BT</SectionHead>
+          <p className="text-sm text-stone-900 mb-3 max-w-3xl">Turntable, line and phone into the same DSP and amps, with one master volume. A 2-channel DJ mixer does it all in one box.</p>
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["What it has", "2 channels, each switchable phono or line, 3-band EQ, Bluetooth input, 1/4″ mic, headphones, all-metal chassis."],
               ["Outputs", "Balanced 1/4″ TRS master (to the DSP), RCA master, and an RCA booth out with its own level."],
@@ -1310,7 +1577,7 @@ function NotesPage() {
               ["Turn-on", "Mixer and sources first, amps last; amps off first."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
@@ -1319,9 +1586,9 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Passive crossover: calibrate and build</h2>
-          <p className="text-sm text-stone-700 mb-3 max-w-3xl">For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80 per box in parts. All values get tuned, not just the pad.</p>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <SectionHead className="mb-3">Passive crossover: calibrate and build</SectionHead>
+          <p className="text-sm text-stone-900 mb-3 max-w-3xl">For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80 per box in parts. All values get tuned, not just the pad.</p>
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["1. Gear (~$150, once)", "UMIK-1 mic, REW (free) to measure, VituixCAD (free) to design, and an impedance jig (Dayton DATS V3, or a resistor + soundcard in REW)."],
               ["2. Measure in the finished box", "Woofer and HF separately, no crossover: response at 1 m on axis (outdoors or gated), impedance, and a near-field of woofer + port. Don't move the mic between drivers, so the phase stays valid. Optional: 15/30/45° off axis."],
@@ -1331,24 +1598,24 @@ function NotesPage() {
               ["6. Final build", "Stripboard is fine for the HF side; run the woofer path (~6 A at 300 W) in 14–16 AWG wire, not the strips, or wire point to point on a ply board. Space the coils or turn them 90° apart, away from the woofer magnet. Mount on foam, re-measure installed, copy for the other boxes and spot-check each."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
           </ul>
-          <p className="text-xs text-stone-500 mt-3 max-w-3xl">Roughly a weekend to measure and design, plus an evening to build and verify.</p>
+          <p className="text-sm text-stone-900 mt-3 max-w-3xl"><Tip tip="Roughly a weekend to measure and design, plus an evening to build and verify.">About 1 weekend</Tip></p>
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Materials</h2>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <SectionHead className="mb-3">Materials</SectionHead>
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["Prototype in particleboard", "Cheap and flat. Build it to verify duct tuning, then transfer interior dimensions \u2014 not the cut list \u2014 to the real material."],
               ["Consider 5/8\" or 1/2\" for the final boxes", "Sub column drops 119 \u2192 107 \u2192 95 lb loaded. Needs more bracing, and the extra interior volume lowers Fb, so the duct gets shorter."],
               ["MDO for the baffles", "Paints far better than birch, no edge penalty since no baffle edge is exposed."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
@@ -1356,8 +1623,8 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Still to decide</h2>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <SectionHead className="mb-3">Still to decide</SectionHead>
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["Baffle mounting", "Cleats (forgiving, costs 3/4\" of interior on each side) or a stopped rabbet in the frame panels (tighter, squares the box, needs a dado). Baffle size changes with the choice."],
               ["Bracing", "Not drawn. Volume and weight allow for two braces. Center ribs, slat ladder or windowed shelves — decide once handle recesses are placed, since they compete for the same panel area."],
@@ -1374,7 +1641,7 @@ function NotesPage() {
               ["Baffle material", "MDO if the baffles are painted — no baffle edge is exposed in any of the current configurations, so there is no reason not to. Birch only if the baffle is ever meant to be clear-finished."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
@@ -1404,7 +1671,7 @@ function FillsPage() {
   const kick = near(60).spl, mid = near(150).spl;
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
-      <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
       <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
     </div>
   );
@@ -1412,8 +1679,8 @@ function FillsPage() {
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "var(--font)" }}>
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
-        <p className="text-sm text-stone-600">Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).</p>
-        <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+        <p className="text-sm text-stone-500"><Tip tip="Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).">Passive fills</Tip></p>
+        <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
           {tile("Net volume", net.toFixed(0), "L")}
           {vM ? tile("Tuning Fb", vM.Fb.toFixed(0), "Hz") : tile("Qtc", sM.Qtc.toFixed(2), "")}
           {tile("F3", f3.toFixed(0), "Hz")}
@@ -1421,7 +1688,7 @@ function FillsPage() {
           {tile("Max @ 150 Hz", mid.toFixed(1), "dB")}
           {tile("Weight", lb.toFixed(0), "lb")}
         </div>
-        <ResponseChart fmax={300} series={[{ curve: maxC, label: drv.name, stroke: "#0082c8", tint: "rgba(0,130,200,0.07)" }]} marks={[{ f: hp, label: "HP" }, ...(vM ? [{ f: vM.Fb, label: "Fb" }] : [])]} />
+        <ResponseChart fmax={300} series={[{ curve: maxC, label: drv.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.07) }]} marks={[{ f: hp, label: "HP" }, ...(vM ? [{ f: vM.Fb, label: "Fb" }] : [])]} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
           {[
             ["Woofer sensitivity", `${sens.toFixed(1)} dB`, "2.83 V, half space, 1 m, modelled"],
@@ -1430,48 +1697,44 @@ function FillsPage() {
             ["HF crossover", hf && hf.xo ? `${hf.xo} Hz or higher` : "—", "recommended minimum"],
             ["Max SPL at 100 Hz", `${near(100).spl.toFixed(1)} dB`, `sine, ${near(100).who}-limited`],
             ["Price", drv.price ? `$${drv.price}` : "—", drv.src],
-          ].map(([k, v, n]) => (
-            <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
-              <span className="text-stone-500 shrink-0">{k}</span>
-              <span className="text-right"><span className="font-medium tabular-nums">{v}</span>{n ? <span className="block text-xs text-stone-500">{n}</span> : null}</span>
-            </div>
-          ))}
+          ]
+.map(([k, v, note, tip]) => <StatRow key={k} k={k} v={v} note={note} tip={tip} />)}
         </div>
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
             <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
               <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-              <span className="text-stone-600">{body}</span>
+              <span className="text-stone-500">{body}</span>
             </div>
           ))}
         </div>
-        <p className="text-xs text-stone-500"><span className="font-medium text-stone-600">{drv.name}.</span> {drv.note} Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement {ts.disp != null ? "as published" : `not published; ${disp} L assumed`}.</p>
+        <p className="text-xs text-stone-500"><span className="font-medium text-stone-500">{drv.name}.</span> {drv.note} <Tip tip={`Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement ${ts.disp != null ? "as published" : `not published; ${disp} L assumed`}.`}>Spec notes</Tip></p>
       </div>
       <aside className="min-w-0 md:col-span-2">
         <Pick label="Coaxial driver" options={FILL_OPTIONS} value={drv} onChange={setDrv} />
         <div className="text-sm text-stone-500 mb-1">Box</div>
         <div className="flex gap-1 mb-2">
           {[["Vented", "vented"], ["Sealed", "sealed"]].map(([l, v]) => (
-            <button key={v} onClick={() => setBoxType(v)} className={`px-3 py-1.5 rounded border text-sm ${boxType === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{l}</button>
+            <ToggleBtn key={v} onClick={() => setBoxType(v)} on={boxType === v}>{l}</ToggleBtn>
           ))}
         </div>
-        <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
-          <Slider label="Width" value={dim.w} min={9} max={20} step={0.5} unit="&#8243;" onChange={(v) => setD("w", v)} />
-          <Slider label="Height" value={dim.h} min={9} max={28} step={0.5} unit="&#8243;" onChange={(v) => setD("h", v)} />
-          <Slider label="Depth" value={dim.d} min={7} max={20} step={0.5} unit="&#8243;" onChange={(v) => setD("d", v)} />
+        <Card className="mb-4">
+          <Slider label="Width" value={dim.w} min={9} max={20} step={0.5} unit="″" onChange={(v) => setD("w", v)} />
+          <Slider label="Height" value={dim.h} min={9} max={28} step={0.5} unit="″" onChange={(v) => setD("h", v)} />
+          <Slider label="Depth" value={dim.d} min={7} max={20} step={0.5} unit="″" onChange={(v) => setD("d", v)} />
           {boxType === "vented" && (<>
             <Slider label="Ports" value={port.n} min={1} max={3} step={1} unit="" onChange={(v) => setP("n", v)} />
-            <Slider label="Port diameter" value={port.dia} min={1.5} max={5} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />
-            <Slider label="Port length" value={port.len} min={1} max={14} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
+            <Slider label="Port diameter" value={port.dia} min={1.5} max={5} step={0.25} unit="″" onChange={(v) => setP("dia", v)} />
+            <Slider label="Port length" value={port.len} min={1} max={14} step={0.25} unit="″" onChange={(v) => setP("len", v)} />
             <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
           </>)}
           <div className="text-xs text-stone-500">{gross.toFixed(0)} L gross{boxType === "sealed" ? ", stuffed" : `, ${pArea.toFixed(1)} in² of port`}.</div>
-        </div>
-        <div className="rounded border border-stone-300 bg-white px-3 py-3">
+        </Card>
+        <Card>
           <Slider label="Highpass to the subs (LR24)" value={hp} min={50} max={160} step={5} unit=" Hz" onChange={setHp} />
           <Slider label="Amp power per box @ 8 Ω" value={ampW} min={25} max={800} step={25} unit=" W" onChange={setAmpW} />
           <div className="text-xs text-stone-500">A freed GXD4 channel with two 8 Ω fills in parallel gives about 300 W each.</div>
-        </div>
+        </Card>
       </aside>
     </main>
   );
@@ -1481,17 +1744,17 @@ function SheetDrawing({ sheet, S, idx }) {
   const sc = 4, W = S.w * sc, H = S.h * sc;
   const [box, cw] = useWidth(S.w === 48 ? 160 : 200);
   const fs = (12 * (W + 4)) / cw;   // 12 css px
-  const colors = { Sub: "#fff3b0", Mid: "#cce6f4" };
+  const colors = { Sub: PAL.subTint, Mid: PAL.mutedTint };
   return (
     <div ref={box} className={`flex flex-col gap-1 w-full ${S.w === 48 ? "max-w-[240px] sm:w-[160px]" : "max-w-[300px] sm:w-[200px]"}`}>
       <div className="text-xs text-stone-500">Sheet {idx + 1}</div>
       <svg viewBox={`-2 -2 ${W + 4} ${H + 4}`} style={{ width: "100%", height: "auto" }} role="img" aria-label={`Sheet ${idx + 1} layout`}>
-        <rect x="0" y="0" width={W} height={H} fill="#ffffff" stroke="#707070" />
+        <rect x="0" y="0" width={W} height={H} fill={PAL.white} stroke={PAL.muted} />
         {sheet.items.map((it, i) => (
           <g key={i}>
-            <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || "#e6e6e6"} stroke="#707070" strokeWidth="0.8" />
+            <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || PAL.edge} stroke={PAL.muted} strokeWidth="0.8" />
             {it.w * sc > fs * 3.6 && it.h * sc > fs * 1.3 && (
-              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + fs * 0.35} textAnchor="middle" fontSize={fs} fill="#111111" fontFamily="Inconsolata, monospace">{it.box} {it.part.split(" ")[0]}</text>
+              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + fs * 0.35} textAnchor="middle" fontSize={fs} fill={PAL.ink} fontFamily="Inconsolata, monospace">{it.box} {it.part.split(" ")[0]}</text>
             )}
           </g>
         ))}
@@ -1507,32 +1770,31 @@ function CutlistPage(props) {
   const byT = {};
   parts.forEach((p) => { for (let i = 0; i < p.qty * sets; i++) (byT[p.t] = byT[p.t] || []).push(p); });
   const packs = Object.keys(byT).sort((a, b) => b - a).map((t) => ({ t: +t, ...packSheets(byT[t], S, kerf) }));
-  const btn = (on) => `px-3 py-1.5 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`;
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16" style={{ fontFamily: "var(--font)" }}>
       <div className="flex flex-wrap gap-6 mb-5">
         <div><div className="text-sm text-stone-500 mb-1">Corner joints</div>
-          <div className="flex gap-1">{[["butt", "Butt"], ["rabbet", "Rabbet"], ["miter", "Miter"]].map(([k, l]) => <button key={k} className={btn(joint === k)} onClick={() => setJoint(k)}>{l}</button>)}</div></div>
+          <div className="flex gap-1">{[["butt", "Butt"], ["rabbet", "Rabbet"], ["miter", "Miter"]].map(([k, l]) => <ToggleBtn key={k} on={joint === k} onClick={() => setJoint(k)}>{l}</ToggleBtn>)}</div></div>
         <div><div className="text-sm text-stone-500 mb-1">Sheet</div>
-          <div className="flex gap-1">{Object.entries(SHEETS).map(([k, s]) => <button key={k} className={btn(sheetKind === k)} onClick={() => setSheetKind(k)}>{s.name}</button>)}</div></div>
+          <div className="flex gap-1">{Object.entries(SHEETS).map(([k, s]) => <ToggleBtn key={k} on={sheetKind === k} onClick={() => setSheetKind(k)}>{s.name}</ToggleBtn>)}</div></div>
         <div><div className="text-sm text-stone-500 mb-1">Stacks</div>
-          <div className="flex gap-1">{[1, 2, 4].map((n) => <button key={n} className={btn(sets === n)} onClick={() => setSets(n)}>{n}</button>)}</div></div>
+          <div className="flex gap-1">{[1, 2, 4].map((n) => <ToggleBtn key={n} on={sets === n} onClick={() => setSets(n)}>{n}</ToggleBtn>)}</div></div>
       </div>
-      <p className="text-sm text-stone-600 mb-4 max-w-3xl">From the planner's current boxes: {tName(wall)} walls, 3/4″ baffles set {f8(props.inset)}″ back, back panels in a rabbet. Sizes are finished dimensions in inches (width × length); {f8(kerf)}″ kerf allowed in the layout. Quantities are for {sets} stack{sets > 1 ? "s" : ""}.</p>
+      <p className="text-sm text-stone-500 mb-4 max-w-3xl">From the planner's current boxes: {tName(wall)} walls, 3/4″ baffles set {f8(props.inset)}″ back, back panels in a rabbet. Sizes are finished dimensions in inches (width × length); {f8(kerf)}″ kerf allowed in the layout. Quantities are for {sets} stack{sets > 1 ? "s" : ""}.</p>
       <div className="overflow-x-auto mb-6"><table className="text-sm w-full sm:min-w-[640px] border-collapse">
         <thead><tr className="text-stone-500 text-left border-b border-stone-300">
           <th className="py-1 pr-3 font-normal">Box</th><th className="py-1 pr-3 font-normal">Part</th><th className="py-1 pr-3 font-normal text-right">Qty</th>
           <th className="py-1 pr-3 font-normal text-right">Width × length</th><th className="py-1 pr-3 font-normal">Ply</th><th className="py-1 font-normal hidden sm:table-cell">Notes</th>
         </tr></thead>
         <tbody>{parts.map((p, i) => (
-          <tr key={i} className="border-b border-stone-200 align-top">
+          <tr key={i} className="border-b border-stone-300 align-top">
             <td className="py-1 pr-3">{p.box}</td><td className="py-1 pr-3">{p.part}{p.note && <span className="block sm:hidden text-xs text-stone-500">{p.note}</span>}</td><td className="py-1 pr-3 text-right tabular-nums">{p.qty * sets}</td>
             <td className="py-1 pr-3 text-right tabular-nums whitespace-nowrap">{f8(Math.min(p.a, p.b))} × {f8(Math.max(p.a, p.b))}</td>
-            <td className="py-1 pr-3">{tName(p.t)}</td><td className="py-1 text-stone-600 hidden sm:table-cell">{p.note}</td>
+            <td className="py-1 pr-3">{tName(p.t)}</td><td className="py-1 text-stone-500 hidden sm:table-cell">{p.note}</td>
           </tr>))}</tbody>
       </table></div>
-      {vent.length > 0 && <p className="text-sm text-stone-600 mb-6">Also: {vent.join("; ")}.</p>}
-      <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Sheet layout, {S.name}</h2>
+      {vent.length > 0 && <p className="text-sm text-stone-500 mb-6">Also: {vent.join("; ")}.</p>}
+      <SectionHead className="mb-2">Sheet layout, {S.name}</SectionHead>
       {packs.map((pk) => (
         <div key={pk.t} className="mb-6">
           <div className="text-sm font-medium mb-2">{tName(pk.t)} birch: {pk.sheets.length} sheet{pk.sheets.length > 1 ? "s" : ""}</div>
@@ -1540,7 +1802,7 @@ function CutlistPage(props) {
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">{pk.sheets.map((sh, i) => <SheetDrawing key={i} sheet={sh} S={S} idx={i} />)}</div>
         </div>
       ))}
-      <p className="text-xs text-stone-500">Simple row-by-row layout, grain direction ignored. Treat it as a sheet count and a starting point for your own cut plan. Driver cutouts are typical values; use the datasheet's.</p>
+      <p className="text-sm text-stone-500"><Tip tip="Simple row-by-row layout, grain direction ignored. Treat it as a sheet count and a starting point for your own cut plan. Driver cutouts are typical values; use the datasheet's.">About this layout</Tip></p>
     </main>
   );
 }
@@ -1554,7 +1816,7 @@ const LOCK_OPEN_PATH = "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h2c0-1.66 1.34-3 
 function LockIcon({ locked }) {
   return <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d={locked ? LOCK_PATH : LOCK_OPEN_PATH} fill="currentColor" fillRule="evenodd" /></svg>;
 }
-const lockCls = (on) => `inline-flex items-center justify-center gap-0.5 min-w-[28px] h-6 px-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 text-stone-400 bg-white hover:border-stone-500 hover:text-stone-600"}`;
+const lockCls = (on) => `inline-flex items-center justify-center gap-0.5 min-w-[32px] h-8 px-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 text-stone-500 bg-white hover:border-stone-500 hover:text-stone-500"}`;
 function LockBtn({ on, onClick, what }) {
   const tip = on ? `Locked: the optimizer keeps ${what}` : `Unlocked: the optimizer may change ${what}`;
   return <button type="button" onClick={onClick} aria-pressed={on} aria-label={tip} title={tip} className={lockCls(on)}><LockIcon locked={on} /></button>;
@@ -1600,7 +1862,7 @@ function runOptimizer(input) {
 
 // a goal's place in the priority order, floating on the button's corner so the label doesn't move
 function RankBadge({ n }) {
-  return <span className="absolute -top-2 -left-2 min-w-[18px] h-[18px] px-1 rounded-full bg-cmy-c text-white text-[11px] font-bold leading-[18px] text-center" aria-label={`priority ${n}`}>{n}</span>;
+  return <span className="absolute -top-2 -left-2 min-w-[18px] h-[18px] px-1 rounded-full bg-cmy-a text-white text-xs font-bold leading-[18px] text-center" aria-label={`priority ${n}`}>{n}</span>;
 }
 // status notes: a light tint of the status colour with a matching border
 const CHIP_BG = { ok: "bg-green-50 border-green-200 border-l-4 border-l-green-300", warn: "bg-amber-50 border-amber-200 border-l-4 border-l-amber-300", bad: "bg-red-50 border-red-200 border-l-4 border-l-red-300" };
@@ -1629,22 +1891,22 @@ function BoxFront({ g, cur }) {
   };
   const a = stackRects(g), b = cur ? stackRects(cur) : null, t = g.wall * k, v = g.cVent;
   const vent = [];
-  if (g.portStyle === "slots" || g.portStyle === "folded") vent.push(<rect key="v" x={a.sb.x + t} y={a.sb.y + a.sb.h - t - v.slotH * k} width={a.sb.w - 2 * t} height={v.slotH * k} fill="#111111" />);
+  if (g.portStyle === "slots" || g.portStyle === "folded") vent.push(<rect key="v" x={a.sb.x + t} y={a.sb.y + a.sb.h - t - v.slotH * k} width={a.sb.w - 2 * t} height={v.slotH * k} fill={PAL.ink} />);
   else if (g.portStyle === "vslots" || g.portStyle === "vslot1") {
-    vent.push(<rect key="l" x={a.sb.x + t} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#111111" />);
-    if (g.portStyle === "vslots") vent.push(<rect key="r" x={a.sb.x + a.sb.w - t - v.throat * k} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#111111" />);
+    vent.push(<rect key="l" x={a.sb.x + t} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill={PAL.ink} />);
+    if (g.portStyle === "vslots") vent.push(<rect key="r" x={a.sb.x + a.sb.w - t - v.throat * k} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill={PAL.ink} />);
   } else for (let i = 0; i < (v.nt || 1); i++) {
     const n = v.nt || 1, gap = a.sb.w / (n + 1);
-    vent.push(<circle key={i} cx={a.sb.x + gap * (i + 1)} cy={a.sb.y + a.sb.h - t - (v.dia * k) / 2 - 2} r={(v.dia * k) / 2} fill="#111111" />);
+    vent.push(<circle key={i} cx={a.sb.x + gap * (i + 1)} cy={a.sb.y + a.sb.h - t - (v.dia * k) / 2 - 2} r={(v.dia * k) / 2} fill={PAL.ink} />);
   }
   const ventH = g.portStyle === "slots" || g.portStyle === "folded" ? v.slotH * k + t : g.portStyle.startsWith("round") ? v.dia * k + 4 : 0;
-  const driver = (box, size, below = 0) => <circle cx={box.x + box.w / 2} cy={box.y + (box.h - below) / 2} r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2} fill="#e6e6e6" stroke="#707070" strokeWidth="1" />;
+  const driver = (box, size, below = 0) => <circle cx={box.x + box.w / 2} cy={box.y + (box.h - below) / 2} r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2} fill={PAL.edge} stroke={PAL.muted} strokeWidth="1" />;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={`Front view: sub ${g.sub.w} × ${g.sub.h}″, mid ${g.mid.w} × ${g.mid.h}″${cur ? "; your design dashed" : ""}`}>
-      {b && b.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} fill="none" stroke="#707070" strokeWidth="1" strokeDasharray="3 2" />)}
-      {a.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} rx="1" fill={q === a.hb ? "#707070" : "#e6e6e6"} fillOpacity={q === a.hb ? 1 : 0.85} stroke="#111111" strokeWidth="1.2" />)}
+      {b && b.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} fill="none" stroke={PAL.muted} strokeWidth="1" strokeDasharray="3 2" />)}
+      {a.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} rx="1" fill={q === a.hb ? PAL.muted : PAL.edge} fillOpacity={q === a.hb ? 1 : 0.85} stroke={PAL.ink} strokeWidth="1.2" />)}
       {vent}
-      {g.tower && <line x1={a.sb.x} x2={a.sb.x + a.sb.w} y1={a.mb.y + a.mb.h} y2={a.mb.y + a.mb.h} stroke="#111111" strokeWidth="1.2" />}
+      {g.tower && <line x1={a.sb.x} x2={a.sb.x + a.sb.w} y1={a.mb.y + a.mb.h} y2={a.mb.y + a.mb.h} stroke={PAL.ink} strokeWidth="1.2" />}
       {driver(g.tower ? { ...a.sb, y: a.mb.y + a.mb.h, h: a.sb.h - a.mb.h } : a.sb, g.subSize, ventH)}
       {driver(a.mb, g.midSize)}
     </svg>
@@ -1668,18 +1930,18 @@ function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90], top = 13
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto touch-none" onPointerMove={move} onPointerLeave={() => setHover(null)} role="img"
       aria-label="Clean sub output from 20 to 200 Hz, this design against yours">
-      {band && <rect x={x(band[0])} y={T} width={x(band[1]) - x(band[0])} height={H - T - B} fill="#f2f2f2" />}
-      {ticks.map((d) => <g key={d}><line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke="#e6e6e6" /><text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill="#707070">{d}</text></g>)}
-      {(fmax > 1000 ? [20, 100, 1000, 10000] : [20, 50, 100, 200, 500]).filter((f) => f >= fmin && f <= fmax).map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill="#707070">{f >= 1000 ? f / 1000 + "k" : f}</text>)}
-      {cur && <path d={path(cur)} fill="none" stroke="#707070" strokeWidth="1.5" strokeDasharray="4 3" />}
-      <path d={path(curve)} fill="none" stroke="#111111" strokeWidth="2" />
+      {band && <rect x={x(band[0])} y={T} width={x(band[1]) - x(band[0])} height={H - T - B} fill={PAL.alpha(PAL.ink, 0.05)} />}
+      {ticks.map((d) => <g key={d}><line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke={PAL.edge} /><text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill={PAL.muted}>{d}</text></g>)}
+      {(fmax > 1000 ? [20, 100, 1000, 10000] : [20, 50, 100, 200, 500]).filter((f) => f >= fmin && f <= fmax).map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill={PAL.muted}>{f >= 1000 ? f / 1000 + "k" : f}</text>)}
+      {cur && <path d={path(cur)} fill="none" stroke={PAL.muted} strokeWidth="1.5" strokeDasharray="4 3" />}
+      <path d={path(curve)} fill="none" stroke={PAL.ink} strokeWidth="2" />
       {hover ? (<>
-        <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke="#707070" strokeWidth="0.75" />
-        <circle cx={x(h1[0])} cy={y(h1[1])} r="2.5" fill="#111111" stroke="#fff" strokeWidth="1" />
-        {(() => { const X = Math.max(L + 14, Math.min(W - R - 14, x(hover))); return <g><rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill="#111111" /><text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill="#ffffff">{hover.toFixed(0)} Hz</text></g>; })()}
-        <text x={L} y={9} fontSize="8.5" fill="#111111">{hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB{h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}</text>
+        <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke={PAL.muted} strokeWidth="0.75" />
+        <circle cx={x(h1[0])} cy={y(h1[1])} r="2.5" fill={PAL.ink} stroke={PAL.white} strokeWidth="1" />
+        {(() => { const X = Math.max(L + 14, Math.min(W - R - 14, x(hover))); return <g><rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill={PAL.ink} /><text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill={PAL.white}>{hover.toFixed(0)} Hz</text></g>; })()}
+        <text x={L} y={9} fontSize="8.5" fill={PAL.ink}>{hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB{h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}</text>
       </>) : (
-        <text x={L} y={9} fontSize="8.5" fill="#707070"><tspan fill="#111111">━ this</tspan>{cur ? "  ╌ yours" : ""} · dB, clean</text>
+        <text x={L} y={9} fontSize="8.5" fill={PAL.muted}><tspan fill={PAL.ink}>━ this</tspan>{cur ? "  ╌ yours" : ""} · dB, clean</text>
       )}
     </svg>
   );
@@ -1687,21 +1949,21 @@ function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90], top = 13
 function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave }) {
   const c = k.config, m = k.metrics, d = k.delta || {};
   const tile = (label, v, delta) => (
-    <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1.5">
-      <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
+    <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
+      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
       <div className="tabular-nums">{v}</div>{delta}
     </div>
   );
   const sheets = k.build.sheets.map((x) => `${x.n} sheet${x.n > 1 ? "s" : ""} ${x.t === 0.5 ? "1/2″" : x.t === 0.75 ? "3/4″" : x.t + "″"}`).join(" + ");
   return (
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
-      <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
+      <div className="text-xs uppercase tracking-wider font-bold text-stone-500">{k.label} · {i + 1} of {n}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{k.names.sub} · {c.cDim.w} × {c.cDim.h} × {c.cDim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         {k.geom && <BoxFront g={k.geom} cur={cur && cur.geom} />}
         {k.curve && <OutChart curve={k.curve} cur={cur && cur.curve} />}
       </div>
-      <div className="text-xs text-stone-600">Mid {k.names.mid} · {k.names.cd} on {k.names.horn} · amps {c.ampW} / {c.mAmpW} / {c.hfAmpW} W</div>
+      <div className="text-xs text-stone-500">Mid {k.names.mid} · {k.names.cd} on {k.names.horn} · amps {c.ampW} / {c.mAmpW} / {c.hfAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile("Drivers", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Heaviest", `${m.heaviest.toFixed(0)} lb`, <Delta v={d.heaviest} unit=" lb" lowerIsBetter />)}
@@ -1712,19 +1974,18 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
       {k.warnings.filter(([h]) => !/limited$/.test(h)).map(([h, b]) => (
         <div key={h} className="text-xs border border-l-4 rounded px-2 py-1 bg-amber-50 border-amber-200 border-l-amber-300"><b className="font-semibold text-amber-700 mr-1">{h}</b>{b}</div>
       ))}
-      <div className="text-xs text-stone-600">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
-      <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
-      {!k.priceKnown && <div className="text-[11px] text-stone-500">Some prices unknown</div>}
+      <div className="text-xs text-stone-500">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
+      <div className="text-xs text-stone-500">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
+      {!k.priceKnown && <div className="text-xs text-stone-500"><Tip tip="Some drivers have no listed price, so the total is a lower bound.">Partial prices</Tip></div>}
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
-        <button onClick={onLoad} className="flex-1 px-3 py-2 rounded border text-sm font-semibold border-cmy-c bg-cmy-c text-white">Load</button>
-        <button onClick={onSave} disabled={!canSave} title={canSave ? "" : "Sign in to save"} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40">Save</button>
+        <Button variant="primary" onClick={onLoad} className="flex-1">Load</Button>
+        <Button onClick={onSave} disabled={!canSave} title={canSave ? "" : "Sign in to save"} className="flex-1">Save</Button>
       </div>
     </div>
   );
 }
-const seg = (on) => `px-3 py-2 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`;
-function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, previewCard, onPreview, onLoad, onSave, canSave }) {
+function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, previewCard, onPreview, onLoad, onSave, canSave }) {
   const need = roomNeed(optIn.room), target = Math.max(curOut != null ? curOut : need, need);
   const goals = optIn.goals, g = goals[0];
   // tap adds a goal at the end of the order; tap again removes it (none selected is allowed; the search waits for one)
@@ -1733,53 +1994,39 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
     + (goals.length > 1 ? `, and ${goals.slice(1).map((x) => ({ cheaper: "cheaper", lighter: "lighter", lower: "lower", louder: "louder" })[x]).join(" and ")} than yours` : "");
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "var(--font)" }}>
-      <div className="rounded-lg border border-stone-300 bg-white p-4">
-        <h2 className="text-xl" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Find a better design</h2>
+      <Card pad="lg">
+        <SectionHead>Find a better design</SectionHead>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>
-            <div className="flex flex-wrap gap-1">{Object.entries(ROOMS).map(([k, r]) => <button key={k} aria-label={r.name} className={seg(String(optIn.room) === k)} onClick={() => setOpt({ room: k === "outdoor" ? k : +k })}>{r.short}</button>)}</div>
+            <div className="flex flex-wrap gap-1">{Object.entries(ROOMS).map(([k, r]) => <ToggleBtn key={k} aria-label={r.name} on={String(optIn.room) === k} onClick={() => setOpt({ room: k === "outdoor" ? k : +k })}>{r.short}</ToggleBtn>)}</div>
           </div>
           <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Max per box</div>
-            <div className="flex items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.maxLb} min={30} max={250} onChange={(e) => setOpt({ maxLb: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> lb</div>
+            <NumberField label="Max per box" value={optIn.maxLb} min={30} max={250} unit="lb" onChange={(n) => setOpt({ maxLb: n })} className="" />
           </div>
           <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Driver budget, per stack <span className="text-xs">(sub + mid + CD, at the listed prices)</span></div>
-            <div className="flex flex-wrap items-center gap-2 text-sm"><input type="number" inputMode="numeric" value={optIn.budget} min={100} step={25} onChange={(e) => setOpt({ budget: +e.target.value || 0 })} className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" /> $</div>
+            <NumberField label={<>Driver budget, per stack <span className="text-xs">(sub + mid + CD, at the listed prices)</span></>} value={optIn.budget} min={100} step={25} unit="$" onChange={(n) => setOpt({ budget: n })} className="" />
           </div>
-          <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
-            <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => { const i = goals.indexOf(k); return (
-              <button key={k} title={gg.name} aria-pressed={i >= 0} className={`relative ${seg(i >= 0)}`} onClick={() => tapGoal(k)}>{goals.length > 1 && i >= 0 && <RankBadge n={i + 1} />}{gg.short}</button>); })}</div>
-          </div>
+          <GoalPicker defs={GOALS} selected={goals} onTap={tapGoal} />
         </div>
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
           {curOut != null && <div className="text-xs text-stone-500 mt-0.5">Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB · {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB</div>}</div>
-        <div className="mt-2 text-xs text-stone-500">Amps: {amps}</div>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button onClick={run} disabled={busy || !g} className="px-4 py-2 rounded border text-sm font-semibold border-cmy-c bg-cmy-c text-white disabled:opacity-50">{busy ? "Searching…" : g ? "Find 3 designs" : "Pick a goal first"}</button>
-          {res && !busy && <span className="text-xs text-stone-500">Searched {res.stats.evaluated.toLocaleString()} designs in {(res.stats.ms / 1000).toFixed(1)} s{res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}</span>}
+        <RunRow busy={busy} hasGoal={!!g} onRun={run} stats={res && res.stats} note={res && res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}>
           {err && <span className="text-xs text-red-700">{err}</span>}
-        </div>
-        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
-        {res && !busy && res.cards.length > 0 && (<>
-          <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
-            {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} cur={res.cur} previewing={previewCard === k} canSave={canSave}
-              onPreview={() => onPreview(k)} onLoad={() => onLoad(k)} onSave={() => onSave(k)} />)}
-          </div>
-          {res.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {res.cards.length - 1} more</div>}
-        </>)}
-        {res && !busy && res.goalMissing && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">{res.goalMissing}</div>}
+        </RunRow>
+        {res && !busy && res.curProblems && res.curProblems.length > 0 && <Notice>Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</Notice>}
+        {res && !busy && <ResultCards cards={res.cards} render={(k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} cur={res.cur} previewing={previewCard === k} canSave={canSave}
+          onPreview={() => onPreview(k)} onLoad={() => onLoad(k)} onSave={() => onSave(k)} />} />}
+        {res && !busy && res.goalMissing && <Notice>{res.goalMissing}</Notice>}
         {res && !busy && !res.cards.length && res.nearMiss && (
           <div className="mt-4 rounded-lg border border-orange-300 bg-orange-50 px-3 py-3">
             <h3 className="text-base" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Nothing fits all your limits</h3>
             <div className="text-xs text-orange-900 mt-1">{res.nearMiss.closest ? `Closest: ${res.nearMiss.closest.names.sub}, ${res.nearMiss.closest.metrics.heaviest.toFixed(0)} lb, ${money(res.nearMiss.closest.metrics.price)} per stack, ${res.nearMiss.closest.metrics.out.toFixed(1)} dB. ` : ""}Blocked by: {res.nearMiss.blocking.join("; ")}.</div>
             {res.nearMiss.options.length > 0 && <div className="flex flex-wrap gap-1.5 mt-2">{res.nearMiss.options.map((o) => (
-              <button key={o.text} className={seg(false)} onClick={() => run(o.set)}>{o.text}</button>))}</div>}
+              <ToggleBtn key={o.text} on={false} onClick={() => run(o.set)}>{o.text}</ToggleBtn>))}</div>}
           </div>
         )}
-      </div>
+      </Card>
     </section>
   );
 }
@@ -1807,14 +2054,14 @@ function StackPlanner() {
   const setM = (k, v) => setMDim((p) => ({ ...p, [k]: v }));
   const plinth = 3; // fixed, matches the duct height
   const [cutaway, setCutaway] = useState(false);
-  const [cabinet, setCabinet] = useState(CABINETS[0]);
+  const [cabinet] = useState(CABINETS[0]);
   const [portStyle, setPortStyle] = useState("slots");
   const [layout, setLayout] = useState("stack");
   const format = FORMATS[0];   // 18″ sub + compression driver; mid is 12″ or 15″
   const [midSize, setMidSize] = useState(12);
   const [wall, setWall] = useState(0.75);   // side/top/bottom/back ply, in
   const [inset, setInset] = useState(0.75); // how far the baffles sit back from the frame front, in
-  const [baffleColor, setBaffleColor] = useState("#e8b4a8");
+  const [baffleColor, setBaffleColor] = useState(SWATCHES.find(([, name]) => name === "Dusty pink")[0]);
   const [cabFinish, setCabFinish] = useState("birch");
   const [spacerH, setSpacerH] = useState(20);
   const [showDetails, setShowDetails] = useState(false);
@@ -1868,38 +2115,8 @@ function StackPlanner() {
   const setV = (k, v) => setCVent((p) => ({ ...p, [k]: v }));
 
   // ---- saved configurations, backed by the artifact's document store ----
-  const [db, setDb] = useState(null);
-  const [saved, setSaved] = useState(null);     // null = still loading
-  const [cfgName, setCfgName] = useState("");
-  const [cfgMsg, setCfgMsg] = useState("");
-  const [selCfg, setSelCfg] = useState("");
-  // Firebase (github.io build): signed-in users keep configs under users/{uid}/.
-  const [fbUser, setFbUser] = useState(null);
-  const fb = !(window.claude && window.claude.use) && window.firebase && window.PLANNER_FIREBASE ? window.firebase : null;
-  useEffect(() => {
-    let live = true;
-    if (fb) {
-      if (!fb.apps.length) fb.initializeApp(window.PLANNER_FIREBASE);
-      const un = fb.auth().onAuthStateChanged((u) => {
-        if (!live) return;
-        setFbUser(u);
-        if (u) {
-          const fs = fb.firestore();
-          setDb({ collection: (name) => fs.collection(`users/${u.uid}/${name}`) });
-        } else { setDb(null); setSaved([]); }
-      });
-      return () => { live = false; un(); };
-    }
-    (async () => {
-      try {
-        const d = window.claude && window.claude.use ? await window.claude.use("db") : null;
-        if (live) { setDb(d); if (!d) setSaved([]); }
-      } catch { if (live) { setDb(null); setSaved([]); } }
-    })();
-    return () => { live = false; };
-  }, []);
-  const signIn = () => fb.auth().signInWithPopup(new fb.auth.GoogleAuthProvider()).catch(() => { setCfgMsg("Sign-in failed"); setTimeout(() => setCfgMsg(""), 2500); });
-  const signOut = () => fb.auth().signOut();
+  const store = useConfigStore("configs");
+  const { db, saved, fb, fbUser, cfgMsg, setCfgMsg, signIn, signOut } = store;
   // One-time copy of the configs saved in the claude.ai artifact (data/configs-seed.json).
   const importSeed = async () => {
     if (!db) return;
@@ -1916,14 +2133,6 @@ function StackPlanner() {
     } catch { setCfgMsg("Couldn't import"); }
     setTimeout(() => setCfgMsg(""), 2500);
   };
-  useEffect(() => {
-    if (!db) return;
-    const un = db.collection("configs").orderBy("savedAt", "desc").limit(50).onSnapshot(
-      (snap) => setSaved(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-      () => setSaved([])
-    );
-    return un;
-  }, [db]);
   // In the tower layout the mid chamber is the sub's footprint, 15.5 in tall.
   const midDims = layout === "tower" ? { w: cDim.w, h: 15.5, d: cDim.d } : mDim;
   const midSel = { ...mid, box: midDims };
@@ -1931,21 +2140,6 @@ function StackPlanner() {
   const midList = MID_OPTIONS.filter((o) => (o.size || 12) === midSize);
   const boxList = MID_BOXES.filter((b) => (b.size || 12) === midSize && b.id !== "b13");
   const subBox = cDim;
-  // Load a published cabinet into the sliders as a starting point.
-  const startFrom = (cb) => {
-    const d = cb.dims[format.sub];
-    setCabinet(cb);
-    setCDim({ w: d.w, h: d.h, d: d.d });
-    const v = cb.vents[0];
-    setPortStyle(v === "round1" || v === "round4" ? "round2" : v);
-    if (v === "round1") setCVent((p) => ({ ...p, nt: 1, dia: 8, len: 11 }));
-    else if (v === "round4") setCVent((p) => ({ ...p, nt: 4, dia: 4, len: 11.5 }));
-    else if (v === "round2") setCVent((p) => ({ ...p, nt: 2, dia: 5, len: 9.8 }));
-    else if (v === "folded") setCVent((p) => ({ ...p, slotH: 3, len: 15.75 }));
-    else if (v === "vslots") setCVent((p) => ({ ...p, throat: 1.4, len: d.d - 3 }));
-    else setCVent((p) => ({ ...p, slotH: 3, len: d.d - 4.5 }));
-    if (cb.vent) setCVent((p) => ({ ...p, ...cb.vent }));   // published vent overrides the generic one
-  };
   const subSel = { ...sub, box: subBox };
   useEffect(() => {
     const pickOf = (list) => list.find((o) => o.pick) || list[0];
@@ -2050,23 +2244,6 @@ function StackPlanner() {
     if (c.joint) setJoint(c.joint);
     if (c.portStyle) setPortStyle(c.portStyle);
   };
-  const saveCfg = async () => {
-    const name = cfgName.trim();
-    if (!db || !name) return;
-    setCfgMsg("Saving…");
-    try {
-      await db.collection("configs").doc().set({ name, savedAt: Date.now(), ...snapshot() });
-      setCfgName(""); setCfgMsg("Saved");
-    } catch (e) {
-      setCfgMsg(e && (e.code === "invalid_argument" || e.code === "permission-denied") ? "You don't have write access here" : "Couldn't save — try again");
-    }
-    setTimeout(() => setCfgMsg(""), 2500);
-  };
-  const delCfg = async (id) => {
-    if (!db) return;
-    try { await db.collection("configs").doc(id).delete(); }
-    catch { setCfgMsg("Couldn't delete"); setTimeout(() => setCfgMsg(""), 2500); }
-  };
   // ---- optimizer actions ----
   const today = () => new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const runOpt = async (over) => {
@@ -2122,7 +2299,7 @@ function StackPlanner() {
   const hornCenter = isTower ? baseH + 15.5 + (archT ? subBox.w / 2 - 0.75 : (horn.size.h + 2) / 2) : baseH + midDims.h + 1.2 + 1 + horn.size.h / 2;
 
   return (
-    <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "var(--font)" }}>
+    <div className="min-h-screen bg-stone-50 text-stone-900" style={{ fontFamily: "var(--font)" }}>
       <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
         {(() => {
           // two levels: the project (PA stack or hi-fi), then the PA stack's own pages
@@ -2153,78 +2330,25 @@ function StackPlanner() {
       </header>
       {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : view === "hifi" ? <HifiPage /> : view === "cutlist" ? <CutlistPage {...{ sub, mid, subBox, midDims, wall, inset, joint, setJoint, sheetKind, setSheetKind, sets, setSets, portStyle, cVent, layout }} /> : <>
 
-      {saved !== null && (
-        <section className="max-w-6xl mx-auto px-4 md:px-8 pb-2" style={{ fontFamily: "var(--font)" }}>
-          <div className="rounded-lg border border-stone-300 bg-stone-50 px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-stone-500 mr-1">Saved configurations</span>
-              {db ? (<>
-                <input value={cfgName} onChange={(e) => setCfgName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") saveCfg(); }}
-                  placeholder="Name this setup" maxLength={60}
-                  className="px-3 py-1.5 rounded border border-stone-300 bg-white text-sm w-56 focus:outline-none focus:border-stone-900" />
-                <button onClick={saveCfg} disabled={!cfgName.trim()}
-                  className="px-3 py-1.5 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-35 disabled:cursor-not-allowed">Save current</button>
-                {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
-                {fbUser && (<span className="ml-auto flex items-center gap-3 text-xs text-stone-500">
-                  <button onClick={importSeed} className="hover:underline">Import saved configs</button>
-                  <button onClick={signOut} className="hover:underline">Sign out</button>
-                </span>)}
-              </>) : fb ? (<>
-                <button onClick={signIn}
-                  className="px-3 py-1.5 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50">Sign in with Google to save</button>
-                {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
-              </>) : (
-                <span className="text-xs text-stone-500">Saving is unavailable in this view. Everything else works.</span>
-              )}
-            </div>
-            {saved.length > 0 && (() => {
-              const cur = saved.find((c) => c.id === selCfg);
-              return (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <select value={cur ? cur.id : ""} aria-label="Load a saved configuration"
-                    onChange={(e) => { const c = saved.find((x) => x.id === e.target.value); setSelCfg(e.target.value); if (c) restore(c); }}
-                    className="px-2 py-1.5 rounded border border-stone-300 bg-white text-sm min-w-0 max-w-full flex-1">
-                    <option value="" disabled>Load a saved configuration ({saved.length})…</option>
-                    {saved.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}{c.savedAt ? ` · ${new Date(c.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : ""}</option>
-                    ))}
-                  </select>
-                  {cur && <button onClick={() => { delCfg(cur.id); setSelCfg(""); }} aria-label={`Delete ${cur.name}`}
-                    className="text-xs text-stone-400 hover:text-red-700 px-1">Delete</button>}
-                  {cur && cur.summary && <div className="basis-full text-xs text-stone-500 truncate">{cur.summary}</div>}
-                </div>
-              );
-            })()}
-          </div>
-        </section>
-      )}
+      <SavedConfigs store={store} snapshot={snapshot} restore={restore}
+        extra={fbUser && <button onClick={importSeed} className="hover:underline">Import saved configs</button>} />
 
-      <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3 flex flex-wrap items-center gap-2" style={{ fontFamily: "var(--font)" }}>
-        <button onClick={() => setOptOn(!optOn)} aria-pressed={optOn}
-          className={`px-3 py-2 rounded border text-sm ${optOn ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`}>Optimizer: {optOn ? "on" : "off"}</button>
-        {optOn && (() => {
+      <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3" style={{ fontFamily: "var(--font)" }}>
+        {(() => {
           const n = Object.entries(locks).reduce((a, [k, v]) => a + (k.endsWith("Dim") ? Object.values(v).filter((m) => m && m !== "free").length : v ? 1 : 0), 0);
-          const tip = n ? `Clear all ${n} lock${n > 1 ? "s" : ""}` : "No locks set";
           // lock everything (box sizes exact), then unlock the one or two things you want the optimizer to change
           const all = { ...Object.fromEntries(LOCK_KEYS.map((k) => [k, true])), subDim: { w: "exact", h: "exact", d: "exact" }, midDim: { w: "exact", h: "exact", d: "exact" } };
-          const full = n >= LOCK_KEYS.length + 6;
-          return (<>
-            <button onClick={() => setLocks(() => all)} disabled={full} aria-label="Lock everything" title="Lock everything, then unlock what the optimizer may change"
-              className="inline-flex items-center gap-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40"><LockIcon locked={true} /><span className="text-xs">All</span></button>
-            <button onClick={() => setLocks(() => ({ subDim: {}, midDim: {} }))} disabled={!n} aria-label={tip} title={tip}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40"><LockIcon locked={false} />{n ? <span className="text-xs">{n}</span> : null}</button>
-          </>);
+          return <OptimizerBar on={optOn} onToggle={() => setOptOn(!optOn)} hint="Find cheaper, lighter or louder designs inside your limits."
+            nLocks={n} lockMax={LOCK_KEYS.length + 6} onLockAll={() => setLocks(() => all)} onClear={() => setLocks(() => ({ subDim: {}, midDim: {} }))} />;
         })()}
-        {!optOn && <span className="text-xs text-stone-500">Find cheaper, lighter or louder designs inside your limits.</span>}
       </section>
-      {optOn && <OptimizerPanel optIn={optIn} setOpt={setOpt} run={runOpt} busy={optBusy} res={optRes} err={optErr} curOut={curOut}
-        amps={[["sub", ampW, locks.ampW, 3000], ["mid", mAmpW, locks.mAmpW, 2000], ["HF", hfAmpW, locks.hfAmpW, 500]].map(([n, w, l, mx]) => `${n} ${l ? `${w} W` : `any up to ${mx} W`}`).join(" · ") + " per channel (unlocked amps come back at the least power that does the job)"} previewCard={preview && preview.card} canSave={!!db}
+      {optOn && <OptimizerPanel optIn={optIn} setOpt={setOpt} run={runOpt} busy={optBusy} res={optRes} err={optErr} curOut={curOut} 
+        previewCard={preview && preview.card} canSave={!!db}
         onPreview={optPreview} onLoad={optLoad} onSave={optSave} />}
       {preview && (
         <div className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-white border-b-4 border-cmy-y px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm" style={{ fontFamily: "var(--font)" }}>
           <span>Previewing: <b className="font-semibold">{preview.label}</b></span>
-          <button onClick={() => optLoad(preview.card)} className="px-3 py-1.5 rounded border font-semibold border-cmy-c bg-cmy-c text-white">Load</button>
+          <Button variant="primary" size="xs" onClick={() => optLoad(preview.card)}>Load</Button>
           <button onClick={optBack} className="px-3 py-1.5 rounded border border-stone-900 bg-white">Back</button>
         </div>
       )}
@@ -2232,21 +2356,25 @@ function StackPlanner() {
         <div className="fixed left-1/2 -translate-x-1/2 bottom-20 md:bottom-6 z-50 w-[calc(100%-2rem)] max-w-xl bg-stone-900 text-stone-50 rounded-lg px-4 py-2.5 flex items-center gap-3 text-sm shadow-lg" style={{ fontFamily: "var(--font)" }} role="status">
           <span className="flex-1">{toast}</span>
           {undoSnap && <button onClick={optUndo} className="px-3 py-1.5 rounded border border-stone-500">Undo</button>}
-          <button onClick={() => setToast("")} aria-label="Dismiss" className="px-2 py-1.5 rounded border border-stone-700">✕</button>
+          <button onClick={() => setToast("")} aria-label="Dismiss" className="px-2 py-1.5 rounded border border-stone-900">✕</button>
         </div>
       )}
       {mdl && lim && (
-        <div className="md:hidden sticky top-0 z-30 bg-stone-100/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center" style={{ fontFamily: "var(--font)" }}>
+        <div className="md:hidden sticky top-0 z-30 bg-stone-50/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center" style={{ fontFamily: "var(--font)" }}>
           {[["Fb", `${mdl.Fb.toFixed(1)}`, "Hz"], ["35 Hz", `${maxNear(35).spl.toFixed(0)}`, "dB"], ["Sub", `${subLbLoaded.toFixed(0)}`, "lb"], ["Limit", { "port air speed": "port", "cone travel (Xmax)": "Xmax", "driver program rating": "thermal", "amplifier power": "amp" }[lim.who] || lim.who, ""]].map(([k, v, u]) => (
-            <div key={k}><div className="text-[10px] uppercase tracking-wider text-stone-500">{k}</div><div className="text-sm font-medium tabular-nums">{v}<span className="text-[10px] text-stone-500 ml-0.5">{u}</span></div></div>
+            <div key={k}><div className="text-xs uppercase tracking-wider text-stone-500">{k}</div><div className="text-sm font-medium tabular-nums">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div></div>
           ))}
         </div>
       )}
       <main className={`max-w-6xl mx-auto px-4 md:px-8 pb-16 grid ${sheetOpen ? "max-md:pb-[52dvh]" : "max-md:pb-24"} grid-cols-1 md:grid-cols-5 gap-8`}>
         <div className="min-w-0 md:col-span-3 flex flex-col gap-5">
         <section className={full3d ? "fixed inset-0 z-50 bg-stone-50" : "relative rounded-lg overflow-hidden border border-stone-300 bg-stone-50 h-[300px] md:h-[clamp(320px,56vh,560px)]"}>
-          <button onClick={() => setFull3d((v) => !v)} aria-label={full3d ? "Close full screen" : "Full screen"}
-            className="absolute top-2 right-2 z-10 px-2.5 py-1 rounded border border-stone-300 bg-white/90 text-xs" style={{ fontFamily: "var(--font)" }}>{full3d ? "Close" : "Full screen"}</button>
+          <button onClick={() => setFull3d((v) => !v)} aria-label={full3d ? "Close full screen" : "Full screen"} title={full3d ? "Close full screen" : "Full screen"}
+            className="absolute top-2 right-2 z-10 w-9 h-9 inline-flex items-center justify-center rounded border border-stone-300 bg-white/90 hover:border-stone-500">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {full3d ? <path d="M4 4l8 8M12 4l-8 8" /> : <path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" />}
+            </svg>
+          </button>
           <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wall} inset={inset} cabFinish={cabFinish} spacerH={spacerH} />
         </section>
 
@@ -2254,7 +2382,7 @@ function StackPlanner() {
           <FoldHead id="sub" title="Sub" folds={folds} toggle={toggleFold} className="mb-3 md:hidden" />
           <div className={foldCls("sub")}>
           {mdl && lim && (
-            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
                 ["Net volume", netL.toFixed(0), "L"],
                 ["Tuning Fb", mdl.Fb.toFixed(1), "Hz"],
@@ -2263,13 +2391,13 @@ function StackPlanner() {
                 ["Weight", subLbLoaded.toFixed(0), "lb"],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
-                  <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
                   <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
             </div>
           )}
-          {mdl && lim && <div className="mb-4"><ResponseChart fmax={20000} series={[{ curve: subSys, label: "Sub", stroke: "#111111", tint: "rgba(17,17,17,0.07)" }, ...(midMax ? [{ curve: midMax, label: "Mid-bass", stroke: "#e5007e", tint: "rgba(229,0,126,0.06)" }] : []), ...(hornModel ? [{ curve: hornModel.curve, label: "Horn", stroke: "#0082c8", tint: "rgba(0,130,200,0.06)" }] : [])]} marks={[{ f: mdl.Fb, label: "Fb" }, { f: xoLo, label: "XO" }, { f: xoHi, label: "XO" }]} /></div>}
+          {mdl && lim && <div className="mb-4"><ResponseChart fmax={20000} series={[{ curve: subSys, label: "Sub", stroke: PAL.ink, tint: PAL.alpha(PAL.ink, 0.07) }, ...(midMax ? [{ curve: midMax, label: "Mid-bass", stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0.06) }] : []), ...(hornModel ? [{ curve: hornModel.curve, label: "Horn", stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }] : [])]} marks={[{ f: mdl.Fb, label: "Fb" }, { f: xoLo, label: "XO" }, { f: xoHi, label: "XO" }]} /></div>}
           {mdl ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
@@ -2279,21 +2407,14 @@ function StackPlanner() {
                 ["Midband sensitivity", `${(mdl.ref - 20 * Math.log10(AMP_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
                 ...[30, 35, 45, 60].map((f) => { const m = maxNear(f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
-                ["First limit, music", lim.who, `at ${Math.round(lim.W / 10) * 10} W${lim.who === "cone travel (Xmax)" ? `, reached first at ${mdl.peakXF.toFixed(0)} Hz` : lim.who === "port air speed" ? `, reached first at ${mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power`],
+                ["First limit, music", lim.who, `at ${Math.round(lim.W / 10) * 10} W`, `at ${Math.round(lim.W / 10) * 10} W${lim.who === "cone travel (Xmax)" ? `, reached first at ${mdl.peakXF.toFixed(0)} Hz` : lim.who === "port air speed" ? `, reached first at ${mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`],
                 ["Peak port velocity", `${lim.vel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz`],
                 ["Peak excursion", `${(mdl.peakX * lim.V / AMP_V).toFixed(1)} mm`, `${lim.xPct.toFixed(0)}% of Xmax, at ${mdl.peakXF.toFixed(0)} Hz`],
-              ].map(([k, v, note]) => (
-                <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
-                  <span className="text-stone-500 shrink-0">{k}</span>
-                  <span className="text-right">
-                    <span className="font-medium tabular-nums">{v}</span>
-                    {note ? <span className="block text-xs text-stone-500">{note}</span> : null}
-                  </span>
-                </div>
-              ))}
+              ]
+.map(([k, v, note, tip]) => <StatRow key={k} k={k} v={v} note={note} tip={tip} />)}
             </div>
           ) : (
-            <p className="text-sm text-stone-600 ">
+            <p className="text-sm text-stone-500 ">
               {sub.name} can't be modelled yet: its parameters are incomplete. {sub.note}
             </p>
           )}
@@ -2304,7 +2425,7 @@ function StackPlanner() {
                 return F.map(([kind, head, body]) => (
                   <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-                    <span className="text-stone-600">{body}</span>
+                    <span className="text-stone-500">{body}</span>
                   </div>
                 ));
               })()}
@@ -2317,7 +2438,7 @@ function StackPlanner() {
           <FoldHead id="mid" title="Mid-bass" folds={folds} toggle={toggleFold} className="mb-3" />
           <div className={foldCls("mid")}>
           {mMdl ? (<>
-            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
                 ["Net volume", midNetL.toFixed(0), "L"],
                 ["Box resonance Fc", mMdl.Fc.toFixed(0), "Hz"],
@@ -2326,7 +2447,7 @@ function StackPlanner() {
                 ["Weight", midLbLoaded.toFixed(0), "lb"],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
-                  <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
                   <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
@@ -2338,16 +2459,9 @@ function StackPlanner() {
                 ["Midband sensitivity", `${(mMdl.ref - 20 * Math.log10(MID_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
                 ...[xoLo, 200, 500].map((f) => { const m = midNear(f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
-                ["Peak excursion", `${(mMdl.peakX * midUseV / MID_V).toFixed(1)} mm`, `${(mMdl.peakX * midUseV / MID_V / mid.ts.Xmax * 100).toFixed(0)}% of Xmax at ${Math.round(midUseV * midUseV / 8)} W, with the ${xoLo} Hz highpass`],
-              ].map(([k, v, note]) => (
-                <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
-                  <span className="text-stone-500 shrink-0">{k}</span>
-                  <span className="text-right">
-                    <span className="font-medium tabular-nums">{v}</span>
-                    {note ? <span className="block text-xs text-stone-500">{note}</span> : null}
-                  </span>
-                </div>
-              ))}
+                ["Peak excursion", `${(mMdl.peakX * midUseV / MID_V).toFixed(1)} mm`, `${(mMdl.peakX * midUseV / MID_V / mid.ts.Xmax * 100).toFixed(0)}% of Xmax`, `At ${Math.round(midUseV * midUseV / 8)} W, with the ${xoLo} Hz highpass.`],
+              ]
+.map(([k, v, note, tip]) => <StatRow key={k} k={k} v={v} note={note} tip={tip} />)}
             </div>
             <div className="flex flex-col gap-1.5 mt-4">
               {(() => {
@@ -2356,13 +2470,13 @@ function StackPlanner() {
                 return F.map(([kind, head, body]) => (
                   <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-                    <span className="text-stone-600">{body}</span>
+                    <span className="text-stone-500">{body}</span>
                   </div>
                 ));
               })()}
             </div>
           </>) : (
-            <p className="text-sm text-stone-600">{mid.name} can't be modelled yet: its parameters are incomplete. {mid.note}</p>
+            <p className="text-sm text-stone-500">{mid.name} can't be modelled yet: its parameters are incomplete. {mid.note}</p>
           )}
           </div>
         </section>
@@ -2371,7 +2485,7 @@ function StackPlanner() {
           <FoldHead id="horn" title="Horn" folds={folds} toggle={toggleFold} className="mb-3" />
           <div className={foldCls("horn")}>
           {hornModel ? (<>
-            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
                 ["Sensitivity", hf.sens.toFixed(1), "dB"],
                 ["Power used", Math.round(hornModel.P), "W"],
@@ -2380,14 +2494,14 @@ function StackPlanner() {
                 ["Mid beam at XO", midBeam ? Math.round(midBeam) : "\u2014", midBeam ? "\u00b0" : ""],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
-                  <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
+                  <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
                   <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
                 </div>
               ))}
             </div>
             <div className="mb-4">
               <ResponseChart fmin={200} fmax={10000} top={180} bot={0} step={30} H={220} yLabel="horizontal beamwidth, °"
-                series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: "#e5007e", tint: "rgba(229,0,126,0)" }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: "#0082c8", tint: "rgba(0,130,200,0)" }] : [])]}
+                series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0) }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0) }] : [])]}
                 marks={[{ f: xoHi, label: "XO" }, ...(beamCurves.fK ? [{ f: beamCurves.fK, label: "horn control" }] : [])]} />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -2396,20 +2510,20 @@ function StackPlanner() {
                 return F.map(([kind, head, body]) => (
                   <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-                    <span className="text-stone-600">{body}</span>
+                    <span className="text-stone-500">{body}</span>
                   </div>
                 ));
               })()}
             </div>
           </>) : (
-            <p className="text-sm text-stone-600">{cd.name} can't be modelled yet: sensitivity or power rating missing.</p>
+            <p className="text-sm text-stone-500">{cd.name} can't be modelled yet: sensitivity or power rating missing.</p>
           )}
           </div>
         </section>
 
         </div>
 
-        <aside className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-100 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-[0_-6px_20px_rgba(0,0,0,0.10)]`} style={{ fontFamily: "var(--font)" }} aria-label="Settings">
+        <aside className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-sheet`} style={{ fontFamily: "var(--font)" }} aria-label="Settings">
           <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
             {[["sub", "Sub"], ["mid", "Mid"], ["horn", "Horn"], ["look", "Look"]].map(([t, label]) => (
               <button key={t} role="tab" aria-selected={sheetOpen && tab === t}
@@ -2424,70 +2538,28 @@ function StackPlanner() {
             <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>Plywood (baffles stay 3/4″)</span>{lk("wall", "the plywood")}</div>
             <div className="flex gap-1">
               {[[0.75, "3/4″ birch"], [0.5, "1/2″ birch, braced"]].map(([t, label]) => (
-                <button key={t} onClick={() => setWall(t)} className={`px-3 py-1.5 rounded border text-sm ${wall === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
+                <ToggleBtn key={t} onClick={() => setWall(t)} on={wall === t}>{label}</ToggleBtn>
               ))}
             </div>
-            <div className="mt-3"><Slider label="Baffle inset" value={inset} min={0} max={1.5} step={0.25} unit="&#8243;" onChange={setInset} /></div>
+            <div className="mt-3"><Slider label="Baffle inset" value={inset} min={0} max={1.5} step={0.25} unit="″" onChange={setInset} /></div>
           </div>
           </div>
           <div className={tabCls("sub")}>
           <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} extra={lk("sub", "the sub driver")} />
           </div>
           <div className={tabCls("look")}>
-          <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">Cabinet finish</div>
-            <div className="flex flex-wrap gap-1.5 items-center">
-              {Object.entries(CAB_FINISHES).map(([k, f]) => (
-                <button key={k} title={f.name} onClick={() => setCabFinish(k)}
-                  className={`px-2.5 h-7 rounded-full border-2 text-xs ${cabFinish === k ? "border-stone-900" : "border-stone-300"}`}
-                  style={{ background: f.swatch, color: k === "walnut" ? "#f2f2f2" : "#111111" }}>{f.name}</button>
-              ))}
-              {SWATCHES.map(([hex, name]) => (
-                <button key={hex} title={`Painted: ${name}`} onClick={() => setCabFinish(hex)}
-                  className={`swatch w-7 h-7 rounded-full border-2 ${cabFinish.toLowerCase() === hex ? "border-stone-900" : "border-stone-300"}`}
-                  style={{ background: hex }} />
-              ))}
-              <label className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom paint">
-                <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
-                <input type="color" value={CAB_FINISHES[cabFinish] ? "#ffffff" : cabFinish} onChange={(e) => setCabFinish(e.target.value)}
-                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
-              </label>
-              <span className="text-xs text-stone-500 ml-1 tabular-nums">{CAB_FINISHES[cabFinish] ? CAB_FINISHES[cabFinish].name : `painted ${cabFinish}`}</span>
-            </div>
-          </div>
+          <SwatchPicker label="Cabinet finish" value={cabFinish} onChange={setCabFinish} swatches={SWATCHES} presets={CAB_FINISHES} titlePrefix="Painted: "
+            note={CAB_FINISHES[cabFinish] ? CAB_FINISHES[cabFinish].name : `painted ${cabFinish}`} />
           </div>
           <div className={tabCls("look")}>
-          <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">Baffle colour</div>
-            <div className="flex flex-wrap gap-1.5 items-center">
-              {SWATCHES.map(([hex, name]) => (
-                <button
-                  key={hex}
-                  title={name}
-                  onClick={() => setBaffleColor(hex)}
-                  className={`swatch w-7 h-7 rounded-full border-2 ${baffleColor.toLowerCase() === hex ? "border-stone-900" : "border-stone-300"}`}
-                  style={{ background: hex }}
-                />
-              ))}
-              <label className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom">
-                <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
-                <input
-                  type="color"
-                  value={baffleColor}
-                  onChange={(e) => setBaffleColor(e.target.value)}
-                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                />
-              </label>
-              <span className="text-xs text-stone-500 ml-1 tabular-nums">{baffleColor}</span>
-            </div>
-          </div>
+          <SwatchPicker label="Baffle colour" value={baffleColor} onChange={setBaffleColor} swatches={SWATCHES} note={baffleColor} />
           </div>
           <div className={tabCls("look")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">View</div>
             <div className="flex gap-1">
               {[["Finished", false], ["Cutaway", true]].map(([label, v]) => (
-                <button key={label} onClick={() => setCutaway(v)} className={`px-3 py-2 rounded border text-sm ${cutaway === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
+                <ToggleBtn key={label} onClick={() => setCutaway(v)} on={cutaway === v}>{label}</ToggleBtn>
               ))}
             </div>
           </div>
@@ -2497,20 +2569,20 @@ function StackPlanner() {
             <div className="text-sm text-stone-500 mb-1">Layout</div>
             <div className="flex gap-1">
               {[["Two stacks", "stack"], ["Tops on spacers", "pole"], ["Tower", "tower"], ["One sub + satellites", "satellite"]].map(([label, v]) => (
-                <button key={v} onClick={() => setLayout(v)} className={`px-3 py-2 rounded border text-sm ${layout === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
+                <ToggleBtn key={v} onClick={() => setLayout(v)} on={layout === v}>{label}</ToggleBtn>
               ))}
             </div>
-            {layout === "pole" && <div className="mt-3"><Slider label="Spacer height" value={spacerH} min={4} max={36} step={1} unit="&#8243;" onChange={setSpacerH} /></div>}
+            {layout === "pole" && <div className="mt-3"><Slider label="Spacer height" value={spacerH} min={4} max={36} step={1} unit="″" onChange={setSpacerH} /></div>}
           </div>
           </div>
           <div className={tabCls("sub")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Cabinet</div>
-            <div className="rounded border border-stone-300 bg-white px-3 py-3">
-              <Slider label="Width"  value={cDim.w} min={18} max={40} step={0.5} unit="&#8243;" onChange={(v) => setC("w", v)} extra={dl("subDim", "w", "Sub width")} />
-              <Slider label="Height" value={cDim.h} min={18} max={42} step={0.5} unit="&#8243;" onChange={(v) => setC("h", v)} extra={dl("subDim", "h", "Sub height")} />
-              <Slider label="Depth"  value={cDim.d} min={14} max={32} step={0.5} unit="&#8243;" onChange={(v) => setC("d", v)} extra={dl("subDim", "d", "Sub depth")} />
-            </div>
+            <Card>
+              <Slider label="Width"  value={cDim.w} min={18} max={40} step={0.5} unit="″" onChange={(v) => setC("w", v)} extra={dl("subDim", "w", "Sub width")} />
+              <Slider label="Height" value={cDim.h} min={18} max={42} step={0.5} unit="″" onChange={(v) => setC("h", v)} extra={dl("subDim", "h", "Sub height")} />
+              <Slider label="Depth"  value={cDim.d} min={14} max={32} step={0.5} unit="″" onChange={(v) => setC("d", v)} extra={dl("subDim", "d", "Sub depth")} />
+            </Card>
           </div>
           </div>
           <div className={tabCls("sub")}>
@@ -2518,42 +2590,42 @@ function StackPlanner() {
             <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>Vent</span>{lk("vent", "the vent style")}</div>
             <div className="flex flex-wrap gap-1">
               {[["Rectangular", !portStyle.startsWith("round"), "slots"], ["Round tubes", portStyle.startsWith("round"), "round2"]].map(([label, on, v]) => (
-                <button key={label} onClick={() => { if (!on) setPortStyle(v); }} className={`px-3 py-2 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>
+                <ToggleBtn key={label} onClick={() => { if (!on) setPortStyle(v); }} on={on}>{label}</ToggleBtn>
               ))}
             </div>
             {!portStyle.startsWith("round") && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {[["slots", "Bottom"], ["folded", "Bottom, folded"], ["vslots", "Both sides"], ["vslot1", "One side"]].map(([v, label]) => {
                   const on = portStyle === v;
-                  return <button key={v} onClick={() => setPortStyle(v)} className={`px-3 py-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</button>;
+                  return <ToggleBtn key={v} onClick={() => setPortStyle(v)} on={on} size="xs">{label}</ToggleBtn>;
                 })}
               </div>
             )}
-            <div className="rounded border border-stone-300 bg-white px-3 py-3 mt-2">
+            <Card className="mt-2">
               {(portStyle === "slots" || portStyle === "folded") &&
-                <Slider label="Slot height" value={cVent.slotH} min={1.5} max={9} step={0.25} unit="&#8243;" onChange={(v) => setV("slotH", v)} />}
+                <Slider label="Slot height" value={cVent.slotH} min={1.5} max={9} step={0.25} unit="″" onChange={(v) => setV("slotH", v)} />}
               {(portStyle === "vslots" || portStyle === "vslot1") &&
-                <Slider label="Duct throat" value={cVent.throat} min={1} max={portStyle === "vslot1" ? 10 : 7} step={0.25} unit="&#8243;" onChange={(v) => setV("throat", v)} />}
+                <Slider label="Duct throat" value={cVent.throat} min={1} max={portStyle === "vslot1" ? 10 : 7} step={0.25} unit="″" onChange={(v) => setV("throat", v)} />}
               {portStyle.startsWith("round") && <>
                 <Slider label="Tubes" value={cVent.nt} min={1} max={6} step={1} unit="" onChange={(v) => setV("nt", v)} />
-                <Slider label="Tube diameter" value={cVent.dia} min={3} max={10} step={0.25} unit="&#8243;" onChange={(v) => setV("dia", v)} />
+                <Slider label="Tube diameter" value={cVent.dia} min={3} max={10} step={0.25} unit="″" onChange={(v) => setV("dia", v)} />
               </>}
-              <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="&#8243;" onChange={(v) => setV("len", v)} />
+              <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="″" onChange={(v) => setV("len", v)} />
               <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
-            </div>
+            </Card>
           </div>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Sub highpass and amp</div>
-            <div className="rounded border border-stone-300 bg-white px-3 py-3">
+            <Card>
               <Slider label={`Highpass (${hpType})`} value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} extra={lk("hpf", "the highpass")} />
               <div className="flex flex-wrap gap-1 -mt-1 mb-3">
                 {Object.keys(HP_TYPES).map((t) => (
-                  <button key={t} onClick={() => setHpType(t)} className={`px-2.5 py-1 rounded border text-xs ${hpType === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{t}</button>
+                  <ToggleBtn key={t} onClick={() => setHpType(t)} on={hpType === t} size="xs">{t}</ToggleBtn>
                 ))}
               </div>
               <Slider label="Amp power per channel @ 8 Ω" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} extra={lk("ampW", "the sub amp power")} />
-            </div>
+            </Card>
           </div>
           </div>
           <div className={tabCls("mid")}>
@@ -2561,38 +2633,36 @@ function StackPlanner() {
             <div className="text-sm text-stone-500 mb-1">Mid-bass size</div>
             <div className="flex gap-1">
               {[12, 15].map((n) => (
-                <button key={n} onClick={() => setMidSize(n)} className={`px-3 py-1.5 rounded border text-sm ${midSize === n ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{n}″</button>
+                <ToggleBtn key={n} onClick={() => setMidSize(n)} on={midSize === n}>{n}″</ToggleBtn>
               ))}
             </div>
           </div>
-          <Pick label={`Mid-bass ${midSize}"`} options={midList} value={mid} onChange={setMid} extra={lk("mid", "the mid-bass driver")} />
+          <Pick label={`Mid-bass ${midSize}″`} options={midList} value={mid} onChange={setMid} extra={lk("mid", "the mid-bass driver")} />
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
-            <div className="rounded border border-stone-300 bg-white px-3 py-3">
+            <Card>
               {layout === "tower" ? (
                 <div className="text-xs text-stone-500 mb-3">Tower layout: the mid chamber is the sub's footprint, {cDim.w}″ × 15.5″ × {cDim.d}″.</div>
               ) : (<>
-                <Slider label="Width"  value={mDim.w} min={10} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("w", v)} extra={dl("midDim", "w", "Mid width")} />
-                <Slider label="Height" value={mDim.h} min={10} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("h", v)} extra={dl("midDim", "h", "Mid height")} />
-                <Slider label="Depth"  value={mDim.d} min={8} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("d", v)} extra={dl("midDim", "d", "Mid depth")} />
+                <Slider label="Width"  value={mDim.w} min={10} max={24} step={0.5} unit="″" onChange={(v) => setM("w", v)} extra={dl("midDim", "w", "Mid width")} />
+                <Slider label="Height" value={mDim.h} min={10} max={24} step={0.5} unit="″" onChange={(v) => setM("h", v)} extra={dl("midDim", "h", "Mid height")} />
+                <Slider label="Depth"  value={mDim.d} min={8} max={24} step={0.5} unit="″" onChange={(v) => setM("d", v)} extra={dl("midDim", "d", "Mid depth")} />
               </>)}
               <Slider label="Crossover, sub to mid" value={xoLo} min={60} max={250} step={5} unit=" Hz" onChange={setXoLo} extra={lk("xoLo", "the sub-to-mid crossover")} />
               <Slider label="Crossover, mid to horn" value={xoHi} min={500} max={2000} step={50} unit=" Hz" onChange={setXoHi} extra={lk("xoHi", "the mid-to-horn crossover")} />
               <Slider label="Mid amp power per channel @ 8 Ω" value={mAmpW} min={50} max={2000} step={25} unit=" W" onChange={setMAmpW} extra={lk("mAmpW", "the mid amp power")} />
-              <Slider label="Music balance: mid band needs less by" value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
-              <div className="text-xs text-stone-500">0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.</div>
-            </div>
+              <Slider label={<Tip tip="0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.">Music balance: mid band needs less by</Tip>} value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
+            </Card>
           </div>
           </div>
           <div className={tabCls("horn")}>
           <Pick label="Compression driver" options={CD_OPTIONS} value={cd} onChange={setCd} extra={lk("cd", "the compression driver")} />
           <Pick label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} extra={lk("horn", "the horn")} />
-          <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
+          <Card className="mb-4">
             <Slider label="HF amp power per channel @ 8 Ω" value={hfAmpW} min={10} max={500} step={5} unit=" W" onChange={setHfAmpW} extra={lk("hfAmpW", "the HF amp power")} />
             <Slider label="Music balance: HF band needs less by" value={hfTilt} min={0} max={12} step={1} unit=" dB" onChange={setHfTilt} />
-            <div className="text-xs text-stone-500">16 Ω drivers draw half the power from the same amp.</div>
-          </div>
-          {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}" vs {cd.exit}").</div>}
+          </Card>
+          {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}″ vs {cd.exit}″).</div>}
           </div>
           </div>
         </aside>
@@ -2619,7 +2689,7 @@ function StackPlanner() {
                 </tr></thead>
                 <tbody>
                   {rows.map(([n, pr, dl, cl, h]) => (
-                    <tr key={n} className="border-b border-stone-200"><td className="py-1 pr-4">{n}</td><td className="py-1 pr-4 text-right tabular-nums">{pr ? `$${pr}` : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{dl.toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{cl ? cl.toFixed(0) : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{(dl + cl).toFixed(0)}</td><td className="py-1 text-right tabular-nums">{h.toFixed(1)}</td></tr>
+                    <tr key={n} className="border-b border-stone-300"><td className="py-1 pr-4">{n}</td><td className="py-1 pr-4 text-right tabular-nums">{pr ? `$${pr}` : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{dl.toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{cl ? cl.toFixed(0) : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{(dl + cl).toFixed(0)}</td><td className="py-1 text-right tabular-nums">{h.toFixed(1)}</td></tr>
                   ))}
                   <tr className="font-medium"><td className="py-1 pr-4">One stack{plinth ? ` + ${plinth}" plinth` : ""}</td><td className="py-1 pr-4 text-right tabular-nums">${sum(1).toLocaleString()}</td><td className="py-1 pr-4 text-right tabular-nums">{sum(2).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(sum(3) + (plinth ? 6 : 0)).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{stackLb.toFixed(0)}</td><td className="py-1 text-right tabular-nums">{stackH.toFixed(0)}</td></tr>
                   <tr className="font-medium text-stone-900"><td className="py-1 pr-4">Pair</td><td className="py-1 pr-4 text-right tabular-nums">${(2 * sum(1)).toLocaleString()}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * sum(2)).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * (sum(3) + (plinth ? 6 : 0))).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * stackLb).toFixed(0)}</td><td></td></tr>
@@ -2635,28 +2705,28 @@ function StackPlanner() {
         </div>
         {showDetails && <section className="min-w-0 md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "var(--font)" }}>
           <div>
-            <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Sub</h2>
-            <p className="text-sm text-stone-700">
+            <SectionHead className="mb-2">Sub</SectionHead>
+            <p className="text-sm text-stone-900">
               {sub.name} in a {subBox.w}×{subBox.h}×{subBox.d} in cabinet, {grossL.toFixed(0)} L gross, {netL.toFixed(0)} L net.
               Vent: {port.desc}. 3/4″ baffle set {inset}″ behind the frame, {wall === 0.5 ? "1/2″" : "3/4″"} birch walls, 1/4″ roundovers on the front edges.
             </p>
           </div>
           <div>
-            <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Mid-bass cube</h2>
-            <p className="text-sm text-stone-700">
+            <SectionHead className="mb-2">Mid-bass cube</SectionHead>
+            <p className="text-sm text-stone-900">
               {mid.name} in a {midDims.w}×{midDims.h}×{midDims.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed.
               Covers {xoLo} Hz to {xoHi} Hz. Same construction, flush-mounted driver.
             </p>
-            {mid.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{mid.name}.</span> {mid.note}</p>}
+            {mid.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{mid.name}.</span> {mid.note}</p>}
           </div>
           <div>
-            <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Horn</h2>
-            <p className="text-sm text-stone-700">
+            <SectionHead className="mb-2">Horn</SectionHead>
+            <p className="text-sm text-stone-900">
               {horn.name} with {cd.name}, crossed at {xoHi} Hz (maker suggests {horn.xo}). Sits on a short block so the mouth clears the cube.
               Total stack height about {stackH.toFixed(0)} in, horn center at {hornCenter.toFixed(0)} in.
             </p>
-            {cd.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{cd.name}.</span> {cd.note}</p>}
-            {horn.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{horn.name}.</span> {horn.note}</p>}
+            {cd.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{cd.name}.</span> {cd.note}</p>}
+            {horn.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{horn.name}.</span> {horn.note}</p>}
           </div>
         </section>}
 
