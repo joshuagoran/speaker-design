@@ -1986,7 +1986,7 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
     </div>
   );
 }
-function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, previewCard, onPreview, onLoad, onSave, canSave }) {
+function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, previewCard, onPreview, onLoad, onSave, canSave }) {
   const need = roomNeed(optIn.room), target = Math.max(curOut != null ? curOut : need, need);
   const goals = optIn.goals, g = goals[0];
   // tap adds a goal at the end of the order; tap again removes it (none selected is allowed; the search waits for one)
@@ -2012,7 +2012,6 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
         </div>
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
           {curOut != null && <div className="text-xs text-stone-500 mt-0.5">Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB · {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB</div>}</div>
-        <div className="mt-2 text-xs text-stone-500">Amps: {amps}</div>
         <RunRow busy={busy} hasGoal={!!g} onRun={run} stats={res && res.stats} note={res && res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}>
           {err && <span className="text-xs text-red-700">{err}</span>}
         </RunRow>
@@ -2359,8 +2358,8 @@ function StackPlanner() {
             nLocks={n} lockMax={LOCK_KEYS.length + 6} onLockAll={() => setLocks(() => all)} onClear={() => setLocks(() => ({ subDim: {}, midDim: {} }))} />;
         })()}
       </section>
-      {optOn && <OptimizerPanel optIn={optIn} setOpt={setOpt} run={runOpt} busy={optBusy} res={optRes} err={optErr} curOut={curOut}
-        amps={[["sub", ampW, locks.ampW, 3000], ["mid", mAmpW, locks.mAmpW, 2000], ["HF", hfAmpW, locks.hfAmpW, 500]].map(([n, w, l, mx]) => `${n} ${l ? `${w} W` : `any up to ${mx} W`}`).join(" · ") + " per channel (unlocked amps come back at the least power that does the job)"} previewCard={preview && preview.card} canSave={!!db}
+      {optOn && <OptimizerPanel optIn={optIn} setOpt={setOpt} run={runOpt} busy={optBusy} res={optRes} err={optErr} curOut={curOut} 
+        previewCard={preview && preview.card} canSave={!!db}
         onPreview={optPreview} onLoad={optLoad} onSave={optSave} />}
       {preview && (
         <div className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-white border-b-4 border-cmy-y px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm" style={{ fontFamily: "var(--font)" }}>
