@@ -21,10 +21,12 @@ jobs:
       - run: npm test
       - run: sh build/build.sh pages
       # phone and tablet layout check (tests/mobile-check.mjs)
-      # the browser install has hung on apt before: give it 5 minutes, retry once
-      - run: npm i --no-save playwright@1.56.1 && (timeout 300 npx playwright install --with-deps chromium || timeout 300 npx playwright install --with-deps chromium)
-        timeout-minutes: 11
+      # Playwright's own Chromium, without --with-deps: the runner already has Chrome's system libraries, and the
+      # apt step pulls fonts from a slow mirror that has stalled CI for many minutes
+      - run: npm i --no-save playwright@1.56.1 && npx playwright install chromium
+        timeout-minutes: 5
       - run: node tests/mobile-check.mjs dist/stack-planner.html
+        timeout-minutes: 5
   deploy:
     needs: test
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

@@ -12,5 +12,14 @@ export const passiveRadiatorOf = (c) => (c && c.box === "radiator" && c.pr ? { d
 /** Whether a tweeter is a compression driver (or needs a waveguide) rather than a dome. */
 export const isCompressionDriver = (o) => o.type === "compression" || o.needsWaveguide;
 
-/** Tweeters split into domes and compression drivers (which need a waveguide), domes first, A–Z within each. */
-export const HIFI_TWEETERS_BY_TYPE = HIFI_TWEETERS.slice().sort((a, b) => isCompressionDriver(a) - isCompressionDriver(b) || a.name.localeCompare(b.name));
+/** Tweeter family for grouping: 0 domes, 1 planar ribbons (with their own waveguide), 2 compression drivers. */
+export const tweeterKind = (o) => (isCompressionDriver(o) ? 2 : o.type === "ribbon" ? 1 : 0);
+
+/** Group headings in the tweeter picker, indexed by tweeterKind. */
+export const TWEETER_GROUP_LABELS = ["Dome tweeters", "Planar ribbons (with their waveguide)", "Compression drivers (on a waveguide)"];
+
+/** Short name of each tweeter family, indexed by tweeterKind. */
+export const TWEETER_KIND_LABELS = ["dome", "planar ribbon", "compression driver"];
+
+/** Tweeters grouped by family (domes, ribbons, compression drivers), A–Z within each. */
+export const HIFI_TWEETERS_BY_TYPE = HIFI_TWEETERS.slice().sort((a, b) => tweeterKind(a) - tweeterKind(b) || a.name.localeCompare(b.name));

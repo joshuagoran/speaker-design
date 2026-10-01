@@ -1,6 +1,6 @@
 import { WarningChips } from "../../components/chips/WarningChips.jsx";
 import { StatTile } from "../../components/stats/StatTile.jsx";
-import { HIFI_WOOFERS_BY_SIZE, HIFI_PASSIVES_BY_SIZE, isCompressionDriver, HIFI_TWEETERS_BY_TYPE } from "./hifiDriverLists.js";
+import { HIFI_WOOFERS_BY_SIZE, HIFI_PASSIVES_BY_SIZE, tweeterKind, TWEETER_GROUP_LABELS, TWEETER_KIND_LABELS, HIFI_TWEETERS_BY_TYPE } from "./hifiDriverLists.js";
 import { HifiResultCard } from "./HifiResultCard.jsx";
 import { ToggleButton } from "../../components/ui/ToggleButton.jsx";
 import { Button } from "../../components/ui/Button.jsx";
@@ -25,7 +25,7 @@ import { useConfigStore } from "../../components/saved-configs/useConfigStore.js
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs.jsx";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales.js";
 import { METERS_PER_FOOT } from "../../constants/units.js";
-import { HORN_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, passiveRadiatorMassMax } from "../../lib/data.js";
+import { HORN_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, passiveRadiatorMassMax, ownGuideCfg } from "../../lib/data.js";
 import { hifiSystem, hifiChips, hifiResponseAt, hifiDispersionMap, logSpacedFrequencies, linkwitzRileyFilter, SPEAKER_PLACEMENTS as HIFI_PLACES } from "../../lib/hifi/hifi.js";
 import { optimizeHifiSpeaker, HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize.js";
 const { useState } = React;
@@ -70,7 +70,9 @@ export function HifiPage() {
   const [undoSnapshot, setUndoSnapshot] = useState(null);
   const setBoxDim = (k, v) => setBoxDims((p) => ({ ...p, [k]: v }));
   const setPortField = (k, v) => setPortSpec((p) => ({ ...p, [k]: v }));
-  const waveguideSpec = tweeter.type === "compression" || tweeter.needsWaveguide ? { covH: selectedWaveguide.hf.covH, covV: selectedWaveguide.hf.covV || selectedWaveguide.hf.covH, w: selectedWaveguide.size.w, h: selectedWaveguide.size.h, name: selectedWaveguide.name, freestanding: !selectedWaveguide.rect } : null;
+  /** The waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded). */
+  const compressionWaveguide = { covH: selectedWaveguide.hf.covH, covV: selectedWaveguide.hf.covV || selectedWaveguide.hf.covH, w: selectedWaveguide.size.w, h: selectedWaveguide.size.h, name: selectedWaveguide.name, freestanding: !selectedWaveguide.rect };
+  const waveguideSpec = tweeter.ownGuide ? ownGuideCfg(tweeter) : tweeter.type === "compression" || tweeter.needsWaveguide ? compressionWaveguide : null;
   const radiatorDriver = HIFI_PASSIVES.find((o) => o.id === radiatorSelection.id) || HIFI_PASSIVES[0];
   const radiator = { drv: radiatorDriver, n: radiatorSelection.n, addG: Math.min(radiatorSelection.addG, passiveRadiatorMassMax(radiatorDriver)) };
   const speakerConfig = { box: boxType, dim: boxDims, wall: wallThicknessIn, mat: panelMaterial, port: portSpec, pr: radiator, xo: crossoverHz, order: crossoverOrder, wAmpW: wooferAmpWatts, tAmpW: tweeterAmpWatts, bsc: baffleStepCompensationDb, place: placement, wallFt: distanceToWallFt, portMax: 17, guide: waveguideSpec };
@@ -93,7 +95,7 @@ export function HifiPage() {
   const maxLevelAtSeatDb = speakerSystem.maxLevel - 20 * Math.log10(seatDistanceM) + 3;
   const tweeterMaxCurve = frequencies.map((f) => ({ f, spl: speakerSystem.tLevel + 20 * Math.log10(Math.max(1e-6, Math.hypot(linkwitzRileyFilter(f, crossoverHz, crossoverOrder, "hp").re, linkwitzRileyFilter(f, crossoverHz, crossoverOrder, "hp").im))) }));
   const dispersion = hifiDispersionMap(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig, dispersionPlane, Math.max(1, seatDistanceM));
-  const pairCostUsd = 2 * ((woofer.price || 0) + (tweeter.price || 0) + (waveguideSpec ? selectedWaveguide.price || 0 : 0) + (boxType === "radiator" ? radiator.n * (radiatorDriver.price || 0) : 0));
+  const pairCostUsd = 2 * ((woofer.price || 0) + (tweeter.price || 0) + (waveguideSpec && !tweeter.ownGuide ? selectedWaveguide.price || 0 : 0) + (boxType === "radiator" ? radiator.n * (radiatorDriver.price || 0) : 0));
   const tile = (k, v, u) => <StatTile key={k} label={k} value={v} unit={u} />;
   const renderLockButton = (key, what) => (isOptimizerOn ? <LockButton on={!!optimizerLocks[key]} what={what} onClick={() => setOptimizerLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null);
   const renderDimensionLock = (dm, what) => (isOptimizerOn ? <DimensionLock mode={optimizerLocks.dim[dm] || "free"} what={what} onChange={(m) => setOptimizerLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))} /> : null);
@@ -118,7 +120,7 @@ export function HifiPage() {
     setIsOptimizing(true);
     const base = designPreview ? designPreview.before : snapshot();
     setTimeout(() => {
-      try { setOptimizerResult(optimizeHifiSpeaker({ cur: { ...speakerConfig, ...base }, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, passives: HIFI_PASSIVES, goals: optimizerGoals, locks: optimizerLocks, budget: optimizerBudget, seatM: seatDistanceM, guidePrice: selectedWaveguide.price || 0 })); }
+      try { setOptimizerResult(optimizeHifiSpeaker({ cur: { ...speakerConfig, ...base, guide: compressionWaveguide }, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, passives: HIFI_PASSIVES, goals: optimizerGoals, locks: optimizerLocks, budget: optimizerBudget, seatM: seatDistanceM, guidePrice: selectedWaveguide.price || 0 })); }
       finally { setIsOptimizing(false); }
     }, 30);
   };
@@ -203,14 +205,14 @@ export function HifiPage() {
             <div>Tweeter trimmed {speakerSystem.trim.toFixed(1)} dB in the DSP to match the woofer; baffle step centered at {speakerSystem.bsF3.toFixed(0)} Hz{baffleStepCompensationDb ? `, ${baffleStepCompensationDb} dB boost` : ""}.</div>
             <div><Tooltip tip={woofer.note}><span className="font-medium text-stone-900">{woofer.name}</span></Tooltip></div>
             <div><Tooltip tip={tweeter.note}><span className="font-medium text-stone-900">{tweeter.name}</span></Tooltip></div>
-            {waveguideSpec && <div><Tooltip tip={selectedWaveguide.note}><span className="font-medium text-stone-900">{waveguideSpec.name}</span></Tooltip></div>}
+            {waveguideSpec && !tweeter.ownGuide && <div><Tooltip tip={selectedWaveguide.note}><span className="font-medium text-stone-900">{waveguideSpec.name}</span></Tooltip></div>}
           </div>
         </details>
       </div>
       <aside className="min-w-0 md:col-span-2">
         <SelectField label={`Woofer · ${woofer.size}″`} options={HIFI_WOOFERS_BY_SIZE} value={woofer} onChange={setWoofer} extra={renderLockButton("woofer", "the woofer")} group={(o) => `${o.size}″ woofers`} />
-        <SelectField label={`Tweeter · ${isCompressionDriver(tweeter) ? "compression driver" : "dome"}`} options={HIFI_TWEETERS_BY_TYPE} value={tweeter} onChange={setTweeter} extra={renderLockButton("tweeter", "the tweeter")} group={(o) => (isCompressionDriver(o) ? "Compression drivers (on a waveguide)" : "Dome tweeters")} />
-        {waveguideSpec && <SelectField label="Waveguide" options={waveguideChoices} value={selectedWaveguide} onChange={setSelectedWaveguide} />}
+        <SelectField label={`Tweeter · ${TWEETER_KIND_LABELS[tweeterKind(tweeter)]}`} options={HIFI_TWEETERS_BY_TYPE} value={tweeter} onChange={setTweeter} extra={renderLockButton("tweeter", "the tweeter")} group={(o) => TWEETER_GROUP_LABELS[tweeterKind(o)]} />
+        {waveguideSpec && !tweeter.ownGuide && <SelectField label="Waveguide" options={waveguideChoices} value={selectedWaveguide} onChange={setSelectedWaveguide} />}
         <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
           <span className="text-stone-500">Material</span>
           <div className="flex flex-wrap gap-1">{[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <ToggleButton key={v} onClick={() => setPanelMaterial(v)} on={panelMaterial === v}>{l}</ToggleButton>)}</div>

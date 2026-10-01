@@ -4,7 +4,7 @@
 // trimmed to the least power that keeps the card's level, and a card applies only the fields searched.
 import { hifiSystem, hifiChips, grossVolumeLiters, linkwitzRileyFilter, logSpacedFrequencies, portMaxLength, passiveRadiatorMassFor, passiveRadiatorFits, hifiSlotEndCorrection, slotWidth, slotMaxLength } from "./hifi.js";
 import { ventTuning } from "../pa/calc.js";
-import { passiveRadiatorMassMax } from "../data.js";
+import { passiveRadiatorMassMax, ownGuideCfg } from "../data.js";
 
 // the PA planner's goals, in its order
 export const HIFI_OPTIMIZER_GOALS = {
@@ -95,14 +95,15 @@ export function optimizeHifiSpeaker(input) {
   const needsGuide = (t) => t.type === "compression" || t.needsWaveguide;
   const tweeterCfg = (t) => (needsGuide(t) ? (guide ? { ...t, faceplate: { w: guide.w, h: guide.h } } : null) : t);
   const prPrice = (c) => (c && c.box === "radiator" && c.pr && c.pr.drv ? c.pr.n * (c.pr.drv.price || 0) : 0);
-  const priceOf = (w, t, c) => 2 * ((w.price || 0) + (t.price || 0) + (needsGuide(t) ? gp : 0) + prPrice(c));
+  const priceOf = (w, t, c) => 2 * ((w.price || 0) + (t.price || 0) + (needsGuide(t) ? gp : 0) + prPrice(c));   // a ribbon's own waveguide is in its price
+  const guideOf = (t) => ownGuideCfg(t) || (needsGuide(t) ? guide : null);
   // unlocked amps: searched at the top of their sliders, trimmed per card at the end
   const amps = { wAmpW: locks.wAmpW ? cur.wAmpW : HIFI_AMP_WATTS_MAX.wAmpW, tAmpW: locks.tAmpW ? cur.tAmpW : HIFI_AMP_WATTS_MAX.tAmpW };
   let evals = 0;
   const run = (w, t, c, N) => {
     evals++;
     const tt = tweeterCfg(t); if (!tt) return null;
-    const cc = { ...c, guide: needsGuide(t) ? guide : null, N };
+    const cc = { ...c, guide: guideOf(t), N };
     const sys = hifiSystem(w, tt, cc);
     return sys && { sys, chips: hifiChips(sys, w, tt, cc), cfg: cc, tt };
   };
@@ -227,7 +228,7 @@ export function optimizeHifiSpeaker(input) {
       config: { woofer: k.w.id, tweeter: k.t.id, box: k.c.box, dim: k.c.dim, port: k.c.port, pr: k.c.box === "radiator" && k.c.pr ? { id: k.c.pr.drv.id, n: k.c.pr.n, addG: k.c.pr.addG } : undefined, wall: k.c.wall, xo: k.c.xo, wAmpW: k.c.wAmpW, tAmpW: k.c.tAmpW },
       metrics: k.m, delta: curM ? { price: k.m.price - curM.price, lb: k.m.lb - curM.lb, level: k.m.level - curM.level, f3: k.m.f3 - curM.f3 } : null,
       warnings: k.chips.filter(([kind]) => kind === "warn").map(([, h]) => h), names: { woofer: k.w.name, tweeter: k.t.name },
-      lay: k.sys.lay, guided: needsGuide(k.t), changed: changes(k, cur), curve: curveOf(k.sys), whoW: k.sys.whoW,
+      lay: k.sys.lay, guided: needsGuide(k.t), ownGuide: !!k.t.ownGuide, changed: changes(k, cur), curve: curveOf(k.sys), whoW: k.sys.whoW,
     })),
     stats: { evaluated: evals, ms: Date.now() - t0, pool: pool.length },
   };

@@ -5,7 +5,7 @@ import { HifiFront } from "../../components/drawings/HifiFront.jsx";
 import { formatDollars } from "../../lib/format.js";
 import { Delta } from "../../components/optimizer/Delta.jsx";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales.js";
-import { HIFI_WOOFERS, HIFI_TWEETERS } from "../../lib/data.js";
+import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data.js";
 
 /** A result card, laid out like the PA optimizer's: what it is, a front view and its bass against yours, the four numbers with deltas. */
 export function HifiResultCard({ result, index, total, currentCurve, waveguide, previewing, onPreview, onLoad }) {
@@ -23,7 +23,7 @@ export function HifiResultCard({ result, index, total, currentCurve, waveguide, 
       <div className="text-xs uppercase tracking-wider font-bold text-stone-500">{result.label} · {index + 1} of {total}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{woofer.size}″ {result.names.woofer} · {config.dim.w} × {config.dim.h} × {config.dim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
-        <HifiFront dim={config.dim} w={woofer} t={tweeter} lay={result.lay} vented={config.box === "vented"} port={config.port} pr={passiveRadiatorOf(config)} guide={result.guided ? waveguide : null} small />
+        <HifiFront dim={config.dim} w={woofer} t={tweeter} lay={result.lay} vented={config.box === "vented"} port={config.port} pr={passiveRadiatorOf(config)} guide={result.ownGuide ? ownGuideCfg(tweeter) : result.guided ? waveguide : null} small />
         <OptimizerCurveChart curve={result.curve} cur={currentCurve} fmin={15} fmax={20000} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
       </div>
       <div className="text-xs text-stone-500">{result.names.tweeter} · {config.box}{config.box === "vented" && config.port.shape === "slot" ? ` (${config.port.h}″ slot, ${config.port.len}″ long)` : config.box === "vented" ? ` (${config.port.n} × ${config.port.dia}″ port, ${config.port.len}″${config.port.elbows ? `, ${config.port.elbows} elbow${config.port.elbows > 1 ? "s" : ""}` : ""})` : config.box === "radiator" && passiveRadiatorOf(config) ? ` (${config.pr.n} × ${passiveRadiatorOf(config).drv.name}, +${config.pr.addG} g)` : ""} · {config.wall === 0.5 ? "1/2″" : "3/4″"} · XO {config.xo} Hz · amps {config.wAmpW} / {config.tAmpW} W</div>
