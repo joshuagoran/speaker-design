@@ -626,11 +626,11 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
 }
 
 function SignalPath() {
-  const ink = "#111111", mute = "#707070", line = "#707070";
-  const col = { pa2: "#707070", sub: "#0082c8", mid: "#e5007e", hf: "#e5007e", grey: "#707070" };
+  const ink = PAL.ink, mute = PAL.mid, line = PAL.mid;
+  const col = { pa2: PAL.mid, sub: PAL.cyan, mid: PAL.magenta, hf: PAL.magenta, grey: PAL.mid };
   const Box = ({ x, y, w, h, c, children }) => (
     <g>
-      <rect x={x} y={y} width={w} height={h} rx="6" fill="#ffffff" stroke={c} strokeWidth="1.5" />
+      <rect x={x} y={y} width={w} height={h} rx="6" fill={PAL.white} stroke={c} strokeWidth="1.5" />
       {children}
     </g>
   );
@@ -719,7 +719,7 @@ function Tip({ tip, children, className = "" }) {
       <span role="button" tabIndex={0} aria-describedby={open ? id : undefined} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); } }}
-        className="cursor-help border-b-2 border-dotted border-[#b3b3b3]">{children}</span>
+        className="cursor-help border-b-2 border-dotted border-soft">{children}</span>
       {open && <span role="tooltip" id={id} className={`absolute z-30 top-full mt-1 w-max max-w-[18rem] rounded bg-stone-900 text-stone-50 text-xs font-normal normal-case tracking-normal leading-snug px-2 py-1.5 text-left ${flip ? "right-0" : "left-0"}`}>{tip}</span>}
     </span>
   );
@@ -737,7 +737,7 @@ function SwatchPicker({ label, value, onChange, swatches, presets, titlePrefix =
         {presets && Object.entries(presets).map(([k, f]) => (
           <button key={k} type="button" title={f.name} aria-pressed={value === k} onClick={() => onChange(k)}
             className={`px-2.5 h-7 rounded-full border-2 text-xs ${ring(value === k)}`}
-            style={{ background: f.swatch, color: k === "walnut" ? "#f2f2f2" : "#111111" }}>{f.name}</button>
+            style={{ background: f.swatch, color: k === "walnut" ? PAL.tint : PAL.ink }}>{f.name}</button>
         ))}
         {swatches.map(([hex, name]) => (
           <button key={hex} type="button" title={titlePrefix + name} aria-label={titlePrefix + name} aria-pressed={!preset && value.toLowerCase() === hex} onClick={() => onChange(hex)}
@@ -745,7 +745,7 @@ function SwatchPicker({ label, value, onChange, swatches, presets, titlePrefix =
         ))}
         <label className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom colour">
           <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
-          <input type="color" aria-label={`Custom ${label.toLowerCase()}`} value={preset ? "#ffffff" : value} onChange={(e) => onChange(e.target.value)}
+          <input type="color" aria-label={`Custom ${label.toLowerCase()}`} value={preset ? PAL.white : value} onChange={(e) => onChange(e.target.value)}
             className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
         </label>
         <span className="text-xs text-stone-500 ml-1 tabular-nums">{note}</span>
@@ -1016,8 +1016,8 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   const grid = [];
   ticks.forEach((f) => {
     const X = px(f);
-    grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke="#e6e6e6" strokeWidth="1" />);
-    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{f >= 1000 ? f / 1000 + "k" : f}</text>);
+    grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke={PAL.edge} strokeWidth="1" />);
+    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{f >= 1000 ? f / 1000 + "k" : f}</text>);
   });
   // hover / drag: a crosshair with each curve's value at that frequency
   const [hf, setHf] = useState(null);
@@ -1034,8 +1034,8 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   const every = ((y1 - y0) * step) / (TOP - BOT) < 16 ? 2 : 1;   // thin the labels when rows get tight
   for (let v = BOT, k = 0; v <= TOP; v += step, k++) {
     const Y = py(v);
-    grid.push(<line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke="#e6e6e6" strokeWidth="1" />);
-    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{v}</text>);
+    grid.push(<line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke={PAL.edge} strokeWidth="1" />);
+    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{v}</text>);
   }
   return (
     <div ref={box}>
@@ -1044,23 +1044,23 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         {grid}
         {marks.filter((m) => m.f > fmin && m.f < fmax).map((m, i, ms) => (
           <g key={m.label + i}>
-            <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke="#707070" strokeWidth="1" strokeDasharray="3 4" />
-            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{m.label}</text>
+            <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke={PAL.mid} strokeWidth="1" strokeDasharray="3 4" />
+            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{m.label}</text>
           </g>
         ))}
         {paths.map((p) => <path key={p.label + "f"} d={p.fill} fill={p.tint} />)}
         {paths.map((p) => <path key={p.label} d={p.d} fill="none" stroke={p.stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />)}
         {hf && (<g pointerEvents="none">
-          <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke="#707070" strokeWidth="1" />
-          {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke="#fff" strokeWidth="1.5" />)}
+          <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke={PAL.mid} strokeWidth="1" />
+          {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke={PAL.white} strokeWidth="1.5" />)}
           {(() => { const t = `${hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz`, w = t.length * 6.5 + 8, X = Math.max(x0 + w / 2, Math.min(x1 - w / 2, px(hf)));
-            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill="#111111" /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="12" fontFamily="Inconsolata, monospace" fill="#ffffff">{t}</text></g>; })()}
-          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="12" fontFamily="Inconsolata, monospace" fill="#111111" stroke="#fff" strokeWidth="3" paintOrder="stroke">
+            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill={PAL.ink} /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="12" fontFamily="Inconsolata, monospace" fill={PAL.white}>{t}</text></g>; })()}
+          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="12" fontFamily="Inconsolata, monospace" fill={PAL.ink} stroke={PAL.white} strokeWidth="3" paintOrder="stroke">
             {hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz{hits.map((h) => ` · ${h.label} ${h.o.spl.toFixed(0)}${unit}`).join("")}
           </text>
         </g>)}
-        <text x={W / 2} y={H - 4} textAnchor="middle" fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">frequency, Hz</text>
-        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{yLabel}</text>
+        <text x={W / 2} y={H - 4} textAnchor="middle" fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">frequency, Hz</text>
+        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{yLabel}</text>
       </svg>
       {paths.length > 0 && (
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1 text-xs text-stone-600" style={{ fontFamily: "var(--font)" }}>
@@ -1111,7 +1111,7 @@ function DispMap({ map, title }) {
   const W = 560, H = 240, L = 40, R = 6, T = 6, B = 24;
   const nF = map.freqs.length, nA = map.angles.length;
   const cw = (W - L - R) / nF, ch = (H - T - B) / nA;
-  const col = (db) => { const x = Math.max(0, Math.min(1, -db / 18)); const l = 28 + x * 66; return `hsl(201 ${Math.round(100 - x * 70)}% ${l.toFixed(0)}%)`; };
+  const col = (db) => { const x = Math.max(0, Math.min(1, -db / 18)); const l = 28 + x * 66; return `hsl(${PAL.cyanHue} ${Math.round(100 - x * 70)}% ${l.toFixed(0)}%)`; };
   const fx = (f) => L + (Math.log(f / map.freqs[0]) / Math.log(map.freqs[nF - 1] / map.freqs[0])) * (W - L - R);
   const move = (e) => {
     const r = e.currentTarget.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H;
@@ -1125,9 +1125,9 @@ function DispMap({ map, title }) {
         <span className="tabular-nums text-stone-700">{hover ? `${map.angles[hover.j]}° · ${map.freqs[hover.i] >= 1000 ? (map.freqs[hover.i] / 1000).toFixed(1) + "k" : map.freqs[hover.i].toFixed(0)} Hz · ${map.rows[hover.j][hover.i].toFixed(1)} dB` : "dB vs on-axis"}</span></div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" style={{ touchAction: "pan-y" }} onPointerMove={move} onPointerDown={move} onPointerLeave={() => setHover(null)} role="img" aria-label={`${title}: level against angle and frequency`}>
         {map.rows.map((row, j) => row.map((db, i) => <rect key={j * nF + i} x={L + i * cw} y={T + j * ch} width={cw + 0.5} height={ch + 0.5} fill={col(db)} />))}
-        {ticksA.map((a) => { const j = map.angles.indexOf(a); return <text key={a} x={L - 5} y={T + (j + 0.5) * ch + 3} fontSize="10" textAnchor="end" fill="#595959">{a}°</text>; })}
-        {[200, 500, 1000, 2000, 5000, 10000, 20000].map((f) => <text key={f} x={fx(f)} y={H - 8} fontSize="10" textAnchor="middle" fill="#595959">{f >= 1000 ? f / 1000 + "k" : f}</text>)}
-        {hover && <rect x={L + hover.i * cw} y={T + hover.j * ch} width={cw} height={ch} fill="none" stroke="#111111" strokeWidth="1.5" />}
+        {ticksA.map((a) => { const j = map.angles.indexOf(a); return <text key={a} x={L - 5} y={T + (j + 0.5) * ch + 3} fontSize="10" textAnchor="end" fill={PAL.muted}>{a}°</text>; })}
+        {[200, 500, 1000, 2000, 5000, 10000, 20000].map((f) => <text key={f} x={fx(f)} y={H - 8} fontSize="10" textAnchor="middle" fill={PAL.muted}>{f >= 1000 ? f / 1000 + "k" : f}</text>)}
+        {hover && <rect x={L + hover.i * cw} y={T + hover.j * ch} width={cw} height={ch} fill="none" stroke={PAL.ink} strokeWidth="1.5" />}
       </svg>
       <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">0 dB<span className="h-2 flex-1 max-w-[160px] rounded" style={{ background: `linear-gradient(to right, ${col(0)}, ${col(-9)}, ${col(-18)})` }} />−18 dB</div>
     </div>
@@ -1145,16 +1145,16 @@ function RoomView({ spacing, toe, seat, setSeat, angles }) {
     setSeat({ x: Math.round(((x - W / 2) / k) * 4) / 4, y: Math.max(2, Math.round(((y - 14) / k) * 4) / 4) });
   };
   const spk = (sx, sign) => {
-    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${-sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill="#111111" /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke="#707070" strokeDasharray="2 2" /></g>;
+    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${-sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill={PAL.ink} /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke={PAL.mid} strokeDasharray="2 2" /></g>;
   };
   return (
     <svg viewBox={`0 0 ${W} ${H + 20}`} className="w-full h-auto rounded border border-stone-200 bg-white" style={{ touchAction: "none" }} onPointerDown={drag} onPointerMove={drag} role="img" aria-label="Room seen from above; drag the seat">
-      {[-1, 1].map((sg) => <line key={sg} x1={px((sg * spacing) / 2)} y1={py(0)} x2={px(seat.x)} y2={py(seat.y)} stroke="#e6e6e6" />)}
+      {[-1, 1].map((sg) => <line key={sg} x1={px((sg * spacing) / 2)} y1={py(0)} x2={px(seat.x)} y2={py(seat.y)} stroke={PAL.edge} />)}
       {spk(-spacing / 2, 1)}{spk(spacing / 2, -1)}
-      <circle cx={px(seat.x)} cy={py(seat.y)} r="7" fill="#0082c8" stroke="#fff" strokeWidth="2" />
-      <text x={px(-spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill="#595959">{angles[0].toFixed(0)}° off</text>
-      <text x={px(spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill="#595959">{angles[1].toFixed(0)}° off</text>
-      <text x={6} y={H + 14} fontSize="10" fill="#595959">{Wd.toFixed(0)} ft wide · drag the seat</text>
+      <circle cx={px(seat.x)} cy={py(seat.y)} r="7" fill={PAL.cyan} stroke={PAL.white} strokeWidth="2" />
+      <text x={px(-spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill={PAL.muted}>{angles[0].toFixed(0)}° off</text>
+      <text x={px(spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill={PAL.muted}>{angles[1].toFixed(0)}° off</text>
+      <text x={6} y={H + 14} fontSize="10" fill={PAL.muted}>{Wd.toFixed(0)} ft wide · drag the seat</text>
     </svg>
   );
 }
@@ -1166,16 +1166,16 @@ function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }) {
   const bx = (W - dim.w * k) / 2, y = (inch) => (dim.h + top - inch) * k;
   return (
     <svg viewBox={`-4 -4 ${W + 8} ${H + 8}`} className={small ? "w-full h-auto max-h-40" : "h-40 w-auto"} role="img" aria-label={`Front view, ${dim.w} × ${dim.h}″${lay.onTop ? ", waveguide on top" : ""}`}>
-      <rect x={bx} y={top * k} width={dim.w * k} height={dim.h * k} rx="2" fill="#e6e6e6" stroke="#111111" strokeWidth="1.2" />
+      <rect x={bx} y={top * k} width={dim.w * k} height={dim.h * k} rx="2" fill={PAL.edge} stroke={PAL.ink} strokeWidth="1.2" />
       {lay.onTop
-        ? <g><rect x={W / 2 - (face.w * k) / 8} y={top * k - 3} width={(face.w * k) / 4} height={3} fill="#111111" /><rect x={W / 2 - (face.w * k) / 2} y={0} width={face.w * k} height={top * k - 3} rx={(face.h * k) / 3} fill="#595959" stroke="#111111" strokeWidth="1" /></g>
-        : <rect x={W / 2 - (face.w * k) / 2} y={y(lay.tweeterIn) - (face.h * k) / 2} width={face.w * k} height={face.h * k} rx={guide ? 3 : face.w * k / 2} fill="#595959" />}
-      <circle cx={W / 2} cy={y(lay.tweeterIn)} r={0.5 * k} fill="#e6e6e6" />
-      <circle cx={W / 2} cy={y(lay.wooferIn)} r={(w.size * 0.95 * k) / 2} fill="#e6e6e6" stroke="#707070" />
+        ? <g><rect x={W / 2 - (face.w * k) / 8} y={top * k - 3} width={(face.w * k) / 4} height={3} fill={PAL.ink} /><rect x={W / 2 - (face.w * k) / 2} y={0} width={face.w * k} height={top * k - 3} rx={(face.h * k) / 3} fill={PAL.muted} stroke={PAL.ink} strokeWidth="1" /></g>
+        : <rect x={W / 2 - (face.w * k) / 2} y={y(lay.tweeterIn) - (face.h * k) / 2} width={face.w * k} height={face.h * k} rx={guide ? 3 : face.w * k / 2} fill={PAL.muted} />}
+      <circle cx={W / 2} cy={y(lay.tweeterIn)} r={0.5 * k} fill={PAL.edge} />
+      <circle cx={W / 2} cy={y(lay.wooferIn)} r={(w.size * 0.95 * k) / 2} fill={PAL.edge} stroke={PAL.mid} />
       {pr && Array.from({ length: pr.n }, (_, i) => { const s = prShape(pr.drv), cy = H - (0.75 + 0.25 + (i + 0.5) * (s.h + 0.5)) * k;
-        return <rect key={`r${i}`} x={W / 2 - (s.w * k) / 2} y={cy - (s.h * k) / 2} width={s.w * k} height={s.h * k} rx={(s.w * k) / 2} fill="none" stroke="#707070" strokeDasharray="3 2" />; })}
-      {vented && port.shape === "slot" && <rect x={bx + 0.75 * k} y={H - (0.75 + port.h) * k} width={(dim.w - 1.5) * k} height={port.h * k} fill="#111111" />}
-      {vented && port.shape !== "slot" && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill="#111111" />)}
+        return <rect key={`r${i}`} x={W / 2 - (s.w * k) / 2} y={cy - (s.h * k) / 2} width={s.w * k} height={s.h * k} rx={(s.w * k) / 2} fill="none" stroke={PAL.mid} strokeDasharray="3 2" />; })}
+      {vented && port.shape === "slot" && <rect x={bx + 0.75 * k} y={H - (0.75 + port.h) * k} width={(dim.w - 1.5) * k} height={port.h * k} fill={PAL.ink} />}
+      {vented && port.shape !== "slot" && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill={PAL.ink} />)}
     </svg>
   );
 }
@@ -1379,10 +1379,10 @@ function HifiPage() {
         </div>
         </div>
         <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="dB SPL at 2.83 V"
-          series={[{ curve: on, label: "On axis, 1 m", stroke: "#111111", tint: "rgba(0,0,0,0)" }, { curve: pair, label: `Pair at the seat (${(seatDist / FT).toFixed(1)} ft)`, stroke: "#0082c8", tint: "rgba(0,130,200,0.06)" }]}
+          series={[{ curve: on, label: "On axis, 1 m", stroke: PAL.ink, tint: PAL.alpha(PAL.ink, 0) }, { curve: pair, label: `Pair at the seat (${(seatDist / FT).toFixed(1)} ft)`, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]}
           marks={[{ f: xo, label: "XO" }, { f: sys.bsF3, label: "Baffle step" }, ...(sys.Fb ? [{ f: sys.Fb, label: "Fb" }] : [])]} />
         <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="max dB SPL @ 1 m"
-          series={[{ curve: sys.wMax, label: w.name, stroke: "#e5007e", tint: "rgba(229,0,126,0.06)" }, { curve: tMax, label: t.name, stroke: "#0082c8", tint: "rgba(0,130,200,0.06)" }]} marks={[{ f: xo, label: "XO" }]} />
+          series={[{ curve: sys.wMax, label: w.name, stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0.06) }, { curve: tMax, label: t.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]} marks={[{ f: xo, label: "XO" }]} />
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
             <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
@@ -1688,7 +1688,7 @@ function FillsPage() {
           {tile("Max @ 150 Hz", mid.toFixed(1), "dB")}
           {tile("Weight", lb.toFixed(0), "lb")}
         </div>
-        <ResponseChart fmax={300} series={[{ curve: maxC, label: drv.name, stroke: "#0082c8", tint: "rgba(0,130,200,0.07)" }]} marks={[{ f: hp, label: "HP" }, ...(vM ? [{ f: vM.Fb, label: "Fb" }] : [])]} />
+        <ResponseChart fmax={300} series={[{ curve: maxC, label: drv.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.07) }]} marks={[{ f: hp, label: "HP" }, ...(vM ? [{ f: vM.Fb, label: "Fb" }] : [])]} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
           {[
             ["Woofer sensitivity", `${sens.toFixed(1)} dB`, "2.83 V, half space, 1 m, modelled"],
@@ -1744,17 +1744,17 @@ function SheetDrawing({ sheet, S, idx }) {
   const sc = 4, W = S.w * sc, H = S.h * sc;
   const [box, cw] = useWidth(S.w === 48 ? 160 : 200);
   const fs = (12 * (W + 4)) / cw;   // 12 css px
-  const colors = { Sub: "#fff3b0", Mid: "#cce6f4" };
+  const colors = { Sub: PAL.subTint, Mid: PAL.midTint };
   return (
     <div ref={box} className={`flex flex-col gap-1 w-full ${S.w === 48 ? "max-w-[240px] sm:w-[160px]" : "max-w-[300px] sm:w-[200px]"}`}>
       <div className="text-xs text-stone-500">Sheet {idx + 1}</div>
       <svg viewBox={`-2 -2 ${W + 4} ${H + 4}`} style={{ width: "100%", height: "auto" }} role="img" aria-label={`Sheet ${idx + 1} layout`}>
-        <rect x="0" y="0" width={W} height={H} fill="#ffffff" stroke="#707070" />
+        <rect x="0" y="0" width={W} height={H} fill={PAL.white} stroke={PAL.mid} />
         {sheet.items.map((it, i) => (
           <g key={i}>
-            <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || "#e6e6e6"} stroke="#707070" strokeWidth="0.8" />
+            <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || PAL.edge} stroke={PAL.mid} strokeWidth="0.8" />
             {it.w * sc > fs * 3.6 && it.h * sc > fs * 1.3 && (
-              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + fs * 0.35} textAnchor="middle" fontSize={fs} fill="#111111" fontFamily="Inconsolata, monospace">{it.box} {it.part.split(" ")[0]}</text>
+              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + fs * 0.35} textAnchor="middle" fontSize={fs} fill={PAL.ink} fontFamily="Inconsolata, monospace">{it.box} {it.part.split(" ")[0]}</text>
             )}
           </g>
         ))}
@@ -1891,22 +1891,22 @@ function BoxFront({ g, cur }) {
   };
   const a = stackRects(g), b = cur ? stackRects(cur) : null, t = g.wall * k, v = g.cVent;
   const vent = [];
-  if (g.portStyle === "slots" || g.portStyle === "folded") vent.push(<rect key="v" x={a.sb.x + t} y={a.sb.y + a.sb.h - t - v.slotH * k} width={a.sb.w - 2 * t} height={v.slotH * k} fill="#111111" />);
+  if (g.portStyle === "slots" || g.portStyle === "folded") vent.push(<rect key="v" x={a.sb.x + t} y={a.sb.y + a.sb.h - t - v.slotH * k} width={a.sb.w - 2 * t} height={v.slotH * k} fill={PAL.ink} />);
   else if (g.portStyle === "vslots" || g.portStyle === "vslot1") {
-    vent.push(<rect key="l" x={a.sb.x + t} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#111111" />);
-    if (g.portStyle === "vslots") vent.push(<rect key="r" x={a.sb.x + a.sb.w - t - v.throat * k} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#111111" />);
+    vent.push(<rect key="l" x={a.sb.x + t} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill={PAL.ink} />);
+    if (g.portStyle === "vslots") vent.push(<rect key="r" x={a.sb.x + a.sb.w - t - v.throat * k} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill={PAL.ink} />);
   } else for (let i = 0; i < (v.nt || 1); i++) {
     const n = v.nt || 1, gap = a.sb.w / (n + 1);
-    vent.push(<circle key={i} cx={a.sb.x + gap * (i + 1)} cy={a.sb.y + a.sb.h - t - (v.dia * k) / 2 - 2} r={(v.dia * k) / 2} fill="#111111" />);
+    vent.push(<circle key={i} cx={a.sb.x + gap * (i + 1)} cy={a.sb.y + a.sb.h - t - (v.dia * k) / 2 - 2} r={(v.dia * k) / 2} fill={PAL.ink} />);
   }
   const ventH = g.portStyle === "slots" || g.portStyle === "folded" ? v.slotH * k + t : g.portStyle.startsWith("round") ? v.dia * k + 4 : 0;
-  const driver = (box, size, below = 0) => <circle cx={box.x + box.w / 2} cy={box.y + (box.h - below) / 2} r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2} fill="#e6e6e6" stroke="#707070" strokeWidth="1" />;
+  const driver = (box, size, below = 0) => <circle cx={box.x + box.w / 2} cy={box.y + (box.h - below) / 2} r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2} fill={PAL.edge} stroke={PAL.mid} strokeWidth="1" />;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={`Front view: sub ${g.sub.w} × ${g.sub.h}″, mid ${g.mid.w} × ${g.mid.h}″${cur ? "; your design dashed" : ""}`}>
-      {b && b.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} fill="none" stroke="#707070" strokeWidth="1" strokeDasharray="3 2" />)}
-      {a.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} rx="1" fill={q === a.hb ? "#707070" : "#e6e6e6"} fillOpacity={q === a.hb ? 1 : 0.85} stroke="#111111" strokeWidth="1.2" />)}
+      {b && b.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} fill="none" stroke={PAL.mid} strokeWidth="1" strokeDasharray="3 2" />)}
+      {a.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} rx="1" fill={q === a.hb ? PAL.mid : PAL.edge} fillOpacity={q === a.hb ? 1 : 0.85} stroke={PAL.ink} strokeWidth="1.2" />)}
       {vent}
-      {g.tower && <line x1={a.sb.x} x2={a.sb.x + a.sb.w} y1={a.mb.y + a.mb.h} y2={a.mb.y + a.mb.h} stroke="#111111" strokeWidth="1.2" />}
+      {g.tower && <line x1={a.sb.x} x2={a.sb.x + a.sb.w} y1={a.mb.y + a.mb.h} y2={a.mb.y + a.mb.h} stroke={PAL.ink} strokeWidth="1.2" />}
       {driver(g.tower ? { ...a.sb, y: a.mb.y + a.mb.h, h: a.sb.h - a.mb.h } : a.sb, g.subSize, ventH)}
       {driver(a.mb, g.midSize)}
     </svg>
@@ -1930,18 +1930,18 @@ function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90], top = 13
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto touch-none" onPointerMove={move} onPointerLeave={() => setHover(null)} role="img"
       aria-label="Clean sub output from 20 to 200 Hz, this design against yours">
-      {band && <rect x={x(band[0])} y={T} width={x(band[1]) - x(band[0])} height={H - T - B} fill="#f2f2f2" />}
-      {ticks.map((d) => <g key={d}><line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke="#e6e6e6" /><text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill="#595959">{d}</text></g>)}
-      {(fmax > 1000 ? [20, 100, 1000, 10000] : [20, 50, 100, 200, 500]).filter((f) => f >= fmin && f <= fmax).map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill="#595959">{f >= 1000 ? f / 1000 + "k" : f}</text>)}
-      {cur && <path d={path(cur)} fill="none" stroke="#707070" strokeWidth="1.5" strokeDasharray="4 3" />}
-      <path d={path(curve)} fill="none" stroke="#111111" strokeWidth="2" />
+      {band && <rect x={x(band[0])} y={T} width={x(band[1]) - x(band[0])} height={H - T - B} fill={PAL.tint} />}
+      {ticks.map((d) => <g key={d}><line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke={PAL.edge} /><text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill={PAL.muted}>{d}</text></g>)}
+      {(fmax > 1000 ? [20, 100, 1000, 10000] : [20, 50, 100, 200, 500]).filter((f) => f >= fmin && f <= fmax).map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill={PAL.muted}>{f >= 1000 ? f / 1000 + "k" : f}</text>)}
+      {cur && <path d={path(cur)} fill="none" stroke={PAL.mid} strokeWidth="1.5" strokeDasharray="4 3" />}
+      <path d={path(curve)} fill="none" stroke={PAL.ink} strokeWidth="2" />
       {hover ? (<>
-        <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke="#707070" strokeWidth="0.75" />
-        <circle cx={x(h1[0])} cy={y(h1[1])} r="2.5" fill="#111111" stroke="#fff" strokeWidth="1" />
-        {(() => { const X = Math.max(L + 14, Math.min(W - R - 14, x(hover))); return <g><rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill="#111111" /><text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill="#ffffff">{hover.toFixed(0)} Hz</text></g>; })()}
-        <text x={L} y={9} fontSize="8.5" fill="#111111">{hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB{h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}</text>
+        <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke={PAL.mid} strokeWidth="0.75" />
+        <circle cx={x(h1[0])} cy={y(h1[1])} r="2.5" fill={PAL.ink} stroke={PAL.white} strokeWidth="1" />
+        {(() => { const X = Math.max(L + 14, Math.min(W - R - 14, x(hover))); return <g><rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill={PAL.ink} /><text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill={PAL.white}>{hover.toFixed(0)} Hz</text></g>; })()}
+        <text x={L} y={9} fontSize="8.5" fill={PAL.ink}>{hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB{h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}</text>
       </>) : (
-        <text x={L} y={9} fontSize="8.5" fill="#595959"><tspan fill="#111111">━ this</tspan>{cur ? "  ╌ yours" : ""} · dB, clean</text>
+        <text x={L} y={9} fontSize="8.5" fill={PAL.muted}><tspan fill={PAL.ink}>━ this</tspan>{cur ? "  ╌ yours" : ""} · dB, clean</text>
       )}
     </svg>
   );
@@ -2061,7 +2061,7 @@ function StackPlanner() {
   const [midSize, setMidSize] = useState(12);
   const [wall, setWall] = useState(0.75);   // side/top/bottom/back ply, in
   const [inset, setInset] = useState(0.75); // how far the baffles sit back from the frame front, in
-  const [baffleColor, setBaffleColor] = useState("#e8b4a8");
+  const [baffleColor, setBaffleColor] = useState(SWATCHES.find(([, name]) => name === "Dusty pink")[0]);
   const [cabFinish, setCabFinish] = useState("birch");
   const [spacerH, setSpacerH] = useState(20);
   const [showDetails, setShowDetails] = useState(false);
@@ -2397,7 +2397,7 @@ function StackPlanner() {
               ))}
             </div>
           )}
-          {mdl && lim && <div className="mb-4"><ResponseChart fmax={20000} series={[{ curve: subSys, label: "Sub", stroke: "#111111", tint: "rgba(17,17,17,0.07)" }, ...(midMax ? [{ curve: midMax, label: "Mid-bass", stroke: "#e5007e", tint: "rgba(229,0,126,0.06)" }] : []), ...(hornModel ? [{ curve: hornModel.curve, label: "Horn", stroke: "#0082c8", tint: "rgba(0,130,200,0.06)" }] : [])]} marks={[{ f: mdl.Fb, label: "Fb" }, { f: xoLo, label: "XO" }, { f: xoHi, label: "XO" }]} /></div>}
+          {mdl && lim && <div className="mb-4"><ResponseChart fmax={20000} series={[{ curve: subSys, label: "Sub", stroke: PAL.ink, tint: PAL.alpha(PAL.ink, 0.07) }, ...(midMax ? [{ curve: midMax, label: "Mid-bass", stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0.06) }] : []), ...(hornModel ? [{ curve: hornModel.curve, label: "Horn", stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }] : [])]} marks={[{ f: mdl.Fb, label: "Fb" }, { f: xoLo, label: "XO" }, { f: xoHi, label: "XO" }]} /></div>}
           {mdl ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
@@ -2501,7 +2501,7 @@ function StackPlanner() {
             </div>
             <div className="mb-4">
               <ResponseChart fmin={200} fmax={10000} top={180} bot={0} step={30} H={220} yLabel="horizontal beamwidth, °"
-                series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: "#e5007e", tint: "rgba(229,0,126,0)" }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: "#0082c8", tint: "rgba(0,130,200,0)" }] : [])]}
+                series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0) }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0) }] : [])]}
                 marks={[{ f: xoHi, label: "XO" }, ...(beamCurves.fK ? [{ f: beamCurves.fK, label: "horn control" }] : [])]} />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -2523,7 +2523,7 @@ function StackPlanner() {
 
         </div>
 
-        <aside className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-100 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-[0_-6px_20px_rgba(0,0,0,0.10)]`} style={{ fontFamily: "var(--font)" }} aria-label="Settings">
+        <aside className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-100 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-sheet`} style={{ fontFamily: "var(--font)" }} aria-label="Settings">
           <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
             {[["sub", "Sub"], ["mid", "Mid"], ["horn", "Horn"], ["look", "Look"]].map(([t, label]) => (
               <button key={t} role="tab" aria-selected={sheetOpen && tab === t}
