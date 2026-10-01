@@ -899,11 +899,11 @@ function HifiFront({ dim, w, t, lay, vented, port, guide, small }) {
 
 // every Hi-fi chart shares one fixed dB scale, so designs and charts compare by eye
 const HIFI_TOP = 130, HIFI_BOT = 50;
-// woofers listed smallest first, grouped by size in the picker
-const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort((a, b) => a.size - b.size);
+// woofers listed smallest first, grouped by size in the picker, A–Z within a size
+const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort((a, b) => a.size - b.size || a.name.localeCompare(b.name));
 // tweeters split into domes and compression drivers (which need a waveguide), domes first
 const isCD = (o) => o.type === "compression" || o.needsWaveguide;
-const HIFI_TWEETERS_BY_TYPE = HIFI_TWEETERS.slice().sort((a, b) => isCD(a) - isCD(b));
+const HIFI_TWEETERS_BY_TYPE = HIFI_TWEETERS.slice().sort((a, b) => isCD(a) - isCD(b) || a.name.localeCompare(b.name));
 
 // A result card, laid out like the PA optimizer's: what it is, a front view and its bass against yours, the four numbers with deltas.
 function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
