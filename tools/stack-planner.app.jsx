@@ -685,7 +685,7 @@ function SignalPath() {
 // ---------------------------------------------------------------
 // group: optional (option) => heading; options with the same heading are listed together under it, in order of first appearance
 function Pick({ label, options, value, onChange, extra, group }) {
-  const opt = (o) => <option key={o.id} value={o.id}>{o.pick ? "● " : ""}{o.name}{o.price ? ` — $${o.price}` : ""}</option>;
+  const opt = (o) => <option key={o.id} value={o.id}>{o.name}{o.price ? ` — $${o.price}` : ""}</option>;
   const groups = group ? [...new Set(options.map(group))] : null;
   return (
     <div className="mb-4">
@@ -894,6 +894,8 @@ function HifiFront({ dim, w, t, lay, vented, port, guide, small }) {
   );
 }
 
+// every Hi-fi chart shares one fixed dB scale, so designs and charts compare by eye
+const HIFI_TOP = 130, HIFI_BOT = 50;
 // woofers listed smallest first, grouped by size in the picker
 const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort((a, b) => a.size - b.size);
 
@@ -914,7 +916,7 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{cw.size}″ {k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} guide={k.guided ? guide : null} small />
-        <OutChart curve={k.curve} cur={curCurve} fmin={20} fmax={500} band={null} />
+        <OutChart curve={k.curve} cur={curCurve} fmin={20} fmax={500} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
       </div>
       <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
@@ -984,7 +986,7 @@ function HifiPage() {
     return { th: Math.abs(ang), eyeIn: earIn - standIn, distM: d * FT };
   };
   const gL = geoOf(-1), gR = geoOf(1);
-  const freqs = logFreqs(40, 20000, 200);
+  const freqs = logFreqs(15, 20000, 220);
   const rL = responseAt(sys, w, tt, cfg, gL, freqs), rR = responseAt(sys, w, tt, cfg, gR, freqs);
   const on = responseAt(sys, w, tt, cfg, { th: 0, eyeIn: sys.lay.tweeterIn, distM: 1 }, freqs);
   const pair = rL.map((o, i) => ({ f: o.f, spl: 10 * Math.log10(Math.pow(10, o.spl / 10) + Math.pow(10, rR[i].spl / 10)) }));
@@ -993,7 +995,6 @@ function HifiPage() {
   const tMax = freqs.map((f) => ({ f, spl: sys.tLevel + 20 * Math.log10(Math.max(1e-6, Math.hypot(lr(f, xo, order, "hp").re, lr(f, xo, order, "hp").im))) }));
   const map = dispersionMap(sys, w, tt, cfg, plane, Math.max(1, seatDist));
   const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0));
-  const hi = Math.max(...on.map((o) => o.spl), ...pair.map((o) => o.spl)), top = Math.ceil((hi + 4) / 5) * 5;
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
       <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
@@ -1045,7 +1046,7 @@ function HifiPage() {
         </div>
         <div className="mt-3">
           <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
-          <div className="flex flex-wrap gap-1">{Object.entries(HIFI_GOALS).map(([k, g]) => { const i = hGoals.indexOf(k); return <button key={k} title={g.name} aria-pressed={i >= 0} className={optSeg(i >= 0)} onClick={() => tapG(k)}>{hGoals.length > 1 && i >= 0 ? `${i + 1} · ` : ""}{g.short}</button>; })}</div>
+          <div className="flex flex-wrap gap-1">{Object.entries(HIFI_GOALS).map(([k, g]) => { const i = hGoals.indexOf(k); return <button key={k} title={g.name} aria-pressed={i >= 0} className={`relative ${optSeg(i >= 0)}`} onClick={() => tapG(k)}>{hGoals.length > 1 && i >= 0 && <RankBadge n={i + 1} />}{g.short}</button>; })}</div>
         </div>
       </div>
       <div className="mt-2 text-xs text-stone-500">Amps: woofer {hLocks.wAmpW ? `${wAmpW} W` : `any up to ${HIFI_AMP_MAX.wAmpW} W`} · tweeter {hLocks.tAmpW ? `${tAmpW} W` : `any up to ${HIFI_AMP_MAX.tAmpW} W`} (unlocked amps come back at the least power that does the job)</div>
@@ -1090,10 +1091,10 @@ function HifiPage() {
           {tile("Pair", `$${Math.round(pairCost)}`, "")}
         </div>
         </div>
-        <ResponseChart fmin={30} fmax={20000} top={top} bot={top - 45} yLabel="dB SPL at 2.83 V"
+        <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="dB SPL at 2.83 V"
           series={[{ curve: on, label: "On axis, 1 m", stroke: "#111111", tint: "rgba(0,0,0,0)" }, { curve: pair, label: `Pair at the seat (${(seatDist / FT).toFixed(1)} ft)`, stroke: "#0082c8", tint: "rgba(0,130,200,0.06)" }]}
           marks={[{ f: xo, label: "XO" }, { f: sys.bsF3, label: "Baffle step" }, ...(sys.Fb ? [{ f: sys.Fb, label: "Fb" }] : [])]} />
-        <ResponseChart fmin={30} fmax={20000} top={Math.ceil((Math.max(sys.tLevel, sys.wLevel) + 8) / 5) * 5} bot={Math.ceil((Math.max(sys.tLevel, sys.wLevel) + 8) / 5) * 5 - 50} yLabel="max dB SPL @ 1 m"
+        <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="max dB SPL @ 1 m"
           series={[{ curve: sys.wMax, label: w.name, stroke: "#e5007e", tint: "rgba(229,0,126,0.06)" }, { curve: tMax, label: t.name, stroke: "#0082c8", tint: "rgba(0,130,200,0.06)" }]} marks={[{ f: xo, label: "XO" }]} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
           <RoomView spacing={spacing} toe={toe} seat={seat} setSeat={setSeat} angles={[(gL.th * 180) / Math.PI, (gR.th * 180) / Math.PI]} />
@@ -1110,8 +1111,8 @@ function HifiPage() {
         </div>
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
-            <div key={head} className={`flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
-              <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+            <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+              <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
               <span className="text-stone-600">{body}</span>
             </div>
           ))}
@@ -1131,19 +1132,25 @@ function HifiPage() {
         <Pick label={`Woofer · ${w.size}″`} options={HIFI_WOOFERS_BY_SIZE} value={w} onChange={setW} extra={hLk("woofer", "the woofer")} group={(o) => `${o.size}″ woofers`} />
         <Pick label="Tweeter" options={HIFI_TWEETERS} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} />
         {guide && <Pick label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
-        <div className="text-sm text-stone-500 mb-1 flex items-center justify-between"><span>Box</span>{hLk("box", "sealed or vented")}</div>
-        <div className="flex flex-wrap gap-1 mb-2">
-          {[["Vented", "vented"], ["Sealed", "sealed"]].map(([l, v]) => <button key={v} onClick={() => setBox(v)} className={seg(box === v)}>{l}</button>)}
-          {[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <button key={v} onClick={() => setMat(v)} className={seg(mat === v)}>{l}</button>)}
-          {[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <button key={v} onClick={() => setWall(v)} className={seg(wall === v)}>{l}</button>)}
-          {hLk("wall", "the plywood")}
+        <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
+          <span className="text-stone-500">Box</span>
+          <div className="flex flex-wrap gap-1">{[["Sealed", "sealed", 0], ["1 port", "vented", 1], ["2 ports", "vented", 2]].map(([l, v, n]) => {
+            const on = box === v && (v === "sealed" || port.n === n);
+            return <button key={l} onClick={() => { setBox(v); if (n) setP("n", n); }} className={seg(on)}>{l}</button>;
+          })}</div>
+          <span>{hLk("box", "sealed or vented")}</span>
+          <span className="text-stone-500">Material</span>
+          <div className="flex flex-wrap gap-1">{[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <button key={v} onClick={() => setMat(v)} className={seg(mat === v)}>{l}</button>)}</div>
+          <span />
+          <span className="text-stone-500">Thickness</span>
+          <div className="flex flex-wrap gap-1">{[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <button key={v} onClick={() => setWall(v)} className={seg(wall === v)}>{l}</button>)}</div>
+          <span>{hLk("wall", "the panel thickness")}</span>
         </div>
         <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
           <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
           <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="&#8243;" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
           <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
           {box === "vented" && (<>
-            <Slider label="Ports" value={port.n} min={1} max={2} step={1} unit="" onChange={(v) => setP("n", v)} />
             <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />
             <Slider label="Port length" value={port.len} min={1} max={14} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
           </>)}
@@ -1410,8 +1417,8 @@ function FillsPage() {
         </div>
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
-            <div key={head} className={`flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
-              <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+            <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+              <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
               <span className="text-stone-600">{body}</span>
             </div>
           ))}
@@ -1569,6 +1576,10 @@ function runOptimizer(input) {
   });
 }
 
+// a goal's place in the priority order, floating on the button's corner so the label doesn't move
+function RankBadge({ n }) {
+  return <span className="absolute -top-2 -left-2 min-w-[18px] h-[18px] px-1 rounded-full bg-cmy-c text-white text-[11px] font-bold leading-[18px] text-center" aria-label={`priority ${n}`}>{n}</span>;
+}
 // status notes: a light tint of the status colour with a matching border
 const CHIP_BG = { ok: "bg-green-50 border-green-200 border-l-4 border-l-green-300", warn: "bg-amber-50 border-amber-200 border-l-4 border-l-amber-300", bad: "bg-red-50 border-red-200 border-l-4 border-l-red-300" };
 const money = (x) => `$${Math.round(x).toLocaleString()}`;
@@ -1619,11 +1630,9 @@ function BoxFront({ g, cur }) {
 }
 
 // The sub's clean output (music limit) against frequency, this design against yours; the scored 40-90 Hz band shaded.
-function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90] }) {
+function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90], top = 135, bot = 80 }) {
   const [hover, setHover] = useState(null);
   const W = 220, H = 150, L = 26, R = 6, T = 16, B = 18;
-  const all = [...curve, ...(cur || [])].map((o) => o[1]);
-  const top = Math.ceil(Math.max(...all) / 5) * 5, bot = Math.max(Math.floor(Math.min(...all) / 5) * 5, top - 40);
   const x = (f) => L + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (W - L - R), y = (d) => T + ((top - Math.max(bot, Math.min(top, d))) / (top - bot)) * (H - T - B);
   const path = (c) => c.map((o, i) => `${i ? "L" : "M"}${x(o[0]).toFixed(1)},${y(o[1]).toFixed(1)}`).join("");
   const at = (c, f) => c && c.reduce((b, o) => (Math.abs(Math.log(o[0] / f)) < Math.abs(Math.log(b[0] / f)) ? o : b));
@@ -1720,7 +1729,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
             <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => { const i = goals.indexOf(k); return (
-              <button key={k} title={gg.name} aria-pressed={i >= 0} className={seg(i >= 0)} onClick={() => tapGoal(k)}>{goals.length > 1 && i >= 0 ? `${i + 1} · ` : ""}{gg.short}</button>); })}</div>
+              <button key={k} title={gg.name} aria-pressed={i >= 0} className={`relative ${seg(i >= 0)}`} onClick={() => tapGoal(k)}>{goals.length > 1 && i >= 0 && <RankBadge n={i + 1} />}{gg.short}</button>); })}</div>
           </div>
         </div>
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
@@ -2093,9 +2102,9 @@ function StackPlanner() {
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "var(--font)" }}>
       <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">Speaker Planner</h1>
+        <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">SpeakNow</h1>
         <nav className="flex gap-1 mt-3" style={{ fontFamily: "var(--font)" }} aria-label="Pages">
-          {[["planner", "Planner", "#"], ["cutlist", "Cutlist", "#cutlist"], ["fills", "Fills", "#fills"], ["hifi", "Hi-fi", "#hifi"], ["notes", "Notes", "#notes"]].map(([v, label, href]) => (
+          {[["planner", "PA Stack", "#"], ["cutlist", "Cutlist", "#cutlist"], ["fills", "Fills", "#fills"], ["hifi", "Hi-fi", "#hifi"], ["notes", "Notes", "#notes"]].map(([v, label, href]) => (
             <a key={v} href={href} aria-current={view === v ? "page" : undefined}
               onClick={(e) => { e.preventDefault(); try { history.replaceState(null, "", v === "planner" ? " " : href); } catch {} setView(v); window.scrollTo(0, 0); }}
               className={`px-3 py-1.5 rounded border text-sm ${view === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</a>
@@ -2253,8 +2262,8 @@ function StackPlanner() {
               {(() => {
                 const F = subChips({ subSize: format.sub, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF: mdl.peakXF, aes: sub.ts.aes, ampW });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className={`flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
-                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+                    <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
@@ -2305,8 +2314,8 @@ function StackPlanner() {
                 const F = midChips({ midSize, midDims, Qtc: mMdl.Qtc, f3: mMdl.f3, peakX: mMdl.peakX, xoLo, ts: mid.ts, V: MID_V, useV: midUseV, vTherm: vMidTherm, mAmpW,
                   subMusicAtXo, tilt, midAtXo: subMusicAtXo != null ? midNear(xoLo) : null });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className={`flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
-                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+                    <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
@@ -2345,8 +2354,8 @@ function StackPlanner() {
               {(() => {
                 const F = hornChips({ hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi: midMax ? midNear(xoHi).spl : null, hfTilt, hornAtXo: hornAt(xoHi), midBeam, fK: beamCurves.fK });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className={`flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
-                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+                    <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
@@ -2462,17 +2471,6 @@ function StackPlanner() {
               <Slider label="Height" value={cDim.h} min={18} max={42} step={0.5} unit="&#8243;" onChange={(v) => setC("h", v)} extra={dl("subDim", "h", "Sub height")} />
               <Slider label="Depth"  value={cDim.d} min={14} max={32} step={0.5} unit="&#8243;" onChange={(v) => setC("d", v)} extra={dl("subDim", "d", "Sub depth")} />
             </div>
-            <div className="text-xs text-stone-500 mt-2 mb-1">Start from a published cabinet</div>
-            <select
-              value=""
-              onChange={(e) => { const cb = CABINETS.find((c) => c.id === e.target.value); if (cb) startFrom(cb); e.target.value = ""; }}
-              className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500 focus:outline-none focus:border-stone-900">
-              <option value="">Load dimensions and vent&hellip;</option>
-              {CABINETS.map((cb) => {
-                const dd = cb.dims[format.sub];
-                return <option key={cb.id} value={cb.id}>{cb.name} — {dd.w} × {dd.h} × {dd.d}&#8243;</option>;
-              })}
-            </select>
           </div>
           </div>
           <div className={tabCls("sub")}>
@@ -2544,14 +2542,6 @@ function StackPlanner() {
               <Slider label="Music balance: mid band needs less by" value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
               <div className="text-xs text-stone-500">0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.</div>
             </div>
-            {layout !== "tower" && (<>
-              <div className="text-xs text-stone-500 mt-2 mb-1">Start from a preset box</div>
-              <select value="" onChange={(e) => { const b = MID_BOXES.find((x) => x.id === e.target.value); if (b) { setMidBox(b); setMDim({ ...b.box }); } e.target.value = ""; }}
-                className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500 focus:outline-none focus:border-stone-900">
-                <option value="">Load dimensions&hellip;</option>
-                {boxList.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </>)}
           </div>
           </div>
           <div className={tabCls("horn")}>

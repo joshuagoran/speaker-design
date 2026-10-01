@@ -41,7 +41,7 @@ export function bscEq(f, baffleWIn, db) {
   const B = Math.pow(10, db / 20), x = (0.707 * f) / baffleStepF3(baffleWIn);
   return Math.sqrt((B * B + x * x) / (1 + x * x));
 }
-export const PLACES = { free: { name: "Free-standing", db: 0 }, wall: { name: "Near the back wall", db: 3 }, corner: { name: "In a corner", db: 6 } };
+export const PLACES = { free: { name: "Free-standing", db: 0 }, wall: { name: "Wall", db: 3 }, corner: { name: "Corner", db: 6 } };
 // boundary reinforcement below ~ c / (4 · distance to the wall)
 export function boundary(f, place, wallM) {
   const db = (PLACES[place] || PLACES.free).db;
