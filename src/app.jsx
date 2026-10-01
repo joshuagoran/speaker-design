@@ -1,11 +1,46 @@
-const { useEffect, useId, useRef, useState } = React;
+const { useEffect, useRef, useState } = React;
+import { ToggleButton } from "./components/ui/ToggleButton.jsx";
+import { Button } from "./components/ui/Button.jsx";
+import { Tooltip } from "./components/ui/Tooltip.jsx";
+import { SwatchPicker } from "./components/ui/SwatchPicker.jsx";
+import { Card } from "./components/ui/Card.jsx";
+import { SectionHeading } from "./components/ui/SectionHeading.jsx";
+import { NumberField } from "./components/ui/NumberField.jsx";
+import { SelectField } from "./components/ui/SelectField.jsx";
+import { Slider } from "./components/ui/Slider.jsx";
+import { FoldHeading } from "./components/ui/FoldHeading.jsx";
+import { Notice } from "./components/ui/Notice.jsx";
+import { ResponseChart } from "./components/charts/ResponseChart.jsx";
+import { OptimizerCurveChart } from "./components/charts/OptimizerCurveChart.jsx";
+import { DispersionMap } from "./components/charts/DispersionMap.jsx";
+import { SignalPath } from "./components/drawings/SignalPath.jsx";
+import { RoomView } from "./components/drawings/RoomView.jsx";
+import { HifiFront } from "./components/drawings/HifiFront.jsx";
+import { SheetDrawing } from "./components/drawings/SheetDrawing.jsx";
+import { LockButton } from "./components/lock/LockButton.jsx";
+import { LOCK_KEYS } from "./constants/lockKeys.js";
+import { DimensionLock } from "./components/lock/DimensionLock.jsx";
+import { runPaOptimizer } from "./lib/pa/runOptimizer.js";
+import { CHIP_BACKGROUND_CLASSES } from "./components/optimizer/OptimizerResultCard.jsx";
+import { formatDollars } from "./lib/format.js";
+import { Delta } from "./components/optimizer/Delta.jsx";
+import { OptimizerPanel } from "./components/optimizer/OptimizerPanel.jsx";
+import { OptimizerBar } from "./components/optimizer/OptimizerBar.jsx";
+import { GoalPicker } from "./components/optimizer/GoalPicker.jsx";
+import { RunRow } from "./components/optimizer/RunRow.jsx";
+import { ResultCards } from "./components/optimizer/ResultCards.jsx";
+import { StatLabel, StatRow } from "./components/optimizer/StatRow.jsx";
+import { useConfigStore } from "./components/saved-configs/useConfigStore.js";
+import { SavedConfigs } from "./components/saved-configs/SavedConfigs.jsx";
+import { HIFI_TOP, HIFI_BOT } from "./constants/chartScales.js";
+import { METERS_PER_FOOT } from "./constants/units.js";
 import { subChips, midChips, hornChips, fillChips } from "./lib/pa/chips.js";
-import { optimize, evaluate as evaluateConfig, roomNeed, ROOMS, GOALS, optFields } from "./lib/pa/optimize.js";
+import { evaluate as evaluateConfig, optFields } from "./lib/pa/optimize.js";
 import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, prAddMax } from "./lib/data.js";
-import { hifiSystem, hifiChips, responseAt, dispersionMap, logFreqs, lr, prShape, PLACES as HIFI_PLACES } from "./lib/hifi/hifi.js";
-import { hifiOptimize, HIFI_GOALS, HIFI_LOCK_KEYS, HIFI_AMP_MAX } from "./lib/hifi/optimize.js";
+import { hifiSystem, hifiChips, responseAt, dispersionMap, logFreqs, lr, PLACES as HIFI_PLACES } from "./lib/hifi/hifi.js";
+import { hifiOptimize, HIFI_GOALS, HIFI_LOCK_KEYS } from "./lib/hifi/optimize.js";
 import { paDispersionMap, firstNullDeg } from "./lib/pa/dispersion.js";
-import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, lr24lp, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest, subMusicAt } from "./lib/pa/calc.js";
+import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest, subMusicAt } from "./lib/pa/calc.js";
 
 
 
@@ -626,563 +661,6 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
   return <div ref={mount} className="w-full h-full cursor-grab" />;
 }
 
-function SignalPath() {
-  const ink = PAL.ink, mute = PAL.muted, line = PAL.muted;
-  const col = { pa2: PAL.muted, sub: PAL.cyan, mid: PAL.magenta, hf: PAL.magenta, grey: PAL.muted };
-  const Box = ({ x, y, w, h, c, children }) => (
-    <g>
-      <rect x={x} y={y} width={w} height={h} rx="6" fill={PAL.white} stroke={c} strokeWidth="1.5" />
-      {children}
-    </g>
-  );
-  const T = ({ x, y, s = 11, c = ink, a = "middle", b }) => (
-    <text x={x} y={y} fontSize={s} fill={c} textAnchor={a} fontFamily="Inconsolata, monospace" fontWeight={b ? 600 : 400}>{b}</text>
-  );
-  const A = ({ d, c = line }) => <path d={d} fill="none" stroke={c} strokeWidth="1.3" markerEnd="url(#sp-ar)" />;
-  return (
-    <svg viewBox="0 0 860 400" width="100%" role="img" aria-label="Mains rack signal path">
-      <defs><marker id="sp-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke={line} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></marker></defs>
-
-      <T x={60} y={22} c={mute} b="Source" /><T x={215} y={22} c={mute} b="Processor" /><T x={415} y={22} c={mute} b="Amps" /><T x={600} y={22} c={mute} b="Rear panel" /><T x={770} y={22} c={mute} b="Stacks" />
-
-      <Box x={15} y={190} w={90} h={52} c={col.grey}><T x={60} y={212} b="DJ mixer" /><T x={60} y={230} s={10} c={mute} b="master L/R" /></Box>
-      <A d="M105 216 L150 216" /><T x={127} y={208} s={10} c={mute} b="XLR" />
-
-      <Box x={150} y={110} w={130} h={220} c={col.pa2}>
-        <T x={215} y={132} b="dbx DriveRack PA2" /><T x={215} y={148} s={10} c={mute} b="2 in / 6 out" />
-        <T x={215} y={176} s={10} c={mute} b="inputs: venue EQ" /><T x={215} y={190} s={10} c={mute} b="outputs: XO, EQ, delay, limit" />
-        <T x={272} y={230} s={10} a="end" c={col.sub} b="Sub L / R" /><T x={272} y={270} s={10} a="end" c={col.mid} b="Mid L / R" /><T x={272} y={310} s={10} a="end" c={col.hf} b="Horn L / R" />
-      </Box>
-
-      <Box x={350} y={205} w={130} h={44} c={col.sub}><T x={415} y={223} b="QSC GXD8" /><T x={415} y={239} s={10} c={mute} b="800 W/ch @ 8 Ω" /></Box>
-      <Box x={350} y={262} w={130} h={44} c={col.mid}><T x={415} y={280} b="QSC GXD4" /><T x={415} y={296} s={10} c={mute} b="400 W/ch @ 8 Ω" /></Box>
-      <Box x={350} y={319} w={130} h={44} c={col.hf}><T x={415} y={337} b="QSC GXD4" /><T x={415} y={353} s={10} c={mute} b="gain trimmed · HPF 500 Hz" /></Box>
-      <A d="M280 226 L350 226" c={col.sub} /><A d="M280 266 L350 283" c={col.mid} /><A d="M280 306 L350 340" c={col.hf} />
-
-      <Box x={555} y={150} w={90} h={230} c={col.grey}><T x={600} y={170} b="Speakon" /><T x={600} y={184} s={10} c={mute} b="4× NL4MP" /></Box>
-      <rect x={565} y={200} width={70} height={22} rx="4" fill="none" stroke={col.sub} /><T x={600} y={215} s={10} c={col.sub} b="SUB L · 1±" />
-      <rect x={565} y={228} width={70} height={22} rx="4" fill="none" stroke={col.sub} /><T x={600} y={243} s={10} c={col.sub} b="SUB R · 1±" />
-      <rect x={565} y={290} width={70} height={36} rx="4" fill="none" stroke={col.mid} /><T x={600} y={304} s={10} c={col.mid} b="TOP L" /><T x={600} y={318} s={9} c={mute} b="1± mid · 2± horn" />
-      <rect x={565} y={332} width={70} height={36} rx="4" fill="none" stroke={col.mid} /><T x={600} y={346} s={10} c={col.mid} b="TOP R" /><T x={600} y={360} s={9} c={mute} b="1± mid · 2± horn" />
-      <A d="M480 222 L565 211" c={col.sub} /><A d="M480 232 L565 239" c={col.sub} />
-      <A d="M480 278 L565 300" c={col.mid} /><A d="M480 290 L565 342" c={col.mid} />
-      <A d="M480 335 L565 318" c={col.hf} /><A d="M480 347 L565 360" c={col.hf} />
-      <T x={518} y={196} s={9} c={mute} b="binding posts, 12 AWG" />
-
-      <Box x={690} y={196} w={110} h={26} c={col.sub}><T x={745} y={213} s={10} b="Sub L" /></Box>
-      <Box x={690} y={226} w={110} h={26} c={col.sub}><T x={745} y={243} s={10} b="Sub R" /></Box>
-      <Box x={690} y={288} w={110} h={40} c={col.mid}><T x={745} y={304} s={10} b="Mid box L" /><T x={745} y={319} s={9} c={mute} b="posts → horn L" /></Box>
-      <Box x={690} y={332} w={110} h={40} c={col.mid}><T x={745} y={348} s={10} b="Mid box R" /><T x={745} y={363} s={9} c={mute} b="posts → horn R" /></Box>
-      <A d="M645 211 L690 209" /><A d="M645 239 L690 239" /><T x={667} y={202} s={9} c={mute} b="NL2" />
-      <A d="M645 308 L690 308" /><A d="M645 352 L690 352" /><T x={667} y={300} s={9} c={mute} b="NL4" />
-
-      <T x={15} y={394} s={10} a="start" c={mute} b="Crossovers in the PA2: sub HPF ~32 Hz BW24 · sub/mid 100–120 Hz LR4 · mid/horn ~1.1 kHz LR4. Amps run full-range; limiters set per driver in each amp." />
-    </svg>
-  );
-}
-
-// ---------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------
-// Shared controls: one look for toggle (segment) buttons and for action buttons
-const TOGGLE_SIZE = { md: "px-3 py-2 text-sm", xs: "px-2.5 py-1 text-xs" };
-function ToggleBtn({ on, size = "md", className = "", ...p }) {
-  return <button type="button" aria-pressed={!!on} {...p}
-    className={`rounded border ${TOGGLE_SIZE[size]} ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-white hover:border-stone-500"} ${className}`} />;
-}
-const BUTTON_VARIANT = {
-  primary: "border-cmy-a bg-cmy-a text-white font-semibold",
-  dark: "border-stone-900 bg-stone-900 text-stone-50",
-  secondary: "border-stone-300 bg-white hover:border-stone-500",
-};
-// Disabled = grey fill with dark text (readable), never faded with opacity
-function Button({ variant = "secondary", size = "md", className = "", ...p }) {
-  return <button type="button" {...p}
-    className={`rounded border ${TOGGLE_SIZE[size]} ${BUTTON_VARIANT[variant]} disabled:border-stone-300 disabled:bg-stone-300 disabled:text-stone-500 disabled:cursor-not-allowed ${className}`} />;
-}
-
-// Term with a tooltip. Opens on hover, keyboard focus or tap; Esc or a tap elsewhere closes it.
-function Tip({ tip, children, className = "" }) {
-  const id = useId();
-  const [open, setOpen] = useState(false);
-  const [flip, setFlip] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return;
-    const r = ref.current?.getBoundingClientRect();
-    setFlip(!!r && r.left + 288 > window.innerWidth - 8);
-    const off = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
-    document.addEventListener("pointerdown", off);
-    return () => document.removeEventListener("pointerdown", off);
-  }, [open]);
-  return (
-    <span ref={ref} className={`relative inline-block ${className}`} onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
-      <span role="button" tabIndex={0} aria-describedby={open ? id : undefined} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); } }}
-        className="cursor-help border-b-2 border-dotted border-soft">{children}</span>
-      {open && <span role="tooltip" id={id} className={`absolute z-30 top-full mt-1 w-max max-w-[18rem] rounded bg-stone-900 text-stone-50 text-xs font-normal normal-case tracking-normal leading-snug px-2 py-1.5 text-left ${flip ? "right-0" : "left-0"}`}>{tip}</span>}
-    </span>
-  );
-}
-
-// Colour choice: optional named presets, a row of paint swatches and a custom picker
-function SwatchPicker({ label, value, onChange, swatches, presets, titlePrefix = "", note }) {
-  const id = useId();
-  const preset = presets && presets[value];
-  const ring = (on) => (on ? "border-stone-900" : "border-stone-300");
-  return (
-    <div className="mb-5">
-      <div id={id} className="text-sm text-stone-500 mb-1">{label}</div>
-      <div role="group" aria-labelledby={id} className="flex flex-wrap gap-1.5 items-center">
-        {presets && Object.entries(presets).map(([k, f]) => (
-          <button key={k} type="button" title={f.name} aria-pressed={value === k} onClick={() => onChange(k)}
-            className={`px-2.5 h-7 rounded-full border-2 text-xs ${ring(value === k)}`}
-            style={{ background: f.swatch, color: k === "walnut" ? PAL.white : PAL.ink }}>{f.name}</button>
-        ))}
-        {swatches.map(([hex, name]) => (
-          <button key={hex} type="button" title={titlePrefix + name} aria-label={titlePrefix + name} aria-pressed={!preset && value.toLowerCase() === hex} onClick={() => onChange(hex)}
-            className={`swatch w-7 h-7 rounded-full border-2 ${ring(!preset && value.toLowerCase() === hex)}`} style={{ background: hex }} />
-        ))}
-        <label className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom colour">
-          <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
-          <input type="color" aria-label={`Custom ${label.toLowerCase()}`} value={preset ? PAL.white : value} onChange={(e) => onChange(e.target.value)}
-            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
-        </label>
-        <span className="text-xs text-stone-500 ml-1 tabular-nums">{note}</span>
-      </div>
-    </div>
-  );
-}
-
-// ---- Optimizer pieces shared by the Hi-fi and PA stack panels ----
-function OptimizerBar({ on, onToggle, hint, nLocks, lockMax, onLockAll, onClear, children }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <ToggleBtn on={on} onClick={onToggle}>Optimizer: {on ? "on" : "off"}</ToggleBtn>
-      {on && (<>
-        <Button onClick={onLockAll} disabled={nLocks >= lockMax} aria-label="Lock everything" title="Lock everything, then unlock what the optimizer may change" className="inline-flex items-center gap-1"><LockIcon locked={true} /><span className="text-xs">All</span></Button>
-        <Button onClick={onClear} disabled={!nLocks} aria-label={nLocks ? `Clear all ${nLocks} lock${nLocks > 1 ? "s" : ""}` : "No locks set"} title={nLocks ? `Clear all ${nLocks} lock${nLocks > 1 ? "s" : ""}` : "No locks set"} className="inline-flex items-center gap-1"><LockIcon locked={false} />{nLocks ? <span className="text-xs">{nLocks}</span> : null}</Button>
-      </>)}
-      {!on && <span className="text-xs text-stone-500">{hint}</span>}
-      {children}
-    </div>
-  );
-}
-function GoalPicker({ defs, selected, onTap }) {
-  return (
-    <div className="mt-3">
-      <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
-      <div className="flex flex-wrap gap-1" role="group" aria-label="Goal">{Object.entries(defs).map(([k, g]) => { const i = selected.indexOf(k); return <ToggleBtn key={k} title={g.name} on={i >= 0} className="relative" onClick={() => onTap(k)}>{selected.length > 1 && i >= 0 && <RankBadge n={i + 1} />}{g.short}</ToggleBtn>; })}</div>
-    </div>
-  );
-}
-function RunRow({ busy, hasGoal, onRun, stats, note, children }) {
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-3">
-      <Button variant="primary" onClick={onRun} disabled={busy || !hasGoal} className="px-4">{busy ? "Searching…" : hasGoal ? "Find 3 designs" : "Pick a goal first"}</Button>
-      {stats && !busy && <span className="text-xs text-stone-500">Searched {stats.evaluated.toLocaleString()} designs in {(stats.ms / 1000).toFixed(1)} s{note}</span>}
-      {children}
-    </div>
-  );
-}
-function Notice({ children }) {
-  return <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">{children}</div>;
-}
-function ResultCards({ cards, render }) {
-  if (!cards.length) return null;
-  return (<>
-    <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">{cards.map(render)}</div>
-    {cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {cards.length - 1} more</div>}
-  </>);
-}
-
-// Plain-language help for the stat labels, shown as a tooltip on the label
-const STAT_TIPS = {
-  "Gross internal": "Inside volume of the box (outside size minus the walls), before the driver and port take their share.",
-  "Net volume": "Air volume left inside the box once the driver and port have taken their share.",
-  "Port area": "Total cross-section of the port or ports, shown against the cone area. Too small and the air speeds up and gets noisy.",
-  "Hydraulic diameter": "Port cross-section area times four, divided by its perimeter. A small value means more air turbulence; flaring the mouths helps.",
-  "Midband sensitivity": "How loud it plays in the middle of its range for a fixed input voltage. Higher means louder for the same power.",
-  "First limit, music": "What runs out first when playing music at the amp's power: cone travel (Xmax), port air speed, or something else.",
-  "Peak port velocity": "Fastest air speed in the port. High speeds cause chuffing noise and compression.",
-  "Peak excursion": "How far the cone moves at the loudest point, and how much of its rated travel (Xmax) that uses.",
-  "Qtc": "Damping of a sealed box. About 0.7 is flat; higher sounds boomy, lower sounds dry.",
-  "Tuning Fb": "Frequency the port resonates at. Output falls away quickly below it.",
-  "F3 in room": "Frequency where output is 3 dB down from the midband, as heard in the room.",
-  "Max at the seat": "Clean level at the seat with both speakers playing, before a driver or port limit.",
-  "Pair": "Cost of the drivers for both speakers, at the listed prices.",
-};
-function StatLabel({ k, extra }) {
-  const def = STAT_TIPS[k] || (/^Max SPL at /.test(k) ? "Loudest output at this frequency from a steady sine tone, before the named limit is reached." : null);
-  const tip = [def, extra].filter(Boolean).join(" ");
-  return tip ? <Tip tip={tip}>{k}</Tip> : k;
-}
-function StatRow({ k, v, note, tip }) {
-  return (
-    <div className="flex justify-between gap-4 border-b border-stone-300 py-1">
-      <span className="text-stone-500 shrink-0"><StatLabel k={k} extra={tip} /></span>
-      <span className="text-right min-w-0">
-        <span className="font-medium tabular-nums">{v}</span>
-        {note ? <span className="block text-xs text-stone-500 whitespace-nowrap">{note}</span> : null}
-      </span>
-    </div>
-  );
-}
-
-// Saved configurations: the claude.ai artifact's database, or Firebase when the page is hosted on GitHub Pages
-function useConfigStore(collection) {
-  const [db, setDb] = useState(null);
-  const [saved, setSaved] = useState(null);     // null = still loading
-  const [fbUser, setFbUser] = useState(null);
-  const [cfgMsg, setCfgMsg] = useState("");
-  const fb = !(window.claude && window.claude.use) && window.firebase && window.PLANNER_FIREBASE ? window.firebase : null;
-  useEffect(() => {
-    let live = true;
-    if (fb) {
-      if (!fb.apps.length) fb.initializeApp(window.PLANNER_FIREBASE);
-      const un = fb.auth().onAuthStateChanged((u) => {
-        if (!live) return;
-        setFbUser(u);
-        if (u) {
-          const fs = fb.firestore();
-          setDb({ collection: (name) => fs.collection(`users/${u.uid}/${name}`) });
-        } else { setDb(null); setSaved([]); }
-      });
-      return () => { live = false; un(); };
-    }
-    (async () => {
-      try {
-        const d = window.claude && window.claude.use ? await window.claude.use("db") : null;
-        if (live) { setDb(d); if (!d) setSaved([]); }
-      } catch { if (live) { setDb(null); setSaved([]); } }
-    })();
-    return () => { live = false; };
-  }, []);
-  useEffect(() => {
-    if (!db) return;
-    const un = db.collection(collection).orderBy("savedAt", "desc").limit(50).onSnapshot(
-      (snap) => setSaved(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
-      () => setSaved([])
-    );
-    return un;
-  }, [db]);
-  const flash = (m) => { setCfgMsg(m); setTimeout(() => setCfgMsg(""), 2500); };
-  const signIn = () => fb.auth().signInWithPopup(new fb.auth.GoogleAuthProvider()).catch(() => flash("Sign-in failed"));
-  const signOut = () => fb.auth().signOut();
-  const save = async (name, data) => {
-    if (!db || !name) return false;
-    setCfgMsg("Saving…");
-    try { await db.collection(collection).doc().set({ name, savedAt: Date.now(), ...data }); flash("Saved"); return true; }
-    catch (e) { flash(e && (e.code === "invalid_argument" || e.code === "permission-denied") ? "You don't have write access here" : "Couldn't save — try again"); return false; }
-  };
-  const remove = async (id) => {
-    if (!db) return;
-    try { await db.collection(collection).doc(id).delete(); } catch { flash("Couldn't delete"); }
-  };
-  return { db, saved, fb, fbUser, cfgMsg, setCfgMsg, signIn, signOut, save, remove };
-}
-// Name-and-save row plus a menu of saved setups. snapshot() returns what to store (may include a `summary` line); restore(c) loads one.
-function SavedConfigs({ store, snapshot, restore, extra, bare = false }) {
-  const { db, saved, fb, fbUser, cfgMsg, signIn, signOut, save, remove } = store;
-  const [name, setName] = useState("");
-  const [sel, setSel] = useState("");
-  if (saved === null) return null;
-  const cur = saved.find((c) => c.id === sel);
-  const doSave = async () => { if (await save(name.trim(), snapshot())) setName(""); };
-  const Wrap = bare ? "div" : "section";
-  return (
-    <Wrap className={bare ? "mb-3" : "max-w-6xl mx-auto px-4 md:px-8 pb-2"} style={{ fontFamily: "var(--font)" }}>
-      <Card pad="lg" tone="tint">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-stone-500 mr-1">Saved configurations</span>
-          {db ? (<>
-            <input aria-label="Name this setup" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") doSave(); }}
-              placeholder="Name this setup" maxLength={60} className="px-3 py-1.5 rounded border border-stone-300 bg-white text-sm w-56" />
-            <Button variant="dark" onClick={doSave} disabled={!name.trim()}>Save current</Button>
-            {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
-            {fbUser && (<span className="ml-auto flex items-center gap-3 text-xs text-stone-500">{extra}<button onClick={signOut} className="hover:underline">Sign out</button></span>)}
-          </>) : fb ? (<>
-            <Button variant="dark" onClick={signIn}>Sign in with Google to save</Button>
-            {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
-          </>) : (
-            <span className="text-xs text-stone-500">Saving is unavailable in this view. Everything else works.</span>
-          )}
-        </div>
-        {saved.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <select value={cur ? cur.id : ""} aria-label="Load a saved configuration"
-              onChange={(e) => { const c = saved.find((x) => x.id === e.target.value); setSel(e.target.value); if (c) restore(c); }}
-              className="px-2 py-1.5 rounded border border-stone-300 bg-white text-sm min-w-0 max-w-full flex-1">
-              <option value="" disabled>Load a saved configuration ({saved.length})…</option>
-              {saved.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}{c.savedAt ? ` · ${new Date(c.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : ""}</option>
-              ))}
-            </select>
-            {cur && <button onClick={() => { remove(cur.id); setSel(""); }} aria-label={`Delete ${cur.name}`} className="text-xs text-stone-500 hover:text-red-700 px-1">Delete</button>}
-            {cur && cur.summary && <div className="basis-full text-xs text-stone-500 truncate">{cur.summary}</div>}
-          </div>
-        )}
-      </Card>
-    </Wrap>
-  );
-}
-
-// Panel: one outline, one radius. pad: "md" (default) or "lg"; tone: "white" or "tint"
-function Card({ pad = "md", tone = "white", className = "", ...p }) {
-  return <div {...p} className={`rounded border border-stone-300 ${tone === "tint" ? "bg-stone-50" : "bg-white"} ${pad === "lg" ? "px-4 py-4" : "px-3 py-3"} ${className}`} />;
-}
-// Section heading
-function SectionHead({ className = "", ...p }) {
-  return <h2 {...p} className={`text-xl font-bold ${className}`} />;
-}
-
-// Labelled form row: the label is a real <label> tied to its control, so screen readers name the control
-function Field({ label, htmlFor, extra, className = "mb-4", children }) {
-  return (
-    <div className={className}>
-      <label htmlFor={htmlFor} className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>{label}</span>{extra}</label>
-      {children}
-    </div>
-  );
-}
-// Number input with a unit. Clearing the box does not force 0: the value only changes once a number is typed.
-function NumberField({ label, value, onChange, unit, min, max, step, className = "" }) {
-  const id = useId();
-  const [raw, setRaw] = useState(String(value));
-  useEffect(() => { setRaw((r) => (parseFloat(r) === value ? r : String(value))); }, [value]);
-  return (
-    <Field label={label} htmlFor={id} className={className}>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <input id={id} type="number" inputMode="decimal" value={raw} min={min} max={max} step={step}
-          onChange={(e) => { setRaw(e.target.value); const n = parseFloat(e.target.value); if (Number.isFinite(n)) onChange(n); }}
-          onBlur={() => setRaw(String(value))}
-          className="w-24 px-3 py-2 rounded border border-stone-300 bg-white" />
-        {unit}
-      </div>
-    </Field>
-  );
-}
-
-// group: optional (option) => heading; options with the same heading are listed together under it, in order of first appearance
-function Pick({ label, options, value, onChange, extra, group }) {
-  const opt = (o) => <option key={o.id} value={o.id}>{o.name}{o.price ? ` — $${o.price}` : ""}</option>;
-  const groups = group ? [...new Set(options.map(group))] : null;
-  const id = useId();
-  return (
-    <Field label={label} htmlFor={id} extra={extra}>
-      <select
-        id={id}
-        value={value?.id ?? ""}
-        onChange={(e) => onChange(options.find((o) => o.id === e.target.value))}
-        className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500"
-      >
-        {groups ? groups.map((g) => <optgroup key={g} label={g}>{options.filter((o) => group(o) === g).map(opt)}</optgroup>) : options.map(opt)}
-      </select>
-    </Field>
-  );
-}
-
-// Width of an element in CSS px, kept current with a ResizeObserver.
-function useWidth(fallback) {
-  const ref = useRef(null);
-  const [w, setW] = useState(fallback);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(() => { const cw = el.clientWidth; if (cw) setW(cw); });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  return [ref, w];
-}
-
-// Max-SPL chart: one or more curves ({f, spl}), fixed 80-135 dB so setups compare directly.
-function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, bot = 80, step = 5, yLabel = "max dB SPL @ 1 m", H = 300 }) {
-  // drawn in real pixels so text stays 11 px at any width
-  const [box, cw] = useWidth(760);
-  const narrow = cw < 500;
-  const W = Math.max(280, cw), L = narrow ? 44 : 52, R = narrow ? 8 : 14, TT = 16, B = 36;
-  if (narrow && H >= 300) H = Math.round(H * 0.8);
-  const x0 = L, x1 = W - R, y0 = TT, y1 = H - B;
-  const TOP = top, BOT = bot;
-  const px = (f) => x0 + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (x1 - x0);
-  const py = (v) => y1 - ((Math.max(BOT, Math.min(TOP, v)) - BOT) / (TOP - BOT)) * (y1 - y0);
-  const paths = series.map((sr) => {
-    const pts = sr.curve.filter((o) => o.f >= fmin && o.f <= fmax);
-    const d = pts.map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1)).join("");
-    return { ...sr, d, fill: pts.length ? d + `L${px(pts[pts.length - 1].f).toFixed(1)},${y1} L${px(pts[0].f).toFixed(1)},${y1} Z` : "" };
-  });
-  const ticks = (narrow ? [20, 50, 100, 200, 1000, 5000, 20000] : [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]).filter((f) => f >= fmin && f <= fmax);
-  const grid = [];
-  ticks.forEach((f) => {
-    const X = px(f);
-    grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke={PAL.edge} strokeWidth="1" />);
-    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{f >= 1000 ? f / 1000 + "k" : f}</text>);
-  });
-  // hover / drag: a crosshair with each curve's value at that frequency
-  const [hf, setHf] = useState(null);
-  const move = (e) => {
-    const r = e.currentTarget.getBoundingClientRect(), X = ((e.clientX - r.left) / r.width) * W;
-    setHf(X >= x0 && X <= x1 ? fmin * Math.pow(fmax / fmin, (X - x0) / (x1 - x0)) : null);
-  };
-  const unit = yLabel.includes("°") ? "°" : " dB";
-  const hits = hf ? paths.map((p) => {
-    const pts = p.curve.filter((o) => o.f >= fmin && o.f <= fmax);
-    const o = pts.length ? pts.reduce((b, q) => (Math.abs(Math.log(q.f / hf)) < Math.abs(Math.log(b.f / hf)) ? q : b)) : null;
-    return o && Math.abs(Math.log(o.f / hf)) < 0.1 ? { ...p, o } : null;
-  }).filter(Boolean) : [];
-  const every = ((y1 - y0) * step) / (TOP - BOT) < 16 ? 2 : 1;   // thin the labels when rows get tight
-  for (let v = BOT, k = 0; v <= TOP; v += step, k++) {
-    const Y = py(v);
-    grid.push(<line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke={PAL.edge} strokeWidth="1" />);
-    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{v}</text>);
-  }
-  return (
-    <div ref={box}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${yLabel} against frequency`} style={{ display: "block", width: "100%", height: "auto", touchAction: "pan-y" }}
-        onPointerMove={move} onPointerDown={move} onPointerLeave={() => setHf(null)}>
-        {grid}
-        {marks.filter((m) => m.f > fmin && m.f < fmax).map((m, i, ms) => (
-          <g key={m.label + i}>
-            <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke={PAL.muted} strokeWidth="1" strokeDasharray="3 4" />
-            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{m.label}</text>
-          </g>
-        ))}
-        {paths.map((p) => <path key={p.label + "f"} d={p.fill} fill={p.tint} />)}
-        {paths.map((p) => <path key={p.label} d={p.d} fill="none" stroke={p.stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />)}
-        {hf && (<g pointerEvents="none">
-          <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke={PAL.muted} strokeWidth="1" />
-          {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke={PAL.white} strokeWidth="1.5" />)}
-          {(() => { const t = `${hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz`, w = t.length * 6.5 + 8, X = Math.max(x0 + w / 2, Math.min(x1 - w / 2, px(hf)));
-            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill={PAL.ink} /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="12" fontFamily="Inconsolata, monospace" fill={PAL.white}>{t}</text></g>; })()}
-          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="12" fontFamily="Inconsolata, monospace" fill={PAL.ink} stroke={PAL.white} strokeWidth="3" paintOrder="stroke">
-            {hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz{hits.map((h) => ` · ${h.label} ${h.o.spl.toFixed(0)}${unit}`).join("")}
-          </text>
-        </g>)}
-        <text x={W / 2} y={H - 4} textAnchor="middle" fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">frequency, Hz</text>
-        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{yLabel}</text>
-      </svg>
-      {paths.length > 0 && (
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1 text-xs text-stone-500" style={{ fontFamily: "var(--font)" }}>
-          {paths.map((p) => <span key={p.label} className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5" style={{ background: p.stroke }} />{p.label}</span>)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Section heading that folds its section on phones (always open from md up).
-function FoldHead({ id, title, folds, toggle, className = "" }) {
-  return (
-    <h2 className={`text-xl ${className} ${folds[id] ? "" : "max-md:mb-0"}`} style={{ fontFamily: "var(--font)", fontWeight: 700 }}>
-      <button onClick={() => toggle(id)} aria-expanded={!!folds[id]} className="w-full flex justify-between items-center text-left md:pointer-events-none md:cursor-default">
-        <span>{title}</span><span className="md:hidden text-stone-500 text-base" aria-hidden="true">{folds[id] ? "\u2212" : "+"}</span>
-      </button>
-    </h2>
-  );
-}
-
-// Decimals a slider readout needs: 0 for whole steps, else as many as the step has (0.5 -> 1, 0.25 -> 2)
-const decimalsOf = (step) => { const t = String(step); const i = t.indexOf("."); return i < 0 ? 0 : t.length - i - 1; };
-
-function Slider({ label, value, min, max, step, unit, onChange, extra }) {
-  const id = useId();
-  const shown = typeof value === "number" ? value.toFixed(decimalsOf(step)) : value;
-  return (
-    <div className="mb-3">
-      <div className="flex justify-between items-center gap-3 mb-1">
-        <span className="flex items-center gap-2"><label htmlFor={id} className="text-sm text-stone-500">{label}</label>{extra}</span>
-        <span className="text-sm tabular-nums font-medium">{shown}{unit}</span>
-      </div>
-      <input id={id} type="range" min={min} max={max} step={step} value={value} aria-valuetext={`${shown}${unit || ""}`}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full accent-stone-900" />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------
-// Hi-fi page: 2-way home speakers with an active crossover
-// ---------------------------------------------------------------
-const FT = 0.3048;
-// Level vs angle and frequency, normalised to on-axis (0 dB darkest). Hover or drag to read a cell.
-function DispMap({ map, title }) {
-  const [hover, setHover] = useState(null);
-  const W = 560, H = 240, L = 40, R = 6, T = 6, B = 24;
-  const nF = map.freqs.length, nA = map.angles.length;
-  const cw = (W - L - R) / nF, ch = (H - T - B) / nA;
-  const col = (db) => { const x = Math.max(0, Math.min(1, -db / 18)); const l = 28 + x * 66; return `hsl(${PAL.cyanHue} ${Math.round(100 - x * 70)}% ${l.toFixed(0)}%)`; };
-  const fx = (f) => L + (Math.log(f / map.freqs[0]) / Math.log(map.freqs[nF - 1] / map.freqs[0])) * (W - L - R);
-  const move = (e) => {
-    const r = e.currentTarget.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H;
-    const i = Math.floor((x - L) / cw), j = Math.floor((y - T) / ch);
-    setHover(i >= 0 && i < nF && j >= 0 && j < nA ? { i, j } : null);
-  };
-  const ticksA = map.angles.filter((a) => a % 30 === 0);
-  return (
-    <div>
-      <div className="flex justify-between items-baseline text-xs text-stone-500 mb-1"><span>{title}</span>
-        <span className="tabular-nums text-stone-900">{hover ? `${map.angles[hover.j]}° · ${map.freqs[hover.i] >= 1000 ? (map.freqs[hover.i] / 1000).toFixed(1) + "k" : map.freqs[hover.i].toFixed(0)} Hz · ${map.rows[hover.j][hover.i].toFixed(1)} dB` : "dB vs on-axis"}</span></div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" style={{ touchAction: "pan-y" }} onPointerMove={move} onPointerDown={move} onPointerLeave={() => setHover(null)} role="img" aria-label={`${title}: level against angle and frequency`}>
-        {map.rows.map((row, j) => row.map((db, i) => <rect key={j * nF + i} x={L + i * cw} y={T + j * ch} width={cw + 0.5} height={ch + 0.5} fill={col(db)} />))}
-        {ticksA.map((a) => { const j = map.angles.indexOf(a); return <text key={a} x={L - 5} y={T + (j + 0.5) * ch + 3} fontSize="10" textAnchor="end" fill={PAL.muted}>{a}°</text>; })}
-        {[200, 500, 1000, 2000, 5000, 10000, 20000].map((f) => <text key={f} x={fx(f)} y={H - 8} fontSize="10" textAnchor="middle" fill={PAL.muted}>{f >= 1000 ? f / 1000 + "k" : f}</text>)}
-        {hover && <rect x={L + hover.i * cw} y={T + hover.j * ch} width={cw} height={ch} fill="none" stroke={PAL.ink} strokeWidth="1.5" />}
-      </svg>
-      <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">0 dB<span className="h-2 flex-1 max-w-[160px] rounded" style={{ background: `linear-gradient(to right, ${col(0)}, ${col(-9)}, ${col(-18)})` }} />−18 dB</div>
-    </div>
-  );
-}
-
-// Top-down room: the pair and a seat you can drag. Units: feet.
-function RoomView({ spacing, toe, seat, setSeat, angles }) {
-  const Wd = Math.max(12, spacing + 6), Dp = Math.max(10, seat.y + 3), W = 320, k = W / Wd, H = Dp * k;
-  const px = (x) => W / 2 + x * k, py = (y) => 14 + y * k;
-  const drag = (e) => {
-    if (e.type === "pointermove" && !e.buttons) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * (H + 20);
-    setSeat({ x: Math.round(((x - W / 2) / k) * 4) / 4, y: Math.max(2, Math.round(((y - 14) / k) * 4) / 4) });
-  };
-  const spk = (sx, sign) => {
-    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${-sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill={PAL.ink} /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke={PAL.muted} strokeDasharray="2 2" /></g>;
-  };
-  return (
-    <svg viewBox={`0 0 ${W} ${H + 20}`} className="w-full h-auto rounded border border-stone-300 bg-white" style={{ touchAction: "none" }} onPointerDown={drag} onPointerMove={drag} role="img" aria-label="Room seen from above; drag the seat">
-      {[-1, 1].map((sg) => <line key={sg} x1={px((sg * spacing) / 2)} y1={py(0)} x2={px(seat.x)} y2={py(seat.y)} stroke={PAL.edge} />)}
-      {spk(-spacing / 2, 1)}{spk(spacing / 2, -1)}
-      <circle cx={px(seat.x)} cy={py(seat.y)} r="7" fill={PAL.cyan} stroke={PAL.white} strokeWidth="2" />
-      <text x={px(-spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill={PAL.muted}>{angles[0].toFixed(0)}° off</text>
-      <text x={px(spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill={PAL.muted}>{angles[1].toFixed(0)}° off</text>
-      <text x={6} y={H + 14} fontSize="10" fill={PAL.muted}>{Wd.toFixed(0)} ft wide · drag the seat</text>
-    </svg>
-  );
-}
-
-// Front view of the box and drivers, to scale.
-function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }) {
-  const face = guide ? { w: guide.w, h: guide.h } : t.faceplate || { w: 4, h: 4 };
-  const top = lay.onTop ? face.h : 0, k = 120 / Math.max(dim.h + top, dim.w * 1.2, face.w * 1.2), W = Math.max(dim.w, face.w) * k, H = (dim.h + top) * k;
-  const bx = (W - dim.w * k) / 2, y = (inch) => (dim.h + top - inch) * k;
-  return (
-    <svg viewBox={`-4 -4 ${W + 8} ${H + 8}`} className={small ? "w-full h-auto max-h-40" : "h-40 w-auto"} role="img" aria-label={`Front view, ${dim.w} × ${dim.h}″${lay.onTop ? ", waveguide on top" : ""}`}>
-      <rect x={bx} y={top * k} width={dim.w * k} height={dim.h * k} rx="2" fill={PAL.edge} stroke={PAL.ink} strokeWidth="1.2" />
-      {lay.onTop
-        ? <g><rect x={W / 2 - (face.w * k) / 8} y={top * k - 3} width={(face.w * k) / 4} height={3} fill={PAL.ink} /><rect x={W / 2 - (face.w * k) / 2} y={0} width={face.w * k} height={top * k - 3} rx={(face.h * k) / 3} fill={PAL.muted} stroke={PAL.ink} strokeWidth="1" /></g>
-        : <rect x={W / 2 - (face.w * k) / 2} y={y(lay.tweeterIn) - (face.h * k) / 2} width={face.w * k} height={face.h * k} rx={guide ? 3 : face.w * k / 2} fill={PAL.muted} />}
-      <circle cx={W / 2} cy={y(lay.tweeterIn)} r={0.5 * k} fill={PAL.edge} />
-      <circle cx={W / 2} cy={y(lay.wooferIn)} r={(w.size * 0.95 * k) / 2} fill={PAL.edge} stroke={PAL.muted} />
-      {pr && Array.from({ length: pr.n }, (_, i) => { const s = prShape(pr.drv), cy = H - (0.75 + 0.25 + (i + 0.5) * (s.h + 0.5)) * k;
-        return <rect key={`r${i}`} x={W / 2 - (s.w * k) / 2} y={cy - (s.h * k) / 2} width={s.w * k} height={s.h * k} rx={(s.w * k) / 2} fill="none" stroke={PAL.muted} strokeDasharray="3 2" />; })}
-      {vented && port.shape === "slot" && <rect x={bx + 0.75 * k} y={H - (0.75 + port.h) * k} width={(dim.w - 1.5) * k} height={port.h * k} fill={PAL.ink} />}
-      {vented && port.shape !== "slot" && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill={PAL.ink} />)}
-    </svg>
-  );
-}
-
-// every Hi-fi chart shares one fixed dB scale, so designs and charts compare by eye
-const HIFI_TOP = 130, HIFI_BOT = 50;
 // woofers listed smallest first, grouped by size in the picker, A–Z within a size
 const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort((a, b) => a.size - b.size || a.name.localeCompare(b.name));
 // tweeters split into domes and compression drivers (which need a waveguide), domes first
@@ -1209,11 +687,11 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{cw.size}″ {k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} pr={prOf(c)} guide={k.guided ? guide : null} small />
-        <OutChart curve={k.curve} cur={curCurve} fmin={15} fmax={20000} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
+        <OptimizerCurveChart curve={k.curve} cur={curCurve} fmin={15} fmax={20000} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
       </div>
       <div className="text-xs text-stone-500">{k.names.tweeter} · {c.box}{c.box === "vented" && c.port.shape === "slot" ? ` (${c.port.h}″ slot, ${c.port.len}″ long)` : c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : c.box === "radiator" && prOf(c) ? ` (${c.pr.n} × ${prOf(c).drv.name}, +${c.pr.addG} g)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
-        {tile("Drivers, pair", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
+        {tile("Drivers, pair", formatDollars(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Weight", `${m.lb.toFixed(0)} lb`, <Delta v={d.lb} unit=" lb" lowerIsBetter digits={1} />)}
         {tile("At the seat", `${m.level.toFixed(1)} dB`, <Delta v={d.level} unit=" dB" digits={1} />)}
         {tile("F3 in room", `${m.f3.toFixed(0)} Hz`, <Delta v={d.f3} unit=" Hz" lowerIsBetter />)}
@@ -1280,7 +758,7 @@ function HifiPage() {
   const geoOf = (sign) => {
     const sx = (sign * spacing) / 2, vx = seat.x - sx, vy = seat.y, d = Math.hypot(vx, vy);
     const axis = (-sign * toe * Math.PI) / 180, ang = Math.atan2(vx, vy) - axis;
-    return { th: Math.abs(ang), eyeIn: earIn - standIn, distM: d * FT };
+    return { th: Math.abs(ang), eyeIn: earIn - standIn, distM: d * METERS_PER_FOOT };
   };
   const gL = geoOf(-1), gR = geoOf(1);
   const freqs = logFreqs(15, 20000, 220);
@@ -1298,8 +776,8 @@ function HifiPage() {
       <div className="text-xl font-medium tabular-nums mt-0.5 break-words">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div>
     </div>
   );
-  const hLk = (key, what) => (hOn ? <LockBtn on={!!hLocks[key]} what={what} onClick={() => setHLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null);
-  const hDl = (dm, what) => (hOn ? <DimLock mode={hLocks.dim[dm] || "free"} what={what} onChange={(m) => setHLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))} /> : null);
+  const hLk = (key, what) => (hOn ? <LockButton on={!!hLocks[key]} what={what} onClick={() => setHLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null);
+  const hDl = (dm, what) => (hOn ? <DimensionLock mode={hLocks.dim[dm] || "free"} what={what} onChange={(m) => setHLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))} /> : null);
   const snapH = () => ({ woofer: w.id, tweeter: t.id, box, dim, port, pr: box === "radiator" ? prSel : undefined, wall, xo, wAmpW, tAmpW });
   // Everything on the page, for saving (undefined fields dropped: the stores reject them)
   const savedSnapH = () => JSON.parse(JSON.stringify({ ...snapH(), guide: guideSel.id, mat, order, bsc, place, wallFt, spacing, toe, seat, earIn, standIn,
@@ -1337,7 +815,7 @@ function HifiPage() {
   );
   const optPanel = hOn && (
     <Card pad="lg" className="mt-3">
-      <SectionHead>Find a better design</SectionHead>
+      <SectionHeading>Find a better design</SectionHeading>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
         <div className="mt-3">
           <NumberField label={<>Driver budget, pair <span className="text-xs">(woofers + tweeters{guide ? " + waveguides" : ""}, at the listed prices)</span></>} value={hBudget} min={50} step={25} unit="$" onChange={(n) => { setHBudget(n); ls.set("hifi.budget", n); }} className="" />
@@ -1380,13 +858,13 @@ function HifiPage() {
         </div>
         </div>
         <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="dB SPL at 2.83 V"
-          series={[{ curve: on, label: "On axis, 1 m", stroke: PAL.ink, tint: PAL.alpha(PAL.ink, 0) }, { curve: pair, label: `Pair at the seat (${(seatDist / FT).toFixed(1)} ft)`, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]}
+          series={[{ curve: on, label: "On axis, 1 m", stroke: PAL.ink, tint: PAL.alpha(PAL.ink, 0) }, { curve: pair, label: `Pair at the seat (${(seatDist / METERS_PER_FOOT).toFixed(1)} ft)`, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]}
           marks={[{ f: xo, label: "XO" }, { f: sys.bsF3, label: "Baffle step" }, ...(sys.Fb ? [{ f: sys.Fb, label: "Fb" }] : [])]} />
         <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="max dB SPL @ 1 m"
           series={[{ curve: sys.wMax, label: w.name, stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0.06) }, { curve: tMax, label: t.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]} marks={[{ f: xo, label: "XO" }]} />
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
-            <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+            <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BACKGROUND_CLASSES[kind] || CHIP_BACKGROUND_CLASSES.ok}`}>
               <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
               <span className="text-stone-500">{body}</span>
             </div>
@@ -1396,37 +874,37 @@ function HifiPage() {
           <RoomView spacing={spacing} toe={toe} seat={seat} setSeat={setSeat} angles={[(gL.th * 180) / Math.PI, (gR.th * 180) / Math.PI]} />
           <div className="text-sm text-stone-500 leading-relaxed">
             <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold mb-1">At the seat</div>
-            <div>{(seatDist / FT).toFixed(1)} ft from the pair</div>
+            <div>{(seatDist / METERS_PER_FOOT).toFixed(1)} ft from the pair</div>
             <div>Off axis: L {((gL.th * 180) / Math.PI).toFixed(0)}°, R {((gR.th * 180) / Math.PI).toFixed(0)}°</div>
             <div>Ears {earIn - standIn - sys.lay.tweeterIn >= 0 ? "above" : "below"} tweeter {Math.abs(earIn - standIn - sys.lay.tweeterIn).toFixed(1)}″</div>
-            <div><Tip tip={`Clean up to about ${atSeat.toFixed(0)} dB at the seat with both speakers playing.`}>Max level</Tip> {atSeat.toFixed(0)} dB</div>
+            <div><Tooltip tip={`Clean up to about ${atSeat.toFixed(0)} dB at the seat with both speakers playing.`}>Max level</Tooltip> {atSeat.toFixed(0)} dB</div>
           </div>
         </div>
         <div>
-          <div className="flex gap-1 mb-2">{[["Horizontal", "h"], ["Vertical", "v"]].map(([l, v]) => <ToggleBtn key={v} onClick={() => setPlane(v)} on={plane === v}>{l}</ToggleBtn>)}</div>
-          <DispMap map={map} title={plane === "h" ? "Horizontal dispersion, one speaker (0° is on axis)" : "Vertical dispersion: below (−) to above (+) the tweeter axis"} />
+          <div className="flex gap-1 mb-2">{[["Horizontal", "h"], ["Vertical", "v"]].map(([l, v]) => <ToggleButton key={v} onClick={() => setPlane(v)} on={plane === v}>{l}</ToggleButton>)}</div>
+          <DispersionMap map={map} title={plane === "h" ? "Horizontal dispersion, one speaker (0° is on axis)" : "Vertical dispersion: below (−) to above (+) the tweeter axis"} />
         </div>
         <details className="text-xs text-stone-500 rounded border border-stone-300 bg-stone-50 px-3 py-2">
           <summary className="cursor-pointer text-sm text-stone-900 py-1">Details</summary>
           <div className="leading-relaxed mt-1 flex flex-col gap-1.5">
             <div>Woofer {sys.lay.wooferIn.toFixed(1)}″ and tweeter {sys.lay.tweeterIn.toFixed(1)}″ from the bottom, {sys.lay.spacingIn.toFixed(1)}″ apart. {sys.gross.toFixed(1)} L gross, {sys.net.toFixed(1)} L net{sys.hpf ? `; DSP highpass ${sys.hpf} Hz (BW24) below the port tuning` : ""}.</div>
             <div>Tweeter trimmed {sys.trim.toFixed(1)} dB in the DSP to match the woofer; baffle step centered at {sys.bsF3.toFixed(0)} Hz{bsc ? `, ${bsc} dB boost` : ""}.</div>
-            <div><Tip tip={w.note}><span className="font-medium text-stone-900">{w.name}</span></Tip></div>
-            <div><Tip tip={t.note}><span className="font-medium text-stone-900">{t.name}</span></Tip></div>
-            {guide && <div><Tip tip={guideSel.note}><span className="font-medium text-stone-900">{guide.name}</span></Tip></div>}
+            <div><Tooltip tip={w.note}><span className="font-medium text-stone-900">{w.name}</span></Tooltip></div>
+            <div><Tooltip tip={t.note}><span className="font-medium text-stone-900">{t.name}</span></Tooltip></div>
+            {guide && <div><Tooltip tip={guideSel.note}><span className="font-medium text-stone-900">{guide.name}</span></Tooltip></div>}
           </div>
         </details>
       </div>
       <aside className="min-w-0 md:col-span-2">
-        <Pick label={`Woofer · ${w.size}″`} options={HIFI_WOOFERS_BY_SIZE} value={w} onChange={setW} extra={hLk("woofer", "the woofer")} group={(o) => `${o.size}″ woofers`} />
-        <Pick label={`Tweeter · ${isCD(t) ? "compression driver" : "dome"}`} options={HIFI_TWEETERS_BY_TYPE} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} group={(o) => (isCD(o) ? "Compression drivers (on a waveguide)" : "Dome tweeters")} />
-        {guide && <Pick label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
+        <SelectField label={`Woofer · ${w.size}″`} options={HIFI_WOOFERS_BY_SIZE} value={w} onChange={setW} extra={hLk("woofer", "the woofer")} group={(o) => `${o.size}″ woofers`} />
+        <SelectField label={`Tweeter · ${isCD(t) ? "compression driver" : "dome"}`} options={HIFI_TWEETERS_BY_TYPE} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} group={(o) => (isCD(o) ? "Compression drivers (on a waveguide)" : "Dome tweeters")} />
+        {guide && <SelectField label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
         <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
           <span className="text-stone-500">Material</span>
-          <div className="flex flex-wrap gap-1">{[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <ToggleBtn key={v} onClick={() => setMat(v)} on={mat === v}>{l}</ToggleBtn>)}</div>
+          <div className="flex flex-wrap gap-1">{[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <ToggleButton key={v} onClick={() => setMat(v)} on={mat === v}>{l}</ToggleButton>)}</div>
           <span />
           <span className="text-stone-500">Thickness</span>
-          <div className="flex flex-wrap gap-1">{[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <ToggleBtn key={v} onClick={() => setWall(v)} on={wall === v}>{l}</ToggleBtn>)}</div>
+          <div className="flex flex-wrap gap-1">{[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <ToggleButton key={v} onClick={() => setWall(v)} on={wall === v}>{l}</ToggleButton>)}</div>
           <span>{hLk("wall", "the panel thickness")}</span>
         </div>
         <Card className="mb-4">
@@ -1437,7 +915,7 @@ function HifiPage() {
           <div className="grid grid-cols-3 gap-1 mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip]) => {
             const slotOn = port.shape === "slot";
             const on = box === v && (v === "sealed" || (v === "vented" ? (n === "slot" ? slotOn : !slotOn && port.n === n) : pr.n === n));
-            return <ToggleBtn key={l} size="xs" className="min-w-0 whitespace-nowrap" title={tip} aria-label={tip} on={on} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}>{l}</ToggleBtn>;
+            return <ToggleButton key={l} size="xs" className="min-w-0 whitespace-nowrap" title={tip} aria-label={tip} on={on} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}>{l}</ToggleButton>;
           })}</div>
           {box === "vented" && (<>
             {port.shape === "slot"
@@ -1446,21 +924,21 @@ function HifiPage() {
             <Slider label={port.shape === "slot" ? "Slot length" : "Port length (centerline)"} value={port.len} min={1} max={30} step={0.25} unit="″" onChange={(v) => setP("len", v)} />
           </>)}
           {box === "radiator" && (<>
-            <Pick label={`Passive radiator · ${prDrv.shape ? "5 × 8″ oval" : `${prDrv.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={prDrv} onChange={(o) => setPrSel((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, prAddMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
+            <SelectField label={`Passive radiator · ${prDrv.shape ? "5 × 8″ oval" : `${prDrv.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={prDrv} onChange={(o) => setPrSel((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, prAddMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
             <Slider label="Added mass, each" value={pr.addG} min={0} max={prAddMax(prDrv)} step={5} unit=" g" onChange={(v) => setPrSel((p) => ({ ...p, addG: v }))} />
           </>)}
           <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of ${sys.slot ? "slot" : "port"}` : sys.radiator ? `; radiators on the back tune it to ${sys.Fb.toFixed(0)} Hz, with a notch at ${sys.Fp.toFixed(0)} Hz (their own resonance)${prDrv.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}` : ", lightly stuffed"}.</div>
         </Card>
         <Card className="mb-4">
           <Slider label="Crossover" value={xo} min={800} max={4000} step={50} unit=" Hz" onChange={setXo} extra={hLk("xo", "the crossover")} />
-          <div className="flex gap-1 mb-3">{[[4, "LR24"], [8, "LR48"]].map(([v, l]) => <ToggleBtn key={v} size="xs" onClick={() => setOrder(v)} on={order === v}>{l}</ToggleBtn>)}</div>
+          <div className="flex gap-1 mb-3">{[[4, "LR24"], [8, "LR48"]].map(([v, l]) => <ToggleButton key={v} size="xs" onClick={() => setOrder(v)} on={order === v}>{l}</ToggleButton>)}</div>
           <Slider label="Baffle-step boost" value={bsc} min={0} max={6} step={0.5} unit=" dB" onChange={setBsc} />
           <Slider label="Woofer amp @ 8 Ω" value={wAmpW} min={10} max={500} step={10} unit=" W" onChange={setWAmpW} extra={hLk("wAmpW", "the woofer amp power")} />
           <Slider label="Tweeter amp @ 8 Ω" value={tAmpW} min={5} max={200} step={5} unit=" W" onChange={setTAmpW} extra={hLk("tAmpW", "the tweeter amp power")} />
         </Card>
         <Card>
           <div className="text-sm text-stone-500 mb-1">Placement</div>
-          <div className="flex flex-wrap gap-1 mb-3">{Object.entries(HIFI_PLACES).map(([k, p]) => <ToggleBtn key={k} onClick={() => setPlace(k)} on={place === k}>{p.name}</ToggleBtn>)}</div>
+          <div className="flex flex-wrap gap-1 mb-3">{Object.entries(HIFI_PLACES).map(([k, p]) => <ToggleButton key={k} onClick={() => setPlace(k)} on={place === k}>{p.name}</ToggleButton>)}</div>
           {place !== "free" && <Slider label="Distance to the wall" value={wallFt} min={0.5} max={6} step={0.25} unit=" ft" onChange={setWallFt} />}
           <Slider label="Speaker spacing" value={spacing} min={3} max={14} step={0.5} unit=" ft" onChange={setSpacing} />
           <Slider label="Toe-in" value={toe} min={0} max={35} step={1} unit="°" onChange={setToe} />
@@ -1484,7 +962,7 @@ function NotesPage() {
             return (
               <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
                 <div className="flex justify-between items-baseline mb-1">
-                  <SectionHead><Tip tip={r.note}>{r.name}</Tip></SectionHead>
+                  <SectionHeading><Tooltip tip={r.note}>{r.name}</Tooltip></SectionHeading>
                   <span className="text-sm tabular-nums text-stone-500">≈ ${total.toLocaleString()}</span>
                 </div>
                 <div className="mb-3" />
@@ -1499,12 +977,12 @@ function NotesPage() {
         </section>
 
         <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
-          <SectionHead className="mb-2">Signal path (mains rack)</SectionHead>
+          <SectionHeading className="mb-2">Signal path (mains rack)</SectionHeading>
           <div className="max-w-4xl"><SignalPath /></div>
-          <p className="text-sm text-stone-900 max-w-3xl mt-3"><Tip tip="the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.">How the DSP work is split</Tip></p>
+          <p className="text-sm text-stone-900 max-w-3xl mt-3"><Tooltip tip="the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.">How the DSP work is split</Tooltip></p>
         </section>
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <SectionHead className="mb-3">Amp DSP: QSC GXD4 / GXD8</SectionHead>
+          <SectionHeading className="mb-3">Amp DSP: QSC GXD4 / GXD8</SectionHeading>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["Power per channel", "GXD4: 400 W into 8 \u03a9, 600 W into 4 \u03a9. GXD8: 800 W into 8 \u03a9, 1200 W into 4 \u03a9. Continuous, both channels driven. Voltage gain 33.5 dB (GXD4), 36.5 dB (GXD8)."],
@@ -1540,7 +1018,7 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <SectionHead className="mb-3">Crossover / DSP: PA2 and alternatives</SectionHead>
+          <SectionHeading className="mb-3">Crossover / DSP: PA2 and alternatives</SectionHeading>
           <p className="text-sm text-stone-900 mb-3 max-w-3xl">What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set in volts or dBu with attack and release, a slower RMS limiter, PEQ and delay. At ~15 ft from the mixer keep the inputs balanced; outputs to amps in the same rack matter less.</p>
           <div className="overflow-x-auto"><table className="text-sm w-full min-w-[720px] border-collapse">
             <thead><tr className="text-stone-500 text-left border-b border-stone-300">
@@ -1562,11 +1040,11 @@ function NotesPage() {
               ))}
             </tbody>
           </table></div>
-          <p className="text-sm text-stone-900 mt-2 max-w-3xl">Pick: a used DriveRack 260 on a budget; new, the Ashly AQM408 (limiters in dBu with attack and release, 4×8) or the VENU360 (front panel plus app). Keep the GXD limiters as a backstop either way. <Tip tip="Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026.">Why not the others?</Tip></p>
+          <p className="text-sm text-stone-900 mt-2 max-w-3xl">Pick: a used DriveRack 260 on a budget; new, the Ashly AQM408 (limiters in dBu with attack and release, 4×8) or the VENU360 (front panel plus app). Keep the GXD limiters as a backstop either way. <Tooltip tip="Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026.">Why not the others?</Tooltip></p>
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <SectionHead className="mb-3">Home inputs: Gemini MXR-01BT</SectionHead>
+          <SectionHeading className="mb-3">Home inputs: Gemini MXR-01BT</SectionHeading>
           <p className="text-sm text-stone-900 mb-3 max-w-3xl">Turntable, line and phone into the same DSP and amps, with one master volume. A 2-channel DJ mixer does it all in one box.</p>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
@@ -1587,7 +1065,7 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <SectionHead className="mb-3">Passive crossover: calibrate and build</SectionHead>
+          <SectionHeading className="mb-3">Passive crossover: calibrate and build</SectionHeading>
           <p className="text-sm text-stone-900 mb-3 max-w-3xl">For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80 per box in parts. All values get tuned, not just the pad.</p>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
@@ -1604,11 +1082,11 @@ function NotesPage() {
               </li>
             ))}
           </ul>
-          <p className="text-sm text-stone-900 mt-3 max-w-3xl"><Tip tip="Roughly a weekend to measure and design, plus an evening to build and verify.">About 1 weekend</Tip></p>
+          <p className="text-sm text-stone-900 mt-3 max-w-3xl"><Tooltip tip="Roughly a weekend to measure and design, plus an evening to build and verify.">About 1 weekend</Tooltip></p>
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <SectionHead className="mb-3">Materials</SectionHead>
+          <SectionHeading className="mb-3">Materials</SectionHeading>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["Prototype in particleboard", "Cheap and flat. Build it to verify duct tuning, then transfer interior dimensions \u2014 not the cut list \u2014 to the real material."],
@@ -1624,7 +1102,7 @@ function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-          <SectionHead className="mb-3">Still to decide</SectionHead>
+          <SectionHeading className="mb-3">Still to decide</SectionHeading>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["Baffle mounting", "Cleats (forgiving, costs 3/4\" of interior on each side) or a stopped rabbet in the frame panels (tighter, squares the box, needs a dado). Baffle size changes with the choice."],
@@ -1680,7 +1158,7 @@ function FillsPage() {
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "var(--font)" }}>
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
-        <p className="text-sm text-stone-500"><Tip tip="Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).">Passive fills</Tip></p>
+        <p className="text-sm text-stone-500"><Tooltip tip="Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).">Passive fills</Tooltip></p>
         <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
           {tile("Net volume", net.toFixed(0), "L")}
           {vM ? tile("Tuning Fb", vM.Fb.toFixed(0), "Hz") : tile("Qtc", sM.Qtc.toFixed(2), "")}
@@ -1703,20 +1181,20 @@ function FillsPage() {
         </div>
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
-            <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+            <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BACKGROUND_CLASSES[kind] || CHIP_BACKGROUND_CLASSES.ok}`}>
               <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
               <span className="text-stone-500">{body}</span>
             </div>
           ))}
         </div>
-        <p className="text-xs text-stone-500"><span className="font-medium text-stone-500">{drv.name}.</span> {drv.note} <Tip tip={`Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement ${ts.disp != null ? "as published" : `not published; ${disp} L assumed`}.`}>Spec notes</Tip></p>
+        <p className="text-xs text-stone-500"><span className="font-medium text-stone-500">{drv.name}.</span> {drv.note} <Tooltip tip={`Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement ${ts.disp != null ? "as published" : `not published; ${disp} L assumed`}.`}>Spec notes</Tooltip></p>
       </div>
       <aside className="min-w-0 md:col-span-2">
-        <Pick label="Coaxial driver" options={FILL_OPTIONS} value={drv} onChange={setDrv} />
+        <SelectField label="Coaxial driver" options={FILL_OPTIONS} value={drv} onChange={setDrv} />
         <div className="text-sm text-stone-500 mb-1">Box</div>
         <div className="flex gap-1 mb-2">
           {[["Vented", "vented"], ["Sealed", "sealed"]].map(([l, v]) => (
-            <ToggleBtn key={v} onClick={() => setBoxType(v)} on={boxType === v}>{l}</ToggleBtn>
+            <ToggleButton key={v} onClick={() => setBoxType(v)} on={boxType === v}>{l}</ToggleButton>
           ))}
         </div>
         <Card className="mb-4">
@@ -1741,29 +1219,6 @@ function FillsPage() {
   );
 }
 
-function SheetDrawing({ sheet, S, idx }) {
-  const sc = 4, W = S.w * sc, H = S.h * sc;
-  const [box, cw] = useWidth(S.w === 48 ? 160 : 200);
-  const fs = (12 * (W + 4)) / cw;   // 12 css px
-  const colors = { Sub: PAL.subTint, Mid: PAL.mutedTint };
-  return (
-    <div ref={box} className={`flex flex-col gap-1 w-full ${S.w === 48 ? "max-w-[240px] sm:w-[160px]" : "max-w-[300px] sm:w-[200px]"}`}>
-      <div className="text-xs text-stone-500">Sheet {idx + 1}</div>
-      <svg viewBox={`-2 -2 ${W + 4} ${H + 4}`} style={{ width: "100%", height: "auto" }} role="img" aria-label={`Sheet ${idx + 1} layout`}>
-        <rect x="0" y="0" width={W} height={H} fill={PAL.white} stroke={PAL.muted} />
-        {sheet.items.map((it, i) => (
-          <g key={i}>
-            <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || PAL.edge} stroke={PAL.muted} strokeWidth="0.8" />
-            {it.w * sc > fs * 3.6 && it.h * sc > fs * 1.3 && (
-              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + fs * 0.35} textAnchor="middle" fontSize={fs} fill={PAL.ink} fontFamily="Inconsolata, monospace">{it.box} {it.part.split(" ")[0]}</text>
-            )}
-          </g>
-        ))}
-      </svg>
-    </div>
-  );
-}
-
 function CutlistPage(props) {
   const { joint, setJoint, sheetKind, setSheetKind, sets, setSets, wall } = props;
   const { parts, vent } = cutParts(props);
@@ -1775,11 +1230,11 @@ function CutlistPage(props) {
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16" style={{ fontFamily: "var(--font)" }}>
       <div className="flex flex-wrap gap-6 mb-5">
         <div><div className="text-sm text-stone-500 mb-1">Corner joints</div>
-          <div className="flex gap-1">{[["butt", "Butt"], ["rabbet", "Rabbet"], ["miter", "Miter"]].map(([k, l]) => <ToggleBtn key={k} on={joint === k} onClick={() => setJoint(k)}>{l}</ToggleBtn>)}</div></div>
+          <div className="flex gap-1">{[["butt", "Butt"], ["rabbet", "Rabbet"], ["miter", "Miter"]].map(([k, l]) => <ToggleButton key={k} on={joint === k} onClick={() => setJoint(k)}>{l}</ToggleButton>)}</div></div>
         <div><div className="text-sm text-stone-500 mb-1">Sheet</div>
-          <div className="flex gap-1">{Object.entries(SHEETS).map(([k, s]) => <ToggleBtn key={k} on={sheetKind === k} onClick={() => setSheetKind(k)}>{s.name}</ToggleBtn>)}</div></div>
+          <div className="flex gap-1">{Object.entries(SHEETS).map(([k, s]) => <ToggleButton key={k} on={sheetKind === k} onClick={() => setSheetKind(k)}>{s.name}</ToggleButton>)}</div></div>
         <div><div className="text-sm text-stone-500 mb-1">Stacks</div>
-          <div className="flex gap-1">{[1, 2, 4].map((n) => <ToggleBtn key={n} on={sets === n} onClick={() => setSets(n)}>{n}</ToggleBtn>)}</div></div>
+          <div className="flex gap-1">{[1, 2, 4].map((n) => <ToggleButton key={n} on={sets === n} onClick={() => setSets(n)}>{n}</ToggleButton>)}</div></div>
       </div>
       <p className="text-sm text-stone-500 mb-4 max-w-3xl">From the planner's current boxes: {tName(wall)} walls, 3/4″ baffles set {f8(props.inset)}″ back, back panels in a rabbet. Sizes are finished dimensions in inches (width × length); {f8(kerf)}″ kerf allowed in the layout. Quantities are for {sets} stack{sets > 1 ? "s" : ""}.</p>
       <div className="overflow-x-auto mb-6"><table className="text-sm w-full sm:min-w-[640px] border-collapse">
@@ -1795,7 +1250,7 @@ function CutlistPage(props) {
           </tr>))}</tbody>
       </table></div>
       {vent.length > 0 && <p className="text-sm text-stone-500 mb-6">Also: {vent.join("; ")}.</p>}
-      <SectionHead className="mb-2">Sheet layout, {S.name}</SectionHead>
+      <SectionHeading className="mb-2">Sheet layout, {S.name}</SectionHeading>
       {packs.map((pk) => (
         <div key={pk.t} className="mb-6">
           <div className="text-sm font-medium mb-2">{tName(pk.t)} birch: {pk.sheets.length} sheet{pk.sheets.length > 1 ? "s" : ""}</div>
@@ -1803,232 +1258,8 @@ function CutlistPage(props) {
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">{pk.sheets.map((sh, i) => <SheetDrawing key={i} sheet={sh} S={S} idx={i} />)}</div>
         </div>
       ))}
-      <p className="text-sm text-stone-500"><Tip tip="Simple row-by-row layout, grain direction ignored. Treat it as a sheet count and a starting point for your own cut plan. Driver cutouts are typical values; use the datasheet's.">About this layout</Tip></p>
+      <p className="text-sm text-stone-500"><Tooltip tip="Simple row-by-row layout, grain direction ignored. Treat it as a sheet count and a starting point for your own cut plan. Driver cutouts are typical values; use the datasheet's.">About this layout</Tooltip></p>
     </main>
-  );
-}
-
-// ---------------------------------------------------------------
-// Optimizer: lock buttons on the controls, the panel, result cards.
-// ---------------------------------------------------------------
-// Material Symbols "lock" / "lock_open" (filled), drawn inline so they never depend on a font loading
-const LOCK_PATH = "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z";
-const LOCK_OPEN_PATH = "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h2c0-1.66 1.34-3 3-3s3 1.34 3 3v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z";
-function LockIcon({ locked }) {
-  return <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d={locked ? LOCK_PATH : LOCK_OPEN_PATH} fill="currentColor" fillRule="evenodd" /></svg>;
-}
-const lockCls = (on) => `inline-flex items-center justify-center gap-0.5 min-w-[32px] h-8 px-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 text-stone-500 bg-white hover:border-stone-500 hover:text-stone-500"}`;
-function LockBtn({ on, onClick, what }) {
-  const tip = on ? `Locked: the optimizer keeps ${what}` : `Unlocked: the optimizer may change ${what}`;
-  return <button type="button" onClick={onClick} aria-pressed={on} aria-label={tip} title={tip} className={lockCls(on)}><LockIcon locked={on} /></button>;
-}
-// every on/off lock the optimizer reads (box sizes are separate: subDim, midDim)
-const LOCK_KEYS = ["sub", "mid", "cd", "horn", "vent", "wall", "hpf", "xoLo", "xoHi", "ampW", "mAmpW", "hfAmpW"];
-const DIM_NEXT = { free: "max", max: "exact", exact: "free" };
-function DimLock({ mode = "free", onChange, what }) {
-  const tip = `${what}: ${mode === "free" ? "unlocked, the optimizer may change it" : mode === "max" ? "up to this value" : "locked at exactly this value"} (tap to change)`;
-  return (
-    <button type="button" onClick={() => onChange(DIM_NEXT[mode])} aria-label={tip} title={tip} className={lockCls(mode !== "free")}>
-      <LockIcon locked={mode !== "free"} />{mode === "max" ? <span>≤</span> : mode === "exact" ? <span>=</span> : null}
-    </button>
-  );
-}
-
-// Start the optimizer in the worker inlined by build.sh; fall back to the main thread where workers are blocked.
-let optWorker = null, optNoWorker = false, optSeq = 0;
-function runOptimizer(input) {
-  const id = ++optSeq;
-  const local = () => new Promise((res, rej) => setTimeout(() => { try { res(optimize(input)); } catch (e) { rej(e); } }, 30));
-  if (optNoWorker) return local();
-  try {
-    if (!optWorker) {
-      const src = document.getElementById("opt-worker");
-      if (!src || typeof Worker === "undefined") throw new Error("no worker");
-      optWorker = new Worker(URL.createObjectURL(new Blob([src.textContent], { type: "text/javascript" })));
-    }
-  } catch { optNoWorker = true; return local(); }
-  const w = optWorker;
-  return new Promise((res, rej) => {
-    let timer = null;
-    const done = () => { clearTimeout(timer); w.removeEventListener("message", onMsg); w.removeEventListener("error", onErr); };
-    const onMsg = (e) => { if (e.data.id !== id) return; done(); if (e.data.error) rej(new Error(e.data.error)); else res(e.data.out); };
-    const onErr = () => { done(); optNoWorker = true; if (optWorker === w) optWorker = null; local().then(res, rej); };
-    // a hung worker: stop it and report, rather than leaving the button on "Searching…"
-    timer = setTimeout(() => { done(); try { w.terminate(); } catch {} if (optWorker === w) optWorker = null; rej(new Error("took longer than 60 s")); }, 60000);
-    w.addEventListener("message", onMsg);
-    w.addEventListener("error", onErr);
-    w.postMessage({ id, input });
-  });
-}
-
-// a goal's place in the priority order, floating on the button's corner so the label doesn't move
-function RankBadge({ n }) {
-  return <span className="absolute -top-2 -left-2 min-w-[18px] h-[18px] px-1 rounded-full bg-cmy-a text-white text-xs font-bold leading-[18px] text-center" aria-label={`priority ${n}`}>{n}</span>;
-}
-// status notes: a light tint of the status colour with a matching border
-const CHIP_BG = { ok: "bg-green-50 border-green-200 border-l-4 border-l-green-300", warn: "bg-amber-50 border-amber-200 border-l-4 border-l-amber-300", bad: "bg-red-50 border-red-200 border-l-4 border-l-red-300" };
-const money = (x) => `$${Math.round(x).toLocaleString()}`;
-function Delta({ v, unit, lowerIsBetter, digits = 0 }) {
-  if (v == null) return null;
-  const r = Number(v.toFixed(digits));
-  const good = lowerIsBetter ? r < 0 : r > 0, bad = lowerIsBetter ? r > 0 : r < 0;
-  const txt = r === 0 ? "±0" : `${r > 0 ? "+" : "\u2212"}${unit === "$" ? money(Math.abs(r)) : Math.abs(r).toFixed(digits) + unit}`;
-  return <div className={`text-xs font-semibold ${good ? "text-green-800" : bad ? "text-red-700" : "text-stone-500"}`}>{txt}{good ? " better" : bad ? " worse" : ""}</div>;
-}
-
-// Front view of a design, to scale, with your current design's outline dashed behind it.
-function BoxFront({ g, cur }) {
-  const W = 150, H = 150, pad = 4;
-  // tower: the mid sits in the top of the sub column (drawn as a section of it), the horn on top
-  const tall = (x) => x.sub.h + (x.tower ? 0 : x.mid.h) + (x.horn ? x.horn.h : 0);
-  const wide = (x) => Math.max(x.sub.w, x.mid.w, x.horn ? x.horn.w : 0);
-  const k = Math.min((H - 2 * pad) / Math.max(tall(g), cur ? tall(cur) : 0), (W - 2 * pad) / Math.max(wide(g), cur ? wide(cur) : 0));
-  const cx = W / 2, y0 = H - pad;
-  const stackRects = (x) => {
-    const r = [], put = (w, h, y) => ({ x: cx - (w * k) / 2, y: y - h * k, w: w * k, h: h * k });
-    const sb = put(x.sub.w, x.sub.h, y0), mb = x.tower ? { ...sb, h: x.mid.h * k } : put(x.mid.w, x.mid.h, sb.y), hb = x.horn ? put(x.horn.w, x.horn.h, mb.y) : null;
-    r.push(sb); if (!x.tower) r.push(mb); if (hb) r.push(hb);
-    return { sb, mb, hb, r };
-  };
-  const a = stackRects(g), b = cur ? stackRects(cur) : null, t = g.wall * k, v = g.cVent;
-  const vent = [];
-  if (g.portStyle === "slots" || g.portStyle === "folded") vent.push(<rect key="v" x={a.sb.x + t} y={a.sb.y + a.sb.h - t - v.slotH * k} width={a.sb.w - 2 * t} height={v.slotH * k} fill={PAL.ink} />);
-  else if (g.portStyle === "vslots" || g.portStyle === "vslot1") {
-    vent.push(<rect key="l" x={a.sb.x + t} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill={PAL.ink} />);
-    if (g.portStyle === "vslots") vent.push(<rect key="r" x={a.sb.x + a.sb.w - t - v.throat * k} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill={PAL.ink} />);
-  } else for (let i = 0; i < (v.nt || 1); i++) {
-    const n = v.nt || 1, gap = a.sb.w / (n + 1);
-    vent.push(<circle key={i} cx={a.sb.x + gap * (i + 1)} cy={a.sb.y + a.sb.h - t - (v.dia * k) / 2 - 2} r={(v.dia * k) / 2} fill={PAL.ink} />);
-  }
-  const ventH = g.portStyle === "slots" || g.portStyle === "folded" ? v.slotH * k + t : g.portStyle.startsWith("round") ? v.dia * k + 4 : 0;
-  const driver = (box, size, below = 0) => <circle cx={box.x + box.w / 2} cy={box.y + (box.h - below) / 2} r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2} fill={PAL.edge} stroke={PAL.muted} strokeWidth="1" />;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={`Front view: sub ${g.sub.w} × ${g.sub.h}″, mid ${g.mid.w} × ${g.mid.h}″${cur ? "; your design dashed" : ""}`}>
-      {b && b.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} fill="none" stroke={PAL.muted} strokeWidth="1" strokeDasharray="3 2" />)}
-      {a.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} rx="1" fill={q === a.hb ? PAL.muted : PAL.edge} fillOpacity={q === a.hb ? 1 : 0.85} stroke={PAL.ink} strokeWidth="1.2" />)}
-      {vent}
-      {g.tower && <line x1={a.sb.x} x2={a.sb.x + a.sb.w} y1={a.mb.y + a.mb.h} y2={a.mb.y + a.mb.h} stroke={PAL.ink} strokeWidth="1.2" />}
-      {driver(g.tower ? { ...a.sb, y: a.mb.y + a.mb.h, h: a.sb.h - a.mb.h } : a.sb, g.subSize, ventH)}
-      {driver(a.mb, g.midSize)}
-    </svg>
-  );
-}
-
-// The sub's clean output (music limit) against frequency, this design against yours; the scored 40-90 Hz band shaded.
-function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90], top = 135, bot = 80 }) {
-  const [hover, setHover] = useState(null);
-  const W = 220, H = 150, L = 26, R = 6, T = 16, B = 18;
-  const x = (f) => L + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (W - L - R), y = (d) => T + ((top - Math.max(bot, Math.min(top, d))) / (top - bot)) * (H - T - B);
-  const path = (c) => c.map((o, i) => `${i ? "L" : "M"}${x(o[0]).toFixed(1)},${y(o[1]).toFixed(1)}`).join("");
-  const at = (c, f) => c && c.reduce((b, o) => (Math.abs(Math.log(o[0] / f)) < Math.abs(Math.log(b[0] / f)) ? o : b));
-  const move = (e) => {
-    const r = e.currentTarget.getBoundingClientRect(), px = ((e.clientX - r.left) / r.width) * W;
-    const f = fmin * Math.pow(fmax / fmin, (px - L) / (W - L - R));
-    setHover(f >= fmin && f <= fmax ? f : null);
-  };
-  const ticks = []; for (let d = bot; d <= top; d += 10) ticks.push(d);
-  const h1 = hover && at(curve, hover), h2 = hover && at(cur, hover);
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto touch-none" onPointerMove={move} onPointerLeave={() => setHover(null)} role="img"
-      aria-label="Clean sub output from 20 to 200 Hz, this design against yours">
-      {band && <rect x={x(band[0])} y={T} width={x(band[1]) - x(band[0])} height={H - T - B} fill={PAL.alpha(PAL.ink, 0.05)} />}
-      {ticks.map((d) => <g key={d}><line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke={PAL.edge} /><text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill={PAL.muted}>{d}</text></g>)}
-      {(fmax > 1000 ? [20, 100, 1000, 10000] : [20, 50, 100, 200, 500]).filter((f) => f >= fmin && f <= fmax).map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill={PAL.muted}>{f >= 1000 ? f / 1000 + "k" : f}</text>)}
-      {cur && <path d={path(cur)} fill="none" stroke={PAL.muted} strokeWidth="1.5" strokeDasharray="4 3" />}
-      <path d={path(curve)} fill="none" stroke={PAL.ink} strokeWidth="2" />
-      {hover ? (<>
-        <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke={PAL.muted} strokeWidth="0.75" />
-        <circle cx={x(h1[0])} cy={y(h1[1])} r="2.5" fill={PAL.ink} stroke={PAL.white} strokeWidth="1" />
-        {(() => { const X = Math.max(L + 14, Math.min(W - R - 14, x(hover))); return <g><rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill={PAL.ink} /><text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill={PAL.white}>{hover.toFixed(0)} Hz</text></g>; })()}
-        <text x={L} y={9} fontSize="8.5" fill={PAL.ink}>{hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB{h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}</text>
-      </>) : (
-        <text x={L} y={9} fontSize="8.5" fill={PAL.muted}><tspan fill={PAL.ink}>━ this</tspan>{cur ? "  ╌ yours" : ""} · dB, clean</text>
-      )}
-    </svg>
-  );
-}
-function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave }) {
-  const c = k.config, m = k.metrics, d = k.delta || {};
-  const tile = (label, v, delta) => (
-    <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
-      <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
-      <div className="tabular-nums">{v}</div>{delta}
-    </div>
-  );
-  const sheets = k.build.sheets.map((x) => `${x.n} sheet${x.n > 1 ? "s" : ""} ${x.t === 0.5 ? "1/2″" : x.t === 0.75 ? "3/4″" : x.t + "″"}`).join(" + ");
-  return (
-    <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
-      <div className="text-xs uppercase tracking-wider font-bold text-stone-500">{k.label} · {i + 1} of {n}</div>
-      <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{k.names.sub} · {c.cDim.w} × {c.cDim.h} × {c.cDim.d}″</h3>
-      <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
-        {k.geom && <BoxFront g={k.geom} cur={cur && cur.geom} />}
-        {k.curve && <OutChart curve={k.curve} cur={cur && cur.curve} />}
-      </div>
-      <div className="text-xs text-stone-500">Mid {k.names.mid} · {k.names.cd} on {k.names.horn} · amps {c.ampW} / {c.mAmpW} / {c.hfAmpW} W</div>
-      <div className="grid grid-cols-2 gap-1.5">
-        {tile("Drivers", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
-        {tile("Heaviest", `${m.heaviest.toFixed(0)} lb`, <Delta v={d.heaviest} unit=" lb" lowerIsBetter />)}
-        {tile("Output", `${m.out.toFixed(1)} dB`, <Delta v={d.out} unit=" dB" digits={1} />)}
-        {tile("F3", `${m.f3.toFixed(0)} Hz`, <Delta v={d.f3} unit=" Hz" lowerIsBetter />)}
-      </div>
-      <div className="text-xs leading-snug"><b className="font-semibold">Limited by:</b> {k.limitedBy}</div>
-      {k.warnings.filter(([h]) => !/limited$/.test(h)).map(([h, b]) => (
-        <div key={h} className="text-xs border border-l-4 rounded px-2 py-1 bg-amber-50 border-amber-200 border-l-amber-300"><b className="font-semibold text-amber-700 mr-1">{h}</b>{b}</div>
-      ))}
-      <div className="text-xs text-stone-500">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
-      <div className="text-xs text-stone-500">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
-      {!k.priceKnown && <div className="text-xs text-stone-500"><Tip tip="Some drivers have no listed price, so the total is a lower bound.">Partial prices</Tip></div>}
-      <div className="flex gap-1.5 mt-auto">
-        <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
-        <Button variant="primary" onClick={onLoad} className="flex-1">Load</Button>
-        <Button onClick={onSave} disabled={!canSave} title={canSave ? "" : "Sign in to save"} className="flex-1">Save</Button>
-      </div>
-    </div>
-  );
-}
-function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, previewCard, onPreview, onLoad, onSave, canSave }) {
-  const need = roomNeed(optIn.room), target = Math.max(curOut != null ? curOut : need, need);
-  const goals = optIn.goals, g = goals[0];
-  // tap adds a goal at the end of the order; tap again removes it (none selected is allowed; the search waits for one)
-  const tapGoal = (k) => setOpt({ goals: goals.includes(k) ? goals.filter((x) => x !== k) : [...goals, k] });
-  const tgtText = !g ? "pick a goal" : (g === "louder" ? "as loud as it gets, F3 within 3 Hz" : g === "lower" ? `lowest F3, at least ${(target - 1.5).toFixed(0)} dB per stack` : `clean ${target.toFixed(0)} dB per stack`)
-    + (goals.length > 1 ? `, and ${goals.slice(1).map((x) => ({ cheaper: "cheaper", lighter: "lighter", lower: "lower", louder: "louder" })[x]).join(" and ")} than yours` : "");
-  return (
-    <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "var(--font)" }}>
-      <Card pad="lg">
-        <SectionHead>Find a better design</SectionHead>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-          <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>
-            <div className="flex flex-wrap gap-1">{Object.entries(ROOMS).map(([k, r]) => <ToggleBtn key={k} aria-label={r.name} on={String(optIn.room) === k} onClick={() => setOpt({ room: k === "outdoor" ? k : +k })}>{r.short}</ToggleBtn>)}</div>
-          </div>
-          <div className="mt-3">
-            <NumberField label="Max per box" value={optIn.maxLb} min={30} max={250} unit="lb" onChange={(n) => setOpt({ maxLb: n })} className="" />
-          </div>
-          <div className="mt-3">
-            <NumberField label={<>Driver budget, per stack <span className="text-xs">(sub + mid + CD, at the listed prices)</span></>} value={optIn.budget} min={100} step={25} unit="$" onChange={(n) => setOpt({ budget: n })} className="" />
-          </div>
-          <GoalPicker defs={GOALS} selected={goals} onTap={tapGoal} />
-        </div>
-        <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
-          {curOut != null && <div className="text-xs text-stone-500 mt-0.5">Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB · {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB</div>}</div>
-        <RunRow busy={busy} hasGoal={!!g} onRun={run} stats={res && res.stats} note={res && res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}>
-          {err && <span className="text-xs text-red-700">{err}</span>}
-        </RunRow>
-        {res && !busy && res.curProblems && res.curProblems.length > 0 && <Notice>Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</Notice>}
-        {res && !busy && <ResultCards cards={res.cards} render={(k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} cur={res.cur} previewing={previewCard === k} canSave={canSave}
-          onPreview={() => onPreview(k)} onLoad={() => onLoad(k)} onSave={() => onSave(k)} />} />}
-        {res && !busy && res.goalMissing && <Notice>{res.goalMissing}</Notice>}
-        {res && !busy && !res.cards.length && res.nearMiss && (
-          <div className="mt-4 rounded-lg border border-orange-300 bg-orange-50 px-3 py-3">
-            <h3 className="text-base" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Nothing fits all your limits</h3>
-            <div className="text-xs text-orange-900 mt-1">{res.nearMiss.closest ? `Closest: ${res.nearMiss.closest.names.sub}, ${res.nearMiss.closest.metrics.heaviest.toFixed(0)} lb, ${money(res.nearMiss.closest.metrics.price)} per stack, ${res.nearMiss.closest.metrics.out.toFixed(1)} dB. ` : ""}Blocked by: {res.nearMiss.blocking.join("; ")}.</div>
-            {res.nearMiss.options.length > 0 && <div className="flex flex-wrap gap-1.5 mt-2">{res.nearMiss.options.map((o) => (
-              <ToggleBtn key={o.text} on={false} onClick={() => run(o.set)}>{o.text}</ToggleBtn>))}</div>}
-          </div>
-        )}
-      </Card>
-    </section>
   );
 }
 
@@ -2089,8 +1320,8 @@ function StackPlanner() {
   const setOpt = (o) => setOptIn((p) => { const n = { ...p, ...o }; lsSet("planner.optIn", n); return n; });
   const [locks, setLocksRaw] = useState(() => { const l = lsGet("planner.locks", {}) || {}; return { ...l, subDim: { ...(l.subDim || {}) }, midDim: { ...(l.midDim || {}) } }; });
   const setLocks = (f) => setLocksRaw((p) => { const n = f(p); lsSet("planner.locks", n); return n; });
-  const lk = (key, what) => optOn ? <LockBtn on={!!locks[key]} what={what} onClick={() => setLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null;
-  const dl = (box, dim, what) => optOn ? <DimLock mode={locks[box][dim] || "free"} what={what} onChange={(m) => setLocks((p) => ({ ...p, [box]: { ...p[box], [dim]: m } }))} /> : null;
+  const lk = (key, what) => optOn ? <LockButton on={!!locks[key]} what={what} onClick={() => setLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null;
+  const dl = (box, dim, what) => optOn ? <DimensionLock mode={locks[box][dim] || "free"} what={what} onChange={(m) => setLocks((p) => ({ ...p, [box]: { ...p[box], [dim]: m } }))} /> : null;
   const [optRes, setOptRes] = useState(null);
   const [optBusy, setOptBusy] = useState(false);
   const [optErr, setOptErr] = useState("");
@@ -2255,7 +1486,7 @@ function StackPlanner() {
     setOptBusy(true); setOptErr("");
     try {
       const cur = preview ? preview.before : snapshot();
-      setOptRes(await runOptimizer({ cur, room: inp.room, maxLb: inp.maxLb, budget: inp.budget, goals: inp.goals, locks }));
+      setOptRes(await runPaOptimizer({ cur, room: inp.room, maxLb: inp.maxLb, budget: inp.budget, goals: inp.goals, locks }));
     } catch (e) { setOptErr("The search failed: " + ((e && e.message) || e)); }
     setOptBusy(false);
   };
@@ -2389,7 +1620,7 @@ function StackPlanner() {
         </section>
 
         <section className="mt-1" style={{ fontFamily: "var(--font)" }}>
-          <FoldHead id="sub" title="Sub" folds={folds} toggle={toggleFold} className="mb-3 md:hidden" />
+          <FoldHeading id="sub" title="Sub" folds={folds} toggle={toggleFold} className="mb-3 md:hidden" />
           <div className={foldCls("sub")}>
           {mdl && lim && (
             <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
@@ -2433,7 +1664,7 @@ function StackPlanner() {
               {(() => {
                 const F = subChips({ subSize: format.sub, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF: mdl.peakXF, aes: sub.ts.aes, ampW });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BACKGROUND_CLASSES[kind] || CHIP_BACKGROUND_CLASSES.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-500">{body}</span>
                   </div>
@@ -2445,7 +1676,7 @@ function StackPlanner() {
         </section>
 
         <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
-          <FoldHead id="mid" title="Mid-bass" folds={folds} toggle={toggleFold} className="mb-3" />
+          <FoldHeading id="mid" title="Mid-bass" folds={folds} toggle={toggleFold} className="mb-3" />
           <div className={foldCls("mid")}>
           {mMdl ? (<>
             <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
@@ -2478,7 +1709,7 @@ function StackPlanner() {
                 const F = midChips({ midSize, midDims, Qtc: mMdl.Qtc, f3: mMdl.f3, peakX: mMdl.peakX, xoLo, ts: mid.ts, V: MID_V, useV: midUseV, vTherm: vMidTherm, mAmpW,
                   subMusicAtXo, tilt, midAtXo: subMusicAtXo != null ? midNear(xoLo) : null });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BACKGROUND_CLASSES[kind] || CHIP_BACKGROUND_CLASSES.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-500">{body}</span>
                   </div>
@@ -2492,7 +1723,7 @@ function StackPlanner() {
         </section>
 
         <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
-          <FoldHead id="horn" title="Horn" folds={folds} toggle={toggleFold} className="mb-3" />
+          <FoldHeading id="horn" title="Horn" folds={folds} toggle={toggleFold} className="mb-3" />
           <div className={foldCls("horn")}>
           {hornModel ? (<>
             <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
@@ -2515,15 +1746,15 @@ function StackPlanner() {
                 marks={[{ f: xoHi, label: "XO" }, ...(beamCurves.fK ? [{ f: beamCurves.fK, label: "horn control" }] : [])]} />
             </div>
             {paMap && (<div className="mb-4">
-              <div className="flex gap-1 mb-2">{[["v", "Vertical"], ["h", "Horizontal"]].map(([v, l]) => <ToggleBtn key={v} size="xs" on={paPlane === v} onClick={() => setPaPlane(v)}>{l}</ToggleBtn>)}</div>
-              <DispMap map={paMap} title={paPlane === "v" ? `Vertical dispersion at ${PA_MAP_M} m: below (−) to above (+) the horn axis` : `Horizontal dispersion at ${PA_MAP_M} m, at horn height (0° is on axis)`} />
+              <div className="flex gap-1 mb-2">{[["v", "Vertical"], ["h", "Horizontal"]].map(([v, l]) => <ToggleButton key={v} size="xs" on={paPlane === v} onClick={() => setPaPlane(v)}>{l}</ToggleButton>)}</div>
+              <DispersionMap map={paMap} title={paPlane === "v" ? `Vertical dispersion at ${PA_MAP_M} m: below (−) to above (+) the horn axis` : `Horizontal dispersion at ${PA_MAP_M} m, at horn height (0° is on axis)`} />
               <div className="text-xs text-stone-500 mt-1">Mid and horn centers {mhGap.toFixed(1)}″ apart: {mhNull ? `the first null at the ${xoHi} Hz crossover is about ${mhNull.toFixed(0)}° above and below the horn axis.` : `under half a wavelength at ${xoHi} Hz, so no null at the crossover.`}</div>
             </div>)}
             <div className="flex flex-col gap-1.5">
               {(() => {
                 const F = hornChips({ hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi: midMax ? midNear(xoHi).spl : null, hfTilt, hornAtXo: hornAt(xoHi), midBeam, fK: beamCurves.fK });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BACKGROUND_CLASSES[kind] || CHIP_BACKGROUND_CLASSES.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-500">{body}</span>
                   </div>
@@ -2553,14 +1784,14 @@ function StackPlanner() {
             <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>Plywood (baffles stay 3/4″)</span>{lk("wall", "the plywood")}</div>
             <div className="flex gap-1">
               {[[0.75, "3/4″ birch"], [0.5, "1/2″ birch, braced"]].map(([t, label]) => (
-                <ToggleBtn key={t} onClick={() => setWall(t)} on={wall === t}>{label}</ToggleBtn>
+                <ToggleButton key={t} onClick={() => setWall(t)} on={wall === t}>{label}</ToggleButton>
               ))}
             </div>
             <div className="mt-3"><Slider label="Baffle inset" value={inset} min={0} max={1.5} step={0.25} unit="″" onChange={setInset} /></div>
           </div>
           </div>
           <div className={tabCls("sub")}>
-          <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} extra={lk("sub", "the sub driver")} />
+          <SelectField label="Sub driver" options={subList} value={sub} onChange={setSub} extra={lk("sub", "the sub driver")} />
           </div>
           <div className={tabCls("look")}>
           <SwatchPicker label="Cabinet finish" value={cabFinish} onChange={setCabFinish} swatches={SWATCHES} presets={CAB_FINISHES} titlePrefix="Painted: "
@@ -2574,7 +1805,7 @@ function StackPlanner() {
             <div className="text-sm text-stone-500 mb-1">View</div>
             <div className="flex gap-1">
               {[["Finished", false], ["Cutaway", true]].map(([label, v]) => (
-                <ToggleBtn key={label} onClick={() => setCutaway(v)} on={cutaway === v}>{label}</ToggleBtn>
+                <ToggleButton key={label} onClick={() => setCutaway(v)} on={cutaway === v}>{label}</ToggleButton>
               ))}
             </div>
           </div>
@@ -2584,7 +1815,7 @@ function StackPlanner() {
             <div className="text-sm text-stone-500 mb-1">Layout</div>
             <div className="flex gap-1">
               {[["Two stacks", "stack"], ["Tops on spacers", "pole"], ["Tower", "tower"], ["One sub + satellites", "satellite"]].map(([label, v]) => (
-                <ToggleBtn key={v} onClick={() => setLayout(v)} on={layout === v}>{label}</ToggleBtn>
+                <ToggleButton key={v} onClick={() => setLayout(v)} on={layout === v}>{label}</ToggleButton>
               ))}
             </div>
             {layout === "pole" && <div className="mt-3"><Slider label="Spacer height" value={spacerH} min={4} max={36} step={1} unit="″" onChange={setSpacerH} /></div>}
@@ -2605,14 +1836,14 @@ function StackPlanner() {
             <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>Vent</span>{lk("vent", "the vent style")}</div>
             <div className="flex flex-wrap gap-1">
               {[["Rectangular", !portStyle.startsWith("round"), "slots"], ["Round tubes", portStyle.startsWith("round"), "round2"]].map(([label, on, v]) => (
-                <ToggleBtn key={label} onClick={() => { if (!on) setPortStyle(v); }} on={on}>{label}</ToggleBtn>
+                <ToggleButton key={label} onClick={() => { if (!on) setPortStyle(v); }} on={on}>{label}</ToggleButton>
               ))}
             </div>
             {!portStyle.startsWith("round") && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {[["slots", "Bottom"], ["folded", "Bottom, folded"], ["vslots", "Both sides"], ["vslot1", "One side"]].map(([v, label]) => {
                   const on = portStyle === v;
-                  return <ToggleBtn key={v} onClick={() => setPortStyle(v)} on={on} size="xs">{label}</ToggleBtn>;
+                  return <ToggleButton key={v} onClick={() => setPortStyle(v)} on={on} size="xs">{label}</ToggleButton>;
                 })}
               </div>
             )}
@@ -2636,7 +1867,7 @@ function StackPlanner() {
               <Slider label={`Highpass (${hpType})`} value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} extra={lk("hpf", "the highpass")} />
               <div className="flex flex-wrap gap-1 -mt-1 mb-3">
                 {Object.keys(HP_TYPES).map((t) => (
-                  <ToggleBtn key={t} onClick={() => setHpType(t)} on={hpType === t} size="xs">{t}</ToggleBtn>
+                  <ToggleButton key={t} onClick={() => setHpType(t)} on={hpType === t} size="xs">{t}</ToggleButton>
                 ))}
               </div>
               <Slider label="Amp power per channel @ 8 Ω" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} extra={lk("ampW", "the sub amp power")} />
@@ -2648,11 +1879,11 @@ function StackPlanner() {
             <div className="text-sm text-stone-500 mb-1">Mid-bass size</div>
             <div className="flex gap-1">
               {[12, 15].map((n) => (
-                <ToggleBtn key={n} onClick={() => setMidSize(n)} on={midSize === n}>{n}″</ToggleBtn>
+                <ToggleButton key={n} onClick={() => setMidSize(n)} on={midSize === n}>{n}″</ToggleButton>
               ))}
             </div>
           </div>
-          <Pick label={`Mid-bass ${midSize}″`} options={midList} value={mid} onChange={setMid} extra={lk("mid", "the mid-bass driver")} />
+          <SelectField label={`Mid-bass ${midSize}″`} options={midList} value={mid} onChange={setMid} extra={lk("mid", "the mid-bass driver")} />
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
             <Card>
@@ -2666,13 +1897,13 @@ function StackPlanner() {
               <Slider label="Crossover, sub to mid" value={xoLo} min={60} max={250} step={5} unit=" Hz" onChange={setXoLo} extra={lk("xoLo", "the sub-to-mid crossover")} />
               <Slider label="Crossover, mid to horn" value={xoHi} min={500} max={2000} step={50} unit=" Hz" onChange={setXoHi} extra={lk("xoHi", "the mid-to-horn crossover")} />
               <Slider label="Mid amp power per channel @ 8 Ω" value={mAmpW} min={50} max={2000} step={25} unit=" W" onChange={setMAmpW} extra={lk("mAmpW", "the mid amp power")} />
-              <Slider label={<Tip tip="0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.">Music balance: mid band needs less by</Tip>} value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
+              <Slider label={<Tooltip tip="0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.">Music balance: mid band needs less by</Tooltip>} value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
             </Card>
           </div>
           </div>
           <div className={tabCls("horn")}>
-          <Pick label="Compression driver" options={CD_OPTIONS} value={cd} onChange={setCd} extra={lk("cd", "the compression driver")} />
-          <Pick label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} extra={lk("horn", "the horn")} />
+          <SelectField label="Compression driver" options={CD_OPTIONS} value={cd} onChange={setCd} extra={lk("cd", "the compression driver")} />
+          <SelectField label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} extra={lk("horn", "the horn")} />
           <Card className="mb-4">
             <Slider label="HF amp power per channel @ 8 Ω" value={hfAmpW} min={10} max={500} step={5} unit=" W" onChange={setHfAmpW} extra={lk("hfAmpW", "the HF amp power")} />
             <Slider label="Music balance: HF band needs less by" value={hfTilt} min={0} max={12} step={1} unit=" dB" onChange={setHfTilt} />
@@ -2684,7 +1915,7 @@ function StackPlanner() {
 
 
         <section className="min-w-0 md:col-span-5 mt-6" style={{ fontFamily: "var(--font)" }}>
-          <FoldHead id="totals" title="Totals for the current selection" folds={folds} toggle={toggleFold} className="mb-2" />
+          <FoldHeading id="totals" title="Totals for the current selection" folds={folds} toggle={toggleFold} className="mb-2" />
           <div className={foldCls("totals")}>
           {(() => {
             const subBoxLb = subLbLoaded - (sub.lb || 0); // same estimate as the stats row
@@ -2720,14 +1951,14 @@ function StackPlanner() {
         </div>
         {showDetails && <section className="min-w-0 md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "var(--font)" }}>
           <div>
-            <SectionHead className="mb-2">Sub</SectionHead>
+            <SectionHeading className="mb-2">Sub</SectionHeading>
             <p className="text-sm text-stone-900">
               {sub.name} in a {subBox.w}×{subBox.h}×{subBox.d} in cabinet, {grossL.toFixed(0)} L gross, {netL.toFixed(0)} L net.
               Vent: {port.desc}. 3/4″ baffle set {inset}″ behind the frame, {wall === 0.5 ? "1/2″" : "3/4″"} birch walls, 1/4″ roundovers on the front edges.
             </p>
           </div>
           <div>
-            <SectionHead className="mb-2">Mid-bass cube</SectionHead>
+            <SectionHeading className="mb-2">Mid-bass cube</SectionHeading>
             <p className="text-sm text-stone-900">
               {mid.name} in a {midDims.w}×{midDims.h}×{midDims.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed.
               Covers {xoLo} Hz to {xoHi} Hz. Same construction, flush-mounted driver.
@@ -2735,7 +1966,7 @@ function StackPlanner() {
             {mid.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{mid.name}.</span> {mid.note}</p>}
           </div>
           <div>
-            <SectionHead className="mb-2">Horn</SectionHead>
+            <SectionHeading className="mb-2">Horn</SectionHeading>
             <p className="text-sm text-stone-900">
               {horn.name} with {cd.name}, crossed at {xoHi} Hz (maker suggests {horn.xo}). Sits on a short block so the mouth clears the cube.
               Total stack height about {stackH.toFixed(0)} in, horn center at {hornCenter.toFixed(0)} in.
