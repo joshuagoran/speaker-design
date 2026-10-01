@@ -1052,8 +1052,8 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         {paths.map((p) => <path key={p.label} d={p.d} fill="none" stroke={p.stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />)}
         {!narrow && paths.map((p, i) => (
           <g key={p.label + "k"}>
-            <line x1={x0 + 10} y1={y0 + 8 + i * 16} x2={x0 + 30} y2={y0 + 8 + i * 16} stroke={p.stroke} strokeWidth="2" />
-            <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{p.label}</text>
+            <line x1={x1 - 36 - p.label.length * 7.3} y1={y0 + 8 + i * 16} x2={x1 - 16 - p.label.length * 7.3} y2={y0 + 8 + i * 16} stroke={p.stroke} strokeWidth="2" />
+            <text x={x1 - 10} y={y0 + 12 + i * 16} textAnchor="end" fill="#111111" stroke="#fff" strokeWidth="3" paintOrder="stroke" fontSize="12" fontFamily="Inconsolata, monospace">{p.label}</text>
           </g>
         ))}
         {hf && (<g pointerEvents="none">
@@ -2392,8 +2392,12 @@ function StackPlanner() {
       <main className={`max-w-6xl mx-auto px-4 md:px-8 pb-16 grid ${sheetOpen ? "max-md:pb-[52dvh]" : "max-md:pb-24"} grid-cols-1 md:grid-cols-5 gap-8`}>
         <div className="min-w-0 md:col-span-3 flex flex-col gap-5">
         <section className={full3d ? "fixed inset-0 z-50 bg-stone-50" : "relative rounded-lg overflow-hidden border border-stone-300 bg-stone-50 h-[300px] md:h-[clamp(320px,56vh,560px)]"}>
-          <button onClick={() => setFull3d((v) => !v)} aria-label={full3d ? "Close full screen" : "Full screen"}
-            className="absolute top-2 right-2 z-10 px-2.5 py-1 rounded border border-stone-300 bg-white/90 text-xs" style={{ fontFamily: "var(--font)" }}>{full3d ? "Close" : "Full screen"}</button>
+          <button onClick={() => setFull3d((v) => !v)} aria-label={full3d ? "Close full screen" : "Full screen"} title={full3d ? "Close full screen" : "Full screen"}
+            className="absolute top-2 right-2 z-10 w-9 h-9 inline-flex items-center justify-center rounded border border-stone-300 bg-white/90 hover:border-stone-500">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {full3d ? <path d="M4 4l8 8M12 4l-8 8" /> : <path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" />}
+            </svg>
+          </button>
           <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wall} inset={inset} cabFinish={cabFinish} spacerH={spacerH} />
         </section>
 
