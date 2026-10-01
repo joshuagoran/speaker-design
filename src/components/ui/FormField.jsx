@@ -2,7 +2,13 @@
 export function FormField({ label, htmlFor, extra, className = "mb-4", children }) {
   return (
     <div className={className}>
-      <label htmlFor={htmlFor} className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>{label}</span>{extra}</label>
+      <label
+        htmlFor={htmlFor}
+        className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"
+      >
+        <span>{label}</span>
+        {extra}
+      </label>
       {children}
     </div>
   );

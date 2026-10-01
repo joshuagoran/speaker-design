@@ -1,224 +1,720 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Optimizer mock</title>
-<style>
-  :root { --ground:#f5f5f4; --card:#fafaf9; --line:#d6d3d1; --line2:#e7e5e4; --ink:#1c1917; --mute:#78716c; --soft:#57534e;
-          --ok:#166534; --warn:#b45309; --bad:#b91c1c; --better:#166534; --worse:#9a3412; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--ground); color:var(--ink); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size:14px; }
-  h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; margin: 0; }
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 60px; }
-  .note { font-size: 12px; color: var(--mute); margin: 4px 0 20px; }
-  .frames { display: grid; grid-template-columns: minmax(0, 1fr) 390px; gap: 28px; align-items: start; }
-  @media (max-width: 1000px) { .frames { grid-template-columns: 1fr; } .phone { margin: 0 auto; } }
-  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); font-weight: 600; margin-bottom: 8px; }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Optimizer mock</title>
+    <style>
+      :root {
+        --ground: #f5f5f4;
+        --card: #fafaf9;
+        --line: #d6d3d1;
+        --line2: #e7e5e4;
+        --ink: #1c1917;
+        --mute: #78716c;
+        --soft: #57534e;
+        --ok: #166534;
+        --warn: #b45309;
+        --bad: #b91c1c;
+        --better: #166534;
+        --worse: #9a3412;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--ground);
+        color: var(--ink);
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        font-size: 14px;
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: Georgia, "Times New Roman", serif;
+        font-weight: 400;
+        margin: 0;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px 16px 60px;
+      }
+      .note {
+        font-size: 12px;
+        color: var(--mute);
+        margin: 4px 0 20px;
+      }
+      .frames {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 390px;
+        gap: 28px;
+        align-items: start;
+      }
+      @media (max-width: 1000px) {
+        .frames {
+          grid-template-columns: 1fr;
+        }
+        .phone {
+          margin: 0 auto;
+        }
+      }
+      .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--mute);
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
 
-  /* panel */
-  .panel { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
-  .row { display: grid; grid-template-columns: 150px 1fr; gap: 10px 16px; align-items: center; margin: 12px 0; }
-  .row > .k { color: var(--soft); }
-  .seg { display: flex; flex-wrap: wrap; gap: 4px; }
-  .seg button, .btn { font: inherit; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; min-height: 38px; }
-  .seg button.on, .btn.primary { background: var(--ink); color: #fafaf9; border-color: var(--ink); }
-  .num { display: flex; align-items: center; gap: 8px; }
-  .num input { font: inherit; width: 90px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
-  .hint { font-size: 12px; color: var(--mute); }
-  .target { margin-top: 6px; padding: 8px 10px; background: var(--card); border: 1px dashed var(--line); border-radius: 6px; font-size: 13px; }
-  details { margin-top: 10px; border-top: 1px solid var(--line2); padding-top: 10px; }
-  summary { cursor: pointer; color: var(--soft); }
-  .adv { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--soft); }
-  .run { display: flex; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
-  .status { font-size: 12px; color: var(--mute); }
+      /* panel */
+      .panel {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 18px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 10px 16px;
+        align-items: center;
+        margin: 12px 0;
+      }
+      .row > .k {
+        color: var(--soft);
+      }
+      .seg {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .seg button,
+      .btn {
+        font: inherit;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--ink);
+        cursor: pointer;
+        min-height: 38px;
+      }
+      .seg button.on,
+      .btn.primary {
+        background: var(--ink);
+        color: #fafaf9;
+        border-color: var(--ink);
+      }
+      .num {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .num input {
+        font: inherit;
+        width: 90px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--mute);
+      }
+      .target {
+        margin-top: 6px;
+        padding: 8px 10px;
+        background: var(--card);
+        border: 1px dashed var(--line);
+        border-radius: 6px;
+        font-size: 13px;
+      }
+      details {
+        margin-top: 10px;
+        border-top: 1px solid var(--line2);
+        padding-top: 10px;
+      }
+      summary {
+        cursor: pointer;
+        color: var(--soft);
+      }
+      .adv {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px 18px;
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--soft);
+      }
+      .run {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 16px;
+        flex-wrap: wrap;
+      }
+      .status {
+        font-size: 12px;
+        color: var(--mute);
+      }
 
-  /* cards */
-  .cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-top: 18px; }
-  @media (max-width: 1000px) { .cards { grid-template-columns: 1fr; } }
-  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-  .card.current { outline: 2px solid var(--ink); outline-offset: -2px; }
-  .tag { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--soft); }
-  .card h3 { font-size: 18px; }
-  .spec { font-size: 13px; color: var(--soft); line-height: 1.45; }
-  .deltas { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
-  .d { background: var(--card); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 8px; }
-  .d .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--mute); font-weight: 600; }
-  .d .v { font-size: 15px; font-variant-numeric: tabular-nums; }
-  .d .dv { font-size: 12px; font-weight: 600; }
-  .better { color: var(--better); } .worse { color: var(--worse); } .same { color: var(--mute); }
-  .why { font-size: 13px; line-height: 1.4; }
-  .why b { font-weight: 600; }
-  .chip { font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; background: var(--card); }
-  .chip b { margin-right: 6px; }
-  .chip.ok b { color: var(--ok); } .chip.warn b { color: var(--warn); }
-  .build { font-size: 12px; color: var(--soft); }
-  .meta { font-size: 11px; color: var(--mute); }
-  .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
-  .actions .btn { flex: 1; }
+      /* cards */
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+      @media (max-width: 1000px) {
+        .cards {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .card.current {
+        outline: 2px solid var(--ink);
+        outline-offset: -2px;
+      }
+      .tag {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+        color: var(--soft);
+      }
+      .card h3 {
+        font-size: 18px;
+      }
+      .spec {
+        font-size: 13px;
+        color: var(--soft);
+        line-height: 1.45;
+      }
+      .deltas {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .d {
+        background: var(--card);
+        border: 1px solid var(--line2);
+        border-radius: 8px;
+        padding: 6px 8px;
+      }
+      .d .k {
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--mute);
+        font-weight: 600;
+      }
+      .d .v {
+        font-size: 15px;
+        font-variant-numeric: tabular-nums;
+      }
+      .d .dv {
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .better {
+        color: var(--better);
+      }
+      .worse {
+        color: var(--worse);
+      }
+      .same {
+        color: var(--mute);
+      }
+      .why {
+        font-size: 13px;
+        line-height: 1.4;
+      }
+      .why b {
+        font-weight: 600;
+      }
+      .chip {
+        font-size: 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 5px 8px;
+        background: var(--card);
+      }
+      .chip b {
+        margin-right: 6px;
+      }
+      .chip.ok b {
+        color: var(--ok);
+      }
+      .chip.warn b {
+        color: var(--warn);
+      }
+      .build {
+        font-size: 12px;
+        color: var(--soft);
+      }
+      .meta {
+        font-size: 11px;
+        color: var(--mute);
+      }
+      .actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: auto;
+      }
+      .actions .btn {
+        flex: 1;
+      }
 
-  /* states */
-  .miss { margin-top: 18px; border: 1px solid #f3c38b; background: #fff7ed; border-radius: 10px; padding: 12px 14px; }
-  .miss h3 { font-size: 16px; margin-bottom: 4px; }
-  .miss .opts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-  .toast { margin-top: 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--ink); color: #fafaf9; border-radius: 10px; padding: 10px 14px; }
-  .toast .btn { background: transparent; color: #fafaf9; border-color: #57534e; }
+      /* states */
+      .miss {
+        margin-top: 18px;
+        border: 1px solid #f3c38b;
+        background: #fff7ed;
+        border-radius: 10px;
+        padding: 12px 14px;
+      }
+      .miss h3 {
+        font-size: 16px;
+        margin-bottom: 4px;
+      }
+      .miss .opts {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+      .toast {
+        margin-top: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        background: var(--ink);
+        color: #fafaf9;
+        border-radius: 10px;
+        padding: 10px 14px;
+      }
+      .toast .btn {
+        background: transparent;
+        color: #fafaf9;
+        border-color: #57534e;
+      }
 
-  /* phone */
-  .frames > div { min-width: 0; }
-  .phone { width: 100%; max-width: 390px; border: 10px solid #292524; border-radius: 36px; background: var(--ground); overflow: hidden; }
-  .phone .bar { height: 24px; }
-  .phone .sheet { background: #fff; border-top-left-radius: 16px; border-top-right-radius: 16px; min-height: 760px; padding: 12px 16px 16px; box-shadow: 0 -6px 20px rgba(0,0,0,.08); }
-  .phone .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 10px; }
-  .phone .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .phone .row { grid-template-columns: 1fr; gap: 4px; margin: 10px 0; }
-  .phone .cards { grid-template-columns: 1fr; margin-top: 12px; }
-  .phone .pager { display: flex; justify-content: center; gap: 6px; margin: 8px 0; }
-  .phone .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); } .phone .dot.on { background: var(--ink); }
-  .phone .pin { position: sticky; bottom: 0; background: #fff; padding-top: 8px; display: flex; gap: 6px; }
-  .phone .pin .btn { flex: 1; }
-  @media (max-width: 520px) { .row { grid-template-columns: 1fr; gap: 4px; } .phone { border-width: 0; border-radius: 0; } .adv { grid-template-columns: 1fr; } }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <h1 style="font-size:28px">Optimizer mock</h1>
-  <p class="note">UI mock only; numbers are illustrative, not model output. Left: desktop panel (opens above the planner controls). Right: phone (full-screen sheet from an "Optimize" button).</p>
+      /* phone */
+      .frames > div {
+        min-width: 0;
+      }
+      .phone {
+        width: 100%;
+        max-width: 390px;
+        border: 10px solid #292524;
+        border-radius: 36px;
+        background: var(--ground);
+        overflow: hidden;
+      }
+      .phone .bar {
+        height: 24px;
+      }
+      .phone .sheet {
+        background: #fff;
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
+        min-height: 760px;
+        padding: 12px 16px 16px;
+        box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.08);
+      }
+      .phone .grab {
+        width: 40px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--line);
+        margin: 0 auto 10px;
+      }
+      .phone .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .phone .row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+        margin: 10px 0;
+      }
+      .phone .cards {
+        grid-template-columns: 1fr;
+        margin-top: 12px;
+      }
+      .phone .pager {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        margin: 8px 0;
+      }
+      .phone .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--line);
+      }
+      .phone .dot.on {
+        background: var(--ink);
+      }
+      .phone .pin {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        padding-top: 8px;
+        display: flex;
+        gap: 6px;
+      }
+      .phone .pin .btn {
+        flex: 1;
+      }
+      @media (max-width: 520px) {
+        .row {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
+        .phone {
+          border-width: 0;
+          border-radius: 0;
+        }
+        .adv {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1 style="font-size: 28px">Optimizer mock</h1>
+      <p class="note">
+        UI mock only; numbers are illustrative, not model output. Left: desktop panel (opens above
+        the planner controls). Right: phone (full-screen sheet from an "Optimize" button).
+      </p>
 
-  <div class="frames">
-    <!-- DESKTOP -->
-    <div>
-      <div class="label">Desktop</div>
-      <div class="panel">
-        <h2 style="font-size:22px">Find a better design</h2>
-        <p class="hint" style="margin:4px 0 0">Starts from your current design: FaitalPRO 18FH500 in 20 × 24 × 16″ · 12PR300 · N314T on A460G2 · 500 / 250 / 100 W.</p>
+      <div class="frames">
+        <!-- DESKTOP -->
+        <div>
+          <div class="label">Desktop</div>
+          <div class="panel">
+            <h2 style="font-size: 22px">Find a better design</h2>
+            <p class="hint" style="margin: 4px 0 0">
+              Starts from your current design: FaitalPRO 18FH500 in 20 × 24 × 16″ · 12PR300 · N314T
+              on A460G2 · 500 / 250 / 100 W.
+            </p>
 
-        <div class="row"><div class="k">Room</div>
-          <div class="seg"><button>500 sq ft</button><button>750 sq ft</button><button class="on">1000 sq ft</button><button>Outdoor</button></div></div>
-        <div class="row"><div class="k">Max per box</div>
-          <div class="num"><input value="125"> lb <span class="hint">heaviest single lift (loaded)</span></div></div>
-        <div class="row"><div class="k">Driver budget</div>
-          <div class="num"><input value="900"> $ <div class="seg"><button class="on">per stack</button><button>for the pair</button></div></div></div>
-        <div class="row" style="align-items:start"><div class="k" style="padding-top:8px">Goal</div>
-          <div>
-            <div class="seg"><button class="on">Same output, cheaper</button><button>Same output, lighter</button><button>Go lower</button><button>Louder</button></div>
-            <div class="target">Target: <b>clean 118 dB at 45 Hz per stack</b> (music limit, what your current design does) · 1000 sq ft needs about 112 dB at the listener</div>
-          </div></div>
-        <div class="row"><div class="k">Amps</div><div class="hint">500 / 250 / 100 W per channel, from your settings</div></div>
-
-        <details>
-          <summary>Advanced</summary>
-          <div class="adv">
-            <div>Max sub box: 24 × 30 × 22″</div><div>Max mid box: 16 × 16 × 16″</div>
-            <div>Vent styles: all</div><div>Wall ply: 3/4″ or 1/2″ braced</div>
-            <div>Layout: keep (two stacks)</div><div>Keep drivers: none</div>
-            <div>Exclude drivers: —</div><div>Drivers I own: —</div>
-          </div>
-        </details>
-
-        <div class="run"><button class="btn primary">Find 3 designs</button><span class="status">Searched 18,400 designs in 0.8 s · all three pass every build check</span></div>
-      </div>
-
-      <div class="cards">
-        <!-- card 1 -->
-        <div class="card">
-          <div class="tag">Same output, cheaper</div>
-          <h3>B&amp;C 18PS100 · 22 × 26 × 19″</h3>
-          <div class="spec">Letterbox 3.25″ × 20.5″, 13.5″ long · Fb 34 Hz · BW24 33 Hz<br>Mid B&amp;C 12CL64 in 15 × 15 × 12″ · XO 120 / 900 Hz · N314T on A460G2</div>
-          <div class="deltas">
-            <div class="d"><div class="k">Drivers, per stack</div><div class="v">$705</div><div class="dv better">−$234</div></div>
-            <div class="d"><div class="k">Heaviest box</div><div class="v">118 lb</div><div class="dv worse">+9 lb</div></div>
-            <div class="d"><div class="k">Max @ 45 Hz</div><div class="v">117.6 dB</div><div class="dv same">−0.4 dB</div></div>
-            <div class="d"><div class="k">F3</div><div class="v">37 Hz</div><div class="dv same">±0</div></div>
-          </div>
-          <div class="why"><b>Why:</b> cheapest pair of drivers that still reaches the target. <b>Limited by:</b> amplifier power.</div>
-          <div class="chip ok"><b>Inside 125 lb</b>118 lb loaded.</div>
-          <div class="build">✓ Duct 13.5″ fits · 2 sheets 3/4″ birch (4 × 8) · Qtc 0.62</div>
-          <div class="meta">Modelled, not measured · prices usspeaker.com, Sep 2026</div>
-          <div class="actions"><button class="btn">Preview</button><button class="btn primary">Load</button><button class="btn">Save as</button></div>
-        </div>
-        <!-- card 2 -->
-        <div class="card">
-          <div class="tag">Lighter</div>
-          <h3>FaitalPRO 18FH500 · 20 × 23 × 17″</h3>
-          <div class="spec">2 × 3.5″ tubes, 13″ long · Fb 34 Hz · BW24 30 Hz · 1/2″ braced walls<br>Mid 12PR300 in 14 × 14 × 10″ · XO 120 / 900 Hz · N314T on A460G2</div>
-          <div class="deltas">
-            <div class="d"><div class="k">Drivers, per stack</div><div class="v">$939</div><div class="dv same">±$0</div></div>
-            <div class="d"><div class="k">Heaviest box</div><div class="v">86 lb</div><div class="dv better">−23 lb</div></div>
-            <div class="d"><div class="k">Max @ 45 Hz</div><div class="v">117.2 dB</div><div class="dv worse">−0.8 dB</div></div>
-            <div class="d"><div class="k">F3</div><div class="v">38 Hz</div><div class="dv worse">+1 Hz</div></div>
-          </div>
-          <div class="why"><b>Why:</b> same drivers, 1/2″ braced walls and a shallower box. <b>Limited by:</b> amplifier power.</div>
-          <div class="chip ok"><b>Inside 125 lb</b>86 lb loaded.</div>
-          <div class="build">✓ Tubes fit · 2 sheets 1/2″ + 1 sheet 3/4″ birch · Qtc 0.66</div>
-          <div class="meta">Modelled, not measured · prices usspeaker.com, Sep 2026</div>
-          <div class="actions"><button class="btn">Preview</button><button class="btn primary">Load</button><button class="btn">Save as</button></div>
-        </div>
-        <!-- card 3 -->
-        <div class="card">
-          <div class="tag">Louder, still under budget</div>
-          <h3>B&amp;C 18NW100 · 24 × 28 × 20″</h3>
-          <div class="spec">Both-side ducts 1.75″, 15″ long · Fb 33 Hz · LR24 32 Hz<br>Mid B&amp;C 12NDL76 in 15 × 15 × 13″ · XO 110 / 900 Hz · N314T on A460G2</div>
-          <div class="deltas">
-            <div class="d"><div class="k">Drivers, per stack</div><div class="v">$897</div><div class="dv better">−$42</div></div>
-            <div class="d"><div class="k">Heaviest box</div><div class="v">124 lb</div><div class="dv worse">+15 lb</div></div>
-            <div class="d"><div class="k">Max @ 45 Hz</div><div class="v">120.6 dB</div><div class="dv better">+2.6 dB</div></div>
-            <div class="d"><div class="k">F3</div><div class="v">36 Hz</div><div class="dv better">−1 Hz</div></div>
-          </div>
-          <div class="why"><b>Why:</b> most output inside 125 lb and $900. <b>Limited by:</b> cone travel at 38 Hz.</div>
-          <div class="chip warn"><b>Excursion-limited</b>Reaches Xmax at 460 W, below the program rating.</div>
-          <div class="build">✓ Ducts fit · 3 sheets 3/4″ birch · Qtc 0.58</div>
-          <div class="meta">Modelled, not measured · prices usspeaker.com, Sep 2026</div>
-          <div class="actions"><button class="btn">Preview</button><button class="btn primary">Load</button><button class="btn">Save as</button></div>
-        </div>
-      </div>
-
-      <div class="label" style="margin-top:28px">When nothing fits</div>
-      <div class="miss">
-        <h3>Nothing under 100 lb reaches 118 dB at 45 Hz</h3>
-        <div class="hint" style="color:#7c2d12">Closest: 18FH500 in a 1/2″ braced box, 116.9 dB at 97 lb. Any one of these would find designs:</div>
-        <div class="opts"><button class="btn">Allow 110 lb</button><button class="btn">Target 117 dB</button><button class="btn">Budget +$60</button></div>
-      </div>
-
-      <div class="label" style="margin-top:28px">After Load</div>
-      <div class="toast"><span>Loaded "Same output, cheaper". Your previous design was saved as "Before optimizer, Sep 29".</span><button class="btn">Undo</button></div>
-    </div>
-
-    <!-- PHONE -->
-    <div>
-      <div class="label">Phone (390 px)</div>
-      <div class="phone">
-        <div class="bar"></div>
-        <div class="sheet">
-          <div class="grab"></div>
-          <div class="top"><h2 style="font-size:20px">Find a better design</h2><button class="btn">✕</button></div>
-          <div class="row"><div class="k hint">Room</div><div class="seg"><button>500</button><button>750</button><button class="on">1000 sq ft</button><button>Out</button></div></div>
-          <div class="row"><div class="k hint">Max per box</div><div class="num"><input value="125"> lb</div></div>
-          <div class="row"><div class="k hint">Driver budget, per stack</div><div class="num"><input value="900"> $</div></div>
-          <div class="row"><div class="k hint">Goal</div><div class="seg"><button class="on">Cheaper</button><button>Lighter</button><button>Lower</button><button>Louder</button></div>
-            <div class="target">Target: clean 118 dB at 45 Hz per stack</div></div>
-          <details><summary>Advanced</summary></details>
-
-          <div class="cards">
-            <div class="card">
-              <div class="tag">Same output, cheaper · 1 of 3</div>
-              <h3>B&amp;C 18PS100 · 22 × 26 × 19″</h3>
-              <div class="deltas">
-                <div class="d"><div class="k">Per stack</div><div class="v">$705</div><div class="dv better">−$234</div></div>
-                <div class="d"><div class="k">Heaviest</div><div class="v">118 lb</div><div class="dv worse">+9 lb</div></div>
-                <div class="d"><div class="k">@ 45 Hz</div><div class="v">117.6</div><div class="dv same">−0.4 dB</div></div>
-                <div class="d"><div class="k">F3</div><div class="v">37 Hz</div><div class="dv same">±0</div></div>
+            <div class="row">
+              <div class="k">Room</div>
+              <div class="seg">
+                <button>500 sq ft</button><button>750 sq ft</button
+                ><button class="on">1000 sq ft</button><button>Outdoor</button>
               </div>
-              <div class="why"><b>Limited by:</b> amplifier power</div>
-              <div class="build">✓ Duct fits · 2 sheets · Qtc 0.62</div>
+            </div>
+            <div class="row">
+              <div class="k">Max per box</div>
+              <div class="num">
+                <input value="125" /> lb <span class="hint">heaviest single lift (loaded)</span>
+              </div>
+            </div>
+            <div class="row">
+              <div class="k">Driver budget</div>
+              <div class="num">
+                <input value="900" /> $
+                <div class="seg">
+                  <button class="on">per stack</button><button>for the pair</button>
+                </div>
+              </div>
+            </div>
+            <div class="row" style="align-items: start">
+              <div class="k" style="padding-top: 8px">Goal</div>
+              <div>
+                <div class="seg">
+                  <button class="on">Same output, cheaper</button
+                  ><button>Same output, lighter</button><button>Go lower</button
+                  ><button>Louder</button>
+                </div>
+                <div class="target">
+                  Target: <b>clean 118 dB at 45 Hz per stack</b> (music limit, what your current
+                  design does) · 1000 sq ft needs about 112 dB at the listener
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="k">Amps</div>
+              <div class="hint">500 / 250 / 100 W per channel, from your settings</div>
+            </div>
+
+            <details>
+              <summary>Advanced</summary>
+              <div class="adv">
+                <div>Max sub box: 24 × 30 × 22″</div>
+                <div>Max mid box: 16 × 16 × 16″</div>
+                <div>Vent styles: all</div>
+                <div>Wall ply: 3/4″ or 1/2″ braced</div>
+                <div>Layout: keep (two stacks)</div>
+                <div>Keep drivers: none</div>
+                <div>Exclude drivers: —</div>
+                <div>Drivers I own: —</div>
+              </div>
+            </details>
+
+            <div class="run">
+              <button class="btn primary">Find 3 designs</button
+              ><span class="status"
+                >Searched 18,400 designs in 0.8 s · all three pass every build check</span
+              >
             </div>
           </div>
-          <div class="pager"><span class="dot on"></span><span class="dot"></span><span class="dot"></span></div>
-          <div class="pin"><button class="btn">Preview</button><button class="btn primary">Load</button><button class="btn">Save</button></div>
+
+          <div class="cards">
+            <!-- card 1 -->
+            <div class="card">
+              <div class="tag">Same output, cheaper</div>
+              <h3>B&amp;C 18PS100 · 22 × 26 × 19″</h3>
+              <div class="spec">
+                Letterbox 3.25″ × 20.5″, 13.5″ long · Fb 34 Hz · BW24 33 Hz<br />Mid B&amp;C 12CL64
+                in 15 × 15 × 12″ · XO 120 / 900 Hz · N314T on A460G2
+              </div>
+              <div class="deltas">
+                <div class="d">
+                  <div class="k">Drivers, per stack</div>
+                  <div class="v">$705</div>
+                  <div class="dv better">−$234</div>
+                </div>
+                <div class="d">
+                  <div class="k">Heaviest box</div>
+                  <div class="v">118 lb</div>
+                  <div class="dv worse">+9 lb</div>
+                </div>
+                <div class="d">
+                  <div class="k">Max @ 45 Hz</div>
+                  <div class="v">117.6 dB</div>
+                  <div class="dv same">−0.4 dB</div>
+                </div>
+                <div class="d">
+                  <div class="k">F3</div>
+                  <div class="v">37 Hz</div>
+                  <div class="dv same">±0</div>
+                </div>
+              </div>
+              <div class="why">
+                <b>Why:</b> cheapest pair of drivers that still reaches the target.
+                <b>Limited by:</b> amplifier power.
+              </div>
+              <div class="chip ok"><b>Inside 125 lb</b>118 lb loaded.</div>
+              <div class="build">✓ Duct 13.5″ fits · 2 sheets 3/4″ birch (4 × 8) · Qtc 0.62</div>
+              <div class="meta">Modelled, not measured · prices usspeaker.com, Sep 2026</div>
+              <div class="actions">
+                <button class="btn">Preview</button><button class="btn primary">Load</button
+                ><button class="btn">Save as</button>
+              </div>
+            </div>
+            <!-- card 2 -->
+            <div class="card">
+              <div class="tag">Lighter</div>
+              <h3>FaitalPRO 18FH500 · 20 × 23 × 17″</h3>
+              <div class="spec">
+                2 × 3.5″ tubes, 13″ long · Fb 34 Hz · BW24 30 Hz · 1/2″ braced walls<br />Mid
+                12PR300 in 14 × 14 × 10″ · XO 120 / 900 Hz · N314T on A460G2
+              </div>
+              <div class="deltas">
+                <div class="d">
+                  <div class="k">Drivers, per stack</div>
+                  <div class="v">$939</div>
+                  <div class="dv same">±$0</div>
+                </div>
+                <div class="d">
+                  <div class="k">Heaviest box</div>
+                  <div class="v">86 lb</div>
+                  <div class="dv better">−23 lb</div>
+                </div>
+                <div class="d">
+                  <div class="k">Max @ 45 Hz</div>
+                  <div class="v">117.2 dB</div>
+                  <div class="dv worse">−0.8 dB</div>
+                </div>
+                <div class="d">
+                  <div class="k">F3</div>
+                  <div class="v">38 Hz</div>
+                  <div class="dv worse">+1 Hz</div>
+                </div>
+              </div>
+              <div class="why">
+                <b>Why:</b> same drivers, 1/2″ braced walls and a shallower box.
+                <b>Limited by:</b> amplifier power.
+              </div>
+              <div class="chip ok"><b>Inside 125 lb</b>86 lb loaded.</div>
+              <div class="build">✓ Tubes fit · 2 sheets 1/2″ + 1 sheet 3/4″ birch · Qtc 0.66</div>
+              <div class="meta">Modelled, not measured · prices usspeaker.com, Sep 2026</div>
+              <div class="actions">
+                <button class="btn">Preview</button><button class="btn primary">Load</button
+                ><button class="btn">Save as</button>
+              </div>
+            </div>
+            <!-- card 3 -->
+            <div class="card">
+              <div class="tag">Louder, still under budget</div>
+              <h3>B&amp;C 18NW100 · 24 × 28 × 20″</h3>
+              <div class="spec">
+                Both-side ducts 1.75″, 15″ long · Fb 33 Hz · LR24 32 Hz<br />Mid B&amp;C 12NDL76 in
+                15 × 15 × 13″ · XO 110 / 900 Hz · N314T on A460G2
+              </div>
+              <div class="deltas">
+                <div class="d">
+                  <div class="k">Drivers, per stack</div>
+                  <div class="v">$897</div>
+                  <div class="dv better">−$42</div>
+                </div>
+                <div class="d">
+                  <div class="k">Heaviest box</div>
+                  <div class="v">124 lb</div>
+                  <div class="dv worse">+15 lb</div>
+                </div>
+                <div class="d">
+                  <div class="k">Max @ 45 Hz</div>
+                  <div class="v">120.6 dB</div>
+                  <div class="dv better">+2.6 dB</div>
+                </div>
+                <div class="d">
+                  <div class="k">F3</div>
+                  <div class="v">36 Hz</div>
+                  <div class="dv better">−1 Hz</div>
+                </div>
+              </div>
+              <div class="why">
+                <b>Why:</b> most output inside 125 lb and $900. <b>Limited by:</b> cone travel at 38
+                Hz.
+              </div>
+              <div class="chip warn">
+                <b>Excursion-limited</b>Reaches Xmax at 460 W, below the program rating.
+              </div>
+              <div class="build">✓ Ducts fit · 3 sheets 3/4″ birch · Qtc 0.58</div>
+              <div class="meta">Modelled, not measured · prices usspeaker.com, Sep 2026</div>
+              <div class="actions">
+                <button class="btn">Preview</button><button class="btn primary">Load</button
+                ><button class="btn">Save as</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="label" style="margin-top: 28px">When nothing fits</div>
+          <div class="miss">
+            <h3>Nothing under 100 lb reaches 118 dB at 45 Hz</h3>
+            <div class="hint" style="color: #7c2d12">
+              Closest: 18FH500 in a 1/2″ braced box, 116.9 dB at 97 lb. Any one of these would find
+              designs:
+            </div>
+            <div class="opts">
+              <button class="btn">Allow 110 lb</button><button class="btn">Target 117 dB</button
+              ><button class="btn">Budget +$60</button>
+            </div>
+          </div>
+
+          <div class="label" style="margin-top: 28px">After Load</div>
+          <div class="toast">
+            <span
+              >Loaded "Same output, cheaper". Your previous design was saved as "Before optimizer,
+              Sep 29".</span
+            ><button class="btn">Undo</button>
+          </div>
+        </div>
+
+        <!-- PHONE -->
+        <div>
+          <div class="label">Phone (390 px)</div>
+          <div class="phone">
+            <div class="bar"></div>
+            <div class="sheet">
+              <div class="grab"></div>
+              <div class="top">
+                <h2 style="font-size: 20px">Find a better design</h2>
+                <button class="btn">✕</button>
+              </div>
+              <div class="row">
+                <div class="k hint">Room</div>
+                <div class="seg">
+                  <button>500</button><button>750</button><button class="on">1000 sq ft</button
+                  ><button>Out</button>
+                </div>
+              </div>
+              <div class="row">
+                <div class="k hint">Max per box</div>
+                <div class="num"><input value="125" /> lb</div>
+              </div>
+              <div class="row">
+                <div class="k hint">Driver budget, per stack</div>
+                <div class="num"><input value="900" /> $</div>
+              </div>
+              <div class="row">
+                <div class="k hint">Goal</div>
+                <div class="seg">
+                  <button class="on">Cheaper</button><button>Lighter</button><button>Lower</button
+                  ><button>Louder</button>
+                </div>
+                <div class="target">Target: clean 118 dB at 45 Hz per stack</div>
+              </div>
+              <details><summary>Advanced</summary></details>
+
+              <div class="cards">
+                <div class="card">
+                  <div class="tag">Same output, cheaper · 1 of 3</div>
+                  <h3>B&amp;C 18PS100 · 22 × 26 × 19″</h3>
+                  <div class="deltas">
+                    <div class="d">
+                      <div class="k">Per stack</div>
+                      <div class="v">$705</div>
+                      <div class="dv better">−$234</div>
+                    </div>
+                    <div class="d">
+                      <div class="k">Heaviest</div>
+                      <div class="v">118 lb</div>
+                      <div class="dv worse">+9 lb</div>
+                    </div>
+                    <div class="d">
+                      <div class="k">@ 45 Hz</div>
+                      <div class="v">117.6</div>
+                      <div class="dv same">−0.4 dB</div>
+                    </div>
+                    <div class="d">
+                      <div class="k">F3</div>
+                      <div class="v">37 Hz</div>
+                      <div class="dv same">±0</div>
+                    </div>
+                  </div>
+                  <div class="why"><b>Limited by:</b> amplifier power</div>
+                  <div class="build">✓ Duct fits · 2 sheets · Qtc 0.62</div>
+                </div>
+              </div>
+              <div class="pager">
+                <span class="dot on"></span><span class="dot"></span><span class="dot"></span>
+              </div>
+              <div class="pin">
+                <button class="btn">Preview</button><button class="btn primary">Load</button
+                ><button class="btn">Save</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
-</body>
+  </body>
 </html>

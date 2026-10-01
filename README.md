@@ -12,51 +12,59 @@ substitute for an impedance sweep on the prototype.
 ## Layout
 
 ```
-src/main.jsx                    entry: mounts <App/>
+src/main.jsx                    entry: mounts <App/>; imports the stylesheet
 src/App.jsx                     hash routing, header, and the planner state shared by the PA pages
 src/pages/pa-stack/             PA stack page: PaStackPage, sections/, hooks/ (state: sub, mid, horn, crossovers, ...)
 src/pages/{hifi,fills,cutlist,notes}/   the other pages
 src/components/                 ui/ charts/ drawings/ lock/ optimizer/ stats/ chips/ saved-configs/ stack-view/
+src/components/saved-configs/firebaseStore.js   saving on GitHub Pages (bundled only into that build)
 src/hooks/  src/constants/      shared hooks, chart scales, lock keys, units
+src/styles/palette.js           the colours (CSS variables and Tailwind names come from here)
+src/styles/app.css              page styles + Tailwind layers; font
 src/lib/data.js                 drivers, horns, cabinets
 src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion (pure JS, tested)
 src/lib/hifi/                   hifi model and its optimizer
-tests/                          node:test suites, golden snapshot, mobile layout check
-build/build.sh                  planner -> dist/stack-planner.html
-build/serve.sh                  build + vendor libs + serve on :8901
-build/stack-planner.head.html   its <head>: styles and the four CDN script tags
+index.html                      Vite entry
+tailwind.config.js              Tailwind, compiled at build time
+tests/                          Vitest suites, golden snapshot, mobile layout check
+build/build.sh                  vp build + build/inline.mjs -> one self-contained page
+build/serve.sh                  build + serve on :8901
 docs/design-notes.md            findings behind the current configuration
 docs/*.svg                      crossover null cone, horn coverage
 ```
 
 ## Prerequisites
 
-Node (for `npx esbuild`) and Python 3 (for the preview server). Nothing to
-install — esbuild is fetched by `npx` on first run.
+Node `^22.18.0 || ^24.11.0 || >=26` and Python 3 (for the preview server). The toolchain is
+[Vite+](https://viteplus.dev) (`vp`); it uses pnpm, which `vp install` fetches if needed.
+
+```sh
+pnpm install            # or `vp install` with the global vp CLI
+pnpm exec vp check      # format, lint, type check
+pnpm exec vp test       # tests (Vitest)
+```
 
 ## Build
 
 ```sh
 build/build.sh          # -> dist/stack-planner.html
+pnpm run build          # (or `vp run build`) -> dist/site/ for GitHub Pages
 ```
 
-It runs esbuild over the JSX, then concatenates `stack-planner.head.html` + the
-bundle + a closing `</script>` into one self-contained page. That page loads
-React, ReactDOM, three.js and Tailwind from cdnjs at runtime; nothing else is
-external.
+`vp build` bundles the app with React, three.js, the optimizer worker, the compiled
+Tailwind stylesheet and the Inconsolata font (all from npm), and `build/inline.mjs`
+puts the result into one HTML file. Nothing loads from a CDN: the page works offline.
+The Pages build (`--mode pages`) also bundles Firebase for saving; the artifact build
+doesn't include it.
 
 ## Local preview
 
 ```sh
-build/serve.sh          # http://127.0.0.1:8901/index.html
+build/serve.sh          # http://127.0.0.1:8901/stack-planner.html
 ```
 
-It builds, downloads the four libraries into `dist/preview/` if they aren't
-already there, rewrites the CDN URLs to local paths, and serves. The download
-step needs network access to cdnjs; if it fails it tells you which file to place
-by hand. Tailwind's play CDN generates CSS at runtime, so for preview drop any
-Tailwind 3 stylesheet at `dist/preview/tw.css` — without it the page works but
-renders unstyled.
+It builds both pages and serves `dist/`. The pages are self-contained, so opening
+`dist/stack-planner.html` straight from disk works too.
 
 Saving is unavailable in local preview (see below). The planner detects that and
 says so rather than breaking.
@@ -88,33 +96,37 @@ collection `configs`, one document per configuration:
 ```jsonc
 {
   "name": "NSW 266 L reference",
-  "savedAt": 1758738000000,          // epoch ms, the list sorts on this
-  "format": "full",                   // fixed: 18" sub + CD; mid size (12" or 15") follows the "mid" driver
-  "sub": "emnsw4018",                 // SUB_OPTIONS id
-  "mid": "em3012",                    // MID_OPTIONS id
-  "midBox": "b15",                    // MID_BOXES id
-  "cd": "n314t",                      // CD_OPTIONS id
-  "horn": "a460g2_14",                // HORN_OPTIONS id
-  "cabinet": "column",                // last "Start from" choice, label only
-  "portStyle": "slots",               // slots (bottom) | folded | vslots (both sides) | vslot1 (one side) | round2
-  "cDim":  { "w": 28, "h": 32, "d": 24 },        // external inches
+  "savedAt": 1758738000000, // epoch ms, the list sorts on this
+  "format": "full", // fixed: 18" sub + CD; mid size (12" or 15") follows the "mid" driver
+  "sub": "emnsw4018", // SUB_OPTIONS id
+  "mid": "em3012", // MID_OPTIONS id
+  "midBox": "b15", // MID_BOXES id
+  "cd": "n314t", // CD_OPTIONS id
+  "horn": "a460g2_14", // HORN_OPTIONS id
+  "cabinet": "column", // last "Start from" choice, label only
+  "portStyle": "slots", // slots (bottom) | folded | vslots (both sides) | vslot1 (one side) | round2
+  "cDim": { "w": 28, "h": 32, "d": 24 }, // external inches
   "cVent": { "slotH": 3, "nt": 2, "dia": 6, "throat": 3, "len": 14 },
-  "hpf": 33, "hpType": "BW24",       // sub highpass: BW24 | LR24 | BW48 | LR48
-  "ampW": 800,                        // amp power per sub channel into 8 Ω; caps max SPL
-  "portMax": 20,                      // peak port air speed limit, m/s
-  "mDim":  { "w": 15, "h": 15, "d": 15 },         // mid-bass box, external inches (sealed)
-  "wall": 0.75,                        // side/top/bottom/back ply, 0.75 or 0.5 (braced); baffles stay 3/4"
-  "inset": 0.75,                       // baffle set back from the frame front, 0–1.5"
-  "cabFinish": "birch",                // "birch", "walnut" or a paint hex
-  "spacerH": 20,                       // "tops on spacers" spacer height, in
-  "joint": "butt",                     // cutlist corner joints: butt | rabbet | miter
-  "xoLo": 120, "xoHi": 950,           // crossovers, sub->mid and mid->horn, LR24
-  "mAmpW": 400,                       // amp power per mid channel into 8 Ω
-  "tilt": 6,                          // dB less the mid band needs than the sub band (music balance)
-  "hfAmpW": 100,                      // amp power per HF channel, rated into 8 Ω
-  "hfTilt": 6,                        // dB less the HF band needs than the mid band
-  "layout": "stack", "cutaway": false, "baffleColor": "#e8b4a8",
-  "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz"
+  "hpf": 33,
+  "hpType": "BW24", // sub highpass: BW24 | LR24 | BW48 | LR48
+  "ampW": 800, // amp power per sub channel into 8 Ω; caps max SPL
+  "portMax": 20, // peak port air speed limit, m/s
+  "mDim": { "w": 15, "h": 15, "d": 15 }, // mid-bass box, external inches (sealed)
+  "wall": 0.75, // side/top/bottom/back ply, 0.75 or 0.5 (braced); baffles stay 3/4"
+  "inset": 0.75, // baffle set back from the frame front, 0–1.5"
+  "cabFinish": "birch", // "birch", "walnut" or a paint hex
+  "spacerH": 20, // "tops on spacers" spacer height, in
+  "joint": "butt", // cutlist corner joints: butt | rabbet | miter
+  "xoLo": 120,
+  "xoHi": 950, // crossovers, sub->mid and mid->horn, LR24
+  "mAmpW": 400, // amp power per mid channel into 8 Ω
+  "tilt": 6, // dB less the mid band needs than the sub band (music balance)
+  "hfAmpW": 100, // amp power per HF channel, rated into 8 Ω
+  "hfTilt": 6, // dB less the HF band needs than the mid band
+  "layout": "stack",
+  "cutaway": false,
+  "baffleColor": "#e8b4a8",
+  "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz",
 }
 ```
 
@@ -129,7 +141,7 @@ configurations and can be edited or deleted like any other.
 ## How the planner is put together
 
 - `src/lib/data.js` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
-- `src/lib/pa/optimize.js` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`tools/optimize.worker.js`, inlined by `build.sh`), with a main-thread fallback. See `docs/optimizer-plan.md`.
+- `src/lib/pa/optimize.js` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`src/lib/pa/optimize.worker.js`, inlined by the build), with a main-thread fallback. See `docs/optimizer-plan.md`.
 - `src/lib/pa/chips.js` — the warning chips for each section (sub, mid, horn, fills), pure functions tested at each threshold.
 - `src/lib/pa/calc.js` — every calculation, pure JS, imported by the page and the tests (`npm test`):
   - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r); letterbox and side ducts pass `ecIn` from `slotEndCorr` / `sideDuctEndCorr` (rectangular mouth; floor mirrored at both ends of a letterbox, the side wall at the inner end of a side duct). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.

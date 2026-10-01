@@ -6,18 +6,18 @@ Scope: `tools/stack-planner.app.jsx` (2665 lines) and `tools/stack-planner.head.
 
 Shared today: `Pick` 687, `Slider` 810, `FoldHead` 800, `LockBtn`/`DimLock` 1554/1561, `RankBadge` 1598. Everything else is ad hoc.
 
-| Pattern | Sites | Problem |
-|---|---|---|
-| Segmented / toggle button | ~20 (1018, 1043, 1131, 1150, 1164, 1451, 1506, 1722, 2135, 2201, 2413, 2486, 2496, ...) | Active style hand-written each time; helpers `seg`/`optSeg`/`btn` differ in padding and inactive bg; port selector (1164) is a joined group, others use `gap-1`; `aria-pressed` on only a few |
-| Card / panel | 1157, 1177, 1184, 1454, 1466, 2505-2586; large: 1054, 1732, 2154 | `rounded ... px-3 py-3` vs `rounded-lg p-4`; margins vary |
-| Field label | 21x `text-sm text-stone-500 mb-1` | Variants at 844, 1124, 1151, 1185; Slider uses stone-600, Pick stone-500 |
-| Number input + unit | 1059, 1741, 1745 | Same classes; `+e.target.value \|\| 0` forces blank to 0; no label; budget persisted in Hi-fi only |
-| Section header | 15 `<h2>` with inline fontFamily | Redundant inline style; h3 sizes vary |
-| Run/Search CTA + optimizer panel | 1054-1070 vs 1732-1760 | Near-copies |
-| Lock-all / clear-locks bar | 1041-1051 vs 2199-2215 | Near-copies; two lock-state shapes |
-| Colour swatch picker | 2440-2455 vs 2459-2477 | Copy-pasted; no aria-label |
-| Button sizes | 1043, 2161, 2183, 2231, 2245 | No scale; secondary bg `stone-50` vs `white` |
-| Slider units | ~50 | Units passed as `"&#8243;"`, `" Hz"`, `"°"`; step 0.5 shows 2 decimals |
+| Pattern                          | Sites                                                                                   | Problem                                                                                                                                                                                       |
+| -------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Segmented / toggle button        | ~20 (1018, 1043, 1131, 1150, 1164, 1451, 1506, 1722, 2135, 2201, 2413, 2486, 2496, ...) | Active style hand-written each time; helpers `seg`/`optSeg`/`btn` differ in padding and inactive bg; port selector (1164) is a joined group, others use `gap-1`; `aria-pressed` on only a few |
+| Card / panel                     | 1157, 1177, 1184, 1454, 1466, 2505-2586; large: 1054, 1732, 2154                        | `rounded ... px-3 py-3` vs `rounded-lg p-4`; margins vary                                                                                                                                     |
+| Field label                      | 21x `text-sm text-stone-500 mb-1`                                                       | Variants at 844, 1124, 1151, 1185; Slider uses stone-600, Pick stone-500                                                                                                                      |
+| Number input + unit              | 1059, 1741, 1745                                                                        | Same classes; `+e.target.value \|\| 0` forces blank to 0; no label; budget persisted in Hi-fi only                                                                                            |
+| Section header                   | 15 `<h2>` with inline fontFamily                                                        | Redundant inline style; h3 sizes vary                                                                                                                                                         |
+| Run/Search CTA + optimizer panel | 1054-1070 vs 1732-1760                                                                  | Near-copies                                                                                                                                                                                   |
+| Lock-all / clear-locks bar       | 1041-1051 vs 2199-2215                                                                  | Near-copies; two lock-state shapes                                                                                                                                                            |
+| Colour swatch picker             | 2440-2455 vs 2459-2477                                                                  | Copy-pasted; no aria-label                                                                                                                                                                    |
+| Button sizes                     | 1043, 2161, 2183, 2231, 2245                                                            | No scale; secondary bg `stone-50` vs `white`                                                                                                                                                  |
+| Slider units                     | ~50                                                                                     | Units passed as `"&#8243;"`, `" Hz"`, `"°"`; step 0.5 shows 2 decimals                                                                                                                        |
 
 Proposed components: `Seg`, `ToggleBtn`, `Button`, `Card`, `Field`, `NumberField`, `SectionHead`, `OptimizerPanel`/`OptimizerBar`, `SwatchPicker`, `fmt` helpers.
 

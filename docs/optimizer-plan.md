@@ -5,14 +5,14 @@ configuration, plus two competitive alternatives, in about a second, without lea
 
 ## Inputs (a new "Optimize" panel)
 
-| Limit | Applies to |
-|---|---|
-| Max price, drivers per stack (or per pair) | sub + mid + compression driver + horn |
-| Max loaded weight per box | sub box, mid box (default 125 lb) |
-| Amp power per channel | sub, mid, HF (fixed inputs, not searched) |
-| Max W × H × D | sub box, mid box (and optional exact values to lock a dimension) |
-| Goal | **Deep** (lowest F3 at a target SPL), **Loud** (most music-limit SPL at 40 Hz), **Balanced** (default: weighted), **Light** (least weight that meets a target SPL) |
-| Optional locks | keep the current sub/mid/horn, layout, wall ply, vent style |
+| Limit                                      | Applies to                                                                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Max price, drivers per stack (or per pair) | sub + mid + compression driver + horn                                                                                                                              |
+| Max loaded weight per box                  | sub box, mid box (default 125 lb)                                                                                                                                  |
+| Amp power per channel                      | sub, mid, HF (fixed inputs, not searched)                                                                                                                          |
+| Max W × H × D                              | sub box, mid box (and optional exact values to lock a dimension)                                                                                                   |
+| Goal                                       | **Deep** (lowest F3 at a target SPL), **Loud** (most music-limit SPL at 40 Hz), **Balanced** (default: weighted), **Light** (least weight that meets a target SPL) |
+| Optional locks                             | keep the current sub/mid/horn, layout, wall ply, vent style                                                                                                        |
 
 ## Output
 
@@ -89,6 +89,7 @@ sealed, cheap) ≈ 0.05 s; horns (8 × 9 pairs) trivial; refinement 3 bands × 4
 Two reviews: technical (search soundness, speed) and usability (inputs, results, flow).
 
 ### Usability
+
 - **Start from what I have.** Pre-fill every input from the current config, the README constraints
   (125 lb, driver budgets, US vendors) and the current amp settings (shown read-only). Default action:
   "Find better than my current design".
@@ -113,6 +114,7 @@ Two reviews: technical (search soundness, speed) and usability (inputs, results,
   once (no reshuffling list).
 
 ### Technical
+
 - **Bands are coupled, so no per-band top-K by a single score.** The mid must keep up with the sub's music
   limit at xoLo, the horn with the mid at xoHi; price and weight are shared (a knapsack); the tower layout
   ties mid to sub dimensions. Search xoLo and xoHi explicitly (6–8 values each), keep a Pareto front per
@@ -140,6 +142,7 @@ Two reviews: technical (search soundness, speed) and usability (inputs, results,
 - **Test:** a loaded result reproduces its card's numbers exactly.
 
 ### Scope: first version
+
 Sub + mid jointly with xoLo (the horn follows from xoHi and is cheap to enumerate), pre-filled inputs,
 three cards with deltas, Preview/Load/Undo/Save as, near-miss message, worker. Later: Pareto chain over
 both crossovers, locks, owned/excluded drivers, outdoor target, "explain" view of rejected options.
@@ -156,6 +159,7 @@ peak at 45 Hz could otherwise win); the layout, finish and amps are never change
 whole inches; about 1 s in Node, 1–4 s in the page.
 
 ### Stacked goals (branch `stack-goals`)
+
 Goals start unselected on every load (the search waits for one); tap to select, tap again to deselect.
 Tap more than one goal; the tap order shows on the buttons (1 · Cheaper, 2 · Lighter). The first goal ranks the
 designs; the main card ("Cheaper + lighter") must also beat your design on every other goal. The other cards

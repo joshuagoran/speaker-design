@@ -13,6 +13,10 @@ export function usePaPlanner() {
   const phoneLayout = usePhoneLayout();
   const savedConfigs = useSavedConfigs();
   const design = usePaDesign({ dispersionPlane: viewOptions.dispersionPlane });
-  const optimizer = usePaOptimizer({ snapshot: design.snapshot, restore: design.restore, db: savedConfigs.db });
+  const optimizer = usePaOptimizer({
+    snapshot: design.snapshot,
+    restore: design.restore,
+    db: savedConfigs.db,
+  });
   return { ...viewOptions, ...phoneLayout, ...savedConfigs, ...design, ...optimizer };
 }

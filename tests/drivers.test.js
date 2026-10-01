@@ -1,4 +1,5 @@
-import test from "node:test";
+import { test } from "vite-plus/test";
+import assert from "node:assert";
 import { SUB_OPTIONS, MID_OPTIONS, FILL_OPTIONS, CD_OPTIONS } from "../src/lib/data.js";
 import { tsModel } from "./helpers.js";
 
@@ -19,25 +20,32 @@ const all = [...SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS];
 const need = ["Fs", "Qms", "Sd", "Mms", "Bl", "Re", "Xmax", "aes"];
 
 test("every driver with T/S has the fields the models use", (t) => {
-  for (const o of all) if (o.ts && o.ts.Bl) for (const k of need) t.assert.ok(Number.isFinite(o.ts[k]) && o.ts[k] > 0, `${o.id}.${k}`);
+  for (const o of all)
+    if (o.ts && o.ts.Bl)
+      for (const k of need) assert.ok(Number.isFinite(o.ts[k]) && o.ts[k] > 0, `${o.id}.${k}`);
 });
 test("T/S internal consistency (Qts, Qes, Vas) or a listed exception", (t) => {
   const bad = [];
   for (const o of all) {
-    const ts = o.ts; if (!ts || !ts.Bl || !ts.Mms) continue;
+    const ts = o.ts;
+    if (!ts || !ts.Bl || !ts.Mms) continue;
     const m = tsModel(ts);
-    if (ts.Qes && ts.Qms && ts.Qts) { const q = (ts.Qes * ts.Qms) / (ts.Qes + ts.Qms); if (Math.abs(q / ts.Qts - 1) > 0.05) bad.push(`${o.id}:Qts`); }
+    if (ts.Qes && ts.Qms && ts.Qts) {
+      const q = (ts.Qes * ts.Qms) / (ts.Qes + ts.Qms);
+      if (Math.abs(q / ts.Qts - 1) > 0.05) bad.push(`${o.id}:Qts`);
+    }
     if (ts.Qes && Math.abs(m.Qes / ts.Qes - 1) > 0.1) bad.push(`${o.id}:Qes`);
     if (ts.Vas && Math.abs(m.VasL / ts.Vas - 1) > 0.1) bad.push(`${o.id}:Vas`);
   }
   const unexplained = bad.filter((k) => !KNOWN[k]);
-  t.assert.deepEqual(unexplained, [], "new mismatches: add a note to KNOWN or fix the data");
+  assert.deepEqual(unexplained, [], "new mismatches: add a note to KNOWN or fix the data");
 });
 test("prices and weights are positive where given; ids are unique", (t) => {
   const ids = new Set();
   for (const o of [...all, ...CD_OPTIONS]) {
-    t.assert.ok(!ids.has(o.id), `duplicate ${o.id}`); ids.add(o.id);
-    if (o.price != null) t.assert.ok(o.price > 0, `${o.id} price`);
-    if (o.lb != null) t.assert.ok(o.lb > 0, `${o.id} lb`);
+    assert.ok(!ids.has(o.id), `duplicate ${o.id}`);
+    ids.add(o.id);
+    if (o.price != null) assert.ok(o.price > 0, `${o.id} price`);
+    if (o.lb != null) assert.ok(o.lb > 0, `${o.id} lb`);
   }
 });

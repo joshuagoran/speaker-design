@@ -5,12 +5,12 @@ the planner's model (`tools/calc.js`; earlier notes used `model/vented-box.js`, 
 
 ## Current configuration
 
-| | |
-|---|---|
-| Sub | Eminence NSW4018-8 in 266 L net, 80 in² × 14" letterbox, Fb 32.6 Hz |
-| Mid | Eminence KappaLite 3012HO, 120 Hz – ~950 Hz |
-| HF | Eminence N314T-8 on an ATH A460G2 (1.4" throat adapter must be generated) |
-| Amp | Powersoft Ottocanali 4K4, non-DSP |
+|     |                                                                           |
+| --- | ------------------------------------------------------------------------- |
+| Sub | Eminence NSW4018-8 in 266 L net, 80 in² × 14" letterbox, Fb 32.6 Hz       |
+| Mid | Eminence KappaLite 3012HO, 120 Hz – ~950 Hz                               |
+| HF  | Eminence N314T-8 on an ATH A460G2 (1.4" throat adapter must be generated) |
+| Amp | Powersoft Ottocanali 4K4, non-DSP                                         |
 
 Sub cabinet: 28 × 32 × 24", 123 lb loaded, thermally limited at the full 1600 W,
 15.4 m/s port air speed, 78% of Xmax, F3 34 Hz, 125.5 dB at 35 Hz.
@@ -19,11 +19,11 @@ Sub cabinet: 28 × 32 × 24", 123 lb loaded, thermally limited at the full 1600 
 
 Displacement volume is what decides this, not cone area or power rating.
 
-| | Vd | AES | Xmax | Notes |
-|---|---|---|---|---|
-| NSW4018-8 | 1850 cm³ | 1600 W | 15.2 mm | Thermally limited in any sane box. The pick. |
-| Nero-18SW1100D | 1533 cm³ | 1100 W | 12.2 mm | 45.6 lb — pushes a 250 L build over the weight limit. |
-| Definimax 4018LF | 1022 cm³ | 1200 W | 8.6 mm | Cone-limited at ~856 W. Can't use its rating. |
+|                  | Vd       | AES    | Xmax    | Notes                                                 |
+| ---------------- | -------- | ------ | ------- | ----------------------------------------------------- |
+| NSW4018-8        | 1850 cm³ | 1600 W | 15.2 mm | Thermally limited in any sane box. The pick.          |
+| Nero-18SW1100D   | 1533 cm³ | 1100 W | 12.2 mm | 45.6 lb — pushes a 250 L build over the weight limit. |
+| Definimax 4018LF | 1022 cm³ | 1200 W | 8.6 mm  | Cone-limited at ~856 W. Can't use its rating.         |
 
 A **pair of 15s loses to one NSW** in every case tested (KappaLite 3015LF,
 CannaBass, Kappa Pro-15LF V2, Omega Pro-15-2KW, LAB 15). Two 15s give more cone
@@ -52,11 +52,11 @@ costs 1.6 dB at 30.
 
 Acoustic centres: sub 16", mid 39", horn 55" above the floor.
 
-| transition | spacing | d/λ | verdict |
-|---|---|---|---|
-| sub → mid @ 120 Hz | 23" | 0.20 | inside λ/4, sums as one source |
-| sub → mid @ 150 Hz | 23" | 0.26 | marginal |
-| mid → horn @ 950 Hz | 16" | 1.08 | null at 28° off axis |
+| transition          | spacing | d/λ  | verdict                        |
+| ------------------- | ------- | ---- | ------------------------------ |
+| sub → mid @ 120 Hz  | 23"     | 0.20 | inside λ/4, sums as one source |
+| sub → mid @ 150 Hz  | 23"     | 0.26 | marginal                       |
+| mid → horn @ 950 Hz | 16"     | 1.08 | null at 28° off axis           |
 
 The mid-to-horn lobe cannot be fixed by moving parts: λ/4 at 950 Hz is 3.6", and
 an 18.1" horn over a 12.6" frame bottoms out at ~15.4". **Stack vertically** so
@@ -65,7 +65,7 @@ the null cone opens up and down, where nobody stands — never side by side. See
 
 Fixes, in order of cost: steeper crossover (LR8) narrows the affected band; a
 coaxial removes the spacing but forces the crossover up to ~1.2 kHz; an MEH or a
-B&C triaxial removes it and crosses *lower* (600–800 Hz).
+B&C triaxial removes it and crosses _lower_ (600–800 Hz).
 
 ## Hybrid horns
 
@@ -77,7 +77,7 @@ US5898138 (Delgado / Klipsch) and US8627920 (Moore).
 
 Modelled against our reflex box, a 4560-scaled bin **loses 9.8 dB at 35 Hz** and
 gains 4–5 dB from 100–200 Hz. Wrong side of our 120 Hz crossover. A horn-loaded
-*mid* gains ~5 dB at 150 Hz tapering to nothing by 500 Hz, which EQs back out.
+_mid_ gains ~5 dB at 150 Hz tapering to nothing by 500 Hz, which EQs back out.
 Horn loading only pays here as part of a 4-way with much more mouth area.
 
 ## Sub height
@@ -86,11 +86,11 @@ Boundary gain survives elevation: half-space loading holds while the sub is well
 inside λ/4 of the floor, which is 84" at 40 Hz. What bites is the floor-bounce
 notch, and it is a top-of-band problem:
 
-| sub acoustic centre | notch at 3 m | at 10 m |
-|---|---|---|
-| 0.4 m (16", current) | 437 Hz | 1280 Hz |
-| 1.2 m (47") | 152 Hz | 429 Hz |
-| 1.6 m (63") | 118 Hz | 324 Hz |
+| sub acoustic centre  | notch at 3 m | at 10 m |
+| -------------------- | ------------ | ------- |
+| 0.4 m (16", current) | 437 Hz       | 1280 Hz |
+| 1.2 m (47")          | 152 Hz       | 429 Hz  |
+| 1.6 m (63")          | 118 Hz       | 324 Hz  |
 
 Keep the sub on the floor for a clean crossover region, not for deep bass.
 Halfway up is the worst place; if it must be raised, go higher rather than partway.

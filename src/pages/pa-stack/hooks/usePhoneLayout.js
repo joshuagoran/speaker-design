@@ -1,4 +1,4 @@
-const { useState } = React;
+import { useState } from "react";
 
 /** Phone layout: the bottom settings sheet with its tabs, and which result sections are folded open (remembered per viewer). */
 export function usePhoneLayout() {
@@ -7,10 +7,26 @@ export function usePhoneLayout() {
   const [activeTab, setActiveTab] = useState("sub");
   const tabClass = (t) => (activeTab === t ? "" : "max-md:hidden");
   const [expandedSections, setExpandedSections] = useState(() => {
-    try { return { sub: true, mid: false, horn: false, totals: false, ...JSON.parse(localStorage.getItem("planner.folds") || "{}") }; }
-    catch { return { sub: true, mid: false, horn: false, totals: false }; }
+    try {
+      return {
+        sub: true,
+        mid: false,
+        horn: false,
+        totals: false,
+        ...JSON.parse(localStorage.getItem("planner.folds") || "{}"),
+      };
+    } catch {
+      return { sub: true, mid: false, horn: false, totals: false };
+    }
   });
-  const toggleSection = (id) => setExpandedSections((f) => { const n = { ...f, [id]: !f[id] }; try { localStorage.setItem("planner.folds", JSON.stringify(n)); } catch {} return n; });
+  const toggleSection = (id) =>
+    setExpandedSections((f) => {
+      const n = { ...f, [id]: !f[id] };
+      try {
+        localStorage.setItem("planner.folds", JSON.stringify(n));
+      } catch {}
+      return n;
+    });
   const sectionClass = (id) => (expandedSections[id] ? "" : "max-md:hidden");
   return {
     isSettingsSheetOpen,

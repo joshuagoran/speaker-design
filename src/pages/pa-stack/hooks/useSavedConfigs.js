@@ -14,10 +14,13 @@ export function useSavedConfigs() {
       let n = 0;
       for (const { id, ...c } of rows) {
         if (have.has(c.name)) continue;
-        await db.collection("configs").doc(id).set(c); n++;
+        await db.collection("configs").doc(id).set(c);
+        n++;
       }
       setCfgMsg(n ? `Imported ${n}` : "Nothing new to import");
-    } catch { setCfgMsg("Couldn't import"); }
+    } catch {
+      setCfgMsg("Couldn't import");
+    }
     setTimeout(() => setCfgMsg(""), 2500);
   };
   return {

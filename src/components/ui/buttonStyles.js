@@ -1,4 +1,3 @@
-
 /** Shared controls: one look for toggle (segment) buttons and for action buttons */
 export const BUTTON_SIZE_CLASSES = { md: "px-3 py-2 text-sm", xs: "px-2.5 py-1 text-xs" };
 
