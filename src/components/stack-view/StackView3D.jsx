@@ -1,4 +1,5 @@
-import { CABINET_FINISHES } from "../lib/data.js";
+import { CABINET_FINISHES } from "../../lib/data.js";
+import { roundedRectShape, roundedRectPath, circlePath, archOutlinePath, rectangularHornGeometry, createScaleFigure } from "./geometry.js";
 const { useEffect, useRef, useState } = React;
 
 /** Rotatable 3D view of the PA stack. */
@@ -51,36 +52,17 @@ export function StackView3D({ sub, mid, horn, plinth, cutaway, portStyle, layout
     // cabinet: four perimeter panels (wall ply) with 1/4" roundovers front and back,
     // 3/4" baffle set back by the inset on cleats, painted. Returns the z of the baffle face.
     const T = wall, BT = 0.75, REVEAL = inset, RO = 0.25;
-    const rr = (w, h, r) => {
-      const x = w / 2, y = h / 2, sh = new THREE.Shape();
-      sh.moveTo(-x + r, -y);
-      sh.lineTo(x - r, -y); sh.quadraticCurveTo(x, -y, x, -y + r);
-      sh.lineTo(x, y - r); sh.quadraticCurveTo(x, y, x - r, y);
-      sh.lineTo(-x + r, y); sh.quadraticCurveTo(-x, y, -x, y - r);
-      sh.lineTo(-x, -y + r); sh.quadraticCurveTo(-x, -y, -x + r, -y);
-      return sh;
-    };
-    const rectPath = (cx, cy, w, h, r) => {
-      const x = w / 2, y = h / 2, p = new THREE.Path();
-      p.moveTo(cx - x + r, cy - y);
-      p.lineTo(cx + x - r, cy - y); p.quadraticCurveTo(cx + x, cy - y, cx + x, cy - y + r);
-      p.lineTo(cx + x, cy + y - r); p.quadraticCurveTo(cx + x, cy + y, cx + x - r, cy + y);
-      p.lineTo(cx - x + r, cy + y); p.quadraticCurveTo(cx - x, cy + y, cx - x, cy + y - r);
-      p.lineTo(cx - x, cy - y + r); p.quadraticCurveTo(cx - x, cy - y, cx - x + r, cy - y);
-      return p;
-    };
-    const circPath = (cx, cy, r) => { const p = new THREE.Path(); p.absarc(cx, cy, r, 0, Math.PI * 2, true); return p; };
     const cabinet = (w, h, d, y, holes, baffleBottom = 0, x = 0, parent = group) => {
       const iw = w - 2 * T, ih = h - 2 * T - baffleBottom;
-      const shape = rr(w, h, RO * 1.5);
-      shape.holes.push(rr(iw + 2 * RO, h - 2 * T + 2 * RO, 0.12));
+      const shape = roundedRectShape(w, h, RO * 1.5);
+      shape.holes.push(roundedRectShape(iw + 2 * RO, h - 2 * T + 2 * RO, 0.12));
       const geo = new THREE.ExtrudeGeometry(shape, {
         depth: d - 2 * RO, bevelEnabled: true, bevelSize: RO, bevelThickness: RO, bevelSegments: 4,
       });
       const frame = new THREE.Mesh(geo, shellMat);
       frame.position.set(x, y + h / 2, -d / 2 + RO);
       parent.add(frame);
-      const bshape = rr(iw, ih, 0.12);
+      const bshape = roundedRectShape(iw, ih, 0.12);
       (holes || []).forEach((hp) => bshape.holes.push(hp));
       const baffle = new THREE.Mesh(
         new THREE.ExtrudeGeometry(bshape, { depth: BT, bevelEnabled: false }),
@@ -95,29 +77,24 @@ export function StackView3D({ sub, mid, horn, plinth, cutaway, portStyle, layout
     };
     // Same construction with a semicircular top the full width of the cabinet.
     // Holes use the same baffle-centered coordinates as cabinet().
-    const archOutline = (P, hw, yb, acy, r) => {
-      P.moveTo(-hw, yb); P.lineTo(hw, yb); P.lineTo(hw, acy);
-      P.absarc(0, acy, r, 0, Math.PI, false); P.lineTo(-hw, yb);
-      return P;
-    };
     const archCabinet = (w, h, d, y, holes, baffleBottom = 0, x = 0, parent = group) => {
       const R = w / 2, acy = h / 2 - R;                  // arch center, frame-centered coords
-      const shape = archOutline(new THREE.Shape(), R, -h / 2, acy, R);
-      shape.holes.push(archOutline(new THREE.Path(), R - T + RO, -h / 2 + T - RO, acy, R - T + RO));
+      const shape = archOutlinePath(new THREE.Shape(), R, -h / 2, acy, R);
+      shape.holes.push(archOutlinePath(new THREE.Path(), R - T + RO, -h / 2 + T - RO, acy, R - T + RO));
       const frame = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {
         depth: d - 2 * RO, bevelEnabled: true, bevelSize: RO, bevelThickness: RO, bevelSegments: 4,
         curveSegments: 48 }), shellMat);
       frame.position.set(x, y + h / 2, -d / 2 + RO);
       parent.add(frame);
       const ih = h - 2 * T - baffleBottom, bcy = y + T + baffleBottom + ih / 2;
-      const bshape = archOutline(new THREE.Shape(), R - T, -ih / 2, (y + h - R) - bcy, R - T);
+      const bshape = archOutlinePath(new THREE.Shape(), R - T, -ih / 2, (y + h - R) - bcy, R - T);
       (holes || []).forEach((hp) => bshape.holes.push(hp));
       const baffle = new THREE.Mesh(
         new THREE.ExtrudeGeometry(bshape, { depth: BT, bevelEnabled: false, curveSegments: 48 }),
         [baffleMat, cutaway ? baffleMat : plyIn]);
       baffle.position.set(x, bcy, d / 2 - REVEAL - BT);
       parent.add(baffle);
-      const bk = archOutline(new THREE.Shape(), R - T, -h / 2 + T, acy, R - T);
+      const bk = archOutlinePath(new THREE.Shape(), R - T, -h / 2 + T, acy, R - T);
       const back = new THREE.Mesh(new THREE.ExtrudeGeometry(bk, { depth: T, bevelEnabled: false, curveSegments: 48 }), shellMat);
       back.position.set(x, y + h / 2, -d / 2);
       parent.add(back);
@@ -181,16 +158,16 @@ export function StackView3D({ sub, mid, horn, plinth, cutaway, portStyle, layout
     const vThroat = pg.throat != null ? pg.throat : Math.round(((sub.size >= 18 ? 66 : 54) / (2 * (s.h - 2 * T))) * 100) / 100;
     // a single side duct pushes the driver into the middle of the remaining baffle
     const drvX = sides.length === 1 && vSlot ? -sides[0] * (vThroat + 0.43 + T) / 2 : 0;
-    const holes = [circPath(drvX, drvAbsY - baffleCy, drvR)];
+    const holes = [circlePath(drvX, drvAbsY - baffleCy, drvR)];
     let portCy = 0;
     if (round) {
       // 8" sits low on the baffle; 5" pair centered 10" up
       portCy = corners ? 0 : (portStyle === "round1" ? pl + T + portR + 0.75 + 1 : pl + 10) - baffleCy;
       if (corners) {
         const off = innerW / 2 - portR - 0.75 - 0.4;
-        [-1, 1].forEach((kx) => [-1, 1].forEach((ky) => holes.push(circPath(kx * off, ky * off, portR))));
-      } else if (nPorts === 1) holes.push(circPath(0, portCy, portR));
-      else [-1, 1].forEach((k) => holes.push(circPath(k * (portR + 2.6), portCy, portR)));
+        [-1, 1].forEach((kx) => [-1, 1].forEach((ky) => holes.push(circlePath(kx * off, ky * off, portR))));
+      } else if (nPorts === 1) holes.push(circlePath(0, portCy, portR));
+      else [-1, 1].forEach((k) => holes.push(circlePath(k * (portR + 2.6), portCy, portR)));
     }
     if (vSlot) {
       // full-height ducts using the side walls as their outer face
@@ -198,14 +175,14 @@ export function StackView3D({ sub, mid, horn, plinth, cutaway, portStyle, layout
       const throat = vThroat;
       const mouth = throat + 0.43;                 // flat strip set at 20 deg: 0.43 in rise
       const sx = innerW / 2 - mouth / 2;
-      sides.forEach((k) => holes.push(rectPath(k * sx, pl + s.h / 2 - baffleCy, mouth, slotH, 0.12)));
+      sides.forEach((k) => holes.push(roundedRectPath(k * sx, pl + s.h / 2 - baffleCy, mouth, slotH, 0.12)));
     }
     if (towerMode) {
-      holes.push(circPath(0, pl + s.h + TW_MID / 2 - baffleCy, (mid.size || 12) / 2 - 0.9));
+      holes.push(circlePath(0, pl + s.h + TW_MID / 2 - baffleCy, (mid.size || 12) / 2 - 0.9));
       const hy = (archTop ? pl + s.h + TW_MID + (s.w / 2 - T) : pl + s.h + TW_MID + twHsH / 2) - baffleCy;
-      holes.push(horn.rect ? rectPath(0, hy, innerW - 1, horn.size.h, 1.2)
-        : horn.profile ? circPath(0, hy, Math.min(horn.size.w, horn.size.h) / 2 - 0.2)
-        : rectPath(0, hy, horn.size.w, horn.size.h, 1));
+      holes.push(horn.rect ? roundedRectPath(0, hy, innerW - 1, horn.size.h, 1.2)
+        : horn.profile ? circlePath(0, hy, Math.min(horn.size.w, horn.size.h) / 2 - 0.2)
+        : roundedRectPath(0, hy, horn.size.w, horn.size.h, 1));
     }
     const subZ = (archTop ? archCabinet : cabinet)(s.w, s.h + extH, s.d, pl, holes, bandH, 0, subGroup);
     if (towerMode) {
@@ -263,8 +240,8 @@ export function StackView3D({ sub, mid, horn, plinth, cutaway, portStyle, layout
       });
         } else if (!round) {
       // duct mouths sit flush with the frame face; the box bottom is the duct floor
-      const band = rr(innerW, bandH, 0.12);
-      for (let k = -1; k <= 1; k++) band.holes.push(rectPath(k * (ductW + T), -T / 2, ductW, ductH, 0.25));
+      const band = roundedRectShape(innerW, bandH, 0.12);
+      for (let k = -1; k <= 1; k++) band.holes.push(roundedRectPath(k * (ductW + T), -T / 2, ductW, ductH, 0.25));
       if (REVEAL > 0) {
         const nose = new THREE.Mesh(new THREE.ExtrudeGeometry(band, { depth: REVEAL, bevelEnabled: false }), shellMat);
         nose.position.set(0, pl + T + bandH / 2, s.d / 2 - REVEAL);
@@ -394,7 +371,7 @@ export function StackView3D({ sub, mid, horn, plinth, cutaway, portStyle, layout
     }
     let midZ = 0;
     midXs.forEach((x) => {
-      midZ = tower ? subZ : cabinet(m.w, m.h, m.d, midBaseY, [circPath(0, 0, (mid.size || 12) / 2 - 0.9)], 0, x);
+      midZ = tower ? subZ : cabinet(m.w, m.h, m.d, midBaseY, [circlePath(0, 0, (mid.size || 12) / 2 - 0.9)], 0, x);
       cone((mid.size || 12) / 2 - 0.9, midBaseY + m.h / 2, midZ, x);
     });
 
@@ -411,31 +388,10 @@ export function StackView3D({ sub, mid, horn, plinth, cutaway, portStyle, layout
       stand.position.set(midXs[0], hornY + 0.6, 0);
       group.add(stand);
     }
-    const rectHornGeo = (mw, mh, depth, tr = 0.5) => {
-      const NS = 40, NP = 112, pos = [], idx = [];
-      for (let i = 0; i <= NS; i++) {
-        const t = i / NS, g = Math.pow(t, 1.7);
-        const a = tr + (mw / 2 - tr) * g, b = tr + (mh / 2 - tr) * g;
-        const n = 2 + 7 * Math.pow(t, 1.4);          // superellipse exponent: circle -> squarish
-        for (let j = 0; j < NP; j++) {
-          const th = (j / NP) * Math.PI * 2, c = Math.cos(th), sn = Math.sin(th);
-          pos.push(a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n),
-                   b * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / n), depth * t);
-        }
-      }
-      for (let i = 0; i < NS; i++) for (let j = 0; j < NP; j++) {
-        const a0 = i * NP + j, a1 = i * NP + ((j + 1) % NP);
-        idx.push(a0, a0 + NP, a1, a1, a0 + NP, a1 + NP);
-      }
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-      geo.setIndex(idx); geo.computeVertexNormals();
-      return geo;
-    };
     midXs.forEach((hx) => {
     if (horn.rect) {
       const mw = tower ? innerW - 1 : m.w;
-      const rm = new THREE.Mesh(rectHornGeo(mw, hz.h, hz.d),
+      const rm = new THREE.Mesh(rectangularHornGeometry(mw, hz.h, hz.d),
         new THREE.MeshStandardMaterial({ color: 0xece4c8, roughness: 0.55, side: THREE.DoubleSide }));
       rm.position.set(hx, tower ? hornCY : hornY + hz.h / 2 + 0.3, tower ? hornZ : m.d / 2 - hz.d + 1);
       group.add(rm);
@@ -471,28 +427,10 @@ export function StackView3D({ sub, mid, horn, plinth, cutaway, portStyle, layout
     }
     });
 
-    // 5 ft 9 in scale figure: standard pictogram silhouette, billboarded
-    const figure = (() => {
-      const H = 69, u = H / 100;
-      const g = new THREE.Group();
-      const mat = new THREE.MeshBasicMaterial({ color: 0x8b847d, transparent: true, opacity: 0.38, side: THREE.DoubleSide });
-      const body = new THREE.Shape();
-      const P = [
-        [6.5, 85], [10.0, 82], [11.0, 70], [8.0, 50], [6.5, 30], [5.5, 1],
-        [1.0, 1], [0, 40], [-1.0, 1], [-5.5, 1], [-6.5, 30], [-8.0, 50],
-        [-11.0, 70], [-10.0, 82], [-6.5, 85],
-      ];
-      body.moveTo(P[0][0] * u, P[0][1] * u);
-      P.slice(1).forEach(([x, y]) => body.lineTo(x * u, y * u));
-      body.closePath();
-      g.add(new THREE.Mesh(new THREE.ShapeGeometry(body), mat));
-      const head = new THREE.Shape();
-      head.absarc(0, 92.5 * u, 6 * u, 0, Math.PI * 2, false);
-      g.add(new THREE.Mesh(new THREE.ShapeGeometry(head), mat));
-      g.position.set(-s.w * 1.4, 0, 3);
-      group.add(g);
-      return g;
-    })();
+    // 5 ft 9 in scale figure, billboarded
+    const figure = createScaleFigure(69);
+    figure.position.set(-s.w * 1.4, 0, 3);
+    group.add(figure);
 
     // floor
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 1 }));

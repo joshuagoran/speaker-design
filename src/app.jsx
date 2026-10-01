@@ -29,7 +29,7 @@ import { NotesPage } from "./pages/notes/NotesPage.jsx";
 import { FillsPage } from "./pages/fills/FillsPage.jsx";
 import { CutlistPage } from "./pages/cutlist/CutlistPage.jsx";
 import { HifiPage } from "./pages/hifi/HifiPage.jsx";
-import { StackView3D } from "./components/StackView3D.jsx";
+import { StackView3D } from "./components/stack-view/StackView3D.jsx";
 
 
 
