@@ -1269,11 +1269,10 @@ function HifiPage() {
           <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="″" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
           <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="″" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
           <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-600">Ports</span>{hLk("box", "sealed, ported or radiator")}</div>
-          <div className="flex mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip], i, all) => {
+          <div className="flex flex-wrap gap-1 mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip]) => {
             const slotOn = port.shape === "slot";
             const on = box === v && (v === "sealed" || (v === "vented" ? (n === "slot" ? slotOn : !slotOn && port.n === n) : pr.n === n));
-            return <button key={l} title={tip} aria-label={tip} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}
-              className={`flex-1 min-w-0 whitespace-nowrap px-1 py-1.5 border text-xs ${i ? "-ml-px" : "rounded-l"} ${i === all.length - 1 ? "rounded-r" : ""} ${on ? "relative border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{l}</button>;
+            return <ToggleBtn key={l} title={tip} aria-label={tip} on={on} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}>{l}</ToggleBtn>;
           })}</div>
           {box === "vented" && (<>
             {port.shape === "slot"
