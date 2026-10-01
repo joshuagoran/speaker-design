@@ -719,7 +719,7 @@ function Tip({ tip, children, className = "" }) {
       <span role="button" tabIndex={0} aria-describedby={open ? id : undefined} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); } }}
-        className="cursor-help border-b-2 border-dotted border-stone-600">{children}</span>
+        className="cursor-help border-b-2 border-dotted border-[#b3b3b3]">{children}</span>
       {open && <span role="tooltip" id={id} className={`absolute z-30 top-full mt-1 w-max max-w-[18rem] rounded bg-stone-900 text-stone-50 text-xs font-normal normal-case tracking-normal leading-snug px-2 py-1.5 text-left ${flip ? "right-0" : "left-0"}`}>{tip}</span>}
     </span>
   );
@@ -812,9 +812,21 @@ const STAT_TIPS = {
   "Max at the seat": "Clean level at the seat with both speakers playing, before a driver or port limit.",
   "Pair": "Cost of the drivers for both speakers, at the listed prices.",
 };
-function StatLabel({ k }) {
-  const tip = STAT_TIPS[k] || (/^Max SPL at /.test(k) ? "Loudest output at this frequency from a steady sine tone, before the named limit is reached." : null);
+function StatLabel({ k, extra }) {
+  const def = STAT_TIPS[k] || (/^Max SPL at /.test(k) ? "Loudest output at this frequency from a steady sine tone, before the named limit is reached." : null);
+  const tip = [def, extra].filter(Boolean).join(" ");
   return tip ? <Tip tip={tip}>{k}</Tip> : k;
+}
+function StatRow({ k, v, note, tip }) {
+  return (
+    <div className="flex justify-between gap-4 border-b border-stone-200 py-1 whitespace-nowrap">
+      <span className="text-stone-500 shrink-0"><StatLabel k={k} extra={tip || note} /></span>
+      <span className="text-right min-w-0">
+        <span className="font-medium tabular-nums">{v}</span>
+        {note ? <span className="hidden sm:inline text-xs text-stone-500 ml-2">{note}</span> : null}
+      </span>
+    </div>
+  );
 }
 
 // Saved configurations: the claude.ai artifact's database, or Firebase when the page is hosted on GitHub Pages
@@ -1692,12 +1704,8 @@ function FillsPage() {
             ["HF crossover", hf && hf.xo ? `${hf.xo} Hz or higher` : "—", "recommended minimum"],
             ["Max SPL at 100 Hz", `${near(100).spl.toFixed(1)} dB`, `sine, ${near(100).who}-limited`],
             ["Price", drv.price ? `$${drv.price}` : "—", drv.src],
-          ].map(([k, v, n]) => (
-            <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
-              <span className="text-stone-500 shrink-0"><StatLabel k={k} /></span>
-              <span className="text-right"><span className="font-medium tabular-nums">{v}</span>{n ? <span className="block text-xs text-stone-500">{n}</span> : null}</span>
-            </div>
-          ))}
+          ]
+.map(([k, v, note, tip]) => <StatRow key={k} k={k} v={v} note={note} tip={tip} />)}
         </div>
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
@@ -2418,18 +2426,11 @@ function StackPlanner() {
                 ["Midband sensitivity", `${(mdl.ref - 20 * Math.log10(AMP_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
                 ...[30, 35, 45, 60].map((f) => { const m = maxNear(f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
-                ["First limit, music", lim.who, `at ${Math.round(lim.W / 10) * 10} W${lim.who === "cone travel (Xmax)" ? `, reached first at ${mdl.peakXF.toFixed(0)} Hz` : lim.who === "port air speed" ? `, reached first at ${mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power`],
+                ["First limit, music", lim.who, `at ${Math.round(lim.W / 10) * 10} W`, `at ${Math.round(lim.W / 10) * 10} W${lim.who === "cone travel (Xmax)" ? `, reached first at ${mdl.peakXF.toFixed(0)} Hz` : lim.who === "port air speed" ? `, reached first at ${mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`],
                 ["Peak port velocity", `${lim.vel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz`],
                 ["Peak excursion", `${(mdl.peakX * lim.V / AMP_V).toFixed(1)} mm`, `${lim.xPct.toFixed(0)}% of Xmax, at ${mdl.peakXF.toFixed(0)} Hz`],
-              ].map(([k, v, note]) => (
-                <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
-                  <span className="text-stone-500 shrink-0"><StatLabel k={k} /></span>
-                  <span className="text-right">
-                    <span className="font-medium tabular-nums">{v}</span>
-                    {note ? <span className="block text-xs text-stone-500">{note}</span> : null}
-                  </span>
-                </div>
-              ))}
+              ]
+.map(([k, v, note, tip]) => <StatRow key={k} k={k} v={v} note={note} tip={tip} />)}
             </div>
           ) : (
             <p className="text-sm text-stone-600 ">
@@ -2477,16 +2478,9 @@ function StackPlanner() {
                 ["Midband sensitivity", `${(mMdl.ref - 20 * Math.log10(MID_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
                 ...[xoLo, 200, 500].map((f) => { const m = midNear(f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
-                ["Peak excursion", `${(mMdl.peakX * midUseV / MID_V).toFixed(1)} mm`, `${(mMdl.peakX * midUseV / MID_V / mid.ts.Xmax * 100).toFixed(0)}% of Xmax at ${Math.round(midUseV * midUseV / 8)} W, with the ${xoLo} Hz highpass`],
-              ].map(([k, v, note]) => (
-                <div key={k} className="flex justify-between gap-4 border-b border-stone-200 py-1">
-                  <span className="text-stone-500 shrink-0"><StatLabel k={k} /></span>
-                  <span className="text-right">
-                    <span className="font-medium tabular-nums">{v}</span>
-                    {note ? <span className="block text-xs text-stone-500">{note}</span> : null}
-                  </span>
-                </div>
-              ))}
+                ["Peak excursion", `${(mMdl.peakX * midUseV / MID_V).toFixed(1)} mm`, `${(mMdl.peakX * midUseV / MID_V / mid.ts.Xmax * 100).toFixed(0)}% of Xmax`, `At ${Math.round(midUseV * midUseV / 8)} W, with the ${xoLo} Hz highpass.`],
+              ]
+.map(([k, v, note, tip]) => <StatRow key={k} k={k} v={v} note={note} tip={tip} />)}
             </div>
             <div className="flex flex-col gap-1.5 mt-4">
               {(() => {
@@ -2676,8 +2670,7 @@ function StackPlanner() {
               <Slider label="Crossover, sub to mid" value={xoLo} min={60} max={250} step={5} unit=" Hz" onChange={setXoLo} extra={lk("xoLo", "the sub-to-mid crossover")} />
               <Slider label="Crossover, mid to horn" value={xoHi} min={500} max={2000} step={50} unit=" Hz" onChange={setXoHi} extra={lk("xoHi", "the mid-to-horn crossover")} />
               <Slider label="Mid amp power per channel @ 8 Ω" value={mAmpW} min={50} max={2000} step={25} unit=" W" onChange={setMAmpW} extra={lk("mAmpW", "the mid amp power")} />
-              <Slider label="Music balance: mid band needs less by" value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
-              <div className="text-xs text-stone-500">0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.</div>
+              <Slider label={<Tip tip="0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.">Music balance: mid band needs less by</Tip>} value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
             </Card>
           </div>
           </div>
@@ -2687,9 +2680,8 @@ function StackPlanner() {
           <Card className="mb-4">
             <Slider label="HF amp power per channel @ 8 Ω" value={hfAmpW} min={10} max={500} step={5} unit=" W" onChange={setHfAmpW} extra={lk("hfAmpW", "the HF amp power")} />
             <Slider label="Music balance: HF band needs less by" value={hfTilt} min={0} max={12} step={1} unit=" dB" onChange={setHfTilt} />
-            <div className="text-xs text-stone-500">16 Ω drivers draw half the power from the same amp.</div>
           </Card>
-          {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}" vs {cd.exit}").</div>}
+          {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}″ vs {cd.exit}″).</div>}
           </div>
           </div>
         </aside>
