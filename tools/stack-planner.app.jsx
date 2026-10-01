@@ -2140,7 +2140,6 @@ function StackPlanner() {
   const midList = MID_OPTIONS.filter((o) => (o.size || 12) === midSize);
   const boxList = MID_BOXES.filter((b) => (b.size || 12) === midSize && b.id !== "b13");
   const subBox = cDim;
-  // Load a published cabinet into the sliders as a starting point.
   const startFrom = (cb) => {
     const d = cb.dims[format.sub];
     setCabinet(cb);
