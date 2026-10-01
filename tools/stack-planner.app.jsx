@@ -819,11 +819,11 @@ function StatLabel({ k, extra }) {
 }
 function StatRow({ k, v, note, tip }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-stone-200 py-1 whitespace-nowrap">
-      <span className="text-stone-500 shrink-0"><StatLabel k={k} extra={tip || note} /></span>
+    <div className="flex justify-between gap-4 border-b border-stone-200 py-1">
+      <span className="text-stone-500 shrink-0"><StatLabel k={k} extra={tip} /></span>
       <span className="text-right min-w-0">
         <span className="font-medium tabular-nums">{v}</span>
-        {note ? <span className="hidden sm:inline text-xs text-stone-500 ml-2">{note}</span> : null}
+        {note ? <span className="block text-xs text-stone-500 whitespace-nowrap">{note}</span> : null}
       </span>
     </div>
   );
