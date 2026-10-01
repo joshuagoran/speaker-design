@@ -1,6 +1,16 @@
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  // one self-contained page: a single JS chunk (dynamic imports and the worker inlined), one stylesheet, and every
+  // asset (fonts) inlined as data URLs; tools/inline.mjs then puts the JS and CSS into the HTML itself
+  build: {
+    assetsInlineLimit: Number.MAX_SAFE_INTEGER,
+    cssCodeSplit: false,
+    modulePreload: false,
+    // single-file by design (about 1.2 MB, or 1.7 MB with Firebase for Pages)
+    chunkSizeWarningLimit: 4000,
+    rolldownOptions: { output: { codeSplitting: false } },
+  },
   staged: {
     "*": "vp check --fix",
   },
@@ -10,8 +20,8 @@ export default defineConfig({
     testTimeout: 30_000,
   },
   fmt: {
-    // the head files are open-ended fragments the build concatenates with the bundle; golden.json is generated
-    ignorePatterns: ["dist/**", "tools/*.head.html", "tests/golden.json"],
+    // golden.json is generated
+    ignorePatterns: ["dist/**", "tests/golden.json"],
   },
   lint: {
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],

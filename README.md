@@ -15,11 +15,15 @@ substitute for an impedance sweep on the prototype.
 tools/calc.js                every calculation (pure JS, tested)
 tools/data.js                drivers, horns, cabinets
 tools/chips.js               warning chips per section
-tools/stack-planner.app.jsx  the planner UI (JSX, bundled with esbuild)
-tests/                       node:test suites, golden snapshot, mobile layout check
-tools/stack-planner.head.html  its <head>: styles and the four CDN script tags
-tools/build.sh               planner -> dist/stack-planner.html
-tools/serve.sh               build + vendor libs + serve on :8901
+tools/stack-planner.app.jsx  the planner UI (JSX)
+tools/palette.js             the colours (CSS variables and Tailwind names come from here)
+tools/app.css                page styles + Tailwind layers; font
+tools/firebase-store.js      saving on GitHub Pages (bundled only into that build)
+index.html                   Vite entry
+tailwind.config.js           Tailwind, compiled at build time
+tests/                       Vitest suites, golden snapshot, mobile layout check
+tools/build.sh               vp build + tools/inline.mjs -> one self-contained page
+tools/serve.sh               build + serve on :8901
 docs/design-notes.md         findings behind the current configuration
 docs/*.svg                   crossover null cone, horn coverage
 dist/                        build output (gitignored)
@@ -43,23 +47,20 @@ tools/build.sh          # -> dist/stack-planner.html
 pnpm run build          # (or `vp run build`) -> dist/site/ for GitHub Pages
 ```
 
-It runs esbuild over the JSX, then concatenates `stack-planner.head.html` + the
-bundle + a closing `</script>` into one self-contained page. That page loads
-React, ReactDOM, three.js and Tailwind from cdnjs at runtime; nothing else is
-external.
+`vp build` bundles the app with React, three.js, the optimizer worker, the compiled
+Tailwind stylesheet and the Inconsolata font (all from npm), and `tools/inline.mjs`
+puts the result into one HTML file. Nothing loads from a CDN: the page works offline.
+The Pages build (`--mode pages`) also bundles Firebase for saving; the artifact build
+doesn't include it.
 
 ## Local preview
 
 ```sh
-tools/serve.sh          # http://127.0.0.1:8901/index.html
+tools/serve.sh          # http://127.0.0.1:8901/stack-planner.html
 ```
 
-It builds, downloads the four libraries into `dist/preview/` if they aren't
-already there, rewrites the CDN URLs to local paths, and serves. The download
-step needs network access to cdnjs; if it fails it tells you which file to place
-by hand. Tailwind's play CDN generates CSS at runtime, so for preview drop any
-Tailwind 3 stylesheet at `dist/preview/tw.css` — without it the page works but
-renders unstyled.
+It builds both pages and serves `dist/`. The pages are self-contained, so opening
+`dist/stack-planner.html` straight from disk works too.
 
 Saving is unavailable in local preview (see below). The planner detects that and
 says so rather than breaking.

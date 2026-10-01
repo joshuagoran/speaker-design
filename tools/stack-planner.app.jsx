@@ -1,4 +1,11 @@
-const { useEffect, useId, useRef, useState } = React;
+// Everything is bundled from npm: no CDN scripts. The font and the compiled Tailwind stylesheet come in as CSS imports.
+import { useEffect, useId, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import * as THREE from "three";
+import "./app.css";
+import { PAL } from "./palette.js";
+// the optimizer's worker, bundled separately and inlined in the page (it starts from a Blob URL)
+import OptWorker from "./optimize.worker.js?worker&inline";
 import { subChips, midChips, hornChips, fillChips } from "./chips.js";
 import {
   optimize,
@@ -1394,33 +1401,40 @@ function StatRow({ k, v, note, tip }) {
 }
 
 // Saved configurations: the claude.ai artifact's database, or Firebase when the page is hosted on GitHub Pages
+// (the Pages build is `vp build --mode pages`; only that build bundles Firebase, see tools/firebase-store.js)
+const PAGES_BUILD = import.meta.env.MODE === "pages";
 function useConfigStore(collection) {
   const [db, setDb] = useState(null);
   const [saved, setSaved] = useState(null); // null = still loading
+  const [fb, setFb] = useState(null);
   const [fbUser, setFbUser] = useState(null);
   const [cfgMsg, setCfgMsg] = useState("");
-  const fb =
-    !(window.claude && window.claude.use) && window.firebase && window.PLANNER_FIREBASE
-      ? window.firebase
-      : null;
   useEffect(() => {
     let live = true;
-    if (fb) {
-      if (!fb.apps.length) fb.initializeApp(window.PLANNER_FIREBASE);
-      const un = fb.auth().onAuthStateChanged((u) => {
-        if (!live) return;
-        setFbUser(u);
-        if (u) {
-          const fs = fb.firestore();
-          setDb({ collection: (name) => fs.collection(`users/${u.uid}/${name}`) });
-        } else {
-          setDb(null);
-          setSaved([]);
-        }
-      });
+    if (PAGES_BUILD && !(window.claude && window.claude.use)) {
+      let un = null;
+      import("./firebase-store.js")
+        .then(({ createFirebase }) => {
+          if (!live) return;
+          const f = createFirebase();
+          setFb(f);
+          un = f.onAuth((u) => {
+            if (!live) return;
+            setFbUser(u);
+            if (u) {
+              setDb(f.userDb(u.uid));
+            } else {
+              setDb(null);
+              setSaved([]);
+            }
+          });
+        })
+        .catch(() => {
+          if (live) setSaved([]);
+        });
       return () => {
         live = false;
-        un();
+        if (un) un();
       };
     }
     (async () => {
@@ -1457,12 +1471,8 @@ function useConfigStore(collection) {
     setCfgMsg(m);
     setTimeout(() => setCfgMsg(""), 2500);
   };
-  const signIn = () =>
-    fb
-      .auth()
-      .signInWithPopup(new fb.auth.GoogleAuthProvider())
-      .catch(() => flash("Sign-in failed"));
-  const signOut = () => fb.auth().signOut();
+  const signIn = () => fb.signIn().catch(() => flash("Sign-in failed"));
+  const signOut = () => fb.signOut();
   const save = async (name, data) => {
     if (!db || !name) return false;
     setCfgMsg("Saving…");
@@ -4231,11 +4241,8 @@ function runOptimizer(input) {
   if (optNoWorker) return local();
   try {
     if (!optWorker) {
-      const src = document.getElementById("opt-worker");
-      if (!src || typeof Worker === "undefined") throw new Error("no worker");
-      optWorker = new Worker(
-        URL.createObjectURL(new Blob([src.textContent], { type: "text/javascript" })),
-      );
+      if (typeof Worker === "undefined") throw new Error("no worker");
+      optWorker = new OptWorker();
     }
   } catch {
     optNoWorker = true;
@@ -6660,4 +6667,4 @@ function StackPlanner() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(StackPlanner));
+createRoot(document.getElementById("root")).render(<StackPlanner />);

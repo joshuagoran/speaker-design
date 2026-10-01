@@ -1,8 +1,8 @@
-// Layout check at phone and tablet widths, run in CI after the build (not part of `npm test`).
+// Layout check at phone and tablet widths, run in CI after the build (not part of `vp test`).
 //   node tests/mobile-check.mjs [page]        default: dist/stack-planner.html
-// Env: PW_MODULE (path to playwright's index.mjs, default "playwright"), PW_CHROMIUM (browser binary),
-//      HTTPS_PROXY (used for the CDN scripts when set).
-// Fails on: horizontal page scroll, touch targets under 40 px, chip text squeezed under 120 px, page errors.
+// Env: PW_MODULE (path to playwright's index.mjs, default "playwright"), PW_CHROMIUM (browser binary).
+// Fails on: horizontal page scroll, touch targets under 40 px, chip text squeezed under 120 px, page errors, and any
+// request outside the page: everything is bundled in, so the page must work with the network blocked.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -11,7 +11,6 @@ const page = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.h
 const browser = await chromium.launch({
   executablePath: process.env.PW_CHROMIUM || undefined,
   args: ["--use-gl=swiftshader"],
-  proxy: process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY } : undefined,
 });
 
 const sizes = [
@@ -53,12 +52,19 @@ for (const size of sizes) {
   const p = await ctx.newPage();
   const errs = [];
   p.on("pageerror", (e) => errs.push(e.message));
+  // block the network: anything not inside the page (file: / data: / blob:) is a failure
+  await p.route("**/*", (r) => {
+    const u = r.request().url();
+    if (/^(file|data|blob):/.test(u)) return r.continue();
+    failures.push(`${size.name}: external request ${u.slice(0, 100)}`);
+    return r.abort();
+  });
   await p.goto(page);
   await p.waitForFunction(() => document.querySelector("nav a"), null, { timeout: 30000 });
-  // the layout comes from Tailwind's CDN script: without it every measurement is meaningless
+  // the compiled Tailwind stylesheet is inlined: without it every measurement is meaningless
   const styled = await p
     .waitForFunction(
-      () => window.tailwind && getComputedStyle(document.querySelector("nav")).display === "flex",
+      () => getComputedStyle(document.querySelector("nav")).display === "flex",
       null,
       { timeout: 30000 },
     )
@@ -67,7 +73,9 @@ for (const size of sizes) {
       () => false,
     );
   if (!styled) {
-    failures.push(`${size.name}: Tailwind didn't load from the CDN; can't check the layout`);
+    failures.push(
+      `${size.name}: the page isn't styled (compiled Tailwind CSS missing); can't check the layout`,
+    );
     await ctx.close();
     continue;
   }

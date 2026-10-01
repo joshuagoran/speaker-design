@@ -1,6 +1,6 @@
 # SpeakNow (speaker-design)
 
-DIY speaker planner: PA stack, cutlist, fills and hi-fi tabs, with optimizers. Single page built by `tools/build.sh`;
+DIY speaker planner: PA stack, cutlist, fills and hi-fi tabs, with optimizers. Single self-contained page (React, three.js, compiled Tailwind, font all bundled; no CDN scripts) built by `tools/build.sh` (`vp build` + `tools/inline.mjs`);
 checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without the global CLI); phone layout check in `tests/mobile-check.mjs` (CI).
 
 ## UI rules
@@ -10,7 +10,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - **Charts on the same view share the same scales**, x and y. Frequency charts use the PA stack's x axis (15 Hz–20 kHz);
   every Hi-fi dB chart uses `HIFI_TOP` / `HIFI_BOT`; the PA response chart and the PA optimizer cards use 80–135 dB.
 - Colours: CMYK brand (cyan actions and horn/tweeter, magenta mid-bass/woofer, yellow accents) plus black, white and two
-  grays; status colours stay green / orange / red. Tailwind's colour names are remapped in `tools/stack-planner.head.html`.
+  grays; status colours stay green / orange / red. The palette lives in `tools/palette.js`; Tailwind's colour names are remapped from it in `tailwind.config.js`.
 - Font: Inconsolata. Corners 4 px (6 px on large boxes).
 
 ## Project conventions

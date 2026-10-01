@@ -7,9 +7,17 @@
     "test": "vp test",
     "prepare": "vp config"
   },
+  "dependencies": {
+    "@fontsource-variable/inconsolata": "5.3.0",
+    "firebase": "10.12.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "three": "0.140.0"
+  },
   "devDependencies": {
-    "esbuild": "0.28.2",
     "playwright": "1.56.1",
+    "postcss": "^8.5.28",
+    "tailwindcss": "3.4.16",
     "vite-plus": "catalog:"
   },
   "devEngines": {

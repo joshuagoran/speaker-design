@@ -1,4 +1,4 @@
-// Runs the optimizer off the main thread. build.sh bundles this and inlines it as text in the page.
+// Runs the optimizer off the main thread. The app imports it with ?worker&inline, so Vite bundles it and inlines it in the page.
 import { optimize } from "./optimize.js";
 self.onmessage = (e) => {
   const { id, input } = e.data;

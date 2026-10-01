@@ -10,3 +10,4 @@ peerDependencyRules:
     vite: "*"
 allowBuilds:
   esbuild: true
+  protobufjs: false
