@@ -112,3 +112,17 @@ test("slot vent: tunes like a port of the same area and length, its shelf takes 
   t.assert.ok(hifiChips(hifiSystem(W, T, long), W, T, long).some(([k, h]) => k === "bad" && h === "Slot too long"));
   t.assert.ok(r.Fb > 0);
 });
+
+test("planar ribbon on its own waveguide: flush-mounted, its coverage drives the directivity, 5 ohm and minimum crossover checked", async (t) => {
+  const { HIFI_TWEETERS, ownGuideCfg } = await import("../tools/data.js");
+  const r = HIFI_TWEETERS.find((o) => o.id === "lt22");
+  const g = ownGuideCfg(r), c = { ...cfg, guide: g, xo: 2200 };
+  const s = hifiSystem(W, r, c);
+  t.assert.ok(!s.lay.onTop && s.lay.tweeterIn < cfg.dim.h, "on the baffle, not on top");
+  // 120° wide: about −6 dB at 60° off axis at 10 kHz, once the waveguide controls
+  const on = responseAt(s, W, r, c, { th: 0, eyeIn: s.lay.tweeterIn, distM: 2 }, [10000])[0].spl;
+  const off = responseAt(s, W, r, c, { th: Math.PI / 3, eyeIn: s.lay.tweeterIn, distM: 2 }, [10000])[0].spl;
+  t.assert.ok(on - off > 3 && on - off < 10, `${(on - off).toFixed(1)} dB down at 60°`);
+  const low = { ...c, xo: 1600 };
+  t.assert.ok(hifiChips(hifiSystem(W, r, low), W, r, low).some(([, h]) => h === "Below the tweeter's minimum crossover"));
+});

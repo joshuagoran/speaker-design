@@ -1,7 +1,7 @@
 const { useEffect, useId, useRef, useState } = React;
 import { subChips, midChips, hornChips, fillChips } from "./chips.js";
 import { optimize, evaluate as evaluateConfig, roomNeed, ROOMS, GOALS, optFields } from "./optimize.js";
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, prAddMax } from "./data.js";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, prAddMax, ownGuideCfg } from "./data.js";
 import { hifiSystem, hifiChips, responseAt, dispersionMap, logFreqs, lr, prShape, PLACES as HIFI_PLACES } from "./hifi.js";
 import { hifiOptimize, HIFI_GOALS, HIFI_LOCK_KEYS, HIFI_AMP_MAX } from "./hifi-optimize.js";
 import { paDispersionMap, firstNullDeg } from "./pa-dispersion.js";
@@ -1190,7 +1190,10 @@ const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort((a, b) => a.size - b.size
 const HIFI_PASSIVES_BY_SIZE = HIFI_PASSIVES.slice().sort((a, b) => a.size - b.size || a.name.localeCompare(b.name));
 const prOf = (c) => (c && c.box === "radiator" && c.pr ? { drv: HIFI_PASSIVES.find((o) => o.id === c.pr.id), n: c.pr.n, addG: c.pr.addG } : null);
 const isCD = (o) => o.type === "compression" || o.needsWaveguide;
-const HIFI_TWEETERS_BY_TYPE = HIFI_TWEETERS.slice().sort((a, b) => isCD(a) - isCD(b) || a.name.localeCompare(b.name));
+const tKind = (o) => (isCD(o) ? 2 : o.type === "ribbon" ? 1 : 0);   // domes, ribbons, compression drivers
+const T_GROUPS = ["Dome tweeters", "Planar ribbons (with their waveguide)", "Compression drivers (on a waveguide)"];
+const T_KIND = ["dome", "planar ribbon", "compression driver"];
+const HIFI_TWEETERS_BY_TYPE = HIFI_TWEETERS.slice().sort((a, b) => tKind(a) - tKind(b) || a.name.localeCompare(b.name));
 
 // A result card, laid out like the PA optimizer's: what it is, a front view and its bass against yours, the four numbers with deltas.
 function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
@@ -1208,7 +1211,7 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
       <div className="text-xs uppercase tracking-wider font-bold text-stone-500">{k.label} · {i + 1} of {n}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{cw.size}″ {k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
-        <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} pr={prOf(c)} guide={k.guided ? guide : null} small />
+        <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} pr={prOf(c)} guide={k.ownGuide ? ownGuideCfg(ct) : k.guided ? guide : null} small />
         <OutChart curve={k.curve} cur={curCurve} fmin={15} fmax={20000} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
       </div>
       <div className="text-xs text-stone-500">{k.names.tweeter} · {c.box}{c.box === "vented" && c.port.shape === "slot" ? ` (${c.port.h}″ slot, ${c.port.len}″ long)` : c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : c.box === "radiator" && prOf(c) ? ` (${c.pr.n} × ${prOf(c).drv.name}, +${c.pr.addG} g)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
@@ -1268,7 +1271,9 @@ function HifiPage() {
   const [hUndo, setHUndo] = useState(null);
   const setD = (k, v) => setDim((p) => ({ ...p, [k]: v }));
   const setP = (k, v) => setPort((p) => ({ ...p, [k]: v }));
-  const guide = t.type === "compression" || t.needsWaveguide ? { covH: guideSel.hf.covH, covV: guideSel.hf.covV || guideSel.hf.covH, w: guideSel.size.w, h: guideSel.size.h, name: guideSel.name, freestanding: !guideSel.rect } : null;
+  // the waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded)
+  const cdGuide = { covH: guideSel.hf.covH, covV: guideSel.hf.covV || guideSel.hf.covH, w: guideSel.size.w, h: guideSel.size.h, name: guideSel.name, freestanding: !guideSel.rect };
+  const guide = t.ownGuide ? ownGuideCfg(t) : t.type === "compression" || t.needsWaveguide ? cdGuide : null;
   const prDrv = HIFI_PASSIVES.find((o) => o.id === prSel.id) || HIFI_PASSIVES[0];
   const pr = { drv: prDrv, n: prSel.n, addG: Math.min(prSel.addG, prAddMax(prDrv)) };
   const cfg = { box, dim, wall, mat, port, pr, xo, order, wAmpW, tAmpW, bsc, place, wallFt, portMax: 17, guide };
@@ -1291,7 +1296,7 @@ function HifiPage() {
   const atSeat = sys.maxLevel - 20 * Math.log10(seatDist) + 3;
   const tMax = freqs.map((f) => ({ f, spl: sys.tLevel + 20 * Math.log10(Math.max(1e-6, Math.hypot(lr(f, xo, order, "hp").re, lr(f, xo, order, "hp").im))) }));
   const map = dispersionMap(sys, w, tt, cfg, plane, Math.max(1, seatDist));
-  const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0) + (box === "radiator" ? pr.n * (prDrv.price || 0) : 0));
+  const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide && !t.ownGuide ? guideSel.price || 0 : 0) + (box === "radiator" ? pr.n * (prDrv.price || 0) : 0));
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
       <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
@@ -1321,7 +1326,7 @@ function HifiPage() {
     setHBusy(true);
     const base = hPreview ? hPreview.before : snapH();
     setTimeout(() => {
-      try { setHRes(hifiOptimize({ cur: { ...cfg, ...base }, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, passives: HIFI_PASSIVES, goals: hGoals, locks: hLocks, budget: hBudget, seatM: seatDist, guidePrice: guideSel.price || 0 })); }
+      try { setHRes(hifiOptimize({ cur: { ...cfg, ...base, guide: cdGuide }, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, passives: HIFI_PASSIVES, goals: hGoals, locks: hLocks, budget: hBudget, seatM: seatDist, guidePrice: guideSel.price || 0 })); }
       finally { setHBusy(false); }
     }, 30);
   };
@@ -1413,14 +1418,14 @@ function HifiPage() {
             <div>Tweeter trimmed {sys.trim.toFixed(1)} dB in the DSP to match the woofer; baffle step centered at {sys.bsF3.toFixed(0)} Hz{bsc ? `, ${bsc} dB boost` : ""}.</div>
             <div><Tip tip={w.note}><span className="font-medium text-stone-900">{w.name}</span></Tip></div>
             <div><Tip tip={t.note}><span className="font-medium text-stone-900">{t.name}</span></Tip></div>
-            {guide && <div><Tip tip={guideSel.note}><span className="font-medium text-stone-900">{guide.name}</span></Tip></div>}
+            {guide && !t.ownGuide && <div><Tip tip={guideSel.note}><span className="font-medium text-stone-900">{guide.name}</span></Tip></div>}
           </div>
         </details>
       </div>
       <aside className="min-w-0 md:col-span-2">
         <Pick label={`Woofer · ${w.size}″`} options={HIFI_WOOFERS_BY_SIZE} value={w} onChange={setW} extra={hLk("woofer", "the woofer")} group={(o) => `${o.size}″ woofers`} />
-        <Pick label={`Tweeter · ${isCD(t) ? "compression driver" : "dome"}`} options={HIFI_TWEETERS_BY_TYPE} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} group={(o) => (isCD(o) ? "Compression drivers (on a waveguide)" : "Dome tweeters")} />
-        {guide && <Pick label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
+        <Pick label={`Tweeter · ${T_KIND[tKind(t)]}`} options={HIFI_TWEETERS_BY_TYPE} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} group={(o) => T_GROUPS[tKind(o)]} />
+        {guide && !t.ownGuide && <Pick label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
         <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
           <span className="text-stone-500">Material</span>
           <div className="flex flex-wrap gap-1">{[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <ToggleBtn key={v} onClick={() => setMat(v)} on={mat === v}>{l}</ToggleBtn>)}</div>

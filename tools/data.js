@@ -495,6 +495,21 @@ export const HIFI_TWEETERS = [
     hf: { sens: 108.5, aes: 60, aesXo: 1600, minXo: 1600, imp: 8, fs: null },
     type: "compression", exit: 1, faceplate: { diameter: 4.7 }, needsWaveguide: true,
     note: "[maker: bcspeakers.com] Ferrite, 44 mm polyimide diaphragm. aes is 60 W B&C nominal, 120 W continuous. sens is 108.5 dB on a B&C horn: the repo notes it as the ME45; the web page does not name one. Minimum crossover 1.6 kHz. 2- and 3-bolt mounting. A hi-fi DIY staple. fs not published." },
+  { id: "de10", lb: 1.8, name: "B&C DE10-8", price: 62.1, src: "parts-express.com, Oct 2026",
+    hf: { sens: 107, aes: 20, aesXo: 2500, minXo: 2500, imp: 8, fs: null },
+    type: "compression", exit: 1, faceplate: { diameter: 3.5 }, needsWaveguide: true,
+    note: "[maker: bcspeakers.com] Ferrite, Mylar diaphragm, 1″ voice coil, 2-bolt. 20 W RMS / 40 W program above the recommended 2.5 kHz crossover (12 dB/oct); 1.5–18 kHz; 107 dB 1 W/1 m. Reviewers say it is an improvement on the Klipschorn's tweeter. fs not published." },
+  // ---------- Planar ribbons on their own waveguide (flush in the baffle; the faceplate is the waveguide) ----------
+  { id: "lt22", lb: 1.3, name: "Radian LT2.2 + LT2.2-WG", price: 89.9, src: "usspeaker.com, Oct 2026 ($64.95 + $24.95 waveguide)",
+    hf: { sens: 101, aes: 20, aesXo: 1200, minXo: 2000, imp: 5, fs: null },
+    type: "ribbon", exit: 1, faceplate: { w: 4.25, h: 4.25 },
+    ownGuide: { name: "Radian LT2.2-WG", covH: 120, covV: 60, w: 4.25, h: 4.25 },
+    note: "[maker: radianaudio.com] Planar ribbon, Kapton diaphragm with aluminium foil conductors, neodymium. 96 dB bare, 101 dB on the LT2.2-WG; 120° × 60° on the waveguide. 20 W AES / 30 W long term / 60 W short term above 1.2 kHz. Recommended crossover 2 kHz at 12 dB/oct (4 kHz at 6 dB); steeper slopes allow lower. 5 Ω. Price is the driver plus its waveguide. fs not published." },
+  { id: "lt32", lb: 1.3, name: "Radian LT3.2 + LT3.2-WG", price: 141.9, src: "usspeaker.com, Oct 2026 ($109.95 + $31.95 waveguide)",
+    hf: { sens: 101, aes: 20, aesXo: 1500, minXo: 1800, imp: 5, fs: null },
+    type: "ribbon", exit: 1, faceplate: { w: 6.69, h: 6.69 },
+    ownGuide: { name: "Radian LT3.2-WG", covH: 100, covV: 60, w: 6.69, h: 6.69 },
+    note: "[maker: radianaudio.com] Planar ribbon, Kapton diaphragm, neodymium. 96 dB bare, 101 dB on the LT3.2-WG (6.7″ square, 2.5″ deep); 100° × 60°. 20 W AES / 30 W long term / 60 W short term above 1.5 kHz. Recommended crossover 1.8 kHz at 12 dB/oct (3 kHz at 6 dB). 5 Ω. Price is the driver plus its waveguide. fs not published." },
   { id: "hf102", lb: 0.7, name: "FaitalPRO HF102", price: 93.95, src: "usspeaker.com, Sep 2026",
     hf: { sens: 107, aes: 30, aesXo: 2600, minXo: 2600, imp: 8, fs: null },
     type: "compression", exit: 1, faceplate: { diameter: 3.58 }, needsWaveguide: true,
@@ -596,4 +611,6 @@ export const HIFI_PASSIVES = [
   { id: "sb23mfcl", name: "SB Acoustics SB23MFCL-00", size: 8, Sd: 210, Mms: 141, Cms: 0.5, Qms: 15.3, Fs: 19, Xmax: 19, xmaxKind: "mechanical", lb: 1.96, price: 85.8, src: "madisound, Oct 2026", note: "Long-stroke, cast frame; M8 mass thread. Datasheet marked preliminary." },
   { id: "dsa270pr", name: "Dayton Audio DSA270-PR", size: 10, Sd: 353, Mms: 88.4, Cms: 0.6, Qms: 5.26, Fs: 21.9, Xmax: 11, xmaxKind: "linear", lb: 1.9, price: 56.98, src: "parts-express.com, Oct 2026", note: "Aluminium cone; M5 hole for added mass. Check the cutout (listed two ways)." },
 ];
+// a ribbon's own waveguide as the model's guide object (flush-mounted)
+export const ownGuideCfg = (t) => (t && t.ownGuide ? { ...t.ownGuide, freestanding: false } : null);
 export const prAddMax = (p) => Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
