@@ -99,3 +99,16 @@ test("passive radiators: tuning, notch, travel limit and checks", (t) => {
   const big = { ...pc, pr: { drv: { ...drv, size: 10 }, n: 2, addG: 0 } };
   t.assert.ok(hifiChips(hifiSystem(W, T, big), W, T, big).some(([k, h]) => k === "bad" && h === "Radiators won't fit"));
 });
+
+test("slot vent: tunes like a port of the same area and length, its shelf takes volume, and long slots are flagged", (t) => {
+  const slot = { ...cfg, port: { shape: "slot", h: 1, len: 5 } };
+  const s = hifiSystem(W, T, slot), r = hifiSystem(W, T, cfg);
+  t.assert.ok(s.slot && s.Fb > 20 && s.Fb < 90, `Fb ${s.Fb}`);
+  close(t, s.pArea, 1 * (cfg.dim.w - 1.5), 1e-9, "full inner width");
+  t.assert.ok(s.pVol > (s.pArea * 5 * 16.387) / 1e3, "the shelf is counted");
+  // longer slot, lower tuning
+  t.assert.ok(hifiSystem(W, T, { ...slot, port: { shape: "slot", h: 1, len: 7 } }).Fb < s.Fb);
+  const long = { ...slot, port: { shape: "slot", h: 1, len: 20 } };
+  t.assert.ok(hifiChips(hifiSystem(W, T, long), W, T, long).some(([k, h]) => k === "bad" && h === "Slot too long"));
+  t.assert.ok(r.Fb > 0);
+});

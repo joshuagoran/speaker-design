@@ -2,7 +2,7 @@
 // Same rules as the PA optimizer: goals in tap order (the first ranks, the main card must beat your design on
 // every one), each card's label true against your design, unlocked amps searched at their slider maximum and
 // trimmed to the least power that keeps the card's level, and a card applies only the fields searched.
-import { hifiSystem, hifiChips, grossL, lr, logFreqs, portMaxLen, prAddFor, prFits } from "./hifi.js";
+import { hifiSystem, hifiChips, grossL, lr, logFreqs, portMaxLen, prAddFor, prFits, slotEc, slotWidth, slotMaxLen } from "./hifi.js";
 import { ventTuning } from "./calc.js";
 import { prAddMax } from "./data.js";
 
@@ -48,6 +48,20 @@ function portFor(w, dim, wall, n, dia, Fb, maxElbows = 2) {
   const len = Math.round(((a + b) / 2) * 4) / 4;
   const elbows = [0, 1, 2].find((e) => e <= maxElbows && len <= portMaxLen(dim, wall, { dia, elbows: e }) + 1e-9);
   return elbows == null ? null : { n, dia, len, elbows };
+}
+
+// slot length for a target tuning (the slot and its shelf come out of the box; the inner end correction depends on the length)
+function slotFor(w, dim, wall, h, Fb) {
+  const g = grossL(dim, wall), disp = w.ts.disp != null ? w.ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6);
+  const sw = slotWidth(dim, wall), A = h * sw;
+  let a = 0.5, b = slotMaxLen(dim, wall, { h });
+  // the inner end correction barely changes with the gap behind the slot: take it once, at mid length
+  const ec = slotEc(dim, wall, { shape: "slot", h, w: sw, len: (a + b) / 2 });
+  const fb = (len) => ventTuning(Math.max(1, g * 0.97 - disp - ((A + wall * sw) * len * 16.387) / 1e3), A, len, 1, ec).Fb;
+  if (b <= a || fb(a) < Fb || fb(b) > Fb) return null;
+  for (let i = 0; i < 20; i++) { const m = (a + b) / 2; if (fb(m) > Fb) a = m; else b = m; }
+  const len = Math.floor(((a + b) / 2) * 4) / 4;
+  return len >= 0.5 ? { shape: "slot", n: 1, h, len } : null;
 }
 
 // passive radiators for a target tuning: the cheapest (pair price) that fit the back, can move 1.5× the
@@ -113,7 +127,10 @@ export function hifiOptimize(input) {
     const ds = range(dl.d, cur.dim.d, [7, 8.5, 10, 11.5, 13, 14.5]);
     for (const bw of ws) for (const bh of hs) for (const bd of ds) for (const box of boxes) for (const wall of walls) {
       const dim = { w: bw, h: bh, d: bd };
-      const ports = box === "vented" ? [0.8, 1, 1.2].flatMap((k) => [1.5, 2, 2.5, 3].map((dia) => portFor(w, dim, wall, 1, dia, w.ts.Fs * k)).filter(Boolean).slice(0, 2)) : [null];
+      const ports = box === "vented" ? [0.8, 1, 1.2].flatMap((k) => [
+        ...[1.5, 2, 2.5, 3].map((dia) => portFor(w, dim, wall, 1, dia, w.ts.Fs * k)).filter(Boolean).slice(0, 2),
+        ...[0.75, 1, 1.5].map((h) => slotFor(w, dim, wall, h, w.ts.Fs * k)).filter(Boolean).slice(0, 1),
+      ]) : [null];
       const prs = box === "radiator" ? [0.8, 1, 1.2].flatMap((k) => prsFor(w, dim, wall, passives, w.ts.Fs * k)) : [null];
       for (const port of ports) for (const pr of prs) {
         if (box === "radiator" && !pr) continue;
@@ -125,7 +142,7 @@ export function hifiOptimize(input) {
       }
     }
   }
-  const key = (x) => `${x.w.id}|${x.box}|${x.wall}|${x.dim.w}|${x.dim.h}|${x.dim.d}|${x.port && x.port.dia}|${x.port && x.port.len}|${x.pr ? `${x.pr.drv.id}${x.pr.n}${x.pr.addG}` : ""}`;
+  const key = (x) => `${x.w.id}|${x.box}|${x.wall}|${x.dim.w}|${x.dim.h}|${x.dim.d}|${x.port && (x.port.shape === "slot" ? `s${x.port.h}` : x.port.dia)}|${x.port && x.port.len}|${x.pr ? `${x.pr.drv.id}${x.pr.n}${x.pr.addG}` : ""}`;
   const keep = new Map();
   for (const g of Object.keys(obj)) stage1.slice().sort((a, b) => obj[g](a.m) - obj[g](b.m)).slice(0, 12).forEach((x) => keep.set(key(x), x));
   for (const w of wList) stage1.filter((x) => x.w === w).sort((a, b) => a.m.f3 - b.m.f3).slice(0, 2).forEach((x) => keep.set(key(x), x));
@@ -223,7 +240,7 @@ function changes(p, cur) {
   if (p.t.id !== cur.tweeter) out.push("tweeter");
   if (c.box !== cur.box) out.push("box type");
   if (c.dim.w !== cur.dim.w || c.dim.h !== cur.dim.h || c.dim.d !== cur.dim.d) out.push("box size");
-  if (c.box === "vented" && cur.box === "vented" && (c.port.dia !== cur.port.dia || c.port.len !== cur.port.len || c.port.n !== cur.port.n)) out.push("port");
+  if (c.box === "vented" && cur.box === "vented" && ((c.port.shape || "round") !== (cur.port.shape || "round") || c.port.dia !== cur.port.dia || c.port.h !== cur.port.h || c.port.len !== cur.port.len || c.port.n !== cur.port.n)) out.push("port");
   if (c.box === "radiator" && cur.box === "radiator" && c.pr && cur.pr && (c.pr.drv.id !== cur.pr.drv.id || c.pr.n !== cur.pr.n || c.pr.addG !== cur.pr.addG)) out.push("radiator");
   if (c.wall !== cur.wall) out.push("plywood");
   if (c.xo !== cur.xo) out.push("crossover");

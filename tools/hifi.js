@@ -1,6 +1,6 @@
 // Hi-fi 2-way model: woofer (sealed or vented) + tweeter, active crossover, baffle step, placement, and the
 // response at a listening position (off-axis, crossover lobing). Pure functions, no DOM.
-import { boxModel, closedBox, ventTuning, ampV, thermalV, keeleF, plyLb, hpGain } from "./calc.js";
+import { boxModel, closedBox, ventTuning, ampV, thermalV, keeleF, plyLb, hpGain, rectEndCorr, duct2DEndCorr } from "./calc.js";
 
 const C = 343, IN = 0.0254;
 
@@ -83,6 +83,7 @@ export function waveguide(f, covH, covV, mouthWIn, mouthHIn, th, tv) {
 // longest port (centerline, inches) that fits: straight front to back; one elbow turns it up (or down) the back wall,
 // using at most half the inner height so it stays clear of the woofer; two elbows fold it back along the bottom or top
 export function portMaxLen(dim, wall, port) {
+  if (port.shape === "slot") return slotMaxLen(dim, wall, port);
   const D = dim.d - 2 * wall, H = dim.h - 2 * wall, dia = port.dia, e = port.elbows || 0;
   const straight = D - dia / 2 - 1;
   if (e === 0) return straight;
@@ -90,7 +91,15 @@ export function portMaxLen(dim, wall, port) {
   return e === 1 ? D - dia - 1 + Math.max(0, up) : 2 * (D - dia - 1) + Math.max(0, up);
 }
 export const grossL = (d, t) => Math.max(0, (d.w - 2 * t) * (d.h - 2 * t) * (d.d - 2 * t)) * 16.387 / 1e3;
-export const portArea = (p) => p.n * Math.PI * Math.pow(p.dia / 2, 2);
+export const portArea = (p) => (p.shape === "slot" ? p.h * p.w : p.n * Math.PI * Math.pow(p.dia / 2, 2));
+// Slot vent: a full-width letterbox along the bottom of the baffle, formed by a shelf, running straight back.
+// Outer end flanged by the baffle; inner end opens into the box (height X, back wall L behind the mouth).
+export const slotWidth = (dim, wall) => dim.w - 2 * wall;
+export function slotEc(dim, wall, port) {
+  const X = dim.h - 2 * wall - wall, L = dim.d - 2 * wall - port.len;
+  return rectEndCorr(port.h, port.w) + (0.61 / 0.85) * duct2DEndCorr(port.h, X, L);
+}
+export const slotMaxLen = (dim, wall, port) => dim.d - 2 * wall - Math.max(port.h, 1);   // leave the mouth's height behind it
 const MDF_LB = { 0.75: 3.4, 0.5: 2.3 };
 export const panelLb = (t, mat) => (mat === "mdf" ? MDF_LB[t] ?? 3.4 : plyLb(t));
 export function boxLb(d, t, mat) {
@@ -168,16 +177,20 @@ export function hifiSystem(w, t, cfg) {
   const ts = w.ts, dim = cfg.dim, wall = cfg.wall || 0.75;
   const gross = grossL(dim, wall);
   const vented = cfg.box === "vented", radiator = cfg.box === "radiator" && !!(cfg.pr && cfg.pr.drv);
-  const pA = vented ? portArea(cfg.port) : 0;
-  const pVol = vented ? (pA * cfg.port.len * 16.387) / 1e3 : 0;
+  const slot = vented && cfg.port.shape === "slot";
+  const port = slot ? { ...cfg.port, n: 1, w: slotWidth(dim, wall) } : cfg.port;
+  const pA = vented ? portArea(port) : 0;
+  // the slot's shelf takes volume too
+  const ec = slot ? slotEc(dim, wall, port) : undefined;
+  const pVol = vented ? ((pA + (slot ? wall * port.w : 0)) * port.len * 16.387) / 1e3 : 0;
   const disp = ts.disp != null ? ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6);
   const net = Math.max(1, gross * 0.97 - disp - pVol);          // 3% for bracing and damping
   const V = ampV(cfg.wAmpW), order = cfg.order || 4, xo = cfg.xo;
   const opts = { fmin: 15, fmax: Math.max(2000, xo * 3), N: cfg.N || 240 };
   // a vented box unloads below its tuning; with DSP you'd highpass it there (default 0.75 × Fb, BW24)
-  const hpf = cfg.hpf != null ? cfg.hpf : vented ? Math.round(0.75 * ventTuning(net, pA, cfg.port.len, cfg.port.n).Fb)
+  const hpf = cfg.hpf != null ? cfg.hpf : vented ? Math.round(0.75 * ventTuning(net, pA, port.len, port.n, ec).Fb)
     : radiator ? Math.round(0.75 * prTuning(cfg.pr.drv, cfg.pr.n, cfg.pr.addG, net).Fb) : null;
-  const vM = vented ? boxModel(ts, net, pA, cfg.port.len, hpf || 1, V, "BW24", { ...opts, nPorts: cfg.port.n }) : null;
+  const vM = vented ? boxModel(ts, net, pA, port.len, hpf || 1, V, "BW24", { ...opts, nPorts: port.n, ecIn: ec }) : null;
   const rM = radiator ? prBox(ts, net, cfg.pr, hpf || 1, V, "BW24", opts) : null;
   const sM = vented || radiator ? null : closedBox(ts, net * 1.1, hpf || null, null, V, opts);   // lightly stuffed
   const m = vM || rM || sM;
@@ -232,11 +245,12 @@ export function hifiSystem(w, t, cfg) {
 
   const lb = boxLb(dim, wall, cfg.mat) + (w.lb || 5) + (t.lb || 1.5) + 1 + (radiator ? cfg.pr.n * ((cfg.pr.drv.lb || 0.75) + (cfg.pr.addG || 0) / 454) : 0);
   // the fewest elbows that fit the port's length (null: too long even with two)
-  const portElbows = vented ? [0, 1, 2].find((e) => cfg.port.len <= portMaxLen(dim, wall, { ...cfg.port, elbows: e }) + 1e-9) ?? null : 0;
+  const portElbows = !vented ? 0 : slot ? (port.len <= slotMaxLen(dim, wall, port) + 1e-9 ? 0 : null)
+    : [0, 1, 2].find((e) => cfg.port.len <= portMaxLen(dim, wall, { ...cfg.port, elbows: e }) + 1e-9) ?? null;
   const portFits = !vented || portElbows != null;
   const lay = layout(w, t, dim, !!(cfg.guide && cfg.guide.freestanding));
   return {
-    gross, net, disp, pVol, pArea: pA, vented, radiator, Fb: vM ? vM.Fb : rM ? rM.Fb : null, Fp: rM ? rM.Fp : null, prFits: !radiator || prFits(dim, wall, cfg.pr), Qtc: sM ? sM.Qtc : null, f3Box: m.f3, ref, refW,
+    gross, net, disp, pVol, pArea: pA, vented, slot, slotW: slot ? port.w : null, radiator, Fb: vM ? vM.Fb : rM ? rM.Fb : null, Fp: rM ? rM.Fp : null, prFits: !radiator || prFits(dim, wall, cfg.pr), Qtc: sM ? sM.Qtc : null, f3Box: m.f3, ref, refW,
     woofer, wMax, sMusic, whoW, trim, tSens, tSens283, tLevel, wLevel, maxLevel, who: tLevel < wLevel ? "tweeter" : "woofer",
     pMax, derate, lb, portFits, portElbows, lay, f3, hpf, xo, order, bsF3: baffleStepF3(bw), tweeterAt, peakVel: vM ? Math.max(...woofer.map((o) => o.vel || 0)) : null, V,
   };
@@ -304,7 +318,9 @@ export function hifiChips(sys, w, t, cfg) {
   if (hf.fs && xo < 2 * hf.fs) F.push(["warn", "Close to the tweeter's resonance", `${xo} Hz is within an octave of its ${hf.fs} Hz resonance; distortion rises there.`]);
   if (w.fmax && xo > w.fmax) F.push(["warn", "Woofer past its usable range", `${w.name} is rated to about ${w.fmax} Hz; cross lower.`]);
   if (sys.Qtc != null) F.push(sys.Qtc > 0.8 ? ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Peaky; the box is small for this woofer."] : sys.Qtc < 0.5 ? ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Overdamped; the box could be smaller."] : ["ok", `Qtc ${sys.Qtc.toFixed(2)}`, "Well damped."]);
-  if (sys.vented && !sys.portFits) {
+  if (sys.slot && !sys.portFits) {
+    F.push(["bad", "Slot too long", `${cfg.port.len.toFixed(1)}″ doesn't fit; this box holds about ${slotMaxLen(cfg.dim, cfg.wall || 0.75, cfg.port).toFixed(1)}″, leaving the slot's height behind it. A shorter, lower slot tunes as low, or the box could be deeper.`]);
+  } else if (sys.vented && !sys.portFits) {
     const fits = portMaxLen(cfg.dim, cfg.wall || 0.75, { ...cfg.port, elbows: 2 });
     F.push(["bad", "Port too long", `${cfg.port.len.toFixed(1)}″ doesn't fit; even with two elbows this box holds about ${fits.toFixed(1)}″. A wider port tunes as low in less length, or the box could be deeper.`]);
   } else if (sys.vented && sys.portElbows) {
@@ -320,7 +336,8 @@ export function hifiChips(sys, w, t, cfg) {
   }
   const need = w.size + 0.8;
   if (cfg.dim.w < need) F.push(["bad", "Woofer won't fit", `A ${w.size}″ woofer needs about ${need.toFixed(1)}″ of baffle width.`]);
-  if (sys.lay.wooferIn - w.size / 2 < 0.5) F.push(["bad", "Drivers won't fit the baffle", `The woofer and tweeter need about ${(cfg.dim.h - sys.lay.wooferIn + w.size / 2 + 0.5).toFixed(1)}″ of height.`]);
+  const floor = sys.slot ? cfg.port.h + (cfg.wall || 0.75) : 0;   // the slot and its shelf along the bottom
+  if (sys.lay.wooferIn - w.size / 2 < 0.5 + floor) F.push(["bad", "Drivers won't fit the baffle", `The woofer and tweeter${floor ? " above the slot" : ""} need about ${(cfg.dim.h - sys.lay.wooferIn + w.size / 2 + 0.5 + floor).toFixed(1)}″ of height.`]);
   F.push(sys.who === "tweeter"
     ? ["warn", "Tweeter runs out first", `The tweeter tops out at ${sys.tLevel.toFixed(0)} dB, ${(sys.wLevel - sys.tLevel).toFixed(1)} dB below the woofer${sys.derate < 1 ? ` (derated for the ${xo} Hz crossover)` : ""}. A higher crossover or a more sensitive tweeter helps.`]
     : ["ok", "Woofer sets the level", `Tweeter has ${(sys.tLevel - sys.wLevel).toFixed(1)} dB to spare.`]);

@@ -894,7 +894,8 @@ function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }) {
       <circle cx={W / 2} cy={y(lay.wooferIn)} r={(w.size * 0.95 * k) / 2} fill="#e6e6e6" stroke="#707070" />
       {pr && Array.from({ length: pr.n }, (_, i) => { const s = prShape(pr.drv), cy = H - (0.75 + 0.25 + (i + 0.5) * (s.h + 0.5)) * k;
         return <rect key={`r${i}`} x={W / 2 - (s.w * k) / 2} y={cy - (s.h * k) / 2} width={s.w * k} height={s.h * k} rx={(s.w * k) / 2} fill="none" stroke="#707070" strokeDasharray="3 2" />; })}
-      {vented && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill="#111111" />)}
+      {vented && port.shape === "slot" && <rect x={bx + 0.75 * k} y={H - (0.75 + port.h) * k} width={(dim.w - 1.5) * k} height={port.h * k} fill="#111111" />}
+      {vented && port.shape !== "slot" && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill="#111111" />)}
     </svg>
   );
 }
@@ -929,7 +930,7 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
         <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} pr={prOf(c)} guide={k.guided ? guide : null} small />
         <OutChart curve={k.curve} cur={curCurve} fmin={15} fmax={20000} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
       </div>
-      <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : c.box === "radiator" && prOf(c) ? ` (${c.pr.n} × ${prOf(c).drv.name}, +${c.pr.addG} g)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
+      <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" && c.port.shape === "slot" ? ` (${c.port.h}″ slot, ${c.port.len}″ long)` : c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : c.box === "radiator" && prOf(c) ? ` (${c.pr.n} × ${prOf(c).drv.name}, +${c.pr.addG} g)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile("Drivers, pair", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Weight", `${m.lb.toFixed(0)} lb`, <Delta v={d.lb} unit=" lb" lowerIsBetter digits={1} />)}
@@ -1159,20 +1160,23 @@ function HifiPage() {
           <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="&#8243;" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
           <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
           <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-600">Ports</span>{hLk("box", "sealed, ported or radiator")}</div>
-          <div className="flex mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One port"], ["2 ports", "vented", 2, "Two ports"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip], i) => {
-            const on = box === v && (v === "sealed" || (v === "vented" ? port.n : pr.n) === n);
-            return <button key={l} title={tip} aria-label={tip} onClick={() => { setBox(v); if (v === "vented") setP("n", n); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}
-              className={`flex-1 min-w-0 whitespace-nowrap px-1 py-1.5 border text-xs ${i ? "-ml-px" : "rounded-l"} ${i === 4 ? "rounded-r" : ""} ${on ? "relative border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{l}</button>;
+          <div className="flex mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip], i, all) => {
+            const slotOn = port.shape === "slot";
+            const on = box === v && (v === "sealed" || (v === "vented" ? (n === "slot" ? slotOn : !slotOn && port.n === n) : pr.n === n));
+            return <button key={l} title={tip} aria-label={tip} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}
+              className={`flex-1 min-w-0 whitespace-nowrap px-1 py-1.5 border text-xs ${i ? "-ml-px" : "rounded-l"} ${i === all.length - 1 ? "rounded-r" : ""} ${on ? "relative border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{l}</button>;
           })}</div>
           {box === "vented" && (<>
-            <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />
-            <Slider label="Port length (centerline)" value={port.len} min={1} max={30} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
+            {port.shape === "slot"
+              ? <Slider label={`Slot height (${sys.slotW.toFixed(1)}″ wide)`} value={port.h || 1} min={0.5} max={3} step={0.125} unit="&#8243;" onChange={(v) => setP("h", v)} />
+              : <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />}
+            <Slider label={port.shape === "slot" ? "Slot length" : "Port length (centerline)"} value={port.len} min={1} max={30} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
           </>)}
           {box === "radiator" && (<>
             <Pick label={`Passive radiator · ${prDrv.shape ? "5 × 8″ oval" : `${prDrv.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={prDrv} onChange={(o) => setPrSel((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, prAddMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
             <Slider label="Added mass, each" value={pr.addG} min={0} max={prAddMax(prDrv)} step={5} unit=" g" onChange={(v) => setPrSel((p) => ({ ...p, addG: v }))} />
           </>)}
-          <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of port` : sys.radiator ? `; radiators on the back tune it to ${sys.Fb.toFixed(0)} Hz, with a notch at ${sys.Fp.toFixed(0)} Hz (their own resonance)${prDrv.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}` : ", lightly stuffed"}.</div>
+          <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of ${sys.slot ? "slot" : "port"}` : sys.radiator ? `; radiators on the back tune it to ${sys.Fb.toFixed(0)} Hz, with a notch at ${sys.Fp.toFixed(0)} Hz (their own resonance)${prDrv.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}` : ", lightly stuffed"}.</div>
         </div>
         <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
           <Slider label="Crossover" value={xo} min={800} max={4000} step={50} unit=" Hz" onChange={setXo} extra={hLk("xo", "the crossover")} />
