@@ -725,6 +725,35 @@ function Tip({ tip, children, className = "" }) {
   );
 }
 
+// Colour choice: optional named presets, a row of paint swatches and a custom picker
+function SwatchPicker({ label, value, onChange, swatches, presets, titlePrefix = "", note }) {
+  const id = useId();
+  const preset = presets && presets[value];
+  const ring = (on) => (on ? "border-stone-900" : "border-stone-300");
+  return (
+    <div className="mb-5">
+      <div id={id} className="text-sm text-stone-500 mb-1">{label}</div>
+      <div role="group" aria-labelledby={id} className="flex flex-wrap gap-1.5 items-center">
+        {presets && Object.entries(presets).map(([k, f]) => (
+          <button key={k} type="button" title={f.name} aria-pressed={value === k} onClick={() => onChange(k)}
+            className={`px-2.5 h-7 rounded-full border-2 text-xs ${ring(value === k)}`}
+            style={{ background: f.swatch, color: k === "walnut" ? "#f2f2f2" : "#111111" }}>{f.name}</button>
+        ))}
+        {swatches.map(([hex, name]) => (
+          <button key={hex} type="button" title={titlePrefix + name} aria-label={titlePrefix + name} aria-pressed={!preset && value.toLowerCase() === hex} onClick={() => onChange(hex)}
+            className={`swatch w-7 h-7 rounded-full border-2 ${ring(!preset && value.toLowerCase() === hex)}`} style={{ background: hex }} />
+        ))}
+        <label className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom colour">
+          <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
+          <input type="color" aria-label={`Custom ${label.toLowerCase()}`} value={preset ? "#ffffff" : value} onChange={(e) => onChange(e.target.value)}
+            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
+        </label>
+        <span className="text-xs text-stone-500 ml-1 tabular-nums">{note}</span>
+      </div>
+    </div>
+  );
+}
+
 // Panel: one outline, one radius. pad: "md" (default) or "lg"; tone: "white" or "tint"
 function Card({ pad = "md", tone = "white", className = "", ...p }) {
   return <div {...p} className={`rounded border border-stone-300 ${tone === "tint" ? "bg-stone-50" : "bg-white"} ${pad === "lg" ? "px-4 py-4" : "px-3 py-3"} ${className}`} />;
@@ -886,9 +915,12 @@ function FoldHead({ id, title, folds, toggle, className = "" }) {
   );
 }
 
+// Decimals a slider readout needs: 0 for whole steps, else as many as the step has (0.5 -> 1, 0.25 -> 2)
+const decimalsOf = (step) => { const t = String(step); const i = t.indexOf("."); return i < 0 ? 0 : t.length - i - 1; };
+
 function Slider({ label, value, min, max, step, unit, onChange, extra }) {
   const id = useId();
-  const shown = typeof value === "number" ? value.toFixed(step < 1 ? 2 : 0) : value;
+  const shown = typeof value === "number" ? value.toFixed(decimalsOf(step)) : value;
   return (
     <div className="mb-3">
       <div className="flex justify-between items-center gap-3 mb-1">
@@ -1233,9 +1265,9 @@ function HifiPage() {
           <span>{hLk("wall", "the panel thickness")}</span>
         </div>
         <Card className="mb-4">
-          <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
-          <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="&#8243;" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
-          <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
+          <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="″" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
+          <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="″" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
+          <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="″" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
           <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-600">Ports</span>{hLk("box", "sealed, ported or radiator")}</div>
           <div className="flex mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip], i, all) => {
             const slotOn = port.shape === "slot";
@@ -1245,9 +1277,9 @@ function HifiPage() {
           })}</div>
           {box === "vented" && (<>
             {port.shape === "slot"
-              ? <Slider label={`Slot height (${sys.slotW.toFixed(1)}″ wide)`} value={port.h || 1} min={0.5} max={3} step={0.125} unit="&#8243;" onChange={(v) => setP("h", v)} />
-              : <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />}
-            <Slider label={port.shape === "slot" ? "Slot length" : "Port length (centerline)"} value={port.len} min={1} max={30} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
+              ? <Slider label={`Slot height (${sys.slotW.toFixed(1)}″ wide)`} value={port.h || 1} min={0.5} max={3} step={0.125} unit="″" onChange={(v) => setP("h", v)} />
+              : <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="″" onChange={(v) => setP("dia", v)} />}
+            <Slider label={port.shape === "slot" ? "Slot length" : "Port length (centerline)"} value={port.len} min={1} max={30} step={0.25} unit="″" onChange={(v) => setP("len", v)} />
           </>)}
           {box === "radiator" && (<>
             <Pick label={`Passive radiator · ${prDrv.shape ? "5 × 8″ oval" : `${prDrv.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={prDrv} onChange={(o) => setPrSel((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, prAddMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
@@ -1268,8 +1300,8 @@ function HifiPage() {
           {place !== "free" && <Slider label="Distance to the wall" value={wallFt} min={0.5} max={6} step={0.25} unit=" ft" onChange={setWallFt} />}
           <Slider label="Speaker spacing" value={spacing} min={3} max={14} step={0.5} unit=" ft" onChange={setSpacing} />
           <Slider label="Toe-in" value={toe} min={0} max={35} step={1} unit="°" onChange={setToe} />
-          <Slider label="Box bottom height (stand)" value={standIn} min={0} max={40} step={1} unit="&#8243;" onChange={setStandIn} />
-          <Slider label="Ear height" value={earIn} min={24} max={60} step={1} unit="&#8243;" onChange={setEarIn} />
+          <Slider label="Box bottom height (stand)" value={standIn} min={0} max={40} step={1} unit="″" onChange={setStandIn} />
+          <Slider label="Ear height" value={earIn} min={24} max={60} step={1} unit="″" onChange={setEarIn} />
         </Card>
       </aside>
     </main>
@@ -1528,13 +1560,13 @@ function FillsPage() {
           ))}
         </div>
         <Card className="mb-4">
-          <Slider label="Width" value={dim.w} min={9} max={20} step={0.5} unit="&#8243;" onChange={(v) => setD("w", v)} />
-          <Slider label="Height" value={dim.h} min={9} max={28} step={0.5} unit="&#8243;" onChange={(v) => setD("h", v)} />
-          <Slider label="Depth" value={dim.d} min={7} max={20} step={0.5} unit="&#8243;" onChange={(v) => setD("d", v)} />
+          <Slider label="Width" value={dim.w} min={9} max={20} step={0.5} unit="″" onChange={(v) => setD("w", v)} />
+          <Slider label="Height" value={dim.h} min={9} max={28} step={0.5} unit="″" onChange={(v) => setD("h", v)} />
+          <Slider label="Depth" value={dim.d} min={7} max={20} step={0.5} unit="″" onChange={(v) => setD("d", v)} />
           {boxType === "vented" && (<>
             <Slider label="Ports" value={port.n} min={1} max={3} step={1} unit="" onChange={(v) => setP("n", v)} />
-            <Slider label="Port diameter" value={port.dia} min={1.5} max={5} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />
-            <Slider label="Port length" value={port.len} min={1} max={14} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
+            <Slider label="Port diameter" value={port.dia} min={1.5} max={5} step={0.25} unit="″" onChange={(v) => setP("dia", v)} />
+            <Slider label="Port length" value={port.len} min={1} max={14} step={0.25} unit="″" onChange={(v) => setP("len", v)} />
             <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
           </>)}
           <div className="text-xs text-stone-500">{gross.toFixed(0)} L gross{boxType === "sealed" ? ", stuffed" : `, ${pArea.toFixed(1)} in² of port`}.</div>
@@ -2490,60 +2522,18 @@ function StackPlanner() {
                 <ToggleBtn key={t} onClick={() => setWall(t)} on={wall === t}>{label}</ToggleBtn>
               ))}
             </div>
-            <div className="mt-3"><Slider label="Baffle inset" value={inset} min={0} max={1.5} step={0.25} unit="&#8243;" onChange={setInset} /></div>
+            <div className="mt-3"><Slider label="Baffle inset" value={inset} min={0} max={1.5} step={0.25} unit="″" onChange={setInset} /></div>
           </div>
           </div>
           <div className={tabCls("sub")}>
           <Pick label="Sub driver" options={subList} value={sub} onChange={setSub} extra={lk("sub", "the sub driver")} />
           </div>
           <div className={tabCls("look")}>
-          <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">Cabinet finish</div>
-            <div className="flex flex-wrap gap-1.5 items-center">
-              {Object.entries(CAB_FINISHES).map(([k, f]) => (
-                <button key={k} title={f.name} onClick={() => setCabFinish(k)}
-                  className={`px-2.5 h-7 rounded-full border-2 text-xs ${cabFinish === k ? "border-stone-900" : "border-stone-300"}`}
-                  style={{ background: f.swatch, color: k === "walnut" ? "#f2f2f2" : "#111111" }}>{f.name}</button>
-              ))}
-              {SWATCHES.map(([hex, name]) => (
-                <button key={hex} title={`Painted: ${name}`} onClick={() => setCabFinish(hex)}
-                  className={`swatch w-7 h-7 rounded-full border-2 ${cabFinish.toLowerCase() === hex ? "border-stone-900" : "border-stone-300"}`}
-                  style={{ background: hex }} />
-              ))}
-              <label className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom paint">
-                <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
-                <input type="color" value={CAB_FINISHES[cabFinish] ? "#ffffff" : cabFinish} onChange={(e) => setCabFinish(e.target.value)}
-                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
-              </label>
-              <span className="text-xs text-stone-500 ml-1 tabular-nums">{CAB_FINISHES[cabFinish] ? CAB_FINISHES[cabFinish].name : `painted ${cabFinish}`}</span>
-            </div>
-          </div>
+          <SwatchPicker label="Cabinet finish" value={cabFinish} onChange={setCabFinish} swatches={SWATCHES} presets={CAB_FINISHES} titlePrefix="Painted: "
+            note={CAB_FINISHES[cabFinish] ? CAB_FINISHES[cabFinish].name : `painted ${cabFinish}`} />
           </div>
           <div className={tabCls("look")}>
-          <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">Baffle colour</div>
-            <div className="flex flex-wrap gap-1.5 items-center">
-              {SWATCHES.map(([hex, name]) => (
-                <button
-                  key={hex}
-                  title={name}
-                  onClick={() => setBaffleColor(hex)}
-                  className={`swatch w-7 h-7 rounded-full border-2 ${baffleColor.toLowerCase() === hex ? "border-stone-900" : "border-stone-300"}`}
-                  style={{ background: hex }}
-                />
-              ))}
-              <label className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative" title="Custom">
-                <span className="absolute inset-0" style={{ background: "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)" }} />
-                <input
-                  type="color"
-                  value={baffleColor}
-                  onChange={(e) => setBaffleColor(e.target.value)}
-                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                />
-              </label>
-              <span className="text-xs text-stone-500 ml-1 tabular-nums">{baffleColor}</span>
-            </div>
-          </div>
+          <SwatchPicker label="Baffle colour" value={baffleColor} onChange={setBaffleColor} swatches={SWATCHES} note={baffleColor} />
           </div>
           <div className={tabCls("look")}>
           <div className="mb-5">
@@ -2563,16 +2553,16 @@ function StackPlanner() {
                 <ToggleBtn key={v} onClick={() => setLayout(v)} on={layout === v}>{label}</ToggleBtn>
               ))}
             </div>
-            {layout === "pole" && <div className="mt-3"><Slider label="Spacer height" value={spacerH} min={4} max={36} step={1} unit="&#8243;" onChange={setSpacerH} /></div>}
+            {layout === "pole" && <div className="mt-3"><Slider label="Spacer height" value={spacerH} min={4} max={36} step={1} unit="″" onChange={setSpacerH} /></div>}
           </div>
           </div>
           <div className={tabCls("sub")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Cabinet</div>
             <Card>
-              <Slider label="Width"  value={cDim.w} min={18} max={40} step={0.5} unit="&#8243;" onChange={(v) => setC("w", v)} extra={dl("subDim", "w", "Sub width")} />
-              <Slider label="Height" value={cDim.h} min={18} max={42} step={0.5} unit="&#8243;" onChange={(v) => setC("h", v)} extra={dl("subDim", "h", "Sub height")} />
-              <Slider label="Depth"  value={cDim.d} min={14} max={32} step={0.5} unit="&#8243;" onChange={(v) => setC("d", v)} extra={dl("subDim", "d", "Sub depth")} />
+              <Slider label="Width"  value={cDim.w} min={18} max={40} step={0.5} unit="″" onChange={(v) => setC("w", v)} extra={dl("subDim", "w", "Sub width")} />
+              <Slider label="Height" value={cDim.h} min={18} max={42} step={0.5} unit="″" onChange={(v) => setC("h", v)} extra={dl("subDim", "h", "Sub height")} />
+              <Slider label="Depth"  value={cDim.d} min={14} max={32} step={0.5} unit="″" onChange={(v) => setC("d", v)} extra={dl("subDim", "d", "Sub depth")} />
             </Card>
           </div>
           </div>
@@ -2594,14 +2584,14 @@ function StackPlanner() {
             )}
             <Card className="mt-2">
               {(portStyle === "slots" || portStyle === "folded") &&
-                <Slider label="Slot height" value={cVent.slotH} min={1.5} max={9} step={0.25} unit="&#8243;" onChange={(v) => setV("slotH", v)} />}
+                <Slider label="Slot height" value={cVent.slotH} min={1.5} max={9} step={0.25} unit="″" onChange={(v) => setV("slotH", v)} />}
               {(portStyle === "vslots" || portStyle === "vslot1") &&
-                <Slider label="Duct throat" value={cVent.throat} min={1} max={portStyle === "vslot1" ? 10 : 7} step={0.25} unit="&#8243;" onChange={(v) => setV("throat", v)} />}
+                <Slider label="Duct throat" value={cVent.throat} min={1} max={portStyle === "vslot1" ? 10 : 7} step={0.25} unit="″" onChange={(v) => setV("throat", v)} />}
               {portStyle.startsWith("round") && <>
                 <Slider label="Tubes" value={cVent.nt} min={1} max={6} step={1} unit="" onChange={(v) => setV("nt", v)} />
-                <Slider label="Tube diameter" value={cVent.dia} min={3} max={10} step={0.25} unit="&#8243;" onChange={(v) => setV("dia", v)} />
+                <Slider label="Tube diameter" value={cVent.dia} min={3} max={10} step={0.25} unit="″" onChange={(v) => setV("dia", v)} />
               </>}
-              <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="&#8243;" onChange={(v) => setV("len", v)} />
+              <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="″" onChange={(v) => setV("len", v)} />
               <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
             </Card>
@@ -2628,16 +2618,16 @@ function StackPlanner() {
               ))}
             </div>
           </div>
-          <Pick label={`Mid-bass ${midSize}"`} options={midList} value={mid} onChange={setMid} extra={lk("mid", "the mid-bass driver")} />
+          <Pick label={`Mid-bass ${midSize}″`} options={midList} value={mid} onChange={setMid} extra={lk("mid", "the mid-bass driver")} />
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
             <Card>
               {layout === "tower" ? (
                 <div className="text-xs text-stone-500 mb-3">Tower layout: the mid chamber is the sub's footprint, {cDim.w}″ × 15.5″ × {cDim.d}″.</div>
               ) : (<>
-                <Slider label="Width"  value={mDim.w} min={10} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("w", v)} extra={dl("midDim", "w", "Mid width")} />
-                <Slider label="Height" value={mDim.h} min={10} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("h", v)} extra={dl("midDim", "h", "Mid height")} />
-                <Slider label="Depth"  value={mDim.d} min={8} max={24} step={0.5} unit="&#8243;" onChange={(v) => setM("d", v)} extra={dl("midDim", "d", "Mid depth")} />
+                <Slider label="Width"  value={mDim.w} min={10} max={24} step={0.5} unit="″" onChange={(v) => setM("w", v)} extra={dl("midDim", "w", "Mid width")} />
+                <Slider label="Height" value={mDim.h} min={10} max={24} step={0.5} unit="″" onChange={(v) => setM("h", v)} extra={dl("midDim", "h", "Mid height")} />
+                <Slider label="Depth"  value={mDim.d} min={8} max={24} step={0.5} unit="″" onChange={(v) => setM("d", v)} extra={dl("midDim", "d", "Mid depth")} />
               </>)}
               <Slider label="Crossover, sub to mid" value={xoLo} min={60} max={250} step={5} unit=" Hz" onChange={setXoLo} extra={lk("xoLo", "the sub-to-mid crossover")} />
               <Slider label="Crossover, mid to horn" value={xoHi} min={500} max={2000} step={50} unit=" Hz" onChange={setXoHi} extra={lk("xoHi", "the mid-to-horn crossover")} />
