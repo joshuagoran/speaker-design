@@ -1050,12 +1050,6 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         ))}
         {paths.map((p) => <path key={p.label + "f"} d={p.fill} fill={p.tint} />)}
         {paths.map((p) => <path key={p.label} d={p.d} fill="none" stroke={p.stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />)}
-        {!narrow && paths.map((p, i) => (
-          <g key={p.label + "k"}>
-            <line x1={x1 - 36 - p.label.length * 7.3} y1={y0 + 8 + i * 16} x2={x1 - 16 - p.label.length * 7.3} y2={y0 + 8 + i * 16} stroke={p.stroke} strokeWidth="2" />
-            <text x={x1 - 10} y={y0 + 12 + i * 16} textAnchor="end" fill="#111111" stroke="#fff" strokeWidth="3" paintOrder="stroke" fontSize="12" fontFamily="Inconsolata, monospace">{p.label}</text>
-          </g>
-        ))}
         {hf && (<g pointerEvents="none">
           <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke="#707070" strokeWidth="1" />
           {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke="#fff" strokeWidth="1.5" />)}
@@ -1068,7 +1062,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         <text x={W / 2} y={H - 4} textAnchor="middle" fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">frequency, Hz</text>
         <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{yLabel}</text>
       </svg>
-      {narrow && paths.length > 0 && (
+      {paths.length > 0 && (
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-stone-600" style={{ fontFamily: "var(--font)" }}>
           {paths.map((p) => <span key={p.label} className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5" style={{ background: p.stroke }} />{p.label}</span>)}
         </div>
