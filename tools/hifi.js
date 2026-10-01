@@ -80,7 +80,7 @@ export function waveguide(f, covH, covV, mouthWIn, mouthHIn, th, tv) {
 }
 
 // ---- box ----
-// longest port (centreline, inches) that fits: straight front to back; one elbow turns it up (or down) the back wall,
+// longest port (centerline, inches) that fits: straight front to back; one elbow turns it up (or down) the back wall,
 // using at most half the inner height so it stays clear of the woofer; two elbows fold it back along the bottom or top
 export function portMaxLen(dim, wall, port) {
   const D = dim.d - 2 * wall, H = dim.h - 2 * wall, dia = port.dia, e = port.elbows || 0;
@@ -231,12 +231,14 @@ export function hifiSystem(w, t, cfg) {
   for (let i = woofer.length - 1; i >= 0; i--) { if (woofer[i].f > 500) continue; if (woofer[i].raw < ref - 3) { f3 = woofer[Math.min(woofer.length - 1, i + 1)].f; break; } f3 = woofer[i].f; }
 
   const lb = boxLb(dim, wall, cfg.mat) + (w.lb || 5) + (t.lb || 1.5) + 1 + (radiator ? cfg.pr.n * ((cfg.pr.drv.lb || 0.75) + (cfg.pr.addG || 0) / 454) : 0);
-  const portFits = !vented || cfg.port.len <= portMaxLen(dim, wall, cfg.port) + 1e-9;
+  // the fewest elbows that fit the port's length (null: too long even with two)
+  const portElbows = vented ? [0, 1, 2].find((e) => cfg.port.len <= portMaxLen(dim, wall, { ...cfg.port, elbows: e }) + 1e-9) ?? null : 0;
+  const portFits = !vented || portElbows != null;
   const lay = layout(w, t, dim, !!(cfg.guide && cfg.guide.freestanding));
   return {
     gross, net, disp, pVol, pArea: pA, vented, radiator, Fb: vM ? vM.Fb : rM ? rM.Fb : null, Fp: rM ? rM.Fp : null, prFits: !radiator || prFits(dim, wall, cfg.pr), Qtc: sM ? sM.Qtc : null, f3Box: m.f3, ref, refW,
     woofer, wMax, sMusic, whoW, trim, tSens, tSens283, tLevel, wLevel, maxLevel, who: tLevel < wLevel ? "tweeter" : "woofer",
-    pMax, derate, lb, portFits, lay, f3, hpf, xo, order, bsF3: baffleStepF3(bw), tweeterAt, peakVel: vM ? Math.max(...woofer.map((o) => o.vel || 0)) : null, V,
+    pMax, derate, lb, portFits, portElbows, lay, f3, hpf, xo, order, bsF3: baffleStepF3(bw), tweeterAt, peakVel: vM ? Math.max(...woofer.map((o) => o.vel || 0)) : null, V,
   };
 }
 
@@ -303,8 +305,11 @@ export function hifiChips(sys, w, t, cfg) {
   if (w.fmax && xo > w.fmax) F.push(["warn", "Woofer past its usable range", `${w.name} is rated to about ${w.fmax} Hz; cross lower.`]);
   if (sys.Qtc != null) F.push(sys.Qtc > 0.8 ? ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Peaky; the box is small for this woofer."] : sys.Qtc < 0.5 ? ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Overdamped; the box could be smaller."] : ["ok", `Qtc ${sys.Qtc.toFixed(2)}`, "Well damped."]);
   if (sys.vented && !sys.portFits) {
-    const e = cfg.port.elbows || 0, fits = portMaxLen(cfg.dim, cfg.wall || 0.75, cfg.port);
-    F.push(["bad", "Port too long", `${cfg.port.len.toFixed(1)}″ doesn't fit; ${e ? `with ${e} elbow${e > 1 ? "s" : ""} ` : "straight, "}this box holds about ${fits.toFixed(1)}″.${e < 2 ? " Another elbow would make room." : ""}`]);
+    const fits = portMaxLen(cfg.dim, cfg.wall || 0.75, { ...cfg.port, elbows: 2 });
+    F.push(["bad", "Port too long", `${cfg.port.len.toFixed(1)}″ doesn't fit; even with two elbows this box holds about ${fits.toFixed(1)}″. A wider port tunes as low in less length, or the box could be deeper.`]);
+  } else if (sys.vented && sys.portElbows) {
+    const e = sys.portElbows;
+    F.push(["warn", `Port needs ${e === 1 ? "an elbow" : "two elbows"}`, `${cfg.port.len.toFixed(1)}″ is longer than a straight port fits (about ${portMaxLen(cfg.dim, cfg.wall || 0.75, { ...cfg.port, elbows: 0 }).toFixed(1)}″); ${e === 1 ? "one elbow turns it up the back wall" : "two elbows fold it along the back and the bottom"}.`]);
   }
   if (sys.radiator) {
     const p = cfg.pr, vdW = w.ts.Sd * w.ts.Xmax, vdP = p.n * p.drv.Sd * p.drv.Xmax, k = vdP / vdW;

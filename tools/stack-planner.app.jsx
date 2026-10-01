@@ -103,14 +103,14 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
       return d / 2 - REVEAL;
     };
     // Same construction with a semicircular top the full width of the cabinet.
-    // Holes use the same baffle-centred coordinates as cabinet().
+    // Holes use the same baffle-centered coordinates as cabinet().
     const archOutline = (P, hw, yb, acy, r) => {
       P.moveTo(-hw, yb); P.lineTo(hw, yb); P.lineTo(hw, acy);
       P.absarc(0, acy, r, 0, Math.PI, false); P.lineTo(-hw, yb);
       return P;
     };
     const archCabinet = (w, h, d, y, holes, baffleBottom = 0, x = 0, parent = group) => {
-      const R = w / 2, acy = h / 2 - R;                  // arch centre, frame-centred coords
+      const R = w / 2, acy = h / 2 - R;                  // arch center, frame-centered coords
       const shape = archOutline(new THREE.Shape(), R, -h / 2, acy, R);
       shape.holes.push(archOutline(new THREE.Path(), R - T + RO, -h / 2 + T - RO, acy, R - T + RO));
       const frame = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {
@@ -178,12 +178,12 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     const towerMode = layout === "tower";
     const TW_MID = 15.5;
     const archTop = towerMode && !!horn.profile && !horn.scaleX && s.w / 2 - T > horn.size.w / 2;
-    // arched: horn centred on the arch, equal margin below and around it
+    // arched: horn centered on the arch, equal margin below and around it
     const twHsH = archTop ? (s.w / 2 - T) + s.w / 2 : horn.size.h + 2;
     const extH = towerMode ? TW_MID + twHsH : 0;
     const baffleH = s.h + extH - 2 * T - bandH;
-    const baffleCy = pl + T + bandH + baffleH / 2; // absolute centre of the baffle
-    // centred when symmetric; bottom slots: centred in the baffle above the duct (sub section only in a tower)
+    const baffleCy = pl + T + bandH + baffleH / 2; // absolute center of the baffle
+    // centered when symmetric; bottom slots: centered in the baffle above the duct (sub section only in a tower)
     const drvAbsY = corners || vSlot ? pl + s.h / 2
       : !round ? pl + T + bandH + (s.h - 2 * T - bandH) / 2
       : pl + s.h - T - innerW / 2;
@@ -193,7 +193,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     const holes = [circPath(drvX, drvAbsY - baffleCy, drvR)];
     let portCy = 0;
     if (round) {
-      // 8" sits low on the baffle; 5" pair centred 10" up
+      // 8" sits low on the baffle; 5" pair centered 10" up
       portCy = corners ? 0 : (portStyle === "round1" ? pl + T + portR + 0.75 + 1 : pl + 10) - baffleCy;
       if (corners) {
         const off = innerW / 2 - portR - 0.75 - 0.4;
@@ -324,7 +324,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
         fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, roofZ);
         subGroup.add(fin);
       });
-      // the rear channel rises until the centreline adds up to the set duct length
+      // the rear channel rises until the centerline adds up to the set duct length
       // The wall starts at the floor leg's roof, so the floor leg runs on under it into the
       // rear channel, turns, and rises between this wall and the back panel.
       const floorRun = roofLen + T + ductH / 2;
@@ -1135,7 +1135,7 @@ function HifiPage() {
           <summary className="cursor-pointer text-sm text-stone-700 py-1">Details</summary>
           <div className="leading-relaxed mt-1 flex flex-col gap-1.5">
             <div>Woofer {sys.lay.wooferIn.toFixed(1)}″ and tweeter {sys.lay.tweeterIn.toFixed(1)}″ from the bottom, {sys.lay.spacingIn.toFixed(1)}″ apart. {sys.gross.toFixed(1)} L gross, {sys.net.toFixed(1)} L net{sys.hpf ? `; DSP highpass ${sys.hpf} Hz (BW24) below the port tuning` : ""}.</div>
-            <div>Tweeter trimmed {sys.trim.toFixed(1)} dB in the DSP to match the woofer; baffle step centred at {sys.bsF3.toFixed(0)} Hz{bsc ? `, ${bsc} dB boost` : ""}.</div>
+            <div>Tweeter trimmed {sys.trim.toFixed(1)} dB in the DSP to match the woofer; baffle step centered at {sys.bsF3.toFixed(0)} Hz{bsc ? `, ${bsc} dB boost` : ""}.</div>
             <div><span className="font-medium text-stone-700">{w.name}.</span> {w.note}</div>
             <div><span className="font-medium text-stone-700">{t.name}.</span> {t.note}</div>
             {guide && <div><span className="font-medium text-stone-700">{guide.name}.</span> {guideSel.note}</div>}
@@ -1165,8 +1165,7 @@ function HifiPage() {
           })}</div>
           {box === "vented" && (<>
             <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />
-            <Slider label="Port length (centreline)" value={port.len} min={1} max={30} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
-            <div className="flex flex-wrap gap-1 mb-3">{[[0, "Straight"], [1, "1 elbow"], [2, "2 elbows"]].map(([e, l]) => <button key={e} onClick={() => setP("elbows", e)} className={seg((port.elbows || 0) === e)}>{l}</button>)}</div>
+            <Slider label="Port length (centerline)" value={port.len} min={1} max={30} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
           </>)}
           {box === "radiator" && (<>
             <Pick label={`Passive radiator · ${prDrv.shape ? "5 × 8″ oval" : `${prDrv.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={prDrv} onChange={(o) => setPrSel((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, prAddMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
@@ -1356,7 +1355,7 @@ function NotesPage() {
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
               ["Baffle mounting", "Cleats (forgiving, costs 3/4\" of interior on each side) or a stopped rabbet in the frame panels (tighter, squares the box, needs a dado). Baffle size changes with the choice."],
-              ["Bracing", "Not drawn. Volume and weight allow for two braces. Centre ribs, slat ladder or windowed shelves — decide once handle recesses are placed, since they compete for the same panel area."],
+              ["Bracing", "Not drawn. Volume and weight allow for two braces. Center ribs, slat ladder or windowed shelves — decide once handle recesses are placed, since they compete for the same panel area."],
               ["Handles", "Recess type, depth and position on the sub. Interacts with bracing."],
               ["Driver margins", "Currently equal at top and sides. One recommendation is to offset deliberately so baffle modes and diffraction paths don't coincide — likely inaudible below 100 Hz, so mostly a visual decision."],
               ["Port edge finish", "The letterbox mouths are cut in the shell's nose band, so this is a shell-material question, not a baffle one. Paint carried into the ducts, or masked so the ply edge shows — end grain in the mouth needs sealing either way."],
@@ -1366,7 +1365,7 @@ function NotesPage() {
               ["Compression driver", "DE360 at $117 is the default; crossover floor on the A400G2 needs a distortion sweep to confirm ~1.1 kHz."],
               ["Horn print", "A400G2 in one piece needs a 400 mm+ bed; otherwise sectioned. Filament, print service, or buy the RX-28 instead."],
               ["Prototype material", "3/4\" particleboard for the first sub, then transfer verified interior dimensions to birch."],
-              ["Final panel thickness", "3/4\" or braced 1/2\" birch (switch it under Plywood in the planner). 1/2\" needs bracing on roughly 12\" centres and a doubler at the driver cutout. Decide before the prototype, since wall thickness changes the interior volume and therefore the duct length."],
+              ["Final panel thickness", "3/4\" or braced 1/2\" birch (switch it under Plywood in the planner). 1/2\" needs bracing on roughly 12\" centers and a doubler at the driver cutout. Decide before the prototype, since wall thickness changes the interior volume and therefore the duct length."],
               ["Baffle material", "MDO if the baffles are painted — no baffle edge is exposed in any of the current configurations, so there is no reason not to. Birch only if the baffle is ever meant to be clear-finished."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
@@ -2649,7 +2648,7 @@ function StackPlanner() {
             <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Horn</h2>
             <p className="text-sm text-stone-700">
               {horn.name} with {cd.name}, crossed at {xoHi} Hz (maker suggests {horn.xo}). Sits on a short block so the mouth clears the cube.
-              Total stack height about {stackH.toFixed(0)} in, horn centre at {hornCenter.toFixed(0)} in.
+              Total stack height about {stackH.toFixed(0)} in, horn center at {hornCenter.toFixed(0)} in.
             </p>
             {cd.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{cd.name}.</span> {cd.note}</p>}
             {horn.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{horn.name}.</span> {horn.note}</p>}

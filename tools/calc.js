@@ -167,7 +167,7 @@ export function boxParts(label, W, H, D, t, inset, joint, extra = {}) {
   P.push({ box: label, part: "Baffle cleat", qty: 2, a: 0.75, b: iw, t: BT, note: "glue and screw behind the baffle" });
   P.push({ box: label, part: "Baffle cleat", qty: 2, a: 0.75, b: ih - band - 1.5, t: BT, note: "" });
   const inD = D - inset - BT - t;
-  if (extra.braces) P.push({ box: label, part: "Window brace", qty: extra.braces, a: iw, b: inD, t, note: "cut out the centre, leave ~2″ rails" });
+  if (extra.braces) P.push({ box: label, part: "Window brace", qty: extra.braces, a: iw, b: inD, t, note: "cut out the center, leave ~2″ rails" });
   return { P, iw, ih, inD };
 }
 

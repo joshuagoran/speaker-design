@@ -310,7 +310,7 @@ export const CABINETS = [
     note: "Vendor-suggested box for the Ciare 18.00SW: 7.55 ft\u00b3 internal, 22 \u00d7 2 in slot, 16.625 in deep, tuned 29 Hz, F3 28.5 Hz." },
   { id: "cube", name: "Cube", vents: ["round4"],
     dims: { 18: { w: 25, h: 25, d: 25 }, 15: { w: 23, h: 23, d: 19 } },
-    note: "Square baffle, centred driver, corner ports. Reads the same in any rotation." },
+    note: "Square baffle, centered driver, corner ports. Reads the same in any rotation." },
 ];
 
 export const FORMATS = [

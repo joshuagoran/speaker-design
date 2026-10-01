@@ -223,7 +223,7 @@ function changes(p, cur) {
   if (p.t.id !== cur.tweeter) out.push("tweeter");
   if (c.box !== cur.box) out.push("box type");
   if (c.dim.w !== cur.dim.w || c.dim.h !== cur.dim.h || c.dim.d !== cur.dim.d) out.push("box size");
-  if (c.box === "vented" && cur.box === "vented" && (c.port.dia !== cur.port.dia || c.port.len !== cur.port.len || c.port.n !== cur.port.n || (c.port.elbows || 0) !== (cur.port.elbows || 0))) out.push("port");
+  if (c.box === "vented" && cur.box === "vented" && (c.port.dia !== cur.port.dia || c.port.len !== cur.port.len || c.port.n !== cur.port.n)) out.push("port");
   if (c.box === "radiator" && cur.box === "radiator" && c.pr && cur.pr && (c.pr.drv.id !== cur.pr.drv.id || c.pr.n !== cur.pr.n || c.pr.addG !== cur.pr.addG)) out.push("radiator");
   if (c.wall !== cur.wall) out.push("plywood");
   if (c.xo !== cur.xo) out.push("crossover");
