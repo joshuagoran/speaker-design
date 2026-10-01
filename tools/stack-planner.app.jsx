@@ -504,10 +504,10 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     })();
 
     // floor
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0xf2eee6, roughness: 1 }));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 1 }));
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
-    scene.add(new THREE.GridHelper(120, 10, 0xd9d2c4, 0xe6e0d4));
+    scene.add(new THREE.GridHelper(120, 10, 0xdddddd, 0xeaeaea));
 
     group.position.y = 0;
 
@@ -626,16 +626,16 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
 }
 
 function SignalPath() {
-  const ink = "#292524", mute = "#78716c", line = "#57534e";
-  const col = { pa2: "#7c3aed", sub: "#0f766e", mid: "#c2410c", hf: "#b45309", grey: "#a8a29e" };
+  const ink = "#111111", mute = "#707070", line = "#707070";
+  const col = { pa2: "#707070", sub: "#0082c8", mid: "#e5007e", hf: "#e5007e", grey: "#707070" };
   const Box = ({ x, y, w, h, c, children }) => (
     <g>
-      <rect x={x} y={y} width={w} height={h} rx="6" fill="#fafaf9" stroke={c} strokeWidth="1.5" />
+      <rect x={x} y={y} width={w} height={h} rx="6" fill="#ffffff" stroke={c} strokeWidth="1.5" />
       {children}
     </g>
   );
   const T = ({ x, y, s = 11, c = ink, a = "middle", b }) => (
-    <text x={x} y={y} fontSize={s} fill={c} textAnchor={a} fontFamily="system-ui, sans-serif" fontWeight={b ? 600 : 400}>{b}</text>
+    <text x={x} y={y} fontSize={s} fill={c} textAnchor={a} fontFamily="Inconsolata, monospace" fontWeight={b ? 600 : 400}>{b}</text>
   );
   const A = ({ d, c = line }) => <path d={d} fill="none" stroke={c} strokeWidth="1.3" markerEnd="url(#sp-ar)" />;
   return (
@@ -685,7 +685,7 @@ function SignalPath() {
 // ---------------------------------------------------------------
 // group: optional (option) => heading; options with the same heading are listed together under it, in order of first appearance
 function Pick({ label, options, value, onChange, extra, group }) {
-  const opt = (o) => <option key={o.id} value={o.id}>{o.pick ? "● " : ""}{o.name}{o.price ? ` — $${o.price}` : ""}</option>;
+  const opt = (o) => <option key={o.id} value={o.id}>{o.name}{o.price ? ` — $${o.price}` : ""}</option>;
   const groups = group ? [...new Set(options.map(group))] : null;
   return (
     <div className="mb-4">
@@ -735,8 +735,8 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   const grid = [];
   ticks.forEach((f) => {
     const X = px(f);
-    grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke="#e7e5e4" strokeWidth="1" />);
-    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{f >= 1000 ? f / 1000 + "k" : f}</text>);
+    grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke="#e6e6e6" strokeWidth="1" />);
+    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill="#707070" fontSize="11" fontFamily="Inconsolata, monospace">{f >= 1000 ? f / 1000 + "k" : f}</text>);
   });
   // hover / drag: a crosshair with each curve's value at that frequency
   const [hf, setHf] = useState(null);
@@ -753,8 +753,8 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   const every = ((y1 - y0) * step) / (TOP - BOT) < 16 ? 2 : 1;   // thin the labels when rows get tight
   for (let v = BOT, k = 0; v <= TOP; v += step, k++) {
     const Y = py(v);
-    grid.push(<line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke="#e7e5e4" strokeWidth="1" />);
-    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{v}</text>);
+    grid.push(<line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke="#e6e6e6" strokeWidth="1" />);
+    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill="#707070" fontSize="11" fontFamily="Inconsolata, monospace">{v}</text>);
   }
   return (
     <div ref={box}>
@@ -763,8 +763,8 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         {grid}
         {marks.filter((m) => m.f > fmin && m.f < fmax).map((m, i, ms) => (
           <g key={m.label + i}>
-            <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke="#a8a29e" strokeWidth="1" strokeDasharray="3 4" />
-            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill="#a8a29e" fontSize="10.5" fontFamily="system-ui, sans-serif">{m.label}</text>
+            <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke="#707070" strokeWidth="1" strokeDasharray="3 4" />
+            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill="#707070" fontSize="10.5" fontFamily="Inconsolata, monospace">{m.label}</text>
           </g>
         ))}
         {paths.map((p) => <path key={p.label + "f"} d={p.fill} fill={p.tint} />)}
@@ -772,23 +772,23 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         {!narrow && paths.map((p, i) => (
           <g key={p.label + "k"}>
             <line x1={x0 + 10} y1={y0 + 8 + i * 16} x2={x0 + 30} y2={y0 + 8 + i * 16} stroke={p.stroke} strokeWidth="2" />
-            <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#57534e" fontSize="11" fontFamily="system-ui, sans-serif">{p.label}</text>
+            <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#707070" fontSize="11" fontFamily="Inconsolata, monospace">{p.label}</text>
           </g>
         ))}
         {hf && (<g pointerEvents="none">
-          <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke="#78716c" strokeWidth="1" />
+          <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke="#707070" strokeWidth="1" />
           {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke="#fff" strokeWidth="1.5" />)}
           {(() => { const t = `${hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz`, w = t.length * 6.5 + 8, X = Math.max(x0 + w / 2, Math.min(x1 - w / 2, px(hf)));
-            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill="#1c1917" /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="11" fontFamily="system-ui, sans-serif" fill="#fafaf9">{t}</text></g>; })()}
-          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="11" fontFamily="system-ui, sans-serif" fill="#1c1917" stroke="#fff" strokeWidth="3" paintOrder="stroke">
+            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill="#111111" /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="11" fontFamily="Inconsolata, monospace" fill="#ffffff">{t}</text></g>; })()}
+          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="11" fontFamily="Inconsolata, monospace" fill="#111111" stroke="#fff" strokeWidth="3" paintOrder="stroke">
             {hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz{hits.map((h) => ` · ${h.label} ${h.o.spl.toFixed(0)}${unit}`).join("")}
           </text>
         </g>)}
-        <text x={W / 2} y={H - 4} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">frequency, Hz</text>
-        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#a8a29e" fontSize="11" fontFamily="system-ui, sans-serif">{yLabel}</text>
+        <text x={W / 2} y={H - 4} textAnchor="middle" fill="#707070" fontSize="11" fontFamily="Inconsolata, monospace">frequency, Hz</text>
+        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#707070" fontSize="11" fontFamily="Inconsolata, monospace">{yLabel}</text>
       </svg>
       {narrow && paths.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[11px] text-stone-600" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[11px] text-stone-600" style={{ fontFamily: "var(--font)" }}>
           {paths.map((p) => <span key={p.label} className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5" style={{ background: p.stroke }} />{p.label}</span>)}
         </div>
       )}
@@ -799,7 +799,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
 // Section heading that folds its section on phones (always open from md up).
 function FoldHead({ id, title, folds, toggle, className = "" }) {
   return (
-    <h2 className={`text-xl ${className} ${folds[id] ? "" : "max-md:mb-0"}`} style={{ fontFamily: "Georgia, serif" }}>
+    <h2 className={`text-xl ${className} ${folds[id] ? "" : "max-md:mb-0"}`} style={{ fontFamily: "var(--font)", fontWeight: 700 }}>
       <button onClick={() => toggle(id)} aria-expanded={!!folds[id]} className="w-full flex justify-between items-center text-left md:pointer-events-none md:cursor-default">
         <span>{title}</span><span className="md:hidden text-stone-500 text-base" aria-hidden="true">{folds[id] ? "\u2212" : "+"}</span>
       </button>
@@ -831,7 +831,7 @@ function DispMap({ map, title }) {
   const W = 560, H = 240, L = 40, R = 6, T = 6, B = 24;
   const nF = map.freqs.length, nA = map.angles.length;
   const cw = (W - L - R) / nF, ch = (H - T - B) / nA;
-  const col = (db) => { const x = Math.max(0, Math.min(1, -db / 18)); const l = 28 + x * 66; return `hsl(174 ${Math.round(60 - x * 45)}% ${l.toFixed(0)}%)`; };
+  const col = (db) => { const x = Math.max(0, Math.min(1, -db / 18)); const l = 28 + x * 66; return `hsl(201 ${Math.round(100 - x * 70)}% ${l.toFixed(0)}%)`; };
   const fx = (f) => L + (Math.log(f / map.freqs[0]) / Math.log(map.freqs[nF - 1] / map.freqs[0])) * (W - L - R);
   const move = (e) => {
     const r = e.currentTarget.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W, y = ((e.clientY - r.top) / r.height) * H;
@@ -845,9 +845,9 @@ function DispMap({ map, title }) {
         <span className="tabular-nums text-stone-700">{hover ? `${map.angles[hover.j]}° · ${map.freqs[hover.i] >= 1000 ? (map.freqs[hover.i] / 1000).toFixed(1) + "k" : map.freqs[hover.i].toFixed(0)} Hz · ${map.rows[hover.j][hover.i].toFixed(1)} dB` : "dB vs on-axis"}</span></div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" style={{ touchAction: "pan-y" }} onPointerMove={move} onPointerDown={move} onPointerLeave={() => setHover(null)} role="img" aria-label={`${title}: level against angle and frequency`}>
         {map.rows.map((row, j) => row.map((db, i) => <rect key={j * nF + i} x={L + i * cw} y={T + j * ch} width={cw + 0.5} height={ch + 0.5} fill={col(db)} />))}
-        {ticksA.map((a) => { const j = map.angles.indexOf(a); return <text key={a} x={L - 5} y={T + (j + 0.5) * ch + 3} fontSize="10" textAnchor="end" fill="#78716c">{a}°</text>; })}
-        {[200, 500, 1000, 2000, 5000, 10000, 20000].map((f) => <text key={f} x={fx(f)} y={H - 8} fontSize="10" textAnchor="middle" fill="#78716c">{f >= 1000 ? f / 1000 + "k" : f}</text>)}
-        {hover && <rect x={L + hover.i * cw} y={T + hover.j * ch} width={cw} height={ch} fill="none" stroke="#1c1917" strokeWidth="1.5" />}
+        {ticksA.map((a) => { const j = map.angles.indexOf(a); return <text key={a} x={L - 5} y={T + (j + 0.5) * ch + 3} fontSize="10" textAnchor="end" fill="#707070">{a}°</text>; })}
+        {[200, 500, 1000, 2000, 5000, 10000, 20000].map((f) => <text key={f} x={fx(f)} y={H - 8} fontSize="10" textAnchor="middle" fill="#707070">{f >= 1000 ? f / 1000 + "k" : f}</text>)}
+        {hover && <rect x={L + hover.i * cw} y={T + hover.j * ch} width={cw} height={ch} fill="none" stroke="#111111" strokeWidth="1.5" />}
       </svg>
       <div className="flex items-center gap-2 text-[11px] text-stone-500 mt-1">0 dB<span className="h-2 flex-1 max-w-[160px] rounded" style={{ background: `linear-gradient(to right, ${col(0)}, ${col(-9)}, ${col(-18)})` }} />−18 dB</div>
     </div>
@@ -865,35 +865,40 @@ function RoomView({ spacing, toe, seat, setSeat, angles }) {
     setSeat({ x: Math.round(((x - W / 2) / k) * 4) / 4, y: Math.max(2, Math.round(((y - 14) / k) * 4) / 4) });
   };
   const spk = (sx, sign) => {
-    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${-sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill="#44403c" /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke="#a8a29e" strokeDasharray="2 2" /></g>;
+    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${-sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill="#111111" /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke="#707070" strokeDasharray="2 2" /></g>;
   };
   return (
     <svg viewBox={`0 0 ${W} ${H + 20}`} className="w-full h-auto rounded border border-stone-200 bg-white" style={{ touchAction: "none" }} onPointerDown={drag} onPointerMove={drag} role="img" aria-label="Room seen from above; drag the seat">
-      {[-1, 1].map((sg) => <line key={sg} x1={px((sg * spacing) / 2)} y1={py(0)} x2={px(seat.x)} y2={py(seat.y)} stroke="#d6d3d1" />)}
+      {[-1, 1].map((sg) => <line key={sg} x1={px((sg * spacing) / 2)} y1={py(0)} x2={px(seat.x)} y2={py(seat.y)} stroke="#e6e6e6" />)}
       {spk(-spacing / 2, 1)}{spk(spacing / 2, -1)}
-      <circle cx={px(seat.x)} cy={py(seat.y)} r="7" fill="#0f766e" stroke="#fff" strokeWidth="2" />
-      <text x={px(-spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill="#57534e">{angles[0].toFixed(0)}° off</text>
-      <text x={px(spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill="#57534e">{angles[1].toFixed(0)}° off</text>
-      <text x={6} y={H + 14} fontSize="10" fill="#78716c">{Wd.toFixed(0)} ft wide · drag the seat</text>
+      <circle cx={px(seat.x)} cy={py(seat.y)} r="7" fill="#0082c8" stroke="#fff" strokeWidth="2" />
+      <text x={px(-spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill="#707070">{angles[0].toFixed(0)}° off</text>
+      <text x={px(spacing / 2)} y={py(0) + 38} fontSize="10" textAnchor="middle" fill="#707070">{angles[1].toFixed(0)}° off</text>
+      <text x={6} y={H + 14} fontSize="10" fill="#707070">{Wd.toFixed(0)} ft wide · drag the seat</text>
     </svg>
   );
 }
 
 // Front view of the box and drivers, to scale.
 function HifiFront({ dim, w, t, lay, vented, port, guide, small }) {
-  const k = 120 / Math.max(dim.h, dim.w * 1.2), W = dim.w * k, H = dim.h * k;
   const face = guide ? { w: guide.w, h: guide.h } : t.faceplate || { w: 4, h: 4 };
+  const top = lay.onTop ? face.h : 0, k = 120 / Math.max(dim.h + top, dim.w * 1.2, face.w * 1.2), W = Math.max(dim.w, face.w) * k, H = (dim.h + top) * k;
+  const bx = (W - dim.w * k) / 2, y = (inch) => (dim.h + top - inch) * k;
   return (
-    <svg viewBox={`-4 -4 ${W + 8} ${H + 8}`} className={small ? "w-full h-auto max-h-40" : "h-40 w-auto"} role="img" aria-label={`Front view, ${dim.w} × ${dim.h}″`}>
-      <rect x={0} y={0} width={W} height={H} rx="2" fill="#e7e5e4" stroke="#292524" strokeWidth="1.2" />
-      <rect x={W / 2 - (face.w * k) / 2} y={(dim.h - lay.tweeterIn - face.h / 2) * k} width={face.w * k} height={face.h * k} rx={guide ? 3 : face.w * k / 2} fill="#57534e" />
-      <circle cx={W / 2} cy={(dim.h - lay.tweeterIn) * k} r={0.5 * k} fill="#d6d3d1" />
-      <circle cx={W / 2} cy={(dim.h - lay.wooferIn) * k} r={(w.size * 0.95 * k) / 2} fill="#d6d3d1" stroke="#78716c" />
-      {vented && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill="#292524" />)}
+    <svg viewBox={`-4 -4 ${W + 8} ${H + 8}`} className={small ? "w-full h-auto max-h-40" : "h-40 w-auto"} role="img" aria-label={`Front view, ${dim.w} × ${dim.h}″${lay.onTop ? ", waveguide on top" : ""}`}>
+      <rect x={bx} y={top * k} width={dim.w * k} height={dim.h * k} rx="2" fill="#e6e6e6" stroke="#111111" strokeWidth="1.2" />
+      {lay.onTop
+        ? <g><rect x={W / 2 - (face.w * k) / 8} y={top * k - 3} width={(face.w * k) / 4} height={3} fill="#111111" /><rect x={W / 2 - (face.w * k) / 2} y={0} width={face.w * k} height={top * k - 3} rx={(face.h * k) / 3} fill="#707070" stroke="#111111" strokeWidth="1" /></g>
+        : <rect x={W / 2 - (face.w * k) / 2} y={y(lay.tweeterIn) - (face.h * k) / 2} width={face.w * k} height={face.h * k} rx={guide ? 3 : face.w * k / 2} fill="#707070" />}
+      <circle cx={W / 2} cy={y(lay.tweeterIn)} r={0.5 * k} fill="#e6e6e6" />
+      <circle cx={W / 2} cy={y(lay.wooferIn)} r={(w.size * 0.95 * k) / 2} fill="#e6e6e6" stroke="#707070" />
+      {vented && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill="#111111" />)}
     </svg>
   );
 }
 
+// every Hi-fi chart shares one fixed dB scale, so designs and charts compare by eye
+const HIFI_TOP = 130, HIFI_BOT = 50;
 // woofers listed smallest first, grouped by size in the picker
 const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort((a, b) => a.size - b.size);
 
@@ -911,12 +916,12 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
   return (
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
       <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
-      <h3 className="text-lg leading-snug" style={{ fontFamily: "Georgia, serif" }}>{cw.size}″ {k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
+      <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{cw.size}″ {k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} guide={k.guided ? guide : null} small />
-        <OutChart curve={k.curve} cur={curCurve} fmin={20} fmax={500} band={null} />
+        <OutChart curve={k.curve} cur={curCurve} fmin={15} fmax={20000} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
       </div>
-      <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
+      <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile("Drivers, pair", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Weight", `${m.lb.toFixed(0)} lb`, <Delta v={d.lb} unit=" lb" lowerIsBetter digits={1} />)}
@@ -924,11 +929,11 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
         {tile("F3 in room", `${m.f3.toFixed(0)} Hz`, <Delta v={d.f3} unit=" Hz" lowerIsBetter />)}
       </div>
       <div className="text-xs leading-snug"><b className="font-semibold">Limited by:</b> {who}</div>
-      {k.warnings.filter((h) => !/^Woofer limited by/.test(h)).map((h) => <div key={h} className="text-xs border border-stone-300 rounded px-2 py-1 bg-stone-50"><b className="font-semibold text-amber-700">{h}</b></div>)}
+      {k.warnings.filter((h) => !/^Woofer limited by/.test(h)).map((h) => <div key={h} className="text-xs border border-l-4 rounded px-2 py-1 bg-amber-50 border-amber-200 border-l-amber-300"><b className="font-semibold text-amber-700">{h}</b></div>)}
       <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
-        <button onClick={onLoad} className="flex-1 px-3 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50">Load</button>
+        <button onClick={onLoad} className="flex-1 px-3 py-2 rounded border text-sm font-semibold border-cmy-c bg-cmy-c text-white">Load</button>
       </div>
     </div>
   );
@@ -971,7 +976,7 @@ function HifiPage() {
   const [hUndo, setHUndo] = useState(null);
   const setD = (k, v) => setDim((p) => ({ ...p, [k]: v }));
   const setP = (k, v) => setPort((p) => ({ ...p, [k]: v }));
-  const guide = t.type === "compression" || t.needsWaveguide ? { covH: guideSel.hf.covH, covV: guideSel.hf.covV || guideSel.hf.covH, w: guideSel.size.w, h: guideSel.size.h, name: guideSel.name } : null;
+  const guide = t.type === "compression" || t.needsWaveguide ? { covH: guideSel.hf.covH, covV: guideSel.hf.covV || guideSel.hf.covH, w: guideSel.size.w, h: guideSel.size.h, name: guideSel.name, freestanding: !guideSel.rect } : null;
   const cfg = { box, dim, wall, mat, port, xo, order, wAmpW, tAmpW, bsc, place, wallFt, portMax: 17, guide };
   const tt = guide ? { ...t, faceplate: { w: guide.w, h: guide.h } } : t;
   const sys = hifiSystem(w, tt, cfg);
@@ -984,7 +989,7 @@ function HifiPage() {
     return { th: Math.abs(ang), eyeIn: earIn - standIn, distM: d * FT };
   };
   const gL = geoOf(-1), gR = geoOf(1);
-  const freqs = logFreqs(40, 20000, 200);
+  const freqs = logFreqs(15, 20000, 220);
   const rL = responseAt(sys, w, tt, cfg, gL, freqs), rR = responseAt(sys, w, tt, cfg, gR, freqs);
   const on = responseAt(sys, w, tt, cfg, { th: 0, eyeIn: sys.lay.tweeterIn, distM: 1 }, freqs);
   const pair = rL.map((o, i) => ({ f: o.f, spl: 10 * Math.log10(Math.pow(10, o.spl / 10) + Math.pow(10, rR[i].spl / 10)) }));
@@ -993,7 +998,6 @@ function HifiPage() {
   const tMax = freqs.map((f) => ({ f, spl: sys.tLevel + 20 * Math.log10(Math.max(1e-6, Math.hypot(lr(f, xo, order, "hp").re, lr(f, xo, order, "hp").im))) }));
   const map = dispersionMap(sys, w, tt, cfg, plane, Math.max(1, seatDist));
   const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0));
-  const hi = Math.max(...on.map((o) => o.spl), ...pair.map((o) => o.spl)), top = Math.ceil((hi + 4) / 5) * 5;
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
       <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
@@ -1037,7 +1041,7 @@ function HifiPage() {
   );
   const optPanel = hOn && (
     <div className="rounded-lg border border-stone-300 bg-white p-4 mt-3">
-      <h2 className="text-xl" style={{ fontFamily: "Georgia, serif" }}>Find a better design</h2>
+      <h2 className="text-xl" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Find a better design</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
         <div className="mt-3">
           <div className="text-sm text-stone-500 mb-1">Driver budget, pair <span className="text-xs">(woofers + tweeters{guide ? " + waveguides" : ""}, at the listed prices)</span></div>
@@ -1045,36 +1049,36 @@ function HifiPage() {
         </div>
         <div className="mt-3">
           <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
-          <div className="flex flex-wrap gap-1">{Object.entries(HIFI_GOALS).map(([k, g]) => { const i = hGoals.indexOf(k); return <button key={k} title={g.name} aria-pressed={i >= 0} className={optSeg(i >= 0)} onClick={() => tapG(k)}>{hGoals.length > 1 && i >= 0 ? `${i + 1} · ` : ""}{g.short}</button>; })}</div>
+          <div className="flex flex-wrap gap-1">{Object.entries(HIFI_GOALS).map(([k, g]) => { const i = hGoals.indexOf(k); return <button key={k} title={g.name} aria-pressed={i >= 0} className={`relative ${optSeg(i >= 0)}`} onClick={() => tapG(k)}>{hGoals.length > 1 && i >= 0 && <RankBadge n={i + 1} />}{g.short}</button>; })}</div>
         </div>
       </div>
       <div className="mt-2 text-xs text-stone-500">Amps: woofer {hLocks.wAmpW ? `${wAmpW} W` : `any up to ${HIFI_AMP_MAX.wAmpW} W`} · tweeter {hLocks.tAmpW ? `${tAmpW} W` : `any up to ${HIFI_AMP_MAX.tAmpW} W`} (unlocked amps come back at the least power that does the job)</div>
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button onClick={runH} disabled={hBusy || !hGoals.length} className="px-4 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-50">{hBusy ? "Searching…" : hGoals.length ? "Find 3 designs" : "Pick a goal first"}</button>
+        <button onClick={runH} disabled={hBusy || !hGoals.length} className="px-4 py-2 rounded border text-sm font-semibold border-cmy-c bg-cmy-c text-white disabled:opacity-50">{hBusy ? "Searching…" : hGoals.length ? "Find 3 designs" : "Pick a goal first"}</button>
         {hRes && !hBusy && <span className="text-xs text-stone-500">Searched {hRes.stats.evaluated.toLocaleString()} designs in {(hRes.stats.ms / 1000).toFixed(1)} s{hRes.cards.length ? " · every design shown passes the checks (warnings are listed on the card)" : ""}</span>}
         {hUndo && !hPreview && <button onClick={() => { applyH(hUndo); setHUndo(null); }} className="px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Undo load</button>}
       </div>
-      {hRes && !hBusy && hRes.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800">Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
+      {hRes && !hBusy && hRes.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
       {hRes && !hBusy && hRes.cards.length > 0 && (<>
         <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
           {hRes.cards.map((k, i) => <HifiCard key={i} k={k} i={i} n={hRes.cards.length} curCurve={hRes.curCurve} guide={guide} previewing={hPreview && hPreview.card === k} onPreview={() => previewH(k)} onLoad={() => loadH(k)} />)}
         </div>
         {hRes.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {hRes.cards.length - 1} more</div>}
       </>)}
-      {hRes && !hBusy && hRes.goalMissing && <div className="mt-2 text-xs text-amber-800">{hRes.goalMissing}</div>}
+      {hRes && !hBusy && hRes.goalMissing && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">{hRes.goalMissing}</div>}
       {hRes && !hBusy && !hRes.cards.length && !hRes.goalMissing && <div className="mt-3 text-sm text-orange-900">Nothing fits all your limits. A bigger budget or fewer locks would open it up.</div>}
     </div>
   );
   return (
-    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "var(--font)" }}>
       <div className="md:col-span-5 min-w-0">
         {optBar}
         {optPanel}
         {hPreview && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded border border-stone-900 bg-stone-900 text-stone-50 px-3 py-2 text-sm">
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded bg-stone-900 text-white border-t-4 border-cmy-y px-3 py-2 text-sm font-semibold">
             <span className="flex-1">Previewing “{hPreview.label}”</span>
-            <button onClick={() => loadH(hPreview.card)} className="px-3 py-1.5 rounded bg-stone-50 text-stone-900">Keep</button>
-            <button onClick={backH} className="px-3 py-1.5 rounded border border-stone-50">Back</button>
+            <button onClick={() => loadH(hPreview.card)} className="px-3 py-1.5 rounded border border-stone-900 bg-white text-stone-900">Keep</button>
+            <button onClick={backH} className="px-3 py-1.5 rounded border border-stone-900 bg-white text-stone-900">Back</button>
           </div>
         )}
       </div>
@@ -1090,11 +1094,19 @@ function HifiPage() {
           {tile("Pair", `$${Math.round(pairCost)}`, "")}
         </div>
         </div>
-        <ResponseChart fmin={30} fmax={20000} top={top} bot={top - 45} yLabel="dB SPL at 2.83 V"
-          series={[{ curve: on, label: "On axis, 1 m", stroke: "#292524", tint: "rgba(0,0,0,0)" }, { curve: pair, label: `Pair at the seat (${(seatDist / FT).toFixed(1)} ft)`, stroke: "#0f766e", tint: "rgba(15,118,110,0.06)" }]}
+        <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="dB SPL at 2.83 V"
+          series={[{ curve: on, label: "On axis, 1 m", stroke: "#111111", tint: "rgba(0,0,0,0)" }, { curve: pair, label: `Pair at the seat (${(seatDist / FT).toFixed(1)} ft)`, stroke: "#0082c8", tint: "rgba(0,130,200,0.06)" }]}
           marks={[{ f: xo, label: "XO" }, { f: sys.bsF3, label: "Baffle step" }, ...(sys.Fb ? [{ f: sys.Fb, label: "Fb" }] : [])]} />
-        <ResponseChart fmin={30} fmax={20000} top={Math.ceil((Math.max(sys.tLevel, sys.wLevel) + 8) / 5) * 5} bot={Math.ceil((Math.max(sys.tLevel, sys.wLevel) + 8) / 5) * 5 - 50} yLabel="max dB SPL @ 1 m"
-          series={[{ curve: sys.wMax, label: w.name, stroke: "#b45309", tint: "rgba(180,83,9,0.06)" }, { curve: tMax, label: t.name, stroke: "#0f766e", tint: "rgba(15,118,110,0.06)" }]} marks={[{ f: xo, label: "XO" }]} />
+        <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="max dB SPL @ 1 m"
+          series={[{ curve: sys.wMax, label: w.name, stroke: "#e5007e", tint: "rgba(229,0,126,0.06)" }, { curve: tMax, label: t.name, stroke: "#0082c8", tint: "rgba(0,130,200,0.06)" }]} marks={[{ f: xo, label: "XO" }]} />
+        <div className="flex flex-col gap-1.5">
+          {F.map(([kind, head, body]) => (
+            <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+              <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+              <span className="text-stone-600">{body}</span>
+            </div>
+          ))}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
           <RoomView spacing={spacing} toe={toe} seat={seat} setSeat={setSeat} angles={[(gL.th * 180) / Math.PI, (gR.th * 180) / Math.PI]} />
           <div className="text-sm text-stone-600 leading-relaxed">
@@ -1107,14 +1119,6 @@ function HifiPage() {
         <div>
           <div className="flex gap-1 mb-2">{[["Horizontal", "h"], ["Vertical", "v"]].map(([l, v]) => <button key={v} onClick={() => setPlane(v)} className={seg(plane === v)}>{l}</button>)}</div>
           <DispMap map={map} title={plane === "h" ? "Horizontal dispersion, one speaker (0° is on axis)" : "Vertical dispersion: below (−) to above (+) the tweeter axis"} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          {F.map(([kind, head, body]) => (
-            <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-              <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-              <span className="text-stone-600">{body}</span>
-            </div>
-          ))}
         </div>
         <details className="text-xs text-stone-600 rounded border border-stone-300 bg-stone-50 px-3 py-2">
           <summary className="cursor-pointer text-sm text-stone-700 py-1">Details</summary>
@@ -1131,21 +1135,27 @@ function HifiPage() {
         <Pick label={`Woofer · ${w.size}″`} options={HIFI_WOOFERS_BY_SIZE} value={w} onChange={setW} extra={hLk("woofer", "the woofer")} group={(o) => `${o.size}″ woofers`} />
         <Pick label="Tweeter" options={HIFI_TWEETERS} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} />
         {guide && <Pick label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
-        <div className="text-sm text-stone-500 mb-1 flex items-center justify-between"><span>Box</span>{hLk("box", "sealed or vented")}</div>
-        <div className="flex flex-wrap gap-1 mb-2">
-          {[["Vented", "vented"], ["Sealed", "sealed"]].map(([l, v]) => <button key={v} onClick={() => setBox(v)} className={seg(box === v)}>{l}</button>)}
-          {[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <button key={v} onClick={() => setMat(v)} className={seg(mat === v)}>{l}</button>)}
-          {[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <button key={v} onClick={() => setWall(v)} className={seg(wall === v)}>{l}</button>)}
-          {hLk("wall", "the plywood")}
+        <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
+          <span className="text-stone-500">Material</span>
+          <div className="flex flex-wrap gap-1">{[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <button key={v} onClick={() => setMat(v)} className={seg(mat === v)}>{l}</button>)}</div>
+          <span />
+          <span className="text-stone-500">Thickness</span>
+          <div className="flex flex-wrap gap-1">{[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <button key={v} onClick={() => setWall(v)} className={seg(wall === v)}>{l}</button>)}</div>
+          <span>{hLk("wall", "the panel thickness")}</span>
         </div>
         <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
           <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
           <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="&#8243;" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
           <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
+          <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-600">Ports</span>{hLk("box", "sealed or vented")}</div>
+          <div className="flex flex-wrap gap-1 mb-3">{[["Sealed", "sealed", 0], ["1 port", "vented", 1], ["2 ports", "vented", 2]].map(([l, v, n]) => {
+            const on = box === v && (v === "sealed" || port.n === n);
+            return <button key={l} onClick={() => { setBox(v); if (n) setP("n", n); }} className={seg(on)}>{l}</button>;
+          })}</div>
           {box === "vented" && (<>
-            <Slider label="Ports" value={port.n} min={1} max={2} step={1} unit="" onChange={(v) => setP("n", v)} />
             <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />
-            <Slider label="Port length" value={port.len} min={1} max={14} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
+            <Slider label="Port length (centreline)" value={port.len} min={1} max={30} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
+            <div className="flex flex-wrap gap-1 mb-3">{[[0, "Straight"], [1, "1 elbow"], [2, "2 elbows"]].map(([e, l]) => <button key={e} onClick={() => setP("elbows", e)} className={seg((port.elbows || 0) === e)}>{l}</button>)}</div>
           </>)}
           <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of port` : ", lightly stuffed"}.</div>
         </div>
@@ -1176,13 +1186,13 @@ function HifiPage() {
 function NotesPage() {
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 flex flex-col gap-2">
-        <section className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <section className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "var(--font)" }}>
           {RACKS.map((r) => {
             const total = r.items.reduce((a, [, c]) => a + c, 0);
             return (
               <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
                 <div className="flex justify-between items-baseline mb-1">
-                  <h2 className="text-xl" style={{ fontFamily: "Georgia, serif" }}>{r.name}</h2>
+                  <h2 className="text-xl" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{r.name}</h2>
                   <span className="text-sm tabular-nums text-stone-600">≈ ${total.toLocaleString()}</span>
                 </div>
                 <p className="text-xs text-stone-500 mb-3">{r.note}</p>
@@ -1196,8 +1206,8 @@ function NotesPage() {
           })}
         </section>
 
-        <section className="mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Signal path (mains rack)</h2>
+        <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
+          <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Signal path (mains rack)</h2>
           <div className="max-w-4xl"><SignalPath /></div>
           <p className="text-sm text-stone-700 max-w-3xl mt-3">
             Division of labour: the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs.
@@ -1206,8 +1216,8 @@ function NotesPage() {
             preset, which a level limiter cannot.
           </p>
         </section>
-        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Amp DSP: QSC GXD4 / GXD8</h2>
+        <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Amp DSP: QSC GXD4 / GXD8</h2>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
               ["Power per channel", "GXD4: 400 W into 8 \u03a9, 600 W into 4 \u03a9. GXD8: 800 W into 8 \u03a9, 1200 W into 4 \u03a9. Continuous, both channels driven. Voltage gain 33.5 dB (GXD4), 36.5 dB (GXD8)."],
@@ -1242,8 +1252,8 @@ function NotesPage() {
           </p>
         </section>
 
-        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Crossover / DSP: PA2 and alternatives</h2>
+        <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Crossover / DSP: PA2 and alternatives</h2>
           <p className="text-sm text-stone-700 mb-3 max-w-3xl">What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set in volts or dBu with attack and release, a slower RMS limiter, PEQ and delay. At ~15 ft from the mixer keep the inputs balanced; outputs to amps in the same rack matter less.</p>
           <div className="overflow-x-auto"><table className="text-sm w-full min-w-[720px] border-collapse">
             <thead><tr className="text-stone-500 text-left border-b border-stone-300">
@@ -1268,8 +1278,8 @@ function NotesPage() {
           <p className="text-xs text-stone-500 mt-2 max-w-3xl">Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026. Pick: a used DriveRack 260 on a budget; new, the Ashly AQM408 (limiters in dBu with attack and release, 4×8) or the VENU360 (front panel plus app). Keep the GXD limiters as a backstop either way.</p>
         </section>
 
-        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Home inputs: Gemini MXR-01BT</h2>
+        <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Home inputs: Gemini MXR-01BT</h2>
           <p className="text-sm text-stone-700 mb-3 max-w-3xl">Turntable, line and phone into the same DSP and amps, with one master volume. A 2-channel DJ mixer does it all in one box.</p>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
@@ -1289,8 +1299,8 @@ function NotesPage() {
           <p className="text-xs text-stone-500 mt-3 max-w-3xl">Source: <a className="underline" href="https://www.geminisound.com/products/mxr-01bt">Gemini MXR-01BT</a>. Alternative without a mixer: a hi-fi preamp with phono, RCA out through an ART CleanBox Pro to balanced.</p>
         </section>
 
-        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Passive crossover: calibrate and build</h2>
+        <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Passive crossover: calibrate and build</h2>
           <p className="text-sm text-stone-700 mb-3 max-w-3xl">For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80 per box in parts. All values get tuned, not just the pad.</p>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
@@ -1310,8 +1320,8 @@ function NotesPage() {
           <p className="text-xs text-stone-500 mt-3 max-w-3xl">Roughly a weekend to measure and design, plus an evening to build and verify.</p>
         </section>
 
-        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Materials</h2>
+        <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Materials</h2>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
               ["Prototype in particleboard", "Cheap and flat. Build it to verify duct tuning, then transfer interior dimensions \u2014 not the cut list \u2014 to the real material."],
@@ -1326,8 +1336,8 @@ function NotesPage() {
           </ul>
         </section>
 
-        <section className="mt-8" style={{ fontFamily: "system-ui, sans-serif" }}>
-          <h2 className="text-xl mb-3" style={{ fontFamily: "Georgia, serif" }}>Still to decide</h2>
+        <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+          <h2 className="text-xl mb-3" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Still to decide</h2>
           <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
             {[
               ["Baffle mounting", "Cleats (forgiving, costs 3/4\" of interior on each side) or a stopped rabbet in the frame panels (tighter, squares the box, needs a dado). Baffle size changes with the choice."],
@@ -1381,7 +1391,7 @@ function FillsPage() {
   );
   const F = fillChips({ drv, dim, Fb: vM ? vM.Fb : null, Qtc: sM ? sM.Qtc : null, hp, portLimited, portMax, f3, hf, hfLimW, ampW, pad });
   return (
-    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "system-ui, sans-serif" }}>
+    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "var(--font)" }}>
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
         <p className="text-sm text-stone-600">Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).</p>
         <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
@@ -1392,7 +1402,7 @@ function FillsPage() {
           {tile("Max @ 150 Hz", mid.toFixed(1), "dB")}
           {tile("Weight", lb.toFixed(0), "lb")}
         </div>
-        <ResponseChart fmax={300} series={[{ curve: maxC, label: drv.name, stroke: "#0f766e", tint: "rgba(15,118,110,0.07)" }]} marks={[{ f: hp, label: "HP" }, ...(vM ? [{ f: vM.Fb, label: "Fb" }] : [])]} />
+        <ResponseChart fmax={300} series={[{ curve: maxC, label: drv.name, stroke: "#0082c8", tint: "rgba(0,130,200,0.07)" }]} marks={[{ f: hp, label: "HP" }, ...(vM ? [{ f: vM.Fb, label: "Fb" }] : [])]} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
           {[
             ["Woofer sensitivity", `${sens.toFixed(1)} dB`, "2.83 V, half space, 1 m, modelled"],
@@ -1410,8 +1420,8 @@ function FillsPage() {
         </div>
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
-            <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-              <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+            <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+              <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
               <span className="text-stone-600">{body}</span>
             </div>
           ))}
@@ -1452,17 +1462,17 @@ function SheetDrawing({ sheet, S, idx }) {
   const sc = 4, W = S.w * sc, H = S.h * sc;
   const [box, cw] = useWidth(S.w === 48 ? 160 : 200);
   const fs = (12 * (W + 4)) / cw;   // 12 css px
-  const colors = { Sub: "#e7d3b3", Mid: "#cfe0d6" };
+  const colors = { Sub: "#fff3b0", Mid: "#cce6f4" };
   return (
     <div ref={box} className={`flex flex-col gap-1 w-full ${S.w === 48 ? "max-w-[240px] sm:w-[160px]" : "max-w-[300px] sm:w-[200px]"}`}>
       <div className="text-xs text-stone-500">Sheet {idx + 1}</div>
       <svg viewBox={`-2 -2 ${W + 4} ${H + 4}`} style={{ width: "100%", height: "auto" }} role="img" aria-label={`Sheet ${idx + 1} layout`}>
-        <rect x="0" y="0" width={W} height={H} fill="#fafaf9" stroke="#a8a29e" />
+        <rect x="0" y="0" width={W} height={H} fill="#ffffff" stroke="#707070" />
         {sheet.items.map((it, i) => (
           <g key={i}>
-            <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || "#e7e5e4"} stroke="#57534e" strokeWidth="0.8" />
+            <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || "#e6e6e6"} stroke="#707070" strokeWidth="0.8" />
             {it.w * sc > fs * 3.6 && it.h * sc > fs * 1.3 && (
-              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + fs * 0.35} textAnchor="middle" fontSize={fs} fill="#292524" fontFamily="system-ui, sans-serif">{it.box} {it.part.split(" ")[0]}</text>
+              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + fs * 0.35} textAnchor="middle" fontSize={fs} fill="#111111" fontFamily="Inconsolata, monospace">{it.box} {it.part.split(" ")[0]}</text>
             )}
           </g>
         ))}
@@ -1480,7 +1490,7 @@ function CutlistPage(props) {
   const packs = Object.keys(byT).sort((a, b) => b - a).map((t) => ({ t: +t, ...packSheets(byT[t], S, kerf) }));
   const btn = (on) => `px-3 py-1.5 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`;
   return (
-    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16" style={{ fontFamily: "system-ui, sans-serif" }}>
+    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16" style={{ fontFamily: "var(--font)" }}>
       <div className="flex flex-wrap gap-6 mb-5">
         <div><div className="text-sm text-stone-500 mb-1">Corner joints</div>
           <div className="flex gap-1">{[["butt", "Butt"], ["rabbet", "Rabbet"], ["miter", "Miter"]].map(([k, l]) => <button key={k} className={btn(joint === k)} onClick={() => setJoint(k)}>{l}</button>)}</div></div>
@@ -1503,7 +1513,7 @@ function CutlistPage(props) {
           </tr>))}</tbody>
       </table></div>
       {vent.length > 0 && <p className="text-sm text-stone-600 mb-6">Also: {vent.join("; ")}.</p>}
-      <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Sheet layout, {S.name}</h2>
+      <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Sheet layout, {S.name}</h2>
       {packs.map((pk) => (
         <div key={pk.t} className="mb-6">
           <div className="text-sm font-medium mb-2">{tName(pk.t)} birch: {pk.sheets.length} sheet{pk.sheets.length > 1 ? "s" : ""}</div>
@@ -1519,13 +1529,11 @@ function CutlistPage(props) {
 // ---------------------------------------------------------------
 // Optimizer: lock buttons on the controls, the panel, result cards.
 // ---------------------------------------------------------------
+// Material Symbols "lock" / "lock_open" (filled), drawn inline so they never depend on a font loading
+const LOCK_PATH = "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z";
+const LOCK_OPEN_PATH = "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h2c0-1.66 1.34-3 3-3s3 1.34 3 3v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z";
 function LockIcon({ locked }) {
-  return (
-    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-      <rect x="3" y="7" width="10" height="7.5" rx="1.5" fill="currentColor" />
-      <path d={locked ? "M5 7V5a3 3 0 0 1 6 0v2" : "M5 7V5a3 3 0 0 1 5.9-.8"} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
-  );
+  return <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d={locked ? LOCK_PATH : LOCK_OPEN_PATH} fill="currentColor" fillRule="evenodd" /></svg>;
 }
 const lockCls = (on) => `inline-flex items-center justify-center gap-0.5 min-w-[28px] h-6 px-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 text-stone-400 bg-white hover:border-stone-500 hover:text-stone-600"}`;
 function LockBtn({ on, onClick, what }) {
@@ -1571,13 +1579,19 @@ function runOptimizer(input) {
   });
 }
 
+// a goal's place in the priority order, floating on the button's corner so the label doesn't move
+function RankBadge({ n }) {
+  return <span className="absolute -top-2 -left-2 min-w-[18px] h-[18px] px-1 rounded-full bg-cmy-c text-white text-[11px] font-bold leading-[18px] text-center" aria-label={`priority ${n}`}>{n}</span>;
+}
+// status notes: a light tint of the status colour with a matching border
+const CHIP_BG = { ok: "bg-green-50 border-green-200 border-l-4 border-l-green-300", warn: "bg-amber-50 border-amber-200 border-l-4 border-l-amber-300", bad: "bg-red-50 border-red-200 border-l-4 border-l-red-300" };
 const money = (x) => `$${Math.round(x).toLocaleString()}`;
 function Delta({ v, unit, lowerIsBetter, digits = 0 }) {
   if (v == null) return null;
   const r = Number(v.toFixed(digits));
   const good = lowerIsBetter ? r < 0 : r > 0, bad = lowerIsBetter ? r > 0 : r < 0;
   const txt = r === 0 ? "±0" : `${r > 0 ? "+" : "\u2212"}${unit === "$" ? money(Math.abs(r)) : Math.abs(r).toFixed(digits) + unit}`;
-  return <div className={`text-xs font-semibold ${good ? "text-green-800" : bad ? "text-orange-800" : "text-stone-500"}`}>{txt}{good ? " better" : bad ? " worse" : ""}</div>;
+  return <div className={`text-xs font-semibold ${good ? "text-green-800" : bad ? "text-red-700" : "text-stone-500"}`}>{txt}{good ? " better" : bad ? " worse" : ""}</div>;
 }
 
 // Front view of a design, to scale, with your current design's outline dashed behind it.
@@ -1596,22 +1610,22 @@ function BoxFront({ g, cur }) {
   };
   const a = stackRects(g), b = cur ? stackRects(cur) : null, t = g.wall * k, v = g.cVent;
   const vent = [];
-  if (g.portStyle === "slots" || g.portStyle === "folded") vent.push(<rect key="v" x={a.sb.x + t} y={a.sb.y + a.sb.h - t - v.slotH * k} width={a.sb.w - 2 * t} height={v.slotH * k} fill="#44403c" />);
+  if (g.portStyle === "slots" || g.portStyle === "folded") vent.push(<rect key="v" x={a.sb.x + t} y={a.sb.y + a.sb.h - t - v.slotH * k} width={a.sb.w - 2 * t} height={v.slotH * k} fill="#111111" />);
   else if (g.portStyle === "vslots" || g.portStyle === "vslot1") {
-    vent.push(<rect key="l" x={a.sb.x + t} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#44403c" />);
-    if (g.portStyle === "vslots") vent.push(<rect key="r" x={a.sb.x + a.sb.w - t - v.throat * k} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#44403c" />);
+    vent.push(<rect key="l" x={a.sb.x + t} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#111111" />);
+    if (g.portStyle === "vslots") vent.push(<rect key="r" x={a.sb.x + a.sb.w - t - v.throat * k} y={a.sb.y + t} width={v.throat * k} height={a.sb.h - 2 * t} fill="#111111" />);
   } else for (let i = 0; i < (v.nt || 1); i++) {
     const n = v.nt || 1, gap = a.sb.w / (n + 1);
-    vent.push(<circle key={i} cx={a.sb.x + gap * (i + 1)} cy={a.sb.y + a.sb.h - t - (v.dia * k) / 2 - 2} r={(v.dia * k) / 2} fill="#44403c" />);
+    vent.push(<circle key={i} cx={a.sb.x + gap * (i + 1)} cy={a.sb.y + a.sb.h - t - (v.dia * k) / 2 - 2} r={(v.dia * k) / 2} fill="#111111" />);
   }
   const ventH = g.portStyle === "slots" || g.portStyle === "folded" ? v.slotH * k + t : g.portStyle.startsWith("round") ? v.dia * k + 4 : 0;
-  const driver = (box, size, below = 0) => <circle cx={box.x + box.w / 2} cy={box.y + (box.h - below) / 2} r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2} fill="#d6d3d1" stroke="#78716c" strokeWidth="1" />;
+  const driver = (box, size, below = 0) => <circle cx={box.x + box.w / 2} cy={box.y + (box.h - below) / 2} r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2} fill="#e6e6e6" stroke="#707070" strokeWidth="1" />;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={`Front view: sub ${g.sub.w} × ${g.sub.h}″, mid ${g.mid.w} × ${g.mid.h}″${cur ? "; your design dashed" : ""}`}>
-      {b && b.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} fill="none" stroke="#a8a29e" strokeWidth="1" strokeDasharray="3 2" />)}
-      {a.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} rx="1" fill={q === a.hb ? "#57534e" : "#e7e5e4"} fillOpacity={q === a.hb ? 1 : 0.85} stroke="#292524" strokeWidth="1.2" />)}
+      {b && b.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} fill="none" stroke="#707070" strokeWidth="1" strokeDasharray="3 2" />)}
+      {a.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} rx="1" fill={q === a.hb ? "#707070" : "#e6e6e6"} fillOpacity={q === a.hb ? 1 : 0.85} stroke="#111111" strokeWidth="1.2" />)}
       {vent}
-      {g.tower && <line x1={a.sb.x} x2={a.sb.x + a.sb.w} y1={a.mb.y + a.mb.h} y2={a.mb.y + a.mb.h} stroke="#292524" strokeWidth="1.2" />}
+      {g.tower && <line x1={a.sb.x} x2={a.sb.x + a.sb.w} y1={a.mb.y + a.mb.h} y2={a.mb.y + a.mb.h} stroke="#111111" strokeWidth="1.2" />}
       {driver(g.tower ? { ...a.sb, y: a.mb.y + a.mb.h, h: a.sb.h - a.mb.h } : a.sb, g.subSize, ventH)}
       {driver(a.mb, g.midSize)}
     </svg>
@@ -1619,11 +1633,9 @@ function BoxFront({ g, cur }) {
 }
 
 // The sub's clean output (music limit) against frequency, this design against yours; the scored 40-90 Hz band shaded.
-function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90] }) {
+function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90], top = 135, bot = 80 }) {
   const [hover, setHover] = useState(null);
   const W = 220, H = 150, L = 26, R = 6, T = 16, B = 18;
-  const all = [...curve, ...(cur || [])].map((o) => o[1]);
-  const top = Math.ceil(Math.max(...all) / 5) * 5, bot = Math.max(Math.floor(Math.min(...all) / 5) * 5, top - 40);
   const x = (f) => L + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (W - L - R), y = (d) => T + ((top - Math.max(bot, Math.min(top, d))) / (top - bot)) * (H - T - B);
   const path = (c) => c.map((o, i) => `${i ? "L" : "M"}${x(o[0]).toFixed(1)},${y(o[1]).toFixed(1)}`).join("");
   const at = (c, f) => c && c.reduce((b, o) => (Math.abs(Math.log(o[0] / f)) < Math.abs(Math.log(b[0] / f)) ? o : b));
@@ -1637,18 +1649,18 @@ function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90] }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto touch-none" onPointerMove={move} onPointerLeave={() => setHover(null)} role="img"
       aria-label="Clean sub output from 20 to 200 Hz, this design against yours">
-      {band && <rect x={x(band[0])} y={T} width={x(band[1]) - x(band[0])} height={H - T - B} fill="#f5f5f4" />}
-      {ticks.map((d) => <g key={d}><line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke="#e7e5e4" /><text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill="#78716c">{d}</text></g>)}
-      {[20, 50, 100, 200, 500].filter((f) => f >= fmin && f <= fmax).map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill="#78716c">{f}</text>)}
-      {cur && <path d={path(cur)} fill="none" stroke="#a8a29e" strokeWidth="1.5" strokeDasharray="4 3" />}
-      <path d={path(curve)} fill="none" stroke="#1c1917" strokeWidth="2" />
+      {band && <rect x={x(band[0])} y={T} width={x(band[1]) - x(band[0])} height={H - T - B} fill="#f2f2f2" />}
+      {ticks.map((d) => <g key={d}><line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke="#e6e6e6" /><text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill="#707070">{d}</text></g>)}
+      {(fmax > 1000 ? [20, 100, 1000, 10000] : [20, 50, 100, 200, 500]).filter((f) => f >= fmin && f <= fmax).map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill="#707070">{f >= 1000 ? f / 1000 + "k" : f}</text>)}
+      {cur && <path d={path(cur)} fill="none" stroke="#707070" strokeWidth="1.5" strokeDasharray="4 3" />}
+      <path d={path(curve)} fill="none" stroke="#111111" strokeWidth="2" />
       {hover ? (<>
-        <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke="#78716c" strokeWidth="0.75" />
-        <circle cx={x(h1[0])} cy={y(h1[1])} r="2.5" fill="#1c1917" stroke="#fff" strokeWidth="1" />
-        {(() => { const X = Math.max(L + 14, Math.min(W - R - 14, x(hover))); return <g><rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill="#1c1917" /><text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill="#fafaf9">{hover.toFixed(0)} Hz</text></g>; })()}
-        <text x={L} y={9} fontSize="8.5" fill="#1c1917">{hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB{h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}</text>
+        <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke="#707070" strokeWidth="0.75" />
+        <circle cx={x(h1[0])} cy={y(h1[1])} r="2.5" fill="#111111" stroke="#fff" strokeWidth="1" />
+        {(() => { const X = Math.max(L + 14, Math.min(W - R - 14, x(hover))); return <g><rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill="#111111" /><text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill="#ffffff">{hover.toFixed(0)} Hz</text></g>; })()}
+        <text x={L} y={9} fontSize="8.5" fill="#111111">{hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB{h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}</text>
       </>) : (
-        <text x={L} y={9} fontSize="8.5" fill="#57534e"><tspan fill="#1c1917">━ this</tspan>{cur ? "  ╌ yours" : ""} · dB, clean</text>
+        <text x={L} y={9} fontSize="8.5" fill="#707070"><tspan fill="#111111">━ this</tspan>{cur ? "  ╌ yours" : ""} · dB, clean</text>
       )}
     </svg>
   );
@@ -1665,7 +1677,7 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
   return (
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
       <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
-      <h3 className="text-lg leading-snug" style={{ fontFamily: "Georgia, serif" }}>{k.names.sub} · {c.cDim.w} × {c.cDim.h} × {c.cDim.d}″</h3>
+      <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{k.names.sub} · {c.cDim.w} × {c.cDim.h} × {c.cDim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         {k.geom && <BoxFront g={k.geom} cur={cur && cur.geom} />}
         {k.curve && <OutChart curve={k.curve} cur={cur && cur.curve} />}
@@ -1679,14 +1691,14 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
       </div>
       <div className="text-xs leading-snug"><b className="font-semibold">Limited by:</b> {k.limitedBy}</div>
       {k.warnings.filter(([h]) => !/limited$/.test(h)).map(([h, b]) => (
-        <div key={h} className="text-xs border border-stone-300 rounded px-2 py-1 bg-stone-50"><b className="font-semibold text-amber-700 mr-1">{h}</b>{b}</div>
+        <div key={h} className="text-xs border border-l-4 rounded px-2 py-1 bg-amber-50 border-amber-200 border-l-amber-300"><b className="font-semibold text-amber-700 mr-1">{h}</b>{b}</div>
       ))}
       <div className="text-xs text-stone-600">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
       <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
       {!k.priceKnown && <div className="text-[11px] text-stone-500">Some prices unknown</div>}
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
-        <button onClick={onLoad} className="flex-1 px-3 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50">Load</button>
+        <button onClick={onLoad} className="flex-1 px-3 py-2 rounded border text-sm font-semibold border-cmy-c bg-cmy-c text-white">Load</button>
         <button onClick={onSave} disabled={!canSave} title={canSave ? "" : "Sign in to save"} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500 disabled:opacity-40">Save</button>
       </div>
     </div>
@@ -1701,9 +1713,9 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
   const tgtText = !g ? "pick a goal" : (g === "louder" ? "as loud as it gets, F3 within 3 Hz" : g === "lower" ? `lowest F3, at least ${(target - 1.5).toFixed(0)} dB per stack` : `clean ${target.toFixed(0)} dB per stack`)
     + (goals.length > 1 ? `, and ${goals.slice(1).map((x) => ({ cheaper: "cheaper", lighter: "lighter", lower: "lower", louder: "louder" })[x]).join(" and ")} than yours` : "");
   return (
-    <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "system-ui, sans-serif" }}>
+    <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "var(--font)" }}>
       <div className="rounded-lg border border-stone-300 bg-white p-4">
-        <h2 className="text-xl" style={{ fontFamily: "Georgia, serif" }}>Find a better design</h2>
+        <h2 className="text-xl" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Find a better design</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>
@@ -1720,18 +1732,18 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
             <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => { const i = goals.indexOf(k); return (
-              <button key={k} title={gg.name} aria-pressed={i >= 0} className={seg(i >= 0)} onClick={() => tapGoal(k)}>{goals.length > 1 && i >= 0 ? `${i + 1} · ` : ""}{gg.short}</button>); })}</div>
+              <button key={k} title={gg.name} aria-pressed={i >= 0} className={`relative ${seg(i >= 0)}`} onClick={() => tapGoal(k)}>{goals.length > 1 && i >= 0 && <RankBadge n={i + 1} />}{gg.short}</button>); })}</div>
           </div>
         </div>
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
           {curOut != null && <div className="text-xs text-stone-500 mt-0.5">Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB · {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB</div>}</div>
         <div className="mt-2 text-xs text-stone-500">Amps: {amps}</div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button onClick={run} disabled={busy || !g} className="px-4 py-2 rounded border text-sm border-stone-900 bg-stone-900 text-stone-50 disabled:opacity-50">{busy ? "Searching…" : g ? "Find 3 designs" : "Pick a goal first"}</button>
+          <button onClick={run} disabled={busy || !g} className="px-4 py-2 rounded border text-sm font-semibold border-cmy-c bg-cmy-c text-white disabled:opacity-50">{busy ? "Searching…" : g ? "Find 3 designs" : "Pick a goal first"}</button>
           {res && !busy && <span className="text-xs text-stone-500">Searched {res.stats.evaluated.toLocaleString()} designs in {(res.stats.ms / 1000).toFixed(1)} s{res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}</span>}
           {err && <span className="text-xs text-red-700">{err}</span>}
         </div>
-        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800">Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
+        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
         {res && !busy && res.cards.length > 0 && (<>
           <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
             {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} cur={res.cur} previewing={previewCard === k} canSave={canSave}
@@ -1739,10 +1751,10 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
           </div>
           {res.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {res.cards.length - 1} more</div>}
         </>)}
-        {res && !busy && res.goalMissing && <div className="mt-2 text-xs text-amber-800">{res.goalMissing}</div>}
+        {res && !busy && res.goalMissing && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">{res.goalMissing}</div>}
         {res && !busy && !res.cards.length && res.nearMiss && (
           <div className="mt-4 rounded-lg border border-orange-300 bg-orange-50 px-3 py-3">
-            <h3 className="text-base" style={{ fontFamily: "Georgia, serif" }}>Nothing fits all your limits</h3>
+            <h3 className="text-base" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Nothing fits all your limits</h3>
             <div className="text-xs text-orange-900 mt-1">{res.nearMiss.closest ? `Closest: ${res.nearMiss.closest.names.sub}, ${res.nearMiss.closest.metrics.heaviest.toFixed(0)} lb, ${money(res.nearMiss.closest.metrics.price)} per stack, ${res.nearMiss.closest.metrics.out.toFixed(1)} dB. ` : ""}Blocked by: {res.nearMiss.blocking.join("; ")}.</div>
             {res.nearMiss.options.length > 0 && <div className="flex flex-wrap gap-1.5 mt-2">{res.nearMiss.options.map((o) => (
               <button key={o.text} className={seg(false)} onClick={() => run(o.set)}>{o.text}</button>))}</div>}
@@ -2091,21 +2103,37 @@ function StackPlanner() {
   const hornCenter = isTower ? baseH + 15.5 + (archT ? subBox.w / 2 - 0.75 : (horn.size.h + 2) / 2) : baseH + midDims.h + 1.2 + 1 + horn.size.h / 2;
 
   return (
-    <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+    <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "var(--font)" }}>
       <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl md:text-4xl leading-tight" aria-label="Speaker Planner">𝒮𝓅ℯ𝒶𝓀ℯ𝓇 𝒫𝓁𝒶𝓃𝓃ℯ𝓇</h1>
-        <nav className="flex gap-1 mt-3" style={{ fontFamily: "system-ui, sans-serif" }} aria-label="Pages">
-          {[["planner", "Planner", "#"], ["cutlist", "Cutlist", "#cutlist"], ["fills", "Fills", "#fills"], ["hifi", "Hi-fi", "#hifi"], ["notes", "Notes", "#notes"]].map(([v, label, href]) => (
-            <a key={v} href={href} aria-current={view === v ? "page" : undefined}
-              onClick={(e) => { e.preventDefault(); try { history.replaceState(null, "", v === "planner" ? " " : href); } catch {} setView(v); window.scrollTo(0, 0); }}
-              className={`px-3 py-1.5 rounded border text-sm ${view === v ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</a>
-          ))}
-        </nav>
+        <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">SpeakNow</h1>
+        {(() => {
+          // two levels: the project (PA stack or hi-fi), then the PA stack's own pages
+          const go = (v, href) => (e) => { e.preventDefault(); try { history.replaceState(null, "", v === "planner" ? " " : href); } catch {} setView(v); window.scrollTo(0, 0); };
+          const pa = view !== "hifi";
+          const top = [["planner", "PA Stack", "#", pa], ["hifi", "Hi-fi", "#hifi", !pa]];
+          const sub = [["planner", "Design", "#"], ["cutlist", "Cutlist", "#cutlist"], ["fills", "Fills", "#fills"], ["notes", "Notes", "#notes"]];
+          return (<>
+            <nav className="flex gap-1 mt-3" style={{ fontFamily: "var(--font)" }} aria-label="Projects">
+              {top.map(([v, label, href, on]) => (
+                <a key={v} href={href} aria-current={on ? "page" : undefined} onClick={go(v, href)}
+                  className={`px-4 py-2 rounded border-2 text-base font-semibold ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</a>
+              ))}
+            </nav>
+            {pa && (
+              <nav className="flex gap-4 mt-3 border-b border-stone-300" style={{ fontFamily: "var(--font)" }} aria-label="PA stack pages">
+                {sub.map(([v, label, href]) => (
+                  <a key={v} href={href} aria-current={view === v ? "page" : undefined} onClick={go(v, href)}
+                    className={`py-2 -mb-px border-b-2 text-sm ${view === v ? "border-stone-900 font-semibold" : "border-transparent text-stone-500 hover:text-stone-900"}`}>{label}</a>
+                ))}
+              </nav>
+            )}
+          </>);
+        })()}
       </header>
       {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : view === "hifi" ? <HifiPage /> : view === "cutlist" ? <CutlistPage {...{ sub, mid, subBox, midDims, wall, inset, joint, setJoint, sheetKind, setSheetKind, sets, setSets, portStyle, cVent, layout }} /> : <>
 
       {saved !== null && (
-        <section className="max-w-6xl mx-auto px-4 md:px-8 pb-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <section className="max-w-6xl mx-auto px-4 md:px-8 pb-2" style={{ fontFamily: "var(--font)" }}>
           <div className="rounded-lg border border-stone-300 bg-stone-50 px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-stone-500 mr-1">Saved configurations</span>
@@ -2151,7 +2179,7 @@ function StackPlanner() {
         </section>
       )}
 
-      <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3 flex flex-wrap items-center gap-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+      <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3 flex flex-wrap items-center gap-2" style={{ fontFamily: "var(--font)" }}>
         <button onClick={() => setOptOn(!optOn)} aria-pressed={optOn}
           className={`px-3 py-2 rounded border text-sm ${optOn ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`}>Optimizer: {optOn ? "on" : "off"}</button>
         {optOn && (() => {
@@ -2173,21 +2201,21 @@ function StackPlanner() {
         amps={[["sub", ampW, locks.ampW, 3000], ["mid", mAmpW, locks.mAmpW, 2000], ["HF", hfAmpW, locks.hfAmpW, 500]].map(([n, w, l, mx]) => `${n} ${l ? `${w} W` : `any up to ${mx} W`}`).join(" · ") + " per channel (unlocked amps come back at the least power that does the job)"} previewCard={preview && preview.card} canSave={!!db}
         onPreview={optPreview} onLoad={optLoad} onSave={optSave} />}
       {preview && (
-        <div className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-stone-50 px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <div className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-white border-b-4 border-cmy-y px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm" style={{ fontFamily: "var(--font)" }}>
           <span>Previewing: <b className="font-semibold">{preview.label}</b></span>
-          <button onClick={() => optLoad(preview.card)} className="px-3 py-1.5 rounded border border-stone-50 bg-stone-50 text-stone-900">Load</button>
-          <button onClick={optBack} className="px-3 py-1.5 rounded border border-stone-500">Back</button>
+          <button onClick={() => optLoad(preview.card)} className="px-3 py-1.5 rounded border font-semibold border-cmy-c bg-cmy-c text-white">Load</button>
+          <button onClick={optBack} className="px-3 py-1.5 rounded border border-stone-900 bg-white">Back</button>
         </div>
       )}
       {toast && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-20 md:bottom-6 z-50 w-[calc(100%-2rem)] max-w-xl bg-stone-900 text-stone-50 rounded-lg px-4 py-2.5 flex items-center gap-3 text-sm shadow-lg" style={{ fontFamily: "system-ui, sans-serif" }} role="status">
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-20 md:bottom-6 z-50 w-[calc(100%-2rem)] max-w-xl bg-stone-900 text-stone-50 rounded-lg px-4 py-2.5 flex items-center gap-3 text-sm shadow-lg" style={{ fontFamily: "var(--font)" }} role="status">
           <span className="flex-1">{toast}</span>
           {undoSnap && <button onClick={optUndo} className="px-3 py-1.5 rounded border border-stone-500">Undo</button>}
           <button onClick={() => setToast("")} aria-label="Dismiss" className="px-2 py-1.5 rounded border border-stone-700">✕</button>
         </div>
       )}
       {mdl && lim && (
-        <div className="md:hidden sticky top-0 z-30 bg-stone-100/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <div className="md:hidden sticky top-0 z-30 bg-stone-100/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center" style={{ fontFamily: "var(--font)" }}>
           {[["Fb", `${mdl.Fb.toFixed(1)}`, "Hz"], ["35 Hz", `${maxNear(35).spl.toFixed(0)}`, "dB"], ["Sub", `${subLbLoaded.toFixed(0)}`, "lb"], ["Limit", { "port air speed": "port", "cone travel (Xmax)": "Xmax", "driver program rating": "thermal", "amplifier power": "amp" }[lim.who] || lim.who, ""]].map(([k, v, u]) => (
             <div key={k}><div className="text-[10px] uppercase tracking-wider text-stone-500">{k}</div><div className="text-sm font-medium tabular-nums">{v}<span className="text-[10px] text-stone-500 ml-0.5">{u}</span></div></div>
           ))}
@@ -2197,11 +2225,11 @@ function StackPlanner() {
         <div className="min-w-0 md:col-span-3 flex flex-col gap-5">
         <section className={full3d ? "fixed inset-0 z-50 bg-stone-50" : "relative rounded-lg overflow-hidden border border-stone-300 bg-stone-50 h-[300px] md:h-[clamp(320px,56vh,560px)]"}>
           <button onClick={() => setFull3d((v) => !v)} aria-label={full3d ? "Close full screen" : "Full screen"}
-            className="absolute top-2 right-2 z-10 px-2.5 py-1 rounded border border-stone-300 bg-white/90 text-xs" style={{ fontFamily: "system-ui, sans-serif" }}>{full3d ? "Close" : "Full screen"}</button>
+            className="absolute top-2 right-2 z-10 px-2.5 py-1 rounded border border-stone-300 bg-white/90 text-xs" style={{ fontFamily: "var(--font)" }}>{full3d ? "Close" : "Full screen"}</button>
           <StackView sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wall} inset={inset} cabFinish={cabFinish} spacerH={spacerH} />
         </section>
 
-        <section className="mt-1" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <section className="mt-1" style={{ fontFamily: "var(--font)" }}>
           <FoldHead id="sub" title="Sub" folds={folds} toggle={toggleFold} className="mb-3 md:hidden" />
           <div className={foldCls("sub")}>
           {mdl && lim && (
@@ -2220,7 +2248,7 @@ function StackPlanner() {
               ))}
             </div>
           )}
-          {mdl && lim && <div className="mb-4"><ResponseChart fmax={20000} series={[{ curve: subSys, label: "Sub", stroke: "#292524", tint: "rgba(41,37,36,0.07)" }, ...(midMax ? [{ curve: midMax, label: "Mid-bass", stroke: "#b45309", tint: "rgba(180,83,9,0.06)" }] : []), ...(hornModel ? [{ curve: hornModel.curve, label: "Horn", stroke: "#0f766e", tint: "rgba(15,118,110,0.06)" }] : [])]} marks={[{ f: mdl.Fb, label: "Fb" }, { f: xoLo, label: "XO" }, { f: xoHi, label: "XO" }]} /></div>}
+          {mdl && lim && <div className="mb-4"><ResponseChart fmax={20000} series={[{ curve: subSys, label: "Sub", stroke: "#111111", tint: "rgba(17,17,17,0.07)" }, ...(midMax ? [{ curve: midMax, label: "Mid-bass", stroke: "#e5007e", tint: "rgba(229,0,126,0.06)" }] : []), ...(hornModel ? [{ curve: hornModel.curve, label: "Horn", stroke: "#0082c8", tint: "rgba(0,130,200,0.06)" }] : [])]} marks={[{ f: mdl.Fb, label: "Fb" }, { f: xoLo, label: "XO" }, { f: xoHi, label: "XO" }]} /></div>}
           {mdl ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
@@ -2253,8 +2281,8 @@ function StackPlanner() {
               {(() => {
                 const F = subChips({ subSize: format.sub, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF: mdl.peakXF, aes: sub.ts.aes, ampW });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+                    <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
@@ -2264,7 +2292,7 @@ function StackPlanner() {
           </div>
         </section>
 
-        <section className="mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
           <FoldHead id="mid" title="Mid-bass" folds={folds} toggle={toggleFold} className="mb-3" />
           <div className={foldCls("mid")}>
           {mMdl ? (<>
@@ -2305,8 +2333,8 @@ function StackPlanner() {
                 const F = midChips({ midSize, midDims, Qtc: mMdl.Qtc, f3: mMdl.f3, peakX: mMdl.peakX, xoLo, ts: mid.ts, V: MID_V, useV: midUseV, vTherm: vMidTherm, mAmpW,
                   subMusicAtXo, tilt, midAtXo: subMusicAtXo != null ? midNear(xoLo) : null });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+                    <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
@@ -2318,7 +2346,7 @@ function StackPlanner() {
           </div>
         </section>
 
-        <section className="mt-2" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
           <FoldHead id="horn" title="Horn" folds={folds} toggle={toggleFold} className="mb-3" />
           <div className={foldCls("horn")}>
           {hornModel ? (<>
@@ -2338,15 +2366,15 @@ function StackPlanner() {
             </div>
             <div className="mb-4">
               <ResponseChart fmin={200} fmax={10000} top={180} bot={0} step={30} H={220} yLabel="horizontal beamwidth, °"
-                series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: "#b45309", tint: "rgba(180,83,9,0)" }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: "#0f766e", tint: "rgba(15,118,110,0)" }] : [])]}
+                series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: "#e5007e", tint: "rgba(229,0,126,0)" }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: "#0082c8", tint: "rgba(0,130,200,0)" }] : [])]}
                 marks={[{ f: xoHi, label: "XO" }, ...(beamCurves.fK ? [{ f: beamCurves.fK, label: "horn control" }] : [])]} />
             </div>
             <div className="flex flex-col gap-1.5">
               {(() => {
                 const F = hornChips({ hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi: midMax ? midNear(xoHi).spl : null, hfTilt, hornAtXo: hornAt(xoHi), midBeam, fK: beamCurves.fK });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
-                    <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
+                  <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
+                    <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
                 ));
@@ -2360,7 +2388,7 @@ function StackPlanner() {
 
         </div>
 
-        <aside className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-100 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-[0_-6px_20px_rgba(0,0,0,0.10)]`} style={{ fontFamily: "system-ui, sans-serif" }} aria-label="Settings">
+        <aside className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-100 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-[0_-6px_20px_rgba(0,0,0,0.10)]`} style={{ fontFamily: "var(--font)" }} aria-label="Settings">
           <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
             {[["sub", "Sub"], ["mid", "Mid"], ["horn", "Horn"], ["look", "Look"]].map(([t, label]) => (
               <button key={t} role="tab" aria-selected={sheetOpen && tab === t}
@@ -2391,7 +2419,7 @@ function StackPlanner() {
               {Object.entries(CAB_FINISHES).map(([k, f]) => (
                 <button key={k} title={f.name} onClick={() => setCabFinish(k)}
                   className={`px-2.5 h-7 rounded-full border-2 text-xs ${cabFinish === k ? "border-stone-900" : "border-stone-300"}`}
-                  style={{ background: f.swatch, color: k === "walnut" ? "#f5f5f4" : "#1c1917" }}>{f.name}</button>
+                  style={{ background: f.swatch, color: k === "walnut" ? "#f2f2f2" : "#111111" }}>{f.name}</button>
               ))}
               {SWATCHES.map(([hex, name]) => (
                 <button key={hex} title={`Painted: ${name}`} onClick={() => setCabFinish(hex)}
@@ -2462,17 +2490,6 @@ function StackPlanner() {
               <Slider label="Height" value={cDim.h} min={18} max={42} step={0.5} unit="&#8243;" onChange={(v) => setC("h", v)} extra={dl("subDim", "h", "Sub height")} />
               <Slider label="Depth"  value={cDim.d} min={14} max={32} step={0.5} unit="&#8243;" onChange={(v) => setC("d", v)} extra={dl("subDim", "d", "Sub depth")} />
             </div>
-            <div className="text-xs text-stone-500 mt-2 mb-1">Start from a published cabinet</div>
-            <select
-              value=""
-              onChange={(e) => { const cb = CABINETS.find((c) => c.id === e.target.value); if (cb) startFrom(cb); e.target.value = ""; }}
-              className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500 focus:outline-none focus:border-stone-900">
-              <option value="">Load dimensions and vent&hellip;</option>
-              {CABINETS.map((cb) => {
-                const dd = cb.dims[format.sub];
-                return <option key={cb.id} value={cb.id}>{cb.name} — {dd.w} × {dd.h} × {dd.d}&#8243;</option>;
-              })}
-            </select>
           </div>
           </div>
           <div className={tabCls("sub")}>
@@ -2544,14 +2561,6 @@ function StackPlanner() {
               <Slider label="Music balance: mid band needs less by" value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
               <div className="text-xs text-stone-500">0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.</div>
             </div>
-            {layout !== "tower" && (<>
-              <div className="text-xs text-stone-500 mt-2 mb-1">Start from a preset box</div>
-              <select value="" onChange={(e) => { const b = MID_BOXES.find((x) => x.id === e.target.value); if (b) { setMidBox(b); setMDim({ ...b.box }); } e.target.value = ""; }}
-                className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500 focus:outline-none focus:border-stone-900">
-                <option value="">Load dimensions&hellip;</option>
-                {boxList.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </>)}
           </div>
           </div>
           <div className={tabCls("horn")}>
@@ -2568,7 +2577,7 @@ function StackPlanner() {
         </aside>
 
 
-        <section className="min-w-0 md:col-span-5 mt-6" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <section className="min-w-0 md:col-span-5 mt-6" style={{ fontFamily: "var(--font)" }}>
           <FoldHead id="totals" title="Totals for the current selection" folds={folds} toggle={toggleFold} className="mb-2" />
           <div className={foldCls("totals")}>
           {(() => {
@@ -2599,20 +2608,20 @@ function StackPlanner() {
           })()}
           </div>
         </section>
-        <div className="min-w-0 md:col-span-5 mt-4" style={{ fontFamily: "system-ui, sans-serif" }}>
+        <div className="min-w-0 md:col-span-5 mt-4" style={{ fontFamily: "var(--font)" }}>
           <button onClick={() => setShowDetails((v) => !v)} aria-expanded={showDetails}
             className="text-sm px-3 py-1.5 rounded border border-stone-300 hover:border-stone-500">{showDetails ? "Hide" : "Show"} sub, mid-bass and horn details</button>
         </div>
-        {showDetails && <section className="min-w-0 md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "system-ui, sans-serif" }}>
+        {showDetails && <section className="min-w-0 md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "var(--font)" }}>
           <div>
-            <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Sub</h2>
+            <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Sub</h2>
             <p className="text-sm text-stone-700">
               {sub.name} in a {subBox.w}×{subBox.h}×{subBox.d} in cabinet, {grossL.toFixed(0)} L gross, {netL.toFixed(0)} L net.
               Vent: {port.desc}. 3/4″ baffle set {inset}″ behind the frame, {wall === 0.5 ? "1/2″" : "3/4″"} birch walls, 1/4″ roundovers on the front edges.
             </p>
           </div>
           <div>
-            <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Mid-bass cube</h2>
+            <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Mid-bass cube</h2>
             <p className="text-sm text-stone-700">
               {mid.name} in a {midDims.w}×{midDims.h}×{midDims.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed.
               Covers {xoLo} Hz to {xoHi} Hz. Same construction, flush-mounted driver.
@@ -2620,7 +2629,7 @@ function StackPlanner() {
             {mid.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{mid.name}.</span> {mid.note}</p>}
           </div>
           <div>
-            <h2 className="text-xl mb-2" style={{ fontFamily: "Georgia, serif" }}>Horn</h2>
+            <h2 className="text-xl mb-2" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Horn</h2>
             <p className="text-sm text-stone-700">
               {horn.name} with {cd.name}, crossed at {xoHi} Hz (maker suggests {horn.xo}). Sits on a short block so the mouth clears the cube.
               Total stack height about {stackH.toFixed(0)} in, horn centre at {hornCenter.toFixed(0)} in.

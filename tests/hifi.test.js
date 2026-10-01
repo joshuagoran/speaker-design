@@ -1,3 +1,4 @@
+import * as HIFI from "../tools/hifi.js";
 import test from "node:test";
 import { lr, baffleStep, baffleStepF3, bscEq, boundary, piston, waveguide, hifiSystem, hifiChips, responseAt, dispersionMap, grossL } from "../tools/hifi.js";
 import { close } from "./helpers.js";
@@ -60,4 +61,15 @@ test("response at the seat: on axis matches the design axis; off axis and above 
   const m = dispersionMap(s, W, T, cfg, "h", 2);
   t.assert.equal(m.rows.length, m.angles.length);
   t.assert.ok(m.rows[0].every((v) => Math.abs(v) < 1e-9), "0° row is the reference");
+});
+
+test("ports with elbows: longer ports fit, and the check says so", (t) => {
+  const { portMaxLen } = HIFI;
+  const dim = { w: 8.5, h: 14, d: 10 };
+  const s0 = portMaxLen(dim, 0.75, { dia: 2, elbows: 0 }), s1 = portMaxLen(dim, 0.75, { dia: 2, elbows: 1 }), s2 = portMaxLen(dim, 0.75, { dia: 2, elbows: 2 });
+  t.assert.ok(s0 < s1 && s1 < s2, `${s0} < ${s1} < ${s2}`);
+  const long = { ...cfg, port: { n: 1, dia: 2, len: s0 + 2 } };
+  t.assert.ok(hifiChips(hifiSystem(W, T, long), W, T, long).some(([, h]) => h === "Port too long"), "straight: too long");
+  const bent = { ...cfg, port: { n: 1, dia: 2, len: s0 + 2, elbows: 1 } };
+  t.assert.ok(!hifiChips(hifiSystem(W, T, bent), W, T, bent).some(([, h]) => h === "Port too long"), "one elbow: fits");
 });
