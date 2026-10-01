@@ -57,22 +57,27 @@ export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts
   const out = [];
   for (let i = 0; i < N; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
-    const w = 2 * Math.PI * f, s = cx(0, w);
-    const Zd = cadd(cx(Ras + Rae), cadd(cmul(s, cx(Mas)), cinv(cmul(s, cx(Cas)))));
-    const Zc = cinv(cmul(s, cx(Cab)));
-    const Zp = cadd(cmul(s, cx(Map)), cx(Rap));
-    const Zbox = cinv(cadd(cadd(cinv(Zc), cinv(Zp)), cinv(cx(Ral))));
-    const Ud = cdiv(cx(Pg), cadd(Zd, Zbox));
-    const Up = cdiv(cmul(Ud, Zbox), Zp);
-    // radiated = cone - port - leak = the flow into the box air
-    const Ut = cdiv(cmul(Ud, Zbox), Zc);
+    // the same circuit in plain real arithmetic (no complex objects: this loop runs millions of times in the optimizers)
+    const w = 2 * Math.PI * f;
+    // Zd = Ras + Rae + j(w Mas - 1/(w Cas)); 1/Zc = j w Cab; 1/Zp = 1/(Rap + j w Map); 1/Ral
+    const dRe = Ras + Rae, dIm = w * Mas - 1 / (w * Cas);
+    const pIm = w * Map, pM = Rap * Rap + pIm * pIm, ypRe = Rap / pM, ypIm = -pIm / pM;
+    const yRe = ypRe + 1 / Ral, yIm = ypIm + w * Cab, yM = yRe * yRe + yIm * yIm;
+    const bRe = yRe / yM, bIm = -yIm / yM;                                  // Zbox = 1 / Y
+    const tRe = dRe + bRe, tIm = dIm + bIm, tM = tRe * tRe + tIm * tIm;
+    const uRe = (Pg * tRe) / tM, uIm = (-Pg * tIm) / tM;                    // Ud = Pg / (Zd + Zbox)
+    const vRe = uRe * bRe - uIm * bIm, vIm = uRe * bIm + uIm * bRe;         // Ud Zbox: box pressure
+    const pv = Math.hypot(vRe, vIm), Ud = Math.hypot(uRe, uIm);
+    const Up = pv / Math.sqrt(pM);                                          // |Ud Zbox / Zp|
+    // radiated = cone - port - leak = the flow into the box air: |Ud Zbox / Zc| = |Ud Zbox| w Cab
+    const Ut = pv * w * Cab;
     const hp = hpGain(f, hpf, hpType);
-    const p = (rho * w * cabs(Ut)) / (2 * Math.PI);
+    const p = (rho * w * Ut) / (2 * Math.PI);
     const raw = 20 * Math.log10(p / 2e-5);
     // volts is RMS; x1.414 turns RMS travel and air speed into sine peaks, which Xmax and the 17 m/s limit mean
     out.push({ f, raw, spl: raw + 20 * Math.log10(hp),
-               xmm: Math.SQRT2 * (cabs(Ud) / (w * Sd)) * hp * 1000,
-               vel: Math.SQRT2 * (cabs(Up) / Sp) * hp });
+               xmm: Math.SQRT2 * (Ud / (w * Sd)) * hp * 1000,
+               vel: Math.SQRT2 * (Up / Sp) * hp });
   }
   // midband reference: the mass-controlled asymptote (see closedBox)
   const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
