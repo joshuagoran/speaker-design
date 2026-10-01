@@ -918,7 +918,7 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
         <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} guide={k.guided ? guide : null} small />
         <OutChart curve={k.curve} cur={curCurve} fmin={15} fmax={20000} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
       </div>
-      <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
+      <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile("Drivers, pair", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Weight", `${m.lb.toFixed(0)} lb`, <Delta v={d.lb} unit=" lb" lowerIsBetter digits={1} />)}
@@ -1152,7 +1152,8 @@ function HifiPage() {
           <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
           {box === "vented" && (<>
             <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />
-            <Slider label="Port length" value={port.len} min={1} max={14} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
+            <Slider label="Port length (centreline)" value={port.len} min={1} max={30} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
+            <div className="flex flex-wrap gap-1 mb-3">{[[0, "Straight"], [1, "1 elbow"], [2, "2 elbows"]].map(([e, l]) => <button key={e} onClick={() => setP("elbows", e)} className={seg((port.elbows || 0) === e)}>{l}</button>)}</div>
           </>)}
           <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of port` : ", lightly stuffed"}.</div>
         </div>

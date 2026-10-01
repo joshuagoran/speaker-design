@@ -2,7 +2,7 @@
 // Same rules as the PA optimizer: goals in tap order (the first ranks, the main card must beat your design on
 // every one), each card's label true against your design, unlocked amps searched at their slider maximum and
 // trimmed to the least power that keeps the card's level, and a card applies only the fields searched.
-import { hifiSystem, hifiChips, grossL, lr, logFreqs } from "./hifi.js";
+import { hifiSystem, hifiChips, grossL, lr, logFreqs, portMaxLen } from "./hifi.js";
 import { ventTuning } from "./calc.js";
 
 // the PA planner's goals, in its order
@@ -37,14 +37,16 @@ export const hifiProblems = (sys, chips) => (!sys ? ["can't be modelled"] : chip
 const XOS = [1500, 1800, 2000, 2200, 2500, 3000];
 const range = (lock, cur, vals) => (lock === "exact" ? [cur] : lock === "max" ? vals.filter((v) => v <= cur + 1e-9) : vals);
 
-// port length for a target tuning (bisection; the port's own volume comes out of the box)
-function portFor(w, dim, wall, n, dia, Fb) {
+// port length for a target tuning (bisection; the port's own volume comes out of the box), with the fewest elbows that fit
+function portFor(w, dim, wall, n, dia, Fb, maxElbows = 2) {
   const g = grossL(dim, wall), disp = w.ts.disp != null ? w.ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6);
   const A = n * Math.PI * (dia / 2) ** 2, fb = (len) => ventTuning(Math.max(1, g * 0.97 - disp - (A * len * 16.387) / 1e3), A, len, n).Fb;
-  let a = 0.5, b = dim.d - 2 * wall - dia / 2 - 1;
+  let a = 0.5, b = portMaxLen(dim, wall, { dia, elbows: maxElbows });
   if (b <= a || fb(a) < Fb || fb(b) > Fb) return null;
   for (let i = 0; i < 20; i++) { const m = (a + b) / 2; if (fb(m) > Fb) a = m; else b = m; }
-  return { n, dia, len: Math.round(((a + b) / 2) * 4) / 4 };
+  const len = Math.round(((a + b) / 2) * 4) / 4;
+  const elbows = [0, 1, 2].find((e) => e <= maxElbows && len <= portMaxLen(dim, wall, { dia, elbows: e }) + 1e-9);
+  return elbows == null ? null : { n, dia, len, elbows };
 }
 
 // input: { cur: page cfg + { woofer, tweeter } ids, woofers, tweeters, goals, locks: { woofer, tweeter, box, wall, xo, wAmpW, tAmpW,
@@ -202,7 +204,7 @@ function changes(p, cur) {
   if (p.t.id !== cur.tweeter) out.push("tweeter");
   if (c.box !== cur.box) out.push("box type");
   if (c.dim.w !== cur.dim.w || c.dim.h !== cur.dim.h || c.dim.d !== cur.dim.d) out.push("box size");
-  if (c.box === "vented" && cur.box === "vented" && (c.port.dia !== cur.port.dia || c.port.len !== cur.port.len || c.port.n !== cur.port.n)) out.push("port");
+  if (c.box === "vented" && cur.box === "vented" && (c.port.dia !== cur.port.dia || c.port.len !== cur.port.len || c.port.n !== cur.port.n || (c.port.elbows || 0) !== (cur.port.elbows || 0))) out.push("port");
   if (c.wall !== cur.wall) out.push("plywood");
   if (c.xo !== cur.xo) out.push("crossover");
   if (c.wAmpW !== cur.wAmpW || c.tAmpW !== cur.tAmpW) out.push("amp power");

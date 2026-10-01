@@ -80,6 +80,15 @@ export function waveguide(f, covH, covV, mouthWIn, mouthHIn, th, tv) {
 }
 
 // ---- box ----
+// longest port (centreline, inches) that fits: straight front to back; one elbow turns it up (or down) the back wall,
+// using at most half the inner height so it stays clear of the woofer; two elbows fold it back along the bottom or top
+export function portMaxLen(dim, wall, port) {
+  const D = dim.d - 2 * wall, H = dim.h - 2 * wall, dia = port.dia, e = port.elbows || 0;
+  const straight = D - dia / 2 - 1;
+  if (e === 0) return straight;
+  const up = H / 2 - dia;
+  return e === 1 ? D - dia - 1 + Math.max(0, up) : 2 * (D - dia - 1) + Math.max(0, up);
+}
 export const grossL = (d, t) => Math.max(0, (d.w - 2 * t) * (d.h - 2 * t) * (d.d - 2 * t)) * 16.387 / 1e3;
 export const portArea = (p) => p.n * Math.PI * Math.pow(p.dia / 2, 2);
 const MDF_LB = { 0.75: 3.4, 0.5: 2.3 };
@@ -164,7 +173,7 @@ export function hifiSystem(w, t, cfg) {
   for (let i = woofer.length - 1; i >= 0; i--) { if (woofer[i].f > 500) continue; if (woofer[i].raw < ref - 3) { f3 = woofer[Math.min(woofer.length - 1, i + 1)].f; break; } f3 = woofer[i].f; }
 
   const lb = boxLb(dim, wall, cfg.mat) + (w.lb || 5) + (t.lb || 1.5) + 1;
-  const portFits = !vented || cfg.port.len + cfg.port.dia / 2 + 1 <= dim.d - 2 * wall;
+  const portFits = !vented || cfg.port.len <= portMaxLen(dim, wall, cfg.port) + 1e-9;
   const lay = layout(w, t, dim);
   return {
     gross, net, disp, pVol, pArea: pA, vented, Fb: vM ? vM.Fb : null, Qtc: sM ? sM.Qtc : null, f3Box: m.f3, ref, refW,
@@ -235,7 +244,10 @@ export function hifiChips(sys, w, t, cfg) {
   if (hf.fs && xo < 2 * hf.fs) F.push(["warn", "Close to the tweeter's resonance", `${xo} Hz is within an octave of its ${hf.fs} Hz resonance; distortion rises there.`]);
   if (w.fmax && xo > w.fmax) F.push(["warn", "Woofer past its usable range", `${w.name} is rated to about ${w.fmax} Hz; cross lower.`]);
   if (sys.Qtc != null) F.push(sys.Qtc > 0.8 ? ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Peaky; the box is small for this woofer."] : sys.Qtc < 0.5 ? ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Overdamped; the box could be smaller."] : ["ok", `Qtc ${sys.Qtc.toFixed(2)}`, "Well damped."]);
-  if (sys.vented && !sys.portFits) F.push(["bad", "Port too long", `${cfg.port.len.toFixed(1)}″ doesn't fit a ${cfg.dim.d}″-deep box.`]);
+  if (sys.vented && !sys.portFits) {
+    const e = cfg.port.elbows || 0, fits = portMaxLen(cfg.dim, cfg.wall || 0.75, cfg.port);
+    F.push(["bad", "Port too long", `${cfg.port.len.toFixed(1)}″ doesn't fit; ${e ? `with ${e} elbow${e > 1 ? "s" : ""} ` : "straight, "}this box holds about ${fits.toFixed(1)}″.${e < 2 ? " Another elbow would make room." : ""}`]);
+  }
   const need = w.size + 0.8;
   if (cfg.dim.w < need) F.push(["bad", "Woofer won't fit", `A ${w.size}″ woofer needs about ${need.toFixed(1)}″ of baffle width.`]);
   if (sys.lay.wooferIn - w.size / 2 < 0.5) F.push(["bad", "Drivers won't fit the baffle", `The woofer and tweeter need about ${(cfg.dim.h - sys.lay.wooferIn + w.size / 2 + 0.5).toFixed(1)}″ of height.`]);
