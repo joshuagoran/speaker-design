@@ -35,12 +35,12 @@ import { SavedConfigs } from "./components/saved-configs/SavedConfigs.jsx";
 import { HIFI_TOP, HIFI_BOT } from "./constants/chartScales.js";
 import { METERS_PER_FOOT } from "./constants/units.js";
 import { subChips, midChips, hornChips, fillChips } from "./lib/pa/chips.js";
-import { evaluate as evaluateConfig, optFields } from "./lib/pa/optimize.js";
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, prAddMax } from "./lib/data.js";
-import { hifiSystem, hifiChips, responseAt, dispersionMap, logFreqs, lr, PLACES as HIFI_PLACES } from "./lib/hifi/hifi.js";
-import { hifiOptimize, HIFI_GOALS, HIFI_LOCK_KEYS } from "./lib/hifi/optimize.js";
-import { paDispersionMap, firstNullDeg } from "./lib/pa/dispersion.js";
-import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest, subMusicAt } from "./lib/pa/calc.js";
+import { evaluateDesign as evaluateConfig, pickOptimizedFields } from "./lib/pa/optimize.js";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, PAINT_SWATCHES, CABINET_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, passiveRadiatorMassMax } from "./lib/data.js";
+import { hifiSystem, hifiChips, hifiResponseAt, hifiDispersionMap, logSpacedFrequencies, linkwitzRileyFilter, SPEAKER_PLACEMENTS as HIFI_PLACES } from "./lib/hifi/hifi.js";
+import { optimizeHifiSpeaker, HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "./lib/hifi/optimize.js";
+import { paDispersionMap, firstNullAngleDeg } from "./lib/pa/dispersion.js";
+import { subSystem, maxOutputCurve as maxCurveOf, hornResponse, pistonBeamWidthDeg, keeleFrequency, hornBeamWidthDeg, subWeightLb, midWeightLb, HIGHPASS_ALIGNMENTS, PLYWOOD_SHEETS, formatInches, formatThickness, cutParts, packSheets, midSystem, fillSystem, subThroughLowpass, nearestPoint, subMusicOutputAt } from "./lib/pa/calc.js";
 
 
 
@@ -78,7 +78,7 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
     scene.add(key);
 
     // cabinet finish: clear birch, walnut veneer, or paint (a hex colour)
-    const finish = CAB_FINISHES[cabFinish];
+    const finish = CABINET_FINISHES[cabFinish];
     const birch = new THREE.MeshStandardMaterial({ color: finish ? finish.color : new THREE.Color(cabFinish), roughness: finish ? finish.rough : 0.8 });
     const black = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.9 });
     const cream = new THREE.MeshStandardMaterial({ color: 0xece4c8, roughness: 0.55 });
@@ -748,7 +748,7 @@ function HifiPage() {
   const setP = (k, v) => setPort((p) => ({ ...p, [k]: v }));
   const guide = t.type === "compression" || t.needsWaveguide ? { covH: guideSel.hf.covH, covV: guideSel.hf.covV || guideSel.hf.covH, w: guideSel.size.w, h: guideSel.size.h, name: guideSel.name, freestanding: !guideSel.rect } : null;
   const prDrv = HIFI_PASSIVES.find((o) => o.id === prSel.id) || HIFI_PASSIVES[0];
-  const pr = { drv: prDrv, n: prSel.n, addG: Math.min(prSel.addG, prAddMax(prDrv)) };
+  const pr = { drv: prDrv, n: prSel.n, addG: Math.min(prSel.addG, passiveRadiatorMassMax(prDrv)) };
   const cfg = { box, dim, wall, mat, port, pr, xo, order, wAmpW, tAmpW, bsc, place, wallFt, portMax: 17, guide };
   const tt = guide ? { ...t, faceplate: { w: guide.w, h: guide.h } } : t;
   const sys = hifiSystem(w, tt, cfg);
@@ -761,14 +761,14 @@ function HifiPage() {
     return { th: Math.abs(ang), eyeIn: earIn - standIn, distM: d * METERS_PER_FOOT };
   };
   const gL = geoOf(-1), gR = geoOf(1);
-  const freqs = logFreqs(15, 20000, 220);
-  const rL = responseAt(sys, w, tt, cfg, gL, freqs), rR = responseAt(sys, w, tt, cfg, gR, freqs);
-  const on = responseAt(sys, w, tt, cfg, { th: 0, eyeIn: sys.lay.tweeterIn, distM: 1 }, freqs);
+  const freqs = logSpacedFrequencies(15, 20000, 220);
+  const rL = hifiResponseAt(sys, w, tt, cfg, gL, freqs), rR = hifiResponseAt(sys, w, tt, cfg, gR, freqs);
+  const on = hifiResponseAt(sys, w, tt, cfg, { th: 0, eyeIn: sys.lay.tweeterIn, distM: 1 }, freqs);
   const pair = rL.map((o, i) => ({ f: o.f, spl: 10 * Math.log10(Math.pow(10, o.spl / 10) + Math.pow(10, rR[i].spl / 10)) }));
   const seatDist = (gL.distM + gR.distM) / 2;
   const atSeat = sys.maxLevel - 20 * Math.log10(seatDist) + 3;
-  const tMax = freqs.map((f) => ({ f, spl: sys.tLevel + 20 * Math.log10(Math.max(1e-6, Math.hypot(lr(f, xo, order, "hp").re, lr(f, xo, order, "hp").im))) }));
-  const map = dispersionMap(sys, w, tt, cfg, plane, Math.max(1, seatDist));
+  const tMax = freqs.map((f) => ({ f, spl: sys.tLevel + 20 * Math.log10(Math.max(1e-6, Math.hypot(linkwitzRileyFilter(f, xo, order, "hp").re, linkwitzRileyFilter(f, xo, order, "hp").im))) }));
+  const map = hifiDispersionMap(sys, w, tt, cfg, plane, Math.max(1, seatDist));
   const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0) + (box === "radiator" ? pr.n * (prDrv.price || 0) : 0));
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
@@ -799,7 +799,7 @@ function HifiPage() {
     setHBusy(true);
     const base = hPreview ? hPreview.before : snapH();
     setTimeout(() => {
-      try { setHRes(hifiOptimize({ cur: { ...cfg, ...base }, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, passives: HIFI_PASSIVES, goals: hGoals, locks: hLocks, budget: hBudget, seatM: seatDist, guidePrice: guideSel.price || 0 })); }
+      try { setHRes(optimizeHifiSpeaker({ cur: { ...cfg, ...base }, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, passives: HIFI_PASSIVES, goals: hGoals, locks: hLocks, budget: hBudget, seatM: seatDist, guidePrice: guideSel.price || 0 })); }
       finally { setHBusy(false); }
     }, 30);
   };
@@ -820,7 +820,7 @@ function HifiPage() {
         <div className="mt-3">
           <NumberField label={<>Driver budget, pair <span className="text-xs">(woofers + tweeters{guide ? " + waveguides" : ""}, at the listed prices)</span></>} value={hBudget} min={50} step={25} unit="$" onChange={(n) => { setHBudget(n); ls.set("hifi.budget", n); }} className="" />
         </div>
-        <GoalPicker defs={HIFI_GOALS} selected={hGoals} onTap={tapG} />
+        <GoalPicker defs={HIFI_OPTIMIZER_GOALS} selected={hGoals} onTap={tapG} />
       </div>
       <RunRow busy={hBusy} hasGoal={hGoals.length > 0} onRun={runH} stats={hRes && hRes.stats} note={hRes && hRes.cards.length ? " · every design shown passes the checks (warnings are listed on the card)" : ""}>
         {hUndo && !hPreview && <Button size="md" onClick={() => { applyH(hUndo); setHUndo(null); }}>Undo load</Button>}
@@ -924,8 +924,8 @@ function HifiPage() {
             <Slider label={port.shape === "slot" ? "Slot length" : "Port length (centerline)"} value={port.len} min={1} max={30} step={0.25} unit="″" onChange={(v) => setP("len", v)} />
           </>)}
           {box === "radiator" && (<>
-            <SelectField label={`Passive radiator · ${prDrv.shape ? "5 × 8″ oval" : `${prDrv.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={prDrv} onChange={(o) => setPrSel((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, prAddMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
-            <Slider label="Added mass, each" value={pr.addG} min={0} max={prAddMax(prDrv)} step={5} unit=" g" onChange={(v) => setPrSel((p) => ({ ...p, addG: v }))} />
+            <SelectField label={`Passive radiator · ${prDrv.shape ? "5 × 8″ oval" : `${prDrv.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={prDrv} onChange={(o) => setPrSel((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, passiveRadiatorMassMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
+            <Slider label="Added mass, each" value={pr.addG} min={0} max={passiveRadiatorMassMax(prDrv)} step={5} unit=" g" onChange={(v) => setPrSel((p) => ({ ...p, addG: v }))} />
           </>)}
           <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of ${sys.slot ? "slot" : "port"}` : sys.radiator ? `; radiators on the back tune it to ${sys.Fb.toFixed(0)} Hz, with a notch at ${sys.Fp.toFixed(0)} Hz (their own resonance)${prDrv.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}` : ", lightly stuffed"}.</div>
         </Card>
@@ -1144,7 +1144,7 @@ function FillsPage() {
   const setP = (k, v) => setPort((p) => ({ ...p, [k]: v }));
   const ts = drv.ts;
   const { gross, pArea, net, vM, sM, max: maxC, sens, f3, pad, hfLimW, lb, portLimited } = fillSystem(drv, { boxType, dim, port, hp, ampW, portMax });
-  const near = (f) => nearest(maxC, f);
+  const near = (f) => nearestPoint(maxC, f);
   const disp = ts.disp != null ? ts.disp : drv.size >= 10 ? 1.5 : 1;
   const hf = drv.hf;
   const kick = near(60).spl, mid = near(150).spl;
@@ -1222,7 +1222,7 @@ function FillsPage() {
 function CutlistPage(props) {
   const { joint, setJoint, sheetKind, setSheetKind, sets, setSets, wall } = props;
   const { parts, vent } = cutParts(props);
-  const S = SHEETS[sheetKind], kerf = 0.125;
+  const S = PLYWOOD_SHEETS[sheetKind], kerf = 0.125;
   const byT = {};
   parts.forEach((p) => { for (let i = 0; i < p.qty * sets; i++) (byT[p.t] = byT[p.t] || []).push(p); });
   const packs = Object.keys(byT).sort((a, b) => b - a).map((t) => ({ t: +t, ...packSheets(byT[t], S, kerf) }));
@@ -1232,11 +1232,11 @@ function CutlistPage(props) {
         <div><div className="text-sm text-stone-500 mb-1">Corner joints</div>
           <div className="flex gap-1">{[["butt", "Butt"], ["rabbet", "Rabbet"], ["miter", "Miter"]].map(([k, l]) => <ToggleButton key={k} on={joint === k} onClick={() => setJoint(k)}>{l}</ToggleButton>)}</div></div>
         <div><div className="text-sm text-stone-500 mb-1">Sheet</div>
-          <div className="flex gap-1">{Object.entries(SHEETS).map(([k, s]) => <ToggleButton key={k} on={sheetKind === k} onClick={() => setSheetKind(k)}>{s.name}</ToggleButton>)}</div></div>
+          <div className="flex gap-1">{Object.entries(PLYWOOD_SHEETS).map(([k, s]) => <ToggleButton key={k} on={sheetKind === k} onClick={() => setSheetKind(k)}>{s.name}</ToggleButton>)}</div></div>
         <div><div className="text-sm text-stone-500 mb-1">Stacks</div>
           <div className="flex gap-1">{[1, 2, 4].map((n) => <ToggleButton key={n} on={sets === n} onClick={() => setSets(n)}>{n}</ToggleButton>)}</div></div>
       </div>
-      <p className="text-sm text-stone-500 mb-4 max-w-3xl">From the planner's current boxes: {tName(wall)} walls, 3/4″ baffles set {f8(props.inset)}″ back, back panels in a rabbet. Sizes are finished dimensions in inches (width × length); {f8(kerf)}″ kerf allowed in the layout. Quantities are for {sets} stack{sets > 1 ? "s" : ""}.</p>
+      <p className="text-sm text-stone-500 mb-4 max-w-3xl">From the planner's current boxes: {formatThickness(wall)} walls, 3/4″ baffles set {formatInches(props.inset)}″ back, back panels in a rabbet. Sizes are finished dimensions in inches (width × length); {formatInches(kerf)}″ kerf allowed in the layout. Quantities are for {sets} stack{sets > 1 ? "s" : ""}.</p>
       <div className="overflow-x-auto mb-6"><table className="text-sm w-full sm:min-w-[640px] border-collapse">
         <thead><tr className="text-stone-500 text-left border-b border-stone-300">
           <th className="py-1 pr-3 font-normal">Box</th><th className="py-1 pr-3 font-normal">Part</th><th className="py-1 pr-3 font-normal text-right">Qty</th>
@@ -1245,15 +1245,15 @@ function CutlistPage(props) {
         <tbody>{parts.map((p, i) => (
           <tr key={i} className="border-b border-stone-300 align-top">
             <td className="py-1 pr-3">{p.box}</td><td className="py-1 pr-3">{p.part}{p.note && <span className="block sm:hidden text-xs text-stone-500">{p.note}</span>}</td><td className="py-1 pr-3 text-right tabular-nums">{p.qty * sets}</td>
-            <td className="py-1 pr-3 text-right tabular-nums whitespace-nowrap">{f8(Math.min(p.a, p.b))} × {f8(Math.max(p.a, p.b))}</td>
-            <td className="py-1 pr-3">{tName(p.t)}</td><td className="py-1 text-stone-500 hidden sm:table-cell">{p.note}</td>
+            <td className="py-1 pr-3 text-right tabular-nums whitespace-nowrap">{formatInches(Math.min(p.a, p.b))} × {formatInches(Math.max(p.a, p.b))}</td>
+            <td className="py-1 pr-3">{formatThickness(p.t)}</td><td className="py-1 text-stone-500 hidden sm:table-cell">{p.note}</td>
           </tr>))}</tbody>
       </table></div>
       {vent.length > 0 && <p className="text-sm text-stone-500 mb-6">Also: {vent.join("; ")}.</p>}
       <SectionHeading className="mb-2">Sheet layout, {S.name}</SectionHeading>
       {packs.map((pk) => (
         <div key={pk.t} className="mb-6">
-          <div className="text-sm font-medium mb-2">{tName(pk.t)} birch: {pk.sheets.length} sheet{pk.sheets.length > 1 ? "s" : ""}</div>
+          <div className="text-sm font-medium mb-2">{formatThickness(pk.t)} birch: {pk.sheets.length} sheet{pk.sheets.length > 1 ? "s" : ""}</div>
           {pk.tooBig.length > 0 && <div className="text-sm text-red-700 mb-2">Doesn't fit on one {S.name} sheet: {pk.tooBig.map((r) => `${r.box} ${r.part}`).join(", ")}.</div>}
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">{pk.sheets.map((sh, i) => <SheetDrawing key={i} sheet={sh} S={S} idx={i} />)}</div>
         </div>
@@ -1294,7 +1294,7 @@ function StackPlanner() {
   const [midSize, setMidSize] = useState(12);
   const [wall, setWall] = useState(0.75);   // side/top/bottom/back ply, in
   const [inset, setInset] = useState(0.75); // how far the baffles sit back from the frame front, in
-  const [baffleColor, setBaffleColor] = useState(SWATCHES.find(([, name]) => name === "Dusty pink")[0]);
+  const [baffleColor, setBaffleColor] = useState(PAINT_SWATCHES.find(([, name]) => name === "Dusty pink")[0]);
   const [cabFinish, setCabFinish] = useState("birch");
   const [spacerH, setSpacerH] = useState(20);
   const [showDetails, setShowDetails] = useState(false);
@@ -1405,11 +1405,11 @@ function StackPlanner() {
   const { V: MID_V, grossL: midGrossL, netL: midNetL, effL: midEffL, mdl: mMdl, vTherm: vMidTherm, max: midMax, useV: midUseV } =
     midSystem(mid, { midDims, wall, inset, xoLo, xoHi, mAmpW });
   // 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware
-  const midCabLb = midWeight(midDims, wall);
+  const midCabLb = midWeightLb(midDims, wall);
   const midLbLoaded = midCabLb + (mid.lb || 0);
   const midNear = (f) => midMax.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
   // Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter.
-  const subSys = mdl ? subThroughLp(mdl, sub.ts, AMP_V, portMax, xoLo) : null;
+  const subSys = mdl ? subThroughLowpass(mdl, sub.ts, AMP_V, portMax, xoLo) : null;
   // What the mid actually has to match: the sub at its music limit (one drive level for
   // the whole band), through its lowpass, less the music-balance allowance.
   // ---- horn + compression driver ----
@@ -1421,22 +1421,22 @@ function StackPlanner() {
   const hornModel = hornResponse(hf, hz, xoHi, hfAmpW);
   const hornAt = (f) => hornModel.curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b)).spl;
   // mid beamwidth at the horn crossover, as a rigid piston: -6 dB where ka sin(theta) = 2.2
-  const midBeam = mid.ts ? pistonBeam(mid.ts.Sd, xoHi) : null;
+  const midBeam = mid.ts ? pistonBeamWidthDeg(mid.ts.Sd, xoHi) : null;
   // Horizontal beamwidth against frequency: mid as a rigid piston, horn at its rated coverage down
   // to Keele's pattern-control limit and proportionally wider below. Rules of thumb.
   const beamCurves = (() => {
     const hz0 = horn.hf || {};
-    const fK = hz0.covH && horn.size ? keeleF(hz0.covH, horn.size.w) : null;
+    const fK = hz0.covH && horn.size ? keeleFrequency(hz0.covH, horn.size.w) : null;
     const midB = [], hornB = [];
     for (let i = 0; i < 160; i++) {
       const f = 200 * Math.pow(10000 / 200, i / 159);
-      if (mid.ts) midB.push({ f, spl: pistonBeam(mid.ts.Sd, f) });
-      if (fK && f >= (hz0.lowHz || 0) * 0.7) hornB.push({ f, spl: hornBeam(hz0.covH, fK, f) });
+      if (mid.ts) midB.push({ f, spl: pistonBeamWidthDeg(mid.ts.Sd, f) });
+      if (fK && f >= (hz0.lowHz || 0) * 0.7) hornB.push({ f, spl: hornBeamWidthDeg(hz0.covH, fK, f) });
     }
     return { midB, hornB, fK };
   })();
 
-  const subMusicAtXo = mdl && lim ? subMusicAt(mdl, lim, AMP_V, xoLo) : null;
+  const subMusicAtXo = mdl && lim ? subMusicOutputAt(mdl, lim, AMP_V, xoLo) : null;
 
   const portGeom = { ductH: cVent.slotH, nPorts: cVent.nt, portR: cVent.dia / 2, tubeLen: cVent.len, throat: cVent.throat };
 
@@ -1459,7 +1459,7 @@ function StackPlanner() {
     if (c.cDim) setCDim(c.cDim);
     if (c.cVent) setCVent(c.cVent);
     if (typeof c.hpf === "number") setHpf(c.hpf);
-    if (c.hpType && HP_TYPES[c.hpType]) setHpType(c.hpType);
+    if (c.hpType && HIGHPASS_ALIGNMENTS[c.hpType]) setHpType(c.hpType);
     if (typeof c.ampW === "number") setAmpW(c.ampW);
     if (typeof c.portMax === "number") setPortMax(c.portMax);
     if (c.mDim) setMDim(c.mDim); else if (c.midBox) { const b = MID_BOXES.find((x) => x.id === c.midBox); if (b) setMDim({ ...b.box }); }
@@ -1493,12 +1493,12 @@ function StackPlanner() {
   // a result only sets the fields the search changes; finish, colours, layout and balance stay as they are now
   const optPreview = (k) => {
     const before = preview ? preview.before : snapshot();
-    restore({ ...snapshot(), ...optFields(k.config) }); setPreview({ label: k.label, before, card: k });
+    restore({ ...snapshot(), ...pickOptimizedFields(k.config) }); setPreview({ label: k.label, before, card: k });
   };
   const optBack = () => { if (preview) restore(preview.before); setPreview(null); };
   const optLoad = async (k) => {
     const before = preview ? preview.before : snapshot();
-    restore({ ...snapshot(), ...optFields(k.config) }); setPreview(null); setUndoSnap(before);
+    restore({ ...snapshot(), ...pickOptimizedFields(k.config) }); setPreview(null); setUndoSnap(before);
     let msg = `Loaded "${k.label}".`;
     if (db) {
       const name = `Before optimizer, ${today()}`;
@@ -1514,14 +1514,14 @@ function StackPlanner() {
     if (!name) return;
     const m = k.metrics;
     try {
-      await db.collection("configs").doc().set({ ...snapshot(), ...optFields(k.config), name: name.slice(0, 60), savedAt: Date.now(),
+      await db.collection("configs").doc().set({ ...snapshot(), ...pickOptimizedFields(k.config), name: name.slice(0, 60), savedAt: Date.now(),
         summary: `${k.names.sub} · ${k.config.cDim.w}×${k.config.cDim.h}×${k.config.cDim.d}″ · ${m.Fb.toFixed(1)} Hz` });
       setToast(`Saved "${name.slice(0, 60)}".`);
     } catch { setToast("Couldn't save — try again"); }
   };
   const curOut = optOn ? (() => { try { const m = evaluateConfig(preview ? preview.before : snapshot()); return m ? m.out : null; } catch { return null; } })() : null;
 
-  const subLbLoaded = subWeight(subBox, wall, sub.lb);
+  const subLbLoaded = subWeightLb(subBox, wall, sub.lb);
 
   const midL = midGrossL;
   const subTopH = plinth + subBox.h;
@@ -1537,7 +1537,7 @@ function StackPlanner() {
     sub: sub.ts ? { zIn: plinth + subBox.h / 2, Sd: sub.ts.Sd } : null, mid: { zIn: midCenter, Sd: mid.ts.Sd },
     horn: { zIn: hornCenter, covH: hz.covH, covV: hz.covV || hz.covH, wIn: horn.size.w, hIn: horn.size.h }, xoLo, xoHi, order: 4,
   }, paPlane, PA_MAP_M) : null;
-  const mhGap = hornCenter - midCenter, mhNull = firstNullDeg(mhGap, xoHi);
+  const mhGap = hornCenter - midCenter, mhNull = firstNullAngleDeg(mhGap, xoHi);
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900" style={{ fontFamily: "var(--font)" }}>
@@ -1794,11 +1794,11 @@ function StackPlanner() {
           <SelectField label="Sub driver" options={subList} value={sub} onChange={setSub} extra={lk("sub", "the sub driver")} />
           </div>
           <div className={tabCls("look")}>
-          <SwatchPicker label="Cabinet finish" value={cabFinish} onChange={setCabFinish} swatches={SWATCHES} presets={CAB_FINISHES} titlePrefix="Painted: "
-            note={CAB_FINISHES[cabFinish] ? CAB_FINISHES[cabFinish].name : `painted ${cabFinish}`} />
+          <SwatchPicker label="Cabinet finish" value={cabFinish} onChange={setCabFinish} swatches={PAINT_SWATCHES} presets={CABINET_FINISHES} titlePrefix="Painted: "
+            note={CABINET_FINISHES[cabFinish] ? CABINET_FINISHES[cabFinish].name : `painted ${cabFinish}`} />
           </div>
           <div className={tabCls("look")}>
-          <SwatchPicker label="Baffle colour" value={baffleColor} onChange={setBaffleColor} swatches={SWATCHES} note={baffleColor} />
+          <SwatchPicker label="Baffle colour" value={baffleColor} onChange={setBaffleColor} swatches={PAINT_SWATCHES} note={baffleColor} />
           </div>
           <div className={tabCls("look")}>
           <div className="mb-5">
@@ -1866,7 +1866,7 @@ function StackPlanner() {
             <Card>
               <Slider label={`Highpass (${hpType})`} value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} extra={lk("hpf", "the highpass")} />
               <div className="flex flex-wrap gap-1 -mt-1 mb-3">
-                {Object.keys(HP_TYPES).map((t) => (
+                {Object.keys(HIGHPASS_ALIGNMENTS).map((t) => (
                   <ToggleButton key={t} onClick={() => setHpType(t)} on={hpType === t} size="xs">{t}</ToggleButton>
                 ))}
               </div>

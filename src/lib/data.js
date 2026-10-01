@@ -263,7 +263,7 @@ export const RACKS = [
   },
 ];
 
-export const SWATCHES = [
+export const PAINT_SWATCHES = [
   ["#e8b4a8", "Dusty pink"],
   ["#2b2725", "Near black"],
   ["#c8cdc4", "Pale sage"],
@@ -274,7 +274,7 @@ export const SWATCHES = [
   ["#4a5d4e", "Deep green"],
 ];
 
-export const CAB_FINISHES = {
+export const CABINET_FINISHES = {
   birch: { name: "Birch", color: 0xd7b98a, inner: 0xc9a875, rough: 0.85, swatch: "#d7b98a" },
   walnut: { name: "Walnut", color: 0x5c3a24, inner: 0x4f3220, rough: 0.7, swatch: "#5c3a24" },
 };
@@ -323,8 +323,8 @@ export const FORMATS = [
 ];
 
 // Pickers list alphabetically; the default pick is marked with a dot, not moved to the top.
-export const byName = (arr) => [...arr].sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true, sensitivity: "base" }));
-[SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS].forEach((arr) => arr.splice(0, arr.length, ...byName(arr)));
+export const sortedByName = (arr) => [...arr].sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true, sensitivity: "base" }));
+[SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS].forEach((arr) => arr.splice(0, arr.length, ...sortedByName(arr)));
 
 // ---------------------------------------------------------------
 // Fills / booth monitors: 8-10" passive coaxials
@@ -596,4 +596,4 @@ export const HIFI_PASSIVES = [
   { id: "sb23mfcl", name: "SB Acoustics SB23MFCL-00", size: 8, Sd: 210, Mms: 141, Cms: 0.5, Qms: 15.3, Fs: 19, Xmax: 19, xmaxKind: "mechanical", lb: 1.96, price: 85.8, src: "madisound, Oct 2026", note: "Long-stroke, cast frame; M8 mass thread. Datasheet marked preliminary." },
   { id: "dsa270pr", name: "Dayton Audio DSA270-PR", size: 10, Sd: 353, Mms: 88.4, Cms: 0.6, Qms: 5.26, Fs: 21.9, Xmax: 11, xmaxKind: "linear", lb: 1.9, price: 56.98, src: "parts-express.com, Oct 2026", note: "Aluminium cone; M5 hole for added mass. Check the cutout (listed two ways)." },
 ];
-export const prAddMax = (p) => Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
+export const passiveRadiatorMassMax = (p) => Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;

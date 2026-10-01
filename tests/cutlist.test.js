@@ -1,5 +1,5 @@
 import test from "node:test";
-import { boxParts, packSheets, f8, SHEETS } from "../src/lib/pa/calc.js";
+import { boxParts, packSheets, formatInches, PLYWOOD_SHEETS } from "../src/lib/pa/calc.js";
 import { close } from "./helpers.js";
 
 const get = (P, name) => P.find((p) => p.part === name);
@@ -17,7 +17,7 @@ for (const joint of ["butt", "rabbet", "miter"]) {
 test("packSheets: no overlaps, inside the sheet, kerf kept, count at least the area bound", (t) => {
   const rects = [];
   for (let i = 0; i < 6; i++) rects.push({ a: 20, b: 30, box: "Sub", part: "Side" }, { a: 15, b: 15, box: "Mid", part: "Side" }, { a: 0.75, b: 26, box: "Sub", part: "Cleat" });
-  for (const S of Object.values(SHEETS)) {
+  for (const S of Object.values(PLYWOOD_SHEETS)) {
     const k = 0.125, { sheets, tooBig } = packSheets(rects, S, k);
     t.assert.equal(tooBig.length, 0);
     t.assert.equal(sheets.reduce((a, s) => a + s.items.length, 0), rects.length, "all placed");
@@ -34,9 +34,9 @@ test("packSheets: no overlaps, inside the sheet, kerf kept, count at least the a
   }
 });
 test("packSheets: oversize parts are reported, not dropped silently", (t) => {
-  const { tooBig } = packSheets([{ a: 70, b: 70, box: "Sub", part: "Big" }], SHEETS["5x5"], 0.125);
+  const { tooBig } = packSheets([{ a: 70, b: 70, box: "Sub", part: "Big" }], PLYWOOD_SHEETS["5x5"], 0.125);
   t.assert.equal(tooBig.length, 1);
 });
 test("f8: nearest 1/16 in, reduced", (t) => {
-  t.assert.equal(f8(12.625), "12 5/8"); t.assert.equal(f8(0.75), "3/4"); t.assert.equal(f8(3), "3"); t.assert.equal(f8(1.03), "1");
+  t.assert.equal(formatInches(12.625), "12 5/8"); t.assert.equal(formatInches(0.75), "3/4"); t.assert.equal(formatInches(3), "3"); t.assert.equal(formatInches(1.03), "1");
 });

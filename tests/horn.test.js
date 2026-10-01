@@ -1,5 +1,5 @@
 import test from "node:test";
-import { hornResponse, pistonBeam, keeleF, hornBeam } from "../src/lib/pa/calc.js";
+import { hornResponse, pistonBeamWidthDeg, keeleFrequency, hornBeamWidthDeg } from "../src/lib/pa/calc.js";
 import { CD_OPTIONS } from "../src/lib/data.js";
 import { close, near, db } from "./helpers.js";
 
@@ -24,13 +24,13 @@ const J1 = (x) => { let s = 0, term = x / 2; for (let k = 0; k < 30; k++) { s +=
 test("piston beamwidth: -6 dB angle matches the Bessel directivity", (t) => {
   const Sd = 522, a = Math.sqrt(Sd / 1e4 / Math.PI);
   for (const f of [1500, 2500, 4000]) {
-    const th = (pistonBeam(Sd, f) / 2) * Math.PI / 180, x = 2 * Math.PI * f / 343 * a * Math.sin(th);
+    const th = (pistonBeamWidthDeg(Sd, f) / 2) * Math.PI / 180, x = 2 * Math.PI * f / 343 * a * Math.sin(th);
     close(t, 2 * J1(x) / x, 0.5, 0.01, `${f} Hz`);
   }
-  t.assert.equal(pistonBeam(Sd, 300), 180);
+  t.assert.equal(pistonBeamWidthDeg(Sd, 300), 180);
 });
 test("Keele: 460 mm / 100 deg holds pattern to ~550 Hz; beam widens below", (t) => {
-  const fK = keeleF(100, 460 / 25.4);
+  const fK = keeleFrequency(100, 460 / 25.4);
   close(t, fK, 1e6 / ((460 / 25.4) * 100) , 1, "1e6 in-deg-Hz");
-  t.assert.equal(hornBeam(100, fK, 2 * fK), 100); close(t, hornBeam(100, fK, fK / 1.5), 150, 1e-9);
+  t.assert.equal(hornBeamWidthDeg(100, fK, 2 * fK), 100); close(t, hornBeamWidthDeg(100, fK, fK / 1.5), 150, 1e-9);
 });

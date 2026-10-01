@@ -1,6 +1,6 @@
 import * as HIFI from "../src/lib/hifi/hifi.js";
 import test from "node:test";
-import { lr, baffleStep, baffleStepF3, bscEq, boundary, piston, waveguide, hifiSystem, hifiChips, responseAt, dispersionMap, grossL } from "../src/lib/hifi/hifi.js";
+import { linkwitzRileyFilter, baffleStepGain, baffleStepF3, baffleStepCompensation, boundaryGain, pistonDirectivity, waveguideDirectivity, hifiSystem, hifiChips, hifiResponseAt, hifiDispersionMap, grossVolumeLiters } from "../src/lib/hifi/hifi.js";
 import { close } from "./helpers.js";
 
 // a generic 6.5" woofer and 1" dome (typical published values), so the tests don't depend on the driver list
@@ -11,32 +11,32 @@ const db = (x) => 20 * Math.log10(x);
 
 test("LR24 and LR48 low and high passes sum flat, in phase", (t) => {
   for (const order of [4, 8]) for (const f of [200, 1000, 2000, 3000, 12000]) {
-    const a = lr(f, 2000, order, "lp"), b = lr(f, 2000, order, "hp");
+    const a = linkwitzRileyFilter(f, 2000, order, "lp"), b = linkwitzRileyFilter(f, 2000, order, "hp");
     close(t, Math.hypot(a.re + b.re, a.im + b.im), 1, 1e-9, `order ${order} at ${f}`);
   }
-  close(t, db(Math.hypot(lr(2000, 2000, 4, "lp").re, lr(2000, 2000, 4, "lp").im)), -6.02, 0.01, "−6 dB at the crossover");
+  close(t, db(Math.hypot(linkwitzRileyFilter(2000, 2000, 4, "lp").re, linkwitzRileyFilter(2000, 2000, 4, "lp").im)), -6.02, 0.01, "−6 dB at the crossover");
 });
 
 test("baffle step: −6 dB well below, 0 dB well above, −3 dB at 115 / width", (t) => {
-  close(t, db(baffleStep(20, 9)), -6, 0.05); close(t, db(baffleStep(20000, 9)), 0, 0.05);
-  close(t, db(baffleStep(baffleStepF3(9), 9)), -3, 0.05);
-  close(t, db(bscEq(20, 9, 4)), 4, 0.05, "compensation shelf"); close(t, db(bscEq(20000, 9, 4)), 0, 0.05);
+  close(t, db(baffleStepGain(20, 9)), -6, 0.05); close(t, db(baffleStepGain(20000, 9)), 0, 0.05);
+  close(t, db(baffleStepGain(baffleStepF3(9), 9)), -3, 0.05);
+  close(t, db(baffleStepCompensation(20, 9, 4)), 4, 0.05, "compensation shelf"); close(t, db(baffleStepCompensation(20000, 9, 4)), 0, 0.05);
 });
 
 test("placement: +3 dB near a wall and +6 dB in a corner at low frequencies, nothing up high", (t) => {
-  close(t, db(boundary(10, "wall", 0.6)), 3, 0.05); close(t, db(boundary(10, "corner", 0.6)), 6, 0.05);
-  close(t, db(boundary(5000, "corner", 0.6)), 0, 0.05); close(t, db(boundary(20, "free", 0.6)), 0, 1e-9);
+  close(t, db(boundaryGain(10, "wall", 0.6)), 3, 0.05); close(t, db(boundaryGain(10, "corner", 0.6)), 6, 0.05);
+  close(t, db(boundaryGain(5000, "corner", 0.6)), 0, 0.05); close(t, db(boundaryGain(20, "free", 0.6)), 0, 1e-9);
 });
 
 test("directivity: pistons and waveguides are 0 dB on axis and fall off-axis as frequency rises", (t) => {
-  close(t, piston(3000, 0.065, 0), 1, 1e-9);
-  t.assert.ok(piston(3000, 0.065, 0.5) < piston(1000, 0.065, 0.5), "a 6.5\" narrows with frequency");
-  close(t, db(waveguide(10000, 90, 60, 10, 7, Math.PI / 4, 0)), -6, 0.1, "−6 dB at the edge of a 90° waveguide");
+  close(t, pistonDirectivity(3000, 0.065, 0), 1, 1e-9);
+  t.assert.ok(pistonDirectivity(3000, 0.065, 0.5) < pistonDirectivity(1000, 0.065, 0.5), "a 6.5\" narrows with frequency");
+  close(t, db(waveguideDirectivity(10000, 90, 60, 10, 7, Math.PI / 4, 0)), -6, 0.1, "−6 dB at the edge of a 90° waveguide");
 });
 
 test("the speaker: volume, tuning, levels and checks", (t) => {
   const s = hifiSystem(W, T, cfg);
-  close(t, s.gross, grossL(cfg.dim, 0.75), 1e-9);
+  close(t, s.gross, grossVolumeLiters(cfg.dim, 0.75), 1e-9);
   t.assert.ok(s.net < s.gross && s.Fb > 30 && s.Fb < 80, `Fb ${s.Fb}`);
   t.assert.ok(s.f3 > 30 && s.f3 < 120, `F3 ${s.f3}`);
   t.assert.ok(s.trim < 0, "a 90 dB dome is trimmed down to an ~86 dB woofer");
@@ -53,20 +53,20 @@ test("the speaker: volume, tuning, levels and checks", (t) => {
 
 test("response at the seat: on axis matches the design axis; off axis and above the lobe lose level", (t) => {
   const s = hifiSystem(W, T, cfg), freqs = [500, 2200, 8000];
-  const on = responseAt(s, W, T, cfg, { th: 0, eyeIn: s.lay.tweeterIn, distM: 2 }, freqs);
-  const off = responseAt(s, W, T, cfg, { th: Math.PI / 3, eyeIn: s.lay.tweeterIn, distM: 2 }, freqs);
+  const on = hifiResponseAt(s, W, T, cfg, { th: 0, eyeIn: s.lay.tweeterIn, distM: 2 }, freqs);
+  const off = hifiResponseAt(s, W, T, cfg, { th: Math.PI / 3, eyeIn: s.lay.tweeterIn, distM: 2 }, freqs);
   t.assert.ok(off[2].spl < on[2].spl - 2, "60° off axis at 8 kHz is quieter");
   // the summed on-axis response at the crossover is close to the passband (time-aligned, LR4)
   t.assert.ok(Math.abs(on[1].spl - on[0].spl) < 3, `${on[1].spl} vs ${on[0].spl}`);
-  const m = dispersionMap(s, W, T, cfg, "h", 2);
+  const m = hifiDispersionMap(s, W, T, cfg, "h", 2);
   t.assert.equal(m.rows.length, m.angles.length);
   t.assert.ok(m.rows[0].every((v) => Math.abs(v) < 1e-9), "0° row is the reference");
 });
 
 test("ports with elbows: longer ports fit, and the check says when one is needed", (t) => {
-  const { portMaxLen } = HIFI;
+  const { portMaxLength } = HIFI;
   const dim = { w: 8.5, h: 14, d: 10 };
-  const s0 = portMaxLen(dim, 0.75, { dia: 2, elbows: 0 }), s1 = portMaxLen(dim, 0.75, { dia: 2, elbows: 1 }), s2 = portMaxLen(dim, 0.75, { dia: 2, elbows: 2 });
+  const s0 = portMaxLength(dim, 0.75, { dia: 2, elbows: 0 }), s1 = portMaxLength(dim, 0.75, { dia: 2, elbows: 1 }), s2 = portMaxLength(dim, 0.75, { dia: 2, elbows: 2 });
   t.assert.ok(s0 < s1 && s1 < s2, `${s0} < ${s1} < ${s2}`);
   const heads = (len) => { const c = { ...cfg, port: { n: 1, dia: 2, len } }; return hifiChips(hifiSystem(W, T, c), W, T, c).map(([, h]) => h); };
   t.assert.ok(!heads(s0 - 0.5).some((h) => /^Port needs|^Port too long/.test(h)), "straight fits, no note");
@@ -76,12 +76,12 @@ test("ports with elbows: longer ports fit, and the check says when one is needed
 });
 
 test("passive radiators: tuning, notch, travel limit and checks", (t) => {
-  const { prTuning, prAddFor } = HIFI;
+  const { passiveRadiatorTuning, passiveRadiatorMassFor } = HIFI;
   const drv = { id: "p", size: 6.5, Sd: 128.7, Mms: 30.7, Cms: 1.15, Qms: 4.3, Fs: 26.8, Xmax: 8, lb: 0.75, price: 25 };
   const s0 = hifiSystem(W, T, { ...cfg, box: "sealed" });
   // Fs of the radiator alone follows from its mass and compliance
-  close(t, prTuning(drv, 1, 0, 1e9).Fp, drv.Fs, 0.5);
-  const add = prAddFor(drv, 2, s0.net, 40);
+  close(t, passiveRadiatorTuning(drv, 1, 0, 1e9).Fp, drv.Fs, 0.5);
+  const add = passiveRadiatorMassFor(drv, 2, s0.net, 40);
   const pc = { ...cfg, box: "radiator", pr: { drv, n: 2, addG: add } };
   const s = hifiSystem(W, T, pc);
   close(t, s.Fb, 40, 1, "added mass tunes the box");

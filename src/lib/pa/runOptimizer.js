@@ -1,11 +1,11 @@
-import { optimize } from "./optimize.js";
+import { optimizePaStack } from "./optimize.js";
 
 /** Worker started from the script inlined by build.sh, and whether workers turned out to be unavailable. */
 let optWorker = null, optNoWorker = false, optSeq = 0;
 
 export function runPaOptimizer(input) {
   const id = ++optSeq;
-  const local = () => new Promise((res, rej) => setTimeout(() => { try { res(optimize(input)); } catch (e) { rej(e); } }, 30));
+  const local = () => new Promise((res, rej) => setTimeout(() => { try { res(optimizePaStack(input)); } catch (e) { rej(e); } }, 30));
   if (optNoWorker) return local();
   try {
     if (!optWorker) {

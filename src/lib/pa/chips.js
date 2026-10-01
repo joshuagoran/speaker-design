@@ -13,8 +13,8 @@ export function ductFit(subBox, portStyle, cVent, PT) {
   return { maxStraight, maxFold, maxSide, maxTube, fit };
 }
 // Clear baffle a driver needs: the sub's cone plus its frame.
-export const subNeed = (subSize) => subSize + 1.9;
-export function driverClear(subBox, portStyle, cVent, PT) {
+export const subDriverClearanceNeededIn = (subSize) => subSize + 1.9;
+export function driverClearance(subBox, portStyle, cVent, PT) {
   const nSide = portStyle === "vslot1" ? 1 : portStyle === "vslots" ? 2 : 0;
   return { clearW: subBox.w - nSide * (cVent.throat + 0.43 + PT), clearH: subBox.h - (portStyle === "slots" || portStyle === "folded" ? cVent.slotH + PT : 0) };
 }
@@ -23,8 +23,8 @@ export function driverClear(subBox, portStyle, cVent, PT) {
 export function subChips(s) {
   const { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW } = s;
   const F = [];
-  const need = subNeed(subSize);
-  const { clearW, clearH } = driverClear(subBox, portStyle, cVent, PT);
+  const need = subDriverClearanceNeededIn(subSize);
+  const { clearW, clearH } = driverClearance(subBox, portStyle, cVent, PT);
   if (Math.min(clearW, clearH) < need)
     F.push(["bad", "Driver won't fit", `The baffle needs about ${need.toFixed(1)}″ clear; after the vents it has ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`]);
   const { maxFold, fit } = ductFit(subBox, portStyle, cVent, PT);

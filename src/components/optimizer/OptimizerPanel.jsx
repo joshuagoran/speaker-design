@@ -8,11 +8,11 @@ import { OptimizerResultCard } from "./OptimizerResultCard.jsx";
 import { GoalPicker } from "./GoalPicker.jsx";
 import { RunRow } from "./RunRow.jsx";
 import { ResultCards } from "./ResultCards.jsx";
-import { roomNeed, ROOMS, GOALS } from "../../lib/pa/optimize.js";
+import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize.js";
 
 /** Goal picker, run button and result cards for the PA optimizer. */
 export function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, previewCard, onPreview, onLoad, onSave, canSave }) {
-  const need = roomNeed(optIn.room), target = Math.max(curOut != null ? curOut : need, need);
+  const need = roomRequiredSpl(optIn.room), target = Math.max(curOut != null ? curOut : need, need);
   const goals = optIn.goals, g = goals[0];
   // tap adds a goal at the end of the order; tap again removes it (none selected is allowed; the search waits for one)
   const tapGoal = (k) => setOpt({ goals: goals.includes(k) ? goals.filter((x) => x !== k) : [...goals, k] });
@@ -33,7 +33,7 @@ export function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, pre
           <div className="mt-3">
             <NumberField label={<>Driver budget, per stack <span className="text-xs">(sub + mid + CD, at the listed prices)</span></>} value={optIn.budget} min={100} step={25} unit="$" onChange={(n) => setOpt({ budget: n })} className="" />
           </div>
-          <GoalPicker defs={GOALS} selected={goals} onTap={tapGoal} />
+          <GoalPicker defs={OPTIMIZER_GOALS} selected={goals} onTap={tapGoal} />
         </div>
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
           {curOut != null && <div className="text-xs text-stone-500 mt-0.5">Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB · {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB</div>}</div>

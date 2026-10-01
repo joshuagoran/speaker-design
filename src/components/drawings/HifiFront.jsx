@@ -1,4 +1,4 @@
-import { prShape } from "../../lib/hifi/hifi.js";
+import { passiveRadiatorShape } from "../../lib/hifi/hifi.js";
 
 /** Front view of the box and drivers, to scale. */
 export function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }) {
@@ -13,7 +13,7 @@ export function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }) {
         : <rect x={W / 2 - (face.w * k) / 2} y={y(lay.tweeterIn) - (face.h * k) / 2} width={face.w * k} height={face.h * k} rx={guide ? 3 : face.w * k / 2} fill={PAL.muted} />}
       <circle cx={W / 2} cy={y(lay.tweeterIn)} r={0.5 * k} fill={PAL.edge} />
       <circle cx={W / 2} cy={y(lay.wooferIn)} r={(w.size * 0.95 * k) / 2} fill={PAL.edge} stroke={PAL.muted} />
-      {pr && Array.from({ length: pr.n }, (_, i) => { const s = prShape(pr.drv), cy = H - (0.75 + 0.25 + (i + 0.5) * (s.h + 0.5)) * k;
+      {pr && Array.from({ length: pr.n }, (_, i) => { const s = passiveRadiatorShape(pr.drv), cy = H - (0.75 + 0.25 + (i + 0.5) * (s.h + 0.5)) * k;
         return <rect key={`r${i}`} x={W / 2 - (s.w * k) / 2} y={cy - (s.h * k) / 2} width={s.w * k} height={s.h * k} rx={(s.w * k) / 2} fill="none" stroke={PAL.muted} strokeDasharray="3 2" />; })}
       {vented && port.shape === "slot" && <rect x={bx + 0.75 * k} y={H - (0.75 + port.h) * k} width={(dim.w - 1.5) * k} height={port.h * k} fill={PAL.ink} />}
       {vented && port.shape !== "slot" && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill={PAL.ink} />)}
