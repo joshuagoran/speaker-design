@@ -754,6 +754,48 @@ function SwatchPicker({ label, value, onChange, swatches, presets, titlePrefix =
   );
 }
 
+// ---- Optimizer pieces shared by the Hi-fi and PA stack panels ----
+function OptimizerBar({ on, onToggle, hint, nLocks, lockMax, onLockAll, onClear, children }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ToggleBtn on={on} onClick={onToggle}>Optimizer: {on ? "on" : "off"}</ToggleBtn>
+      {on && (<>
+        <Button onClick={onLockAll} disabled={nLocks >= lockMax} aria-label="Lock everything" title="Lock everything, then unlock what the optimizer may change" className="inline-flex items-center gap-1"><LockIcon locked={true} /><span className="text-xs">All</span></Button>
+        <Button onClick={onClear} disabled={!nLocks} aria-label={nLocks ? `Clear all ${nLocks} lock${nLocks > 1 ? "s" : ""}` : "No locks set"} title={nLocks ? `Clear all ${nLocks} lock${nLocks > 1 ? "s" : ""}` : "No locks set"} className="inline-flex items-center gap-1"><LockIcon locked={false} />{nLocks ? <span className="text-xs">{nLocks}</span> : null}</Button>
+      </>)}
+      {!on && <span className="text-xs text-stone-500">{hint}</span>}
+      {children}
+    </div>
+  );
+}
+function GoalPicker({ defs, selected, onTap }) {
+  return (
+    <div className="mt-3">
+      <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
+      <div className="flex flex-wrap gap-1" role="group" aria-label="Goal">{Object.entries(defs).map(([k, g]) => { const i = selected.indexOf(k); return <ToggleBtn key={k} title={g.name} on={i >= 0} className="relative" onClick={() => onTap(k)}>{selected.length > 1 && i >= 0 && <RankBadge n={i + 1} />}{g.short}</ToggleBtn>; })}</div>
+    </div>
+  );
+}
+function RunRow({ busy, hasGoal, onRun, stats, note, children }) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-3">
+      <Button variant="primary" onClick={onRun} disabled={busy || !hasGoal} className="px-4">{busy ? "Searching…" : hasGoal ? "Find 3 designs" : "Pick a goal first"}</Button>
+      {stats && !busy && <span className="text-xs text-stone-500">Searched {stats.evaluated.toLocaleString()} designs in {(stats.ms / 1000).toFixed(1)} s{note}</span>}
+      {children}
+    </div>
+  );
+}
+function Notice({ children }) {
+  return <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">{children}</div>;
+}
+function ResultCards({ cards, render }) {
+  if (!cards.length) return null;
+  return (<>
+    <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">{cards.map(render)}</div>
+    {cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {cards.length - 1} more</div>}
+  </>);
+}
+
 // Panel: one outline, one radius. pad: "md" (default) or "lg"; tone: "white" or "tint"
 function Card({ pad = "md", tone = "white", className = "", ...p }) {
   return <div {...p} className={`rounded border border-stone-300 ${tone === "tint" ? "bg-stone-50" : "bg-white"} ${pad === "lg" ? "px-4 py-4" : "px-3 py-3"} ${className}`} />;
@@ -1151,14 +1193,8 @@ function HifiPage() {
   const nLocks = HIFI_LOCK_KEYS.filter((k) => hLocks[k]).length + Object.values(hLocks.dim).filter((m) => m && m !== "free").length;
   const allLocks = { ...Object.fromEntries(HIFI_LOCK_KEYS.map((k) => [k, true])), dim: { w: "exact", h: "exact", d: "exact" } };
   const optBar = (
-    <div className="flex flex-wrap items-center gap-2">
-      <ToggleBtn on={hOn} onClick={() => setHOn(!hOn)}>Optimizer: {hOn ? "on" : "off"}</ToggleBtn>
-      {hOn && (<>
-        <Button onClick={() => setHLocks(() => allLocks)} disabled={nLocks >= HIFI_LOCK_KEYS.length + 3} aria-label="Lock everything" title="Lock everything, then unlock what the optimizer may change" className="inline-flex items-center gap-1"><LockIcon locked={true} /><span className="text-xs">All</span></Button>
-        <Button onClick={() => setHLocks(() => ({ dim: {} }))} disabled={!nLocks} aria-label={nLocks ? `Clear all ${nLocks} locks` : "No locks set"} title={nLocks ? `Clear all ${nLocks} locks` : "No locks set"} className="inline-flex items-center gap-1"><LockIcon locked={false} />{nLocks ? <span className="text-xs">{nLocks}</span> : null}</Button>
-      </>)}
-      {!hOn && <span className="text-xs text-stone-500">Find cheaper, lighter, deeper or louder designs inside your limits.</span>}
-    </div>
+    <OptimizerBar on={hOn} onToggle={() => setHOn(!hOn)} hint="Find cheaper, lighter, deeper or louder designs inside your limits."
+      nLocks={nLocks} lockMax={HIFI_LOCK_KEYS.length + 3} onLockAll={() => setHLocks(() => allLocks)} onClear={() => setHLocks(() => ({ dim: {} }))} />
   );
   const optPanel = hOn && (
     <Card pad="lg" className="mt-3">
@@ -1167,25 +1203,15 @@ function HifiPage() {
         <div className="mt-3">
           <NumberField label={<>Driver budget, pair <span className="text-xs">(woofers + tweeters{guide ? " + waveguides" : ""}, at the listed prices)</span></>} value={hBudget} min={50} step={25} unit="$" onChange={(n) => { setHBudget(n); ls.set("hifi.budget", n); }} className="" />
         </div>
-        <div className="mt-3">
-          <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
-          <div className="flex flex-wrap gap-1">{Object.entries(HIFI_GOALS).map(([k, g]) => { const i = hGoals.indexOf(k); return <ToggleBtn key={k} title={g.name} on={i >= 0} className="relative" onClick={() => tapG(k)}>{hGoals.length > 1 && i >= 0 && <RankBadge n={i + 1} />}{g.short}</ToggleBtn>; })}</div>
-        </div>
+        <GoalPicker defs={HIFI_GOALS} selected={hGoals} onTap={tapG} />
       </div>
       <div className="mt-2 text-xs text-stone-500">Amps: woofer {hLocks.wAmpW ? `${wAmpW} W` : `any up to ${HIFI_AMP_MAX.wAmpW} W`} · tweeter {hLocks.tAmpW ? `${tAmpW} W` : `any up to ${HIFI_AMP_MAX.tAmpW} W`} (unlocked amps come back at the least power that does the job)</div>
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        <Button variant="primary" onClick={runH} disabled={hBusy || !hGoals.length} className="px-4">{hBusy ? "Searching…" : hGoals.length ? "Find 3 designs" : "Pick a goal first"}</Button>
-        {hRes && !hBusy && <span className="text-xs text-stone-500">Searched {hRes.stats.evaluated.toLocaleString()} designs in {(hRes.stats.ms / 1000).toFixed(1)} s{hRes.cards.length ? " · every design shown passes the checks (warnings are listed on the card)" : ""}</span>}
-        {hUndo && !hPreview && <button onClick={() => { applyH(hUndo); setHUndo(null); }} className="px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Undo load</button>}
-      </div>
-      {hRes && !hBusy && hRes.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
-      {hRes && !hBusy && hRes.cards.length > 0 && (<>
-        <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
-          {hRes.cards.map((k, i) => <HifiCard key={i} k={k} i={i} n={hRes.cards.length} curCurve={hRes.curCurve} guide={guide} previewing={hPreview && hPreview.card === k} onPreview={() => previewH(k)} onLoad={() => loadH(k)} />)}
-        </div>
-        {hRes.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {hRes.cards.length - 1} more</div>}
-      </>)}
-      {hRes && !hBusy && hRes.goalMissing && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">{hRes.goalMissing}</div>}
+      <RunRow busy={hBusy} hasGoal={hGoals.length > 0} onRun={runH} stats={hRes && hRes.stats} note={hRes && hRes.cards.length ? " · every design shown passes the checks (warnings are listed on the card)" : ""}>
+        {hUndo && !hPreview && <Button size="md" onClick={() => { applyH(hUndo); setHUndo(null); }}>Undo load</Button>}
+      </RunRow>
+      {hRes && !hBusy && hRes.curProblems.length > 0 && <Notice>Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost or weigh more.</Notice>}
+      {hRes && !hBusy && <ResultCards cards={hRes.cards} render={(k, i) => <HifiCard key={i} k={k} i={i} n={hRes.cards.length} curCurve={hRes.curCurve} guide={guide} previewing={hPreview && hPreview.card === k} onPreview={() => previewH(k)} onLoad={() => loadH(k)} />} />}
+      {hRes && !hBusy && hRes.goalMissing && <Notice>{hRes.goalMissing}</Notice>}
       {hRes && !hBusy && !hRes.cards.length && !hRes.goalMissing && <div className="mt-3 text-sm text-orange-900">Nothing fits all your limits. A bigger budget or fewer locks would open it up.</div>}
     </Card>
   );
@@ -1269,10 +1295,10 @@ function HifiPage() {
           <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="″" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
           <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="″" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
           <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-600">Ports</span>{hLk("box", "sealed, ported or radiator")}</div>
-          <div className="flex flex-wrap gap-1 mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip]) => {
+          <div className="grid grid-cols-3 gap-1 mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip]) => {
             const slotOn = port.shape === "slot";
             const on = box === v && (v === "sealed" || (v === "vented" ? (n === "slot" ? slotOn : !slotOn && port.n === n) : pr.n === n));
-            return <ToggleBtn key={l} size="xs" title={tip} aria-label={tip} on={on} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}>{l}</ToggleBtn>;
+            return <ToggleBtn key={l} size="xs" className="min-w-0 whitespace-nowrap" title={tip} aria-label={tip} on={on} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}>{l}</ToggleBtn>;
           })}</div>
           {box === "vented" && (<>
             {port.shape === "slot"
@@ -1847,29 +1873,18 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
           <div className="mt-3">
             <NumberField label={<>Driver budget, per stack <span className="text-xs">(sub + mid + CD, at the listed prices)</span></>} value={optIn.budget} min={100} step={25} unit="$" onChange={(n) => setOpt({ budget: n })} className="" />
           </div>
-          <div className="mt-3">
-            <div className="text-sm text-stone-500 mb-1">Goal <span className="text-xs">(choose one or more, in priority order)</span></div>
-            <div className="flex flex-wrap gap-1">{Object.entries(GOALS).map(([k, gg]) => { const i = goals.indexOf(k); return (
-              <ToggleBtn key={k} title={gg.name} on={i >= 0} className="relative" onClick={() => tapGoal(k)}>{goals.length > 1 && i >= 0 && <RankBadge n={i + 1} />}{gg.short}</ToggleBtn>); })}</div>
-          </div>
+          <GoalPicker defs={GOALS} selected={goals} onTap={tapGoal} />
         </div>
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">Target: {tgtText}
           {curOut != null && <div className="text-xs text-stone-500 mt-0.5">Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB · {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB</div>}</div>
         <div className="mt-2 text-xs text-stone-500">Amps: {amps}</div>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <Button variant="primary" onClick={run} disabled={busy || !g} className="px-4">{busy ? "Searching…" : g ? "Find 3 designs" : "Pick a goal first"}</Button>
-          {res && !busy && <span className="text-xs text-stone-500">Searched {res.stats.evaluated.toLocaleString()} designs in {(res.stats.ms / 1000).toFixed(1)} s{res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}</span>}
+        <RunRow busy={busy} hasGoal={!!g} onRun={run} stats={res && res.stats} note={res && res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}>
           {err && <span className="text-xs text-red-700">{err}</span>}
-        </div>
-        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
-        {res && !busy && res.cards.length > 0 && (<>
-          <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
-            {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} cur={res.cur} previewing={previewCard === k} canSave={canSave}
-              onPreview={() => onPreview(k)} onLoad={() => onLoad(k)} onSave={() => onSave(k)} />)}
-          </div>
-          {res.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {res.cards.length - 1} more</div>}
-        </>)}
-        {res && !busy && res.goalMissing && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-300 px-2 py-1">{res.goalMissing}</div>}
+        </RunRow>
+        {res && !busy && res.curProblems && res.curProblems.length > 0 && <Notice>Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</Notice>}
+        {res && !busy && <ResultCards cards={res.cards} render={(k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} cur={res.cur} previewing={previewCard === k} canSave={canSave}
+          onPreview={() => onPreview(k)} onLoad={() => onLoad(k)} onSave={() => onSave(k)} />} />}
+        {res && !busy && res.goalMissing && <Notice>{res.goalMissing}</Notice>}
         {res && !busy && !res.cards.length && res.nearMiss && (
           <div className="mt-4 rounded-lg border border-orange-300 bg-orange-50 px-3 py-3">
             <h3 className="text-base" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Nothing fits all your limits</h3>
@@ -2297,20 +2312,14 @@ function StackPlanner() {
         </section>
       )}
 
-      <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3 flex flex-wrap items-center gap-2" style={{ fontFamily: "var(--font)" }}>
-        <ToggleBtn on={optOn} onClick={() => setOptOn(!optOn)}>Optimizer: {optOn ? "on" : "off"}</ToggleBtn>
-        {optOn && (() => {
+      <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3" style={{ fontFamily: "var(--font)" }}>
+        {(() => {
           const n = Object.entries(locks).reduce((a, [k, v]) => a + (k.endsWith("Dim") ? Object.values(v).filter((m) => m && m !== "free").length : v ? 1 : 0), 0);
-          const tip = n ? `Clear all ${n} lock${n > 1 ? "s" : ""}` : "No locks set";
           // lock everything (box sizes exact), then unlock the one or two things you want the optimizer to change
           const all = { ...Object.fromEntries(LOCK_KEYS.map((k) => [k, true])), subDim: { w: "exact", h: "exact", d: "exact" }, midDim: { w: "exact", h: "exact", d: "exact" } };
-          const full = n >= LOCK_KEYS.length + 6;
-          return (<>
-            <Button onClick={() => setLocks(() => all)} disabled={full} aria-label="Lock everything" title="Lock everything, then unlock what the optimizer may change" className="inline-flex items-center gap-1"><LockIcon locked={true} /><span className="text-xs">All</span></Button>
-            <Button onClick={() => setLocks(() => ({ subDim: {}, midDim: {} }))} disabled={!n} aria-label={tip} title={tip} className="inline-flex items-center gap-1"><LockIcon locked={false} />{n ? <span className="text-xs">{n}</span> : null}</Button>
-          </>);
+          return <OptimizerBar on={optOn} onToggle={() => setOptOn(!optOn)} hint="Find cheaper, lighter or louder designs inside your limits."
+            nLocks={n} lockMax={LOCK_KEYS.length + 6} onLockAll={() => setLocks(() => all)} onClear={() => setLocks(() => ({ subDim: {}, midDim: {} }))} />;
         })()}
-        {!optOn && <span className="text-xs text-stone-500">Find cheaper, lighter or louder designs inside your limits.</span>}
       </section>
       {optOn && <OptimizerPanel optIn={optIn} setOpt={setOpt} run={runOpt} busy={optBusy} res={optRes} err={optErr} curOut={curOut}
         amps={[["sub", ampW, locks.ampW, 3000], ["mid", mAmpW, locks.mAmpW, 2000], ["HF", hfAmpW, locks.hfAmpW, 500]].map(([n, w, l, mx]) => `${n} ${l ? `${w} W` : `any up to ${mx} W`}`).join(" · ") + " per channel (unlocked amps come back at the least power that does the job)"} previewCard={preview && preview.card} canSave={!!db}
