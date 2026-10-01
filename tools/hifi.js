@@ -201,13 +201,13 @@ export function hifiSystem(w, t, cfg) {
 
   // on-axis woofer response (small signal at the amp voltage) with baffle step, placement, EQ and the low-pass
   const woofer = m.curve.map((o) => {
-    const g = shelf(o.f) * eq(o.f), lp = cabs(lr(o.f, xo, order, "lp"));
-    return { f: o.f, spl: o.spl + 20 * Math.log10(g * lp), raw: o.spl + 20 * Math.log10(g), xmm: o.xmm * eq(o.f) * lp, vel: o.vel != null ? o.vel * eq(o.f) * lp : null, prx: o.prx != null ? o.prx * eq(o.f) * lp : null };
+    const e = eq(o.f), g = shelf(o.f) * e, lp = cabs(lr(o.f, xo, order, "lp"));
+    return { f: o.f, spl: o.spl + 20 * Math.log10(g * lp), raw: o.spl + 20 * Math.log10(g), xmm: o.xmm * e * lp, vel: o.vel != null ? o.vel * e * lp : null, prx: o.prx != null ? o.prx * e * lp : null, e, lp };
   });
   // per-frequency limits of the woofer with the EQ in the signal (the boosted drive can't pass the amp or the coil rating)
   const vT = thermalV(ts.aes || 100), portMax = cfg.portMax || 17;
   const wMax = woofer.map((o, i) => {
-    const e = eq(o.f), lp = cabs(lr(o.f, xo, order, "lp"));
+    const { e, lp } = o;
     const drive = V * e * lp;                                       // volts at the terminals for full-scale input
     const sAmp = V / Math.max(1e-9, V * e), sTh = vT / Math.max(1e-9, drive), sX = ts.Xmax / Math.max(1e-9, o.xmm);
     const sP = o.vel ? portMax / o.vel : Infinity, sR = o.prx ? cfg.pr.drv.Xmax / o.prx : Infinity;
