@@ -1063,7 +1063,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{yLabel}</text>
       </svg>
       {paths.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-stone-600" style={{ fontFamily: "var(--font)" }}>
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1 text-xs text-stone-600" style={{ fontFamily: "var(--font)" }}>
           {paths.map((p) => <span key={p.label} className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5" style={{ background: p.stroke }} />{p.label}</span>)}
         </div>
       )}
