@@ -169,7 +169,7 @@ export function hifiSystem(w, t, cfg) {
   return {
     gross, net, disp, pVol, pArea: pA, vented, Fb: vM ? vM.Fb : null, Qtc: sM ? sM.Qtc : null, f3Box: m.f3, ref, refW,
     woofer, wMax, sMusic, whoW, trim, tSens, tSens283, tLevel, wLevel, maxLevel, who: tLevel < wLevel ? "tweeter" : "woofer",
-    pMax, derate, lb, portFits, lay, f3, hpf, bsF3: baffleStepF3(bw), tweeterAt, peakVel: vM ? Math.max(...woofer.map((o) => o.vel || 0)) : null, V,
+    pMax, derate, lb, portFits, lay, f3, hpf, xo, order, bsF3: baffleStepF3(bw), tweeterAt, peakVel: vM ? Math.max(...woofer.map((o) => o.vel || 0)) : null, V,
   };
 }
 

@@ -916,7 +916,7 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{cw.size}″ {k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} guide={k.guided ? guide : null} small />
-        <OutChart curve={k.curve} cur={curCurve} fmin={20} fmax={500} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
+        <OutChart curve={k.curve} cur={curCurve} fmin={15} fmax={20000} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
       </div>
       <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
@@ -1648,7 +1648,7 @@ function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90], top = 13
       aria-label="Clean sub output from 20 to 200 Hz, this design against yours">
       {band && <rect x={x(band[0])} y={T} width={x(band[1]) - x(band[0])} height={H - T - B} fill="#f2f2f2" />}
       {ticks.map((d) => <g key={d}><line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke="#e6e6e6" /><text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill="#707070">{d}</text></g>)}
-      {[20, 50, 100, 200, 500].filter((f) => f >= fmin && f <= fmax).map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill="#707070">{f}</text>)}
+      {(fmax > 1000 ? [20, 100, 1000, 10000] : [20, 50, 100, 200, 500]).filter((f) => f >= fmin && f <= fmax).map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill="#707070">{f >= 1000 ? f / 1000 + "k" : f}</text>)}
       {cur && <path d={path(cur)} fill="none" stroke="#707070" strokeWidth="1.5" strokeDasharray="4 3" />}
       <path d={path(curve)} fill="none" stroke="#111111" strokeWidth="2" />
       {hover ? (<>

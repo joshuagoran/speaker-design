@@ -2,7 +2,7 @@
 // Same rules as the PA optimizer: goals in tap order (the first ranks, the main card must beat your design on
 // every one), each card's label true against your design, unlocked amps searched at their slider maximum and
 // trimmed to the least power that keeps the card's level, and a card applies only the fields searched.
-import { hifiSystem, hifiChips, grossL } from "./hifi.js";
+import { hifiSystem, hifiChips, grossL, lr, logFreqs } from "./hifi.js";
 import { ventTuning } from "./calc.js";
 
 // the PA planner's goals, in its order
@@ -169,7 +169,18 @@ export function hifiOptimize(input) {
     return { ...p, c, sys: r.sys, chips: r.chips, m: metricOf(r, p.w, p.t) };
   };
   const done = cards.map((k) => ({ ...k, ...trim(k) }));
-  const curveOf = (sys) => sys.woofer.filter((o, i) => i % 3 === 0 && o.f >= 20 && o.f <= 500).map((o) => [+o.f.toFixed(1), +(o.raw + 20 * Math.log10(sys.sMusic) - 20 * Math.log10(seat) + 3).toFixed(2)]);
+  // clean level at the seat, 15 Hz-20 kHz: the woofer through its low-pass plus the tweeter, level-matched to the
+  // woofer's passband, through its high-pass (LR pairs sum in phase), at the woofer's music limit
+  const curveOf = (sys) => {
+    const xo = sys.xo, order = sys.order, last = sys.woofer[sys.woofer.length - 1];
+    const at = (f) => sys.woofer.reduce((b, o) => (Math.abs(Math.log(o.f / f)) < Math.abs(Math.log(b.f / f)) ? o : b));
+    const tw = Math.pow(10, sys.ref / 20), sc = 20 * Math.log10(sys.sMusic) - 20 * Math.log10(seat) + 3;
+    return logFreqs(15, 20000, 90).map((f) => {
+      const raw = f > last.f ? last.raw : at(f).raw, lp = lr(f, xo, order, "lp"), hp = lr(f, xo, order, "hp");
+      const p = Math.hypot(lp.re, lp.im) * Math.pow(10, raw / 20) + Math.hypot(hp.re, hp.im) * tw;
+      return [+f.toFixed(1), +(20 * Math.log10(p) + sc).toFixed(2)];
+    });
+  };
   return {
     goals, cur: curM, curProblems, curCurve: curR ? curveOf(curR.sys) : null,
     goalMissing: !first && !curFails ? `Nothing ${goals.map((g) => g).join(" and ")} than your design passes the checks.` : null,
