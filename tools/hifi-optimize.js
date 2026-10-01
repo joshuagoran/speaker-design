@@ -87,7 +87,7 @@ export function hifiOptimize(input) {
   const wList = locks.woofer ? [W0] : woofers.filter((o) => o.ts && o.ts.Fs && o.ts.Sd);
   const boxes = locks.box ? [cur.box] : ["sealed", "vented"];
   const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
-  const face = (T0 && T0.faceplate) || { w: 4, h: 4 };
+  const face = T0 && needsGuide(T0) && guide ? (guide.freestanding ? { w: 0, h: -1 } : guide) : (T0 && T0.faceplate) || { w: 4, h: 4 };
   const stage1 = [];
   for (const w of wList) {
     const minW = Math.max(w.size + 1.5, face.w + 1), minH = face.h + w.size + 3;

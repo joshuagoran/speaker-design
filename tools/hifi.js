@@ -97,9 +97,11 @@ export function boxLb(d, t, mat) {
   const ft2 = (2 * (d.w * d.h + d.w * d.d + d.h * d.d)) / 144;
   return ft2 * panelLb(t, mat);
 }
-// where the drivers sit on the baffle (inches from the box bottom): tweeter near the top, woofer just below it
-export function layout(w, t, d) {
+// where the drivers sit (inches from the box bottom): tweeter near the top, woofer just below it;
+// a freestanding waveguide sits on the box top, so the woofer moves up to the top of the baffle
+export function layout(w, t, d, onTop) {
   const face = t.faceplate || { w: 4, h: 4 };
+  if (onTop) { const th = d.h + face.h / 2, wh = d.h - 1 - w.size / 2; return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh, onTop: true }; }
   const th = d.h - 1 - face.h / 2;
   const wh = th - face.h / 2 - 0.5 - w.size / 2;
   return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh };
@@ -174,7 +176,7 @@ export function hifiSystem(w, t, cfg) {
 
   const lb = boxLb(dim, wall, cfg.mat) + (w.lb || 5) + (t.lb || 1.5) + 1;
   const portFits = !vented || cfg.port.len <= portMaxLen(dim, wall, cfg.port) + 1e-9;
-  const lay = layout(w, t, dim);
+  const lay = layout(w, t, dim, !!(cfg.guide && cfg.guide.freestanding));
   return {
     gross, net, disp, pVol, pArea: pA, vented, Fb: vM ? vM.Fb : null, Qtc: sM ? sM.Qtc : null, f3Box: m.f3, ref, refW,
     woofer, wMax, sMusic, whoW, trim, tSens, tSens283, tLevel, wLevel, maxLevel, who: tLevel < wLevel ? "tweeter" : "woofer",
