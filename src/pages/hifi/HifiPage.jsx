@@ -32,230 +32,230 @@ const { useState } = React;
 
 /** Hi-fi page: 2-way home speakers with an active crossover. */
 export function HifiPage() {
-  const guides = HORN_OPTIONS.filter((h) => h.exit === 1 && h.hf && h.hf.covH && h.size);
-  const [w, setW] = useState(HIFI_WOOFERS.find((o) => o.pick) || HIFI_WOOFERS[0]);
-  const [t, setT] = useState(HIFI_TWEETERS.find((o) => o.pick) || HIFI_TWEETERS[0]);
-  const [guideSel, setGuide] = useState(guides.find((g) => g.id === "st260") || guides[0]);
-  const [box, setBox] = useState("vented");
-  const [dim, setDim] = useState({ w: 9, h: 15, d: 11 });
-  const [wall, setWall] = useState(0.75);
-  const [mat, setMat] = useState("ply");
-  const [port, setPort] = useState({ n: 1, dia: 2, len: 6 });
-  const [prSel, setPrSel] = useState({ id: "sb16pfcr", n: 2, addG: 0 });
-  const [xo, setXo] = useState(2000);
-  const [order, setOrder] = useState(4);
-  const [wAmpW, setWAmpW] = useState(100);
-  const [tAmpW, setTAmpW] = useState(50);
-  const [bsc, setBsc] = useState(3);
-  const [place, setPlace] = useState("free");
-  const [wallFt, setWallFt] = useState(2);
-  const [spacing, setSpacing] = useState(7);
-  const [toe, setToe] = useState(15);
-  const [seat, setSeat] = useState({ x: 0, y: 8 });
-  const [earIn, setEarIn] = useState(38);
-  const [standIn, setStandIn] = useState(24);
-  const [plane, setPlane] = useState("h");
+  const waveguideChoices = HORN_OPTIONS.filter((h) => h.exit === 1 && h.hf && h.hf.covH && h.size);
+  const [woofer, setWoofer] = useState(HIFI_WOOFERS.find((o) => o.pick) || HIFI_WOOFERS[0]);
+  const [tweeter, setTweeter] = useState(HIFI_TWEETERS.find((o) => o.pick) || HIFI_TWEETERS[0]);
+  const [selectedWaveguide, setSelectedWaveguide] = useState(waveguideChoices.find((g) => g.id === "st260") || waveguideChoices[0]);
+  const [boxType, setBoxType] = useState("vented");
+  const [boxDims, setBoxDims] = useState({ w: 9, h: 15, d: 11 });
+  const [wallThicknessIn, setWallThicknessIn] = useState(0.75);
+  const [panelMaterial, setPanelMaterial] = useState("ply");
+  const [portSpec, setPortSpec] = useState({ n: 1, dia: 2, len: 6 });
+  const [radiatorSelection, setRadiatorSelection] = useState({ id: "sb16pfcr", n: 2, addG: 0 });
+  const [crossoverHz, setCrossoverHz] = useState(2000);
+  const [crossoverOrder, setCrossoverOrder] = useState(4);
+  const [wooferAmpWatts, setWooferAmpWatts] = useState(100);
+  const [tweeterAmpWatts, setTweeterAmpWatts] = useState(50);
+  const [baffleStepCompensationDb, setBaffleStepCompensationDb] = useState(3);
+  const [placement, setPlacement] = useState("free");
+  const [distanceToWallFt, setDistanceToWallFt] = useState(2);
+  const [speakerSpacingFt, setSpeakerSpacingFt] = useState(7);
+  const [toeInDeg, setToeInDeg] = useState(15);
+  const [listeningSeat, setListeningSeat] = useState({ x: 0, y: 8 });
+  const [earHeightIn, setEarHeightIn] = useState(38);
+  const [standHeightIn, setStandHeightIn] = useState(24);
+  const [dispersionPlane, setDispersionPlane] = useState("h");
   const store = useConfigStore("hifiConfigs");
   // optimizer: same rules and layout as the PA planner's (switch, locks on the controls, goals in tap order)
-  const ls = { get: (k, fb) => { try { const v = localStorage.getItem(k); return v == null ? fb : JSON.parse(v); } catch { return fb; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
-  const [hOn, setHOnRaw] = useState(() => ls.get("hifi.opt", false));
-  const setHOn = (v) => { setHOnRaw(v); ls.set("hifi.opt", v); };
-  const [hGoals, setHGoals] = useState([]);
-  const [hBudget, setHBudget] = useState(() => ls.get("hifi.budget", 800));
-  const [hLocks, setHLocksRaw] = useState(() => { const l = ls.get("hifi.locks", {}) || {}; return { ...l, dim: { ...(l.dim || {}) } }; });
-  const setHLocks = (f) => setHLocksRaw((p) => { const n = f(p); ls.set("hifi.locks", n); return n; });
-  const [hRes, setHRes] = useState(null);
-  const [hBusy, setHBusy] = useState(false);
-  const [hPreview, setHPreview] = useState(null);   // { label, before, card }
-  const [hUndo, setHUndo] = useState(null);
-  const setD = (k, v) => setDim((p) => ({ ...p, [k]: v }));
-  const setP = (k, v) => setPort((p) => ({ ...p, [k]: v }));
-  const guide = t.type === "compression" || t.needsWaveguide ? { covH: guideSel.hf.covH, covV: guideSel.hf.covV || guideSel.hf.covH, w: guideSel.size.w, h: guideSel.size.h, name: guideSel.name, freestanding: !guideSel.rect } : null;
-  const prDrv = HIFI_PASSIVES.find((o) => o.id === prSel.id) || HIFI_PASSIVES[0];
-  const pr = { drv: prDrv, n: prSel.n, addG: Math.min(prSel.addG, passiveRadiatorMassMax(prDrv)) };
-  const cfg = { box, dim, wall, mat, port, pr, xo, order, wAmpW, tAmpW, bsc, place, wallFt, portMax: 17, guide };
-  const tt = guide ? { ...t, faceplate: { w: guide.w, h: guide.h } } : t;
-  const sys = hifiSystem(w, tt, cfg);
-  if (!sys) return <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 text-sm">This woofer can't be modelled (its parameters aren't published).</main>;
-  const F = hifiChips(sys, w, tt, cfg);
+  const storage = { get: (k, fb) => { try { const v = localStorage.getItem(k); return v == null ? fb : JSON.parse(v); } catch { return fb; } }, set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+  const [isOptimizerOn, setIsOptimizerOnState] = useState(() => storage.get("hifi.opt", false));
+  const setIsOptimizerOn = (v) => { setIsOptimizerOnState(v); storage.set("hifi.opt", v); };
+  const [optimizerGoals, setOptimizerGoals] = useState([]);
+  const [optimizerBudget, setOptimizerBudget] = useState(() => storage.get("hifi.budget", 800));
+  const [optimizerLocks, setOptimizerLocksState] = useState(() => { const l = storage.get("hifi.locks", {}) || {}; return { ...l, dim: { ...(l.dim || {}) } }; });
+  const setOptimizerLocks = (f) => setOptimizerLocksState((p) => { const n = f(p); storage.set("hifi.locks", n); return n; });
+  const [optimizerResult, setOptimizerResult] = useState(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [designPreview, setDesignPreview] = useState(null);   // { label, before, card }
+  const [undoSnapshot, setUndoSnapshot] = useState(null);
+  const setBoxDim = (k, v) => setBoxDims((p) => ({ ...p, [k]: v }));
+  const setPortField = (k, v) => setPortSpec((p) => ({ ...p, [k]: v }));
+  const waveguideSpec = tweeter.type === "compression" || tweeter.needsWaveguide ? { covH: selectedWaveguide.hf.covH, covV: selectedWaveguide.hf.covV || selectedWaveguide.hf.covH, w: selectedWaveguide.size.w, h: selectedWaveguide.size.h, name: selectedWaveguide.name, freestanding: !selectedWaveguide.rect } : null;
+  const radiatorDriver = HIFI_PASSIVES.find((o) => o.id === radiatorSelection.id) || HIFI_PASSIVES[0];
+  const radiator = { drv: radiatorDriver, n: radiatorSelection.n, addG: Math.min(radiatorSelection.addG, passiveRadiatorMassMax(radiatorDriver)) };
+  const speakerConfig = { box: boxType, dim: boxDims, wall: wallThicknessIn, mat: panelMaterial, port: portSpec, pr: radiator, xo: crossoverHz, order: crossoverOrder, wAmpW: wooferAmpWatts, tAmpW: tweeterAmpWatts, bsc: baffleStepCompensationDb, place: placement, wallFt: distanceToWallFt, portMax: 17, guide: waveguideSpec };
+  const tweeterWithWaveguide = waveguideSpec ? { ...tweeter, faceplate: { w: waveguideSpec.w, h: waveguideSpec.h } } : tweeter;
+  const speakerSystem = hifiSystem(woofer, tweeterWithWaveguide, speakerConfig);
+  if (!speakerSystem) return <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 text-sm">This woofer can't be modelled (its parameters aren't published).</main>;
+  const warningChips = hifiChips(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig);
   // the seat, relative to each speaker (left at -spacing/2, toed in toward the middle)
-  const geoOf = (sign) => {
-    const sx = (sign * spacing) / 2, vx = seat.x - sx, vy = seat.y, d = Math.hypot(vx, vy);
-    const axis = (-sign * toe * Math.PI) / 180, ang = Math.atan2(vx, vy) - axis;
-    return { th: Math.abs(ang), eyeIn: earIn - standIn, distM: d * METERS_PER_FOOT };
+  const listenerGeometryFor = (sign) => {
+    const sx = (sign * speakerSpacingFt) / 2, vx = listeningSeat.x - sx, vy = listeningSeat.y, d = Math.hypot(vx, vy);
+    const axis = (-sign * toeInDeg * Math.PI) / 180, ang = Math.atan2(vx, vy) - axis;
+    return { th: Math.abs(ang), eyeIn: earHeightIn - standHeightIn, distM: d * METERS_PER_FOOT };
   };
-  const gL = geoOf(-1), gR = geoOf(1);
-  const freqs = logSpacedFrequencies(15, 20000, 220);
-  const rL = hifiResponseAt(sys, w, tt, cfg, gL, freqs), rR = hifiResponseAt(sys, w, tt, cfg, gR, freqs);
-  const on = hifiResponseAt(sys, w, tt, cfg, { th: 0, eyeIn: sys.lay.tweeterIn, distM: 1 }, freqs);
-  const pair = rL.map((o, i) => ({ f: o.f, spl: 10 * Math.log10(Math.pow(10, o.spl / 10) + Math.pow(10, rR[i].spl / 10)) }));
-  const seatDist = (gL.distM + gR.distM) / 2;
-  const atSeat = sys.maxLevel - 20 * Math.log10(seatDist) + 3;
-  const tMax = freqs.map((f) => ({ f, spl: sys.tLevel + 20 * Math.log10(Math.max(1e-6, Math.hypot(linkwitzRileyFilter(f, xo, order, "hp").re, linkwitzRileyFilter(f, xo, order, "hp").im))) }));
-  const map = hifiDispersionMap(sys, w, tt, cfg, plane, Math.max(1, seatDist));
-  const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0) + (box === "radiator" ? pr.n * (prDrv.price || 0) : 0));
+  const leftGeometry = listenerGeometryFor(-1), rightGeometry = listenerGeometryFor(1);
+  const frequencies = logSpacedFrequencies(15, 20000, 220);
+  const leftResponse = hifiResponseAt(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig, leftGeometry, frequencies), rightResponse = hifiResponseAt(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig, rightGeometry, frequencies);
+  const onAxisResponse = hifiResponseAt(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig, { th: 0, eyeIn: speakerSystem.lay.tweeterIn, distM: 1 }, frequencies);
+  const pairResponse = leftResponse.map((o, i) => ({ f: o.f, spl: 10 * Math.log10(Math.pow(10, o.spl / 10) + Math.pow(10, rightResponse[i].spl / 10)) }));
+  const seatDistanceM = (leftGeometry.distM + rightGeometry.distM) / 2;
+  const maxLevelAtSeatDb = speakerSystem.maxLevel - 20 * Math.log10(seatDistanceM) + 3;
+  const tweeterMaxCurve = frequencies.map((f) => ({ f, spl: speakerSystem.tLevel + 20 * Math.log10(Math.max(1e-6, Math.hypot(linkwitzRileyFilter(f, crossoverHz, crossoverOrder, "hp").re, linkwitzRileyFilter(f, crossoverHz, crossoverOrder, "hp").im))) }));
+  const dispersion = hifiDispersionMap(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig, dispersionPlane, Math.max(1, seatDistanceM));
+  const pairCostUsd = 2 * ((woofer.price || 0) + (tweeter.price || 0) + (waveguideSpec ? selectedWaveguide.price || 0 : 0) + (boxType === "radiator" ? radiator.n * (radiatorDriver.price || 0) : 0));
   const tile = (k, v, u) => <StatTile key={k} label={k} value={v} unit={u} />;
-  const hLk = (key, what) => (hOn ? <LockButton on={!!hLocks[key]} what={what} onClick={() => setHLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null);
-  const hDl = (dm, what) => (hOn ? <DimensionLock mode={hLocks.dim[dm] || "free"} what={what} onChange={(m) => setHLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))} /> : null);
-  const snapH = () => ({ woofer: w.id, tweeter: t.id, box, dim, port, pr: box === "radiator" ? prSel : undefined, wall, xo, wAmpW, tAmpW });
+  const renderLockButton = (key, what) => (isOptimizerOn ? <LockButton on={!!optimizerLocks[key]} what={what} onClick={() => setOptimizerLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null);
+  const renderDimensionLock = (dm, what) => (isOptimizerOn ? <DimensionLock mode={optimizerLocks.dim[dm] || "free"} what={what} onChange={(m) => setOptimizerLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))} /> : null);
+  const snapshot = () => ({ woofer: woofer.id, tweeter: tweeter.id, box: boxType, dim: boxDims, port: portSpec, pr: boxType === "radiator" ? radiatorSelection : undefined, wall: wallThicknessIn, xo: crossoverHz, wAmpW: wooferAmpWatts, tAmpW: tweeterAmpWatts });
   // Everything on the page, for saving (undefined fields dropped: the stores reject them)
-  const savedSnapH = () => JSON.parse(JSON.stringify({ ...snapH(), guide: guideSel.id, mat, order, bsc, place, wallFt, spacing, toe, seat, earIn, standIn,
-    summary: `${w.name} + ${t.name} · ${dim.w}×${dim.h}×${dim.d}″ · ${box === "radiator" ? "passive radiator" : box}` }));
-  const restoreH = (c) => {
+  const savedConfigSnapshot = () => JSON.parse(JSON.stringify({ ...snapshot(), guide: selectedWaveguide.id, mat: panelMaterial, order: crossoverOrder, bsc: baffleStepCompensationDb, place: placement, wallFt: distanceToWallFt, spacing: speakerSpacingFt, toe: toeInDeg, seat: listeningSeat, earIn: earHeightIn, standIn: standHeightIn,
+    summary: `${woofer.name} + ${tweeter.name} · ${boxDims.w}×${boxDims.h}×${boxDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}` }));
+  const restoreSavedConfig = (c) => {
     const pick = (list, id) => list.find((o) => o.id === id);
     const ok = (f, v) => { if (v !== undefined) f(v); };
-    ok(setW, pick(HIFI_WOOFERS, c.woofer)); ok(setT, pick(HIFI_TWEETERS, c.tweeter)); ok(setGuide, pick(guides, c.guide));
-    [[setBox, c.box], [setDim, c.dim], [setPort, c.port], [setPrSel, c.pr], [setWall, c.wall], [setMat, c.mat], [setXo, c.xo], [setOrder, c.order],
-     [setWAmpW, c.wAmpW], [setTAmpW, c.tAmpW], [setBsc, c.bsc], [setPlace, c.place], [setWallFt, c.wallFt], [setSpacing, c.spacing], [setToe, c.toe],
-     [setSeat, c.seat], [setEarIn, c.earIn], [setStandIn, c.standIn]].forEach(([f, v]) => ok(f, v));
-    setHPreview(null); setHUndo(null); setHRes(null);
+    ok(setWoofer, pick(HIFI_WOOFERS, c.woofer)); ok(setTweeter, pick(HIFI_TWEETERS, c.tweeter)); ok(setSelectedWaveguide, pick(waveguideChoices, c.guide));
+    [[setBoxType, c.box], [setBoxDims, c.dim], [setPortSpec, c.port], [setRadiatorSelection, c.pr], [setWallThicknessIn, c.wall], [setPanelMaterial, c.mat], [setCrossoverHz, c.xo], [setCrossoverOrder, c.order],
+     [setWooferAmpWatts, c.wAmpW], [setTweeterAmpWatts, c.tAmpW], [setBaffleStepCompensationDb, c.bsc], [setPlacement, c.place], [setDistanceToWallFt, c.wallFt], [setSpeakerSpacingFt, c.spacing], [setToeInDeg, c.toe],
+     [setListeningSeat, c.seat], [setEarHeightIn, c.earIn], [setStandHeightIn, c.standIn]].forEach(([f, v]) => ok(f, v));
+    setDesignPreview(null); setUndoSnapshot(null); setOptimizerResult(null);
   };
-  const applyH = (c) => {
-    setW(HIFI_WOOFERS.find((o) => o.id === c.woofer)); setT(HIFI_TWEETERS.find((o) => o.id === c.tweeter));
-    setBox(c.box); setDim(c.dim); if (c.port) setPort(c.port); if (c.pr) setPrSel(c.pr); setWall(c.wall); setXo(c.xo); setWAmpW(c.wAmpW); setTAmpW(c.tAmpW);
+  const applyDesign = (c) => {
+    setWoofer(HIFI_WOOFERS.find((o) => o.id === c.woofer)); setTweeter(HIFI_TWEETERS.find((o) => o.id === c.tweeter));
+    setBoxType(c.box); setBoxDims(c.dim); if (c.port) setPortSpec(c.port); if (c.pr) setRadiatorSelection(c.pr); setWallThicknessIn(c.wall); setCrossoverHz(c.xo); setWooferAmpWatts(c.wAmpW); setTweeterAmpWatts(c.tAmpW);
   };
-  const runH = () => {
-    setHBusy(true);
-    const base = hPreview ? hPreview.before : snapH();
+  const runOptimizerSearch = () => {
+    setIsOptimizing(true);
+    const base = designPreview ? designPreview.before : snapshot();
     setTimeout(() => {
-      try { setHRes(optimizeHifiSpeaker({ cur: { ...cfg, ...base }, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, passives: HIFI_PASSIVES, goals: hGoals, locks: hLocks, budget: hBudget, seatM: seatDist, guidePrice: guideSel.price || 0 })); }
-      finally { setHBusy(false); }
+      try { setOptimizerResult(optimizeHifiSpeaker({ cur: { ...speakerConfig, ...base }, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, passives: HIFI_PASSIVES, goals: optimizerGoals, locks: optimizerLocks, budget: optimizerBudget, seatM: seatDistanceM, guidePrice: selectedWaveguide.price || 0 })); }
+      finally { setIsOptimizing(false); }
     }, 30);
   };
-  const previewH = (k) => { const before = hPreview ? hPreview.before : snapH(); applyH(k.config); setHPreview({ label: k.label, before, card: k }); };
-  const backH = () => { if (hPreview) applyH(hPreview.before); setHPreview(null); };
-  const loadH = (k) => { const before = hPreview ? hPreview.before : snapH(); applyH(k.config); setHPreview(null); setHUndo(before); };
-  const tapG = (g) => setHGoals((p) => (p.includes(g) ? p.filter((x) => x !== g) : [...p, g]));
-  const nLocks = HIFI_LOCK_KEYS.filter((k) => hLocks[k]).length + Object.values(hLocks.dim).filter((m) => m && m !== "free").length;
-  const allLocks = { ...Object.fromEntries(HIFI_LOCK_KEYS.map((k) => [k, true])), dim: { w: "exact", h: "exact", d: "exact" } };
-  const optBar = (
-    <OptimizerBar on={hOn} onToggle={() => setHOn(!hOn)} hint="Find cheaper, lighter, deeper or louder designs inside your limits."
-      nLocks={nLocks} lockMax={HIFI_LOCK_KEYS.length + 3} onLockAll={() => setHLocks(() => allLocks)} onClear={() => setHLocks(() => ({ dim: {} }))} />
+  const previewOptimizerResult = (k) => { const before = designPreview ? designPreview.before : snapshot(); applyDesign(k.config); setDesignPreview({ label: k.label, before, card: k }); };
+  const exitPreview = () => { if (designPreview) applyDesign(designPreview.before); setDesignPreview(null); };
+  const loadOptimizerResult = (k) => { const before = designPreview ? designPreview.before : snapshot(); applyDesign(k.config); setDesignPreview(null); setUndoSnapshot(before); };
+  const toggleGoal = (g) => setOptimizerGoals((p) => (p.includes(g) ? p.filter((x) => x !== g) : [...p, g]));
+  const lockCount = HIFI_LOCK_KEYS.filter((k) => optimizerLocks[k]).length + Object.values(optimizerLocks.dim).filter((m) => m && m !== "free").length;
+  const allLocksConfig = { ...Object.fromEntries(HIFI_LOCK_KEYS.map((k) => [k, true])), dim: { w: "exact", h: "exact", d: "exact" } };
+  const optimizerBar = (
+    <OptimizerBar on={isOptimizerOn} onToggle={() => setIsOptimizerOn(!isOptimizerOn)} hint="Find cheaper, lighter, deeper or louder designs inside your limits."
+      nLocks={lockCount} lockMax={HIFI_LOCK_KEYS.length + 3} onLockAll={() => setOptimizerLocks(() => allLocksConfig)} onClear={() => setOptimizerLocks(() => ({ dim: {} }))} />
   );
-  const optPanel = hOn && (
+  const optimizerPanel = isOptimizerOn && (
     <Card pad="lg" className="mt-3">
       <SectionHeading>Find a better design</SectionHeading>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
         <div className="mt-3">
-          <NumberField label={<>Driver budget, pair <span className="text-xs">(woofers + tweeters{guide ? " + waveguides" : ""}, at the listed prices)</span></>} value={hBudget} min={50} step={25} unit="$" onChange={(n) => { setHBudget(n); ls.set("hifi.budget", n); }} className="" />
+          <NumberField label={<>Driver budget, pair <span className="text-xs">(woofers + tweeters{waveguideSpec ? " + waveguides" : ""}, at the listed prices)</span></>} value={optimizerBudget} min={50} step={25} unit="$" onChange={(n) => { setOptimizerBudget(n); storage.set("hifi.budget", n); }} className="" />
         </div>
-        <GoalPicker defs={HIFI_OPTIMIZER_GOALS} selected={hGoals} onTap={tapG} />
+        <GoalPicker defs={HIFI_OPTIMIZER_GOALS} selected={optimizerGoals} onTap={toggleGoal} />
       </div>
-      <RunRow busy={hBusy} hasGoal={hGoals.length > 0} onRun={runH} stats={hRes && hRes.stats} note={hRes && hRes.cards.length ? " · every design shown passes the checks (warnings are listed on the card)" : ""}>
-        {hUndo && !hPreview && <Button size="md" onClick={() => { applyH(hUndo); setHUndo(null); }}>Undo load</Button>}
+      <RunRow busy={isOptimizing} hasGoal={optimizerGoals.length > 0} onRun={runOptimizerSearch} stats={optimizerResult && optimizerResult.stats} note={optimizerResult && optimizerResult.cards.length ? " · every design shown passes the checks (warnings are listed on the card)" : ""}>
+        {undoSnapshot && !designPreview && <Button size="md" onClick={() => { applyDesign(undoSnapshot); setUndoSnapshot(null); }}>Undo load</Button>}
       </RunRow>
-      {hRes && !hBusy && hRes.curProblems.length > 0 && <Notice>Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost or weigh more.</Notice>}
-      {hRes && !hBusy && <ResultCards cards={hRes.cards} render={(k, i) => <HifiResultCard key={i} k={k} i={i} n={hRes.cards.length} curCurve={hRes.curCurve} guide={guide} previewing={hPreview && hPreview.card === k} onPreview={() => previewH(k)} onLoad={() => loadH(k)} />} />}
-      {hRes && !hBusy && hRes.goalMissing && <Notice>{hRes.goalMissing}</Notice>}
-      {hRes && !hBusy && !hRes.cards.length && !hRes.goalMissing && <div className="mt-3 text-sm text-orange-900">Nothing fits all your limits. A bigger budget or fewer locks would open it up.</div>}
+      {optimizerResult && !isOptimizing && optimizerResult.curProblems.length > 0 && <Notice>Your design fails: {optimizerResult.curProblems.join("; ")}. Fixes may cost or weigh more.</Notice>}
+      {optimizerResult && !isOptimizing && <ResultCards cards={optimizerResult.cards} render={(k, i) => <HifiResultCard key={i} result={k} index={i} total={optimizerResult.cards.length} currentCurve={optimizerResult.curCurve} waveguide={waveguideSpec} previewing={designPreview && designPreview.card === k} onPreview={() => previewOptimizerResult(k)} onLoad={() => loadOptimizerResult(k)} />} />}
+      {optimizerResult && !isOptimizing && optimizerResult.goalMissing && <Notice>{optimizerResult.goalMissing}</Notice>}
+      {optimizerResult && !isOptimizing && !optimizerResult.cards.length && !optimizerResult.goalMissing && <div className="mt-3 text-sm text-orange-900">Nothing fits all your limits. A bigger budget or fewer locks would open it up.</div>}
     </Card>
   );
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "var(--font)" }}>
       <div className="md:col-span-5 min-w-0">
-        <SavedConfigs bare store={store} snapshot={savedSnapH} restore={restoreH} />
-        {optBar}
-        {optPanel}
-        {hPreview && (
+        <SavedConfigs bare store={store} snapshot={savedConfigSnapshot} restore={restoreSavedConfig} />
+        {optimizerBar}
+        {optimizerPanel}
+        {designPreview && (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded bg-stone-900 text-white border-t-4 border-cmy-y px-3 py-2 text-sm font-semibold">
-            <span className="flex-1">Previewing “{hPreview.label}”</span>
-            <button onClick={() => loadH(hPreview.card)} className="px-3 py-1.5 rounded border border-stone-900 bg-white text-stone-900">Keep</button>
-            <button onClick={backH} className="px-3 py-1.5 rounded border border-stone-900 bg-white text-stone-900">Back</button>
+            <span className="flex-1">Previewing “{designPreview.label}”</span>
+            <button onClick={() => loadOptimizerResult(designPreview.card)} className="px-3 py-1.5 rounded border border-stone-900 bg-white text-stone-900">Keep</button>
+            <button onClick={exitPreview} className="px-3 py-1.5 rounded border border-stone-900 bg-white text-stone-900">Back</button>
           </div>
         )}
       </div>
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
         <div className="flex gap-4 items-center">
-        <div className="shrink-0"><HifiFront dim={dim} w={w} t={tt} lay={sys.lay} vented={sys.vented} port={port} pr={sys.radiator ? pr : null} guide={guide} /></div>
+        <div className="shrink-0"><HifiFront dim={boxDims} w={woofer} t={tweeterWithWaveguide} lay={speakerSystem.lay} vented={speakerSystem.vented} port={portSpec} pr={speakerSystem.radiator ? radiator : null} guide={waveguideSpec} /></div>
         <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
-          {tile("Net volume", sys.net.toFixed(1), "L")}
-          {sys.Fb != null ? tile("Tuning Fb", sys.Fb.toFixed(0), "Hz") : tile("Qtc", sys.Qtc.toFixed(2), "")}
-          {tile("F3 in room", sys.f3.toFixed(0), "Hz")}
-          {tile("Max at the seat", atSeat.toFixed(0), "dB")}
-          {tile("Weight", sys.lb.toFixed(0), "lb")}
-          {tile("Pair", `$${Math.round(pairCost)}`, "")}
+          {tile("Net volume", speakerSystem.net.toFixed(1), "L")}
+          {speakerSystem.Fb != null ? tile("Tuning Fb", speakerSystem.Fb.toFixed(0), "Hz") : tile("Qtc", speakerSystem.Qtc.toFixed(2), "")}
+          {tile("F3 in room", speakerSystem.f3.toFixed(0), "Hz")}
+          {tile("Max at the seat", maxLevelAtSeatDb.toFixed(0), "dB")}
+          {tile("Weight", speakerSystem.lb.toFixed(0), "lb")}
+          {tile("Pair", `$${Math.round(pairCostUsd)}`, "")}
         </div>
         </div>
         <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="dB SPL at 2.83 V"
-          series={[{ curve: on, label: "On axis, 1 m", stroke: PAL.ink, tint: PAL.alpha(PAL.ink, 0) }, { curve: pair, label: `Pair at the seat (${(seatDist / METERS_PER_FOOT).toFixed(1)} ft)`, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]}
-          marks={[{ f: xo, label: "XO" }, { f: sys.bsF3, label: "Baffle step" }, ...(sys.Fb ? [{ f: sys.Fb, label: "Fb" }] : [])]} />
+          series={[{ curve: onAxisResponse, label: "On axis, 1 m", stroke: PAL.ink, tint: PAL.alpha(PAL.ink, 0) }, { curve: pairResponse, label: `Pair at the seat (${(seatDistanceM / METERS_PER_FOOT).toFixed(1)} ft)`, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]}
+          marks={[{ f: crossoverHz, label: "XO" }, { f: speakerSystem.bsF3, label: "Baffle step" }, ...(speakerSystem.Fb ? [{ f: speakerSystem.Fb, label: "Fb" }] : [])]} />
         <ResponseChart fmin={15} fmax={20000} top={HIFI_TOP} bot={HIFI_BOT} step={10} yLabel="max dB SPL @ 1 m"
-          series={[{ curve: sys.wMax, label: w.name, stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0.06) }, { curve: tMax, label: t.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]} marks={[{ f: xo, label: "XO" }]} />
-        <WarningChips chips={F} />
+          series={[{ curve: speakerSystem.wMax, label: woofer.name, stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0.06) }, { curve: tweeterMaxCurve, label: tweeter.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }]} marks={[{ f: crossoverHz, label: "XO" }]} />
+        <WarningChips chips={warningChips} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-          <RoomView spacing={spacing} toe={toe} seat={seat} setSeat={setSeat} angles={[(gL.th * 180) / Math.PI, (gR.th * 180) / Math.PI]} />
+          <RoomView spacing={speakerSpacingFt} toe={toeInDeg} seat={listeningSeat} setSeat={setListeningSeat} angles={[(leftGeometry.th * 180) / Math.PI, (rightGeometry.th * 180) / Math.PI]} />
           <div className="text-sm text-stone-500 leading-relaxed">
             <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold mb-1">At the seat</div>
-            <div>{(seatDist / METERS_PER_FOOT).toFixed(1)} ft from the pair</div>
-            <div>Off axis: L {((gL.th * 180) / Math.PI).toFixed(0)}°, R {((gR.th * 180) / Math.PI).toFixed(0)}°</div>
-            <div>Ears {earIn - standIn - sys.lay.tweeterIn >= 0 ? "above" : "below"} tweeter {Math.abs(earIn - standIn - sys.lay.tweeterIn).toFixed(1)}″</div>
-            <div><Tooltip tip={`Clean up to about ${atSeat.toFixed(0)} dB at the seat with both speakers playing.`}>Max level</Tooltip> {atSeat.toFixed(0)} dB</div>
+            <div>{(seatDistanceM / METERS_PER_FOOT).toFixed(1)} ft from the pair</div>
+            <div>Off axis: L {((leftGeometry.th * 180) / Math.PI).toFixed(0)}°, R {((rightGeometry.th * 180) / Math.PI).toFixed(0)}°</div>
+            <div>Ears {earHeightIn - standHeightIn - speakerSystem.lay.tweeterIn >= 0 ? "above" : "below"} tweeter {Math.abs(earHeightIn - standHeightIn - speakerSystem.lay.tweeterIn).toFixed(1)}″</div>
+            <div><Tooltip tip={`Clean up to about ${maxLevelAtSeatDb.toFixed(0)} dB at the seat with both speakers playing.`}>Max level</Tooltip> {maxLevelAtSeatDb.toFixed(0)} dB</div>
           </div>
         </div>
         <div>
-          <div className="flex gap-1 mb-2">{[["Horizontal", "h"], ["Vertical", "v"]].map(([l, v]) => <ToggleButton key={v} onClick={() => setPlane(v)} on={plane === v}>{l}</ToggleButton>)}</div>
-          <DispersionMap map={map} title={plane === "h" ? "Horizontal dispersion, one speaker (0° is on axis)" : "Vertical dispersion: below (−) to above (+) the tweeter axis"} />
+          <div className="flex gap-1 mb-2">{[["Horizontal", "h"], ["Vertical", "v"]].map(([l, v]) => <ToggleButton key={v} onClick={() => setDispersionPlane(v)} on={dispersionPlane === v}>{l}</ToggleButton>)}</div>
+          <DispersionMap map={dispersion} title={dispersionPlane === "h" ? "Horizontal dispersion, one speaker (0° is on axis)" : "Vertical dispersion: below (−) to above (+) the tweeter axis"} />
         </div>
         <details className="text-xs text-stone-500 rounded border border-stone-300 bg-stone-50 px-3 py-2">
           <summary className="cursor-pointer text-sm text-stone-900 py-1">Details</summary>
           <div className="leading-relaxed mt-1 flex flex-col gap-1.5">
-            <div>Woofer {sys.lay.wooferIn.toFixed(1)}″ and tweeter {sys.lay.tweeterIn.toFixed(1)}″ from the bottom, {sys.lay.spacingIn.toFixed(1)}″ apart. {sys.gross.toFixed(1)} L gross, {sys.net.toFixed(1)} L net{sys.hpf ? `; DSP highpass ${sys.hpf} Hz (BW24) below the port tuning` : ""}.</div>
-            <div>Tweeter trimmed {sys.trim.toFixed(1)} dB in the DSP to match the woofer; baffle step centered at {sys.bsF3.toFixed(0)} Hz{bsc ? `, ${bsc} dB boost` : ""}.</div>
-            <div><Tooltip tip={w.note}><span className="font-medium text-stone-900">{w.name}</span></Tooltip></div>
-            <div><Tooltip tip={t.note}><span className="font-medium text-stone-900">{t.name}</span></Tooltip></div>
-            {guide && <div><Tooltip tip={guideSel.note}><span className="font-medium text-stone-900">{guide.name}</span></Tooltip></div>}
+            <div>Woofer {speakerSystem.lay.wooferIn.toFixed(1)}″ and tweeter {speakerSystem.lay.tweeterIn.toFixed(1)}″ from the bottom, {speakerSystem.lay.spacingIn.toFixed(1)}″ apart. {speakerSystem.gross.toFixed(1)} L gross, {speakerSystem.net.toFixed(1)} L net{speakerSystem.hpf ? `; DSP highpass ${speakerSystem.hpf} Hz (BW24) below the port tuning` : ""}.</div>
+            <div>Tweeter trimmed {speakerSystem.trim.toFixed(1)} dB in the DSP to match the woofer; baffle step centered at {speakerSystem.bsF3.toFixed(0)} Hz{baffleStepCompensationDb ? `, ${baffleStepCompensationDb} dB boost` : ""}.</div>
+            <div><Tooltip tip={woofer.note}><span className="font-medium text-stone-900">{woofer.name}</span></Tooltip></div>
+            <div><Tooltip tip={tweeter.note}><span className="font-medium text-stone-900">{tweeter.name}</span></Tooltip></div>
+            {waveguideSpec && <div><Tooltip tip={selectedWaveguide.note}><span className="font-medium text-stone-900">{waveguideSpec.name}</span></Tooltip></div>}
           </div>
         </details>
       </div>
       <aside className="min-w-0 md:col-span-2">
-        <SelectField label={`Woofer · ${w.size}″`} options={HIFI_WOOFERS_BY_SIZE} value={w} onChange={setW} extra={hLk("woofer", "the woofer")} group={(o) => `${o.size}″ woofers`} />
-        <SelectField label={`Tweeter · ${isCompressionDriver(t) ? "compression driver" : "dome"}`} options={HIFI_TWEETERS_BY_TYPE} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} group={(o) => (isCompressionDriver(o) ? "Compression drivers (on a waveguide)" : "Dome tweeters")} />
-        {guide && <SelectField label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
+        <SelectField label={`Woofer · ${woofer.size}″`} options={HIFI_WOOFERS_BY_SIZE} value={woofer} onChange={setWoofer} extra={renderLockButton("woofer", "the woofer")} group={(o) => `${o.size}″ woofers`} />
+        <SelectField label={`Tweeter · ${isCompressionDriver(tweeter) ? "compression driver" : "dome"}`} options={HIFI_TWEETERS_BY_TYPE} value={tweeter} onChange={setTweeter} extra={renderLockButton("tweeter", "the tweeter")} group={(o) => (isCompressionDriver(o) ? "Compression drivers (on a waveguide)" : "Dome tweeters")} />
+        {waveguideSpec && <SelectField label="Waveguide" options={waveguideChoices} value={selectedWaveguide} onChange={setSelectedWaveguide} />}
         <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
           <span className="text-stone-500">Material</span>
-          <div className="flex flex-wrap gap-1">{[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <ToggleButton key={v} onClick={() => setMat(v)} on={mat === v}>{l}</ToggleButton>)}</div>
+          <div className="flex flex-wrap gap-1">{[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <ToggleButton key={v} onClick={() => setPanelMaterial(v)} on={panelMaterial === v}>{l}</ToggleButton>)}</div>
           <span />
           <span className="text-stone-500">Thickness</span>
-          <div className="flex flex-wrap gap-1">{[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <ToggleButton key={v} onClick={() => setWall(v)} on={wall === v}>{l}</ToggleButton>)}</div>
-          <span>{hLk("wall", "the panel thickness")}</span>
+          <div className="flex flex-wrap gap-1">{[[0.75, "3/4″"], [0.5, "1/2″"]].map(([v, l]) => <ToggleButton key={v} onClick={() => setWallThicknessIn(v)} on={wallThicknessIn === v}>{l}</ToggleButton>)}</div>
+          <span>{renderLockButton("wall", "the panel thickness")}</span>
         </div>
         <Card className="mb-4">
-          <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="″" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
-          <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="″" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
-          <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="″" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
-          <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-500">Ports</span>{hLk("box", "sealed, ported or radiator")}</div>
+          <Slider label="Width" value={boxDims.w} min={6} max={16} step={0.25} unit="″" onChange={(v) => setBoxDim("w", v)} extra={renderDimensionLock("w", "Width")} />
+          <Slider label="Height" value={boxDims.h} min={9} max={44} step={0.25} unit="″" onChange={(v) => setBoxDim("h", v)} extra={renderDimensionLock("h", "Height")} />
+          <Slider label="Depth" value={boxDims.d} min={6} max={16} step={0.25} unit="″" onChange={(v) => setBoxDim("d", v)} extra={renderDimensionLock("d", "Depth")} />
+          <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-500">Ports</span>{renderLockButton("box", "sealed, ported or radiator")}</div>
           <div className="grid grid-cols-3 gap-1 mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip]) => {
-            const slotOn = port.shape === "slot";
-            const on = box === v && (v === "sealed" || (v === "vented" ? (n === "slot" ? slotOn : !slotOn && port.n === n) : pr.n === n));
-            return <ToggleButton key={l} size="xs" className="min-w-0 whitespace-nowrap" title={tip} aria-label={tip} on={on} onClick={() => { setBox(v); if (v === "vented") setPort((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setPrSel((p) => ({ ...p, n })); }}>{l}</ToggleButton>;
+            const slotOn = portSpec.shape === "slot";
+            const on = boxType === v && (v === "sealed" || (v === "vented" ? (n === "slot" ? slotOn : !slotOn && portSpec.n === n) : radiator.n === n));
+            return <ToggleButton key={l} size="xs" className="min-w-0 whitespace-nowrap" title={tip} aria-label={tip} on={on} onClick={() => { setBoxType(v); if (v === "vented") setPortSpec((p) => (n === "slot" ? { ...p, shape: "slot", h: p.h || 1, len: p.len } : { ...p, shape: "round", n })); if (v === "radiator") setRadiatorSelection((p) => ({ ...p, n })); }}>{l}</ToggleButton>;
           })}</div>
-          {box === "vented" && (<>
-            {port.shape === "slot"
-              ? <Slider label={`Slot height (${sys.slotW.toFixed(1)}″ wide)`} value={port.h || 1} min={0.5} max={3} step={0.125} unit="″" onChange={(v) => setP("h", v)} />
-              : <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="″" onChange={(v) => setP("dia", v)} />}
-            <Slider label={port.shape === "slot" ? "Slot length" : "Port length (centerline)"} value={port.len} min={1} max={30} step={0.25} unit="″" onChange={(v) => setP("len", v)} />
+          {boxType === "vented" && (<>
+            {portSpec.shape === "slot"
+              ? <Slider label={`Slot height (${speakerSystem.slotW.toFixed(1)}″ wide)`} value={portSpec.h || 1} min={0.5} max={3} step={0.125} unit="″" onChange={(v) => setPortField("h", v)} />
+              : <Slider label="Port diameter" value={portSpec.dia} min={1} max={4} step={0.25} unit="″" onChange={(v) => setPortField("dia", v)} />}
+            <Slider label={portSpec.shape === "slot" ? "Slot length" : "Port length (centerline)"} value={portSpec.len} min={1} max={30} step={0.25} unit="″" onChange={(v) => setPortField("len", v)} />
           </>)}
-          {box === "radiator" && (<>
-            <SelectField label={`Passive radiator · ${prDrv.shape ? "5 × 8″ oval" : `${prDrv.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={prDrv} onChange={(o) => setPrSel((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, passiveRadiatorMassMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
-            <Slider label="Added mass, each" value={pr.addG} min={0} max={passiveRadiatorMassMax(prDrv)} step={5} unit=" g" onChange={(v) => setPrSel((p) => ({ ...p, addG: v }))} />
+          {boxType === "radiator" && (<>
+            <SelectField label={`Passive radiator · ${radiatorDriver.shape ? "5 × 8″ oval" : `${radiatorDriver.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={radiatorDriver} onChange={(o) => setRadiatorSelection((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, passiveRadiatorMassMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
+            <Slider label="Added mass, each" value={radiator.addG} min={0} max={passiveRadiatorMassMax(radiatorDriver)} step={5} unit=" g" onChange={(v) => setRadiatorSelection((p) => ({ ...p, addG: v }))} />
           </>)}
-          <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of ${sys.slot ? "slot" : "port"}` : sys.radiator ? `; radiators on the back tune it to ${sys.Fb.toFixed(0)} Hz, with a notch at ${sys.Fp.toFixed(0)} Hz (their own resonance)${prDrv.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}` : ", lightly stuffed"}.</div>
+          <div className="text-xs text-stone-500">{speakerSystem.gross.toFixed(1)} L gross{speakerSystem.vented ? `, ${speakerSystem.pArea.toFixed(1)} in² of ${speakerSystem.slot ? "slot" : "port"}` : speakerSystem.radiator ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their own resonance)${radiatorDriver.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}` : ", lightly stuffed"}.</div>
         </Card>
         <Card className="mb-4">
-          <Slider label="Crossover" value={xo} min={800} max={4000} step={50} unit=" Hz" onChange={setXo} extra={hLk("xo", "the crossover")} />
-          <div className="flex gap-1 mb-3">{[[4, "LR24"], [8, "LR48"]].map(([v, l]) => <ToggleButton key={v} size="xs" onClick={() => setOrder(v)} on={order === v}>{l}</ToggleButton>)}</div>
-          <Slider label="Baffle-step boost" value={bsc} min={0} max={6} step={0.5} unit=" dB" onChange={setBsc} />
-          <Slider label="Woofer amp @ 8 Ω" value={wAmpW} min={10} max={500} step={10} unit=" W" onChange={setWAmpW} extra={hLk("wAmpW", "the woofer amp power")} />
-          <Slider label="Tweeter amp @ 8 Ω" value={tAmpW} min={5} max={200} step={5} unit=" W" onChange={setTAmpW} extra={hLk("tAmpW", "the tweeter amp power")} />
+          <Slider label="Crossover" value={crossoverHz} min={800} max={4000} step={50} unit=" Hz" onChange={setCrossoverHz} extra={renderLockButton("xo", "the crossover")} />
+          <div className="flex gap-1 mb-3">{[[4, "LR24"], [8, "LR48"]].map(([v, l]) => <ToggleButton key={v} size="xs" onClick={() => setCrossoverOrder(v)} on={crossoverOrder === v}>{l}</ToggleButton>)}</div>
+          <Slider label="Baffle-step boost" value={baffleStepCompensationDb} min={0} max={6} step={0.5} unit=" dB" onChange={setBaffleStepCompensationDb} />
+          <Slider label="Woofer amp @ 8 Ω" value={wooferAmpWatts} min={10} max={500} step={10} unit=" W" onChange={setWooferAmpWatts} extra={renderLockButton("wAmpW", "the woofer amp power")} />
+          <Slider label="Tweeter amp @ 8 Ω" value={tweeterAmpWatts} min={5} max={200} step={5} unit=" W" onChange={setTweeterAmpWatts} extra={renderLockButton("tAmpW", "the tweeter amp power")} />
         </Card>
         <Card>
           <div className="text-sm text-stone-500 mb-1">Placement</div>
-          <div className="flex flex-wrap gap-1 mb-3">{Object.entries(HIFI_PLACES).map(([k, p]) => <ToggleButton key={k} onClick={() => setPlace(k)} on={place === k}>{p.name}</ToggleButton>)}</div>
-          {place !== "free" && <Slider label="Distance to the wall" value={wallFt} min={0.5} max={6} step={0.25} unit=" ft" onChange={setWallFt} />}
-          <Slider label="Speaker spacing" value={spacing} min={3} max={14} step={0.5} unit=" ft" onChange={setSpacing} />
-          <Slider label="Toe-in" value={toe} min={0} max={35} step={1} unit="°" onChange={setToe} />
-          <Slider label="Box bottom height (stand)" value={standIn} min={0} max={40} step={1} unit="″" onChange={setStandIn} />
-          <Slider label="Ear height" value={earIn} min={24} max={60} step={1} unit="″" onChange={setEarIn} />
+          <div className="flex flex-wrap gap-1 mb-3">{Object.entries(HIFI_PLACES).map(([k, p]) => <ToggleButton key={k} onClick={() => setPlacement(k)} on={placement === k}>{p.name}</ToggleButton>)}</div>
+          {placement !== "free" && <Slider label="Distance to the wall" value={distanceToWallFt} min={0.5} max={6} step={0.25} unit=" ft" onChange={setDistanceToWallFt} />}
+          <Slider label="Speaker spacing" value={speakerSpacingFt} min={3} max={14} step={0.5} unit=" ft" onChange={setSpeakerSpacingFt} />
+          <Slider label="Toe-in" value={toeInDeg} min={0} max={35} step={1} unit="°" onChange={setToeInDeg} />
+          <Slider label="Box bottom height (stand)" value={standHeightIn} min={0} max={40} step={1} unit="″" onChange={setStandHeightIn} />
+          <Slider label="Ear height" value={earHeightIn} min={24} max={60} step={1} unit="″" onChange={setEarHeightIn} />
         </Card>
       </aside>
     </main>

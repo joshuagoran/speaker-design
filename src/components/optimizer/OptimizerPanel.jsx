@@ -41,7 +41,7 @@ export function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, pre
           {err && <span className="text-xs text-red-700">{err}</span>}
         </RunRow>
         {res && !busy && res.curProblems && res.curProblems.length > 0 && <Notice>Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</Notice>}
-        {res && !busy && <ResultCards cards={res.cards} render={(k, i) => <OptimizerResultCard key={i} k={k} i={i} n={res.cards.length} cur={res.cur} previewing={previewCard === k} canSave={canSave}
+        {res && !busy && <ResultCards cards={res.cards} render={(k, i) => <OptimizerResultCard key={i} result={k} index={i} total={res.cards.length} currentDesign={res.cur} previewing={previewCard === k} canSave={canSave}
           onPreview={() => onPreview(k)} onLoad={() => onLoad(k)} onSave={() => onSave(k)} />} />}
         {res && !busy && res.goalMissing && <Notice>{res.goalMissing}</Notice>}
         {res && !busy && !res.cards.length && res.nearMiss && (
