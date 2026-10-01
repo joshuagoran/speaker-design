@@ -2105,7 +2105,6 @@ function StackPlanner() {
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "var(--font)" }}>
       <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">SpeakNow</h1>
         {(() => {
           // two levels: the project (PA stack or hi-fi), then the PA stack's own pages
           const go = (v, href) => (e) => { e.preventDefault(); try { history.replaceState(null, "", v === "planner" ? " " : href); } catch {} setView(v); window.scrollTo(0, 0); };
@@ -2113,12 +2112,15 @@ function StackPlanner() {
           const top = [["planner", "PA Stack", "#", pa], ["hifi", "Hi-fi", "#hifi", !pa]];
           const sub = [["planner", "Design", "#"], ["cutlist", "Cutlist", "#cutlist"], ["fills", "Fills", "#fills"], ["notes", "Notes", "#notes"]];
           return (<>
-            <nav className="flex gap-1 mt-3" style={{ fontFamily: "var(--font)" }} aria-label="Projects">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">SpeakNow</h1>
+            <nav className="flex gap-1" style={{ fontFamily: "var(--font)" }} aria-label="Projects">
               {top.map(([v, label, href, on]) => (
                 <a key={v} href={href} aria-current={on ? "page" : undefined} onClick={go(v, href)}
                   className={`px-4 py-2 rounded border-2 text-base font-semibold ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}>{label}</a>
               ))}
             </nav>
+            </div>
             {pa && (
               <nav className="flex gap-4 mt-3 border-b border-stone-300" style={{ fontFamily: "var(--font)" }} aria-label="PA stack pages">
                 {sub.map(([v, label, href]) => (
