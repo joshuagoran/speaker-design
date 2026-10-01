@@ -924,7 +924,7 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
         {tile("F3 in room", `${m.f3.toFixed(0)} Hz`, <Delta v={d.f3} unit=" Hz" lowerIsBetter />)}
       </div>
       <div className="text-xs leading-snug"><b className="font-semibold">Limited by:</b> {who}</div>
-      {k.warnings.filter((h) => !/^Woofer limited by/.test(h)).map((h) => <div key={h} className="text-xs border border-stone-300 rounded px-2 py-1 bg-stone-50"><b className="font-semibold text-amber-700">{h}</b></div>)}
+      {k.warnings.filter((h) => !/^Woofer limited by/.test(h)).map((h) => <div key={h} className="text-xs border rounded px-2 py-1 bg-amber-50 border-amber-200"><b className="font-semibold text-amber-700">{h}</b></div>)}
       <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
@@ -1054,14 +1054,14 @@ function HifiPage() {
         {hRes && !hBusy && <span className="text-xs text-stone-500">Searched {hRes.stats.evaluated.toLocaleString()} designs in {(hRes.stats.ms / 1000).toFixed(1)} s{hRes.cards.length ? " · every design shown passes the checks (warnings are listed on the card)" : ""}</span>}
         {hUndo && !hPreview && <button onClick={() => { applyH(hUndo); setHUndo(null); }} className="px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Undo load</button>}
       </div>
-      {hRes && !hBusy && hRes.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 border-l-4 border-amber-400 pl-2 py-0.5">Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
+      {hRes && !hBusy && hRes.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-400 px-2 py-1">Your design fails: {hRes.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
       {hRes && !hBusy && hRes.cards.length > 0 && (<>
         <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
           {hRes.cards.map((k, i) => <HifiCard key={i} k={k} i={i} n={hRes.cards.length} curCurve={hRes.curCurve} guide={guide} previewing={hPreview && hPreview.card === k} onPreview={() => previewH(k)} onLoad={() => loadH(k)} />)}
         </div>
         {hRes.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {hRes.cards.length - 1} more</div>}
       </>)}
-      {hRes && !hBusy && hRes.goalMissing && <div className="mt-2 text-xs text-amber-800 border-l-4 border-amber-400 pl-2 py-0.5">{hRes.goalMissing}</div>}
+      {hRes && !hBusy && hRes.goalMissing && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-400 px-2 py-1">{hRes.goalMissing}</div>}
       {hRes && !hBusy && !hRes.cards.length && !hRes.goalMissing && <div className="mt-3 text-sm text-orange-900">Nothing fits all your limits. A bigger budget or fewer locks would open it up.</div>}
     </div>
   );
@@ -1110,7 +1110,7 @@ function HifiPage() {
         </div>
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
-            <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+            <div key={head} className={`flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
               <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
               <span className="text-stone-600">{body}</span>
             </div>
@@ -1410,7 +1410,7 @@ function FillsPage() {
         </div>
         <div className="flex flex-col gap-1.5">
           {F.map(([kind, head, body]) => (
-            <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+            <div key={head} className={`flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
               <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
               <span className="text-stone-600">{body}</span>
             </div>
@@ -1569,6 +1569,8 @@ function runOptimizer(input) {
   });
 }
 
+// status notes: a light tint of the status colour with a matching border
+const CHIP_BG = { ok: "bg-green-50 border-green-200", warn: "bg-amber-50 border-amber-200", bad: "bg-red-50 border-red-200" };
 const money = (x) => `$${Math.round(x).toLocaleString()}`;
 function Delta({ v, unit, lowerIsBetter, digits = 0 }) {
   if (v == null) return null;
@@ -1677,7 +1679,7 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
       </div>
       <div className="text-xs leading-snug"><b className="font-semibold">Limited by:</b> {k.limitedBy}</div>
       {k.warnings.filter(([h]) => !/limited$/.test(h)).map(([h, b]) => (
-        <div key={h} className="text-xs border border-stone-300 rounded px-2 py-1 bg-stone-50"><b className="font-semibold text-amber-700 mr-1">{h}</b>{b}</div>
+        <div key={h} className="text-xs border rounded px-2 py-1 bg-amber-50 border-amber-200"><b className="font-semibold text-amber-700 mr-1">{h}</b>{b}</div>
       ))}
       <div className="text-xs text-stone-600">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
       <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
@@ -1729,7 +1731,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
           {res && !busy && <span className="text-xs text-stone-500">Searched {res.stats.evaluated.toLocaleString()} designs in {(res.stats.ms / 1000).toFixed(1)} s{res.cards.length ? " · every design shown passes the planner's build checks (warnings are listed on the card)" : ""}</span>}
           {err && <span className="text-xs text-red-700">{err}</span>}
         </div>
-        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 border-l-4 border-amber-400 pl-2 py-0.5">Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
+        {res && !busy && res.curProblems && res.curProblems.length > 0 && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-400 px-2 py-1">Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.</div>}
         {res && !busy && res.cards.length > 0 && (<>
           <div className="mt-4 flex md:grid md:grid-cols-3 gap-3 overflow-x-auto snap-x snap-mandatory pb-1">
             {res.cards.map((k, i) => <OptCard key={i} k={k} i={i} n={res.cards.length} cur={res.cur} previewing={previewCard === k} canSave={canSave}
@@ -1737,7 +1739,7 @@ function OptimizerPanel({ optIn, setOpt, run, busy, res, err, curOut, amps, prev
           </div>
           {res.cards.length > 1 && <div className="md:hidden text-xs text-stone-500 text-center mt-1">Swipe for {res.cards.length - 1} more</div>}
         </>)}
-        {res && !busy && res.goalMissing && <div className="mt-2 text-xs text-amber-800 border-l-4 border-amber-400 pl-2 py-0.5">{res.goalMissing}</div>}
+        {res && !busy && res.goalMissing && <div className="mt-2 text-xs text-amber-800 bg-amber-50 rounded border-l-4 border-amber-400 px-2 py-1">{res.goalMissing}</div>}
         {res && !busy && !res.cards.length && res.nearMiss && (
           <div className="mt-4 rounded-lg border border-orange-300 bg-orange-50 px-3 py-3">
             <h3 className="text-base" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>Nothing fits all your limits</h3>
@@ -2251,7 +2253,7 @@ function StackPlanner() {
               {(() => {
                 const F = subChips({ subSize: format.sub, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF: mdl.peakXF, aes: sub.ts.aes, ampW });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+                  <div key={head} className={`flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
                     <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
@@ -2303,7 +2305,7 @@ function StackPlanner() {
                 const F = midChips({ midSize, midDims, Qtc: mMdl.Qtc, f3: mMdl.f3, peakX: mMdl.peakX, xoLo, ts: mid.ts, V: MID_V, useV: midUseV, vTherm: vMidTherm, mAmpW,
                   subMusicAtXo, tilt, midAtXo: subMusicAtXo != null ? midNear(xoLo) : null });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+                  <div key={head} className={`flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
                     <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
@@ -2343,7 +2345,7 @@ function StackPlanner() {
               {(() => {
                 const F = hornChips({ hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi: midMax ? midNear(xoHi).spl : null, hfTilt, hornAtXo: hornAt(xoHi), midBeam, fK: beamCurves.fK });
                 return F.map(([kind, head, body]) => (
-                  <div key={head} className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border border-stone-300 bg-stone-50">
+                  <div key={head} className={`flex flex-col sm:flex-row gap-0.5 sm:gap-2 items-start text-xs px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
                     <b className={`sm:shrink-0 sm:max-w-[45%] font-semibold ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
                     <span className="text-stone-600">{body}</span>
                   </div>
