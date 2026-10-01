@@ -49,7 +49,15 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }) 
             </>
           ) : fb ? (
             <>
-              <Button variant="dark" onClick={signIn}>
+              <Button
+                variant="dark"
+                onClick={signIn}
+                // start fetching Firebase as soon as the pointer or focus heads here: the sign-in popup must open soon
+                // after the click or browsers block it
+                onPointerEnter={fb.prefetch}
+                onFocus={fb.prefetch}
+                onTouchStart={fb.prefetch}
+              >
                 Sign in with Google to save
               </Button>
               {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
