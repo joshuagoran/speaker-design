@@ -1,6 +1,6 @@
 import test from "node:test";
-import { boxModel, closedBox } from "../tools/calc.js";
-import { SUB_OPTIONS } from "../tools/data.js";
+import { boxModel, closedBox } from "../src/lib/pa/calc.js";
+import { SUB_OPTIONS } from "../src/lib/data.js";
 import { tsModel, massLineSPL, helmholtz, near, close, rel } from "./helpers.js";
 
 const fh500 = SUB_OPTIONS.find((o) => o.id === "f18fh500").ts;

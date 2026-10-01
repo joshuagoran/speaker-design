@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: 20
       - run: npm test
-      - run: sh tools/build.sh pages
+      - run: sh build/build.sh pages
       # phone and tablet layout check (tests/mobile-check.mjs)
       # Playwright's own Chromium, without --with-deps: the runner already has Chrome's system libraries, and the
       # apt step pulls fonts from a slow mirror that has stalled CI for many minutes
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: sh tools/build.sh pages
+      - run: sh build/build.sh pages
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/site

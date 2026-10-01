@@ -1,8 +1,8 @@
 // Configs for the regression snapshot: the saved seeds plus synthetic ones covering the options.
 import fs from "node:fs";
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS } from "../tools/data.js";
-import { subSystem, midSystem, fillSystem, subThroughLp, hornResponse, nearest, midWeight, subWeight } from "../tools/calc.js";
-import { FILL_OPTIONS } from "../tools/data.js";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data.js";
+import { subSystem, midSystem, fillSystem, subThroughLowpass, hornResponse, nearestPoint, midWeightLb, subWeightLb } from "../src/lib/pa/calc.js";
+import { FILL_OPTIONS } from "../src/lib/data.js";
 
 const seeds = JSON.parse(fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url)));
 const base = seeds.find((c) => c.name === "lil block stack LE (optimized)");
@@ -30,15 +30,15 @@ export function evaluate(c) {
   const xoLo = c.xoLo || 120;
   const ms = midSystem(mid, { midDims: mDim, wall: cfg.wall, inset: cfg.inset, xoLo, xoHi: c.xoHi || 900, mAmpW: c.mAmpW || 400 });
   const mm = ms.mdl;
-  const sxo = s.mdl ? nearest(subThroughLp(s.mdl, sub.ts, s.AMP_V, cfg.portMax, xoLo), xoLo).spl : null;
+  const sxo = s.mdl ? nearestPoint(subThroughLowpass(s.mdl, sub.ts, s.AMP_V, cfg.portMax, xoLo), xoLo).spl : null;
   const cd = CD_OPTIONS.find((o) => o.id === c.cd), horn = HORN_OPTIONS.find((o) => o.id === c.horn);
   const h = cd && horn ? hornResponse(cd.hf, horn.hf, c.xoHi || 900, c.hfAmpW || 100) : null;
   return {
     netL: r2(s.netL), Fb: r2(s.mdl && s.mdl.Fb), f3: r2(s.mdl && s.mdl.f3), ref: r2(s.mdl && s.mdl.ref),
     firstLimit: s.lim && s.lim.who, limitW: r2(s.lim && s.lim.W), spl35: r2(s.lim && s.lim.spl35), spl45: r2(s.lim && s.lim.spl45),
     midFc: r2(mm && mm.Fc), midQtc: r2(mm && mm.Qtc), midF3: r2(mm && mm.f3), midRef: r2(mm && mm.ref),
-    midMaxXo: r2(mm && nearest(ms.max, xoLo).spl), midMax300: r2(mm && nearest(ms.max, 300).spl), subAtXo: r2(sxo),
-    hornFlat: r2(h && h.flat), subLb: r2(subWeight(cfg.subBox, cfg.wall, sub.lb)), midLb: r2(midWeight(mDim, cfg.wall)),
+    midMaxXo: r2(mm && nearestPoint(ms.max, xoLo).spl), midMax300: r2(mm && nearestPoint(ms.max, 300).spl), subAtXo: r2(sxo),
+    hornFlat: r2(h && h.flat), subLb: r2(subWeightLb(cfg.subBox, cfg.wall, sub.lb)), midLb: r2(midWeightLb(mDim, cfg.wall)),
   };
 }
 
@@ -53,6 +53,6 @@ export function evaluateFill(c) {
   const f = fillSystem(drv, { boxType: c.boxType, dim: c.dim || { w: 11.5, h: 16, d: 11 }, port: c.port || { n: 1, dia: 3, len: 4 },
     hp: c.hp || 70, ampW: c.ampW || 300, portMax: c.portMax || 20 });
   return { net: r2(f.net), Fb: r2(f.vM && f.vM.Fb), Qtc: r2(f.sM && f.sM.Qtc), f3: r2(f.f3), sens: r2(f.sens),
-    max60: r2(nearest(f.max, 60).spl), max100: r2(nearest(f.max, 100).spl), who100: nearest(f.max, 100).who,
+    max60: r2(nearestPoint(f.max, 60).spl), max100: r2(nearestPoint(f.max, 100).spl), who100: nearestPoint(f.max, 100).who,
     pad: r2(f.pad), hfLimW: r2(f.hfLimW), lb: r2(f.lb), portLimited: f.portLimited };
 }

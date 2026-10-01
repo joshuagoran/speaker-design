@@ -1,5 +1,5 @@
 import test from "node:test";
-import { SUB_OPTIONS, MID_OPTIONS, FILL_OPTIONS, CD_OPTIONS } from "../tools/data.js";
+import { SUB_OPTIONS, MID_OPTIONS, FILL_OPTIONS, CD_OPTIONS } from "../src/lib/data.js";
 import { tsModel } from "./helpers.js";
 
 // Datasheet values that disagree with the driver's own Mms/Sd/Fs/Bl/Re by more than the tolerance.

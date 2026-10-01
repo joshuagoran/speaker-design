@@ -1,5 +1,5 @@
 import test from "node:test";
-import { subChips, midChips, hornChips, fillChips } from "../tools/chips.js";
+import { subChips, midChips, hornChips, fillChips } from "../src/lib/pa/chips.js";
 
 const heads = (F) => F.map(([, h]) => h);
 const kindOf = (F, head) => (F.find(([, h]) => h.startsWith(head)) || [])[0];
