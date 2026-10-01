@@ -12,6 +12,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,7 +21,9 @@ jobs:
       - run: npm test
       - run: sh build/build.sh pages
       # phone and tablet layout check (tests/mobile-check.mjs)
-      - run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
+      # the browser install has hung on apt before: give it 5 minutes, retry once
+      - run: npm i --no-save playwright@1.56.1 && (timeout 300 npx playwright install --with-deps chromium || timeout 300 npx playwright install --with-deps chromium)
+        timeout-minutes: 11
       - run: node tests/mobile-check.mjs dist/stack-planner.html
   deploy:
     needs: test
