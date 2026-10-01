@@ -21,9 +21,9 @@
     /* a 28 px thumb on a thin track: easier to grab than the default, which iOS requires you to hit */
     input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: 36px; }
     input[type=range]::-webkit-slider-runnable-track { height: 4px; background: var(--edge); border-radius: 2px; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -12px; border-radius: 50%; background: var(--ink); border: 3px solid var(--white); box-shadow: 0 0 0 1px var(--mid); }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -12px; border-radius: 50%; background: var(--ink); border: 3px solid var(--white); box-shadow: 0 0 0 1px var(--muted); }
     input[type=range]::-moz-range-track { height: 4px; background: var(--edge); border-radius: 2px; }
-    input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--ink); border: 3px solid var(--white); box-shadow: 0 0 0 1px var(--mid); }
+    input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--ink); border: 3px solid var(--white); box-shadow: 0 0 0 1px var(--muted); }
     .swatch { width: 40px !important; height: 40px !important; }
   }
 </style>
@@ -32,7 +32,7 @@
   // names are mapped from it, and the app code uses PAL.<name>. Nothing else in the project writes a colour literal.
   window.PAL = (function () {
     var P = {
-      ink: "#111111", white: "#ffffff", muted: "#595959", mid: "#707070", soft: "#b3b3b3", edge: "#e6e6e6", tint: "#f2f2f2",
+      ink: "#111111", white: "#ffffff", muted: "#595959", edge: "#e6e6e6",
       magenta: "#e5007e", cyan: "#0082c8", yellow: "#ffd400", subTint: "#fff3b0", midTint: "#cce6f4", cyanHue: 201,
       // status colours stay conventional and separate from the brand colours. tint: background, edge: border of a tinted note,
       // base: the colour, text: its dark shade for text
@@ -45,7 +45,7 @@
     P.accent = P.ink;
     // a colour with transparency, for chart tints and shadows
     P.alpha = function (hex, a) { var n = parseInt(hex.slice(1), 16); return "rgba(" + (n >> 16) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a + ")"; };
-    var vars = { ink: P.ink, white: P.white, muted: P.muted, mid: P.mid, edge: P.edge, accent: P.accent };
+    var vars = { ink: P.ink, white: P.white, muted: P.muted, edge: P.edge, accent: P.accent };
     var css = ":root{" + Object.keys(vars).map(function (k) { return "--" + k + ":" + vars[k]; }).join(";") + "}";
     var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
     return P;
@@ -54,19 +54,20 @@
 <script src="https://cdn.tailwindcss.com/3.4.16"></script>
 <script>
   // Tailwind's colour names mapped onto the palette: stone = the grays; green / orange (amber) / red = status; cmy-* = brand
-  // (cmy-a = actions and focus, ink today; magenta and cyan chart series; yellow accents); 4 px corners, 6 px for large ones
+  // (cmy-a = actions and focus, ink today; cmy-y = yellow accents; chart colours are read from PAL in the app code); 4 px corners, 6 px for large ones
   (function () {
-    var W = PAL.white, G1 = PAL.edge, G2 = PAL.muted, K = PAL.ink, M = PAL.magenta, Y = PAL.yellow, C = PAL.cyan, A = PAL.accent, S = PAL.status;
+    var W = PAL.white, G1 = PAL.edge, G2 = PAL.muted, K = PAL.ink, Y = PAL.yellow, A = PAL.accent, S = PAL.status;
     // a: tint (backgrounds), e: soft edge (borders of tinted notes), b: the colour, c: its dark text shade
-    var scale = function (s) { return { 50: s.tint, 100: s.tint, 200: s.edge, 300: s.base, 400: s.base, 500: s.text, 600: s.text, 700: s.text, 800: s.text, 900: s.text, 950: s.text }; };
+    var scale = function (s) { return { 50: s.tint, 200: s.edge, 300: s.base, 700: s.text, 800: s.text, 900: s.text }; };
     window.tailwind = window.tailwind || {};
     tailwind.config = { theme: { extend: {
       colors: {
-        stone: { 50: W, 100: W, 200: G1, 300: G1, 400: G2, 500: G2, 600: G2, 700: K, 800: K, 900: K, 950: K },
+        stone: { 50: W, 300: G1, 500: G2, 900: K },
         // status colours stay conventional and separate from the brand colours: green ok, orange warning, red problem
         green: scale(S.green), red: scale(S.red),
         orange: scale(S.orange), amber: scale(S.orange),
-        cmy: { c: C, m: M, y: Y, k: K, a: A }, soft: PAL.soft,
+        cmy: { y: Y, a: A },
+        soft: PAL.alpha(G2, 0.5),
       },
       borderRadius: { DEFAULT: "4px", lg: "6px" },
       boxShadow: { sheet: "0 -6px 20px " + PAL.alpha(K, 0.10) },

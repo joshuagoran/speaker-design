@@ -626,8 +626,8 @@ function StackView({ sub, mid, horn, plinth, cutaway, portStyle, layout, baffleC
 }
 
 function SignalPath() {
-  const ink = PAL.ink, mute = PAL.mid, line = PAL.mid;
-  const col = { pa2: PAL.mid, sub: PAL.cyan, mid: PAL.magenta, hf: PAL.magenta, grey: PAL.mid };
+  const ink = PAL.ink, mute = PAL.muted, line = PAL.muted;
+  const col = { pa2: PAL.muted, sub: PAL.cyan, mid: PAL.magenta, hf: PAL.magenta, grey: PAL.muted };
   const Box = ({ x, y, w, h, c, children }) => (
     <g>
       <rect x={x} y={y} width={w} height={h} rx="6" fill={PAL.white} stroke={c} strokeWidth="1.5" />
@@ -697,7 +697,7 @@ const BUTTON_VARIANT = {
 // Disabled = grey fill with dark text (readable), never faded with opacity
 function Button({ variant = "secondary", size = "md", className = "", ...p }) {
   return <button type="button" {...p}
-    className={`rounded border ${TOGGLE_SIZE[size]} ${BUTTON_VARIANT[variant]} disabled:border-stone-300 disabled:bg-stone-300 disabled:text-stone-600 disabled:cursor-not-allowed ${className}`} />;
+    className={`rounded border ${TOGGLE_SIZE[size]} ${BUTTON_VARIANT[variant]} disabled:border-stone-300 disabled:bg-stone-300 disabled:text-stone-500 disabled:cursor-not-allowed ${className}`} />;
 }
 
 // Term with a tooltip. Opens on hover, keyboard focus or tap; Esc or a tap elsewhere closes it.
@@ -737,7 +737,7 @@ function SwatchPicker({ label, value, onChange, swatches, presets, titlePrefix =
         {presets && Object.entries(presets).map(([k, f]) => (
           <button key={k} type="button" title={f.name} aria-pressed={value === k} onClick={() => onChange(k)}
             className={`px-2.5 h-7 rounded-full border-2 text-xs ${ring(value === k)}`}
-            style={{ background: f.swatch, color: k === "walnut" ? PAL.tint : PAL.ink }}>{f.name}</button>
+            style={{ background: f.swatch, color: k === "walnut" ? PAL.white : PAL.ink }}>{f.name}</button>
         ))}
         {swatches.map(([hex, name]) => (
           <button key={hex} type="button" title={titlePrefix + name} aria-label={titlePrefix + name} aria-pressed={!preset && value.toLowerCase() === hex} onClick={() => onChange(hex)}
@@ -819,7 +819,7 @@ function StatLabel({ k, extra }) {
 }
 function StatRow({ k, v, note, tip }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-stone-200 py-1">
+    <div className="flex justify-between gap-4 border-b border-stone-300 py-1">
       <span className="text-stone-500 shrink-0"><StatLabel k={k} extra={tip} /></span>
       <span className="text-right min-w-0">
         <span className="font-medium tabular-nums">{v}</span>
@@ -1044,14 +1044,14 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         {grid}
         {marks.filter((m) => m.f > fmin && m.f < fmax).map((m, i, ms) => (
           <g key={m.label + i}>
-            <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke={PAL.mid} strokeWidth="1" strokeDasharray="3 4" />
+            <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke={PAL.muted} strokeWidth="1" strokeDasharray="3 4" />
             <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{m.label}</text>
           </g>
         ))}
         {paths.map((p) => <path key={p.label + "f"} d={p.fill} fill={p.tint} />)}
         {paths.map((p) => <path key={p.label} d={p.d} fill="none" stroke={p.stroke} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />)}
         {hf && (<g pointerEvents="none">
-          <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke={PAL.mid} strokeWidth="1" />
+          <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke={PAL.muted} strokeWidth="1" />
           {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke={PAL.white} strokeWidth="1.5" />)}
           {(() => { const t = `${hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz`, w = t.length * 6.5 + 8, X = Math.max(x0 + w / 2, Math.min(x1 - w / 2, px(hf)));
             return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill={PAL.ink} /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="12" fontFamily="Inconsolata, monospace" fill={PAL.white}>{t}</text></g>; })()}
@@ -1063,7 +1063,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill={PAL.muted} fontSize="12" fontFamily="Inconsolata, monospace">{yLabel}</text>
       </svg>
       {paths.length > 0 && (
-        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1 text-xs text-stone-600" style={{ fontFamily: "var(--font)" }}>
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1 text-xs text-stone-500" style={{ fontFamily: "var(--font)" }}>
           {paths.map((p) => <span key={p.label} className="flex items-center gap-1.5"><span className="inline-block w-4 h-0.5" style={{ background: p.stroke }} />{p.label}</span>)}
         </div>
       )}
@@ -1122,7 +1122,7 @@ function DispMap({ map, title }) {
   return (
     <div>
       <div className="flex justify-between items-baseline text-xs text-stone-500 mb-1"><span>{title}</span>
-        <span className="tabular-nums text-stone-700">{hover ? `${map.angles[hover.j]}° · ${map.freqs[hover.i] >= 1000 ? (map.freqs[hover.i] / 1000).toFixed(1) + "k" : map.freqs[hover.i].toFixed(0)} Hz · ${map.rows[hover.j][hover.i].toFixed(1)} dB` : "dB vs on-axis"}</span></div>
+        <span className="tabular-nums text-stone-900">{hover ? `${map.angles[hover.j]}° · ${map.freqs[hover.i] >= 1000 ? (map.freqs[hover.i] / 1000).toFixed(1) + "k" : map.freqs[hover.i].toFixed(0)} Hz · ${map.rows[hover.j][hover.i].toFixed(1)} dB` : "dB vs on-axis"}</span></div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" style={{ touchAction: "pan-y" }} onPointerMove={move} onPointerDown={move} onPointerLeave={() => setHover(null)} role="img" aria-label={`${title}: level against angle and frequency`}>
         {map.rows.map((row, j) => row.map((db, i) => <rect key={j * nF + i} x={L + i * cw} y={T + j * ch} width={cw + 0.5} height={ch + 0.5} fill={col(db)} />))}
         {ticksA.map((a) => { const j = map.angles.indexOf(a); return <text key={a} x={L - 5} y={T + (j + 0.5) * ch + 3} fontSize="10" textAnchor="end" fill={PAL.muted}>{a}°</text>; })}
@@ -1145,10 +1145,10 @@ function RoomView({ spacing, toe, seat, setSeat, angles }) {
     setSeat({ x: Math.round(((x - W / 2) / k) * 4) / 4, y: Math.max(2, Math.round(((y - 14) / k) * 4) / 4) });
   };
   const spk = (sx, sign) => {
-    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${-sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill={PAL.ink} /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke={PAL.mid} strokeDasharray="2 2" /></g>;
+    return <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${-sign * toe})`}><rect x={-7} y={-6} width={14} height={10} rx="1.5" fill={PAL.ink} /><line x1={0} y1={4} x2={0} y2={4 + 22} stroke={PAL.muted} strokeDasharray="2 2" /></g>;
   };
   return (
-    <svg viewBox={`0 0 ${W} ${H + 20}`} className="w-full h-auto rounded border border-stone-200 bg-white" style={{ touchAction: "none" }} onPointerDown={drag} onPointerMove={drag} role="img" aria-label="Room seen from above; drag the seat">
+    <svg viewBox={`0 0 ${W} ${H + 20}`} className="w-full h-auto rounded border border-stone-300 bg-white" style={{ touchAction: "none" }} onPointerDown={drag} onPointerMove={drag} role="img" aria-label="Room seen from above; drag the seat">
       {[-1, 1].map((sg) => <line key={sg} x1={px((sg * spacing) / 2)} y1={py(0)} x2={px(seat.x)} y2={py(seat.y)} stroke={PAL.edge} />)}
       {spk(-spacing / 2, 1)}{spk(spacing / 2, -1)}
       <circle cx={px(seat.x)} cy={py(seat.y)} r="7" fill={PAL.cyan} stroke={PAL.white} strokeWidth="2" />
@@ -1171,9 +1171,9 @@ function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }) {
         ? <g><rect x={W / 2 - (face.w * k) / 8} y={top * k - 3} width={(face.w * k) / 4} height={3} fill={PAL.ink} /><rect x={W / 2 - (face.w * k) / 2} y={0} width={face.w * k} height={top * k - 3} rx={(face.h * k) / 3} fill={PAL.muted} stroke={PAL.ink} strokeWidth="1" /></g>
         : <rect x={W / 2 - (face.w * k) / 2} y={y(lay.tweeterIn) - (face.h * k) / 2} width={face.w * k} height={face.h * k} rx={guide ? 3 : face.w * k / 2} fill={PAL.muted} />}
       <circle cx={W / 2} cy={y(lay.tweeterIn)} r={0.5 * k} fill={PAL.edge} />
-      <circle cx={W / 2} cy={y(lay.wooferIn)} r={(w.size * 0.95 * k) / 2} fill={PAL.edge} stroke={PAL.mid} />
+      <circle cx={W / 2} cy={y(lay.wooferIn)} r={(w.size * 0.95 * k) / 2} fill={PAL.edge} stroke={PAL.muted} />
       {pr && Array.from({ length: pr.n }, (_, i) => { const s = prShape(pr.drv), cy = H - (0.75 + 0.25 + (i + 0.5) * (s.h + 0.5)) * k;
-        return <rect key={`r${i}`} x={W / 2 - (s.w * k) / 2} y={cy - (s.h * k) / 2} width={s.w * k} height={s.h * k} rx={(s.w * k) / 2} fill="none" stroke={PAL.mid} strokeDasharray="3 2" />; })}
+        return <rect key={`r${i}`} x={W / 2 - (s.w * k) / 2} y={cy - (s.h * k) / 2} width={s.w * k} height={s.h * k} rx={(s.w * k) / 2} fill="none" stroke={PAL.muted} strokeDasharray="3 2" />; })}
       {vented && port.shape === "slot" && <rect x={bx + 0.75 * k} y={H - (0.75 + port.h) * k} width={(dim.w - 1.5) * k} height={port.h * k} fill={PAL.ink} />}
       {vented && port.shape !== "slot" && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill={PAL.ink} />)}
     </svg>
@@ -1196,7 +1196,7 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
   const c = k.config, m = k.metrics, d = k.delta || {};
   const cw = HIFI_WOOFERS.find((o) => o.id === k.woofer), ct = HIFI_TWEETERS.find((o) => o.id === k.tweeter);
   const tile = (label, v, delta) => (
-    <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1.5">
+    <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
       <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
       <div className="tabular-nums">{v}</div>{delta}
     </div>
@@ -1204,13 +1204,13 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
   const who = { Xmax: "cone travel", port: "port air speed", radiator: "radiator travel", thermal: "the woofer's power rating", amp: "the amp" }[k.whoW] || k.whoW;
   return (
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
-      <div className="text-xs uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
+      <div className="text-xs uppercase tracking-wider font-bold text-stone-500">{k.label} · {i + 1} of {n}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{cw.size}″ {k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} pr={prOf(c)} guide={k.guided ? guide : null} small />
         <OutChart curve={k.curve} cur={curCurve} fmin={15} fmax={20000} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
       </div>
-      <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" && c.port.shape === "slot" ? ` (${c.port.h}″ slot, ${c.port.len}″ long)` : c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : c.box === "radiator" && prOf(c) ? ` (${c.pr.n} × ${prOf(c).drv.name}, +${c.pr.addG} g)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
+      <div className="text-xs text-stone-500">{k.names.tweeter} · {c.box}{c.box === "vented" && c.port.shape === "slot" ? ` (${c.port.h}″ slot, ${c.port.len}″ long)` : c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : c.box === "radiator" && prOf(c) ? ` (${c.pr.n} × ${prOf(c).drv.name}, +${c.pr.addG} g)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile("Drivers, pair", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Weight", `${m.lb.toFixed(0)} lb`, <Delta v={d.lb} unit=" lb" lowerIsBetter digits={1} />)}
@@ -1219,7 +1219,7 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
       </div>
       <div className="text-xs leading-snug"><b className="font-semibold">Limited by:</b> {who}</div>
       {k.warnings.filter((h) => !/^Woofer limited by/.test(h)).map((h) => <div key={h} className="text-xs border border-l-4 rounded px-2 py-1 bg-amber-50 border-amber-200 border-l-amber-300"><b className="font-semibold text-amber-700">{h}</b></div>)}
-      <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
+      <div className="text-xs text-stone-500">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
         <Button variant="primary" onClick={onLoad} className="flex-1">Load</Button>
@@ -1369,7 +1369,7 @@ function HifiPage() {
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
         <div className="flex gap-4 items-center">
         <div className="shrink-0"><HifiFront dim={dim} w={w} t={tt} lay={sys.lay} vented={sys.vented} port={port} pr={sys.radiator ? pr : null} guide={guide} /></div>
-        <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+        <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
           {tile("Net volume", sys.net.toFixed(1), "L")}
           {sys.Fb != null ? tile("Tuning Fb", sys.Fb.toFixed(0), "Hz") : tile("Qtc", sys.Qtc.toFixed(2), "")}
           {tile("F3 in room", sys.f3.toFixed(0), "Hz")}
@@ -1387,13 +1387,13 @@ function HifiPage() {
           {F.map(([kind, head, body]) => (
             <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
               <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-              <span className="text-stone-600">{body}</span>
+              <span className="text-stone-500">{body}</span>
             </div>
           ))}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
           <RoomView spacing={spacing} toe={toe} seat={seat} setSeat={setSeat} angles={[(gL.th * 180) / Math.PI, (gR.th * 180) / Math.PI]} />
-          <div className="text-sm text-stone-600 leading-relaxed">
+          <div className="text-sm text-stone-500 leading-relaxed">
             <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold mb-1">At the seat</div>
             <div>{(seatDist / FT).toFixed(1)} ft from the pair</div>
             <div>Off axis: L {((gL.th * 180) / Math.PI).toFixed(0)}°, R {((gR.th * 180) / Math.PI).toFixed(0)}°</div>
@@ -1405,14 +1405,14 @@ function HifiPage() {
           <div className="flex gap-1 mb-2">{[["Horizontal", "h"], ["Vertical", "v"]].map(([l, v]) => <ToggleBtn key={v} onClick={() => setPlane(v)} on={plane === v}>{l}</ToggleBtn>)}</div>
           <DispMap map={map} title={plane === "h" ? "Horizontal dispersion, one speaker (0° is on axis)" : "Vertical dispersion: below (−) to above (+) the tweeter axis"} />
         </div>
-        <details className="text-xs text-stone-600 rounded border border-stone-300 bg-stone-50 px-3 py-2">
-          <summary className="cursor-pointer text-sm text-stone-700 py-1">Details</summary>
+        <details className="text-xs text-stone-500 rounded border border-stone-300 bg-stone-50 px-3 py-2">
+          <summary className="cursor-pointer text-sm text-stone-900 py-1">Details</summary>
           <div className="leading-relaxed mt-1 flex flex-col gap-1.5">
             <div>Woofer {sys.lay.wooferIn.toFixed(1)}″ and tweeter {sys.lay.tweeterIn.toFixed(1)}″ from the bottom, {sys.lay.spacingIn.toFixed(1)}″ apart. {sys.gross.toFixed(1)} L gross, {sys.net.toFixed(1)} L net{sys.hpf ? `; DSP highpass ${sys.hpf} Hz (BW24) below the port tuning` : ""}.</div>
             <div>Tweeter trimmed {sys.trim.toFixed(1)} dB in the DSP to match the woofer; baffle step centered at {sys.bsF3.toFixed(0)} Hz{bsc ? `, ${bsc} dB boost` : ""}.</div>
-            <div><Tip tip={w.note}><span className="font-medium text-stone-700">{w.name}</span></Tip></div>
-            <div><Tip tip={t.note}><span className="font-medium text-stone-700">{t.name}</span></Tip></div>
-            {guide && <div><Tip tip={guideSel.note}><span className="font-medium text-stone-700">{guide.name}</span></Tip></div>}
+            <div><Tip tip={w.note}><span className="font-medium text-stone-900">{w.name}</span></Tip></div>
+            <div><Tip tip={t.note}><span className="font-medium text-stone-900">{t.name}</span></Tip></div>
+            {guide && <div><Tip tip={guideSel.note}><span className="font-medium text-stone-900">{guide.name}</span></Tip></div>}
           </div>
         </details>
       </div>
@@ -1432,7 +1432,7 @@ function HifiPage() {
           <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="″" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
           <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="″" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
           <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="″" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
-          <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-600">Ports</span>{hLk("box", "sealed, ported or radiator")}</div>
+          <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-500">Ports</span>{hLk("box", "sealed, ported or radiator")}</div>
           <div className="grid grid-cols-3 gap-1 mb-3">{[["Sealed", "sealed", 0, "Sealed"], ["1 port", "vented", 1, "One round port"], ["2 ports", "vented", 2, "Two round ports"], ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"], ["1 PR", "radiator", 1, "One passive radiator"], ["2 PR", "radiator", 2, "Two passive radiators"]].map(([l, v, n, tip]) => {
             const slotOn = port.shape === "slot";
             const on = box === v && (v === "sealed" || (v === "vented" ? (n === "slot" ? slotOn : !slotOn && port.n === n) : pr.n === n));
@@ -1458,7 +1458,7 @@ function HifiPage() {
           <Slider label="Tweeter amp @ 8 Ω" value={tAmpW} min={5} max={200} step={5} unit=" W" onChange={setTAmpW} extra={hLk("tAmpW", "the tweeter amp power")} />
         </Card>
         <Card>
-          <div className="text-sm text-stone-600 mb-1">Placement</div>
+          <div className="text-sm text-stone-500 mb-1">Placement</div>
           <div className="flex flex-wrap gap-1 mb-3">{Object.entries(HIFI_PLACES).map(([k, p]) => <ToggleBtn key={k} onClick={() => setPlace(k)} on={place === k}>{p.name}</ToggleBtn>)}</div>
           {place !== "free" && <Slider label="Distance to the wall" value={wallFt} min={0.5} max={6} step={0.25} unit=" ft" onChange={setWallFt} />}
           <Slider label="Speaker spacing" value={spacing} min={3} max={14} step={0.5} unit=" ft" onChange={setSpacing} />
@@ -1484,10 +1484,10 @@ function NotesPage() {
               <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
                 <div className="flex justify-between items-baseline mb-1">
                   <SectionHead><Tip tip={r.note}>{r.name}</Tip></SectionHead>
-                  <span className="text-sm tabular-nums text-stone-600">≈ ${total.toLocaleString()}</span>
+                  <span className="text-sm tabular-nums text-stone-500">≈ ${total.toLocaleString()}</span>
                 </div>
                 <div className="mb-3" />
-                <ul className="text-sm text-stone-700 space-y-1">
+                <ul className="text-sm text-stone-900 space-y-1">
                   {r.items.map(([label, cost]) => (
                     <li key={label} className="flex justify-between gap-3"><span>{label}</span><span className="tabular-nums text-stone-500">${cost}</span></li>
                   ))}
@@ -1500,11 +1500,11 @@ function NotesPage() {
         <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
           <SectionHead className="mb-2">Signal path (mains rack)</SectionHead>
           <div className="max-w-4xl"><SignalPath /></div>
-          <p className="text-sm text-stone-700 max-w-3xl mt-3"><Tip tip="the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.">How the DSP work is split</Tip></p>
+          <p className="text-sm text-stone-900 max-w-3xl mt-3"><Tip tip="the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.">How the DSP work is split</Tip></p>
         </section>
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
           <SectionHead className="mb-3">Amp DSP: QSC GXD4 / GXD8</SectionHead>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["Power per channel", "GXD4: 400 W into 8 \u03a9, 600 W into 4 \u03a9. GXD8: 800 W into 8 \u03a9, 1200 W into 4 \u03a9. Continuous, both channels driven. Voltage gain 33.5 dB (GXD4), 36.5 dB (GXD8)."],
               ["Filters", "Linkwitz-Riley 24 dB/oct only. Highpass 20 Hz\u20134 kHz, lowpass 60 Hz\u20134 kHz. No Butterworth and nothing steeper. Plus a 4-band PEQ (\u00b112 dB, 0.1\u20133 oct) and 50 ms of delay."],
@@ -1512,13 +1512,13 @@ function NotesPage() {
               ["What it can't do", "No threshold in volts, no attack or release settings, no limiting confined to one band. QSC don't say how the power setting maps to a threshold (the spec sheet calls it a peak limiter, the manual an RMS limiter)."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
           </ul>
           <h3 className="text-base font-medium mt-5 mb-2">Protecting an excursion-limited sub with a GXD</h3>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["1. Highpass", "At or a little above tuning, LR24. Set the planner's highpass to LR24 to match."],
               ["2. Limiter power", "The lower of the planner's \u201ccone reaches Xmax at X W\u201d and the driver's rating; Medium or Aggressive. On a GXD8 the ceiling is 800 W, which is just the amp's own limit."],
@@ -1527,7 +1527,7 @@ function NotesPage() {
               ["Horns", "A GXD4 puts 400 W on a 35 W AES driver like the DE360. Its limiter, set to the driver's rating, is the protection; set the planner's HF amp slider to the same power so its numbers match."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
@@ -1540,10 +1540,10 @@ function NotesPage() {
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
           <SectionHead className="mb-3">Crossover / DSP: PA2 and alternatives</SectionHead>
-          <p className="text-sm text-stone-700 mb-3 max-w-3xl">What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set in volts or dBu with attack and release, a slower RMS limiter, PEQ and delay. At ~15 ft from the mixer keep the inputs balanced; outputs to amps in the same rack matter less.</p>
+          <p className="text-sm text-stone-900 mb-3 max-w-3xl">What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set in volts or dBu with attack and release, a slower RMS limiter, PEQ and delay. At ~15 ft from the mixer keep the inputs balanced; outputs to amps in the same rack matter less.</p>
           <div className="overflow-x-auto"><table className="text-sm w-full min-w-[720px] border-collapse">
             <thead><tr className="text-stone-500 text-left border-b border-stone-300">
-              {["Unit", "I/O", "Slopes", "Limiter", "PEQ / out", "Price (US)", "Notes"].map((h, i) => <th key={h} className={`py-1 pr-4 font-normal ${i === 0 ? "sticky left-0 bg-stone-100" : ""}`}>{h}</th>)}
+              {["Unit", "I/O", "Slopes", "Limiter", "PEQ / out", "Price (US)", "Notes"].map((h, i) => <th key={h} className={`py-1 pr-4 font-normal ${i === 0 ? "sticky left-0 bg-stone-50" : ""}`}>{h}</th>)}
             </tr></thead>
             <tbody>
               {[
@@ -1555,19 +1555,19 @@ function NotesPage() {
               ["t.racks DSP 408", "4×8 XLR", "up to 48 (unconfirmed)", "Attack, release; units unclear", "9", "$439", "Thomann only in the US."],
               ["dbx DriveRack PA2 (current)", "2×6 XLR", "BW / LR to 48", "No attack or release; up to 3 dB overshoot", "8, linked L/R", "~$599, ~$366 used", "Left and right share EQ and delay per band; 10 ms output delay."],
               ].map((r) => (
-                <tr key={r[0]} className="border-b border-stone-200 align-top">
-                  {r.map((c, i) => <td key={i} className={`py-1.5 pr-4 ${i === 0 ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-100" : ""}`}>{c}</td>)}
+                <tr key={r[0]} className="border-b border-stone-300 align-top">
+                  {r.map((c, i) => <td key={i} className={`py-1.5 pr-4 ${i === 0 ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : ""}`}>{c}</td>)}
                 </tr>
               ))}
             </tbody>
           </table></div>
-          <p className="text-sm text-stone-700 mt-2 max-w-3xl">Pick: a used DriveRack 260 on a budget; new, the Ashly AQM408 (limiters in dBu with attack and release, 4×8) or the VENU360 (front panel plus app). Keep the GXD limiters as a backstop either way. <Tip tip="Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026.">Why not the others?</Tip></p>
+          <p className="text-sm text-stone-900 mt-2 max-w-3xl">Pick: a used DriveRack 260 on a budget; new, the Ashly AQM408 (limiters in dBu with attack and release, 4×8) or the VENU360 (front panel plus app). Keep the GXD limiters as a backstop either way. <Tip tip="Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026.">Why not the others?</Tip></p>
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
           <SectionHead className="mb-3">Home inputs: Gemini MXR-01BT</SectionHead>
-          <p className="text-sm text-stone-700 mb-3 max-w-3xl">Turntable, line and phone into the same DSP and amps, with one master volume. A 2-channel DJ mixer does it all in one box.</p>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <p className="text-sm text-stone-900 mb-3 max-w-3xl">Turntable, line and phone into the same DSP and amps, with one master volume. A 2-channel DJ mixer does it all in one box.</p>
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["What it has", "2 channels, each switchable phono or line, 3-band EQ, Bluetooth input, 1/4″ mic, headphones, all-metal chassis."],
               ["Outputs", "Balanced 1/4″ TRS master (to the DSP), RCA master, and an RCA booth out with its own level."],
@@ -1577,7 +1577,7 @@ function NotesPage() {
               ["Turn-on", "Mixer and sources first, amps last; amps off first."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
@@ -1587,8 +1587,8 @@ function NotesPage() {
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
           <SectionHead className="mb-3">Passive crossover: calibrate and build</SectionHead>
-          <p className="text-sm text-stone-700 mb-3 max-w-3xl">For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80 per box in parts. All values get tuned, not just the pad.</p>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <p className="text-sm text-stone-900 mb-3 max-w-3xl">For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80 per box in parts. All values get tuned, not just the pad.</p>
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["1. Gear (~$150, once)", "UMIK-1 mic, REW (free) to measure, VituixCAD (free) to design, and an impedance jig (Dayton DATS V3, or a resistor + soundcard in REW)."],
               ["2. Measure in the finished box", "Woofer and HF separately, no crossover: response at 1 m on axis (outdoors or gated), impedance, and a near-field of woofer + port. Don't move the mic between drivers, so the phase stays valid. Optional: 15/30/45° off axis."],
@@ -1598,24 +1598,24 @@ function NotesPage() {
               ["6. Final build", "Stripboard is fine for the HF side; run the woofer path (~6 A at 300 W) in 14–16 AWG wire, not the strips, or wire point to point on a ply board. Space the coils or turn them 90° apart, away from the woofer magnet. Mount on foam, re-measure installed, copy for the other boxes and spot-check each."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
           </ul>
-          <p className="text-sm text-stone-700 mt-3 max-w-3xl"><Tip tip="Roughly a weekend to measure and design, plus an evening to build and verify.">About 1 weekend</Tip></p>
+          <p className="text-sm text-stone-900 mt-3 max-w-3xl"><Tip tip="Roughly a weekend to measure and design, plus an evening to build and verify.">About 1 weekend</Tip></p>
         </section>
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
           <SectionHead className="mb-3">Materials</SectionHead>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["Prototype in particleboard", "Cheap and flat. Build it to verify duct tuning, then transfer interior dimensions \u2014 not the cut list \u2014 to the real material."],
               ["Consider 5/8\" or 1/2\" for the final boxes", "Sub column drops 119 \u2192 107 \u2192 95 lb loaded. Needs more bracing, and the extra interior volume lowers Fb, so the duct gets shorter."],
               ["MDO for the baffles", "Paints far better than birch, no edge penalty since no baffle edge is exposed."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
@@ -1624,7 +1624,7 @@ function NotesPage() {
 
         <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
           <SectionHead className="mb-3">Still to decide</SectionHead>
-          <ul className="text-sm text-stone-700 space-y-2 max-w-3xl">
+          <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               ["Baffle mounting", "Cleats (forgiving, costs 3/4\" of interior on each side) or a stopped rabbet in the frame panels (tighter, squares the box, needs a dado). Baffle size changes with the choice."],
               ["Bracing", "Not drawn. Volume and weight allow for two braces. Center ribs, slat ladder or windowed shelves — decide once handle recesses are placed, since they compete for the same panel area."],
@@ -1641,7 +1641,7 @@ function NotesPage() {
               ["Baffle material", "MDO if the baffles are painted — no baffle edge is exposed in any of the current configurations, so there is no reason not to. Birch only if the baffle is ever meant to be clear-finished."],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-400 shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
                 <span><span className="font-medium">{t}.</span> {d}</span>
               </li>
             ))}
@@ -1679,8 +1679,8 @@ function FillsPage() {
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8" style={{ fontFamily: "var(--font)" }}>
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
-        <p className="text-sm text-stone-600"><Tip tip="Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).">Passive fills</Tip></p>
-        <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+        <p className="text-sm text-stone-500"><Tip tip="Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).">Passive fills</Tip></p>
+        <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
           {tile("Net volume", net.toFixed(0), "L")}
           {vM ? tile("Tuning Fb", vM.Fb.toFixed(0), "Hz") : tile("Qtc", sM.Qtc.toFixed(2), "")}
           {tile("F3", f3.toFixed(0), "Hz")}
@@ -1704,11 +1704,11 @@ function FillsPage() {
           {F.map(([kind, head, body]) => (
             <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
               <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-              <span className="text-stone-600">{body}</span>
+              <span className="text-stone-500">{body}</span>
             </div>
           ))}
         </div>
-        <p className="text-xs text-stone-500"><span className="font-medium text-stone-600">{drv.name}.</span> {drv.note} <Tip tip={`Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement ${ts.disp != null ? "as published" : `not published; ${disp} L assumed`}.`}>Spec notes</Tip></p>
+        <p className="text-xs text-stone-500"><span className="font-medium text-stone-500">{drv.name}.</span> {drv.note} <Tip tip={`Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement ${ts.disp != null ? "as published" : `not published; ${disp} L assumed`}.`}>Spec notes</Tip></p>
       </div>
       <aside className="min-w-0 md:col-span-2">
         <Pick label="Coaxial driver" options={FILL_OPTIONS} value={drv} onChange={setDrv} />
@@ -1744,15 +1744,15 @@ function SheetDrawing({ sheet, S, idx }) {
   const sc = 4, W = S.w * sc, H = S.h * sc;
   const [box, cw] = useWidth(S.w === 48 ? 160 : 200);
   const fs = (12 * (W + 4)) / cw;   // 12 css px
-  const colors = { Sub: PAL.subTint, Mid: PAL.midTint };
+  const colors = { Sub: PAL.subTint, Mid: PAL.mutedTint };
   return (
     <div ref={box} className={`flex flex-col gap-1 w-full ${S.w === 48 ? "max-w-[240px] sm:w-[160px]" : "max-w-[300px] sm:w-[200px]"}`}>
       <div className="text-xs text-stone-500">Sheet {idx + 1}</div>
       <svg viewBox={`-2 -2 ${W + 4} ${H + 4}`} style={{ width: "100%", height: "auto" }} role="img" aria-label={`Sheet ${idx + 1} layout`}>
-        <rect x="0" y="0" width={W} height={H} fill={PAL.white} stroke={PAL.mid} />
+        <rect x="0" y="0" width={W} height={H} fill={PAL.white} stroke={PAL.muted} />
         {sheet.items.map((it, i) => (
           <g key={i}>
-            <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || PAL.edge} stroke={PAL.mid} strokeWidth="0.8" />
+            <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || PAL.edge} stroke={PAL.muted} strokeWidth="0.8" />
             {it.w * sc > fs * 3.6 && it.h * sc > fs * 1.3 && (
               <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + fs * 0.35} textAnchor="middle" fontSize={fs} fill={PAL.ink} fontFamily="Inconsolata, monospace">{it.box} {it.part.split(" ")[0]}</text>
             )}
@@ -1780,20 +1780,20 @@ function CutlistPage(props) {
         <div><div className="text-sm text-stone-500 mb-1">Stacks</div>
           <div className="flex gap-1">{[1, 2, 4].map((n) => <ToggleBtn key={n} on={sets === n} onClick={() => setSets(n)}>{n}</ToggleBtn>)}</div></div>
       </div>
-      <p className="text-sm text-stone-600 mb-4 max-w-3xl">From the planner's current boxes: {tName(wall)} walls, 3/4″ baffles set {f8(props.inset)}″ back, back panels in a rabbet. Sizes are finished dimensions in inches (width × length); {f8(kerf)}″ kerf allowed in the layout. Quantities are for {sets} stack{sets > 1 ? "s" : ""}.</p>
+      <p className="text-sm text-stone-500 mb-4 max-w-3xl">From the planner's current boxes: {tName(wall)} walls, 3/4″ baffles set {f8(props.inset)}″ back, back panels in a rabbet. Sizes are finished dimensions in inches (width × length); {f8(kerf)}″ kerf allowed in the layout. Quantities are for {sets} stack{sets > 1 ? "s" : ""}.</p>
       <div className="overflow-x-auto mb-6"><table className="text-sm w-full sm:min-w-[640px] border-collapse">
         <thead><tr className="text-stone-500 text-left border-b border-stone-300">
           <th className="py-1 pr-3 font-normal">Box</th><th className="py-1 pr-3 font-normal">Part</th><th className="py-1 pr-3 font-normal text-right">Qty</th>
           <th className="py-1 pr-3 font-normal text-right">Width × length</th><th className="py-1 pr-3 font-normal">Ply</th><th className="py-1 font-normal hidden sm:table-cell">Notes</th>
         </tr></thead>
         <tbody>{parts.map((p, i) => (
-          <tr key={i} className="border-b border-stone-200 align-top">
+          <tr key={i} className="border-b border-stone-300 align-top">
             <td className="py-1 pr-3">{p.box}</td><td className="py-1 pr-3">{p.part}{p.note && <span className="block sm:hidden text-xs text-stone-500">{p.note}</span>}</td><td className="py-1 pr-3 text-right tabular-nums">{p.qty * sets}</td>
             <td className="py-1 pr-3 text-right tabular-nums whitespace-nowrap">{f8(Math.min(p.a, p.b))} × {f8(Math.max(p.a, p.b))}</td>
-            <td className="py-1 pr-3">{tName(p.t)}</td><td className="py-1 text-stone-600 hidden sm:table-cell">{p.note}</td>
+            <td className="py-1 pr-3">{tName(p.t)}</td><td className="py-1 text-stone-500 hidden sm:table-cell">{p.note}</td>
           </tr>))}</tbody>
       </table></div>
-      {vent.length > 0 && <p className="text-sm text-stone-600 mb-6">Also: {vent.join("; ")}.</p>}
+      {vent.length > 0 && <p className="text-sm text-stone-500 mb-6">Also: {vent.join("; ")}.</p>}
       <SectionHead className="mb-2">Sheet layout, {S.name}</SectionHead>
       {packs.map((pk) => (
         <div key={pk.t} className="mb-6">
@@ -1816,7 +1816,7 @@ const LOCK_OPEN_PATH = "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h2c0-1.66 1.34-3 
 function LockIcon({ locked }) {
   return <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d={locked ? LOCK_PATH : LOCK_OPEN_PATH} fill="currentColor" fillRule="evenodd" /></svg>;
 }
-const lockCls = (on) => `inline-flex items-center justify-center gap-0.5 min-w-[32px] h-8 px-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 text-stone-400 bg-white hover:border-stone-500 hover:text-stone-600"}`;
+const lockCls = (on) => `inline-flex items-center justify-center gap-0.5 min-w-[32px] h-8 px-1.5 rounded border text-xs ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 text-stone-500 bg-white hover:border-stone-500 hover:text-stone-500"}`;
 function LockBtn({ on, onClick, what }) {
   const tip = on ? `Locked: the optimizer keeps ${what}` : `Unlocked: the optimizer may change ${what}`;
   return <button type="button" onClick={onClick} aria-pressed={on} aria-label={tip} title={tip} className={lockCls(on)}><LockIcon locked={on} /></button>;
@@ -1900,11 +1900,11 @@ function BoxFront({ g, cur }) {
     vent.push(<circle key={i} cx={a.sb.x + gap * (i + 1)} cy={a.sb.y + a.sb.h - t - (v.dia * k) / 2 - 2} r={(v.dia * k) / 2} fill={PAL.ink} />);
   }
   const ventH = g.portStyle === "slots" || g.portStyle === "folded" ? v.slotH * k + t : g.portStyle.startsWith("round") ? v.dia * k + 4 : 0;
-  const driver = (box, size, below = 0) => <circle cx={box.x + box.w / 2} cy={box.y + (box.h - below) / 2} r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2} fill={PAL.edge} stroke={PAL.mid} strokeWidth="1" />;
+  const driver = (box, size, below = 0) => <circle cx={box.x + box.w / 2} cy={box.y + (box.h - below) / 2} r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2} fill={PAL.edge} stroke={PAL.muted} strokeWidth="1" />;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={`Front view: sub ${g.sub.w} × ${g.sub.h}″, mid ${g.mid.w} × ${g.mid.h}″${cur ? "; your design dashed" : ""}`}>
-      {b && b.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} fill="none" stroke={PAL.mid} strokeWidth="1" strokeDasharray="3 2" />)}
-      {a.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} rx="1" fill={q === a.hb ? PAL.mid : PAL.edge} fillOpacity={q === a.hb ? 1 : 0.85} stroke={PAL.ink} strokeWidth="1.2" />)}
+      {b && b.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} fill="none" stroke={PAL.muted} strokeWidth="1" strokeDasharray="3 2" />)}
+      {a.r.map((q, i) => <rect key={i} x={q.x} y={q.y} width={q.w} height={q.h} rx="1" fill={q === a.hb ? PAL.muted : PAL.edge} fillOpacity={q === a.hb ? 1 : 0.85} stroke={PAL.ink} strokeWidth="1.2" />)}
       {vent}
       {g.tower && <line x1={a.sb.x} x2={a.sb.x + a.sb.w} y1={a.mb.y + a.mb.h} y2={a.mb.y + a.mb.h} stroke={PAL.ink} strokeWidth="1.2" />}
       {driver(g.tower ? { ...a.sb, y: a.mb.y + a.mb.h, h: a.sb.h - a.mb.h } : a.sb, g.subSize, ventH)}
@@ -1930,13 +1930,13 @@ function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90], top = 13
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto touch-none" onPointerMove={move} onPointerLeave={() => setHover(null)} role="img"
       aria-label="Clean sub output from 20 to 200 Hz, this design against yours">
-      {band && <rect x={x(band[0])} y={T} width={x(band[1]) - x(band[0])} height={H - T - B} fill={PAL.tint} />}
+      {band && <rect x={x(band[0])} y={T} width={x(band[1]) - x(band[0])} height={H - T - B} fill={PAL.alpha(PAL.ink, 0.05)} />}
       {ticks.map((d) => <g key={d}><line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke={PAL.edge} /><text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill={PAL.muted}>{d}</text></g>)}
       {(fmax > 1000 ? [20, 100, 1000, 10000] : [20, 50, 100, 200, 500]).filter((f) => f >= fmin && f <= fmax).map((f) => <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill={PAL.muted}>{f >= 1000 ? f / 1000 + "k" : f}</text>)}
-      {cur && <path d={path(cur)} fill="none" stroke={PAL.mid} strokeWidth="1.5" strokeDasharray="4 3" />}
+      {cur && <path d={path(cur)} fill="none" stroke={PAL.muted} strokeWidth="1.5" strokeDasharray="4 3" />}
       <path d={path(curve)} fill="none" stroke={PAL.ink} strokeWidth="2" />
       {hover ? (<>
-        <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke={PAL.mid} strokeWidth="0.75" />
+        <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} stroke={PAL.muted} strokeWidth="0.75" />
         <circle cx={x(h1[0])} cy={y(h1[1])} r="2.5" fill={PAL.ink} stroke={PAL.white} strokeWidth="1" />
         {(() => { const X = Math.max(L + 14, Math.min(W - R - 14, x(hover))); return <g><rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill={PAL.ink} /><text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill={PAL.white}>{hover.toFixed(0)} Hz</text></g>; })()}
         <text x={L} y={9} fontSize="8.5" fill={PAL.ink}>{hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB{h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}</text>
@@ -1949,7 +1949,7 @@ function OutChart({ curve, cur, fmin = 20, fmax = 200, band = [40, 90], top = 13
 function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave }) {
   const c = k.config, m = k.metrics, d = k.delta || {};
   const tile = (label, v, delta) => (
-    <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1.5">
+    <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
       <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
       <div className="tabular-nums">{v}</div>{delta}
     </div>
@@ -1957,13 +1957,13 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
   const sheets = k.build.sheets.map((x) => `${x.n} sheet${x.n > 1 ? "s" : ""} ${x.t === 0.5 ? "1/2″" : x.t === 0.75 ? "3/4″" : x.t + "″"}`).join(" + ");
   return (
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
-      <div className="text-xs uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
+      <div className="text-xs uppercase tracking-wider font-bold text-stone-500">{k.label} · {i + 1} of {n}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{k.names.sub} · {c.cDim.w} × {c.cDim.h} × {c.cDim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         {k.geom && <BoxFront g={k.geom} cur={cur && cur.geom} />}
         {k.curve && <OutChart curve={k.curve} cur={cur && cur.curve} />}
       </div>
-      <div className="text-xs text-stone-600">Mid {k.names.mid} · {k.names.cd} on {k.names.horn} · amps {c.ampW} / {c.mAmpW} / {c.hfAmpW} W</div>
+      <div className="text-xs text-stone-500">Mid {k.names.mid} · {k.names.cd} on {k.names.horn} · amps {c.ampW} / {c.mAmpW} / {c.hfAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile("Drivers", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Heaviest", `${m.heaviest.toFixed(0)} lb`, <Delta v={d.heaviest} unit=" lb" lowerIsBetter />)}
@@ -1974,8 +1974,8 @@ function OptCard({ k, i, n, cur, onPreview, onLoad, onSave, previewing, canSave 
       {k.warnings.filter(([h]) => !/limited$/.test(h)).map(([h, b]) => (
         <div key={h} className="text-xs border border-l-4 rounded px-2 py-1 bg-amber-50 border-amber-200 border-l-amber-300"><b className="font-semibold text-amber-700 mr-1">{h}</b>{b}</div>
       ))}
-      <div className="text-xs text-stone-600">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
-      <div className="text-xs text-stone-600">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
+      <div className="text-xs text-stone-500">✓ Duct fits · {sheets} · Qtc {k.build.qtc.toFixed(2)}</div>
+      <div className="text-xs text-stone-500">Changes: {k.changed.length ? k.changed.join(", ") : "none"}</div>
       {!k.priceKnown && <div className="text-xs text-stone-500"><Tip tip="Some drivers have no listed price, so the total is a lower bound.">Partial prices</Tip></div>}
       <div className="flex gap-1.5 mt-auto">
         <button onClick={onPreview} className="flex-1 px-3 py-2 rounded border text-sm border-stone-300 bg-stone-50 hover:border-stone-500">Preview</button>
@@ -2299,7 +2299,7 @@ function StackPlanner() {
   const hornCenter = isTower ? baseH + 15.5 + (archT ? subBox.w / 2 - 0.75 : (horn.size.h + 2) / 2) : baseH + midDims.h + 1.2 + 1 + horn.size.h / 2;
 
   return (
-    <div className="min-h-screen bg-stone-100 text-stone-900" style={{ fontFamily: "var(--font)" }}>
+    <div className="min-h-screen bg-stone-50 text-stone-900" style={{ fontFamily: "var(--font)" }}>
       <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
         {(() => {
           // two levels: the project (PA stack or hi-fi), then the PA stack's own pages
@@ -2356,11 +2356,11 @@ function StackPlanner() {
         <div className="fixed left-1/2 -translate-x-1/2 bottom-20 md:bottom-6 z-50 w-[calc(100%-2rem)] max-w-xl bg-stone-900 text-stone-50 rounded-lg px-4 py-2.5 flex items-center gap-3 text-sm shadow-lg" style={{ fontFamily: "var(--font)" }} role="status">
           <span className="flex-1">{toast}</span>
           {undoSnap && <button onClick={optUndo} className="px-3 py-1.5 rounded border border-stone-500">Undo</button>}
-          <button onClick={() => setToast("")} aria-label="Dismiss" className="px-2 py-1.5 rounded border border-stone-700">✕</button>
+          <button onClick={() => setToast("")} aria-label="Dismiss" className="px-2 py-1.5 rounded border border-stone-900">✕</button>
         </div>
       )}
       {mdl && lim && (
-        <div className="md:hidden sticky top-0 z-30 bg-stone-100/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center" style={{ fontFamily: "var(--font)" }}>
+        <div className="md:hidden sticky top-0 z-30 bg-stone-50/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center" style={{ fontFamily: "var(--font)" }}>
           {[["Fb", `${mdl.Fb.toFixed(1)}`, "Hz"], ["35 Hz", `${maxNear(35).spl.toFixed(0)}`, "dB"], ["Sub", `${subLbLoaded.toFixed(0)}`, "lb"], ["Limit", { "port air speed": "port", "cone travel (Xmax)": "Xmax", "driver program rating": "thermal", "amplifier power": "amp" }[lim.who] || lim.who, ""]].map(([k, v, u]) => (
             <div key={k}><div className="text-xs uppercase tracking-wider text-stone-500">{k}</div><div className="text-sm font-medium tabular-nums">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div></div>
           ))}
@@ -2382,7 +2382,7 @@ function StackPlanner() {
           <FoldHead id="sub" title="Sub" folds={folds} toggle={toggleFold} className="mb-3 md:hidden" />
           <div className={foldCls("sub")}>
           {mdl && lim && (
-            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
                 ["Net volume", netL.toFixed(0), "L"],
                 ["Tuning Fb", mdl.Fb.toFixed(1), "Hz"],
@@ -2414,7 +2414,7 @@ function StackPlanner() {
 .map(([k, v, note, tip]) => <StatRow key={k} k={k} v={v} note={note} tip={tip} />)}
             </div>
           ) : (
-            <p className="text-sm text-stone-600 ">
+            <p className="text-sm text-stone-500 ">
               {sub.name} can't be modelled yet: its parameters are incomplete. {sub.note}
             </p>
           )}
@@ -2425,7 +2425,7 @@ function StackPlanner() {
                 return F.map(([kind, head, body]) => (
                   <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-                    <span className="text-stone-600">{body}</span>
+                    <span className="text-stone-500">{body}</span>
                   </div>
                 ));
               })()}
@@ -2438,7 +2438,7 @@ function StackPlanner() {
           <FoldHead id="mid" title="Mid-bass" folds={folds} toggle={toggleFold} className="mb-3" />
           <div className={foldCls("mid")}>
           {mMdl ? (<>
-            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
                 ["Net volume", midNetL.toFixed(0), "L"],
                 ["Box resonance Fc", mMdl.Fc.toFixed(0), "Hz"],
@@ -2470,13 +2470,13 @@ function StackPlanner() {
                 return F.map(([kind, head, body]) => (
                   <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-                    <span className="text-stone-600">{body}</span>
+                    <span className="text-stone-500">{body}</span>
                   </div>
                 ));
               })()}
             </div>
           </>) : (
-            <p className="text-sm text-stone-600">{mid.name} can't be modelled yet: its parameters are incomplete. {mid.note}</p>
+            <p className="text-sm text-stone-500">{mid.name} can't be modelled yet: its parameters are incomplete. {mid.note}</p>
           )}
           </div>
         </section>
@@ -2485,7 +2485,7 @@ function StackPlanner() {
           <FoldHead id="horn" title="Horn" folds={folds} toggle={toggleFold} className="mb-3" />
           <div className={foldCls("horn")}>
           {hornModel ? (<>
-            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+            <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
                 ["Sensitivity", hf.sens.toFixed(1), "dB"],
                 ["Power used", Math.round(hornModel.P), "W"],
@@ -2510,20 +2510,20 @@ function StackPlanner() {
                 return F.map(([kind, head, body]) => (
                   <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BG[kind] || CHIP_BG.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
-                    <span className="text-stone-600">{body}</span>
+                    <span className="text-stone-500">{body}</span>
                   </div>
                 ));
               })()}
             </div>
           </>) : (
-            <p className="text-sm text-stone-600">{cd.name} can't be modelled yet: sensitivity or power rating missing.</p>
+            <p className="text-sm text-stone-500">{cd.name} can't be modelled yet: sensitivity or power rating missing.</p>
           )}
           </div>
         </section>
 
         </div>
 
-        <aside className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-100 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-sheet`} style={{ fontFamily: "var(--font)" }} aria-label="Settings">
+        <aside className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-sheet`} style={{ fontFamily: "var(--font)" }} aria-label="Settings">
           <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
             {[["sub", "Sub"], ["mid", "Mid"], ["horn", "Horn"], ["look", "Look"]].map(([t, label]) => (
               <button key={t} role="tab" aria-selected={sheetOpen && tab === t}
@@ -2689,7 +2689,7 @@ function StackPlanner() {
                 </tr></thead>
                 <tbody>
                   {rows.map(([n, pr, dl, cl, h]) => (
-                    <tr key={n} className="border-b border-stone-200"><td className="py-1 pr-4">{n}</td><td className="py-1 pr-4 text-right tabular-nums">{pr ? `$${pr}` : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{dl.toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{cl ? cl.toFixed(0) : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{(dl + cl).toFixed(0)}</td><td className="py-1 text-right tabular-nums">{h.toFixed(1)}</td></tr>
+                    <tr key={n} className="border-b border-stone-300"><td className="py-1 pr-4">{n}</td><td className="py-1 pr-4 text-right tabular-nums">{pr ? `$${pr}` : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{dl.toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{cl ? cl.toFixed(0) : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{(dl + cl).toFixed(0)}</td><td className="py-1 text-right tabular-nums">{h.toFixed(1)}</td></tr>
                   ))}
                   <tr className="font-medium"><td className="py-1 pr-4">One stack{plinth ? ` + ${plinth}" plinth` : ""}</td><td className="py-1 pr-4 text-right tabular-nums">${sum(1).toLocaleString()}</td><td className="py-1 pr-4 text-right tabular-nums">{sum(2).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(sum(3) + (plinth ? 6 : 0)).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{stackLb.toFixed(0)}</td><td className="py-1 text-right tabular-nums">{stackH.toFixed(0)}</td></tr>
                   <tr className="font-medium text-stone-900"><td className="py-1 pr-4">Pair</td><td className="py-1 pr-4 text-right tabular-nums">${(2 * sum(1)).toLocaleString()}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * sum(2)).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * (sum(3) + (plinth ? 6 : 0))).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * stackLb).toFixed(0)}</td><td></td></tr>
@@ -2706,27 +2706,27 @@ function StackPlanner() {
         {showDetails && <section className="min-w-0 md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: "var(--font)" }}>
           <div>
             <SectionHead className="mb-2">Sub</SectionHead>
-            <p className="text-sm text-stone-700">
+            <p className="text-sm text-stone-900">
               {sub.name} in a {subBox.w}×{subBox.h}×{subBox.d} in cabinet, {grossL.toFixed(0)} L gross, {netL.toFixed(0)} L net.
               Vent: {port.desc}. 3/4″ baffle set {inset}″ behind the frame, {wall === 0.5 ? "1/2″" : "3/4″"} birch walls, 1/4″ roundovers on the front edges.
             </p>
           </div>
           <div>
             <SectionHead className="mb-2">Mid-bass cube</SectionHead>
-            <p className="text-sm text-stone-700">
+            <p className="text-sm text-stone-900">
               {mid.name} in a {midDims.w}×{midDims.h}×{midDims.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed.
               Covers {xoLo} Hz to {xoHi} Hz. Same construction, flush-mounted driver.
             </p>
-            {mid.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{mid.name}.</span> {mid.note}</p>}
+            {mid.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{mid.name}.</span> {mid.note}</p>}
           </div>
           <div>
             <SectionHead className="mb-2">Horn</SectionHead>
-            <p className="text-sm text-stone-700">
+            <p className="text-sm text-stone-900">
               {horn.name} with {cd.name}, crossed at {xoHi} Hz (maker suggests {horn.xo}). Sits on a short block so the mouth clears the cube.
               Total stack height about {stackH.toFixed(0)} in, horn center at {hornCenter.toFixed(0)} in.
             </p>
-            {cd.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{cd.name}.</span> {cd.note}</p>}
-            {horn.note && <p className="text-sm text-stone-600 mt-2"><span className="font-medium text-stone-700">{horn.name}.</span> {horn.note}</p>}
+            {cd.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{cd.name}.</span> {cd.note}</p>}
+            {horn.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{horn.name}.</span> {horn.note}</p>}
           </div>
         </section>}
 
