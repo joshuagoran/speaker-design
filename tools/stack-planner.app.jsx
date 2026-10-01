@@ -635,7 +635,7 @@ function SignalPath() {
     </g>
   );
   const T = ({ x, y, s = 11, c = ink, a = "middle", b }) => (
-    <text x={x} y={y} fontSize={s} fill={c} textAnchor={a} fontFamily="JetBrains Mono, monospace" fontWeight={b ? 600 : 400}>{b}</text>
+    <text x={x} y={y} fontSize={s} fill={c} textAnchor={a} fontFamily="Inconsolata, monospace" fontWeight={b ? 600 : 400}>{b}</text>
   );
   const A = ({ d, c = line }) => <path d={d} fill="none" stroke={c} strokeWidth="1.3" markerEnd="url(#sp-ar)" />;
   return (
@@ -844,7 +844,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   ticks.forEach((f) => {
     const X = px(f);
     grid.push(<line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke="#e6e6e6" strokeWidth="1" />);
-    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">{f >= 1000 ? f / 1000 + "k" : f}</text>);
+    grid.push(<text key={"vt" + f} x={X} y={y1 + 18} textAnchor={X > x1 - 12 ? "end" : "middle"} fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{f >= 1000 ? f / 1000 + "k" : f}</text>);
   });
   // hover / drag: a crosshair with each curve's value at that frequency
   const [hf, setHf] = useState(null);
@@ -862,7 +862,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
   for (let v = BOT, k = 0; v <= TOP; v += step, k++) {
     const Y = py(v);
     grid.push(<line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke="#e6e6e6" strokeWidth="1" />);
-    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">{v}</text>);
+    if (k % every === 0) grid.push(<text key={"ht" + v} x={x0 - 8} y={Y + 3.5} textAnchor="end" fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{v}</text>);
   }
   return (
     <div ref={box}>
@@ -872,7 +872,7 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         {marks.filter((m) => m.f > fmin && m.f < fmax).map((m, i, ms) => (
           <g key={m.label + i}>
             <line x1={px(m.f)} y1={y0} x2={px(m.f)} y2={y1} stroke="#707070" strokeWidth="1" strokeDasharray="3 4" />
-            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">{m.label}</text>
+            <text x={px(m.f) + 5} y={y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)} fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{m.label}</text>
           </g>
         ))}
         {paths.map((p) => <path key={p.label + "f"} d={p.fill} fill={p.tint} />)}
@@ -880,20 +880,20 @@ function ResponseChart({ series, marks = [], fmax = 200, fmin = 15, top = 135, b
         {!narrow && paths.map((p, i) => (
           <g key={p.label + "k"}>
             <line x1={x0 + 10} y1={y0 + 8 + i * 16} x2={x0 + 30} y2={y0 + 8 + i * 16} stroke={p.stroke} strokeWidth="2" />
-            <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">{p.label}</text>
+            <text x={x0 + 36} y={y0 + 12 + i * 16} fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{p.label}</text>
           </g>
         ))}
         {hf && (<g pointerEvents="none">
           <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke="#707070" strokeWidth="1" />
           {hits.map((h) => <circle key={h.label} cx={px(h.o.f)} cy={py(h.o.spl)} r="3.5" fill={h.stroke} stroke="#fff" strokeWidth="1.5" />)}
           {(() => { const t = `${hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz`, w = t.length * 6.5 + 8, X = Math.max(x0 + w / 2, Math.min(x1 - w / 2, px(hf)));
-            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill="#111111" /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="12" fontFamily="JetBrains Mono, monospace" fill="#ffffff">{t}</text></g>; })()}
-          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="12" fontFamily="JetBrains Mono, monospace" fill="#111111" stroke="#fff" strokeWidth="3" paintOrder="stroke">
+            return <g><rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill="#111111" /><text x={X} y={y1 + 17.5} textAnchor="middle" fontSize="12" fontFamily="Inconsolata, monospace" fill="#ffffff">{t}</text></g>; })()}
+          <text x={x1} y={y0 - 4} textAnchor="end" fontSize="12" fontFamily="Inconsolata, monospace" fill="#111111" stroke="#fff" strokeWidth="3" paintOrder="stroke">
             {hf >= 1000 ? (hf / 1000).toFixed(hf >= 10000 ? 0 : 1) + "k" : hf.toFixed(0)} Hz{hits.map((h) => ` · ${h.label} ${h.o.spl.toFixed(0)}${unit}`).join("")}
           </text>
         </g>)}
-        <text x={W / 2} y={H - 4} textAnchor="middle" fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">frequency, Hz</text>
-        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#595959" fontSize="12" fontFamily="JetBrains Mono, monospace">{yLabel}</text>
+        <text x={W / 2} y={H - 4} textAnchor="middle" fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">frequency, Hz</text>
+        <text transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`} textAnchor="middle" fill="#595959" fontSize="12" fontFamily="Inconsolata, monospace">{yLabel}</text>
       </svg>
       {narrow && paths.length > 0 && (
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-stone-600" style={{ fontFamily: "var(--font)" }}>
@@ -1594,7 +1594,7 @@ function SheetDrawing({ sheet, S, idx }) {
           <g key={i}>
             <rect x={it.x * sc} y={it.y * sc} width={it.w * sc} height={it.h * sc} fill={colors[it.box] || "#e6e6e6"} stroke="#707070" strokeWidth="0.8" />
             {it.w * sc > fs * 3.6 && it.h * sc > fs * 1.3 && (
-              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + fs * 0.35} textAnchor="middle" fontSize={fs} fill="#111111" fontFamily="JetBrains Mono, monospace">{it.box} {it.part.split(" ")[0]}</text>
+              <text x={(it.x + it.w / 2) * sc} y={(it.y + it.h / 2) * sc + fs * 0.35} textAnchor="middle" fontSize={fs} fill="#111111" fontFamily="Inconsolata, monospace">{it.box} {it.part.split(" ")[0]}</text>
             )}
           </g>
         ))}
