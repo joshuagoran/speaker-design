@@ -73,3 +73,28 @@ test("ports with elbows: longer ports fit, and the check says so", (t) => {
   const bent = { ...cfg, port: { n: 1, dia: 2, len: s0 + 2, elbows: 1 } };
   t.assert.ok(!hifiChips(hifiSystem(W, T, bent), W, T, bent).some(([, h]) => h === "Port too long"), "one elbow: fits");
 });
+
+test("passive radiators: tuning, notch, travel limit and checks", (t) => {
+  const { prTuning, prAddFor } = HIFI;
+  const drv = { id: "p", size: 6.5, Sd: 128.7, Mms: 30.7, Cms: 1.15, Qms: 4.3, Fs: 26.8, Xmax: 8, lb: 0.75, price: 25 };
+  const s0 = hifiSystem(W, T, { ...cfg, box: "sealed" });
+  // Fs of the radiator alone follows from its mass and compliance
+  close(t, prTuning(drv, 1, 0, 1e9).Fp, drv.Fs, 0.5);
+  const add = prAddFor(drv, 2, s0.net, 40);
+  const pc = { ...cfg, box: "radiator", pr: { drv, n: 2, addG: add } };
+  const s = hifiSystem(W, T, pc);
+  close(t, s.Fb, 40, 1, "added mass tunes the box");
+  t.assert.ok(s.Fp < s.Fb, "the radiator's own resonance sits below the tuning");
+  const at = (f) => s.woofer.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
+  // the notch: steep above Fp, shallower below it
+  t.assert.ok(at(s.Fp * 1.25).raw - at(s.Fp).raw > at(s.Fp).raw - at(s.Fp / 1.25).raw, "a notch at Fp");
+  t.assert.ok(at(s.Fb).xmm < at(s.Fb * 1.6).xmm, "the cone barely moves at Fb");
+  t.assert.ok(at(s.Fb).prx > at(s.Fb).xmm, "the radiators move at Fb");
+  // more mass, lower tuning
+  t.assert.ok(hifiSystem(W, T, { ...pc, pr: { drv, n: 2, addG: add + 40 } }).Fb < s.Fb);
+  // one small radiator is flagged; one that doesn't fit is bad
+  const one = { ...pc, pr: { drv: { ...drv, Xmax: 3 }, n: 1, addG: 0 } };
+  t.assert.ok(hifiChips(hifiSystem(W, T, one), W, T, one).some(([, h]) => h === "Radiators small for this woofer"));
+  const big = { ...pc, pr: { drv: { ...drv, size: 10 }, n: 2, addG: 0 } };
+  t.assert.ok(hifiChips(hifiSystem(W, T, big), W, T, big).some(([k, h]) => k === "bad" && h === "Radiators won't fit"));
+});

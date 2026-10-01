@@ -45,3 +45,18 @@ test("hi-fi optimizer: unlocked amps stay within the sliders; locked amps stay; 
   const ply = hifiOptimize({ ...base, goals: ["lighter"], locks: all });
   t.assert.ok(ply.cards.some((k) => k.config.wall === 0.5), JSON.stringify(ply.cards.map((k) => k.label)));
 });
+
+test("hi-fi optimizer: radiator designs price their radiators and load back with them", async (t) => {
+  const { hifiOptimize } = await import("../tools/hifi-optimize.js");
+  const { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } = await import("../tools/data.js");
+  const w = HIFI_WOOFERS.find((o) => o.pick) || HIFI_WOOFERS[0], tw = HIFI_TWEETERS.find((o) => o.pick && !o.needsWaveguide && o.type !== "compression") || HIFI_TWEETERS[0];
+  const drv = HIFI_PASSIVES.find((o) => o.id === "sb16pfcr");
+  const cur = { woofer: w.id, tweeter: tw.id, box: "radiator", pr: { drv, n: 2, addG: 0 }, dim: { w: 9, h: 16, d: 11 }, wall: 0.75, port: { n: 1, dia: 2, len: 6 }, xo: 2200, order: 4, wAmpW: 100, tAmpW: 50, bsc: 3, place: "free", wallFt: 2, portMax: 17 };
+  const res = hifiOptimize({ cur, woofers: [w], tweeters: [tw], passives: HIFI_PASSIVES, goals: ["lower"], locks: { woofer: true, tweeter: true, box: true } });
+  for (const k of res.cards) {
+    t.assert.equal(k.config.box, "radiator");
+    t.assert.ok(k.config.pr && HIFI_PASSIVES.some((p) => p.id === k.config.pr.id), "a card names its radiator");
+    const p = HIFI_PASSIVES.find((o) => o.id === k.config.pr.id);
+    t.assert.ok(k.metrics.price >= 2 * (w.price + tw.price + k.config.pr.n * p.price) - 0.01, "radiators are in the pair price");
+  }
+});

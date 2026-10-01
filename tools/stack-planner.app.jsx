@@ -1,8 +1,8 @@
 const { useEffect, useRef, useState } = React;
 import { subChips, midChips, hornChips, fillChips } from "./chips.js";
 import { optimize, evaluate as evaluateConfig, roomNeed, ROOMS, GOALS, optFields } from "./optimize.js";
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS } from "./data.js";
-import { hifiSystem, hifiChips, responseAt, dispersionMap, logFreqs, lr, PLACES as HIFI_PLACES } from "./hifi.js";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS, RACKS, SWATCHES, CAB_FINISHES, CABINETS, FORMATS, FILL_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, prAddMax } from "./data.js";
+import { hifiSystem, hifiChips, responseAt, dispersionMap, logFreqs, lr, prShape, PLACES as HIFI_PLACES } from "./hifi.js";
 import { hifiOptimize, HIFI_GOALS, HIFI_LOCK_KEYS, HIFI_AMP_MAX } from "./hifi-optimize.js";
 import { subSystem, maxCurve as maxCurveOf, hornResponse, pistonBeam, keeleF, hornBeam, subWeight, midWeight, HP_TYPES, lr24lp, SHEETS, f8, tName, cutParts, packSheets, midSystem, fillSystem, subThroughLp, nearest, subMusicAt } from "./calc.js";
 
@@ -880,7 +880,7 @@ function RoomView({ spacing, toe, seat, setSeat, angles }) {
 }
 
 // Front view of the box and drivers, to scale.
-function HifiFront({ dim, w, t, lay, vented, port, guide, small }) {
+function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }) {
   const face = guide ? { w: guide.w, h: guide.h } : t.faceplate || { w: 4, h: 4 };
   const top = lay.onTop ? face.h : 0, k = 120 / Math.max(dim.h + top, dim.w * 1.2, face.w * 1.2), W = Math.max(dim.w, face.w) * k, H = (dim.h + top) * k;
   const bx = (W - dim.w * k) / 2, y = (inch) => (dim.h + top - inch) * k;
@@ -892,6 +892,8 @@ function HifiFront({ dim, w, t, lay, vented, port, guide, small }) {
         : <rect x={W / 2 - (face.w * k) / 2} y={y(lay.tweeterIn) - (face.h * k) / 2} width={face.w * k} height={face.h * k} rx={guide ? 3 : face.w * k / 2} fill="#707070" />}
       <circle cx={W / 2} cy={y(lay.tweeterIn)} r={0.5 * k} fill="#e6e6e6" />
       <circle cx={W / 2} cy={y(lay.wooferIn)} r={(w.size * 0.95 * k) / 2} fill="#e6e6e6" stroke="#707070" />
+      {pr && Array.from({ length: pr.n }, (_, i) => { const s = prShape(pr.drv), cy = H - (0.75 + 0.25 + (i + 0.5) * (s.h + 0.5)) * k;
+        return <rect key={`r${i}`} x={W / 2 - (s.w * k) / 2} y={cy - (s.h * k) / 2} width={s.w * k} height={s.h * k} rx={(s.w * k) / 2} fill="none" stroke="#707070" strokeDasharray="3 2" />; })}
       {vented && Array.from({ length: port.n }, (_, i) => <circle key={i} cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k} cy={H - (port.dia / 2 + 1) * k} r={(port.dia * k) / 2} fill="#111111" />)}
     </svg>
   );
@@ -902,6 +904,9 @@ const HIFI_TOP = 130, HIFI_BOT = 50;
 // woofers listed smallest first, grouped by size in the picker, A–Z within a size
 const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort((a, b) => a.size - b.size || a.name.localeCompare(b.name));
 // tweeters split into domes and compression drivers (which need a waveguide), domes first
+// passive radiators by size, A–Z within a size
+const HIFI_PASSIVES_BY_SIZE = HIFI_PASSIVES.slice().sort((a, b) => a.size - b.size || a.name.localeCompare(b.name));
+const prOf = (c) => (c && c.box === "radiator" && c.pr ? { drv: HIFI_PASSIVES.find((o) => o.id === c.pr.id), n: c.pr.n, addG: c.pr.addG } : null);
 const isCD = (o) => o.type === "compression" || o.needsWaveguide;
 const HIFI_TWEETERS_BY_TYPE = HIFI_TWEETERS.slice().sort((a, b) => isCD(a) - isCD(b) || a.name.localeCompare(b.name));
 
@@ -915,16 +920,16 @@ function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
       <div className="tabular-nums">{v}</div>{delta}
     </div>
   );
-  const who = { Xmax: "cone travel", port: "port air speed", thermal: "the woofer's power rating", amp: "the amp" }[k.whoW] || k.whoW;
+  const who = { Xmax: "cone travel", port: "port air speed", radiator: "radiator travel", thermal: "the woofer's power rating", amp: "the amp" }[k.whoW] || k.whoW;
   return (
     <div className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}>
       <div className="text-[11px] uppercase tracking-wider font-bold text-stone-600">{k.label} · {i + 1} of {n}</div>
       <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>{cw.size}″ {k.names.woofer} · {c.dim.w} × {c.dim.h} × {c.dim.d}″</h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
-        <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} guide={k.guided ? guide : null} small />
+        <HifiFront dim={c.dim} w={cw} t={ct} lay={k.lay} vented={c.box === "vented"} port={c.port} pr={prOf(c)} guide={k.guided ? guide : null} small />
         <OutChart curve={k.curve} cur={curCurve} fmin={15} fmax={20000} band={null} top={HIFI_TOP} bot={HIFI_BOT} />
       </div>
-      <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
+      <div className="text-xs text-stone-600">{k.names.tweeter} · {c.box}{c.box === "vented" ? ` (${c.port.n} × ${c.port.dia}″ port, ${c.port.len}″${c.port.elbows ? `, ${c.port.elbows} elbow${c.port.elbows > 1 ? "s" : ""}` : ""})` : c.box === "radiator" && prOf(c) ? ` (${c.pr.n} × ${prOf(c).drv.name}, +${c.pr.addG} g)` : ""} · {c.wall === 0.5 ? "1/2″" : "3/4″"} · XO {c.xo} Hz · amps {c.wAmpW} / {c.tAmpW} W</div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile("Drivers, pair", money(m.price), <Delta v={d.price} unit="$" lowerIsBetter />)}
         {tile("Weight", `${m.lb.toFixed(0)} lb`, <Delta v={d.lb} unit=" lb" lowerIsBetter digits={1} />)}
@@ -952,6 +957,7 @@ function HifiPage() {
   const [wall, setWall] = useState(0.75);
   const [mat, setMat] = useState("ply");
   const [port, setPort] = useState({ n: 1, dia: 2, len: 6 });
+  const [prSel, setPrSel] = useState({ id: "sb16pfcr", n: 2, addG: 0 });
   const [xo, setXo] = useState(2000);
   const [order, setOrder] = useState(4);
   const [wAmpW, setWAmpW] = useState(100);
@@ -980,7 +986,9 @@ function HifiPage() {
   const setD = (k, v) => setDim((p) => ({ ...p, [k]: v }));
   const setP = (k, v) => setPort((p) => ({ ...p, [k]: v }));
   const guide = t.type === "compression" || t.needsWaveguide ? { covH: guideSel.hf.covH, covV: guideSel.hf.covV || guideSel.hf.covH, w: guideSel.size.w, h: guideSel.size.h, name: guideSel.name, freestanding: !guideSel.rect } : null;
-  const cfg = { box, dim, wall, mat, port, xo, order, wAmpW, tAmpW, bsc, place, wallFt, portMax: 17, guide };
+  const prDrv = HIFI_PASSIVES.find((o) => o.id === prSel.id) || HIFI_PASSIVES[0];
+  const pr = { drv: prDrv, n: prSel.n, addG: Math.min(prSel.addG, prAddMax(prDrv)) };
+  const cfg = { box, dim, wall, mat, port, pr, xo, order, wAmpW, tAmpW, bsc, place, wallFt, portMax: 17, guide };
   const tt = guide ? { ...t, faceplate: { w: guide.w, h: guide.h } } : t;
   const sys = hifiSystem(w, tt, cfg);
   if (!sys) return <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 text-sm">This woofer can't be modelled (its parameters aren't published).</main>;
@@ -1000,7 +1008,7 @@ function HifiPage() {
   const atSeat = sys.maxLevel - 20 * Math.log10(seatDist) + 3;
   const tMax = freqs.map((f) => ({ f, spl: sys.tLevel + 20 * Math.log10(Math.max(1e-6, Math.hypot(lr(f, xo, order, "hp").re, lr(f, xo, order, "hp").im))) }));
   const map = dispersionMap(sys, w, tt, cfg, plane, Math.max(1, seatDist));
-  const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0));
+  const pairCost = 2 * ((w.price || 0) + (t.price || 0) + (guide ? guideSel.price || 0 : 0) + (box === "radiator" ? pr.n * (prDrv.price || 0) : 0));
   const tile = (k, v, u) => (
     <div key={k} className="bg-stone-50 px-3 py-2.5">
       <div className="text-[10.5px] uppercase tracking-wider text-stone-500 font-semibold">{k}</div>
@@ -1011,16 +1019,16 @@ function HifiPage() {
   const optSeg = (on) => `px-3 py-2 rounded border text-sm ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50 hover:border-stone-500"}`;
   const hLk = (key, what) => (hOn ? <LockBtn on={!!hLocks[key]} what={what} onClick={() => setHLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null);
   const hDl = (dm, what) => (hOn ? <DimLock mode={hLocks.dim[dm] || "free"} what={what} onChange={(m) => setHLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))} /> : null);
-  const snapH = () => ({ woofer: w.id, tweeter: t.id, box, dim, port, wall, xo, wAmpW, tAmpW });
+  const snapH = () => ({ woofer: w.id, tweeter: t.id, box, dim, port, pr: box === "radiator" ? prSel : undefined, wall, xo, wAmpW, tAmpW });
   const applyH = (c) => {
     setW(HIFI_WOOFERS.find((o) => o.id === c.woofer)); setT(HIFI_TWEETERS.find((o) => o.id === c.tweeter));
-    setBox(c.box); setDim(c.dim); if (c.port) setPort(c.port); setWall(c.wall); setXo(c.xo); setWAmpW(c.wAmpW); setTAmpW(c.tAmpW);
+    setBox(c.box); setDim(c.dim); if (c.port) setPort(c.port); if (c.pr) setPrSel(c.pr); setWall(c.wall); setXo(c.xo); setWAmpW(c.wAmpW); setTAmpW(c.tAmpW);
   };
   const runH = () => {
     setHBusy(true);
     const base = hPreview ? hPreview.before : snapH();
     setTimeout(() => {
-      try { setHRes(hifiOptimize({ cur: { ...cfg, ...base }, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, goals: hGoals, locks: hLocks, budget: hBudget, seatM: seatDist, guidePrice: guideSel.price || 0 })); }
+      try { setHRes(hifiOptimize({ cur: { ...cfg, ...base }, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, passives: HIFI_PASSIVES, goals: hGoals, locks: hLocks, budget: hBudget, seatM: seatDist, guidePrice: guideSel.price || 0 })); }
       finally { setHBusy(false); }
     }, 30);
   };
@@ -1087,10 +1095,10 @@ function HifiPage() {
       </div>
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
         <div className="flex gap-4 items-center">
-        <div className="shrink-0"><HifiFront dim={dim} w={w} t={tt} lay={sys.lay} vented={sys.vented} port={port} guide={guide} /></div>
+        <div className="shrink-0"><HifiFront dim={dim} w={w} t={tt} lay={sys.lay} vented={sys.vented} port={port} pr={sys.radiator ? pr : null} guide={guide} /></div>
         <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-200 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
           {tile("Net volume", sys.net.toFixed(1), "L")}
-          {sys.vented ? tile("Tuning Fb", sys.Fb.toFixed(0), "Hz") : tile("Qtc", sys.Qtc.toFixed(2), "")}
+          {sys.Fb != null ? tile("Tuning Fb", sys.Fb.toFixed(0), "Hz") : tile("Qtc", sys.Qtc.toFixed(2), "")}
           {tile("F3 in room", sys.f3.toFixed(0), "Hz")}
           {tile("Max at the seat", atSeat.toFixed(0), "dB")}
           {tile("Weight", sys.lb.toFixed(0), "lb")}
@@ -1150,9 +1158,9 @@ function HifiPage() {
           <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
           <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="&#8243;" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
           <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
-          <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-600">Ports</span>{hLk("box", "sealed or vented")}</div>
-          <div className="flex flex-wrap gap-1 mb-3">{[["Sealed", "sealed", 0], ["1 port", "vented", 1], ["2 ports", "vented", 2]].map(([l, v, n]) => {
-            const on = box === v && (v === "sealed" || port.n === n);
+          <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-600">Ports</span>{hLk("box", "sealed, ported or radiator")}</div>
+          <div className="flex flex-wrap gap-1 mb-3">{[["Sealed", "sealed", 0], ["1 port", "vented", 1], ["2 ports", "vented", 2], ["Radiator", "radiator", 0]].map(([l, v, n]) => {
+            const on = box === v && (v !== "vented" || port.n === n);
             return <button key={l} onClick={() => { setBox(v); if (n) setP("n", n); }} className={seg(on)}>{l}</button>;
           })}</div>
           {box === "vented" && (<>
@@ -1160,7 +1168,12 @@ function HifiPage() {
             <Slider label="Port length (centreline)" value={port.len} min={1} max={30} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
             <div className="flex flex-wrap gap-1 mb-3">{[[0, "Straight"], [1, "1 elbow"], [2, "2 elbows"]].map(([e, l]) => <button key={e} onClick={() => setP("elbows", e)} className={seg((port.elbows || 0) === e)}>{l}</button>)}</div>
           </>)}
-          <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of port` : ", lightly stuffed"}.</div>
+          {box === "radiator" && (<>
+            <Pick label={`Passive radiator · ${prDrv.shape ? "5 × 8″ oval" : `${prDrv.size}″`}`} options={HIFI_PASSIVES_BY_SIZE} value={prDrv} onChange={(o) => setPrSel((p) => ({ ...p, id: o.id, addG: Math.min(p.addG, prAddMax(o)) }))} group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)} />
+            <div className="flex flex-wrap gap-1 mb-3">{[1, 2].map((n) => <button key={n} onClick={() => setPrSel((p) => ({ ...p, n }))} className={seg(pr.n === n)}>{n === 1 ? "1 radiator" : "2 radiators"}</button>)}</div>
+            <Slider label="Added mass, each" value={pr.addG} min={0} max={prAddMax(prDrv)} step={5} unit=" g" onChange={(v) => setPrSel((p) => ({ ...p, addG: v }))} />
+          </>)}
+          <div className="text-xs text-stone-500">{sys.gross.toFixed(1)} L gross{sys.vented ? `, ${sys.pArea.toFixed(1)} in² of port` : sys.radiator ? `; radiators on the back tune it to ${sys.Fb.toFixed(0)} Hz, with a notch at ${sys.Fp.toFixed(0)} Hz (their own resonance)${prDrv.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}` : ", lightly stuffed"}.</div>
         </div>
         <div className="rounded border border-stone-300 bg-white px-3 py-3 mb-4">
           <Slider label="Crossover" value={xo} min={800} max={4000} step={50} unit=" Hz" onChange={setXo} extra={hLk("xo", "the crossover")} />
