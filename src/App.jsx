@@ -4,6 +4,7 @@ import { NotesPage } from "./pages/notes/NotesPage.jsx";
 import { FillsPage } from "./pages/fills/FillsPage.jsx";
 import { CutlistPage } from "./pages/cutlist/CutlistPage.jsx";
 import { HifiPage } from "./pages/hifi/HifiPage.jsx";
+import { useHifiPlanner } from "./pages/hifi/useHifiPlanner.js";
 const { useEffect, useState } = React;
 
 /** Hash of each page, and the page shown for an unknown or empty hash. */
@@ -18,6 +19,7 @@ export function App() {
     return () => window.removeEventListener("hashchange", on);
   }, []);
   const planner = usePaPlanner();
+  const hifi = useHifiPlanner();
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900" style={{ fontFamily: "var(--font)" }}>
       <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
@@ -48,7 +50,7 @@ export function App() {
           </>);
         })()}
       </header>
-      {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : view === "hifi" ? <HifiPage /> : view === "cutlist" ? <CutlistPage planner={planner} /> : <PaStackPage planner={planner} />}
+      {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : view === "hifi" ? <HifiPage hifi={hifi} /> : view === "cutlist" ? <CutlistPage planner={planner} /> : <PaStackPage planner={planner} />}
     </div>
   );
 }
