@@ -1,8 +1,8 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { hifiOptimize, hifiProblems } from "../tools/hifi-optimize.js";
-import { hifiSystem, hifiChips } from "../tools/hifi.js";
-import { HIFI_WOOFERS, HIFI_TWEETERS } from "../tools/data.js";
+import { optimizeHifiSpeaker, hifiDesignProblems } from "../src/lib/hifi/optimize.js";
+import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi.js";
+import { HIFI_WOOFERS, HIFI_TWEETERS } from "../src/lib/data.js";
 
 const cur = {
   woofer: "sb17nrx",
@@ -46,7 +46,7 @@ test("every driver in the hi-fi list can be modelled", (t) => {
 for (const goal of ["cheaper", "lighter", "lower", "louder"]) {
   test(`hi-fi optimizer (${goal}): cards pass the checks, stay in budget, and their labels are true`, (t) => {
     const t0 = Date.now(),
-      out = hifiOptimize({ ...base, goals: [goal] });
+      out = optimizeHifiSpeaker({ ...base, goals: [goal] });
     assert.ok(Date.now() - t0 < 10000, `${Date.now() - t0} ms`);
     assert.ok(out.cards.length >= 1 || out.goalMissing, "cards or a message");
     for (const k of out.cards) {
@@ -54,7 +54,7 @@ for (const goal of ["cheaper", "lighter", "lower", "louder"]) {
         tw = HIFI_TWEETERS.find((o) => o.id === k.tweeter);
       const c = { ...cur, ...k.config },
         sys = hifiSystem(w, tw, c);
-      assert.deepEqual(hifiProblems(sys, hifiChips(sys, w, tw, c)), [], k.label);
+      assert.deepEqual(hifiDesignProblems(sys, hifiChips(sys, w, tw, c)), [], k.label);
       assert.ok(k.metrics.price <= base.budget, "within budget");
       if (k.label === "Fixes your design") continue;
       const axis = axisOf[k.label] || goal; // "Smallest change" is held to the goal
@@ -64,7 +64,7 @@ for (const goal of ["cheaper", "lighter", "lower", "louder"]) {
 }
 
 test("hi-fi optimizer: locked woofer and exact box stay put", (t) => {
-  const out = hifiOptimize({
+  const out = optimizeHifiSpeaker({
     ...base,
     goals: ["louder"],
     locks: { woofer: true, dim: { w: "exact", h: "exact", d: "exact" } },
@@ -76,9 +76,13 @@ test("hi-fi optimizer: locked woofer and exact box stay put", (t) => {
 });
 
 test("hi-fi optimizer: unlocked amps stay within the sliders; locked amps stay; Lighter can offer 1/2 in ply", (t) => {
-  const out = hifiOptimize({ ...base, goals: ["louder"] });
+  const out = optimizeHifiSpeaker({ ...base, goals: ["louder"] });
   for (const k of out.cards) assert.ok(k.config.wAmpW <= 500 && k.config.tAmpW <= 200, k.label);
-  const locked = hifiOptimize({ ...base, goals: ["cheaper"], locks: { wAmpW: true, tAmpW: true } });
+  const locked = optimizeHifiSpeaker({
+    ...base,
+    goals: ["cheaper"],
+    locks: { wAmpW: true, tAmpW: true },
+  });
   for (const k of locked.cards)
     assert.deepEqual([k.config.wAmpW, k.config.tAmpW], [cur.wAmpW, cur.tAmpW]);
   const all = {
@@ -90,7 +94,7 @@ test("hi-fi optimizer: unlocked amps stay within the sliders; locked amps stay; 
     tAmpW: true,
     dim: { w: "exact", h: "exact", d: "exact" },
   };
-  const ply = hifiOptimize({ ...base, goals: ["lighter"], locks: all });
+  const ply = optimizeHifiSpeaker({ ...base, goals: ["lighter"], locks: all });
   assert.ok(
     ply.cards.some((k) => k.config.wall === 0.5),
     JSON.stringify(ply.cards.map((k) => k.label)),
@@ -98,8 +102,8 @@ test("hi-fi optimizer: unlocked amps stay within the sliders; locked amps stay; 
 });
 
 test("hi-fi optimizer: radiator designs price their radiators and load back with them", async (t) => {
-  const { hifiOptimize } = await import("../tools/hifi-optimize.js");
-  const { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } = await import("../tools/data.js");
+  const { optimizeHifiSpeaker } = await import("../src/lib/hifi/optimize.js");
+  const { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } = await import("../src/lib/data.js");
   const w = HIFI_WOOFERS.find((o) => o.pick) || HIFI_WOOFERS[0],
     tw =
       HIFI_TWEETERS.find((o) => o.pick && !o.needsWaveguide && o.type !== "compression") ||
@@ -122,7 +126,7 @@ test("hi-fi optimizer: radiator designs price their radiators and load back with
     wallFt: 2,
     portMax: 17,
   };
-  const res = hifiOptimize({
+  const res = optimizeHifiSpeaker({
     cur,
     woofers: [w],
     tweeters: [tw],

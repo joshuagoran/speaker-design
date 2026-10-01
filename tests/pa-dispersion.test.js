@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { paResponseAt, paDispersionMap, firstNullDeg } from "../tools/pa-dispersion.js";
-import { logFreqs } from "../tools/hifi.js";
+import { paResponseAt, paDispersionMap, firstNullAngleDeg } from "../src/lib/pa/dispersion.js";
+import { logSpacedFrequencies } from "../src/lib/hifi/hifi.js";
 
 const stack = (gapIn) => ({
   sub: { zIn: 12, Sd: 1200 },
@@ -20,7 +20,7 @@ test("PA dispersion: flat on the horn axis through both crossovers (time-aligned
 test("PA dispersion: a vertical null opens near the predicted angle at the mid/horn crossover, and closer drivers push it out", (t) => {
   const gap = 18,
     f = 1000,
-    pred = firstNullDeg(gap, f);
+    pred = firstNullAngleDeg(gap, f);
   const m = paDispersionMap(stack(gap), "v", 20);
   const fi = m.freqs.reduce(
     (b, x, i) => (Math.abs(Math.log(x / f)) < Math.abs(Math.log(m.freqs[b] / f)) ? i : b),
@@ -30,8 +30,8 @@ test("PA dispersion: a vertical null opens near the predicted angle at the mid/h
   const worst = col.reduce((b, o) => (o.db < b.db ? o : b));
   assert.ok(worst.db < -10, `deep null ${worst.db.toFixed(1)} dB`);
   assert.ok(Math.abs(worst.a - pred) <= 8, `null at ${worst.a}°, predicted ${pred.toFixed(0)}°`);
-  assert.ok(firstNullDeg(10, f) > pred, "closer spacing, wider null angle");
-  assert.equal(firstNullDeg(6, f), null, "under half a wavelength: no null");
+  assert.ok(firstNullAngleDeg(10, f) > pred, "closer spacing, wider null angle");
+  assert.equal(firstNullAngleDeg(6, f), null, "under half a wavelength: no null");
 });
 
 test("PA dispersion: horizontal map is 0 dB on axis", (t) => {

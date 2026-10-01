@@ -1,17 +1,17 @@
 // Configs for the regression snapshot: the saved seeds plus synthetic ones covering the options.
 import fs from "node:fs";
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS } from "../tools/data.js";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data.js";
 import {
   subSystem,
   midSystem,
   fillSystem,
-  subThroughLp,
+  subThroughLowpass,
   hornResponse,
-  nearest,
-  midWeight,
-  subWeight,
-} from "../tools/calc.js";
-import { FILL_OPTIONS } from "../tools/data.js";
+  nearestPoint,
+  midWeightLb,
+  subWeightLb,
+} from "../src/lib/pa/calc.js";
+import { FILL_OPTIONS } from "../src/lib/data.js";
 
 const seeds = JSON.parse(fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url)));
 const base = seeds.find((c) => c.name === "lil block stack LE (optimized)");
@@ -79,7 +79,7 @@ export function evaluate(c) {
   });
   const mm = ms.mdl;
   const sxo = s.mdl
-    ? nearest(subThroughLp(s.mdl, sub.ts, s.AMP_V, cfg.portMax, xoLo), xoLo).spl
+    ? nearestPoint(subThroughLowpass(s.mdl, sub.ts, s.AMP_V, cfg.portMax, xoLo), xoLo).spl
     : null;
   const cd = CD_OPTIONS.find((o) => o.id === c.cd),
     horn = HORN_OPTIONS.find((o) => o.id === c.horn);
@@ -97,12 +97,12 @@ export function evaluate(c) {
     midQtc: r2(mm && mm.Qtc),
     midF3: r2(mm && mm.f3),
     midRef: r2(mm && mm.ref),
-    midMaxXo: r2(mm && nearest(ms.max, xoLo).spl),
-    midMax300: r2(mm && nearest(ms.max, 300).spl),
+    midMaxXo: r2(mm && nearestPoint(ms.max, xoLo).spl),
+    midMax300: r2(mm && nearestPoint(ms.max, 300).spl),
     subAtXo: r2(sxo),
     hornFlat: r2(h && h.flat),
-    subLb: r2(subWeight(cfg.subBox, cfg.wall, sub.lb)),
-    midLb: r2(midWeight(mDim, cfg.wall)),
+    subLb: r2(subWeightLb(cfg.subBox, cfg.wall, sub.lb)),
+    midLb: r2(midWeightLb(mDim, cfg.wall)),
   };
 }
 
@@ -141,9 +141,9 @@ export function evaluateFill(c) {
     Qtc: r2(f.sM && f.sM.Qtc),
     f3: r2(f.f3),
     sens: r2(f.sens),
-    max60: r2(nearest(f.max, 60).spl),
-    max100: r2(nearest(f.max, 100).spl),
-    who100: nearest(f.max, 100).who,
+    max60: r2(nearestPoint(f.max, 60).spl),
+    max100: r2(nearestPoint(f.max, 100).spl),
+    who100: nearestPoint(f.max, 100).who,
     pad: r2(f.pad),
     hfLimW: r2(f.hfLimW),
     lb: r2(f.lb),

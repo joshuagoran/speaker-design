@@ -1,7 +1,15 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { fillSystem, boxModel, closedBox, ampV, thermalV, STUFF, nearest } from "../tools/calc.js";
-import { FILL_OPTIONS } from "../tools/data.js";
+import {
+  fillSystem,
+  boxModel,
+  closedBox,
+  ampVoltage,
+  thermalVoltageLimit,
+  STUFFING_VOLUME_GAIN,
+  nearestPoint,
+} from "../src/lib/pa/calc.js";
+import { FILL_OPTIONS } from "../src/lib/data.js";
 import { close, massLineSPL } from "./helpers.js";
 
 const drv = FILL_OPTIONS.find((o) => o.id === "bc10cxn64");
@@ -22,7 +30,7 @@ test("fills volume: 1/2 in walls, less driver and port, sealed stuffed", (t) => 
   close(t, v.eff, v.net, 1e-12);
   const s = fillSystem(drv, { ...base, boxType: "sealed" });
   close(t, s.net, s.gross - 1.5, 1e-9);
-  close(t, s.eff, s.net * STUFF, 1e-9);
+  close(t, s.eff, s.net * STUFFING_VOLUME_GAIN, 1e-9);
 });
 test("fills sensitivity at 2.83 V = mass line (independent), both box types", (t) => {
   for (const boxType of ["vented", "sealed"])
@@ -42,7 +50,7 @@ test("fills f3 includes the highpass: raising the highpass raises f3", (t) => {
 });
 test("fills model calls match the planner's box models", (t) => {
   const v = fillSystem(drv, base),
-    V = ampV(300);
+    V = ampVoltage(300);
   const m = boxModel(drv.ts, v.eff, v.pArea, 4, 70, V, "LR24", { nPorts: 1 });
   close(t, v.vM.Fb, m.Fb, 1e-12);
   const s = fillSystem(drv, { ...base, boxType: "sealed" });
@@ -52,12 +60,12 @@ test("fills max curve stops at 300 Hz and respects every limit", (t) => {
   const v = fillSystem(drv, base);
   assert.ok(v.max.every((o) => o.f <= 300));
   for (const o of v.max) {
-    const c = nearest(v.vM.curve, o.f),
+    const c = nearestPoint(v.vM.curve, o.f),
       s = 10 ** ((o.spl - c.spl) / 20);
     assert.ok(
       c.xmm * s <= drv.ts.Xmax * (1 + 1e-9) &&
         c.vel * s <= 20 * (1 + 1e-9) &&
-        v.V * s <= thermalV(drv.ts.aes) * (1 + 1e-9),
+        v.V * s <= thermalVoltageLimit(drv.ts.aes) * (1 + 1e-9),
     );
   }
 });

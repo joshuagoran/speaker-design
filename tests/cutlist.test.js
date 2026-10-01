@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { boxParts, packSheets, f8, SHEETS } from "../tools/calc.js";
+import { boxParts, packSheets, formatInches, PLYWOOD_SHEETS } from "../src/lib/pa/calc.js";
 import { close } from "./helpers.js";
 
 const get = (P, name) => P.find((p) => p.part === name);
@@ -33,7 +33,7 @@ test("packSheets: no overlaps, inside the sheet, kerf kept, count at least the a
       { a: 15, b: 15, box: "Mid", part: "Side" },
       { a: 0.75, b: 26, box: "Sub", part: "Cleat" },
     );
-  for (const S of Object.values(SHEETS)) {
+  for (const S of Object.values(PLYWOOD_SHEETS)) {
     const k = 0.125,
       { sheets, tooBig } = packSheets(rects, S, k);
     assert.equal(tooBig.length, 0);
@@ -65,12 +65,16 @@ test("packSheets: no overlaps, inside the sheet, kerf kept, count at least the a
   }
 });
 test("packSheets: oversize parts are reported, not dropped silently", (t) => {
-  const { tooBig } = packSheets([{ a: 70, b: 70, box: "Sub", part: "Big" }], SHEETS["5x5"], 0.125);
+  const { tooBig } = packSheets(
+    [{ a: 70, b: 70, box: "Sub", part: "Big" }],
+    PLYWOOD_SHEETS["5x5"],
+    0.125,
+  );
   assert.equal(tooBig.length, 1);
 });
 test("f8: nearest 1/16 in, reduced", (t) => {
-  assert.equal(f8(12.625), "12 5/8");
-  assert.equal(f8(0.75), "3/4");
-  assert.equal(f8(3), "3");
-  assert.equal(f8(1.03), "1");
+  assert.equal(formatInches(12.625), "12 5/8");
+  assert.equal(formatInches(0.75), "3/4");
+  assert.equal(formatInches(3), "3");
+  assert.equal(formatInches(1.03), "1");
 });

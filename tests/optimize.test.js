@@ -2,16 +2,16 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import fs from "node:fs";
 import {
-  optimize,
-  evaluate,
-  problems,
-  bandOut,
-  roomNeed,
-  BAND,
-  AMP_MAX,
-} from "../tools/optimize.js";
-import { boxModel, subLimits, ampV } from "../tools/calc.js";
-import { SUB_OPTIONS, MID_BOXES } from "../tools/data.js";
+  optimizePaStack,
+  evaluateDesign,
+  designProblems,
+  bandOutputDb,
+  roomRequiredSpl,
+  SUB_BAND_HZ,
+  AMP_WATTS_MAX,
+} from "../src/lib/pa/optimize.js";
+import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc.js";
+import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data.js";
 import { close } from "./helpers.js";
 
 const seeds = JSON.parse(fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url)));
@@ -36,7 +36,7 @@ const base = { cur, room: 1000, maxLb: 125, budget: 1100, locks: {} };
 
 test("evaluate() gives the planner's numbers (golden snapshot)", (t) => {
   for (const name of ["lil block stack LE (optimized)", "blocky", "lil tower"]) {
-    const m = evaluate(pick(name)),
+    const m = evaluateDesign(pick(name)),
       g = golden[name];
     close(t, m.Fb, g.Fb, 0.02, `${name} Fb`);
     close(t, m.f3, g.f3, 0.02, `${name} f3`);
@@ -46,28 +46,33 @@ test("evaluate() gives the planner's numbers (golden snapshot)", (t) => {
 
 test("bandOut is the lowest music-limit level from 40 to 90 Hz (a peak can't raise it)", (t) => {
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500").ts,
-    V = ampV(500);
+    V = ampVoltage(500);
   const mdl = boxModel(ts, 150, 60, 12, 30, V, "BW24"),
-    L = subLimits(mdl, ts, V, 20);
+    L = subwooferLimits(mdl, ts, V, 20);
   const sc = 20 * Math.log10(L.V / V),
-    inBand = mdl.curve.filter((o) => o.f >= BAND[0] && o.f <= BAND[1]).map((o) => o.spl + sc);
-  close(t, bandOut(mdl, L, V), Math.min(...inBand), 1e-9);
+    inBand = mdl.curve
+      .filter((o) => o.f >= SUB_BAND_HZ[0] && o.f <= SUB_BAND_HZ[1])
+      .map((o) => o.spl + sc);
+  close(t, bandOutputDb(mdl, L, V), Math.min(...inBand), 1e-9);
 });
 
 test("room target: farther listener or no room gain needs more", (t) => {
-  assert.ok(roomNeed(500) < roomNeed(1000) && roomNeed(1000) < roomNeed("outdoor"));
+  assert.ok(
+    roomRequiredSpl(500) < roomRequiredSpl(1000) &&
+      roomRequiredSpl(1000) < roomRequiredSpl("outdoor"),
+  );
 });
 
 const runs = {};
 for (const goal of ["cheaper", "lighter", "lower", "louder"]) {
   test(`optimize (${goal}): every card passes every check and reproduces its numbers`, (t) => {
     const t0 = Date.now(),
-      out = (runs[goal] = optimize({ ...base, goal }));
+      out = (runs[goal] = optimizePaStack({ ...base, goal }));
     assert.ok(Date.now() - t0 < 8000, `took ${Date.now() - t0} ms`);
     assert.ok(out.cards.length >= 1, "at least one card");
     for (const k of out.cards) {
-      const m = evaluate(k.config);
-      assert.deepEqual(problems(m, { maxLb: base.maxLb, budget: base.budget }), [], k.label);
+      const m = evaluateDesign(k.config);
+      assert.deepEqual(designProblems(m, { maxLb: base.maxLb, budget: base.budget }), [], k.label);
       close(t, m.out, k.metrics.out, 1e-9, "output");
       close(t, m.price, k.metrics.price, 1e-9, "price");
       close(t, m.heaviest, k.metrics.heaviest, 1e-9, "weight");
@@ -95,7 +100,7 @@ for (const goal of ["cheaper", "lighter", "lower", "louder"]) {
 
 test("every card's label is true against the current design", (t) => {
   // (also run with a current design that fails: over budget, so the fix card appears)
-  runs.failing = optimize({ ...base, budget: 700, goal: "cheaper" });
+  runs.failing = optimizePaStack({ ...base, budget: 700, goal: "cheaper" });
   const goalName = {
     cheaper: "Same output, cheaper",
     lighter: "Same output, lighter",
@@ -103,7 +108,7 @@ test("every card's label is true against the current design", (t) => {
     louder: "Louder",
   };
   for (const goal of ["cheaper", "lighter", "lower", "louder", "failing"]) {
-    const out = runs[goal] || optimize({ ...base, goal }),
+    const out = runs[goal] || optimizePaStack({ ...base, goal }),
       c = out.curM;
     for (const k of out.cards) {
       const m = k.metrics;
@@ -134,7 +139,7 @@ test("every card's label is true against the current design", (t) => {
 
 test("locks: locked parts stay, dimension limits hold", (t) => {
   // (the saved config pairs a 1.4" driver with a 1" horn; lock a matching horn)
-  const out = optimize({
+  const out = optimizePaStack({
     ...base,
     cur: { ...cur, horn: "a460g2_14" },
     goal: "louder",
@@ -158,23 +163,23 @@ test("locks: locked parts stay, dimension limits hold", (t) => {
 });
 
 test("impossible limits: no cards, a near-miss that names what blocks it", (t) => {
-  const out = optimize({ ...base, goal: "cheaper", maxLb: 40 });
+  const out = optimizePaStack({ ...base, goal: "cheaper", maxLb: 40 });
   assert.equal(out.cards.length, 0);
   assert.ok(out.nearMiss && out.nearMiss.blocking.length > 0);
 });
 
 test("amps: unlocked amps stay within the sliders; locked amps stay; same-output cards keep the target", (t) => {
-  const free = runs.cheaper || optimize({ ...base, goal: "cheaper" });
+  const free = runs.cheaper || optimizePaStack({ ...base, goal: "cheaper" });
   for (const k of free.cards) {
     assert.ok(
-      k.config.ampW <= AMP_MAX.ampW &&
-        k.config.mAmpW <= AMP_MAX.mAmpW &&
-        k.config.hfAmpW <= AMP_MAX.hfAmpW,
+      k.config.ampW <= AMP_WATTS_MAX.ampW &&
+        k.config.mAmpW <= AMP_WATTS_MAX.mAmpW &&
+        k.config.hfAmpW <= AMP_WATTS_MAX.hfAmpW,
       k.label,
     );
   }
   if (!free.goalMissing) assert.ok(free.cards[0].metrics.out >= free.target - 0.5);
-  const locked = optimize({
+  const locked = optimizePaStack({
     ...base,
     goal: "cheaper",
     locks: { ampW: true, mAmpW: true, hfAmpW: true },
@@ -188,7 +193,7 @@ test("amps: unlocked amps stay within the sliders; locked amps stay; same-output
 
 test("all three sub dimensions exact: tunes that one box (sub locked)", (t) => {
   const c = { ...pick("light block"), horn: "a460g2_14" };
-  const out = optimize({
+  const out = optimizePaStack({
     ...base,
     cur: c,
     goal: "louder",
@@ -200,7 +205,7 @@ test("all three sub dimensions exact: tunes that one box (sub locked)", (t) => {
 
 test("15 in sub: a box narrower than an 18 in needs is allowed", (t) => {
   const c = { ...cur, sub: "sbnero15", cDim: { w: 19, h: 24, d: 20 }, horn: "a460g2_14" };
-  const out = optimize({
+  const out = optimizePaStack({
     ...base,
     cur: c,
     goal: "louder",
@@ -210,10 +215,10 @@ test("15 in sub: a box narrower than an 18 in needs is allowed", (t) => {
 });
 
 test("a near-miss option, once applied, finds designs", (t) => {
-  const out = optimize({ ...base, goal: "cheaper", maxLb: 100 });
+  const out = optimizePaStack({ ...base, goal: "cheaper", maxLb: 100 });
   if (out.cards.length) return; // nothing to check: the limit wasn't binding
   for (const o of out.nearMiss.options) {
-    const again = optimize({ ...base, goal: "cheaper", maxLb: 100, ...o.set });
+    const again = optimizePaStack({ ...base, goal: "cheaper", maxLb: 100, ...o.set });
     assert.ok(again.cards.length >= 1, o.text);
   }
   assert.ok(out.nearMiss.blocking.length > 0 && out.nearMiss.blocking.every((b) => b.length > 0));
@@ -225,7 +230,7 @@ test("Lighter with everything locked but the plywood offers the same design on 1
   for (const name of ["lil block stack LE", "blocky", "light block", "lil tower"]) {
     const c0 = { ...defaults, ...pick(name) };
     const c = { ...c0, horn: c0.cd === "n314t" && c0.horn === "a460g2" ? "a460g2_14" : c0.horn };
-    if (problems(evaluate(c), { maxLb: 150, budget: 2000 }).length) continue; // locked as it is, it can't pass anyway
+    if (designProblems(evaluateDesign(c), { maxLb: 150, budget: 2000 }).length) continue; // locked as it is, it can't pass anyway
     tried++;
     const all = {
       sub: true,
@@ -242,7 +247,7 @@ test("Lighter with everything locked but the plywood offers the same design on 1
       subDim: { w: "exact", h: "exact", d: "exact" },
       midDim: { w: "exact", h: "exact", d: "exact" },
     };
-    const out = optimize({
+    const out = optimizePaStack({
       ...base,
       cur: c,
       maxLb: 150,
@@ -255,14 +260,14 @@ test("Lighter with everything locked but the plywood offers the same design on 1
       `${name}: ${JSON.stringify(out.nearMiss && out.nearMiss.blocking)}`,
     );
     assert.equal(out.cards[0].config.wall, 0.5, name);
-    assert.ok(out.cards[0].metrics.heaviest < evaluate(c).heaviest, name);
+    assert.ok(out.cards[0].metrics.heaviest < evaluateDesign(c).heaviest, name);
   }
   assert.ok(tried >= 2, "at least two saved designs checked");
 });
 
 test("Lighter with free choices still shows the plywood-only change when it beats the current design", (t) => {
   const c = { ...pick("light block"), xoLo: 120, xoHi: 900, mAmpW: 400, hfAmpW: 100 };
-  const out = optimize({ ...base, cur: c, maxLb: 150, budget: 2000, goal: "lighter" });
+  const out = optimizePaStack({ ...base, cur: c, maxLb: 150, budget: 2000, goal: "lighter" });
   const small = out.cards.find((k) => k.config.wall !== c.wall && k.changed.join() === "plywood");
   assert.ok(
     small || out.cards.some((k) => k.config.wall === 0.5),
@@ -272,7 +277,7 @@ test("Lighter with free choices still shows the plywood-only change when it beat
 
 test("no card carries 'Horn stops loading near the crossover' when the horn, driver or crossover is free", (t) => {
   for (const goal of ["cheaper", "lighter", "lower", "louder"]) {
-    const out = runs[goal] || optimize({ ...base, goal });
+    const out = runs[goal] || optimizePaStack({ ...base, goal });
     for (const k of out.cards)
       assert.ok(
         !k.warnings.some(([h]) => h === "Horn stops loading near the crossover"),
@@ -294,7 +299,7 @@ test("stacked goals: the main card beats the current design on every goal; the f
     ["cheaper", "louder"],
     ["louder", "lower"],
   ]) {
-    const out = optimize({ ...base, goals });
+    const out = optimizePaStack({ ...base, goals });
     assert.deepEqual(out.goals, goals);
     const main = out.cards.find((k) => k.label.includes(" + "));
     if (!main) {
@@ -308,8 +313,8 @@ test("stacked goals: the main card beats the current design on every goal; the f
         `${goals}: main card doesn't beat the current design on ${g}`,
       );
   }
-  const a = optimize({ ...base, goals: ["cheaper", "lighter"] }).cards[0],
-    b = optimize({ ...base, goals: ["lighter", "cheaper"] }).cards[0];
+  const a = optimizePaStack({ ...base, goals: ["cheaper", "lighter"] }).cards[0],
+    b = optimizePaStack({ ...base, goals: ["lighter", "cheaper"] }).cards[0];
   if (a && b && a.label.includes("+") && b.label.includes("+"))
     assert.ok(
       a.metrics.price <= b.metrics.price + 1e-9 && b.metrics.heaviest <= a.metrics.heaviest + 1e-9,
@@ -331,13 +336,20 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
     midDim: { w: "exact", h: "exact", d: "exact" },
   };
   const c = { xoLo: 120, xoHi: 900, mAmpW: 400, hfAmpW: 100, ...pick("light block"), ampW: 300 }; // a small amp: the sub is amp-limited
-  assert.equal(evaluate(c).who, "amplifier power");
-  const out = optimize({ ...base, cur: c, maxLb: 200, budget: 2000, goals: ["louder"], locks });
+  assert.equal(evaluateDesign(c).who, "amplifier power");
+  const out = optimizePaStack({
+    ...base,
+    cur: c,
+    maxLb: 200,
+    budget: 2000,
+    goals: ["louder"],
+    locks,
+  });
   assert.ok(out.cards.length >= 1, JSON.stringify(out.nearMiss && out.nearMiss.blocking));
   const k = out.cards[0];
   assert.ok(k.config.ampW > c.ampW, `amp ${k.config.ampW} W`);
-  assert.ok(k.metrics.out >= evaluate(c).out + 1, "louder than the design at 300 W");
+  assert.ok(k.metrics.out >= evaluateDesign(c).out + 1, "louder than the design at 300 W");
   // and no more power than it uses: 50 W less loses output
-  const less = evaluate({ ...k.config, ampW: k.config.ampW - 50 });
+  const less = evaluateDesign({ ...k.config, ampW: k.config.ampW - 50 });
   assert.ok(less.out < k.metrics.out - 0.01 || k.config.ampW - 50 < 200);
 });

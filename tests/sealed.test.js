@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { closedBox } from "../tools/calc.js";
-import { MID_OPTIONS } from "../tools/data.js";
+import { closedBox } from "../src/lib/pa/calc.js";
+import { MID_OPTIONS } from "../src/lib/data.js";
 import { tsModel, massLineSPL, f3SecondOrder, near, close, rel, db } from "./helpers.js";
 
 const drv = (id) => MID_OPTIONS.find((o) => o.id === id).ts;

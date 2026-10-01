@@ -2,7 +2,7 @@
 // palette: stone = the grays; green / orange (amber) / red = status; cmy-* = brand (cmy-a = actions and focus, ink today;
 // cmy-y = yellow accents; chart colours are read from PAL in the app code); 4 px corners, 6 px for large ones.
 import plugin from "tailwindcss/plugin";
-import { PAL } from "./tools/palette.js";
+import { PAL } from "./src/styles/palette.js";
 
 const S = PAL.status;
 // a: tint (backgrounds), e: soft edge (borders of tinted notes), b: the colour, c: its dark text shade
@@ -17,7 +17,7 @@ const scale = (s) => ({
 const font = ["Inconsolata", "ui-monospace", "monospace"];
 
 export default {
-  content: ["./index.html", "./tools/**/*.{js,jsx}"],
+  content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
     extend: {
       colors: {

@@ -12,21 +12,25 @@ substitute for an impedance sweep on the prototype.
 ## Layout
 
 ```
-tools/calc.js                every calculation (pure JS, tested)
-tools/data.js                drivers, horns, cabinets
-tools/chips.js               warning chips per section
-tools/stack-planner.app.jsx  the planner UI (JSX)
-tools/palette.js             the colours (CSS variables and Tailwind names come from here)
-tools/app.css                page styles + Tailwind layers; font
-tools/firebase-store.js      saving on GitHub Pages (bundled only into that build)
-index.html                   Vite entry
-tailwind.config.js           Tailwind, compiled at build time
-tests/                       Vitest suites, golden snapshot, mobile layout check
-tools/build.sh               vp build + tools/inline.mjs -> one self-contained page
-tools/serve.sh               build + serve on :8901
-docs/design-notes.md         findings behind the current configuration
-docs/*.svg                   crossover null cone, horn coverage
-dist/                        build output (gitignored)
+src/main.jsx                    entry: mounts <App/>; imports the stylesheet
+src/App.jsx                     hash routing, header, and the planner state shared by the PA pages
+src/pages/pa-stack/             PA stack page: PaStackPage, sections/, hooks/ (state: sub, mid, horn, crossovers, ...)
+src/pages/{hifi,fills,cutlist,notes}/   the other pages
+src/components/                 ui/ charts/ drawings/ lock/ optimizer/ stats/ chips/ saved-configs/ stack-view/
+src/components/saved-configs/firebaseStore.js   saving on GitHub Pages (bundled only into that build)
+src/hooks/  src/constants/      shared hooks, chart scales, lock keys, units
+src/styles/palette.js           the colours (CSS variables and Tailwind names come from here)
+src/styles/app.css              page styles + Tailwind layers; font
+src/lib/data.js                 drivers, horns, cabinets
+src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion (pure JS, tested)
+src/lib/hifi/                   hifi model and its optimizer
+index.html                      Vite entry
+tailwind.config.js              Tailwind, compiled at build time
+tests/                          Vitest suites, golden snapshot, mobile layout check
+build/build.sh                  vp build + build/inline.mjs -> one self-contained page
+build/serve.sh                  build + serve on :8901
+docs/design-notes.md            findings behind the current configuration
+docs/*.svg                      crossover null cone, horn coverage
 ```
 
 ## Prerequisites
@@ -43,12 +47,12 @@ pnpm exec vp test       # tests (Vitest)
 ## Build
 
 ```sh
-tools/build.sh          # -> dist/stack-planner.html
+build/build.sh          # -> dist/stack-planner.html
 pnpm run build          # (or `vp run build`) -> dist/site/ for GitHub Pages
 ```
 
 `vp build` bundles the app with React, three.js, the optimizer worker, the compiled
-Tailwind stylesheet and the Inconsolata font (all from npm), and `tools/inline.mjs`
+Tailwind stylesheet and the Inconsolata font (all from npm), and `build/inline.mjs`
 puts the result into one HTML file. Nothing loads from a CDN: the page works offline.
 The Pages build (`--mode pages`) also bundles Firebase for saving; the artifact build
 doesn't include it.
@@ -56,7 +60,7 @@ doesn't include it.
 ## Local preview
 
 ```sh
-tools/serve.sh          # http://127.0.0.1:8901/stack-planner.html
+build/serve.sh          # http://127.0.0.1:8901/stack-planner.html
 ```
 
 It builds both pages and serves `dist/`. The pages are self-contained, so opening
@@ -136,10 +140,10 @@ configurations and can be edited or deleted like any other.
 
 ## How the planner is put together
 
-- `tools/data.js` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
-- `tools/optimize.js` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`tools/optimize.worker.js`, inlined by `build.sh`), with a main-thread fallback. See `docs/optimizer-plan.md`.
-- `tools/chips.js` — the warning chips for each section (sub, mid, horn, fills), pure functions tested at each threshold.
-- `tools/calc.js` — every calculation, pure JS, imported by the page and the tests (`npm test`):
+- `src/lib/data.js` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
+- `src/lib/pa/optimize.js` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`src/lib/pa/optimize.worker.js`, inlined by the build), with a main-thread fallback. See `docs/optimizer-plan.md`.
+- `src/lib/pa/chips.js` — the warning chips for each section (sub, mid, horn, fills), pure functions tested at each threshold.
+- `src/lib/pa/calc.js` — every calculation, pure JS, imported by the page and the tests (`npm test`):
   - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r); letterbox and side ducts pass `ecIn` from `slotEndCorr` / `sideDuctEndCorr` (rectangular mouth; floor mirrored at both ends of a letterbox, the side wall at the inner end of a side duct). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.
   - `closedBox(ts, VbL, hp, lp, volts)` — sealed mid-bass, LR24 crossovers. `ref` is the mass-controlled asymptote, so `f3` is right for low-Qtc boxes. Coil inductance is not modelled.
   - `midSystem` (sealed mid volume, model, per-frequency max), `subThroughLp` (sub through the crossover), `fillSystem` (the Fills page).
@@ -188,14 +192,14 @@ See `docs/design-notes.md` for the findings behind the current configuration.
 
 ## Web app (GitHub Pages + Firestore)
 
-`sh tools/build.sh pages` builds `dist/site/` — the same planner, with saved
+`sh build/build.sh pages` builds `dist/site/` — the same planner, with saved
 configs in Firebase Firestore instead of the claude.ai artifact store. Pushes
 to `main` deploy it via `.github/workflows/pages.yml`.
 
 One-time setup:
 
 1. [Firebase console](https://console.firebase.google.com): create a project (free Spark plan).
-2. Add a **Web app**; copy its config object into `tools/firebase-config.js`
+2. Add a **Web app**; copy its config object into `build/firebase-config.js`
    (`window.PLANNER_FIREBASE = { ... }`). These values are public by design.
 3. **Firestore Database → Create** (production mode).
 4. **Authentication → Sign-in method → Google → Enable**; under

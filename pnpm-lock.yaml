@@ -176,7 +176,7 @@ importers:
   .:
     dependencies:
       '@fontsource-variable/inconsolata':
-        specifier: ^5.3.0
+        specifier: 5.3.0
         version: 5.3.0
       firebase:
         specifier: 10.12.5

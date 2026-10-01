@@ -2,7 +2,7 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   // one self-contained page: a single JS chunk (dynamic imports and the worker inlined), one stylesheet, and every
-  // asset (fonts) inlined as data URLs; tools/inline.mjs then puts the JS and CSS into the HTML itself
+  // asset (fonts) inlined as data URLs; build/inline.mjs then puts the JS and CSS into the HTML itself
   build: {
     assetsInlineLimit: Number.MAX_SAFE_INTEGER,
     cssCodeSplit: false,
