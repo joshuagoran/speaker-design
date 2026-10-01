@@ -41,81 +41,81 @@ function StackPlanner() {
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
   }, []);
-  const [sub, setSub] = useState(SUB_OPTIONS.find((o) => o.id === "sbnero18"));
-  const [mid, setMid] = useState(MID_OPTIONS.find((o) => o.id === "sbnero12"));
-  const [horn, setHorn] = useState(HORN_OPTIONS.find((h) => h.id === "a400g2"));
-  const [cd, setCd] = useState(CD_OPTIONS.find((c) => c.id === "de360"));
-  const [midBox, setMidBox] = useState(MID_BOXES.find((o) => o.id === "b15"));   // last preset loaded
-  const [mDim, setMDim] = useState({ ...MID_BOXES.find((o) => o.id === "b15").box });
-  const [xoLo, setXoLo] = useState(120);         // sub -> mid crossover, LR24
-  const [xoHi, setXoHi] = useState(900);         // mid -> horn crossover, LR24
-  const [paPlane, setPaPlane] = useState("v");    // dispersion map: vertical (lobing) or horizontal
-  const [mAmpW, setMAmpW] = useState(400);       // amp power per mid channel, into 8 Ω
-  const [tilt, setTilt] = useState(6);           // how much less the mid band needs than the sub band, dB
-  const [hfAmpW, setHfAmpW] = useState(100);     // amp power per HF channel, rated into 8 Ω
-  const [hfTilt, setHfTilt] = useState(6);       // how much less the horn band needs than the mid band, dB
-  const setM = (k, v) => setMDim((p) => ({ ...p, [k]: v }));
-  const plinth = 3; // fixed, matches the duct height
+  const [subDriver, setSubDriver] = useState(SUB_OPTIONS.find((o) => o.id === "sbnero18"));
+  const [midDriver, setMidDriver] = useState(MID_OPTIONS.find((o) => o.id === "sbnero12"));
+  const [hornOption, setHornOption] = useState(HORN_OPTIONS.find((h) => h.id === "a400g2"));
+  const [compressionDriver, setCompressionDriver] = useState(CD_OPTIONS.find((c) => c.id === "de360"));
+  const [midBoxPreset, setMidBoxPreset] = useState(MID_BOXES.find((o) => o.id === "b15"));   // last preset loaded
+  const [midBoxDims, setMidBoxDims] = useState({ ...MID_BOXES.find((o) => o.id === "b15").box });
+  const [subMidCrossoverHz, setSubMidCrossoverHz] = useState(120);         // sub -> mid crossover, LR24
+  const [midHornCrossoverHz, setMidHornCrossoverHz] = useState(900);         // mid -> horn crossover, LR24
+  const [dispersionPlane, setDispersionPlane] = useState("v");    // dispersion map: vertical (lobing) or horizontal
+  const [midAmpWatts, setMidAmpWatts] = useState(400);       // amp power per mid channel, into 8 Ω
+  const [midBandTiltDb, setMidBandTiltDb] = useState(6);           // how much less the mid band needs than the sub band, dB
+  const [hornAmpWatts, setHornAmpWatts] = useState(100);     // amp power per HF channel, rated into 8 Ω
+  const [hornBandTiltDb, setHornBandTiltDb] = useState(6);       // how much less the horn band needs than the mid band, dB
+  const setMidBoxDim = (k, v) => setMidBoxDims((p) => ({ ...p, [k]: v }));
+  const plinthHeightIn = 3; // fixed, matches the duct height
   const [cutaway, setCutaway] = useState(false);
   const [cabinet] = useState(CABINETS[0]);
   const [portStyle, setPortStyle] = useState("slots");
   const [layout, setLayout] = useState("stack");
   const format = FORMATS[0];   // 18″ sub + compression driver; mid is 12″ or 15″
   const [midSize, setMidSize] = useState(12);
-  const [wall, setWall] = useState(0.75);   // side/top/bottom/back ply, in
-  const [inset, setInset] = useState(0.75); // how far the baffles sit back from the frame front, in
+  const [wallThicknessIn, setWallThicknessIn] = useState(0.75);   // side/top/bottom/back ply, in
+  const [baffleInsetIn, setBaffleInsetIn] = useState(0.75); // how far the baffles sit back from the frame front, in
   const [baffleColor, setBaffleColor] = useState(PAINT_SWATCHES.find(([, name]) => name === "Dusty pink")[0]);
-  const [cabFinish, setCabFinish] = useState("birch");
-  const [spacerH, setSpacerH] = useState(20);
+  const [cabinetFinish, setCabinetFinish] = useState("birch");
+  const [spacerHeightIn, setSpacerHeightIn] = useState(20);
   const [showDetails, setShowDetails] = useState(false);
   // phones: settings live in a bottom sheet with tabs; result sections fold (remembered per viewer)
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [tab, setTab] = useState("sub");
-  const tabCls = (t) => (tab === t ? "" : "max-md:hidden");
-  const [folds, setFolds] = useState(() => {
+  const [isSettingsSheetOpen, setSettingsSheetOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("sub");
+  const tabClass = (t) => (activeTab === t ? "" : "max-md:hidden");
+  const [expandedSections, setExpandedSections] = useState(() => {
     try { return { sub: true, mid: false, horn: false, totals: false, ...JSON.parse(localStorage.getItem("planner.folds") || "{}") }; }
     catch { return { sub: true, mid: false, horn: false, totals: false }; }
   });
-  const toggleFold = (id) => setFolds((f) => { const n = { ...f, [id]: !f[id] }; try { localStorage.setItem("planner.folds", JSON.stringify(n)); } catch {} return n; });
-  const foldCls = (id) => (folds[id] ? "" : "max-md:hidden");
-  const [full3d, setFull3d] = useState(false);
+  const toggleSection = (id) => setExpandedSections((f) => { const n = { ...f, [id]: !f[id] }; try { localStorage.setItem("planner.folds", JSON.stringify(n)); } catch {} return n; });
+  const sectionClass = (id) => (expandedSections[id] ? "" : "max-md:hidden");
+  const [isFull3d, setIsFull3d] = useState(false);
   // optimizer: switch, inputs and locks remembered per viewer
-  const lsGet = (k, fb) => { try { const v = localStorage.getItem(k); return v == null ? fb : JSON.parse(v); } catch { return fb; } };
-  const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
-  const [optOn, setOptOnRaw] = useState(() => lsGet("planner.opt", false));
-  const setOptOn = (v) => { setOptOnRaw(v); lsSet("planner.opt", v); };
+  const readStoredJson = (k, fb) => { try { const v = localStorage.getItem(k); return v == null ? fb : JSON.parse(v); } catch { return fb; } };
+  const writeStoredJson = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  const [isOptimizerOn, setIsOptimizerOnState] = useState(() => readStoredJson("planner.opt", false));
+  const setIsOptimizerOn = (v) => { setIsOptimizerOnState(v); writeStoredJson("planner.opt", v); };
   // goals start empty on every load (not restored), so a search always starts from a goal you just picked
-  const [optIn, setOptIn] = useState(() => { const { budgetPer, goal, goals, ...o } = lsGet("planner.optIn", {}) || {};
+  const [optimizerInput, setOptimizerInputState] = useState(() => { const { budgetPer, goal, goals, ...o } = readStoredJson("planner.optIn", {}) || {};
     return { room: 1000, maxLb: 125, budget: 900, ...o, goals: [] }; });
-  const setOpt = (o) => setOptIn((p) => { const n = { ...p, ...o }; lsSet("planner.optIn", n); return n; });
-  const [locks, setLocksRaw] = useState(() => { const l = lsGet("planner.locks", {}) || {}; return { ...l, subDim: { ...(l.subDim || {}) }, midDim: { ...(l.midDim || {}) } }; });
-  const setLocks = (f) => setLocksRaw((p) => { const n = f(p); lsSet("planner.locks", n); return n; });
-  const lk = (key, what) => optOn ? <LockButton on={!!locks[key]} what={what} onClick={() => setLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null;
-  const dl = (box, dim, what) => optOn ? <DimensionLock mode={locks[box][dim] || "free"} what={what} onChange={(m) => setLocks((p) => ({ ...p, [box]: { ...p[box], [dim]: m } }))} /> : null;
-  const [optRes, setOptRes] = useState(null);
-  const [optBusy, setOptBusy] = useState(false);
-  const [optErr, setOptErr] = useState("");
-  const [preview, setPreview] = useState(null);   // { label, before }
-  const [undoSnap, setUndoSnap] = useState(null);
-  const [toast, setToast] = useState("");
+  const updateOptimizerInput = (o) => setOptimizerInputState((p) => { const n = { ...p, ...o }; writeStoredJson("planner.optIn", n); return n; });
+  const [optimizerLocks, setOptimizerLocksState] = useState(() => { const l = readStoredJson("planner.locks", {}) || {}; return { ...l, subDim: { ...(l.subDim || {}) }, midDim: { ...(l.midDim || {}) } }; });
+  const setOptimizerLocks = (f) => setOptimizerLocksState((p) => { const n = f(p); writeStoredJson("planner.locks", n); return n; });
+  const renderLockButton = (key, what) => isOptimizerOn ? <LockButton on={!!optimizerLocks[key]} what={what} onClick={() => setOptimizerLocks((p) => ({ ...p, [key]: !p[key] }))} /> : null;
+  const renderDimensionLock = (box, dim, what) => isOptimizerOn ? <DimensionLock mode={optimizerLocks[box][dim] || "free"} what={what} onChange={(m) => setOptimizerLocks((p) => ({ ...p, [box]: { ...p[box], [dim]: m } }))} /> : null;
+  const [optimizerResult, setOptimizerResult] = useState(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizerError, setOptimizerError] = useState("");
+  const [designPreview, setDesignPreview] = useState(null);   // { label, before }
+  const [undoSnapshot, setUndoSnapshot] = useState(null);
+  const [toastMessage, setToastMessage] = useState("");
   useEffect(() => {
-    if (!full3d) return;
-    const esc = (e) => { if (e.key === "Escape") setFull3d(false); };
+    if (!isFull3d) return;
+    const esc = (e) => { if (e.key === "Escape") setIsFull3d(false); };
     window.addEventListener("keydown", esc);
     return () => window.removeEventListener("keydown", esc);
-  }, [full3d]);
-  const [joint, setJoint] = useState("butt");       // cutlist corner joints
-  const [sheetKind, setSheetKind] = useState("4x8");
-  const [sets, setSets] = useState(2);   // "tops on spacers": spacer height, in   // "birch", "walnut" or a paint hex
+  }, [isFull3d]);
+  const [cornerJoint, setCornerJoint] = useState("butt");       // cutlist corner joints
+  const [plywoodSheetKind, setPlywoodSheetKind] = useState("4x8");
+  const [boxSetCount, setBoxSetCount] = useState(2);   // how many sets of boxes the cutlist covers
   // Every cabinet is custom; the preset list below is only a starting point.
-  const [cDim, setCDim] = useState({ w: 28, h: 32, d: 24 });
-  const [cVent, setCVent] = useState({ slotH: 3, nt: 2, dia: 6, throat: 3, len: 14 });
-  const [hpf, setHpf] = useState(33);
-  const [hpType, setHpType] = useState("BW24");   // sub highpass alignment
-  const [ampW, setAmpW] = useState(800);   // amp power per sub channel, into 8 Ω
-  const [portMax, setPortMax] = useState(20);   // peak port air speed allowed, m/s
-  const setC = (k, v) => setCDim((p) => ({ ...p, [k]: v }));
-  const setV = (k, v) => setCVent((p) => ({ ...p, [k]: v }));
+  const [subBoxDims, setSubBoxDims] = useState({ w: 28, h: 32, d: 24 });
+  const [subVentSpec, setSubVentSpec] = useState({ slotH: 3, nt: 2, dia: 6, throat: 3, len: 14 });
+  const [subHighpassHz, setSubHighpassHz] = useState(33);
+  const [subHighpassType, setSubHighpassType] = useState("BW24");   // sub highpass alignment
+  const [subAmpWatts, setSubAmpWatts] = useState(800);   // amp power per sub channel, into 8 Ω
+  const [maxPortAirSpeedMs, setMaxPortAirSpeedMs] = useState(20);   // peak port air speed allowed, m/s
+  const setSubBoxDim = (k, v) => setSubBoxDims((p) => ({ ...p, [k]: v }));
+  const setSubVentField = (k, v) => setSubVentSpec((p) => ({ ...p, [k]: v }));
 
   // ---- saved configurations, backed by the artifact's document store ----
   const store = useConfigStore("configs");
@@ -137,17 +137,17 @@ function StackPlanner() {
     setTimeout(() => setCfgMsg(""), 2500);
   };
   // In the tower layout the mid chamber is the sub's footprint, 15.5 in tall.
-  const midDims = layout === "tower" ? { w: cDim.w, h: 15.5, d: cDim.d } : mDim;
-  const midSel = { ...mid, box: midDims };
-  const subList = SUB_OPTIONS.filter((o) => o.size === format.sub);
-  const midList = MID_OPTIONS.filter((o) => (o.size || 12) === midSize);
-  const boxList = MID_BOXES.filter((b) => (b.size || 12) === midSize && b.id !== "b13");
-  const subBox = cDim;
-  const subSel = { ...sub, box: subBox };
+  const effectiveMidBoxDims = layout === "tower" ? { w: subBoxDims.w, h: 15.5, d: subBoxDims.d } : midBoxDims;
+  const midWithBox = { ...midDriver, box: effectiveMidBoxDims };
+  const subDriverChoices = SUB_OPTIONS.filter((o) => o.size === format.sub);
+  const midDriverChoices = MID_OPTIONS.filter((o) => (o.size || 12) === midSize);
+  const midBoxChoices = MID_BOXES.filter((b) => (b.size || 12) === midSize && b.id !== "b13");
+  const subBox = subBoxDims;
+  const subWithBox = { ...subDriver, box: subBox };
   useEffect(() => {
     const pickOf = (list) => list.find((o) => o.pick) || list[0];
-    if (subList.length) setSub(pickOf(subList));
-    if (midList.length) setMid(pickOf(midList));
+    if (subDriverChoices.length) setSubDriver(pickOf(subDriverChoices));
+    if (midDriverChoices.length) setMidDriver(pickOf(midDriverChoices));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [format]);
   // Switching 12/15 picks that size's default driver and box; restoring a config sets them itself.
@@ -155,31 +155,31 @@ function StackPlanner() {
   useEffect(() => {
     if (skipSizeReset.current) { skipSizeReset.current = false; return; }
     const pickOf = (list) => list.find((o) => o.pick) || list[0];
-    if (midList.length) setMid(pickOf(midList));
-    if (boxList.length) { const b = pickOf(boxList); setMidBox(b); setMDim({ ...b.box }); }
+    if (midDriverChoices.length) setMidDriver(pickOf(midDriverChoices));
+    if (midBoxChoices.length) { const b = pickOf(midBoxChoices); setMidBoxPreset(b); setMidBoxDims({ ...b.box }); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [midSize]);
-  const mismatch = horn.exit !== cd.exit;
+  const hornExitMismatch = hornOption.exit !== compressionDriver.exit;
 
   // Port geometry, matching what the 3D view draws, so the table and the
   // model describe the same box.
-  const PT = wall;
-  const { port, grossL, netL, AMP_V, mdl, lim } = subSystem(sub, mid, {
-    subBox, midDims: mDim, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout });
+  const PT = wallThicknessIn;
+  const { port, grossL: subGrossLiters, netL: subNetLiters, AMP_V: subAmpVoltage, mdl: subModel, lim: subLimits } = subSystem(subDriver, midDriver, {
+    subBox, midDims: midBoxDims, wall: wallThicknessIn, inset: baffleInsetIn, portStyle, cVent: subVentSpec, hpf: subHighpassHz, hpType: subHighpassType, ampW: subAmpWatts, portMax: maxPortAirSpeedMs, layout });
   // Max SPL for a sine at each frequency (each frequency meets its own port and excursion limits);
   // the broadband limit above is what applies to music.
-  const maxCurve = mdl ? maxCurveOf(mdl.curve, sub.ts, AMP_V, portMax) : null;
-  const maxNear = (f) => maxCurve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
+  const subMaxCurve = subModel ? maxCurveOf(subModel.curve, subDriver.ts, subAmpVoltage, maxPortAirSpeedMs) : null;
+  const subMaxCurveNearest = (f) => subMaxCurve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 
   // ---- mid-bass: sealed box ----
-  const { V: MID_V, grossL: midGrossL, netL: midNetL, effL: midEffL, mdl: mMdl, vTherm: vMidTherm, max: midMax, useV: midUseV } =
-    midSystem(mid, { midDims, wall, inset, xoLo, xoHi, mAmpW });
+  const { V: midVoltage, grossL: midGrossL, netL: midNetL, effL: midEffL, mdl: midModel, vTherm: midThermalVoltage, max: midMaxCurve, useV: midUsedVoltage } =
+    midSystem(midDriver, { midDims: effectiveMidBoxDims, wall: wallThicknessIn, inset: baffleInsetIn, xoLo: subMidCrossoverHz, xoHi: midHornCrossoverHz, mAmpW: midAmpWatts });
   // 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware
-  const midCabLb = midWeightLb(midDims, wall);
-  const midLbLoaded = midCabLb + (mid.lb || 0);
-  const midNear = (f) => midMax.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
+  const midCabinetLb = midWeightLb(effectiveMidBoxDims, wallThicknessIn);
+  const midWeightLoadedLb = midCabinetLb + (midDriver.lb || 0);
+  const midMaxCurveNearest = (f) => midMaxCurve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
   // Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter.
-  const subSys = mdl ? subThroughLowpass(mdl, sub.ts, AMP_V, portMax, xoLo) : null;
+  const subThroughLowpassCurve = subModel ? subThroughLowpass(subModel, subDriver.ts, subAmpVoltage, maxPortAirSpeedMs, subMidCrossoverHz) : null;
   // What the mid actually has to match: the sub at its music limit (one drive level for
   // the whole band), through its lowpass, less the music-balance allowance.
   // ---- horn + compression driver ----
@@ -187,98 +187,98 @@ function StackPlanner() {
   // highpass at the crossover and a 12 dB/oct rolloff below the horn's loading limit.
   // Power: amp voltage into the driver's impedance, capped at program (2 x AES), derated
   // 6 dB per octave when crossing below the frequency the AES rating was measured at.
-  const hf = cd.hf, hz = horn.hf || {};
-  const hornModel = hornResponse(hf, hz, xoHi, hfAmpW);
-  const hornAt = (f) => hornModel.curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b)).spl;
+  const compressionDriverSpec = compressionDriver.hf, hornSpec = hornOption.hf || {};
+  const hornModel = hornResponse(compressionDriverSpec, hornSpec, midHornCrossoverHz, hornAmpWatts);
+  const hornSplAt = (f) => hornModel.curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b)).spl;
   // mid beamwidth at the horn crossover, as a rigid piston: -6 dB where ka sin(theta) = 2.2
-  const midBeam = mid.ts ? pistonBeamWidthDeg(mid.ts.Sd, xoHi) : null;
+  const midBeamWidthDeg = midDriver.ts ? pistonBeamWidthDeg(midDriver.ts.Sd, midHornCrossoverHz) : null;
   // Horizontal beamwidth against frequency: mid as a rigid piston, horn at its rated coverage down
   // to Keele's pattern-control limit and proportionally wider below. Rules of thumb.
   const beamCurves = (() => {
-    const hz0 = horn.hf || {};
-    const fK = hz0.covH && horn.size ? keeleFrequency(hz0.covH, horn.size.w) : null;
+    const hz0 = hornOption.hf || {};
+    const fK = hz0.covH && hornOption.size ? keeleFrequency(hz0.covH, hornOption.size.w) : null;
     const midB = [], hornB = [];
     for (let i = 0; i < 160; i++) {
       const f = 200 * Math.pow(10000 / 200, i / 159);
-      if (mid.ts) midB.push({ f, spl: pistonBeamWidthDeg(mid.ts.Sd, f) });
+      if (midDriver.ts) midB.push({ f, spl: pistonBeamWidthDeg(midDriver.ts.Sd, f) });
       if (fK && f >= (hz0.lowHz || 0) * 0.7) hornB.push({ f, spl: hornBeamWidthDeg(hz0.covH, fK, f) });
     }
     return { midB, hornB, fK };
   })();
 
-  const subMusicAtXo = mdl && lim ? subMusicOutputAt(mdl, lim, AMP_V, xoLo) : null;
+  const subMusicAtCrossover = subModel && subLimits ? subMusicOutputAt(subModel, subLimits, subAmpVoltage, subMidCrossoverHz) : null;
 
-  const portGeom = { ductH: cVent.slotH, nPorts: cVent.nt, portR: cVent.dia / 2, tubeLen: cVent.len, throat: cVent.throat };
+  const portGeom = { ductH: subVentSpec.slotH, nPorts: subVentSpec.nt, portR: subVentSpec.dia / 2, tubeLen: subVentSpec.len, throat: subVentSpec.throat };
 
   // One named snapshot of the whole system.
   const snapshot = () => ({
-    format: format.id, sub: sub.id, mid: mid.id, midBox: midBox.id, cd: cd.id, horn: horn.id,
-    cabinet: cabinet.id, portStyle, cDim, cVent, hpf, hpType, ampW, portMax, mDim, wall, inset, xoLo, xoHi, mAmpW, tilt, hfAmpW, hfTilt,
-    layout, cutaway, baffleColor, cabFinish, spacerH, joint,
-    summary: `${sub.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${mdl ? mdl.Fb.toFixed(1) + " Hz" : "—"}`
+    format: format.id, sub: subDriver.id, mid: midDriver.id, midBox: midBoxPreset.id, cd: compressionDriver.id, horn: hornOption.id,
+    cabinet: cabinet.id, portStyle, cDim: subBoxDims, cVent: subVentSpec, hpf: subHighpassHz, hpType: subHighpassType, ampW: subAmpWatts, portMax: maxPortAirSpeedMs, mDim: midBoxDims, wall: wallThicknessIn, inset: baffleInsetIn, xoLo: subMidCrossoverHz, xoHi: midHornCrossoverHz, mAmpW: midAmpWatts, tilt: midBandTiltDb, hfAmpW: hornAmpWatts, hfTilt: hornBandTiltDb,
+    layout, cutaway, baffleColor, cabFinish: cabinetFinish, spacerH: spacerHeightIn, joint: cornerJoint,
+    summary: `${subDriver.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${subModel ? subModel.Fb.toFixed(1) + " Hz" : "—"}`
   });
   const restore = (c) => {
     const find = (list, id, fb) => list.find((o) => o.id === id) || fb;
-    if (c.wall === 0.5 || c.wall === 0.75) setWall(c.wall); else setWall(0.75);
-    setInset(typeof c.inset === "number" ? c.inset : 0.75);
-    if (c.sub) setSub(find(SUB_OPTIONS, c.sub, sub));
-    if (c.mid) { const m = find(MID_OPTIONS, c.mid, mid); skipSizeReset.current = (m.size || 12) !== midSize; setMidSize(m.size || 12); setMid(m); }
-    if (c.midBox) setMidBox(find(MID_BOXES, c.midBox, midBox));
-    if (c.cd) setCd(find(CD_OPTIONS, c.cd, cd));
-    if (c.horn) setHorn(find(HORN_OPTIONS, c.horn, horn));
-    if (c.cDim) setCDim(c.cDim);
-    if (c.cVent) setCVent(c.cVent);
-    if (typeof c.hpf === "number") setHpf(c.hpf);
-    if (c.hpType && HIGHPASS_ALIGNMENTS[c.hpType]) setHpType(c.hpType);
-    if (typeof c.ampW === "number") setAmpW(c.ampW);
-    if (typeof c.portMax === "number") setPortMax(c.portMax);
-    if (c.mDim) setMDim(c.mDim); else if (c.midBox) { const b = MID_BOXES.find((x) => x.id === c.midBox); if (b) setMDim({ ...b.box }); }
-    if (typeof c.xoLo === "number") setXoLo(c.xoLo);
-    if (typeof c.xoHi === "number") setXoHi(c.xoHi);
-    if (typeof c.mAmpW === "number") setMAmpW(c.mAmpW);
-    if (typeof c.tilt === "number") setTilt(c.tilt);
-    if (typeof c.hfAmpW === "number") setHfAmpW(c.hfAmpW);
-    if (typeof c.hfTilt === "number") setHfTilt(c.hfTilt);
+    if (c.wall === 0.5 || c.wall === 0.75) setWallThicknessIn(c.wall); else setWallThicknessIn(0.75);
+    setBaffleInsetIn(typeof c.inset === "number" ? c.inset : 0.75);
+    if (c.sub) setSubDriver(find(SUB_OPTIONS, c.sub, subDriver));
+    if (c.mid) { const m = find(MID_OPTIONS, c.mid, midDriver); skipSizeReset.current = (m.size || 12) !== midSize; setMidSize(m.size || 12); setMidDriver(m); }
+    if (c.midBox) setMidBoxPreset(find(MID_BOXES, c.midBox, midBoxPreset));
+    if (c.cd) setCompressionDriver(find(CD_OPTIONS, c.cd, compressionDriver));
+    if (c.horn) setHornOption(find(HORN_OPTIONS, c.horn, hornOption));
+    if (c.cDim) setSubBoxDims(c.cDim);
+    if (c.cVent) setSubVentSpec(c.cVent);
+    if (typeof c.hpf === "number") setSubHighpassHz(c.hpf);
+    if (c.hpType && HIGHPASS_ALIGNMENTS[c.hpType]) setSubHighpassType(c.hpType);
+    if (typeof c.ampW === "number") setSubAmpWatts(c.ampW);
+    if (typeof c.portMax === "number") setMaxPortAirSpeedMs(c.portMax);
+    if (c.mDim) setMidBoxDims(c.mDim); else if (c.midBox) { const b = MID_BOXES.find((x) => x.id === c.midBox); if (b) setMidBoxDims({ ...b.box }); }
+    if (typeof c.xoLo === "number") setSubMidCrossoverHz(c.xoLo);
+    if (typeof c.xoHi === "number") setMidHornCrossoverHz(c.xoHi);
+    if (typeof c.mAmpW === "number") setMidAmpWatts(c.mAmpW);
+    if (typeof c.tilt === "number") setMidBandTiltDb(c.tilt);
+    if (typeof c.hfAmpW === "number") setHornAmpWatts(c.hfAmpW);
+    if (typeof c.hfTilt === "number") setHornBandTiltDb(c.hfTilt);
     if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
     if (c.layout) setLayout(c.layout);
     if (c.baffleColor) setBaffleColor(c.baffleColor);
-    setCabFinish(c.cabFinish || "birch");
-    setSpacerH(typeof c.spacerH === "number" ? c.spacerH : 20);
-    if (c.joint) setJoint(c.joint);
+    setCabinetFinish(c.cabFinish || "birch");
+    setSpacerHeightIn(typeof c.spacerH === "number" ? c.spacerH : 20);
+    if (c.joint) setCornerJoint(c.joint);
     if (c.portStyle) setPortStyle(c.portStyle);
   };
   // ---- optimizer actions ----
   const today = () => new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const runOpt = async (over) => {
-    const inp = { ...optIn, ...(over && over.nativeEvent ? {} : over || {}) };
-    if (over && !over.nativeEvent) setOpt(over);
+  const startOptimizerSearch = async (over) => {
+    const inp = { ...optimizerInput, ...(over && over.nativeEvent ? {} : over || {}) };
+    if (over && !over.nativeEvent) updateOptimizerInput(over);
     if (!inp.goals.length) return;
-    setOptBusy(true); setOptErr("");
+    setIsOptimizing(true); setOptimizerError("");
     try {
-      const cur = preview ? preview.before : snapshot();
-      setOptRes(await runPaOptimizer({ cur, room: inp.room, maxLb: inp.maxLb, budget: inp.budget, goals: inp.goals, locks }));
-    } catch (e) { setOptErr("The search failed: " + ((e && e.message) || e)); }
-    setOptBusy(false);
+      const cur = designPreview ? designPreview.before : snapshot();
+      setOptimizerResult(await runPaOptimizer({ cur, room: inp.room, maxLb: inp.maxLb, budget: inp.budget, goals: inp.goals, locks: optimizerLocks }));
+    } catch (e) { setOptimizerError("The search failed: " + ((e && e.message) || e)); }
+    setIsOptimizing(false);
   };
   // a result only sets the fields the search changes; finish, colours, layout and balance stay as they are now
-  const optPreview = (k) => {
-    const before = preview ? preview.before : snapshot();
-    restore({ ...snapshot(), ...pickOptimizedFields(k.config) }); setPreview({ label: k.label, before, card: k });
+  const previewOptimizerResult = (k) => {
+    const before = designPreview ? designPreview.before : snapshot();
+    restore({ ...snapshot(), ...pickOptimizedFields(k.config) }); setDesignPreview({ label: k.label, before, card: k });
   };
-  const optBack = () => { if (preview) restore(preview.before); setPreview(null); };
-  const optLoad = async (k) => {
-    const before = preview ? preview.before : snapshot();
-    restore({ ...snapshot(), ...pickOptimizedFields(k.config) }); setPreview(null); setUndoSnap(before);
+  const exitPreview = () => { if (designPreview) restore(designPreview.before); setDesignPreview(null); };
+  const loadOptimizerResult = async (k) => {
+    const before = designPreview ? designPreview.before : snapshot();
+    restore({ ...snapshot(), ...pickOptimizedFields(k.config) }); setDesignPreview(null); setUndoSnapshot(before);
     let msg = `Loaded "${k.label}".`;
     if (db) {
       const name = `Before optimizer, ${today()}`;
       try { await db.collection("configs").doc().set({ ...before, name, savedAt: Date.now() }); msg += ` Your previous design was saved as "${name}".`; }
       catch { msg += " Undo brings your previous design back."; }
     } else msg += " Undo brings your previous design back.";
-    setToast(msg);
+    setToastMessage(msg);
   };
-  const optUndo = () => { if (undoSnap) restore(undoSnap); setUndoSnap(null); setToast(""); };
-  const optSave = async (k) => {
+  const undoOptimizerLoad = () => { if (undoSnapshot) restore(undoSnapshot); setUndoSnapshot(null); setToastMessage(""); };
+  const saveOptimizerResult = async (k) => {
     if (!db) return;
     const name = window.prompt("Name this design", `${k.label} · ${today()}`);
     if (!name) return;
@@ -286,28 +286,28 @@ function StackPlanner() {
     try {
       await db.collection("configs").doc().set({ ...snapshot(), ...pickOptimizedFields(k.config), name: name.slice(0, 60), savedAt: Date.now(),
         summary: `${k.names.sub} · ${k.config.cDim.w}×${k.config.cDim.h}×${k.config.cDim.d}″ · ${m.Fb.toFixed(1)} Hz` });
-      setToast(`Saved "${name.slice(0, 60)}".`);
-    } catch { setToast("Couldn't save — try again"); }
+      setToastMessage(`Saved "${name.slice(0, 60)}".`);
+    } catch { setToastMessage("Couldn't save — try again"); }
   };
-  const curOut = optOn ? (() => { try { const m = evaluateConfig(preview ? preview.before : snapshot()); return m ? m.out : null; } catch { return null; } })() : null;
+  const currentDesignOutput = isOptimizerOn ? (() => { try { const m = evaluateConfig(designPreview ? designPreview.before : snapshot()); return m ? m.out : null; } catch { return null; } })() : null;
 
-  const subLbLoaded = subWeightLb(subBox, wall, sub.lb);
+  const subWeightLoadedLb = subWeightLb(subBox, wallThicknessIn, subDriver.lb);
 
-  const midL = midGrossL;
-  const subTopH = plinth + subBox.h;
+  const midBoxLiters = midGrossL;
+  const subTopHeightIn = plinthHeightIn + subBox.h;
   const isTower = layout === "tower";
-  const baseH = layout === "satellite" ? 34 : layout === "pole" ? subTopH + spacerH : isTower ? subTopH : subTopH + 0.4;
-  const archT = isTower && !!horn.profile && !horn.scaleX && subBox.w / 2 - 0.75 > horn.size.w / 2;
-  const stackH = isTower ? baseH + 15.5 + (archT ? subBox.w - 0.75 : horn.size.h + 2) : baseH + midDims.h + 1.2 + horn.size.h + 2;
-  const hornCenter = isTower ? baseH + 15.5 + (archT ? subBox.w / 2 - 0.75 : (horn.size.h + 2) / 2) : baseH + midDims.h + 1.2 + 1 + horn.size.h / 2;
+  const stackBaseHeightIn = layout === "satellite" ? 34 : layout === "pole" ? subTopHeightIn + spacerHeightIn : isTower ? subTopHeightIn : subTopHeightIn + 0.4;
+  const hasArchedTop = isTower && !!hornOption.profile && !hornOption.scaleX && subBox.w / 2 - 0.75 > hornOption.size.w / 2;
+  const stackHeightIn = isTower ? stackBaseHeightIn + 15.5 + (hasArchedTop ? subBox.w - 0.75 : hornOption.size.h + 2) : stackBaseHeightIn + effectiveMidBoxDims.h + 1.2 + hornOption.size.h + 2;
+  const hornCenterHeightIn = isTower ? stackBaseHeightIn + 15.5 + (hasArchedTop ? subBox.w / 2 - 0.75 : (hornOption.size.h + 2) / 2) : stackBaseHeightIn + effectiveMidBoxDims.h + 1.2 + 1 + hornOption.size.h / 2;
   // driver heights for the dispersion map: mid centered in its box (or the tower's mid section), sub at its box center
-  const midCenter = isTower ? baseH + 15.5 / 2 : baseH + midDims.h / 2;
-  const PA_MAP_M = 10;
-  const paMap = mid.ts && hz.covH && horn.size ? paDispersionMap({
-    sub: sub.ts ? { zIn: plinth + subBox.h / 2, Sd: sub.ts.Sd } : null, mid: { zIn: midCenter, Sd: mid.ts.Sd },
-    horn: { zIn: hornCenter, covH: hz.covH, covV: hz.covV || hz.covH, wIn: horn.size.w, hIn: horn.size.h }, xoLo, xoHi, order: 4,
-  }, paPlane, PA_MAP_M) : null;
-  const mhGap = hornCenter - midCenter, mhNull = firstNullAngleDeg(mhGap, xoHi);
+  const midCenterHeightIn = isTower ? stackBaseHeightIn + 15.5 / 2 : stackBaseHeightIn + effectiveMidBoxDims.h / 2;
+  const dispersionMapDistanceM = 10;
+  const paDispersion = midDriver.ts && hornSpec.covH && hornOption.size ? paDispersionMap({
+    sub: subDriver.ts ? { zIn: plinthHeightIn + subBox.h / 2, Sd: subDriver.ts.Sd } : null, mid: { zIn: midCenterHeightIn, Sd: midDriver.ts.Sd },
+    horn: { zIn: hornCenterHeightIn, covH: hornSpec.covH, covV: hornSpec.covV || hornSpec.covH, wIn: hornOption.size.w, hIn: hornOption.size.h }, xoLo: subMidCrossoverHz, xoHi: midHornCrossoverHz, order: 4,
+  }, dispersionPlane, dispersionMapDistanceM) : null;
+  const midHornGapIn = hornCenterHeightIn - midCenterHeightIn, midHornNullAngleDeg = firstNullAngleDeg(midHornGapIn, midHornCrossoverHz);
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900" style={{ fontFamily: "var(--font)" }}>
@@ -339,67 +339,67 @@ function StackPlanner() {
           </>);
         })()}
       </header>
-      {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : view === "hifi" ? <HifiPage /> : view === "cutlist" ? <CutlistPage {...{ sub, mid, subBox, midDims, wall, inset, joint, setJoint, sheetKind, setSheetKind, sets, setSets, portStyle, cVent, layout }} /> : <>
+      {view === "notes" ? <NotesPage /> : view === "fills" ? <FillsPage /> : view === "hifi" ? <HifiPage /> : view === "cutlist" ? <CutlistPage {...{ sub: subDriver, mid: midDriver, subBox, midDims: effectiveMidBoxDims, wall: wallThicknessIn, inset: baffleInsetIn, joint: cornerJoint, setJoint: setCornerJoint, sheetKind: plywoodSheetKind, setSheetKind: setPlywoodSheetKind, sets: boxSetCount, setSets: setBoxSetCount, portStyle, cVent: subVentSpec, layout }} /> : <>
 
       <SavedConfigs store={store} snapshot={snapshot} restore={restore}
         extra={fbUser && <button onClick={importSeed} className="hover:underline">Import saved configs</button>} />
 
       <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3" style={{ fontFamily: "var(--font)" }}>
         {(() => {
-          const n = Object.entries(locks).reduce((a, [k, v]) => a + (k.endsWith("Dim") ? Object.values(v).filter((m) => m && m !== "free").length : v ? 1 : 0), 0);
+          const n = Object.entries(optimizerLocks).reduce((a, [k, v]) => a + (k.endsWith("Dim") ? Object.values(v).filter((m) => m && m !== "free").length : v ? 1 : 0), 0);
           // lock everything (box sizes exact), then unlock the one or two things you want the optimizer to change
           const all = { ...Object.fromEntries(LOCK_KEYS.map((k) => [k, true])), subDim: { w: "exact", h: "exact", d: "exact" }, midDim: { w: "exact", h: "exact", d: "exact" } };
-          return <OptimizerBar on={optOn} onToggle={() => setOptOn(!optOn)} hint="Find cheaper, lighter or louder designs inside your limits."
-            nLocks={n} lockMax={LOCK_KEYS.length + 6} onLockAll={() => setLocks(() => all)} onClear={() => setLocks(() => ({ subDim: {}, midDim: {} }))} />;
+          return <OptimizerBar on={isOptimizerOn} onToggle={() => setIsOptimizerOn(!isOptimizerOn)} hint="Find cheaper, lighter or louder designs inside your limits."
+            nLocks={n} lockMax={LOCK_KEYS.length + 6} onLockAll={() => setOptimizerLocks(() => all)} onClear={() => setOptimizerLocks(() => ({ subDim: {}, midDim: {} }))} />;
         })()}
       </section>
-      {optOn && <OptimizerPanel optIn={optIn} setOpt={setOpt} run={runOpt} busy={optBusy} res={optRes} err={optErr} curOut={curOut} 
-        previewCard={preview && preview.card} canSave={!!db}
-        onPreview={optPreview} onLoad={optLoad} onSave={optSave} />}
-      {preview && (
+      {isOptimizerOn && <OptimizerPanel optIn={optimizerInput} setOpt={updateOptimizerInput} run={startOptimizerSearch} busy={isOptimizing} res={optimizerResult} err={optimizerError} curOut={currentDesignOutput} 
+        previewCard={designPreview && designPreview.card} canSave={!!db}
+        onPreview={previewOptimizerResult} onLoad={loadOptimizerResult} onSave={saveOptimizerResult} />}
+      {designPreview && (
         <div className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-white border-b-4 border-cmy-y px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm" style={{ fontFamily: "var(--font)" }}>
-          <span>Previewing: <b className="font-semibold">{preview.label}</b></span>
-          <Button variant="primary" size="xs" onClick={() => optLoad(preview.card)}>Load</Button>
-          <button onClick={optBack} className="px-3 py-1.5 rounded border border-stone-900 bg-white">Back</button>
+          <span>Previewing: <b className="font-semibold">{designPreview.label}</b></span>
+          <Button variant="primary" size="xs" onClick={() => loadOptimizerResult(designPreview.card)}>Load</Button>
+          <button onClick={exitPreview} className="px-3 py-1.5 rounded border border-stone-900 bg-white">Back</button>
         </div>
       )}
-      {toast && (
+      {toastMessage && (
         <div className="fixed left-1/2 -translate-x-1/2 bottom-20 md:bottom-6 z-50 w-[calc(100%-2rem)] max-w-xl bg-stone-900 text-stone-50 rounded-lg px-4 py-2.5 flex items-center gap-3 text-sm shadow-lg" style={{ fontFamily: "var(--font)" }} role="status">
-          <span className="flex-1">{toast}</span>
-          {undoSnap && <button onClick={optUndo} className="px-3 py-1.5 rounded border border-stone-500">Undo</button>}
-          <button onClick={() => setToast("")} aria-label="Dismiss" className="px-2 py-1.5 rounded border border-stone-900">✕</button>
+          <span className="flex-1">{toastMessage}</span>
+          {undoSnapshot && <button onClick={undoOptimizerLoad} className="px-3 py-1.5 rounded border border-stone-500">Undo</button>}
+          <button onClick={() => setToastMessage("")} aria-label="Dismiss" className="px-2 py-1.5 rounded border border-stone-900">✕</button>
         </div>
       )}
-      {mdl && lim && (
+      {subModel && subLimits && (
         <div className="md:hidden sticky top-0 z-30 bg-stone-50/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center" style={{ fontFamily: "var(--font)" }}>
-          {[["Fb", `${mdl.Fb.toFixed(1)}`, "Hz"], ["35 Hz", `${maxNear(35).spl.toFixed(0)}`, "dB"], ["Sub", `${subLbLoaded.toFixed(0)}`, "lb"], ["Limit", { "port air speed": "port", "cone travel (Xmax)": "Xmax", "driver program rating": "thermal", "amplifier power": "amp" }[lim.who] || lim.who, ""]].map(([k, v, u]) => (
+          {[["Fb", `${subModel.Fb.toFixed(1)}`, "Hz"], ["35 Hz", `${subMaxCurveNearest(35).spl.toFixed(0)}`, "dB"], ["Sub", `${subWeightLoadedLb.toFixed(0)}`, "lb"], ["Limit", { "port air speed": "port", "cone travel (Xmax)": "Xmax", "driver program rating": "thermal", "amplifier power": "amp" }[subLimits.who] || subLimits.who, ""]].map(([k, v, u]) => (
             <div key={k}><div className="text-xs uppercase tracking-wider text-stone-500">{k}</div><div className="text-sm font-medium tabular-nums">{v}<span className="text-xs text-stone-500 ml-0.5">{u}</span></div></div>
           ))}
         </div>
       )}
-      <main className={`max-w-6xl mx-auto px-4 md:px-8 pb-16 grid ${sheetOpen ? "max-md:pb-[52dvh]" : "max-md:pb-24"} grid-cols-1 md:grid-cols-5 gap-8`}>
+      <main className={`max-w-6xl mx-auto px-4 md:px-8 pb-16 grid ${isSettingsSheetOpen ? "max-md:pb-[52dvh]" : "max-md:pb-24"} grid-cols-1 md:grid-cols-5 gap-8`}>
         <div className="min-w-0 md:col-span-3 flex flex-col gap-5">
-        <section className={full3d ? "fixed inset-0 z-50 bg-stone-50" : "relative rounded-lg overflow-hidden border border-stone-300 bg-stone-50 h-[300px] md:h-[clamp(320px,56vh,560px)]"}>
-          <button onClick={() => setFull3d((v) => !v)} aria-label={full3d ? "Close full screen" : "Full screen"} title={full3d ? "Close full screen" : "Full screen"}
+        <section className={isFull3d ? "fixed inset-0 z-50 bg-stone-50" : "relative rounded-lg overflow-hidden border border-stone-300 bg-stone-50 h-[300px] md:h-[clamp(320px,56vh,560px)]"}>
+          <button onClick={() => setIsFull3d((v) => !v)} aria-label={isFull3d ? "Close full screen" : "Full screen"} title={isFull3d ? "Close full screen" : "Full screen"}
             className="absolute top-2 right-2 z-10 w-9 h-9 inline-flex items-center justify-center rounded border border-stone-300 bg-white/90 hover:border-stone-500">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              {full3d ? <path d="M4 4l8 8M12 4l-8 8" /> : <path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" />}
+              {isFull3d ? <path d="M4 4l8 8M12 4l-8 8" /> : <path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" />}
             </svg>
           </button>
-          <StackView3D sub={subSel} mid={midSel} horn={horn} plinth={plinth} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wall} inset={inset} cabFinish={cabFinish} spacerH={spacerH} />
+          <StackView3D sub={subWithBox} mid={midWithBox} horn={hornOption} plinth={plinthHeightIn} cutaway={cutaway} portStyle={portStyle} layout={layout} baffleColor={baffleColor} portGeom={portGeom} wall={wallThicknessIn} inset={baffleInsetIn} cabFinish={cabinetFinish} spacerH={spacerHeightIn} />
         </section>
 
         <section className="mt-1" style={{ fontFamily: "var(--font)" }}>
-          <FoldHeading id="sub" title="Sub" folds={folds} toggle={toggleFold} className="mb-3 md:hidden" />
-          <div className={foldCls("sub")}>
-          {mdl && lim && (
+          <FoldHeading id="sub" title="Sub" folds={expandedSections} toggle={toggleSection} className="mb-3 md:hidden" />
+          <div className={sectionClass("sub")}>
+          {subModel && subLimits && (
             <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
-                ["Net volume", netL.toFixed(0), "L"],
-                ["Tuning Fb", mdl.Fb.toFixed(1), "Hz"],
-                ["System F3", mdl.f3.toFixed(0), "Hz"],
-                ["Max SPL @ 35 Hz", maxNear(35).spl.toFixed(1), "dB"],
-                ["Weight", subLbLoaded.toFixed(0), "lb"],
+                ["Net volume", subNetLiters.toFixed(0), "L"],
+                ["Tuning Fb", subModel.Fb.toFixed(1), "Hz"],
+                ["System F3", subModel.f3.toFixed(0), "Hz"],
+                ["Max SPL @ 35 Hz", subMaxCurveNearest(35).spl.toFixed(1), "dB"],
+                ["Weight", subWeightLoadedLb.toFixed(0), "lb"],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
                   <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
@@ -408,31 +408,31 @@ function StackPlanner() {
               ))}
             </div>
           )}
-          {mdl && lim && <div className="mb-4"><ResponseChart fmax={20000} series={[{ curve: subSys, label: "Sub", stroke: PAL.ink, tint: PAL.alpha(PAL.ink, 0.07) }, ...(midMax ? [{ curve: midMax, label: "Mid-bass", stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0.06) }] : []), ...(hornModel ? [{ curve: hornModel.curve, label: "Horn", stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }] : [])]} marks={[{ f: mdl.Fb, label: "Fb" }, { f: xoLo, label: "XO" }, { f: xoHi, label: "XO" }]} /></div>}
-          {mdl ? (
+          {subModel && subLimits && <div className="mb-4"><ResponseChart fmax={20000} series={[{ curve: subThroughLowpassCurve, label: "Sub", stroke: PAL.ink, tint: PAL.alpha(PAL.ink, 0.07) }, ...(midMaxCurve ? [{ curve: midMaxCurve, label: "Mid-bass", stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0.06) }] : []), ...(hornModel ? [{ curve: hornModel.curve, label: "Horn", stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0.06) }] : [])]} marks={[{ f: subModel.Fb, label: "Fb" }, { f: subMidCrossoverHz, label: "XO" }, { f: midHornCrossoverHz, label: "XO" }]} /></div>}
+          {subModel ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
-                ["Gross internal", `${grossL.toFixed(0)} L`],
-                ["Port area", `${port.area.toFixed(1)} in²`, `${((port.area / (sub.ts.Sd / 6.4516)) * 100).toFixed(0)}% of cone area`],
+                ["Gross internal", `${subGrossLiters.toFixed(0)} L`],
+                ["Port area", `${port.area.toFixed(1)} in²`, `${((port.area / (subDriver.ts.Sd / 6.4516)) * 100).toFixed(0)}% of cone area`],
                 ["Hydraulic diameter", `${port.dh.toFixed(2)}″`, port.dh < 2 ? "low — flare the mouths" : "acceptable with flares"],
-                ["Midband sensitivity", `${(mdl.ref - 20 * Math.log10(AMP_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
-                ...[30, 35, 45, 60].map((f) => { const m = maxNear(f);
+                ["Midband sensitivity", `${(subModel.ref - 20 * Math.log10(subAmpVoltage / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
+                ...[30, 35, 45, 60].map((f) => { const m = subMaxCurveNearest(f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
-                ["First limit, music", lim.who, `at ${Math.round(lim.W / 10) * 10} W`, `at ${Math.round(lim.W / 10) * 10} W${lim.who === "cone travel (Xmax)" ? `, reached first at ${mdl.peakXF.toFixed(0)} Hz` : lim.who === "port air speed" ? `, reached first at ${mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`],
-                ["Peak port velocity", `${lim.vel.toFixed(1)} m/s`, `at ${mdl.peakVelF.toFixed(0)} Hz`],
-                ["Peak excursion", `${(mdl.peakX * lim.V / AMP_V).toFixed(1)} mm`, `${lim.xPct.toFixed(0)}% of Xmax, at ${mdl.peakXF.toFixed(0)} Hz`],
+                ["First limit, music", subLimits.who, `at ${Math.round(subLimits.W / 10) * 10} W`, `at ${Math.round(subLimits.W / 10) * 10} W${subLimits.who === "cone travel (Xmax)" ? `, reached first at ${subModel.peakXF.toFixed(0)} Hz` : subLimits.who === "port air speed" ? `, reached first at ${subModel.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`],
+                ["Peak port velocity", `${subLimits.vel.toFixed(1)} m/s`, `at ${subModel.peakVelF.toFixed(0)} Hz`],
+                ["Peak excursion", `${(subModel.peakX * subLimits.V / subAmpVoltage).toFixed(1)} mm`, `${subLimits.xPct.toFixed(0)}% of Xmax, at ${subModel.peakXF.toFixed(0)} Hz`],
               ]
 .map(([k, v, note, tip]) => <StatRow key={k} k={k} v={v} note={note} tip={tip} />)}
             </div>
           ) : (
             <p className="text-sm text-stone-500 ">
-              {sub.name} can't be modelled yet: its parameters are incomplete. {sub.note}
+              {subDriver.name} can't be modelled yet: its parameters are incomplete. {subDriver.note}
             </p>
           )}
-          {mdl && lim && (
+          {subModel && subLimits && (
             <div className="flex flex-col gap-1.5 mt-4">
               {(() => {
-                const F = subChips({ subSize: format.sub, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF: mdl.peakXF, aes: sub.ts.aes, ampW });
+                const F = subChips({ subSize: format.sub, subBox, portStyle, cVent: subVentSpec, PT, subLbLoaded: subWeightLoadedLb, lim: subLimits, peakXF: subModel.peakXF, aes: subDriver.ts.aes, ampW: subAmpWatts });
                 return F.map(([kind, head, body]) => (
                   <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BACKGROUND_CLASSES[kind] || CHIP_BACKGROUND_CLASSES.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
@@ -446,16 +446,16 @@ function StackPlanner() {
         </section>
 
         <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
-          <FoldHeading id="mid" title="Mid-bass" folds={folds} toggle={toggleFold} className="mb-3" />
-          <div className={foldCls("mid")}>
-          {mMdl ? (<>
+          <FoldHeading id="mid" title="Mid-bass" folds={expandedSections} toggle={toggleSection} className="mb-3" />
+          <div className={sectionClass("mid")}>
+          {midModel ? (<>
             <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
                 ["Net volume", midNetL.toFixed(0), "L"],
-                ["Box resonance Fc", mMdl.Fc.toFixed(0), "Hz"],
-                ["Box F3", mMdl.f3.toFixed(0), "Hz"],
-                [`Max SPL @ ${xoLo} Hz`, midNear(xoLo).spl.toFixed(1), "dB"],
-                ["Weight", midLbLoaded.toFixed(0), "lb"],
+                ["Box resonance Fc", midModel.Fc.toFixed(0), "Hz"],
+                ["Box F3", midModel.f3.toFixed(0), "Hz"],
+                [`Max SPL @ ${subMidCrossoverHz} Hz`, midMaxCurveNearest(subMidCrossoverHz).spl.toFixed(1), "dB"],
+                ["Weight", midWeightLoadedLb.toFixed(0), "lb"],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
                   <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
@@ -466,18 +466,18 @@ function StackPlanner() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
                 ["Gross internal", `${midGrossL.toFixed(0)} L`, `acts like ${midEffL.toFixed(0)} L stuffed`],
-                ["Qtc", mMdl.Qtc.toFixed(2), mMdl.Qtc > 0.8 ? "peaky" : mMdl.Qtc < 0.5 ? "very damped" : "well damped"],
-                ["Midband sensitivity", `${(mMdl.ref - 20 * Math.log10(MID_V / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
-                ...[xoLo, 200, 500].map((f) => { const m = midNear(f);
+                ["Qtc", midModel.Qtc.toFixed(2), midModel.Qtc > 0.8 ? "peaky" : midModel.Qtc < 0.5 ? "very damped" : "well damped"],
+                ["Midband sensitivity", `${(midModel.ref - 20 * Math.log10(midVoltage / 2.83)).toFixed(1)} dB`, "2.83 V, half space, 1 m"],
+                ...[subMidCrossoverHz, 200, 500].map((f) => { const m = midMaxCurveNearest(f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`]; }),
-                ["Peak excursion", `${(mMdl.peakX * midUseV / MID_V).toFixed(1)} mm`, `${(mMdl.peakX * midUseV / MID_V / mid.ts.Xmax * 100).toFixed(0)}% of Xmax`, `At ${Math.round(midUseV * midUseV / 8)} W, with the ${xoLo} Hz highpass.`],
+                ["Peak excursion", `${(midModel.peakX * midUsedVoltage / midVoltage).toFixed(1)} mm`, `${(midModel.peakX * midUsedVoltage / midVoltage / midDriver.ts.Xmax * 100).toFixed(0)}% of Xmax`, `At ${Math.round(midUsedVoltage * midUsedVoltage / 8)} W, with the ${subMidCrossoverHz} Hz highpass.`],
               ]
 .map(([k, v, note, tip]) => <StatRow key={k} k={k} v={v} note={note} tip={tip} />)}
             </div>
             <div className="flex flex-col gap-1.5 mt-4">
               {(() => {
-                const F = midChips({ midSize, midDims, Qtc: mMdl.Qtc, f3: mMdl.f3, peakX: mMdl.peakX, xoLo, ts: mid.ts, V: MID_V, useV: midUseV, vTherm: vMidTherm, mAmpW,
-                  subMusicAtXo, tilt, midAtXo: subMusicAtXo != null ? midNear(xoLo) : null });
+                const F = midChips({ midSize, midDims: effectiveMidBoxDims, Qtc: midModel.Qtc, f3: midModel.f3, peakX: midModel.peakX, xoLo: subMidCrossoverHz, ts: midDriver.ts, V: midVoltage, useV: midUsedVoltage, vTherm: midThermalVoltage, mAmpW: midAmpWatts,
+                  subMusicAtXo: subMusicAtCrossover, tilt: midBandTiltDb, midAtXo: subMusicAtCrossover != null ? midMaxCurveNearest(subMidCrossoverHz) : null });
                 return F.map(([kind, head, body]) => (
                   <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BACKGROUND_CLASSES[kind] || CHIP_BACKGROUND_CLASSES.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
@@ -487,22 +487,22 @@ function StackPlanner() {
               })()}
             </div>
           </>) : (
-            <p className="text-sm text-stone-500">{mid.name} can't be modelled yet: its parameters are incomplete. {mid.note}</p>
+            <p className="text-sm text-stone-500">{midDriver.name} can't be modelled yet: its parameters are incomplete. {midDriver.note}</p>
           )}
           </div>
         </section>
 
         <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
-          <FoldHeading id="horn" title="Horn" folds={folds} toggle={toggleFold} className="mb-3" />
-          <div className={foldCls("horn")}>
+          <FoldHeading id="horn" title="Horn" folds={expandedSections} toggle={toggleSection} className="mb-3" />
+          <div className={sectionClass("horn")}>
           {hornModel ? (<>
             <div className="grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
               {[
-                ["Sensitivity", hf.sens.toFixed(1), "dB"],
+                ["Sensitivity", compressionDriverSpec.sens.toFixed(1), "dB"],
                 ["Power used", Math.round(hornModel.P), "W"],
                 ["Max SPL", hornModel.flat.toFixed(1), "dB"],
-                ["Coverage", hz.covH ? `${hz.covH}\u00b0\u00d7${hz.covV || "?"}\u00b0` : "\u2014", ""],
-                ["Mid beam at XO", midBeam ? Math.round(midBeam) : "\u2014", midBeam ? "\u00b0" : ""],
+                ["Coverage", hornSpec.covH ? `${hornSpec.covH}\u00b0\u00d7${hornSpec.covV || "?"}\u00b0` : "\u2014", ""],
+                ["Mid beam at XO", midBeamWidthDeg ? Math.round(midBeamWidthDeg) : "\u2014", midBeamWidthDeg ? "\u00b0" : ""],
               ].map(([k, v, u]) => (
                 <div key={k} className="bg-stone-50 px-3 py-2.5">
                   <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold"><StatLabel k={k} /></div>
@@ -512,17 +512,17 @@ function StackPlanner() {
             </div>
             <div className="mb-4">
               <ResponseChart fmin={200} fmax={10000} top={180} bot={0} step={30} H={220} yLabel="horizontal beamwidth, °"
-                series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0) }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: horn.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0) }] : [])]}
-                marks={[{ f: xoHi, label: "XO" }, ...(beamCurves.fK ? [{ f: beamCurves.fK, label: "horn control" }] : [])]} />
+                series={[...(beamCurves.midB.length ? [{ curve: beamCurves.midB, label: `Mid-bass ${midSize}″`, stroke: PAL.magenta, tint: PAL.alpha(PAL.magenta, 0) }] : []), ...(beamCurves.hornB.length ? [{ curve: beamCurves.hornB, label: hornOption.name, stroke: PAL.cyan, tint: PAL.alpha(PAL.cyan, 0) }] : [])]}
+                marks={[{ f: midHornCrossoverHz, label: "XO" }, ...(beamCurves.fK ? [{ f: beamCurves.fK, label: "horn control" }] : [])]} />
             </div>
-            {paMap && (<div className="mb-4">
-              <div className="flex gap-1 mb-2">{[["v", "Vertical"], ["h", "Horizontal"]].map(([v, l]) => <ToggleButton key={v} size="xs" on={paPlane === v} onClick={() => setPaPlane(v)}>{l}</ToggleButton>)}</div>
-              <DispersionMap map={paMap} title={paPlane === "v" ? `Vertical dispersion at ${PA_MAP_M} m: below (−) to above (+) the horn axis` : `Horizontal dispersion at ${PA_MAP_M} m, at horn height (0° is on axis)`} />
-              <div className="text-xs text-stone-500 mt-1">Mid and horn centers {mhGap.toFixed(1)}″ apart: {mhNull ? `the first null at the ${xoHi} Hz crossover is about ${mhNull.toFixed(0)}° above and below the horn axis.` : `under half a wavelength at ${xoHi} Hz, so no null at the crossover.`}</div>
+            {paDispersion && (<div className="mb-4">
+              <div className="flex gap-1 mb-2">{[["v", "Vertical"], ["h", "Horizontal"]].map(([v, l]) => <ToggleButton key={v} size="xs" on={dispersionPlane === v} onClick={() => setDispersionPlane(v)}>{l}</ToggleButton>)}</div>
+              <DispersionMap map={paDispersion} title={dispersionPlane === "v" ? `Vertical dispersion at ${dispersionMapDistanceM} m: below (−) to above (+) the horn axis` : `Horizontal dispersion at ${dispersionMapDistanceM} m, at horn height (0° is on axis)`} />
+              <div className="text-xs text-stone-500 mt-1">Mid and horn centers {midHornGapIn.toFixed(1)}″ apart: {midHornNullAngleDeg ? `the first null at the ${midHornCrossoverHz} Hz crossover is about ${midHornNullAngleDeg.toFixed(0)}° above and below the horn axis.` : `under half a wavelength at ${midHornCrossoverHz} Hz, so no null at the crossover.`}</div>
             </div>)}
             <div className="flex flex-col gap-1.5">
               {(() => {
-                const F = hornChips({ hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi: midMax ? midNear(xoHi).spl : null, hfTilt, hornAtXo: hornAt(xoHi), midBeam, fK: beamCurves.fK });
+                const F = hornChips({ hf: compressionDriverSpec, hz: hornSpec, horn: hornOption, xoHi: midHornCrossoverHz, hornModel, hfAmpW: hornAmpWatts, midAtXoHi: midMaxCurve ? midMaxCurveNearest(midHornCrossoverHz).spl : null, hfTilt: hornBandTiltDb, hornAtXo: hornSplAt(midHornCrossoverHz), midBeam: midBeamWidthDeg, fK: beamCurves.fK });
                 return F.map(([kind, head, body]) => (
                   <div key={head} className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BACKGROUND_CLASSES[kind] || CHIP_BACKGROUND_CLASSES.ok}`}>
                     <b className={`font-semibold mr-1.5 ${kind === "ok" ? "text-green-800" : kind === "warn" ? "text-amber-700" : "text-red-700"}`}>{head}</b>
@@ -532,7 +532,7 @@ function StackPlanner() {
               })()}
             </div>
           </>) : (
-            <p className="text-sm text-stone-500">{cd.name} can't be modelled yet: sensitivity or power rating missing.</p>
+            <p className="text-sm text-stone-500">{compressionDriver.name} can't be modelled yet: sensitivity or power rating missing.</p>
           )}
           </div>
         </section>
@@ -542,35 +542,35 @@ function StackPlanner() {
         <aside className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-sheet`} style={{ fontFamily: "var(--font)" }} aria-label="Settings">
           <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
             {[["sub", "Sub"], ["mid", "Mid"], ["horn", "Horn"], ["look", "Look"]].map(([t, label]) => (
-              <button key={t} role="tab" aria-selected={sheetOpen && tab === t}
-                onClick={() => { if (sheetOpen && tab === t) setSheetOpen(false); else { setTab(t); setSheetOpen(true); } }}
-                className={`flex-1 px-2 py-2 rounded border text-sm ${sheetOpen && tab === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50"}`}>{label}</button>
+              <button key={t} role="tab" aria-selected={isSettingsSheetOpen && activeTab === t}
+                onClick={() => { if (isSettingsSheetOpen && activeTab === t) setSettingsSheetOpen(false); else { setActiveTab(t); setSettingsSheetOpen(true); } }}
+                className={`flex-1 px-2 py-2 rounded border text-sm ${isSettingsSheetOpen && activeTab === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50"}`}>{label}</button>
             ))}
-            {sheetOpen && <button onClick={() => setSheetOpen(false)} aria-label="Close settings" className="px-3 rounded border border-stone-300 bg-stone-50 text-sm">✕</button>}
+            {isSettingsSheetOpen && <button onClick={() => setSettingsSheetOpen(false)} aria-label="Close settings" className="px-3 rounded border border-stone-300 bg-stone-50 text-sm">✕</button>}
           </div>
-          <div className={`max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${sheetOpen ? "" : "max-md:hidden"}`}>
-          <div className={tabCls("look")}>
+          <div className={`max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${isSettingsSheetOpen ? "" : "max-md:hidden"}`}>
+          <div className={tabClass("look")}>
           <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>Plywood (baffles stay 3/4″)</span>{lk("wall", "the plywood")}</div>
+            <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>Plywood (baffles stay 3/4″)</span>{renderLockButton("wall", "the plywood")}</div>
             <div className="flex gap-1">
               {[[0.75, "3/4″ birch"], [0.5, "1/2″ birch, braced"]].map(([t, label]) => (
-                <ToggleButton key={t} onClick={() => setWall(t)} on={wall === t}>{label}</ToggleButton>
+                <ToggleButton key={t} onClick={() => setWallThicknessIn(t)} on={wallThicknessIn === t}>{label}</ToggleButton>
               ))}
             </div>
-            <div className="mt-3"><Slider label="Baffle inset" value={inset} min={0} max={1.5} step={0.25} unit="″" onChange={setInset} /></div>
+            <div className="mt-3"><Slider label="Baffle inset" value={baffleInsetIn} min={0} max={1.5} step={0.25} unit="″" onChange={setBaffleInsetIn} /></div>
           </div>
           </div>
-          <div className={tabCls("sub")}>
-          <SelectField label="Sub driver" options={subList} value={sub} onChange={setSub} extra={lk("sub", "the sub driver")} />
+          <div className={tabClass("sub")}>
+          <SelectField label="Sub driver" options={subDriverChoices} value={subDriver} onChange={setSubDriver} extra={renderLockButton("sub", "the sub driver")} />
           </div>
-          <div className={tabCls("look")}>
-          <SwatchPicker label="Cabinet finish" value={cabFinish} onChange={setCabFinish} swatches={PAINT_SWATCHES} presets={CABINET_FINISHES} titlePrefix="Painted: "
-            note={CABINET_FINISHES[cabFinish] ? CABINET_FINISHES[cabFinish].name : `painted ${cabFinish}`} />
+          <div className={tabClass("look")}>
+          <SwatchPicker label="Cabinet finish" value={cabinetFinish} onChange={setCabinetFinish} swatches={PAINT_SWATCHES} presets={CABINET_FINISHES} titlePrefix="Painted: "
+            note={CABINET_FINISHES[cabinetFinish] ? CABINET_FINISHES[cabinetFinish].name : `painted ${cabinetFinish}`} />
           </div>
-          <div className={tabCls("look")}>
+          <div className={tabClass("look")}>
           <SwatchPicker label="Baffle colour" value={baffleColor} onChange={setBaffleColor} swatches={PAINT_SWATCHES} note={baffleColor} />
           </div>
-          <div className={tabCls("look")}>
+          <div className={tabClass("look")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">View</div>
             <div className="flex gap-1">
@@ -580,7 +580,7 @@ function StackPlanner() {
             </div>
           </div>
           </div>
-          <div className={tabCls("look")}>
+          <div className={tabClass("look")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Layout</div>
             <div className="flex gap-1">
@@ -588,22 +588,22 @@ function StackPlanner() {
                 <ToggleButton key={v} onClick={() => setLayout(v)} on={layout === v}>{label}</ToggleButton>
               ))}
             </div>
-            {layout === "pole" && <div className="mt-3"><Slider label="Spacer height" value={spacerH} min={4} max={36} step={1} unit="″" onChange={setSpacerH} /></div>}
+            {layout === "pole" && <div className="mt-3"><Slider label="Spacer height" value={spacerHeightIn} min={4} max={36} step={1} unit="″" onChange={setSpacerHeightIn} /></div>}
           </div>
           </div>
-          <div className={tabCls("sub")}>
+          <div className={tabClass("sub")}>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Cabinet</div>
             <Card>
-              <Slider label="Width"  value={cDim.w} min={18} max={40} step={0.5} unit="″" onChange={(v) => setC("w", v)} extra={dl("subDim", "w", "Sub width")} />
-              <Slider label="Height" value={cDim.h} min={18} max={42} step={0.5} unit="″" onChange={(v) => setC("h", v)} extra={dl("subDim", "h", "Sub height")} />
-              <Slider label="Depth"  value={cDim.d} min={14} max={32} step={0.5} unit="″" onChange={(v) => setC("d", v)} extra={dl("subDim", "d", "Sub depth")} />
+              <Slider label="Width"  value={subBoxDims.w} min={18} max={40} step={0.5} unit="″" onChange={(v) => setSubBoxDim("w", v)} extra={renderDimensionLock("subDim", "w", "Sub width")} />
+              <Slider label="Height" value={subBoxDims.h} min={18} max={42} step={0.5} unit="″" onChange={(v) => setSubBoxDim("h", v)} extra={renderDimensionLock("subDim", "h", "Sub height")} />
+              <Slider label="Depth"  value={subBoxDims.d} min={14} max={32} step={0.5} unit="″" onChange={(v) => setSubBoxDim("d", v)} extra={renderDimensionLock("subDim", "d", "Sub depth")} />
             </Card>
           </div>
           </div>
-          <div className={tabCls("sub")}>
+          <div className={tabClass("sub")}>
           <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>Vent</span>{lk("vent", "the vent style")}</div>
+            <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"><span>Vent</span>{renderLockButton("vent", "the vent style")}</div>
             <div className="flex flex-wrap gap-1">
               {[["Rectangular", !portStyle.startsWith("round"), "slots"], ["Round tubes", portStyle.startsWith("round"), "round2"]].map(([label, on, v]) => (
                 <ToggleButton key={label} onClick={() => { if (!on) setPortStyle(v); }} on={on}>{label}</ToggleButton>
@@ -619,32 +619,32 @@ function StackPlanner() {
             )}
             <Card className="mt-2">
               {(portStyle === "slots" || portStyle === "folded") &&
-                <Slider label="Slot height" value={cVent.slotH} min={1.5} max={9} step={0.25} unit="″" onChange={(v) => setV("slotH", v)} />}
+                <Slider label="Slot height" value={subVentSpec.slotH} min={1.5} max={9} step={0.25} unit="″" onChange={(v) => setSubVentField("slotH", v)} />}
               {(portStyle === "vslots" || portStyle === "vslot1") &&
-                <Slider label="Duct throat" value={cVent.throat} min={1} max={portStyle === "vslot1" ? 10 : 7} step={0.25} unit="″" onChange={(v) => setV("throat", v)} />}
+                <Slider label="Duct throat" value={subVentSpec.throat} min={1} max={portStyle === "vslot1" ? 10 : 7} step={0.25} unit="″" onChange={(v) => setSubVentField("throat", v)} />}
               {portStyle.startsWith("round") && <>
-                <Slider label="Tubes" value={cVent.nt} min={1} max={6} step={1} unit="" onChange={(v) => setV("nt", v)} />
-                <Slider label="Tube diameter" value={cVent.dia} min={3} max={10} step={0.25} unit="″" onChange={(v) => setV("dia", v)} />
+                <Slider label="Tubes" value={subVentSpec.nt} min={1} max={6} step={1} unit="" onChange={(v) => setSubVentField("nt", v)} />
+                <Slider label="Tube diameter" value={subVentSpec.dia} min={3} max={10} step={0.25} unit="″" onChange={(v) => setSubVentField("dia", v)} />
               </>}
-              <Slider label="Duct length" value={cVent.len} min={3} max={30} step={0.5} unit="″" onChange={(v) => setV("len", v)} />
-              <Slider label="Port velocity limit" value={portMax} min={12} max={30} step={0.5} unit=" m/s" onChange={setPortMax} />
+              <Slider label="Duct length" value={subVentSpec.len} min={3} max={30} step={0.5} unit="″" onChange={(v) => setSubVentField("len", v)} />
+              <Slider label="Port velocity limit" value={maxPortAirSpeedMs} min={12} max={30} step={0.5} unit=" m/s" onChange={setMaxPortAirSpeedMs} />
               <div className="text-xs text-stone-500">{port.desc}. {port.area.toFixed(1)} in&#178;.</div>
             </Card>
           </div>
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Sub highpass and amp</div>
             <Card>
-              <Slider label={`Highpass (${hpType})`} value={hpf} min={20} max={50} step={1} unit=" Hz" onChange={setHpf} extra={lk("hpf", "the highpass")} />
+              <Slider label={`Highpass (${subHighpassType})`} value={subHighpassHz} min={20} max={50} step={1} unit=" Hz" onChange={setSubHighpassHz} extra={renderLockButton("hpf", "the highpass")} />
               <div className="flex flex-wrap gap-1 -mt-1 mb-3">
                 {Object.keys(HIGHPASS_ALIGNMENTS).map((t) => (
-                  <ToggleButton key={t} onClick={() => setHpType(t)} on={hpType === t} size="xs">{t}</ToggleButton>
+                  <ToggleButton key={t} onClick={() => setSubHighpassType(t)} on={subHighpassType === t} size="xs">{t}</ToggleButton>
                 ))}
               </div>
-              <Slider label="Amp power per channel @ 8 Ω" value={ampW} min={200} max={3000} step={50} unit=" W" onChange={setAmpW} extra={lk("ampW", "the sub amp power")} />
+              <Slider label="Amp power per channel @ 8 Ω" value={subAmpWatts} min={200} max={3000} step={50} unit=" W" onChange={setSubAmpWatts} extra={renderLockButton("ampW", "the sub amp power")} />
             </Card>
           </div>
           </div>
-          <div className={tabCls("mid")}>
+          <div className={tabClass("mid")}>
           <div className="mb-2">
             <div className="text-sm text-stone-500 mb-1">Mid-bass size</div>
             <div className="flex gap-1">
@@ -653,51 +653,51 @@ function StackPlanner() {
               ))}
             </div>
           </div>
-          <SelectField label={`Mid-bass ${midSize}″`} options={midList} value={mid} onChange={setMid} extra={lk("mid", "the mid-bass driver")} />
+          <SelectField label={`Mid-bass ${midSize}″`} options={midDriverChoices} value={midDriver} onChange={setMidDriver} extra={renderLockButton("mid", "the mid-bass driver")} />
           <div className="mb-5">
             <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
             <Card>
               {layout === "tower" ? (
-                <div className="text-xs text-stone-500 mb-3">Tower layout: the mid chamber is the sub's footprint, {cDim.w}″ × 15.5″ × {cDim.d}″.</div>
+                <div className="text-xs text-stone-500 mb-3">Tower layout: the mid chamber is the sub's footprint, {subBoxDims.w}″ × 15.5″ × {subBoxDims.d}″.</div>
               ) : (<>
-                <Slider label="Width"  value={mDim.w} min={10} max={24} step={0.5} unit="″" onChange={(v) => setM("w", v)} extra={dl("midDim", "w", "Mid width")} />
-                <Slider label="Height" value={mDim.h} min={10} max={24} step={0.5} unit="″" onChange={(v) => setM("h", v)} extra={dl("midDim", "h", "Mid height")} />
-                <Slider label="Depth"  value={mDim.d} min={8} max={24} step={0.5} unit="″" onChange={(v) => setM("d", v)} extra={dl("midDim", "d", "Mid depth")} />
+                <Slider label="Width"  value={midBoxDims.w} min={10} max={24} step={0.5} unit="″" onChange={(v) => setMidBoxDim("w", v)} extra={renderDimensionLock("midDim", "w", "Mid width")} />
+                <Slider label="Height" value={midBoxDims.h} min={10} max={24} step={0.5} unit="″" onChange={(v) => setMidBoxDim("h", v)} extra={renderDimensionLock("midDim", "h", "Mid height")} />
+                <Slider label="Depth"  value={midBoxDims.d} min={8} max={24} step={0.5} unit="″" onChange={(v) => setMidBoxDim("d", v)} extra={renderDimensionLock("midDim", "d", "Mid depth")} />
               </>)}
-              <Slider label="Crossover, sub to mid" value={xoLo} min={60} max={250} step={5} unit=" Hz" onChange={setXoLo} extra={lk("xoLo", "the sub-to-mid crossover")} />
-              <Slider label="Crossover, mid to horn" value={xoHi} min={500} max={2000} step={50} unit=" Hz" onChange={setXoHi} extra={lk("xoHi", "the mid-to-horn crossover")} />
-              <Slider label="Mid amp power per channel @ 8 Ω" value={mAmpW} min={50} max={2000} step={25} unit=" W" onChange={setMAmpW} extra={lk("mAmpW", "the mid amp power")} />
-              <Slider label={<Tooltip tip="0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.">Music balance: mid band needs less by</Tooltip>} value={tilt} min={0} max={12} step={1} unit=" dB" onChange={setTilt} />
+              <Slider label="Crossover, sub to mid" value={subMidCrossoverHz} min={60} max={250} step={5} unit=" Hz" onChange={setSubMidCrossoverHz} extra={renderLockButton("xoLo", "the sub-to-mid crossover")} />
+              <Slider label="Crossover, mid to horn" value={midHornCrossoverHz} min={500} max={2000} step={50} unit=" Hz" onChange={setMidHornCrossoverHz} extra={renderLockButton("xoHi", "the mid-to-horn crossover")} />
+              <Slider label="Mid amp power per channel @ 8 Ω" value={midAmpWatts} min={50} max={2000} step={25} unit=" W" onChange={setMidAmpWatts} extra={renderLockButton("mAmpW", "the mid amp power")} />
+              <Slider label={<Tooltip tip="0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.">Music balance: mid band needs less by</Tooltip>} value={midBandTiltDb} min={0} max={12} step={1} unit=" dB" onChange={setMidBandTiltDb} />
             </Card>
           </div>
           </div>
-          <div className={tabCls("horn")}>
-          <SelectField label="Compression driver" options={CD_OPTIONS} value={cd} onChange={setCd} extra={lk("cd", "the compression driver")} />
-          <SelectField label="Horn" options={HORN_OPTIONS} value={horn} onChange={setHorn} extra={lk("horn", "the horn")} />
+          <div className={tabClass("horn")}>
+          <SelectField label="Compression driver" options={CD_OPTIONS} value={compressionDriver} onChange={setCompressionDriver} extra={renderLockButton("cd", "the compression driver")} />
+          <SelectField label="Horn" options={HORN_OPTIONS} value={hornOption} onChange={setHornOption} extra={renderLockButton("horn", "the horn")} />
           <Card className="mb-4">
-            <Slider label="HF amp power per channel @ 8 Ω" value={hfAmpW} min={10} max={500} step={5} unit=" W" onChange={setHfAmpW} extra={lk("hfAmpW", "the HF amp power")} />
-            <Slider label="Music balance: HF band needs less by" value={hfTilt} min={0} max={12} step={1} unit=" dB" onChange={setHfTilt} />
+            <Slider label="HF amp power per channel @ 8 Ω" value={hornAmpWatts} min={10} max={500} step={5} unit=" W" onChange={setHornAmpWatts} extra={renderLockButton("hfAmpW", "the HF amp power")} />
+            <Slider label="Music balance: HF band needs less by" value={hornBandTiltDb} min={0} max={12} step={1} unit=" dB" onChange={setHornBandTiltDb} />
           </Card>
-          {mismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({horn.exit}″ vs {cd.exit}″).</div>}
+          {hornExitMismatch && <div className="text-sm text-red-700 mb-4">Horn throat and driver exit don't match ({hornOption.exit}″ vs {compressionDriver.exit}″).</div>}
           </div>
           </div>
         </aside>
 
 
         <section className="min-w-0 md:col-span-5 mt-6" style={{ fontFamily: "var(--font)" }}>
-          <FoldHeading id="totals" title="Totals for the current selection" folds={folds} toggle={toggleFold} className="mb-2" />
-          <div className={foldCls("totals")}>
+          <FoldHeading id="totals" title="Totals for the current selection" folds={expandedSections} toggle={toggleSection} className="mb-2" />
+          <div className={sectionClass("totals")}>
           {(() => {
-            const subBoxLb = subLbLoaded - (sub.lb || 0); // same estimate as the stats row
-            const midBoxLb = midCabLb;   // same estimate as the mid-bass stats row
+            const subBoxLb = subWeightLoadedLb - (subDriver.lb || 0); // same estimate as the stats row
+            const midBoxLb = midCabinetLb;   // same estimate as the mid-bass stats row
             const rows = [
-              ["Sub column", sub.price, sub.lb, subBoxLb, subBox.h],
-              ["Mid-bass box", mid.price, mid.lb, midBoxLb, midDims.h],
-              ["Compression driver", cd.price, cd.lb || 0, 0, 0],
-              ["Horn", horn.price, (horn.lb || 0) + 1, 0, horn.size.h + 1],
+              ["Sub column", subDriver.price, subDriver.lb, subBoxLb, subBox.h],
+              ["Mid-bass box", midDriver.price, midDriver.lb, midBoxLb, effectiveMidBoxDims.h],
+              ["Compression driver", compressionDriver.price, compressionDriver.lb || 0, 0, 0],
+              ["Horn", hornOption.price, (hornOption.lb || 0) + 1, 0, hornOption.size.h + 1],
             ];
             const sum = (i) => rows.reduce((a, r) => a + (r[i] || 0), 0);
-            const stackLb = sum(2) + sum(3) + (plinth ? 6 : 0);
+            const stackLb = sum(2) + sum(3) + (plinthHeightIn ? 6 : 0);
             return (
               <div className="overflow-x-auto max-w-3xl"><table className="text-sm w-full min-w-[340px] border-collapse">
                 <thead><tr className="text-stone-500 text-left border-b border-stone-300">
@@ -707,8 +707,8 @@ function StackPlanner() {
                   {rows.map(([n, pr, dl, cl, h]) => (
                     <tr key={n} className="border-b border-stone-300"><td className="py-1 pr-4">{n}</td><td className="py-1 pr-4 text-right tabular-nums">{pr ? `$${pr}` : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{dl.toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{cl ? cl.toFixed(0) : "—"}</td><td className="py-1 pr-4 text-right tabular-nums">{(dl + cl).toFixed(0)}</td><td className="py-1 text-right tabular-nums">{h.toFixed(1)}</td></tr>
                   ))}
-                  <tr className="font-medium"><td className="py-1 pr-4">One stack{plinth ? ` + ${plinth}" plinth` : ""}</td><td className="py-1 pr-4 text-right tabular-nums">${sum(1).toLocaleString()}</td><td className="py-1 pr-4 text-right tabular-nums">{sum(2).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(sum(3) + (plinth ? 6 : 0)).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{stackLb.toFixed(0)}</td><td className="py-1 text-right tabular-nums">{stackH.toFixed(0)}</td></tr>
-                  <tr className="font-medium text-stone-900"><td className="py-1 pr-4">Pair</td><td className="py-1 pr-4 text-right tabular-nums">${(2 * sum(1)).toLocaleString()}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * sum(2)).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * (sum(3) + (plinth ? 6 : 0))).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * stackLb).toFixed(0)}</td><td></td></tr>
+                  <tr className="font-medium"><td className="py-1 pr-4">One stack{plinthHeightIn ? ` + ${plinthHeightIn}" plinth` : ""}</td><td className="py-1 pr-4 text-right tabular-nums">${sum(1).toLocaleString()}</td><td className="py-1 pr-4 text-right tabular-nums">{sum(2).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(sum(3) + (plinthHeightIn ? 6 : 0)).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{stackLb.toFixed(0)}</td><td className="py-1 text-right tabular-nums">{stackHeightIn.toFixed(0)}</td></tr>
+                  <tr className="font-medium text-stone-900"><td className="py-1 pr-4">Pair</td><td className="py-1 pr-4 text-right tabular-nums">${(2 * sum(1)).toLocaleString()}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * sum(2)).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * (sum(3) + (plinthHeightIn ? 6 : 0))).toFixed(0)}</td><td className="py-1 pr-4 text-right tabular-nums">{(2 * stackLb).toFixed(0)}</td><td></td></tr>
                 </tbody>
               </table></div>
             );
@@ -723,26 +723,26 @@ function StackPlanner() {
           <div>
             <SectionHeading className="mb-2">Sub</SectionHeading>
             <p className="text-sm text-stone-900">
-              {sub.name} in a {subBox.w}×{subBox.h}×{subBox.d} in cabinet, {grossL.toFixed(0)} L gross, {netL.toFixed(0)} L net.
-              Vent: {port.desc}. 3/4″ baffle set {inset}″ behind the frame, {wall === 0.5 ? "1/2″" : "3/4″"} birch walls, 1/4″ roundovers on the front edges.
+              {subDriver.name} in a {subBox.w}×{subBox.h}×{subBox.d} in cabinet, {subGrossLiters.toFixed(0)} L gross, {subNetLiters.toFixed(0)} L net.
+              Vent: {port.desc}. 3/4″ baffle set {baffleInsetIn}″ behind the frame, {wallThicknessIn === 0.5 ? "1/2″" : "3/4″"} birch walls, 1/4″ roundovers on the front edges.
             </p>
           </div>
           <div>
             <SectionHeading className="mb-2">Mid-bass cube</SectionHeading>
             <p className="text-sm text-stone-900">
-              {mid.name} in a {midDims.w}×{midDims.h}×{midDims.d} in sealed box, gross {midL.toFixed(0)} L, lightly stuffed.
-              Covers {xoLo} Hz to {xoHi} Hz. Same construction, flush-mounted driver.
+              {midDriver.name} in a {effectiveMidBoxDims.w}×{effectiveMidBoxDims.h}×{effectiveMidBoxDims.d} in sealed box, gross {midBoxLiters.toFixed(0)} L, lightly stuffed.
+              Covers {subMidCrossoverHz} Hz to {midHornCrossoverHz} Hz. Same construction, flush-mounted driver.
             </p>
-            {mid.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{mid.name}.</span> {mid.note}</p>}
+            {midDriver.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{midDriver.name}.</span> {midDriver.note}</p>}
           </div>
           <div>
             <SectionHeading className="mb-2">Horn</SectionHeading>
             <p className="text-sm text-stone-900">
-              {horn.name} with {cd.name}, crossed at {xoHi} Hz (maker suggests {horn.xo}). Sits on a short block so the mouth clears the cube.
-              Total stack height about {stackH.toFixed(0)} in, horn center at {hornCenter.toFixed(0)} in.
+              {hornOption.name} with {compressionDriver.name}, crossed at {midHornCrossoverHz} Hz (maker suggests {hornOption.xo}). Sits on a short block so the mouth clears the cube.
+              Total stack height about {stackHeightIn.toFixed(0)} in, horn center at {hornCenterHeightIn.toFixed(0)} in.
             </p>
-            {cd.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{cd.name}.</span> {cd.note}</p>}
-            {horn.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{horn.name}.</span> {horn.note}</p>}
+            {compressionDriver.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{compressionDriver.name}.</span> {compressionDriver.note}</p>}
+            {hornOption.note && <p className="text-sm text-stone-500 mt-2"><span className="font-medium text-stone-900">{hornOption.name}.</span> {hornOption.note}</p>}
           </div>
         </section>}
 
