@@ -1,93 +1,402 @@
 <title>Horn Sub Mock</title>
 <style>
-:root{
-  --bg:#f6f5f2; --panel:#ffffff; --ink:#1f1c1a; --muted:#6b6560; --line:#e4e0da;
-  --sub:#292524; --horn:#0f766e; --warn:#b45309; --okbg:#ecf5f3; --warnbg:#fbf2e8;
-  --chip:#efece7; --grid:#ebe7e1;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){ color-scheme:dark;
-    --bg:#181615; --panel:#211f1d; --ink:#ece8e3; --muted:#a39c95; --line:#35312d;
-    --sub:#d6d1cb; --horn:#4fb8ab; --warn:#e3a45a; --okbg:#1c2d2a; --warnbg:#33271a; --chip:#2b2825; --grid:#2d2a27; }
-}
-:root[data-theme="dark"]{ color-scheme:dark;
-  --bg:#181615; --panel:#211f1d; --ink:#ece8e3; --muted:#a39c95; --line:#35312d;
-  --sub:#d6d1cb; --horn:#4fb8ab; --warn:#e3a45a; --okbg:#1c2d2a; --warnbg:#33271a; --chip:#2b2825; --grid:#2d2a27; }
-body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;}
-.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
-h1{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:28px;margin:0}
-h2{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:20px;margin:0 0 10px;text-wrap:balance}
-.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px 20px;margin-bottom:6px}
-.nav{display:flex;gap:14px;font-size:14px;color:var(--muted)}
-.nav span.on{color:var(--ink);border-bottom:2px solid var(--ink)}
-.mock{font-size:12px;letter-spacing:.06em;text-transform:uppercase;background:var(--warnbg);color:var(--warn);padding:3px 8px;border-radius:4px}
-.lede{color:var(--muted);font-size:14px;max-width:70ch;margin:6px 0 18px}
-.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:28px}
-@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
-.tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-bottom:16px}
-@media (max-width:700px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
-.tile .k{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
-.tile .v{font-size:22px;font-variant-numeric:tabular-nums;margin-top:2px}
-.tile .v small{font-size:12px;color:var(--muted);margin-left:2px}
-.view{background:var(--panel);border:1px solid var(--line);border-radius:8px;position:relative;height:420px;overflow:hidden;margin-bottom:16px}
-.view canvas{display:block;width:100%;height:100%;cursor:grab}
-.view .hint{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--muted);pointer-events:none}
-.view .legend{position:absolute;right:12px;top:10px;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px;align-items:flex-end}
-.chart{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 8px 4px;margin-bottom:16px}
-.chart svg{width:100%;height:auto;display:block}
-.rows{display:grid;grid-template-columns:1fr 1fr;gap:0 32px;font-size:14px}
-@media (max-width:600px){.rows{grid-template-columns:1fr}}
-.row{display:flex;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line);padding:6px 0}
-.row .k{color:var(--muted)} .row .v{text-align:right;font-variant-numeric:tabular-nums}
-.row .v small{display:block;color:var(--muted);font-size:12px}
-.chips{display:flex;flex-direction:column;gap:8px;margin-top:16px}
-.chipx{border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:14px;background:var(--panel)}
-.chipx b{font-weight:600;margin-right:8px}
-.chipx.ok b{color:var(--horn)} .chipx.warn b{color:var(--warn)}
-aside{display:flex;flex-direction:column;gap:18px}
-.box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
-.lab{font-size:13px;color:var(--muted);margin-bottom:6px}
-select{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
-.seg{display:flex;flex-wrap:wrap;gap:6px}
-.seg button{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);cursor:pointer}
-.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.seg button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--horn);outline-offset:2px}
-.sl{display:flex;flex-direction:column;gap:4px;margin-top:10px}
-.sl .t{display:flex;justify-content:space-between;font-size:14px}
-.sl .t span:last-child{font-variant-numeric:tabular-nums}
-input[type=range]{width:100%;accent-color:var(--ink)}
-table.segs{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
-table.segs th{text-align:left;font-weight:500;color:var(--muted);padding:4px 0}
-table.segs td{padding:4px 0;border-top:1px solid var(--line)}
-.note{font-size:12px;color:var(--muted);margin-top:8px}
+  :root {
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --ink: #1f1c1a;
+    --muted: #6b6560;
+    --line: #e4e0da;
+    --sub: #292524;
+    --horn: #0f766e;
+    --warn: #b45309;
+    --okbg: #ecf5f3;
+    --warnbg: #fbf2e8;
+    --chip: #efece7;
+    --grid: #ebe7e1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #181615;
+      --panel: #211f1d;
+      --ink: #ece8e3;
+      --muted: #a39c95;
+      --line: #35312d;
+      --sub: #d6d1cb;
+      --horn: #4fb8ab;
+      --warn: #e3a45a;
+      --okbg: #1c2d2a;
+      --warnbg: #33271a;
+      --chip: #2b2825;
+      --grid: #2d2a27;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #181615;
+    --panel: #211f1d;
+    --ink: #ece8e3;
+    --muted: #a39c95;
+    --line: #35312d;
+    --sub: #d6d1cb;
+    --horn: #4fb8ab;
+    --warn: #e3a45a;
+    --okbg: #1c2d2a;
+    --warnbg: #33271a;
+    --chip: #2b2825;
+    --grid: #2d2a27;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family:
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      sans-serif;
+  }
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding-inline: 16px;
+    padding-block: 20px 48px;
+  }
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    font-size: 28px;
+    margin: 0;
+  }
+  h2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    font-size: 20px;
+    margin: 0 0 10px;
+    text-wrap: balance;
+  }
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px 20px;
+    margin-bottom: 6px;
+  }
+  .nav {
+    display: flex;
+    gap: 14px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .nav span.on {
+    color: var(--ink);
+    border-bottom: 2px solid var(--ink);
+  }
+  .mock {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: var(--warnbg);
+    color: var(--warn);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .lede {
+    color: var(--muted);
+    font-size: 14px;
+    max-width: 70ch;
+    margin: 6px 0 18px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 28px;
+  }
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 700px) {
+    .tiles {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .tile {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .tile .k {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .tile .v {
+    font-size: 22px;
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+  .tile .v small {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 2px;
+  }
+  .view {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    position: relative;
+    height: 420px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .view canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+  }
+  .view .hint {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .view .legend {
+    position: absolute;
+    right: 12px;
+    top: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: flex-end;
+  }
+  .chart {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 8px 4px;
+    margin-bottom: 16px;
+  }
+  .chart svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .rows {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 32px;
+    font-size: 14px;
+  }
+  @media (max-width: 600px) {
+    .rows {
+      grid-template-columns: 1fr;
+    }
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    border-bottom: 1px solid var(--line);
+    padding: 6px 0;
+  }
+  .row .k {
+    color: var(--muted);
+  }
+  .row .v {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .row .v small {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .chips {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .chipx {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    background: var(--panel);
+  }
+  .chipx b {
+    font-weight: 600;
+    margin-right: 8px;
+  }
+  .chipx.ok b {
+    color: var(--horn);
+  }
+  .chipx.warn b {
+    color: var(--warn);
+  }
+  aside {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .lab {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  select {
+    width: 100%;
+    font: inherit;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--ink);
+  }
+  .seg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .seg button {
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .seg button.on {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .seg button:focus-visible,
+  select:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--horn);
+    outline-offset: 2px;
+  }
+  .sl {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 10px;
+  }
+  .sl .t {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+  }
+  .sl .t span:last-child {
+    font-variant-numeric: tabular-nums;
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--ink);
+  }
+  table.segs {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  table.segs th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--muted);
+    padding: 4px 0;
+  }
+  table.segs td {
+    padding: 4px 0;
+    border-top: 1px solid var(--line);
+  }
+  .note {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
 </style>
 
 <div class="wrap">
   <div class="top">
     <h1>Speaker Planner</h1>
-    <div class="nav"><span>Planner</span><span class="on">Horn</span><span>Fills</span><span>Notes</span></div>
+    <div class="nav">
+      <span>Planner</span><span class="on">Horn</span><span>Fills</span><span>Notes</span>
+    </div>
     <span class="mock">Mock · illustrative numbers</span>
   </div>
-  <p class="lede">A preview of what a horn-sub tab could look like. The layout, controls and 3D view are the proposal; the curves are shaped to look like a tapped horn and are not a real model yet.</p>
+  <p class="lede">
+    A preview of what a horn-sub tab could look like. The layout, controls and 3D view are the
+    proposal; the curves are shaped to look like a tapped horn and are not a real model yet.
+  </p>
 
   <div class="grid">
     <main>
       <div class="tiles">
-        <div class="tile"><div class="k">Gross volume</div><div class="v" id="tVol">–<small>L</small></div></div>
-        <div class="tile"><div class="k">Path length</div><div class="v" id="tLen">–<small>m</small></div></div>
-        <div class="tile"><div class="k">Horn tuning</div><div class="v" id="tFb">–<small>Hz</small></div></div>
-        <div class="tile"><div class="k">Max @ 40 Hz</div><div class="v" id="t40">–<small>dB</small></div></div>
-        <div class="tile"><div class="k">Max @ 60 Hz</div><div class="v" id="t60">–<small>dB</small></div></div>
-        <div class="tile"><div class="k">Weight</div><div class="v" id="tLb">–<small>lb</small></div></div>
+        <div class="tile">
+          <div class="k">Gross volume</div>
+          <div class="v" id="tVol">–<small>L</small></div>
+        </div>
+        <div class="tile">
+          <div class="k">Path length</div>
+          <div class="v" id="tLen">–<small>m</small></div>
+        </div>
+        <div class="tile">
+          <div class="k">Horn tuning</div>
+          <div class="v" id="tFb">–<small>Hz</small></div>
+        </div>
+        <div class="tile">
+          <div class="k">Max @ 40 Hz</div>
+          <div class="v" id="t40">–<small>dB</small></div>
+        </div>
+        <div class="tile">
+          <div class="k">Max @ 60 Hz</div>
+          <div class="v" id="t60">–<small>dB</small></div>
+        </div>
+        <div class="tile">
+          <div class="k">Weight</div>
+          <div class="v" id="tLb">–<small>lb</small></div>
+        </div>
       </div>
 
       <div class="view" id="view">
-        <div class="legend"><span>Outer box: <b id="dims">–</b></span></div>
+        <div class="legend">
+          <span>Outer box: <b id="dims">–</b></span>
+        </div>
         <div class="hint">Right side cut away to show the folds</div>
       </div>
 
-      <div class="chart"><svg id="chart" viewBox="0 0 760 300" role="img" aria-label="Max SPL per frequency, horn against the vented box"></svg></div>
+      <div class="chart">
+        <svg
+          id="chart"
+          viewBox="0 0 760 300"
+          role="img"
+          aria-label="Max SPL per frequency, horn against the vented box"
+        ></svg>
+      </div>
 
       <div class="rows" id="rows"></div>
       <div class="chips" id="chips"></div>
@@ -101,12 +410,12 @@ table.segs td{padding:4px 0;border-top:1px solid var(--line)}
           <option value="sw115">B&amp;C 18SW115 — $739</option>
           <option value="hp1010">FaitalPRO 18HP1010 — $459.95</option>
         </select>
-        <div class="lab" style="margin-top:14px">Horn type</div>
+        <div class="lab" style="margin-top: 14px">Horn type</div>
         <div class="seg" id="type">
           <button data-v="th" class="on">Tapped horn</button>
           <button data-v="flh">Front-loaded</button>
         </div>
-        <div class="lab" style="margin-top:14px">Placement</div>
+        <div class="lab" style="margin-top: 14px">Placement</div>
         <div class="seg" id="place">
           <button data-v="half" class="on">Floor</button>
           <button data-v="quarter">Floor + wall</button>
@@ -116,19 +425,43 @@ table.segs td{padding:4px 0;border-top:1px solid var(--line)}
 
       <div class="box">
         <div class="lab">Horn path</div>
-        <div class="sl"><div class="t"><span>Path length</span><span id="lenV"></span></div><input id="len" type="range" min="2.4" max="4.4" step="0.1" value="3.4"></div>
-        <div class="sl"><div class="t"><span>Mouth area</span><span id="mouthV"></span></div><input id="mouth" type="range" min="1400" max="3200" step="100" value="2400"></div>
-        <div class="sl"><div class="t"><span>Box width</span><span id="wV"></span></div><input id="w" type="range" min="20" max="30" step="0.5" value="22"></div>
+        <div class="sl">
+          <div class="t"><span>Path length</span><span id="lenV"></span></div>
+          <input id="len" type="range" min="2.4" max="4.4" step="0.1" value="3.4" />
+        </div>
+        <div class="sl">
+          <div class="t"><span>Mouth area</span><span id="mouthV"></span></div>
+          <input id="mouth" type="range" min="1400" max="3200" step="100" value="2400" />
+        </div>
+        <div class="sl">
+          <div class="t"><span>Box width</span><span id="wV"></span></div>
+          <input id="w" type="range" min="20" max="30" step="0.5" value="22" />
+        </div>
         <table class="segs" aria-label="Horn segments">
-          <thead><tr><th>Segment</th><th>Start</th><th>End</th><th>Length</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Segment</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Length</th>
+            </tr>
+          </thead>
           <tbody id="segs"></tbody>
         </table>
-        <p class="note">Areas in cm², lengths in cm. S2 is where the cone's front taps in, S3 where its back does.</p>
+        <p class="note">
+          Areas in cm², lengths in cm. S2 is where the cone's front taps in, S3 where its back does.
+        </p>
       </div>
 
       <div class="box">
-        <div class="sl" style="margin-top:0"><div class="t"><span>Amp power per channel @ 8 Ω</span><span id="ampV"></span></div><input id="amp" type="range" min="200" max="1600" step="50" value="500"></div>
-        <div class="sl"><div class="t"><span>Highpass (LR24)</span><span id="hpV"></span></div><input id="hp" type="range" min="25" max="45" step="1" value="32"></div>
+        <div class="sl" style="margin-top: 0">
+          <div class="t"><span>Amp power per channel @ 8 Ω</span><span id="ampV"></span></div>
+          <input id="amp" type="range" min="200" max="1600" step="50" value="500" />
+        </div>
+        <div class="sl">
+          <div class="t"><span>Highpass (LR24)</span><span id="hpV"></span></div>
+          <input id="hp" type="range" min="25" max="45" step="1" value="32" />
+        </div>
       </div>
     </aside>
   </div>
@@ -136,188 +469,353 @@ table.segs td{padding:4px 0;border-top:1px solid var(--line)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.140.0/three.min.js"></script>
 <script>
-(function(){
-  const $ = (id) => document.getElementById(id);
-  const DRV = {
-    fh500:  { name:"FaitalPRO 18FH500", sens:99.4, xmax:9.3, aes:600, lb:10.1 },
-    sw115:  { name:"B&C 18SW115",       sens:98.5, xmax:9.0, aes:1500, lb:21 },
-    hp1010: { name:"FaitalPRO 18HP1010",sens:98.8, xmax:10.4, aes:1000, lb:17 }
-  };
-  const S = { drv:"fh500", type:"th", place:"half", len:3.4, mouth:2400, w:22, amp:500, hp:32 };
-  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const DRV = {
+      fh500: { name: "FaitalPRO 18FH500", sens: 99.4, xmax: 9.3, aes: 600, lb: 10.1 },
+      sw115: { name: "B&C 18SW115", sens: 98.5, xmax: 9.0, aes: 1500, lb: 21 },
+      hp1010: { name: "FaitalPRO 18HP1010", sens: 98.8, xmax: 10.4, aes: 1000, lb: 17 },
+    };
+    const S = {
+      drv: "fh500",
+      type: "th",
+      place: "half",
+      len: 3.4,
+      mouth: 2400,
+      w: 22,
+      amp: 500,
+      hp: 32,
+    };
+    const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 
-  // ---- illustrative curves (not a model) ----
-  function hornCurve(){
-    const d = DRV[S.drv], fL = 128 / S.len * (S.type === "flh" ? 1.15 : 1);
-    const gain = 7 + (S.mouth - 2400) / 800 + (S.place === "quarter" ? 3 : S.place === "pair" ? 6 : 0);
-    const base = d.sens + 10 * Math.log10(S.amp / 1) + gain - 3;
-    const pts = [];
-    for (let i = 0; i < 160; i++) {
-      const f = 20 * Math.pow(10, i / 159 * Math.log10(300 / 20));
-      const hpH = Math.pow(f / fL, 4) / Math.sqrt(1 + Math.pow(f / fL, 8));
-      const hpE = Math.pow(f / S.hp, 4) / (1 + Math.pow(f / S.hp, 4));
-      const upper = 1 / Math.sqrt(1 + Math.pow(f / (fL * 3.6), 6));
-      const ripple = 1.6 * Math.sin(Math.log(f / fL) * 5.2) * Math.min(1, f / (fL * 1.4));
-      let spl = base + 20 * Math.log10(hpH * hpE * upper) + ripple;
-      // cone unloads below tuning: excursion caps output there
-      const xCap = base + 20 * Math.log10(Math.pow(f / fL, 2.2)) + 2 + (d.xmax - 9.3) * 0.8;
-      let who = "amp";
-      if (f < fL && xCap < spl) { spl = xCap; who = "Xmax"; }
-      pts.push({ f, spl, who });
+    // ---- illustrative curves (not a model) ----
+    function hornCurve() {
+      const d = DRV[S.drv],
+        fL = (128 / S.len) * (S.type === "flh" ? 1.15 : 1);
+      const gain =
+        7 + (S.mouth - 2400) / 800 + (S.place === "quarter" ? 3 : S.place === "pair" ? 6 : 0);
+      const base = d.sens + 10 * Math.log10(S.amp / 1) + gain - 3;
+      const pts = [];
+      for (let i = 0; i < 160; i++) {
+        const f = 20 * Math.pow(10, (i / 159) * Math.log10(300 / 20));
+        const hpH = Math.pow(f / fL, 4) / Math.sqrt(1 + Math.pow(f / fL, 8));
+        const hpE = Math.pow(f / S.hp, 4) / (1 + Math.pow(f / S.hp, 4));
+        const upper = 1 / Math.sqrt(1 + Math.pow(f / (fL * 3.6), 6));
+        const ripple = 1.6 * Math.sin(Math.log(f / fL) * 5.2) * Math.min(1, f / (fL * 1.4));
+        let spl = base + 20 * Math.log10(hpH * hpE * upper) + ripple;
+        // cone unloads below tuning: excursion caps output there
+        const xCap = base + 20 * Math.log10(Math.pow(f / fL, 2.2)) + 2 + (d.xmax - 9.3) * 0.8;
+        let who = "amp";
+        if (f < fL && xCap < spl) {
+          spl = xCap;
+          who = "Xmax";
+        }
+        pts.push({ f, spl, who });
+      }
+      return { pts, fL };
     }
-    return { pts, fL };
-  }
-  function ventCurve(){
-    // the saved "lil block stack LE (optimized)" box, shape only
-    const pts = [];
-    for (let i = 0; i < 160; i++) {
-      const f = 20 * Math.pow(10, i / 159 * Math.log10(300 / 20));
-      const hp = Math.pow(f / 34, 4) / Math.sqrt(1 + Math.pow(f / 34, 8));
-      const top = 1 / Math.sqrt(1 + Math.pow(f / 190, 4));
-      pts.push({ f, spl: 126.5 + 20 * Math.log10(hp * top) + 10 * Math.log10(S.amp / 500) * 0.4 });
+    function ventCurve() {
+      // the saved "lil block stack LE (optimized)" box, shape only
+      const pts = [];
+      for (let i = 0; i < 160; i++) {
+        const f = 20 * Math.pow(10, (i / 159) * Math.log10(300 / 20));
+        const hp = Math.pow(f / 34, 4) / Math.sqrt(1 + Math.pow(f / 34, 8));
+        const top = 1 / Math.sqrt(1 + Math.pow(f / 190, 4));
+        pts.push({
+          f,
+          spl: 126.5 + 20 * Math.log10(hp * top) + 10 * Math.log10(S.amp / 500) * 0.4,
+        });
+      }
+      return pts;
     }
-    return pts;
-  }
-  const at = (pts, f) => pts.reduce((b, o) => Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b);
+    const at = (pts, f) => pts.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 
-  // ---- chart ----
-  function drawChart(h, v){
-    const W = 760, H = 300, L = 48, R = 16, T = 18, B = 40;
-    const fx = (f) => L + (Math.log10(f / 20) / Math.log10(300 / 20)) * (W - L - R);
-    const lo = 95, hi = 140, fy = (d) => T + (1 - (d - lo) / (hi - lo)) * (H - T - B);
-    const grid = css("--grid"), mut = css("--muted");
-    let s = "";
-    for (let d = lo; d <= hi; d += 5) s += `<line x1="${L}" x2="${W-R}" y1="${fy(d)}" y2="${fy(d)}" stroke="${grid}"/><text x="${L-8}" y="${fy(d)+4}" text-anchor="end" font-size="11" fill="${mut}">${d}</text>`;
-    [20, 30, 40, 50, 60, 80, 100, 150, 200, 300].forEach(f => s += `<line x1="${fx(f)}" x2="${fx(f)}" y1="${T}" y2="${H-B}" stroke="${grid}"/><text x="${fx(f)}" y="${H-B+16}" text-anchor="middle" font-size="11" fill="${mut}">${f}</text>`);
-    s += `<text x="${(W+L)/2}" y="${H-6}" text-anchor="middle" font-size="11" fill="${mut}">frequency, Hz</text>`;
-    s += `<text transform="translate(12 ${(H-B+T)/2}) rotate(-90)" text-anchor="middle" font-size="11" fill="${mut}">max dB SPL @ 1 m</text>`;
-    const path = (pts) => pts.map((o, i) => `${i ? "L" : "M"}${fx(o.f).toFixed(1)},${fy(Math.max(lo, Math.min(hi, o.spl))).toFixed(1)}`).join("");
-    const area = (pts) => path(pts) + `L${fx(300)},${fy(lo)}L${fx(20)},${fy(lo)}Z`;
-    const hc = css("--horn"), sc = css("--sub");
-    s += `<path d="${area(h.pts)}" fill="${hc}" fill-opacity="0.08"/>`;
-    s += `<path d="${path(v)}" fill="none" stroke="${sc}" stroke-width="1.6" stroke-dasharray="5 4"/>`;
-    s += `<path d="${path(h.pts)}" fill="none" stroke="${hc}" stroke-width="2.2"/>`;
-    s += `<line x1="${fx(h.fL)}" x2="${fx(h.fL)}" y1="${T}" y2="${H-B}" stroke="${mut}" stroke-dasharray="2 3"/><text x="${fx(h.fL)+4}" y="${T+12}" font-size="11" fill="${mut}">tuning</text>`;
-    s += `<g font-size="12"><line x1="${L+12}" x2="${L+34}" y1="${T+14}" y2="${T+14}" stroke="${hc}" stroke-width="2.2"/><text x="${L+40}" y="${T+18}" fill="${css("--ink")}">Horn</text>`;
-    s += `<line x1="${L+12}" x2="${L+34}" y1="${T+32}" y2="${T+32}" stroke="${sc}" stroke-width="1.6" stroke-dasharray="5 4"/><text x="${L+40}" y="${T+36}" fill="${css("--ink")}">Vented 81 L (saved config)</text></g>`;
-    $("chart").innerHTML = s;
-  }
+    // ---- chart ----
+    function drawChart(h, v) {
+      const W = 760,
+        H = 300,
+        L = 48,
+        R = 16,
+        T = 18,
+        B = 40;
+      const fx = (f) => L + (Math.log10(f / 20) / Math.log10(300 / 20)) * (W - L - R);
+      const lo = 95,
+        hi = 140,
+        fy = (d) => T + (1 - (d - lo) / (hi - lo)) * (H - T - B);
+      const grid = css("--grid"),
+        mut = css("--muted");
+      let s = "";
+      for (let d = lo; d <= hi; d += 5)
+        s += `<line x1="${L}" x2="${W - R}" y1="${fy(d)}" y2="${fy(d)}" stroke="${grid}"/><text x="${L - 8}" y="${fy(d) + 4}" text-anchor="end" font-size="11" fill="${mut}">${d}</text>`;
+      [20, 30, 40, 50, 60, 80, 100, 150, 200, 300].forEach(
+        (f) =>
+          (s += `<line x1="${fx(f)}" x2="${fx(f)}" y1="${T}" y2="${H - B}" stroke="${grid}"/><text x="${fx(f)}" y="${H - B + 16}" text-anchor="middle" font-size="11" fill="${mut}">${f}</text>`),
+      );
+      s += `<text x="${(W + L) / 2}" y="${H - 6}" text-anchor="middle" font-size="11" fill="${mut}">frequency, Hz</text>`;
+      s += `<text transform="translate(12 ${(H - B + T) / 2}) rotate(-90)" text-anchor="middle" font-size="11" fill="${mut}">max dB SPL @ 1 m</text>`;
+      const path = (pts) =>
+        pts
+          .map(
+            (o, i) =>
+              `${i ? "L" : "M"}${fx(o.f).toFixed(1)},${fy(Math.max(lo, Math.min(hi, o.spl))).toFixed(1)}`,
+          )
+          .join("");
+      const area = (pts) => path(pts) + `L${fx(300)},${fy(lo)}L${fx(20)},${fy(lo)}Z`;
+      const hc = css("--horn"),
+        sc = css("--sub");
+      s += `<path d="${area(h.pts)}" fill="${hc}" fill-opacity="0.08"/>`;
+      s += `<path d="${path(v)}" fill="none" stroke="${sc}" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+      s += `<path d="${path(h.pts)}" fill="none" stroke="${hc}" stroke-width="2.2"/>`;
+      s += `<line x1="${fx(h.fL)}" x2="${fx(h.fL)}" y1="${T}" y2="${H - B}" stroke="${mut}" stroke-dasharray="2 3"/><text x="${fx(h.fL) + 4}" y="${T + 12}" font-size="11" fill="${mut}">tuning</text>`;
+      s += `<g font-size="12"><line x1="${L + 12}" x2="${L + 34}" y1="${T + 14}" y2="${T + 14}" stroke="${hc}" stroke-width="2.2"/><text x="${L + 40}" y="${T + 18}" fill="${css("--ink")}">Horn</text>`;
+      s += `<line x1="${L + 12}" x2="${L + 34}" y1="${T + 32}" y2="${T + 32}" stroke="${sc}" stroke-width="1.6" stroke-dasharray="5 4"/><text x="${L + 40}" y="${T + 36}" fill="${css("--ink")}">Vented 81 L (saved config)</text></g>`;
+      $("chart").innerHTML = s;
+    }
 
-  // ---- geometry numbers (illustrative) ----
-  function geom(){
-    const w = S.w, d = 24, pathIn = S.len / 0.0254;
-    const h = Math.max(36, Math.min(64, pathIn / 3.1 + 6));
-    const gross = (w - 1.5) * (h - 1.5) * (d - 1.5) * 16.387 / 1000;
-    const lb = ((2 * (w * h + w * d + h * d) + 3 * (w - 1.5) * (d - 1.5)) / 144) * 2.3 + DRV[S.drv].lb + 8;
-    return { w, h, d, gross, lb };
-  }
+    // ---- geometry numbers (illustrative) ----
+    function geom() {
+      const w = S.w,
+        d = 24,
+        pathIn = S.len / 0.0254;
+      const h = Math.max(36, Math.min(64, pathIn / 3.1 + 6));
+      const gross = ((w - 1.5) * (h - 1.5) * (d - 1.5) * 16.387) / 1000;
+      const lb =
+        ((2 * (w * h + w * d + h * d) + 3 * (w - 1.5) * (d - 1.5)) / 144) * 2.3 + DRV[S.drv].lb + 8;
+      return { w, h, d, gross, lb };
+    }
 
-  function update(){
-    const d = DRV[S.drv], h = hornCurve(), v = ventCurve(), g = geom();
-    $("tVol").innerHTML = `${g.gross.toFixed(0)}<small>L</small>`;
-    $("tLen").innerHTML = `${S.len.toFixed(1)}<small>m</small>`;
-    $("tFb").innerHTML = `${h.fL.toFixed(0)}<small>Hz</small>`;
-    $("t40").innerHTML = `${at(h.pts, 40).spl.toFixed(1)}<small>dB</small>`;
-    $("t60").innerHTML = `${at(h.pts, 60).spl.toFixed(1)}<small>dB</small>`;
-    $("tLb").innerHTML = `${g.lb.toFixed(0)}<small>lb</small>`;
-    $("dims").textContent = `${g.w.toFixed(1)} × ${g.h.toFixed(1)} × ${g.d.toFixed(0)}″`;
-    $("lenV").textContent = `${S.len.toFixed(1)} m`;
-    $("mouthV").textContent = `${S.mouth} cm²`;
-    $("wV").textContent = `${S.w.toFixed(1)}″`;
-    $("ampV").textContent = `${S.amp} W`;
-    $("hpV").textContent = `${S.hp} Hz`;
-    const L = S.len * 100, m = S.mouth;
-    const segs = [["S1–S2", 600, 900, L * 0.18], ["S2–S3", 900, 1300, L * 0.34], ["S3–S4", 1300, m, L * 0.48]];
-    $("segs").innerHTML = segs.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3].toFixed(0)}</td></tr>`).join("");
-    drawChart(h, v);
+    function update() {
+      const d = DRV[S.drv],
+        h = hornCurve(),
+        v = ventCurve(),
+        g = geom();
+      $("tVol").innerHTML = `${g.gross.toFixed(0)}<small>L</small>`;
+      $("tLen").innerHTML = `${S.len.toFixed(1)}<small>m</small>`;
+      $("tFb").innerHTML = `${h.fL.toFixed(0)}<small>Hz</small>`;
+      $("t40").innerHTML = `${at(h.pts, 40).spl.toFixed(1)}<small>dB</small>`;
+      $("t60").innerHTML = `${at(h.pts, 60).spl.toFixed(1)}<small>dB</small>`;
+      $("tLb").innerHTML = `${g.lb.toFixed(0)}<small>lb</small>`;
+      $("dims").textContent = `${g.w.toFixed(1)} × ${g.h.toFixed(1)} × ${g.d.toFixed(0)}″`;
+      $("lenV").textContent = `${S.len.toFixed(1)} m`;
+      $("mouthV").textContent = `${S.mouth} cm²`;
+      $("wV").textContent = `${S.w.toFixed(1)}″`;
+      $("ampV").textContent = `${S.amp} W`;
+      $("hpV").textContent = `${S.hp} Hz`;
+      const L = S.len * 100,
+        m = S.mouth;
+      const segs = [
+        ["S1–S2", 600, 900, L * 0.18],
+        ["S2–S3", 900, 1300, L * 0.34],
+        ["S3–S4", 1300, m, L * 0.48],
+      ];
+      $("segs").innerHTML = segs
+        .map(
+          (r) =>
+            `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3].toFixed(0)}</td></tr>`,
+        )
+        .join("");
+      drawChart(h, v);
 
-    const peak = h.pts.filter(o => o.f > 30 && o.f < 150).reduce((b, o) => o.spl > b.spl ? o : b);
-    const v45 = at(v, 45).spl, h45 = at(h.pts, 45).spl;
-    const rows = [
-      ["Driver", d.name],
-      ["Horn type", S.type === "th" ? "Tapped horn" : "Front-loaded, sealed rear chamber"],
-      ["Max SPL at 35 Hz", `${at(h.pts, 35).spl.toFixed(1)} dB`, `sine, ${at(h.pts, 35).who}-limited`],
-      ["Max SPL at 45 Hz", `${h45.toFixed(1)} dB`, `sine, ${at(h.pts, 45).who}-limited`],
-      ["Peak output", `${peak.spl.toFixed(1)} dB`, `at ${peak.f.toFixed(0)} Hz`],
-      ["Against the vented box", `${(h45 - v45 >= 0 ? "+" : "")}${(h45 - v45).toFixed(1)} dB`, "at 45 Hz, same amp"],
-      ["Peak excursion", `${(d.xmax * 0.55).toFixed(1)} mm`, `${Math.round(55)}% of Xmax at ${S.amp} W, above tuning`],
-      ["Mouth air speed", "6.8 m/s", "at tuning; limit 20 m/s"]
-    ];
-    $("rows").innerHTML = rows.map(r => `<div class="row"><span class="k">${r[0]}</span><span class="v">${r[1]}${r[2] ? `<small>${r[2]}</small>` : ""}</span></div>`).join("");
-    const chips = [
-      ["ok", "Loaded cone", "Above tuning the horn keeps the cone under 60% of Xmax; the amp runs out first."],
-      [S.hp < h.fL * 0.85 ? "warn" : "ok", S.hp < h.fL * 0.85 ? "Unloads below tuning" : "Highpass protects it", S.hp < h.fL * 0.85 ? `Below ${h.fL.toFixed(0)} Hz the horn stops loading the cone. Raise the highpass to about ${Math.round(h.fL * 0.9)} Hz.` : `The ${S.hp} Hz highpass stops the cone unloading below tuning.`],
-      [g.lb > 125 ? "warn" : "ok", g.lb > 125 ? "Two-person lift" : "Inside 125 lb", `${g.lb.toFixed(0)} lb loaded, ${(g.gross / 81).toFixed(1)}× the volume of the vented box.`],
-      ["warn", "Lowpass it hard", "Tapped horns have peaks and nulls above about 3.5× tuning. Keep the crossover at or below 100 Hz, LR24 or steeper."]
-    ];
-    $("chips").innerHTML = chips.map(c => `<div class="chipx ${c[0]}"><b>${c[1]}</b>${c[2]}</div>`).join("");
-    build3d(g);
-  }
+      const peak = h.pts
+        .filter((o) => o.f > 30 && o.f < 150)
+        .reduce((b, o) => (o.spl > b.spl ? o : b));
+      const v45 = at(v, 45).spl,
+        h45 = at(h.pts, 45).spl;
+      const rows = [
+        ["Driver", d.name],
+        ["Horn type", S.type === "th" ? "Tapped horn" : "Front-loaded, sealed rear chamber"],
+        [
+          "Max SPL at 35 Hz",
+          `${at(h.pts, 35).spl.toFixed(1)} dB`,
+          `sine, ${at(h.pts, 35).who}-limited`,
+        ],
+        ["Max SPL at 45 Hz", `${h45.toFixed(1)} dB`, `sine, ${at(h.pts, 45).who}-limited`],
+        ["Peak output", `${peak.spl.toFixed(1)} dB`, `at ${peak.f.toFixed(0)} Hz`],
+        [
+          "Against the vented box",
+          `${h45 - v45 >= 0 ? "+" : ""}${(h45 - v45).toFixed(1)} dB`,
+          "at 45 Hz, same amp",
+        ],
+        [
+          "Peak excursion",
+          `${(d.xmax * 0.55).toFixed(1)} mm`,
+          `${Math.round(55)}% of Xmax at ${S.amp} W, above tuning`,
+        ],
+        ["Mouth air speed", "6.8 m/s", "at tuning; limit 20 m/s"],
+      ];
+      $("rows").innerHTML = rows
+        .map(
+          (r) =>
+            `<div class="row"><span class="k">${r[0]}</span><span class="v">${r[1]}${r[2] ? `<small>${r[2]}</small>` : ""}</span></div>`,
+        )
+        .join("");
+      const chips = [
+        [
+          "ok",
+          "Loaded cone",
+          "Above tuning the horn keeps the cone under 60% of Xmax; the amp runs out first.",
+        ],
+        [
+          S.hp < h.fL * 0.85 ? "warn" : "ok",
+          S.hp < h.fL * 0.85 ? "Unloads below tuning" : "Highpass protects it",
+          S.hp < h.fL * 0.85
+            ? `Below ${h.fL.toFixed(0)} Hz the horn stops loading the cone. Raise the highpass to about ${Math.round(h.fL * 0.9)} Hz.`
+            : `The ${S.hp} Hz highpass stops the cone unloading below tuning.`,
+        ],
+        [
+          g.lb > 125 ? "warn" : "ok",
+          g.lb > 125 ? "Two-person lift" : "Inside 125 lb",
+          `${g.lb.toFixed(0)} lb loaded, ${(g.gross / 81).toFixed(1)}× the volume of the vented box.`,
+        ],
+        [
+          "warn",
+          "Lowpass it hard",
+          "Tapped horns have peaks and nulls above about 3.5× tuning. Keep the crossover at or below 100 Hz, LR24 or steeper.",
+        ],
+      ];
+      $("chips").innerHTML = chips
+        .map((c) => `<div class="chipx ${c[0]}"><b>${c[1]}</b>${c[2]}</div>`)
+        .join("");
+      build3d(g);
+    }
 
-  // ---- 3D: folded tapped horn, right side cut away ----
-  let renderer, scene, camera, root, rotY = 0.75, rotX = 0.22;
-  function init3d(){
-    const el = $("view");
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-    el.prepend(renderer.domElement);
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(32, 1, 0.1, 1000);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
-    const dl = new THREE.DirectionalLight(0xffffff, 0.6); dl.position.set(40, 80, 60); scene.add(dl);
-    root = new THREE.Group(); scene.add(root);
-    let drag = null;
-    renderer.domElement.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY }; renderer.domElement.setPointerCapture(e.pointerId); });
-    renderer.domElement.addEventListener("pointermove", e => { if (!drag) return; rotY += (e.clientX - drag.x) * 0.01; rotX = Math.max(-0.6, Math.min(0.9, rotX + (e.clientY - drag.y) * 0.01)); drag = { x: e.clientX, y: e.clientY }; render(); });
-    renderer.domElement.addEventListener("pointerup", () => drag = null);
-    new ResizeObserver(size).observe(el); size();
-  }
-  function size(){ const el = $("view"); renderer.setSize(el.clientWidth, el.clientHeight, false); camera.aspect = el.clientWidth / el.clientHeight; camera.updateProjectionMatrix(); render(); }
-  function render(){ if (!renderer) return; root.rotation.set(rotX, rotY, 0); renderer.render(scene, camera); }
-  function build3d(g){
-    if (!root) return;
-    while (root.children.length) root.remove(root.children[0]);
-    const ply = new THREE.MeshLambertMaterial({ color: 0xd9c7a7 });
-    const edge = new THREE.MeshLambertMaterial({ color: 0xc2ab86 });
-    const baffle = new THREE.MeshLambertMaterial({ color: 0x4a5d4e });
-    const cone = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
-    const t = 0.75, W = g.w, H = g.h, D = g.d;
-    const panel = (w, h, d, x, y, z, m = ply, rx = 0) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.rotation.x = rx; root.add(b); return b; };
-    // shell: left side, top, bottom, back, front (front open at the mouth)
-    panel(t, H, D, -W / 2 + t / 2, 0, 0, edge);
-    panel(W, t, D, 0, H / 2 - t / 2, 0);
-    panel(W, t, D, 0, -H / 2 + t / 2, 0);
-    panel(W, H, t, 0, 0, -D / 2 + t / 2);
-    const mouthH = Math.max(6, S.mouth / 6.45 / (W - 1.5));
-    panel(W, H - mouthH - t, t, 0, (mouthH + t) / 2 - t / 2 + t / 2, D / 2 - t / 2, baffle);
-    // internal folds: vertical panels alternating open at top and bottom
-    const inner = W - 2 * t, gap = Math.max(4, D * 0.18);
-    const zs = [-D / 2 + D * 0.3, -D / 2 + D * 0.55, -D / 2 + D * 0.78];
-    zs.forEach((z, i) => {
-      const len = H - 2 * t - gap;
-      const y = i % 2 === 0 ? -(gap / 2) : gap / 2;
-      panel(inner, len, t, 0, y, z);
+    // ---- 3D: folded tapped horn, right side cut away ----
+    let renderer,
+      scene,
+      camera,
+      root,
+      rotY = 0.75,
+      rotX = 0.22;
+    function init3d() {
+      const el = $("view");
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+      el.prepend(renderer.domElement);
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(32, 1, 0.1, 1000);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+      const dl = new THREE.DirectionalLight(0xffffff, 0.6);
+      dl.position.set(40, 80, 60);
+      scene.add(dl);
+      root = new THREE.Group();
+      scene.add(root);
+      let drag = null;
+      renderer.domElement.addEventListener("pointerdown", (e) => {
+        drag = { x: e.clientX, y: e.clientY };
+        renderer.domElement.setPointerCapture(e.pointerId);
+      });
+      renderer.domElement.addEventListener("pointermove", (e) => {
+        if (!drag) return;
+        rotY += (e.clientX - drag.x) * 0.01;
+        rotX = Math.max(-0.6, Math.min(0.9, rotX + (e.clientY - drag.y) * 0.01));
+        drag = { x: e.clientX, y: e.clientY };
+        render();
+      });
+      renderer.domElement.addEventListener("pointerup", () => (drag = null));
+      new ResizeObserver(size).observe(el);
+      size();
+    }
+    function size() {
+      const el = $("view");
+      renderer.setSize(el.clientWidth, el.clientHeight, false);
+      camera.aspect = el.clientWidth / el.clientHeight;
+      camera.updateProjectionMatrix();
+      render();
+    }
+    function render() {
+      if (!renderer) return;
+      root.rotation.set(rotX, rotY, 0);
+      renderer.render(scene, camera);
+    }
+    function build3d(g) {
+      if (!root) return;
+      while (root.children.length) root.remove(root.children[0]);
+      const ply = new THREE.MeshLambertMaterial({ color: 0xd9c7a7 });
+      const edge = new THREE.MeshLambertMaterial({ color: 0xc2ab86 });
+      const baffle = new THREE.MeshLambertMaterial({ color: 0x4a5d4e });
+      const cone = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+      const t = 0.75,
+        W = g.w,
+        H = g.h,
+        D = g.d;
+      const panel = (w, h, d, x, y, z, m = ply, rx = 0) => {
+        const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+        b.position.set(x, y, z);
+        b.rotation.x = rx;
+        root.add(b);
+        return b;
+      };
+      // shell: left side, top, bottom, back, front (front open at the mouth)
+      panel(t, H, D, -W / 2 + t / 2, 0, 0, edge);
+      panel(W, t, D, 0, H / 2 - t / 2, 0);
+      panel(W, t, D, 0, -H / 2 + t / 2, 0);
+      panel(W, H, t, 0, 0, -D / 2 + t / 2);
+      const mouthH = Math.max(6, S.mouth / 6.45 / (W - 1.5));
+      panel(W, H - mouthH - t, t, 0, (mouthH + t) / 2 - t / 2 + t / 2, D / 2 - t / 2, baffle);
+      // internal folds: vertical panels alternating open at top and bottom
+      const inner = W - 2 * t,
+        gap = Math.max(4, D * 0.18);
+      const zs = [-D / 2 + D * 0.3, -D / 2 + D * 0.55, -D / 2 + D * 0.78];
+      zs.forEach((z, i) => {
+        const len = H - 2 * t - gap;
+        const y = i % 2 === 0 ? -(gap / 2) : gap / 2;
+        panel(inner, len, t, 0, y, z);
+      });
+      // driver baffle (angled) in the first fold with the 18" driver
+      const db = panel(
+        inner,
+        D * 0.28,
+        t,
+        0,
+        H / 2 - t - D * 0.22,
+        -D / 2 + D * 0.15,
+        baffle,
+        -0.9,
+      );
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(8.6, 7.2, 1.8, 48), cone);
+      ring.rotation.x = Math.PI / 2 - 0.9;
+      ring.position.copy(db.position);
+      ring.position.z += 1.4;
+      ring.position.y -= 0.9;
+      root.add(ring);
+      camera.position.set(0, 4, Math.max(H, W) * 2.4);
+      camera.lookAt(0, 0, 0);
+      render();
+    }
+
+    // ---- controls ----
+    const segBtns = (id, key) =>
+      $(id).addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        [...$(id).children].forEach((x) => x.classList.toggle("on", x === b));
+        S[key] = b.dataset.v;
+        update();
+      });
+    segBtns("type", "type");
+    segBtns("place", "place");
+    $("drv").addEventListener("change", (e) => {
+      S.drv = e.target.value;
+      update();
     });
-    // driver baffle (angled) in the first fold with the 18" driver
-    const db = panel(inner, D * 0.28, t, 0, H / 2 - t - D * 0.22, -D / 2 + D * 0.15, baffle, -0.9);
-    const ring = new THREE.Mesh(new THREE.CylinderGeometry(8.6, 7.2, 1.8, 48), cone);
-    ring.rotation.x = Math.PI / 2 - 0.9; ring.position.copy(db.position); ring.position.z += 1.4; ring.position.y -= 0.9;
-    root.add(ring);
-    camera.position.set(0, 4, Math.max(H, W) * 2.4);
-    camera.lookAt(0, 0, 0);
-    render();
-  }
-
-  // ---- controls ----
-  const segBtns = (id, key) => $(id).addEventListener("click", e => {
-    const b = e.target.closest("button"); if (!b) return;
-    [...$(id).children].forEach(x => x.classList.toggle("on", x === b)); S[key] = b.dataset.v; update();
-  });
-  segBtns("type", "type"); segBtns("place", "place");
-  $("drv").addEventListener("change", e => { S.drv = e.target.value; update(); });
-  [["len", 1], ["mouth", 0], ["w", 1], ["amp", 0], ["hp", 0]].forEach(([id]) => $(id).addEventListener("input", e => { S[id] = +e.target.value; update(); }));
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", update);
-  try { init3d(); } catch (e) { $("view").querySelector(".hint").textContent = "3D view unavailable in this browser"; }
-  update();
-})();
+    [
+      ["len", 1],
+      ["mouth", 0],
+      ["w", 1],
+      ["amp", 0],
+      ["hp", 0],
+    ].forEach(([id]) =>
+      $(id).addEventListener("input", (e) => {
+        S[id] = +e.target.value;
+        update();
+      }),
+    );
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", update);
+    try {
+      init3d();
+    } catch (e) {
+      $("view").querySelector(".hint").textContent = "3D view unavailable in this browser";
+    }
+    update();
+  })();
 </script>

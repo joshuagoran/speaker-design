@@ -15,15 +15,19 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # Vite+ sets up Node, pnpm and the dependency cache
+      - uses: voidzero-dev/setup-vp@v1.21.1
         with:
-          node-version: 20
-      - run: npm test
-      - run: sh tools/build.sh pages
+          node-version: "22"
+          cache: true
+      - run: vp install
+      - run: vp check
+      - run: vp test
+      - run: vp run build
       # phone and tablet layout check (tests/mobile-check.mjs)
       # Playwright's own Chromium, without --with-deps: the runner already has Chrome's system libraries, and the
       # apt step pulls fonts from a slow mirror that has stalled CI for many minutes
-      - run: npm i --no-save playwright@1.56.1 && npx playwright install chromium
+      - run: vp exec playwright install chromium
         timeout-minutes: 5
       - run: node tests/mobile-check.mjs dist/stack-planner.html
         timeout-minutes: 5
@@ -40,10 +44,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: voidzero-dev/setup-vp@v1.21.1
         with:
-          node-version: 20
-      - run: sh tools/build.sh pages
+          node-version: "22"
+          cache: true
+      - run: vp install
+      - run: vp run build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/site

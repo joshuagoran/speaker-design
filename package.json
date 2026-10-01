@@ -2,9 +2,24 @@
   "name": "speaker-design",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
   "scripts": {
     "build": "sh tools/build.sh pages",
-    "test": "node --test tests/*.test.js"
+    "test": "vp test",
+    "prepare": "vp config"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "playwright": "1.56.1",
+    "vite-plus": "catalog:"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.8.1",
+      "onFail": "download"
+    }
+  },
+  "engines": {
+    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
   }
 }

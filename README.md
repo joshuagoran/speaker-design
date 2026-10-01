@@ -27,13 +27,20 @@ dist/                        build output (gitignored)
 
 ## Prerequisites
 
-Node (for `npx esbuild`) and Python 3 (for the preview server). Nothing to
-install — esbuild is fetched by `npx` on first run.
+Node `^22.18.0 || ^24.11.0 || >=26` and Python 3 (for the preview server). The toolchain is
+[Vite+](https://viteplus.dev) (`vp`); it uses pnpm, which `vp install` fetches if needed.
+
+```sh
+pnpm install            # or `vp install` with the global vp CLI
+pnpm exec vp check      # format, lint, type check
+pnpm exec vp test       # tests (Vitest)
+```
 
 ## Build
 
 ```sh
 tools/build.sh          # -> dist/stack-planner.html
+pnpm run build          # (or `vp run build`) -> dist/site/ for GitHub Pages
 ```
 
 It runs esbuild over the JSX, then concatenates `stack-planner.head.html` + the
@@ -84,33 +91,37 @@ collection `configs`, one document per configuration:
 ```jsonc
 {
   "name": "NSW 266 L reference",
-  "savedAt": 1758738000000,          // epoch ms, the list sorts on this
-  "format": "full",                   // fixed: 18" sub + CD; mid size (12" or 15") follows the "mid" driver
-  "sub": "emnsw4018",                 // SUB_OPTIONS id
-  "mid": "em3012",                    // MID_OPTIONS id
-  "midBox": "b15",                    // MID_BOXES id
-  "cd": "n314t",                      // CD_OPTIONS id
-  "horn": "a460g2_14",                // HORN_OPTIONS id
-  "cabinet": "column",                // last "Start from" choice, label only
-  "portStyle": "slots",               // slots (bottom) | folded | vslots (both sides) | vslot1 (one side) | round2
-  "cDim":  { "w": 28, "h": 32, "d": 24 },        // external inches
+  "savedAt": 1758738000000, // epoch ms, the list sorts on this
+  "format": "full", // fixed: 18" sub + CD; mid size (12" or 15") follows the "mid" driver
+  "sub": "emnsw4018", // SUB_OPTIONS id
+  "mid": "em3012", // MID_OPTIONS id
+  "midBox": "b15", // MID_BOXES id
+  "cd": "n314t", // CD_OPTIONS id
+  "horn": "a460g2_14", // HORN_OPTIONS id
+  "cabinet": "column", // last "Start from" choice, label only
+  "portStyle": "slots", // slots (bottom) | folded | vslots (both sides) | vslot1 (one side) | round2
+  "cDim": { "w": 28, "h": 32, "d": 24 }, // external inches
   "cVent": { "slotH": 3, "nt": 2, "dia": 6, "throat": 3, "len": 14 },
-  "hpf": 33, "hpType": "BW24",       // sub highpass: BW24 | LR24 | BW48 | LR48
-  "ampW": 800,                        // amp power per sub channel into 8 Ω; caps max SPL
-  "portMax": 20,                      // peak port air speed limit, m/s
-  "mDim":  { "w": 15, "h": 15, "d": 15 },         // mid-bass box, external inches (sealed)
-  "wall": 0.75,                        // side/top/bottom/back ply, 0.75 or 0.5 (braced); baffles stay 3/4"
-  "inset": 0.75,                       // baffle set back from the frame front, 0–1.5"
-  "cabFinish": "birch",                // "birch", "walnut" or a paint hex
-  "spacerH": 20,                       // "tops on spacers" spacer height, in
-  "joint": "butt",                     // cutlist corner joints: butt | rabbet | miter
-  "xoLo": 120, "xoHi": 950,           // crossovers, sub->mid and mid->horn, LR24
-  "mAmpW": 400,                       // amp power per mid channel into 8 Ω
-  "tilt": 6,                          // dB less the mid band needs than the sub band (music balance)
-  "hfAmpW": 100,                      // amp power per HF channel, rated into 8 Ω
-  "hfTilt": 6,                        // dB less the HF band needs than the mid band
-  "layout": "stack", "cutaway": false, "baffleColor": "#e8b4a8",
-  "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz"
+  "hpf": 33,
+  "hpType": "BW24", // sub highpass: BW24 | LR24 | BW48 | LR48
+  "ampW": 800, // amp power per sub channel into 8 Ω; caps max SPL
+  "portMax": 20, // peak port air speed limit, m/s
+  "mDim": { "w": 15, "h": 15, "d": 15 }, // mid-bass box, external inches (sealed)
+  "wall": 0.75, // side/top/bottom/back ply, 0.75 or 0.5 (braced); baffles stay 3/4"
+  "inset": 0.75, // baffle set back from the frame front, 0–1.5"
+  "cabFinish": "birch", // "birch", "walnut" or a paint hex
+  "spacerH": 20, // "tops on spacers" spacer height, in
+  "joint": "butt", // cutlist corner joints: butt | rabbet | miter
+  "xoLo": 120,
+  "xoHi": 950, // crossovers, sub->mid and mid->horn, LR24
+  "mAmpW": 400, // amp power per mid channel into 8 Ω
+  "tilt": 6, // dB less the mid band needs than the sub band (music balance)
+  "hfAmpW": 100, // amp power per HF channel, rated into 8 Ω
+  "hfTilt": 6, // dB less the HF band needs than the mid band
+  "layout": "stack",
+  "cutaway": false,
+  "baffleColor": "#e8b4a8",
+  "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz",
 }
 ```
 

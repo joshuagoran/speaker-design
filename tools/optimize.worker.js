@@ -2,6 +2,9 @@
 import { optimize } from "./optimize.js";
 self.onmessage = (e) => {
   const { id, input } = e.data;
-  try { self.postMessage({ id, out: optimize(input) }); }
-  catch (err) { self.postMessage({ id, error: String((err && err.message) || err) }); }
+  try {
+    self.postMessage({ id, out: optimize(input) });
+  } catch (err) {
+    self.postMessage({ id, error: String((err && err.message) || err) });
+  }
 };
