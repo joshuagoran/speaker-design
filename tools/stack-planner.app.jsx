@@ -1133,12 +1133,6 @@ function HifiPage() {
         <Pick label="Tweeter" options={HIFI_TWEETERS} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} />
         {guide && <Pick label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
         <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
-          <span className="text-stone-500">Box</span>
-          <div className="flex flex-wrap gap-1">{[["Sealed", "sealed", 0], ["1 port", "vented", 1], ["2 ports", "vented", 2]].map(([l, v, n]) => {
-            const on = box === v && (v === "sealed" || port.n === n);
-            return <button key={l} onClick={() => { setBox(v); if (n) setP("n", n); }} className={seg(on)}>{l}</button>;
-          })}</div>
-          <span>{hLk("box", "sealed or vented")}</span>
           <span className="text-stone-500">Material</span>
           <div className="flex flex-wrap gap-1">{[["Birch ply", "ply"], ["MDF", "mdf"]].map(([l, v]) => <button key={v} onClick={() => setMat(v)} className={seg(mat === v)}>{l}</button>)}</div>
           <span />
@@ -1150,6 +1144,11 @@ function HifiPage() {
           <Slider label="Width" value={dim.w} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("w", v)} extra={hDl("w", "Width")} />
           <Slider label="Height" value={dim.h} min={9} max={44} step={0.25} unit="&#8243;" onChange={(v) => setD("h", v)} extra={hDl("h", "Height")} />
           <Slider label="Depth" value={dim.d} min={6} max={16} step={0.25} unit="&#8243;" onChange={(v) => setD("d", v)} extra={hDl("d", "Depth")} />
+          <div className="flex items-center justify-between gap-2 mb-1 mt-1"><span className="text-sm text-stone-600">Ports</span>{hLk("box", "sealed or vented")}</div>
+          <div className="flex flex-wrap gap-1 mb-3">{[["Sealed", "sealed", 0], ["1 port", "vented", 1], ["2 ports", "vented", 2]].map(([l, v, n]) => {
+            const on = box === v && (v === "sealed" || port.n === n);
+            return <button key={l} onClick={() => { setBox(v); if (n) setP("n", n); }} className={seg(on)}>{l}</button>;
+          })}</div>
           {box === "vented" && (<>
             <Slider label="Port diameter" value={port.dia} min={1} max={4} step={0.25} unit="&#8243;" onChange={(v) => setP("dia", v)} />
             <Slider label="Port length (centreline)" value={port.len} min={1} max={30} step={0.25} unit="&#8243;" onChange={(v) => setP("len", v)} />
