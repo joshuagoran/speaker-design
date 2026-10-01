@@ -901,6 +901,9 @@ function HifiFront({ dim, w, t, lay, vented, port, guide, small }) {
 const HIFI_TOP = 130, HIFI_BOT = 50;
 // woofers listed smallest first, grouped by size in the picker
 const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort((a, b) => a.size - b.size);
+// tweeters split into domes and compression drivers (which need a waveguide), domes first
+const isCD = (o) => o.type === "compression" || o.needsWaveguide;
+const HIFI_TWEETERS_BY_TYPE = HIFI_TWEETERS.slice().sort((a, b) => isCD(a) - isCD(b));
 
 // A result card, laid out like the PA optimizer's: what it is, a front view and its bass against yours, the four numbers with deltas.
 function HifiCard({ k, i, n, curCurve, guide, previewing, onPreview, onLoad }) {
@@ -1133,7 +1136,7 @@ function HifiPage() {
       </div>
       <aside className="min-w-0 md:col-span-2">
         <Pick label={`Woofer · ${w.size}″`} options={HIFI_WOOFERS_BY_SIZE} value={w} onChange={setW} extra={hLk("woofer", "the woofer")} group={(o) => `${o.size}″ woofers`} />
-        <Pick label="Tweeter" options={HIFI_TWEETERS} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} />
+        <Pick label={`Tweeter · ${isCD(t) ? "compression driver" : "dome"}`} options={HIFI_TWEETERS_BY_TYPE} value={t} onChange={setT} extra={hLk("tweeter", "the tweeter")} group={(o) => (isCD(o) ? "Compression drivers (on a waveguide)" : "Dome tweeters")} />
         {guide && <Pick label="Waveguide" options={guides} value={guideSel} onChange={setGuide} />}
         <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
           <span className="text-stone-500">Material</span>
