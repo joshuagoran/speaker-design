@@ -41,7 +41,7 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") doSave();
+                  if (e.key === "Enter") void doSave(); // `save` shows its own failure message
                 }}
                 placeholder="Name this setup"
                 maxLength={60}
@@ -100,7 +100,7 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
             {cur && (
               <button
                 onClick={() => {
-                  remove(cur.id);
+                  void remove(cur.id); // `remove` shows its own failure message
                   setSel("");
                 }}
                 aria-label={`Delete ${cur.name}`}

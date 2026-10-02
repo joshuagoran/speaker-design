@@ -41,6 +41,7 @@ import {
   ownGuideCfg,
 } from "../../lib/data";
 import { byId, byIdOrThrow } from "../../lib/tables";
+import { writeStoredJson } from "../../lib/storage";
 import {
   hifiSystem,
   hifiChips,
@@ -158,7 +159,6 @@ export function HifiPage({ hifi }: Props) {
     setUndoSnapshot,
     setIsOptimizerOn,
     setOptimizerLocks,
-    storage,
     waveguideChoices,
     store,
   } = hifi;
@@ -463,7 +463,7 @@ export function HifiPage({ hifi }: Props) {
             unit="$"
             onChange={(n) => {
               setOptimizerBudget(n);
-              storage.set("hifi.budget", n);
+              writeStoredJson("hifi.budget", n);
             }}
             className=""
           />

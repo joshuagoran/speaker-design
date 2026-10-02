@@ -1,5 +1,6 @@
 import { HORN_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS } from "../../lib/data";
 import { byId, defaultOf } from "../../lib/tables";
+import { readStoredJson, writeStoredJson } from "../../lib/storage";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
 import type {
   Dims3,
@@ -37,12 +38,6 @@ export interface HifiDesignPreview {
   label: string;
   before: HifiCardConfig;
   card: HifiOptimizerCard;
-}
-
-/** Per-viewer settings kept in local storage; a missing or unreadable value gives `fb`, and a failed write is ignored. */
-export interface HifiStorage {
-  get<T>(k: string, fb: T): T;
-  set(k: string, v: unknown): void;
 }
 
 export interface HifiPlanner {
@@ -108,7 +103,6 @@ export interface HifiPlanner {
   setUndoSnapshot: Setter<HifiCardConfig | null>;
   setIsOptimizerOn: (v: boolean) => void;
   setOptimizerLocks: (f: (p: HifiPlannerLocks) => HifiPlannerLocks) => void;
-  storage: HifiStorage;
   waveguideChoices: HifiWaveguide[];
   store: ConfigStore;
 }
@@ -149,36 +143,21 @@ export function useHifiPlanner(): HifiPlanner {
   const [dispersionPlane, setDispersionPlane] = useState<DispersionPlane>("h");
   const store = useConfigStore("hifiConfigs");
   // optimizer: same rules and layout as the PA planner's (switch, locks on the controls, goals in tap order)
-  const storage: HifiStorage = {
-    get: (k, fb) => {
-      try {
-        const v = localStorage.getItem(k);
-        return v == null ? fb : JSON.parse(v);
-      } catch {
-        return fb;
-      }
-    },
-    set: (k, v) => {
-      try {
-        localStorage.setItem(k, JSON.stringify(v));
-      } catch {}
-    },
-  };
-  const [isOptimizerOn, setIsOptimizerOnState] = useState(() => storage.get("hifi.opt", false));
+  const [isOptimizerOn, setIsOptimizerOnState] = useState(() => readStoredJson("hifi.opt", false));
   const setIsOptimizerOn = (v: boolean) => {
     setIsOptimizerOnState(v);
-    storage.set("hifi.opt", v);
+    writeStoredJson("hifi.opt", v);
   };
   const [optimizerGoals, setOptimizerGoals] = useState<HifiGoal[]>([]);
-  const [optimizerBudget, setOptimizerBudget] = useState(() => storage.get("hifi.budget", 800));
+  const [optimizerBudget, setOptimizerBudget] = useState(() => readStoredJson("hifi.budget", 800));
   const [optimizerLocks, setOptimizerLocksState] = useState<HifiPlannerLocks>(() => {
-    const l = storage.get<HifiOptimizerLocks>("hifi.locks", {}) || {};
+    const l = readStoredJson<HifiOptimizerLocks>("hifi.locks", {}) || {};
     return { ...l, dim: { ...l.dim } };
   });
   const setOptimizerLocks = (f: (p: HifiPlannerLocks) => HifiPlannerLocks) =>
     setOptimizerLocksState((p) => {
       const n = f(p);
-      storage.set("hifi.locks", n);
+      writeStoredJson("hifi.locks", n);
       return n;
     });
   const [optimizerResult, setOptimizerResult] = useState<HifiOptimizerResult | null>(null);
@@ -249,7 +228,6 @@ export function useHifiPlanner(): HifiPlanner {
     setUndoSnapshot,
     setIsOptimizerOn,
     setOptimizerLocks,
-    storage,
     waveguideChoices,
     store,
   };
