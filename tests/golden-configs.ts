@@ -178,3 +178,9 @@ export function evaluateFill(c: FillGoldenConfig): GoldenValues {
     portLimited: f.portLimited,
   };
 }
+
+/** Every snapshotted case, by name: what `golden.test.ts` checks and `update-golden.ts` writes. */
+export const goldenCases = [
+  ...configs.map((c) => ({ name: c.name, run: () => evaluate(c) })),
+  ...fillConfigs.map((c) => ({ name: c.name, run: () => evaluateFill(c) })),
+];

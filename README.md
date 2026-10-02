@@ -22,6 +22,7 @@ src/hooks/  src/constants/      shared hooks, chart scales, lock keys, units
 src/styles/palette.ts           the colours (CSS variables and Tailwind names come from here)
 src/styles/app.css              page styles + Tailwind layers; font
 src/lib/data.ts                 drivers, horns, cabinets
+src/lib/tables.ts               defaultOf / byId / byIdOrThrow for those tables
 src/types.ts                    types shared across modules (drivers, horns, cabinets, design config, Setter)
 src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion (pure TypeScript, tested)
 src/lib/hifi/                   hifi model and its optimizer
@@ -45,6 +46,7 @@ Node `^22.18.0 || ^24.11.0 || >=26` and Python 3 (for the preview server). The t
 pnpm install            # or `vp install` with the global vp CLI
 pnpm exec vp check      # format, lint, type check
 pnpm exec vp test       # tests (Vitest)
+pnpm run golden         # rewrite tests/golden.json after an intentional change (golden.test.ts only reads it)
 ```
 
 ## Build
@@ -152,7 +154,7 @@ configurations and can be edited or deleted like any other.
   - `midSystem` (sealed mid volume, model, per-frequency max), `subThroughLp` (sub through the crossover), `fillSystem` (the Fills page).
   - `subSystem` (vent geometry, gross/net volume incl. internal wood from the cutlist parts, model, limits), `subLimits`, `maxCurve`, `hornResponse`, `pistonBeam`, `keeleF`, weights, cutlist (`boxParts`, `cutParts`, `packSheets`).
 - Horn — datasheet model, not T/S: `cd.hf` (sensitivity and its reference, AES power and the crossover it was rated at, minimum crossover, impedance) and `horn.hf` (coverage, minimum crossover, loading limit `lowHz`). Output is sensitivity + 10 log P through the LR24 highpass and a 12 dB/oct rolloff below `lowHz`; power is capped at 2 × AES, derated 6 dB per octave below the AES rating's crossover.
-- Tests (`tests/`) check each function against an independent reference; `tests/golden.json` snapshots the key outputs of the saved and synthetic configs (regenerate with `UPDATE_GOLDEN=1 vp test --run tests/golden.test.ts` after an intentional change; only this single-file invocation is supported, because a full-suite run with `UPDATE_GOLDEN=1` rewrites `golden.json` while `tests/optimize.test.ts` reads it in a parallel worker). CI runs them before every deploy, plus `tests/mobile-check.mjs` (Playwright: no sideways scroll, 40 px touch targets, chip text not squeezed, at phone and tablet widths). See `docs/testing-plan.md` and `docs/calc-audit.md`.
+- Tests (`tests/`) check each function against an independent reference; `tests/golden.json` snapshots the key outputs of the saved and synthetic configs (regenerate with `vp run golden` after an intentional change; `golden.test.ts` only reads it, and the writer, `tests/update-golden.ts`, is a separate run because rewriting `golden.json` inside the full suite would race `tests/optimize.test.ts`, which reads it in a parallel worker). CI runs them before every deploy, plus `tests/mobile-check.mjs` (Playwright: no sideways scroll, 40 px touch targets, chip text not squeezed, at phone and tablet widths). See `docs/testing-plan.md` and `docs/calc-audit.md`.
 - `StackView` — the three.js scene. Takes `sub` (whose `.box` carries the
   dimensions) and `portGeom` (explicit vent geometry), so the drawn box always
   matches the modelled one. Its `useEffect` rebuilds the whole scene; the
