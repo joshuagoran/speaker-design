@@ -50,7 +50,7 @@ import {
   SPEAKER_PLACEMENTS as HIFI_PLACES,
 } from "../../lib/hifi/hifi.ts";
 import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize.ts";
-import { runHifiOptimizer } from "../../lib/hifi/runOptimizer.js";
+import { runHifiOptimizer } from "../../lib/hifi/runOptimizer.ts";
 
 /** Hi-fi page: 2-way home speakers with an active crossover. */
 export function HifiPage({ hifi }) {
