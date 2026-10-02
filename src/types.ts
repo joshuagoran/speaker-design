@@ -1231,15 +1231,15 @@ export interface PaOptimizerResult {
   stats: { evaluated: number; ms: number; subs: number; combos: number; pool: number };
 }
 
-/** What the page posts to the optimizer's worker. */
-export interface OptimizerRequest {
+/** What the page posts to an optimizer's worker; the PA stack's unless another input type is given. */
+export interface OptimizerRequest<I = PaOptimizerInput> {
   id: number;
-  input: PaOptimizerInput;
+  input: I;
 }
 
 /** The worker's reply: the result, or the message of what it threw. */
-export type OptimizerResponse =
-  | { id: number; out: PaOptimizerResult; error?: undefined }
+export type OptimizerResponse<R = PaOptimizerResult> =
+  | { id: number; out: R; error?: undefined }
   | { id: number; error: string; out?: undefined };
 
 // ---- Saved configurations ----

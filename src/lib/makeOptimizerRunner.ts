@@ -1,12 +1,17 @@
+import type { OptimizerRequest, OptimizerResponse } from "../types.ts";
+
 /** Runs an optimizer in its worker, falling back to the main thread where workers are unavailable. */
-export function makeOptimizerRunner(WorkerCtor, optimizeLocal) {
-  let optWorker = null,
+export function makeOptimizerRunner<I, R>(
+  WorkerCtor: new () => Worker,
+  optimizeLocal: (input: I) => R,
+): (input: I) => Promise<R> {
+  let optWorker: Worker | null = null,
     optNoWorker = false,
     optSeq = 0;
-  return function run(input) {
+  return function run(input: I): Promise<R> {
     const id = ++optSeq;
     const local = () =>
-      new Promise((res, rej) =>
+      new Promise<R>((res, rej) =>
         setTimeout(() => {
           try {
             res(optimizeLocal(input));
@@ -26,18 +31,18 @@ export function makeOptimizerRunner(WorkerCtor, optimizeLocal) {
       return local();
     }
     const w = optWorker;
-    return new Promise((res, rej) => {
-      let timer = null;
+    return new Promise<R>((res, rej) => {
+      let timer: ReturnType<typeof setTimeout> | null = null;
       const done = () => {
-        clearTimeout(timer);
+        clearTimeout(timer!); // null until the timer starts, which clearTimeout accepts
         w.removeEventListener("message", onMsg);
         w.removeEventListener("error", onErr);
       };
-      const onMsg = (e) => {
+      const onMsg = (e: MessageEvent<OptimizerResponse<R>>) => {
         if (e.data.id !== id) return;
         done();
         if (e.data.error) rej(new Error(e.data.error));
-        else res(e.data.out);
+        else res(e.data.out!);
       };
       const onErr = () => {
         done();
@@ -56,7 +61,7 @@ export function makeOptimizerRunner(WorkerCtor, optimizeLocal) {
       }, 60000);
       w.addEventListener("message", onMsg);
       w.addEventListener("error", onErr);
-      w.postMessage({ id, input });
+      w.postMessage({ id, input } satisfies OptimizerRequest<I>);
     });
   };
 }
