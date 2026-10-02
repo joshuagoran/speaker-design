@@ -5,13 +5,41 @@ export function SignalPath() {
     mute = PAL.muted,
     line = PAL.muted;
   const col = { pa2: PAL.muted, sub: PAL.cyan, mid: PAL.magenta, hf: PAL.magenta, grey: PAL.muted };
-  const Box = ({ x, y, w, h, c, children }) => (
+  const Box = ({
+    x,
+    y,
+    w,
+    h,
+    c,
+    children,
+  }: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    c: string;
+    children: React.ReactNode;
+  }) => (
     <g>
       <rect x={x} y={y} width={w} height={h} rx="6" fill={PAL.white} stroke={c} strokeWidth="1.5" />
       {children}
     </g>
   );
-  const T = ({ x, y, s = 11, c = ink, a = "middle", b }) => (
+  const T = ({
+    x,
+    y,
+    s = 11,
+    c = ink,
+    a = "middle",
+    b,
+  }: {
+    x: number;
+    y: number;
+    s?: number;
+    c?: string;
+    a?: "start" | "middle" | "end";
+    b: string;
+  }) => (
     <text
       x={x}
       y={y}
@@ -24,7 +52,7 @@ export function SignalPath() {
       {b}
     </text>
   );
-  const A = ({ d, c = line }) => (
+  const A = ({ d, c = line }: { d: string; c?: string }) => (
     <path d={d} fill="none" stroke={c} strokeWidth="1.3" markerEnd="url(#sp-ar)" />
   );
   return (

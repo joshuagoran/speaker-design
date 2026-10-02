@@ -1,7 +1,7 @@
 import { Button } from "../ui/Button.tsx";
 import { Tooltip } from "../ui/Tooltip.tsx";
-import { OptimizerCurveChart } from "../charts/OptimizerCurveChart.jsx";
-import { BoxFront } from "../drawings/BoxFront.jsx";
+import { OptimizerCurveChart } from "../charts/OptimizerCurveChart.tsx";
+import { BoxFront } from "../drawings/BoxFront.tsx";
 import { formatDollars } from "../../lib/format.ts";
 import { Delta } from "./Delta.jsx";
 

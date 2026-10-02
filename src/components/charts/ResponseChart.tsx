@@ -1,6 +1,36 @@
+import type { FrequencyPoint } from "../../types.ts";
 import { PAL } from "../../styles/palette.ts";
 import { useElementWidth } from "../../hooks/useElementWidth.ts";
 import { useState } from "react";
+
+/** One curve on the chart: its points, legend label, line colour and fill colour. */
+interface Series {
+  curve: readonly FrequencyPoint[];
+  label: string;
+  stroke: string;
+  tint: string;
+}
+
+/** A labelled vertical line at a frequency. */
+interface Mark {
+  f: number;
+  label: string;
+}
+
+interface Props {
+  series: readonly Series[];
+  marks?: readonly Mark[];
+  fmax?: number;
+  fmin?: number;
+  /** fixed y axis, dB (or degrees for a beamwidth chart): defaults to the PA stack's 80-135 dB; the Hi-fi charts pass HIFI_TOP / HIFI_BOT */
+  top?: number;
+  bot?: number;
+  /** gridline spacing on the y axis */
+  step?: number;
+  yLabel?: string;
+  /** height in px */
+  H?: number;
+}
 
 /** Max-SPL chart: one or more curves ({f, spl}), fixed 80-135 dB so setups compare directly. */
 export function ResponseChart({
@@ -13,7 +43,7 @@ export function ResponseChart({
   step = 5,
   yLabel = "max dB SPL @ 1 m",
   H = 300,
-}) {
+}: Props) {
   // drawn in real pixels so text stays 11 px at any width
   const [box, cw] = useElementWidth(760);
   const narrow = cw < 500;
@@ -29,8 +59,9 @@ export function ResponseChart({
     y1 = H - B;
   const TOP = top,
     BOT = bot;
-  const px = (f) => x0 + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (x1 - x0);
-  const py = (v) => y1 - ((Math.max(BOT, Math.min(TOP, v)) - BOT) / (TOP - BOT)) * (y1 - y0);
+  const px = (f: number) => x0 + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (x1 - x0);
+  const py = (v: number) =>
+    y1 - ((Math.max(BOT, Math.min(TOP, v)) - BOT) / (TOP - BOT)) * (y1 - y0);
   const paths = series.map((sr) => {
     const pts = sr.curve.filter((o) => o.f >= fmin && o.f <= fmax);
     const d = pts
@@ -49,7 +80,7 @@ export function ResponseChart({
       ? [20, 50, 100, 200, 1000, 5000, 20000]
       : [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
   ).filter((f) => f >= fmin && f <= fmax);
-  const grid = [];
+  const grid: React.ReactElement[] = [];
   ticks.forEach((f) => {
     const X = px(f);
     grid.push(
@@ -70,15 +101,15 @@ export function ResponseChart({
     );
   });
   // hover / drag: a crosshair with each curve's value at that frequency
-  const [hf, setHf] = useState(null);
-  const move = (e) => {
+  const [hf, setHf] = useState<number | null>(null);
+  const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect(),
       X = ((e.clientX - r.left) / r.width) * W;
     setHf(X >= x0 && X <= x1 ? fmin * Math.pow(fmax / fmin, (X - x0) / (x1 - x0)) : null);
   };
   const unit = yLabel.includes("°") ? "°" : " dB";
   const hits = hf
-    ? paths
+    ? (paths
         .map((p) => {
           const pts = p.curve.filter((o) => o.f >= fmin && o.f <= fmax);
           const o = pts.length
@@ -88,7 +119,8 @@ export function ResponseChart({
             : null;
           return o && Math.abs(Math.log(o.f / hf)) < 0.1 ? { ...p, o } : null;
         })
-        .filter(Boolean)
+        // `as`: filter(Boolean) drops the nulls, which TypeScript doesn't track
+        .filter(Boolean) as (Series & { o: FrequencyPoint })[])
     : [];
   const every = ((y1 - y0) * step) / (TOP - BOT) < 16 ? 2 : 1; // thin the labels when rows get tight
   for (let v = BOT, k = 0; v <= TOP; v += step, k++) {

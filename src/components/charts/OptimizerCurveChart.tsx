@@ -1,6 +1,23 @@
 import { PAL } from "../../styles/palette.ts";
 import { useState } from "react";
 
+/** One curve point: frequency in Hz, level in dB. */
+type CurvePoint = readonly [hz: number, db: number];
+
+interface Props {
+  /** this design's curve (the optimizer cards' `curve`) */
+  curve: readonly CurvePoint[];
+  /** your current design's curve, drawn dashed; absent when there is none */
+  cur?: readonly CurvePoint[] | null;
+  fmin?: number;
+  fmax?: number;
+  /** shaded band, Hz; null for none (the Hi-fi cards) */
+  band?: readonly [number, number] | null;
+  /** fixed dB axis: defaults to the PA optimizer cards' 80-135 dB; the Hi-fi cards pass HIFI_TOP / HIFI_BOT */
+  top?: number;
+  bot?: number;
+}
+
 /** The sub's clean output (music limit) against frequency, this design against yours; the scored 40-90 Hz band shaded. */
 export function OptimizerCurveChart({
   curve,
@@ -10,29 +27,30 @@ export function OptimizerCurveChart({
   band = [40, 90],
   top = 135,
   bot = 80,
-}) {
-  const [hover, setHover] = useState(null);
+}: Props) {
+  const [hover, setHover] = useState<number | null>(null);
   const W = 220,
     H = 150,
     L = 26,
     R = 6,
     T = 16,
     B = 18;
-  const x = (f) => L + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (W - L - R),
-    y = (d) => T + ((top - Math.max(bot, Math.min(top, d))) / (top - bot)) * (H - T - B);
-  const path = (c) =>
+  const x = (f: number) => L + (Math.log(f / fmin) / Math.log(fmax / fmin)) * (W - L - R),
+    y = (d: number) => T + ((top - Math.max(bot, Math.min(top, d))) / (top - bot)) * (H - T - B);
+  const path = (c: readonly CurvePoint[]) =>
     c.map((o, i) => `${i ? "L" : "M"}${x(o[0]).toFixed(1)},${y(o[1]).toFixed(1)}`).join("");
-  const at = (c, f) =>
+  const at = (c: readonly CurvePoint[] | null | undefined, f: number) =>
     c && c.reduce((b, o) => (Math.abs(Math.log(o[0] / f)) < Math.abs(Math.log(b[0] / f)) ? o : b));
-  const move = (e) => {
+  const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect(),
       px = ((e.clientX - r.left) / r.width) * W;
     const f = fmin * Math.pow(fmax / fmin, (px - L) / (W - L - R));
     setHover(f >= fmin && f <= fmax ? f : null);
   };
-  const ticks = [];
+  const ticks: number[] = [];
   for (let d = bot; d <= top; d += 10) ticks.push(d);
-  const h1 = hover && at(curve, hover),
+  // read only while `hover` is set, and `curve` is this card's own, so never null (and `0` is not a hover frequency)
+  const h1 = (hover && at(curve, hover)) as CurvePoint,
     h2 = hover && at(cur, hover);
   return (
     <svg

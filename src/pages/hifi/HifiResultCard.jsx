@@ -1,7 +1,7 @@
 import { passiveRadiatorOf } from "./hifiDriverLists.ts";
 import { Button } from "../../components/ui/Button.tsx";
-import { OptimizerCurveChart } from "../../components/charts/OptimizerCurveChart.jsx";
-import { HifiFront } from "../../components/drawings/HifiFront.jsx";
+import { OptimizerCurveChart } from "../../components/charts/OptimizerCurveChart.tsx";
+import { HifiFront } from "../../components/drawings/HifiFront.tsx";
 import { formatDollars } from "../../lib/format.ts";
 import { Delta } from "../../components/optimizer/Delta.jsx";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales.ts";

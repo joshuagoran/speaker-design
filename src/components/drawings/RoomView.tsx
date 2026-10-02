@@ -1,14 +1,32 @@
 import { PAL } from "../../styles/palette.ts";
+
+/** The listening seat, feet: across from the middle of the pair, and out from the speakers. */
+interface Seat {
+  x: number;
+  y: number;
+}
+
+interface Props {
+  /** distance between the speakers, feet */
+  spacing: number;
+  /** toe-in, degrees */
+  toe: number;
+  seat: Seat;
+  setSeat: (seat: Seat) => void;
+  /** each speaker's angle to the seat, degrees: left, right */
+  angles: readonly [left: number, right: number];
+}
+
 /** Top-down room: the pair and a seat you can drag. Units: feet. */
-export function RoomView({ spacing, toe, seat, setSeat, angles }) {
+export function RoomView({ spacing, toe, seat, setSeat, angles }: Props) {
   const Wd = Math.max(12, spacing + 6),
     Dp = Math.max(10, seat.y + 3),
     W = 320,
     k = W / Wd,
     H = Dp * k;
-  const px = (x) => W / 2 + x * k,
-    py = (y) => 14 + y * k;
-  const drag = (e) => {
+  const px = (x: number) => W / 2 + x * k,
+    py = (y: number) => 14 + y * k;
+  const drag = (e: React.PointerEvent<SVGSVGElement>) => {
     if (e.type === "pointermove" && !e.buttons) return;
     const r = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - r.left) / r.width) * W,
@@ -18,7 +36,7 @@ export function RoomView({ spacing, toe, seat, setSeat, angles }) {
       y: Math.max(2, Math.round(((y - 14) / k) * 4) / 4),
     });
   };
-  const spk = (sx, sign) => {
+  const spk = (sx: number, sign: number) => {
     return (
       <g key={sign} transform={`translate(${px(sx)},${py(0)}) rotate(${-sign * toe})`}>
         <rect x={-7} y={-6} width={14} height={10} rx="1.5" fill={PAL.ink} />

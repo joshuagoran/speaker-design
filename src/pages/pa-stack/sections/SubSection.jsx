@@ -2,7 +2,7 @@ import { PAL } from "../../../styles/palette.ts";
 import { WarningChips } from "../../../components/chips/WarningChips.tsx";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid.tsx";
 import { FoldHeading } from "../../../components/ui/FoldHeading.tsx";
-import { ResponseChart } from "../../../components/charts/ResponseChart.jsx";
+import { ResponseChart } from "../../../components/charts/ResponseChart.tsx";
 import { StatRow } from "../../../components/optimizer/StatRow.tsx";
 import { subChips } from "../../../lib/pa/chips.ts";
 

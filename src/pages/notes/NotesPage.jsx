@@ -1,6 +1,6 @@
 import { Tooltip } from "../../components/ui/Tooltip.tsx";
 import { SectionHeading } from "../../components/ui/SectionHeading.tsx";
-import { SignalPath } from "../../components/drawings/SignalPath.jsx";
+import { SignalPath } from "../../components/drawings/SignalPath.tsx";
 import { RACKS } from "../../lib/data.ts";
 
 /** Notes page: reference material and parts research behind the design. */

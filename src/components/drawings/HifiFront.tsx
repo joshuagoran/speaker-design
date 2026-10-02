@@ -1,15 +1,40 @@
+import type {
+  Dims2,
+  DriverLayout,
+  HifiPort,
+  HifiTweeter,
+  HifiWoofer,
+  PassiveRadiatorChoice,
+} from "../../types.ts";
 import { PAL } from "../../styles/palette.ts";
 import { passiveRadiatorShape } from "../../lib/hifi/hifi.ts";
 
+interface Props {
+  /** the box's outside size, inches */
+  dim: Dims2;
+  w: HifiWoofer;
+  t: HifiTweeter;
+  lay: DriverLayout;
+  vented: boolean;
+  port: HifiPort;
+  pr: Pick<PassiveRadiatorChoice, "drv" | "n"> | null;
+  /** the waveguide's mouth, inches; null for a bare tweeter */
+  guide: Dims2 | null;
+  small?: boolean;
+}
+
 /** Front view of the box and drivers, to scale. */
-export function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }) {
-  const face = guide ? { w: guide.w, h: guide.h } : t.faceplate || { w: 4, h: 4 };
+export function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }: Props) {
+  // `as Dims2`: the data module gives every faceplate a `w` and `h` when it loads (types.ts `Faceplate`)
+  const face = guide
+    ? { w: guide.w, h: guide.h }
+    : (t.faceplate as Dims2 | null | undefined) || { w: 4, h: 4 };
   const top = lay.onTop ? face.h : 0,
     k = 120 / Math.max(dim.h + top, dim.w * 1.2, face.w * 1.2),
     W = Math.max(dim.w, face.w) * k,
     H = (dim.h + top) * k;
   const bx = (W - dim.w * k) / 2,
-    y = (inch) => (dim.h + top - inch) * k;
+    y = (inch: number) => (dim.h + top - inch) * k;
   return (
     <svg
       viewBox={`-4 -4 ${W + 8} ${H + 8}`}

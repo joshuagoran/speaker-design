@@ -1,21 +1,42 @@
+import type { PaBoxGeometry } from "../../types.ts";
 import { PAL } from "../../styles/palette.ts";
+
+interface Props {
+  g: PaBoxGeometry;
+  /** your current design, drawn dashed behind */
+  cur?: PaBoxGeometry | null;
+}
+
+/** A box's outline in the drawing's units. */
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 /** Front view of a design, to scale, with your current design's outline dashed behind it. */
-export function BoxFront({ g, cur }) {
+export function BoxFront({ g, cur }: Props) {
   const W = 150,
     H = 150,
     pad = 4;
   // tower: the mid sits in the top of the sub column (drawn as a section of it), the horn on top
-  const tall = (x) => x.sub.h + (x.tower ? 0 : x.mid.h) + (x.horn ? x.horn.h : 0);
-  const wide = (x) => Math.max(x.sub.w, x.mid.w, x.horn ? x.horn.w : 0);
+  const tall = (x: PaBoxGeometry) => x.sub.h + (x.tower ? 0 : x.mid.h) + (x.horn ? x.horn.h : 0);
+  const wide = (x: PaBoxGeometry) => Math.max(x.sub.w, x.mid.w, x.horn ? x.horn.w : 0);
   const k = Math.min(
     (H - 2 * pad) / Math.max(tall(g), cur ? tall(cur) : 0),
     (W - 2 * pad) / Math.max(wide(g), cur ? wide(cur) : 0),
   );
   const cx = W / 2,
     y0 = H - pad;
-  const stackRects = (x) => {
-    const r = [],
-      put = (w, h, y) => ({ x: cx - (w * k) / 2, y: y - h * k, w: w * k, h: h * k });
+  const stackRects = (x: PaBoxGeometry) => {
+    const r: Rect[] = [],
+      put = (w: number, h: number, y: number): Rect => ({
+        x: cx - (w * k) / 2,
+        y: y - h * k,
+        w: w * k,
+        h: h * k,
+      });
     const sb = put(x.sub.w, x.sub.h, y0),
       mb = x.tower ? { ...sb, h: x.mid.h * k } : put(x.mid.w, x.mid.h, sb.y),
       hb = x.horn ? put(x.horn.w, x.horn.h, mb.y) : null;
@@ -28,7 +49,7 @@ export function BoxFront({ g, cur }) {
     b = cur ? stackRects(cur) : null,
     t = g.wall * k,
     v = g.cVent;
-  const vent = [];
+  const vent: React.ReactElement[] = [];
   if (g.portStyle === "slots" || g.portStyle === "folded")
     vent.push(
       <rect
@@ -82,7 +103,7 @@ export function BoxFront({ g, cur }) {
       : g.portStyle.startsWith("round")
         ? v.dia * k + 4
         : 0;
-  const driver = (box, size, below = 0) => (
+  const driver = (box: Rect, size: number, below = 0) => (
     <circle
       cx={box.x + box.w / 2}
       cy={box.y + (box.h - below) / 2}

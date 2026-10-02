@@ -7,7 +7,7 @@ import { Tooltip } from "../../components/ui/Tooltip.tsx";
 import { Card } from "../../components/ui/Card.tsx";
 import { SelectField } from "../../components/ui/SelectField.tsx";
 import { Slider } from "../../components/ui/Slider.tsx";
-import { ResponseChart } from "../../components/charts/ResponseChart.jsx";
+import { ResponseChart } from "../../components/charts/ResponseChart.tsx";
 import { fillChips } from "../../lib/pa/chips.ts";
 import { FILL_OPTIONS } from "../../lib/data.ts";
 import { fillSystem, nearestPoint } from "../../lib/pa/calc.ts";

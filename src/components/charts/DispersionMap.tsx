@@ -1,9 +1,15 @@
+import type { HifiDispersionMap } from "../../types.ts";
 import { PAL } from "../../styles/palette.ts";
 import { useState } from "react";
 
+interface Props {
+  map: HifiDispersionMap;
+  title: string;
+}
+
 /** Level vs angle and frequency, normalised to on-axis (0 dB darkest). Hover or drag to read a cell. */
-export function DispersionMap({ map, title }) {
-  const [hover, setHover] = useState(null);
+export function DispersionMap({ map, title }: Props) {
+  const [hover, setHover] = useState<{ i: number; j: number } | null>(null);
   const W = 560,
     H = 240,
     L = 40,
@@ -14,14 +20,14 @@ export function DispersionMap({ map, title }) {
     nA = map.angles.length;
   const cw = (W - L - R) / nF,
     ch = (H - T - B) / nA;
-  const col = (db) => {
+  const col = (db: number) => {
     const x = Math.max(0, Math.min(1, -db / 18));
     const l = 28 + x * 66;
     return `hsl(${PAL.cyanHue} ${Math.round(100 - x * 70)}% ${l.toFixed(0)}%)`;
   };
-  const fx = (f) =>
+  const fx = (f: number) =>
     L + (Math.log(f / map.freqs[0]) / Math.log(map.freqs[nF - 1] / map.freqs[0])) * (W - L - R);
-  const move = (e) => {
+  const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect(),
       x = ((e.clientX - r.left) / r.width) * W,
       y = ((e.clientY - r.top) / r.height) * H;

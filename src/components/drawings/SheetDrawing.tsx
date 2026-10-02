@@ -1,14 +1,24 @@
+import type { PackedSheet, PlywoodSheet } from "../../types.ts";
 import { PAL } from "../../styles/palette.ts";
 import { useElementWidth } from "../../hooks/useElementWidth.ts";
 
+interface Props {
+  sheet: PackedSheet;
+  /** the sheet's size, inches */
+  S: PlywoodSheet;
+  /** which sheet this is, from 0 */
+  idx: number;
+}
+
 /** One plywood sheet with its cut pieces laid out. */
-export function SheetDrawing({ sheet, S, idx }) {
+export function SheetDrawing({ sheet, S, idx }: Props) {
   const sc = 4,
     W = S.w * sc,
     H = S.h * sc;
   const [box, cw] = useElementWidth(S.w === 48 ? 160 : 200);
   const fs = (12 * (W + 4)) / cw; // 12 css px
-  const colors = { Sub: PAL.subTint, Mid: PAL.mutedTint };
+  // @ts-expect-error PAL has no `mutedTint` (the palette's name is `midTint`), so Mid pieces get the `PAL.edge` fallback below. Real bug, left as is for the migration.
+  const colors: Record<string, string> = { Sub: PAL.subTint, Mid: PAL.mutedTint };
   return (
     <div
       ref={box}

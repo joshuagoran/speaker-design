@@ -1,7 +1,7 @@
 import { ToggleButton } from "../../components/ui/ToggleButton.tsx";
 import { Tooltip } from "../../components/ui/Tooltip.tsx";
 import { SectionHeading } from "../../components/ui/SectionHeading.tsx";
-import { SheetDrawing } from "../../components/drawings/SheetDrawing.jsx";
+import { SheetDrawing } from "../../components/drawings/SheetDrawing.tsx";
 import {
   PLYWOOD_SHEETS,
   formatInches,
