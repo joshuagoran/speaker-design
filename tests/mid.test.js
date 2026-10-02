@@ -10,7 +10,7 @@ import {
   STUFFING_VOLUME_GAIN,
   nearestPoint,
 } from "../src/lib/pa/calc.js";
-import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data.js";
+import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data.ts";
 import { close, db } from "./helpers.js";
 
 const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76") || MID_OPTIONS.find((o) => o.ts);

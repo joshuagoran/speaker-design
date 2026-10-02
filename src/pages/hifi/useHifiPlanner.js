@@ -1,4 +1,4 @@
-import { HORN_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS } from "../../lib/data.js";
+import { HORN_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS } from "../../lib/data.ts";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore.js";
 import { useState } from "react";
 

@@ -11,7 +11,7 @@ import {
   AMP_WATTS_MAX,
 } from "../src/lib/pa/optimize.js";
 import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc.js";
-import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data.js";
+import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data.ts";
 import { close } from "./helpers.js";
 
 const seeds = JSON.parse(fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url)));

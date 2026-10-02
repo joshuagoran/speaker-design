@@ -244,7 +244,7 @@ test("slot vent: tunes like a port of the same area and length, its shelf takes 
 });
 
 test("planar ribbon on its own waveguide: flush-mounted, its coverage drives the directivity, 5 ohm and minimum crossover checked", async (t) => {
-  const { HIFI_TWEETERS, ownGuideCfg } = await import("../src/lib/data.js");
+  const { HIFI_TWEETERS, ownGuideCfg } = await import("../src/lib/data.ts");
   const r = HIFI_TWEETERS.find((o) => o.id === "lt22");
   const g = ownGuideCfg(r),
     c = { ...cfg, guide: g, xo: 2200 };

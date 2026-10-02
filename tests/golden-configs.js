@@ -1,6 +1,6 @@
 // Configs for the regression snapshot: the saved seeds plus synthetic ones covering the options.
 import fs from "node:fs";
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data.js";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data.ts";
 import {
   subSystem,
   midSystem,
@@ -11,7 +11,7 @@ import {
   midWeightLb,
   subWeightLb,
 } from "../src/lib/pa/calc.js";
-import { FILL_OPTIONS } from "../src/lib/data.js";
+import { FILL_OPTIONS } from "../src/lib/data.ts";
 
 const seeds = JSON.parse(fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url)));
 const base = seeds.find((c) => c.name === "lil block stack LE (optimized)");

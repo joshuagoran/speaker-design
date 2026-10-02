@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CABINET_FINISHES } from "../../lib/data.js";
+import { CABINET_FINISHES } from "../../lib/data.ts";
 import {
   roundedRectShape,
   roundedRectPath,

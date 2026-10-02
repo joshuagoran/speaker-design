@@ -10,7 +10,7 @@ import {
   MID_BOXES,
   CD_OPTIONS,
   HORN_OPTIONS,
-} from "../../../lib/data.js";
+} from "../../../lib/data.ts";
 import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion.js";
 import {
   subSystem,

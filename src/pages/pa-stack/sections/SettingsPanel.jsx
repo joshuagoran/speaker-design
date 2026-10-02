@@ -4,7 +4,7 @@ import { SwatchPicker } from "../../../components/ui/SwatchPicker.jsx";
 import { Card } from "../../../components/ui/Card.jsx";
 import { SelectField } from "../../../components/ui/SelectField.jsx";
 import { Slider } from "../../../components/ui/Slider.jsx";
-import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, CABINET_FINISHES } from "../../../lib/data.js";
+import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, CABINET_FINISHES } from "../../../lib/data.ts";
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc.js";
 
 /** Settings: sliders and pickers for the sub, mid-bass, horn and the look. A bottom sheet with tabs on phones. */

@@ -7,7 +7,7 @@ import {
   thermalVoltageLimit,
   ampVoltage,
 } from "../src/lib/pa/calc.js";
-import { SUB_OPTIONS } from "../src/lib/data.js";
+import { SUB_OPTIONS } from "../src/lib/data.ts";
 import { close, near } from "./helpers.js";
 
 const fh = SUB_OPTIONS.find((o) => o.id === "f18fh500").ts;

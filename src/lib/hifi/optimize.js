@@ -16,7 +16,7 @@ import {
   slotMaxLength,
 } from "./hifi.js";
 import { ventTuning } from "../pa/calc.js";
-import { passiveRadiatorMassMax, ownGuideCfg } from "../data.js";
+import { passiveRadiatorMassMax, ownGuideCfg } from "../data.ts";
 
 // the PA planner's goals, in its order
 export const HIFI_OPTIMIZER_GOALS = {

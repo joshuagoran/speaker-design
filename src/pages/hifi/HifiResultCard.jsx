@@ -5,7 +5,7 @@ import { HifiFront } from "../../components/drawings/HifiFront.jsx";
 import { formatDollars } from "../../lib/format.ts";
 import { Delta } from "../../components/optimizer/Delta.jsx";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales.ts";
-import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data.js";
+import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data.ts";
 
 /** A result card, laid out like the PA optimizer's: what it is, a front view and its bass against yours, the four numbers with deltas. */
 export function HifiResultCard({

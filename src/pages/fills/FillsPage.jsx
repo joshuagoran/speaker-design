@@ -9,7 +9,7 @@ import { SelectField } from "../../components/ui/SelectField.jsx";
 import { Slider } from "../../components/ui/Slider.jsx";
 import { ResponseChart } from "../../components/charts/ResponseChart.jsx";
 import { fillChips } from "../../lib/pa/chips.js";
-import { FILL_OPTIONS } from "../../lib/data.js";
+import { FILL_OPTIONS } from "../../lib/data.ts";
 import { fillSystem, nearestPoint } from "../../lib/pa/calc.js";
 import { useState } from "react";
 

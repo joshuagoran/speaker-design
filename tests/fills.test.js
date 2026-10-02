@@ -9,7 +9,7 @@ import {
   STUFFING_VOLUME_GAIN,
   nearestPoint,
 } from "../src/lib/pa/calc.js";
-import { FILL_OPTIONS } from "../src/lib/data.js";
+import { FILL_OPTIONS } from "../src/lib/data.ts";
 import { close, massLineSPL } from "./helpers.js";
 
 const drv = FILL_OPTIONS.find((o) => o.id === "bc10cxn64");

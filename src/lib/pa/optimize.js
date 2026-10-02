@@ -38,7 +38,7 @@ import {
   subDriverClearanceNeededIn,
   driverClearance,
 } from "./chips.js";
-import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS } from "../data.js";
+import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS } from "../data.ts";
 
 const byId = (list, id) => list.find((o) => o.id === id);
 const r2 = (x, q = 0.5) => Math.round(x / q) * q;

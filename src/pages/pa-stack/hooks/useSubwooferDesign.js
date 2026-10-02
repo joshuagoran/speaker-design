@@ -1,4 +1,4 @@
-import { SUB_OPTIONS } from "../../../lib/data.js";
+import { SUB_OPTIONS } from "../../../lib/data.ts";
 import { useState } from "react";
 
 /** State for the subwoofer box: driver, port style, box size, vent, highpass and amp. Every cabinet is custom; presets are only a starting point. */

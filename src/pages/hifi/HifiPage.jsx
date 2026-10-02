@@ -39,7 +39,7 @@ import {
   HIFI_PASSIVES,
   passiveRadiatorMassMax,
   ownGuideCfg,
-} from "../../lib/data.js";
+} from "../../lib/data.ts";
 import {
   hifiSystem,
   hifiChips,

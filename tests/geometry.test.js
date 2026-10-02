@@ -9,7 +9,7 @@ import {
   midWeightLb,
   plywoodLbPerSqFt,
 } from "../src/lib/pa/calc.js";
-import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data.js";
+import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data.ts";
 import { close } from "./helpers.js";
 
 const IN3_L = 16.387 / 1000;
