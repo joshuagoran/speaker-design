@@ -20,6 +20,7 @@ import type {
   FrequencyPoint,
   HifiChip,
   HifiConfig,
+  HifiPort,
   HighpassType,
   HifiDispersionMap,
   HifiPlacement,
@@ -777,4 +778,23 @@ export function hifiChips(
     `Clean up to ${sys.wLevel.toFixed(0)} dB at 1 m${cfg.bsc ? `, with ${cfg.bsc} dB of baffle-step boost` : ""}.`,
   ]);
   return F;
+}
+
+/**
+ * The port after the "1 port / 2 ports / Slot" toggle: a new object with only the fields of the shape it switches to
+ * (a round port has `dia` and `elbows`, a slot has `h`; both keep the length).
+ */
+export function portAfterToggle(p: HifiPort, to: number | "slot"): HifiPort {
+  if (to === "slot") {
+    const slot: SlotPort = { shape: "slot", n: 1, h: p.shape === "slot" ? p.h : 1, len: p.len };
+    return slot;
+  }
+  const round: RoundPort = {
+    shape: "round",
+    n: to,
+    dia: p.shape === "slot" ? 2 : p.dia,
+    len: p.len,
+  };
+  if (p.shape !== "slot" && p.elbows !== undefined) round.elbows = p.elbows;
+  return round;
 }

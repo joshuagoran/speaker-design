@@ -14,6 +14,7 @@ import {
   hifiResponseAt,
   hifiDispersionMap,
   grossVolumeLiters,
+  portAfterToggle,
 } from "../src/lib/hifi/hifi";
 import type { HifiConfig, HifiTweeter, HifiWoofer, PassiveRadiator } from "../src/types";
 import { close } from "./helpers";
@@ -288,4 +289,19 @@ test("planar ribbon on its own waveguide: flush-mounted, its coverage drives the
       ([, h]) => h === "Below the tweeter's minimum crossover",
     ),
   );
+});
+
+test("port toggle builds a fresh port with only its own shape's fields", () => {
+  const round = { n: 1, dia: 3, len: 7, elbows: 1 } as const;
+  const slot = portAfterToggle(round, "slot");
+  assert.deepEqual(slot, { shape: "slot", n: 1, h: 1, len: 7 });
+  assert.ok(!("dia" in slot) && !("elbows" in slot), "no round fields on a slot");
+  const back = portAfterToggle({ ...slot, h: 2, w: 9 }, 2);
+  assert.deepEqual(back, { shape: "round", n: 2, dia: 2, len: 7 });
+  assert.ok(
+    !("h" in back) && !("w" in back) && !("elbows" in back),
+    "no slot fields on a round port",
+  );
+  assert.deepEqual(portAfterToggle(round, 2), { shape: "round", n: 2, dia: 3, len: 7, elbows: 1 });
+  assert.deepEqual(portAfterToggle({ ...slot, h: 2 }, "slot"), { ...slot, h: 2 });
 });

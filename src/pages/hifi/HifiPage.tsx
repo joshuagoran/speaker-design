@@ -48,6 +48,7 @@ import {
   logSpacedFrequencies,
   linkwitzRileyFilter,
   SPEAKER_PLACEMENTS as HIFI_PLACES,
+  portAfterToggle,
 } from "../../lib/hifi/hifi";
 import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
 import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
@@ -60,7 +61,6 @@ import type {
   HifiLockKey,
   HifiOptimizerCard,
   HifiPlacement,
-  HifiPort,
   ListeningSeat,
   PanelMaterial,
   RadiatorSelection,
@@ -864,14 +864,7 @@ export function HifiPage({ hifi }: Props) {
                   on={on}
                   onClick={() => {
                     setBoxType(v);
-                    if (v === "vented")
-                      // boundary cast: the spread keeps the other shape's fields (`dia`, or `h`), which `HifiPort` types as undefined
-                      setPortSpec(
-                        (p) =>
-                          (n === "slot"
-                            ? { ...p, shape: "slot", h: p.h || 1, len: p.len }
-                            : { ...p, shape: "round", n }) as HifiPort,
-                      );
+                    if (v === "vented") setPortSpec((p) => portAfterToggle(p, n));
                     if (v === "radiator") setRadiatorSelection((p) => ({ ...p, n }));
                   }}
                 >

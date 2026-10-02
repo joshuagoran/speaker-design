@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { optimizeHifiSpeaker, hifiDesignProblems } from "../src/lib/hifi/optimize";
+import { optimizeHifiSpeaker, hifiDesignProblems, portsDiffer } from "../src/lib/hifi/optimize";
 import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
 import type { HifiGoal, HifiMetrics, HifiOptimizerCurrent, HifiOptimizerLocks } from "../src/types";
@@ -247,4 +247,17 @@ test("hi-fi optimizer: a handed-over radiator not in `passives` is looked up in 
   });
   assert.equal(unknown.cur, null, "no comparison against a design with its radiator dropped");
   assert.ok(unknown.curProblems && unknown.curProblems[0].includes("radiator"));
+});
+
+test("hi-fi optimizer: a port counts as changed only on its own shape's fields", () => {
+  const round = { n: 1, dia: 2, len: 6 } as const;
+  // boundary cast: a design saved before the port toggle built fresh ports can carry a slot's `h` on a round port
+  const stale = { ...round, h: 1 } as unknown as typeof round;
+  assert.equal(portsDiffer(stale, round), false, "a stale slot field is not a change");
+  assert.equal(portsDiffer(round, { ...round, dia: 2.5 }), true);
+  assert.equal(portsDiffer(round, { ...round, len: 7 }), true);
+  const slot = { shape: "slot", n: 1, h: 1, len: 6 } as const;
+  assert.equal(portsDiffer(slot, { ...slot, h: 1.5 }), true);
+  assert.equal(portsDiffer(slot, round), true);
+  assert.equal(portsDiffer(round, slot), true);
 });

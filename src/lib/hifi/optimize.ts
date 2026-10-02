@@ -634,6 +634,16 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
   };
 }
 
+/**
+ * Whether two ports are different designs. Only the fields of the port's own shape count, so a saved design that still
+ * carries the other shape's leftovers (`h` on a round port, `dia` on a slot) isn't reported as changed.
+ */
+export function portsDiffer(a: HifiPort, b: HifiPort): boolean {
+  if (a.n !== b.n || a.len !== b.len) return true;
+  if (a.shape === "slot") return b.shape !== "slot" || a.h !== b.h;
+  return b.shape === "slot" || a.dia !== b.dia;
+}
+
 // what a card changes from your design
 function changes(p: Pick<PoolEntry, "w" | "t" | "c">, cur: HifiOptimizerCurrent): string[] {
   const c = p.c,
@@ -642,16 +652,7 @@ function changes(p: Pick<PoolEntry, "w" | "t" | "c">, cur: HifiOptimizerCurrent)
   if (p.t.id !== cur.tweeter) out.push("tweeter");
   if (c.box !== cur.box) out.push("box type");
   if (c.dim.w !== cur.dim.w || c.dim.h !== cur.dim.h || c.dim.d !== cur.dim.d) out.push("box size");
-  if (
-    c.box === "vented" &&
-    cur.box === "vented" &&
-    ((c.port.shape || "round") !== (cur.port.shape || "round") ||
-      c.port.dia !== cur.port.dia ||
-      c.port.h !== cur.port.h ||
-      c.port.len !== cur.port.len ||
-      c.port.n !== cur.port.n)
-  )
-    out.push("port");
+  if (c.box === "vented" && cur.box === "vented" && portsDiffer(c.port, cur.port)) out.push("port");
   if (
     c.box === "radiator" &&
     cur.box === "radiator" &&
