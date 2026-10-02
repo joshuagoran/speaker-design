@@ -26,6 +26,7 @@ import type {
   HifiGoal,
   HifiLockKey,
   HifiMetrics,
+  HifiOptimizedField,
   HifiOptimizerCurrent,
   HifiOptimizerInput,
   HifiOptimizerResult,
@@ -91,7 +92,7 @@ export const HIFI_OPTIMIZER_GOALS: Record<HifiGoal, { short: string; name: strin
     louder: { short: "Louder", name: "Louder", why: "Most clean level at the seat." },
   };
 export const HIFI_AMP_WATTS_MAX = { wAmpW: 500, tAmpW: 200 };
-export const HIFI_OPTIMIZED_FIELDS = [
+export const HIFI_OPTIMIZED_FIELDS: readonly HifiOptimizedField[] = [
   "woofer",
   "tweeter",
   "box",
