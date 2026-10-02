@@ -15,14 +15,20 @@ import {
   hifiDispersionMap,
   grossVolumeLiters,
 } from "../src/lib/hifi/hifi.ts";
+import type { HifiConfig, HifiTweeter, HifiWoofer, PassiveRadiator } from "../src/types.ts";
 import { close } from "./helpers.ts";
 
 // a generic 6.5" woofer and 1" dome (typical published values), so the tests don't depend on the driver list
-const W = {
+// price, src, fmax, note and ts.Le, ts.sens, ts.imp complete the type; the functions under test ignore them
+const W: HifiWoofer = {
   id: "w",
   size: 6.5,
   lb: 4,
   name: "test 6.5",
+  price: 0,
+  src: "",
+  fmax: null,
+  note: "",
   ts: {
     Fs: 38,
     Qts: 0.36,
@@ -36,18 +42,25 @@ const W = {
     Mms: 16,
     aes: 60,
     disp: 0.6,
+    Le: 0.5,
+    sens: 88,
+    imp: 8,
   },
 };
-const T = {
+const T: HifiTweeter = {
   id: "t",
   lb: 1,
   name: "test dome",
+  price: 0,
+  src: "",
+  exit: null,
+  note: "",
   hf: { sens: 90, aes: 50, aesXo: 2000, minXo: 1800, imp: 8, fs: 700 },
   type: "dome",
   faceplate: { w: 4, h: 4 },
   domeIn: 1,
 };
-const cfg = {
+const cfg: HifiConfig = {
   box: "vented",
   dim: { w: 8.5, h: 14, d: 10 },
   wall: 0.75,
@@ -61,7 +74,7 @@ const cfg = {
   wallFt: 2,
   portMax: 17,
 };
-const db = (x) => 20 * Math.log10(x);
+const db = (x: number) => 20 * Math.log10(x);
 
 test("LR24 and LR48 low and high passes sum flat, in phase", (t) => {
   for (const order of [4, 8])
@@ -115,9 +128,9 @@ test("directivity: pistons and waveguides are 0 dB on axis and fall off-axis as 
 });
 
 test("the speaker: volume, tuning, levels and checks", (t) => {
-  const s = hifiSystem(W, T, cfg);
+  const s = hifiSystem(W, T, cfg)!;
   close(t, s.gross, grossVolumeLiters(cfg.dim, 0.75), 1e-9);
-  assert.ok(s.net < s.gross && s.Fb > 30 && s.Fb < 80, `Fb ${s.Fb}`);
+  assert.ok(s.net < s.gross && s.Fb! > 30 && s.Fb! < 80, `Fb ${s.Fb}`);
   assert.ok(s.f3 > 30 && s.f3 < 120, `F3 ${s.f3}`);
   assert.ok(s.trim < 0, "a 90 dB dome is trimmed down to an ~86 dB woofer");
   assert.ok(s.maxLevel === Math.min(s.wLevel, s.tLevel));
@@ -126,17 +139,17 @@ test("the speaker: volume, tuning, levels and checks", (t) => {
   // a crossover under the dome's rating is flagged
   const low = { ...cfg, xo: 1200 };
   assert.ok(
-    hifiChips(hifiSystem(W, T, low), W, T, low).some(
+    hifiChips(hifiSystem(W, T, low)!, W, T, low).some(
       ([, h]) => h === "Below the tweeter's minimum crossover",
     ),
   );
   // baffle-step boost costs headroom
-  const b = hifiSystem(W, T, { ...cfg, bsc: 6 });
+  const b = hifiSystem(W, T, { ...cfg, bsc: 6 })!;
   assert.ok(b.wLevel <= s.wLevel + 1e-9, "boost never adds clean output");
 });
 
 test("response at the seat: on axis matches the design axis; off axis and above the lobe lose level", (t) => {
-  const s = hifiSystem(W, T, cfg),
+  const s = hifiSystem(W, T, cfg)!,
     freqs = [500, 2200, 8000];
   const on = hifiResponseAt(s, W, T, cfg, { th: 0, eyeIn: s.lay.tweeterIn, distM: 2 }, freqs);
   const off = hifiResponseAt(
@@ -165,9 +178,9 @@ test("ports with elbows: longer ports fit, and the check says when one is needed
     s1 = portMaxLength(dim, 0.75, { dia: 2, elbows: 1 }),
     s2 = portMaxLength(dim, 0.75, { dia: 2, elbows: 2 });
   assert.ok(s0 < s1 && s1 < s2, `${s0} < ${s1} < ${s2}`);
-  const heads = (len) => {
+  const heads = (len: number) => {
     const c = { ...cfg, port: { n: 1, dia: 2, len } };
-    return hifiChips(hifiSystem(W, T, c), W, T, c).map(([, h]) => h);
+    return hifiChips(hifiSystem(W, T, c)!, W, T, c).map(([, h]) => h);
   };
   assert.ok(
     !heads(s0 - 0.5).some((h) => /^Port needs|^Port too long/.test(h)),
@@ -180,8 +193,12 @@ test("ports with elbows: longer ports fit, and the check says when one is needed
 
 test("passive radiators: tuning, notch, travel limit and checks", (t) => {
   const { passiveRadiatorTuning, passiveRadiatorMassFor } = HIFI;
-  const drv = {
+  const drv: PassiveRadiator = {
     id: "p",
+    name: "test radiator",
+    xmaxKind: "linear",
+    src: "",
+    note: "",
     size: 6.5,
     Sd: 128.7,
     Mms: 30.7,
@@ -192,63 +209,66 @@ test("passive radiators: tuning, notch, travel limit and checks", (t) => {
     lb: 0.75,
     price: 25,
   };
-  const s0 = hifiSystem(W, T, { ...cfg, box: "sealed" });
+  const s0 = hifiSystem(W, T, { ...cfg, box: "sealed" })!;
   // Fs of the radiator alone follows from its mass and compliance
   close(t, passiveRadiatorTuning(drv, 1, 0, 1e9).Fp, drv.Fs, 0.5);
-  const add = passiveRadiatorMassFor(drv, 2, s0.net, 40);
-  const pc = { ...cfg, box: "radiator", pr: { drv, n: 2, addG: add } };
-  const s = hifiSystem(W, T, pc);
-  close(t, s.Fb, 40, 1, "added mass tunes the box");
-  assert.ok(s.Fp < s.Fb, "the radiator's own resonance sits below the tuning");
-  const at = (f) => s.woofer.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
+  const add = passiveRadiatorMassFor(drv, 2, s0.net, 40)!;
+  const pc: HifiConfig = { ...cfg, box: "radiator", pr: { drv, n: 2, addG: add } };
+  const s = hifiSystem(W, T, pc)!;
+  close(t, s.Fb!, 40, 1, "added mass tunes the box");
+  assert.ok(s.Fp! < s.Fb!, "the radiator's own resonance sits below the tuning");
+  const at = (f: number) =>
+    s.woofer.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
   // the notch: steep above Fp, shallower below it
   assert.ok(
-    at(s.Fp * 1.25).raw - at(s.Fp).raw > at(s.Fp).raw - at(s.Fp / 1.25).raw,
+    at(s.Fp! * 1.25).raw - at(s.Fp!).raw > at(s.Fp!).raw - at(s.Fp! / 1.25).raw,
     "a notch at Fp",
   );
-  assert.ok(at(s.Fb).xmm < at(s.Fb * 1.6).xmm, "the cone barely moves at Fb");
-  assert.ok(at(s.Fb).prx > at(s.Fb).xmm, "the radiators move at Fb");
+  assert.ok(at(s.Fb!).xmm < at(s.Fb! * 1.6).xmm, "the cone barely moves at Fb");
+  assert.ok(at(s.Fb!).prx! > at(s.Fb!).xmm, "the radiators move at Fb");
   // more mass, lower tuning
-  assert.ok(hifiSystem(W, T, { ...pc, pr: { drv, n: 2, addG: add + 40 } }).Fb < s.Fb);
+  assert.ok(hifiSystem(W, T, { ...pc, pr: { drv, n: 2, addG: add + 40 } })!.Fb! < s.Fb!);
   // one small radiator is flagged; one that doesn't fit is bad
   const one = { ...pc, pr: { drv: { ...drv, Xmax: 3 }, n: 1, addG: 0 } };
   assert.ok(
-    hifiChips(hifiSystem(W, T, one), W, T, one).some(
+    hifiChips(hifiSystem(W, T, one)!, W, T, one).some(
       ([, h]) => h === "Radiators small for this woofer",
     ),
   );
   const big = { ...pc, pr: { drv: { ...drv, size: 10 }, n: 2, addG: 0 } };
   assert.ok(
-    hifiChips(hifiSystem(W, T, big), W, T, big).some(
+    hifiChips(hifiSystem(W, T, big)!, W, T, big).some(
       ([k, h]) => k === "bad" && h === "Radiators won't fit",
     ),
   );
 });
 
 test("slot vent: tunes like a port of the same area and length, its shelf takes volume, and long slots are flagged", (t) => {
-  const slot = { ...cfg, port: { shape: "slot", h: 1, len: 5 } };
-  const s = hifiSystem(W, T, slot),
-    r = hifiSystem(W, T, cfg);
-  assert.ok(s.slot && s.Fb > 20 && s.Fb < 90, `Fb ${s.Fb}`);
+  const slot: HifiConfig = { ...cfg, port: { shape: "slot", n: 1, h: 1, len: 5 } };
+  const s = hifiSystem(W, T, slot)!,
+    r = hifiSystem(W, T, cfg)!;
+  assert.ok(s.slot && s.Fb! > 20 && s.Fb! < 90, `Fb ${s.Fb}`);
   close(t, s.pArea, 1 * (cfg.dim.w - 1.5), 1e-9, "full inner width");
   assert.ok(s.pVol > (s.pArea * 5 * 16.387) / 1e3, "the shelf is counted");
   // longer slot, lower tuning
-  assert.ok(hifiSystem(W, T, { ...slot, port: { shape: "slot", h: 1, len: 7 } }).Fb < s.Fb);
-  const long = { ...slot, port: { shape: "slot", h: 1, len: 20 } };
   assert.ok(
-    hifiChips(hifiSystem(W, T, long), W, T, long).some(
+    hifiSystem(W, T, { ...slot, port: { shape: "slot", n: 1, h: 1, len: 7 } })!.Fb! < s.Fb!,
+  );
+  const long: HifiConfig = { ...slot, port: { shape: "slot", n: 1, h: 1, len: 20 } };
+  assert.ok(
+    hifiChips(hifiSystem(W, T, long)!, W, T, long).some(
       ([k, h]) => k === "bad" && h === "Slot too long",
     ),
   );
-  assert.ok(r.Fb > 0);
+  assert.ok(r.Fb! > 0);
 });
 
 test("planar ribbon on its own waveguide: flush-mounted, its coverage drives the directivity, 5 ohm and minimum crossover checked", async (t) => {
   const { HIFI_TWEETERS, ownGuideCfg } = await import("../src/lib/data.ts");
-  const r = HIFI_TWEETERS.find((o) => o.id === "lt22");
+  const r = HIFI_TWEETERS.find((o) => o.id === "lt22")!;
   const g = ownGuideCfg(r),
     c = { ...cfg, guide: g, xo: 2200 };
-  const s = hifiSystem(W, r, c);
+  const s = hifiSystem(W, r, c)!;
   assert.ok(!s.lay.onTop && s.lay.tweeterIn < cfg.dim.h, "on the baffle, not on top");
   // 120° wide: about −6 dB at 60° off axis at 10 kHz, once the waveguide controls
   const on = hifiResponseAt(s, W, r, c, { th: 0, eyeIn: s.lay.tweeterIn, distM: 2 }, [10000])[0]
@@ -264,7 +284,7 @@ test("planar ribbon on its own waveguide: flush-mounted, its coverage drives the
   assert.ok(on - off > 3 && on - off < 10, `${(on - off).toFixed(1)} dB down at 60°`);
   const low = { ...c, xo: 1600 };
   assert.ok(
-    hifiChips(hifiSystem(W, r, low), W, r, low).some(
+    hifiChips(hifiSystem(W, r, low)!, W, r, low).some(
       ([, h]) => h === "Below the tweeter's minimum crossover",
     ),
   );

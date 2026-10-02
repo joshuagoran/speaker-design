@@ -11,10 +11,11 @@ import {
   nearestPoint,
 } from "../src/lib/pa/calc.ts";
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data.ts";
+import type { MidSystemConfig } from "../src/types.ts";
 import { close, db } from "./helpers.ts";
 
-const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76") || MID_OPTIONS.find((o) => o.ts);
-const cfg = {
+const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76") || MID_OPTIONS.find((o) => o.ts)!;
+const cfg: MidSystemConfig = {
   midDims: { w: 15, h: 15, d: 15 },
   wall: 0.75,
   inset: 0.75,
@@ -38,8 +39,8 @@ test("midSystem: displacement assumed 2.5 L (12 in) / 4 L (15 in) when unpublish
 });
 test("mid max curve: each point is the smallest of Xmax, thermal and amp", (t) => {
   const m = midSystem(mid, cfg);
-  m.max.forEach((o, i) => {
-    const c = m.mdl.curve[i],
+  m.max!.forEach((o, i) => {
+    const c = m.mdl!.curve[i],
       s = 10 ** ((o.spl - c.spl) / 20),
       V = m.V * s;
     assert.ok(o.spl <= c.spl + 1e-9, "never above the amp-limited curve");
@@ -55,27 +56,27 @@ test("mid max curve: each point is the smallest of Xmax, thermal and amp", (t) =
 });
 test("mid max: tiny amp is amp-limited everywhere and equals the curve", (t) => {
   const m = midSystem(mid, { ...cfg, mAmpW: 1 });
-  m.max.forEach((o, i) => {
+  m.max!.forEach((o, i) => {
     assert.equal(o.who, "amp");
-    close(t, o.spl, m.mdl.curve[i].spl, 1e-9);
+    close(t, o.spl, m.mdl!.curve[i].spl, 1e-9);
   });
 });
 test("mid max in the passband: thermal-limited SPL = mass line at the program-rating voltage", (t) => {
   const m = midSystem(mid, { ...cfg, mAmpW: 5000 });
-  const o = nearestPoint(m.max, 400);
+  const o = nearestPoint(m.max!, 400);
   if (o.who === "thermal")
     close(
       t,
       o.spl,
-      nearestPoint(m.mdl.curve, 400).spl + db(thermalVoltageLimit(mid.ts.aes) / m.V),
+      nearestPoint(m.mdl!.curve, 400).spl + db(thermalVoltageLimit(mid.ts.aes) / m.V),
       1e-9,
     );
   close(t, m.useV, Math.min(thermalVoltageLimit(mid.ts.aes), m.V), 1e-12);
 });
 test("subThroughLp: -6 dB LR24 at the crossover when amp-limited, never above the sub curve", (t) => {
-  const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500").ts,
+  const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts,
     V = ampVoltage(10);
-  const mdl = boxModel(ts, 150, 60, 14, 30, V, "BW24");
+  const mdl = boxModel(ts, 150, 60, 14, 30, V, "BW24")!;
   const s = subThroughLowpass(mdl, ts, V, 20, 120);
   const i = mdl.curve.indexOf(nearestPoint(mdl.curve, 120));
   close(t, s[i].spl, mdl.curve[i].spl + db(linkwitzRiley24Lowpass(mdl.curve[i].f, 120)), 1e-9);
@@ -83,9 +84,9 @@ test("subThroughLp: -6 dB LR24 at the crossover when amp-limited, never above th
   s.forEach((o, k) => assert.ok(o.spl <= mdl.curve[k].spl + 1e-9));
 });
 test("subThroughLp: the lowpass relaxes the limits (more drive above the crossover)", (t) => {
-  const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500").ts,
+  const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts,
     V = ampVoltage(3000);
-  const mdl = boxModel(ts, 150, 60, 14, 30, V, "BW24");
+  const mdl = boxModel(ts, 150, 60, 14, 30, V, "BW24")!;
   const s = subThroughLowpass(mdl, ts, V, 20, 80),
     k = mdl.curve.indexOf(nearestPoint(mdl.curve, 200));
   const vt = thermalVoltageLimit(ts.aes),

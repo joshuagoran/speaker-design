@@ -6,32 +6,35 @@ import {
   evaluate as evalSub,
   fillConfigs,
   evaluateFill,
+  type GoldenValues,
 } from "./golden-configs.ts";
 const configs = [
-  ...subConfigs.map((c) => ({ ...c, run: evalSub })),
-  ...fillConfigs.map((c) => ({ ...c, run: evaluateFill })),
+  ...subConfigs.map((c) => ({ name: c.name, run: () => evalSub(c) })),
+  ...fillConfigs.map((c) => ({ name: c.name, run: () => evaluateFill(c) })),
 ];
 
 // Regenerate after an intentional change:  UPDATE_GOLDEN=1 vp test --run tests/golden.test.ts
 const goldenUrl = new URL("./golden.json", import.meta.url);
 if (process.env.UPDATE_GOLDEN === "1") {
-  const out = {};
-  for (const c of configs) out[c.name] = c.run(c);
+  const out: Record<string, GoldenValues> = {};
+  for (const c of configs) out[c.name] = c.run();
   fs.writeFileSync(goldenUrl, JSON.stringify(out, null, 1) + "\n");
 }
-const golden = JSON.parse(fs.readFileSync(goldenUrl));
+// boundary: golden.json is what `UPDATE_GOLDEN` wrote above
+const golden = JSON.parse(fs.readFileSync(goldenUrl, "utf8")) as Record<string, GoldenValues>;
 for (const c of configs) {
   test(`golden: ${c.name}`, (t) => {
     const want = golden[c.name],
-      got = c.run(c);
+      got = c.run();
     assert.ok(
       want,
       "missing from golden.json: run UPDATE_GOLDEN=1 vp test --run tests/golden.test.ts",
     );
     for (const k of Object.keys(want)) {
+      // the golden value is a number here, so the evaluation's value for the same key is too (a null reads as 0, as before)
       if (typeof want[k] === "number")
         assert.ok(
-          Math.abs(got[k] - want[k]) <= 0.02 + 1e-4 * Math.abs(want[k]),
+          Math.abs((got[k] as number) - want[k]) <= 0.02 + 1e-4 * Math.abs(want[k]),
           `${k}: ${got[k]} vs ${want[k]}`,
         );
       else assert.equal(got[k], want[k], k);

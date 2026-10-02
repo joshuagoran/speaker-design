@@ -33,6 +33,6 @@ test("LR24 lowpass + highpass magnitudes sum to 1 at every frequency", (t) => {
     );
 });
 test("far above the corner a highpass is flat", (t) => {
-  for (const ty of ["BW24", "LR24", "BW48", "LR48"])
+  for (const ty of ["BW24", "LR24", "BW48", "LR48"] as const)
     close(t, db(highpassGain(4000, 40, ty)), 0, 0.01, ty);
 });

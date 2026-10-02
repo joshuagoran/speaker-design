@@ -3,8 +3,14 @@ import assert from "node:assert";
 import { optimizeHifiSpeaker, hifiDesignProblems } from "../src/lib/hifi/optimize.ts";
 import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi.ts";
 import { HIFI_WOOFERS, HIFI_TWEETERS } from "../src/lib/data.ts";
+import type {
+  HifiGoal,
+  HifiMetrics,
+  HifiOptimizerCurrent,
+  HifiOptimizerLocks,
+} from "../src/types.ts";
 
-const cur = {
+const cur: HifiOptimizerCurrent = {
   woofer: "sb17nrx",
   tweeter: "sb26stcn",
   box: "vented",
@@ -22,13 +28,13 @@ const cur = {
   guide: null,
 };
 const base = { cur, woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, budget: 800, seatM: 2.6 };
-const beat = {
+const beat: Record<HifiGoal, (m: HifiMetrics, c: HifiMetrics) => boolean> = {
   cheaper: (m, c) => m.price < c.price,
   lighter: (m, c) => m.lb <= c.lb - 1,
   lower: (m, c) => m.f3 <= c.f3 - 2,
   louder: (m, c) => m.level >= c.level + 1,
 };
-const axisOf = {
+const axisOf: Record<string, HifiGoal> = {
   "Same level, cheaper": "cheaper",
   "Same level, lighter": "lighter",
   "Go lower": "lower",
@@ -39,26 +45,27 @@ const axisOf = {
 };
 
 test("every driver in the hi-fi list can be modelled", (t) => {
-  const tw = HIFI_TWEETERS.find((o) => o.id === "sb26stcn");
+  const tw = HIFI_TWEETERS.find((o) => o.id === "sb26stcn")!;
   for (const w of HIFI_WOOFERS) assert.ok(hifiSystem(w, tw, cur), w.id);
 });
 
-for (const goal of ["cheaper", "lighter", "lower", "louder"]) {
+for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
   test(`hi-fi optimizer (${goal}): cards pass the checks, stay in budget, and their labels are true`, (t) => {
     const t0 = Date.now(),
       out = optimizeHifiSpeaker({ ...base, goals: [goal] });
     assert.ok(Date.now() - t0 < 10000, `${Date.now() - t0} ms`);
     assert.ok(out.cards.length >= 1 || out.goalMissing, "cards or a message");
     for (const k of out.cards) {
-      const w = HIFI_WOOFERS.find((o) => o.id === k.woofer),
-        tw = HIFI_TWEETERS.find((o) => o.id === k.tweeter);
-      const c = { ...cur, ...k.config },
-        sys = hifiSystem(w, tw, c);
+      const w = HIFI_WOOFERS.find((o) => o.id === k.woofer)!,
+        tw = HIFI_TWEETERS.find((o) => o.id === k.tweeter)!;
+      // no passives are offered in this run, so a card's id-based `pr` is always undefined (it is not a HifiConfig `pr`)
+      const c = { ...cur, ...k.config, pr: undefined },
+        sys = hifiSystem(w, tw, c)!;
       assert.deepEqual(hifiDesignProblems(sys, hifiChips(sys, w, tw, c)), [], k.label);
       assert.ok(k.metrics.price <= base.budget, "within budget");
       if (k.label === "Fixes your design") continue;
       const axis = axisOf[k.label] || goal; // "Smallest change" is held to the goal
-      assert.ok(beat[axis](k.metrics, out.cur), `${k.label} beats the current design on ${axis}`);
+      assert.ok(beat[axis](k.metrics, out.cur!), `${k.label} beats the current design on ${axis}`);
     }
   });
 }
@@ -85,7 +92,7 @@ test("hi-fi optimizer: unlocked amps stay within the sliders; locked amps stay; 
   });
   for (const k of locked.cards)
     assert.deepEqual([k.config.wAmpW, k.config.tAmpW], [cur.wAmpW, cur.tAmpW]);
-  const all = {
+  const all: HifiOptimizerLocks = {
     woofer: true,
     tweeter: true,
     box: true,
@@ -108,8 +115,8 @@ test("hi-fi optimizer: radiator designs price their radiators and load back with
     tw =
       HIFI_TWEETERS.find((o) => o.pick && !o.needsWaveguide && o.type !== "compression") ||
       HIFI_TWEETERS[0];
-  const drv = HIFI_PASSIVES.find((o) => o.id === "sb16pfcr");
-  const cur = {
+  const drv = HIFI_PASSIVES.find((o) => o.id === "sb16pfcr")!;
+  const cur: HifiOptimizerCurrent = {
     woofer: w.id,
     tweeter: tw.id,
     box: "radiator",
@@ -137,12 +144,12 @@ test("hi-fi optimizer: radiator designs price their radiators and load back with
   for (const k of res.cards) {
     assert.equal(k.config.box, "radiator");
     assert.ok(
-      k.config.pr && HIFI_PASSIVES.some((p) => p.id === k.config.pr.id),
+      k.config.pr && HIFI_PASSIVES.some((p) => p.id === k.config.pr!.id),
       "a card names its radiator",
     );
-    const p = HIFI_PASSIVES.find((o) => o.id === k.config.pr.id);
+    const p = HIFI_PASSIVES.find((o) => o.id === k.config.pr!.id);
     assert.ok(
-      k.metrics.price >= 2 * (w.price + tw.price + k.config.pr.n * p.price) - 0.01,
+      k.metrics.price >= 2 * (w.price + tw.price + k.config.pr.n * p!.price) - 0.01,
       "radiators are in the pair price",
     );
   }

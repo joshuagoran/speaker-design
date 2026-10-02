@@ -10,7 +10,7 @@ import {
   plywoodLbPerSqFt,
 } from "../src/lib/pa/calc.ts";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data.ts";
-import { close } from "./helpers.ts";
+import { close, vent } from "./helpers.ts";
 
 const IN3_L = 16.387 / 1000;
 test("boxL: inner width/height lose two walls, depth loses inset + 3/4 baffle + back", (t) => {
@@ -19,18 +19,26 @@ test("boxL: inner width/height lose two walls, depth loses inset + 3/4 baffle + 
   close(t, boxInternalLiters(20, 24, 16, 0.5, 1.5), 19 * 23 * 13.25 * IN3_L, 1e-9);
 });
 test("ventGeom: letterbox area = slot height x inner width less two fins", (t) => {
-  const g = ventGeometry("slots", { w: 22, h: 30, d: 20 }, { slotH: 3, len: 14 }, 0.75);
+  const g = ventGeometry("slots", { w: 22, h: 30, d: 20 }, vent({ slotH: 3, len: 14 }), 0.75);
   close(t, g.area, 3 * (22 - 1.5 - 1.5), 1e-9);
   assert.equal(g.n, 1);
 });
 test("ventGeom: side ducts = throat x inner height less dividers, one opening each", (t) => {
-  const g2 = ventGeometry("vslots", { w: 22, h: 30, d: 20 }, { throat: 2, len: 16 }, 0.75);
+  const g2 = ventGeometry("vslots", { w: 22, h: 30, d: 20 }, vent({ throat: 2, len: 16 }), 0.75);
   close(t, g2.area, 2 * 2 * (28.5 - 1), 1e-9);
   assert.equal(g2.n, 2);
-  assert.equal(ventGeometry("vslot1", { w: 22, h: 30, d: 20 }, { throat: 2, len: 16 }, 0.75).n, 1);
+  assert.equal(
+    ventGeometry("vslot1", { w: 22, h: 30, d: 20 }, vent({ throat: 2, len: 16 }), 0.75).n,
+    1,
+  );
 });
 test("ventGeom: round tubes = n circles, n openings", (t) => {
-  const g = ventGeometry("round2", { w: 20, h: 24, d: 16 }, { nt: 2, dia: 3.5, len: 14 }, 0.75);
+  const g = ventGeometry(
+    "round2",
+    { w: 20, h: 24, d: 16 },
+    vent({ nt: 2, dia: 3.5, len: 14 }),
+    0.75,
+  );
   close(t, g.area, 2 * Math.PI * 1.75 ** 2, 1e-9);
   assert.equal(g.n, 2);
 });
@@ -48,7 +56,7 @@ test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => 
     inset: 0.75,
     joint: "butt",
     portStyle: "slots",
-    cVent: { slotH: 3, len: 14 },
+    cVent: vent({ slotH: 3, len: 14 }),
     layout: "stack",
   }).parts;
   const iw = 20.5,
@@ -75,7 +83,7 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
       inset: 0.75,
       joint: "butt",
       portStyle: "round2",
-      cVent: { nt: 2, dia: 4, len: 12 },
+      cVent: vent({ nt: 2, dia: 4, len: 12 }),
       layout: "stack",
     }).parts.filter((p) => p.box === "Sub");
     const lb =

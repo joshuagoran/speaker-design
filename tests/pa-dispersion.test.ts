@@ -2,8 +2,9 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { paResponseAt, paDispersionMap, firstNullAngleDeg } from "../src/lib/pa/dispersion.ts";
 import { logSpacedFrequencies } from "../src/lib/hifi/hifi.ts";
+import type { PaStackGeometry } from "../src/types.ts";
 
-const stack = (gapIn) => ({
+const stack = (gapIn: number): PaStackGeometry => ({
   sub: { zIn: 12, Sd: 1200 },
   mid: { zIn: 40, Sd: 530 },
   horn: { zIn: 40 + gapIn, covH: 90, covV: 40, wIn: 12, hIn: 7 },
@@ -29,8 +30,8 @@ test("PA dispersion: a vertical null opens near the predicted angle at the mid/h
   const col = m.angles.map((a, j) => ({ a, db: m.rows[j][fi] })).filter((o) => o.a > 0);
   const worst = col.reduce((b, o) => (o.db < b.db ? o : b));
   assert.ok(worst.db < -10, `deep null ${worst.db.toFixed(1)} dB`);
-  assert.ok(Math.abs(worst.a - pred) <= 8, `null at ${worst.a}°, predicted ${pred.toFixed(0)}°`);
-  assert.ok(firstNullAngleDeg(10, f) > pred, "closer spacing, wider null angle");
+  assert.ok(Math.abs(worst.a - pred!) <= 8, `null at ${worst.a}°, predicted ${pred!.toFixed(0)}°`);
+  assert.ok(firstNullAngleDeg(10, f)! > pred!, "closer spacing, wider null angle");
   assert.equal(firstNullAngleDeg(6, f), null, "under half a wavelength: no null");
 });
 

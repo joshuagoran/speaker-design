@@ -1,10 +1,11 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { boxParts, packSheets, formatInches, PLYWOOD_SHEETS } from "../src/lib/pa/calc.ts";
+import type { CutPart } from "../src/types.ts";
 import { close } from "./helpers.ts";
 
-const get = (P, name) => P.find((p) => p.part === name);
-for (const joint of ["butt", "rabbet", "miter"]) {
+const get = (P: CutPart[], name: string) => P.find((p) => p.part === name)!;
+for (const joint of ["butt", "rabbet", "miter"] as const) {
   test(`boxParts ${joint}: panels reassemble to the outer box`, (t) => {
     const W = 22,
       H = 30,
@@ -26,7 +27,7 @@ for (const joint of ["butt", "rabbet", "miter"]) {
   });
 }
 test("packSheets: no overlaps, inside the sheet, kerf kept, count at least the area bound", (t) => {
-  const rects = [];
+  const rects: { a: number; b: number; box: string; part: string }[] = [];
   for (let i = 0; i < 6; i++)
     rects.push(
       { a: 20, b: 30, box: "Sub", part: "Side" },

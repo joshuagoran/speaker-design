@@ -1,10 +1,19 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { subChips, midChips, hornChips, fillChips } from "../src/lib/pa/chips.ts";
+import type {
+  Chip,
+  Dims2,
+  FillChipsInput,
+  HornChipsInput,
+  MidChipsInput,
+  SubChipsInput,
+  VentSpec,
+} from "../src/types.ts";
 
-const heads = (F) => F.map(([, h]) => h);
-const kindOf = (F, head) => (F.find(([, h]) => h.startsWith(head)) || [])[0];
-const has = (t, F, head, yes = true) =>
+const heads = (F: Chip[]) => F.map(([, h]) => h);
+const kindOf = (F: Chip[], head: string) => (F.find(([, h]) => h.startsWith(head)) || [])[0];
+const has = (t: unknown, F: Chip[], head: string, yes = true) =>
   assert.equal(
     heads(F).some((h) => h.startsWith(head)),
     yes,
@@ -12,11 +21,11 @@ const has = (t, F, head, yes = true) =>
   );
 
 // ---- sub ----
-const subBase = {
+const subBase: SubChipsInput = {
   subSize: 18,
   subBox: { w: 24, h: 30, d: 22 },
   portStyle: "slots",
-  cVent: { slotH: 3, len: 14, throat: 2, dia: 4 },
+  cVent: { slotH: 3, nt: 2, len: 14, throat: 2, dia: 4 }, // nt: subChips ignores it
   PT: 0.75,
   subLbLoaded: 110,
   lim: { who: "amplifier power", W: 800 },
@@ -24,7 +33,9 @@ const subBase = {
   aes: 1000,
   ampW: 800,
 };
-const sub = (o) => subChips({ ...subBase, ...o, cVent: { ...subBase.cVent, ...(o.cVent || {}) } });
+type SubOverrides = Partial<Omit<SubChipsInput, "cVent">> & { cVent?: Partial<VentSpec> };
+const sub = (o: SubOverrides) =>
+  subChips({ ...subBase, ...o, cVent: { ...subBase.cVent, ...(o.cVent || {}) } });
 test("sub: 125 lb line", (t) => {
   assert.equal(kindOf(sub({ subLbLoaded: 125 }), "Inside 125 lb"), "ok");
   assert.equal(kindOf(sub({ subLbLoaded: 125.1 }), "Over 125 lb"), "warn");
@@ -43,7 +54,7 @@ test("sub: duct fit per layout, with the folded hint", (t) => {
   has(t, sub({ cVent: { len: 18.25 } }), "Duct too long", false);
   const F = sub({ cVent: { len: 18.5 } });
   has(t, F, "Duct too long");
-  assert.ok(F.find(([, h]) => h === "Duct too long")[2].includes("Switch to Bottom, folded."));
+  assert.ok(F.find(([, h]) => h === "Duct too long")![2].includes("Switch to Bottom, folded."));
   // side ducts hold d - PT - throat = 19.25
   has(t, sub({ portStyle: "vslots", cVent: { len: 19.25 } }), "Duct too long", false);
   has(t, sub({ portStyle: "vslots", cVent: { len: 19.5 } }), "Duct too long");
@@ -66,7 +77,7 @@ test("sub: first-limit chip follows lim.who", (t) => {
 
 // ---- mid ----
 const ts = { Xmax: 8, aes: 400 };
-const midBase = {
+const midBase: MidChipsInput = {
   midSize: 12,
   midDims: { w: 15, h: 15, d: 15 },
   Qtc: 0.65,
@@ -82,14 +93,14 @@ const midBase = {
   tilt: 6,
   midAtXo: { spl: 115, who: "amp" },
 };
-const mid = (o) => midChips({ ...midBase, ...o });
+const mid = (o: Partial<MidChipsInput>) => midChips({ ...midBase, ...o });
 test("mid: Qtc bands 0.5 and 0.8", (t) => {
   for (const [q, k] of [
     [0.49, "warn"],
     [0.5, "ok"],
     [0.8, "ok"],
     [0.81, "warn"],
-  ])
+  ] as const)
     assert.equal(kindOf(mid({ Qtc: q }), "Qtc"), k, `Qtc ${q}`);
 });
 test("mid: driver fit needs size + 1.2 in", (t) => {
@@ -113,22 +124,23 @@ test("mid vs sub: -0.5 dB gap is the line; amp advice only while under 2 x AES",
   const F = mid({ midAtXo: { spl: 113.4, who: "amp" } });
   has(t, F, "Mid runs out first");
   assert.match(
-    F.find(([, h]) => h === "Mid runs out first")[2],
+    F.find(([, h]) => h === "Mid runs out first")![2],
     /W per mid channel would cover it/,
   );
   const G = mid({ midAtXo: { spl: 100, who: "amp" } }); // needs far more than 800 W
-  assert.match(G.find(([, h]) => h === "Mid runs out first")[2], /More amp won't get there/);
+  assert.match(G.find(([, h]) => h === "Mid runs out first")![2], /More amp won't get there/);
   has(t, mid({ subMusicAtXo: null }), "Mid runs out first", false);
   has(t, mid({ subMusicAtXo: null }), "Keeps up with the sub", false);
 });
 
 // ---- horn ----
-const hornBase = {
-  hf: { minXo: 1000, aes: 50, aesXo: 1200 },
+const hornBase: HornChipsInput = {
+  // sens, sensRef, imp (hf), curve, P, flat (hornModel) and size.h, size.d are filled in only to complete the types; hornChips ignores them
+  hf: { minXo: 1000, aes: 50, aesXo: 1200, sens: 108, sensRef: "1 W / 1 m", imp: 8 },
   hz: { minXo: 800, lowHz: 600, covH: 90 },
-  horn: { name: "Test horn", size: { w: 18 } },
+  horn: { name: "Test horn", size: { w: 18, h: 12, d: 12 } },
   xoHi: 1200,
-  hornModel: { who: "amp", pAmp: 50, imp: 8, pProg: 100, derate: 1 },
+  hornModel: { who: "amp", pAmp: 50, imp: 8, pProg: 100, derate: 1, curve: [], P: 50, flat: 108 },
   hfAmpW: 50,
   midAtXoHi: 118,
   hfTilt: 6,
@@ -136,7 +148,8 @@ const hornBase = {
   midBeam: 90,
   fK: 1000,
 };
-const horn = (o) => hornChips({ ...hornBase, ...o, hz: { ...hornBase.hz, ...(o.hz || {}) } });
+const horn = (o: Partial<HornChipsInput>) =>
+  hornChips({ ...hornBase, ...o, hz: { ...hornBase.hz, ...(o.hz || {}) } });
 test("horn: driver and horn minimum crossovers", (t) => {
   has(t, horn({ xoHi: 1000 }), "Below the driver's minimum crossover", false);
   has(t, horn({ xoHi: 999 }), "Below the driver's minimum crossover");
@@ -164,27 +177,38 @@ test("horn: beamwidth match bands 0.75 and 1.4, Keele limit at 0.85", (t) => {
 test("horn: amp- or program-limited chip, derating noted", (t) => {
   assert.equal(kindOf(horn({}), "Amp-limited"), "ok");
   const F = horn({
-    hornModel: { who: "program rating", pAmp: 200, imp: 8, pProg: 70, derate: 0.7 },
+    hornModel: {
+      who: "program rating",
+      pAmp: 200,
+      imp: 8,
+      pProg: 70,
+      derate: 0.7,
+      curve: [],
+      P: 70,
+      flat: 108,
+    },
   });
-  assert.match(F.find(([, h]) => h === "Program-limited")[2], /derated 1\.5 dB/);
+  assert.match(F.find(([, h]) => h === "Program-limited")![2], /derated 1\.5 dB/);
 });
 
 // ---- fills ----
-const fillBase = {
+const fillBase: FillChipsInput = {
   drv: { size: 10 },
-  dim: { w: 12, h: 16 },
+  dim: { w: 12, h: 16, d: 12 }, // d: fillChips ignores it
   Fb: 60,
   Qtc: null,
   hp: 70,
   portLimited: false,
   portMax: 20,
   f3: 80,
-  hf: { aes: 80 },
+  hf: { aes: 80, sens: 100, xo: null, imp: 8, cov: null }, // all but aes: fillChips ignores them
   hfLimW: 400,
   ampW: 300,
   pad: 6,
 };
-const fill = (o) => fillChips({ ...fillBase, ...o });
+type FillOverrides = Partial<Omit<FillChipsInput, "dim">> & { dim?: Dims2 };
+const fill = (o: FillOverrides) =>
+  fillChips({ ...fillBase, ...o, dim: { ...fillBase.dim, ...o.dim } });
 test("fills: driver fit needs size + 1 in", (t) => {
   has(t, fill({ dim: { w: 11, h: 16 } }), "Driver won't fit", false);
   has(t, fill({ dim: { w: 10.9, h: 16 } }), "Driver won't fit");
@@ -200,7 +224,7 @@ test("fills sealed: Qtc bands", (t) => {
     [0.5, "ok"],
     [0.8, "ok"],
     [0.81, "warn"],
-  ])
+  ] as const)
     assert.equal(kindOf(fill({ Fb: null, Qtc: q }), "Qtc"), k, `Qtc ${q}`);
 });
 test("fills: kick at F3 85 Hz; HF limit vs the amp", (t) => {
