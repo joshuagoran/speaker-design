@@ -574,6 +574,20 @@ export interface HifiCardConfig {
   tAmpW: number;
 }
 
+/** The fields of a Hi-fi design a card applies (the keys of `HIFI_OPTIMIZED_FIELDS`). */
+export type HifiOptimizedField =
+  | "woofer"
+  | "tweeter"
+  | "box"
+  | "dim"
+  | "port"
+  | "pr"
+  | "wall"
+  | "xo"
+  | "wAmpW"
+  | "tAmpW";
+export type HifiOptimizedFields = Pick<HifiCardConfig, HifiOptimizedField>;
+
 /** A card's change from the current design. */
 export interface HifiMetricsDelta {
   price: number;
@@ -978,11 +992,11 @@ export interface MidChipsInput {
 }
 
 export interface HornChipsInput {
-  hf: CompressionHf;
-  hz: Partial<HornHf>;
-  horn: Pick<Horn, "name" | "size">;
+  hf: Pick<CompressionHf, "minXo" | "aes" | "aesXo">;
+  hz: Partial<Pick<HornHf, "minXo" | "lowHz" | "covH">>;
+  horn: Pick<Horn, "name"> & { size: Pick<Dims3, "w"> };
   xoHi: number;
-  hornModel: HornResponse;
+  hornModel: Pick<HornResponse, "who" | "pAmp" | "imp" | "pProg" | "derate">;
   hfAmpW: number;
   /** the mid at its limit at the horn crossover, dB; null where the mid has no model */
   midAtXoHi: number | null;
@@ -997,7 +1011,7 @@ export interface HornChipsInput {
 
 export interface FillChipsInput {
   drv: Pick<FillDriver, "size">;
-  dim: Dims3;
+  dim: Dims2;
   /** the vented box's tuning, or null for a sealed box */
   Fb: number | null;
   /** the sealed box's Qtc, or null for a vented box */
@@ -1006,7 +1020,7 @@ export interface FillChipsInput {
   portLimited: boolean;
   portMax: number;
   f3: number;
-  hf: FillHf | null;
+  hf: Pick<FillHf, "aes"> | null;
   hfLimW: number | null;
   ampW: number;
   pad: number;

@@ -274,14 +274,19 @@ export function closedBox(
 export const boxInternalLiters = (w: number, h: number, d: number, t: number, inset = 0.75) =>
   ((w - 2 * t) * (h - 2 * t) * (d - inset - 0.75 - t) * 16.387) / 1000;
 // Plywood weight, lb/ft² (birch). The baffle stays 3/4″ either way.
-export const PLYWOOD_LB_PER_SQ_FT: Record<number, number> = { 0.75: 2.3, 0.5: 1.6 };
+export const PLYWOOD_LB_PER_SQ_FT: Partial<Record<number, number>> = { 0.75: 2.3, 0.5: 1.6 };
 export const plywoodLbPerSqFt = (t: number) => PLYWOOD_LB_PER_SQ_FT[t] ?? 2.3; // lb/ft²; unknown thicknesses fall back to 3/4″
 
 // ---------------------------------------------------------------
 // Cutlist: panels for the sub and mid boxes from the planner's current
 // dimensions, and a simple shelf layout on 4x8 or 5x5 sheets.
 // ---------------------------------------------------------------
-export const DRIVER_CUTOUT_IN: Record<number, number> = { 18: 16.6, 15: 13.9, 12: 11.1, 10: 9.2 }; // typical front-mount cutouts, in
+export const DRIVER_CUTOUT_IN: Partial<Record<number, number>> = {
+  18: 16.6,
+  15: 13.9,
+  12: 11.1,
+  10: 9.2,
+}; // typical front-mount cutouts, in
 export const PLYWOOD_SHEETS: Record<PlywoodSheetKind, PlywoodSheet> = {
   "4x8": { w: 48, h: 96, name: "4 × 8 ft" },
   "5x5": { w: 60, h: 60, name: "5 × 5 ft" },

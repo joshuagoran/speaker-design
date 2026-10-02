@@ -14,6 +14,8 @@ const configs = [
 ];
 
 // Regenerate after an intentional change:  UPDATE_GOLDEN=1 vp test --run tests/golden.test.ts
+// Only that single-file invocation is supported: a full-suite run with UPDATE_GOLDEN=1 rewrites golden.json while
+// tests/optimize.test.ts reads it in a parallel worker.
 const goldenUrl = new URL("./golden.json", import.meta.url);
 if (process.env.UPDATE_GOLDEN === "1") {
   const out: Record<string, GoldenValues> = {};

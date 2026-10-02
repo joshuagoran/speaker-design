@@ -135,12 +135,11 @@ test("mid vs sub: -0.5 dB gap is the line; amp advice only while under 2 x AES",
 
 // ---- horn ----
 const hornBase: HornChipsInput = {
-  // sens, sensRef, imp (hf), curve, P, flat (hornModel) and size.h, size.d are filled in only to complete the types; hornChips ignores them
-  hf: { minXo: 1000, aes: 50, aesXo: 1200, sens: 108, sensRef: "1 W / 1 m", imp: 8 },
+  hf: { minXo: 1000, aes: 50, aesXo: 1200 },
   hz: { minXo: 800, lowHz: 600, covH: 90 },
-  horn: { name: "Test horn", size: { w: 18, h: 12, d: 12 } },
+  horn: { name: "Test horn", size: { w: 18 } },
   xoHi: 1200,
-  hornModel: { who: "amp", pAmp: 50, imp: 8, pProg: 100, derate: 1, curve: [], P: 50, flat: 108 },
+  hornModel: { who: "amp", pAmp: 50, imp: 8, pProg: 100, derate: 1 },
   hfAmpW: 50,
   midAtXoHi: 118,
   hfTilt: 6,
@@ -183,9 +182,6 @@ test("horn: amp- or program-limited chip, derating noted", (t) => {
       imp: 8,
       pProg: 70,
       derate: 0.7,
-      curve: [],
-      P: 70,
-      flat: 108,
     },
   });
   assert.match(F.find(([, h]) => h === "Program-limited")![2], /derated 1\.5 dB/);
@@ -194,14 +190,14 @@ test("horn: amp- or program-limited chip, derating noted", (t) => {
 // ---- fills ----
 const fillBase: FillChipsInput = {
   drv: { size: 10 },
-  dim: { w: 12, h: 16, d: 12 }, // d: fillChips ignores it
+  dim: { w: 12, h: 16 },
   Fb: 60,
   Qtc: null,
   hp: 70,
   portLimited: false,
   portMax: 20,
   f3: 80,
-  hf: { aes: 80, sens: 100, xo: null, imp: 8, cov: null }, // all but aes: fillChips ignores them
+  hf: { aes: 80 },
   hfLimW: 400,
   ampW: 300,
   pad: 6,
