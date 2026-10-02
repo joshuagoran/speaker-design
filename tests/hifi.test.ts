@@ -15,6 +15,7 @@ import {
   hifiDispersionMap,
   grossVolumeLiters,
   portAfterToggle,
+  listenerGeometry,
 } from "../src/lib/hifi/hifi";
 import type { HifiConfig, HifiTweeter, HifiWoofer, PassiveRadiator } from "../src/types";
 import { close } from "./helpers";
@@ -321,4 +322,26 @@ test("port toggle: round 3 in, to a slot and back, is round 3 in again; a slot k
   assert.equal(back.h, undefined);
   const slotAgain = portAfterToggle(back, "slot", { dia: 3, h: 2 });
   assert.equal(slotAgain.h, 2, "and the slot height the user last had");
+});
+
+test("listenerGeometry: a centred seat is symmetric, toe-in cuts the off-axis angle, and distance and ear height follow the room", (t) => {
+  const room = {
+    speakerSpacingFt: 8,
+    listeningSeat: { x: 0, y: 8 },
+    toeInDeg: 0,
+    earHeightIn: 38,
+    standHeightIn: 24,
+  };
+  const l = listenerGeometry(-1, room),
+    r = listenerGeometry(1, room);
+  close(t, l.th, Math.atan2(4, 8), 1e-9, "left angle");
+  close(t, r.th, l.th, 1e-9, "right matches left");
+  close(t, l.distM, Math.hypot(4, 8) * 0.3048, 1e-9, "distance");
+  assert.equal(l.eyeIn, 14);
+  // toeing in by that angle points each speaker at the seat
+  const aimed = listenerGeometry(-1, { ...room, toeInDeg: (l.th * 180) / Math.PI });
+  close(t, aimed.th, 0, 1e-9, "aimed at the seat");
+  // a seat moved toward the right speaker is closer to it and further off axis of the left
+  const right = { ...room, listeningSeat: { x: 3, y: 8 } };
+  assert.ok(listenerGeometry(1, right).distM < listenerGeometry(-1, right).distM);
 });

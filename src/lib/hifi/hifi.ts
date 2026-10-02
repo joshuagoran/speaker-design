@@ -20,6 +20,7 @@ import type {
   FrequencyPoint,
   HifiChip,
   HifiConfig,
+  HifiDesignState,
   HifiPort,
   HighpassType,
   HifiDispersionMap,
@@ -38,6 +39,7 @@ import type {
   WooferMaxPoint,
   WooferPoint,
 } from "../../types";
+import { METERS_PER_FOOT } from "../../constants/units";
 
 const C = 343,
   IN = 0.0254;
@@ -599,6 +601,27 @@ export function hifiResponseAt(
     return { f, spl: 20 * Math.log10(Math.max(1e-9, cabs(cadd(pw, pt)))) };
   });
 }
+/** The seat relative to one speaker: the left one sits at -spacing/2 (`sign` -1), the right at +spacing/2 (1), each toed in toward the middle. */
+export const listenerGeometry = (
+  sign: -1 | 1,
+  room: Pick<
+    HifiDesignState,
+    "speakerSpacingFt" | "listeningSeat" | "toeInDeg" | "earHeightIn" | "standHeightIn"
+  >,
+): ListenerGeometry => {
+  const sx = (sign * room.speakerSpacingFt) / 2,
+    vx = room.listeningSeat.x - sx,
+    vy = room.listeningSeat.y,
+    d = Math.hypot(vx, vy);
+  const axis = (-sign * room.toeInDeg * Math.PI) / 180,
+    ang = Math.atan2(vx, vy) - axis;
+  return {
+    th: Math.abs(ang),
+    eyeIn: room.earHeightIn - room.standHeightIn,
+    distM: d * METERS_PER_FOOT,
+  };
+};
+
 export const logSpacedFrequencies = (a: number, b: number, n: number) =>
   Array.from({ length: n }, (_, i) => a * Math.pow(b / a, i / (n - 1)));
 const nearestF = (curve: WooferPoint[], f: number) => {

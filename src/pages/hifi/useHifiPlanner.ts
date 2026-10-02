@@ -2,18 +2,17 @@ import { HIFI_TWEETERS, HIFI_WOOFERS, HORN_OPTIONS } from "../../lib/data";
 import { DEFAULT_HIFI, DEFAULT_PORT_SIZE } from "../../lib/defaults";
 import { portAfterToggle } from "../../lib/hifi/hifi";
 import { byId, byIdOrThrow } from "../../lib/tables";
-import { readStoredJson, writeStoredJson } from "../../lib/storage";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
+import { useHifiDesign } from "./useHifiDesign";
+import type { HifiDesign } from "./useHifiDesign";
+import { useHifiOptimizer } from "./useHifiOptimizer";
+import type { HifiOptimizer } from "./useHifiOptimizer";
 import type {
   Dims3,
   DispersionPlane,
   HifiBoxKind,
   HifiCardConfig,
   HifiDesignState,
-  HifiGoal,
-  HifiOptimizerCard,
-  HifiOptimizerLocks,
-  HifiOptimizerResult,
   HifiPlacement,
   HifiPort,
   HifiTweeter,
@@ -29,19 +28,8 @@ import type {
 } from "../../types";
 import { useEffect, useRef, useState } from "react";
 
-/** The optimizer locks as the page holds them: the box-dimension modes are always present. */
-export interface HifiPlannerLocks extends HifiOptimizerLocks {
-  dim: NonNullable<HifiOptimizerLocks["dim"]>;
-}
-
-/** The card being previewed, and the design to go back to when the preview ends. */
-export interface HifiDesignPreview {
-  label: string;
-  before: HifiCardConfig;
-  card: HifiOptimizerCard;
-}
-
-export interface HifiPlanner extends HifiDesignState {
+/** Everything the Hi-fi page reads: the design state and its setters, the model derived from it, the optimizer, and saving. */
+export interface HifiPlanner extends HifiDesignState, HifiDesign, HifiOptimizer {
   setWoofer: Setter<HifiWoofer>;
   setTweeter: Setter<HifiTweeter>;
   setSelectedWaveguide: Setter<HifiWaveguide>;
@@ -66,24 +54,6 @@ export interface HifiPlanner extends HifiDesignState {
   setEarHeightIn: Setter<number>;
   setStandHeightIn: Setter<number>;
   setDispersionPlane: Setter<DispersionPlane>;
-  isOptimizerOn: boolean;
-  optimizerGoals: HifiGoal[];
-  setOptimizerGoals: Setter<HifiGoal[]>;
-  optimizerBudget: number;
-  setOptimizerBudget: (v: number) => void;
-  optimizerLocks: HifiPlannerLocks;
-  optimizerResult: HifiOptimizerResult | null;
-  setOptimizerResult: Setter<HifiOptimizerResult | null>;
-  isOptimizing: boolean;
-  setIsOptimizing: Setter<boolean>;
-  optimizerError: string;
-  setOptimizerError: Setter<string>;
-  designPreview: HifiDesignPreview | null;
-  setDesignPreview: Setter<HifiDesignPreview | null>;
-  undoSnapshot: HifiCardConfig | null;
-  setUndoSnapshot: Setter<HifiCardConfig | null>;
-  setIsOptimizerOn: (v: boolean) => void;
-  setOptimizerLocks: (f: (p: HifiPlannerLocks) => HifiPlannerLocks) => void;
   waveguideChoices: HifiWaveguide[];
   store: ConfigStore;
   /** The fields of the design a card applies: what the optimizer starts from, and what undo and preview go back to. */
@@ -144,36 +114,6 @@ export function useHifiPlanner(): HifiPlanner {
     DEFAULT_HIFI.dispersionPlane,
   );
   const store = useConfigStore("hifiConfigs");
-  // optimizer: same rules and layout as the PA planner's (switch, locks on the controls, goals in tap order)
-  const [isOptimizerOn, setIsOptimizerOnState] = useState(() => readStoredJson("hifi.opt", false));
-  const setIsOptimizerOn = (v: boolean) => {
-    setIsOptimizerOnState(v);
-    writeStoredJson("hifi.opt", v);
-  };
-  const [optimizerGoals, setOptimizerGoals] = useState<HifiGoal[]>([]);
-  const [optimizerBudget, setOptimizerBudgetState] = useState(() =>
-    readStoredJson("hifi.budget", 800),
-  );
-  const setOptimizerBudget = (v: number) => {
-    setOptimizerBudgetState(v);
-    writeStoredJson("hifi.budget", v);
-  };
-  const [optimizerLocks, setOptimizerLocksState] = useState<HifiPlannerLocks>(() => {
-    const l = readStoredJson<HifiOptimizerLocks>("hifi.locks", {}) || {};
-    return { ...l, dim: { ...l.dim } };
-  });
-  const setOptimizerLocks = (f: (p: HifiPlannerLocks) => HifiPlannerLocks) =>
-    setOptimizerLocksState((p) => {
-      const n = f(p);
-      writeStoredJson("hifi.locks", n);
-      return n;
-    });
-  const [optimizerResult, setOptimizerResult] = useState<HifiOptimizerResult | null>(null);
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [optimizerError, setOptimizerError] = useState("");
-  const [designPreview, setDesignPreview] = useState<HifiDesignPreview | null>(null);
-  const [undoSnapshot, setUndoSnapshot] = useState<HifiCardConfig | null>(null);
-
   const snapshot = (): HifiCardConfig => ({
     woofer: woofer.id,
     tweeter: tweeter.id,
@@ -205,6 +145,52 @@ export function useHifiPlanner(): HifiPlanner {
         summary: `${woofer.name} + ${tweeter.name} · ${boxDims.w}×${boxDims.h}×${boxDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}`,
       }),
     );
+  const applyDesign = (c: HifiCardConfig) => {
+    // a card's or snapshot's driver ids come from these lists
+    setWoofer(byIdOrThrow(HIFI_WOOFERS, c.woofer, "hi-fi woofers"));
+    setTweeter(byIdOrThrow(HIFI_TWEETERS, c.tweeter, "hi-fi tweeters"));
+    setBoxType(c.box);
+    setBoxDims(c.dim);
+    if (c.port) setPortSpec(c.port);
+    if (c.pr) setRadiatorSelection(c.pr);
+    setWallThicknessIn(c.wall);
+    setCrossoverHz(c.xo);
+    setWooferAmpWatts(c.wAmpW);
+    setTweeterAmpWatts(c.tAmpW);
+  };
+  const state: HifiDesignState = {
+    woofer,
+    tweeter,
+    selectedWaveguide,
+    boxType,
+    boxDims,
+    wallThicknessIn,
+    panelMaterial,
+    portSpec,
+    radiatorSelection,
+    crossoverHz,
+    crossoverOrder,
+    wooferAmpWatts,
+    tweeterAmpWatts,
+    baffleStepCompensationDb,
+    placement,
+    distanceToWallFt,
+    speakerSpacingFt,
+    toeInDeg,
+    listeningSeat,
+    earHeightIn,
+    standHeightIn,
+    dispersionPlane,
+  };
+  const design = useHifiDesign(state);
+  const optimizer = useHifiOptimizer({
+    snapshot,
+    applyDesign,
+    speakerConfig: design.speakerConfig,
+    compressionWaveguide: design.compressionWaveguide,
+    seatDistanceM: design.seatDistanceM,
+    guidePrice: selectedWaveguide.price || 0,
+  });
   const restoreSavedConfig = (c: Partial<SavedHifiConfig>) => {
     const pick = <T extends { id: string }>(list: readonly T[], id: string | undefined) =>
       id === undefined ? undefined : byId(list, id);
@@ -233,87 +219,35 @@ export function useHifiPlanner(): HifiPlanner {
     ok(setListeningSeat, c.seat);
     ok(setEarHeightIn, c.earIn);
     ok(setStandHeightIn, c.standIn);
-    setDesignPreview(null);
-    setUndoSnapshot(null);
-    setOptimizerResult(null);
-  };
-  const applyDesign = (c: HifiCardConfig) => {
-    // a card's or snapshot's driver ids come from these lists
-    setWoofer(byIdOrThrow(HIFI_WOOFERS, c.woofer, "hi-fi woofers"));
-    setTweeter(byIdOrThrow(HIFI_TWEETERS, c.tweeter, "hi-fi tweeters"));
-    setBoxType(c.box);
-    setBoxDims(c.dim);
-    if (c.port) setPortSpec(c.port);
-    if (c.pr) setRadiatorSelection(c.pr);
-    setWallThicknessIn(c.wall);
-    setCrossoverHz(c.xo);
-    setWooferAmpWatts(c.wAmpW);
-    setTweeterAmpWatts(c.tAmpW);
+    optimizer.clearOptimizerResults();
   };
   return {
-    woofer,
+    ...state,
+    ...design,
+    ...optimizer,
     setWoofer,
-    tweeter,
     setTweeter,
-    selectedWaveguide,
     setSelectedWaveguide,
-    boxType,
     setBoxType,
-    boxDims,
     setBoxDims,
-    wallThicknessIn,
     setWallThicknessIn,
-    panelMaterial,
     setPanelMaterial,
-    portSpec,
     setPortSpec,
     togglePort,
-    radiatorSelection,
     setRadiatorSelection,
-    crossoverHz,
     setCrossoverHz,
-    crossoverOrder,
     setCrossoverOrder,
-    wooferAmpWatts,
     setWooferAmpWatts,
-    tweeterAmpWatts,
     setTweeterAmpWatts,
-    baffleStepCompensationDb,
     setBaffleStepCompensationDb,
-    placement,
     setPlacement,
-    distanceToWallFt,
     setDistanceToWallFt,
-    speakerSpacingFt,
     setSpeakerSpacingFt,
-    toeInDeg,
     setToeInDeg,
-    listeningSeat,
     setListeningSeat,
-    earHeightIn,
     setEarHeightIn,
-    standHeightIn,
     setStandHeightIn,
-    dispersionPlane,
     setDispersionPlane,
-    isOptimizerOn,
-    optimizerGoals,
-    setOptimizerGoals,
-    optimizerBudget,
-    setOptimizerBudget,
-    optimizerLocks,
-    optimizerResult,
-    setOptimizerResult,
-    isOptimizing,
-    setIsOptimizing,
-    optimizerError,
-    setOptimizerError,
-    designPreview,
-    setDesignPreview,
-    undoSnapshot,
-    setUndoSnapshot,
-    setIsOptimizerOn,
-    setOptimizerLocks,
     waveguideChoices,
     store,
     snapshot,

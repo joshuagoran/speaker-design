@@ -32,28 +32,11 @@ import { ResultCards } from "../../components/optimizer/ResultCards";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
 import { METERS_PER_FOOT } from "../../constants/units";
-import {
-  HIFI_WOOFERS,
-  HIFI_TWEETERS,
-  HIFI_PASSIVES,
-  passiveRadiatorMassMax,
-  ownGuideCfg,
-} from "../../lib/data";
-import { byId } from "../../lib/tables";
-import {
-  hifiSystem,
-  hifiChips,
-  hifiResponseAt,
-  hifiDispersionMap,
-  logSpacedFrequencies,
-  linkwitzRileyFilter,
-  needsWaveguide,
-  SPEAKER_PLACEMENTS as HIFI_PLACES,
-} from "../../lib/hifi/hifi";
+import { passiveRadiatorMassMax } from "../../lib/data";
+import { SPEAKER_PLACEMENTS as HIFI_PLACES } from "../../lib/hifi/hifi";
 import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
-import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
 import type { HifiPlanner } from "./useHifiPlanner";
-import type { Dims3, HifiGoal, HifiLockKey, HifiOptimizerCard } from "../../types";
+import type { Dims3, HifiGoal, HifiLockKey } from "../../types";
 import { entriesOf } from "../../lib/records";
 
 interface Props {
@@ -80,7 +63,6 @@ export function HifiPage({ hifi }: Props) {
     portSpec,
     setPortSpec,
     togglePort,
-    radiatorSelection,
     setRadiatorSelection,
     crossoverHz,
     setCrossoverHz,
@@ -115,151 +97,53 @@ export function HifiPage({ hifi }: Props) {
     setOptimizerBudget,
     optimizerLocks,
     optimizerResult,
-    setOptimizerResult,
     isOptimizing,
-    setIsOptimizing,
     optimizerError,
-    setOptimizerError,
     designPreview,
-    setDesignPreview,
     undoSnapshot,
-    setUndoSnapshot,
     setIsOptimizerOn,
     setOptimizerLocks,
+    runOptimizerSearch,
+    previewOptimizerResult,
+    exitPreview,
+    loadOptimizerResult,
+    undoOptimizerLoad,
     waveguideChoices,
     store,
-    snapshot,
-    applyDesign,
     savedConfigSnapshot,
     restoreSavedConfig,
+    waveguideSpec,
+    radiatorDriver,
+    radiator,
+    tweeterWithWaveguide,
+    leftGeometry,
+    rightGeometry,
+    seatDistanceM,
+    pairCostUsd,
+    speakerModel,
   } = hifi;
   const setBoxDim = (k: keyof Dims3, v: number) => setBoxDims((p) => ({ ...p, [k]: v }));
   const setPortField = (k: "h" | "dia" | "len", v: number) =>
     setPortSpec((p) => ({ ...p, [k]: v }));
-  /** The waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded). */
-  const compressionWaveguide = {
-    covH: selectedWaveguide.hf.covH,
-    covV: selectedWaveguide.hf.covV || selectedWaveguide.hf.covH,
-    w: selectedWaveguide.size.w,
-    h: selectedWaveguide.size.h,
-    name: selectedWaveguide.name,
-    freestanding: !selectedWaveguide.rect,
-  };
-  const waveguideSpec = tweeter.ownGuide
-    ? ownGuideCfg(tweeter)
-    : needsWaveguide(tweeter)
-      ? compressionWaveguide
-      : null;
-  const radiatorDriver = byId(HIFI_PASSIVES, radiatorSelection.id) ?? HIFI_PASSIVES[0];
-  const radiator = {
-    drv: radiatorDriver,
-    n: radiatorSelection.n,
-    addG: Math.min(radiatorSelection.addG, passiveRadiatorMassMax(radiatorDriver)),
-  };
-  const speakerConfig = {
-    box: boxType,
-    dim: boxDims,
-    wall: wallThicknessIn,
-    mat: panelMaterial,
-    port: portSpec,
-    pr: radiator,
-    xo: crossoverHz,
-    order: crossoverOrder,
-    wAmpW: wooferAmpWatts,
-    tAmpW: tweeterAmpWatts,
-    bsc: baffleStepCompensationDb,
-    place: placement,
-    wallFt: distanceToWallFt,
-    portMax: 17,
-    guide: waveguideSpec,
-  };
-  const tweeterWithWaveguide = waveguideSpec
-    ? { ...tweeter, faceplate: { w: waveguideSpec.w, h: waveguideSpec.h } }
-    : tweeter;
-  const speakerSystem = hifiSystem(woofer, tweeterWithWaveguide, speakerConfig);
-  if (!speakerSystem)
+  if (!speakerModel)
     return (
       <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 text-sm">
         This woofer can't be modelled (its parameters aren't published).
       </main>
     );
+  const {
+    speakerSystem,
+    warningChips,
+    maxLevelAtSeatDb,
+    onAxisResponse,
+    pairResponse,
+    tweeterMaxCurve,
+    dispersion,
+  } = speakerModel;
   const slotWidthNote =
     speakerSystem.kind === "vented" && speakerSystem.slotW != null
       ? ` (${speakerSystem.slotW.toFixed(1)}″ wide)`
       : "";
-  const warningChips = hifiChips(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig);
-  // the seat, relative to each speaker (left at -spacing/2, toed in toward the middle)
-  const listenerGeometryFor = (sign: -1 | 1) => {
-    const sx = (sign * speakerSpacingFt) / 2,
-      vx = listeningSeat.x - sx,
-      vy = listeningSeat.y,
-      d = Math.hypot(vx, vy);
-    const axis = (-sign * toeInDeg * Math.PI) / 180,
-      ang = Math.atan2(vx, vy) - axis;
-    return { th: Math.abs(ang), eyeIn: earHeightIn - standHeightIn, distM: d * METERS_PER_FOOT };
-  };
-  const leftGeometry = listenerGeometryFor(-1),
-    rightGeometry = listenerGeometryFor(1);
-  const frequencies = logSpacedFrequencies(15, 20000, 220);
-  const leftResponse = hifiResponseAt(
-      speakerSystem,
-      woofer,
-      tweeterWithWaveguide,
-      speakerConfig,
-      leftGeometry,
-      frequencies,
-    ),
-    rightResponse = hifiResponseAt(
-      speakerSystem,
-      woofer,
-      tweeterWithWaveguide,
-      speakerConfig,
-      rightGeometry,
-      frequencies,
-    );
-  const onAxisResponse = hifiResponseAt(
-    speakerSystem,
-    woofer,
-    tweeterWithWaveguide,
-    speakerConfig,
-    { th: 0, eyeIn: speakerSystem.lay.tweeterIn, distM: 1 },
-    frequencies,
-  );
-  const pairResponse = leftResponse.map((o, i) => ({
-    f: o.f,
-    spl: 10 * Math.log10(Math.pow(10, o.spl / 10) + Math.pow(10, rightResponse[i].spl / 10)),
-  }));
-  const seatDistanceM = (leftGeometry.distM + rightGeometry.distM) / 2;
-  const maxLevelAtSeatDb = speakerSystem.maxLevel - 20 * Math.log10(seatDistanceM) + 3;
-  const tweeterMaxCurve = frequencies.map((f) => ({
-    f,
-    spl:
-      speakerSystem.tLevel +
-      20 *
-        Math.log10(
-          Math.max(
-            1e-6,
-            Math.hypot(
-              linkwitzRileyFilter(f, crossoverHz, crossoverOrder, "hp").re,
-              linkwitzRileyFilter(f, crossoverHz, crossoverOrder, "hp").im,
-            ),
-          ),
-        ),
-  }));
-  const dispersion = hifiDispersionMap(
-    speakerSystem,
-    woofer,
-    tweeterWithWaveguide,
-    speakerConfig,
-    dispersionPlane,
-    Math.max(1, seatDistanceM),
-  );
-  const pairCostUsd =
-    2 *
-    ((woofer.price || 0) +
-      (tweeter.price || 0) +
-      (waveguideSpec && !tweeter.ownGuide ? selectedWaveguide.price || 0 : 0) +
-      (boxType === "radiator" ? radiator.n * (radiatorDriver.price || 0) : 0));
   const tile = (k: string, v: string, u: string) => (
     <StatTile key={k} label={k} value={v} unit={u} />
   );
@@ -279,45 +163,6 @@ export function HifiPage({ hifi }: Props) {
         onChange={(m) => setOptimizerLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))}
       />
     ) : null;
-  const runOptimizerSearch = async () => {
-    setIsOptimizing(true);
-    setOptimizerError("");
-    const base = designPreview ? designPreview.before : snapshot();
-    try {
-      setOptimizerResult(
-        await runHifiOptimizer({
-          cur: { ...speakerConfig, ...base, guide: compressionWaveguide },
-          woofers: HIFI_WOOFERS,
-          tweeters: HIFI_TWEETERS,
-          passives: HIFI_PASSIVES,
-          goals: optimizerGoals,
-          locks: optimizerLocks,
-          budget: optimizerBudget,
-          seatM: seatDistanceM,
-          guidePrice: selectedWaveguide.price || 0,
-        }),
-      );
-    } catch (e) {
-      // boundary cast: a catch variable is unknown; whatever was thrown is read for a message, as before
-      setOptimizerError("The search failed: " + ((e && (e as Error).message) || e));
-    }
-    setIsOptimizing(false);
-  };
-  const previewOptimizerResult = (k: HifiOptimizerCard) => {
-    const before = designPreview ? designPreview.before : snapshot();
-    applyDesign(k.config);
-    setDesignPreview({ label: k.label, before, card: k });
-  };
-  const exitPreview = () => {
-    if (designPreview) applyDesign(designPreview.before);
-    setDesignPreview(null);
-  };
-  const loadOptimizerResult = (k: HifiOptimizerCard) => {
-    const before = designPreview ? designPreview.before : snapshot();
-    applyDesign(k.config);
-    setDesignPreview(null);
-    setUndoSnapshot(before);
-  };
   const toggleGoal = (g: HifiGoal) =>
     setOptimizerGoals((p) => (p.includes(g) ? p.filter((x) => x !== g) : [...p, g]));
   const lockCount =
@@ -374,13 +219,7 @@ export function HifiPage({ hifi }: Props) {
         }
       >
         {undoSnapshot && !designPreview && (
-          <Button
-            size="md"
-            onClick={() => {
-              applyDesign(undoSnapshot);
-              setUndoSnapshot(null);
-            }}
-          >
+          <Button size="md" onClick={undoOptimizerLoad}>
             Undo load
           </Button>
         )}
