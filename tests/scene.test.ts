@@ -221,16 +221,27 @@ describe("stack scene", () => {
 
   test("the planner follows the wall thickness: tower height and arch threshold", () => {
     const base = byName("tower, arched top");
-    for (const wall of [0.5, 0.75, 1.5]) {
+    // the two plywood choices the planner offers
+    for (const wall of [0.5, 0.75]) {
       const p = { ...base, wall };
       const derived = derivedHeights(p);
       const box = stackBox(buildStackScene(p));
       expect(box.max.y, `wall ${wall}`).toBeGreaterThanOrEqual(derived.stackHeightIn - 1e-6);
       expect(box.max.y, `wall ${wall}`).toBeLessThan(derived.stackHeightIn + 0.1);
     }
-    // a wall thick enough that the horn no longer fits the arch turns the arched top off in both
-    const thick = { ...base, wall: base.sub.box.w / 2 - base.horn.size.w / 2 + 0.1 };
-    expect(derivedHeights(thick).hasArchedTop).toBe(false);
+    // a box just wide enough for the arch with 1/2 in walls but not with 3/4 in: the wall decides, in the planner and the scene
+    const w = base.horn.size.w + 1.2;
+    const narrow = { ...base, sub: { ...base.sub, box: { ...base.sub.box, w } } };
+    for (const [wall, arched] of [
+      [0.5, true],
+      [0.75, false],
+    ] as const) {
+      const p = { ...narrow, wall };
+      expect(derivedHeights(p).hasArchedTop, `wall ${wall}`).toBe(arched);
+      const top = stackBox(buildStackScene(p)).max.y;
+      expect(top, `wall ${wall}`).toBeGreaterThanOrEqual(derivedHeights(p).stackHeightIn - 1e-6);
+      expect(top, `wall ${wall}`).toBeLessThan(derivedHeights(p).stackHeightIn + 0.1);
+    }
   });
 
   test("scene-dump.json matches a fresh build (regenerate with `vp run scene-dump`)", () => {
