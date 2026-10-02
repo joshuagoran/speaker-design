@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 import {
+  CABINETS,
   CD_OPTIONS,
   FILL_OPTIONS,
+  FORMATS,
   HIFI_TWEETERS,
   HIFI_WOOFERS,
   HORN_OPTIONS,
@@ -9,7 +11,13 @@ import {
   MID_OPTIONS,
   SUB_OPTIONS,
 } from "../src/lib/data";
-import { DEFAULT_FILL, DEFAULT_HIFI, DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../src/lib/defaults";
+import {
+  DEFAULT_FILL,
+  DEFAULT_HIFI,
+  DEFAULT_MID_BY_SIZE,
+  DEFAULT_PA,
+  DEFAULT_PORT_SIZE,
+} from "../src/lib/defaults";
 import { designProblems, evaluateDesign } from "../src/lib/pa/optimize";
 import { hornResponse } from "../src/lib/pa/calc";
 import { fillSystem } from "../src/lib/pa/calc";
@@ -21,6 +29,8 @@ const snapshotOf = (d: typeof DEFAULT_PA): PaDesignConfig => {
   const { midSize: _midSize, plywoodSheetKind: _kind, boxSetCount: _sets, ...rest } = d;
   return {
     ...rest,
+    format: d.format.id,
+    cabinet: d.cabinet.id,
     sub: d.sub.id,
     mid: d.mid.id,
     midBox: d.midBox.id,
@@ -97,6 +107,8 @@ describe("default designs", () => {
     expect(CD_OPTIONS.includes(DEFAULT_PA.cd)).toBe(true);
     expect(HORN_OPTIONS.includes(DEFAULT_PA.horn)).toBe(true);
     expect(MID_BOXES.includes(DEFAULT_PA.midBox)).toBe(true);
+    expect(FORMATS.includes(DEFAULT_PA.format)).toBe(true);
+    expect(CABINETS.includes(DEFAULT_PA.cabinet)).toBe(true);
     expect(HIFI_WOOFERS.includes(DEFAULT_HIFI.woofer)).toBe(true);
     expect(HIFI_TWEETERS.includes(DEFAULT_HIFI.tweeter)).toBe(true);
     expect(HORN_OPTIONS.includes(DEFAULT_HIFI.selectedWaveguide)).toBe(true);
@@ -105,5 +117,9 @@ describe("default designs", () => {
       expect(MID_OPTIONS.includes(d.mid)).toBe(true);
       expect(MID_BOXES.includes(d.midBox)).toBe(true);
     }
+  });
+
+  it("the Hi-fi round port starts at the diameter the port toggle falls back to", () => {
+    expect(DEFAULT_HIFI.portSpec.dia).toBe(DEFAULT_PORT_SIZE.dia);
   });
 });

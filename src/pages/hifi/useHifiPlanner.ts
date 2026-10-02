@@ -1,5 +1,5 @@
 import { HORN_OPTIONS } from "../../lib/data";
-import { DEFAULT_HIFI } from "../../lib/defaults";
+import { DEFAULT_HIFI, DEFAULT_PORT_SIZE } from "../../lib/defaults";
 import { portAfterToggle } from "../../lib/hifi/hifi";
 import { readStoredJson, writeStoredJson } from "../../lib/storage";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
@@ -104,10 +104,7 @@ export function useHifiPlanner(): HifiPlanner {
   const [portSpec, setPortSpec] = useState<HifiPort>(DEFAULT_HIFI.portSpec);
   // the last round diameter and slot height, so toggling the port shape and back keeps what the user had
   // (not persisted, like portSpec itself)
-  const portMemory = useRef<PortMemory>({
-    dia: DEFAULT_HIFI.portSpec.dia,
-    h: DEFAULT_HIFI.slotHeightIn,
-  });
+  const portMemory = useRef<PortMemory>(DEFAULT_PORT_SIZE);
   useEffect(() => {
     portMemory.current =
       portSpec.shape === "slot"

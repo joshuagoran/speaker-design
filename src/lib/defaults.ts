@@ -6,15 +6,20 @@ import {
   BC10CXN64,
   BC15NDL76,
   BC18NBX,
+  CABINETS,
   F12PR300,
+  FORMATS,
   N314T,
   SB17NRX,
   SB26STCN,
   ST260,
 } from "./data";
+import { byIdOrThrow } from "./tables";
 import type {
+  Cabinet,
   CompressionDriver,
   FillDesignState,
+  Format,
   HifiDesignState,
   Horn,
   MidBox,
@@ -22,15 +27,17 @@ import type {
   MidSize,
   PaDesignConfig,
   PlywoodSheetKind,
-  SlotPort,
+  PortMemory,
   SubDriver,
 } from "../types";
 
-/** The PA design's starting state: a saved config with its driver, horn and box ids replaced by the objects, plus the cutlist and mid size choices. */
+/** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
 export type PaDefaults = Omit<
   Required<PaDesignConfig>,
   "format" | "cabinet" | "summary" | "sub" | "mid" | "midBox" | "cd" | "horn"
 > & {
+  format: Format;
+  cabinet: Cabinet;
   sub: SubDriver;
   mid: MidDriver;
   midBox: MidBox;
@@ -46,6 +53,9 @@ export type PaDefaults = Omit<
  * for the B&C 18NBX100 and the sub box set to 24 × 32 × 18; the fields the seed does not carry (wall, inset, finish, spacer, joint, plywood, sets, mid size) keep the values the hooks always started on.
  */
 export const DEFAULT_PA = {
+  // the only format and cabinet the planner has ever offered; nothing changes them
+  format: byIdOrThrow(FORMATS, "full", "formats"),
+  cabinet: byIdOrThrow(CABINETS, "column", "cabinets"),
   sub: BC18NBX,
   mid: F12PR300,
   cd: N314T,
@@ -84,8 +94,8 @@ export const DEFAULT_MID_BY_SIZE: Partial<Record<MidSize, Pick<PaDefaults, "mid"
   15: { mid: BC15NDL76, midBox: B18 },
 };
 
-/** The Hi-fi page's starting state: its design and room, plus the slot height the port toggle starts from. */
-export type HifiDefaults = HifiDesignState & { slotHeightIn: SlotPort["h"] };
+/** What each port shape starts at: the round port's diameter and the slot's height. The toggle falls back to these until you size the other shape. */
+export const DEFAULT_PORT_SIZE: PortMemory = { dia: 2, h: 1 };
 
 /** The Hi-fi page's starting design, room and waveguide. */
 export const DEFAULT_HIFI = {
@@ -96,8 +106,7 @@ export const DEFAULT_HIFI = {
   boxDims: { w: 9, h: 15, d: 11 },
   wallThicknessIn: 0.75,
   panelMaterial: "ply",
-  portSpec: { n: 1, dia: 2, len: 6 },
-  slotHeightIn: 1,
+  portSpec: { n: 1, dia: DEFAULT_PORT_SIZE.dia, len: 6 },
   radiatorSelection: { id: "sb16pfcr", n: 2, addG: 0 },
   crossoverHz: 2000,
   crossoverOrder: 4,
@@ -112,7 +121,7 @@ export const DEFAULT_HIFI = {
   earHeightIn: 38,
   standHeightIn: 24,
   dispersionPlane: "h",
-} satisfies HifiDefaults;
+} satisfies HifiDesignState;
 
 /** The Fills page's starting design. */
 export const DEFAULT_FILL = {

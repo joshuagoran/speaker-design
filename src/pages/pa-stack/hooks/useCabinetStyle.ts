@@ -1,4 +1,3 @@
-import { CABINETS, FORMATS } from "../../../lib/data";
 import { DEFAULT_PA } from "../../../lib/defaults";
 import type { Cabinet, Format, PaLayout, Setter } from "../../../types";
 import { useState } from "react";
@@ -28,9 +27,7 @@ export interface CabinetStyle {
 export function useCabinetStyle(): CabinetStyle {
   const plinthHeightIn = 3; // fixed, matches the duct height
   const [cutaway, setCutaway] = useState<boolean>(DEFAULT_PA.cutaway);
-  const [cabinet] = useState(CABINETS[0]);
   const [layout, setLayout] = useState<PaLayout>(DEFAULT_PA.layout);
-  const format = FORMATS[0]; // 18″ sub + compression driver; mid is 12″ or 15″
   const [wallThicknessIn, setWallThicknessIn] = useState(DEFAULT_PA.wall); // side/top/bottom/back ply, in
   const [baffleInsetIn, setBaffleInsetIn] = useState(DEFAULT_PA.inset); // how far the baffles sit back from the frame front, in
   const [baffleColor, setBaffleColor] = useState(DEFAULT_PA.baffleColor);
@@ -40,10 +37,10 @@ export function useCabinetStyle(): CabinetStyle {
     plinthHeightIn,
     cutaway,
     setCutaway,
-    cabinet,
+    cabinet: DEFAULT_PA.cabinet,
     layout,
     setLayout,
-    format,
+    format: DEFAULT_PA.format, // 18″ sub + compression driver; mid is 12″ or 15″
     wallThicknessIn,
     setWallThicknessIn,
     baffleInsetIn,

@@ -869,7 +869,7 @@ export function HifiPage({ hifi }: Props) {
               {portSpec.shape === "slot" ? (
                 <Slider
                   label={`Slot height${slotWidthNote}`}
-                  value={portSpec.h || 1}
+                  value={portSpec.h}
                   min={0.5}
                   max={3}
                   step={0.125}
