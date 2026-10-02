@@ -71,6 +71,7 @@ import type {
 } from "../../types";
 import { keysOf } from "../records";
 import { byId, byIdOrThrow } from "../tables";
+import { DEFAULT_PA } from "../defaults";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -492,21 +493,22 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   ).filter((g, i, a) => OPTIMIZER_GOALS[g] && a.indexOf(g) === i);
   const goal = goals[0],
     also = goals.slice(1);
-  // older saved configs can lack some fields: these are what the planner started on before `defaults.ts` (the page's own
-  // starting design differs in `hfTilt` and `portMax`), kept so a saved design from then optimizes as it always did
+  // older saved configs can lack some fields; they fall back to the planner's starting design
+  const { xoLo, xoHi, tilt, hfTilt, ampW, mAmpW, hfAmpW, hpType, portMax, wall, inset, layout } =
+    DEFAULT_PA;
   const cur: PaDesignConfig = {
-    xoLo: 120,
-    xoHi: 900,
-    tilt: 6,
-    hfTilt: 6,
-    ampW: 800,
-    mAmpW: 400,
-    hfAmpW: 100,
-    hpType: "BW24",
-    portMax: 20,
-    wall: 0.75,
-    inset: 0.75,
-    layout: "stack",
+    xoLo,
+    xoHi,
+    tilt,
+    hfTilt,
+    ampW,
+    mAmpW,
+    hfAmpW,
+    hpType,
+    portMax,
+    wall,
+    inset,
+    layout,
     ...input.cur,
   };
   const locks: ResolvedLocks = { subDim: {}, midDim: {}, ...(input.locks || {}) };
