@@ -7,7 +7,7 @@ import {
   pistonDirectivity,
   waveguideDirectivity,
   logSpacedFrequencies,
-} from "../hifi/hifi.js";
+} from "../hifi/hifi.ts";
 
 const C = 343,
   IN = 0.0254;

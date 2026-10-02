@@ -7,7 +7,7 @@ import {
   archOutlinePath,
   rectangularHornGeometry,
   createScaleFigure,
-} from "./geometry.js";
+} from "./geometry.ts";
 import { useEffect, useRef, useState } from "react";
 
 /** Rotatable 3D view of the PA stack. */

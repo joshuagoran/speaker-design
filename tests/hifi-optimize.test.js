@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { optimizeHifiSpeaker, hifiDesignProblems } from "../src/lib/hifi/optimize.js";
-import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi.js";
+import { optimizeHifiSpeaker, hifiDesignProblems } from "../src/lib/hifi/optimize.ts";
+import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi.ts";
 import { HIFI_WOOFERS, HIFI_TWEETERS } from "../src/lib/data.ts";
 
 const cur = {
@@ -102,7 +102,7 @@ test("hi-fi optimizer: unlocked amps stay within the sliders; locked amps stay; 
 });
 
 test("hi-fi optimizer: radiator designs price their radiators and load back with them", async (t) => {
-  const { optimizeHifiSpeaker } = await import("../src/lib/hifi/optimize.js");
+  const { optimizeHifiSpeaker } = await import("../src/lib/hifi/optimize.ts");
   const { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } = await import("../src/lib/data.ts");
   const w = HIFI_WOOFERS.find((o) => o.pick) || HIFI_WOOFERS[0],
     tw =

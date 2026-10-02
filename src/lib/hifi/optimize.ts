@@ -14,7 +14,7 @@ import {
   hifiSlotEndCorrection,
   slotWidth,
   slotMaxLength,
-} from "./hifi.js";
+} from "./hifi.ts";
 import { ventTuning } from "../pa/calc.js";
 import { passiveRadiatorMassMax, ownGuideCfg } from "../data.ts";
 

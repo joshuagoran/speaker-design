@@ -48,12 +48,12 @@ import {
   logSpacedFrequencies,
   linkwitzRileyFilter,
   SPEAKER_PLACEMENTS as HIFI_PLACES,
-} from "../../lib/hifi/hifi.js";
+} from "../../lib/hifi/hifi.ts";
 import {
   optimizeHifiSpeaker,
   HIFI_OPTIMIZER_GOALS,
   HIFI_LOCK_KEYS,
-} from "../../lib/hifi/optimize.js";
+} from "../../lib/hifi/optimize.ts";
 
 /** Hi-fi page: 2-way home speakers with an active crossover. */
 export function HifiPage({ hifi }) {

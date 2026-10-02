@@ -1,4 +1,4 @@
-import * as HIFI from "../src/lib/hifi/hifi.js";
+import * as HIFI from "../src/lib/hifi/hifi.ts";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
@@ -14,7 +14,7 @@ import {
   hifiResponseAt,
   hifiDispersionMap,
   grossVolumeLiters,
-} from "../src/lib/hifi/hifi.js";
+} from "../src/lib/hifi/hifi.ts";
 import { close } from "./helpers.js";
 
 // a generic 6.5" woofer and 1" dome (typical published values), so the tests don't depend on the driver list
