@@ -1,18 +1,13 @@
 import { PAL } from "../../styles/palette";
-
-/** The listening seat, feet: across from the middle of the pair, and out from the speakers. */
-interface Seat {
-  x: number;
-  y: number;
-}
+import type { ListeningSeat } from "../../types";
 
 interface Props {
   /** distance between the speakers, feet */
   spacing: number;
   /** toe-in, degrees */
   toe: number;
-  seat: Seat;
-  setSeat: (seat: Seat) => void;
+  seat: ListeningSeat;
+  setSeat: (seat: ListeningSeat) => void;
   /** each speaker's angle to the seat, degrees: left, right */
   angles: readonly [left: number, right: number];
 }

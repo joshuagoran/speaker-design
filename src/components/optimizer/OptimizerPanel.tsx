@@ -9,11 +9,14 @@ import { GoalPicker } from "./GoalPicker";
 import { RunRow } from "./RunRow";
 import { ResultCards } from "./ResultCards";
 import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize";
-import type { PaGoal, PaOptimizerCard, PaOptimizerResult, PaRoom } from "../../types";
 import type {
+  PaGoal,
+  PaOptimizerCard,
   PaOptimizerInputState,
+  PaOptimizerResult,
+  PaRoom,
   PaSearchOverrides,
-} from "../../pages/pa-stack/hooks/usePaOptimizer";
+} from "../../types";
 
 interface Props {
   optIn: PaOptimizerInputState;

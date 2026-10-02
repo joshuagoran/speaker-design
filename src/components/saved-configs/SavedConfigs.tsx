@@ -1,11 +1,11 @@
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { useState } from "react";
-import type { useConfigStore } from "./useConfigStore";
+import type { ConfigStore } from "./useConfigStore";
 import type { SavedConfig, SavedConfigData } from "../../types";
 
 interface Props {
-  store: ReturnType<typeof useConfigStore>;
+  store: ConfigStore;
   /** what to save; may include a `summary` line */
   snapshot: () => SavedConfigData;
   restore: (config: SavedConfig) => void;

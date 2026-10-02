@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "../ui/Button";
+import type { PaOptimizerResult } from "../../types";
 
 /** "Searching" with dots that count up, in a fixed width so the button doesn't jump. */
 function Searching() {
@@ -20,7 +21,7 @@ interface Props {
   hasGoal: boolean;
   onRun: () => void;
   /** what the last search covered; null before the first one */
-  stats: { evaluated: number; ms: number } | null | undefined;
+  stats: Pick<PaOptimizerResult["stats"], "evaluated" | "ms"> | null | undefined;
   note?: React.ReactNode;
   children?: React.ReactNode;
 }

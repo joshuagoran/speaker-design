@@ -1,13 +1,13 @@
-import type { DispersionPlane } from "../../../types";
+import type { DispersionPlane, Setter } from "../../../types";
 import { useEffect, useState } from "react";
 
 export interface StackViewOptions {
   dispersionPlane: DispersionPlane;
-  setDispersionPlane: React.Dispatch<React.SetStateAction<DispersionPlane>>;
+  setDispersionPlane: Setter<DispersionPlane>;
   showDetails: boolean;
-  setShowDetails: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowDetails: Setter<boolean>;
   isFull3d: boolean;
-  setIsFull3d: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsFull3d: Setter<boolean>;
 }
 
 /** View toggles on the PA stack page: dispersion plane, details panel and full-screen 3D. */

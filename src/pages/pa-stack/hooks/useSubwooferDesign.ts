@@ -1,24 +1,24 @@
 import { SUB_OPTIONS } from "../../../lib/data";
-import type { Dims3, HighpassType, PortStyle, SubDriver, VentSpec } from "../../../types";
+import type { Dims3, HighpassType, PortStyle, SubDriver, Setter, VentSpec } from "../../../types";
 import { useState } from "react";
 
 export interface SubwooferDesign {
   subDriver: SubDriver;
-  setSubDriver: React.Dispatch<React.SetStateAction<SubDriver>>;
+  setSubDriver: Setter<SubDriver>;
   portStyle: PortStyle;
-  setPortStyle: React.Dispatch<React.SetStateAction<PortStyle>>;
+  setPortStyle: Setter<PortStyle>;
   subBoxDims: Dims3;
-  setSubBoxDims: React.Dispatch<React.SetStateAction<Dims3>>;
+  setSubBoxDims: Setter<Dims3>;
   subVentSpec: VentSpec;
-  setSubVentSpec: React.Dispatch<React.SetStateAction<VentSpec>>;
+  setSubVentSpec: Setter<VentSpec>;
   subHighpassHz: number;
-  setSubHighpassHz: React.Dispatch<React.SetStateAction<number>>;
+  setSubHighpassHz: Setter<number>;
   subHighpassType: HighpassType;
-  setSubHighpassType: React.Dispatch<React.SetStateAction<HighpassType>>;
+  setSubHighpassType: Setter<HighpassType>;
   subAmpWatts: number;
-  setSubAmpWatts: React.Dispatch<React.SetStateAction<number>>;
+  setSubAmpWatts: Setter<number>;
   maxPortAirSpeedMs: number;
-  setMaxPortAirSpeedMs: React.Dispatch<React.SetStateAction<number>>;
+  setMaxPortAirSpeedMs: Setter<number>;
   setSubBoxDim: (k: keyof Dims3, v: number) => void;
   setSubVentField: (k: keyof VentSpec, v: number) => void;
 }

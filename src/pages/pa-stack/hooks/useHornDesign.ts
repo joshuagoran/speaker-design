@@ -1,16 +1,16 @@
 import { CD_OPTIONS, HORN_OPTIONS } from "../../../lib/data";
-import type { CompressionDriver, Horn } from "../../../types";
+import type { CompressionDriver, Horn, Setter } from "../../../types";
 import { useState } from "react";
 
 export interface HornDesign {
   hornOption: Horn;
-  setHornOption: React.Dispatch<React.SetStateAction<Horn>>;
+  setHornOption: Setter<Horn>;
   compressionDriver: CompressionDriver;
-  setCompressionDriver: React.Dispatch<React.SetStateAction<CompressionDriver>>;
+  setCompressionDriver: Setter<CompressionDriver>;
   hornAmpWatts: number;
-  setHornAmpWatts: React.Dispatch<React.SetStateAction<number>>;
+  setHornAmpWatts: Setter<number>;
   hornBandTiltDb: number;
-  setHornBandTiltDb: React.Dispatch<React.SetStateAction<number>>;
+  setHornBandTiltDb: Setter<number>;
 }
 
 /** State for the horn and compression driver: parts, HF amp power and music balance. */

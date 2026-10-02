@@ -10,20 +10,15 @@ import type {
   PaGoal,
   PaLockKey,
   PaOptimizerCard,
+  PaOptimizerInputState,
   PaOptimizerLocks,
   PaOptimizerResult,
   PaRoom,
+  PaSearchOverrides,
+  Setter,
 } from "../../../types";
 import type { PaDesign } from "./usePaDesign";
 import { useState } from "react";
-
-/** The optimizer's inputs on the page: the room, the heaviest box and the budget, and the goals in tap order. */
-export interface PaOptimizerInputState {
-  room: PaRoom;
-  maxLb: number;
-  budget: number;
-  goals: PaGoal[];
-}
 
 /** The optimizer locks as the page holds them: both box-dimension modes are always present. */
 export interface PaPlannerLocks extends PaOptimizerLocks {
@@ -38,9 +33,6 @@ export interface DesignPreview {
   card: PaOptimizerCard;
 }
 
-/** What `startOptimizerSearch` takes: input fields to change for this run, or the click event when it is used as a handler. */
-export type PaSearchOverrides = Partial<PaOptimizerInputState> & { nativeEvent?: Event };
-
 interface Props {
   snapshot: PaDesign["snapshot"];
   restore: PaDesign["restore"];
@@ -50,13 +42,13 @@ interface Props {
 
 export interface PaOptimizer {
   isOptimizerOn: boolean;
-  setIsOptimizerOnState: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsOptimizerOnState: Setter<boolean>;
   setIsOptimizerOn: (v: boolean) => void;
   optimizerInput: PaOptimizerInputState;
-  setOptimizerInputState: React.Dispatch<React.SetStateAction<PaOptimizerInputState>>;
+  setOptimizerInputState: Setter<PaOptimizerInputState>;
   updateOptimizerInput: (o: Partial<PaOptimizerInputState>) => void;
   optimizerLocks: PaPlannerLocks;
-  setOptimizerLocksState: React.Dispatch<React.SetStateAction<PaPlannerLocks>>;
+  setOptimizerLocksState: Setter<PaPlannerLocks>;
   setOptimizerLocks: (f: (p: PaPlannerLocks) => PaPlannerLocks) => void;
   renderLockButton: (key: PaLockKey, what: string) => React.ReactNode;
   renderDimensionLock: (
@@ -65,17 +57,17 @@ export interface PaOptimizer {
     what: string,
   ) => React.ReactNode;
   optimizerResult: PaOptimizerResult | null;
-  setOptimizerResult: React.Dispatch<React.SetStateAction<PaOptimizerResult | null>>;
+  setOptimizerResult: Setter<PaOptimizerResult | null>;
   isOptimizing: boolean;
-  setIsOptimizing: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsOptimizing: Setter<boolean>;
   optimizerError: string;
-  setOptimizerError: React.Dispatch<React.SetStateAction<string>>;
+  setOptimizerError: Setter<string>;
   designPreview: DesignPreview | null;
-  setDesignPreview: React.Dispatch<React.SetStateAction<DesignPreview | null>>;
+  setDesignPreview: Setter<DesignPreview | null>;
   undoSnapshot: PaDesignConfig | null;
-  setUndoSnapshot: React.Dispatch<React.SetStateAction<PaDesignConfig | null>>;
+  setUndoSnapshot: Setter<PaDesignConfig | null>;
   toastMessage: string;
-  setToastMessage: React.Dispatch<React.SetStateAction<string>>;
+  setToastMessage: Setter<string>;
   today: () => string;
   startOptimizerSearch: (over?: PaSearchOverrides) => Promise<void>;
   previewOptimizerResult: (k: PaOptimizerCard) => void;

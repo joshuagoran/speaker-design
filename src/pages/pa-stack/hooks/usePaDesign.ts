@@ -32,6 +32,7 @@ import type {
   MidDriver,
   PaDesignConfig,
   PaMaxPoint,
+  PaPortGeometry,
   SealedBoxModel,
   SubDriver,
   SubLimits,
@@ -90,7 +91,7 @@ export interface PaDesign
   /** beamwidth in degrees against frequency for the mid and the horn, and the horn's pattern-control frequency */
   beamCurves: { midB: FrequencyPoint[]; hornB: FrequencyPoint[]; fK: number | null };
   subMusicAtCrossover: number | null;
-  portGeom: { ductH: number; nPorts: number; portR: number; tubeLen: number; throat: number };
+  portGeom: PaPortGeometry;
   snapshot: () => PaDesignConfig;
   /** loads a saved or optimizer design; fields an older config lacks keep their defaults */
   restore: (c: Partial<PaDesignConfig>) => void;

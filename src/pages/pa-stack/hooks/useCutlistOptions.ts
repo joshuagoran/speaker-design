@@ -1,13 +1,13 @@
-import type { CornerJoint, PlywoodSheetKind } from "../../../types";
+import type { CornerJoint, PlywoodSheetKind, Setter } from "../../../types";
 import { useState } from "react";
 
 export interface CutlistOptions {
   cornerJoint: CornerJoint;
-  setCornerJoint: React.Dispatch<React.SetStateAction<CornerJoint>>;
+  setCornerJoint: Setter<CornerJoint>;
   plywoodSheetKind: PlywoodSheetKind;
-  setPlywoodSheetKind: React.Dispatch<React.SetStateAction<PlywoodSheetKind>>;
+  setPlywoodSheetKind: Setter<PlywoodSheetKind>;
   boxSetCount: number;
-  setBoxSetCount: React.Dispatch<React.SetStateAction<number>>;
+  setBoxSetCount: Setter<number>;
 }
 
 /** Cutlist choices: corner joint, plywood sheet size and how many sets of boxes to cut. */

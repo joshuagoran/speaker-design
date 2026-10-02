@@ -9,8 +9,16 @@ import {
   createScaleFigure,
 } from "./geometry";
 import { useEffect, useRef, useState } from "react";
-import type { Dims3, FinishId, Horn, MidDriver, PaLayout, PortStyle, SubDriver } from "../../types";
-import type { PaDesign } from "../../pages/pa-stack/hooks/usePaDesign";
+import type {
+  Dims3,
+  FinishId,
+  Horn,
+  MidDriver,
+  PaLayout,
+  PaPortGeometry,
+  PortStyle,
+  SubDriver,
+} from "../../types";
 
 interface Props {
   sub: SubDriver & { box: Dims3 };
@@ -22,7 +30,7 @@ interface Props {
   layout: PaLayout;
   baffleColor: string;
   /** explicit vent geometry when the cabinet is custom */
-  portGeom?: Partial<PaDesign["portGeom"]>;
+  portGeom?: Partial<PaPortGeometry>;
   wall?: number;
   inset?: number;
   cabFinish?: FinishId;

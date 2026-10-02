@@ -1,5 +1,5 @@
 import { HORN_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS } from "../../lib/data";
-import { useConfigStore } from "../../components/saved-configs/useConfigStore";
+import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
 import type {
   Dims3,
   DispersionPlane,
@@ -15,18 +15,12 @@ import type {
   HifiWoofer,
   CrossoverOrder,
   Horn,
+  ListeningSeat,
   PanelMaterial,
   RadiatorSelection,
+  Setter,
 } from "../../types";
 import { useState } from "react";
-
-type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
-
-/** Where the listener sits: feet across the room (x) and back from the speakers (y). */
-export interface ListeningSeat {
-  x: number;
-  y: number;
-}
 
 /** The optimizer locks as the page holds them: the box-dimension modes are always present. */
 export interface HifiPlannerLocks extends HifiOptimizerLocks {
@@ -111,7 +105,7 @@ export interface HifiPlanner {
   setOptimizerLocks: (f: (p: HifiPlannerLocks) => HifiPlannerLocks) => void;
   storage: HifiStorage;
   waveguideChoices: Horn[];
-  store: ReturnType<typeof useConfigStore>;
+  store: ConfigStore;
 }
 
 /** The Hi-fi page's design, room and optimizer state. Held by App so it survives switching tabs. */

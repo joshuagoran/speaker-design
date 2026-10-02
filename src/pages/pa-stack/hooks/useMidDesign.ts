@@ -1,21 +1,21 @@
 import { MID_OPTIONS, MID_BOXES } from "../../../lib/data";
-import type { Dims3, MidBox, MidDriver, MidSize } from "../../../types";
+import type { Dims3, MidBox, MidDriver, MidSize, Setter } from "../../../types";
 import { useState } from "react";
 
 export interface MidDesign {
   midDriver: MidDriver;
-  setMidDriver: React.Dispatch<React.SetStateAction<MidDriver>>;
+  setMidDriver: Setter<MidDriver>;
   midBoxPreset: MidBox;
-  setMidBoxPreset: React.Dispatch<React.SetStateAction<MidBox>>;
+  setMidBoxPreset: Setter<MidBox>;
   midBoxDims: Dims3;
-  setMidBoxDims: React.Dispatch<React.SetStateAction<Dims3>>;
+  setMidBoxDims: Setter<Dims3>;
   midAmpWatts: number;
-  setMidAmpWatts: React.Dispatch<React.SetStateAction<number>>;
+  setMidAmpWatts: Setter<number>;
   midBandTiltDb: number;
-  setMidBandTiltDb: React.Dispatch<React.SetStateAction<number>>;
+  setMidBandTiltDb: Setter<number>;
   setMidBoxDim: (k: keyof Dims3, v: number) => void;
   midSize: MidSize;
-  setMidSize: React.Dispatch<React.SetStateAction<MidSize>>;
+  setMidSize: Setter<MidSize>;
 }
 
 /** State for the mid-bass box: driver, size class, box dimensions, amp power and music balance. */

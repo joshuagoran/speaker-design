@@ -1,7 +1,5 @@
-import { useConfigStore } from "../../../components/saved-configs/useConfigStore";
+import { useConfigStore, type ConfigStore } from "../../../components/saved-configs/useConfigStore";
 import type { SavedConfig } from "../../../types";
-
-type ConfigStore = ReturnType<typeof useConfigStore>;
 
 export interface SavedConfigs {
   store: ConfigStore;

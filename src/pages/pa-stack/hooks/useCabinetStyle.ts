@@ -1,25 +1,25 @@
 import { PAINT_SWATCHES, CABINETS, FORMATS } from "../../../lib/data";
-import type { Cabinet, FinishId, Format, PaLayout } from "../../../types";
+import type { Cabinet, FinishId, Format, PaLayout, Setter } from "../../../types";
 import { useState } from "react";
 
 export interface CabinetStyle {
   plinthHeightIn: number;
   cutaway: boolean;
-  setCutaway: React.Dispatch<React.SetStateAction<boolean>>;
+  setCutaway: Setter<boolean>;
   cabinet: Cabinet;
   layout: PaLayout;
-  setLayout: React.Dispatch<React.SetStateAction<PaLayout>>;
+  setLayout: Setter<PaLayout>;
   format: Format;
   wallThicknessIn: number;
-  setWallThicknessIn: React.Dispatch<React.SetStateAction<number>>;
+  setWallThicknessIn: Setter<number>;
   baffleInsetIn: number;
-  setBaffleInsetIn: React.Dispatch<React.SetStateAction<number>>;
+  setBaffleInsetIn: Setter<number>;
   baffleColor: string;
-  setBaffleColor: React.Dispatch<React.SetStateAction<string>>;
+  setBaffleColor: Setter<string>;
   cabinetFinish: FinishId;
-  setCabinetFinish: React.Dispatch<React.SetStateAction<FinishId>>;
+  setCabinetFinish: Setter<FinishId>;
   spacerHeightIn: number;
-  setSpacerHeightIn: React.Dispatch<React.SetStateAction<number>>;
+  setSpacerHeightIn: Setter<number>;
 }
 
 /** Cabinet construction and look: plywood, baffle inset, finish, layout and the fixed plinth. */

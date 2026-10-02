@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { Setter } from "../../../types";
 
 /** The result sections that fold on phones. */
 export type FoldId = "sub" | "mid" | "horn" | "totals";
@@ -7,12 +8,12 @@ export type SettingsTab = "sub" | "mid" | "horn" | "look";
 
 export interface PhoneLayout {
   isSettingsSheetOpen: boolean;
-  setSettingsSheetOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setSettingsSheetOpen: Setter<boolean>;
   activeTab: SettingsTab;
-  setActiveTab: React.Dispatch<React.SetStateAction<SettingsTab>>;
+  setActiveTab: Setter<SettingsTab>;
   tabClass: (t: SettingsTab) => string;
   expandedSections: Record<FoldId, boolean>;
-  setExpandedSections: React.Dispatch<React.SetStateAction<Record<FoldId, boolean>>>;
+  setExpandedSections: Setter<Record<FoldId, boolean>>;
   toggleSection: (id: FoldId) => void;
   sectionClass: (id: FoldId) => string;
 }

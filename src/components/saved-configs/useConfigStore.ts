@@ -117,3 +117,6 @@ export function useConfigStore(collection: string) {
   };
   return { db, saved, fb, fbUser, cfgMsg, setCfgMsg, signIn, signOut, save, remove };
 }
+
+/** What `useConfigStore` returns: the saved-config list and the actions on it. */
+export type ConfigStore = ReturnType<typeof useConfigStore>;

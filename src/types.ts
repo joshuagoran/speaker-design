@@ -1,3 +1,5 @@
+import type { Dispatch, SetStateAction } from "react";
+
 // Shapes of the driver, horn, cabinet and fill tables in lib/data.ts.
 //
 // A spec the vendor does not publish is `null` in the table (the note says so), so it stays in the type as `number | null`.
@@ -7,6 +9,9 @@
 export type SubSize = 15 | 18;
 /** Mid driver diameters in inches. */
 export type MidSize = 10 | 12 | 15;
+
+/** The setter `useState` returns, as a hook hands it to the page. */
+export type Setter<T> = Dispatch<SetStateAction<T>>;
 
 /** Outer or internal dimensions in inches. */
 export interface Dims3 {
@@ -483,6 +488,12 @@ export interface HifiSystem {
 /** A check on the design: a severity, a short title and a sentence of detail. */
 export type HifiChip = Chip;
 
+/** Where the listener sits: feet across the room (x) and back from the speakers (y). */
+export interface ListeningSeat {
+  x: number;
+  y: number;
+}
+
 /** Where the listener is relative to one speaker: horizontal angle off its axis (rad), ear height above the box bottom (in) and distance (m). */
 export interface ListenerGeometry {
   th: number;
@@ -785,6 +796,15 @@ export interface VentGeometry {
   desc: string;
 }
 
+/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length and throat (all inches). */
+export interface PaPortGeometry {
+  ductH: number;
+  nPorts: number;
+  portR: number;
+  tubeLen: number;
+  throat: number;
+}
+
 /** What `subGeometry` needs: boxes, plywood, vent and layout. */
 export interface SubGeometryConfig {
   subBox: Dims3;
@@ -1070,6 +1090,17 @@ export interface PaOptimizerLocks extends Partial<Record<PaLockKey, boolean>> {
   subDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
   midDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
 }
+
+/** The optimizer's inputs on the page: the room, the heaviest box and the budget, and the goals in tap order. */
+export interface PaOptimizerInputState {
+  room: PaRoom;
+  maxLb: number;
+  budget: number;
+  goals: PaGoal[];
+}
+
+/** What `startOptimizerSearch` takes: input fields to change for this run, or the click event when it is used as a handler. */
+export type PaSearchOverrides = Partial<PaOptimizerInputState> & { nativeEvent?: Event };
 
 /** The fields an older saved design can lack; the optimizer fills these in. */
 export type PaDefaultedField =

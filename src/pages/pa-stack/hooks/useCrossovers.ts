@@ -1,10 +1,11 @@
 import { useState } from "react";
+import type { Setter } from "../../../types";
 
 export interface Crossovers {
   subMidCrossoverHz: number;
-  setSubMidCrossoverHz: React.Dispatch<React.SetStateAction<number>>;
+  setSubMidCrossoverHz: Setter<number>;
   midHornCrossoverHz: number;
-  setMidHornCrossoverHz: React.Dispatch<React.SetStateAction<number>>;
+  setMidHornCrossoverHz: Setter<number>;
 }
 
 /** Crossover frequencies, both Linkwitz-Riley 24 dB. */
