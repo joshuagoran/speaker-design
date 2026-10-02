@@ -1,5 +1,6 @@
 import { ToggleButton } from "../ui/ToggleButton";
 import { RankBadge } from "./RankBadge";
+import { entriesOf } from "../../lib/records";
 
 interface Props<G extends string> {
   /** every goal, with its short and long name */
@@ -17,8 +18,7 @@ export function GoalPicker<G extends string>({ defs, selected, onTap }: Props<G>
         Goal <span className="text-xs">(choose one or more, in priority order)</span>
       </div>
       <div className="flex flex-wrap gap-1" role="group" aria-label="Goal">
-        {/* boundary: Object.entries types the keys as string; they are the goals `defs` is keyed by */}
-        {(Object.entries(defs) as [G, { short: string; name: string }][]).map(([k, g]) => {
+        {entriesOf(defs).map(([k, g]) => {
           const i = selected.indexOf(k);
           return (
             <ToggleButton

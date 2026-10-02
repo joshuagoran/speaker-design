@@ -6,8 +6,8 @@ import { SelectField } from "../../../components/ui/SelectField";
 import { Slider } from "../../../components/ui/Slider";
 import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, CABINET_FINISHES } from "../../../lib/data";
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
-import type { HighpassType } from "../../../types";
 import type { PaPlanner } from "../hooks/usePaPlanner";
+import { keysOf } from "../../../lib/records";
 
 interface Props {
   planner: Pick<
@@ -470,8 +470,7 @@ export function SettingsPanel({ planner }: Props) {
                   extra={renderLockButton("hpf", "the highpass")}
                 />
                 <div className="flex flex-wrap gap-1 -mt-1 mb-3">
-                  {/* boundary cast: `Object.keys` is `string[]`; the keys are the highpass types */}
-                  {(Object.keys(HIGHPASS_ALIGNMENTS) as HighpassType[]).map((t) => (
+                  {keysOf(HIGHPASS_ALIGNMENTS).map((t) => (
                     <ToggleButton
                       key={t}
                       onClick={() => setSubHighpassType(t)}

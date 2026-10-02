@@ -69,6 +69,7 @@ import type {
   VentedBoxModel,
   VentSpec,
 } from "../../types";
+import { keysOf } from "../records";
 
 const byId = <T extends { id: string }>(list: readonly T[], id: string) =>
   list.find((o) => o.id === id);
@@ -934,8 +935,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   const inLimits = (x: Score) => x.price <= budget + 1e-9 && x.heaviest <= input.maxLb + 1e-9;
   const add = (list: Combo[], n: number) =>
     list.slice(0, n).forEach((x) => finalists.set(JSON.stringify(x.c), x));
-  // Object.keys is string[]; obj has exactly the PaGoal keys.
-  for (const g of Object.keys(obj) as PaGoal[]) {
+  for (const g of keysOf(obj)) {
     const ranked = combos.filter(goalOk[g]).sort((a, b) => obj[g](a) - obj[g](b));
     add(ranked.filter(inLimits), 14); // candidates for the cards
     add(ranked, 4); // and a few just outside the limits, for the near-miss message
@@ -1044,12 +1044,9 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
         });
     }
     // stacked goals: single-goal options first, so you can see what dropping the others buys
-    const axes = [
-      ...(also.length ? goals : []),
-      ...ALT_ORDER[goal],
-      // Object.keys is string[]; ALT_LABEL has exactly the PaGoal keys.
-      ...(Object.keys(ALT_LABEL) as PaGoal[]),
-    ].filter((a, i, arr) => arr.indexOf(a) === i && (also.length || a !== goal));
+    const axes = [...(also.length ? goals : []), ...ALT_ORDER[goal], ...keysOf(ALT_LABEL)].filter(
+      (a, i, arr) => arr.indexOf(a) === i && (also.length || a !== goal),
+    );
     for (const alt of axes) {
       if (cards.length >= 3) break;
       const q = ok

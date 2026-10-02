@@ -65,6 +65,7 @@ import type {
   PanelMaterial,
   RadiatorSelection,
 } from "../../types";
+import { entriesOf } from "../../lib/records";
 
 interface Props {
   hifi: HifiPlanner;
@@ -1008,10 +1009,7 @@ export function HifiPage({ hifi }: Props) {
         <Card>
           <div className="text-sm text-stone-500 mb-1">Placement</div>
           <div className="flex flex-wrap gap-1 mb-3">
-            {/* boundary cast: Object.entries types the keys as string; they are the placements `HIFI_PLACES` is keyed by */}
-            {(
-              Object.entries(HIFI_PLACES) as [HifiPlacement, (typeof HIFI_PLACES)[HifiPlacement]][]
-            ).map(([k, p]) => (
+            {entriesOf(HIFI_PLACES).map(([k, p]) => (
               <ToggleButton key={k} onClick={() => setPlacement(k)} on={placement === k}>
                 {p.name}
               </ToggleButton>

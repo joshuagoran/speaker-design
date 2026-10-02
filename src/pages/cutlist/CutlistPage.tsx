@@ -1,4 +1,4 @@
-import type { CutPart, PlywoodSheetKind } from "../../types";
+import type { CutPart } from "../../types";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
@@ -11,6 +11,7 @@ import {
   cutParts,
   packSheets,
 } from "../../lib/pa/calc";
+import { entriesOf } from "../../lib/records";
 
 interface Props {
   planner: Pick<
@@ -97,12 +98,11 @@ export function CutlistPage({ planner }: Props) {
         <div>
           <div className="text-sm text-stone-500 mb-1">Sheet</div>
           <div className="flex gap-1">
-            {Object.entries(PLYWOOD_SHEETS).map(([k, s]) => (
+            {entriesOf(PLYWOOD_SHEETS).map(([k, s]) => (
               <ToggleButton
                 key={k}
                 on={plywoodSheetKind === k}
-                // cast: `Object.entries` types the keys as strings; they are the keys of PLYWOOD_SHEETS
-                onClick={() => setPlywoodSheetKind(k as PlywoodSheetKind)}
+                onClick={() => setPlywoodSheetKind(k)}
               >
                 {s.name}
               </ToggleButton>
