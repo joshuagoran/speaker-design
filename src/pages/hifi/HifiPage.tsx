@@ -65,6 +65,7 @@ import type {
   ListeningSeat,
   PanelMaterial,
   RadiatorSelection,
+  Setter,
 } from "../../types";
 import { entriesOf } from "../../lib/records";
 
@@ -341,36 +342,31 @@ export function HifiPage({ hifi }: Props) {
   const restoreSavedConfig = (c: Partial<SavedHifiConfig>) => {
     const pick = <T extends { id: string }>(list: readonly T[], id: string | undefined) =>
       id === undefined ? undefined : byId(list, id);
-    // boundary: the list below pairs each setter with a value of its own type, which a list of mixed pairs can't
-    // keep matched, so `ok` takes any setter and any value; each value is the saved field for that setter
-    const ok = (f: (v: never) => void, v: unknown) => {
-      if (v !== undefined) f(v as never);
+    // each saved field sets its own state when the saved config has it; the setter and the field share a type
+    const ok = <T,>(set: Setter<T>, v: T | undefined) => {
+      if (v !== undefined) set(v);
     };
     ok(setWoofer, pick(HIFI_WOOFERS, c.woofer));
     ok(setTweeter, pick(HIFI_TWEETERS, c.tweeter));
     ok(setSelectedWaveguide, pick(waveguideChoices, c.guide));
-    (
-      [
-        [setBoxType, c.box],
-        [setBoxDims, c.dim],
-        [setPortSpec, c.port],
-        [setRadiatorSelection, c.pr],
-        [setWallThicknessIn, c.wall],
-        [setPanelMaterial, c.mat],
-        [setCrossoverHz, c.xo],
-        [setCrossoverOrder, c.order],
-        [setWooferAmpWatts, c.wAmpW],
-        [setTweeterAmpWatts, c.tAmpW],
-        [setBaffleStepCompensationDb, c.bsc],
-        [setPlacement, c.place],
-        [setDistanceToWallFt, c.wallFt],
-        [setSpeakerSpacingFt, c.spacing],
-        [setToeInDeg, c.toe],
-        [setListeningSeat, c.seat],
-        [setEarHeightIn, c.earIn],
-        [setStandHeightIn, c.standIn],
-      ] as const
-    ).forEach(([f, v]) => ok(f, v));
+    ok(setBoxType, c.box);
+    ok(setBoxDims, c.dim);
+    ok(setPortSpec, c.port);
+    ok(setRadiatorSelection, c.pr);
+    ok(setWallThicknessIn, c.wall);
+    ok(setPanelMaterial, c.mat);
+    ok(setCrossoverHz, c.xo);
+    ok(setCrossoverOrder, c.order);
+    ok(setWooferAmpWatts, c.wAmpW);
+    ok(setTweeterAmpWatts, c.tAmpW);
+    ok(setBaffleStepCompensationDb, c.bsc);
+    ok(setPlacement, c.place);
+    ok(setDistanceToWallFt, c.wallFt);
+    ok(setSpeakerSpacingFt, c.spacing);
+    ok(setToeInDeg, c.toe);
+    ok(setListeningSeat, c.seat);
+    ok(setEarHeightIn, c.earIn);
+    ok(setStandHeightIn, c.standIn);
     setDesignPreview(null);
     setUndoSnapshot(null);
     setOptimizerResult(null);
