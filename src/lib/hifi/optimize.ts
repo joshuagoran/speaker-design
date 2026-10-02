@@ -40,6 +40,7 @@ import type {
   RoundPort,
   SlotPort,
 } from "../../types";
+import { keysOf } from "../records";
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };
@@ -382,8 +383,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
   const key = (x: Candidate) =>
     `${x.w.id}|${x.box}|${x.wall}|${x.dim.w}|${x.dim.h}|${x.dim.d}|${x.port && (x.port.shape === "slot" ? `s${x.port.h}` : x.port.dia)}|${x.port && x.port.len}|${x.pr ? `${x.pr.drv.id}${x.pr.n}${x.pr.addG}` : ""}`;
   const keep = new Map<string, Candidate>();
-  // Object.keys is string[]; obj has exactly the HifiGoal keys.
-  for (const g of Object.keys(obj) as HifiGoal[])
+  for (const g of keysOf(obj))
     stage1
       .slice()
       .sort((a, b) => obj[g](a.m) - obj[g](b.m))
@@ -479,8 +479,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
         why: "Changes one thing from your design.",
       });
   }
-  // Object.keys is string[]; obj has exactly the HifiGoal keys.
-  for (const g of [...(also.length ? goals : []), ...(Object.keys(obj) as HifiGoal[])].filter(
+  for (const g of [...(also.length ? goals : []), ...keysOf(obj)].filter(
     (g, i, a) => a.indexOf(g) === i,
   )) {
     if (cards.length >= 3) break;

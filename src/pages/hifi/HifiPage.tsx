@@ -51,9 +51,48 @@ import {
 } from "../../lib/hifi/hifi";
 import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
 import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
+import type { HifiPlanner } from "./useHifiPlanner";
+import type {
+  CrossoverOrder,
+  Dims3,
+  HifiCardConfig,
+  HifiGoal,
+  HifiLockKey,
+  HifiOptimizerCard,
+  HifiPlacement,
+  HifiPort,
+  ListeningSeat,
+  PanelMaterial,
+  RadiatorSelection,
+} from "../../types";
+import { entriesOf } from "../../lib/records";
+
+interface Props {
+  hifi: HifiPlanner;
+}
+
+/**
+ * What the page saves: the fields a card applies and the rest of the page's settings. The JSON round trip drops
+ * undefined fields, so `pr` is absent unless the box has radiators.
+ */
+interface SavedHifiConfig extends Omit<HifiCardConfig, "pr"> {
+  pr?: RadiatorSelection;
+  guide: string;
+  mat: PanelMaterial;
+  order: CrossoverOrder;
+  bsc: number;
+  place: HifiPlacement;
+  wallFt: number;
+  spacing: number;
+  toe: number;
+  seat: ListeningSeat;
+  earIn: number;
+  standIn: number;
+  summary: string;
+}
 
 /** Hi-fi page: 2-way home speakers with an active crossover. */
-export function HifiPage({ hifi }) {
+export function HifiPage({ hifi }: Props) {
   const {
     woofer,
     setWoofer,
@@ -121,8 +160,9 @@ export function HifiPage({ hifi }) {
     waveguideChoices,
     store,
   } = hifi;
-  const setBoxDim = (k, v) => setBoxDims((p) => ({ ...p, [k]: v }));
-  const setPortField = (k, v) => setPortSpec((p) => ({ ...p, [k]: v }));
+  const setBoxDim = (k: keyof Dims3, v: number) => setBoxDims((p) => ({ ...p, [k]: v }));
+  const setPortField = (k: "h" | "dia" | "len", v: number) =>
+    setPortSpec((p) => ({ ...p, [k]: v }));
   /** The waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded). */
   const compressionWaveguide = {
     covH: selectedWaveguide.hf.covH,
@@ -171,9 +211,11 @@ export function HifiPage({ hifi }) {
         This woofer can't be modelled (its parameters aren't published).
       </main>
     );
+  // The `!` on `speakerSystem.Qtc`, `slotW`, `Fb` and `Fp` below: each is set for the box it is shown for
+  // (`Qtc` sealed, `slotW` slot, `Fb` vented or radiator, `Fp` radiator)
   const warningChips = hifiChips(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig);
   // the seat, relative to each speaker (left at -spacing/2, toed in toward the middle)
-  const listenerGeometryFor = (sign) => {
+  const listenerGeometryFor = (sign: -1 | 1) => {
     const sx = (sign * speakerSpacingFt) / 2,
       vx = listeningSeat.x - sx,
       vy = listeningSeat.y,
@@ -244,8 +286,10 @@ export function HifiPage({ hifi }) {
       (tweeter.price || 0) +
       (waveguideSpec && !tweeter.ownGuide ? selectedWaveguide.price || 0 : 0) +
       (boxType === "radiator" ? radiator.n * (radiatorDriver.price || 0) : 0));
-  const tile = (k, v, u) => <StatTile key={k} label={k} value={v} unit={u} />;
-  const renderLockButton = (key, what) =>
+  const tile = (k: string, v: string, u: string) => (
+    <StatTile key={k} label={k} value={v} unit={u} />
+  );
+  const renderLockButton = (key: HifiLockKey, what: string) =>
     isOptimizerOn ? (
       <LockButton
         on={!!optimizerLocks[key]}
@@ -253,7 +297,7 @@ export function HifiPage({ hifi }) {
         onClick={() => setOptimizerLocks((p) => ({ ...p, [key]: !p[key] }))}
       />
     ) : null;
-  const renderDimensionLock = (dm, what) =>
+  const renderDimensionLock = (dm: keyof Dims3, what: string) =>
     isOptimizerOn ? (
       <DimensionLock
         mode={optimizerLocks.dim[dm] || "free"}
@@ -261,7 +305,7 @@ export function HifiPage({ hifi }) {
         onChange={(m) => setOptimizerLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))}
       />
     ) : null;
-  const snapshot = () => ({
+  const snapshot = (): HifiCardConfig => ({
     woofer: woofer.id,
     tweeter: tweeter.id,
     box: boxType,
@@ -274,7 +318,7 @@ export function HifiPage({ hifi }) {
     tAmpW: tweeterAmpWatts,
   });
   // Everything on the page, for saving (undefined fields dropped: the stores reject them)
-  const savedConfigSnapshot = () =>
+  const savedConfigSnapshot = (): SavedHifiConfig =>
     JSON.parse(
       JSON.stringify({
         ...snapshot(),
@@ -292,41 +336,47 @@ export function HifiPage({ hifi }) {
         summary: `${woofer.name} + ${tweeter.name} · ${boxDims.w}×${boxDims.h}×${boxDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}`,
       }),
     );
-  const restoreSavedConfig = (c) => {
-    const pick = (list, id) => list.find((o) => o.id === id);
-    const ok = (f, v) => {
-      if (v !== undefined) f(v);
+  const restoreSavedConfig = (c: Partial<SavedHifiConfig>) => {
+    const pick = <T extends { id: string }>(list: readonly T[], id: string | undefined) =>
+      list.find((o) => o.id === id);
+    // boundary: the list below pairs each setter with a value of its own type, which a list of mixed pairs can't
+    // keep matched, so `ok` takes any setter and any value; each value is the saved field for that setter
+    const ok = (f: (v: never) => void, v: unknown) => {
+      if (v !== undefined) f(v as never);
     };
     ok(setWoofer, pick(HIFI_WOOFERS, c.woofer));
     ok(setTweeter, pick(HIFI_TWEETERS, c.tweeter));
     ok(setSelectedWaveguide, pick(waveguideChoices, c.guide));
-    [
-      [setBoxType, c.box],
-      [setBoxDims, c.dim],
-      [setPortSpec, c.port],
-      [setRadiatorSelection, c.pr],
-      [setWallThicknessIn, c.wall],
-      [setPanelMaterial, c.mat],
-      [setCrossoverHz, c.xo],
-      [setCrossoverOrder, c.order],
-      [setWooferAmpWatts, c.wAmpW],
-      [setTweeterAmpWatts, c.tAmpW],
-      [setBaffleStepCompensationDb, c.bsc],
-      [setPlacement, c.place],
-      [setDistanceToWallFt, c.wallFt],
-      [setSpeakerSpacingFt, c.spacing],
-      [setToeInDeg, c.toe],
-      [setListeningSeat, c.seat],
-      [setEarHeightIn, c.earIn],
-      [setStandHeightIn, c.standIn],
-    ].forEach(([f, v]) => ok(f, v));
+    (
+      [
+        [setBoxType, c.box],
+        [setBoxDims, c.dim],
+        [setPortSpec, c.port],
+        [setRadiatorSelection, c.pr],
+        [setWallThicknessIn, c.wall],
+        [setPanelMaterial, c.mat],
+        [setCrossoverHz, c.xo],
+        [setCrossoverOrder, c.order],
+        [setWooferAmpWatts, c.wAmpW],
+        [setTweeterAmpWatts, c.tAmpW],
+        [setBaffleStepCompensationDb, c.bsc],
+        [setPlacement, c.place],
+        [setDistanceToWallFt, c.wallFt],
+        [setSpeakerSpacingFt, c.spacing],
+        [setToeInDeg, c.toe],
+        [setListeningSeat, c.seat],
+        [setEarHeightIn, c.earIn],
+        [setStandHeightIn, c.standIn],
+      ] as const
+    ).forEach(([f, v]) => ok(f, v));
     setDesignPreview(null);
     setUndoSnapshot(null);
     setOptimizerResult(null);
   };
-  const applyDesign = (c) => {
-    setWoofer(HIFI_WOOFERS.find((o) => o.id === c.woofer));
-    setTweeter(HIFI_TWEETERS.find((o) => o.id === c.tweeter));
+  const applyDesign = (c: HifiCardConfig) => {
+    // `!` on both finds: a card's or snapshot's driver ids come from these lists
+    setWoofer(HIFI_WOOFERS.find((o) => o.id === c.woofer)!);
+    setTweeter(HIFI_TWEETERS.find((o) => o.id === c.tweeter)!);
     setBoxType(c.box);
     setBoxDims(c.dim);
     if (c.port) setPortSpec(c.port);
@@ -355,11 +405,12 @@ export function HifiPage({ hifi }) {
         }),
       );
     } catch (e) {
-      setOptimizerError("The search failed: " + ((e && e.message) || e));
+      // boundary cast: a catch variable is unknown; whatever was thrown is read for a message, as before
+      setOptimizerError("The search failed: " + ((e && (e as Error).message) || e));
     }
     setIsOptimizing(false);
   };
-  const previewOptimizerResult = (k) => {
+  const previewOptimizerResult = (k: HifiOptimizerCard) => {
     const before = designPreview ? designPreview.before : snapshot();
     applyDesign(k.config);
     setDesignPreview({ label: k.label, before, card: k });
@@ -368,20 +419,20 @@ export function HifiPage({ hifi }) {
     if (designPreview) applyDesign(designPreview.before);
     setDesignPreview(null);
   };
-  const loadOptimizerResult = (k) => {
+  const loadOptimizerResult = (k: HifiOptimizerCard) => {
     const before = designPreview ? designPreview.before : snapshot();
     applyDesign(k.config);
     setDesignPreview(null);
     setUndoSnapshot(before);
   };
-  const toggleGoal = (g) =>
+  const toggleGoal = (g: HifiGoal) =>
     setOptimizerGoals((p) => (p.includes(g) ? p.filter((x) => x !== g) : [...p, g]));
   const lockCount =
     HIFI_LOCK_KEYS.filter((k) => optimizerLocks[k]).length +
     Object.values(optimizerLocks.dim).filter((m) => m && m !== "free").length;
   const allLocksConfig = {
     ...Object.fromEntries(HIFI_LOCK_KEYS.map((k) => [k, true])),
-    dim: { w: "exact", h: "exact", d: "exact" },
+    dim: { w: "exact", h: "exact", d: "exact" } as const,
   };
   const optimizerBar = (
     <OptimizerBar
@@ -445,9 +496,10 @@ export function HifiPage({ hifi }) {
         )}
       </RunRow>
       {optimizerError && !isOptimizing && <Notice>{optimizerError}</Notice>}
-      {optimizerResult && !isOptimizing && optimizerResult.curProblems.length > 0 && (
+      {optimizerResult && !isOptimizing && optimizerResult.curProblems!.length > 0 && (
         <Notice>
-          Your design fails: {optimizerResult.curProblems.join("; ")}. Fixes may cost or weigh more.
+          Your design fails: {optimizerResult.curProblems!.join("; ")}. Fixes may cost or weigh
+          more.
         </Notice>
       )}
       {optimizerResult && !isOptimizing && (
@@ -531,7 +583,7 @@ export function HifiPage({ hifi }) {
             {tile("Net volume", speakerSystem.net.toFixed(1), "L")}
             {speakerSystem.Fb != null
               ? tile("Tuning Fb", speakerSystem.Fb.toFixed(0), "Hz")
-              : tile("Qtc", speakerSystem.Qtc.toFixed(2), "")}
+              : tile("Qtc", speakerSystem.Qtc!.toFixed(2), "")}
             {tile("F3 in room", speakerSystem.f3.toFixed(0), "Hz")}
             {tile("Max at the seat", maxLevelAtSeatDb.toFixed(0), "dB")}
             {tile("Weight", speakerSystem.lb.toFixed(0), "lb")}
@@ -624,10 +676,12 @@ export function HifiPage({ hifi }) {
         </div>
         <div>
           <div className="flex gap-1 mb-2">
-            {[
-              ["Horizontal", "h"],
-              ["Vertical", "v"],
-            ].map(([l, v]) => (
+            {(
+              [
+                ["Horizontal", "h"],
+                ["Vertical", "v"],
+              ] as const
+            ).map(([l, v]) => (
               <ToggleButton
                 key={v}
                 onClick={() => setDispersionPlane(v)}
@@ -712,10 +766,12 @@ export function HifiPage({ hifi }) {
         <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
           <span className="text-stone-500">Material</span>
           <div className="flex flex-wrap gap-1">
-            {[
-              ["Birch ply", "ply"],
-              ["MDF", "mdf"],
-            ].map(([l, v]) => (
+            {(
+              [
+                ["Birch ply", "ply"],
+                ["MDF", "mdf"],
+              ] as const
+            ).map(([l, v]) => (
               <ToggleButton key={v} onClick={() => setPanelMaterial(v)} on={panelMaterial === v}>
                 {l}
               </ToggleButton>
@@ -724,10 +780,12 @@ export function HifiPage({ hifi }) {
           <span />
           <span className="text-stone-500">Thickness</span>
           <div className="flex flex-wrap gap-1">
-            {[
-              [0.75, "3/4″"],
-              [0.5, "1/2″"],
-            ].map(([v, l]) => (
+            {(
+              [
+                [0.75, "3/4″"],
+                [0.5, "1/2″"],
+              ] as const
+            ).map(([v, l]) => (
               <ToggleButton
                 key={v}
                 onClick={() => setWallThicknessIn(v)}
@@ -775,14 +833,16 @@ export function HifiPage({ hifi }) {
             {renderLockButton("box", "sealed, ported or radiator")}
           </div>
           <div className="grid grid-cols-3 gap-1 mb-3">
-            {[
-              ["Sealed", "sealed", 0, "Sealed"],
-              ["1 port", "vented", 1, "One round port"],
-              ["2 ports", "vented", 2, "Two round ports"],
-              ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"],
-              ["1 PR", "radiator", 1, "One passive radiator"],
-              ["2 PR", "radiator", 2, "Two passive radiators"],
-            ].map(([l, v, n, tip]) => {
+            {(
+              [
+                ["Sealed", "sealed", 0, "Sealed"],
+                ["1 port", "vented", 1, "One round port"],
+                ["2 ports", "vented", 2, "Two round ports"],
+                ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"],
+                ["1 PR", "radiator", 1, "One passive radiator"],
+                ["2 PR", "radiator", 2, "Two passive radiators"],
+              ] as const
+            ).map(([l, v, n, tip]) => {
               const slotOn = portSpec.shape === "slot";
               const on =
                 boxType === v &&
@@ -803,10 +863,12 @@ export function HifiPage({ hifi }) {
                   onClick={() => {
                     setBoxType(v);
                     if (v === "vented")
-                      setPortSpec((p) =>
-                        n === "slot"
-                          ? { ...p, shape: "slot", h: p.h || 1, len: p.len }
-                          : { ...p, shape: "round", n },
+                      // boundary cast: the spread keeps the other shape's fields (`dia`, or `h`), which `HifiPort` types as undefined
+                      setPortSpec(
+                        (p) =>
+                          (n === "slot"
+                            ? { ...p, shape: "slot", h: p.h || 1, len: p.len }
+                            : { ...p, shape: "round", n }) as HifiPort,
                       );
                     if (v === "radiator") setRadiatorSelection((p) => ({ ...p, n }));
                   }}
@@ -820,7 +882,7 @@ export function HifiPage({ hifi }) {
             <>
               {portSpec.shape === "slot" ? (
                 <Slider
-                  label={`Slot height (${speakerSystem.slotW.toFixed(1)}″ wide)`}
+                  label={`Slot height (${speakerSystem.slotW!.toFixed(1)}″ wide)`}
                   value={portSpec.h || 1}
                   min={0.5}
                   max={3}
@@ -881,7 +943,7 @@ export function HifiPage({ hifi }) {
             {speakerSystem.vented
               ? `, ${speakerSystem.pArea.toFixed(1)} in² of ${speakerSystem.slot ? "slot" : "port"}`
               : speakerSystem.radiator
-                ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their own resonance)${radiatorDriver.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}`
+                ? `; radiators on the back tune it to ${speakerSystem.Fb!.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp!.toFixed(0)} Hz (their own resonance)${radiatorDriver.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}`
                 : ", lightly stuffed"}
             .
           </div>
@@ -898,10 +960,12 @@ export function HifiPage({ hifi }) {
             extra={renderLockButton("xo", "the crossover")}
           />
           <div className="flex gap-1 mb-3">
-            {[
-              [4, "LR24"],
-              [8, "LR48"],
-            ].map(([v, l]) => (
+            {(
+              [
+                [4, "LR24"],
+                [8, "LR48"],
+              ] as const
+            ).map(([v, l]) => (
               <ToggleButton
                 key={v}
                 size="xs"
@@ -945,7 +1009,7 @@ export function HifiPage({ hifi }) {
         <Card>
           <div className="text-sm text-stone-500 mb-1">Placement</div>
           <div className="flex flex-wrap gap-1 mb-3">
-            {Object.entries(HIFI_PLACES).map(([k, p]) => (
+            {entriesOf(HIFI_PLACES).map(([k, p]) => (
               <ToggleButton key={k} onClick={() => setPlacement(k)} on={placement === k}>
                 {p.name}
               </ToggleButton>

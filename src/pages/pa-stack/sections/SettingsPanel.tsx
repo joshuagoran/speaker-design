@@ -6,9 +6,80 @@ import { SelectField } from "../../../components/ui/SelectField";
 import { Slider } from "../../../components/ui/Slider";
 import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, CABINET_FINISHES } from "../../../lib/data";
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
+import type { PaPlanner } from "../hooks/usePaPlanner";
+import { keysOf } from "../../../lib/records";
+
+interface Props {
+  planner: Pick<
+    PaPlanner,
+    | "isSettingsSheetOpen"
+    | "setSettingsSheetOpen"
+    | "activeTab"
+    | "setActiveTab"
+    | "tabClass"
+    | "subDriver"
+    | "setSubDriver"
+    | "portStyle"
+    | "setPortStyle"
+    | "subBoxDims"
+    | "subVentSpec"
+    | "subHighpassHz"
+    | "setSubHighpassHz"
+    | "subHighpassType"
+    | "setSubHighpassType"
+    | "subAmpWatts"
+    | "setSubAmpWatts"
+    | "maxPortAirSpeedMs"
+    | "setMaxPortAirSpeedMs"
+    | "setSubBoxDim"
+    | "setSubVentField"
+    | "midDriver"
+    | "setMidDriver"
+    | "midBoxDims"
+    | "midAmpWatts"
+    | "setMidAmpWatts"
+    | "midBandTiltDb"
+    | "setMidBandTiltDb"
+    | "setMidBoxDim"
+    | "midSize"
+    | "setMidSize"
+    | "hornOption"
+    | "setHornOption"
+    | "compressionDriver"
+    | "setCompressionDriver"
+    | "hornAmpWatts"
+    | "setHornAmpWatts"
+    | "hornBandTiltDb"
+    | "setHornBandTiltDb"
+    | "subMidCrossoverHz"
+    | "setSubMidCrossoverHz"
+    | "midHornCrossoverHz"
+    | "setMidHornCrossoverHz"
+    | "cutaway"
+    | "setCutaway"
+    | "layout"
+    | "setLayout"
+    | "wallThicknessIn"
+    | "setWallThicknessIn"
+    | "baffleInsetIn"
+    | "setBaffleInsetIn"
+    | "baffleColor"
+    | "setBaffleColor"
+    | "cabinetFinish"
+    | "setCabinetFinish"
+    | "spacerHeightIn"
+    | "setSpacerHeightIn"
+    | "subDriverChoices"
+    | "midDriverChoices"
+    | "hornExitMismatch"
+    | "port"
+    | "renderLockButton"
+    | "renderDimensionLock"
+  >;
+}
 
 /** Settings: sliders and pickers for the sub, mid-bass, horn and the look. A bottom sheet with tabs on phones. */
-export function SettingsPanel({ planner }) {
+export function SettingsPanel({ planner }: Props) {
   const {
     isSettingsSheetOpen,
     setSettingsSheetOpen,
@@ -82,12 +153,14 @@ export function SettingsPanel({ planner }) {
         aria-label="Settings"
       >
         <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
-          {[
-            ["sub", "Sub"],
-            ["mid", "Mid"],
-            ["horn", "Horn"],
-            ["look", "Look"],
-          ].map(([t, label]) => (
+          {(
+            [
+              ["sub", "Sub"],
+              ["mid", "Mid"],
+              ["horn", "Horn"],
+              ["look", "Look"],
+            ] as const
+          ).map(([t, label]) => (
             <button
               key={t}
               role="tab"
@@ -124,10 +197,12 @@ export function SettingsPanel({ planner }) {
                 {renderLockButton("wall", "the plywood")}
               </div>
               <div className="flex gap-1">
-                {[
-                  [0.75, "3/4″ birch"],
-                  [0.5, "1/2″ birch, braced"],
-                ].map(([t, label]) => (
+                {(
+                  [
+                    [0.75, "3/4″ birch"],
+                    [0.5, "1/2″ birch, braced"],
+                  ] as const
+                ).map(([t, label]) => (
                   <ToggleButton
                     key={t}
                     onClick={() => setWallThicknessIn(t)}
@@ -163,7 +238,8 @@ export function SettingsPanel({ planner }) {
             <SwatchPicker
               label="Cabinet finish"
               value={cabinetFinish}
-              onChange={setCabinetFinish}
+              // boundary cast: the custom colour picker also stores a hex string here, which `FinishId` doesn't allow
+              onChange={setCabinetFinish as (value: string) => void}
               swatches={PAINT_SWATCHES}
               presets={CABINET_FINISHES}
               titlePrefix="Painted: "
@@ -187,10 +263,12 @@ export function SettingsPanel({ planner }) {
             <div className="mb-5">
               <div className="text-sm text-stone-500 mb-1">View</div>
               <div className="flex gap-1">
-                {[
-                  ["Finished", false],
-                  ["Cutaway", true],
-                ].map(([label, v]) => (
+                {(
+                  [
+                    ["Finished", false],
+                    ["Cutaway", true],
+                  ] as const
+                ).map(([label, v]) => (
                   <ToggleButton key={label} onClick={() => setCutaway(v)} on={cutaway === v}>
                     {label}
                   </ToggleButton>
@@ -202,12 +280,14 @@ export function SettingsPanel({ planner }) {
             <div className="mb-5">
               <div className="text-sm text-stone-500 mb-1">Layout</div>
               <div className="flex gap-1">
-                {[
-                  ["Two stacks", "stack"],
-                  ["Tops on spacers", "pole"],
-                  ["Tower", "tower"],
-                  ["One sub + satellites", "satellite"],
-                ].map(([label, v]) => (
+                {(
+                  [
+                    ["Two stacks", "stack"],
+                    ["Tops on spacers", "pole"],
+                    ["Tower", "tower"],
+                    ["One sub + satellites", "satellite"],
+                  ] as const
+                ).map(([label, v]) => (
                   <ToggleButton key={v} onClick={() => setLayout(v)} on={layout === v}>
                     {label}
                   </ToggleButton>
@@ -272,10 +352,12 @@ export function SettingsPanel({ planner }) {
                 {renderLockButton("vent", "the vent style")}
               </div>
               <div className="flex flex-wrap gap-1">
-                {[
-                  ["Rectangular", !portStyle.startsWith("round"), "slots"],
-                  ["Round tubes", portStyle.startsWith("round"), "round2"],
-                ].map(([label, on, v]) => (
+                {(
+                  [
+                    ["Rectangular", !portStyle.startsWith("round"), "slots"],
+                    ["Round tubes", portStyle.startsWith("round"), "round2"],
+                  ] as const
+                ).map(([label, on, v]) => (
                   <ToggleButton
                     key={label}
                     onClick={() => {
@@ -289,12 +371,14 @@ export function SettingsPanel({ planner }) {
               </div>
               {!portStyle.startsWith("round") && (
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {[
-                    ["slots", "Bottom"],
-                    ["folded", "Bottom, folded"],
-                    ["vslots", "Both sides"],
-                    ["vslot1", "One side"],
-                  ].map(([v, label]) => {
+                  {(
+                    [
+                      ["slots", "Bottom"],
+                      ["folded", "Bottom, folded"],
+                      ["vslots", "Both sides"],
+                      ["vslot1", "One side"],
+                    ] as const
+                  ).map(([v, label]) => {
                     const on = portStyle === v;
                     return (
                       <ToggleButton key={v} onClick={() => setPortStyle(v)} on={on} size="xs">
@@ -386,7 +470,7 @@ export function SettingsPanel({ planner }) {
                   extra={renderLockButton("hpf", "the highpass")}
                 />
                 <div className="flex flex-wrap gap-1 -mt-1 mb-3">
-                  {Object.keys(HIGHPASS_ALIGNMENTS).map((t) => (
+                  {keysOf(HIGHPASS_ALIGNMENTS).map((t) => (
                     <ToggleButton
                       key={t}
                       onClick={() => setSubHighpassType(t)}
@@ -414,7 +498,7 @@ export function SettingsPanel({ planner }) {
             <div className="mb-2">
               <div className="text-sm text-stone-500 mb-1">Mid-bass size</div>
               <div className="flex gap-1">
-                {[12, 15].map((n) => (
+                {([12, 15] as const).map((n) => (
                   <ToggleButton key={n} onClick={() => setMidSize(n)} on={midSize === n}>
                     {n}″
                   </ToggleButton>

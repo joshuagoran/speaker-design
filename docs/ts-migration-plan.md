@@ -40,6 +40,16 @@ is clean (0 errors, 74 warnings).
 - **Type-only fixes.** Because of the gate, a type error is fixed with annotations, type narrowing that already exists
   in the code, or a non-null assertion; never with a new guard, a default (`?? 0`) or a restructured loop. If a type
   error reveals a real bug, note it and fix it in a separate PR after the migration.
+- **Narrowest type, shared definition.** A parameter or prop is typed to exactly the fields the code reads, and that
+  shape is derived from an existing type with `Pick`, `Omit`, `Partial` or an indexed access (`PaOptimizerResult["stats"]`),
+  never written out again. A type used by more than one module lives in `src/types.ts`; React helper types that several
+  hooks need (`Setter<T>`) live there too. Before declaring any interface, grep `src/types.ts` and the neighbouring
+  modules for the same fields under another name; if it exists, import it. A full domain object (`SubDriver`,
+  `HifiConfig`) is only the right type where the code passes the object on whole.
+- **Avoid `!`.** When the checker says a value may be null, in this order: fix the type at its source (a producer that
+  never returns null is typed so; a field every caller supplies is required); use the narrowing the code already does;
+  derive a narrower slice with `NonNullable` or `Pick`. A `!` is the last resort, carries a one-line reason, and is
+  listed in the PR for a real guard after the migration (issue #21). No runtime guards during the migration.
 - **No `any`, no `@ts-ignore`.** `as` only as `as const`, or as a commented cast at a boundary: the driver tables,
   `JSON.parse` in `lib/storage`, the `window.claude` call in `useConfigStore`, three.js in `StackView3D`, and the
   worker's `self`.
@@ -113,3 +123,13 @@ e.g. `useRef<HTMLDivElement>(null)` (4 sites).
 - `vp check` runs tsgolint (TypeScript 7); the pinned `typescript` dev dependency keeps the editor on the same
   version, but the two can still differ on edge cases. `vp check` is the one that counts.
 - Bundle size: types are stripped, so it shouldn't change. The byte-identical build gate checks this.
+
+## Done
+
+Landed as three PRs, bottom-up as planned: data and calculations (PR 1), hooks and components (PR 2), pages and cleanup
+(PR 3). Every file in `src/` and `tests/` is TypeScript under `strict`, `allowJs` is gone, `any` and `@ts-ignore` are
+lint errors, and `@ts-expect-error` needs a reason. The pages stayed byte-identical to `main` (checked with
+`build/compare-main.sh`) except in the commits that were labelled as runtime or data changes: the two Hi-fi woofer values written into the
+table (`926324a`), the fill-driver `Qts` and T/S corrections (`ee81e1b`, `1594bf8`) and the Cutlist mid-tint fix
+(`e407d8d`). The runtime bugs and the remaining `!`
+assertions found along the way are in issue #21, for a real guard after the migration.

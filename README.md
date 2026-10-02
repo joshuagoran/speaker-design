@@ -12,8 +12,8 @@ substitute for an impedance sweep on the prototype.
 ## Layout
 
 ```
-src/main.jsx                    entry: mounts <App/>; imports the stylesheet
-src/App.jsx                     hash routing, header, and the planner state shared by the PA pages
+src/main.tsx                    entry: mounts <App/>; imports the stylesheet
+src/App.tsx                     hash routing, header, and the planner state shared by the PA pages
 src/pages/pa-stack/             PA stack page: PaStackPage, sections/, hooks/ (state: sub, mid, horn, crossovers, ...)
 src/pages/{hifi,fills,cutlist,notes}/   the other pages
 src/components/                 ui/ charts/ drawings/ lock/ optimizer/ stats/ chips/ saved-configs/ stack-view/
@@ -22,13 +22,16 @@ src/hooks/  src/constants/      shared hooks, chart scales, lock keys, units
 src/styles/palette.ts           the colours (CSS variables and Tailwind names come from here)
 src/styles/app.css              page styles + Tailwind layers; font
 src/lib/data.ts                 drivers, horns, cabinets
-src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion (pure JS, tested)
+src/types.ts                    types shared across modules (drivers, horns, cabinets, design config, Setter)
+src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion (pure TypeScript, tested)
 src/lib/hifi/                   hifi model and its optimizer
 index.html                      Vite entry
 tailwind.config.js              Tailwind, compiled at build time
+tsconfig.json                   strict TypeScript (type-checked by `vp check`; Vite does the emit)
 tests/                          Vitest suites, golden snapshot, mobile layout check
 build/build.sh                  vp build + build/inline.mjs -> one self-contained page
 build/serve.sh                  build + serve on :8901
+build/compare-main.sh           build this tree and a ref (default origin/main), cmp both pages
 docs/design-notes.md            findings behind the current configuration
 docs/*.svg                      crossover null cone, horn coverage
 ```
@@ -143,7 +146,7 @@ configurations and can be edited or deleted like any other.
 - `src/lib/data.ts` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
 - `src/lib/pa/optimize.ts` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`src/lib/pa/optimize.worker.ts`, inlined by the build), with a main-thread fallback. See `docs/optimizer-plan.md`.
 - `src/lib/pa/chips.ts` — the warning chips for each section (sub, mid, horn, fills), pure functions tested at each threshold.
-- `src/lib/pa/calc.ts` — every calculation, pure JS, imported by the page and the tests (`npm test`):
+- `src/lib/pa/calc.ts` — every calculation, pure TypeScript, imported by the page and the tests (`vp test`):
   - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r); letterbox and side ducts pass `ecIn` from `slotEndCorr` / `sideDuctEndCorr` (rectangular mouth; floor mirrored at both ends of a letterbox, the side wall at the inner end of a side duct). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.
   - `closedBox(ts, VbL, hp, lp, volts)` — sealed mid-bass, LR24 crossovers. `ref` is the mass-controlled asymptote, so `f3` is right for low-Qtc boxes. Coil inductance is not modelled.
   - `midSystem` (sealed mid volume, model, per-frequency max), `subThroughLp` (sub through the crossover), `fillSystem` (the Fills page).

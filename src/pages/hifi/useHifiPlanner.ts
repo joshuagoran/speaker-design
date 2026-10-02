@@ -15,6 +15,7 @@ import type {
   HifiWoofer,
   CrossoverOrder,
   Horn,
+  HornHf,
   ListeningSeat,
   PanelMaterial,
   RadiatorSelection,
@@ -26,6 +27,9 @@ import { useState } from "react";
 export interface HifiPlannerLocks extends HifiOptimizerLocks {
   dim: NonNullable<HifiOptimizerLocks["dim"]>;
 }
+
+/** A horn the page can use as a waveguide: one with its coverage specs, which `waveguideChoices` keeps. */
+export type HifiWaveguide = Horn & { hf: HornHf };
 
 /** The card being previewed, and the design to go back to when the preview ends. */
 export interface HifiDesignPreview {
@@ -45,8 +49,8 @@ export interface HifiPlanner {
   setWoofer: Setter<HifiWoofer>;
   tweeter: HifiTweeter;
   setTweeter: Setter<HifiTweeter>;
-  selectedWaveguide: Horn;
-  setSelectedWaveguide: Setter<Horn>;
+  selectedWaveguide: HifiWaveguide;
+  setSelectedWaveguide: Setter<HifiWaveguide>;
   boxType: HifiBoxKind;
   setBoxType: Setter<HifiBoxKind>;
   boxDims: Dims3;
@@ -104,13 +108,16 @@ export interface HifiPlanner {
   setIsOptimizerOn: (v: boolean) => void;
   setOptimizerLocks: (f: (p: HifiPlannerLocks) => HifiPlannerLocks) => void;
   storage: HifiStorage;
-  waveguideChoices: Horn[];
+  waveguideChoices: HifiWaveguide[];
   store: ConfigStore;
 }
 
 /** The Hi-fi page's design, room and optimizer state. Held by App so it survives switching tabs. */
 export function useHifiPlanner(): HifiPlanner {
-  const waveguideChoices = HORN_OPTIONS.filter((h) => h.exit === 1 && h.hf && h.hf.covH && h.size);
+  // boundary cast: the filter keeps only horns that have `hf`
+  const waveguideChoices = HORN_OPTIONS.filter(
+    (h) => h.exit === 1 && h.hf && h.hf.covH && h.size,
+  ) as HifiWaveguide[];
   const [woofer, setWoofer] = useState(HIFI_WOOFERS.find((o) => o.pick) || HIFI_WOOFERS[0]);
   const [tweeter, setTweeter] = useState(HIFI_TWEETERS.find((o) => o.pick) || HIFI_TWEETERS[0]);
   const [selectedWaveguide, setSelectedWaveguide] = useState(

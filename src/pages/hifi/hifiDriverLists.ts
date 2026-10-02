@@ -11,12 +11,15 @@ export const HIFI_PASSIVES_BY_SIZE = HIFI_PASSIVES.slice().sort(
   (a, b) => a.size - b.size || a.name.localeCompare(b.name),
 );
 
-/** The passive radiator driver and count of a saved Hi-fi config, or null for a config without one. */
+/**
+ * The passive radiator driver and count of a saved Hi-fi config, or null for a config without one.
+ * The `!` on `find`: the id comes from `HIFI_PASSIVES` (the page's picker, or the optimizer's search of it).
+ */
 export const passiveRadiatorOf = (
   c: { box?: HifiBoxKind; pr?: RadiatorSelection } | null | undefined,
 ) =>
   c && c.box === "radiator" && c.pr
-    ? { drv: HIFI_PASSIVES.find((o) => o.id === c.pr!.id), n: c.pr.n, addG: c.pr.addG }
+    ? { drv: HIFI_PASSIVES.find((o) => o.id === c.pr!.id)!, n: c.pr.n, addG: c.pr.addG }
     : null;
 
 /** Whether a tweeter is a compression driver (or needs a waveguide) rather than a dome. */

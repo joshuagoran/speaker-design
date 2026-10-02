@@ -1281,8 +1281,10 @@ export type OptimizerResponse<R = PaOptimizerResult> =
 
 // ---- Saved configurations ----
 
-/** What a page hands to `save`: its snapshot of the design (and a `summary` line); the store adds `name` and `savedAt`. */
-export type SavedConfigData = Record<string, unknown>;
+/** What a page hands to `save`: its snapshot of the design, with a one-line `summary` of it; the store adds `name` and `savedAt`. */
+export interface SavedConfigData {
+  summary?: string;
+}
 
 /** A saved configuration as read back: the stored fields plus the document's id. */
 export interface SavedConfig {

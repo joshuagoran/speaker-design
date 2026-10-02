@@ -3,9 +3,35 @@ import { StatTileGrid } from "../../../components/stats/StatTileGrid";
 import { FoldHeading } from "../../../components/ui/FoldHeading";
 import { StatRow } from "../../../components/optimizer/StatRow";
 import { midChips } from "../../../lib/pa/chips";
+import type { PaPlanner } from "../hooks/usePaPlanner";
+
+interface Props {
+  planner: Pick<
+    PaPlanner,
+    | "expandedSections"
+    | "toggleSection"
+    | "sectionClass"
+    | "midDriver"
+    | "midAmpWatts"
+    | "midBandTiltDb"
+    | "midSize"
+    | "subMidCrossoverHz"
+    | "effectiveMidBoxDims"
+    | "midVoltage"
+    | "midGrossL"
+    | "midNetL"
+    | "midEffL"
+    | "midModel"
+    | "midThermalVoltage"
+    | "midUsedVoltage"
+    | "midWeightLoadedLb"
+    | "midMaxCurveNearest"
+    | "subMusicAtCrossover"
+  >;
+}
 
 /** Mid-bass results: headline stats, details table and warning chips. */
-export function MidSection({ planner }) {
+export function MidSection({ planner }: Props) {
   const {
     expandedSections,
     toggleSection,

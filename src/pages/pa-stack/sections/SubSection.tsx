@@ -5,9 +5,39 @@ import { FoldHeading } from "../../../components/ui/FoldHeading";
 import { ResponseChart } from "../../../components/charts/ResponseChart";
 import { StatRow } from "../../../components/optimizer/StatRow";
 import { subChips } from "../../../lib/pa/chips";
+import type { PaPlanner } from "../hooks/usePaPlanner";
+
+interface Props {
+  planner: Pick<
+    PaPlanner,
+    | "expandedSections"
+    | "toggleSection"
+    | "sectionClass"
+    | "subDriver"
+    | "portStyle"
+    | "subVentSpec"
+    | "subAmpWatts"
+    | "subMidCrossoverHz"
+    | "midHornCrossoverHz"
+    | "format"
+    | "subBox"
+    | "PT"
+    | "port"
+    | "subGrossLiters"
+    | "subNetLiters"
+    | "subAmpVoltage"
+    | "subModel"
+    | "subLimits"
+    | "subMaxCurveNearest"
+    | "midMaxCurve"
+    | "subThroughLowpassCurve"
+    | "hornModel"
+    | "subWeightLoadedLb"
+  >;
+}
 
 /** Sub results: headline stats, system response chart, details table and warning chips. */
-export function SubSection({ planner }) {
+export function SubSection({ planner }: Props) {
   const {
     expandedSections,
     toggleSection,
@@ -61,7 +91,7 @@ export function SubSection({ planner }) {
                 fmax={20000}
                 series={[
                   {
-                    curve: subThroughLowpassCurve,
+                    curve: subThroughLowpassCurve!, // `!`: set whenever subModel is
                     label: "Sub",
                     stroke: PAL.ink,
                     tint: PAL.alpha(PAL.ink, 0.07),
@@ -118,21 +148,22 @@ export function SubSection({ planner }) {
                   const m = subMaxCurveNearest(f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`];
                 }),
+                // `subLimits!` below: set whenever subModel is
                 [
                   "First limit, music",
-                  subLimits.who,
-                  `at ${Math.round(subLimits.W / 10) * 10} W`,
-                  `at ${Math.round(subLimits.W / 10) * 10} W${subLimits.who === "cone travel (Xmax)" ? `, reached first at ${subModel.peakXF.toFixed(0)} Hz` : subLimits.who === "port air speed" ? `, reached first at ${subModel.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`,
+                  subLimits!.who,
+                  `at ${Math.round(subLimits!.W / 10) * 10} W`,
+                  `at ${Math.round(subLimits!.W / 10) * 10} W${subLimits!.who === "cone travel (Xmax)" ? `, reached first at ${subModel.peakXF.toFixed(0)} Hz` : subLimits!.who === "port air speed" ? `, reached first at ${subModel.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`,
                 ],
                 [
                   "Peak port velocity",
-                  `${subLimits.vel.toFixed(1)} m/s`,
+                  `${subLimits!.vel.toFixed(1)} m/s`,
                   `at ${subModel.peakVelF.toFixed(0)} Hz`,
                 ],
                 [
                   "Peak excursion",
-                  `${((subModel.peakX * subLimits.V) / subAmpVoltage).toFixed(1)} mm`,
-                  `${subLimits.xPct.toFixed(0)}% of Xmax, at ${subModel.peakXF.toFixed(0)} Hz`,
+                  `${((subModel.peakX * subLimits!.V) / subAmpVoltage).toFixed(1)} mm`,
+                  `${subLimits!.xPct.toFixed(0)}% of Xmax, at ${subModel.peakXF.toFixed(0)} Hz`,
                 ],
               ].map(([k, v, note, tip]) => (
                 <StatRow key={k} k={k} v={v} note={note} tip={tip} />

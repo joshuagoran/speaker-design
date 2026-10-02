@@ -12,18 +12,20 @@ import { fillChips } from "../../lib/pa/chips";
 import { FILL_OPTIONS } from "../../lib/data";
 import { fillSystem, nearestPoint } from "../../lib/pa/calc";
 import { useState } from "react";
+import type { Dims3, FillBoxType, FillDriver, FillPort } from "../../types";
 
 /** Fills page: choose and size the fill speakers. */
 export function FillsPage() {
-  const [driver, setDriver] = useState(FILL_OPTIONS.find((o) => o.id === "bc10cxn64"));
-  const [boxType, setBoxType] = useState("vented");
-  const [boxDims, setBoxDims] = useState({ w: 11.5, h: 16, d: 11 });
-  const [portSpec, setPortSpec] = useState({ n: 1, dia: 3, len: 4 });
+  // `!`: "bc10cxn64" is one of the FILL_OPTIONS ids
+  const [driver, setDriver] = useState<FillDriver>(FILL_OPTIONS.find((o) => o.id === "bc10cxn64")!);
+  const [boxType, setBoxType] = useState<FillBoxType>("vented");
+  const [boxDims, setBoxDims] = useState<Dims3>({ w: 11.5, h: 16, d: 11 });
+  const [portSpec, setPortSpec] = useState<FillPort>({ n: 1, dia: 3, len: 4 });
   const [highpassHz, setHighpassHz] = useState(70); // highpass to the subs, LR24
   const [ampWatts, setAmpWatts] = useState(300); // per box, rated into 8 Ω
   const [maxPortAirSpeedMs, setMaxPortAirSpeedMs] = useState(20);
-  const setBoxDim = (k, v) => setBoxDims((p) => ({ ...p, [k]: v }));
-  const setPortField = (k, v) => setPortSpec((p) => ({ ...p, [k]: v }));
+  const setBoxDim = (k: keyof Dims3, v: number) => setBoxDims((p) => ({ ...p, [k]: v }));
+  const setPortField = (k: keyof FillPort, v: number) => setPortSpec((p) => ({ ...p, [k]: v }));
   const thieleSmall = driver.ts;
   const {
     gross: grossLiters,
@@ -46,13 +48,15 @@ export function FillsPage() {
     ampW: ampWatts,
     portMax: maxPortAirSpeedMs,
   });
-  const maxCurveNearest = (f) => nearestPoint(maxCurve, f);
+  const maxCurveNearest = (f: number) => nearestPoint(maxCurve, f);
   const driverDisplacement =
     thieleSmall.disp != null ? thieleSmall.disp : driver.size >= 10 ? 1.5 : 1;
   const hfSpec = driver.hf;
   const maxAt60HzDb = maxCurveNearest(60).spl,
     maxAt150HzDb = maxCurveNearest(150).spl;
-  const tile = (k, v, u) => <StatTile key={k} label={k} value={v} unit={u} />;
+  const tile = (k: string, v: string, u: string) => (
+    <StatTile key={k} label={k} value={v} unit={u} />
+  );
   const warningChips = fillChips({
     drv: driver,
     dim: boxDims,
@@ -80,9 +84,10 @@ export function FillsPage() {
         </p>
         <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
           {tile("Net volume", netLiters.toFixed(0), "L")}
+          {/* `!`: fillSystem returns a sealed model exactly when it returns no vented one */}
           {ventedModel
             ? tile("Tuning Fb", ventedModel.Fb.toFixed(0), "Hz")
-            : tile("Qtc", sealedModel.Qtc.toFixed(2), "")}
+            : tile("Qtc", sealedModel!.Qtc.toFixed(2), "")}
           {tile("F3", f3Hz.toFixed(0), "Hz")}
           {tile("Max @ 60 Hz", maxAt60HzDb.toFixed(1), "dB")}
           {tile("Max @ 150 Hz", maxAt150HzDb.toFixed(1), "dB")}
@@ -148,10 +153,12 @@ export function FillsPage() {
         />
         <div className="text-sm text-stone-500 mb-1">Box</div>
         <div className="flex gap-1 mb-2">
-          {[
-            ["Vented", "vented"],
-            ["Sealed", "sealed"],
-          ].map(([l, v]) => (
+          {(
+            [
+              ["Vented", "vented"],
+              ["Sealed", "sealed"],
+            ] as const
+          ).map(([l, v]) => (
             <ToggleButton key={v} onClick={() => setBoxType(v)} on={boxType === v}>
               {l}
             </ToggleButton>

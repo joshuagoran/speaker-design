@@ -2,9 +2,38 @@ import { Button } from "../../../components/ui/Button";
 import { LOCK_KEYS } from "../../../constants/lockKeys";
 import { OptimizerPanel } from "../../../components/optimizer/OptimizerPanel";
 import { OptimizerBar } from "../../../components/optimizer/OptimizerBar";
+import type { PaPlannerLocks } from "../hooks/usePaOptimizer";
+import type { PaPlanner } from "../hooks/usePaPlanner";
+
+interface Props {
+  planner: Pick<
+    PaPlanner,
+    | "db"
+    | "isOptimizerOn"
+    | "setIsOptimizerOn"
+    | "optimizerInput"
+    | "updateOptimizerInput"
+    | "optimizerLocks"
+    | "setOptimizerLocks"
+    | "optimizerResult"
+    | "isOptimizing"
+    | "optimizerError"
+    | "designPreview"
+    | "undoSnapshot"
+    | "toastMessage"
+    | "setToastMessage"
+    | "startOptimizerSearch"
+    | "previewOptimizerResult"
+    | "exitPreview"
+    | "loadOptimizerResult"
+    | "undoOptimizerLoad"
+    | "saveOptimizerResult"
+    | "currentDesignOutput"
+  >;
+}
 
 /** Optimizer switch and lock-all buttons, the optimizer panel, the preview banner and the result toast. */
-export function OptimizerControls({ planner }) {
+export function OptimizerControls({ planner }: Props) {
   const {
     db,
     isOptimizerOn,
@@ -46,7 +75,7 @@ export function OptimizerControls({ planner }) {
             0,
           );
           /** lock everything (box sizes exact), then unlock the one or two things you want the optimizer to change */
-          const all = {
+          const all: PaPlannerLocks = {
             ...Object.fromEntries(LOCK_KEYS.map((k) => [k, true])),
             subDim: { w: "exact", h: "exact", d: "exact" },
             midDim: { w: "exact", h: "exact", d: "exact" },
