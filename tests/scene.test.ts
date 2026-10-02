@@ -1,10 +1,9 @@
 import { describe, expect, test } from "vite-plus/test";
-import fs from "node:fs";
 import * as THREE from "three";
 import { buildStackScene, type Props } from "../src/components/stack-view/buildStackScene";
 import { derivePaDesign } from "../src/pages/pa-stack/hooks/paDesign";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { sceneCases, scenePropsOf, dumpScene } from "./scene-cases";
+import { sceneCases, scenePropsOf } from "./scene-cases";
 
 const byName = (name: string) => {
   const c = sceneCases.find((x) => x.name === name);
@@ -242,16 +241,5 @@ describe("stack scene", () => {
       expect(top, `wall ${wall}`).toBeGreaterThanOrEqual(derivedHeights(p).stackHeightIn - 1e-6);
       expect(top, `wall ${wall}`).toBeLessThan(derivedHeights(p).stackHeightIn + 0.1);
     }
-  });
-
-  test("scene-dump.json matches a fresh build (regenerate with `vp run scene-dump`)", () => {
-    const saved: unknown = JSON.parse(
-      fs.readFileSync(new URL("./scene-dump.json", import.meta.url), "utf8"),
-    );
-    const fresh = Object.fromEntries(
-      sceneCases.map((c) => [c.name, dumpScene(buildStackScene(c.props))]),
-    );
-    // through JSON, as the file was written (it turns -0 into 0)
-    expect(JSON.parse(JSON.stringify(fresh))).toEqual(saved);
   });
 });

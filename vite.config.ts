@@ -20,8 +20,8 @@ export default defineConfig({
     testTimeout: 30_000,
   },
   fmt: {
-    // golden.json and scene-dump.json are generated
-    ignorePatterns: ["dist/**", "tests/golden.json", "tests/scene-dump.json"],
+    // golden.json is generated
+    ignorePatterns: ["dist/**", "tests/golden.json"],
   },
   lint: {
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],

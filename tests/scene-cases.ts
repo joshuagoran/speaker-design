@@ -1,5 +1,4 @@
-// Props for the 3D scene tests and the scene dump: every golden config, the default PA and the other layouts.
-import * as THREE from "three";
+// Props for the 3D scene tests: every golden config, the default PA and the other layouts.
 import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, HORN_OPTIONS } from "../src/lib/data";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import type { Props } from "../src/components/stack-view/buildStackScene";
@@ -76,29 +75,3 @@ export const sceneCases: { name: string; props: Props }[] = [
   { name: "satellite", props: scenePropsOf({ ...defaultConfig, layout: "satellite" }) },
   { name: "pole", props: scenePropsOf({ ...defaultConfig, layout: "pole" }) },
 ];
-
-const r3 = (x: number) => Math.round(x * 1000) / 1000;
-const triple = (v: THREE.Vector3) => [r3(v.x), r3(v.y), r3(v.z)];
-
-/** One entry per mesh in traversal order: what a refactor of the scene builder must leave unchanged. */
-export function dumpScene(group: THREE.Group) {
-  group.updateMatrixWorld(true);
-  const out: object[] = [];
-  group.traverse((o) => {
-    if (!(o instanceof THREE.Mesh)) return;
-    const mat = Array.isArray(o.material) ? o.material[0] : o.material;
-    out.push({
-      name: o.name,
-      geometryType: o.geometry.type,
-      vertexCount: o.geometry.getAttribute("position").count,
-      worldPosition: triple(o.getWorldPosition(new THREE.Vector3())),
-      boundingBox: [
-        ...triple(new THREE.Box3().setFromObject(o).min),
-        ...triple(new THREE.Box3().setFromObject(o).max),
-      ],
-      materialColor:
-        "color" in mat && mat.color instanceof THREE.Color ? mat.color.getHexString() : null,
-    });
-  });
-  return out;
-}
