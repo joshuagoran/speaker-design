@@ -430,6 +430,7 @@ test("vent locked on a round1 or round4 style searches that style's tubes instea
 });
 
 test("evaluate() rejects a config missing a number it needs, and every seed completes to finite metrics", () => {
+  // boundary: `Picked` types the defaulted fields as optional; a seed carries them all
   const full = { ...pick("blocky") } as PaDesignConfig;
   const m = evaluateDesign(full);
   assert.ok(m, "a complete design evaluates");
