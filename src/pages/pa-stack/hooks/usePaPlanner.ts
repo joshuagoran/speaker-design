@@ -1,8 +1,8 @@
-import { useStackViewOptions } from "./useStackViewOptions.js";
-import { usePhoneLayout } from "./usePhoneLayout.js";
-import { useSavedConfigs } from "./useSavedConfigs.js";
-import { usePaOptimizer } from "./usePaOptimizer.jsx";
-import { usePaDesign } from "./usePaDesign.js";
+import { useStackViewOptions } from "./useStackViewOptions.ts";
+import { usePhoneLayout } from "./usePhoneLayout.ts";
+import { useSavedConfigs } from "./useSavedConfigs.ts";
+import { usePaOptimizer } from "./usePaOptimizer.tsx";
+import { usePaDesign } from "./usePaDesign.ts";
 
 /**
  * Everything the PA stack and cutlist pages need, in one flat object. It is created once in App, so the

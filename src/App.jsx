@@ -1,10 +1,10 @@
-import { usePaPlanner } from "./pages/pa-stack/hooks/usePaPlanner.js";
+import { usePaPlanner } from "./pages/pa-stack/hooks/usePaPlanner.ts";
 import { PaStackPage } from "./pages/pa-stack/PaStackPage.jsx";
 import { NotesPage } from "./pages/notes/NotesPage.jsx";
 import { FillsPage } from "./pages/fills/FillsPage.jsx";
 import { CutlistPage } from "./pages/cutlist/CutlistPage.jsx";
 import { HifiPage } from "./pages/hifi/HifiPage.jsx";
-import { useHifiPlanner } from "./pages/hifi/useHifiPlanner.js";
+import { useHifiPlanner } from "./pages/hifi/useHifiPlanner.ts";
 import { useEffect, useState } from "react";
 
 /** Hash of each page, and the page shown for an unknown or empty hash. */

@@ -1,9 +1,9 @@
-import { useSubwooferDesign } from "./useSubwooferDesign.js";
-import { useMidDesign } from "./useMidDesign.js";
-import { useHornDesign } from "./useHornDesign.js";
-import { useCrossovers } from "./useCrossovers.js";
-import { useCabinetStyle } from "./useCabinetStyle.js";
-import { useCutlistOptions } from "./useCutlistOptions.js";
+import { useSubwooferDesign } from "./useSubwooferDesign.ts";
+import { useMidDesign } from "./useMidDesign.ts";
+import { useHornDesign } from "./useHornDesign.ts";
+import { useCrossovers } from "./useCrossovers.ts";
+import { useCabinetStyle } from "./useCabinetStyle.ts";
+import { useCutlistOptions } from "./useCutlistOptions.ts";
 import {
   SUB_OPTIONS,
   MID_OPTIONS,
