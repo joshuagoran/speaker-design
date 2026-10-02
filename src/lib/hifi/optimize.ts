@@ -16,7 +16,13 @@ import {
   slotMaxLength,
 } from "./hifi";
 import { ventTuning } from "../pa/calc";
-import { passiveRadiatorMassMax, ownGuideCfg } from "../data";
+import {
+  passiveRadiatorMassMax,
+  ownGuideCfg,
+  HIFI_WOOFERS,
+  HIFI_TWEETERS,
+  HIFI_PASSIVES,
+} from "../data";
 import type {
   Dims3,
   DimensionLockMode,
@@ -243,13 +249,16 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
   const { woofers, tweeters, locks = {} } = input;
   // boundary cast: `pr` may still lack its driver here; the block below looks it up
   const cur = { wall: 0.75, ...(input.cur as HifiOptimizerCurrent) };
-  // the page hands over its radiator as { id, n, addG }; the model wants the driver itself
+  // the page hands over its radiator as { id, n, addG }; the model wants the driver itself. The current design is looked up in
+  // the offered list first and then in the full table, so a short list can't change what "your design" is.
+  let curPrMissing = cur.box === "radiator" && !cur.pr;
   if (cur.pr && !cur.pr.drv) {
     // boundary cast: a radiator without `drv` is the { id, n, addG } form
-    const drv = (input.passives || []).find(
-      (o) => o.id === (cur.pr as PassiveRadiatorChoice & PassiveRadiatorHandover).id,
-    );
+    const id = (cur.pr as PassiveRadiatorChoice & PassiveRadiatorHandover).id;
+    const drv =
+      (input.passives || []).find((o) => o.id === id) ?? HIFI_PASSIVES.find((o) => o.id === id);
     cur.pr = drv ? { ...cur.pr, drv } : undefined;
+    curPrMissing = !drv;
   }
   const goals = (input.goals || []).filter(
     (g, i, a) => HIFI_OPTIMIZER_GOALS[g] && a.indexOf(g) === i,
@@ -262,8 +271,19 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     levelOf = (sys: HifiSystem) => sys.maxLevel - 20 * Math.log10(seat) + 3;
   const byId = <T extends { id: string }>(a: readonly T[], id: string) =>
     a.find((o) => o.id === id);
-  const W0 = byId(woofers, cur.woofer),
-    T0 = byId(tweeters, cur.tweeter);
+  // your drivers: from the lists the search uses, else from the full tables (a budget or size filter doesn't remove them from your design)
+  const W0 = byId(woofers, cur.woofer) ?? byId(HIFI_WOOFERS, cur.woofer),
+    T0 = byId(tweeters, cur.tweeter) ?? byId(HIFI_TWEETERS, cur.tweeter);
+  if (!W0 || !T0)
+    return {
+      goals,
+      cards: [],
+      cur: null,
+      curProblems: [`${W0 ? "tweeter" : "woofer"} isn't in the driver tables`],
+      curCurve: null,
+      goalMissing: null,
+      stats: { evaluated: 0, ms: Date.now() - t0 },
+    };
   const guide = cur.guide || null,
     gp = input.guidePrice || 0;
   const needsGuide = (t: HifiTweeter) => t.type === "compression" || t.needsWaveguide;
@@ -300,14 +320,17 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     lb: r.sys.lb,
   });
 
-  const curR = W0 && T0 && run(W0, T0, cur, 240);
-  const curM = curR && metricOf(curR, W0!, T0!); // curR is only set when both were found
-  const curProblems = curR ? hifiDesignProblems(curR.sys, curR.chips) : ["can't be modelled"];
+  // a radiator box whose radiator isn't in any table has no model: say so instead of scoring it as if it had none
+  const curR = curPrMissing ? null : run(W0, T0, cur, 240);
+  const curM = curR && metricOf(curR, W0, T0);
+  const curProblems = curR
+    ? hifiDesignProblems(curR.sys, curR.chips)
+    : [curPrMissing ? "the passive radiator isn't in the driver tables" : "can't be modelled"];
   const curFails = curProblems.length > 0;
 
   // 1. woofer, box, tuning and plywood (current tweeter and crossover, coarse model)
   const wList: HifiWoofer[] = locks.woofer
-    ? [W0!]
+    ? [W0]
     : woofers.filter((o) => o.ts && o.ts.Fs && o.ts.Sd);
   const passives = input.passives || [];
   const boxes: HifiBoxKind[] = locks.box
@@ -317,11 +340,11 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       : ["sealed", "vented"];
   const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
   const face =
-    T0 && needsGuide(T0) && guide
+    needsGuide(T0) && guide
       ? guide.freestanding
         ? { w: 0, h: -1 }
         : guide
-      : (T0 && T0.faceplate) || { w: 4, h: 4 };
+      : T0.faceplate || { w: 4, h: 4 };
   const stage1: Stage1Entry[] = [];
   for (const w of wList) {
     const minW = Math.max(w.size + 1.5, face.w! + 1),
@@ -365,7 +388,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
                   if (box === "radiator" && !pr) continue;
                   const r = run(
                     w,
-                    T0!,
+                    T0,
                     { ...cur, ...amps, box, dim, wall, port: port || cur.port, pr: pr || cur.pr },
                     80,
                   );
@@ -376,7 +399,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
                   )
                     continue; // a bigger port or radiator instead
                   if (r.chips.some(([k, h]) => k === "bad" || h.startsWith("Qtc"))) continue;
-                  stage1.push({ w, dim, box, wall, port, pr, m: metricOf(r, w, T0!) });
+                  stage1.push({ w, dim, box, wall, port, pr, m: metricOf(r, w, T0) });
                 }
             }
   }
@@ -396,14 +419,14 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       .slice(0, 2)
       .forEach((x) => keep.set(key(x), x));
   // the current box as it is, on the other plywood (the smallest change for Lighter)
-  if (W0 && !locks.wall)
+  if (curR && !locks.wall)
     for (const wall of walls)
       if (wall !== cur.wall)
         keep.set("ply", { w: W0, dim: cur.dim, box: cur.box, wall, port: cur.port, pr: cur.pr });
 
   // 2. tweeter and crossover, exact model
   const tList: HifiTweeter[] = locks.tweeter
-    ? [T0!]
+    ? [T0]
     : tweeters.filter((t) => t.hf && t.hf.sens != null && (!needsGuide(t) || guide));
   const xos = locks.xo ? [cur.xo] : XOS.includes(cur.xo) ? XOS : [...XOS, cur.xo];
   const pool: PoolEntry[] = [];

@@ -159,3 +159,92 @@ test("hi-fi optimizer: a radiator design handed over as the page does ({ id, n, 
   });
   assert.ok(out.cards.length >= 1 || out.goalMissing);
 });
+
+// everything but the drivers held still, so the runs below only search what each test is about
+const tight: HifiOptimizerLocks = {
+  box: true,
+  wall: true,
+  xo: true,
+  wAmpW: true,
+  tAmpW: true,
+  dim: { w: "exact", h: "exact", d: "exact" },
+};
+test("hi-fi optimizer: your woofer or tweeter missing from the offered lists still anchors the comparison", () => {
+  const full = optimizeHifiSpeaker({ ...base, goals: ["cheaper"], locks: { ...tight } });
+  assert.ok(full.cur, "the design models with the full lists");
+  // the offered lists have been filtered (a size or budget filter) and no longer hold your drivers
+  const noWoofer = optimizeHifiSpeaker({
+    ...base,
+    woofers: HIFI_WOOFERS.filter((o) => o.id !== cur.woofer),
+    goals: ["cheaper"],
+    locks: { ...tight },
+  });
+  assert.deepEqual(noWoofer.cur, full.cur, "your design is scored against the full tables");
+  for (const k of noWoofer.cards)
+    assert.notEqual(k.woofer, cur.woofer, "searched the filtered list");
+  const noTweeter = optimizeHifiSpeaker({
+    ...base,
+    tweeters: HIFI_TWEETERS.filter((o) => o.id !== cur.tweeter),
+    goals: ["louder"],
+    locks: { ...tight, woofer: true },
+  });
+  assert.deepEqual(
+    noTweeter.cur,
+    optimizeHifiSpeaker({ ...base, goals: ["louder"], locks: { ...tight, woofer: true } }).cur,
+  );
+  for (const k of noTweeter.cards) assert.notEqual(k.tweeter, cur.tweeter);
+  // locked drivers are still your drivers, found in the full tables
+  const lockedOut = optimizeHifiSpeaker({
+    ...base,
+    woofers: [],
+    tweeters: [],
+    goals: ["lighter"],
+    locks: { ...tight, woofer: true, tweeter: true },
+  });
+  assert.ok(lockedOut.cur && Array.isArray(lockedOut.cards));
+  for (const k of lockedOut.cards)
+    assert.deepEqual([k.woofer, k.tweeter], [cur.woofer, cur.tweeter]);
+});
+
+test("hi-fi optimizer: a driver that is in no table gives an explicit empty result", () => {
+  const out = optimizeHifiSpeaker({
+    ...base,
+    cur: { ...cur, woofer: "no-such-woofer" },
+    goals: ["cheaper"],
+    locks: { ...tight },
+  });
+  assert.equal(out.cards.length, 0);
+  assert.equal(out.cur, null);
+  assert.ok(out.curProblems && out.curProblems[0].includes("woofer"), String(out.curProblems));
+  const t = optimizeHifiSpeaker({ ...base, cur: { ...cur, tweeter: "nope" }, goals: ["cheaper"] });
+  assert.ok(t.curProblems && t.curProblems[0].includes("tweeter"));
+});
+
+test("hi-fi optimizer: a handed-over radiator not in `passives` is looked up in the full table; an unknown one is reported", () => {
+  const radiatorCur = {
+    ...cur,
+    box: "radiator" as const,
+    pr: { id: HIFI_PASSIVES[0].id, n: 2, addG: 0 },
+  };
+  const opts = {
+    ...base,
+    cur: radiatorCur,
+    goals: ["cheaper" as const],
+    locks: { ...tight, woofer: true, tweeter: true },
+  };
+  const withList = optimizeHifiSpeaker({ ...opts, passives: HIFI_PASSIVES });
+  const noList = optimizeHifiSpeaker({ ...opts, passives: [] });
+  assert.ok(withList.cur, "scored with the list");
+  assert.deepEqual(noList.cur, withList.cur, "scored with the full table when the list lacks it");
+  // the radiator is in the price: a design without it would be cheaper
+  const bare = optimizeHifiSpeaker({ ...opts, cur: { ...cur, box: "sealed" }, passives: [] });
+  assert.ok(withList.cur && bare.cur && withList.cur.price > bare.cur.price);
+
+  const unknown = optimizeHifiSpeaker({
+    ...opts,
+    cur: { ...radiatorCur, pr: { id: "no-such-radiator", n: 2, addG: 0 } },
+    passives: HIFI_PASSIVES,
+  });
+  assert.equal(unknown.cur, null, "no comparison against a design with its radiator dropped");
+  assert.ok(unknown.curProblems && unknown.curProblems[0].includes("radiator"));
+});
