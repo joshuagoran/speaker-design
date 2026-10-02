@@ -26,7 +26,7 @@ is clean (0 errors, 74 warnings).
   `dist/stack-planner.html` is byte-identical (`cmp`) to a build of `main`. Renames and type annotations don't change
   the emitted JS or CSS, so any diff means runtime code changed and needs a look. The golden test alone isn't enough:
   it compares about 780 rounded numbers within a tolerance and doesn't cover the optimizers, Hi-fi, chips, dispersion
-  or the UI. PR 1 adds `build/compare-main.sh` for this (checks `main` out into a temp worktree, builds it, `cmp`s).
+  or the UI. PR 1 adds `build/compare-main.sh` for this: it builds this tree, checks `origin/main` out into a temp worktree (or another ref, given as the first argument), builds that, and `cmp`s the two pages (prints `identical`, or exits 1 with the first differing byte).
 - **Rename and edit in separate commits.** Per group of files: first a `git mv` commit with `--no-verify` (the pre-commit
   `vp check --fix` rejects a renamed file that doesn't type-check yet) that also updates the import specifiers that
   point at the renamed files (`./foo.js` → `./foo.ts`, `./Bar.jsx` → `./Bar.tsx`), then the typing commit. Git keeps

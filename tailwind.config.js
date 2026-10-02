@@ -17,7 +17,7 @@ const scale = (s) => ({
 const font = ["Inconsolata", "ui-monospace", "monospace"];
 
 export default {
-  content: ["./index.html", "./src/**/*.{js,jsx}"],
+  content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
       colors: {

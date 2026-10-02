@@ -15,7 +15,7 @@ export default defineConfig({
     "*": "vp check --fix",
   },
   test: {
-    include: ["tests/**/*.test.js"],
+    include: ["tests/**/*.test.{js,ts}"],
     // the optimizer tests take 5–7 s and assert their own 10 s budget; Vitest's 5 s default would cut them off
     testTimeout: 30_000,
   },

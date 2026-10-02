@@ -12,13 +12,22 @@ const configs = [
   ...fillConfigs.map((c) => ({ ...c, run: evaluateFill })),
 ];
 
-// Regenerate after an intentional change:  node tests/make-golden.js
-const golden = JSON.parse(fs.readFileSync(new URL("./golden.json", import.meta.url)));
+// Regenerate after an intentional change:  UPDATE_GOLDEN=1 vp test --run tests/golden.test.js
+const goldenUrl = new URL("./golden.json", import.meta.url);
+if (process.env.UPDATE_GOLDEN === "1") {
+  const out = {};
+  for (const c of configs) out[c.name] = c.run(c);
+  fs.writeFileSync(goldenUrl, JSON.stringify(out, null, 1) + "\n");
+}
+const golden = JSON.parse(fs.readFileSync(goldenUrl));
 for (const c of configs) {
   test(`golden: ${c.name}`, (t) => {
     const want = golden[c.name],
       got = c.run(c);
-    assert.ok(want, "missing from golden.json: run node tests/make-golden.js");
+    assert.ok(
+      want,
+      "missing from golden.json: run UPDATE_GOLDEN=1 vp test --run tests/golden.test.js",
+    );
     for (const k of Object.keys(want)) {
       if (typeof want[k] === "number")
         assert.ok(
