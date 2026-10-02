@@ -494,10 +494,9 @@ export function HifiPage({ hifi }: Props) {
         )}
       </RunRow>
       {optimizerError && !isOptimizing && <Notice>{optimizerError}</Notice>}
-      {optimizerResult && !isOptimizing && optimizerResult.curProblems!.length > 0 && (
+      {optimizerResult && !isOptimizing && optimizerResult.curProblems.length > 0 && (
         <Notice>
-          Your design fails: {optimizerResult.curProblems!.join("; ")}. Fixes may cost or weigh
-          more.
+          Your design fails: {optimizerResult.curProblems.join("; ")}. Fixes may cost or weigh more.
         </Notice>
       )}
       {optimizerResult && !isOptimizing && (

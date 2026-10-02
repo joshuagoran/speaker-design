@@ -450,3 +450,11 @@ test("evaluate() rejects a config missing a number it needs, and every seed comp
         if (typeof v === "number") assert.ok(Number.isFinite(v), `${s.name} ${k} is ${v}`);
   }
 });
+
+test("a locked sub or mid that isn't in the tables leaves nothing to search, and doesn't throw", () => {
+  for (const locks of [{ sub: true }, { mid: true }] as const) {
+    const unknown = { ...cur, [locks.sub ? "sub" : "mid"]: "no-such-driver" };
+    const out = optimizePaStack({ ...base, cur: unknown, locks });
+    assert.deepEqual(out.cards, []);
+  }
+});

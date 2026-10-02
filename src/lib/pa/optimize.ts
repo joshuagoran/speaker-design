@@ -70,7 +70,7 @@ import type {
   VentSpec,
 } from "../../types";
 import { keysOf } from "../records";
-import { byId, byIdOrThrow } from "../tables";
+import { byId, byIdOrThrow, defaultOf } from "../tables";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -516,9 +516,14 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   // candidate lists
   const curSub = byId(SUB_OPTIONS, cur.sub),
     curMid = byId(MID_OPTIONS, cur.mid);
-  const priced = (o: { ts: object; price: number | null }) => o.ts && o.price != null;
+  const priced = <T extends { ts: object; price: number | null }>(
+    o: T,
+  ): o is T & { price: number } => !!o.ts && o.price != null;
+  // a locked driver that isn't in the tables leaves nothing to search
   const subs = locks.sub
-    ? [curSub!]
+    ? curSub
+      ? [curSub]
+      : []
     : SUB_OPTIONS.filter(
         (o) => o.size === (curSub ? curSub.size : 18) && priced(o) && o.price <= budget,
       );
@@ -664,7 +669,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
 
   // 2. real boxes and vents for the seeds
   const subCands: SubCandidate[] = [];
-  const midForGeom = (curMid || MID_OPTIONS.find((o) => o.ts))!;
+  const midForGeom =
+    curMid ?? MID_OPTIONS.find((o) => o.ts) ?? defaultOf(MID_OPTIONS, "mid drivers");
   for (const sd of seedSet) {
     for (const t of walls) {
       const G = sd.V + (sd.sub.ts.disp || 10) + 0.08 * sd.V + 3;
@@ -783,8 +789,10 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
 
   // 3. mid designs: each driver at a few Qtc targets, boxes inside the limits, per crossover
   const mids = locks.mid
-    ? [curMid!]
-    : MID_OPTIONS.filter((o) => (o.size || 12) >= 12 && priced(o) && o.price! <= budget);
+    ? curMid
+      ? [curMid]
+      : []
+    : MID_OPTIONS.filter((o) => (o.size || 12) >= 12 && priced(o) && o.price <= budget);
   const mr = {
     w: rangeOf(locks.midDim.w, cur.mDim.w, MID_BOX_RANGE.w),
     h: rangeOf(locks.midDim.h, cur.mDim.h, MID_BOX_RANGE.h),
@@ -823,6 +831,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     }
     return out;
   };
+  const midPrice = (e: MidEntry) => e.m.price ?? 0; // an unpriced mid (only a locked one gets here) counts as 0
+  const curMidPrice = curMid?.price || 0;
   const midTable: MidEntry[] = []; // { m, bx, t, xoLo, atXo, curve (no lowpass), qtc, f3, lb }
   for (const m of mids)
     for (const t of walls)
@@ -879,12 +889,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           same: cd.id === cur.cd && h.id === cur.horn,
         });
       }
-    // `same` is a boolean and true - false is 1; the casts only tell the checker so
     hornTable[xoHi].sort(
-      (a, b) =>
-        (b.same as unknown as number) - (a.same as unknown as number) ||
-        a.price - b.price ||
-        a.horn - b.horn,
+      (a, b) => Number(b.same) - Number(a.same) || a.price - b.price || a.horn - b.horn,
     );
   }
 
@@ -901,20 +907,16 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       const okMids: (MidEntry | null)[] = midTable.filter(
         (e) => e.xoLo === xoLo && e.t === sc.c.wall && e.atXo - need >= -0.5 && e.lb <= slack.lb,
       );
-      if (cur.layout === "tower") okMids.push(null);
+      // the tower layout takes the mid as it is, so it needs the current mid to exist
+      const towerMid = cur.layout === "tower" && curMid !== undefined;
+      if (towerMid) okMids.push(null);
       const choices: (MidEntry | null)[] = [];
-      // the casts: filter drops the null the tower layout adds, which the checker can't see
-      const byPrice = (okMids.filter(Boolean) as MidEntry[]).sort(
-        (a, b) => a.m.price! - b.m.price! || a.lb - b.lb,
-      )[0];
-      const byLb = (okMids.filter(Boolean) as MidEntry[]).sort(
-        (a, b) => a.lb - b.lb || a.m.price! - b.m.price!,
-      )[0];
-      const same = (okMids.filter((e) => e && e.m.id === cur.mid) as MidEntry[]).sort(
-        (a, b) => a.lb - b.lb,
-      )[0];
+      const realMids = okMids.filter((e): e is MidEntry => e !== null);
+      const byPrice = realMids.slice().sort((a, b) => midPrice(a) - midPrice(b) || a.lb - b.lb)[0];
+      const byLb = realMids.slice().sort((a, b) => a.lb - b.lb || midPrice(a) - midPrice(b))[0];
+      const same = realMids.filter((e) => e.m.id === cur.mid).sort((a, b) => a.lb - b.lb)[0];
       for (const e of [byPrice, byLb, same]) if (e && !choices.includes(e)) choices.push(e);
-      if (cur.layout === "tower") choices.push(null);
+      if (towerMid) choices.push(null);
       for (const e of choices)
         for (const xoHi of xoHis) {
           const midHi = e
@@ -933,7 +935,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
             cd: hp.cd.id,
             horn: hp.h.id,
           };
-          const price = sc.sub.price + (e ? e.m.price! : curMid!.price || 0) + hp.price;
+          const price = sc.sub.price + (e ? midPrice(e) : curMidPrice) + hp.price;
           const heaviest = Math.max(sc.lb, e ? e.lb : 0);
           combos.push({ c, price, heaviest, out: sc.out, f3: sc.s.mdl.f3, ch: changes(c) });
         }
@@ -1108,16 +1110,16 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   const shrinkAmps = (p: PoolEntry, tgtOut: number): PoolEntry => {
     let c = { ...p.c },
       m = p.m;
-    const ok = (cc: PaDesignConfig, mm: PaEvaluation | null) =>
-      mm && designProblems(mm, lim).length === 0;
+    const ok = (mm: PaEvaluation | null): mm is PaEvaluation =>
+      mm !== null && designProblems(mm, lim).length === 0;
     const lowest = (key: AmpKey, lo: number, step: number, good: (m: PaEvaluation) => boolean) => {
       if (locks[key] || c[key] <= lo) return;
       const floor = { ...c, [key]: lo },
         fm = evaluateDesign(floor);
       evals++;
-      if (ok(floor, fm) && good(fm!)) {
+      if (ok(fm) && good(fm)) {
         c = floor;
-        m = fm!;
+        m = fm;
         return;
       } // the slider minimum is enough
       let a = lo,
@@ -1128,15 +1130,15 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           mm = evaluateDesign(cc);
         evals++;
         if (mid <= a || mid >= b) break;
-        if (ok(cc, mm) && good(mm!)) b = mid;
+        if (ok(mm) && good(mm)) b = mid;
         else a = mid;
       }
       const cc = { ...c, [key]: b },
         mm = evaluateDesign(cc);
       evals++;
-      if (ok(cc, mm) && good(mm!)) {
+      if (ok(mm) && good(mm)) {
         c = cc;
-        m = mm!;
+        m = mm;
       }
     };
     lowest("ampW", 200, 50, (mm) => mm.out >= tgtOut - 0.01);

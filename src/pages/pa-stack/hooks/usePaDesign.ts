@@ -303,16 +303,15 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
    * to Keele's pattern-control limit and proportionally wider below. Rules of thumb.
    */
   const beamCurves = (() => {
-    const hz0: Partial<HornHf> = hornOption.hf || {};
-    const fK = hz0.covH && hornOption.size ? keeleFrequency(hz0.covH, hornOption.size.w) : null;
+    const hf = hornOption.hf;
+    const fK = hf && hf.covH && hornOption.size ? keeleFrequency(hf.covH, hornOption.size.w) : null;
     const midB: FrequencyPoint[] = [],
       hornB: FrequencyPoint[] = [];
     for (let i = 0; i < 160; i++) {
       const f = 200 * Math.pow(10000 / 200, i / 159);
       if (midDriver.ts) midB.push({ f, spl: pistonBeamWidthDeg(midDriver.ts.Sd, f) });
-      // `hz0.covH!`: `fK` is set only when `covH` is
-      if (fK && f >= (hz0.lowHz || 0) * 0.7)
-        hornB.push({ f, spl: hornBeamWidthDeg(hz0.covH!, fK, f) });
+      if (hf && fK && f >= (hf.lowHz || 0) * 0.7)
+        hornB.push({ f, spl: hornBeamWidthDeg(hf.covH, fK, f) });
     }
     return { midB, hornB, fK };
   })();

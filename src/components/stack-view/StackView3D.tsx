@@ -60,8 +60,8 @@ export function StackView3D({
     drag: boolean;
     lx: number;
     ly: number;
-    zoom?: number; // set to 1 when the scene first builds
-  }>({ rotY: 0.6, rotX: 0.35, drag: false, lx: 0, ly: 0 });
+    zoom: number;
+  }>({ rotY: 0.6, rotX: 0.35, drag: false, lx: 0, ly: 0, zoom: 1 });
   // Rebuild the scene only when the geometry actually changes (the parent recreates these objects every
   // render), and at most every 120 ms while a slider is dragged, so the controls stay responsive.
   const geoKey = JSON.stringify([
@@ -80,20 +80,20 @@ export function StackView3D({
     spacerH,
   ]);
   const [builtKey, setBuiltKey] = useState(geoKey);
-  const lastBuild = useRef(0),
-    pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastBuild = useRef(0);
   useEffect(() => {
     if (geoKey === builtKey) return;
     const wait = Math.max(0, 120 - (performance.now() - lastBuild.current));
-    pending.current = setTimeout(() => {
+    const pending = setTimeout(() => {
       lastBuild.current = performance.now();
       setBuiltKey(geoKey);
     }, wait);
-    return () => clearTimeout(pending.current!);
+    return () => clearTimeout(pending);
   }, [geoKey, builtKey]);
 
   useEffect(() => {
-    const el = mount.current!;
+    const el = mount.current;
+    if (!el) return;
     const W = el.clientWidth || 640,
       H = el.clientHeight || 560;
     const scene = new THREE.Scene();
@@ -609,12 +609,10 @@ export function StackView3D({
     // horn
     const hz = horn.size;
     const hornY = midBaseY + m.h;
-    let hornCY: number | null = null,
-      hornZ: number | null = null;
-    if (tower) {
-      hornCY = archTop ? hornY + (s.w / 2 - T) : hornY + (hz.h + 2) / 2;
-      hornZ = subZ - hz.d + 0.2; // mouth flush with the shared baffle face
-    }
+    // in the tower the horn sits on the sub's footprint: centre height, and the mouth flush with the shared baffle face
+    const towerHorn = tower
+      ? { cy: archTop ? hornY + (s.w / 2 - T) : hornY + (hz.h + 2) / 2, z: subZ - hz.d + 0.2 }
+      : null;
     if (!horn.profile && !horn.rect && !tower) {
       const stand = new THREE.Mesh(new THREE.BoxGeometry(hz.w * 0.5, 1.2, hz.d * 0.5), black);
       stand.position.set(midXs[0], hornY + 0.6, 0);
@@ -633,8 +631,8 @@ export function StackView3D({
         );
         rm.position.set(
           hx,
-          tower ? hornCY! : hornY + hz.h / 2 + 0.3,
-          tower ? hornZ! : m.d / 2 - hz.d + 1,
+          towerHorn ? towerHorn.cy : hornY + hz.h / 2 + 0.3,
+          towerHorn ? towerHorn.z : m.d / 2 - hz.d + 1,
         );
         group.add(rm);
         const th = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
@@ -658,13 +656,13 @@ export function StackView3D({
           lm.scale.set(horn.scaleX || 1, horn.scaleZ || 1, horn.scaleY || 1); // local x=width, y=depth, z=height
         lm.position.set(
           hx,
-          tower ? hornCY! : hornY + hz.h / 2 + 0.3,
-          tower ? hornZ! : m.d / 2 - hz.d + 1,
+          towerHorn ? towerHorn.cy : hornY + hz.h / 2 + 0.3,
+          towerHorn ? towerHorn.z : m.d / 2 - hz.d + 1,
         );
         group.add(lm);
         const th = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
         th.rotation.x = Math.PI / 2;
-        th.position.set(hx, lm.position.y, tower ? hornZ! - 2 : -2.2);
+        th.position.set(hx, lm.position.y, towerHorn ? towerHorn.z - 2 : -2.2);
         group.add(th);
       } else {
         const hornShape = new THREE.Shape();
@@ -690,13 +688,17 @@ export function StackView3D({
         const hornMesh = new THREE.Mesh(hornGeo, cream);
         hornMesh.position.set(
           hx,
-          tower ? hornCY! : hornY + 1.2 + rh + 1,
-          tower ? hornZ! : -hz.d / 2 + 2,
+          towerHorn ? towerHorn.cy : hornY + 1.2 + rh + 1,
+          towerHorn ? towerHorn.z : -hz.d / 2 + 2,
         );
         group.add(hornMesh);
         const throat = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
         throat.rotation.x = Math.PI / 2;
-        throat.position.set(hx, hornMesh.position.y, tower ? hornZ! - 2.5 : -hz.d / 2 - 0.5);
+        throat.position.set(
+          hx,
+          hornMesh.position.y,
+          towerHorn ? towerHorn.z - 2.5 : -hz.d / 2 - 0.5,
+        );
         group.add(throat);
       }
     });
@@ -734,7 +736,6 @@ export function StackView3D({
     fit(W / H);
 
     const st = state.current;
-    if (st.zoom == null) st.zoom = 1;
 
     // Pointer handling. touch-action on the canvas is pan-y, so a mostly
     // vertical swipe scrolls the page and anything else reaches us here.
@@ -752,7 +753,7 @@ export function StackView3D({
       if (pts.size === 2) {
         const [a, b] = [...pts.values()];
         pinch0 = Math.hypot(a.x - b.x, a.y - b.y);
-        zoom0 = st.zoom!;
+        zoom0 = st.zoom;
       }
       st.drag = true;
       st.lx = e.clientX;
@@ -793,7 +794,7 @@ export function StackView3D({
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      st.zoom = Math.max(0.45, Math.min(2.2, st.zoom! * (1 + e.deltaY * 0.0012)));
+      st.zoom = Math.max(0.45, Math.min(2.2, st.zoom * (1 + e.deltaY * 0.0012)));
     };
 
     el.addEventListener("pointerdown", onDown);
@@ -818,7 +819,7 @@ export function StackView3D({
 
     let raf: number;
     const tick = () => {
-      const dist = baseDist * st.zoom!;
+      const dist = baseDist * st.zoom;
       cam.position.set(
         target.x + dist * Math.sin(st.rotY) * Math.cos(st.rotX),
         target.y + dist * Math.sin(st.rotX),

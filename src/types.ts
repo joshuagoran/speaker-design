@@ -669,9 +669,10 @@ export interface HifiOptimizerResult {
   goals: HifiGoal[];
   cards: HifiOptimizerCard[];
   stats: { evaluated: number; ms: number; pool?: number };
+  /** what fails in your design; empty when it passes or when no goal was given */
+  curProblems: string[];
   // the fields below are absent when no goal was given
   cur?: HifiMetrics | null;
-  curProblems?: string[];
   curCurve?: [number, number][] | null;
   goalMissing?: string | null;
 }
@@ -1356,8 +1357,8 @@ export interface OptimizerRequest<I = PaOptimizerInput> {
 
 /** The worker's reply: the result, or the message of what it threw. */
 export type OptimizerResponse<R = PaOptimizerResult> =
-  | { id: number; out: R; error?: undefined }
-  | { id: number; error: string; out?: undefined };
+  | { id: number; out: R }
+  | { id: number; error: string };
 
 // ---- Saved configurations ----
 

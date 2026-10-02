@@ -263,7 +263,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
   const goals = (input.goals || []).filter(
     (g, i, a) => HIFI_OPTIMIZER_GOALS[g] && a.indexOf(g) === i,
   );
-  if (!goals.length) return { cards: [], goals, stats: { evaluated: 0, ms: 0 } };
+  if (!goals.length) return { cards: [], goals, curProblems: [], stats: { evaluated: 0, ms: 0 } };
   const goal = goals[0],
     also = goals.slice(1);
   const dl: NonNullable<typeof locks.dim> = locks.dim || {};
@@ -530,17 +530,17 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
   const trim = (p: PoolEntry) => {
     let c = { ...p.c },
       r = { sys: p.sys, chips: p.chips };
-    const ok = (rr: RunResult | null, lvl: number) =>
-      rr && !hifiDesignProblems(rr.sys, rr.chips).length && levelOf(rr.sys) >= lvl - 0.01;
+    const ok = (rr: RunResult | null, lvl: number): rr is RunResult =>
+      rr !== null && !hifiDesignProblems(rr.sys, rr.chips).length && levelOf(rr.sys) >= lvl - 0.01;
     const lowest = (keyName: "wAmpW" | "tAmpW", lo: number, step: number, lvl: number) => {
       if (locks[keyName]) return;
       let a = lo,
-        b = c[keyName]!;
+        b = c[keyName];
       const at = (v: number) => run(p.w, p.t, { ...c, [keyName]: v }, 240);
       const ra = at(a);
       if (ok(ra, lvl)) {
         c = { ...c, [keyName]: a };
-        r = ra!; // ok() found it
+        r = ra;
         return;
       }
       while (b - a > step) {
@@ -552,7 +552,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       const rb = at(b);
       if (ok(rb, lvl)) {
         c = { ...c, [keyName]: b };
-        r = rb!; // ok() found it
+        r = rb;
       }
     };
     const lvl = levelOf(p.sys);
