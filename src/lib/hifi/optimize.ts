@@ -338,15 +338,11 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       : ["sealed", "vented"];
   const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
   const face =
-    needsGuide(T0) && guide
-      ? guide.freestanding
-        ? { w: 0, h: -1 }
-        : guide
-      : T0.faceplate || { w: 4, h: 4 };
+    needsGuide(T0) && guide ? (guide.freestanding ? { w: 0, h: -1 } : guide) : T0.faceplate;
   const stage1: Stage1Entry[] = [];
   for (const w of wList) {
-    const minW = Math.max(w.size + 1.5, face.w! + 1),
-      minH = face.h! + w.size + 3;
+    const minW = Math.max(w.size + 1.5, face.w + 1),
+      minH = face.h + w.size + 3;
     const ws = range(
       dl.w,
       cur.dim.w,

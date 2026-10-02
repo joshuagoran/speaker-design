@@ -253,16 +253,6 @@ export interface TweeterHf {
   fs: number | null;
 }
 
-/**
- * A tweeter's faceplate. The table gives either `diameter` (round) or `w` and `h`; when the module loads it rewrites every
- * entry to `w` and `h`.
- */
-export interface Faceplate {
-  w?: number;
-  h?: number;
-  diameter?: number;
-}
-
 /** A ribbon's own waveguide: coverage in degrees and mouth size in inches. */
 export interface OwnGuide {
   name: string;
@@ -282,16 +272,24 @@ export interface HifiTweeter {
   type: TweeterType;
   /** exit diameter in inches, null for a horn-loaded tweeter */
   exit: number | null;
-  /** null where the maker gives no size; the layout then assumes 3.5 in square */
-  faceplate?: Faceplate | null;
+  /** the baffle cut-out the tweeter needs, inches; 3.5 in square where the maker gives no size, and a round faceplate is a square of its diameter */
+  faceplate: Dims2;
   /** absent on the ribbons, which come with their own */
   needsWaveguide?: boolean;
   note: string;
-  /** radiating diameter in inches for the directivity; set when the module loads */
-  domeIn?: number;
+  /** radiating diameter in inches for the directivity: the exit, or the mouth of a horn-loaded tweeter */
+  domeIn: number;
   pick?: boolean;
   ownGuide?: OwnGuide;
 }
+
+/**
+ * A tweeter as the table gives it: the faceplate is a round `diameter` or `w` and `h` (null where the maker gives no size),
+ * and `domeIn` is not set yet. `data.ts` turns every row into a `HifiTweeter` when the module loads.
+ */
+export type HifiTweeterRaw = Omit<HifiTweeter, "faceplate" | "domeIn"> & {
+  faceplate: { diameter: number } | Dims2 | null;
+};
 
 export type XmaxKind = "linear" | "mechanical";
 

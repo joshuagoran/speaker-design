@@ -12,6 +12,7 @@ import type {
   FinishId,
   Format,
   HifiTweeter,
+  HifiTweeterRaw,
   HifiWoofer,
   Horn,
   HornProfilePoint,
@@ -3033,7 +3034,7 @@ export const HIFI_WOOFERS: HifiWoofer[] = [
   },
 ];
 
-export const HIFI_TWEETERS: readonly HifiTweeter[] = [
+const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
   // ---------- Domes (flat baffle) ----------
   {
     id: "rst28f",
@@ -3235,6 +3236,24 @@ export const HIFI_TWEETERS: readonly HifiTweeter[] = [
     note: '[vendor: PE page, Eminence spec text] US brand. Titanium diaphragm, 2" voice coil, 1" exit. sens is 105 dB 1 W/1 m on an unnamed horn. aes is 80 W EIA-426B with a 1.6 kHz 18 dB high-pass. Crossover: 1.2 kHz at 18 dB/oct or 1.8 kHz at 12 dB/oct. Titanium can sound bright; plan on DSP EQ. lb is the PE shipping weight. Also sold in a screw-on version (PSD:2002S).',
   },
 ];
+
+// Give every tweeter a faceplate size and radiating diameter the layout and directivity use.
+const pass = (rows: readonly HifiTweeterRaw[]): HifiTweeter[] =>
+  rows.map((t) => {
+    const fp = t.faceplate;
+    const diameter = fp && "diameter" in fp ? fp.diameter : 0;
+    return {
+      ...t,
+      faceplate: !fp
+        ? { w: 3.5, h: 3.5 }
+        : "diameter" in fp
+          ? { w: fp.diameter, h: fp.diameter }
+          : fp,
+      // radiating diameter for the directivity: the dome, or the horn mouth for a horn-loaded tweeter
+      domeIn: t.type === "horn-loaded" ? diameter || 3 : t.exit || 1,
+    };
+  });
+export const HIFI_TWEETERS: readonly HifiTweeter[] = pass(HIFI_TWEETERS_RAW);
 
 // more woofers sold by usspeaker.com (researched Sep 2026)
 HIFI_WOOFERS.push(
@@ -3511,14 +3530,6 @@ HIFI_WOOFERS.push(
     },
   ],
 );
-
-// Give every tweeter a faceplate size and radiating diameter the layout and directivity use.
-for (const t of HIFI_TWEETERS) {
-  const fp = t.faceplate;
-  t.faceplate = !fp ? { w: 3.5, h: 3.5 } : fp.diameter ? { w: fp.diameter, h: fp.diameter } : fp;
-  // radiating diameter for the directivity: the dome, or the horn mouth for a horn-loaded tweeter
-  t.domeIn = t.type === "horn-loaded" ? (fp && fp.diameter) || 3 : t.exit || 1;
-}
 
 // Passive radiators for the Hi-fi tab (per unit, US vendors, Oct 2026). Sd cm², Mms g (as shipped), Cms mm/N,
 // Xmax mm one-way (SB, Purifi and Seas publish only the mechanical limit: xmaxKind). No maker states a maximum

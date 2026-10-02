@@ -216,14 +216,14 @@ export function driverLayout(
   d: Dims3,
   onTop: boolean,
 ): DriverLayout {
-  const face = t.faceplate || { w: 4, h: 4 };
+  const face = t.faceplate;
   if (onTop) {
-    const th = d.h + face.h! / 2,
+    const th = d.h + face.h / 2,
       wh = d.h - 1 - w.size / 2;
     return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh, onTop: true };
   }
-  const th = d.h - 1 - face.h! / 2;
-  const wh = th - face.h! / 2 - 0.5 - w.size / 2;
+  const th = d.h - 1 - face.h / 2;
+  const wh = th - face.h / 2 - 0.5 - w.size / 2;
   return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh };
 }
 
@@ -552,7 +552,7 @@ export function hifiResponseAt(
   const xo = cfg.xo,
     order = cfg.order || 4,
     a = Math.sqrt(w.ts.Sd / 1e4 / Math.PI);
-  const dome = ((t.domeIn || 1) * IN) / 2;
+  const dome = (t.domeIn * IN) / 2;
   const dist = geo.distM,
     dz = (h: number) => (geo.eyeIn - h) * IN;
   const rW = Math.hypot(dist, dz(sys.lay.wooferIn)),
