@@ -484,10 +484,13 @@ test("evaluate() rejects a config missing a number it needs, and every seed comp
   }
 });
 
-test("a locked sub or mid that isn't in the tables leaves nothing to search, and doesn't throw", () => {
-  for (const locks of [{ sub: true }, { mid: true }] as const) {
-    const unknown = { ...cur, [locks.sub ? "sub" : "mid"]: "no-such-driver" };
-    const out = optimizePaStack({ ...base, cur: unknown, locks });
-    assert.deepEqual(out.cards, []);
+test("a locked sub, mid, driver or horn that isn't in the tables leaves nothing to search, and doesn't throw", () => {
+  for (const key of ["sub", "mid", "cd", "horn"] as const) {
+    const out = optimizePaStack({
+      ...base,
+      cur: { ...cur, [key]: "no-such-part" },
+      locks: { [key]: true },
+    });
+    assert.deepEqual(out.cards, [], key);
   }
 });

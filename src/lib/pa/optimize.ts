@@ -883,11 +883,18 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
         }
       }
   // horn pairs per xoHi, with their level at the crossover
+  // (a locked driver or horn that isn't in the tables leaves nothing to search, like a locked sub or mid)
+  const curCd = byId(CD_OPTIONS, cur.cd),
+    curHorn = byId(HORN_OPTIONS, cur.horn);
   const cds = locks.cd
-    ? [byIdOrThrow(CD_OPTIONS, cur.cd, "compression drivers")]
+    ? curCd
+      ? [curCd]
+      : []
     : CD_OPTIONS.filter((o) => o.hf && o.hf.sens != null && o.price != null);
   const horns = locks.horn
-    ? [byIdOrThrow(HORN_OPTIONS, cur.horn, "horns")]
+    ? curHorn
+      ? [curHorn]
+      : []
     : HORN_OPTIONS.filter((h) => h.price != null);
   const hornTable: Record<number, HornEntry[]> = {};
   for (const xoHi of xoHis) {
