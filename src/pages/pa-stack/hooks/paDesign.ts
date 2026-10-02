@@ -254,7 +254,11 @@ export function derivePaDesign({
     : stackBaseHeightIn + effectiveMidBoxDims.h + 1.2 + hornOption.size.h + 2;
   const hornCenterHeightIn = isTower
     ? stackBaseHeightIn + 15.5 + (hasArchedTop ? subBox.w / 2 - 0.75 : (hornOption.size.h + 2) / 2)
-    : stackBaseHeightIn + effectiveMidBoxDims.h + 1.2 + 1 + hornOption.size.h / 2;
+    : // the 3D scene sits a rect or lathe horn 0.3 in above the mid box; the plain flared block 2.2 in
+      stackBaseHeightIn +
+      effectiveMidBoxDims.h +
+      (hornOption.rect || hornOption.profile ? 0.3 : 1.2 + 1) +
+      hornOption.size.h / 2;
   /** driver heights for the dispersion map: mid centered in its box (or the tower's mid section), sub at its box center */
   const midCenterHeightIn = isTower
     ? stackBaseHeightIn + 15.5 / 2

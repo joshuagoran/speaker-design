@@ -179,6 +179,25 @@ describe("stack scene", () => {
     expect(derived.subTopHeightIn).toBeCloseTo(p.plinth + p.sub.box.h, 6);
   });
 
+  test("every horn's centre is where the planner says, in each layout", () => {
+    const horns = [...new Set(sceneCases.map((c) => c.props.horn))];
+    for (const layout of ["stack", "pole", "satellite", "tower"] as const) {
+      for (const horn of horns) {
+        const p = { ...byName("default PA"), horn, layout };
+        const g = buildStackScene(p);
+        const derived = derivedHeights(p);
+        // the horn is the highest mesh directly in the group
+        const hornMesh = g.children
+          .filter((o): o is THREE.Mesh => o instanceof THREE.Mesh)
+          .reduce((a, b) => (b.position.y > a.position.y ? b : a));
+        expect(hornMesh.position.y, `${horn.id} ${layout}`).toBeCloseTo(
+          derived.hornCenterHeightIn,
+          6,
+        );
+      }
+    }
+  });
+
   test("scene-dump.json matches a fresh build (regenerate with `vp run scene-dump`)", () => {
     const saved: unknown = JSON.parse(
       fs.readFileSync(new URL("./scene-dump.json", import.meta.url), "utf8"),
