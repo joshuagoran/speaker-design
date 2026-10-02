@@ -1,19 +1,22 @@
 import { useEffect, useState } from "react";
+import type { User } from "firebase/auth";
+import type { ConfigDb, SavedConfig, SavedConfigData } from "../../types.ts";
+import type { FirebaseStore } from "./firebaseStore.ts";
 
 /** The GitHub Pages build is `vp build --mode pages`; only that build bundles Firebase (see firebaseStore.ts). */
 const PAGES_BUILD = import.meta.env.MODE === "pages";
 
 /** Saved configurations: the claude.ai artifact's database, or Firebase when the page is hosted on GitHub Pages */
-export function useConfigStore(collection) {
-  const [db, setDb] = useState(null);
-  const [saved, setSaved] = useState(null); // null = still loading
-  const [fb, setFb] = useState(null);
-  const [fbUser, setFbUser] = useState(null);
+export function useConfigStore(collection: string) {
+  const [db, setDb] = useState<ConfigDb | null>(null);
+  const [saved, setSaved] = useState<SavedConfig[] | null>(null); // null = still loading
+  const [fb, setFb] = useState<FirebaseStore | null>(null);
+  const [fbUser, setFbUser] = useState<User | null>(null);
   const [cfgMsg, setCfgMsg] = useState("");
   useEffect(() => {
     let live = true;
     if (PAGES_BUILD && !(window.claude && window.claude.use)) {
-      let un = null;
+      let un: (() => void) | null = null;
       import("./firebaseStore.ts")
         .then(({ createFirebase }) => {
           if (!live) return;
@@ -39,7 +42,10 @@ export function useConfigStore(collection) {
     }
     (async () => {
       try {
-        const d = window.claude && window.claude.use ? await window.claude.use("db") : null;
+        // boundary: the artifact host's `use("db")` resolves to the database handle (typed `unknown` in env.d.ts)
+        const d = (
+          window.claude && window.claude.use ? await window.claude.use("db") : null
+        ) as ConfigDb | null;
         if (live) {
           setDb(d);
           if (!d) setSaved([]);
@@ -62,18 +68,24 @@ export function useConfigStore(collection) {
       .orderBy("savedAt", "desc")
       .limit(50)
       .onSnapshot(
-        (snap) => setSaved(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+        (snap) =>
+          setSaved(
+            snap.docs.map(
+              // boundary: stored documents come from `save` below, so they carry a `name`
+              (d) => ({ id: d.id, ...d.data() }) as SavedConfig,
+            ),
+          ),
         () => setSaved([]),
       );
     return un;
   }, [db]);
-  const flash = (m) => {
+  const flash = (m: string) => {
     setCfgMsg(m);
     setTimeout(() => setCfgMsg(""), 2500);
   };
-  const signIn = () => fb.signIn().catch(() => flash("Sign-in failed"));
-  const signOut = () => fb.signOut();
-  const save = async (name, data) => {
+  const signIn = () => fb!.signIn().catch(() => flash("Sign-in failed"));
+  const signOut = () => fb!.signOut();
+  const save = async (name: string, data: SavedConfigData): Promise<boolean> => {
     if (!db || !name) return false;
     setCfgMsg("Saving…");
     try {
@@ -85,14 +97,17 @@ export function useConfigStore(collection) {
       return true;
     } catch (e) {
       flash(
-        e && (e.code === "invalid_argument" || e.code === "permission-denied")
+        // the error is a Firebase or artifact-database error carrying a `code`
+        e &&
+          ((e as { code?: string }).code === "invalid_argument" ||
+            (e as { code?: string }).code === "permission-denied")
           ? "You don't have write access here"
           : "Couldn't save — try again",
       );
       return false;
     }
   };
-  const remove = async (id) => {
+  const remove = async (id: string) => {
     if (!db) return;
     try {
       await db.collection(collection).doc(id).delete();

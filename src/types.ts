@@ -1231,3 +1231,45 @@ export interface OptimizerRequest {
 export type OptimizerResponse =
   | { id: number; out: PaOptimizerResult; error?: undefined }
   | { id: number; error: string; out?: undefined };
+
+// ---- Saved configurations ----
+
+/** What a page hands to `save`: its snapshot of the design (and a `summary` line); the store adds `name` and `savedAt`. */
+export type SavedConfigData = Record<string, unknown>;
+
+/** A saved configuration as read back: the stored fields plus the document's id. */
+export interface SavedConfig {
+  id: string;
+  name: string;
+  /** ms since the epoch */
+  savedAt?: number;
+  /** the one-line description shown under the picker */
+  summary?: string;
+  [field: string]: unknown;
+}
+
+/** The documents of a snapshot, as the config store reads them. */
+export interface ConfigSnapshot {
+  docs: { id: string; data(): Record<string, unknown> }[];
+}
+
+/** A query on a config collection, chained the way the artifact database and Firestore's compat API do. */
+export interface ConfigQuery {
+  orderBy(field: string, dir?: "asc" | "desc"): ConfigQuery;
+  limit(n: number): ConfigQuery;
+  /** returns the unsubscribe function */
+  onSnapshot(next: (snap: ConfigSnapshot) => void, error: (e: Error) => void): () => void;
+}
+
+/** A config collection: a query, plus `doc(id?)` (a new id when none is given) to write or delete one. */
+export interface ConfigCollection extends ConfigQuery {
+  doc(id?: string): {
+    set(data: Record<string, unknown>): Promise<unknown>;
+    delete(): Promise<unknown>;
+  };
+}
+
+/** The database handle the config store works with: the claude.ai artifact's, or the Firebase adapter's. */
+export interface ConfigDb {
+  collection(name: string): ConfigCollection;
+}

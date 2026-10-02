@@ -1,7 +1,9 @@
 // Firebase web config for the github.io build. These values are public by
 // design (access is enforced by firestore.rules). Paste the object from
 // Firebase console → Project settings → Your apps → Web app → Config.
-export const FIREBASE_CONFIG = {
+import type { FirebaseOptions } from "firebase/app";
+
+export const FIREBASE_CONFIG: FirebaseOptions = {
   apiKey: "AIzaSyBE11z8z1R2aTiUPdbXRoV5lFUJQLPjBH8",
   authDomain: "speaker-planner.firebaseapp.com",
   projectId: "speaker-planner",
