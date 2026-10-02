@@ -1,4 +1,4 @@
-import { LockIcon } from "./LockIcon.jsx";
+import { LockIcon } from "./LockIcon.tsx";
 
 /** Tailwind classes for a lock button in its on or off state. */
 export const lockButtonClass = (on) =>

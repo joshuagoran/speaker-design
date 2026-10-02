@@ -1,9 +1,9 @@
-import { ToggleButton } from "../../../components/ui/ToggleButton.jsx";
-import { Tooltip } from "../../../components/ui/Tooltip.jsx";
-import { SwatchPicker } from "../../../components/ui/SwatchPicker.jsx";
-import { Card } from "../../../components/ui/Card.jsx";
-import { SelectField } from "../../../components/ui/SelectField.jsx";
-import { Slider } from "../../../components/ui/Slider.jsx";
+import { ToggleButton } from "../../../components/ui/ToggleButton.tsx";
+import { Tooltip } from "../../../components/ui/Tooltip.tsx";
+import { SwatchPicker } from "../../../components/ui/SwatchPicker.tsx";
+import { Card } from "../../../components/ui/Card.tsx";
+import { SelectField } from "../../../components/ui/SelectField.tsx";
+import { Slider } from "../../../components/ui/Slider.tsx";
 import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, CABINET_FINISHES } from "../../../lib/data.ts";
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc.ts";
 

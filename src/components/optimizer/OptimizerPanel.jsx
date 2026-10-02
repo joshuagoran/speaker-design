@@ -1,8 +1,8 @@
-import { ToggleButton } from "../ui/ToggleButton.jsx";
-import { Card } from "../ui/Card.jsx";
-import { SectionHeading } from "../ui/SectionHeading.jsx";
-import { NumberField } from "../ui/NumberField.jsx";
-import { Notice } from "../ui/Notice.jsx";
+import { ToggleButton } from "../ui/ToggleButton.tsx";
+import { Card } from "../ui/Card.tsx";
+import { SectionHeading } from "../ui/SectionHeading.tsx";
+import { NumberField } from "../ui/NumberField.tsx";
+import { Notice } from "../ui/Notice.tsx";
 import { formatDollars } from "../../lib/format.ts";
 import { OptimizerResultCard } from "./OptimizerResultCard.jsx";
 import { GoalPicker } from "./GoalPicker.jsx";

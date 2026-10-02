@@ -1,5 +1,5 @@
-import { LockIcon } from "./LockIcon.jsx";
-import { lockButtonClass } from "./LockButton.jsx";
+import { LockIcon } from "./LockIcon.tsx";
+import { lockButtonClass } from "./LockButton.tsx";
 
 /** Order in which a dimension lock cycles: free, max, exact. */
 export const NEXT_DIMENSION_LOCK_MODE = { free: "max", max: "exact", exact: "free" };

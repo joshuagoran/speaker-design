@@ -1,6 +1,6 @@
-import { ToggleButton } from "../../components/ui/ToggleButton.jsx";
-import { Tooltip } from "../../components/ui/Tooltip.jsx";
-import { SectionHeading } from "../../components/ui/SectionHeading.jsx";
+import { ToggleButton } from "../../components/ui/ToggleButton.tsx";
+import { Tooltip } from "../../components/ui/Tooltip.tsx";
+import { SectionHeading } from "../../components/ui/SectionHeading.tsx";
 import { SheetDrawing } from "../../components/drawings/SheetDrawing.jsx";
 import {
   PLYWOOD_SHEETS,

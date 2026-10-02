@@ -1,4 +1,4 @@
-import { FormField } from "./FormField.jsx";
+import { FormField } from "./FormField.tsx";
 import { useEffect, useId, useState } from "react";
 
 /** Number input with a unit. Clearing the box does not force 0: the value only changes once a number is typed. */

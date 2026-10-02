@@ -1,4 +1,4 @@
-import { StatRow } from "../optimizer/StatRow.jsx";
+import { StatRow } from "../optimizer/StatRow.tsx";
 
 /** Two-column list of detail rows, each `[name, value, note, tooltip]`. */
 export function StatRowGrid({ rows }) {

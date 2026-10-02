@@ -1,4 +1,4 @@
-import { Button } from "../../../components/ui/Button.jsx";
+import { Button } from "../../../components/ui/Button.tsx";
 import { LOCK_KEYS } from "../../../constants/lockKeys.ts";
 import { OptimizerPanel } from "../../../components/optimizer/OptimizerPanel.jsx";
 import { OptimizerBar } from "../../../components/optimizer/OptimizerBar.jsx";

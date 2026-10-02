@@ -1,4 +1,4 @@
-import { StatTile } from "./StatTile.jsx";
+import { StatTile } from "./StatTile.tsx";
 
 /** Responsive grid of headline numbers, each `[label, value, unit]`. */
 export function StatTileGrid({ tiles }) {

@@ -1,5 +1,5 @@
-import { Button } from "../ui/Button.jsx";
-import { Card } from "../ui/Card.jsx";
+import { Button } from "../ui/Button.tsx";
+import { Card } from "../ui/Card.tsx";
 import { useState } from "react";
 
 /** Name-and-save row plus a menu of saved setups. snapshot() returns what to store (may include a `summary` line); restore(c) loads one. */

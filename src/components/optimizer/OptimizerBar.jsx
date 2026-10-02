@@ -1,6 +1,6 @@
-import { ToggleButton } from "../ui/ToggleButton.jsx";
-import { Button } from "../ui/Button.jsx";
-import { LockIcon } from "../lock/LockIcon.jsx";
+import { ToggleButton } from "../ui/ToggleButton.tsx";
+import { Button } from "../ui/Button.tsx";
+import { LockIcon } from "../lock/LockIcon.tsx";
 
 /** ---- Optimizer pieces shared by the Hi-fi and PA stack panels ---- */
 export function OptimizerBar({

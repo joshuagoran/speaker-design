@@ -1,6 +1,6 @@
 import { PAL } from "../../styles/palette.ts";
-import { WarningChips } from "../../components/chips/WarningChips.jsx";
-import { StatTile } from "../../components/stats/StatTile.jsx";
+import { WarningChips } from "../../components/chips/WarningChips.tsx";
+import { StatTile } from "../../components/stats/StatTile.tsx";
 import {
   HIFI_WOOFERS_BY_SIZE,
   HIFI_PASSIVES_BY_SIZE,
@@ -10,21 +10,21 @@ import {
   HIFI_TWEETERS_BY_TYPE,
 } from "./hifiDriverLists.ts";
 import { HifiResultCard } from "./HifiResultCard.jsx";
-import { ToggleButton } from "../../components/ui/ToggleButton.jsx";
-import { Button } from "../../components/ui/Button.jsx";
-import { Tooltip } from "../../components/ui/Tooltip.jsx";
-import { Card } from "../../components/ui/Card.jsx";
-import { SectionHeading } from "../../components/ui/SectionHeading.jsx";
-import { NumberField } from "../../components/ui/NumberField.jsx";
-import { SelectField } from "../../components/ui/SelectField.jsx";
-import { Slider } from "../../components/ui/Slider.jsx";
-import { Notice } from "../../components/ui/Notice.jsx";
+import { ToggleButton } from "../../components/ui/ToggleButton.tsx";
+import { Button } from "../../components/ui/Button.tsx";
+import { Tooltip } from "../../components/ui/Tooltip.tsx";
+import { Card } from "../../components/ui/Card.tsx";
+import { SectionHeading } from "../../components/ui/SectionHeading.tsx";
+import { NumberField } from "../../components/ui/NumberField.tsx";
+import { SelectField } from "../../components/ui/SelectField.tsx";
+import { Slider } from "../../components/ui/Slider.tsx";
+import { Notice } from "../../components/ui/Notice.tsx";
 import { ResponseChart } from "../../components/charts/ResponseChart.jsx";
 import { DispersionMap } from "../../components/charts/DispersionMap.jsx";
 import { RoomView } from "../../components/drawings/RoomView.jsx";
 import { HifiFront } from "../../components/drawings/HifiFront.jsx";
-import { LockButton } from "../../components/lock/LockButton.jsx";
-import { DimensionLock } from "../../components/lock/DimensionLock.jsx";
+import { LockButton } from "../../components/lock/LockButton.tsx";
+import { DimensionLock } from "../../components/lock/DimensionLock.tsx";
 import { OptimizerBar } from "../../components/optimizer/OptimizerBar.jsx";
 import { GoalPicker } from "../../components/optimizer/GoalPicker.jsx";
 import { RunRow } from "../../components/optimizer/RunRow.jsx";

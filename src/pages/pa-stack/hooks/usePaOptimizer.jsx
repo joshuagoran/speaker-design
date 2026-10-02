@@ -1,6 +1,6 @@
 import { readStoredJson, writeStoredJson } from "../../../lib/storage.ts";
-import { LockButton } from "../../../components/lock/LockButton.jsx";
-import { DimensionLock } from "../../../components/lock/DimensionLock.jsx";
+import { LockButton } from "../../../components/lock/LockButton.tsx";
+import { DimensionLock } from "../../../components/lock/DimensionLock.tsx";
 import { runPaOptimizer } from "../../../lib/pa/runOptimizer.ts";
 import { evaluateDesign as evaluateConfig, pickOptimizedFields } from "../../../lib/pa/optimize.ts";
 import { useState } from "react";

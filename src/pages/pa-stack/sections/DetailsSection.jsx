@@ -1,4 +1,4 @@
-import { SectionHeading } from "../../../components/ui/SectionHeading.jsx";
+import { SectionHeading } from "../../../components/ui/SectionHeading.tsx";
 
 /** Toggle for, and text of, the written details of the sub, mid-bass cube and horn. */
 export function DetailsSection({ planner }) {

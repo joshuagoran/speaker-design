@@ -1,4 +1,4 @@
-import { StatLabel } from "../optimizer/StatRow.jsx";
+import { StatLabel } from "../optimizer/StatRow.tsx";
 
 /** One headline number: a small label (with tooltip when one exists), the value and its unit. */
 export function StatTile({ label, value, unit }) {

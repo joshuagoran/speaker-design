@@ -1,4 +1,4 @@
-import { FormField } from "./FormField.jsx";
+import { FormField } from "./FormField.tsx";
 import { useId } from "react";
 
 /** group: optional (option) => heading; options with the same heading are listed together under it, in order of first appearance */

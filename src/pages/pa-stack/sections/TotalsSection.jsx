@@ -1,4 +1,4 @@
-import { FoldHeading } from "../../../components/ui/FoldHeading.jsx";
+import { FoldHeading } from "../../../components/ui/FoldHeading.tsx";
 
 /** Cost, weight and height totals for the current selection, per stack and per pair. */
 export function TotalsSection({ planner }) {

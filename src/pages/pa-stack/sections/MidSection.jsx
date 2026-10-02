@@ -1,7 +1,7 @@
-import { WarningChips } from "../../../components/chips/WarningChips.jsx";
-import { StatTileGrid } from "../../../components/stats/StatTileGrid.jsx";
-import { FoldHeading } from "../../../components/ui/FoldHeading.jsx";
-import { StatRow } from "../../../components/optimizer/StatRow.jsx";
+import { WarningChips } from "../../../components/chips/WarningChips.tsx";
+import { StatTileGrid } from "../../../components/stats/StatTileGrid.tsx";
+import { FoldHeading } from "../../../components/ui/FoldHeading.tsx";
+import { StatRow } from "../../../components/optimizer/StatRow.tsx";
 import { midChips } from "../../../lib/pa/chips.ts";
 
 /** Mid-bass results: headline stats, details table and warning chips. */

@@ -1,5 +1,5 @@
-import { Tooltip } from "../../components/ui/Tooltip.jsx";
-import { SectionHeading } from "../../components/ui/SectionHeading.jsx";
+import { Tooltip } from "../../components/ui/Tooltip.tsx";
+import { SectionHeading } from "../../components/ui/SectionHeading.tsx";
 import { SignalPath } from "../../components/drawings/SignalPath.jsx";
 import { RACKS } from "../../lib/data.ts";
 

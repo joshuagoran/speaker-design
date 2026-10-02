@@ -1,4 +1,4 @@
-import { ToggleButton } from "../ui/ToggleButton.jsx";
+import { ToggleButton } from "../ui/ToggleButton.tsx";
 import { RankBadge } from "./RankBadge.jsx";
 
 /** Row of goal toggles for an optimizer. */

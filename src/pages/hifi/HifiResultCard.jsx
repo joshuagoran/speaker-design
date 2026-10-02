@@ -1,5 +1,5 @@
 import { passiveRadiatorOf } from "./hifiDriverLists.ts";
-import { Button } from "../../components/ui/Button.jsx";
+import { Button } from "../../components/ui/Button.tsx";
 import { OptimizerCurveChart } from "../../components/charts/OptimizerCurveChart.jsx";
 import { HifiFront } from "../../components/drawings/HifiFront.jsx";
 import { formatDollars } from "../../lib/format.ts";
