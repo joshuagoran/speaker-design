@@ -123,3 +123,12 @@ e.g. `useRef<HTMLDivElement>(null)` (4 sites).
 - `vp check` runs tsgolint (TypeScript 7); the pinned `typescript` dev dependency keeps the editor on the same
   version, but the two can still differ on edge cases. `vp check` is the one that counts.
 - Bundle size: types are stripped, so it shouldn't change. The byte-identical build gate checks this.
+
+## Done
+
+Landed as three PRs, bottom-up as planned: data and calculations (PR 1), hooks and components (PR 2), pages and cleanup
+(PR 3). Every file in `src/` and `tests/` is TypeScript under `strict`, `allowJs` is gone, `any` and `@ts-ignore` are
+lint errors, and `@ts-expect-error` needs a reason. The pages stayed byte-identical to `main` (checked with
+`build/compare-main.sh`) except in the commits that were labelled as runtime changes: the Cutlist mid-tint fix
+(`e407d8d`) and the fill-driver T/S corrections (`1594bf8`, `ee81e1b`). The runtime bugs and the remaining `!`
+assertions found along the way are in issue #21, for a real guard after the migration.

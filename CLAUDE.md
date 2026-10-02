@@ -1,6 +1,6 @@
 # SpeakNow (speaker-design)
 
-DIY speaker planner: PA stack, cutlist, fills and hi-fi tabs, with optimizers. Single self-contained page (React, three.js, compiled Tailwind, font all bundled; no CDN scripts) built by `build/build.sh` (`vp build` + `build/inline.mjs`); sources in `src/`;
+DIY speaker planner: PA stack, cutlist, fills and hi-fi tabs, with optimizers. Single self-contained page (React, three.js, compiled Tailwind, font all bundled; no CDN scripts) built by `build/build.sh` (`vp build` + `build/inline.mjs`); sources in `src/`, strict TypeScript (`tsconfig.json`), shared types in `src/types.ts`;
 checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without the global CLI); phone layout check in `tests/mobile-check.mjs` (CI).
 
 ## UI rules
@@ -12,6 +12,13 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - Colours: CMYK brand (cyan actions and horn/tweeter, magenta mid-bass/woofer, yellow accents) plus black, white and two
   grays; status colours stay green / orange / red. The palette lives in `src/styles/palette.ts`; Tailwind's colour names are remapped from it in `tailwind.config.js`.
 - Font: Inconsolata. Corners 4 px (6 px on large boxes).
+
+## TypeScript
+
+- Imports carry no extension (`./foo`, never `./foo.ts`); only `?worker&inline`, CSS and Node-loaded files keep theirs.
+- Narrowest type, derived from an existing one (`Pick`, `Omit`, indexed access); never redeclare a shape, grep `src/types.ts` first.
+- Avoid `!`: fix the type at its source or use existing narrowing; a last-resort `!` carries a one-line reason.
+- No `any` (lint errors), no `@ts-ignore`, `@ts-expect-error` needs a reason; `as` only as `as const` or a commented boundary cast.
 
 ## Project conventions
 
