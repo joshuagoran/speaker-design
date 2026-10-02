@@ -162,6 +162,7 @@ export function evaluateFill(c: FillGoldenConfig): GoldenValues {
     ampW: c.ampW || 300,
     portMax: c.portMax || 20,
   });
+  if (!f) throw new Error(`fill ${c.drv} has no model`);
   return {
     net: r2(f.net),
     Fb: r2(f.vM && f.vM.Fb),

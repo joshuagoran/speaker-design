@@ -964,15 +964,14 @@ export interface FillSystemConfig {
   portMax: number;
 }
 
-export interface FillSystem {
+/** What every modelled fill has, whichever box. */
+export interface FillSystemBase {
   V: number;
   gross: number;
   pArea: number;
   disp: number;
   net: number;
   eff: number;
-  vM: VentedBoxModel | null;
-  sM: SealedBoxModel | null;
   max: PaMaxPoint[];
   sens: number;
   f3: number;
@@ -982,6 +981,23 @@ export interface FillSystem {
   lb: number;
   portLimited: boolean;
 }
+
+/** A ported fill: the vented-box model, no sealed one. */
+export interface FillSystemVented extends FillSystemBase {
+  boxType: Extract<FillBoxType, "vented">;
+  vM: VentedBoxModel;
+  sM: null;
+}
+
+/** A sealed fill (stuffed): the closed-box model, no vented one. */
+export interface FillSystemSealed extends FillSystemBase {
+  boxType: Extract<FillBoxType, "sealed">;
+  vM: null;
+  sM: SealedBoxModel;
+}
+
+/** `fillSystem`'s result: check `boxType`, or `vM` or `sM`, and the other model's type follows. */
+export type FillSystem = FillSystemVented | FillSystemSealed;
 
 // ---- Cutlist ----
 

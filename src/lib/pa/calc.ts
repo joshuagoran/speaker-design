@@ -900,7 +900,7 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
 // ---- passive coaxial fills ----
 // drv: FILL_OPTIONS entry. cfg: { boxType: "vented" | "sealed", dim {w,h,d} external in, port {n, dia, len},
 // hp (LR24 highpass to the subs), ampW (per box, 8 ohm rating), portMax }. 1/2" walls throughout.
-export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem {
+export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem | null {
   const { boxType, dim, port, hp, ampW, portMax } = cfg;
   const ts = drv.ts,
     V = ampVoltage(ampW),
@@ -913,13 +913,14 @@ export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem {
   const eff = vented ? net : net * STUFFING_VOLUME_GAIN; // sealed boxes are stuffed
   const vM = vented ? boxModel(ts, eff, pArea, port.len, hp, V, "LR24", { nPorts: port.n }) : null;
   const sM = vented ? null : closedBox(ts, eff, hp, null, V);
-  const m = (vM || sM)!; // a vented box with a port, or the sealed model
+  const m = vM || sM;
+  if (!m) return null; // a vented box with no port area or length has no model
   const max = maxOutputCurve(m.curve, ts, V, portMax).filter((o) => o.f <= 300);
   const sens = m.ref - 20 * Math.log10(V / 2.83);
   // system -3 dB, highpass included, for both box types
   const f3 = vM
     ? vM.f3
-    : (sM!.curve.find((o) => o.spl >= sM!.ref - 3) || sM!.curve[sM!.curve.length - 1]).f;
+    : (m.curve.find((o) => o.spl >= m.ref - 3) || m.curve[m.curve.length - 1]).f;
   // HF through a passive network, padded down to the woofer: reaches its program rating (2 x AES)
   // only at an amp power well above what the woofer sees
   const hf = drv.hf;
@@ -927,5 +928,8 @@ export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem {
   const hfLimW = hf ? ((2 * hf.aes * hf.imp) / 8) * Math.pow(10, pad / 10) : null; // amp watts (8 ohm rating)
   const lb = ((2 * (dim.w * dim.h + dim.w * dim.d + dim.h * dim.d)) / 144) * 1.6 + drv.lb + 1; // 1/2" birch ~1.6 lb/ft2
   const portLimited = vented && max.some((o) => o.who === "port");
-  return { V, gross, pArea, disp, net, eff, vM, sM, max, sens, f3, pad, hfLimW, lb, portLimited };
+  const common = { V, gross, pArea, disp, net, eff, max, sens, f3, pad, hfLimW, lb, portLimited };
+  if (vM) return { ...common, boxType: "vented", vM, sM: null };
+  if (sM) return { ...common, boxType: "sealed", vM: null, sM };
+  return null;
 }

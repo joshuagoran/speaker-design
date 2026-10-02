@@ -298,17 +298,17 @@ export function fillChips(s: FillChipsInput): Chip[] {
         "Port-limited",
         `Port air speed reaches ${portMax} m/s somewhere below 300 Hz; a wider port helps.`,
       ]);
-  } else {
+  } else if (Qtc != null) {
     F.push(
-      Qtc! > 0.8
-        ? ["warn", `Qtc ${Qtc!.toFixed(2)}`, "Peaky; a bigger box or a vent."]
-        : Qtc! < 0.5
+      Qtc > 0.8
+        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky; a bigger box or a vent."]
+        : Qtc < 0.5
           ? [
               "warn",
-              `Qtc ${Qtc!.toFixed(2)}`,
+              `Qtc ${Qtc.toFixed(2)}`,
               "Very damped: rolls off early. Good driver for a vented box.",
             ]
-          : ["ok", `Qtc ${Qtc!.toFixed(2)}`, "Well damped."],
+          : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped."],
     );
   }
   F.push(
