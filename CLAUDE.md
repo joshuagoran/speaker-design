@@ -27,4 +27,5 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 
 ## Commits and PRs
 
+- Name task branches readably, e.g. `hifi-slot-vent`, not `claude/<random-words>`.
 - Never attach session links (e.g. `Claude-Session:` trailers or claude.ai/code URLs) to commit messages, PR descriptions or comments.
