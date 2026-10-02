@@ -660,16 +660,18 @@ export interface HifiDesign {
   speakerModel: HifiSpeakerModel | null;
 }
 
-/** The optimizer locks as the page holds them: the box-dimension modes are always present. */
-export interface HifiPlannerLocks extends HifiOptimizerLocks {
-  dim: NonNullable<HifiOptimizerLocks["dim"]>;
-}
+/** The optimizer locks as a page holds them: an on/off lock per key, and the lock mode of each box dimension for each box (always present). */
+export type OptimizerLocks<K extends string, B extends string> = Partial<Record<K, boolean>> &
+  Record<B, Partial<Record<keyof Dims3, DimensionLockMode>>>;
+
+/** The Hi-fi optimizer locks as the page holds them. */
+export type HifiPlannerLocks = OptimizerLocks<HifiLockKey, "dim">;
 
 /** The card being previewed, and the design to go back to when the preview ends. */
-export interface HifiDesignPreview {
+export interface DesignPreview<Card, Config> {
   label: string;
-  before: HifiCardConfig;
-  card: HifiOptimizerCard;
+  before: Config;
+  card: Card;
 }
 
 /** The fields of a design a card applies (the ones the optimizer searched). */
@@ -1273,18 +1275,8 @@ export interface PaOptimizerLocks extends Partial<Record<PaLockKey, boolean>> {
   midDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
 }
 
-/** The optimizer locks as the page holds them: both box-dimension modes are always present. */
-export interface PaPlannerLocks extends PaOptimizerLocks {
-  subDim: NonNullable<PaOptimizerLocks["subDim"]>;
-  midDim: NonNullable<PaOptimizerLocks["midDim"]>;
-}
-
-/** The card being previewed, and the design to go back to when the preview ends. */
-export interface PaDesignPreview {
-  label: string;
-  before: PaDesignConfig;
-  card: PaOptimizerCard;
-}
+/** The PA optimizer locks as the page holds them. */
+export type PaPlannerLocks = OptimizerLocks<PaLockKey, "subDim" | "midDim">;
 
 /** The optimizer's inputs on the page: the room, the heaviest box and the budget, and the goals in tap order. */
 export interface PaOptimizerInputState {

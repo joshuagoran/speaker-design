@@ -1,8 +1,6 @@
 import { Button } from "../../../components/ui/Button";
-import { LOCK_KEYS } from "../../../constants/lockKeys";
 import { OptimizerPanel } from "../../../components/optimizer/OptimizerPanel";
 import { OptimizerBar } from "../../../components/optimizer/OptimizerBar";
-import type { PaPlannerLocks } from "../../../types";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 
 interface Props {
@@ -13,8 +11,7 @@ interface Props {
     | "setIsOptimizerOn"
     | "optimizerInput"
     | "updateOptimizerInput"
-    | "optimizerLocks"
-    | "setOptimizerLocks"
+    | "lockBar"
     | "optimizerResult"
     | "isOptimizing"
     | "optimizerError"
@@ -40,8 +37,7 @@ export function OptimizerControls({ planner }: Props) {
     setIsOptimizerOn,
     optimizerInput,
     updateOptimizerInput,
-    optimizerLocks,
-    setOptimizerLocks,
+    lockBar,
     optimizerResult,
     isOptimizing,
     optimizerError,
@@ -63,35 +59,12 @@ export function OptimizerControls({ planner }: Props) {
         className="max-w-6xl mx-auto px-4 md:px-8 pb-3"
         style={{ fontFamily: "var(--font)" }}
       >
-        {(() => {
-          const n = Object.entries(optimizerLocks).reduce(
-            (a, [k, v]) =>
-              a +
-              (k.endsWith("Dim")
-                ? Object.values(v).filter((m) => m && m !== "free").length
-                : v
-                  ? 1
-                  : 0),
-            0,
-          );
-          /** lock everything (box sizes exact), then unlock the one or two things you want the optimizer to change */
-          const all: PaPlannerLocks = {
-            ...Object.fromEntries(LOCK_KEYS.map((k) => [k, true])),
-            subDim: { w: "exact", h: "exact", d: "exact" },
-            midDim: { w: "exact", h: "exact", d: "exact" },
-          };
-          return (
-            <OptimizerBar
-              on={isOptimizerOn}
-              onToggle={() => setIsOptimizerOn(!isOptimizerOn)}
-              hint="Find cheaper, lighter or louder designs inside your limits."
-              nLocks={n}
-              lockMax={LOCK_KEYS.length + 6}
-              onLockAll={() => setOptimizerLocks(() => all)}
-              onClear={() => setOptimizerLocks(() => ({ subDim: {}, midDim: {} }))}
-            />
-          );
-        })()}
+        <OptimizerBar
+          on={isOptimizerOn}
+          onToggle={() => setIsOptimizerOn(!isOptimizerOn)}
+          hint="Find cheaper, lighter or louder designs inside your limits."
+          {...lockBar}
+        />
       </section>
       {isOptimizerOn && (
         <OptimizerPanel

@@ -1,16 +1,20 @@
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../../lib/data";
-import { readStoredJson, writeStoredJson } from "../../lib/storage";
+import { toggled } from "../../lib/lists";
+import { HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
 import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
+import { useDesignPreview } from "../../hooks/useDesignPreview";
+import { useOptimizerLocks } from "../../hooks/useOptimizerLocks";
+import { useOptimizerRun } from "../../hooks/useOptimizerRun";
+import { useStoredState } from "../../hooks/useStoredState";
 import type {
   HifiCardConfig,
   HifiDesign,
-  HifiDesignPreview,
   HifiGoal,
+  HifiLockKey,
   HifiOptimizerCard,
   HifiOptimizerLocks,
   HifiOptimizerResult,
   HifiPlannerLocks,
-  Setter,
 } from "../../types";
 import { useState } from "react";
 
@@ -26,28 +30,39 @@ interface Props {
   guidePrice: number;
 }
 
-export interface HifiOptimizer {
+export interface HifiOptimizer
+  extends
+    Pick<
+      ReturnType<typeof useOptimizerLocks<HifiLockKey, "dim", HifiOptimizerLocks>>,
+      "renderLockButton" | "renderDimensionLock" | "lockBar"
+    >,
+    Pick<
+      ReturnType<typeof useDesignPreview<HifiOptimizerCard, HifiCardConfig>>,
+      | "designPreview"
+      | "undoSnapshot"
+      | "previewOptimizerResult"
+      | "exitPreview"
+      | "loadOptimizerResult"
+      | "undoOptimizerLoad"
+    > {
   isOptimizerOn: boolean;
   setIsOptimizerOn: (v: boolean) => void;
   optimizerGoals: HifiGoal[];
-  setOptimizerGoals: Setter<HifiGoal[]>;
+  toggleOptimizerGoal: (g: HifiGoal) => void;
   optimizerBudget: number;
   setOptimizerBudget: (v: number) => void;
-  optimizerLocks: HifiPlannerLocks;
-  setOptimizerLocks: (f: (p: HifiPlannerLocks) => HifiPlannerLocks) => void;
   optimizerResult: HifiOptimizerResult | null;
   isOptimizing: boolean;
   optimizerError: string;
-  designPreview: HifiDesignPreview | null;
-  undoSnapshot: HifiCardConfig | null;
   runOptimizerSearch: () => Promise<void>;
-  previewOptimizerResult: (k: HifiOptimizerCard) => void;
-  exitPreview: () => void;
-  loadOptimizerResult: (k: HifiOptimizerCard) => void;
-  undoOptimizerLoad: () => void;
   /** Drops the result, any preview and the undo (a restored saved design makes them stale). */
   clearOptimizerResults: () => void;
 }
+
+const ALL_LOCKED: HifiPlannerLocks = {
+  ...Object.fromEntries(HIFI_LOCK_KEYS.map((k) => [k, true])),
+  dim: { w: "exact", h: "exact", d: "exact" },
+};
 
 /** The Hi-fi optimizer: switch, goals, budget, locks, search, previewing, loading and undo. Switch, budget and locks are remembered per viewer. */
 export function useHifiOptimizer({
@@ -58,104 +73,71 @@ export function useHifiOptimizer({
   seatDistanceM,
   guidePrice,
 }: Props): HifiOptimizer {
-  // optimizer: same rules and layout as the PA planner's (switch, locks on the controls, goals in tap order)
-  const [isOptimizerOn, setIsOptimizerOnState] = useState(() => readStoredJson("hifi.opt", false));
-  const setIsOptimizerOn = (v: boolean) => {
-    setIsOptimizerOnState(v);
-    writeStoredJson("hifi.opt", v);
-  };
+  const [isOptimizerOn, setIsOptimizerOn] = useStoredState("hifi.opt", false);
+  const [optimizerBudget, setOptimizerBudget] = useStoredState("hifi.budget", 800);
+  // goals in tap order, not remembered
   const [optimizerGoals, setOptimizerGoals] = useState<HifiGoal[]>([]);
-  const [optimizerBudget, setOptimizerBudgetState] = useState(() =>
-    readStoredJson("hifi.budget", 800),
-  );
-  const setOptimizerBudget = (v: number) => {
-    setOptimizerBudgetState(v);
-    writeStoredJson("hifi.budget", v);
-  };
-  const [optimizerLocks, setOptimizerLocksState] = useState<HifiPlannerLocks>(() => {
-    const l = readStoredJson<HifiOptimizerLocks>("hifi.locks", {}) || {};
-    return { ...l, dim: { ...l.dim } };
+  const { optimizerLocks, renderLockButton, renderDimensionLock, lockBar } = useOptimizerLocks<
+    HifiLockKey,
+    "dim",
+    HifiOptimizerLocks
+  >({
+    key: "hifi.locks",
+    empty: {},
+    fromStored: (l) => ({ ...l, dim: { ...l.dim } }),
+    allLocked: ALL_LOCKED,
+    none: { dim: {} },
+    enabled: isOptimizerOn,
   });
-  const setOptimizerLocks = (f: (p: HifiPlannerLocks) => HifiPlannerLocks) =>
-    setOptimizerLocksState((p) => {
-      const n = f(p);
-      writeStoredJson("hifi.locks", n);
-      return n;
-    });
-  const [optimizerResult, setOptimizerResult] = useState<HifiOptimizerResult | null>(null);
-  const [isOptimizing, setIsOptimizing] = useState(false);
-  const [optimizerError, setOptimizerError] = useState("");
-  const [designPreview, setDesignPreview] = useState<HifiDesignPreview | null>(null);
-  const [undoSnapshot, setUndoSnapshot] = useState<HifiCardConfig | null>(null);
-  // ---- optimizer actions ----
-  const runOptimizerSearch = async () => {
-    if (isOptimizing) return; // the Run button is disabled while a search runs; this guards the call itself
-    setIsOptimizing(true);
-    setOptimizerError("");
-    const base = designPreview ? designPreview.before : snapshot();
-    try {
-      setOptimizerResult(
-        await runHifiOptimizer({
-          cur: { ...speakerConfig, ...base, guide: compressionWaveguide },
-          woofers: HIFI_WOOFERS,
-          tweeters: HIFI_TWEETERS,
-          passives: HIFI_PASSIVES,
-          goals: optimizerGoals,
-          locks: optimizerLocks,
-          budget: optimizerBudget,
-          seatM: seatDistanceM,
-          guidePrice,
-        }),
-      );
-    } catch (e) {
-      // boundary cast: a catch variable is unknown; whatever was thrown is read for a message, as before
-      setOptimizerError("The search failed: " + ((e && (e as Error).message) || e));
-    }
-    setIsOptimizing(false);
-  };
-  const previewOptimizerResult = (k: HifiOptimizerCard) => {
-    const before = designPreview ? designPreview.before : snapshot();
-    applyDesign(k.config);
-    setDesignPreview({ label: k.label, before, card: k });
-  };
-  const exitPreview = () => {
-    if (designPreview) applyDesign(designPreview.before);
-    setDesignPreview(null);
-  };
-  const loadOptimizerResult = (k: HifiOptimizerCard) => {
-    const before = designPreview ? designPreview.before : snapshot();
-    applyDesign(k.config);
-    setDesignPreview(null);
-    setUndoSnapshot(before);
-  };
-  const undoOptimizerLoad = () => {
-    if (undoSnapshot) applyDesign(undoSnapshot);
-    setUndoSnapshot(null);
-  };
-  const clearOptimizerResults = () => {
-    setDesignPreview(null);
-    setUndoSnapshot(null);
-    setOptimizerResult(null);
-  };
+  const preview = useDesignPreview<HifiOptimizerCard, HifiCardConfig>({
+    snapshot,
+    applyCard: (k) => applyDesign(k.config),
+    restore: applyDesign,
+  });
+  const {
+    optimizerResult,
+    isOptimizing,
+    optimizerError,
+    runOptimizerSearch,
+    clearOptimizerResult,
+  } = useOptimizerRun<HifiOptimizerResult>();
+  const search = () =>
+    runOptimizerSearch(() =>
+      runHifiOptimizer({
+        cur: { ...speakerConfig, ...preview.baseDesign(), guide: compressionWaveguide },
+        woofers: HIFI_WOOFERS,
+        tweeters: HIFI_TWEETERS,
+        passives: HIFI_PASSIVES,
+        goals: optimizerGoals,
+        locks: optimizerLocks,
+        budget: optimizerBudget,
+        seatM: seatDistanceM,
+        guidePrice,
+      }),
+    );
   return {
     isOptimizerOn,
     setIsOptimizerOn,
     optimizerGoals,
-    setOptimizerGoals,
+    toggleOptimizerGoal: (g) => setOptimizerGoals((p) => toggled(p, g)),
     optimizerBudget,
     setOptimizerBudget,
-    optimizerLocks,
-    setOptimizerLocks,
+    renderLockButton,
+    renderDimensionLock,
+    lockBar,
     optimizerResult,
     isOptimizing,
     optimizerError,
-    designPreview,
-    undoSnapshot,
-    runOptimizerSearch,
-    previewOptimizerResult,
-    exitPreview,
-    loadOptimizerResult,
-    undoOptimizerLoad,
-    clearOptimizerResults,
+    designPreview: preview.designPreview,
+    undoSnapshot: preview.undoSnapshot,
+    runOptimizerSearch: search,
+    previewOptimizerResult: preview.previewOptimizerResult,
+    exitPreview: preview.exitPreview,
+    loadOptimizerResult: preview.loadOptimizerResult,
+    undoOptimizerLoad: preview.undoOptimizerLoad,
+    clearOptimizerResults: () => {
+      preview.clearDesignPreview();
+      clearOptimizerResult();
+    },
   };
 }

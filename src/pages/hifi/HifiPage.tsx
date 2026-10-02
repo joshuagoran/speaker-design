@@ -23,8 +23,6 @@ import { ResponseChart } from "../../components/charts/ResponseChart";
 import { DispersionMap } from "../../components/charts/DispersionMap";
 import { RoomView } from "../../components/drawings/RoomView";
 import { HifiFront } from "../../components/drawings/HifiFront";
-import { LockButton } from "../../components/lock/LockButton";
-import { DimensionLock } from "../../components/lock/DimensionLock";
 import { OptimizerBar } from "../../components/optimizer/OptimizerBar";
 import { GoalPicker } from "../../components/optimizer/GoalPicker";
 import { RunRow } from "../../components/optimizer/RunRow";
@@ -34,9 +32,9 @@ import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
 import { METERS_PER_FOOT } from "../../constants/units";
 import { passiveRadiatorMassMax } from "../../lib/data";
 import { SPEAKER_PLACEMENTS as HIFI_PLACES } from "../../lib/hifi/hifi";
-import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
+import { HIFI_OPTIMIZER_GOALS } from "../../lib/hifi/optimize";
 import type { HifiPlanner } from "./useHifiPlanner";
-import type { Dims3, HifiGoal, HifiLockKey } from "../../types";
+import type { Dims3 } from "../../types";
 import { entriesOf } from "../../lib/records";
 
 interface Props {
@@ -92,17 +90,18 @@ export function HifiPage({ hifi }: Props) {
     setDispersionPlane,
     isOptimizerOn,
     optimizerGoals,
-    setOptimizerGoals,
+    toggleOptimizerGoal,
     optimizerBudget,
     setOptimizerBudget,
-    optimizerLocks,
+    renderLockButton,
+    renderDimensionLock,
+    lockBar,
     optimizerResult,
     isOptimizing,
     optimizerError,
     designPreview,
     undoSnapshot,
     setIsOptimizerOn,
-    setOptimizerLocks,
     runOptimizerSearch,
     previewOptimizerResult,
     exitPreview,
@@ -147,40 +146,12 @@ export function HifiPage({ hifi }: Props) {
   const tile = (k: string, v: string, u: string) => (
     <StatTile key={k} label={k} value={v} unit={u} />
   );
-  const renderLockButton = (key: HifiLockKey, what: string) =>
-    isOptimizerOn ? (
-      <LockButton
-        on={!!optimizerLocks[key]}
-        what={what}
-        onClick={() => setOptimizerLocks((p) => ({ ...p, [key]: !p[key] }))}
-      />
-    ) : null;
-  const renderDimensionLock = (dm: keyof Dims3, what: string) =>
-    isOptimizerOn ? (
-      <DimensionLock
-        mode={optimizerLocks.dim[dm] || "free"}
-        what={what}
-        onChange={(m) => setOptimizerLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))}
-      />
-    ) : null;
-  const toggleGoal = (g: HifiGoal) =>
-    setOptimizerGoals((p) => (p.includes(g) ? p.filter((x) => x !== g) : [...p, g]));
-  const lockCount =
-    HIFI_LOCK_KEYS.filter((k) => optimizerLocks[k]).length +
-    Object.values(optimizerLocks.dim).filter((m) => m && m !== "free").length;
-  const allLocksConfig = {
-    ...Object.fromEntries(HIFI_LOCK_KEYS.map((k) => [k, true])),
-    dim: { w: "exact", h: "exact", d: "exact" } as const,
-  };
   const optimizerBar = (
     <OptimizerBar
       on={isOptimizerOn}
       onToggle={() => setIsOptimizerOn(!isOptimizerOn)}
       hint="Find cheaper, lighter, deeper or louder designs inside your limits."
-      nLocks={lockCount}
-      lockMax={HIFI_LOCK_KEYS.length + 3}
-      onLockAll={() => setOptimizerLocks(() => allLocksConfig)}
-      onClear={() => setOptimizerLocks(() => ({ dim: {} }))}
+      {...lockBar}
     />
   );
   const optimizerPanel = isOptimizerOn && (
@@ -205,7 +176,11 @@ export function HifiPage({ hifi }: Props) {
             className=""
           />
         </div>
-        <GoalPicker defs={HIFI_OPTIMIZER_GOALS} selected={optimizerGoals} onTap={toggleGoal} />
+        <GoalPicker
+          defs={HIFI_OPTIMIZER_GOALS}
+          selected={optimizerGoals}
+          onTap={toggleOptimizerGoal}
+        />
       </div>
       <RunRow
         busy={isOptimizing}
@@ -534,7 +509,7 @@ export function HifiPage({ hifi }: Props) {
             step={0.25}
             unit="″"
             onChange={(v) => setBoxDim("w", v)}
-            extra={renderDimensionLock("w", "Width")}
+            extra={renderDimensionLock("dim", "w", "Width")}
           />
           <Slider
             label="Height"
@@ -544,7 +519,7 @@ export function HifiPage({ hifi }: Props) {
             step={0.25}
             unit="″"
             onChange={(v) => setBoxDim("h", v)}
-            extra={renderDimensionLock("h", "Height")}
+            extra={renderDimensionLock("dim", "h", "Height")}
           />
           <Slider
             label="Depth"
@@ -554,7 +529,7 @@ export function HifiPage({ hifi }: Props) {
             step={0.25}
             unit="″"
             onChange={(v) => setBoxDim("d", v)}
-            extra={renderDimensionLock("d", "Depth")}
+            extra={renderDimensionLock("dim", "d", "Depth")}
           />
           <div className="flex items-center justify-between gap-2 mb-1 mt-1">
             <span className="text-sm text-stone-500">Ports</span>
