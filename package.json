@@ -5,6 +5,7 @@
   "scripts": {
     "build": "sh build/build.sh pages",
     "test": "vp test",
+    "golden": "vp test --run --config tests/update-golden.config.ts",
     "prepare": "vp config"
   },
   "dependencies": {
@@ -15,9 +16,13 @@
     "three": "0.140.0"
   },
   "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.140.0",
     "playwright": "1.56.1",
     "postcss": "^8.5.28",
     "tailwindcss": "3.4.16",
+    "typescript": "7.0.2",
     "vite-plus": "catalog:"
   },
   "devEngines": {

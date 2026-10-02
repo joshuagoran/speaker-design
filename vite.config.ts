@@ -23,7 +23,7 @@ export default defineConfig({
     "*": "vp check --fix",
   },
   test: {
-    include: ["tests/**/*.test.js"],
+    include: ["tests/**/*.test.{js,ts}"],
     // the optimizer tests take 5–7 s and assert their own 10 s budget; Vitest's 5 s default would cut them off
     testTimeout: 30_000,
   },
@@ -33,7 +33,14 @@ export default defineConfig({
   },
   lint: {
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
-    rules: { "vite-plus/prefer-vite-plus-imports": "error" },
+    rules: {
+      "vite-plus/prefer-vite-plus-imports": "error",
+      "typescript/no-explicit-any": "error",
+      "typescript/ban-ts-comment": [
+        "error",
+        { "ts-expect-error": "allow-with-description", "ts-ignore": true },
+      ],
+    },
     options: { typeAware: true, typeCheck: true },
   },
 });

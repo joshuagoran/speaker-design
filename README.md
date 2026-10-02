@@ -12,23 +12,28 @@ substitute for an impedance sweep on the prototype.
 ## Layout
 
 ```
-src/main.jsx                    entry: mounts <App/>; imports the stylesheet
-src/App.jsx                     hash routing, header, and the planner state shared by the PA pages
+src/main.tsx                    entry: mounts <App/>; imports the stylesheet
+src/App.tsx                     hash routing, header, and the planner state shared by the PA pages
 src/pages/pa-stack/             PA stack page: PaStackPage, sections/, hooks/ (state: sub, mid, horn, crossovers, ...)
 src/pages/{hifi,fills,cutlist,notes}/   the other pages
 src/components/                 ui/ charts/ drawings/ lock/ optimizer/ stats/ chips/ saved-configs/ stack-view/
-src/components/saved-configs/firebaseStore.js   saving on GitHub Pages (bundled only into that build)
+src/components/saved-configs/firebaseStore.ts   saving on GitHub Pages (bundled only into that build)
 src/hooks/  src/constants/      shared hooks, chart scales, lock keys, units
-src/styles/palette.js           the colours (CSS variables and Tailwind names come from here)
+src/styles/palette.ts           the colours (CSS variables and Tailwind names come from here)
 src/styles/app.css              page styles + Tailwind layers; font
-src/lib/data.js                 drivers, horns, cabinets
-src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion (pure JS, tested)
+src/lib/data.ts                 drivers, horns, cabinets
+src/lib/tables.ts               byId / byIdOrThrow for those tables
+src/lib/defaults.ts             DEFAULT_PA / DEFAULT_HIFI / DEFAULT_FILL: the first-load designs, as whole objects
+src/types.ts                    types shared across modules (drivers, horns, cabinets, design config, Setter)
+src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion (pure TypeScript, tested)
 src/lib/hifi/                   hifi model and its optimizer
 index.html                      Vite entry
 tailwind.config.js              Tailwind, compiled at build time
+tsconfig.json                   strict TypeScript (type-checked by `vp check`; Vite does the emit)
 tests/                          Vitest suites, golden snapshot, mobile layout check
 build/build.sh                  vp build + build/inline.mjs -> one self-contained page
 build/serve.sh                  build + serve on :8901
+build/compare-main.sh           build this tree and a ref (default origin/main), cmp both pages
 docs/design-notes.md            findings behind the current configuration
 docs/*.svg                      crossover null cone, horn coverage
 ```
@@ -42,6 +47,7 @@ Node `^22.18.0 || ^24.11.0 || >=26` and Python 3 (for the preview server). The t
 pnpm install            # or `vp install` with the global vp CLI
 pnpm exec vp check      # format, lint, type check
 pnpm exec vp test       # tests (Vitest)
+pnpm run golden         # rewrite tests/golden.json after an intentional change (golden.test.ts only reads it)
 ```
 
 ## Build
@@ -140,16 +146,16 @@ configurations and can be edited or deleted like any other.
 
 ## How the planner is put together
 
-- `src/lib/data.js` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
-- `src/lib/pa/optimize.js` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`src/lib/pa/optimize.worker.js`, inlined by the build), with a main-thread fallback. See `docs/optimizer-plan.md`.
-- `src/lib/pa/chips.js` — the warning chips for each section (sub, mid, horn, fills), pure functions tested at each threshold.
-- `src/lib/pa/calc.js` — every calculation, pure JS, imported by the page and the tests (`npm test`):
+- `src/lib/data.ts` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
+- `src/lib/pa/optimize.ts` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`src/lib/pa/optimize.worker.ts`, inlined by the build), with a main-thread fallback. See `docs/optimizer-plan.md`.
+- `src/lib/pa/chips.ts` — the warning chips for each section (sub, mid, horn, fills), pure functions tested at each threshold.
+- `src/lib/pa/calc.ts` — every calculation, pure TypeScript, imported by the page and the tests (`vp test`):
   - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r); letterbox and side ducts pass `ecIn` from `slotEndCorr` / `sideDuctEndCorr` (rectangular mouth; floor mirrored at both ends of a letterbox, the side wall at the inner end of a side duct). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.
   - `closedBox(ts, VbL, hp, lp, volts)` — sealed mid-bass, LR24 crossovers. `ref` is the mass-controlled asymptote, so `f3` is right for low-Qtc boxes. Coil inductance is not modelled.
   - `midSystem` (sealed mid volume, model, per-frequency max), `subThroughLp` (sub through the crossover), `fillSystem` (the Fills page).
   - `subSystem` (vent geometry, gross/net volume incl. internal wood from the cutlist parts, model, limits), `subLimits`, `maxCurve`, `hornResponse`, `pistonBeam`, `keeleF`, weights, cutlist (`boxParts`, `cutParts`, `packSheets`).
 - Horn — datasheet model, not T/S: `cd.hf` (sensitivity and its reference, AES power and the crossover it was rated at, minimum crossover, impedance) and `horn.hf` (coverage, minimum crossover, loading limit `lowHz`). Output is sensitivity + 10 log P through the LR24 highpass and a 12 dB/oct rolloff below `lowHz`; power is capped at 2 × AES, derated 6 dB per octave below the AES rating's crossover.
-- Tests (`tests/`) check each function against an independent reference; `tests/golden.json` snapshots the key outputs of the saved and synthetic configs (regenerate with `node tests/make-golden.js` after an intentional change). CI runs them before every deploy, plus `tests/mobile-check.mjs` (Playwright: no sideways scroll, 40 px touch targets, chip text not squeezed, at phone and tablet widths). See `docs/testing-plan.md` and `docs/calc-audit.md`.
+- Tests (`tests/`) check each function against an independent reference; `tests/golden.json` snapshots the key outputs of the saved and synthetic configs (regenerate with `vp run golden` after an intentional change; `golden.test.ts` only reads it, and the writer, `tests/update-golden.ts`, is a separate run because rewriting `golden.json` inside the full suite would race `tests/optimize.test.ts`, which reads it in a parallel worker). CI runs them before every deploy, plus `tests/mobile-check.mjs` (Playwright: no sideways scroll, 40 px touch targets, chip text not squeezed, at phone and tablet widths). See `docs/testing-plan.md` and `docs/calc-audit.md`.
 - `StackView` — the three.js scene. Takes `sub` (whose `.box` carries the
   dimensions) and `portGeom` (explicit vent geometry), so the drawn box always
   matches the modelled one. Its `useEffect` rebuilds the whole scene; the
