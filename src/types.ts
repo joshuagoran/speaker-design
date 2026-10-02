@@ -495,6 +495,9 @@ export interface FrequencyPoint {
   spl: number;
 }
 
+/** The plane a dispersion map is taken in: horizontal (sideways off axis) or vertical (above and below it). */
+export type DispersionPlane = "h" | "v";
+
 /** Level against angle and frequency, relative to on-axis; `rows[angle][frequency]` in dB. */
 export interface HifiDispersionMap {
   angles: number[];

@@ -26,10 +26,97 @@ import {
   subThroughLowpass,
   subMusicOutputAt,
 } from "../../../lib/pa/calc.ts";
+import type {
+  CompressionHf,
+  Dims3,
+  DispersionPlane,
+  FrequencyPoint,
+  HifiDispersionMap,
+  HornHf,
+  HornResponse,
+  MidBox,
+  MidDriver,
+  PaDesignConfig,
+  PaMaxPoint,
+  SealedBoxModel,
+  SubDriver,
+  SubLimits,
+  VentedBoxModel,
+  VentGeometry,
+} from "../../../types.ts";
+import type { CabinetStyle } from "./useCabinetStyle.ts";
+import type { Crossovers } from "./useCrossovers.ts";
+import type { CutlistOptions } from "./useCutlistOptions.ts";
+import type { HornDesign } from "./useHornDesign.ts";
+import type { MidDesign } from "./useMidDesign.ts";
+import type { SubwooferDesign } from "./useSubwooferDesign.ts";
 import { useEffect, useRef } from "react";
 
+/** What `usePaDesign` returns: every design state and setter, plus the models and sizes derived from them. */
+export interface PaDesign
+  extends SubwooferDesign, MidDesign, HornDesign, Crossovers, CabinetStyle, CutlistOptions {
+  /** the mid chamber's size: the tower layout fixes it to the sub's footprint */
+  effectiveMidBoxDims: Dims3;
+  midWithBox: MidDriver & { box: Dims3 };
+  subDriverChoices: SubDriver[];
+  midDriverChoices: MidDriver[];
+  midBoxChoices: MidBox[];
+  subBox: Dims3;
+  subWithBox: SubDriver & { box: Dims3 };
+  /** set by `restore` so the mid size effect leaves a restored config's driver and box alone */
+  skipSizeReset: React.RefObject<boolean>;
+  hornExitMismatch: boolean;
+  /** plywood thickness, in */
+  PT: number;
+  port: VentGeometry;
+  subGrossLiters: number;
+  subNetLiters: number;
+  subAmpVoltage: number;
+  subModel: VentedBoxModel | null;
+  subLimits: SubLimits | null;
+  subMaxCurve: PaMaxPoint[] | null;
+  subMaxCurveNearest: (f: number) => PaMaxPoint;
+  midVoltage: number;
+  midGrossL: number;
+  midNetL: number;
+  midEffL: number;
+  midModel: SealedBoxModel | null;
+  midThermalVoltage: number;
+  midMaxCurve: PaMaxPoint[] | null;
+  midUsedVoltage: number;
+  midCabinetLb: number;
+  midWeightLoadedLb: number;
+  midMaxCurveNearest: (f: number) => PaMaxPoint;
+  subThroughLowpassCurve: FrequencyPoint[] | null;
+  compressionDriverSpec: CompressionHf | undefined;
+  hornSpec: Partial<HornHf>;
+  hornModel: HornResponse | null;
+  hornSplAt: (f: number) => number;
+  midBeamWidthDeg: number | null;
+  /** beamwidth in degrees against frequency for the mid and the horn, and the horn's pattern-control frequency */
+  beamCurves: { midB: FrequencyPoint[]; hornB: FrequencyPoint[]; fK: number | null };
+  subMusicAtCrossover: number | null;
+  portGeom: { ductH: number; nPorts: number; portR: number; tubeLen: number; throat: number };
+  snapshot: () => PaDesignConfig;
+  /** loads a saved or optimizer design; fields an older config lacks keep their defaults */
+  restore: (c: Partial<PaDesignConfig>) => void;
+  subWeightLoadedLb: number;
+  midBoxLiters: number;
+  subTopHeightIn: number;
+  isTower: boolean;
+  stackBaseHeightIn: number;
+  hasArchedTop: boolean;
+  stackHeightIn: number;
+  hornCenterHeightIn: number;
+  midCenterHeightIn: number;
+  dispersionMapDistanceM: number;
+  paDispersion: HifiDispersionMap | null;
+  midHornGapIn: number;
+  midHornNullAngleDeg: number | null;
+}
+
 /** The whole PA design: every part and dimension, the models derived from them, and snapshot/restore for saved configurations. */
-export function usePaDesign({ dispersionPlane }) {
+export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPlane }): PaDesign {
   const {
     subDriver,
     setSubDriver,
@@ -114,7 +201,8 @@ export function usePaDesign({ dispersionPlane }) {
   const subBox = subBoxDims;
   const subWithBox = { ...subDriver, box: subBox };
   useEffect(() => {
-    const pickOf = (list) => list.find((o) => o.pick) || list[0];
+    const pickOf = <T extends { pick?: boolean }>(list: readonly T[]) =>
+      list.find((o) => o.pick) || list[0];
     if (subDriverChoices.length) setSubDriver(pickOf(subDriverChoices));
     if (midDriverChoices.length) setMidDriver(pickOf(midDriverChoices));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,7 +214,8 @@ export function usePaDesign({ dispersionPlane }) {
       skipSizeReset.current = false;
       return;
     }
-    const pickOf = (list) => list.find((o) => o.pick) || list[0];
+    const pickOf = <T extends { pick?: boolean }>(list: readonly T[]) =>
+      list.find((o) => o.pick) || list[0];
     if (midDriverChoices.length) setMidDriver(pickOf(midDriverChoices));
     if (midBoxChoices.length) {
       const b = pickOf(midBoxChoices);
@@ -169,8 +258,9 @@ export function usePaDesign({ dispersionPlane }) {
   const subMaxCurve = subModel
     ? maxCurveOf(subModel.curve, subDriver.ts, subAmpVoltage, maxPortAirSpeedMs)
     : null;
-  const subMaxCurveNearest = (f) =>
-    subMaxCurve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
+  // `subMaxCurve!`, `midMaxCurve!`, `hornModel!` below: the pages call these only where the model exists
+  const subMaxCurveNearest = (f: number) =>
+    subMaxCurve!.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 
   // ---- mid-bass: sealed box ----
   const {
@@ -193,8 +283,8 @@ export function usePaDesign({ dispersionPlane }) {
   /** 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware */
   const midCabinetLb = midWeightLb(effectiveMidBoxDims, wallThicknessIn);
   const midWeightLoadedLb = midCabinetLb + (midDriver.lb || 0);
-  const midMaxCurveNearest = (f) =>
-    midMaxCurve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
+  const midMaxCurveNearest = (f: number) =>
+    midMaxCurve!.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
   /** Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter. */
   const subThroughLowpassCurve = subModel
     ? subThroughLowpass(subModel, subDriver.ts, subAmpVoltage, maxPortAirSpeedMs, subMidCrossoverHz)
@@ -207,10 +297,10 @@ export function usePaDesign({ dispersionPlane }) {
    * 6 dB per octave when crossing below the frequency the AES rating was measured at.
    */
   const compressionDriverSpec = compressionDriver.hf,
-    hornSpec = hornOption.hf || {};
+    hornSpec: Partial<HornHf> = hornOption.hf || {};
   const hornModel = hornResponse(compressionDriverSpec, hornSpec, midHornCrossoverHz, hornAmpWatts);
-  const hornSplAt = (f) =>
-    hornModel.curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b)).spl;
+  const hornSplAt = (f: number) =>
+    hornModel!.curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b)).spl;
   /** mid beamwidth at the horn crossover, as a rigid piston: -6 dB where ka sin(theta) = 2.2 */
   const midBeamWidthDeg = midDriver.ts
     ? pistonBeamWidthDeg(midDriver.ts.Sd, midHornCrossoverHz)
@@ -220,15 +310,16 @@ export function usePaDesign({ dispersionPlane }) {
    * to Keele's pattern-control limit and proportionally wider below. Rules of thumb.
    */
   const beamCurves = (() => {
-    const hz0 = hornOption.hf || {};
+    const hz0: Partial<HornHf> = hornOption.hf || {};
     const fK = hz0.covH && hornOption.size ? keeleFrequency(hz0.covH, hornOption.size.w) : null;
-    const midB = [],
-      hornB = [];
+    const midB: FrequencyPoint[] = [],
+      hornB: FrequencyPoint[] = [];
     for (let i = 0; i < 160; i++) {
       const f = 200 * Math.pow(10000 / 200, i / 159);
       if (midDriver.ts) midB.push({ f, spl: pistonBeamWidthDeg(midDriver.ts.Sd, f) });
+      // `hz0.covH!`: `fK` is set only when `covH` is
       if (fK && f >= (hz0.lowHz || 0) * 0.7)
-        hornB.push({ f, spl: hornBeamWidthDeg(hz0.covH, fK, f) });
+        hornB.push({ f, spl: hornBeamWidthDeg(hz0.covH!, fK, f) });
     }
     return { midB, hornB, fK };
   })();
@@ -251,7 +342,7 @@ export function usePaDesign({ dispersionPlane }) {
   };
 
   /** One named snapshot of the whole system. */
-  const snapshot = () => ({
+  const snapshot = (): PaDesignConfig => ({
     format: format.id,
     sub: subDriver.id,
     mid: midDriver.id,
@@ -283,8 +374,9 @@ export function usePaDesign({ dispersionPlane }) {
     joint: cornerJoint,
     summary: `${subDriver.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${subModel ? subModel.Fb.toFixed(1) + " Hz" : "—"}`,
   });
-  const restore = (c) => {
-    const find = (list, id, fb) => list.find((o) => o.id === id) || fb;
+  const restore = (c: Partial<PaDesignConfig>) => {
+    const find = <T extends { id: string }>(list: readonly T[], id: string, fb: T) =>
+      list.find((o) => o.id === id) || fb;
     if (c.wall === 0.5 || c.wall === 0.75) setWallThicknessIn(c.wall);
     else setWallThicknessIn(0.75);
     setBaffleInsetIn(typeof c.inset === "number" ? c.inset : 0.75);
