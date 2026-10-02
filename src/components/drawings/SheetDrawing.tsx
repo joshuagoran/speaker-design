@@ -17,8 +17,7 @@ export function SheetDrawing({ sheet, S, idx }: Props) {
     H = S.h * sc;
   const [box, cw] = useElementWidth(S.w === 48 ? 160 : 200);
   const fs = (12 * (W + 4)) / cw; // 12 css px
-  // @ts-expect-error PAL has no `mutedTint` (the palette's name is `midTint`), so Mid pieces get the `PAL.edge` fallback below. Real bug, left as is for the migration.
-  const colors: Record<string, string> = { Sub: PAL.subTint, Mid: PAL.mutedTint };
+  const colors: Record<string, string> = { Sub: PAL.subTint, Mid: PAL.midTint };
   return (
     <div
       ref={box}
