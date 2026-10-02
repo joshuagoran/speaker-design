@@ -40,6 +40,12 @@ is clean (0 errors, 74 warnings).
 - **Type-only fixes.** Because of the gate, a type error is fixed with annotations, type narrowing that already exists
   in the code, or a non-null assertion; never with a new guard, a default (`?? 0`) or a restructured loop. If a type
   error reveals a real bug, note it and fix it in a separate PR after the migration.
+- **Narrowest type, shared definition.** A parameter or prop is typed to exactly the fields the code reads, and that
+  shape is derived from an existing type with `Pick`, `Omit`, `Partial` or an indexed access (`PaOptimizerResult["stats"]`),
+  never written out again. A type used by more than one module lives in `src/types.ts`; React helper types that several
+  hooks need (`Setter<T>`) live there too. Before declaring any interface, grep `src/types.ts` and the neighbouring
+  modules for the same fields under another name; if it exists, import it. A full domain object (`SubDriver`,
+  `HifiConfig`) is only the right type where the code passes the object on whole.
 - **No `any`, no `@ts-ignore`.** `as` only as `as const`, or as a commented cast at a boundary: the driver tables,
   `JSON.parse` in `lib/storage`, the `window.claude` call in `useConfigStore`, three.js in `StackView3D`, and the
   worker's `self`.
