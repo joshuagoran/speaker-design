@@ -33,14 +33,13 @@ import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
 import { METERS_PER_FOOT } from "../../constants/units";
 import {
-  HORN_OPTIONS,
   HIFI_WOOFERS,
   HIFI_TWEETERS,
   HIFI_PASSIVES,
   passiveRadiatorMassMax,
   ownGuideCfg,
 } from "../../lib/data";
-import { byId, byIdOrThrow } from "../../lib/tables";
+import { byId } from "../../lib/tables";
 import {
   hifiSystem,
   hifiChips,
@@ -53,43 +52,11 @@ import {
 import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
 import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
 import type { HifiPlanner } from "./useHifiPlanner";
-import type {
-  CrossoverOrder,
-  Dims3,
-  HifiCardConfig,
-  HifiGoal,
-  HifiLockKey,
-  HifiOptimizerCard,
-  HifiPlacement,
-  ListeningSeat,
-  PanelMaterial,
-  RadiatorSelection,
-  Setter,
-} from "../../types";
+import type { Dims3, HifiGoal, HifiLockKey, HifiOptimizerCard } from "../../types";
 import { entriesOf } from "../../lib/records";
 
 interface Props {
   hifi: HifiPlanner;
-}
-
-/**
- * What the page saves: the fields a card applies and the rest of the page's settings. The JSON round trip drops
- * undefined fields, so `pr` is absent unless the box has radiators.
- */
-interface SavedHifiConfig extends Omit<HifiCardConfig, "pr"> {
-  pr?: RadiatorSelection;
-  guide: string;
-  mat: PanelMaterial;
-  order: CrossoverOrder;
-  bsc: number;
-  place: HifiPlacement;
-  wallFt: number;
-  spacing: number;
-  toe: number;
-  seat: ListeningSeat;
-  earIn: number;
-  standIn: number;
-  summary: string;
 }
 
 /** Hi-fi page: 2-way home speakers with an active crossover. */
@@ -160,6 +127,10 @@ export function HifiPage({ hifi }: Props) {
     setOptimizerLocks,
     waveguideChoices,
     store,
+    snapshot,
+    applyDesign,
+    savedConfigSnapshot,
+    restoreSavedConfig,
   } = hifi;
   const setBoxDim = (k: keyof Dims3, v: number) => setBoxDims((p) => ({ ...p, [k]: v }));
   const setPortField = (k: "h" | "dia" | "len", v: number) =>
@@ -307,82 +278,6 @@ export function HifiPage({ hifi }: Props) {
         onChange={(m) => setOptimizerLocks((p) => ({ ...p, dim: { ...p.dim, [dm]: m } }))}
       />
     ) : null;
-  const snapshot = (): HifiCardConfig => ({
-    woofer: woofer.id,
-    tweeter: tweeter.id,
-    box: boxType,
-    dim: boxDims,
-    port: portSpec,
-    pr: boxType === "radiator" ? radiatorSelection : undefined,
-    wall: wallThicknessIn,
-    xo: crossoverHz,
-    wAmpW: wooferAmpWatts,
-    tAmpW: tweeterAmpWatts,
-  });
-  // Everything on the page, for saving (undefined fields dropped: the stores reject them)
-  const savedConfigSnapshot = (): SavedHifiConfig =>
-    JSON.parse(
-      JSON.stringify({
-        ...snapshot(),
-        guide: selectedWaveguide.id,
-        mat: panelMaterial,
-        order: crossoverOrder,
-        bsc: baffleStepCompensationDb,
-        place: placement,
-        wallFt: distanceToWallFt,
-        spacing: speakerSpacingFt,
-        toe: toeInDeg,
-        seat: listeningSeat,
-        earIn: earHeightIn,
-        standIn: standHeightIn,
-        summary: `${woofer.name} + ${tweeter.name} · ${boxDims.w}×${boxDims.h}×${boxDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}`,
-      }),
-    );
-  const restoreSavedConfig = (c: Partial<SavedHifiConfig>) => {
-    const pick = <T extends { id: string }>(list: readonly T[], id: string | undefined) =>
-      id === undefined ? undefined : byId(list, id);
-    // each saved field sets its own state when the saved config has it; the setter and the field share a type
-    const ok = <T,>(set: Setter<T>, v: T | undefined) => {
-      if (v !== undefined) set(v);
-    };
-    ok(setWoofer, pick(HIFI_WOOFERS, c.woofer));
-    ok(setTweeter, pick(HIFI_TWEETERS, c.tweeter));
-    ok(setSelectedWaveguide, pick(waveguideChoices, c.guide));
-    ok(setBoxType, c.box);
-    ok(setBoxDims, c.dim);
-    ok(setPortSpec, c.port);
-    ok(setRadiatorSelection, c.pr);
-    ok(setWallThicknessIn, c.wall);
-    ok(setPanelMaterial, c.mat);
-    ok(setCrossoverHz, c.xo);
-    ok(setCrossoverOrder, c.order);
-    ok(setWooferAmpWatts, c.wAmpW);
-    ok(setTweeterAmpWatts, c.tAmpW);
-    ok(setBaffleStepCompensationDb, c.bsc);
-    ok(setPlacement, c.place);
-    ok(setDistanceToWallFt, c.wallFt);
-    ok(setSpeakerSpacingFt, c.spacing);
-    ok(setToeInDeg, c.toe);
-    ok(setListeningSeat, c.seat);
-    ok(setEarHeightIn, c.earIn);
-    ok(setStandHeightIn, c.standIn);
-    setDesignPreview(null);
-    setUndoSnapshot(null);
-    setOptimizerResult(null);
-  };
-  const applyDesign = (c: HifiCardConfig) => {
-    // a card's or snapshot's driver ids come from these lists
-    setWoofer(byIdOrThrow(HIFI_WOOFERS, c.woofer, "hi-fi woofers"));
-    setTweeter(byIdOrThrow(HIFI_TWEETERS, c.tweeter, "hi-fi tweeters"));
-    setBoxType(c.box);
-    setBoxDims(c.dim);
-    if (c.port) setPortSpec(c.port);
-    if (c.pr) setRadiatorSelection(c.pr);
-    setWallThicknessIn(c.wall);
-    setCrossoverHz(c.xo);
-    setWooferAmpWatts(c.wAmpW);
-    setTweeterAmpWatts(c.tAmpW);
-  };
   const runOptimizerSearch = async () => {
     setIsOptimizing(true);
     setOptimizerError("");

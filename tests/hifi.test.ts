@@ -313,7 +313,7 @@ test("port toggle builds a fresh port with only its own shape's fields", () => {
 
 test("port toggle: round 3 in, to a slot and back, is round 3 in again; a slot keeps its height too", () => {
   const round = { n: 1, dia: 3, len: 7 } as const;
-  // the page remembers the last round diameter while the slot is showing
+  // the planner remembers the last round diameter while the slot is showing
   const slot = portAfterToggle(round, "slot", { dia: round.dia, h: 1.5 });
   assert.equal(slot.h, 1.5, "the slot comes back at its remembered height");
   const back = portAfterToggle(slot, 1, { dia: round.dia, h: 2 });

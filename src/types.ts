@@ -655,6 +655,26 @@ export type HifiOptimizedField =
   | "tAmpW";
 export type HifiOptimizedFields = Pick<HifiCardConfig, HifiOptimizedField>;
 
+/**
+ * What the Hi-fi page saves: the fields a card applies and the rest of the design and room. The JSON round trip drops
+ * undefined fields, so `pr` is absent unless the box has radiators.
+ */
+export interface SavedHifiConfig extends Omit<HifiCardConfig, "pr"> {
+  pr?: RadiatorSelection;
+  guide: string;
+  mat: PanelMaterial;
+  order: CrossoverOrder;
+  bsc: number;
+  place: HifiPlacement;
+  wallFt: number;
+  spacing: number;
+  toe: number;
+  seat: ListeningSeat;
+  earIn: number;
+  standIn: number;
+  summary: string;
+}
+
 /** A card's change from the current design. */
 export interface HifiMetricsDelta {
   price: number;
