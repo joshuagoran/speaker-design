@@ -6,6 +6,7 @@ import {
   hifiSystem,
   hifiChips,
   grossVolumeLiters,
+  boxWeightLb,
   linkwitzRileyFilter,
   logSpacedFrequencies,
   portMaxLength,
@@ -230,6 +231,45 @@ export function optimizeHifiSpeaker(input) {
         : guide
       : (T0 && T0.faceplate) || { w: 4, h: 4 };
   const stage1 = [];
+  // performance follows the net volume (and the baffle width), not the plywood: the grid runs on 3/4" ply and
+  // the survivors get the same inside dimensions in the other ply
+  const GRID_WALL = 0.75;
+  const dimLocked = !!(dl.w || dl.h || dl.d);
+  const gridWalls = dimLocked ? walls : [GRID_WALL];
+  const variants = (w, dim, box, wall) =>
+    [0.8, 1, 1.2].flatMap((k) =>
+      box === "vented"
+        ? [
+            ...[1.5, 2, 2.5, 3]
+              .map((dia) => portFor(w, dim, wall, 1, dia, w.ts.Fs * k))
+              .filter(Boolean)
+              .slice(0, 2),
+            ...[0.75, 1, 1.5]
+              .map((h) => slotFor(w, dim, wall, h, w.ts.Fs * k))
+              .filter(Boolean)
+              .slice(0, 1),
+          ].map((port) => ({ k, port }))
+        : box === "radiator"
+          ? prsFor(w, dim, wall, passives, w.ts.Fs * k).map((pr) => ({ k, pr }))
+          : [{ k: 0 }],
+    );
+  const score = (w, dim, box, wall, { k, port, pr }) => {
+    const r = run(
+      w,
+      T0,
+      { ...cur, ...amps, box, dim, wall, port: port || cur.port, pr: pr || cur.pr },
+      80,
+    );
+    if (!r) return null;
+    if (
+      (box === "vented" && r.sys.whoW === "port") ||
+      (box === "radiator" && r.sys.whoW === "radiator")
+    )
+      return null; // a bigger port or radiator instead
+    if (r.chips.some(([kk, h]) => kk === "bad" || h.startsWith("Qtc"))) return null;
+    return { w, dim, box, wall, port, pr, k, m: metricOf(r, w, T0) };
+  };
+  const mat = cur.mat;
   for (const w of wList) {
     const minW = Math.max(w.size + 1.5, face.w + 1),
       minH = face.h + w.size + 3;
@@ -244,48 +284,53 @@ export function optimizeHifiSpeaker(input) {
       [0, 2, 4, 7, 11, 16, 22].map((v) => Math.ceil((minH + v) * 4) / 4),
     ).filter((h) => h <= 44);
     const ds = range(dl.d, cur.dim.d, [7, 8.5, 10, 11.5, 13, 14.5]);
-    for (const bw of ws)
-      for (const bh of hs)
-        for (const bd of ds)
-          for (const box of boxes)
-            for (const wall of walls) {
-              const dim = { w: bw, h: bh, d: bd };
-              const ports =
-                box === "vented"
-                  ? [0.8, 1, 1.2].flatMap((k) => [
-                      ...[1.5, 2, 2.5, 3]
-                        .map((dia) => portFor(w, dim, wall, 1, dia, w.ts.Fs * k))
-                        .filter(Boolean)
-                        .slice(0, 2),
-                      ...[0.75, 1, 1.5]
-                        .map((h) => slotFor(w, dim, wall, h, w.ts.Fs * k))
-                        .filter(Boolean)
-                        .slice(0, 1),
-                    ])
-                  : [null];
-              const prs =
-                box === "radiator"
-                  ? [0.8, 1, 1.2].flatMap((k) => prsFor(w, dim, wall, passives, w.ts.Fs * k))
-                  : [null];
-              for (const port of ports)
-                for (const pr of prs) {
-                  if (box === "radiator" && !pr) continue;
-                  const r = run(
-                    w,
-                    T0,
-                    { ...cur, ...amps, box, dim, wall, port: port || cur.port, pr: pr || cur.pr },
-                    80,
-                  );
-                  if (!r) continue;
-                  if (
-                    (box === "vented" && r.sys.whoW === "port") ||
-                    (box === "radiator" && r.sys.whoW === "radiator")
-                  )
-                    continue; // a bigger port or radiator instead
-                  if (r.chips.some(([k, h]) => k === "bad" || h.startsWith("Qtc"))) continue;
-                  stage1.push({ w, dim, box, wall, port, pr, m: metricOf(r, w, T0) });
-                }
-            }
+    // the boxes to try: with a size locked, the old grid; otherwise a ladder of volumes, each in its
+    // lightest shape and in its deepest
+    const boxesToTry = [];
+    if (dimLocked) {
+      for (const bw of ws)
+        for (const bh of hs) for (const bd of ds) boxesToTry.push({ w: bw, h: bh, d: bd });
+    } else {
+      const T = GRID_WALL * 2;
+      const vol = (d) => (d.w - T) * (d.h - T) * (d.d - T);
+      const lo = Math.min(...ws.map((bw) => vol({ w: bw, h: hs[0], d: ds[0] }))),
+        hi = Math.max(
+          ...ws.map((bw) => vol({ w: bw, h: hs[hs.length - 1], d: ds[ds.length - 1] })),
+        );
+      const dMin = ds[0],
+        dMax = ds[ds.length - 1];
+      // as the PA optimizer: for each volume, the lightest few shapes that differ in depth or proportion
+      const hAll = Array.from(
+        { length: Math.max(0, Math.floor(44 - minH)) + 1 },
+        (_, i) => Math.ceil((minH + i) * 4) / 4,
+      ).filter((h) => h <= 44);
+      for (const bw of ws)
+        for (let i = 0; i < 16; i++) {
+          const V = lo * Math.pow(hi / lo, i / 15);
+          const shapes = [];
+          for (const bh of hAll) {
+            const bd = Math.round((V / ((bw - T) * (bh - T)) + T) * 4) / 4;
+            if (bd >= dMin && bd <= dMax) shapes.push({ w: bw, h: bh, d: bd });
+          }
+          shapes.sort((a, b) => boxWeightLb(a, GRID_WALL, mat) - boxWeightLb(b, GRID_WALL, mat));
+          const pick = [];
+          for (const o of shapes) {
+            if (
+              pick.every((q) => Math.abs(q.d - o.d) >= 2 || Math.abs(q.h / q.w - o.h / o.w) > 0.2)
+            )
+              pick.push(o);
+            if (pick.length >= 3) break;
+          }
+          boxesToTry.push(...pick);
+        }
+    }
+    for (const dim of boxesToTry)
+      for (const box of boxes)
+        for (const wall of gridWalls)
+          for (const v of variants(w, dim, box, wall)) {
+            const x = score(w, dim, box, wall, v);
+            if (x) stage1.push(x);
+          }
   }
   const key = (x) =>
     `${x.w.id}|${x.box}|${x.wall}|${x.dim.w}|${x.dim.h}|${x.dim.d}|${x.port && (x.port.shape === "slot" ? `s${x.port.h}` : x.port.dia)}|${x.port && x.port.len}|${x.pr ? `${x.pr.drv.id}${x.pr.n}${x.pr.addG}` : ""}`;
@@ -307,6 +352,18 @@ export function optimizeHifiSpeaker(input) {
     for (const wall of walls)
       if (wall !== cur.wall)
         keep.set("ply", { w: W0, dim: cur.dim, box: cur.box, wall, port: cur.port, pr: cur.pr });
+
+  // the other plywood on every survivor: the same inside dimensions, so the same volume and port
+  if (!dimLocked && !locks.wall)
+    for (const x of [...keep.values()])
+      if (x.k != null)
+        for (const wall of walls)
+          if (wall !== x.wall) {
+            const g = 2 * (wall - x.wall);
+            const dim = { w: x.dim.w + g, h: x.dim.h + g, d: x.dim.d + g };
+            const y = score(x.w, dim, x.box, wall, x);
+            if (y) keep.set(key(y), y);
+          }
 
   // 2. tweeter and crossover, exact model
   const tList = locks.tweeter
@@ -342,7 +399,9 @@ export function optimizeHifiSpeaker(input) {
   const meets = (p) => !K || goals.every((g) => K[g](p.m));
   const trueVsCur = (g, p) => !curM || beats[g](p.m, curM);
   const sorted = (list, g) =>
-    list.slice().sort((a, b) => obj[g](a.m) - obj[g](b.m) || a.m.price - b.m.price);
+    list
+      .slice()
+      .sort((a, b) => obj[g](a.m) - obj[g](b.m) || a.m.price - b.m.price || a.m.lb - b.m.lb);
   const cards = [];
   const first = sorted(
     pool.filter((p) => meets(p) && goals.every((g) => trueVsCur(g, p))),
