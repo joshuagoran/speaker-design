@@ -6,6 +6,21 @@ import { formatDollars } from "../../lib/format";
 import { Delta } from "../../components/optimizer/Delta";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
 import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
+import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
+
+interface Props {
+  result: HifiOptimizerCard;
+  index: number;
+  total: number;
+  /** your design's curve, drawn dashed beside the card's */
+  currentCurve: HifiOptimizerResult["curCurve"];
+  /** the waveguide the page has picked, for a card whose tweeter sits on it */
+  waveguide: Dims2 | null;
+  /** the page passes `designPreview && designPreview.card === result`, so `null` when nothing is previewed */
+  previewing: boolean | null;
+  onPreview: () => void;
+  onLoad: () => void;
+}
 
 /** A result card, laid out like the PA optimizer's: what it is, a front view and its bass against yours, the four numbers with deltas. */
 export function HifiResultCard({
@@ -17,13 +32,14 @@ export function HifiResultCard({
   previewing,
   onPreview,
   onLoad,
-}) {
+}: Props) {
   const config = result.config,
     metrics = result.metrics,
-    deltas = result.delta || {};
-  const woofer = HIFI_WOOFERS.find((o) => o.id === result.woofer),
-    tweeter = HIFI_TWEETERS.find((o) => o.id === result.tweeter);
-  const tile = (label, v, delta) => (
+    deltas: Partial<HifiMetricsDelta> = result.delta || {};
+  // `!` on both: a card's driver ids come from these same lists (the optimizer searches them)
+  const woofer = HIFI_WOOFERS.find((o) => o.id === result.woofer)!,
+    tweeter = HIFI_TWEETERS.find((o) => o.id === result.tweeter)!;
+  const tile = (label: string, v: string, delta: React.ReactNode) => (
     <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
       <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
       <div className="tabular-nums">{v}</div>
@@ -77,7 +93,7 @@ export function HifiResultCard({
           : config.box === "vented"
             ? ` (${config.port.n} × ${config.port.dia}″ port, ${config.port.len}″${config.port.elbows ? `, ${config.port.elbows} elbow${config.port.elbows > 1 ? "s" : ""}` : ""})`
             : config.box === "radiator" && passiveRadiatorOf(config)
-              ? ` (${config.pr.n} × ${passiveRadiatorOf(config).drv.name}, +${config.pr.addG} g)`
+              ? ` (${config.pr!.n} × ${passiveRadiatorOf(config)!.drv.name}, +${config.pr!.addG} g)`
               : ""}{" "}
         · {config.wall === 0.5 ? "1/2″" : "3/4″"} · XO {config.xo} Hz · amps {config.wAmpW} /{" "}
         {config.tAmpW} W
