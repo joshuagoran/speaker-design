@@ -3,4 +3,5 @@ import { createRoot } from "react-dom/client";
 import "./styles/app.css";
 import { App } from "./App";
 
-createRoot(document.getElementById("root")).render(<App />);
+// non-null: index.html always has #root; a real guard is left for after the migration (issue #21)
+createRoot(document.getElementById("root")!).render(<App />);

@@ -5,10 +5,13 @@ import { FillsPage } from "./pages/fills/FillsPage";
 import { CutlistPage } from "./pages/cutlist/CutlistPage";
 import { HifiPage } from "./pages/hifi/HifiPage";
 import { useHifiPlanner } from "./pages/hifi/useHifiPlanner";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
+
+/** The pages: the PA stack's four ("planner" is Design) and Hi-fi. */
+type AppTab = "planner" | "cutlist" | "fills" | "notes" | "hifi";
 
 /** Hash of each page, and the page shown for an unknown or empty hash. */
-const viewOf = () =>
+const viewOf = (): AppTab =>
   window.location.hash === "#notes"
     ? "notes"
     : window.location.hash === "#fills"
@@ -34,7 +37,7 @@ export function App() {
       <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
         {(() => {
           // two levels: the project (PA stack or hi-fi), then the PA stack's own pages
-          const navigateTo = (v, href) => (e) => {
+          const navigateTo = (v: AppTab, href: string) => (e: MouseEvent<HTMLAnchorElement>) => {
             e.preventDefault();
             try {
               history.replaceState(null, "", v === "planner" ? " " : href);
@@ -43,11 +46,11 @@ export function App() {
             window.scrollTo(0, 0);
           };
           const isPaProject = view !== "hifi";
-          const projectLinks = [
+          const projectLinks: [AppTab, string, string, boolean][] = [
             ["planner", "PA Stack", "#", isPaProject],
             ["hifi", "Hi-fi", "#hifi", !isPaProject],
           ];
-          const paPageLinks = [
+          const paPageLinks: [AppTab, string, string][] = [
             ["planner", "Design", "#"],
             ["cutlist", "Cutlist", "#cutlist"],
             ["fills", "Fills", "#fills"],
