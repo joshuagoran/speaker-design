@@ -56,7 +56,7 @@ const cdiv = (a: Complex, b: Complex) => {
   const d = b.re * b.re + b.im * b.im;
   return cm((a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d);
 };
-const cabs = (a: Complex) => Math.hypot(a.re, a.im);
+export const cabs = (a: Complex) => Math.hypot(a.re, a.im);
 const cexp = (ph: number) => cm(Math.cos(ph), Math.sin(ph));
 
 // Linkwitz-Riley low/high pass as complex transfer functions: LR(2n) = Butterworth(n) squared.

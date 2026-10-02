@@ -655,6 +655,8 @@ export interface HifiDesign {
   rightGeometry: ListenerGeometry;
   /** the average distance to the seat, at least 1 m */
   seatDistanceM: number;
+  /** the same distance in feet, as the page shows it */
+  seatDistanceFt: number;
   pairCostUsd: number;
   /** null when the woofer can't be modelled (its parameters aren't published) */
   speakerModel: HifiSpeakerModel | null;

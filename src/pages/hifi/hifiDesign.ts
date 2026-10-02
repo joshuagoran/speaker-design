@@ -1,4 +1,5 @@
 import { HIFI_PASSIVES, passiveRadiatorMassMax, ownGuideCfg } from "../../lib/data";
+import { METERS_PER_FOOT } from "../../constants/units";
 import { byId } from "../../lib/tables";
 import {
   hifiSystem,
@@ -8,9 +9,13 @@ import {
   listenerGeometry,
   logSpacedFrequencies,
   linkwitzRileyFilter,
+  cabs,
   needsWaveguide,
 } from "../../lib/hifi/hifi";
 import type { HifiDesign, HifiDesignState, HifiSpeakerModel } from "../../types";
+
+/** The frequencies every Hi-fi response is worked out at: the charts' 15 Hz to 20 kHz axis. */
+const RESPONSE_FREQUENCIES = logSpacedFrequencies(15, 20000, 220);
 
 /** The Hi-fi model, pure in the state: the config the lib functions take, the system and its warnings, the seat geometry, levels and response curves. */
 export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
@@ -86,14 +91,13 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
   const speakerSystem = hifiSystem(woofer, tweeterWithWaveguide, speakerConfig);
   let speakerModel: HifiSpeakerModel | null = null;
   if (speakerSystem) {
-    const frequencies = logSpacedFrequencies(15, 20000, 220);
     const leftResponse = hifiResponseAt(
         speakerSystem,
         woofer,
         tweeterWithWaveguide,
         speakerConfig,
         leftGeometry,
-        frequencies,
+        RESPONSE_FREQUENCIES,
       ),
       rightResponse = hifiResponseAt(
         speakerSystem,
@@ -101,7 +105,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
         tweeterWithWaveguide,
         speakerConfig,
         rightGeometry,
-        frequencies,
+        RESPONSE_FREQUENCIES,
       );
     speakerModel = {
       speakerSystem,
@@ -113,25 +117,19 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
         tweeterWithWaveguide,
         speakerConfig,
         { th: 0, eyeIn: speakerSystem.lay.tweeterIn, distM: 1 },
-        frequencies,
+        RESPONSE_FREQUENCIES,
       ),
       pairResponse: leftResponse.map((o, i) => ({
         f: o.f,
         spl: 10 * Math.log10(Math.pow(10, o.spl / 10) + Math.pow(10, rightResponse[i].spl / 10)),
       })),
-      tweeterMaxCurve: frequencies.map((f) => ({
+      tweeterMaxCurve: RESPONSE_FREQUENCIES.map((f) => ({
         f,
         spl:
           speakerSystem.tLevel +
           20 *
             Math.log10(
-              Math.max(
-                1e-6,
-                Math.hypot(
-                  linkwitzRileyFilter(f, crossoverHz, crossoverOrder, "hp").re,
-                  linkwitzRileyFilter(f, crossoverHz, crossoverOrder, "hp").im,
-                ),
-              ),
+              Math.max(1e-6, cabs(linkwitzRileyFilter(f, crossoverHz, crossoverOrder, "hp"))),
             ),
       })),
       dispersion: hifiDispersionMap(
@@ -154,6 +152,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     leftGeometry,
     rightGeometry,
     seatDistanceM,
+    seatDistanceFt: seatDistanceM / METERS_PER_FOOT,
     pairCostUsd,
     speakerModel,
   };

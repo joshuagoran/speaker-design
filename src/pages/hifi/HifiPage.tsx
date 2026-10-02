@@ -29,7 +29,6 @@ import { RunRow } from "../../components/optimizer/RunRow";
 import { ResultCards } from "../../components/optimizer/ResultCards";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
-import { METERS_PER_FOOT } from "../../constants/units";
 import { passiveRadiatorMassMax } from "../../lib/data";
 import { SPEAKER_PLACEMENTS as HIFI_PLACES } from "../../lib/hifi/hifi";
 import { HIFI_OPTIMIZER_GOALS } from "../../lib/hifi/optimize";
@@ -117,7 +116,7 @@ export function HifiPage({ hifi }: Props) {
     tweeterWithWaveguide,
     leftGeometry,
     rightGeometry,
-    seatDistanceM,
+    seatDistanceFt,
     pairCostUsd,
     speakerModel,
   } = hifi;
@@ -309,7 +308,7 @@ export function HifiPage({ hifi }: Props) {
             },
             {
               curve: pairResponse,
-              label: `Pair at the seat (${(seatDistanceM / METERS_PER_FOOT).toFixed(1)} ft)`,
+              label: `Pair at the seat (${seatDistanceFt.toFixed(1)} ft)`,
               stroke: PAL.cyan,
               tint: PAL.alpha(PAL.cyan, 0.06),
             },
@@ -356,7 +355,7 @@ export function HifiPage({ hifi }: Props) {
             <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold mb-1">
               At the seat
             </div>
-            <div>{(seatDistanceM / METERS_PER_FOOT).toFixed(1)} ft from the pair</div>
+            <div>{seatDistanceFt.toFixed(1)} ft from the pair</div>
             <div>
               Off axis: L {((leftGeometry.th * 180) / Math.PI).toFixed(0)}°, R{" "}
               {((rightGeometry.th * 180) / Math.PI).toFixed(0)}°
