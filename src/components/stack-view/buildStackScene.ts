@@ -1,10 +1,11 @@
 import * as THREE from "three";
-import { cabinetFinishOf } from "../../lib/data";
+import { createSceneContext } from "./sceneContext";
+import { buildCabinet } from "./buildCabinet";
+import { buildCone } from "./buildCone";
 import {
   roundedRectShape,
   roundedRectPath,
   circlePath,
-  archOutlinePath,
   rectangularHornGeometry,
   createScaleFigure,
 } from "./geometry";
@@ -52,173 +53,12 @@ export function buildStackScene({
   cabFinish = "birch",
   spacerH = 20,
 }: Props): THREE.Group {
-  // cabinet finish: clear birch, walnut veneer, or paint (a hex colour)
-  const finish = cabinetFinishOf(cabFinish);
-  const birch = new THREE.MeshStandardMaterial({
-    color: finish ? finish.color : new THREE.Color(cabFinish),
-    roughness: finish ? finish.rough : 0.8,
-  });
-  const black = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.9 });
-  const cream = new THREE.MeshStandardMaterial({ color: 0xece4c8, roughness: 0.55 });
-  const painted = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(baffleColor),
-    roughness: 0.9,
-  });
-  const ghost = new THREE.MeshStandardMaterial({
-    color: 0xd7b98a,
-    roughness: 0.9,
-    transparent: true,
-    opacity: 0.16,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
-  const shellMat = cutaway ? ghost : birch;
-  // duct fins, shelves and cut edges follow the cabinet finish, a shade darker
-  const plyIn = new THREE.MeshStandardMaterial({
-    color: finish ? finish.inner : new THREE.Color(cabFinish).multiplyScalar(0.88),
-    roughness: 0.9,
-  });
-  const portMat = new THREE.MeshStandardMaterial({
-    color: 0x8a7458,
-    roughness: 0.95,
-    side: THREE.DoubleSide,
-  });
-  const baffleMat = cutaway
-    ? new THREE.MeshStandardMaterial({
-        color: new THREE.Color(baffleColor),
-        roughness: 0.9,
-        transparent: true,
-        opacity: 0.18,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-      })
-    : painted;
-
-  const group = new THREE.Group();
-
-  // cabinet: four perimeter panels (wall ply) with 1/4" roundovers front and back,
-  // 3/4" baffle set back by the inset on cleats, painted. Returns the z of the baffle face.
+  const ctx = createSceneContext({ wall, inset, cabFinish, baffleColor, cutaway });
+  const { group } = ctx;
+  const { wood: birch, black, cream, inner: plyIn, port: portMat, shell: shellMat } = ctx.materials;
   const T = wall,
     BT = 0.75,
-    REVEAL = inset,
-    RO = 0.25;
-  const cabinet = (
-    w: number,
-    h: number,
-    d: number,
-    y: number,
-    holes: THREE.Path[] | undefined,
-    baffleBottom = 0,
-    x = 0,
-    parent = group,
-  ) => {
-    const iw = w - 2 * T,
-      ih = h - 2 * T - baffleBottom;
-    const shape = roundedRectShape(w, h, RO * 1.5);
-    shape.holes.push(roundedRectShape(iw + 2 * RO, h - 2 * T + 2 * RO, 0.12));
-    const geo = new THREE.ExtrudeGeometry(shape, {
-      depth: d - 2 * RO,
-      bevelEnabled: true,
-      bevelSize: RO,
-      bevelThickness: RO,
-      bevelSegments: 4,
-    });
-    const frame = new THREE.Mesh(geo, shellMat);
-    frame.position.set(x, y + h / 2, -d / 2 + RO);
-    parent.add(frame);
-    const bshape = roundedRectShape(iw, ih, 0.12);
-    (holes || []).forEach((hp) => bshape.holes.push(hp));
-    const baffle = new THREE.Mesh(
-      new THREE.ExtrudeGeometry(bshape, { depth: BT, bevelEnabled: false }),
-      [baffleMat, cutaway ? baffleMat : plyIn], // caps painted, cut edges left as bare ply
-    );
-    baffle.position.set(x, y + T + baffleBottom + ih / 2, d / 2 - REVEAL - BT);
-    parent.add(baffle);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(iw, h - 2 * T, T), shellMat);
-    back.position.set(x, y + h / 2, -d / 2 + T / 2);
-    parent.add(back);
-    return d / 2 - REVEAL;
-  };
-  // Same construction with a semicircular top the full width of the cabinet.
-  // Holes use the same baffle-centered coordinates as cabinet().
-  const archCabinet = (
-    w: number,
-    h: number,
-    d: number,
-    y: number,
-    holes: THREE.Path[] | undefined,
-    baffleBottom = 0,
-    x = 0,
-    parent = group,
-  ) => {
-    const R = w / 2,
-      acy = h / 2 - R; // arch center, frame-centered coords
-    const shape = archOutlinePath(new THREE.Shape(), R, -h / 2, acy, R);
-    shape.holes.push(
-      archOutlinePath(
-        // geometry.ts types the argument as a Shape, but only calls Path methods on it; the hole is a Path
-        new THREE.Path() as THREE.Shape,
-        R - T + RO,
-        -h / 2 + T - RO,
-        acy,
-        R - T + RO,
-      ),
-    );
-    const frame = new THREE.Mesh(
-      new THREE.ExtrudeGeometry(shape, {
-        depth: d - 2 * RO,
-        bevelEnabled: true,
-        bevelSize: RO,
-        bevelThickness: RO,
-        bevelSegments: 4,
-        curveSegments: 48,
-      }),
-      shellMat,
-    );
-    frame.position.set(x, y + h / 2, -d / 2 + RO);
-    parent.add(frame);
-    const ih = h - 2 * T - baffleBottom,
-      bcy = y + T + baffleBottom + ih / 2;
-    const bshape = archOutlinePath(new THREE.Shape(), R - T, -ih / 2, y + h - R - bcy, R - T);
-    (holes || []).forEach((hp) => bshape.holes.push(hp));
-    const baffle = new THREE.Mesh(
-      new THREE.ExtrudeGeometry(bshape, { depth: BT, bevelEnabled: false, curveSegments: 48 }),
-      [baffleMat, cutaway ? baffleMat : plyIn],
-    );
-    baffle.position.set(x, bcy, d / 2 - REVEAL - BT);
-    parent.add(baffle);
-    const bk = archOutlinePath(new THREE.Shape(), R - T, -h / 2 + T, acy, R - T);
-    const back = new THREE.Mesh(
-      new THREE.ExtrudeGeometry(bk, { depth: T, bevelEnabled: false, curveSegments: 48 }),
-      shellMat,
-    );
-    back.position.set(x, y + h / 2, -d / 2);
-    parent.add(back);
-    return d / 2 - REVEAL;
-  };
-  const cone = (r: number, y: number, z: number, x = 0, parent = group) => {
-    if (cutaway) return;
-    // membrane: a filled disc just behind the baffle face
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(r * 0.99, 48), black);
-    disc.position.set(x, y, z - 0.3);
-    parent.add(disc);
-    // shallow cone from the surround down to the dust cap
-    const c = new THREE.Mesh(new THREE.ConeGeometry(r * 0.9, r * 0.22, 48, 1, true), black);
-    c.rotation.x = -Math.PI / 2;
-    c.position.set(x, y, z - 0.3 - r * 0.11);
-    parent.add(c);
-    const surround = new THREE.Mesh(new THREE.TorusGeometry(r * 0.93, r * 0.055, 12, 48), black);
-    surround.position.set(x, y, z - 0.18);
-    parent.add(surround);
-    const cap = new THREE.Mesh(
-      new THREE.SphereGeometry(r * 0.26, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
-      black,
-    );
-    cap.scale.set(1, 0.45, 1);
-    cap.rotation.x = Math.PI / 2;
-    cap.position.set(x, y, z - 0.42);
-    parent.add(cap);
-  };
+    REVEAL = inset;
 
   const subGroup = new THREE.Group();
   group.add(subGroup);
@@ -305,16 +145,14 @@ export function buildStackScene({
           : roundedRectPath(0, hy, horn.size.w, horn.size.h, 1),
     );
   }
-  const subZ = (archTop ? archCabinet : cabinet)(
-    s.w,
-    s.h + extH,
-    s.d,
-    pl,
-    holes,
-    bandH,
-    0,
-    subGroup,
-  );
+  const subZ = buildCabinet(ctx, {
+    dims: { w: s.w, h: s.h + extH, d: s.d },
+    baffleHoles: holes,
+    y: pl,
+    archTop,
+    baffleBottom: bandH,
+    parent: subGroup,
+  }).baffleZ;
   if (towerMode) {
     // internal partitions: sub/mid floor, mid/horn floor, and the mid chamber's back wall
     const zF = s.d / 2 - REVEAL - BT,
@@ -425,7 +263,7 @@ export function buildStackScene({
       });
     });
   }
-  cone(drvR, drvAbsY, subZ, drvX, subGroup);
+  buildCone(ctx, { r: drvR, y: drvAbsY, z: subZ, x: drvX, parent: subGroup });
   // duct structure inside: top shelf, two fins (slot version only)
   const wantLen = pg.tubeLen != null ? pg.tubeLen : s.d - T - 3;
   const ductLen = Math.max(2, Math.min(wantLen, s.d - T - ductH)); // from the frame face back, open gap behind
@@ -545,8 +383,13 @@ export function buildStackScene({
   midXs.forEach((x) => {
     midZ = tower
       ? subZ
-      : cabinet(m.w, m.h, m.d, midBaseY, [circlePath(0, 0, mid.size / 2 - 0.9)], 0, x);
-    cone(mid.size / 2 - 0.9, midBaseY + m.h / 2, midZ, x);
+      : buildCabinet(ctx, {
+          dims: m,
+          baffleHoles: [circlePath(0, 0, mid.size / 2 - 0.9)],
+          y: midBaseY,
+          x,
+        }).baffleZ;
+    buildCone(ctx, { r: mid.size / 2 - 0.9, y: midBaseY + m.h / 2, z: midZ, x });
   });
 
   // horn

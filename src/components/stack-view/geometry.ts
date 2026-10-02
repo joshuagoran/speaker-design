@@ -51,11 +51,11 @@ export function circlePath(centerX: number, centerY: number, radius: number) {
 }
 
 /**
- * Adds an arch-topped outline to a THREE.Shape: flat bottom at `bottomY`, straight sides up to
+ * Adds an arch-topped outline to a THREE.Shape (or Path): flat bottom at `bottomY`, straight sides up to
  * `archCenterY`, then a semicircle of `radius` across the top.
  */
-export function archOutlinePath(
-  shape: THREE.Shape,
+export function archOutlinePath<P extends THREE.Path>(
+  shape: P,
   halfWidth: number,
   bottomY: number,
   archCenterY: number,
