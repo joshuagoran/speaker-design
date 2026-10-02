@@ -8,9 +8,9 @@ import { Card } from "../../components/ui/Card.jsx";
 import { SelectField } from "../../components/ui/SelectField.jsx";
 import { Slider } from "../../components/ui/Slider.jsx";
 import { ResponseChart } from "../../components/charts/ResponseChart.jsx";
-import { fillChips } from "../../lib/pa/chips.js";
+import { fillChips } from "../../lib/pa/chips.ts";
 import { FILL_OPTIONS } from "../../lib/data.ts";
-import { fillSystem, nearestPoint } from "../../lib/pa/calc.js";
+import { fillSystem, nearestPoint } from "../../lib/pa/calc.ts";
 import { useState } from "react";
 
 /** Fills page: choose and size the fill speakers. */

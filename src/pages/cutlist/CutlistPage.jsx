@@ -8,7 +8,7 @@ import {
   formatThickness,
   cutParts,
   packSheets,
-} from "../../lib/pa/calc.js";
+} from "../../lib/pa/calc.ts";
 
 /** Cutlist page: plywood parts for each box and how they pack onto sheets. */
 export function CutlistPage({ planner }) {

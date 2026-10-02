@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { paResponseAt, paDispersionMap, firstNullAngleDeg } from "../src/lib/pa/dispersion.js";
+import { paResponseAt, paDispersionMap, firstNullAngleDeg } from "../src/lib/pa/dispersion.ts";
 import { logSpacedFrequencies } from "../src/lib/hifi/hifi.ts";
 
 const stack = (gapIn) => ({

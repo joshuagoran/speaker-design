@@ -15,7 +15,7 @@ import {
   slotWidth,
   slotMaxLength,
 } from "./hifi.ts";
-import { ventTuning } from "../pa/calc.js";
+import { ventTuning } from "../pa/calc.ts";
 import { passiveRadiatorMassMax, ownGuideCfg } from "../data.ts";
 import type {
   Dims3,

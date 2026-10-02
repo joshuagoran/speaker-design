@@ -10,7 +10,7 @@ import {
   nearestPoint,
   midWeightLb,
   subWeightLb,
-} from "../src/lib/pa/calc.js";
+} from "../src/lib/pa/calc.ts";
 import { FILL_OPTIONS } from "../src/lib/data.ts";
 
 const seeds = JSON.parse(fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url)));

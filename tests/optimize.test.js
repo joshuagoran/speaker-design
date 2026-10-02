@@ -9,8 +9,8 @@ import {
   roomRequiredSpl,
   SUB_BAND_HZ,
   AMP_WATTS_MAX,
-} from "../src/lib/pa/optimize.js";
-import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc.js";
+} from "../src/lib/pa/optimize.ts";
+import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc.ts";
 import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data.ts";
 import { close } from "./helpers.js";
 

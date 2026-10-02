@@ -29,7 +29,7 @@ import {
   keeleFrequency,
   maxOutputCurve,
   STUFFING_VOLUME_GAIN,
-} from "./calc.js";
+} from "./calc.ts";
 import {
   subChips,
   midChips,
@@ -37,7 +37,7 @@ import {
   ductFit,
   subDriverClearanceNeededIn,
   driverClearance,
-} from "./chips.js";
+} from "./chips.ts";
 import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS } from "../data.ts";
 
 const byId = (list, id) => list.find((o) => o.id === id);

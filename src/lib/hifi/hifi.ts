@@ -11,7 +11,7 @@ import {
   highpassGain,
   rectangleEndCorrection,
   ductEndCorrection2D,
-} from "../pa/calc.js";
+} from "../pa/calc.ts";
 import type {
   Dims3,
   DriverLayout,

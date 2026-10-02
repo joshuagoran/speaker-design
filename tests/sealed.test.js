@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { closedBox } from "../src/lib/pa/calc.js";
+import { closedBox } from "../src/lib/pa/calc.ts";
 import { MID_OPTIONS } from "../src/lib/data.ts";
 import { tsModel, massLineSPL, f3SecondOrder, near, close, rel, db } from "./helpers.js";
 

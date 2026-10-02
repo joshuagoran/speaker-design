@@ -8,7 +8,7 @@ import { OptimizerResultCard } from "./OptimizerResultCard.jsx";
 import { GoalPicker } from "./GoalPicker.jsx";
 import { RunRow } from "./RunRow.jsx";
 import { ResultCards } from "./ResultCards.jsx";
-import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize.js";
+import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize.ts";
 
 /** Goal picker, run button and result cards for the PA optimizer. */
 export function OptimizerPanel({

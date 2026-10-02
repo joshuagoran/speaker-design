@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { boxModel, closedBox } from "../src/lib/pa/calc.js";
+import { boxModel, closedBox } from "../src/lib/pa/calc.ts";
 import { SUB_OPTIONS } from "../src/lib/data.ts";
 import { tsModel, massLineSPL, helmholtz, near, close, rel } from "./helpers.js";
 

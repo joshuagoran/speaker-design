@@ -11,7 +11,7 @@ import {
   ventGeometry,
   boxModel,
   subSystem,
-} from "../src/lib/pa/calc.js";
+} from "../src/lib/pa/calc.ts";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data.ts";
 import { C, rel, close } from "./helpers.js";
 

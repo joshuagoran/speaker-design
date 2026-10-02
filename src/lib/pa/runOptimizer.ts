@@ -1,6 +1,6 @@
-import { optimizePaStack } from "./optimize.js";
+import { optimizePaStack } from "./optimize.ts";
 // the optimizer's worker, bundled separately by Vite and inlined in the page (it starts from a Blob URL)
-import OptimizerWorker from "./optimize.worker.js?worker&inline";
+import OptimizerWorker from "./optimize.worker.ts?worker&inline";
 
 /** The worker, once started, and whether workers turned out to be unavailable. */
 let optWorker = null,

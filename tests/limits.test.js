@@ -6,7 +6,7 @@ import {
   maxOutputCurve,
   thermalVoltageLimit,
   ampVoltage,
-} from "../src/lib/pa/calc.js";
+} from "../src/lib/pa/calc.ts";
 import { SUB_OPTIONS } from "../src/lib/data.ts";
 import { close, near } from "./helpers.js";
 

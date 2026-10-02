@@ -4,7 +4,7 @@ import { StatTileGrid } from "../../../components/stats/StatTileGrid.jsx";
 import { FoldHeading } from "../../../components/ui/FoldHeading.jsx";
 import { ResponseChart } from "../../../components/charts/ResponseChart.jsx";
 import { StatRow } from "../../../components/optimizer/StatRow.jsx";
-import { subChips } from "../../../lib/pa/chips.js";
+import { subChips } from "../../../lib/pa/chips.ts";
 
 /** Sub results: headline stats, system response chart, details table and warning chips. */
 export function SubSection({ planner }) {

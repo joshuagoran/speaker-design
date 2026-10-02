@@ -5,7 +5,7 @@ import {
   pistonBeamWidthDeg,
   keeleFrequency,
   hornBeamWidthDeg,
-} from "../src/lib/pa/calc.js";
+} from "../src/lib/pa/calc.ts";
 import { CD_OPTIONS } from "../src/lib/data.ts";
 import { close, near, db } from "./helpers.js";
 
