@@ -4,12 +4,8 @@ import { buildSubwoofer } from "./buildSubwoofer";
 import { buildMid } from "./buildMid";
 import { buildHorn } from "./buildHorn";
 import { buildTower } from "./buildTower";
-import {
-  buildPoleSpacer,
-  buildSatelliteColumns,
-  SATELLITE_COLUMN_D_IN,
-  SATELLITE_COLUMN_H_IN,
-} from "./buildSupports";
+import { buildPoleSpacer, buildSatelliteColumns, SATELLITE_COLUMN_D_IN } from "./buildSupports";
+import { MID_GAP_IN, SATELLITE_COLUMN_H_IN } from "./stackHeights";
 import { createScaleFigure } from "./geometry";
 import type {
   Dims3,
@@ -69,14 +65,13 @@ export function buildStackScene({
       plinth,
     });
     // the mid cube: on the sub, on a spacer above it, or on round columns either side of it
-    const gap = 0.4;
     const satX = s.w / 2 + SATELLITE_COLUMN_D_IN / 2 + 6; // columns clear of the sub
     const midBaseY =
       layout === "satellite"
         ? SATELLITE_COLUMN_H_IN
         : layout === "pole"
           ? subTop + spacerH
-          : subTop + gap;
+          : subTop + MID_GAP_IN;
     const xs = layout === "satellite" ? [-satX, satX] : [0];
     if (layout === "pole") buildPoleSpacer(ctx, { y: subTop, rise: spacerH, parent: subGroup });
     if (layout === "satellite") buildSatelliteColumns(ctx, { xs });

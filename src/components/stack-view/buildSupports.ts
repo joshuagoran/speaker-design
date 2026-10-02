@@ -1,9 +1,9 @@
 import * as THREE from "three";
+import { SATELLITE_COLUMN_H_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 
 /** Column diameter and height of the satellite layout's stands, inches. */
 export const SATELLITE_COLUMN_D_IN = 8;
-export const SATELLITE_COLUMN_H_IN = 34;
 
 /**
  * Three-post spacer between the sub and the mid: 6 in discs top and bottom, three 1.25 in posts on a 4 in circle,

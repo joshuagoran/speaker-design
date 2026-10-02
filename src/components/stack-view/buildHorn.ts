@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { rectangularHornGeometry } from "./geometry";
+import { HORN_LIFT_IN, PLAIN_HORN_LIFT_IN, PLAIN_HORN_BEVEL_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import type { Dims3, Horn } from "../../types";
 
@@ -38,7 +39,7 @@ export function buildHorn(
       const rm = new THREE.Mesh(rectangularHornGeometry(mw, hz.h, hz.d), hornShell);
       rm.position.set(
         hx,
-        tower ? tower.cy : hornY + hz.h / 2 + 0.3,
+        tower ? tower.cy : hornY + hz.h / 2 + HORN_LIFT_IN,
         tower ? tower.z : mount.d / 2 - hz.d + 1,
       );
       ctx.group.add(rm);
@@ -56,7 +57,7 @@ export function buildHorn(
         lm.scale.set(horn.scaleX || 1, horn.scaleZ || 1, horn.scaleY || 1); // local x=width, y=depth, z=height
       lm.position.set(
         hx,
-        tower ? tower.cy : hornY + hz.h / 2 + 0.3,
+        tower ? tower.cy : hornY + hz.h / 2 + HORN_LIFT_IN,
         tower ? tower.z : mount.d / 2 - hz.d + 1,
       );
       ctx.group.add(lm);
@@ -81,14 +82,14 @@ export function buildHorn(
       const hornGeo = new THREE.ExtrudeGeometry(hornShape, {
         depth: hz.d,
         bevelEnabled: true,
-        bevelSize: 1.6,
+        bevelSize: PLAIN_HORN_BEVEL_IN,
         bevelThickness: 1.2,
         bevelSegments: 6,
       });
       const hornMesh = new THREE.Mesh(hornGeo, cream);
       hornMesh.position.set(
         hx,
-        tower ? tower.cy : hornY + 1.2 + rh + 1,
+        tower ? tower.cy : hornY + PLAIN_HORN_LIFT_IN + rh,
         tower ? tower.z : -hz.d / 2 + 2,
       );
       ctx.group.add(hornMesh);
@@ -98,5 +99,6 @@ export function buildHorn(
       ctx.group.add(throat);
     }
   });
-  return { top: hornY + (tower ? tower.sectionH : 1.2 + hz.h + 2) };
+  const lift = horn.rect || horn.profile ? HORN_LIFT_IN : PLAIN_HORN_LIFT_IN + PLAIN_HORN_BEVEL_IN;
+  return { top: hornY + (tower ? tower.sectionH : lift + hz.h) };
 }

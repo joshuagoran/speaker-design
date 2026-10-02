@@ -25,6 +25,7 @@ import type {
   SubSystemModelled,
   VentGeometry,
 } from "../../../types";
+import { stackHeights } from "../../../components/stack-view/stackHeights";
 import type { CabinetStyle } from "./useCabinetStyle";
 import type { Crossovers } from "./useCrossovers";
 import type { HornDesign } from "./useHornDesign";
@@ -234,39 +235,25 @@ export function derivePaDesign({
   const subWeightLoadedLb = subWeightLb(subBox, wallThicknessIn, subDriver.lb);
 
   const midBoxLiters = midGrossL;
-  const subTopHeightIn = plinthHeightIn + subBox.h;
   const isTower = layout === "tower";
-  const stackBaseHeightIn =
-    layout === "satellite"
-      ? 34
-      : layout === "pole"
-        ? subTopHeightIn + spacerHeightIn
-        : isTower
-          ? subTopHeightIn
-          : subTopHeightIn + 0.4;
-  const hasArchedTop =
-    isTower &&
-    !!hornOption.profile &&
-    !hornOption.scaleX &&
-    subBox.w / 2 - 0.75 > hornOption.size.w / 2;
-  const stackHeightIn = isTower
-    ? // the shell's top roundover adds a quarter inch
-      stackBaseHeightIn + 15.5 + (hasArchedTop ? subBox.w - 0.75 : hornOption.size.h + 2) + 0.25
-    : stackBaseHeightIn +
-      effectiveMidBoxDims.h +
-      (hornOption.rect || hornOption.profile ? 0.3 : 2.2 + 1.6) + // the plain block: 2.2 in up, plus its 1.6 in bevel
-      hornOption.size.h;
-  const hornCenterHeightIn = isTower
-    ? stackBaseHeightIn + 15.5 + (hasArchedTop ? subBox.w / 2 - 0.75 : (hornOption.size.h + 2) / 2)
-    : // the 3D scene sits a rect or lathe horn 0.3 in above the mid box; the plain flared block 2.2 in
-      stackBaseHeightIn +
-      effectiveMidBoxDims.h +
-      (hornOption.rect || hornOption.profile ? 0.3 : 1.2 + 1) +
-      hornOption.size.h / 2;
-  /** driver heights for the dispersion map: mid centered in its box (or the tower's mid section), sub at its box center */
-  const midCenterHeightIn = isTower
-    ? stackBaseHeightIn + 15.5 / 2
-    : stackBaseHeightIn + effectiveMidBoxDims.h / 2;
+  const heights = stackHeights({
+    layout,
+    plinth: plinthHeightIn,
+    subBox,
+    midBox: effectiveMidBoxDims,
+    horn: hornOption,
+    wall: wallThicknessIn,
+    spacerH: spacerHeightIn,
+  });
+  const {
+    subTop: subTopHeightIn,
+    base: stackBaseHeightIn,
+    hasArchedTop,
+    stack: stackHeightIn,
+    hornCenter: hornCenterHeightIn,
+    // driver heights for the dispersion map: mid centered in its box (or the tower's mid section), sub at its box center
+    midCenter: midCenterHeightIn,
+  } = heights;
   const dispersionMapDistanceM = 10;
   const paDispersion =
     midDriver.ts && hornSpec.covH && hornOption.size

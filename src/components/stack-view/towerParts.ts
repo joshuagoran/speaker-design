@@ -1,21 +1,8 @@
 import * as THREE from "three";
 import { roundedRectPath, circlePath } from "./geometry";
+import { towerSpec, TOWER_MID_HEIGHT_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import type { Dims3, Horn, MidDriver } from "../../types";
-
-/** Height of the tower's mid chamber, inches. */
-export const TOWER_MID_HEIGHT_IN = 15.5;
-
-/**
- * The tower is one shell and one continuous baffle over the sub's footprint: sub, mid chamber and horn section stacked and
- * divided internally. `archTop` puts a semicircular top on it when the round horn is narrower than the cabinet.
- */
-export function towerSpec(box: Dims3, wall: number, horn: Horn) {
-  const archTop = !!horn.profile && !horn.scaleX && box.w / 2 - wall > horn.size.w / 2;
-  // arched: horn centered on the arch, equal margin below and around it
-  const hornSectionH = archTop ? box.w / 2 - wall + box.w / 2 : horn.size.h + 2;
-  return { archTop, hornSectionH, extH: TOWER_MID_HEIGHT_IN + hornSectionH };
-}
 
 /** The mid and horn cutouts on the tower's baffle; `baffleCy` is the absolute centre of the baffle. */
 export function towerBaffleHoles(

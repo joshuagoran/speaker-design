@@ -1,10 +1,10 @@
 import * as THREE from "three";
 import { roundedRectShape, archOutlinePath } from "./geometry";
+import { ROUNDOVER_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import type { Dims3 } from "../../types";
 
 const BAFFLE_THICKNESS_IN = 0.75;
-const ROUNDOVER_IN = 0.25;
 
 /**
  * A cabinet: four perimeter panels (wall ply) with 1/4" roundovers front and back, a 3/4" baffle set back by the inset on

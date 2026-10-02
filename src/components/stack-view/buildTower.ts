@@ -1,7 +1,7 @@
 import { buildSubwoofer } from "./buildSubwoofer";
 import { buildMid } from "./buildMid";
 import { buildHorn } from "./buildHorn";
-import { towerSpec, TOWER_MID_HEIGHT_IN } from "./towerParts";
+import { towerSpec, TOWER_MID_HEIGHT_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import type { Props } from "./buildStackScene";
 

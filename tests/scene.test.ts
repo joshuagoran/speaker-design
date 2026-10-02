@@ -219,6 +219,20 @@ describe("stack scene", () => {
     }
   });
 
+  test("the planner follows the wall thickness: tower height and arch threshold", () => {
+    const base = byName("tower, arched top");
+    for (const wall of [0.5, 0.75, 1.5]) {
+      const p = { ...base, wall };
+      const derived = derivedHeights(p);
+      const box = stackBox(buildStackScene(p));
+      expect(box.max.y, `wall ${wall}`).toBeGreaterThanOrEqual(derived.stackHeightIn - 1e-6);
+      expect(box.max.y, `wall ${wall}`).toBeLessThan(derived.stackHeightIn + 0.1);
+    }
+    // a wall thick enough that the horn no longer fits the arch turns the arched top off in both
+    const thick = { ...base, wall: base.sub.box.w / 2 - base.horn.size.w / 2 + 0.1 };
+    expect(derivedHeights(thick).hasArchedTop).toBe(false);
+  });
+
   test("scene-dump.json matches a fresh build (regenerate with `vp run scene-dump`)", () => {
     const saved: unknown = JSON.parse(
       fs.readFileSync(new URL("./scene-dump.json", import.meta.url), "utf8"),
