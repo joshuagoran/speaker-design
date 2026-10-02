@@ -1,4 +1,4 @@
-import { MID_OPTIONS, MID_BOXES } from "../../../lib/data";
+import { DEFAULT_PA } from "../../../lib/defaults";
 import type { Dims3, MidBox, MidDriver, MidSize, Setter } from "../../../types";
 import { useState } from "react";
 
@@ -20,14 +20,13 @@ export interface MidDesign {
 
 /** State for the mid-bass box: driver, size class, box dimensions, amp power and music balance. */
 export function useMidDesign(): MidDesign {
-  // `!` on the finds: the ids are in the tables
-  const [midDriver, setMidDriver] = useState(MID_OPTIONS.find((o) => o.id === "sbnero12")!);
-  const [midBoxPreset, setMidBoxPreset] = useState(MID_BOXES.find((o) => o.id === "b15")!); // last preset loaded
-  const [midBoxDims, setMidBoxDims] = useState({ ...MID_BOXES.find((o) => o.id === "b15")!.box });
-  const [midAmpWatts, setMidAmpWatts] = useState(400); // amp power per mid channel, into 8 Ω
-  const [midBandTiltDb, setMidBandTiltDb] = useState(6); // how much less the mid band needs than the sub band, dB
+  const [midDriver, setMidDriver] = useState(DEFAULT_PA.mid);
+  const [midBoxPreset, setMidBoxPreset] = useState(DEFAULT_PA.midBox); // last preset loaded
+  const [midBoxDims, setMidBoxDims] = useState<Dims3>(DEFAULT_PA.mDim);
+  const [midAmpWatts, setMidAmpWatts] = useState(DEFAULT_PA.mAmpW); // amp power per mid channel, into 8 Ω
+  const [midBandTiltDb, setMidBandTiltDb] = useState(DEFAULT_PA.tilt); // how much less the mid band needs than the sub band, dB
   const setMidBoxDim = (k: keyof Dims3, v: number) => setMidBoxDims((p) => ({ ...p, [k]: v }));
-  const [midSize, setMidSize] = useState<MidSize>(12);
+  const [midSize, setMidSize] = useState<MidSize>(DEFAULT_PA.midSize);
   return {
     midDriver,
     setMidDriver,

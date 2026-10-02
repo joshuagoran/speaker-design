@@ -20,10 +20,14 @@ import type {
   FrequencyPoint,
   HifiChip,
   HifiConfig,
+  HifiDesignState,
+  HifiPort,
   HighpassType,
   HifiDispersionMap,
   HifiPlacement,
-  HifiPort,
+  RoundPort,
+  SizedSlotPort,
+  SlotPort,
   HifiSystem,
   HifiTweeter,
   HifiWoofer,
@@ -31,9 +35,11 @@ import type {
   PanelMaterial,
   PassiveRadiator,
   PassiveRadiatorChoice,
+  PortMemory,
   WooferMaxPoint,
   WooferPoint,
 } from "../../types";
+import { METERS_PER_FOOT } from "../../constants/units";
 
 const C = 343,
   IN = 0.0254;
@@ -50,7 +56,7 @@ const cdiv = (a: Complex, b: Complex) => {
   const d = b.re * b.re + b.im * b.im;
   return cm((a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d);
 };
-const cabs = (a: Complex) => Math.hypot(a.re, a.im);
+export const cabs = (a: Complex) => Math.hypot(a.re, a.im);
 const cexp = (ph: number) => cm(Math.cos(ph), Math.sin(ph));
 
 // Linkwitz-Riley low/high pass as complex transfer functions: LR(2n) = Butterworth(n) squared.
@@ -162,21 +168,22 @@ export function waveguideDirectivity(
   return Math.pow(10, Math.max(-40, db) / 20);
 }
 
+/** Whether a tweeter has to be mounted on a waveguide or horn (a compression driver, or a dome made for one) rather than sit on the baffle. */
+export const needsWaveguide = (t: Pick<HifiTweeter, "type" | "needsWaveguide">): boolean =>
+  t.type === "compression" || !!t.needsWaveguide;
+
 // ---- box ----
 /** The fields the port length reads: a round port's `dia` and `elbows`, or a slot's `h`. */
-export interface PortGeometry {
-  shape?: "round" | "slot";
-  dia?: number;
-  elbows?: number;
-  h?: number;
-}
+export type PortGeometry =
+  | Pick<RoundPort, "shape" | "dia" | "elbows">
+  | (Pick<SlotPort, "shape" | "h"> & Pick<RoundPort, "elbows">);
 // longest port (centerline, inches) that fits: straight front to back; one elbow turns it up (or down) the back wall,
 // using at most half the inner height so it stays clear of the woofer; two elbows fold it back along the bottom or top
 export function portMaxLength(dim: Dims3, wall: number, port: PortGeometry) {
   if (port.shape === "slot") return slotMaxLength(dim, wall, port);
   const D = dim.d - 2 * wall,
     H = dim.h - 2 * wall,
-    dia = port.dia!,
+    dia = port.dia,
     e = port.elbows || 0;
   const straight = D - dia / 2 - 1;
   if (e === 0) return straight;
@@ -185,24 +192,22 @@ export function portMaxLength(dim: Dims3, wall: number, port: PortGeometry) {
 }
 export const grossVolumeLiters = (d: Dims3, t: number) =>
   (Math.max(0, (d.w - 2 * t) * (d.h - 2 * t) * (d.d - 2 * t)) * 16.387) / 1e3;
-export const portArea = (p: HifiPort) =>
-  p.shape === "slot" ? p.h * p.w! : p.n * Math.PI * Math.pow(p.dia / 2, 2);
+export const portArea = (p: RoundPort | SizedSlotPort) =>
+  p.shape === "slot" ? p.h * p.w : p.n * Math.PI * Math.pow(p.dia / 2, 2);
 // Slot vent: a full-width letterbox along the bottom of the baffle, formed by a shelf, running straight back.
 // Outer end flanged by the baffle; inner end opens into the box (height X, back wall L behind the mouth).
 export const slotWidth = (dim: Dims3, wall: number) => dim.w - 2 * wall;
 export function hifiSlotEndCorrection(
   dim: Dims3,
   wall: number,
-  port: { shape?: "round" | "slot"; h?: number; w?: number; len: number },
+  port: Pick<SizedSlotPort, "h" | "w" | "len">,
 ) {
   const X = dim.h - 2 * wall - wall,
     L = dim.d - 2 * wall - port.len;
-  return (
-    rectangleEndCorrection(port.h!, port.w!) + (0.61 / 0.85) * ductEndCorrection2D(port.h!, X, L)
-  );
+  return rectangleEndCorrection(port.h, port.w) + (0.61 / 0.85) * ductEndCorrection2D(port.h, X, L);
 }
-export const slotMaxLength = (dim: Dims3, wall: number, port: PortGeometry) =>
-  dim.d - 2 * wall - Math.max(port.h!, 1); // leave the mouth's height behind it
+export const slotMaxLength = (dim: Dims3, wall: number, port: Pick<SlotPort, "h">) =>
+  dim.d - 2 * wall - Math.max(port.h, 1); // leave the mouth's height behind it
 const MDF_LB: Partial<Record<number, number>> = { 0.75: 3.4, 0.5: 2.3 };
 export const panelWeightLb = (t: number, mat: PanelMaterial | undefined) =>
   mat === "mdf" ? (MDF_LB[t] ?? 3.4) : plywoodLbPerSqFt(t);
@@ -218,14 +223,14 @@ export function driverLayout(
   d: Dims3,
   onTop: boolean,
 ): DriverLayout {
-  const face = t.faceplate || { w: 4, h: 4 };
+  const face = t.faceplate;
   if (onTop) {
-    const th = d.h + face.h! / 2,
+    const th = d.h + face.h / 2,
       wh = d.h - 1 - w.size / 2;
     return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh, onTop: true };
   }
-  const th = d.h - 1 - face.h! / 2;
-  const wh = th - face.h! / 2 - 0.5 - w.size / 2;
+  const th = d.h - 1 - face.h / 2;
+  const wh = th - face.h / 2 - 0.5 - w.size / 2;
   return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh };
 }
 
@@ -334,14 +339,21 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
     dim = cfg.dim,
     wall = cfg.wall || 0.75;
   const gross = grossVolumeLiters(dim, wall);
-  const vented = cfg.box === "vented",
-    radiator = cfg.box === "radiator" && !!(cfg.pr && cfg.pr.drv);
-  const slot = vented && cfg.port.shape === "slot";
-  const port = slot ? { ...cfg.port, n: 1, w: slotWidth(dim, wall) } : cfg.port;
-  const pA = vented ? portArea(port) : 0;
+  // the port the model uses (a slot is one opening across the whole baffle), and the radiators, each only for its box
+  const ventPort: RoundPort | SizedSlotPort | null =
+    cfg.box !== "vented"
+      ? null
+      : cfg.port.shape === "slot"
+        ? { ...cfg.port, n: 1, w: slotWidth(dim, wall) }
+        : cfg.port;
+  const pr = cfg.box === "radiator" && cfg.pr && cfg.pr.drv ? cfg.pr : null;
+  const pA = ventPort ? portArea(ventPort) : 0;
   // the slot's shelf takes volume too
-  const ec = slot ? hifiSlotEndCorrection(dim, wall, port) : undefined;
-  const pVol = vented ? ((pA + (slot ? wall * port.w! : 0)) * port.len * 16.387) / 1e3 : 0;
+  const ec =
+    ventPort && ventPort.shape === "slot" ? hifiSlotEndCorrection(dim, wall, ventPort) : undefined;
+  const pVol = ventPort
+    ? ((pA + (ventPort.shape === "slot" ? wall * ventPort.w : 0)) * ventPort.len * 16.387) / 1e3
+    : 0;
   const disp = ts.disp != null ? ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6);
   const net = Math.max(1, gross * 0.97 - disp - pVol); // 3% for bracing and damping
   const V = ampVoltage(cfg.wAmpW),
@@ -352,16 +364,20 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
   const hpf =
     cfg.hpf != null
       ? cfg.hpf
-      : vented
-        ? Math.round(0.75 * ventTuning(net, pA, port.len, port.n, ec).Fb)
-        : radiator
-          ? Math.round(0.75 * passiveRadiatorTuning(cfg.pr.drv, cfg.pr.n, cfg.pr.addG, net).Fb)
+      : ventPort
+        ? Math.round(0.75 * ventTuning(net, pA, ventPort.len, ventPort.n, ec).Fb)
+        : pr
+          ? Math.round(0.75 * passiveRadiatorTuning(pr.drv, pr.n, pr.addG, net).Fb)
           : null;
-  const vM = vented
-    ? boxModel(ts, net, pA, port.len, hpf || 1, V, "BW24", { ...opts, nPorts: port.n, ecIn: ec })
+  const vM = ventPort
+    ? boxModel(ts, net, pA, ventPort.len, hpf || 1, V, "BW24", {
+        ...opts,
+        nPorts: ventPort.n,
+        ecIn: ec,
+      })
     : null;
-  const rM = radiator ? passiveRadiatorBox(ts, net, cfg.pr, hpf || 1, V, "BW24", opts) : null;
-  const sM = vented || radiator ? null : closedBox(ts, net * 1.1, hpf || null, null, V, opts); // lightly stuffed
+  const rM = pr ? passiveRadiatorBox(ts, net, pr, hpf || 1, V, "BW24", opts) : null;
+  const sM = ventPort || pr ? null : closedBox(ts, net * 1.1, hpf || null, null, V, opts); // lightly stuffed
   const m: BoxModel | null = vM || rM || sM;
   if (!m) return null;
   const bw = dim.w,
@@ -396,7 +412,7 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
       sTh = vT / Math.max(1e-9, drive),
       sX = ts.Xmax / Math.max(1e-9, o.xmm);
     const sP = o.vel ? portMax / o.vel : Infinity,
-      sR = o.prx ? cfg.pr!.drv.Xmax / o.prx : Infinity;
+      sR = o.prx && pr ? pr.drv.Xmax / o.prx : Infinity;
     const s = Math.min(sAmp, sTh, sX, sP, sR);
     return {
       f: o.f,
@@ -460,33 +476,25 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
     (w.lb || 5) +
     (t.lb || 1.5) +
     1 +
-    (radiator ? cfg.pr.n * ((cfg.pr.drv.lb || 0.75) + (cfg.pr.addG || 0) / 454) : 0);
+    (pr ? pr.n * ((pr.drv.lb || 0.75) + (pr.addG || 0) / 454) : 0);
   // the fewest elbows that fit the port's length (null: too long even with two)
-  const portElbows = !vented
+  const portElbows = !ventPort
     ? 0
-    : slot
-      ? port.len <= slotMaxLength(dim, wall, port) + 1e-9
+    : ventPort.shape === "slot"
+      ? ventPort.len <= slotMaxLength(dim, wall, ventPort) + 1e-9
         ? 0
         : null
       : ([0, 1, 2].find(
-          (e) => cfg.port.len <= portMaxLength(dim, wall, { ...cfg.port, elbows: e }) + 1e-9,
+          (e) => ventPort.len <= portMaxLength(dim, wall, { ...ventPort, elbows: e }) + 1e-9,
         ) ?? null);
-  const portFits = !vented || portElbows != null;
+  const portFits = !ventPort || portElbows != null;
   const lay = driverLayout(w, t, dim, !!(cfg.guide && cfg.guide.freestanding));
-  return {
+  const common = {
     gross,
     net,
     disp,
     pVol,
     pArea: pA,
-    vented,
-    slot,
-    slotW: slot ? port.w! : null,
-    radiator,
-    Fb: vM ? vM.Fb : rM ? rM.Fb : null,
-    Fp: rM ? rM.Fp : null,
-    prFits: !radiator || passiveRadiatorFits(dim, wall, cfg.pr!),
-    Qtc: sM ? sM.Qtc : null,
     f3Box: m.f3,
     ref,
     refW,
@@ -500,7 +508,7 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
     tLevel,
     wLevel,
     maxLevel,
-    who: tLevel < wLevel ? "tweeter" : "woofer",
+    who: tLevel < wLevel ? ("tweeter" as const) : ("woofer" as const),
     pMax,
     derate,
     lb,
@@ -513,9 +521,28 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
     order,
     bsF3: baffleStepF3(bw),
     tweeterAt,
-    peakVel: vM ? Math.max(...woofer.map((o) => o.vel || 0)) : null,
     V,
   };
+  if (vM && ventPort)
+    return {
+      ...common,
+      kind: "vented",
+      Fb: vM.Fb,
+      slotW: ventPort.shape === "slot" ? ventPort.w : null,
+      peakVel: Math.max(...woofer.map((o) => o.vel || 0)),
+    };
+  if (rM && pr)
+    return {
+      ...common,
+      kind: "radiator",
+      pr,
+      prFits: passiveRadiatorFits(dim, wall, pr),
+      Fb: rM.Fb,
+      Fp: rM.Fp,
+      peakVel: null,
+    };
+  if (sM) return { ...common, kind: "sealed", Qtc: sM.Qtc, peakVel: null };
+  return null;
 }
 
 // Response of one speaker at a point, relative to its on-axis response at 1 m; the DSP is time-aligned on the
@@ -532,7 +559,7 @@ export function hifiResponseAt(
   const xo = cfg.xo,
     order = cfg.order || 4,
     a = Math.sqrt(w.ts.Sd / 1e4 / Math.PI);
-  const dome = ((t.domeIn || 1) * IN) / 2;
+  const dome = (t.domeIn * IN) / 2;
   const dist = geo.distM,
     dz = (h: number) => (geo.eyeIn - h) * IN;
   const rW = Math.hypot(dist, dz(sys.lay.wooferIn)),
@@ -574,6 +601,27 @@ export function hifiResponseAt(
     return { f, spl: 20 * Math.log10(Math.max(1e-9, cabs(cadd(pw, pt)))) };
   });
 }
+/** The seat relative to one speaker: the left one sits at -spacing/2 (`sign` -1), the right at +spacing/2 (1), each toed in toward the middle. */
+export const listenerGeometry = (
+  sign: -1 | 1,
+  room: Pick<
+    HifiDesignState,
+    "speakerSpacingFt" | "listeningSeat" | "toeInDeg" | "earHeightIn" | "standHeightIn"
+  >,
+): ListenerGeometry => {
+  const sx = (sign * room.speakerSpacingFt) / 2,
+    vx = room.listeningSeat.x - sx,
+    vy = room.listeningSeat.y,
+    d = Math.hypot(vx, vy);
+  const axis = (-sign * room.toeInDeg * Math.PI) / 180,
+    ang = Math.atan2(vx, vy) - axis;
+  return {
+    th: Math.abs(ang),
+    eyeIn: room.earHeightIn - room.standHeightIn,
+    distM: d * METERS_PER_FOOT,
+  };
+};
+
 export const logSpacedFrequencies = (a: number, b: number, n: number) =>
   Array.from({ length: n }, (_, i) => a * Math.pow(b / a, i / (n - 1)));
 const nearestF = (curve: WooferPoint[], f: number) => {
@@ -661,7 +709,7 @@ export function hifiChips(
       "Woofer past its usable range",
       `${w.name} is rated to about ${w.fmax} Hz; cross lower.`,
     ]);
-  if (sys.Qtc != null)
+  if (sys.kind === "sealed")
     F.push(
       sys.Qtc > 0.8
         ? ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Peaky; the box is small for this woofer."]
@@ -669,20 +717,20 @@ export function hifiChips(
           ? ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Overdamped; the box could be smaller."]
           : ["ok", `Qtc ${sys.Qtc.toFixed(2)}`, "Well damped."],
     );
-  if (sys.slot && !sys.portFits) {
+  if (sys.kind === "vented" && sys.slotW != null && !sys.portFits) {
     F.push([
       "bad",
       "Slot too long",
-      `${cfg.port.len.toFixed(1)}″ doesn't fit; this box holds about ${slotMaxLength(cfg.dim, cfg.wall || 0.75, cfg.port).toFixed(1)}″, leaving the slot's height behind it. A shorter, lower slot tunes as low, or the box could be deeper.`,
+      `${cfg.port.len.toFixed(1)}″ doesn't fit; this box holds about ${portMaxLength(cfg.dim, cfg.wall || 0.75, cfg.port).toFixed(1)}″, leaving the slot's height behind it. A shorter, lower slot tunes as low, or the box could be deeper.`,
     ]);
-  } else if (sys.vented && !sys.portFits) {
+  } else if (sys.kind === "vented" && !sys.portFits) {
     const fits = portMaxLength(cfg.dim, cfg.wall || 0.75, { ...cfg.port, elbows: 2 });
     F.push([
       "bad",
       "Port too long",
       `${cfg.port.len.toFixed(1)}″ doesn't fit; even with two elbows this box holds about ${fits.toFixed(1)}″. A wider port tunes as low in less length, or the box could be deeper.`,
     ]);
-  } else if (sys.vented && sys.portElbows) {
+  } else if (sys.kind === "vented" && sys.portElbows) {
     const e = sys.portElbows;
     F.push([
       "warn",
@@ -690,8 +738,8 @@ export function hifiChips(
       `${cfg.port.len.toFixed(1)}″ is longer than a straight port fits (about ${portMaxLength(cfg.dim, cfg.wall || 0.75, { ...cfg.port, elbows: 0 }).toFixed(1)}″); ${e === 1 ? "one elbow turns it up the back wall" : "two elbows fold it along the back and the bottom"}.`,
     ]);
   }
-  if (sys.radiator) {
-    const p = cfg.pr!,
+  if (sys.kind === "radiator") {
+    const p = sys.pr,
       vdW = w.ts.Sd * w.ts.Xmax,
       vdP = p.n * p.drv.Sd * p.drv.Xmax,
       k = vdP / vdW;
@@ -724,7 +772,8 @@ export function hifiChips(
       "Woofer won't fit",
       `A ${w.size}″ woofer needs about ${need.toFixed(1)}″ of baffle width.`,
     ]);
-  const floor = sys.slot ? cfg.port.h! + (cfg.wall || 0.75) : 0; // the slot and its shelf along the bottom
+  const floor =
+    sys.kind === "vented" && cfg.port.shape === "slot" ? cfg.port.h + (cfg.wall || 0.75) : 0; // the slot and its shelf along the bottom
   if (sys.lay.wooferIn - w.size / 2 < 0.5 + floor)
     F.push([
       "bad",
@@ -757,4 +806,33 @@ export function hifiChips(
     `Clean up to ${sys.wLevel.toFixed(0)} dB at 1 m${cfg.bsc ? `, with ${cfg.bsc} dB of baffle-step boost` : ""}.`,
   ]);
   return F;
+}
+
+/**
+ * The port after the "1 port / 2 ports / Slot" toggle: a new object with only the fields of the shape it switches to
+ * (a round port has `dia` and `elbows`, a slot has `h`; both keep the length). The other shape's size comes from
+ * `remembered`: the diameter the round port last had, the height the slot last had.
+ */
+export function portAfterToggle(
+  p: HifiPort,
+  to: number | "slot",
+  remembered: PortMemory,
+): HifiPort {
+  if (to === "slot") {
+    const slot: SlotPort = {
+      shape: "slot",
+      n: 1,
+      h: p.shape === "slot" ? p.h : remembered.h,
+      len: p.len,
+    };
+    return slot;
+  }
+  const round: RoundPort = {
+    shape: "round",
+    n: to,
+    dia: p.shape === "slot" ? remembered.dia : p.dia,
+    len: p.len,
+  };
+  if (p.shape !== "slot" && p.elbows !== undefined) round.elbows = p.elbows;
+  return round;
 }

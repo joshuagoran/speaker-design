@@ -162,6 +162,7 @@ export function evaluateFill(c: FillGoldenConfig): GoldenValues {
     ampW: c.ampW || 300,
     portMax: c.portMax || 20,
   });
+  if (!f) throw new Error(`fill ${c.drv} has no model`);
   return {
     net: r2(f.net),
     Fb: r2(f.vM && f.vM.Fb),
@@ -177,3 +178,9 @@ export function evaluateFill(c: FillGoldenConfig): GoldenValues {
     portLimited: f.portLimited,
   };
 }
+
+/** Every snapshotted case, by name: what `golden.test.ts` checks and `update-golden.ts` writes. */
+export const goldenCases = [
+  ...configs.map((c) => ({ name: c.name, run: () => evaluate(c) })),
+  ...fillConfigs.map((c) => ({ name: c.name, run: () => evaluateFill(c) })),
+];

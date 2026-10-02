@@ -70,8 +70,6 @@ export interface SubDriver {
   size: SubSize;
   ts: SubTS;
   note: string;
-  /** the default pick, marked with a dot in the picker */
-  pick?: boolean;
 }
 
 export interface MidDriver {
@@ -83,7 +81,6 @@ export interface MidDriver {
   src: string;
   ts: ThieleSmall;
   note: string;
-  pick?: boolean;
 }
 
 /** The compression section of a compression driver (1 W / 1 m on `sensRef`, aes in watts above `aesXo`). */
@@ -107,7 +104,6 @@ export interface CompressionDriver {
   price: number | null;
   src: string;
   note: string;
-  pick?: boolean;
 }
 
 /** One point of a horn's flare, [radius, depth] in inches. */
@@ -123,7 +119,6 @@ export interface HornHf {
 export interface Horn {
   id: string;
   lb: number;
-  pick?: boolean;
   name: string;
   hf?: HornHf;
   /** throat exit in inches */
@@ -144,6 +139,9 @@ export interface Horn {
   note: string;
 }
 
+/** A horn the hi-fi page can use as a waveguide: one with its coverage specs. */
+export type HifiWaveguide = Horn & { hf: HornHf };
+
 /** The cabinet's ported-vent kinds. */
 export type VentKind = "slots" | "round1" | "round2" | "vslots" | "folded" | "round4";
 
@@ -162,11 +160,11 @@ export interface MidBox {
   name: string;
   box: Dims3;
   note: string;
-  pick?: boolean;
-  /** the sub size it suits, when it is for one size only */
-  size?: SubSize;
+  /** the mid size it suits, when it is for one size only */
+  size?: MidSize;
 }
 
+/** The named cabinet finishes; the cabinet's `cabFinish` can also be any paint colour, as a hex string. */
 export type FinishId = "birch" | "walnut";
 
 export interface CabinetFinish {
@@ -236,7 +234,6 @@ export interface HifiWoofer {
   /** highest usable frequency, Hz */
   fmax: number | null;
   note: string;
-  pick?: boolean;
 }
 
 export type TweeterType = "dome" | "horn-loaded" | "compression" | "ribbon";
@@ -248,16 +245,6 @@ export interface TweeterHf {
   minXo: number | null;
   imp: number;
   fs: number | null;
-}
-
-/**
- * A tweeter's faceplate. The table gives either `diameter` (round) or `w` and `h`; when the module loads it rewrites every
- * entry to `w` and `h`.
- */
-export interface Faceplate {
-  w?: number;
-  h?: number;
-  diameter?: number;
 }
 
 /** A ribbon's own waveguide: coverage in degrees and mouth size in inches. */
@@ -279,16 +266,23 @@ export interface HifiTweeter {
   type: TweeterType;
   /** exit diameter in inches, null for a horn-loaded tweeter */
   exit: number | null;
-  /** null where the maker gives no size; the layout then assumes 3.5 in square */
-  faceplate?: Faceplate | null;
+  /** the baffle cut-out the tweeter needs, inches; 3.5 in square where the maker gives no size, and a round faceplate is a square of its diameter */
+  faceplate: Dims2;
   /** absent on the ribbons, which come with their own */
   needsWaveguide?: boolean;
   note: string;
-  /** radiating diameter in inches for the directivity; set when the module loads */
-  domeIn?: number;
-  pick?: boolean;
+  /** radiating diameter in inches for the directivity: the exit, or the mouth of a horn-loaded tweeter */
+  domeIn: number;
   ownGuide?: OwnGuide;
 }
+
+/**
+ * A tweeter as the table gives it: the faceplate is a round `diameter` or `w` and `h` (null where the maker gives no size),
+ * and `domeIn` is not set yet. `data.ts` turns every row into a `HifiTweeter` when the module loads.
+ */
+export type HifiTweeterRaw = Omit<HifiTweeter, "faceplate" | "domeIn"> & {
+  faceplate: { diameter: number } | Dims2 | null;
+};
 
 export type XmaxKind = "linear" | "mechanical";
 
@@ -356,6 +350,12 @@ export interface SlotPort {
 }
 
 export type HifiPort = RoundPort | SlotPort;
+
+/** A slot port with its width, as `hifiSystem` models it. */
+export type SizedSlotPort = SlotPort & Required<Pick<SlotPort, "w">>;
+
+/** What the port toggle remembers across shapes, in inches: the last round port's diameter and the last slot's height. */
+export type PortMemory = Pick<RoundPort, "dia"> & Pick<SlotPort, "h">;
 
 /** The passive radiators in use: the driver itself, how many, and the added mass on each in grams. */
 export interface PassiveRadiatorChoice {
@@ -441,21 +441,13 @@ export interface WooferMaxPoint {
   s: number;
 }
 
-/** The modelled speaker: `hifiSystem`'s result. */
-export interface HifiSystem {
+/** What every modelled Hi-fi speaker has, whatever its box. */
+export interface HifiSystemBase {
   gross: number;
   net: number;
   disp: number;
   pVol: number;
   pArea: number;
-  vented: boolean;
-  slot: boolean;
-  slotW: number | null;
-  radiator: boolean;
-  Fb: number | null;
-  Fp: number | null;
-  prFits: boolean;
-  Qtc: number | null;
   f3Box: number;
   ref: number;
   refW: number;
@@ -484,9 +476,44 @@ export interface HifiSystem {
   bsF3: number;
   /** the tweeter's level at 1 m at `f` Hz for `volts`, through its high-pass */
   tweeterAt: (f: number, volts: number) => number;
-  peakVel: number | null;
   V: number;
 }
+
+/** A sealed box, lightly stuffed: its Qtc. */
+export interface HifiSealedSystem extends HifiSystemBase {
+  kind: Extract<HifiBoxKind, "sealed">;
+  Qtc: number;
+  Fb?: undefined;
+  Fp?: undefined;
+  peakVel: null;
+}
+
+/** A ported box: its tuning, the port's peak air speed and, for a slot, the slot's width in inches (null for round ports). */
+export interface HifiVentedSystem extends HifiSystemBase {
+  kind: Extract<HifiBoxKind, "vented">;
+  Fb: number;
+  slotW: number | null;
+  peakVel: number;
+  Qtc?: undefined;
+  Fp?: undefined;
+}
+
+/** A passive-radiator box: the radiators used, whether they fit the back, the box tuning and the radiators' own resonance. */
+export interface HifiRadiatorSystem extends HifiSystemBase {
+  kind: Extract<HifiBoxKind, "radiator">;
+  pr: PassiveRadiatorChoice;
+  prFits: boolean;
+  Fb: number;
+  Fp: number;
+  peakVel: null;
+  Qtc?: undefined;
+}
+
+/**
+ * The modelled speaker: `hifiSystem`'s result, one variant per box kind. The `?: undefined` fields are the other
+ * boxes', so `Fb`, `Fp` and `Qtc` can be read without narrowing and `kind` says which one is set.
+ */
+export type HifiSystem = HifiSealedSystem | HifiVentedSystem | HifiRadiatorSystem;
 
 /** A check on the design: a severity, a short title and a sentence of detail. */
 export type HifiChip = Chip;
@@ -574,6 +601,81 @@ export interface HifiMetrics {
   lb: number;
 }
 
+/** The Hi-fi page's design and room, as the planner holds it. */
+export interface HifiDesignState {
+  woofer: HifiWoofer;
+  tweeter: HifiTweeter;
+  selectedWaveguide: HifiWaveguide;
+  boxType: HifiBoxKind;
+  boxDims: Dims3;
+  wallThicknessIn: number;
+  panelMaterial: PanelMaterial;
+  portSpec: HifiPort;
+  radiatorSelection: RadiatorSelection;
+  crossoverHz: number;
+  crossoverOrder: CrossoverOrder;
+  wooferAmpWatts: number;
+  tweeterAmpWatts: number;
+  baffleStepCompensationDb: number;
+  placement: HifiPlacement;
+  distanceToWallFt: number;
+  speakerSpacingFt: number;
+  toeInDeg: number;
+  listeningSeat: ListeningSeat;
+  earHeightIn: number;
+  standHeightIn: number;
+  dispersionPlane: DispersionPlane;
+}
+
+/** What the model reads off a design that can be modelled: the system, and the curves and numbers worked out from it. */
+export interface HifiSpeakerModel {
+  speakerSystem: HifiSystem;
+  warningChips: Chip[];
+  /** both speakers' clean output at the seat, dB */
+  maxLevelAtSeatDb: number;
+  onAxisResponse: FrequencyPoint[];
+  pairResponse: FrequencyPoint[];
+  /** what the tweeter can play at 1 m, behind the crossover */
+  tweeterMaxCurve: FrequencyPoint[];
+  dispersion: HifiDispersionMap;
+}
+
+/** The Hi-fi design as the models read it, worked out from the planner's state. */
+export interface HifiDesign {
+  /** the waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded) */
+  compressionWaveguide: WaveguideSpec;
+  /** the waveguide in use: the tweeter's own, the picked one for a tweeter that needs one, else none */
+  waveguideSpec: WaveguideSpec | null;
+  radiatorDriver: PassiveRadiator;
+  radiator: PassiveRadiatorChoice;
+  speakerConfig: HifiConfig;
+  tweeterWithWaveguide: HifiTweeter;
+  /** each speaker's seat geometry: the left one at -spacing/2, the right at +spacing/2 */
+  leftGeometry: ListenerGeometry;
+  rightGeometry: ListenerGeometry;
+  /** the average distance to the seat, at least 1 m */
+  seatDistanceM: number;
+  /** the same distance in feet, as the page shows it */
+  seatDistanceFt: number;
+  pairCostUsd: number;
+  /** null when the woofer can't be modelled (its parameters aren't published) */
+  speakerModel: HifiSpeakerModel | null;
+}
+
+/** The optimizer locks as a page holds them: an on/off lock per key, and the lock mode of each box dimension for each box (always present). */
+export type OptimizerLocks<K extends string, B extends string> = Partial<Record<K, boolean>> &
+  Record<B, Partial<Record<keyof Dims3, DimensionLockMode>>>;
+
+/** The Hi-fi optimizer locks as the page holds them. */
+export type HifiPlannerLocks = OptimizerLocks<HifiLockKey, "dim">;
+
+/** The card being previewed, and the design to go back to when the preview ends. */
+export interface DesignPreview<Card, Config> {
+  label: string;
+  before: Config;
+  card: Card;
+}
+
 /** The fields of a design a card applies (the ones the optimizer searched). */
 export interface HifiCardConfig {
   woofer: string;
@@ -601,6 +703,26 @@ export type HifiOptimizedField =
   | "wAmpW"
   | "tAmpW";
 export type HifiOptimizedFields = Pick<HifiCardConfig, HifiOptimizedField>;
+
+/**
+ * What the Hi-fi page saves: the fields a card applies and the rest of the design and room. The JSON round trip drops
+ * undefined fields, so `pr` is absent unless the box has radiators.
+ */
+export interface SavedHifiConfig extends Omit<HifiCardConfig, "pr"> {
+  pr?: RadiatorSelection;
+  guide: string;
+  mat: PanelMaterial;
+  order: CrossoverOrder;
+  bsc: number;
+  place: HifiPlacement;
+  wallFt: number;
+  spacing: number;
+  toe: number;
+  seat: ListeningSeat;
+  earIn: number;
+  standIn: number;
+  summary: string;
+}
 
 /** A card's change from the current design. */
 export interface HifiMetricsDelta {
@@ -636,9 +758,10 @@ export interface HifiOptimizerResult {
   goals: HifiGoal[];
   cards: HifiOptimizerCard[];
   stats: { evaluated: number; ms: number; pool?: number };
+  /** what fails in your design; empty when it passes or when no goal was given */
+  curProblems: string[];
   // the fields below are absent when no goal was given
   cur?: HifiMetrics | null;
-  curProblems?: string[];
   curCurve?: [number, number][] | null;
   goalMissing?: string | null;
 }
@@ -714,7 +837,8 @@ export interface PaDesignConfig {
   layout: PaLayout;
   cutaway?: boolean;
   baffleColor?: string;
-  cabFinish?: FinishId;
+  /** a `FinishId`, or a paint colour as a hex string (`SwatchPicker` offers both) */
+  cabFinish?: string;
   spacerH?: number;
   joint?: CornerJoint;
   summary?: string;
@@ -837,16 +961,30 @@ export interface SubGeometry {
   Fb: number;
 }
 
-export interface SubSystem {
+/** What a sub always has: its vent, volumes and the amp's peak voltage. */
+export interface SubSystemBase {
   port: VentGeometry;
   grossL: number;
   ductL: number;
   woodL: number;
   netL: number;
   AMP_V: number;
-  mdl: VentedBoxModel | null;
-  lim: SubLimits | null;
 }
+
+/** A sub with no model: the driver has no T/S, or the box or vent is degenerate (no net volume, no port area, port length at or under 0). */
+export interface SubSystemUnmodelled extends SubSystemBase {
+  mdl: null;
+  lim: null;
+}
+
+/** A sub with its vented-box model and the music limit that comes from it. */
+export interface SubSystemModelled extends SubSystemBase {
+  mdl: VentedBoxModel;
+  lim: SubLimits;
+}
+
+/** `subSystem`: check `mdl` and `lim` narrows with it. */
+export type SubSystem = SubSystemUnmodelled | SubSystemModelled;
 
 export interface MidSystemConfig {
   midDims: Dims3;
@@ -857,20 +995,36 @@ export interface MidSystemConfig {
   mAmpW: number;
 }
 
-export interface MidSystem {
+/** What a mid always has: voltages and the sealed box's volumes. */
+export interface MidSystemBase {
   V: number;
   grossL: number;
   disp: number;
   netL: number;
   effL: number;
-  mdl: SealedBoxModel | null;
   vTherm: number;
-  max: PaMaxPoint[] | null;
   useV: number;
 }
 
+/** A mid with no model (the driver has no T/S): no response and no limit curve. */
+export interface MidSystemUnmodelled extends MidSystemBase {
+  mdl: null;
+  max: null;
+}
+
+/** A mid with its sealed-box model and the most it can play at each frequency. */
+export interface MidSystemModelled extends MidSystemBase {
+  mdl: SealedBoxModel;
+  max: PaMaxPoint[];
+}
+
+/** `midSystem`: check `mdl` and `max` narrows with it. */
+export type MidSystem = MidSystemUnmodelled | MidSystemModelled;
+
 /** The compression driver on its horn: power available, the cap, and the response from the crossover up. */
 export interface HornResponse {
+  /** the compression driver's spec the response was built from */
+  hf: CompressionHf;
   curve: FrequencyPoint[];
   /** watts the driver sees: the lower of the amp and the program rating */
   P: number;
@@ -893,6 +1047,19 @@ export interface FillPort {
   len: number;
 }
 
+/** The Fills page's design, as the planner holds it. */
+export interface FillDesignState {
+  driver: FillDriver;
+  boxType: FillBoxType;
+  boxDims: Dims3;
+  portSpec: FillPort;
+  /** the highpass to the subs, Hz (LR24) */
+  highpassHz: number;
+  /** per box, rated into 8 Ω */
+  ampWatts: number;
+  maxPortAirSpeedMs: number;
+}
+
 export interface FillSystemConfig {
   boxType: FillBoxType;
   /** the box's outside size, inches */
@@ -904,15 +1071,14 @@ export interface FillSystemConfig {
   portMax: number;
 }
 
-export interface FillSystem {
+/** What every modelled fill has, whichever box. */
+export interface FillSystemBase {
   V: number;
   gross: number;
   pArea: number;
   disp: number;
   net: number;
   eff: number;
-  vM: VentedBoxModel | null;
-  sM: SealedBoxModel | null;
   max: PaMaxPoint[];
   sens: number;
   f3: number;
@@ -922,6 +1088,23 @@ export interface FillSystem {
   lb: number;
   portLimited: boolean;
 }
+
+/** A ported fill: the vented-box model, no sealed one. */
+export interface FillSystemVented extends FillSystemBase {
+  boxType: Extract<FillBoxType, "vented">;
+  vM: VentedBoxModel;
+  sM: null;
+}
+
+/** A sealed fill (stuffed): the closed-box model, no vented one. */
+export interface FillSystemSealed extends FillSystemBase {
+  boxType: Extract<FillBoxType, "sealed">;
+  vM: null;
+  sM: SealedBoxModel;
+}
+
+/** `fillSystem`'s result: check `boxType`, or `vM` or `sM`, and the other model's type follows. */
+export type FillSystem = FillSystemVented | FillSystemSealed;
 
 // ---- Cutlist ----
 
@@ -1093,6 +1276,9 @@ export interface PaOptimizerLocks extends Partial<Record<PaLockKey, boolean>> {
   subDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
   midDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
 }
+
+/** The PA optimizer locks as the page holds them. */
+export type PaPlannerLocks = OptimizerLocks<PaLockKey, "subDim" | "midDim">;
 
 /** The optimizer's inputs on the page: the room, the heaviest box and the budget, and the goals in tap order. */
 export interface PaOptimizerInputState {
@@ -1276,8 +1462,8 @@ export interface OptimizerRequest<I = PaOptimizerInput> {
 
 /** The worker's reply: the result, or the message of what it threw. */
 export type OptimizerResponse<R = PaOptimizerResult> =
-  | { id: number; out: R; error?: undefined }
-  | { id: number; error: string; out?: undefined };
+  | { id: number; out: R }
+  | { id: number; error: string };
 
 // ---- Saved configurations ----
 

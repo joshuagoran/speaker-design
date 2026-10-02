@@ -6,6 +6,7 @@ import { formatDollars } from "../../lib/format";
 import { Delta } from "../../components/optimizer/Delta";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
 import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
+import { byIdOrThrow } from "../../lib/tables";
 import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
 
 interface Props {
@@ -36,9 +37,10 @@ export function HifiResultCard({
   const config = result.config,
     metrics = result.metrics,
     deltas: Partial<HifiMetricsDelta> = result.delta || {};
-  // `!` on both: a card's driver ids come from these same lists (the optimizer searches them)
-  const woofer = HIFI_WOOFERS.find((o) => o.id === result.woofer)!,
-    tweeter = HIFI_TWEETERS.find((o) => o.id === result.tweeter)!;
+  // a card's driver ids come from these same lists (the optimizer searches them)
+  const woofer = byIdOrThrow(HIFI_WOOFERS, result.woofer, "hi-fi woofers"),
+    tweeter = byIdOrThrow(HIFI_TWEETERS, result.tweeter, "hi-fi tweeters");
+  const radiator = passiveRadiatorOf(config); // null unless the box is a radiator box with its radiator
   const tile = (label: string, v: string, delta: React.ReactNode) => (
     <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
       <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
@@ -72,7 +74,7 @@ export function HifiResultCard({
           lay={result.lay}
           vented={config.box === "vented"}
           port={config.port}
-          pr={passiveRadiatorOf(config)}
+          pr={radiator}
           guide={result.ownGuide ? ownGuideCfg(tweeter) : result.guided ? waveguide : null}
           small
         />
@@ -92,8 +94,8 @@ export function HifiResultCard({
           ? ` (${config.port.h}″ slot, ${config.port.len}″ long)`
           : config.box === "vented"
             ? ` (${config.port.n} × ${config.port.dia}″ port, ${config.port.len}″${config.port.elbows ? `, ${config.port.elbows} elbow${config.port.elbows > 1 ? "s" : ""}` : ""})`
-            : config.box === "radiator" && passiveRadiatorOf(config)
-              ? ` (${config.pr!.n} × ${passiveRadiatorOf(config)!.drv.name}, +${config.pr!.addG} g)`
+            : radiator
+              ? ` (${radiator.n} × ${radiator.drv.name}, +${radiator.addG} g)`
               : ""}{" "}
         · {config.wall === 0.5 ? "1/2″" : "3/4″"} · XO {config.xo} Hz · amps {config.wAmpW} /{" "}
         {config.tAmpW} W

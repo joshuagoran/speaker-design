@@ -4,6 +4,7 @@ import { SectionHeading } from "../ui/SectionHeading";
 import { NumberField } from "../ui/NumberField";
 import { Notice } from "../ui/Notice";
 import { formatDollars } from "../../lib/format";
+import { toggled } from "../../lib/lists";
 import { OptimizerResultCard } from "./OptimizerResultCard";
 import { GoalPicker } from "./GoalPicker";
 import { RunRow } from "./RunRow";
@@ -56,8 +57,7 @@ export function OptimizerPanel({
   const goals = optIn.goals,
     g = goals[0];
   // tap adds a goal at the end of the order; tap again removes it (none selected is allowed; the search waits for one)
-  const tapGoal = (k: PaGoal) =>
-    setOpt({ goals: goals.includes(k) ? goals.filter((x) => x !== k) : [...goals, k] });
+  const tapGoal = (k: PaGoal) => setOpt({ goals: toggled(goals, k) });
   const tgtText = !g
     ? "pick a goal"
     : (g === "louder"

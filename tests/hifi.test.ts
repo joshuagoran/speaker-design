@@ -14,6 +14,8 @@ import {
   hifiResponseAt,
   hifiDispersionMap,
   grossVolumeLiters,
+  portAfterToggle,
+  listenerGeometry,
 } from "../src/lib/hifi/hifi";
 import type { HifiConfig, HifiTweeter, HifiWoofer, PassiveRadiator } from "../src/types";
 import { close } from "./helpers";
@@ -247,13 +249,11 @@ test("slot vent: tunes like a port of the same area and length, its shelf takes 
   const slot: HifiConfig = { ...cfg, port: { shape: "slot", n: 1, h: 1, len: 5 } };
   const s = hifiSystem(W, T, slot)!,
     r = hifiSystem(W, T, cfg)!;
-  assert.ok(s.slot && s.Fb! > 20 && s.Fb! < 90, `Fb ${s.Fb}`);
+  assert.ok(s.kind === "vented" && s.slotW != null && s.Fb > 20 && s.Fb < 90, `Fb ${s.Fb}`);
   close(t, s.pArea, 1 * (cfg.dim.w - 1.5), 1e-9, "full inner width");
   assert.ok(s.pVol > (s.pArea * 5 * 16.387) / 1e3, "the shelf is counted");
   // longer slot, lower tuning
-  assert.ok(
-    hifiSystem(W, T, { ...slot, port: { shape: "slot", n: 1, h: 1, len: 7 } })!.Fb! < s.Fb!,
-  );
+  assert.ok(hifiSystem(W, T, { ...slot, port: { shape: "slot", n: 1, h: 1, len: 7 } })!.Fb! < s.Fb);
   const long: HifiConfig = { ...slot, port: { shape: "slot", n: 1, h: 1, len: 20 } };
   assert.ok(
     hifiChips(hifiSystem(W, T, long)!, W, T, long).some(
@@ -288,4 +288,60 @@ test("planar ribbon on its own waveguide: flush-mounted, its coverage drives the
       ([, h]) => h === "Below the tweeter's minimum crossover",
     ),
   );
+});
+
+test("port toggle builds a fresh port with only its own shape's fields", () => {
+  const round = { n: 1, dia: 3, len: 7, elbows: 1 } as const;
+  const remembered = { dia: 2, h: 1 };
+  const slot = portAfterToggle(round, "slot", remembered);
+  assert.deepEqual(slot, { shape: "slot", n: 1, h: 1, len: 7 });
+  assert.ok(!("dia" in slot) && !("elbows" in slot), "no round fields on a slot");
+  const back = portAfterToggle({ ...slot, h: 2, w: 9 }, 2, remembered);
+  assert.deepEqual(back, { shape: "round", n: 2, dia: 2, len: 7 });
+  assert.ok(
+    !("h" in back) && !("w" in back) && !("elbows" in back),
+    "no slot fields on a round port",
+  );
+  assert.deepEqual(portAfterToggle(round, 2, remembered), {
+    shape: "round",
+    n: 2,
+    dia: 3,
+    len: 7,
+    elbows: 1,
+  });
+  assert.deepEqual(portAfterToggle({ ...slot, h: 2 }, "slot", remembered), { ...slot, h: 2 });
+});
+
+test("port toggle: round 3 in, to a slot and back, is round 3 in again; a slot keeps its height too", () => {
+  const round = { n: 1, dia: 3, len: 7 } as const;
+  // the planner remembers the last round diameter while the slot is showing
+  const slot = portAfterToggle(round, "slot", { dia: round.dia, h: 1.5 });
+  assert.equal(slot.h, 1.5, "the slot comes back at its remembered height");
+  const back = portAfterToggle(slot, 1, { dia: round.dia, h: 2 });
+  assert.equal(back.dia, 3);
+  assert.equal(back.h, undefined);
+  const slotAgain = portAfterToggle(back, "slot", { dia: 3, h: 2 });
+  assert.equal(slotAgain.h, 2, "and the slot height the user last had");
+});
+
+test("listenerGeometry: a centred seat is symmetric, toe-in cuts the off-axis angle, and distance and ear height follow the room", (t) => {
+  const room = {
+    speakerSpacingFt: 8,
+    listeningSeat: { x: 0, y: 8 },
+    toeInDeg: 0,
+    earHeightIn: 38,
+    standHeightIn: 24,
+  };
+  const l = listenerGeometry(-1, room),
+    r = listenerGeometry(1, room);
+  close(t, l.th, Math.atan2(4, 8), 1e-9, "left angle");
+  close(t, r.th, l.th, 1e-9, "right matches left");
+  close(t, l.distM, Math.hypot(4, 8) * 0.3048, 1e-9, "distance");
+  assert.equal(l.eyeIn, 14);
+  // toeing in by that angle points each speaker at the seat
+  const aimed = listenerGeometry(-1, { ...room, toeInDeg: (l.th * 180) / Math.PI });
+  close(t, aimed.th, 0, 1e-9, "aimed at the seat");
+  // a seat moved toward the right speaker is closer to it and further off axis of the left
+  const right = { ...room, listeningSeat: { x: 3, y: 8 } };
+  assert.ok(listenerGeometry(1, right).distM < listenerGeometry(-1, right).distM);
 });

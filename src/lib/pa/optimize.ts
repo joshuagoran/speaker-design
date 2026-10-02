@@ -38,7 +38,7 @@ import {
   subDriverClearanceNeededIn,
   driverClearance,
 } from "./chips";
-import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS } from "../data";
+import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS, subDriversOfSize } from "../data";
 import type {
   CompressionDriver,
   CutPart,
@@ -65,14 +65,14 @@ import type {
   SubDriver,
   SubLimitWho,
   SubLimits,
-  SubSystem,
+  SubSystemModelled,
   VentedBoxModel,
   VentSpec,
 } from "../../types";
 import { keysOf } from "../records";
+import { byId, byIdOrThrow } from "../tables";
+import { DEFAULT_PA } from "../defaults";
 
-const byId = <T extends { id: string }>(list: readonly T[], id: string) =>
-  list.find((o) => o.id === id);
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
 /** The limits a design is checked against: the heaviest box, the driver budget and the warnings let through. */
@@ -107,7 +107,7 @@ interface Seed {
 /** A real sub box with its vent and model. */
 interface SubCandidate {
   c: PaDesignConfig;
-  s: SubSystem;
+  s: SubSystemModelled;
   sub: SubDriver;
   lb: number;
   out: number;
@@ -230,14 +230,21 @@ const TUBES = [
   [3, 6],
   [4, 6],
 ];
-// Only the styles the search tries by itself have sizes; a locked "round1" or "round4" vent has none, so the search throws on it.
-const VENT_SIZES: Partial<Record<PortStyle, Partial<VentSpec>[]>> = {
-  round2: TUBES.map(([nt, dia]) => ({ nt, dia })),
+// "round1" and "round4" are the one-tube and four-corner-tube layouts (the geometry treats every round style alike, from `nt` and
+// `dia`), so they take the tubes of that count; "round2" tries every tube count, as it always has.
+const tubesOf = (count?: number) =>
+  TUBES.filter(([nt]) => count === undefined || nt === count).map(([nt, dia]) => ({ nt, dia }));
+const VENT_SIZES: Record<PortStyle, Partial<VentSpec>[]> = {
+  round1: tubesOf(1),
+  round2: tubesOf(),
+  round4: tubesOf(4),
   slots: [2, 2.5, 3, 3.5, 4, 4.5, 5, 6].map((slotH) => ({ slotH })),
   folded: [2, 2.5, 3, 3.5, 4, 4.5, 5].map((slotH) => ({ slotH })),
   vslots: [1, 1.25, 1.5, 1.75, 2, 2.5, 3].map((throat) => ({ throat })),
   vslot1: [1.5, 2, 2.5, 3, 3.5, 4, 5].map((throat) => ({ throat })),
 };
+/** The vent sizes the search tries for a style, smallest area first. */
+export const ventSizesFor = (style: PortStyle) => VENT_SIZES[style];
 
 // Clean output: the lowest music-limit level from 40 to 90 Hz, so a peak in the response can't win.
 export const SUB_BAND_HZ = [40, 90];
@@ -253,8 +260,52 @@ export function bandOutputDb(
   return lo;
 }
 
+// The numbers evaluateDesign reads from a config. A saved design from an older version can lack some of them, and a missing
+// one would flow through the model as NaN.
+const REQUIRED_NUMBERS = [
+  "hpf",
+  "ampW",
+  "portMax",
+  "wall",
+  "inset",
+  "xoLo",
+  "xoHi",
+  "mAmpW",
+  "tilt",
+  "hfTilt",
+  "hfAmpW",
+] as const satisfies readonly (keyof PaDesignConfig)[];
+const hasDims = (d: Partial<Dims3> | undefined) =>
+  d !== undefined && Number.isFinite(d.w) && Number.isFinite(d.h) && Number.isFinite(d.d);
+
+// The vent fields a layout reads: the slot height for the slots, the throat for the side ducts, the tubes' count and
+// diameter for the round ones, and the length for all of them. A known layout with all of its fields is a vent that can be modelled.
+const VENT_FIELDS: Record<PortStyle, readonly (keyof VentSpec)[]> = {
+  slots: ["slotH", "len"],
+  folded: ["slotH", "len"],
+  vslots: ["throat", "len"],
+  vslot1: ["throat", "len"],
+  round1: ["nt", "dia", "len"],
+  round2: ["nt", "dia", "len"],
+  round4: ["nt", "dia", "len"],
+};
+const hasVent = (style: PortStyle | undefined, vent: Partial<VentSpec> | undefined) =>
+  style !== undefined &&
+  Object.hasOwn(VENT_FIELDS, style) &&
+  vent !== undefined &&
+  VENT_FIELDS[style].every((k) => Number.isFinite(vent[k]));
+
 // ---- the planner's evaluation of a whole config (same functions, same order as the page) ----
+// Null for a design it can't evaluate: an unknown driver, a config missing a number, a box size or a vent it needs, or a box with no model.
 export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
+  // boundary: the type says every field is there, but a saved or handed-over config may not have them all
+  if (
+    !REQUIRED_NUMBERS.every((k) => Number.isFinite(c[k])) ||
+    !hasDims(c.cDim) ||
+    !hasDims(c.mDim) ||
+    !hasVent(c.portStyle, c.cVent)
+  )
+    return null;
   const sub = byId(SUB_OPTIONS, c.sub),
     mid = byId(MID_OPTIONS, c.mid),
     cd = byId(CD_OPTIONS, c.cd),
@@ -284,12 +335,13 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
   });
   const subLb = subWeightLb(c.cDim, c.wall, sub.lb),
     midLb = midWeightLb(midDims, c.wall) + (mid.lb || 0);
-  const subMusic = subMusicOutputAt(s.mdl!, s.lim!, s.AMP_V, c.xoLo);
+  if (!s.mdl || !ms.mdl) return null; // a vent or box with no geometry has no model to evaluate
+  const subMusic = subMusicOutputAt(s.mdl, s.lim, s.AMP_V, c.xoLo);
   const hz: Partial<HornHf> = horn.hf || {};
   const hornModel = hornResponse(cd.hf, hz, c.xoHi, c.hfAmpW);
-  const mm = ms.mdl!,
-    midAtXo = nearestPoint(ms.max!, c.xoLo),
-    midAtHi = nearestPoint(ms.max!, c.xoHi).spl;
+  const mm = ms.mdl,
+    midAtXo = nearestPoint(ms.max, c.xoLo),
+    midAtHi = nearestPoint(ms.max, c.xoHi).spl;
   const hornAtXo = hornModel ? nearestPoint(hornModel.curve, c.xoHi).spl : null;
   const chips = {
     sub: subChips({
@@ -299,13 +351,13 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
       cVent: c.cVent,
       PT: c.wall,
       subLbLoaded: subLb,
-      lim: s.lim!,
-      peakXF: s.mdl!.peakXF,
+      lim: s.lim,
+      peakXF: s.mdl.peakXF,
       aes: sub.ts.aes,
       ampW: c.ampW,
     }),
     mid: midChips({
-      midSize: mid.size || 12,
+      midSize: mid.size,
       midDims,
       Qtc: mm.Qtc,
       f3: mm.f3,
@@ -322,7 +374,7 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     }),
     horn: hornModel
       ? hornChips({
-          hf: cd.hf!,
+          hf: hornModel.hf,
           hz,
           horn,
           xoHi: c.xoHi,
@@ -345,13 +397,13 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     subLb,
     midLb,
     heaviest: Math.max(subLb, midLb),
-    out: bandOutputDb(s.mdl!, s.lim!, s.AMP_V),
-    spl45: s.lim!.spl45,
-    spl35: s.lim!.spl35,
-    f3: s.mdl!.f3,
-    Fb: s.mdl!.Fb,
-    who: s.lim!.who,
-    limW: s.lim!.W,
+    out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
+    spl45: s.lim.spl45,
+    spl35: s.lim.spl35,
+    f3: s.mdl.f3,
+    Fb: s.mdl.Fb,
+    who: s.lim.who,
+    limW: s.lim.W,
     netL: s.netL,
     qtc: mm.Qtc,
     midF3: mm.f3,
@@ -361,11 +413,11 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     port: s.port,
     chips,
     // for the card's chart: the sub's clean music-limit level, 20-200 Hz (the curve bandOut takes its minimum from)
-    curve: s
-      .mdl!.curve.filter((o, i) => i % 5 === 0 && o.f >= 20 && o.f <= 200)
+    curve: s.mdl.curve
+      .filter((o, i) => i % 5 === 0 && o.f >= 20 && o.f <= 200)
       .map((o): [number, number] => [
         +o.f.toFixed(1),
-        +(o.spl + 20 * Math.log10(s.lim!.V / s.AMP_V)).toFixed(2),
+        +(o.spl + 20 * Math.log10(s.lim.V / s.AMP_V)).toFixed(2),
       ]),
   };
 }
@@ -441,20 +493,22 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   ).filter((g, i, a) => OPTIMIZER_GOALS[g] && a.indexOf(g) === i);
   const goal = goals[0],
     also = goals.slice(1);
-  // older saved configs can lack some fields; the page always has them, with these defaults
+  // older saved configs can lack some fields; they fall back to the planner's starting design
+  const { xoLo, xoHi, tilt, hfTilt, ampW, mAmpW, hfAmpW, hpType, portMax, wall, inset, layout } =
+    DEFAULT_PA;
   const cur: PaDesignConfig = {
-    xoLo: 120,
-    xoHi: 900,
-    tilt: 6,
-    hfTilt: 6,
-    ampW: 800,
-    mAmpW: 400,
-    hfAmpW: 100,
-    hpType: "BW24",
-    portMax: 20,
-    wall: 0.75,
-    inset: 0.75,
-    layout: "stack",
+    xoLo,
+    xoHi,
+    tilt,
+    hfTilt,
+    ampW,
+    mAmpW,
+    hfAmpW,
+    hpType,
+    portMax,
+    wall,
+    inset,
+    layout,
     ...input.cur,
   };
   const locks: ResolvedLocks = { subDim: {}, midDim: {}, ...(input.locks || {}) };
@@ -487,12 +541,15 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   // candidate lists
   const curSub = byId(SUB_OPTIONS, cur.sub),
     curMid = byId(MID_OPTIONS, cur.mid);
-  const priced = (o: { ts: object; price: number | null }) => o.ts && o.price != null;
+  const priced = <T extends { ts: object; price: number | null }>(
+    o: T,
+  ): o is T & { price: number } => !!o.ts && o.price != null;
+  // a locked driver that isn't in the tables leaves nothing to search
   const subs = locks.sub
-    ? [curSub!]
-    : SUB_OPTIONS.filter(
-        (o) => o.size === (curSub ? curSub.size : 18) && priced(o) && o.price <= budget,
-      );
+    ? curSub
+      ? [curSub]
+      : []
+    : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
   const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
   const styles: PortStyle[] = locks.vent ? [cur.portStyle] : ["slots", "vslots", "round2"];
   const xoLos = locks.xoLo ? [cur.xoLo] : [90, 100, 110, 120, 140];
@@ -635,7 +692,9 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
 
   // 2. real boxes and vents for the seeds
   const subCands: SubCandidate[] = [];
-  const midForGeom = (curMid || MID_OPTIONS.find((o) => o.ts))!;
+  // the sub's geometry reads only the sub's own cut parts; the mid just has to exist for the cut list, so with no known
+  // current mid the first table entry will do
+  const midForGeom = curMid ?? MID_OPTIONS[0];
   for (const sd of seedSet) {
     for (const t of walls) {
       const G = sd.V + (sd.sub.ts.disp || 10) + 0.08 * sd.V + 3;
@@ -657,8 +716,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
               layout: cur.layout,
             });
           let pushed = false,
-            fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystem } | null = null;
-          for (const size of VENT_SIZES[style]!) {
+            fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystemModelled } | null = null;
+          for (const size of ventSizesFor(style)) {
             const hi = ductFit(box, style, mk(size, 0), t).fit,
               lo = 2;
             if (hi < lo + 0.25) continue;
@@ -700,7 +759,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
             });
             evals++;
             if (!s.mdl) continue;
-            const portOk = s.lim!.who !== "port air speed" && s.lim!.vel <= 0.9 * cur.portMax;
+            const portOk = s.lim.who !== "port air speed" && s.lim.vel <= 0.9 * cur.portMax;
             if (!portOk) {
               fallback = { c, cVent, s };
               continue;
@@ -710,7 +769,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
               s,
               sub: sd.sub,
               lb: subWeightLb(box, t, sd.sub.lb),
-              out: bandOutputDb(s.mdl, s.lim!, s.AMP_V),
+              out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
             });
             pushed = true;
             break; // smallest vent that doesn't limit
@@ -719,7 +778,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           // with the amp turned down to where the port still has a 10% air-speed margin
           if (!pushed && fallback && !locks.ampW) {
             const vW =
-              Math.pow((fallback.s.AMP_V * (0.9 * cur.portMax)) / fallback.s.mdl!.peakVel, 2) / 8;
+              Math.pow((fallback.s.AMP_V * (0.9 * cur.portMax)) / fallback.s.mdl.peakVel, 2) / 8;
             const ampW = Math.floor(vW / 50) * 50;
             if (ampW >= 200) {
               const c = { ...fallback.c, ampW };
@@ -737,13 +796,13 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
                 layout: cur.layout,
               });
               evals++;
-              if (s.mdl && s.lim!.who !== "port air speed")
+              if (s.mdl && s.lim.who !== "port air speed")
                 subCands.push({
                   c,
                   s,
                   sub: sd.sub,
                   lb: subWeightLb(box, t, sd.sub.lb),
-                  out: bandOutputDb(s.mdl, s.lim!, s.AMP_V),
+                  out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
                 });
             }
           }
@@ -754,8 +813,10 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
 
   // 3. mid designs: each driver at a few Qtc targets, boxes inside the limits, per crossover
   const mids = locks.mid
-    ? [curMid!]
-    : MID_OPTIONS.filter((o) => (o.size || 12) >= 12 && priced(o) && o.price! <= budget);
+    ? curMid
+      ? [curMid]
+      : []
+    : MID_OPTIONS.filter((o) => o.size >= 12 && priced(o) && o.price <= budget);
   const mr = {
     w: rangeOf(locks.midDim.w, cur.mDim.w, MID_BOX_RANGE.w),
     h: rangeOf(locks.midDim.h, cur.mDim.h, MID_BOX_RANGE.h),
@@ -771,7 +832,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl),
       Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
     const disp = ts.disp != null ? ts.disp : m.size === 15 ? 4 : 2.5,
-      need = (m.size || 12) + 1.2;
+      need = m.size + 1.2;
     const out: Dims3[] = [];
     const exact = mr.w[0] === mr.w[1] && mr.h[0] === mr.h[1] && mr.d[0] === mr.d[1];
     if (exact) return [{ w: mr.w[0], h: mr.h[0], d: mr.d[0] }];
@@ -794,6 +855,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     }
     return out;
   };
+  const midPrice = (e: MidEntry) => e.m.price ?? 0; // an unpriced mid (only a locked one gets here) counts as 0
+  const curMidPrice = curMid?.price || 0;
   const midTable: MidEntry[] = []; // { m, bx, t, xoLo, atXo, curve (no lowpass), qtc, f3, lb }
   for (const m of mids)
     for (const t of walls)
@@ -822,11 +885,18 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
         }
       }
   // horn pairs per xoHi, with their level at the crossover
+  // (a locked driver or horn that isn't in the tables leaves nothing to search, like a locked sub or mid)
+  const curCd = byId(CD_OPTIONS, cur.cd),
+    curHorn = byId(HORN_OPTIONS, cur.horn);
   const cds = locks.cd
-    ? [byId(CD_OPTIONS, cur.cd)!]
+    ? curCd
+      ? [curCd]
+      : []
     : CD_OPTIONS.filter((o) => o.hf && o.hf.sens != null && o.price != null);
   const horns = locks.horn
-    ? [byId(HORN_OPTIONS, cur.horn)!]
+    ? curHorn
+      ? [curHorn]
+      : []
     : HORN_OPTIONS.filter((h) => h.price != null);
   const hornTable: Record<number, HornEntry[]> = {};
   for (const xoHi of xoHis) {
@@ -835,7 +905,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       for (const h of horns) {
         if (h.exit !== cd.exit) continue;
         const hz: Partial<HornHf> = h.hf || {};
-        if ((cd.hf!.minXo && xoHi < cd.hf!.minXo) || (hz.minXo && xoHi < hz.minXo)) continue;
+        if (!cd.hf) continue; // a locked driver with no published spec can't be modelled
+        if ((cd.hf.minXo && xoHi < cd.hf.minXo) || (hz.minXo && xoHi < hz.minXo)) continue;
         if (hz.lowHz && hz.lowHz > xoHi * 0.8 && !hornLoadOk) continue; // horn stops loading near the crossover
         const hm = hornResponse(cd.hf, hz, xoHi, amps.hfAmpW);
         evals++;
@@ -849,12 +920,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           same: cd.id === cur.cd && h.id === cur.horn,
         });
       }
-    // `same` is a boolean and true - false is 1; the casts only tell the checker so
     hornTable[xoHi].sort(
-      (a, b) =>
-        (b.same as unknown as number) - (a.same as unknown as number) ||
-        a.price - b.price ||
-        a.horn - b.horn,
+      (a, b) => Number(b.same) - Number(a.same) || a.price - b.price || a.horn - b.horn,
     );
   }
 
@@ -867,24 +934,20 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   for (const sc of subCands) {
     if (sc.lb > slack.lb || sc.sub.price > slack.budget) continue;
     for (const xoLo of xoLos) {
-      const need = subMusicOutputAt(sc.s.mdl!, sc.s.lim!, sc.s.AMP_V, xoLo) - cur.tilt;
+      const need = subMusicOutputAt(sc.s.mdl, sc.s.lim, sc.s.AMP_V, xoLo) - cur.tilt;
       const okMids: (MidEntry | null)[] = midTable.filter(
         (e) => e.xoLo === xoLo && e.t === sc.c.wall && e.atXo - need >= -0.5 && e.lb <= slack.lb,
       );
-      if (cur.layout === "tower") okMids.push(null);
+      // the tower layout takes the mid as it is, so it needs the current mid to exist
+      const towerMid = cur.layout === "tower" && curMid !== undefined;
+      if (towerMid) okMids.push(null);
       const choices: (MidEntry | null)[] = [];
-      // the casts: filter drops the null the tower layout adds, which the checker can't see
-      const byPrice = (okMids.filter(Boolean) as MidEntry[]).sort(
-        (a, b) => a.m.price! - b.m.price! || a.lb - b.lb,
-      )[0];
-      const byLb = (okMids.filter(Boolean) as MidEntry[]).sort(
-        (a, b) => a.lb - b.lb || a.m.price! - b.m.price!,
-      )[0];
-      const same = (okMids.filter((e) => e && e.m.id === cur.mid) as MidEntry[]).sort(
-        (a, b) => a.lb - b.lb,
-      )[0];
+      const realMids = okMids.filter((e): e is MidEntry => e !== null);
+      const byPrice = realMids.slice().sort((a, b) => midPrice(a) - midPrice(b) || a.lb - b.lb)[0];
+      const byLb = realMids.slice().sort((a, b) => a.lb - b.lb || midPrice(a) - midPrice(b))[0];
+      const same = realMids.filter((e) => e.m.id === cur.mid).sort((a, b) => a.lb - b.lb)[0];
       for (const e of [byPrice, byLb, same]) if (e && !choices.includes(e)) choices.push(e);
-      if (cur.layout === "tower") choices.push(null);
+      if (towerMid) choices.push(null);
       for (const e of choices)
         for (const xoHi of xoHis) {
           const midHi = e
@@ -903,9 +966,9 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
             cd: hp.cd.id,
             horn: hp.h.id,
           };
-          const price = sc.sub.price + (e ? e.m.price! : curMid!.price || 0) + hp.price;
+          const price = sc.sub.price + (e ? midPrice(e) : curMidPrice) + hp.price;
           const heaviest = Math.max(sc.lb, e ? e.lb : 0);
-          combos.push({ c, price, heaviest, out: sc.out, f3: sc.s.mdl!.f3, ch: changes(c) });
+          combos.push({ c, price, heaviest, out: sc.out, f3: sc.s.mdl.f3, ch: changes(c) });
         }
     }
   }
@@ -1078,16 +1141,16 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   const shrinkAmps = (p: PoolEntry, tgtOut: number): PoolEntry => {
     let c = { ...p.c },
       m = p.m;
-    const ok = (cc: PaDesignConfig, mm: PaEvaluation | null) =>
-      mm && designProblems(mm, lim).length === 0;
+    const ok = (mm: PaEvaluation | null): mm is PaEvaluation =>
+      mm !== null && designProblems(mm, lim).length === 0;
     const lowest = (key: AmpKey, lo: number, step: number, good: (m: PaEvaluation) => boolean) => {
       if (locks[key] || c[key] <= lo) return;
       const floor = { ...c, [key]: lo },
         fm = evaluateDesign(floor);
       evals++;
-      if (ok(floor, fm) && good(fm!)) {
+      if (ok(fm) && good(fm)) {
         c = floor;
-        m = fm!;
+        m = fm;
         return;
       } // the slider minimum is enough
       let a = lo,
@@ -1098,15 +1161,15 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           mm = evaluateDesign(cc);
         evals++;
         if (mid <= a || mid >= b) break;
-        if (ok(cc, mm) && good(mm!)) b = mid;
+        if (ok(mm) && good(mm)) b = mid;
         else a = mid;
       }
       const cc = { ...c, [key]: b },
         mm = evaluateDesign(cc);
       evals++;
-      if (ok(cc, mm) && good(mm!)) {
+      if (ok(mm) && good(mm)) {
         c = cc;
-        m = mm!;
+        m = mm;
       }
     };
     lowest("ampW", 200, 50, (mm) => mm.out >= tgtOut - 0.01);
@@ -1235,7 +1298,7 @@ export function boxGeometry(c: PaDesignConfig): PaBoxGeometry {
     tower: c.layout === "tower",
     horn: horn && horn.size ? { w: horn.size.w, h: horn.size.h } : null,
     subSize: sub ? sub.size : 18,
-    midSize: mid ? mid.size || 12 : 12,
+    midSize: mid ? mid.size : 12,
     portStyle: c.portStyle,
     cVent: c.cVent,
     wall: c.wall,
@@ -1250,10 +1313,10 @@ function card(
   cur: PaDesignConfig,
 ): PaOptimizerCard {
   const { c, m } = p;
-  const sub = byId(SUB_OPTIONS, c.sub)!,
-    mid = byId(MID_OPTIONS, c.mid)!,
-    cd = byId(CD_OPTIONS, c.cd)!,
-    horn = byId(HORN_OPTIONS, c.horn)!;
+  const sub = byIdOrThrow(SUB_OPTIONS, c.sub, "subwoofers"),
+    mid = byIdOrThrow(MID_OPTIONS, c.mid, "mid drivers"),
+    cd = byIdOrThrow(CD_OPTIONS, c.cd, "compression drivers"),
+    horn = byIdOrThrow(HORN_OPTIONS, c.horn, "horns");
   const midDims = c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim;
   const { parts } = cutParts({
     sub,

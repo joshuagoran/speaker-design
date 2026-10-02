@@ -5,6 +5,7 @@ import { FoldHeading } from "../../../components/ui/FoldHeading";
 import { ResponseChart } from "../../../components/charts/ResponseChart";
 import { StatRow } from "../../../components/optimizer/StatRow";
 import { subChips } from "../../../lib/pa/chips";
+import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 
 interface Props {
@@ -26,11 +27,8 @@ interface Props {
     | "subGrossLiters"
     | "subNetLiters"
     | "subAmpVoltage"
-    | "subModel"
-    | "subLimits"
-    | "subMaxCurveNearest"
-    | "midMaxCurve"
-    | "subThroughLowpassCurve"
+    | "subModelled"
+    | "midModelled"
     | "hornModel"
     | "subWeightLoadedLb"
   >;
@@ -55,11 +53,8 @@ export function SubSection({ planner }: Props) {
     subGrossLiters,
     subNetLiters,
     subAmpVoltage,
-    subModel,
-    subLimits,
-    subMaxCurveNearest,
-    midMaxCurve,
-    subThroughLowpassCurve,
+    subModelled,
+    midModelled,
     hornModel,
     subWeightLoadedLb,
   } = planner;
@@ -74,32 +69,32 @@ export function SubSection({ planner }: Props) {
           className="mb-3 md:hidden"
         />
         <div className={sectionClass("sub")}>
-          {subModel && subLimits && (
+          {subModelled && (
             <StatTileGrid
               tiles={[
                 ["Net volume", subNetLiters.toFixed(0), "L"],
-                ["Tuning Fb", subModel.Fb.toFixed(1), "Hz"],
-                ["System F3", subModel.f3.toFixed(0), "Hz"],
-                ["Max SPL @ 35 Hz", subMaxCurveNearest(35).spl.toFixed(1), "dB"],
+                ["Tuning Fb", subModelled.mdl.Fb.toFixed(1), "Hz"],
+                ["System F3", subModelled.mdl.f3.toFixed(0), "Hz"],
+                ["Max SPL @ 35 Hz", nearestPoint(subModelled.maxCurve, 35).spl.toFixed(1), "dB"],
                 ["Weight", subWeightLoadedLb.toFixed(0), "lb"],
               ]}
             />
           )}
-          {subModel && subLimits && (
+          {subModelled && (
             <div className="mb-4">
               <ResponseChart
                 fmax={20000}
                 series={[
                   {
-                    curve: subThroughLowpassCurve!, // `!`: set whenever subModel is
+                    curve: subModelled.throughLowpass,
                     label: "Sub",
                     stroke: PAL.ink,
                     tint: PAL.alpha(PAL.ink, 0.07),
                   },
-                  ...(midMaxCurve
+                  ...(midModelled
                     ? [
                         {
-                          curve: midMaxCurve,
+                          curve: midModelled.max,
                           label: "Mid-bass",
                           stroke: PAL.magenta,
                           tint: PAL.alpha(PAL.magenta, 0.06),
@@ -118,14 +113,14 @@ export function SubSection({ planner }: Props) {
                     : []),
                 ]}
                 marks={[
-                  { f: subModel.Fb, label: "Fb" },
+                  { f: subModelled.mdl.Fb, label: "Fb" },
                   { f: subMidCrossoverHz, label: "XO" },
                   { f: midHornCrossoverHz, label: "XO" },
                 ]}
               />
             </div>
           )}
-          {subModel ? (
+          {subModelled ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
               {[
                 ["Gross internal", `${subGrossLiters.toFixed(0)} L`],
@@ -141,29 +136,28 @@ export function SubSection({ planner }: Props) {
                 ],
                 [
                   "Midband sensitivity",
-                  `${(subModel.ref - 20 * Math.log10(subAmpVoltage / 2.83)).toFixed(1)} dB`,
+                  `${(subModelled.mdl.ref - 20 * Math.log10(subAmpVoltage / 2.83)).toFixed(1)} dB`,
                   "2.83 V, half space, 1 m",
                 ],
                 ...[30, 35, 45, 60].map((f) => {
-                  const m = subMaxCurveNearest(f);
+                  const m = nearestPoint(subModelled.maxCurve, f);
                   return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`];
                 }),
-                // `subLimits!` below: set whenever subModel is
                 [
                   "First limit, music",
-                  subLimits!.who,
-                  `at ${Math.round(subLimits!.W / 10) * 10} W`,
-                  `at ${Math.round(subLimits!.W / 10) * 10} W${subLimits!.who === "cone travel (Xmax)" ? `, reached first at ${subModel.peakXF.toFixed(0)} Hz` : subLimits!.who === "port air speed" ? `, reached first at ${subModel.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`,
+                  subModelled.lim.who,
+                  `at ${Math.round(subModelled.lim.W / 10) * 10} W`,
+                  `at ${Math.round(subModelled.lim.W / 10) * 10} W${subModelled.lim.who === "cone travel (Xmax)" ? `, reached first at ${subModelled.mdl.peakXF.toFixed(0)} Hz` : subModelled.lim.who === "port air speed" ? `, reached first at ${subModelled.mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`,
                 ],
                 [
                   "Peak port velocity",
-                  `${subLimits!.vel.toFixed(1)} m/s`,
-                  `at ${subModel.peakVelF.toFixed(0)} Hz`,
+                  `${subModelled.lim.vel.toFixed(1)} m/s`,
+                  `at ${subModelled.mdl.peakVelF.toFixed(0)} Hz`,
                 ],
                 [
                   "Peak excursion",
-                  `${((subModel.peakX * subLimits!.V) / subAmpVoltage).toFixed(1)} mm`,
-                  `${subLimits!.xPct.toFixed(0)}% of Xmax, at ${subModel.peakXF.toFixed(0)} Hz`,
+                  `${((subModelled.mdl.peakX * subModelled.lim.V) / subAmpVoltage).toFixed(1)} mm`,
+                  `${subModelled.lim.xPct.toFixed(0)}% of Xmax, at ${subModelled.mdl.peakXF.toFixed(0)} Hz`,
                 ],
               ].map(([k, v, note, tip]) => (
                 <StatRow key={k} k={k} v={v} note={note} tip={tip} />
@@ -175,7 +169,7 @@ export function SubSection({ planner }: Props) {
               {subDriver.note}
             </p>
           )}
-          {subModel && subLimits && (
+          {subModelled && (
             <WarningChips
               chips={subChips({
                 subSize: format.sub,
@@ -184,8 +178,8 @@ export function SubSection({ planner }: Props) {
                 cVent: subVentSpec,
                 PT,
                 subLbLoaded: subWeightLoadedLb,
-                lim: subLimits,
-                peakXF: subModel.peakXF,
+                lim: subModelled.lim,
+                peakXF: subModelled.mdl.peakXF,
                 aes: subDriver.ts.aes,
                 ampW: subAmpWatts,
               })}

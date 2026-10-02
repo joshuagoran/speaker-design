@@ -25,10 +25,7 @@ interface Props {
 
 /** Front view of the box and drivers, to scale. */
 export function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }: Props) {
-  // `as Dims2`: the data module gives every faceplate a `w` and `h` when it loads (types.ts `Faceplate`)
-  const face = guide
-    ? { w: guide.w, h: guide.h }
-    : (t.faceplate as Dims2 | null | undefined) || { w: 4, h: 4 };
+  const face = guide ? { w: guide.w, h: guide.h } : t.faceplate;
   const top = lay.onTop ? face.h : 0,
     k = 120 / Math.max(dim.h + top, dim.w * 1.2, face.w * 1.2),
     W = Math.max(dim.w, face.w) * k,

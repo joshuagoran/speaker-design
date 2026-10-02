@@ -39,8 +39,8 @@ export function OptimizerCurveChart({
     y = (d: number) => T + ((top - Math.max(bot, Math.min(top, d))) / (top - bot)) * (H - T - B);
   const path = (c: readonly CurvePoint[]) =>
     c.map((o, i) => `${i ? "L" : "M"}${x(o[0]).toFixed(1)},${y(o[1]).toFixed(1)}`).join("");
-  const at = (c: readonly CurvePoint[] | null | undefined, f: number) =>
-    c && c.reduce((b, o) => (Math.abs(Math.log(o[0] / f)) < Math.abs(Math.log(b[0] / f)) ? o : b));
+  const nearest = (c: readonly CurvePoint[], f: number) =>
+    c.reduce((b, o) => (Math.abs(Math.log(o[0] / f)) < Math.abs(Math.log(b[0] / f)) ? o : b));
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect(),
       px = ((e.clientX - r.left) / r.width) * W;
@@ -49,9 +49,10 @@ export function OptimizerCurveChart({
   };
   const ticks: number[] = [];
   for (let d = bot; d <= top; d += 10) ticks.push(d);
-  // read only while `hover` is set, and `curve` is this card's own, so never null (and `0` is not a hover frequency)
-  const h1 = (hover && at(curve, hover)) as CurvePoint,
-    h2 = hover && at(cur, hover);
+  // the points under the pointer, on this card's curve and on yours (`0` is not a hover frequency)
+  const hov = hover
+    ? { f: hover, h1: nearest(curve, hover), h2: cur ? nearest(cur, hover) : null }
+    : null;
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
@@ -95,38 +96,38 @@ export function OptimizerCurveChart({
         />
       )}
       <path d={path(curve)} fill="none" stroke={PAL.ink} strokeWidth="2" />
-      {hover ? (
+      {hov ? (
         <>
           <line
-            x1={x(hover)}
-            x2={x(hover)}
+            x1={x(hov.f)}
+            x2={x(hov.f)}
             y1={T}
             y2={H - B}
             stroke={PAL.muted}
             strokeWidth="0.75"
           />
           <circle
-            cx={x(h1[0])}
-            cy={y(h1[1])}
+            cx={x(hov.h1[0])}
+            cy={y(hov.h1[1])}
             r="2.5"
             fill={PAL.ink}
             stroke={PAL.white}
             strokeWidth="1"
           />
           {(() => {
-            const X = Math.max(L + 14, Math.min(W - R - 14, x(hover)));
+            const X = Math.max(L + 14, Math.min(W - R - 14, x(hov.f)));
             return (
               <g>
                 <rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill={PAL.ink} />
                 <text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill={PAL.white}>
-                  {hover.toFixed(0)} Hz
+                  {hov.f.toFixed(0)} Hz
                 </text>
               </g>
             );
           })()}
           <text x={L} y={9} fontSize="8.5" fill={PAL.ink}>
-            {hover.toFixed(0)} Hz: {h1[1].toFixed(0)} dB
-            {h2 ? ` · yours ${h2[1].toFixed(0)} dB` : ""}
+            {hov.f.toFixed(0)} Hz: {hov.h1[1].toFixed(0)} dB
+            {hov.h2 ? ` · yours ${hov.h2[1].toFixed(0)} dB` : ""}
           </text>
         </>
       ) : (

@@ -1,4 +1,4 @@
-import { SUB_OPTIONS } from "../../../lib/data";
+import { DEFAULT_PA } from "../../../lib/defaults";
 import type { Dims3, HighpassType, PortStyle, SubDriver, Setter, VentSpec } from "../../../types";
 import { useState } from "react";
 
@@ -25,21 +25,14 @@ export interface SubwooferDesign {
 
 /** State for the subwoofer box: driver, port style, box size, vent, highpass and amp. Every cabinet is custom; presets are only a starting point. */
 export function useSubwooferDesign(): SubwooferDesign {
-  // `!`: the id is in the table
-  const [subDriver, setSubDriver] = useState(SUB_OPTIONS.find((o) => o.id === "sbnero18")!);
-  const [portStyle, setPortStyle] = useState<PortStyle>("slots");
-  const [subBoxDims, setSubBoxDims] = useState<Dims3>({ w: 28, h: 32, d: 24 });
-  const [subVentSpec, setSubVentSpec] = useState<VentSpec>({
-    slotH: 3,
-    nt: 2,
-    dia: 6,
-    throat: 3,
-    len: 14,
-  });
-  const [subHighpassHz, setSubHighpassHz] = useState(33);
-  const [subHighpassType, setSubHighpassType] = useState<HighpassType>("BW24"); // sub highpass alignment
-  const [subAmpWatts, setSubAmpWatts] = useState(800); // amp power per sub channel, into 8 Ω
-  const [maxPortAirSpeedMs, setMaxPortAirSpeedMs] = useState(20); // peak port air speed allowed, m/s
+  const [subDriver, setSubDriver] = useState(DEFAULT_PA.sub);
+  const [portStyle, setPortStyle] = useState<PortStyle>(DEFAULT_PA.portStyle);
+  const [subBoxDims, setSubBoxDims] = useState<Dims3>(DEFAULT_PA.cDim);
+  const [subVentSpec, setSubVentSpec] = useState<VentSpec>(DEFAULT_PA.cVent);
+  const [subHighpassHz, setSubHighpassHz] = useState(DEFAULT_PA.hpf);
+  const [subHighpassType, setSubHighpassType] = useState<HighpassType>(DEFAULT_PA.hpType); // sub highpass alignment
+  const [subAmpWatts, setSubAmpWatts] = useState(DEFAULT_PA.ampW); // amp power per sub channel, into 8 Ω
+  const [maxPortAirSpeedMs, setMaxPortAirSpeedMs] = useState(DEFAULT_PA.portMax); // peak port air speed allowed, m/s
   const setSubBoxDim = (k: keyof Dims3, v: number) => setSubBoxDims((p) => ({ ...p, [k]: v }));
   const setSubVentField = (k: keyof VentSpec, v: number) =>
     setSubVentSpec((p) => ({ ...p, [k]: v }));

@@ -9,6 +9,7 @@ import {
   roomRequiredSpl,
   SUB_BAND_HZ,
   AMP_WATTS_MAX,
+  ventSizesFor,
 } from "../src/lib/pa/optimize";
 import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc";
 import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data";
@@ -61,7 +62,7 @@ const base: PaOptimizerInput = { cur, room: 1000, maxLb: 125, budget: 1100, lock
 
 test("evaluate() gives the planner's numbers (golden snapshot)", (t) => {
   for (const name of ["lil block stack LE (optimized)", "blocky", "lil tower"]) {
-    // older saves lack the crossovers and amps; this test reads only the sub numbers, so the partial design is on purpose
+    // the seeds carry the crossovers and amps now; the type keeps them optional, as older saves lack them
     const m = evaluateDesign(pick(name) as PaDesignConfig)!,
       g = golden[name];
     close(t, m.Fb, g.Fb, 0.02, `${name} Fb`);
@@ -383,4 +384,114 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
   // and no more power than it uses: 50 W less loses output
   const less = evaluateDesign({ ...k.config, ampW: k.config.ampW - 50 })!;
   assert.ok(less.out < k.metrics.out - 0.01 || k.config.ampW - 50 < 200);
+});
+
+test("vent locked on a round1 or round4 style searches that style's tubes instead of throwing", (t) => {
+  for (const [style, nt] of [
+    ["round1", 1],
+    ["round4", 4],
+  ] as const) {
+    assert.ok(ventSizesFor(style).length > 0, `${style} has vent sizes`);
+    for (const size of ventSizesFor(style)) assert.equal(size.nt, nt, `${style} tubes`);
+  }
+  for (const style of [
+    "slots",
+    "round1",
+    "round2",
+    "vslots",
+    "folded",
+    "round4",
+    "vslot1",
+  ] as const)
+    assert.ok(ventSizesFor(style).length > 0, `${style} has sizes`);
+
+  const c = {
+    xoLo: 120,
+    xoHi: 900,
+    mAmpW: 400,
+    hfAmpW: 100,
+    ...pick("light block"),
+    portStyle: "round1" as const,
+    cVent: { slotH: 3, nt: 1, dia: 5, throat: 3, len: 12 },
+  };
+  const out = optimizePaStack({
+    ...base,
+    cur: c,
+    maxLb: 200,
+    budget: 2000,
+    goal: "lighter",
+    locks: { vent: true },
+  });
+  assert.ok(out.cards.length >= 1, "cards come back for a locked round1 vent");
+  for (const k of out.cards) {
+    assert.equal(k.config.portStyle, "round1");
+    assert.equal(k.config.cVent.nt, 1);
+  }
+});
+
+test("evaluate() rejects a config missing a number it needs, and every seed completes to finite metrics", () => {
+  // boundary: `Picked` types the defaulted fields as optional; a seed carries them all
+  const full = { ...pick("blocky") } as PaDesignConfig;
+  const m = evaluateDesign(full);
+  assert.ok(m, "a complete design evaluates");
+  for (const [k, v] of Object.entries(m))
+    if (typeof v === "number") assert.ok(Number.isFinite(v), `blocky ${k} is ${v}`);
+  for (const key of ["xoLo", "xoHi", "mAmpW", "hfAmpW", "tilt", "hfTilt", "wall", "ampW"] as const)
+    assert.equal(evaluateDesign({ ...full, [key]: undefined }), null, `no ${key}`);
+  assert.equal(evaluateDesign({ ...full, [`xoLo`]: NaN }), null, "NaN is not a number");
+  // boundary: an older save with no mid box size at all
+  assert.equal(evaluateDesign({ ...full, mDim: undefined } as unknown as PaDesignConfig), null);
+  // boundary: older saves with no vent, or with a vent layout the planner doesn't know
+  assert.equal(
+    evaluateDesign({ ...full, cVent: undefined } as unknown as PaDesignConfig),
+    null,
+    "no vent",
+  );
+  assert.equal(
+    evaluateDesign({ ...full, portStyle: undefined } as unknown as PaDesignConfig),
+    null,
+    "no port style",
+  );
+  assert.equal(
+    evaluateDesign({ ...full, portStyle: "nope" } as unknown as PaDesignConfig),
+    null,
+    "unknown port style",
+  );
+  assert.equal(
+    evaluateDesign({ ...full, cVent: { ...full.cVent, len: NaN } }),
+    null,
+    "NaN vent length",
+  );
+  for (const style of [
+    "slots",
+    "folded",
+    "vslots",
+    "vslot1",
+    "round1",
+    "round2",
+    "round4",
+  ] as const) {
+    const cVent = { slotH: 3, nt: 2, dia: 4, throat: 2, len: 14 };
+    assert.ok(evaluateDesign({ ...full, portStyle: style, cVent }), `${style} with a full vent`);
+  }
+  for (const s of seeds) {
+    const c = pick(s.name);
+    for (const key of ["xoLo", "xoHi", "mAmpW", "hfAmpW"] as const)
+      assert.ok(Number.isFinite(c[key]), `${s.name} has ${key}`);
+    const e = evaluateDesign(c as PaDesignConfig); // boundary: `PaOptimizerCurrent` types the defaulted fields as optional
+    if (e)
+      for (const [k, v] of Object.entries(e))
+        if (typeof v === "number") assert.ok(Number.isFinite(v), `${s.name} ${k} is ${v}`);
+  }
+});
+
+test("a locked sub, mid, driver or horn that isn't in the tables leaves nothing to search, and doesn't throw", () => {
+  for (const key of ["sub", "mid", "cd", "horn"] as const) {
+    const out = optimizePaStack({
+      ...base,
+      cur: { ...cur, [key]: "no-such-part" },
+      locks: { [key]: true },
+    });
+    assert.deepEqual(out.cards, [], key);
+  }
 });

@@ -1,5 +1,6 @@
 import { FormField } from "./FormField";
 import { useId } from "react";
+import { byId } from "../../lib/tables";
 
 /** What a select lists: each option has an id, a name and optionally a price. */
 export interface SelectOption {
@@ -26,27 +27,34 @@ export function SelectField<T extends SelectOption>({
   extra,
   group,
 }: Props<T>) {
-  // `group!` below: it is set whenever `groups` is; `find(...)!`: the select only offers ids from `options`
   const opt = (o: T) => (
     <option key={o.id} value={o.id}>
       {o.name}
       {o.price ? ` — $${o.price}` : ""}
     </option>
   );
-  const groups = group ? [...new Set(options.map(group))] : null;
+  const groups = group
+    ? [...new Set(options.map(group))].map((g) => ({
+        heading: g,
+        items: options.filter((o) => group(o) === g),
+      }))
+    : null;
   const id = useId();
   return (
     <FormField label={label} htmlFor={id} extra={extra}>
       <select
         id={id}
         value={value?.id ?? ""}
-        onChange={(e) => onChange(options.find((o) => o.id === e.target.value)!)}
+        onChange={(e) => {
+          const picked = byId(options, e.target.value);
+          if (picked) onChange(picked);
+        }}
         className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500"
       >
         {groups
-          ? groups.map((g) => (
-              <optgroup key={g} label={g}>
-                {options.filter((o) => group!(o) === g).map(opt)}
+          ? groups.map(({ heading, items }) => (
+              <optgroup key={heading} label={heading}>
+                {items.map(opt)}
               </optgroup>
             ))
           : options.map(opt)}

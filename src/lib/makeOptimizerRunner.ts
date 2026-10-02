@@ -32,17 +32,16 @@ export function makeOptimizerRunner<I, R>(
     }
     const w = optWorker;
     return new Promise<R>((res, rej) => {
-      let timer: ReturnType<typeof setTimeout> | null = null;
       const done = () => {
-        clearTimeout(timer!); // null until the timer starts, which clearTimeout accepts
+        clearTimeout(timer);
         w.removeEventListener("message", onMsg);
         w.removeEventListener("error", onErr);
       };
       const onMsg = (e: MessageEvent<OptimizerResponse<R>>) => {
         if (e.data.id !== id) return;
         done();
-        if (e.data.error) rej(new Error(e.data.error));
-        else res(e.data.out!);
+        if ("error" in e.data) rej(new Error(e.data.error));
+        else res(e.data.out);
       };
       const onErr = () => {
         done();
@@ -51,7 +50,7 @@ export function makeOptimizerRunner<I, R>(
         local().then(res, rej);
       };
       // a hung worker: stop it and report, rather than leaving the button on "Searching…"
-      timer = setTimeout(() => {
+      const timer = setTimeout(() => {
         done();
         try {
           w.terminate();

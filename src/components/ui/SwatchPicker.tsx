@@ -24,7 +24,7 @@ export function SwatchPicker({
   note,
 }: Props) {
   const id = useId();
-  const preset = presets && presets[value];
+  const preset = presets && Object.hasOwn(presets, value) ? presets[value] : undefined;
   const ring = (on: boolean) => (on ? "border-stone-900" : "border-stone-300");
   return (
     <div className="mb-5">

@@ -83,8 +83,18 @@ export function useConfigStore(collection: string) {
     setCfgMsg(m);
     setTimeout(() => setCfgMsg(""), 2500);
   };
-  const signIn = () => fb!.signIn().catch(() => flash("Sign-in failed"));
-  const signOut = () => fb!.signOut();
+  // the sign-in buttons only show once Firebase has loaded; until then there is nothing to do
+  const signIn = async () => {
+    if (!fb) return;
+    try {
+      await fb.signIn();
+    } catch {
+      flash("Sign-in failed");
+    }
+  };
+  const signOut = async () => {
+    if (fb) await fb.signOut();
+  };
   const save = async (name: string, data: SavedConfigData): Promise<boolean> => {
     if (!db || !name) return false;
     setCfgMsg("Saving…");

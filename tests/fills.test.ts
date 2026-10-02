@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
-  fillSystem,
+  fillSystem as fillSystemOrNull,
   boxModel,
   closedBox,
   ampVoltage,
@@ -12,6 +12,13 @@ import {
 import { FILL_OPTIONS } from "../src/lib/data";
 import type { FillSystemConfig } from "../src/types";
 import { close, massLineSPL } from "./helpers";
+
+/** `fillSystem` for a fill that has a model, as every one here does. */
+const fillSystem = (...args: Parameters<typeof fillSystemOrNull>) => {
+  const s = fillSystemOrNull(...args);
+  assert.ok(s, "the fill has a model");
+  return s;
+};
 
 const drv = FILL_OPTIONS.find((o) => o.id === "bc10cxn64")!;
 const base: FillSystemConfig = {

@@ -6,6 +6,7 @@ import { FoldHeading } from "../../../components/ui/FoldHeading";
 import { ResponseChart } from "../../../components/charts/ResponseChart";
 import { DispersionMap } from "../../../components/charts/DispersionMap";
 import { hornChips } from "../../../lib/pa/chips";
+import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 
 interface Props {
@@ -22,12 +23,9 @@ interface Props {
     | "hornAmpWatts"
     | "hornBandTiltDb"
     | "midHornCrossoverHz"
-    | "midMaxCurve"
-    | "midMaxCurveNearest"
-    | "compressionDriverSpec"
+    | "midModelled"
     | "hornSpec"
     | "hornModel"
-    | "hornSplAt"
     | "midBeamWidthDeg"
     | "beamCurves"
     | "dispersionMapDistanceM"
@@ -51,12 +49,9 @@ export function HornSection({ planner }: Props) {
     hornAmpWatts,
     hornBandTiltDb,
     midHornCrossoverHz,
-    midMaxCurve,
-    midMaxCurveNearest,
-    compressionDriverSpec,
+    midModelled,
     hornSpec,
     hornModel,
-    hornSplAt,
     midBeamWidthDeg,
     beamCurves,
     dispersionMapDistanceM,
@@ -76,11 +71,10 @@ export function HornSection({ planner }: Props) {
         />
         <div className={sectionClass("horn")}>
           {hornModel ? (
-            // `compressionDriverSpec!` below: hornModel is null when the driver has no spec
             <>
               <StatTileGrid
                 tiles={[
-                  ["Sensitivity", compressionDriverSpec!.sens.toFixed(1), "dB"],
+                  ["Sensitivity", hornModel.hf.sens.toFixed(1), "dB"],
                   ["Power used", Math.round(hornModel.P), "W"],
                   ["Max SPL", hornModel.flat.toFixed(1), "dB"],
                   [
@@ -171,15 +165,17 @@ export function HornSection({ planner }: Props) {
               )}
               <WarningChips
                 chips={hornChips({
-                  hf: compressionDriverSpec!,
+                  hf: hornModel.hf,
                   hz: hornSpec,
                   horn: hornOption,
                   xoHi: midHornCrossoverHz,
                   hornModel,
                   hfAmpW: hornAmpWatts,
-                  midAtXoHi: midMaxCurve ? midMaxCurveNearest(midHornCrossoverHz).spl : null,
+                  midAtXoHi: midModelled
+                    ? nearestPoint(midModelled.max, midHornCrossoverHz).spl
+                    : null,
                   hfTilt: hornBandTiltDb,
-                  hornAtXo: hornSplAt(midHornCrossoverHz),
+                  hornAtXo: nearestPoint(hornModel.curve, midHornCrossoverHz).spl,
                   midBeam: midBeamWidthDeg,
                   fK: beamCurves.fK,
                 })}

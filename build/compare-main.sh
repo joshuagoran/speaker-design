@@ -1,5 +1,5 @@
 #!/bin/sh
-# Gate for the TypeScript migration: build both pages from this tree and from a ref (origin/main by default), and check
+# Compare this tree's build with a ref: build both pages from this tree and from a ref (origin/main by default), and check
 # that the artifact page (dist/stack-planner.html) and the Pages page (dist/site/index.html) are each byte-identical. The
 # Pages build is the only one that bundles Firebase (firebaseStore.ts and the Firebase branch of useConfigStore.ts).
 # Renames and type annotations don't change the emitted JS or CSS, so any difference means runtime code (or the CSS)
