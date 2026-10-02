@@ -1,13 +1,13 @@
-import { OptimizerControls } from "./sections/OptimizerControls.jsx";
-import { MobileSummaryStrip } from "./sections/MobileSummaryStrip.jsx";
-import { StackViewer } from "./sections/StackViewer.jsx";
-import { SubSection } from "./sections/SubSection.jsx";
-import { MidSection } from "./sections/MidSection.jsx";
-import { HornSection } from "./sections/HornSection.jsx";
-import { SettingsPanel } from "./sections/SettingsPanel.jsx";
-import { TotalsSection } from "./sections/TotalsSection.jsx";
-import { DetailsSection } from "./sections/DetailsSection.jsx";
-import { SavedConfigs } from "../../components/saved-configs/SavedConfigs.jsx";
+import { OptimizerControls } from "./sections/OptimizerControls";
+import { MobileSummaryStrip } from "./sections/MobileSummaryStrip";
+import { StackViewer } from "./sections/StackViewer";
+import { SubSection } from "./sections/SubSection";
+import { MidSection } from "./sections/MidSection";
+import { HornSection } from "./sections/HornSection";
+import { SettingsPanel } from "./sections/SettingsPanel";
+import { TotalsSection } from "./sections/TotalsSection";
+import { DetailsSection } from "./sections/DetailsSection";
+import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 
 /** PA stack page: saved configurations, optimizer, 3D view, the Sub / Mid-bass / Horn results and the settings panel. */
 export function PaStackPage({ planner }) {

@@ -1,6 +1,6 @@
 // Runs the optimizer off the main thread. runOptimizer.ts imports it with ?worker&inline, so Vite bundles it into the page.
-import { optimizePaStack } from "./optimize.ts";
-import type { OptimizerRequest, OptimizerResponse } from "../../types.ts";
+import { optimizePaStack } from "./optimize";
+import type { OptimizerRequest, OptimizerResponse } from "../../types";
 // Under the DOM lib `self` is a Window, whose onmessage and one-argument postMessage match what a worker does.
 self.onmessage = (e: MessageEvent<OptimizerRequest>) => {
   const { id, input } = e.data;

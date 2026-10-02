@@ -8,9 +8,9 @@ import {
   subWeightLb,
   midWeightLb,
   plywoodLbPerSqFt,
-} from "../src/lib/pa/calc.ts";
-import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data.ts";
-import { close, vent } from "./helpers.ts";
+} from "../src/lib/pa/calc";
+import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
+import { close, vent } from "./helpers";
 
 const IN3_L = 16.387 / 1000;
 test("boxL: inner width/height lose two walls, depth loses inset + 3/4 baffle + back", (t) => {

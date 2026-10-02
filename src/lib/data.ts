@@ -22,7 +22,7 @@ import type {
   PassiveRadiator,
   Rack,
   SubDriver,
-} from "../types.ts";
+} from "../types";
 
 export const ST260_PROFILE: readonly HornProfilePoint[] = [
   [1.89, 0.0],
@@ -2198,6 +2198,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com (no price shown)",
     ts: {
       Fs: 68,
+      Qts: 0.27,
       Qes: 0.29,
       Qms: 4.7,
       Vas: 17,
@@ -2211,7 +2212,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     },
     hf: { sens: 104, aes: 50, xo: 1800, imp: 8, cov: 100 },
     lfSens: 97,
-    note: "Neo. 250 W / 500 W program LF. No matching B&C network sold for the 8″ (DIY or DSP).",
+    note: "Neo. 250 W / 500 W program LF. B&C publishes only Xvar (6 mm), stored as Xmax. No matching B&C network sold for the 8″ (DIY or DSP).",
   },
   {
     id: "bc8fcx51",
@@ -2222,11 +2223,12 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com (no price shown)",
     ts: {
       Fs: 69,
+      Qts: 0.34,
       Qes: 0.36,
       Qms: 6.3,
       Vas: 16,
       Sd: 220,
-      Xmax: 6.5,
+      Xmax: 6,
       Re: 4.9,
       Bl: 11.5,
       Mms: 22,
@@ -2235,7 +2237,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     },
     hf: { sens: 104, aes: 50, xo: 1800, imp: 8, cov: 100 },
     lfSens: 96,
-    note: "Ferrite. No matching B&C network sold for the 8″ (DIY or DSP).",
+    note: "[maker: bcspeakers.com] Ferrite. B&C publishes only Xvar (6 mm), stored as Xmax. No matching B&C network sold for the 8″ (DIY or DSP).",
   },
   {
     id: "by8cx300fe",
@@ -2246,6 +2248,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 89,
+      Qts: 0.55,
       Qes: 0.63,
       Qms: 4.2,
       Vas: 10.8,
@@ -2257,9 +2260,9 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
       aes: 300,
       disp: null,
     },
-    hf: { sens: 105, aes: 50, xo: 1800, imp: 16, cov: 70 },
+    hf: { sens: 105, aes: 50, xo: 2000, imp: 16, cov: 70 },
     lfSens: 95,
-    note: "Ferrite. High Qts (0.55): wants a small sealed box. No matching Beyma network sold (FD2CXFE is listed for the 10″ only).",
+    note: "[maker: Beyma datasheet] Ferrite. High Qts (0.55): wants a small sealed box. Beyma recommends an HF crossover of 2 kHz or higher (the table had 1.8 kHz). No matching Beyma network sold (FD2CXFE is listed for the 10″ only).",
   },
   {
     id: "by8cx300nd",
@@ -2270,20 +2273,21 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 61,
-      Qes: 0.28,
-      Qms: 13.3,
-      Vas: 36.2,
+      Qts: 0.29,
+      Qes: 0.3,
+      Qms: 13,
+      Vas: 23,
       Sd: 220,
       Xmax: 6,
-      Re: 5.1,
-      Bl: 9.4,
-      Mms: 12.7,
+      Re: 5.4,
+      Bl: 12,
+      Mms: 20,
       aes: 250,
       disp: 1.5,
     },
     hf: { sens: 104, aes: 50, xo: 1500, imp: 8, cov: 70 },
     lfSens: 96,
-    note: "Neo, 1.5 L displacement. Mms not published; 12.7 g derived (Vas and Qes agree). Beyma FD2CX network ($198.95/pair, 2.6 kHz, 500 W AES).",
+    note: "[maker: Beyma datasheet] Neo, 1.5 L displacement (not on the datasheet). usspeaker's page differs on Qes, Qms, Vas, Re and Bl and gave no Mms (12.7 g was derived); the datasheet's values, including Mms 20 g, are used. Beyma FD2CX network ($198.95/pair, 2.6 kHz, 500 W AES).",
   },
   {
     id: "f8hx200",
@@ -2294,20 +2298,21 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 76,
-      Qes: 0.43,
-      Qms: 9.5,
-      Vas: 11.9,
-      Sd: 205,
+      Qts: 0.3,
+      Qes: 0.31,
+      Qms: 10.5,
+      Vas: 13.1,
+      Sd: 217.2,
       Xmax: 4.92,
       Re: 5.5,
-      Bl: 11.6,
+      Bl: 13.8,
       Mms: 22,
       aes: 250,
       disp: null,
     },
-    hf: { sens: 104, aes: 15, xo: 1700, imp: 8, cov: 90 },
-    lfSens: 94,
-    note: "Neo, dome HF (15 W AES). No FaitalPRO network sold in the US (DIY or DSP).",
+    hf: { sens: 107, aes: 30, xo: 1700, imp: 8, cov: 90 },
+    lfSens: 95,
+    note: "[maker: FaitalPRO datasheet] Neo, annular HF (30 W AES). usspeaker's page shows 8HX150 data (and a 15 W HF); the datasheet values are used. Xmax uses Faital's formula (adds gap/3). No FaitalPRO network sold in the US (DIY or DSP).",
   },
   {
     id: "f8hx230",
@@ -2318,20 +2323,21 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 70,
-      Qes: 0.38,
-      Qms: 7.4,
-      Vas: 8,
-      Sd: 205,
+      Qts: 0.29,
+      Qes: 0.31,
+      Qms: 6,
+      Vas: 14.7,
+      Sd: 223,
       Xmax: 6.17,
       Re: 6.5,
-      Bl: 15.1,
-      Mms: 23.6,
+      Bl: 15,
+      Mms: 24.4,
       aes: 250,
       disp: null,
     },
     hf: { sens: 105, aes: 30, xo: 1700, imp: 8, cov: 100 },
     lfSens: 94,
-    note: "Ferrite, annular HF. Published Vas doesn't fit its Mms/Sd (not used by the model). No FaitalPRO network sold in the US (DIY or DSP).",
+    note: "[maker: FaitalPRO datasheet] Ferrite, annular HF. usspeaker's page differs on Qes, Qms, Vas, Sd, Bl and Mms; the datasheet values are used. No FaitalPRO network sold in the US (DIY or DSP).",
   },
   {
     id: "f8hx240",
@@ -2342,10 +2348,11 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 70,
+      Qts: 0.3,
       Qes: 0.31,
       Qms: 8.1,
       Vas: 12.9,
-      Sd: 205,
+      Sd: 223,
       Xmax: 6.17,
       Re: 5,
       Bl: 13.8,
@@ -2355,7 +2362,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     },
     hf: { sens: 107, aes: 30, xo: 1700, imp: 8, cov: 100 },
     lfSens: 94,
-    note: "Neo, annular HF. No FaitalPRO network sold in the US (DIY or DSP).",
+    note: "[maker: FaitalPRO datasheet] Neo, annular HF. usspeaker's page lists Sd 205 cm²; the datasheet's 223 is used. No FaitalPRO network sold in the US (DIY or DSP).",
   },
   {
     id: "embeta8cx",
@@ -2365,13 +2372,14 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     price: 129.99,
     src: "usspeaker.com, Sep 2026",
     ts: {
-      Fs: 54,
+      Fs: 62,
+      Qts: 0.29,
       Qes: 0.31,
-      Qms: 7.67,
-      Vas: 34.9,
-      Sd: 205.9,
+      Qms: 6.57,
+      Vas: 21.43,
+      Sd: 210,
       Xmax: 3.2,
-      Re: 5.53,
+      Re: 5.37,
       Bl: 11.21,
       Mms: 19,
       aes: 250,
@@ -2379,7 +2387,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     },
     hf: null,
     lfSens: 92,
-    note: "Budget coax; HF section specs not listed on usspeaker, so only the woofer is modelled. Short 3.2 mm Xmax. Eminence PXB2:2K5CX network ($64.99, 250 W, switchable −3 dB HF).",
+    note: "[maker: eminence.com] Budget coax; Eminence lists no HF section specs, so only the woofer is modelled. Short 3.2 mm Xmax. usspeaker's page differs on Fs, Qms, Vas, Sd and Re; Eminence's values are used. Eminence PXB2:2K5CX network ($64.99, 250 W, switchable −3 dB HF).",
   },
   {
     id: "bc10cxn64",
@@ -2390,11 +2398,12 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 68,
+      Qts: 0.31,
       Qes: 0.33,
       Qms: 5.6,
       Vas: 23,
       Sd: 320,
-      Xmax: 5.5,
+      Xmax: 5,
       Re: 5.6,
       Bl: 15.8,
       Mms: 33.5,
@@ -2403,7 +2412,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     },
     hf: { sens: 103, aes: 80, xo: 1200, imp: 8, cov: 70 },
     lfSens: 97,
-    note: "Neo, 1.4 in HF exit. B&C sell a matching passive network, FB10CX64 ($176.52, 2.1 kHz, 18 dB/oct).",
+    note: "[maker: bcspeakers.com] Neo, 1.4 in HF exit. B&C publishes only Xvar (5 mm), stored as Xmax. B&C sell a matching passive network, FB10CX64 ($176.52, 2.1 kHz, 18 dB/oct).",
   },
   {
     id: "bc10fcx64",
@@ -2414,11 +2423,12 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 63,
+      Qts: 0.42,
       Qes: 0.44,
       Qms: 7.9,
       Vas: 25,
       Sd: 320,
-      Xmax: 5.5,
+      Xmax: 6,
       Re: 5.5,
       Bl: 13.4,
       Mms: 37,
@@ -2427,7 +2437,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     },
     hf: { sens: 104, aes: 80, xo: 1200, imp: 8, cov: 70 },
     lfSens: 95,
-    note: "Ferrite, 1.3 in HF exit, titanium diaphragm. Same B&C FB10CX64 network ($176.52, 2.1 kHz, 18 dB/oct).",
+    note: "[maker: bcspeakers.com] Ferrite, 1.3 in HF exit, titanium diaphragm. B&C publishes only Xvar (6 mm), stored as Xmax. Same B&C FB10CX64 network ($176.52, 2.1 kHz, 18 dB/oct).",
   },
   {
     id: "by10cx300fe",
@@ -2438,6 +2448,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 48,
+      Qts: 0.38,
       Qes: 0.41,
       Qms: 5.3,
       Vas: 62.7,
@@ -2462,6 +2473,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 79.5,
+      Qts: 0.31,
       Qes: 0.32,
       Qms: 10.25,
       Vas: 14.79,
@@ -2486,20 +2498,21 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 65,
-      Qes: 0.37,
+      Qts: 0.39,
+      Qes: 0.42,
       Qms: 5.8,
-      Vas: 25.8,
-      Sd: 321,
+      Vas: 30.5,
+      Sd: 347,
       Xmax: 7.37,
       Re: 5.3,
-      Bl: 14.1,
-      Mms: 34,
+      Bl: 13.1,
+      Mms: 33,
       aes: 250,
       disp: null,
     },
     hf: { sens: 107, aes: 30, xo: 1700, imp: 8, cov: 110 },
     lfSens: 96,
-    note: "Ferrite, annular HF, widest coverage (110°). No FaitalPRO network sold in the US (DIY or DSP).",
+    note: "[maker: FaitalPRO datasheet] Ferrite, annular HF, widest coverage (110°). usspeaker's page differs on Qes, Vas, Sd, Bl and Mms; the datasheet values are used. No FaitalPRO network sold in the US (DIY or DSP).",
   },
   {
     id: "f10hx240",
@@ -2510,20 +2523,21 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 65,
-      Qes: 0.37,
-      Qms: 5.8,
-      Vas: 25.8,
-      Sd: 321,
+      Qts: 0.28,
+      Qes: 0.3,
+      Qms: 3.3,
+      Vas: 31.8,
+      Sd: 347,
       Xmax: 7.37,
       Re: 5.3,
-      Bl: 14.1,
-      Mms: 34,
+      Bl: 15.5,
+      Mms: 31.6,
       aes: 250,
       disp: null,
     },
     hf: { sens: 107, aes: 30, xo: 1700, imp: 8, cov: 110 },
     lfSens: 96,
-    note: "Neo version of the 10HX230. No FaitalPRO network sold in the US (DIY or DSP).",
+    note: "[maker: FaitalPRO datasheet] Neo version of the 10HX230, with its own motor (higher Bl, lower Qms). usspeaker's page is a copy of its 10HX230 page; the datasheet values are used. No FaitalPRO network sold in the US (DIY or DSP).",
   },
   {
     id: "embeta10cx",
@@ -2534,12 +2548,13 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com (no price shown)",
     ts: {
       Fs: 49,
-      Qes: 0.43,
-      Qms: 5.21,
-      Vas: 64.2,
+      Qts: 0.38,
+      Qes: 0.41,
+      Qms: 6.16,
+      Vas: 61.1,
       Sd: 344.9,
       Xmax: 5,
-      Re: 5.53,
+      Re: 5.48,
       Bl: 10.88,
       Mms: 29,
       aes: 250,
@@ -2547,7 +2562,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     },
     hf: null,
     lfSens: 93.3,
-    note: "Budget coax; HF section specs not listed, so only the woofer is modelled. Eminence PXB2:2K5CX network ($64.99, 250 W, switchable −3 dB HF).",
+    note: "[maker: eminence.com] Budget coax; Eminence lists no HF section specs, so only the woofer is modelled. usspeaker's page differs on Qes, Qms, Vas and Re; Eminence's values are used. Eminence PXB2:2K5CX network ($64.99, 250 W, switchable −3 dB HF).",
   },
 ].sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
 
@@ -2796,7 +2811,7 @@ export const HIFI_WOOFERS: HifiWoofer[] = [
       Vas: 27.8,
       Sd: 132,
       Xmax: 1.85,
-      Re: null,
+      Re: 6.53,
       Bl: 7.23,
       Mms: 9.5,
       Le: 0.056,
@@ -2806,7 +2821,7 @@ export const HIFI_WOOFERS: HifiWoofer[] = [
       imp: 8,
     },
     fmax: 21000,
-    note: "[maker: Fostex FF-WK manual + fostex.jp] Double-layer paper full-range cone. Re is not published (Qes and Bl imply about 6.5 Ω, derived only). aes is 30 W rated input, 90 W music. sens is 92 dB 1 W/1 m. Xmax is only 1.85 mm, so high-pass it about 60–80 Hz. It can run to 5 kHz or higher before a super tweeter. Fostex FW168HS and FW208HS woofers are discontinued.",
+    note: "[maker: Fostex FF-WK manual + fostex.jp] Double-layer paper full-range cone. Re is not published (Qes and Bl imply about 6.5 Ω, derived only). aes is 30 W rated input, 90 W music. sens is 92 dB 1 W/1 m. Xmax is only 1.85 mm, so high-pass it about 60–80 Hz. It can run to 5 kHz or higher before a super tweeter. Fostex FW168HS and FW208HS woofers are discontinued. Derived for the model: Re 6.53 Ω from Qes, Bl, Mms and Fs.",
   },
   // ---------- Pro high-sensitivity midwoofers ----------
   {
@@ -2934,7 +2949,7 @@ export const HIFI_WOOFERS: HifiWoofer[] = [
       Xmax: 6.0,
       Re: 5.1,
       Bl: 9.0,
-      Mms: null,
+      Mms: 15.8,
       Le: 0.6,
       aes: 280,
       sens: 95,
@@ -2942,7 +2957,7 @@ export const HIFI_WOOFERS: HifiWoofer[] = [
       imp: 8,
     },
     fmax: 4500,
-    note: '[vendor: usspeaker page; eighteensound.com returned 503] Ferrite 8" midbass. aes is 280 W AES, 400 W program. sens is 1 W/1 m. 3 kHz recommended crossover. Mms not published for 8 Ω (Fs, Vas and Sd imply about 16 g; the 4 Ω version is listed at 18 g). The listed Qts 0.43 does not match Qes and Qms, which give 0.39. Box 10–40 L.',
+    note: '[vendor: usspeaker page; eighteensound.com returned 503] Ferrite 8" midbass. aes is 280 W AES, 400 W program. sens is 1 W/1 m. 3 kHz recommended crossover. Mms not published for 8 Ω (Fs, Vas and Sd imply about 16 g; the 4 Ω version is listed at 18 g). The listed Qts 0.43 does not match Qes and Qms, which give 0.39. Box 10–40 L. Derived for the model: Mms 15.8 g from Vas, Sd and Fs.',
   },
   {
     id: "by6p200fe",
@@ -3479,24 +3494,7 @@ HIFI_WOOFERS.push(
   ],
 );
 
-// Fill gaps a model needs from the published parameters (marked in the note), and give every tweeter a faceplate
-// size and radiating diameter the layout and directivity use.
-const RHO_C2 = 1.18 * 343 * 343;
-for (const w of HIFI_WOOFERS) {
-  const ts = w.ts,
-    derived = [];
-  if (ts.Mms == null && ts.Vas && ts.Sd && ts.Fs) {
-    const Sd = ts.Sd / 1e4,
-      Cms = ts.Vas / 1e3 / (RHO_C2 * Sd * Sd);
-    ts.Mms = +(1e3 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Cms)).toFixed(1);
-    derived.push(`Mms ${ts.Mms} g from Vas, Sd and Fs`);
-  }
-  if (ts.Re == null && ts.Qes && ts.Bl && ts.Mms && ts.Fs) {
-    ts.Re = +((ts.Qes * ts.Bl * ts.Bl) / (2 * Math.PI * ts.Fs * (ts.Mms / 1e3))).toFixed(2);
-    derived.push(`Re ${ts.Re} Ω from Qes, Bl, Mms and Fs`);
-  }
-  if (derived.length) w.note += ` Derived for the model: ${derived.join("; ")}.`;
-}
+// Give every tweeter a faceplate size and radiating diameter the layout and directivity use.
 for (const t of HIFI_TWEETERS) {
   const fp = t.faceplate;
   t.faceplate = !fp ? { w: 3.5, h: 3.5 } : fp.diameter ? { w: fp.diameter, h: fp.diameter } : fp;

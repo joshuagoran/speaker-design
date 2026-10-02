@@ -11,10 +11,10 @@ import {
   ventGeometry,
   boxModel,
   subSystem,
-} from "../src/lib/pa/calc.ts";
-import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data.ts";
-import type { SubSystemConfig } from "../src/types.ts";
-import { C, rel, close, vent } from "./helpers.ts";
+} from "../src/lib/pa/calc";
+import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
+import type { SubSystemConfig } from "../src/types";
+import { C, rel, close, vent } from "./helpers";
 
 // Independent check of the closed form: integrate the potential of the rectangle numerically.
 // phi(x, y) = integral of 1/distance over the rectangle, from its four corner sub-rectangles.

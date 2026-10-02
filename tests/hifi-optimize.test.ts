@@ -1,14 +1,9 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { optimizeHifiSpeaker, hifiDesignProblems } from "../src/lib/hifi/optimize.ts";
-import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi.ts";
-import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data.ts";
-import type {
-  HifiGoal,
-  HifiMetrics,
-  HifiOptimizerCurrent,
-  HifiOptimizerLocks,
-} from "../src/types.ts";
+import { optimizeHifiSpeaker, hifiDesignProblems } from "../src/lib/hifi/optimize";
+import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
+import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
+import type { HifiGoal, HifiMetrics, HifiOptimizerCurrent, HifiOptimizerLocks } from "../src/types";
 
 const cur: HifiOptimizerCurrent = {
   woofer: "sb17nrx",
@@ -109,8 +104,8 @@ test("hi-fi optimizer: unlocked amps stay within the sliders; locked amps stay; 
 });
 
 test("hi-fi optimizer: radiator designs price their radiators and load back with them", async (t) => {
-  const { optimizeHifiSpeaker } = await import("../src/lib/hifi/optimize.ts");
-  const { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } = await import("../src/lib/data.ts");
+  const { optimizeHifiSpeaker } = await import("../src/lib/hifi/optimize");
+  const { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } = await import("../src/lib/data");
   const w = HIFI_WOOFERS.find((o) => o.pick) || HIFI_WOOFERS[0],
     tw =
       HIFI_TWEETERS.find((o) => o.pick && !o.needsWaveguide && o.type !== "compression") ||

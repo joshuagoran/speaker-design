@@ -8,13 +8,14 @@ import {
   waveguideDirectivity,
   logSpacedFrequencies,
   type Complex,
-} from "../hifi/hifi.ts";
+} from "../hifi/hifi";
 import type {
+  DispersionPlane,
   FrequencyPoint,
   HifiDispersionMap,
   ListenerGeometry,
   PaStackGeometry,
-} from "../../types.ts";
+} from "../../types";
 
 const C = 343,
   IN = 0.0254;
@@ -88,7 +89,7 @@ export function paResponseAt(
 // level vs angle and frequency, normalised to the horn axis. plane "h" (at horn height) or "v" (−60° below to +60° above)
 export function paDispersionMap(
   s: PaStackGeometry,
-  plane: "h" | "v" = "v",
+  plane: DispersionPlane = "v",
   distM = 5,
 ): HifiDispersionMap {
   const freqs = logSpacedFrequencies(100, 20000, 72);

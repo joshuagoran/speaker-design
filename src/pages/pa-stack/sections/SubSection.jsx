@@ -1,10 +1,10 @@
-import { PAL } from "../../../styles/palette.ts";
-import { WarningChips } from "../../../components/chips/WarningChips.jsx";
-import { StatTileGrid } from "../../../components/stats/StatTileGrid.jsx";
-import { FoldHeading } from "../../../components/ui/FoldHeading.jsx";
-import { ResponseChart } from "../../../components/charts/ResponseChart.jsx";
-import { StatRow } from "../../../components/optimizer/StatRow.jsx";
-import { subChips } from "../../../lib/pa/chips.ts";
+import { PAL } from "../../../styles/palette";
+import { WarningChips } from "../../../components/chips/WarningChips";
+import { StatTileGrid } from "../../../components/stats/StatTileGrid";
+import { FoldHeading } from "../../../components/ui/FoldHeading";
+import { ResponseChart } from "../../../components/charts/ResponseChart";
+import { StatRow } from "../../../components/optimizer/StatRow";
+import { subChips } from "../../../lib/pa/chips";
 
 /** Sub results: headline stats, system response chart, details table and warning chips. */
 export function SubSection({ planner }) {

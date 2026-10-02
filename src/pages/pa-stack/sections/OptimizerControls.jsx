@@ -1,7 +1,7 @@
-import { Button } from "../../../components/ui/Button.jsx";
-import { LOCK_KEYS } from "../../../constants/lockKeys.ts";
-import { OptimizerPanel } from "../../../components/optimizer/OptimizerPanel.jsx";
-import { OptimizerBar } from "../../../components/optimizer/OptimizerBar.jsx";
+import { Button } from "../../../components/ui/Button";
+import { LOCK_KEYS } from "../../../constants/lockKeys";
+import { OptimizerPanel } from "../../../components/optimizer/OptimizerPanel";
+import { OptimizerBar } from "../../../components/optimizer/OptimizerBar";
 
 /** Optimizer switch and lock-all buttons, the optimizer panel, the preview banner and the result toast. */
 export function OptimizerControls({ planner }) {

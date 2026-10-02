@@ -1,3 +1,5 @@
+import type { Dispatch, SetStateAction } from "react";
+
 // Shapes of the driver, horn, cabinet and fill tables in lib/data.ts.
 //
 // A spec the vendor does not publish is `null` in the table (the note says so), so it stays in the type as `number | null`.
@@ -7,6 +9,9 @@
 export type SubSize = 15 | 18;
 /** Mid driver diameters in inches. */
 export type MidSize = 10 | 12 | 15;
+
+/** The setter `useState` returns, as a hook hands it to the page. */
+export type Setter<T> = Dispatch<SetStateAction<T>>;
 
 /** Outer or internal dimensions in inches. */
 export interface Dims3 {
@@ -23,9 +28,10 @@ export interface Dims2 {
 
 // ---- Thiele-Small blocks ----
 
-/** The parameters every modelled woofer has. `disp` is the driver's displacement in litres, null where unpublished. */
-export interface DriverTS {
+/** The Thiele-Small parameters and ratings every driver table lists. `disp` is the driver's displacement in litres, null where unpublished. */
+export interface ThieleSmall {
   Fs: number;
+  Qts: number;
   Qes: number;
   Qms: number;
   Vas: number;
@@ -38,27 +44,18 @@ export interface DriverTS {
   disp: number | null;
 }
 
-/** Sub and mid drivers also publish Qts. */
-export interface BassTS extends DriverTS {
-  Qts: number;
-}
+/** The Thiele-Small fields the box models read (`boxModel`, `closedBox`, `passiveRadiatorBox`); `closedBox` and `passiveRadiatorBox` leave `Xmax` alone. */
+export type BoxModelTS = Pick<ThieleSmall, "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms">;
 
 /** Subs always list a displacement. */
-export interface SubTS extends BassTS {
+export interface SubTS extends ThieleSmall {
   disp: number;
 }
 
-/** Fill coaxials list no Qts. */
-export type FillTS = DriverTS;
-
-/** Hi-fi woofers. `Re` and `Mms` can be unpublished (null); the module fills them in from the other parameters when it can. */
-export interface HifiWooferTS extends Omit<BassTS, "Re" | "Mms"> {
-  Re: number | null;
-  Mms: number | null;
+/** Hi-fi woofers also list inductance, 2.83 V sensitivity and nominal impedance (informational; no model reads them). */
+export interface HifiWooferTS extends ThieleSmall {
   Le: number;
-  /** dB at 2.83 V / 1 m */
   sens: number;
-  /** nominal impedance, ohms */
   imp: number;
 }
 
@@ -84,7 +81,7 @@ export interface MidDriver {
   name: string;
   price: number | null;
   src: string;
-  ts: BassTS;
+  ts: ThieleSmall;
   note: string;
   pick?: boolean;
 }
@@ -219,7 +216,7 @@ export interface FillDriver {
   name: string;
   price: number | null;
   src: string;
-  ts: FillTS;
+  ts: ThieleSmall;
   /** the compression section; null for a fill without one */
   hf: FillHf | null;
   lfSens: number;
@@ -494,6 +491,12 @@ export interface HifiSystem {
 /** A check on the design: a severity, a short title and a sentence of detail. */
 export type HifiChip = Chip;
 
+/** Where the listener sits: feet across the room (x) and back from the speakers (y). */
+export interface ListeningSeat {
+  x: number;
+  y: number;
+}
+
 /** Where the listener is relative to one speaker: horizontal angle off its axis (rad), ear height above the box bottom (in) and distance (m). */
 export interface ListenerGeometry {
   th: number;
@@ -505,6 +508,9 @@ export interface FrequencyPoint {
   f: number;
   spl: number;
 }
+
+/** The plane a dispersion map is taken in: horizontal (sideways off axis) or vertical (above and below it). */
+export type DispersionPlane = "h" | "v";
 
 /** Level against angle and frequency, relative to on-axis; `rows[angle][frequency]` in dB. */
 export interface HifiDispersionMap {
@@ -714,9 +720,6 @@ export interface PaDesignConfig {
   summary?: string;
 }
 
-/** A PA sub or mid box's models read the T/S parameters; `Re` and `Mms` are null on a Hi-fi woofer that doesn't publish them. */
-export type ModelTS = Pick<HifiWooferTS, "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms">;
-
 /** One point of a vented-box response: raw box SPL, system SPL with the highpass, cone excursion (mm, peak) and port air speed (m/s, peak). */
 export interface VentedPoint {
   f: number;
@@ -794,6 +797,15 @@ export interface VentGeometry {
   ec?: number;
   dh: number;
   desc: string;
+}
+
+/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length and throat (all inches). */
+export interface PaPortGeometry {
+  ductH: number;
+  nPorts: number;
+  portR: number;
+  tubeLen: number;
+  throat: number;
 }
 
 /** What `subGeometry` needs: boxes, plywood, vent and layout. */
@@ -989,7 +1001,7 @@ export interface MidChipsInput {
   f3: number;
   peakX: number;
   xoLo: number;
-  ts: Pick<BassTS, "Xmax" | "aes">;
+  ts: Pick<ThieleSmall, "Xmax" | "aes">;
   /** amp volts, the volts the driver can use, and the thermal limit in volts */
   V: number;
   useV: number;
@@ -1081,6 +1093,17 @@ export interface PaOptimizerLocks extends Partial<Record<PaLockKey, boolean>> {
   subDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
   midDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
 }
+
+/** The optimizer's inputs on the page: the room, the heaviest box and the budget, and the goals in tap order. */
+export interface PaOptimizerInputState {
+  room: PaRoom;
+  maxLb: number;
+  budget: number;
+  goals: PaGoal[];
+}
+
+/** What `startOptimizerSearch` takes: input fields to change for this run, or the click event when it is used as a handler. */
+export type PaSearchOverrides = Partial<PaOptimizerInputState> & { nativeEvent?: Event };
 
 /** The fields an older saved design can lack; the optimizer fills these in. */
 export type PaDefaultedField =

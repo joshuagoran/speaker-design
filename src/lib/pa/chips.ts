@@ -10,7 +10,7 @@ import type {
   PortStyle,
   SubChipsInput,
   VentSpec,
-} from "../../types.ts";
+} from "../../types";
 
 // Longest duct each layout can hold, leaving an opening at least as wide as the duct.
 export function ductFit(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {

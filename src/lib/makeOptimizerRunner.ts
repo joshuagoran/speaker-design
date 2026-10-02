@@ -1,4 +1,4 @@
-import type { OptimizerRequest, OptimizerResponse } from "../types.ts";
+import type { OptimizerRequest, OptimizerResponse } from "../types";
 
 /** Runs an optimizer in its worker, falling back to the main thread where workers are unavailable. */
 export function makeOptimizerRunner<I, R>(

@@ -1,11 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import {
-  highpassGain,
-  linkwitzRiley24Lowpass,
-  linkwitzRiley24Highpass,
-} from "../src/lib/pa/calc.ts";
-import { db, close } from "./helpers.ts";
+import { highpassGain, linkwitzRiley24Lowpass, linkwitzRiley24Highpass } from "../src/lib/pa/calc";
+import { db, close } from "./helpers";
 
 test("Butterworth highpasses are -3.01 dB at the corner", (t) => {
   close(t, db(highpassGain(40, 40, "BW24")), -3.01, 0.01);

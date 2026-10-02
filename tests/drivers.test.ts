@@ -1,8 +1,8 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { SUB_OPTIONS, MID_OPTIONS, FILL_OPTIONS, CD_OPTIONS } from "../src/lib/data.ts";
-import type { BassTS } from "../src/types.ts";
-import { tsModel } from "./helpers.ts";
+import { SUB_OPTIONS, MID_OPTIONS, FILL_OPTIONS, CD_OPTIONS } from "../src/lib/data";
+import type { ThieleSmall } from "../src/types";
+import { tsModel } from "./helpers";
 
 // Datasheet values that disagree with the driver's own Mms/Sd/Fs/Bl/Re by more than the tolerance.
 // Keep each with a note; the model uses Mms/Bl/Re/Sd/Fs/Qms, not the listed Vas/Qes.
@@ -12,10 +12,6 @@ const KNOWN: Record<string, string> = {
   "lv123f:Vas": "datasheet Vas 42 L vs 37.3 L",
   "bc10nw64:Vas": "datasheet Vas 27.5 L vs 30.6 L",
   "cindcx10:Vas": "published Vas doesn't fit Mms/Sd (noted on the driver); derived is 1.53x",
-  "f8hx230:Vas": "published Vas doesn't fit Mms/Sd (noted on the driver); derived is 1.60x",
-  "f8hx230:Qes": "listed Qes 22% above the Bl/Mms/Re value; same datasheet as the Vas mismatch",
-  "embeta8cx:Vas": "usspeaker Vas 23% above the Mms/Sd value",
-  "f8hx240:Vas": "listed Vas 16% below the Mms/Sd value",
 };
 const all = [...SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS];
 const need = ["Fs", "Qms", "Sd", "Mms", "Bl", "Re", "Xmax", "aes"] as const;
@@ -28,7 +24,7 @@ test("every driver with T/S has the fields the models use", (t) => {
 test("T/S internal consistency (Qts, Qes, Vas) or a listed exception", (t) => {
   const bad: string[] = [];
   for (const o of all) {
-    const ts: Partial<BassTS> = o.ts; // fills list no Qts
+    const ts: ThieleSmall = o.ts;
     if (!ts || !ts.Bl || !ts.Mms) continue;
     const m = tsModel(o.ts);
     if (ts.Qes && ts.Qms && ts.Qts) {

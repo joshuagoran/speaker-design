@@ -13,7 +13,7 @@ is clean (0 errors, 74 warnings).
   on its own leaves it byte-identical. So the gate below is sound.
 - Every relative import in `src/` and `tests/` carries an explicit `.js` / `.jsx` extension (250 of them). Vite+
   resolves `./units.js` to `units.ts` even from a `.jsx` importer, and `vp test` still passes, so a bare `git mv`
-  builds. The specifiers are still updated in the rename commit (see below) so they point at the files that exist.
+  builds. The extensions are dropped in the rename commit (see below), so no specifier names a file that doesn't exist.
 - `src/styles/palette.js` renamed to `.ts`, with the import in `tailwind.config.js` updated, builds byte-identical:
   Tailwind 3.4 loads its config through jiti, which handles the `.ts` import. So the palette goes first, not last.
 - Renaming one `.jsx` to `.tsx` without widening Tailwind's `content` glob builds and passes every check, but the CSS
@@ -28,10 +28,15 @@ is clean (0 errors, 74 warnings).
   it compares about 780 rounded numbers within a tolerance and doesn't cover the optimizers, Hi-fi, chips, dispersion
   or the UI. PR 1 adds `build/compare-main.sh` for this: it builds both pages of this tree, checks `origin/main` out into a temp worktree (or another ref, given as the first argument), builds both there, and `cmp`s each pair (prints `identical`, or exits 1 saying which page differs and the first differing byte).
 - **Rename and edit in separate commits.** Per group of files: first a `git mv` commit with `--no-verify` (the pre-commit
-  `vp check --fix` rejects a renamed file that doesn't type-check yet) that also updates the import specifiers that
-  point at the renamed files (`./foo.js` → `./foo.ts`, `./Bar.jsx` → `./Bar.tsx`), then the typing commit. Git keeps
-  the rename even for heavily edited files like `StackView3D` and `HifiPage`. Merge the PRs with merge commits, not
-  squash.
+  `vp check --fix` rejects a renamed file that doesn't type-check yet) that also drops the extension from the import
+  specifiers that point at the renamed files (`./foo.js` → `./foo`, `./Bar.jsx` → `./Bar`), then the typing commit. Git
+  keeps the rename even for heavily edited files like `StackView3D` and `HifiPage`. Merge the PRs with merge commits,
+  not squash.
+- **Imports carry no file extension.** Relative imports in `src/` and `tests/` are written `./foo`, never `./foo.ts`:
+  Vite resolves them, and a `.ts` in a specifier is a Vite-only dialect (`allowImportingTsExtensions` is not set).
+  Exceptions: the `?worker&inline` imports keep the file and its query (Vite needs the file for `?worker`), CSS imports
+  keep theirs, and files loaded by Node (`tailwind.config.js`, `build/*.mjs`, `tests/mobile-check.mjs`,
+  `vite.config.ts`) keep theirs too.
 - **Type-only fixes.** Because of the gate, a type error is fixed with annotations, type narrowing that already exists
   in the code, or a non-null assertion; never with a new guard, a default (`?? 0`) or a restructured loop. If a type
   error reveals a real bug, note it and fix it in a separate PR after the migration.

@@ -1,11 +1,11 @@
-import { passiveRadiatorOf } from "./hifiDriverLists.ts";
-import { Button } from "../../components/ui/Button.jsx";
-import { OptimizerCurveChart } from "../../components/charts/OptimizerCurveChart.jsx";
-import { HifiFront } from "../../components/drawings/HifiFront.jsx";
-import { formatDollars } from "../../lib/format.ts";
-import { Delta } from "../../components/optimizer/Delta.jsx";
-import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales.ts";
-import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data.ts";
+import { passiveRadiatorOf } from "./hifiDriverLists";
+import { Button } from "../../components/ui/Button";
+import { OptimizerCurveChart } from "../../components/charts/OptimizerCurveChart";
+import { HifiFront } from "../../components/drawings/HifiFront";
+import { formatDollars } from "../../lib/format";
+import { Delta } from "../../components/optimizer/Delta";
+import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
+import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
 
 /** A result card, laid out like the PA optimizer's: what it is, a front view and its bass against yours, the four numbers with deltas. */
 export function HifiResultCard({

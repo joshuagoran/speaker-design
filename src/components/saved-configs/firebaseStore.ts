@@ -25,8 +25,8 @@ import {
   type QueryConstraint,
   type OrderByDirection,
 } from "firebase/firestore";
-import { FIREBASE_CONFIG } from "./firebaseConfig.ts";
-import type { ConfigDb, ConfigQuery, ConfigSnapshot } from "../../types.ts";
+import { FIREBASE_CONFIG } from "./firebaseConfig";
+import type { ConfigDb, ConfigQuery, ConfigSnapshot } from "../../types";
 
 /** What the config store gets: sign-in and the signed-in user's own database handle. */
 export interface FirebaseStore {

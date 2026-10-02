@@ -1,6 +1,6 @@
 // Calculation functions for the planner. Pure TS, no React, window or THREE.
 import type {
-  BassTS,
+  BoxModelTS,
   CompressionHf,
   CornerJoint,
   CutPart,
@@ -16,7 +16,6 @@ import type {
   MidDriver,
   MidSystem,
   MidSystemConfig,
-  ModelTS,
   PackedSheet,
   PackedSheets,
   PaMaxPoint,
@@ -31,11 +30,12 @@ import type {
   SubLimits,
   SubSystem,
   SubSystemConfig,
+  ThieleSmall,
   VentedBoxModel,
   VentedPoint,
   VentGeometry,
   VentSpec,
-} from "../../types.ts";
+} from "../../types";
 
 // ---------------------------------------------------------------
 // Vented-box model. Same lumped-element circuit used to check this
@@ -113,7 +113,7 @@ export interface BoxModelOptions {
   fmax?: number;
 }
 export function boxModel(
-  ts: ModelTS,
+  ts: BoxModelTS,
   VbL: number,
   SpIn2: number,
   LpIn: number,
@@ -127,20 +127,20 @@ export function boxModel(
   const rho = 1.18,
     c = 343;
   const Sd = ts.Sd / 10000; // cm^2 -> m^2
-  const Mms = ts.Mms! / 1000; // g -> kg
+  const Mms = ts.Mms / 1000; // g -> kg
   const Vb = VbL / 1000;
   const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
   const Mas = Mms / (Sd * Sd);
   const Cas = Cms * Sd * Sd;
   const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
-  const Rae = (ts.Bl * ts.Bl) / ts.Re! / (Sd * Sd);
+  const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
   const Cab = Vb / (rho * c * c);
   const Sp = SpIn2 * 0.00064516;
   const { Leff, Fb } = ventTuning(VbL, SpIn2, LpIn, nPorts, ecIn);
   const Map = (rho * Leff) / Sp;
   const Ral = QL / (2 * Math.PI * Fb * Cab);
   const Rap = Number.isFinite(Qp) ? (2 * Math.PI * Fb * Map) / Qp : 0; // port friction and turbulence
-  const Pg = (volts * ts.Bl) / (ts.Re! * Sd);
+  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
 
   const out: VentedPoint[] = [];
   for (let i = 0; i < N; i++) {
@@ -184,7 +184,7 @@ export function boxModel(
     });
   }
   // midband reference: the mass-controlled asymptote (see closedBox)
-  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re! * Mms) / 2e-5);
+  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
   const f3 = (out.find((o) => o.spl >= ref - 3) || out[out.length - 1]).f; // system, with the highpass
   const f3Box = (out.find((o) => o.raw >= ref - 3) || out[out.length - 1]).f; // box alone
   const at = (t: number) => out.reduce((b, o) => (Math.abs(o.f - t) < Math.abs(b.f - t) ? o : b));
@@ -213,7 +213,7 @@ export function boxModel(
 // octave reads a little high. Excursion is the sine peak, as in boxModel.
 // ---------------------------------------------------------------
 export function closedBox(
-  ts: ModelTS,
+  ts: BoxModelTS,
   VbL: number,
   hp: number | null,
   lp: number | null,
@@ -225,18 +225,18 @@ export function closedBox(
   const rho = 1.18,
     c = 343;
   const Sd = ts.Sd / 10000,
-    Mms = ts.Mms! / 1000,
+    Mms = ts.Mms / 1000,
     Vb = VbL / 1000;
   const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
   const Mas = Mms / (Sd * Sd),
     Cas = Cms * Sd * Sd;
   const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
-  const Rae = (ts.Bl * ts.Bl) / ts.Re! / (Sd * Sd);
+  const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
   const Cab = Vb / (rho * c * c);
-  const Pg = (volts * ts.Bl) / (ts.Re! * Sd);
+  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
   const Ctot = (Cas * Cab) / (Cas + Cab);
   const Fc = 1 / (2 * Math.PI * Math.sqrt(Mas * Ctot));
-  const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re!) / (ts.Bl * ts.Bl);
+  const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl);
   const Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
   const Qtc = Qts * (Fc / ts.Fs);
   const out: SealedPoint[] = [];
@@ -266,7 +266,7 @@ export function closedBox(
   }
   // Midband reference: the mass-controlled asymptote p = rho*V*Bl*Sd/(2*pi*Re*Mms) (half space, 1 m).
   // Averaging a band (the old 200-500 Hz) reads low when a well-damped box is still rising there.
-  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re! * Mms) / 2e-5);
+  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
   const f3 = (out.find((o) => o.raw >= ref - 3) || out[out.length - 1]).f;
   return { curve: out, Fc, Qtc, f3, ref, peakX: Math.max(...out.map((o) => o.xmm)) };
 }
@@ -675,7 +675,7 @@ export const ampVoltage = (W: number) => Math.sqrt(W * 8);
 // Broadband ("music") limit: one drive level for the whole band.
 export function subwooferLimits(
   mdl: VentedBoxModel,
-  ts: Pick<BassTS, "aes">,
+  ts: Pick<ThieleSmall, "aes">,
   AMP_V: number,
   portMax: number,
 ): SubLimits {
@@ -705,7 +705,7 @@ export function subwooferLimits(
 // Per-frequency sine limit: each frequency meets its own port and excursion limits.
 export function maxOutputCurve(
   curve: { f: number; spl: number; xmm: number; vel?: number }[],
-  ts: Pick<BassTS, "aes" | "Xmax">,
+  ts: Pick<ThieleSmall, "aes" | "Xmax">,
   AMP_V: number,
   portMax: number,
 ): PaMaxPoint[] {
@@ -849,7 +849,7 @@ export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig):
 // scales excursion and port speed with the output).
 export function subThroughLowpass(
   mdl: VentedBoxModel,
-  ts: Pick<BassTS, "aes" | "Xmax">,
+  ts: Pick<ThieleSmall, "aes" | "Xmax">,
   AMP_V: number,
   portMax: number,
   xoLo: number,

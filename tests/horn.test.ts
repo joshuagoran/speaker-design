@@ -5,9 +5,9 @@ import {
   pistonBeamWidthDeg,
   keeleFrequency,
   hornBeamWidthDeg,
-} from "../src/lib/pa/calc.ts";
-import { CD_OPTIONS } from "../src/lib/data.ts";
-import { close, near, db } from "./helpers.ts";
+} from "../src/lib/pa/calc";
+import { CD_OPTIONS } from "../src/lib/data";
+import { close, near, db } from "./helpers";
 
 const n314t = CD_OPTIONS.find((o) => o.id === "n314t")!.hf!;
 test("horn power: amp into Z, capped at 2 x AES, derated below the rated crossover", (t) => {

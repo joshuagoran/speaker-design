@@ -1,11 +1,11 @@
-import { PAL } from "../../../styles/palette.ts";
-import { WarningChips } from "../../../components/chips/WarningChips.jsx";
-import { StatTileGrid } from "../../../components/stats/StatTileGrid.jsx";
-import { ToggleButton } from "../../../components/ui/ToggleButton.jsx";
-import { FoldHeading } from "../../../components/ui/FoldHeading.jsx";
-import { ResponseChart } from "../../../components/charts/ResponseChart.jsx";
-import { DispersionMap } from "../../../components/charts/DispersionMap.jsx";
-import { hornChips } from "../../../lib/pa/chips.ts";
+import { PAL } from "../../../styles/palette";
+import { WarningChips } from "../../../components/chips/WarningChips";
+import { StatTileGrid } from "../../../components/stats/StatTileGrid";
+import { ToggleButton } from "../../../components/ui/ToggleButton";
+import { FoldHeading } from "../../../components/ui/FoldHeading";
+import { ResponseChart } from "../../../components/charts/ResponseChart";
+import { DispersionMap } from "../../../components/charts/DispersionMap";
+import { hornChips } from "../../../lib/pa/chips";
 
 /** Horn results: headline stats, beamwidth chart, dispersion map and warning chips. */
 export function HornSection({ planner }) {

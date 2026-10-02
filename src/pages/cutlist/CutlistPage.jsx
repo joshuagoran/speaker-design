@@ -1,14 +1,14 @@
-import { ToggleButton } from "../../components/ui/ToggleButton.jsx";
-import { Tooltip } from "../../components/ui/Tooltip.jsx";
-import { SectionHeading } from "../../components/ui/SectionHeading.jsx";
-import { SheetDrawing } from "../../components/drawings/SheetDrawing.jsx";
+import { ToggleButton } from "../../components/ui/ToggleButton";
+import { Tooltip } from "../../components/ui/Tooltip";
+import { SectionHeading } from "../../components/ui/SectionHeading";
+import { SheetDrawing } from "../../components/drawings/SheetDrawing";
 import {
   PLYWOOD_SHEETS,
   formatInches,
   formatThickness,
   cutParts,
   packSheets,
-} from "../../lib/pa/calc.ts";
+} from "../../lib/pa/calc";
 
 /** Cutlist page: plywood parts for each box and how they pack onto sheets. */
 export function CutlistPage({ planner }) {
