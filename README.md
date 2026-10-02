@@ -22,7 +22,8 @@ src/hooks/  src/constants/      shared hooks, chart scales, lock keys, units
 src/styles/palette.ts           the colours (CSS variables and Tailwind names come from here)
 src/styles/app.css              page styles + Tailwind layers; font
 src/lib/data.ts                 drivers, horns, cabinets
-src/lib/tables.ts               defaultOf / byId / byIdOrThrow for those tables
+src/lib/tables.ts               byId / byIdOrThrow for those tables
+src/lib/defaults.ts             DEFAULT_PA / DEFAULT_HIFI / DEFAULT_FILL: the first-load designs, as whole objects
 src/types.ts                    types shared across modules (drivers, horns, cabinets, design config, Setter)
 src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion (pure TypeScript, tested)
 src/lib/hifi/                   hifi model and its optimizer
