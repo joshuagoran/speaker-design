@@ -1,5 +1,11 @@
+import type { PaPlanner } from "../hooks/usePaPlanner";
+
+interface Props {
+  planner: Pick<PaPlanner, "subModel" | "subLimits" | "subMaxCurveNearest" | "subWeightLoadedLb">;
+}
+
 /** Sticky strip of the four headline sub numbers, shown on phones. */
-export function MobileSummaryStrip({ planner }) {
+export function MobileSummaryStrip({ planner }: Props) {
   const { subModel, subLimits, subMaxCurveNearest, subWeightLoadedLb } = planner;
   return (
     <>

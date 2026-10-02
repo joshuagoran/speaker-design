@@ -1,7 +1,27 @@
 import { FoldHeading } from "../../../components/ui/FoldHeading";
+import type { PaPlanner } from "../hooks/usePaPlanner";
+
+interface Props {
+  planner: Pick<
+    PaPlanner,
+    | "expandedSections"
+    | "toggleSection"
+    | "sectionClass"
+    | "subDriver"
+    | "midDriver"
+    | "hornOption"
+    | "compressionDriver"
+    | "plinthHeightIn"
+    | "effectiveMidBoxDims"
+    | "subBox"
+    | "midCabinetLb"
+    | "subWeightLoadedLb"
+    | "stackHeightIn"
+  >;
+}
 
 /** Cost, weight and height totals for the current selection, per stack and per pair. */
-export function TotalsSection({ planner }) {
+export function TotalsSection({ planner }: Props) {
   const {
     expandedSections,
     toggleSection,
@@ -31,13 +51,13 @@ export function TotalsSection({ planner }) {
           {(() => {
             const subBoxLb = subWeightLoadedLb - (subDriver.lb || 0); // same estimate as the stats row
             const midBoxLb = midCabinetLb; // same estimate as the mid-bass stats row
-            const rows = [
+            const rows: [string, number | null, number, number, number][] = [
               ["Sub column", subDriver.price, subDriver.lb, subBoxLb, subBox.h],
               ["Mid-bass box", midDriver.price, midDriver.lb, midBoxLb, effectiveMidBoxDims.h],
               ["Compression driver", compressionDriver.price, compressionDriver.lb || 0, 0, 0],
               ["Horn", hornOption.price, (hornOption.lb || 0) + 1, 0, hornOption.size.h + 1],
             ];
-            const sum = (i) => rows.reduce((a, r) => a + (r[i] || 0), 0);
+            const sum = (i: 1 | 2 | 3) => rows.reduce((a, r) => a + (r[i] || 0), 0);
             const stackLb = sum(2) + sum(3) + (plinthHeightIn ? 6 : 0);
             return (
               <div className="overflow-x-auto max-w-3xl">

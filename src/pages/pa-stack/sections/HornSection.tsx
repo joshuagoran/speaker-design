@@ -6,9 +6,39 @@ import { FoldHeading } from "../../../components/ui/FoldHeading";
 import { ResponseChart } from "../../../components/charts/ResponseChart";
 import { DispersionMap } from "../../../components/charts/DispersionMap";
 import { hornChips } from "../../../lib/pa/chips";
+import type { PaPlanner } from "../hooks/usePaPlanner";
+
+interface Props {
+  planner: Pick<
+    PaPlanner,
+    | "dispersionPlane"
+    | "setDispersionPlane"
+    | "expandedSections"
+    | "toggleSection"
+    | "sectionClass"
+    | "midSize"
+    | "hornOption"
+    | "compressionDriver"
+    | "hornAmpWatts"
+    | "hornBandTiltDb"
+    | "midHornCrossoverHz"
+    | "midMaxCurve"
+    | "midMaxCurveNearest"
+    | "compressionDriverSpec"
+    | "hornSpec"
+    | "hornModel"
+    | "hornSplAt"
+    | "midBeamWidthDeg"
+    | "beamCurves"
+    | "dispersionMapDistanceM"
+    | "paDispersion"
+    | "midHornGapIn"
+    | "midHornNullAngleDeg"
+  >;
+}
 
 /** Horn results: headline stats, beamwidth chart, dispersion map and warning chips. */
-export function HornSection({ planner }) {
+export function HornSection({ planner }: Props) {
   const {
     dispersionPlane,
     setDispersionPlane,
@@ -46,10 +76,11 @@ export function HornSection({ planner }) {
         />
         <div className={sectionClass("horn")}>
           {hornModel ? (
+            // `compressionDriverSpec!` below: hornModel is null when the driver has no spec
             <>
               <StatTileGrid
                 tiles={[
-                  ["Sensitivity", compressionDriverSpec.sens.toFixed(1), "dB"],
+                  ["Sensitivity", compressionDriverSpec!.sens.toFixed(1), "dB"],
                   ["Power used", Math.round(hornModel.P), "W"],
                   ["Max SPL", hornModel.flat.toFixed(1), "dB"],
                   [
@@ -106,10 +137,12 @@ export function HornSection({ planner }) {
               {paDispersion && (
                 <div className="mb-4">
                   <div className="flex gap-1 mb-2">
-                    {[
-                      ["v", "Vertical"],
-                      ["h", "Horizontal"],
-                    ].map(([v, l]) => (
+                    {(
+                      [
+                        ["v", "Vertical"],
+                        ["h", "Horizontal"],
+                      ] as const
+                    ).map(([v, l]) => (
                       <ToggleButton
                         key={v}
                         size="xs"
@@ -138,7 +171,7 @@ export function HornSection({ planner }) {
               )}
               <WarningChips
                 chips={hornChips({
-                  hf: compressionDriverSpec,
+                  hf: compressionDriverSpec!,
                   hz: hornSpec,
                   horn: hornOption,
                   xoHi: midHornCrossoverHz,

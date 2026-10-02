@@ -1,7 +1,32 @@
 import { SectionHeading } from "../../../components/ui/SectionHeading";
+import type { PaPlanner } from "../hooks/usePaPlanner";
+
+interface Props {
+  planner: Pick<
+    PaPlanner,
+    | "showDetails"
+    | "setShowDetails"
+    | "subDriver"
+    | "midDriver"
+    | "hornOption"
+    | "compressionDriver"
+    | "subMidCrossoverHz"
+    | "midHornCrossoverHz"
+    | "wallThicknessIn"
+    | "baffleInsetIn"
+    | "effectiveMidBoxDims"
+    | "subBox"
+    | "port"
+    | "subGrossLiters"
+    | "subNetLiters"
+    | "midBoxLiters"
+    | "stackHeightIn"
+    | "hornCenterHeightIn"
+  >;
+}
 
 /** Toggle for, and text of, the written details of the sub, mid-bass cube and horn. */
-export function DetailsSection({ planner }) {
+export function DetailsSection({ planner }: Props) {
   const {
     showDetails,
     setShowDetails,

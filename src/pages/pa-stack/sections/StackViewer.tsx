@@ -1,7 +1,29 @@
 import { StackView3D } from "../../../components/stack-view/StackView3D";
+import type { PaPlanner } from "../hooks/usePaPlanner";
+
+interface Props {
+  planner: Pick<
+    PaPlanner,
+    | "isFull3d"
+    | "setIsFull3d"
+    | "portStyle"
+    | "hornOption"
+    | "plinthHeightIn"
+    | "cutaway"
+    | "layout"
+    | "wallThicknessIn"
+    | "baffleInsetIn"
+    | "baffleColor"
+    | "cabinetFinish"
+    | "spacerHeightIn"
+    | "midWithBox"
+    | "subWithBox"
+    | "portGeom"
+  >;
+}
 
 /** The 3D view with its full-screen toggle. */
-export function StackViewer({ planner }) {
+export function StackViewer({ planner }: Props) {
   const {
     isFull3d,
     setIsFull3d,

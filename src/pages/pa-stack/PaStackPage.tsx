@@ -8,9 +8,14 @@ import { SettingsPanel } from "./sections/SettingsPanel";
 import { TotalsSection } from "./sections/TotalsSection";
 import { DetailsSection } from "./sections/DetailsSection";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
+import type { PaPlanner } from "./hooks/usePaPlanner";
+
+interface Props {
+  planner: PaPlanner;
+}
 
 /** PA stack page: saved configurations, optimizer, 3D view, the Sub / Mid-bass / Horn results and the settings panel. */
-export function PaStackPage({ planner }) {
+export function PaStackPage({ planner }: Props) {
   const { isSettingsSheetOpen, store, fbUser, importSeed, snapshot, restore } = planner;
   return (
     <>
