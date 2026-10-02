@@ -278,11 +278,33 @@ const REQUIRED_NUMBERS = [
 const hasDims = (d: Partial<Dims3> | undefined) =>
   d !== undefined && Number.isFinite(d.w) && Number.isFinite(d.h) && Number.isFinite(d.d);
 
+// The vent fields a layout reads: the slot height for the slots, the throat for the side ducts, the tubes' count and
+// diameter for the round ones, and the length for all of them. A known layout with all of its fields is a vent that can be modelled.
+const VENT_FIELDS: Record<PortStyle, readonly (keyof VentSpec)[]> = {
+  slots: ["slotH", "len"],
+  folded: ["slotH", "len"],
+  vslots: ["throat", "len"],
+  vslot1: ["throat", "len"],
+  round1: ["nt", "dia", "len"],
+  round2: ["nt", "dia", "len"],
+  round4: ["nt", "dia", "len"],
+};
+const hasVent = (style: PortStyle | undefined, vent: Partial<VentSpec> | undefined) =>
+  style !== undefined &&
+  Object.hasOwn(VENT_FIELDS, style) &&
+  vent !== undefined &&
+  VENT_FIELDS[style].every((k) => Number.isFinite(vent[k]));
+
 // ---- the planner's evaluation of a whole config (same functions, same order as the page) ----
-// Null for a design it can't evaluate: an unknown driver, a config missing a number it needs, or a box with no model.
+// Null for a design it can't evaluate: an unknown driver, a config missing a number, a box size or a vent it needs, or a box with no model.
 export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
   // boundary: the type says every field is there, but a saved or handed-over config may not have them all
-  if (!REQUIRED_NUMBERS.every((k) => Number.isFinite(c[k])) || !hasDims(c.cDim) || !hasDims(c.mDim))
+  if (
+    !REQUIRED_NUMBERS.every((k) => Number.isFinite(c[k])) ||
+    !hasDims(c.cDim) ||
+    !hasDims(c.mDim) ||
+    !hasVent(c.portStyle, c.cVent)
+  )
     return null;
   const sub = byId(SUB_OPTIONS, c.sub),
     mid = byId(MID_OPTIONS, c.mid),

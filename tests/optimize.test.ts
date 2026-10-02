@@ -440,6 +440,39 @@ test("evaluate() rejects a config missing a number it needs, and every seed comp
   assert.equal(evaluateDesign({ ...full, [`xoLo`]: NaN }), null, "NaN is not a number");
   // boundary: an older save with no mid box size at all
   assert.equal(evaluateDesign({ ...full, mDim: undefined } as unknown as PaDesignConfig), null);
+  // boundary: older saves with no vent, or with a vent layout the planner doesn't know
+  assert.equal(
+    evaluateDesign({ ...full, cVent: undefined } as unknown as PaDesignConfig),
+    null,
+    "no vent",
+  );
+  assert.equal(
+    evaluateDesign({ ...full, portStyle: undefined } as unknown as PaDesignConfig),
+    null,
+    "no port style",
+  );
+  assert.equal(
+    evaluateDesign({ ...full, portStyle: "nope" } as unknown as PaDesignConfig),
+    null,
+    "unknown port style",
+  );
+  assert.equal(
+    evaluateDesign({ ...full, cVent: { ...full.cVent, len: NaN } }),
+    null,
+    "NaN vent length",
+  );
+  for (const style of [
+    "slots",
+    "folded",
+    "vslots",
+    "vslot1",
+    "round1",
+    "round2",
+    "round4",
+  ] as const) {
+    const cVent = { slotH: 3, nt: 2, dia: 4, throat: 2, len: 14 };
+    assert.ok(evaluateDesign({ ...full, portStyle: style, cVent }), `${style} with a full vent`);
+  }
   for (const s of seeds) {
     const c = pick(s.name);
     for (const key of ["xoLo", "xoHi", "mAmpW", "hfAmpW"] as const)
