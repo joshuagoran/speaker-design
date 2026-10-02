@@ -22,6 +22,7 @@ import type {
   MidSystemModelled,
   PaMaxPoint,
   PaPortGeometry,
+  PaStackGeometry,
   SubSystemModelled,
   VentGeometry,
 } from "../../../types";
@@ -95,6 +96,8 @@ export interface PaDerivedDesign {
   hornCenterHeightIn: number;
   midCenterHeightIn: number;
   dispersionMapDistanceM: number;
+  /** the stack the dispersion and coverage maps sum; null when the mid has no T/S or the horn no coverage */
+  stackGeometry: PaStackGeometry | null;
   paDispersion: HifiDispersionMap | null;
   midHornGapIn: number;
   midHornNullAngleDeg: number | null;
@@ -260,27 +263,26 @@ export function derivePaDesign({
     ? stackBaseHeightIn + 15.5 / 2
     : stackBaseHeightIn + effectiveMidBoxDims.h / 2;
   const dispersionMapDistanceM = 10;
-  const paDispersion =
+  const stackGeometry: PaStackGeometry | null =
     midDriver.ts && hornSpec.covH && hornOption.size
-      ? paDispersionMap(
-          {
-            sub: subDriver.ts ? { zIn: plinthHeightIn + subBox.h / 2, Sd: subDriver.ts.Sd } : null,
-            mid: { zIn: midCenterHeightIn, Sd: midDriver.ts.Sd },
-            horn: {
-              zIn: hornCenterHeightIn,
-              covH: hornSpec.covH,
-              covV: hornSpec.covV || hornSpec.covH,
-              wIn: hornOption.size.w,
-              hIn: hornOption.size.h,
-            },
-            xoLo: subMidCrossoverHz,
-            xoHi: midHornCrossoverHz,
-            order: 4,
+      ? {
+          sub: subDriver.ts ? { zIn: plinthHeightIn + subBox.h / 2, Sd: subDriver.ts.Sd } : null,
+          mid: { zIn: midCenterHeightIn, Sd: midDriver.ts.Sd },
+          horn: {
+            zIn: hornCenterHeightIn,
+            covH: hornSpec.covH,
+            covV: hornSpec.covV || hornSpec.covH,
+            wIn: hornOption.size.w,
+            hIn: hornOption.size.h,
           },
-          dispersionPlane,
-          dispersionMapDistanceM,
-        )
+          xoLo: subMidCrossoverHz,
+          xoHi: midHornCrossoverHz,
+          order: 4,
+        }
       : null;
+  const paDispersion = stackGeometry
+    ? paDispersionMap(stackGeometry, dispersionPlane, dispersionMapDistanceM)
+    : null;
   const midHornGapIn = hornCenterHeightIn - midCenterHeightIn,
     midHornNullAngleDeg = firstNullAngleDeg(midHornGapIn, midHornCrossoverHz);
   return {
@@ -315,6 +317,7 @@ export function derivePaDesign({
     hornCenterHeightIn,
     midCenterHeightIn,
     dispersionMapDistanceM,
+    stackGeometry,
     paDispersion,
     midHornGapIn,
     midHornNullAngleDeg,

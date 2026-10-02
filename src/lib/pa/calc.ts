@@ -723,8 +723,20 @@ export function maxOutputCurve(
 }
 export const nearestPoint = <P extends { f: number }>(curve: P[], f: number): P =>
   curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
-// The sub at its music limit (one drive level for the whole band) through the LR24 lowpass at xoLo:
-// what the mid has to match.
+// The sub at its music limit (one drive level for the whole band) through the LR24 lowpass at xoLo.
+export function subMusicThroughLowpass(
+  mdl: VentedBoxModel,
+  lim: Pick<SubLimits, "V">,
+  AMP_V: number,
+  xoLo: number,
+): FrequencyPoint[] {
+  return mdl.curve.map((o) => ({
+    f: o.f,
+    spl:
+      o.spl + 20 * Math.log10(linkwitzRiley24Lowpass(o.f, xoLo)) + 20 * Math.log10(lim.V / AMP_V),
+  }));
+}
+// ... and its level at the crossover: what the mid has to match (one point of that curve; the optimizer calls it often).
 export function subMusicOutputAt(
   mdl: VentedBoxModel,
   lim: Pick<SubLimits, "V">,

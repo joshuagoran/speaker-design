@@ -15,6 +15,7 @@ substitute for an impedance sweep on the prototype.
 src/main.tsx                    entry: mounts <App/>; imports the stylesheet
 src/App.tsx                     hash routing, header, and the planner state shared by the PA pages
 src/pages/pa-stack/             PA stack page: PaStackPage, sections/, hooks/ (state: sub, mid, horn, crossovers, ...)
+src/pages/coverage/             Coverage page: the stacks on a floor plan (useCoverageLayout, useCoverageMap)
 src/pages/{hifi,fills,cutlist,notes}/   the other pages
 src/components/                 ui/ charts/ drawings/ lock/ optimizer/ stats/ chips/ saved-configs/ stack-view/
 src/components/saved-configs/firebaseStore.ts   saving on GitHub Pages (bundled only into that build)
@@ -25,7 +26,7 @@ src/lib/data.ts                 drivers, horns, cabinets
 src/lib/tables.ts               byId / byIdOrThrow for those tables
 src/lib/defaults.ts             DEFAULT_PA / DEFAULT_HIFI / DEFAULT_FILL: the first-load designs, as whole objects
 src/types.ts                    types shared across modules (drivers, horns, cabinets, design config, Setter)
-src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion (pure TypeScript, tested)
+src/lib/pa/                     calc, chips, optimize (+ worker, runner), dispersion, coverage (+ worker, runner) (pure TypeScript, tested)
 src/lib/hifi/                   hifi model and its optimizer
 index.html                      Vite entry
 tailwind.config.js              Tailwind, compiled at build time
@@ -148,6 +149,7 @@ configurations and can be edited or deleted like any other.
 
 - `src/lib/data.ts` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
 - `src/lib/pa/optimize.ts` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`src/lib/pa/optimize.worker.ts`, inlined by the build), with a main-thread fallback. See `docs/optimizer-plan.md`.
+- `src/lib/pa/coverage.ts` — the Coverage page's floor map: both stacks (the dispersion model's sub, mid and horn, driven at the planner's curves and balanced with its music tilts) placed and aimed on a floor plan, summed with the floor and first-order wall reflections. Coherent below 500 Hz (the stacks interfere), power-summed above it in a band average. Runs in a Web Worker (`coverage.worker.ts`), coarse while dragging, then fine.
 - `src/lib/pa/chips.ts` — the warning chips for each section (sub, mid, horn, fills), pure functions tested at each threshold.
 - `src/lib/pa/calc.ts` — every calculation, pure TypeScript, imported by the page and the tests (`vp test`):
   - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r); letterbox and side ducts pass `ecIn` from `slotEndCorr` / `sideDuctEndCorr` (rectangular mouth; floor mirrored at both ends of a letterbox, the side wall at the inner end of a side duct). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.

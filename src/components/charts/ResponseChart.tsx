@@ -20,6 +20,8 @@ interface Mark {
 interface Props {
   series: readonly Series[];
   marks?: readonly Mark[];
+  /** a shaded frequency range (the band a map averages), Hz */
+  span?: { lo: number; hi: number };
   fmax?: number;
   fmin?: number;
   /** fixed y axis, dB (or degrees for a beamwidth chart): defaults to the PA stack's 80-135 dB; the Hi-fi charts pass HIFI_TOP / HIFI_BOT */
@@ -36,6 +38,7 @@ interface Props {
 export function ResponseChart({
   series,
   marks = [],
+  span,
   fmax = 200,
   fmin = 15,
   top = 135,
@@ -154,6 +157,15 @@ export function ResponseChart({
         onPointerDown={move}
         onPointerLeave={() => setHf(null)}
       >
+        {span && (
+          <rect
+            x={px(Math.max(fmin, span.lo))}
+            y={y0}
+            width={Math.max(0, px(Math.min(fmax, span.hi)) - px(Math.max(fmin, span.lo)))}
+            height={y1 - y0}
+            fill={PAL.alpha(PAL.cyan, 0.08)}
+          />
+        )}
         {grid}
         {marks
           .filter((m) => m.f > fmin && m.f < fmax)

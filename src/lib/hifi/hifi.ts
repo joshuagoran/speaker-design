@@ -142,10 +142,35 @@ function j1(x: number) {
   const v = Math.sqrt(0.636619772 / ax) * (Math.cos(xx) * p - z * Math.sin(xx) * q);
   return x < 0 ? -v : v;
 }
+/** A rigid piston's pattern, 2·J1(x)/x, at x = ka·sin θ. */
+export const pistonPattern = (x: number) => (x < 1e-6 ? 1 : Math.abs((2 * j1(x)) / x));
 // rigid piston of radius a (m) in a baffle, off-axis by theta (rad): 2·J1(x)/x, x = ka·sin θ
 export function pistonDirectivity(f: number, a: number, theta: number) {
-  const x = ((2 * Math.PI * f) / C) * a * Math.sin(Math.min(Math.abs(theta), Math.PI / 2));
-  return x < 1e-6 ? 1 : Math.abs((2 * j1(x)) / x);
+  return pistonPattern(
+    ((2 * Math.PI * f) / C) * a * Math.sin(Math.min(Math.abs(theta), Math.PI / 2)),
+  );
+}
+/**
+ * A waveguide's half coverage angles at `f`, radians, horizontal and vertical: its rated coverage above the mouth's
+ * control frequency, wider below it.
+ */
+export function waveguideHalfAngles(
+  f: number,
+  covH: number,
+  covV: number,
+  mouthWIn: number,
+  mouthHIn: number,
+): [h: number, v: number] {
+  const fh = keeleFrequency(covH, mouthWIn),
+    fv = covV && mouthHIn ? keeleFrequency(covV, mouthHIn) : fh;
+  const bh = Math.min(180, f >= fh ? covH : (covH * fh) / f),
+    bv = Math.min(180, f >= fv ? covV || covH : ((covV || covH) * fv) / f);
+  return [((bh / 2) * Math.PI) / 180, ((bv / 2) * Math.PI) / 180];
+}
+/** A waveguide's level (pressure) at `th`, `tv` radians off axis, given its half angles: −6 dB at the edges, −40 dB at most. */
+export function waveguideGain(th: number, tv: number, [h, v]: [h: number, v: number]) {
+  const db = -6 * ((th / h) ** 2 + (tv / v) ** 2);
+  return Math.pow(10, Math.max(-40, db) / 20);
 }
 // waveguide: constant coverage (−6 dB at the edges) above the mouth's control frequency, wider below it
 export function waveguideDirectivity(
@@ -157,15 +182,7 @@ export function waveguideDirectivity(
   th: number,
   tv: number,
 ) {
-  const fh = keeleFrequency(covH, mouthWIn),
-    fv = covV && mouthHIn ? keeleFrequency(covV, mouthHIn) : fh;
-  const bh = Math.min(180, f >= fh ? covH : (covH * fh) / f),
-    bv = Math.min(180, f >= fv ? covV || covH : ((covV || covH) * fv) / f);
-  const db =
-    -6 *
-    (Math.pow(th / (((bh / 2) * Math.PI) / 180), 2) +
-      Math.pow(tv / (((bv / 2) * Math.PI) / 180), 2));
-  return Math.pow(10, Math.max(-40, db) / 20);
+  return waveguideGain(th, tv, waveguideHalfAngles(f, covH, covV, mouthWIn, mouthHIn));
 }
 
 /** Whether a tweeter has to be mounted on a waveguide or horn (a compression driver, or a dome made for one) rather than sit on the baffle. */
