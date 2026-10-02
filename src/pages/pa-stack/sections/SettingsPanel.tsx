@@ -14,6 +14,13 @@ import {
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { keysOf } from "../../../lib/records";
+import type { CrossoverOrder, Setter } from "../../../types";
+
+/** The crossover slopes the PA offers, as the Hi-fi tab names them. */
+const CROSSOVER_SLOPES = [
+  [4, "LR24"],
+  [8, "LR48"],
+] as const;
 
 interface Props {
   planner: Pick<
@@ -61,6 +68,10 @@ interface Props {
     | "setSubMidCrossoverHz"
     | "midHornCrossoverHz"
     | "setMidHornCrossoverHz"
+    | "subMidCrossoverOrder"
+    | "setSubMidCrossoverOrder"
+    | "midHornCrossoverOrder"
+    | "setMidHornCrossoverOrder"
     | "cutaway"
     | "setCutaway"
     | "layout"
@@ -130,6 +141,10 @@ export function SettingsPanel({ planner }: Props) {
     setSubMidCrossoverHz,
     midHornCrossoverHz,
     setMidHornCrossoverHz,
+    subMidCrossoverOrder,
+    setSubMidCrossoverOrder,
+    midHornCrossoverOrder,
+    setMidHornCrossoverOrder,
     cutaway,
     setCutaway,
     layout,
@@ -151,6 +166,16 @@ export function SettingsPanel({ planner }: Props) {
     renderLockButton,
     renderDimensionLock,
   } = planner;
+  /** LR24 / LR48 buttons under a crossover's slider. */
+  const renderSlopeToggle = (order: CrossoverOrder, setOrder: Setter<CrossoverOrder>) => (
+    <div className="flex gap-1 -mt-1 mb-3">
+      {CROSSOVER_SLOPES.map(([v, l]) => (
+        <ToggleButton key={v} onClick={() => setOrder(v)} on={order === v} size="xs">
+          {l}
+        </ToggleButton>
+      ))}
+    </div>
+  );
   return (
     <>
       <aside
@@ -565,6 +590,7 @@ export function SettingsPanel({ planner }: Props) {
                   onChange={setSubMidCrossoverHz}
                   extra={renderLockButton("xoLo", "the sub-to-mid crossover")}
                 />
+                {renderSlopeToggle(subMidCrossoverOrder, setSubMidCrossoverOrder)}
                 <Slider
                   label="Crossover, mid to horn"
                   value={midHornCrossoverHz}
@@ -575,6 +601,7 @@ export function SettingsPanel({ planner }: Props) {
                   onChange={setMidHornCrossoverHz}
                   extra={renderLockButton("xoHi", "the mid-to-horn crossover")}
                 />
+                {renderSlopeToggle(midHornCrossoverOrder, setMidHornCrossoverOrder)}
                 <Slider
                   label="Mid amp power per channel @ 8 Ω"
                   value={midAmpWatts}

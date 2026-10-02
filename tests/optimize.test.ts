@@ -254,7 +254,14 @@ test("a near-miss option, once applied, finds designs", (t) => {
 });
 
 test("Lighter with everything locked but the plywood offers the same design on 1/2 in ply", (t) => {
-  const defaults = { xoLo: 120, xoHi: 900, mAmpW: 400, hfAmpW: 100 };
+  const defaults = {
+    xoLo: 120,
+    xoHi: 900,
+    xoLoOrder: 4,
+    xoHiOrder: 4,
+    mAmpW: 400,
+    hfAmpW: 100,
+  } as const;
   let tried = 0;
   for (const name of ["lil block stack LE", "blocky", "light block", "lil tower"]) {
     const c0 = { ...defaults, ...pick(name) };
@@ -367,7 +374,16 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
     subDim: { w: "exact", h: "exact", d: "exact" },
     midDim: { w: "exact", h: "exact", d: "exact" },
   };
-  const c = { xoLo: 120, xoHi: 900, mAmpW: 400, hfAmpW: 100, ...pick("light block"), ampW: 300 }; // a small amp: the sub is amp-limited
+  const c = {
+    xoLo: 120,
+    xoHi: 900,
+    xoLoOrder: 4 as const,
+    xoHiOrder: 4 as const,
+    mAmpW: 400,
+    hfAmpW: 100,
+    ...pick("light block"),
+    ampW: 300,
+  }; // a small amp: the sub is amp-limited
   assert.equal(evaluateDesign(c)!.who, "amplifier power");
   const out = optimizePaStack({
     ...base,

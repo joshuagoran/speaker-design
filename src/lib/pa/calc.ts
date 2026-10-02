@@ -3,6 +3,7 @@ import type {
   BoxModelTS,
   CompressionHf,
   CornerJoint,
+  CrossoverOrder,
   CutPart,
   CutPartsConfig,
   Dims3,
@@ -80,8 +81,13 @@ export const highpassGain = (f: number, fc: number, type: HighpassType = "BW24")
     ? Math.pow(x, n) / Math.sqrt(1 + Math.pow(x, 2 * n))
     : Math.pow(x, n) / (1 + Math.pow(x, n));
 };
-export const linkwitzRiley24Lowpass = (f: number, fc: number) => 1 / (1 + Math.pow(f / fc, 4)); // Linkwitz-Riley 24 dB/oct lowpass
-export const linkwitzRiley24Highpass = (f: number, fc: number) => highpassGain(f, fc, "LR24");
+// Linkwitz-Riley crossover magnitudes of either order (4 = LR24, 8 = LR48), both -6 dB at fc
+export const linkwitzRileyLowpass = (f: number, fc: number, order: CrossoverOrder = 4) =>
+  1 / (1 + Math.pow(f / fc, order));
+export const linkwitzRileyHighpass = (f: number, fc: number, order: CrossoverOrder = 4) =>
+  highpassGain(f, fc, order === 8 ? "LR48" : "LR24");
+export const linkwitzRiley24Lowpass = (f: number, fc: number) => linkwitzRileyLowpass(f, fc, 4);
+export const linkwitzRiley24Highpass = (f: number, fc: number) => linkwitzRileyHighpass(f, fc, 4);
 
 // Vent tuning: effective length (m) and Fb for net volume VbL, total vent area SpIn2 over nPorts equal
 // openings, physical length LpIn, and total end correction ecIn in inches (default 1.46 r per opening).
@@ -209,8 +215,8 @@ export function boxModel(
 // ---------------------------------------------------------------
 // Sealed-box model for the mid-bass: the same driver circuit with the box
 // compliance in series and no port. hp and lp are the crossover corners,
-// Linkwitz-Riley 24 dB/oct. Voice-coil inductance is not modelled, so the top
-// octave reads a little high. Excursion is the sine peak, as in boxModel.
+// Linkwitz-Riley, LR24 unless opts gives an order (hpOrder, lpOrder). Voice-coil inductance is not
+// modelled, so the top octave reads a little high. Excursion is the sine peak, as in boxModel.
 // ---------------------------------------------------------------
 export function closedBox(
   ts: BoxModelTS,
@@ -218,9 +224,15 @@ export function closedBox(
   hp: number | null,
   lp: number | null,
   volts: number,
-  opts: { N?: number; fmin?: number; fmax?: number } = {},
+  opts: {
+    N?: number;
+    fmin?: number;
+    fmax?: number;
+    hpOrder?: CrossoverOrder;
+    lpOrder?: CrossoverOrder;
+  } = {},
 ): SealedBoxModel | null {
-  const { N = 420, fmin = 20, fmax = 2000 } = opts;
+  const { N = 420, fmin = 20, fmax = 2000, hpOrder = 4, lpOrder = 4 } = opts;
   if (!ts || !VbL || VbL <= 0) return null;
   const rho = 1.18,
     c = 343;
@@ -255,7 +267,9 @@ export function closedBox(
       ),
     );
     const U = complexMagnitude(divideComplex(complex(Pg), Z));
-    const g = (hp ? linkwitzRiley24Highpass(f, hp) : 1) * (lp ? linkwitzRiley24Lowpass(f, lp) : 1);
+    const g =
+      (hp ? linkwitzRileyHighpass(f, hp, hpOrder) : 1) *
+      (lp ? linkwitzRileyLowpass(f, lp, lpOrder) : 1);
     const raw = 20 * Math.log10((rho * w * U) / (2 * Math.PI) / 2e-5);
     out.push({
       f,
@@ -723,29 +737,32 @@ export function maxOutputCurve(
 }
 export const nearestPoint = <P extends { f: number }>(curve: P[], f: number): P =>
   curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
-// The sub at its music limit (one drive level for the whole band) through the LR24 lowpass at xoLo:
-// what the mid has to match.
+// The sub at its music limit (one drive level for the whole band) through the lowpass at xoLo
+// (LR24, or LR48 with order 8): what the mid has to match.
 export function subMusicOutputAt(
   mdl: VentedBoxModel,
   lim: Pick<SubLimits, "V">,
   AMP_V: number,
   xoLo: number,
+  order: CrossoverOrder = 4,
 ) {
   const o = nearestPoint(mdl.curve, xoLo);
   return (
-    o.spl + 20 * Math.log10(linkwitzRiley24Lowpass(o.f, xoLo)) + 20 * Math.log10(lim.V / AMP_V)
+    o.spl + 20 * Math.log10(linkwitzRileyLowpass(o.f, xoLo, order)) + 20 * Math.log10(lim.V / AMP_V)
   );
 }
 
 // ---- horn ----
-// Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24 highpass at the
-// crossover and 12 dB/oct below the horn's loading limit. Power: amp voltage into the driver's
-// impedance, capped at program (2 x AES), derated 6 dB/oct below the frequency AES was rated at.
+// Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24 (or, order 8, LR48)
+// highpass at the crossover and 12 dB/oct below the horn's loading limit. Power: amp voltage into
+// the driver's impedance, capped at program (2 x AES), derated 6 dB/oct below the frequency AES
+// was rated at.
 export function hornResponse(
   hf: CompressionHf | undefined,
   hz: Partial<HornHf>,
   xoHi: number,
   hfAmpW: number,
+  order: CrossoverOrder = 4,
 ): HornResponse | null {
   if (!hf || hf.sens == null || !hf.aes) return null;
   const imp = hf.imp || 8;
@@ -757,7 +774,7 @@ export function hornResponse(
   const curve: FrequencyPoint[] = [];
   for (let i = 0; i < 300; i++) {
     const f = 300 * Math.pow(20000 / 300, i / 299);
-    const g = linkwitzRiley24Highpass(f, xoHi) * (low ? Math.min(1, Math.pow(f / low, 2)) : 1);
+    const g = linkwitzRileyHighpass(f, xoHi, order) * (low ? Math.min(1, Math.pow(f / low, 2)) : 1);
     curve.push({ f, spl: hf.sens + 10 * Math.log10(P) + 20 * Math.log10(g) });
   }
   return {
@@ -855,18 +872,19 @@ export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig):
   };
 }
 
-// Sub through the LR24 lowpass at the crossover, each frequency at its own sine limit (the filter
-// scales excursion and port speed with the output).
+// Sub through the lowpass at the crossover (LR24, or LR48 with order 8), each frequency at its own
+// sine limit (the filter scales excursion and port speed with the output).
 export function subThroughLowpass(
   mdl: VentedBoxModel,
   ts: Pick<ThieleSmall, "aes" | "Xmax">,
   AMP_V: number,
   portMax: number,
   xoLo: number,
+  order: CrossoverOrder = 4,
 ): FrequencyPoint[] {
   const vt = thermalVoltageLimit(ts.aes);
   return mdl.curve.map((o) => {
-    const g = linkwitzRiley24Lowpass(o.f, xoLo);
+    const g = linkwitzRileyLowpass(o.f, xoLo, order);
     const vp = (AMP_V * portMax) / (o.vel * g),
       vx = (AMP_V * ts.Xmax) / (o.xmm * g);
     const V = Math.min(vp, vx, vt, AMP_V);
@@ -875,7 +893,7 @@ export function subThroughLowpass(
 }
 
 // ---- the mid-bass as the planner computes it: sealed, always lightly stuffed ----
-// cfg: { midDims, wall, inset, xoLo, xoHi, mAmpW }
+// cfg: { midDims, wall, inset, xoLo, xoHi, mAmpW, xoLoOrder?, xoHiOrder? } (orders default to LR24)
 export const STUFFING_VOLUME_GAIN = 1.15; // ~15% more effective volume from light stuffing
 export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const V = ampVoltage(cfg.mAmpW);
@@ -889,7 +907,12 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const disp = mid.ts && mid.ts.disp != null ? mid.ts.disp : mid.size === 15 ? 4 : 2.5; // assumed where not published
   const netL = Math.max(5, grossL - disp);
   const effL = netL * STUFFING_VOLUME_GAIN;
-  const mdl = mid.ts ? closedBox(mid.ts, effL, cfg.xoLo, cfg.xoHi, V) : null;
+  const mdl = mid.ts
+    ? closedBox(mid.ts, effL, cfg.xoLo, cfg.xoHi, V, {
+        hpOrder: cfg.xoLoOrder,
+        lpOrder: cfg.xoHiOrder,
+      })
+    : null;
   const vTherm = mid.ts ? thermalVoltageLimit(mid.ts.aes) : 0;
   const useV = Math.min(vTherm, V);
   if (!mid.ts || !mdl) return { V, grossL, disp, netL, effL, vTherm, useV, mdl: null, max: null };

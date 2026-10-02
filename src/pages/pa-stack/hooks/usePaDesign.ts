@@ -99,8 +99,16 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     hornBandTiltDb,
     setHornBandTiltDb,
   } = useHornDesign();
-  const { subMidCrossoverHz, setSubMidCrossoverHz, midHornCrossoverHz, setMidHornCrossoverHz } =
-    useCrossovers();
+  const {
+    subMidCrossoverHz,
+    setSubMidCrossoverHz,
+    midHornCrossoverHz,
+    setMidHornCrossoverHz,
+    subMidCrossoverOrder,
+    setSubMidCrossoverOrder,
+    midHornCrossoverOrder,
+    setMidHornCrossoverOrder,
+  } = useCrossovers();
   const {
     plinthHeightIn,
     cutaway,
@@ -171,6 +179,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
         hornAmpWatts,
         subMidCrossoverHz,
         midHornCrossoverHz,
+        subMidCrossoverOrder,
+        midHornCrossoverOrder,
         plinthHeightIn,
         layout,
         wallThicknessIn,
@@ -195,6 +205,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
       hornAmpWatts,
       subMidCrossoverHz,
       midHornCrossoverHz,
+      subMidCrossoverOrder,
+      midHornCrossoverOrder,
       plinthHeightIn,
       layout,
       wallThicknessIn,
@@ -226,6 +238,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     inset: baffleInsetIn,
     xoLo: subMidCrossoverHz,
     xoHi: midHornCrossoverHz,
+    xoLoOrder: subMidCrossoverOrder,
+    xoHiOrder: midHornCrossoverOrder,
     mAmpW: midAmpWatts,
     tilt: midBandTiltDb,
     hfAmpW: hornAmpWatts,
@@ -263,6 +277,9 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     else if (savedMidBox) setMidBoxDims({ ...savedMidBox.box });
     if (typeof c.xoLo === "number") setSubMidCrossoverHz(c.xoLo);
     if (typeof c.xoHi === "number") setMidHornCrossoverHz(c.xoHi);
+    // a save from before the slope setting (or with anything but 8) is LR24
+    setSubMidCrossoverOrder(c.xoLoOrder === 8 ? 8 : 4);
+    setMidHornCrossoverOrder(c.xoHiOrder === 8 ? 8 : 4);
     if (typeof c.mAmpW === "number") setMidAmpWatts(c.mAmpW);
     if (typeof c.tilt === "number") setMidBandTiltDb(c.tilt);
     if (typeof c.hfAmpW === "number") setHornAmpWatts(c.hfAmpW);
@@ -319,6 +336,10 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setSubMidCrossoverHz,
     midHornCrossoverHz,
     setMidHornCrossoverHz,
+    subMidCrossoverOrder,
+    setSubMidCrossoverOrder,
+    midHornCrossoverOrder,
+    setMidHornCrossoverOrder,
     plinthHeightIn,
     cutaway,
     setCutaway,

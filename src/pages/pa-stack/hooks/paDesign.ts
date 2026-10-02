@@ -46,7 +46,10 @@ type PaDesignInputs = Pick<
 > &
   Pick<MidDesign, "midDriver" | "midBoxDims" | "midAmpWatts"> &
   Pick<HornDesign, "hornOption" | "compressionDriver" | "hornAmpWatts"> &
-  Pick<Crossovers, "subMidCrossoverHz" | "midHornCrossoverHz"> &
+  Pick<
+    Crossovers,
+    "subMidCrossoverHz" | "midHornCrossoverHz" | "subMidCrossoverOrder" | "midHornCrossoverOrder"
+  > &
   Pick<
     CabinetStyle,
     "plinthHeightIn" | "layout" | "wallThicknessIn" | "baffleInsetIn" | "spacerHeightIn"
@@ -119,6 +122,8 @@ export function derivePaDesign({
   hornAmpWatts,
   subMidCrossoverHz,
   midHornCrossoverHz,
+  subMidCrossoverOrder,
+  midHornCrossoverOrder,
   plinthHeightIn,
   layout,
   wallThicknessIn,
@@ -160,6 +165,7 @@ export function derivePaDesign({
           subAmpVoltage,
           maxPortAirSpeedMs,
           subMidCrossoverHz,
+          subMidCrossoverOrder,
         ),
       }
     : null;
@@ -171,6 +177,8 @@ export function derivePaDesign({
     inset: baffleInsetIn,
     xoLo: subMidCrossoverHz,
     xoHi: midHornCrossoverHz,
+    xoLoOrder: subMidCrossoverOrder,
+    xoHiOrder: midHornCrossoverOrder,
     mAmpW: midAmpWatts,
   });
   const {
@@ -187,13 +195,19 @@ export function derivePaDesign({
   const midWeightLoadedLb = midCabinetLb + (midDriver.lb || 0);
   // ---- horn + compression driver ----
   /**
-   * Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24
+   * Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24 or LR48
    * highpass at the crossover and a 12 dB/oct rolloff below the horn's loading limit.
    * Power: amp voltage into the driver's impedance, capped at program (2 x AES), derated
    * 6 dB per octave when crossing below the frequency the AES rating was measured at.
    */
   const hornSpec: Partial<HornHf> = hornOption.hf || {};
-  const hornModel = hornResponse(compressionDriver.hf, hornSpec, midHornCrossoverHz, hornAmpWatts);
+  const hornModel = hornResponse(
+    compressionDriver.hf,
+    hornSpec,
+    midHornCrossoverHz,
+    hornAmpWatts,
+    midHornCrossoverOrder,
+  );
   /** mid beamwidth at the horn crossover, as a rigid piston: -6 dB where ka sin(theta) = 2.2 */
   const midBeamWidthDeg = midDriver.ts
     ? pistonBeamWidthDeg(midDriver.ts.Sd, midHornCrossoverHz)
@@ -221,7 +235,13 @@ export function derivePaDesign({
    * band), through its lowpass, less the music-balance allowance.
    */
   const subMusicAtCrossover = subModelled
-    ? subMusicOutputAt(subModelled.mdl, subModelled.lim, subAmpVoltage, subMidCrossoverHz)
+    ? subMusicOutputAt(
+        subModelled.mdl,
+        subModelled.lim,
+        subAmpVoltage,
+        subMidCrossoverHz,
+        subMidCrossoverOrder,
+      )
     : null;
 
   const portGeom = {
@@ -270,7 +290,8 @@ export function derivePaDesign({
             },
             xoLo: subMidCrossoverHz,
             xoHi: midHornCrossoverHz,
-            order: 4,
+            orderLo: subMidCrossoverOrder,
+            orderHi: midHornCrossoverOrder,
           },
           dispersionPlane,
           dispersionMapDistanceM,

@@ -828,6 +828,9 @@ export interface PaDesignConfig {
   /** sub to mid and mid to horn crossovers, Hz */
   xoLo: number;
   xoHi: number;
+  /** each crossover's Linkwitz-Riley order (4 = LR24, 8 = LR48); saves from before the setting load as LR24 */
+  xoLoOrder: CrossoverOrder;
+  xoHiOrder: CrossoverOrder;
   mAmpW: number;
   /** how much less the mid band needs than the sub band, dB */
   tilt: number;
@@ -986,7 +989,7 @@ export interface SubSystemModelled extends SubSystemBase {
 /** `subSystem`: check `mdl` and `lim` narrows with it. */
 export type SubSystem = SubSystemUnmodelled | SubSystemModelled;
 
-export interface MidSystemConfig {
+export interface MidSystemConfig extends Partial<Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder">> {
   midDims: Dims3;
   wall: number;
   inset: number;
@@ -1247,6 +1250,9 @@ export interface PaStackGeometry {
   horn: { zIn: number; covH: number; covV: number; wIn: number; hIn: number };
   xoLo: number;
   xoHi: number;
+  /** each crossover's Linkwitz-Riley order; where one is missing, `order` (both), else LR24 */
+  orderLo?: CrossoverOrder;
+  orderHi?: CrossoverOrder;
   order?: CrossoverOrder;
 }
 
@@ -1295,6 +1301,8 @@ export type PaSearchOverrides = Partial<PaOptimizerInputState> & { nativeEvent?:
 export type PaDefaultedField =
   | "xoLo"
   | "xoHi"
+  | "xoLoOrder"
+  | "xoHiOrder"
   | "tilt"
   | "hfTilt"
   | "ampW"

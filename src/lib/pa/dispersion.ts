@@ -1,4 +1,4 @@
-// PA stack dispersion: sub, mid and horn stacked vertically, each through its LR24 crossover filters, with
+// PA stack dispersion: sub, mid and horn stacked vertically, each through its LR24/LR48 crossover filters, with
 // its own directivity (sub and mid as pistons, the horn as constant coverage above its control frequency)
 // and its path length to the listener. The DSP is time-aligned on the horn axis at the listening distance,
 // so the map shows lobing at the crossovers (vertical) and beaming (horizontal). Bands are level-matched.
@@ -30,14 +30,15 @@ type Source =
   | { z: number; a: number; filt: (f: number) => Complex; horn?: undefined }
   | { z: number; horn: true; filt: (f: number) => Complex; a?: undefined };
 
-// s: { sub: { zIn, Sd }, mid: { zIn, Sd }, horn: { zIn, covH, covV, wIn, hIn }, xoLo, xoHi, order }
+// s: { sub: { zIn, Sd }, mid: { zIn, Sd }, horn: { zIn, covH, covV, wIn, hIn }, xoLo, xoHi, orderLo, orderHi }
 // geo: { th (rad, horizontal), eyeIn (ear height, in), distM }. Returns [{ f, spl }] (dB, relative).
 export function paResponseAt(
   s: PaStackGeometry,
   geo: ListenerGeometry,
   freqs: number[],
 ): FrequencyPoint[] {
-  const order = s.order || 4,
+  const orderLo = s.orderLo ?? s.order ?? 4,
+    orderHi = s.orderHi ?? s.order ?? 4,
     dist = geo.distM,
     ref = s.horn.zIn;
   const src = (
@@ -46,7 +47,7 @@ export function paResponseAt(
         ? {
             z: s.sub.zIn,
             a: Math.sqrt(s.sub.Sd / 1e4 / Math.PI),
-            filt: (f: number) => linkwitzRileyFilter(f, s.xoLo, order, "lp"),
+            filt: (f: number) => linkwitzRileyFilter(f, s.xoLo, orderLo, "lp"),
           }
         : null,
       {
@@ -54,14 +55,14 @@ export function paResponseAt(
         a: Math.sqrt(s.mid.Sd / 1e4 / Math.PI),
         filt: (f: number) =>
           cmul(
-            linkwitzRileyFilter(f, s.xoLo, order, "hp"),
-            linkwitzRileyFilter(f, s.xoHi, order, "lp"),
+            linkwitzRileyFilter(f, s.xoLo, orderLo, "hp"),
+            linkwitzRileyFilter(f, s.xoHi, orderHi, "lp"),
           ),
       },
       {
         z: s.horn.zIn,
         horn: true,
-        filt: (f: number) => linkwitzRileyFilter(f, s.xoHi, order, "hp"),
+        filt: (f: number) => linkwitzRileyFilter(f, s.xoHi, orderHi, "hp"),
       },
     ].filter(Boolean) as Source[]
   ) // boundary cast: filter(Boolean) drops the null a stack without a sub leaves, which the checker can't see
