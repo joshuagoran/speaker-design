@@ -13,7 +13,9 @@ import {
   ductEndCorrection2D,
 } from "../pa/calc";
 import type {
+  BoxModelTS,
   Dims3,
+  DispersionPlane,
   DriverLayout,
   FrequencyPoint,
   HifiChip,
@@ -29,7 +31,6 @@ import type {
   PanelMaterial,
   PassiveRadiator,
   PassiveRadiatorChoice,
-  ThieleSmall,
   WooferMaxPoint,
   WooferPoint,
 } from "../../types";
@@ -268,7 +269,7 @@ export function passiveRadiatorMassFor(drv: PassiveRadiator, n: number, VbL: num
   return g < -2.5 ? null : Math.max(0, Math.round(g / 5) * 5);
 }
 export function passiveRadiatorBox(
-  ts: ThieleSmall,
+  ts: BoxModelTS,
   VbL: number,
   pr: Pick<PassiveRadiatorChoice, "drv" | "n" | "addG">,
   hpf: number,
@@ -595,7 +596,7 @@ export function hifiDispersionMap(
   w: HifiWoofer,
   t: HifiTweeter,
   cfg: HifiConfig,
-  plane: "h" | "v" = "h",
+  plane: DispersionPlane = "h",
   distM = 2,
 ): HifiDispersionMap {
   const freqs = logSpacedFrequencies(100, 20000, 72);

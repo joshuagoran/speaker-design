@@ -1,5 +1,6 @@
 // Calculation functions for the planner. Pure TS, no React, window or THREE.
 import type {
+  BoxModelTS,
   CompressionHf,
   CornerJoint,
   CutPart,
@@ -112,7 +113,7 @@ export interface BoxModelOptions {
   fmax?: number;
 }
 export function boxModel(
-  ts: ThieleSmall,
+  ts: BoxModelTS,
   VbL: number,
   SpIn2: number,
   LpIn: number,
@@ -212,7 +213,7 @@ export function boxModel(
 // octave reads a little high. Excursion is the sine peak, as in boxModel.
 // ---------------------------------------------------------------
 export function closedBox(
-  ts: ThieleSmall,
+  ts: BoxModelTS,
   VbL: number,
   hp: number | null,
   lp: number | null,

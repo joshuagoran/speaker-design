@@ -44,6 +44,9 @@ export interface ThieleSmall {
   disp: number | null;
 }
 
+/** The Thiele-Small fields the box models read (`boxModel`, `closedBox`, `passiveRadiatorBox`); `closedBox` and `passiveRadiatorBox` leave `Xmax` alone. */
+export type BoxModelTS = Pick<ThieleSmall, "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms">;
+
 /** Subs always list a displacement. */
 export interface SubTS extends ThieleSmall {
   disp: number;
