@@ -49,11 +49,8 @@ import {
   linkwitzRileyFilter,
   SPEAKER_PLACEMENTS as HIFI_PLACES,
 } from "../../lib/hifi/hifi.js";
-import {
-  optimizeHifiSpeaker,
-  HIFI_OPTIMIZER_GOALS,
-  HIFI_LOCK_KEYS,
-} from "../../lib/hifi/optimize.js";
+import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize.js";
+import { runHifiOptimizer } from "../../lib/hifi/runOptimizer.js";
 
 /** Hi-fi page: 2-way home speakers with an active crossover. */
 export function HifiPage({ hifi }) {
@@ -112,6 +109,8 @@ export function HifiPage({ hifi }) {
     setOptimizerResult,
     isOptimizing,
     setIsOptimizing,
+    optimizerError,
+    setOptimizerError,
     designPreview,
     setDesignPreview,
     undoSnapshot,
@@ -337,28 +336,28 @@ export function HifiPage({ hifi }) {
     setWooferAmpWatts(c.wAmpW);
     setTweeterAmpWatts(c.tAmpW);
   };
-  const runOptimizerSearch = () => {
+  const runOptimizerSearch = async () => {
     setIsOptimizing(true);
+    setOptimizerError("");
     const base = designPreview ? designPreview.before : snapshot();
-    setTimeout(() => {
-      try {
-        setOptimizerResult(
-          optimizeHifiSpeaker({
-            cur: { ...speakerConfig, ...base, guide: compressionWaveguide },
-            woofers: HIFI_WOOFERS,
-            tweeters: HIFI_TWEETERS,
-            passives: HIFI_PASSIVES,
-            goals: optimizerGoals,
-            locks: optimizerLocks,
-            budget: optimizerBudget,
-            seatM: seatDistanceM,
-            guidePrice: selectedWaveguide.price || 0,
-          }),
-        );
-      } finally {
-        setIsOptimizing(false);
-      }
-    }, 30);
+    try {
+      setOptimizerResult(
+        await runHifiOptimizer({
+          cur: { ...speakerConfig, ...base, guide: compressionWaveguide },
+          woofers: HIFI_WOOFERS,
+          tweeters: HIFI_TWEETERS,
+          passives: HIFI_PASSIVES,
+          goals: optimizerGoals,
+          locks: optimizerLocks,
+          budget: optimizerBudget,
+          seatM: seatDistanceM,
+          guidePrice: selectedWaveguide.price || 0,
+        }),
+      );
+    } catch (e) {
+      setOptimizerError("The search failed: " + ((e && e.message) || e));
+    }
+    setIsOptimizing(false);
   };
   const previewOptimizerResult = (k) => {
     const before = designPreview ? designPreview.before : snapshot();
@@ -445,6 +444,7 @@ export function HifiPage({ hifi }) {
           </Button>
         )}
       </RunRow>
+      {optimizerError && !isOptimizing && <Notice>{optimizerError}</Notice>}
       {optimizerResult && !isOptimizing && optimizerResult.curProblems.length > 0 && (
         <Notice>
           Your design fails: {optimizerResult.curProblems.join("; ")}. Fixes may cost or weigh more.

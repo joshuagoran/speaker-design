@@ -160,6 +160,11 @@ export function optimizeHifiSpeaker(input) {
   const t0 = Date.now();
   const { woofers, tweeters, locks = {} } = input;
   const cur = { wall: 0.75, ...input.cur };
+  // the page hands over its radiator as { id, n, addG }; the model wants the driver itself
+  if (cur.pr && !cur.pr.drv) {
+    const drv = (input.passives || []).find((o) => o.id === cur.pr.id);
+    cur.pr = drv ? { ...cur.pr, drv } : undefined;
+  }
   const goals = (input.goals || []).filter(
     (g, i, a) => HIFI_OPTIMIZER_GOALS[g] && a.indexOf(g) === i,
   );
