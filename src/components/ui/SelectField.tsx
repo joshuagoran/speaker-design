@@ -1,4 +1,4 @@
-import { FormField } from "./FormField.tsx";
+import { FormField } from "./FormField";
 import { useId } from "react";
 
 /** What a select lists: each option has an id, a name and optionally a price. */

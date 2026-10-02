@@ -1,4 +1,4 @@
-import { StatRow } from "../optimizer/StatRow.tsx";
+import { StatRow } from "../optimizer/StatRow";
 
 /** One detail row: name, value, optional note and optional tooltip text. */
 export type StatRowItem = [

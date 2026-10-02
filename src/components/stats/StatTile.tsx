@@ -1,4 +1,4 @@
-import { StatLabel } from "../optimizer/StatRow.tsx";
+import { StatLabel } from "../optimizer/StatRow";
 
 interface Props {
   label: string;

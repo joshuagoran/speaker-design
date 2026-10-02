@@ -1,5 +1,5 @@
-import type { HifiDispersionMap } from "../../types.ts";
-import { PAL } from "../../styles/palette.ts";
+import type { HifiDispersionMap } from "../../types";
+import { PAL } from "../../styles/palette";
 import { useState } from "react";
 
 interface Props {

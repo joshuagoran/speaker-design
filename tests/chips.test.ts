@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { subChips, midChips, hornChips, fillChips } from "../src/lib/pa/chips.ts";
+import { subChips, midChips, hornChips, fillChips } from "../src/lib/pa/chips";
 import type {
   Chip,
   Dims2,
@@ -9,7 +9,7 @@ import type {
   MidChipsInput,
   SubChipsInput,
   VentSpec,
-} from "../src/types.ts";
+} from "../src/types";
 
 const heads = (F: Chip[]) => F.map(([, h]) => h);
 const kindOf = (F: Chip[], head: string) => (F.find(([, h]) => h.startsWith(head)) || [])[0];

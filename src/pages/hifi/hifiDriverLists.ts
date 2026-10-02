@@ -1,5 +1,5 @@
-import type { HifiBoxKind, HifiTweeter, RadiatorSelection } from "../../types.ts";
-import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../../lib/data.ts";
+import type { HifiBoxKind, HifiTweeter, RadiatorSelection } from "../../types";
+import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../../lib/data";
 
 /** Woofers listed smallest first, grouped by size in the picker, A–Z within a size. */
 export const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort(

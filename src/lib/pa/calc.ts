@@ -34,7 +34,7 @@ import type {
   VentedPoint,
   VentGeometry,
   VentSpec,
-} from "../../types.ts";
+} from "../../types";
 
 // ---------------------------------------------------------------
 // Vented-box model. Same lumped-element circuit used to check this

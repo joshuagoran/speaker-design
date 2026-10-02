@@ -1,4 +1,4 @@
-import { Tooltip } from "../ui/Tooltip.tsx";
+import { Tooltip } from "../ui/Tooltip";
 
 /** Plain-language help for the stat labels, shown as a tooltip on the label */
 export const STAT_TIPS: Record<string, string> = {

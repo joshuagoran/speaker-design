@@ -1,4 +1,4 @@
-import type { DispersionPlane } from "../../../types.ts";
+import type { DispersionPlane } from "../../../types";
 import { useEffect, useState } from "react";
 
 export interface StackViewOptions {

@@ -1,6 +1,6 @@
-import { PAL } from "../../styles/palette.ts";
+import { PAL } from "../../styles/palette";
 import { useId } from "react";
-import type { PaintSwatch } from "../../types.ts";
+import type { PaintSwatch } from "../../types";
 
 interface Props {
   label: string;

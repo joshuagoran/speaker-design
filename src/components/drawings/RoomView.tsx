@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.ts";
+import { PAL } from "../../styles/palette";
 
 /** The listening seat, feet: across from the middle of the pair, and out from the speakers. */
 interface Seat {

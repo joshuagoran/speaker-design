@@ -1,6 +1,6 @@
-import type { FrequencyPoint } from "../../types.ts";
-import { PAL } from "../../styles/palette.ts";
-import { useElementWidth } from "../../hooks/useElementWidth.ts";
+import type { FrequencyPoint } from "../../types";
+import { PAL } from "../../styles/palette";
+import { useElementWidth } from "../../hooks/useElementWidth";
 import { useState } from "react";
 
 /** One curve on the chart: its points, legend label, line colour and fill colour. */

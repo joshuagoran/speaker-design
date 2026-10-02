@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.ts";
+import { PAL } from "../../styles/palette";
 import { useState } from "react";
 
 /** One curve point: frequency in Hz, level in dB. */

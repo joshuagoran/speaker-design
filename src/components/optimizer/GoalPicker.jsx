@@ -1,5 +1,5 @@
-import { ToggleButton } from "../ui/ToggleButton.tsx";
-import { RankBadge } from "./RankBadge.jsx";
+import { ToggleButton } from "../ui/ToggleButton";
+import { RankBadge } from "./RankBadge";
 
 /** Row of goal toggles for an optimizer. */
 export function GoalPicker({ defs, selected, onTap }) {

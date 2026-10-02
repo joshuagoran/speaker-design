@@ -1,5 +1,5 @@
-import { CD_OPTIONS, HORN_OPTIONS } from "../../../lib/data.ts";
-import type { CompressionDriver, Horn } from "../../../types.ts";
+import { CD_OPTIONS, HORN_OPTIONS } from "../../../lib/data";
+import type { CompressionDriver, Horn } from "../../../types";
 import { useState } from "react";
 
 export interface HornDesign {

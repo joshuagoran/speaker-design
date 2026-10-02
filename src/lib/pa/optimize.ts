@@ -29,7 +29,7 @@ import {
   keeleFrequency,
   maxOutputCurve,
   STUFFING_VOLUME_GAIN,
-} from "./calc.ts";
+} from "./calc";
 import {
   subChips,
   midChips,
@@ -37,8 +37,8 @@ import {
   ductFit,
   subDriverClearanceNeededIn,
   driverClearance,
-} from "./chips.ts";
-import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS } from "../data.ts";
+} from "./chips";
+import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS } from "../data";
 import type {
   CompressionDriver,
   CutPart,
@@ -68,7 +68,7 @@ import type {
   SubSystem,
   VentedBoxModel,
   VentSpec,
-} from "../../types.ts";
+} from "../../types";
 
 const byId = <T extends { id: string }>(list: readonly T[], id: string) =>
   list.find((o) => o.id === id);

@@ -1,8 +1,8 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { paResponseAt, paDispersionMap, firstNullAngleDeg } from "../src/lib/pa/dispersion.ts";
-import { logSpacedFrequencies } from "../src/lib/hifi/hifi.ts";
-import type { PaStackGeometry } from "../src/types.ts";
+import { paResponseAt, paDispersionMap, firstNullAngleDeg } from "../src/lib/pa/dispersion";
+import { logSpacedFrequencies } from "../src/lib/hifi/hifi";
+import type { PaStackGeometry } from "../src/types";
 
 const stack = (gapIn: number): PaStackGeometry => ({
   sub: { zIn: 12, Sd: 1200 },

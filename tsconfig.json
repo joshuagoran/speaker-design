@@ -4,7 +4,6 @@
     "noImplicitOverride": true,
     "isolatedModules": true,
     "allowJs": true,
-    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "module": "esnext",
     "target": "esnext",

@@ -1,4 +1,4 @@
-import { StatTile } from "./StatTile.tsx";
+import { StatTile } from "./StatTile";
 
 /** One headline number: label, value and unit. */
 export type StatTileItem = [label: string, value: React.ReactNode, unit?: React.ReactNode];

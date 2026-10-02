@@ -5,9 +5,9 @@ import type {
   HifiTweeter,
   HifiWoofer,
   PassiveRadiatorChoice,
-} from "../../types.ts";
-import { PAL } from "../../styles/palette.ts";
-import { passiveRadiatorShape } from "../../lib/hifi/hifi.ts";
+} from "../../types";
+import { PAL } from "../../styles/palette";
+import { passiveRadiatorShape } from "../../lib/hifi/hifi";
 
 interface Props {
   /** the box's outside size, inches */

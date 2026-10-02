@@ -1,6 +1,6 @@
 // Configs for the regression snapshot: the saved seeds plus synthetic ones covering the options.
 import fs from "node:fs";
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data.ts";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import {
   subSystem,
   midSystem,
@@ -10,15 +10,15 @@ import {
   nearestPoint,
   midWeightLb,
   subWeightLb,
-} from "../src/lib/pa/calc.ts";
-import { FILL_OPTIONS } from "../src/lib/data.ts";
+} from "../src/lib/pa/calc";
+import { FILL_OPTIONS } from "../src/lib/data";
 import type {
   Dims3,
   FillBoxType,
   FillPort,
   PaOptimizerCurrent,
   SubSystemConfig,
-} from "../src/types.ts";
+} from "../src/types";
 
 /** A PA design to evaluate: a saved seed, which can lack the fields an older save didn't have. */
 export type GoldenConfig = PaOptimizerCurrent & { name: string };

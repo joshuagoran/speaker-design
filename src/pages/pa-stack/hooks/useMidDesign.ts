@@ -1,5 +1,5 @@
-import { MID_OPTIONS, MID_BOXES } from "../../../lib/data.ts";
-import type { Dims3, MidBox, MidDriver, MidSize } from "../../../types.ts";
+import { MID_OPTIONS, MID_BOXES } from "../../../lib/data";
+import type { Dims3, MidBox, MidDriver, MidSize } from "../../../types";
 import { useState } from "react";
 
 export interface MidDesign {

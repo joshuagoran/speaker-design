@@ -1,8 +1,8 @@
-import { readStoredJson, writeStoredJson } from "../../../lib/storage.ts";
-import { LockButton } from "../../../components/lock/LockButton.tsx";
-import { DimensionLock } from "../../../components/lock/DimensionLock.tsx";
-import { runPaOptimizer } from "../../../lib/pa/runOptimizer.ts";
-import { evaluateDesign as evaluateConfig, pickOptimizedFields } from "../../../lib/pa/optimize.ts";
+import { readStoredJson, writeStoredJson } from "../../../lib/storage";
+import { LockButton } from "../../../components/lock/LockButton";
+import { DimensionLock } from "../../../components/lock/DimensionLock";
+import { runPaOptimizer } from "../../../lib/pa/runOptimizer";
+import { evaluateDesign as evaluateConfig, pickOptimizedFields } from "../../../lib/pa/optimize";
 import type {
   ConfigDb,
   Dims3,
@@ -13,8 +13,8 @@ import type {
   PaOptimizerLocks,
   PaOptimizerResult,
   PaRoom,
-} from "../../../types.ts";
-import type { PaDesign } from "./usePaDesign.ts";
+} from "../../../types";
+import type { PaDesign } from "./usePaDesign";
 import { useState } from "react";
 
 /** The optimizer's inputs on the page: the room, the heaviest box and the budget, and the goals in tap order. */

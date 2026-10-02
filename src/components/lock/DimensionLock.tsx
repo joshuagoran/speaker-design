@@ -1,6 +1,6 @@
-import { LockIcon } from "./LockIcon.tsx";
-import { lockButtonClass } from "./LockButton.tsx";
-import type { DimensionLockMode } from "../../types.ts";
+import { LockIcon } from "./LockIcon";
+import { lockButtonClass } from "./LockButton";
+import type { DimensionLockMode } from "../../types";
 
 /** Order in which a dimension lock cycles: free, max, exact. */
 export const NEXT_DIMENSION_LOCK_MODE: Record<DimensionLockMode, DimensionLockMode> = {

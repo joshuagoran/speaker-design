@@ -1,4 +1,4 @@
-import { StackView3D } from "../../../components/stack-view/StackView3D.jsx";
+import { StackView3D } from "../../../components/stack-view/StackView3D";
 
 /** The 3D view with its full-screen toggle. */
 export function StackViewer({ planner }) {

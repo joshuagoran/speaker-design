@@ -1,6 +1,6 @@
 // Shared test helpers and independent physics references.
 import assert from "node:assert";
-import type { ThieleSmall, VentSpec } from "../src/types.ts";
+import type { ThieleSmall, VentSpec } from "../src/types";
 
 // The tests give a vent only the fields its layout reads; the cast marks the partial on purpose.
 export const vent = (v: Partial<VentSpec>) => v as VentSpec;

@@ -1,5 +1,5 @@
-import { SUB_OPTIONS } from "../../../lib/data.ts";
-import type { Dims3, HighpassType, PortStyle, SubDriver, VentSpec } from "../../../types.ts";
+import { SUB_OPTIONS } from "../../../lib/data";
+import type { Dims3, HighpassType, PortStyle, SubDriver, VentSpec } from "../../../types";
 import { useState } from "react";
 
 export interface SubwooferDesign {

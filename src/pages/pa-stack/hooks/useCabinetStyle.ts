@@ -1,5 +1,5 @@
-import { PAINT_SWATCHES, CABINETS, FORMATS } from "../../../lib/data.ts";
-import type { Cabinet, FinishId, Format, PaLayout } from "../../../types.ts";
+import { PAINT_SWATCHES, CABINETS, FORMATS } from "../../../lib/data";
+import type { Cabinet, FinishId, Format, PaLayout } from "../../../types";
 import { useState } from "react";
 
 export interface CabinetStyle {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button } from "../ui/Button.tsx";
+import { Button } from "../ui/Button";
 
 /** "Searching" with dots that count up, in a fixed width so the button doesn't jump. */
 function Searching() {

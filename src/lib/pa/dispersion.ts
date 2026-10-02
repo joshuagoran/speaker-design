@@ -8,13 +8,13 @@ import {
   waveguideDirectivity,
   logSpacedFrequencies,
   type Complex,
-} from "../hifi/hifi.ts";
+} from "../hifi/hifi";
 import type {
   FrequencyPoint,
   HifiDispersionMap,
   ListenerGeometry,
   PaStackGeometry,
-} from "../../types.ts";
+} from "../../types";
 
 const C = 343,
   IN = 0.0254;

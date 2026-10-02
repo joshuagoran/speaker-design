@@ -1,7 +1,7 @@
-import { Tooltip } from "../../components/ui/Tooltip.tsx";
-import { SectionHeading } from "../../components/ui/SectionHeading.tsx";
-import { SignalPath } from "../../components/drawings/SignalPath.tsx";
-import { RACKS } from "../../lib/data.ts";
+import { Tooltip } from "../../components/ui/Tooltip";
+import { SectionHeading } from "../../components/ui/SectionHeading";
+import { SignalPath } from "../../components/drawings/SignalPath";
+import { RACKS } from "../../lib/data";
 
 /** Notes page: reference material and parts research behind the design. */
 export function NotesPage() {

@@ -22,7 +22,7 @@ import type {
   PassiveRadiator,
   Rack,
   SubDriver,
-} from "../types.ts";
+} from "../types";
 
 export const ST260_PROFILE: readonly HornProfilePoint[] = [
   [1.89, 0.0],

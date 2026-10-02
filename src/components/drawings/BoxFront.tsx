@@ -1,5 +1,5 @@
-import type { PaBoxGeometry } from "../../types.ts";
-import { PAL } from "../../styles/palette.ts";
+import type { PaBoxGeometry } from "../../types";
+import { PAL } from "../../styles/palette";
 
 interface Props {
   g: PaBoxGeometry;

@@ -8,10 +8,10 @@ import {
   thermalVoltageLimit,
   STUFFING_VOLUME_GAIN,
   nearestPoint,
-} from "../src/lib/pa/calc.ts";
-import { FILL_OPTIONS } from "../src/lib/data.ts";
-import type { FillSystemConfig } from "../src/types.ts";
-import { close, massLineSPL } from "./helpers.ts";
+} from "../src/lib/pa/calc";
+import { FILL_OPTIONS } from "../src/lib/data";
+import type { FillSystemConfig } from "../src/types";
+import { close, massLineSPL } from "./helpers";
 
 const drv = FILL_OPTIONS.find((o) => o.id === "bc10cxn64")!;
 const base: FillSystemConfig = {

@@ -1,9 +1,9 @@
-import { Button } from "../ui/Button.tsx";
-import { Tooltip } from "../ui/Tooltip.tsx";
-import { OptimizerCurveChart } from "../charts/OptimizerCurveChart.tsx";
-import { BoxFront } from "../drawings/BoxFront.tsx";
-import { formatDollars } from "../../lib/format.ts";
-import { Delta } from "./Delta.jsx";
+import { Button } from "../ui/Button";
+import { Tooltip } from "../ui/Tooltip";
+import { OptimizerCurveChart } from "../charts/OptimizerCurveChart";
+import { BoxFront } from "../drawings/BoxFront";
+import { formatDollars } from "../../lib/format";
+import { Delta } from "./Delta";
 
 /** One suggested design with its numbers, preview and load buttons. */
 export function OptimizerResultCard({

@@ -1,6 +1,6 @@
-import type { PackedSheet, PlywoodSheet } from "../../types.ts";
-import { PAL } from "../../styles/palette.ts";
-import { useElementWidth } from "../../hooks/useElementWidth.ts";
+import type { PackedSheet, PlywoodSheet } from "../../types";
+import { PAL } from "../../styles/palette";
+import { useElementWidth } from "../../hooks/useElementWidth";
 
 interface Props {
   sheet: PackedSheet;

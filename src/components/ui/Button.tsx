@@ -1,5 +1,5 @@
-import { BUTTON_SIZE_CLASSES, BUTTON_VARIANT_CLASSES } from "./buttonStyles.ts";
-import type { ButtonSize, ButtonVariant } from "./buttonStyles.ts";
+import { BUTTON_SIZE_CLASSES, BUTTON_VARIANT_CLASSES } from "./buttonStyles";
+import type { ButtonSize, ButtonVariant } from "./buttonStyles";
 
 interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;

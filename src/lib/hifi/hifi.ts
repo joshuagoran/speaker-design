@@ -11,7 +11,7 @@ import {
   highpassGain,
   rectangleEndCorrection,
   ductEndCorrection2D,
-} from "../pa/calc.ts";
+} from "../pa/calc";
 import type {
   Dims3,
   DriverLayout,
@@ -32,7 +32,7 @@ import type {
   ThieleSmall,
   WooferMaxPoint,
   WooferPoint,
-} from "../../types.ts";
+} from "../../types";
 
 const C = 343,
   IN = 0.0254;

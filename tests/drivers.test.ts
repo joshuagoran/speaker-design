@@ -1,8 +1,8 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { SUB_OPTIONS, MID_OPTIONS, FILL_OPTIONS, CD_OPTIONS } from "../src/lib/data.ts";
-import type { ThieleSmall } from "../src/types.ts";
-import { tsModel } from "./helpers.ts";
+import { SUB_OPTIONS, MID_OPTIONS, FILL_OPTIONS, CD_OPTIONS } from "../src/lib/data";
+import type { ThieleSmall } from "../src/types";
+import { tsModel } from "./helpers";
 
 // Datasheet values that disagree with the driver's own Mms/Sd/Fs/Bl/Re by more than the tolerance.
 // Keep each with a note; the model uses Mms/Bl/Re/Sd/Fs/Qms, not the listed Vas/Qes.

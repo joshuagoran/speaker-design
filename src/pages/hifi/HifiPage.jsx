@@ -1,6 +1,6 @@
-import { PAL } from "../../styles/palette.ts";
-import { WarningChips } from "../../components/chips/WarningChips.tsx";
-import { StatTile } from "../../components/stats/StatTile.tsx";
+import { PAL } from "../../styles/palette";
+import { WarningChips } from "../../components/chips/WarningChips";
+import { StatTile } from "../../components/stats/StatTile";
 import {
   HIFI_WOOFERS_BY_SIZE,
   HIFI_PASSIVES_BY_SIZE,
@@ -8,30 +8,30 @@ import {
   TWEETER_GROUP_LABELS,
   TWEETER_KIND_LABELS,
   HIFI_TWEETERS_BY_TYPE,
-} from "./hifiDriverLists.ts";
-import { HifiResultCard } from "./HifiResultCard.jsx";
-import { ToggleButton } from "../../components/ui/ToggleButton.tsx";
-import { Button } from "../../components/ui/Button.tsx";
-import { Tooltip } from "../../components/ui/Tooltip.tsx";
-import { Card } from "../../components/ui/Card.tsx";
-import { SectionHeading } from "../../components/ui/SectionHeading.tsx";
-import { NumberField } from "../../components/ui/NumberField.tsx";
-import { SelectField } from "../../components/ui/SelectField.tsx";
-import { Slider } from "../../components/ui/Slider.tsx";
-import { Notice } from "../../components/ui/Notice.tsx";
-import { ResponseChart } from "../../components/charts/ResponseChart.tsx";
-import { DispersionMap } from "../../components/charts/DispersionMap.tsx";
-import { RoomView } from "../../components/drawings/RoomView.tsx";
-import { HifiFront } from "../../components/drawings/HifiFront.tsx";
-import { LockButton } from "../../components/lock/LockButton.tsx";
-import { DimensionLock } from "../../components/lock/DimensionLock.tsx";
-import { OptimizerBar } from "../../components/optimizer/OptimizerBar.jsx";
-import { GoalPicker } from "../../components/optimizer/GoalPicker.jsx";
-import { RunRow } from "../../components/optimizer/RunRow.jsx";
-import { ResultCards } from "../../components/optimizer/ResultCards.jsx";
-import { SavedConfigs } from "../../components/saved-configs/SavedConfigs.jsx";
-import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales.ts";
-import { METERS_PER_FOOT } from "../../constants/units.ts";
+} from "./hifiDriverLists";
+import { HifiResultCard } from "./HifiResultCard";
+import { ToggleButton } from "../../components/ui/ToggleButton";
+import { Button } from "../../components/ui/Button";
+import { Tooltip } from "../../components/ui/Tooltip";
+import { Card } from "../../components/ui/Card";
+import { SectionHeading } from "../../components/ui/SectionHeading";
+import { NumberField } from "../../components/ui/NumberField";
+import { SelectField } from "../../components/ui/SelectField";
+import { Slider } from "../../components/ui/Slider";
+import { Notice } from "../../components/ui/Notice";
+import { ResponseChart } from "../../components/charts/ResponseChart";
+import { DispersionMap } from "../../components/charts/DispersionMap";
+import { RoomView } from "../../components/drawings/RoomView";
+import { HifiFront } from "../../components/drawings/HifiFront";
+import { LockButton } from "../../components/lock/LockButton";
+import { DimensionLock } from "../../components/lock/DimensionLock";
+import { OptimizerBar } from "../../components/optimizer/OptimizerBar";
+import { GoalPicker } from "../../components/optimizer/GoalPicker";
+import { RunRow } from "../../components/optimizer/RunRow";
+import { ResultCards } from "../../components/optimizer/ResultCards";
+import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
+import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
+import { METERS_PER_FOOT } from "../../constants/units";
 import {
   HORN_OPTIONS,
   HIFI_WOOFERS,
@@ -39,7 +39,7 @@ import {
   HIFI_PASSIVES,
   passiveRadiatorMassMax,
   ownGuideCfg,
-} from "../../lib/data.ts";
+} from "../../lib/data";
 import {
   hifiSystem,
   hifiChips,
@@ -48,9 +48,9 @@ import {
   logSpacedFrequencies,
   linkwitzRileyFilter,
   SPEAKER_PLACEMENTS as HIFI_PLACES,
-} from "../../lib/hifi/hifi.ts";
-import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize.ts";
-import { runHifiOptimizer } from "../../lib/hifi/runOptimizer.ts";
+} from "../../lib/hifi/hifi";
+import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
+import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
 
 /** Hi-fi page: 2-way home speakers with an active crossover. */
 export function HifiPage({ hifi }) {

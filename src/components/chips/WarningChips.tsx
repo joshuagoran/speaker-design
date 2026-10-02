@@ -1,4 +1,4 @@
-import type { Chip } from "../../types.ts";
+import type { Chip } from "../../types";
 
 /** Background and border classes for each warning-chip status: a light tint of the status colour with a matching border. */
 export const CHIP_BACKGROUND_CLASSES = {

@@ -9,9 +9,9 @@ import {
   roomRequiredSpl,
   SUB_BAND_HZ,
   AMP_WATTS_MAX,
-} from "../src/lib/pa/optimize.ts";
-import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc.ts";
-import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data.ts";
+} from "../src/lib/pa/optimize";
+import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc";
+import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data";
 import type {
   Dims3,
   PaDesignConfig,
@@ -21,8 +21,8 @@ import type {
   PaOptimizerInput,
   PaOptimizerLocks,
   PaOptimizerResult,
-} from "../src/types.ts";
-import { close } from "./helpers.ts";
+} from "../src/types";
+import { close } from "./helpers";
 
 // boundary: the seed file is saved configurations (older ones lack mDim; all carry ampW), and golden.json holds the numbers checked below
 const seeds = JSON.parse(

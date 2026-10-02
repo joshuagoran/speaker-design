@@ -1,11 +1,11 @@
-import { ToggleButton } from "../../../components/ui/ToggleButton.tsx";
-import { Tooltip } from "../../../components/ui/Tooltip.tsx";
-import { SwatchPicker } from "../../../components/ui/SwatchPicker.tsx";
-import { Card } from "../../../components/ui/Card.tsx";
-import { SelectField } from "../../../components/ui/SelectField.tsx";
-import { Slider } from "../../../components/ui/Slider.tsx";
-import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, CABINET_FINISHES } from "../../../lib/data.ts";
-import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc.ts";
+import { ToggleButton } from "../../../components/ui/ToggleButton";
+import { Tooltip } from "../../../components/ui/Tooltip";
+import { SwatchPicker } from "../../../components/ui/SwatchPicker";
+import { Card } from "../../../components/ui/Card";
+import { SelectField } from "../../../components/ui/SelectField";
+import { Slider } from "../../../components/ui/Slider";
+import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, CABINET_FINISHES } from "../../../lib/data";
+import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
 
 /** Settings: sliders and pickers for the sub, mid-bass, horn and the look. A bottom sheet with tabs on phones. */
 export function SettingsPanel({ planner }) {

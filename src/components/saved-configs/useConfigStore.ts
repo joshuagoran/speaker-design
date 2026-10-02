@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
-import type { ConfigDb, SavedConfig, SavedConfigData } from "../../types.ts";
-import type { FirebaseStore } from "./firebaseStore.ts";
+import type { ConfigDb, SavedConfig, SavedConfigData } from "../../types";
+import type { FirebaseStore } from "./firebaseStore";
 
 /** The GitHub Pages build is `vp build --mode pages`; only that build bundles Firebase (see firebaseStore.ts). */
 const PAGES_BUILD = import.meta.env.MODE === "pages";
@@ -17,7 +17,7 @@ export function useConfigStore(collection: string) {
     let live = true;
     if (PAGES_BUILD && !(window.claude && window.claude.use)) {
       let un: (() => void) | null = null;
-      import("./firebaseStore.ts")
+      import("./firebaseStore")
         .then(({ createFirebase }) => {
           if (!live) return;
           const f = createFirebase();

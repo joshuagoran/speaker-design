@@ -1,16 +1,16 @@
-import { PAL } from "../../styles/palette.ts";
-import { WarningChips } from "../../components/chips/WarningChips.tsx";
-import { StatRowGrid } from "../../components/stats/StatRowGrid.tsx";
-import { StatTile } from "../../components/stats/StatTile.tsx";
-import { ToggleButton } from "../../components/ui/ToggleButton.tsx";
-import { Tooltip } from "../../components/ui/Tooltip.tsx";
-import { Card } from "../../components/ui/Card.tsx";
-import { SelectField } from "../../components/ui/SelectField.tsx";
-import { Slider } from "../../components/ui/Slider.tsx";
-import { ResponseChart } from "../../components/charts/ResponseChart.tsx";
-import { fillChips } from "../../lib/pa/chips.ts";
-import { FILL_OPTIONS } from "../../lib/data.ts";
-import { fillSystem, nearestPoint } from "../../lib/pa/calc.ts";
+import { PAL } from "../../styles/palette";
+import { WarningChips } from "../../components/chips/WarningChips";
+import { StatRowGrid } from "../../components/stats/StatRowGrid";
+import { StatTile } from "../../components/stats/StatTile";
+import { ToggleButton } from "../../components/ui/ToggleButton";
+import { Tooltip } from "../../components/ui/Tooltip";
+import { Card } from "../../components/ui/Card";
+import { SelectField } from "../../components/ui/SelectField";
+import { Slider } from "../../components/ui/Slider";
+import { ResponseChart } from "../../components/charts/ResponseChart";
+import { fillChips } from "../../lib/pa/chips";
+import { FILL_OPTIONS } from "../../lib/data";
+import { fillSystem, nearestPoint } from "../../lib/pa/calc";
 import { useState } from "react";
 
 /** Fills page: choose and size the fill speakers. */

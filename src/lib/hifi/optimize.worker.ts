@@ -1,11 +1,11 @@
 // Runs the optimizer off the main thread. runOptimizer.ts imports it with ?worker&inline, so Vite bundles it into the page.
-import { optimizeHifiSpeaker } from "./optimize.ts";
+import { optimizeHifiSpeaker } from "./optimize";
 import type {
   HifiOptimizerInput,
   HifiOptimizerResult,
   OptimizerRequest,
   OptimizerResponse,
-} from "../../types.ts";
+} from "../../types";
 // Under the DOM lib `self` is a Window, whose onmessage and one-argument postMessage match what a worker does.
 self.onmessage = (e: MessageEvent<OptimizerRequest<HifiOptimizerInput>>) => {
   const { id, input } = e.data;

@@ -1,9 +1,9 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { boxModel, closedBox } from "../src/lib/pa/calc.ts";
-import { SUB_OPTIONS } from "../src/lib/data.ts";
-import type { ThieleSmall } from "../src/types.ts";
-import { tsModel, massLineSPL, helmholtz, near, close, rel } from "./helpers.ts";
+import { boxModel, closedBox } from "../src/lib/pa/calc";
+import { SUB_OPTIONS } from "../src/lib/data";
+import type { ThieleSmall } from "../src/types";
+import { tsModel, massLineSPL, helmholtz, near, close, rel } from "./helpers";
 
 const fh500 = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
 

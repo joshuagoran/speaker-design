@@ -1,4 +1,4 @@
-import * as HIFI from "../src/lib/hifi/hifi.ts";
+import * as HIFI from "../src/lib/hifi/hifi";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
@@ -14,9 +14,9 @@ import {
   hifiResponseAt,
   hifiDispersionMap,
   grossVolumeLiters,
-} from "../src/lib/hifi/hifi.ts";
-import type { HifiConfig, HifiTweeter, HifiWoofer, PassiveRadiator } from "../src/types.ts";
-import { close } from "./helpers.ts";
+} from "../src/lib/hifi/hifi";
+import type { HifiConfig, HifiTweeter, HifiWoofer, PassiveRadiator } from "../src/types";
+import { close } from "./helpers";
 
 // a generic 6.5" woofer and 1" dome (typical published values), so the tests don't depend on the driver list
 // price, src, fmax, note and ts.Le, ts.sens, ts.imp complete the type; the functions under test ignore them
@@ -264,7 +264,7 @@ test("slot vent: tunes like a port of the same area and length, its shelf takes 
 });
 
 test("planar ribbon on its own waveguide: flush-mounted, its coverage drives the directivity, 5 ohm and minimum crossover checked", async (t) => {
-  const { HIFI_TWEETERS, ownGuideCfg } = await import("../src/lib/data.ts");
+  const { HIFI_TWEETERS, ownGuideCfg } = await import("../src/lib/data");
   const r = HIFI_TWEETERS.find((o) => o.id === "lt22")!;
   const g = ownGuideCfg(r),
     c = { ...cfg, guide: g, xo: 2200 };

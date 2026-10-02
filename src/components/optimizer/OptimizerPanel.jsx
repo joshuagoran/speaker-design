@@ -1,14 +1,14 @@
-import { ToggleButton } from "../ui/ToggleButton.tsx";
-import { Card } from "../ui/Card.tsx";
-import { SectionHeading } from "../ui/SectionHeading.tsx";
-import { NumberField } from "../ui/NumberField.tsx";
-import { Notice } from "../ui/Notice.tsx";
-import { formatDollars } from "../../lib/format.ts";
-import { OptimizerResultCard } from "./OptimizerResultCard.jsx";
-import { GoalPicker } from "./GoalPicker.jsx";
-import { RunRow } from "./RunRow.jsx";
-import { ResultCards } from "./ResultCards.jsx";
-import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize.ts";
+import { ToggleButton } from "../ui/ToggleButton";
+import { Card } from "../ui/Card";
+import { SectionHeading } from "../ui/SectionHeading";
+import { NumberField } from "../ui/NumberField";
+import { Notice } from "../ui/Notice";
+import { formatDollars } from "../../lib/format";
+import { OptimizerResultCard } from "./OptimizerResultCard";
+import { GoalPicker } from "./GoalPicker";
+import { RunRow } from "./RunRow";
+import { ResultCards } from "./ResultCards";
+import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize";
 
 /** Goal picker, run button and result cards for the PA optimizer. */
 export function OptimizerPanel({

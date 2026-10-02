@@ -1,4 +1,4 @@
-import { FormField } from "./FormField.tsx";
+import { FormField } from "./FormField";
 import { useEffect, useId, useState } from "react";
 
 interface Props {

@@ -9,10 +9,10 @@ import {
   linkwitzRiley24Lowpass,
   STUFFING_VOLUME_GAIN,
   nearestPoint,
-} from "../src/lib/pa/calc.ts";
-import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data.ts";
-import type { MidSystemConfig } from "../src/types.ts";
-import { close, db } from "./helpers.ts";
+} from "../src/lib/pa/calc";
+import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
+import type { MidSystemConfig } from "../src/types";
+import { close, db } from "./helpers";
 
 const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76") || MID_OPTIONS.find((o) => o.ts)!;
 const cfg: MidSystemConfig = {

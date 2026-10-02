@@ -1,8 +1,8 @@
-import { WarningChips } from "../../../components/chips/WarningChips.tsx";
-import { StatTileGrid } from "../../../components/stats/StatTileGrid.tsx";
-import { FoldHeading } from "../../../components/ui/FoldHeading.tsx";
-import { StatRow } from "../../../components/optimizer/StatRow.tsx";
-import { midChips } from "../../../lib/pa/chips.ts";
+import { WarningChips } from "../../../components/chips/WarningChips";
+import { StatTileGrid } from "../../../components/stats/StatTileGrid";
+import { FoldHeading } from "../../../components/ui/FoldHeading";
+import { StatRow } from "../../../components/optimizer/StatRow";
+import { midChips } from "../../../lib/pa/chips";
 
 /** Mid-bass results: headline stats, details table and warning chips. */
 export function MidSection({ planner }) {

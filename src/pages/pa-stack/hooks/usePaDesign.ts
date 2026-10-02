@@ -1,17 +1,11 @@
-import { useSubwooferDesign } from "./useSubwooferDesign.ts";
-import { useMidDesign } from "./useMidDesign.ts";
-import { useHornDesign } from "./useHornDesign.ts";
-import { useCrossovers } from "./useCrossovers.ts";
-import { useCabinetStyle } from "./useCabinetStyle.ts";
-import { useCutlistOptions } from "./useCutlistOptions.ts";
-import {
-  SUB_OPTIONS,
-  MID_OPTIONS,
-  MID_BOXES,
-  CD_OPTIONS,
-  HORN_OPTIONS,
-} from "../../../lib/data.ts";
-import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion.ts";
+import { useSubwooferDesign } from "./useSubwooferDesign";
+import { useMidDesign } from "./useMidDesign";
+import { useHornDesign } from "./useHornDesign";
+import { useCrossovers } from "./useCrossovers";
+import { useCabinetStyle } from "./useCabinetStyle";
+import { useCutlistOptions } from "./useCutlistOptions";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, CD_OPTIONS, HORN_OPTIONS } from "../../../lib/data";
+import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion";
 import {
   subSystem,
   maxOutputCurve as maxCurveOf,
@@ -25,7 +19,7 @@ import {
   midSystem,
   subThroughLowpass,
   subMusicOutputAt,
-} from "../../../lib/pa/calc.ts";
+} from "../../../lib/pa/calc";
 import type {
   CompressionHf,
   Dims3,
@@ -43,13 +37,13 @@ import type {
   SubLimits,
   VentedBoxModel,
   VentGeometry,
-} from "../../../types.ts";
-import type { CabinetStyle } from "./useCabinetStyle.ts";
-import type { Crossovers } from "./useCrossovers.ts";
-import type { CutlistOptions } from "./useCutlistOptions.ts";
-import type { HornDesign } from "./useHornDesign.ts";
-import type { MidDesign } from "./useMidDesign.ts";
-import type { SubwooferDesign } from "./useSubwooferDesign.ts";
+} from "../../../types";
+import type { CabinetStyle } from "./useCabinetStyle";
+import type { Crossovers } from "./useCrossovers";
+import type { CutlistOptions } from "./useCutlistOptions";
+import type { HornDesign } from "./useHornDesign";
+import type { MidDesign } from "./useMidDesign";
+import type { SubwooferDesign } from "./useSubwooferDesign";
 import { useEffect, useRef } from "react";
 
 /** What `usePaDesign` returns: every design state and setter, plus the models and sizes derived from them. */

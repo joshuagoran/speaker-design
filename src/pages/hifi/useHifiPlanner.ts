@@ -1,5 +1,5 @@
-import { HORN_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS } from "../../lib/data.ts";
-import { useConfigStore } from "../../components/saved-configs/useConfigStore.ts";
+import { HORN_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS } from "../../lib/data";
+import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import type {
   Dims3,
   DispersionPlane,
@@ -17,7 +17,7 @@ import type {
   Horn,
   PanelMaterial,
   RadiatorSelection,
-} from "../../types.ts";
+} from "../../types";
 import { useState } from "react";
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;

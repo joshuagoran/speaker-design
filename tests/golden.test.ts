@@ -7,7 +7,7 @@ import {
   fillConfigs,
   evaluateFill,
   type GoldenValues,
-} from "./golden-configs.ts";
+} from "./golden-configs";
 const configs = [
   ...subConfigs.map((c) => ({ name: c.name, run: () => evalSub(c) })),
   ...fillConfigs.map((c) => ({ name: c.name, run: () => evaluateFill(c) })),

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CABINET_FINISHES } from "../../lib/data.ts";
+import { CABINET_FINISHES } from "../../lib/data";
 import {
   roundedRectShape,
   roundedRectPath,
@@ -7,7 +7,7 @@ import {
   archOutlinePath,
   rectangularHornGeometry,
   createScaleFigure,
-} from "./geometry.ts";
+} from "./geometry";
 import { useEffect, useRef, useState } from "react";
 
 /** Rotatable 3D view of the PA stack. */

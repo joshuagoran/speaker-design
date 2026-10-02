@@ -14,9 +14,9 @@ import {
   hifiSlotEndCorrection,
   slotWidth,
   slotMaxLength,
-} from "./hifi.ts";
-import { ventTuning } from "../pa/calc.ts";
-import { passiveRadiatorMassMax, ownGuideCfg } from "../data.ts";
+} from "./hifi";
+import { ventTuning } from "../pa/calc";
+import { passiveRadiatorMassMax, ownGuideCfg } from "../data";
 import type {
   Dims3,
   DimensionLockMode,
@@ -38,7 +38,7 @@ import type {
   PassiveRadiatorHandover,
   RoundPort,
   SlotPort,
-} from "../../types.ts";
+} from "../../types";
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };

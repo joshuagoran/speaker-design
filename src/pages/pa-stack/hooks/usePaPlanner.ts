@@ -1,13 +1,13 @@
-import { useStackViewOptions } from "./useStackViewOptions.ts";
-import type { StackViewOptions } from "./useStackViewOptions.ts";
-import { usePhoneLayout } from "./usePhoneLayout.ts";
-import type { PhoneLayout } from "./usePhoneLayout.ts";
-import { useSavedConfigs } from "./useSavedConfigs.ts";
-import type { SavedConfigs } from "./useSavedConfigs.ts";
-import { usePaOptimizer } from "./usePaOptimizer.tsx";
-import type { PaOptimizer } from "./usePaOptimizer.tsx";
-import { usePaDesign } from "./usePaDesign.ts";
-import type { PaDesign } from "./usePaDesign.ts";
+import { useStackViewOptions } from "./useStackViewOptions";
+import type { StackViewOptions } from "./useStackViewOptions";
+import { usePhoneLayout } from "./usePhoneLayout";
+import type { PhoneLayout } from "./usePhoneLayout";
+import { useSavedConfigs } from "./useSavedConfigs";
+import type { SavedConfigs } from "./useSavedConfigs";
+import { usePaOptimizer } from "./usePaOptimizer";
+import type { PaOptimizer } from "./usePaOptimizer";
+import { usePaDesign } from "./usePaDesign";
+import type { PaDesign } from "./usePaDesign";
 
 /** Everything the PA stack and cutlist pages read, flat. */
 export interface PaPlanner

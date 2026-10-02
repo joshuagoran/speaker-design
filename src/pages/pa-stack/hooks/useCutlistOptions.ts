@@ -1,4 +1,4 @@
-import type { CornerJoint, PlywoodSheetKind } from "../../../types.ts";
+import type { CornerJoint, PlywoodSheetKind } from "../../../types";
 import { useState } from "react";
 
 export interface CutlistOptions {
