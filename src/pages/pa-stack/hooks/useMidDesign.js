@@ -1,4 +1,4 @@
-import { MID_OPTIONS, MID_BOXES } from "../../../lib/data.js";
+import { MID_OPTIONS, MID_BOXES } from "../../../lib/data.ts";
 import { useState } from "react";
 
 /** State for the mid-bass box: driver, size class, box dimensions, amp power and music balance. */

@@ -10,8 +10,8 @@ import {
   MID_BOXES,
   CD_OPTIONS,
   HORN_OPTIONS,
-} from "../../../lib/data.js";
-import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion.js";
+} from "../../../lib/data.ts";
+import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion.ts";
 import {
   subSystem,
   maxOutputCurve as maxCurveOf,
@@ -25,7 +25,7 @@ import {
   midSystem,
   subThroughLowpass,
   subMusicOutputAt,
-} from "../../../lib/pa/calc.js";
+} from "../../../lib/pa/calc.ts";
 import { useEffect, useRef } from "react";
 
 /** The whole PA design: every part and dimension, the models derived from them, and snapshot/restore for saved configurations. */

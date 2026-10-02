@@ -1,4 +1,4 @@
-import { CD_OPTIONS, HORN_OPTIONS } from "../../../lib/data.js";
+import { CD_OPTIONS, HORN_OPTIONS } from "../../../lib/data.ts";
 import { useState } from "react";
 
 /** State for the horn and compression driver: parts, HF amp power and music balance. */

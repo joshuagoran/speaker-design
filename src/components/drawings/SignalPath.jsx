@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.js";
+import { PAL } from "../../styles/palette.ts";
 /** Block diagram of the PA signal path. */
 export function SignalPath() {
   const ink = PAL.ink,

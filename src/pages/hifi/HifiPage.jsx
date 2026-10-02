@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.js";
+import { PAL } from "../../styles/palette.ts";
 import { WarningChips } from "../../components/chips/WarningChips.jsx";
 import { StatTile } from "../../components/stats/StatTile.jsx";
 import {
@@ -8,7 +8,7 @@ import {
   TWEETER_GROUP_LABELS,
   TWEETER_KIND_LABELS,
   HIFI_TWEETERS_BY_TYPE,
-} from "./hifiDriverLists.js";
+} from "./hifiDriverLists.ts";
 import { HifiResultCard } from "./HifiResultCard.jsx";
 import { ToggleButton } from "../../components/ui/ToggleButton.jsx";
 import { Button } from "../../components/ui/Button.jsx";
@@ -30,8 +30,8 @@ import { GoalPicker } from "../../components/optimizer/GoalPicker.jsx";
 import { RunRow } from "../../components/optimizer/RunRow.jsx";
 import { ResultCards } from "../../components/optimizer/ResultCards.jsx";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs.jsx";
-import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales.js";
-import { METERS_PER_FOOT } from "../../constants/units.js";
+import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales.ts";
+import { METERS_PER_FOOT } from "../../constants/units.ts";
 import {
   HORN_OPTIONS,
   HIFI_WOOFERS,
@@ -39,7 +39,7 @@ import {
   HIFI_PASSIVES,
   passiveRadiatorMassMax,
   ownGuideCfg,
-} from "../../lib/data.js";
+} from "../../lib/data.ts";
 import {
   hifiSystem,
   hifiChips,
@@ -48,9 +48,9 @@ import {
   logSpacedFrequencies,
   linkwitzRileyFilter,
   SPEAKER_PLACEMENTS as HIFI_PLACES,
-} from "../../lib/hifi/hifi.js";
-import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize.js";
-import { runHifiOptimizer } from "../../lib/hifi/runOptimizer.js";
+} from "../../lib/hifi/hifi.ts";
+import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize.ts";
+import { runHifiOptimizer } from "../../lib/hifi/runOptimizer.ts";
 
 /** Hi-fi page: 2-way home speakers with an active crossover. */
 export function HifiPage({ hifi }) {

@@ -10,7 +10,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - **Charts on the same view share the same scales**, x and y. Frequency charts use the PA stack's x axis (15 Hz–20 kHz);
   every Hi-fi dB chart uses `HIFI_TOP` / `HIFI_BOT`; the PA response chart and the PA optimizer cards use 80–135 dB.
 - Colours: CMYK brand (cyan actions and horn/tweeter, magenta mid-bass/woofer, yellow accents) plus black, white and two
-  grays; status colours stay green / orange / red. The palette lives in `src/styles/palette.js`; Tailwind's colour names are remapped from it in `tailwind.config.js`.
+  grays; status colours stay green / orange / red. The palette lives in `src/styles/palette.ts`; Tailwind's colour names are remapped from it in `tailwind.config.js`.
 - Font: Inconsolata. Corners 4 px (6 px on large boxes).
 
 ## Project conventions

@@ -1,4 +1,4 @@
-import { BUTTON_SIZE_CLASSES } from "./buttonStyles.js";
+import { BUTTON_SIZE_CLASSES } from "./buttonStyles.ts";
 
 /** Segment-style button that shows a pressed state. */
 export function ToggleButton({ on, size = "md", className = "", ...p }) {

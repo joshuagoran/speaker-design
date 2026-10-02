@@ -1,4 +1,4 @@
-import { useConfigStore } from "../../../components/saved-configs/useConfigStore.js";
+import { useConfigStore } from "../../../components/saved-configs/useConfigStore.ts";
 
 /** Saved configurations, backed by the artifact's document store, plus the one-time import of the seed configs. */
 export function useSavedConfigs() {

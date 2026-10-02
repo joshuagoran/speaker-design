@@ -1,5 +1,5 @@
-import { PAL } from "../../styles/palette.js";
-import { useElementWidth } from "../../hooks/useElementWidth.js";
+import { PAL } from "../../styles/palette.ts";
+import { useElementWidth } from "../../hooks/useElementWidth.ts";
 import { useState } from "react";
 
 /** Max-SPL chart: one or more curves ({f, spl}), fixed 80-135 dB so setups compare directly. */

@@ -1,5 +1,5 @@
-import { PAL } from "../../styles/palette.js";
-import { passiveRadiatorShape } from "../../lib/hifi/hifi.js";
+import { PAL } from "../../styles/palette.ts";
+import { passiveRadiatorShape } from "../../lib/hifi/hifi.ts";
 
 /** Front view of the box and drivers, to scale. */
 export function HifiFront({ dim, w, t, lay, vented, port, pr, guide, small }) {

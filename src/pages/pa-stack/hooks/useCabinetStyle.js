@@ -1,4 +1,4 @@
-import { PAINT_SWATCHES, CABINETS, FORMATS } from "../../../lib/data.js";
+import { PAINT_SWATCHES, CABINETS, FORMATS } from "../../../lib/data.ts";
 import { useState } from "react";
 
 /** Cabinet construction and look: plywood, baffle inset, finish, layout and the fixed plinth. */

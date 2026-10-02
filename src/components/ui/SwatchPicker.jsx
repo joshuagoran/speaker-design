@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.js";
+import { PAL } from "../../styles/palette.ts";
 import { useId } from "react";
 
 /** Colour choice: optional named presets, a row of paint swatches and a custom picker */
