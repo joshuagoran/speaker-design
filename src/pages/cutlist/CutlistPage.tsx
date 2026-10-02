@@ -67,15 +67,15 @@ export function CutlistPage({ planner }: Props) {
   });
   const sheetSize = PLYWOOD_SHEETS[plywoodSheetKind],
     kerfIn = 0.125;
-  const partsByThickness: Record<number, CutPart[]> = {};
+  const partsByThickness = new Map<number, CutPart[]>();
   parts.forEach((p) => {
-    for (let i = 0; i < p.qty * boxSetCount; i++)
-      (partsByThickness[p.t] = partsByThickness[p.t] || []).push(p);
+    const list = partsByThickness.get(p.t) ?? [];
+    for (let i = 0; i < p.qty * boxSetCount; i++) list.push(p);
+    if (list.length) partsByThickness.set(p.t, list);
   });
-  // cast: `Object.keys` types the numeric keys as strings; the sort and the lookup below coerce them back
-  const packedSheets = (Object.keys(partsByThickness) as unknown as number[])
-    .sort((a, b) => b - a)
-    .map((t) => ({ t: +t, ...packSheets(partsByThickness[t], sheetSize, kerfIn) }));
+  const packedSheets = [...partsByThickness]
+    .sort(([a], [b]) => b - a)
+    .map(([t, list]) => ({ t, ...packSheets(list, sheetSize, kerfIn) }));
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16" style={{ fontFamily: "var(--font)" }}>
       <div className="flex flex-wrap gap-6 mb-5">
