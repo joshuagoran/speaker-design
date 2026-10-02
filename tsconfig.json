@@ -3,7 +3,6 @@
     "strict": true,
     "noImplicitOverride": true,
     "isolatedModules": true,
-    "allowJs": true,
     "jsx": "react-jsx",
     "module": "esnext",
     "target": "esnext",
