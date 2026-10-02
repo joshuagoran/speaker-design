@@ -1,7 +1,7 @@
 import { Tooltip } from "../ui/Tooltip.tsx";
 
 /** Plain-language help for the stat labels, shown as a tooltip on the label */
-export const STAT_TIPS = {
+export const STAT_TIPS: Record<string, string> = {
   "Gross internal":
     "Inside volume of the box (outside size minus the walls), before the driver and port take their share.",
   "Net volume": "Air volume left inside the box once the driver and port have taken their share.",
@@ -25,8 +25,13 @@ export const STAT_TIPS = {
   Pair: "Cost of the drivers for both speakers, at the listed prices.",
 };
 
+interface StatLabelProps {
+  k: string;
+  extra?: string;
+}
+
 /** Statistic name, with a tooltip when one exists. */
-export function StatLabel({ k, extra }) {
+export function StatLabel({ k, extra }: StatLabelProps) {
   const def =
     STAT_TIPS[k] ||
     (/^Max SPL at /.test(k)
@@ -36,8 +41,15 @@ export function StatLabel({ k, extra }) {
   return tip ? <Tooltip tip={tip}>{k}</Tooltip> : k;
 }
 
+interface StatRowProps {
+  k: string;
+  v: React.ReactNode;
+  note?: React.ReactNode;
+  tip?: string;
+}
+
 /** One statistic: name, value and note. */
-export function StatRow({ k, v, note, tip }) {
+export function StatRow({ k, v, note, tip }: StatRowProps) {
   return (
     <div className="flex justify-between gap-4 border-b border-stone-300 py-1">
       <span className="text-stone-500 shrink-0">

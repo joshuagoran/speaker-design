@@ -1,14 +1,25 @@
 import { useId } from "react";
 
 /** Decimals a slider readout needs: 0 for whole steps, else as many as the step has (0.5 -> 1, 0.25 -> 2) */
-export const countDecimals = (step) => {
+export const countDecimals = (step: number) => {
   const t = String(step);
   const i = t.indexOf(".");
   return i < 0 ? 0 : t.length - i - 1;
 };
 
+interface Props {
+  label: React.ReactNode;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  unit?: string;
+  onChange: (value: number) => void;
+  extra?: React.ReactNode;
+}
+
 /** Labelled range slider with a numeric readout. */
-export function Slider({ label, value, min, max, step, unit, onChange, extra }) {
+export function Slider({ label, value, min, max, step, unit, onChange, extra }: Props) {
   const id = useId();
   const shown = typeof value === "number" ? value.toFixed(countDecimals(step)) : value;
   return (

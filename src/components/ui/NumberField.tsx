@@ -1,8 +1,28 @@
 import { FormField } from "./FormField.tsx";
 import { useEffect, useId, useState } from "react";
 
+interface Props {
+  label: React.ReactNode;
+  value: number;
+  onChange: (value: number) => void;
+  unit?: React.ReactNode;
+  min?: number;
+  max?: number;
+  step?: number;
+  className?: string;
+}
+
 /** Number input with a unit. Clearing the box does not force 0: the value only changes once a number is typed. */
-export function NumberField({ label, value, onChange, unit, min, max, step, className = "" }) {
+export function NumberField({
+  label,
+  value,
+  onChange,
+  unit,
+  min,
+  max,
+  step,
+  className = "",
+}: Props) {
   const id = useId();
   const [raw, setRaw] = useState(String(value));
   useEffect(() => {

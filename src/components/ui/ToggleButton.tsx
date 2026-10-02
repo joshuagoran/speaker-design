@@ -1,7 +1,13 @@
 import { BUTTON_SIZE_CLASSES } from "./buttonStyles.ts";
+import type { ButtonSize } from "./buttonStyles.ts";
+
+interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  on?: boolean;
+  size?: ButtonSize;
+}
 
 /** Segment-style button that shows a pressed state. */
-export function ToggleButton({ on, size = "md", className = "", ...p }) {
+export function ToggleButton({ on, size = "md", className = "", ...p }: Props) {
   return (
     <button
       type="button"

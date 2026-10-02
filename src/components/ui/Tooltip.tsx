@@ -1,17 +1,24 @@
 import { useEffect, useId, useRef, useState } from "react";
 
+interface Props {
+  tip: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}
+
 /** Term with a tooltip. Opens on hover, keyboard focus or tap; Esc or a tap elsewhere closes it. */
-export function Tooltip({ tip, children, className = "" }) {
+export function Tooltip({ tip, children, className = "" }: Props) {
   const id = useId();
   const [open, setOpen] = useState(false);
   const [flip, setFlip] = useState(false);
-  const ref = useRef(null);
+  const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (!open) return;
     const r = ref.current?.getBoundingClientRect();
     setFlip(!!r && r.left + 288 > window.innerWidth - 8);
-    const off = (e) => {
-      if (!ref.current?.contains(e.target)) setOpen(false);
+    const off = (e: PointerEvent) => {
+      // boundary cast: a DOM event's target is typed EventTarget, here it is always a node
+      if (!ref.current?.contains(e.target as Node | null)) setOpen(false);
     };
     document.addEventListener("pointerdown", off);
     return () => document.removeEventListener("pointerdown", off);

@@ -1,5 +1,14 @@
+interface Props {
+  id: string;
+  title: React.ReactNode;
+  /** whether each section is open, by id */
+  folds: Record<string, boolean>;
+  toggle: (id: string) => void;
+  className?: string;
+}
+
 /** Section heading that folds its section on phones (always open from md up). */
-export function FoldHeading({ id, title, folds, toggle, className = "" }) {
+export function FoldHeading({ id, title, folds, toggle, className = "" }: Props) {
   return (
     <h2
       className={`text-xl ${className} ${folds[id] ? "" : "max-md:mb-0"}`}

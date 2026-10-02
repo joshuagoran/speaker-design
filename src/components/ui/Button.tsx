@@ -1,7 +1,13 @@
 import { BUTTON_SIZE_CLASSES, BUTTON_VARIANT_CLASSES } from "./buttonStyles.ts";
+import type { ButtonSize, ButtonVariant } from "./buttonStyles.ts";
+
+interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+}
 
 /** Disabled = grey fill with dark text (readable), never faded with opacity */
-export function Button({ variant = "secondary", size = "md", className = "", ...p }) {
+export function Button({ variant = "secondary", size = "md", className = "", ...p }: Props) {
   return (
     <button
       type="button"

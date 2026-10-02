@@ -1,3 +1,5 @@
+import type { Chip } from "../../types.ts";
+
 /** Background and border classes for each warning-chip status: a light tint of the status colour with a matching border. */
 export const CHIP_BACKGROUND_CLASSES = {
   ok: "bg-green-50 border-green-200 border-l-4 border-l-green-300",
@@ -5,8 +7,13 @@ export const CHIP_BACKGROUND_CLASSES = {
   bad: "bg-red-50 border-red-200 border-l-4 border-l-red-300",
 };
 
+interface Props {
+  chips: readonly Chip[];
+  className?: string;
+}
+
 /** Stack of warning chips, each `[status, heading, text]` as returned by subChips, midChips, hornChips, fillChips and hifiChips. */
-export function WarningChips({ chips, className = "" }) {
+export function WarningChips({ chips, className = "" }: Props) {
   return (
     <div className={`flex flex-col gap-1.5 ${className}`.trim()}>
       {chips.map(([kind, head, body]) => (

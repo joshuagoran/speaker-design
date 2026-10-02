@@ -1,5 +1,10 @@
+interface Props extends React.HTMLAttributes<HTMLDivElement> {
+  pad?: "md" | "lg";
+  tone?: "white" | "tint";
+}
+
 /** Panel: one outline, one radius. pad: "md" (default) or "lg"; tone: "white" or "tint" */
-export function Card({ pad = "md", tone = "white", className = "", ...p }) {
+export function Card({ pad = "md", tone = "white", className = "", ...p }: Props) {
   return (
     <div
       {...p}

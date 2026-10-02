@@ -1,7 +1,13 @@
 import { StatLabel } from "../optimizer/StatRow.tsx";
 
+interface Props {
+  label: string;
+  value: React.ReactNode;
+  unit?: React.ReactNode;
+}
+
 /** One headline number: a small label (with tooltip when one exists), the value and its unit. */
-export function StatTile({ label, value, unit }) {
+export function StatTile({ label, value, unit }: Props) {
   return (
     <div className="bg-stone-50 px-3 py-2.5">
       <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">

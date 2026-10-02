@@ -1,5 +1,17 @@
 import { PAL } from "../../styles/palette.ts";
 import { useId } from "react";
+import type { PaintSwatch } from "../../types.ts";
+
+interface Props {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  swatches: readonly PaintSwatch[];
+  /** named presets, by key (the cabinet finishes) */
+  presets?: Record<string, { name: string; swatch: string }>;
+  titlePrefix?: string;
+  note?: React.ReactNode;
+}
 
 /** Colour choice: optional named presets, a row of paint swatches and a custom picker */
 export function SwatchPicker({
@@ -10,10 +22,10 @@ export function SwatchPicker({
   presets,
   titlePrefix = "",
   note,
-}) {
+}: Props) {
   const id = useId();
   const preset = presets && presets[value];
-  const ring = (on) => (on ? "border-stone-900" : "border-stone-300");
+  const ring = (on: boolean) => (on ? "border-stone-900" : "border-stone-300");
   return (
     <div className="mb-5">
       <div id={id} className="text-sm text-stone-500 mb-1">
