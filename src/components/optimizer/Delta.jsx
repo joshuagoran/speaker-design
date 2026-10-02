@@ -1,4 +1,4 @@
-import { formatDollars } from "../../lib/format.js";
+import { formatDollars } from "../../lib/format.ts";
 
 /** Difference from the current design, coloured by whether it is an improvement. */
 export function Delta({ v, unit, lowerIsBetter, digits = 0 }) {

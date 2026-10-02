@@ -2,7 +2,7 @@ import { Button } from "../ui/Button.jsx";
 import { Tooltip } from "../ui/Tooltip.jsx";
 import { OptimizerCurveChart } from "../charts/OptimizerCurveChart.jsx";
 import { BoxFront } from "../drawings/BoxFront.jsx";
-import { formatDollars } from "../../lib/format.js";
+import { formatDollars } from "../../lib/format.ts";
 import { Delta } from "./Delta.jsx";
 
 /** One suggested design with its numbers, preview and load buttons. */

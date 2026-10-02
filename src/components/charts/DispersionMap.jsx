@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.js";
+import { PAL } from "../../styles/palette.ts";
 import { useState } from "react";
 
 /** Level vs angle and frequency, normalised to on-axis (0 dB darkest). Hover or drag to read a cell. */

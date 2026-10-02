@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.js";
+import { PAL } from "../../styles/palette.ts";
 import { useElementWidth } from "../../hooks/useElementWidth.js";
 
 /** One plywood sheet with its cut pieces laid out. */

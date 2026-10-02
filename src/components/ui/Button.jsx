@@ -1,4 +1,4 @@
-import { BUTTON_SIZE_CLASSES, BUTTON_VARIANT_CLASSES } from "./buttonStyles.js";
+import { BUTTON_SIZE_CLASSES, BUTTON_VARIANT_CLASSES } from "./buttonStyles.ts";
 
 /** Disabled = grey fill with dark text (readable), never faded with opacity */
 export function Button({ variant = "secondary", size = "md", className = "", ...p }) {

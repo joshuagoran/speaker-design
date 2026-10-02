@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.js";
+import { PAL } from "../../styles/palette.ts";
 /** Top-down room: the pair and a seat you can drag. Units: feet. */
 export function RoomView({ spacing, toe, seat, setSeat, angles }) {
   const Wd = Math.max(12, spacing + 6),

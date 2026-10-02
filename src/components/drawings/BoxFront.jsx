@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.js";
+import { PAL } from "../../styles/palette.ts";
 /** Front view of a design, to scale, with your current design's outline dashed behind it. */
 export function BoxFront({ g, cur }) {
   const W = 150,

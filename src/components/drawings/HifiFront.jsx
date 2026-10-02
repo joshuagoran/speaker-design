@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.js";
+import { PAL } from "../../styles/palette.ts";
 import { passiveRadiatorShape } from "../../lib/hifi/hifi.js";
 
 /** Front view of the box and drivers, to scale. */

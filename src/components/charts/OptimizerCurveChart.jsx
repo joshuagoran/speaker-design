@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.js";
+import { PAL } from "../../styles/palette.ts";
 import { useState } from "react";
 
 /** The sub's clean output (music limit) against frequency, this design against yours; the scored 40-90 Hz band shaded. */

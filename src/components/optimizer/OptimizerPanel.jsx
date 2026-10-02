@@ -3,7 +3,7 @@ import { Card } from "../ui/Card.jsx";
 import { SectionHeading } from "../ui/SectionHeading.jsx";
 import { NumberField } from "../ui/NumberField.jsx";
 import { Notice } from "../ui/Notice.jsx";
-import { formatDollars } from "../../lib/format.js";
+import { formatDollars } from "../../lib/format.ts";
 import { OptimizerResultCard } from "./OptimizerResultCard.jsx";
 import { GoalPicker } from "./GoalPicker.jsx";
 import { RunRow } from "./RunRow.jsx";

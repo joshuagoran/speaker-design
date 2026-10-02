@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette.js";
+import { PAL } from "../../styles/palette.ts";
 import { WarningChips } from "../../components/chips/WarningChips.jsx";
 import { StatRowGrid } from "../../components/stats/StatRowGrid.jsx";
 import { StatTile } from "../../components/stats/StatTile.jsx";

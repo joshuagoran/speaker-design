@@ -1,4 +1,4 @@
-import { readStoredJson, writeStoredJson } from "../../../lib/storage.js";
+import { readStoredJson, writeStoredJson } from "../../../lib/storage.ts";
 import { LockButton } from "../../../components/lock/LockButton.jsx";
 import { DimensionLock } from "../../../components/lock/DimensionLock.jsx";
 import { runPaOptimizer } from "../../../lib/pa/runOptimizer.js";
