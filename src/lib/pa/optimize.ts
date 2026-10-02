@@ -38,7 +38,7 @@ import {
   subDriverClearanceNeededIn,
   driverClearance,
 } from "./chips";
-import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS } from "../data";
+import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS, subDriversOfSize } from "../data";
 import type {
   CompressionDriver,
   CutPart,
@@ -356,7 +356,7 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
       ampW: c.ampW,
     }),
     mid: midChips({
-      midSize: mid.size || 12,
+      midSize: mid.size,
       midDims,
       Qtc: mm.Qtc,
       f3: mm.f3,
@@ -492,7 +492,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   ).filter((g, i, a) => OPTIMIZER_GOALS[g] && a.indexOf(g) === i);
   const goal = goals[0],
     also = goals.slice(1);
-  // older saved configs can lack some fields; the page always has them, with these defaults
+  // older saved configs can lack some fields: these are what the planner started on before `defaults.ts` (the page's own
+  // starting design differs in `hfTilt` and `portMax`), kept so a saved design from then optimizes as it always did
   const cur: PaDesignConfig = {
     xoLo: 120,
     xoHi: 900,
@@ -546,9 +547,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     ? curSub
       ? [curSub]
       : []
-    : SUB_OPTIONS.filter(
-        (o) => o.size === (curSub ? curSub.size : 18) && priced(o) && o.price <= budget,
-      );
+    : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
   const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
   const styles: PortStyle[] = locks.vent ? [cur.portStyle] : ["slots", "vslots", "round2"];
   const xoLos = locks.xoLo ? [cur.xoLo] : [90, 100, 110, 120, 140];
@@ -815,7 +814,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     ? curMid
       ? [curMid]
       : []
-    : MID_OPTIONS.filter((o) => (o.size || 12) >= 12 && priced(o) && o.price <= budget);
+    : MID_OPTIONS.filter((o) => o.size >= 12 && priced(o) && o.price <= budget);
   const mr = {
     w: rangeOf(locks.midDim.w, cur.mDim.w, MID_BOX_RANGE.w),
     h: rangeOf(locks.midDim.h, cur.mDim.h, MID_BOX_RANGE.h),
@@ -831,7 +830,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl),
       Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
     const disp = ts.disp != null ? ts.disp : m.size === 15 ? 4 : 2.5,
-      need = (m.size || 12) + 1.2;
+      need = m.size + 1.2;
     const out: Dims3[] = [];
     const exact = mr.w[0] === mr.w[1] && mr.h[0] === mr.h[1] && mr.d[0] === mr.d[1];
     if (exact) return [{ w: mr.w[0], h: mr.h[0], d: mr.d[0] }];
@@ -1297,7 +1296,7 @@ export function boxGeometry(c: PaDesignConfig): PaBoxGeometry {
     tower: c.layout === "tower",
     horn: horn && horn.size ? { w: horn.size.w, h: horn.size.h } : null,
     subSize: sub ? sub.size : 18,
-    midSize: mid ? mid.size || 12 : 12,
+    midSize: mid ? mid.size : 12,
     portStyle: c.portStyle,
     cVent: c.cVent,
     wall: c.wall,

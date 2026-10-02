@@ -10,6 +10,8 @@ import {
   MID_BOXES,
   MID_OPTIONS,
   SUB_OPTIONS,
+  midDriversOfSize,
+  subDriversOfSize,
 } from "../src/lib/data";
 import {
   DEFAULT_FILL,
@@ -121,5 +123,12 @@ describe("default designs", () => {
 
   it("the Hi-fi round port starts at the diameter the port toggle falls back to", () => {
     expect(DEFAULT_HIFI.portSpec.dia).toBe(DEFAULT_PORT_SIZE.dia);
+  });
+
+  it("a size's drivers are the table's drivers of that size", () => {
+    expect(subDriversOfSize(18).every((o) => o.size === 18 && SUB_OPTIONS.includes(o))).toBe(true);
+    expect(midDriversOfSize(15)).toContain(DEFAULT_MID_BY_SIZE[15]?.mid);
+    expect(midDriversOfSize(12)).toContain(DEFAULT_PA.mid);
+    expect(subDriversOfSize(18)).toContain(DEFAULT_PA.sub);
   });
 });

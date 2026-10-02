@@ -10,8 +10,8 @@ import {
   MID_BOXES,
   CD_OPTIONS,
   HORN_OPTIONS,
-  midBoxesOfSize,
   midDriversOfSize,
+  subDriversOfSize,
 } from "../../../lib/data";
 import { byId } from "../../../lib/tables";
 import { DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../../../lib/defaults";
@@ -37,7 +37,6 @@ import type {
   HifiDispersionMap,
   HornHf,
   HornResponse,
-  MidBox,
   MidDriver,
   PaDesignConfig,
   PaMaxPoint,
@@ -63,7 +62,6 @@ export interface PaDesign
   midWithBox: MidDriver & { box: Dims3 };
   subDriverChoices: SubDriver[];
   midDriverChoices: MidDriver[];
-  midBoxChoices: MidBox[];
   subBox: Dims3;
   subWithBox: SubDriver & { box: Dims3 };
   /** set by `restore` so the mid size effect leaves a restored config's driver and box alone */
@@ -199,9 +197,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
   const effectiveMidBoxDims =
     layout === "tower" ? { w: subBoxDims.w, h: 15.5, d: subBoxDims.d } : midBoxDims;
   const midWithBox = { ...midDriver, box: effectiveMidBoxDims };
-  const subDriverChoices = SUB_OPTIONS.filter((o) => o.size === format.sub);
+  const subDriverChoices = subDriversOfSize(format.sub);
   const midDriverChoices = midDriversOfSize(midSize);
-  const midBoxChoices = midBoxesOfSize(midSize);
   const subBox = subBoxDims;
   const subWithBox = { ...subDriver, box: subBox };
   /** Switching 12/15 picks that size's default driver and box; restoring a config sets them itself. */
@@ -368,11 +365,12 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     if (c.sub) setSubDriver(byId(SUB_OPTIONS, c.sub) ?? subDriver);
     if (c.mid) {
       const m = byId(MID_OPTIONS, c.mid) ?? midDriver;
-      skipSizeReset.current = (m.size || 12) !== midSize;
-      setMidSize(m.size || 12);
+      skipSizeReset.current = m.size !== midSize;
+      setMidSize(m.size);
       setMidDriver(m);
     }
-    if (c.midBox) setMidBoxPreset(byId(MID_BOXES, c.midBox) ?? midBoxPreset);
+    const savedMidBox = c.midBox ? byId(MID_BOXES, c.midBox) : undefined;
+    if (savedMidBox) setMidBoxPreset(savedMidBox);
     if (c.cd) setCompressionDriver(byId(CD_OPTIONS, c.cd) ?? compressionDriver);
     if (c.horn) setHornOption(byId(HORN_OPTIONS, c.horn) ?? hornOption);
     if (c.cDim) setSubBoxDims(c.cDim);
@@ -382,10 +380,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     if (typeof c.ampW === "number") setSubAmpWatts(c.ampW);
     if (typeof c.portMax === "number") setMaxPortAirSpeedMs(c.portMax);
     if (c.mDim) setMidBoxDims(c.mDim);
-    else if (c.midBox) {
-      const b = byId(MID_BOXES, c.midBox);
-      if (b) setMidBoxDims({ ...b.box });
-    }
+    else if (savedMidBox) setMidBoxDims({ ...savedMidBox.box });
     if (typeof c.xoLo === "number") setSubMidCrossoverHz(c.xoLo);
     if (typeof c.xoHi === "number") setMidHornCrossoverHz(c.xoHi);
     if (typeof c.mAmpW === "number") setMidAmpWatts(c.mAmpW);
@@ -523,7 +518,6 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     midWithBox,
     subDriverChoices,
     midDriverChoices,
-    midBoxChoices,
     subBox,
     subWithBox,
     skipSizeReset,

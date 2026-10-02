@@ -25,6 +25,7 @@ import type {
   PassiveRadiator,
   Rack,
   SubDriver,
+  SubSize,
 } from "../types";
 
 export const ST260_PROFILE: readonly HornProfilePoint[] = [
@@ -1698,13 +1699,11 @@ export const MID_BOXES: readonly MidBox[] = [
   B18,
 ];
 
-/** The mid drivers for a mid size class (a driver with no `size` is a 12). */
-export const midDriversOfSize = (size: MidSize) =>
-  MID_OPTIONS.filter((o) => (o.size || 12) === size);
+/** The sub drivers for a sub size class (15 or 18 in). */
+export const subDriversOfSize = (size: SubSize) => SUB_OPTIONS.filter((o) => o.size === size);
 
-/** The mid box presets for a mid size class (a preset with no `size` is a 12; the 13 in cube is not offered). */
-export const midBoxesOfSize = (size: MidSize) =>
-  MID_BOXES.filter((b) => (b.size || 12) === size && b.id !== "b13");
+/** The mid drivers for a mid size class (10, 12 or 15 in). */
+export const midDriversOfSize = (size: MidSize) => MID_OPTIONS.filter((o) => o.size === size);
 
 export const N314T: CompressionDriver = {
   id: "n314t",

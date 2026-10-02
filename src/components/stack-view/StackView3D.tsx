@@ -351,7 +351,7 @@ export function StackView3D({
       );
     }
     if (towerMode) {
-      holes.push(circlePath(0, pl + s.h + TW_MID / 2 - baffleCy, (mid.size || 12) / 2 - 0.9));
+      holes.push(circlePath(0, pl + s.h + TW_MID / 2 - baffleCy, mid.size / 2 - 0.9));
       const hy =
         (archTop ? pl + s.h + TW_MID + (s.w / 2 - T) : pl + s.h + TW_MID + twHsH / 2) - baffleCy;
       holes.push(
@@ -602,8 +602,8 @@ export function StackView3D({
     midXs.forEach((x) => {
       midZ = tower
         ? subZ
-        : cabinet(m.w, m.h, m.d, midBaseY, [circlePath(0, 0, (mid.size || 12) / 2 - 0.9)], 0, x);
-      cone((mid.size || 12) / 2 - 0.9, midBaseY + m.h / 2, midZ, x);
+        : cabinet(m.w, m.h, m.d, midBaseY, [circlePath(0, 0, mid.size / 2 - 0.9)], 0, x);
+      cone(mid.size / 2 - 0.9, midBaseY + m.h / 2, midZ, x);
     });
 
     // horn

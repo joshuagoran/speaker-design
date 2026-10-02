@@ -466,7 +466,7 @@ export function cutParts({
   if (layout !== "tower") {
     const m = boxParts("Mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
       braces: wall === 0.5 ? 2 : 1,
-      cutNote: `${formatInches(DRIVER_CUTOUT_IN[mid.size || 12] || 11.1)}″ driver cutout (check the datasheet)`,
+      cutNote: `${formatInches(DRIVER_CUTOUT_IN[mid.size] || 11.1)}″ driver cutout (check the datasheet)`,
     });
     all.push(...m.P);
   }

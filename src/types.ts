@@ -160,8 +160,8 @@ export interface MidBox {
   name: string;
   box: Dims3;
   note: string;
-  /** the sub size it suits, when it is for one size only */
-  size?: SubSize;
+  /** the mid size it suits, when it is for one size only */
+  size?: MidSize;
 }
 
 /** The named cabinet finishes; the cabinet's `cabFinish` can also be any paint colour, as a hex string. */

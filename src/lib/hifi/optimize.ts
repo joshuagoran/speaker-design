@@ -14,6 +14,7 @@ import {
   hifiSlotEndCorrection,
   slotWidth,
   slotMaxLength,
+  needsWaveguide,
 } from "./hifi";
 import { ventTuning } from "../pa/calc";
 import {
@@ -284,14 +285,13 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     };
   const guide = cur.guide || null,
     gp = input.guidePrice || 0;
-  const needsGuide = (t: HifiTweeter) => t.type === "compression" || t.needsWaveguide;
   const tweeterCfg = (t: HifiTweeter): HifiTweeter | null =>
-    needsGuide(t) ? (guide ? { ...t, faceplate: { w: guide.w, h: guide.h } } : null) : t;
+    needsWaveguide(t) ? (guide ? { ...t, faceplate: { w: guide.w, h: guide.h } } : null) : t;
   const prPrice = (c: HifiConfig) =>
     c && c.box === "radiator" && c.pr && c.pr.drv ? c.pr.n * (c.pr.drv.price || 0) : 0;
   const priceOf = (w: HifiWoofer, t: HifiTweeter, c: HifiConfig) =>
-    2 * ((w.price || 0) + (t.price || 0) + (needsGuide(t) ? gp : 0) + prPrice(c)); // a ribbon's own waveguide is in its price
-  const guideOf = (t: HifiTweeter) => ownGuideCfg(t) || (needsGuide(t) ? guide : null);
+    2 * ((w.price || 0) + (t.price || 0) + (needsWaveguide(t) ? gp : 0) + prPrice(c)); // a ribbon's own waveguide is in its price
+  const guideOf = (t: HifiTweeter) => ownGuideCfg(t) || (needsWaveguide(t) ? guide : null);
   // unlocked amps: searched at the top of their sliders, trimmed per card at the end
   const amps = {
     wAmpW: locks.wAmpW ? cur.wAmpW : HIFI_AMP_WATTS_MAX.wAmpW,
@@ -338,7 +338,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       : ["sealed", "vented"];
   const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
   const face =
-    needsGuide(T0) && guide ? (guide.freestanding ? { w: 0, h: -1 } : guide) : T0.faceplate;
+    needsWaveguide(T0) && guide ? (guide.freestanding ? { w: 0, h: -1 } : guide) : T0.faceplate;
   const stage1: Stage1Entry[] = [];
   for (const w of wList) {
     const minW = Math.max(w.size + 1.5, face.w + 1),
@@ -421,7 +421,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
   // 2. tweeter and crossover, exact model
   const tList: HifiTweeter[] = locks.tweeter
     ? [T0]
-    : tweeters.filter((t) => t.hf && t.hf.sens != null && (!needsGuide(t) || guide));
+    : tweeters.filter((t) => t.hf && t.hf.sens != null && (!needsWaveguide(t) || guide));
   const xos = locks.xo ? [cur.xo] : XOS.includes(cur.xo) ? XOS : [...XOS, cur.xo];
   const pool: PoolEntry[] = [];
   for (const x of keep.values())
@@ -618,7 +618,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       warnings: k.chips.filter(([kind]) => kind === "warn").map(([, h]) => h),
       names: { woofer: k.w.name, tweeter: k.t.name },
       lay: k.sys.lay,
-      guided: needsGuide(k.t),
+      guided: needsWaveguide(k.t),
       ownGuide: !!k.t.ownGuide,
       changed: changes(k, cur),
       curve: curveOf(k.sys),

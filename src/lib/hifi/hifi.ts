@@ -166,6 +166,10 @@ export function waveguideDirectivity(
   return Math.pow(10, Math.max(-40, db) / 20);
 }
 
+/** Whether a tweeter has to be mounted on a waveguide or horn (a compression driver, or a dome made for one) rather than sit on the baffle. */
+export const needsWaveguide = (t: Pick<HifiTweeter, "type" | "needsWaveguide">): boolean =>
+  t.type === "compression" || !!t.needsWaveguide;
+
 // ---- box ----
 /** The fields the port length reads: a round port's `dia` and `elbows`, or a slot's `h`. */
 export type PortGeometry =

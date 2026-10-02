@@ -47,6 +47,7 @@ import {
   hifiDispersionMap,
   logSpacedFrequencies,
   linkwitzRileyFilter,
+  needsWaveguide,
   SPEAKER_PLACEMENTS as HIFI_PLACES,
 } from "../../lib/hifi/hifi";
 import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
@@ -146,7 +147,7 @@ export function HifiPage({ hifi }: Props) {
   };
   const waveguideSpec = tweeter.ownGuide
     ? ownGuideCfg(tweeter)
-    : tweeter.type === "compression" || tweeter.needsWaveguide
+    : needsWaveguide(tweeter)
       ? compressionWaveguide
       : null;
   const radiatorDriver = byId(HIFI_PASSIVES, radiatorSelection.id) ?? HIFI_PASSIVES[0];
