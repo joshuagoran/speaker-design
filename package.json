@@ -6,6 +6,7 @@
     "build": "sh build/build.sh pages",
     "test": "vp test",
     "golden": "vp test --run --config tests/update-golden.config.ts",
+    "scene-dump": "vp test --run --config tests/scene-dump.config.ts",
     "prepare": "vp config"
   },
   "dependencies": {
