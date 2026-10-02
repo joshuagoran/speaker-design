@@ -1,5 +1,6 @@
 import { HORN_OPTIONS } from "../../lib/data";
 import { DEFAULT_HIFI } from "../../lib/defaults";
+import { portAfterToggle } from "../../lib/hifi/hifi";
 import { readStoredJson, writeStoredJson } from "../../lib/storage";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
 import type {
@@ -20,10 +21,11 @@ import type {
   CrossoverOrder,
   ListeningSeat,
   PanelMaterial,
+  PortMemory,
   RadiatorSelection,
   Setter,
 } from "../../types";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** The optimizer locks as the page holds them: the box-dimension modes are always present. */
 export interface HifiPlannerLocks extends HifiOptimizerLocks {
@@ -46,6 +48,8 @@ export interface HifiPlanner extends HifiDesignState {
   setWallThicknessIn: Setter<number>;
   setPanelMaterial: Setter<PanelMaterial>;
   setPortSpec: Setter<HifiPort>;
+  /** The port after the "1 port / 2 ports / Slot" toggle, keeping the size each shape last had. */
+  togglePort: (to: Parameters<typeof portAfterToggle>[1]) => void;
   setRadiatorSelection: Setter<RadiatorSelection>;
   setCrossoverHz: Setter<number>;
   setCrossoverOrder: Setter<CrossoverOrder>;
@@ -98,6 +102,20 @@ export function useHifiPlanner(): HifiPlanner {
   const [wallThicknessIn, setWallThicknessIn] = useState(DEFAULT_HIFI.wallThicknessIn);
   const [panelMaterial, setPanelMaterial] = useState<PanelMaterial>(DEFAULT_HIFI.panelMaterial);
   const [portSpec, setPortSpec] = useState<HifiPort>(DEFAULT_HIFI.portSpec);
+  // the last round diameter and slot height, so toggling the port shape and back keeps what the user had
+  // (not persisted, like portSpec itself)
+  const portMemory = useRef<PortMemory>({
+    dia: DEFAULT_HIFI.portSpec.dia,
+    h: DEFAULT_HIFI.slotHeightIn,
+  });
+  useEffect(() => {
+    portMemory.current =
+      portSpec.shape === "slot"
+        ? { ...portMemory.current, h: portSpec.h }
+        : { ...portMemory.current, dia: portSpec.dia };
+  }, [portSpec]);
+  const togglePort = (to: Parameters<typeof portAfterToggle>[1]) =>
+    setPortSpec((p) => portAfterToggle(p, to, portMemory.current));
   const [radiatorSelection, setRadiatorSelection] = useState<RadiatorSelection>(
     DEFAULT_HIFI.radiatorSelection,
   );
@@ -159,6 +177,7 @@ export function useHifiPlanner(): HifiPlanner {
     setPanelMaterial,
     portSpec,
     setPortSpec,
+    togglePort,
     radiatorSelection,
     setRadiatorSelection,
     crossoverHz,

@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { PAL } from "../../styles/palette";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { StatTile } from "../../components/stats/StatTile";
@@ -41,7 +40,6 @@ import {
   passiveRadiatorMassMax,
   ownGuideCfg,
 } from "../../lib/data";
-import { DEFAULT_HIFI } from "../../lib/defaults";
 import { byId, byIdOrThrow } from "../../lib/tables";
 import { writeStoredJson } from "../../lib/storage";
 import {
@@ -52,7 +50,6 @@ import {
   logSpacedFrequencies,
   linkwitzRileyFilter,
   SPEAKER_PLACEMENTS as HIFI_PLACES,
-  portAfterToggle,
 } from "../../lib/hifi/hifi";
 import { HIFI_OPTIMIZER_GOALS, HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
 import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
@@ -67,7 +64,6 @@ import type {
   HifiPlacement,
   ListeningSeat,
   PanelMaterial,
-  PortMemory,
   RadiatorSelection,
   Setter,
 } from "../../types";
@@ -116,6 +112,7 @@ export function HifiPage({ hifi }: Props) {
     setPanelMaterial,
     portSpec,
     setPortSpec,
+    togglePort,
     radiatorSelection,
     setRadiatorSelection,
     crossoverHz,
@@ -165,17 +162,6 @@ export function HifiPage({ hifi }: Props) {
     waveguideChoices,
     store,
   } = hifi;
-  // the last round diameter and slot height, so toggling the port shape and back keeps what the user had
-  const portMemory = useRef<PortMemory>({
-    dia: DEFAULT_HIFI.portSpec.dia,
-    h: DEFAULT_HIFI.slotHeightIn,
-  });
-  useEffect(() => {
-    portMemory.current =
-      portSpec.shape === "slot"
-        ? { ...portMemory.current, h: portSpec.h }
-        : { ...portMemory.current, dia: portSpec.dia };
-  }, [portSpec]);
   const setBoxDim = (k: keyof Dims3, v: number) => setBoxDims((p) => ({ ...p, [k]: v }));
   const setPortField = (k: "h" | "dia" | "len", v: number) =>
     setPortSpec((p) => ({ ...p, [k]: v }));
@@ -873,8 +859,7 @@ export function HifiPage({ hifi }: Props) {
                   on={on}
                   onClick={() => {
                     setBoxType(v);
-                    if (v === "vented")
-                      setPortSpec((p) => portAfterToggle(p, n, portMemory.current));
+                    if (v === "vented") togglePort(n);
                     if (v === "radiator") setRadiatorSelection((p) => ({ ...p, n }));
                   }}
                 >
