@@ -56,8 +56,8 @@ export interface HifiDesign {
   speakerModel: HifiSpeakerModel | null;
 }
 
-/** The Hi-fi model: the config the lib functions take, the system and its warnings, the seat geometry, levels and response curves. */
-export function useHifiDesign(state: HifiDesignState): HifiDesign {
+/** The Hi-fi model, pure in the state: the config the lib functions take, the system and its warnings, the seat geometry, levels and response curves. */
+export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
   const {
     woofer,
     tweeter,

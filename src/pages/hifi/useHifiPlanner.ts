@@ -3,8 +3,8 @@ import { DEFAULT_HIFI, DEFAULT_PORT_SIZE } from "../../lib/defaults";
 import { portAfterToggle } from "../../lib/hifi/hifi";
 import { byId, byIdOrThrow } from "../../lib/tables";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
-import { useHifiDesign } from "./useHifiDesign";
-import type { HifiDesign } from "./useHifiDesign";
+import { deriveHifiDesign } from "./hifiDesign";
+import type { HifiDesign } from "./hifiDesign";
 import { useHifiOptimizer } from "./useHifiOptimizer";
 import type { HifiOptimizer } from "./useHifiOptimizer";
 import type {
@@ -26,7 +26,7 @@ import type {
   SavedHifiConfig,
   Setter,
 } from "../../types";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /** Everything the Hi-fi page reads: the design state and its setters, the model derived from it, the optimizer, and saving. */
 export interface HifiPlanner extends HifiDesignState, HifiDesign, HifiOptimizer {
@@ -182,7 +182,58 @@ export function useHifiPlanner(): HifiPlanner {
     standHeightIn,
     dispersionPlane,
   };
-  const design = useHifiDesign(state);
+  // derived once per change to a state field, not on every render of every tab (App holds this planner)
+  const design = useMemo(
+    () =>
+      deriveHifiDesign({
+        woofer,
+        tweeter,
+        selectedWaveguide,
+        boxType,
+        boxDims,
+        wallThicknessIn,
+        panelMaterial,
+        portSpec,
+        radiatorSelection,
+        crossoverHz,
+        crossoverOrder,
+        wooferAmpWatts,
+        tweeterAmpWatts,
+        baffleStepCompensationDb,
+        placement,
+        distanceToWallFt,
+        speakerSpacingFt,
+        toeInDeg,
+        listeningSeat,
+        earHeightIn,
+        standHeightIn,
+        dispersionPlane,
+      }),
+    [
+      woofer,
+      tweeter,
+      selectedWaveguide,
+      boxType,
+      boxDims,
+      wallThicknessIn,
+      panelMaterial,
+      portSpec,
+      radiatorSelection,
+      crossoverHz,
+      crossoverOrder,
+      wooferAmpWatts,
+      tweeterAmpWatts,
+      baffleStepCompensationDb,
+      placement,
+      distanceToWallFt,
+      speakerSpacingFt,
+      toeInDeg,
+      listeningSeat,
+      earHeightIn,
+      standHeightIn,
+      dispersionPlane,
+    ],
+  );
   const optimizer = useHifiOptimizer({
     snapshot,
     applyDesign,

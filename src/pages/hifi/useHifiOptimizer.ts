@@ -9,7 +9,7 @@ import type {
   HifiOptimizerResult,
   Setter,
 } from "../../types";
-import type { HifiDesign } from "./useHifiDesign";
+import type { HifiDesign } from "./hifiDesign";
 import { useState } from "react";
 
 /** The optimizer locks as the page holds them: the box-dimension modes are always present. */
