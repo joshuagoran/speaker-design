@@ -198,6 +198,27 @@ describe("stack scene", () => {
     }
   });
 
+  test("the stack is as tall as the planner says, for each horn shape and layout", () => {
+    const base = byName("default PA");
+    const horns = [...new Set(sceneCases.map((c) => c.props.horn))].flatMap((horn) => [
+      horn,
+      { ...horn, profile: undefined, rect: undefined }, // the plain flared block
+      { ...horn, profile: undefined, rect: true }, // a rectangular horn
+    ]);
+    for (const layout of ["stack", "pole", "satellite", "tower"] as const) {
+      for (const horn of horns) {
+        // a plain block in the tower pokes out of the shell by its bevel; no horn in the data is one
+        if (layout === "tower" && !horn.profile && !horn.rect) continue;
+        const p = { ...base, horn, layout };
+        const top = stackBox(buildStackScene(p)).max.y;
+        const planned = derivedHeights(p).stackHeightIn;
+        // the lathe profile overshoots its nominal height by a few hundredths of an inch
+        expect(top, `${horn.id} ${layout}`).toBeGreaterThanOrEqual(planned - 1e-6);
+        expect(top, `${horn.id} ${layout}`).toBeLessThan(planned + 0.1);
+      }
+    }
+  });
+
   test("scene-dump.json matches a fresh build (regenerate with `vp run scene-dump`)", () => {
     const saved: unknown = JSON.parse(
       fs.readFileSync(new URL("./scene-dump.json", import.meta.url), "utf8"),

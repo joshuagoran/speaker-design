@@ -250,8 +250,12 @@ export function derivePaDesign({
     !hornOption.scaleX &&
     subBox.w / 2 - 0.75 > hornOption.size.w / 2;
   const stackHeightIn = isTower
-    ? stackBaseHeightIn + 15.5 + (hasArchedTop ? subBox.w - 0.75 : hornOption.size.h + 2)
-    : stackBaseHeightIn + effectiveMidBoxDims.h + 1.2 + hornOption.size.h + 2;
+    ? // the shell's top roundover adds a quarter inch
+      stackBaseHeightIn + 15.5 + (hasArchedTop ? subBox.w - 0.75 : hornOption.size.h + 2) + 0.25
+    : stackBaseHeightIn +
+      effectiveMidBoxDims.h +
+      (hornOption.rect || hornOption.profile ? 0.3 : 2.2 + 1.6) + // the plain block: 2.2 in up, plus its 1.6 in bevel
+      hornOption.size.h;
   const hornCenterHeightIn = isTower
     ? stackBaseHeightIn + 15.5 + (hasArchedTop ? subBox.w / 2 - 0.75 : (hornOption.size.h + 2) / 2)
     : // the 3D scene sits a rect or lathe horn 0.3 in above the mid box; the plain flared block 2.2 in
