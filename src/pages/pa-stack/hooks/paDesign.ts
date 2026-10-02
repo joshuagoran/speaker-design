@@ -32,7 +32,7 @@ import type { MidDesign } from "./useMidDesign";
 import type { SubwooferDesign } from "./useSubwooferDesign";
 
 /** The design state the PA models read; the music-balance tilts, finish, colours and cutlist options don't enter them. */
-export type PaDesignInputs = Pick<
+type PaDesignInputs = Pick<
   SubwooferDesign,
   | "subDriver"
   | "portStyle"

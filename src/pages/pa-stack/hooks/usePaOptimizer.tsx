@@ -7,31 +7,20 @@ import type {
   ConfigDb,
   Dims3,
   PaDesignConfig,
+  PaDesignPreview,
   PaGoal,
   PaLockKey,
   PaOptimizerCard,
   PaOptimizerInputState,
   PaOptimizerLocks,
   PaOptimizerResult,
+  PaPlannerLocks,
   PaRoom,
   PaSearchOverrides,
   Setter,
 } from "../../../types";
 import type { PaDesign } from "./usePaDesign";
 import { useState } from "react";
-
-/** The optimizer locks as the page holds them: both box-dimension modes are always present. */
-export interface PaPlannerLocks extends PaOptimizerLocks {
-  subDim: NonNullable<PaOptimizerLocks["subDim"]>;
-  midDim: NonNullable<PaOptimizerLocks["midDim"]>;
-}
-
-/** The card being previewed, and the design to go back to when the preview ends. */
-export interface DesignPreview {
-  label: string;
-  before: PaDesignConfig;
-  card: PaOptimizerCard;
-}
 
 interface Props {
   snapshot: PaDesign["snapshot"];
@@ -62,8 +51,8 @@ export interface PaOptimizer {
   setIsOptimizing: Setter<boolean>;
   optimizerError: string;
   setOptimizerError: Setter<string>;
-  designPreview: DesignPreview | null;
-  setDesignPreview: Setter<DesignPreview | null>;
+  designPreview: PaDesignPreview | null;
+  setDesignPreview: Setter<PaDesignPreview | null>;
   undoSnapshot: PaDesignConfig | null;
   setUndoSnapshot: Setter<PaDesignConfig | null>;
   toastMessage: string;
@@ -133,7 +122,7 @@ export function usePaOptimizer({ snapshot, restore, db }: Props): PaOptimizer {
   const [optimizerResult, setOptimizerResult] = useState<PaOptimizerResult | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizerError, setOptimizerError] = useState("");
-  const [designPreview, setDesignPreview] = useState<DesignPreview | null>(null); // { label, before }
+  const [designPreview, setDesignPreview] = useState<PaDesignPreview | null>(null); // { label, before }
   const [undoSnapshot, setUndoSnapshot] = useState<PaDesignConfig | null>(null);
   const [toastMessage, setToastMessage] = useState("");
   // ---- optimizer actions ----

@@ -10,52 +10,7 @@ import {
   linkwitzRileyFilter,
   needsWaveguide,
 } from "../../lib/hifi/hifi";
-import type {
-  Chip,
-  FrequencyPoint,
-  HifiConfig,
-  HifiDesignState,
-  HifiDispersionMap,
-  HifiSystem,
-  HifiTweeter,
-  ListenerGeometry,
-  PassiveRadiator,
-  PassiveRadiatorChoice,
-  WaveguideSpec,
-} from "../../types";
-
-/** What the model reads off a design that can be modelled: the system, and the curves and numbers worked out from it. */
-export interface HifiSpeakerModel {
-  speakerSystem: HifiSystem;
-  warningChips: Chip[];
-  /** both speakers' clean output at the seat, dB */
-  maxLevelAtSeatDb: number;
-  onAxisResponse: FrequencyPoint[];
-  pairResponse: FrequencyPoint[];
-  /** what the tweeter can play at 1 m, behind the crossover */
-  tweeterMaxCurve: FrequencyPoint[];
-  dispersion: HifiDispersionMap;
-}
-
-/** The Hi-fi design as the models read it, worked out from the planner's state. */
-export interface HifiDesign {
-  /** the waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded) */
-  compressionWaveguide: WaveguideSpec;
-  /** the waveguide in use: the tweeter's own, the picked one for a tweeter that needs one, else none */
-  waveguideSpec: WaveguideSpec | null;
-  radiatorDriver: PassiveRadiator;
-  radiator: PassiveRadiatorChoice;
-  speakerConfig: HifiConfig;
-  tweeterWithWaveguide: HifiTweeter;
-  /** each speaker's seat geometry: the left one at -spacing/2, the right at +spacing/2 */
-  leftGeometry: ListenerGeometry;
-  rightGeometry: ListenerGeometry;
-  /** the average distance to the seat, at least 1 m */
-  seatDistanceM: number;
-  pairCostUsd: number;
-  /** null when the woofer can't be modelled (its parameters aren't published) */
-  speakerModel: HifiSpeakerModel | null;
-}
+import type { HifiDesign, HifiDesignState, HifiSpeakerModel } from "../../types";
 
 /** The Hi-fi model, pure in the state: the config the lib functions take, the system and its warnings, the seat geometry, levels and response curves. */
 export function deriveHifiDesign(state: HifiDesignState): HifiDesign {

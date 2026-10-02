@@ -2,7 +2,7 @@ import { Button } from "../../../components/ui/Button";
 import { LOCK_KEYS } from "../../../constants/lockKeys";
 import { OptimizerPanel } from "../../../components/optimizer/OptimizerPanel";
 import { OptimizerBar } from "../../../components/optimizer/OptimizerBar";
-import type { PaPlannerLocks } from "../hooks/usePaOptimizer";
+import type { PaPlannerLocks } from "../../../types";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 
 interface Props {

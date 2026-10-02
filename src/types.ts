@@ -627,6 +627,51 @@ export interface HifiDesignState {
   dispersionPlane: DispersionPlane;
 }
 
+/** What the model reads off a design that can be modelled: the system, and the curves and numbers worked out from it. */
+export interface HifiSpeakerModel {
+  speakerSystem: HifiSystem;
+  warningChips: Chip[];
+  /** both speakers' clean output at the seat, dB */
+  maxLevelAtSeatDb: number;
+  onAxisResponse: FrequencyPoint[];
+  pairResponse: FrequencyPoint[];
+  /** what the tweeter can play at 1 m, behind the crossover */
+  tweeterMaxCurve: FrequencyPoint[];
+  dispersion: HifiDispersionMap;
+}
+
+/** The Hi-fi design as the models read it, worked out from the planner's state. */
+export interface HifiDesign {
+  /** the waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded) */
+  compressionWaveguide: WaveguideSpec;
+  /** the waveguide in use: the tweeter's own, the picked one for a tweeter that needs one, else none */
+  waveguideSpec: WaveguideSpec | null;
+  radiatorDriver: PassiveRadiator;
+  radiator: PassiveRadiatorChoice;
+  speakerConfig: HifiConfig;
+  tweeterWithWaveguide: HifiTweeter;
+  /** each speaker's seat geometry: the left one at -spacing/2, the right at +spacing/2 */
+  leftGeometry: ListenerGeometry;
+  rightGeometry: ListenerGeometry;
+  /** the average distance to the seat, at least 1 m */
+  seatDistanceM: number;
+  pairCostUsd: number;
+  /** null when the woofer can't be modelled (its parameters aren't published) */
+  speakerModel: HifiSpeakerModel | null;
+}
+
+/** The optimizer locks as the page holds them: the box-dimension modes are always present. */
+export interface HifiPlannerLocks extends HifiOptimizerLocks {
+  dim: NonNullable<HifiOptimizerLocks["dim"]>;
+}
+
+/** The card being previewed, and the design to go back to when the preview ends. */
+export interface HifiDesignPreview {
+  label: string;
+  before: HifiCardConfig;
+  card: HifiOptimizerCard;
+}
+
 /** The fields of a design a card applies (the ones the optimizer searched). */
 export interface HifiCardConfig {
   woofer: string;
@@ -1226,6 +1271,19 @@ export type PaLockKey =
 export interface PaOptimizerLocks extends Partial<Record<PaLockKey, boolean>> {
   subDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
   midDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
+}
+
+/** The optimizer locks as the page holds them: both box-dimension modes are always present. */
+export interface PaPlannerLocks extends PaOptimizerLocks {
+  subDim: NonNullable<PaOptimizerLocks["subDim"]>;
+  midDim: NonNullable<PaOptimizerLocks["midDim"]>;
+}
+
+/** The card being previewed, and the design to go back to when the preview ends. */
+export interface PaDesignPreview {
+  label: string;
+  before: PaDesignConfig;
+  card: PaOptimizerCard;
 }
 
 /** The optimizer's inputs on the page: the room, the heaviest box and the budget, and the goals in tap order. */

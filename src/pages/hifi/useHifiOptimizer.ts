@@ -3,26 +3,16 @@ import { readStoredJson, writeStoredJson } from "../../lib/storage";
 import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
 import type {
   HifiCardConfig,
+  HifiDesign,
+  HifiDesignPreview,
   HifiGoal,
   HifiOptimizerCard,
   HifiOptimizerLocks,
   HifiOptimizerResult,
+  HifiPlannerLocks,
   Setter,
 } from "../../types";
-import type { HifiDesign } from "./hifiDesign";
 import { useState } from "react";
-
-/** The optimizer locks as the page holds them: the box-dimension modes are always present. */
-export interface HifiPlannerLocks extends HifiOptimizerLocks {
-  dim: NonNullable<HifiOptimizerLocks["dim"]>;
-}
-
-/** The card being previewed, and the design to go back to when the preview ends. */
-export interface HifiDesignPreview {
-  label: string;
-  before: HifiCardConfig;
-  card: HifiOptimizerCard;
-}
 
 interface Props {
   /** the fields of the design a card applies: what the search starts from, and what undo and preview go back to */

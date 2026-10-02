@@ -4,7 +4,6 @@ import { portAfterToggle } from "../../lib/hifi/hifi";
 import { byId, byIdOrThrow } from "../../lib/tables";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
 import { deriveHifiDesign } from "./hifiDesign";
-import type { HifiDesign } from "./hifiDesign";
 import { useHifiOptimizer } from "./useHifiOptimizer";
 import type { HifiOptimizer } from "./useHifiOptimizer";
 import type {
@@ -12,6 +11,7 @@ import type {
   DispersionPlane,
   HifiBoxKind,
   HifiCardConfig,
+  HifiDesign,
   HifiDesignState,
   HifiPlacement,
   HifiPort,
