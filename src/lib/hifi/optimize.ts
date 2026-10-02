@@ -35,6 +35,7 @@ import type {
   HifiWoofer,
   PassiveRadiator,
   PassiveRadiatorChoice,
+  PassiveRadiatorHandover,
   RoundPort,
   SlotPort,
 } from "../../types.ts";
@@ -238,7 +239,16 @@ function prsFor(
 export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerResult {
   const t0 = Date.now();
   const { woofers, tweeters, locks = {} } = input;
-  const cur = { wall: 0.75, ...input.cur };
+  // boundary cast: `pr` may still lack its driver here; the block below looks it up
+  const cur = { wall: 0.75, ...(input.cur as HifiOptimizerCurrent) };
+  // the page hands over its radiator as { id, n, addG }; the model wants the driver itself
+  if (cur.pr && !cur.pr.drv) {
+    // boundary cast: a radiator without `drv` is the { id, n, addG } form
+    const drv = (input.passives || []).find(
+      (o) => o.id === (cur.pr as PassiveRadiatorChoice & PassiveRadiatorHandover).id,
+    );
+    cur.pr = drv ? { ...cur.pr, drv } : undefined;
+  }
   const goals = (input.goals || []).filter(
     (g, i, a) => HIFI_OPTIMIZER_GOALS[g] && a.indexOf(g) === i,
   );

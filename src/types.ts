@@ -527,6 +527,13 @@ export interface HifiOptimizerLocks extends Partial<Record<HifiLockKey, boolean>
   dim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
 }
 
+/** A radiator design as the page hands it to the optimizer: the driver named by id, with no `drv` yet. */
+export interface PassiveRadiatorHandover {
+  id: string;
+  n: number;
+  addG: number;
+}
+
 /** The design the optimizer starts from: the page's config with the drivers named by id. */
 export interface HifiOptimizerCurrent extends HifiConfig {
   woofer: string;
@@ -535,7 +542,10 @@ export interface HifiOptimizerCurrent extends HifiConfig {
 }
 
 export interface HifiOptimizerInput {
-  cur: HifiOptimizerCurrent;
+  /** `pr` can come as `{ id, n, addG }`; the optimizer looks the driver up in `passives` */
+  cur: Omit<HifiOptimizerCurrent, "pr"> & {
+    readonly pr?: PassiveRadiatorChoice | PassiveRadiatorHandover;
+  };
   woofers: readonly HifiWoofer[];
   tweeters: readonly HifiTweeter[];
   passives?: readonly PassiveRadiator[];

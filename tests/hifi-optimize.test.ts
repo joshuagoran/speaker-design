@@ -2,7 +2,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { optimizeHifiSpeaker, hifiDesignProblems } from "../src/lib/hifi/optimize.ts";
 import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi.ts";
-import { HIFI_WOOFERS, HIFI_TWEETERS } from "../src/lib/data.ts";
+import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data.ts";
 import type {
   HifiGoal,
   HifiMetrics,
@@ -153,4 +153,14 @@ test("hi-fi optimizer: radiator designs price their radiators and load back with
       "radiators are in the pair price",
     );
   }
+});
+
+test("hi-fi optimizer: a radiator design handed over as the page does ({ id, n, addG }) still gets cards", () => {
+  const out = optimizeHifiSpeaker({
+    ...base,
+    cur: { ...cur, box: "radiator", pr: { id: HIFI_PASSIVES[0].id, n: 2, addG: 0 } },
+    passives: HIFI_PASSIVES,
+    goals: ["cheaper"],
+  });
+  assert.ok(out.cards.length >= 1 || out.goalMissing);
 });
