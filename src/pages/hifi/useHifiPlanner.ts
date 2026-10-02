@@ -1,5 +1,5 @@
-import { HORN_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS } from "../../lib/data";
-import { byId, defaultOf } from "../../lib/tables";
+import { HORN_OPTIONS } from "../../lib/data";
+import { DEFAULT_HIFI } from "../../lib/defaults";
 import { readStoredJson, writeStoredJson } from "../../lib/storage";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
 import type {
@@ -14,10 +14,9 @@ import type {
   HifiPlacement,
   HifiPort,
   HifiTweeter,
+  HifiWaveguide,
   HifiWoofer,
   CrossoverOrder,
-  Horn,
-  HornHf,
   ListeningSeat,
   PanelMaterial,
   RadiatorSelection,
@@ -29,9 +28,6 @@ import { useState } from "react";
 export interface HifiPlannerLocks extends HifiOptimizerLocks {
   dim: NonNullable<HifiOptimizerLocks["dim"]>;
 }
-
-/** A horn the page can use as a waveguide: one with its coverage specs, which `waveguideChoices` keeps. */
-export type HifiWaveguide = Horn & { hf: HornHf };
 
 /** The card being previewed, and the design to go back to when the preview ends. */
 export interface HifiDesignPreview {
@@ -113,34 +109,36 @@ export function useHifiPlanner(): HifiPlanner {
   const waveguideChoices = HORN_OPTIONS.filter(
     (h) => h.exit === 1 && h.hf && h.hf.covH && h.size,
   ) as HifiWaveguide[];
-  const [woofer, setWoofer] = useState(() => defaultOf(HIFI_WOOFERS, "hi-fi woofers"));
-  const [tweeter, setTweeter] = useState(() => defaultOf(HIFI_TWEETERS, "hi-fi tweeters"));
-  const [selectedWaveguide, setSelectedWaveguide] = useState(
-    () => byId(waveguideChoices, "st260") ?? waveguideChoices[0],
+  const [woofer, setWoofer] = useState<HifiWoofer>(DEFAULT_HIFI.woofer);
+  const [tweeter, setTweeter] = useState<HifiTweeter>(DEFAULT_HIFI.tweeter);
+  const [selectedWaveguide, setSelectedWaveguide] = useState<HifiWaveguide>(
+    DEFAULT_HIFI.selectedWaveguide,
   );
-  const [boxType, setBoxType] = useState<HifiBoxKind>("vented");
-  const [boxDims, setBoxDims] = useState<Dims3>({ w: 9, h: 15, d: 11 });
-  const [wallThicknessIn, setWallThicknessIn] = useState(0.75);
-  const [panelMaterial, setPanelMaterial] = useState<PanelMaterial>("ply");
-  const [portSpec, setPortSpec] = useState<HifiPort>({ n: 1, dia: 2, len: 6 });
-  const [radiatorSelection, setRadiatorSelection] = useState<RadiatorSelection>({
-    id: "sb16pfcr",
-    n: 2,
-    addG: 0,
-  });
-  const [crossoverHz, setCrossoverHz] = useState(2000);
-  const [crossoverOrder, setCrossoverOrder] = useState<CrossoverOrder>(4);
-  const [wooferAmpWatts, setWooferAmpWatts] = useState(100);
-  const [tweeterAmpWatts, setTweeterAmpWatts] = useState(50);
-  const [baffleStepCompensationDb, setBaffleStepCompensationDb] = useState(3);
-  const [placement, setPlacement] = useState<HifiPlacement>("free");
-  const [distanceToWallFt, setDistanceToWallFt] = useState(2);
-  const [speakerSpacingFt, setSpeakerSpacingFt] = useState(7);
-  const [toeInDeg, setToeInDeg] = useState(15);
-  const [listeningSeat, setListeningSeat] = useState<ListeningSeat>({ x: 0, y: 8 });
-  const [earHeightIn, setEarHeightIn] = useState(38);
-  const [standHeightIn, setStandHeightIn] = useState(24);
-  const [dispersionPlane, setDispersionPlane] = useState<DispersionPlane>("h");
+  const [boxType, setBoxType] = useState<HifiBoxKind>(DEFAULT_HIFI.boxType);
+  const [boxDims, setBoxDims] = useState<Dims3>(DEFAULT_HIFI.boxDims);
+  const [wallThicknessIn, setWallThicknessIn] = useState(DEFAULT_HIFI.wallThicknessIn);
+  const [panelMaterial, setPanelMaterial] = useState<PanelMaterial>(DEFAULT_HIFI.panelMaterial);
+  const [portSpec, setPortSpec] = useState<HifiPort>(DEFAULT_HIFI.portSpec);
+  const [radiatorSelection, setRadiatorSelection] = useState<RadiatorSelection>(
+    DEFAULT_HIFI.radiatorSelection,
+  );
+  const [crossoverHz, setCrossoverHz] = useState(DEFAULT_HIFI.crossoverHz);
+  const [crossoverOrder, setCrossoverOrder] = useState<CrossoverOrder>(DEFAULT_HIFI.crossoverOrder);
+  const [wooferAmpWatts, setWooferAmpWatts] = useState(DEFAULT_HIFI.wooferAmpWatts);
+  const [tweeterAmpWatts, setTweeterAmpWatts] = useState(DEFAULT_HIFI.tweeterAmpWatts);
+  const [baffleStepCompensationDb, setBaffleStepCompensationDb] = useState(
+    DEFAULT_HIFI.baffleStepCompensationDb,
+  );
+  const [placement, setPlacement] = useState<HifiPlacement>(DEFAULT_HIFI.placement);
+  const [distanceToWallFt, setDistanceToWallFt] = useState(DEFAULT_HIFI.distanceToWallFt);
+  const [speakerSpacingFt, setSpeakerSpacingFt] = useState(DEFAULT_HIFI.speakerSpacingFt);
+  const [toeInDeg, setToeInDeg] = useState(DEFAULT_HIFI.toeInDeg);
+  const [listeningSeat, setListeningSeat] = useState<ListeningSeat>(DEFAULT_HIFI.listeningSeat);
+  const [earHeightIn, setEarHeightIn] = useState(DEFAULT_HIFI.earHeightIn);
+  const [standHeightIn, setStandHeightIn] = useState(DEFAULT_HIFI.standHeightIn);
+  const [dispersionPlane, setDispersionPlane] = useState<DispersionPlane>(
+    DEFAULT_HIFI.dispersionPlane,
+  );
   const store = useConfigStore("hifiConfigs");
   // optimizer: same rules and layout as the PA planner's (switch, locks on the controls, goals in tap order)
   const [isOptimizerOn, setIsOptimizerOnState] = useState(() => readStoredJson("hifi.opt", false));

@@ -70,8 +70,6 @@ export interface SubDriver {
   size: SubSize;
   ts: SubTS;
   note: string;
-  /** the default pick, marked with a dot in the picker */
-  pick?: boolean;
 }
 
 export interface MidDriver {
@@ -83,7 +81,6 @@ export interface MidDriver {
   src: string;
   ts: ThieleSmall;
   note: string;
-  pick?: boolean;
 }
 
 /** The compression section of a compression driver (1 W / 1 m on `sensRef`, aes in watts above `aesXo`). */
@@ -107,7 +104,6 @@ export interface CompressionDriver {
   price: number | null;
   src: string;
   note: string;
-  pick?: boolean;
 }
 
 /** One point of a horn's flare, [radius, depth] in inches. */
@@ -123,7 +119,6 @@ export interface HornHf {
 export interface Horn {
   id: string;
   lb: number;
-  pick?: boolean;
   name: string;
   hf?: HornHf;
   /** throat exit in inches */
@@ -144,6 +139,9 @@ export interface Horn {
   note: string;
 }
 
+/** A horn the hi-fi page can use as a waveguide: one with its coverage specs. */
+export type HifiWaveguide = Horn & { hf: HornHf };
+
 /** The cabinet's ported-vent kinds. */
 export type VentKind = "slots" | "round1" | "round2" | "vslots" | "folded" | "round4";
 
@@ -162,7 +160,6 @@ export interface MidBox {
   name: string;
   box: Dims3;
   note: string;
-  pick?: boolean;
   /** the sub size it suits, when it is for one size only */
   size?: SubSize;
 }
@@ -222,8 +219,6 @@ export interface FillDriver {
   hf: FillHf | null;
   lfSens: number;
   note: string;
-  /** the default pick, marked with a dot in the picker */
-  pick?: boolean;
 }
 
 // ---- Hi-fi ----
@@ -239,7 +234,6 @@ export interface HifiWoofer {
   /** highest usable frequency, Hz */
   fmax: number | null;
   note: string;
-  pick?: boolean;
 }
 
 export type TweeterType = "dome" | "horn-loaded" | "compression" | "ribbon";
@@ -279,7 +273,6 @@ export interface HifiTweeter {
   note: string;
   /** radiating diameter in inches for the directivity: the exit, or the mouth of a horn-loaded tweeter */
   domeIn: number;
-  pick?: boolean;
   ownGuide?: OwnGuide;
 }
 

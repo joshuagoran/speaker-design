@@ -1,0 +1,156 @@
+// What the planner shows on first load, as whole objects: the drivers are the table entries themselves.
+import {
+  A460G2,
+  B15,
+  B18,
+  BC10CXN64,
+  BC15NDL76,
+  BC18NBX,
+  F12PR300,
+  N314T,
+  SB17NRX,
+  SB26STCN,
+  ST260,
+} from "./data";
+import type { HifiPlanner } from "../pages/hifi/useHifiPlanner";
+import type {
+  CompressionDriver,
+  Dims3,
+  FillBoxType,
+  FillDriver,
+  FillPort,
+  Horn,
+  MidBox,
+  MidDriver,
+  MidSize,
+  PaDesignConfig,
+  PlywoodSheetKind,
+  SubDriver,
+} from "../types";
+
+/** The PA design's starting state: a saved config with its driver, horn and box ids replaced by the objects, plus the cutlist and mid size choices. */
+export type PaDefaults = Omit<
+  Required<PaDesignConfig>,
+  "format" | "cabinet" | "summary" | "sub" | "mid" | "midBox" | "cd" | "horn"
+> & {
+  sub: SubDriver;
+  mid: MidDriver;
+  midBox: MidBox;
+  cd: CompressionDriver;
+  horn: Horn;
+  midSize: MidSize;
+  plywoodSheetKind: PlywoodSheetKind;
+  boxSetCount: number;
+};
+
+/**
+ * The PA stack on first load. It mirrors the seed "lil block stack LE" in `data/configs-seed.json` with the sub swapped
+ * for the B&C 18NBX100 and the sub box set to 24 × 32 × 18; the fields the seed does not carry (wall, inset, finish, spacer, joint, plywood, sets, mid size) keep the values the hooks always started on.
+ */
+export const DEFAULT_PA = {
+  sub: BC18NBX,
+  mid: F12PR300,
+  cd: N314T,
+  horn: A460G2,
+  midBox: B15,
+  portStyle: "slots",
+  cDim: { w: 24, h: 32, d: 18 },
+  cVent: { slotH: 3, nt: 2, dia: 4.25, throat: 2, len: 14 },
+  hpf: 31,
+  hpType: "BW24",
+  ampW: 800,
+  portMax: 23.5,
+  mDim: { w: 15, h: 15, d: 15 },
+  wall: 0.75,
+  inset: 0.75,
+  xoLo: 120,
+  xoHi: 900,
+  mAmpW: 400,
+  tilt: 6,
+  hfAmpW: 100,
+  hfTilt: 3,
+  layout: "stack",
+  cutaway: false,
+  baffleColor: "#4a5d4e",
+  cabFinish: "birch",
+  spacerH: 20,
+  joint: "butt",
+  midSize: 12,
+  plywoodSheetKind: "4x8",
+  boxSetCount: 2,
+} satisfies PaDefaults;
+
+/** The mid driver and box the mid size toggle switches to: the 12 is the starting design's, the 15 has its own. */
+export const DEFAULT_MID_BY_SIZE: Partial<Record<MidSize, Pick<PaDefaults, "mid" | "midBox">>> = {
+  12: { mid: DEFAULT_PA.mid, midBox: DEFAULT_PA.midBox },
+  15: { mid: BC15NDL76, midBox: B18 },
+};
+
+/** The Hi-fi page's starting design, room and waveguide. */
+export const DEFAULT_HIFI = {
+  woofer: SB17NRX,
+  tweeter: SB26STCN,
+  selectedWaveguide: ST260,
+  boxType: "vented",
+  boxDims: { w: 9, h: 15, d: 11 },
+  wallThicknessIn: 0.75,
+  panelMaterial: "ply",
+  portSpec: { n: 1, dia: 2, len: 6 },
+  radiatorSelection: { id: "sb16pfcr", n: 2, addG: 0 },
+  crossoverHz: 2000,
+  crossoverOrder: 4,
+  wooferAmpWatts: 100,
+  tweeterAmpWatts: 50,
+  baffleStepCompensationDb: 3,
+  placement: "free",
+  distanceToWallFt: 2,
+  speakerSpacingFt: 7,
+  toeInDeg: 15,
+  listeningSeat: { x: 0, y: 8 },
+  earHeightIn: 38,
+  standHeightIn: 24,
+  dispersionPlane: "h",
+} satisfies Pick<
+  HifiPlanner,
+  | "woofer"
+  | "tweeter"
+  | "selectedWaveguide"
+  | "boxType"
+  | "boxDims"
+  | "wallThicknessIn"
+  | "panelMaterial"
+  | "portSpec"
+  | "radiatorSelection"
+  | "crossoverHz"
+  | "crossoverOrder"
+  | "wooferAmpWatts"
+  | "tweeterAmpWatts"
+  | "baffleStepCompensationDb"
+  | "placement"
+  | "distanceToWallFt"
+  | "speakerSpacingFt"
+  | "toeInDeg"
+  | "listeningSeat"
+  | "earHeightIn"
+  | "standHeightIn"
+  | "dispersionPlane"
+>;
+
+/** The Fills page's starting design. */
+export const DEFAULT_FILL = {
+  driver: BC10CXN64,
+  boxType: "vented",
+  boxDims: { w: 11.5, h: 16, d: 11 },
+  port: { n: 1, dia: 3, len: 4 },
+  highpassHz: 70,
+  ampWatts: 300,
+  maxPortAirSpeedMs: 20,
+} satisfies {
+  driver: FillDriver;
+  boxType: FillBoxType;
+  boxDims: Dims3;
+  port: FillPort;
+  highpassHz: number;
+  ampWatts: number;
+  maxPortAirSpeedMs: number;
+};

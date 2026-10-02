@@ -1,3 +1,4 @@
+import { DEFAULT_PA } from "../../../lib/defaults";
 import { useState } from "react";
 import type { Setter } from "../../../types";
 
@@ -10,8 +11,8 @@ export interface Crossovers {
 
 /** Crossover frequencies, both Linkwitz-Riley 24 dB. */
 export function useCrossovers(): Crossovers {
-  const [subMidCrossoverHz, setSubMidCrossoverHz] = useState(120); // sub -> mid crossover, LR24
-  const [midHornCrossoverHz, setMidHornCrossoverHz] = useState(900); // mid -> horn crossover, LR24
+  const [subMidCrossoverHz, setSubMidCrossoverHz] = useState(DEFAULT_PA.xoLo); // sub -> mid crossover, LR24
+  const [midHornCrossoverHz, setMidHornCrossoverHz] = useState(DEFAULT_PA.xoHi); // mid -> horn crossover, LR24
   return {
     subMidCrossoverHz,
     setSubMidCrossoverHz,

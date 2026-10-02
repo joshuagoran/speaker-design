@@ -105,11 +105,10 @@ test("hi-fi optimizer: unlocked amps stay within the sliders; locked amps stay; 
 
 test("hi-fi optimizer: radiator designs price their radiators and load back with them", async (t) => {
   const { optimizeHifiSpeaker } = await import("../src/lib/hifi/optimize");
-  const { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } = await import("../src/lib/data");
-  const w = HIFI_WOOFERS.find((o) => o.pick) || HIFI_WOOFERS[0],
-    tw =
-      HIFI_TWEETERS.find((o) => o.pick && !o.needsWaveguide && o.type !== "compression") ||
-      HIFI_TWEETERS[0];
+  const { HIFI_PASSIVES } = await import("../src/lib/data");
+  const { DEFAULT_HIFI } = await import("../src/lib/defaults");
+  const w = DEFAULT_HIFI.woofer,
+    tw = DEFAULT_HIFI.tweeter;
   const drv = HIFI_PASSIVES.find((o) => o.id === "sb16pfcr")!;
   const cur: HifiOptimizerCurrent = {
     woofer: w.id,

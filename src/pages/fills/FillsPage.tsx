@@ -10,20 +10,20 @@ import { Slider } from "../../components/ui/Slider";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { fillChips } from "../../lib/pa/chips";
 import { FILL_OPTIONS } from "../../lib/data";
-import { defaultOf } from "../../lib/tables";
+import { DEFAULT_FILL } from "../../lib/defaults";
 import { fillSystem, nearestPoint } from "../../lib/pa/calc";
 import { useState } from "react";
 import type { Dims3, FillBoxType, FillDriver, FillPort } from "../../types";
 
 /** Fills page: choose and size the fill speakers. */
 export function FillsPage() {
-  const [driver, setDriver] = useState<FillDriver>(() => defaultOf(FILL_OPTIONS, "fill drivers"));
-  const [boxType, setBoxType] = useState<FillBoxType>("vented");
-  const [boxDims, setBoxDims] = useState<Dims3>({ w: 11.5, h: 16, d: 11 });
-  const [portSpec, setPortSpec] = useState<FillPort>({ n: 1, dia: 3, len: 4 });
-  const [highpassHz, setHighpassHz] = useState(70); // highpass to the subs, LR24
-  const [ampWatts, setAmpWatts] = useState(300); // per box, rated into 8 Ω
-  const [maxPortAirSpeedMs, setMaxPortAirSpeedMs] = useState(20);
+  const [driver, setDriver] = useState<FillDriver>(DEFAULT_FILL.driver);
+  const [boxType, setBoxType] = useState<FillBoxType>(DEFAULT_FILL.boxType);
+  const [boxDims, setBoxDims] = useState<Dims3>(DEFAULT_FILL.boxDims);
+  const [portSpec, setPortSpec] = useState<FillPort>(DEFAULT_FILL.port);
+  const [highpassHz, setHighpassHz] = useState(DEFAULT_FILL.highpassHz); // highpass to the subs, LR24
+  const [ampWatts, setAmpWatts] = useState(DEFAULT_FILL.ampWatts); // per box, rated into 8 Ω
+  const [maxPortAirSpeedMs, setMaxPortAirSpeedMs] = useState(DEFAULT_FILL.maxPortAirSpeedMs);
   const setBoxDim = (k: keyof Dims3, v: number) => setBoxDims((p) => ({ ...p, [k]: v }));
   const setPortField = (k: keyof FillPort, v: number) => setPortSpec((p) => ({ ...p, [k]: v }));
   const thieleSmall = driver.ts;

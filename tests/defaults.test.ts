@@ -1,0 +1,97 @@
+import { describe, expect, it } from "vite-plus/test";
+import {
+  CD_OPTIONS,
+  FILL_OPTIONS,
+  HIFI_TWEETERS,
+  HIFI_WOOFERS,
+  HORN_OPTIONS,
+  MID_BOXES,
+  MID_OPTIONS,
+  SUB_OPTIONS,
+} from "../src/lib/data";
+import { DEFAULT_FILL, DEFAULT_HIFI, DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../src/lib/defaults";
+import { evaluateDesign } from "../src/lib/pa/optimize";
+import { fillSystem } from "../src/lib/pa/calc";
+import { hifiSystem } from "../src/lib/hifi/hifi";
+import type { PaDesignConfig } from "../src/types";
+
+/** What `usePaDesign().snapshot()` makes of a design: the drivers, box and horn as ids. */
+const snapshotOf = (d: typeof DEFAULT_PA): PaDesignConfig => {
+  const { midSize: _midSize, plywoodSheetKind: _kind, boxSetCount: _sets, ...rest } = d;
+  return {
+    ...rest,
+    sub: d.sub.id,
+    mid: d.mid.id,
+    midBox: d.midBox.id,
+    cd: d.cd.id,
+    horn: d.horn.id,
+  };
+};
+
+/** True when every number anywhere in the value is finite. */
+const allFinite = (v: unknown): boolean =>
+  typeof v === "number"
+    ? Number.isFinite(v)
+    : Array.isArray(v)
+      ? v.every(allFinite)
+      : v !== null && typeof v === "object"
+        ? Object.values(v).every(allFinite)
+        : true;
+
+describe("default designs", () => {
+  it("DEFAULT_PA is a modelled system with no NaN", () => {
+    const m = evaluateDesign(snapshotOf(DEFAULT_PA));
+    expect(m).not.toBeNull();
+    expect(allFinite(m)).toBe(true);
+  });
+
+  it("DEFAULT_HIFI is a modelled system with no NaN", () => {
+    const d = DEFAULT_HIFI;
+    const sys = hifiSystem(d.woofer, d.tweeter, {
+      box: d.boxType,
+      dim: d.boxDims,
+      wall: d.wallThicknessIn,
+      mat: d.panelMaterial,
+      port: d.portSpec,
+      xo: d.crossoverHz,
+      order: d.crossoverOrder,
+      wAmpW: d.wooferAmpWatts,
+      tAmpW: d.tweeterAmpWatts,
+      bsc: d.baffleStepCompensationDb,
+      place: d.placement,
+      wallFt: d.distanceToWallFt,
+    });
+    expect(sys).not.toBeNull();
+    expect(allFinite(sys)).toBe(true);
+  });
+
+  it("DEFAULT_FILL is a modelled system with no NaN", () => {
+    const d = DEFAULT_FILL;
+    const sys = fillSystem(d.driver, {
+      boxType: d.boxType,
+      dim: d.boxDims,
+      port: d.port,
+      hp: d.highpassHz,
+      ampW: d.ampWatts,
+      portMax: d.maxPortAirSpeedMs,
+    });
+    expect(sys).not.toBeNull();
+    expect(allFinite(sys)).toBe(true);
+  });
+
+  it("every default part is the very object its table holds", () => {
+    expect(SUB_OPTIONS.includes(DEFAULT_PA.sub)).toBe(true);
+    expect(MID_OPTIONS.includes(DEFAULT_PA.mid)).toBe(true);
+    expect(CD_OPTIONS.includes(DEFAULT_PA.cd)).toBe(true);
+    expect(HORN_OPTIONS.includes(DEFAULT_PA.horn)).toBe(true);
+    expect(MID_BOXES.includes(DEFAULT_PA.midBox)).toBe(true);
+    expect(HIFI_WOOFERS.includes(DEFAULT_HIFI.woofer)).toBe(true);
+    expect(HIFI_TWEETERS.includes(DEFAULT_HIFI.tweeter)).toBe(true);
+    expect(HORN_OPTIONS.includes(DEFAULT_HIFI.selectedWaveguide)).toBe(true);
+    expect(FILL_OPTIONS.includes(DEFAULT_FILL.driver)).toBe(true);
+    for (const d of Object.values(DEFAULT_MID_BY_SIZE)) {
+      expect(MID_OPTIONS.includes(d.mid)).toBe(true);
+      expect(MID_BOXES.includes(d.midBox)).toBe(true);
+    }
+  });
+});

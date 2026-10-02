@@ -70,7 +70,8 @@ import type {
   VentSpec,
 } from "../../types";
 import { keysOf } from "../records";
-import { byId, byIdOrThrow, defaultOf } from "../tables";
+import { byId, byIdOrThrow } from "../tables";
+import { DEFAULT_PA } from "../defaults";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -669,8 +670,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
 
   // 2. real boxes and vents for the seeds
   const subCands: SubCandidate[] = [];
-  const midForGeom =
-    curMid ?? MID_OPTIONS.find((o) => o.ts) ?? defaultOf(MID_OPTIONS, "mid drivers");
+  const midForGeom = curMid ?? MID_OPTIONS.find((o) => o.ts) ?? DEFAULT_PA.mid;
   for (const sd of seedSet) {
     for (const t of walls) {
       const G = sd.V + (sd.sub.ts.disp || 10) + 0.08 * sd.V + 3;

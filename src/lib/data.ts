@@ -13,6 +13,7 @@ import type {
   Format,
   HifiTweeter,
   HifiTweeterRaw,
+  HifiWaveguide,
   HifiWoofer,
   Horn,
   HornProfilePoint,
@@ -127,11 +128,34 @@ export const ST260_PROFILE: readonly HornProfilePoint[] = [
   [1.89, 0.0],
 ]; // [radius, depth] in inches, from ST260-19.stl cross-section
 
+export const BC18NBX: SubDriver = {
+  id: "bc18nbx",
+  lb: 20,
+  name: "B&C 18NBX100",
+  price: 448.56,
+  src: "usspeaker.com, Sep 2026",
+  size: 18,
+  ts: {
+    Fs: 35,
+    Qts: 0.38,
+    Qes: 0.4,
+    Qms: 5.6,
+    Vas: 198,
+    Sd: 1210,
+    Xmax: 10,
+    Re: 5.2,
+    Bl: 24.8,
+    Mms: 217,
+    aes: 1200,
+    disp: 10.5,
+  },
+  note: "[datasheet, bcspeakers.com, Sep 2026] Neo, 1200 W nominal / 2400 W continuous, 96.5 dB, Xvar 12 mm, Le 1.85 mH, 20 lb. Displacement not published; 10.5 L assumed.",
+};
+
 export const SUB_OPTIONS: SubDriver[] = [
   {
     id: "sbnero18",
     lb: 45,
-    pick: true,
     name: "SB Audience Nero-18SW1100D",
     price: 290,
     src: "Madisound, Sep 2026",
@@ -313,29 +337,7 @@ export const SUB_OPTIONS: SubDriver[] = [
     },
     note: "[datasheet, bcspeakers.com, Sep 2026] Neo, 1200 W nominal / 2400 W continuous, 98 dB, Xvar 11 mm, Le 1.7 mH, 20 lb. Displacement not published; 10.5 L assumed.",
   },
-  {
-    id: "bc18nbx",
-    lb: 20,
-    name: "B&C 18NBX100",
-    price: 448.56,
-    src: "usspeaker.com, Sep 2026",
-    size: 18,
-    ts: {
-      Fs: 35,
-      Qts: 0.38,
-      Qes: 0.4,
-      Qms: 5.6,
-      Vas: 198,
-      Sd: 1210,
-      Xmax: 10,
-      Re: 5.2,
-      Bl: 24.8,
-      Mms: 217,
-      aes: 1200,
-      disp: 10.5,
-    },
-    note: "[datasheet, bcspeakers.com, Sep 2026] Neo, 1200 W nominal / 2400 W continuous, 96.5 dB, Xvar 12 mm, Le 1.85 mH, 20 lb. Displacement not published; 10.5 L assumed.",
-  },
+  BC18NBX,
   {
     id: "lv18403",
     lb: 36.2,
@@ -637,6 +639,54 @@ export const SUB_OPTIONS: SubDriver[] = [
   },
 ];
 
+export const F12PR300: MidDriver = {
+  id: "f12pr300",
+  size: 12,
+  lb: 5.3,
+  name: "FaitalPRO 12PR300",
+  price: 289.95,
+  src: "usspeaker.com, Sep 2026",
+  ts: {
+    Fs: 50,
+    Qts: 0.36,
+    Qes: 0.37,
+    Qms: 9.9,
+    Vas: 79.2,
+    Sd: 489,
+    Xmax: 4.92,
+    Re: 5.4,
+    Bl: 14.1,
+    Mms: 43.4,
+    aes: 300,
+    disp: null,
+  },
+  note: "[usspeaker.com spec table, Sep 2026] Neo, 300 W AES / 600 W program, 99 dB, Le 0.42 mH, 5.3 lb. Displacement not published; 2.5 L assumed.",
+};
+
+export const BC15NDL76: MidDriver = {
+  id: "bc15ndl76",
+  size: 15,
+  lb: 10.4,
+  name: "B&C 15NDL76",
+  price: 305.4,
+  src: "usspeaker.com, Sep 2026",
+  ts: {
+    Fs: 37,
+    Qts: 0.22,
+    Qes: 0.24,
+    Qms: 4.5,
+    Vas: 195,
+    Sd: 855,
+    Xmax: 7,
+    Re: 5.3,
+    Bl: 22.5,
+    Mms: 96,
+    aes: 500,
+    disp: null,
+  },
+  note: "[bcspeakers.com, Sep 2026] Neo, 500 W nominal / 1000 W continuous, 99.5 dB, Le 1.5 mH, to 2 kHz. The 15 sibling of the 12NDL76.",
+};
+
 export const MID_OPTIONS: MidDriver[] = [
   // ---- 15" mid-bass (sealed), for tops crossed low (tapped-horn sub, separated subs) ----
   {
@@ -685,30 +735,7 @@ export const MID_OPTIONS: MidDriver[] = [
     },
     note: "[bcspeakers.com, Sep 2026] Ferrite, 500 W nominal / 1000 W continuous, 100 dB, Le 1.4 mH, to 2 kHz. Strong motor but 20.5 lb.",
   },
-  {
-    id: "bc15ndl76",
-    size: 15,
-    lb: 10.4,
-    pick: true,
-    name: "B&C 15NDL76",
-    price: 305.4,
-    src: "usspeaker.com, Sep 2026",
-    ts: {
-      Fs: 37,
-      Qts: 0.22,
-      Qes: 0.24,
-      Qms: 4.5,
-      Vas: 195,
-      Sd: 855,
-      Xmax: 7,
-      Re: 5.3,
-      Bl: 22.5,
-      Mms: 96,
-      aes: 500,
-      disp: null,
-    },
-    note: "[bcspeakers.com, Sep 2026] Neo, 500 W nominal / 1000 W continuous, 99.5 dB, Le 1.5 mH, to 2 kHz. The 15 sibling of the 12NDL76.",
-  },
+  BC15NDL76,
   {
     id: "bc15ndl88",
     size: 15,
@@ -851,7 +878,6 @@ export const MID_OPTIONS: MidDriver[] = [
     id: "sbnero12",
     size: 12,
     lb: 9.15,
-    pick: true,
     name: "SB Audience Nero-12MWN700D",
     price: 247,
     src: "Madisound",
@@ -1009,29 +1035,7 @@ export const MID_OPTIONS: MidDriver[] = [
     },
     note: "[usspeaker.com spec table, Sep 2026] Neo, 300 W AES / 600 W program, 97 dB, Le 0.67 mH. Displacement not published; 2.5 L assumed.",
   },
-  {
-    id: "f12pr300",
-    size: 12,
-    lb: 5.3,
-    name: "FaitalPRO 12PR300",
-    price: 289.95,
-    src: "usspeaker.com, Sep 2026",
-    ts: {
-      Fs: 50,
-      Qts: 0.36,
-      Qes: 0.37,
-      Qms: 9.9,
-      Vas: 79.2,
-      Sd: 489,
-      Xmax: 4.92,
-      Re: 5.4,
-      Bl: 14.1,
-      Mms: 43.4,
-      aes: 300,
-      disp: null,
-    },
-    note: "[usspeaker.com spec table, Sep 2026] Neo, 300 W AES / 600 W program, 99 dB, Le 0.42 mH, 5.3 lb. Displacement not published; 2.5 L assumed.",
-  },
+  F12PR300,
   {
     id: "f12pr310",
     size: 12,
@@ -1655,6 +1659,21 @@ export const MID_OPTIONS: MidDriver[] = [
   },
 ];
 
+export const B15: MidBox = {
+  id: "b15",
+  name: "15 × 15 × 15 in",
+  box: { w: 15, h: 15, d: 15 },
+  note: "Cube. Exceeds the RX-28 width guidance; fine under a round ATH horn.",
+};
+
+export const B18: MidBox = {
+  id: "b18",
+  size: 15,
+  name: "18 × 18 × 16 in",
+  box: { w: 18, h: 18, d: 16 },
+  note: "~60 L for a 15.",
+};
+
 export const MID_BOXES: readonly MidBox[] = [
   {
     id: "b14",
@@ -1668,13 +1687,7 @@ export const MID_BOXES: readonly MidBox[] = [
     box: { w: 13, h: 13, d: 13 },
     note: 'Cube for a 10" mid, ~25 L sealed.',
   },
-  {
-    id: "b15",
-    pick: true,
-    name: "15 × 15 × 15 in",
-    box: { w: 15, h: 15, d: 15 },
-    note: "Cube. Exceeds the RX-28 width guidance; fine under a round ATH horn.",
-  },
+  B15,
   {
     id: "b17",
     size: 15,
@@ -1682,23 +1695,34 @@ export const MID_BOXES: readonly MidBox[] = [
     box: { w: 17, h: 17, d: 14 },
     note: "Smallest practical face for a 15, ~45 L.",
   },
-  {
-    id: "b18",
-    size: 15,
-    pick: true,
-    name: "18 × 18 × 16 in",
-    box: { w: 18, h: 18, d: 16 },
-    note: "~60 L for a 15.",
-  },
+  B18,
 ];
 
-/** The mid drivers for a mid size class (a driver with no `size` is a 12). Each class has its own `pick`. */
+/** The mid drivers for a mid size class (a driver with no `size` is a 12). */
 export const midDriversOfSize = (size: MidSize) =>
   MID_OPTIONS.filter((o) => (o.size || 12) === size);
 
-/** The mid box presets for a mid size class (a preset with no `size` is a 12; the 13 in cube is not offered). Each class has its own `pick`. */
+/** The mid box presets for a mid size class (a preset with no `size` is a 12; the 13 in cube is not offered). */
 export const midBoxesOfSize = (size: MidSize) =>
   MID_BOXES.filter((b) => (b.size || 12) === size && b.id !== "b13");
+
+export const N314T: CompressionDriver = {
+  id: "n314t",
+  lb: 4.8,
+  name: 'Eminence N314T-8 (1.4")',
+  hf: {
+    sens: 110.9,
+    sensRef: "Eminence's averaged 1 W/1 m figure (no horn named)",
+    aes: 100,
+    aesXo: 800,
+    minXo: 800,
+    imp: 8,
+  },
+  exit: 1.4,
+  price: 234.99,
+  src: "usspeaker.com, Sep 2026 (Parts Express $249.99)",
+  note: "3 in titanium diaphragm, D3 surround. Minimum crossover 800 Hz at 12 dB/oct, 110 dB, 100 W AES, 4.8 lb. Exit is a 7.3\u00b0 included conical flare, so an ATH throat adapter has to be generated for it \u2014 none published yet. Rated below 1 kHz, like the FaitalPRO HF1440.",
+};
 
 export const CD_OPTIONS: CompressionDriver[] = [
   {
@@ -1779,23 +1803,7 @@ export const CD_OPTIONS: CompressionDriver[] = [
     src: "usspeaker.com, Sep 2026 (Parts Express $259)",
     note: "Marcel Batík's standard 1\" pairing for the A400G2/A460G2; measured polars on at-horns.eu.",
   },
-  {
-    id: "n314t",
-    lb: 4.8,
-    name: 'Eminence N314T-8 (1.4")',
-    hf: {
-      sens: 110.9,
-      sensRef: "Eminence's averaged 1 W/1 m figure (no horn named)",
-      aes: 100,
-      aesXo: 800,
-      minXo: 800,
-      imp: 8,
-    },
-    exit: 1.4,
-    price: 234.99,
-    src: "usspeaker.com, Sep 2026 (Parts Express $249.99)",
-    note: "3 in titanium diaphragm, D3 surround. Minimum crossover 800 Hz at 12 dB/oct, 110 dB, 100 W AES, 4.8 lb. Exit is a 7.3\u00b0 included conical flare, so an ATH throat adapter has to be generated for it \u2014 none published yet. Rated below 1 kHz, like the FaitalPRO HF1440.",
-  },
+  N314T,
   {
     id: "hf143n",
     lb: 4.4,
@@ -1833,7 +1841,6 @@ export const CD_OPTIONS: CompressionDriver[] = [
   {
     id: "de360",
     lb: 3,
-    pick: true,
     name: 'B&C DE360 (1")',
     hf: { sens: 110, sensRef: "the B&C ME45 horn", aes: 35, aesXo: 1800, minXo: 1800, imp: 8 },
     exit: 1,
@@ -1868,6 +1875,37 @@ export const CD_OPTIONS: CompressionDriver[] = [
     note: 'Ring radiator, 1.8 kHz rec. crossover, 45 W. Too high a crossover for a 12"; listed for price reference only.',
   },
 ];
+
+export const A460G2: Horn = {
+  id: "a460g2",
+  lb: 3.5,
+  name: "ATH A460G2 (printed, approx.)",
+  hf: { covH: 100, covV: 100, minXo: null, lowHz: 670 },
+  exit: 1,
+  profile: ST260_PROFILE,
+  scale: 460 / 260,
+  price: 80,
+  src: "free STL from at-horns.eu; ~$80 filament, more via service",
+  size: { w: 18.1, h: 18.1, d: 5.8 },
+  driver: '1" or 1.4" via adapter; measured pairings on at-horns.eu',
+  xo: "600–800 Hz",
+  note: 'Shown as the ST260 profile scaled 1.77×; the real Gen2 profile is deeper. 18.1" round mouth, Marcel\'s pick for 1" drivers.',
+};
+
+export const ST260: HifiWaveguide = {
+  id: "st260",
+  lb: 1,
+  name: "ATH ST260 (printed)",
+  hf: { covH: 90, covV: 90, minXo: null, lowHz: 1500 },
+  exit: 1,
+  profile: ST260_PROFILE,
+  price: 40,
+  src: "free STL; ~$40 filament self-printed, $80–150 via service",
+  size: { w: 10.25, h: 10.25, d: 3.3 },
+  driver: "Lavoce DF10.171K / Faital HF108",
+  xo: "1200–1500 Hz",
+  note: "Round free-standing waveguide, ~110° coverage. No cabinet-width constraint.",
+};
 
 export const HORN_OPTIONS: Horn[] = [
   {
@@ -1935,24 +1973,10 @@ export const HORN_OPTIONS: Horn[] = [
     xo: "1.2\u20131.3 kHz (900 Hz cutoff)",
     note: 'Cast aluminium constant-directivity horn, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt, cutoff 900 Hz. 10.6" H \u00d7 11" W \u00d7 4.5" D; cutout 8.8" \u00d7 9.5". Weight not published; 3 lb assumed.',
   },
-  {
-    id: "st260",
-    lb: 1,
-    name: "ATH ST260 (printed)",
-    hf: { covH: 90, covV: 90, minXo: null, lowHz: 1500 },
-    exit: 1,
-    profile: ST260_PROFILE,
-    price: 40,
-    src: "free STL; ~$40 filament self-printed, $80–150 via service",
-    size: { w: 10.25, h: 10.25, d: 3.3 },
-    driver: "Lavoce DF10.171K / Faital HF108",
-    xo: "1200–1500 Hz",
-    note: "Round free-standing waveguide, ~110° coverage. No cabinet-width constraint.",
-  },
+  ST260,
   {
     id: "a400g2",
     lb: 2.5,
-    pick: true,
     name: "ATH A400G2 (printed, approx.)",
     hf: { covH: 100, covV: 100, minXo: null, lowHz: 670 },
     exit: 1,
@@ -1980,21 +2004,7 @@ export const HORN_OPTIONS: Horn[] = [
     xo: "900\u20131000 Hz",
     note: "Same print as the A460G2 with a 36 mm throat adapter. 18.1 in mouth controls pattern to about 750 Hz, so it supports a 900 Hz\u20131 kHz crossover. Adapter must match the driver's exit angle (7.3\u00b0 for the N314T-8); Bat\u00edk publishes them per driver.",
   },
-  {
-    id: "a460g2",
-    lb: 3.5,
-    name: "ATH A460G2 (printed, approx.)",
-    hf: { covH: 100, covV: 100, minXo: null, lowHz: 670 },
-    exit: 1,
-    profile: ST260_PROFILE,
-    scale: 460 / 260,
-    price: 80,
-    src: "free STL from at-horns.eu; ~$80 filament, more via service",
-    size: { w: 18.1, h: 18.1, d: 5.8 },
-    driver: '1" or 1.4" via adapter; measured pairings on at-horns.eu',
-    xo: "600–800 Hz",
-    note: 'Shown as the ST260 profile scaled 1.77×; the real Gen2 profile is deeper. 18.1" round mouth, Marcel\'s pick for 1" drivers.',
-  },
+  A460G2,
   {
     id: "athRect",
     lb: 3.5,
@@ -2069,11 +2079,8 @@ export const RACKS: readonly Rack[] = [
   },
 ];
 
-/** The baffle colour the planner starts on: the first swatch. */
-export const DEFAULT_BAFFLE_COLOR = "#e8b4a8";
-
 export const PAINT_SWATCHES: readonly PaintSwatch[] = [
-  [DEFAULT_BAFFLE_COLOR, "Dusty pink"],
+  ["#e8b4a8", "Dusty pink"],
   ["#2b2725", "Near black"],
   ["#c8cdc4", "Pale sage"],
   ["#eeff00", "Acid yellow"],
@@ -2192,7 +2199,7 @@ export const FORMATS: readonly Format[] = [
   },
 ];
 
-// Pickers list alphabetically; the default pick is marked with a dot, not moved to the top.
+// Pickers list alphabetically.
 export const sortedByName = <T extends { name: string }>(arr: readonly T[]): T[] =>
   [...arr].sort((a, b) =>
     a.name.localeCompare(b.name, "en", { numeric: true, sensitivity: "base" }),
@@ -2206,6 +2213,32 @@ export const sortedByName = <T extends { name: string }>(arr: readonly T[]): T[]
 // ---------------------------------------------------------------
 // ts: woofer T/S (the model uses Fs, Qms, Re, Bl, Mms, Sd, Xmax; Vas is shown only).
 // hf: compression section, sens 1 W/1 m, aes W, xo recommended minimum Hz, imp Ω, cov degrees.
+export const BC10CXN64: FillDriver = {
+  id: "bc10cxn64",
+  size: 10,
+  lb: 7.1,
+  name: "B&C 10CXN64",
+  price: 476.22,
+  src: "usspeaker.com, Sep 2026",
+  ts: {
+    Fs: 68,
+    Qts: 0.31,
+    Qes: 0.33,
+    Qms: 5.6,
+    Vas: 23,
+    Sd: 320,
+    Xmax: 5,
+    Re: 5.6,
+    Bl: 15.8,
+    Mms: 33.5,
+    aes: 250,
+    disp: null,
+  },
+  hf: { sens: 103, aes: 80, xo: 1200, imp: 8, cov: 70 },
+  lfSens: 97,
+  note: "[maker: bcspeakers.com] Neo, 1.4 in HF exit. B&C publishes only Xvar (5 mm), stored as Xmax. B&C sell a matching passive network, FB10CX64 ($176.52, 2.1 kHz, 18 dB/oct).",
+};
+
 export const FILL_OPTIONS: readonly FillDriver[] = [
   {
     id: "bc8cxn51",
@@ -2407,32 +2440,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     lfSens: 92,
     note: "[maker: eminence.com] Budget coax; Eminence lists no HF section specs, so only the woofer is modelled. Short 3.2 mm Xmax. usspeaker's page differs on Fs, Qms, Vas, Sd and Re; Eminence's values are used. Eminence PXB2:2K5CX network ($64.99, 250 W, switchable −3 dB HF).",
   },
-  {
-    id: "bc10cxn64",
-    pick: true,
-    size: 10,
-    lb: 7.1,
-    name: "B&C 10CXN64",
-    price: 476.22,
-    src: "usspeaker.com, Sep 2026",
-    ts: {
-      Fs: 68,
-      Qts: 0.31,
-      Qes: 0.33,
-      Qms: 5.6,
-      Vas: 23,
-      Sd: 320,
-      Xmax: 5,
-      Re: 5.6,
-      Bl: 15.8,
-      Mms: 33.5,
-      aes: 250,
-      disp: null,
-    },
-    hf: { sens: 103, aes: 80, xo: 1200, imp: 8, cov: 70 },
-    lfSens: 97,
-    note: "[maker: bcspeakers.com] Neo, 1.4 in HF exit. B&C publishes only Xvar (5 mm), stored as Xmax. B&C sell a matching passive network, FB10CX64 ($176.52, 2.1 kHz, 18 dB/oct).",
-  },
+  BC10CXN64,
   {
     id: "bc10fcx64",
     size: 10,
@@ -2596,6 +2604,34 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
 // Madisound pages showed "out of stock" on every product fetched, which may be a page-template
 // artifact; check stock before ordering.
 
+export const SB17NRX: HifiWoofer = {
+  id: "sb17nrx",
+  size: 6.5,
+  lb: 3.44,
+  name: "SB Acoustics SB17NRX2C35-8",
+  price: 76.7,
+  src: "madisoundspeakerstore.com, Sep 2026",
+  ts: {
+    Fs: 36.5,
+    Qts: 0.42,
+    Qes: 0.47,
+    Qms: 4.55,
+    Vas: 27,
+    Sd: 118,
+    Xmax: 5.5,
+    Re: 5.7,
+    Bl: 6.25,
+    Mms: 13.9,
+    Le: 0.15,
+    aes: 50,
+    sens: 87,
+    disp: null,
+    imp: 8,
+  },
+  fmax: null,
+  note: "[maker: SB datasheet rev 2, 2019] Norex paper cone. Xmax is derived: 11 mm p-p linear travel / 2. aes is 50 W IEC 268-5. sens is 2.83 V/1 m. SB publishes no fmax; the curve is smooth into the low kHz. Box suggestion: 7 L sealed or 17 L vented.",
+};
+
 export const HIFI_WOOFERS: HifiWoofer[] = [
   // ---------- Hi-fi long-throw ----------
   {
@@ -2706,34 +2742,7 @@ export const HIFI_WOOFERS: HifiWoofer[] = [
     fmax: 4000,
     note: "[maker: Tymphany datasheet rev 2] Fiber cone. Very low Le (0.12 mH) from its motor design. aes is 80 W rated noise power. sens is 86.7 dB 1 W (87.2 dB at 2.83 V). Out of stock at PE.",
   },
-  {
-    id: "sb17nrx",
-    pick: true,
-    size: 6.5,
-    lb: 3.44,
-    name: "SB Acoustics SB17NRX2C35-8",
-    price: 76.7,
-    src: "madisoundspeakerstore.com, Sep 2026",
-    ts: {
-      Fs: 36.5,
-      Qts: 0.42,
-      Qes: 0.47,
-      Qms: 4.55,
-      Vas: 27,
-      Sd: 118,
-      Xmax: 5.5,
-      Re: 5.7,
-      Bl: 6.25,
-      Mms: 13.9,
-      Le: 0.15,
-      aes: 50,
-      sens: 87,
-      disp: null,
-      imp: 8,
-    },
-    fmax: null,
-    note: "[maker: SB datasheet rev 2, 2019] Norex paper cone. Xmax is derived: 11 mm p-p linear travel / 2. aes is 50 W IEC 268-5. sens is 2.83 V/1 m. SB publishes no fmax; the curve is smooth into the low kHz. Box suggestion: 7 L sealed or 17 L vented.",
-  },
+  SB17NRX,
   {
     id: "sb23nrxs",
     size: 8,
@@ -3034,6 +3043,20 @@ export const HIFI_WOOFERS: HifiWoofer[] = [
   },
 ];
 
+const SB26STCN_RAW: HifiTweeterRaw = {
+  id: "sb26stcn",
+  lb: 0.22,
+  name: "SB Acoustics SB26STCN-C000-4",
+  price: 40.5,
+  src: "madisoundspeakerstore.com, Sep 2026",
+  hf: { sens: 89.5, aes: 120, aesXo: 2600, minXo: null, imp: 4, fs: 960 },
+  type: "dome",
+  exit: 1.0,
+  faceplate: { diameter: 2.83 },
+  needsWaveguide: false,
+  note: "[maker: SB datasheet] 26 mm textile dome, neo motor, 72 mm faceplate. sens is 92.5 dB at 2.83 V on 4 Ω, about 89.5 dB/1 W. aes is 120 W IEC 268-5 with a 2.6 kHz 12 dB/oct high-pass. No minimum crossover published. The small faceplate lets it sit close to the woofer.",
+};
+
 const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
   // ---------- Domes (flat baffle) ----------
   {
@@ -3062,20 +3085,7 @@ const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     needsWaveguide: false,
     note: '[maker: Tymphany datasheet, Jul 2025] 1" corundum dome, flat baffle. aes is only 15 W IEC 268-5 (PE says 100 W). Distributor copy claims a 1.2–1.3 kHz minimum crossover; unverified, not on the datasheet. Xmax 1.72 mm. Faceplate size is from PE.',
   },
-  {
-    id: "sb26stcn",
-    pick: true,
-    lb: 0.22,
-    name: "SB Acoustics SB26STCN-C000-4",
-    price: 40.5,
-    src: "madisoundspeakerstore.com, Sep 2026",
-    hf: { sens: 89.5, aes: 120, aesXo: 2600, minXo: null, imp: 4, fs: 960 },
-    type: "dome",
-    exit: 1.0,
-    faceplate: { diameter: 2.83 },
-    needsWaveguide: false,
-    note: "[maker: SB datasheet] 26 mm textile dome, neo motor, 72 mm faceplate. sens is 92.5 dB at 2.83 V on 4 Ω, about 89.5 dB/1 W. aes is 120 W IEC 268-5 with a 2.6 kHz 12 dB/oct high-pass. No minimum crossover published. The small faceplate lets it sit close to the woofer.",
-  },
+  SB26STCN_RAW,
   {
     id: "d2608",
     lb: 1.54,
@@ -3238,22 +3248,25 @@ const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
 ];
 
 // Give every tweeter a faceplate size and radiating diameter the layout and directivity use.
-const pass = (rows: readonly HifiTweeterRaw[]): HifiTweeter[] =>
-  rows.map((t) => {
-    const fp = t.faceplate;
-    const diameter = fp && "diameter" in fp ? fp.diameter : 0;
-    return {
-      ...t,
-      faceplate: !fp
-        ? { w: 3.5, h: 3.5 }
-        : "diameter" in fp
-          ? { w: fp.diameter, h: fp.diameter }
-          : fp,
-      // radiating diameter for the directivity: the dome, or the horn mouth for a horn-loaded tweeter
-      domeIn: t.type === "horn-loaded" ? diameter || 3 : t.exit || 1,
-    };
-  });
-export const HIFI_TWEETERS: readonly HifiTweeter[] = pass(HIFI_TWEETERS_RAW);
+const withFaceplate = (t: HifiTweeterRaw): HifiTweeter => {
+  const fp = t.faceplate;
+  const diameter = fp && "diameter" in fp ? fp.diameter : 0;
+  return {
+    ...t,
+    faceplate: !fp
+      ? { w: 3.5, h: 3.5 }
+      : "diameter" in fp
+        ? { w: fp.diameter, h: fp.diameter }
+        : fp,
+    // radiating diameter for the directivity: the dome, or the horn mouth for a horn-loaded tweeter
+    domeIn: t.type === "horn-loaded" ? diameter || 3 : t.exit || 1,
+  };
+};
+/** The tweeter the hi-fi planner starts on, as the table holds it (with its faceplate and dome size). */
+export const SB26STCN: HifiTweeter = withFaceplate(SB26STCN_RAW);
+export const HIFI_TWEETERS: readonly HifiTweeter[] = HIFI_TWEETERS_RAW.map((t) =>
+  t === SB26STCN_RAW ? SB26STCN : withFaceplate(t),
+);
 
 // more woofers sold by usspeaker.com (researched Sep 2026)
 HIFI_WOOFERS.push(

@@ -13,7 +13,8 @@ import {
   midBoxesOfSize,
   midDriversOfSize,
 } from "../../../lib/data";
-import { byId, defaultOf } from "../../../lib/tables";
+import { byId } from "../../../lib/tables";
+import { DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../../../lib/defaults";
 import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion";
 import {
   subSystem,
@@ -203,11 +204,6 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
   const midBoxChoices = midBoxesOfSize(midSize);
   const subBox = subBoxDims;
   const subWithBox = { ...subDriver, box: subBox };
-  useEffect(() => {
-    if (subDriverChoices.length) setSubDriver(defaultOf(subDriverChoices, "subwoofers"));
-    if (midDriverChoices.length) setMidDriver(defaultOf(midDriverChoices, "mid drivers"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [format]);
   /** Switching 12/15 picks that size's default driver and box; restoring a config sets them itself. */
   const skipSizeReset = useRef(true);
   useEffect(() => {
@@ -215,11 +211,11 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
       skipSizeReset.current = false;
       return;
     }
-    if (midDriverChoices.length) setMidDriver(defaultOf(midDriverChoices, "mid drivers"));
-    if (midBoxChoices.length) {
-      const b = defaultOf(midBoxChoices, "mid boxes");
-      setMidBoxPreset(b);
-      setMidBoxDims({ ...b.box });
+    const start = DEFAULT_MID_BY_SIZE[midSize];
+    if (start) {
+      setMidDriver(start.mid);
+      setMidBoxPreset(start.midBox);
+      setMidBoxDims({ ...start.midBox.box });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [midSize]);
@@ -367,8 +363,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
   });
   const restore = (c: Partial<PaDesignConfig>) => {
     if (c.wall === 0.5 || c.wall === 0.75) setWallThicknessIn(c.wall);
-    else setWallThicknessIn(0.75);
-    setBaffleInsetIn(typeof c.inset === "number" ? c.inset : 0.75);
+    else setWallThicknessIn(DEFAULT_PA.wall);
+    setBaffleInsetIn(typeof c.inset === "number" ? c.inset : DEFAULT_PA.inset);
     if (c.sub) setSubDriver(byId(SUB_OPTIONS, c.sub) ?? subDriver);
     if (c.mid) {
       const m = byId(MID_OPTIONS, c.mid) ?? midDriver;
@@ -399,8 +395,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
     if (c.layout) setLayout(c.layout);
     if (c.baffleColor) setBaffleColor(c.baffleColor);
-    setCabinetFinish(c.cabFinish || "birch");
-    setSpacerHeightIn(typeof c.spacerH === "number" ? c.spacerH : 20);
+    setCabinetFinish(c.cabFinish || DEFAULT_PA.cabFinish);
+    setSpacerHeightIn(typeof c.spacerH === "number" ? c.spacerH : DEFAULT_PA.spacerH);
     if (c.joint) setCornerJoint(c.joint);
     if (c.portStyle) setPortStyle(c.portStyle);
   };
