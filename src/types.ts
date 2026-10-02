@@ -601,6 +601,32 @@ export interface HifiMetrics {
   lb: number;
 }
 
+/** The Hi-fi page's design and room, as the planner holds it. */
+export interface HifiDesignState {
+  woofer: HifiWoofer;
+  tweeter: HifiTweeter;
+  selectedWaveguide: HifiWaveguide;
+  boxType: HifiBoxKind;
+  boxDims: Dims3;
+  wallThicknessIn: number;
+  panelMaterial: PanelMaterial;
+  portSpec: HifiPort;
+  radiatorSelection: RadiatorSelection;
+  crossoverHz: number;
+  crossoverOrder: CrossoverOrder;
+  wooferAmpWatts: number;
+  tweeterAmpWatts: number;
+  baffleStepCompensationDb: number;
+  placement: HifiPlacement;
+  distanceToWallFt: number;
+  speakerSpacingFt: number;
+  toeInDeg: number;
+  listeningSeat: ListeningSeat;
+  earHeightIn: number;
+  standHeightIn: number;
+  dispersionPlane: DispersionPlane;
+}
+
 /** The fields of a design a card applies (the ones the optimizer searched). */
 export interface HifiCardConfig {
   woofer: string;

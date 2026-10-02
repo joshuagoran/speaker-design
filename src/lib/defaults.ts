@@ -12,13 +12,13 @@ import {
   SB26STCN,
   ST260,
 } from "./data";
-import type { HifiPlanner } from "../pages/hifi/useHifiPlanner";
 import type {
   CompressionDriver,
   Dims3,
   FillBoxType,
   FillDriver,
   FillPort,
+  HifiDesignState,
   Horn,
   MidBox,
   MidDriver,
@@ -87,6 +87,9 @@ export const DEFAULT_MID_BY_SIZE: Partial<Record<MidSize, Pick<PaDefaults, "mid"
   15: { mid: BC15NDL76, midBox: B18 },
 };
 
+/** The Hi-fi page's starting state: its design and room, plus the slot height the port toggle starts from. */
+export type HifiDefaults = HifiDesignState & { slotHeightIn: SlotPort["h"] };
+
 /** The Hi-fi page's starting design, room and waveguide. */
 export const DEFAULT_HIFI = {
   woofer: SB17NRX,
@@ -112,31 +115,7 @@ export const DEFAULT_HIFI = {
   earHeightIn: 38,
   standHeightIn: 24,
   dispersionPlane: "h",
-} satisfies Pick<
-  HifiPlanner,
-  | "woofer"
-  | "tweeter"
-  | "selectedWaveguide"
-  | "boxType"
-  | "boxDims"
-  | "wallThicknessIn"
-  | "panelMaterial"
-  | "portSpec"
-  | "radiatorSelection"
-  | "crossoverHz"
-  | "crossoverOrder"
-  | "wooferAmpWatts"
-  | "tweeterAmpWatts"
-  | "baffleStepCompensationDb"
-  | "placement"
-  | "distanceToWallFt"
-  | "speakerSpacingFt"
-  | "toeInDeg"
-  | "listeningSeat"
-  | "earHeightIn"
-  | "standHeightIn"
-  | "dispersionPlane"
-> & { slotHeightIn: SlotPort["h"] }; // the slot height the port toggle starts from
+} satisfies HifiDefaults;
 
 /** The Fills page's starting design. */
 export const DEFAULT_FILL = {

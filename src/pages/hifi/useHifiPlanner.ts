@@ -7,6 +7,7 @@ import type {
   DispersionPlane,
   HifiBoxKind,
   HifiCardConfig,
+  HifiDesignState,
   HifiGoal,
   HifiOptimizerCard,
   HifiOptimizerLocks,
@@ -36,50 +37,28 @@ export interface HifiDesignPreview {
   card: HifiOptimizerCard;
 }
 
-export interface HifiPlanner {
-  woofer: HifiWoofer;
+export interface HifiPlanner extends HifiDesignState {
   setWoofer: Setter<HifiWoofer>;
-  tweeter: HifiTweeter;
   setTweeter: Setter<HifiTweeter>;
-  selectedWaveguide: HifiWaveguide;
   setSelectedWaveguide: Setter<HifiWaveguide>;
-  boxType: HifiBoxKind;
   setBoxType: Setter<HifiBoxKind>;
-  boxDims: Dims3;
   setBoxDims: Setter<Dims3>;
-  wallThicknessIn: number;
   setWallThicknessIn: Setter<number>;
-  panelMaterial: PanelMaterial;
   setPanelMaterial: Setter<PanelMaterial>;
-  portSpec: HifiPort;
   setPortSpec: Setter<HifiPort>;
-  radiatorSelection: RadiatorSelection;
   setRadiatorSelection: Setter<RadiatorSelection>;
-  crossoverHz: number;
   setCrossoverHz: Setter<number>;
-  crossoverOrder: CrossoverOrder;
   setCrossoverOrder: Setter<CrossoverOrder>;
-  wooferAmpWatts: number;
   setWooferAmpWatts: Setter<number>;
-  tweeterAmpWatts: number;
   setTweeterAmpWatts: Setter<number>;
-  baffleStepCompensationDb: number;
   setBaffleStepCompensationDb: Setter<number>;
-  placement: HifiPlacement;
   setPlacement: Setter<HifiPlacement>;
-  distanceToWallFt: number;
   setDistanceToWallFt: Setter<number>;
-  speakerSpacingFt: number;
   setSpeakerSpacingFt: Setter<number>;
-  toeInDeg: number;
   setToeInDeg: Setter<number>;
-  listeningSeat: ListeningSeat;
   setListeningSeat: Setter<ListeningSeat>;
-  earHeightIn: number;
   setEarHeightIn: Setter<number>;
-  standHeightIn: number;
   setStandHeightIn: Setter<number>;
-  dispersionPlane: DispersionPlane;
   setDispersionPlane: Setter<DispersionPlane>;
   isOptimizerOn: boolean;
   optimizerGoals: HifiGoal[];
