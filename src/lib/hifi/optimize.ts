@@ -258,7 +258,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     const id = (cur.pr as PassiveRadiatorChoice & PassiveRadiatorHandover).id;
     const drv = byId(input.passives || [], id) ?? byId(HIFI_PASSIVES, id);
     cur.pr = drv ? { ...cur.pr, drv } : undefined;
-    curPrMissing = !drv;
+    curPrMissing = cur.box === "radiator" && !drv; // a sealed or vented design may carry a leftover id
   }
   const goals = (input.goals || []).filter(
     (g, i, a) => HIFI_OPTIMIZER_GOALS[g] && a.indexOf(g) === i,

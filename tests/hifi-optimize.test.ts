@@ -248,6 +248,17 @@ test("hi-fi optimizer: a handed-over radiator not in `passives` is looked up in 
   assert.ok(unknown.curProblems && unknown.curProblems[0].includes("radiator"));
 });
 
+test("hi-fi optimizer: a stale radiator id on a vented design still gets a comparison", () => {
+  const out = optimizeHifiSpeaker({
+    ...base,
+    cur: { ...cur, pr: { id: "no-such-radiator", n: 2, addG: 0 } }, // leftover from a radiator design
+    goals: ["cheaper"],
+    passives: HIFI_PASSIVES,
+    locks: { ...tight, woofer: true, tweeter: true },
+  });
+  assert.ok(out.cur, "compared against the vented design as it is");
+});
+
 test("hi-fi optimizer: a port counts as changed only on its own shape's fields", () => {
   const round = { n: 1, dia: 2, len: 6 } as const;
   // boundary cast: a design saved before the port toggle built fresh ports can carry a slot's `h` on a round port
