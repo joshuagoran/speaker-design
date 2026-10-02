@@ -14,10 +14,7 @@ import {
 } from "./data";
 import type {
   CompressionDriver,
-  Dims3,
-  FillBoxType,
-  FillDriver,
-  FillPort,
+  FillDesignState,
   HifiDesignState,
   Horn,
   MidBox,
@@ -122,16 +119,8 @@ export const DEFAULT_FILL = {
   driver: BC10CXN64,
   boxType: "vented",
   boxDims: { w: 11.5, h: 16, d: 11 },
-  port: { n: 1, dia: 3, len: 4 },
+  portSpec: { n: 1, dia: 3, len: 4 },
   highpassHz: 70,
   ampWatts: 300,
   maxPortAirSpeedMs: 20,
-} satisfies {
-  driver: FillDriver;
-  boxType: FillBoxType;
-  boxDims: Dims3;
-  port: FillPort;
-  highpassHz: number;
-  ampWatts: number;
-  maxPortAirSpeedMs: number;
-};
+} satisfies FillDesignState;

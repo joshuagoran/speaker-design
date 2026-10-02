@@ -978,6 +978,19 @@ export interface FillPort {
   len: number;
 }
 
+/** The Fills page's design, as the planner holds it. */
+export interface FillDesignState {
+  driver: FillDriver;
+  boxType: FillBoxType;
+  boxDims: Dims3;
+  portSpec: FillPort;
+  /** the highpass to the subs, Hz (LR24) */
+  highpassHz: number;
+  /** per box, rated into 8 Ω */
+  ampWatts: number;
+  maxPortAirSpeedMs: number;
+}
+
 export interface FillSystemConfig {
   boxType: FillBoxType;
   /** the box's outside size, inches */

@@ -82,7 +82,7 @@ describe("default designs", () => {
     const sys = fillSystem(d.driver, {
       boxType: d.boxType,
       dim: d.boxDims,
-      port: d.port,
+      port: d.portSpec,
       hp: d.highpassHz,
       ampW: d.ampWatts,
       portMax: d.maxPortAirSpeedMs,

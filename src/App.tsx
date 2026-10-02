@@ -5,6 +5,7 @@ import { FillsPage } from "./pages/fills/FillsPage";
 import { CutlistPage } from "./pages/cutlist/CutlistPage";
 import { HifiPage } from "./pages/hifi/HifiPage";
 import { useHifiPlanner } from "./pages/hifi/useHifiPlanner";
+import { useFillsPlanner } from "./pages/fills/useFillsPlanner";
 import { useEffect, useState, type MouseEvent } from "react";
 
 /** The pages: the PA stack's four ("planner" is Design) and Hi-fi. */
@@ -22,7 +23,7 @@ const viewOf = (): AppTab =>
           ? "cutlist"
           : "planner";
 
-/** The page shell: hash routing, the header navigation, and the planner state shared by the PA pages. */
+/** The page shell: hash routing, the header navigation, and the design state of every page (held here so it survives switching tabs). */
 export function App() {
   const [view, setView] = useState(viewOf);
   useEffect(() => {
@@ -32,6 +33,7 @@ export function App() {
   }, []);
   const planner = usePaPlanner();
   const hifi = useHifiPlanner();
+  const fills = useFillsPlanner();
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900" style={{ fontFamily: "var(--font)" }}>
       <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
@@ -106,7 +108,7 @@ export function App() {
       {view === "notes" ? (
         <NotesPage />
       ) : view === "fills" ? (
-        <FillsPage />
+        <FillsPage fills={fills} />
       ) : view === "hifi" ? (
         <HifiPage hifi={hifi} />
       ) : view === "cutlist" ? (

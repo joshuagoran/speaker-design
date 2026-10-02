@@ -68,7 +68,7 @@ export interface HifiPlanner extends HifiDesignState {
   optimizerGoals: HifiGoal[];
   setOptimizerGoals: Setter<HifiGoal[]>;
   optimizerBudget: number;
-  setOptimizerBudget: Setter<number>;
+  setOptimizerBudget: (v: number) => void;
   optimizerLocks: HifiPlannerLocks;
   optimizerResult: HifiOptimizerResult | null;
   setOptimizerResult: Setter<HifiOptimizerResult | null>;
@@ -144,7 +144,13 @@ export function useHifiPlanner(): HifiPlanner {
     writeStoredJson("hifi.opt", v);
   };
   const [optimizerGoals, setOptimizerGoals] = useState<HifiGoal[]>([]);
-  const [optimizerBudget, setOptimizerBudget] = useState(() => readStoredJson("hifi.budget", 800));
+  const [optimizerBudget, setOptimizerBudgetState] = useState(() =>
+    readStoredJson("hifi.budget", 800),
+  );
+  const setOptimizerBudget = (v: number) => {
+    setOptimizerBudgetState(v);
+    writeStoredJson("hifi.budget", v);
+  };
   const [optimizerLocks, setOptimizerLocksState] = useState<HifiPlannerLocks>(() => {
     const l = readStoredJson<HifiOptimizerLocks>("hifi.locks", {}) || {};
     return { ...l, dim: { ...l.dim } };
