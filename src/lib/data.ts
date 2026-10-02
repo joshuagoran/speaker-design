@@ -2212,7 +2212,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     },
     hf: { sens: 104, aes: 50, xo: 1800, imp: 8, cov: 100 },
     lfSens: 97,
-    note: "Neo. 250 W / 500 W program LF. No matching B&C network sold for the 8″ (DIY or DSP).",
+    note: "Neo. 250 W / 500 W program LF. B&C publishes only Xvar (6 mm), stored as Xmax. No matching B&C network sold for the 8″ (DIY or DSP).",
   },
   {
     id: "bc8fcx51",
@@ -2237,7 +2237,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     },
     hf: { sens: 104, aes: 50, xo: 1800, imp: 8, cov: 100 },
     lfSens: 96,
-    note: "[maker: bcspeakers.com] Ferrite. Xmax is B&C's Xvar, 6 mm (the table had 6.5). No matching B&C network sold for the 8″ (DIY or DSP).",
+    note: "[maker: bcspeakers.com] Ferrite. B&C publishes only Xvar (6 mm), stored as Xmax. No matching B&C network sold for the 8″ (DIY or DSP).",
   },
   {
     id: "by8cx300fe",
@@ -2412,7 +2412,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     },
     hf: { sens: 103, aes: 80, xo: 1200, imp: 8, cov: 70 },
     lfSens: 97,
-    note: "[maker: bcspeakers.com] Neo, 1.4 in HF exit. Xmax is B&C's Xvar, 5 mm (the table had 5.5). B&C sell a matching passive network, FB10CX64 ($176.52, 2.1 kHz, 18 dB/oct).",
+    note: "[maker: bcspeakers.com] Neo, 1.4 in HF exit. B&C publishes only Xvar (5 mm), stored as Xmax. B&C sell a matching passive network, FB10CX64 ($176.52, 2.1 kHz, 18 dB/oct).",
   },
   {
     id: "bc10fcx64",
@@ -2437,7 +2437,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     },
     hf: { sens: 104, aes: 80, xo: 1200, imp: 8, cov: 70 },
     lfSens: 95,
-    note: "[maker: bcspeakers.com] Ferrite, 1.3 in HF exit, titanium diaphragm. Xmax is B&C's Xvar, 6 mm (the table had 5.5). Same B&C FB10CX64 network ($176.52, 2.1 kHz, 18 dB/oct).",
+    note: "[maker: bcspeakers.com] Ferrite, 1.3 in HF exit, titanium diaphragm. B&C publishes only Xvar (6 mm), stored as Xmax. Same B&C FB10CX64 network ($176.52, 2.1 kHz, 18 dB/oct).",
   },
   {
     id: "by10cx300fe",
