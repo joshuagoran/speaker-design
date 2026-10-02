@@ -43,7 +43,7 @@ vi.mock("firebase/firestore", () => ({
 }));
 
 test("firebase adapter: the config store's calls map onto the modular SDK", async () => {
-  const { createFirebase } = await import("../src/components/saved-configs/firebaseStore.js");
+  const { createFirebase } = await import("../src/components/saved-configs/firebaseStore.ts");
   const fb = createFirebase();
   assert.equal(
     createFirebase(),

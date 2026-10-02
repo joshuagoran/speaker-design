@@ -1,5 +1,5 @@
 import { HORN_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS } from "../../lib/data.ts";
-import { useConfigStore } from "../../components/saved-configs/useConfigStore.js";
+import { useConfigStore } from "../../components/saved-configs/useConfigStore.ts";
 import { useState } from "react";
 
 /** The Hi-fi page's design, room and optimizer state. Held by App so it survives switching tabs. */

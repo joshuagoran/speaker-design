@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-/** The GitHub Pages build is `vp build --mode pages`; only that build bundles Firebase (see firebaseStore.js). */
+/** The GitHub Pages build is `vp build --mode pages`; only that build bundles Firebase (see firebaseStore.ts). */
 const PAGES_BUILD = import.meta.env.MODE === "pages";
 
 /** Saved configurations: the claude.ai artifact's database, or Firebase when the page is hosted on GitHub Pages */
@@ -14,7 +14,7 @@ export function useConfigStore(collection) {
     let live = true;
     if (PAGES_BUILD && !(window.claude && window.claude.use)) {
       let un = null;
-      import("./firebaseStore.js")
+      import("./firebaseStore.ts")
         .then(({ createFirebase }) => {
           if (!live) return;
           const f = createFirebase();

@@ -1,5 +1,5 @@
 import { PAL } from "../../styles/palette.ts";
-import { useElementWidth } from "../../hooks/useElementWidth.js";
+import { useElementWidth } from "../../hooks/useElementWidth.ts";
 
 /** One plywood sheet with its cut pieces laid out. */
 export function SheetDrawing({ sheet, S, idx }) {

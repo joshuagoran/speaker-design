@@ -20,7 +20,7 @@ import {
   limit as fsLimit,
   onSnapshot,
 } from "firebase/firestore";
-import { FIREBASE_CONFIG } from "./firebaseConfig.js";
+import { FIREBASE_CONFIG } from "./firebaseConfig.ts";
 
 // one instance per page: both views' config stores share it (Firebase refuses to initialize the same app twice)
 let instance = null;
