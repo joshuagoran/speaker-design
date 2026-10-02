@@ -6,13 +6,13 @@ import {
   evaluate as evalSub,
   fillConfigs,
   evaluateFill,
-} from "./golden-configs.js";
+} from "./golden-configs.ts";
 const configs = [
   ...subConfigs.map((c) => ({ ...c, run: evalSub })),
   ...fillConfigs.map((c) => ({ ...c, run: evaluateFill })),
 ];
 
-// Regenerate after an intentional change:  UPDATE_GOLDEN=1 vp test --run tests/golden.test.js
+// Regenerate after an intentional change:  UPDATE_GOLDEN=1 vp test --run tests/golden.test.ts
 const goldenUrl = new URL("./golden.json", import.meta.url);
 if (process.env.UPDATE_GOLDEN === "1") {
   const out = {};
@@ -26,7 +26,7 @@ for (const c of configs) {
       got = c.run(c);
     assert.ok(
       want,
-      "missing from golden.json: run UPDATE_GOLDEN=1 vp test --run tests/golden.test.js",
+      "missing from golden.json: run UPDATE_GOLDEN=1 vp test --run tests/golden.test.ts",
     );
     for (const k of Object.keys(want)) {
       if (typeof want[k] === "number")

@@ -11,7 +11,7 @@ import {
   nearestPoint,
 } from "../src/lib/pa/calc.ts";
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data.ts";
-import { close, db } from "./helpers.js";
+import { close, db } from "./helpers.ts";
 
 const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76") || MID_OPTIONS.find((o) => o.ts);
 const cfg = {

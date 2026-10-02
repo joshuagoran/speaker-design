@@ -5,7 +5,7 @@ import {
   linkwitzRiley24Lowpass,
   linkwitzRiley24Highpass,
 } from "../src/lib/pa/calc.ts";
-import { db, close } from "./helpers.js";
+import { db, close } from "./helpers.ts";
 
 test("Butterworth highpasses are -3.01 dB at the corner", (t) => {
   close(t, db(highpassGain(40, 40, "BW24")), -3.01, 0.01);

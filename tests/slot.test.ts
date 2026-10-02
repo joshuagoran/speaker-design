@@ -13,7 +13,7 @@ import {
   subSystem,
 } from "../src/lib/pa/calc.ts";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data.ts";
-import { C, rel, close } from "./helpers.js";
+import { C, rel, close } from "./helpers.ts";
 
 // Independent check of the closed form: integrate the potential of the rectangle numerically.
 // phi(x, y) = integral of 1/distance over the rectangle, from its four corner sub-rectangles.

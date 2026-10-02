@@ -10,7 +10,7 @@ import {
   nearestPoint,
 } from "../src/lib/pa/calc.ts";
 import { FILL_OPTIONS } from "../src/lib/data.ts";
-import { close, massLineSPL } from "./helpers.js";
+import { close, massLineSPL } from "./helpers.ts";
 
 const drv = FILL_OPTIONS.find((o) => o.id === "bc10cxn64");
 const base = {

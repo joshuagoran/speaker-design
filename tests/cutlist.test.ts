@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { boxParts, packSheets, formatInches, PLYWOOD_SHEETS } from "../src/lib/pa/calc.ts";
-import { close } from "./helpers.js";
+import { close } from "./helpers.ts";
 
 const get = (P, name) => P.find((p) => p.part === name);
 for (const joint of ["butt", "rabbet", "miter"]) {

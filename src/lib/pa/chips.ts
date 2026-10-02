@@ -1,5 +1,5 @@
 // Warning chips for each planner section: pure functions of the numbers the page already has.
-// Each returns [kind, head, body][] with kind "ok" | "warn" | "bad". Tested in tests/chips.test.js.
+// Each returns [kind, head, body][] with kind "ok" | "warn" | "bad". Tested in tests/chips.test.ts.
 
 import type {
   Chip,

@@ -8,7 +8,7 @@ import {
   ampVoltage,
 } from "../src/lib/pa/calc.ts";
 import { SUB_OPTIONS } from "../src/lib/data.ts";
-import { close, near } from "./helpers.js";
+import { close, near } from "./helpers.ts";
 
 const fh = SUB_OPTIONS.find((o) => o.id === "f18fh500").ts;
 test("thermal limit: 2 x AES into 8 ohm; amp voltage: W into 8 ohm", (t) => {

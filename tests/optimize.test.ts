@@ -12,7 +12,7 @@ import {
 } from "../src/lib/pa/optimize.ts";
 import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc.ts";
 import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data.ts";
-import { close } from "./helpers.js";
+import { close } from "./helpers.ts";
 
 const seeds = JSON.parse(fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url)));
 const golden = JSON.parse(fs.readFileSync(new URL("./golden.json", import.meta.url)));

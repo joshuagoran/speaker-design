@@ -15,7 +15,7 @@ import {
   hifiDispersionMap,
   grossVolumeLiters,
 } from "../src/lib/hifi/hifi.ts";
-import { close } from "./helpers.js";
+import { close } from "./helpers.ts";
 
 // a generic 6.5" woofer and 1" dome (typical published values), so the tests don't depend on the driver list
 const W = {
