@@ -3,5 +3,6 @@ import { createRoot } from "react-dom/client";
 import "./styles/app.css";
 import { App } from "./App";
 
-// non-null: index.html always has #root; a real guard is left for after the migration (issue #21)
-createRoot(document.getElementById("root")!).render(<App />);
+const root = document.getElementById("root");
+if (!root) throw new Error("index.html has no #root");
+createRoot(root).render(<App />);
