@@ -10,7 +10,8 @@ import {
   SUB_OPTIONS,
 } from "../src/lib/data";
 import { DEFAULT_FILL, DEFAULT_HIFI, DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../src/lib/defaults";
-import { evaluateDesign } from "../src/lib/pa/optimize";
+import { designProblems, evaluateDesign } from "../src/lib/pa/optimize";
+import { hornResponse } from "../src/lib/pa/calc";
 import { fillSystem } from "../src/lib/pa/calc";
 import { hifiSystem } from "../src/lib/hifi/hifi";
 import type { PaDesignConfig } from "../src/types";
@@ -43,6 +44,17 @@ describe("default designs", () => {
     const m = evaluateDesign(snapshotOf(DEFAULT_PA));
     expect(m).not.toBeNull();
     expect(allFinite(m)).toBe(true);
+  });
+
+  it("DEFAULT_PA's horn fits its compression driver's exit", () => {
+    expect(DEFAULT_PA.horn.exit).toBe(DEFAULT_PA.cd.exit);
+    const m = evaluateDesign(snapshotOf(DEFAULT_PA));
+    expect(m?.mismatch).toBe(false);
+    expect(designProblems(m, { maxLb: 1000, budget: 100000 })).not.toContain(
+      "horn and driver exits differ",
+    );
+    const d = DEFAULT_PA;
+    expect(hornResponse(d.cd.hf, d.horn.hf ?? {}, d.xoHi, d.hfAmpW)).not.toBeNull();
   });
 
   it("DEFAULT_HIFI is a modelled system with no NaN", () => {

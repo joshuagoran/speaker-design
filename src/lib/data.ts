@@ -1876,22 +1876,6 @@ export const CD_OPTIONS: CompressionDriver[] = [
   },
 ];
 
-export const A460G2: Horn = {
-  id: "a460g2",
-  lb: 3.5,
-  name: "ATH A460G2 (printed, approx.)",
-  hf: { covH: 100, covV: 100, minXo: null, lowHz: 670 },
-  exit: 1,
-  profile: ST260_PROFILE,
-  scale: 460 / 260,
-  price: 80,
-  src: "free STL from at-horns.eu; ~$80 filament, more via service",
-  size: { w: 18.1, h: 18.1, d: 5.8 },
-  driver: '1" or 1.4" via adapter; measured pairings on at-horns.eu',
-  xo: "600–800 Hz",
-  note: 'Shown as the ST260 profile scaled 1.77×; the real Gen2 profile is deeper. 18.1" round mouth, Marcel\'s pick for 1" drivers.',
-};
-
 export const ST260: HifiWaveguide = {
   id: "st260",
   lb: 1,
@@ -1905,6 +1889,22 @@ export const ST260: HifiWaveguide = {
   driver: "Lavoce DF10.171K / Faital HF108",
   xo: "1200–1500 Hz",
   note: "Round free-standing waveguide, ~110° coverage. No cabinet-width constraint.",
+};
+
+export const A460G2_14: Horn = {
+  id: "a460g2_14",
+  lb: 3.5,
+  name: "ATH A460G2 + 1.4 in adapter (printed, approx.)",
+  hf: { covH: 100, covV: 100, minXo: null, lowHz: 580 },
+  exit: 1.4,
+  profile: ST260_PROFILE,
+  scale: 460 / 260,
+  price: 80,
+  src: "free STL from at-horns.eu; ~$80 filament, more via service",
+  size: { w: 18.1, h: 18.1, d: 5.8 },
+  driver: "Eminence N314T-8 / SB Rosso-65CD-T / 18Sound ND3T",
+  xo: "900\u20131000 Hz",
+  note: "Same print as the A460G2 with a 36 mm throat adapter. 18.1 in mouth controls pattern to about 750 Hz, so it supports a 900 Hz\u20131 kHz crossover. Adapter must match the driver's exit angle (7.3\u00b0 for the N314T-8); Bat\u00edk publishes them per driver.",
 };
 
 export const HORN_OPTIONS: Horn[] = [
@@ -1989,22 +1989,22 @@ export const HORN_OPTIONS: Horn[] = [
     xo: "800–1000 Hz",
     note: 'Shown as the ST260 profile scaled 1.54×; the real Gen2 profile is deeper. 15.7" round mouth.',
   },
+  A460G2_14,
   {
-    id: "a460g2_14",
+    id: "a460g2",
     lb: 3.5,
-    name: "ATH A460G2 + 1.4 in adapter (printed, approx.)",
-    hf: { covH: 100, covV: 100, minXo: null, lowHz: 580 },
-    exit: 1.4,
+    name: "ATH A460G2 (printed, approx.)",
+    hf: { covH: 100, covV: 100, minXo: null, lowHz: 670 },
+    exit: 1,
     profile: ST260_PROFILE,
     scale: 460 / 260,
     price: 80,
     src: "free STL from at-horns.eu; ~$80 filament, more via service",
     size: { w: 18.1, h: 18.1, d: 5.8 },
-    driver: "Eminence N314T-8 / SB Rosso-65CD-T / 18Sound ND3T",
-    xo: "900\u20131000 Hz",
-    note: "Same print as the A460G2 with a 36 mm throat adapter. 18.1 in mouth controls pattern to about 750 Hz, so it supports a 900 Hz\u20131 kHz crossover. Adapter must match the driver's exit angle (7.3\u00b0 for the N314T-8); Bat\u00edk publishes them per driver.",
+    driver: '1" or 1.4" via adapter; measured pairings on at-horns.eu',
+    xo: "600–800 Hz",
+    note: 'Shown as the ST260 profile scaled 1.77×; the real Gen2 profile is deeper. 18.1" round mouth, Marcel\'s pick for 1" drivers.',
   },
-  A460G2,
   {
     id: "athRect",
     lb: 3.5,

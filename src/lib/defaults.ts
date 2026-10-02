@@ -1,6 +1,6 @@
 // What the planner shows on first load, as whole objects: the drivers are the table entries themselves.
 import {
-  A460G2,
+  A460G2_14,
   B15,
   B18,
   BC10CXN64,
@@ -51,7 +51,7 @@ export const DEFAULT_PA = {
   sub: BC18NBX,
   mid: F12PR300,
   cd: N314T,
-  horn: A460G2,
+  horn: A460G2_14,
   midBox: B15,
   portStyle: "slots",
   cDim: { w: 24, h: 32, d: 18 },
