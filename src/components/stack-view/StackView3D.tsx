@@ -9,6 +9,25 @@ import {
   createScaleFigure,
 } from "./geometry";
 import { useEffect, useRef, useState } from "react";
+import type { Dims3, FinishId, Horn, MidDriver, PaLayout, PortStyle, SubDriver } from "../../types";
+import type { PaDesign } from "../../pages/pa-stack/hooks/usePaDesign";
+
+interface Props {
+  sub: SubDriver & { box: Dims3 };
+  mid: MidDriver & { box: Dims3 };
+  horn: Horn;
+  plinth: number;
+  cutaway: boolean;
+  portStyle: PortStyle;
+  layout: PaLayout;
+  baffleColor: string;
+  /** explicit vent geometry when the cabinet is custom */
+  portGeom?: Partial<PaDesign["portGeom"]>;
+  wall?: number;
+  inset?: number;
+  cabFinish?: FinishId;
+  spacerH?: number;
+}
 
 /** Rotatable 3D view of the PA stack. */
 export function StackView3D({
@@ -25,9 +44,16 @@ export function StackView3D({
   inset = 0.75,
   cabFinish = "birch",
   spacerH = 20,
-}) {
-  const mount = useRef(null);
-  const state = useRef({ rotY: 0.6, rotX: 0.35, drag: false, lx: 0, ly: 0 });
+}: Props) {
+  const mount = useRef<HTMLDivElement>(null);
+  const state = useRef<{
+    rotY: number;
+    rotX: number;
+    drag: boolean;
+    lx: number;
+    ly: number;
+    zoom?: number; // set to 1 when the scene first builds
+  }>({ rotY: 0.6, rotX: 0.35, drag: false, lx: 0, ly: 0 });
   // Rebuild the scene only when the geometry actually changes (the parent recreates these objects every
   // render), and at most every 120 ms while a slider is dragged, so the controls stay responsive.
   const geoKey = JSON.stringify([
@@ -47,7 +73,7 @@ export function StackView3D({
   ]);
   const [builtKey, setBuiltKey] = useState(geoKey);
   const lastBuild = useRef(0),
-    pending = useRef(null);
+    pending = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (geoKey === builtKey) return;
     const wait = Math.max(0, 120 - (performance.now() - lastBuild.current));
@@ -55,11 +81,11 @@ export function StackView3D({
       lastBuild.current = performance.now();
       setBuiltKey(geoKey);
     }, wait);
-    return () => clearTimeout(pending.current);
+    return () => clearTimeout(pending.current!);
   }, [geoKey, builtKey]);
 
   useEffect(() => {
-    const el = mount.current;
+    const el = mount.current!;
     const W = el.clientWidth || 640,
       H = el.clientHeight || 560;
     const scene = new THREE.Scene();
@@ -125,7 +151,16 @@ export function StackView3D({
       BT = 0.75,
       REVEAL = inset,
       RO = 0.25;
-    const cabinet = (w, h, d, y, holes, baffleBottom = 0, x = 0, parent = group) => {
+    const cabinet = (
+      w: number,
+      h: number,
+      d: number,
+      y: number,
+      holes: THREE.Path[] | undefined,
+      baffleBottom = 0,
+      x = 0,
+      parent = group,
+    ) => {
       const iw = w - 2 * T,
         ih = h - 2 * T - baffleBottom;
       const shape = roundedRectShape(w, h, RO * 1.5);
@@ -155,12 +190,28 @@ export function StackView3D({
     };
     // Same construction with a semicircular top the full width of the cabinet.
     // Holes use the same baffle-centered coordinates as cabinet().
-    const archCabinet = (w, h, d, y, holes, baffleBottom = 0, x = 0, parent = group) => {
+    const archCabinet = (
+      w: number,
+      h: number,
+      d: number,
+      y: number,
+      holes: THREE.Path[] | undefined,
+      baffleBottom = 0,
+      x = 0,
+      parent = group,
+    ) => {
       const R = w / 2,
         acy = h / 2 - R; // arch center, frame-centered coords
       const shape = archOutlinePath(new THREE.Shape(), R, -h / 2, acy, R);
       shape.holes.push(
-        archOutlinePath(new THREE.Path(), R - T + RO, -h / 2 + T - RO, acy, R - T + RO),
+        archOutlinePath(
+          // geometry.ts types the argument as a Shape, but only calls Path methods on it; the hole is a Path
+          new THREE.Path() as THREE.Shape,
+          R - T + RO,
+          -h / 2 + T - RO,
+          acy,
+          R - T + RO,
+        ),
       );
       const frame = new THREE.Mesh(
         new THREE.ExtrudeGeometry(shape, {
@@ -194,7 +245,7 @@ export function StackView3D({
       parent.add(back);
       return d / 2 - REVEAL;
     };
-    const cone = (r, y, z, x = 0, parent = group) => {
+    const cone = (r: number, y: number, z: number, x = 0, parent = group) => {
       if (cutaway) return;
       // membrane: a filled disc just behind the baffle face
       const disc = new THREE.Mesh(new THREE.CircleGeometry(r * 0.99, 48), black);
@@ -407,7 +458,7 @@ export function StackView3D({
         // quarter-round flares, tangent to the tube at the throat
         const RB = 0.75,
           seg = 10;
-        const prof = [];
+        const prof: THREE.Vector2[] = [];
         for (let i = 0; i <= seg; i++) {
           const t = (i / seg) * (Math.PI / 2);
           prof.push(new THREE.Vector2(portR + RB * (1 - Math.cos(t)), RB * Math.sin(t)));
@@ -550,8 +601,8 @@ export function StackView3D({
     // horn
     const hz = horn.size;
     const hornY = midBaseY + m.h;
-    let hornCY = null,
-      hornZ = null;
+    let hornCY: number | null = null,
+      hornZ: number | null = null;
     if (tower) {
       hornCY = archTop ? hornY + (s.w / 2 - T) : hornY + (hz.h + 2) / 2;
       hornZ = subZ - hz.d + 0.2; // mouth flush with the shared baffle face
@@ -574,8 +625,8 @@ export function StackView3D({
         );
         rm.position.set(
           hx,
-          tower ? hornCY : hornY + hz.h / 2 + 0.3,
-          tower ? hornZ : m.d / 2 - hz.d + 1,
+          tower ? hornCY! : hornY + hz.h / 2 + 0.3,
+          tower ? hornZ! : m.d / 2 - hz.d + 1,
         );
         group.add(rm);
         const th = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
@@ -599,13 +650,13 @@ export function StackView3D({
           lm.scale.set(horn.scaleX || 1, horn.scaleZ || 1, horn.scaleY || 1); // local x=width, y=depth, z=height
         lm.position.set(
           hx,
-          tower ? hornCY : hornY + hz.h / 2 + 0.3,
-          tower ? hornZ : m.d / 2 - hz.d + 1,
+          tower ? hornCY! : hornY + hz.h / 2 + 0.3,
+          tower ? hornZ! : m.d / 2 - hz.d + 1,
         );
         group.add(lm);
         const th = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
         th.rotation.x = Math.PI / 2;
-        th.position.set(hx, lm.position.y, tower ? hornZ - 2 : -2.2);
+        th.position.set(hx, lm.position.y, tower ? hornZ! - 2 : -2.2);
         group.add(th);
       } else {
         const hornShape = new THREE.Shape();
@@ -631,13 +682,13 @@ export function StackView3D({
         const hornMesh = new THREE.Mesh(hornGeo, cream);
         hornMesh.position.set(
           hx,
-          tower ? hornCY : hornY + 1.2 + rh + 1,
-          tower ? hornZ : -hz.d / 2 + 2,
+          tower ? hornCY! : hornY + 1.2 + rh + 1,
+          tower ? hornZ! : -hz.d / 2 + 2,
         );
         group.add(hornMesh);
         const throat = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
         throat.rotation.x = Math.PI / 2;
-        throat.position.set(hx, hornMesh.position.y, tower ? hornZ - 2.5 : -hz.d / 2 - 0.5);
+        throat.position.set(hx, hornMesh.position.y, tower ? hornZ! - 2.5 : -hz.d / 2 - 0.5);
         group.add(throat);
       }
     });
@@ -669,7 +720,7 @@ export function StackView3D({
     const halfW = Math.sqrt(bs.x * bs.x + bs.z * bs.z) / 2;
     const tanV = Math.tan((cam.fov * Math.PI) / 360);
     let baseDist = halfH / tanV;
-    const fit = (aspect) => {
+    const fit = (aspect: number) => {
       baseDist = Math.max(halfH / tanV, halfW / (aspect * tanV)) * 1.18;
     };
     fit(W / H);
@@ -679,11 +730,11 @@ export function StackView3D({
 
     // Pointer handling. touch-action on the canvas is pan-y, so a mostly
     // vertical swipe scrolls the page and anything else reaches us here.
-    const pts = new Map();
+    const pts = new Map<number, { x: number; y: number }>();
     let pinch0 = 0,
       zoom0 = 1;
 
-    const onDown = (e) => {
+    const onDown = (e: PointerEvent) => {
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       try {
         el.setPointerCapture(e.pointerId);
@@ -693,14 +744,14 @@ export function StackView3D({
       if (pts.size === 2) {
         const [a, b] = [...pts.values()];
         pinch0 = Math.hypot(a.x - b.x, a.y - b.y);
-        zoom0 = st.zoom;
+        zoom0 = st.zoom!;
       }
       st.drag = true;
       st.lx = e.clientX;
       st.ly = e.clientY;
     };
 
-    const onMove = (e) => {
+    const onMove = (e: PointerEvent) => {
       if (!pts.has(e.pointerId)) return;
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pts.size >= 2) {
@@ -716,7 +767,7 @@ export function StackView3D({
       st.ly = e.clientY;
     };
 
-    const onUp = (e) => {
+    const onUp = (e: PointerEvent) => {
       pts.delete(e.pointerId);
       try {
         el.releasePointerCapture(e.pointerId);
@@ -732,9 +783,9 @@ export function StackView3D({
       }
     };
 
-    const onWheel = (e) => {
+    const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      st.zoom = Math.max(0.45, Math.min(2.2, st.zoom * (1 + e.deltaY * 0.0012)));
+      st.zoom = Math.max(0.45, Math.min(2.2, st.zoom! * (1 + e.deltaY * 0.0012)));
     };
 
     el.addEventListener("pointerdown", onDown);
@@ -757,9 +808,9 @@ export function StackView3D({
     ro.observe(el);
     window.addEventListener("orientationchange", resize);
 
-    let raf;
+    let raf: number;
     const tick = () => {
-      const dist = baseDist * st.zoom;
+      const dist = baseDist * st.zoom!;
       cam.position.set(
         target.x + dist * Math.sin(st.rotY) * Math.cos(st.rotX),
         target.y + dist * Math.sin(st.rotX),
