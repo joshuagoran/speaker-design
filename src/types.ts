@@ -222,6 +222,8 @@ export interface FillDriver {
   hf: FillHf | null;
   lfSens: number;
   note: string;
+  /** the default pick, marked with a dot in the picker */
+  pick?: boolean;
 }
 
 // ---- Hi-fi ----

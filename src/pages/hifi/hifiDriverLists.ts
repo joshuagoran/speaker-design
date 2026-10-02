@@ -1,5 +1,6 @@
 import type { HifiBoxKind, HifiTweeter, RadiatorSelection } from "../../types";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../../lib/data";
+import { byIdOrThrow } from "../../lib/tables";
 
 /** Woofers listed smallest first, grouped by size in the picker, A–Z within a size. */
 export const HIFI_WOOFERS_BY_SIZE = HIFI_WOOFERS.slice().sort(
@@ -13,13 +14,13 @@ export const HIFI_PASSIVES_BY_SIZE = HIFI_PASSIVES.slice().sort(
 
 /**
  * The passive radiator driver and count of a saved Hi-fi config, or null for a config without one.
- * The `!` on `find`: the id comes from `HIFI_PASSIVES` (the page's picker, or the optimizer's search of it).
+ * The id comes from `HIFI_PASSIVES` (the page's picker, or the optimizer's search of it), so a miss throws.
  */
 export const passiveRadiatorOf = (
   c: { box?: HifiBoxKind; pr?: RadiatorSelection } | null | undefined,
 ) =>
   c && c.box === "radiator" && c.pr
-    ? { drv: HIFI_PASSIVES.find((o) => o.id === c.pr!.id)!, n: c.pr.n, addG: c.pr.addG }
+    ? { drv: byIdOrThrow(HIFI_PASSIVES, c.pr.id, "passive radiators"), n: c.pr.n, addG: c.pr.addG }
     : null;
 
 /** Whether a tweeter is a compression driver (or needs a waveguide) rather than a dome. */

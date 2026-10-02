@@ -1,4 +1,4 @@
-import { PAINT_SWATCHES, CABINETS, FORMATS } from "../../../lib/data";
+import { DEFAULT_BAFFLE_COLOR, CABINETS, FORMATS } from "../../../lib/data";
 import type { Cabinet, Format, PaLayout, Setter } from "../../../types";
 import { useState } from "react";
 
@@ -32,10 +32,7 @@ export function useCabinetStyle(): CabinetStyle {
   const format = FORMATS[0]; // 18″ sub + compression driver; mid is 12″ or 15″
   const [wallThicknessIn, setWallThicknessIn] = useState(0.75); // side/top/bottom/back ply, in
   const [baffleInsetIn, setBaffleInsetIn] = useState(0.75); // how far the baffles sit back from the frame front, in
-  const [baffleColor, setBaffleColor] = useState(
-    // `!`: "Dusty pink" is one of the swatches
-    PAINT_SWATCHES.find(([, name]) => name === "Dusty pink")![0],
-  );
+  const [baffleColor, setBaffleColor] = useState(DEFAULT_BAFFLE_COLOR);
   const [cabinetFinish, setCabinetFinish] = useState("birch");
   const [spacerHeightIn, setSpacerHeightIn] = useState(20);
   return {

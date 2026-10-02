@@ -10,14 +10,14 @@ import { Slider } from "../../components/ui/Slider";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { fillChips } from "../../lib/pa/chips";
 import { FILL_OPTIONS } from "../../lib/data";
+import { defaultOf } from "../../lib/tables";
 import { fillSystem, nearestPoint } from "../../lib/pa/calc";
 import { useState } from "react";
 import type { Dims3, FillBoxType, FillDriver, FillPort } from "../../types";
 
 /** Fills page: choose and size the fill speakers. */
 export function FillsPage() {
-  // `!`: "bc10cxn64" is one of the FILL_OPTIONS ids
-  const [driver, setDriver] = useState<FillDriver>(FILL_OPTIONS.find((o) => o.id === "bc10cxn64")!);
+  const [driver, setDriver] = useState<FillDriver>(() => defaultOf(FILL_OPTIONS, "fill drivers"));
   const [boxType, setBoxType] = useState<FillBoxType>("vented");
   const [boxDims, setBoxDims] = useState<Dims3>({ w: 11.5, h: 16, d: 11 });
   const [portSpec, setPortSpec] = useState<FillPort>({ n: 1, dia: 3, len: 4 });

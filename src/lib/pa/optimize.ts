@@ -70,9 +70,8 @@ import type {
   VentSpec,
 } from "../../types";
 import { keysOf } from "../records";
+import { byId, byIdOrThrow } from "../tables";
 
-const byId = <T extends { id: string }>(list: readonly T[], id: string) =>
-  list.find((o) => o.id === id);
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
 /** The limits a design is checked against: the heaviest box, the driver budget and the warnings let through. */
@@ -853,10 +852,10 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       }
   // horn pairs per xoHi, with their level at the crossover
   const cds = locks.cd
-    ? [byId(CD_OPTIONS, cur.cd)!]
+    ? [byIdOrThrow(CD_OPTIONS, cur.cd, "compression drivers")]
     : CD_OPTIONS.filter((o) => o.hf && o.hf.sens != null && o.price != null);
   const horns = locks.horn
-    ? [byId(HORN_OPTIONS, cur.horn)!]
+    ? [byIdOrThrow(HORN_OPTIONS, cur.horn, "horns")]
     : HORN_OPTIONS.filter((h) => h.price != null);
   const hornTable: Record<number, HornEntry[]> = {};
   for (const xoHi of xoHis) {
@@ -1281,10 +1280,10 @@ function card(
   cur: PaDesignConfig,
 ): PaOptimizerCard {
   const { c, m } = p;
-  const sub = byId(SUB_OPTIONS, c.sub)!,
-    mid = byId(MID_OPTIONS, c.mid)!,
-    cd = byId(CD_OPTIONS, c.cd)!,
-    horn = byId(HORN_OPTIONS, c.horn)!;
+  const sub = byIdOrThrow(SUB_OPTIONS, c.sub, "subwoofers"),
+    mid = byIdOrThrow(MID_OPTIONS, c.mid, "mid drivers"),
+    cd = byIdOrThrow(CD_OPTIONS, c.cd, "compression drivers"),
+    horn = byIdOrThrow(HORN_OPTIONS, c.horn, "horns");
   const midDims = c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim;
   const { parts } = cutParts({
     sub,

@@ -47,6 +47,7 @@ import type {
   SlotPort,
 } from "../../types";
 import { keysOf } from "../records";
+import { byId } from "../tables";
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };
@@ -255,8 +256,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
   if (cur.pr && !cur.pr.drv) {
     // boundary cast: a radiator without `drv` is the { id, n, addG } form
     const id = (cur.pr as PassiveRadiatorChoice & PassiveRadiatorHandover).id;
-    const drv =
-      (input.passives || []).find((o) => o.id === id) ?? HIFI_PASSIVES.find((o) => o.id === id);
+    const drv = byId(input.passives || [], id) ?? byId(HIFI_PASSIVES, id);
     cur.pr = drv ? { ...cur.pr, drv } : undefined;
     curPrMissing = !drv;
   }
@@ -269,8 +269,6 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
   const dl: NonNullable<typeof locks.dim> = locks.dim || {};
   const seat = input.seatM || 2.5,
     levelOf = (sys: HifiSystem) => sys.maxLevel - 20 * Math.log10(seat) + 3;
-  const byId = <T extends { id: string }>(a: readonly T[], id: string) =>
-    a.find((o) => o.id === id);
   // your drivers: from the lists the search uses, else from the full tables (a budget or size filter doesn't remove them from your design)
   const W0 = byId(woofers, cur.woofer) ?? byId(HIFI_WOOFERS, cur.woofer),
     T0 = byId(tweeters, cur.tweeter) ?? byId(HIFI_TWEETERS, cur.tweeter);

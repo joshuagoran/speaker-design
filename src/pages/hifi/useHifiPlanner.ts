@@ -1,4 +1,5 @@
 import { HORN_OPTIONS, HIFI_WOOFERS, HIFI_TWEETERS } from "../../lib/data";
+import { byId, defaultOf } from "../../lib/tables";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
 import type {
   Dims3,
@@ -118,10 +119,10 @@ export function useHifiPlanner(): HifiPlanner {
   const waveguideChoices = HORN_OPTIONS.filter(
     (h) => h.exit === 1 && h.hf && h.hf.covH && h.size,
   ) as HifiWaveguide[];
-  const [woofer, setWoofer] = useState(HIFI_WOOFERS.find((o) => o.pick) || HIFI_WOOFERS[0]);
-  const [tweeter, setTweeter] = useState(HIFI_TWEETERS.find((o) => o.pick) || HIFI_TWEETERS[0]);
+  const [woofer, setWoofer] = useState(() => defaultOf(HIFI_WOOFERS, "hi-fi woofers"));
+  const [tweeter, setTweeter] = useState(() => defaultOf(HIFI_TWEETERS, "hi-fi tweeters"));
   const [selectedWaveguide, setSelectedWaveguide] = useState(
-    waveguideChoices.find((g) => g.id === "st260") || waveguideChoices[0],
+    () => byId(waveguideChoices, "st260") ?? waveguideChoices[0],
   );
   const [boxType, setBoxType] = useState<HifiBoxKind>("vented");
   const [boxDims, setBoxDims] = useState<Dims3>({ w: 9, h: 15, d: 11 });

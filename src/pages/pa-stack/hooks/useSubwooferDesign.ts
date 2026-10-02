@@ -1,4 +1,5 @@
 import { SUB_OPTIONS } from "../../../lib/data";
+import { defaultOf } from "../../../lib/tables";
 import type { Dims3, HighpassType, PortStyle, SubDriver, Setter, VentSpec } from "../../../types";
 import { useState } from "react";
 
@@ -25,8 +26,7 @@ export interface SubwooferDesign {
 
 /** State for the subwoofer box: driver, port style, box size, vent, highpass and amp. Every cabinet is custom; presets are only a starting point. */
 export function useSubwooferDesign(): SubwooferDesign {
-  // `!`: the id is in the table
-  const [subDriver, setSubDriver] = useState(SUB_OPTIONS.find((o) => o.id === "sbnero18")!);
+  const [subDriver, setSubDriver] = useState(() => defaultOf(SUB_OPTIONS, "subwoofers"));
   const [portStyle, setPortStyle] = useState<PortStyle>("slots");
   const [subBoxDims, setSubBoxDims] = useState<Dims3>({ w: 28, h: 32, d: 24 });
   const [subVentSpec, setSubVentSpec] = useState<VentSpec>({

@@ -40,6 +40,7 @@ import {
   passiveRadiatorMassMax,
   ownGuideCfg,
 } from "../../lib/data";
+import { byId, byIdOrThrow } from "../../lib/tables";
 import {
   hifiSystem,
   hifiChips,
@@ -177,8 +178,7 @@ export function HifiPage({ hifi }: Props) {
     : tweeter.type === "compression" || tweeter.needsWaveguide
       ? compressionWaveguide
       : null;
-  const radiatorDriver =
-    HIFI_PASSIVES.find((o) => o.id === radiatorSelection.id) || HIFI_PASSIVES[0];
+  const radiatorDriver = byId(HIFI_PASSIVES, radiatorSelection.id) ?? HIFI_PASSIVES[0];
   const radiator = {
     drv: radiatorDriver,
     n: radiatorSelection.n,
@@ -340,7 +340,7 @@ export function HifiPage({ hifi }: Props) {
     );
   const restoreSavedConfig = (c: Partial<SavedHifiConfig>) => {
     const pick = <T extends { id: string }>(list: readonly T[], id: string | undefined) =>
-      list.find((o) => o.id === id);
+      id === undefined ? undefined : byId(list, id);
     // boundary: the list below pairs each setter with a value of its own type, which a list of mixed pairs can't
     // keep matched, so `ok` takes any setter and any value; each value is the saved field for that setter
     const ok = (f: (v: never) => void, v: unknown) => {
@@ -376,9 +376,9 @@ export function HifiPage({ hifi }: Props) {
     setOptimizerResult(null);
   };
   const applyDesign = (c: HifiCardConfig) => {
-    // `!` on both finds: a card's or snapshot's driver ids come from these lists
-    setWoofer(HIFI_WOOFERS.find((o) => o.id === c.woofer)!);
-    setTweeter(HIFI_TWEETERS.find((o) => o.id === c.tweeter)!);
+    // a card's or snapshot's driver ids come from these lists
+    setWoofer(byIdOrThrow(HIFI_WOOFERS, c.woofer, "hi-fi woofers"));
+    setTweeter(byIdOrThrow(HIFI_TWEETERS, c.tweeter, "hi-fi tweeters"));
     setBoxType(c.box);
     setBoxDims(c.dim);
     if (c.port) setPortSpec(c.port);

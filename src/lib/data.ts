@@ -17,6 +17,7 @@ import type {
   HornProfilePoint,
   MidBox,
   MidDriver,
+  MidSize,
   OwnGuide,
   PaintSwatch,
   PassiveRadiator,
@@ -1690,6 +1691,14 @@ export const MID_BOXES: readonly MidBox[] = [
   },
 ];
 
+/** The mid drivers for a mid size class (a driver with no `size` is a 12). Each class has its own `pick`. */
+export const midDriversOfSize = (size: MidSize) =>
+  MID_OPTIONS.filter((o) => (o.size || 12) === size);
+
+/** The mid box presets for a mid size class (a preset with no `size` is a 12; the 13 in cube is not offered). Each class has its own `pick`. */
+export const midBoxesOfSize = (size: MidSize) =>
+  MID_BOXES.filter((b) => (b.size || 12) === size && b.id !== "b13");
+
 export const CD_OPTIONS: CompressionDriver[] = [
   {
     id: "hf10ak",
@@ -2059,8 +2068,11 @@ export const RACKS: readonly Rack[] = [
   },
 ];
 
+/** The baffle colour the planner starts on: the first swatch. */
+export const DEFAULT_BAFFLE_COLOR = "#e8b4a8";
+
 export const PAINT_SWATCHES: readonly PaintSwatch[] = [
-  ["#e8b4a8", "Dusty pink"],
+  [DEFAULT_BAFFLE_COLOR, "Dusty pink"],
   ["#2b2725", "Near black"],
   ["#c8cdc4", "Pale sage"],
   ["#eeff00", "Acid yellow"],
@@ -2396,6 +2408,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
   },
   {
     id: "bc10cxn64",
+    pick: true,
     size: 10,
     lb: 7.1,
     name: "B&C 10CXN64",
