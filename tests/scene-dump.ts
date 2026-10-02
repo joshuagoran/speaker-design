@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import fs from "node:fs";
-import { buildStackScene } from "../src/components/stack-view/StackView3D";
+import { buildStackScene } from "../src/components/stack-view/buildStackScene";
 import { sceneCases, dumpScene } from "./scene-cases";
 
 // Rewrites tests/scene-dump.json from the current scene builder. Run it after each step of a refactor of the builder, on its

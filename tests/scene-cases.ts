@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, HORN_OPTIONS } from "../src/lib/data";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import type { Props } from "../src/components/stack-view/StackView3D";
+import type { Props } from "../src/components/stack-view/buildStackScene";
 import type { PaDesignConfig } from "../src/types";
 import { configs } from "./golden-configs";
 
