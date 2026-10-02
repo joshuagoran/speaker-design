@@ -1,3 +1,5 @@
+import type { CutPart, PlywoodSheetKind } from "../../types";
+import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
@@ -10,8 +12,29 @@ import {
   packSheets,
 } from "../../lib/pa/calc";
 
+interface Props {
+  planner: Pick<
+    PaPlanner,
+    | "subDriver"
+    | "midDriver"
+    | "subBox"
+    | "effectiveMidBoxDims"
+    | "wallThicknessIn"
+    | "baffleInsetIn"
+    | "cornerJoint"
+    | "setCornerJoint"
+    | "plywoodSheetKind"
+    | "setPlywoodSheetKind"
+    | "boxSetCount"
+    | "setBoxSetCount"
+    | "portStyle"
+    | "subVentSpec"
+    | "layout"
+  >;
+}
+
 /** Cutlist page: plywood parts for each box and how they pack onto sheets. */
-export function CutlistPage({ planner }) {
+export function CutlistPage({ planner }: Props) {
   const {
     subDriver,
     midDriver,
@@ -43,12 +66,13 @@ export function CutlistPage({ planner }) {
   });
   const sheetSize = PLYWOOD_SHEETS[plywoodSheetKind],
     kerfIn = 0.125;
-  const partsByThickness = {};
+  const partsByThickness: Record<number, CutPart[]> = {};
   parts.forEach((p) => {
     for (let i = 0; i < p.qty * boxSetCount; i++)
       (partsByThickness[p.t] = partsByThickness[p.t] || []).push(p);
   });
-  const packedSheets = Object.keys(partsByThickness)
+  // cast: `Object.keys` types the numeric keys as strings; the sort and the lookup below coerce them back
+  const packedSheets = (Object.keys(partsByThickness) as unknown as number[])
     .sort((a, b) => b - a)
     .map((t) => ({ t: +t, ...packSheets(partsByThickness[t], sheetSize, kerfIn) }));
   return (
@@ -57,11 +81,13 @@ export function CutlistPage({ planner }) {
         <div>
           <div className="text-sm text-stone-500 mb-1">Corner joints</div>
           <div className="flex gap-1">
-            {[
-              ["butt", "Butt"],
-              ["rabbet", "Rabbet"],
-              ["miter", "Miter"],
-            ].map(([k, l]) => (
+            {(
+              [
+                ["butt", "Butt"],
+                ["rabbet", "Rabbet"],
+                ["miter", "Miter"],
+              ] as const
+            ).map(([k, l]) => (
               <ToggleButton key={k} on={cornerJoint === k} onClick={() => setCornerJoint(k)}>
                 {l}
               </ToggleButton>
@@ -75,7 +101,8 @@ export function CutlistPage({ planner }) {
               <ToggleButton
                 key={k}
                 on={plywoodSheetKind === k}
-                onClick={() => setPlywoodSheetKind(k)}
+                // cast: `Object.entries` types the keys as strings; they are the keys of PLYWOOD_SHEETS
+                onClick={() => setPlywoodSheetKind(k as PlywoodSheetKind)}
               >
                 {s.name}
               </ToggleButton>
