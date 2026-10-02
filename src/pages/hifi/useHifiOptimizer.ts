@@ -99,6 +99,7 @@ export function useHifiOptimizer({
   const [undoSnapshot, setUndoSnapshot] = useState<HifiCardConfig | null>(null);
   // ---- optimizer actions ----
   const runOptimizerSearch = async () => {
+    if (isOptimizing) return; // the Run button is disabled while a search runs; this guards the call itself
     setIsOptimizing(true);
     setOptimizerError("");
     const base = designPreview ? designPreview.before : snapshot();

@@ -139,6 +139,7 @@ export function usePaOptimizer({ snapshot, restore, db }: Props): PaOptimizer {
   // ---- optimizer actions ----
   const today = () => new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const startOptimizerSearch = async (over?: PaSearchOverrides) => {
+    if (isOptimizing) return; // the Run button is disabled while a search runs; this guards the call itself
     const inp = { ...optimizerInput, ...(over && over.nativeEvent ? {} : over || {}) };
     if (over && !over.nativeEvent) updateOptimizerInput(over);
     if (!inp.goals.length) return;
