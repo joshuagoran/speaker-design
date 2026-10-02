@@ -6,12 +6,15 @@ import {
   thermalVoltageLimit,
   subThroughLowpass,
   boxModel,
+  closedBox,
+  subSystem,
   linkwitzRiley24Lowpass,
+  LOWPASS_SKIRT_SPAN,
   STUFFING_VOLUME_GAIN,
   nearestPoint,
 } from "../src/lib/pa/calc";
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
-import type { MidSystemConfig } from "../src/types";
+import type { MidSystemConfig, SubSystemConfig } from "../src/types";
 import { close, db } from "./helpers";
 
 const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76") || MID_OPTIONS.find((o) => o.ts)!;
@@ -104,4 +107,65 @@ test("subThroughLp: the lowpass relaxes the limits (more drive above the crossov
       ),
     1e-9,
   );
+});
+test("mid at a 2 kHz crossover: the curve runs past it, -6 dB (LR24) at xoHi, then falls smoothly", (t) => {
+  const xoHi = 2000,
+    m = midSystem(mid, { ...cfg, xoHi });
+  const curve = m.mdl!.curve,
+    max = m.max!;
+  assert.ok(curve[curve.length - 1].f >= LOWPASS_SKIRT_SPAN * xoHi, "runs to 2.5 x the crossover");
+  const i = curve.indexOf(nearestPoint(curve, xoHi)),
+    k = curve.indexOf(nearestPoint(curve, xoHi / 2));
+  close(t, curve[i].f, xoHi, xoHi * 0.006, "a point at the crossover");
+  // the filters' share at xoHi against the passband trend (the raw curve): LR24 lowpass -6 dB, the 120 Hz highpass ~0
+  close(t, curve[i].spl - curve[i].raw, -6.02, 0.05);
+  // the max curve carries the same -6 dB: its drop from an octave below is the lowpass's
+  const lp = (j: number) => db(linkwitzRiley24Lowpass(curve[j].f, xoHi));
+  close(t, max[i].spl - curve[i].raw - (max[k].spl - curve[k].raw), lp(i) - lp(k), 0.05);
+  // above: falls at every step, no step bigger than 1 dB, 30 dB under the passband trend by the end
+  for (let j = i + 1; j < max.length; j++) {
+    const d = max[j].spl - max[j - 1].spl;
+    assert.ok(d < 0 && d > -1, `${max[j].f.toFixed(0)} Hz: step ${d.toFixed(2)} dB`);
+  }
+  assert.ok(max[max.length - 1].spl < max[i].spl + 6.02 - 30, "skirt 30 dB down at the end");
+});
+test("running a curve on past fmax leaves the usual points exactly where they were", () => {
+  const a = closedBox(mid.ts, 40, 120, 2000, 20)!,
+    b = closedBox(mid.ts, 40, 120, 2000, 20, { fTop: 5000 })!;
+  assert.equal(a.curve.length, 420);
+  assert.ok(b.curve.length > a.curve.length && b.curve[b.curve.length - 1].f >= 5000);
+  a.curve.forEach((o, i) => assert.deepStrictEqual(b.curve[i], o));
+  assert.equal(b.peakX, a.peakX);
+  assert.equal(b.f3, a.f3);
+  // xoHi at 800 Hz or below samples exactly as before; the default 900 Hz runs on to 2250 Hz
+  assert.equal(midSystem(mid, { ...cfg, xoHi: 800 }).mdl!.curve.length, 420);
+  assert.ok(midSystem(mid, cfg).mdl!.curve[midSystem(mid, cfg).mdl!.curve.length - 1].f >= 2250);
+});
+test("sub: a crossover above 120 Hz runs the curve past 300 Hz for the skirt; limits unchanged", (t) => {
+  const sub = SUB_OPTIONS.find((o) => o.id === "f18fh500")!;
+  const sc: SubSystemConfig = {
+    subBox: { w: 24, h: 30, d: 26 },
+    midDims: cfg.midDims,
+    wall: 0.75,
+    inset: 0.75,
+    portStyle: "round2",
+    cVent: { slotH: 3, nt: 2, dia: 4, throat: 2, len: 12 },
+    hpf: 30,
+    hpType: "BW24",
+    ampW: 800,
+    portMax: 20,
+    layout: "stack",
+  };
+  const a = subSystem(sub, mid, sc),
+    b = subSystem(sub, mid, { ...sc, xoLo: 250 }),
+    c = subSystem(sub, mid, { ...sc, xoLo: 120 });
+  assert.ok(a.mdl && b.mdl && c.mdl);
+  assert.equal(a.mdl.curve.length, 420);
+  assert.equal(c.mdl.curve.length, 420, "120 Hz and below: as before");
+  assert.ok(b.mdl.curve[b.mdl.curve.length - 1].f >= 625);
+  a.mdl.curve.forEach((o, i) => assert.deepStrictEqual(b.mdl?.curve[i], o));
+  assert.deepStrictEqual(b.lim, a.lim);
+  const s = subThroughLowpass(b.mdl, sub.ts, b.AMP_V, 20, 250);
+  close(t, s.length, b.mdl.curve.length, 0);
+  assert.ok(s[s.length - 1].spl < nearestPoint(s, 250).spl - 25, "the skirt reaches well down");
 });
