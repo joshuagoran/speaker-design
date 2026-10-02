@@ -2198,6 +2198,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com (no price shown)",
     ts: {
       Fs: 68,
+      Qts: 0.27,
       Qes: 0.29,
       Qms: 4.7,
       Vas: 17,
@@ -2222,6 +2223,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com (no price shown)",
     ts: {
       Fs: 69,
+      Qts: 0.34,
       Qes: 0.36,
       Qms: 6.3,
       Vas: 16,
@@ -2246,6 +2248,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 89,
+      Qts: 0.55,
       Qes: 0.63,
       Qms: 4.2,
       Vas: 10.8,
@@ -2270,6 +2273,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 61,
+      Qts: 0.29,
       Qes: 0.28,
       Qms: 13.3,
       Vas: 36.2,
@@ -2294,6 +2298,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 76,
+      Qts: 0.3,
       Qes: 0.43,
       Qms: 9.5,
       Vas: 11.9,
@@ -2318,6 +2323,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 70,
+      Qts: 0.29,
       Qes: 0.38,
       Qms: 7.4,
       Vas: 8,
@@ -2342,6 +2348,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 70,
+      Qts: 0.3,
       Qes: 0.31,
       Qms: 8.1,
       Vas: 12.9,
@@ -2366,6 +2373,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 54,
+      Qts: 0.29,
       Qes: 0.31,
       Qms: 7.67,
       Vas: 34.9,
@@ -2390,6 +2398,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 68,
+      Qts: 0.31,
       Qes: 0.33,
       Qms: 5.6,
       Vas: 23,
@@ -2414,6 +2423,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 63,
+      Qts: 0.42,
       Qes: 0.44,
       Qms: 7.9,
       Vas: 25,
@@ -2438,6 +2448,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 48,
+      Qts: 0.38,
       Qes: 0.41,
       Qms: 5.3,
       Vas: 62.7,
@@ -2462,6 +2473,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 79.5,
+      Qts: 0.31,
       Qes: 0.32,
       Qms: 10.25,
       Vas: 14.79,
@@ -2486,6 +2498,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 65,
+      Qts: 0.39,
       Qes: 0.37,
       Qms: 5.8,
       Vas: 25.8,
@@ -2510,6 +2523,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com, Sep 2026",
     ts: {
       Fs: 65,
+      Qts: 0.28,
       Qes: 0.37,
       Qms: 5.8,
       Vas: 25.8,
@@ -2534,6 +2548,7 @@ export const FILL_OPTIONS: readonly FillDriver[] = [
     src: "usspeaker.com (no price shown)",
     ts: {
       Fs: 49,
+      Qts: 0.38,
       Qes: 0.43,
       Qms: 5.21,
       Vas: 64.2,
