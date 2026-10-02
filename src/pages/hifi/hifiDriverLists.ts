@@ -11,16 +11,20 @@ export const HIFI_PASSIVES_BY_SIZE = HIFI_PASSIVES.slice().sort(
 );
 
 /** The passive radiator driver and count of a saved Hi-fi config, or null for a config without one. */
-export const passiveRadiatorOf = (c) =>
+export const passiveRadiatorOf = (
+  c: { box?: string; pr?: { id: string; n: number; addG: number } } | null | undefined,
+) =>
   c && c.box === "radiator" && c.pr
-    ? { drv: HIFI_PASSIVES.find((o) => o.id === c.pr.id), n: c.pr.n, addG: c.pr.addG }
+    ? { drv: HIFI_PASSIVES.find((o) => o.id === c.pr!.id), n: c.pr.n, addG: c.pr.addG }
     : null;
 
 /** Whether a tweeter is a compression driver (or needs a waveguide) rather than a dome. */
-export const isCompressionDriver = (o) => o.type === "compression" || o.needsWaveguide;
+export const isCompressionDriver = (o: (typeof HIFI_TWEETERS)[number]) =>
+  o.type === "compression" || o.needsWaveguide;
 
 /** Tweeter family for grouping: 0 domes, 1 planar ribbons (with their own waveguide), 2 compression drivers. */
-export const tweeterKind = (o) => (isCompressionDriver(o) ? 2 : o.type === "ribbon" ? 1 : 0);
+export const tweeterKind = (o: (typeof HIFI_TWEETERS)[number]) =>
+  isCompressionDriver(o) ? 2 : o.type === "ribbon" ? 1 : 0;
 
 /** Group headings in the tweeter picker, indexed by tweeterKind. */
 export const TWEETER_GROUP_LABELS = [

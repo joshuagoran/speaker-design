@@ -1,2 +1,2 @@
 /** Formats an amount as whole US dollars, e.g. $1,234. */
-export const formatDollars = (x) => `$${Math.round(x).toLocaleString()}`;
+export const formatDollars = (x: number): string => `$${Math.round(x).toLocaleString()}`;

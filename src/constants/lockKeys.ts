@@ -12,4 +12,6 @@ export const LOCK_KEYS = [
   "ampW",
   "mAmpW",
   "hfAmpW",
-];
+] as const;
+
+export type LockKey = (typeof LOCK_KEYS)[number];
