@@ -2796,7 +2796,7 @@ export const HIFI_WOOFERS: HifiWoofer[] = [
       Vas: 27.8,
       Sd: 132,
       Xmax: 1.85,
-      Re: null,
+      Re: 6.53,
       Bl: 7.23,
       Mms: 9.5,
       Le: 0.056,
@@ -2806,7 +2806,7 @@ export const HIFI_WOOFERS: HifiWoofer[] = [
       imp: 8,
     },
     fmax: 21000,
-    note: "[maker: Fostex FF-WK manual + fostex.jp] Double-layer paper full-range cone. Re is not published (Qes and Bl imply about 6.5 Ω, derived only). aes is 30 W rated input, 90 W music. sens is 92 dB 1 W/1 m. Xmax is only 1.85 mm, so high-pass it about 60–80 Hz. It can run to 5 kHz or higher before a super tweeter. Fostex FW168HS and FW208HS woofers are discontinued.",
+    note: "[maker: Fostex FF-WK manual + fostex.jp] Double-layer paper full-range cone. Re is not published (Qes and Bl imply about 6.5 Ω, derived only). aes is 30 W rated input, 90 W music. sens is 92 dB 1 W/1 m. Xmax is only 1.85 mm, so high-pass it about 60–80 Hz. It can run to 5 kHz or higher before a super tweeter. Fostex FW168HS and FW208HS woofers are discontinued. Derived for the model: Re 6.53 Ω from Qes, Bl, Mms and Fs.",
   },
   // ---------- Pro high-sensitivity midwoofers ----------
   {
@@ -2934,7 +2934,7 @@ export const HIFI_WOOFERS: HifiWoofer[] = [
       Xmax: 6.0,
       Re: 5.1,
       Bl: 9.0,
-      Mms: null,
+      Mms: 15.8,
       Le: 0.6,
       aes: 280,
       sens: 95,
@@ -2942,7 +2942,7 @@ export const HIFI_WOOFERS: HifiWoofer[] = [
       imp: 8,
     },
     fmax: 4500,
-    note: '[vendor: usspeaker page; eighteensound.com returned 503] Ferrite 8" midbass. aes is 280 W AES, 400 W program. sens is 1 W/1 m. 3 kHz recommended crossover. Mms not published for 8 Ω (Fs, Vas and Sd imply about 16 g; the 4 Ω version is listed at 18 g). The listed Qts 0.43 does not match Qes and Qms, which give 0.39. Box 10–40 L.',
+    note: '[vendor: usspeaker page; eighteensound.com returned 503] Ferrite 8" midbass. aes is 280 W AES, 400 W program. sens is 1 W/1 m. 3 kHz recommended crossover. Mms not published for 8 Ω (Fs, Vas and Sd imply about 16 g; the 4 Ω version is listed at 18 g). The listed Qts 0.43 does not match Qes and Qms, which give 0.39. Box 10–40 L. Derived for the model: Mms 15.8 g from Vas, Sd and Fs.',
   },
   {
     id: "by6p200fe",
@@ -3479,24 +3479,7 @@ HIFI_WOOFERS.push(
   ],
 );
 
-// Fill gaps a model needs from the published parameters (marked in the note), and give every tweeter a faceplate
-// size and radiating diameter the layout and directivity use.
-const RHO_C2 = 1.18 * 343 * 343;
-for (const w of HIFI_WOOFERS) {
-  const ts = w.ts,
-    derived = [];
-  if (ts.Mms == null && ts.Vas && ts.Sd && ts.Fs) {
-    const Sd = ts.Sd / 1e4,
-      Cms = ts.Vas / 1e3 / (RHO_C2 * Sd * Sd);
-    ts.Mms = +(1e3 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Cms)).toFixed(1);
-    derived.push(`Mms ${ts.Mms} g from Vas, Sd and Fs`);
-  }
-  if (ts.Re == null && ts.Qes && ts.Bl && ts.Mms && ts.Fs) {
-    ts.Re = +((ts.Qes * ts.Bl * ts.Bl) / (2 * Math.PI * ts.Fs * (ts.Mms / 1e3))).toFixed(2);
-    derived.push(`Re ${ts.Re} Ω from Qes, Bl, Mms and Fs`);
-  }
-  if (derived.length) w.note += ` Derived for the model: ${derived.join("; ")}.`;
-}
+// Give every tweeter a faceplate size and radiating diameter the layout and directivity use.
 for (const t of HIFI_TWEETERS) {
   const fp = t.faceplate;
   t.faceplate = !fp ? { w: 3.5, h: 3.5 } : fp.diameter ? { w: fp.diameter, h: fp.diameter } : fp;
