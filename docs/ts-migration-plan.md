@@ -46,6 +46,10 @@ is clean (0 errors, 74 warnings).
   hooks need (`Setter<T>`) live there too. Before declaring any interface, grep `src/types.ts` and the neighbouring
   modules for the same fields under another name; if it exists, import it. A full domain object (`SubDriver`,
   `HifiConfig`) is only the right type where the code passes the object on whole.
+- **Avoid `!`.** When the checker says a value may be null, in this order: fix the type at its source (a producer that
+  never returns null is typed so; a field every caller supplies is required); use the narrowing the code already does;
+  derive a narrower slice with `NonNullable` or `Pick`. A `!` is the last resort, carries a one-line reason, and is
+  listed in the PR for a real guard after the migration (issue #21). No runtime guards during the migration.
 - **No `any`, no `@ts-ignore`.** `as` only as `as const`, or as a commented cast at a boundary: the driver tables,
   `JSON.parse` in `lib/storage`, the `window.claude` call in `useConfigStore`, three.js in `StackView3D`, and the
   worker's `self`.
