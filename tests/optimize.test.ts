@@ -9,6 +9,7 @@ import {
   roomRequiredSpl,
   SUB_BAND_HZ,
   AMP_WATTS_MAX,
+  ventSizesFor,
 } from "../src/lib/pa/optimize";
 import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc";
 import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data";
@@ -383,4 +384,47 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
   // and no more power than it uses: 50 W less loses output
   const less = evaluateDesign({ ...k.config, ampW: k.config.ampW - 50 })!;
   assert.ok(less.out < k.metrics.out - 0.01 || k.config.ampW - 50 < 200);
+});
+
+test("vent locked on a round1 or round4 style searches that style's tubes instead of throwing", (t) => {
+  for (const [style, nt] of [
+    ["round1", 1],
+    ["round4", 4],
+  ] as const) {
+    assert.ok(ventSizesFor(style).length > 0, `${style} has vent sizes`);
+    for (const size of ventSizesFor(style)) assert.equal(size.nt, nt, `${style} tubes`);
+  }
+  for (const style of [
+    "slots",
+    "round1",
+    "round2",
+    "vslots",
+    "folded",
+    "round4",
+    "vslot1",
+  ] as const)
+    assert.ok(ventSizesFor(style).length > 0, `${style} has sizes`);
+
+  const c = {
+    xoLo: 120,
+    xoHi: 900,
+    mAmpW: 400,
+    hfAmpW: 100,
+    ...pick("light block"),
+    portStyle: "round1" as const,
+    cVent: { slotH: 3, nt: 1, dia: 5, throat: 3, len: 12 },
+  };
+  const out = optimizePaStack({
+    ...base,
+    cur: c,
+    maxLb: 200,
+    budget: 2000,
+    goal: "lighter",
+    locks: { vent: true },
+  });
+  assert.ok(out.cards.length >= 1, "cards come back for a locked round1 vent");
+  for (const k of out.cards) {
+    assert.equal(k.config.portStyle, "round1");
+    assert.equal(k.config.cVent.nt, 1);
+  }
 });

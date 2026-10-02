@@ -230,14 +230,21 @@ const TUBES = [
   [3, 6],
   [4, 6],
 ];
-// Only the styles the search tries by itself have sizes; a locked "round1" or "round4" vent has none, so the search throws on it.
-const VENT_SIZES: Partial<Record<PortStyle, Partial<VentSpec>[]>> = {
-  round2: TUBES.map(([nt, dia]) => ({ nt, dia })),
+// "round1" and "round4" are the one-tube and four-corner-tube layouts (the geometry treats every round style alike, from `nt` and
+// `dia`), so they take the tubes of that count; "round2" tries every tube count, as it always has.
+const tubesOf = (count?: number) =>
+  TUBES.filter(([nt]) => count === undefined || nt === count).map(([nt, dia]) => ({ nt, dia }));
+const VENT_SIZES: Record<PortStyle, Partial<VentSpec>[]> = {
+  round1: tubesOf(1),
+  round2: tubesOf(),
+  round4: tubesOf(4),
   slots: [2, 2.5, 3, 3.5, 4, 4.5, 5, 6].map((slotH) => ({ slotH })),
   folded: [2, 2.5, 3, 3.5, 4, 4.5, 5].map((slotH) => ({ slotH })),
   vslots: [1, 1.25, 1.5, 1.75, 2, 2.5, 3].map((throat) => ({ throat })),
   vslot1: [1.5, 2, 2.5, 3, 3.5, 4, 5].map((throat) => ({ throat })),
 };
+/** The vent sizes the search tries for a style, smallest area first. */
+export const ventSizesFor = (style: PortStyle) => VENT_SIZES[style];
 
 // Clean output: the lowest music-limit level from 40 to 90 Hz, so a peak in the response can't win.
 export const SUB_BAND_HZ = [40, 90];
@@ -659,7 +666,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
             });
           let pushed = false,
             fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystemModelled } | null = null;
-          for (const size of VENT_SIZES[style]!) {
+          for (const size of ventSizesFor(style)) {
             const hi = ductFit(box, style, mk(size, 0), t).fit,
               lo = 2;
             if (hi < lo + 0.25) continue;
