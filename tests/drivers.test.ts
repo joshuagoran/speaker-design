@@ -12,10 +12,6 @@ const KNOWN: Record<string, string> = {
   "lv123f:Vas": "datasheet Vas 42 L vs 37.3 L",
   "bc10nw64:Vas": "datasheet Vas 27.5 L vs 30.6 L",
   "cindcx10:Vas": "published Vas doesn't fit Mms/Sd (noted on the driver); derived is 1.53x",
-  "f8hx230:Vas": "published Vas doesn't fit Mms/Sd (noted on the driver); derived is 1.60x",
-  "f8hx230:Qes": "listed Qes 22% above the Bl/Mms/Re value; same datasheet as the Vas mismatch",
-  "embeta8cx:Vas": "usspeaker Vas 23% above the Mms/Sd value",
-  "f8hx240:Vas": "listed Vas 16% below the Mms/Sd value",
 };
 const all = [...SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS];
 const need = ["Fs", "Qms", "Sd", "Mms", "Bl", "Re", "Xmax", "aes"] as const;
