@@ -7,42 +7,63 @@ import {
   pistonDirectivity,
   waveguideDirectivity,
   logSpacedFrequencies,
+  type Complex,
 } from "../hifi/hifi.ts";
+import type {
+  FrequencyPoint,
+  HifiDispersionMap,
+  ListenerGeometry,
+  PaStackGeometry,
+} from "../../types.ts";
 
 const C = 343,
   IN = 0.0254;
-const cm = (re, im = 0) => ({ re, im });
-const cmul = (a, b) => cm(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
-const cadd = (a, b) => cm(a.re + b.re, a.im + b.im);
-const cabs = (a) => Math.hypot(a.re, a.im);
-const cexp = (ph) => cm(Math.cos(ph), Math.sin(ph));
+const cm = (re: number, im = 0): Complex => ({ re, im });
+const cmul = (a: Complex, b: Complex) => cm(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
+const cadd = (a: Complex, b: Complex) => cm(a.re + b.re, a.im + b.im);
+const cabs = (a: Complex) => Math.hypot(a.re, a.im);
+const cexp = (ph: number) => cm(Math.cos(ph), Math.sin(ph));
+
+/** A driver in the sum: its height, its crossover filters and, for a piston, its radius in metres (the horn has none). */
+type Source =
+  | { z: number; a: number; filt: (f: number) => Complex; horn?: undefined }
+  | { z: number; horn: true; filt: (f: number) => Complex; a?: undefined };
 
 // s: { sub: { zIn, Sd }, mid: { zIn, Sd }, horn: { zIn, covH, covV, wIn, hIn }, xoLo, xoHi, order }
 // geo: { th (rad, horizontal), eyeIn (ear height, in), distM }. Returns [{ f, spl }] (dB, relative).
-export function paResponseAt(s, geo, freqs) {
+export function paResponseAt(
+  s: PaStackGeometry,
+  geo: ListenerGeometry,
+  freqs: number[],
+): FrequencyPoint[] {
   const order = s.order || 4,
     dist = geo.distM,
     ref = s.horn.zIn;
-  const src = [
-    s.sub && s.sub.Sd
-      ? {
-          z: s.sub.zIn,
-          a: Math.sqrt(s.sub.Sd / 1e4 / Math.PI),
-          filt: (f) => linkwitzRileyFilter(f, s.xoLo, order, "lp"),
-        }
-      : null,
-    {
-      z: s.mid.zIn,
-      a: Math.sqrt(s.mid.Sd / 1e4 / Math.PI),
-      filt: (f) =>
-        cmul(
-          linkwitzRileyFilter(f, s.xoLo, order, "hp"),
-          linkwitzRileyFilter(f, s.xoHi, order, "lp"),
-        ),
-    },
-    { z: s.horn.zIn, horn: true, filt: (f) => linkwitzRileyFilter(f, s.xoHi, order, "hp") },
-  ]
-    .filter(Boolean)
+  const src = (
+    [
+      s.sub && s.sub.Sd
+        ? {
+            z: s.sub.zIn,
+            a: Math.sqrt(s.sub.Sd / 1e4 / Math.PI),
+            filt: (f: number) => linkwitzRileyFilter(f, s.xoLo, order, "lp"),
+          }
+        : null,
+      {
+        z: s.mid.zIn,
+        a: Math.sqrt(s.mid.Sd / 1e4 / Math.PI),
+        filt: (f: number) =>
+          cmul(
+            linkwitzRileyFilter(f, s.xoLo, order, "hp"),
+            linkwitzRileyFilter(f, s.xoHi, order, "lp"),
+          ),
+      },
+      {
+        z: s.horn.zIn,
+        horn: true,
+        filt: (f: number) => linkwitzRileyFilter(f, s.xoHi, order, "hp"),
+      },
+    ].filter(Boolean) as Source[]
+  ) // boundary cast: filter(Boolean) drops the null a stack without a sub leaves, which the checker can't see
     .map((o) => {
       const dz = (geo.eyeIn - o.z) * IN,
         r = Math.hypot(dist, dz),
@@ -65,7 +86,11 @@ export function paResponseAt(s, geo, freqs) {
 }
 
 // level vs angle and frequency, normalised to the horn axis. plane "h" (at horn height) or "v" (−60° below to +60° above)
-export function paDispersionMap(s, plane = "v", distM = 5) {
+export function paDispersionMap(
+  s: PaStackGeometry,
+  plane: "h" | "v" = "v",
+  distM = 5,
+): HifiDispersionMap {
   const freqs = logSpacedFrequencies(100, 20000, 72);
   const angles =
     plane === "h"
@@ -84,7 +109,7 @@ export function paDispersionMap(s, plane = "v", distM = 5) {
 }
 
 // first vertical null near the mid/horn crossover: the angle where the path difference is half a wavelength
-export function firstNullAngleDeg(spacingIn, f) {
+export function firstNullAngleDeg(spacingIn: number, f: number): number | null {
   const x = C / f / (2 * spacingIn * IN);
   return x >= 1 ? null : (Math.asin(x) * 180) / Math.PI;
 }

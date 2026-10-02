@@ -18,6 +18,7 @@ import type {
   FrequencyPoint,
   HifiChip,
   HifiConfig,
+  HighpassType,
   HifiDispersionMap,
   HifiPlacement,
   HifiPort,
@@ -195,7 +196,9 @@ export function hifiSlotEndCorrection(
 ) {
   const X = dim.h - 2 * wall - wall,
     L = dim.d - 2 * wall - port.len;
-  return rectangleEndCorrection(port.h, port.w) + (0.61 / 0.85) * ductEndCorrection2D(port.h, X, L);
+  return (
+    rectangleEndCorrection(port.h!, port.w!) + (0.61 / 0.85) * ductEndCorrection2D(port.h!, X, L)
+  );
 }
 export const slotMaxLength = (dim: Dims3, wall: number, port: PortGeometry) =>
   dim.d - 2 * wall - Math.max(port.h!, 1); // leave the mouth's height behind it
@@ -270,7 +273,7 @@ export function passiveRadiatorBox(
   pr: Pick<PassiveRadiatorChoice, "drv" | "n" | "addG">,
   hpf: number,
   volts: number,
-  hpType = "BW24",
+  hpType: HighpassType = "BW24",
   opts: { QL?: number; N?: number; fmin?: number; fmax?: number } = {},
 ) {
   const { QL = 7, N = 420, fmin = 12, fmax = 300 } = opts;

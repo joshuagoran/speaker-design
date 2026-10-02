@@ -1,44 +1,97 @@
-// Calculation functions for the planner. Pure JS, no React, window or THREE.
+// Calculation functions for the planner. Pure TS, no React, window or THREE.
+import type {
+  BassTS,
+  CompressionHf,
+  CornerJoint,
+  CutPart,
+  CutPartsConfig,
+  Dims3,
+  FillDriver,
+  FillSystem,
+  FillSystemConfig,
+  FrequencyPoint,
+  HighpassType,
+  HornHf,
+  HornResponse,
+  MidDriver,
+  MidSystem,
+  MidSystemConfig,
+  ModelTS,
+  PackedSheet,
+  PackedSheets,
+  PaMaxPoint,
+  PlywoodSheet,
+  PlywoodSheetKind,
+  PortStyle,
+  SealedBoxModel,
+  SealedPoint,
+  SubDriver,
+  SubGeometry,
+  SubGeometryConfig,
+  SubLimits,
+  SubSystem,
+  SubSystemConfig,
+  VentedBoxModel,
+  VentedPoint,
+  VentGeometry,
+  VentSpec,
+} from "../../types.ts";
 
 // ---------------------------------------------------------------
 // Vented-box model. Same lumped-element circuit used to check this
 // design offline; see the provenance note under the table.
 // Complex helpers kept local and minimal.
 // ---------------------------------------------------------------
-export const complex = (re, im = 0) => ({ re, im });
-export const addComplex = (a, b) => ({ re: a.re + b.re, im: a.im + b.im });
-export const multiplyComplex = (a, b) => ({
+interface Complex {
+  re: number;
+  im: number;
+}
+export const complex = (re: number, im = 0): Complex => ({ re, im });
+export const addComplex = (a: Complex, b: Complex): Complex => ({
+  re: a.re + b.re,
+  im: a.im + b.im,
+});
+export const multiplyComplex = (a: Complex, b: Complex): Complex => ({
   re: a.re * b.re - a.im * b.im,
   im: a.re * b.im + a.im * b.re,
 });
-export const divideComplex = (a, b) => {
+export const divideComplex = (a: Complex, b: Complex): Complex => {
   const d = b.re * b.re + b.im * b.im;
   return { re: (a.re * b.re + a.im * b.im) / d, im: (a.im * b.re - a.re * b.im) / d };
 };
-export const invertComplex = (a) => divideComplex(complex(1), a);
-export const complexMagnitude = (a) => Math.hypot(a.re, a.im);
+export const invertComplex = (a: Complex) => divideComplex(complex(1), a);
+export const complexMagnitude = (a: Complex) => Math.hypot(a.re, a.im);
 
 // Filter magnitudes. Butterworth order n: x^n / sqrt(1 + x^2n). Linkwitz-Riley 2m: a
 // Butterworth m squared, x^2m / (1 + x^2m). LR24 is -6 dB at the corner, BW24 -3 dB.
-export const HIGHPASS_ALIGNMENTS = {
+export const HIGHPASS_ALIGNMENTS: Record<
+  HighpassType,
+  readonly [kind: "bw" | "lr", order: number]
+> = {
   BW24: ["bw", 4],
   LR24: ["lr", 4],
   BW48: ["bw", 8],
   LR48: ["lr", 8],
 };
-export const highpassGain = (f, fc, type = "BW24") => {
+export const highpassGain = (f: number, fc: number, type: HighpassType = "BW24") => {
   const [kind, n] = HIGHPASS_ALIGNMENTS[type] || HIGHPASS_ALIGNMENTS.BW24,
     x = f / fc;
   return kind === "bw"
     ? Math.pow(x, n) / Math.sqrt(1 + Math.pow(x, 2 * n))
     : Math.pow(x, n) / (1 + Math.pow(x, n));
 };
-export const linkwitzRiley24Lowpass = (f, fc) => 1 / (1 + Math.pow(f / fc, 4)); // Linkwitz-Riley 24 dB/oct lowpass
-export const linkwitzRiley24Highpass = (f, fc) => highpassGain(f, fc, "LR24");
+export const linkwitzRiley24Lowpass = (f: number, fc: number) => 1 / (1 + Math.pow(f / fc, 4)); // Linkwitz-Riley 24 dB/oct lowpass
+export const linkwitzRiley24Highpass = (f: number, fc: number) => highpassGain(f, fc, "LR24");
 
 // Vent tuning: effective length (m) and Fb for net volume VbL, total vent area SpIn2 over nPorts equal
 // openings, physical length LpIn, and total end correction ecIn in inches (default 1.46 r per opening).
-export function ventTuning(VbL, SpIn2, LpIn, nPorts = 1, ecIn) {
+export function ventTuning(
+  VbL: number,
+  SpIn2: number,
+  LpIn: number,
+  nPorts = 1,
+  ecIn?: number,
+): { Leff: number; Fb: number } {
   const c = 343,
     Sp = SpIn2 * 0.00064516,
     Vb = VbL / 1000;
@@ -50,28 +103,46 @@ export function ventTuning(VbL, SpIn2, LpIn, nPorts = 1, ecIn) {
 // opts: nPorts (separate openings sharing the area), QL (box leakage, default 7), Qp (port losses, default 50),
 // ecIn (total end correction in inches, both ends; default 1.46 r per opening), N (frequency points, default 420;
 // fewer only for the optimizer's screening).
-export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts = {}) {
+export interface BoxModelOptions {
+  nPorts?: number;
+  QL?: number;
+  Qp?: number;
+  ecIn?: number;
+  N?: number;
+  fmin?: number;
+  fmax?: number;
+}
+export function boxModel(
+  ts: ModelTS,
+  VbL: number,
+  SpIn2: number,
+  LpIn: number,
+  hpf: number,
+  volts: number,
+  hpType: HighpassType = "BW24",
+  opts: BoxModelOptions = {},
+): VentedBoxModel | null {
   if (!ts || !VbL || !SpIn2 || LpIn <= 0) return null;
   const { nPorts = 1, QL = 7, Qp = 50, ecIn, N = 420, fmin = 12, fmax = 300 } = opts;
   const rho = 1.18,
     c = 343;
   const Sd = ts.Sd / 10000; // cm^2 -> m^2
-  const Mms = ts.Mms / 1000; // g -> kg
+  const Mms = ts.Mms! / 1000; // g -> kg
   const Vb = VbL / 1000;
   const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
   const Mas = Mms / (Sd * Sd);
   const Cas = Cms * Sd * Sd;
   const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
-  const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
+  const Rae = (ts.Bl * ts.Bl) / ts.Re! / (Sd * Sd);
   const Cab = Vb / (rho * c * c);
   const Sp = SpIn2 * 0.00064516;
   const { Leff, Fb } = ventTuning(VbL, SpIn2, LpIn, nPorts, ecIn);
   const Map = (rho * Leff) / Sp;
   const Ral = QL / (2 * Math.PI * Fb * Cab);
   const Rap = Number.isFinite(Qp) ? (2 * Math.PI * Fb * Map) / Qp : 0; // port friction and turbulence
-  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
+  const Pg = (volts * ts.Bl) / (ts.Re! * Sd);
 
-  const out = [];
+  const out: VentedPoint[] = [];
   for (let i = 0; i < N; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
     // the same circuit in plain real arithmetic (no complex objects: this loop runs millions of times in the optimizers)
@@ -113,10 +184,10 @@ export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts
     });
   }
   // midband reference: the mass-controlled asymptote (see closedBox)
-  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
+  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re! * Mms) / 2e-5);
   const f3 = (out.find((o) => o.spl >= ref - 3) || out[out.length - 1]).f; // system, with the highpass
   const f3Box = (out.find((o) => o.raw >= ref - 3) || out[out.length - 1]).f; // box alone
-  const at = (t) => out.reduce((b, o) => (Math.abs(o.f - t) < Math.abs(b.f - t) ? o : b));
+  const at = (t: number) => out.reduce((b, o) => (Math.abs(o.f - t) < Math.abs(b.f - t) ? o : b));
   const lo = out; // limits are searched over the whole curve (12-300 Hz)
   return {
     curve: out,
@@ -141,27 +212,34 @@ export function boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType = "BW24", opts
 // Linkwitz-Riley 24 dB/oct. Voice-coil inductance is not modelled, so the top
 // octave reads a little high. Excursion is the sine peak, as in boxModel.
 // ---------------------------------------------------------------
-export function closedBox(ts, VbL, hp, lp, volts, opts = {}) {
+export function closedBox(
+  ts: ModelTS,
+  VbL: number,
+  hp: number | null,
+  lp: number | null,
+  volts: number,
+  opts: { N?: number; fmin?: number; fmax?: number } = {},
+): SealedBoxModel | null {
   const { N = 420, fmin = 20, fmax = 2000 } = opts;
   if (!ts || !VbL || VbL <= 0) return null;
   const rho = 1.18,
     c = 343;
   const Sd = ts.Sd / 10000,
-    Mms = ts.Mms / 1000,
+    Mms = ts.Mms! / 1000,
     Vb = VbL / 1000;
   const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
   const Mas = Mms / (Sd * Sd),
     Cas = Cms * Sd * Sd;
   const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
-  const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
+  const Rae = (ts.Bl * ts.Bl) / ts.Re! / (Sd * Sd);
   const Cab = Vb / (rho * c * c);
-  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
+  const Pg = (volts * ts.Bl) / (ts.Re! * Sd);
   const Ctot = (Cas * Cab) / (Cas + Cab);
   const Fc = 1 / (2 * Math.PI * Math.sqrt(Mas * Ctot));
-  const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl);
+  const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re!) / (ts.Bl * ts.Bl);
   const Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
   const Qtc = Qts * (Fc / ts.Fs);
-  const out = [];
+  const out: SealedPoint[] = [];
   for (let i = 0; i < N; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
     const w = 2 * Math.PI * f,
@@ -188,28 +266,28 @@ export function closedBox(ts, VbL, hp, lp, volts, opts = {}) {
   }
   // Midband reference: the mass-controlled asymptote p = rho*V*Bl*Sd/(2*pi*Re*Mms) (half space, 1 m).
   // Averaging a band (the old 200-500 Hz) reads low when a well-damped box is still rising there.
-  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
+  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re! * Mms) / 2e-5);
   const f3 = (out.find((o) => o.raw >= ref - 3) || out[out.length - 1]).f;
   return { curve: out, Fc, Qtc, f3, ref, peakX: Math.max(...out.map((o) => o.xmm)) };
 }
 
 // Internal litres with walls of thickness t and a 3/4″ baffle recessed `inset` into the frame.
-export const boxInternalLiters = (w, h, d, t, inset = 0.75) =>
+export const boxInternalLiters = (w: number, h: number, d: number, t: number, inset = 0.75) =>
   ((w - 2 * t) * (h - 2 * t) * (d - inset - 0.75 - t) * 16.387) / 1000;
 // Plywood weight, lb/ft² (birch). The baffle stays 3/4″ either way.
-export const PLYWOOD_LB_PER_SQ_FT = { 0.75: 2.3, 0.5: 1.6 };
-export const plywoodLbPerSqFt = (t) => PLYWOOD_LB_PER_SQ_FT[t] ?? 2.3; // lb/ft²; unknown thicknesses fall back to 3/4″
+export const PLYWOOD_LB_PER_SQ_FT: Record<number, number> = { 0.75: 2.3, 0.5: 1.6 };
+export const plywoodLbPerSqFt = (t: number) => PLYWOOD_LB_PER_SQ_FT[t] ?? 2.3; // lb/ft²; unknown thicknesses fall back to 3/4″
 
 // ---------------------------------------------------------------
 // Cutlist: panels for the sub and mid boxes from the planner's current
 // dimensions, and a simple shelf layout on 4x8 or 5x5 sheets.
 // ---------------------------------------------------------------
-export const DRIVER_CUTOUT_IN = { 18: 16.6, 15: 13.9, 12: 11.1, 10: 9.2 }; // typical front-mount cutouts, in
-export const PLYWOOD_SHEETS = {
+export const DRIVER_CUTOUT_IN: Record<number, number> = { 18: 16.6, 15: 13.9, 12: 11.1, 10: 9.2 }; // typical front-mount cutouts, in
+export const PLYWOOD_SHEETS: Record<PlywoodSheetKind, PlywoodSheet> = {
   "4x8": { w: 48, h: 96, name: "4 × 8 ft" },
   "5x5": { w: 60, h: 60, name: "5 × 5 ft" },
 };
-export const formatInches = (x) => {
+export const formatInches = (x: number) => {
   // inches to the nearest 1/16, as 12 5/8
   const n = Math.round(x * 16),
     whole = Math.floor(n / 16),
@@ -223,11 +301,20 @@ export const formatInches = (x) => {
   }
   return whole ? `${whole} ${a}/${b}` : `${a}/${b}`;
 };
-export const formatThickness = (t) => (t === 0.75 ? "3/4″" : t === 0.5 ? "1/2″" : `${t}″`);
+export const formatThickness = (t: number) => (t === 0.75 ? "3/4″" : t === 0.5 ? "1/2″" : `${t}″`);
 
-export function boxParts(label, W, H, D, t, inset, joint, extra = {}) {
+export function boxParts(
+  label: string,
+  W: number,
+  H: number,
+  D: number,
+  t: number,
+  inset: number,
+  joint: CornerJoint,
+  extra: { band?: number; cutNote?: string; braces?: number } = {},
+) {
   const BT = 0.75,
-    P = [];
+    P: CutPart[] = [];
   const topW = joint === "butt" ? W - 2 * t : joint === "rabbet" ? W - t : W;
   const rearNote = `rabbet ${formatInches(t)} × ${formatInches(t / 2)} on rear edge for the back`;
   const sideNote =
@@ -303,10 +390,10 @@ export function cutParts({
   portStyle,
   cVent,
   layout,
-}) {
+}: CutPartsConfig): { parts: CutPart[]; vent: string[] } {
   const t = wall,
-    all = [];
-  const vent = [];
+    all: CutPart[] = [];
+  const vent: string[] = [];
   const s = boxParts("Sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
     braces: wall === 0.5 ? 3 : 2,
     band: portStyle === "slots" || portStyle === "folded" ? cVent.slotH + t : 0,
@@ -382,14 +469,18 @@ export function cutParts({
 }
 
 // Shelf packing with rotation and kerf: largest first, fill rows across the sheet.
-export function packSheets(rects, sheet, kerf) {
-  const sheets = [];
+export function packSheets<R extends { a: number; b: number }>(
+  rects: R[],
+  sheet: { w: number; h: number },
+  kerf: number,
+): PackedSheets<R> {
+  const sheets: PackedSheet<R>[] = [];
   const items = rects
     .slice()
     .sort(
       (p, q) => Math.max(q.a, q.b) - Math.max(p.a, p.b) || Math.min(q.a, q.b) - Math.min(p.a, p.b),
     );
-  const tooBig = [];
+  const tooBig: R[] = [];
   for (const r of items) {
     const opts = [
       [r.a, r.b],
@@ -441,20 +532,24 @@ export function packSheets(rects, sheet, kerf) {
 // Low-frequency radiation mass of a uniform rectangular piston a x b in an infinite baffle is
 // rho*I/(2*pi*S^2), I = the double area integral of 1/distance (closed form below). As a length:
 // end correction = I/(2*pi*a*b). A circle gives the familiar 0.85 r.
-export function rectangleEndCorrectionIntegral(a, b) {
+export function rectangleEndCorrectionIntegral(a: number, b: number) {
   const d = Math.hypot(a, b);
   return (
     (2 / 3) * (a ** 3 + b ** 3 - d ** 3) +
     2 * a * b * (a * Math.log((b + d) / a) + b * Math.log((a + d) / b))
   );
 }
-export const rectangleEndCorrection = (a, b) =>
+export const rectangleEndCorrection = (a: number, b: number) =>
   rectangleEndCorrectionIntegral(a, b) / (2 * Math.PI * a * b);
 // Flanged + free end, as the 1.46 r (0.85 r + 0.61 r) used for round tubes.
 export const BOTH_ENDS_CORRECTION_RATIO = 1 + 0.61 / 0.85;
 // Rectangular duct of throat a x height b along a panel: a wall at an end mirrors the mouth, so that end
 // acts as one twice as wide in a (image method). Outer end flanged (baffle), inner end free (0.61/0.85).
-export const ductEndCorrection = (a, b, { inner = true, outer = true } = {}) =>
+export const ductEndCorrection = (
+  a: number,
+  b: number,
+  { inner = true, outer = true }: { inner?: boolean; outer?: boolean } = {},
+) =>
   rectangleEndCorrection(outer ? 2 * a : a, b) +
   (0.61 / 0.85) * rectangleEndCorrection(inner ? 2 * a : a, b);
 // Inner end, inside the box: the vent mouth (height h against one wall, spanning the box from wall to wall)
@@ -464,8 +559,8 @@ export const ductEndCorrection = (a, b, { inner = true, outer = true } = {}) =>
 // It includes the wall the vent sits on and the opposite wall, and tends to the free-space strip as X grows.
 // The gap to the back wall is taken as at least h: the planner's "Duct too long" check asks for that much,
 // and closer than that the flow turns through the gap and the model no longer holds.
-const d2Cache = new Map();
-export function ductEndCorrection2D(h, X, L = Infinity) {
+const d2Cache = new Map<string, number>();
+export function ductEndCorrection2D(h: number, X: number, L = Infinity) {
   if (h >= X) return 0;
   L = Math.max(L, h);
   const key = h + "|" + X + "|" + L,
@@ -485,20 +580,25 @@ export function ductEndCorrection2D(h, X, L = Infinity) {
 const FREE_END = 0.61 / 0.85; // an unflanged (free) end relative to a flanged one, as in 1.46 r
 // Letterbox on the floor: outside, the ground mirrors the mouth (slot twice as tall, open width w);
 // inside, the box interior (height X, back wall L behind the mouth) with the side walls at both ends.
-export const slotEndCorrection = (h, w, X, L) =>
+export const slotEndCorrection = (h: number, w: number, X?: number, L?: number) =>
   X
     ? rectangleEndCorrection(2 * h, w) + FREE_END * ductEndCorrection2D(h, X, L)
     : ductEndCorrection(h, w);
 // Side duct (throat th, open height H) against a side wall: outside, the ground mirrors the bottom of the
 // mouth; inside, the box interior across its width X (for a pair of ducts, half the width: symmetry).
-export const sideDuctEndCorrection = (th, H, X, L) =>
+export const sideDuctEndCorrection = (th: number, H: number, X?: number, L?: number) =>
   X
     ? rectangleEndCorrection(th, 2 * H) + FREE_END * ductEndCorrection2D(th, X, L)
     : ductEndCorrection(th, H, { outer: false });
 
 // Vent geometry for the sub. t is the wall (and fin) ply. n is the number of separate openings,
 // which sets the end correction in boxModel.
-export function ventGeometry(portStyle, box, cVent, t) {
+export function ventGeometry(
+  portStyle: PortStyle,
+  box: Dims3,
+  cVent: VentSpec,
+  t: number,
+): VentGeometry {
   const iw = box.w - 2 * t,
     ih = box.h - 2 * t;
   if (portStyle === "vslots" || portStyle === "vslot1") {
@@ -548,7 +648,7 @@ export function ventGeometry(portStyle, box, cVent, t) {
 // Litres of wood inside a box: everything behind the baffle except the shell panels themselves.
 // Window braces keep ~2 in rails, so only their rails count.
 const SHELL = new Set(["Side", "Top / bottom", "Back", "Baffle"]);
-export function internalWoodLiters(parts, box) {
+export function internalWoodLiters(parts: CutPart[], box: string) {
   let in3 = 0;
   for (const p of parts) {
     if (p.box !== box || SHELL.has(p.part)) continue;
@@ -565,10 +665,15 @@ export function internalWoodLiters(parts, box) {
 // cone limits use the sine's peaks. Thermal is program power, 2 x AES: AES noise has a 6 dB crest,
 // so a sine with the same peak voltage carries twice the AES power; music with at least that crest
 // keeps the coil's average at or under AES.
-export const thermalVoltageLimit = (aes) => Math.sqrt(2 * aes * 8);
-export const ampVoltage = (W) => Math.sqrt(W * 8);
+export const thermalVoltageLimit = (aes: number) => Math.sqrt(2 * aes * 8);
+export const ampVoltage = (W: number) => Math.sqrt(W * 8);
 // Broadband ("music") limit: one drive level for the whole band.
-export function subwooferLimits(mdl, ts, AMP_V, portMax) {
+export function subwooferLimits(
+  mdl: VentedBoxModel,
+  ts: Pick<BassTS, "aes">,
+  AMP_V: number,
+  portMax: number,
+): SubLimits {
   const vp = (AMP_V * portMax) / mdl.peakVel,
     vx = (AMP_V * 100) / mdl.xmaxPct,
     vt = thermalVoltageLimit(ts.aes);
@@ -593,9 +698,14 @@ export function subwooferLimits(mdl, ts, AMP_V, portMax) {
   };
 }
 // Per-frequency sine limit: each frequency meets its own port and excursion limits.
-export function maxOutputCurve(curve, ts, AMP_V, portMax) {
+export function maxOutputCurve(
+  curve: { f: number; spl: number; xmm: number; vel?: number }[],
+  ts: Pick<BassTS, "aes" | "Xmax">,
+  AMP_V: number,
+  portMax: number,
+): PaMaxPoint[] {
   const vt = thermalVoltageLimit(ts.aes);
-  return curve.map((o) => {
+  return curve.map((o): PaMaxPoint => {
     const vp = o.vel != null ? (AMP_V * portMax) / o.vel : Infinity,
       vx = (AMP_V * ts.Xmax) / o.xmm;
     const V = Math.min(vp, vx, vt, AMP_V);
@@ -606,11 +716,16 @@ export function maxOutputCurve(curve, ts, AMP_V, portMax) {
     };
   });
 }
-export const nearestPoint = (curve, f) =>
+export const nearestPoint = <P extends { f: number }>(curve: P[], f: number): P =>
   curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 // The sub at its music limit (one drive level for the whole band) through the LR24 lowpass at xoLo:
 // what the mid has to match.
-export function subMusicOutputAt(mdl, lim, AMP_V, xoLo) {
+export function subMusicOutputAt(
+  mdl: VentedBoxModel,
+  lim: Pick<SubLimits, "V">,
+  AMP_V: number,
+  xoLo: number,
+) {
   const o = nearestPoint(mdl.curve, xoLo);
   return (
     o.spl + 20 * Math.log10(linkwitzRiley24Lowpass(o.f, xoLo)) + 20 * Math.log10(lim.V / AMP_V)
@@ -621,7 +736,12 @@ export function subMusicOutputAt(mdl, lim, AMP_V, xoLo) {
 // Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24 highpass at the
 // crossover and 12 dB/oct below the horn's loading limit. Power: amp voltage into the driver's
 // impedance, capped at program (2 x AES), derated 6 dB/oct below the frequency AES was rated at.
-export function hornResponse(hf, hz, xoHi, hfAmpW) {
+export function hornResponse(
+  hf: CompressionHf | undefined,
+  hz: Partial<HornHf>,
+  xoHi: number,
+  hfAmpW: number,
+): HornResponse | null {
   if (!hf || hf.sens == null || !hf.aes) return null;
   const imp = hf.imp || 8;
   const pAmp = (hfAmpW * 8) / imp;
@@ -629,7 +749,7 @@ export function hornResponse(hf, hz, xoHi, hfAmpW) {
   const pProg = 2 * hf.aes * derate;
   const P = Math.min(pAmp, pProg);
   const low = (hz && hz.lowHz) || 0;
-  const curve = [];
+  const curve: FrequencyPoint[] = [];
   for (let i = 0; i < 300; i++) {
     const f = 300 * Math.pow(20000 / 300, i / 299);
     const g = linkwitzRiley24Highpass(f, xoHi) * (low ? Math.min(1, Math.pow(f / low, 2)) : 1);
@@ -649,25 +769,26 @@ export function hornResponse(hf, hz, xoHi, hfAmpW) {
 
 // ---- directivity ----
 // Rigid piston: -6 dB where ka sin(theta) = 2.2 (2 J1(x)/x = 0.5 at x = 2.215).
-export function pistonBeamWidthDeg(SdCm2, f) {
+export function pistonBeamWidthDeg(SdCm2: number, f: number) {
   const ka = ((2 * Math.PI * f) / 343) * Math.sqrt(SdCm2 / 10000 / Math.PI);
   return ka <= 2.2 ? 180 : (2 * Math.asin(2.2 / ka) * 180) / Math.PI;
 }
 // Keele: a horn holds its angle down to f = 25 400 / (mouth width m x angle deg) (1e6 in-deg-Hz).
-export const keeleFrequency = (covDeg, mouthIn) => 25400 / (mouthIn * 0.0254 * covDeg);
-export const hornBeamWidthDeg = (covDeg, fK, f) =>
+export const keeleFrequency = (covDeg: number, mouthIn: number) =>
+  25400 / (mouthIn * 0.0254 * covDeg);
+export const hornBeamWidthDeg = (covDeg: number, fK: number, f: number) =>
   Math.min(180, f >= fK ? covDeg : (covDeg * fK) / f);
 
 // ---- weights (lb): 3/4″ baffle, other panels and full-size braces at the wall ply ----
 // Brace counts match the Cutlist: sub 2 (3 with 1/2″ walls), mid 1 (2 with 1/2″ walls).
-export const subWeightLb = (b, wall, drvLb) =>
+export const subWeightLb = (b: Dims3, wall: number, drvLb: number) =>
   (b.w * b.h * 2.3 +
     (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d + (wall === 0.5 ? 3 : 2) * b.w * b.d) *
       plywoodLbPerSqFt(wall)) /
     144 +
   (drvLb || 0) +
   6;
-export const midWeightLb = (b, wall) =>
+export const midWeightLb = (b: Dims3, wall: number) =>
   (b.w * b.h * 2.3 +
     (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d + (wall === 0.5 ? 2 : 1) * b.w * b.d) *
       plywoodLbPerSqFt(wall)) /
@@ -677,7 +798,7 @@ export const midWeightLb = (b, wall) =>
 // ---- the sub as the planner computes it ----
 // cfg: { subBox, midDims, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout }
 // Vent and volumes only (no model): what the optimizer's vent solver iterates on.
-export function subGeometry(sub, mid, cfg) {
+export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConfig): SubGeometry {
   const port = ventGeometry(cfg.portStyle, cfg.subBox, cfg.cVent, cfg.wall);
   const grossL = boxInternalLiters(cfg.subBox.w, cfg.subBox.h, cfg.subBox.d, cfg.wall, cfg.inset);
   const ductL = (port.area * port.len * 16.387) / 1000;
@@ -706,7 +827,7 @@ export function subGeometry(sub, mid, cfg) {
     Fb: ventTuning(netL, port.area, port.len, port.n, port.ec).Fb,
   };
 }
-export function subSystem(sub, mid, cfg) {
+export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig): SubSystem {
   const { port, grossL, ductL, woodL, netL } = subGeometry(sub, mid, cfg);
   const AMP_V = ampVoltage(cfg.ampW);
   const mdl = sub.ts
@@ -721,7 +842,13 @@ export function subSystem(sub, mid, cfg) {
 
 // Sub through the LR24 lowpass at the crossover, each frequency at its own sine limit (the filter
 // scales excursion and port speed with the output).
-export function subThroughLowpass(mdl, ts, AMP_V, portMax, xoLo) {
+export function subThroughLowpass(
+  mdl: VentedBoxModel,
+  ts: Pick<BassTS, "aes" | "Xmax">,
+  AMP_V: number,
+  portMax: number,
+  xoLo: number,
+): FrequencyPoint[] {
   const vt = thermalVoltageLimit(ts.aes);
   return mdl.curve.map((o) => {
     const g = linkwitzRiley24Lowpass(o.f, xoLo);
@@ -735,7 +862,7 @@ export function subThroughLowpass(mdl, ts, AMP_V, portMax, xoLo) {
 // ---- the mid-bass as the planner computes it: sealed, always lightly stuffed ----
 // cfg: { midDims, wall, inset, xoLo, xoHi, mAmpW }
 export const STUFFING_VOLUME_GAIN = 1.15; // ~15% more effective volume from light stuffing
-export function midSystem(mid, cfg) {
+export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const V = ampVoltage(cfg.mAmpW);
   const grossL = boxInternalLiters(
     cfg.midDims.w,
@@ -756,7 +883,7 @@ export function midSystem(mid, cfg) {
 // ---- passive coaxial fills ----
 // drv: FILL_OPTIONS entry. cfg: { boxType: "vented" | "sealed", dim {w,h,d} external in, port {n, dia, len},
 // hp (LR24 highpass to the subs), ampW (per box, 8 ohm rating), portMax }. 1/2" walls throughout.
-export function fillSystem(drv, cfg) {
+export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem {
   const { boxType, dim, port, hp, ampW, portMax } = cfg;
   const ts = drv.ts,
     V = ampVoltage(ampW),
@@ -769,13 +896,13 @@ export function fillSystem(drv, cfg) {
   const eff = vented ? net : net * STUFFING_VOLUME_GAIN; // sealed boxes are stuffed
   const vM = vented ? boxModel(ts, eff, pArea, port.len, hp, V, "LR24", { nPorts: port.n }) : null;
   const sM = vented ? null : closedBox(ts, eff, hp, null, V);
-  const m = vM || sM;
+  const m = (vM || sM)!; // a vented box with a port, or the sealed model
   const max = maxOutputCurve(m.curve, ts, V, portMax).filter((o) => o.f <= 300);
   const sens = m.ref - 20 * Math.log10(V / 2.83);
   // system -3 dB, highpass included, for both box types
   const f3 = vM
     ? vM.f3
-    : (sM.curve.find((o) => o.spl >= sM.ref - 3) || sM.curve[sM.curve.length - 1]).f;
+    : (sM!.curve.find((o) => o.spl >= sM!.ref - 3) || sM!.curve[sM!.curve.length - 1]).f;
   // HF through a passive network, padded down to the woofer: reaches its program rating (2 x AES)
   // only at an amp power well above what the woofer sees
   const hf = drv.hf;

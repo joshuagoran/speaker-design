@@ -1,8 +1,19 @@
 // Warning chips for each planner section: pure functions of the numbers the page already has.
 // Each returns [kind, head, body][] with kind "ok" | "warn" | "bad". Tested in tests/chips.test.js.
 
+import type {
+  Chip,
+  Dims3,
+  FillChipsInput,
+  HornChipsInput,
+  MidChipsInput,
+  PortStyle,
+  SubChipsInput,
+  VentSpec,
+} from "../../types.ts";
+
 // Longest duct each layout can hold, leaving an opening at least as wide as the duct.
-export function ductFit(subBox, portStyle, cVent, PT) {
+export function ductFit(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
   const inD = subBox.d - PT,
     inH = subBox.h - 2 * PT,
     sH = cVent.slotH;
@@ -21,8 +32,8 @@ export function ductFit(subBox, portStyle, cVent, PT) {
   return { maxStraight, maxFold, maxSide, maxTube, fit };
 }
 // Clear baffle a driver needs: the sub's cone plus its frame.
-export const subDriverClearanceNeededIn = (subSize) => subSize + 1.9;
-export function driverClearance(subBox, portStyle, cVent, PT) {
+export const subDriverClearanceNeededIn = (subSize: number) => subSize + 1.9;
+export function driverClearance(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
   const nSide = portStyle === "vslot1" ? 1 : portStyle === "vslots" ? 2 : 0;
   return {
     clearW: subBox.w - nSide * (cVent.throat + 0.43 + PT),
@@ -31,9 +42,9 @@ export function driverClearance(subBox, portStyle, cVent, PT) {
 }
 
 // s: { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW }
-export function subChips(s) {
+export function subChips(s: SubChipsInput): Chip[] {
   const { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW } = s;
-  const F = [];
+  const F: Chip[] = [];
   const need = subDriverClearanceNeededIn(subSize);
   const { clearW, clearH } = driverClearance(subBox, portStyle, cVent, PT);
   if (Math.min(clearW, clearH) < need)
@@ -89,7 +100,7 @@ export function subChips(s) {
 
 // s: { midSize, midDims, Qtc, f3, peakX, xoLo, ts (Xmax, aes), V (amp volts), useV, vTherm, mAmpW,
 //      subMusicAtXo (dB or null), tilt, midAtXo ({spl, who} of the mid max curve at xoLo) }
-export function midChips(s) {
+export function midChips(s: MidChipsInput): Chip[] {
   const {
     midSize,
     midDims,
@@ -106,7 +117,7 @@ export function midChips(s) {
     tilt,
     midAtXo,
   } = s;
-  const F = [];
+  const F: Chip[] = [];
   const need = midSize + 1.2;
   if (Math.min(midDims.w, midDims.h) < need)
     F.push([
@@ -153,7 +164,7 @@ export function midChips(s) {
   );
   if (subMusicAtXo != null) {
     const needDb = subMusicAtXo - tilt,
-      m = midAtXo,
+      m = midAtXo!, // present whenever the sub is modelled
       gap = m.spl - needDb;
     // amp power that would close the gap, if the amp is what's short
     const wNeed = Math.pow(V * Math.pow(10, -gap / 20), 2) / 8;
@@ -185,9 +196,9 @@ export function midChips(s) {
 }
 
 // s: { hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi (dB or null), hfTilt, hornAtXo (dB), midBeam (deg or null), fK (Hz or null) }
-export function hornChips(s) {
+export function hornChips(s: HornChipsInput): Chip[] {
   const { hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi, hfTilt, hornAtXo, midBeam, fK } = s;
-  const F = [];
+  const F: Chip[] = [];
   if (hf.minXo && xoHi < hf.minXo)
     F.push([
       "warn",
@@ -221,7 +232,7 @@ export function hornChips(s) {
   );
   if (midAtXoHi != null) {
     const need = midAtXoHi - hfTilt,
-      gap = hornAtXo - need;
+      gap = hornAtXo! - need;
     const wNeed = hfAmpW * Math.pow(10, -gap / 10);
     F.push(
       gap < -0.5
@@ -262,9 +273,9 @@ export function hornChips(s) {
 }
 
 // s: { drv, dim, Fb (vented) | Qtc (sealed), hp, portLimited, portMax, f3, hf, hfLimW, ampW, pad }
-export function fillChips(s) {
+export function fillChips(s: FillChipsInput): Chip[] {
   const { drv, dim, Fb, Qtc, hp, portLimited, portMax, f3, hf, hfLimW, ampW, pad } = s;
-  const F = [];
+  const F: Chip[] = [];
   if (Math.min(dim.w, dim.h) < drv.size + 1)
     F.push([
       "bad",
@@ -289,15 +300,15 @@ export function fillChips(s) {
       ]);
   } else {
     F.push(
-      Qtc > 0.8
-        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky; a bigger box or a vent."]
-        : Qtc < 0.5
+      Qtc! > 0.8
+        ? ["warn", `Qtc ${Qtc!.toFixed(2)}`, "Peaky; a bigger box or a vent."]
+        : Qtc! < 0.5
           ? [
               "warn",
-              `Qtc ${Qtc.toFixed(2)}`,
+              `Qtc ${Qtc!.toFixed(2)}`,
               "Very damped: rolls off early. Good driver for a vented box.",
             ]
-          : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped."],
+          : ["ok", `Qtc ${Qtc!.toFixed(2)}`, "Well damped."],
     );
   }
   F.push(
@@ -315,16 +326,16 @@ export function fillChips(s) {
   );
   if (hf)
     F.push(
-      hfLimW < ampW
+      hfLimW! < ampW
         ? [
             "warn",
             "HF limits first",
-            `Through a ${pad.toFixed(0)} dB pad the HF reaches its ${2 * hf.aes} W program rating at about ${Math.round(hfLimW)} W of amp, under the ${ampW} W you've set.`,
+            `Through a ${pad.toFixed(0)} dB pad the HF reaches its ${2 * hf.aes} W program rating at about ${Math.round(hfLimW!)} W of amp, under the ${ampW} W you've set.`,
           ]
         : [
             "ok",
             "HF has headroom",
-            `Through a ${pad.toFixed(0)} dB pad the HF only reaches its program rating at about ${Math.round(hfLimW)} W of amp.`,
+            `Through a ${pad.toFixed(0)} dB pad the HF only reaches its program rating at about ${Math.round(hfLimW!)} W of amp.`,
           ],
     );
   else F.push(["warn", "HF not modelled", "The HF section's specs aren't published on usspeaker."]);

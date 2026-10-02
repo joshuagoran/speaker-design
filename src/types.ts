@@ -492,7 +492,7 @@ export interface HifiSystem {
 }
 
 /** A check on the design: a severity, a short title and a sentence of detail. */
-export type HifiChip = [severity: "ok" | "warn" | "bad", title: string, detail: string];
+export type HifiChip = Chip;
 
 /** Where the listener is relative to one speaker: horizontal angle off its axis (rad), ear height above the box bottom (in) and distance (m). */
 export interface ListenerGeometry {
@@ -612,3 +612,622 @@ export interface HifiOptimizerResult {
   curCurve?: [number, number][] | null;
   goalMissing?: string | null;
 }
+
+// ---- PA design (lib/pa) ----
+
+/** The subwoofer's vent layouts. `vslot1` is the single side duct; the rest are the cabinet's `vents`. */
+export type PortStyle = VentKind | "vslot1";
+/** Sub highpass alignments: Butterworth or Linkwitz-Riley, 24 or 48 dB/oct. */
+export type HighpassType = "BW24" | "LR24" | "BW48" | "LR48";
+export type PaLayout = "stack" | "pole" | "tower" | "satellite";
+/** How the cutlist joins the corners. */
+export type CornerJoint = "butt" | "rabbet" | "miter";
+export type PlywoodSheetKind = "4x8" | "5x5";
+
+/** A plywood sheet size in inches. */
+export interface PlywoodSheet {
+  w: number;
+  h: number;
+  name: string;
+}
+
+/**
+ * The sub's vent, in inches: the planner keeps every field, whichever layout uses it (`slotH` the slots, `throat` the
+ * side ducts, `nt` and `dia` the tubes), and `len` is the duct length in all of them.
+ */
+export interface VentSpec {
+  slotH: number;
+  nt: number;
+  dia: number;
+  throat: number;
+  len: number;
+}
+
+/**
+ * The PA design the planner snapshots and the optimizer works on: driver and box ids, dimensions in inches, crossovers in Hz,
+ * amp watts and balance in dB. The fields after `layout` are looks and cutlist choices; the optimizer leaves them alone.
+ */
+export interface PaDesignConfig {
+  format?: string;
+  /** driver, box and horn ids from `lib/data` */
+  sub: string;
+  mid: string;
+  midBox?: string;
+  cd: string;
+  horn: string;
+  cabinet?: string;
+  portStyle: PortStyle;
+  /** the sub box's outside size */
+  cDim: Dims3;
+  cVent: VentSpec;
+  /** sub highpass, Hz */
+  hpf: number;
+  hpType: HighpassType;
+  ampW: number;
+  /** peak port air speed allowed, m/s */
+  portMax: number;
+  /** the mid box's outside size */
+  mDim: Dims3;
+  /** side, top, bottom and back plywood, inches */
+  wall: number;
+  /** how far the baffles sit behind the frame front, inches */
+  inset: number;
+  /** sub to mid and mid to horn crossovers, Hz */
+  xoLo: number;
+  xoHi: number;
+  mAmpW: number;
+  /** how much less the mid band needs than the sub band, dB */
+  tilt: number;
+  hfAmpW: number;
+  /** how much less the horn band needs than the mid band, dB */
+  hfTilt: number;
+  layout: PaLayout;
+  cutaway?: boolean;
+  baffleColor?: string;
+  cabFinish?: FinishId;
+  spacerH?: number;
+  joint?: CornerJoint;
+  summary?: string;
+}
+
+/** A PA sub or mid box's models read the T/S parameters; `Re` and `Mms` are null on a Hi-fi woofer that doesn't publish them. */
+export type ModelTS = Pick<HifiWooferTS, "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms">;
+
+/** One point of a vented-box response: raw box SPL, system SPL with the highpass, cone excursion (mm, peak) and port air speed (m/s, peak). */
+export interface VentedPoint {
+  f: number;
+  raw: number;
+  spl: number;
+  xmm: number;
+  vel: number;
+}
+
+export interface VentedBoxModel {
+  curve: VentedPoint[];
+  Fb: number;
+  f3: number;
+  f3Box: number;
+  ref: number;
+  spl30: number;
+  spl35: number;
+  spl45: number;
+  peakVel: number;
+  peakVelF: number;
+  peakX: number;
+  peakXF: number;
+  xmaxPct: number;
+}
+
+/** One point of a sealed-box response (no port). */
+export interface SealedPoint {
+  f: number;
+  raw: number;
+  spl: number;
+  xmm: number;
+}
+
+export interface SealedBoxModel {
+  curve: SealedPoint[];
+  Fc: number;
+  Qtc: number;
+  f3: number;
+  ref: number;
+  peakX: number;
+}
+
+/** What stops a drive level for the whole band. */
+export type SubLimitWho =
+  | "port air speed"
+  | "cone travel (Xmax)"
+  | "driver program rating"
+  | "amplifier power";
+
+/** The sub's music limit: the drive level (volts and watts into 8 ohm) where the first of port, cone, driver and amp gives out. */
+export interface SubLimits {
+  who: SubLimitWho;
+  V: number;
+  W: number;
+  vel: number;
+  xPct: number;
+  spl30: number;
+  spl35: number;
+  spl45: number;
+}
+
+/** The most a sine can play at one frequency, and what stops it. */
+export interface PaMaxPoint {
+  f: number;
+  spl: number;
+  who: "port" | "Xmax" | "thermal" | "amp";
+}
+
+/** The vent as the model uses it: openings, total area (in²), length (in), end correction (in), hydraulic diameter (in) and a description. */
+export interface VentGeometry {
+  n: number;
+  area: number;
+  len: number;
+  /** absent for round tubes, which take the model's default */
+  ec?: number;
+  dh: number;
+  desc: string;
+}
+
+/** What `subGeometry` needs: boxes, plywood, vent and layout. */
+export interface SubGeometryConfig {
+  subBox: Dims3;
+  midDims: Dims3;
+  wall: number;
+  inset: number;
+  portStyle: PortStyle;
+  cVent: VentSpec;
+  layout: PaLayout;
+}
+
+/** `subSystem` adds the highpass, the amp and the port air speed limit. */
+export interface SubSystemConfig extends SubGeometryConfig {
+  hpf: number;
+  hpType: HighpassType;
+  ampW: number;
+  portMax: number;
+}
+
+/** The sub's vent and volumes, without the model. */
+export interface SubGeometry {
+  port: VentGeometry;
+  grossL: number;
+  ductL: number;
+  woodL: number;
+  netL: number;
+  Fb: number;
+}
+
+export interface SubSystem {
+  port: VentGeometry;
+  grossL: number;
+  ductL: number;
+  woodL: number;
+  netL: number;
+  AMP_V: number;
+  mdl: VentedBoxModel | null;
+  lim: SubLimits | null;
+}
+
+export interface MidSystemConfig {
+  midDims: Dims3;
+  wall: number;
+  inset: number;
+  xoLo: number;
+  xoHi: number;
+  mAmpW: number;
+}
+
+export interface MidSystem {
+  V: number;
+  grossL: number;
+  disp: number;
+  netL: number;
+  effL: number;
+  mdl: SealedBoxModel | null;
+  vTherm: number;
+  max: PaMaxPoint[] | null;
+  useV: number;
+}
+
+/** The compression driver on its horn: power available, the cap, and the response from the crossover up. */
+export interface HornResponse {
+  curve: FrequencyPoint[];
+  /** watts the driver sees: the lower of the amp and the program rating */
+  P: number;
+  pAmp: number;
+  pProg: number;
+  /** power derating for a crossover below the frequency the AES rating assumes (1 = none) */
+  derate: number;
+  imp: number;
+  who: "amp" | "program rating";
+  /** dB at 1 m for the power in `P`, before the filters */
+  flat: number;
+}
+
+export type FillBoxType = "vented" | "sealed";
+
+/** A fill's round port. */
+export interface FillPort {
+  n: number;
+  dia: number;
+  len: number;
+}
+
+export interface FillSystemConfig {
+  boxType: FillBoxType;
+  /** the box's outside size, inches */
+  dim: Dims3;
+  port: FillPort;
+  /** the highpass to the subs, Hz */
+  hp: number;
+  ampW: number;
+  portMax: number;
+}
+
+export interface FillSystem {
+  V: number;
+  gross: number;
+  pArea: number;
+  disp: number;
+  net: number;
+  eff: number;
+  vM: VentedBoxModel | null;
+  sM: SealedBoxModel | null;
+  max: PaMaxPoint[];
+  sens: number;
+  f3: number;
+  pad: number;
+  /** amp watts at which the HF reaches its program rating; null for a fill without an HF section */
+  hfLimW: number | null;
+  lb: number;
+  portLimited: boolean;
+}
+
+// ---- Cutlist ----
+
+/** One line of the cutlist: a part of a box, cut `qty` times from `t`-inch ply, `a` by `b` inches. */
+export interface CutPart {
+  box: string;
+  part: string;
+  qty: number;
+  a: number;
+  b: number;
+  t: number;
+  note: string;
+}
+
+/** What the cutlist needs for a sub and mid pair. */
+export interface CutPartsConfig {
+  sub: SubDriver;
+  mid: MidDriver;
+  subBox: Dims3;
+  midDims: Dims3;
+  wall: number;
+  inset: number;
+  joint: CornerJoint;
+  portStyle: PortStyle;
+  cVent: VentSpec;
+  layout: PaLayout;
+}
+
+/** A part laid on a sheet: its position and the size it was placed at (rotated if need be). */
+export type PlacedPart<R = CutPart> = R & { x: number; y: number; w: number; h: number };
+
+/** One shelf of a sheet: its top, its height and how far across it is filled. */
+export interface SheetRow {
+  y: number;
+  h: number;
+  x: number;
+}
+
+/** A sheet of ply with the parts on it; `y` is how far down the last row ends. */
+export interface PackedSheet<R = CutPart> {
+  rows: SheetRow[];
+  items: PlacedPart<R>[];
+  y: number;
+}
+
+export interface PackedSheets<R = CutPart> {
+  sheets: PackedSheet<R>[];
+  /** parts too big for the sheet in either direction */
+  tooBig: R[];
+}
+
+// ---- Warning chips (lib/pa/chips) ----
+
+export type ChipSeverity = "ok" | "warn" | "bad";
+/** A check on a design: a severity, a short title and a sentence of detail. */
+export type Chip = [severity: ChipSeverity, title: string, detail: string];
+
+export interface SubChipsInput {
+  subSize: SubSize;
+  subBox: Dims3;
+  portStyle: PortStyle;
+  cVent: VentSpec;
+  /** plywood thickness */
+  PT: number;
+  subLbLoaded: number;
+  lim: Pick<SubLimits, "who" | "W">;
+  /** frequency of the peak excursion, Hz */
+  peakXF: number;
+  aes: number;
+  ampW: number;
+}
+
+export interface MidChipsInput {
+  midSize: MidSize;
+  midDims: Dims3;
+  Qtc: number;
+  f3: number;
+  peakX: number;
+  xoLo: number;
+  ts: Pick<BassTS, "Xmax" | "aes">;
+  /** amp volts, the volts the driver can use, and the thermal limit in volts */
+  V: number;
+  useV: number;
+  vTherm: number;
+  mAmpW: number;
+  /** the sub at its music limit at the crossover, dB; null where the sub has no model */
+  subMusicAtXo: number | null;
+  tilt: number;
+  /** the mid's own limit at the crossover; null when `subMusicAtXo` is */
+  midAtXo: Pick<PaMaxPoint, "spl" | "who"> | null;
+}
+
+export interface HornChipsInput {
+  hf: CompressionHf;
+  hz: Partial<HornHf>;
+  horn: Pick<Horn, "name" | "size">;
+  xoHi: number;
+  hornModel: HornResponse;
+  hfAmpW: number;
+  /** the mid at its limit at the horn crossover, dB; null where the mid has no model */
+  midAtXoHi: number | null;
+  hfTilt: number;
+  /** the horn's level at the crossover, dB; null where the horn has no model */
+  hornAtXo: number | null;
+  /** the mid's beamwidth at the crossover in degrees, null where it has no model */
+  midBeam: number | null;
+  /** the horn's pattern-control frequency in Hz, null where its coverage isn't known */
+  fK: number | null;
+}
+
+export interface FillChipsInput {
+  drv: Pick<FillDriver, "size">;
+  dim: Dims3;
+  /** the vented box's tuning, or null for a sealed box */
+  Fb: number | null;
+  /** the sealed box's Qtc, or null for a vented box */
+  Qtc: number | null;
+  hp: number;
+  portLimited: boolean;
+  portMax: number;
+  f3: number;
+  hf: FillHf | null;
+  hfLimW: number | null;
+  ampW: number;
+  pad: number;
+}
+
+// ---- PA dispersion (lib/pa/dispersion) ----
+
+/** Where a driver sits in the stack, in inches above the floor, and its cone area in cm². */
+export interface StackDriver {
+  zIn: number;
+  Sd: number;
+}
+
+/** The stack the dispersion model sums: sub (optional), mid and horn, the horn's coverage in degrees and mouth size in inches. */
+export interface PaStackGeometry {
+  sub: StackDriver | null;
+  mid: StackDriver;
+  horn: { zIn: number; covH: number; covV: number; wIn: number; hIn: number };
+  xoLo: number;
+  xoHi: number;
+  order?: CrossoverOrder;
+}
+
+// ---- PA optimizer (lib/pa/optimize) ----
+
+/** The goals, as the planner's buttons name them. */
+export type PaGoal = "cheaper" | "lighter" | "lower" | "louder";
+/** The room sizes the optimizer sets its output target from: square feet, or outdoors. */
+export type PaRoom = 500 | 750 | 1000 | "outdoor";
+
+/** The optimizer locks that are on/off switches (a box dimension has its own mode: `subDim`, `midDim`). */
+export type PaLockKey =
+  | "sub"
+  | "mid"
+  | "cd"
+  | "horn"
+  | "vent"
+  | "wall"
+  | "hpf"
+  | "xoLo"
+  | "xoHi"
+  | "ampW"
+  | "mAmpW"
+  | "hfAmpW";
+
+export interface PaOptimizerLocks extends Partial<Record<PaLockKey, boolean>> {
+  subDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
+  midDim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
+}
+
+/** The fields an older saved design can lack; the optimizer fills these in. */
+export type PaDefaultedField =
+  | "xoLo"
+  | "xoHi"
+  | "tilt"
+  | "hfTilt"
+  | "ampW"
+  | "mAmpW"
+  | "hfAmpW"
+  | "hpType"
+  | "portMax"
+  | "wall"
+  | "inset"
+  | "layout";
+
+/** The design the optimizer starts from: the planner's snapshot, possibly an older one. */
+export interface PaOptimizerCurrent
+  extends Omit<PaDesignConfig, PaDefaultedField>, Partial<Pick<PaDesignConfig, PaDefaultedField>> {}
+
+export interface PaOptimizerInput {
+  cur: PaOptimizerCurrent;
+  room?: PaRoom;
+  /** the heaviest box allowed, lb */
+  maxLb: number;
+  /** the most the drivers may cost per stack, dollars */
+  budget: number;
+  /** in tap order; the first ranks the designs */
+  goals?: readonly PaGoal[];
+  /** one goal, from before several could be stacked */
+  goal?: PaGoal;
+  locks?: PaOptimizerLocks;
+}
+
+/** The fields a result card sets; everything else (finish, colours, layout, balance) stays as the page has it. */
+export type PaOptimizedField =
+  | "sub"
+  | "mid"
+  | "cd"
+  | "horn"
+  | "cDim"
+  | "cVent"
+  | "portStyle"
+  | "hpf"
+  | "mDim"
+  | "wall"
+  | "xoLo"
+  | "xoHi"
+  | "ampW"
+  | "mAmpW"
+  | "hfAmpW";
+export type PaOptimizedFields = Pick<PaDesignConfig, PaOptimizedField>;
+
+/** A design as the planner evaluates it: cost, weight, output, limits and the chips for each section. */
+export interface PaEvaluation {
+  /** drivers per stack: sub, mid and compression driver */
+  price: number;
+  /** false when a driver has no published price */
+  priceKnown: boolean;
+  hornPrice: number;
+  subLb: number;
+  midLb: number;
+  heaviest: number;
+  /** the sub's clean music-limit level, 40 to 90 Hz, dB */
+  out: number;
+  spl45: number;
+  spl35: number;
+  f3: number;
+  Fb: number;
+  who: SubLimitWho;
+  limW: number;
+  netL: number;
+  qtc: number;
+  midF3: number;
+  /** dB the mid has to spare over what the sub needs at the crossover; negative = runs out first */
+  midGap: number;
+  hornGap: number | null;
+  mismatch: boolean;
+  port: VentGeometry;
+  chips: { sub: Chip[]; mid: Chip[]; horn: Chip[] };
+  /** the sub's clean level for the card's chart, [Hz, dB] points from 20 to 200 Hz */
+  curve: [number, number][];
+}
+
+export interface PaMetricsSummary {
+  price: number;
+  heaviest: number;
+  out: number;
+  spl45: number;
+  f3: number;
+  Fb: number;
+  who: SubLimitWho;
+}
+
+/** A card's change from the current design. */
+export interface PaMetricsDelta {
+  price: number;
+  heaviest: number;
+  out: number;
+  f3: number;
+}
+
+/** What a card's front-view drawing needs. */
+export interface PaBoxGeometry {
+  sub: Dims3;
+  mid: Dims3;
+  tower: boolean;
+  horn: Dims2 | null;
+  subSize: SubSize;
+  midSize: MidSize;
+  portStyle: PortStyle;
+  cVent: VentSpec;
+  wall: number;
+}
+
+export interface PaOptimizerCard {
+  label: string;
+  why: string;
+  config: PaDesignConfig;
+  metrics: PaMetricsSummary;
+  delta: PaMetricsDelta | null;
+  names: { sub: string; mid: string; cd: string; horn: string };
+  /** the vent in words */
+  vent: string;
+  /** what stops the sub's music level */
+  limitedBy: string;
+  /** the planner's warnings on this design as [title, detail] */
+  warnings: [title: string, detail: string][];
+  /** the mid's Qtc and the sheets of ply each thickness needs */
+  build: { qtc: number; sheets: { t: number; n: number }[] };
+  /** what differs from the current design: "sub driver", "vent" ... */
+  changed: string[];
+  priceKnown: boolean;
+  curve: [number, number][];
+  geom: PaBoxGeometry;
+}
+
+/** A change to the limits that would let the search find a card. */
+export interface PaNearMissOption {
+  text: string;
+  set: Partial<Pick<PaOptimizerInput, "maxLb" | "budget">>;
+}
+
+/** No card fits: the closest design, why it fails and what loosening would help. */
+export interface PaNearMiss {
+  options: PaNearMissOption[];
+  closest: PaOptimizerCard | null;
+  blocking: string[];
+}
+
+export interface PaOptimizerResult {
+  /** the output the cards aim for, dB, and what the room alone needs */
+  target: number;
+  need: number;
+  curM: PaMetricsSummary | null;
+  curProblems: string[];
+  cur: { curve: [number, number][]; geom: PaBoxGeometry } | null;
+  cards: PaOptimizerCard[];
+  goals: PaGoal[];
+  goalMissing: string | null;
+  nearMiss: PaNearMiss | null;
+  stats: { evaluated: number; ms: number; subs: number; combos: number; pool: number };
+}
+
+/** What the page posts to the optimizer's worker. */
+export interface OptimizerRequest {
+  id: number;
+  input: PaOptimizerInput;
+}
+
+/** The worker's reply: the result, or the message of what it threw. */
+export type OptimizerResponse =
+  | { id: number; out: PaOptimizerResult; error?: undefined }
+  | { id: number; error: string; out?: undefined };
