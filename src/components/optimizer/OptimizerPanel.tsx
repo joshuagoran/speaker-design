@@ -79,8 +79,8 @@ export function OptimizerPanel({
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>
             <div className="flex flex-wrap gap-1">
-              {/* boundary: Object.entries types the keys as string; they are the rooms in ROOMS, so a numeric key is a PaRoom below */}
-              {(Object.entries(ROOMS) as [string, (typeof ROOMS)[PaRoom]][]).map(([k, r]) => (
+              {/* the cast below is a boundary: Object.entries types the keys as string; they are the rooms in ROOMS */}
+              {Object.entries(ROOMS).map(([k, r]) => (
                 <ToggleButton
                   key={k}
                   aria-label={r.name}
