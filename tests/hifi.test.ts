@@ -247,7 +247,7 @@ test("slot vent: tunes like a port of the same area and length, its shelf takes 
   const slot: HifiConfig = { ...cfg, port: { shape: "slot", n: 1, h: 1, len: 5 } };
   const s = hifiSystem(W, T, slot)!,
     r = hifiSystem(W, T, cfg)!;
-  assert.ok(s.slot && s.Fb! > 20 && s.Fb! < 90, `Fb ${s.Fb}`);
+  assert.ok(s.kind === "vented" && s.slotW != null && s.Fb! > 20 && s.Fb! < 90, `Fb ${s.Fb}`);
   close(t, s.pArea, 1 * (cfg.dim.w - 1.5), 1e-9, "full inner width");
   assert.ok(s.pVol > (s.pArea * 5 * 16.387) / 1e3, "the shelf is counted");
   // longer slot, lower tuning

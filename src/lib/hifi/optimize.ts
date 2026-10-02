@@ -193,7 +193,7 @@ function slotFor(w: HifiWoofer, dim: Dims3, wall: number, h: number, Fb: number)
   let a = 0.5,
     b = slotMaxLength(dim, wall, { h });
   // the inner end correction barely changes with the gap behind the slot: take it once, at mid length
-  const ec = hifiSlotEndCorrection(dim, wall, { shape: "slot", h, w: sw, len: (a + b) / 2 });
+  const ec = hifiSlotEndCorrection(dim, wall, { h, w: sw, len: (a + b) / 2 });
   const fb = (len: number) =>
     ventTuning(Math.max(1, g * 0.97 - disp - ((A + wall * sw) * len * 16.387) / 1e3), A, len, 1, ec)
       .Fb;

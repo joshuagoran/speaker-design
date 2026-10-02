@@ -357,6 +357,9 @@ export interface SlotPort {
 
 export type HifiPort = RoundPort | SlotPort;
 
+/** A slot port with its width, as `hifiSystem` models it. */
+export type SizedSlotPort = SlotPort & Required<Pick<SlotPort, "w">>;
+
 /** The passive radiators in use: the driver itself, how many, and the added mass on each in grams. */
 export interface PassiveRadiatorChoice {
   drv: PassiveRadiator;
@@ -441,21 +444,13 @@ export interface WooferMaxPoint {
   s: number;
 }
 
-/** The modelled speaker: `hifiSystem`'s result. */
-export interface HifiSystem {
+/** What every modelled Hi-fi speaker has, whatever its box. */
+export interface HifiSystemBase {
   gross: number;
   net: number;
   disp: number;
   pVol: number;
   pArea: number;
-  vented: boolean;
-  slot: boolean;
-  slotW: number | null;
-  radiator: boolean;
-  Fb: number | null;
-  Fp: number | null;
-  prFits: boolean;
-  Qtc: number | null;
   f3Box: number;
   ref: number;
   refW: number;
@@ -484,9 +479,44 @@ export interface HifiSystem {
   bsF3: number;
   /** the tweeter's level at 1 m at `f` Hz for `volts`, through its high-pass */
   tweeterAt: (f: number, volts: number) => number;
-  peakVel: number | null;
   V: number;
 }
+
+/** A sealed box, lightly stuffed: its Qtc. */
+export interface HifiSealedSystem extends HifiSystemBase {
+  kind: Extract<HifiBoxKind, "sealed">;
+  Qtc: number;
+  Fb?: undefined;
+  Fp?: undefined;
+  peakVel: null;
+}
+
+/** A ported box: its tuning, the port's peak air speed and, for a slot, the slot's width in inches (null for round ports). */
+export interface HifiVentedSystem extends HifiSystemBase {
+  kind: Extract<HifiBoxKind, "vented">;
+  Fb: number;
+  slotW: number | null;
+  peakVel: number;
+  Qtc?: undefined;
+  Fp?: undefined;
+}
+
+/** A passive-radiator box: the radiators used, whether they fit the back, the box tuning and the radiators' own resonance. */
+export interface HifiRadiatorSystem extends HifiSystemBase {
+  kind: Extract<HifiBoxKind, "radiator">;
+  pr: PassiveRadiatorChoice;
+  prFits: boolean;
+  Fb: number;
+  Fp: number;
+  peakVel: null;
+  Qtc?: undefined;
+}
+
+/**
+ * The modelled speaker: `hifiSystem`'s result, one variant per box kind. The `?: undefined` fields are the other
+ * boxes', so `Fb`, `Fp` and `Qtc` can be read without narrowing and `kind` says which one is set.
+ */
+export type HifiSystem = HifiSealedSystem | HifiVentedSystem | HifiRadiatorSystem;
 
 /** A check on the design: a severity, a short title and a sentence of detail. */
 export type HifiChip = Chip;

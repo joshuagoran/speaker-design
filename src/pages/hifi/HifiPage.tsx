@@ -211,8 +211,10 @@ export function HifiPage({ hifi }: Props) {
         This woofer can't be modelled (its parameters aren't published).
       </main>
     );
-  // The `!` on `speakerSystem.Qtc`, `slotW`, `Fb` and `Fp` below: each is set for the box it is shown for
-  // (`Qtc` sealed, `slotW` slot, `Fb` vented or radiator, `Fp` radiator)
+  const slotWidthNote =
+    speakerSystem.kind === "vented" && speakerSystem.slotW != null
+      ? ` (${speakerSystem.slotW.toFixed(1)}″ wide)`
+      : "";
   const warningChips = hifiChips(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig);
   // the seat, relative to each speaker (left at -spacing/2, toed in toward the middle)
   const listenerGeometryFor = (sign: -1 | 1) => {
@@ -573,17 +575,17 @@ export function HifiPage({ hifi }: Props) {
               w={woofer}
               t={tweeterWithWaveguide}
               lay={speakerSystem.lay}
-              vented={speakerSystem.vented}
+              vented={speakerSystem.kind === "vented"}
               port={portSpec}
-              pr={speakerSystem.radiator ? radiator : null}
+              pr={speakerSystem.kind === "radiator" ? radiator : null}
               guide={waveguideSpec}
             />
           </div>
           <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
             {tile("Net volume", speakerSystem.net.toFixed(1), "L")}
-            {speakerSystem.Fb != null
-              ? tile("Tuning Fb", speakerSystem.Fb.toFixed(0), "Hz")
-              : tile("Qtc", speakerSystem.Qtc!.toFixed(2), "")}
+            {speakerSystem.kind === "sealed"
+              ? tile("Qtc", speakerSystem.Qtc.toFixed(2), "")
+              : tile("Tuning Fb", speakerSystem.Fb.toFixed(0), "Hz")}
             {tile("F3 in room", speakerSystem.f3.toFixed(0), "Hz")}
             {tile("Max at the seat", maxLevelAtSeatDb.toFixed(0), "dB")}
             {tile("Weight", speakerSystem.lb.toFixed(0), "lb")}
@@ -882,7 +884,7 @@ export function HifiPage({ hifi }: Props) {
             <>
               {portSpec.shape === "slot" ? (
                 <Slider
-                  label={`Slot height (${speakerSystem.slotW!.toFixed(1)}″ wide)`}
+                  label={`Slot height${slotWidthNote}`}
                   value={portSpec.h || 1}
                   min={0.5}
                   max={3}
@@ -940,10 +942,10 @@ export function HifiPage({ hifi }: Props) {
           )}
           <div className="text-xs text-stone-500">
             {speakerSystem.gross.toFixed(1)} L gross
-            {speakerSystem.vented
-              ? `, ${speakerSystem.pArea.toFixed(1)} in² of ${speakerSystem.slot ? "slot" : "port"}`
-              : speakerSystem.radiator
-                ? `; radiators on the back tune it to ${speakerSystem.Fb!.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp!.toFixed(0)} Hz (their own resonance)${radiatorDriver.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}`
+            {speakerSystem.kind === "vented"
+              ? `, ${speakerSystem.pArea.toFixed(1)} in² of ${speakerSystem.slotW != null ? "slot" : "port"}`
+              : speakerSystem.kind === "radiator"
+                ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their own resonance)${radiatorDriver.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}`
                 : ", lightly stuffed"}
             .
           </div>
