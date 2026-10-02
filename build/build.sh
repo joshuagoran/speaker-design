@@ -10,7 +10,7 @@ VP=node_modules/.bin/vp
 "$VP" build --mode artifact --outDir dist/build-artifact --emptyOutDir --logLevel warn
 node build/inline.mjs dist/build-artifact dist/stack-planner.html
 if [ "$1" = "pages" ]; then
-  "$VP" build --mode pages --outDir dist/build-pages --emptyOutDir --logLevel warn
+  SPEAKNOW_SPLIT_FIREBASE=1 "$VP" build --mode pages --outDir dist/build-pages --emptyOutDir --logLevel warn
   node build/inline.mjs dist/build-pages dist/site/index.html
   cp data/configs-seed.json dist/site/
   touch dist/site/.nojekyll

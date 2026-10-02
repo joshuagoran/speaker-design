@@ -10,7 +10,7 @@ const fail = (msg) => {
   console.error(`inline.mjs: ${msg}`);
   process.exit(1);
 };
-const read = (url) => fs.readFileSync(path.join(dir, url.replace(/^\//, "")), "utf8");
+const read = (url) => fs.readFileSync(path.join(dir, url.replace(/^\.?\//, "")), "utf8");
 
 const scripts = [...html.matchAll(/<script type="module" crossorigin src="([^"]+)"><\/script>/g)];
 const styles = [...html.matchAll(/<link rel="stylesheet" crossorigin href="([^"]+)">/g)];
@@ -35,4 +35,20 @@ if (external) fail(`external resources remain: ${external.join(", ")}`);
 if (!html.includes('name="viewport"')) fail("viewport meta missing");
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, html);
-console.log(`built ${out} (${(html.length / 1024).toFixed(0)} kB)`);
+// chunks loaded on demand (the Pages build's Firebase) stay as files beside the page
+const entry = path.normalize(scripts[0][1].replace(/^\.?\//, ""));
+const extra = fs
+  .readdirSync(dir, { recursive: true })
+  .map(String)
+  .filter((f) => f.endsWith(".js") && path.normalize(f) !== entry);
+for (const f of extra) {
+  fs.mkdirSync(path.dirname(path.join(path.dirname(out), f)), { recursive: true });
+  fs.copyFileSync(path.join(dir, f), path.join(path.dirname(out), f));
+}
+const kb = (n) => `${(n / 1024).toFixed(0)} kB`;
+console.log(
+  `built ${out} (${kb(html.length)})` +
+    (extra.length
+      ? ` + on demand: ${extra.map((f) => `${f} (${kb(fs.statSync(path.join(dir, f)).size)})`).join(", ")}`
+      : ""),
+);

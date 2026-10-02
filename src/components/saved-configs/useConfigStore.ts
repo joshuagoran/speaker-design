@@ -6,35 +6,72 @@ import type { FirebaseStore } from "./firebaseStore";
 /** The GitHub Pages build is `vp build --mode pages`; only that build bundles Firebase (see firebaseStore.ts). */
 const PAGES_BUILD = import.meta.env.MODE === "pages";
 
+/** Whether this browser signed in before: then Firebase loads at startup to restore the session. */
+const SIGNED_IN_KEY = "speaknow.firebase.signedIn";
+const wasSignedIn = () => {
+  try {
+    return localStorage.getItem(SIGNED_IN_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+const rememberSignedIn = (yes: boolean) => {
+  try {
+    if (yes) localStorage.setItem(SIGNED_IN_KEY, "1");
+    else localStorage.removeItem(SIGNED_IN_KEY);
+  } catch {
+    // storage unavailable (private mode): Firebase then loads on the next sign-in click instead
+  }
+};
+
+/** What the UI holds before Firebase is fetched: the same sign-in calls, plus a prefetch for the sign-in button. */
+export interface FirebaseLoader {
+  prefetch: () => void;
+  signIn: () => Promise<unknown>;
+  signOut: () => Promise<unknown>;
+}
+
 /** Saved configurations: the claude.ai artifact's database, or Firebase when the page is hosted on GitHub Pages */
 export function useConfigStore(collection: string) {
   const [db, setDb] = useState<ConfigDb | null>(null);
   const [saved, setSaved] = useState<SavedConfig[] | null>(null); // null = still loading
-  const [fb, setFb] = useState<FirebaseStore | null>(null);
+  const [fb, setFb] = useState<FirebaseLoader | null>(null);
   const [fbUser, setFbUser] = useState<User | null>(null);
   const [cfgMsg, setCfgMsg] = useState("");
   useEffect(() => {
     let live = true;
     if (PAGES_BUILD && !(window.claude && window.claude.use)) {
+      // Firebase is a separate file, fetched on demand: at startup only for someone who signed in before (to restore the
+      // session), otherwise when they head for the sign-in button. Until then `fb` is a stand-in with the same calls.
       let un: (() => void) | null = null;
-      import("./firebaseStore")
-        .then(({ createFirebase }) => {
-          if (!live) return;
+      let loading: Promise<FirebaseStore> | null = null;
+      const load = () =>
+        (loading ??= import("./firebaseStore").then(({ createFirebase }) => {
           const f = createFirebase();
-          setFb(f);
-          un = f.onAuth((u) => {
-            if (!live) return;
-            setFbUser(u);
-            if (u) setDb(f.userDb(u.uid));
-            else {
-              setDb(null);
-              setSaved([]);
-            }
-          });
-        })
-        .catch(() => {
+          if (live) {
+            un = f.onAuth((u) => {
+              if (!live) return;
+              setFbUser(u);
+              rememberSignedIn(!!u);
+              if (u) setDb(f.userDb(u.uid));
+              else {
+                setDb(null);
+                setSaved([]);
+              }
+            });
+          }
+          return f;
+        }));
+      setFb({
+        prefetch: () => void load().catch(() => {}),
+        signIn: () => load().then((f) => f.signIn()),
+        signOut: () => load().then((f) => f.signOut()),
+      });
+      if (wasSignedIn())
+        load().catch(() => {
           if (live) setSaved([]);
         });
+      else setSaved([]);
       return () => {
         live = false;
         if (un) un();
@@ -83,7 +120,7 @@ export function useConfigStore(collection: string) {
     setCfgMsg(m);
     setTimeout(() => setCfgMsg(""), 2500);
   };
-  // the sign-in buttons only show once Firebase has loaded; until then there is nothing to do
+  // `fb` is the loader stand-in on the Pages build (it fetches Firebase on demand) and null elsewhere
   const signIn = async () => {
     if (!fb) return;
     try {
