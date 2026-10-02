@@ -12,24 +12,48 @@ import {
   rectangleEndCorrection,
   ductEndCorrection2D,
 } from "../pa/calc.js";
+import type {
+  Dims3,
+  DriverLayout,
+  FrequencyPoint,
+  HifiChip,
+  HifiConfig,
+  HifiDispersionMap,
+  HifiPlacement,
+  HifiPort,
+  HifiSystem,
+  HifiTweeter,
+  HifiWoofer,
+  HifiWooferTS,
+  ListenerGeometry,
+  PanelMaterial,
+  PassiveRadiator,
+  PassiveRadiatorChoice,
+  WooferMaxPoint,
+  WooferPoint,
+} from "../../types.ts";
 
 const C = 343,
   IN = 0.0254;
 
 // ---- small complex helpers (local: the crossover sum needs phase) ----
-const cm = (re, im = 0) => ({ re, im });
-const cmul = (a, b) => cm(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
-const cadd = (a, b) => cm(a.re + b.re, a.im + b.im);
-const cdiv = (a, b) => {
+export interface Complex {
+  re: number;
+  im: number;
+}
+const cm = (re: number, im = 0): Complex => ({ re, im });
+const cmul = (a: Complex, b: Complex) => cm(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
+const cadd = (a: Complex, b: Complex) => cm(a.re + b.re, a.im + b.im);
+const cdiv = (a: Complex, b: Complex) => {
   const d = b.re * b.re + b.im * b.im;
   return cm((a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d);
 };
-const cabs = (a) => Math.hypot(a.re, a.im);
-const cexp = (ph) => cm(Math.cos(ph), Math.sin(ph));
+const cabs = (a: Complex) => Math.hypot(a.re, a.im);
+const cexp = (ph: number) => cm(Math.cos(ph), Math.sin(ph));
 
 // Linkwitz-Riley low/high pass as complex transfer functions: LR(2n) = Butterworth(n) squared.
 // order 4 (24 dB/oct) or 8 (48 dB/oct). The pair sums flat in magnitude and in phase.
-function butter(s, n) {
+function butter(s: Complex, n: number) {
   // normalised Butterworth denominator for n = 2 or 4
   if (n === 2) return cadd(cadd(cmul(s, s), cmul(cm(Math.SQRT2), s)), cm(1));
   const q1 = 2 * Math.cos((3 * Math.PI) / 8),
@@ -38,7 +62,12 @@ function butter(s, n) {
     b = cadd(cadd(cmul(s, s), cmul(cm(q2), s)), cm(1));
   return cmul(a, b);
 }
-export function linkwitzRileyFilter(f, fc, order = 4, kind = "lp") {
+export function linkwitzRileyFilter(
+  f: number,
+  fc: number,
+  order = 4,
+  kind: "lp" | "hp" = "lp",
+): Complex {
   const s = cm(0, f / fc),
     n = order / 2,
     d = butter(s, n),
@@ -50,26 +79,26 @@ export function linkwitzRileyFilter(f, fc, order = 4, kind = "lp") {
 }
 
 // ---- baffle step, placement, compensation (all magnitude shelves) ----
-export const baffleStepF3 = (baffleWIn) => 115 / (baffleWIn * IN); // −3 dB point, Hz
+export const baffleStepF3 = (baffleWIn: number) => 115 / (baffleWIn * IN); // −3 dB point, Hz
 // 0 dB well above f3, −6 dB well below (radiation from half space to full space)
-export function baffleStepGain(f, baffleWIn) {
+export function baffleStepGain(f: number, baffleWIn: number) {
   const x = (0.707 * f) / baffleStepF3(baffleWIn);
   return 0.5 * Math.sqrt((1 + 4 * x * x) / (1 + x * x));
 }
 // DSP compensation: a low shelf of `db` at the same corner (costs that much headroom at low frequencies)
-export function baffleStepCompensation(f, baffleWIn, db) {
+export function baffleStepCompensation(f: number, baffleWIn: number, db: number) {
   if (!db) return 1;
   const B = Math.pow(10, db / 20),
     x = (0.707 * f) / baffleStepF3(baffleWIn);
   return Math.sqrt((B * B + x * x) / (1 + x * x));
 }
-export const SPEAKER_PLACEMENTS = {
+export const SPEAKER_PLACEMENTS: Record<HifiPlacement, { name: string; db: number }> = {
   free: { name: "Free-standing", db: 0 },
   wall: { name: "Wall", db: 3 },
   corner: { name: "Corner", db: 6 },
 };
 // boundary reinforcement below ~ c / (4 · distance to the wall)
-export function boundaryGain(f, place, wallM) {
+export function boundaryGain(f: number, place: HifiPlacement, wallM: number) {
   const db = (SPEAKER_PLACEMENTS[place] || SPEAKER_PLACEMENTS.free).db;
   if (!db) return 1;
   const G = Math.pow(10, db / 20),
@@ -79,7 +108,7 @@ export function boundaryGain(f, place, wallM) {
 
 // ---- directivity ----
 // Bessel J1 (Numerical Recipes rational approximation)
-function j1(x) {
+function j1(x: number) {
   const ax = Math.abs(x);
   if (ax < 8) {
     const y = x * x;
@@ -106,12 +135,20 @@ function j1(x) {
   return x < 0 ? -v : v;
 }
 // rigid piston of radius a (m) in a baffle, off-axis by theta (rad): 2·J1(x)/x, x = ka·sin θ
-export function pistonDirectivity(f, a, theta) {
+export function pistonDirectivity(f: number, a: number, theta: number) {
   const x = ((2 * Math.PI * f) / C) * a * Math.sin(Math.min(Math.abs(theta), Math.PI / 2));
   return x < 1e-6 ? 1 : Math.abs((2 * j1(x)) / x);
 }
 // waveguide: constant coverage (−6 dB at the edges) above the mouth's control frequency, wider below it
-export function waveguideDirectivity(f, covH, covV, mouthWIn, mouthHIn, th, tv) {
+export function waveguideDirectivity(
+  f: number,
+  covH: number,
+  covV: number,
+  mouthWIn: number,
+  mouthHIn: number,
+  th: number,
+  tv: number,
+) {
   const fh = keeleFrequency(covH, mouthWIn),
     fv = covV && mouthHIn ? keeleFrequency(covV, mouthHIn) : fh;
   const bh = Math.min(180, f >= fh ? covH : (covH * fh) / f),
@@ -124,49 +161,67 @@ export function waveguideDirectivity(f, covH, covV, mouthWIn, mouthHIn, th, tv) 
 }
 
 // ---- box ----
+/** The fields the port length reads: a round port's `dia` and `elbows`, or a slot's `h`. */
+export interface PortGeometry {
+  shape?: "round" | "slot";
+  dia?: number;
+  elbows?: number;
+  h?: number;
+}
 // longest port (centerline, inches) that fits: straight front to back; one elbow turns it up (or down) the back wall,
 // using at most half the inner height so it stays clear of the woofer; two elbows fold it back along the bottom or top
-export function portMaxLength(dim, wall, port) {
+export function portMaxLength(dim: Dims3, wall: number, port: PortGeometry) {
   if (port.shape === "slot") return slotMaxLength(dim, wall, port);
   const D = dim.d - 2 * wall,
     H = dim.h - 2 * wall,
-    dia = port.dia,
+    dia = port.dia!,
     e = port.elbows || 0;
   const straight = D - dia / 2 - 1;
   if (e === 0) return straight;
   const up = H / 2 - dia;
   return e === 1 ? D - dia - 1 + Math.max(0, up) : 2 * (D - dia - 1) + Math.max(0, up);
 }
-export const grossVolumeLiters = (d, t) =>
+export const grossVolumeLiters = (d: Dims3, t: number) =>
   (Math.max(0, (d.w - 2 * t) * (d.h - 2 * t) * (d.d - 2 * t)) * 16.387) / 1e3;
-export const portArea = (p) =>
-  p.shape === "slot" ? p.h * p.w : p.n * Math.PI * Math.pow(p.dia / 2, 2);
+export const portArea = (p: HifiPort) =>
+  p.shape === "slot" ? p.h * p.w! : p.n * Math.PI * Math.pow(p.dia / 2, 2);
 // Slot vent: a full-width letterbox along the bottom of the baffle, formed by a shelf, running straight back.
 // Outer end flanged by the baffle; inner end opens into the box (height X, back wall L behind the mouth).
-export const slotWidth = (dim, wall) => dim.w - 2 * wall;
-export function hifiSlotEndCorrection(dim, wall, port) {
+export const slotWidth = (dim: Dims3, wall: number) => dim.w - 2 * wall;
+export function hifiSlotEndCorrection(
+  dim: Dims3,
+  wall: number,
+  port: { shape?: "round" | "slot"; h?: number; w?: number; len: number },
+) {
   const X = dim.h - 2 * wall - wall,
     L = dim.d - 2 * wall - port.len;
   return rectangleEndCorrection(port.h, port.w) + (0.61 / 0.85) * ductEndCorrection2D(port.h, X, L);
 }
-export const slotMaxLength = (dim, wall, port) => dim.d - 2 * wall - Math.max(port.h, 1); // leave the mouth's height behind it
-const MDF_LB = { 0.75: 3.4, 0.5: 2.3 };
-export const panelWeightLb = (t, mat) => (mat === "mdf" ? (MDF_LB[t] ?? 3.4) : plywoodLbPerSqFt(t));
-export function boxWeightLb(d, t, mat) {
+export const slotMaxLength = (dim: Dims3, wall: number, port: PortGeometry) =>
+  dim.d - 2 * wall - Math.max(port.h!, 1); // leave the mouth's height behind it
+const MDF_LB: Partial<Record<number, number>> = { 0.75: 3.4, 0.5: 2.3 };
+export const panelWeightLb = (t: number, mat: PanelMaterial | undefined) =>
+  mat === "mdf" ? (MDF_LB[t] ?? 3.4) : plywoodLbPerSqFt(t);
+export function boxWeightLb(d: Dims3, t: number, mat: PanelMaterial | undefined) {
   const ft2 = (2 * (d.w * d.h + d.w * d.d + d.h * d.d)) / 144;
   return ft2 * panelWeightLb(t, mat);
 }
 // where the drivers sit (inches from the box bottom): tweeter near the top, woofer just below it;
 // a freestanding waveguide sits on the box top, so the woofer moves up to the top of the baffle
-export function driverLayout(w, t, d, onTop) {
+export function driverLayout(
+  w: HifiWoofer,
+  t: HifiTweeter,
+  d: Dims3,
+  onTop: boolean,
+): DriverLayout {
   const face = t.faceplate || { w: 4, h: 4 };
   if (onTop) {
-    const th = d.h + face.h / 2,
+    const th = d.h + face.h! / 2,
       wh = d.h - 1 - w.size / 2;
     return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh, onTop: true };
   }
-  const th = d.h - 1 - face.h / 2;
-  const wh = th - face.h / 2 - 0.5 - w.size / 2;
+  const th = d.h - 1 - face.h! / 2;
+  const wh = th - face.h! / 2 - 0.5 - w.size / 2;
   return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh };
 }
 
@@ -175,7 +230,7 @@ export function driverLayout(w, t, d, onTop) {
 // suspension compliance and its losses, n radiators in parallel. Box tuning Fb (where the cone barely moves):
 // the radiator mass against the box and suspension stiffness together; the radiator's own resonance Fp, below
 // Fb, puts a notch in the output. pr: { drv, n, addG }.
-export function passiveRadiatorTuning(drv, n, addG, VbL) {
+export function passiveRadiatorTuning(drv: PassiveRadiator, n: number, addG: number, VbL: number) {
   const rho = 1.18,
     c = 343,
     Sp = drv.Sd / 1e4;
@@ -191,36 +246,49 @@ export function passiveRadiatorTuning(drv, n, addG, VbL) {
   };
 }
 // radiators go on the back panel, stacked; each needs its size plus a little frame margin
-export const passiveRadiatorShape = (drv) => drv.shape || { w: drv.size, h: drv.size };
-export const passiveRadiatorFits = (dim, wall, pr) => {
+export const passiveRadiatorShape = (drv: PassiveRadiator) =>
+  drv.shape || { w: drv.size, h: drv.size };
+export const passiveRadiatorFits = (
+  dim: Dims3,
+  wall: number,
+  pr: Pick<PassiveRadiatorChoice, "drv" | "n">,
+) => {
   const s = passiveRadiatorShape(pr.drv);
   return dim.w - 2 * wall >= s.w + 0.3 && dim.h - 2 * wall >= pr.n * (s.h + 0.5);
 };
 // added mass (g, 5 g steps, ≥ 0) that tunes the box to Fb; null if Fb is above the radiator's as-shipped tuning
-export function passiveRadiatorMassFor(drv, n, VbL, Fb) {
+export function passiveRadiatorMassFor(drv: PassiveRadiator, n: number, VbL: number, Fb: number) {
   const { Cap, Cab } = passiveRadiatorTuning(drv, n, 0, VbL),
     Sp = drv.Sd / 1e4;
   const Map = (1 / Cap + 1 / Cab) / Math.pow(2 * Math.PI * Fb, 2);
   const g = Map * n * Sp * Sp * 1000 - drv.Mms;
   return g < -2.5 ? null : Math.max(0, Math.round(g / 5) * 5);
 }
-export function passiveRadiatorBox(ts, VbL, pr, hpf, volts, hpType = "BW24", opts = {}) {
+export function passiveRadiatorBox(
+  ts: HifiWooferTS,
+  VbL: number,
+  pr: Pick<PassiveRadiatorChoice, "drv" | "n" | "addG">,
+  hpf: number,
+  volts: number,
+  hpType = "BW24",
+  opts: { QL?: number; N?: number; fmin?: number; fmax?: number } = {},
+) {
   const { QL = 7, N = 420, fmin = 12, fmax = 300 } = opts;
   const { drv, n } = pr;
   if (!ts || !VbL || !drv || !n) return null;
   const rho = 1.18,
     Sd = ts.Sd / 1e4,
-    Mms = ts.Mms / 1000;
+    Mms = ts.Mms! / 1000;
   const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
   const Mas = Mms / (Sd * Sd),
     Cas = Cms * Sd * Sd;
   const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
-  const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
+  const Rae = (ts.Bl * ts.Bl) / ts.Re! / (Sd * Sd);
   const { Map, Cap, Cab, Fb, Fp } = passiveRadiatorTuning(drv, n, pr.addG, VbL);
   const Sp = drv.Sd / 1e4;
   const Rap = (2 * Math.PI * drv.Fs * (drv.Mms / 1000)) / (drv.Qms || 5) / (Sp * Sp) / n;
   const Ral = QL / (2 * Math.PI * Fb * Cab);
-  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
+  const Pg = (volts * ts.Bl) / (ts.Re! * Sd);
   const out = [];
   for (let i = 0; i < N; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
@@ -243,15 +311,21 @@ export function passiveRadiatorBox(ts, VbL, pr, hpf, volts, hpType = "BW24", opt
       prx: Math.SQRT2 * (cabs(Up) / (w * Sp * n)) * hp * 1000,
     });
   }
-  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
+  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re! * Mms) / 2e-5);
   const f3 = (out.find((o) => o.raw >= ref - 3) || out[out.length - 1]).f;
   return { curve: out, Fb, Fp, f3, ref };
 }
 
 // ---- the whole speaker ----
+/** What the box models return that `hifiSystem` reads: a response curve and its F3 and level reference. */
+interface BoxModel {
+  curve: { f: number; spl: number; xmm: number; vel?: number; prx?: number }[];
+  f3: number;
+  ref: number;
+}
 // cfg: { box: "sealed"|"vented"|"radiator", pr: { drv, n, addG } (radiator), dim: {w,h,d} (in), wall (in), mat, port: {n, dia, len} (in), xo (Hz), order (4|8),
 //        wAmpW, tAmpW, bsc (dB), place, wallFt, portMax (m/s), hpf (Hz, optional subsonic for vented), guide (waveguide or null) }
-export function hifiSystem(w, t, cfg) {
+export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): HifiSystem | null {
   const ts = w.ts,
     dim = cfg.dim,
     wall = cfg.wall || 0.75;
@@ -263,7 +337,7 @@ export function hifiSystem(w, t, cfg) {
   const pA = vented ? portArea(port) : 0;
   // the slot's shelf takes volume too
   const ec = slot ? hifiSlotEndCorrection(dim, wall, port) : undefined;
-  const pVol = vented ? ((pA + (slot ? wall * port.w : 0)) * port.len * 16.387) / 1e3 : 0;
+  const pVol = vented ? ((pA + (slot ? wall * port.w! : 0)) * port.len * 16.387) / 1e3 : 0;
   const disp = ts.disp != null ? ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6);
   const net = Math.max(1, gross * 0.97 - disp - pVol); // 3% for bracing and damping
   const V = ampVoltage(cfg.wAmpW),
@@ -284,16 +358,16 @@ export function hifiSystem(w, t, cfg) {
     : null;
   const rM = radiator ? passiveRadiatorBox(ts, net, cfg.pr, hpf || 1, V, "BW24", opts) : null;
   const sM = vented || radiator ? null : closedBox(ts, net * 1.1, hpf || null, null, V, opts); // lightly stuffed
-  const m = vM || rM || sM;
+  const m: BoxModel | null = vM || rM || sM;
   if (!m) return null;
   const bw = dim.w,
     place = cfg.place || "free",
     wallM = (cfg.wallFt || 2) * 0.3048;
-  const shelf = (f) => baffleStepGain(f, bw) * boundaryGain(f, place, wallM);
-  const eq = (f) => baffleStepCompensation(f, bw, cfg.bsc || 0);
+  const shelf = (f: number) => baffleStepGain(f, bw) * boundaryGain(f, place, wallM);
+  const eq = (f: number) => baffleStepCompensation(f, bw, cfg.bsc || 0);
 
   // on-axis woofer response (small signal at the amp voltage) with baffle step, placement, EQ and the low-pass
-  const woofer = m.curve.map((o) => {
+  const woofer: WooferPoint[] = m.curve.map((o) => {
     const e = eq(o.f),
       g = shelf(o.f) * e,
       lp = cabs(linkwitzRileyFilter(o.f, xo, order, "lp"));
@@ -311,14 +385,14 @@ export function hifiSystem(w, t, cfg) {
   // per-frequency limits of the woofer with the EQ in the signal (the boosted drive can't pass the amp or the coil rating)
   const vT = thermalVoltageLimit(ts.aes || 100),
     portMax = cfg.portMax || 17;
-  const wMax = woofer.map((o, i) => {
+  const wMax: WooferMaxPoint[] = woofer.map((o, i) => {
     const { e, lp } = o;
     const drive = V * e * lp; // volts at the terminals for full-scale input
     const sAmp = V / Math.max(1e-9, V * e),
       sTh = vT / Math.max(1e-9, drive),
       sX = ts.Xmax / Math.max(1e-9, o.xmm);
     const sP = o.vel ? portMax / o.vel : Infinity,
-      sR = o.prx ? cfg.pr.drv.Xmax / o.prx : Infinity;
+      sR = o.prx ? cfg.pr!.drv.Xmax / o.prx : Infinity;
     const s = Math.min(sAmp, sTh, sX, sP, sR);
     return {
       f: o.f,
@@ -342,7 +416,7 @@ export function hifiSystem(w, t, cfg) {
     whoW = band.reduce((a, o) => (o.s < a.s ? o : a)).who;
 
   // tweeter: sensitivity and power, derated below the frequency its rating assumes, then the high-pass
-  const hf = t.hf || {};
+  const hf: Partial<HifiTweeter["hf"]> = t.hf || {};
   const imp = hf.imp || 8,
     tV = ampVoltage(cfg.tAmpW || 50);
   const pAmp = ((cfg.tAmpW || 50) * 8) / imp;
@@ -354,7 +428,7 @@ export function hifiSystem(w, t, cfg) {
   const refW = m.ref - 20 * Math.log10(V / 2.83);
   const tSens283 = tSens + 10 * Math.log10(8 / imp);
   const trim = refW - tSens283; // dB applied to the tweeter in the DSP (usually negative)
-  const tweeterAt = (f, volts) =>
+  const tweeterAt = (f: number, volts: number) =>
     tSens283 +
     20 * Math.log10(volts / 2.83) +
     20 * Math.log10(cabs(linkwitzRileyFilter(f, xo, order, "hp")));
@@ -403,11 +477,11 @@ export function hifiSystem(w, t, cfg) {
     pArea: pA,
     vented,
     slot,
-    slotW: slot ? port.w : null,
+    slotW: slot ? port.w! : null,
     radiator,
     Fb: vM ? vM.Fb : rM ? rM.Fb : null,
     Fp: rM ? rM.Fp : null,
-    prFits: !radiator || passiveRadiatorFits(dim, wall, cfg.pr),
+    prFits: !radiator || passiveRadiatorFits(dim, wall, cfg.pr!),
     Qtc: sM ? sM.Qtc : null,
     f3Box: m.f3,
     ref,
@@ -443,13 +517,20 @@ export function hifiSystem(w, t, cfg) {
 // Response of one speaker at a point, relative to its on-axis response at 1 m; the DSP is time-aligned on the
 // tweeter axis at the listening distance. Returns [{ f, spl }] at 2.83 V-equivalent level (1 m on-axis scale).
 // geo: { th (rad, horizontal off-axis), eyeIn (ear height above the box bottom, in), distM }
-export function hifiResponseAt(sys, w, t, cfg, geo, freqs = logSpacedFrequencies(60, 20000, 160)) {
+export function hifiResponseAt(
+  sys: HifiSystem,
+  w: HifiWoofer,
+  t: HifiTweeter,
+  cfg: HifiConfig,
+  geo: ListenerGeometry,
+  freqs = logSpacedFrequencies(60, 20000, 160),
+): FrequencyPoint[] {
   const xo = cfg.xo,
     order = cfg.order || 4,
     a = Math.sqrt(w.ts.Sd / 1e4 / Math.PI);
   const dome = ((t.domeIn || 1) * IN) / 2;
   const dist = geo.distM,
-    dz = (h) => (geo.eyeIn - h) * IN;
+    dz = (h: number) => (geo.eyeIn - h) * IN;
   const rW = Math.hypot(dist, dz(sys.lay.wooferIn)),
     rT = Math.hypot(dist, dz(sys.lay.tweeterIn));
   const r0W = Math.hypot(dist, (sys.lay.tweeterIn - sys.lay.wooferIn) * IN),
@@ -458,7 +539,7 @@ export function hifiResponseAt(sys, w, t, cfg, geo, freqs = logSpacedFrequencies
     tvT = Math.atan2(dz(sys.lay.tweeterIn), dist);
   const offW = Math.acos(Math.cos(geo.th) * Math.cos(tvW)),
     offT = Math.acos(Math.cos(geo.th) * Math.cos(tvT));
-  const wAt = (f) => {
+  const wAt = (f: number) => {
     const o = nearestF(sys.woofer, f);
     return Math.pow(10, (o.raw - 20 * Math.log10(sys.V / 2.83)) / 20);
   };
@@ -489,9 +570,9 @@ export function hifiResponseAt(sys, w, t, cfg, geo, freqs = logSpacedFrequencies
     return { f, spl: 20 * Math.log10(Math.max(1e-9, cabs(cadd(pw, pt)))) };
   });
 }
-export const logSpacedFrequencies = (a, b, n) =>
+export const logSpacedFrequencies = (a: number, b: number, n: number) =>
   Array.from({ length: n }, (_, i) => a * Math.pow(b / a, i / (n - 1)));
-const nearestF = (curve, f) => {
+const nearestF = (curve: WooferPoint[], f: number) => {
   let lo = 0,
     hi = curve.length - 1;
   if (f <= curve[0].f) return curve[0];
@@ -506,7 +587,14 @@ const nearestF = (curve, f) => {
 
 // Dispersion map: level vs angle and frequency, normalised to on-axis. plane "h" (horizontal, at the tweeter
 // height) or "v" (vertical, from below to above the tweeter axis). Returns { angles, freqs, rows: [[dB]] }.
-export function hifiDispersionMap(sys, w, t, cfg, plane = "h", distM = 2) {
+export function hifiDispersionMap(
+  sys: HifiSystem,
+  w: HifiWoofer,
+  t: HifiTweeter,
+  cfg: HifiConfig,
+  plane: "h" | "v" = "h",
+  distM = 2,
+): HifiDispersionMap {
   const freqs = logSpacedFrequencies(100, 20000, 72);
   const angles =
     plane === "h"
@@ -526,10 +614,15 @@ export function hifiDispersionMap(sys, w, t, cfg, plane = "h", distM = 2) {
 }
 
 // ---- checks ----
-export function hifiChips(sys, w, t, cfg) {
-  const F = [],
+export function hifiChips(
+  sys: HifiSystem,
+  w: HifiWoofer,
+  t: HifiTweeter,
+  cfg: HifiConfig,
+): HifiChip[] {
+  const F: HifiChip[] = [],
     xo = cfg.xo,
-    hf = t.hf || {};
+    hf: Partial<HifiTweeter["hf"]> = t.hf || {};
   const a = Math.sqrt(w.ts.Sd / 1e4 / Math.PI),
     ka = ((2 * Math.PI * xo) / C) * a;
   const beam = ka <= 2.2 ? 180 : (2 * Math.asin(2.2 / ka) * 180) / Math.PI;
@@ -594,7 +687,7 @@ export function hifiChips(sys, w, t, cfg) {
     ]);
   }
   if (sys.radiator) {
-    const p = cfg.pr,
+    const p = cfg.pr!,
       vdW = w.ts.Sd * w.ts.Xmax,
       vdP = p.n * p.drv.Sd * p.drv.Xmax,
       k = vdP / vdW;
@@ -627,7 +720,7 @@ export function hifiChips(sys, w, t, cfg) {
       "Woofer won't fit",
       `A ${w.size}″ woofer needs about ${need.toFixed(1)}″ of baffle width.`,
     ]);
-  const floor = sys.slot ? cfg.port.h + (cfg.wall || 0.75) : 0; // the slot and its shelf along the bottom
+  const floor = sys.slot ? cfg.port.h! + (cfg.wall || 0.75) : 0; // the slot and its shelf along the bottom
   if (sys.lay.wooferIn - w.size / 2 < 0.5 + floor)
     F.push([
       "bad",

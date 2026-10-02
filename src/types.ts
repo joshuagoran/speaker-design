@@ -324,3 +324,291 @@ export interface RadiatorSelection {
 }
 
 export type HifiBoxKind = "sealed" | "vented" | "radiator";
+
+// ---- Hi-fi design (lib/hifi) ----
+
+export type HifiPlacement = "free" | "wall" | "corner";
+export type PanelMaterial = "ply" | "mdf";
+/** Linkwitz-Riley crossover order: 4 is 24 dB/oct, 8 is 48 dB/oct. */
+export type CrossoverOrder = 4 | 8;
+
+/**
+ * A round port. `n` is the number of equal openings, `dia` and `len` are in inches, `elbows` is how many bends it
+ * takes to fit. The `?: undefined` fields are the slot's, so the two port kinds can be told apart by `shape` and read
+ * without narrowing.
+ */
+export interface RoundPort {
+  shape?: "round";
+  n: number;
+  dia: number;
+  len: number;
+  elbows?: number;
+  h?: undefined;
+  w?: undefined;
+}
+
+/** A full-width slot along the bottom of the baffle: height `h`, length `len`, in inches; `w` is set by `hifiSystem`. */
+export interface SlotPort {
+  shape: "slot";
+  n: number;
+  h: number;
+  w?: number;
+  len: number;
+  dia?: undefined;
+  elbows?: undefined;
+}
+
+export type HifiPort = RoundPort | SlotPort;
+
+/** The passive radiators in use: the driver itself, how many, and the added mass on each in grams. */
+export interface PassiveRadiatorChoice {
+  drv: PassiveRadiator;
+  n: number;
+  addG: number;
+}
+
+/** A waveguide's coverage in degrees and mouth size in inches; `freestanding` sits it on the box top. */
+export interface WaveguideSpec {
+  name: string;
+  covH: number;
+  covV: number;
+  w: number;
+  h: number;
+  freestanding: boolean;
+}
+
+/** The Hi-fi design the model works on (the Hi-fi page's state, with the units the lib uses: inches, Hz, watts, dB). */
+export interface HifiConfig {
+  box: HifiBoxKind;
+  /** the passive radiators (used when `box` is "radiator") */
+  readonly pr?: PassiveRadiatorChoice;
+  dim: Dims3;
+  /** panel thickness in inches; 0.75 when absent */
+  wall?: number;
+  mat?: PanelMaterial;
+  /** the port (used when `box` is "vented") */
+  readonly port: HifiPort;
+  /** crossover frequency, Hz */
+  xo: number;
+  order?: CrossoverOrder;
+  /** woofer and tweeter amplifier watts */
+  wAmpW: number;
+  tAmpW?: number;
+  /** baffle-step compensation in dB */
+  bsc?: number;
+  place?: HifiPlacement;
+  /** distance to the wall behind in feet */
+  wallFt?: number;
+  /** the port's air speed limit, m/s */
+  portMax?: number;
+  /** subsonic high-pass for a vented or radiator box, Hz; null for none */
+  hpf?: number | null;
+  /** the waveguide, or null for a bare dome */
+  guide?: WaveguideSpec | null;
+  /** extra tweeter sensitivity from the waveguide, dB */
+  guideGain?: number;
+  /** frequency points for the woofer response (240 when absent) */
+  N?: number;
+}
+
+/** Where the drivers sit on the baffle, inches from the box bottom. */
+export interface DriverLayout {
+  tweeterIn: number;
+  wooferIn: number;
+  spacingIn: number;
+  /** the tweeter's waveguide sits on the box top */
+  onTop?: true;
+}
+
+/** What limits the woofer's output at a frequency. */
+export type WooferLimit = "Xmax" | "port" | "radiator" | "thermal" | "amp";
+
+/** The woofer's response at one frequency, with the baffle step, placement, EQ and low-pass applied. */
+export interface WooferPoint {
+  f: number;
+  spl: number;
+  raw: number;
+  xmm: number;
+  vel: number | null;
+  prx: number | null;
+  /** the baffle-step EQ gain and the low-pass gain */
+  e: number;
+  lp: number;
+}
+
+/** How loud the woofer can play at one frequency before something gives out. `s` is the scale from full-scale input. */
+export interface WooferMaxPoint {
+  f: number;
+  spl: number;
+  who: WooferLimit;
+  s: number;
+}
+
+/** The modelled speaker: `hifiSystem`'s result. */
+export interface HifiSystem {
+  gross: number;
+  net: number;
+  disp: number;
+  pVol: number;
+  pArea: number;
+  vented: boolean;
+  slot: boolean;
+  slotW: number | null;
+  radiator: boolean;
+  Fb: number | null;
+  Fp: number | null;
+  prFits: boolean;
+  Qtc: number | null;
+  f3Box: number;
+  ref: number;
+  refW: number;
+  woofer: WooferPoint[];
+  wMax: WooferMaxPoint[];
+  sMusic: number;
+  whoW: WooferLimit;
+  trim: number;
+  tSens: number;
+  tSens283: number;
+  tLevel: number;
+  wLevel: number;
+  maxLevel: number;
+  who: "tweeter" | "woofer";
+  pMax: number;
+  derate: number;
+  lb: number;
+  portFits: boolean;
+  /** the fewest elbows that fit the port; null when it is too long even with two */
+  portElbows: number | null;
+  lay: DriverLayout;
+  f3: number;
+  hpf: number | null;
+  xo: number;
+  order: CrossoverOrder;
+  bsF3: number;
+  /** the tweeter's level at 1 m at `f` Hz for `volts`, through its high-pass */
+  tweeterAt: (f: number, volts: number) => number;
+  peakVel: number | null;
+  V: number;
+}
+
+/** A check on the design: a severity, a short title and a sentence of detail. */
+export type HifiChip = [severity: "ok" | "warn" | "bad", title: string, detail: string];
+
+/** Where the listener is relative to one speaker: horizontal angle off its axis (rad), ear height above the box bottom (in) and distance (m). */
+export interface ListenerGeometry {
+  th: number;
+  eyeIn: number;
+  distM: number;
+}
+
+export interface FrequencyPoint {
+  f: number;
+  spl: number;
+}
+
+/** Level against angle and frequency, relative to on-axis; `rows[angle][frequency]` in dB. */
+export interface HifiDispersionMap {
+  angles: number[];
+  freqs: number[];
+  rows: number[][];
+}
+
+// ---- Hi-fi optimizer (lib/hifi/optimize) ----
+
+export type HifiGoal = "cheaper" | "lighter" | "lower" | "louder";
+
+export type DimensionLockMode = "free" | "exact" | "max";
+
+/** The optimizer locks that are plain on/off switches (a box dimension has its own mode: `dim`). */
+export type HifiLockKey = "woofer" | "tweeter" | "box" | "wall" | "xo" | "wAmpW" | "tAmpW";
+
+/** The optimizer's on/off locks, plus how each box dimension is held. */
+export interface HifiOptimizerLocks extends Partial<Record<HifiLockKey, boolean>> {
+  dim?: Partial<Record<keyof Dims3, DimensionLockMode>>;
+}
+
+/** The design the optimizer starts from: the page's config with the drivers named by id. */
+export interface HifiOptimizerCurrent extends HifiConfig {
+  woofer: string;
+  tweeter: string;
+  tAmpW: number;
+}
+
+export interface HifiOptimizerInput {
+  cur: HifiOptimizerCurrent;
+  woofers: readonly HifiWoofer[];
+  tweeters: readonly HifiTweeter[];
+  passives?: readonly PassiveRadiator[];
+  goals?: readonly HifiGoal[];
+  locks?: HifiOptimizerLocks;
+  /** the most the drivers may cost for a pair, in dollars */
+  budget?: number;
+  /** listening distance, m */
+  seatM?: number;
+  /** the price of a waveguide, for one speaker */
+  guidePrice?: number;
+}
+
+/** What a design is scored on: price for the pair in dollars, weight in lb, in-room F3 in Hz and clean level at the seat in dB. */
+export interface HifiMetrics {
+  gross: number;
+  f3: number;
+  price: number;
+  level: number;
+  lb: number;
+}
+
+/** The fields of a design a card applies (the ones the optimizer searched). */
+export interface HifiCardConfig {
+  woofer: string;
+  tweeter: string;
+  box: HifiBoxKind;
+  dim: Dims3;
+  port: HifiPort;
+  pr: RadiatorSelection | undefined;
+  wall: number;
+  xo: number;
+  wAmpW: number;
+  tAmpW: number;
+}
+
+/** A card's change from the current design. */
+export interface HifiMetricsDelta {
+  price: number;
+  lb: number;
+  level: number;
+  f3: number;
+}
+
+export interface HifiOptimizerCard {
+  label: string;
+  why: string;
+  woofer: string;
+  tweeter: string;
+  config: HifiCardConfig;
+  metrics: HifiMetrics;
+  delta: HifiMetricsDelta | null;
+  warnings: string[];
+  names: { woofer: string; tweeter: string };
+  lay: DriverLayout;
+  /** the tweeter sits on a waveguide (undefined for a tweeter that needs none) */
+  guided: boolean | undefined;
+  /** the tweeter comes with its own waveguide */
+  ownGuide: boolean;
+  /** what differs from the current design: "woofer", "box size", "amp power" ... */
+  changed: string[];
+  /** clean level at the seat as [Hz, dB] points */
+  curve: [number, number][];
+  whoW: WooferLimit;
+}
+
+export interface HifiOptimizerResult {
+  goals: HifiGoal[];
+  cards: HifiOptimizerCard[];
+  stats: { evaluated: number; ms: number; pool?: number };
+  // the fields below are absent when no goal was given
+  cur?: HifiMetrics | null;
+  curProblems?: string[];
+  curCurve?: [number, number][] | null;
+  goalMissing?: string | null;
+}

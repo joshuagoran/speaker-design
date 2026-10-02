@@ -1,6 +1,6 @@
 import * as THREE from "three";
 /** Rounded rectangle outline centred on the origin, as a THREE.Shape. */
-export function roundedRectShape(width, height, radius) {
+export function roundedRectShape(width: number, height: number, radius: number) {
   const x = width / 2,
     y = height / 2,
     shape = new THREE.Shape();
@@ -18,7 +18,13 @@ export function roundedRectShape(width, height, radius) {
 }
 
 /** Rounded rectangle hole outline centred on (centerX, centerY), as a THREE.Path. */
-export function roundedRectPath(centerX, centerY, width, height, radius) {
+export function roundedRectPath(
+  centerX: number,
+  centerY: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
   const x = width / 2,
     y = height / 2,
     cx = centerX,
@@ -38,7 +44,7 @@ export function roundedRectPath(centerX, centerY, width, height, radius) {
 }
 
 /** Circular hole outline centred on (centerX, centerY), as a THREE.Path. */
-export function circlePath(centerX, centerY, radius) {
+export function circlePath(centerX: number, centerY: number, radius: number) {
   const path = new THREE.Path();
   path.absarc(centerX, centerY, radius, 0, Math.PI * 2, true);
   return path;
@@ -48,7 +54,13 @@ export function circlePath(centerX, centerY, radius) {
  * Adds an arch-topped outline to a THREE.Shape: flat bottom at `bottomY`, straight sides up to
  * `archCenterY`, then a semicircle of `radius` across the top.
  */
-export function archOutlinePath(shape, halfWidth, bottomY, archCenterY, radius) {
+export function archOutlinePath(
+  shape: THREE.Shape,
+  halfWidth: number,
+  bottomY: number,
+  archCenterY: number,
+  radius: number,
+) {
   shape.moveTo(-halfWidth, bottomY);
   shape.lineTo(halfWidth, bottomY);
   shape.lineTo(halfWidth, archCenterY);
@@ -61,11 +73,16 @@ export function archOutlinePath(shape, halfWidth, bottomY, archCenterY, radius) 
  * Rectangular horn flare as a mesh geometry: a circular throat of `throatRadius` growing along z over
  * `depth` into a superellipse that squares up toward a `mouthWidth` by `mouthHeight` mouth.
  */
-export function rectangularHornGeometry(mouthWidth, mouthHeight, depth, throatRadius = 0.5) {
+export function rectangularHornGeometry(
+  mouthWidth: number,
+  mouthHeight: number,
+  depth: number,
+  throatRadius = 0.5,
+) {
   const NS = 40,
     NP = 112,
-    pos = [],
-    idx = [];
+    pos: number[] = [],
+    idx: number[] = [];
   for (let i = 0; i <= NS; i++) {
     const t = i / NS,
       g = Math.pow(t, 1.7);
@@ -97,7 +114,7 @@ export function rectangularHornGeometry(mouthWidth, mouthHeight, depth, throatRa
 }
 
 /** Pictogram silhouette of a person, billboarded and semi-transparent, `heightIn` inches tall (standing on y = 0). */
-export function createScaleFigure(heightIn) {
+export function createScaleFigure(heightIn: number) {
   const u = heightIn / 100;
   const figure = new THREE.Group();
   const material = new THREE.MeshBasicMaterial({
