@@ -260,8 +260,30 @@ export function bandOutputDb(
   return lo;
 }
 
+// The numbers evaluateDesign reads from a config. A saved design from an older version can lack some of them, and a missing
+// one would flow through the model as NaN.
+const REQUIRED_NUMBERS = [
+  "hpf",
+  "ampW",
+  "portMax",
+  "wall",
+  "inset",
+  "xoLo",
+  "xoHi",
+  "mAmpW",
+  "tilt",
+  "hfTilt",
+  "hfAmpW",
+] as const satisfies readonly (keyof PaDesignConfig)[];
+const hasDims = (d: Partial<Dims3> | undefined) =>
+  d !== undefined && Number.isFinite(d.w) && Number.isFinite(d.h) && Number.isFinite(d.d);
+
 // ---- the planner's evaluation of a whole config (same functions, same order as the page) ----
+// Null for a design it can't evaluate: an unknown driver, a config missing a number it needs, or a box with no model.
 export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
+  // boundary: the type says every field is there, but a saved or handed-over config may not have them all
+  if (!REQUIRED_NUMBERS.every((k) => Number.isFinite(c[k])) || !hasDims(c.cDim) || !hasDims(c.mDim))
+    return null;
   const sub = byId(SUB_OPTIONS, c.sub),
     mid = byId(MID_OPTIONS, c.mid),
     cd = byId(CD_OPTIONS, c.cd),

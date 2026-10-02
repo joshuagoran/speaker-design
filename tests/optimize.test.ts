@@ -62,7 +62,7 @@ const base: PaOptimizerInput = { cur, room: 1000, maxLb: 125, budget: 1100, lock
 
 test("evaluate() gives the planner's numbers (golden snapshot)", (t) => {
   for (const name of ["lil block stack LE (optimized)", "blocky", "lil tower"]) {
-    // older saves lack the crossovers and amps; this test reads only the sub numbers, so the partial design is on purpose
+    // the seeds carry the crossovers and amps now; the type keeps them optional, as older saves lack them
     const m = evaluateDesign(pick(name) as PaDesignConfig)!,
       g = golden[name];
     close(t, m.Fb, g.Fb, 0.02, `${name} Fb`);
@@ -426,5 +426,27 @@ test("vent locked on a round1 or round4 style searches that style's tubes instea
   for (const k of out.cards) {
     assert.equal(k.config.portStyle, "round1");
     assert.equal(k.config.cVent.nt, 1);
+  }
+});
+
+test("evaluate() rejects a config missing a number it needs, and every seed completes to finite metrics", () => {
+  const full = { ...pick("blocky") } as PaDesignConfig;
+  const m = evaluateDesign(full);
+  assert.ok(m, "a complete design evaluates");
+  for (const [k, v] of Object.entries(m))
+    if (typeof v === "number") assert.ok(Number.isFinite(v), `blocky ${k} is ${v}`);
+  for (const key of ["xoLo", "xoHi", "mAmpW", "hfAmpW", "tilt", "hfTilt", "wall", "ampW"] as const)
+    assert.equal(evaluateDesign({ ...full, [key]: undefined }), null, `no ${key}`);
+  assert.equal(evaluateDesign({ ...full, [`xoLo`]: NaN }), null, "NaN is not a number");
+  // boundary: an older save with no mid box size at all
+  assert.equal(evaluateDesign({ ...full, mDim: undefined } as unknown as PaDesignConfig), null);
+  for (const s of seeds) {
+    const c = pick(s.name);
+    for (const key of ["xoLo", "xoHi", "mAmpW", "hfAmpW"] as const)
+      assert.ok(Number.isFinite(c[key]), `${s.name} has ${key}`);
+    const e = evaluateDesign(c as PaDesignConfig); // boundary: `PaOptimizerCurrent` types the defaulted fields as optional
+    if (e)
+      for (const [k, v] of Object.entries(e))
+        if (typeof v === "number") assert.ok(Number.isFinite(v), `${s.name} ${k} is ${v}`);
   }
 });

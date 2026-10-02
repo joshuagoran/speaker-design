@@ -325,9 +325,11 @@
     "cd": "de360",
     "cutaway": false,
     "format": "full",
+    "hfAmpW": 100,
     "horn": "a400g2",
     "hpf": 33,
     "layout": "stack",
+    "mAmpW": 400,
     "mid": "sbnero12",
     "midBox": "b15",
     "name": "idk",
@@ -336,6 +338,8 @@
     "savedAt": 1790351815179,
     "sub": "f18fh500",
     "summary": "FaitalPRO 18FH500 · 24×32×20″ · 63 in² · 36.3 Hz",
+    "xoHi": 900,
+    "xoLo": 120,
     "id": "ps1dneg7qk9554uj8jpx"
   },
   {
@@ -357,9 +361,11 @@
     "cd": "de360",
     "cutaway": true,
     "format": "full",
+    "hfAmpW": 100,
     "horn": "a400g2",
     "hpf": 30,
     "layout": "stack",
+    "mAmpW": 400,
     "mid": "sbnero12",
     "midBox": "b15",
     "name": "blocky",
@@ -368,6 +374,8 @@
     "savedAt": 1790350905793,
     "sub": "f18fx600",
     "summary": "FaitalPRO 18FX600 · 30×30×22″ · 95 in² · 36.0 Hz",
+    "xoHi": 900,
+    "xoLo": 120,
     "id": "2rttm6fvyid1l0b97isj"
   },
   {
@@ -389,9 +397,11 @@
     "cd": "n314t",
     "cutaway": false,
     "format": "full",
+    "hfAmpW": 100,
     "horn": "a460g2_14",
     "hpf": 30,
     "layout": "tower",
+    "mAmpW": 400,
     "mid": "em3012",
     "midBox": "b15",
     "name": "lil tower",
@@ -399,6 +409,8 @@
     "savedAt": 1790279931184,
     "sub": "emnsw4018",
     "summary": "Eminence NSW4018-8 · 24×32×20″ · 79 in² · 37.7 Hz",
+    "xoHi": 900,
+    "xoLo": 120,
     "id": "t299ri66r2u7y80n2tc0"
   },
   {
@@ -420,9 +432,11 @@
     "cd": "n314t",
     "cutaway": false,
     "format": "full",
+    "hfAmpW": 100,
     "horn": "a460g2_14",
     "hpf": 25,
     "layout": "stack",
+    "mAmpW": 400,
     "mid": "em3012",
     "midBox": "b15",
     "name": "compact-ish stack",
@@ -430,6 +444,8 @@
     "savedAt": 1790279418139,
     "sub": "emnsw4018",
     "summary": "Eminence NSW4018-8 · 24×32×20″ · 79 in² · 37.7 Hz",
+    "xoHi": 900,
+    "xoLo": 120,
     "id": "snbgbi4qss0nw2ly1z71"
   }
 ]
