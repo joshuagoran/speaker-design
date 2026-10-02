@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { SUB_OPTIONS, MID_OPTIONS, FILL_OPTIONS, CD_OPTIONS } from "../src/lib/data.ts";
-import type { BassTS } from "../src/types.ts";
+import type { ThieleSmall } from "../src/types.ts";
 import { tsModel } from "./helpers.ts";
 
 // Datasheet values that disagree with the driver's own Mms/Sd/Fs/Bl/Re by more than the tolerance.
@@ -28,7 +28,7 @@ test("every driver with T/S has the fields the models use", (t) => {
 test("T/S internal consistency (Qts, Qes, Vas) or a listed exception", (t) => {
   const bad: string[] = [];
   for (const o of all) {
-    const ts: Partial<BassTS> = o.ts; // fills list no Qts
+    const ts: ThieleSmall = o.ts;
     if (!ts || !ts.Bl || !ts.Mms) continue;
     const m = tsModel(o.ts);
     if (ts.Qes && ts.Qms && ts.Qts) {

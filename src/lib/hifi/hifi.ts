@@ -25,11 +25,11 @@ import type {
   HifiSystem,
   HifiTweeter,
   HifiWoofer,
-  HifiWooferTS,
   ListenerGeometry,
   PanelMaterial,
   PassiveRadiator,
   PassiveRadiatorChoice,
+  ThieleSmall,
   WooferMaxPoint,
   WooferPoint,
 } from "../../types.ts";
@@ -268,7 +268,7 @@ export function passiveRadiatorMassFor(drv: PassiveRadiator, n: number, VbL: num
   return g < -2.5 ? null : Math.max(0, Math.round(g / 5) * 5);
 }
 export function passiveRadiatorBox(
-  ts: HifiWooferTS,
+  ts: ThieleSmall,
   VbL: number,
   pr: Pick<PassiveRadiatorChoice, "drv" | "n" | "addG">,
   hpf: number,
@@ -281,17 +281,17 @@ export function passiveRadiatorBox(
   if (!ts || !VbL || !drv || !n) return null;
   const rho = 1.18,
     Sd = ts.Sd / 1e4,
-    Mms = ts.Mms! / 1000;
+    Mms = ts.Mms / 1000;
   const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
   const Mas = Mms / (Sd * Sd),
     Cas = Cms * Sd * Sd;
   const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
-  const Rae = (ts.Bl * ts.Bl) / ts.Re! / (Sd * Sd);
+  const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
   const { Map, Cap, Cab, Fb, Fp } = passiveRadiatorTuning(drv, n, pr.addG, VbL);
   const Sp = drv.Sd / 1e4;
   const Rap = (2 * Math.PI * drv.Fs * (drv.Mms / 1000)) / (drv.Qms || 5) / (Sp * Sp) / n;
   const Ral = QL / (2 * Math.PI * Fb * Cab);
-  const Pg = (volts * ts.Bl) / (ts.Re! * Sd);
+  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
   const out = [];
   for (let i = 0; i < N; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
@@ -314,7 +314,7 @@ export function passiveRadiatorBox(
       prx: Math.SQRT2 * (cabs(Up) / (w * Sp * n)) * hp * 1000,
     });
   }
-  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re! * Mms) / 2e-5);
+  const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
   const f3 = (out.find((o) => o.raw >= ref - 3) || out[out.length - 1]).f;
   return { curve: out, Fb, Fp, f3, ref };
 }

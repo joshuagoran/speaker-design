@@ -23,9 +23,10 @@ export interface Dims2 {
 
 // ---- Thiele-Small blocks ----
 
-/** The parameters every modelled woofer has. `disp` is the driver's displacement in litres, null where unpublished. */
-export interface DriverTS {
+/** The Thiele-Small parameters and ratings every driver table lists. `disp` is the driver's displacement in litres, null where unpublished. */
+export interface ThieleSmall {
   Fs: number;
+  Qts: number;
   Qes: number;
   Qms: number;
   Vas: number;
@@ -38,27 +39,15 @@ export interface DriverTS {
   disp: number | null;
 }
 
-/** Sub and mid drivers also publish Qts. */
-export interface BassTS extends DriverTS {
-  Qts: number;
-}
-
 /** Subs always list a displacement. */
-export interface SubTS extends BassTS {
+export interface SubTS extends ThieleSmall {
   disp: number;
 }
 
-/** Fill coaxials list no Qts. */
-export type FillTS = DriverTS;
-
-/** Hi-fi woofers. `Re` and `Mms` can be unpublished (null); the module fills them in from the other parameters when it can. */
-export interface HifiWooferTS extends Omit<BassTS, "Re" | "Mms"> {
-  Re: number | null;
-  Mms: number | null;
+/** Hi-fi woofers also list inductance, 2.83 V sensitivity and nominal impedance (informational; no model reads them). */
+export interface HifiWooferTS extends ThieleSmall {
   Le: number;
-  /** dB at 2.83 V / 1 m */
   sens: number;
-  /** nominal impedance, ohms */
   imp: number;
 }
 
@@ -84,7 +73,7 @@ export interface MidDriver {
   name: string;
   price: number | null;
   src: string;
-  ts: BassTS;
+  ts: ThieleSmall;
   note: string;
   pick?: boolean;
 }
@@ -219,7 +208,7 @@ export interface FillDriver {
   name: string;
   price: number | null;
   src: string;
-  ts: FillTS;
+  ts: ThieleSmall;
   /** the compression section; null for a fill without one */
   hf: FillHf | null;
   lfSens: number;
@@ -700,9 +689,6 @@ export interface PaDesignConfig {
   summary?: string;
 }
 
-/** A PA sub or mid box's models read the T/S parameters; `Re` and `Mms` are null on a Hi-fi woofer that doesn't publish them. */
-export type ModelTS = Pick<HifiWooferTS, "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms">;
-
 /** One point of a vented-box response: raw box SPL, system SPL with the highpass, cone excursion (mm, peak) and port air speed (m/s, peak). */
 export interface VentedPoint {
   f: number;
@@ -975,7 +961,7 @@ export interface MidChipsInput {
   f3: number;
   peakX: number;
   xoLo: number;
-  ts: Pick<BassTS, "Xmax" | "aes">;
+  ts: Pick<ThieleSmall, "Xmax" | "aes">;
   /** amp volts, the volts the driver can use, and the thermal limit in volts */
   V: number;
   useV: number;

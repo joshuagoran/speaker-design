@@ -1,12 +1,12 @@
 // Shared test helpers and independent physics references.
 import assert from "node:assert";
-import type { DriverTS, VentSpec } from "../src/types.ts";
+import type { ThieleSmall, VentSpec } from "../src/types.ts";
 
 // The tests give a vent only the fields its layout reads; the cast marks the partial on purpose.
 export const vent = (v: Partial<VentSpec>) => v as VentSpec;
 
 /** The Thiele-Small fields these references use. */
-type TsFields = Pick<DriverTS, "Fs" | "Sd" | "Mms" | "Re" | "Bl" | "Qms">;
+type TsFields = Pick<ThieleSmall, "Fs" | "Sd" | "Mms" | "Re" | "Bl" | "Qms">;
 
 export const RHO = 1.18,
   C = 343,

@@ -2,7 +2,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { boxModel, closedBox } from "../src/lib/pa/calc.ts";
 import { SUB_OPTIONS } from "../src/lib/data.ts";
-import type { DriverTS } from "../src/types.ts";
+import type { ThieleSmall } from "../src/types.ts";
 import { tsModel, massLineSPL, helmholtz, near, close, rel } from "./helpers.ts";
 
 const fh500 = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
@@ -52,7 +52,7 @@ test("boxModel: excursion minimum sits at Fb", (t) => {
 test("boxModel: lossless B4 alignment has F3 = Fs", (t) => {
   // Qts 0.383, Vas/Vb 1.414, Fb = Fs (Thiele's B4)
   // a partial driver on purpose: no Xmax (the model's excursion limit isn't used here), and Bl is set on the next line
-  const ts = { Fs: 30, Qms: 1e6, Sd: 1100, Mms: 150, Re: 5.5 } as DriverTS;
+  const ts = { Fs: 30, Qms: 1e6, Sd: 1100, Mms: 150, Re: 5.5 } as ThieleSmall;
   ts.Bl = Math.sqrt((2 * Math.PI * ts.Fs * (ts.Mms / 1e3) * ts.Re) / 0.383);
   const m = tsModel(ts),
     Vb = m.VasL / 1.4142;
