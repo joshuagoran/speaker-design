@@ -55,7 +55,7 @@ export function useHifiPlanner() {
   const [optimizerBudget, setOptimizerBudget] = useState(() => storage.get("hifi.budget", 800));
   const [optimizerLocks, setOptimizerLocksState] = useState(() => {
     const l = storage.get("hifi.locks", {}) || {};
-    return { ...l, dim: { ...(l.dim || {}) } };
+    return { ...l, dim: { ...l.dim } };
   });
   const setOptimizerLocks = (f) =>
     setOptimizerLocksState((p) => {
@@ -65,6 +65,7 @@ export function useHifiPlanner() {
     });
   const [optimizerResult, setOptimizerResult] = useState(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizerError, setOptimizerError] = useState("");
   const [designPreview, setDesignPreview] = useState(null); // { label, before, card }
   const [undoSnapshot, setUndoSnapshot] = useState(null);
   return {
@@ -122,6 +123,8 @@ export function useHifiPlanner() {
     setOptimizerResult,
     isOptimizing,
     setIsOptimizing,
+    optimizerError,
+    setOptimizerError,
     designPreview,
     setDesignPreview,
     undoSnapshot,

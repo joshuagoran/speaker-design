@@ -5,7 +5,19 @@ export function RunRow({ busy, hasGoal, onRun, stats, note, children }) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-3">
       <Button variant="primary" onClick={onRun} disabled={busy || !hasGoal} className="px-4">
-        {busy ? "Searching…" : hasGoal ? "Find 3 designs" : "Pick a goal first"}
+        {busy ? (
+          <span className="inline-flex items-center gap-2">
+            <span
+              className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
+              aria-hidden="true"
+            />
+            Searching…
+          </span>
+        ) : hasGoal ? (
+          "Find 3 designs"
+        ) : (
+          "Pick a goal first"
+        )}
       </Button>
       {stats && !busy && (
         <span className="text-xs text-stone-500">
