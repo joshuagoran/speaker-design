@@ -32,7 +32,6 @@ export function buildSubwoofer(
 ): { top: number; baffleZ: number; group: THREE.Group } {
   const { wood: birch, inner: plyIn, port: portMat, shell: shellMat } = ctx.materials;
   const T = ctx.wall,
-    BT = 0.75,
     REVEAL = ctx.inset;
   const subGroup = new THREE.Group();
   ctx.group.add(subGroup);
