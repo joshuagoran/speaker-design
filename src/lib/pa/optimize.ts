@@ -71,7 +71,6 @@ import type {
 } from "../../types";
 import { keysOf } from "../records";
 import { byId, byIdOrThrow } from "../tables";
-import { DEFAULT_PA } from "../defaults";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -692,7 +691,9 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
 
   // 2. real boxes and vents for the seeds
   const subCands: SubCandidate[] = [];
-  const midForGeom = curMid ?? MID_OPTIONS.find((o) => o.ts) ?? DEFAULT_PA.mid;
+  // the sub's geometry reads only the sub's own cut parts; the mid just has to exist for the cut list, so with no known
+  // current mid the first table entry will do
+  const midForGeom = curMid ?? MID_OPTIONS[0];
   for (const sd of seedSet) {
     for (const t of walls) {
       const G = sd.V + (sd.sub.ts.disp || 10) + 0.08 * sd.V + 3;
