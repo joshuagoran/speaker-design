@@ -4,7 +4,27 @@
 // internal, before driver/port/bracing displacement. Verify every
 // driver spec and price against the vendor before ordering.
 // ---------------------------------------------------------------
-export const ST260_PROFILE = [
+import type {
+  Cabinet,
+  CabinetFinish,
+  CompressionDriver,
+  FillDriver,
+  FinishId,
+  Format,
+  HifiTweeter,
+  HifiWoofer,
+  Horn,
+  HornProfilePoint,
+  MidBox,
+  MidDriver,
+  OwnGuide,
+  PaintSwatch,
+  PassiveRadiator,
+  Rack,
+  SubDriver,
+} from "../types.ts";
+
+export const ST260_PROFILE: readonly HornProfilePoint[] = [
   [1.89, 0.0],
   [0.5, 0.0],
   [0.507, 0.036],
@@ -105,7 +125,7 @@ export const ST260_PROFILE = [
   [1.89, 0.0],
 ]; // [radius, depth] in inches, from ST260-19.stl cross-section
 
-export const SUB_OPTIONS = [
+export const SUB_OPTIONS: SubDriver[] = [
   {
     id: "sbnero18",
     lb: 45,
@@ -615,7 +635,7 @@ export const SUB_OPTIONS = [
   },
 ];
 
-export const MID_OPTIONS = [
+export const MID_OPTIONS: MidDriver[] = [
   // ---- 15" mid-bass (sealed), for tops crossed low (tapped-horn sub, separated subs) ----
   {
     id: "bc15cl76",
@@ -1633,7 +1653,7 @@ export const MID_OPTIONS = [
   },
 ];
 
-export const MID_BOXES = [
+export const MID_BOXES: readonly MidBox[] = [
   {
     id: "b14",
     name: "14 × 14 × 18 in",
@@ -1670,7 +1690,7 @@ export const MID_BOXES = [
   },
 ];
 
-export const CD_OPTIONS = [
+export const CD_OPTIONS: CompressionDriver[] = [
   {
     id: "hf10ak",
     lb: 2,
@@ -1839,7 +1859,7 @@ export const CD_OPTIONS = [
   },
 ];
 
-export const HORN_OPTIONS = [
+export const HORN_OPTIONS: Horn[] = [
   {
     id: "rx28",
     lb: 2,
@@ -1998,7 +2018,7 @@ export const HORN_OPTIONS = [
 
 // Prices are US dollars, checked Sep 2026, single unit, before tax/shipping.
 
-export const RACKS = [
+export const RACKS: readonly Rack[] = [
   {
     id: "mains",
     name: "Mains rack",
@@ -2039,7 +2059,7 @@ export const RACKS = [
   },
 ];
 
-export const PAINT_SWATCHES = [
+export const PAINT_SWATCHES: readonly PaintSwatch[] = [
   ["#e8b4a8", "Dusty pink"],
   ["#2b2725", "Near black"],
   ["#c8cdc4", "Pale sage"],
@@ -2050,12 +2070,12 @@ export const PAINT_SWATCHES = [
   ["#4a5d4e", "Deep green"],
 ];
 
-export const CABINET_FINISHES = {
+export const CABINET_FINISHES: Record<FinishId, CabinetFinish> = {
   birch: { name: "Birch", color: 0xd7b98a, inner: 0xc9a875, rough: 0.85, swatch: "#d7b98a" },
   walnut: { name: "Walnut", color: 0x5c3a24, inner: 0x4f3220, rough: 0.7, swatch: "#5c3a24" },
 };
 
-export const CABINETS = [
+export const CABINETS: readonly Cabinet[] = [
   {
     id: "column",
     name: "Upright column",
@@ -2130,7 +2150,7 @@ export const CABINETS = [
   },
 ];
 
-export const FORMATS = [
+export const FORMATS: readonly Format[] = [
   {
     id: "full",
     name: 'Full — 18" sub, 12" mid',
@@ -2155,11 +2175,11 @@ export const FORMATS = [
 ];
 
 // Pickers list alphabetically; the default pick is marked with a dot, not moved to the top.
-export const sortedByName = (arr) =>
+export const sortedByName = <T extends { name: string }>(arr: readonly T[]): T[] =>
   [...arr].sort((a, b) =>
     a.name.localeCompare(b.name, "en", { numeric: true, sensitivity: "base" }),
   );
-[SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS].forEach((arr) =>
+[SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS].forEach((arr: { name: string }[]) =>
   arr.splice(0, arr.length, ...sortedByName(arr)),
 );
 
@@ -2168,7 +2188,7 @@ export const sortedByName = (arr) =>
 // ---------------------------------------------------------------
 // ts: woofer T/S (the model uses Fs, Qms, Re, Bl, Mms, Sd, Xmax; Vas is shown only).
 // hf: compression section, sens 1 W/1 m, aes W, xo recommended minimum Hz, imp Ω, cov degrees.
-export const FILL_OPTIONS = [
+export const FILL_OPTIONS: readonly FillDriver[] = [
   {
     id: "bc8cxn51",
     size: 8,
@@ -2542,7 +2562,7 @@ export const FILL_OPTIONS = [
 // Madisound pages showed "out of stock" on every product fetched, which may be a page-template
 // artifact; check stock before ordering.
 
-export const HIFI_WOOFERS = [
+export const HIFI_WOOFERS: HifiWoofer[] = [
   // ---------- Hi-fi long-throw ----------
   {
     id: "rs180",
@@ -2980,7 +3000,7 @@ export const HIFI_WOOFERS = [
   },
 ];
 
-export const HIFI_TWEETERS = [
+export const HIFI_TWEETERS: readonly HifiTweeter[] = [
   // ---------- Domes (flat baffle) ----------
   {
     id: "rst28f",
@@ -3487,7 +3507,7 @@ for (const t of HIFI_TWEETERS) {
 // Passive radiators for the Hi-fi tab (per unit, US vendors, Oct 2026). Sd cm², Mms g (as shipped), Cms mm/N,
 // Xmax mm one-way (SB, Purifi and Seas publish only the mechanical limit: xmaxKind). No maker states a maximum
 // added mass, so the planner allows up to 3 × Mms.
-export const HIFI_PASSIVES = [
+export const HIFI_PASSIVES: readonly PassiveRadiator[] = [
   {
     id: "ds135pr",
     name: "Dayton Audio DS135-PR",
@@ -3699,5 +3719,9 @@ export const HIFI_PASSIVES = [
   },
 ];
 // a ribbon's own waveguide as the model's guide object (flush-mounted)
-export const ownGuideCfg = (t) => (t && t.ownGuide ? { ...t.ownGuide, freestanding: false } : null);
-export const passiveRadiatorMassMax = (p) => Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
+export const ownGuideCfg = (
+  t: HifiTweeter | null | undefined,
+): (OwnGuide & { freestanding: boolean }) | null =>
+  t && t.ownGuide ? { ...t.ownGuide, freestanding: false } : null;
+export const passiveRadiatorMassMax = (p: PassiveRadiator): number =>
+  Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
