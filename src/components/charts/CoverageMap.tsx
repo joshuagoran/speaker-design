@@ -3,12 +3,14 @@ import { PAL } from "../../styles/palette";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { formatSigned } from "../../lib/format";
 import { contourSegments, gridLevelAt } from "../../lib/pa/coverage";
+import { materialAlpha } from "../../lib/pa/roomAcoustics";
 import type {
   CoverageBox,
   CoverageGridView,
   CoverageLayout,
   CoverageStack,
   FloorPoint,
+  RoomSide,
 } from "../../types";
 import type { CoverageLayoutState } from "../../pages/coverage/useCoverageLayout";
 
@@ -77,7 +79,7 @@ interface Props {
 
 /**
  * Top-down floor map: level against the target across the room, with the target and −6 dB contours. Drag a stack to
- * move it, its dot to turn it, the sub pair, or the listener (or tap the floor to put the listener there).
+ * move it, its dot to turn it, the center subs, or the listener (or tap the floor to put the listener there).
  */
 export function CoverageMap({
   view,
@@ -222,10 +224,14 @@ export function CoverageMap({
     hover.y <= view.room.lengthFt
       ? gridLevelAt(view.grid, view.room, hover)
       : null;
-  const walls = room.outdoors
-    ? { front: false, back: false, left: false, right: false }
-    : room.walls;
-  const sides: [keyof typeof walls, number, number, number, number][] = [
+  // each side's line: heavy for a hard wall, lighter for an absorbent one (curtains), dashed for open
+  const sideLine = (side: RoomSide) => {
+    const m = room.materials[side];
+    if (room.outdoors || m === "open")
+      return { stroke: PAL.muted, strokeWidth: 1.25, strokeDasharray: "4 4" };
+    return { stroke: PAL.ink, strokeWidth: materialAlpha(m, 1000) >= 0.5 ? 2 : 4 };
+  };
+  const sides: [RoomSide, number, number, number, number][] = [
     ["front", px(-room.widthFt / 2), py(0), px(room.widthFt / 2), py(0)],
     ["back", px(-room.widthFt / 2), py(room.lengthFt), px(room.widthFt / 2), py(room.lengthFt)],
     ["left", px(-room.widthFt / 2), py(0), px(-room.widthFt / 2), py(room.lengthFt)],
@@ -240,7 +246,11 @@ export function CoverageMap({
   return (
     <div ref={box}>
       <div className="flex justify-between items-baseline gap-3 text-xs text-stone-500 mb-1 min-h-[1rem]">
-        <span>{room.outdoors ? "Outdoors" : `${room.widthFt} × ${room.lengthFt} ft room`}</span>
+        <span>
+          {room.outdoors
+            ? "Outdoors"
+            : `${room.widthFt} × ${room.lengthFt} ft room, ${room.ceilingFt} ft ceiling`}
+        </span>
         <span className="tabular-nums text-stone-900">
           {readout != null && hover && view
             ? `${hover.x.toFixed(1)}, ${hover.y.toFixed(1)} ft · ${(readout + view.gain).toFixed(1)} dB (${formatSigned(readout - view.target)})`
@@ -317,9 +327,7 @@ export function CoverageMap({
             y1={y1}
             x2={x2}
             y2={y2}
-            stroke={walls[side] ? PAL.ink : PAL.muted}
-            strokeWidth={walls[side] ? 4 : 1.25}
-            strokeDasharray={walls[side] ? undefined : "4 4"}
+            {...sideLine(side)}
             strokeLinecap="square"
           />
         ))}

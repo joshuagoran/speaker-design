@@ -5,13 +5,20 @@ import { Button } from "../../components/ui/Button";
 import { Notice } from "../../components/ui/Notice";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Slider } from "../../components/ui/Slider";
+import { SelectField } from "../../components/ui/SelectField";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { formatSigned as signed } from "../../lib/format";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
 import { LISTENER_TARGET_DB } from "../../lib/pa/optimize";
+import { MODAL_HZ, ROOM_MATERIAL_OPTIONS } from "../../lib/pa/roomAcoustics";
 import { PAL } from "../../styles/palette";
-import type { RoomSide } from "../../types";
-import { ROOM_LENGTH_FT, ROOM_WIDTH_FT, useCoverageLayout } from "./useCoverageLayout";
+import type { RoomSurface, SubPlacement } from "../../types";
+import {
+  ROOM_CEILING_FT,
+  ROOM_LENGTH_FT,
+  ROOM_WIDTH_FT,
+  useCoverageLayout,
+} from "./useCoverageLayout";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
 
 /** The tabs of the phone settings sheet. */
@@ -23,11 +30,17 @@ const TABS: [CoverageTab, string][] = [
   ["stacks", "Stacks"],
 ];
 const NAMED_BANDS = ["sub", "kick", "mid", "high"] as const;
-const SIDES: [RoomSide, string][] = [
+const SURFACES: [RoomSurface, string][] = [
   ["front", "Behind the stacks"],
   ["back", "Far end"],
   ["left", "Left side"],
   ["right", "Right side"],
+  ["ceiling", "Ceiling"],
+];
+const SUB_PLACEMENTS: [SubPlacement, string][] = [
+  ["stacks", "Subs in the stacks"],
+  ["center", "Center pair"],
+  ["single", "One center sub"],
 ];
 
 interface Props {
@@ -168,16 +181,32 @@ export function CoveragePage({ planner }: Props) {
               frequency and widens below it.
             </li>
             <li>
-              The floor reflects: the planner's sub and mid levels are measured on the floor, so the
-              map takes the floor out of them (below the baffle step) and adds it back as a
-              reflection from each box's real height. Each solid wall adds one mirrored copy of
-              every box, less the absorption. Reflections between walls, and so room modes, aren't
-              modelled.
+              The planner's sub and mid levels are measured on the floor, so the map takes the floor
+              out of them (below the baffle step) and adds it back as a reflection from each box's
+              real height. A full dance floor soaks up the floor bounce above about 200 Hz. The air
+              absorbs the highs along every path (20 °C, 50 % humidity).
             </li>
             <li>
-              Below 500 Hz everything adds with phase, so the stacks interfere. Above it, a band
-              average adds the stacks and reflections by power, since their comb filtering averages
-              out across a band.
+              Indoors the room is a box with flat sides, each side and the ceiling of its own
+              material. Below {MODAL_HZ[0]}–{MODAL_HZ[1]} Hz (lower in big, dead rooms) the map sums
+              the room's modes, so it shows the peaks and nulls of the room's resonances; the walls'
+              and ceiling's first and second reflections are as their materials reflect.
+            </li>
+            <li>
+              Above that, each wall and the ceiling adds one reflection of every box, less what its
+              material absorbs at that frequency, and the rest of the room's sound comes back as an
+              even reverberant field, from the materials, the crowd and the room's size. The two
+              methods blend over half an octave.
+            </li>
+            <li>
+              Below 500 Hz the direct sound and reflections add with phase, so the stacks interfere.
+              Above it, a band average adds them by power, since their comb filtering averages out
+              across a band.
+            </li>
+            <li>
+              Left out: rooms that aren't rectangular, balconies and pillars, sound bending around
+              the people in front of you, and each driver's measured directivity. The modes take
+              every side as solid: with an open side they are only a rough guide.
             </li>
             <li>
               The target is the planner's {LISTENER_TARGET_DB} dB at the listener in the sub band (
@@ -188,7 +217,7 @@ export function CoveragePage({ planner }: Props) {
       </div>
 
       <aside
-        className="min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-sheet"
+        className="min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet"
         aria-label="Coverage settings"
       >
         <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
@@ -389,44 +418,52 @@ export function CoveragePage({ planner }: Props) {
             />
             {!room.outdoors && (
               <>
-                <div className="grid grid-cols-2 gap-1 mb-3">
-                  {SIDES.map(([side, name]) => (
-                    <ToggleButton
-                      key={side}
-                      on={room.walls[side]}
-                      onClick={() => state.toggleWall(side)}
-                      className="text-left"
-                    >
-                      {name}: {room.walls[side] ? "wall" : "open"}
-                    </ToggleButton>
+                <Slider
+                  label="Ceiling height"
+                  value={room.ceilingFt}
+                  min={ROOM_CEILING_FT[0]}
+                  max={ROOM_CEILING_FT[1]}
+                  step={1}
+                  unit=" ft"
+                  onChange={state.setCeilingFt}
+                />
+                <div className="grid grid-cols-2 gap-x-3">
+                  {SURFACES.map(([surface, name]) => (
+                    <SelectField
+                      key={surface}
+                      label={name}
+                      options={ROOM_MATERIAL_OPTIONS}
+                      value={ROOM_MATERIAL_OPTIONS.find((o) => o.id === room.materials[surface])}
+                      onChange={(o) => state.setMaterial(surface, o.id)}
+                    />
                   ))}
                 </div>
-                <Slider
-                  label="Wall absorption"
-                  value={Math.round(room.absorption * 100)}
-                  min={0}
-                  max={90}
-                  step={5}
-                  unit="%"
-                  onChange={(v) => state.setAbsorption(v / 100)}
-                />
               </>
             )}
+            <div className={label}>Dance floor</div>
+            <div className="flex gap-1">
+              <ToggleButton on={room.crowd === "empty"} onClick={() => state.setCrowd("empty")}>
+                Empty
+              </ToggleButton>
+              <ToggleButton on={room.crowd === "full"} onClick={() => state.setCrowd("full")}>
+                Full
+              </ToggleButton>
+            </div>
           </div>
 
           <div className={tabClass("stacks")}>
             <div className={label}>Stacks</div>
             <div className="flex flex-wrap gap-1 mb-3">
-              <ToggleButton on={map.subs === "stacks"} onClick={() => state.setSubs("stacks")}>
-                Subs in the stacks
-              </ToggleButton>
-              <ToggleButton
-                on={map.subs === "center"}
-                onClick={() => state.setSubs("center")}
-                disabled={!planner.subModelled}
-              >
-                Subs as a center pair
-              </ToggleButton>
+              {SUB_PLACEMENTS.map(([subs, name]) => (
+                <ToggleButton
+                  key={subs}
+                  on={map.subs === subs}
+                  onClick={() => state.setSubs(subs)}
+                  disabled={subs !== "stacks" && !map.levels?.sub}
+                >
+                  {name}
+                </ToggleButton>
+              ))}
             </div>
             <div className="flex flex-wrap gap-1 mb-3">
               <ToggleButton on={layout.mirror} onClick={() => state.setMirror(!layout.mirror)}>

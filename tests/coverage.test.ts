@@ -4,6 +4,7 @@ import {
   balanceLevels,
   bandTarget,
   contourSegments,
+  coverageBoxes,
   coverageFrequencies,
   coverageGrid,
   coverageResponse,
@@ -12,11 +13,20 @@ import {
   coverageStats,
   curveLevelAt,
   levelAtPoint,
+  pistonQ,
 } from "../src/lib/pa/coverage";
 import { paResponseAt, paStackSources } from "../src/lib/pa/dispersion";
+import { materialAlpha, surfaceReflection } from "../src/lib/pa/roomAcoustics";
+import { DEFAULT_COVERAGE_LAYOUT, fromStored } from "../src/pages/coverage/useCoverageLayout";
 import { logSpacedFrequencies } from "../src/lib/hifi/hifi";
 import { METERS_PER_FOOT as FT } from "../src/constants/units";
-import type { CoverageLayout, CoverageLevels, CoverageStack } from "../src/types";
+import type {
+  CoverageLayout,
+  CoverageLevels,
+  CoverageRoom,
+  CoverageStack,
+  RoomMaterial,
+} from "../src/types";
 
 const stack: CoverageStack = {
   sub: { zIn: 12, Sd: 1200 },
@@ -42,12 +52,21 @@ const levels = (db: number, s: CoverageStack = stack): CoverageLevels => {
   return { sub: curve("sub"), mid: curve("mid"), horn: curve("horn") };
 };
 
+const OPEN: CoverageRoom["materials"] = {
+  front: "open",
+  back: "open",
+  left: "open",
+  right: "open",
+  ceiling: "open",
+};
+
 const layout = (o: Partial<CoverageLayout> = {}): CoverageLayout => ({
   room: {
     widthFt: 40,
     lengthFt: 50,
-    walls: { front: false, back: false, left: false, right: false },
-    absorption: 0,
+    ceilingFt: 14,
+    materials: OPEN,
+    crowd: "empty",
     outdoors: true,
   },
   stacks: [
@@ -76,7 +95,7 @@ const at = (
   const scene = coverageScene(stack, l);
   return levelAtPoint(
     scene,
-    coverageSlots(stack, levels(110), freqs, coherent),
+    coverageSlots(scene, levels(110), freqs, coherent),
     x * FT,
     y * FT,
     l.earFt * FT,
@@ -108,16 +127,17 @@ test("coverage: past a curve's ends its band rolls off by its crossover, and an 
   const high = { ...stack, xoHi: 1800 };
   const full = levels(110, high);
   const cut = { ...full, mid: full.mid.filter((o) => o.f <= 2000), horn: [] };
+  const highScene = coverageScene(high, layout());
   const mid = (f: number) => {
-    const v = coverageSlots(high, cut, [f], true)[0].out.mid;
+    const v = coverageSlots(highScene, cut, [f], true)[0].out.mid;
     return v ? 20 * Math.log10(Math.hypot(v.re, v.im)) : -Infinity;
   };
   const end = cut.mid[cut.mid.length - 1].f;
   assert.ok(Math.abs(mid(end * 1.01) - mid(end)) < 0.5, `${mid(end)} to ${mid(end * 1.01)} dB`);
   // and it matches the full curve an octave on
-  const ref = coverageSlots(high, full, [4000], true)[0].out.mid;
+  const ref = coverageSlots(highScene, full, [4000], true)[0].out.mid;
   assert.ok(ref && Math.abs(mid(4000) - 20 * Math.log10(Math.hypot(ref.re, ref.im))) < 0.1);
-  assert.equal(coverageSlots(high, cut, [4000], true)[0].out.horn, undefined);
+  assert.equal(coverageSlots(highScene, cut, [4000], true)[0].out.horn, undefined);
 });
 
 test("coverage: a box's drivers arrive in phase on its axis at the alignment point, as the dispersion model has them", () => {
@@ -138,7 +158,7 @@ test("coverage: a box's drivers arrive in phase on its axis at the alignment poi
   for (const [i, f] of freqs.entries()) {
     const db = levelAtPoint(
       one,
-      coverageSlots(tall, levels(110, tall), [f], true),
+      coverageSlots(one, levels(110, tall), [f], true),
       box.x * FT,
       box.y * FT + distM,
       tall.horn.zIn * 0.0254,
@@ -183,31 +203,21 @@ test("coverage: the band average smooths the low-frequency dip a single frequenc
   );
 });
 
-test("coverage: a solid wall right behind the stacks lifts the bass, and absorption takes some of it back", () => {
-  const open = layout({
-    stacks: [
-      { x: -8, y: 1, aim: 0 },
-      { x: 8, y: 1, aim: 0 },
-    ],
-  });
-  const walled = (absorption: number) =>
+test("coverage: a hard wall right behind the stacks lifts the bass, and a softer one less so", () => {
+  // indoors, the other sides and the ceiling open: only the front wall's material changes
+  const room = (front: RoomMaterial): CoverageLayout =>
     layout({
-      stacks: open.stacks,
-      room: {
-        ...open.room,
-        outdoors: false,
-        absorption,
-        walls: { ...open.room.walls, front: true },
-      },
+      stacks: [
+        { x: -8, y: 1, aim: 0 },
+        { x: 8, y: 1, aim: 0 },
+      ],
+      room: { ...layout().room, outdoors: false, materials: { ...OPEN, front } },
     });
-  const a = at(open, "sub", 50, 0, 25),
-    b = at(walled(0), "sub", 50, 0, 25),
-    c = at(walled(0.6), "sub", 50, 0, 25);
+  const a = at(room("open"), "sub", 50, 0, 25),
+    b = at(room("concrete"), "sub", 50, 0, 25),
+    c = at(room("glass"), "sub", 50, 0, 25);
   assert.ok(b - a > 4, `wall adds ${(b - a).toFixed(1)} dB`);
-  assert.ok(
-    c < b && c > a,
-    `absorbent wall ${c.toFixed(1)} dB between ${a.toFixed(1)} and ${b.toFixed(1)}`,
-  );
+  assert.ok(c < b && c > a, `glass ${c.toFixed(1)} dB between ${a.toFixed(1)} and ${b.toFixed(1)}`);
 });
 
 test("coverage: the horn's coverage shows in the high band, and toeing in moves it", () => {
@@ -240,7 +250,7 @@ test("coverage: the map follows the planner's levels dB for dB", () => {
   const scene = coverageScene(stack, l);
   const { freqs } = coverageFrequencies("mid", 0);
   const g = (db: number) =>
-    coverageGrid(scene, coverageSlots(stack, levels(db), freqs, false), l.room, l.earFt, 12);
+    coverageGrid(scene, coverageSlots(scene, levels(db), freqs, false), l.room, l.earFt, 12);
   const a = g(100),
     b = g(106);
   for (let i = 0; i < a.db.length; i++) assert.ok(Math.abs(b.db[i] - a.db[i] - 6) < 1e-3);
@@ -285,17 +295,17 @@ test("coverage: balancing turns the bands with more to spare down to the planner
   ];
   const b = { xoLo: 120, xoHi: 900, tilt: 6, hfTilt: 3 };
   // a loud horn and mid: the sub sets the level, mid 6 under it, horn 3 under the mid
-  const loud = balanceLevels({ sub: flat(120), mid: flat(124), horn: flat(130) }, b);
+  const loud = balanceLevels({ sub: flat(120), mid: flat(124), horn: flat(130) }, b, stack);
   assert.deepEqual(loud.pads, { sub: 0, mid: -10, horn: -19 });
   // a weak mid: it sets the level and the sub comes down to 6 above it
-  const weak = balanceLevels({ sub: flat(120), mid: flat(110), horn: flat(130) }, b);
+  const weak = balanceLevels({ sub: flat(120), mid: flat(110), horn: flat(130) }, b, stack);
   assert.deepEqual(weak.pads, { sub: -4, mid: 0, horn: -23 });
   assert.equal(weak.levels.sub?.[0].spl, 116);
   // a weak horn sets the level for both others
-  const hornWeak = balanceLevels({ sub: flat(120), mid: flat(114), horn: flat(105) }, b);
+  const hornWeak = balanceLevels({ sub: flat(120), mid: flat(114), horn: flat(105) }, b, stack);
   assert.deepEqual(hornWeak.pads, { sub: -6, mid: -6, horn: 0 });
   // no sub: only the mid and horn balance
-  assert.deepEqual(balanceLevels({ sub: null, mid: flat(114), horn: flat(130) }, b).pads, {
+  assert.deepEqual(balanceLevels({ sub: null, mid: flat(114), horn: flat(130) }, b, stack).pads, {
     sub: 0,
     mid: 0,
     horn: -19,
@@ -304,4 +314,212 @@ test("coverage: balancing turns the bands with more to spare down to the planner
   assert.equal(bandTarget(105, "mid", 0, b), 99);
   assert.equal(bandTarget(105, "high", 0, b), 96);
   assert.equal(bandTarget(105, "one", 50, b), 105);
+});
+
+/** A closed room, `m` on every side and the ceiling, empty. */
+const indoors = (
+  room: Partial<CoverageRoom>,
+  m: RoomMaterial,
+  o: Partial<CoverageLayout> = {},
+): CoverageLayout =>
+  layout({
+    ...o,
+    room: {
+      ...layout().room,
+      outdoors: false,
+      materials: { front: m, back: m, left: m, right: m, ceiling: m },
+      ...room,
+    },
+  });
+
+test("coverage: a hard room's modes: peaks at the first length and width modes in a corner, a null of the width mode on the center line", () => {
+  // 24 × 40 × 12 ft, both stacks against the left wall so the width mode is driven
+  const l = indoors({ widthFt: 24, lengthFt: 40, ceilingFt: 12 }, "concrete", {
+    stacks: [
+      { x: -10, y: 2, aim: 0 },
+      { x: -6, y: 2, aim: 0 },
+    ],
+  });
+  const fLength = 343 / (2 * 40 * FT),
+    fWidth = 343 / (2 * 24 * FT);
+  const corner = (f: number) => at(l, "one", f, 11.5, 39.5);
+  // a local peak within 4 % of each mode
+  for (const fm of [fLength, fWidth]) {
+    const scan = Array.from({ length: 17 }, (_, i) => fm * (0.92 + i * 0.01));
+    const levelsHere = scan.map(corner);
+    const top = levelsHere.indexOf(Math.max(...levelsHere));
+    assert.ok(
+      Math.abs(scan[top] / fm - 1) < 0.04 && top > 0 && top < scan.length - 1,
+      `peak at ${scan[top].toFixed(1)} Hz for the mode at ${fm.toFixed(1)} Hz`,
+    );
+    assert.ok(corner(fm) - corner(fm * 0.8) > 6, `${fm.toFixed(1)} Hz stands out`);
+  }
+  // on the center line the first width mode has its node
+  const center = at(l, "one", fWidth, 0, 39.5);
+  assert.ok(
+    corner(fWidth) - center > 10,
+    `corner ${corner(fWidth).toFixed(1)} dB, center ${center.toFixed(1)} dB`,
+  );
+});
+
+test("coverage: near a box in a large, very absorbent room the modal sum is the free field and floor bounce", () => {
+  // 80 × 100 × 40 ft, every side and the ceiling open, the stacks in the middle
+  const l = indoors({ widthFt: 80, lengthFt: 100, ceilingFt: 40 }, "open", {
+    stacks: [
+      { x: -8, y: 50, aim: 0 },
+      { x: 8, y: 50, aim: 0 },
+    ],
+  });
+  const scene = coverageScene(stack, l);
+  for (const f of [30, 50])
+    for (const d of [3, 6]) {
+      const [slot] = coverageSlots(scene, levels(110), [f], true);
+      assert.equal(slot.modal?.weight, 1);
+      const p = [-8 * FT, (50 + d) * FT, l.earFt * FT] as const;
+      // the image sources alone: the free field and the floor bounce
+      const modal = levelAtPoint(scene, [slot], ...p),
+        images = levelAtPoint(scene, [{ ...slot, modal: null }], ...p);
+      assert.ok(
+        Math.abs(modal - images) < 2,
+        `${f} Hz, ${d} ft: modal ${modal.toFixed(1)} dB, images ${images.toFixed(1)} dB`,
+      );
+    }
+});
+
+test("coverage: the reverberant field is the textbook Lw + 10·log10(4/R), from the second reflection on", () => {
+  // horn only, 2 kHz: a concrete room, empty
+  const l = indoors({ widthFt: 30, lengthFt: 40, ceilingFt: 12 }, "concrete");
+  const scene = coverageScene(stack, l);
+  const full = levels(110);
+  const [slot] = coverageSlots(scene, { sub: null, mid: [], horn: full.horn }, [2000], false);
+  // the room by hand at 2 kHz (an octave center): block walls and ceiling 0.09, concrete floor 0.02, ISO air 9.89 dB/km
+  const [w, len, h] = [30 * FT, 40 * FT, 12 * FT];
+  const walls = 2 * (w + len) * h + w * len,
+    floor = w * len,
+    volume = w * len * h;
+  const sa = 0.09 * walls + 0.02 * floor,
+    alpha = sa / (walls + floor),
+    A = sa + (4 * volume * 0.00989) / (10 * Math.LOG10E),
+    R = A / (1 - alpha);
+  // the horn's power from its level at 1 m and Molloy's Q for its coverage at 2 kHz (degrees)
+  const horn = curveLevelAt(full.horn, 2000) ?? 0;
+  const [hh, hv] = slot.hornHalf.map((a) => (a * 180) / Math.PI);
+  const sinDeg = (d: number) => Math.sin((d * Math.PI) / 180);
+  const q = 180 / ((Math.asin(sinDeg(hh) * sinDeg(hv)) * 180) / Math.PI);
+  // Lw (re ρc = 400): Lp(1 m) + 10·log10(4π / Q); two horns; less (1 − ᾱ) for the first reflection, kept as images
+  const lw = horn + 10 * Math.log10((4 * Math.PI) / q);
+  const expected = lw + 10 * Math.log10(4 / R) + 10 * Math.log10(2) + 10 * Math.log10(1 - alpha);
+  const got = 10 * Math.log10(slot.diffuse);
+  assert.ok(
+    Math.abs(got - expected) < 0.2,
+    `${got.toFixed(2)} dB, expected ${expected.toFixed(2)}`,
+  );
+});
+
+test("coverage: air absorbs ISO 9613-1's dB per metre along a long path at 8 kHz", () => {
+  const l = layout();
+  const scene = coverageScene(stack, l);
+  const [slot] = coverageSlots(scene, levels(110), [8000], false);
+  // 100 m down the left stack's axis at horn height, with the air and without it
+  const p = [-8 * FT, 3 * FT + 100, stack.horn.zIn * 0.0254] as const;
+  const loss = levelAtPoint(scene, [slot], ...p) - levelAtPoint(scene, [{ ...slot, air: 0 }], ...p);
+  // ISO 9613-1, Table 1: 20 °C, 50 % RH, 8 kHz: 105 dB/km
+  assert.ok(Math.abs(loss + 0.105 * 100) < 0.3, `${loss.toFixed(2)} dB over 100 m`);
+});
+
+test("coverage: materials interpolate on log frequency and hold flat past the table; old layouts load", () => {
+  // drywall: 0.29 at 125 Hz, 0.10 at 250 Hz
+  assert.ok(Math.abs(materialAlpha("drywall", Math.sqrt(125 * 250)) - (0.29 + 0.1) / 2) < 1e-9);
+  assert.equal(materialAlpha("drywall", 40), 0.29);
+  assert.equal(materialAlpha("drywall", 12000), 0.09);
+  assert.equal(surfaceReflection("open", 1000), 0);
+  assert.ok(Math.abs(surfaceReflection("curtain", 1000) - Math.sqrt(1 - 0.72)) < 1e-9);
+  // a layout stored before materials: a wall on or off per side, and one absorption
+  const old = fromStored({
+    room: {
+      widthFt: 30,
+      lengthFt: 40,
+      walls: { front: true, back: false, left: true, right: false },
+      absorption: 0.4,
+      outdoors: false,
+    },
+  });
+  assert.deepEqual(old.room.materials, {
+    front: "drywall",
+    back: "open",
+    left: "drywall",
+    right: "open",
+    ceiling: DEFAULT_COVERAGE_LAYOUT.room.materials.ceiling,
+  });
+  assert.equal(old.room.widthFt, 30);
+  assert.equal(old.room.ceilingFt, DEFAULT_COVERAGE_LAYOUT.room.ceilingFt);
+  assert.ok(!("absorption" in old.room) && !("walls" in old.room));
+});
+
+test("coverage: a full dance floor takes the top end out of the floor bounce's comb", () => {
+  const comb = (crowd: CoverageRoom["crowd"]) => {
+    const l = layout({ room: { ...layout().room, crowd } });
+    const scene = coverageScene(stack, l);
+    // the left stack and its floor bounce only, every frequency with phase
+    const one = { ...scene, sources: scene.sources.filter((s) => s.path <= 1) };
+    const v = logSpacedFrequencies(2000, 8000, 60).map((f) =>
+      levelAtPoint(one, coverageSlots(one, levels(110), [f], true), -8 * FT, 23 * FT, l.earFt * FT),
+    );
+    return Math.max(...v) - Math.min(...v);
+  };
+  assert.ok(
+    comb("empty") - comb("full") > 6,
+    `empty ${comb("empty").toFixed(1)} dB, full ${comb("full").toFixed(1)} dB`,
+  );
+});
+
+test("coverage: one center sub is 6 dB under the center pair on the center line at low frequency", () => {
+  const pair = at(layout({ subs: "center" }), "one", 40, 0, 25),
+    single = at(layout({ subs: "single" }), "one", 40, 0, 25);
+  assert.ok(
+    Math.abs(pair - single - 20 * Math.log10(2)) < 0.3,
+    `pair ${pair.toFixed(2)} dB, one ${single.toFixed(2)} dB`,
+  );
+  assert.equal(
+    coverageBoxes(layout({ subs: "single" }), stack).filter((b) => b.kind === "sub").length,
+    1,
+  );
+});
+
+test("coverage: the balance reads the mid past its curve's end when the horn crosses over above it", () => {
+  const high = { ...stack, xoHi: 2500 };
+  const full = levels(110, high);
+  // the planner's mid curve stops at 2 kHz, under the 2.5 kHz crossover
+  const cut = { ...full, mid: full.mid.filter((o) => o.f <= 2000) };
+  const b = { xoLo: 120, xoHi: 2500, tilt: 6, hfTilt: 3 };
+  const a = balanceLevels(cut, b, high).pads,
+    ref = balanceLevels(full, b, high).pads;
+  assert.ok(a.horn < -1, `horn turned down ${a.horn.toFixed(1)} dB`);
+  for (const k of ["sub", "mid", "horn"] as const)
+    assert.ok(
+      Math.abs(a[k] - ref[k]) < 0.2,
+      `${k}: ${a[k].toFixed(2)} against ${ref[k].toFixed(2)}`,
+    );
+});
+
+test("coverage: a piston's directivity factor is a baffled piston's with no sound behind the box, and 1 at low ka with all of it", () => {
+  // J1 by its power series
+  const j1 = (x: number) => {
+    let t = x / 2,
+      s = t;
+    for (let m = 1; m < 40; m++) {
+      t *= -((x / 2) ** 2) / (m * (m + 1));
+      s += t;
+    }
+    return s;
+  };
+  // Kinsler: Q = (ka)² / (1 − J1(2ka) / ka) for a piston in an infinite baffle
+  for (const ka of [0.5, 1, 2, 4]) {
+    const ref = ka ** 2 / (1 - j1(2 * ka) / ka);
+    assert.ok(
+      Math.abs(pistonQ(ka, 0) / ref - 1) < 0.01,
+      `ka ${ka}: ${pistonQ(ka, 0)} against ${ref}`,
+    );
+  }
+  assert.ok(Math.abs(pistonQ(0.01, 1) - 1) < 1e-3);
 });

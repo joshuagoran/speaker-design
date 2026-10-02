@@ -124,7 +124,7 @@ export function useCoverageMap(
   // system chart draws them), then balanced: the weakest band sets the level
   const balanced = useMemo<BalancedLevels | null>(
     () =>
-      midModelled
+      midModelled && stack
         ? balanceLevels(
             {
               sub: subModelled
@@ -139,13 +139,14 @@ export function useCoverageMap(
               horn: hornModel ? hornModel.curve : [],
             },
             balance,
+            stack,
           )
         : null,
-    [subModelled, subAmpVoltage, subMidCrossoverHz, midModelled, hornModel, balance],
+    [subModelled, subAmpVoltage, subMidCrossoverHz, midModelled, hornModel, balance, stack],
   );
   const levels = balanced && balanced.levels;
   const { room, stacks, cluster, band, freqHz, earFt, listener, levelMode } = layout;
-  // a center pair only when the sub has levels to play: otherwise the subs stay (silent) in the stacks
+  // center subs only when the sub has levels to play: otherwise the subs stay (silent) in the stacks
   const subs = levels?.sub ? layout.subs : "stacks";
   const job = useMemo<CoverageJob | null>(
     () =>

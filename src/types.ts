@@ -1255,13 +1255,24 @@ export interface PaStackGeometry {
 /** A side of the room. front: the wall behind the stacks. */
 export type RoomSide = "front" | "back" | "left" | "right";
 
-/** The room the map covers, in feet; a side with a wall reflects (first order), less its absorption (0–1). */
+/** A surface the room's material is set for: the four sides and the ceiling (the floor is hard, or the crowd). */
+export type RoomSurface = RoomSide | "ceiling";
+
+/** What a side or the ceiling is made of (lib/pa/roomAcoustics has each one's absorption); "open" reflects nothing. */
+export type RoomMaterial = "concrete" | "drywall" | "wood" | "glass" | "curtain" | "open";
+
+/** The dance floor: empty (a hard floor), or full of people, who absorb the top end of the floor bounce. */
+export type FloorCrowd = "empty" | "full";
+
+/** The room the map covers, in feet: a rectangular box, each side and the ceiling of its own material. */
 export interface CoverageRoom {
   widthFt: number;
   lengthFt: number;
-  walls: Record<RoomSide, boolean>;
-  absorption: number;
-  /** no walls at all, and a softer ground */
+  /** floor to ceiling */
+  ceilingFt: number;
+  materials: Record<RoomSurface, RoomMaterial>;
+  crowd: FloorCrowd;
+  /** no walls or ceiling at all, and a softer ground */
   outdoors: boolean;
 }
 
@@ -1288,15 +1299,15 @@ export type CoverageBand = "sub" | "kick" | "mid" | "high" | "one";
 /** How loud the system plays: at its limit, or turned down until the listener gets the target. */
 export type CoverageLevelMode = "limit" | "listener";
 
-/** The subs in their stacks, or both together in the middle. */
-export type SubPlacement = "stacks" | "center";
+/** The subs in their stacks, both together in the middle, or one sub alone in the middle. */
+export type SubPlacement = "stacks" | "center" | "single";
 
 /** The coverage page's layout: room, where the stacks (and subs) stand, the listener, the band. */
 export interface CoverageLayout {
   room: CoverageRoom;
   stacks: [left: FloorPlacement, right: FloorPlacement];
   subs: SubPlacement;
-  /** the center pair's midpoint, used when `subs` is "center" */
+  /** where the center subs stand (the pair's midpoint, or the one sub), used when `subs` is "center" or "single" */
   cluster: FloorPoint;
   /** move and aim the stacks as a mirror image of each other */
   mirror: boolean;

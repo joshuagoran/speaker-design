@@ -4,18 +4,31 @@ import type {
   CoverageLayout,
   CoverageLevelMode,
   CoverageRoom,
+  FloorCrowd,
   FloorPoint,
+  RoomMaterial,
   RoomSide,
+  RoomSurface,
   SubPlacement,
 } from "../../types";
 
-/** A dance floor about 1500 sq ft, walls all round, the stacks a few feet off the front wall, toed in a little. */
+/**
+ * A dance floor about 1500 sq ft with a 14 ft drywall ceiling, block walls all round, full of people; the stacks a
+ * few feet off the front wall, toed in a little.
+ */
 export const DEFAULT_COVERAGE_LAYOUT: CoverageLayout = {
   room: {
     widthFt: 34,
     lengthFt: 44,
-    walls: { front: true, back: true, left: true, right: true },
-    absorption: 0.3,
+    ceilingFt: 14,
+    materials: {
+      front: "concrete",
+      back: "concrete",
+      left: "concrete",
+      right: "concrete",
+      ceiling: "drywall",
+    },
+    crowd: "full",
     outdoors: false,
   },
   stacks: [
@@ -35,6 +48,7 @@ export const DEFAULT_COVERAGE_LAYOUT: CoverageLayout = {
 /** Room size limits, ft. */
 export const ROOM_WIDTH_FT: [number, number] = [16, 80];
 export const ROOM_LENGTH_FT: [number, number] = [16, 100];
+export const ROOM_CEILING_FT: [number, number] = [8, 40];
 /** How far the stacks may turn either way, degrees. */
 const MAX_AIM_DEG = 60;
 
@@ -60,16 +74,33 @@ const fitted = (l: CoverageLayout): CoverageLayout => ({
   listener: inRoom(l.listener, l.room, 0.5),
 });
 
+/**
+ * A layout as stored: any saved field over the defaults. Layouts saved before materials had a wall on or off per side
+ * (`walls`) and one `absorption` for them all.
+ */
+export type StoredCoverageLayout = Partial<Omit<CoverageLayout, "room">> & {
+  room?: Partial<CoverageRoom> & {
+    walls?: Partial<Record<RoomSide, boolean>>;
+    absorption?: number;
+  };
+};
+
 /** A stored layout over the defaults, so a layout saved before a field existed still loads. */
-const fromStored = (s: Partial<CoverageLayout>): CoverageLayout => ({
-  ...DEFAULT_COVERAGE_LAYOUT,
-  ...s,
-  room: {
-    ...DEFAULT_COVERAGE_LAYOUT.room,
-    ...s.room,
-    walls: { ...DEFAULT_COVERAGE_LAYOUT.room.walls, ...s.room?.walls },
-  },
-});
+export const fromStored = (s: StoredCoverageLayout): CoverageLayout => {
+  const { walls, absorption: _absorption, ...room } = s.room ?? {};
+  // an old wall that was there is drywall, one that wasn't is open; its single absorption is dropped
+  const old: Partial<Record<RoomSurface, RoomMaterial>> = {};
+  if (walls)
+    for (const [side, on] of Object.entries(walls))
+      // boundary cast: Object.entries widens the keys of a Record<RoomSide, …> to string
+      old[side as RoomSide] = on ? "drywall" : "open";
+  const def = DEFAULT_COVERAGE_LAYOUT.room;
+  return {
+    ...DEFAULT_COVERAGE_LAYOUT,
+    ...s,
+    room: { ...def, ...room, materials: { ...def.materials, ...old, ...room.materials } },
+  };
+};
 
 /** The coverage page's layout and the ways to change it. */
 export interface CoverageLayoutState {
@@ -81,8 +112,9 @@ export interface CoverageLayoutState {
   moveCluster: (p: FloorPoint) => void;
   moveListener: (p: FloorPoint) => void;
   setRoomSize: (size: Pick<CoverageRoom, "widthFt" | "lengthFt">) => void;
-  toggleWall: (side: RoomSide) => void;
-  setAbsorption: (a: number) => void;
+  setMaterial: (surface: RoomSurface, material: RoomMaterial) => void;
+  setCeilingFt: (ft: number) => void;
+  setCrowd: (crowd: FloorCrowd) => void;
   setOutdoors: (outdoors: boolean) => void;
   setBand: (band: CoverageBand) => void;
   setFreqHz: (f: number) => void;
@@ -95,7 +127,7 @@ export interface CoverageLayoutState {
 
 /** The floor layout, remembered per viewer: it belongs to the venue, not to the design, so it isn't saved with configs. */
 export function useCoverageLayout(): CoverageLayoutState {
-  const [layout, setLayout] = useStoredStateFrom<CoverageLayout, Partial<CoverageLayout>>(
+  const [layout, setLayout] = useStoredStateFrom<CoverageLayout, StoredCoverageLayout>(
     "coverage.layout",
     {},
     fromStored,
@@ -123,12 +155,13 @@ export function useCoverageLayout(): CoverageLayoutState {
     moveCluster: (p) => update((l) => ({ ...l, cluster: inRoom(p, l.room, 2) })),
     moveListener: (p) => update((l) => ({ ...l, listener: inRoom(p, l.room, 0.5) })),
     setRoomSize: (size) => update((l) => fitted({ ...l, room: { ...l.room, ...size } })),
-    toggleWall: (side) =>
+    setMaterial: (surface, material) =>
       update((l) => ({
         ...l,
-        room: { ...l.room, walls: { ...l.room.walls, [side]: !l.room.walls[side] } },
+        room: { ...l.room, materials: { ...l.room.materials, [surface]: material } },
       })),
-    setAbsorption: (absorption) => update((l) => ({ ...l, room: { ...l.room, absorption } })),
+    setCeilingFt: (ceilingFt) => update((l) => ({ ...l, room: { ...l.room, ceilingFt } })),
+    setCrowd: (crowd) => update((l) => ({ ...l, room: { ...l.room, crowd } })),
     setOutdoors: (outdoors) => update((l) => ({ ...l, room: { ...l.room, outdoors } })),
     setBand: (band) => update((l) => ({ ...l, band })),
     setFreqHz: (freqHz) => update((l) => ({ ...l, freqHz })),
