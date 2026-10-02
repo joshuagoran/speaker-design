@@ -761,6 +761,7 @@ export function hornResponse(
     curve.push({ f, spl: hf.sens + 10 * Math.log10(P) + 20 * Math.log10(g) });
   }
   return {
+    hf,
     curve,
     P,
     pAmp,

@@ -899,6 +899,8 @@ export type MidSystem = MidSystemUnmodelled | MidSystemModelled;
 
 /** The compression driver on its horn: power available, the cap, and the response from the crossover up. */
 export interface HornResponse {
+  /** the compression driver's spec the response was built from */
+  hf: CompressionHf;
   curve: FrequencyPoint[];
   /** watts the driver sees: the lower of the amp and the program rating */
   P: number;

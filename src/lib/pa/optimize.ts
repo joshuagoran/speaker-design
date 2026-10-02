@@ -323,7 +323,7 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     }),
     horn: hornModel
       ? hornChips({
-          hf: cd.hf!,
+          hf: hornModel.hf,
           hz,
           horn,
           xoHi: c.xoHi,
@@ -836,7 +836,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       for (const h of horns) {
         if (h.exit !== cd.exit) continue;
         const hz: Partial<HornHf> = h.hf || {};
-        if ((cd.hf!.minXo && xoHi < cd.hf!.minXo) || (hz.minXo && xoHi < hz.minXo)) continue;
+        if (!cd.hf) continue; // a locked driver with no published spec can't be modelled
+        if ((cd.hf.minXo && xoHi < cd.hf.minXo) || (hz.minXo && xoHi < hz.minXo)) continue;
         if (hz.lowHz && hz.lowHz > xoHi * 0.8 && !hornLoadOk) continue; // horn stops loading near the crossover
         const hm = hornResponse(cd.hf, hz, xoHi, amps.hfAmpW);
         evals++;

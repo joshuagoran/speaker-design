@@ -24,10 +24,8 @@ interface Props {
     | "hornBandTiltDb"
     | "midHornCrossoverHz"
     | "midModelled"
-    | "compressionDriverSpec"
     | "hornSpec"
     | "hornModel"
-    | "hornSplAt"
     | "midBeamWidthDeg"
     | "beamCurves"
     | "dispersionMapDistanceM"
@@ -52,10 +50,8 @@ export function HornSection({ planner }: Props) {
     hornBandTiltDb,
     midHornCrossoverHz,
     midModelled,
-    compressionDriverSpec,
     hornSpec,
     hornModel,
-    hornSplAt,
     midBeamWidthDeg,
     beamCurves,
     dispersionMapDistanceM,
@@ -75,11 +71,10 @@ export function HornSection({ planner }: Props) {
         />
         <div className={sectionClass("horn")}>
           {hornModel ? (
-            // `compressionDriverSpec!` below: hornModel is null when the driver has no spec
             <>
               <StatTileGrid
                 tiles={[
-                  ["Sensitivity", compressionDriverSpec!.sens.toFixed(1), "dB"],
+                  ["Sensitivity", hornModel.hf.sens.toFixed(1), "dB"],
                   ["Power used", Math.round(hornModel.P), "W"],
                   ["Max SPL", hornModel.flat.toFixed(1), "dB"],
                   [
@@ -170,7 +165,7 @@ export function HornSection({ planner }: Props) {
               )}
               <WarningChips
                 chips={hornChips({
-                  hf: compressionDriverSpec!,
+                  hf: hornModel.hf,
                   hz: hornSpec,
                   horn: hornOption,
                   xoHi: midHornCrossoverHz,
@@ -180,7 +175,7 @@ export function HornSection({ planner }: Props) {
                     ? nearestPoint(midModelled.max, midHornCrossoverHz).spl
                     : null,
                   hfTilt: hornBandTiltDb,
-                  hornAtXo: hornSplAt(midHornCrossoverHz),
+                  hornAtXo: nearestPoint(hornModel.curve, midHornCrossoverHz).spl,
                   midBeam: midBeamWidthDeg,
                   fK: beamCurves.fK,
                 })}

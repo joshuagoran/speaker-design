@@ -21,7 +21,6 @@ import {
   subMusicOutputAt,
 } from "../../../lib/pa/calc";
 import type {
-  CompressionHf,
   Dims3,
   DispersionPlane,
   FrequencyPoint,
@@ -85,10 +84,8 @@ export interface PaDesign
   midUsedVoltage: number;
   midCabinetLb: number;
   midWeightLoadedLb: number;
-  compressionDriverSpec: CompressionHf | undefined;
   hornSpec: Partial<HornHf>;
   hornModel: HornResponse | null;
-  hornSplAt: (f: number) => number;
   midBeamWidthDeg: number | null;
   /** beamwidth in degrees against frequency for the mid and the horn, and the horn's pattern-control frequency */
   beamCurves: { midB: FrequencyPoint[]; hornB: FrequencyPoint[]; fK: number | null };
@@ -290,11 +287,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
    * Power: amp voltage into the driver's impedance, capped at program (2 x AES), derated
    * 6 dB per octave when crossing below the frequency the AES rating was measured at.
    */
-  const compressionDriverSpec = compressionDriver.hf,
-    hornSpec: Partial<HornHf> = hornOption.hf || {};
-  const hornModel = hornResponse(compressionDriverSpec, hornSpec, midHornCrossoverHz, hornAmpWatts);
-  const hornSplAt = (f: number) =>
-    hornModel!.curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b)).spl;
+  const hornSpec: Partial<HornHf> = hornOption.hf || {};
+  const hornModel = hornResponse(compressionDriver.hf, hornSpec, midHornCrossoverHz, hornAmpWatts);
   /** mid beamwidth at the horn crossover, as a rigid piston: -6 dB where ka sin(theta) = 2.2 */
   const midBeamWidthDeg = midDriver.ts
     ? pistonBeamWidthDeg(midDriver.ts.Sd, midHornCrossoverHz)
@@ -551,10 +545,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     midUsedVoltage,
     midCabinetLb,
     midWeightLoadedLb,
-    compressionDriverSpec,
     hornSpec,
     hornModel,
-    hornSplAt,
     midBeamWidthDeg,
     beamCurves,
     subMusicAtCrossover,

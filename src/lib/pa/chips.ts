@@ -230,9 +230,9 @@ export function hornChips(s: HornChipsInput): Chip[] {
           `Capped at ${Math.round(hornModel.pProg)} W: 2 × ${hf.aes} W AES${hornModel.derate < 1 ? `, derated ${(-10 * Math.log10(hornModel.derate)).toFixed(1)} dB because ${xoHi} Hz is below the ${hf.aesXo} Hz the rating assumes` : ""}.`,
         ],
   );
-  if (midAtXoHi != null) {
+  if (midAtXoHi != null && hornAtXo != null) {
     const need = midAtXoHi - hfTilt,
-      gap = hornAtXo! - need;
+      gap = hornAtXo - need;
     const wNeed = hfAmpW * Math.pow(10, -gap / 10);
     F.push(
       gap < -0.5
@@ -324,18 +324,18 @@ export function fillChips(s: FillChipsInput): Chip[] {
           `${f3.toFixed(0)} Hz −3 dB; the kick's attack comes through but its body is all subs.`,
         ],
   );
-  if (hf)
+  if (hf && hfLimW != null)
     F.push(
-      hfLimW! < ampW
+      hfLimW < ampW
         ? [
             "warn",
             "HF limits first",
-            `Through a ${pad.toFixed(0)} dB pad the HF reaches its ${2 * hf.aes} W program rating at about ${Math.round(hfLimW!)} W of amp, under the ${ampW} W you've set.`,
+            `Through a ${pad.toFixed(0)} dB pad the HF reaches its ${2 * hf.aes} W program rating at about ${Math.round(hfLimW)} W of amp, under the ${ampW} W you've set.`,
           ]
         : [
             "ok",
             "HF has headroom",
-            `Through a ${pad.toFixed(0)} dB pad the HF only reaches its program rating at about ${Math.round(hfLimW!)} W of amp.`,
+            `Through a ${pad.toFixed(0)} dB pad the HF only reaches its program rating at about ${Math.round(hfLimW)} W of amp.`,
           ],
     );
   else F.push(["warn", "HF not modelled", "The HF section's specs aren't published on usspeaker."]);
