@@ -167,6 +167,7 @@ export interface MidBox {
   size?: SubSize;
 }
 
+/** The named cabinet finishes; the cabinet's `cabFinish` can also be any paint colour, as a hex string. */
 export type FinishId = "birch" | "walnut";
 
 export interface CabinetFinish {
@@ -744,7 +745,8 @@ export interface PaDesignConfig {
   layout: PaLayout;
   cutaway?: boolean;
   baffleColor?: string;
-  cabFinish?: FinishId;
+  /** a `FinishId`, or a paint colour as a hex string (`SwatchPicker` offers both) */
+  cabFinish?: string;
   spacerH?: number;
   joint?: CornerJoint;
   summary?: string;

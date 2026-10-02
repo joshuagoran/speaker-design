@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CABINET_FINISHES } from "../../lib/data";
+import { cabinetFinishOf } from "../../lib/data";
 import {
   roundedRectShape,
   roundedRectPath,
@@ -11,7 +11,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type {
   Dims3,
-  FinishId,
   Horn,
   MidDriver,
   PaLayout,
@@ -33,7 +32,8 @@ interface Props {
   portGeom?: Partial<PaPortGeometry>;
   wall?: number;
   inset?: number;
-  cabFinish?: FinishId;
+  /** a `FinishId` or a paint colour (hex) */
+  cabFinish?: string;
   spacerH?: number;
 }
 
@@ -109,7 +109,7 @@ export function StackView3D({
     scene.add(key);
 
     // cabinet finish: clear birch, walnut veneer, or paint (a hex colour)
-    const finish = CABINET_FINISHES[cabFinish];
+    const finish = cabinetFinishOf(cabFinish);
     const birch = new THREE.MeshStandardMaterial({
       color: finish ? finish.color : new THREE.Color(cabFinish),
       roughness: finish ? finish.rough : 0.8,

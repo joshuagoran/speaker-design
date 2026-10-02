@@ -2074,6 +2074,11 @@ export const CABINET_FINISHES: Record<FinishId, CabinetFinish> = {
   birch: { name: "Birch", color: 0xd7b98a, inner: 0xc9a875, rough: 0.85, swatch: "#d7b98a" },
   walnut: { name: "Walnut", color: 0x5c3a24, inner: 0x4f3220, rough: 0.7, swatch: "#5c3a24" },
 };
+const isFinishId = (value: string): value is FinishId => Object.hasOwn(CABINET_FINISHES, value);
+/** The named finish for a cabinet's `cabFinish`, or undefined when it is a paint colour (a hex string). */
+export function cabinetFinishOf(value: string): CabinetFinish | undefined {
+  return isFinishId(value) ? CABINET_FINISHES[value] : undefined;
+}
 
 export const CABINETS: readonly Cabinet[] = [
   {

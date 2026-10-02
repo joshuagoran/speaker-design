@@ -4,7 +4,13 @@ import { SwatchPicker } from "../../../components/ui/SwatchPicker";
 import { Card } from "../../../components/ui/Card";
 import { SelectField } from "../../../components/ui/SelectField";
 import { Slider } from "../../../components/ui/Slider";
-import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, CABINET_FINISHES } from "../../../lib/data";
+import {
+  CD_OPTIONS,
+  HORN_OPTIONS,
+  PAINT_SWATCHES,
+  CABINET_FINISHES,
+  cabinetFinishOf,
+} from "../../../lib/data";
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { keysOf } from "../../../lib/records";
@@ -238,16 +244,11 @@ export function SettingsPanel({ planner }: Props) {
             <SwatchPicker
               label="Cabinet finish"
               value={cabinetFinish}
-              // boundary cast: the custom colour picker also stores a hex string here, which `FinishId` doesn't allow
-              onChange={setCabinetFinish as (value: string) => void}
+              onChange={setCabinetFinish}
               swatches={PAINT_SWATCHES}
               presets={CABINET_FINISHES}
               titlePrefix="Painted: "
-              note={
-                CABINET_FINISHES[cabinetFinish]
-                  ? CABINET_FINISHES[cabinetFinish].name
-                  : `painted ${cabinetFinish}`
-              }
+              note={cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`}
             />
           </div>
           <div className={tabClass("look")}>

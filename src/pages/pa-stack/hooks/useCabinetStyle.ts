@@ -1,5 +1,5 @@
 import { PAINT_SWATCHES, CABINETS, FORMATS } from "../../../lib/data";
-import type { Cabinet, FinishId, Format, PaLayout, Setter } from "../../../types";
+import type { Cabinet, Format, PaLayout, Setter } from "../../../types";
 import { useState } from "react";
 
 export interface CabinetStyle {
@@ -16,8 +16,9 @@ export interface CabinetStyle {
   setBaffleInsetIn: Setter<number>;
   baffleColor: string;
   setBaffleColor: Setter<string>;
-  cabinetFinish: FinishId;
-  setCabinetFinish: Setter<FinishId>;
+  /** a `FinishId` or a paint colour (hex) */
+  cabinetFinish: string;
+  setCabinetFinish: Setter<string>;
   spacerHeightIn: number;
   setSpacerHeightIn: Setter<number>;
 }
@@ -35,7 +36,7 @@ export function useCabinetStyle(): CabinetStyle {
     // `!`: "Dusty pink" is one of the swatches
     PAINT_SWATCHES.find(([, name]) => name === "Dusty pink")![0],
   );
-  const [cabinetFinish, setCabinetFinish] = useState<FinishId>("birch");
+  const [cabinetFinish, setCabinetFinish] = useState("birch");
   const [spacerHeightIn, setSpacerHeightIn] = useState(20);
   return {
     plinthHeightIn,
