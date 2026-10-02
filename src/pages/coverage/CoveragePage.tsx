@@ -6,6 +6,7 @@ import { Notice } from "../../components/ui/Notice";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Slider } from "../../components/ui/Slider";
 import { ToggleButton } from "../../components/ui/ToggleButton";
+import { formatSigned as signed } from "../../lib/format";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
 import { LISTENER_TARGET_DB } from "../../lib/pa/optimize";
 import { PAL } from "../../styles/palette";
@@ -35,7 +36,6 @@ interface Props {
 
 const hz = (f: number) =>
   f >= 1000 ? `${(f / 1000).toFixed(f >= 10000 ? 0 : 1)} kHz` : `${Math.round(f)} Hz`;
-const signed = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1);
 
 /** The height the map may take: on phones, half the screen, so it stays in view above the open settings sheet. */
 function useMapMaxHeight() {
@@ -109,12 +109,11 @@ export function CoveragePage({ planner }: Props) {
           </p>
           {map.stack && map.levels ? (
             <CoverageMap
-              grid={map.grid}
+              view={map.view}
               layout={layout}
               actions={state}
               boxes={map.boxes}
               stack={map.stack}
-              target={map.gridTarget}
               onDragChange={setDragging}
               maxHeight={maxHeight}
             />
@@ -418,11 +417,11 @@ export function CoveragePage({ planner }: Props) {
           <div className={tabClass("stacks")}>
             <div className={label}>Stacks</div>
             <div className="flex flex-wrap gap-1 mb-3">
-              <ToggleButton on={layout.subs === "stacks"} onClick={() => state.setSubs("stacks")}>
+              <ToggleButton on={map.subs === "stacks"} onClick={() => state.setSubs("stacks")}>
                 Subs in the stacks
               </ToggleButton>
               <ToggleButton
-                on={layout.subs === "center"}
+                on={map.subs === "center"}
                 onClick={() => state.setSubs("center")}
                 disabled={!planner.subModelled}
               >

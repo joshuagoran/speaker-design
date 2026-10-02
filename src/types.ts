@@ -1314,13 +1314,8 @@ export interface CoverageLevels {
   horn: FrequencyPoint[];
 }
 
-/** The planner's music balance: how much less the mid band needs than the sub, and the horn than the mid, dB. */
-export interface MusicBalance {
-  xoLo: number;
-  xoHi: number;
-  tilt: number;
-  hfTilt: number;
-}
+/** The planner's music balance: its crossovers, and how much less the mid band needs than the sub and the horn than the mid. */
+export type MusicBalance = Pick<PaDesignConfig, "xoLo" | "xoHi" | "tilt" | "hfTilt">;
 
 /** Each band's level after balancing, and how far each was turned down to get there, dB (0 or less). */
 export interface BalancedLevels {
@@ -1338,6 +1333,19 @@ export interface CoverageGrid {
   cols: number;
   rows: number;
   db: Float32Array;
+}
+
+/**
+ * A grid as the map draws it: the room it covers and the target it is compared against, both as of the request it was
+ * computed for, so an older grid still on show while the next one computes stays consistent with itself.
+ */
+export interface CoverageGridView {
+  grid: CoverageGrid;
+  room: Pick<CoverageRoom, "widthFt" | "lengthFt">;
+  /** what a grid level is compared against: the grid's band target less the gain (the grid is at the limit), dB */
+  target: number;
+  /** the system's gain for this grid, dB, added to a grid level for the absolute level */
+  gain: number;
 }
 
 /** What the floor map's worker computes from: the stack and its levels, where the boxes stand, the band, the grid size. */

@@ -13,6 +13,7 @@ import {
   waveguideHalfAngles,
   type Complex,
 } from "../hifi/hifi";
+import { METERS_PER_FOOT as FT } from "../../constants/units";
 import { paStackSources, type StackBand, type StackSource } from "./dispersion";
 import type {
   CoverageBand,
@@ -31,7 +32,6 @@ import type {
 } from "../../types";
 
 const C = 343,
-  FT = 0.3048,
   IN = 0.0254;
 
 /** The bands the map averages over, Hz. */
@@ -72,7 +72,10 @@ interface SceneSource {
   /** reflection loss along this path, pressure */
   gain: number;
   src: StackSource;
-  /** the delay that time-aligns it with the box's other drivers, as a distance, m */
+  /**
+   * how much farther it is than the box's reference driver from the box's alignment point, m: the DSP delays the
+   * box's other drivers by this against it, so the sum takes it off this driver's path
+   */
   alignM: number;
 }
 
@@ -175,10 +178,23 @@ export function coverageScene(
   return { stack, sources, paths };
 }
 
-/** A curve's level at `f`, dB, interpolated on log frequency; null outside the curve (the band is silent there). */
-export function curveLevelAt(curve: readonly FrequencyPoint[], f: number): number | null {
+/**
+ * A curve's level at `f`, dB, interpolated on log frequency; null for an empty curve (the band is silent). Outside the
+ * curve, `skirt` (the band's crossover magnitude against frequency) carries the nearest end on, so the band keeps
+ * rolling off past where its curve stops; without it the band is silent there.
+ */
+export function curveLevelAt(
+  curve: readonly FrequencyPoint[],
+  f: number,
+  skirt?: (f: number) => number,
+): number | null {
   const n = curve.length;
-  if (!n || f < curve[0].f || f > curve[n - 1].f) return null;
+  if (!n) return null;
+  if (f < curve[0].f || f > curve[n - 1].f) {
+    if (!skirt) return null;
+    const edge = f < curve[0].f ? curve[0] : curve[n - 1];
+    return edge.spl + 20 * Math.log10(Math.max(1e-12, skirt(f)) / Math.max(1e-12, skirt(edge.f)));
+  }
   let lo = 0,
     hi = n - 1;
   while (hi - lo > 1) {
@@ -235,7 +251,8 @@ export function bandTarget(target: number, band: CoverageBand, freqHz: number, b
 
 /**
  * Each band's output at each frequency: its level from the planner's curve (which already carries the crossover's
- * magnitude) with its crossover's phase, taken off the floor for the sub and mid (the map adds the floor itself).
+ * magnitude, and past the curve's ends rolls off by it) with its crossover's phase, taken off the floor for the sub and
+ * mid (the map adds the floor itself).
  */
 export function coverageSlots(
   stack: CoverageStack,
@@ -245,14 +262,19 @@ export function coverageSlots(
 ): CoverageSlot[] {
   const srcs = paStackSources(stack);
   const { horn } = stack;
+  const magnitude = (o: StackSource) => (f: number) => {
+    const h = o.filt(f);
+    return Math.hypot(h.re, h.im);
+  };
+  const skirts = srcs.map(magnitude);
   return freqs.map((f) => {
     const k = (2 * Math.PI * f) / C;
     const out: CoverageSlot["out"] = {},
       ka: CoverageSlot["ka"] = {};
-    for (const o of srcs) {
+    for (const [i, o] of srcs.entries()) {
       if (!o.horn) ka[o.band] = k * o.a;
       const curve = levels[o.band];
-      const db = curve && curveLevelAt(curve, f);
+      const db = curve && curveLevelAt(curve, f, skirts[i]);
       if (db == null) continue;
       // the sub's and mid's curves are half-space (on the floor); in the open a box radiates into full space below
       // its baffle step, and the floor image puts the floor back. The horn's datasheet sensitivity is free-field.
@@ -340,7 +362,8 @@ export function levelAtPoint(
         if (geo[g + 4]) d *= sl.shadow;
       }
       const mag = (d * s.gain) / r,
-        ph = -sl.k * (r + s.alignM),
+        // less the alignment, so the box's drivers arrive together at its alignment point
+        ph = -sl.k * (r - s.alignM),
         c = Math.cos(ph),
         sn = Math.sin(ph);
       pre[s.path] += mag * (v.re * c - v.im * sn);
@@ -402,6 +425,21 @@ export function computeCoverageGrid({
     layout.room,
     layout.earFt,
     cols,
+  );
+}
+
+/** A request's level at one spot on the floor (feet), at ear height, in its band: what its grid shows there. */
+export function coverageLevelAt(
+  { stack, levels, layout }: Omit<CoverageRequest, "cols">,
+  at: FloorPoint,
+): number {
+  const { freqs, coherent } = coverageFrequencies(layout.band, layout.freqHz);
+  return levelAtPoint(
+    coverageScene(stack, layout),
+    coverageSlots(stack, levels, freqs, coherent),
+    at.x * FT,
+    at.y * FT,
+    layout.earFt * FT,
   );
 }
 

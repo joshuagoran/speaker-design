@@ -13,11 +13,10 @@ import {
   curveLevelAt,
   levelAtPoint,
 } from "../src/lib/pa/coverage";
-import { paStackSources } from "../src/lib/pa/dispersion";
+import { paResponseAt, paStackSources } from "../src/lib/pa/dispersion";
 import { logSpacedFrequencies } from "../src/lib/hifi/hifi";
+import { METERS_PER_FOOT as FT } from "../src/constants/units";
 import type { CoverageLayout, CoverageLevels, CoverageStack } from "../src/types";
-
-const FT = 0.3048;
 
 const stack: CoverageStack = {
   sub: { zIn: 12, Sd: 1200 },
@@ -30,10 +29,10 @@ const stack: CoverageStack = {
 };
 
 /** Every band at `db` at 1 m, through its crossover's magnitude, as the planner's curves are. */
-const levels = (db: number): CoverageLevels => {
+const levels = (db: number, s: CoverageStack = stack): CoverageLevels => {
   const freqs = logSpacedFrequencies(12, 20000, 400);
   const curve = (band: "sub" | "mid" | "horn") => {
-    const o = paStackSources(stack).find((s) => s.band === band);
+    const o = paStackSources(s).find((src) => src.band === band);
     if (!o) throw new Error(band); // the test stack has all three
     return freqs.map((f) => {
       const h = o.filt(f);
@@ -93,6 +92,65 @@ test("coverage: curve levels interpolate on log frequency and are silent outside
   assert.ok(Math.abs((curveLevelAt(c, Math.sqrt(1e5)) ?? 0) - 95) < 1e-9);
   assert.equal(curveLevelAt(c, 50), null);
   assert.equal(curveLevelAt(c, 2000), null);
+});
+
+test("coverage: past a curve's ends its band rolls off by its crossover, and an empty curve stays silent", () => {
+  const c = [
+    { f: 100, spl: 90 },
+    { f: 1000, spl: 100 },
+  ];
+  // a skirt falling 12 dB per octave above 1 kHz: an octave past the end is 12 dB under it
+  const skirt = (f: number) => Math.min(1, (1000 / f) ** 2);
+  assert.ok(Math.abs((curveLevelAt(c, 2000, skirt) ?? 0) - (100 - 20 * Math.log10(4))) < 1e-9);
+  assert.equal(curveLevelAt(c, 50, skirt), 90);
+  assert.equal(curveLevelAt([], 500, skirt), null);
+  // the planner's mid curve stops at 2 kHz: with the horn crossover near it, the mid carries on past 2 kHz smoothly
+  const high = { ...stack, xoHi: 1800 };
+  const full = levels(110, high);
+  const cut = { ...full, mid: full.mid.filter((o) => o.f <= 2000), horn: [] };
+  const mid = (f: number) => {
+    const v = coverageSlots(high, cut, [f], true)[0].out.mid;
+    return v ? 20 * Math.log10(Math.hypot(v.re, v.im)) : -Infinity;
+  };
+  const end = cut.mid[cut.mid.length - 1].f;
+  assert.ok(Math.abs(mid(end * 1.01) - mid(end)) < 0.5, `${mid(end)} to ${mid(end * 1.01)} dB`);
+  // and it matches the full curve an octave on
+  const ref = coverageSlots(high, full, [4000], true)[0].out.mid;
+  assert.ok(ref && Math.abs(mid(4000) - 20 * Math.log10(Math.hypot(ref.re, ref.im))) < 0.1);
+  assert.equal(coverageSlots(high, cut, [4000], true)[0].out.horn, undefined);
+});
+
+test("coverage: a box's drivers arrive in phase on its axis at the alignment point, as the dispersion model has them", () => {
+  // a tall stack, the horn well above the mid, so a wrong alignment shows plainly at the crossover
+  const tall: CoverageStack = {
+    ...stack,
+    mid: { zIn: 20, Sd: 530 },
+    horn: { ...stack.horn, zIn: 100 },
+  };
+  const l = layout();
+  const scene = coverageScene(tall, l);
+  // the left stack alone, no floor: its first path
+  const one = { ...scene, sources: scene.sources.filter((s) => s.path === 0) };
+  const [box] = l.stacks;
+  const distM = 10,
+    freqs = [600, 900, 1350];
+  const on = paResponseAt(tall, { th: 0, eyeIn: tall.horn.zIn, distM }, freqs);
+  for (const [i, f] of freqs.entries()) {
+    const db = levelAtPoint(
+      one,
+      coverageSlots(tall, levels(110, tall), [f], true),
+      box.x * FT,
+      box.y * FT + distM,
+      tall.horn.zIn * 0.0254,
+    );
+    // 110 dB at 1 m, 20 dB down at 10 m; the dispersion model is 0 dB there when the drivers sum flat
+    const rel = db - (110 - 20);
+    assert.ok(
+      Math.abs(rel - on[i].spl) < 1,
+      `${f} Hz: ${rel.toFixed(2)} dB, dispersion ${on[i].spl.toFixed(2)} dB`,
+    );
+    assert.ok(Math.abs(rel) < 1, `${f} Hz: ${rel.toFixed(2)} dB off flat`);
+  }
 });
 
 test("coverage: two stacks at one low frequency add on the center line and cancel where their paths differ by half a wavelength", () => {

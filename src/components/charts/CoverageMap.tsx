@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { PAL } from "../../styles/palette";
 import { useElementWidth } from "../../hooks/useElementWidth";
+import { formatSigned } from "../../lib/format";
 import { contourSegments, gridLevelAt } from "../../lib/pa/coverage";
 import type {
   CoverageBox,
-  CoverageGrid,
+  CoverageGridView,
   CoverageLayout,
   CoverageStack,
   FloorPoint,
@@ -62,12 +63,12 @@ type Drag =
   | { kind: "listener" };
 
 interface Props {
-  grid: CoverageGrid | null;
+  /** the grid on show, with the room and target it was computed for (an older one while the next computes) */
+  view: CoverageGridView | null;
   layout: CoverageLayout;
   actions: Pick<CoverageLayoutState, "moveStack" | "aimStack" | "moveCluster" | "moveListener">;
   boxes: readonly CoverageBox[];
   stack: Pick<CoverageStack, "horn" | "footprint">;
-  target: number;
   /** tells the page when a drag starts and ends, so it can trade detail for speed meanwhile */
   onDragChange: (dragging: boolean) => void;
   /** the most height the map may take, px */
@@ -79,12 +80,11 @@ interface Props {
  * move it, its dot to turn it, the sub pair, or the listener (or tap the floor to put the listener there).
  */
 export function CoverageMap({
-  grid,
+  view,
   layout,
   actions,
   boxes,
   stack,
-  target,
   onDragChange,
   maxHeight,
 }: Props) {
@@ -105,9 +105,16 @@ export function CoverageMap({
     y: (Y - PAD.t) / k,
   });
 
+  // where the grid lies: over its own room, which is the current one unless the room has changed since it was computed
+  const gridRoom = view ? view.room : room;
+  const gx = px(-gridRoom.widthFt / 2),
+    gy = py(0),
+    gw = gridRoom.widthFt * k,
+    gh = gridRoom.lengthFt * k;
   // the heat map as a small image, one pixel a cell, scaled up smoothly
   const image = useMemo(() => {
-    if (!grid || typeof document === "undefined") return null;
+    if (!view || typeof document === "undefined") return null;
+    const { grid, target } = view;
     const c = document.createElement("canvas");
     c.width = grid.cols;
     c.height = grid.rows;
@@ -120,16 +127,19 @@ export function CoverageMap({
     });
     ctx.putImageData(img, 0, 0);
     return c.toDataURL();
-  }, [grid, target]);
-  const contour = (level: number) =>
-    grid
-      ? contourSegments(grid, level)
-          .map(
-            ([x1, y1, x2, y2]) =>
-              `M${(PAD.l + (x1 / grid.cols) * w).toFixed(1)},${(PAD.t + (y1 / grid.rows) * h).toFixed(1)}L${(PAD.l + (x2 / grid.cols) * w).toFixed(1)},${(PAD.t + (y2 / grid.rows) * h).toFixed(1)}`,
-          )
-          .join("")
-      : "";
+  }, [view]);
+  // the target and −6 dB contours, rebuilt only when the grid, its target or the map's size changes
+  const contours = useMemo(() => {
+    if (!view) return { target: "", minus6: "" };
+    const { grid, target } = view;
+    const X = (x: number) => (gx + (x / grid.cols) * gw).toFixed(1),
+      Y = (y: number) => (gy + (y / grid.rows) * gh).toFixed(1);
+    const path = (level: number) =>
+      contourSegments(grid, level)
+        .map(([x1, y1, x2, y2]) => `M${X(x1)},${Y(y1)}L${X(x2)},${Y(y2)}`)
+        .join("");
+    return { target: path(target), minus6: path(target - 6) };
+  }, [view, gx, gy, gw, gh]);
 
   const stackBoxes = boxes.filter((b) => b.kind === "stack");
   const sideFt = { w: stack.footprint.w / 12, d: stack.footprint.d / 12 };
@@ -203,8 +213,15 @@ export function CoverageMap({
     actions.moveListener({ x: listener.x + v[0], y: listener.y + v[1] });
   };
 
-  const readout = hover && grid ? gridLevelAt(grid, room, hover) : null;
-  const fmt = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1);
+  // the grid's level under the pointer, inside the grid's own room
+  const readout =
+    hover &&
+    view &&
+    Math.abs(hover.x) <= view.room.widthFt / 2 &&
+    hover.y >= 0 &&
+    hover.y <= view.room.lengthFt
+      ? gridLevelAt(view.grid, view.room, hover)
+      : null;
   const walls = room.outdoors
     ? { front: false, back: false, left: false, right: false }
     : room.walls;
@@ -225,8 +242,8 @@ export function CoverageMap({
       <div className="flex justify-between items-baseline gap-3 text-xs text-stone-500 mb-1 min-h-[1rem]">
         <span>{room.outdoors ? "Outdoors" : `${room.widthFt} × ${room.lengthFt} ft room`}</span>
         <span className="tabular-nums text-stone-900">
-          {readout != null && hover
-            ? `${hover.x.toFixed(1)}, ${hover.y.toFixed(1)} ft · ${readout.toFixed(1)} dB (${fmt(readout - target)})`
+          {readout != null && hover && view
+            ? `${hover.x.toFixed(1)}, ${hover.y.toFixed(1)} ft · ${(readout + view.gain).toFixed(1)} dB (${formatSigned(readout - view.target)})`
             : "dB against the target"}
         </span>
       </div>
@@ -252,25 +269,27 @@ export function CoverageMap({
           </clipPath>
         </defs>
         <rect x={PAD.l} y={PAD.t} width={w} height={h} fill={PAL.edge} />
-        {image && (
-          <image
-            href={image}
-            x={PAD.l}
-            y={PAD.t}
-            width={w}
-            height={h}
-            preserveAspectRatio="none"
-            style={{ imageRendering: "auto" }}
+        <g clipPath="url(#coverage-room)">
+          {image && (
+            <image
+              href={image}
+              x={gx}
+              y={gy}
+              width={gw}
+              height={gh}
+              preserveAspectRatio="none"
+              style={{ imageRendering: "auto" }}
+            />
+          )}
+          <path
+            d={contours.minus6}
+            stroke={PAL.ink}
+            strokeOpacity="0.45"
+            strokeWidth="1"
+            fill="none"
           />
-        )}
-        <path
-          d={contour(target - 6)}
-          stroke={PAL.ink}
-          strokeOpacity="0.45"
-          strokeWidth="1"
-          fill="none"
-        />
-        <path d={contour(target)} stroke={PAL.ink} strokeWidth="1.5" fill="none" />
+          <path d={contours.target} stroke={PAL.ink} strokeWidth="1.5" fill="none" />
+        </g>
         <g clipPath="url(#coverage-room)">
           {stack.horn.covH > 0 &&
             stackBoxes.flatMap((b) =>
