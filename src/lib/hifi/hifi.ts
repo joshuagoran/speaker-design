@@ -34,6 +34,7 @@ import type {
   PanelMaterial,
   PassiveRadiator,
   PassiveRadiatorChoice,
+  PortMemory,
   WooferMaxPoint,
   WooferPoint,
 } from "../../types";
@@ -782,17 +783,27 @@ export function hifiChips(
 
 /**
  * The port after the "1 port / 2 ports / Slot" toggle: a new object with only the fields of the shape it switches to
- * (a round port has `dia` and `elbows`, a slot has `h`; both keep the length).
+ * (a round port has `dia` and `elbows`, a slot has `h`; both keep the length). The other shape's size comes from
+ * `remembered`: the diameter the round port last had, the height the slot last had.
  */
-export function portAfterToggle(p: HifiPort, to: number | "slot"): HifiPort {
+export function portAfterToggle(
+  p: HifiPort,
+  to: number | "slot",
+  remembered: PortMemory,
+): HifiPort {
   if (to === "slot") {
-    const slot: SlotPort = { shape: "slot", n: 1, h: p.shape === "slot" ? p.h : 1, len: p.len };
+    const slot: SlotPort = {
+      shape: "slot",
+      n: 1,
+      h: p.shape === "slot" ? p.h : remembered.h,
+      len: p.len,
+    };
     return slot;
   }
   const round: RoundPort = {
     shape: "round",
     n: to,
-    dia: p.shape === "slot" ? 2 : p.dia,
+    dia: p.shape === "slot" ? remembered.dia : p.dia,
     len: p.len,
   };
   if (p.shape !== "slot" && p.elbows !== undefined) round.elbows = p.elbows;

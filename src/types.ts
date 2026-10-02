@@ -354,6 +354,9 @@ export type HifiPort = RoundPort | SlotPort;
 /** A slot port with its width, as `hifiSystem` models it. */
 export type SizedSlotPort = SlotPort & Required<Pick<SlotPort, "w">>;
 
+/** What the port toggle remembers across shapes, in inches: the last round port's diameter and the last slot's height. */
+export type PortMemory = Pick<RoundPort, "dia"> & Pick<SlotPort, "h">;
+
 /** The passive radiators in use: the driver itself, how many, and the added mass on each in grams. */
 export interface PassiveRadiatorChoice {
   drv: PassiveRadiator;

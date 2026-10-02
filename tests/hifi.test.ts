@@ -293,15 +293,34 @@ test("planar ribbon on its own waveguide: flush-mounted, its coverage drives the
 
 test("port toggle builds a fresh port with only its own shape's fields", () => {
   const round = { n: 1, dia: 3, len: 7, elbows: 1 } as const;
-  const slot = portAfterToggle(round, "slot");
+  const remembered = { dia: 2, h: 1 };
+  const slot = portAfterToggle(round, "slot", remembered);
   assert.deepEqual(slot, { shape: "slot", n: 1, h: 1, len: 7 });
   assert.ok(!("dia" in slot) && !("elbows" in slot), "no round fields on a slot");
-  const back = portAfterToggle({ ...slot, h: 2, w: 9 }, 2);
+  const back = portAfterToggle({ ...slot, h: 2, w: 9 }, 2, remembered);
   assert.deepEqual(back, { shape: "round", n: 2, dia: 2, len: 7 });
   assert.ok(
     !("h" in back) && !("w" in back) && !("elbows" in back),
     "no slot fields on a round port",
   );
-  assert.deepEqual(portAfterToggle(round, 2), { shape: "round", n: 2, dia: 3, len: 7, elbows: 1 });
-  assert.deepEqual(portAfterToggle({ ...slot, h: 2 }, "slot"), { ...slot, h: 2 });
+  assert.deepEqual(portAfterToggle(round, 2, remembered), {
+    shape: "round",
+    n: 2,
+    dia: 3,
+    len: 7,
+    elbows: 1,
+  });
+  assert.deepEqual(portAfterToggle({ ...slot, h: 2 }, "slot", remembered), { ...slot, h: 2 });
+});
+
+test("port toggle: round 3 in, to a slot and back, is round 3 in again; a slot keeps its height too", () => {
+  const round = { n: 1, dia: 3, len: 7 } as const;
+  // the page remembers the last round diameter while the slot is showing
+  const slot = portAfterToggle(round, "slot", { dia: round.dia, h: 1.5 });
+  assert.equal(slot.h, 1.5, "the slot comes back at its remembered height");
+  const back = portAfterToggle(slot, 1, { dia: round.dia, h: 2 });
+  assert.equal(back.dia, 3);
+  assert.equal(back.h, undefined);
+  const slotAgain = portAfterToggle(back, "slot", { dia: 3, h: 2 });
+  assert.equal(slotAgain.h, 2, "and the slot height the user last had");
 });

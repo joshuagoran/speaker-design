@@ -25,6 +25,7 @@ import type {
   MidSize,
   PaDesignConfig,
   PlywoodSheetKind,
+  SlotPort,
   SubDriver,
 } from "../types";
 
@@ -96,6 +97,7 @@ export const DEFAULT_HIFI = {
   wallThicknessIn: 0.75,
   panelMaterial: "ply",
   portSpec: { n: 1, dia: 2, len: 6 },
+  slotHeightIn: 1,
   radiatorSelection: { id: "sb16pfcr", n: 2, addG: 0 },
   crossoverHz: 2000,
   crossoverOrder: 4,
@@ -134,7 +136,7 @@ export const DEFAULT_HIFI = {
   | "earHeightIn"
   | "standHeightIn"
   | "dispersionPlane"
->;
+> & { slotHeightIn: SlotPort["h"] }; // the slot height the port toggle starts from
 
 /** The Fills page's starting design. */
 export const DEFAULT_FILL = {
