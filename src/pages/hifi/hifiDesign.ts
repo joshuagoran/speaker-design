@@ -50,6 +50,7 @@ export interface HifiDesign {
   /** each speaker's seat geometry: the left one at -spacing/2, the right at +spacing/2 */
   leftGeometry: ListenerGeometry;
   rightGeometry: ListenerGeometry;
+  /** the average distance to the seat, at least 1 m */
   seatDistanceM: number;
   pairCostUsd: number;
   /** null when the woofer can't be modelled (its parameters aren't published) */
@@ -119,7 +120,8 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
   // the seat, relative to each speaker (left at -spacing/2, toed in toward the middle)
   const leftGeometry = listenerGeometry(-1, state),
     rightGeometry = listenerGeometry(1, state);
-  const seatDistanceM = (leftGeometry.distM + rightGeometry.distM) / 2;
+  // floored at 1 m so a seat at the speakers (spacing 0, seat at the origin) can't send the level to infinity
+  const seatDistanceM = Math.max(1, (leftGeometry.distM + rightGeometry.distM) / 2);
   const pairCostUsd =
     2 *
     ((woofer.price || 0) +
@@ -183,7 +185,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
         tweeterWithWaveguide,
         speakerConfig,
         dispersionPlane,
-        Math.max(1, seatDistanceM),
+        seatDistanceM,
       ),
     };
   }
