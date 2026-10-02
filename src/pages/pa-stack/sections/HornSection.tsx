@@ -6,6 +6,7 @@ import { FoldHeading } from "../../../components/ui/FoldHeading";
 import { ResponseChart } from "../../../components/charts/ResponseChart";
 import { DispersionMap } from "../../../components/charts/DispersionMap";
 import { hornChips } from "../../../lib/pa/chips";
+import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 
 interface Props {
@@ -22,8 +23,7 @@ interface Props {
     | "hornAmpWatts"
     | "hornBandTiltDb"
     | "midHornCrossoverHz"
-    | "midMaxCurve"
-    | "midMaxCurveNearest"
+    | "midModelled"
     | "compressionDriverSpec"
     | "hornSpec"
     | "hornModel"
@@ -51,8 +51,7 @@ export function HornSection({ planner }: Props) {
     hornAmpWatts,
     hornBandTiltDb,
     midHornCrossoverHz,
-    midMaxCurve,
-    midMaxCurveNearest,
+    midModelled,
     compressionDriverSpec,
     hornSpec,
     hornModel,
@@ -177,7 +176,9 @@ export function HornSection({ planner }: Props) {
                   xoHi: midHornCrossoverHz,
                   hornModel,
                   hfAmpW: hornAmpWatts,
-                  midAtXoHi: midMaxCurve ? midMaxCurveNearest(midHornCrossoverHz).spl : null,
+                  midAtXoHi: midModelled
+                    ? nearestPoint(midModelled.max, midHornCrossoverHz).spl
+                    : null,
                   hfTilt: hornBandTiltDb,
                   hornAtXo: hornSplAt(midHornCrossoverHz),
                   midBeam: midBeamWidthDeg,

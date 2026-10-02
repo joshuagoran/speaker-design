@@ -837,16 +837,30 @@ export interface SubGeometry {
   Fb: number;
 }
 
-export interface SubSystem {
+/** What a sub always has: its vent, volumes and the amp's peak voltage. */
+export interface SubSystemBase {
   port: VentGeometry;
   grossL: number;
   ductL: number;
   woodL: number;
   netL: number;
   AMP_V: number;
-  mdl: VentedBoxModel | null;
-  lim: SubLimits | null;
 }
+
+/** A sub with no model: the driver has no T/S, or the box or vent is degenerate (no net volume, no port area, port length at or under 0). */
+export interface SubSystemUnmodelled extends SubSystemBase {
+  mdl: null;
+  lim: null;
+}
+
+/** A sub with its vented-box model and the music limit that comes from it. */
+export interface SubSystemModelled extends SubSystemBase {
+  mdl: VentedBoxModel;
+  lim: SubLimits;
+}
+
+/** `subSystem`: check `mdl` and `lim` narrows with it. */
+export type SubSystem = SubSystemUnmodelled | SubSystemModelled;
 
 export interface MidSystemConfig {
   midDims: Dims3;
@@ -857,17 +871,31 @@ export interface MidSystemConfig {
   mAmpW: number;
 }
 
-export interface MidSystem {
+/** What a mid always has: voltages and the sealed box's volumes. */
+export interface MidSystemBase {
   V: number;
   grossL: number;
   disp: number;
   netL: number;
   effL: number;
-  mdl: SealedBoxModel | null;
   vTherm: number;
-  max: PaMaxPoint[] | null;
   useV: number;
 }
+
+/** A mid with no model (the driver has no T/S): no response and no limit curve. */
+export interface MidSystemUnmodelled extends MidSystemBase {
+  mdl: null;
+  max: null;
+}
+
+/** A mid with its sealed-box model and the most it can play at each frequency. */
+export interface MidSystemModelled extends MidSystemBase {
+  mdl: SealedBoxModel;
+  max: PaMaxPoint[];
+}
+
+/** `midSystem`: check `mdl` and `max` narrows with it. */
+export type MidSystem = MidSystemUnmodelled | MidSystemModelled;
 
 /** The compression driver on its horn: power available, the cap, and the response from the crossover up. */
 export interface HornResponse {

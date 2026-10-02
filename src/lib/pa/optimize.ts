@@ -65,7 +65,7 @@ import type {
   SubDriver,
   SubLimitWho,
   SubLimits,
-  SubSystem,
+  SubSystemModelled,
   VentedBoxModel,
   VentSpec,
 } from "../../types";
@@ -107,7 +107,7 @@ interface Seed {
 /** A real sub box with its vent and model. */
 interface SubCandidate {
   c: PaDesignConfig;
-  s: SubSystem;
+  s: SubSystemModelled;
   sub: SubDriver;
   lb: number;
   out: number;
@@ -284,12 +284,13 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
   });
   const subLb = subWeightLb(c.cDim, c.wall, sub.lb),
     midLb = midWeightLb(midDims, c.wall) + (mid.lb || 0);
-  const subMusic = subMusicOutputAt(s.mdl!, s.lim!, s.AMP_V, c.xoLo);
+  if (!s.mdl || !ms.mdl) return null; // a vent or box with no geometry has no model to evaluate
+  const subMusic = subMusicOutputAt(s.mdl, s.lim, s.AMP_V, c.xoLo);
   const hz: Partial<HornHf> = horn.hf || {};
   const hornModel = hornResponse(cd.hf, hz, c.xoHi, c.hfAmpW);
-  const mm = ms.mdl!,
-    midAtXo = nearestPoint(ms.max!, c.xoLo),
-    midAtHi = nearestPoint(ms.max!, c.xoHi).spl;
+  const mm = ms.mdl,
+    midAtXo = nearestPoint(ms.max, c.xoLo),
+    midAtHi = nearestPoint(ms.max, c.xoHi).spl;
   const hornAtXo = hornModel ? nearestPoint(hornModel.curve, c.xoHi).spl : null;
   const chips = {
     sub: subChips({
@@ -299,8 +300,8 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
       cVent: c.cVent,
       PT: c.wall,
       subLbLoaded: subLb,
-      lim: s.lim!,
-      peakXF: s.mdl!.peakXF,
+      lim: s.lim,
+      peakXF: s.mdl.peakXF,
       aes: sub.ts.aes,
       ampW: c.ampW,
     }),
@@ -345,13 +346,13 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     subLb,
     midLb,
     heaviest: Math.max(subLb, midLb),
-    out: bandOutputDb(s.mdl!, s.lim!, s.AMP_V),
-    spl45: s.lim!.spl45,
-    spl35: s.lim!.spl35,
-    f3: s.mdl!.f3,
-    Fb: s.mdl!.Fb,
-    who: s.lim!.who,
-    limW: s.lim!.W,
+    out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
+    spl45: s.lim.spl45,
+    spl35: s.lim.spl35,
+    f3: s.mdl.f3,
+    Fb: s.mdl.Fb,
+    who: s.lim.who,
+    limW: s.lim.W,
     netL: s.netL,
     qtc: mm.Qtc,
     midF3: mm.f3,
@@ -361,11 +362,11 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     port: s.port,
     chips,
     // for the card's chart: the sub's clean music-limit level, 20-200 Hz (the curve bandOut takes its minimum from)
-    curve: s
-      .mdl!.curve.filter((o, i) => i % 5 === 0 && o.f >= 20 && o.f <= 200)
+    curve: s.mdl.curve
+      .filter((o, i) => i % 5 === 0 && o.f >= 20 && o.f <= 200)
       .map((o): [number, number] => [
         +o.f.toFixed(1),
-        +(o.spl + 20 * Math.log10(s.lim!.V / s.AMP_V)).toFixed(2),
+        +(o.spl + 20 * Math.log10(s.lim.V / s.AMP_V)).toFixed(2),
       ]),
   };
 }
@@ -657,7 +658,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
               layout: cur.layout,
             });
           let pushed = false,
-            fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystem } | null = null;
+            fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystemModelled } | null = null;
           for (const size of VENT_SIZES[style]!) {
             const hi = ductFit(box, style, mk(size, 0), t).fit,
               lo = 2;
@@ -700,7 +701,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
             });
             evals++;
             if (!s.mdl) continue;
-            const portOk = s.lim!.who !== "port air speed" && s.lim!.vel <= 0.9 * cur.portMax;
+            const portOk = s.lim.who !== "port air speed" && s.lim.vel <= 0.9 * cur.portMax;
             if (!portOk) {
               fallback = { c, cVent, s };
               continue;
@@ -710,7 +711,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
               s,
               sub: sd.sub,
               lb: subWeightLb(box, t, sd.sub.lb),
-              out: bandOutputDb(s.mdl, s.lim!, s.AMP_V),
+              out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
             });
             pushed = true;
             break; // smallest vent that doesn't limit
@@ -719,7 +720,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           // with the amp turned down to where the port still has a 10% air-speed margin
           if (!pushed && fallback && !locks.ampW) {
             const vW =
-              Math.pow((fallback.s.AMP_V * (0.9 * cur.portMax)) / fallback.s.mdl!.peakVel, 2) / 8;
+              Math.pow((fallback.s.AMP_V * (0.9 * cur.portMax)) / fallback.s.mdl.peakVel, 2) / 8;
             const ampW = Math.floor(vW / 50) * 50;
             if (ampW >= 200) {
               const c = { ...fallback.c, ampW };
@@ -737,13 +738,13 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
                 layout: cur.layout,
               });
               evals++;
-              if (s.mdl && s.lim!.who !== "port air speed")
+              if (s.mdl && s.lim.who !== "port air speed")
                 subCands.push({
                   c,
                   s,
                   sub: sd.sub,
                   lb: subWeightLb(box, t, sd.sub.lb),
-                  out: bandOutputDb(s.mdl, s.lim!, s.AMP_V),
+                  out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
                 });
             }
           }
@@ -867,7 +868,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   for (const sc of subCands) {
     if (sc.lb > slack.lb || sc.sub.price > slack.budget) continue;
     for (const xoLo of xoLos) {
-      const need = subMusicOutputAt(sc.s.mdl!, sc.s.lim!, sc.s.AMP_V, xoLo) - cur.tilt;
+      const need = subMusicOutputAt(sc.s.mdl, sc.s.lim, sc.s.AMP_V, xoLo) - cur.tilt;
       const okMids: (MidEntry | null)[] = midTable.filter(
         (e) => e.xoLo === xoLo && e.t === sc.c.wall && e.atXo - need >= -0.5 && e.lb <= slack.lb,
       );
@@ -905,7 +906,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           };
           const price = sc.sub.price + (e ? e.m.price! : curMid!.price || 0) + hp.price;
           const heaviest = Math.max(sc.lb, e ? e.lb : 0);
-          combos.push({ c, price, heaviest, out: sc.out, f3: sc.s.mdl!.f3, ch: changes(c) });
+          combos.push({ c, price, heaviest, out: sc.out, f3: sc.s.mdl.f3, ch: changes(c) });
         }
     }
   }

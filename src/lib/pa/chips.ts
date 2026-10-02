@@ -162,9 +162,9 @@ export function midChips(s: MidChipsInput): Chip[] {
             `The ${mAmpW} W amp runs out before Xmax or the ${2 * ts.aes} W program rating.`,
           ],
   );
-  if (subMusicAtXo != null) {
+  if (subMusicAtXo != null && midAtXo) {
     const needDb = subMusicAtXo - tilt,
-      m = midAtXo!, // present whenever the sub is modelled
+      m = midAtXo,
       gap = m.spl - needDb;
     // amp power that would close the gap, if the amp is what's short
     const wNeed = Math.pow(V * Math.pow(10, -gap / 20), 2) / 8;

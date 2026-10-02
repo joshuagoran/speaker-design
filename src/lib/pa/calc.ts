@@ -841,8 +841,17 @@ export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig):
         ecIn: port.ec,
       })
     : null;
-  const lim = mdl ? subwooferLimits(mdl, sub.ts, AMP_V, cfg.portMax) : null;
-  return { port, grossL, ductL, woodL, netL, AMP_V, mdl, lim };
+  if (!sub.ts || !mdl) return { port, grossL, ductL, woodL, netL, AMP_V, mdl: null, lim: null };
+  return {
+    port,
+    grossL,
+    ductL,
+    woodL,
+    netL,
+    AMP_V,
+    mdl,
+    lim: subwooferLimits(mdl, sub.ts, AMP_V, cfg.portMax),
+  };
 }
 
 // Sub through the LR24 lowpass at the crossover, each frequency at its own sine limit (the filter
@@ -881,8 +890,10 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const effL = netL * STUFFING_VOLUME_GAIN;
   const mdl = mid.ts ? closedBox(mid.ts, effL, cfg.xoLo, cfg.xoHi, V) : null;
   const vTherm = mid.ts ? thermalVoltageLimit(mid.ts.aes) : 0;
-  const max = mdl ? maxOutputCurve(mdl.curve, mid.ts, V, Infinity) : null; // no port: Xmax, thermal, amp
-  return { V, grossL, disp, netL, effL, mdl, vTherm, max, useV: Math.min(vTherm, V) };
+  const useV = Math.min(vTherm, V);
+  if (!mid.ts || !mdl) return { V, grossL, disp, netL, effL, vTherm, useV, mdl: null, max: null };
+  const max = maxOutputCurve(mdl.curve, mid.ts, V, Infinity); // no port: Xmax, thermal, amp
+  return { V, grossL, disp, netL, effL, vTherm, useV, mdl, max };
 }
 
 // ---- passive coaxial fills ----

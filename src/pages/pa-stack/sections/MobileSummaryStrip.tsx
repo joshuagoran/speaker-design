@@ -1,22 +1,23 @@
+import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 
 interface Props {
-  planner: Pick<PaPlanner, "subModel" | "subLimits" | "subMaxCurveNearest" | "subWeightLoadedLb">;
+  planner: Pick<PaPlanner, "subModelled" | "subWeightLoadedLb">;
 }
 
 /** Sticky strip of the four headline sub numbers, shown on phones. */
 export function MobileSummaryStrip({ planner }: Props) {
-  const { subModel, subLimits, subMaxCurveNearest, subWeightLoadedLb } = planner;
+  const { subModelled, subWeightLoadedLb } = planner;
   return (
     <>
-      {subModel && subLimits && (
+      {subModelled && (
         <div
           className="md:hidden sticky top-0 z-30 bg-stone-50/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center"
           style={{ fontFamily: "var(--font)" }}
         >
           {[
-            ["Fb", `${subModel.Fb.toFixed(1)}`, "Hz"],
-            ["35 Hz", `${subMaxCurveNearest(35).spl.toFixed(0)}`, "dB"],
+            ["Fb", `${subModelled.mdl.Fb.toFixed(1)}`, "Hz"],
+            ["35 Hz", `${nearestPoint(subModelled.maxCurve, 35).spl.toFixed(0)}`, "dB"],
             ["Sub", `${subWeightLoadedLb.toFixed(0)}`, "lb"],
             [
               "Limit",
@@ -25,7 +26,7 @@ export function MobileSummaryStrip({ planner }: Props) {
                 "cone travel (Xmax)": "Xmax",
                 "driver program rating": "thermal",
                 "amplifier power": "amp",
-              }[subLimits.who] || subLimits.who,
+              }[subModelled.lim.who] || subModelled.lim.who,
               "",
             ],
           ].map(([k, v, u]) => (

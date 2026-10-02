@@ -33,10 +33,9 @@ import type {
   PaDesignConfig,
   PaMaxPoint,
   PaPortGeometry,
-  SealedBoxModel,
+  MidSystemModelled,
   SubDriver,
-  SubLimits,
-  VentedBoxModel,
+  SubSystemModelled,
   VentGeometry,
 } from "../../../types";
 import type { CabinetStyle } from "./useCabinetStyle";
@@ -67,22 +66,25 @@ export interface PaDesign
   subGrossLiters: number;
   subNetLiters: number;
   subAmpVoltage: number;
-  subModel: VentedBoxModel | null;
-  subLimits: SubLimits | null;
-  subMaxCurve: PaMaxPoint[] | null;
-  subMaxCurveNearest: (f: number) => PaMaxPoint;
+  /** the sub's model, music limit and curves; null when the driver has no T/S or the box or vent can't be modelled */
+  subModelled:
+    | (Pick<SubSystemModelled, "mdl" | "lim"> & {
+        /** the most a sine can play at each frequency */
+        maxCurve: PaMaxPoint[];
+        /** the sub through its lowpass at the crossover, for the system chart */
+        throughLowpass: FrequencyPoint[];
+      })
+    | null;
   midVoltage: number;
   midGrossL: number;
   midNetL: number;
   midEffL: number;
-  midModel: SealedBoxModel | null;
+  /** the mid's model and limit curve; null when the driver has no T/S */
+  midModelled: MidSystemModelled | null;
   midThermalVoltage: number;
-  midMaxCurve: PaMaxPoint[] | null;
   midUsedVoltage: number;
   midCabinetLb: number;
   midWeightLoadedLb: number;
-  midMaxCurveNearest: (f: number) => PaMaxPoint;
-  subThroughLowpassCurve: FrequencyPoint[] | null;
   compressionDriverSpec: CompressionHf | undefined;
   hornSpec: Partial<HornHf>;
   hornModel: HornResponse | null;
@@ -226,14 +228,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
    * model describe the same box.
    */
   const PT = wallThicknessIn;
-  const {
-    port,
-    grossL: subGrossLiters,
-    netL: subNetLiters,
-    AMP_V: subAmpVoltage,
-    mdl: subModel,
-    lim: subLimits,
-  } = subSystem(subDriver, midDriver, {
+  const subSys = subSystem(subDriver, midDriver, {
     subBox,
     midDims: midBoxDims,
     wall: wallThicknessIn,
@@ -246,28 +241,29 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     portMax: maxPortAirSpeedMs,
     layout,
   });
-  /**
-   * Max SPL for a sine at each frequency (each frequency meets its own port and excursion limits);
-   * the broadband limit above is what applies to music.
-   */
-  const subMaxCurve = subModel
-    ? maxCurveOf(subModel.curve, subDriver.ts, subAmpVoltage, maxPortAirSpeedMs)
+  const { port, grossL: subGrossLiters, netL: subNetLiters, AMP_V: subAmpVoltage } = subSys;
+  const subModelled = subSys.mdl
+    ? {
+        mdl: subSys.mdl,
+        lim: subSys.lim,
+        /**
+         * Max SPL for a sine at each frequency (each frequency meets its own port and excursion limits);
+         * the broadband limit (`lim`) is what applies to music.
+         */
+        maxCurve: maxCurveOf(subSys.mdl.curve, subDriver.ts, subAmpVoltage, maxPortAirSpeedMs),
+        /** Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter. */
+        throughLowpass: subThroughLowpass(
+          subSys.mdl,
+          subDriver.ts,
+          subAmpVoltage,
+          maxPortAirSpeedMs,
+          subMidCrossoverHz,
+        ),
+      }
     : null;
-  // `subMaxCurve!`, `midMaxCurve!`, `hornModel!` below: the pages call these only where the model exists
-  const subMaxCurveNearest = (f: number) =>
-    subMaxCurve!.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 
   // ---- mid-bass: sealed box ----
-  const {
-    V: midVoltage,
-    grossL: midGrossL,
-    netL: midNetL,
-    effL: midEffL,
-    mdl: midModel,
-    vTherm: midThermalVoltage,
-    max: midMaxCurve,
-    useV: midUsedVoltage,
-  } = midSystem(midDriver, {
+  const midSys = midSystem(midDriver, {
     midDims: effectiveMidBoxDims,
     wall: wallThicknessIn,
     inset: baffleInsetIn,
@@ -275,15 +271,18 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     xoHi: midHornCrossoverHz,
     mAmpW: midAmpWatts,
   });
+  const {
+    V: midVoltage,
+    grossL: midGrossL,
+    netL: midNetL,
+    effL: midEffL,
+    vTherm: midThermalVoltage,
+    useV: midUsedVoltage,
+  } = midSys;
+  const midModelled = midSys.mdl ? midSys : null;
   /** 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware */
   const midCabinetLb = midWeightLb(effectiveMidBoxDims, wallThicknessIn);
   const midWeightLoadedLb = midCabinetLb + (midDriver.lb || 0);
-  const midMaxCurveNearest = (f: number) =>
-    midMaxCurve!.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
-  /** Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter. */
-  const subThroughLowpassCurve = subModel
-    ? subThroughLowpass(subModel, subDriver.ts, subAmpVoltage, maxPortAirSpeedMs, subMidCrossoverHz)
-    : null;
   // ---- horn + compression driver ----
   /**
    * Datasheet model, not T/S: on-horn sensitivity + 10 log P, shaped by the LR24
@@ -323,10 +322,9 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
    * What the mid actually has to match: the sub at its music limit (one drive level for the whole
    * band), through its lowpass, less the music-balance allowance.
    */
-  const subMusicAtCrossover =
-    subModel && subLimits
-      ? subMusicOutputAt(subModel, subLimits, subAmpVoltage, subMidCrossoverHz)
-      : null;
+  const subMusicAtCrossover = subModelled
+    ? subMusicOutputAt(subModelled.mdl, subModelled.lim, subAmpVoltage, subMidCrossoverHz)
+    : null;
 
   const portGeom = {
     ductH: subVentSpec.slotH,
@@ -367,7 +365,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     cabFinish: cabinetFinish,
     spacerH: spacerHeightIn,
     joint: cornerJoint,
-    summary: `${subDriver.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${subModel ? subModel.Fb.toFixed(1) + " Hz" : "—"}`,
+    summary: `${subDriver.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${subModelled ? subModelled.mdl.Fb.toFixed(1) + " Hz" : "—"}`,
   });
   const restore = (c: Partial<PaDesignConfig>) => {
     const find = <T extends { id: string }>(list: readonly T[], id: string, fb: T) =>
@@ -543,22 +541,16 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     subGrossLiters,
     subNetLiters,
     subAmpVoltage,
-    subModel,
-    subLimits,
-    subMaxCurve,
-    subMaxCurveNearest,
+    subModelled,
     midVoltage,
     midGrossL,
     midNetL,
     midEffL,
-    midModel,
+    midModelled,
     midThermalVoltage,
-    midMaxCurve,
     midUsedVoltage,
     midCabinetLb,
     midWeightLoadedLb,
-    midMaxCurveNearest,
-    subThroughLowpassCurve,
     compressionDriverSpec,
     hornSpec,
     hornModel,
