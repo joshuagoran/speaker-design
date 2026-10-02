@@ -949,6 +949,8 @@ export interface SubSystemConfig extends SubGeometryConfig {
   hpType: HighpassType;
   ampW: number;
   portMax: number;
+  /** the sub-to-mid crossover, for a curve that shows the lowpass skirt (the planner's chart); the optimizer's screening leaves it out */
+  xoLo?: number;
 }
 
 /** The sub's vent and volumes, without the model. */

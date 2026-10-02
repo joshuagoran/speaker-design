@@ -144,6 +144,7 @@ export function derivePaDesign({
     ampW: subAmpWatts,
     portMax: maxPortAirSpeedMs,
     layout,
+    xoLo: subMidCrossoverHz, // the system chart draws the lowpass skirt
   });
   const { port, grossL: subGrossLiters, netL: subNetLiters, AMP_V: subAmpVoltage } = subSys;
   const subModelled = subSys.mdl
