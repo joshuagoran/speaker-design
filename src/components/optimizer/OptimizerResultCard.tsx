@@ -4,6 +4,21 @@ import { OptimizerCurveChart } from "../charts/OptimizerCurveChart";
 import { BoxFront } from "../drawings/BoxFront";
 import { formatDollars } from "../../lib/format";
 import { Delta } from "./Delta";
+import type { PaMetricsDelta, PaOptimizerCard, PaOptimizerResult } from "../../types";
+
+interface Props {
+  result: PaOptimizerCard;
+  /** its place among the cards, and how many there are */
+  index: number;
+  total: number;
+  /** the current design's curve and box, drawn faintly behind the card's own */
+  currentDesign: PaOptimizerResult["cur"];
+  onPreview: () => void;
+  onLoad: () => void;
+  onSave: () => void;
+  previewing: boolean;
+  canSave: boolean;
+}
 
 /** One suggested design with its numbers, preview and load buttons. */
 export function OptimizerResultCard({
@@ -16,11 +31,11 @@ export function OptimizerResultCard({
   onSave,
   previewing,
   canSave,
-}) {
+}: Props) {
   const config = result.config,
     metrics = result.metrics,
-    deltas = result.delta || {};
-  const tile = (label, v, delta) => (
+    deltas: Partial<PaMetricsDelta> = result.delta || {};
+  const tile = (label: string, v: React.ReactNode, delta: React.ReactNode) => (
     <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
       <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold">{label}</div>
       <div className="tabular-nums">{v}</div>

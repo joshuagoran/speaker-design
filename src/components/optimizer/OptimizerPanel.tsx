@@ -9,6 +9,29 @@ import { GoalPicker } from "./GoalPicker";
 import { RunRow } from "./RunRow";
 import { ResultCards } from "./ResultCards";
 import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize";
+import type { PaGoal, PaOptimizerCard, PaOptimizerResult, PaRoom } from "../../types";
+import type {
+  PaOptimizerInputState,
+  PaSearchOverrides,
+} from "../../pages/pa-stack/hooks/usePaOptimizer";
+
+interface Props {
+  optIn: PaOptimizerInputState;
+  setOpt: (o: Partial<PaOptimizerInputState>) => void;
+  /** starts a search; given limits to change first, or called as the run button's click handler */
+  run: (over?: PaSearchOverrides) => unknown;
+  busy: boolean;
+  res: PaOptimizerResult | null;
+  err: string;
+  /** the current design's clean sub output in dB; null when it can't be scored */
+  curOut: number | null;
+  /** the card being previewed, if any */
+  previewCard: PaOptimizerCard | null;
+  onPreview: (card: PaOptimizerCard) => void;
+  onLoad: (card: PaOptimizerCard) => void;
+  onSave: (card: PaOptimizerCard) => void;
+  canSave: boolean;
+}
 
 /** Goal picker, run button and result cards for the PA optimizer. */
 export function OptimizerPanel({
@@ -24,13 +47,13 @@ export function OptimizerPanel({
   onLoad,
   onSave,
   canSave,
-}) {
+}: Props) {
   const need = roomRequiredSpl(optIn.room),
     target = Math.max(curOut != null ? curOut : need, need);
   const goals = optIn.goals,
     g = goals[0];
   // tap adds a goal at the end of the order; tap again removes it (none selected is allowed; the search waits for one)
-  const tapGoal = (k) =>
+  const tapGoal = (k: PaGoal) =>
     setOpt({ goals: goals.includes(k) ? goals.filter((x) => x !== k) : [...goals, k] });
   const tgtText = !g
     ? "pick a goal"
@@ -56,12 +79,13 @@ export function OptimizerPanel({
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>
             <div className="flex flex-wrap gap-1">
-              {Object.entries(ROOMS).map(([k, r]) => (
+              {/* boundary: Object.entries types the keys as string; they are the rooms in ROOMS, so a numeric key is a PaRoom below */}
+              {(Object.entries(ROOMS) as [string, (typeof ROOMS)[PaRoom]][]).map(([k, r]) => (
                 <ToggleButton
                   key={k}
                   aria-label={r.name}
                   on={String(optIn.room) === k}
-                  onClick={() => setOpt({ room: k === "outdoor" ? k : +k })}
+                  onClick={() => setOpt({ room: k === "outdoor" ? k : (+k as PaRoom) })}
                 >
                   {r.short}
                 </ToggleButton>

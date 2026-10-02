@@ -2,6 +2,19 @@ import { ToggleButton } from "../ui/ToggleButton";
 import { Button } from "../ui/Button";
 import { LockIcon } from "../lock/LockIcon";
 
+interface Props {
+  on: boolean;
+  onToggle: () => void;
+  /** shown while the optimizer is off */
+  hint: React.ReactNode;
+  /** how many locks are set, and how many there can be */
+  nLocks: number;
+  lockMax: number;
+  onLockAll: () => void;
+  onClear: () => void;
+  children?: React.ReactNode;
+}
+
 /** ---- Optimizer pieces shared by the Hi-fi and PA stack panels ---- */
 export function OptimizerBar({
   on,
@@ -12,7 +25,7 @@ export function OptimizerBar({
   onLockAll,
   onClear,
   children,
-}) {
+}: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <ToggleButton on={on} onClick={onToggle}>

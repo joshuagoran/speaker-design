@@ -1,5 +1,11 @@
+interface Props<C> {
+  cards: readonly C[];
+  /** draws one card; give each a `key` */
+  render: (card: C, index: number) => React.ReactNode;
+}
+
 /** Grid of optimizer result cards. */
-export function ResultCards({ cards, render }) {
+export function ResultCards<C>({ cards, render }: Props<C>) {
   if (!cards.length) return null;
   return (
     <>

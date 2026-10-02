@@ -1,7 +1,15 @@
 import { formatDollars } from "../../lib/format";
 
+interface Props {
+  /** the change; nothing is shown for null/undefined */
+  v: number | null | undefined;
+  unit: string;
+  lowerIsBetter?: boolean;
+  digits?: number;
+}
+
 /** Difference from the current design, coloured by whether it is an improvement. */
-export function Delta({ v, unit, lowerIsBetter, digits = 0 }) {
+export function Delta({ v, unit, lowerIsBetter, digits = 0 }: Props) {
   if (v == null) return null;
   const r = Number(v.toFixed(digits));
   const good = lowerIsBetter ? r < 0 : r > 0,

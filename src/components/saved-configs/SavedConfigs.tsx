@@ -1,9 +1,22 @@
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { useState } from "react";
+import type { useConfigStore } from "./useConfigStore";
+import type { SavedConfig, SavedConfigData } from "../../types";
+
+interface Props {
+  store: ReturnType<typeof useConfigStore>;
+  /** what to save; may include a `summary` line */
+  snapshot: () => SavedConfigData;
+  restore: (config: SavedConfig) => void;
+  /** shown beside Sign out */
+  extra?: React.ReactNode;
+  /** a plain div instead of the page-width section */
+  bare?: boolean;
+}
 
 /** Name-and-save row plus a menu of saved setups. snapshot() returns what to store (may include a `summary` line); restore(c) loads one. */
-export function SavedConfigs({ store, snapshot, restore, extra, bare = false }) {
+export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: Props) {
   const { db, saved, fb, fbUser, cfgMsg, signIn, signOut, save, remove } = store;
   const [name, setName] = useState("");
   const [sel, setSel] = useState("");

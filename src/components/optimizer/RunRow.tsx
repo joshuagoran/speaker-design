@@ -15,8 +15,18 @@ function Searching() {
   );
 }
 
+interface Props {
+  busy: boolean;
+  hasGoal: boolean;
+  onRun: () => void;
+  /** what the last search covered; null before the first one */
+  stats: { evaluated: number; ms: number } | null | undefined;
+  note?: React.ReactNode;
+  children?: React.ReactNode;
+}
+
 /** Run button with search statistics. */
-export function RunRow({ busy, hasGoal, onRun, stats, note, children }) {
+export function RunRow({ busy, hasGoal, onRun, stats, note, children }: Props) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-3">
       <Button variant="primary" onClick={onRun} disabled={busy || !hasGoal} className="px-4">
