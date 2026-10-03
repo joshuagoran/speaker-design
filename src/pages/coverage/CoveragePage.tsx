@@ -19,6 +19,7 @@ import {
   ROOM_WIDTH_FT,
   useCoverageLayout,
 } from "./useCoverageLayout";
+import { CoverageAssumptions } from "./CoverageAssumptions";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
 
 /** The tabs of the phone settings sheet. */
@@ -213,6 +214,9 @@ export function CoveragePage({ planner }: Props) {
               {map.target} dB in this band).
             </li>
           </ul>
+          <div className="mt-3">
+            <CoverageAssumptions room={room} />
+          </div>
         </section>
       </div>
 

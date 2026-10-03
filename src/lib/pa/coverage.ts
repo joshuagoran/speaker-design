@@ -57,7 +57,9 @@ import type {
   PaStackGeometry,
 } from "../../types";
 
-const C = 343,
+/** speed of sound, m/s (20 °C) */
+export const SPEED_OF_SOUND = 343;
+const C = SPEED_OF_SOUND,
   IN = 0.0254;
 
 /** The bands the map averages over, Hz. */
@@ -71,22 +73,22 @@ export const COVERAGE_BANDS: Record<
   high: { name: "High", lo: 2000, hi: 16000 },
 };
 /** frequencies averaged per band */
-const BAND_POINTS = 10;
+export const BAND_POINTS = 10;
 /** Below this the paths sum with phase in a band average; a single frequency always does. */
 export const COHERENT_BELOW_HZ = 500;
 /** the single-frequency view's range, Hz: above it the interference is finer than the grid */
 export const SINGLE_FREQ_RANGE: [number, number] = [20, 500];
 /** each box's DSP time-aligns its drivers on its axis this far out, m (as the dispersion model does) */
-const ALIGN_DISTANCE_M = 10;
+export const ALIGN_DISTANCE_M = 10;
 /** A box shadows what's behind its cone: rule of thumb, −3 dB here and 6 dB/oct above. */
-const BOX_SHADOW_HZ = 150;
+export const BOX_SHADOW_HZ = 150;
 /**
  * The modal sum takes modes up to this many times the highest wavenumber it is evaluated at, so the direct sound near
  * a box isn't smoothed away by the cutoff.
  */
 const MODE_SPAN = 2;
 /** Stats leave out the floor this close to a box, ft. */
-const STATS_CLEARANCE_FT = 4;
+export const STATS_CLEARANCE_FT = 4;
 /** The listener response: the PA charts' x axis. */
 export const RESPONSE_FREQS = logSpacedFrequencies(15, 20000, 120);
 /** A band this far (pressure) under the loudest at a frequency is left out of its sum: −80 dB. */

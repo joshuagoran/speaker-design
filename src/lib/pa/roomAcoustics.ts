@@ -91,13 +91,13 @@ export function airDbPerM(f: number): number {
 }
 
 /** pressure the floor reflects: a hard floor indoors, ground outdoors */
-const FLOOR_REFLECTION = { indoors: 0.95, outdoors: 0.85 };
+export const FLOOR_REFLECTION = { indoors: 0.95, outdoors: 0.85 };
 /**
  * A full dance floor's floor bounce against an empty one's: unchanged below 200 Hz, where a person is small against
  * the wavelength (1.7 m and up), falling on log frequency to 0.3 at 1 kHz and above, where the audience row absorbs
  * about 90 % (√(1 − 0.9) ≈ 0.3).
  */
-const CROWD_BOUNCE = { loHz: 200, hiHz: 1000, hi: 0.3 };
+export const CROWD_BOUNCE = { loHz: 200, hiHz: 1000, hi: 0.3 };
 
 /** The pressure the floor reflects at `f`, by the ground and the crowd on it. */
 export function floorReflection(room: Pick<CoverageRoom, "outdoors" | "crowd">, f: number) {
@@ -157,7 +157,7 @@ export const schroederHz = (t60: number, volume: number) => 2000 * Math.sqrt(t60
 /** Where the map hands over from the modal sum to the image sources, Hz: twice the Schroeder frequency, 80–200 Hz. */
 export const MODAL_HZ: [lo: number, hi: number] = [80, 200];
 /** The handover is a crossfade (in power) this many octaves wide, centered on the crossover. */
-const MODAL_FADE_OCT = 0.5;
+export const MODAL_FADE_OCT = 0.5;
 
 /**
  * The crossover from the modal sum to the image sources for an indoor room, Hz. The Schroeder frequency is taken at
