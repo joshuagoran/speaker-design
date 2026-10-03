@@ -15,6 +15,7 @@ import {
   ST260,
 } from "./data";
 import { byIdOrThrow } from "./tables";
+import { CUTLIST_DEFAULTS } from "./pa/cutlist";
 import type {
   Cabinet,
   CompressionDriver,
@@ -50,7 +51,7 @@ export type PaDefaults = Omit<
 
 /**
  * The PA stack on first load. It mirrors the seed "lil block stack LE" in `data/configs-seed.json` with the sub swapped
- * for the B&C 18NBX100 and the sub box set to 24 × 32 × 18; the fields the seed does not carry (wall, inset, finish, spacer, joint, plywood, sets, mid size) keep the values the hooks always started on.
+ * for the B&C 18NBX100 and the sub box set to 24 × 32 × 18; the fields the seed does not carry (wall, inset, finish, spacer, cutlist choices, plywood, sets, mid size) keep the values the hooks always started on.
  */
 export const DEFAULT_PA = {
   // the only format and cabinet the planner has ever offered; nothing changes them
@@ -85,6 +86,7 @@ export const DEFAULT_PA = {
   cabFinish: "birch",
   spacerH: 20,
   joint: "butt",
+  ...CUTLIST_DEFAULTS,
   midSize: 12,
   plywoodSheetKind: "4x8",
   boxSetCount: 2,

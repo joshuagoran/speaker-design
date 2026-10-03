@@ -1,6 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { boxParts, packSheets, formatInches, PLYWOOD_SHEETS } from "../src/lib/pa/calc";
+import { boxParts, formatInches, PLYWOOD_SHEETS } from "../src/lib/pa/calc";
+import { packSheets } from "../src/lib/pa/cutlist";
 import type { CutPart } from "../src/types";
 import { close } from "./helpers";
 

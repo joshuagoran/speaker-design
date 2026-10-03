@@ -17,8 +17,6 @@ import type {
   MidDriver,
   MidSystem,
   MidSystemConfig,
-  PackedSheet,
-  PackedSheets,
   PaMaxPoint,
   PhasedPoint,
   PlywoodSheet,
@@ -368,7 +366,7 @@ export const plywoodLbPerSqFt = (t: number) => PLYWOOD_LB_PER_SQ_FT[t] ?? 2.3; /
 
 // ---------------------------------------------------------------
 // Cutlist: panels for the sub and mid boxes from the planner's current
-// dimensions, and a simple shelf layout on 4x8 or 5x5 sheets.
+// dimensions (cutlist.ts lays them out on 4x8 or 5x5 sheets).
 // ---------------------------------------------------------------
 export const DRIVER_CUTOUT_IN: Partial<Record<number, number>> = {
   18: 16.6,
@@ -559,66 +557,6 @@ export function cutParts({
     all.push(...m.P);
   }
   return { parts: all, vent };
-}
-
-// Shelf packing with rotation and kerf: largest first, fill rows across the sheet.
-export function packSheets<R extends { a: number; b: number }>(
-  rects: R[],
-  sheet: { w: number; h: number },
-  kerf: number,
-): PackedSheets<R> {
-  const sheets: PackedSheet<R>[] = [];
-  const items = rects
-    .slice()
-    .sort(
-      (p, q) => Math.max(q.a, q.b) - Math.max(p.a, p.b) || Math.min(q.a, q.b) - Math.min(p.a, p.b),
-    );
-  const tooBig: R[] = [];
-  for (const r of items) {
-    const opts = [
-      [r.a, r.b],
-      [r.b, r.a],
-    ].filter(([w, h]) => w <= sheet.w && h <= sheet.h);
-    if (!opts.length) {
-      tooBig.push(r);
-      continue;
-    }
-    let placed = false;
-    for (const sh of sheets) {
-      for (const row of sh.rows) {
-        for (const [w, h] of opts) {
-          if (h <= row.h && row.x + w <= sheet.w) {
-            sh.items.push({ ...r, x: row.x, y: row.y, w, h });
-            row.x += w + kerf;
-            placed = true;
-            break;
-          }
-        }
-        if (placed) break;
-      }
-      if (placed) break;
-      // new row on this sheet: tallest-first orientation that fits
-      for (const [w, h] of opts.slice().sort((p, q) => q[1] - p[1])) {
-        if (sh.y + h <= sheet.h) {
-          sh.rows.push({ y: sh.y, h, x: w + kerf });
-          sh.items.push({ ...r, x: 0, y: sh.y, w, h });
-          sh.y += h + kerf;
-          placed = true;
-          break;
-        }
-      }
-      if (placed) break;
-    }
-    if (!placed) {
-      const [w, h] = opts.slice().sort((p, q) => q[1] - p[1])[0];
-      sheets.push({
-        rows: [{ y: 0, h, x: w + kerf }],
-        items: [{ ...r, x: 0, y: 0, w, h }],
-        y: h + kerf,
-      });
-    }
-  }
-  return { sheets, tooBig };
 }
 
 // ---- end correction of a rectangular opening ----
