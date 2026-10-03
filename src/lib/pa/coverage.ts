@@ -11,7 +11,8 @@
 // Below COHERENT_BELOW_HZ the image paths sum with phase, so the two stacks interfere; above it a band average adds
 // the separate paths (each box, each reflection) by power, as their comb filtering averages out across a band.
 import {
-  baffleStepGain,
+  baffleStepShelf,
+  cabs,
   logSpacedFrequencies,
   pistonPattern,
   waveguideGain,
@@ -55,6 +56,10 @@ import type {
   FrequencyPoint,
   MusicBalance,
   PaStackGeometry,
+  PhasedPoint,
+  PhasePoint,
+  SealedPoint,
+  VentedPoint,
 } from "../../types";
 
 /** speed of sound, m/s (20 °C) */
@@ -263,6 +268,23 @@ export function coverageScene(
   };
 }
 
+/** The points either side of `f` in a curve that spans it, and how far `f` lies between them on log frequency. */
+function bracket<P extends Pick<FrequencyPoint, "f">>(
+  curve: readonly P[],
+  f: number,
+): [a: P, b: P, t: number] {
+  let lo = 0,
+    hi = curve.length - 1;
+  while (hi - lo > 1) {
+    const m = (lo + hi) >> 1;
+    if (curve[m].f <= f) lo = m;
+    else hi = m;
+  }
+  const a = curve[lo],
+    b = curve[hi];
+  return [a, b, b.f === a.f ? 0 : Math.log(f / a.f) / Math.log(b.f / a.f)];
+}
+
 /**
  * A curve's level at `f`, dB, interpolated on log frequency; null for an empty curve (the band is silent). Outside the
  * curve, `skirt` (the band's crossover magnitude against frequency) carries the nearest end on, so the band keeps
@@ -280,18 +302,55 @@ export function curveLevelAt(
     const edge = f < curve[0].f ? curve[0] : curve[n - 1];
     return edge.spl + 20 * Math.log10(Math.max(1e-12, skirt(f)) / Math.max(1e-12, skirt(edge.f)));
   }
-  let lo = 0,
-    hi = n - 1;
-  while (hi - lo > 1) {
-    const m = (lo + hi) >> 1;
-    if (curve[m].f <= f) lo = m;
-    else hi = m;
-  }
-  const a = curve[lo],
-    b = curve[hi];
-  if (b.f === a.f) return a.spl;
-  const t = Math.log(f / a.f) / Math.log(b.f / a.f);
+  const [a, b, t] = bracket(curve, f);
   return a.spl + (b.spl - a.spl) * t;
+}
+
+/**
+ * A curve's own phase at `f`, radians, interpolated on log frequency and held past its ends (where a box's phase has
+ * flattened out, or its band is far down); 0 for an empty curve.
+ */
+export function curvePhaseAt(curve: readonly Pick<PhasePoint, "f" | "phase">[], f: number): number {
+  const n = curve.length;
+  if (!n) return 0;
+  if (f <= curve[0].f) return curve[0].phase;
+  if (f >= curve[n - 1].f) return curve[n - 1].phase;
+  const [a, b, t] = bracket(curve, f);
+  return a.phase + (b.phase - a.phase) * t;
+}
+
+/**
+ * A band's curve with its own phase: its box model's (read at each curve point's frequency; the model must have been
+ * run with its phase), and `filterPhase` (the sub's highpass's) where it has one. Both are continuous, so the sum is.
+ */
+export function withOwnPhase(
+  curve: readonly FrequencyPoint[],
+  model: readonly Pick<PhasedPoint<VentedPoint | SealedPoint>, "f" | "rawPhase">[],
+  filterPhase?: (f: number) => number,
+): PhasePoint[] {
+  const box = model.map((o) => ({ f: o.f, phase: o.rawPhase }));
+  return curve.map((o) => ({
+    f: o.f,
+    spl: o.spl,
+    phase: curvePhaseAt(box, o.f) + (filterPhase?.(o.f) ?? 0),
+  }));
+}
+
+/** A sub or mid curve's level (as curveLevelAt) and own phase (as curvePhaseAt) at `f`, from one search. */
+function curveLevelPhaseAt(
+  curve: readonly PhasePoint[],
+  f: number,
+  skirt?: (f: number) => number,
+): Pick<PhasePoint, "spl" | "phase"> | null {
+  const n = curve.length;
+  if (!n) return null;
+  if (f < curve[0].f || f > curve[n - 1].f) {
+    // past the ends: no search, the level along the skirt and the end's phase held
+    const spl = curveLevelAt(curve, f, skirt);
+    return spl == null ? null : { spl, phase: (f < curve[0].f ? curve[0] : curve[n - 1]).phase };
+  }
+  const [a, b, t] = bracket(curve, f);
+  return { spl: a.spl + (b.spl - a.spl) * t, phase: a.phase + (b.phase - a.phase) * t };
 }
 
 /** Each band's crossover magnitude against frequency: what carries its curve on past its ends. */
@@ -332,7 +391,8 @@ export function balanceLevels(
     mid: gm,
     horn: horn != null && midHi != null ? Math.min(0, midHi + gm - b.hfTilt - horn) : 0,
   };
-  const shift = (c: FrequencyPoint[], db: number) => c.map((o) => ({ f: o.f, spl: o.spl + db }));
+  const shift = <P extends FrequencyPoint>(c: P[], db: number): P[] =>
+    c.map((o) => ({ ...o, spl: o.spl + db }));
   return {
     levels: {
       sub: levels.sub && shift(levels.sub, pads.sub),
@@ -379,11 +439,90 @@ export const hornQ = ([h, v]: [h: number, v: number]) =>
   Math.PI /
   Math.asin(Math.min(1, Math.sin(Math.min(h, Math.PI / 2)) * Math.sin(Math.min(v, Math.PI / 2))));
 
+/** The sub's or mid's baffle step at `f`, with its phase: each band's from its own box's width. */
+const bandShelf = (
+  stack: Pick<CoverageStack, "footprint" | "midW">,
+  band: "sub" | "mid",
+  f: number,
+) => baffleStepShelf(f, band === "sub" ? stack.footprint.w : stack.midW);
+
+/** The sub's or mid's own phase at `f`, radians: its curve's (its box, and the sub's highpass) and its baffle step's. */
+function ownPhase(
+  stack: Pick<CoverageStack, "footprint" | "midW">,
+  levels: CoverageLevels,
+  band: "sub" | "mid",
+  f: number,
+): number {
+  const shelf = bandShelf(stack, band, f);
+  return Math.atan2(shelf.im, shelf.re) + curvePhaseAt(levels[band] ?? [], f);
+}
+
 /**
- * Each band's output at each frequency: its level from the planner's curve (which already carries the crossover's
- * magnitude, and past the curve's ends rolls off by it) with its crossover's phase, taken off the floor for the sub and
- * mid (the map adds the floor itself); and the scene's room at that frequency.
+ * Each band's output at 1 m at `f`: its level from the planner's curve (which already carries the crossover's
+ * magnitude, and past the curve's ends rolls off by it), with its own phase and its crossover's, taken off the floor
+ * for the sub and mid (the map adds the floor itself), and the sub through its DSP delay.
  */
+function bandOutputs(
+  stack: Pick<CoverageStack, "footprint" | "midW" | "subDelayMs">,
+  levels: CoverageLevels,
+  srcs: readonly StackSource[],
+  skirts: ReturnType<typeof bandSkirts>,
+  f: number,
+): CoverageSlot["out"] {
+  const out: CoverageSlot["out"] = {};
+  for (const o of srcs) {
+    const h = o.filt(f);
+    let ph = Math.hypot(h.re, h.im) > 1e-12 ? Math.atan2(h.im, h.re) : 0,
+      mag: number;
+    if (o.band === "horn") {
+      // the horn's datasheet sensitivity is free-field
+      const db = curveLevelAt(levels.horn, f, skirts.horn);
+      if (db == null) continue;
+      mag = Math.pow(10, db / 20);
+    } else {
+      const curve = levels[o.band];
+      const at = curve && curveLevelPhaseAt(curve, f, skirts[o.band]);
+      if (!at) continue;
+      // the sub's and mid's curves are half-space (on the floor); in the open a box radiates into full space below
+      // its baffle step, and the floor image puts the floor back
+      const shelf = bandShelf(stack, o.band, f);
+      mag = Math.pow(10, at.spl / 20) * cabs(shelf);
+      ph += Math.atan2(shelf.im, shelf.re) + at.phase;
+    }
+    if (o.band === "sub") ph -= (2 * Math.PI * f * stack.subDelayMs) / 1000;
+    out[o.band] = { re: mag * Math.cos(ph), im: mag * Math.sin(ph) };
+  }
+  return out;
+}
+
+/** An angle wrapped to ±π. */
+const wrapAngle = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
+
+/**
+ * The sub delay a DSP setup would dial in, ms (negative: the tops wait): the one that puts the sub in phase with the
+ * mid at the low crossover on the box's axis at its alignment point, where the box's drivers already arrive together.
+ * It comes from the true difference in their phase there, not one wrapped to a turn, so it follows the design
+ * smoothly: the crossover's lowpass and highpass are in phase (Linkwitz-Riley), and the bands' own phases are unwrapped
+ * from where they are flat. Null without a sub, or with the sub or mid silent at the crossover.
+ */
+export function autoSubDelayMs(
+  stack: Omit<CoverageStack, "subDelayMs">,
+  levels: CoverageLevels,
+): number | null {
+  const f0 = stack.xoLo,
+    sub = paStackSources(stack).find((o) => o.band === "sub"),
+    mid = paStackSources(stack).find((o) => o.band === "mid");
+  if (!sub || !mid || !levels.sub || curveLevelAt(levels.sub, f0) == null) return null;
+  if (curveLevelAt(levels.mid, f0) == null) return null;
+  const hs = sub.filt(f0),
+    hm = mid.filt(f0);
+  // the crossovers' share, wrapped: the pair is in phase but for the mid's lowpass far above
+  const crossover = wrapAngle(Math.atan2(hs.im, hs.re) - Math.atan2(hm.im, hm.re));
+  const lead = crossover + ownPhase(stack, levels, "sub", f0) - ownPhase(stack, levels, "mid", f0);
+  return (lead / (2 * Math.PI * f0)) * 1000;
+}
+
+/** Each band's output at each frequency (see bandOutputs), and the scene's room at that frequency. */
 export function coverageSlots(
   scene: CoverageScene,
   levels: CoverageLevels,
@@ -399,20 +538,9 @@ export function coverageSlots(
   for (const s of scene.sources) if (s.refl === 0) count[s.src.band] = (count[s.src.band] ?? 0) + 1;
   return freqs.map((f) => {
     const k = (2 * Math.PI * f) / C;
-    const out: CoverageSlot["out"] = {},
+    const out = bandOutputs(stack, levels, srcs, skirts, f),
       ka: CoverageSlot["ka"] = {};
-    for (const o of srcs) {
-      if (!o.horn) ka[o.band] = k * o.a;
-      const curve = levels[o.band];
-      const db = curve && curveLevelAt(curve, f, skirts[o.band]);
-      if (db == null) continue;
-      // the sub's and mid's curves are half-space (on the floor); in the open a box radiates into full space below
-      // its baffle step, and the floor image puts the floor back. The horn's datasheet sensitivity is free-field.
-      const amp = Math.pow(10, db / 20) * (o.horn ? 1 : baffleStepGain(f, stack.footprint.w)),
-        h = o.filt(f),
-        m = Math.hypot(h.re, h.im);
-      out[o.band] = m > 1e-12 ? { re: (amp * h.re) / m, im: (amp * h.im) / m } : { re: amp, im: 0 };
-    }
+    for (const o of srcs) if (!o.horn) ka[o.band] = k * o.a;
     // a band more than SILENT_DB under the loudest adds nothing the map can show: leave it out of the sums
     const loudest = Math.max(...Object.values(out).map((v) => Math.hypot(v.re, v.im)));
     for (const o of srcs) {

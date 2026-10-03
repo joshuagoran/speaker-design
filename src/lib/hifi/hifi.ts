@@ -2,6 +2,7 @@
 // response at a listening position (off-axis, crossover lobing). Pure functions, no DOM.
 import {
   boxModel,
+  butterworth,
   closedBox,
   ventTuning,
   ampVoltage,
@@ -63,15 +64,6 @@ const cexp = (ph: number) => cm(Math.cos(ph), Math.sin(ph));
 
 // Linkwitz-Riley low/high pass as complex transfer functions: LR(2n) = Butterworth(n) squared.
 // order 4 (24 dB/oct) or 8 (48 dB/oct). The pair sums flat in magnitude and in phase.
-function butter(s: Complex, n: number) {
-  // normalised Butterworth denominator for n = 2 or 4
-  if (n === 2) return cadd(cadd(cmul(s, s), cmul(cm(Math.SQRT2), s)), cm(1));
-  const q1 = 2 * Math.cos((3 * Math.PI) / 8),
-    q2 = 2 * Math.cos(Math.PI / 8);
-  const a = cadd(cadd(cmul(s, s), cmul(cm(q1), s)), cm(1)),
-    b = cadd(cadd(cmul(s, s), cmul(cm(q2), s)), cm(1));
-  return cmul(a, b);
-}
 export function linkwitzRileyFilter(
   f: number,
   fc: number,
@@ -80,7 +72,7 @@ export function linkwitzRileyFilter(
 ): Complex {
   const s = cm(0, f / fc),
     n = order / 2,
-    d = butter(s, n),
+    d = butterworth(s, n),
     d2 = cmul(d, d);
   if (kind === "lp") return cdiv(cm(1), d2);
   let sn = cm(1);
@@ -88,12 +80,17 @@ export function linkwitzRileyFilter(
   return cdiv(sn, d2);
 }
 
-// ---- baffle step, placement, compensation (all magnitude shelves) ----
+// ---- baffle step, placement, compensation (magnitude shelves; the baffle step also with its phase) ----
 export const baffleStepF3 = (baffleWIn: number) => 115 / (baffleWIn * IN); // −3 dB point, Hz
 // 0 dB well above f3, −6 dB well below (radiation from half space to full space)
 export function baffleStepGain(f: number, baffleWIn: number) {
   const x = (0.707 * f) / baffleStepF3(baffleWIn);
   return 0.5 * Math.sqrt((1 + 4 * x * x) / (1 + x * x));
+}
+// the same step with its phase: the first-order shelf 0.5 (1 + 2jx) / (1 + jx), whose magnitude is baffleStepGain
+export function baffleStepShelf(f: number, baffleWIn: number): Complex {
+  const x = (0.707 * f) / baffleStepF3(baffleWIn);
+  return cdiv(cm(0.5, x), cm(1, x));
 }
 // DSP compensation: a low shelf of `db` at the same corner (costs that much headroom at low frequencies)
 export function baffleStepCompensation(f: number, baffleWIn: number, db: number) {

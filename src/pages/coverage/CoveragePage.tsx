@@ -107,6 +107,8 @@ export function CoveragePage({ planner }: Props) {
       SINGLE_FREQ_RANGE[0] * Math.pow(SINGLE_FREQ_RANGE[1] / SINGLE_FREQ_RANGE[0], p / 1000),
     );
   const label = "text-sm text-stone-500 mb-1";
+  const delay = (ms: number) =>
+    ms < 0 ? `the tops wait ${(-ms).toFixed(1)} ms` : `${ms.toFixed(1)} ms on the sub`;
 
   return (
     <main
@@ -171,7 +173,9 @@ export function CoveragePage({ planner }: Props) {
             <li>
               Each stack is this design: sub, mid and horn at their heights, through the crossovers
               ({crossoverSlopesText(planner.subMidCrossoverOrder, planner.midHornCrossoverOrder)}),
-              time-aligned on the horn axis.
+              time-aligned on the horn axis. Each band has its own phase too: the sub's vented box
+              and highpass, the mid's sealed box and the baffle step. The sub's delay lines it up
+              with the mid at the crossover.
             </li>
             <li>
               The system plays at its limit with the Design page's music balance: the mid band{" "}
@@ -476,6 +480,12 @@ export function CoveragePage({ planner }: Props) {
                 Move the pair as a mirror image
               </ToggleButton>
             </div>
+            {map.subDelayMs != null && (
+              <p className="text-sm text-stone-500 tabular-nums mb-3">
+                Sub delay: {delay(map.subDelayMs)}, in phase with the mid at{" "}
+                {hz(planner.subMidCrossoverHz)} on the stack's axis, as a DSP setup would set it.
+              </p>
+            )}
             <Slider
               label="Ear height"
               value={layout.earFt}
