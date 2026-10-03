@@ -7,6 +7,7 @@ import { StatRow } from "../../../components/optimizer/StatRow";
 import { subChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
+import { xmaxRows } from "../../../lib/xmax";
 
 interface Props {
   planner: Pick<
@@ -29,6 +30,7 @@ interface Props {
     | "subAmpVoltage"
     | "subModelled"
     | "midModelled"
+    | "midMaxBand"
     | "hornModel"
     | "subWeightLoadedLb"
   >;
@@ -55,6 +57,7 @@ export function SubSection({ planner }: Props) {
     subAmpVoltage,
     subModelled,
     midModelled,
+    midMaxBand,
     hornModel,
     subWeightLoadedLb,
   } = planner;
@@ -87,6 +90,7 @@ export function SubSection({ planner }: Props) {
                 series={[
                   {
                     curve: subModelled.throughLowpass,
+                    band: subModelled.throughLowpassBand,
                     label: "Sub",
                     stroke: PAL.ink,
                     tint: PAL.alpha(PAL.ink, 0.07),
@@ -95,6 +99,7 @@ export function SubSection({ planner }: Props) {
                     ? [
                         {
                           curve: midModelled.max,
+                          band: midMaxBand,
                           label: "Mid-bass",
                           stroke: PAL.magenta,
                           tint: PAL.alpha(PAL.magenta, 0.06),
@@ -159,6 +164,7 @@ export function SubSection({ planner }: Props) {
                   `${((subModelled.mdl.peakX * subModelled.lim.V) / subAmpVoltage).toFixed(1)} mm`,
                   `${subModelled.lim.xPct.toFixed(0)}% of Xmax, at ${subModelled.mdl.peakXF.toFixed(0)} Hz`,
                 ],
+                ...xmaxRows(subDriver.ts),
               ].map(([k, v, note, tip]) => (
                 <StatRow key={k} k={k} v={v} note={note} tip={tip} />
               ))}

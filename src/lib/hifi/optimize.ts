@@ -50,6 +50,7 @@ import type {
 import { keysOf } from "../records";
 import { byId } from "../tables";
 import { selectCards } from "../optimizer/selectCards";
+import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };
@@ -134,13 +135,15 @@ const obj: Record<HifiGoal, (x: HifiMetrics) => number> = {
   lower: (x) => x.f3,
   louder: (x) => -x.level,
 };
-// what each goal keeps from your design (as the PA optimizer: same output, F3 within a couple of Hz)
-const keeps = (cur: HifiMetrics): Record<HifiGoal, (x: HifiMetrics) => boolean> => ({
-  cheaper: (x) => x.level >= cur.level - 0.5 && x.f3 <= cur.f3 + 2,
-  lighter: (x) => x.level >= cur.level - 0.5 && x.f3 <= cur.f3 + 2,
-  lower: (x) => x.level >= cur.level - 1.5,
-  louder: (x) => x.f3 <= cur.f3 + 3,
+// what each goal keeps from your design (as the PA optimizer: same output, F3 within a couple of Hz): the level it has
+// to reach and the F3 it can't pass
+const keeps = (cur: HifiMetrics): Record<HifiGoal, Keep> => ({
+  cheaper: { db: cur.level - 0.5, f3: cur.f3 + 2 },
+  lighter: { db: cur.level - 0.5, f3: cur.f3 + 2 },
+  lower: { db: cur.level - 1.5, f3: Infinity },
+  louder: { db: -Infinity, f3: cur.f3 + 3 },
 });
+const gapTo = (k: Keep, x: HifiMetrics) => keepGap(k, { db: x.level, f3: x.f3 });
 // warnings that rule a design out (the soft ones stay on the card)
 const HARD = new Set([
   "Below the tweeter's minimum crossover",
@@ -462,7 +465,8 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     objective: (g, p) => obj[g](p.m),
     beatsCurrent: (g, p) => !curM || beats[g](p.m, curM),
     beats: (g, a, b) => beats[g](a.m, b.m),
-    meets: (p) => !K || goals.every((g) => K[g](p.m)),
+    meets: (p) => !K || goals.every((g) => gapTo(K[g], p.m) === 0),
+    shortfall: (p) => (K ? goals.reduce((sum, g) => sum + gapTo(K[g], p.m), 0) : 0),
     differs: (p, chosen) =>
       chosen.every(
         (k) =>
@@ -481,13 +485,17 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       (g, i, a) => a.indexOf(g) === i && (also.length || g !== goal),
     ),
     // an alternative keeps what its own goal keeps
-    altFilter: (g, p) => !K || K[g](p.m),
-    fixFallback: true,
+    altFilter: (g, p) => !K || gapTo(K[g], p.m) === 0,
     labels: {
       first: { label, why: HIFI_OPTIMIZER_GOALS[goal].why },
       fix: {
         label: "Fixes your design",
         why: "Your design fails a check; this is the best that passes.",
+      },
+      // nothing that passes keeps what the goals keep: the one that comes closest (the notice says what it misses)
+      closest: {
+        label: "Fixes your design",
+        why: "Passes the checks and comes closest to your goal.",
       },
       alt: (g) => ({ label: HIFI_OPTIMIZER_GOALS[g].short, why: ALT_WHY[g] }),
     },
@@ -554,9 +562,16 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     cur: curM,
     curProblems,
     curCurve: curR ? curveOf(curR.sys) : null,
-    goalMissing: picked.goalMissing
-      ? `Nothing ${goals.map((g) => g).join(" and ")} than your design passes the checks.`
-      : null,
+    goalMissing:
+      picked.fixMisses && K && done[0]
+        ? outOfReachNotice(
+            goals.map((g) => K[g]),
+            { db: done[0].m.level, f3: done[0].m.f3 },
+            { level: "at the seat", f3: "an in-room F3", both: "level and bass" },
+          )
+        : picked.goalMissing
+          ? `Nothing ${goals.map((g) => g).join(" and ")} than your design passes the checks.`
+          : null,
     cards: done.map((k) => ({
       label: k.label,
       why: k.why,

@@ -14,6 +14,7 @@ import {
 } from "../../../lib/pa/calc";
 import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion";
 import type {
+  BandCurves,
   Dims3,
   DispersionPlane,
   FrequencyPoint,
@@ -36,6 +37,7 @@ import type { Crossovers } from "./useCrossovers";
 import type { HornDesign } from "./useHornDesign";
 import type { MidDesign } from "./useMidDesign";
 import type { SubwooferDesign } from "./useSubwooferDesign";
+import { xmaxBandCurves } from "../../../lib/xmax";
 
 /** The design state the PA models read; the music-balance tilts, finish, colours and cutlist options don't enter them. */
 type PaDesignInputs = Pick<
@@ -79,6 +81,8 @@ export interface PaDerivedDesign {
         maxCurve: PaMaxPoint[];
         /** the sub through its lowpass at the crossover, for the system chart */
         throughLowpass: FrequencyPoint[];
+        /** that curve at the ends of an estimated Xmax; null when the driver's Xmax is exact */
+        throughLowpassBand: BandCurves<FrequencyPoint> | null;
       })
     | null;
   midVoltage: number;
@@ -87,6 +91,8 @@ export interface PaDerivedDesign {
   midEffL: number;
   /** the mid's model (with the box's phase, for the coverage map) and limit curve; null when the driver has no T/S */
   midModelled: (Omit<MidSystemModelled, "mdl"> & { mdl: PhasedModel<SealedBoxModel> }) | null;
+  /** the mid's limit curve at the ends of an estimated Xmax; null when its Xmax is exact or it has no model */
+  midMaxBand: BandCurves<PaMaxPoint> | null;
   midThermalVoltage: number;
   midUsedVoltage: number;
   midCabinetLb: number;
@@ -162,7 +168,8 @@ export function derivePaDesign({
     phase: true, // for the coverage map
   });
   const { port, grossL: subGrossLiters, netL: subNetLiters, AMP_V: subAmpVoltage } = subSys;
-  const subModelled = subSys.mdl
+  const subMdl = subSys.mdl;
+  const subModelled = subMdl
     ? {
         mdl: { ...subSys.mdl, curve: phasedCurve(subSys.mdl.curve) },
         lim: subSys.lim,
@@ -179,6 +186,16 @@ export function derivePaDesign({
           maxPortAirSpeedMs,
           subMidCrossoverHz,
           subMidCrossoverOrder,
+        ),
+        throughLowpassBand: xmaxBandCurves(subDriver.ts.xmax, (Xmax) =>
+          subThroughLowpass(
+            subMdl,
+            { ...subDriver.ts, Xmax },
+            subAmpVoltage,
+            maxPortAirSpeedMs,
+            subMidCrossoverHz,
+            subMidCrossoverOrder,
+          ),
         ),
       }
     : null;
@@ -205,6 +222,11 @@ export function derivePaDesign({
   } = midSys;
   const midModelled = midSys.mdl
     ? { ...midSys, mdl: { ...midSys.mdl, curve: phasedCurve(midSys.mdl.curve) } }
+    : null;
+  const midMaxBand = midModelled
+    ? xmaxBandCurves(midDriver.ts.xmax, (Xmax) =>
+        maxCurveOf(midModelled.mdl.curve, { ...midDriver.ts, Xmax }, midVoltage, Infinity),
+      )
     : null;
   /** 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware */
   const midCabinetLb = midWeightLb(effectiveMidBoxDims, wallThicknessIn);
@@ -326,6 +348,7 @@ export function derivePaDesign({
     midNetL,
     midEffL,
     midModelled,
+    midMaxBand,
     midThermalVoltage,
     midUsedVoltage,
     midCabinetLb,

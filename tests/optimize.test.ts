@@ -127,7 +127,7 @@ for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
 
 test("every card's label is true against the current design", (t) => {
   // (also run with a current design that fails: over budget, so the fix card appears)
-  runs.failing = optimizePaStack({ ...base, budget: 700, goal: "cheaper" });
+  runs.failing = optimizePaStack({ ...base, budget: 850, goal: "cheaper" });
   const goalName: Record<string, string> = {
     cheaper: "Same output, cheaper",
     lighter: "Same output, lighter",
@@ -382,7 +382,7 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
     mAmpW: 400,
     hfAmpW: 100,
     ...pick("light block"),
-    ampW: 300,
+    ampW: 200,
   }; // a small amp: the sub is amp-limited
   assert.equal(evaluateDesign(c)!.who, "amplifier power");
   const out = optimizePaStack({
@@ -396,7 +396,7 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
   assert.ok(out.cards.length >= 1, JSON.stringify(out.nearMiss && out.nearMiss.blocking));
   const k = out.cards[0];
   assert.ok(k.config.ampW > c.ampW, `amp ${k.config.ampW} W`);
-  assert.ok(k.metrics.out >= evaluateDesign(c)!.out + 1, "louder than the design at 300 W");
+  assert.ok(k.metrics.out >= evaluateDesign(c)!.out + 1, "louder than the design at 200 W");
   // and no more power than it uses: 50 W less loses output
   const less = evaluateDesign({ ...k.config, ampW: k.config.ampW - 50 })!;
   assert.ok(less.out < k.metrics.out - 0.01 || k.config.ampW - 50 < 200);
@@ -510,4 +510,30 @@ test("a locked sub, mid, driver or horn that isn't in the tables leaves nothing 
     });
     assert.deepEqual(out.cards, [], key);
   }
+});
+
+test("a failing design with nothing in reach: the closest design that passes, and a notice naming what's out of reach", () => {
+  // over a $700 budget nothing that passes keeps the design's output
+  const out = optimizePaStack({ ...base, budget: 700, goal: "cheaper" });
+  assert.ok(out.curProblems.length > 0, "the current design fails a check");
+  const k = out.cards[0];
+  assert.ok(k, "a card is shown");
+  assert.equal(k.label, "Fixes your design");
+  assert.deepEqual(
+    designProblems(evaluateDesign(k.config)!, { maxLb: base.maxLb, budget: 700 }),
+    [],
+  );
+  assert.ok(k.metrics.out < out.target - 0.5, "it misses the target");
+  const note = out.goalMissing ?? "";
+  assert.match(note, /^Out of reach within the checks: .*dB of output/);
+  assert.ok(note.includes(`${k.metrics.out.toFixed(1)} dB`), note);
+});
+
+test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
+  // over an $800 budget nothing that passes keeps the output; $880 does
+  const out = optimizePaStack({ ...base, budget: 800, goal: "cheaper" });
+  assert.match(out.goalMissing ?? "", /^Out of reach/);
+  assert.ok(out.cards.length > 0);
+  const opts = out.nearMiss ? out.nearMiss.options.map((o) => o.text) : [];
+  assert.ok(opts.includes("Budget +$80"), JSON.stringify(opts));
 });

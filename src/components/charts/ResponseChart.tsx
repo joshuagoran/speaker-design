@@ -1,14 +1,18 @@
-import type { FrequencyPoint } from "../../types";
+import type { BandCurves, FrequencyPoint } from "../../types";
 import { PAL } from "../../styles/palette";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { useState } from "react";
 
-/** One curve on the chart: its points, legend label, line colour and fill colour. */
+/**
+ * One curve on the chart: its points, legend label, line colour and fill colour. `band` shades the curve at the low and
+ * high ends of an estimated Xmax (see `lib/xmax`); null or absent when the driver's Xmax is exact.
+ */
 interface Series {
   curve: readonly FrequencyPoint[];
   label: string;
   stroke: string;
   tint: string;
+  band?: BandCurves<FrequencyPoint> | null;
 }
 
 /** A labelled vertical line at a frequency. */
@@ -70,9 +74,20 @@ export function ResponseChart({
     const d = pts
       .map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1))
       .join("");
+    // the band: along the high curve, back along the low one (none unless both have points on the chart)
+    const inRange = (c: readonly FrequencyPoint[]) => c.filter((o) => o.f >= fmin && o.f <= fmax);
+    const bandHi = sr.band ? inRange(sr.band.hi) : [],
+      bandLo = sr.band ? inRange(sr.band.lo) : [];
+    const band =
+      bandHi.length && bandLo.length
+        ? [...bandHi, ...bandLo.reverse()]
+            .map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1))
+            .join("") + "Z"
+        : "";
     return {
       ...sr,
       d,
+      bandD: band,
       fill: pts.length
         ? d + `L${px(pts[pts.length - 1].f).toFixed(1)},${y1} L${px(pts[0].f).toFixed(1)},${y1} Z`
         : "",
@@ -196,6 +211,11 @@ export function ResponseChart({
         {paths.map((p) => (
           <path key={p.label + "f"} d={p.fill} fill={p.tint} />
         ))}
+        {paths.map((p) =>
+          p.bandD ? (
+            <path key={p.label + "b"} d={p.bandD} fill={PAL.alpha(p.stroke, 0.18)} stroke="none" />
+          ) : null,
+        )}
         {paths.map((p) => (
           <path
             key={p.label}
@@ -288,6 +308,15 @@ export function ResponseChart({
               {p.label}
             </span>
           ))}
+          {paths.some((p) => p.bandD) && (
+            <span className="flex items-center gap-1.5">
+              <span
+                className="inline-block w-4 h-2.5 rounded-sm"
+                style={{ background: PAL.alpha(PAL.ink, 0.18) }}
+              />
+              Xmax estimated: shaded range
+            </span>
+          )}
         </div>
       )}
     </div>

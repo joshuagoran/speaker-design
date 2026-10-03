@@ -43,6 +43,7 @@ import type {
 import { METERS_PER_FOOT } from "../../constants/units";
 import { formatInches } from "../format";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
+import { xmaxBandCurves } from "../xmax";
 
 const C = 343,
   IN = 0.0254;
@@ -425,31 +426,36 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
   // per-frequency limits of the woofer with the EQ in the signal (the boosted drive can't pass the amp or the coil rating)
   const vT = thermalVoltageLimit(ts.aes || 100),
     portMax = cfg.portMax || 17;
-  const wMax: WooferMaxPoint[] = woofer.map((o, i) => {
-    const { e, lp } = o;
-    const drive = V * e * lp; // volts at the terminals for full-scale input
-    const sAmp = V / Math.max(1e-9, V * e),
-      sTh = vT / Math.max(1e-9, drive),
-      sX = ts.Xmax / Math.max(1e-9, o.xmm);
-    const sP = o.vel ? portMax / o.vel : Infinity,
-      sR = o.prx && pr ? pr.drv.Xmax / o.prx : Infinity;
-    const s = Math.min(sAmp, sTh, sX, sP, sR);
-    return {
-      f: o.f,
-      spl: o.spl + 20 * Math.log10(s),
-      who:
-        s === sX
-          ? "Xmax"
-          : s === sP
-            ? "port"
-            : s === sR
-              ? "radiator"
-              : s === sTh
-                ? "thermal"
-                : "amp",
-      s,
-    };
-  });
+  // at a woofer Xmax (its centre, or the ends of an estimated band for the chart's shading) and the radiator's limit
+  const wMaxAt = (xW: number, xR: number): WooferMaxPoint[] =>
+    woofer.map((o) => {
+      const { e, lp } = o;
+      const drive = V * e * lp; // volts at the terminals for full-scale input
+      const sAmp = V / Math.max(1e-9, V * e),
+        sTh = vT / Math.max(1e-9, drive),
+        sX = xW / Math.max(1e-9, o.xmm);
+      const sP = o.vel ? portMax / o.vel : Infinity,
+        sR = o.prx && pr ? xR / o.prx : Infinity;
+      const s = Math.min(sAmp, sTh, sX, sP, sR);
+      return {
+        f: o.f,
+        spl: o.spl + 20 * Math.log10(s),
+        who:
+          s === sX
+            ? "Xmax"
+            : s === sP
+              ? "port"
+              : s === sR
+                ? "radiator"
+                : s === sTh
+                  ? "thermal"
+                  : "amp",
+        s,
+      };
+    });
+  const xR = pr ? pr.drv.Xmax : 0; // a radiator's limit is published, never a band
+  const wMax = wMaxAt(ts.Xmax, xR);
+  const wMaxBand = xmaxBandCurves(ts.xmax, (xW) => wMaxAt(xW, xR));
   // one scale for music (the worst case across the woofer's band), like the PA planner's music limit
   const band = wMax.filter((o) => o.f >= 30 && o.f <= xo * 1.5);
   const sMusic = Math.min(...band.map((o) => o.s)),
@@ -520,6 +526,7 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
     refW,
     woofer,
     wMax,
+    wMaxBand,
     sMusic,
     whoW,
     trim,

@@ -171,6 +171,20 @@ export function OptimizerPanel({
           />
         )}
         {res && !busy && res.goalMissing && <Notice>{res.goalMissing}</Notice>}
+        {res &&
+          !busy &&
+          res.cards.length > 0 &&
+          res.nearMiss &&
+          res.nearMiss.options.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs text-stone-500">
+              Reaches the goal with a looser limit:
+              {res.nearMiss.options.map((o) => (
+                <ToggleButton key={o.text} on={false} onClick={() => run(o.set)}>
+                  {o.text}
+                </ToggleButton>
+              ))}
+            </div>
+          )}
         {res && !busy && !res.cards.length && res.nearMiss && (
           <div className="mt-4 rounded-lg border border-orange-300 bg-orange-50 px-3 py-3">
             <h3 className="text-base" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>

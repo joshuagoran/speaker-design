@@ -42,6 +42,7 @@ import { HIFI_OPTIMIZER_GOALS } from "../../lib/hifi/optimize";
 import type { HifiPlanner } from "./useHifiPlanner";
 import type { Dims3 } from "../../types";
 import { entriesOf } from "../../lib/records";
+import { xmaxRows } from "../../lib/xmax";
 
 interface Props {
   hifi: HifiPlanner;
@@ -351,6 +352,7 @@ export function HifiPage({ hifi }: Props) {
           series={[
             {
               curve: speakerSystem.wMax,
+              band: speakerSystem.wMaxBand,
               label: woofer.name,
               stroke: PAL.magenta,
               tint: PAL.alpha(PAL.magenta, 0.06),
@@ -456,6 +458,12 @@ export function HifiPage({ hifi }: Props) {
               <Tooltip tip={woofer.note}>
                 <span className="font-medium text-stone-900">{woofer.name}</span>
               </Tooltip>
+              {xmaxRows(woofer.ts).map(([k, v, note, tip]) => (
+                <span key={k}>
+                  {" · "}
+                  <Tooltip tip={tip}>{k}</Tooltip> {v} ({note})
+                </span>
+              ))}
             </div>
             <div>
               <Tooltip tip={tweeter.note}>
@@ -670,7 +678,7 @@ export function HifiPage({ hifi }: Props) {
             {speakerSystem.kind === "vented"
               ? `, ${speakerSystem.pArea.toFixed(1)} in² of ${speakerSystem.slotW != null ? "slot" : "port"}`
               : speakerSystem.kind === "radiator"
-                ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their own resonance)${radiatorDriver.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}`
+                ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their own resonance)${radiatorDriver.pub.Xmax == null ? `. Its travel limit is the mechanical one (${radiatorDriver.Xmax} mm); no linear figure is published, so expect some noise near it` : ""}`
                 : ", lightly stuffed"}
             .
           </div>

@@ -40,6 +40,8 @@ const W: HifiWoofer = {
     Vas: 25,
     Sd: 132,
     Xmax: 5.5,
+    xmax: { basis: "converted", lo: 5.5, hi: 5.5 },
+    pub: { Xmax: 5.5, formula: "hg/4" },
     Re: 5.6,
     Bl: 7,
     Mms: 16,
@@ -212,7 +214,6 @@ test("passive radiators: tuning, notch, travel limit and checks", (t) => {
   const drv: PassiveRadiator = {
     id: "p",
     name: "test radiator",
-    xmaxKind: "linear",
     src: "",
     note: "",
     size: 6.5,
@@ -222,6 +223,8 @@ test("passive radiators: tuning, notch, travel limit and checks", (t) => {
     Qms: 4.3,
     Fs: 26.8,
     Xmax: 8,
+    xmax: { basis: "published", lo: 8, hi: 8 },
+    pub: { Xmax: 8, formula: "unstated" },
     lb: 0.75,
     price: 25,
   };
