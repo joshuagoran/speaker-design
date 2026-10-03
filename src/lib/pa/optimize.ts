@@ -70,7 +70,7 @@ import type {
   VentSpec,
 } from "../../types";
 import { keysOf } from "../records";
-import { selectCards } from "../optimizer/selectCards";
+import { selectCards, type SelectedCard } from "../optimizer/selectCards";
 import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
 import { savedCrossoverOrder } from "../../constants/crossovers";
@@ -145,11 +145,8 @@ interface PoolEntry {
   m: PaEvaluation;
   ch: number;
 }
-interface PlannedCard {
-  p: PoolEntry;
-  label: string;
-  why: string;
-}
+/** A card as `choose` picks it: the design, its label and its why. */
+type PlannedCard = SelectedCard<PoolEntry>;
 /** The locks with both box-dimension modes present. */
 interface ResolvedLocks extends PaOptimizerLocks {
   subDim: Partial<Record<keyof Dims3, DimensionLockMode>>;

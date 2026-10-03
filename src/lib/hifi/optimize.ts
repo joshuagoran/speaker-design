@@ -80,10 +80,6 @@ interface PoolEntry {
   chips: HifiChip[];
   m: HifiMetrics;
 }
-interface PlannedCard extends PoolEntry {
-  label: string;
-  why: string;
-}
 
 // the PA planner's goals, in its order
 export const HIFI_OPTIMIZER_GOALS: Record<HifiGoal, { short: string; name: string; why: string }> =
