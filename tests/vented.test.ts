@@ -1,6 +1,6 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { boxModel, closedBox } from "../src/lib/pa/calc";
+import { boxModel, butterworth, closedBox } from "../src/lib/pa/calc";
 import { SUB_OPTIONS } from "../src/lib/data";
 import type { BoxModelTS } from "../src/types";
 import { tsModel, massLineSPL, helmholtz, near, close, rel, LR24_ORDERS } from "./helpers";
@@ -84,4 +84,40 @@ test("boxModel: excursion and velocity are sine peaks (x sqrt 2 of the RMS drive
   const a = boxModel(fh500, 150, 60, 12, 1, 2.83)!,
     b = boxModel(fh500, 150, 60, 12, 1, 2.83 * 2)!;
   rel(t, near(b.curve, 50).xmm, 2 * near(a.curve, 50).xmm, 1e-9);
+});
+
+test("boxModel phase: a lossless B4 box is s⁴ / B4(s), 180° at Fb, and off unless asked for", (t) => {
+  // Thiele's B4: Qts = 1 / 2.613 (the Butterworth a1), Vas / Vb = √2, Fb = Fs; no losses anywhere
+  const a1 = 2 * (Math.sin(Math.PI / 8) + Math.sin((3 * Math.PI) / 8)),
+    Fs = 30,
+    Mms = 150,
+    Re = 6;
+  // Qes = 2π Fs Mms Re / Bl²
+  const Bl = Math.sqrt(2 * Math.PI * Fs * (Mms / 1e3) * Re * a1);
+  const ts: BoxModelTS = { Fs, Qms: 1e12, Sd: 1200, Mms, Re, Bl, Xmax: 10 };
+  const Vb = tsModel(ts).VasL / Math.SQRT2;
+  // the port tuned to Fs exactly: no end correction, its length all of Leff
+  const SpIn2 = 40,
+    Leff = (SpIn2 * 0.00064516 * (343 / (2 * Math.PI * ts.Fs)) ** 2) / (Vb / 1000);
+  const r = boxModel(ts, Vb, SpIn2, Leff / 0.0254, 1, 2.83, "BW24", {
+    QL: Infinity,
+    Qp: Infinity,
+    ecIn: 0,
+    phase: true,
+  })!;
+  rel(t, r.Fb, ts.Fs, 1e-9);
+  for (const o of r.curve) {
+    const s = { re: 0, im: o.f / ts.Fs },
+      b = butterworth(s, 4);
+    // s⁴ = (f/Fs)⁴, real
+    const ref = Math.atan2(-b.im, b.re),
+      d = o.rawPhase! - ref; // the option was asked for: every point has it
+    assert.ok(Math.abs(d - 2 * Math.PI * Math.round(d / (2 * Math.PI))) < 1e-6, `${o.f} Hz`);
+    close(t, o.raw - r.ref, 20 * Math.log10((o.f / ts.Fs) ** 4 / Math.hypot(b.re, b.im)), 1e-6);
+  }
+  const atFb = near(r.curve, ts.Fs);
+  close(t, (atFb.rawPhase! * 180) / Math.PI, 180, 2, "at Fb, as unwrapped from the top");
+  const plain = boxModel(ts, Vb, SpIn2, 10, 1, 2.83);
+  assert.ok(plain);
+  assert.equal(plain.curve[0].rawPhase, undefined);
 });

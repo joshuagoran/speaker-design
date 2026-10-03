@@ -42,7 +42,7 @@ export function CoverageAssumptions({ room }: Props) {
       [
         `Target: ${LISTENER_TARGET_DB} dB SPL at the listener in the sub band, less the music-balance tilts above the crossovers.`,
         "Each band at the planner's own limit: the sub at its music limit through its lowpass, the mid and horn at their maximum curves. The band with the least to spare sets the level.",
-        "The planner's curves are carried past their ends along the crossover slope.",
+        "The planner's curves are carried past their ends along the crossover slope, their own phase held at the end.",
         "The sub and mid curves are taken as measured on the floor (half space); below the baffle step the map removes that and adds the floor back as a reflection. The horn's sensitivity is taken as free field.",
       ],
     ],
@@ -54,7 +54,8 @@ export function CoverageAssumptions({ room }: Props) {
         "Crossovers: Linkwitz-Riley, with their phase (the slopes are set on the Design page).",
         `Sub and mid radiate as rigid pistons. Behind a box they lose 3 dB at ${BOX_SHADOW_HZ} Hz and 6 dB per octave above it.`,
         "The horn holds its rated coverage (−6 dB at the edges) above its control frequency and widens below it, never dropping more than 40 dB.",
-        "Sub phase: only the crossover's. The box's own phase (its tuning and highpass) is left out.",
+        "Each band's own phase from the planner's models: the sub's vented box and its highpass, the mid's sealed box (no voice-coil inductance). The baffle step is a first-order shelf, with its phase.",
+        "Sub delay: auto puts the sub in phase with the mid at the crossover on the stack's axis (of the delays that do, the one nearest the difference in their group delays); one delay for every sub, in the stacks or in the middle.",
       ],
     ],
     [

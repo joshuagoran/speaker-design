@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { subMusicThroughLowpass } from "../../lib/pa/calc";
+import { highpassFilter, subMusicThroughLowpass } from "../../lib/pa/calc";
 import {
+  autoSubDelayMs,
   balanceLevels,
   balancedTarget,
   bandTarget,
@@ -9,6 +10,7 @@ import {
   coverageResponse,
   coverageScene,
   coverageStats,
+  withOwnPhase,
 } from "../../lib/pa/coverage";
 import { LISTENER_TARGET_DB } from "../../lib/pa/optimize";
 import { runCoverageGrid } from "../../lib/pa/runCoverage";
@@ -48,6 +50,8 @@ export type CoverageInputs = Pick<
   | "subAmpVoltage"
   | "subMidCrossoverHz"
   | "subMidCrossoverOrder"
+  | "subHighpassHz"
+  | "subHighpassType"
   | "midHornCrossoverOrder"
   | "midModelled"
   | "hornModel"
@@ -59,6 +63,8 @@ export type CoverageInputs = Pick<
 /** The map's results: the floor grid (null until the first one arrives), the boxes, the listener's level and response. */
 export interface CoverageMap {
   stack: CoverageStack | null;
+  /** what the auto sub delay works out to, ms: in phase with the mid at the crossover (null without a sub to match) */
+  autoSubDelayMs: number | null;
   levels: CoverageLevels | null;
   /** how far each band is turned down to balance the system */
   pads: BalancedLevels["pads"] | null;
@@ -105,6 +111,8 @@ export function useCoverageMap(
     subModelled,
     subAmpVoltage,
     subMidCrossoverHz,
+    subHighpassHz,
+    subHighpassType,
     midModelled,
     hornModel,
     midHornCrossoverHz,
@@ -120,7 +128,7 @@ export function useCoverageMap(
     }),
     [subMidCrossoverHz, midHornCrossoverHz, midBandTiltDb, hornBandTiltDb],
   );
-  const stack = useMemo<CoverageStack | null>(
+  const geometry = useMemo<Omit<CoverageStack, "subDelayMs"> | null>(
     () =>
       stackGeometry
         ? {
@@ -132,32 +140,55 @@ export function useCoverageMap(
     [stackGeometry, subBox.w, subBox.d, effectiveMidBoxDims.w],
   );
   // each band at the planner's own limit (the sub at its music limit through its lowpass, the mid and horn as the
-  // system chart draws them), then balanced: the weakest band sets the level
+  // system chart draws them), with the sub's and mid's own phase, then balanced: the weakest band sets the level
   const balanced = useMemo<BalancedLevels | null>(
     () =>
-      midModelled && stack
+      midModelled && geometry
         ? balanceLevels(
             {
               sub: subModelled
-                ? subMusicThroughLowpass(
-                    subModelled.mdl,
-                    subModelled.lim,
-                    subAmpVoltage,
-                    subMidCrossoverHz,
-                    stack.orderLo,
+                ? withOwnPhase(
+                    subMusicThroughLowpass(
+                      subModelled.mdl,
+                      subModelled.lim,
+                      subAmpVoltage,
+                      subMidCrossoverHz,
+                      geometry.orderLo,
+                    ),
+                    subModelled.mdl.curve,
+                    (f) => highpassFilter(f, subHighpassHz, subHighpassType),
                   )
                 : null,
-              mid: midModelled.max,
+              mid: withOwnPhase(midModelled.max, midModelled.mdl.curve),
               horn: hornModel ? hornModel.curve : [],
             },
             balance,
-            stack,
+            geometry,
           )
         : null,
-    [subModelled, subAmpVoltage, subMidCrossoverHz, midModelled, hornModel, balance, stack],
+    [
+      subModelled,
+      subAmpVoltage,
+      subMidCrossoverHz,
+      subHighpassHz,
+      subHighpassType,
+      midModelled,
+      hornModel,
+      balance,
+      geometry,
+    ],
   );
   const levels = balanced && balanced.levels;
-  const { room, stacks, cluster, band, freqHz, earFt, listener, levelMode } = layout;
+  const { room, stacks, cluster, band, freqHz, earFt, listener, levelMode, subDelay } = layout;
+  const autoDelay = useMemo(
+    () => (geometry && levels ? autoSubDelayMs({ ...geometry, subDelayMs: 0 }, levels) : null),
+    [geometry, levels],
+  );
+  const subDelayMs = subDelay === "auto" ? (autoDelay ?? 0) : subDelay;
+  const stack = useMemo<CoverageStack | null>(
+    () => geometry && { ...geometry, subDelayMs },
+    [geometry, subDelayMs],
+  );
   // center subs only when the sub has levels to play: otherwise the subs stay (silent) in the stacks
   const subs = levels?.sub ? layout.subs : "stacks";
   const job = useMemo<CoverageJob | null>(
@@ -276,6 +307,7 @@ export function useCoverageMap(
   const jobFailed = !!job && failed?.job === job;
   return {
     stack,
+    autoSubDelayMs: autoDelay,
     levels,
     pads: balanced && balanced.pads,
     boxes,

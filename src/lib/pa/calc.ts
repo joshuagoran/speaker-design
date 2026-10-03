@@ -82,6 +82,37 @@ export const highpassGain = (f: number, fc: number, type: HighpassType = "BW24")
     ? Math.pow(x, n) / Math.sqrt(1 + Math.pow(x, 2 * n))
     : Math.pow(x, n) / (1 + Math.pow(x, n));
 };
+// Normalised Butterworth denominator of even order n: the product of s² + 2 sin((2k − 1)π / 2n)·s + 1, k = 1 … n/2
+export function butterworth(s: Complex, n: number): Complex {
+  let d = complex(1);
+  for (let k = 1; k <= n / 2; k++) {
+    const b = 2 * Math.sin(((2 * k - 1) * Math.PI) / (2 * n));
+    d = multiplyComplex(d, addComplex(multiplyComplex(s, addComplex(s, complex(b))), complex(1)));
+  }
+  return d;
+}
+// The highpass with its phase: s^n / Butterworth(n), or a Linkwitz-Riley as that of n/2 squared. highpassGain is its
+// magnitude, kept in closed form for the box model's loop.
+export function highpassFilter(f: number, fc: number, type: HighpassType = "BW24"): Complex {
+  const [kind, n] = HIGHPASS_ALIGNMENTS[type] || HIGHPASS_ALIGNMENTS.BW24,
+    s = complex(0, f / fc);
+  const bw = (m: number) => {
+    let sm = complex(1);
+    for (let i = 0; i < m; i++) sm = multiplyComplex(sm, s);
+    return divideComplex(sm, butterworth(s, m));
+  };
+  if (kind === "bw") return bw(n);
+  const h = bw(n / 2);
+  return multiplyComplex(h, h);
+}
+// Phase along a curve made continuous: each point moved by whole turns to within half a turn of the next one up, from
+// the top of the curve down (the top keeps its own value: there a box's phase is near 0).
+export function unwrapPhase(ph: readonly number[]): number[] {
+  const out = [...ph];
+  for (let i = out.length - 2; i >= 0; i--)
+    out[i] -= 2 * Math.PI * Math.round((out[i] - out[i + 1]) / (2 * Math.PI));
+  return out;
+}
 // Linkwitz-Riley crossover magnitudes of either order (4 = LR24, 8 = LR48), both -6 dB at fc
 export const linkwitzRileyLowpass = (f: number, fc: number, order: CrossoverOrder) =>
   1 / (1 + Math.pow(f / fc, order));
@@ -107,8 +138,10 @@ export function ventTuning(
 
 // opts: nPorts (separate openings sharing the area), QL (box leakage, default 7), Qp (port losses, default 50),
 // ecIn (total end correction in inches, both ends; default 1.46 r per opening), N (frequency points, default 420;
-// fewer only for the optimizer's screening), fTop (run the curve on past fmax to here; see logGridCount).
+// fewer only for the optimizer's screening), fTop (run the curve on past fmax to here; see logGridCount), phase (give
+// each point the box's phase, `rawPhase`: the coverage map's; the optimizers leave it off).
 export interface BoxModelOptions {
+  phase?: boolean;
   nPorts?: number;
   QL?: number;
   Qp?: number;
@@ -137,7 +170,7 @@ export function boxModel(
   opts: BoxModelOptions = {},
 ): VentedBoxModel | null {
   if (!ts || !VbL || !SpIn2 || LpIn <= 0) return null;
-  const { nPorts = 1, QL = 7, Qp = 50, ecIn, N = 420, fmin = 12, fmax = 300, fTop } = opts;
+  const { nPorts = 1, QL = 7, Qp = 50, ecIn, N = 420, fmin = 12, fmax = 300, fTop, phase } = opts;
   const rho = 1.18,
     c = 343;
   const Sd = ts.Sd / 10000; // cm^2 -> m^2
@@ -190,13 +223,20 @@ export function boxModel(
     const p = (rho * w * Ut) / (2 * Math.PI);
     const raw = 20 * Math.log10(p / 2e-5);
     // volts is RMS; x1.414 turns RMS travel and air speed into sine peaks, which Xmax and the 17 m/s limit mean
-    out.push({
+    const pt: VentedPoint = {
       f,
       raw,
       spl: raw + 20 * Math.log10(hp),
       xmm: Math.SQRT2 * (Ud / (w * Sd)) * hp * 1000,
       vel: Math.SQRT2 * (Up / Sp) * hp,
-    });
+    };
+    // the radiated pressure is jω × the flow into the box air, jω Cab·Ud Zbox: −ω² Cab·Ud Zbox, in phase with −Ud Zbox
+    if (phase) pt.rawPhase = Math.atan2(-vIm, -vRe);
+    out.push(pt);
+  }
+  if (phase) {
+    const ph = unwrapPhase(out.map((o) => o.rawPhase ?? 0));
+    for (const [i, o] of out.entries()) o.rawPhase = ph[i];
   }
   // midband reference: the mass-controlled asymptote (see closedBox)
   const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
@@ -225,7 +265,8 @@ export function boxModel(
 // Sealed-box model for the mid-bass: the same driver circuit with the box
 // compliance in series and no port. hp and lp are the crossover corners,
 // Linkwitz-Riley of the orders opts gives (hpOrder, lpOrder). Voice-coil inductance is not
-// modelled, so the top octave reads a little high. Excursion is the sine peak, as in boxModel.
+// modelled, so the top octave reads a little high. Excursion is the sine peak, as in boxModel; opts.phase gives each
+// point the box's phase (without the crossover's), as boxModel does.
 // ---------------------------------------------------------------
 export function closedBox(
   ts: BoxModelTS,
@@ -233,12 +274,12 @@ export function closedBox(
   hp: number | null,
   lp: number | null,
   volts: number,
-  opts: Pick<BoxModelOptions, "N" | "fmin" | "fmax" | "fTop"> & {
+  opts: Pick<BoxModelOptions, "N" | "fmin" | "fmax" | "fTop" | "phase"> & {
     hpOrder: CrossoverOrder;
     lpOrder: CrossoverOrder;
   },
 ): SealedBoxModel | null {
-  const { N = 420, fmin = 20, fmax = 2000, fTop, hpOrder, lpOrder } = opts;
+  const { N = 420, fmin = 20, fmax = 2000, fTop, phase, hpOrder, lpOrder } = opts;
   if (!ts || !VbL || VbL <= 0) return null;
   const rho = 1.18,
     c = 343;
@@ -273,17 +314,25 @@ export function closedBox(
         ),
       ),
     );
-    const U = complexMagnitude(divideComplex(complex(Pg), Z));
+    const Uc = divideComplex(complex(Pg), Z),
+      U = complexMagnitude(Uc);
     const g =
       (hp ? linkwitzRileyHighpass(f, hp, hpOrder) : 1) *
       (lp ? linkwitzRileyLowpass(f, lp, lpOrder) : 1);
     const raw = 20 * Math.log10((rho * w * U) / (2 * Math.PI) / 2e-5);
-    out.push({
+    const pt: SealedPoint = {
       f,
       raw,
       spl: raw + 20 * Math.log10(g),
       xmm: Math.SQRT2 * (U / (w * Sd)) * g * 1000,
-    });
+    };
+    // the radiated pressure is jω × the cone's flow: in phase with jU
+    if (phase) pt.rawPhase = Math.atan2(Uc.re, -Uc.im);
+    out.push(pt);
+  }
+  if (phase) {
+    const ph = unwrapPhase(out.map((o) => o.rawPhase ?? 0));
+    for (const [i, o] of out.entries()) o.rawPhase = ph[i];
   }
   // Midband reference: the mass-controlled asymptote p = rho*V*Bl*Sd/(2*pi*Re*Mms) (half space, 1 m).
   // Averaging a band (the old 200-500 Hz) reads low when a well-damped box is still rising there.
@@ -881,6 +930,7 @@ export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig):
         nPorts: port.n,
         ecIn: port.ec,
         fTop: cfg.xoLo && LOWPASS_SKIRT_SPAN * cfg.xoLo, // past 300 Hz only above a 120 Hz crossover
+        phase: cfg.phase,
       })
     : null;
   if (!sub.ts || !mdl) return { port, grossL, ductL, woodL, netL, AMP_V, mdl: null, lim: null };
@@ -937,6 +987,7 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
         fTop: LOWPASS_SKIRT_SPAN * cfg.xoHi,
         hpOrder: cfg.xoLoOrder,
         lpOrder: cfg.xoHiOrder,
+        phase: cfg.phase,
       })
     : null;
   const vTherm = mid.ts ? thermalVoltageLimit(mid.ts.aes) : 0;

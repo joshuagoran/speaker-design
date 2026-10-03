@@ -4,6 +4,7 @@ import assert from "node:assert";
 import {
   linkwitzRileyFilter,
   baffleStepGain,
+  baffleStepShelf,
   baffleStepF3,
   baffleStepCompensation,
   boundaryGain,
@@ -105,6 +106,18 @@ test("baffle step: −6 dB well below, 0 dB well above, −3 dB at 115 / width",
   close(t, db(baffleStepGain(baffleStepF3(9), 9)), -3, 0.05);
   close(t, db(baffleStepCompensation(20, 9, 4)), 4, 0.05, "compensation shelf");
   close(t, db(baffleStepCompensation(20000, 9, 4)), 0, 0.05);
+});
+
+test("baffle step with its phase: the shelf's magnitude is the step's; it leads most, 19.5°, where x = 1/√2", (t) => {
+  for (const f of [20, 200, 600, 2000, 20000]) {
+    const h = baffleStepShelf(f, 15);
+    close(t, Math.hypot(h.re, h.im), baffleStepGain(f, 15), 1e-12, `${f} Hz`);
+  }
+  // x = 0.707 f / f3, so x = 1/√2 at f3
+  const h = baffleStepShelf(baffleStepF3(15), 15);
+  close(t, (Math.atan2(h.im, h.re) * 180) / Math.PI, 19.47, 0.01);
+  const far = baffleStepShelf(20000, 15);
+  assert.ok(Math.abs(Math.atan2(far.im, far.re)) < 0.02, "flat in phase well above");
 });
 
 test("placement: +3 dB near a wall and +6 dB in a corner at low frequencies, nothing up high", (t) => {

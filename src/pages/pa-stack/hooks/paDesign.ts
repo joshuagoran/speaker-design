@@ -151,6 +151,7 @@ export function derivePaDesign({
     portMax: maxPortAirSpeedMs,
     layout,
     xoLo: subMidCrossoverHz, // the system chart draws the lowpass skirt
+    phase: true, // for the coverage map
   });
   const { port, grossL: subGrossLiters, netL: subNetLiters, AMP_V: subAmpVoltage } = subSys;
   const subModelled = subSys.mdl
@@ -184,6 +185,7 @@ export function derivePaDesign({
     xoLoOrder: subMidCrossoverOrder,
     xoHiOrder: midHornCrossoverOrder,
     mAmpW: midAmpWatts,
+    phase: true, // for the coverage map
   });
   const {
     V: midVoltage,

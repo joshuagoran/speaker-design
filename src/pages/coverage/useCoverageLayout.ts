@@ -43,12 +43,15 @@ export const DEFAULT_COVERAGE_LAYOUT: CoverageLayout = {
   levelMode: "listener",
   earFt: 5.3,
   listener: { x: 3, y: 24 },
+  subDelay: "auto",
 };
 
 /** Room size limits, ft. */
 export const ROOM_WIDTH_FT: [number, number] = [16, 80];
 export const ROOM_LENGTH_FT: [number, number] = [16, 100];
 export const ROOM_CEILING_FT: [number, number] = [8, 40];
+/** How far the sub delay set by hand goes either way, ms: a period at 100 Hz. */
+export const SUB_DELAY_MAX_MS = 10;
 /** How far the stacks may turn either way, degrees. */
 const MAX_AIM_DEG = 60;
 
@@ -122,6 +125,7 @@ export interface CoverageLayoutState {
   setSubs: (subs: SubPlacement) => void;
   setMirror: (mirror: boolean) => void;
   setEarFt: (ft: number) => void;
+  setSubDelay: (delay: CoverageLayout["subDelay"]) => void;
   reset: () => void;
 }
 
@@ -173,6 +177,7 @@ export function useCoverageLayout(): CoverageLayoutState {
         return mirror ? withStack(m, 0, l.stacks[0]) : m;
       }),
     setEarFt: (earFt) => update((l) => ({ ...l, earFt })),
+    setSubDelay: (subDelay) => update((l) => ({ ...l, subDelay })),
     reset: () => setLayout(DEFAULT_COVERAGE_LAYOUT),
   };
 }

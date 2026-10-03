@@ -542,6 +542,9 @@ export interface FrequencyPoint {
   spl: number;
 }
 
+/** A curve point with its phase, radians, unwrapped along the curve. */
+export type PhasePoint = FrequencyPoint & { phase: number };
+
 /** The plane a dispersion map is taken in: horizontal (sideways off axis) or vertical (above and below it). */
 export type DispersionPlane = "h" | "v";
 
@@ -872,6 +875,8 @@ export interface VentedPoint {
   spl: number;
   xmm: number;
   vel: number;
+  /** the phase of `raw` (the box alone), radians, unwrapped; only with the model's `phase` option */
+  rawPhase?: number;
 }
 
 export interface VentedBoxModel {
@@ -896,6 +901,8 @@ export interface SealedPoint {
   raw: number;
   spl: number;
   xmm: number;
+  /** the phase of `raw` (the box alone, no crossover), radians, unwrapped; only with the model's `phase` option */
+  rawPhase?: number;
 }
 
 export interface SealedBoxModel {
@@ -972,6 +979,8 @@ export interface SubSystemConfig extends SubGeometryConfig {
   portMax: number;
   /** the sub-to-mid crossover, for a curve that shows the lowpass skirt (the planner's chart); the optimizer's screening leaves it out */
   xoLo?: number;
+  /** give the model's points the box's phase (the coverage map's); the optimizer leaves it off */
+  phase?: boolean;
 }
 
 /** The sub's vent and volumes, without the model. */
@@ -1016,6 +1025,8 @@ export interface MidSystemConfig extends Pick<PaDesignConfig, "xoLoOrder" | "xoH
   xoLo: number;
   xoHi: number;
   mAmpW: number;
+  /** give the model's points the box's phase (the coverage map's); the optimizer leaves it off */
+  phase?: boolean;
 }
 
 /** What a mid always has: voltages and the sealed box's volumes. */
@@ -1341,12 +1352,17 @@ export interface CoverageLayout {
   levelMode: CoverageLevelMode;
   earFt: number;
   listener: FloorPoint;
+  /** the sub's DSP delay against the tops, ms (negative: the tops wait), or in phase with the mid at the crossover */
+  subDelay: number | "auto";
 }
 
-/** Each band's output at 1 m on axis, through its crossover, dB SPL against frequency: the planner's curves. */
+/**
+ * Each band's output at 1 m on axis, through its crossover, dB SPL against frequency: the planner's curves. The sub's
+ * and mid's carry their own phase (the box's, and the sub's highpass's); the crossovers' phase comes from the stack.
+ */
 export interface CoverageLevels {
-  sub: FrequencyPoint[] | null;
-  mid: FrequencyPoint[];
+  sub: PhasePoint[] | null;
+  mid: PhasePoint[];
   horn: FrequencyPoint[];
 }
 
@@ -1364,6 +1380,8 @@ export interface CoverageStack extends PaStackGeometry {
   footprint: Pick<Dims3, "w" | "d">;
   /** the mid box's width, for its baffle step (the tower's is the sub's footprint) */
   midW: Dims3["w"];
+  /** the sub's DSP delay against the tops, ms (negative: the tops wait) */
+  subDelayMs: number;
 }
 
 /** Level across the floor: `cols` × `rows` cells, row by row from the front wall, dB SPL. */
