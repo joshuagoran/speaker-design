@@ -406,6 +406,10 @@ export interface HifiConfig {
   guideGain?: number;
   /** frequency points for the woofer response (240 when absent) */
   N?: number;
+  /** radius of the roundover on the baffle's edges, inches; 0 (sharp) when absent */
+  roundoverIn?: number;
+  /** how far the tweeter sits off the baffle's centre line, inches, + toward the inside of the pair (mirror-imaged); 0 when absent */
+  tweeterOffsetIn?: number;
 }
 
 /** Where the drivers sit on the baffle, inches from the box bottom. */
@@ -529,6 +533,8 @@ export interface ListenerGeometry {
   th: number;
   eyeIn: number;
   distM: number;
+  /** which side of the axis the listener is on: 1 toward the other speaker (where a + tweeter offset goes), -1 away; 1 when absent */
+  side?: -1 | 1;
 }
 
 export interface FrequencyPoint {
@@ -625,6 +631,10 @@ export interface HifiDesignState {
   earHeightIn: number;
   standHeightIn: number;
   dispersionPlane: DispersionPlane;
+  /** baffle edge roundover radius, inches (0: sharp) */
+  roundoverIn: number;
+  /** tweeter offset from the baffle's centre line, inches, + toward the inside of the pair */
+  tweeterOffsetIn: number;
 }
 
 /** What the model reads off a design that can be modelled: the system, and the curves and numbers worked out from it. */
@@ -638,6 +648,10 @@ export interface HifiSpeakerModel {
   /** what the tweeter can play at 1 m, behind the crossover */
   tweeterMaxCurve: FrequencyPoint[];
   dispersion: HifiDispersionMap;
+  /** the tweeter's edge diffraction alone on axis at 1 m: the ripple it puts on the response, dB */
+  edgeRipple: FrequencyPoint[];
+  /** that ripple's ± spread from 1 to 5 kHz, dB */
+  edgeRippleDb: number;
 }
 
 /** The Hi-fi design as the models read it, worked out from the planner's state. */
@@ -721,6 +735,10 @@ export interface SavedHifiConfig extends Omit<HifiCardConfig, "pr"> {
   seat: ListeningSeat;
   earIn: number;
   standIn: number;
+  /** baffle edge roundover radius, inches; absent in configs saved before it existed (sharp edges) */
+  roundover?: number;
+  /** tweeter offset, inches, + toward the inside; absent in configs saved before it existed (centred) */
+  tweeterOffset?: number;
   summary: string;
 }
 

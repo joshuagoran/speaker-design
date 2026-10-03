@@ -167,8 +167,9 @@ test("response at the seat: on axis matches the design axis; off axis and above 
   assert.ok(Math.abs(on[1].spl - on[0].spl) < 3, `${on[1].spl} vs ${on[0].spl}`);
   const m = hifiDispersionMap(s, W, T, cfg, "h", 2);
   assert.equal(m.rows.length, m.angles.length);
+  assert.deepStrictEqual([m.angles[0], m.angles[m.angles.length - 1]], [-90, 90], "both sides");
   assert.ok(
-    m.rows[0].every((v) => Math.abs(v) < 1e-9),
+    m.rows[m.angles.indexOf(0)].every((v) => Math.abs(v) < 1e-9),
     "0° row is the reference",
   );
 });

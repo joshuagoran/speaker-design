@@ -40,6 +40,8 @@ import type {
   WooferPoint,
 } from "../../types";
 import { METERS_PER_FOOT } from "../../constants/units";
+import { formatInches } from "../format";
+import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
 
 const C = 343,
   IN = 0.0254;
@@ -566,9 +568,93 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
   return null;
 }
 
+// ---- edge diffraction (see ./diffraction) ----
+/** The furthest the tweeter can sit off the centre line, inches: its faceplate (or waveguide) stays a quarter inch inside the baffle edge. */
+export const tweeterOffsetMax = (dim: Pick<Dims3, "w">, t: Pick<HifiTweeter, "faceplate">) =>
+  Math.max(0, (dim.w - t.faceplate.w) / 2 - 0.25);
+/** The tweeter offset the model uses, inches (+ inward): the asked-for one, kept on the baffle; 0 for a waveguide on the box top. */
+export function tweeterOffset(
+  cfg: Pick<HifiConfig, "dim" | "tweeterOffsetIn">,
+  t: Pick<HifiTweeter, "faceplate">,
+  lay: Pick<DriverLayout, "onTop">,
+) {
+  if (lay.onTop) return 0;
+  const m = tweeterOffsetMax(cfg.dim, t),
+    x = cfg.tweeterOffsetIn || 0;
+  return Math.max(-m, Math.min(m, x));
+}
+/** The listening point for `geo` in the baffle's inches (x across, + inward; y up from the box bottom; z out), on the axis of a driver at `x0` across. */
+function fieldPoint(geo: ListenerGeometry, x0: number): FieldPoint {
+  const d = geo.distM / IN,
+    th = Math.min(Math.abs(geo.th), Math.PI / 2);
+  return { x: x0 + (geo.side ?? 1) * d * Math.sin(th), y: geo.eyeIn, z: d * Math.cos(th) };
+}
+/**
+ * Each driver's edge diffraction ripple for the listener at `geo`, as functions of frequency (a complex gain, 1 for
+ * none). The tweeter's level toward the edges is its dome's (or waveguide's) at 90°, the woofer's its cone's; a
+ * waveguide on the box top is off the baffle and gets none.
+ */
+function edgeRipples(
+  sys: Pick<HifiSystem, "lay">,
+  w: HifiWoofer,
+  t: HifiTweeter,
+  cfg: HifiConfig,
+  geo: ListenerGeometry,
+) {
+  const r = cfg.roundoverIn || 0,
+    a = Math.sqrt(w.ts.Sd / 1e4 / Math.PI),
+    dome = (t.domeIn * IN) / 2,
+    xT = tweeterOffset(cfg, t, sys.lay),
+    guide = cfg.guide;
+  const tSrc: BafflePoint = { x: xT, y: sys.lay.tweeterIn },
+    wSrc: BafflePoint = { x: 0, y: sys.lay.wooferIn };
+  const p = fieldPoint(geo, xT);
+  const tSegs = sys.lay.onTop ? [] : edgeSegments(cfg.dim, tSrc, p),
+    wSegs = edgeSegments(cfg.dim, wSrc, p);
+  const kOf = (f: number) => (2 * Math.PI * f) / C;
+  return {
+    woofer: (f: number): Complex => {
+      const g = pistonPattern(kOf(f) * a);
+      const [re, im] = edgeRipple(wSegs, f, r, () => g);
+      return cm(re, im);
+    },
+    tweeter: (f: number): Complex => {
+      if (!tSegs.length) return cm(1);
+      let toward: (ux: number, uy: number) => number;
+      if (guide) {
+        // the waveguide model puts −6 dB at its coverage edge; once that edge reaches 90° the baffle edge gets it all
+        const half = waveguideHalfAngles(f, guide.covH, guide.covV, guide.w, guide.h);
+        toward = (ux, uy) =>
+          Math.min(
+            1,
+            2 * waveguideGain((Math.PI / 2) * Math.abs(ux), (Math.PI / 2) * Math.abs(uy), half),
+          );
+      } else {
+        const g = pistonPattern(kOf(f) * dome);
+        toward = () => g;
+      }
+      const [re, im] = edgeRipple(tSegs, f, r, toward);
+      return cm(re, im);
+    },
+  };
+}
+/** The tweeter's edge diffraction ripple alone, dB, for the listener at `geo` (on axis at 1 m by default). */
+export function hifiEdgeRipple(
+  sys: Pick<HifiSystem, "lay">,
+  w: HifiWoofer,
+  t: HifiTweeter,
+  cfg: HifiConfig,
+  freqs: readonly number[],
+  geo: ListenerGeometry = { th: 0, eyeIn: sys.lay.tweeterIn, distM: 1 },
+): FrequencyPoint[] {
+  const er = edgeRipples(sys, w, t, cfg, geo);
+  return freqs.map((f) => ({ f, spl: 20 * Math.log10(cabs(er.tweeter(f))) }));
+}
+
 // Response of one speaker at a point, relative to its on-axis response at 1 m; the DSP is time-aligned on the
 // tweeter axis at the listening distance. Returns [{ f, spl }] at 2.83 V-equivalent level (1 m on-axis scale).
-// geo: { th (rad, horizontal off-axis), eyeIn (ear height above the box bottom, in), distM }
+// Each driver's sound carries its baffle-edge diffraction at that point (roundover and tweeter offset from `cfg`).
+// geo: { th (rad, horizontal off-axis), eyeIn (ear height above the box bottom, in), distM, side }
 export function hifiResponseAt(
   sys: HifiSystem,
   w: HifiWoofer,
@@ -596,6 +682,7 @@ export function hifiResponseAt(
     return Math.pow(10, (o.raw - 20 * Math.log10(sys.V / 2.83)) / 20);
   };
   const trimG = Math.pow(10, sys.trim / 20);
+  const edges = edgeRipples(sys, w, t, cfg, geo);
   return freqs.map((f) => {
     const k = (2 * Math.PI * f) / C;
     const dW = pistonDirectivity(f, a, offW),
@@ -611,13 +698,19 @@ export function hifiResponseAt(
           )
         : pistonDirectivity(f, dome, offT);
     const pw = cmul(
-      cmul(linkwitzRileyFilter(f, xo, order, "lp"), cm(wAt(f) * dW * (1 / rW))),
-      cexp(-k * (rW - r0W)),
+      cmul(
+        cmul(linkwitzRileyFilter(f, xo, order, "lp"), cm(wAt(f) * dW * (1 / rW))),
+        cexp(-k * (rW - r0W)),
+      ),
+      edges.woofer(f),
     );
     const tOn = Math.pow(10, (sys.tSens283 + 20 * Math.log10(cabs(cm(1)))) / 20);
     const pt = cmul(
-      cmul(linkwitzRileyFilter(f, xo, order, "hp"), cm(tOn * trimG * dT * (1 / rT))),
-      cexp(-k * (rT - r0T)),
+      cmul(
+        cmul(linkwitzRileyFilter(f, xo, order, "hp"), cm(tOn * trimG * dT * (1 / rT))),
+        cexp(-k * (rT - r0T)),
+      ),
+      edges.tweeter(f),
     );
     return { f, spl: 20 * Math.log10(Math.max(1e-9, cabs(cadd(pw, pt)))) };
   });
@@ -640,6 +733,8 @@ export const listenerGeometry = (
     th: Math.abs(ang),
     eyeIn: room.earHeightIn - room.standHeightIn,
     distM: d * METERS_PER_FOOT,
+    // `ang` is + to the right of the axis; inward is right for the left speaker and left for the right one
+    side: -sign * ang >= 0 ? 1 : -1,
   };
 };
 
@@ -659,7 +754,8 @@ const nearestF = (curve: WooferPoint[], f: number) => {
 };
 
 // Dispersion map: level vs angle and frequency, normalised to on-axis. plane "h" (horizontal, at the tweeter
-// height) or "v" (vertical, from below to above the tweeter axis). Returns { angles, freqs, rows: [[dB]] }.
+// height, from the outside (−) to the inside (+) of the pair, so an offset tweeter's two sides both show) or "v"
+// (vertical, from below to above the tweeter axis). Returns { angles, freqs, rows: [[dB]] }.
 export function hifiDispersionMap(
   sys: HifiSystem,
   w: HifiWoofer,
@@ -671,14 +767,14 @@ export function hifiDispersionMap(
   const freqs = logSpacedFrequencies(100, 20000, 72);
   const angles =
     plane === "h"
-      ? Array.from({ length: 19 }, (_, i) => i * 5)
+      ? Array.from({ length: 37 }, (_, i) => -90 + i * 5)
       : Array.from({ length: 25 }, (_, i) => -60 + i * 5);
   const on = hifiResponseAt(sys, w, t, cfg, { th: 0, eyeIn: sys.lay.tweeterIn, distM }, freqs);
   const rows = angles.map((deg) => {
     const rad = (deg * Math.PI) / 180;
-    const geo =
+    const geo: ListenerGeometry =
       plane === "h"
-        ? { th: rad, eyeIn: sys.lay.tweeterIn, distM }
+        ? { th: Math.abs(rad), eyeIn: sys.lay.tweeterIn, distM, side: deg < 0 ? -1 : 1 }
         : { th: 0, eyeIn: sys.lay.tweeterIn + (Math.tan(rad) * distM) / IN, distM: distM };
     const r = hifiResponseAt(sys, w, t, cfg, geo, freqs);
     return r.map((o, i) => o.spl - on[i].spl);
@@ -800,6 +896,27 @@ export function hifiChips(
       "bad",
       "Drivers won't fit the baffle",
       `The woofer and tweeter${floor ? " above the slot" : ""} need about ${(cfg.dim.h - sys.lay.wooferIn + w.size / 2 + 0.5 + floor).toFixed(1)}″ of height.`,
+    ]);
+  const wall = cfg.wall || 0.75,
+    round = cfg.roundoverIn || 0;
+  if (round > wall + 1e-9)
+    F.push([
+      "warn",
+      "Roundover deeper than the baffle",
+      `A ${formatInches(round)} radius needs more than ${formatInches(wall)} stock: double the baffle up or glue hardwood strips along its edges to cut it in.`,
+    ]);
+  const offAsked = cfg.tweeterOffsetIn || 0;
+  if (offAsked && sys.lay.onTop)
+    F.push([
+      "warn",
+      "Tweeter offset ignored",
+      "The waveguide sits on the box top, centred; the offset only applies to a tweeter on the baffle.",
+    ]);
+  else if (Math.abs(offAsked) > tweeterOffsetMax(cfg.dim, t) + 1e-9)
+    F.push([
+      "warn",
+      "Tweeter offset past the edge",
+      `Its ${t.faceplate.w.toFixed(1)}″ faceplate fits at most ${tweeterOffsetMax(cfg.dim, t).toFixed(2)}″ off centre on this baffle; the model uses that.`,
     ]);
   F.push(
     sys.who === "tweeter"
