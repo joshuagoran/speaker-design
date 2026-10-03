@@ -13,7 +13,7 @@ import type {
 } from "../../types";
 
 /**
- * A dance floor about 1500 sq ft with a 14 ft drywall ceiling, block walls all round, full of people; the stacks a
+ * A dance floor about 1500 sq ft with a 14 ft drywall ceiling, block walls all round, an empty floor; the stacks a
  * few feet off the front wall, toed in a little.
  */
 export const DEFAULT_COVERAGE_LAYOUT: CoverageLayout = {
@@ -28,7 +28,7 @@ export const DEFAULT_COVERAGE_LAYOUT: CoverageLayout = {
       right: "concrete",
       ceiling: "drywall",
     },
-    crowd: "full",
+    crowd: "empty",
     outdoors: false,
   },
   stacks: [
