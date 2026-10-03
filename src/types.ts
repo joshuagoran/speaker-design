@@ -29,7 +29,7 @@ export interface Dims2 {
 // ---- Thiele-Small blocks ----
 
 /**
- * An Xmax formula from coil winding height Hvc and gap height Hg: "plain" is (Hvc − Hg)/2, "hg/4" adds Hg/4 (B&C,
+ * An Xmax formula from coil winding height Hvc and gap height Hg: "plain" is (Hvc − Hg)/2, "hg/4" adds Hg/4 (B&C, Celestion,
  * Lavoce, Ciare), "hg/3" adds Hg/3 (FaitalPRO, SB Audience), "hg/3.5" adds Hg/3.5 (Beyma).
  */
 export type GapFormula = "plain" | "hg/4" | "hg/3" | "hg/3.5";
