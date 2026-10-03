@@ -1950,7 +1950,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 14.9,
     name: "Celestion CF1230BMB",
-    price: 235,
+    price: 225,
     src: "Parts Express, Oct 2026",
     ts: {
       Fs: 43.4,
@@ -2406,8 +2406,8 @@ export const CD_OPTIONS: CompressionDriver[] = [
       imp: 8,
     },
     exit: 1.4,
-    price: 259,
-    src: "Parts Express, Oct 2026 (out of stock)",
+    price: 249,
+    src: "Parts Express 294-2502 (8 ohm), Oct 2026",
     note: "[datasheet, celestion.com, Oct 2026] Neo, 3 in edgewound CCAW coil, titanium diaphragm, polyimide surround. 120 W AES / 240 W continuous, 108 dB 1 W/1 m, minimum crossover 800 Hz at 12 dB/oct, 500 Hz\u201320 kHz, 3.7 lb. 4 \u00d7 M6 on a 102 mm circle, the N314T's pattern, so it bolts to the 1.4\u2033 horns here. The power test's high-pass is not published; the 800 Hz minimum crossover is assumed. Exit flare angle not published, which an ATH throat adapter needs.",
   },
   {
