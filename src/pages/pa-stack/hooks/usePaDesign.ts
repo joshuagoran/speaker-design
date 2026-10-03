@@ -16,6 +16,7 @@ import {
 import { byId } from "../../../lib/tables";
 import { DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../../../lib/defaults";
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
+import { KERF_OPTIONS, TRIM_OPTIONS, savedGrain } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
 import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
 import { derivePaDesign } from "./paDesign";
@@ -136,6 +137,16 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setPlywoodSheetKind,
     boxSetCount,
     setBoxSetCount,
+    kerfIn,
+    setKerfIn,
+    edgeTrimIn,
+    setEdgeTrimIn,
+    grain,
+    setGrain,
+    waterfall,
+    setWaterfall,
+    offcutShape,
+    setOffcutShape,
   } = useCutlistOptions();
   const subDriverChoices = subDriversOfSize(format.sub);
   const midDriverChoices = midDriversOfSize(midSize);
@@ -251,6 +262,11 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     cabFinish: cabinetFinish,
     spacerH: spacerHeightIn,
     joint: cornerJoint,
+    kerf: kerfIn,
+    trim: edgeTrimIn,
+    grain,
+    waterfall,
+    offcut: offcutShape,
     summary: `${subDriver.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${subModelled ? subModelled.mdl.Fb.toFixed(1) + " Hz" : "—"}`,
   });
   const restore = (c: Partial<PaDesignConfig>) => {
@@ -290,6 +306,12 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setCabinetFinish(c.cabFinish || DEFAULT_PA.cabFinish);
     setSpacerHeightIn(typeof c.spacerH === "number" ? c.spacerH : DEFAULT_PA.spacerH);
     if (c.joint) setCornerJoint(c.joint);
+    setKerfIn(KERF_OPTIONS.find((k) => k.v === c.kerf)?.v ?? DEFAULT_PA.kerf);
+    setEdgeTrimIn(TRIM_OPTIONS.find((v) => v === c.trim) ?? DEFAULT_PA.trim);
+    setGrain(savedGrain(c.grain));
+    // older designs: waterfall strips come on with mitre joints
+    setWaterfall(typeof c.waterfall === "boolean" ? c.waterfall : c.joint === "miter");
+    setOffcutShape(c.offcut === "panel" ? "panel" : DEFAULT_PA.offcut);
     if (c.portStyle) setPortStyle(c.portStyle);
   };
   return {
@@ -363,6 +385,16 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setPlywoodSheetKind,
     boxSetCount,
     setBoxSetCount,
+    kerfIn,
+    setKerfIn,
+    edgeTrimIn,
+    setEdgeTrimIn,
+    grain,
+    setGrain,
+    waterfall,
+    setWaterfall,
+    offcutShape,
+    setOffcutShape,
     ...derived,
     midWithBox,
     subDriverChoices,

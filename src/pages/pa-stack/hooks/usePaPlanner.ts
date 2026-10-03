@@ -26,6 +26,7 @@ export function usePaPlanner(): PaPlanner {
     snapshot: design.snapshot,
     restore: design.restore,
     db: savedConfigs.db,
+    cutlist: { sheet: design.plywoodSheetKind, stacks: design.boxSetCount },
   });
   return { ...viewOptions, ...phoneLayout, ...savedConfigs, ...design, ...optimizer };
 }

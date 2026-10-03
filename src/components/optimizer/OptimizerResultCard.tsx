@@ -3,6 +3,7 @@ import { Tooltip } from "../ui/Tooltip";
 import { OptimizerCurveChart } from "../charts/OptimizerCurveChart";
 import { BoxFront } from "../drawings/BoxFront";
 import { formatDollars } from "../../lib/format";
+import { formatThickness } from "../../lib/pa/calc";
 import { Delta } from "./Delta";
 import type { PaMetricsDelta, PaOptimizerCard, PaOptimizerResult } from "../../types";
 
@@ -42,12 +43,11 @@ export function OptimizerResultCard({
       {delta}
     </div>
   );
-  const sheets = result.build.sheets
-    .map(
-      (x) =>
-        `${x.n} sheet${x.n > 1 ? "s" : ""} ${x.t === 0.5 ? "1/2″" : x.t === 0.75 ? "3/4″" : x.t + "″"}`,
-    )
-    .join(" + ");
+  const { stacks } = result.build;
+  const sheets =
+    result.build.sheets
+      .map((x) => `${x.n} sheet${x.n > 1 ? "s" : ""} ${formatThickness(x.t)}`)
+      .join(" + ") + (stacks > 1 ? ` for ${stacks} stacks` : "");
   return (
     <div
       className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}
@@ -94,7 +94,7 @@ export function OptimizerResultCard({
         <b className="font-semibold">Limited by:</b> {result.limitedBy}
       </div>
       {result.warnings
-        .filter(([h]) => !/limited$/.test(h))
+        .filter(([h]) => !h.endsWith("limited"))
         .map(([h, b]) => (
           <div
             key={h}
