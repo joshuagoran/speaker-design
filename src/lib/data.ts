@@ -217,7 +217,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
       Sd: 1217,
       pub: {
         Xmax: 15.21,
-        formula: "unstated",
+        formula: "overhang-or-x10",
         src: "https://www.parts-express.com/pedocs/specs/290-5660--eminence-nsw4018-8-spec-sheet.pdf",
       },
       Hvc: 40.64,
@@ -246,7 +246,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
       Sd: 1188,
       pub: {
         Xmax: 8.57,
-        formula: "unstated",
+        formula: "overhang-or-x10",
         Xlim: 15.9,
         src: "https://cdn.shopify.com/s/files/1/0270/8665/1462/files/Definimax_4018LF.pdf",
       },
@@ -1675,7 +1675,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
       Sd: 532.4,
       pub: {
         Xmax: 6.2,
-        formula: "unstated",
+        formula: "overhang-or-x10",
         Xlim: 12.5,
         src: "https://cdn.shopify.com/s/files/1/0270/8665/1462/files/Kappalite_3012HO.pdf",
       },
@@ -1704,7 +1704,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
       Sd: 545.4,
       pub: {
         Xmax: 9.1,
-        formula: "unstated",
+        formula: "overhang-or-x10",
         Xlim: 14.5,
         src: "https://cdn.shopify.com/s/files/1/0270/8665/1462/files/Kappalite_3012LF.pdf",
       },
@@ -1733,7 +1733,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
       Sd: 519.5,
       pub: {
         Xmax: 4.9,
-        formula: "unstated",
+        formula: "overhang-or-x10",
         Xlim: 8.5,
         src: "https://cdn.shopify.com/s/files/1/0270/8665/1462/files/DeltaliteII_2512.pdf",
       },
@@ -2925,7 +2925,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
       Sd: 210,
       pub: {
         Xmax: 3.2,
-        formula: "unstated",
+        formula: "overhang-or-x10",
         Xlim: 6.9,
         src: "https://cdn.shopify.com/s/files/1/0270/8665/1462/files/Beta_8CX.pdf",
       },
@@ -3110,7 +3110,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
       Sd: 344.9,
       pub: {
         Xmax: 5,
-        formula: "unstated",
+        formula: "overhang-or-x10",
         Xlim: 7.6,
         src: "https://cdn.shopify.com/s/files/1/0270/8665/1462/files/Beta_10CX.pdf",
       },
@@ -3454,7 +3454,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
       Sd: 210,
       pub: {
         Xmax: 3,
-        formula: "unstated",
+        formula: "overhang-or-x10",
         Xlim: 7.4,
         src: "https://cdn.shopify.com/s/files/1/0270/8665/1462/files/Beta_8A.pdf",
       },

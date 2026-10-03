@@ -8,7 +8,7 @@ import {
   HIFI_WOOFERS,
   HIFI_PASSIVES,
 } from "../src/lib/data";
-import { ESTIMATE, comparableXmax, xmaxBandOf, xmaxByFormula } from "../src/lib/xmax";
+import { ESTIMATE, comparableXmax, isGapFormula, xmaxBandOf, xmaxByFormula } from "../src/lib/xmax";
 import type { ThieleSmall } from "../src/types";
 import { close, tsModel } from "./helpers";
 
@@ -67,7 +67,11 @@ test("published Xmax fits its formula from Hvc and Hg (±0.5 mm) or a listed exc
   const bad: string[] = [];
   for (const o of woofers) {
     const { pub, Hvc, Hg } = o.ts;
-    if (Hvc == null || Hg == null || pub.Xmax == null || pub.formula === "unstated") continue;
+    if (Hvc == null || Hg == null || pub.Xmax == null) continue;
+    // Eminence: the greater of the plain overhang and the 10 % distortion point, so never below the overhang
+    if (pub.formula === "overhang-or-x10" && pub.Xmax < xmaxByFormula("plain", Hvc, Hg) - 0.5)
+      bad.push(`${o.id}: ${pub.Xmax} below the plain overhang`);
+    if (!isGapFormula(pub.formula)) continue;
     const want = xmaxByFormula(pub.formula, Hvc, Hg);
     if (Math.abs(pub.Xmax - want) > 0.5) bad.push(`${o.id}: ${pub.Xmax} vs ${want.toFixed(2)}`);
   }

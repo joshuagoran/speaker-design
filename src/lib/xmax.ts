@@ -10,6 +10,7 @@
 //              where that is all the maker gives (pushing a radiator to it costs noise and distortion, not a coil);
 //   estimated  from the maker's figure times the ESTIMATE band, centre in the middle.
 import type {
+  GapFormula,
   PassiveRadiator,
   PublishedExcursion,
   RawTS,
@@ -19,17 +20,19 @@ import type {
 } from "../types";
 
 /** the share of Hg each maker formula adds to the plain overhang */
-const GAP_SHARE: Record<Exclude<XmaxFormula, "unstated">, number> = {
+const GAP_SHARE: Record<GapFormula, number> = {
   plain: 0,
   "hg/4": 1 / 4,
   "hg/3": 1 / 3,
   "hg/3.5": 1 / 3.5,
 };
+/** The formula is one of the gap formulas (a share of Hg on the plain overhang). */
+export const isGapFormula = (f: XmaxFormula): f is GapFormula => Object.hasOwn(GAP_SHARE, f);
 /** the comparable scale's share of Hg */
 const SCALE_SHARE = GAP_SHARE["hg/4"];
 
 /** One-way Xmax by a maker formula from coil and gap heights, mm. */
-export const xmaxByFormula = (formula: Exclude<XmaxFormula, "unstated">, Hvc: number, Hg: number) =>
+export const xmaxByFormula = (formula: GapFormula, Hvc: number, Hg: number) =>
   (Hvc - Hg) / 2 + GAP_SHARE[formula] * Hg;
 
 /** The comparable Xmax from coil and gap heights, mm. */
@@ -38,7 +41,7 @@ export const comparableXmax = (Hvc: number, Hg: number) => xmaxByFormula("hg/4",
 /**
  * Where the comparable value lies, as multiples of a published figure, when the maker gives no heights. Calibrated on
  * the 72 drivers whose heights are known (comparable / published):
- *   XmaxPro    pro makers that state no method (18Sound, Eminence): their peers run 0.83–1.06, median 0.93;
+ *   XmaxPro    pro makers that state no method: their peers run 0.83–1.06, median 0.93;
  *   XmaxHifi   hi-fi makers that state no method (Dayton, Peerless, Fostex): hi-fi makers mostly publish the plain
  *              overhang, which reads 1.2–1.3 on this scale (Scan-Speak), so the band spans gap-fraction to plain;
  *   Xvar       B&C's 10 % distortion limit: 0.68–1.13, median 0.84;
@@ -83,11 +86,16 @@ export function xmaxBandOf(
 ): XmaxBand {
   const { pub, Hvc, Hg } = ts;
   if (Hvc != null && Hg != null) return exact(comparableXmax(Hvc, Hg), "derived");
-  if (pub.Xmax != null && pub.formula !== "unstated") {
+  if (pub.Xmax != null && isGapFormula(pub.formula)) {
     if (pub.formula === "hg/4") return exact(pub.Xmax, "converted");
     if (Hg != null)
       return exact(pub.Xmax - (GAP_SHARE[pub.formula] - SCALE_SHARE) * Hg, "converted");
   }
+  // Eminence publishes the greater of the plain overhang and the 10 % distortion point, so the plain overhang is at
+  // most its figure and the comparable value at most the figure + Hg/4; at least the figure while the distortion
+  // point sits within Hg/4 of the overhang (NSW4018-8, whose heights are known: 1.2 mm against Hg/4 = 3.2 mm)
+  if (pub.Xmax != null && pub.formula === "overhang-or-x10" && Hg != null)
+    return { basis: "estimated", lo: pub.Xmax, hi: pub.Xmax + SCALE_SHARE * Hg };
   if (pub.Xmax != null)
     return estimate(pub.Xmax, isHifiMaker(who) ? ESTIMATE.XmaxHifi : ESTIMATE.XmaxPro);
   if (pub.Xvar != null) return estimate(pub.Xvar, ESTIMATE.Xvar);
@@ -133,6 +141,7 @@ const FORMULA_LABEL: Record<XmaxFormula, string> = {
   "hg/4": "Hg/4",
   "hg/3": "Hg/3",
   "hg/3.5": "Hg/3.5",
+  "overhang-or-x10": "overhang or X10",
   unstated: "method not published",
 };
 const mm = (v: number) => `${+v.toFixed(2)}`;

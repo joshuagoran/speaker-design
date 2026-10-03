@@ -29,10 +29,12 @@ export interface Dims2 {
 // ---- Thiele-Small blocks ----
 
 /**
- * How a maker computes its Xmax from coil winding height Hvc and gap height Hg: "plain" is (Hvc − Hg)/2, "hg/4" adds
- * Hg/4 (B&C, Lavoce, Ciare), "hg/3" adds Hg/3 (FaitalPRO, SB Audience), "hg/3.5" adds Hg/3.5 (Beyma).
+ * An Xmax formula from coil winding height Hvc and gap height Hg: "plain" is (Hvc − Hg)/2, "hg/4" adds Hg/4 (B&C,
+ * Lavoce, Ciare), "hg/3" adds Hg/3 (FaitalPRO, SB Audience), "hg/3.5" adds Hg/3.5 (Beyma).
  */
-export type XmaxFormula = "plain" | "hg/4" | "hg/3" | "hg/3.5" | "unstated";
+export type GapFormula = "plain" | "hg/4" | "hg/3" | "hg/3.5";
+/** How a maker computes its Xmax: a gap formula, Eminence's greater of the plain overhang and the 10 % distortion point, or unstated. */
+export type XmaxFormula = GapFormula | "overhang-or-x10" | "unstated";
 
 /** Every excursion figure the maker publishes, one-way mm, as published. */
 export interface PublishedExcursion {
