@@ -1212,6 +1212,12 @@ export interface CutlistSettings {
   cuts: CutStyle;
 }
 
+/** The cutlist choices a design saves with itself. */
+export type CutlistChoices = Pick<
+  CutlistSettings,
+  "kerf" | "trim" | "grain" | "waterfall" | "offcut" | "cuts"
+>;
+
 /** What a packed rectangle needs: its size and, optionally, which dimension must run along the sheet's length. */
 export interface PackRect {
   a: number;
@@ -1267,10 +1273,11 @@ export interface CutlistGroup extends PackedSheets {
   fewestSheets: number | null;
 }
 
-/** What the cutlist worker takes: one stack's parts and the settings. */
+/** What the cutlist worker takes: one stack's parts and the settings; `countsOnly` skips the offcut and rip-first comparison. */
 export interface CutlistRequest {
   parts: CutPart[];
   settings: CutlistSettings;
+  countsOnly?: boolean;
 }
 
 /** The cutlist laid out for the given settings. */
@@ -1681,8 +1688,16 @@ export interface PaOptimizerCard {
   limitedBy: string;
   /** the planner's warnings on this design as [title, detail] */
   warnings: [title: string, detail: string][];
-  /** the mid's Qtc, the sheets of ply each thickness needs (thickest first) and the stacks they cover */
-  build: { qtc: number; sheets: { t: number; n: number }[]; stacks: number };
+  /**
+   * the mid's Qtc and the sheets of ply each thickness needs (thickest first) from the quick packing; `parts` (one
+   * stack) and `cutlist` let the card ask the worker for the exact counts the Cutlist tab shows
+   */
+  build: {
+    qtc: number;
+    sheets: { t: number; n: number }[];
+    parts: CutPart[];
+    cutlist: CutlistSettings;
+  };
   /** what differs from the current design: "sub driver", "vent" ... */
   changed: string[];
   priceKnown: boolean;

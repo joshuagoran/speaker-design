@@ -9,6 +9,7 @@ import {
   layoutCutlist,
   offcutOf,
   packSheets,
+  savedCutlist,
   waterfallStrips,
 } from "../src/lib/pa/cutlist";
 import { DEFAULT_PA } from "../src/lib/defaults";
@@ -142,7 +143,7 @@ describe("layoutCutlist", () => {
   test("the longer search never needs more sheets than the quick one", () => {
     for (const stacks of [1, 2, 4]) {
       const n = (runs?: number) =>
-        layoutCutlist(parts(), settings({ stacks }), { runs, offcut: false }).groups.reduce(
+        layoutCutlist(parts(), settings({ stacks }), { runs, countsOnly: true }).groups.reduce(
           (a, g) => a + g.sheets.length,
           0,
         );
@@ -157,7 +158,7 @@ describe("offcut", () => {
       let seen = 0;
       for (const stacks of [1, 2, 4]) {
         const s = settings({ stacks, offcut: shape });
-        const plain = layoutCutlist(parts(), s, { offcut: false }),
+        const plain = layoutCutlist(parts(), s, { countsOnly: true }),
           kept = layoutCutlist(parts(), s);
         const S = PLYWOOD_SHEETS[s.sheet];
         for (const [i, g] of kept.groups.entries()) {
@@ -284,7 +285,7 @@ describe("cut style", () => {
         const L = layoutCutlist(parts(), s, { runs: SEARCH_RUNS });
         const free = layoutCutlist(parts(), settings({ sheet, stacks }), {
           runs: SEARCH_RUNS,
-          offcut: false,
+          countsOnly: true,
         });
         for (const [i, g] of L.groups.entries()) {
           assert.equal(g.cuts.crosscuts, 0);
@@ -294,4 +295,56 @@ describe("cut style", () => {
         }
       }
     });
+});
+
+describe("review fixes", () => {
+  test("a ply group with no part that fits gives no sheets, not a crash", () => {
+    const big: CutPart = { box: "Sub", part: "Baffle", qty: 1, a: 62, b: 70, t: 0.75, note: "" };
+    const L = layoutCutlist([big], settings({ sheet: "5x5", stacks: 1 }));
+    assert.equal(L.groups[0].sheets.length, 0);
+    assert.equal(L.groups[0].tooBig.length, 1);
+    assert.deepEqual(L.groups[0].cuts, { rips: 0, crosscuts: 0, widestCrosscut: 0 });
+  });
+
+  test("the offcut repack never turns a part across the grain", () => {
+    const crossed = (L: ReturnType<typeof layoutCutlist>) =>
+      L.groups.flatMap((g) => g.sheets.flatMap((s) => s.items)).filter((it) => it.crossed).length;
+    for (const sheet of ["4x8", "5x5"] as const)
+      for (const offcut of ["strip", "panel"] as const)
+        for (const grain of ["wrap", "horizontal"] as const)
+          for (const stacks of [1, 2]) {
+            const s = settings({
+              sheet,
+              offcut,
+              stacks,
+              grain: GRAIN_PRESETS[grain],
+              waterfall: true,
+              joint: "miter",
+            });
+            const P = parts("miter");
+            assert.ok(
+              crossed(layoutCutlist(P, s)) <= crossed(layoutCutlist(P, s, { countsOnly: true })),
+            );
+          }
+  });
+
+  test("rip first keeps a long strip even when a wide panel is asked for", () => {
+    const L = layoutCutlist(
+      parts(),
+      settings({ sheet: "5x5", cuts: "rips", offcut: "panel", stacks: 1 }),
+    );
+    for (const g of L.groups) {
+      assert.equal(g.cuts.crosscuts, 0);
+      if (g.offcut) close(null, g.offcut.h, PLYWOOD_SHEETS["5x5"].h, EPS, "full length");
+    }
+  });
+
+  test("savedCutlist: unknown values fall back, older designs get waterfall with mitres", () => {
+    const c = savedCutlist({ kerf: 0.2, trim: 0.3, joint: "miter" });
+    assert.equal(c.kerf, 0.125);
+    assert.equal(c.trim, 0);
+    assert.equal(c.waterfall, true);
+    assert.equal(savedCutlist({ joint: "miter", waterfall: false }).waterfall, false);
+    assert.equal(savedCutlist({ kerf: 0.25 }).kerf, 0.25);
+  });
 });

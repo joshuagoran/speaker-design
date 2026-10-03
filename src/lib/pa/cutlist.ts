@@ -4,6 +4,7 @@ import type {
   CutPart,
   CutPartName,
   CutStats,
+  CutlistChoices,
   CutlistGroup,
   CutlistLayout,
   CutlistSettings,
@@ -13,12 +14,18 @@ import type {
   GrainSettings,
   Offcut,
   OffcutShape,
+  PaDesignConfig,
   PackRect,
   PackedSheet,
   PackedSheets,
   PlacedPart,
+  PlywoodSheet,
 } from "../../types";
 import { PLYWOOD_SHEETS, formatInches } from "./calc";
+import { keysOf } from "../records";
+
+type SheetSize = Pick<PlywoodSheet, "w" | "h">;
+type Rect = Pick<PlacedPart<PackRect>, "x" | "y" | "w" | "h">;
 
 /** Saw kerf choices, inches. */
 export const KERF_OPTIONS = [
@@ -36,10 +43,7 @@ export const GRAIN_PRESETS: Record<GrainPreset, GrainSettings> = {
 };
 /** The preset these settings match, or null when they are mixed. */
 export const grainPresetOf = (g: GrainSettings): GrainPreset | null =>
-  (Object.keys(GRAIN_PRESETS) as GrainPreset[]).find((k) =>
-    // boundary cast: Object.keys loses the record's key type
-    (Object.keys(g) as GrainPanel[]).every((p) => GRAIN_PRESETS[k][p] === g[p]),
-  ) ?? null;
+  keysOf(GRAIN_PRESETS).find((k) => keysOf(g).every((p) => GRAIN_PRESETS[k][p] === g[p])) ?? null;
 
 /** Which grain setting each part follows; parts not listed take either direction. */
 export const GRAIN_PANEL_OF: Partial<Record<CutPartName, GrainPanel>> = {
@@ -55,15 +59,40 @@ export const MIN_OFFCUT_IN = 3;
 export const FROM_OFFCUT: ReadonlySet<CutPartName> = new Set(["Baffle cleat", "Duct divider"]);
 
 /** Reads saved grain settings, falling back to the default for anything missing or unknown. */
-export const savedGrain = (g: Partial<Record<GrainPanel, unknown>> | undefined): GrainSettings => {
+const savedGrain = (g: Partial<Record<GrainPanel, unknown>> | undefined): GrainSettings => {
   const out = { ...GRAIN_PRESETS.wrap };
   if (g)
-    for (const p of Object.keys(out) as GrainPanel[]) {
+    for (const p of keysOf(out)) {
       const v = g[p];
       if (v === "a" || v === "b" || v === "any") out[p] = v;
     }
   return out;
 };
+
+/** The cutlist choices a new design starts with. */
+export const CUTLIST_DEFAULTS: CutlistChoices = {
+  kerf: 0.125,
+  trim: 0,
+  grain: GRAIN_PRESETS.wrap,
+  waterfall: false,
+  offcut: "strip",
+  cuts: "sheets",
+};
+
+/**
+ * A saved design's cutlist choices, each checked against what the page offers; anything missing or unknown falls back
+ * to the default (waterfall: on with mitre joints, as older designs had none).
+ */
+export const savedCutlist = (
+  c: Pick<PaDesignConfig, keyof CutlistChoices | "joint">,
+): CutlistChoices => ({
+  kerf: KERF_OPTIONS.find((k) => k.v === c.kerf)?.v ?? CUTLIST_DEFAULTS.kerf,
+  trim: TRIM_OPTIONS.find((v) => v === c.trim) ?? CUTLIST_DEFAULTS.trim,
+  grain: savedGrain(c.grain),
+  waterfall: typeof c.waterfall === "boolean" ? c.waterfall : c.joint === "miter",
+  offcut: c.offcut === "panel" ? "panel" : CUTLIST_DEFAULTS.offcut,
+  cuts: c.cuts === "rips" ? "rips" : CUTLIST_DEFAULTS.cuts,
+});
 
 // ---------------------------------------------------------------
 // Guillotine packer
@@ -81,12 +110,6 @@ const SPLITS: SplitRule[] = [
 ];
 const EPS = 1e-9;
 
-interface Free {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
 interface Item<R> {
   r: R;
   /** the [w, h] it may be placed at; h runs along the sheet's length */
@@ -95,7 +118,7 @@ interface Item<R> {
   area: number;
 }
 interface Run<R> {
-  sheets: { free: Free[]; items: PlacedPart<R>[]; area: number }[];
+  sheets: { free: Rect[]; items: PlacedPart<R>[]; area: number }[];
 }
 
 export interface PackOptions {
@@ -103,7 +126,7 @@ export interface PackOptions {
   trim?: number;
   /** how many packing runs to try: the first `DETERMINISTIC_RUNS` are the sorted orders, the rest a seeded random search */
   runs?: number;
-  /** a safety stop on slow machines, ms; within it the result depends only on the input */
+  /** a safety stop for the main thread, ms; without one (as in the worker) the result depends only on the input */
   capMs?: number;
   seed?: number;
   /** rip each sheet into full-length strips before any crosscut (table saw friendly) */
@@ -111,9 +134,9 @@ export interface PackOptions {
 }
 /** Every sorted order with every fit and split rule, first-fit and best-fit sheet choice. */
 export const DETERMINISTIC_RUNS = 6 * FITS.length * SPLITS.length * 2;
-/** The Cutlist tab's and the optimizer cards' search: the same runs, so their sheet counts agree (about 50 ms on average). */
+/** The full search the Cutlist tab and the optimizer cards' exact counts run (about 50 ms on average). */
 export const SEARCH_RUNS = 5000;
-/** The time cap on that search, ms. */
+/** The time cap on that search when it has to run on the main thread, ms. */
 export const SEARCH_CAP_MS = 1500;
 
 // a small seeded generator, so the same input gives the same layout
@@ -134,12 +157,11 @@ function orient<R extends PackRect>(r: R, W: number, H: number): Item<R> | null 
     const across: [number, number] = [along[1], along[0]];
     return fits(across) ? { r, opts: [across], crossed: true, area } : null;
   }
-  const opts = (
-    [
-      [r.a, r.b],
-      [r.b, r.a],
-    ] as [number, number][]
-  ).filter(fits);
+  const both: [number, number][] = [
+    [r.a, r.b],
+    [r.b, r.a],
+  ];
+  const opts = both.filter(fits);
   if (opts.length === 2 && Math.abs(r.a - r.b) < EPS) opts.pop();
   return opts.length ? { r, opts, crossed: false, area } : null;
 }
@@ -257,7 +279,7 @@ const compare = (p: number[], q: number[]) => {
  */
 export function packSheets<R extends PackRect>(
   rects: R[],
-  sheet: { w: number; h: number },
+  sheet: SheetSize,
   kerf: number,
   {
     trim = 0,
@@ -358,7 +380,6 @@ interface Span {
   to: number;
   items: Rect[];
 }
-type Rect = Pick<PlacedPart<PackRect>, "x" | "y" | "w" | "h">;
 
 /** The parts' spans along one axis inside [lo, hi], merged where less than a kerf apart, and the cuts that separate them. */
 function spans(items: Rect[], axis: "x" | "y", lo: number, hi: number, kerf: number) {
@@ -387,12 +408,7 @@ function spans(items: Rect[], axis: "x" | "y", lo: number, hi: number, kerf: num
 /**
  * `cutStats(...).crosscuts`, quicker: a full-width crosscut can only come before any rip, so only the top level counts.
  */
-function fullWidthCrosscuts(
-  items: Rect[],
-  S: { w: number; h: number },
-  kerf: number,
-  trim: number,
-) {
+function fullWidthCrosscuts(items: Rect[], S: SheetSize, kerf: number, trim: number) {
   if (spans(items, "x", trim, S.w - trim, kerf).cuts) return 0;
   return spans(items, "y", trim, S.h - trim, kerf).cuts;
 }
@@ -401,12 +417,7 @@ function fullWidthCrosscuts(
  * How a sheet is cut, reading the layout as a table saw would take it (rips first wherever it can): `rips` run the
  * sheet's full length, `crosscuts` its full width, and `widestCrosscut` is the widest piece any crosscut goes through.
  */
-export function cutStats(
-  items: Rect[],
-  S: { w: number; h: number },
-  kerf: number,
-  trim: number,
-): CutStats {
+export function cutStats(items: Rect[], S: SheetSize, kerf: number, trim: number): CutStats {
   const out: CutStats = { rips: 0, crosscuts: 0, widestCrosscut: 0 };
   const W0 = trim,
     W1 = S.w - trim,
@@ -440,7 +451,7 @@ export function cutStats(
 export function offcutOf(
   sheet: PackedSheet<PackRect>,
   idx: number,
-  S: { w: number; h: number },
+  S: SheetSize,
   kerf: number,
   trim: number,
   shape: OffcutShape,
@@ -482,7 +493,7 @@ export function offcutOf(
 function repackForOffcut<R extends PackRect>(
   sheet: PackedSheet<R>,
   idx: number,
-  S: { w: number; h: number },
+  S: SheetSize,
   kerf: number,
   trim: number,
   shape: OffcutShape,
@@ -494,12 +505,15 @@ function repackForOffcut<R extends PackRect>(
   // placed parts repack as they are: a new placement overwrites the position, size and grain flag
   const parts = sheet.items;
   const full = shape === "strip" ? S.w : S.h;
+  const crossed = (sh: PackedSheet<R>) => sh.items.filter((it) => it.crossed).length;
+  // a smaller sheet only counts as a fit if no part has to turn across the grain to get on it
   const fitsIn = (len: number) => {
     const p = packSheets(parts, shape === "strip" ? { w: len, h: S.h } : { w: S.w, h: len }, kerf, {
       trim,
       ripFirst,
     });
-    return p.sheets.length === 1 && !p.tooBig.length ? p.sheets[0] : null;
+    const sh = p.sheets.length === 1 && !p.tooBig.length ? p.sheets[0] : null;
+    return sh && crossed(sh) <= crossed(sheet) ? sh : null;
   };
   let lo = 0,
     hi = full,
@@ -532,7 +546,7 @@ function repackForOffcut<R extends PackRect>(
 export function waterfallStrips(
   parts: CutPart[],
   s: Pick<CutlistSettings, "kerf" | "joint">,
-  usable: { w: number; h: number },
+  usable: SheetSize,
 ): { parts: CutPart[]; notes: string[] } {
   const notes: string[] = [];
   let out = parts;
@@ -576,17 +590,15 @@ export const withGrain = (parts: CutPart[], grain: GrainSettings): CutPart[] =>
   });
 
 export interface LayoutOptions extends Pick<PackOptions, "runs" | "capMs"> {
-  /** repack the least-full sheet for the offcut shape */
-  offcut?: boolean;
-  /** with rip-first cutting, also count the sheets without it */
-  fewest?: boolean;
+  /** sheet counts only: skip the offcut repack and the rip-first comparison */
+  countsOnly?: boolean;
 }
 
 /** The cutlist for one stack's parts laid out with the settings: waterfall strips, grain, offcut parts set aside, sheets packed. */
 export function layoutCutlist(
   perStack: CutPart[],
   s: CutlistSettings,
-  { runs, capMs, offcut = true, fewest = true }: LayoutOptions = {},
+  { runs, capMs, countsOnly = false }: LayoutOptions = {},
 ): CutlistLayout {
   const S = PLYWOOD_SHEETS[s.sheet],
     usable = { w: S.w - 2 * s.trim, h: S.h - 2 * s.trim };
@@ -607,27 +619,32 @@ export function layoutCutlist(
       const packed = packSheets(list, S, s.kerf, { trim: s.trim, runs, capMs, ripFirst });
       let sheets = packed.sheets,
         off: Offcut | null = null;
-      if (offcut && sheets.length) {
+      if (!countsOnly && sheets.length) {
         // the least-full sheet goes last and keeps the offcut
         const fill = sheets.map((sh) => sh.items.reduce((a, it) => a + it.w * it.h, 0));
         const k = fill.indexOf(Math.min(...fill));
         sheets = [...sheets.slice(0, k), ...sheets.slice(k + 1), sheets[k]];
         const last = sheets.length - 1;
-        const r = repackForOffcut(sheets[last], last, S, s.kerf, s.trim, s.offcut, ripFirst);
+        // keeping a full-width panel takes a full-width crosscut, which rip first rules out
+        const shape = ripFirst ? "strip" : s.offcut;
+        const r = repackForOffcut(sheets[last], last, S, s.kerf, s.trim, shape, ripFirst);
         sheets[last] = r.sheet;
         // a sliver isn't worth keeping
         off = r.offcut && Math.min(r.offcut.w, r.offcut.h) >= MIN_OFFCUT_IN ? r.offcut : null;
       }
       const cuts = sheets
         .map((sh) => cutStats(sh.items, S, s.kerf, s.trim))
-        .reduce((a, c) => ({
-          rips: a.rips + c.rips,
-          crosscuts: a.crosscuts + c.crosscuts,
-          widestCrosscut: Math.max(a.widestCrosscut, c.widestCrosscut),
-        }));
+        .reduce(
+          (a, c) => ({
+            rips: a.rips + c.rips,
+            crosscuts: a.crosscuts + c.crosscuts,
+            widestCrosscut: Math.max(a.widestCrosscut, c.widestCrosscut),
+          }),
+          { rips: 0, crosscuts: 0, widestCrosscut: 0 },
+        );
       // what rip-first costs: the sheet count without it
       const fewestSheets =
-        ripFirst && fewest
+        ripFirst && !countsOnly
           ? packSheets(list, S, s.kerf, { trim: s.trim, runs, capMs }).sheets.length
           : null;
       return { t, sheets, tooBig: packed.tooBig, offcut: off, cuts, fewestSheets };

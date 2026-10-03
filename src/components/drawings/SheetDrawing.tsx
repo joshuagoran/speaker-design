@@ -93,7 +93,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
           const labelled = !!label;
           // waterfall strips: a tick at each cut and the panels numbered in cut order
           const cuts: number[] = [];
-          if (it.pieces) {
+          if (it.pieces && !it.crossed) {
             const gap = (it.h - it.pieces.reduce((a, p) => a + p, 0)) / (it.pieces.length - 1);
             let at = it.y;
             for (const p of it.pieces.slice(0, -1)) {

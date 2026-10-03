@@ -16,7 +16,7 @@ import {
 import { byId } from "../../../lib/tables";
 import { DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../../../lib/defaults";
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
-import { KERF_OPTIONS, TRIM_OPTIONS, savedGrain } from "../../../lib/pa/cutlist";
+import { savedCutlist } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
 import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
 import { derivePaDesign } from "./paDesign";
@@ -309,13 +309,13 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setCabinetFinish(c.cabFinish || DEFAULT_PA.cabFinish);
     setSpacerHeightIn(typeof c.spacerH === "number" ? c.spacerH : DEFAULT_PA.spacerH);
     if (c.joint) setCornerJoint(c.joint);
-    setKerfIn(KERF_OPTIONS.find((k) => k.v === c.kerf)?.v ?? DEFAULT_PA.kerf);
-    setEdgeTrimIn(TRIM_OPTIONS.find((v) => v === c.trim) ?? DEFAULT_PA.trim);
-    setGrain(savedGrain(c.grain));
-    // older designs: waterfall strips come on with mitre joints
-    setWaterfall(typeof c.waterfall === "boolean" ? c.waterfall : c.joint === "miter");
-    setOffcutShape(c.offcut === "panel" ? "panel" : DEFAULT_PA.offcut);
-    setCutStyle(c.cuts === "rips" ? "rips" : DEFAULT_PA.cuts);
+    const cl = savedCutlist(c);
+    setKerfIn(cl.kerf);
+    setEdgeTrimIn(cl.trim);
+    setGrain(cl.grain);
+    setWaterfall(cl.waterfall);
+    setOffcutShape(cl.offcut);
+    setCutStyle(cl.cuts);
     if (c.portStyle) setPortStyle(c.portStyle);
   };
   return {

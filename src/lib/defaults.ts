@@ -15,7 +15,7 @@ import {
   ST260,
 } from "./data";
 import { byIdOrThrow } from "./tables";
-import { GRAIN_PRESETS } from "./pa/cutlist";
+import { CUTLIST_DEFAULTS } from "./pa/cutlist";
 import type {
   Cabinet,
   CompressionDriver,
@@ -86,12 +86,7 @@ export const DEFAULT_PA = {
   cabFinish: "birch",
   spacerH: 20,
   joint: "butt",
-  kerf: 0.125,
-  trim: 0,
-  grain: GRAIN_PRESETS.wrap,
-  waterfall: false,
-  offcut: "strip",
-  cuts: "sheets",
+  ...CUTLIST_DEFAULTS,
   midSize: 12,
   plywoodSheetKind: "4x8",
   boxSetCount: 2,

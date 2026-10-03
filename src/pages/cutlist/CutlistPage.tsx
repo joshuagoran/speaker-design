@@ -1,12 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import type {
-  CutPart,
-  CutlistLayout,
-  CutlistSettings,
-  GrainDir,
-  GrainPanel,
-  GrainPreset,
-} from "../../types";
+import { useMemo } from "react";
+import type { CutPart, CutlistSettings, GrainDir, GrainPanel, GrainPreset } from "../../types";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
@@ -21,7 +14,7 @@ import {
   grainPresetOf,
   layoutCutlist,
 } from "../../lib/pa/cutlist";
-import { runCutlistLayout } from "../../lib/pa/runCutlist";
+import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import { entriesOf } from "../../lib/records";
 
 interface Props {
@@ -173,18 +166,7 @@ export function CutlistPage({ planner }: Props) {
   const key = JSON.stringify({ parts, settings });
   // the quick deterministic layout shows at once; the worker's longer search replaces it when it is done
   const quick = useMemo(() => layoutCutlist(parts, settings), [key]);
-  const [refined, setRefined] = useState<{ key: string; out: CutlistLayout } | null>(null);
-  useEffect(() => {
-    let live = true;
-    runCutlistLayout({ parts, settings }).then(
-      (out) => live && setRefined({ key, out }),
-      () => {}, // the quick layout stays
-    );
-    return () => {
-      live = false;
-    };
-  }, [key]);
-  const cut = refined && refined.key === key ? refined.out : quick;
+  const cut = useCutlistLayout({ parts, settings }) ?? quick;
   const sheetSize = PLYWOOD_SHEETS[plywoodSheetKind];
   const preset = grainPresetOf(grain);
   const toggles = <T extends string | number | boolean>(
@@ -192,12 +174,19 @@ export function CutlistPage({ planner }: Props) {
     value: T,
     set: (v: T) => void,
     options: readonly (readonly [T, React.ReactNode])[],
+    disabled?: { value: T; why: string },
   ) => (
     <div>
       <div className="text-sm text-stone-500 mb-1">{label}</div>
       <div className="flex flex-wrap gap-1">
         {options.map(([k, l]) => (
-          <ToggleButton key={String(k)} on={value === k} onClick={() => set(k)}>
+          <ToggleButton
+            key={String(k)}
+            on={value === k}
+            onClick={() => set(k)}
+            disabled={disabled?.value === k}
+            title={disabled?.value === k ? disabled.why : undefined}
+          >
             {l}
           </ToggleButton>
         ))}
@@ -211,9 +200,9 @@ export function CutlistPage({ planner }: Props) {
           "Corner joints",
           cornerJoint,
           (k) => {
+            // mitred boxes get waterfall strips by default; other changes keep your choice
+            if ((k === "miter") !== (cornerJoint === "miter")) setWaterfall(k === "miter");
             setCornerJoint(k);
-            // mitred boxes get waterfall strips by default
-            setWaterfall(k === "miter");
           },
           [
             ["butt", "Butt"],
@@ -297,12 +286,15 @@ export function CutlistPage({ planner }: Props) {
           <Tooltip tip="The least-full sheet is laid out again to leave one big usable piece: a strip the full length of the sheet, or a panel its full width. It never costs a sheet.">
             Keep offcut
           </Tooltip>,
-          offcutShape,
+          cutStyle === "rips" ? "strip" : offcutShape,
           setOffcutShape,
           [
             ["strip", "Long strip"],
             ["panel", "Wide panel"],
           ] as const,
+          cutStyle === "rips"
+            ? { value: "panel", why: "Keeping a full-width panel takes a full-width crosscut" }
+            : undefined,
         )}
         {toggles(
           <Tooltip tip="Rip first: every sheet is ripped into full-length strips before any crosscut, so you never crosscut a whole sheet on the table saw. It can cost a sheet; the layout says how many.">

@@ -71,7 +71,7 @@ import { keysOf } from "../records";
 import { selectCards, type SelectedCard } from "../optimizer/selectCards";
 import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
-import { SEARCH_CAP_MS, SEARCH_RUNS, layoutCutlist, savedGrain } from "./cutlist";
+import { layoutCutlist, savedCutlist } from "./cutlist";
 import { savedCrossoverOrder } from "../../constants/crossovers";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
@@ -521,15 +521,10 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   };
   // the cards count sheets as the Cutlist tab does
   const cl: CutlistSettings = {
+    ...savedCutlist(cur),
     sheet: input.cutlist?.sheet ?? DEFAULT_PA.plywoodSheetKind,
     stacks: input.cutlist?.stacks ?? 1,
-    kerf: cur.kerf ?? DEFAULT_PA.kerf,
-    trim: cur.trim ?? DEFAULT_PA.trim,
-    grain: savedGrain(cur.grain),
-    waterfall: cur.waterfall ?? cur.joint === "miter",
     joint: cur.joint || DEFAULT_PA.joint,
-    offcut: DEFAULT_PA.offcut,
-    cuts: cur.cuts === "rips" ? "rips" : DEFAULT_PA.cuts,
   };
   const locks: ResolvedLocks = { subDim: {}, midDim: {}, ...input.locks };
   const budget = input.budget; // drivers per stack
@@ -1335,13 +1330,8 @@ function card(
     cVent: c.cVent,
     layout: c.layout,
   });
-  // the Cutlist tab's search, so the counts match it
-  const sheets = layoutCutlist(parts, cl, {
-    runs: SEARCH_RUNS,
-    capMs: SEARCH_CAP_MS,
-    offcut: false,
-    fewest: false,
-  }).groups.map((g) => ({
+  // the quick packing only: the card asks the worker for the exact count afterwards (build.parts and build.cutlist)
+  const sheets = layoutCutlist(parts, cl, { countsOnly: true }).groups.map((g) => ({
     t: g.t,
     n: g.sheets.length,
   }));
@@ -1378,7 +1368,7 @@ function card(
     warnings: [...m.chips.sub, ...m.chips.mid, ...m.chips.horn]
       .filter(([k]) => k !== "ok")
       .map(([, h, b]): [string, string] => [h, b]),
-    build: { qtc: m.qtc, sheets, stacks: cl.stacks },
+    build: { qtc: m.qtc, sheets, parts, cutlist: cl },
     changed,
     priceKnown: m.priceKnown,
     curve: m.curve,
