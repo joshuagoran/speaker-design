@@ -49,6 +49,7 @@ import type {
 } from "../../types";
 import { keysOf } from "../records";
 import { byId } from "../tables";
+import { selectCards } from "../optimizer/selectCards";
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };
@@ -78,10 +79,6 @@ interface PoolEntry {
   sys: HifiSystem;
   chips: HifiChip[];
   m: HifiMetrics;
-}
-interface PlannedCard extends PoolEntry {
-  label: string;
-  why: string;
 }
 
 // the PA planner's goals, in its order
@@ -449,78 +446,53 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       }
 
   const K = curM ? keeps(curM) : null;
-  const meets = (p: PoolEntry) => !K || goals.every((g) => K[g](p.m));
-  const trueVsCur = (g: HifiGoal, p: PoolEntry) => !curM || beats[g](p.m, curM);
-  const sorted = (list: PoolEntry[], g: HifiGoal) =>
-    list.slice().sort((a, b) => obj[g](a.m) - obj[g](b.m) || a.m.price - b.m.price);
-  const cards: PlannedCard[] = [];
-  const first = sorted(
-    pool.filter((p) => meets(p) && goals.every((g) => trueVsCur(g, p))),
-    goal,
-  )[0];
   const label = also.length
     ? goals.map((g, i) => (i ? g : HIFI_OPTIMIZER_GOALS[g].short)).join(" + ")
     : HIFI_OPTIMIZER_GOALS[goal].name;
-  if (first) cards.push({ ...first, label, why: HIFI_OPTIMIZER_GOALS[goal].why });
-  else if (curFails) {
-    const fix = sorted(pool.filter(meets), goal)[0] || sorted(pool, goal)[0];
-    if (fix)
-      cards.push({
-        ...fix,
+  const ALT_WHY: Record<HifiGoal, string> = {
+    cheaper: "Costs less than your design.",
+    lighter: "Lighter than your design.",
+    lower: "Goes lower than your design.",
+    louder: "Louder than your design.",
+  };
+  const picked = selectCards<PoolEntry, HifiGoal>({
+    pool,
+    goal,
+    goals,
+    objective: (g, p) => obj[g](p.m),
+    beatsCurrent: (g, p) => !curM || beats[g](p.m, curM),
+    beats: (g, a, b) => beats[g](a.m, b.m),
+    meets: (p) => !K || goals.every((g) => K[g](p.m)),
+    differs: (p, chosen) =>
+      chosen.every(
+        (k) =>
+          k.w !== p.w ||
+          k.t !== p.t ||
+          k.c.box !== p.c.box ||
+          k.c.wall !== p.c.wall ||
+          Math.abs(p.m.gross / k.m.gross - 1) >= 0.15,
+      ),
+    changeCount: (p) => changes(p, cur).filter((x) => x !== "amp power").length, // amps are trimmed afterwards
+    currentFails: curFails,
+    hasCurrent: !!curM,
+    tieBreak: (a, b) => a.m.price - b.m.price,
+    // stacked goals: each goal alone first; a single goal's own axis is the first card
+    altAxes: [...(also.length ? goals : []), ...keysOf(obj)].filter(
+      (g, i, a) => a.indexOf(g) === i && (also.length || g !== goal),
+    ),
+    // an alternative keeps what its own goal keeps
+    altFilter: (g, p) => !K || K[g](p.m),
+    fixFallback: true,
+    labels: {
+      first: { label, why: HIFI_OPTIMIZER_GOALS[goal].why },
+      fix: {
         label: "Fixes your design",
         why: "Your design fails a check; this is the best that passes.",
-      });
-  }
-  const differs = (p: PoolEntry) =>
-    cards.every(
-      (k) =>
-        k.w !== p.w ||
-        k.t !== p.t ||
-        k.c.box !== p.c.box ||
-        k.c.wall !== p.c.wall ||
-        Math.abs(p.m.gross / k.m.gross - 1) >= 0.15,
-    );
-  // the smallest change that already beats your design on the goals (e.g. the same box on 1/2" ply)
-  if (curM) {
-    const chg = (p: PoolEntry) => changes(p, cur).filter((x) => x !== "amp power").length; // amps are trimmed afterwards
-    const small = sorted(
-      pool.filter(
-        (p) => chg(p) <= 1 && differs(p) && meets(p) && goals.every((g) => trueVsCur(g, p)),
-      ),
-      goal,
-    )[0];
-    if (small)
-      cards.push({
-        ...small,
-        label: "Smallest change",
-        why: "Changes one thing from your design.",
-      });
-  }
-  for (const g of [...(also.length ? goals : []), ...keysOf(obj)].filter(
-    (g, i, a) => a.indexOf(g) === i,
-  )) {
-    if (cards.length >= 3) break;
-    if (!also.length && g === goal) continue;
-    // an alternative keeps what its own goal keeps, beats your design and the first card on its own axis
-    const q = sorted(
-      pool.filter(
-        (p) =>
-          differs(p) && (!K || K[g](p.m)) && trueVsCur(g, p) && (!first || beats[g](p.m, first.m)),
-      ),
-      g,
-    )[0];
-    if (q)
-      cards.push({
-        ...q,
-        label: HIFI_OPTIMIZER_GOALS[g].short,
-        why: {
-          cheaper: "Costs less than your design.",
-          lighter: "Lighter than your design.",
-          lower: "Goes lower than your design.",
-          louder: "Louder than your design.",
-        }[g],
-      });
-  }
+      },
+      alt: (g) => ({ label: HIFI_OPTIMIZER_GOALS[g].short, why: ALT_WHY[g] }),
+    },
+  });
+  const cards = picked.cards.map(({ p, label, why }) => ({ ...p, label, why }));
 
   // trim unlocked amps: the least power (slider steps) that keeps the card's clean level and keeps the tweeter up
   const trim = (p: PoolEntry) => {
@@ -582,10 +554,9 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     cur: curM,
     curProblems,
     curCurve: curR ? curveOf(curR.sys) : null,
-    goalMissing:
-      !first && !curFails
-        ? `Nothing ${goals.map((g) => g).join(" and ")} than your design passes the checks.`
-        : null,
+    goalMissing: picked.goalMissing
+      ? `Nothing ${goals.map((g) => g).join(" and ")} than your design passes the checks.`
+      : null,
     cards: done.map((k) => ({
       label: k.label,
       why: k.why,
