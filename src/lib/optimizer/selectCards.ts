@@ -35,9 +35,12 @@ export interface SelectCardsOptions<P, G extends string> {
   altAxes: readonly G[];
   /** an extra condition on an alternative for its axis */
   altFilter?: (g: G, p: P) => boolean;
-  /** with nothing passing `meets`, the fix is the goal's best design anyway */
-  fixFallback?: boolean;
-  labels: { first: CardRole; fix: CardRole; alt: (g: G) => CardRole };
+  /**
+   * how far a design falls short of what the goals keep (0 when it meets them); with nothing passing `meets`, the fix is
+   * the design that falls least short, labelled `closest`
+   */
+  shortfall?: (p: P) => number;
+  labels: { first: CardRole; fix: CardRole; closest?: CardRole; alt: (g: G) => CardRole };
   /** 3 when absent */
   maxCards?: number;
 }
@@ -50,11 +53,12 @@ export interface SelectedCard<P> extends CardRole {
  * The cards, in order: (1) the best design on the goal that keeps what the goals keep and beats your design on every
  * goal, or, when there is none and your design fails a check, the best design that passes, as a fix; (2) the smallest
  * change (at most one thing) that does the same; (3) one alternative per axis, each beating your design and the first
- * card on its own axis, until the cards run out. `goalMissing` is set when no design beats yours and yours passes.
+ * card on its own axis, until the cards run out. `goalMissing` is set when no design beats yours and yours passes;
+ * `fixMisses` when the fix is only the closest (it passes the checks but misses what the goals keep).
  */
 export function selectCards<P, G extends string>(
   o: SelectCardsOptions<P, G>,
-): { cards: SelectedCard<P>[]; goalMissing: boolean } {
+): { cards: SelectedCard<P>[]; goalMissing: boolean; fixMisses: boolean } {
   const { pool, goal, goals, objective, beatsCurrent, beats, meets, differs, tieBreak } = o;
   const max = o.maxCards ?? 3;
   const best = (list: readonly P[], g: G): P | undefined =>
@@ -69,10 +73,20 @@ export function selectCards<P, G extends string>(
     pool.filter((p) => meets(p) && beatsAll(p)),
     goal,
   );
+  let fixMisses = false;
   if (first) cards.push({ p: first, ...o.labels.first });
   else if (o.currentFails) {
-    const fix = best(pool.filter(meets), goal) ?? (o.fixFallback ? best(pool, goal) : undefined);
+    const fix = best(pool.filter(meets), goal);
     if (fix) cards.push({ p: fix, ...o.labels.fix });
+    else if (o.shortfall && pool.length) {
+      const short = o.shortfall;
+      const closest = pool.reduce((a, p) => {
+        const d = short(p) - short(a);
+        return d < 0 || (d === 0 && objective(goal, p) < objective(goal, a)) ? p : a;
+      });
+      cards.push({ p: closest, ...(o.labels.closest ?? o.labels.fix) });
+      fixMisses = true;
+    }
   }
   if (o.hasCurrent) {
     const taken = chosen();
@@ -102,5 +116,5 @@ export function selectCards<P, G extends string>(
     );
     if (q) cards.push({ p: q, ...o.labels.alt(g) });
   }
-  return { cards, goalMissing: !first && !o.currentFails };
+  return { cards, goalMissing: !first && !o.currentFails, fixMisses };
 }

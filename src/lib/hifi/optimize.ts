@@ -134,13 +134,30 @@ const obj: Record<HifiGoal, (x: HifiMetrics) => number> = {
   lower: (x) => x.f3,
   louder: (x) => -x.level,
 };
-// what each goal keeps from your design (as the PA optimizer: same output, F3 within a couple of Hz)
-const keeps = (cur: HifiMetrics): Record<HifiGoal, (x: HifiMetrics) => boolean> => ({
-  cheaper: (x) => x.level >= cur.level - 0.5 && x.f3 <= cur.f3 + 2,
-  lighter: (x) => x.level >= cur.level - 0.5 && x.f3 <= cur.f3 + 2,
-  lower: (x) => x.level >= cur.level - 1.5,
-  louder: (x) => x.f3 <= cur.f3 + 3,
+// what each goal keeps from your design (as the PA optimizer: same output, F3 within a couple of Hz): the level it has
+// to reach and the F3 it can't pass
+const keeps = (cur: HifiMetrics): Record<HifiGoal, Pick<HifiMetrics, "level" | "f3">> => ({
+  cheaper: { level: cur.level - 0.5, f3: cur.f3 + 2 },
+  lighter: { level: cur.level - 0.5, f3: cur.f3 + 2 },
+  lower: { level: cur.level - 1.5, f3: Infinity },
+  louder: { level: -Infinity, f3: cur.f3 + 3 },
 });
+// how far a design falls short of a goal's keep: dB of level, plus a dB for every 5 Hz of F3 (0 when it keeps it)
+const gapTo = (k: Pick<HifiMetrics, "level" | "f3">, x: HifiMetrics) =>
+  Math.max(0, k.level - x.level) + Math.max(0, x.f3 - k.f3) / 5;
+// the notice when the first card is only the closest: what the goals keep that nothing passing reaches
+const outOfReach = (K: ReturnType<typeof keeps>, goals: readonly HifiGoal[], m: HifiMetrics) => {
+  const needLevel = Math.max(...goals.map((g) => K[g].level)),
+    maxF3 = Math.min(...goals.map((g) => K[g].f3));
+  const missed = [
+    m.level < needLevel ? `${needLevel.toFixed(1)} dB at the seat` : null,
+    m.f3 > maxF3 ? `an in-room F3 of ${maxF3.toFixed(0)} Hz or lower` : null,
+  ].filter((x) => x != null);
+  const got = `${m.level.toFixed(1)} dB, F3 ${m.f3.toFixed(0)} Hz`;
+  return missed.length
+    ? `Out of reach within the checks: ${missed.join(" with ")}. The first card comes closest: ${got}.`
+    : `Nothing that passes the checks keeps your design's level and bass. The first card comes closest: ${got}.`;
+};
 // warnings that rule a design out (the soft ones stay on the card)
 const HARD = new Set([
   "Below the tweeter's minimum crossover",
@@ -462,7 +479,8 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     objective: (g, p) => obj[g](p.m),
     beatsCurrent: (g, p) => !curM || beats[g](p.m, curM),
     beats: (g, a, b) => beats[g](a.m, b.m),
-    meets: (p) => !K || goals.every((g) => K[g](p.m)),
+    meets: (p) => !K || goals.every((g) => gapTo(K[g], p.m) === 0),
+    shortfall: (p) => (K ? goals.reduce((sum, g) => sum + gapTo(K[g], p.m), 0) : 0),
     differs: (p, chosen) =>
       chosen.every(
         (k) =>
@@ -481,13 +499,17 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       (g, i, a) => a.indexOf(g) === i && (also.length || g !== goal),
     ),
     // an alternative keeps what its own goal keeps
-    altFilter: (g, p) => !K || K[g](p.m),
-    fixFallback: true,
+    altFilter: (g, p) => !K || gapTo(K[g], p.m) === 0,
     labels: {
       first: { label, why: HIFI_OPTIMIZER_GOALS[goal].why },
       fix: {
         label: "Fixes your design",
         why: "Your design fails a check; this is the best that passes.",
+      },
+      // nothing that passes keeps what the goals keep: the one that comes closest (the notice says what it misses)
+      closest: {
+        label: "Fixes your design",
+        why: "Passes the checks and comes closest to your goal.",
       },
       alt: (g) => ({ label: HIFI_OPTIMIZER_GOALS[g].short, why: ALT_WHY[g] }),
     },
@@ -554,9 +576,12 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     cur: curM,
     curProblems,
     curCurve: curR ? curveOf(curR.sys) : null,
-    goalMissing: picked.goalMissing
-      ? `Nothing ${goals.map((g) => g).join(" and ")} than your design passes the checks.`
-      : null,
+    goalMissing:
+      picked.fixMisses && K && done[0]
+        ? outOfReach(K, goals, done[0].m)
+        : picked.goalMissing
+          ? `Nothing ${goals.map((g) => g).join(" and ")} than your design passes the checks.`
+          : null,
     cards: done.map((k) => ({
       label: k.label,
       why: k.why,

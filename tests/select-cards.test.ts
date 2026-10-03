@@ -79,18 +79,27 @@ test("selectCards: nothing beats a passing design: no first card and goalMissing
   assert.equal(r.goalMissing, true);
 });
 
-test("selectCards: a failing design gets the best design that passes as a fix, with the fallback only when asked", () => {
+test("selectCards: a failing design gets the best design that passes as a fix, or the closest when none keeps the goals", () => {
   const passes = [d("a", 130, 25, 90), d("b", 120, 25, 90)];
   const r = selectCards(opts(passes, { currentFails: true, altAxes: [] }));
   assert.deepEqual(ids(r), ["Fixes your design:b"]);
   assert.equal(r.goalMissing, false);
-  // nothing keeps the level: no fix, unless the fallback takes the goal's best anyway
-  const loses = [d("a", 130, 25, 50), d("b", 120, 25, 50)];
+  assert.equal(r.fixMisses, false);
+  // nothing keeps the level: no fix without a shortfall, else the design that falls least short (not the cheapest)
+  const loses = [d("a", 130, 25, 85), d("b", 120, 25, 50), d("c", 125, 25, 85)];
   assert.deepEqual(ids(selectCards(opts(loses, { currentFails: true, altAxes: [] }))), []);
-  assert.deepEqual(
-    ids(selectCards(opts(loses, { currentFails: true, altAxes: [], fixFallback: true }))),
-    ["Fixes your design:b"],
+  const close = selectCards(
+    opts(loses, {
+      currentFails: true,
+      altAxes: [],
+      shortfall: (p) => Math.max(0, cur.level - 1 - p.level),
+      labels: { ...opts([]).labels, closest: { label: "Closest", why: "closest" } },
+    }),
   );
+  // a and c fall equally short; the goal's objective (price) breaks the tie
+  assert.deepEqual(ids(close), ["Closest:c"]);
+  assert.equal(close.fixMisses, true);
+  assert.equal(close.goalMissing, false);
 });
 
 test("selectCards: the smallest change changes at most one thing, differs from the first card and needs a current design", () => {

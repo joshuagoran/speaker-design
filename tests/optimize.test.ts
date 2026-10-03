@@ -511,3 +511,20 @@ test("a locked sub, mid, driver or horn that isn't in the tables leaves nothing 
     assert.deepEqual(out.cards, [], key);
   }
 });
+
+test("a failing design with nothing in reach: the closest design that passes, and a notice naming what's out of reach", (t) => {
+  // over a $700 budget nothing that passes keeps the design's output
+  const out = optimizePaStack({ ...base, budget: 700, goal: "cheaper" });
+  assert.ok(out.curProblems.length > 0, "the current design fails a check");
+  const k = out.cards[0];
+  assert.ok(k, "a card is shown");
+  assert.equal(k.label, "Fixes your design");
+  assert.deepEqual(
+    designProblems(evaluateDesign(k.config)!, { maxLb: base.maxLb, budget: 700 }),
+    [],
+  );
+  assert.ok(k.metrics.out < out.target - 0.5, "it misses the target");
+  const note = out.goalMissing ?? "";
+  assert.match(note, /^Out of reach within the checks: .*dB of output/);
+  assert.ok(note.includes(`${k.metrics.out.toFixed(1)} dB`), note);
+});

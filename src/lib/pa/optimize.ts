@@ -995,12 +995,17 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     lower: (x) => x.f3 + 0.1 * x.ch + 0.7 * (x.w || 0),
     louder: (x) => -x.out + 0.05 * x.ch + 0.5 * (x.w || 0),
   };
-  const goalOk: Record<PaGoal, (x: Score) => boolean> = {
-    cheaper: (x) => x.out >= target - 0.5 && x.f3 <= curF3 + 2,
-    lighter: (x) => x.out >= target - 0.5 && x.f3 <= curF3 + 2,
-    lower: (x) => x.out >= target - 1.5,
-    louder: (x) => x.f3 <= curF3 + 3,
+  // what each goal keeps from your design: the output it has to reach and the F3 it can't pass
+  const keep: Record<PaGoal, { out: number; f3: number }> = {
+    cheaper: { out: target - 0.5, f3: curF3 + 2 },
+    lighter: { out: target - 0.5, f3: curF3 + 2 },
+    lower: { out: target - 1.5, f3: Infinity },
+    louder: { out: -Infinity, f3: curF3 + 3 },
   };
+  // how far a design falls short of that: dB of output, plus a dB for every 5 Hz of F3 (0 when it keeps it)
+  const goalGap = (g: PaGoal, x: Score) =>
+    Math.max(0, keep[g].out - x.out) + Math.max(0, x.f3 - keep[g].f3) / 5;
+  const goalOk = (g: PaGoal, x: Score) => goalGap(g, x) === 0;
   // an alternative has to beat the first card on its own axis by a margin that matters
   const beats: Record<PaGoal, (x: Score, y: Score) => boolean> = {
     cheaper: (x, y) => x.price < y.price,
@@ -1013,14 +1018,14 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   const add = (list: Combo[], n: number) =>
     list.slice(0, n).forEach((x) => finalists.set(JSON.stringify(x.c), x));
   for (const g of keysOf(obj)) {
-    const ranked = combos.filter(goalOk[g]).sort((a, b) => obj[g](a) - obj[g](b));
+    const ranked = combos.filter((x) => goalOk(g, x)).sort((a, b) => obj[g](a) - obj[g](b));
     add(ranked.filter(inLimits), 14); // candidates for the cards
     add(ranked, 4); // and a few just outside the limits, for the near-miss message
   }
   if (also.length && curM) {
     const cm = { price: curM.price, heaviest: curM.heaviest, out: curM.out, f3: curM.f3 };
     const ranked = combos
-      .filter((x) => goals.every((g) => goalOk[g](x)) && also.every((g) => beats[g](x, cm)))
+      .filter((x) => goals.every((g) => goalOk(g, x)) && also.every((g) => beats[g](x, cm)))
       .sort((a, b) => obj[goal](a) - obj[goal](b));
     add(ranked.filter(inLimits), 14);
     add(ranked, 4);
@@ -1092,7 +1097,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   const choose = (L: ProblemLimits, tgt: number) => {
     const ok = pool.filter((p) => designProblems(p.m, L).length === 0);
     const vol = (c: PaDesignConfig) => c.cDim.w * c.cDim.h * c.cDim.d;
-    const { cards, goalMissing } = selectCards<PoolEntry, PaGoal>({
+    const relaxed = (p: PoolEntry) => ({ ...metric(p), out: p.m.out + (target - tgt) });
+    const { cards, goalMissing, fixMisses } = selectCards<PoolEntry, PaGoal>({
       pool: ok,
       goal,
       goals,
@@ -1100,7 +1106,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       beatsCurrent: trueVsCur,
       beats: (g, a, b) => beats[g](metric(a), metric(b)),
       // the output is held to the retry's relaxed target
-      meets: (p) => goals.every((g) => goalOk[g]({ ...metric(p), out: p.m.out + (target - tgt) })),
+      meets: (p) => goals.every((g) => goalOk(g, relaxed(p))),
+      shortfall: (p) => goals.reduce((sum, g) => sum + goalGap(g, relaxed(p)), 0),
       differs: (p, chosen) =>
         chosen.every(
           (k) =>
@@ -1123,10 +1130,15 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
         first: { label: goalLabel, why: goalWhy },
         // your design fails a check: the goal's best design that passes (it may cost or weigh more)
         fix: { label: "Fixes your design", why: FIX_WHY[goal] },
+        // nothing that passes keeps what the goals keep: the one that comes closest (the notice says what it misses)
+        closest: {
+          label: "Fixes your design",
+          why: "Passes the checks and comes closest to your goal.",
+        },
         alt: (g) => ({ label: ALT_LABEL[g], why: ALT_WHY[g] }),
       },
     });
-    return cards.length ? { cards, goalMissing } : null;
+    return cards.length ? { cards, goalMissing, fixMisses } : null;
   };
 
   // Unlocked amps: the least power per channel (in the sliders' steps) that still reaches the target and keeps
@@ -1199,6 +1211,19 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     lower: "Nothing goes lower than your design and keeps the output.",
     louder: "Nothing louder than your design passes the checks.",
   };
+  // the notice when the first card is only the closest: what the goals keep that nothing passing reaches
+  const outOfReach = (m: Pick<Score, "out" | "f3">) => {
+    const needOut = Math.max(...goals.map((g) => keep[g].out)),
+      maxF3 = Math.min(...goals.map((g) => keep[g].f3));
+    const missed = [
+      m.out < needOut ? `${needOut.toFixed(1)} dB of output` : null,
+      m.f3 > maxF3 ? `an F3 of ${maxF3.toFixed(0)} Hz or lower` : null,
+    ].filter((x) => x != null);
+    const got = `${m.out.toFixed(1)} dB, F3 ${m.f3.toFixed(0)} Hz`;
+    return missed.length
+      ? `Out of reach within the checks: ${missed.join(" with ")}. The first card comes closest: ${got}.`
+      : `Nothing that passes the checks keeps your design's output and bass. The first card comes closest: ${got}.`;
+  };
   if (!cards) {
     const tries = [
       {
@@ -1214,7 +1239,10 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
         t: target,
       },
     ];
-    const worked = tries.filter((x) => choose(x.L, x.t));
+    const worked = tries.filter((x) => {
+      const r = choose(x.L, x.t);
+      return r && !r.fixMisses;
+    });
     const closest = pool
       .slice()
       .sort(
@@ -1248,11 +1276,13 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     cards: cards ? cards.map((k) => card(k.p, k.label, k.why, curM, cur)) : [],
     goals,
     goalMissing:
-      chosen && chosen.goalMissing
-        ? also.length
-          ? `Nothing ${goals.map((g) => THAN[g]).join(" and ")} than your design passes the checks.`
-          : GOAL_MISSING[goal]
-        : null,
+      chosen && chosen.fixMisses
+        ? outOfReach(chosen.cards[0].p.m)
+        : chosen && chosen.goalMissing
+          ? also.length
+            ? `Nothing ${goals.map((g) => THAN[g]).join(" and ")} than your design passes the checks.`
+            : GOAL_MISSING[goal]
+          : null,
     nearMiss,
     stats: {
       evaluated: evals,
