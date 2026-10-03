@@ -4,6 +4,16 @@
 // trimmed to the least power that keeps the card's level, and a card applies only the fields searched.
 import {
   hifiSystem,
+  hifiBox,
+  hifiSystemFromBox,
+  hifiGridTop,
+  hifiWeightLb,
+  tweeterMaxLevel,
+  driversFitBaffle,
+  driverLayout,
+  belowTweeterMinXo,
+  nearTweeterResonance,
+  type HifiBox,
   hifiChips,
   grossVolumeLiters,
   linkwitzRileyFilter,
@@ -60,17 +70,20 @@ interface RunResult {
   cfg: SearchConfig;
   tt: HifiTweeter;
 }
-/** A box, port and radiator choice from the first pass. */
-interface Candidate {
+/** A box on the search grid: its woofer and config (no crossover yet), its model, and how many things it changes. */
+interface BoxEntry {
   w: HifiWoofer;
-  dim: Dims3;
-  box: HifiBoxKind;
-  wall: number;
-  port: HifiPort | null | undefined;
-  pr: PassiveRadiatorChoice | null | undefined;
+  cfg: SearchConfig;
+  b: HifiBox;
+  ch: number;
 }
-interface Stage1Entry extends Candidate {
-  m: HifiMetrics;
+/** A box at one crossover that passes the box's own checks: the woofer's F3 and level (indices into the box and crossover lists). */
+interface Rec {
+  bi: number;
+  xi: number;
+  f3: number;
+  wLevel: number;
+  level: number;
 }
 /** A finished design from the second pass: drivers, config, model and score. */
 interface PoolEntry {
@@ -144,6 +157,13 @@ const keeps = (cur: HifiMetrics): Record<HifiGoal, Keep> => ({
   louder: { db: -Infinity, f3: cur.f3 + 3 },
 });
 const gapTo = (k: Keep, x: HifiMetrics) => keepGap(k, { db: x.level, f3: x.f3 });
+// the checks that depend on the tweeter (made per tweeter in the search; every other check is the box's own)
+const TWEETER_PROBLEMS = new Set([
+  "Drivers won't fit the baffle",
+  "Below the tweeter's minimum crossover",
+  "Close to the tweeter's resonance",
+  "Tweeter runs out first",
+]);
 // warnings that rule a design out (the soft ones stay on the card)
 const HARD = new Set([
   "Below the tweeter's minimum crossover",
@@ -298,11 +318,11 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     tAmpW: locks.tAmpW ? cur.tAmpW : HIFI_AMP_WATTS_MAX.tAmpW,
   };
   let evals = 0;
-  const run = (w: HifiWoofer, t: HifiTweeter, c: SearchConfig, N: number): RunResult | null => {
+  const run = (w: HifiWoofer, t: HifiTweeter, c: SearchConfig): RunResult | null => {
     evals++;
     const tt = tweeterCfg(t);
     if (!tt) return null;
-    const cc = { ...c, guide: guideOf(t), N };
+    const cc = { ...c, guide: guideOf(t) };
     const sys = hifiSystem(w, tt, cc);
     return sys && { sys, chips: hifiChips(sys, w, tt, cc), cfg: cc, tt };
   };
@@ -319,14 +339,15 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
   });
 
   // a radiator box whose radiator isn't in any table has no model: say so instead of scoring it as if it had none
-  const curR = curPrMissing ? null : run(W0, T0, cur, 240);
+  const curR = curPrMissing ? null : run(W0, T0, cur);
   const curM = curR && metricOf(curR, W0, T0);
   const curProblems = curR
     ? hifiDesignProblems(curR.sys, curR.chips)
     : [curPrMissing ? "the passive radiator isn't in the driver tables" : "can't be modelled"];
   const curFails = curProblems.length > 0;
 
-  // 1. woofer, box, tuning and plywood (current tweeter and crossover, coarse model)
+  // 1. every box on the grid (woofer × size × type × plywood × port or radiator, and your box on each plywood the
+  //    search allows), modelled once to the top crossover's grid
   const wList: HifiWoofer[] = locks.woofer
     ? [W0]
     : woofers.filter((o) => o.ts && o.ts.Fs && o.ts.Sd);
@@ -337,9 +358,43 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       ? ["sealed", "vented", "radiator"]
       : ["sealed", "vented"];
   const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
+  const tList: HifiTweeter[] = locks.tweeter
+    ? [T0]
+    : tweeters.filter((t) => t.hf && t.hf.sens != null && (!needsWaveguide(t) || guide));
+  const xos = locks.xo ? [cur.xo] : XOS.includes(cur.xo) ? XOS : [...XOS, cur.xo];
+  const top = hifiGridTop(Math.max(...xos));
   const face =
     needsWaveguide(T0) && guide ? (guide.freestanding ? { w: 0, h: -1 } : guide) : T0.faceplate;
-  const stage1: Stage1Entry[] = [];
+  const boxList: BoxEntry[] = [];
+  const seen = new Set<string>();
+  const addBox = (
+    w: HifiWoofer,
+    dim: Dims3,
+    box: HifiBoxKind,
+    wall: number,
+    port: HifiPort | null,
+    pr: PassiveRadiatorChoice | null | undefined,
+  ) => {
+    const key = `${w.id}|${box}|${wall}|${dim.w}|${dim.h}|${dim.d}|${box === "vented" && port ? JSON.stringify(port) : ""}|${box === "radiator" && pr ? `${pr.drv.id}|${pr.n}|${pr.addG}` : ""}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const cfg: SearchConfig = {
+      ...cur,
+      ...amps,
+      box,
+      dim,
+      wall,
+      port: port || cur.port,
+      pr: pr || cur.pr,
+    };
+    evals++;
+    const b = hifiBox(w, cfg, top);
+    if (!b) return;
+    const ch = changes({ w, t: T0, c: { ...cfg, xo: cur.xo } }, cur).filter(
+      (x) => x !== "amp power",
+    ).length;
+    boxList.push({ w, cfg, b, ch });
+  };
   for (const w of wList) {
     const minW = Math.max(w.size + 1.5, face.w + 1),
       minH = face.h + w.size + 3;
@@ -360,96 +415,120 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
           for (const box of boxes)
             for (const wall of walls) {
               const dim = { w: bw, h: bh, d: bd };
-              const ports =
-                box === "vented"
-                  ? [0.8, 1, 1.2].flatMap((k) => [
-                      ...[1.5, 2, 2.5, 3]
-                        .map((dia) => portFor(w, dim, wall, 1, dia, w.ts.Fs * k))
-                        .filter(Boolean)
-                        .slice(0, 2),
-                      ...[0.75, 1, 1.5]
-                        .map((h) => slotFor(w, dim, wall, h, w.ts.Fs * k))
-                        .filter(Boolean)
-                        .slice(0, 1),
-                    ])
-                  : [null];
-              const prs =
-                box === "radiator"
-                  ? [0.8, 1, 1.2].flatMap((k) => prsFor(w, dim, wall, passives, w.ts.Fs * k))
-                  : [null];
-              for (const port of ports)
-                for (const pr of prs) {
-                  if (box === "radiator" && !pr) continue;
-                  const r = run(
-                    w,
-                    T0,
-                    { ...cur, ...amps, box, dim, wall, port: port || cur.port, pr: pr || cur.pr },
-                    80,
-                  );
-                  if (!r) continue;
-                  if (
-                    (box === "vented" && r.sys.whoW === "port") ||
-                    (box === "radiator" && r.sys.whoW === "radiator")
-                  )
-                    continue; // a bigger port or radiator instead
-                  if (
-                    r.chips.some(([k, h]) => k === "bad" || (k === "warn" && h.startsWith("Qtc")))
-                  )
-                    continue;
-                  stage1.push({ w, dim, box, wall, port, pr, m: metricOf(r, w, T0) });
+              if (box === "vented")
+                for (const k of [0.8, 1, 1.2]) {
+                  const Fb = w.ts.Fs * k;
+                  for (const port of [
+                    ...[1.5, 2, 2.5, 3]
+                      .map((dia) => portFor(w, dim, wall, 1, dia, Fb))
+                      .filter(Boolean)
+                      .slice(0, 2),
+                    ...[0.75, 1, 1.5]
+                      .map((h) => slotFor(w, dim, wall, h, Fb))
+                      .filter(Boolean)
+                      .slice(0, 1),
+                  ])
+                    addBox(w, dim, box, wall, port, null);
                 }
+              else if (box === "radiator")
+                for (const k of [0.8, 1, 1.2])
+                  for (const pr of prsFor(w, dim, wall, passives, w.ts.Fs * k))
+                    addBox(w, dim, box, wall, null, pr);
+              else addBox(w, dim, box, wall, null, null);
             }
   }
-  const key = (x: Candidate) =>
-    `${x.w.id}|${x.box}|${x.wall}|${x.dim.w}|${x.dim.h}|${x.dim.d}|${x.port && (x.port.shape === "slot" ? `s${x.port.h}` : x.port.dia)}|${x.port && x.port.len}|${x.pr ? `${x.pr.drv.id}${x.pr.n}${x.pr.addG}` : ""}`;
-  const keep = new Map<string, Candidate>();
-  for (const g of keysOf(obj))
-    stage1
-      .slice()
-      .sort((a, b) => obj[g](a.m) - obj[g](b.m))
-      .slice(0, 12)
-      .forEach((x) => keep.set(key(x), x));
-  for (const w of wList)
-    stage1
-      .filter((x) => x.w === w)
-      .sort((a, b) => a.m.f3 - b.m.f3)
-      .slice(0, 2)
-      .forEach((x) => keep.set(key(x), x));
-  // the current box as it is, on the other plywood (the smallest change for Lighter)
-  if (curR && !locks.wall)
-    for (const wall of walls)
-      if (wall !== cur.wall)
-        keep.set("ply", { w: W0, dim: cur.dim, box: cur.box, wall, port: cur.port, pr: cur.pr });
+  // your box as it is, on each plywood (the smallest change for Lighter; a new tweeter or crossover keeps it)
+  if (curR && wList.includes(W0) && boxes.includes(cur.box))
+    for (const wall of walls) addBox(W0, cur.dim, cur.box, wall, cur.port, cur.pr);
 
-  // 2. tweeter and crossover, exact model
-  const tList: HifiTweeter[] = locks.tweeter
-    ? [T0]
-    : tweeters.filter((t) => t.hf && t.hf.sens != null && (!needsWaveguide(t) || guide));
-  const xos = locks.xo ? [cur.xo] : XOS.includes(cur.xo) ? XOS : [...XOS, cur.xo];
-  const pool: PoolEntry[] = [];
-  for (const x of keep.values())
-    for (const t of tList)
-      for (const xo of xos) {
-        const r = run(
-          x.w,
-          t,
-          {
-            ...cur,
-            ...amps,
-            box: x.box,
-            dim: x.dim,
-            wall: x.wall,
-            port: x.port || cur.port,
-            pr: x.pr || cur.pr,
-            xo,
-          },
-          240,
-        );
-        if (!r || hifiDesignProblems(r.sys, r.chips).length) continue;
-        const m = metricOf(r, x.w, t);
-        if (input.budget && m.price > input.budget + 1e-9) continue;
-        pool.push({ w: x.w, t, c: r.cfg, sys: r.sys, chips: r.chips, m });
+  // 2. each crossover on each box: the box's own checks with any tweeter, then each tweeter's checks, exactly as the
+  //    page makes them (its level, its crossover limits and the baffle), so every design on the grid is scored
+  const tRef = tList.find((t) => tweeterCfg(t));
+  const tRefCfg = tRef && tweeterCfg(tRef);
+  const recs: Rec[] = [];
+  if (tRef && tRefCfg)
+    for (let bi = 0; bi < boxList.length; bi++) {
+      const e = boxList[bi];
+      for (let xi = 0; xi < xos.length; xi++) {
+        const c = { ...e.cfg, xo: xos[xi], guide: guideOf(tRef) };
+        evals++;
+        const sys = hifiSystemFromBox(e.b, e.w, tRefCfg, c, { band: false });
+        if (!sys) continue;
+        if (
+          hifiDesignProblems(sys, hifiChips(sys, e.w, tRefCfg, c)).some(
+            (h) => !TWEETER_PROBLEMS.has(h),
+          )
+        )
+          continue;
+        recs.push({
+          bi,
+          xi,
+          f3: sys.f3,
+          wLevel: sys.wLevel,
+          // a design that passes has the woofer setting the level (the tweeter running out first rules it out)
+          level: sys.wLevel - 20 * Math.log10(seat) + 3,
+        });
       }
+    }
+  // the tweeters' own checks per crossover: its limits and its clean level
+  const tws = tList.flatMap((t) => {
+    const tt = tweeterCfg(t);
+    if (!tt) return [];
+    const g = guideOf(t);
+    return [
+      {
+        t,
+        tt,
+        onTop: !!(g && g.freestanding),
+        xoOk: xos.map((xo) => !belowTweeterMinXo(tt, xo) && !nearTweeterResonance(tt, xo)),
+        tLevel: xos.map(
+          (xo) => tweeterMaxLevel(tt, { xo, tAmpW: amps.tAmpW, guideGain: cur.guideGain }).tLevel,
+        ),
+      },
+    ];
+  });
+  // every design that passes: a box at a crossover with a tweeter (index arrays; metrics read through them)
+  const dRec: number[] = [],
+    dTw: number[] = [],
+    dPrice: number[] = [],
+    dLb: number[] = [];
+  let lastBi = -1;
+  const bPrice: number[] = [],
+    bLb: number[] = [],
+    bFits: boolean[] = [];
+  for (let ri = 0; ri < recs.length; ri++) {
+    const r = recs[ri],
+      e = boxList[r.bi];
+    if (r.bi !== lastBi) {
+      lastBi = r.bi;
+      for (let ti = 0; ti < tws.length; ti++) {
+        const x = tws[ti];
+        bPrice[ti] = priceOf(e.w, x.t, e.cfg);
+        bLb[ti] = hifiWeightLb(e.w, x.tt, e.cfg, e.b.pr);
+        bFits[ti] = driversFitBaffle(driverLayout(e.w, x.tt, e.cfg.dim, x.onTop), e.w, e.cfg);
+      }
+    }
+    for (let ti = 0; ti < tws.length; ti++) {
+      const x = tws[ti];
+      if (!bFits[ti] || !x.xoOk[r.xi] || x.tLevel[r.xi] < r.wLevel) continue;
+      if (input.budget && bPrice[ti] > input.budget + 1e-9) continue;
+      dRec.push(ri);
+      dTw.push(ti);
+      dPrice.push(bPrice[ti]);
+      dLb.push(bLb[ti]);
+    }
+  }
+  const metricsAt = (i: number): HifiMetrics => {
+    const r = recs[dRec[i]];
+    return {
+      gross: boxList[r.bi].b.gross,
+      f3: r.f3,
+      price: dPrice[i],
+      level: r.level,
+      lb: dLb[i],
+    };
+  };
+  const pool = dRec.map((_, i) => i);
 
   const K = curM ? keeps(curM) : null;
   const label = also.length
@@ -461,34 +540,43 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     lower: "Goes lower than your design.",
     louder: "Louder than your design.",
   };
-  const picked = selectCards<PoolEntry, HifiGoal>({
+  const boxOf = (i: number) => boxList[recs[dRec[i]].bi];
+  const picked = selectCards<number, HifiGoal>({
     pool,
     goal,
     goals,
-    objective: (g, p) => obj[g](p.m),
-    beatsCurrent: (g, p) => !curM || beats[g](p.m, curM),
-    beats: (g, a, b) => beats[g](a.m, b.m),
-    meets: (p) => !K || goals.every((g) => gapTo(K[g], p.m) === 0),
-    shortfall: (p) => (K ? goals.reduce((sum, g) => sum + gapTo(K[g], p.m), 0) : 0),
-    differs: (p, chosen) =>
-      chosen.every(
-        (k) =>
+    objective: (g, i) => obj[g](metricsAt(i)),
+    beatsCurrent: (g, i) => !curM || beats[g](metricsAt(i), curM),
+    beats: (g, a, b) => beats[g](metricsAt(a), metricsAt(b)),
+    meets: (i) => !K || goals.every((g) => gapTo(K[g], metricsAt(i)) === 0),
+    shortfall: (i) => (K ? goals.reduce((sum, g) => sum + gapTo(K[g], metricsAt(i)), 0) : 0),
+    differs: (i, chosen) => {
+      const p = boxOf(i);
+      return chosen.every((j) => {
+        const k = boxOf(j);
+        return (
           k.w !== p.w ||
-          k.t !== p.t ||
-          k.c.box !== p.c.box ||
-          k.c.wall !== p.c.wall ||
-          Math.abs(p.m.gross / k.m.gross - 1) >= 0.15,
-      ),
-    changeCount: (p) => changes(p, cur).filter((x) => x !== "amp power").length, // amps are trimmed afterwards
+          dTw[j] !== dTw[i] ||
+          k.cfg.box !== p.cfg.box ||
+          k.cfg.wall !== p.cfg.wall ||
+          Math.abs(p.b.gross / k.b.gross - 1) >= 0.15
+        );
+      });
+    },
+    // amps are trimmed afterwards
+    changeCount: (i) =>
+      boxOf(i).ch +
+      (tws[dTw[i]].t.id !== cur.tweeter ? 1 : 0) +
+      (xos[recs[dRec[i]].xi] !== cur.xo ? 1 : 0),
     currentFails: curFails,
     hasCurrent: !!curM,
-    tieBreak: (a, b) => a.m.price - b.m.price,
+    tieBreak: (a, b) => dPrice[a] - dPrice[b],
     // stacked goals: each goal alone first; a single goal's own axis is the first card
     altAxes: [...(also.length ? goals : []), ...keysOf(obj)].filter(
       (g, i, a) => a.indexOf(g) === i && (also.length || g !== goal),
     ),
     // an alternative keeps what its own goal keeps
-    altFilter: (g, p) => !K || gapTo(K[g], p.m) === 0,
+    altFilter: (g, i) => !K || gapTo(K[g], metricsAt(i)) === 0,
     labels: {
       first: { label, why: HIFI_OPTIMIZER_GOALS[goal].why },
       fix: {
@@ -503,7 +591,15 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       alt: (g) => ({ label: HIFI_OPTIMIZER_GOALS[g].short, why: ALT_WHY[g] }),
     },
   });
-  const cards = picked.cards.map(({ p, label, why }) => ({ ...p, label, why }));
+  // the chosen designs, modelled whole (as the page models them)
+  const cards = picked.cards.flatMap(({ p: i, label, why }) => {
+    const e = boxOf(i),
+      t = tws[dTw[i]].t,
+      r = run(e.w, t, { ...e.cfg, xo: xos[recs[dRec[i]].xi] });
+    return r
+      ? [{ w: e.w, t, c: r.cfg, sys: r.sys, chips: r.chips, m: metricOf(r, e.w, t), label, why }]
+      : [];
+  });
 
   // trim unlocked amps: the least power (slider steps) that keeps the card's clean level and keeps the tweeter up
   const trim = (p: PoolEntry) => {
@@ -515,7 +611,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       if (locks[keyName]) return;
       let a = lo,
         b = c[keyName];
-      const at = (v: number) => run(p.w, p.t, { ...c, [keyName]: v }, 240);
+      const at = (v: number) => run(p.w, p.t, { ...c, [keyName]: v });
       const ra = at(a);
       if (ok(ra, lvl)) {
         c = { ...c, [keyName]: a };

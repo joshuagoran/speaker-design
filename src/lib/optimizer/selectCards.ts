@@ -61,11 +61,19 @@ export function selectCards<P, G extends string>(
 ): { cards: SelectedCard<P>[]; goalMissing: boolean; fixMisses: boolean } {
   const { pool, goal, goals, objective, beatsCurrent, beats, meets, differs, tieBreak } = o;
   const max = o.maxCards ?? 3;
-  const best = (list: readonly P[], g: G): P | undefined =>
-    list.slice().sort((a, b) => {
-      const d = objective(g, a) - objective(g, b);
-      return tieBreak ? d || tieBreak(a, b) : d;
-    })[0];
+  // the first design, in pool order, that nothing in the list beats on the objective (then the tie-break)
+  const best = (list: readonly P[], g: G): P | undefined => {
+    let b: P | undefined,
+      bv = 0;
+    for (const p of list) {
+      const v = objective(g, p);
+      if (b === undefined || v < bv || (v === bv && tieBreak && tieBreak(p, b) < 0)) {
+        b = p;
+        bv = v;
+      }
+    }
+    return b;
+  };
   const beatsAll = (p: P) => goals.every((g) => beatsCurrent(g, p));
   const cards: SelectedCard<P>[] = [];
   const chosen = () => cards.map((k) => k.p);
