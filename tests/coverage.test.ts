@@ -17,7 +17,13 @@ import {
   pistonQ,
   withOwnPhase,
 } from "../src/lib/pa/coverage";
-import { highpassFilter, midSystem, subMusicThroughLowpass, subSystem } from "../src/lib/pa/calc";
+import {
+  highpassPhase,
+  midSystem,
+  phasedCurve,
+  subMusicThroughLowpass,
+  subSystem,
+} from "../src/lib/pa/calc";
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { paResponseAt, paStackSources } from "../src/lib/pa/dispersion";
 import { materialAlpha, surfaceReflection } from "../src/lib/pa/roomAcoustics";
@@ -599,10 +605,16 @@ test("coverage: a band's own phase and the sub's delay turn its output, and noth
 
 test("coverage: the auto sub delay puts a sub with its own phase back in phase with the mid at the crossover", () => {
   const base = levels(110);
-  // the sub through a subsonic highpass (its curve as its own model: no box phase), so it leads the mid at the crossover
+  // the sub through a subsonic highpass (and a box with no phase), so it leads the mid at the crossover
   const lv: CoverageLevels = {
     ...base,
-    sub: base.sub && withOwnPhase(base.sub, base.sub, (f) => highpassFilter(f, 40, "BW24")),
+    sub:
+      base.sub &&
+      withOwnPhase(
+        base.sub,
+        base.sub.map((o) => ({ f: o.f, rawPhase: 0 })),
+        (f) => highpassPhase(f, 40, "BW24"),
+      ),
   };
   const ms = autoSubDelayMs(stack, lv);
   assert.ok(ms != null && ms > 0, `${ms} ms`);
@@ -679,10 +691,12 @@ function plannerStack(xoLo: number, hpf: number, hpType: HighpassType) {
   };
   const lv = balanceLevels(
     {
-      sub: withOwnPhase(subMusicThroughLowpass(s.mdl, s.lim, s.AMP_V, xoLo, 4), s.mdl.curve, (f) =>
-        highpassFilter(f, hpf, hpType),
+      sub: withOwnPhase(
+        subMusicThroughLowpass(s.mdl, s.lim, s.AMP_V, xoLo, 4),
+        phasedCurve(s.mdl.curve),
+        (f) => highpassPhase(f, hpf, hpType),
       ),
-      mid: withOwnPhase(m.max, m.mdl.curve),
+      mid: withOwnPhase(m.max, phasedCurve(m.mdl.curve)),
       horn: [],
     },
     { xoLo, xoHi: 900, tilt: 6, hfTilt: 3 },
@@ -722,4 +736,25 @@ test("coverage: the auto sub delay follows the design smoothly, never a period o
         last = ms;
       }
     }
+});
+
+test("coverage: a box model run without its phase can't be given to the map", () => {
+  const sub = SUB_OPTIONS.find((o) => o.id === "f18fh500");
+  assert.ok(sub?.ts);
+  const plain = subSystem(sub, MID_OPTIONS[0], {
+    subBox: { w: 24, h: 30, d: 26 },
+    midDims: { w: 15, h: 15, d: 15 },
+    wall: 0.75,
+    inset: 0.75,
+    portStyle: "round2",
+    cVent: { slotH: 3, nt: 2, dia: 4, throat: 2, len: 12 },
+    hpf: 30,
+    hpType: "BW24",
+    ampW: 800,
+    portMax: 20,
+    layout: "stack",
+  });
+  assert.ok(plain.mdl);
+  const curve = plain.mdl.curve;
+  assert.throws(() => phasedCurve(curve), /without its phase/);
 });

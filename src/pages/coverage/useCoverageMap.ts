@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { highpassFilter, subMusicThroughLowpass } from "../../lib/pa/calc";
+import { highpassPhase, subMusicThroughLowpass } from "../../lib/pa/calc";
 import {
   autoSubDelayMs,
   balanceLevels,
@@ -156,7 +156,7 @@ export function useCoverageMap(
                       geometry.orderLo,
                     ),
                     subModelled.mdl.curve,
-                    (f) => highpassFilter(f, subHighpassHz, subHighpassType),
+                    (f) => highpassPhase(f, subHighpassHz, subHighpassType),
                   )
                 : null,
               mid: withOwnPhase(midModelled.max, midModelled.mdl.curve),

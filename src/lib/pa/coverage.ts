@@ -20,7 +20,6 @@ import {
   type Complex,
 } from "../hifi/hifi";
 import { METERS_PER_FOOT as FT } from "../../constants/units";
-import { unwrapPhase } from "./calc";
 import { paStackSources, type StackBand, type StackSource } from "./dispersion";
 import {
   airDbPerM,
@@ -57,6 +56,7 @@ import type {
   FrequencyPoint,
   MusicBalance,
   PaStackGeometry,
+  PhasedPoint,
   PhasePoint,
   SealedPoint,
   VentedPoint,
@@ -269,7 +269,7 @@ export function coverageScene(
 }
 
 /** The points either side of `f` in a curve that spans it, and how far `f` lies between them on log frequency. */
-function bracket<P extends FrequencyPoint>(
+function bracket<P extends Pick<FrequencyPoint, "f">>(
   curve: readonly P[],
   f: number,
 ): [a: P, b: P, t: number] {
@@ -310,7 +310,7 @@ export function curveLevelAt(
  * A curve's own phase at `f`, radians, interpolated on log frequency and held past its ends (where a box's phase has
  * flattened out, or its band is far down); 0 for an empty curve.
  */
-export function curvePhaseAt(curve: readonly PhasePoint[], f: number): number {
+export function curvePhaseAt(curve: readonly Pick<PhasePoint, "f" | "phase">[], f: number): number {
   const n = curve.length;
   if (!n) return 0;
   if (f <= curve[0].f) return curve[0].phase;
@@ -320,22 +320,37 @@ export function curvePhaseAt(curve: readonly PhasePoint[], f: number): number {
 }
 
 /**
- * A band's curve with its own phase: its box model's (`rawPhase`, read at each curve point's frequency), and `filter`'s
- * (the sub's highpass) where it has one, unwrapped. A model run without its phase gives only the filter's.
+ * A band's curve with its own phase: its box model's (read at each curve point's frequency; the model must have been
+ * run with its phase), and `filterPhase` (the sub's highpass's) where it has one. Both are continuous, so the sum is.
  */
 export function withOwnPhase(
   curve: readonly FrequencyPoint[],
-  model: readonly Pick<VentedPoint | SealedPoint, "f" | "spl" | "rawPhase">[],
-  filter?: (f: number) => Complex,
+  model: readonly Pick<PhasedPoint<VentedPoint | SealedPoint>, "f" | "rawPhase">[],
+  filterPhase?: (f: number) => number,
 ): PhasePoint[] {
-  const box = model.map((o) => ({ f: o.f, spl: o.spl, phase: o.rawPhase ?? 0 }));
-  const ph = unwrapPhase(
-    curve.map((o) => {
-      const h = filter?.(o.f);
-      return curvePhaseAt(box, o.f) + (h ? Math.atan2(h.im, h.re) : 0);
-    }),
-  );
-  return curve.map((o, i) => ({ f: o.f, spl: o.spl, phase: ph[i] }));
+  const box = model.map((o) => ({ f: o.f, phase: o.rawPhase }));
+  return curve.map((o) => ({
+    f: o.f,
+    spl: o.spl,
+    phase: curvePhaseAt(box, o.f) + (filterPhase?.(o.f) ?? 0),
+  }));
+}
+
+/** A sub or mid curve's level (as curveLevelAt) and own phase (as curvePhaseAt) at `f`, from one search. */
+function curveLevelPhaseAt(
+  curve: readonly PhasePoint[],
+  f: number,
+  skirt?: (f: number) => number,
+): Pick<PhasePoint, "spl" | "phase"> | null {
+  const n = curve.length;
+  if (!n) return null;
+  if (f < curve[0].f || f > curve[n - 1].f) {
+    // past the ends: no search, the level along the skirt and the end's phase held
+    const spl = curveLevelAt(curve, f, skirt);
+    return spl == null ? null : { spl, phase: (f < curve[0].f ? curve[0] : curve[n - 1]).phase };
+  }
+  const [a, b, t] = bracket(curve, f);
+  return { spl: a.spl + (b.spl - a.spl) * t, phase: a.phase + (b.phase - a.phase) * t };
 }
 
 /** Each band's crossover magnitude against frequency: what carries its curve on past its ends. */
@@ -456,17 +471,23 @@ function bandOutputs(
 ): CoverageSlot["out"] {
   const out: CoverageSlot["out"] = {};
   for (const o of srcs) {
-    const curve = levels[o.band];
-    const db = curve && curveLevelAt(curve, f, skirts[o.band]);
-    if (db == null) continue;
     const h = o.filt(f);
-    let mag = Math.pow(10, db / 20),
-      ph = Math.hypot(h.re, h.im) > 1e-12 ? Math.atan2(h.im, h.re) : 0;
-    if (o.band !== "horn") {
+    let ph = Math.hypot(h.re, h.im) > 1e-12 ? Math.atan2(h.im, h.re) : 0,
+      mag: number;
+    if (o.band === "horn") {
+      // the horn's datasheet sensitivity is free-field
+      const db = curveLevelAt(levels.horn, f, skirts.horn);
+      if (db == null) continue;
+      mag = Math.pow(10, db / 20);
+    } else {
+      const curve = levels[o.band];
+      const at = curve && curveLevelPhaseAt(curve, f, skirts[o.band]);
+      if (!at) continue;
       // the sub's and mid's curves are half-space (on the floor); in the open a box radiates into full space below
-      // its baffle step, and the floor image puts the floor back. The horn's datasheet sensitivity is free-field.
-      mag *= cabs(bandShelf(stack, o.band, f));
-      ph += ownPhase(stack, levels, o.band, f);
+      // its baffle step, and the floor image puts the floor back
+      const shelf = bandShelf(stack, o.band, f);
+      mag = Math.pow(10, at.spl / 20) * cabs(shelf);
+      ph += Math.atan2(shelf.im, shelf.re) + at.phase;
     }
     if (o.band === "sub") ph -= (2 * Math.PI * f * stack.subDelayMs) / 1000;
     out[o.band] = { re: mag * Math.cos(ph), im: mag * Math.sin(ph) };

@@ -10,6 +10,7 @@ import {
   midSystem,
   subThroughLowpass,
   subMusicOutputAt,
+  phasedCurve,
 } from "../../../lib/pa/calc";
 import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion";
 import type {
@@ -23,7 +24,10 @@ import type {
   PaMaxPoint,
   PaPortGeometry,
   PaStackGeometry,
+  PhasedModel,
+  SealedBoxModel,
   SubSystemModelled,
+  VentedBoxModel,
   VentGeometry,
 } from "../../../types";
 import { stackHeights } from "../../../components/stack-view/stackHeights";
@@ -64,9 +68,13 @@ export interface PaDerivedDesign {
   subGrossLiters: number;
   subNetLiters: number;
   subAmpVoltage: number;
-  /** the sub's model, music limit and curves; null when the driver has no T/S or the box or vent can't be modelled */
+  /**
+   * the sub's model (with the box's phase, for the coverage map), music limit and curves; null when the driver has no
+   * T/S or the box or vent can't be modelled
+   */
   subModelled:
-    | (Pick<SubSystemModelled, "mdl" | "lim"> & {
+    | (Pick<SubSystemModelled, "lim"> & {
+        mdl: PhasedModel<VentedBoxModel>;
         /** the most a sine can play at each frequency */
         maxCurve: PaMaxPoint[];
         /** the sub through its lowpass at the crossover, for the system chart */
@@ -77,8 +85,8 @@ export interface PaDerivedDesign {
   midGrossL: number;
   midNetL: number;
   midEffL: number;
-  /** the mid's model and limit curve; null when the driver has no T/S */
-  midModelled: MidSystemModelled | null;
+  /** the mid's model (with the box's phase, for the coverage map) and limit curve; null when the driver has no T/S */
+  midModelled: (Omit<MidSystemModelled, "mdl"> & { mdl: PhasedModel<SealedBoxModel> }) | null;
   midThermalVoltage: number;
   midUsedVoltage: number;
   midCabinetLb: number;
@@ -156,7 +164,7 @@ export function derivePaDesign({
   const { port, grossL: subGrossLiters, netL: subNetLiters, AMP_V: subAmpVoltage } = subSys;
   const subModelled = subSys.mdl
     ? {
-        mdl: subSys.mdl,
+        mdl: { ...subSys.mdl, curve: phasedCurve(subSys.mdl.curve) },
         lim: subSys.lim,
         /**
          * Max SPL for a sine at each frequency (each frequency meets its own port and excursion limits);
@@ -195,7 +203,9 @@ export function derivePaDesign({
     vTherm: midThermalVoltage,
     useV: midUsedVoltage,
   } = midSys;
-  const midModelled = midSys.mdl ? midSys : null;
+  const midModelled = midSys.mdl
+    ? { ...midSys, mdl: { ...midSys.mdl, curve: phasedCurve(midSys.mdl.curve) } }
+    : null;
   /** 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware */
   const midCabinetLb = midWeightLb(effectiveMidBoxDims, wallThicknessIn);
   const midWeightLoadedLb = midCabinetLb + (midDriver.lb || 0);

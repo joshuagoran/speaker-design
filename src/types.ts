@@ -895,6 +895,14 @@ export interface VentedBoxModel {
   xmaxPct: number;
 }
 
+/** A model point with the box's phase: what a model run with its `phase` option gives. */
+export type PhasedPoint<P extends VentedPoint | SealedPoint> = P & { rawPhase: number };
+
+/** A box model run with its `phase` option (see `phasedCurve`). */
+export type PhasedModel<M extends VentedBoxModel | SealedBoxModel> = Omit<M, "curve"> & {
+  curve: PhasedPoint<M["curve"][number]>[];
+};
+
 /** One point of a sealed-box response (no port). */
 export interface SealedPoint {
   f: number;

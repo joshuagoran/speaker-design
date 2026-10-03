@@ -20,6 +20,7 @@ import type {
   PackedSheet,
   PackedSheets,
   PaMaxPoint,
+  PhasedPoint,
   PlywoodSheet,
   PlywoodSheetKind,
   PortStyle,
@@ -82,35 +83,42 @@ export const highpassGain = (f: number, fc: number, type: HighpassType = "BW24")
     ? Math.pow(x, n) / Math.sqrt(1 + Math.pow(x, 2 * n))
     : Math.pow(x, n) / (1 + Math.pow(x, n));
 };
-// Normalised Butterworth denominator of even order n: the product of s² + 2 sin((2k − 1)π / 2n)·s + 1, k = 1 … n/2
+// The normalised Butterworth sections of even order n, s² + b·s + 1: each b = 2 sin((2k − 1)π / 2n), k = 1 … n/2
+const butterworthSections = (n: number) =>
+  Array.from({ length: n / 2 }, (_, k) => 2 * Math.sin(((2 * k + 1) * Math.PI) / (2 * n)));
+// Normalised Butterworth denominator of even order n: the product of its sections
 export function butterworth(s: Complex, n: number): Complex {
   let d = complex(1);
-  for (let k = 1; k <= n / 2; k++) {
-    const b = 2 * Math.sin(((2 * k - 1) * Math.PI) / (2 * n));
+  for (const b of butterworthSections(n))
     d = multiplyComplex(d, addComplex(multiplyComplex(s, addComplex(s, complex(b))), complex(1)));
-  }
   return d;
 }
-// The highpass with its phase: s^n / Butterworth(n), or a Linkwitz-Riley as that of n/2 squared. highpassGain is its
-// magnitude, kept in closed form for the box model's loop.
-export function highpassFilter(f: number, fc: number, type: HighpassType = "BW24"): Complex {
+// The highpass's phase, radians, continuous in f: each section s² / (s² + b·s + 1) leads by π less its denominator's
+// angle, π far below the corner to 0 far above. A Butterworth n, or a Linkwitz-Riley as two of n/2; highpassGain is
+// its magnitude.
+export function highpassPhase(f: number, fc: number, type: HighpassType = "BW24") {
   const [kind, n] = HIGHPASS_ALIGNMENTS[type] || HIGHPASS_ALIGNMENTS.BW24,
-    s = complex(0, f / fc);
-  const bw = (m: number) => {
-    let sm = complex(1);
-    for (let i = 0; i < m; i++) sm = multiplyComplex(sm, s);
-    return divideComplex(sm, butterworth(s, m));
-  };
-  if (kind === "bw") return bw(n);
-  const h = bw(n / 2);
-  return multiplyComplex(h, h);
+    x = f / fc;
+  const bw = (m: number) =>
+    butterworthSections(m).reduce((p, b) => p + Math.PI - Math.atan2(b * x, 1 - x * x), 0);
+  return kind === "bw" ? bw(n) : 2 * bw(n / 2);
 }
-// Phase along a curve made continuous: each point moved by whole turns to within half a turn of the next one up, from
-// the top of the curve down (the top keeps its own value: there a box's phase is near 0).
-export function unwrapPhase(ph: readonly number[]): number[] {
-  const out = [...ph];
-  for (let i = out.length - 2; i >= 0; i--)
-    out[i] -= 2 * Math.PI * Math.round((out[i] - out[i + 1]) / (2 * Math.PI));
+// A model curve's box phase made continuous: each point moved by whole turns to within half a turn of the next one
+// up, from the top of the curve down (the top keeps its own value: there a box's phase is near 0).
+function unwrapRawPhase(curve: Pick<VentedPoint | SealedPoint, "rawPhase">[]) {
+  for (let i = curve.length - 2; i >= 0; i--) {
+    const p = curve[i].rawPhase ?? 0,
+      up = curve[i + 1].rawPhase ?? 0;
+    curve[i].rawPhase = p - 2 * Math.PI * Math.round((p - up) / (2 * Math.PI));
+  }
+}
+// A model run with its phase option, as the type that says so: every point has the box's phase. Throws for one run
+// without it, which only a bug in the caller's own call can give.
+export function phasedCurve<P extends VentedPoint | SealedPoint>(
+  curve: readonly P[],
+): PhasedPoint<P>[] {
+  const out = curve.filter((o): o is PhasedPoint<P> => o.rawPhase != null);
+  if (out.length !== curve.length) throw new Error("the box model was run without its phase");
   return out;
 }
 // Linkwitz-Riley crossover magnitudes of either order (4 = LR24, 8 = LR48), both -6 dB at fc
@@ -234,10 +242,7 @@ export function boxModel(
     if (phase) pt.rawPhase = Math.atan2(-vIm, -vRe);
     out.push(pt);
   }
-  if (phase) {
-    const ph = unwrapPhase(out.map((o) => o.rawPhase ?? 0));
-    for (const [i, o] of out.entries()) o.rawPhase = ph[i];
-  }
+  if (phase) unwrapRawPhase(out);
   // midband reference: the mass-controlled asymptote (see closedBox)
   const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
   const f3 = (out.find((o) => o.spl >= ref - 3) || out[out.length - 1]).f; // system, with the highpass
@@ -330,10 +335,7 @@ export function closedBox(
     if (phase) pt.rawPhase = Math.atan2(Uc.re, -Uc.im);
     out.push(pt);
   }
-  if (phase) {
-    const ph = unwrapPhase(out.map((o) => o.rawPhase ?? 0));
-    for (const [i, o] of out.entries()) o.rawPhase = ph[i];
-  }
+  if (phase) unwrapRawPhase(out);
   // Midband reference: the mass-controlled asymptote p = rho*V*Bl*Sd/(2*pi*Re*Mms) (half space, 1 m).
   // Averaging a band (the old 200-500 Hz) reads low when a well-damped box is still rising there.
   const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
