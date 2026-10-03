@@ -6,7 +6,8 @@
 // value as `Xmax` and its band as `xmax`:
 //   derived    from Hvc and Hg, exact;
 //   converted  from the maker's Xmax and its stated formula (needs Hg unless the formula is already Hg/4), exact;
-//   published  a passive radiator's linear limit, used as is (no motor, so no gap);
+//   published  a passive radiator's limit, used as is (no motor, so no gap): its linear Xmax, or the mechanical limit
+//              where that is all the maker gives (pushing a radiator to it costs noise and distortion, not a coil);
 //   estimated  from the maker's figure times the ESTIMATE band, centre in the middle.
 import type {
   PassiveRadiator,
@@ -41,18 +42,16 @@ export const comparableXmax = (Hvc: number, Hg: number) => xmaxByFormula("hg/4",
  *   XmaxHifi   hi-fi makers that state no method (Dayton, Peerless, Fostex): hi-fi makers mostly publish the plain
  *              overhang, which reads 1.2–1.3 on this scale (Scan-Speak), so the band spans gap-fraction to plain;
  *   Xvar       B&C's 10 % distortion limit: 0.68–1.13, median 0.84;
- *   travelPP   SB Acoustics' linear travel, peak to peak (= Hvc − Hg): half of it plus a quarter of a 5–6 mm gap;
- *   Xlim       a passive radiator's mechanical limit; its linear range is about half of it.
+ *   travelPP   SB Acoustics' linear travel, peak to peak (= Hvc − Hg): half of it plus a quarter of a 5–6 mm gap.
  */
 export const ESTIMATE: Record<
-  "XmaxPro" | "XmaxHifi" | "Xvar" | "travelPP" | "Xlim",
+  "XmaxPro" | "XmaxHifi" | "Xvar" | "travelPP",
   readonly [number, number]
 > = {
   XmaxPro: [0.85, 1.0],
   XmaxHifi: [0.9, 1.3],
   Xvar: [0.7, 1.1],
   travelPP: [0.55, 0.65],
-  Xlim: [0.4, 0.65],
 };
 
 /** Makers whose published Xmax is estimated with the hi-fi band when no heights are known. */
@@ -93,7 +92,6 @@ export function xmaxBandOf(
     return estimate(pub.Xmax, isHifiMaker(who) ? ESTIMATE.XmaxHifi : ESTIMATE.XmaxPro);
   if (pub.Xvar != null) return estimate(pub.Xvar, ESTIMATE.Xvar);
   if (pub.travelPP != null) return estimate(pub.travelPP, ESTIMATE.travelPP);
-  if (pub.Xlim != null) return estimate(pub.Xlim, ESTIMATE.Xlim);
   throw new Error(`${who}: no excursion figure`);
 }
 
@@ -112,10 +110,11 @@ export function withXmax<T extends RawTS<ThieleSmall>>(
 /** A passive radiator as its table holds it: the published limit, before the comparable one is added. */
 export type RawPassiveRadiator = Omit<PassiveRadiator, "Xmax" | "xmax">;
 
-/** A passive radiator with its comparable `Xmax`: a linear limit as published, a mechanical one estimated. */
+/** A passive radiator with its `Xmax`: the linear limit, or the mechanical one where that is all the maker gives. */
 export function passiveWithXmax(p: RawPassiveRadiator): PassiveRadiator {
-  const xmax = p.pub.Xmax != null ? exact(p.pub.Xmax, "published") : xmaxBandOf(p, p.name);
-  return { ...p, Xmax: centreOf(xmax), xmax };
+  const lim = p.pub.Xmax ?? p.pub.Xlim;
+  if (lim == null) throw new Error(`${p.name}: no excursion figure`);
+  return { ...p, Xmax: lim, xmax: exact(lim, "published") };
 }
 
 /** The band in dB of travel-limited output: 20·log10(hi/lo); 0 when exact. */

@@ -44,7 +44,7 @@ test("write docs/xmax-audit.md", () => {
     "",
     "The models compare every driver on one scale, (Hvc − Hg)/2 + Hg/4 (see `src/lib/xmax.ts`). **Basis**: derived",
     "from the coil and gap heights; converted from the maker's Xmax and its stated formula; published (a passive",
-    "radiator's linear limit); or estimated, where the comparable value is the middle of the band shown.",
+    "radiator's linear limit, or its mechanical one where that is all the maker gives); or estimated, where the comparable value is the middle of the band shown.",
     "",
     `${rows.length} drivers: ${count("derived")} derived, ${count("converted")} converted, ${count("published")} published, ${count("estimated")} estimated.`,
     "",

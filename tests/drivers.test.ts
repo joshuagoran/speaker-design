@@ -89,7 +89,8 @@ test("every driver's comparable Xmax: derived from heights where both are given,
   }
   for (const p of HIFI_PASSIVES) {
     assert.ok(p.xmax.lo > 0 && p.xmax.lo <= p.Xmax && p.Xmax <= p.xmax.hi, p.id);
-    assert.equal(p.xmax.basis, p.pub.Xmax != null ? "published" : "estimated", p.id);
+    assert.equal(p.xmax.basis, "published", p.id);
+    assert.equal(p.Xmax, p.pub.Xmax ?? p.pub.Xlim, p.id);
   }
 });
 

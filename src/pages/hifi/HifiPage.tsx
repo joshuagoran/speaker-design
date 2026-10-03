@@ -678,7 +678,7 @@ export function HifiPage({ hifi }: Props) {
             {speakerSystem.kind === "vented"
               ? `, ${speakerSystem.pArea.toFixed(1)} in² of ${speakerSystem.slotW != null ? "slot" : "port"}`
               : speakerSystem.kind === "radiator"
-                ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their own resonance)${radiatorDriver.xmax.basis === "estimated" ? `. Its maker publishes only the mechanical limit (${radiatorDriver.pub.Xlim} mm); the model uses an estimated linear limit of ${radiatorDriver.Xmax.toFixed(1)} mm (${radiatorDriver.xmax.lo.toFixed(1)}–${radiatorDriver.xmax.hi.toFixed(1)})` : ""}`
+                ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their own resonance)${radiatorDriver.pub.Xmax == null ? `. Its travel limit is the mechanical one (${radiatorDriver.Xmax} mm); no linear figure is published, so expect some noise near it` : ""}`
                 : ", lightly stuffed"}
             .
           </div>

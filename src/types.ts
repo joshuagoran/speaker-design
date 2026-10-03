@@ -53,7 +53,7 @@ export interface PublishedExcursion {
 
 /**
  * How the comparable Xmax was found: from Hvc and Hg, from the maker's figure and its known formula, as published (a
- * passive radiator's linear limit: no motor, so no gap), or estimated.
+ * passive radiator's limit: no motor, so no gap), or estimated.
  */
 export type XmaxBasis = "derived" | "converted" | "published" | "estimated";
 
@@ -343,7 +343,7 @@ export interface PassiveRadiator {
   Cms: number;
   Qms: number;
   Fs: number;
-  /** the comparable one-way limit the model uses, mm: a linear limit as published, else estimated from `pub.Xlim` (see `lib/xmax`) */
+  /** the one-way limit the model uses, mm: the linear `pub.Xmax`, else the mechanical `pub.Xlim` (see `lib/xmax`) */
   Xmax: number;
   xmax: XmaxBand;
   /** the maker's figures: a linear `Xmax`, or only the mechanical limit `Xlim` (SB, Purifi, Seas) */
