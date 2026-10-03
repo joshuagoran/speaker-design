@@ -544,3 +544,12 @@ test("Cheaper swaps the compression driver when a cheaper one keeps up", () => {
   assert.ok(k, "a card");
   assert.equal(k.config.cd, "hf143n", `kept ${k.config.cd} at $${Math.round(k.metrics.price)}`);
 });
+
+test("Cheaper is strictly the cheapest card, with weight breaking a price tie", () => {
+  const out = optimizePaStack({ ...base, goal: "cheaper" }),
+    [first, ...rest] = out.cards;
+  assert.ok(first, "a card");
+  for (const k of rest) assert.ok(first.metrics.price <= k.metrics.price, k.label);
+  // the same drivers on 1/2 in ply cost the same and weigh less (it also carries one more soft warning)
+  assert.equal(first.config.wall, 0.5);
+});
