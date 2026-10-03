@@ -83,15 +83,31 @@ export const highpassGain = (f: number, fc: number, type: HighpassType = "BW24")
     ? Math.pow(x, n) / Math.sqrt(1 + Math.pow(x, 2 * n))
     : Math.pow(x, n) / (1 + Math.pow(x, n));
 };
-// The normalised Butterworth sections of even order n, s² + b·s + 1: each b = 2 sin((2k − 1)π / 2n), k = 1 … n/2
-const butterworthSections = (n: number) =>
-  Array.from({ length: n / 2 }, (_, k) => 2 * Math.sin(((2 * k + 1) * Math.PI) / (2 * n)));
-// Normalised Butterworth denominator of even order n: the product of its sections
+// The normalised Butterworth sections of even order n, s² + b·s + 1: each b = 2 sin((2k − 1)π / 2n), k = 1 … n/2.
+// Kept per order: the hi-fi crossover calls for them at every frequency of every design the optimizer tries.
+const SECTIONS = new Map<number, number[]>();
+function butterworthSections(n: number) {
+  let b = SECTIONS.get(n);
+  if (!b) {
+    b = Array.from({ length: n / 2 }, (_, k) => 2 * Math.sin(((2 * k + 1) * Math.PI) / (2 * n)));
+    SECTIONS.set(n, b);
+  }
+  return b;
+}
+// Normalised Butterworth denominator of even order n: the product of its sections, in plain real arithmetic
 export function butterworth(s: Complex, n: number): Complex {
-  let d = complex(1);
-  for (const b of butterworthSections(n))
-    d = multiplyComplex(d, addComplex(multiplyComplex(s, addComplex(s, complex(b))), complex(1)));
-  return d;
+  const s2re = s.re * s.re - s.im * s.im,
+    s2im = 2 * s.re * s.im;
+  let re = 1,
+    im = 0;
+  for (const b of butterworthSections(n)) {
+    const qre = s2re + b * s.re + 1,
+      qim = s2im + b * s.im,
+      t = re * qre - im * qim;
+    im = re * qim + im * qre;
+    re = t;
+  }
+  return { re, im };
 }
 // The highpass's phase, radians, continuous in f: each section s² / (s² + b·s + 1) leads by π less its denominator's
 // angle, π far below the corner to 0 far above. A Butterworth n, or a Linkwitz-Riley as two of n/2; highpassGain is
