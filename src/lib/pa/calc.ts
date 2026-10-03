@@ -179,7 +179,7 @@ export interface BoxModelOptions {
 export const LOWPASS_SKIRT_SPAN = 2.5;
 // Points on the log grid fmin..fmax (N points), carried on at the same spacing until it reaches fTop. The points up
 // to fmax stay exactly where they were, so running a curve on never moves a reading inside the usual range.
-function logGridCount(N: number, fmin: number, fmax: number, fTop: number | undefined) {
+export function logGridCount(N: number, fmin: number, fmax: number, fTop: number | undefined) {
   if (!fTop || fTop <= fmax) return N;
   return N + Math.ceil(((N - 1) * Math.log(fTop / fmax)) / Math.log(fmax / fmin));
 }

@@ -11,6 +11,9 @@ import {
   pistonDirectivity,
   waveguideDirectivity,
   hifiSystem,
+  hifiBox,
+  hifiSystemFromBox,
+  hifiGridTop,
   hifiChips,
   hifiResponseAt,
   hifiDispersionMap,
@@ -361,4 +364,32 @@ test("listenerGeometry: a centred seat is symmetric, toe-in cuts the off-axis an
   // a seat moved toward the right speaker is closer to it and further off axis of the left
   const right = { ...room, listeningSeat: { x: 3, y: 8 } };
   assert.ok(listenerGeometry(1, right).distM < listenerGeometry(-1, right).distM);
+});
+
+test("a box modelled once to the top crossover reads exactly as hifiSystem at every crossover", () => {
+  for (const c of [
+    cfg,
+    { ...cfg, box: "sealed" as const },
+    { ...cfg, port: { shape: "slot" as const, n: 1, h: 1, len: 6 } },
+  ]) {
+    const b = hifiBox(W, c, hifiGridTop(3000))!;
+    for (const xo of [1500, 1800, 2000, 2200, 2500, 3000]) {
+      const cc = { ...c, xo },
+        a = hifiSystemFromBox(b, W, T, cc)!,
+        s = hifiSystem(W, T, cc)!;
+      for (const k of [
+        "f3",
+        "f3Box",
+        "wLevel",
+        "tLevel",
+        "maxLevel",
+        "sMusic",
+        "lb",
+        "net",
+      ] as const)
+        assert.strictEqual(a[k], s[k], `${c.box} ${xo} Hz: ${k}`);
+      assert.strictEqual(a.whoW, s.whoW);
+      assert.deepStrictEqual(a.woofer, s.woofer);
+    }
+  }
 });
