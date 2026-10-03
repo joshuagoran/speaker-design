@@ -70,6 +70,7 @@ import type {
   VentSpec,
 } from "../../types";
 import { keysOf } from "../records";
+import { selectCards } from "../optimizer/selectCards";
 import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
 import { savedCrossoverOrder } from "../../constants/crossovers";
@@ -1085,71 +1086,50 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     ? `${OPTIMIZER_GOALS[goal].why.replace(/\.$/, "")}, and ${also.map((g) => ({ cheaper: "costs less", lighter: "weighs less", lower: "goes lower", louder: "is louder" })[g]).join(" and ")} than your design.`
     : OPTIMIZER_GOALS[goal].why;
   const trueVsCur = (axis: PaGoal, p: PoolEntry) => !curMet || beats[axis](metric(p), curMet);
+  const ALT_WHY: Record<PaGoal, string> = {
+    louder: "More output than your design.",
+    lower: "Goes lower than your design.",
+    cheaper: "Costs less than your design, close to the target.",
+    lighter: "Lighter than your design, close to the target.",
+  };
   const choose = (L: ProblemLimits, tgt: number) => {
     const ok = pool.filter((p) => designProblems(p.m, L).length === 0);
-    const meets = (p: PoolEntry) =>
-      goals.every((g) => goalOk[g]({ ...metric(p), out: p.m.out + (target - tgt) }));
-    const beatsAll = (p: PoolEntry) => goals.every((g) => trueVsCur(g, p));
-    const cards: PlannedCard[] = [];
-    const first = ok
-      .filter((p) => meets(p) && beatsAll(p))
-      .sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
-    if (first) cards.push({ p: first, label: goalLabel, why: goalWhy });
-    // your design fails a check: the goal's best design that passes, labelled as a fix (it may cost or weigh more)
-    else if (curFails) {
-      const fix = ok.filter(meets).sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
-      if (fix) cards.push({ p: fix, label: "Fixes your design", why: FIX_WHY[goal] });
-    }
     const vol = (c: PaDesignConfig) => c.cDim.w * c.cDim.h * c.cDim.d;
-    const differs = (p: PoolEntry) =>
-      cards.every(
-        (k) =>
-          k.p.c.sub !== p.c.sub ||
-          k.p.c.portStyle !== p.c.portStyle ||
-          k.p.c.mid !== p.c.mid ||
-          k.p.c.wall !== p.c.wall ||
-          Math.abs(vol(p.c) / vol(k.p.c) - 1) >= 0.15,
-      );
-    // the smallest change that already beats your design on the goal (e.g. the same boxes on 1/2" ply)
-    if (curMet) {
-      const small = ok
-        .filter((p) => p.ch <= 1 && differs(p) && meets(p) && beatsAll(p))
-        .sort((a, b) => obj[goal](metric(a)) - obj[goal](metric(b)))[0];
-      if (small)
-        cards.push({
-          p: small,
-          label: "Smallest change",
-          why: "Changes one thing from your design.",
-        });
-    }
-    // stacked goals: single-goal options first, so you can see what dropping the others buys
-    const axes = [...(also.length ? goals : []), ...ALT_ORDER[goal], ...keysOf(ALT_LABEL)].filter(
-      (a, i, arr) => arr.indexOf(a) === i && (also.length || a !== goal),
-    );
-    for (const alt of axes) {
-      if (cards.length >= 3) break;
-      const q = ok
-        .filter(
-          (p) =>
-            differs(p) &&
-            p.m.out >= tgt - 1.5 &&
-            trueVsCur(alt, p) &&
-            (!first || beats[alt](metric(p), metric(first))),
-        )
-        .sort((a, b) => obj[alt](metric(a)) - obj[alt](metric(b)))[0];
-      if (q)
-        cards.push({
-          p: q,
-          label: ALT_LABEL[alt],
-          why: {
-            louder: "More output than your design.",
-            lower: "Goes lower than your design.",
-            cheaper: "Costs less than your design, close to the target.",
-            lighter: "Lighter than your design, close to the target.",
-          }[alt],
-        });
-    }
-    return cards.length ? { cards, goalMissing: !first && !curFails } : null;
+    const { cards, goalMissing } = selectCards<PoolEntry, PaGoal>({
+      pool: ok,
+      goal,
+      goals,
+      objective: (g, p) => obj[g](metric(p)),
+      beatsCurrent: trueVsCur,
+      beats: (g, a, b) => beats[g](metric(a), metric(b)),
+      // the output is held to the retry's relaxed target
+      meets: (p) => goals.every((g) => goalOk[g]({ ...metric(p), out: p.m.out + (target - tgt) })),
+      differs: (p, chosen) =>
+        chosen.every(
+          (k) =>
+            k.c.sub !== p.c.sub ||
+            k.c.portStyle !== p.c.portStyle ||
+            k.c.mid !== p.c.mid ||
+            k.c.wall !== p.c.wall ||
+            Math.abs(vol(p.c) / vol(k.c) - 1) >= 0.15,
+        ),
+      changeCount: (p) => p.ch,
+      currentFails: curFails,
+      hasCurrent: !!curMet,
+      // stacked goals: single-goal options first, so you can see what dropping the others buys
+      altAxes: [...(also.length ? goals : []), ...ALT_ORDER[goal], ...keysOf(ALT_LABEL)].filter(
+        (a, i, arr) => arr.indexOf(a) === i && (also.length || a !== goal),
+      ),
+      // alternatives stay close to the target
+      altFilter: (_g, p) => p.m.out >= tgt - 1.5,
+      labels: {
+        first: { label: goalLabel, why: goalWhy },
+        // your design fails a check: the goal's best design that passes (it may cost or weigh more)
+        fix: { label: "Fixes your design", why: FIX_WHY[goal] },
+        alt: (g) => ({ label: ALT_LABEL[g], why: ALT_WHY[g] }),
+      },
+    });
+    return cards.length ? { cards, goalMissing } : null;
   };
 
   // Unlocked amps: the least power per channel (in the sliders' steps) that still reaches the target and keeps
