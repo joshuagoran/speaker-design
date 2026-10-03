@@ -862,6 +862,14 @@ export interface PaDesignConfig {
   cabFinish?: string;
   spacerH?: number;
   joint?: CornerJoint;
+  /** saw kerf, inches */
+  kerf?: number;
+  /** edge trim on each factory edge, inches */
+  trim?: number;
+  grain?: GrainSettings;
+  waterfall?: boolean;
+  offcut?: OffcutShape;
+  cuts?: CutStyle;
   summary?: string;
 }
 
@@ -1131,15 +1139,48 @@ export type FillSystem = FillSystemVented | FillSystemSealed;
 
 // ---- Cutlist ----
 
+/** Every part the cutlist names. */
+export type CutPartName =
+  | "Side"
+  | "Top / bottom"
+  | "Bottom"
+  | "Side-top-side strip"
+  | "Back"
+  | "Baffle"
+  | "Baffle cleat"
+  | "Window brace"
+  | "Duct shelf"
+  | "Duct fin"
+  | "Duct rear wall"
+  | "Side duct wall"
+  | "Duct divider";
+
+/** Which of a part's dimensions runs along the grain (the sheet's length): `a`, `b`, or either. */
+export type GrainDir = "a" | "b" | "any";
+/** The panels whose grain can be set; every other part takes either direction. */
+export type GrainPanel = "Side" | "Top / bottom" | "Baffle" | "Back";
+/** The grain direction of each settable panel. */
+export type GrainSettings = Record<GrainPanel, GrainDir>;
+/** Grain presets: wrap (sides vertical, top/bottom across, baffle and back vertical), horizontal, or none (MDF). */
+export type GrainPreset = "wrap" | "horizontal" | "none";
+/** How sheets are cut: whatever gives the fewest sheets, or full-length rips before any crosscut (table saw). */
+export type CutStyle = "sheets" | "rips";
+/** Which offcut the least-full sheet keeps: a full-length strip or a full-width panel. */
+export type OffcutShape = "strip" | "panel";
+
 /** One line of the cutlist: a part of a box, cut `qty` times from `t`-inch ply, `a` by `b` inches. */
 export interface CutPart {
   box: string;
-  part: string;
+  part: CutPartName;
   qty: number;
   a: number;
   b: number;
   t: number;
   note: string;
+  /** which dimension runs along the grain; absent means either */
+  grain?: GrainDir;
+  /** a waterfall strip: the panels' lengths along `b`, in cut order */
+  pieces?: number[];
 }
 
 /** What the cutlist needs for a sub and mid pair. */
@@ -1156,27 +1197,91 @@ export interface CutPartsConfig {
   layout: PaLayout;
 }
 
-/** A part laid on a sheet: its position and the size it was placed at (rotated if need be). */
-export type PlacedPart<R = CutPart> = R & { x: number; y: number; w: number; h: number };
-
-/** One shelf of a sheet: its top, its height and how far across it is filled. */
-export interface SheetRow {
-  y: number;
-  h: number;
-  x: number;
+/** How the cutlist lays parts on sheets: sheet and stack count, saw kerf and edge trim (inches), grain, waterfall and offcut. */
+export interface CutlistSettings {
+  sheet: PlywoodSheetKind;
+  stacks: number;
+  kerf: number;
+  /** squared off each factory edge, inches */
+  trim: number;
+  grain: GrainSettings;
+  /** cut each box's sides and top as one side-top-side strip so the grain runs over the top corners */
+  waterfall: boolean;
+  joint: CornerJoint;
+  offcut: OffcutShape;
+  cuts: CutStyle;
 }
 
-/** A sheet of ply with the parts on it; `y` is how far down the last row ends. */
-export interface PackedSheet<R = CutPart> {
-  rows: SheetRow[];
-  items: PlacedPart<R>[];
+/** What a packed rectangle needs: its size and, optionally, which dimension must run along the sheet's length. */
+export interface PackRect {
+  a: number;
+  b: number;
+  grain?: GrainDir;
+}
+
+/**
+ * A part laid on a sheet: its position and the size it was placed at (rotated if need be). `y` and `h` run along the
+ * sheet's length, which is the grain; `crossed` marks a grain-locked part that only fit across the grain.
+ */
+export type PlacedPart<R = CutPart> = R & {
+  x: number;
   y: number;
+  w: number;
+  h: number;
+  crossed?: boolean;
+};
+
+/** A sheet of ply with the parts on it. */
+export interface PackedSheet<R = CutPart> {
+  items: PlacedPart<R>[];
 }
 
 export interface PackedSheets<R = CutPart> {
   sheets: PackedSheet<R>[];
   /** parts too big for the sheet in either direction */
   tooBig: R[];
+}
+
+/** The free piece the least-full sheet keeps, inches: `w` across the sheet, `h` along it, from (`x`, `y`). */
+export interface Offcut {
+  sheet: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** The big cuts on sheets: full-length rips, full-width crosscuts, and the widest piece crosscut (inches). */
+export interface CutStats {
+  rips: number;
+  crosscuts: number;
+  widestCrosscut: number;
+}
+
+/** One ply thickness laid out: its sheets, parts that don't fit, the offcut kept and the cuts. */
+export interface CutlistGroup extends PackedSheets {
+  t: number;
+  offcut: Offcut | null;
+  cuts: CutStats;
+  /** with rip-first cutting, the sheets the layout would need without it; null otherwise */
+  fewestSheets: number | null;
+}
+
+/** What the cutlist worker takes: one stack's parts and the settings. */
+export interface CutlistRequest {
+  parts: CutPart[];
+  settings: CutlistSettings;
+}
+
+/** The cutlist laid out for the given settings. */
+export interface CutlistLayout {
+  /** the table's rows, per stack, after waterfall strips replace their panels */
+  parts: CutPart[];
+  /** parts left off the sheets: cut them from offcuts */
+  fromOffcut: CutPart[];
+  groups: CutlistGroup[];
+  /** waterfall strips that didn't fit, and why */
+  notes: string[];
 }
 
 // ---- Warning chips (lib/pa/chips) ----
@@ -1478,6 +1583,8 @@ export interface PaOptimizerInput {
   /** one goal, from before several could be stacked */
   goal?: PaGoal;
   locks?: PaOptimizerLocks;
+  /** the cutlist's sheet and stack count, so the cards' sheet counts match the Cutlist tab */
+  cutlist?: Pick<CutlistSettings, "sheet" | "stacks">;
 }
 
 /** The fields a result card sets; everything else (finish, colours, layout, balance) stays as the page has it. */
@@ -1574,8 +1681,8 @@ export interface PaOptimizerCard {
   limitedBy: string;
   /** the planner's warnings on this design as [title, detail] */
   warnings: [title: string, detail: string][];
-  /** the mid's Qtc and the sheets of ply each thickness needs */
-  build: { qtc: number; sheets: { t: number; n: number }[] };
+  /** the mid's Qtc, the sheets of ply each thickness needs (thickest first) and the stacks they cover */
+  build: { qtc: number; sheets: { t: number; n: number }[]; stacks: number };
   /** what differs from the current design: "sub driver", "vent" ... */
   changed: string[];
   priceKnown: boolean;

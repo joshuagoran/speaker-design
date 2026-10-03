@@ -20,8 +20,6 @@ import {
   midWeightLb,
   boxInternalLiters,
   cutParts,
-  packSheets,
-  PLYWOOD_SHEETS,
   nearestPoint,
   subMusicOutputAt,
   linkwitzRileyLowpass,
@@ -41,7 +39,7 @@ import {
 import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS, subDriversOfSize } from "../data";
 import type {
   CompressionDriver,
-  CutPart,
+  CutlistSettings,
   Dims3,
   DimensionLockMode,
   Horn,
@@ -73,6 +71,7 @@ import { keysOf } from "../records";
 import { selectCards, type SelectedCard } from "../optimizer/selectCards";
 import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
+import { SEARCH_CAP_MS, SEARCH_RUNS, layoutCutlist, savedGrain } from "./cutlist";
 import { savedCrossoverOrder } from "../../constants/crossovers";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
@@ -519,6 +518,18 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     ...input.cur,
     xoLoOrder: savedCrossoverOrder(input.cur.xoLoOrder),
     xoHiOrder: savedCrossoverOrder(input.cur.xoHiOrder),
+  };
+  // the cards count sheets as the Cutlist tab does
+  const cl: CutlistSettings = {
+    sheet: input.cutlist?.sheet ?? DEFAULT_PA.plywoodSheetKind,
+    stacks: input.cutlist?.stacks ?? 1,
+    kerf: cur.kerf ?? DEFAULT_PA.kerf,
+    trim: cur.trim ?? DEFAULT_PA.trim,
+    grain: savedGrain(cur.grain),
+    waterfall: cur.waterfall ?? cur.joint === "miter",
+    joint: cur.joint || DEFAULT_PA.joint,
+    offcut: DEFAULT_PA.offcut,
+    cuts: cur.cuts === "rips" ? "rips" : DEFAULT_PA.cuts,
   };
   const locks: ResolvedLocks = { subDim: {}, midDim: {}, ...input.locks };
   const budget = input.budget; // drivers per stack
@@ -1225,7 +1236,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     const lightest = subCands.length ? Math.min(...subCands.map((x) => x.lb)) : null;
     nearMiss = {
       options: worked.map(({ text, set }) => ({ text, set })),
-      closest: closest ? card(closest, "Closest", "", curM, cur) : null,
+      closest: closest ? card(closest, "Closest", "", curM, cur, cl) : null,
       blocking: closest
         ? designProblems(closest.m, lim).length
           ? designProblems(closest.m, lim)
@@ -1245,7 +1256,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     curM: curM && summary(curM),
     curProblems: designProblems(curM, lim),
     cur: curM ? { curve: curM.curve, geom: boxGeometry(cur) } : null,
-    cards: cards ? cards.map((k) => card(k.p, k.label, k.why, curM, cur)) : [],
+    cards: cards ? cards.map((k) => card(k.p, k.label, k.why, curM, cur, cl)) : [],
     goals,
     goalMissing:
       chosen && chosen.goalMissing
@@ -1304,6 +1315,7 @@ function card(
   why: string,
   curM: PaEvaluation | null,
   cur: PaDesignConfig,
+  cl: CutlistSettings,
 ): PaOptimizerCard {
   const { c, m } = p;
   const sub = byIdOrThrow(SUB_OPTIONS, c.sub, "subwoofers"),
@@ -1318,18 +1330,20 @@ function card(
     midDims,
     wall: c.wall,
     inset: c.inset,
-    joint: cur.joint || "butt",
+    joint: cl.joint,
     portStyle: c.portStyle,
     cVent: c.cVent,
     layout: c.layout,
   });
-  const byT: Record<string, CutPart[]> = {};
-  parts.forEach((q) => {
-    for (let i = 0; i < q.qty; i++) (byT[q.t] = byT[q.t] || []).push(q);
-  });
-  const sheets = Object.keys(byT).map((t) => ({
-    t: +t,
-    n: packSheets(byT[t], PLYWOOD_SHEETS["4x8"], 0.125).sheets.length,
+  // the Cutlist tab's search, so the counts match it
+  const sheets = layoutCutlist(parts, cl, {
+    runs: SEARCH_RUNS,
+    capMs: SEARCH_CAP_MS,
+    offcut: false,
+    fewest: false,
+  }).groups.map((g) => ({
+    t: g.t,
+    n: g.sheets.length,
   }));
   const changed: string[] = [];
   if (c.sub !== cur.sub) changed.push("sub driver");
@@ -1364,7 +1378,7 @@ function card(
     warnings: [...m.chips.sub, ...m.chips.mid, ...m.chips.horn]
       .filter(([k]) => k !== "ok")
       .map(([, h, b]): [string, string] => [h, b]),
-    build: { qtc: m.qtc, sheets: sheets.sort((a, b) => b.t - a.t) },
+    build: { qtc: m.qtc, sheets, stacks: cl.stacks },
     changed,
     priceKnown: m.priceKnown,
     curve: m.curve,
