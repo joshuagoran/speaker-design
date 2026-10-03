@@ -934,9 +934,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           same: cd.id === cur.cd && h.id === cur.horn,
         });
       }
-    hornTable[xoHi].sort(
-      (a, b) => Number(b.same) - Number(a.same) || a.price - b.price || a.horn - b.horn,
-    );
+    hornTable[xoHi].sort((a, b) => a.price - b.price || a.horn - b.horn);
   }
 
   // combine: for each sub and crossover pair, the mid and horn that keep up, best for each objective
@@ -968,22 +966,25 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
             ? nearestPoint(e.max, xoHi).spl +
               20 * Math.log10(linkwitzRileyLowpass(xoHi, xoHi, cur.xoHiOrder))
             : null;
-          const hp = hornTable[xoHi].find(
+          // the cheapest pair that keeps up, and the current one if it does too (the smaller change)
+          const keepsUp = hornTable[xoHi].filter(
             (p) => midHi == null || p.at - (midHi - cur.hfTilt) >= -0.5,
           );
-          if (!hp) continue;
-          const c = {
-            ...sc.c,
-            xoLo,
-            xoHi,
-            mid: e ? e.m.id : cur.mid,
-            mDim: e ? e.bx : cur.mDim,
-            cd: hp.cd.id,
-            horn: hp.h.id,
-          };
-          const price = sc.sub.price + (e ? midPrice(e) : curMidPrice) + hp.price;
-          const heaviest = Math.max(sc.lb, e ? e.lb : 0);
-          combos.push({ c, price, heaviest, out: sc.out, f3: sc.s.mdl.f3, ch: changes(c) });
+          const same = keepsUp.find((p) => p.same);
+          for (const hp of same && same !== keepsUp[0] ? [keepsUp[0], same] : keepsUp.slice(0, 1)) {
+            const c = {
+              ...sc.c,
+              xoLo,
+              xoHi,
+              mid: e ? e.m.id : cur.mid,
+              mDim: e ? e.bx : cur.mDim,
+              cd: hp.cd.id,
+              horn: hp.h.id,
+            };
+            const price = sc.sub.price + (e ? midPrice(e) : curMidPrice) + hp.price;
+            const heaviest = Math.max(sc.lb, e ? e.lb : 0);
+            combos.push({ c, price, heaviest, out: sc.out, f3: sc.s.mdl.f3, ch: changes(c) });
+          }
         }
     }
   }

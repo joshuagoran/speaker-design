@@ -392,7 +392,10 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
                     (box === "radiator" && r.sys.whoW === "radiator")
                   )
                     continue; // a bigger port or radiator instead
-                  if (r.chips.some(([k, h]) => k === "bad" || h.startsWith("Qtc"))) continue;
+                  if (
+                    r.chips.some(([k, h]) => k === "bad" || (k === "warn" && h.startsWith("Qtc")))
+                  )
+                    continue;
                   stage1.push({ w, dim, box, wall, port, pr, m: metricOf(r, w, T0) });
                 }
             }

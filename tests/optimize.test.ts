@@ -537,3 +537,10 @@ test("with only a closest card, the near miss still offers the looser limit that
   const opts = out.nearMiss ? out.nearMiss.options.map((o) => o.text) : [];
   assert.ok(opts.includes("Budget +$80"), JSON.stringify(opts));
 });
+
+test("Cheaper swaps the compression driver when a cheaper one keeps up", () => {
+  const out = optimizePaStack({ ...base, cur: pick("light block"), goal: "cheaper" });
+  const k = out.cards[0];
+  assert.ok(k, "a card");
+  assert.equal(k.config.cd, "hf143n", `kept ${k.config.cd} at $${Math.round(k.metrics.price)}`);
+});

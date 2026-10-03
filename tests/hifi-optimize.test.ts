@@ -271,3 +271,20 @@ test("hi-fi optimizer: a port counts as changed only on its own shape's fields",
   assert.equal(portsDiffer(slot, round), true);
   assert.equal(portsDiffer(round, slot), true);
 });
+
+test("hi-fi optimizer: a sealed box locked in place gets sealed cards (an ok Qtc chip doesn't rule a design out)", () => {
+  const sealed = { ...cur, box: "sealed" as const, dim: { w: 10, h: 16, d: 12 } };
+  const w = HIFI_WOOFERS.find((o) => o.id === sealed.woofer)!,
+    tw = HIFI_TWEETERS.find((o) => o.id === sealed.tweeter)!,
+    sys = hifiSystem(w, tw, sealed)!;
+  assert.deepEqual(
+    hifiDesignProblems(sys, hifiChips(sys, w, tw, sealed)),
+    [],
+    "the sealed design passes",
+  );
+  for (const goal of ["lower", "louder"] as const) {
+    const out = optimizeHifiSpeaker({ ...base, cur: sealed, goals: [goal], locks: { box: true } });
+    assert.ok(!out.goalMissing, `${goal}: a sealed design that beats yours exists`);
+    for (const k of out.cards) assert.equal(k.config.box, "sealed", k.label);
+  }
+});
