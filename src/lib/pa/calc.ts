@@ -108,7 +108,7 @@ export function ventTuning(
 
 // opts: nPorts (separate openings sharing the area), QL (box leakage, default 7), Qp (port losses, default 50),
 // ecIn (total end correction in inches, both ends; default 1.46 r per opening), N (frequency points, default 420;
-// fewer only for the optimizer's screening).
+// fewer only for the optimizer's screening), fTop (run the curve on past fmax to here; see logGridCount).
 export interface BoxModelOptions {
   nPorts?: number;
   QL?: number;
@@ -117,6 +117,15 @@ export interface BoxModelOptions {
   N?: number;
   fmin?: number;
   fmax?: number;
+  fTop?: number;
+}
+// How far past a lowpass corner a curve runs so its skirt shows: at 2.5x the corner an LR24 is 32 dB down.
+export const LOWPASS_SKIRT_SPAN = 2.5;
+// Points on the log grid fmin..fmax (N points), carried on at the same spacing until it reaches fTop. The points up
+// to fmax stay exactly where they were, so running a curve on never moves a reading inside the usual range.
+function logGridCount(N: number, fmin: number, fmax: number, fTop: number | undefined) {
+  if (!fTop || fTop <= fmax) return N;
+  return N + Math.ceil(((N - 1) * Math.log(fTop / fmax)) / Math.log(fmax / fmin));
 }
 export function boxModel(
   ts: BoxModelTS,
@@ -129,7 +138,7 @@ export function boxModel(
   opts: BoxModelOptions = {},
 ): VentedBoxModel | null {
   if (!ts || !VbL || !SpIn2 || LpIn <= 0) return null;
-  const { nPorts = 1, QL = 7, Qp = 50, ecIn, N = 420, fmin = 12, fmax = 300 } = opts;
+  const { nPorts = 1, QL = 7, Qp = 50, ecIn, N = 420, fmin = 12, fmax = 300, fTop } = opts;
   const rho = 1.18,
     c = 343;
   const Sd = ts.Sd / 10000; // cm^2 -> m^2
@@ -149,7 +158,8 @@ export function boxModel(
   const Pg = (volts * ts.Bl) / (ts.Re * Sd);
 
   const out: VentedPoint[] = [];
-  for (let i = 0; i < N; i++) {
+  const count = logGridCount(N, fmin, fmax, fTop);
+  for (let i = 0; i < count; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
     // the same circuit in plain real arithmetic (no complex objects: this loop runs millions of times in the optimizers)
     const w = 2 * Math.PI * f;
@@ -194,7 +204,7 @@ export function boxModel(
   const f3 = (out.find((o) => o.spl >= ref - 3) || out[out.length - 1]).f; // system, with the highpass
   const f3Box = (out.find((o) => o.raw >= ref - 3) || out[out.length - 1]).f; // box alone
   const at = (t: number) => out.reduce((b, o) => (Math.abs(o.f - t) < Math.abs(b.f - t) ? o : b));
-  const lo = out; // limits are searched over the whole curve (12-300 Hz)
+  const lo = out; // limits are searched over the whole curve (12-300 Hz, and any run-on, where both only fall)
   return {
     curve: out,
     Fb,
@@ -224,15 +234,12 @@ export function closedBox(
   hp: number | null,
   lp: number | null,
   volts: number,
-  opts: {
-    N?: number;
-    fmin?: number;
-    fmax?: number;
+  opts: Pick<BoxModelOptions, "N" | "fmin" | "fmax" | "fTop"> & {
     hpOrder?: CrossoverOrder;
     lpOrder?: CrossoverOrder;
   } = {},
 ): SealedBoxModel | null {
-  const { N = 420, fmin = 20, fmax = 2000, hpOrder = 4, lpOrder = 4 } = opts;
+  const { N = 420, fmin = 20, fmax = 2000, fTop, hpOrder = 4, lpOrder = 4 } = opts;
   if (!ts || !VbL || VbL <= 0) return null;
   const rho = 1.18,
     c = 343;
@@ -252,7 +259,8 @@ export function closedBox(
   const Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
   const Qtc = Qts * (Fc / ts.Fs);
   const out: SealedPoint[] = [];
-  for (let i = 0; i < N; i++) {
+  const count = logGridCount(N, fmin, fmax, fTop);
+  for (let i = 0; i < count; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
     const w = 2 * Math.PI * f,
       s = complex(0, w);
@@ -737,8 +745,27 @@ export function maxOutputCurve(
 }
 export const nearestPoint = <P extends { f: number }>(curve: P[], f: number): P =>
   curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
-// The sub at its music limit (one drive level for the whole band) through the lowpass at xoLo
-// (LR24, or LR48 with order 8): what the mid has to match.
+// One point of the sub at its music limit (one drive level for the whole band) through the lowpass at xoLo
+// (LR24, or LR48 with order 8).
+const subMusicLevel = (
+  o: Pick<VentedPoint, "f" | "spl">,
+  lim: Pick<SubLimits, "V">,
+  AMP_V: number,
+  xoLo: number,
+  order: CrossoverOrder,
+) =>
+  o.spl + 20 * Math.log10(linkwitzRileyLowpass(o.f, xoLo, order)) + 20 * Math.log10(lim.V / AMP_V);
+// The whole curve of it,
+export function subMusicThroughLowpass(
+  mdl: VentedBoxModel,
+  lim: Pick<SubLimits, "V">,
+  AMP_V: number,
+  xoLo: number,
+  order: CrossoverOrder = 4,
+): FrequencyPoint[] {
+  return mdl.curve.map((o) => ({ f: o.f, spl: subMusicLevel(o, lim, AMP_V, xoLo, order) }));
+}
+// ... and its level at the crossover: what the mid has to match (one point of that curve; the optimizer calls it often).
 export function subMusicOutputAt(
   mdl: VentedBoxModel,
   lim: Pick<SubLimits, "V">,
@@ -746,10 +773,7 @@ export function subMusicOutputAt(
   xoLo: number,
   order: CrossoverOrder = 4,
 ) {
-  const o = nearestPoint(mdl.curve, xoLo);
-  return (
-    o.spl + 20 * Math.log10(linkwitzRileyLowpass(o.f, xoLo, order)) + 20 * Math.log10(lim.V / AMP_V)
-  );
+  return subMusicLevel(nearestPoint(mdl.curve, xoLo), lim, AMP_V, xoLo, order);
 }
 
 // ---- horn ----
@@ -857,6 +881,7 @@ export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig):
     ? boxModel(sub.ts, netL, port.area, port.len, cfg.hpf, AMP_V, cfg.hpType, {
         nPorts: port.n,
         ecIn: port.ec,
+        fTop: cfg.xoLo && LOWPASS_SKIRT_SPAN * cfg.xoLo, // past 300 Hz only above a 120 Hz crossover
       })
     : null;
   if (!sub.ts || !mdl) return { port, grossL, ductL, woodL, netL, AMP_V, mdl: null, lim: null };
@@ -907,8 +932,10 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const disp = mid.ts && mid.ts.disp != null ? mid.ts.disp : mid.size === 15 ? 4 : 2.5; // assumed where not published
   const netL = Math.max(5, grossL - disp);
   const effL = netL * STUFFING_VOLUME_GAIN;
+  // the curve runs on past 2 kHz when the lowpass sits above 800 Hz, so its skirt shows on the system chart
   const mdl = mid.ts
     ? closedBox(mid.ts, effL, cfg.xoLo, cfg.xoHi, V, {
+        fTop: LOWPASS_SKIRT_SPAN * cfg.xoHi,
         hpOrder: cfg.xoLoOrder,
         lpOrder: cfg.xoHiOrder,
       })

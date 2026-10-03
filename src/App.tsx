@@ -4,12 +4,13 @@ import { NotesPage } from "./pages/notes/NotesPage";
 import { FillsPage } from "./pages/fills/FillsPage";
 import { CutlistPage } from "./pages/cutlist/CutlistPage";
 import { HifiPage } from "./pages/hifi/HifiPage";
+import { CoveragePage } from "./pages/coverage/CoveragePage";
 import { useHifiPlanner } from "./pages/hifi/useHifiPlanner";
 import { useFillsPlanner } from "./pages/fills/useFillsPlanner";
 import { useEffect, useState, type MouseEvent } from "react";
 
-/** The pages: the PA stack's four ("planner" is Design) and Hi-fi. */
-type AppTab = "planner" | "cutlist" | "fills" | "notes" | "hifi";
+/** The pages: the PA stack's five ("planner" is Design) and Hi-fi. */
+type AppTab = "planner" | "coverage" | "cutlist" | "fills" | "notes" | "hifi";
 
 /** Hash of each page, and the page shown for an unknown or empty hash. */
 const viewOf = (): AppTab =>
@@ -21,7 +22,9 @@ const viewOf = (): AppTab =>
         ? "hifi"
         : window.location.hash === "#cutlist"
           ? "cutlist"
-          : "planner";
+          : window.location.hash === "#coverage"
+            ? "coverage"
+            : "planner";
 
 /** The page shell: hash routing, the header navigation, and the design state of every page (held here so it survives switching tabs). */
 export function App() {
@@ -54,6 +57,7 @@ export function App() {
           ];
           const paPageLinks: [AppTab, string, string][] = [
             ["planner", "Design", "#"],
+            ["coverage", "Coverage", "#coverage"],
             ["cutlist", "Cutlist", "#cutlist"],
             ["fills", "Fills", "#fills"],
             ["notes", "Notes", "#notes"],
@@ -113,6 +117,8 @@ export function App() {
         <HifiPage hifi={hifi} />
       ) : view === "cutlist" ? (
         <CutlistPage planner={planner} />
+      ) : view === "coverage" ? (
+        <CoveragePage planner={planner} />
       ) : (
         <PaStackPage planner={planner} />
       )}

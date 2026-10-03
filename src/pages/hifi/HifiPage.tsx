@@ -1,4 +1,5 @@
 import { PAL } from "../../styles/palette";
+import { CROSSOVER_SLOPES } from "../../constants/crossovers";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { StatTile } from "../../components/stats/StatTile";
 import {
@@ -655,12 +656,7 @@ export function HifiPage({ hifi }: Props) {
             extra={renderLockButton("xo", "the crossover")}
           />
           <div className="flex gap-1 mb-3">
-            {(
-              [
-                [4, "LR24"],
-                [8, "LR48"],
-              ] as const
-            ).map(([v, l]) => (
+            {CROSSOVER_SLOPES.map(([v, l]) => (
               <ToggleButton
                 key={v}
                 size="xs"

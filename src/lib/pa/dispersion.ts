@@ -25,10 +25,62 @@ const cadd = (a: Complex, b: Complex) => cm(a.re + b.re, a.im + b.im);
 const cabs = (a: Complex) => Math.hypot(a.re, a.im);
 const cexp = (ph: number) => cm(Math.cos(ph), Math.sin(ph));
 
-/** A driver in the sum: its height, its crossover filters and, for a piston, its radius in metres (the horn has none). */
-type Source =
-  | { z: number; a: number; filt: (f: number) => Complex; horn?: undefined }
-  | { z: number; horn: true; filt: (f: number) => Complex; a?: undefined };
+/** Which part of the stack a driver is. */
+export type StackBand = "sub" | "mid" | "horn";
+
+/** A driver in the sum: its band, height, crossover filters and, for a piston, its radius in metres (the horn has none). */
+export type StackSource =
+  | { band: "sub" | "mid"; z: number; a: number; filt: (f: number) => Complex; horn?: undefined }
+  | { band: "horn"; z: number; horn: true; filt: (f: number) => Complex; a?: undefined };
+
+/** The stack's drivers (sub when it has one, mid, horn), each through its crossover filters. */
+export function paStackSources(s: PaStackGeometry): StackSource[] {
+  const orderLo = s.orderLo ?? s.order ?? 4,
+    orderHi = s.orderHi ?? s.order ?? 4;
+  const out: StackSource[] = [];
+  if (s.sub && s.sub.Sd)
+    out.push({
+      band: "sub",
+      z: s.sub.zIn,
+      a: Math.sqrt(s.sub.Sd / 1e4 / Math.PI),
+      filt: (f) => linkwitzRileyFilter(f, s.xoLo, orderLo, "lp"),
+    });
+  out.push(
+    {
+      band: "mid",
+      z: s.mid.zIn,
+      a: Math.sqrt(s.mid.Sd / 1e4 / Math.PI),
+      filt: (f) =>
+        cmul(
+          linkwitzRileyFilter(f, s.xoLo, orderLo, "hp"),
+          linkwitzRileyFilter(f, s.xoHi, orderHi, "lp"),
+        ),
+    },
+    {
+      band: "horn",
+      z: s.horn.zIn,
+      horn: true,
+      filt: (f) => linkwitzRileyFilter(f, s.xoHi, orderHi, "hp"),
+    },
+  );
+  return out;
+}
+
+/**
+ * A driver's directivity (pressure, 1 on axis) at `th` radians off its horizontal axis and `tv` above it: the horn as
+ * a waveguide, a piston by its total off-axis angle.
+ */
+export function stackSourceDirectivity(
+  s: Pick<PaStackGeometry, "horn">,
+  o: StackSource,
+  f: number,
+  th: number,
+  tv: number,
+): number {
+  return o.horn
+    ? waveguideDirectivity(f, s.horn.covH, s.horn.covV, s.horn.wIn, s.horn.hIn, th, tv)
+    : pistonDirectivity(f, o.a, Math.acos(Math.cos(th) * Math.cos(tv)));
+}
 
 // s: { sub: { zIn, Sd }, mid: { zIn, Sd }, horn: { zIn, covH, covV, wIn, hIn }, xoLo, xoHi, orderLo, orderHi }
 // geo: { th (rad, horizontal), eyeIn (ear height, in), distM }. Returns [{ f, spl }] (dB, relative).
@@ -37,51 +89,20 @@ export function paResponseAt(
   geo: ListenerGeometry,
   freqs: number[],
 ): FrequencyPoint[] {
-  const orderLo = s.orderLo ?? s.order ?? 4,
-    orderHi = s.orderHi ?? s.order ?? 4,
-    dist = geo.distM,
+  const dist = geo.distM,
     ref = s.horn.zIn;
-  const src = (
-    [
-      s.sub && s.sub.Sd
-        ? {
-            z: s.sub.zIn,
-            a: Math.sqrt(s.sub.Sd / 1e4 / Math.PI),
-            filt: (f: number) => linkwitzRileyFilter(f, s.xoLo, orderLo, "lp"),
-          }
-        : null,
-      {
-        z: s.mid.zIn,
-        a: Math.sqrt(s.mid.Sd / 1e4 / Math.PI),
-        filt: (f: number) =>
-          cmul(
-            linkwitzRileyFilter(f, s.xoLo, orderLo, "hp"),
-            linkwitzRileyFilter(f, s.xoHi, orderHi, "lp"),
-          ),
-      },
-      {
-        z: s.horn.zIn,
-        horn: true,
-        filt: (f: number) => linkwitzRileyFilter(f, s.xoHi, orderHi, "hp"),
-      },
-    ].filter(Boolean) as Source[]
-  ) // boundary cast: filter(Boolean) drops the null a stack without a sub leaves, which the checker can't see
-    .map((o) => {
-      const dz = (geo.eyeIn - o.z) * IN,
-        r = Math.hypot(dist, dz),
-        r0 = Math.hypot(dist, (ref - o.z) * IN);
-      const tv = Math.atan2(dz, dist),
-        off = Math.acos(Math.cos(geo.th) * Math.cos(tv));
-      return { ...o, r, r0, tv, off };
-    });
+  const src = paStackSources(s).map((o) => {
+    const dz = (geo.eyeIn - o.z) * IN,
+      r = Math.hypot(dist, dz),
+      r0 = Math.hypot(dist, (ref - o.z) * IN);
+    return { o, r, r0, tv: Math.atan2(dz, dist) };
+  });
   return freqs.map((f) => {
     const k = (2 * Math.PI * f) / C;
     let p = cm(0);
-    for (const o of src) {
-      const d = o.horn
-        ? waveguideDirectivity(f, s.horn.covH, s.horn.covV, s.horn.wIn, s.horn.hIn, geo.th, o.tv)
-        : pistonDirectivity(f, o.a, o.off);
-      p = cadd(p, cmul(cmul(o.filt(f), cm((d * dist) / o.r)), cexp(-k * (o.r - o.r0))));
+    for (const { o, r, r0, tv } of src) {
+      const d = stackSourceDirectivity(s, o, f, geo.th, tv);
+      p = cadd(p, cmul(cmul(o.filt(f), cm((d * dist) / r)), cexp(-k * (r - r0))));
     }
     return { f, spl: 20 * Math.log10(Math.max(1e-9, cabs(p))) };
   });

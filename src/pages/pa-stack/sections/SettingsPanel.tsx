@@ -14,13 +14,8 @@ import {
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { keysOf } from "../../../lib/records";
+import { CROSSOVER_SLOPES } from "../../../constants/crossovers";
 import type { CrossoverOrder, Setter } from "../../../types";
-
-/** The crossover slopes the PA offers, as the Hi-fi tab names them. */
-const CROSSOVER_SLOPES = [
-  [4, "LR24"],
-  [8, "LR48"],
-] as const;
 
 interface Props {
   planner: Pick<
@@ -179,7 +174,7 @@ export function SettingsPanel({ planner }: Props) {
   return (
     <>
       <aside
-        className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-xl max-md:shadow-sheet`}
+        className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet`}
         style={{ fontFamily: "var(--font)" }}
         aria-label="Settings"
       >

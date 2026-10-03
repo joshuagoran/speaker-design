@@ -181,9 +181,11 @@ export const ROOMS: Record<PaRoom, { d: number; gain: number; name: string; shor
   1000: { d: 7, gain: 3, name: "1000 sq ft", short: "1000" },
   outdoor: { d: 10, gain: 0, name: "Outdoors", short: "Outdoors" },
 };
+/** The level the planner aims for at the listener, dB SPL. */
+export const LISTENER_TARGET_DB = 105;
 export const roomRequiredSpl = (room: PaRoom) => {
   const r = ROOMS[room] || ROOMS[1000];
-  return 105 + 20 * Math.log10(r.d) - 6 - r.gain;
+  return LISTENER_TARGET_DB + 20 * Math.log10(r.d) - 6 - r.gain;
 };
 
 export const OPTIMIZER_GOALS: Record<PaGoal, { short: string; name: string; why: string }> = {
