@@ -143,3 +143,12 @@ test("selectCards: ties keep the pool's order unless a tie-break is given", () =
   const r = selectCards(opts(pool, { altAxes: [], tieBreak: (a, b) => a.lb - b.lb }));
   assert.deepEqual(ids(r), ["First:y"]);
 });
+
+test("selectCards: an alternative that beats only your design, or only the first card, on its axis is skipped", () => {
+  // x is the lightest after the first card and lighter than you, but not 1 lb lighter than the first card
+  const notFirst = [d("a", 80, 19, 91), d("x", 99, 18.5, 90)];
+  assert.deepEqual(ids(selectCards(opts(notFirst, { altAxes: ["lighter"] }))), ["First:a"]);
+  // y is louder than the (quieter) first card but not 1 dB louder than your design
+  const notYou = [d("a", 80, 19, 89.5), d("y", 99, 20, 90.6)];
+  assert.deepEqual(ids(selectCards(opts(notYou, { altAxes: ["louder"] }))), ["First:a"]);
+});
