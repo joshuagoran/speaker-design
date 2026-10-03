@@ -18,7 +18,6 @@ const KNOWN: Record<string, string> = {
   "bc18ps:Vas": "datasheet Vas 245 L vs 283 L from Mms/Sd/Fs; noted on the driver",
   "es12nlw9300:Qes": "datasheet Qes 0.45 vs 0.394 from Bl/Mms/Re/Fs; Qtc reads ~12% low",
   "lv123f:Vas": "datasheet Vas 42 L vs 37.3 L",
-  "bc10nw64:Vas": "datasheet Vas 27.5 L vs 30.6 L",
   "cindcx10:Vas": "published Vas doesn't fit Mms/Sd (noted on the driver); derived is 1.53x",
 };
 const all = [...SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS];
