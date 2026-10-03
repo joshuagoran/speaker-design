@@ -8,22 +8,14 @@ import {
   SUB_OPTIONS,
 } from "../src/lib/data";
 import { publishedText } from "../src/lib/xmax";
-import type { PublishedExcursion, XmaxBand } from "../src/types";
+import type { PassiveRadiator, ThieleSmall, XmaxBand } from "../src/types";
 
 // Rewrites docs/xmax-audit.md: every driver's published excursion figures, coil and gap heights, and the comparable
 // Xmax the models use, so the gaps and estimates stay visible. Run it after changing a driver's excursion data:
 //   vp run xmax-audit
 
-interface Row {
-  table: string;
-  id: string;
-  name: string;
-  pub: PublishedExcursion;
-  Hvc?: number;
-  Hg?: number;
-  Xmax: number;
-  xmax: XmaxBand;
-}
+type Row = Pick<ThieleSmall, "pub" | "Hvc" | "Hg" | "Xmax" | "xmax"> &
+  Pick<PassiveRadiator, "id" | "name"> & { table: string };
 const n = (v: number | undefined) => (v == null ? "–" : `${+v.toFixed(2)}`);
 const host = (url: string | undefined) =>
   url ? `[${new URL(url).hostname}](${url})` : "table note";

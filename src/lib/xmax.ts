@@ -88,14 +88,17 @@ export function xmaxBandOf(
   if (Hvc != null && Hg != null) return exact(comparableXmax(Hvc, Hg), "derived");
   if (pub.Xmax != null && isGapFormula(pub.formula)) {
     if (pub.formula === "hg/4") return exact(pub.Xmax, "converted");
-    if (Hg != null)
-      return exact(pub.Xmax - (GAP_SHARE[pub.formula] - SCALE_SHARE) * Hg, "converted");
+    // the other formulas convert only with the gap height; the generic bands would move them the wrong way
+    if (Hg == null) throw new Error(`${who}: a ${pub.formula} Xmax needs the gap height Hg`);
+    return exact(pub.Xmax - (GAP_SHARE[pub.formula] - SCALE_SHARE) * Hg, "converted");
   }
   // Eminence publishes the greater of the plain overhang and the 10 % distortion point, so the plain overhang is at
   // most its figure and the comparable value at most the figure + Hg/4; at least the figure while the distortion
   // point sits within Hg/4 of the overhang (NSW4018-8, whose heights are known: 1.2 mm against Hg/4 = 3.2 mm)
-  if (pub.Xmax != null && pub.formula === "overhang-or-x10" && Hg != null)
+  if (pub.Xmax != null && pub.formula === "overhang-or-x10") {
+    if (Hg == null) throw new Error(`${who}: an overhang-or-X10 Xmax needs the gap height Hg`);
     return { basis: "estimated", lo: pub.Xmax, hi: pub.Xmax + SCALE_SHARE * Hg };
+  }
   if (pub.Xmax != null)
     return estimate(pub.Xmax, isHifiMaker(who) ? ESTIMATE.XmaxHifi : ESTIMATE.XmaxPro);
   if (pub.Xvar != null) return estimate(pub.Xvar, ESTIMATE.Xvar);
@@ -124,9 +127,6 @@ export function passiveWithXmax(p: RawPassiveRadiator): PassiveRadiator {
   if (lim == null) throw new Error(`${p.name}: no excursion figure`);
   return { ...p, Xmax: lim, xmax: exact(lim, "published") };
 }
-
-/** The band in dB of travel-limited output: 20·log10(hi/lo); 0 when exact. */
-export const xmaxBandDb = (b: Pick<XmaxBand, "lo" | "hi">) => 20 * Math.log10(b.hi / b.lo);
 
 /** A curve at the low and high ends of an Xmax band; null when the band is exact (nothing to shade). */
 export function xmaxBandCurves<P>(
@@ -158,6 +158,14 @@ export function publishedText(p: PublishedExcursion): string {
   return parts.filter((s) => s != null).join(", ");
 }
 
+/** Why a value is an estimate, for its tooltip. */
+const estimateWhy = (formula: XmaxFormula, Hg: number | undefined) =>
+  formula === "overhang-or-x10"
+    ? "Eminence publishes the greater of the plain overhang and the 10 % distortion point, and the gap height but no coil height, so the value lies between its figure and the figure + Hg/4."
+    : Hg != null
+      ? "The maker publishes the gap height but no coil height and no method."
+      : "The maker publishes no coil or gap height and no method.";
+
 /**
  * Two stat rows, [name, value, note, tooltip]: the comparable Xmax the models use and the maker's own figure. Notes stay
  * short (stat-row notes don't wrap); the full list of published figures and the source go in the tooltips.
@@ -188,7 +196,7 @@ export function xmaxRows(
       "Xmax (comparable)",
       `${est ? "≈" : ""}${ts.Xmax.toFixed(1)} mm`,
       how,
-      `One scale for every driver: (Hvc − Hg)/2 + Hg/4, which B&C, Lavoce and Ciare publish and most makers' figures sit near. The models use this value.${est ? " The maker publishes no coil height and no method, so this is the middle of an estimated band; the max-SPL chart shades the band." : ""}`,
+      `One scale for every driver: (Hvc − Hg)/2 + Hg/4, which B&C, Lavoce and Ciare publish and most makers' figures sit near. The models use this value.${est ? ` ${estimateWhy(pub.formula, Hg)} The value is the middle of the band; the max-SPL chart shades it.` : ""}`,
     ],
     [
       "Xmax (maker)",

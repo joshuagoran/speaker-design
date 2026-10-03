@@ -46,11 +46,6 @@ export function FillsPage({ fills }: Props) {
     portMax: maxPortAirSpeedMs,
   };
   const fill = fillSystem(driver, fillConfig);
-  // the limit curve at the ends of an estimated Xmax, shaded on the chart
-  const maxBand = xmaxBandCurves(
-    thieleSmall.xmax,
-    (Xmax) => fillSystem({ ...driver, ts: { ...thieleSmall, Xmax } }, fillConfig)?.max ?? [],
-  );
   if (!fill)
     return (
       <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 text-sm">
@@ -72,6 +67,11 @@ export function FillsPage({ fills }: Props) {
     portLimited,
   } = fill;
   const maxCurveNearest = (f: number) => nearestPoint(maxCurve, f);
+  // the limit curve at the ends of an estimated Xmax, shaded on the chart (the box models whenever `fill` did)
+  const maxBand = xmaxBandCurves(
+    thieleSmall.xmax,
+    (Xmax) => fillSystem({ ...driver, ts: { ...thieleSmall, Xmax } }, fillConfig)?.max ?? [],
+  );
   const driverDisplacement =
     thieleSmall.disp != null ? thieleSmall.disp : driver.size >= 10 ? 1.5 : 1;
   const hfSpec = driver.hf;

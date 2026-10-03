@@ -119,8 +119,14 @@ test("xmax: derived, converted and estimated bands", (t) => {
     9.25 - 10.5 / 12,
     1e-9,
   );
-  // Hg/3 without the gap height can't be converted: estimated
-  assert.equal(xmaxBandOf({ pub: { Xmax: 9.25, formula: "hg/3" } }, name).basis, "estimated");
+  // Hg/3 without the gap height can't be converted: a table error
+  assert.throws(() => xmaxBandOf({ pub: { Xmax: 9.25, formula: "hg/3" } }, name));
+  // Eminence: between its figure and the figure + Hg/4
+  assert.deepEqual(xmaxBandOf({ pub: { Xmax: 5, formula: "overhang-or-x10" }, Hg: 8 }, name), {
+    basis: "estimated",
+    lo: 5,
+    hi: 7,
+  });
   const pro = xmaxBandOf({ pub: { Xmax: 10, formula: "unstated" } }, name),
     hifi = xmaxBandOf({ pub: { Xmax: 10, formula: "unstated" } }, "Dayton Audio X");
   assert.deepEqual(

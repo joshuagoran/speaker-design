@@ -50,6 +50,7 @@ import type {
 import { keysOf } from "../records";
 import { byId } from "../tables";
 import { selectCards } from "../optimizer/selectCards";
+import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };
@@ -136,28 +137,13 @@ const obj: Record<HifiGoal, (x: HifiMetrics) => number> = {
 };
 // what each goal keeps from your design (as the PA optimizer: same output, F3 within a couple of Hz): the level it has
 // to reach and the F3 it can't pass
-const keeps = (cur: HifiMetrics): Record<HifiGoal, Pick<HifiMetrics, "level" | "f3">> => ({
-  cheaper: { level: cur.level - 0.5, f3: cur.f3 + 2 },
-  lighter: { level: cur.level - 0.5, f3: cur.f3 + 2 },
-  lower: { level: cur.level - 1.5, f3: Infinity },
-  louder: { level: -Infinity, f3: cur.f3 + 3 },
+const keeps = (cur: HifiMetrics): Record<HifiGoal, Keep> => ({
+  cheaper: { db: cur.level - 0.5, f3: cur.f3 + 2 },
+  lighter: { db: cur.level - 0.5, f3: cur.f3 + 2 },
+  lower: { db: cur.level - 1.5, f3: Infinity },
+  louder: { db: -Infinity, f3: cur.f3 + 3 },
 });
-// how far a design falls short of a goal's keep: dB of level, plus a dB for every 5 Hz of F3 (0 when it keeps it)
-const gapTo = (k: Pick<HifiMetrics, "level" | "f3">, x: HifiMetrics) =>
-  Math.max(0, k.level - x.level) + Math.max(0, x.f3 - k.f3) / 5;
-// the notice when the first card is only the closest: what the goals keep that nothing passing reaches
-const outOfReach = (K: ReturnType<typeof keeps>, goals: readonly HifiGoal[], m: HifiMetrics) => {
-  const needLevel = Math.max(...goals.map((g) => K[g].level)),
-    maxF3 = Math.min(...goals.map((g) => K[g].f3));
-  const missed = [
-    m.level < needLevel ? `${needLevel.toFixed(1)} dB at the seat` : null,
-    m.f3 > maxF3 ? `an in-room F3 of ${maxF3.toFixed(0)} Hz or lower` : null,
-  ].filter((x) => x != null);
-  const got = `${m.level.toFixed(1)} dB, F3 ${m.f3.toFixed(0)} Hz`;
-  return missed.length
-    ? `Out of reach within the checks: ${missed.join(" with ")}. The first card comes closest: ${got}.`
-    : `Nothing that passes the checks keeps your design's level and bass. The first card comes closest: ${got}.`;
-};
+const gapTo = (k: Keep, x: HifiMetrics) => keepGap(k, { db: x.level, f3: x.f3 });
 // warnings that rule a design out (the soft ones stay on the card)
 const HARD = new Set([
   "Below the tweeter's minimum crossover",
@@ -578,7 +564,11 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     curCurve: curR ? curveOf(curR.sys) : null,
     goalMissing:
       picked.fixMisses && K && done[0]
-        ? outOfReach(K, goals, done[0].m)
+        ? outOfReachNotice(
+            goals.map((g) => K[g]),
+            { db: done[0].m.level, f3: done[0].m.f3 },
+            { level: "at the seat", f3: "an in-room F3", both: "level and bass" },
+          )
         : picked.goalMissing
           ? `Nothing ${goals.map((g) => g).join(" and ")} than your design passes the checks.`
           : null,

@@ -4243,7 +4243,7 @@ export const HIFI_WOOFERS: readonly HifiWoofer[] = HIFI_WOOFERS_RAW.map((d) =>
 );
 
 // Passive radiators for the Hi-fi tab (per unit, US vendors, Oct 2026). Sd cm², Mms g (as shipped), Cms mm/N,
-// Xmax mm one-way (SB, Purifi and Seas publish only the mechanical limit: xmaxKind). No maker states a maximum
+// excursion in `pub` (SB, Purifi and Seas publish only the mechanical limit, Xlim). No maker states a maximum
 // added mass, so the planner allows up to 3 × Mms.
 const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {

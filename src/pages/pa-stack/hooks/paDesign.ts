@@ -13,6 +13,7 @@ import {
 } from "../../../lib/pa/calc";
 import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion";
 import type {
+  BandCurves,
   Dims3,
   DispersionPlane,
   FrequencyPoint,
@@ -73,7 +74,7 @@ export interface PaDerivedDesign {
         /** the sub through its lowpass at the crossover, for the system chart */
         throughLowpass: FrequencyPoint[];
         /** that curve at the ends of an estimated Xmax; null when the driver's Xmax is exact */
-        throughLowpassBand: { lo: FrequencyPoint[]; hi: FrequencyPoint[] } | null;
+        throughLowpassBand: BandCurves<FrequencyPoint> | null;
       })
     | null;
   midVoltage: number;
@@ -83,7 +84,7 @@ export interface PaDerivedDesign {
   /** the mid's model and limit curve; null when the driver has no T/S */
   midModelled: MidSystemModelled | null;
   /** the mid's limit curve at the ends of an estimated Xmax; null when its Xmax is exact or it has no model */
-  midMaxBand: { lo: PaMaxPoint[]; hi: PaMaxPoint[] } | null;
+  midMaxBand: BandCurves<PaMaxPoint> | null;
   midThermalVoltage: number;
   midUsedVoltage: number;
   midCabinetLb: number;
@@ -158,7 +159,8 @@ export function derivePaDesign({
     xoLo: subMidCrossoverHz, // the system chart draws the lowpass skirt
   });
   const { port, grossL: subGrossLiters, netL: subNetLiters, AMP_V: subAmpVoltage } = subSys;
-  const subModelled = subSys.mdl
+  const subMdl = subSys.mdl;
+  const subModelled = subMdl
     ? {
         mdl: subSys.mdl,
         lim: subSys.lim,
@@ -177,16 +179,14 @@ export function derivePaDesign({
           subMidCrossoverOrder,
         ),
         throughLowpassBand: xmaxBandCurves(subDriver.ts.xmax, (Xmax) =>
-          subSys.mdl
-            ? subThroughLowpass(
-                subSys.mdl,
-                { ...subDriver.ts, Xmax },
-                subAmpVoltage,
-                maxPortAirSpeedMs,
-                subMidCrossoverHz,
-                subMidCrossoverOrder,
-              )
-            : [],
+          subThroughLowpass(
+            subMdl,
+            { ...subDriver.ts, Xmax },
+            subAmpVoltage,
+            maxPortAirSpeedMs,
+            subMidCrossoverHz,
+            subMidCrossoverOrder,
+          ),
         ),
       }
     : null;

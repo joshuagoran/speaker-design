@@ -74,6 +74,7 @@ import { selectCards, type SelectedCard } from "../optimizer/selectCards";
 import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
 import { savedCrossoverOrder } from "../../constants/crossovers";
+import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -996,15 +997,13 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     louder: (x) => -x.out + 0.05 * x.ch + 0.5 * (x.w || 0),
   };
   // what each goal keeps from your design: the output it has to reach and the F3 it can't pass
-  const keep: Record<PaGoal, { out: number; f3: number }> = {
-    cheaper: { out: target - 0.5, f3: curF3 + 2 },
-    lighter: { out: target - 0.5, f3: curF3 + 2 },
-    lower: { out: target - 1.5, f3: Infinity },
-    louder: { out: -Infinity, f3: curF3 + 3 },
+  const keep: Record<PaGoal, Keep> = {
+    cheaper: { db: target - 0.5, f3: curF3 + 2 },
+    lighter: { db: target - 0.5, f3: curF3 + 2 },
+    lower: { db: target - 1.5, f3: Infinity },
+    louder: { db: -Infinity, f3: curF3 + 3 },
   };
-  // how far a design falls short of that: dB of output, plus a dB for every 5 Hz of F3 (0 when it keeps it)
-  const goalGap = (g: PaGoal, x: Score) =>
-    Math.max(0, keep[g].out - x.out) + Math.max(0, x.f3 - keep[g].f3) / 5;
+  const goalGap = (g: PaGoal, x: Score) => keepGap(keep[g], { db: x.out, f3: x.f3 });
   const goalOk = (g: PaGoal, x: Score) => goalGap(g, x) === 0;
   // an alternative has to beat the first card on its own axis by a margin that matters
   const beats: Record<PaGoal, (x: Score, y: Score) => boolean> = {
@@ -1015,13 +1014,24 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   };
   const finalists = new Map<string, Combo>();
   const inLimits = (x: Score) => x.price <= budget + 1e-9 && x.heaviest <= input.maxLb + 1e-9;
+  // the near miss's retries: 10 % more budget or weight
+  const inLooser = (x: Score) =>
+    x.price <= budget + Math.ceil(input.budget * 0.1) + 1e-9 &&
+    x.heaviest <= Math.ceil(input.maxLb * 1.1) + 1e-9;
   const add = (list: Combo[], n: number) =>
     list.slice(0, n).forEach((x) => finalists.set(JSON.stringify(x.c), x));
   for (const g of keysOf(obj)) {
     const ranked = combos.filter((x) => goalOk(g, x)).sort((a, b) => obj[g](a) - obj[g](b));
     add(ranked.filter(inLimits), 14); // candidates for the cards
     add(ranked, 4); // and a few just outside the limits, for the near-miss message
+    add(ranked.filter(inLooser), 6); // and inside the loosened limits the near miss offers
   }
+  // the designs inside the limits that come closest to every goal, for the closest card when none keeps them
+  const gapSum = (x: Score) => goals.reduce((sum, g) => sum + goalGap(g, x), 0);
+  add(
+    combos.filter(inLimits).sort((a, b) => gapSum(a) - gapSum(b)),
+    8,
+  );
   if (also.length && curM) {
     const cm = { price: curM.price, heaviest: curM.heaviest, out: curM.out, f3: curM.f3 };
     const ranked = combos
@@ -1212,19 +1222,14 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     louder: "Nothing louder than your design passes the checks.",
   };
   // the notice when the first card is only the closest: what the goals keep that nothing passing reaches
-  const outOfReach = (m: Pick<Score, "out" | "f3">) => {
-    const needOut = Math.max(...goals.map((g) => keep[g].out)),
-      maxF3 = Math.min(...goals.map((g) => keep[g].f3));
-    const missed = [
-      m.out < needOut ? `${needOut.toFixed(1)} dB of output` : null,
-      m.f3 > maxF3 ? `an F3 of ${maxF3.toFixed(0)} Hz or lower` : null,
-    ].filter((x) => x != null);
-    const got = `${m.out.toFixed(1)} dB, F3 ${m.f3.toFixed(0)} Hz`;
-    return missed.length
-      ? `Out of reach within the checks: ${missed.join(" with ")}. The first card comes closest: ${got}.`
-      : `Nothing that passes the checks keeps your design's output and bass. The first card comes closest: ${got}.`;
-  };
-  if (!cards) {
+  const outOfReach = (m: Pick<Score, "out" | "f3">) =>
+    outOfReachNotice(
+      goals.map((g) => keep[g]),
+      { db: m.out, f3: m.f3 },
+      { level: "of output", f3: "an F3", both: "output and bass" },
+    );
+  // no card, or only the closest: what loosening a limit would buy
+  if (!cards || (chosen && chosen.fixMisses)) {
     const tries = [
       {
         text: `Allow ${Math.ceil(input.maxLb * 1.1)} lb`,

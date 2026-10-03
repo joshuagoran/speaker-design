@@ -1,4 +1,4 @@
-import type { FrequencyPoint } from "../../types";
+import type { BandCurves, FrequencyPoint } from "../../types";
 import { PAL } from "../../styles/palette";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { useState } from "react";
@@ -12,7 +12,7 @@ interface Series {
   label: string;
   stroke: string;
   tint: string;
-  band?: { lo: readonly FrequencyPoint[]; hi: readonly FrequencyPoint[] } | null;
+  band?: BandCurves<FrequencyPoint> | null;
 }
 
 /** A labelled vertical line at a frequency. */
@@ -74,13 +74,16 @@ export function ResponseChart({
     const d = pts
       .map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1))
       .join("");
-    // the band: along the high curve, back along the low one
+    // the band: along the high curve, back along the low one (none unless both have points on the chart)
     const inRange = (c: readonly FrequencyPoint[]) => c.filter((o) => o.f >= fmin && o.f <= fmax);
-    const band = sr.band
-      ? [...inRange(sr.band.hi), ...inRange(sr.band.lo).reverse()]
-          .map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1))
-          .join("") + "Z"
-      : "";
+    const bandHi = sr.band ? inRange(sr.band.hi) : [],
+      bandLo = sr.band ? inRange(sr.band.lo) : [];
+    const band =
+      bandHi.length && bandLo.length
+        ? [...bandHi, ...bandLo.reverse()]
+            .map((p, i) => (i ? "L" : "M") + px(p.f).toFixed(1) + "," + py(p.spl).toFixed(1))
+            .join("") + "Z"
+        : "";
     return {
       ...sr,
       d,

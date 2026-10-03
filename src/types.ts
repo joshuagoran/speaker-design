@@ -91,6 +91,12 @@ export interface ThieleSmall {
   disp: number | null;
 }
 
+/** A curve at the low and high ends of an estimated Xmax band (see `lib/xmax`). */
+export interface BandCurves<P> {
+  lo: P[];
+  hi: P[];
+}
+
 /** A Thiele-Small block as a driver table holds it: the maker's figures, before `lib/xmax` adds the comparable Xmax. */
 export type RawTS<T extends ThieleSmall> = Omit<T, "Xmax" | "xmax">;
 /** A driver as its table holds it. */
@@ -511,7 +517,7 @@ export interface HifiSystemBase {
   woofer: WooferPoint[];
   wMax: WooferMaxPoint[];
   /** `wMax` at the low and high ends of the woofer's and radiator's estimated Xmax; null when both are exact */
-  wMaxBand: { lo: WooferMaxPoint[]; hi: WooferMaxPoint[] } | null;
+  wMaxBand: BandCurves<WooferMaxPoint> | null;
   sMusic: number;
   whoW: WooferLimit;
   trim: number;

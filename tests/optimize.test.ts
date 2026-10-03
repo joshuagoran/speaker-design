@@ -512,7 +512,7 @@ test("a locked sub, mid, driver or horn that isn't in the tables leaves nothing 
   }
 });
 
-test("a failing design with nothing in reach: the closest design that passes, and a notice naming what's out of reach", (t) => {
+test("a failing design with nothing in reach: the closest design that passes, and a notice naming what's out of reach", () => {
   // over a $700 budget nothing that passes keeps the design's output
   const out = optimizePaStack({ ...base, budget: 700, goal: "cheaper" });
   assert.ok(out.curProblems.length > 0, "the current design fails a check");
@@ -527,4 +527,13 @@ test("a failing design with nothing in reach: the closest design that passes, an
   const note = out.goalMissing ?? "";
   assert.match(note, /^Out of reach within the checks: .*dB of output/);
   assert.ok(note.includes(`${k.metrics.out.toFixed(1)} dB`), note);
+});
+
+test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
+  // over an $800 budget nothing that passes keeps the output; $880 does
+  const out = optimizePaStack({ ...base, budget: 800, goal: "cheaper" });
+  assert.match(out.goalMissing ?? "", /^Out of reach/);
+  assert.ok(out.cards.length > 0);
+  const opts = out.nearMiss ? out.nearMiss.options.map((o) => o.text) : [];
+  assert.ok(opts.includes("Budget +$80"), JSON.stringify(opts));
 });
