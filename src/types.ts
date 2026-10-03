@@ -869,6 +869,7 @@ export interface PaDesignConfig {
   grain?: GrainSettings;
   waterfall?: boolean;
   offcut?: OffcutShape;
+  cuts?: CutStyle;
   summary?: string;
 }
 
@@ -1162,6 +1163,8 @@ export type GrainPanel = "Side" | "Top / bottom" | "Baffle" | "Back";
 export type GrainSettings = Record<GrainPanel, GrainDir>;
 /** Grain presets: wrap (sides vertical, top/bottom across, baffle and back vertical), horizontal, or none (MDF). */
 export type GrainPreset = "wrap" | "horizontal" | "none";
+/** How sheets are cut: whatever gives the fewest sheets, or full-length rips before any crosscut (table saw). */
+export type CutStyle = "sheets" | "rips";
 /** Which offcut the least-full sheet keeps: a full-length strip or a full-width panel. */
 export type OffcutShape = "strip" | "panel";
 
@@ -1206,6 +1209,7 @@ export interface CutlistSettings {
   waterfall: boolean;
   joint: CornerJoint;
   offcut: OffcutShape;
+  cuts: CutStyle;
 }
 
 /** What a packed rectangle needs: its size and, optionally, which dimension must run along the sheet's length. */
@@ -1247,10 +1251,20 @@ export interface Offcut {
   h: number;
 }
 
-/** One ply thickness laid out: its sheets, parts that don't fit and the offcut kept. */
+/** The big cuts on sheets: full-length rips, full-width crosscuts, and the widest piece crosscut (inches). */
+export interface CutStats {
+  rips: number;
+  crosscuts: number;
+  widestCrosscut: number;
+}
+
+/** One ply thickness laid out: its sheets, parts that don't fit, the offcut kept and the cuts. */
 export interface CutlistGroup extends PackedSheets {
   t: number;
   offcut: Offcut | null;
+  cuts: CutStats;
+  /** with rip-first cutting, the sheets the layout would need without it; null otherwise */
+  fewestSheets: number | null;
 }
 
 /** What the cutlist worker takes: one stack's parts and the settings. */

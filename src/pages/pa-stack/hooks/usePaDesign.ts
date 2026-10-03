@@ -147,6 +147,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setWaterfall,
     offcutShape,
     setOffcutShape,
+    cutStyle,
+    setCutStyle,
   } = useCutlistOptions();
   const subDriverChoices = subDriversOfSize(format.sub);
   const midDriverChoices = midDriversOfSize(midSize);
@@ -267,6 +269,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     grain,
     waterfall,
     offcut: offcutShape,
+    cuts: cutStyle,
     summary: `${subDriver.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${subModelled ? subModelled.mdl.Fb.toFixed(1) + " Hz" : "—"}`,
   });
   const restore = (c: Partial<PaDesignConfig>) => {
@@ -312,6 +315,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     // older designs: waterfall strips come on with mitre joints
     setWaterfall(typeof c.waterfall === "boolean" ? c.waterfall : c.joint === "miter");
     setOffcutShape(c.offcut === "panel" ? "panel" : DEFAULT_PA.offcut);
+    setCutStyle(c.cuts === "rips" ? "rips" : DEFAULT_PA.cuts);
     if (c.portStyle) setPortStyle(c.portStyle);
   };
   return {
@@ -395,6 +399,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setWaterfall,
     offcutShape,
     setOffcutShape,
+    cutStyle,
+    setCutStyle,
     ...derived,
     midWithBox,
     subDriverChoices,

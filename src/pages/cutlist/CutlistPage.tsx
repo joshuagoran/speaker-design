@@ -49,6 +49,8 @@ interface Props {
     | "setWaterfall"
     | "offcutShape"
     | "setOffcutShape"
+    | "cutStyle"
+    | "setCutStyle"
     | "portStyle"
     | "subVentSpec"
     | "layout"
@@ -100,6 +102,8 @@ const GRAIN_ROWS: [GrainPanel, string, [GrainDir, string][]][] = [
   ],
 ];
 
+const plural = (n: number, what: string) => `${n} ${what}${n === 1 ? "" : "s"}`;
+
 /** A part's size: along the grain first when it is locked, otherwise short side first. */
 const sizeOf = (p: CutPart) => {
   const [first, second] =
@@ -136,6 +140,8 @@ export function CutlistPage({ planner }: Props) {
     setWaterfall,
     offcutShape,
     setOffcutShape,
+    cutStyle,
+    setCutStyle,
     portStyle,
     subVentSpec,
     layout,
@@ -161,6 +167,7 @@ export function CutlistPage({ planner }: Props) {
     waterfall,
     joint: cornerJoint,
     offcut: offcutShape,
+    cuts: cutStyle,
   };
   // the inputs as one string: the layout is redone only when it changes
   const key = JSON.stringify({ parts, settings });
@@ -297,6 +304,17 @@ export function CutlistPage({ planner }: Props) {
             ["panel", "Wide panel"],
           ] as const,
         )}
+        {toggles(
+          <Tooltip tip="Rip first: every sheet is ripped into full-length strips before any crosscut, so you never crosscut a whole sheet on the table saw. It can cost a sheet; the layout says how many.">
+            Cut style
+          </Tooltip>,
+          cutStyle,
+          setCutStyle,
+          [
+            ["sheets", "Fewest sheets"],
+            ["rips", "Rip first"],
+          ] as const,
+        )}
       </div>
       <p className="text-sm text-stone-500 mb-4 max-w-3xl">
         From the planner's current boxes: {formatThickness(wallThicknessIn)} walls, 3/4″ baffles set{" "}
@@ -368,6 +386,16 @@ export function CutlistPage({ planner }: Props) {
                   · keeps a {formatInches(g.offcut.w)} × {formatInches(g.offcut.h)}″ offcut
                 </span>
               )}
+            </div>
+            <div className="text-sm text-stone-500 mb-2">
+              {plural(g.cuts.rips, "full-length rip")},{" "}
+              {plural(g.cuts.crosscuts, "full-width crosscut")}
+              {g.cuts.widestCrosscut > 0 &&
+                `; widest crosscut ${formatInches(g.cuts.widestCrosscut)}″`}
+              {g.fewestSheets !== null &&
+                g.fewestSheets < g.sheets.length &&
+                `. Rip first costs ${plural(g.sheets.length - g.fewestSheets, "sheet")} more than the fewest-sheets layout`}
+              .
             </div>
             {g.tooBig.length > 0 && (
               <div className="text-sm text-red-700 mb-2">

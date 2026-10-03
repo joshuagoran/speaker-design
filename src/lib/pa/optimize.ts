@@ -529,6 +529,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     waterfall: cur.waterfall ?? cur.joint === "miter",
     joint: cur.joint || DEFAULT_PA.joint,
     offcut: DEFAULT_PA.offcut,
+    cuts: cur.cuts === "rips" ? "rips" : DEFAULT_PA.cuts,
   };
   const locks: ResolvedLocks = { subDim: {}, midDim: {}, ...input.locks };
   const budget = input.budget; // drivers per stack
@@ -1339,6 +1340,7 @@ function card(
     runs: SEARCH_RUNS,
     capMs: SEARCH_CAP_MS,
     offcut: false,
+    fewest: false,
   }).groups.map((g) => ({
     t: g.t,
     n: g.sheets.length,

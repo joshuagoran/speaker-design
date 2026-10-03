@@ -3,6 +3,7 @@
 import type {
   CutPart,
   CutPartName,
+  CutStats,
   CutlistGroup,
   CutlistLayout,
   CutlistSettings,
@@ -105,6 +106,8 @@ export interface PackOptions {
   /** a safety stop on slow machines, ms; within it the result depends only on the input */
   capMs?: number;
   seed?: number;
+  /** rip each sheet into full-length strips before any crosscut (table saw friendly) */
+  ripFirst?: boolean;
 }
 /** Every sorted order with every fit and split rule, first-fit and best-fit sheet choice. */
 export const DETERMINISTIC_RUNS = 6 * FITS.length * SPLITS.length * 2;
@@ -165,6 +168,7 @@ function runOnce<R extends PackRect>(
   split: SplitRule,
   bestSheet: boolean,
   minDim: number,
+  ripFirst: boolean,
 ): Run<R> {
   const sheets: Run<R>["sheets"] = [];
   const newSheet = () => {
@@ -216,18 +220,21 @@ function runOnce<R extends PackRect>(
       hk = h + kerf,
       rw = fr.w - wk,
       rh = fr.h - hk;
+    // rip first: a free area still the sheet's full length is only ever split by a rip
     const horizontal =
-      split === "shortLeft"
-        ? rw <= rh
-        : split === "longLeft"
-          ? rw > rh
-          : split === "minArea"
-            ? wk * rh > rw * hk
-            : split === "maxArea"
-              ? wk * rh <= rw * hk
-              : split === "shortAxis"
-                ? fr.w <= fr.h
-                : fr.w > fr.h;
+      ripFirst && fr.h >= Hk - EPS
+        ? false
+        : split === "shortLeft"
+          ? rw <= rh
+          : split === "longLeft"
+            ? rw > rh
+            : split === "minArea"
+              ? wk * rh > rw * hk
+              : split === "maxArea"
+                ? wk * rh <= rw * hk
+                : split === "shortAxis"
+                  ? fr.w <= fr.h
+                  : fr.w > fr.h;
     // horizontal: the cut below the part runs the whole free width; vertical: the cut beside it runs the whole height
     const below = { x: fr.x, y: fr.y + hk, w: horizontal ? fr.w : wk, h: rh };
     const beside = { x: fr.x + wk, y: fr.y, w: rw, h: horizontal ? hk : fr.h };
@@ -237,10 +244,11 @@ function runOnce<R extends PackRect>(
   return { sheets };
 }
 
-/** Fewer sheets first, then the emptiest sheet as empty as it can be (a bigger offcut). */
-const runScore = (r: Run<PackRect>) => [r.sheets.length, Math.min(...r.sheets.map((s) => s.area))];
-const better = (p: number[], q: number[] | null) =>
-  !q || p[0] < q[0] || (p[0] === q[0] && p[1] < q[1] - EPS);
+/** Compares scores in order: negative when `p` is better. */
+const compare = (p: number[], q: number[]) => {
+  for (let i = 0; i < p.length; i++) if (Math.abs(p[i] - q[i]) > EPS) return p[i] - q[i];
+  return 0;
+};
 
 /**
  * Packs parts onto sheets with straight through-cuts only (guillotine), `kerf` between parts and `trim` off each edge.
@@ -251,7 +259,13 @@ export function packSheets<R extends PackRect>(
   rects: R[],
   sheet: { w: number; h: number },
   kerf: number,
-  { trim = 0, runs: maxRuns = DETERMINISTIC_RUNS, capMs = Infinity, seed = 1 }: PackOptions = {},
+  {
+    trim = 0,
+    runs: maxRuns = DETERMINISTIC_RUNS,
+    capMs = Infinity,
+    seed = 1,
+    ripFirst = false,
+  }: PackOptions = {},
 ): PackedSheets<R> {
   const W = sheet.w - 2 * trim,
     H = sheet.h - 2 * trim,
@@ -277,9 +291,15 @@ export function packSheets<R extends PackRect>(
     bestScore: number[] | null = null,
     bestRules: [Item<R>[], FitRule, SplitRule, boolean] | null = null;
   const tryRun = (order: Item<R>[], fit: FitRule, split: SplitRule, bestSheet: boolean) => {
-    const r = runOnce(order, Wk, Hk, kerf, trim, fit, split, bestSheet, minDim);
-    const s = runScore(r);
-    if (better(s, bestScore) || (bestScore && s[0] === bestScore[0] && s[1] <= bestScore[1])) {
+    const r = runOnce(order, Wk, Hk, kerf, trim, fit, split, bestSheet, minDim, ripFirst);
+    if (bestScore && r.sheets.length > bestScore[0]) return;
+    // fewer sheets, then fewer full-width crosscuts, then the emptiest sheet as empty as it can be (a bigger offcut)
+    const s = [
+      r.sheets.length,
+      r.sheets.reduce((a, sh) => a + fullWidthCrosscuts(sh.items, sheet, kerf, trim), 0),
+      Math.min(...r.sheets.map((sh) => sh.area)),
+    ];
+    if (!bestScore || compare(s, bestScore) <= 0) {
       // equal scores move the search along too, so it can cross plateaus
       best = r;
       bestScore = s;
@@ -329,6 +349,86 @@ export function packSheets<R extends PackRect>(
   return { sheets: won ? won.sheets.map((s) => ({ items: s.items })) : [], tooBig };
 }
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+
+// ---------------------------------------------------------------
+// Cut counts
+// ---------------------------------------------------------------
+interface Span {
+  from: number;
+  to: number;
+  items: Rect[];
+}
+type Rect = Pick<PlacedPart<PackRect>, "x" | "y" | "w" | "h">;
+
+/** The parts' spans along one axis inside [lo, hi], merged where less than a kerf apart, and the cuts that separate them. */
+function spans(items: Rect[], axis: "x" | "y", lo: number, hi: number, kerf: number) {
+  const size = axis === "x" ? "w" : "h";
+  const bands: Span[] = [];
+  for (const it of items.slice().sort((p, q) => p[axis] - q[axis])) {
+    const last = bands[bands.length - 1],
+      from = it[axis],
+      to = it[axis] + it[size];
+    if (last && from < last.to + kerf - EPS) {
+      last.to = Math.max(last.to, to);
+      last.items.push(it);
+    } else bands.push({ from, to, items: [it] });
+  }
+  // one cut between touching bands, two around a gap, one at each end that stops short of the edge
+  let cuts = 0;
+  bands.forEach((b, i) => {
+    if (i === 0 ? b.from > lo + EPS : b.from - bands[i - 1].to > kerf + EPS) cuts++;
+    if (i > 0) cuts++;
+  });
+  const end = bands[bands.length - 1];
+  if (end && end.to < hi - EPS) cuts++;
+  return { bands, cuts };
+}
+
+/**
+ * `cutStats(...).crosscuts`, quicker: a full-width crosscut can only come before any rip, so only the top level counts.
+ */
+function fullWidthCrosscuts(
+  items: Rect[],
+  S: { w: number; h: number },
+  kerf: number,
+  trim: number,
+) {
+  if (spans(items, "x", trim, S.w - trim, kerf).cuts) return 0;
+  return spans(items, "y", trim, S.h - trim, kerf).cuts;
+}
+
+/**
+ * How a sheet is cut, reading the layout as a table saw would take it (rips first wherever it can): `rips` run the
+ * sheet's full length, `crosscuts` its full width, and `widestCrosscut` is the widest piece any crosscut goes through.
+ */
+export function cutStats(
+  items: Rect[],
+  S: { w: number; h: number },
+  kerf: number,
+  trim: number,
+): CutStats {
+  const out: CutStats = { rips: 0, crosscuts: 0, widestCrosscut: 0 };
+  const W0 = trim,
+    W1 = S.w - trim,
+    H0 = trim,
+    H1 = S.h - trim;
+  const walk = (its: Rect[], x0: number, x1: number, y0: number, y1: number) => {
+    if (!its.length) return;
+    const v = spans(its, "x", x0, x1, kerf);
+    if (v.cuts) {
+      if (y0 <= H0 + EPS && y1 >= H1 - EPS) out.rips += v.cuts;
+      for (const b of v.bands) walk(b.items, b.from, b.to, y0, y1);
+      return;
+    }
+    const h = spans(its, "y", y0, y1, kerf);
+    if (!h.cuts) return; // one part filling its piece
+    if (x0 <= W0 + EPS && x1 >= W1 - EPS) out.crosscuts += h.cuts;
+    out.widestCrosscut = Math.max(out.widestCrosscut, x1 - x0);
+    for (const b of h.bands) walk(b.items, x0, x1, b.from, b.to);
+  };
+  walk(items, W0, W1, H0, H1);
+  return out;
+}
 
 // ---------------------------------------------------------------
 // Offcut
@@ -386,6 +486,7 @@ function repackForOffcut<R extends PackRect>(
   kerf: number,
   trim: number,
   shape: OffcutShape,
+  ripFirst: boolean,
 ): { sheet: PackedSheet<R>; offcut: Offcut | null } {
   const size = (o: Offcut | null) => (o ? (shape === "strip" ? o.w : o.h) : 0);
   let bestSheet = sheet,
@@ -396,6 +497,7 @@ function repackForOffcut<R extends PackRect>(
   const fitsIn = (len: number) => {
     const p = packSheets(parts, shape === "strip" ? { w: len, h: S.h } : { w: S.w, h: len }, kerf, {
       trim,
+      ripFirst,
     });
     return p.sheets.length === 1 && !p.tooBig.length ? p.sheets[0] : null;
   };
@@ -476,13 +578,15 @@ export const withGrain = (parts: CutPart[], grain: GrainSettings): CutPart[] =>
 export interface LayoutOptions extends Pick<PackOptions, "runs" | "capMs"> {
   /** repack the least-full sheet for the offcut shape */
   offcut?: boolean;
+  /** with rip-first cutting, also count the sheets without it */
+  fewest?: boolean;
 }
 
 /** The cutlist for one stack's parts laid out with the settings: waterfall strips, grain, offcut parts set aside, sheets packed. */
 export function layoutCutlist(
   perStack: CutPart[],
   s: CutlistSettings,
-  { runs, capMs, offcut = true }: LayoutOptions = {},
+  { runs, capMs, offcut = true, fewest = true }: LayoutOptions = {},
 ): CutlistLayout {
   const S = PLYWOOD_SHEETS[s.sheet],
     usable = { w: S.w - 2 * s.trim, h: S.h - 2 * s.trim };
@@ -499,7 +603,8 @@ export function layoutCutlist(
   const groups: CutlistGroup[] = [...byT]
     .sort(([a], [b]) => b - a)
     .map(([t, list]) => {
-      const packed = packSheets(list, S, s.kerf, { trim: s.trim, runs, capMs });
+      const ripFirst = s.cuts === "rips";
+      const packed = packSheets(list, S, s.kerf, { trim: s.trim, runs, capMs, ripFirst });
       let sheets = packed.sheets,
         off: Offcut | null = null;
       if (offcut && sheets.length) {
@@ -508,12 +613,24 @@ export function layoutCutlist(
         const k = fill.indexOf(Math.min(...fill));
         sheets = [...sheets.slice(0, k), ...sheets.slice(k + 1), sheets[k]];
         const last = sheets.length - 1;
-        const r = repackForOffcut(sheets[last], last, S, s.kerf, s.trim, s.offcut);
+        const r = repackForOffcut(sheets[last], last, S, s.kerf, s.trim, s.offcut, ripFirst);
         sheets[last] = r.sheet;
         // a sliver isn't worth keeping
         off = r.offcut && Math.min(r.offcut.w, r.offcut.h) >= MIN_OFFCUT_IN ? r.offcut : null;
       }
-      return { t, sheets, tooBig: packed.tooBig, offcut: off };
+      const cuts = sheets
+        .map((sh) => cutStats(sh.items, S, s.kerf, s.trim))
+        .reduce((a, c) => ({
+          rips: a.rips + c.rips,
+          crosscuts: a.crosscuts + c.crosscuts,
+          widestCrosscut: Math.max(a.widestCrosscut, c.widestCrosscut),
+        }));
+      // what rip-first costs: the sheet count without it
+      const fewestSheets =
+        ripFirst && fewest
+          ? packSheets(list, S, s.kerf, { trim: s.trim, runs, capMs }).sheets.length
+          : null;
+      return { t, sheets, tooBig: packed.tooBig, offcut: off, cuts, fewestSheets };
     });
   return { parts, fromOffcut, groups, notes: wf.notes };
 }

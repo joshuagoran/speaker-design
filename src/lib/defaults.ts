@@ -91,6 +91,7 @@ export const DEFAULT_PA = {
   grain: GRAIN_PRESETS.wrap,
   waterfall: false,
   offcut: "strip",
+  cuts: "sheets",
   midSize: 12,
   plywoodSheetKind: "4x8",
   boxSetCount: 2,

@@ -1,6 +1,7 @@
 import { DEFAULT_PA } from "../../../lib/defaults";
 import type {
   CornerJoint,
+  CutStyle,
   GrainSettings,
   OffcutShape,
   PlywoodSheetKind,
@@ -25,9 +26,11 @@ export interface CutlistOptions {
   setWaterfall: Setter<boolean>;
   offcutShape: OffcutShape;
   setOffcutShape: Setter<OffcutShape>;
+  cutStyle: CutStyle;
+  setCutStyle: Setter<CutStyle>;
 }
 
-/** Cutlist choices: corner joint, plywood sheet size, how many sets of boxes to cut, kerf, edge trim, grain, waterfall and offcut. */
+/** Cutlist choices: corner joint, plywood sheet size, how many sets of boxes to cut, kerf, edge trim, grain, waterfall, offcut and cut style. */
 export function useCutlistOptions(): CutlistOptions {
   const [cornerJoint, setCornerJoint] = useState<CornerJoint>(DEFAULT_PA.joint); // cutlist corner joints
   const [plywoodSheetKind, setPlywoodSheetKind] = useState<PlywoodSheetKind>(
@@ -39,6 +42,7 @@ export function useCutlistOptions(): CutlistOptions {
   const [grain, setGrain] = useState<GrainSettings>(DEFAULT_PA.grain);
   const [waterfall, setWaterfall] = useState<boolean>(DEFAULT_PA.waterfall);
   const [offcutShape, setOffcutShape] = useState<OffcutShape>(DEFAULT_PA.offcut);
+  const [cutStyle, setCutStyle] = useState<CutStyle>(DEFAULT_PA.cuts);
   return {
     cornerJoint,
     setCornerJoint,
@@ -56,5 +60,7 @@ export function useCutlistOptions(): CutlistOptions {
     setWaterfall,
     offcutShape,
     setOffcutShape,
+    cutStyle,
+    setCutStyle,
   };
 }

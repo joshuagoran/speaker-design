@@ -3,6 +3,7 @@ import assert from "node:assert";
 import { PLYWOOD_SHEETS, cutParts } from "../src/lib/pa/calc";
 import {
   FROM_OFFCUT,
+  cutStats,
   GRAIN_PRESETS,
   SEARCH_RUNS,
   layoutCutlist,
@@ -41,6 +42,7 @@ const settings = (o: Partial<CutlistSettings> = {}): CutlistSettings => ({
   waterfall: false,
   joint: "butt",
   offcut: "strip",
+  cuts: "sheets",
   ...o,
 });
 
@@ -254,4 +256,42 @@ describe("waterfall", () => {
     assert.equal(strips.length, 2 * 2, "sub and mid, two stacks");
     for (const it of strips) close(null, it.h, it.b, EPS);
   });
+});
+
+describe("cut style", () => {
+  test("cutStats: rips run the full length, crosscuts the full width", () => {
+    const S = { w: 48, h: 96 },
+      k = 0.125;
+    // two full-length strips, the second crosscut in two
+    const strips = [
+      { x: 0, y: 0, w: 20, h: 96 },
+      { x: 20.125, y: 0, w: 10, h: 40 },
+      { x: 20.125, y: 40.125, w: 10, h: 55.875 },
+    ];
+    assert.deepEqual(cutStats(strips, S, k, 0), { rips: 2, crosscuts: 0, widestCrosscut: 10 });
+    // a full-width crosscut first, then rips in each piece
+    const panels = [
+      { x: 0, y: 0, w: 30, h: 40 },
+      { x: 0, y: 40.125, w: 48, h: 20 },
+    ];
+    assert.deepEqual(cutStats(panels, S, k, 0), { rips: 0, crosscuts: 2, widestCrosscut: 48 });
+  });
+
+  for (const sheet of ["4x8", "5x5"] as const)
+    test(`${sheet} rip first: no full-width crosscut, still guillotine, and its cost is reported`, () => {
+      for (const stacks of [1, 2, 4]) {
+        const s = settings({ sheet, stacks, cuts: "rips" });
+        const L = layoutCutlist(parts(), s, { runs: SEARCH_RUNS });
+        const free = layoutCutlist(parts(), settings({ sheet, stacks }), {
+          runs: SEARCH_RUNS,
+          offcut: false,
+        });
+        for (const [i, g] of L.groups.entries()) {
+          assert.equal(g.cuts.crosscuts, 0);
+          for (const sh of g.sheets) checkSheet(sh, PLYWOOD_SHEETS[sheet], s.kerf, s.trim);
+          assert.equal(g.fewestSheets, free.groups[i].sheets.length);
+          assert.ok(g.sheets.length >= free.groups[i].sheets.length);
+        }
+      }
+    });
 });
