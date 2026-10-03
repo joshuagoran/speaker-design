@@ -58,6 +58,8 @@ function derivedHeights(p: Props) {
     hornAmpWatts: DEFAULT_PA.hfAmpW,
     subMidCrossoverHz: DEFAULT_PA.xoLo,
     midHornCrossoverHz: DEFAULT_PA.xoHi,
+    subMidCrossoverOrder: DEFAULT_PA.xoLoOrder,
+    midHornCrossoverOrder: DEFAULT_PA.xoHiOrder,
     plinthHeightIn: p.plinth,
     layout: p.layout,
     wallThicknessIn: p.wall ?? 0.75,

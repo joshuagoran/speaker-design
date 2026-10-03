@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { boxModel, closedBox } from "../src/lib/pa/calc";
 import { SUB_OPTIONS } from "../src/lib/data";
 import type { BoxModelTS } from "../src/types";
-import { tsModel, massLineSPL, helmholtz, near, close, rel } from "./helpers";
+import { tsModel, massLineSPL, helmholtz, near, close, rel, LR24_ORDERS } from "./helpers";
 
 const fh500 = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
 
@@ -30,7 +30,7 @@ test("boxModel: midband level is the mass-controlled line (reference efficiency)
 });
 test("boxModel: a tiny port converges to the sealed box", (t) => {
   const v = boxModel(fh500, 150, 0.05, 12, 1, 2.83)!,
-    s = closedBox(fh500, 150, null, null, 2.83)!;
+    s = closedBox(fh500, 150, null, null, 2.83, LR24_ORDERS)!;
   for (const f of [40, 60, 100, 200]) {
     close(t, near(v.curve, f).spl, near(s.curve, f).raw, 0.1, `SPL ${f} Hz`);
     rel(t, near(v.curve, f).xmm, near(s.curve, f).xmm, 0.01, `x ${f} Hz`);

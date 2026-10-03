@@ -1,4 +1,4 @@
-// PA stack dispersion: sub, mid and horn stacked vertically, each through its LR24 crossover filters, with
+// PA stack dispersion: sub, mid and horn stacked vertically, each through its LR24/LR48 crossover filters, with
 // its own directivity (sub and mid as pistons, the horn as constant coverage above its control frequency)
 // and its path length to the listener. The DSP is time-aligned on the horn axis at the listening distance,
 // so the map shows lobing at the crossovers (vertical) and beaming (horizontal). Bands are level-matched.
@@ -35,14 +35,14 @@ export type StackSource =
 
 /** The stack's drivers (sub when it has one, mid, horn), each through its crossover filters. */
 export function paStackSources(s: PaStackGeometry): StackSource[] {
-  const order = s.order || 4;
+  const { orderLo, orderHi } = s;
   const out: StackSource[] = [];
   if (s.sub && s.sub.Sd)
     out.push({
       band: "sub",
       z: s.sub.zIn,
       a: Math.sqrt(s.sub.Sd / 1e4 / Math.PI),
-      filt: (f) => linkwitzRileyFilter(f, s.xoLo, order, "lp"),
+      filt: (f) => linkwitzRileyFilter(f, s.xoLo, orderLo, "lp"),
     });
   out.push(
     {
@@ -51,15 +51,15 @@ export function paStackSources(s: PaStackGeometry): StackSource[] {
       a: Math.sqrt(s.mid.Sd / 1e4 / Math.PI),
       filt: (f) =>
         cmul(
-          linkwitzRileyFilter(f, s.xoLo, order, "hp"),
-          linkwitzRileyFilter(f, s.xoHi, order, "lp"),
+          linkwitzRileyFilter(f, s.xoLo, orderLo, "hp"),
+          linkwitzRileyFilter(f, s.xoHi, orderHi, "lp"),
         ),
     },
     {
       band: "horn",
       z: s.horn.zIn,
       horn: true,
-      filt: (f) => linkwitzRileyFilter(f, s.xoHi, order, "hp"),
+      filt: (f) => linkwitzRileyFilter(f, s.xoHi, orderHi, "hp"),
     },
   );
   return out;
@@ -81,7 +81,7 @@ export function stackSourceDirectivity(
     : pistonDirectivity(f, o.a, Math.acos(Math.cos(th) * Math.cos(tv)));
 }
 
-// s: { sub: { zIn, Sd }, mid: { zIn, Sd }, horn: { zIn, covH, covV, wIn, hIn }, xoLo, xoHi, order }
+// s: { sub: { zIn, Sd }, mid: { zIn, Sd }, horn: { zIn, covH, covV, wIn, hIn }, xoLo, xoHi, orderLo, orderHi }
 // geo: { th (rad, horizontal), eyeIn (ear height, in), distM }. Returns [{ f, spl }] (dB, relative).
 export function paResponseAt(
   s: PaStackGeometry,

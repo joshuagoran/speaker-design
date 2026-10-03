@@ -46,6 +46,8 @@ export type CoverageInputs = Pick<
   | "subModelled"
   | "subAmpVoltage"
   | "subMidCrossoverHz"
+  | "subMidCrossoverOrder"
+  | "midHornCrossoverOrder"
   | "midModelled"
   | "hornModel"
   | "midHornCrossoverHz"
@@ -133,6 +135,7 @@ export function useCoverageMap(
                     subModelled.lim,
                     subAmpVoltage,
                     subMidCrossoverHz,
+                    stack.orderLo,
                   )
                 : null,
               mid: midModelled.max,

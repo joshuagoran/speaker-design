@@ -14,6 +14,7 @@ import {
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { keysOf } from "../../../lib/records";
+import { CrossoverSlopeButtons } from "../../../components/ui/CrossoverSlopeButtons";
 
 interface Props {
   planner: Pick<
@@ -61,6 +62,10 @@ interface Props {
     | "setSubMidCrossoverHz"
     | "midHornCrossoverHz"
     | "setMidHornCrossoverHz"
+    | "subMidCrossoverOrder"
+    | "setSubMidCrossoverOrder"
+    | "midHornCrossoverOrder"
+    | "setMidHornCrossoverOrder"
     | "cutaway"
     | "setCutaway"
     | "layout"
@@ -130,6 +135,10 @@ export function SettingsPanel({ planner }: Props) {
     setSubMidCrossoverHz,
     midHornCrossoverHz,
     setMidHornCrossoverHz,
+    subMidCrossoverOrder,
+    setSubMidCrossoverOrder,
+    midHornCrossoverOrder,
+    setMidHornCrossoverOrder,
     cutaway,
     setCutaway,
     layout,
@@ -565,6 +574,11 @@ export function SettingsPanel({ planner }: Props) {
                   onChange={setSubMidCrossoverHz}
                   extra={renderLockButton("xoLo", "the sub-to-mid crossover")}
                 />
+                <CrossoverSlopeButtons
+                  order={subMidCrossoverOrder}
+                  onChange={setSubMidCrossoverOrder}
+                  label="Crossover slope, sub to mid"
+                />
                 <Slider
                   label="Crossover, mid to horn"
                   value={midHornCrossoverHz}
@@ -574,6 +588,11 @@ export function SettingsPanel({ planner }: Props) {
                   unit=" Hz"
                   onChange={setMidHornCrossoverHz}
                   extra={renderLockButton("xoHi", "the mid-to-horn crossover")}
+                />
+                <CrossoverSlopeButtons
+                  order={midHornCrossoverOrder}
+                  onChange={setMidHornCrossoverOrder}
+                  label="Crossover slope, mid to horn"
                 />
                 <Slider
                   label="Mid amp power per channel @ 8 Ω"

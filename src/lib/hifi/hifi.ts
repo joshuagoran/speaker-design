@@ -394,7 +394,11 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
       })
     : null;
   const rM = pr ? passiveRadiatorBox(ts, net, pr, hpf || 1, V, "BW24", opts) : null;
-  const sM = ventPort || pr ? null : closedBox(ts, net * 1.1, hpf || null, null, V, opts); // lightly stuffed
+  // lightly stuffed; an LR24 highpass, and no lowpass here (the crossover's is applied below)
+  const sM =
+    ventPort || pr
+      ? null
+      : closedBox(ts, net * 1.1, hpf || null, null, V, { ...opts, hpOrder: 4, lpOrder: order });
   const m: BoxModel | null = vM || rM || sM;
   if (!m) return null;
   const bw = dim.w,

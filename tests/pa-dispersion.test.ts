@@ -10,7 +10,8 @@ const stack = (gapIn: number): PaStackGeometry => ({
   horn: { zIn: 40 + gapIn, covH: 90, covV: 40, wIn: 12, hIn: 7 },
   xoLo: 120,
   xoHi: 1000,
-  order: 4,
+  orderLo: 4,
+  orderHi: 4,
 });
 
 test("PA dispersion: flat on the horn axis through both crossovers (time-aligned LR24)", (t) => {

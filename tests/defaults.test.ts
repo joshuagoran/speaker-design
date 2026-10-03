@@ -66,7 +66,7 @@ describe("default designs", () => {
       "horn and driver exits differ",
     );
     const d = DEFAULT_PA;
-    expect(hornResponse(d.cd.hf, d.horn.hf ?? {}, d.xoHi, d.hfAmpW)).not.toBeNull();
+    expect(hornResponse(d.cd.hf, d.horn.hf ?? {}, d.xoHi, d.hfAmpW, d.xoHiOrder)).not.toBeNull();
   });
 
   it("DEFAULT_HIFI is a modelled system with no NaN", () => {

@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { crossoverSlopesText } from "../../constants/crossovers";
 import { CoverageMap } from "../../components/charts/CoverageMap";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { Button } from "../../components/ui/Button";
@@ -169,7 +170,8 @@ export function CoveragePage({ planner }: Props) {
           <ul className="list-disc pl-5 flex flex-col gap-1">
             <li>
               Each stack is this design: sub, mid and horn at their heights, through the crossovers
-              (LR24), time-aligned on the horn axis.
+              ({crossoverSlopesText(planner.subMidCrossoverOrder, planner.midHornCrossoverOrder)}),
+              time-aligned on the horn axis.
             </li>
             <li>
               The system plays at its limit with the Design page's music balance: the mid band{" "}

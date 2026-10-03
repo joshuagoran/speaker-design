@@ -24,7 +24,7 @@ import {
   PLYWOOD_SHEETS,
   nearestPoint,
   subMusicOutputAt,
-  linkwitzRiley24Lowpass,
+  linkwitzRileyLowpass,
   pistonBeamWidthDeg,
   keeleFrequency,
   maxOutputCurve,
@@ -72,6 +72,7 @@ import type {
 import { keysOf } from "../records";
 import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
+import { savedCrossoverOrder } from "../../constants/crossovers";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -314,6 +315,9 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     horn = byId(HORN_OPTIONS, c.horn);
   if (!sub || !sub.ts || !mid || !mid.ts || !cd || !horn) return null;
   const midDims = c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim;
+  // boundary: a save from before the slope setting has no orders, and reads as LR24
+  const xoLoOrder = savedCrossoverOrder(c.xoLoOrder),
+    xoHiOrder = savedCrossoverOrder(c.xoHiOrder);
   const s = subSystem(sub, mid, {
     subBox: c.cDim,
     midDims,
@@ -333,14 +337,16 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     inset: c.inset,
     xoLo: c.xoLo,
     xoHi: c.xoHi,
+    xoLoOrder,
+    xoHiOrder,
     mAmpW: c.mAmpW,
   });
   const subLb = subWeightLb(c.cDim, c.wall, sub.lb),
     midLb = midWeightLb(midDims, c.wall) + (mid.lb || 0);
   if (!s.mdl || !ms.mdl) return null; // a vent or box with no geometry has no model to evaluate
-  const subMusic = subMusicOutputAt(s.mdl, s.lim, s.AMP_V, c.xoLo);
+  const subMusic = subMusicOutputAt(s.mdl, s.lim, s.AMP_V, c.xoLo, xoLoOrder);
   const hz: Partial<HornHf> = horn.hf || {};
-  const hornModel = hornResponse(cd.hf, hz, c.xoHi, c.hfAmpW);
+  const hornModel = hornResponse(cd.hf, hz, c.xoHi, c.hfAmpW, xoHiOrder);
   const mm = ms.mdl,
     midAtXo = nearestPoint(ms.max, c.xoLo),
     midAtHi = nearestPoint(ms.max, c.xoHi).spl;
@@ -498,6 +504,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   // older saved configs can lack some fields; they fall back to the planner's starting design
   const { xoLo, xoHi, tilt, hfTilt, ampW, mAmpW, hfAmpW, hpType, portMax, wall, inset, layout } =
     DEFAULT_PA;
+  // the crossover slopes are the design's own: every candidate keeps them (the search varies only the frequencies)
   const cur: PaDesignConfig = {
     xoLo,
     xoHi,
@@ -512,6 +519,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     inset,
     layout,
     ...input.cur,
+    xoLoOrder: savedCrossoverOrder(input.cur.xoLoOrder),
+    xoHiOrder: savedCrossoverOrder(input.cur.xoHiOrder),
   };
   const locks: ResolvedLocks = { subDim: {}, midDim: {}, ...input.locks };
   const budget = input.budget; // drivers per stack
@@ -870,7 +879,11 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           STUFFING_VOLUME_GAIN;
         for (const xoLo of xoLos) {
           const V = ampVoltage(amps.mAmpW),
-            mdl = closedBox(m.ts, eff, xoLo, null, V, { N: 120 });
+            mdl = closedBox(m.ts, eff, xoLo, null, V, {
+              N: 120,
+              hpOrder: cur.xoLoOrder,
+              lpOrder: cur.xoHiOrder, // no lowpass here: it is applied at each xoHi below
+            });
           evals++;
           if (!mdl || mdl.Qtc < 0.5 || mdl.Qtc > 0.8 || mdl.f3 > xoLo) continue;
           const max = maxOutputCurve(mdl.curve, m.ts, V, Infinity);
@@ -910,7 +923,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
         if (!cd.hf) continue; // a locked driver with no published spec can't be modelled
         if ((cd.hf.minXo && xoHi < cd.hf.minXo) || (hz.minXo && xoHi < hz.minXo)) continue;
         if (hz.lowHz && hz.lowHz > xoHi * 0.8 && !hornLoadOk) continue; // horn stops loading near the crossover
-        const hm = hornResponse(cd.hf, hz, xoHi, amps.hfAmpW);
+        const hm = hornResponse(cd.hf, hz, xoHi, amps.hfAmpW, cur.xoHiOrder);
         evals++;
         if (!hm) continue;
         hornTable[xoHi].push({
@@ -936,7 +949,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   for (const sc of subCands) {
     if (sc.lb > slack.lb || sc.sub.price > slack.budget) continue;
     for (const xoLo of xoLos) {
-      const need = subMusicOutputAt(sc.s.mdl, sc.s.lim, sc.s.AMP_V, xoLo) - cur.tilt;
+      const need = subMusicOutputAt(sc.s.mdl, sc.s.lim, sc.s.AMP_V, xoLo, cur.xoLoOrder) - cur.tilt;
       const okMids: (MidEntry | null)[] = midTable.filter(
         (e) => e.xoLo === xoLo && e.t === sc.c.wall && e.atXo - need >= -0.5 && e.lb <= slack.lb,
       );
@@ -953,7 +966,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       for (const e of choices)
         for (const xoHi of xoHis) {
           const midHi = e
-            ? nearestPoint(e.max, xoHi).spl + 20 * Math.log10(linkwitzRiley24Lowpass(xoHi, xoHi))
+            ? nearestPoint(e.max, xoHi).spl +
+              20 * Math.log10(linkwitzRileyLowpass(xoHi, xoHi, cur.xoHiOrder))
             : null;
           const hp = hornTable[xoHi].find(
             (p) => midHi == null || p.at - (midHi - cur.hfTilt) >= -0.5,

@@ -73,6 +73,8 @@ export const DEFAULT_PA = {
   inset: 0.75,
   xoLo: 120,
   xoHi: 900,
+  xoLoOrder: 4,
+  xoHiOrder: 4,
   mAmpW: 400,
   tilt: 6,
   hfAmpW: 100,

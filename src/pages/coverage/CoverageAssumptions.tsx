@@ -51,7 +51,7 @@ export function CoverageAssumptions({ room }: Props) {
       [
         "Every driver of a box sits at the box's center on the floor plan, at its real height.",
         `Each box's drivers are time-aligned on its axis ${ALIGN_DISTANCE_M} m out, at horn height.`,
-        "Crossovers: Linkwitz-Riley 24 dB/oct, with their phase.",
+        "Crossovers: Linkwitz-Riley, with their phase (the slopes are set on the Design page).",
         `Sub and mid radiate as rigid pistons. Behind a box they lose 3 dB at ${BOX_SHADOW_HZ} Hz and 6 dB per octave above it.`,
         "The horn holds its rated coverage (−6 dB at the edges) above its control frequency and widens below it, never dropping more than 40 dB.",
         "Sub phase: only the crossover's. The box's own phase (its tuning and highpass) is left out.",

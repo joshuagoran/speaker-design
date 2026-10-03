@@ -4,6 +4,8 @@ import type { ThieleSmall, VentSpec } from "../src/types";
 
 // The tests give a vent only the fields its layout reads; the cast marks the partial on purpose.
 export const vent = (v: Partial<VentSpec>) => v as VentSpec;
+/** `closedBox` filter orders: LR24 at both corners, as the PA crossovers default to. */
+export const LR24_ORDERS = { hpOrder: 4, lpOrder: 4 } as const;
 
 /** The Thiele-Small fields these references use. */
 type TsFields = Pick<ThieleSmall, "Fs" | "Sd" | "Mms" | "Re" | "Bl" | "Qms">;
