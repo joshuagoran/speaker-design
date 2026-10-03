@@ -54,6 +54,8 @@ export interface HifiPlanner extends HifiDesignState, HifiDesign, HifiOptimizer 
   setEarHeightIn: Setter<number>;
   setStandHeightIn: Setter<number>;
   setDispersionPlane: Setter<DispersionPlane>;
+  setRoundoverIn: Setter<number>;
+  setTweeterOffsetIn: Setter<number>;
   waveguideChoices: HifiWaveguide[];
   store: ConfigStore;
   /** The fields of the design a card applies: what the optimizer starts from, and what undo and preview go back to. */
@@ -113,6 +115,8 @@ export function useHifiPlanner(): HifiPlanner {
   const [dispersionPlane, setDispersionPlane] = useState<DispersionPlane>(
     DEFAULT_HIFI.dispersionPlane,
   );
+  const [roundoverIn, setRoundoverIn] = useState(DEFAULT_HIFI.roundoverIn);
+  const [tweeterOffsetIn, setTweeterOffsetIn] = useState(DEFAULT_HIFI.tweeterOffsetIn);
   const store = useConfigStore("hifiConfigs");
   const snapshot = (): HifiCardConfig => ({
     woofer: woofer.id,
@@ -142,6 +146,8 @@ export function useHifiPlanner(): HifiPlanner {
         seat: listeningSeat,
         earIn: earHeightIn,
         standIn: standHeightIn,
+        roundover: roundoverIn,
+        tweeterOffset: tweeterOffsetIn,
         summary: `${woofer.name} + ${tweeter.name} · ${boxDims.w}×${boxDims.h}×${boxDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}`,
       }),
     );
@@ -181,6 +187,8 @@ export function useHifiPlanner(): HifiPlanner {
     earHeightIn,
     standHeightIn,
     dispersionPlane,
+    roundoverIn,
+    tweeterOffsetIn,
   };
   // derived once per change to a state field, not on every render of every tab (App holds this planner)
   const design = useMemo(
@@ -208,6 +216,8 @@ export function useHifiPlanner(): HifiPlanner {
         earHeightIn,
         standHeightIn,
         dispersionPlane,
+        roundoverIn,
+        tweeterOffsetIn,
       }),
     [
       woofer,
@@ -232,6 +242,8 @@ export function useHifiPlanner(): HifiPlanner {
       earHeightIn,
       standHeightIn,
       dispersionPlane,
+      roundoverIn,
+      tweeterOffsetIn,
     ],
   );
   const optimizer = useHifiOptimizer({
@@ -270,6 +282,9 @@ export function useHifiPlanner(): HifiPlanner {
     ok(setListeningSeat, c.seat);
     ok(setEarHeightIn, c.earIn);
     ok(setStandHeightIn, c.standIn);
+    // configs saved before these existed had sharp edges and a centred tweeter
+    setRoundoverIn(c.roundover ?? DEFAULT_HIFI.roundoverIn);
+    setTweeterOffsetIn(c.tweeterOffset ?? DEFAULT_HIFI.tweeterOffsetIn);
     optimizer.clearOptimizerResults();
   };
   return {
@@ -299,6 +314,8 @@ export function useHifiPlanner(): HifiPlanner {
     setEarHeightIn,
     setStandHeightIn,
     setDispersionPlane,
+    setRoundoverIn,
+    setTweeterOffsetIn,
     waveguideChoices,
     store,
     snapshot,

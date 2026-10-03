@@ -31,7 +31,13 @@ import { ResultCards } from "../../components/optimizer/ResultCards";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
 import { passiveRadiatorMassMax } from "../../lib/data";
-import { SPEAKER_PLACEMENTS as HIFI_PLACES } from "../../lib/hifi/hifi";
+import {
+  SPEAKER_PLACEMENTS as HIFI_PLACES,
+  tweeterOffset,
+  tweeterOffsetMax,
+} from "../../lib/hifi/hifi";
+import { roundoverOnsetHz } from "../../lib/hifi/diffraction";
+import { formatInches } from "../../lib/format";
 import { HIFI_OPTIMIZER_GOALS } from "../../lib/hifi/optimize";
 import type { HifiPlanner } from "./useHifiPlanner";
 import type { Dims3 } from "../../types";
@@ -40,6 +46,9 @@ import { entriesOf } from "../../lib/records";
 interface Props {
   hifi: HifiPlanner;
 }
+
+/** The roundover radii on offer, inches (0: sharp edges); a router bit's usual sizes. */
+const ROUNDOVER_CHOICES = [0, 0.5, 0.75, 1, 1.5, 2] as const;
 
 /** Hi-fi page: 2-way home speakers with an active crossover. */
 export function HifiPage({ hifi }: Props) {
@@ -88,6 +97,11 @@ export function HifiPage({ hifi }: Props) {
     setStandHeightIn,
     dispersionPlane,
     setDispersionPlane,
+    roundoverIn,
+    setRoundoverIn,
+    tweeterOffsetIn,
+    setTweeterOffsetIn,
+    speakerConfig,
     isOptimizerOn,
     optimizerGoals,
     toggleOptimizerGoal,
@@ -138,7 +152,12 @@ export function HifiPage({ hifi }: Props) {
     pairResponse,
     tweeterMaxCurve,
     dispersion,
+    edgeRippleDb,
   } = speakerModel;
+  // the offset the model uses (kept on the baffle), and where a roundover starts to work
+  const tweeterOffsetUsed = tweeterOffset(speakerConfig, tweeterWithWaveguide, speakerSystem.lay);
+  const roundoverOnset = roundoverOnsetHz(roundoverIn);
+  const roundoverTooDeep = roundoverIn > wallThicknessIn + 1e-9;
   const slotWidthNote =
     speakerSystem.kind === "vented" && speakerSystem.slotW != null
       ? ` (${speakerSystem.slotW.toFixed(1)}″ wide)`
@@ -280,6 +299,8 @@ export function HifiPage({ hifi }: Props) {
               port={portSpec}
               pr={speakerSystem.kind === "radiator" ? radiator : null}
               guide={waveguideSpec}
+              roundoverIn={roundoverIn}
+              tweeterOffsetIn={tweeterOffsetUsed}
             />
           </div>
           <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
@@ -398,7 +419,7 @@ export function HifiPage({ hifi }: Props) {
             map={dispersion}
             title={
               dispersionPlane === "h"
-                ? "Horizontal dispersion, one speaker (0° is on axis)"
+                ? "Horizontal dispersion, one speaker: outside (−) to inside (+), 0° on axis"
                 : "Vertical dispersion: below (−) to above (+) the tweeter axis"
             }
           />
@@ -420,6 +441,16 @@ export function HifiPage({ hifi }: Props) {
               Tweeter trimmed {speakerSystem.trim.toFixed(1)} dB in the DSP to match the woofer;
               baffle step centered at {speakerSystem.bsF3.toFixed(0)} Hz
               {baffleStepCompensationDb ? `, ${baffleStepCompensationDb} dB boost` : ""}.
+            </div>
+            <div>
+              Edge diffraction: the baffle edges re-radiate each driver's sound a little later, for
+              about ±{edgeRippleDb.toFixed(1)} dB of ripple from 1 to 5 kHz on axis (
+              {roundoverIn ? `${formatInches(roundoverIn)} roundover` : "sharp edges"}, tweeter{" "}
+              {tweeterOffsetUsed
+                ? `${formatInches(Math.abs(tweeterOffsetUsed))} ${tweeterOffsetUsed > 0 ? "inward" : "outward"} of centre`
+                : "centred"}
+              ). The ripple and the tweeter's position are in the responses and the dispersion map;
+              the ripple shifts with angle.
             </div>
             <div>
               <Tooltip tip={woofer.note}>
@@ -642,6 +673,53 @@ export function HifiPage({ hifi }: Props) {
                 ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their own resonance)${radiatorDriver.xmaxKind === "mechanical" ? ". Its travel limit is the mechanical one; no linear figure is published" : ""}`
                 : ", lightly stuffed"}
             .
+          </div>
+        </Card>
+        <Card className="mb-4">
+          <div className="text-sm text-stone-500 mb-1">Edge roundover</div>
+          <div className="grid grid-cols-6 gap-1 mb-3">
+            {ROUNDOVER_CHOICES.map((r) => (
+              <ToggleButton
+                key={r}
+                size="xs"
+                className="min-w-0 whitespace-nowrap"
+                title={
+                  r ? `${formatInches(r)} roundover on the baffle edges` : "Sharp baffle edges"
+                }
+                on={roundoverIn === r}
+                onClick={() => setRoundoverIn(r)}
+              >
+                {r ? formatInches(r) : "Sharp"}
+              </ToggleButton>
+            ))}
+          </div>
+          <Slider
+            label="Tweeter offset (+ inward)"
+            value={tweeterOffsetIn}
+            min={-3}
+            max={3}
+            step={0.25}
+            unit="″"
+            onChange={setTweeterOffsetIn}
+          />
+          <div className="text-xs text-stone-500 leading-relaxed">
+            Edges ripple the response ±{edgeRippleDb.toFixed(1)} dB from 1 to 5 kHz on axis.{" "}
+            {roundoverIn
+              ? `The roundover cuts edge re-radiation above about ${(roundoverOnset / 1000).toFixed(1)} kHz (wavelengths under 4× its radius)`
+              : "A roundover cuts it where the wavelength is under 4× its radius (1½″ works above about 2 kHz)"}
+            ; it barely moves the baffle step itself. An off-centre tweeter spreads the ripple so it
+            partly cancels; the pair is mirror-imaged
+            {speakerSystem.lay.onTop
+              ? " (the waveguide on top stays centred)"
+              : `, at most ${tweeterOffsetMax(speakerConfig, tweeterWithWaveguide).toFixed(2)}″ either way on this baffle`}
+            .
+            {roundoverTooDeep && (
+              <span className="text-orange-900">
+                {" "}
+                {formatInches(roundoverIn)} is more than the {formatInches(wallThicknessIn)} panel
+                takes: double the baffle or add hardwood edge strips.
+              </span>
+            )}
           </div>
         </Card>
         <Card className="mb-4">

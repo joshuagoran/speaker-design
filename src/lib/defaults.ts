@@ -123,6 +123,8 @@ export const DEFAULT_HIFI = {
   earHeightIn: 38,
   standHeightIn: 24,
   dispersionPlane: "h",
+  roundoverIn: 0,
+  tweeterOffsetIn: 0,
 } satisfies HifiDesignState;
 
 /** The Fills page's starting design. */

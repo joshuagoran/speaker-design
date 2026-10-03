@@ -6,12 +6,14 @@ import {
   hifiChips,
   hifiResponseAt,
   hifiDispersionMap,
+  hifiEdgeRipple,
   listenerGeometry,
   logSpacedFrequencies,
   linkwitzRileyFilter,
   cabs,
   needsWaveguide,
 } from "../../lib/hifi/hifi";
+import { rippleDb } from "../../lib/hifi/diffraction";
 import type { HifiDesign, HifiDesignState, HifiSpeakerModel } from "../../types";
 
 /** The frequencies every Hi-fi response is worked out at: the charts' 15 Hz to 20 kHz axis. */
@@ -37,6 +39,8 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     placement,
     distanceToWallFt,
     dispersionPlane,
+    roundoverIn,
+    tweeterOffsetIn,
   } = state;
   const compressionWaveguide = {
     covH: selectedWaveguide.hf.covH,
@@ -73,6 +77,8 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     wallFt: distanceToWallFt,
     portMax: 17,
     guide: waveguideSpec,
+    roundoverIn,
+    tweeterOffsetIn,
   };
   const tweeterWithWaveguide = waveguideSpec
     ? { ...tweeter, faceplate: { w: waveguideSpec.w, h: waveguideSpec.h } }
@@ -107,8 +113,17 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
         rightGeometry,
         RESPONSE_FREQUENCIES,
       );
+    const edgeRipple = hifiEdgeRipple(
+      speakerSystem,
+      woofer,
+      tweeterWithWaveguide,
+      speakerConfig,
+      RESPONSE_FREQUENCIES,
+    );
     speakerModel = {
       speakerSystem,
+      edgeRipple,
+      edgeRippleDb: rippleDb(edgeRipple, 1000, 5000),
       warningChips: hifiChips(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig),
       maxLevelAtSeatDb: speakerSystem.maxLevel - 20 * Math.log10(seatDistanceM) + 3,
       onAxisResponse: hifiResponseAt(
