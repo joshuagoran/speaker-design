@@ -28,6 +28,45 @@ export interface Dims2 {
 
 // ---- Thiele-Small blocks ----
 
+/**
+ * How a maker computes its Xmax from coil winding height Hvc and gap height Hg: "plain" is (Hvc − Hg)/2, "hg/4" adds
+ * Hg/4 (B&C, Lavoce, Ciare), "hg/3" adds Hg/3 (FaitalPRO, SB Audience), "hg/3.5" adds Hg/3.5 (Beyma).
+ */
+export type XmaxFormula = "plain" | "hg/4" | "hg/3" | "hg/3.5" | "unstated";
+
+/** Every excursion figure the maker publishes, one-way mm, as published. */
+export interface PublishedExcursion {
+  /** the maker's Xmax; null where it publishes none (the B&C coaxials give only Xvar) */
+  Xmax: number | null;
+  formula: XmaxFormula;
+  /** B&C's 10 % distortion limit */
+  Xvar?: number;
+  /** mechanical limit (Eminence Xlim, passive radiators' Xmech) */
+  Xlim?: number;
+  /** damage limit (a peak-to-peak figure is halved) */
+  Xdamage?: number;
+  /** SB Acoustics' linear travel, peak to peak */
+  travelPP?: number;
+  /** where the figures and heights were read: the maker's datasheet or product page */
+  src?: string;
+}
+
+/**
+ * How the comparable Xmax was found: from Hvc and Hg, from the maker's figure and its known formula, as published (a
+ * passive radiator's linear limit: no motor, so no gap), or estimated.
+ */
+export type XmaxBasis = "derived" | "converted" | "published" | "estimated";
+
+/**
+ * The comparable Xmax, (Hvc − Hg)/2 + Hg/4 one-way mm, as a band: `lo` = `hi` unless `basis` is "estimated", and the
+ * driver's `Xmax` is its centre.
+ */
+export interface XmaxBand {
+  basis: XmaxBasis;
+  lo: number;
+  hi: number;
+}
+
 /** The Thiele-Small parameters and ratings every driver table lists. `disp` is the driver's displacement in litres, null where unpublished. */
 export interface ThieleSmall {
   Fs: number;
@@ -36,13 +75,24 @@ export interface ThieleSmall {
   Qms: number;
   Vas: number;
   Sd: number;
+  /** the comparable one-way excursion the models use, mm: the centre of `xmax` (see `lib/xmax`) */
   Xmax: number;
+  xmax: XmaxBand;
+  pub: PublishedExcursion;
+  /** voice-coil winding height and magnetic gap height, mm, where the maker publishes them */
+  Hvc?: number;
+  Hg?: number;
   Re: number;
   Bl: number;
   Mms: number;
   aes: number;
   disp: number | null;
 }
+
+/** A Thiele-Small block as a driver table holds it: the maker's figures, before `lib/xmax` adds the comparable Xmax. */
+export type RawTS<T extends ThieleSmall> = Omit<T, "Xmax" | "xmax">;
+/** A driver as its table holds it. */
+export type RawDriver<D extends { ts: ThieleSmall }> = Omit<D, "ts"> & { ts: RawTS<D["ts"]> };
 
 /** The Thiele-Small fields the box models read (`boxModel`, `closedBox`, `passiveRadiatorBox`); `closedBox` and `passiveRadiatorBox` leave `Xmax` alone. */
 export type BoxModelTS = Pick<ThieleSmall, "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms">;
@@ -284,8 +334,6 @@ export type HifiTweeterRaw = Omit<HifiTweeter, "faceplate" | "domeIn"> & {
   faceplate: { diameter: number } | Dims2 | null;
 };
 
-export type XmaxKind = "linear" | "mechanical";
-
 export interface PassiveRadiator {
   id: string;
   name: string;
@@ -295,8 +343,11 @@ export interface PassiveRadiator {
   Cms: number;
   Qms: number;
   Fs: number;
+  /** the comparable one-way limit the model uses, mm: a linear limit as published, else estimated from `pub.Xlim` (see `lib/xmax`) */
   Xmax: number;
-  xmaxKind: XmaxKind;
+  xmax: XmaxBand;
+  /** the maker's figures: a linear `Xmax`, or only the mechanical limit `Xlim` (SB, Purifi, Seas) */
+  pub: PublishedExcursion;
   lb: number | null;
   price: number;
   src: string;
@@ -457,6 +508,8 @@ export interface HifiSystemBase {
   refW: number;
   woofer: WooferPoint[];
   wMax: WooferMaxPoint[];
+  /** `wMax` at the low and high ends of the woofer's and radiator's estimated Xmax; null when both are exact */
+  wMaxBand: { lo: WooferMaxPoint[]; hi: WooferMaxPoint[] } | null;
   sMusic: number;
   whoW: WooferLimit;
   trim: number;

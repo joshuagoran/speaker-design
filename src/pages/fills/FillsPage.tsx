@@ -12,6 +12,7 @@ import { fillChips } from "../../lib/pa/chips";
 import { FILL_OPTIONS } from "../../lib/data";
 import { fillSystem, nearestPoint } from "../../lib/pa/calc";
 import type { FillsPlanner } from "./useFillsPlanner";
+import { xmaxBandCurves, xmaxRows } from "../../lib/xmax";
 
 interface Props {
   fills: FillsPlanner;
@@ -36,14 +37,20 @@ export function FillsPage({ fills }: Props) {
     setMaxPortAirSpeedMs,
   } = fills;
   const thieleSmall = driver.ts;
-  const fill = fillSystem(driver, {
+  const fillConfig = {
     boxType,
     dim: boxDims,
     port: portSpec,
     hp: highpassHz,
     ampW: ampWatts,
     portMax: maxPortAirSpeedMs,
-  });
+  };
+  const fill = fillSystem(driver, fillConfig);
+  // the limit curve at the ends of an estimated Xmax, shaded on the chart
+  const maxBand = xmaxBandCurves(
+    thieleSmall.xmax,
+    (Xmax) => fillSystem({ ...driver, ts: { ...thieleSmall, Xmax } }, fillConfig)?.max ?? [],
+  );
   if (!fill)
     return (
       <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 text-sm">
@@ -113,6 +120,7 @@ export function FillsPage({ fills }: Props) {
           series={[
             {
               curve: maxCurve,
+              band: maxBand,
               label: driver.name,
               stroke: PAL.cyan,
               tint: PAL.alpha(PAL.cyan, 0.07),
@@ -146,6 +154,7 @@ export function FillsPage({ fills }: Props) {
               `${maxCurveNearest(100).spl.toFixed(1)} dB`,
               `sine, ${maxCurveNearest(100).who}-limited`,
             ],
+            ...xmaxRows(thieleSmall),
             ["Price", driver.price ? `$${driver.price}` : "—", driver.src],
           ]}
         />

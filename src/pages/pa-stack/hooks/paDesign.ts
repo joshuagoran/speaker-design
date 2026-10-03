@@ -32,6 +32,7 @@ import type { Crossovers } from "./useCrossovers";
 import type { HornDesign } from "./useHornDesign";
 import type { MidDesign } from "./useMidDesign";
 import type { SubwooferDesign } from "./useSubwooferDesign";
+import { xmaxBandCurves } from "../../../lib/xmax";
 
 /** The design state the PA models read; the music-balance tilts, finish, colours and cutlist options don't enter them. */
 type PaDesignInputs = Pick<
@@ -71,6 +72,8 @@ export interface PaDerivedDesign {
         maxCurve: PaMaxPoint[];
         /** the sub through its lowpass at the crossover, for the system chart */
         throughLowpass: FrequencyPoint[];
+        /** that curve at the ends of an estimated Xmax; null when the driver's Xmax is exact */
+        throughLowpassBand: { lo: FrequencyPoint[]; hi: FrequencyPoint[] } | null;
       })
     | null;
   midVoltage: number;
@@ -79,6 +82,8 @@ export interface PaDerivedDesign {
   midEffL: number;
   /** the mid's model and limit curve; null when the driver has no T/S */
   midModelled: MidSystemModelled | null;
+  /** the mid's limit curve at the ends of an estimated Xmax; null when its Xmax is exact or it has no model */
+  midMaxBand: { lo: PaMaxPoint[]; hi: PaMaxPoint[] } | null;
   midThermalVoltage: number;
   midUsedVoltage: number;
   midCabinetLb: number;
@@ -171,6 +176,18 @@ export function derivePaDesign({
           subMidCrossoverHz,
           subMidCrossoverOrder,
         ),
+        throughLowpassBand: xmaxBandCurves(subDriver.ts.xmax, (Xmax) =>
+          subSys.mdl
+            ? subThroughLowpass(
+                subSys.mdl,
+                { ...subDriver.ts, Xmax },
+                subAmpVoltage,
+                maxPortAirSpeedMs,
+                subMidCrossoverHz,
+                subMidCrossoverOrder,
+              )
+            : [],
+        ),
       }
     : null;
 
@@ -194,6 +211,11 @@ export function derivePaDesign({
     useV: midUsedVoltage,
   } = midSys;
   const midModelled = midSys.mdl ? midSys : null;
+  const midMaxBand = midModelled
+    ? xmaxBandCurves(midDriver.ts.xmax, (Xmax) =>
+        maxCurveOf(midModelled.mdl.curve, { ...midDriver.ts, Xmax }, midVoltage, Infinity),
+      )
+    : null;
   /** 3/4" baffle at 2.3 lb/ft\u00b2, other panels and one brace at the chosen ply, plus 2 lb of hardware */
   const midCabinetLb = midWeightLb(effectiveMidBoxDims, wallThicknessIn);
   const midWeightLoadedLb = midCabinetLb + (midDriver.lb || 0);
@@ -314,6 +336,7 @@ export function derivePaDesign({
     midNetL,
     midEffL,
     midModelled,
+    midMaxBand,
     midThermalVoltage,
     midUsedVoltage,
     midCabinetLb,

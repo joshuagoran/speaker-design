@@ -5,6 +5,7 @@ import { StatRow } from "../../../components/optimizer/StatRow";
 import { midChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
+import { xmaxRows } from "../../../lib/xmax";
 
 interface Props {
   planner: Pick<
@@ -113,6 +114,7 @@ export function MidSection({ planner }: Props) {
                     `${(((midModelled.mdl.peakX * midUsedVoltage) / midVoltage / midDriver.ts.Xmax) * 100).toFixed(0)}% of Xmax`,
                     `At ${Math.round((midUsedVoltage * midUsedVoltage) / 8)} W, with the ${subMidCrossoverHz} Hz highpass.`,
                   ],
+                  ...xmaxRows(midDriver.ts),
                 ].map(([k, v, note, tip]) => (
                   <StatRow key={k} k={k} v={v} note={note} tip={tip} />
                 ))}
