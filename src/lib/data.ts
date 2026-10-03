@@ -2394,6 +2394,23 @@ export const CD_OPTIONS: CompressionDriver[] = [
     note: "[datasheet, faitalpro.com, Sep 2026] 3.4 in coil, 109 dB on the LTH142, 120 W AES above 900 Hz (240 W max), minimum crossover 700 Hz, 4.5 lb. The lowest-crossing driver here.",
   },
   {
+    id: "cdx143055",
+    lb: 3.7,
+    name: 'Celestion CDX14-3055 (1.4")',
+    hf: {
+      sens: 108,
+      sensRef: "Celestion's unnamed \u201ctypical horn\u201d",
+      aes: 120,
+      aesXo: 800,
+      minXo: 800,
+      imp: 8,
+    },
+    exit: 1.4,
+    price: 259,
+    src: "Parts Express, Oct 2026 (out of stock)",
+    note: "[datasheet, celestion.com, Oct 2026] Neo, 3 in edgewound CCAW coil, titanium diaphragm, polyimide surround. 120 W AES / 240 W continuous, 108 dB 1 W/1 m, minimum crossover 800 Hz at 12 dB/oct, 500 Hz\u201320 kHz, 3.7 lb. 4 \u00d7 M6 on a 102 mm circle, the N314T's pattern, so it bolts to the 1.4\u2033 horns here. The power test's high-pass is not published; the 800 Hz minimum crossover is assumed. Exit flare angle not published, which an ATH throat adapter needs.",
+  },
+  {
     id: "de360",
     lb: 3,
     name: 'B&C DE360 (1")',
@@ -3912,6 +3929,19 @@ const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     faceplate: { diameter: 3.5 },
     needsWaveguide: true,
     note: "[maker: bcspeakers.com] Ferrite, Mylar diaphragm, 1″ voice coil, 2-bolt. 20 W RMS / 40 W program above the recommended 2.5 kHz crossover (12 dB/oct); 1.5–18 kHz; 107 dB 1 W/1 m. Reviewers say it is an improvement on the Klipschorn's tweeter. fs not published.",
+  },
+  {
+    id: "cdx11745",
+    lb: 5.1,
+    name: "Celestion CDX1-1745",
+    price: 109,
+    src: "parts-express.com, Oct 2026",
+    hf: { sens: 110, aes: 40, aesXo: 2200, minXo: 2200, imp: 8, fs: null },
+    type: "compression",
+    exit: 1,
+    faceplate: { diameter: 4.7 },
+    needsWaveguide: true,
+    note: "[maker: celestion.com, Oct 2026] Ferrite, 44 mm PETP diaphragm. sens is 110 dB 1 W/1 m on an unnamed \u201ctypical horn\u201d. aes is 40 W AES, 80 W continuous; PE lists 75 W. The power test's high-pass is not published; the 2.2 kHz minimum crossover (12 dB/oct) is assumed. 1.2\u201320 kHz. 2- and 3-bolt M6 mounting on 76/57 mm circles, like the DE250. Also sold in 16 \u03a9. fs not published.",
   },
   // ---------- Planar ribbons on their own waveguide (flush in the baffle; the faceplate is the waveguide) ----------
   {
