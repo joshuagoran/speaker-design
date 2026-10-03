@@ -12,6 +12,7 @@
 // the separate paths (each box, each reflection) by power, as their comb filtering averages out across a band.
 import {
   baffleStepShelf,
+  cabs,
   logSpacedFrequencies,
   pistonPattern,
   waveguideGain,
@@ -319,20 +320,19 @@ export function curvePhaseAt(curve: readonly PhasePoint[], f: number): number {
 }
 
 /**
- * A band's curve with its own phase: its box's (`rawPhase` of the model point each curve point was made from, one to
- * one), and `filter`'s (the sub's highpass) where it has one, unwrapped. A model run without its phase gives only the
- * filter's.
+ * A band's curve with its own phase: its box model's (`rawPhase`, read at each curve point's frequency), and `filter`'s
+ * (the sub's highpass) where it has one, unwrapped. A model run without its phase gives only the filter's.
  */
 export function withOwnPhase(
   curve: readonly FrequencyPoint[],
-  model: readonly Pick<VentedPoint | SealedPoint, "rawPhase">[],
+  model: readonly Pick<VentedPoint | SealedPoint, "f" | "spl" | "rawPhase">[],
   filter?: (f: number) => Complex,
 ): PhasePoint[] {
-  if (model.length !== curve.length) throw new Error("the curve doesn't match its model's points");
+  const box = model.map((o) => ({ f: o.f, spl: o.spl, phase: o.rawPhase ?? 0 }));
   const ph = unwrapPhase(
-    curve.map((o, i) => {
+    curve.map((o) => {
       const h = filter?.(o.f);
-      return (model[i].rawPhase ?? 0) + (h ? Math.atan2(h.im, h.re) : 0);
+      return curvePhaseAt(box, o.f) + (h ? Math.atan2(h.im, h.re) : 0);
     }),
   );
   return curve.map((o, i) => ({ f: o.f, spl: o.spl, phase: ph[i] }));
@@ -424,13 +424,31 @@ export const hornQ = ([h, v]: [h: number, v: number]) =>
   Math.PI /
   Math.asin(Math.min(1, Math.sin(Math.min(h, Math.PI / 2)) * Math.sin(Math.min(v, Math.PI / 2))));
 
+/** The sub's or mid's baffle step at `f`, with its phase: each band's from its own box's width. */
+const bandShelf = (
+  stack: Pick<CoverageStack, "footprint" | "midW">,
+  band: "sub" | "mid",
+  f: number,
+) => baffleStepShelf(f, band === "sub" ? stack.footprint.w : stack.midW);
+
+/** The sub's or mid's own phase at `f`, radians: its curve's (its box, and the sub's highpass) and its baffle step's. */
+function ownPhase(
+  stack: Pick<CoverageStack, "footprint" | "midW">,
+  levels: CoverageLevels,
+  band: "sub" | "mid",
+  f: number,
+): number {
+  const shelf = bandShelf(stack, band, f);
+  return Math.atan2(shelf.im, shelf.re) + curvePhaseAt(levels[band] ?? [], f);
+}
+
 /**
  * Each band's output at 1 m at `f`: its level from the planner's curve (which already carries the crossover's
- * magnitude, and past the curve's ends rolls off by it), with its own phase from the curve and its crossover's, taken
- * off the floor for the sub and mid (the map adds the floor itself), and the sub through its DSP delay.
+ * magnitude, and past the curve's ends rolls off by it), with its own phase and its crossover's, taken off the floor
+ * for the sub and mid (the map adds the floor itself), and the sub through its DSP delay.
  */
 function bandOutputs(
-  stack: CoverageStack,
+  stack: Pick<CoverageStack, "footprint" | "midW" | "subDelayMs">,
   levels: CoverageLevels,
   srcs: readonly StackSource[],
   skirts: ReturnType<typeof bandSkirts>,
@@ -446,11 +464,9 @@ function bandOutputs(
       ph = Math.hypot(h.re, h.im) > 1e-12 ? Math.atan2(h.im, h.re) : 0;
     if (o.band !== "horn") {
       // the sub's and mid's curves are half-space (on the floor); in the open a box radiates into full space below
-      // its baffle step (each band's from its own box's width, with the shelf's phase), and the floor image puts the
-      // floor back. The horn's datasheet sensitivity is free-field.
-      const shelf = baffleStepShelf(f, o.band === "sub" ? stack.footprint.w : stack.midW);
-      mag *= Math.hypot(shelf.re, shelf.im);
-      ph += Math.atan2(shelf.im, shelf.re) + curvePhaseAt(levels[o.band] ?? [], f);
+      // its baffle step, and the floor image puts the floor back. The horn's datasheet sensitivity is free-field.
+      mag *= cabs(bandShelf(stack, o.band, f));
+      ph += ownPhase(stack, levels, o.band, f);
     }
     if (o.band === "sub") ph -= (2 * Math.PI * f * stack.subDelayMs) / 1000;
     out[o.band] = { re: mag * Math.cos(ph), im: mag * Math.sin(ph) };
@@ -464,30 +480,25 @@ const wrapAngle = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI))
 /**
  * The sub delay a DSP setup would dial in, ms (negative: the tops wait): the one that puts the sub in phase with the
  * mid at the low crossover on the box's axis at its alignment point, where the box's drivers already arrive together.
- * Of the delays that do, a period apart, the one nearest the difference in their group delays there. Null without a
- * sub, or with the sub or mid silent at the crossover.
+ * It comes from the true difference in their phase there, not one wrapped to a turn, so it follows the design
+ * smoothly: the crossover's lowpass and highpass are in phase (Linkwitz-Riley), and the bands' own phases are unwrapped
+ * from where they are flat. Null without a sub, or with the sub or mid silent at the crossover.
  */
-export function autoSubDelayMs(stack: CoverageStack, levels: CoverageLevels): number | null {
-  const s = { ...stack, subDelayMs: 0 },
-    srcs = paStackSources(s),
-    skirts = bandSkirts(s);
-  // the sub's phase less the mid's at f
-  const lead = (f: number) => {
-    const { sub, mid } = bandOutputs(s, levels, srcs, skirts, f);
-    return sub && mid ? Math.atan2(sub.im, sub.re) - Math.atan2(mid.im, mid.re) : null;
-  };
+export function autoSubDelayMs(
+  stack: Omit<CoverageStack, "subDelayMs">,
+  levels: CoverageLevels,
+): number | null {
   const f0 = stack.xoLo,
-    e = 1.02,
-    w0 = 2 * Math.PI * f0;
-  const at = lead(f0),
-    below = lead(f0 / e),
-    above = lead(f0 * e);
-  if (at == null || below == null || above == null) return null;
-  // the sub's group delay less the mid's, s: −dφ/dω across the crossover. The sub that lags needs the tops to wait.
-  const lag = -wrapAngle(above - below) / (2 * Math.PI * f0 * (e - 1 / e));
-  const d = wrapAngle(at),
-    n = Math.round((-lag * w0 - d) / (2 * Math.PI));
-  return ((d + 2 * Math.PI * n) / w0) * 1000;
+    sub = paStackSources(stack).find((o) => o.band === "sub"),
+    mid = paStackSources(stack).find((o) => o.band === "mid");
+  if (!sub || !mid || !levels.sub || curveLevelAt(levels.sub, f0) == null) return null;
+  if (curveLevelAt(levels.mid, f0) == null) return null;
+  const hs = sub.filt(f0),
+    hm = mid.filt(f0);
+  // the crossovers' share, wrapped: the pair is in phase but for the mid's lowpass far above
+  const crossover = wrapAngle(Math.atan2(hs.im, hs.re) - Math.atan2(hm.im, hm.re));
+  const lead = crossover + ownPhase(stack, levels, "sub", f0) - ownPhase(stack, levels, "mid", f0);
+  return (lead / (2 * Math.PI * f0)) * 1000;
 }
 
 /** Each band's output at each frequency (see bandOutputs), and the scene's room at that frequency. */

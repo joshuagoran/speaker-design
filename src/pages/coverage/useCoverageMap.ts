@@ -63,8 +63,8 @@ export type CoverageInputs = Pick<
 /** The map's results: the floor grid (null until the first one arrives), the boxes, the listener's level and response. */
 export interface CoverageMap {
   stack: CoverageStack | null;
-  /** what the auto sub delay works out to, ms: in phase with the mid at the crossover (null without a sub to match) */
-  autoSubDelayMs: number | null;
+  /** the sub's delay against the tops, ms: in phase with the mid at the crossover (null without a sub to match) */
+  subDelayMs: number | null;
   levels: CoverageLevels | null;
   /** how far each band is turned down to balance the system */
   pads: BalancedLevels["pads"] | null;
@@ -179,14 +179,14 @@ export function useCoverageMap(
     ],
   );
   const levels = balanced && balanced.levels;
-  const { room, stacks, cluster, band, freqHz, earFt, listener, levelMode, subDelay } = layout;
-  const autoDelay = useMemo(
-    () => (geometry && levels ? autoSubDelayMs({ ...geometry, subDelayMs: 0 }, levels) : null),
+  const { room, stacks, cluster, band, freqHz, earFt, listener, levelMode } = layout;
+  // the sub delayed as a DSP setup would: in phase with the mid at the crossover
+  const subDelayMs = useMemo(
+    () => (geometry && levels ? autoSubDelayMs(geometry, levels) : null),
     [geometry, levels],
   );
-  const subDelayMs = subDelay === "auto" ? (autoDelay ?? 0) : subDelay;
   const stack = useMemo<CoverageStack | null>(
-    () => geometry && { ...geometry, subDelayMs },
+    () => geometry && { ...geometry, subDelayMs: subDelayMs ?? 0 },
     [geometry, subDelayMs],
   );
   // center subs only when the sub has levels to play: otherwise the subs stay (silent) in the stacks
@@ -307,7 +307,7 @@ export function useCoverageMap(
   const jobFailed = !!job && failed?.job === job;
   return {
     stack,
-    autoSubDelayMs: autoDelay,
+    subDelayMs,
     levels,
     pads: balanced && balanced.pads,
     boxes,

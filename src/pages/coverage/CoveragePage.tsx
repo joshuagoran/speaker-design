@@ -18,7 +18,6 @@ import {
   ROOM_CEILING_FT,
   ROOM_LENGTH_FT,
   ROOM_WIDTH_FT,
-  SUB_DELAY_MAX_MS,
   useCoverageLayout,
 } from "./useCoverageLayout";
 import { CoverageAssumptions } from "./CoverageAssumptions";
@@ -110,7 +109,6 @@ export function CoveragePage({ planner }: Props) {
   const label = "text-sm text-stone-500 mb-1";
   const delay = (ms: number) =>
     ms < 0 ? `the tops wait ${(-ms).toFixed(1)} ms` : `${ms.toFixed(1)} ms on the sub`;
-  const autoDelay = map.autoSubDelayMs;
 
   return (
     <main
@@ -482,45 +480,11 @@ export function CoveragePage({ planner }: Props) {
                 Move the pair as a mirror image
               </ToggleButton>
             </div>
-            {map.levels?.sub && (
-              <>
-                <div className={label}>Sub delay</div>
-                <div className="flex flex-wrap gap-1 mb-2">
-                  <ToggleButton
-                    on={layout.subDelay === "auto"}
-                    onClick={() => state.setSubDelay("auto")}
-                  >
-                    Auto
-                  </ToggleButton>
-                  <ToggleButton
-                    on={layout.subDelay !== "auto"}
-                    onClick={() =>
-                      layout.subDelay === "auto" &&
-                      state.setSubDelay(Math.round((autoDelay ?? 0) * 10) / 10)
-                    }
-                  >
-                    Set by hand
-                  </ToggleButton>
-                </div>
-                {layout.subDelay !== "auto" && (
-                  <Slider
-                    label="On the sub (negative: the tops wait)"
-                    value={layout.subDelay}
-                    min={-SUB_DELAY_MAX_MS}
-                    max={SUB_DELAY_MAX_MS}
-                    step={0.1}
-                    unit=" ms"
-                    onChange={state.setSubDelay}
-                  />
-                )}
-                <p className="text-xs text-stone-500 mb-3 tabular-nums">
-                  {autoDelay == null
-                    ? "The sub or mid is silent at the crossover, so auto sets no delay."
-                    : layout.subDelay === "auto"
-                      ? `${delay(autoDelay)}: in phase with the mid at ${hz(planner.subMidCrossoverHz)} on the stack's axis, as a DSP setup would set it.`
-                      : `Auto would set ${delay(autoDelay)}.`}
-                </p>
-              </>
+            {map.subDelayMs != null && (
+              <p className="text-sm text-stone-500 tabular-nums mb-3">
+                Sub delay: {delay(map.subDelayMs)}, in phase with the mid at{" "}
+                {hz(planner.subMidCrossoverHz)} on the stack's axis, as a DSP setup would set it.
+              </p>
             )}
             <Slider
               label="Ear height"

@@ -1352,8 +1352,6 @@ export interface CoverageLayout {
   levelMode: CoverageLevelMode;
   earFt: number;
   listener: FloorPoint;
-  /** the sub's DSP delay against the tops, ms (negative: the tops wait), or in phase with the mid at the crossover */
-  subDelay: number | "auto";
 }
 
 /**

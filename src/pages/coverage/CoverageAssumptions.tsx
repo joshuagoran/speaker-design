@@ -55,7 +55,7 @@ export function CoverageAssumptions({ room }: Props) {
         `Sub and mid radiate as rigid pistons. Behind a box they lose 3 dB at ${BOX_SHADOW_HZ} Hz and 6 dB per octave above it.`,
         "The horn holds its rated coverage (−6 dB at the edges) above its control frequency and widens below it, never dropping more than 40 dB.",
         "Each band's own phase from the planner's models: the sub's vented box and its highpass, the mid's sealed box (no voice-coil inductance). The baffle step is a first-order shelf, with its phase.",
-        "Sub delay: auto puts the sub in phase with the mid at the crossover on the stack's axis (of the delays that do, the one nearest the difference in their group delays); one delay for every sub, in the stacks or in the middle.",
+        "Sub delay: the one that puts the sub in phase with the mid at the crossover on the stack's axis, from the true (unwrapped) difference in their phase there; one delay for every sub, in the stacks or in the middle.",
       ],
     ],
     [

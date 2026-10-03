@@ -29,6 +29,7 @@ import type {
   CoverageLevels,
   CoverageRoom,
   CoverageStack,
+  HighpassType,
   RoomMaterial,
 } from "../src/types";
 
@@ -88,7 +89,6 @@ const layout = (o: Partial<CoverageLayout> = {}): CoverageLayout => ({
   levelMode: "limit",
   earFt: 5,
   listener: { x: 0, y: 25 },
-  subDelay: 0,
   ...o,
 });
 
@@ -599,16 +599,10 @@ test("coverage: a band's own phase and the sub's delay turn its output, and noth
 
 test("coverage: the auto sub delay puts a sub with its own phase back in phase with the mid at the crossover", () => {
   const base = levels(110);
-  // the sub through a subsonic highpass (and no box phase), so it leads the mid at the crossover
+  // the sub through a subsonic highpass (its curve as its own model: no box phase), so it leads the mid at the crossover
   const lv: CoverageLevels = {
     ...base,
-    sub:
-      base.sub &&
-      withOwnPhase(
-        base.sub,
-        base.sub.map(() => ({})),
-        (f) => highpassFilter(f, 40, "BW24"),
-      ),
+    sub: base.sub && withOwnPhase(base.sub, base.sub, (f) => highpassFilter(f, 40, "BW24")),
   };
   const ms = autoSubDelayMs(stack, lv);
   assert.ok(ms != null && ms > 0, `${ms} ms`);
@@ -642,13 +636,12 @@ test("coverage: a map of the subs alone doesn't change with their delay, in the 
   }
 });
 
-test("coverage: the planner's sub and mid with their boxes' phase lose level at the crossover, and the auto delay wins it back", () => {
+/** The planner's f18fh500 sub and bc12ndl76 mid in a stack, their curves with their boxes' phase. */
+function plannerStack(xoLo: number, hpf: number, hpType: HighpassType) {
   const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76"),
     sub = SUB_OPTIONS.find((o) => o.id === "f18fh500");
   assert.ok(mid?.ts && sub?.ts);
-  const xoLo = 80,
-    hpf = 30,
-    midDims = { w: 15, h: 15, d: 15 };
+  const midDims = { w: 15, h: 15, d: 15 };
   const s = subSystem(sub, mid, {
     subBox: { w: 24, h: 30, d: 26 },
     midDims,
@@ -657,7 +650,7 @@ test("coverage: the planner's sub and mid with their boxes' phase lose level at 
     portStyle: "round2",
     cVent: { slotH: 3, nt: 2, dia: 4, throat: 2, len: 12 },
     hpf,
-    hpType: "BW24",
+    hpType,
     ampW: 800,
     portMax: 20,
     layout: "stack",
@@ -687,7 +680,7 @@ test("coverage: the planner's sub and mid with their boxes' phase lose level at 
   const lv = balanceLevels(
     {
       sub: withOwnPhase(subMusicThroughLowpass(s.mdl, s.lim, s.AMP_V, xoLo, 4), s.mdl.curve, (f) =>
-        highpassFilter(f, hpf, "BW24"),
+        highpassFilter(f, hpf, hpType),
       ),
       mid: withOwnPhase(m.max, m.mdl.curve),
       horn: [],
@@ -695,19 +688,38 @@ test("coverage: the planner's sub and mid with their boxes' phase lose level at 
     { xoLo, xoHi: 900, tilt: 6, hfTilt: 3 },
     planner,
   ).levels;
+  return { planner, lv };
+}
+
+/** How far the sub and mid sum under in phase at the crossover, dB. */
+function crossoverLoss(planner: CoverageStack, lv: CoverageLevels, subDelayMs: number) {
+  const { sub: a, mid: b } = outsAt({ ...planner, subDelayMs }, lv, planner.xoLo);
+  assert.ok(a && b);
+  const sum = Math.hypot(a.re + b.re, a.im + b.im);
+  return 20 * Math.log10(sum / (Math.hypot(a.re, a.im) + Math.hypot(b.re, b.im)));
+}
+
+test("coverage: the planner's sub and mid with their boxes' phase lose level at the crossover, and the auto delay wins it back", () => {
+  const { planner, lv } = plannerStack(80, 30, "BW24");
   const ms = autoSubDelayMs(planner, lv);
   // a small delay on the sub: it leads the mid at the crossover, though its group delay is the longer
   assert.ok(ms != null && ms > 0 && ms < 5, `${ms} ms`);
-  const loss = (d: number) => {
-    const { sub: a, mid: b } = outsAt({ ...planner, subDelayMs: d }, lv, xoLo);
-    assert.ok(a && b);
-    return (
-      20 *
-      Math.log10(
-        Math.hypot(a.re + b.re, a.im + b.im) / (Math.hypot(a.re, a.im) + Math.hypot(b.re, b.im)),
-      )
-    );
-  };
-  assert.ok(loss(0) < -0.2, `no delay: ${loss(0).toFixed(2)} dB`);
-  assert.ok(loss(ms) > -0.01, `auto: ${loss(ms).toFixed(2)} dB`);
+  assert.ok(crossoverLoss(planner, lv, 0) < -0.2, "no delay");
+  assert.ok(crossoverLoss(planner, lv, ms) > -0.01, "auto");
+});
+
+test("coverage: the auto sub delay follows the design smoothly, never a period off", () => {
+  for (const xoLo of [60, 80, 120])
+    for (const hpType of ["BW24", "LR24"] as const) {
+      let last: number | null = null;
+      for (let hpf = 20; hpf <= 40; hpf += 2.5) {
+        const { planner, lv } = plannerStack(xoLo, hpf, hpType);
+        const ms = autoSubDelayMs(planner, lv);
+        const at = `${xoLo} Hz, ${hpType} at ${hpf} Hz`;
+        assert.ok(ms != null && Math.abs(ms) < 6, `${at}: ${ms} ms`);
+        assert.ok(crossoverLoss(planner, lv, ms) > -0.01, `${at}: in phase`);
+        if (last != null) assert.ok(Math.abs(ms - last) < 1, `${at}: ${last} to ${ms} ms`);
+        last = ms;
+      }
+    }
 });
