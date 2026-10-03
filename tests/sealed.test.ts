@@ -54,3 +54,25 @@ test("closedBox: LR24 filters shape the output, not the raw curve", (t) => {
   close(t, o.spl - o.raw, db(0.5), 0.3, "at hp");
   close(t, h.spl - h.raw, db(0.5), 0.3, "at lp");
 });
+
+test("closedBox phase: 90° at Fc, near 180° far below (unwrapped from the top), near 0 well above", (t) => {
+  const ts = drv("bc12ndl76");
+  const { Fc } = closedBox(ts, 40, null, null, 2.83, LR24_ORDERS)!;
+  // a grid that starts on Fc
+  const m = closedBox(ts, 40, null, null, 2.83, {
+    ...LR24_ORDERS,
+    fmin: Fc,
+    fmax: 100 * Fc,
+    phase: true,
+  })!;
+  const deg = (o: { rawPhase?: number }) => ((o.rawPhase ?? NaN) * 180) / Math.PI;
+  close(t, deg(m.curve[0]), 90, 1e-6, "at Fc");
+  assert.ok(Math.abs(deg(m.curve[m.curve.length - 1])) < 2, "well above");
+  const low = closedBox(ts, 40, null, null, 2.83, {
+    ...LR24_ORDERS,
+    fmin: Fc / 50,
+    fmax: 20 * Fc,
+    phase: true,
+  })!;
+  close(t, deg(low.curve[0]), 180, 5, "far below");
+});

@@ -603,6 +603,9 @@ export interface FrequencyPoint {
   spl: number;
 }
 
+/** A curve point with its phase, radians, unwrapped along the curve. */
+export type PhasePoint = FrequencyPoint & { phase: number };
+
 /** The plane a dispersion map is taken in: horizontal (sideways off axis) or vertical (above and below it). */
 export type DispersionPlane = "h" | "v";
 
@@ -933,6 +936,8 @@ export interface VentedPoint {
   spl: number;
   xmm: number;
   vel: number;
+  /** the phase of `raw` (the box alone), radians, unwrapped; only with the model's `phase` option */
+  rawPhase?: number;
 }
 
 export interface VentedBoxModel {
@@ -951,12 +956,22 @@ export interface VentedBoxModel {
   xmaxPct: number;
 }
 
+/** A model point with the box's phase: what a model run with its `phase` option gives. */
+export type PhasedPoint<P extends VentedPoint | SealedPoint> = P & { rawPhase: number };
+
+/** A box model run with its `phase` option (see `phasedCurve`). */
+export type PhasedModel<M extends VentedBoxModel | SealedBoxModel> = Omit<M, "curve"> & {
+  curve: PhasedPoint<M["curve"][number]>[];
+};
+
 /** One point of a sealed-box response (no port). */
 export interface SealedPoint {
   f: number;
   raw: number;
   spl: number;
   xmm: number;
+  /** the phase of `raw` (the box alone, no crossover), radians, unwrapped; only with the model's `phase` option */
+  rawPhase?: number;
 }
 
 export interface SealedBoxModel {
@@ -1033,6 +1048,8 @@ export interface SubSystemConfig extends SubGeometryConfig {
   portMax: number;
   /** the sub-to-mid crossover, for a curve that shows the lowpass skirt (the planner's chart); the optimizer's screening leaves it out */
   xoLo?: number;
+  /** give the model's points the box's phase (the coverage map's); the optimizer leaves it off */
+  phase?: boolean;
 }
 
 /** The sub's vent and volumes, without the model. */
@@ -1077,6 +1094,8 @@ export interface MidSystemConfig extends Pick<PaDesignConfig, "xoLoOrder" | "xoH
   xoLo: number;
   xoHi: number;
   mAmpW: number;
+  /** give the model's points the box's phase (the coverage map's); the optimizer leaves it off */
+  phase?: boolean;
 }
 
 /** What a mid always has: voltages and the sealed box's volumes. */
@@ -1404,10 +1423,13 @@ export interface CoverageLayout {
   listener: FloorPoint;
 }
 
-/** Each band's output at 1 m on axis, through its crossover, dB SPL against frequency: the planner's curves. */
+/**
+ * Each band's output at 1 m on axis, through its crossover, dB SPL against frequency: the planner's curves. The sub's
+ * and mid's carry their own phase (the box's, and the sub's highpass's); the crossovers' phase comes from the stack.
+ */
 export interface CoverageLevels {
-  sub: FrequencyPoint[] | null;
-  mid: FrequencyPoint[];
+  sub: PhasePoint[] | null;
+  mid: PhasePoint[];
   horn: FrequencyPoint[];
 }
 
@@ -1420,9 +1442,13 @@ export interface BalancedLevels {
   pads: Record<"sub" | "mid" | "horn", number>;
 }
 
-/** The stack the map places: the dispersion model's stack and its footprint, inches. */
+/** The stack the map places: the dispersion model's stack, its footprint and the mid box's width, inches. */
 export interface CoverageStack extends PaStackGeometry {
   footprint: Pick<Dims3, "w" | "d">;
+  /** the mid box's width, for its baffle step (the tower's is the sub's footprint) */
+  midW: Dims3["w"];
+  /** the sub's DSP delay against the tops, ms (negative: the tops wait) */
+  subDelayMs: number;
 }
 
 /** Level across the floor: `cols` × `rows` cells, row by row from the front wall, dB SPL. */

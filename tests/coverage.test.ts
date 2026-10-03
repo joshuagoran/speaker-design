@@ -1,6 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
+  autoSubDelayMs,
   balanceLevels,
   bandTarget,
   contourSegments,
@@ -14,17 +15,27 @@ import {
   curveLevelAt,
   levelAtPoint,
   pistonQ,
+  withOwnPhase,
 } from "../src/lib/pa/coverage";
+import {
+  highpassPhase,
+  midSystem,
+  phasedCurve,
+  subMusicThroughLowpass,
+  subSystem,
+} from "../src/lib/pa/calc";
+import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { paResponseAt, paStackSources } from "../src/lib/pa/dispersion";
 import { materialAlpha, surfaceReflection } from "../src/lib/pa/roomAcoustics";
 import { DEFAULT_COVERAGE_LAYOUT, fromStored } from "../src/pages/coverage/useCoverageLayout";
-import { logSpacedFrequencies } from "../src/lib/hifi/hifi";
+import { baffleStepGain, logSpacedFrequencies, type Complex } from "../src/lib/hifi/hifi";
 import { METERS_PER_FOOT as FT } from "../src/constants/units";
 import type {
   CoverageLayout,
   CoverageLevels,
   CoverageRoom,
   CoverageStack,
+  HighpassType,
   RoomMaterial,
 } from "../src/types";
 
@@ -37,9 +48,11 @@ const stack: CoverageStack = {
   orderLo: 4,
   orderHi: 4,
   footprint: { w: 24, d: 24 },
+  midW: 24,
+  subDelayMs: 0,
 };
 
-/** Every band at `db` at 1 m, through its crossover's magnitude, as the planner's curves are. */
+/** Every band at `db` at 1 m, through its crossover's magnitude, as the planner's curves are; no phase of its own. */
 const levels = (db: number, s: CoverageStack = stack): CoverageLevels => {
   const freqs = logSpacedFrequencies(12, 20000, 400);
   const curve = (band: "sub" | "mid" | "horn") => {
@@ -47,7 +60,7 @@ const levels = (db: number, s: CoverageStack = stack): CoverageLevels => {
     if (!o) throw new Error(band); // the test stack has all three
     return freqs.map((f) => {
       const h = o.filt(f);
-      return { f, spl: db + 20 * Math.log10(Math.max(1e-9, Math.hypot(h.re, h.im))) };
+      return { f, spl: db + 20 * Math.log10(Math.max(1e-9, Math.hypot(h.re, h.im))), phase: 0 };
     });
   };
   return { sub: curve("sub"), mid: curve("mid"), horn: curve("horn") };
@@ -142,9 +155,12 @@ test("coverage: past a curve's ends its band rolls off by its crossover, and an 
 });
 
 test("coverage: a box's drivers arrive in phase on its axis at the alignment point, as the dispersion model has them", () => {
-  // a tall stack, the horn well above the mid, so a wrong alignment shows plainly at the crossover
+  // a tall stack, the horn well above the mid, so a wrong alignment shows plainly at the crossover; its baffles so wide
+  // their step (and its phase) sits far below it, as the dispersion model has none
   const tall: CoverageStack = {
     ...stack,
+    footprint: { w: 1000, d: 24 },
+    midW: 1000,
     mid: { zIn: 20, Sd: 530 },
     horn: { ...stack.horn, zIn: 100 },
   };
@@ -172,6 +188,37 @@ test("coverage: a box's drivers arrive in phase on its axis at the alignment poi
     );
     assert.ok(Math.abs(rel) < 1, `${f} Hz: ${rel.toFixed(2)} dB off flat`);
   }
+});
+
+test("coverage: the sub and mid sum flat at the low crossover, at LR24 and LR48", () => {
+  for (const order of [4, 8] as const) {
+    // the horn crossover far above, so the mid's own lowpass adds no phase at the low one
+    const s: CoverageStack = { ...stack, orderLo: order, xoHi: 18000 };
+    const scene = coverageScene(s, layout());
+    const { sub, mid } = coverageSlots(scene, levels(110, s), [s.xoLo], true)[0].out;
+    assert.ok(sub && mid, `LR${order * 6}: both bands play at the crossover`);
+    // Linkwitz-Riley: each band 6 dB down and in phase, so the two add to the level either plays alone
+    const sum = Math.hypot(sub.re + mid.re, sub.im + mid.im),
+      apart = Math.hypot(sub.re, sub.im) + Math.hypot(mid.re, mid.im);
+    assert.ok(sum / apart > 0.999, `LR${order * 6}: sum ${(sum / apart).toFixed(4)} of in phase`);
+  }
+});
+
+test("coverage: each band's baffle step follows its own box: a narrower mid box loses level, the sub doesn't", () => {
+  const narrow: CoverageStack = { ...stack, midW: 15 };
+  const f = 200;
+  const out = (s: CoverageStack) =>
+    coverageSlots(coverageScene(s, layout()), levels(110, s), [f], true)[0].out;
+  const a = out(stack),
+    b = out(narrow);
+  const db = (v: Complex | undefined) => (v ? 20 * Math.log10(Math.hypot(v.re, v.im)) : -Infinity);
+  const step = 20 * Math.log10(baffleStepGain(f, 15) / baffleStepGain(f, 24));
+  assert.ok(step < -1, `the 15″ step is ${step.toFixed(2)} dB under the 24″ one at ${f} Hz`);
+  assert.ok(
+    Math.abs(db(b.mid) - db(a.mid) - step) < 1e-9,
+    `mid ${(db(b.mid) - db(a.mid)).toFixed(2)} dB`,
+  );
+  assert.ok(Math.abs(db(b.sub) - db(a.sub)) < 1e-9, "the sub keeps its footprint's step");
 });
 
 test("coverage: two stacks at one low frequency add on the center line and cancel where their paths differ by half a wavelength", () => {
@@ -291,8 +338,8 @@ test("coverage: contours cross between the cells either side of the level", () =
 
 test("coverage: balancing turns the bands with more to spare down to the planner's music balance", () => {
   const flat = (db: number) => [
-    { f: 10, spl: db },
-    { f: 20000, spl: db },
+    { f: 10, spl: db, phase: 0 },
+    { f: 20000, spl: db, phase: 0 },
   ];
   const b = { xoLo: 120, xoHi: 900, tilt: 6, hfTilt: 3 };
   // a loud horn and mid: the sub sets the level, mid 6 under it, horn 3 under the mid
@@ -523,4 +570,191 @@ test("coverage: a piston's directivity factor is a baffled piston's with no soun
     );
   }
   assert.ok(Math.abs(pistonQ(0.01, 1) - 1) < 1e-3);
+});
+
+/** The sub's and mid's outputs at one frequency, for `s` and `lv`, outdoors. */
+const outsAt = (s: CoverageStack, lv: CoverageLevels, f: number) =>
+  coverageSlots(coverageScene(s, layout()), lv, [f], true)[0].out;
+const angle = (v: { re: number; im: number } | undefined) => (v ? Math.atan2(v.im, v.re) : NaN);
+const wrapped = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
+
+test("coverage: a band's own phase and the sub's delay turn its output, and nothing else", () => {
+  const base = levels(110),
+    f = 60;
+  const own: CoverageLevels = {
+    ...base,
+    sub: base.sub && base.sub.map((o) => ({ ...o, phase: 0.5 })),
+  };
+  const a = outsAt(stack, base, f),
+    b = outsAt(stack, own, f),
+    c = outsAt({ ...stack, subDelayMs: 2 }, base, f);
+  assert.ok(Math.abs(wrapped(angle(b.sub) - angle(a.sub)) - 0.5) < 1e-9, "own phase");
+  assert.ok(
+    Math.abs(wrapped(angle(c.sub) - angle(a.sub)) + 2 * Math.PI * f * 0.002) < 1e-9,
+    "delay",
+  );
+  for (const v of [b, c]) {
+    assert.ok(
+      Math.abs(
+        Math.hypot(v.sub?.re ?? 0, v.sub?.im ?? 0) / Math.hypot(a.sub?.re ?? 0, a.sub?.im ?? 0) - 1,
+      ) < 1e-12,
+    );
+    assert.deepStrictEqual(v.mid, a.mid);
+  }
+});
+
+test("coverage: the auto sub delay puts a sub with its own phase back in phase with the mid at the crossover", () => {
+  const base = levels(110);
+  // the sub through a subsonic highpass (and a box with no phase), so it leads the mid at the crossover
+  const lv: CoverageLevels = {
+    ...base,
+    sub:
+      base.sub &&
+      withOwnPhase(
+        base.sub,
+        base.sub.map((o) => ({ f: o.f, rawPhase: 0 })),
+        (f) => highpassPhase(f, 40, "BW24"),
+      ),
+  };
+  const ms = autoSubDelayMs(stack, lv);
+  assert.ok(ms != null && ms > 0, `${ms} ms`);
+  const sum = (d: number) => {
+    const { sub, mid } = outsAt({ ...stack, subDelayMs: d }, lv, stack.xoLo);
+    assert.ok(sub && mid);
+    return (
+      Math.hypot(sub.re + mid.re, sub.im + mid.im) /
+      (Math.hypot(sub.re, sub.im) + Math.hypot(mid.re, mid.im))
+    );
+  };
+  assert.ok(sum(ms) > 0.99999, `auto: ${sum(ms)}`);
+  assert.ok(sum(ms) >= sum(0), `none: ${sum(0)}`);
+  // nothing to match with the mid silent
+  assert.equal(autoSubDelayMs(stack, { ...lv, mid: [] }), null);
+});
+
+test("coverage: a map of the subs alone doesn't change with their delay, in the stacks or in the middle", () => {
+  const lv: CoverageLevels = { ...levels(110), mid: [], horn: [] };
+  for (const subs of ["stacks", "center"] as const) {
+    const l = layout({ subs, room: { ...layout().room, outdoors: false } });
+    const grid = (ms: number) => {
+      const scene = coverageScene({ ...stack, subDelayMs: ms }, l);
+      const { freqs } = coverageFrequencies("sub", 0);
+      return coverageGrid(scene, coverageSlots(scene, lv, freqs, false), l.room, l.earFt, 12).db;
+    };
+    const a = grid(0),
+      b = grid(3.7);
+    for (let i = 0; i < a.length; i++)
+      assert.ok(Math.abs(a[i] - b[i]) < 1e-3, `${subs}: cell ${i}`);
+  }
+});
+
+/** The planner's f18fh500 sub and bc12ndl76 mid in a stack, their curves with their boxes' phase. */
+function plannerStack(xoLo: number, hpf: number, hpType: HighpassType) {
+  const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76"),
+    sub = SUB_OPTIONS.find((o) => o.id === "f18fh500");
+  assert.ok(mid?.ts && sub?.ts);
+  const midDims = { w: 15, h: 15, d: 15 };
+  const s = subSystem(sub, mid, {
+    subBox: { w: 24, h: 30, d: 26 },
+    midDims,
+    wall: 0.75,
+    inset: 0.75,
+    portStyle: "round2",
+    cVent: { slotH: 3, nt: 2, dia: 4, throat: 2, len: 12 },
+    hpf,
+    hpType,
+    ampW: 800,
+    portMax: 20,
+    layout: "stack",
+    xoLo,
+    phase: true,
+  });
+  const m = midSystem(mid, {
+    midDims,
+    wall: 0.75,
+    inset: 0.75,
+    xoLo,
+    xoHi: 900,
+    xoLoOrder: 4,
+    xoHiOrder: 4,
+    mAmpW: 400,
+    phase: true,
+  });
+  assert.ok(s.mdl && m.mdl && m.max);
+  const planner: CoverageStack = {
+    ...stack,
+    sub: { zIn: 15, Sd: sub.ts.Sd },
+    mid: { zIn: 40, Sd: mid.ts.Sd },
+    xoLo,
+    footprint: { w: 24, d: 26 },
+    midW: midDims.w,
+  };
+  const lv = balanceLevels(
+    {
+      sub: withOwnPhase(
+        subMusicThroughLowpass(s.mdl, s.lim, s.AMP_V, xoLo, 4),
+        phasedCurve(s.mdl.curve),
+        (f) => highpassPhase(f, hpf, hpType),
+      ),
+      mid: withOwnPhase(m.max, phasedCurve(m.mdl.curve)),
+      horn: [],
+    },
+    { xoLo, xoHi: 900, tilt: 6, hfTilt: 3 },
+    planner,
+  ).levels;
+  return { planner, lv };
+}
+
+/** How far the sub and mid sum under in phase at the crossover, dB. */
+function crossoverLoss(planner: CoverageStack, lv: CoverageLevels, subDelayMs: number) {
+  const { sub: a, mid: b } = outsAt({ ...planner, subDelayMs }, lv, planner.xoLo);
+  assert.ok(a && b);
+  const sum = Math.hypot(a.re + b.re, a.im + b.im);
+  return 20 * Math.log10(sum / (Math.hypot(a.re, a.im) + Math.hypot(b.re, b.im)));
+}
+
+test("coverage: the planner's sub and mid with their boxes' phase lose level at the crossover, and the auto delay wins it back", () => {
+  const { planner, lv } = plannerStack(80, 30, "BW24");
+  const ms = autoSubDelayMs(planner, lv);
+  // a small delay on the sub: it leads the mid at the crossover, though its group delay is the longer
+  assert.ok(ms != null && ms > 0 && ms < 5, `${ms} ms`);
+  assert.ok(crossoverLoss(planner, lv, 0) < -0.2, "no delay");
+  assert.ok(crossoverLoss(planner, lv, ms) > -0.01, "auto");
+});
+
+test("coverage: the auto sub delay follows the design smoothly, never a period off", () => {
+  for (const xoLo of [60, 80, 120])
+    for (const hpType of ["BW24", "LR24"] as const) {
+      let last: number | null = null;
+      for (let hpf = 20; hpf <= 40; hpf += 2.5) {
+        const { planner, lv } = plannerStack(xoLo, hpf, hpType);
+        const ms = autoSubDelayMs(planner, lv);
+        const at = `${xoLo} Hz, ${hpType} at ${hpf} Hz`;
+        assert.ok(ms != null && Math.abs(ms) < 6, `${at}: ${ms} ms`);
+        assert.ok(crossoverLoss(planner, lv, ms) > -0.01, `${at}: in phase`);
+        if (last != null) assert.ok(Math.abs(ms - last) < 1, `${at}: ${last} to ${ms} ms`);
+        last = ms;
+      }
+    }
+});
+
+test("coverage: a box model run without its phase can't be given to the map", () => {
+  const sub = SUB_OPTIONS.find((o) => o.id === "f18fh500");
+  assert.ok(sub?.ts);
+  const plain = subSystem(sub, MID_OPTIONS[0], {
+    subBox: { w: 24, h: 30, d: 26 },
+    midDims: { w: 15, h: 15, d: 15 },
+    wall: 0.75,
+    inset: 0.75,
+    portStyle: "round2",
+    cVent: { slotH: 3, nt: 2, dia: 4, throat: 2, len: 12 },
+    hpf: 30,
+    hpType: "BW24",
+    ampW: 800,
+    portMax: 20,
+    layout: "stack",
+  });
+  assert.ok(plain.mdl);
+  const curve = plain.mdl.curve;
+  assert.throws(() => phasedCurve(curve), /without its phase/);
 });

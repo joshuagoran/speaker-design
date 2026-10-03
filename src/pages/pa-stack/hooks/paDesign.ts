@@ -10,6 +10,7 @@ import {
   midSystem,
   subThroughLowpass,
   subMusicOutputAt,
+  phasedCurve,
 } from "../../../lib/pa/calc";
 import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion";
 import type {
@@ -24,7 +25,10 @@ import type {
   PaMaxPoint,
   PaPortGeometry,
   PaStackGeometry,
+  PhasedModel,
+  SealedBoxModel,
   SubSystemModelled,
+  VentedBoxModel,
   VentGeometry,
 } from "../../../types";
 import { stackHeights } from "../../../components/stack-view/stackHeights";
@@ -66,9 +70,13 @@ export interface PaDerivedDesign {
   subGrossLiters: number;
   subNetLiters: number;
   subAmpVoltage: number;
-  /** the sub's model, music limit and curves; null when the driver has no T/S or the box or vent can't be modelled */
+  /**
+   * the sub's model (with the box's phase, for the coverage map), music limit and curves; null when the driver has no
+   * T/S or the box or vent can't be modelled
+   */
   subModelled:
-    | (Pick<SubSystemModelled, "mdl" | "lim"> & {
+    | (Pick<SubSystemModelled, "lim"> & {
+        mdl: PhasedModel<VentedBoxModel>;
         /** the most a sine can play at each frequency */
         maxCurve: PaMaxPoint[];
         /** the sub through its lowpass at the crossover, for the system chart */
@@ -81,8 +89,8 @@ export interface PaDerivedDesign {
   midGrossL: number;
   midNetL: number;
   midEffL: number;
-  /** the mid's model and limit curve; null when the driver has no T/S */
-  midModelled: MidSystemModelled | null;
+  /** the mid's model (with the box's phase, for the coverage map) and limit curve; null when the driver has no T/S */
+  midModelled: (Omit<MidSystemModelled, "mdl"> & { mdl: PhasedModel<SealedBoxModel> }) | null;
   /** the mid's limit curve at the ends of an estimated Xmax; null when its Xmax is exact or it has no model */
   midMaxBand: BandCurves<PaMaxPoint> | null;
   midThermalVoltage: number;
@@ -157,12 +165,13 @@ export function derivePaDesign({
     portMax: maxPortAirSpeedMs,
     layout,
     xoLo: subMidCrossoverHz, // the system chart draws the lowpass skirt
+    phase: true, // for the coverage map
   });
   const { port, grossL: subGrossLiters, netL: subNetLiters, AMP_V: subAmpVoltage } = subSys;
   const subMdl = subSys.mdl;
   const subModelled = subMdl
     ? {
-        mdl: subSys.mdl,
+        mdl: { ...subSys.mdl, curve: phasedCurve(subSys.mdl.curve) },
         lim: subSys.lim,
         /**
          * Max SPL for a sine at each frequency (each frequency meets its own port and excursion limits);
@@ -201,6 +210,7 @@ export function derivePaDesign({
     xoLoOrder: subMidCrossoverOrder,
     xoHiOrder: midHornCrossoverOrder,
     mAmpW: midAmpWatts,
+    phase: true, // for the coverage map
   });
   const {
     V: midVoltage,
@@ -210,7 +220,9 @@ export function derivePaDesign({
     vTherm: midThermalVoltage,
     useV: midUsedVoltage,
   } = midSys;
-  const midModelled = midSys.mdl ? midSys : null;
+  const midModelled = midSys.mdl
+    ? { ...midSys, mdl: { ...midSys.mdl, curve: phasedCurve(midSys.mdl.curve) } }
+    : null;
   const midMaxBand = midModelled
     ? xmaxBandCurves(midDriver.ts.xmax, (Xmax) =>
         maxCurveOf(midModelled.mdl.curve, { ...midDriver.ts, Xmax }, midVoltage, Infinity),
