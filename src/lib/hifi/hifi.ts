@@ -569,17 +569,19 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
 }
 
 // ---- edge diffraction (see ./diffraction) ----
-/** The furthest the tweeter can sit off the centre line, inches: its faceplate (or waveguide) stays a quarter inch inside the baffle edge. */
-export const tweeterOffsetMax = (dim: Pick<Dims3, "w">, t: Pick<HifiTweeter, "faceplate">) =>
-  Math.max(0, (dim.w - t.faceplate.w) / 2 - 0.25);
+/** The furthest the tweeter can sit off the centre line, inches: its faceplate (or waveguide) stays on the flat baffle, a quarter inch inside where the roundover starts. */
+export const tweeterOffsetMax = (
+  cfg: Pick<HifiConfig, "dim" | "roundoverIn">,
+  t: Pick<HifiTweeter, "faceplate">,
+) => Math.max(0, (cfg.dim.w - t.faceplate.w) / 2 - (cfg.roundoverIn || 0) - 0.25);
 /** The tweeter offset the model uses, inches (+ inward): the asked-for one, kept on the baffle; 0 for a waveguide on the box top. */
 export function tweeterOffset(
-  cfg: Pick<HifiConfig, "dim" | "tweeterOffsetIn">,
+  cfg: Pick<HifiConfig, "dim" | "roundoverIn" | "tweeterOffsetIn">,
   t: Pick<HifiTweeter, "faceplate">,
   lay: Pick<DriverLayout, "onTop">,
 ) {
   if (lay.onTop) return 0;
-  const m = tweeterOffsetMax(cfg.dim, t),
+  const m = tweeterOffsetMax(cfg, t),
     x = cfg.tweeterOffsetIn || 0;
   return Math.max(-m, Math.min(m, x));
 }
@@ -638,7 +640,7 @@ function edgeRipples(
     },
   };
 }
-/** The tweeter's edge diffraction ripple alone, dB, for the listener at `geo` (on axis at 1 m by default). */
+/** The edge diffraction ripple alone, dB, for the listener at `geo` (on axis at 1 m by default): each driver's, summed through the crossover. */
 export function hifiEdgeRipple(
   sys: Pick<HifiSystem, "lay">,
   w: HifiWoofer,
@@ -647,8 +649,14 @@ export function hifiEdgeRipple(
   freqs: readonly number[],
   geo: ListenerGeometry = { th: 0, eyeIn: sys.lay.tweeterIn, distM: 1 },
 ): FrequencyPoint[] {
-  const er = edgeRipples(sys, w, t, cfg, geo);
-  return freqs.map((f) => ({ f, spl: 20 * Math.log10(cabs(er.tweeter(f))) }));
+  const er = edgeRipples(sys, w, t, cfg, geo),
+    order = cfg.order || 4;
+  return freqs.map((f) => {
+    const lp = linkwitzRileyFilter(f, cfg.xo, order, "lp"),
+      hp = linkwitzRileyFilter(f, cfg.xo, order, "hp");
+    const r = cdiv(cadd(cmul(lp, er.woofer(f)), cmul(hp, er.tweeter(f))), cadd(lp, hp));
+    return { f, spl: 20 * Math.log10(cabs(r)) };
+  });
 }
 
 // Response of one speaker at a point, relative to its on-axis response at 1 m; the DSP is time-aligned on the
@@ -669,13 +677,18 @@ export function hifiResponseAt(
   const dome = (t.domeIn * IN) / 2;
   const dist = geo.distM,
     dz = (h: number) => (geo.eyeIn - h) * IN;
-  const rW = Math.hypot(dist, dz(sys.lay.wooferIn)),
+  // the angle is measured on the tweeter's axis, which an offset moves off the woofer's (centred) one
+  const xT = tweeterOffset(cfg, t, sys.lay) * IN,
+    p = fieldPoint(geo, xT / IN),
+    hW = Math.hypot(p.x * IN, p.z * IN), // woofer to listener, across the floor
+    thW = Math.atan2(Math.abs(p.x * IN), p.z * IN);
+  const rW = Math.hypot(hW, dz(sys.lay.wooferIn)),
     rT = Math.hypot(dist, dz(sys.lay.tweeterIn));
-  const r0W = Math.hypot(dist, (sys.lay.tweeterIn - sys.lay.wooferIn) * IN),
+  const r0W = Math.hypot(Math.hypot(dist, xT), (sys.lay.tweeterIn - sys.lay.wooferIn) * IN),
     r0T = dist; // alignment point: tweeter axis
-  const tvW = Math.atan2(dz(sys.lay.wooferIn), dist),
+  const tvW = Math.atan2(dz(sys.lay.wooferIn), hW),
     tvT = Math.atan2(dz(sys.lay.tweeterIn), dist);
-  const offW = Math.acos(Math.cos(geo.th) * Math.cos(tvW)),
+  const offW = Math.acos(Math.cos(thW) * Math.cos(tvW)),
     offT = Math.acos(Math.cos(geo.th) * Math.cos(tvT));
   const wAt = (f: number) => {
     const o = nearestF(sys.woofer, f);
@@ -912,11 +925,11 @@ export function hifiChips(
       "Tweeter offset ignored",
       "The waveguide sits on the box top, centred; the offset only applies to a tweeter on the baffle.",
     ]);
-  else if (Math.abs(offAsked) > tweeterOffsetMax(cfg.dim, t) + 1e-9)
+  else if (Math.abs(offAsked) > tweeterOffsetMax(cfg, t) + 1e-9)
     F.push([
       "warn",
       "Tweeter offset past the edge",
-      `Its ${t.faceplate.w.toFixed(1)}″ faceplate fits at most ${tweeterOffsetMax(cfg.dim, t).toFixed(2)}″ off centre on this baffle; the model uses that.`,
+      `Its ${t.faceplate.w.toFixed(1)}″ faceplate fits at most ${tweeterOffsetMax(cfg, t).toFixed(2)}″ off centre on this baffle; the model uses that.`,
     ]);
   F.push(
     sys.who === "tweeter"

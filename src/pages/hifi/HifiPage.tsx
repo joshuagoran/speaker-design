@@ -443,13 +443,14 @@ export function HifiPage({ hifi }: Props) {
               {baffleStepCompensationDb ? `, ${baffleStepCompensationDb} dB boost` : ""}.
             </div>
             <div>
-              Edge diffraction: the baffle edges re-radiate the tweeter's sound a little later, for
+              Edge diffraction: the baffle edges re-radiate each driver's sound a little later, for
               about ±{edgeRippleDb.toFixed(1)} dB of ripple from 1 to 5 kHz on axis (
               {roundoverIn ? `${formatInches(roundoverIn)} roundover` : "sharp edges"}, tweeter{" "}
               {tweeterOffsetUsed
                 ? `${formatInches(Math.abs(tweeterOffsetUsed))} ${tweeterOffsetUsed > 0 ? "inward" : "outward"} of centre`
                 : "centred"}
-              ). It is in the responses and the dispersion map; the ripple shifts with angle.
+              ). The ripple and the tweeter's position are in the responses and the dispersion map;
+              the ripple shifts with angle.
             </div>
             <div>
               <Tooltip tip={woofer.note}>
@@ -710,7 +711,7 @@ export function HifiPage({ hifi }: Props) {
             partly cancels; the pair is mirror-imaged
             {speakerSystem.lay.onTop
               ? " (the waveguide on top stays centred)"
-              : `, at most ${tweeterOffsetMax(boxDims, tweeterWithWaveguide).toFixed(2)}″ either way on this baffle`}
+              : `, at most ${tweeterOffsetMax(speakerConfig, tweeterWithWaveguide).toFixed(2)}″ either way on this baffle`}
             .
             {roundoverTooDeep && (
               <span className="text-orange-900">

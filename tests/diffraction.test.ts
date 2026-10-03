@@ -160,7 +160,7 @@ test("hifi: a roundover smooths the on-axis response above 2 kHz and leaves the 
   assert.ok(rippleDb(round, 2500, 8000) < rippleDb(sharp, 2500, 8000));
   for (let i = 0; i < FREQS.length && FREQS[i] < 600; i++)
     close(t, round[i].spl, sharp[i].spl, 0.15, `${FREQS[i].toFixed(0)} Hz`);
-  // the tweeter's ripple alone, as the page reports it
+  // the edge ripple alone, through the crossover, as the page reports it
   const rSharp = rippleDb(hifiEdgeRipple(s, W, T, cfg, FREQS), 1000, 5000),
     rRound = rippleDb(hifiEdgeRipple(s, W, T, { ...cfg, roundoverIn: 1.5 }, FREQS), 1000, 5000);
   assert.ok(rRound < rSharp && rSharp > 1, `±${rRound.toFixed(2)} vs ±${rSharp.toFixed(2)} dB`);
@@ -195,10 +195,18 @@ test("hifi: a centred tweeter's horizontal map is symmetric; an offset one is no
   assert.ok(inward.some((o, i) => Math.abs(o.spl - outward[i].spl) > 0.3));
 });
 
-test("hifi: the offset stays on the baffle, and the checks flag a too-deep roundover and an offset past the edge", () => {
+test("hifi: the offset stays on the baffle, and the checks flag a too-deep roundover and an offset past the edge", (t) => {
   const s = sysOf(cfg);
-  const max = tweeterOffsetMax(cfg.dim, T);
+  const max = tweeterOffsetMax(cfg, T);
   assert.strictEqual(max, Math.max(0, (cfg.dim.w - T.faceplate.w) / 2 - 0.25));
+  // a roundover takes its radius off the flat baffle the faceplate needs
+  const wide = { ...cfg, dim: { ...cfg.dim, w: 14 } };
+  close(
+    t,
+    tweeterOffsetMax({ ...wide, roundoverIn: 1.5 }, T),
+    tweeterOffsetMax(wide, T) - 1.5,
+    1e-9,
+  );
   assert.strictEqual(tweeterOffset({ ...cfg, tweeterOffsetIn: 99 }, T, s.lay), max);
   assert.strictEqual(tweeterOffset({ ...cfg, tweeterOffsetIn: -99 }, T, s.lay), -max);
   assert.strictEqual(tweeterOffset({ ...cfg, tweeterOffsetIn: 1 }, T, { onTop: true }), 0);
@@ -228,4 +236,34 @@ test("inches are written as a woodworker would", () => {
   assert.strictEqual(formatInches(1.5), "1½″");
   assert.strictEqual(formatInches(2), "2″");
   assert.strictEqual(formatInches(1.3), "1.3″");
+});
+
+test("hifi: an offset tweeter's own path changes the crossover sum off axis, not just its edge ripple", () => {
+  const wide = { ...cfg, dim: { ...cfg.dim, w: 14 }, tweeterOffsetIn: 3 },
+    centred = { ...wide, tweeterOffsetIn: 0 };
+  const s = sysOf(wide);
+  // the crossover sum with each driver's edge ripple taken out
+  const direct = (c: HifiConfig, th: number) => {
+    const geo = { th, eyeIn: s.lay.tweeterIn, distM: 1, side: 1 as const };
+    return (
+      hifiResponseAt(s, W, T, c, geo, [c.xo])[0].spl -
+      hifiEdgeRipple(s, W, T, c, [c.xo], geo)[0].spl
+    );
+  };
+  // at 45° inside the tweeter is about 2″ nearer than the woofer: over 100° of phase at 2 kHz
+  const at45 = direct(wide, Math.PI / 4) - direct(centred, Math.PI / 4);
+  assert.ok(at45 < -1, `45° inside at the crossover, offset vs centred: ${at45.toFixed(2)} dB`);
+  // on axis the DSP alignment still holds
+  const on = direct(wide, 0) - direct(centred, 0);
+  assert.ok(Math.abs(on) < 0.5, `on axis at the crossover: ${on.toFixed(2)} dB`);
+});
+
+test("hifi: the page's ripple figure counts the woofer below the crossover", () => {
+  const s = sysOf(cfg),
+    low = rippleDb(hifiEdgeRipple(s, W, T, { ...cfg, xo: 3000 }, FREQS), 1000, 2000),
+    tweeterOnly = rippleDb(hifiEdgeRipple(s, W, T, { ...cfg, xo: 200 }, FREQS), 1000, 2000);
+  assert.ok(
+    Math.abs(low - tweeterOnly) > 0.05,
+    `±${low.toFixed(2)} vs ±${tweeterOnly.toFixed(2)} dB`,
+  );
 });
