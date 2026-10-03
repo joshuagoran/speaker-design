@@ -34,7 +34,8 @@ const stack: CoverageStack = {
   horn: { zIn: 50, covH: 90, covV: 40, wIn: 14, hIn: 8 },
   xoLo: 120,
   xoHi: 900,
-  order: 4,
+  orderLo: 4,
+  orderHi: 4,
   footprint: { w: 24, d: 24 },
 };
 

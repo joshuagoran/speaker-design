@@ -11,7 +11,7 @@ import {
 } from "../src/lib/pa/calc";
 import { FILL_OPTIONS } from "../src/lib/data";
 import type { FillSystemConfig } from "../src/types";
-import { close, massLineSPL } from "./helpers";
+import { close, massLineSPL, LR24_ORDERS } from "./helpers";
 
 /** `fillSystem` for a fill that has a model, as every one here does. */
 const fillSystem = (...args: Parameters<typeof fillSystemOrNull>) => {
@@ -62,7 +62,7 @@ test("fills model calls match the planner's box models", (t) => {
   const m = boxModel(drv.ts, v.eff, v.pArea, 4, 70, V, "LR24", { nPorts: 1 });
   close(t, v.vM!.Fb, m!.Fb, 1e-12);
   const s = fillSystem(drv, { ...base, boxType: "sealed" });
-  close(t, s.sM!.Qtc, closedBox(drv.ts, s.eff, 70, null, V)!.Qtc, 1e-12);
+  close(t, s.sM!.Qtc, closedBox(drv.ts, s.eff, 70, null, V, LR24_ORDERS)!.Qtc, 1e-12);
 });
 test("fills max curve stops at 300 Hz and respects every limit", (t) => {
   const v = fillSystem(drv, base);

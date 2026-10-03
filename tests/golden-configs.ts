@@ -92,15 +92,17 @@ export function evaluate(c: GoldenConfig): GoldenValues {
     inset: cfg.inset,
     xoLo,
     xoHi: c.xoHi || 900,
+    xoLoOrder: 4,
+    xoHiOrder: 4,
     mAmpW: c.mAmpW || 400,
   });
   const mm = ms.mdl;
   const sxo = s.mdl
-    ? nearestPoint(subThroughLowpass(s.mdl, sub.ts, s.AMP_V, cfg.portMax, xoLo), xoLo).spl
+    ? nearestPoint(subThroughLowpass(s.mdl, sub.ts, s.AMP_V, cfg.portMax, xoLo, 4), xoLo).spl
     : null;
   const cd = CD_OPTIONS.find((o) => o.id === c.cd),
     horn = HORN_OPTIONS.find((o) => o.id === c.horn);
-  const h = cd && horn ? hornResponse(cd.hf, horn.hf!, c.xoHi || 900, c.hfAmpW || 100) : null;
+  const h = cd && horn ? hornResponse(cd.hf, horn.hf!, c.xoHi || 900, c.hfAmpW || 100, 4) : null;
   return {
     netL: r2(s.netL),
     Fb: r2(s.mdl && s.mdl.Fb),

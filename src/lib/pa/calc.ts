@@ -37,6 +37,7 @@ import type {
   VentGeometry,
   VentSpec,
 } from "../../types";
+import { crossoverSlopeName } from "../../constants/crossovers";
 
 // ---------------------------------------------------------------
 // Vented-box model. Same lumped-element circuit used to check this
@@ -82,12 +83,10 @@ export const highpassGain = (f: number, fc: number, type: HighpassType = "BW24")
     : Math.pow(x, n) / (1 + Math.pow(x, n));
 };
 // Linkwitz-Riley crossover magnitudes of either order (4 = LR24, 8 = LR48), both -6 dB at fc
-export const linkwitzRileyLowpass = (f: number, fc: number, order: CrossoverOrder = 4) =>
+export const linkwitzRileyLowpass = (f: number, fc: number, order: CrossoverOrder) =>
   1 / (1 + Math.pow(f / fc, order));
-export const linkwitzRileyHighpass = (f: number, fc: number, order: CrossoverOrder = 4) =>
-  highpassGain(f, fc, order === 8 ? "LR48" : "LR24");
-export const linkwitzRiley24Lowpass = (f: number, fc: number) => linkwitzRileyLowpass(f, fc, 4);
-export const linkwitzRiley24Highpass = (f: number, fc: number) => linkwitzRileyHighpass(f, fc, 4);
+export const linkwitzRileyHighpass = (f: number, fc: number, order: CrossoverOrder) =>
+  highpassGain(f, fc, crossoverSlopeName(order));
 
 // Vent tuning: effective length (m) and Fb for net volume VbL, total vent area SpIn2 over nPorts equal
 // openings, physical length LpIn, and total end correction ecIn in inches (default 1.46 r per opening).
@@ -225,7 +224,7 @@ export function boxModel(
 // ---------------------------------------------------------------
 // Sealed-box model for the mid-bass: the same driver circuit with the box
 // compliance in series and no port. hp and lp are the crossover corners,
-// Linkwitz-Riley, LR24 unless opts gives an order (hpOrder, lpOrder). Voice-coil inductance is not
+// Linkwitz-Riley of the orders opts gives (hpOrder, lpOrder). Voice-coil inductance is not
 // modelled, so the top octave reads a little high. Excursion is the sine peak, as in boxModel.
 // ---------------------------------------------------------------
 export function closedBox(
@@ -235,11 +234,11 @@ export function closedBox(
   lp: number | null,
   volts: number,
   opts: Pick<BoxModelOptions, "N" | "fmin" | "fmax" | "fTop"> & {
-    hpOrder?: CrossoverOrder;
-    lpOrder?: CrossoverOrder;
-  } = {},
+    hpOrder: CrossoverOrder;
+    lpOrder: CrossoverOrder;
+  },
 ): SealedBoxModel | null {
-  const { N = 420, fmin = 20, fmax = 2000, fTop, hpOrder = 4, lpOrder = 4 } = opts;
+  const { N = 420, fmin = 20, fmax = 2000, fTop, hpOrder, lpOrder } = opts;
   if (!ts || !VbL || VbL <= 0) return null;
   const rho = 1.18,
     c = 343;
@@ -761,7 +760,7 @@ export function subMusicThroughLowpass(
   lim: Pick<SubLimits, "V">,
   AMP_V: number,
   xoLo: number,
-  order: CrossoverOrder = 4,
+  order: CrossoverOrder,
 ): FrequencyPoint[] {
   return mdl.curve.map((o) => ({ f: o.f, spl: subMusicLevel(o, lim, AMP_V, xoLo, order) }));
 }
@@ -771,7 +770,7 @@ export function subMusicOutputAt(
   lim: Pick<SubLimits, "V">,
   AMP_V: number,
   xoLo: number,
-  order: CrossoverOrder = 4,
+  order: CrossoverOrder,
 ) {
   return subMusicLevel(nearestPoint(mdl.curve, xoLo), lim, AMP_V, xoLo, order);
 }
@@ -786,7 +785,7 @@ export function hornResponse(
   hz: Partial<HornHf>,
   xoHi: number,
   hfAmpW: number,
-  order: CrossoverOrder = 4,
+  order: CrossoverOrder,
 ): HornResponse | null {
   if (!hf || hf.sens == null || !hf.aes) return null;
   const imp = hf.imp || 8;
@@ -905,7 +904,7 @@ export function subThroughLowpass(
   AMP_V: number,
   portMax: number,
   xoLo: number,
-  order: CrossoverOrder = 4,
+  order: CrossoverOrder,
 ): FrequencyPoint[] {
   const vt = thermalVoltageLimit(ts.aes);
   return mdl.curve.map((o) => {
@@ -918,7 +917,7 @@ export function subThroughLowpass(
 }
 
 // ---- the mid-bass as the planner computes it: sealed, always lightly stuffed ----
-// cfg: { midDims, wall, inset, xoLo, xoHi, mAmpW, xoLoOrder?, xoHiOrder? } (orders default to LR24)
+// cfg: { midDims, wall, inset, xoLo, xoHi, xoLoOrder, xoHiOrder, mAmpW }
 export const STUFFING_VOLUME_GAIN = 1.15; // ~15% more effective volume from light stuffing
 export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const V = ampVoltage(cfg.mAmpW);
@@ -962,7 +961,8 @@ export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem |
   const net = Math.max(3, gross - disp - (vented ? pVol : 0));
   const eff = vented ? net : net * STUFFING_VOLUME_GAIN; // sealed boxes are stuffed
   const vM = vented ? boxModel(ts, eff, pArea, port.len, hp, V, "LR24", { nPorts: port.n }) : null;
-  const sM = vented ? null : closedBox(ts, eff, hp, null, V);
+  // sealed: the same LR24 highpass to the subs, and no lowpass
+  const sM = vented ? null : closedBox(ts, eff, hp, null, V, { hpOrder: 4, lpOrder: 4 });
   const m = vM || sM;
   if (!m) return null; // a vented box with no port area or length has no model
   const max = maxOutputCurve(m.curve, ts, V, portMax).filter((o) => o.f <= 300);

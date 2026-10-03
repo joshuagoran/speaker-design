@@ -1,11 +1,10 @@
-// PA crossover slopes: LR24 or LR48 at each crossover (issue #27). LR24 stays the default and reads as before.
+// PA crossover slopes: LR24 or LR48 at each crossover (issue #27). LR24 reads as before.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
+  highpassGain,
   linkwitzRileyLowpass,
   linkwitzRileyHighpass,
-  linkwitzRiley24Lowpass,
-  linkwitzRiley24Highpass,
   midSystem,
   hornResponse,
   subSystem,
@@ -16,7 +15,12 @@ import {
 import { paResponseAt } from "../src/lib/pa/dispersion";
 import { evaluateDesign, optimizePaStack } from "../src/lib/pa/optimize";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import type { MidSystemConfig, PaDesignConfig, PaStackGeometry } from "../src/types";
+import type {
+  CrossoverOrder,
+  MidSystemConfig,
+  PaDesignConfig,
+  PaStackGeometry,
+} from "../src/types";
 import { close, db } from "./helpers";
 
 test("LR48 is -6 dB at the corner, 48 dB/oct beyond it, and its halves sum to 1", (t) => {
@@ -36,8 +40,8 @@ test("LR48 is -6 dB at the corner, 48 dB/oct beyond it, and its halves sum to 1"
 
 test("order 4 is the LR24 the PA always used, to the bit", () => {
   for (const f of [30, 120, 900, 5000]) {
-    assert.equal(linkwitzRileyLowpass(f, 900), linkwitzRiley24Lowpass(f, 900));
-    assert.equal(linkwitzRileyHighpass(f, 900), linkwitzRiley24Highpass(f, 900));
+    assert.equal(linkwitzRileyLowpass(f, 900, 4), 1 / (1 + Math.pow(f / 900, 4)));
+    assert.equal(linkwitzRileyHighpass(f, 900, 4), highpassGain(f, 900, "LR24"));
   }
 });
 
@@ -48,11 +52,19 @@ const cfg: MidSystemConfig = {
   inset: 0.75,
   xoLo: 120,
   xoHi: 500,
+  xoLoOrder: 4,
+  xoHiOrder: 4,
   mAmpW: 400,
+};
+/** The mid's sealed-box model. */
+const midModel = (c: MidSystemConfig) => {
+  const m = midSystem(mid, c).mdl;
+  assert.ok(m, "DEFAULT_PA's mid has T/S");
+  return m;
 };
 /** The mid's fall over the octave from 2x to 4x the high crossover, dB. */
 const octaveFall = (c: MidSystemConfig) => {
-  const curve = midSystem(mid, c).mdl!.curve; // DEFAULT_PA's mid has T/S
+  const curve = midModel(c).curve;
   return nearestPoint(curve, 2000).spl - nearestPoint(curve, 1000).spl;
 };
 
@@ -65,18 +77,16 @@ test("mid: an LR48 high crossover falls ~48 dB/oct well above it, LR24 ~24", (t)
   close(t, lr48 - lr24, db(257 / 65537) - db(17 / 257), 0.05);
 });
 
-test("mid: no order given is LR24, identical curve; the slope moves nothing at the corners", (t) => {
-  const a = midSystem(mid, cfg).mdl!,
-    b = midSystem(mid, { ...cfg, xoLoOrder: 4, xoHiOrder: 4 }).mdl!,
-    c = midSystem(mid, { ...cfg, xoLoOrder: 8, xoHiOrder: 8 }).mdl!;
-  assert.deepEqual(a.curve, b.curve);
+test("mid: the slope moves nothing at the corners", (t) => {
+  const a = midModel(cfg),
+    c = midModel({ ...cfg, xoLoOrder: 8, xoHiOrder: 8 });
   // LR48 differs from LR24 by the filters alone, which agree (-6 dB each) at both corners
   a.curve.forEach((o, i) => {
-    const g4 = linkwitzRileyHighpass(o.f, cfg.xoLo) * linkwitzRileyLowpass(o.f, cfg.xoHi),
+    const g4 = linkwitzRileyHighpass(o.f, cfg.xoLo, 4) * linkwitzRileyLowpass(o.f, cfg.xoHi, 4),
       g8 = linkwitzRileyHighpass(o.f, cfg.xoLo, 8) * linkwitzRileyLowpass(o.f, cfg.xoHi, 8);
     close(t, c.curve[i].spl - o.spl, db(g8 / g4), 1e-9, `${o.f} Hz`);
   });
-  close(t, db(linkwitzRileyHighpass(120, 120, 8)), db(linkwitzRileyHighpass(120, 120)), 1e-12);
+  close(t, db(linkwitzRileyHighpass(120, 120, 8)), db(linkwitzRileyHighpass(120, 120, 4)), 1e-12);
   // an octave below the low crossover LR48 is the steeper skirt
   assert.ok(nearestPoint(c.curve, 60).spl < nearestPoint(a.curve, 60).spl - 10);
 });
@@ -84,12 +94,16 @@ test("mid: no order given is LR24, identical curve; the slope moves nothing at t
 test("horn: LR48 is -6 dB at the crossover and ~48 dB down an octave below", (t) => {
   const hf = DEFAULT_PA.cd.hf,
     hz = { ...DEFAULT_PA.horn.hf, lowHz: 0 }; // the crossover's skirt alone
-  const a = hornResponse(hf, hz, 1000, 100)!,
-    b = hornResponse(hf, hz, 1000, 100, 8)!;
-  assert.deepEqual(hornResponse(hf, hz, 1000, 100, 4)!.curve, a.curve);
+  const horn = (order: CrossoverOrder) => {
+    const h = hornResponse(hf, hz, 1000, 100, order);
+    assert.ok(h, "DEFAULT_PA's driver has a spec");
+    return h;
+  };
+  const a = horn(4),
+    b = horn(8);
   const at = (h: typeof a, f: number) => nearestPoint(h.curve, f).spl - h.flat;
   close(t, at(b, 1000), at(a, 1000), 0.3);
-  close(t, at(a, 500), db(linkwitzRiley24Highpass(nearestPoint(a.curve, 500).f, 1000)), 1e-9);
+  close(t, at(a, 500), db(linkwitzRileyHighpass(nearestPoint(a.curve, 500).f, 1000, 4)), 1e-9);
   assert.ok(at(b, 500) < -40 && at(a, 500) > -30, `${at(b, 500)} vs ${at(a, 500)}`);
 });
 
@@ -109,13 +123,13 @@ test("sub: an LR48 lowpass is steeper above the crossover, the same at it", (t) 
     layout: d.layout,
   });
   assert.ok(s.mdl && s.lim, "the default sub is modelled");
-  const lp4 = subThroughLowpass(s.mdl, d.sub.ts, s.AMP_V, d.portMax, 120),
+  const lp4 = subThroughLowpass(s.mdl, d.sub.ts, s.AMP_V, d.portMax, 120, 4),
     lp8 = subThroughLowpass(s.mdl, d.sub.ts, s.AMP_V, d.portMax, 120, 8);
   assert.ok(nearestPoint(lp8, 240).spl < nearestPoint(lp4, 240).spl - 15);
   close(
     t,
     subMusicOutputAt(s.mdl, s.lim, s.AMP_V, 120, 8),
-    subMusicOutputAt(s.mdl, s.lim, s.AMP_V, 120),
+    subMusicOutputAt(s.mdl, s.lim, s.AMP_V, 120, 4),
     0.5,
   );
 });
@@ -126,17 +140,21 @@ const stack = (o: Partial<PaStackGeometry>): PaStackGeometry => ({
   horn: { zIn: 55, covH: 90, covV: 40, wIn: 12, hIn: 7 },
   xoLo: 120,
   xoHi: 1000,
+  orderLo: 4,
+  orderHi: 4,
   ...o,
 });
 const freqs = [60, 120, 300, 800, 1000, 1400, 4000];
 const below = { th: 0, eyeIn: 20, distM: 5 }; // off the horn axis: the crossover lobes show
 const spl = (s: PaStackGeometry) => paResponseAt(s, below, freqs).map((p) => p.spl);
 
-test("dispersion: each crossover takes its own order; `order` still sets both", () => {
-  assert.deepEqual(spl(stack({})), spl(stack({ order: 4 })));
-  assert.deepEqual(spl(stack({ order: 8 })), spl(stack({ orderLo: 8, orderHi: 8 })));
-  assert.deepEqual(spl(stack({ orderLo: 8 })), spl(stack({ order: 4, orderLo: 8 })));
-  assert.notDeepEqual(spl(stack({ orderLo: 8 })), spl(stack({ orderHi: 8 })));
+test("dispersion: each crossover takes its own order", () => {
+  const lr24 = spl(stack({})),
+    lo8 = spl(stack({ orderLo: 8 })),
+    hi8 = spl(stack({ orderHi: 8 }));
+  assert.notDeepEqual(lo8, lr24);
+  assert.notDeepEqual(hi8, lr24);
+  assert.notDeepEqual(lo8, hi8);
   // on the horn axis a mixed stack still sums flat (both are time-aligned Linkwitz-Riley pairs)
   for (const p of paResponseAt(
     stack({ orderLo: 8, orderHi: 4 }),
@@ -182,6 +200,8 @@ test("optimizer: every card keeps the design's LR48 slopes", (t) => {
     assert.equal(k.config.xoLoOrder, 8, k.label);
     assert.equal(k.config.xoHiOrder, 8, k.label);
     // the card's numbers are the LR48 design's own
-    close(t, evaluateDesign(k.config)!.out, k.metrics.out, 1e-9, k.label);
+    const m = evaluateDesign(k.config);
+    assert.ok(m, k.label);
+    close(t, m.out, k.metrics.out, 1e-9, k.label);
   }
 });

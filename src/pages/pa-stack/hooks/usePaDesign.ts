@@ -16,6 +16,7 @@ import {
 import { byId } from "../../../lib/tables";
 import { DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../../../lib/defaults";
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
+import { savedCrossoverOrder } from "../../../constants/crossovers";
 import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
 import { derivePaDesign } from "./paDesign";
 import type { PaDerivedDesign } from "./paDesign";
@@ -277,9 +278,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     else if (savedMidBox) setMidBoxDims({ ...savedMidBox.box });
     if (typeof c.xoLo === "number") setSubMidCrossoverHz(c.xoLo);
     if (typeof c.xoHi === "number") setMidHornCrossoverHz(c.xoHi);
-    // a save from before the slope setting (or with anything but 8) is LR24
-    setSubMidCrossoverOrder(c.xoLoOrder === 8 ? 8 : 4);
-    setMidHornCrossoverOrder(c.xoHiOrder === 8 ? 8 : 4);
+    setSubMidCrossoverOrder(savedCrossoverOrder(c.xoLoOrder));
+    setMidHornCrossoverOrder(savedCrossoverOrder(c.xoHiOrder));
     if (typeof c.mAmpW === "number") setMidAmpWatts(c.mAmpW);
     if (typeof c.tilt === "number") setMidBandTiltDb(c.tilt);
     if (typeof c.hfAmpW === "number") setHornAmpWatts(c.hfAmpW);

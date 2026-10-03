@@ -8,14 +8,14 @@ import {
   boxModel,
   closedBox,
   subSystem,
-  linkwitzRiley24Lowpass,
+  linkwitzRileyLowpass,
   LOWPASS_SKIRT_SPAN,
   STUFFING_VOLUME_GAIN,
   nearestPoint,
 } from "../src/lib/pa/calc";
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import type { MidSystemConfig, SubSystemConfig } from "../src/types";
-import { close, db } from "./helpers";
+import { close, db, LR24_ORDERS } from "./helpers";
 
 const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76") || MID_OPTIONS.find((o) => o.ts)!;
 const cfg: MidSystemConfig = {
@@ -24,6 +24,8 @@ const cfg: MidSystemConfig = {
   inset: 0.75,
   xoLo: 120,
   xoHi: 900,
+  xoLoOrder: 4,
+  xoHiOrder: 4,
   mAmpW: 400,
 };
 
@@ -80,20 +82,20 @@ test("subThroughLp: -6 dB LR24 at the crossover when amp-limited, never above th
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts,
     V = ampVoltage(10);
   const mdl = boxModel(ts, 150, 60, 14, 30, V, "BW24")!;
-  const s = subThroughLowpass(mdl, ts, V, 20, 120);
+  const s = subThroughLowpass(mdl, ts, V, 20, 120, 4);
   const i = mdl.curve.indexOf(nearestPoint(mdl.curve, 120));
-  close(t, s[i].spl, mdl.curve[i].spl + db(linkwitzRiley24Lowpass(mdl.curve[i].f, 120)), 1e-9);
-  close(t, db(linkwitzRiley24Lowpass(120, 120)), -6.02, 0.01);
+  close(t, s[i].spl, mdl.curve[i].spl + db(linkwitzRileyLowpass(mdl.curve[i].f, 120, 4)), 1e-9);
+  close(t, db(linkwitzRileyLowpass(120, 120, 4)), -6.02, 0.01);
   s.forEach((o, k) => assert.ok(o.spl <= mdl.curve[k].spl + 1e-9));
 });
 test("subThroughLp: the lowpass relaxes the limits (more drive above the crossover)", (t) => {
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts,
     V = ampVoltage(3000);
   const mdl = boxModel(ts, 150, 60, 14, 30, V, "BW24")!;
-  const s = subThroughLowpass(mdl, ts, V, 20, 80),
+  const s = subThroughLowpass(mdl, ts, V, 20, 80, 4),
     k = mdl.curve.indexOf(nearestPoint(mdl.curve, 200));
   const vt = thermalVoltageLimit(ts.aes),
-    g = linkwitzRiley24Lowpass(mdl.curve[k].f, 80);
+    g = linkwitzRileyLowpass(mdl.curve[k].f, 80, 4);
   // at 200 Hz the filtered cone moves little: thermal or amp limits, not Xmax/port
   const lim = Math.min(vt, V);
   close(
@@ -120,7 +122,7 @@ test("mid at a 2 kHz crossover: the curve runs past it, -6 dB (LR24) at xoHi, th
   // the filters' share at xoHi against the passband trend (the raw curve): LR24 lowpass -6 dB, the 120 Hz highpass ~0
   close(t, curve[i].spl - curve[i].raw, -6.02, 0.05);
   // the max curve carries the same -6 dB: its drop from an octave below is the lowpass's
-  const lp = (j: number) => db(linkwitzRiley24Lowpass(curve[j].f, xoHi));
+  const lp = (j: number) => db(linkwitzRileyLowpass(curve[j].f, xoHi, 4));
   close(t, max[i].spl - curve[i].raw - (max[k].spl - curve[k].raw), lp(i) - lp(k), 0.05);
   // above: falls at every step, no step bigger than 1 dB, 30 dB under the passband trend by the end
   for (let j = i + 1; j < max.length; j++) {
@@ -130,8 +132,8 @@ test("mid at a 2 kHz crossover: the curve runs past it, -6 dB (LR24) at xoHi, th
   assert.ok(max[max.length - 1].spl < max[i].spl + 6.02 - 30, "skirt 30 dB down at the end");
 });
 test("running a curve on past fmax leaves the usual points exactly where they were", () => {
-  const a = closedBox(mid.ts, 40, 120, 2000, 20)!,
-    b = closedBox(mid.ts, 40, 120, 2000, 20, { fTop: 5000 })!;
+  const a = closedBox(mid.ts, 40, 120, 2000, 20, LR24_ORDERS)!,
+    b = closedBox(mid.ts, 40, 120, 2000, 20, { ...LR24_ORDERS, fTop: 5000 })!;
   assert.equal(a.curve.length, 420);
   assert.ok(b.curve.length > a.curve.length && b.curve[b.curve.length - 1].f >= 5000);
   a.curve.forEach((o, i) => assert.deepStrictEqual(b.curve[i], o));
@@ -165,7 +167,7 @@ test("sub: a crossover above 120 Hz runs the curve past 300 Hz for the skirt; li
   assert.ok(b.mdl.curve[b.mdl.curve.length - 1].f >= 625);
   a.mdl.curve.forEach((o, i) => assert.deepStrictEqual(b.mdl?.curve[i], o));
   assert.deepStrictEqual(b.lim, a.lim);
-  const s = subThroughLowpass(b.mdl, sub.ts, b.AMP_V, 20, 250);
+  const s = subThroughLowpass(b.mdl, sub.ts, b.AMP_V, 20, 250, 4);
   close(t, s.length, b.mdl.curve.length, 0);
   assert.ok(s[s.length - 1].spl < nearestPoint(s, 250).spl - 25, "the skirt reaches well down");
 });

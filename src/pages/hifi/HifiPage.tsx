@@ -1,5 +1,5 @@
 import { PAL } from "../../styles/palette";
-import { CROSSOVER_SLOPES } from "../../constants/crossovers";
+import { CrossoverSlopeButtons } from "../../components/ui/CrossoverSlopeButtons";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { StatTile } from "../../components/stats/StatTile";
 import {
@@ -655,18 +655,11 @@ export function HifiPage({ hifi }: Props) {
             onChange={setCrossoverHz}
             extra={renderLockButton("xo", "the crossover")}
           />
-          <div className="flex gap-1 mb-3">
-            {CROSSOVER_SLOPES.map(([v, l]) => (
-              <ToggleButton
-                key={v}
-                size="xs"
-                onClick={() => setCrossoverOrder(v)}
-                on={crossoverOrder === v}
-              >
-                {l}
-              </ToggleButton>
-            ))}
-          </div>
+          <CrossoverSlopeButtons
+            order={crossoverOrder}
+            onChange={setCrossoverOrder}
+            label="Crossover slope"
+          />
           <Slider
             label="Baffle-step boost"
             value={baffleStepCompensationDb}

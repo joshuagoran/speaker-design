@@ -991,7 +991,7 @@ export interface SubSystemModelled extends SubSystemBase {
 /** `subSystem`: check `mdl` and `lim` narrows with it. */
 export type SubSystem = SubSystemUnmodelled | SubSystemModelled;
 
-export interface MidSystemConfig extends Partial<Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder">> {
+export interface MidSystemConfig extends Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder"> {
   midDims: Dims3;
   wall: number;
   inset: number;
@@ -1252,10 +1252,9 @@ export interface PaStackGeometry {
   horn: { zIn: number; covH: number; covV: number; wIn: number; hIn: number };
   xoLo: number;
   xoHi: number;
-  /** each crossover's Linkwitz-Riley order; where one is missing, `order` (both), else LR24 */
-  orderLo?: CrossoverOrder;
-  orderHi?: CrossoverOrder;
-  order?: CrossoverOrder;
+  /** each crossover's Linkwitz-Riley order (4 = LR24, 8 = LR48) */
+  orderLo: CrossoverOrder;
+  orderHi: CrossoverOrder;
 }
 
 // ---- coverage map (lib/pa/coverage) ----

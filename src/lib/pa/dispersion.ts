@@ -35,8 +35,7 @@ export type StackSource =
 
 /** The stack's drivers (sub when it has one, mid, horn), each through its crossover filters. */
 export function paStackSources(s: PaStackGeometry): StackSource[] {
-  const orderLo = s.orderLo ?? s.order ?? 4,
-    orderHi = s.orderHi ?? s.order ?? 4;
+  const { orderLo, orderHi } = s;
   const out: StackSource[] = [];
   if (s.sub && s.sub.Sd)
     out.push({
