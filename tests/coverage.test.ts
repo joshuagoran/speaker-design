@@ -18,7 +18,7 @@ import {
 import { paResponseAt, paStackSources } from "../src/lib/pa/dispersion";
 import { materialAlpha, surfaceReflection } from "../src/lib/pa/roomAcoustics";
 import { DEFAULT_COVERAGE_LAYOUT, fromStored } from "../src/pages/coverage/useCoverageLayout";
-import { logSpacedFrequencies } from "../src/lib/hifi/hifi";
+import { baffleStepGain, logSpacedFrequencies, type Complex } from "../src/lib/hifi/hifi";
 import { METERS_PER_FOOT as FT } from "../src/constants/units";
 import type {
   CoverageLayout,
@@ -37,6 +37,7 @@ const stack: CoverageStack = {
   orderLo: 4,
   orderHi: 4,
   footprint: { w: 24, d: 24 },
+  midW: 24,
 };
 
 /** Every band at `db` at 1 m, through its crossover's magnitude, as the planner's curves are. */
@@ -172,6 +173,37 @@ test("coverage: a box's drivers arrive in phase on its axis at the alignment poi
     );
     assert.ok(Math.abs(rel) < 1, `${f} Hz: ${rel.toFixed(2)} dB off flat`);
   }
+});
+
+test("coverage: the sub and mid sum flat at the low crossover, at LR24 and LR48", () => {
+  for (const order of [4, 8] as const) {
+    // the horn crossover far above, so the mid's own lowpass adds no phase at the low one
+    const s: CoverageStack = { ...stack, orderLo: order, xoHi: 18000 };
+    const scene = coverageScene(s, layout());
+    const { sub, mid } = coverageSlots(scene, levels(110, s), [s.xoLo], true)[0].out;
+    assert.ok(sub && mid, `LR${order * 6}: both bands play at the crossover`);
+    // Linkwitz-Riley: each band 6 dB down and in phase, so the two add to the level either plays alone
+    const sum = Math.hypot(sub.re + mid.re, sub.im + mid.im),
+      apart = Math.hypot(sub.re, sub.im) + Math.hypot(mid.re, mid.im);
+    assert.ok(sum / apart > 0.999, `LR${order * 6}: sum ${(sum / apart).toFixed(4)} of in phase`);
+  }
+});
+
+test("coverage: each band's baffle step follows its own box: a narrower mid box loses level, the sub doesn't", () => {
+  const narrow: CoverageStack = { ...stack, midW: 15 };
+  const f = 200;
+  const out = (s: CoverageStack) =>
+    coverageSlots(coverageScene(s, layout()), levels(110, s), [f], true)[0].out;
+  const a = out(stack),
+    b = out(narrow);
+  const db = (v: Complex | undefined) => (v ? 20 * Math.log10(Math.hypot(v.re, v.im)) : -Infinity);
+  const step = 20 * Math.log10(baffleStepGain(f, 15) / baffleStepGain(f, 24));
+  assert.ok(step < -1, `the 15″ step is ${step.toFixed(2)} dB under the 24″ one at ${f} Hz`);
+  assert.ok(
+    Math.abs(db(b.mid) - db(a.mid) - step) < 1e-9,
+    `mid ${(db(b.mid) - db(a.mid)).toFixed(2)} dB`,
+  );
+  assert.ok(Math.abs(db(b.sub) - db(a.sub)) < 1e-9, "the sub keeps its footprint's step");
 });
 
 test("coverage: two stacks at one low frequency add on the center line and cancel where their paths differ by half a wavelength", () => {

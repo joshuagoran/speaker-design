@@ -1359,9 +1359,11 @@ export interface BalancedLevels {
   pads: Record<"sub" | "mid" | "horn", number>;
 }
 
-/** The stack the map places: the dispersion model's stack and its footprint, inches. */
+/** The stack the map places: the dispersion model's stack, its footprint and the mid box's width, inches. */
 export interface CoverageStack extends PaStackGeometry {
   footprint: Pick<Dims3, "w" | "d">;
+  /** the mid box's width, for its baffle step (the tower's is the sub's footprint) */
+  midW: Dims3["w"];
 }
 
 /** Level across the floor: `cols` × `rows` cells, row by row from the front wall, dB SPL. */

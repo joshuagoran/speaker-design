@@ -43,6 +43,7 @@ export type CoverageInputs = Pick<
   PaPlanner,
   | "stackGeometry"
   | "subBox"
+  | "effectiveMidBoxDims"
   | "subModelled"
   | "subAmpVoltage"
   | "subMidCrossoverHz"
@@ -100,6 +101,7 @@ export function useCoverageMap(
   const {
     stackGeometry,
     subBox,
+    effectiveMidBoxDims,
     subModelled,
     subAmpVoltage,
     subMidCrossoverHz,
@@ -119,8 +121,15 @@ export function useCoverageMap(
     [subMidCrossoverHz, midHornCrossoverHz, midBandTiltDb, hornBandTiltDb],
   );
   const stack = useMemo<CoverageStack | null>(
-    () => (stackGeometry ? { ...stackGeometry, footprint: { w: subBox.w, d: subBox.d } } : null),
-    [stackGeometry, subBox.w, subBox.d],
+    () =>
+      stackGeometry
+        ? {
+            ...stackGeometry,
+            footprint: { w: subBox.w, d: subBox.d },
+            midW: effectiveMidBoxDims.w,
+          }
+        : null,
+    [stackGeometry, subBox.w, subBox.d, effectiveMidBoxDims.w],
   );
   // each band at the planner's own limit (the sub at its music limit through its lowpass, the mid and horn as the
   // system chart draws them), then balanced: the weakest band sets the level

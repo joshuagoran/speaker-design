@@ -407,8 +407,10 @@ export function coverageSlots(
       const db = curve && curveLevelAt(curve, f, skirts[o.band]);
       if (db == null) continue;
       // the sub's and mid's curves are half-space (on the floor); in the open a box radiates into full space below
-      // its baffle step, and the floor image puts the floor back. The horn's datasheet sensitivity is free-field.
-      const amp = Math.pow(10, db / 20) * (o.horn ? 1 : baffleStepGain(f, stack.footprint.w)),
+      // its baffle step (each band's from its own box's width), and the floor image puts the floor back. The horn's
+      // datasheet sensitivity is free-field.
+      const baffleW = o.band === "sub" ? stack.footprint.w : stack.midW,
+        amp = Math.pow(10, db / 20) * (o.horn ? 1 : baffleStepGain(f, baffleW)),
         h = o.filt(f),
         m = Math.hypot(h.re, h.im);
       out[o.band] = m > 1e-12 ? { re: (amp * h.re) / m, im: (amp * h.im) / m } : { re: amp, im: 0 };
