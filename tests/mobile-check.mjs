@@ -17,7 +17,7 @@ const sizes = [
   { name: "phone", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
   { name: "tablet", viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true },
 ];
-const views = ["", "#cutlist", "#fills", "#hifi", "#notes"];
+const views = ["", "#coverage", "#cutlist", "#fills", "#hifi", "#notes"];
 const failures = [];
 
 // Everything the check measures, evaluated in the page.

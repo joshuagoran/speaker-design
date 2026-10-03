@@ -949,6 +949,8 @@ export interface SubSystemConfig extends SubGeometryConfig {
   hpType: HighpassType;
   ampW: number;
   portMax: number;
+  /** the sub-to-mid crossover, for a curve that shows the lowpass skirt (the planner's chart); the optimizer's screening leaves it out */
+  xoLo?: number;
 }
 
 /** The sub's vent and volumes, without the model. */
@@ -1248,6 +1250,135 @@ export interface PaStackGeometry {
   xoLo: number;
   xoHi: number;
   order?: CrossoverOrder;
+}
+
+// ---- coverage map (lib/pa/coverage) ----
+
+/** A side of the room. front: the wall behind the stacks. */
+export type RoomSide = "front" | "back" | "left" | "right";
+
+/** A surface the room's material is set for: the four sides and the ceiling (the floor is hard, or the crowd). */
+export type RoomSurface = RoomSide | "ceiling";
+
+/** What a side or the ceiling is made of (lib/pa/roomAcoustics has each one's absorption); "open" reflects nothing. */
+export type RoomMaterial = "concrete" | "drywall" | "wood" | "glass" | "curtain" | "open";
+
+/** The dance floor: empty (a hard floor), or full of people, who absorb the top end of the floor bounce. */
+export type FloorCrowd = "empty" | "full";
+
+/** The room the map covers, in feet: a rectangular box, each side and the ceiling of its own material. */
+export interface CoverageRoom {
+  widthFt: number;
+  lengthFt: number;
+  /** floor to ceiling */
+  ceilingFt: number;
+  materials: Record<RoomSurface, RoomMaterial>;
+  crowd: FloorCrowd;
+  /** no walls or ceiling at all, and a softer ground */
+  outdoors: boolean;
+}
+
+/** A spot on the floor in feet: x across from the center line, y down the room from the front wall. */
+export interface FloorPoint {
+  x: number;
+  y: number;
+}
+
+/** A box on the floor, and its aim in degrees from straight down the room (+ turns toward +x). */
+export interface FloorPlacement extends FloorPoint {
+  aim: number;
+}
+
+/** A box the map draws and sums: a stack, or one of the center pair of subs. */
+export interface CoverageBox extends FloorPlacement {
+  kind: "stack" | "sub";
+  label: string;
+}
+
+/** What the map averages: a named band, or one frequency (`freqHz`) summed with phase. */
+export type CoverageBand = "sub" | "kick" | "mid" | "high" | "one";
+
+/** How loud the system plays: at its limit, or turned down until the listener gets the target. */
+export type CoverageLevelMode = "limit" | "listener";
+
+/** The subs in their stacks, both together in the middle, or one sub alone in the middle. */
+export type SubPlacement = "stacks" | "center" | "single";
+
+/** The coverage page's layout: room, where the stacks (and subs) stand, the listener, the band. */
+export interface CoverageLayout {
+  room: CoverageRoom;
+  stacks: [left: FloorPlacement, right: FloorPlacement];
+  subs: SubPlacement;
+  /** where the center subs stand (the pair's midpoint, or the one sub), used when `subs` is "center" or "single" */
+  cluster: FloorPoint;
+  /** move and aim the stacks as a mirror image of each other */
+  mirror: boolean;
+  band: CoverageBand;
+  freqHz: number;
+  levelMode: CoverageLevelMode;
+  earFt: number;
+  listener: FloorPoint;
+}
+
+/** Each band's output at 1 m on axis, through its crossover, dB SPL against frequency: the planner's curves. */
+export interface CoverageLevels {
+  sub: FrequencyPoint[] | null;
+  mid: FrequencyPoint[];
+  horn: FrequencyPoint[];
+}
+
+/** The planner's music balance: its crossovers, and how much less the mid band needs than the sub and the horn than the mid. */
+export type MusicBalance = Pick<PaDesignConfig, "xoLo" | "xoHi" | "tilt" | "hfTilt">;
+
+/** Each band's level after balancing, and how far each was turned down to get there, dB (0 or less). */
+export interface BalancedLevels {
+  levels: CoverageLevels;
+  pads: Record<"sub" | "mid" | "horn", number>;
+}
+
+/** The stack the map places: the dispersion model's stack and its footprint, inches. */
+export interface CoverageStack extends PaStackGeometry {
+  footprint: Pick<Dims3, "w" | "d">;
+}
+
+/** Level across the floor: `cols` × `rows` cells, row by row from the front wall, dB SPL. */
+export interface CoverageGrid {
+  cols: number;
+  rows: number;
+  db: Float32Array;
+}
+
+/**
+ * A grid as the map draws it: the room it covers and the target it is compared against, both as of the request it was
+ * computed for, so an older grid still on show while the next one computes stays consistent with itself.
+ */
+export interface CoverageGridView {
+  grid: CoverageGrid;
+  room: Pick<CoverageRoom, "widthFt" | "lengthFt">;
+  /** what a grid level is compared against: the grid's band target less the gain (the grid is at the limit), dB */
+  target: number;
+  /** the system's gain for this grid, dB, added to a grid level for the absolute level */
+  gain: number;
+}
+
+/** What the floor map's worker computes from: the stack and its levels, where the boxes stand, the band, the grid size. */
+export interface CoverageRequest {
+  stack: CoverageStack;
+  levels: CoverageLevels;
+  layout: Pick<
+    CoverageLayout,
+    "room" | "stacks" | "subs" | "cluster" | "band" | "freqHz" | "earFt"
+  >;
+  cols: number;
+}
+
+/** How much of the floor reaches the target, leaving out the space right in front of the boxes. */
+export interface CoverageStats {
+  /** share of the floor at or above target − 3 dB, and − 6 dB, 0–1 */
+  within3: number;
+  within6: number;
+  /** level spread between the 10th and 90th percentile, dB */
+  spread: number;
 }
 
 // ---- PA optimizer (lib/pa/optimize) ----
