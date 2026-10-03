@@ -545,11 +545,15 @@ test("Cheaper swaps the compression driver when a cheaper one keeps up", () => {
   assert.equal(k.config.cd, "hf143n", `kept ${k.config.cd} at $${Math.round(k.metrics.price)}`);
 });
 
-test("Cheaper is strictly the cheapest card, with weight breaking a price tie", () => {
+test("Cheaper: fewest warnings, then strictly the cheapest, with weight breaking a price tie", () => {
   const out = optimizePaStack({ ...base, goal: "cheaper" }),
     [first, ...rest] = out.cards;
   assert.ok(first, "a card");
   for (const k of rest) assert.ok(first.metrics.price <= k.metrics.price, k.label);
-  // the same drivers on 1/2 in ply cost the same and weigh less (it also carries one more soft warning)
+  // the same drivers on 1/2 in ply cost the same and weigh less, and a crossover that avoids the warning exists
   assert.equal(first.config.wall, 0.5);
+  assert.ok(
+    !first.warnings.some(([h]) => h.startsWith("Mid much wider")),
+    "no soft warning on the cheapest card",
+  );
 });
