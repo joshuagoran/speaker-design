@@ -1,5 +1,6 @@
 import type { PaBoxGeometry } from "../../types";
 import { PAL } from "../../styles/palette";
+import { isRoundPort } from "../../lib/pa/calc";
 
 interface Props {
   g: PaBoxGeometry;
@@ -100,7 +101,7 @@ export function BoxFront({ g, cur }: Props) {
   const ventH =
     g.portStyle === "slots" || g.portStyle === "folded"
       ? v.slotH * k + t
-      : g.portStyle.startsWith("round")
+      : isRoundPort(g.portStyle)
         ? v.dia * k + 4
         : 0;
   const driver = (box: Rect, size: number, below = 0) => (

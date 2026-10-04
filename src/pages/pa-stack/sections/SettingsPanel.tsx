@@ -11,7 +11,7 @@ import {
   CABINET_FINISHES,
   cabinetFinishOf,
 } from "../../../lib/data";
-import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
+import { HIGHPASS_ALIGNMENTS, isRoundPort } from "../../../lib/pa/calc";
 import { AMP_WATTS_MAX, AMP_WATTS_STEPS } from "../../../lib/pa/optimize";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { keysOf } from "../../../lib/records";
@@ -365,8 +365,8 @@ export function SettingsPanel({ planner }: Props) {
               <div className="flex flex-wrap gap-1">
                 {(
                   [
-                    ["Rectangular", !portStyle.startsWith("round"), "slots"],
-                    ["Round tubes", portStyle.startsWith("round"), "round2"],
+                    ["Rectangular", !isRoundPort(portStyle), "slots"],
+                    ["Round tubes", isRoundPort(portStyle), "round2"],
                   ] as const
                 ).map(([label, on, v]) => (
                   <ToggleButton
@@ -380,7 +380,7 @@ export function SettingsPanel({ planner }: Props) {
                   </ToggleButton>
                 ))}
               </div>
-              {!portStyle.startsWith("round") && (
+              {!isRoundPort(portStyle) && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {(
                     [
@@ -422,7 +422,7 @@ export function SettingsPanel({ planner }: Props) {
                     onChange={(v) => setSubVentField("throat", v)}
                   />
                 )}
-                {portStyle.startsWith("round") && (
+                {isRoundPort(portStyle) && (
                   <>
                     <Slider
                       label="Tubes"

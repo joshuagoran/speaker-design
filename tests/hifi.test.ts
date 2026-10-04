@@ -19,7 +19,7 @@ import {
   listenerGeometry,
 } from "../src/lib/hifi/hifi";
 import type { HifiConfig, HifiTweeter, HifiWoofer, PassiveRadiator } from "../src/types";
-import { close } from "./helpers";
+import { chipList, chipOf, close, findChip } from "./helpers";
 
 // a generic 6.5" woofer and 1" dome (typical published values), so the tests don't depend on the driver list
 // price, src, fmax, note and ts.Le, ts.sens, ts.imp complete the type; the functions under test ignore them
@@ -152,15 +152,14 @@ test("the speaker: volume, tuning, levels and checks", (t) => {
   assert.ok(s.f3 > 30 && s.f3 < 120, `F3 ${s.f3}`);
   assert.ok(s.trim < 0, "a 90 dB dome is trimmed down to an ~86 dB woofer");
   assert.ok(s.maxLevel === Math.min(s.wLevel, s.tLevel));
-  const heads = hifiChips(s, W, T, cfg).map(([, h]) => h);
-  assert.ok(heads.some((h) => /Woofer limited by|Woofer sets/.test(h)));
+  // the woofer, not the tweeter, sets the level, and the check names what limits it
+  const chips = hifiChips(s, W, T, cfg);
+  chipOf(chips, "hifiTweeterLevel", "ok");
+  chipOf(chips, "hifiWooferLimit");
   // a crossover under the dome's rating is flagged
   const low = { ...cfg, xo: 1200 };
-  assert.ok(
-    hifiChips(hifiSystem(W, T, low)!, W, T, low).some(
-      ([, h]) => h === "Below the tweeter's minimum crossover",
-    ),
-  );
+  assert.ok(!findChip(hifiChips(s, W, T, cfg), "hifiTweeterMinXo"));
+  chipOf(hifiChips(hifiSystem(W, T, low)!, W, T, low), "hifiTweeterMinXo", "warn");
   // baffle-step boost costs headroom
   const b = hifiSystem(W, T, { ...cfg, bsc: 6 })!;
   assert.ok(b.wLevel <= s.wLevel + 1e-9, "boost never adds clean output");
@@ -197,17 +196,32 @@ test("ports with elbows: longer ports fit, and the check says when one is needed
     s1 = portMaxLength(dim, 0.75, { dia: 2, elbows: 1 }),
     s2 = portMaxLength(dim, 0.75, { dia: 2, elbows: 2 });
   assert.ok(s0 < s1 && s1 < s2, `${s0} < ${s1} < ${s2}`);
-  const heads = (len: number) => {
+  const chips = (len: number) => {
     const c = { ...cfg, port: { n: 1, dia: 2, len } };
-    return hifiChips(hifiSystem(W, T, c)!, W, T, c).map(([, h]) => h);
+    return hifiChips(hifiSystem(W, T, c)!, W, T, c);
   };
+  const port = (len: number) => {
+    const F = chips(len);
+    return {
+      elbows: findChip(F, "hifiPortElbows", "warn"),
+      tooLong: findChip(F, "hifiPortFit", "bad"),
+      F,
+    };
+  };
+  const straight = port(s0 - 0.5);
   assert.ok(
-    !heads(s0 - 0.5).some((h) => /^Port needs|^Port too long/.test(h)),
-    "straight fits, no note",
+    !straight.elbows && !straight.tooLong,
+    `straight fits, no note: ${chipList(straight.F)}`,
   );
-  assert.ok(heads(s0 + 0.5).includes("Port needs an elbow"));
-  assert.ok(heads(s1 + 0.5).includes("Port needs two elbows"));
-  assert.ok(heads(s2 + 0.5).includes("Port too long"));
+  const one = port(s0 + 0.5),
+    two = port(s1 + 0.5),
+    none = port(s2 + 0.5);
+  assert.ok(one.elbows && !one.tooLong, chipList(one.F));
+  assert.ok(two.elbows && !two.tooLong, chipList(two.F));
+  assert.ok(none.tooLong && !none.elbows, chipList(none.F));
+  // how many elbows the chip asks for is only in its words: a check of the copy, not the lookup
+  assert.match(one.elbows[1], /an elbow/);
+  assert.match(two.elbows[1], /two elbows/);
 });
 
 test("passive radiators: tuning, notch, travel limit and checks", (t) => {
@@ -251,17 +265,11 @@ test("passive radiators: tuning, notch, travel limit and checks", (t) => {
   assert.ok(hifiSystem(W, T, { ...pc, pr: { drv, n: 2, addG: add + 40 } })!.Fb! < s.Fb!);
   // one small radiator is flagged; one that doesn't fit is bad
   const one = { ...pc, pr: { drv: { ...drv, Xmax: 3 }, n: 1, addG: 0 } };
-  assert.ok(
-    hifiChips(hifiSystem(W, T, one)!, W, T, one).some(
-      ([, h]) => h === "Radiators small for this woofer",
-    ),
-  );
+  chipOf(hifiChips(s, W, T, pc), "hifiRadiatorSize", "ok");
+  chipOf(hifiChips(hifiSystem(W, T, one)!, W, T, one), "hifiRadiatorSize", "warn");
   const big = { ...pc, pr: { drv: { ...drv, size: 10 }, n: 2, addG: 0 } };
-  assert.ok(
-    hifiChips(hifiSystem(W, T, big)!, W, T, big).some(
-      ([k, h]) => k === "bad" && h === "Radiators won't fit",
-    ),
-  );
+  assert.ok(!findChip(hifiChips(hifiSystem(W, T, one)!, W, T, one), "hifiRadiatorFit"));
+  chipOf(hifiChips(hifiSystem(W, T, big)!, W, T, big), "hifiRadiatorFit", "bad");
 });
 
 test("slot vent: tunes like a port of the same area and length, its shelf takes volume, and long slots are flagged", (t) => {
@@ -274,11 +282,8 @@ test("slot vent: tunes like a port of the same area and length, its shelf takes 
   // longer slot, lower tuning
   assert.ok(hifiSystem(W, T, { ...slot, port: { shape: "slot", n: 1, h: 1, len: 7 } })!.Fb! < s.Fb);
   const long: HifiConfig = { ...slot, port: { shape: "slot", n: 1, h: 1, len: 20 } };
-  assert.ok(
-    hifiChips(hifiSystem(W, T, long)!, W, T, long).some(
-      ([k, h]) => k === "bad" && h === "Slot too long",
-    ),
-  );
+  assert.ok(!findChip(hifiChips(s, W, T, slot), "hifiSlotFit"));
+  chipOf(hifiChips(hifiSystem(W, T, long)!, W, T, long), "hifiSlotFit", "bad");
   assert.ok(r.Fb! > 0);
 });
 
@@ -302,11 +307,8 @@ test("planar ribbon on its own waveguide: flush-mounted, its coverage drives the
   )[0].spl;
   assert.ok(on - off > 3 && on - off < 10, `${(on - off).toFixed(1)} dB down at 60°`);
   const low = { ...c, xo: 1600 };
-  assert.ok(
-    hifiChips(hifiSystem(W, r, low)!, W, r, low).some(
-      ([, h]) => h === "Below the tweeter's minimum crossover",
-    ),
-  );
+  assert.ok(!findChip(hifiChips(s, W, r, c), "hifiTweeterMinXo"));
+  chipOf(hifiChips(hifiSystem(W, r, low)!, W, r, low), "hifiTweeterMinXo", "warn");
 });
 
 test("port toggle builds a fresh port with only its own shape's fields", () => {

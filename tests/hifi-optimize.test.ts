@@ -3,6 +3,7 @@ import assert from "node:assert";
 import { optimizeHifiSpeaker, hifiDesignProblems, portsDiffer } from "../src/lib/hifi/optimize";
 import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
+import { chipOf } from "./helpers";
 import type { HifiGoal, HifiMetrics, HifiOptimizerCurrent, HifiOptimizerLocks } from "../src/types";
 
 const cur: HifiOptimizerCurrent = {
@@ -312,13 +313,14 @@ test("hi-fi optimizer: a tweeter that keeps up only below full woofer power turn
   assert.ok(w && tw && out.cur);
   const at = (wAmpW: number) => {
     const c = { ...quiet, ...k.config, pr: undefined, wAmpW },
-      sys = hifiSystem(w, tw, c);
-    return sys ? hifiDesignProblems(sys, hifiChips(sys, w, tw, c)) : ["can't be modelled"];
+      sys = hifiSystem(w, tw, c),
+      chips = sys ? hifiChips(sys, w, tw, c) : [];
+    return { chips, problems: hifiDesignProblems(sys, chips) };
   };
-  assert.deepEqual(at(k.config.wAmpW), [], "the card passes as it is");
+  assert.deepEqual(at(k.config.wAmpW).problems, [], "the card passes as it is");
   assert.ok(k.metrics.level >= out.cur.level - 0.5, "and keeps the level");
-  assert.ok(
-    at(500).includes("Tweeter runs out first"),
-    "at full woofer power the tweeter would run out first",
-  );
+  // at full woofer power the tweeter would run out first, and that fails the design
+  const full = at(500);
+  const tweeter = chipOf(full.chips, "hifiTweeterLevel", "warn");
+  assert.ok(full.problems.includes(tweeter[1]), full.problems.join("; "));
 });
