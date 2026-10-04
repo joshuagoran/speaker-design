@@ -374,11 +374,13 @@ test("a box modelled once to the top crossover reads exactly as hifiSystem at ev
     { ...cfg, box: "sealed" as const },
     { ...cfg, port: { shape: "slot" as const, n: 1, h: 1, len: 6 } },
   ]) {
-    const b = hifiBox(W, c, hifiGridTop(3000))!;
+    const b = hifiBox(W, c, hifiGridTop(3000));
+    assert.ok(b, c.box);
     for (const xo of [1500, 1800, 2000, 2200, 2500, 3000]) {
       const cc = { ...c, xo },
-        a = hifiSystemFromBox(b, W, T, cc)!,
-        s = hifiSystem(W, T, cc)!;
+        a = hifiSystemFromBox(b, W, T, cc),
+        s = hifiSystem(W, T, cc);
+      assert.ok(a && s, `${c.box} ${xo} Hz`);
       for (const k of [
         "f3",
         "f3Box",
@@ -393,5 +395,16 @@ test("a box modelled once to the top crossover reads exactly as hifiSystem at ev
       assert.strictEqual(a.whoW, s.whoW);
       assert.deepStrictEqual(a.woofer, s.woofer);
     }
+  }
+});
+
+test("the woofer's chart limits and its music level come from one source", () => {
+  for (const c of [cfg, { ...cfg, box: "sealed" as const }]) {
+    const s = hifiSystem(W, T, c);
+    assert.ok(s, c.box);
+    const band = s.wMax.filter((o) => o.f >= 30 && o.f <= c.xo * 1.5),
+      worst = band.reduce((a, o) => (o.s < a.s ? o : a));
+    assert.strictEqual(s.sMusic, worst.s, `${c.box}: the music scale is the chart's worst point`);
+    assert.strictEqual(s.whoW, worst.who, `${c.box}: and names the same limit`);
   }
 });

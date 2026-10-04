@@ -479,7 +479,7 @@ export interface HifiConfig {
   guide?: WaveguideSpec | null;
   /** extra tweeter sensitivity from the waveguide, dB */
   guideGain?: number;
-  /** frequency points for the woofer response (240 when absent) */
+  /** the woofer response's frequency points from 15 Hz to 2 kHz (196 when absent); the curve runs on at the same spacing */
   N?: number;
   /** radius of the roundover on the baffle's edges, inches; 0 (sharp) when absent */
   roundoverIn?: number;

@@ -181,7 +181,13 @@ const obj: Record<HifiGoal, (x: HifiMetrics) => number> = {
 // what each goal keeps from your design (as the PA optimizer: same output, F3 within a couple of Hz): the level it has
 // to reach and the F3 it can't pass
 const keeps = (cur: HifiMetrics): Record<HifiGoal, Keep> => goalKeeps(cur.level, cur.f3);
-const gapTo = (k: Keep, x: HifiMetrics) => keepGap(k, { db: x.level, f3: x.f3 });
+// (one scratch pair, refilled per call: the search asks this of millions of designs)
+const gapPoint: Keep = { db: 0, f3: 0 };
+const gapTo = (k: Keep, x: HifiMetrics) => {
+  gapPoint.db = x.level;
+  gapPoint.f3 = x.f3;
+  return keepGap(k, gapPoint);
+};
 // warnings that rule a design out (the soft ones stay on the card)
 const HARD = new Set<ChipId<"hifi">>([
   "hifiTweeterMinXo",
@@ -370,7 +376,13 @@ export function hifiSearchSpace(
     port: HifiPort | null,
     pr: PassiveRadiatorChoice | null | undefined,
   ) => {
-    const key = `${w.id}|${box}|${wall}|${dim.w}|${dim.h}|${dim.d}|${box === "vented" && port ? JSON.stringify(port) : ""}|${box === "radiator" && pr ? `${pr.drv.id}|${pr.n}|${pr.addG}` : ""}`;
+    // a port by its own shape's fields (a saved port may carry the other shape's leftovers, or another field order)
+    const portKey = !port
+      ? ""
+      : port.shape === "slot"
+        ? `slot ${port.n} ${port.h} ${port.len}`
+        : `round ${port.n} ${port.dia} ${port.len}`;
+    const key = `${w.id}|${box}|${wall}|${dim.w}|${dim.h}|${dim.d}|${box === "vented" ? portKey : ""}|${box === "radiator" && pr ? `${pr.drv.id}|${pr.n}|${pr.addG}` : ""}`;
     if (seen.has(key)) return;
     seen.add(key);
     const gb: HifiGridBox = { box, dim, wall, port, pr: pr || null };
@@ -423,7 +435,8 @@ export function hifiSearchSpace(
             }
   }
   // your box as it is, on each plywood (the smallest change for Lighter; a new tweeter or crossover keeps it)
-  if (withGrid && part === 0 && !curPrMissing && wList.includes(W0) && boxes.includes(cur.box)) {
+  // (even when your woofer isn't in the offered list)
+  if (withGrid && part === 0 && !curPrMissing) {
     wi = wList.length;
     li = 0;
     for (const wall of walls) add(W0, cur.dim, cur.box, wall, cur.port, cur.pr);
@@ -550,7 +563,7 @@ export function optimizeHifiSpeaker(
   //    each box once
   const parts = scored ?? [hifiScoreBoxes(input)];
   const merged = parts.flat().sort((a, b) => a.order[0] - b.order[0] || a.order[1] - b.order[1]);
-  const byWoofer = new Map(wList.map((w) => [w.id, w]));
+  const byWoofer = new Map([...wList, W0].map((w) => [w.id, w]));
   const boxList: BoxEntry[] = [];
   const recs: Rec[] = [];
   const taken = new Set<string>();
@@ -588,8 +601,26 @@ export function optimizeHifiSpeaker(
       },
     ];
   });
-  // every design that passes: a box at a crossover with a tweeter, its woofer amp and level (index arrays; metrics read
-  // through them)
+  // what the cards hold a design to: what the goals keep, and the axes the alternatives come from
+  const K = curM ? keeps(curM) : null;
+  const meets = (m: HifiMetrics) => !K || goals.every((g) => gapTo(K[g], m) === 0);
+  // stacked goals: each goal alone first; a single goal's own axis is the first card
+  const altAxes = [...(also.length ? goals : []), ...keysOf(obj)].filter(
+    (g, i, a) => a.indexOf(g) === i && (also.length || g !== goal),
+  );
+  // a design that can be a card: every one while your design fails (the fix and the closest are drawn from all), else
+  // one that keeps the goals and beats yours on all of them (the first card, the smallest change) or keeps an
+  // alternative's goal and beats yours on its axis (that alternative); the rest never reach the card selection
+  const canBeCard = (m: HifiMetrics) =>
+    curFails ||
+    !curM ||
+    (meets(m) && goals.every((g) => beats[g](m, curM))) ||
+    altAxes.some((g) => (!K || gapTo(K[g], m) === 0) && beats[g](m, curM));
+  // two scratch metric records, refilled per call (the card selection compares at most two designs at once)
+  const va: HifiMetrics = { gross: 0, f3: 0, price: 0, level: 0, lb: 0 },
+    vb: HifiMetrics = { gross: 0, f3: 0, price: 0, level: 0, lb: 0 };
+  // every design that passes and can be a card: a box at a crossover with a tweeter, its woofer amp and level (index
+  // arrays; metrics read through them)
   const dRec: number[] = [],
     dTw: number[] = [],
     dPrice: number[] = [],
@@ -634,28 +665,32 @@ export function optimizeHifiSpeaker(
         wLevel = Math.min(r.ampDb + 20 * Math.log10(ampVoltage(w) / V0), r.drvDb);
         if (tLevel < wLevel) continue;
       }
+      // a design that passes has the woofer setting the level
+      va.gross = e.gross;
+      va.f3 = r.f3;
+      va.price = bPrice[ti];
+      va.level = wLevel - seatDb;
+      va.lb = bLb[ti];
+      if (!canBeCard(va)) continue;
       dRec.push(ri);
       dTw.push(ti);
-      dPrice.push(bPrice[ti]);
-      dLb.push(bLb[ti]);
-      // a design that passes has the woofer setting the level
-      dLevel.push(wLevel - seatDb);
+      dPrice.push(va.price);
+      dLb.push(va.lb);
+      dLevel.push(va.level);
       dWamp.push(wAmpW);
     }
   }
-  const metricsAt = (i: number): HifiMetrics => {
+  const metricsAt = (i: number, o: HifiMetrics = va): HifiMetrics => {
     const r = recs[dRec[i]];
-    return {
-      gross: boxList[r.bi].gross,
-      f3: r.f3,
-      price: dPrice[i],
-      level: dLevel[i],
-      lb: dLb[i],
-    };
+    o.gross = boxList[r.bi].gross;
+    o.f3 = r.f3;
+    o.price = dPrice[i];
+    o.level = dLevel[i];
+    o.lb = dLb[i];
+    return o;
   };
   const pool = dRec.map((_, i) => i);
 
-  const K = curM ? keeps(curM) : null;
   const label = also.length
     ? goals.map((g, i) => (i ? g : HIFI_OPTIMIZER_GOALS[g].short)).join(" + ")
     : HIFI_OPTIMIZER_GOALS[goal].name;
@@ -666,65 +701,78 @@ export function optimizeHifiSpeaker(
     louder: "Louder than your design.",
   };
   const boxOf = (i: number) => boxList[recs[dRec[i]].bi];
-  const picked = selectCards<number, HifiGoal>({
-    pool,
-    goal,
-    goals,
-    objective: (g, i) => obj[g](metricsAt(i)),
-    beatsCurrent: (g, i) => !curM || beats[g](metricsAt(i), curM),
-    beats: (g, a, b) => beats[g](metricsAt(a), metricsAt(b)),
-    meets: (i) => !K || goals.every((g) => gapTo(K[g], metricsAt(i)) === 0),
-    shortfall: (i) => (K ? goals.reduce((sum, g) => sum + gapTo(K[g], metricsAt(i)), 0) : 0),
-    differs: (i, chosen) => {
-      const p = boxOf(i);
-      return chosen.every((j) => {
-        const k = boxOf(j);
-        return (
-          k.w !== p.w ||
-          dTw[j] !== dTw[i] ||
-          k.cfg.box !== p.cfg.box ||
-          k.cfg.wall !== p.cfg.wall ||
-          Math.abs(p.gross / k.gross - 1) >= 0.15
-        );
-      });
-    },
-    // amps are trimmed afterwards
-    changeCount: (i) =>
-      boxOf(i).ch +
-      (tws[dTw[i]].t.id !== cur.tweeter ? 1 : 0) +
-      (xos[recs[dRec[i]].xi] !== cur.xo ? 1 : 0),
-    currentFails: curFails,
-    hasCurrent: !!curM,
-    tieBreak: (a, b) => dPrice[a] - dPrice[b],
-    // stacked goals: each goal alone first; a single goal's own axis is the first card
-    altAxes: [...(also.length ? goals : []), ...keysOf(obj)].filter(
-      (g, i, a) => a.indexOf(g) === i && (also.length || g !== goal),
-    ),
-    // an alternative keeps what its own goal keeps
-    altFilter: (g, i) => !K || gapTo(K[g], metricsAt(i)) === 0,
-    labels: {
-      first: { label, why: HIFI_OPTIMIZER_GOALS[goal].why },
-      fix: {
-        label: "Fixes your design",
-        why: "Your design fails a check; this is the best that passes.",
+  // the cards, re-picked without any design the page's full model turns down (the search reads the same checks off the
+  // same model, so this is a guard against rounding at a check's edge, not a second filter)
+  const rejected = new Set<number>();
+  const pick = () =>
+    selectCards<number, HifiGoal>({
+      pool: rejected.size ? pool.filter((i) => !rejected.has(i)) : pool,
+      goal,
+      goals,
+      objective: (g, i) => obj[g](metricsAt(i)),
+      beatsCurrent: (g, i) => !curM || beats[g](metricsAt(i), curM),
+      beats: (g, a, b) => beats[g](metricsAt(a, va), metricsAt(b, vb)),
+      meets: (i) => meets(metricsAt(i)),
+      shortfall: (i) => (K ? goals.reduce((sum, g) => sum + gapTo(K[g], metricsAt(i)), 0) : 0),
+      differs: (i, chosen) => {
+        const p = boxOf(i);
+        return chosen.every((j) => {
+          const k = boxOf(j);
+          return (
+            k.w !== p.w ||
+            dTw[j] !== dTw[i] ||
+            k.cfg.box !== p.cfg.box ||
+            k.cfg.wall !== p.cfg.wall ||
+            Math.abs(p.gross / k.gross - 1) >= 0.15
+          );
+        });
       },
-      // nothing that passes keeps what the goals keep: the one that comes closest (the notice says what it misses)
-      closest: {
-        label: "Fixes your design",
-        why: "Passes the checks and comes closest to your goal.",
+      // amps are trimmed afterwards
+      changeCount: (i) =>
+        boxOf(i).ch +
+        (tws[dTw[i]].t.id !== cur.tweeter ? 1 : 0) +
+        (xos[recs[dRec[i]].xi] !== cur.xo ? 1 : 0),
+      currentFails: curFails,
+      hasCurrent: !!curM,
+      tieBreak: (a, b) => dPrice[a] - dPrice[b],
+      altAxes,
+      // an alternative keeps what its own goal keeps
+      altFilter: (g, i) => !K || gapTo(K[g], metricsAt(i)) === 0,
+      labels: {
+        first: { label, why: HIFI_OPTIMIZER_GOALS[goal].why },
+        fix: {
+          label: "Fixes your design",
+          why: "Your design fails a check; this is the best that passes.",
+        },
+        // nothing that passes keeps what the goals keep: the one that comes closest (the notice says what it misses)
+        closest: {
+          label: "Fixes your design",
+          why: "Passes the checks and comes closest to your goal.",
+        },
+        alt: (g) => ({ label: HIFI_OPTIMIZER_GOALS[g].short, why: ALT_WHY[g] }),
       },
-      alt: (g) => ({ label: HIFI_OPTIMIZER_GOALS[g].short, why: ALT_WHY[g] }),
-    },
-  });
+    });
   // the chosen designs, modelled whole (as the page models them)
-  const cards = picked.cards.flatMap(({ p: i, label, why }) => {
+  const model = (i: number) => {
     const e = boxOf(i),
       t = tws[dTw[i]].t,
       r = run(e.w, t, { ...e.cfg, xo: xos[recs[dRec[i]].xi], wAmpW: dWamp[i] });
-    // (the search read the same checks off the same model; a card that fails them here is left out, never shown)
     return r && !hifiDesignProblems(r.sys, r.chips).length
-      ? [{ w: e.w, t, c: r.cfg, sys: r.sys, chips: r.chips, m: metricOf(r, e.w, t), label, why }]
-      : [];
+      ? { w: e.w, t, c: r.cfg, sys: r.sys, chips: r.chips, m: metricOf(r, e.w, t) }
+      : null;
+  };
+  let picked = pick(),
+    modelled = picked.cards.map((k) => model(k.p));
+  for (let round = 0; round < 5 && modelled.includes(null); round++) {
+    picked.cards.forEach((k, j) => {
+      if (!modelled[j]) rejected.add(k.p);
+    });
+    picked = pick();
+    modelled = picked.cards.map((k) => model(k.p));
+  }
+  const cards = picked.cards.flatMap(({ label, why }, j) => {
+    const p = modelled[j];
+    return p ? [{ ...p, label, why }] : [];
   });
 
   // trim unlocked amps: the least power (slider steps) that keeps the card's clean level and keeps the tweeter up

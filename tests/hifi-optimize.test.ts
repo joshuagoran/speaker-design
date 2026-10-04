@@ -340,7 +340,8 @@ test("hi-fi optimizer: the first card is the best design on its grid, checked on
   };
   for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
     const out = optimizeHifiSpeaker({ ...opts, goals: [goal] }),
-      c = out.cur!;
+      c = out.cur;
+    assert.ok(c, `${goal}: your design is modelled`);
     const ok = designs.filter((m) => keeps[goal](m, c) && beat[goal](m, c));
     const best = Math.min(...ok.map(objective[goal]));
     if (!ok.length) {
@@ -402,5 +403,18 @@ test("hi-fi optimizer: a tweeter that keeps up only below full woofer power turn
   assert.ok(
     at(500).includes("Tweeter runs out first"),
     "at full woofer power the tweeter would run out first",
+  );
+});
+
+test("hi-fi optimizer: your box is offered on the other plywood even when your woofer isn't in the offered list", () => {
+  const out = optimizeHifiSpeaker({
+    ...base,
+    woofers: HIFI_WOOFERS.filter((o) => o.id !== cur.woofer),
+    goals: ["lighter"],
+    locks: { tweeter: true, box: true, xo: true, wAmpW: true, tAmpW: true, dim: tight.dim },
+  });
+  assert.ok(
+    out.cards.some((k) => k.woofer === cur.woofer && k.config.wall === 0.5),
+    JSON.stringify(out.cards.map((k) => [k.label, k.woofer, k.config.wall])),
   );
 });

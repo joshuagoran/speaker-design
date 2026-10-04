@@ -328,8 +328,7 @@ export function closedBox(
       zRe = Ras + Rae,
       zIm = w * Mas - 1 / (w * Cas) - 1 / (w * Cab),
       zM = zRe * zRe + zIm * zIm;
-    const Uc = { re: (Pg * zRe) / zM, im: (-Pg * zIm) / zM },
-      U = Pg / Math.sqrt(zM);
+    const U = Pg / Math.sqrt(zM);
     const g =
       (hp ? linkwitzRileyHighpass(f, hp, hpOrder) : 1) *
       (lp ? linkwitzRileyLowpass(f, lp, lpOrder) : 1);
@@ -341,7 +340,7 @@ export function closedBox(
       xmm: Math.SQRT2 * (U / (w * Sd)) * g * 1000,
     };
     // the radiated pressure is jω × the cone's flow: in phase with jU
-    if (phase) pt.rawPhase = Math.atan2(Uc.re, -Uc.im);
+    if (phase) pt.rawPhase = Math.atan2((Pg * zRe) / zM, (Pg * zIm) / zM);
     out.push(pt);
   }
   if (phase) unwrapRawPhase(out);
