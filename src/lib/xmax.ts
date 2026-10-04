@@ -14,6 +14,7 @@ import type {
   MakerId,
   PassiveRadiator,
   PublishedExcursion,
+  RawPassiveRadiator,
   RawTS,
   ThieleSmall,
   XmaxBand,
@@ -119,9 +120,6 @@ export function withXmax<T extends RawTS<ThieleSmall>>(
   const xmax = xmaxBandOf(ts, maker, who);
   return { ...ts, Xmax: centreOf(xmax), xmax };
 }
-
-/** A passive radiator as its table holds it: the published limit, before the comparable one is added. */
-export type RawPassiveRadiator = Omit<PassiveRadiator, "Xmax" | "xmax">;
 
 /** A passive radiator with its `Xmax`: the linear limit, or the mechanical one where that is all the maker gives. */
 export function passiveWithXmax(p: RawPassiveRadiator): PassiveRadiator {

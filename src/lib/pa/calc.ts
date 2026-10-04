@@ -21,8 +21,6 @@ import type {
   MidSystemConfig,
   PaMaxPoint,
   PhasedPoint,
-  PlywoodSheet,
-  PlywoodSheetKind,
   PortStyle,
   SealedBoxModel,
   SealedPoint,
@@ -376,10 +374,7 @@ export const DRIVER_CUTOUT_IN: Partial<Record<number, number>> = {
   12: 11.1,
   10: 9.2,
 }; // typical front-mount cutouts, in
-export const PLYWOOD_SHEETS: Record<PlywoodSheetKind, PlywoodSheet> = {
-  "4x8": { w: 48, h: 96, name: "4 × 8 ft" },
-  "5x5": { w: 60, h: 60, name: "5 × 5 ft" },
-};
+export { PLYWOOD_SHEETS } from "../../data/catalog/plywood";
 export const formatInches = (x: number) => {
   // inches to the nearest 1/16, as 12 5/8
   const n = Math.round(x * 16),

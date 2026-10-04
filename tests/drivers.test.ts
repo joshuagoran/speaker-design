@@ -16,7 +16,7 @@ import {
   xmaxBandOf,
   xmaxByFormula,
 } from "../src/lib/xmax";
-import { MAKER_NAMES } from "../src/constants/makers";
+import { MAKER_NAMES } from "../src/data/catalog/makers";
 import { keysOf } from "../src/lib/records";
 import type { ThieleSmall } from "../src/types";
 import { close, tsModel } from "./helpers";
