@@ -479,3 +479,40 @@ test("hi-fi optimizer: the first worker's kept share (or, if lost, its share sco
     assert.deepStrictEqual({ ...done.result, stats: null }, { ...one, stats: null }, run);
   }
 });
+
+test("hi-fi optimizer: no card costs more than the budget, even when the best design without one does", () => {
+  // only the drivers searched: Go lower's best pair costs more than $300, so the budget is what keeps it off the cards
+  const opts = { ...base, goals: ["lower" as const], locks: { ...tight } };
+  const budget = 300;
+  const free = optimizeHifiSpeaker({ ...opts, budget: undefined });
+  assert.ok(
+    free.cards.some((k) => k.metrics.price > budget),
+    "without a budget a card costs more",
+  );
+  const capped = optimizeHifiSpeaker({ ...opts, budget });
+  assert.ok(capped.cards.length >= 1, "cards within the budget");
+  for (const k of capped.cards)
+    assert.ok(k.metrics.price <= budget, `${k.label}: $${k.metrics.price}`);
+});
+
+test("hi-fi optimizer: shares handed back out of order merge in the grid's order, so ties go as in one run", () => {
+  // your woofer and a twin under another id: every design ties with its twin's, and the first in the grid's order wins
+  const w = HIFI_WOOFERS.find((o) => o.id === cur.woofer);
+  assert.ok(w);
+  const tweeters = HIFI_TWEETERS.filter((t) => ["sb26stcn", "rst28f", "ne25vts"].includes(t.id));
+  const input = {
+    ...base,
+    woofers: [w, { ...w, id: `${w.id}-twin` }],
+    tweeters,
+    goals: ["cheaper" as const],
+    locks: { ...tight },
+  };
+  const one = optimizeHifiSpeaker(input);
+  assert.equal(one.cards[0]?.woofer, w.id, "the tie goes to the woofer first in the list");
+  // the twin's worker (part 1) hands its share back first
+  const late = optimizeHifiSpeaker(
+    input,
+    [1, 0].map((part) => hifiScoreBoxes(input, part, 2)),
+  );
+  assert.deepStrictEqual({ ...late, stats: null }, { ...one, stats: null });
+});
