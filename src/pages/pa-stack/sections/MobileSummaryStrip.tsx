@@ -1,5 +1,6 @@
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
+import { LIMIT_NAMES } from "../../../constants/limits";
 
 interface Props {
   planner: Pick<PaPlanner, "subModelled" | "subWeightLoadedLb">;
@@ -19,16 +20,7 @@ export function MobileSummaryStrip({ planner }: Props) {
             ["Fb", `${subModelled.mdl.Fb.toFixed(1)}`, "Hz"],
             ["35 Hz", `${nearestPoint(subModelled.maxCurve, 35).spl.toFixed(0)}`, "dB"],
             ["Sub", `${subWeightLoadedLb.toFixed(0)}`, "lb"],
-            [
-              "Limit",
-              {
-                "port air speed": "port",
-                "cone travel (Xmax)": "Xmax",
-                "driver program rating": "thermal",
-                "amplifier power": "amp",
-              }[subModelled.lim.who] || subModelled.lim.who,
-              "",
-            ],
+            ["Limit", LIMIT_NAMES[subModelled.lim.who], ""],
           ].map(([k, v, u]) => (
             <div key={k}>
               <div className="text-xs uppercase tracking-wider text-stone-500">{k}</div>

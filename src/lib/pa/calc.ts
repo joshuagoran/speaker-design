@@ -724,14 +724,7 @@ export function subwooferLimits(
   const L = Math.min(vp, vx, vt, AMP_V);
   const sc = 20 * Math.log10(L / AMP_V);
   return {
-    who:
-      L === vp
-        ? "port air speed"
-        : L === vx
-          ? "cone travel (Xmax)"
-          : L === vt
-            ? "driver program rating"
-            : "amplifier power",
+    who: L === vp ? "port" : L === vx ? "Xmax" : L === vt ? "thermal" : "amp",
     V: L,
     W: (L * L) / 8,
     vel: (mdl.peakVel * L) / AMP_V,
@@ -826,7 +819,7 @@ export function hornResponse(
     pProg,
     derate,
     imp,
-    who: P === pAmp ? "amp" : "program rating",
+    who: P === pAmp ? "amp" : "thermal",
     flat: hf.sens + 10 * Math.log10(P),
   };
 }

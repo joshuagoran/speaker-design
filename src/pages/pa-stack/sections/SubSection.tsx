@@ -9,6 +9,7 @@ import { subChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { xmaxRows } from "../../../lib/xmax";
+import { LIMIT_NAMES, SUB_LIMIT_NAMES } from "../../../constants/limits";
 
 interface Props {
   planner: Pick<
@@ -150,15 +151,15 @@ export function SubSection({ planner }: Props) {
                   return [
                     `Max SPL at ${f} Hz`,
                     `${m.spl.toFixed(1)} dB`,
-                    `sine, ${m.who}-limited`,
+                    `sine, ${LIMIT_NAMES[m.who]}-limited`,
                     MAX_SPL_TIP,
                   ];
                 }),
                 [
                   STATS.firstLimit,
-                  subModelled.lim.who,
+                  SUB_LIMIT_NAMES[subModelled.lim.who],
                   `at ${Math.round(subModelled.lim.W / 10) * 10} W`,
-                  `at ${Math.round(subModelled.lim.W / 10) * 10} W${subModelled.lim.who === "cone travel (Xmax)" ? `, reached first at ${subModelled.mdl.peakXF.toFixed(0)} Hz` : subModelled.lim.who === "port air speed" ? `, reached first at ${subModelled.mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`,
+                  `at ${Math.round(subModelled.lim.W / 10) * 10} W${subModelled.lim.who === "Xmax" ? `, reached first at ${subModelled.mdl.peakXF.toFixed(0)} Hz` : subModelled.lim.who === "port" ? `, reached first at ${subModelled.mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`,
                 ],
                 [
                   STATS.peakPortVelocity,

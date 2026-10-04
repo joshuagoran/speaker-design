@@ -6,6 +6,7 @@ import { formatDollars } from "../../lib/format";
 import { Delta } from "../../components/optimizer/Delta";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
+import { WOOFER_LIMITED_BY } from "../../constants/limits";
 import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
 import { byIdOrThrow } from "../../lib/tables";
 import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
@@ -49,14 +50,7 @@ export function HifiResultCard({
       {delta}
     </div>
   );
-  const limitedBy =
-    {
-      Xmax: "cone travel",
-      port: "port air speed",
-      radiator: "radiator travel",
-      thermal: "the woofer's power rating",
-      amp: "the amp",
-    }[result.whoW] || result.whoW;
+  const limitedBy = WOOFER_LIMITED_BY[result.whoW];
   return (
     <div
       className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}

@@ -28,7 +28,7 @@ test("horn power: amp into Z, capped at 2 x AES, derated below the rated crossov
   );
   close(t, b!.derate, 0.25, 1e-12);
   close(t, b!.P, 20, 1e-9);
-  assert.equal(b!.who, "program rating");
+  assert.equal(b!.who, "thermal");
 });
 test("horn curve: flat = sens + 10 log P; LR24 -6 dB at the crossover; 12 dB/oct below the loading limit", (t) => {
   const h = hornResponse(n314t, { lowHz: 1000 }, 1000, 100, 4);

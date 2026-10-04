@@ -32,7 +32,7 @@ const subBase: SubChipsInput = {
   cVent: { slotH: 3, nt: 2, len: 14, throat: 2, dia: 4 }, // nt: subChips ignores it
   PT: 0.75,
   subLbLoaded: 110,
-  lim: { who: "amplifier power", W: 800 },
+  lim: { who: "amp", W: 800 },
   peakXF: 40,
   aes: 1000,
   ampW: 800,
@@ -67,16 +67,10 @@ test("sub: duct fit per layout, with the folded hint", (t) => {
   has(t, sub({ portStyle: "round2", cVent: { len: 18 } }), "subDuctFit");
 });
 test("sub: first-limit chip follows lim.who", (t) => {
-  assert.equal(kindOf(sub({ lim: { who: "port air speed", W: 400 } }), "subPortLimited"), "warn");
-  assert.equal(
-    kindOf(sub({ lim: { who: "cone travel (Xmax)", W: 400 } }), "subExcursionLimited"),
-    "warn",
-  );
-  assert.equal(kindOf(sub({ lim: { who: "amplifier power", W: 800 } }), "subAmpLimited"), "warn");
-  assert.equal(
-    kindOf(sub({ lim: { who: "driver program rating", W: 2000 } }), "subThermalLimited"),
-    "ok",
-  );
+  assert.equal(kindOf(sub({ lim: { who: "port", W: 400 } }), "subPortLimited"), "warn");
+  assert.equal(kindOf(sub({ lim: { who: "Xmax", W: 400 } }), "subExcursionLimited"), "warn");
+  assert.equal(kindOf(sub({ lim: { who: "amp", W: 800 } }), "subAmpLimited"), "warn");
+  assert.equal(kindOf(sub({ lim: { who: "thermal", W: 2000 } }), "subThermalLimited"), "ok");
 });
 
 // ---- mid ----
@@ -180,7 +174,7 @@ test("horn: amp- or program-limited chip, derating noted", (t) => {
   assert.equal(kindOf(horn({}), "hornAmpLimited"), "ok");
   const F = horn({
     hornModel: {
-      who: "program rating",
+      who: "thermal",
       pAmp: 200,
       imp: 8,
       pProg: 70,

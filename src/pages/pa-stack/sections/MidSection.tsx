@@ -7,6 +7,7 @@ import { midChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { xmaxRows } from "../../../lib/xmax";
+import { LIMIT_NAMES } from "../../../constants/limits";
 
 interface Props {
   planner: Pick<
@@ -106,7 +107,7 @@ export function MidSection({ planner }: Props) {
                     return [
                       `Max SPL at ${f} Hz`,
                       `${m.spl.toFixed(1)} dB`,
-                      `sine, ${m.who}-limited`,
+                      `sine, ${LIMIT_NAMES[m.who]}-limited`,
                       MAX_SPL_TIP,
                     ];
                   }),
