@@ -2,9 +2,9 @@ import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
 import type { LIMIT_NAMES } from "./constants/limits";
-import type { MAKER_NAMES } from "./constants/makers";
+import type { MAKER_NAMES } from "./data/catalog/makers";
 
-// Shapes of the driver, horn, cabinet and fill tables in lib/data.ts.
+// Shapes of the parts catalogue tables in data/catalog/ (lib/data.ts derives the app's view of them).
 //
 // A spec the vendor does not publish is `null` in the table (the note says so), so it stays in the type as `number | null`.
 // A field that only some entries have is optional (`?`).
@@ -263,6 +263,45 @@ export interface Rack {
   items: RackItem[];
 }
 
+/** A crossover / DSP unit as the Notes page's comparison table shows it: one display-text cell per column. */
+export type DspUnitRow = readonly [
+  unit: string,
+  io: string,
+  slopes: string,
+  limiter: string,
+  peqPerOutput: string,
+  priceUs: string,
+  notes: string,
+];
+
+/** One amplifier model of a series: per-channel power, continuous with both channels driven. */
+export interface AmpModel {
+  id: string;
+  /** model name without the brand, as the notes write it (`GXD4`) */
+  model: string;
+  /** watts per channel into 8 Ω and into 4 Ω */
+  w8: number;
+  w4: number;
+  /** voltage gain, dB */
+  gainDb: number;
+  /** the speaker-power range its limiter can be set to, watts */
+  limiterW: readonly [min: number, max: number];
+}
+
+/** An amplifier series and the DSP its models share, as the Notes page and the signal-path drawing describe it. */
+export interface AmpSeries {
+  brand: string;
+  models: readonly AmpModel[];
+  /** the DSP's crossover filters, display text */
+  filters: string;
+  /** the limiter's name and presets, display text */
+  limiterModes: string;
+  /** what the DSP can't do, display text */
+  limits: string;
+  /** where the figures come from: the maker's documents */
+  src: readonly { name: string; url: string }[];
+}
+
 /** A paint colour: [hex, name]. */
 export type PaintSwatch = readonly [hex: string, name: string];
 
@@ -382,6 +421,9 @@ export interface PassiveRadiator {
   /** the most added mass in grams; the planner allows 3 x Mms when absent */
   maxAddG?: number;
 }
+
+/** A passive radiator as its table holds it: the published limit, before `lib/xmax` adds the comparable one. */
+export type RawPassiveRadiator = Omit<PassiveRadiator, "Xmax" | "xmax">;
 
 /** The passive radiators chosen in a saved Hi-fi design: driver id, count and added mass per unit in grams. */
 export interface RadiatorSelection {
@@ -885,6 +927,9 @@ export interface PlywoodSheet {
   h: number;
   name: string;
 }
+
+/** The panel thicknesses, inches, the catalogue lists a weight for (plywood and MDF). */
+export type PanelThickness = 0.75 | 0.5;
 
 /**
  * The sub's vent, in inches: the planner keeps every field, whichever layout uses it (`slotH` the slots, `throat` the
