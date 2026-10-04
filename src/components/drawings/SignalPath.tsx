@@ -1,4 +1,8 @@
 import { PAL } from "../../styles/palette";
+import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
+import type { AmpModel } from "../../types";
+
+const ampName = (m: Pick<AmpModel, "model">) => `${QSC_GXD.brand} ${m.model}`;
 /** Block diagram of the PA signal path. */
 export function SignalPath() {
   const ink = PAL.ink,
@@ -102,15 +106,15 @@ export function SignalPath() {
       </Box>
 
       <Box x={350} y={205} w={130} h={44} c={col.sub}>
-        <T x={415} y={223} b="QSC GXD8" />
-        <T x={415} y={239} s={10} c={mute} b="800 W/ch @ 8 Ω" />
+        <T x={415} y={223} b={ampName(GXD8)} />
+        <T x={415} y={239} s={10} c={mute} b={`${GXD8.w8} W/ch @ 8 Ω`} />
       </Box>
       <Box x={350} y={262} w={130} h={44} c={col.mid}>
-        <T x={415} y={280} b="QSC GXD4" />
-        <T x={415} y={296} s={10} c={mute} b="400 W/ch @ 8 Ω" />
+        <T x={415} y={280} b={ampName(GXD4)} />
+        <T x={415} y={296} s={10} c={mute} b={`${GXD4.w8} W/ch @ 8 Ω`} />
       </Box>
       <Box x={350} y={319} w={130} h={44} c={col.hf}>
-        <T x={415} y={337} b="QSC GXD4" />
+        <T x={415} y={337} b={ampName(GXD4)} />
         <T x={415} y={353} s={10} c={mute} b="gain trimmed · HPF 500 Hz" />
       </Box>
       <A d="M280 226 L350 226" c={col.sub} />

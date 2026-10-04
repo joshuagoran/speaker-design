@@ -22,7 +22,8 @@ src/components/saved-configs/firebaseStore.ts   saving on GitHub Pages (bundled 
 src/hooks/  src/constants/      shared hooks, chart scales, lock keys, units
 src/styles/palette.ts           the colours (CSS variables and Tailwind names come from here)
 src/styles/app.css              page styles + Tailwind layers; font
-src/lib/data.ts                 drivers, horns, cabinets
+src/data/catalog/               the parts catalogue as typed data, one file per kind (drivers, horns, amps, cabinets, plywood, …)
+src/lib/data.ts                 the catalogue as the app reads it: comparable Xmax, tweeter faceplates, picker order
 src/lib/tables.ts               byId / byIdOrThrow for those tables
 src/lib/defaults.ts             DEFAULT_PA / DEFAULT_HIFI / DEFAULT_FILL: the first-load designs, as whole objects
 src/types.ts                    types shared across modules (drivers, horns, cabinets, design config, Setter)
@@ -149,7 +150,8 @@ configurations and can be edited or deleted like any other.
 
 ## How the planner is put together
 
-- `src/lib/data.ts` — component tables (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …). Drivers with a `ts` block get modelled; ones without show a note instead.
+- `src/data/catalog/<kind>.ts` — the parts catalogue, pure typed data: subs, mids, fills, compression drivers, horns and waveguides, Hi-fi woofers, tweeters and passive radiators, amps, makers, cabinets, mid boxes, formats, finishes, racks, DSP units, plywood and driver cutouts. Adding a part is an edit there; each file's header lists its fields and units.
+- `src/lib/data.ts` — the tables the app reads (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …), derived from the catalogue (comparable Xmax, tweeter faceplates, picker order). Drivers with a `ts` block get modelled; ones without show a note instead.
 - `src/lib/pa/optimize.ts` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`src/lib/pa/optimize.worker.ts`, inlined by the build), with a main-thread fallback. See `docs/optimizer-plan.md`.
 - `src/lib/pa/coverage.ts` — the Coverage page's floor map: both stacks (the dispersion model's sub, mid and horn, driven at the planner's curves and balanced with its music tilts) placed and aimed on a floor plan, summed with the floor and first-order wall reflections. Coherent below 500 Hz (the stacks interfere), power-summed above it in a band average. Runs in a Web Worker (`coverage.worker.ts`), coarse while dragging, then fine.
 - `src/lib/pa/chips.ts` — the warning chips for each section (sub, mid, horn, fills), pure functions tested at each threshold.

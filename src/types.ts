@@ -273,6 +273,34 @@ export type DspUnitRow = readonly [
   notes: string,
 ];
 
+/** One amplifier model of a series: per-channel power, continuous with both channels driven. */
+export interface AmpModel {
+  id: string;
+  /** model name without the brand, as the notes write it (`GXD4`) */
+  model: string;
+  /** watts per channel into 8 Ω and into 4 Ω */
+  w8: number;
+  w4: number;
+  /** voltage gain, dB */
+  gainDb: number;
+  /** the speaker-power range its limiter can be set to, watts */
+  limiterW: readonly [min: number, max: number];
+}
+
+/** An amplifier series and the DSP its models share, as the Notes page and the signal-path drawing describe it. */
+export interface AmpSeries {
+  brand: string;
+  models: readonly AmpModel[];
+  /** the DSP's crossover filters, display text */
+  filters: string;
+  /** the limiter's name and presets, display text */
+  limiterModes: string;
+  /** what the DSP can't do, display text */
+  limits: string;
+  /** where the figures come from: the maker's documents */
+  src: readonly { name: string; url: string }[];
+}
+
 /** A paint colour: [hex, name]. */
 export type PaintSwatch = readonly [hex: string, name: string];
 
@@ -896,6 +924,9 @@ export interface PlywoodSheet {
   h: number;
   name: string;
 }
+
+/** The panel thicknesses, inches, the catalogue lists a weight for (plywood and MDF). */
+export type PanelThickness = 0.75 | 0.5;
 
 /**
  * The sub's vent, in inches: the planner keeps every field, whichever layout uses it (`slotH` the slots, `throat` the

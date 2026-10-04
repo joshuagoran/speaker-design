@@ -20,6 +20,8 @@ import type {
   XmaxBand,
   XmaxFormula,
 } from "../types";
+import { MAKER_SEGMENT } from "../data/catalog/makers";
+import { keysOf } from "./records";
 
 /** the share of Hg each maker formula adds to the plain overhang */
 const GAP_SHARE: Record<GapFormula, number> = {
@@ -60,15 +62,9 @@ export const ESTIMATE: Record<
 };
 
 /** Makers whose published Xmax is estimated with the hi-fi band when no heights are known. */
-export const HIFI_MAKERS: ReadonlySet<MakerId> = new Set<MakerId>([
-  "dayton",
-  "peerless",
-  "fostex",
-  "scanSpeak",
-  "sbAcoustics",
-  "seas",
-  "purifi",
-]);
+export const HIFI_MAKERS: ReadonlySet<MakerId> = new Set(
+  keysOf(MAKER_SEGMENT).filter((m) => MAKER_SEGMENT[m] === "hifi"),
+);
 
 const exact = (mm: number, basis: XmaxBand["basis"]): XmaxBand => ({ basis, lo: mm, hi: mm });
 const estimate = (mm: number, [lo, hi]: readonly [number, number]): XmaxBand => ({

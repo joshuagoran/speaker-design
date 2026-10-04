@@ -23,7 +23,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 ## Project conventions
 
 - Driver prices come from US vendors only; don't drop a driver because some specs are missing (mark the gap).
-- The parts catalogue (drivers, horns, waveguides, passive radiators, cabinets, racks, DSP units, plywood) lives in `src/data/catalog/<kind>.ts` as typed pure data; adding a part is a data edit there, never in code (`src/lib/data.ts` only derives).
+- The parts catalogue (drivers, horns, waveguides, passive radiators, amps, makers, cabinets, racks, DSP units, plywood, driver cutouts) lives in `src/data/catalog/<kind>.ts` as typed pure data; adding a part is a data edit there, never in code (`src/lib/data.ts` only derives).
 - Don't push straight to `main` (it deploys via GitHub Actions). Before pushing a change, ask the user whether they want a PR or a direct push to `main`.
 
 ## Commits and PRs
