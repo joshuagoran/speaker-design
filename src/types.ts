@@ -3,6 +3,7 @@ import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
 import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
+import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { MAKER_NAMES } from "./data/catalog/makers";
 import type { AMP_SERIES } from "./data/catalog/amps";
@@ -306,15 +307,10 @@ export interface Rack {
 export type RackView = Omit<Rack, "items"> & { items: { label: string; price: PriceRange }[] };
 
 /** A crossover / DSP unit as the Notes page's comparison table shows it: one display-text cell per column. */
-export type DspUnitRow = readonly [
-  unit: string,
-  io: string,
-  slopes: string,
-  limiter: string,
-  peqPerOutput: string,
-  priceUs: string,
-  notes: string,
-];
+export type DspUnitRow = Readonly<Record<DspColumn, string>>;
+
+/** A column of the DSP comparison table: a cell of every unit's row (`DSP_COLUMNS` holds their order and headers). */
+export type DspColumn = keyof typeof DSP_COLUMNS;
 
 /** A DSP unit in the catalogue: its id (racks name it by this) and its comparison-table row. */
 export interface DspUnit {

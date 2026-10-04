@@ -101,7 +101,7 @@ export function SignalPath() {
       <T x={127} y={208} s={10} c={mute} b="XLR" />
 
       <Box x={150} y={110} w={130} h={220} c={col.pa2}>
-        <T x={215} y={132} b={mainsDsp().row[0]} />
+        <T x={215} y={132} b={mainsDsp().row.unit} />
         <T x={215} y={148} s={10} c={mute} b="2 in / 6 out" />
         <T x={215} y={176} s={10} c={mute} b="inputs: venue EQ" />
         <T x={215} y={190} s={10} c={mute} b="outputs: XO, EQ, delay, limit" />

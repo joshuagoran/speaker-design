@@ -12,7 +12,9 @@ import {
 } from "../../lib/data";
 import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
 import { FONT } from "../../styles/fonts";
-import type { DspUnit, DspUnitId } from "../../types";
+import type { DspColumn, DspUnit, DspUnitId } from "../../types";
+import { DSP_COLUMNS } from "../../constants/dspColumns";
+import { entriesOf, keysOf } from "../../lib/records";
 import {
   DEFAULT_CD,
   DEFAULT_HORN,
@@ -26,23 +28,22 @@ import {
 // part, price or rating shows up here.
 const GXD = QSC_GXD.models;
 const OHM = "Ω";
-/** The DSP table's unit and price columns, which take words from the unit's entry. */
-const DSP_UNIT_COL = 0,
-  DSP_PRICE_COL = 5;
 
 /** A DSP table cell: the unit the racks use marked "(current)", a settled used price added to the price cell. */
-function dspCell(u: DspUnit & { id: DspUnitId }, col: number, text: string): string {
-  if (col === DSP_UNIT_COL && RACK_DSP_IDS.has(u.id)) return `${text} (current)`;
-  if (col === DSP_PRICE_COL && u.usedPrice) return `${text}, ${formatPriceRange(u.usedPrice)} used`;
+function dspCell(u: DspUnit & { id: DspUnitId }, col: DspColumn): string {
+  const text = u.row[col];
+  if (col === "unit" && RACK_DSP_IDS.has(u.id)) return `${text} (current)`;
+  if (col === "priceUs" && u.usedPrice) return `${text}, ${formatPriceRange(u.usedPrice)} used`;
   return text;
 }
 
-/** How far a sensitivity claim may sit above the T/S figure and still count as agreeing with it, dB. */
+/** How far a sensitivity claim may sit from the T/S figure, either way, and still count as agreeing with it, dB. */
 const SENS_AGREE_DB = 0.5;
 
 /**
- * The default sub's published sensitivity against what its T/S give: a claim more than SENS_AGREE_DB above the T/S is
- * flagged (assume the lower figure); one at, near or below it agrees; with no claim entered, the T/S figure alone.
+ * The default sub's published sensitivity against what its T/S give: within SENS_AGREE_DB either way it agrees; further
+ * above it is flagged (assume the lower figure); further below it is the conservative one; with no claim entered, the
+ * T/S figure alone.
  */
 function sensitivityText(): string {
   const { maker, sens, tsSens } = DEFAULT_SUB;
@@ -52,6 +53,8 @@ function sensitivityText(): string {
   const gap = sens - tsSens;
   if (gap > SENS_AGREE_DB)
     return `${maker}'s ${sens} dB claim is ${gap.toFixed(1)} dB above what their own published T/S parameters give (${ts}). Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure.`;
+  if (gap < -SENS_AGREE_DB)
+    return `${maker}'s ${sens} dB claim is ${(-gap).toFixed(1)} dB below what their own published T/S parameters give (${ts}), so it is the conservative figure for levels and limiter settings; a measurement would tell which is right.`;
   return `${maker}'s ${sens} dB claim agrees with what their own published T/S parameters give (${ts}), so levels and limiter settings can rest on it; a measurement would confirm it.`;
 }
 
@@ -193,27 +196,25 @@ export function NotesPage() {
           <table className="text-sm w-full min-w-[720px] border-collapse">
             <thead>
               <tr className="text-stone-500 text-left border-b border-stone-300">
-                {["Unit", "I/O", "Slopes", "Limiter", "PEQ / out", "Price (US)", "Notes"].map(
-                  (h, i) => (
-                    <th
-                      key={h}
-                      className={`py-1 pr-4 font-normal ${i === 0 ? "sticky left-0 bg-stone-50" : ""}`}
-                    >
-                      {h}
-                    </th>
-                  ),
-                )}
+                {entriesOf(DSP_COLUMNS).map(([col, h]) => (
+                  <th
+                    key={col}
+                    className={`py-1 pr-4 font-normal ${col === "unit" ? "sticky left-0 bg-stone-50" : ""}`}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {DSP_UNITS.map((u) => (
                 <tr key={u.id} className="border-b border-stone-300 align-top">
-                  {u.row.map((c, i) => (
+                  {keysOf(DSP_COLUMNS).map((col) => (
                     <td
-                      key={i}
-                      className={`py-1.5 pr-4 ${i === 0 ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : ""}`}
+                      key={col}
+                      className={`py-1.5 pr-4 ${col === "unit" ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : ""}`}
                     >
-                      {dspCell(u, i, c)}
+                      {dspCell(u, col)}
                     </td>
                   ))}
                 </tr>

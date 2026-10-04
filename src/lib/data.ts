@@ -168,7 +168,7 @@ function rackLine(item: RackItem): RackView["items"][number] {
     // the id's type admits only priced units; this guards a catalogue edit that drops the price
     if (!unit.usedPrice)
       throw new Error(`${CATALOG_TABLE_NAMES.dspUnits}: ${item.dsp} has no used price`);
-    return { label: `${unit.row[0]} (used) — ${item.note}`, price: unit.usedPrice };
+    return { label: `${unit.row.unit} (used) — ${item.note}`, price: unit.usedPrice };
   }
   const [label, price] = item;
   return { label, price: exactly(price) };
