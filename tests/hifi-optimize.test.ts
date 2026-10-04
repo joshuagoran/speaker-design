@@ -4,6 +4,7 @@ import {
   optimizeHifiSpeaker,
   hifiDesignProblems,
   hifiSearchSpace,
+  hifiScoreBoxes,
   portsDiffer,
 } from "../src/lib/hifi/optimize";
 import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
@@ -354,4 +355,13 @@ test("hi-fi optimizer: the first card is the best design on its grid, checked on
       `${goal}: the first card is the best on the grid`,
     );
   }
+});
+
+test("hi-fi optimizer: the box step split across workers gives exactly what one run gives", () => {
+  const input = { ...base, goals: ["lighter" as const, "cheaper" as const] };
+  const one = optimizeHifiSpeaker(input);
+  // as the workers hand their shares back: copied, not shared
+  const shares = structuredClone([0, 1, 2].map((part) => hifiScoreBoxes(input, part, 3)));
+  const split = optimizeHifiSpeaker(input, shares);
+  assert.deepStrictEqual({ ...split, stats: null }, { ...one, stats: null });
 });

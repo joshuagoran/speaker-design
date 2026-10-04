@@ -1703,6 +1703,33 @@ export interface OptimizerRequest<I = PaOptimizerInput> {
   input: I;
 }
 
+/** A box's fields on the search grid (the rest of its config is your design's). */
+export interface HifiGridBox {
+  box: HifiBoxKind;
+  dim: Dims3;
+  wall: number;
+  port: HifiPort | null;
+  pr: PassiveRadiatorChoice | null;
+}
+/** A box from the box step, as a worker hands it back: its fields, place in the grid, and its numbers per crossover. */
+export interface HifiScoredBox extends HifiGridBox {
+  key: string;
+  order: [woofer: number, box: number];
+  wId: string;
+  gross: number;
+  ch: number;
+  f3: number;
+  /** the woofer's clean level at 1 m per crossover (null: past the woofer's range) */
+  wLevels: (number | null)[];
+}
+/** A job for a Hi-fi optimizer worker: one share of the box step, or the rest of the search on every share. */
+export type HifiOptimizerJob =
+  | { kind: "score"; input: HifiOptimizerInput; part: number; parts: number }
+  | { kind: "select"; input: HifiOptimizerInput; scored: HifiScoredBox[][] };
+export type HifiOptimizerJobResult =
+  | { kind: "scored"; scored: HifiScoredBox[] }
+  | { kind: "result"; result: HifiOptimizerResult };
+
 /** The worker's reply: the result, or the message of what it threw. */
 export type OptimizerResponse<R = PaOptimizerResult> =
   | { id: number; out: R }

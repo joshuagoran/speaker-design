@@ -558,11 +558,18 @@ function lowpassOn(b: HifiBox, n: number, xo: number, order: CrossoverOrder) {
   }
   return lp;
 }
-/** The woofer on its baffle in the room, without the crossover: per-point EQ and level, and its in-room F3. */
+/** The woofer on its baffle in the room, without the crossover: per point, its level and limits; and its in-room F3. */
 export interface HifiWooferPrep {
-  e: Float64Array;
   /** the small-signal level with baffle step, placement and EQ, dB */
   raw: Float64Array;
+  /** the lowest of `raw` from 150 Hz up to each point (the passband level a crossover reads below its corner) */
+  rawMin: Float64Array;
+  /** the scale the amp allows at each point (with the EQ in the signal) */
+  sAmp: Float64Array;
+  /** the scale the driver's own limits allow before the low-pass (coil rating, Xmax, port air speed, radiator travel) */
+  sDrv: Float64Array;
+  /** which of those limits it is */
+  who: WooferMaxPoint["who"][];
   /** the level at 200-500 Hz the in-room F3 is read against */
   ref: number;
   /** in-room F3, Hz (the crossover doesn't move it) */
@@ -570,9 +577,11 @@ export interface HifiWooferPrep {
 }
 export function hifiWooferPrep(
   b: HifiBox,
-  cfg: Pick<HifiConfig, "dim" | "bsc" | "place" | "wallFt">,
+  w: HifiWoofer,
+  cfg: Pick<HifiConfig, "dim" | "bsc" | "place" | "wallFt" | "portMax">,
 ): HifiWooferPrep {
-  const c = b.m.curve;
+  const c = b.m.curve,
+    n = c.length;
   const { e, gDb } = shelfOn(
     b,
     cfg.dim.w,
@@ -580,83 +589,85 @@ export function hifiWooferPrep(
     cfg.place || "free",
     (cfg.wallFt || 2) * 0.3048,
   );
-  const raw = new Float64Array(c.length);
-  for (let i = 0; i < c.length; i++) raw[i] = c[i].spl + gDb[i];
-  // in-room F3: small-signal response (baffle step, placement, EQ) against its own level at 200-500 Hz
-  let sum = 0,
-    cnt = 0;
-  for (let i = 0; i < c.length; i++)
-    if (c[i].f >= 200 && c[i].f <= 500) {
-      sum += raw[i];
-      cnt++;
-    }
-  const ref = cnt ? sum / cnt : b.m.ref;
-  let f3 = c[c.length - 1].f;
-  for (let i = c.length - 1; i >= 0; i--) {
-    if (c[i].f > 500) continue;
-    if (raw[i] < ref - 3) {
-      f3 = c[Math.min(c.length - 1, i + 1)].f;
-      break;
-    }
-    f3 = c[i].f;
-  }
-  return { e, raw, ref, f3 };
-}
-/**
- * The woofer's clean music level at 1 m at one crossover: the worst-case scale across its band (amp, coil rating,
- * Xmax, port air speed, radiator travel, with the EQ and low-pass in the signal) on its passband level.
- */
-export function hifiWooferLevel(
-  b: HifiBox,
-  p: HifiWooferPrep,
-  w: HifiWoofer,
-  cfg: Pick<HifiConfig, "xo" | "order" | "portMax">,
-): { sMusic: number; whoW: WooferMaxPoint["who"]; wLevel: number } {
-  const c = b.m.curve,
-    xo = cfg.xo,
-    n = Math.min(c.length, logGridCount(b.N, GRID.fmin, GRID.fmax, hifiGridTop(xo)));
-  const lp = lowpassOn(b, n, xo, cfg.order || 4);
   const V = b.V,
     vT = thermalVoltageLimit(w.ts.aes || 100),
     portMax = cfg.portMax || 17,
     xW = w.ts.Xmax,
     pr = b.pr,
     xR = pr ? pr.drv.Xmax : 0;
-  let sMusic = Infinity,
-    whoW: WooferMaxPoint["who"] = "amp",
-    pbMin = Infinity;
+  const raw = new Float64Array(n),
+    rawMin = new Float64Array(n),
+    sAmp = new Float64Array(n),
+    sDrv = new Float64Array(n),
+    who: WooferMaxPoint["who"][] = [];
+  let low = Infinity;
   for (let i = 0; i < n; i++) {
     const o = c[i],
-      f = o.f;
-    if (f >= 150 && f <= xo / 1.4 && p.raw[i] < pbMin) pbMin = p.raw[i];
-    if (f < 30 || f > xo * 1.5) continue;
-    const e = p.e[i],
-      l = lp[i];
-    // as hifiSystemFromBox's wMax: volts at the terminals for full-scale input, and each limit's scale
-    const drive = V * e * l;
-    const sAmp = V / Math.max(1e-9, V * e),
-      sTh = vT / Math.max(1e-9, drive),
-      sX = xW / Math.max(1e-9, o.xmm * e * l);
-    const vel = o.vel != null ? o.vel * e * l : null,
-      prx = o.prx != null ? o.prx * e * l : null;
-    const sP = vel ? portMax / vel : Infinity,
-      sR = prx && pr ? xR / prx : Infinity;
-    const s = Math.min(sAmp, sTh, sX, sP, sR);
-    if (s < sMusic) {
-      sMusic = s;
-      whoW =
-        s === sX
-          ? "Xmax"
-          : s === sP
-            ? "port"
-            : s === sR
-              ? "radiator"
-              : s === sTh
-                ? "thermal"
-                : "amp";
+      ei = e[i];
+    raw[i] = o.spl + gDb[i];
+    if (o.f >= 150 && raw[i] < low) low = raw[i];
+    rawMin[i] = low;
+    // per-frequency limits with the EQ in the signal (the boosted drive can't pass the amp or the coil rating); the
+    // low-pass divides every one but the amp's
+    sAmp[i] = V / Math.max(1e-9, V * ei);
+    const sTh = vT / Math.max(1e-9, V * ei),
+      sX = xW / Math.max(1e-9, o.xmm * ei),
+      sP = o.vel ? portMax / (o.vel * ei) : Infinity,
+      sR = o.prx && pr ? xR / (o.prx * ei) : Infinity;
+    const s = Math.min(sTh, sX, sP, sR);
+    sDrv[i] = s;
+    who.push(s === sX ? "Xmax" : s === sP ? "port" : s === sR ? "radiator" : "thermal");
+  }
+  // in-room F3: small-signal response (baffle step, placement, EQ) against its own level at 200-500 Hz
+  let sum = 0,
+    cnt = 0;
+  for (let i = 0; i < n; i++)
+    if (c[i].f >= 200 && c[i].f <= 500) {
+      sum += raw[i];
+      cnt++;
+    }
+  const ref = cnt ? sum / cnt : b.m.ref;
+  let f3 = c[n - 1].f;
+  for (let i = n - 1; i >= 0; i--) {
+    if (c[i].f > 500) continue;
+    if (raw[i] < ref - 3) {
+      f3 = c[Math.min(n - 1, i + 1)].f;
+      break;
+    }
+    f3 = c[i].f;
+  }
+  return { raw, rawMin, sAmp, sDrv, who, ref, f3 };
+}
+/**
+ * The woofer's clean music level at 1 m at one crossover: the worst-case scale across its band (30 Hz to 1.5 × the
+ * crossover; the low-pass in the signal) on its passband level (the lowest from 150 Hz to the crossover / 1.4).
+ */
+export function hifiWooferLevel(
+  b: HifiBox,
+  p: HifiWooferPrep,
+  cfg: Pick<HifiConfig, "xo" | "order">,
+): { sMusic: number; whoW: WooferMaxPoint["who"]; wLevel: number } {
+  const c = b.m.curve,
+    xo = cfg.xo,
+    n = Math.min(c.length, logGridCount(b.N, GRID.fmin, GRID.fmax, hifiGridTop(xo)));
+  const lp = lowpassOn(b, n, xo, cfg.order || 4);
+  let sMusic = Infinity,
+    whoW: WooferMaxPoint["who"] = "amp",
+    pb = -1;
+  for (let i = 0; i < n; i++) {
+    const f = c[i].f;
+    if (f <= xo / 1.4) pb = i;
+    if (f < 30) continue;
+    if (f > xo * 1.5) break;
+    const d = p.sDrv[i] / Math.max(1e-9, lp[i]),
+      a = p.sAmp[i];
+    if (d <= a ? d < sMusic : a < sMusic) {
+      sMusic = d <= a ? d : a;
+      whoW = d <= a ? p.who[i] : "amp";
     }
   }
-  const wLevel = (pbMin < Infinity ? pbMin : b.m.ref) + 20 * Math.log10(sMusic);
+  const wLevel =
+    (pb >= 0 && p.rawMin[pb] < Infinity ? p.rawMin[pb] : b.m.ref) + 20 * Math.log10(sMusic);
   return { sMusic, whoW, wLevel };
 }
 
@@ -743,8 +754,8 @@ export function hifiSystemFromBox(
   const wMax = wMaxAt(ts.Xmax, xR);
   const wMaxBand = withBand ? xmaxBandCurves(ts.xmax, (xW) => wMaxAt(xW, xR)) : null;
   // one scale for music (the worst case across the woofer's band), like the PA planner's music limit
-  const prep = hifiWooferPrep(b, cfg);
-  const { sMusic, whoW, wLevel } = hifiWooferLevel(b, prep, w, cfg);
+  const prep = hifiWooferPrep(b, w, cfg);
+  const { sMusic, whoW, wLevel } = hifiWooferLevel(b, prep, cfg);
 
   // tweeter: sensitivity and power, derated below the frequency its rating assumes, then the high-pass
   const { imp, derate, pMax, tSens, tLevel } = tweeterMaxLevel(t, cfg);
