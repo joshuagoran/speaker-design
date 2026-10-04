@@ -11,7 +11,14 @@ import {
 import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
 import { chipOf } from "./helpers";
-import type { HifiGoal, HifiMetrics, HifiOptimizerCurrent, HifiOptimizerLocks } from "../src/types";
+import type {
+  HifiGoal,
+  HifiMetrics,
+  HifiOptimizerCurrent,
+  HifiOptimizerLocks,
+  HifiOptimizerResult,
+  HifiScoredBox,
+} from "../src/types";
 
 const cur: HifiOptimizerCurrent = {
   woofer: "sb17nrx",
@@ -52,11 +59,36 @@ test("every driver in the hi-fi list can be modelled", (t) => {
   for (const w of HIFI_WOOFERS) assert.ok(hifiSystem(w, tw, cur), w.id);
 });
 
+// What a step costs, in ms of this process's CPU time. The search is synchronous, so on an idle machine this is its wall
+// time; unlike wall time it leaves out the time the other test files' workers hold the cores (in a full parallel run the
+// full search's wall time nearly doubles while its CPU time stays put).
+function cpuMs<T>(step: () => T): { value: T; ms: number } {
+  const c0 = process.cpuUsage(),
+    value = step(),
+    { user, system } = process.cpuUsage(c0);
+  return { value, ms: (user + system) / 1000 };
+}
+// The full search (every woofer and tweeter, nothing locked), run once per goal for every test that asks for it. Its box
+// step reads no goal, so the goals share one box step; a goal's search time is that step's time plus its own selection,
+// as a run of `optimizeHifiSpeaker` alone would take (the split-run tests below check that handing the step over gives
+// exactly what one run gives).
+let fullBoxes: { value: HifiScoredBox[]; ms: number } | undefined;
+const fullRuns = new Map<HifiGoal, { out: HifiOptimizerResult; ms: number }>();
+function fullSearch(goal: HifiGoal) {
+  const done = fullRuns.get(goal);
+  if (done) return done;
+  const input = { ...base, goals: [goal] },
+    boxes = (fullBoxes ??= cpuMs(() => hifiScoreBoxes(input))),
+    select = cpuMs(() => optimizeHifiSpeaker(input, [boxes.value])),
+    run = { out: select.value, ms: boxes.ms + select.ms };
+  fullRuns.set(goal, run);
+  return run;
+}
+
 for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
   test(`hi-fi optimizer (${goal}): cards pass the checks, stay in budget, and their labels are true`, (t) => {
-    const t0 = Date.now(),
-      out = optimizeHifiSpeaker({ ...base, goals: [goal] });
-    assert.ok(Date.now() - t0 < 10000, `${Date.now() - t0} ms`);
+    const { out, ms } = fullSearch(goal);
+    assert.ok(ms < 10000, `${Math.round(ms)} ms of CPU time`);
     assert.ok(out.cards.length >= 1 || out.goalMissing, "cards or a message");
     for (const k of out.cards) {
       const w = HIFI_WOOFERS.find((o) => o.id === k.woofer)!,
@@ -86,13 +118,15 @@ test("hi-fi optimizer: locked woofer and exact box stay put", (t) => {
 });
 
 test("hi-fi optimizer: unlocked amps stay within the sliders; locked amps stay; Lighter can offer 1/2 in ply", (t) => {
-  const out = optimizeHifiSpeaker({ ...base, goals: ["louder"] });
+  const { out } = fullSearch("louder");
   for (const k of out.cards) assert.ok(k.config.wAmpW <= 500 && k.config.tAmpW <= 200, k.label);
+  // the woofer held too (the search over tweeters, boxes and crossovers still finds cards, which unlocked amps would trim)
   const locked = optimizeHifiSpeaker({
     ...base,
     goals: ["cheaper"],
-    locks: { wAmpW: true, tAmpW: true },
+    locks: { woofer: true, wAmpW: true, tAmpW: true },
   });
+  assert.ok(locked.cards.length >= 1, "cards to check");
   for (const k of locked.cards)
     assert.deepEqual([k.config.wAmpW, k.config.tAmpW], [cur.wAmpW, cur.tAmpW]);
   const all: HifiOptimizerLocks = {
@@ -163,6 +197,8 @@ test("hi-fi optimizer: a radiator design handed over as the page does ({ id, n, 
     cur: { ...cur, box: "radiator", pr: { id: HIFI_PASSIVES[0].id, n: 2, addG: 0 } },
     passives: HIFI_PASSIVES,
     goals: ["cheaper"],
+    // (the handover is about your design, not the woofers: the boxes, radiators, tweeters and crossovers are still searched)
+    locks: { woofer: true },
   });
   assert.ok(out.cards.length >= 1 || out.goalMissing);
 });
@@ -369,17 +405,18 @@ test("hi-fi optimizer: the first card is the best design on its grid, checked on
   }
 });
 
+// the split-run tests below: the box step in three workers' shares, computed once (it reads no goal, so each test's
+// goals select from the same shares; six woofers: still three parts with two woofers each, interleaved in the merge)
+const splitBoxInput = { ...base, woofers: HIFI_WOOFERS.slice(0, 6) };
+let splitShares: HifiScoredBox[][] | undefined;
+const splitShare = (part: number) =>
+  (splitShares ??= [0, 1, 2].map((p) => hifiScoreBoxes(splitBoxInput, p, 3)))[part];
+
 test("hi-fi optimizer: the box step split across workers gives exactly what one run gives", () => {
-  // (a third of the woofers: still three parts with several woofers each)
-  const input = {
-    ...base,
-    woofers: HIFI_WOOFERS.slice(0, 9),
-    goals: ["lighter" as const, "cheaper" as const],
-  };
+  const input = { ...splitBoxInput, goals: ["lighter" as const, "cheaper" as const] };
   const one = optimizeHifiSpeaker(input);
   // as the workers hand their shares back: copied, not shared
-  const shares = structuredClone([0, 1, 2].map((part) => hifiScoreBoxes(input, part, 3)));
-  const split = optimizeHifiSpeaker(input, shares);
+  const split = optimizeHifiSpeaker(input, structuredClone([0, 1, 2].map(splitShare)));
   assert.deepStrictEqual({ ...split, stats: null }, { ...one, stats: null });
 });
 
@@ -434,9 +471,9 @@ test("hi-fi optimizer: your box is searched on the other plywood even when your 
 });
 
 test("hi-fi optimizer: the first worker's kept share (or, if lost, its share scored again) gives what one run gives", () => {
-  const input = { ...base, woofers: HIFI_WOOFERS.slice(0, 9), goals: ["cheaper" as const] };
+  const input = { ...splitBoxInput, goals: ["cheaper" as const] };
   const one = optimizeHifiSpeaker(input);
-  const others = structuredClone([1, 2].map((part) => hifiScoreBoxes(input, part, 3)));
+  const others = structuredClone([1, 2].map(splitShare));
   const sent = runHifiJob({ kind: "score", input, part: 0, parts: 3, keep: "run-a" });
   assert.deepStrictEqual(sent, { kind: "scored", scored: [] }, "the kept share isn't sent back");
   for (const run of ["run-a", "run-b"]) {
