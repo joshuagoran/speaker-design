@@ -1,20 +1,19 @@
 import { ToggleButton } from "../ui/ToggleButton";
 import { RankBadge } from "./RankBadge";
 import { entriesOf } from "../../lib/records";
-import { keepText, type KeepGoal, type KeepWords } from "../../lib/optimizer/goalKeeps";
 
-interface Props<G extends KeepGoal> {
+interface Props<G extends string> {
   /** every goal, with its short and long name */
   defs: Record<G, { short: string; name: string }>;
   /** the goals picked, in priority order */
   selected: readonly G[];
   onTap: (goal: G) => void;
-  /** how this optimizer words what each goal keeps, for the Details drop-down */
-  keepWords: KeepWords;
+  /** the Details drop-down's lines for the picked goals: what they keep from your design, in the optimizer's words */
+  details: readonly string[];
 }
 
 /** Row of goal toggles for an optimizer, and a Details drop-down saying what the picked goals keep from your design. */
-export function GoalPicker<G extends KeepGoal>({ defs, selected, onTap, keepWords }: Props<G>) {
+export function GoalPicker<G extends string>({ defs, selected, onTap, details }: Props<G>) {
   return (
     <div className="mt-3">
       <div className="text-sm text-stone-500 mb-1">
@@ -41,11 +40,10 @@ export function GoalPicker<G extends KeepGoal>({ defs, selected, onTap, keepWord
         <summary className="cursor-pointer text-sm text-stone-900 py-2.5">Details</summary>
         <div className="leading-relaxed mt-0.5 mb-1 flex flex-col gap-0.5">
           {selected.length ? (
-            selected.map((k) => <div key={k}>{keepText(k, defs[k].short, keepWords)}</div>)
+            details.map((line) => <div key={line}>{line}</div>)
           ) : (
             <div>Pick a goal to see how far it may move from your design.</div>
           )}
-          {selected.length > 0 && keepWords.note && <div>{keepWords.note}</div>}
         </div>
       </details>
     </div>

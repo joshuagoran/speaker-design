@@ -3,7 +3,7 @@ import { WarningChips } from "../../../components/chips/WarningChips";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
 import { FoldHeading } from "../../../components/ui/FoldHeading";
 import { ResponseChart } from "../../../components/charts/ResponseChart";
-import { StatRow } from "../../../components/optimizer/StatRow";
+import { MAX_SPL_TIP, StatRow } from "../../../components/optimizer/StatRow";
 import { subChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
@@ -146,7 +146,12 @@ export function SubSection({ planner }: Props) {
                 ],
                 ...[30, 35, 45, 60].map((f) => {
                   const m = nearestPoint(subModelled.maxCurve, f);
-                  return [`Max SPL at ${f} Hz`, `${m.spl.toFixed(1)} dB`, `sine, ${m.who}-limited`];
+                  return [
+                    `Max SPL at ${f} Hz`,
+                    `${m.spl.toFixed(1)} dB`,
+                    `sine, ${m.who}-limited`,
+                    MAX_SPL_TIP,
+                  ];
                 }),
                 [
                   "First limit, music",

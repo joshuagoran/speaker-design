@@ -1,6 +1,7 @@
 import { PAL } from "../../styles/palette";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { StatRowGrid } from "../../components/stats/StatRowGrid";
+import { MAX_SPL_TIP } from "../../components/optimizer/StatRow";
 import { StatTile } from "../../components/stats/StatTile";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
@@ -153,6 +154,7 @@ export function FillsPage({ fills }: Props) {
               "Max SPL at 100 Hz",
               `${maxCurveNearest(100).spl.toFixed(1)} dB`,
               `sine, ${maxCurveNearest(100).who}-limited`,
+              MAX_SPL_TIP,
             ],
             ...xmaxRows(thieleSmall),
             ["Price", driver.price ? `$${driver.price}` : "—", driver.src],

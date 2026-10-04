@@ -12,13 +12,13 @@ interface Props {
   className?: string;
 }
 
-/** Stack of warning chips, each `[status, heading, text]` as returned by subChips, midChips, hornChips, fillChips and hifiChips. */
+/** Stack of warning chips, each `[status, heading, text, id]` as returned by subChips, midChips, hornChips, fillChips and hifiChips. */
 export function WarningChips({ chips, className = "" }: Props) {
   return (
     <div className={`flex flex-col gap-1.5 ${className}`.trim()}>
-      {chips.map(([kind, head, body]) => (
+      {chips.map(([kind, head, body, id]) => (
         <div
-          key={head}
+          key={id}
           className={`block text-xs leading-relaxed px-3 py-2 rounded border ${CHIP_BACKGROUND_CLASSES[kind] || CHIP_BACKGROUND_CLASSES.ok}`}
         >
           <b

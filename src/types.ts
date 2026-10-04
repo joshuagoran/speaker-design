@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
+import type { CHIP_IDS } from "./constants/chipIds";
 
 // Shapes of the driver, horn, cabinet and fill tables in lib/data.ts.
 //
@@ -580,8 +581,8 @@ export interface HifiRadiatorSystem extends HifiSystemBase {
  */
 export type HifiSystem = HifiSealedSystem | HifiVentedSystem | HifiRadiatorSystem;
 
-/** A check on the design: a severity, a short title and a sentence of detail. */
-export type HifiChip = Chip;
+/** A check on the design: a severity, a short title, a sentence of detail and the check's id. */
+export type HifiChip = Chip<ChipId<"hifi">>;
 
 /** Where the listener sits: feet across the room (x) and back from the speakers (y). */
 export interface ListeningSeat {
@@ -704,7 +705,7 @@ export interface HifiDesignState {
 /** What the model reads off a design that can be modelled: the system, and the curves and numbers worked out from it. */
 export interface HifiSpeakerModel {
   speakerSystem: HifiSystem;
-  warningChips: Chip[];
+  warningChips: HifiChip[];
   /** both speakers' clean output at the seat, dB */
   maxLevelAtSeatDb: number;
   onAxisResponse: FrequencyPoint[];
@@ -822,7 +823,8 @@ export interface HifiOptimizerCard {
   config: HifiCardConfig;
   metrics: HifiMetrics;
   delta: HifiMetricsDelta | null;
-  warnings: string[];
+  /** the warnings on this design (the checks it passes with a warning) */
+  warnings: HifiChip[];
   names: { woofer: string; tweeter: string };
   lay: DriverLayout;
   /** the tweeter sits on a waveguide (undefined for a tweeter that needs none) */
@@ -1262,8 +1264,17 @@ export interface PackedSheets<R = CutPart> {
 // ---- Warning chips (lib/pa/chips) ----
 
 export type ChipSeverity = "ok" | "warn" | "bad";
-/** A check on a design: a severity, a short title and a sentence of detail. */
-export type Chip = [severity: ChipSeverity, title: string, detail: string];
+/** The sections that carry checks: the PA stack's sub, mid and horn, the fills and the Hi-fi speaker. */
+export type ChipSection = keyof typeof CHIP_IDS;
+/** A check's stable id (`CHIP_IDS`), of one section or of any. */
+export type ChipId<S extends ChipSection = ChipSection> = (typeof CHIP_IDS)[S][number];
+/** A check on a design: a severity, a short title, a sentence of detail and the check's id (code matches the id, never the words). */
+export type Chip<I extends ChipId = ChipId> = [
+  severity: ChipSeverity,
+  title: string,
+  detail: string,
+  id: I,
+];
 
 export interface SubChipsInput {
   subSize: SubSize;
@@ -1612,7 +1623,7 @@ export interface PaEvaluation {
   hornGap: number | null;
   mismatch: boolean;
   port: VentGeometry;
-  chips: { sub: Chip[]; mid: Chip[]; horn: Chip[] };
+  chips: { sub: Chip<ChipId<"sub">>[]; mid: Chip<ChipId<"mid">>[]; horn: Chip<ChipId<"horn">>[] };
   /** the sub's clean level for the card's chart, [Hz, dB] points from 20 to 200 Hz */
   curve: [number, number][];
 }
@@ -1659,8 +1670,8 @@ export interface PaOptimizerCard {
   vent: string;
   /** what stops the sub's music level */
   limitedBy: string;
-  /** the planner's warnings on this design as [title, detail] */
-  warnings: [title: string, detail: string][];
+  /** the planner's warnings on this design (its sub, mid and horn chips that aren't ok) */
+  warnings: Chip<ChipId<"sub" | "mid" | "horn">>[];
   /** the mid's Qtc and the sheets of ply each thickness needs */
   build: { qtc: number; sheets: { t: number; n: number }[] };
   /** what differs from the current design: "sub driver", "vent" ... */

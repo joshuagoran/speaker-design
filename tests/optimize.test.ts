@@ -315,10 +315,7 @@ test("no card carries 'Horn stops loading near the crossover' when the horn, dri
   for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
     const out = runs[goal] || optimizePaStack({ ...base, goal });
     for (const k of out.cards)
-      assert.ok(
-        !k.warnings.some(([h]) => h === "Horn stops loading near the crossover"),
-        `${goal}: ${k.label}`,
-      );
+      assert.ok(!k.warnings.some(([, , , id]) => id === "hornLoading"), `${goal}: ${k.label}`);
   }
 });
 
@@ -553,7 +550,7 @@ test("Cheaper: fewest warnings, then strictly the cheapest, with weight breaking
   // the same drivers on 1/2 in ply cost the same and weigh less, and a crossover that avoids the warning exists
   assert.equal(first.config.wall, 0.5);
   assert.ok(
-    !first.warnings.some(([h]) => h.startsWith("Mid much wider")),
+    !first.warnings.some(([, , , id]) => id === "hornMidWider"),
     "no soft warning on the cheapest card",
   );
 });

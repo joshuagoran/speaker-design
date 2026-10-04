@@ -40,6 +40,7 @@ import {
 } from "./chips";
 import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS, subDriversOfSize } from "../data";
 import type {
+  ChipId,
   CompressionDriver,
   CutPart,
   Dims3,
@@ -51,7 +52,6 @@ import type {
   PaDesignConfig,
   PaEvaluation,
   PaGoal,
-  PaMaxPoint,
   PaMetricsSummary,
   PaNearMiss,
   PaOptimizedField,
@@ -62,7 +62,6 @@ import type {
   PaOptimizerResult,
   PaRoom,
   PortStyle,
-  SealedPoint,
   SubDriver,
   SubLimitWho,
   SubLimits,
@@ -76,7 +75,9 @@ import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
 import { savedCrossoverOrder } from "../../constants/crossovers";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
-import { goalKeeps } from "../optimizer/goalKeeps";
+import { goalKeeps, PA_UNMODELLED_F3_HZ } from "../optimizer/goalKeeps";
+import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
+import { ampForGain, onSlider, type AmpSteps } from "../optimizer/ampSteps";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -84,8 +85,10 @@ const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 interface ProblemLimits {
   maxLb: number;
   budget: number;
-  allow?: Set<string>;
+  allow?: Set<PaChipId>;
 }
+/** A check on the PA stack's sub, mid or horn. */
+type PaChipId = ChipId<"sub" | "mid" | "horn">;
 /** The numbers the goals rank by. */
 interface Score {
   price: number;
@@ -117,15 +120,19 @@ interface SubCandidate {
   lb: number;
   out: number;
 }
-/** A mid driver in a box at one crossover, with its limit curve and its response at the searched power. */
+/** A mid's level at a crossover, dB: its limit and its response at the searched power. */
+interface MidLevel {
+  max: number;
+  sig: number;
+}
+/** A mid driver in a box at one crossover, with its level there and at each upper crossover (through its lowpass). */
 interface MidEntry {
   m: MidDriver;
   bx: Dims3;
   t: number;
   xoLo: number;
-  atXo: number;
-  max: PaMaxPoint[];
-  sig: Pick<SealedPoint, "f" | "spl">[];
+  lo: MidLevel;
+  hi: Record<number, MidLevel>;
   qtc: number;
   lb: number;
 }
@@ -150,7 +157,7 @@ interface PoolEntry {
   ch: number;
 }
 /** A card as `choose` picks it: the design, its label and its why. */
-type PlannedCard = SelectedCard<PoolEntry>;
+type PlannedCard = SelectedCard<PoolEntry, PaGoal>;
 /** The locks with both box-dimension modes present. */
 interface ResolvedLocks extends PaOptimizerLocks {
   subDim: Partial<Record<keyof Dims3, DimensionLockMode>>;
@@ -435,26 +442,28 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
 // Reasons a config can't be a card (hard limits and the planner's own warnings that matter for a build).
 // Warnings a card may carry (shown on it). Anything else the planner warns about rules a design out, unless
 // lim.allow lists it (a warning the current design has from parts the user locked, so nothing can fix it).
-const SOFT_OK = new Set([
-  "Over 125 lb",
-  "Amp-limited",
-  "Excursion-limited",
-  "Thermally limited",
-  "Horn wider than rated at the crossover",
-  "Mid narrower than the horn at the crossover",
-  "Mid much wider than the horn at the crossover",
+const SOFT_OK = new Set<PaChipId>([
+  "subWeight",
+  "subAmpLimited",
+  "subExcursionLimited",
+  "subThermalLimited",
+  "midAmpLimited",
+  "midExcursionLimited",
+  "midThermalLimited",
+  "midQtc",
+  "hornAmpLimited",
+  "hornWiderThanRated",
+  "hornMidNarrower",
+  "hornMidWider",
 ]);
 export function designProblems(m: PaEvaluation | null, lim: ProblemLimits) {
   const out: string[] = [];
   if (!m) return ["can't be modelled"];
   for (const k of ["sub", "mid", "horn"] as const)
-    for (const [kind, head] of m.chips[k]) {
+    for (const [kind, head, , id] of m.chips[k]) {
       if (
         kind === "bad" ||
-        (kind === "warn" &&
-          !SOFT_OK.has(head) &&
-          !head.startsWith("Qtc") &&
-          !(lim.allow && lim.allow.has(head)))
+        (kind === "warn" && !SOFT_OK.has(id) && !(lim.allow && lim.allow.has(id)))
       )
         out.push(head);
     }
@@ -474,6 +483,12 @@ export function designProblems(m: PaEvaluation | null, lim: ProblemLimits) {
 // The fields a result sets; everything else (finish, colours, layout, balance) stays as the page has it.
 // the planner's amp sliders top out here; an unlocked amp is searched up to these
 export const AMP_WATTS_MAX = { ampW: 3000, mAmpW: 2000, hfAmpW: 500 };
+// and their steps and minimums: an amp the search turns down stays on a step, never under the minimum
+export const AMP_WATTS_STEPS: Record<AmpKey, AmpSteps> = {
+  ampW: { step: 50, min: 200 },
+  mAmpW: { step: 25, min: 50 },
+  hfAmpW: { step: 5, min: 10 },
+};
 export const OPTIMIZED_FIELDS: readonly PaOptimizedField[] = [
   "sub",
   "mid",
@@ -526,7 +541,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   };
   const locks: ResolvedLocks = { subDim: {}, midDim: {}, ...input.locks };
   const budget = input.budget; // drivers per stack
-  const lim: Required<ProblemLimits> = { maxLb: input.maxLb, budget, allow: new Set<string>() };
+  const lim: Required<ProblemLimits> = { maxLb: input.maxLb, budget, allow: new Set<PaChipId>() };
   // Unlocked amps are searched at the top of their slider (so the drivers, not the amp, set the limit), turned down where
   // the band above can't keep up (the combine step), then every card comes back at the least power that keeps its output
   // and keeps each band up with the one below.
@@ -544,12 +559,12 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     locks.cd &&
     locks.xoHi &&
     curM &&
-    curM.chips.horn.some(([, h]) => h === "Horn stops loading near the crossover")
+    curM.chips.horn.some(([, , , id]) => id === "hornLoading")
   );
-  if (hornLoadOk) lim.allow.add("Horn stops loading near the crossover");
+  if (hornLoadOk) lim.allow.add("hornLoading");
   const need = roomRequiredSpl(room);
   const target = Math.max(curM ? curM.out : need, need);
-  const curF3 = curM ? curM.f3 : 40;
+  const curF3 = curM ? curM.f3 : PA_UNMODELLED_F3_HZ;
   let evals = 0;
 
   // candidate lists
@@ -793,8 +808,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           if (!pushed && fallback && !locks.ampW) {
             const vW =
               Math.pow((fallback.s.AMP_V * (0.9 * cur.portMax)) / fallback.s.mdl.peakVel, 2) / 8;
-            const ampW = Math.floor(vW / 50) * 50;
-            if (ampW >= 200) {
+            const ampW = onSlider(vW, AMP_WATTS_STEPS.ampW);
+            if (ampW !== null) {
               const c = { ...fallback.c, ampW };
               const s = subSystem(sd.sub, midForGeom, {
                 subBox: box,
@@ -871,7 +886,11 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   };
   const midPrice = (e: MidEntry) => e.m.price ?? 0; // an unpriced mid (only a locked one gets here) counts as 0
   const curMidPrice = curMid?.price || 0;
-  const midTable: MidEntry[] = []; // { m, bx, t, xoLo, atXo, curve (no lowpass), qtc, f3, lb }
+  // the upper crossover's lowpass at its own frequency, dB, per xoHi
+  const lowpassAtXo: Record<number, number> = Object.fromEntries(
+    xoHis.map((f) => [f, 20 * Math.log10(linkwitzRileyLowpass(f, f, cur.xoHiOrder))]),
+  );
+  const midTable: MidEntry[] = [];
   for (const m of mids)
     for (const t of walls)
       for (const bx of midBoxes(m, t)) {
@@ -890,14 +909,17 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           evals++;
           if (!mdl || mdl.Qtc < 0.5 || mdl.Qtc > 0.8 || mdl.f3 > xoLo) continue;
           const max = maxOutputCurve(mdl.curve, m.ts, V, Infinity);
+          const levelAt = (f: number, lp = 0): MidLevel => ({
+            max: nearestPoint(max, f).spl + lp,
+            sig: nearestPoint(mdl.curve, f).spl + lp,
+          });
           midTable.push({
             m,
             bx,
             t,
             xoLo,
-            atXo: nearestPoint(max, xoLo).spl,
-            max,
-            sig: mdl.curve,
+            lo: levelAt(xoLo),
+            hi: Object.fromEntries(xoHis.map((f) => [f, levelAt(f, lowpassAtXo[f])])),
             qtc: mdl.Qtc,
             lb: midWeightLb(bx, t) + (m.lb || 0),
           });
@@ -956,16 +978,9 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   // under its slider)
   const subFor = (sc: SubCandidate, gap: number) => {
     if (gap >= -0.5) return { ampW: sc.c.ampW, out: sc.out };
-    const ampW = Math.floor((sc.s.lim.W * 10 ** (gap / 10)) / 50) * 50;
-    return locks.ampW || ampW < 200
-      ? null
-      : { ampW, out: sc.out + 10 * Math.log10(ampW / sc.s.lim.W) };
+    const ampW = locks.ampW ? null : ampForGain(sc.s.lim.W, gap, AMP_WATTS_STEPS.ampW);
+    return ampW === null ? null : { ampW, out: sc.out + 10 * Math.log10(ampW / sc.s.lim.W) };
   };
-  // a mid's level at a crossover: its limit and its response at the searched power
-  const levels = (e: MidEntry, f: number, lp = 0) => ({
-    max: nearestPoint(e.max, f).spl + lp,
-    sig: nearestPoint(e.sig, f).spl + lp,
-  });
   for (const sc of subCands) {
     if (sc.lb > slack.lb || sc.sub.price > slack.budget) continue;
     for (const xoLo of xoLos) {
@@ -974,7 +989,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       const okMids = midTable.flatMap((e) => {
         const s =
           e.xoLo === xoLo && e.t === sc.c.wall && e.lb <= slack.lb
-            ? subFor(sc, e.atXo - need)
+            ? subFor(sc, e.lo.max - need)
             : null;
         return s ? [{ e, out: s.out }] : [];
       });
@@ -996,19 +1011,20 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
         if (x && !choices.includes(x.e)) choices.push(x.e);
       if (towerMid) choices.push(null);
       for (const e of choices) {
-        const lo = e && levels(e, xoLo);
         for (const xoHi of xoHis) {
-          const hi =
-            e && levels(e, xoHi, 20 * Math.log10(linkwitzRileyLowpass(xoHi, xoHi, cur.xoHiOrder)));
           // each pair with the amps and output once every band keeps up (the tower's mid isn't checked here)
           const fits = hornTable[xoHi].flatMap((hp) => {
-            if (!lo || !hi) return [{ hp, ampW: sc.c.ampW, mAmpW: amps.mAmpW, out: sc.out }];
+            if (!e) return [{ hp, ampW: sc.c.ampW, mAmpW: amps.mAmpW, out: sc.out }];
+            const { lo } = e,
+              hi = e.hi[xoHi];
             const room = hp.at + cur.hfTilt;
             const mAmpW =
               hi.max - room <= 0.5
                 ? amps.mAmpW
-                : Math.floor((amps.mAmpW * 10 ** ((room - hi.sig) / 10)) / 25) * 25;
-            if (mAmpW < amps.mAmpW && (locks.mAmpW || mAmpW < 50)) return [];
+                : locks.mAmpW
+                  ? null
+                  : ampForGain(amps.mAmpW, room - hi.sig, AMP_WATTS_STEPS.mAmpW);
+            if (mAmpW === null) return [];
             const s = subFor(
               sc,
               Math.min(lo.max, lo.sig + 10 * Math.log10(mAmpW / amps.mAmpW)) - need,
@@ -1114,7 +1130,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       (a, k) =>
         a +
         m.chips[k].filter(
-          ([kind, head]) => kind === "warn" && !head.endsWith("limited") && head !== "Over 125 lb",
+          ([kind, , , id]) => kind === "warn" && !LIMIT_CHIP_IDS.has(id) && id !== "subWeight",
         ).length,
       0,
     );
@@ -1212,7 +1228,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       m = p.m;
     const ok = (mm: PaEvaluation | null): mm is PaEvaluation =>
       mm !== null && designProblems(mm, lim).length === 0;
-    const lowest = (key: AmpKey, lo: number, step: number, good: (m: PaEvaluation) => boolean) => {
+    const lowest = (key: AmpKey, good: (m: PaEvaluation) => boolean) => {
+      const { min: lo, step } = AMP_WATTS_STEPS[key];
       if (locks[key] || c[key] <= lo) return;
       const floor = { ...c, [key]: lo },
         fm = evaluateDesign(floor);
@@ -1241,9 +1258,9 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
         m = mm;
       }
     };
-    lowest("ampW", 200, 50, (mm) => mm.out >= tgtOut - 0.01);
-    lowest("mAmpW", 50, 25, (mm) => mm.midGap >= 0);
-    lowest("hfAmpW", 10, 5, (mm) => mm.hornGap == null || mm.hornGap >= 0);
+    lowest("ampW", (mm) => mm.out >= tgtOut - 0.01);
+    lowest("mAmpW", (mm) => mm.midGap >= 0);
+    lowest("hfAmpW", (mm) => mm.hornGap == null || mm.hornGap >= 0);
     return { ...p, c, m };
   };
   const choose0 = choose;
@@ -1254,9 +1271,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     // output-first cards keep all the output they found; the others come down to the target
     const keepOut = (k: PlannedCard) =>
       (goals.some((g) => ["louder", "lower"].includes(g)) && k === cs[0]) ||
-      k.label === ALT_LABEL.louder ||
-      k.label === ALT_LABEL.lower ||
-      k.label === "Smallest change";
+      (k.slot.kind === "alt" && (k.slot.axis === "louder" || k.slot.axis === "lower")) ||
+      k.slot.kind === "smallest";
     return {
       ...res,
       cards: cs.map((k) => ({
@@ -1450,9 +1466,7 @@ function card(
     names: { sub: sub.name, mid: mid.name, cd: cd.name, horn: horn.name },
     vent: m.port.desc,
     limitedBy: WHO[m.who] || m.who,
-    warnings: [...m.chips.sub, ...m.chips.mid, ...m.chips.horn]
-      .filter(([k]) => k !== "ok")
-      .map(([, h, b]): [string, string] => [h, b]),
+    warnings: [...m.chips.sub, ...m.chips.mid, ...m.chips.horn].filter(([k]) => k !== "ok"),
     build: { qtc: m.qtc, sheets: sheets.sort((a, b) => b.t - a.t) },
     changed,
     priceKnown: m.priceKnown,

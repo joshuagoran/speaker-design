@@ -6,6 +6,7 @@ import {
   HIFI_KEEP_WORDS,
   PA_KEEP_WORDS,
   goalKeeps,
+  keepLines,
   keepText,
   type KeepGoal,
 } from "../src/lib/optimizer/goalKeeps";
@@ -63,4 +64,22 @@ test("both optimizers build their keep tables from the constant", () => {
   // no keep table spelled out by hand: no level or F3 offset next to a goal name
   for (const s of [hifi, pa])
     assert.doesNotMatch(s, /(cheaper|lighter|lower|louder): \{ db: [^}]*[-+] \d/);
+});
+
+test("the Details lines: one per picked goal and the footnote, or one honest line when your design can't be modelled", () => {
+  assert.deepStrictEqual(keepLines([], OPTIMIZER_GOALS, PA_KEEP_WORDS, true), []);
+  assert.deepStrictEqual(
+    keepLines(["lower", "cheaper"], HIFI_OPTIMIZER_GOALS, HIFI_KEEP_WORDS, true),
+    [
+      keepText("lower", "Lower", HIFI_KEEP_WORDS),
+      keepText("cheaper", "Cheaper", HIFI_KEEP_WORDS),
+      HIFI_KEEP_WORDS.note,
+    ],
+  );
+  // nothing of your design to keep: no limit is claimed
+  for (const words of [HIFI_KEEP_WORDS, PA_KEEP_WORDS])
+    assert.deepStrictEqual(keepLines(["cheaper"], OPTIMIZER_GOALS, words, false), [
+      words.unmodelled,
+    ]);
+  assert.doesNotMatch(HIFI_KEEP_WORDS.unmodelled + PA_KEEP_WORDS.unmodelled, /at most/);
 });
