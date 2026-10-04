@@ -20,8 +20,6 @@ import {
   midWeightLb,
   boxInternalLiters,
   cutParts,
-  packSheets,
-  PLYWOOD_SHEETS,
   nearestPoint,
   subMusicOutputAt,
   linkwitzRileyLowpass,
@@ -43,7 +41,7 @@ import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS, subDriversOfSize } 
 import type {
   ChipId,
   CompressionDriver,
-  CutPart,
+  CutlistSettings,
   Dims3,
   DimensionLockMode,
   Horn,
@@ -74,6 +72,7 @@ import { keysOf } from "../records";
 import { selectCards, type SelectedCard } from "../optimizer/selectCards";
 import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
+import { layoutCutlist, savedCutlist } from "./cutlist";
 import { savedCrossoverOrder } from "../../constants/crossovers";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
 import { goalKeeps, PA_UNMODELLED_F3_HZ } from "../optimizer/goalKeeps";
@@ -539,6 +538,13 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     ...input.cur,
     xoLoOrder: savedCrossoverOrder(input.cur.xoLoOrder),
     xoHiOrder: savedCrossoverOrder(input.cur.xoHiOrder),
+  };
+  // the cards count sheets as the Cutlist tab does
+  const cl: CutlistSettings = {
+    ...savedCutlist(cur),
+    sheet: input.cutlist?.sheet ?? DEFAULT_PA.plywoodSheetKind,
+    stacks: input.cutlist?.stacks ?? 1,
+    joint: cur.joint || DEFAULT_PA.joint,
   };
   const locks: ResolvedLocks = { subDim: {}, midDim: {}, ...input.locks };
   const budget = input.budget; // drivers per stack
@@ -1333,7 +1339,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     const lightest = subCands.length ? Math.min(...subCands.map((x) => x.lb)) : null;
     nearMiss = {
       options: worked.map(({ text, set }) => ({ text, set })),
-      closest: closest ? card(closest, "Closest", "", curM, cur) : null,
+      closest: closest ? card(closest, "Closest", "", curM, cur, cl) : null,
       blocking: closest
         ? designProblems(closest.m, lim).length
           ? designProblems(closest.m, lim)
@@ -1353,7 +1359,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     curM: curM && summary(curM),
     curProblems: designProblems(curM, lim),
     cur: curM ? { curve: curM.curve, geom: boxGeometry(cur) } : null,
-    cards: cards ? cards.map((k) => card(k.p, k.label, k.why, curM, cur)) : [],
+    cards: cards ? cards.map((k) => card(k.p, k.label, k.why, curM, cur, cl)) : [],
     goals,
     goalMissing:
       chosen && chosen.fixMisses
@@ -1414,6 +1420,7 @@ function card(
   why: string,
   curM: PaEvaluation | null,
   cur: PaDesignConfig,
+  cl: CutlistSettings,
 ): PaOptimizerCard {
   const { c, m } = p;
   const sub = byIdOrThrow(SUB_OPTIONS, c.sub, "subwoofers"),
@@ -1428,18 +1435,15 @@ function card(
     midDims,
     wall: c.wall,
     inset: c.inset,
-    joint: cur.joint || "butt",
+    joint: cl.joint,
     portStyle: c.portStyle,
     cVent: c.cVent,
     layout: c.layout,
   });
-  const byT: Record<string, CutPart[]> = {};
-  parts.forEach((q) => {
-    for (let i = 0; i < q.qty; i++) (byT[q.t] = byT[q.t] || []).push(q);
-  });
-  const sheets = Object.keys(byT).map((t) => ({
-    t: +t,
-    n: packSheets(byT[t], PLYWOOD_SHEETS["4x8"], 0.125).sheets.length,
+  // the quick packing only: the card asks the worker for the exact count afterwards (build.parts and build.cutlist)
+  const sheets = layoutCutlist(parts, cl, { countsOnly: true }).groups.map((g) => ({
+    t: g.t,
+    n: g.sheets.length,
   }));
   const changed: string[] = [];
   if (c.sub !== cur.sub) changed.push("sub driver");
@@ -1472,7 +1476,7 @@ function card(
     vent: m.port.desc,
     limitedBy: WHO[m.who] || m.who,
     warnings: [...m.chips.sub, ...m.chips.mid, ...m.chips.horn].filter(([k]) => k !== "ok"),
-    build: { qtc: m.qtc, sheets: sheets.sort((a, b) => b.t - a.t) },
+    build: { qtc: m.qtc, sheets, parts, cutlist: cl },
     changed,
     priceKnown: m.priceKnown,
     curve: m.curve,
