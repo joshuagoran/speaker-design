@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
+import type { LIMIT_NAMES } from "./constants/limits";
 import type { MAKER_NAMES } from "./constants/makers";
 
 // Shapes of the driver, horn, cabinet and fill tables in lib/data.ts.
@@ -496,8 +497,10 @@ export interface DriverLayout {
   onTop?: true;
 }
 
-/** What limits the woofer's output at a frequency. */
-export type WooferLimit = "Xmax" | "port" | "radiator" | "thermal" | "amp";
+/** What stops a level, by id (`LIMIT_NAMES` holds the word a chart label shows for it). */
+export type LimitId = keyof typeof LIMIT_NAMES;
+/** What limits the woofer's output at a frequency: any limit, a radiator's travel included. */
+export type WooferLimit = LimitId;
 
 /** The woofer's response at one frequency, with the baffle step, placement, EQ and low-pass applied. */
 export interface WooferPoint {
@@ -1008,12 +1011,8 @@ export interface SealedBoxModel {
   peakX: number;
 }
 
-/** What stops a drive level for the whole band. */
-export type SubLimitWho =
-  | "port air speed"
-  | "cone travel (Xmax)"
-  | "driver program rating"
-  | "amplifier power";
+/** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator). */
+export type SubLimitWho = Exclude<LimitId, "radiator">;
 
 /** The sub's music limit: the drive level (volts and watts into 8 ohm) where the first of port, cone, driver and amp gives out. */
 export interface SubLimits {
@@ -1031,7 +1030,7 @@ export interface SubLimits {
 export interface PaMaxPoint {
   f: number;
   spl: number;
-  who: "port" | "Xmax" | "thermal" | "amp";
+  who: SubLimitWho;
 }
 
 /** The vent as the model uses it: openings, total area (in²), length (in), end correction (in), hydraulic diameter (in) and a description. */
@@ -1161,7 +1160,8 @@ export interface HornResponse {
   /** power derating for a crossover below the frequency the AES rating assumes (1 = none) */
   derate: number;
   imp: number;
-  who: "amp" | "program rating";
+  /** "thermal" when the program rating, not the amp, sets `P` */
+  who: Extract<LimitId, "amp" | "thermal">;
   /** dB at 1 m for the power in `P`, before the filters */
   flat: number;
 }

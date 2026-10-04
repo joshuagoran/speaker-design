@@ -8,6 +8,7 @@ import {
   ampVoltage,
 } from "../src/lib/pa/calc";
 import { SUB_OPTIONS } from "../src/lib/data";
+import { LIMIT_NAMES, SUB_LIMITED_BY, SUB_LIMIT_NAMES } from "../src/constants/limits";
 import { close, near } from "./helpers";
 
 const fh = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
@@ -31,7 +32,7 @@ test("subLimits picks the smallest voltage and names it", (t) => {
 test("subLimits: amp-limited when the amp is tiny", (t) => {
   const V = ampVoltage(20),
     m = boxModel(fh, 148, 57, 14, 31, V, "BW24")!;
-  assert.equal(subwooferLimits(m, fh, V, 23.5).who, "amplifier power");
+  assert.equal(subwooferLimits(m, fh, V, 23.5).who, "amp");
 });
 test("limits search the whole curve, including below 20 Hz", (t) => {
   const m = boxModel(fh, 148, 57, 14, 15, ampVoltage(500), "BW24")!; // low highpass: excursion rises below 20 Hz
@@ -49,4 +50,25 @@ test("maxCurve never exceeds the amp-limited curve and stays below Xmax", (t) =>
       s = 10 ** ((c.spl - o.spl) / 20);
     assert.ok(o.xmm * s <= fh.Xmax * (1 + 1e-9) && o.vel * s <= 23.5 * (1 + 1e-9), `${f} Hz`);
   }
+});
+test("limit ids show the words the pages have always shown", () => {
+  assert.deepEqual(LIMIT_NAMES, {
+    port: "port",
+    Xmax: "Xmax",
+    radiator: "radiator",
+    thermal: "thermal",
+    amp: "amp",
+  });
+  assert.deepEqual(SUB_LIMIT_NAMES, {
+    port: "port air speed",
+    Xmax: "cone travel (Xmax)",
+    thermal: "driver program rating",
+    amp: "amplifier power",
+  });
+  assert.deepEqual(SUB_LIMITED_BY, {
+    port: "port air speed",
+    Xmax: "cone travel",
+    thermal: "the driver's program rating",
+    amp: "amplifier power",
+  });
 });

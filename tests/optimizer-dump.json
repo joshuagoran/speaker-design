@@ -64,7 +64,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -134,7 +134,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -215,7 +215,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -285,7 +285,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -355,7 +355,7 @@
       "spl45": 118.06,
       "f3": 55.777,
       "Fb": 37.092,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -436,7 +436,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -506,7 +506,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -587,7 +587,7 @@
       "spl45": 118.06,
       "f3": 55.777,
       "Fb": 37.092,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -657,7 +657,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -727,7 +727,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -809,7 +809,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -879,7 +879,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -949,7 +949,7 @@
       "spl45": 118.06,
       "f3": 55.777,
       "Fb": 37.092,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -1031,7 +1031,7 @@
       "spl45": 117.535,
       "f3": 55.777,
       "Fb": 34.044,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -1102,7 +1102,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -1184,7 +1184,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -1254,7 +1254,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -1324,7 +1324,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -1406,7 +1406,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -1476,7 +1476,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -1546,7 +1546,7 @@
       "spl45": 118.06,
       "f3": 55.777,
       "Fb": 37.092,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -1628,7 +1628,7 @@
       "spl45": 117.535,
       "f3": 55.777,
       "Fb": 34.044,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -1699,7 +1699,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -1781,7 +1781,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -1851,7 +1851,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -1921,7 +1921,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -2003,7 +2003,7 @@
       "spl45": 118.06,
       "f3": 55.777,
       "Fb": 37.092,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -2073,7 +2073,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -2143,7 +2143,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -2225,7 +2225,7 @@
       "spl45": 117.535,
       "f3": 55.777,
       "Fb": 34.044,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -2296,7 +2296,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -2378,7 +2378,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -2448,7 +2448,7 @@
       "spl45": 118.06,
       "f3": 55.777,
       "Fb": 37.092,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -2518,7 +2518,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -2600,7 +2600,7 @@
       "spl45": 118.06,
       "f3": 55.777,
       "Fb": 37.092,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -2670,7 +2670,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -2740,7 +2740,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -2822,7 +2822,7 @@
       "spl45": 118.06,
       "f3": 55.777,
       "Fb": 37.092,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -2892,7 +2892,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -2962,7 +2962,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -3044,7 +3044,7 @@
       "spl45": 118.06,
       "f3": 55.777,
       "Fb": 37.092,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -3114,7 +3114,7 @@
       "spl45": 115.893,
       "f3": 53.675,
       "Fb": 37.022,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -3184,7 +3184,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -3265,7 +3265,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -3335,7 +3335,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -3406,7 +3406,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -3487,7 +3487,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -3556,7 +3556,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -3626,7 +3626,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -3708,7 +3708,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -3778,7 +3778,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -3849,7 +3849,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -3930,7 +3930,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -4001,7 +4001,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -4071,7 +4071,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -4152,7 +4152,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -4222,7 +4222,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -4293,7 +4293,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -4375,7 +4375,7 @@
       "spl45": 117.535,
       "f3": 55.777,
       "Fb": 34.044,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -4446,7 +4446,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -4516,7 +4516,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -4599,7 +4599,7 @@
       "spl45": 127.666,
       "f3": 38.28,
       "Fb": 40.09,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -4671,7 +4671,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -4741,7 +4741,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -4824,7 +4824,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -4893,7 +4893,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -4963,7 +4963,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -5046,7 +5046,7 @@
       "spl45": 117.535,
       "f3": 55.777,
       "Fb": 34.044,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -5116,7 +5116,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -5186,7 +5186,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -5268,7 +5268,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -5337,7 +5337,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -5407,7 +5407,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -5490,7 +5490,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -5561,7 +5561,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -5631,7 +5631,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -5714,7 +5714,7 @@
       "spl45": 117.535,
       "f3": 55.777,
       "Fb": 34.044,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -5784,7 +5784,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -5854,7 +5854,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -5937,7 +5937,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -6007,7 +6007,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -6078,7 +6078,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -6160,7 +6160,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -6232,7 +6232,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -6302,7 +6302,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -6383,7 +6383,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -6454,7 +6454,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -6525,7 +6525,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -6606,7 +6606,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -6677,7 +6677,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -6747,7 +6747,7 @@
       "spl45": 117.276,
       "f3": 58.859,
       "Fb": 33.187,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -6827,7 +6827,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -6899,7 +6899,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -6968,7 +6968,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -7048,7 +7048,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -7117,7 +7117,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -7189,7 +7189,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -7269,7 +7269,7 @@
       "spl45": 121.204,
       "f3": 41.656,
       "Fb": 36.937,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -7338,7 +7338,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -7407,7 +7407,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -7490,7 +7490,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -7559,7 +7559,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -7631,7 +7631,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -7712,7 +7712,7 @@
       "spl45": 120.524,
       "f3": 49.326,
       "Fb": 40.142,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -7784,7 +7784,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -7856,7 +7856,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -7937,7 +7937,7 @@
       "spl45": 119.993,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -8009,7 +8009,7 @@
       "spl45": 121.204,
       "f3": 41.656,
       "Fb": 36.937,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -8078,7 +8078,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -8159,7 +8159,7 @@
       "spl45": 120.95,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -8231,7 +8231,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -8300,7 +8300,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -8381,7 +8381,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -8450,7 +8450,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -8522,7 +8522,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -8603,7 +8603,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -8672,7 +8672,7 @@
       "spl45": 120.129,
       "f3": 47.467,
       "Fb": 38.042,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -8740,7 +8740,7 @@
       "spl45": 121.204,
       "f3": 41.656,
       "Fb": 36.937,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -8821,7 +8821,7 @@
       "spl45": 123.448,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -8893,7 +8893,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -8962,7 +8962,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -9046,7 +9046,7 @@
       "spl45": 121.204,
       "f3": 41.656,
       "Fb": 36.937,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -9115,7 +9115,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -9187,7 +9187,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -9268,7 +9268,7 @@
       "spl45": 121.204,
       "f3": 41.656,
       "Fb": 36.937,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -9337,7 +9337,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -9406,7 +9406,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -9487,7 +9487,7 @@
       "spl45": 121.204,
       "f3": 41.656,
       "Fb": 36.937,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -9556,7 +9556,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -9625,7 +9625,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -9709,7 +9709,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -9778,7 +9778,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -9850,7 +9850,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -9931,7 +9931,7 @@
       "spl45": 123.595,
       "f3": 47.467,
       "Fb": 40.025,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -10002,7 +10002,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -10071,7 +10071,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -10152,7 +10152,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -10221,7 +10221,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -10293,7 +10293,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -10373,7 +10373,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -10445,7 +10445,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -10513,7 +10513,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -10595,7 +10595,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -10663,7 +10663,7 @@
       "spl45": 120.222,
       "f3": 46.743,
       "Fb": 36.837,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "plywood",
@@ -10727,7 +10727,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -10810,7 +10810,7 @@
       "spl45": 125.84,
       "f3": 35.998,
       "Fb": 39.847,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -10881,7 +10881,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -10952,7 +10952,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -11035,7 +11035,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -11106,7 +11106,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -11178,7 +11178,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -11258,7 +11258,7 @@
       "spl45": 120.524,
       "f3": 49.326,
       "Fb": 40.142,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -11330,7 +11330,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -11402,7 +11402,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -11485,7 +11485,7 @@
       "spl45": 119.993,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -11557,7 +11557,7 @@
       "spl45": 125.84,
       "f3": 35.998,
       "Fb": 39.847,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -11628,7 +11628,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -11708,7 +11708,7 @@
       "spl45": 120.95,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -11780,7 +11780,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -11851,7 +11851,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -11931,7 +11931,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -12000,7 +12000,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -12072,7 +12072,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -12155,7 +12155,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -12223,7 +12223,7 @@
       "spl45": 125.84,
       "f3": 35.998,
       "Fb": 39.847,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -12294,7 +12294,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -12378,7 +12378,7 @@
       "spl45": 123.448,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -12448,7 +12448,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -12519,7 +12519,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -12603,7 +12603,7 @@
       "spl45": 125.84,
       "f3": 35.998,
       "Fb": 39.847,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -12675,7 +12675,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -12747,7 +12747,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -12830,7 +12830,7 @@
       "spl45": 125.84,
       "f3": 35.998,
       "Fb": 39.847,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -12901,7 +12901,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -12969,7 +12969,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -13052,7 +13052,7 @@
       "spl45": 125.84,
       "f3": 35.998,
       "Fb": 39.847,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -13123,7 +13123,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -13194,7 +13194,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -13278,7 +13278,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -13350,7 +13350,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -13422,7 +13422,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -13502,7 +13502,7 @@
       "spl45": 123.595,
       "f3": 47.467,
       "Fb": 40.025,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -13571,7 +13571,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -13642,7 +13642,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -13722,7 +13722,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -13793,7 +13793,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -13865,7 +13865,7 @@
       "spl45": 120.119,
       "f3": 47.467,
       "Fb": 38.032,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -13944,7 +13944,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -14015,7 +14015,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -14085,7 +14085,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -14167,7 +14167,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -14237,7 +14237,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -14308,7 +14308,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -14390,7 +14390,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -14460,7 +14460,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -14531,7 +14531,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -14613,7 +14613,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -14684,7 +14684,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -14755,7 +14755,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -14837,7 +14837,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -14907,7 +14907,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -14978,7 +14978,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -15061,7 +15061,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -15132,7 +15132,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -15202,7 +15202,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -15285,7 +15285,7 @@
       "spl45": 120.95,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -15357,7 +15357,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -15439,7 +15439,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -15509,7 +15509,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -15580,7 +15580,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -15663,7 +15663,7 @@
       "spl45": 121.102,
       "f3": 52.452,
       "Fb": 42.859,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -15735,7 +15735,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -15805,7 +15805,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -15887,7 +15887,7 @@
       "spl45": 121.036,
       "f3": 54.089,
       "Fb": 40.259,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -15959,7 +15959,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -16029,7 +16029,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -16112,7 +16112,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -16182,7 +16182,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -16253,7 +16253,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -16336,7 +16336,7 @@
       "spl45": 121.102,
       "f3": 52.452,
       "Fb": 42.859,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -16408,7 +16408,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -16478,7 +16478,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -16560,7 +16560,7 @@
       "spl45": 120.329,
       "f3": 47.833,
       "Fb": 37.034,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -16630,7 +16630,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -16701,7 +16701,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -16784,7 +16784,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -16855,7 +16855,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -16926,7 +16926,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -17008,7 +17008,7 @@
       "spl45": 121.945,
       "f3": 52.452,
       "Fb": 42.859,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -17080,7 +17080,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -17151,7 +17151,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -17233,7 +17233,7 @@
       "spl45": 122.1,
       "f3": 50.476,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -17304,7 +17304,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -17374,7 +17374,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -17456,7 +17456,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -17527,7 +17527,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -17596,7 +17596,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -17679,7 +17679,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -17748,7 +17748,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -17819,7 +17819,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -17902,7 +17902,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -17972,7 +17972,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -18044,7 +18044,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -18126,7 +18126,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -18198,7 +18198,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -18269,7 +18269,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -18350,7 +18350,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -18420,7 +18420,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -18491,7 +18491,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -18575,7 +18575,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -18646,7 +18646,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -18716,7 +18716,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -18797,7 +18797,7 @@
       "spl45": 120.95,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -18869,7 +18869,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -18941,7 +18941,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -19022,7 +19022,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -19091,7 +19091,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -19162,7 +19162,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -19246,7 +19246,7 @@
       "spl45": 121.102,
       "f3": 52.452,
       "Fb": 42.859,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -19317,7 +19317,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -19386,7 +19386,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -19468,7 +19468,7 @@
       "spl45": 121.036,
       "f3": 54.089,
       "Fb": 40.259,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -19539,7 +19539,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -19608,7 +19608,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -19692,7 +19692,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -19763,7 +19763,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -19834,7 +19834,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -19918,7 +19918,7 @@
       "spl45": 121.102,
       "f3": 52.452,
       "Fb": 42.859,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -19989,7 +19989,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -20059,7 +20059,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -20140,7 +20140,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -20210,7 +20210,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -20282,7 +20282,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -20365,7 +20365,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -20437,7 +20437,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -20508,7 +20508,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -20589,7 +20589,7 @@
       "spl45": 121.945,
       "f3": 52.452,
       "Fb": 42.859,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -20660,7 +20660,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -20732,7 +20732,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -20813,7 +20813,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -20885,7 +20885,7 @@
       "spl45": 117.51,
       "f3": 47.104,
       "Fb": 37.041,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -20956,7 +20956,7 @@
       "spl45": 118.074,
       "f3": 55.777,
       "Fb": 37.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -21036,7 +21036,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21107,7 +21107,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21179,7 +21179,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21260,7 +21260,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21332,7 +21332,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21403,7 +21403,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21484,7 +21484,7 @@
       "spl45": 121.664,
       "f3": 41.656,
       "Fb": 37.048,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21553,7 +21553,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21624,7 +21624,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21707,7 +21707,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21777,7 +21777,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21848,7 +21848,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -21932,7 +21932,7 @@
       "spl45": 120.524,
       "f3": 49.326,
       "Fb": 40.142,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22004,7 +22004,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22075,7 +22075,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22157,7 +22157,7 @@
       "spl45": 119.993,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22229,7 +22229,7 @@
       "spl45": 121.664,
       "f3": 41.656,
       "Fb": 37.048,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22298,7 +22298,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22382,7 +22382,7 @@
       "spl45": 120.95,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22453,7 +22453,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22523,7 +22523,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22607,7 +22607,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22679,7 +22679,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22750,7 +22750,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22832,7 +22832,7 @@
       "spl45": 123.448,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -22904,7 +22904,7 @@
       "spl45": 121.664,
       "f3": 41.656,
       "Fb": 37.048,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -22973,7 +22973,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23056,7 +23056,7 @@
       "spl45": 123.448,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -23128,7 +23128,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23198,7 +23198,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23281,7 +23281,7 @@
       "spl45": 121.664,
       "f3": 41.656,
       "Fb": 37.048,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23350,7 +23350,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23421,7 +23421,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23505,7 +23505,7 @@
       "spl45": 121.664,
       "f3": 41.656,
       "Fb": 37.048,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23574,7 +23574,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23646,7 +23646,7 @@
       "spl45": 120.95,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23729,7 +23729,7 @@
       "spl45": 121.664,
       "f3": 41.656,
       "Fb": 37.048,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23798,7 +23798,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23869,7 +23869,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -23953,7 +23953,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24023,7 +24023,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24094,7 +24094,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24178,7 +24178,7 @@
       "spl45": 123.595,
       "f3": 47.467,
       "Fb": 40.025,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -24249,7 +24249,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24319,7 +24319,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24403,7 +24403,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24473,7 +24473,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24544,7 +24544,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24627,7 +24627,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24698,7 +24698,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24769,7 +24769,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -24851,7 +24851,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24922,7 +24922,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -24993,7 +24993,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -25075,7 +25075,7 @@
       "spl45": 130.561,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -25146,7 +25146,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -25218,7 +25218,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -25300,7 +25300,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -25371,7 +25371,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -25442,7 +25442,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -25525,7 +25525,7 @@
       "spl45": 120.524,
       "f3": 49.326,
       "Fb": 40.142,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -25597,7 +25597,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -25668,7 +25668,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -25751,7 +25751,7 @@
       "spl45": 119.993,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -25823,7 +25823,7 @@
       "spl45": 130.561,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -25894,7 +25894,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -25977,7 +25977,7 @@
       "spl45": 120.95,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -26048,7 +26048,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -26119,7 +26119,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -26202,7 +26202,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -26274,7 +26274,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -26345,7 +26345,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -26428,7 +26428,7 @@
       "spl45": 123.448,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -26499,7 +26499,7 @@
       "spl45": 130.561,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -26570,7 +26570,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -26653,7 +26653,7 @@
       "spl45": 123.448,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -26724,7 +26724,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -26795,7 +26795,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -26878,7 +26878,7 @@
       "spl45": 130.561,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -26950,7 +26950,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -27021,7 +27021,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -27104,7 +27104,7 @@
       "spl45": 130.561,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -27175,7 +27175,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -27247,7 +27247,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -27330,7 +27330,7 @@
       "spl45": 130.561,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -27401,7 +27401,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -27473,7 +27473,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -27556,7 +27556,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -27628,7 +27628,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -27699,7 +27699,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -27782,7 +27782,7 @@
       "spl45": 123.595,
       "f3": 47.467,
       "Fb": 40.025,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -27852,7 +27852,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -27923,7 +27923,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -28006,7 +28006,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -28077,7 +28077,7 @@
       "spl45": 119.7,
       "f3": 48.574,
       "Fb": 36.953,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -28148,7 +28148,7 @@
       "spl45": 120.64,
       "f3": 48.202,
       "Fb": 39.849,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -28230,7 +28230,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -28302,7 +28302,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -28372,7 +28372,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -28455,7 +28455,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -28525,7 +28525,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -28597,7 +28597,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -28680,7 +28680,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -28752,7 +28752,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -28824,7 +28824,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -28905,7 +28905,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -28975,7 +28975,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -29047,7 +29047,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -29129,7 +29129,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -29199,7 +29199,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -29271,7 +29271,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -29355,7 +29355,7 @@
       "spl45": 123.412,
       "f3": 42.956,
       "Fb": 36.876,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -29425,7 +29425,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -29497,7 +29497,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -29579,7 +29579,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -29651,7 +29651,7 @@
       "spl45": 123.303,
       "f3": 47.833,
       "Fb": 34.136,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -29722,7 +29722,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -29804,7 +29804,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -29874,7 +29874,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -29946,7 +29946,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -30030,7 +30030,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -30100,7 +30100,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -30172,7 +30172,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -30256,7 +30256,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -30326,7 +30326,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -30398,7 +30398,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -30482,7 +30482,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -30552,7 +30552,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -30624,7 +30624,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -30708,7 +30708,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -30778,7 +30778,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -30850,7 +30850,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -30932,7 +30932,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -31004,7 +31004,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -31074,7 +31074,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -31158,7 +31158,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -31228,7 +31228,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -31300,7 +31300,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -31382,7 +31382,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -31452,7 +31452,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -31522,7 +31522,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -31606,7 +31606,7 @@
       "spl45": 124.868,
       "f3": 42.956,
       "Fb": 39.994,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -31676,7 +31676,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -31748,7 +31748,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -31831,7 +31831,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -31903,7 +31903,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -31972,7 +31972,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -32054,7 +32054,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -32123,7 +32123,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -32195,7 +32195,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -32277,7 +32277,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -32348,7 +32348,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -32419,7 +32419,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -32502,7 +32502,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -32573,7 +32573,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -32645,7 +32645,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -32726,7 +32726,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -32796,7 +32796,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -32868,7 +32868,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -32951,7 +32951,7 @@
       "spl45": 123.412,
       "f3": 42.956,
       "Fb": 36.876,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -33021,7 +33021,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -33092,7 +33092,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -33173,7 +33173,7 @@
       "spl45": 129.619,
       "f3": 38.28,
       "Fb": 39.982,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -33245,7 +33245,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -33317,7 +33317,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -33400,7 +33400,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -33469,7 +33469,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -33541,7 +33541,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -33624,7 +33624,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -33693,7 +33693,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -33764,7 +33764,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -33848,7 +33848,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -33917,7 +33917,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -33988,7 +33988,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -34072,7 +34072,7 @@
       "spl45": 130.561,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -34144,7 +34144,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -34215,7 +34215,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -34299,7 +34299,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -34370,7 +34370,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -34441,7 +34441,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -34522,7 +34522,7 @@
       "spl45": 130.561,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -34593,7 +34593,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -34664,7 +34664,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -34748,7 +34748,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -34820,7 +34820,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -34892,7 +34892,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -34973,7 +34973,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -35044,7 +35044,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -35116,7 +35116,7 @@
       "spl45": 123.939,
       "f3": 48.574,
       "Fb": 36.907,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -35197,7 +35197,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -35268,7 +35268,7 @@
       "spl45": 121.636,
       "f3": 26.071,
       "Fb": 28.015,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -35339,7 +35339,7 @@
       "spl45": 123.697,
       "f3": 48.574,
       "Fb": 33.832,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -35422,7 +35422,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -35503,7 +35503,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -35572,7 +35572,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -35653,7 +35653,7 @@
       "spl45": 121.376,
       "f3": 62.11,
       "Fb": 28.857,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -35721,7 +35721,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -35791,7 +35791,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -35871,7 +35871,7 @@
       "spl45": 121.423,
       "f3": 62.11,
       "Fb": 28.973,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -35939,7 +35939,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36009,7 +36009,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36090,7 +36090,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36172,7 +36172,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36242,7 +36242,7 @@
       "spl45": 121.349,
       "f3": 62.589,
       "Fb": 28.793,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36312,7 +36312,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36393,7 +36393,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36463,7 +36463,7 @@
       "spl45": 121.349,
       "f3": 62.589,
       "Fb": 28.793,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36533,7 +36533,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36614,7 +36614,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36696,7 +36696,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36765,7 +36765,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36835,7 +36835,7 @@
       "spl45": 121.349,
       "f3": 62.589,
       "Fb": 28.793,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36917,7 +36917,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -36986,7 +36986,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37056,7 +37056,7 @@
       "spl45": 121.349,
       "f3": 62.589,
       "Fb": 28.793,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37138,7 +37138,7 @@
       "spl45": 121.376,
       "f3": 62.11,
       "Fb": 28.857,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37206,7 +37206,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37276,7 +37276,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37357,7 +37357,7 @@
       "spl45": 121.376,
       "f3": 62.11,
       "Fb": 28.857,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37425,7 +37425,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37494,7 +37494,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37576,7 +37576,7 @@
       "spl45": 121.376,
       "f3": 62.11,
       "Fb": 28.857,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37644,7 +37644,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37714,7 +37714,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37795,7 +37795,7 @@
       "spl45": 121.423,
       "f3": 62.11,
       "Fb": 28.973,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37863,7 +37863,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -37933,7 +37933,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -38014,7 +38014,7 @@
       "spl45": 121.423,
       "f3": 62.11,
       "Fb": 28.973,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -38082,7 +38082,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -38151,7 +38151,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -38233,7 +38233,7 @@
       "spl45": 121.423,
       "f3": 62.11,
       "Fb": 28.973,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -38301,7 +38301,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -38371,7 +38371,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -38451,7 +38451,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -38521,7 +38521,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -38592,7 +38592,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -38672,7 +38672,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -38741,7 +38741,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -38811,7 +38811,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -38893,7 +38893,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -38962,7 +38962,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -39033,7 +39033,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -39114,7 +39114,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -39185,7 +39185,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -39255,7 +39255,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -39336,7 +39336,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -39406,7 +39406,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -39477,7 +39477,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -39558,7 +39558,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -39628,7 +39628,7 @@
       "spl45": 121.349,
       "f3": 62.589,
       "Fb": 28.793,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -39698,7 +39698,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -39779,7 +39779,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -39849,7 +39849,7 @@
       "spl45": 121.349,
       "f3": 62.589,
       "Fb": 28.793,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -39919,7 +39919,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -40002,7 +40002,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -40072,7 +40072,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -40143,7 +40143,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -40224,7 +40224,7 @@
       "spl45": 127.666,
       "f3": 38.28,
       "Fb": 40.09,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -40295,7 +40295,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -40364,7 +40364,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -40445,7 +40445,7 @@
       "spl45": 127.666,
       "f3": 38.28,
       "Fb": 40.09,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -40516,7 +40516,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -40585,7 +40585,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -40668,7 +40668,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -40737,7 +40737,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -40808,7 +40808,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -40890,7 +40890,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -40959,7 +40959,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -41028,7 +41028,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -41111,7 +41111,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -41180,7 +41180,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -41251,7 +41251,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -41333,7 +41333,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -41404,7 +41404,7 @@
       "spl45": 123.699,
       "f3": 35.998,
       "Fb": 37.122,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -41473,7 +41473,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -41555,7 +41555,7 @@
       "spl45": 130.68,
       "f3": 36.838,
       "Fb": 40.025,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -41626,7 +41626,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -41695,7 +41695,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -41777,7 +41777,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -41848,7 +41848,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -41918,7 +41918,7 @@
       "spl45": 121.374,
       "f3": 62.11,
       "Fb": 28.853,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -41998,7 +41998,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -42070,7 +42070,7 @@
       "spl45": 121.194,
       "f3": 43.957,
       "Fb": 36.57,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -42138,7 +42138,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -42218,7 +42218,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -42287,7 +42287,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -42359,7 +42359,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -42440,7 +42440,7 @@
       "spl45": 118.803,
       "f3": 37.408,
       "Fb": 36.876,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -42509,7 +42509,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -42579,7 +42579,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -42662,7 +42662,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -42732,7 +42732,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -42804,7 +42804,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -42885,7 +42885,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -42955,7 +42955,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -43027,7 +43027,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -43109,7 +43109,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -43181,7 +43181,7 @@
       "spl45": 118.803,
       "f3": 37.408,
       "Fb": 36.876,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -43250,7 +43250,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -43331,7 +43331,7 @@
       "spl45": 122.618,
       "f3": 42.627,
       "Fb": 39.985,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -43403,7 +43403,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -43473,7 +43473,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -43554,7 +43554,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -43623,7 +43623,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -43695,7 +43695,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -43777,7 +43777,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -43846,7 +43846,7 @@
       "spl45": 118.803,
       "f3": 37.408,
       "Fb": 36.876,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -43915,7 +43915,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -43999,7 +43999,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -44068,7 +44068,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -44138,7 +44138,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -44222,7 +44222,7 @@
       "spl45": 121.139,
       "f3": 37.696,
       "Fb": 36.922,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -44291,7 +44291,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -44363,7 +44363,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -44445,7 +44445,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -44515,7 +44515,7 @@
       "spl45": 118.803,
       "f3": 37.408,
       "Fb": 36.876,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -44584,7 +44584,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -44665,7 +44665,7 @@
       "spl45": 121.139,
       "f3": 37.696,
       "Fb": 36.922,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -44734,7 +44734,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -44804,7 +44804,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -44888,7 +44888,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -44958,7 +44958,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -45030,7 +45030,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -45111,7 +45111,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -45181,7 +45181,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -45250,7 +45250,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -45334,7 +45334,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -45404,7 +45404,7 @@
       "spl45": 118.803,
       "f3": 37.408,
       "Fb": 36.876,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -45473,7 +45473,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -45556,7 +45556,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -45628,7 +45628,7 @@
       "spl45": 121.194,
       "f3": 43.957,
       "Fb": 36.57,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -45696,7 +45696,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -45775,7 +45775,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -45843,7 +45843,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -45915,7 +45915,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -45997,7 +45997,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -46068,7 +46068,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -46139,7 +46139,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -46222,7 +46222,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -46293,7 +46293,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -46365,7 +46365,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -46445,7 +46445,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -46515,7 +46515,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -46587,7 +46587,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -46670,7 +46670,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -46742,7 +46742,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -46813,7 +46813,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -46893,7 +46893,7 @@
       "spl45": 122.618,
       "f3": 42.627,
       "Fb": 39.985,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -46965,7 +46965,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -47036,7 +47036,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -47116,7 +47116,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -47185,7 +47185,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -47257,7 +47257,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -47340,7 +47340,7 @@
       "spl45": 127.133,
       "f3": 38.28,
       "Fb": 39.982,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -47411,7 +47411,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -47479,7 +47479,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -47562,7 +47562,7 @@
       "spl45": 127.133,
       "f3": 38.28,
       "Fb": 39.982,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -47633,7 +47633,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -47701,7 +47701,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -47784,7 +47784,7 @@
       "spl45": 121.139,
       "f3": 37.696,
       "Fb": 36.922,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -47853,7 +47853,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -47925,7 +47925,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -48008,7 +48008,7 @@
       "spl45": 125.178,
       "f3": 36.276,
       "Fb": 36.966,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -48079,7 +48079,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -48147,7 +48147,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -48230,7 +48230,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -48301,7 +48301,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -48372,7 +48372,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -48456,7 +48456,7 @@
       "spl45": 125.329,
       "f3": 41.02,
       "Fb": 36.876,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -48526,7 +48526,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -48597,7 +48597,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -48681,7 +48681,7 @@
       "spl45": 129.36,
       "f3": 38.575,
       "Fb": 40.04,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -48752,7 +48752,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -48823,7 +48823,7 @@
       "spl45": 121.19,
       "f3": 43.957,
       "Fb": 36.594,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -48903,7 +48903,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -48974,7 +48974,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -49045,7 +49045,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -49128,7 +49128,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -49200,7 +49200,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -49269,7 +49269,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -49351,7 +49351,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -49420,7 +49420,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -49492,7 +49492,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -49574,7 +49574,7 @@
       "spl45": 117.885,
       "f3": 36.838,
       "Fb": 34.128,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -49645,7 +49645,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -49716,7 +49716,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -49799,7 +49799,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -49870,7 +49870,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -49942,7 +49942,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -50023,7 +50023,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -50093,7 +50093,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -50165,7 +50165,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -50248,7 +50248,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -50320,7 +50320,7 @@
       "spl45": 117.885,
       "f3": 36.838,
       "Fb": 34.128,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -50391,7 +50391,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -50472,7 +50472,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -50544,7 +50544,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -50615,7 +50615,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -50696,7 +50696,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -50766,7 +50766,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -50838,7 +50838,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -50921,7 +50921,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -50990,7 +50990,7 @@
       "spl45": 117.885,
       "f3": 36.838,
       "Fb": 34.128,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -51061,7 +51061,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -51145,7 +51145,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -51214,7 +51214,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -51285,7 +51285,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -51369,7 +51369,7 @@
       "spl45": 117.885,
       "f3": 36.838,
       "Fb": 34.128,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -51440,7 +51440,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -51512,7 +51512,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -51595,7 +51595,7 @@
       "spl45": 117.885,
       "f3": 36.838,
       "Fb": 34.128,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -51666,7 +51666,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -51737,7 +51737,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -51818,7 +51818,7 @@
       "spl45": 121.734,
       "f3": 37.987,
       "Fb": 34.198,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -51888,7 +51888,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -51959,7 +51959,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -52043,7 +52043,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -52114,7 +52114,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -52186,7 +52186,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -52267,7 +52267,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -52338,7 +52338,7 @@
       "spl45": 122.14,
       "f3": 44.982,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -52410,7 +52410,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -52491,7 +52491,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -52562,7 +52562,7 @@
       "spl45": 117.885,
       "f3": 36.838,
       "Fb": 34.128,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -52633,7 +52633,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -52716,7 +52716,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -52788,7 +52788,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -52857,7 +52857,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -52939,7 +52939,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -53008,7 +53008,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -53080,7 +53080,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -53162,7 +53162,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -53233,7 +53233,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -53304,7 +53304,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -53387,7 +53387,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -53458,7 +53458,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -53530,7 +53530,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -53611,7 +53611,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -53681,7 +53681,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -53753,7 +53753,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -53836,7 +53836,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -53908,7 +53908,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -53979,7 +53979,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -54060,7 +54060,7 @@
       "spl45": 120.642,
       "f3": 41.977,
       "Fb": 37.115,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -54132,7 +54132,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -54203,7 +54203,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -54284,7 +54284,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -54354,7 +54354,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -54426,7 +54426,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -54509,7 +54509,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -54578,7 +54578,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -54649,7 +54649,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -54733,7 +54733,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -54802,7 +54802,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -54873,7 +54873,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -54957,7 +54957,7 @@
       "spl45": 117.885,
       "f3": 36.838,
       "Fb": 34.128,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -55028,7 +55028,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -55100,7 +55100,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -55183,7 +55183,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -55254,7 +55254,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -55325,7 +55325,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -55406,7 +55406,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -55477,7 +55477,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -55548,7 +55548,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -55632,7 +55632,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -55703,7 +55703,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -55774,7 +55774,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -55858,7 +55858,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -55929,7 +55929,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -56000,7 +56000,7 @@
       "spl45": 120.133,
       "f3": 44.982,
       "Fb": 34.332,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -56081,7 +56081,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -56152,7 +56152,7 @@
       "spl45": 129.159,
       "f3": 35.998,
       "Fb": 39.975,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -56223,7 +56223,7 @@
       "spl45": 118.743,
       "f3": 44.638,
       "Fb": 34.126,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -56306,7 +56306,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -56378,7 +56378,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -56448,7 +56448,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -56530,7 +56530,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -56600,7 +56600,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -56672,7 +56672,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -56754,7 +56754,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -56825,7 +56825,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -56896,7 +56896,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -56979,7 +56979,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -57050,7 +57050,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -57122,7 +57122,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -57204,7 +57204,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -57276,7 +57276,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -57346,7 +57346,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -57429,7 +57429,7 @@
       "spl45": 124.443,
       "f3": 34.909,
       "Fb": 34.065,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -57501,7 +57501,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -57572,7 +57572,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -57654,7 +57654,7 @@
       "spl45": 124.443,
       "f3": 34.909,
       "Fb": 34.065,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -57726,7 +57726,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -57797,7 +57797,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -57879,7 +57879,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -57949,7 +57949,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -58021,7 +58021,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -58104,7 +58104,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -58174,7 +58174,7 @@
       "spl45": 123.187,
       "f3": 37.987,
       "Fb": 34.754,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -58243,7 +58243,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -58326,7 +58326,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -58396,7 +58396,7 @@
       "spl45": 123.187,
       "f3": 37.987,
       "Fb": 34.754,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -58465,7 +58465,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -58548,7 +58548,7 @@
       "spl45": 124.385,
       "f3": 34.642,
       "Fb": 33.952,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -58619,7 +58619,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -58690,7 +58690,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -58774,7 +58774,7 @@
       "spl45": 123.45,
       "f3": 37.408,
       "Fb": 34.099,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -58844,7 +58844,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -58915,7 +58915,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -58997,7 +58997,7 @@
       "spl45": 124.385,
       "f3": 34.642,
       "Fb": 33.952,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -59068,7 +59068,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -59139,7 +59139,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -59223,7 +59223,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -59294,7 +59294,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -59366,7 +59366,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -59448,7 +59448,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -59519,7 +59519,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -59589,7 +59589,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -59673,7 +59673,7 @@
       "spl45": 124.443,
       "f3": 34.909,
       "Fb": 34.065,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -59744,7 +59744,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -59815,7 +59815,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -59898,7 +59898,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -59970,7 +59970,7 @@
       "spl45": 124.498,
       "f3": 39.475,
       "Fb": 37.096,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -60041,7 +60041,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -60123,7 +60123,7 @@
       "spl45": 124.498,
       "f3": 39.475,
       "Fb": 37.096,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -60194,7 +60194,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -60266,7 +60266,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -60348,7 +60348,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -60419,7 +60419,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -60490,7 +60490,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -60573,7 +60573,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -60644,7 +60644,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -60716,7 +60716,7 @@
       "spl45": 124.498,
       "f3": 39.475,
       "Fb": 37.096,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -60799,7 +60799,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -60871,7 +60871,7 @@
       "spl45": 124.498,
       "f3": 39.475,
       "Fb": 37.096,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -60942,7 +60942,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -61025,7 +61025,7 @@
       "spl45": 124.443,
       "f3": 34.909,
       "Fb": 34.065,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -61097,7 +61097,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -61168,7 +61168,7 @@
       "spl45": 124.498,
       "f3": 39.475,
       "Fb": 37.096,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -61251,7 +61251,7 @@
       "spl45": 124.443,
       "f3": 34.909,
       "Fb": 34.065,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -61323,7 +61323,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -61394,7 +61394,7 @@
       "spl45": 124.498,
       "f3": 39.475,
       "Fb": 37.096,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -61477,7 +61477,7 @@
       "spl45": 123.188,
       "f3": 37.987,
       "Fb": 34.76,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -61547,7 +61547,7 @@
       "spl45": 124.498,
       "f3": 39.475,
       "Fb": 37.096,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -61618,7 +61618,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -61702,7 +61702,7 @@
       "spl45": 125.168,
       "f3": 39.475,
       "Fb": 37.096,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -61773,7 +61773,7 @@
       "spl45": 123.187,
       "f3": 37.987,
       "Fb": 34.754,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -61842,7 +61842,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -61925,7 +61925,7 @@
       "spl45": 128.333,
       "f3": 38.28,
       "Fb": 39.982,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -61996,7 +61996,7 @@
       "spl45": 124.498,
       "f3": 39.475,
       "Fb": 37.096,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -62067,7 +62067,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -62150,7 +62150,7 @@
       "spl45": 124.385,
       "f3": 34.642,
       "Fb": 33.952,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -62221,7 +62221,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -62292,7 +62292,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -62376,7 +62376,7 @@
       "spl45": 125.178,
       "f3": 36.276,
       "Fb": 36.966,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -62447,7 +62447,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -62518,7 +62518,7 @@
       "spl45": 124.498,
       "f3": 39.475,
       "Fb": 37.096,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -62601,7 +62601,7 @@
       "spl45": 124.385,
       "f3": 34.642,
       "Fb": 33.952,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -62672,7 +62672,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -62743,7 +62743,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -62826,7 +62826,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -62897,7 +62897,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -62968,7 +62968,7 @@
       "spl45": 123.011,
       "f3": 39.173,
       "Fb": 33.923,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -63052,7 +63052,7 @@
       "spl45": 129.36,
       "f3": 38.575,
       "Fb": 40.04,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -63123,7 +63123,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -63194,7 +63194,7 @@
       "spl45": 124.498,
       "f3": 39.475,
       "Fb": 37.096,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -63277,7 +63277,7 @@
       "spl45": 124.443,
       "f3": 34.909,
       "Fb": 34.065,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -63348,7 +63348,7 @@
       "spl45": 131.15,
       "f3": 38.28,
       "Fb": 39.929,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -63419,7 +63419,7 @@
       "spl45": 121.655,
       "f3": 26.071,
       "Fb": 27.966,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -63501,7 +63501,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -63574,7 +63574,7 @@
       "spl45": 125.991,
       "f3": 37.696,
       "Fb": 37.04,
-      "who": "amplifier power"
+      "who": "amp"
      }
     },
     "blocking": [
@@ -63647,7 +63647,7 @@
       "spl45": 125.991,
       "f3": 37.696,
       "Fb": 37.04,
-      "who": "amplifier power"
+      "who": "amp"
      }
     },
     "blocking": [
@@ -63720,7 +63720,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -63794,7 +63794,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -63868,7 +63868,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -63942,7 +63942,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -64016,7 +64016,7 @@
       "spl45": 125.991,
       "f3": 37.696,
       "Fb": 37.04,
-      "who": "amplifier power"
+      "who": "amp"
      }
     },
     "blocking": [
@@ -64090,7 +64090,7 @@
       "spl45": 125.991,
       "f3": 37.696,
       "Fb": 37.04,
-      "who": "amplifier power"
+      "who": "amp"
      }
     },
     "blocking": [
@@ -64164,7 +64164,7 @@
       "spl45": 125.991,
       "f3": 37.696,
       "Fb": 37.04,
-      "who": "amplifier power"
+      "who": "amp"
      }
     },
     "blocking": [
@@ -64238,7 +64238,7 @@
       "spl45": 125.991,
       "f3": 37.696,
       "Fb": 37.04,
-      "who": "amplifier power"
+      "who": "amp"
      }
     },
     "blocking": [
@@ -64312,7 +64312,7 @@
       "spl45": 125.991,
       "f3": 37.696,
       "Fb": 37.04,
-      "who": "amplifier power"
+      "who": "amp"
      }
     },
     "blocking": [
@@ -64386,7 +64386,7 @@
       "spl45": 125.991,
       "f3": 37.696,
       "Fb": 37.04,
-      "who": "amplifier power"
+      "who": "amp"
      }
     },
     "blocking": [
@@ -64460,7 +64460,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -64534,7 +64534,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -64608,7 +64608,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -64681,7 +64681,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -64754,7 +64754,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -64827,7 +64827,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -64900,7 +64900,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -64974,7 +64974,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -65048,7 +65048,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -65122,7 +65122,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -65196,7 +65196,7 @@
       "spl45": 127.552,
       "f3": 40.707,
       "Fb": 39.929,
-      "who": "amplifier power"
+      "who": "amp"
      }
     },
     "blocking": [
@@ -65270,7 +65270,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -65344,7 +65344,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -65418,7 +65418,7 @@
       "spl45": 125.749,
       "f3": 29.708,
       "Fb": 30.978,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -65492,7 +65492,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -65566,7 +65566,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -65640,7 +65640,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -65714,7 +65714,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -65788,7 +65788,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      }
     },
     "blocking": [
@@ -65861,7 +65861,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -65933,7 +65933,7 @@
       "spl45": 125.147,
       "f3": 37.696,
       "Fb": 34.035,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -66004,7 +66004,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -66085,7 +66085,7 @@
       "spl45": 125.147,
       "f3": 37.696,
       "Fb": 34.035,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -66156,7 +66156,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -66228,7 +66228,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -66309,7 +66309,7 @@
       "spl45": 123.389,
       "f3": 29.031,
       "Fb": 30.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -66380,7 +66380,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -66450,7 +66450,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -66533,7 +66533,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -66603,7 +66603,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -66675,7 +66675,7 @@
       "spl45": 125.147,
       "f3": 37.696,
       "Fb": 34.035,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -66758,7 +66758,7 @@
       "spl45": 125.368,
       "f3": 38.575,
       "Fb": 36.871,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -66830,7 +66830,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -66902,7 +66902,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -66984,7 +66984,7 @@
       "spl45": 125.749,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -67056,7 +67056,7 @@
       "spl45": 125.288,
       "f3": 38.28,
       "Fb": 36.929,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -67127,7 +67127,7 @@
       "spl45": 123.389,
       "f3": 29.031,
       "Fb": 30.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -67210,7 +67210,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -67282,7 +67282,7 @@
       "spl45": 125.147,
       "f3": 37.696,
       "Fb": 34.035,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -67353,7 +67353,7 @@
       "spl45": 123.389,
       "f3": 29.031,
       "Fb": 30.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -67436,7 +67436,7 @@
       "spl45": 125.147,
       "f3": 37.696,
       "Fb": 34.035,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -67507,7 +67507,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -67579,7 +67579,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -67661,7 +67661,7 @@
       "spl45": 125.147,
       "f3": 37.696,
       "Fb": 34.035,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -67732,7 +67732,7 @@
       "spl45": 123.389,
       "f3": 29.031,
       "Fb": 30.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -67803,7 +67803,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -67887,7 +67887,7 @@
       "spl45": 125.147,
       "f3": 37.696,
       "Fb": 34.035,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -67958,7 +67958,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -68028,7 +68028,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -68112,7 +68112,7 @@
       "spl45": 126.235,
       "f3": 35.723,
       "Fb": 37.058,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -68182,7 +68182,7 @@
       "spl45": 123.389,
       "f3": 29.031,
       "Fb": 30.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -68253,7 +68253,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -68337,7 +68337,7 @@
       "spl45": 125.136,
       "f3": 37.408,
       "Fb": 33.969,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -68408,7 +68408,7 @@
       "spl45": 123.389,
       "f3": 29.031,
       "Fb": 30.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -68479,7 +68479,7 @@
       "spl45": 125.136,
       "f3": 37.408,
       "Fb": 33.969,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -68563,7 +68563,7 @@
       "spl45": 123.389,
       "f3": 29.031,
       "Fb": 30.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -68634,7 +68634,7 @@
       "spl45": 123.389,
       "f3": 29.031,
       "Fb": 30.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -68706,7 +68706,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -68788,7 +68788,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -68858,7 +68858,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -68930,7 +68930,7 @@
       "spl45": 125.147,
       "f3": 37.696,
       "Fb": 34.035,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -69013,7 +69013,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -69083,7 +69083,7 @@
       "spl45": 125.147,
       "f3": 37.696,
       "Fb": 34.035,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -69154,7 +69154,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -69238,7 +69238,7 @@
       "spl45": 127.736,
       "f3": 37.987,
       "Fb": 39.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -69308,7 +69308,7 @@
       "spl45": 123.389,
       "f3": 29.031,
       "Fb": 30.949,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -69379,7 +69379,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -69462,7 +69462,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -69534,7 +69534,7 @@
       "spl45": 126.063,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -69603,7 +69603,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -69683,7 +69683,7 @@
       "spl45": 126.063,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -69752,7 +69752,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -69824,7 +69824,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -69904,7 +69904,7 @@
       "spl45": 124.33,
       "f3": 28.588,
       "Fb": 28.052,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -69973,7 +69973,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -70043,7 +70043,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -70126,7 +70126,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -70195,7 +70195,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -70267,7 +70267,7 @@
       "spl45": 126.063,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -70348,7 +70348,7 @@
       "spl45": 125.368,
       "f3": 38.575,
       "Fb": 36.871,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -70420,7 +70420,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -70492,7 +70492,7 @@
       "spl45": 126.063,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -70573,7 +70573,7 @@
       "spl45": 124.33,
       "f3": 28.588,
       "Fb": 28.052,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -70644,7 +70644,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -70716,7 +70716,7 @@
       "spl45": 126.063,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -70797,7 +70797,7 @@
       "spl45": 127.691,
       "f3": 37.987,
       "Fb": 40.012,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub driver",
@@ -70869,7 +70869,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -70938,7 +70938,7 @@
       "spl45": 126.063,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -71019,7 +71019,7 @@
       "spl45": 126.063,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -71089,7 +71089,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -71161,7 +71161,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -71242,7 +71242,7 @@
       "spl45": 126.555,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -71311,7 +71311,7 @@
       "spl45": 124.33,
       "f3": 28.588,
       "Fb": 28.052,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -71380,7 +71380,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -71464,7 +71464,7 @@
       "spl45": 129.836,
       "f3": 38.28,
       "Fb": 39.982,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -71533,7 +71533,7 @@
       "spl45": 126.063,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -71602,7 +71602,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -71683,7 +71683,7 @@
       "spl45": 124.33,
       "f3": 28.588,
       "Fb": 28.052,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -71753,7 +71753,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -71825,7 +71825,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -71906,7 +71906,7 @@
       "spl45": 124.33,
       "f3": 28.588,
       "Fb": 28.052,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -71975,7 +71975,7 @@
       "spl45": 126.063,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -72044,7 +72044,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -72126,7 +72126,7 @@
       "spl45": 124.33,
       "f3": 28.588,
       "Fb": 28.052,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -72195,7 +72195,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -72265,7 +72265,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -72349,7 +72349,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -72419,7 +72419,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -72491,7 +72491,7 @@
       "spl45": 126.063,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -72572,7 +72572,7 @@
       "spl45": 129.279,
       "f3": 36.556,
       "Fb": 37.049,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -72641,7 +72641,7 @@
       "spl45": 126.063,
       "f3": 39.173,
       "Fb": 37.039,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub box",
@@ -72710,7 +72710,7 @@
       "spl45": 125.55,
       "f3": 38.575,
       "Fb": 37.107,
-      "who": "amplifier power"
+      "who": "amp"
      },
      "changed": [
       "sub driver",
@@ -72794,7 +72794,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -72863,7 +72863,7 @@
       "spl45": 131.405,
       "f3": 37.987,
       "Fb": 40.033,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
@@ -72933,7 +72933,7 @@
       "spl45": 124.414,
       "f3": 29.255,
       "Fb": 28.03,
-      "who": "cone travel (Xmax)"
+      "who": "Xmax"
      },
      "changed": [
       "sub box",
