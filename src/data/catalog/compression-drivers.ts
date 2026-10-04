@@ -161,6 +161,23 @@ export const CD_RAW: readonly CompressionDriver[] = [
     note: "[datasheet, celestion.com, Oct 2026] Neo, 3 in edgewound CCAW coil, titanium diaphragm, polyimide surround. 120 W AES / 240 W continuous, 108 dB 1 W/1 m, minimum crossover 800 Hz at 12 dB/oct, 500 Hz\u201320 kHz, 3.7 lb. 4 \u00d7 M6 on a 102 mm circle, the N314T's pattern, so it bolts to the 1.4\u2033 horns here. The power test's high-pass is not published; the 800 Hz minimum crossover is assumed. Exit flare angle not published, which an ATH throat adapter needs.",
   },
   {
+    id: "cdx143045",
+    lb: 4.4,
+    name: 'Celestion CDX14-3045 (1.4")',
+    hf: {
+      sens: 108,
+      sensRef: "Celestion's unnamed “typical horn”",
+      aes: 120,
+      aesXo: 800,
+      minXo: 800,
+      imp: 8,
+    },
+    exit: 1.4,
+    price: 249,
+    src: "Loudspeakers Plus, Oct 2026 (Pro Audio Star $259)",
+    note: "[datasheet, celestion.com, Oct 2026] Neo, 3 in edgewound CCAW coil, single-piece titanium diaphragm and surround, polymer clamp ring. 120 W AES / 240 W continuous, 108 dB 1 W/1 m, minimum crossover 800 Hz at 12 dB/oct, 500 Hz–20 kHz, 2.3 in deep, 4.4 lb (Loudspeakers Plus lists 4 lb). 4 × M6 on a 102 mm circle, the N314T's and CDX14-3055's pattern, so it bolts to the 1.4″ horns here (Loudspeakers Plus misprints the circle as 120 mm and the crossover as 1 kHz). Also sold in 16 Ω. The power test's high-pass is not published; the 800 Hz minimum crossover is assumed. Exit flare angle not published, which an ATH throat adapter needs.",
+  },
+  {
     id: "de360",
     lb: 3,
     name: 'B&C DE360 (1")',
