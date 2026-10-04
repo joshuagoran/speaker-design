@@ -27,5 +27,5 @@ test(`optimizer dump: ${kind} shard ${shard + 1} of ${shards}`, () => {
     cases: shardCases(kind, shard, shards).map((i) => [i, DUMP_CASES[kind][i]()]),
   };
   fs.mkdirSync(PARTIAL_DIR, { recursive: true });
-  fs.writeFileSync(new URL(`${kind}-${shard}.json`, PARTIAL_DIR), JSON.stringify(partial));
+  fs.writeFileSync(new URL(`${kind}-${shard + 1}.json`, PARTIAL_DIR), JSON.stringify(partial));
 });

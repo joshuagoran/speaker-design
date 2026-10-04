@@ -37,15 +37,18 @@ export function mergeDump(): void {
         // boundary: the shard files are DumpPartial, written by tests/optimizer-dump.ts
         .map((f) => JSON.parse(fs.readFileSync(new URL(f, PARTIAL_DIR), "utf8")) as DumpPartial)
     : [];
-  // boundary: the dump is this function's own output, keyed by kind
-  const old = fs.existsSync(DUMP_FILE)
-    ? (JSON.parse(fs.readFileSync(DUMP_FILE, "utf8")) as Partial<Record<DumpKind, Json[]>>)
-    : {};
+  // read lazily: a full run replaces both kinds, so a broken old dump (e.g. left with merge-conflict markers) can't block it
+  let old: Partial<Record<DumpKind, Json[]>> | undefined;
+  const oldDump = () =>
+    (old ??= fs.existsSync(DUMP_FILE)
+      ? // boundary: the dump is this function's own output, keyed by kind
+        (JSON.parse(fs.readFileSync(DUMP_FILE, "utf8")) as Partial<Record<DumpKind, Json[]>>)
+      : {});
   const dump = Object.fromEntries(
     DUMP_KINDS.map((kind) => {
       const mine = partials.filter((p) => p.kind === kind);
       if (!mine.length) {
-        const kept = old[kind];
+        const kept = oldDump()[kind];
         if (!kept)
           throw new Error(`optimizer dump: no ${kind} cases yet; run vp run optimizer-dump`);
         return [kind, kept];
