@@ -109,7 +109,7 @@ describe("layoutCutlist", () => {
         close(null, it.h, along, EPS, `${it.part} along the grain`);
       }
     const locked = L.parts.filter((p) => p.grain).map((p) => p.part);
-    assert.deepEqual(new Set(locked), new Set(["Side", "Top / bottom", "Back", "Baffle"]));
+    assert.deepEqual(new Set(locked), new Set(["side", "topBottom", "back", "baffle"]));
   });
 
   test("a locked part that only fits across the grain is placed across and flagged", () => {
@@ -123,8 +123,8 @@ describe("layoutCutlist", () => {
 
   test("cleats and dividers come from offcuts, not the sheet count", () => {
     const L = layoutCutlist(parts("butt", "vslots"), settings());
-    assert.ok(L.fromOffcut.some((p) => p.part === "Baffle cleat"));
-    assert.ok(L.fromOffcut.some((p) => p.part === "Duct divider"));
+    assert.ok(L.fromOffcut.some((p) => p.part === "baffleCleat"));
+    assert.ok(L.fromOffcut.some((p) => p.part === "ductDivider"));
     for (const g of L.groups)
       for (const it of g.sheets.flatMap((s) => s.items)) assert.ok(!FROM_OFFCUT.has(it.part));
     // the 1/2″ dividers were the only 1/2″ parts: no 1/2″ sheet any more
@@ -220,15 +220,13 @@ describe("waterfall", () => {
       { w: 48, h: 96 },
     );
     assert.deepEqual(notes, []);
-    for (const box of ["Sub", "Mid"]) {
-      const side = P.find((p) => p.box === box && p.part === "Side"),
-        top = P.find((p) => p.box === box && p.part === "Top / bottom"),
-        strip = out.find((p) => p.box === box && p.part === "Side-top-side strip"),
-        bottom = out.find((p) => p.box === box && p.part === "Bottom");
+    for (const box of ["sub", "mid"]) {
+      const side = P.find((p) => p.box === box && p.part === "side"),
+        top = P.find((p) => p.box === box && p.part === "topBottom"),
+        strip = out.find((p) => p.box === box && p.part === "sideTopSideStrip"),
+        bottom = out.find((p) => p.box === box && p.part === "bottom");
       assert.ok(side && top && strip && bottom);
-      assert.ok(
-        !out.some((p) => p.box === box && (p.part === "Side" || p.part === "Top / bottom")),
-      );
+      assert.ok(!out.some((p) => p.box === box && (p.part === "side" || p.part === "topBottom")));
       close(null, strip.b, 2 * side.b + top.b + 2 * 0.125, EPS);
       assert.deepEqual(strip.pieces, [side.b, top.b, side.b]);
       assert.equal(strip.grain, "b");
@@ -246,7 +244,7 @@ describe("waterfall", () => {
       },
     );
     assert.ok(notes.some((n) => n.startsWith("Sub:")));
-    assert.ok(out.some((p) => p.box === "Sub" && p.part === "Side"));
+    assert.ok(out.some((p) => p.box === "sub" && p.part === "side"));
   });
 
   test("the laid-out strip is grain-locked along the sheet and drawn with its pieces", () => {
@@ -299,7 +297,7 @@ describe("cut style", () => {
 
 describe("review fixes", () => {
   test("a ply group with no part that fits gives no sheets, not a crash", () => {
-    const big: CutPart = { box: "Sub", part: "Baffle", qty: 1, a: 62, b: 70, t: 0.75, note: "" };
+    const big: CutPart = { box: "sub", part: "baffle", qty: 1, a: 62, b: 70, t: 0.75, note: "" };
     const L = layoutCutlist([big], settings({ sheet: "5x5", stacks: 1 }));
     assert.equal(L.groups[0].sheets.length, 0);
     assert.equal(L.groups[0].tooBig.length, 1);

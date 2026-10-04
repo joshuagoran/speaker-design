@@ -16,6 +16,7 @@ import {
 } from "../../lib/pa/cutlist";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import { entriesOf } from "../../lib/records";
+import { CUT_BOX_NAMES, CUT_PART_NAMES } from "../../constants/cutParts";
 
 interface Props {
   planner: Pick<
@@ -58,7 +59,7 @@ const PRESETS: [GrainPreset, string][] = [
 /** Each panel's grain choices: what `b` and `a` along the grain look like on the box. */
 const GRAIN_ROWS: [GrainPanel, string, [GrainDir, string][]][] = [
   [
-    "Side",
+    "side",
     "Sides",
     [
       ["b", "Vertical"],
@@ -67,7 +68,7 @@ const GRAIN_ROWS: [GrainPanel, string, [GrainDir, string][]][] = [
     ],
   ],
   [
-    "Top / bottom",
+    "topBottom",
     "Top/bottom",
     [
       ["b", "Across"],
@@ -76,7 +77,7 @@ const GRAIN_ROWS: [GrainPanel, string, [GrainDir, string][]][] = [
     ],
   ],
   [
-    "Baffle",
+    "baffle",
     "Baffle",
     [
       ["b", "Vertical"],
@@ -85,7 +86,7 @@ const GRAIN_ROWS: [GrainPanel, string, [GrainDir, string][]][] = [
     ],
   ],
   [
-    "Back",
+    "back",
     "Back",
     [
       ["b", "Vertical"],
@@ -96,6 +97,9 @@ const GRAIN_ROWS: [GrainPanel, string, [GrainDir, string][]][] = [
 ];
 
 const plural = (n: number, what: string) => `${n} ${what}${n === 1 ? "" : "s"}`;
+/** A part as the notes under a layout name it: its box, then the part, e.g. "Sub Baffle". */
+const partName = (p: Pick<CutPart, "box" | "part">) =>
+  `${CUT_BOX_NAMES[p.box]} ${CUT_PART_NAMES[p.part]}`;
 
 /** A part's size: along the grain first when it is locked, otherwise short side first. */
 const sizeOf = (p: CutPart) => {
@@ -336,9 +340,9 @@ export function CutlistPage({ planner }: Props) {
                 : p.note;
               return (
                 <tr key={i} className="border-b border-stone-300 align-top">
-                  <td className="py-1 pr-3">{p.box}</td>
+                  <td className="py-1 pr-3">{CUT_BOX_NAMES[p.box]}</td>
                   <td className="py-1 pr-3">
-                    {p.part}
+                    {CUT_PART_NAMES[p.part]}
                     {note && <span className="block sm:hidden text-xs text-stone-500">{note}</span>}
                   </td>
                   <td className="py-1 pr-3 text-right tabular-nums">{p.qty * boxSetCount}</td>
@@ -391,13 +395,12 @@ export function CutlistPage({ planner }: Props) {
             </div>
             {g.tooBig.length > 0 && (
               <div className="text-sm text-red-700 mb-2">
-                Doesn't fit on one {sheetSize.name} sheet:{" "}
-                {g.tooBig.map((r) => `${r.box} ${r.part}`).join(", ")}.
+                Doesn't fit on one {sheetSize.name} sheet: {g.tooBig.map(partName).join(", ")}.
               </div>
             )}
             {crossed.length > 0 && (
               <div className="text-sm text-orange-700 mb-2">
-                Only fits across the grain: {crossed.map((r) => `${r.box} ${r.part}`).join(", ")}.
+                Only fits across the grain: {crossed.map(partName).join(", ")}.
               </div>
             )}
             <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">

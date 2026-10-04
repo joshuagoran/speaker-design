@@ -67,7 +67,7 @@ test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => 
   const cleats = 0.75 * 0.75 * (2 * iw + 2 * (ih - band - 1.5));
   const braces = 2 * (2 * 2 * (iw + inD) - 16) * t0;
   const duct = iw * len * t0 + 2 * 3 * len * t0;
-  close(t, internalWoodLiters(parts, "Sub"), (cleats + braces + duct) * IN3_L, 1e-9);
+  close(t, internalWoodLiters(parts, "sub"), (cleats + braces + duct) * IN3_L, 1e-9);
 });
 test("weights: shell from panel areas at the ply density matches the cutlist parts", (t) => {
   // independent: sum the cutlist panels (butt joints), + driver + hardware; formula counts full outer
@@ -85,7 +85,7 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
       portStyle: "round2",
       cVent: vent({ nt: 2, dia: 4, len: 12 }),
       layout: "stack",
-    }).parts.filter((p) => p.box === "Sub");
+    }).parts.filter((p) => p.box === "sub");
     const lb =
       parts.reduce((a, p) => a + ((p.a * p.b * p.qty) / 144) * plywoodLbPerSqFt(p.t), 0) + 6;
     const w = subWeightLb(box, wall, 0);

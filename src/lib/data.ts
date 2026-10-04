@@ -19,6 +19,7 @@ import type {
   HornProfilePoint,
   MidBox,
   MidDriver,
+  MakerId,
   MidSize,
   OwnGuide,
   PaintSwatch,
@@ -33,9 +34,9 @@ import type {
 import { passiveWithXmax, withXmax, type RawPassiveRadiator } from "./xmax";
 
 // Every driver table holds the maker's excursion figures; this adds the comparable Xmax the models read.
-const withTsXmax = <D extends { name: string; ts: RawTS<ThieleSmall> }>(d: D) => ({
+const withTsXmax = <D extends { name: string; maker: MakerId; ts: RawTS<ThieleSmall> }>(d: D) => ({
   ...d,
-  ts: withXmax(d.ts, d.name),
+  ts: withXmax(d.ts, d.maker, d.name),
 });
 
 export const ST260_PROFILE: readonly HornProfilePoint[] = [
@@ -143,6 +144,7 @@ const BC18NBX_RAW: RawDriver<SubDriver> = {
   id: "bc18nbx",
   lb: 20,
   name: "B&C 18NBX100",
+  maker: "bc",
   price: 448.56,
   src: "usspeaker.com, Sep 2026",
   size: 18,
@@ -175,6 +177,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "sbnero18",
     lb: 45,
     name: "SB Audience Nero-18SW1100D",
+    maker: "sbAudience",
     price: 290,
     src: "Madisound, Sep 2026",
     size: 18,
@@ -205,6 +208,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "emnsw4018",
     lb: 20.9,
     name: "Eminence NSW4018-8",
+    maker: "eminence",
     price: 580,
     src: "US vendor, Sep 2026 (per Josh)",
     size: 18,
@@ -234,6 +238,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "em4018",
     lb: 24,
     name: "Eminence Definimax 4018LF",
+    maker: "eminence",
     price: 329,
     src: "local vendor, Sep 2026",
     size: 18,
@@ -263,6 +268,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "bc18tbx",
     lb: 28,
     name: "B&C 18TBX100",
+    maker: "bc",
     price: 399.9,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -293,6 +299,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "bc18sw",
     lb: 26,
     name: "B&C 18SW115",
+    maker: "bc",
     price: 739,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -323,6 +330,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "bc18tbw",
     lb: 34,
     name: "B&C 18TBW100",
+    maker: "bc",
     price: 472,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -353,6 +361,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "bc18ps",
     lb: 22.5,
     name: "B&C 18PS100",
+    maker: "bc",
     price: 361.62,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -383,6 +392,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "bc18nw",
     lb: 20,
     name: "B&C 18NW100",
+    maker: "bc",
     price: 458.1,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -414,6 +424,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "lv18403",
     lb: 36.2,
     name: "Lavoce SAF184.03",
+    maker: "lavoce",
     price: 369,
     src: "Parts Express (back-ordered)",
     size: 18,
@@ -443,6 +454,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "lv18402",
     lb: 29.8,
     name: "Lavoce SAF184.02",
+    maker: "lavoce",
     price: 319,
     src: "Parts Express",
     size: 18,
@@ -472,6 +484,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "lv18n403",
     lb: 24.3,
     name: "Lavoce SAN184.03 (neo)",
+    maker: "lavoce",
     price: 489,
     src: "Parts Express",
     size: 18,
@@ -501,6 +514,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "ciare18sw",
     lb: 34.5,
     name: "Ciare 18.00SW-8",
+    maker: "ciare",
     price: 455,
     src: "per Josh, Sep 2026",
     size: 18,
@@ -530,6 +544,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "ciarendh18",
     lb: 19.8,
     name: "Ciare NDH18-4S",
+    maker: "ciare",
     price: 459.95,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -559,6 +574,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "f18fh510",
     lb: 19.4,
     name: "FaitalPRO 18FH510",
+    maker: "faital",
     price: 389.95,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -589,6 +605,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "f18fh500",
     lb: 10.1,
     name: "FaitalPRO 18FH500",
+    maker: "faital",
     price: 459.95,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -619,6 +636,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "f18fx600",
     lb: 13.4,
     name: "FaitalPRO 18FX600",
+    maker: "faital",
     price: 541.95,
     src: "usspeaker.com, Sep 2026 (Parts Express $586 per Josh)",
     size: 18,
@@ -649,6 +667,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "f18hp1010",
     lb: 22.3,
     name: "FaitalPRO 18HP1010",
+    maker: "faital",
     price: 459.95,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -679,6 +698,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "by18pwb",
     lb: 30,
     name: "Beyma 18PWB1000Fe/S",
+    maker: "beyma",
     price: 418.95,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -709,6 +729,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "by18lex",
     lb: 19.8,
     name: "Beyma 18LEX1200Nd",
+    maker: "beyma",
     price: 458.95,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -739,6 +760,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "es18lw2420",
     lb: 27.3,
     name: "18Sound 18LW2420",
+    maker: "eighteenSound",
     price: 439.95,
     src: "usspeaker.com, Sep 2026",
     size: 18,
@@ -766,6 +788,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "celftr18",
     lb: 21.6,
     name: "Celestion FTR18-4080FD",
+    maker: "celestion",
     price: 325,
     src: "Parts Express, Oct 2026",
     size: 18,
@@ -795,6 +818,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "celcf1840",
     lb: 25.5,
     name: "Celestion CF1840JD",
+    maker: "celestion",
     price: 335,
     src: "Parts Express, Oct 2026",
     size: 18,
@@ -824,6 +848,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "celtsq1845",
     lb: 26,
     name: "Celestion TSQ1845",
+    maker: "celestion",
     price: 599,
     src: "Parts Express, Oct 2026",
     size: 18,
@@ -853,6 +878,7 @@ const SUB_RAW: RawDriver<SubDriver>[] = [
     id: "sbnero15",
     lb: 35.9,
     name: "SB Audience Nero-15SW800",
+    maker: "sbAudience",
     price: 295,
     src: "Madisound (out of stock)",
     size: 15,
@@ -890,6 +916,7 @@ const F12PR300_RAW: RawDriver<MidDriver> = {
   size: 12,
   lb: 5.3,
   name: "FaitalPRO 12PR300",
+  maker: "faital",
   price: 289.95,
   src: "usspeaker.com, Sep 2026",
   ts: {
@@ -921,6 +948,7 @@ const BC15NDL76_RAW: RawDriver<MidDriver> = {
   size: 15,
   lb: 10.4,
   name: "B&C 15NDL76",
+  maker: "bc",
   price: 305.4,
   src: "usspeaker.com, Sep 2026",
   ts: {
@@ -954,6 +982,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 15,
     lb: 8.4,
     name: "B&C 15CL76",
+    maker: "bc",
     price: 246.18,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -984,6 +1013,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 15,
     lb: 20.5,
     name: "B&C 15FW76",
+    maker: "bc",
     price: 295.8,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1015,6 +1045,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 15,
     lb: 12.6,
     name: "B&C 15NDL88",
+    maker: "bc",
     price: 388.44,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1045,6 +1076,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 15,
     lb: 12.3,
     name: "B&C 15NW76",
+    maker: "bc",
     price: 379.8,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1075,6 +1107,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 15,
     lb: 9.2,
     name: "Beyma 15MC700Nd",
+    maker: "beyma",
     price: 374.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1105,6 +1138,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 15,
     lb: 18.3,
     name: "18Sound 15MB700",
+    maker: "eighteenSound",
     price: 279.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1132,6 +1166,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 15,
     lb: 9.7,
     name: "FaitalPRO 15FH500",
+    maker: "faital",
     price: 389.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1162,6 +1197,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 15,
     lb: 7.9,
     name: "FaitalPRO 15PR400",
+    maker: "faital",
     price: 359.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1192,6 +1228,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 9.15,
     name: "SB Audience Nero-12MWN700D",
+    maker: "sbAudience",
     price: 247,
     src: "Madisound",
     ts: {
@@ -1222,6 +1259,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 8.6,
     name: "B&C 12NDL76",
+    maker: "bc",
     price: 281.52,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1252,6 +1290,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 8.6,
     name: "B&C 12NDL88",
+    maker: "bc",
     price: 355.92,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1282,6 +1321,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 10.6,
     name: "B&C 12NW76",
+    maker: "bc",
     price: 343.5,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1312,6 +1352,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 18.7,
     name: "B&C 12FW76",
+    maker: "bc",
     price: 256.74,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1342,6 +1383,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 4.2,
     name: "B&C 12CL64",
+    maker: "bc",
     price: 184.2,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1372,6 +1414,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 6.1,
     name: "FaitalPRO 12PR320",
+    maker: "faital",
     price: 309.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1403,6 +1446,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 9.37,
     name: "FaitalPRO 12PR310",
+    maker: "faital",
     price: 247.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1433,6 +1477,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 9.5,
     name: "FaitalPRO 12PR330",
+    maker: "faital",
     price: 265.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1463,6 +1508,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 20.3,
     name: "FaitalPRO 12HP1010",
+    maker: "faital",
     price: 378.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1493,6 +1539,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 17.9,
     name: "FaitalPRO 12RS550",
+    maker: "faital",
     price: 335.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1523,6 +1570,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 8.8,
     name: "FaitalPRO 12FH500",
+    maker: "faital",
     price: 359.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1553,6 +1601,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 17.7,
     name: "18Sound 12MB700",
+    maker: "eighteenSound",
     price: 294.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1580,6 +1629,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 21.2,
     name: "18Sound 12MB1000",
+    maker: "eighteenSound",
     price: 409.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1607,6 +1657,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 13.7,
     name: "18Sound 12NLW9300",
+    maker: "eighteenSound",
     price: 369.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1634,6 +1685,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 24,
     name: "18Sound 12LW1400",
+    maker: "eighteenSound",
     price: null,
     src: "not on usspeaker",
     ts: {
@@ -1661,6 +1713,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 8.2,
     name: "Beyma 12MC700Nd",
+    maker: "beyma",
     price: 342.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1691,6 +1744,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 21.4,
     name: "Beyma 12LX60v2",
+    maker: "beyma",
     price: 249.75,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1721,6 +1775,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 12.3,
     name: "Beyma 12P80Nd",
+    maker: "beyma",
     price: 474.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1751,6 +1806,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 11,
     name: "Eminence KappaLite 3012HO",
+    maker: "eminence",
     price: 249.99,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1780,6 +1836,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 11,
     name: "Eminence KappaLite 3012LF",
+    maker: "eminence",
     price: 254.99,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1809,6 +1866,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 7,
     name: "Eminence Deltalite II 2512",
+    maker: "eminence",
     price: 194.99,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1838,6 +1896,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 11,
     name: "Ciare 12NDH3",
+    maker: "ciare",
     price: 319.08,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -1863,6 +1922,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 11.4,
     name: "Lavoce WAN123.00",
+    maker: "lavoce",
     price: 249,
     src: "Parts Express, Sep 2026",
     ts: {
@@ -1892,6 +1952,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 18.9,
     name: "Lavoce WAF123.01",
+    maker: "lavoce",
     price: 199,
     src: "Parts Express, Sep 2026",
     ts: {
@@ -1921,6 +1982,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 26.6,
     name: "Lavoce WAF124.01",
+    maker: "lavoce",
     price: 289,
     src: "Parts Express, Sep 2026",
     ts: {
@@ -1950,6 +2012,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 12,
     lb: 14.9,
     name: "Celestion CF1230BMB",
+    maker: "celestion",
     price: 235,
     src: "Parts Express, Oct 2026",
     ts: {
@@ -1979,6 +2042,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 10,
     lb: 8.6,
     name: "SB Audience Nero-10MWN600D",
+    maker: "sbAudience",
     price: null,
     src: "not priced yet",
     ts: {
@@ -2009,6 +2073,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 10,
     lb: 6.4,
     name: "B&C 10NDL64",
+    maker: "bc",
     price: 233.88,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -2039,6 +2104,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 10,
     lb: 6.5,
     name: "B&C 10NW64",
+    maker: "bc",
     price: 224.22,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -2069,6 +2135,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 10,
     lb: 5.6,
     name: "FaitalPRO 10PR320",
+    maker: "faital",
     price: 284.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -2099,6 +2166,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 10,
     lb: 15.9,
     name: "18Sound 10MB600",
+    maker: "eighteenSound",
     price: 249.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -2126,6 +2194,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 10,
     lb: 6.8,
     name: "Beyma 10MC500Nd",
+    maker: "beyma",
     price: 280.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -2156,6 +2225,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 10,
     lb: 6.2,
     name: "Lavoce WAN102.50",
+    maker: "lavoce",
     price: 179,
     src: "Parts Express, Sep 2026",
     ts: {
@@ -2185,6 +2255,7 @@ const MID_RAW: RawDriver<MidDriver>[] = [
     size: 10,
     lb: 10.2,
     name: "Lavoce WAF102.50",
+    maker: "lavoce",
     price: 159,
     src: "Parts Express, Sep 2026",
     ts: {
@@ -2790,6 +2861,7 @@ const BC10CXN64_RAW: RawDriver<FillDriver> = {
   size: 10,
   lb: 7.1,
   name: "B&C 10CXN64",
+  maker: "bc",
   price: 476.22,
   src: "usspeaker.com, Sep 2026",
   ts: {
@@ -2824,6 +2896,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 8,
     lb: 5.5,
     name: "B&C 8CXN51",
+    maker: "bc",
     price: null,
     src: "usspeaker.com (no price shown)",
     ts: {
@@ -2856,6 +2929,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 8,
     lb: 11.2,
     name: "B&C 8FCX51",
+    maker: "bc",
     price: null,
     src: "usspeaker.com (no price shown)",
     ts: {
@@ -2888,6 +2962,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 8,
     lb: 10.1,
     name: "Beyma 8CX300Fe",
+    maker: "beyma",
     price: 288.5,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -2919,6 +2994,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 8,
     lb: 6.1,
     name: "Beyma 8CX300NdN",
+    maker: "beyma",
     price: 428.75,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -2951,6 +3027,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 8,
     lb: 6,
     name: "FaitalPRO 8HX200",
+    maker: "faital",
     price: 455.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -2983,6 +3060,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 8,
     lb: 10.4,
     name: "FaitalPRO 8HX230",
+    maker: "faital",
     price: 399.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -3015,6 +3093,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 8,
     lb: 8.6,
     name: "FaitalPRO 8HX240",
+    maker: "faital",
     price: 469.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -3047,6 +3126,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 8,
     lb: 6.8,
     name: "Eminence Beta 8CX",
+    maker: "eminence",
     price: 129.99,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -3079,6 +3159,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 10,
     lb: 12.8,
     name: "B&C 10FCX64",
+    maker: "bc",
     price: 419.88,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -3111,6 +3192,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 10,
     lb: 11.2,
     name: "Beyma 10CX300Fe",
+    maker: "beyma",
     price: 378.5,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -3143,6 +3225,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 10,
     lb: 9.2,
     name: "Ciare NDCX10-1.4",
+    maker: "ciare",
     price: 399.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -3168,6 +3251,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 10,
     lb: 11,
     name: "FaitalPRO 10HX230",
+    maker: "faital",
     price: 468.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -3200,6 +3284,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 10,
     lb: 9,
     name: "FaitalPRO 10HX240",
+    maker: "faital",
     price: 539.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -3232,6 +3317,7 @@ const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     size: 10,
     lb: 7.3,
     name: "Eminence Beta 10CX",
+    maker: "eminence",
     price: null,
     src: "usspeaker.com (no price shown)",
     ts: {
@@ -3280,6 +3366,7 @@ const SB17NRX_RAW: RawDriver<HifiWoofer> = {
   size: 6.5,
   lb: 3.44,
   name: "SB Acoustics SB17NRX2C35-8",
+  maker: "sbAcoustics",
   price: 76.7,
   src: "madisoundspeakerstore.com, Sep 2026",
   ts: {
@@ -3317,6 +3404,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 7,
     lb: 4.85,
     name: "Dayton Audio RS180-8",
+    maker: "dayton",
     price: 79.98,
     src: "parts-express.com, Sep 2026",
     ts: {
@@ -3348,6 +3436,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 8,
     lb: 6.1,
     name: "Dayton Audio RS225-8",
+    maker: "dayton",
     price: 89.98,
     src: "parts-express.com, Sep 2026 (backorder)",
     ts: {
@@ -3379,6 +3468,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 6.5,
     lb: 3.44,
     name: "Peerless HDS-P830875",
+    maker: "peerless",
     price: 49.5,
     src: "parts-express.com, Sep 2026",
     ts: {
@@ -3413,6 +3503,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 6.5,
     lb: 4.59,
     name: "Peerless NE180W-08",
+    maker: "peerless",
     price: 97.98,
     src: "parts-express.com, Sep 2026 (out of stock)",
     ts: {
@@ -3446,6 +3537,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 8,
     lb: 6.04,
     name: "SB Acoustics SB23NRXS45-8",
+    maker: "sbAcoustics",
     price: 116.7,
     src: "madisoundspeakerstore.com, Sep 2026",
     ts: {
@@ -3480,6 +3572,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 7,
     lb: 3.75,
     name: "Scan-Speak 18W/8531G00 (Revelator)",
+    maker: "scanSpeak",
     price: 254.2,
     src: "madisoundspeakerstore.com, Sep 2026",
     ts: {
@@ -3514,6 +3607,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 5.25,
     lb: 2.65,
     name: "Scan-Speak 15W/8434G00 (Discovery)",
+    maker: "scanSpeak",
     price: 84.8,
     src: "madisoundspeakerstore.com, Sep 2026",
     ts: {
@@ -3548,6 +3642,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 6.5,
     lb: 4.3,
     name: "Fostex FF165WK",
+    maker: "fostex",
     price: 117.7,
     src: "madisoundspeakerstore.com, Sep 2026",
     ts: {
@@ -3576,6 +3671,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 8,
     lb: 6.6,
     name: "Eminence Beta-8A",
+    maker: "eminence",
     price: 89.99,
     src: "usspeaker.com, Sep 2026 (PE $99.99)",
     ts: {
@@ -3609,6 +3705,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 6.5,
     lb: 2.6,
     name: "B&C 6NDL38",
+    maker: "bc",
     price: 161.28,
     src: "usspeaker.com, Sep 2026 (PE same)",
     ts: {
@@ -3643,6 +3740,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 8,
     lb: 4.08,
     name: "B&C 8NDL51",
+    maker: "bc",
     price: 174.66,
     src: "usspeaker.com, Sep 2026 (PE same)",
     ts: {
@@ -3677,6 +3775,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 8,
     lb: 4.6,
     name: "FaitalPRO 8PR200",
+    maker: "faital",
     price: 229.95,
     src: "usspeaker.com, Sep 2026 (PE $252)",
     ts: {
@@ -3711,6 +3810,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 8,
     lb: 7.5,
     name: "18 Sound 8MB500",
+    maker: "eighteenSound",
     price: 179.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -3742,6 +3842,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 6.5,
     lb: 6.83,
     name: "Beyma 6P200Fe",
+    maker: "beyma",
     price: 117.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -3776,6 +3877,7 @@ const HIFI_WOOFERS_RAW: RawDriver<HifiWoofer>[] = [
     size: 8,
     lb: 8.82,
     name: "Beyma 8P300Fe/N",
+    maker: "beyma",
     price: 136.95,
     src: "usspeaker.com, Sep 2026 (PE $137.14)",
     ts: {
@@ -4052,6 +4154,7 @@ HIFI_WOOFERS_RAW.push(
     size: 5,
     lb: 3.8,
     name: "Ciare HWG130-8",
+    maker: "ciare",
     price: 137.52,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -4085,6 +4188,7 @@ HIFI_WOOFERS_RAW.push(
     size: 5,
     lb: 2.48,
     name: "FaitalPRO 5FE125",
+    maker: "faital",
     price: 54.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -4119,6 +4223,7 @@ HIFI_WOOFERS_RAW.push(
     size: 6.5,
     lb: 5.5,
     name: "Ciare HWG160-8",
+    maker: "ciare",
     price: 158.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -4152,6 +4257,7 @@ HIFI_WOOFERS_RAW.push(
     size: 6.5,
     lb: 3.08,
     name: "Ciare HW161N",
+    maker: "ciare",
     price: 89.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -4185,6 +4291,7 @@ HIFI_WOOFERS_RAW.push(
     size: 8,
     lb: 7.27,
     name: "Ciare HW205",
+    maker: "ciare",
     price: 134.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -4218,6 +4325,7 @@ HIFI_WOOFERS_RAW.push(
     size: 8,
     lb: 6.06,
     name: "Ciare HWB200-8",
+    maker: "ciare",
     price: 145.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -4251,6 +4359,7 @@ HIFI_WOOFERS_RAW.push(
     size: 6.5,
     lb: 2.6,
     name: "FaitalPRO 6FE100",
+    maker: "faital",
     price: 55.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -4285,6 +4394,7 @@ HIFI_WOOFERS_RAW.push(
     size: 8,
     lb: 6.8,
     name: "FaitalPRO 8FE300",
+    maker: "faital",
     price: 109.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -4319,6 +4429,7 @@ HIFI_WOOFERS_RAW.push(
     size: 5,
     lb: 2.6,
     name: "Beyma 5MP60/N",
+    maker: "beyma",
     price: 69.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -4353,6 +4464,7 @@ HIFI_WOOFERS_RAW.push(
     size: 8,
     lb: 7.3,
     name: "Beyma 8G40",
+    maker: "beyma",
     price: 133.95,
     src: "usspeaker.com, Sep 2026",
     ts: {
@@ -4395,6 +4507,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "ds135pr",
     name: "Dayton Audio DS135-PR",
+    maker: "dayton",
     size: 5,
     Sd: 75.4,
     Mms: 21.8,
@@ -4410,6 +4523,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "dsa175pr",
     name: "Dayton Audio DSA175-PR",
+    maker: "dayton",
     size: 6.5,
     Sd: 128.7,
     Mms: 30.7,
@@ -4425,6 +4539,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "sb16pfcr",
     name: "SB Acoustics SB16PFCR-00",
+    maker: "sbAcoustics",
     size: 6,
     Sd: 124,
     Mms: 38,
@@ -4440,6 +4555,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "ptt525pr",
     name: "Purifi PTT5.25PR-NF2-01",
+    maker: "purifi",
     size: 5.25,
     Sd: 85,
     Mms: 50,
@@ -4455,6 +4571,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "ptt65pr",
     name: "Purifi PTT6.5PR-NF1-01",
+    maker: "purifi",
     size: 6.5,
     Sd: 133,
     Mms: 80,
@@ -4470,6 +4587,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "sp18r",
     name: "Seas Prestige SP18R (H9944)",
+    maker: "seas",
     size: 6.5,
     Sd: 130,
     Mms: 20,
@@ -4485,6 +4603,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "sb15sfcr",
     name: "SB Acoustics SB15SFCR-00 (5 × 8″ oval)",
+    maker: "sbAcoustics",
     size: 6.5,
     shape: { w: 5.6, h: 8.6 },
     Sd: 178,
@@ -4501,6 +4620,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "dsa215pr",
     name: "Dayton Audio DSA215-PR",
+    maker: "dayton",
     size: 8,
     Sd: 211.2,
     Mms: 67,
@@ -4516,6 +4636,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "ds215pr",
     name: "Dayton Audio DS215-PR",
+    maker: "dayton",
     size: 8,
     Sd: 211.2,
     Mms: 68.8,
@@ -4531,6 +4652,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "sb20pfcr",
     name: "SB Acoustics SB20PFCR-00",
+    maker: "sbAcoustics",
     size: 8,
     Sd: 216,
     Mms: 76.7,
@@ -4546,6 +4668,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "rss210pr",
     name: "Dayton Audio RSS210-PR",
+    maker: "dayton",
     size: 8,
     Sd: 213,
     Mms: 110,
@@ -4561,6 +4684,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "sb23mfcl",
     name: "SB Acoustics SB23MFCL-00",
+    maker: "sbAcoustics",
     size: 8,
     Sd: 210,
     Mms: 141,
@@ -4576,6 +4700,7 @@ const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
   {
     id: "dsa270pr",
     name: "Dayton Audio DSA270-PR",
+    maker: "dayton",
     size: 10,
     Sd: 353,
     Mms: 88.4,
