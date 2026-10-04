@@ -2,6 +2,7 @@
 // unit, I/O, slopes, limiter, PEQ per output, US price (new and used, with the seller where it matters), notes.
 // To add a unit, append an entry with its id and row; the compiler checks the row has all seven cells (DspUnit in
 // src/types.ts). Racks name a unit by its id, and the Notes table marks the one the mains rack uses "(current)".
+// A settled used price is `usedPrice` (a range); the table adds it to the price cell and a rack line uses it.
 // Prices are US dollars from US sellers; mark an unconfirmed spec in its cell, as the rows below do.
 import type { DspUnit } from "../../types";
 
@@ -80,13 +81,14 @@ export const DSP_UNITS = [
   },
   {
     id: "pa2",
+    usedPrice: { lo: 300, hi: 400 },
     row: [
       "dbx DriveRack PA2",
       "2×6 XLR",
       "BW / LR to 48",
       "No attack or release; up to 3 dB overshoot",
       "8, linked L/R",
-      "~$599, ~$366 used",
+      "~$599",
       "Left and right share EQ and delay per band; 10 ms output delay.",
     ],
   },

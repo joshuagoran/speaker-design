@@ -2,9 +2,17 @@ import { Fragment } from "react";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { SignalPath } from "../../components/drawings/SignalPath";
-import { DSP_UNITS, HORN_AMP_SAFETY_HPF_HZ, RACK_DSP_IDS, RACKS } from "../../lib/data";
+import {
+  DSP_UNITS,
+  HORN_AMP_SAFETY_HPF_HZ,
+  RACK_DSP_IDS,
+  RACKS,
+  formatPriceRange,
+  rackTotal,
+} from "../../lib/data";
 import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
 import { FONT } from "../../styles/fonts";
+import type { DspUnit, DspUnitId } from "../../types";
 import {
   DEFAULT_CD,
   DEFAULT_HORN,
@@ -18,6 +26,16 @@ import {
 // part, price or rating shows up here.
 const GXD = QSC_GXD.models;
 const OHM = "Ω";
+/** The DSP table's unit and price columns, which take words from the unit's entry. */
+const DSP_UNIT_COL = 0,
+  DSP_PRICE_COL = 5;
+
+/** A DSP table cell: the unit the racks use marked "(current)", a settled used price added to the price cell. */
+function dspCell(u: DspUnit & { id: DspUnitId }, col: number, text: string): string {
+  if (col === DSP_UNIT_COL && RACK_DSP_IDS.has(u.id)) return `${text} (current)`;
+  if (col === DSP_PRICE_COL && u.usedPrice) return `${text}, ${formatPriceRange(u.usedPrice)} used`;
+  return text;
+}
 
 /** How far a sensitivity claim may sit above the T/S figure and still count as agreeing with it, dB. */
 const SENS_AGREE_DB = 0.5;
@@ -46,7 +64,7 @@ export function NotesPage() {
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 flex flex-col gap-2">
       <section className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: FONT }}>
         {RACKS.map((r) => {
-          const total = r.items.reduce((a, i) => a + i.price, 0);
+          const total = rackTotal(r);
           return (
             <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
               <div className="flex justify-between items-baseline mb-1">
@@ -54,7 +72,7 @@ export function NotesPage() {
                   <Tooltip tip={r.note}>{r.name}</Tooltip>
                 </SectionHeading>
                 <span className="text-sm tabular-nums text-stone-500">
-                  ≈ ${total.toLocaleString()}
+                  ≈ {formatPriceRange(total)}
                 </span>
               </div>
               <div className="mb-3" />
@@ -62,7 +80,7 @@ export function NotesPage() {
                 {r.items.map(({ label, price }) => (
                   <li key={label} className="flex justify-between gap-3">
                     <span>{label}</span>
-                    <span className="tabular-nums text-stone-500">${price}</span>
+                    <span className="tabular-nums text-stone-500">{formatPriceRange(price)}</span>
                   </li>
                 ))}
               </ul>
@@ -195,7 +213,7 @@ export function NotesPage() {
                       key={i}
                       className={`py-1.5 pr-4 ${i === 0 ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : ""}`}
                     >
-                      {i === 0 && RACK_DSP_IDS.has(u.id) ? `${c} (current)` : c}
+                      {dspCell(u, i, c)}
                     </td>
                   ))}
                 </tr>

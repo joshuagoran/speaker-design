@@ -267,6 +267,9 @@ export type AmpId = (typeof AMP_SERIES)[number]["models"][number]["id"];
 /** A DSP unit's id: one of the rows in the DSP catalogue (`DSP_UNITS`). */
 export type DspUnitId = (typeof DSP_UNITS)[number]["id"];
 
+/** A DSP unit with a settled used price: only these can be a rack line, which takes the price from the unit. */
+export type PricedDspUnitId = Extract<(typeof DSP_UNITS)[number], { usedPrice: PriceRange }>["id"];
+
 /** A rack line that is no catalogue part: description and price in dollars. */
 export type RackTextItem = readonly [text: string, price: number];
 
@@ -282,12 +285,10 @@ export interface RackAmpItem {
 }
 
 /**
- * A rack line that is a used DSP unit from the DSP catalogue: its name comes from the unit's row, the price is the
- * rack's own (the catalogue quotes prices as display text).
+ * A rack line that is a used DSP unit from the DSP catalogue: its name and used price come from the unit's entry.
  */
 export interface RackDspItem {
-  dsp: DspUnitId;
-  price: number;
+  dsp: PricedDspUnitId;
   note: string;
 }
 
@@ -302,7 +303,7 @@ export interface Rack {
 }
 
 /** A rack as the Notes page lists it: every line resolved to its words and price. */
-export type RackView = Omit<Rack, "items"> & { items: { label: string; price: number }[] };
+export type RackView = Omit<Rack, "items"> & { items: { label: string; price: PriceRange }[] };
 
 /** A crossover / DSP unit as the Notes page's comparison table shows it: one display-text cell per column. */
 export type DspUnitRow = readonly [
@@ -319,7 +320,12 @@ export type DspUnitRow = readonly [
 export interface DspUnit {
   id: string;
   row: DspUnitRow;
+  /** a used one's price range, US dollars, where settled: the table's price cell adds it and a rack line uses it */
+  usedPrice?: PriceRange;
 }
+
+/** A price in US dollars as a range, low to high (equal for a single price). */
+export type PriceRange = Pick<XmaxBand, "lo" | "hi">;
 
 /** One amplifier model of a series: per-channel power, continuous with both channels driven. */
 export interface AmpModel {

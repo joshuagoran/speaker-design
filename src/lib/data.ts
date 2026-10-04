@@ -9,6 +9,7 @@ import type {
   DspUnit,
   DspUnitId,
   RackItem,
+  PriceRange,
   RackView,
   CabinetFinish,
   CompressionDriver,
@@ -149,6 +150,9 @@ export function ampById(id: AmpId): { series: AmpSeries; model: AmpModel } {
 export const dspUnitById = (id: DspUnitId): DspUnit =>
   byIdOrThrow(DSP_UNITS, id, CATALOG_TABLE_NAMES.dspUnits);
 
+/** A single price as a range. */
+const exactly = (price: number): PriceRange => ({ lo: price, hi: price });
+
 /** A rack line's words and price. */
 function rackLine(item: RackItem): RackView["items"][number] {
   if ("amp" in item) {
@@ -156,14 +160,27 @@ function rackLine(item: RackItem): RackView["items"][number] {
     const what = [item.use, item.rating && `${model.w8} W/ch at 8 Ω`, item.note].filter(Boolean);
     return {
       label: `${series.brand} ${model.model} (used) — ${what.join(", ")}`,
-      price: model.usedPrice,
+      price: exactly(model.usedPrice),
     };
   }
-  if ("dsp" in item)
-    return { label: `${dspUnitById(item.dsp).row[0]} (used) — ${item.note}`, price: item.price };
+  if ("dsp" in item) {
+    const unit = dspUnitById(item.dsp);
+    // the id's type admits only priced units; this guards a catalogue edit that drops the price
+    if (!unit.usedPrice)
+      throw new Error(`${CATALOG_TABLE_NAMES.dspUnits}: ${item.dsp} has no used price`);
+    return { label: `${unit.row[0]} (used) — ${item.note}`, price: unit.usedPrice };
+  }
   const [label, price] = item;
-  return { label, price };
+  return { label, price: exactly(price) };
 }
+
+/** A price range in dollars: $300–400, or $300 when it is one price. */
+export const formatPriceRange = ({ lo, hi }: PriceRange): string =>
+  lo === hi ? `$${lo.toLocaleString()}` : `$${lo.toLocaleString()}–${hi.toLocaleString()}`;
+
+/** A rack's total, low to high: the sum of its lines' ranges. */
+export const rackTotal = (r: RackView): PriceRange =>
+  r.items.reduce((t, i) => ({ lo: t.lo + i.price.lo, hi: t.hi + i.price.hi }), exactly(0));
 
 /** The racks with every line in words. */
 export const RACKS: readonly RackView[] = RACK_TABLE.map((r) => ({
