@@ -15,10 +15,17 @@ import { fillSystem, nearestPoint } from "../../lib/pa/calc";
 import type { FillsPlanner } from "./useFillsPlanner";
 import { xmaxBandCurves, xmaxRows } from "../../lib/xmax";
 import { LIMIT_NAMES } from "../../constants/limits";
+import { FONT } from "../../styles/fonts";
+import { GXD4 } from "../../data/catalog/amps";
+import { UI_TEXT } from "../../constants/uiText";
 
 interface Props {
   fills: FillsPlanner;
 }
+
+const fillSizes = FILL_OPTIONS.map((o) => o.size);
+/** the catalogue's fill size range, e.g. "8–12″" */
+const FILL_SIZE_RANGE = `${Math.min(...fillSizes)}–${Math.max(...fillSizes)}″`;
 
 /** Fills page: choose and size the fill speakers. */
 export function FillsPage({ fills }: Props) {
@@ -99,11 +106,13 @@ export function FillsPage({ fills }: Props) {
   return (
     <main
       className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8"
-      style={{ fontFamily: "var(--font)" }}
+      style={{ fontFamily: FONT }}
     >
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
         <p className="text-sm text-stone-500">
-          <Tooltip tip="Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).">
+          <Tooltip
+            tip={`Passive ${FILL_SIZE_RANGE} coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).`}
+          >
             Passive fills
           </Tooltip>
         </p>
@@ -138,7 +147,7 @@ export function FillsPage({ fills }: Props) {
             [
               "Woofer sensitivity",
               `${sensitivityDb.toFixed(1)} dB`,
-              "2.83 V, half space, 1 m, modelled",
+              `${UI_TEXT.splConditions}, modelled`,
             ],
             [
               "HF sensitivity",
@@ -284,7 +293,7 @@ export function FillsPage({ fills }: Props) {
             onChange={setAmpWatts}
           />
           <div className="text-xs text-stone-500">
-            A freed GXD4 channel with two 8 Ω fills in parallel gives about 300 W each.
+            {`A freed ${GXD4.model} channel with two 8 Ω fills in parallel gives about ${GXD4.w4 / 2} W each.`}
           </div>
         </Card>
       </aside>

@@ -7,9 +7,13 @@ import { Delta } from "../../components/optimizer/Delta";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { WOOFER_LIMITED_BY } from "../../constants/limits";
+import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
+import { STATS } from "../../components/optimizer/StatRow";
 import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
 import { byIdOrThrow } from "../../lib/tables";
 import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
+import { FONT } from "../../styles/fonts";
+import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 
 interface Props {
   result: HifiOptimizerCard;
@@ -40,8 +44,8 @@ export function HifiResultCard({
     metrics = result.metrics,
     deltas: Partial<HifiMetricsDelta> = result.delta || {};
   // a card's driver ids come from these same lists (the optimizer searches them)
-  const woofer = byIdOrThrow(HIFI_WOOFERS, result.woofer, "hi-fi woofers"),
-    tweeter = byIdOrThrow(HIFI_TWEETERS, result.tweeter, "hi-fi tweeters");
+  const woofer = byIdOrThrow(HIFI_WOOFERS, result.woofer, CATALOG_TABLE_NAMES.hifiWoofers),
+    tweeter = byIdOrThrow(HIFI_TWEETERS, result.tweeter, CATALOG_TABLE_NAMES.hifiTweeters);
   const radiator = passiveRadiatorOf(config); // null unless the box is a radiator box with its radiator
   const tile = (label: string, v: string, delta: React.ReactNode) => (
     <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
@@ -58,7 +62,7 @@ export function HifiResultCard({
       <div className="text-xs uppercase tracking-wider font-bold text-stone-500">
         {result.label} · {index + 1} of {total}
       </div>
-      <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>
+      <h3 className="text-lg leading-snug" style={{ fontFamily: FONT, fontWeight: 700 }}>
         {woofer.size}″ {result.names.woofer} · {config.dim.w} × {config.dim.h} × {config.dim.d}″
       </h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
@@ -112,13 +116,13 @@ export function HifiResultCard({
           <Delta v={deltas.level} unit=" dB" digits={1} />,
         )}
         {tile(
-          "F3 in room",
+          STATS.f3InRoom.label,
           `${metrics.f3.toFixed(0)} Hz`,
           <Delta v={deltas.f3} unit=" Hz" lowerIsBetter />,
         )}
       </div>
       <div className="text-xs leading-snug">
-        <b className="font-semibold">Limited by:</b> {limitedBy}
+        <b className="font-semibold">{OPTIMIZER_PANEL_TEXT.limitedBy}</b> {limitedBy}
       </div>
       {result.warnings
         .filter(([, , , id]) => !LIMIT_CHIP_IDS.has(id))

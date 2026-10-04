@@ -3,6 +3,7 @@ import { formatInches } from "../../lib/pa/calc";
 import { PAL } from "../../styles/palette";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { CUT_BOX_NAMES, CUT_PART_NAMES } from "../../constants/cutParts";
+import { SVG_FONT } from "../../styles/fonts";
 
 interface Props {
   sheet: PackedSheet;
@@ -70,7 +71,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                 textAnchor="middle"
                 fontSize={fs}
                 fill={PAL.muted}
-                fontFamily="Inconsolata, monospace"
+                fontFamily={SVG_FONT}
               >
                 <tspan x={(offcut.x + offcut.w / 2) * sc}>offcut</tspan>
                 <tspan x={(offcut.x + offcut.w / 2) * sc} dy={fs * 1.1}>
@@ -133,7 +134,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                     y={top * sc + fs * 1.1}
                     fontSize={fs}
                     fill={PAL.ink}
-                    fontFamily="Inconsolata, monospace"
+                    fontFamily={SVG_FONT}
                   >
                     {k + 1}
                   </text>
@@ -155,7 +156,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                   textAnchor="middle"
                   fontSize={fs}
                   fill={PAL.ink}
-                  fontFamily="Inconsolata, monospace"
+                  fontFamily={SVG_FONT}
                   transform={it.pieces ? `rotate(-90 ${cx} ${y + h / 2})` : undefined}
                 >
                   {label}

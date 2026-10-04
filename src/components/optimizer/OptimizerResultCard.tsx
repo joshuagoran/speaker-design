@@ -6,9 +6,11 @@ import { formatDollars } from "../../lib/format";
 import { formatThickness } from "../../lib/pa/calc";
 import { Delta } from "./Delta";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
+import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import { Ellipsis } from "../ui/Ellipsis";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import type { PaMetricsDelta, PaOptimizerCard, PaOptimizerResult } from "../../types";
+import { FONT } from "../../styles/fonts";
 
 interface Props {
   result: PaOptimizerCard;
@@ -67,7 +69,7 @@ export function OptimizerResultCard({
       <div className="text-xs uppercase tracking-wider font-bold text-stone-500">
         {result.label} · {index + 1} of {total}
       </div>
-      <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>
+      <h3 className="text-lg leading-snug" style={{ fontFamily: FONT, fontWeight: 700 }}>
         {result.names.sub} · {config.cDim.w} × {config.cDim.h} × {config.cDim.d}″
       </h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
@@ -103,7 +105,7 @@ export function OptimizerResultCard({
         )}
       </div>
       <div className="text-xs leading-snug">
-        <b className="font-semibold">Limited by:</b> {result.limitedBy}
+        <b className="font-semibold">{OPTIMIZER_PANEL_TEXT.limitedBy}</b> {result.limitedBy}
       </div>
       {result.warnings
         .filter(([, , , id]) => !LIMIT_CHIP_IDS.has(id))

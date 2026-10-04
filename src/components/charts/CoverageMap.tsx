@@ -13,6 +13,8 @@ import type {
   RoomSide,
 } from "../../types";
 import type { CoverageLayoutState } from "../../pages/coverage/useCoverageLayout";
+import { SVG_FONT } from "../../styles/fonts";
+import { UI_TEXT } from "../../constants/uiText";
 
 /** The colour scale, dB against the target: fixed, so layouts compare by eye. */
 export const COVERAGE_SCALE: [lo: number, hi: number] = [-18, 6];
@@ -241,14 +243,14 @@ export function CoverageMap({
     yTicks: number[] = [];
   for (let f = -Math.floor(room.widthFt / 20) * 10; f <= room.widthFt / 2; f += 10) xTicks.push(f);
   for (let f = 10; f <= room.lengthFt; f += 10) yTicks.push(f);
-  const font = { fontSize: 11, fontFamily: "Inconsolata, monospace" };
+  const font = { fontSize: 11, fontFamily: SVG_FONT };
 
   return (
     <div ref={box}>
       <div className="flex justify-between items-baseline gap-3 text-xs text-stone-500 mb-1 min-h-[1rem]">
         <span>
           {room.outdoors
-            ? "Outdoors"
+            ? UI_TEXT.outdoors
             : `${room.widthFt} × ${room.lengthFt} ft room, ${room.ceilingFt} ft ceiling`}
         </span>
         <span className="tabular-nums text-stone-900">

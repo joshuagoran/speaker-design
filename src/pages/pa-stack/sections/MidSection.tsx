@@ -8,6 +8,8 @@ import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { xmaxRows } from "../../../lib/xmax";
 import { LIMIT_NAMES } from "../../../constants/limits";
+import { FONT } from "../../../styles/fonts";
+import { UI_TEXT } from "../../../constants/uiText";
 
 interface Props {
   planner: Pick<
@@ -57,10 +59,10 @@ export function MidSection({ planner }: Props) {
   } = planner;
   return (
     <>
-      <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-2" style={{ fontFamily: FONT }}>
         <FoldHeading
           id="mid"
-          title="Mid-bass"
+          title={UI_TEXT.midBass}
           folds={expandedSections}
           toggle={toggleSection}
           className="mb-3"
@@ -100,7 +102,7 @@ export function MidSection({ planner }: Props) {
                   [
                     STATS.midbandSensitivity,
                     `${(midModelled.mdl.ref - 20 * Math.log10(midVoltage / 2.83)).toFixed(1)} dB`,
-                    "2.83 V, half space, 1 m",
+                    UI_TEXT.splConditions,
                   ],
                   ...[subMidCrossoverHz, 200, 500].map((f): StatRowItem => {
                     const m = nearestPoint(midModelled.max, f);

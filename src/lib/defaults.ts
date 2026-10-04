@@ -31,6 +31,7 @@ import type {
   PortMemory,
   SubDriver,
 } from "../types";
+import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
 
 /** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
 export type PaDefaults = Omit<
@@ -55,8 +56,8 @@ export type PaDefaults = Omit<
  */
 export const DEFAULT_PA = {
   // the only format and cabinet the planner has ever offered; nothing changes them
-  format: byIdOrThrow(FORMATS, "full", "formats"),
-  cabinet: byIdOrThrow(CABINETS, "column", "cabinets"),
+  format: byIdOrThrow(FORMATS, "full", CATALOG_TABLE_NAMES.formats),
+  cabinet: byIdOrThrow(CABINETS, "column", CATALOG_TABLE_NAMES.cabinets),
   sub: BC18NBX,
   mid: F12PR300,
   cd: N314T,

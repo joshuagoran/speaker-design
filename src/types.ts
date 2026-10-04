@@ -2,7 +2,12 @@ import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
 import type { LIMIT_NAMES } from "./constants/limits";
+import type { CHANGE_NAMES } from "./constants/optimizerText";
+import type { DSP_COLUMNS } from "./constants/dspColumns";
+import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { MAKER_NAMES } from "./data/catalog/makers";
+import type { AMP_SERIES } from "./data/catalog/amps";
+import type { DSP_UNITS } from "./data/catalog/dsp-units";
 
 // Shapes of the parts catalogue tables in data/catalog/ (lib/data.ts derives the app's view of them).
 //
@@ -136,6 +141,10 @@ export interface SubDriver {
   src: string;
   size: SubSize;
   ts: SubTS;
+  /** the maker's published sensitivity, dB at 1 m (informational: the models use the T/S); absent where not entered */
+  sens?: number;
+  /** mounting depth in inches, from the maker's datasheet; absent where it isn't published (a gap the Notes page words around) */
+  depthIn?: number;
   note: string;
 }
 
@@ -253,26 +262,66 @@ export interface Format {
   note: string;
 }
 
-/** One line of a rack's parts list: description and price in dollars. */
-export type RackItem = [text: string, price: number];
+/** An amp's id: one of the models in the amps catalogue (`AMP_SERIES`), so a rack can't name an amp that isn't there. */
+export type AmpId = (typeof AMP_SERIES)[number]["models"][number]["id"];
+
+/** A DSP unit's id: one of the rows in the DSP catalogue (`DSP_UNITS`). */
+export type DspUnitId = (typeof DSP_UNITS)[number]["id"];
+
+/** A DSP unit with a settled used price: only these can be a rack line, which takes the price from the unit. */
+export type PricedDspUnitId = Extract<(typeof DSP_UNITS)[number], { usedPrice: PriceRange }>["id"];
+
+/** A rack line that is no catalogue part: description and price in dollars. */
+export type RackTextItem = readonly [text: string, price: number];
+
+/**
+ * A rack line that is a used amp from the amps catalogue: its name and price come from the amp entry. `use` says what
+ * it drives, `rating` adds its 8 Ω power, `note` follows.
+ */
+export interface RackAmpItem {
+  amp: AmpId;
+  use: string;
+  rating?: true;
+  note?: string;
+}
+
+/**
+ * A rack line that is a used DSP unit from the DSP catalogue: its name and used price come from the unit's entry.
+ */
+export interface RackDspItem {
+  dsp: PricedDspUnitId;
+  note: string;
+}
+
+/** One line of a rack's parts list. */
+export type RackItem = RackTextItem | RackAmpItem | RackDspItem;
 
 export interface Rack {
   id: string;
   name: string;
   note: string;
-  items: RackItem[];
+  items: readonly RackItem[];
 }
 
+/** A rack as the Notes page lists it: every line resolved to its words and price. */
+export type RackView = Omit<Rack, "items"> & { items: { label: string; price: PriceRange }[] };
+
 /** A crossover / DSP unit as the Notes page's comparison table shows it: one display-text cell per column. */
-export type DspUnitRow = readonly [
-  unit: string,
-  io: string,
-  slopes: string,
-  limiter: string,
-  peqPerOutput: string,
-  priceUs: string,
-  notes: string,
-];
+export type DspUnitRow = Readonly<Record<DspColumn, string>>;
+
+/** A column of the DSP comparison table: a cell of every unit's row (`DSP_COLUMNS` holds their order and headers). */
+export type DspColumn = keyof typeof DSP_COLUMNS;
+
+/** A DSP unit in the catalogue: its id (racks name it by this) and its comparison-table row. */
+export interface DspUnit {
+  id: string;
+  row: DspUnitRow;
+  /** a used one's price range, US dollars, where settled: the table's price cell adds it and a rack line uses it */
+  usedPrice?: PriceRange;
+}
+
+/** A price in US dollars as a range, low to high (equal for a single price). */
+export type PriceRange = Pick<XmaxBand, "lo" | "hi">;
 
 /** One amplifier model of a series: per-channel power, continuous with both channels driven. */
 export interface AmpModel {
@@ -286,6 +335,8 @@ export interface AmpModel {
   gainDb: number;
   /** the speaker-power range its limiter can be set to, watts */
   limiterW: readonly [min: number, max: number];
+  /** a used one's price, US dollars, as the racks buy it */
+  usedPrice: number;
 }
 
 /** An amplifier series and the DSP its models share, as the Notes page and the signal-path drawing describe it. */
@@ -875,9 +926,14 @@ export interface HifiMetricsDelta {
   f3: number;
 }
 
+/** What a card changes from your design, in the words its "changes" line shows. */
+export type ChangeName = (typeof CHANGE_NAMES)[keyof typeof CHANGE_NAMES];
+
 export interface HifiOptimizerCard {
   label: string;
   why: string;
+  /** which card it is (first, fix, closest, smallest or an alternative's goal): code reads this, never the label */
+  slot: CardSlot<HifiGoal>;
   woofer: string;
   tweeter: string;
   config: HifiCardConfig;
@@ -892,7 +948,7 @@ export interface HifiOptimizerCard {
   /** the tweeter comes with its own waveguide */
   ownGuide: boolean;
   /** what differs from the current design: "woofer", "box size", "amp power" ... */
-  changed: string[];
+  changed: ChangeName[];
   /** clean level at the seat as [Hz, dB] points */
   curve: [number, number][];
   whoW: WooferLimit;
@@ -942,6 +998,9 @@ export interface VentSpec {
   throat: number;
   len: number;
 }
+
+/** A set of round port tubes from stock pipe: how many, and each one's inside diameter in inches. */
+export type PortTubeSet = Pick<VentSpec, "nt" | "dia">;
 
 /**
  * The PA design the planner snapshots and the optimizer works on: driver and box ids, dimensions in inches, crossovers in Hz,
@@ -1538,6 +1597,9 @@ export type RoomSurface = RoomSide | "ceiling";
 /** What a side or the ceiling is made of (lib/pa/roomAcoustics has each one's absorption); "open" reflects nothing. */
 export type RoomMaterial = "concrete" | "drywall" | "wood" | "glass" | "curtain" | "open";
 
+/** A value in each octave band the absorption tables give, 125 Hz–4 kHz (`OCTAVE_HZ` in data/acoustics). */
+export type OctaveRow = readonly [number, number, number, number, number, number];
+
 /** The dance floor: empty (a hard floor), or full of people, who absorb the top end of the floor bounce. */
 export type FloorCrowd = "empty" | "full";
 
@@ -1825,6 +1887,8 @@ export interface PaBoxGeometry {
 export interface PaOptimizerCard {
   label: string;
   why: string;
+  /** which card it is (first, fix, closest, smallest or an alternative's goal): code reads this, never the label */
+  slot: CardSlot<PaGoal>;
   config: PaDesignConfig;
   metrics: PaMetricsSummary;
   delta: PaMetricsDelta | null;
@@ -1846,7 +1910,7 @@ export interface PaOptimizerCard {
     cutlist: CutlistSettings;
   };
   /** what differs from the current design: "sub driver", "vent" ... */
-  changed: string[];
+  changed: ChangeName[];
   priceKnown: boolean;
   curve: [number, number][];
   geom: PaBoxGeometry;

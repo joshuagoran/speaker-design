@@ -1,3 +1,5 @@
+import { FONT } from "../../styles/fonts";
+
 interface Props<Id extends string> {
   id: Id;
   title: React.ReactNode;
@@ -18,7 +20,7 @@ export function FoldHeading<Id extends string>({
   return (
     <h2
       className={`text-xl ${className} ${folds[id] ? "" : "max-md:mb-0"}`}
-      style={{ fontFamily: "var(--font)", fontWeight: 700 }}
+      style={{ fontFamily: FONT, fontWeight: 700 }}
     >
       <button
         onClick={() => toggle(id)}

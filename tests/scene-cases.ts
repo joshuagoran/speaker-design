@@ -59,15 +59,22 @@ const defaultConfig = {
 /** A horn drawn as a lathe profile and narrow enough for the tower's arched top. */
 const archedHorn = HORN_OPTIONS.find((h) => h.profile && !h.scaleX && h.size.w < 20);
 
+/** The cases the scene tests pick by name. */
+export const SCENE_CASE_NAMES = {
+  defaultPa: "default PA",
+  tower: "tower",
+  archedTower: "tower, arched top",
+} as const;
+
 export const sceneCases: { name: string; props: Props }[] = [
   ...configs.map((c) => ({ name: c.name, props: scenePropsOf(c) })),
-  { name: "default PA", props: scenePropsOf(defaultConfig) },
+  { name: SCENE_CASE_NAMES.defaultPa, props: scenePropsOf(defaultConfig) },
   { name: "default PA, cutaway", props: scenePropsOf({ ...defaultConfig, cutaway: true }) },
-  { name: "tower", props: scenePropsOf({ ...defaultConfig, layout: "tower" }) },
+  { name: SCENE_CASE_NAMES.tower, props: scenePropsOf({ ...defaultConfig, layout: "tower" }) },
   ...(archedHorn
     ? [
         {
-          name: "tower, arched top",
+          name: SCENE_CASE_NAMES.archedTower,
           props: scenePropsOf({ ...defaultConfig, layout: "tower", horn: archedHorn.id }),
         },
       ]
