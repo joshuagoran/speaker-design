@@ -1,5 +1,6 @@
 import { PAL } from "../../styles/palette";
 import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
+import { HORN_AMP_SAFETY_HPF_HZ, mainsDsp } from "../../lib/data";
 import type { AmpModel } from "../../types";
 import { SVG_FONT } from "../../styles/fonts";
 
@@ -97,7 +98,7 @@ export function SignalPath() {
       <T x={127} y={208} s={10} c={mute} b="XLR" />
 
       <Box x={150} y={110} w={130} h={220} c={col.pa2}>
-        <T x={215} y={132} b="dbx DriveRack PA2" />
+        <T x={215} y={132} b={mainsDsp().row[0]} />
         <T x={215} y={148} s={10} c={mute} b="2 in / 6 out" />
         <T x={215} y={176} s={10} c={mute} b="inputs: venue EQ" />
         <T x={215} y={190} s={10} c={mute} b="outputs: XO, EQ, delay, limit" />
@@ -116,7 +117,7 @@ export function SignalPath() {
       </Box>
       <Box x={350} y={319} w={130} h={44} c={col.hf}>
         <T x={415} y={337} b={ampName(GXD4)} />
-        <T x={415} y={353} s={10} c={mute} b="gain trimmed · HPF 500 Hz" />
+        <T x={415} y={353} s={10} c={mute} b={`gain trimmed · HPF ${HORN_AMP_SAFETY_HPF_HZ} Hz`} />
       </Box>
       <A d="M280 226 L350 226" c={col.sub} />
       <A d="M280 266 L350 283" c={col.mid} />

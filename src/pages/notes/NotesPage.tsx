@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { SignalPath } from "../../components/drawings/SignalPath";
-import { CD_OPTIONS, DSP_UNITS, RACKS } from "../../lib/data";
+import { CD_OPTIONS, DSP_UNITS, HORN_AMP_SAFETY_HPF_HZ, RACK_DSP_IDS, RACKS } from "../../lib/data";
 import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
 import { formatDollars } from "../../lib/format";
 import { byIdOrThrow } from "../../lib/tables";
@@ -29,7 +29,7 @@ export function NotesPage() {
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 flex flex-col gap-2">
       <section className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: FONT }}>
         {RACKS.map((r) => {
-          const total = r.items.reduce((a, [, c]) => a + c, 0);
+          const total = r.items.reduce((a, i) => a + i.price, 0);
           return (
             <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
               <div className="flex justify-between items-baseline mb-1">
@@ -42,10 +42,10 @@ export function NotesPage() {
               </div>
               <div className="mb-3" />
               <ul className="text-sm text-stone-900 space-y-1">
-                {r.items.map(([label, cost]) => (
+                {r.items.map(({ label, price }) => (
                   <li key={label} className="flex justify-between gap-3">
                     <span>{label}</span>
-                    <span className="tabular-nums text-stone-500">${cost}</span>
+                    <span className="tabular-nums text-stone-500">${price}</span>
                   </li>
                 ))}
               </ul>
@@ -60,7 +60,9 @@ export function NotesPage() {
           <SignalPath />
         </div>
         <p className="text-sm text-stone-900 max-w-3xl mt-3">
-          <Tooltip tip="the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.">
+          <Tooltip
+            tip={`the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around ${HORN_AMP_SAFETY_HPF_HZ} Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.`}
+          >
             How the DSP work is split
           </Tooltip>
         </p>
@@ -169,14 +171,14 @@ export function NotesPage() {
               </tr>
             </thead>
             <tbody>
-              {DSP_UNITS.map((r) => (
-                <tr key={r[0]} className="border-b border-stone-300 align-top">
-                  {r.map((c, i) => (
+              {DSP_UNITS.map((u) => (
+                <tr key={u.id} className="border-b border-stone-300 align-top">
+                  {u.row.map((c, i) => (
                     <td
                       key={i}
                       className={`py-1.5 pr-4 ${i === 0 ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : ""}`}
                     >
-                      {c}
+                      {i === 0 && RACK_DSP_IDS.has(u.id) ? `${c} (current)` : c}
                     </td>
                   ))}
                 </tr>

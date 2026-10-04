@@ -16,6 +16,7 @@ import type { FillsPlanner } from "./useFillsPlanner";
 import { xmaxBandCurves, xmaxRows } from "../../lib/xmax";
 import { LIMIT_NAMES } from "../../constants/limits";
 import { FONT } from "../../styles/fonts";
+import { GXD4 } from "../../data/catalog/amps";
 import { UI_TEXT } from "../../constants/uiText";
 
 interface Props {
@@ -286,7 +287,7 @@ export function FillsPage({ fills }: Props) {
             onChange={setAmpWatts}
           />
           <div className="text-xs text-stone-500">
-            A freed GXD4 channel with two 8 Ω fills in parallel gives about 300 W each.
+            {`A freed ${GXD4.model} channel with two 8 Ω fills in parallel gives about ${GXD4.w4 / 2} W each.`}
           </div>
         </Card>
       </aside>

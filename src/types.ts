@@ -5,6 +5,8 @@ import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { MAKER_NAMES } from "./data/catalog/makers";
+import type { AMP_SERIES } from "./data/catalog/amps";
+import type { DSP_UNITS } from "./data/catalog/dsp-units";
 
 // Shapes of the parts catalogue tables in data/catalog/ (lib/data.ts derives the app's view of them).
 //
@@ -255,15 +257,48 @@ export interface Format {
   note: string;
 }
 
-/** One line of a rack's parts list: description and price in dollars. */
-export type RackItem = [text: string, price: number];
+/** An amp's id: one of the models in the amps catalogue (`AMP_SERIES`), so a rack can't name an amp that isn't there. */
+export type AmpId = (typeof AMP_SERIES)[number]["models"][number]["id"];
+
+/** A DSP unit's id: one of the rows in the DSP catalogue (`DSP_UNITS`). */
+export type DspUnitId = (typeof DSP_UNITS)[number]["id"];
+
+/** A rack line that is no catalogue part: description and price in dollars. */
+export type RackTextItem = readonly [text: string, price: number];
+
+/**
+ * A rack line that is a used amp from the amps catalogue: its name and price come from the amp entry. `use` says what
+ * it drives, `rating` adds its 8 Ω power, `note` follows.
+ */
+export interface RackAmpItem {
+  amp: AmpId;
+  use: string;
+  rating?: true;
+  note?: string;
+}
+
+/**
+ * A rack line that is a used DSP unit from the DSP catalogue: its name comes from the unit's row, the price is the
+ * rack's own (the catalogue quotes prices as display text).
+ */
+export interface RackDspItem {
+  dsp: DspUnitId;
+  price: number;
+  note: string;
+}
+
+/** One line of a rack's parts list. */
+export type RackItem = RackTextItem | RackAmpItem | RackDspItem;
 
 export interface Rack {
   id: string;
   name: string;
   note: string;
-  items: RackItem[];
+  items: readonly RackItem[];
 }
+
+/** A rack as the Notes page lists it: every line resolved to its words and price. */
+export type RackView = Omit<Rack, "items"> & { items: { label: string; price: number }[] };
 
 /** A crossover / DSP unit as the Notes page's comparison table shows it: one display-text cell per column. */
 export type DspUnitRow = readonly [
@@ -275,6 +310,12 @@ export type DspUnitRow = readonly [
   priceUs: string,
   notes: string,
 ];
+
+/** A DSP unit in the catalogue: its id (racks name it by this) and its comparison-table row. */
+export interface DspUnit {
+  id: string;
+  row: DspUnitRow;
+}
 
 /** One amplifier model of a series: per-channel power, continuous with both channels driven. */
 export interface AmpModel {
@@ -288,6 +329,8 @@ export interface AmpModel {
   gainDb: number;
   /** the speaker-power range its limiter can be set to, watts */
   limiterW: readonly [min: number, max: number];
+  /** a used one's price, US dollars, as the racks buy it */
+  usedPrice: number;
 }
 
 /** An amplifier series and the DSP its models share, as the Notes page and the signal-path drawing describe it. */
