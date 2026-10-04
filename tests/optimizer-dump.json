@@ -72965,15 +72965,15 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 16.5,
+       "w": 9.5,
+       "h": 14.5,
        "d": 14.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "dia": 3,
+       "len": 9,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
@@ -72981,11 +72981,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
+      "gross": 25.386,
+      "f3": 51.292,
       "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
+      "level": 94.397,
+      "lb": 17.034
      },
      "changed": [
       "woofer",
@@ -72994,6 +72994,40 @@
       "port",
       "plywood",
       "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Smallest change",
+     "why": "Changes one thing from your design.",
+     "config": {
+      "woofer": "sb17nrx",
+      "tweeter": "rst28f",
+      "box": "vented",
+      "dim": {
+       "w": 9,
+       "h": 15,
+       "d": 11
+      },
+      "port": {
+       "n": 1,
+       "dia": 2,
+       "len": 6
+      },
+      "wall": 0.75,
+      "xo": 2000,
+      "wAmpW": 20,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 15.762,
+      "f3": 51.292,
+      "price": 233.36,
+      "level": 90.139,
+      "lb": 18.986
+     },
+     "changed": [
+      "tweeter",
       "amp power"
      ]
     },
@@ -73001,77 +73035,37 @@
      "label": "Lighter",
      "why": "Lighter than your design.",
      "config": {
-      "woofer": "ss15w8434",
+      "woofer": "ciare_hwg130",
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 13.25,
+       "w": 6.5,
+       "h": 11,
        "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "dia": 2.5,
+       "len": 16.25,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "gross": 10.815,
+      "f3": 52.595,
+      "price": 356.04,
+      "level": 90.768,
+      "lb": 11.664
      },
      "changed": [
       "woofer",
       "box size",
       "port",
       "plywood",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Lower",
-     "why": "Goes lower than your design.",
-     "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 14.5
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 7.25
-      },
-      "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 5
-     },
-     "metrics": {
-      "gross": 89.043,
-      "f3": 28.572,
-      "price": 259.92,
-      "level": 92.383,
-      "lb": 34.528
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box size",
-      "port",
-      "plywood",
-      "crossover",
       "amp power"
      ]
     }
@@ -73088,31 +73082,31 @@
      "label": "Same level, lighter",
      "why": "Lightest box that keeps the bass and the level.",
      "config": {
-      "woofer": "ss15w8434",
+      "woofer": "ciare_hwg130",
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 13.25,
+       "w": 6.5,
+       "h": 11,
        "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "dia": 2.5,
+       "len": 16.25,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "gross": 10.815,
+      "f3": 52.595,
+      "price": 356.04,
+      "level": 90.768,
+      "lb": 11.664
      },
      "changed": [
       "woofer",
@@ -73130,15 +73124,15 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 16.5,
+       "w": 9.5,
+       "h": 14.5,
        "d": 14.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "dia": 3,
+       "len": 9,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
@@ -73146,11 +73140,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
+      "gross": 25.386,
+      "f3": 51.292,
       "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
+      "level": 94.397,
+      "lb": 17.034
      },
      "changed": [
       "woofer",
@@ -73177,8 +73171,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -73187,9 +73181,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -73226,8 +73220,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -73236,9 +73230,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -73275,7 +73269,7 @@
      },
      "metrics": {
       "gross": 18.353,
-      "f3": 48.73,
+      "f3": 48.782,
       "price": 234.4,
       "level": 89.45,
       "lb": 13.527
@@ -73293,15 +73287,15 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 16.5,
+       "w": 9.5,
+       "h": 14.5,
        "d": 14.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "dia": 3,
+       "len": 9,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
@@ -73309,11 +73303,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
+      "gross": 25.386,
+      "f3": 51.292,
       "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
+      "level": 94.397,
+      "lb": 17.034
      },
      "changed": [
       "woofer",
@@ -73338,31 +73332,31 @@
      "label": "Louder",
      "why": "Most clean level at the seat.",
      "config": {
-      "woofer": "faital_8fe300",
+      "woofer": "f8pr200",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 12.5,
+       "h": 25,
+       "d": 11.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
+       "len": 6.25
       },
       "wall": 0.75,
-      "xo": 2200,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "xo": 1500,
+      "wAmpW": 90,
+      "tAmpW": 20
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 54.976,
-      "price": 299.86,
-      "level": 98.51,
-      "lb": 44.02
+      "gross": 42.36,
+      "f3": 53.932,
+      "price": 539.86,
+      "level": 101.127,
+      "lb": 31.159
      },
      "changed": [
       "woofer",
@@ -73381,15 +73375,15 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 16.5,
+       "w": 9.5,
+       "h": 14.5,
        "d": 14.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "dia": 3,
+       "len": 9,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
@@ -73397,11 +73391,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
+      "gross": 25.386,
+      "f3": 51.292,
       "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
+      "level": 94.397,
+      "lb": 17.034
      },
      "changed": [
       "woofer",
@@ -73417,31 +73411,31 @@
      "label": "Lighter",
      "why": "Lighter than your design.",
      "config": {
-      "woofer": "ss15w8434",
+      "woofer": "ciare_hwg130",
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 13.25,
+       "w": 6.5,
+       "h": 11,
        "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "dia": 2.5,
+       "len": 16.25,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "gross": 10.815,
+      "f3": 52.595,
+      "price": 356.04,
+      "level": 90.768,
+      "lb": 11.664
      },
      "changed": [
       "woofer",
@@ -73462,6 +73456,44 @@
    ],
    "cards": [
     {
+     "label": "Cheaper + lighter",
+     "why": "Cheapest pair of drivers that keeps the bass and the level.",
+     "config": {
+      "woofer": "hds875",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 11,
+       "h": 12.5,
+       "d": 14.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 3,
+       "len": 9,
+       "elbows": 0
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 40,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 25.441,
+      "f3": 52.595,
+      "price": 180,
+      "level": 94.539,
+      "lb": 15.288
+     },
+     "changed": [
+      "woofer",
+      "box size",
+      "port",
+      "plywood",
+      "amp power"
+     ]
+    },
+    {
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
@@ -73469,15 +73501,15 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 16.5,
+       "w": 9.5,
+       "h": 14.5,
        "d": 14.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "dia": 3,
+       "len": 9,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
@@ -73485,11 +73517,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
+      "gross": 25.386,
+      "f3": 51.292,
       "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
+      "level": 94.397,
+      "lb": 17.034
      },
      "changed": [
       "woofer",
@@ -73505,82 +73537,42 @@
      "label": "Lighter",
      "why": "Lighter than your design.",
      "config": {
-      "woofer": "ss15w8434",
+      "woofer": "ciare_hwg130",
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 13.25,
+       "w": 6.5,
+       "h": 11,
        "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "dia": 2.5,
+       "len": 16.25,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "gross": 10.815,
+      "f3": 52.595,
+      "price": 356.04,
+      "level": 90.768,
+      "lb": 11.664
      },
      "changed": [
       "woofer",
       "box size",
       "port",
       "plywood",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Lower",
-     "why": "Goes lower than your design.",
-     "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 14.5
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 7.25
-      },
-      "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 5
-     },
-     "metrics": {
-      "gross": 89.043,
-      "f3": 28.572,
-      "price": 259.92,
-      "level": 92.383,
-      "lb": 34.528
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box size",
-      "port",
-      "plywood",
-      "crossover",
       "amp power"
      ]
     }
    ],
-   "goalMissing": "Nothing cheaper and lighter than your design passes the checks."
+   "goalMissing": null
   },
   {
    "config": "DEFAULT_HIFI",
@@ -73598,14 +73590,14 @@
       "box": "vented",
       "dim": {
        "w": 11,
-       "h": 16.5,
+       "h": 14.5,
        "d": 14.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "dia": 3,
+       "len": 7,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
@@ -73613,11 +73605,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
+      "gross": 29.865,
+      "f3": 47.573,
       "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
+      "level": 94.091,
+      "lb": 18.001
      },
      "changed": [
       "woofer",
@@ -73644,8 +73636,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -73654,9 +73646,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -73673,31 +73665,31 @@
      "label": "Lighter",
      "why": "Lighter than your design.",
      "config": {
-      "woofer": "ss15w8434",
+      "woofer": "ciare_hwg130",
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 13.25,
+       "w": 6.5,
+       "h": 11,
        "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "dia": 2.5,
+       "len": 16.25,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "gross": 10.815,
+      "f3": 52.595,
+      "price": 356.04,
+      "level": 90.768,
+      "lb": 11.664
      },
      "changed": [
       "woofer",
@@ -73725,15 +73717,15 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 16.5,
+       "w": 9.5,
+       "h": 14.5,
        "d": 14.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "dia": 3,
+       "len": 9,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
@@ -73741,11 +73733,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
+      "gross": 25.386,
+      "f3": 51.292,
       "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
+      "level": 94.397,
+      "lb": 17.034
      },
      "changed": [
       "woofer",
@@ -73761,31 +73753,31 @@
      "label": "Louder",
      "why": "Louder than your design.",
      "config": {
-      "woofer": "faital_8fe300",
+      "woofer": "f8pr200",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 12.5,
+       "h": 25,
+       "d": 11.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
+       "len": 6.25
       },
       "wall": 0.75,
-      "xo": 2200,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "xo": 1500,
+      "wAmpW": 90,
+      "tAmpW": 20
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 54.976,
-      "price": 299.86,
-      "level": 98.51,
-      "lb": 44.02
+      "gross": 42.36,
+      "f3": 53.932,
+      "price": 539.86,
+      "level": 101.127,
+      "lb": 31.159
      },
      "changed": [
       "woofer",
@@ -73800,31 +73792,31 @@
      "label": "Lighter",
      "why": "Lighter than your design.",
      "config": {
-      "woofer": "ss15w8434",
+      "woofer": "ciare_hwg130",
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 13.25,
+       "w": 6.5,
+       "h": 11,
        "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "dia": 2.5,
+       "len": 16.25,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "gross": 10.815,
+      "f3": 52.595,
+      "price": 356.04,
+      "level": 90.768,
+      "lb": 11.664
      },
      "changed": [
       "woofer",
@@ -73845,34 +73837,72 @@
    ],
    "cards": [
     {
-     "label": "Lighter",
-     "why": "Lighter than your design.",
+     "label": "Lighter + cheaper",
+     "why": "Lightest box that keeps the bass and the level.",
      "config": {
-      "woofer": "ss15w8434",
+      "woofer": "beyma_5mp60n",
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 13.25,
-       "d": 13
+       "w": 6.5,
+       "h": 22,
+       "d": 10
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
+       "h": 1.5,
        "len": 7.25
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "gross": 17.034,
+      "f3": 52.595,
+      "price": 220.9,
+      "level": 90.067,
+      "lb": 13.331
+     },
+     "changed": [
+      "woofer",
+      "box size",
+      "port",
+      "plywood",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Lighter",
+     "why": "Lighter than your design.",
+     "config": {
+      "woofer": "ciare_hwg130",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 6.5,
+       "h": 11,
+       "d": 13
+      },
+      "port": {
+       "n": 1,
+       "dia": 2.5,
+       "len": 16.25,
+       "elbows": 2
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 10.815,
+      "f3": 52.595,
+      "price": 356.04,
+      "level": 90.768,
+      "lb": 11.664
      },
      "changed": [
       "woofer",
@@ -73890,15 +73920,15 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 16.5,
+       "w": 9.5,
+       "h": 14.5,
        "d": 14.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "dia": 3,
+       "len": 9,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
@@ -73906,51 +73936,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
+      "gross": 25.386,
+      "f3": 51.292,
       "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box size",
-      "port",
-      "plywood",
-      "crossover",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Lower",
-     "why": "Goes lower than your design.",
-     "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 14.5
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 7.25
-      },
-      "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 5
-     },
-     "metrics": {
-      "gross": 89.043,
-      "f3": 28.572,
-      "price": 259.92,
-      "level": 92.383,
-      "lb": 34.528
+      "level": 94.397,
+      "lb": 17.034
      },
      "changed": [
       "woofer",
@@ -73963,7 +73953,7 @@
      ]
     }
    ],
-   "goalMissing": "Nothing lighter and cheaper than your design passes the checks."
+   "goalMissing": null
   },
   {
    "config": "DEFAULT_HIFI",
@@ -73981,14 +73971,14 @@
       "box": "vented",
       "dim": {
        "w": 8,
-       "h": 13,
+       "h": 11,
        "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 10.25
+       "dia": 2.5,
+       "len": 11.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
@@ -73996,49 +73986,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 16.518,
-      "f3": 46.347,
+      "gross": 13.765,
+      "f3": 48.782,
       "price": 356.04,
-      "level": 89.977,
-      "lb": 13.398
-     },
-     "changed": [
-      "woofer",
-      "box size",
-      "port",
-      "plywood",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Lighter",
-     "why": "Lighter than your design.",
-     "config": {
-      "woofer": "ss15w8434",
-      "tweeter": "sb26stcn",
-      "box": "vented",
-      "dim": {
-       "w": 6.75,
-       "h": 13.25,
-       "d": 13
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 7.25
-      },
-      "wall": 0.5,
-      "xo": 2000,
-      "wAmpW": 20,
-      "tAmpW": 5
-     },
-     "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "level": 90.205,
+      "lb": 12.464
      },
      "changed": [
       "woofer",
@@ -74063,8 +74015,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -74073,10 +74025,50 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
+     },
+     "changed": [
+      "woofer",
+      "tweeter",
+      "box size",
+      "port",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Cheaper",
+     "why": "Costs less than your design.",
+     "config": {
+      "woofer": "hds875",
+      "tweeter": "rst28f",
+      "box": "vented",
+      "dim": {
+       "w": 9.5,
+       "h": 14.5,
+       "d": 14.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 3,
+       "len": 9,
+       "elbows": 0
+      },
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 40,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 25.386,
+      "f3": 51.292,
+      "price": 178.96,
+      "level": 94.397,
+      "lb": 17.034
      },
      "changed": [
       "woofer",
@@ -74099,34 +74091,71 @@
    ],
    "cards": [
     {
-     "label": "Lighter",
-     "why": "Lighter than your design.",
+     "label": "Lighter + louder",
+     "why": "Lightest box that keeps the bass and the level.",
      "config": {
-      "woofer": "ss15w8434",
+      "woofer": "sb17nrx",
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 13.25,
+       "w": 8,
+       "h": 12.5,
        "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "dia": 2.5,
+       "len": 12.25,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "gross": 15.83,
+      "f3": 51.292,
+      "price": 234.4,
+      "level": 92.395,
+      "lb": 12.804
+     },
+     "changed": [
+      "box size",
+      "port",
+      "plywood",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Lighter",
+     "why": "Lighter than your design.",
+     "config": {
+      "woofer": "ciare_hwg130",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 6.5,
+       "h": 11,
+       "d": 13
+      },
+      "port": {
+       "n": 1,
+       "dia": 2.5,
+       "len": 16.25,
+       "elbows": 2
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 10.815,
+      "f3": 52.595,
+      "price": 356.04,
+      "level": 90.768,
+      "lb": 11.664
      },
      "changed": [
       "woofer",
@@ -74140,83 +74169,43 @@
      "label": "Louder",
      "why": "Louder than your design.",
      "config": {
-      "woofer": "faital_8fe300",
+      "woofer": "f8pr200",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 12.5,
+       "h": 25,
+       "d": 11.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
+       "len": 6.25
       },
       "wall": 0.75,
-      "xo": 2200,
-      "wAmpW": 40,
-      "tAmpW": 10
-     },
-     "metrics": {
-      "gross": 69.821,
-      "f3": 54.976,
-      "price": 299.86,
-      "level": 98.51,
-      "lb": 44.02
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box size",
-      "port",
-      "crossover",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
-     "config": {
-      "woofer": "hds875",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 11,
-       "h": 16.5,
-       "d": 14.5
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 6.75
-      },
-      "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 5
+      "wAmpW": 90,
+      "tAmpW": 20
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
-      "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
+      "gross": 42.36,
+      "f3": 53.932,
+      "price": 539.86,
+      "level": 101.127,
+      "lb": 31.159
      },
      "changed": [
       "woofer",
       "tweeter",
       "box size",
       "port",
-      "plywood",
       "crossover",
       "amp power"
      ]
     }
    ],
-   "goalMissing": "Nothing lighter and louder than your design passes the checks."
+   "goalMissing": null
   },
   {
    "config": "DEFAULT_HIFI",
@@ -74229,34 +74218,33 @@
      "label": "Lower + cheaper",
      "why": "Lowest in-room F3 that keeps the level.",
      "config": {
-      "woofer": "faital_6fe100",
+      "woofer": "sb17nrx",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 34.5,
-       "d": 14.5
+       "w": 8,
+       "h": 28.5,
+       "d": 11.5
       },
       "port": {
+       "shape": "slot",
        "n": 1,
-       "dia": 3,
-       "len": 1,
-       "elbows": 0
+       "h": 0.75,
+       "len": 7.5
       },
       "wall": 0.5,
-      "xo": 2500,
-      "wAmpW": 10,
+      "xo": 1500,
+      "wAmpW": 20,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 74.11,
-      "f3": 43.561,
-      "price": 191.86,
-      "level": 90.785,
-      "lb": 28.494
+      "gross": 33.122,
+      "f3": 37.956,
+      "price": 233.36,
+      "level": 89.682,
+      "lb": 20.634
      },
      "changed": [
-      "woofer",
       "tweeter",
       "box size",
       "port",
@@ -74280,8 +74268,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -74290,9 +74278,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -74313,15 +74301,15 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 16.5,
+       "w": 9.5,
+       "h": 14.5,
        "d": 14.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "dia": 3,
+       "len": 9,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
@@ -74329,11 +74317,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
+      "gross": 25.386,
+      "f3": 51.292,
       "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
+      "level": 94.397,
+      "lb": 17.034
      },
      "changed": [
       "woofer",
@@ -74359,39 +74347,36 @@
      "label": "Lower + lighter",
      "why": "Lowest in-room F3 that keeps the level.",
      "config": {
-      "woofer": "ciare_hwg130",
-      "tweeter": "rst28f",
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
        "w": 8,
-       "h": 13,
-       "d": 14.5
+       "h": 19.5,
+       "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.75
+       "dia": 3,
+       "len": 15.75,
+       "elbows": 2
       },
       "wall": 0.5,
-      "xo": 2500,
+      "xo": 2000,
       "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 18.583,
-      "f3": 45.886,
-      "price": 355,
-      "level": 89.689,
-      "lb": 15.678
+      "gross": 25.465,
+      "f3": 43.03,
+      "price": 234.4,
+      "level": 90.53,
+      "lb": 16.071
      },
      "changed": [
-      "woofer",
-      "tweeter",
       "box size",
       "port",
       "plywood",
-      "crossover",
       "amp power"
      ]
     },
@@ -74410,8 +74395,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -74420,9 +74405,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -74439,31 +74424,31 @@
      "label": "Lighter",
      "why": "Lighter than your design.",
      "config": {
-      "woofer": "ss15w8434",
+      "woofer": "ciare_hwg130",
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 13.25,
+       "w": 6.5,
+       "h": 11,
        "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "dia": 2.5,
+       "len": 16.25,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "gross": 10.815,
+      "f3": 52.595,
+      "price": 356.04,
+      "level": 90.768,
+      "lb": 11.664
      },
      "changed": [
       "woofer",
@@ -74498,8 +74483,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -74508,9 +74493,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -74527,31 +74512,31 @@
      "label": "Louder",
      "why": "Louder than your design.",
      "config": {
-      "woofer": "faital_8fe300",
+      "woofer": "f8pr200",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 12.5,
+       "h": 25,
+       "d": 11.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
+       "len": 6.25
       },
       "wall": 0.75,
-      "xo": 2200,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "xo": 1500,
+      "wAmpW": 90,
+      "tAmpW": 20
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 54.976,
-      "price": 299.86,
-      "level": 98.51,
-      "lb": 44.02
+      "gross": 42.36,
+      "f3": 53.932,
+      "price": 539.86,
+      "level": 101.127,
+      "lb": 31.159
      },
      "changed": [
       "woofer",
@@ -74570,15 +74555,15 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 16.5,
+       "w": 9.5,
+       "h": 14.5,
        "d": 14.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "dia": 3,
+       "len": 9,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
@@ -74586,11 +74571,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
+      "gross": 25.386,
+      "f3": 51.292,
       "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
+      "level": 94.397,
+      "lb": 17.034
      },
      "changed": [
       "woofer",
@@ -74620,27 +74605,27 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 16.5,
-       "d": 14.5
+       "w": 8,
+       "h": 19.5,
+       "d": 13
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "h": 1.5,
+       "len": 8.75
       },
       "wall": 0.5,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 5
+      "xo": 1500,
+      "wAmpW": 60,
+      "tAmpW": 10
      },
      "metrics": {
-      "gross": 34.29,
-      "f3": 46.164,
+      "gross": 25.465,
+      "f3": 52.595,
       "price": 178.96,
-      "level": 93.907,
-      "lb": 19.134
+      "level": 96.447,
+      "lb": 17.651
      },
      "changed": [
       "woofer",
@@ -74656,31 +74641,31 @@
      "label": "Louder",
      "why": "Louder than your design.",
      "config": {
-      "woofer": "faital_8fe300",
+      "woofer": "f8pr200",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 12.5,
+       "h": 25,
+       "d": 11.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
+       "len": 6.25
       },
       "wall": 0.75,
-      "xo": 2200,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "xo": 1500,
+      "wAmpW": 90,
+      "tAmpW": 20
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 54.976,
-      "price": 299.86,
-      "level": 98.51,
-      "lb": 44.02
+      "gross": 42.36,
+      "f3": 53.932,
+      "price": 539.86,
+      "level": 101.127,
+      "lb": 31.159
      },
      "changed": [
       "woofer",
@@ -74695,31 +74680,31 @@
      "label": "Lighter",
      "why": "Lighter than your design.",
      "config": {
-      "woofer": "ss15w8434",
+      "woofer": "ciare_hwg130",
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 13.25,
+       "w": 6.5,
+       "h": 11,
        "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "dia": 2.5,
+       "len": 16.25,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "gross": 10.815,
+      "f3": 52.595,
+      "price": 356.04,
+      "level": 90.768,
+      "lb": 11.664
      },
      "changed": [
       "woofer",
@@ -74740,34 +74725,72 @@
    ],
    "cards": [
     {
-     "label": "Louder",
-     "why": "Louder than your design.",
+     "label": "Louder + lighter",
+     "why": "Most clean level at the seat.",
      "config": {
-      "woofer": "faital_8fe300",
-      "tweeter": "rst28f",
+      "woofer": "hds875",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 8,
+       "h": 19.5,
+       "d": 13
       },
       "port": {
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
+       "len": 8.75
       },
-      "wall": 0.75,
-      "xo": 2200,
-      "wAmpW": 40,
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 60,
       "tAmpW": 10
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 54.976,
-      "price": 299.86,
-      "level": 98.51,
-      "lb": 44.02
+      "gross": 25.465,
+      "f3": 52.595,
+      "price": 180,
+      "level": 96.447,
+      "lb": 16.071
+     },
+     "changed": [
+      "woofer",
+      "box size",
+      "port",
+      "plywood",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Louder",
+     "why": "Louder than your design.",
+     "config": {
+      "woofer": "f8pr200",
+      "tweeter": "rst28f",
+      "box": "vented",
+      "dim": {
+       "w": 12.5,
+       "h": 25,
+       "d": 11.5
+      },
+      "port": {
+       "shape": "slot",
+       "n": 1,
+       "h": 1.5,
+       "len": 6.25
+      },
+      "wall": 0.75,
+      "xo": 1500,
+      "wAmpW": 90,
+      "tAmpW": 20
+     },
+     "metrics": {
+      "gross": 42.36,
+      "f3": 53.932,
+      "price": 539.86,
+      "level": 101.127,
+      "lb": 31.159
      },
      "changed": [
       "woofer",
@@ -74782,82 +74805,42 @@
      "label": "Lighter",
      "why": "Lighter than your design.",
      "config": {
-      "woofer": "ss15w8434",
+      "woofer": "ciare_hwg130",
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 13.25,
+       "w": 6.5,
+       "h": 11,
        "d": 13
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "dia": 2.5,
+       "len": 16.25,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 13.851,
-      "f3": 53.869,
-      "price": 250.6,
-      "level": 90.029,
-      "lb": 11.635
+      "gross": 10.815,
+      "f3": 52.595,
+      "price": 356.04,
+      "level": 90.768,
+      "lb": 11.664
      },
      "changed": [
       "woofer",
       "box size",
       "port",
       "plywood",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
-     "config": {
-      "woofer": "hds875",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 11,
-       "h": 16.5,
-       "d": 14.5
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 6.75
-      },
-      "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 5
-     },
-     "metrics": {
-      "gross": 34.29,
-      "f3": 46.049,
-      "price": 178.96,
-      "level": 93.882,
-      "lb": 19.134
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box size",
-      "port",
-      "plywood",
-      "crossover",
       "amp power"
      ]
     }
    ],
-   "goalMissing": "Nothing louder and lighter than your design passes the checks."
+   "goalMissing": null
   },
   {
    "config": "DEFAULT_HIFI",
@@ -74875,33 +74858,32 @@
       "box": "vented",
       "dim": {
        "w": 12.5,
-       "h": 25,
+       "h": 30,
        "d": 10
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 6
+       "h": 1.5,
+       "len": 6.25
       },
-      "wall": 0.5,
-      "xo": 3000,
-      "wAmpW": 40,
+      "wall": 0.75,
+      "xo": 1500,
+      "wAmpW": 50,
       "tAmpW": 10
      },
      "metrics": {
-      "gross": 40.705,
-      "f3": 46.164,
+      "gross": 43.667,
+      "f3": 48.782,
       "price": 349.86,
-      "level": 95.651,
-      "lb": 25.348
+      "level": 96.992,
+      "lb": 35.626
      },
      "changed": [
       "woofer",
       "tweeter",
       "box size",
       "port",
-      "plywood",
       "crossover",
       "amp power"
      ]
@@ -74910,31 +74892,31 @@
      "label": "Louder",
      "why": "Louder than your design.",
      "config": {
-      "woofer": "faital_8fe300",
+      "woofer": "f8pr200",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 12.5,
+       "h": 25,
+       "d": 11.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
+       "len": 6.25
       },
       "wall": 0.75,
-      "xo": 2200,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "xo": 1500,
+      "wAmpW": 90,
+      "tAmpW": 20
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 54.976,
-      "price": 299.86,
-      "level": 98.51,
-      "lb": 44.02
+      "gross": 42.36,
+      "f3": 53.932,
+      "price": 539.86,
+      "level": 101.127,
+      "lb": 31.159
      },
      "changed": [
       "woofer",
@@ -74960,8 +74942,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -74970,9 +74952,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -74998,31 +74980,31 @@
      "label": "Same level, cheaper",
      "why": "Cheapest pair of drivers that keeps the bass and the level.",
      "config": {
-      "woofer": "rs225",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
+       "w": 8,
+       "h": 19.5,
+       "d": 11.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "dia": 3,
+       "len": 6.5,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 5
+      "wAmpW": 50,
+      "tAmpW": 10
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "gross": 22.282,
+      "f3": 53.932,
+      "price": 178.96,
+      "level": 95.622,
+      "lb": 16.734
      },
      "changed": [
       "woofer",
@@ -75035,40 +75017,78 @@
      ]
     },
     {
-     "label": "Louder",
-     "why": "Louder than your design.",
+     "label": "Smallest change",
+     "why": "Changes one thing from your design.",
      "config": {
-      "woofer": "faital_8fe300",
+      "woofer": "sb17nrx",
       "tweeter": "rst28f",
-      "box": "vented",
+      "box": "radiator",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 9,
+       "h": 16,
+       "d": 11
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 1.5,
-       "len": 1
+       "dia": 2,
+       "len": 6
+      },
+      "pr": {
+       "id": "sb16pfcr",
+       "n": 2,
+       "addG": 0
       },
       "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "xo": 2200,
+      "wAmpW": 30,
+      "tAmpW": 5
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
+      "gross": 16.93,
+      "f3": 52.595,
+      "price": 348.56,
+      "level": 91.888,
+      "lb": 20.365
      },
      "changed": [
-      "woofer",
       "tweeter",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Lighter",
+     "why": "Lighter than your design.",
+     "config": {
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
+     },
+     "changed": [
       "box type",
       "box size",
+      "plywood",
       "crossover",
       "amp power"
      ]
@@ -75083,34 +75103,72 @@
    ],
    "cards": [
     {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
+     "label": "Same level, lighter",
+     "why": "Lightest box that keeps the bass and the level.",
      "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
       },
       "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
+      "xo": 2000,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
+     },
+     "changed": [
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Cheaper",
+     "why": "Costs less than your design.",
+     "config": {
+      "woofer": "hds875",
+      "tweeter": "rst28f",
+      "box": "vented",
+      "dim": {
+       "w": 8,
+       "h": 19.5,
+       "d": 11.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 3,
+       "len": 6.5,
+       "elbows": 0
+      },
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 50,
+      "tAmpW": 10
+     },
+     "metrics": {
+      "gross": 22.282,
+      "f3": 53.932,
+      "price": 178.96,
+      "level": 95.622,
+      "lb": 16.734
      },
      "changed": [
       "woofer",
@@ -75127,30 +75185,30 @@
      "why": "Goes lower than your design.",
      "config": {
       "woofer": "rs225",
-      "tweeter": "da25tx",
+      "tweeter": "rst28f",
       "box": "vented",
       "dim": {
        "w": 12.5,
        "h": 36,
-       "d": 13
+       "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
       "wAmpW": 40,
-      "tAmpW": 10
+      "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 292.46,
-      "level": 92.433,
-      "lb": 33.421
+      "gross": 89.043,
+      "f3": 28.802,
+      "price": 259.92,
+      "level": 92.214,
+      "lb": 34.528
      },
      "changed": [
       "woofer",
@@ -75161,48 +75219,9 @@
       "crossover",
       "amp power"
      ]
-    },
-    {
-     "label": "Louder",
-     "why": "Louder than your design.",
-     "config": {
-      "woofer": "faital_8fe300",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 1.5,
-       "len": 1
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
-     },
-     "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "crossover",
-      "amp power"
-     ]
     }
    ],
-   "goalMissing": "Nothing lighter than your design passes the checks."
+   "goalMissing": null
   },
   {
    "config": "radiator",
@@ -75220,13 +75239,13 @@
       "dim": {
        "w": 12.5,
        "h": 36,
-       "d": 13
+       "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -75234,11 +75253,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
+      "gross": 89.043,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "level": 92.214,
+      "lb": 34.528
      },
      "changed": [
       "woofer",
@@ -75279,9 +75298,9 @@
      },
      "metrics": {
       "gross": 19.664,
-      "f3": 50.932,
+      "f3": 50.021,
       "price": 349.6,
-      "level": 90.841,
+      "level": 90.844,
       "lb": 14.711
      },
      "changed": [
@@ -75290,40 +75309,41 @@
      ]
     },
     {
-     "label": "Louder",
-     "why": "Louder than your design.",
+     "label": "Cheaper",
+     "why": "Costs less than your design.",
      "config": {
-      "woofer": "faital_8fe300",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 8,
+       "h": 19.5,
+       "d": 11.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 1.5,
-       "len": 1
+       "dia": 3,
+       "len": 6.5,
+       "elbows": 0
       },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 50,
       "tAmpW": 10
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
+      "gross": 22.282,
+      "f3": 53.932,
+      "price": 178.96,
+      "level": 95.622,
+      "lb": 16.734
      },
      "changed": [
       "woofer",
       "tweeter",
       "box type",
       "box size",
+      "plywood",
       "crossover",
       "amp power"
      ]
@@ -75341,37 +75361,37 @@
      "label": "Louder",
      "why": "Most clean level at the seat.",
      "config": {
-      "woofer": "faital_8fe300",
-      "tweeter": "rst28f",
+      "woofer": "f8pr200",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
+       "w": 12.5,
+       "h": 16,
        "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
+       "len": 8.75
       },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 100,
+      "tAmpW": 30
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
+      "gross": 38.161,
+      "f3": 55.302,
+      "price": 540.9,
+      "level": 101.71,
+      "lb": 19.448
      },
      "changed": [
       "woofer",
-      "tweeter",
       "box type",
       "box size",
+      "plywood",
       "crossover",
       "amp power"
      ]
@@ -75380,31 +75400,31 @@
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
-      "woofer": "rs225",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
+       "w": 8,
+       "h": 19.5,
+       "d": 11.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "dia": 3,
+       "len": 6.5,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 5
+      "wAmpW": 50,
+      "tAmpW": 10
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "gross": 22.282,
+      "f3": 53.932,
+      "price": 178.96,
+      "level": 95.622,
+      "lb": 16.734
      },
      "changed": [
       "woofer",
@@ -75417,38 +75437,36 @@
      ]
     },
     {
-     "label": "Lower",
-     "why": "Goes lower than your design.",
+     "label": "Lighter",
+     "why": "Lighter than your design.",
      "config": {
-      "woofer": "rs225",
-      "tweeter": "da25tx",
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
       },
       "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 292.46,
-      "level": 92.433,
-      "lb": 33.421
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
      },
      "changed": [
-      "woofer",
-      "tweeter",
       "box type",
       "box size",
       "plywood",
@@ -75467,8 +75485,86 @@
    ],
    "cards": [
     {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
+     "label": "Cheaper + lighter",
+     "why": "Cheapest pair of drivers that keeps the bass and the level.",
+     "config": {
+      "woofer": "hds875",
+      "tweeter": "rst28f",
+      "box": "vented",
+      "dim": {
+       "w": 8,
+       "h": 19.5,
+       "d": 11.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 3,
+       "len": 6.5,
+       "elbows": 0
+      },
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 50,
+      "tAmpW": 10
+     },
+     "metrics": {
+      "gross": 22.282,
+      "f3": 53.932,
+      "price": 178.96,
+      "level": 95.622,
+      "lb": 16.734
+     },
+     "changed": [
+      "woofer",
+      "tweeter",
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Lighter",
+     "why": "Lighter than your design.",
+     "config": {
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
+     },
+     "changed": [
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Lower",
+     "why": "Goes lower than your design.",
      "config": {
       "woofer": "rs225",
       "tweeter": "rst28f",
@@ -75476,13 +75572,13 @@
       "dim": {
        "w": 12.5,
        "h": 36,
-       "d": 13
+       "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -75490,11 +75586,61 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
+      "gross": 89.043,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "level": 92.214,
+      "lb": 34.528
+     },
+     "changed": [
+      "woofer",
+      "tweeter",
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    }
+   ],
+   "goalMissing": null
+  },
+  {
+   "config": "radiator",
+   "goals": [
+    "cheaper",
+    "lower"
+   ],
+   "cards": [
+    {
+     "label": "Cheaper + lower",
+     "why": "Cheapest pair of drivers that keeps the bass and the level.",
+     "config": {
+      "woofer": "hds875",
+      "tweeter": "rst28f",
+      "box": "vented",
+      "dim": {
+       "w": 8,
+       "h": 19.5,
+       "d": 13
+      },
+      "port": {
+       "n": 1,
+       "dia": 3,
+       "len": 8.75,
+       "elbows": 0
+      },
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 40,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 25.465,
+      "f3": 50.021,
+      "price": 178.96,
+      "level": 94.726,
+      "lb": 17.651
      },
      "changed": [
       "woofer",
@@ -75511,107 +75657,18 @@
      "why": "Goes lower than your design.",
      "config": {
       "woofer": "rs225",
-      "tweeter": "da25tx",
-      "box": "vented",
-      "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 8.5
-      },
-      "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 10
-     },
-     "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 292.46,
-      "level": 92.433,
-      "lb": 33.421
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "plywood",
-      "crossover",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Louder",
-     "why": "Louder than your design.",
-     "config": {
-      "woofer": "faital_8fe300",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
+       "w": 12.5,
        "h": 36,
        "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 1.5,
-       "len": 1
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
-     },
-     "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "crossover",
-      "amp power"
-     ]
-    }
-   ],
-   "goalMissing": "Nothing cheaper and lighter than your design passes the checks."
-  },
-  {
-   "config": "radiator",
-   "goals": [
-    "cheaper",
-    "lower"
-   ],
-   "cards": [
-    {
-     "label": "Cheaper + lower",
-     "why": "Cheapest pair of drivers that keeps the bass and the level.",
-     "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -75619,11 +75676,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
+      "gross": 89.043,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "level": 92.214,
+      "lb": 34.528
      },
      "changed": [
       "woofer",
@@ -75636,40 +75693,39 @@
      ]
     },
     {
-     "label": "Louder",
-     "why": "Louder than your design.",
+     "label": "Lighter",
+     "why": "Lighter than your design.",
      "config": {
-      "woofer": "faital_8fe300",
-      "tweeter": "rst28f",
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 1.5,
-       "len": 1
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
       },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
      },
      "changed": [
-      "woofer",
-      "tweeter",
       "box type",
       "box size",
+      "plywood",
       "crossover",
       "amp power"
      ]
@@ -75688,71 +75744,31 @@
      "label": "Cheaper + louder",
      "why": "Cheapest pair of drivers that keeps the bass and the level.",
      "config": {
-      "woofer": "beta8a",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 8,
+       "h": 19.5,
+       "d": 11.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 1,
-       "len": 0.75
+       "dia": 3,
+       "len": 6.5,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 20,
-      "tAmpW": 5
+      "wAmpW": 50,
+      "tAmpW": 10
      },
      "metrics": {
-      "gross": 77.429,
-      "f3": 51.886,
-      "price": 259.94,
-      "level": 95.35,
-      "lb": 33.344
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "plywood",
-      "crossover",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
-     "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 8.5
-      },
-      "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 5
-     },
-     "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "gross": 22.282,
+      "f3": 53.932,
+      "price": 178.96,
+      "level": 95.622,
+      "lb": 16.734
      },
      "changed": [
       "woofer",
@@ -75768,37 +75784,75 @@
      "label": "Louder",
      "why": "Louder than your design.",
      "config": {
-      "woofer": "faital_8fe300",
-      "tweeter": "rst28f",
+      "woofer": "f8pr200",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
+       "w": 12.5,
+       "h": 16,
        "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
+       "len": 8.75
       },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 100,
+      "tAmpW": 30
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
+      "gross": 38.161,
+      "f3": 55.302,
+      "price": 540.9,
+      "level": 101.71,
+      "lb": 19.448
      },
      "changed": [
       "woofer",
-      "tweeter",
       "box type",
       "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Lighter",
+     "why": "Lighter than your design.",
+     "config": {
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
+     },
+     "changed": [
+      "box type",
+      "box size",
+      "plywood",
       "crossover",
       "amp power"
      ]
@@ -75814,34 +75868,72 @@
    ],
    "cards": [
     {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
+     "label": "Lighter + cheaper",
+     "why": "Lightest box that keeps the bass and the level.",
      "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
       },
       "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
+      "xo": 2000,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
+     },
+     "changed": [
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Cheaper",
+     "why": "Costs less than your design.",
+     "config": {
+      "woofer": "hds875",
+      "tweeter": "rst28f",
+      "box": "vented",
+      "dim": {
+       "w": 8,
+       "h": 19.5,
+       "d": 11.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 3,
+       "len": 6.5,
+       "elbows": 0
+      },
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 50,
+      "tAmpW": 10
+     },
+     "metrics": {
+      "gross": 22.282,
+      "f3": 53.932,
+      "price": 178.96,
+      "level": 95.622,
+      "lb": 16.734
      },
      "changed": [
       "woofer",
@@ -75858,30 +75950,30 @@
      "why": "Goes lower than your design.",
      "config": {
       "woofer": "rs225",
-      "tweeter": "da25tx",
+      "tweeter": "rst28f",
       "box": "vented",
       "dim": {
        "w": 12.5,
        "h": 36,
-       "d": 13
+       "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
       "wAmpW": 40,
-      "tAmpW": 10
+      "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 292.46,
-      "level": 92.433,
-      "lb": 33.421
+      "gross": 89.043,
+      "f3": 28.802,
+      "price": 259.92,
+      "level": 92.214,
+      "lb": 34.528
      },
      "changed": [
       "woofer",
@@ -75892,48 +75984,9 @@
       "crossover",
       "amp power"
      ]
-    },
-    {
-     "label": "Louder",
-     "why": "Louder than your design.",
-     "config": {
-      "woofer": "faital_8fe300",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 1.5,
-       "len": 1
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
-     },
-     "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "crossover",
-      "amp power"
-     ]
     }
    ],
-   "goalMissing": "Nothing lighter and cheaper than your design passes the checks."
+   "goalMissing": null
   },
   {
    "config": "radiator",
@@ -75943,6 +75996,82 @@
    ],
    "cards": [
     {
+     "label": "Lighter + lower",
+     "why": "Lightest box that keeps the bass and the level.",
+     "config": {
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 8,
+       "h": 12.5,
+       "d": 14.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 3,
+       "len": 16.75,
+       "elbows": 2
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 17.809,
+      "f3": 50.021,
+      "price": 234.4,
+      "level": 92.112,
+      "lb": 13.488
+     },
+     "changed": [
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Lighter",
+     "why": "Lighter than your design.",
+     "config": {
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
+     },
+     "changed": [
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
      "label": "Lower",
      "why": "Goes lower than your design.",
      "config": {
@@ -75952,13 +76081,13 @@
       "dim": {
        "w": 12.5,
        "h": 36,
-       "d": 13
+       "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -75966,11 +76095,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
+      "gross": 89.043,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "level": 92.214,
+      "lb": 34.528
      },
      "changed": [
       "woofer",
@@ -75978,91 +76107,12 @@
       "box type",
       "box size",
       "plywood",
-      "crossover",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
-     "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 11,
-       "h": 30,
-       "d": 14.5
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 9.5
-      },
-      "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 50,
-      "tAmpW": 5
-     },
-     "metrics": {
-      "gross": 64.155,
-      "f3": 32.97,
-      "price": 259.92,
-      "level": 92.786,
-      "lb": 29.444
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "plywood",
-      "crossover",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Louder",
-     "why": "Louder than your design.",
-     "config": {
-      "woofer": "faital_8fe300",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 1.5,
-       "len": 1
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
-     },
-     "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
       "crossover",
       "amp power"
      ]
     }
    ],
-   "goalMissing": "Nothing lighter and lower than your design passes the checks."
+   "goalMissing": null
   },
   {
    "config": "radiator",
@@ -76072,77 +76122,37 @@
    ],
    "cards": [
     {
-     "label": "Louder",
-     "why": "Louder than your design.",
+     "label": "Lighter + louder",
+     "why": "Lightest box that keeps the bass and the level.",
      "config": {
-      "woofer": "faital_8fe300",
-      "tweeter": "rst28f",
+      "woofer": "ss18w8531",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 8.5,
+       "h": 15,
+       "d": 11.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 1.5,
-       "len": 1
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
-     },
-     "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "crossover",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
-     "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "dia": 2,
+       "len": 11.25,
+       "elbows": 1
       },
       "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
+      "xo": 2000,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "gross": 18.067,
+      "f3": 53.932,
+      "price": 589.4,
+      "level": 93.474,
+      "lb": 13.809
      },
      "changed": [
       "woofer",
-      "tweeter",
       "box type",
       "box size",
       "plywood",
@@ -76151,38 +76161,75 @@
      ]
     },
     {
-     "label": "Lower",
-     "why": "Goes lower than your design.",
+     "label": "Lighter",
+     "why": "Lighter than your design.",
      "config": {
-      "woofer": "rs225",
-      "tweeter": "da25tx",
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
+     },
+     "changed": [
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Louder",
+     "why": "Louder than your design.",
+     "config": {
+      "woofer": "f8pr200",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
        "w": 12.5,
-       "h": 36,
-       "d": 13
+       "h": 16,
+       "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1.5,
+       "len": 8.75
       },
       "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "xo": 2000,
+      "wAmpW": 100,
+      "tAmpW": 30
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 292.46,
-      "level": 92.433,
-      "lb": 33.421
+      "gross": 38.161,
+      "f3": 55.302,
+      "price": 540.9,
+      "level": 101.71,
+      "lb": 19.448
      },
      "changed": [
       "woofer",
-      "tweeter",
       "box type",
       "box size",
       "plywood",
@@ -76191,7 +76238,7 @@
      ]
     }
    ],
-   "goalMissing": "Nothing lighter and louder than your design passes the checks."
+   "goalMissing": null
   },
   {
    "config": "radiator",
@@ -76210,102 +76257,13 @@
       "dim": {
        "w": 12.5,
        "h": 36,
-       "d": 13
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 8.5
-      },
-      "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 5
-     },
-     "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "plywood",
-      "crossover",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Louder",
-     "why": "Louder than your design.",
-     "config": {
-      "woofer": "faital_8fe300",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 11,
-       "h": 36,
        "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 1.5,
-       "len": 1
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
-     },
-     "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "crossover",
-      "amp power"
-     ]
-    }
-   ],
-   "goalMissing": null
-  },
-  {
-   "config": "radiator",
-   "goals": [
-    "lower",
-    "lighter"
-   ],
-   "cards": [
-    {
-     "label": "Lower",
-     "why": "Goes lower than your design.",
-     "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -76313,11 +76271,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
+      "gross": 89.043,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "level": 92.214,
+      "lb": 34.528
      },
      "changed": [
       "woofer",
@@ -76333,31 +76291,31 @@
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
-      "woofer": "rs225",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 30,
-       "d": 14.5
+       "w": 8,
+       "h": 19.5,
+       "d": 11.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 9.5
+       "dia": 3,
+       "len": 6.5,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
       "wAmpW": 50,
-      "tAmpW": 5
+      "tAmpW": 10
      },
      "metrics": {
-      "gross": 64.155,
-      "f3": 32.97,
-      "price": 259.92,
-      "level": 92.786,
-      "lb": 29.444
+      "gross": 22.282,
+      "f3": 53.932,
+      "price": 178.96,
+      "level": 95.622,
+      "lb": 16.734
      },
      "changed": [
       "woofer",
@@ -76370,71 +76328,22 @@
      ]
     },
     {
-     "label": "Louder",
-     "why": "Louder than your design.",
+     "label": "Lighter",
+     "why": "Lighter than your design.",
      "config": {
-      "woofer": "faital_8fe300",
-      "tweeter": "rst28f",
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
-       "d": 14.5
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 1.5,
-       "len": 1
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
-     },
-     "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "crossover",
-      "amp power"
-     ]
-    }
-   ],
-   "goalMissing": "Nothing lower and lighter than your design passes the checks."
-  },
-  {
-   "config": "radiator",
-   "goals": [
-    "lower",
-    "louder"
-   ],
-   "cards": [
-    {
-     "label": "Lower + louder",
-     "why": "Lowest in-room F3 that keeps the level.",
-     "config": {
-      "woofer": "sb23nrxs",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 12.5,
-       "h": 30,
-       "d": 14.5
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 6.75
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
       },
       "wall": 0.5,
       "xo": 2000,
@@ -76442,15 +76351,62 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 73.778,
-      "f3": 35.177,
-      "price": 313.36,
-      "level": 94.297,
-      "lb": 30.868
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
+     },
+     "changed": [
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    }
+   ],
+   "goalMissing": null
+  },
+  {
+   "config": "radiator",
+   "goals": [
+    "lower",
+    "lighter"
+   ],
+   "cards": [
+    {
+     "label": "Lower + lighter",
+     "why": "Lowest in-room F3 that keeps the level.",
+     "config": {
+      "woofer": "rs180",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 10,
+       "h": 13,
+       "d": 14.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 3,
+       "len": 11.75,
+       "elbows": 1
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 40,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 23.892,
+      "f3": 44.123,
+      "price": 240.96,
+      "level": 91.574,
+      "lb": 16.37
      },
      "changed": [
       "woofer",
-      "tweeter",
       "box type",
       "box size",
       "plywood",
@@ -76468,13 +76424,13 @@
       "dim": {
        "w": 12.5,
        "h": 36,
-       "d": 13
+       "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -76482,11 +76438,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
+      "gross": 89.043,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "level": 92.214,
+      "lb": 34.528
      },
      "changed": [
       "woofer",
@@ -76499,14 +76455,62 @@
      ]
     },
     {
-     "label": "Louder",
-     "why": "Louder than your design.",
+     "label": "Lighter",
+     "why": "Lighter than your design.",
      "config": {
-      "woofer": "faital_8fe300",
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
+     },
+     "changed": [
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    }
+   ],
+   "goalMissing": null
+  },
+  {
+   "config": "radiator",
+   "goals": [
+    "lower",
+    "louder"
+   ],
+   "cards": [
+    {
+     "label": "Lower + louder",
+     "why": "Lowest in-room F3 that keeps the level.",
+     "config": {
+      "woofer": "rs225",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
+       "w": 12.5,
        "h": 36,
        "d": 14.5
       },
@@ -76514,25 +76518,104 @@
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
+       "len": 9.75
       },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 50,
+      "tAmpW": 5
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
+      "gross": 89.043,
+      "f3": 31.053,
+      "price": 259.92,
+      "level": 93.493,
+      "lb": 34.528
      },
      "changed": [
       "woofer",
       "tweeter",
       "box type",
       "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Lower",
+     "why": "Goes lower than your design.",
+     "config": {
+      "woofer": "rs225",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 12.5,
+       "h": 36,
+       "d": 14.5
+      },
+      "port": {
+       "shape": "slot",
+       "n": 1,
+       "h": 1,
+       "len": 10
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 40,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 89.043,
+      "f3": 28.802,
+      "price": 260.96,
+      "level": 92.214,
+      "lb": 32.948
+     },
+     "changed": [
+      "woofer",
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Louder",
+     "why": "Louder than your design.",
+     "config": {
+      "woofer": "f8pr200",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 12.5,
+       "h": 16,
+       "d": 14.5
+      },
+      "port": {
+       "shape": "slot",
+       "n": 1,
+       "h": 1.5,
+       "len": 8.75
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 100,
+      "tAmpW": 30
+     },
+     "metrics": {
+      "gross": 38.161,
+      "f3": 55.302,
+      "price": 540.9,
+      "level": 101.71,
+      "lb": 19.448
+     },
+     "changed": [
+      "woofer",
+      "box type",
+      "box size",
+      "plywood",
       "crossover",
       "amp power"
      ]
@@ -76555,65 +76638,27 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
+       "w": 12.5,
        "h": 36,
-       "d": 14.5
+       "d": 10
       },
       "port": {
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
-      },
-      "wall": 0.75,
-      "xo": 2200,
-      "wAmpW": 40,
-      "tAmpW": 10
-     },
-     "metrics": {
-      "gross": 69.821,
-      "f3": 54.976,
-      "price": 299.86,
-      "level": 98.51,
-      "lb": 44.02
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
-     "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "len": 2.75
       },
       "wall": 0.5,
       "xo": 1500,
       "wAmpW": 40,
-      "tAmpW": 5
+      "tAmpW": 15
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "gross": 59.362,
+      "f3": 53.932,
+      "price": 299.86,
+      "level": 98.565,
+      "lb": 30.378
      },
      "changed": [
       "woofer",
@@ -76626,34 +76671,73 @@
      ]
     },
     {
-     "label": "Lower",
-     "why": "Goes lower than your design.",
+     "label": "Louder",
+     "why": "Louder than your design.",
      "config": {
-      "woofer": "rs225",
-      "tweeter": "da25tx",
+      "woofer": "f8pr200",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
        "w": 12.5,
-       "h": 36,
-       "d": 13
+       "h": 16,
+       "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1.5,
+       "len": 8.75
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 100,
+      "tAmpW": 30
+     },
+     "metrics": {
+      "gross": 38.161,
+      "f3": 55.302,
+      "price": 540.9,
+      "level": 101.71,
+      "lb": 19.448
+     },
+     "changed": [
+      "woofer",
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Cheaper",
+     "why": "Costs less than your design.",
+     "config": {
+      "woofer": "hds875",
+      "tweeter": "rst28f",
+      "box": "vented",
+      "dim": {
+       "w": 8,
+       "h": 19.5,
+       "d": 11.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 3,
+       "len": 6.5,
+       "elbows": 0
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 40,
+      "wAmpW": 50,
       "tAmpW": 10
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 292.46,
-      "level": 92.433,
-      "lb": 33.421
+      "gross": 22.282,
+      "f3": 53.932,
+      "price": 178.96,
+      "level": 95.622,
+      "lb": 16.734
      },
      "changed": [
       "woofer",
@@ -76676,73 +76760,34 @@
    ],
    "cards": [
     {
-     "label": "Louder",
-     "why": "Louder than your design.",
+     "label": "Louder + lighter",
+     "why": "Most clean level at the seat.",
      "config": {
-      "woofer": "faital_8fe300",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
        "w": 11,
-       "h": 36,
-       "d": 14.5
+       "h": 16.5,
+       "d": 11.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 1.5,
-       "len": 1
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
-     },
-     "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "crossover",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
-     "config": {
-      "woofer": "rs225",
-      "tweeter": "rst28f",
-      "box": "vented",
-      "dim": {
-       "w": 12.5,
-       "h": 36,
-       "d": 13
-      },
-      "port": {
-       "shape": "slot",
-       "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1,
+       "len": 8.25
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 5
+      "wAmpW": 60,
+      "tAmpW": 10
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "gross": 26.67,
+      "f3": 53.932,
+      "price": 178.96,
+      "level": 96.601,
+      "lb": 17.301
      },
      "changed": [
       "woofer",
@@ -76755,38 +76800,75 @@
      ]
     },
     {
-     "label": "Lower",
-     "why": "Goes lower than your design.",
+     "label": "Louder",
+     "why": "Louder than your design.",
      "config": {
-      "woofer": "rs225",
-      "tweeter": "da25tx",
+      "woofer": "f8pr200",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
        "w": 12.5,
-       "h": 36,
-       "d": 13
+       "h": 16,
+       "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1.5,
+       "len": 8.75
       },
       "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "xo": 2000,
+      "wAmpW": 100,
+      "tAmpW": 30
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
-      "price": 292.46,
-      "level": 92.433,
-      "lb": 33.421
+      "gross": 38.161,
+      "f3": 55.302,
+      "price": 540.9,
+      "level": 101.71,
+      "lb": 19.448
      },
      "changed": [
       "woofer",
-      "tweeter",
+      "box type",
+      "box size",
+      "plywood",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Lighter",
+     "why": "Lighter than your design.",
+     "config": {
+      "woofer": "sb17nrx",
+      "tweeter": "sb26stcn",
+      "box": "vented",
+      "dim": {
+       "w": 9.5,
+       "h": 14.5,
+       "d": 8.5
+      },
+      "port": {
+       "n": 1,
+       "dia": 2,
+       "len": 8.25,
+       "elbows": 1
+      },
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 30,
+      "tAmpW": 5
+     },
+     "metrics": {
+      "gross": 14.103,
+      "f3": 53.932,
+      "price": 234.4,
+      "level": 91.518,
+      "lb": 12.254
+     },
+     "changed": [
       "box type",
       "box size",
       "plywood",
@@ -76795,7 +76877,7 @@
      ]
     }
    ],
-   "goalMissing": "Nothing louder and lighter than your design passes the checks."
+   "goalMissing": null
   },
   {
    "config": "radiator",
@@ -76813,26 +76895,26 @@
       "box": "vented",
       "dim": {
        "w": 12.5,
-       "h": 16,
-       "d": 14.5
+       "h": 30,
+       "d": 10
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7
+       "h": 1.5,
+       "len": 5.25
       },
       "wall": 0.5,
-      "xo": 3000,
-      "wAmpW": 40,
+      "xo": 1500,
+      "wAmpW": 50,
       "tAmpW": 10
      },
      "metrics": {
-      "gross": 38.161,
-      "f3": 48.702,
+      "gross": 49.186,
+      "f3": 50.021,
       "price": 349.86,
-      "level": 96.121,
-      "lb": 23.698
+      "level": 97.253,
+      "lb": 27.848
      },
      "changed": [
       "woofer",
@@ -76848,37 +76930,37 @@
      "label": "Louder",
      "why": "Louder than your design.",
      "config": {
-      "woofer": "faital_8fe300",
-      "tweeter": "rst28f",
+      "woofer": "f8pr200",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 11,
-       "h": 36,
+       "w": 12.5,
+       "h": 16,
        "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
        "h": 1.5,
-       "len": 1
+       "len": 8.75
       },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 40,
-      "tAmpW": 10
+      "wall": 0.5,
+      "xo": 2000,
+      "wAmpW": 100,
+      "tAmpW": 30
      },
      "metrics": {
-      "gross": 69.821,
-      "f3": 55.676,
-      "price": 299.86,
-      "level": 98.532,
-      "lb": 44.02
+      "gross": 38.161,
+      "f3": 55.302,
+      "price": 540.9,
+      "level": 101.71,
+      "lb": 19.448
      },
      "changed": [
       "woofer",
-      "tweeter",
       "box type",
       "box size",
+      "plywood",
       "crossover",
       "amp power"
      ]
@@ -76893,13 +76975,13 @@
       "dim": {
        "w": 12.5,
        "h": 36,
-       "d": 13
+       "d": 14.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 8.5
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -76907,11 +76989,11 @@
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 79.149,
-      "f3": 29.968,
+      "gross": 89.043,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.433,
-      "lb": 32.911
+      "level": 92.214,
+      "lb": 34.528
      },
      "changed": [
       "woofer",
@@ -76936,31 +77018,31 @@
      "label": "Same level, cheaper",
      "why": "Cheapest pair of drivers that keeps the bass and the level.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -76981,25 +77063,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -77024,8 +77106,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -77034,9 +77116,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -77067,25 +77149,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -77099,31 +77181,31 @@
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -77149,8 +77231,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -77159,9 +77241,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -77197,8 +77279,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -77207,9 +77289,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -77225,31 +77307,31 @@
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -77270,25 +77352,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -77311,42 +77393,37 @@
      "label": "Louder",
      "why": "Most clean level at the seat.",
      "config": {
-      "woofer": "beyma_8g40",
+      "woofer": "es8mb500",
       "tweeter": "rst28f",
-      "box": "radiator",
+      "box": "vented",
       "dim": {
        "w": 12.5,
-       "h": 25,
-       "d": 7
+       "h": 18,
+       "d": 11.5
       },
       "port": {
+       "shape": "slot",
        "n": 1,
-       "dia": 2,
-       "len": 6
+       "h": 1.5,
+       "len": 2
       },
-      "pr": {
-       "id": "dsa270pr",
-       "n": 2,
-       "addG": 5
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 120,
-      "tAmpW": 40
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 80,
+      "tAmpW": 60
      },
      "metrics": {
-      "gross": 23.298,
-      "f3": 76.764,
-      "price": 575.78,
-      "level": 104.026,
-      "lb": 32.29
+      "gross": 33.638,
+      "f3": 84.721,
+      "price": 439.86,
+      "level": 106.212,
+      "lb": 23.094
      },
      "changed": [
       "woofer",
       "tweeter",
       "box type",
       "box size",
-      "plywood",
       "crossover",
       "amp power"
      ]
@@ -77355,31 +77432,31 @@
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -77400,25 +77477,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -77442,34 +77519,35 @@
      "label": "Cheaper + lighter",
      "why": "Cheapest pair of drivers that keeps the bass and the level.",
      "config": {
-      "woofer": "faital_5fe125",
-      "tweeter": "sb26stcn",
+      "woofer": "hds875",
+      "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 11,
-       "d": 10
+       "w": 8,
+       "h": 14.5,
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 8.5,
        "elbows": 2
       },
       "wall": 0.5,
-      "xo": 2000,
-      "wAmpW": 20,
+      "xo": 1500,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
-      "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
+      "tweeter",
       "box type",
       "box size",
       "crossover",
@@ -77477,38 +77555,37 @@
      ]
     },
     {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
+     "label": "Lighter",
+     "why": "Lighter than your design.",
      "config": {
       "woofer": "faital_5fe125",
-      "tweeter": "rst28f",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
        "w": 6.5,
-       "h": 33,
+       "h": 11,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 7,
+       "elbows": 2
       },
       "wall": 0.5,
-      "xo": 1500,
-      "wAmpW": 10,
+      "xo": 2000,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 5.408,
+      "f3": 78.578,
+      "price": 190.9,
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
-      "tweeter",
       "box type",
       "box size",
       "crossover",
@@ -77530,8 +77607,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -77540,9 +77617,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -77568,31 +77645,31 @@
      "label": "Cheaper + lower",
      "why": "Cheapest pair of drivers that keeps the bass and the level.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -77618,8 +77695,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -77628,9 +77705,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -77652,25 +77729,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -77694,31 +77771,31 @@
      "label": "Cheaper + louder",
      "why": "Cheapest pair of drivers that keeps the bass and the level.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -77733,42 +77810,37 @@
      "label": "Louder",
      "why": "Louder than your design.",
      "config": {
-      "woofer": "beyma_8g40",
+      "woofer": "es8mb500",
       "tweeter": "rst28f",
-      "box": "radiator",
+      "box": "vented",
       "dim": {
        "w": 12.5,
-       "h": 25,
-       "d": 7
+       "h": 18,
+       "d": 11.5
       },
       "port": {
+       "shape": "slot",
        "n": 1,
-       "dia": 2,
-       "len": 6
+       "h": 1.5,
+       "len": 2
       },
-      "pr": {
-       "id": "dsa270pr",
-       "n": 2,
-       "addG": 5
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 120,
-      "tAmpW": 40
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 80,
+      "tAmpW": 60
      },
      "metrics": {
-      "gross": 23.298,
-      "f3": 76.764,
-      "price": 575.78,
-      "level": 104.026,
-      "lb": 32.29
+      "gross": 33.638,
+      "f3": 84.721,
+      "price": 439.86,
+      "level": 106.212,
+      "lb": 23.094
      },
      "changed": [
       "woofer",
       "tweeter",
       "box type",
       "box size",
-      "plywood",
       "crossover",
       "amp power"
      ]
@@ -77783,25 +77855,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -77831,25 +77903,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -77863,31 +77935,31 @@
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -77913,8 +77985,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -77923,9 +77995,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -77957,25 +78029,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -78000,8 +78072,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -78010,9 +78082,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -78028,31 +78100,31 @@
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -78083,25 +78155,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -78115,42 +78187,37 @@
      "label": "Louder",
      "why": "Louder than your design.",
      "config": {
-      "woofer": "beyma_8g40",
+      "woofer": "es8mb500",
       "tweeter": "rst28f",
-      "box": "radiator",
+      "box": "vented",
       "dim": {
        "w": 12.5,
-       "h": 25,
-       "d": 7
+       "h": 18,
+       "d": 11.5
       },
       "port": {
+       "shape": "slot",
        "n": 1,
-       "dia": 2,
-       "len": 6
+       "h": 1.5,
+       "len": 2
       },
-      "pr": {
-       "id": "dsa270pr",
-       "n": 2,
-       "addG": 5
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 120,
-      "tAmpW": 40
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 80,
+      "tAmpW": 60
      },
      "metrics": {
-      "gross": 23.298,
-      "f3": 76.764,
-      "price": 575.78,
-      "level": 104.026,
-      "lb": 32.29
+      "gross": 33.638,
+      "f3": 84.721,
+      "price": 439.86,
+      "level": 106.212,
+      "lb": 23.094
      },
      "changed": [
       "woofer",
       "tweeter",
       "box type",
       "box size",
-      "plywood",
       "crossover",
       "amp power"
      ]
@@ -78159,31 +78226,31 @@
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -78212,27 +78279,27 @@
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 11,
+       "w": 9.5,
        "h": 34.5,
        "d": 14.5
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7
+       "dia": 3,
+       "len": 8.25,
+       "elbows": 0
       },
       "wall": 0.5,
-      "xo": 2000,
+      "xo": 1500,
       "wAmpW": 20,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 74.11,
-      "f3": 28.785,
+      "gross": 62.994,
+      "f3": 30.284,
       "price": 233.36,
-      "level": 87.253,
-      "lb": 29.334
+      "level": 87.352,
+      "lb": 27.701
      },
      "changed": [
       "tweeter",
@@ -78246,31 +78313,31 @@
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -78291,25 +78358,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -78337,27 +78404,27 @@
       "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
-       "d": 7
+       "w": 8,
+       "h": 22,
+       "d": 10
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "h": 1,
+       "len": 7.5
       },
       "wall": 0.5,
-      "xo": 2500,
+      "xo": 2000,
       "wAmpW": 10,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 45.886,
+      "gross": 21.68,
+      "f3": 45.244,
       "price": 190.9,
-      "level": 86.894,
-      "lb": 14.611
+      "level": 86.832,
+      "lb": 14.278
      },
      "changed": [
       "woofer",
@@ -78382,8 +78449,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -78392,9 +78459,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -78416,25 +78483,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -78469,8 +78536,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -78479,9 +78546,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -78497,42 +78564,37 @@
      "label": "Louder",
      "why": "Louder than your design.",
      "config": {
-      "woofer": "beyma_8g40",
+      "woofer": "es8mb500",
       "tweeter": "rst28f",
-      "box": "radiator",
+      "box": "vented",
       "dim": {
        "w": 12.5,
-       "h": 25,
-       "d": 7
+       "h": 18,
+       "d": 11.5
       },
       "port": {
+       "shape": "slot",
        "n": 1,
-       "dia": 2,
-       "len": 6
+       "h": 1.5,
+       "len": 2
       },
-      "pr": {
-       "id": "dsa270pr",
-       "n": 2,
-       "addG": 5
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 120,
-      "tAmpW": 40
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 80,
+      "tAmpW": 60
      },
      "metrics": {
-      "gross": 23.298,
-      "f3": 76.764,
-      "price": 575.78,
-      "level": 104.026,
-      "lb": 32.29
+      "gross": 33.638,
+      "f3": 84.721,
+      "price": 439.86,
+      "level": 106.212,
+      "lb": 23.094
      },
      "changed": [
       "woofer",
       "tweeter",
       "box type",
       "box size",
-      "plywood",
       "crossover",
       "amp power"
      ]
@@ -78541,31 +78603,31 @@
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -78591,77 +78653,33 @@
      "why": "Most clean level at the seat.",
      "config": {
       "woofer": "faital_6fe100",
-      "tweeter": "rst28f",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 9.5,
-       "h": 34.5,
-       "d": 14.5
+       "w": 11,
+       "h": 12.5,
+       "d": 8.5
       },
       "port": {
        "n": 1,
        "dia": 3,
-       "len": 1.5,
-       "elbows": 0
-      },
-      "wall": 0.5,
-      "xo": 2200,
-      "wAmpW": 20,
-      "tAmpW": 5
-     },
-     "metrics": {
-      "gross": 62.994,
-      "f3": 44.843,
-      "price": 191.86,
-      "level": 91.076,
-      "lb": 26.861
-     },
-     "changed": [
-      "woofer",
-      "tweeter",
-      "box type",
-      "box size",
-      "crossover",
-      "amp power"
-     ]
-    },
-    {
-     "label": "Louder",
-     "why": "Louder than your design.",
-     "config": {
-      "woofer": "beyma_8g40",
-      "tweeter": "rst28f",
-      "box": "radiator",
-      "dim": {
-       "w": 12.5,
-       "h": 25,
-       "d": 7
-      },
-      "port": {
-       "n": 1,
-       "dia": 2,
-       "len": 6
-      },
-      "pr": {
-       "id": "dsa270pr",
-       "n": 2,
-       "addG": 5
+       "len": 7.5,
+       "elbows": 2
       },
       "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 120,
-      "tAmpW": 40
+      "xo": 2000,
+      "wAmpW": 50,
+      "tAmpW": 15
      },
      "metrics": {
-      "gross": 23.298,
-      "f3": 76.764,
-      "price": 575.78,
-      "level": 104.026,
-      "lb": 32.29
+      "gross": 11.987,
+      "f3": 80.575,
+      "price": 192.9,
+      "level": 99.044,
+      "lb": 14.593
      },
      "changed": [
       "woofer",
-      "tweeter",
       "box type",
       "box size",
       "plywood",
@@ -78670,34 +78688,73 @@
      ]
     },
     {
-     "label": "Cheaper",
-     "why": "Costs less than your design.",
+     "label": "Louder",
+     "why": "Louder than your design.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "es8mb500",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
-       "d": 7
+       "w": 12.5,
+       "h": 18,
+       "d": 11.5
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "h": 1.5,
+       "len": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 80,
+      "tAmpW": 60
+     },
+     "metrics": {
+      "gross": 33.638,
+      "f3": 84.721,
+      "price": 439.86,
+      "level": 106.212,
+      "lb": 23.094
+     },
+     "changed": [
+      "woofer",
+      "tweeter",
+      "box type",
+      "box size",
+      "crossover",
+      "amp power"
+     ]
+    },
+    {
+     "label": "Cheaper",
+     "why": "Costs less than your design.",
+     "config": {
+      "woofer": "hds875",
+      "tweeter": "rst28f",
+      "box": "vented",
+      "dim": {
+       "w": 8,
+       "h": 14.5,
+       "d": 7
+      },
+      "port": {
+       "n": 1,
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
+      },
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
@@ -78722,35 +78779,34 @@
      "label": "Louder + lighter",
      "why": "Most clean level at the seat.",
      "config": {
-      "woofer": "ss15w8434",
-      "tweeter": "rst28f",
+      "woofer": "bc8ndl51",
+      "tweeter": "sb26stcn",
       "box": "vented",
       "dim": {
-       "w": 6.75,
-       "h": 15.25,
-       "d": 11.5
+       "w": 9.5,
+       "h": 16,
+       "d": 10
       },
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7
+       "h": 1.5,
+       "len": 7.25
       },
       "wall": 0.5,
-      "xo": 3000,
-      "wAmpW": 20,
-      "tAmpW": 5
+      "xo": 2000,
+      "wAmpW": 110,
+      "tAmpW": 40
      },
      "metrics": {
-      "gross": 14.098,
-      "f3": 54.206,
-      "price": 249.56,
-      "level": 90.092,
-      "lb": 13.36
+      "gross": 18.804,
+      "f3": 74.732,
+      "price": 430.32,
+      "level": 103.391,
+      "lb": 14.344
      },
      "changed": [
       "woofer",
-      "tweeter",
       "box type",
       "box size",
       "crossover",
@@ -78761,42 +78817,37 @@
      "label": "Louder",
      "why": "Louder than your design.",
      "config": {
-      "woofer": "beyma_8g40",
+      "woofer": "es8mb500",
       "tweeter": "rst28f",
-      "box": "radiator",
+      "box": "vented",
       "dim": {
        "w": 12.5,
-       "h": 25,
-       "d": 7
+       "h": 18,
+       "d": 11.5
       },
       "port": {
+       "shape": "slot",
        "n": 1,
-       "dia": 2,
-       "len": 6
+       "h": 1.5,
+       "len": 2
       },
-      "pr": {
-       "id": "dsa270pr",
-       "n": 2,
-       "addG": 5
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 120,
-      "tAmpW": 40
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 80,
+      "tAmpW": 60
      },
      "metrics": {
-      "gross": 23.298,
-      "f3": 76.764,
-      "price": 575.78,
-      "level": 104.026,
-      "lb": 32.29
+      "gross": 33.638,
+      "f3": 84.721,
+      "price": 439.86,
+      "level": 106.212,
+      "lb": 23.094
      },
      "changed": [
       "woofer",
       "tweeter",
       "box type",
       "box size",
-      "plywood",
       "crossover",
       "amp power"
      ]
@@ -78811,25 +78862,25 @@
       "dim": {
        "w": 6.5,
        "h": 11,
-       "d": 10
+       "d": 7
       },
       "port": {
        "n": 1,
        "dia": 2,
-       "len": 11,
+       "len": 7,
        "elbows": 2
       },
       "wall": 0.5,
       "xo": 2000,
-      "wAmpW": 20,
+      "wAmpW": 30,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 8.112,
-      "f3": 65.833,
+      "gross": 5.408,
+      "f3": 78.578,
       "price": 190.9,
-      "level": 89.006,
-      "lb": 9.178
+      "level": 92.569,
+      "lb": 8.011
      },
      "changed": [
       "woofer",
@@ -78855,40 +78906,35 @@
      "config": {
       "woofer": "beyma_8g40",
       "tweeter": "rst28f",
-      "box": "radiator",
+      "box": "vented",
       "dim": {
        "w": 12.5,
-       "h": 25,
-       "d": 7
+       "h": 18,
+       "d": 8.5
       },
       "port": {
+       "shape": "slot",
        "n": 1,
-       "dia": 2,
-       "len": 6
+       "h": 1.5,
+       "len": 5.75
       },
-      "pr": {
-       "id": "dsa270pr",
-       "n": 2,
-       "addG": 5
-      },
-      "wall": 0.75,
-      "xo": 3000,
-      "wAmpW": 120,
-      "tAmpW": 40
+      "wall": 0.5,
+      "xo": 1500,
+      "wAmpW": 150,
+      "tAmpW": 60
      },
      "metrics": {
-      "gross": 23.298,
-      "f3": 76.764,
-      "price": 575.78,
-      "level": 104.026,
-      "lb": 32.29
+      "gross": 24.027,
+      "f3": 78.578,
+      "price": 347.86,
+      "level": 106.102,
+      "lb": 20.861
      },
      "changed": [
       "woofer",
       "tweeter",
       "box type",
       "box size",
-      "plywood",
       "crossover",
       "amp power"
      ]
@@ -78908,8 +78954,8 @@
       "port": {
        "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 7.25
+       "h": 1,
+       "len": 10
       },
       "wall": 0.5,
       "xo": 1500,
@@ -78918,9 +78964,9 @@
      },
      "metrics": {
       "gross": 89.043,
-      "f3": 28.572,
+      "f3": 28.802,
       "price": 259.92,
-      "level": 92.383,
+      "level": 92.214,
       "lb": 34.528
      },
      "changed": [
@@ -78936,31 +78982,31 @@
      "label": "Cheaper",
      "why": "Costs less than your design.",
      "config": {
-      "woofer": "faital_5fe125",
+      "woofer": "hds875",
       "tweeter": "rst28f",
       "box": "vented",
       "dim": {
-       "w": 6.5,
-       "h": 33,
+       "w": 8,
+       "h": 14.5,
        "d": 7
       },
       "port": {
-       "shape": "slot",
        "n": 1,
-       "h": 0.75,
-       "len": 4.25
+       "dia": 2,
+       "len": 8.5,
+       "elbows": 2
       },
       "wall": 0.5,
       "xo": 1500,
-      "wAmpW": 10,
+      "wAmpW": 40,
       "tAmpW": 5
      },
      "metrics": {
-      "gross": 17.305,
-      "f3": 46.049,
-      "price": 189.86,
-      "level": 86.887,
-      "lb": 16.191
+      "gross": 9.291,
+      "f3": 78.578,
+      "price": 178.96,
+      "level": 95.414,
+      "lb": 12.318
      },
      "changed": [
       "woofer",
