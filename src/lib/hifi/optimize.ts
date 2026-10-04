@@ -1,7 +1,8 @@
 // Hi-fi optimizer: woofer × box × tuning × plywood, then × tweeter × crossover, scored like the page scores them.
 // Same rules as the PA optimizer: goals in tap order (the first ranks, the main card must beat your design on
-// every one), each card's label true against your design, unlocked amps searched at their slider maximum and
-// trimmed to the least power that keeps the card's level, and a card applies only the fields searched.
+// every one), each card's label true against your design, unlocked amps searched at their slider maximum (turned
+// down where the band above can't keep up) and trimmed to the least power that keeps the card's level, and a card
+// applies only the fields searched.
 import {
   hifiSystem,
   hifiChips,
@@ -421,6 +422,20 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       if (wall !== cur.wall)
         keep.set("ply", { w: W0, dim: cur.dim, box: cur.box, wall, port: cur.port, pr: cur.pr });
 
+  // the tweeter runs out first at full woofer power: with the woofer amp free, the woofer comes down (slider steps) until
+  // the tweeter keeps up, so the tweeter caps the level instead of ruling the design out. Below the searched power the
+  // woofer's music level is the lesser of what cone, port and coil allow (they don't move) and its amp-limited level,
+  // which falls 1 dB per dB of power (at full power: the level less its music scale and the EQ's largest boost in the band)
+  const fitWoofer = (r: RunResult, w: HifiWoofer, t: HifiTweeter): RunResult | null => {
+    const { sys, cfg } = r;
+    const boost = Math.max(
+      ...sys.woofer.filter((o) => o.f >= 30 && o.f <= cfg.xo * 1.5).map((o) => o.e),
+    );
+    const ampLevel = sys.wLevel - 20 * Math.log10(sys.sMusic * boost);
+    const wAmpW = Math.floor((cfg.wAmpW * 10 ** ((sys.tLevel - ampLevel) / 10)) / 10) * 10;
+    return wAmpW >= 10 ? run(w, t, { ...cfg, wAmpW }, 240) : null;
+  };
+
   // 2. tweeter and crossover, exact model
   const tList: HifiTweeter[] = locks.tweeter
     ? [T0]
@@ -430,7 +445,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
   for (const x of keep.values())
     for (const t of tList)
       for (const xo of xos) {
-        const r = run(
+        let r = run(
           x.w,
           t,
           {
@@ -445,6 +460,12 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
           },
           240,
         );
+        if (
+          r &&
+          !locks.wAmpW &&
+          hifiDesignProblems(r.sys, r.chips).join() === "Tweeter runs out first"
+        )
+          r = fitWoofer(r, x.w, t);
         if (!r || hifiDesignProblems(r.sys, r.chips).length) continue;
         const m = metricOf(r, x.w, t);
         if (input.budget && m.price > input.budget + 1e-9) continue;
