@@ -1,31 +1,34 @@
-// Power amplifiers: the mains rack's QSC GXD series, as the Notes page and the signal-path drawing describe it (both
-// format their power figures from here). Watts are per channel, continuous, both channels driven; gain is voltage
-// gain in dB; limiterW is the speaker-power range the limiter accepts. The compiler checks every field (AmpSeries in
-// src/types.ts). To add a model, append it to `models`; to add a series, export another AmpSeries. Rack prices live
-// in racks.ts.
+// Power amplifiers: the mains rack's QSC GXD series, as the Notes page, the racks and the signal-path drawing describe it
+// (all of them format their names, power figures and prices from here). Watts are per channel, continuous, both
+// channels driven; gain is voltage gain in dB; limiterW is the speaker-power range the limiter accepts; usedPrice is
+// what the racks pay for a used one (US dollars, checked Sep 2026). The compiler checks every field (AmpModel and
+// AmpSeries in src/types.ts). To add a model, append it to its series' `models`; to add a series, export another
+// AmpSeries and list it in AMP_SERIES. A rack names an amp by its id, so it can only name one listed here.
 import type { AmpModel, AmpSeries } from "../../types";
 
 /** The sub amp. */
-export const GXD8: AmpModel = {
+export const GXD8 = {
   id: "gxd8",
   model: "GXD8",
   w8: 800,
   w4: 1200,
   gainDb: 36.5,
   limiterW: [5, 800],
-};
+  usedPrice: 600,
+} as const satisfies AmpModel;
 
 /** The mid and horn amp. */
-export const GXD4: AmpModel = {
+export const GXD4 = {
   id: "gxd4",
   model: "GXD4",
   w8: 400,
   w4: 600,
   gainDb: 33.5,
   limiterW: [5, 400],
-};
+  usedPrice: 400,
+} as const satisfies AmpModel;
 
-export const QSC_GXD: AmpSeries = {
+export const QSC_GXD = {
   brand: "QSC",
   models: [GXD4, GXD8],
   filters:
@@ -43,4 +46,7 @@ export const QSC_GXD: AmpSeries = {
       url: "https://www.qscaudio.com/resource-files/productresources/amp/gxd/q_amp_gxd_specsheet.pdf",
     },
   ],
-};
+} as const satisfies AmpSeries;
+
+/** Every amp series in the catalogue; a rack's amp ids are the models listed here. */
+export const AMP_SERIES = [QSC_GXD] as const;

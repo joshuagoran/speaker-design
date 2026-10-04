@@ -1,6 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { selectCards, type SelectCardsOptions } from "../src/lib/optimizer/selectCards";
+import { CARD_LABELS, CARD_WHY } from "../src/constants/optimizerText";
 
 // a synthetic pool: designs with a price, a weight, a level, a change count and a family (same family = same design)
 interface D {
@@ -110,8 +111,9 @@ test("selectCards: the smallest change changes at most one thing, differs from t
     d("c", 90, 20, 90, 2), // cheaper, two changes
   ];
   const r = selectCards(opts(pool, { altAxes: [] }));
-  assert.deepEqual(ids(r), ["First:a", "Smallest change:b"]);
-  assert.equal(r.cards[1].why, "Changes one thing from your design.");
+  assert.deepEqual(ids(r), ["First:a", `${CARD_LABELS.smallest}:b`]);
+  assert.deepEqual(r.cards[1].slot, { kind: "smallest" });
+  assert.equal(r.cards[1].why, CARD_WHY.smallest);
   assert.deepEqual(ids(selectCards(opts(pool, { altAxes: [], hasCurrent: false }))), ["First:a"]);
 });
 

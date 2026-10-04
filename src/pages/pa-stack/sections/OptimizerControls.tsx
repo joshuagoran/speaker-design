@@ -2,6 +2,7 @@ import { Button } from "../../../components/ui/Button";
 import { OptimizerPanel } from "../../../components/optimizer/OptimizerPanel";
 import { OptimizerBar } from "../../../components/optimizer/OptimizerBar";
 import type { PaPlanner } from "../hooks/usePaPlanner";
+import { FONT } from "../../../styles/fonts";
 
 interface Props {
   planner: Pick<
@@ -55,10 +56,7 @@ export function OptimizerControls({ planner }: Props) {
   } = planner;
   return (
     <>
-      <section
-        className="max-w-6xl mx-auto px-4 md:px-8 pb-3"
-        style={{ fontFamily: "var(--font)" }}
-      >
+      <section className="max-w-6xl mx-auto px-4 md:px-8 pb-3" style={{ fontFamily: FONT }}>
         <OptimizerBar
           on={isOptimizerOn}
           onToggle={() => setIsOptimizerOn(!isOptimizerOn)}
@@ -85,7 +83,7 @@ export function OptimizerControls({ planner }: Props) {
       {designPreview && (
         <div
           className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-white border-b-4 border-cmy-y px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm"
-          style={{ fontFamily: "var(--font)" }}
+          style={{ fontFamily: FONT }}
         >
           <span>
             Previewing: <b className="font-semibold">{designPreview.label}</b>
@@ -108,7 +106,7 @@ export function OptimizerControls({ planner }: Props) {
       {toastMessage && (
         <div
           className="fixed left-1/2 -translate-x-1/2 bottom-20 md:bottom-6 z-50 w-[calc(100%-2rem)] max-w-xl bg-stone-900 text-stone-50 rounded-lg px-4 py-2.5 flex items-center gap-3 text-sm shadow-lg"
-          style={{ fontFamily: "var(--font)" }}
+          style={{ fontFamily: FONT }}
           role="status"
         >
           <span className="flex-1">{toastMessage}</span>

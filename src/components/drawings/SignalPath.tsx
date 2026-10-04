@@ -1,7 +1,12 @@
 import { PAL } from "../../styles/palette";
 import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
+import { HORN_AMP_SAFETY_HPF_HZ, mainsDsp } from "../../lib/data";
+import { DEFAULT_CROSSOVERS } from "../../lib/defaultParts";
 import type { AmpModel } from "../../types";
+import { SVG_FONT } from "../../styles/fonts";
 
+/** What each top box's Speakon carries. */
+const TOP_PINS = "1± mid · 2± horn";
 const ampName = (m: Pick<AmpModel, "model">) => `${QSC_GXD.brand} ${m.model}`;
 /** Block diagram of the PA signal path. */
 export function SignalPath() {
@@ -50,7 +55,7 @@ export function SignalPath() {
       fontSize={s}
       fill={c}
       textAnchor={a}
-      fontFamily="Inconsolata, monospace"
+      fontFamily={SVG_FONT}
       fontWeight={b ? 600 : 400}
     >
       {b}
@@ -96,7 +101,7 @@ export function SignalPath() {
       <T x={127} y={208} s={10} c={mute} b="XLR" />
 
       <Box x={150} y={110} w={130} h={220} c={col.pa2}>
-        <T x={215} y={132} b="dbx DriveRack PA2" />
+        <T x={215} y={132} b={mainsDsp().row.unit} />
         <T x={215} y={148} s={10} c={mute} b="2 in / 6 out" />
         <T x={215} y={176} s={10} c={mute} b="inputs: venue EQ" />
         <T x={215} y={190} s={10} c={mute} b="outputs: XO, EQ, delay, limit" />
@@ -115,7 +120,7 @@ export function SignalPath() {
       </Box>
       <Box x={350} y={319} w={130} h={44} c={col.hf}>
         <T x={415} y={337} b={ampName(GXD4)} />
-        <T x={415} y={353} s={10} c={mute} b="gain trimmed · HPF 500 Hz" />
+        <T x={415} y={353} s={10} c={mute} b={`gain trimmed · HPF ${HORN_AMP_SAFETY_HPF_HZ} Hz`} />
       </Box>
       <A d="M280 226 L350 226" c={col.sub} />
       <A d="M280 266 L350 283" c={col.mid} />
@@ -131,10 +136,10 @@ export function SignalPath() {
       <T x={600} y={243} s={10} c={col.sub} b="SUB R · 1±" />
       <rect x={565} y={290} width={70} height={36} rx="4" fill="none" stroke={col.mid} />
       <T x={600} y={304} s={10} c={col.mid} b="TOP L" />
-      <T x={600} y={318} s={9} c={mute} b="1± mid · 2± horn" />
+      <T x={600} y={318} s={9} c={mute} b={TOP_PINS} />
       <rect x={565} y={332} width={70} height={36} rx="4" fill="none" stroke={col.mid} />
       <T x={600} y={346} s={10} c={col.mid} b="TOP R" />
-      <T x={600} y={360} s={9} c={mute} b="1± mid · 2± horn" />
+      <T x={600} y={360} s={9} c={mute} b={TOP_PINS} />
       <A d="M480 222 L565 211" c={col.sub} />
       <A d="M480 232 L565 239" c={col.sub} />
       <A d="M480 278 L565 300" c={col.mid} />
@@ -170,7 +175,7 @@ export function SignalPath() {
         s={10}
         a="start"
         c={mute}
-        b="Crossovers in the PA2: sub HPF ~32 Hz BW24 · sub/mid 100–120 Hz LR4 · mid/horn ~1.1 kHz LR4. Amps run full-range; limiters set per driver in each amp."
+        b={`Crossovers in the PA2: ${DEFAULT_CROSSOVERS}. Amps run full-range; limiters set per driver in each amp.`}
       />
     </svg>
   );

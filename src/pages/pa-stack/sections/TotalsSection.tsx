@@ -1,5 +1,6 @@
 import { FoldHeading } from "../../../components/ui/FoldHeading";
 import type { PaPlanner } from "../hooks/usePaPlanner";
+import { FONT } from "../../../styles/fonts";
 
 interface Props {
   planner: Pick<
@@ -39,7 +40,7 @@ export function TotalsSection({ planner }: Props) {
   } = planner;
   return (
     <>
-      <section className="min-w-0 md:col-span-5 mt-6" style={{ fontFamily: "var(--font)" }}>
+      <section className="min-w-0 md:col-span-5 mt-6" style={{ fontFamily: FONT }}>
         <FoldHeading
           id="totals"
           title="Totals for the current selection"

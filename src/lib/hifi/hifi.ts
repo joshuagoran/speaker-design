@@ -47,6 +47,7 @@ import type {
   WooferPoint,
 } from "../../types";
 import { METERS_PER_FOOT } from "../../constants/units";
+import { WOOFER_LIMITED_BY } from "../../constants/limits";
 import { formatInches } from "../format";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
 import { xmaxBandCurves } from "../xmax";
@@ -1260,16 +1261,9 @@ export function hifiChips(
           "hifiTweeterLevel",
         ],
   );
-  const whoText = {
-    Xmax: "cone travel",
-    port: "port air speed",
-    radiator: "radiator travel",
-    thermal: "the woofer's power rating",
-    amp: "the amp",
-  }[sys.whoW];
   F.push([
     sys.whoW === "amp" ? "ok" : "warn",
-    `Woofer limited by ${whoText}`,
+    `Woofer limited by ${WOOFER_LIMITED_BY[sys.whoW]}`,
     `Clean up to ${sys.wLevel.toFixed(0)} dB at 1 m${cfg.bsc ? `, with ${cfg.bsc} dB of baffle-step boost` : ""}.`,
     "hifiWooferLimit",
   ]);
