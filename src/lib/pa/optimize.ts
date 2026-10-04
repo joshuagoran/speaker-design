@@ -37,6 +37,7 @@ import {
   ductFit,
   subDriverClearanceNeededIn,
   driverClearance,
+  KEEP_UP_SLACK_DB,
 } from "./chips";
 import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS, subDriversOfSize } from "../data";
 import type {
@@ -975,10 +976,12 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   const combos: Combo[] = [];
   const slack = { budget: budget * 1.25, lb: input.maxLb * 1.25 };
   // the sub's amp and output once a mid `gap` dB short at the crossover keeps up (null: the amp is locked or would go
-  // under its slider)
+  // under its slider). Keeping up means within the check's slack, so the sub comes down only that far.
   const subFor = (sc: SubCandidate, gap: number) => {
-    if (gap >= -0.5) return { ampW: sc.c.ampW, out: sc.out };
-    const ampW = locks.ampW ? null : ampForGain(sc.s.lim.W, gap, AMP_WATTS_STEPS.ampW);
+    if (gap >= -KEEP_UP_SLACK_DB) return { ampW: sc.c.ampW, out: sc.out };
+    const ampW = locks.ampW
+      ? null
+      : ampForGain(sc.s.lim.W, gap + KEEP_UP_SLACK_DB, AMP_WATTS_STEPS.ampW);
     return ampW === null ? null : { ampW, out: sc.out + 10 * Math.log10(ampW / sc.s.lim.W) };
   };
   for (const sc of subCands) {
@@ -1017,9 +1020,10 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
             if (!e) return [{ hp, ampW: sc.c.ampW, mAmpW: amps.mAmpW, out: sc.out }];
             const { lo } = e,
               hi = e.hi[xoHi];
-            const room = hp.at + cur.hfTilt;
+            // the mid may stand up to the check's slack above what the horn keeps up with
+            const room = hp.at + cur.hfTilt + KEEP_UP_SLACK_DB;
             const mAmpW =
-              hi.max - room <= 0.5
+              hi.max <= room
                 ? amps.mAmpW
                 : locks.mAmpW
                   ? null

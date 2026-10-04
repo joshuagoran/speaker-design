@@ -42,6 +42,9 @@ export function driverClearance(subBox: Dims3, portStyle: PortStyle, cVent: Vent
   };
 }
 
+/** How far a band may fall short of the band below at their crossover before its chip says it runs out first, dB. */
+export const KEEP_UP_SLACK_DB = 0.5;
+
 // s: { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW }
 export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
   const { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW } = s;
@@ -188,7 +191,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
     // amp power that would close the gap, if the amp is what's short
     const wNeed = Math.pow(V * Math.pow(10, -gap / 20), 2) / 8;
     F.push(
-      gap < -0.5
+      gap < -KEEP_UP_SLACK_DB
         ? [
             "warn",
             "Mid runs out first",
@@ -261,7 +264,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
       gap = hornAtXo - need;
     const wNeed = hfAmpW * Math.pow(10, -gap / 10);
     F.push(
-      gap < -0.5
+      gap < -KEEP_UP_SLACK_DB
         ? [
             "warn",
             "Horn runs out first",
