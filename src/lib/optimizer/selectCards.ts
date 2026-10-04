@@ -1,5 +1,6 @@
 // The card selection both optimizers share: a pool of evaluated designs in, up to three cards out. Each engine keeps
 // its own goal tables and wording and hands them in as callbacks; the order of the cards is decided here.
+import { CARD_LABELS, CARD_WHY } from "../../constants/optimizerText";
 
 /** A card's heading and the sentence under it. */
 export interface CardRole {
@@ -112,8 +113,8 @@ export function selectCards<P, G extends string>(
       cards.push({
         p: small,
         slot: { kind: "smallest" },
-        label: "Smallest change",
-        why: "Changes one thing from your design.",
+        label: CARD_LABELS.smallest,
+        why: CARD_WHY.smallest,
       });
   }
   for (const g of o.altAxes) {

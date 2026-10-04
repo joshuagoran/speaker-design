@@ -12,6 +12,7 @@ import {
   subWeightLb,
 } from "../src/lib/pa/calc";
 import { FILL_OPTIONS } from "../src/lib/data";
+import { SEED_NAMES } from "./seeds";
 import type {
   Dims3,
   FillBoxType,
@@ -29,7 +30,7 @@ export type GoldenValues = Record<string, number | string | boolean | null | und
 const seeds = JSON.parse(
   fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url), "utf8"),
 ) as GoldenConfig[];
-const base = seeds.find((c) => c.name === "lil block stack LE (optimized)")!;
+const base = seeds.find((c) => c.name === SEED_NAMES.lilBlockOptimized)!;
 const synth = (
   [
     { name: "synthetic: 1/2 walls, 1.5 inset", wall: 0.5, inset: 1.5 },

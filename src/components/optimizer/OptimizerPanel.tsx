@@ -12,6 +12,7 @@ import { RunRow } from "./RunRow";
 import { ResultCards } from "./ResultCards";
 import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize";
 import { keepLines, PA_KEEP_WORDS } from "../../lib/optimizer/goalKeeps";
+import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import type {
   PaGoal,
   PaOptimizerCard,
@@ -79,7 +80,7 @@ export function OptimizerPanel({
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: "var(--font)" }}>
       <Card pad="lg">
-        <SectionHeading>Find a better design</SectionHeading>
+        <SectionHeading>{OPTIMIZER_PANEL_TEXT.heading}</SectionHeading>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
           <div className="mt-3">
             <div className="text-sm text-stone-500 mb-1">Room, sq ft</div>

@@ -6,6 +6,7 @@ import { formatDollars } from "../../lib/format";
 import { formatThickness } from "../../lib/pa/calc";
 import { Delta } from "./Delta";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
+import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import { Ellipsis } from "../ui/Ellipsis";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import type { PaMetricsDelta, PaOptimizerCard, PaOptimizerResult } from "../../types";
@@ -103,7 +104,7 @@ export function OptimizerResultCard({
         )}
       </div>
       <div className="text-xs leading-snug">
-        <b className="font-semibold">Limited by:</b> {result.limitedBy}
+        <b className="font-semibold">{OPTIMIZER_PANEL_TEXT.limitedBy}</b> {result.limitedBy}
       </div>
       {result.warnings
         .filter(([, , , id]) => !LIMIT_CHIP_IDS.has(id))

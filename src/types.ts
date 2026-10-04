@@ -2,6 +2,8 @@ import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
 import type { LIMIT_NAMES } from "./constants/limits";
+import type { CHANGE_NAMES } from "./constants/optimizerText";
+import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { MAKER_NAMES } from "./data/catalog/makers";
 
 // Shapes of the parts catalogue tables in data/catalog/ (lib/data.ts derives the app's view of them).
@@ -875,9 +877,14 @@ export interface HifiMetricsDelta {
   f3: number;
 }
 
+/** What a card changes from your design, in the words its "changes" line shows. */
+export type ChangeName = (typeof CHANGE_NAMES)[keyof typeof CHANGE_NAMES];
+
 export interface HifiOptimizerCard {
   label: string;
   why: string;
+  /** which card it is (first, fix, closest, smallest or an alternative's goal): code reads this, never the label */
+  slot: CardSlot<HifiGoal>;
   woofer: string;
   tweeter: string;
   config: HifiCardConfig;
@@ -892,7 +899,7 @@ export interface HifiOptimizerCard {
   /** the tweeter comes with its own waveguide */
   ownGuide: boolean;
   /** what differs from the current design: "woofer", "box size", "amp power" ... */
-  changed: string[];
+  changed: ChangeName[];
   /** clean level at the seat as [Hz, dB] points */
   curve: [number, number][];
   whoW: WooferLimit;
@@ -1825,6 +1832,8 @@ export interface PaBoxGeometry {
 export interface PaOptimizerCard {
   label: string;
   why: string;
+  /** which card it is (first, fix, closest, smallest or an alternative's goal): code reads this, never the label */
+  slot: CardSlot<PaGoal>;
   config: PaDesignConfig;
   metrics: PaMetricsSummary;
   delta: PaMetricsDelta | null;
@@ -1846,7 +1855,7 @@ export interface PaOptimizerCard {
     cutlist: CutlistSettings;
   };
   /** what differs from the current design: "sub driver", "vent" ... */
-  changed: string[];
+  changed: ChangeName[];
   priceKnown: boolean;
   curve: [number, number][];
   geom: PaBoxGeometry;

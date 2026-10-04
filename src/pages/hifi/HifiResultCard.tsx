@@ -7,6 +7,8 @@ import { Delta } from "../../components/optimizer/Delta";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { WOOFER_LIMITED_BY } from "../../constants/limits";
+import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
+import { STATS } from "../../components/optimizer/StatRow";
 import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
 import { byIdOrThrow } from "../../lib/tables";
 import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
@@ -112,13 +114,13 @@ export function HifiResultCard({
           <Delta v={deltas.level} unit=" dB" digits={1} />,
         )}
         {tile(
-          "F3 in room",
+          STATS.f3InRoom.label,
           `${metrics.f3.toFixed(0)} Hz`,
           <Delta v={deltas.f3} unit=" Hz" lowerIsBetter />,
         )}
       </div>
       <div className="text-xs leading-snug">
-        <b className="font-semibold">Limited by:</b> {limitedBy}
+        <b className="font-semibold">{OPTIMIZER_PANEL_TEXT.limitedBy}</b> {limitedBy}
       </div>
       {result.warnings
         .filter(([, , , id]) => !LIMIT_CHIP_IDS.has(id))

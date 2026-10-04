@@ -46,6 +46,7 @@ import {
   HIFI_OPTIMIZER_GOALS,
 } from "../../lib/hifi/optimize";
 import { HIFI_KEEP_WORDS, keepLines } from "../../lib/optimizer/goalKeeps";
+import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import type { HifiPlanner } from "./useHifiPlanner";
 import type { Dims3 } from "../../types";
 import { entriesOf } from "../../lib/records";
@@ -183,7 +184,7 @@ export function HifiPage({ hifi }: Props) {
   );
   const optimizerPanel = isOptimizerOn && (
     <Card pad="lg" className="mt-3">
-      <SectionHeading>Find a better design</SectionHeading>
+      <SectionHeading>{OPTIMIZER_PANEL_TEXT.heading}</SectionHeading>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
         <div className="mt-3">
           <NumberField

@@ -21,6 +21,7 @@ import {
   DEFAULT_PORT_SIZE,
 } from "../src/lib/defaults";
 import { designProblems, evaluateDesign } from "../src/lib/pa/optimize";
+import { DESIGN_PROBLEM_TEXT } from "../src/constants/optimizerText";
 import { hornResponse } from "../src/lib/pa/calc";
 import { fillSystem } from "../src/lib/pa/calc";
 import { hifiSystem } from "../src/lib/hifi/hifi";
@@ -63,7 +64,7 @@ describe("default designs", () => {
     const m = evaluateDesign(snapshotOf(DEFAULT_PA));
     expect(m?.mismatch).toBe(false);
     expect(designProblems(m, { maxLb: 1000, budget: 100000 })).not.toContain(
-      "horn and driver exits differ",
+      DESIGN_PROBLEM_TEXT.exitMismatch,
     );
     const d = DEFAULT_PA;
     expect(hornResponse(d.cd.hf, d.horn.hf ?? {}, d.xoHi, d.hfAmpW, d.xoHiOrder)).not.toBeNull();
