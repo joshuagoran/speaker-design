@@ -14,8 +14,11 @@ import {
 import { HIGHPASS_ALIGNMENTS, isRoundPort } from "../../../lib/pa/calc";
 import { AMP_WATTS_MAX, AMP_WATTS_STEPS } from "../../../lib/pa/optimize";
 import type { PaPlanner } from "../hooks/usePaPlanner";
-import { keysOf } from "../../../lib/records";
+import { entriesOf, keysOf } from "../../../lib/records";
 import { CrossoverSlopeButtons } from "../../../components/ui/CrossoverSlopeButtons";
+import { FONT } from "../../../styles/fonts";
+import { SLOT_LAYOUT_NAMES } from "../../../constants/portStyles";
+import { UI_TEXT } from "../../../constants/uiText";
 
 interface Props {
   planner: Pick<
@@ -165,7 +168,7 @@ export function SettingsPanel({ planner }: Props) {
     <>
       <aside
         className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet`}
-        style={{ fontFamily: "var(--font)" }}
+        style={{ fontFamily: FONT }}
         aria-label="Settings"
       >
         <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
@@ -196,7 +199,7 @@ export function SettingsPanel({ planner }: Props) {
           {isSettingsSheetOpen && (
             <button
               onClick={() => setSettingsSheetOpen(false)}
-              aria-label="Close settings"
+              aria-label={UI_TEXT.closeSettings}
               className="px-3 rounded border border-stone-300 bg-stone-50 text-sm"
             >
               ✕
@@ -382,14 +385,7 @@ export function SettingsPanel({ planner }: Props) {
               </div>
               {!isRoundPort(portStyle) && (
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {(
-                    [
-                      ["slots", "Bottom"],
-                      ["folded", "Bottom, folded"],
-                      ["vslots", "Both sides"],
-                      ["vslot1", "One side"],
-                    ] as const
-                  ).map(([v, label]) => {
+                  {entriesOf(SLOT_LAYOUT_NAMES).map(([v, label]) => {
                     const on = portStyle === v;
                     return (
                       <ToggleButton key={v} onClick={() => setPortStyle(v)} on={on} size="xs">

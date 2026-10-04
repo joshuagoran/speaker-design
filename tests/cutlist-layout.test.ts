@@ -13,6 +13,7 @@ import {
   waterfallStrips,
 } from "../src/lib/pa/cutlist";
 import { DEFAULT_PA } from "../src/lib/defaults";
+import { CUT_BOX_NAMES } from "../src/constants/cutParts";
 import type { CutPart, CutlistSettings, PackedSheet, PlacedPart, PortStyle } from "../src/types";
 import { close } from "./helpers";
 
@@ -243,7 +244,7 @@ describe("waterfall", () => {
         h: 60,
       },
     );
-    assert.ok(notes.some((n) => n.startsWith("Sub:")));
+    assert.ok(notes.some((n) => n.startsWith(`${CUT_BOX_NAMES.sub}:`)));
     assert.ok(out.some((p) => p.box === "sub" && p.part === "side"));
   });
 

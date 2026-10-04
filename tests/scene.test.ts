@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { buildStackScene, type Props } from "../src/components/stack-view/buildStackScene";
 import { derivePaDesign } from "../src/pages/pa-stack/hooks/paDesign";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import { sceneCases, scenePropsOf } from "./scene-cases";
+import { SCENE_CASE_NAMES, sceneCases, scenePropsOf } from "./scene-cases";
 
 const byName = (name: string) => {
   const c = sceneCases.find((x) => x.name === name);
@@ -71,7 +71,7 @@ function derivedHeights(p: Props) {
 
 describe("stack scene", () => {
   test("the default PA stands on the floor and is as wide and deep as the sub box", () => {
-    const p = byName("default PA");
+    const p = byName(SCENE_CASE_NAMES.defaultPa);
     const box = stackBox(buildStackScene(p));
     const { w, d } = p.sub.box;
     expect(box.min.y).toBeCloseTo(0, 6);
@@ -83,7 +83,7 @@ describe("stack scene", () => {
   });
 
   test("the tower is one shell as wide and deep as the sub box, as tall as the planner says", () => {
-    const p = byName("tower");
+    const p = byName(SCENE_CASE_NAMES.tower);
     const box = stackBox(buildStackScene(p));
     const { w, d } = p.sub.box;
     expect(box.max.x - box.min.x).toBeGreaterThanOrEqual(w);
@@ -95,7 +95,7 @@ describe("stack scene", () => {
   });
 
   test("the tower's arched top is as tall as the planner says", () => {
-    const p = byName("tower, arched top");
+    const p = byName(SCENE_CASE_NAMES.archedTower);
     const derived = derivedHeights(p);
     expect(derived.hasArchedTop).toBe(true);
     const box = stackBox(buildStackScene(p));
@@ -154,7 +154,7 @@ describe("stack scene", () => {
   });
 
   test("the mid box and horn sit at the heights the planner derives", () => {
-    const p = byName("default PA");
+    const p = byName(SCENE_CASE_NAMES.defaultPa);
     const g = buildStackScene(p);
     const derived = derivedHeights(p);
     const { w, h } = p.mid.box;
@@ -184,7 +184,7 @@ describe("stack scene", () => {
     const horns = [...new Set(sceneCases.map((c) => c.props.horn))];
     for (const layout of ["stack", "pole", "satellite", "tower"] as const) {
       for (const horn of horns) {
-        const p = { ...byName("default PA"), horn, layout };
+        const p = { ...byName(SCENE_CASE_NAMES.defaultPa), horn, layout };
         const g = buildStackScene(p);
         const derived = derivedHeights(p);
         // the horn is the highest mesh directly in the group
@@ -200,7 +200,7 @@ describe("stack scene", () => {
   });
 
   test("the stack is as tall as the planner says, for each horn shape and layout", () => {
-    const base = byName("default PA");
+    const base = byName(SCENE_CASE_NAMES.defaultPa);
     const horns = [...new Set(sceneCases.map((c) => c.props.horn))].flatMap((horn) => [
       horn,
       { ...horn, profile: undefined, rect: undefined }, // the plain flared block
@@ -221,7 +221,7 @@ describe("stack scene", () => {
   });
 
   test("the planner follows the wall thickness: tower height and arch threshold", () => {
-    const base = byName("tower, arched top");
+    const base = byName(SCENE_CASE_NAMES.archedTower);
     // the two plywood choices the planner offers
     for (const wall of [0.5, 0.75]) {
       const p = { ...base, wall };
