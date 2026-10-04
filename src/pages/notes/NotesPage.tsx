@@ -2,26 +2,31 @@ import { Fragment } from "react";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { SignalPath } from "../../components/drawings/SignalPath";
-import { CD_OPTIONS, DSP_UNITS, HORN_AMP_SAFETY_HPF_HZ, RACK_DSP_IDS, RACKS } from "../../lib/data";
+import { DSP_UNITS, HORN_AMP_SAFETY_HPF_HZ, RACK_DSP_IDS, RACKS } from "../../lib/data";
 import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
-import { formatDollars } from "../../lib/format";
-import { byIdOrThrow } from "../../lib/tables";
-import type { CompressionDriver, CompressionHf } from "../../types";
 import { FONT } from "../../styles/fonts";
+import {
+  DEFAULT_CD,
+  DEFAULT_HORN,
+  DEFAULT_SUB,
+  DEFAULT_SUB_WEIGHTS,
+  DEFAULT_XO_HI,
+} from "../../lib/defaultParts";
 
-// The prose quotes these parts' catalogue figures, so a price or rating edited there shows up here.
-/** The DE360's AES rating and price; throws if its catalogue entry loses either. */
-function de360Figures(): Pick<CompressionHf, "aes"> & {
-  price: NonNullable<CompressionDriver["price"]>;
-} {
-  const d = byIdOrThrow(CD_OPTIONS, "de360", "compression drivers");
-  if (!d.hf || d.price === null)
-    throw new Error("compression drivers: the Notes page quotes the DE360's AES rating and price");
-  return { aes: d.hf.aes, price: d.price };
-}
-const DE360 = de360Figures();
+// The prose quotes the starting design's parts and the catalogue's figures (defaultParts.ts), so a change of default
+// part, price or rating shows up here.
 const GXD = QSC_GXD.models;
 const OHM = "Ω";
+
+/** The default sub's published sensitivity against what its T/S give, or the T/S figure alone when none is entered. */
+function sensitivityText(): string {
+  const { maker, sens, tsSens } = DEFAULT_SUB;
+  const ts = `${tsSens.toFixed(1)} dB/2.83V`;
+  if (sens == null)
+    return `${maker} publish no sensitivity in the catalogue; their published T/S parameters give ${ts}.`;
+  const gap = sens - tsSens;
+  return `${maker}'s ${sens} dB claim is ${Math.abs(gap).toFixed(1)} dB ${gap >= 0 ? "above" : "below"} what their own published T/S parameters give (${ts}).`;
+}
 
 /** Notes page: reference material and parts research behind the design. */
 export function NotesPage() {
@@ -120,7 +125,7 @@ export function NotesPage() {
             ],
             [
               "Horns",
-              `A ${GXD4.model} puts ${GXD4.w8} W on a ${DE360.aes} W AES driver like the DE360. Its limiter, set to the driver's rating, is the protection; set the planner's HF amp slider to the same power so its numbers match.`,
+              `A ${GXD4.model} puts ${GXD4.w8} W on a ${DEFAULT_CD.aes} W AES driver like the ${DEFAULT_CD.name}. Its limiter, set to the driver's rating, is the protection; set the planner's HF amp slider to the same power so its numbers match.`,
             ],
           ].map(([t, d]) => (
             <li key={t} className="flex gap-3">
@@ -303,7 +308,7 @@ export function NotesPage() {
             ],
             [
               'Consider 5/8" or 1/2" for the final boxes',
-              "Sub column drops 119 \u2192 107 \u2192 95 lb loaded. Needs more bracing, and the extra interior volume lowers Fb, so the duct gets shorter.",
+              `Sub column drops ${DEFAULT_SUB_WEIGHTS.map((w) => w.lb).join(" \u2192 ")} lb loaded (${DEFAULT_SUB_WEIGHTS.map((w) => w.t).join(" \u2192 ")}). Needs more bracing, and the extra interior volume lowers Fb, so the duct gets shorter.`,
             ],
             [
               "MDO for the baffles",
@@ -347,19 +352,19 @@ export function NotesPage() {
             ],
             [
               "Sensitivity",
-              "SB's 99 dB claim is 3 dB above what their own published T/S parameters give (95.9 dB/2.83V). Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure.",
+              `${sensitivityText()} Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure.`,
             ],
             [
               "Driver clearance",
-              "Check the Nero's frame and 8.4\" mounting depth against the baffle margin and anything that ends up behind the magnet.",
+              `Check the ${DEFAULT_SUB.name}'s frame and ${DEFAULT_SUB.depthIn != null ? `${DEFAULT_SUB.depthIn}" ` : ""}mounting depth against the baffle margin and anything that ends up behind the magnet.`,
             ],
             [
               "Compression driver",
-              `DE360 at ${formatDollars(DE360.price)} is the default; crossover floor on the A400G2 needs a distortion sweep to confirm ~1.1 kHz.`,
+              `${DEFAULT_CD.name} at ${DEFAULT_CD.price} is the default; crossover floor on the ${DEFAULT_HORN.name} needs a distortion sweep to confirm ~${DEFAULT_XO_HI}.`,
             ],
             [
               "Horn print",
-              "A400G2 in one piece needs a 400 mm+ bed; otherwise sectioned. Filament, print service, or buy the RX-28 instead.",
+              `${DEFAULT_HORN.name} in one piece needs a ${DEFAULT_HORN.bedMm} mm+ bed; otherwise sectioned. Filament, print service, or buy the RX-28 instead.`,
             ],
             [
               "Prototype material",
