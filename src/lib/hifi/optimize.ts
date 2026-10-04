@@ -96,7 +96,9 @@ interface GridEntry extends HifiGridBox {
   w: HifiWoofer;
   cfg: SearchConfig;
   key: string;
-  order: [woofer: number, box: number];
+  order: HifiScoredBox["order"];
+  /** the tuning its port or radiators were sized for (null for a sealed box or your own box) */
+  fb: number | null;
 }
 /** A box at one crossover that passes the box's own checks: the woofer's F3 and level (indices into the box and crossover lists). */
 interface Rec {
@@ -286,7 +288,7 @@ function prsFor(
       if (addG == null || addG > passiveRadiatorMassMax(drv)) continue;
       out.push({ drv, n, addG });
     }
-  return out.sort((a, b) => a.n * a.drv.price - b.n * b.drv.price).slice(0, 1);
+  return out.sort((a, b) => a.n * a.drv.price - b.n * b.drv.price);
 }
 
 // input: { cur: page cfg + { woofer, tweeter } ids, woofers, tweeters, passives, goals, locks: { woofer, tweeter, box, wall, xo, wAmpW, tAmpW,
@@ -368,14 +370,17 @@ export function hifiSearchSpace(
   // the grid's order: woofer by woofer in list order, each woofer's boxes as generated, your box last
   let wi = 0,
     li = 0;
-  const add = (
+  // a box on the grid (null when it is already there), at its place in the grid's order
+  const entry = (
     w: HifiWoofer,
     dim: Dims3,
     box: HifiBoxKind,
     wall: number,
     port: HifiPort | null,
     pr: PassiveRadiatorChoice | null | undefined,
-  ) => {
+    fb: number | null,
+    order: GridEntry["order"],
+  ): GridEntry | null => {
     // a port by its own shape's fields (a saved port may carry the other shape's leftovers, or another field order)
     const portKey = !port
       ? ""
@@ -383,10 +388,38 @@ export function hifiSearchSpace(
         ? `slot ${port.n} ${port.h} ${port.len}`
         : `round ${port.n} ${port.dia} ${port.len}`;
     const key = `${w.id}|${box}|${wall}|${dim.w}|${dim.h}|${dim.d}|${box === "vented" ? portKey : ""}|${box === "radiator" && pr ? `${pr.drv.id}|${pr.n}|${pr.addG}` : ""}`;
-    if (seen.has(key)) return;
+    if (seen.has(key)) return null;
     seen.add(key);
     const gb: HifiGridBox = { box, dim, wall, port, pr: pr || null };
-    grid.push({ ...gb, w, key, order: [wi, li++], cfg: cfgOf(gb) });
+    return { ...gb, w, key, order, fb, cfg: cfgOf(gb) };
+  };
+  const add = (
+    w: HifiWoofer,
+    dim: Dims3,
+    box: HifiBoxKind,
+    wall: number,
+    port: HifiPort | null,
+    pr: PassiveRadiatorChoice | null | undefined,
+    fb: number | null = null,
+  ) => {
+    const e = entry(w, dim, box, wall, port, pr, fb, [wi, li++, 0]);
+    if (e) grid.push(e);
+  };
+  // the same radiator box with the next radiator option at the same tuning, placed right after it in the grid's
+  // order: tried when the radiators' travel sets the box's level, so a bigger radiator is in the running (null when
+  // there is none; a vented box has its biggest port on the grid already)
+  const bigger = (e: GridEntry): GridEntry | null => {
+    const { w, dim, wall, fb, pr } = e;
+    if (fb == null || e.box !== "radiator" || !pr) return null;
+    const options = prsFor(w, dim, wall, passives, fb),
+      i = options.findIndex((o) => o.drv.id === pr.drv.id && o.n === pr.n);
+    return i >= 0 && i + 1 < options.length
+      ? entry(w, dim, "radiator", wall, null, options[i + 1], fb, [
+          e.order[0],
+          e.order[1],
+          e.order[2] + 1,
+        ])
+      : null;
   };
   // a share of the grid for one worker: every `parts`-th woofer, and your box in part 0
   for (const [i, w] of wList.entries()) {
@@ -415,31 +448,36 @@ export function hifiSearchSpace(
               if (box === "vented")
                 for (const k of [0.8, 1, 1.2]) {
                   const Fb = w.ts.Fs * k;
+                  // the smallest round port that fits (the shortest), the largest (the most air before it chuffs) and
+                  // the largest slot: a box limited by its port's air speed always has its biggest port in the running
+                  const rounds = [1.5, 2, 2.5, 3]
+                    .map((dia) => portFor(w, dim, wall, 1, dia, Fb))
+                    .filter((o) => o !== null);
+                  const slots = [0.75, 1, 1.5]
+                    .map((h) => slotFor(w, dim, wall, h, Fb))
+                    .filter((o) => o !== null);
                   for (const port of [
-                    ...[1.5, 2, 2.5, 3]
-                      .map((dia) => portFor(w, dim, wall, 1, dia, Fb))
-                      .filter(Boolean)
-                      .slice(0, 2),
-                    ...[0.75, 1, 1.5]
-                      .map((h) => slotFor(w, dim, wall, h, Fb))
-                      .filter(Boolean)
-                      .slice(0, 1),
+                    rounds[0],
+                    rounds[rounds.length - 1],
+                    slots[slots.length - 1],
                   ])
-                    add(w, dim, box, wall, port, null);
+                    if (port) add(w, dim, box, wall, port, null, Fb);
                 }
               else if (box === "radiator")
                 for (const k of [0.8, 1, 1.2])
-                  for (const pr of prsFor(w, dim, wall, passives, w.ts.Fs * k))
-                    add(w, dim, box, wall, null, pr);
+                  for (const pr of prsFor(w, dim, wall, passives, w.ts.Fs * k).slice(0, 1))
+                    add(w, dim, box, wall, null, pr, w.ts.Fs * k);
               else add(w, dim, box, wall, null, null);
             }
   }
-  // your box as it is, on each plywood (the smallest change for Lighter; a new tweeter or crossover keeps it)
-  // (even when your woofer isn't in the offered list)
+  // your box as it is: on the other plywood always (the smallest change for Lighter), and on yours when your woofer is
+  // in the offered list (a new tweeter or crossover keeps it; a filtered list leaves your woofer out of the search)
   if (withGrid && part === 0 && !curPrMissing) {
     wi = wList.length;
     li = 0;
-    for (const wall of walls) add(W0, cur.dim, cur.box, wall, cur.port, cur.pr);
+    for (const wall of walls)
+      if (wall !== cur.wall || wList.includes(W0))
+        add(W0, cur.dim, cur.box, wall, cur.port, cur.pr);
   }
   return {
     cur,
@@ -457,6 +495,7 @@ export function hifiSearchSpace(
       xos,
       grid,
       cfgOf,
+      bigger,
     },
   };
 }
@@ -469,10 +508,13 @@ export function hifiSearchSpace(
 export function hifiScoreBoxes(input: HifiOptimizerInput, part = 0, parts = 1): HifiScoredBox[] {
   const { cur, W0, T0, space } = hifiSearchSpace(input, { part, parts });
   if (!W0 || !T0 || !space) return [];
-  const { xos, grid } = space;
+  const { xos, grid, bigger } = space;
   const top = Math.max(hifiGridTop(0), 1.5 * Math.max(...xos));
   const out: HifiScoredBox[] = [];
-  for (const e of grid) {
+  // the grid, and the next radiators of boxes whose radiators set their level, as they come up
+  const queue = [...grid];
+  for (let qi = 0; qi < queue.length; qi++) {
+    const e = queue[qi];
     const { w, cfg, dim, wall, box, pr } = e;
     if (!wooferFitsBaffle(w, dim)) continue;
     if (box === "vented" && hifiPortElbows(dim, wall, hifiVentPort(cfg)) == null) continue;
@@ -480,6 +522,7 @@ export function hifiScoreBoxes(input: HifiOptimizerInput, part = 0, parts = 1): 
     const b = hifiBox(w, cfg, top);
     if (!b || (b.sM && !qtcInRange(b.sM.Qtc))) continue;
     const prep = hifiWooferPrep(b, w, cfg);
+    let radiatorLimited = false;
     out.push({
       key: e.key,
       order: e.order,
@@ -495,10 +538,15 @@ export function hifiScoreBoxes(input: HifiOptimizerInput, part = 0, parts = 1): 
       f3: prep.f3,
       levels: xos.map((xo) => {
         if (wooferPastRange(w, xo)) return null;
-        const { wLevel, ampDb, drvDb } = hifiWooferLevel(b, prep, { ...cfg, xo });
+        const { wLevel, ampDb, drvDb, whoW } = hifiWooferLevel(b, prep, { ...cfg, xo });
+        if (whoW === "radiator") radiatorLimited = true;
         return { wLevel, ampDb, drvDb };
       }),
     });
+    if (radiatorLimited) {
+      const next = bigger(e);
+      if (next) queue.push(next);
+    }
   }
   return out;
 }
@@ -562,7 +610,9 @@ export function optimizeHifiSpeaker(
   // 1. the box step (here or in parts), merged in the grid's order (so a split run picks exactly what one run does),
   //    each box once
   const parts = scored ?? [hifiScoreBoxes(input)];
-  const merged = parts.flat().sort((a, b) => a.order[0] - b.order[0] || a.order[1] - b.order[1]);
+  const merged = parts
+    .flat()
+    .sort((a, b) => a.order[0] - b.order[0] || a.order[1] - b.order[1] || a.order[2] - b.order[2]);
   const byWoofer = new Map([...wList, W0].map((w) => [w.id, w]));
   const boxList: BoxEntry[] = [];
   const recs: Rec[] = [];
@@ -734,7 +784,8 @@ export function optimizeHifiSpeaker(
         (xos[recs[dRec[i]].xi] !== cur.xo ? 1 : 0),
       currentFails: curFails,
       hasCurrent: !!curM,
-      tieBreak: (a, b) => dPrice[a] - dPrice[b],
+      // designs the goal ties on: the cheaper, then the lighter, then the louder
+      tieBreak: (a, b) => dPrice[a] - dPrice[b] || dLb[a] - dLb[b] || dLevel[b] - dLevel[a],
       altAxes,
       // an alternative keeps what its own goal keeps
       altFilter: (g, i) => !K || gapTo(K[g], metricsAt(i)) === 0,
@@ -923,8 +974,25 @@ function changes(p: Pick<PoolEntry, "w" | "t" | "c">, cur: HifiOptimizerCurrent)
 }
 
 /** One job for a worker: a share of the box step, or the rest of the search on the shares. */
+// a share kept by this worker (or the page, without workers) for its run's select job, so it isn't copied out and back
+let keptShare: { run: string; scored: HifiScoredBox[] } | null = null;
 export function runHifiJob(job: HifiOptimizerJob): HifiOptimizerJobResult {
-  return job.kind === "score"
-    ? { kind: "scored", scored: hifiScoreBoxes(job.input, job.part, job.parts) }
-    : { kind: "result", result: optimizeHifiSpeaker(job.input, job.scored) };
+  if (job.kind === "score") {
+    const scored = hifiScoreBoxes(job.input, job.part, job.parts);
+    if (!job.keep) return { kind: "scored", scored };
+    keptShare = { run: job.keep, scored };
+    return { kind: "scored", scored: [] };
+  }
+  const { kept } = job;
+  let shares = job.scored;
+  if (kept) {
+    // the kept share, or (a worker restarted between the jobs) that share scored again here
+    const own =
+      keptShare && keptShare.run === kept.run
+        ? keptShare.scored
+        : hifiScoreBoxes(job.input, kept.part, kept.parts);
+    shares = [own, ...shares];
+    keptShare = null;
+  }
+  return { kind: "result", result: optimizeHifiSpeaker(job.input, shares) };
 }

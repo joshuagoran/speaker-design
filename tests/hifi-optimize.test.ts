@@ -5,6 +5,7 @@ import {
   hifiDesignProblems,
   hifiSearchSpace,
   hifiScoreBoxes,
+  runHifiJob,
   portsDiffer,
 } from "../src/lib/hifi/optimize";
 import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
@@ -307,13 +308,19 @@ test("hi-fi optimizer: the first card is the best design on its grid, checked on
   assert.ok(space && space.grid.length > 100, "a grid to search");
   const seat = base.seatM;
   const designs: HifiMetrics[] = [];
-  for (const { w, cfg } of space.grid)
+  // the grid, and the next radiators of any box whose radiators set its level (as the search adds them)
+  const queue = [...space.grid];
+  for (let qi = 0; qi < queue.length; qi++) {
+    const e = queue[qi],
+      { w, cfg } = e;
+    let radiatorLimited = false;
     for (const xo of space.xos)
       for (const t of space.tList) {
         const tt = space.tweeterCfg(t);
         if (!tt) continue;
         const c = { ...cfg, xo, guide: space.guideOf(t) },
           sys = hifiSystem(w, tt, c);
+        if (sys && sys.whoW === "radiator") radiatorLimited = true;
         if (!sys || hifiDesignProblems(sys, hifiChips(sys, w, tt, c)).length) continue;
         const price = space.priceOf(w, t, c);
         if (price > base.budget) continue;
@@ -325,6 +332,9 @@ test("hi-fi optimizer: the first card is the best design on its grid, checked on
           level: sys.maxLevel - 20 * Math.log10(seat) + 3,
         });
       }
+    const next = radiatorLimited ? space.bigger(e) : null;
+    if (next) queue.push(next);
+  }
   // what each goal keeps from your design, and its objective (lower is better)
   const keeps: Record<HifiGoal, (m: HifiMetrics, c: HifiMetrics) => boolean> = {
     cheaper: (m, c) => m.level >= c.level - 0.5 && m.f3 <= c.f3 + 2,
@@ -406,15 +416,35 @@ test("hi-fi optimizer: a tweeter that keeps up only below full woofer power turn
   );
 });
 
-test("hi-fi optimizer: your box is offered on the other plywood even when your woofer isn't in the offered list", () => {
-  const out = optimizeHifiSpeaker({
+test("hi-fi optimizer: your box is searched on the other plywood even when your woofer isn't in the offered list", () => {
+  const { space } = hifiSearchSpace({
     ...base,
     woofers: HIFI_WOOFERS.filter((o) => o.id !== cur.woofer),
     goals: ["lighter"],
-    locks: { tweeter: true, box: true, xo: true, wAmpW: true, tAmpW: true, dim: tight.dim },
   });
-  assert.ok(
-    out.cards.some((k) => k.woofer === cur.woofer && k.config.wall === 0.5),
-    JSON.stringify(out.cards.map((k) => [k.label, k.woofer, k.config.wall])),
+  assert.ok(space, "a search");
+  const yours = space.grid.filter((e) => e.w.id === cur.woofer);
+  assert.deepEqual(
+    yours.map((e) => [e.wall, e.dim]),
+    [[0.5, cur.dim]],
+    "your box on 1/2 in ply only (your woofer itself is filtered out)",
   );
+});
+
+test("hi-fi optimizer: the first worker's kept share (or, if lost, its share scored again) gives what one run gives", () => {
+  const input = { ...base, woofers: HIFI_WOOFERS.slice(0, 9), goals: ["cheaper" as const] };
+  const one = optimizeHifiSpeaker(input);
+  const others = structuredClone([1, 2].map((part) => hifiScoreBoxes(input, part, 3)));
+  const sent = runHifiJob({ kind: "score", input, part: 0, parts: 3, keep: "run-a" });
+  assert.deepStrictEqual(sent, { kind: "scored", scored: [] }, "the kept share isn't sent back");
+  for (const run of ["run-a", "run-b"]) {
+    const done = runHifiJob({
+      kind: "select",
+      input,
+      scored: others,
+      kept: { run, part: 0, parts: 3 },
+    });
+    assert.ok(done.kind === "result");
+    assert.deepStrictEqual({ ...done.result, stats: null }, { ...one, stats: null }, run);
+  }
 });

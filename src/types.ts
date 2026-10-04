@@ -1851,7 +1851,8 @@ export interface HifiGridBox {
 /** A box from the box step, as a worker hands it back: its fields, place in the grid, and its numbers per crossover. */
 export interface HifiScoredBox extends HifiGridBox {
   key: string;
-  order: [woofer: number, box: number];
+  /** its place in the grid's order: the woofer's, the box's, and how many vents up from the box's own */
+  order: [woofer: number, box: number, vent: number];
   wId: string;
   gross: number;
   ch: number;
@@ -1864,8 +1865,21 @@ export interface HifiScoredBox extends HifiGridBox {
 }
 /** A job for a Hi-fi optimizer worker: one share of the box step, or the rest of the search on every share. */
 export type HifiOptimizerJob =
-  | { kind: "score"; input: HifiOptimizerInput; part: number; parts: number }
-  | { kind: "select"; input: HifiOptimizerInput; scored: HifiScoredBox[][] };
+  | {
+      kind: "score";
+      input: HifiOptimizerInput;
+      part: number;
+      parts: number;
+      /** keep this share in the worker for the select job of the same run, instead of sending it back */
+      keep?: string;
+    }
+  | {
+      kind: "select";
+      input: HifiOptimizerInput;
+      /** the other workers' shares; the share kept for this run joins them (or is scored again if it was lost) */
+      scored: HifiScoredBox[][];
+      kept?: { run: string; part: number; parts: number };
+    };
 export type HifiOptimizerJobResult =
   | { kind: "scored"; scored: HifiScoredBox[] }
   | { kind: "result"; result: HifiOptimizerResult };

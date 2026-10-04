@@ -13,13 +13,23 @@ const runners = Array.from({ length: PARTS }, () =>
 );
 
 /** The Hi-fi search: the box step in parts on several workers, then the rest on the first. */
+let runs = 0;
 export async function runHifiOptimizer(input: HifiOptimizerInput): Promise<HifiOptimizerResult> {
-  const t0 = Date.now();
+  const t0 = Date.now(),
+    run = `${t0}-${++runs}`;
+  // the first worker keeps its own share for the select job it runs next; the others send theirs over
   const shares = await Promise.all(
-    runners.map((run, part) => run({ kind: "score", input, part, parts: PARTS })),
+    runners.map((go, part) =>
+      go({ kind: "score", input, part, parts: PARTS, keep: part === 0 ? run : undefined }),
+    ),
   );
-  const scored = shares.flatMap((r) => (r.kind === "scored" ? [r.scored] : []));
-  const done = await runners[0]({ kind: "select", input, scored });
+  const scored = shares.slice(1).flatMap((r) => (r.kind === "scored" ? [r.scored] : []));
+  const done = await runners[0]({
+    kind: "select",
+    input,
+    scored,
+    kept: { run, part: 0, parts: PARTS },
+  });
   if (done.kind !== "result") throw new Error("the search returned no result");
   // the time the whole search took, not only its last job
   return { ...done.result, stats: { ...done.result.stats, ms: Date.now() - t0 } };
