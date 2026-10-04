@@ -38,6 +38,7 @@ import {
   KEEP_UP_SLACK_DB,
 } from "./chips";
 import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS, subDriversOfSize } from "../data";
+import { PORT_TUBES } from "../../data/catalog/port-tubes";
 import type {
   ChangeName,
   ChipId,
@@ -251,27 +252,15 @@ const ALT_ORDER: Record<PaGoal, PaGoal[]> = {
   louder: ["cheaper", "lighter"],
 };
 
-// Vent sizes per style, smallest area first.
-const TUBES = [
-  [1, 3],
-  [1, 4],
-  [2, 3],
-  [2, 3.5],
-  [1, 5],
-  [2, 4],
-  [3, 4],
-  [2, 5],
-  [4, 4],
-  [2, 6],
-  [3, 5],
-  [4, 5],
-  [3, 6],
-  [4, 6],
-];
+// Vent sizes per style, smallest area first: the round styles from the port-tube catalogue (stock pipe), the rectangular
+// ones (ply ducts, cut to any size) from the search's own grid of slot heights and duct throats.
 // "round1" and "round4" are the one-tube and four-corner-tube layouts (the geometry treats every round style alike, from `nt` and
 // `dia`), so they take the tubes of that count; "round2" tries every tube count, as it always has.
 const tubesOf = (count?: number) =>
-  TUBES.filter(([nt]) => count === undefined || nt === count).map(([nt, dia]) => ({ nt, dia }));
+  PORT_TUBES.filter(({ nt }) => count === undefined || nt === count).map(({ nt, dia }) => ({
+    nt,
+    dia,
+  }));
 const VENT_SIZES: Record<PortStyle, Partial<VentSpec>[]> = {
   round1: tubesOf(1),
   round2: tubesOf(),

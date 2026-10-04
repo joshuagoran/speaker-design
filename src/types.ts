@@ -997,6 +997,9 @@ export interface VentSpec {
   len: number;
 }
 
+/** A set of round port tubes from stock pipe: how many, and each one's inside diameter in inches. */
+export type PortTubeSet = Pick<VentSpec, "nt" | "dia">;
+
 /**
  * The PA design the planner snapshots and the optimizer works on: driver and box ids, dimensions in inches, crossovers in Hz,
  * amp watts and balance in dB. The fields after `layout` are looks and cutlist choices; the optimizer leaves them alone.
@@ -1591,6 +1594,9 @@ export type RoomSurface = RoomSide | "ceiling";
 
 /** What a side or the ceiling is made of (lib/pa/roomAcoustics has each one's absorption); "open" reflects nothing. */
 export type RoomMaterial = "concrete" | "drywall" | "wood" | "glass" | "curtain" | "open";
+
+/** A value in each octave band the absorption tables give, 125 Hz–4 kHz (`OCTAVE_HZ` in data/acoustics). */
+export type OctaveRow = readonly [number, number, number, number, number, number];
 
 /** The dance floor: empty (a hard floor), or full of people, who absorb the top end of the floor bounce. */
 export type FloorCrowd = "empty" | "full";
