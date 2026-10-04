@@ -5,6 +5,7 @@ import { BoxFront } from "../drawings/BoxFront";
 import { formatDollars } from "../../lib/format";
 import { formatThickness } from "../../lib/pa/calc";
 import { Delta } from "./Delta";
+import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { Ellipsis } from "../ui/Ellipsis";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import type { PaMetricsDelta, PaOptimizerCard, PaOptimizerResult } from "../../types";
@@ -105,10 +106,10 @@ export function OptimizerResultCard({
         <b className="font-semibold">Limited by:</b> {result.limitedBy}
       </div>
       {result.warnings
-        .filter(([h]) => !h.endsWith("limited"))
-        .map(([h, b]) => (
+        .filter(([, , , id]) => !LIMIT_CHIP_IDS.has(id))
+        .map(([, h, b, id]) => (
           <div
-            key={h}
+            key={id}
             className="text-xs border border-l-4 rounded px-2 py-1 bg-amber-50 border-amber-200 border-l-amber-300"
           >
             <b className="font-semibold text-amber-700 mr-1">{h}</b>

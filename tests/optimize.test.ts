@@ -12,6 +12,7 @@ import {
   ventSizesFor,
 } from "../src/lib/pa/optimize";
 import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc";
+import { KEEP_UP_SLACK_DB } from "../src/lib/pa/chips";
 import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data";
 import type {
   Dims3,
@@ -315,10 +316,7 @@ test("no card carries 'Horn stops loading near the crossover' when the horn, dri
   for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
     const out = runs[goal] || optimizePaStack({ ...base, goal });
     for (const k of out.cards)
-      assert.ok(
-        !k.warnings.some(([h]) => h === "Horn stops loading near the crossover"),
-        `${goal}: ${k.label}`,
-      );
+      assert.ok(!k.warnings.some(([, , , id]) => id === "hornLoading"), `${goal}: ${k.label}`);
   }
 });
 
@@ -536,4 +534,79 @@ test("with only a closest card, the near miss still offers the looser limit that
   assert.ok(out.cards.length > 0);
   const opts = out.nearMiss ? out.nearMiss.options.map((o) => o.text) : [];
   assert.ok(opts.includes("Budget +$80"), JSON.stringify(opts));
+});
+
+test("Cheaper swaps the compression driver when a cheaper one keeps up", () => {
+  const out = optimizePaStack({ ...base, cur: pick("light block"), goal: "cheaper" });
+  const k = out.cards[0];
+  assert.ok(k, "a card");
+  assert.equal(k.config.cd, "hf143n", `kept ${k.config.cd} at $${Math.round(k.metrics.price)}`);
+});
+
+test("Cheaper: fewest warnings, then strictly the cheapest, with weight breaking a price tie", () => {
+  const out = optimizePaStack({ ...base, goal: "cheaper" }),
+    [first, ...rest] = out.cards;
+  assert.ok(first, "a card");
+  for (const k of rest) assert.ok(first.metrics.price <= k.metrics.price, k.label);
+  // the same drivers on 1/2 in ply cost the same and weigh less, and a crossover that avoids the warning exists
+  assert.equal(first.config.wall, 0.5);
+  assert.ok(
+    !first.warnings.some(([, , , id]) => id === "hornMidWider"),
+    "no soft warning on the cheapest card",
+  );
+});
+
+test("a horn that keeps up only below full mid power turns the mid down instead of ruling the design out", () => {
+  // a 20 W HF amp, locked with its driver and horn, and every band asked to match the one below flat out: the cheapest
+  // mids at the full 2000 W outrun it
+  const c = { ...pick("light block"), tilt: 0, hfTilt: 0, hfAmpW: 20 },
+    lim = { maxLb: base.maxLb, budget: base.budget };
+  const out = optimizePaStack({
+    ...base,
+    cur: c,
+    goals: ["cheaper"],
+    locks: { cd: true, horn: true, hfAmpW: true },
+  });
+  const k = out.cards[0];
+  assert.ok(k && k.label === "Same output, cheaper", out.goalMissing ?? "no card");
+  assert.deepEqual(designProblems(evaluateDesign(k.config), lim), [], "the card passes as it is");
+  assert.ok(k.metrics.out >= out.target - 0.5, "and keeps the target");
+  assert.ok(
+    designProblems(evaluateDesign({ ...k.config, mAmpW: AMP_WATTS_MAX.mAmpW }), lim).includes(
+      "Horn runs out first",
+    ),
+    "at full mid power the horn would run out first",
+  );
+});
+
+test("a mid that keeps up only below full sub power turns the sub down instead of ruling the design out", () => {
+  // a 150 W mid amp, locked, asked to match the sub flat out: the subs that go lowest outrun it at full power (the
+  // search used to stop at 41.7 Hz; turned down to where the mid keeps up, a 4018 reaches 36 Hz)
+  const c = { ...pick("light block"), tilt: 0, mAmpW: 150 },
+    lim = { maxLb: base.maxLb, budget: base.budget };
+  const out = optimizePaStack({ ...base, cur: c, goals: ["lower"], locks: { mAmpW: true } });
+  const k = out.cards[0];
+  assert.ok(k && k.label === "Go lower", out.goalMissing ?? "no card");
+  assert.deepEqual(designProblems(evaluateDesign(k.config), lim), [], "the card passes as it is");
+  assert.ok(k.metrics.out >= out.target - 1.5, "and keeps the output");
+  assert.ok(k.metrics.f3 < 38, `F3 ${k.metrics.f3.toFixed(1)} Hz`);
+  assert.ok(
+    designProblems(evaluateDesign({ ...k.config, ampW: AMP_WATTS_MAX.ampW }), lim).includes(
+      "Mid runs out first",
+    ),
+    "at full sub power the mid would run out first",
+  );
+});
+
+test("a band is turned down only as far as the keep-up check needs, not level with the band above", () => {
+  // the sub outruns this mid at full power; it comes down until the mid is within the check's slack, which leaves it
+  // ~0.4 dB more output than turning it down until the mid is exactly level (124.8 dB)
+  const lim = { maxLb: base.maxLb, budget: base.budget };
+  const out = optimizePaStack({ ...base, cur: pick("idk tweaked"), goals: ["lighter", "lower"] });
+  const k = out.cards[0];
+  assert.ok(k, out.goalMissing ?? "no card");
+  const m = evaluateDesign(k.config)!;
+  assert.deepEqual(designProblems(m, lim), [], "the card passes as it is");
+  assert.ok(m.midGap < 0 && m.midGap >= -KEEP_UP_SLACK_DB, `mid gap ${m.midGap.toFixed(2)} dB`);
+  assert.ok(k.metrics.out > 125, `${k.metrics.out.toFixed(2)} dB`);
 });

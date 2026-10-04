@@ -818,44 +818,60 @@ export function hifiChips(
       "warn",
       "Woofer narrower than the tweeter at the crossover",
       `About ${Math.round(beam)}° against the tweeter's ${cfg.guide ? tCov + "°" : "wide dome"}: off-axis sound dips just below ${xo} Hz. A lower crossover or a smaller woofer meets it.`,
+      "hifiDispersion",
     ]);
   else
     F.push([
       "ok",
       "Dispersion matches at the crossover",
       `The woofer is about ${Math.round(beam)}° wide at ${xo} Hz.`,
+      "hifiDispersion",
     ]);
   if (hf.minXo && xo < hf.minXo)
     F.push([
       "warn",
       "Below the tweeter's minimum crossover",
       `${xo} Hz against ${hf.minXo} Hz recommended.`,
+      "hifiTweeterMinXo",
     ]);
   if (hf.fs && xo < 2 * hf.fs)
     F.push([
       "warn",
       "Close to the tweeter's resonance",
       `${xo} Hz is within an octave of its ${hf.fs} Hz resonance; distortion rises there.`,
+      "hifiTweeterResonance",
     ]);
   if (w.fmax && xo > w.fmax)
     F.push([
       "warn",
       "Woofer past its usable range",
       `${w.name} is rated to about ${w.fmax} Hz; cross lower.`,
+      "hifiWooferRange",
     ]);
   if (sys.kind === "sealed")
     F.push(
       sys.Qtc > 0.8
-        ? ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Peaky; the box is small for this woofer."]
+        ? [
+            "warn",
+            `Qtc ${sys.Qtc.toFixed(2)}`,
+            "Peaky; the box is small for this woofer.",
+            "hifiQtc",
+          ]
         : sys.Qtc < 0.5
-          ? ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Overdamped; the box could be smaller."]
-          : ["ok", `Qtc ${sys.Qtc.toFixed(2)}`, "Well damped."],
+          ? [
+              "warn",
+              `Qtc ${sys.Qtc.toFixed(2)}`,
+              "Overdamped; the box could be smaller.",
+              "hifiQtc",
+            ]
+          : ["ok", `Qtc ${sys.Qtc.toFixed(2)}`, "Well damped.", "hifiQtc"],
     );
   if (sys.kind === "vented" && sys.slotW != null && !sys.portFits) {
     F.push([
       "bad",
       "Slot too long",
       `${cfg.port.len.toFixed(1)}″ doesn't fit; this box holds about ${portMaxLength(cfg.dim, cfg.wall || 0.75, cfg.port).toFixed(1)}″, leaving the slot's height behind it. A shorter, lower slot tunes as low, or the box could be deeper.`,
+      "hifiSlotFit",
     ]);
   } else if (sys.kind === "vented" && !sys.portFits) {
     const fits = portMaxLength(cfg.dim, cfg.wall || 0.75, { ...cfg.port, elbows: 2 });
@@ -863,6 +879,7 @@ export function hifiChips(
       "bad",
       "Port too long",
       `${cfg.port.len.toFixed(1)}″ doesn't fit; even with two elbows this box holds about ${fits.toFixed(1)}″. A wider port tunes as low in less length, or the box could be deeper.`,
+      "hifiPortFit",
     ]);
   } else if (sys.kind === "vented" && sys.portElbows) {
     const e = sys.portElbows;
@@ -870,6 +887,7 @@ export function hifiChips(
       "warn",
       `Port needs ${e === 1 ? "an elbow" : "two elbows"}`,
       `${cfg.port.len.toFixed(1)}″ is longer than a straight port fits (about ${portMaxLength(cfg.dim, cfg.wall || 0.75, { ...cfg.port, elbows: 0 }).toFixed(1)}″); ${e === 1 ? "one elbow turns it up the back wall" : "two elbows fold it along the back and the bottom"}.`,
+      "hifiPortElbows",
     ]);
   }
   if (sys.kind === "radiator") {
@@ -882,6 +900,7 @@ export function hifiChips(
         "bad",
         "Radiators won't fit",
         `${p.n} on the back need about ${(passiveRadiatorShape(p.drv).w + 0.3 + 2 * (cfg.wall || 0.75)).toFixed(1)}″ of width and ${(p.n * (passiveRadiatorShape(p.drv).h + 0.5) + 2 * (cfg.wall || 0.75)).toFixed(1)}″ of height.`,
+        "hifiRadiatorFit",
       ]);
     F.push(
       k < 1.5
@@ -889,14 +908,21 @@ export function hifiChips(
             "warn",
             "Radiators small for this woofer",
             `They can move ${k.toFixed(1)}× the woofer's air; 1.5–2× keeps them from running out first. Use a bigger or second radiator.`,
+            "hifiRadiatorSize",
           ]
-        : ["ok", "Radiators big enough", `They can move ${k.toFixed(1)}× the woofer's air.`],
+        : [
+            "ok",
+            "Radiators big enough",
+            `They can move ${k.toFixed(1)}× the woofer's air.`,
+            "hifiRadiatorSize",
+          ],
     );
     if ((p.addG || 0) > 2 * p.drv.Mms)
       F.push([
         "warn",
         "Lots of added mass",
         `${p.addG} g on a ${p.drv.Mms} g cone; it may sag or rock. A bigger radiator or a bigger box tunes as low with less.`,
+        "hifiRadiatorMass",
       ]);
   }
   const need = w.size + 0.8;
@@ -905,6 +931,7 @@ export function hifiChips(
       "bad",
       "Woofer won't fit",
       `A ${w.size}″ woofer needs about ${need.toFixed(1)}″ of baffle width.`,
+      "hifiWooferFit",
     ]);
   const floor =
     sys.kind === "vented" && cfg.port.shape === "slot" ? cfg.port.h + (cfg.wall || 0.75) : 0; // the slot and its shelf along the bottom
@@ -913,6 +940,7 @@ export function hifiChips(
       "bad",
       "Drivers won't fit the baffle",
       `The woofer and tweeter${floor ? " above the slot" : ""} need about ${(cfg.dim.h - sys.lay.wooferIn + w.size / 2 + 0.5 + floor).toFixed(1)}″ of height.`,
+      "hifiBaffleFit",
     ]);
   const wall = cfg.wall || 0.75,
     round = cfg.roundoverIn || 0;
@@ -921,6 +949,7 @@ export function hifiChips(
       "warn",
       "Roundover deeper than the baffle",
       `A ${formatInches(round)} radius needs more than ${formatInches(wall)} stock: double the baffle up or glue hardwood strips along its edges to cut it in.`,
+      "hifiRoundover",
     ]);
   const offAsked = cfg.tweeterOffsetIn || 0;
   if (offAsked && sys.lay.onTop)
@@ -928,12 +957,14 @@ export function hifiChips(
       "warn",
       "Tweeter offset ignored",
       "The waveguide sits on the box top, centred; the offset only applies to a tweeter on the baffle.",
+      "hifiTweeterOffsetIgnored",
     ]);
   else if (Math.abs(offAsked) > tweeterOffsetMax(cfg, t) + 1e-9)
     F.push([
       "warn",
       "Tweeter offset past the edge",
       `Its ${t.faceplate.w.toFixed(1)}″ faceplate fits at most ${tweeterOffsetMax(cfg, t).toFixed(2)}″ off centre on this baffle; the model uses that.`,
+      "hifiTweeterOffsetEdge",
     ]);
   F.push(
     sys.who === "tweeter"
@@ -941,11 +972,13 @@ export function hifiChips(
           "warn",
           "Tweeter runs out first",
           `The tweeter tops out at ${sys.tLevel.toFixed(0)} dB, ${(sys.wLevel - sys.tLevel).toFixed(1)} dB below the woofer${sys.derate < 1 ? ` (derated for the ${xo} Hz crossover)` : ""}. A higher crossover or a more sensitive tweeter helps.`,
+          "hifiTweeterLevel",
         ]
       : [
           "ok",
           "Woofer sets the level",
           `Tweeter has ${(sys.tLevel - sys.wLevel).toFixed(1)} dB to spare.`,
+          "hifiTweeterLevel",
         ],
   );
   const whoText = {
@@ -959,6 +992,7 @@ export function hifiChips(
     sys.whoW === "amp" ? "ok" : "warn",
     `Woofer limited by ${whoText}`,
     `Clean up to ${sys.wLevel.toFixed(0)} dB at 1 m${cfg.bsc ? `, with ${cfg.bsc} dB of baffle-step boost` : ""}.`,
+    "hifiWooferLimit",
   ]);
   return F;
 }

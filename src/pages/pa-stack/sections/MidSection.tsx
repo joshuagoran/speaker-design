@@ -1,7 +1,7 @@
 import { WarningChips } from "../../../components/chips/WarningChips";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
 import { FoldHeading } from "../../../components/ui/FoldHeading";
-import { StatRow } from "../../../components/optimizer/StatRow";
+import { MAX_SPL_TIP, StatRow } from "../../../components/optimizer/StatRow";
 import { midChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
@@ -106,6 +106,7 @@ export function MidSection({ planner }: Props) {
                       `Max SPL at ${f} Hz`,
                       `${m.spl.toFixed(1)} dB`,
                       `sine, ${m.who}-limited`,
+                      MAX_SPL_TIP,
                     ];
                   }),
                   [

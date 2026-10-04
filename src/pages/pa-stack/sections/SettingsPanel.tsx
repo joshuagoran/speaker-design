@@ -12,6 +12,7 @@ import {
   cabinetFinishOf,
 } from "../../../lib/data";
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
+import { AMP_WATTS_MAX, AMP_WATTS_STEPS } from "../../../lib/pa/optimize";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { keysOf } from "../../../lib/records";
 import { CrossoverSlopeButtons } from "../../../components/ui/CrossoverSlopeButtons";
@@ -494,9 +495,9 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label="Amp power per channel @ 8 Ω"
                   value={subAmpWatts}
-                  min={200}
-                  max={3000}
-                  step={50}
+                  min={AMP_WATTS_STEPS.ampW.min}
+                  max={AMP_WATTS_MAX.ampW}
+                  step={AMP_WATTS_STEPS.ampW.step}
                   unit=" W"
                   onChange={setSubAmpWatts}
                   extra={renderLockButton("ampW", "the sub amp power")}
@@ -597,9 +598,9 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label="Mid amp power per channel @ 8 Ω"
                   value={midAmpWatts}
-                  min={50}
-                  max={2000}
-                  step={25}
+                  min={AMP_WATTS_STEPS.mAmpW.min}
+                  max={AMP_WATTS_MAX.mAmpW}
+                  step={AMP_WATTS_STEPS.mAmpW.step}
                   unit=" W"
                   onChange={setMidAmpWatts}
                   extra={renderLockButton("mAmpW", "the mid amp power")}
@@ -639,9 +640,9 @@ export function SettingsPanel({ planner }: Props) {
               <Slider
                 label="HF amp power per channel @ 8 Ω"
                 value={hornAmpWatts}
-                min={10}
-                max={500}
-                step={5}
+                min={AMP_WATTS_STEPS.hfAmpW.min}
+                max={AMP_WATTS_MAX.hfAmpW}
+                step={AMP_WATTS_STEPS.hfAmpW.step}
                 unit=" W"
                 onChange={setHornAmpWatts}
                 extra={renderLockButton("hfAmpW", "the HF amp power")}
