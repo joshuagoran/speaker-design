@@ -87,6 +87,8 @@ import {
   SHARED_GOAL_NAMES,
 } from "../../constants/optimizerText";
 import { ampForGain, onSlider, type AmpSteps } from "../optimizer/ampSteps";
+import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
+import { UI_TEXT } from "../../constants/uiText";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -208,7 +210,7 @@ export const ROOMS: Record<PaRoom, { d: number; gain: number; name: string; shor
   500: { d: 5, gain: 3, name: "500 sq ft", short: "500" },
   750: { d: 6, gain: 3, name: "750 sq ft", short: "750" },
   1000: { d: 7, gain: 3, name: "1000 sq ft", short: "1000" },
-  outdoor: { d: 10, gain: 0, name: "Outdoors", short: "Outdoors" },
+  outdoor: { d: 10, gain: 0, name: UI_TEXT.outdoors, short: UI_TEXT.outdoors },
 };
 /** The level the planner aims for at the listener, dB SPL. */
 export const LISTENER_TARGET_DB = 105;
@@ -1525,10 +1527,10 @@ function card(
   cl: CutlistSettings,
 ): PaOptimizerCard {
   const { c, m } = p;
-  const sub = byIdOrThrow(SUB_OPTIONS, c.sub, "subwoofers"),
-    mid = byIdOrThrow(MID_OPTIONS, c.mid, "mid drivers"),
-    cd = byIdOrThrow(CD_OPTIONS, c.cd, "compression drivers"),
-    horn = byIdOrThrow(HORN_OPTIONS, c.horn, "horns");
+  const sub = byIdOrThrow(SUB_OPTIONS, c.sub, CATALOG_TABLE_NAMES.subs),
+    mid = byIdOrThrow(MID_OPTIONS, c.mid, CATALOG_TABLE_NAMES.mids),
+    cd = byIdOrThrow(CD_OPTIONS, c.cd, CATALOG_TABLE_NAMES.compressionDrivers),
+    horn = byIdOrThrow(HORN_OPTIONS, c.horn, CATALOG_TABLE_NAMES.horns);
   const midDims = c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim;
   const { parts } = cutParts({
     sub,

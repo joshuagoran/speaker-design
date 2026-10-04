@@ -16,6 +16,7 @@ import type { FillsPlanner } from "./useFillsPlanner";
 import { xmaxBandCurves, xmaxRows } from "../../lib/xmax";
 import { LIMIT_NAMES } from "../../constants/limits";
 import { FONT } from "../../styles/fonts";
+import { UI_TEXT } from "../../constants/uiText";
 
 interface Props {
   fills: FillsPlanner;
@@ -139,7 +140,7 @@ export function FillsPage({ fills }: Props) {
             [
               "Woofer sensitivity",
               `${sensitivityDb.toFixed(1)} dB`,
-              "2.83 V, half space, 1 m, modelled",
+              `${UI_TEXT.splConditions}, modelled`,
             ],
             [
               "HF sensitivity",

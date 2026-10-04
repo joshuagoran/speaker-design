@@ -13,6 +13,7 @@ import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
 import { byIdOrThrow } from "../../lib/tables";
 import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
 import { FONT } from "../../styles/fonts";
+import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 
 interface Props {
   result: HifiOptimizerCard;
@@ -43,8 +44,8 @@ export function HifiResultCard({
     metrics = result.metrics,
     deltas: Partial<HifiMetricsDelta> = result.delta || {};
   // a card's driver ids come from these same lists (the optimizer searches them)
-  const woofer = byIdOrThrow(HIFI_WOOFERS, result.woofer, "hi-fi woofers"),
-    tweeter = byIdOrThrow(HIFI_TWEETERS, result.tweeter, "hi-fi tweeters");
+  const woofer = byIdOrThrow(HIFI_WOOFERS, result.woofer, CATALOG_TABLE_NAMES.hifiWoofers),
+    tweeter = byIdOrThrow(HIFI_TWEETERS, result.tweeter, CATALOG_TABLE_NAMES.hifiTweeters);
   const radiator = passiveRadiatorOf(config); // null unless the box is a radiator box with its radiator
   const tile = (label: string, v: string, delta: React.ReactNode) => (
     <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">

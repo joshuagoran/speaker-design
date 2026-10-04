@@ -27,6 +27,7 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
     if (await save(name.trim(), snapshot())) setName("");
   };
   const Wrap = bare ? "div" : "section";
+  const namePrompt = "Name this setup";
   return (
     <Wrap
       className={bare ? "mb-3" : "max-w-6xl mx-auto px-4 md:px-8 pb-2"}
@@ -38,13 +39,13 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
           {db ? (
             <>
               <input
-                aria-label="Name this setup"
+                aria-label={namePrompt}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void doSave(); // `save` shows its own failure message
                 }}
-                placeholder="Name this setup"
+                placeholder={namePrompt}
                 maxLength={60}
                 className="px-3 py-1.5 rounded border border-stone-300 bg-white text-sm w-56"
               />

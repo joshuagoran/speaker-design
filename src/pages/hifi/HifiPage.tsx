@@ -366,7 +366,6 @@ export function HifiPage({ hifi }: Props) {
           top={HIFI_TOP}
           bot={HIFI_BOT}
           step={10}
-          yLabel="max dB SPL @ 1 m"
           series={[
             {
               curve: speakerSystem.wMax,

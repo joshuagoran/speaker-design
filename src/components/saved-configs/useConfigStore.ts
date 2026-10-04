@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import type { ConfigDb, SavedConfig, SavedConfigData } from "../../types";
 import type { FirebaseStore } from "./firebaseStore";
+import { UI_TEXT } from "../../constants/uiText";
 
 /** The GitHub Pages build is `vp build --mode pages`; only that build bundles Firebase (see firebaseStore.ts). */
 const PAGES_BUILD = import.meta.env.MODE === "pages";
@@ -149,7 +150,7 @@ export function useConfigStore(collection: string) {
           ((e as { code?: string }).code === "invalid_argument" ||
             (e as { code?: string }).code === "permission-denied")
           ? "You don't have write access here"
-          : "Couldn't save — try again",
+          : UI_TEXT.saveFailed,
       );
       return false;
     }

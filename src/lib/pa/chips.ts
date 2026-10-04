@@ -13,6 +13,7 @@ import type {
   VentSpec,
 } from "../../types";
 import { isRoundPort } from "./calc";
+import { SLOT_LAYOUT_NAMES } from "../../constants/portStyles";
 
 // Longest duct each layout can hold, leaving an opening at least as wide as the duct.
 export function ductFit(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
@@ -46,6 +47,11 @@ export function driverClearance(subBox: Dims3, portStyle: PortStyle, cVent: Vent
 /** How far a band may fall short of the band below at their crossover before its chip says it runs out first, dB. */
 export const KEEP_UP_SLACK_DB = 0.5;
 
+/** The title the sub, mid and fill share for a driver its baffle has no room for. */
+const DRIVER_WONT_FIT = "Driver won't fit";
+/** The title the sub and mid share when the driver's program rating sets the level. */
+const THERMALLY_LIMITED = "Thermally limited";
+
 // s: { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW }
 export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
   const { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW } = s;
@@ -55,7 +61,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
   if (Math.min(clearW, clearH) < need)
     F.push([
       "bad",
-      "Driver won't fit",
+      DRIVER_WONT_FIT,
       `The baffle needs about ${need.toFixed(1)}″ clear; after the vents it has ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`,
       "subDriverFit",
     ]);
@@ -65,7 +71,9 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       "bad",
       "Duct too long",
       `${cVent.len.toFixed(1)}″ won't fit; this layout holds about ${fit.toFixed(1)}″.` +
-        (portStyle === "slots" && cVent.len <= maxFold ? " Switch to Bottom, folded." : ""),
+        (portStyle === "slots" && cVent.len <= maxFold
+          ? ` Switch to ${SLOT_LAYOUT_NAMES.folded}.`
+          : ""),
       "subDuctFit",
     ]);
   F.push(
@@ -102,7 +110,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
             ]
           : [
               "ok",
-              "Thermally limited",
+              THERMALLY_LIMITED,
               `Reaches its ${2 * aes} W program rating (2 × ${aes} W AES) before the port or the cone gives out.`,
               "subThermalLimited",
             ],
@@ -134,7 +142,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
   if (Math.min(midDims.w, midDims.h) < need)
     F.push([
       "bad",
-      "Driver won't fit",
+      DRIVER_WONT_FIT,
       `A ${midSize}″ driver needs about ${need.toFixed(1)}″ of baffle; the smallest face is ${Math.min(midDims.w, midDims.h)}″.`,
       "midDriverFit",
     ]);
@@ -174,7 +182,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
       : vTherm < V
         ? [
             "ok",
-            "Thermally limited",
+            THERMALLY_LIMITED,
             `Reaches its ${2 * ts.aes} W program rating (2 × ${ts.aes} W AES) before Xmax; the ${mAmpW} W amp has more than it can use.`,
             "midThermalLimited",
           ]
@@ -314,7 +322,7 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
   if (Math.min(dim.w, dim.h) < drv.size + 1)
     F.push([
       "bad",
-      "Driver won't fit",
+      DRIVER_WONT_FIT,
       `An ${drv.size}″ coax needs about ${drv.size + 1}″ of baffle.`,
       "fillDriverFit",
     ]);

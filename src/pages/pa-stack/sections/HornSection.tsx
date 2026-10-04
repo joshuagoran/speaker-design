@@ -9,6 +9,7 @@ import { hornChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
+import { UI_TEXT } from "../../../constants/uiText";
 
 interface Props {
   planner: Pick<
@@ -107,7 +108,7 @@ export function HornSection({ planner }: Props) {
                       ? [
                           {
                             curve: beamCurves.midB,
-                            label: `Mid-bass ${midSize}″`,
+                            label: `${UI_TEXT.midBass} ${midSize}″`,
                             stroke: PAL.magenta,
                             tint: PAL.alpha(PAL.magenta, 0),
                           },

@@ -13,6 +13,7 @@ import type {
   VentSpec,
 } from "../src/types";
 import { chipList, chipOf, findChip } from "./helpers";
+import { SLOT_LAYOUT_NAMES } from "../src/constants/portStyles";
 
 const kindOf = <I extends ChipId>(F: Chip<I>[], id: NoInfer<I>) => findChip(F, id)?.[0];
 /** whether the check's chip shows, at `kind` when one is given */
@@ -58,7 +59,7 @@ test("sub: duct fit per layout, with the folded hint", (t) => {
   has(t, sub({ cVent: { len: 18.25 } }), "subDuctFit", false);
   const F = sub({ cVent: { len: 18.5 } });
   has(t, F, "subDuctFit");
-  assert.ok(chipOf(F, "subDuctFit")[2].includes("Switch to Bottom, folded."));
+  assert.ok(chipOf(F, "subDuctFit")[2].includes(SLOT_LAYOUT_NAMES.folded));
   // side ducts hold d - PT - throat = 19.25
   has(t, sub({ portStyle: "vslots", cVent: { len: 19.25 } }), "subDuctFit", false);
   has(t, sub({ portStyle: "vslots", cVent: { len: 19.5 } }), "subDuctFit");

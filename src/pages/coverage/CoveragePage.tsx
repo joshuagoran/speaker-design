@@ -24,6 +24,7 @@ import {
 import { CoverageAssumptions } from "./CoverageAssumptions";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
 import { FONT } from "../../styles/fonts";
+import { UI_TEXT } from "../../constants/uiText";
 
 /** The tabs of the phone settings sheet. */
 type CoverageTab = "listener" | "band" | "room" | "stacks";
@@ -260,7 +261,7 @@ export function CoveragePage({ planner }: Props) {
           {sheetOpen && (
             <button
               onClick={() => setSheetOpen(false)}
-              aria-label="Close settings"
+              aria-label={UI_TEXT.closeSettings}
               className="px-3 rounded border border-stone-300 bg-stone-50 text-sm"
             >
               ✕
@@ -414,7 +415,7 @@ export function CoveragePage({ planner }: Props) {
                 Indoors
               </ToggleButton>
               <ToggleButton on={room.outdoors} onClick={() => state.setOutdoors(true)}>
-                Outdoors
+                {UI_TEXT.outdoors}
               </ToggleButton>
             </div>
             <Slider
