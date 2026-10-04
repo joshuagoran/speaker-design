@@ -1,7 +1,7 @@
 import { PAL } from "../../styles/palette";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { StatRowGrid } from "../../components/stats/StatRowGrid";
-import { MAX_SPL_TIP } from "../../components/optimizer/StatRow";
+import { MAX_SPL_TIP, STATS, statLabel, type StatName } from "../../components/optimizer/StatRow";
 import { StatTile } from "../../components/stats/StatTile";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { Tooltip } from "../../components/ui/Tooltip";
@@ -78,8 +78,8 @@ export function FillsPage({ fills }: Props) {
   const hfSpec = driver.hf;
   const maxAt60HzDb = maxCurveNearest(60).spl,
     maxAt150HzDb = maxCurveNearest(150).spl;
-  const tile = (k: string, v: string, u: string) => (
-    <StatTile key={k} label={k} value={v} unit={u} />
+  const tile = (k: StatName, v: string, u: string) => (
+    <StatTile key={statLabel(k)} label={k} value={v} unit={u} />
   );
   const warningChips = fillChips({
     drv: driver,
@@ -107,10 +107,10 @@ export function FillsPage({ fills }: Props) {
           </Tooltip>
         </p>
         <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
-          {tile("Net volume", netLiters.toFixed(0), "L")}
+          {tile(STATS.netVolume, netLiters.toFixed(0), "L")}
           {ventedModel
-            ? tile("Tuning Fb", ventedModel.Fb.toFixed(0), "Hz")
-            : tile("Qtc", sealedModel.Qtc.toFixed(2), "")}
+            ? tile(STATS.tuningFb, ventedModel.Fb.toFixed(0), "Hz")
+            : tile(STATS.qtc, sealedModel.Qtc.toFixed(2), "")}
           {tile("F3", f3Hz.toFixed(0), "Hz")}
           {tile("Max @ 60 Hz", maxAt60HzDb.toFixed(1), "dB")}
           {tile("Max @ 150 Hz", maxAt150HzDb.toFixed(1), "dB")}

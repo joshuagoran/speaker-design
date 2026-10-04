@@ -1,7 +1,7 @@
-import { StatLabel } from "../optimizer/StatRow";
+import { StatLabel, type StatName } from "../optimizer/StatRow";
 
 interface Props {
-  label: string;
+  label: StatName;
   value: React.ReactNode;
   unit?: React.ReactNode;
 }
