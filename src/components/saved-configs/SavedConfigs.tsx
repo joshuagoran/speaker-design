@@ -3,6 +3,7 @@ import { Card } from "../ui/Card";
 import { useState } from "react";
 import type { ConfigStore } from "./useConfigStore";
 import type { SavedConfig, SavedConfigData } from "../../types";
+import { FONT } from "../../styles/fonts";
 
 interface Props {
   store: ConfigStore;
@@ -29,7 +30,7 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
   return (
     <Wrap
       className={bare ? "mb-3" : "max-w-6xl mx-auto px-4 md:px-8 pb-2"}
-      style={{ fontFamily: "var(--font)" }}
+      style={{ fontFamily: FONT }}
     >
       <Card pad="lg" tone="tint">
         <div className="flex flex-wrap items-center gap-2">

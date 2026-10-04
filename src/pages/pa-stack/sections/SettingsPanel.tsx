@@ -16,6 +16,7 @@ import { AMP_WATTS_MAX, AMP_WATTS_STEPS } from "../../../lib/pa/optimize";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { keysOf } from "../../../lib/records";
 import { CrossoverSlopeButtons } from "../../../components/ui/CrossoverSlopeButtons";
+import { FONT } from "../../../styles/fonts";
 
 interface Props {
   planner: Pick<
@@ -165,7 +166,7 @@ export function SettingsPanel({ planner }: Props) {
     <>
       <aside
         className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet`}
-        style={{ fontFamily: "var(--font)" }}
+        style={{ fontFamily: FONT }}
         aria-label="Settings"
       >
         <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">

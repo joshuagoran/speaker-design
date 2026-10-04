@@ -51,6 +51,7 @@ import type { HifiPlanner } from "./useHifiPlanner";
 import type { Dims3 } from "../../types";
 import { entriesOf } from "../../lib/records";
 import { xmaxRows } from "../../lib/xmax";
+import { FONT } from "../../styles/fonts";
 
 interface Props {
   hifi: HifiPlanner;
@@ -276,7 +277,7 @@ export function HifiPage({ hifi }: Props) {
   return (
     <main
       className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8"
-      style={{ fontFamily: "var(--font)" }}
+      style={{ fontFamily: FONT }}
     >
       <div className="md:col-span-5 min-w-0">
         <SavedConfigs

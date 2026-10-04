@@ -10,6 +10,7 @@ import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { xmaxRows } from "../../../lib/xmax";
 import { LIMIT_NAMES, SUB_LIMIT_NAMES } from "../../../constants/limits";
+import { FONT } from "../../../styles/fonts";
 
 interface Props {
   planner: Pick<
@@ -65,7 +66,7 @@ export function SubSection({ planner }: Props) {
   } = planner;
   return (
     <>
-      <section className="mt-1" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-1" style={{ fontFamily: FONT }}>
         <FoldHeading
           id="sub"
           title="Sub"

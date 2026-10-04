@@ -1,6 +1,7 @@
 import { PAL } from "../../styles/palette";
 import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
 import type { AmpModel } from "../../types";
+import { SVG_FONT } from "../../styles/fonts";
 
 const ampName = (m: Pick<AmpModel, "model">) => `${QSC_GXD.brand} ${m.model}`;
 /** Block diagram of the PA signal path. */
@@ -50,7 +51,7 @@ export function SignalPath() {
       fontSize={s}
       fill={c}
       textAnchor={a}
-      fontFamily="Inconsolata, monospace"
+      fontFamily={SVG_FONT}
       fontWeight={b ? 600 : 400}
     >
       {b}

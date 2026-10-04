@@ -15,6 +15,7 @@ import { fillSystem, nearestPoint } from "../../lib/pa/calc";
 import type { FillsPlanner } from "./useFillsPlanner";
 import { xmaxBandCurves, xmaxRows } from "../../lib/xmax";
 import { LIMIT_NAMES } from "../../constants/limits";
+import { FONT } from "../../styles/fonts";
 
 interface Props {
   fills: FillsPlanner;
@@ -99,7 +100,7 @@ export function FillsPage({ fills }: Props) {
   return (
     <main
       className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8"
-      style={{ fontFamily: "var(--font)" }}
+      style={{ fontFamily: FONT }}
     >
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
         <p className="text-sm text-stone-500">

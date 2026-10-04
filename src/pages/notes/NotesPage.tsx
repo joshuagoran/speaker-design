@@ -7,6 +7,7 @@ import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
 import { formatDollars } from "../../lib/format";
 import { byIdOrThrow } from "../../lib/tables";
 import type { CompressionDriver, CompressionHf } from "../../types";
+import { FONT } from "../../styles/fonts";
 
 // The prose quotes these parts' catalogue figures, so a price or rating edited there shows up here.
 /** The DE360's AES rating and price; throws if its catalogue entry loses either. */
@@ -26,10 +27,7 @@ const OHM = "Ω";
 export function NotesPage() {
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 flex flex-col gap-2">
-      <section
-        className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6"
-        style={{ fontFamily: "var(--font)" }}
-      >
+      <section className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: FONT }}>
         {RACKS.map((r) => {
           const total = r.items.reduce((a, [, c]) => a + c, 0);
           return (
@@ -56,7 +54,7 @@ export function NotesPage() {
         })}
       </section>
 
-      <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-2" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-2">Signal path (mains rack)</SectionHeading>
         <div className="max-w-4xl">
           <SignalPath />
@@ -67,7 +65,7 @@ export function NotesPage() {
           </Tooltip>
         </p>
       </section>
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">
           {`Amp DSP: ${QSC_GXD.brand} ${GXD.map((m) => m.model).join(" / ")}`}
         </SectionHeading>
@@ -147,7 +145,7 @@ export function NotesPage() {
         </p>
       </section>
 
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">Crossover / DSP: PA2 and alternatives</SectionHeading>
         <p className="text-sm text-stone-900 mb-3 max-w-3xl">
           What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set in
@@ -196,7 +194,7 @@ export function NotesPage() {
         </p>
       </section>
 
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">Home inputs: Gemini MXR-01BT</SectionHeading>
         <p className="text-sm text-stone-900 mb-3 max-w-3xl">
           Turntable, line and phone into the same DSP and amps, with one master volume. A 2-channel
@@ -244,7 +242,7 @@ export function NotesPage() {
         </p>
       </section>
 
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">Passive crossover: calibrate and build</SectionHeading>
         <p className="text-sm text-stone-900 mb-3 max-w-3xl">
           For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8
@@ -293,7 +291,7 @@ export function NotesPage() {
         </p>
       </section>
 
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">Materials</SectionHeading>
         <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
           {[
@@ -320,7 +318,7 @@ export function NotesPage() {
         </ul>
       </section>
 
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">Still to decide</SectionHeading>
         <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
           {[

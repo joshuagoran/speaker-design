@@ -12,6 +12,7 @@ import { STATS } from "../../components/optimizer/StatRow";
 import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
 import { byIdOrThrow } from "../../lib/tables";
 import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
+import { FONT } from "../../styles/fonts";
 
 interface Props {
   result: HifiOptimizerCard;
@@ -60,7 +61,7 @@ export function HifiResultCard({
       <div className="text-xs uppercase tracking-wider font-bold text-stone-500">
         {result.label} · {index + 1} of {total}
       </div>
-      <h3 className="text-lg leading-snug" style={{ fontFamily: "var(--font)", fontWeight: 700 }}>
+      <h3 className="text-lg leading-snug" style={{ fontFamily: FONT, fontWeight: 700 }}>
         {woofer.size}″ {result.names.woofer} · {config.dim.w} × {config.dim.h} × {config.dim.d}″
       </h3>
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">

@@ -23,6 +23,7 @@ import {
 } from "./useCoverageLayout";
 import { CoverageAssumptions } from "./CoverageAssumptions";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
+import { FONT } from "../../styles/fonts";
 
 /** The tabs of the phone settings sheet. */
 type CoverageTab = "listener" | "band" | "room" | "stacks";
@@ -114,7 +115,7 @@ export function CoveragePage({ planner }: Props) {
   return (
     <main
       className={`max-w-6xl mx-auto px-4 md:px-8 pb-16 grid ${sheetOpen ? "max-md:pb-[52dvh]" : "max-md:pb-24"} grid-cols-1 md:grid-cols-5 gap-8`}
-      style={{ fontFamily: "var(--font)" }}
+      style={{ fontFamily: FONT }}
     >
       <div className="min-w-0 md:col-span-3 flex flex-col gap-5">
         <section>

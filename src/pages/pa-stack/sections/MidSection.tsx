@@ -8,6 +8,7 @@ import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { xmaxRows } from "../../../lib/xmax";
 import { LIMIT_NAMES } from "../../../constants/limits";
+import { FONT } from "../../../styles/fonts";
 
 interface Props {
   planner: Pick<
@@ -57,7 +58,7 @@ export function MidSection({ planner }: Props) {
   } = planner;
   return (
     <>
-      <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-2" style={{ fontFamily: FONT }}>
         <FoldHeading
           id="mid"
           title="Mid-bass"
