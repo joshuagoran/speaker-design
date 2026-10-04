@@ -5,6 +5,7 @@ import { ResponseChart } from "../../components/charts/ResponseChart";
 import { Button } from "../../components/ui/Button";
 import { Notice } from "../../components/ui/Notice";
 import { SectionHeading } from "../../components/ui/SectionHeading";
+import { Ellipsis } from "../../components/ui/Ellipsis";
 import { Slider } from "../../components/ui/Slider";
 import { SelectField } from "../../components/ui/SelectField";
 import { ToggleButton } from "../../components/ui/ToggleButton";
@@ -121,8 +122,15 @@ export function CoveragePage({ planner }: Props) {
           <p className="text-sm text-stone-500 mb-3">
             {bandName},{" "}
             {layout.levelMode === "listener" ? "target at the listener" : "at full output"}
-            {map.isRefining ? " · updating…" : ""}. Drag a stack to move it, its dot to toe it in,
-            or the listener (tap the floor to put them there).
+            {map.isRefining && (
+              <>
+                {" "}
+                · updating
+                <Ellipsis />
+              </>
+            )}
+            . Drag a stack to move it, its dot to toe it in, or the listener (tap the floor to put
+            them there).
           </p>
           {map.stack && map.levels ? (
             <CoverageMap

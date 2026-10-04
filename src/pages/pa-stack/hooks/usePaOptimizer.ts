@@ -7,6 +7,7 @@ import { useOptimizerRun } from "../../../hooks/useOptimizerRun";
 import { useStoredState, useStoredStateFrom } from "../../../hooks/useStoredState";
 import type {
   ConfigDb,
+  CutlistSettings,
   PaDesignConfig,
   PaGoal,
   PaLockKey,
@@ -27,6 +28,8 @@ interface Props {
   restore: (c: Partial<PaDesignConfig>) => void;
   /** the saved-config database; null when there is none, so results can't be saved */
   db: ConfigDb | null;
+  /** the Cutlist tab's sheet and stack count, for the cards' sheet counts */
+  cutlist: Pick<CutlistSettings, "sheet" | "stacks">;
 }
 
 export interface PaOptimizer
@@ -71,7 +74,7 @@ const ALL_LOCKED: PaPlannerLocks = {
 const today = () => new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
 /** The PA optimizer: switch, inputs, locks, search, previewing, loading and undo. Switch, inputs and locks are remembered per viewer. */
-export function usePaOptimizer({ snapshot, restore, db }: Props): PaOptimizer {
+export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOptimizer {
   const [isOptimizerOn, setIsOptimizerOn] = useStoredState("planner.opt", false);
   // goals start empty on every load (not restored), so a search always starts from a goal you just picked
   const [optimizerInput, setOptimizerInput] = useStoredStateFrom(
@@ -118,6 +121,7 @@ export function usePaOptimizer({ snapshot, restore, db }: Props): PaOptimizer {
         budget: inp.budget,
         goals: inp.goals,
         locks: optimizerLocks,
+        cutlist,
       }),
     );
   };

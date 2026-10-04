@@ -5,6 +5,7 @@ import { HifiFront } from "../../components/drawings/HifiFront";
 import { formatDollars } from "../../lib/format";
 import { Delta } from "../../components/optimizer/Delta";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
+import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
 import { byIdOrThrow } from "../../lib/tables";
 import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
@@ -126,10 +127,10 @@ export function HifiResultCard({
         <b className="font-semibold">Limited by:</b> {limitedBy}
       </div>
       {result.warnings
-        .filter((h) => !/^Woofer limited by/.test(h))
-        .map((h) => (
+        .filter(([, , , id]) => !LIMIT_CHIP_IDS.has(id))
+        .map(([, h, , id]) => (
           <div
-            key={h}
+            key={id}
             className="text-xs border border-l-4 rounded px-2 py-1 bg-amber-50 border-amber-200 border-l-amber-300"
           >
             <b className="font-semibold text-amber-700">{h}</b>

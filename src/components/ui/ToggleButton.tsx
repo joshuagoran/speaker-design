@@ -13,7 +13,7 @@ export function ToggleButton({ on, size = "md", className = "", ...p }: Props) {
       type="button"
       aria-pressed={!!on}
       {...p}
-      className={`rounded border ${BUTTON_SIZE_CLASSES[size]} ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-white hover:border-stone-500"} ${className}`}
+      className={`rounded border disabled:opacity-40 disabled:cursor-not-allowed ${BUTTON_SIZE_CLASSES[size]} ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-white hover:border-stone-500"} ${className}`}
     />
   );
 }

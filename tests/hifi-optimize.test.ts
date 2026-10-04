@@ -358,10 +358,49 @@ test("hi-fi optimizer: the first card is the best design on its grid, checked on
 });
 
 test("hi-fi optimizer: the box step split across workers gives exactly what one run gives", () => {
-  const input = { ...base, goals: ["lighter" as const, "cheaper" as const] };
+  // (a third of the woofers: still three parts with several woofers each)
+  const input = {
+    ...base,
+    woofers: HIFI_WOOFERS.slice(0, 9),
+    goals: ["lighter" as const, "cheaper" as const],
+  };
   const one = optimizeHifiSpeaker(input);
   // as the workers hand their shares back: copied, not shared
   const shares = structuredClone([0, 1, 2].map((part) => hifiScoreBoxes(input, part, 3)));
   const split = optimizeHifiSpeaker(input, shares);
   assert.deepStrictEqual({ ...split, stats: null }, { ...one, stats: null });
+});
+
+test("hi-fi optimizer: a tweeter that keeps up only below full woofer power turns the woofer down instead of ruling the design out", () => {
+  // a 5 W tweeter amp, locked with both drivers: the 8 in woofer at 500 W outruns it, at the 20 W the design uses it doesn't
+  const quiet: HifiOptimizerCurrent = {
+    ...cur,
+    woofer: "sb23nrxs",
+    dim: { w: 12, h: 20, d: 13 },
+    port: { n: 1, dia: 3, len: 6 },
+    wAmpW: 20,
+    tAmpW: 5,
+  };
+  const out = optimizeHifiSpeaker({
+    ...base,
+    cur: quiet,
+    goals: ["lighter"],
+    locks: { woofer: true, tweeter: true, tAmpW: true },
+  });
+  const k = out.cards[0],
+    w = HIFI_WOOFERS.find((o) => o.id === quiet.woofer),
+    tw = HIFI_TWEETERS.find((o) => o.id === quiet.tweeter);
+  assert.ok(k && k.label === "Same level, lighter", out.goalMissing ?? "no card");
+  assert.ok(w && tw && out.cur);
+  const at = (wAmpW: number) => {
+    const c = { ...quiet, ...k.config, pr: undefined, wAmpW },
+      sys = hifiSystem(w, tw, c);
+    return sys ? hifiDesignProblems(sys, hifiChips(sys, w, tw, c)) : ["can't be modelled"];
+  };
+  assert.deepEqual(at(k.config.wAmpW), [], "the card passes as it is");
+  assert.ok(k.metrics.level >= out.cur.level - 0.5, "and keeps the level");
+  assert.ok(
+    at(500).includes("Tweeter runs out first"),
+    "at full woofer power the tweeter would run out first",
+  );
 });

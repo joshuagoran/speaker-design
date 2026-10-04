@@ -45,8 +45,14 @@ export interface SelectCardsOptions<P, G extends string> {
   maxCards?: number;
 }
 
-export interface SelectedCard<P> extends CardRole {
+/** Which card it is, for code to tell cards apart without reading their labels: an alternative names its axis. */
+export type CardSlot<G extends string> =
+  | { kind: "first" | "fix" | "closest" | "smallest" }
+  | { kind: "alt"; axis: G };
+
+export interface SelectedCard<P, G extends string> extends CardRole {
   p: P;
+  slot: CardSlot<G>;
 }
 
 /**
@@ -58,7 +64,7 @@ export interface SelectedCard<P> extends CardRole {
  */
 export function selectCards<P, G extends string>(
   o: SelectCardsOptions<P, G>,
-): { cards: SelectedCard<P>[]; goalMissing: boolean; fixMisses: boolean } {
+): { cards: SelectedCard<P, G>[]; goalMissing: boolean; fixMisses: boolean } {
   const { pool, goal, goals, objective, beatsCurrent, beats, meets, differs, tieBreak } = o;
   const max = o.maxCards ?? 3;
   // the first design, in pool order, that nothing in the list beats on the objective (then the tie-break)
@@ -75,24 +81,24 @@ export function selectCards<P, G extends string>(
     return b;
   };
   const beatsAll = (p: P) => goals.every((g) => beatsCurrent(g, p));
-  const cards: SelectedCard<P>[] = [];
+  const cards: SelectedCard<P, G>[] = [];
   const chosen = () => cards.map((k) => k.p);
   const first = best(
     pool.filter((p) => meets(p) && beatsAll(p)),
     goal,
   );
   let fixMisses = false;
-  if (first) cards.push({ p: first, ...o.labels.first });
+  if (first) cards.push({ p: first, slot: { kind: "first" }, ...o.labels.first });
   else if (o.currentFails) {
     const fix = best(pool.filter(meets), goal);
-    if (fix) cards.push({ p: fix, ...o.labels.fix });
+    if (fix) cards.push({ p: fix, slot: { kind: "fix" }, ...o.labels.fix });
     else if (o.shortfall && pool.length) {
       const short = o.shortfall;
       const closest = pool.reduce((a, p) => {
         const d = short(p) - short(a);
         return d < 0 || (d === 0 && objective(goal, p) < objective(goal, a)) ? p : a;
       });
-      cards.push({ p: closest, ...(o.labels.closest ?? o.labels.fix) });
+      cards.push({ p: closest, slot: { kind: "closest" }, ...(o.labels.closest ?? o.labels.fix) });
       fixMisses = true;
     }
   }
@@ -105,6 +111,7 @@ export function selectCards<P, G extends string>(
     if (small)
       cards.push({
         p: small,
+        slot: { kind: "smallest" },
         label: "Smallest change",
         why: "Changes one thing from your design.",
       });
@@ -122,7 +129,7 @@ export function selectCards<P, G extends string>(
       ),
       g,
     );
-    if (q) cards.push({ p: q, ...o.labels.alt(g) });
+    if (q) cards.push({ p: q, slot: { kind: "alt", axis: g }, ...o.labels.alt(g) });
   }
   return { cards, goalMissing: !first && !o.currentFails, fixMisses };
 }

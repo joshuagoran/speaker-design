@@ -1,7 +1,8 @@
 // Hi-fi optimizer: woofer × box × tuning × plywood, then × tweeter × crossover, scored like the page scores them.
 // Same rules as the PA optimizer: goals in tap order (the first ranks, the main card must beat your design on
-// every one), each card's label true against your design, unlocked amps searched at their slider maximum and
-// trimmed to the least power that keeps the card's level, and a card applies only the fields searched.
+// every one), each card's label true against your design, unlocked amps searched at their slider maximum (turned
+// down where the band above can't keep up) and trimmed to the least power that keeps the card's level, and a card
+// applies only the fields searched.
 import {
   hifiSystem,
   hifiBox,
@@ -31,7 +32,7 @@ import {
   slotMaxLength,
   needsWaveguide,
 } from "./hifi";
-import { ventTuning } from "../pa/calc";
+import { ampVoltage, ventTuning } from "../pa/calc";
 import {
   passiveRadiatorMassMax,
   ownGuideCfg,
@@ -40,6 +41,7 @@ import {
   HIFI_PASSIVES,
 } from "../data";
 import type {
+  ChipId,
   Dims3,
   DimensionLockMode,
   HifiBoxKind,
@@ -70,6 +72,8 @@ import { keysOf } from "../records";
 import { byId } from "../tables";
 import { selectCards } from "../optimizer/selectCards";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
+import { goalKeeps } from "../optimizer/goalKeeps";
+import { ampForGain, type AmpSteps } from "../optimizer/ampSteps";
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };
@@ -99,8 +103,10 @@ interface Rec {
   bi: number;
   xi: number;
   f3: number;
+  /** the woofer's clean level at 1 m at the searched power, and what the amp alone and the driver alone allow */
   wLevel: number;
-  level: number;
+  ampDb: number;
+  drvDb: number;
 }
 /** A finished design from the second pass: drivers, config, model and score. */
 interface PoolEntry {
@@ -129,6 +135,13 @@ export const HIFI_OPTIMIZER_GOALS: Record<HifiGoal, { short: string; name: strin
     louder: { short: "Louder", name: "Louder", why: "Most clean level at the seat." },
   };
 export const HIFI_AMP_WATTS_MAX = { wAmpW: 500, tAmpW: 200 };
+/** The amps the Hi-fi optimizer searches. */
+type HifiAmpKey = keyof typeof HIFI_AMP_WATTS_MAX;
+// the amp sliders' steps and minimums: an amp the search turns down stays on a step, never under the minimum
+export const HIFI_AMP_WATTS_STEPS: Record<HifiAmpKey, AmpSteps> = {
+  wAmpW: { step: 10, min: 10 },
+  tAmpW: { step: 5, min: 5 },
+};
 export const HIFI_OPTIMIZED_FIELDS: readonly HifiOptimizedField[] = [
   "woofer",
   "tweeter",
@@ -167,26 +180,22 @@ const obj: Record<HifiGoal, (x: HifiMetrics) => number> = {
 };
 // what each goal keeps from your design (as the PA optimizer: same output, F3 within a couple of Hz): the level it has
 // to reach and the F3 it can't pass
-const keeps = (cur: HifiMetrics): Record<HifiGoal, Keep> => ({
-  cheaper: { db: cur.level - 0.5, f3: cur.f3 + 2 },
-  lighter: { db: cur.level - 0.5, f3: cur.f3 + 2 },
-  lower: { db: cur.level - 1.5, f3: Infinity },
-  louder: { db: -Infinity, f3: cur.f3 + 3 },
-});
+const keeps = (cur: HifiMetrics): Record<HifiGoal, Keep> => goalKeeps(cur.level, cur.f3);
 const gapTo = (k: Keep, x: HifiMetrics) => keepGap(k, { db: x.level, f3: x.f3 });
 // warnings that rule a design out (the soft ones stay on the card)
-const HARD = new Set([
-  "Below the tweeter's minimum crossover",
-  "Close to the tweeter's resonance",
-  "Woofer past its usable range",
-  "Tweeter runs out first",
+const HARD = new Set<ChipId<"hifi">>([
+  "hifiTweeterMinXo",
+  "hifiTweeterResonance",
+  "hifiWooferRange",
+  "hifiTweeterLevel",
+  "hifiQtc",
 ]);
+/** The checks a design fails: every "bad" one, and the warnings in `HARD`. */
+const failedChecks = (chips: HifiChip[]) =>
+  chips.filter(([k, , , id]) => k === "bad" || (k === "warn" && HARD.has(id)));
+/** What fails in a design, as the checks' titles (empty when it passes). */
 export const hifiDesignProblems = (sys: HifiSystem | null, chips: HifiChip[]): string[] =>
-  !sys
-    ? ["can't be modelled"]
-    : chips
-        .filter(([k, h]) => k === "bad" || (k === "warn" && (HARD.has(h) || h.startsWith("Qtc"))))
-        .map(([, h]) => h);
+  !sys ? ["can't be modelled"] : failedChecks(chips).map(([, h]) => h);
 
 const XOS: number[] = [1500, 1800, 2000, 2200, 2500, 3000];
 const range = (lock: DimensionLockMode | undefined, cur: number, vals: number[]) =>
@@ -471,9 +480,11 @@ export function hifiScoreBoxes(input: HifiOptimizerInput, part = 0, parts = 1): 
       ch: changes({ w, t: T0, c: { ...cfg, xo: cur.xo } }, cur).filter((x) => x !== "amp power")
         .length,
       f3: prep.f3,
-      wLevels: xos.map((xo) =>
-        wooferPastRange(w, xo) ? null : hifiWooferLevel(b, prep, { ...cfg, xo }).wLevel,
-      ),
+      levels: xos.map((xo) => {
+        if (wooferPastRange(w, xo)) return null;
+        const { wLevel, ampDb, drvDb } = hifiWooferLevel(b, prep, { ...cfg, xo });
+        return { wLevel, ampDb, drvDb };
+      }),
     });
   }
   return out;
@@ -555,16 +566,8 @@ export function optimizeHifiSpeaker(
       pr: x.box === "radiator" ? x.pr : null,
       ch: x.ch,
     });
-    x.wLevels.forEach((wLevel, xi) => {
-      if (wLevel != null)
-        recs.push({
-          bi,
-          xi,
-          f3: x.f3,
-          wLevel,
-          // a design that passes has the woofer setting the level (the tweeter running out first rules it out)
-          level: wLevel - 20 * Math.log10(seat) + 3,
-        });
+    x.levels.forEach((l, xi) => {
+      if (l) recs.push({ bi, xi, f3: x.f3, ...l });
     });
   }
 
@@ -585,11 +588,16 @@ export function optimizeHifiSpeaker(
       },
     ];
   });
-  // every design that passes: a box at a crossover with a tweeter (index arrays; metrics read through them)
+  // every design that passes: a box at a crossover with a tweeter, its woofer amp and level (index arrays; metrics read
+  // through them)
   const dRec: number[] = [],
     dTw: number[] = [],
     dPrice: number[] = [],
-    dLb: number[] = [];
+    dLb: number[] = [],
+    dLevel: number[] = [],
+    dWamp: number[] = [];
+  const seatDb = 20 * Math.log10(seat) - 3,
+    V0 = ampVoltage(amps.wAmpW);
   let lastBi = -1;
   const bPrice: number[] = [],
     bLb: number[] = [],
@@ -608,12 +616,31 @@ export function optimizeHifiSpeaker(
     }
     for (let ti = 0; ti < tws.length; ti++) {
       const x = tws[ti];
-      if (!bFits[ti] || !x.xoOk[r.xi] || x.tLevel[r.xi] < r.wLevel) continue;
+      if (!bFits[ti] || !x.xoOk[r.xi]) continue;
       if (input.budget && bPrice[ti] > input.budget + 1e-9) continue;
+      // the tweeter runs out first at the searched power: with the woofer amp free, the woofer comes down (slider
+      // steps) until the tweeter keeps up, so the tweeter caps the level instead of ruling the design out. Below the
+      // searched power the woofer's level is the lesser of its amp-limited level (1 dB per dB of power) and what the
+      // driver allows (which doesn't move).
+      const tLevel = x.tLevel[r.xi];
+      let wAmpW = amps.wAmpW,
+        wLevel = r.wLevel;
+      if (tLevel < wLevel) {
+        const w = locks.wAmpW
+          ? null
+          : ampForGain(amps.wAmpW, tLevel - r.ampDb, HIFI_AMP_WATTS_STEPS.wAmpW);
+        if (w === null) continue;
+        wAmpW = w;
+        wLevel = Math.min(r.ampDb + 20 * Math.log10(ampVoltage(w) / V0), r.drvDb);
+        if (tLevel < wLevel) continue;
+      }
       dRec.push(ri);
       dTw.push(ti);
       dPrice.push(bPrice[ti]);
       dLb.push(bLb[ti]);
+      // a design that passes has the woofer setting the level
+      dLevel.push(wLevel - seatDb);
+      dWamp.push(wAmpW);
     }
   }
   const metricsAt = (i: number): HifiMetrics => {
@@ -622,7 +649,7 @@ export function optimizeHifiSpeaker(
       gross: boxList[r.bi].gross,
       f3: r.f3,
       price: dPrice[i],
-      level: r.level,
+      level: dLevel[i],
       lb: dLb[i],
     };
   };
@@ -693,8 +720,9 @@ export function optimizeHifiSpeaker(
   const cards = picked.cards.flatMap(({ p: i, label, why }) => {
     const e = boxOf(i),
       t = tws[dTw[i]].t,
-      r = run(e.w, t, { ...e.cfg, xo: xos[recs[dRec[i]].xi] });
-    return r
+      r = run(e.w, t, { ...e.cfg, xo: xos[recs[dRec[i]].xi], wAmpW: dWamp[i] });
+    // (the search read the same checks off the same model; a card that fails them here is left out, never shown)
+    return r && !hifiDesignProblems(r.sys, r.chips).length
       ? [{ w: e.w, t, c: r.cfg, sys: r.sys, chips: r.chips, m: metricOf(r, e.w, t), label, why }]
       : [];
   });
@@ -705,7 +733,8 @@ export function optimizeHifiSpeaker(
       r = { sys: p.sys, chips: p.chips };
     const ok = (rr: RunResult | null, lvl: number): rr is RunResult =>
       rr !== null && !hifiDesignProblems(rr.sys, rr.chips).length && levelOf(rr.sys) >= lvl - 0.01;
-    const lowest = (keyName: "wAmpW" | "tAmpW", lo: number, step: number, lvl: number) => {
+    const lowest = (keyName: HifiAmpKey, lvl: number) => {
+      const { min: lo, step } = HIFI_AMP_WATTS_STEPS[keyName];
       if (locks[keyName]) return;
       let a = lo,
         b = c[keyName];
@@ -729,8 +758,8 @@ export function optimizeHifiSpeaker(
       }
     };
     const lvl = levelOf(p.sys);
-    lowest("wAmpW", 10, 10, lvl);
-    lowest("tAmpW", 5, 5, lvl);
+    lowest("wAmpW", lvl);
+    lowest("tAmpW", lvl);
     return { ...p, c, sys: r.sys, chips: r.chips, m: metricOf({ ...r, cfg: c }, p.w, p.t) };
   };
   const done = cards.map((k) => ({ ...k, ...trim(k) }));
@@ -798,7 +827,7 @@ export function optimizeHifiSpeaker(
             f3: k.m.f3 - curM.f3,
           }
         : null,
-      warnings: k.chips.filter(([kind]) => kind === "warn").map(([, h]) => h),
+      warnings: k.chips.filter(([kind]) => kind === "warn"),
       names: { woofer: k.w.name, tweeter: k.t.name },
       lay: k.sys.lay,
       guided: needsWaveguide(k.t),

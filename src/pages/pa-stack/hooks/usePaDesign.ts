@@ -16,6 +16,7 @@ import {
 import { byId } from "../../../lib/tables";
 import { DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../../../lib/defaults";
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
+import { savedCutlist } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
 import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
 import { derivePaDesign } from "./paDesign";
@@ -136,6 +137,18 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setPlywoodSheetKind,
     boxSetCount,
     setBoxSetCount,
+    kerfIn,
+    setKerfIn,
+    edgeTrimIn,
+    setEdgeTrimIn,
+    grain,
+    setGrain,
+    waterfall,
+    setWaterfall,
+    offcutShape,
+    setOffcutShape,
+    cutStyle,
+    setCutStyle,
   } = useCutlistOptions();
   const subDriverChoices = subDriversOfSize(format.sub);
   const midDriverChoices = midDriversOfSize(midSize);
@@ -251,6 +264,12 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     cabFinish: cabinetFinish,
     spacerH: spacerHeightIn,
     joint: cornerJoint,
+    kerf: kerfIn,
+    trim: edgeTrimIn,
+    grain,
+    waterfall,
+    offcut: offcutShape,
+    cuts: cutStyle,
     summary: `${subDriver.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${subModelled ? subModelled.mdl.Fb.toFixed(1) + " Hz" : "—"}`,
   });
   const restore = (c: Partial<PaDesignConfig>) => {
@@ -290,6 +309,13 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setCabinetFinish(c.cabFinish || DEFAULT_PA.cabFinish);
     setSpacerHeightIn(typeof c.spacerH === "number" ? c.spacerH : DEFAULT_PA.spacerH);
     if (c.joint) setCornerJoint(c.joint);
+    const cl = savedCutlist(c);
+    setKerfIn(cl.kerf);
+    setEdgeTrimIn(cl.trim);
+    setGrain(cl.grain);
+    setWaterfall(cl.waterfall);
+    setOffcutShape(cl.offcut);
+    setCutStyle(cl.cuts);
     if (c.portStyle) setPortStyle(c.portStyle);
   };
   return {
@@ -363,6 +389,18 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setPlywoodSheetKind,
     boxSetCount,
     setBoxSetCount,
+    kerfIn,
+    setKerfIn,
+    edgeTrimIn,
+    setEdgeTrimIn,
+    grain,
+    setGrain,
+    waterfall,
+    setWaterfall,
+    offcutShape,
+    setOffcutShape,
+    cutStyle,
+    setCutStyle,
     ...derived,
     midWithBox,
     subDriverChoices,

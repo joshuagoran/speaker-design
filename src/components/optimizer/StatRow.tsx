@@ -24,6 +24,9 @@ export const STAT_TIPS: Record<string, string> = {
     "Clean level at the seat with both speakers playing, before a driver or port limit.",
   Pair: "Cost of the drivers for both speakers, at the listed prices.",
 };
+/** The tooltip of a "Max SPL at … Hz" row (its name carries the frequency, so the row passes it as its own tip). */
+export const MAX_SPL_TIP =
+  "Loudest output at this frequency from a steady sine tone, before the named limit is reached.";
 
 interface StatLabelProps {
   k: string;
@@ -32,12 +35,7 @@ interface StatLabelProps {
 
 /** Statistic name, with a tooltip when one exists. */
 export function StatLabel({ k, extra }: StatLabelProps) {
-  const def =
-    STAT_TIPS[k] ||
-    (/^Max SPL at /.test(k)
-      ? "Loudest output at this frequency from a steady sine tone, before the named limit is reached."
-      : null);
-  const tip = [def, extra].filter(Boolean).join(" ");
+  const tip = [STAT_TIPS[k], extra].filter(Boolean).join(" ");
   return tip ? <Tooltip tip={tip}>{k}</Tooltip> : k;
 }
 

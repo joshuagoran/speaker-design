@@ -26,6 +26,7 @@ import { RoomView } from "../../components/drawings/RoomView";
 import { HifiFront } from "../../components/drawings/HifiFront";
 import { OptimizerBar } from "../../components/optimizer/OptimizerBar";
 import { GoalPicker } from "../../components/optimizer/GoalPicker";
+import { KeepDetails } from "../../components/optimizer/KeepDetails";
 import { RunRow } from "../../components/optimizer/RunRow";
 import { ResultCards } from "../../components/optimizer/ResultCards";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
@@ -38,7 +39,12 @@ import {
 } from "../../lib/hifi/hifi";
 import { roundoverOnsetHz } from "../../lib/hifi/diffraction";
 import { formatInches } from "../../lib/format";
-import { HIFI_OPTIMIZER_GOALS } from "../../lib/hifi/optimize";
+import {
+  HIFI_AMP_WATTS_MAX,
+  HIFI_AMP_WATTS_STEPS,
+  HIFI_OPTIMIZER_GOALS,
+} from "../../lib/hifi/optimize";
+import { HIFI_KEEP_WORDS, keepLines } from "../../lib/optimizer/goalKeeps";
 import type { HifiPlanner } from "./useHifiPlanner";
 import type { Dims3 } from "../../types";
 import { entriesOf } from "../../lib/records";
@@ -200,6 +206,15 @@ export function HifiPage({ hifi }: Props) {
           defs={HIFI_OPTIMIZER_GOALS}
           selected={optimizerGoals}
           onTap={toggleOptimizerGoal}
+        />
+        <KeepDetails
+          lines={keepLines(
+            optimizerGoals,
+            HIFI_OPTIMIZER_GOALS,
+            HIFI_KEEP_WORDS,
+            // the page models your design; the optimizer may still not (a radiator missing from the tables)
+            !optimizerResult || optimizerResult.cur !== null,
+          )}
         />
       </div>
       <RunRow
@@ -758,9 +773,9 @@ export function HifiPage({ hifi }: Props) {
           <Slider
             label="Woofer amp @ 8 Ω"
             value={wooferAmpWatts}
-            min={10}
-            max={500}
-            step={10}
+            min={HIFI_AMP_WATTS_STEPS.wAmpW.min}
+            max={HIFI_AMP_WATTS_MAX.wAmpW}
+            step={HIFI_AMP_WATTS_STEPS.wAmpW.step}
             unit=" W"
             onChange={setWooferAmpWatts}
             extra={renderLockButton("wAmpW", "the woofer amp power")}
@@ -768,9 +783,9 @@ export function HifiPage({ hifi }: Props) {
           <Slider
             label="Tweeter amp @ 8 Ω"
             value={tweeterAmpWatts}
-            min={5}
-            max={200}
-            step={5}
+            min={HIFI_AMP_WATTS_STEPS.tAmpW.min}
+            max={HIFI_AMP_WATTS_MAX.tAmpW}
+            step={HIFI_AMP_WATTS_STEPS.tAmpW.step}
             unit=" W"
             onChange={setTweeterAmpWatts}
             extra={renderLockButton("tAmpW", "the tweeter amp power")}

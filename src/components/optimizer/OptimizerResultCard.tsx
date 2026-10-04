@@ -3,7 +3,11 @@ import { Tooltip } from "../ui/Tooltip";
 import { OptimizerCurveChart } from "../charts/OptimizerCurveChart";
 import { BoxFront } from "../drawings/BoxFront";
 import { formatDollars } from "../../lib/format";
+import { formatThickness } from "../../lib/pa/calc";
 import { Delta } from "./Delta";
+import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
+import { Ellipsis } from "../ui/Ellipsis";
+import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import type { PaMetricsDelta, PaOptimizerCard, PaOptimizerResult } from "../../types";
 
 interface Props {
@@ -42,12 +46,20 @@ export function OptimizerResultCard({
       {delta}
     </div>
   );
-  const sheets = result.build.sheets
-    .map(
-      (x) =>
-        `${x.n} sheet${x.n > 1 ? "s" : ""} ${x.t === 0.5 ? "1/2″" : x.t === 0.75 ? "3/4″" : x.t + "″"}`,
-    )
-    .join(" + ");
+  const { build } = result,
+    { stacks } = build.cutlist;
+  // the quick count shows at once, marked "~"; the worker's full search (the Cutlist tab's) replaces it
+  const exact = useCutlistLayout({ parts: build.parts, settings: build.cutlist, countsOnly: true });
+  const counts = exact ? exact.groups.map((g) => ({ t: g.t, n: g.sheets.length })) : build.sheets;
+  const sheets = (
+    <span title={exact ? undefined : "Quick estimate; the exact count is on its way"}>
+      {counts
+        .map((x) => `${exact ? "" : "~"}${x.n} sheet${x.n > 1 ? "s" : ""} ${formatThickness(x.t)}`)
+        .join(" + ")}
+      {stacks > 1 && ` for ${stacks} stacks`}
+      {!exact && <Ellipsis />}
+    </span>
+  );
   return (
     <div
       className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}
@@ -94,10 +106,10 @@ export function OptimizerResultCard({
         <b className="font-semibold">Limited by:</b> {result.limitedBy}
       </div>
       {result.warnings
-        .filter(([h]) => !/limited$/.test(h))
-        .map(([h, b]) => (
+        .filter(([, , , id]) => !LIMIT_CHIP_IDS.has(id))
+        .map(([, h, b, id]) => (
           <div
-            key={h}
+            key={id}
             className="text-xs border border-l-4 rounded px-2 py-1 bg-amber-50 border-amber-200 border-l-amber-300"
           >
             <b className="font-semibold text-amber-700 mr-1">{h}</b>
@@ -105,7 +117,7 @@ export function OptimizerResultCard({
           </div>
         ))}
       <div className="text-xs text-stone-500">
-        ✓ Duct fits · {sheets} · Qtc {result.build.qtc.toFixed(2)}
+        ✓ Duct fits · {sheets} · Qtc {build.qtc.toFixed(2)}
       </div>
       <div className="text-xs text-stone-500">
         Changes: {result.changed.length ? result.changed.join(", ") : "none"}
