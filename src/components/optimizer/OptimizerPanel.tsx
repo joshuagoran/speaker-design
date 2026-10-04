@@ -7,6 +7,7 @@ import { formatDollars } from "../../lib/format";
 import { toggled } from "../../lib/lists";
 import { OptimizerResultCard } from "./OptimizerResultCard";
 import { GoalPicker } from "./GoalPicker";
+import { KeepDetails } from "./KeepDetails";
 import { RunRow } from "./RunRow";
 import { ResultCards } from "./ResultCards";
 import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize";
@@ -123,12 +124,8 @@ export function OptimizerPanel({
               className=""
             />
           </div>
-          <GoalPicker
-            defs={OPTIMIZER_GOALS}
-            selected={goals}
-            onTap={tapGoal}
-            details={keepLines(goals, OPTIMIZER_GOALS, PA_KEEP_WORDS, curOut != null)}
-          />
+          <GoalPicker defs={OPTIMIZER_GOALS} selected={goals} onTap={tapGoal} />
+          <KeepDetails lines={keepLines(goals, OPTIMIZER_GOALS, PA_KEEP_WORDS, curOut != null)} />
         </div>
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">
           Target: {tgtText}

@@ -26,6 +26,7 @@ import { RoomView } from "../../components/drawings/RoomView";
 import { HifiFront } from "../../components/drawings/HifiFront";
 import { OptimizerBar } from "../../components/optimizer/OptimizerBar";
 import { GoalPicker } from "../../components/optimizer/GoalPicker";
+import { KeepDetails } from "../../components/optimizer/KeepDetails";
 import { RunRow } from "../../components/optimizer/RunRow";
 import { ResultCards } from "../../components/optimizer/ResultCards";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
@@ -205,7 +206,9 @@ export function HifiPage({ hifi }: Props) {
           defs={HIFI_OPTIMIZER_GOALS}
           selected={optimizerGoals}
           onTap={toggleOptimizerGoal}
-          details={keepLines(
+        />
+        <KeepDetails
+          lines={keepLines(
             optimizerGoals,
             HIFI_OPTIMIZER_GOALS,
             HIFI_KEEP_WORDS,
