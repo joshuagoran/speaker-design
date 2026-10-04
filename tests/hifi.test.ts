@@ -31,6 +31,7 @@ const W: HifiWoofer = {
   size: 6.5,
   lb: 4,
   name: "test 6.5",
+  maker: "dayton",
   price: 0,
   src: "",
   fmax: null,
@@ -217,6 +218,7 @@ test("passive radiators: tuning, notch, travel limit and checks", (t) => {
   const drv: PassiveRadiator = {
     id: "p",
     name: "test radiator",
+    maker: "dayton",
     src: "",
     note: "",
     size: 6.5,

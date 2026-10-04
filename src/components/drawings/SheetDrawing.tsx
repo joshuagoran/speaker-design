@@ -1,7 +1,8 @@
-import type { Offcut, PackedSheet, PlywoodSheet } from "../../types";
+import type { CutBoxId, Offcut, PackedSheet, PlywoodSheet } from "../../types";
 import { formatInches } from "../../lib/pa/calc";
 import { PAL } from "../../styles/palette";
 import { useElementWidth } from "../../hooks/useElementWidth";
+import { CUT_BOX_NAMES, CUT_PART_NAMES } from "../../constants/cutParts";
 
 interface Props {
   sheet: PackedSheet;
@@ -20,7 +21,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
     H = S.h * sc;
   const [box, cw] = useElementWidth(S.w === 48 ? 160 : 200);
   const fs = (12 * (W + 4)) / cw; // 12 css px
-  const colors: Record<string, string> = { Sub: PAL.subTint, Mid: PAL.midTint };
+  const colors: Record<CutBoxId, string> = { sub: PAL.subTint, mid: PAL.midTint };
   // a grain arrow down the middle of a piece, from y0 to y1 (sheet units)
   const arrow = (x: number, y0: number, y1: number, colour: string, key?: string) => {
     const head = fs * 0.45;
@@ -86,10 +87,10 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
             h = it.h * sc,
             cx = x + w / 2;
           // strips are labelled along their length; the box name goes first where it fits (the fill colour shows it too)
-          const name = it.pieces ? "strip" : it.part.split(" ")[0];
+          const name = it.pieces ? "strip" : CUT_PART_NAMES[it.part].split(" ")[0];
           const [run, across] = it.pieces ? [h, w] : [w, h];
           const fits = (t: string) => run > fs * (0.55 * t.length + 0.6) && across > fs * 1.3;
-          const label = [`${it.box} ${name}`, name].find(fits);
+          const label = [`${CUT_BOX_NAMES[it.box]} ${name}`, name].find(fits);
           const labelled = !!label;
           // waterfall strips: a tick at each cut and the panels numbered in cut order
           const cuts: number[] = [];
@@ -109,7 +110,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                 y={y}
                 width={w}
                 height={h}
-                fill={colors[it.box] || PAL.edge}
+                fill={colors[it.box]}
                 stroke={it.crossed ? PAL.status.orange.base : PAL.muted}
                 strokeWidth={it.crossed ? "2" : "0.8"}
               />

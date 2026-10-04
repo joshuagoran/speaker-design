@@ -3,7 +3,8 @@ import { WarningChips } from "../../../components/chips/WarningChips";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
 import { FoldHeading } from "../../../components/ui/FoldHeading";
 import { ResponseChart } from "../../../components/charts/ResponseChart";
-import { MAX_SPL_TIP, StatRow } from "../../../components/optimizer/StatRow";
+import { MAX_SPL_TIP, STATS } from "../../../components/optimizer/StatRow";
+import { StatRowGrid, type StatRowItem } from "../../../components/stats/StatRowGrid";
 import { subChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
@@ -75,8 +76,8 @@ export function SubSection({ planner }: Props) {
           {subModelled && (
             <StatTileGrid
               tiles={[
-                ["Net volume", subNetLiters.toFixed(0), "L"],
-                ["Tuning Fb", subModelled.mdl.Fb.toFixed(1), "Hz"],
+                [STATS.netVolume, subNetLiters.toFixed(0), "L"],
+                [STATS.tuningFb, subModelled.mdl.Fb.toFixed(1), "Hz"],
                 ["System F3", subModelled.mdl.f3.toFixed(0), "Hz"],
                 ["Max SPL @ 35 Hz", nearestPoint(subModelled.maxCurve, 35).spl.toFixed(1), "dB"],
                 ["Weight", subWeightLoadedLb.toFixed(0), "lb"],
@@ -126,25 +127,25 @@ export function SubSection({ planner }: Props) {
             </div>
           )}
           {subModelled ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
-              {[
-                ["Gross internal", `${subGrossLiters.toFixed(0)} L`],
+            <StatRowGrid
+              rows={[
+                [STATS.grossInternal, `${subGrossLiters.toFixed(0)} L`],
                 [
-                  "Port area",
+                  STATS.portArea,
                   `${port.area.toFixed(1)} in²`,
                   `${((port.area / (subDriver.ts.Sd / 6.4516)) * 100).toFixed(0)}% of cone area`,
                 ],
                 [
-                  "Hydraulic diameter",
+                  STATS.hydraulicDiameter,
                   `${port.dh.toFixed(2)}″`,
                   port.dh < 2 ? "low — flare the mouths" : "acceptable with flares",
                 ],
                 [
-                  "Midband sensitivity",
+                  STATS.midbandSensitivity,
                   `${(subModelled.mdl.ref - 20 * Math.log10(subAmpVoltage / 2.83)).toFixed(1)} dB`,
                   "2.83 V, half space, 1 m",
                 ],
-                ...[30, 35, 45, 60].map((f) => {
+                ...[30, 35, 45, 60].map((f): StatRowItem => {
                   const m = nearestPoint(subModelled.maxCurve, f);
                   return [
                     `Max SPL at ${f} Hz`,
@@ -154,26 +155,24 @@ export function SubSection({ planner }: Props) {
                   ];
                 }),
                 [
-                  "First limit, music",
+                  STATS.firstLimit,
                   subModelled.lim.who,
                   `at ${Math.round(subModelled.lim.W / 10) * 10} W`,
                   `at ${Math.round(subModelled.lim.W / 10) * 10} W${subModelled.lim.who === "cone travel (Xmax)" ? `, reached first at ${subModelled.mdl.peakXF.toFixed(0)} Hz` : subModelled.lim.who === "port air speed" ? `, reached first at ${subModelled.mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`,
                 ],
                 [
-                  "Peak port velocity",
+                  STATS.peakPortVelocity,
                   `${subModelled.lim.vel.toFixed(1)} m/s`,
                   `at ${subModelled.mdl.peakVelF.toFixed(0)} Hz`,
                 ],
                 [
-                  "Peak excursion",
+                  STATS.peakExcursion,
                   `${((subModelled.mdl.peakX * subModelled.lim.V) / subAmpVoltage).toFixed(1)} mm`,
                   `${subModelled.lim.xPct.toFixed(0)}% of Xmax, at ${subModelled.mdl.peakXF.toFixed(0)} Hz`,
                 ],
                 ...xmaxRows(subDriver.ts),
-              ].map(([k, v, note, tip]) => (
-                <StatRow key={k} k={k} v={v} note={note} tip={tip} />
-              ))}
-            </div>
+              ]}
+            />
           ) : (
             <p className="text-sm text-stone-500 ">
               {subDriver.name} can't be modelled yet: its parameters are incomplete.{" "}

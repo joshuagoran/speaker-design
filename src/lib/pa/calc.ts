@@ -4,7 +4,9 @@ import type {
   CompressionHf,
   CornerJoint,
   CrossoverOrder,
+  CutBoxId,
   CutPart,
+  CutPartId,
   CutPartsConfig,
   Dims3,
   FillDriver,
@@ -388,7 +390,7 @@ export const formatInches = (x: number) => {
 export const formatThickness = (t: number) => (t === 0.75 ? "3/4″" : t === 0.5 ? "1/2″" : `${t}″`);
 
 export function boxParts(
-  label: string,
+  label: CutBoxId,
   W: number,
   H: number,
   D: number,
@@ -408,11 +410,11 @@ export function boxParts(
         ? `45° on top and bottom edges; ${rearNote}`
         : rearNote;
   const topNote = joint === "miter" ? `45° on both ends; ${rearNote}` : rearNote;
-  P.push({ box: label, part: "Side", qty: 2, a: D, b: H, t, note: sideNote });
-  P.push({ box: label, part: "Top / bottom", qty: 2, a: D, b: topW, t, note: topNote });
+  P.push({ box: label, part: "side", qty: 2, a: D, b: H, t, note: sideNote });
+  P.push({ box: label, part: "topBottom", qty: 2, a: D, b: topW, t, note: topNote });
   P.push({
     box: label,
-    part: "Back",
+    part: "back",
     qty: 1,
     a: W - t,
     b: H - t,
@@ -424,7 +426,7 @@ export function boxParts(
     band = extra.band || 0;
   P.push({
     box: label,
-    part: "Baffle",
+    part: "baffle",
     qty: 1,
     a: iw,
     b: ih - band,
@@ -433,7 +435,7 @@ export function boxParts(
   });
   P.push({
     box: label,
-    part: "Baffle cleat",
+    part: "baffleCleat",
     qty: 2,
     a: 0.75,
     b: iw,
@@ -442,7 +444,7 @@ export function boxParts(
   });
   P.push({
     box: label,
-    part: "Baffle cleat",
+    part: "baffleCleat",
     qty: 2,
     a: 0.75,
     b: ih - band - 1.5,
@@ -453,7 +455,7 @@ export function boxParts(
   if (extra.braces)
     P.push({
       box: label,
-      part: "Window brace",
+      part: "windowBrace",
       qty: extra.braces,
       a: iw,
       b: inD,
@@ -478,7 +480,7 @@ export function cutParts({
   const t = wall,
     all: CutPart[] = [];
   const vent: string[] = [];
-  const s = boxParts("Sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
+  const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
     braces: wall === 0.5 ? 3 : 2,
     band: portStyle === "slots" || portStyle === "folded" ? cVent.slotH + t : 0,
     cutNote: `${formatInches(DRIVER_CUTOUT_IN[sub.size] || 16.6)}″ driver cutout (check the datasheet)`,
@@ -490,8 +492,8 @@ export function cutParts({
         ? Math.min(cVent.len, subBox.d - t - cVent.slotH)
         : subBox.d - inset - t - cVent.slotH - 2 * t;
     all.push({
-      box: "Sub",
-      part: "Duct shelf",
+      box: "sub",
+      part: "ductShelf",
       qty: 1,
       a: s.iw,
       b: len,
@@ -499,8 +501,8 @@ export function cutParts({
       note: "roof of the bottom slot",
     });
     all.push({
-      box: "Sub",
-      part: "Duct fin",
+      box: "sub",
+      part: "ductFin",
       qty: 2,
       a: cVent.slotH,
       b: len,
@@ -509,8 +511,8 @@ export function cutParts({
     });
     if (portStyle === "folded")
       all.push({
-        box: "Sub",
-        part: "Duct rear wall",
+        box: "sub",
+        part: "ductRearWall",
         qty: 1,
         a: s.iw,
         b: Math.max(2, cVent.len - len),
@@ -520,8 +522,8 @@ export function cutParts({
   } else if (portStyle === "vslots" || portStyle === "vslot1") {
     const n = portStyle === "vslot1" ? 1 : 2;
     all.push({
-      box: "Sub",
-      part: "Side duct wall",
+      box: "sub",
+      part: "sideDuctWall",
       qty: n,
       a: s.ih,
       b: cVent.len,
@@ -529,8 +531,8 @@ export function cutParts({
       note: `${formatInches(cVent.throat)}″ throat; 20° chamfer both ends`,
     });
     all.push({
-      box: "Sub",
-      part: "Duct divider",
+      box: "sub",
+      part: "ductDivider",
       qty: 2 * n,
       a: cVent.throat,
       b: cVent.len,
@@ -543,7 +545,7 @@ export function cutParts({
     );
   }
   if (layout !== "tower") {
-    const m = boxParts("Mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
+    const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
       braces: wall === 0.5 ? 2 : 1,
       cutNote: `${formatInches(DRIVER_CUTOUT_IN[mid.size] || 11.1)}″ driver cutout (check the datasheet)`,
     });
@@ -671,14 +673,14 @@ export function ventGeometry(
 
 // Litres of wood inside a box: everything behind the baffle except the shell panels themselves.
 // Window braces keep ~2 in rails, so only their rails count.
-const SHELL = new Set(["Side", "Top / bottom", "Back", "Baffle"]);
-export function internalWoodLiters(parts: CutPart[], box: string) {
+const SHELL: ReadonlySet<CutPartId> = new Set(["side", "topBottom", "back", "baffle"]);
+export function internalWoodLiters(parts: CutPart[], box: CutBoxId) {
   let in3 = 0;
   for (const p of parts) {
     if (p.box !== box || SHELL.has(p.part)) continue;
     const a = Math.min(p.a, p.b),
       b = Math.max(p.a, p.b);
-    const area = p.part === "Window brace" ? Math.max(0, 2 * 2 * (a + b) - 4 * 2 * 2) : a * b;
+    const area = p.part === "windowBrace" ? Math.max(0, 2 * 2 * (a + b) - 4 * 2 * 2) : a * b;
     in3 += area * p.t * p.qty;
   }
   return (in3 * 16.387) / 1000;
@@ -859,7 +861,7 @@ export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConf
       cVent: cfg.cVent,
       layout: cfg.layout,
     }).parts,
-    "Sub",
+    "sub",
   );
   const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - woodL);
   return {

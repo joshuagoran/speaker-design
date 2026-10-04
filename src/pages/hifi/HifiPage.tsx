@@ -2,6 +2,7 @@ import { PAL } from "../../styles/palette";
 import { CrossoverSlopeButtons } from "../../components/ui/CrossoverSlopeButtons";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { StatTile } from "../../components/stats/StatTile";
+import { STATS, statLabel, type StatName } from "../../components/optimizer/StatRow";
 import {
   HIFI_WOOFERS_BY_SIZE,
   HIFI_PASSIVES_BY_SIZE,
@@ -169,8 +170,8 @@ export function HifiPage({ hifi }: Props) {
     speakerSystem.kind === "vented" && speakerSystem.slotW != null
       ? ` (${speakerSystem.slotW.toFixed(1)}″ wide)`
       : "";
-  const tile = (k: string, v: string, u: string) => (
-    <StatTile key={k} label={k} value={v} unit={u} />
+  const tile = (k: StatName, v: string, u: string) => (
+    <StatTile key={statLabel(k)} label={k} value={v} unit={u} />
   );
   const optimizerBar = (
     <OptimizerBar
@@ -320,14 +321,14 @@ export function HifiPage({ hifi }: Props) {
             />
           </div>
           <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
-            {tile("Net volume", speakerSystem.net.toFixed(1), "L")}
+            {tile(STATS.netVolume, speakerSystem.net.toFixed(1), "L")}
             {speakerSystem.kind === "sealed"
-              ? tile("Qtc", speakerSystem.Qtc.toFixed(2), "")
-              : tile("Tuning Fb", speakerSystem.Fb.toFixed(0), "Hz")}
-            {tile("F3 in room", speakerSystem.f3.toFixed(0), "Hz")}
-            {tile("Max at the seat", maxLevelAtSeatDb.toFixed(0), "dB")}
+              ? tile(STATS.qtc, speakerSystem.Qtc.toFixed(2), "")
+              : tile(STATS.tuningFb, speakerSystem.Fb.toFixed(0), "Hz")}
+            {tile(STATS.f3InRoom, speakerSystem.f3.toFixed(0), "Hz")}
+            {tile(STATS.maxAtSeat, maxLevelAtSeatDb.toFixed(0), "dB")}
             {tile("Weight", speakerSystem.lb.toFixed(0), "lb")}
-            {tile("Pair", `$${Math.round(pairCostUsd)}`, "")}
+            {tile(STATS.pairPrice, `$${Math.round(pairCostUsd)}`, "")}
           </div>
         </div>
         <ResponseChart

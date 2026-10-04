@@ -1,7 +1,8 @@
 import { WarningChips } from "../../../components/chips/WarningChips";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
 import { FoldHeading } from "../../../components/ui/FoldHeading";
-import { MAX_SPL_TIP, StatRow } from "../../../components/optimizer/StatRow";
+import { MAX_SPL_TIP, STATS } from "../../../components/optimizer/StatRow";
+import { StatRowGrid, type StatRowItem } from "../../../components/stats/StatRowGrid";
 import { midChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
@@ -68,7 +69,7 @@ export function MidSection({ planner }: Props) {
             <>
               <StatTileGrid
                 tiles={[
-                  ["Net volume", midNetL.toFixed(0), "L"],
+                  [STATS.netVolume, midNetL.toFixed(0), "L"],
                   ["Box resonance Fc", midModelled.mdl.Fc.toFixed(0), "Hz"],
                   ["Box F3", midModelled.mdl.f3.toFixed(0), "Hz"],
                   [
@@ -79,15 +80,15 @@ export function MidSection({ planner }: Props) {
                   ["Weight", midWeightLoadedLb.toFixed(0), "lb"],
                 ]}
               />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
-                {[
+              <StatRowGrid
+                rows={[
                   [
-                    "Gross internal",
+                    STATS.grossInternal,
                     `${midGrossL.toFixed(0)} L`,
                     `acts like ${midEffL.toFixed(0)} L stuffed`,
                   ],
                   [
-                    "Qtc",
+                    STATS.qtc,
                     midModelled.mdl.Qtc.toFixed(2),
                     midModelled.mdl.Qtc > 0.8
                       ? "peaky"
@@ -96,11 +97,11 @@ export function MidSection({ planner }: Props) {
                         : "well damped",
                   ],
                   [
-                    "Midband sensitivity",
+                    STATS.midbandSensitivity,
                     `${(midModelled.mdl.ref - 20 * Math.log10(midVoltage / 2.83)).toFixed(1)} dB`,
                     "2.83 V, half space, 1 m",
                   ],
-                  ...[subMidCrossoverHz, 200, 500].map((f) => {
+                  ...[subMidCrossoverHz, 200, 500].map((f): StatRowItem => {
                     const m = nearestPoint(midModelled.max, f);
                     return [
                       `Max SPL at ${f} Hz`,
@@ -110,16 +111,14 @@ export function MidSection({ planner }: Props) {
                     ];
                   }),
                   [
-                    "Peak excursion",
+                    STATS.peakExcursion,
                     `${((midModelled.mdl.peakX * midUsedVoltage) / midVoltage).toFixed(1)} mm`,
                     `${(((midModelled.mdl.peakX * midUsedVoltage) / midVoltage / midDriver.ts.Xmax) * 100).toFixed(0)}% of Xmax`,
                     `At ${Math.round((midUsedVoltage * midUsedVoltage) / 8)} W, with the ${subMidCrossoverHz} Hz highpass.`,
                   ],
                   ...xmaxRows(midDriver.ts),
-                ].map(([k, v, note, tip]) => (
-                  <StatRow key={k} k={k} v={v} note={note} tip={tip} />
-                ))}
-              </div>
+                ]}
+              />
               <WarningChips
                 chips={midChips({
                   midSize,
