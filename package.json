@@ -7,6 +7,8 @@
     "test": "vp test",
     "golden": "vp test --run --config tests/update-golden.config.ts",
     "optimizer-dump": "vp test --run --config tests/optimizer-dump.config.ts",
+    "optimizer-dump:pa": "vp test --run --config tests/optimizer-dump.config.ts --project \"pa-*\"",
+    "optimizer-dump:hifi": "vp test --run --config tests/optimizer-dump.config.ts --project \"hifi-*\"",
     "xmax-audit": "vp test --run --config tests/xmax-audit.config.ts",
     "prepare": "vp config"
   },
