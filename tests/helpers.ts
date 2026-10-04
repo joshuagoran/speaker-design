@@ -1,9 +1,27 @@
 // Shared test helpers and independent physics references.
 import assert from "node:assert";
-import type { ThieleSmall, VentSpec } from "../src/types";
+import type { Chip, ChipId, ChipSeverity, ThieleSmall, VentSpec } from "../src/types";
 
 // The tests give a vent only the fields its layout reads; the cast marks the partial on purpose.
 export const vent = (v: Partial<VentSpec>) => v as VentSpec;
+// Chips are found by their id (a typo fails the type check), never by their words; `kind` narrows to one severity.
+export const findChip = <I extends ChipId>(
+  F: readonly Chip<I>[],
+  id: NoInfer<I>,
+  kind?: ChipSeverity,
+) => F.find(([k, , , i]) => i === id && (kind === undefined || k === kind));
+/** the chips' ids and severities, for a failure message */
+export const chipList = (F: readonly Chip[]) => F.map(([k, , , i]) => `${i} ${k}`).join(" | ");
+/** the check's chip (at `kind` when given); fails the test when it isn't there */
+export const chipOf = <I extends ChipId>(
+  F: readonly Chip<I>[],
+  id: NoInfer<I>,
+  kind?: ChipSeverity,
+) => {
+  const c = findChip(F, id, kind);
+  assert.ok(c, `${id}${kind ? ` (${kind})` : ""}: ${chipList(F)}`);
+  return c;
+};
 /** `closedBox` filter orders: LR24 at both corners, as the PA crossovers default to. */
 export const LR24_ORDERS = { hpOrder: 4, lpOrder: 4 } as const;
 

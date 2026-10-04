@@ -23,7 +23,7 @@ import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import { formatInches } from "../src/lib/format";
 import type { Dims2, HifiConfig } from "../src/types";
-import { C, close, db } from "./helpers";
+import { C, chipOf, close, db, findChip } from "./helpers";
 
 const IN = 0.0254;
 const FREQS = logSpacedFrequencies(200, 20000, 300);
@@ -210,14 +210,12 @@ test("hifi: the offset stays on the baffle, and the checks flag a too-deep round
   assert.strictEqual(tweeterOffset({ ...cfg, tweeterOffsetIn: 99 }, T, s.lay), max);
   assert.strictEqual(tweeterOffset({ ...cfg, tweeterOffsetIn: -99 }, T, s.lay), -max);
   assert.strictEqual(tweeterOffset({ ...cfg, tweeterOffsetIn: 1 }, T, { onTop: true }), 0);
-  const heads = (c: HifiConfig) => hifiChips(sysOf(c), W, T, c).map(([, h]) => h);
-  assert.ok(!heads({ ...cfg, roundoverIn: 0.75 }).includes("Roundover deeper than the baffle"));
-  assert.ok(heads({ ...cfg, roundoverIn: 1.5 }).includes("Roundover deeper than the baffle"));
-  assert.ok(
-    heads({ ...cfg, wall: 0.5, roundoverIn: 0.75 }).includes("Roundover deeper than the baffle"),
-  );
-  assert.ok(heads({ ...cfg, tweeterOffsetIn: 99 }).includes("Tweeter offset past the edge"));
-  assert.ok(!heads({ ...cfg, tweeterOffsetIn: max }).includes("Tweeter offset past the edge"));
+  const chips = (c: HifiConfig) => hifiChips(sysOf(c), W, T, c);
+  assert.ok(!findChip(chips({ ...cfg, roundoverIn: 0.75 }), "hifiRoundover"));
+  chipOf(chips({ ...cfg, roundoverIn: 1.5 }), "hifiRoundover", "warn");
+  chipOf(chips({ ...cfg, wall: 0.5, roundoverIn: 0.75 }), "hifiRoundover", "warn");
+  chipOf(chips({ ...cfg, tweeterOffsetIn: 99 }), "hifiTweeterOffsetEdge", "warn");
+  assert.ok(!findChip(chips({ ...cfg, tweeterOffsetIn: max }), "hifiTweeterOffsetEdge"));
 });
 
 test("hifi design: the page's ripple figure follows the roundover, and a design still derives quickly", () => {
