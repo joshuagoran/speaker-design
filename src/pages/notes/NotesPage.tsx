@@ -1,7 +1,26 @@
+import { Fragment } from "react";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { SignalPath } from "../../components/drawings/SignalPath";
-import { RACKS } from "../../lib/data";
+import { CD_OPTIONS, DSP_UNITS, RACKS } from "../../lib/data";
+import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
+import { formatDollars } from "../../lib/format";
+import { byIdOrThrow } from "../../lib/tables";
+import type { CompressionDriver, CompressionHf } from "../../types";
+
+// The prose quotes these parts' catalogue figures, so a price or rating edited there shows up here.
+/** The DE360's AES rating and price; throws if its catalogue entry loses either. */
+function de360Figures(): Pick<CompressionHf, "aes"> & {
+  price: NonNullable<CompressionDriver["price"]>;
+} {
+  const d = byIdOrThrow(CD_OPTIONS, "de360", "compression drivers");
+  if (!d.hf || d.price === null)
+    throw new Error("compression drivers: the Notes page quotes the DE360's AES rating and price");
+  return { aes: d.hf.aes, price: d.price };
+}
+const DE360 = de360Figures();
+const GXD = QSC_GXD.models;
+const OHM = "Ω";
 
 /** Notes page: reference material and parts research behind the design. */
 export function NotesPage() {
@@ -49,25 +68,26 @@ export function NotesPage() {
         </p>
       </section>
       <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
-        <SectionHeading className="mb-3">Amp DSP: QSC GXD4 / GXD8</SectionHeading>
+        <SectionHeading className="mb-3">
+          {`Amp DSP: ${QSC_GXD.brand} ${GXD.map((m) => m.model).join(" / ")}`}
+        </SectionHeading>
         <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
           {[
             [
               "Power per channel",
-              "GXD4: 400 W into 8 \u03a9, 600 W into 4 \u03a9. GXD8: 800 W into 8 \u03a9, 1200 W into 4 \u03a9. Continuous, both channels driven. Voltage gain 33.5 dB (GXD4), 36.5 dB (GXD8).",
+              `${GXD.map((m) => `${m.model}: ${m.w8} W into 8 ${OHM}, ${m.w4} W into 4 ${OHM}.`).join(" ")} Continuous, both channels driven. Voltage gain ${GXD.map((m) => `${m.gainDb} dB (${m.model})`).join(", ")}.`,
             ],
-            [
-              "Filters",
-              "Linkwitz-Riley 24 dB/oct only. Highpass 20 Hz\u20134 kHz, lowpass 60 Hz\u20134 kHz. No Butterworth and nothing steeper. Plus a 4-band PEQ (\u00b112 dB, 0.1\u20133 oct) and 50 ms of delay.",
-            ],
+            ["Filters", QSC_GXD.filters],
             [
               "Limiter",
-              "\u201cSmart Speaker Protection\u201d: Mild, Medium or Aggressive; a speaker power of 5\u2013800 W (GXD8) or 5\u2013400 W (GXD4); and 4 or 8 \u03a9. QSC say to set the power to the speaker's continuous rating.",
+              `${QSC_GXD.limiterModes}; a speaker power of ${[...GXD]
+                .reverse()
+                .map((m) => `${m.limiterW[0]}\u2013${m.limiterW[1]} W (${m.model})`)
+                .join(
+                  " or ",
+                )}; and 4 or 8 ${OHM}. ${QSC_GXD.brand} say to set the power to the speaker's continuous rating.`,
             ],
-            [
-              "What it can't do",
-              "No threshold in volts, no attack or release settings, no limiting confined to one band. QSC don't say how the power setting maps to a threshold (the spec sheet calls it a peak limiter, the manual an RMS limiter).",
-            ],
+            ["What it can't do", QSC_GXD.limits],
           ].map(([t, d]) => (
             <li key={t} className="flex gap-3">
               <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
@@ -88,7 +108,7 @@ export function NotesPage() {
             ],
             [
               "2. Limiter power",
-              "The lower of the planner's \u201ccone reaches Xmax at X W\u201d and the driver's rating; Medium or Aggressive. On a GXD8 the ceiling is 800 W, which is just the amp's own limit.",
+              `The lower of the planner's \u201ccone reaches Xmax at X W\u201d and the driver's rating; Medium or Aggressive. On a ${GXD8.model} the ceiling is ${GXD8.limiterW[1]} W, which is just the amp's own limit.`,
             ],
             [
               "3. Check it",
@@ -100,7 +120,7 @@ export function NotesPage() {
             ],
             [
               "Horns",
-              "A GXD4 puts 400 W on a 35 W AES driver like the DE360. Its limiter, set to the driver's rating, is the protection; set the planner's HF amp slider to the same power so its numbers match.",
+              `A ${GXD4.model} puts ${GXD4.w8} W on a ${DE360.aes} W AES driver like the DE360. Its limiter, set to the driver's rating, is the protection; set the planner's HF amp slider to the same power so its numbers match.`,
             ],
           ].map(([t, d]) => (
             <li key={t} className="flex gap-3">
@@ -115,19 +135,14 @@ export function NotesPage() {
           Xmax is where distortion climbs, not where damage starts; the mechanical limit is usually
           2–3× further, so 1.2–1.4× the Xmax voltage is a common setting once you've listened.
           Sources:{" "}
-          <a
-            className="underline"
-            href="https://www.qscaudio.com/resource-files/productresources/amp/gxd/q_amp_gxd_usermanual.pdf"
-          >
-            GXD user manual
-          </a>
-          ,{" "}
-          <a
-            className="underline"
-            href="https://www.qscaudio.com/resource-files/productresources/amp/gxd/q_amp_gxd_specsheet.pdf"
-          >
-            GXD spec sheet
-          </a>
+          {QSC_GXD.src.map((d, i) => (
+            <Fragment key={d.url}>
+              {i > 0 && ", "}
+              <a className="underline" href={d.url}>
+                {d.name}
+              </a>
+            </Fragment>
+          ))}
           .
         </p>
       </section>
@@ -156,71 +171,7 @@ export function NotesPage() {
               </tr>
             </thead>
             <tbody>
-              {[
-                [
-                  "dbx DriveRack 260",
-                  "2×6 XLR",
-                  "LR to 48 (BW to 24)",
-                  "dBu threshold; attack, hold, release",
-                  "4",
-                  "$995 new, ~$390 used",
-                  "Best value: limits set straight from the amp's gain. Only 4 PEQ bands per output.",
-                ],
-                [
-                  "dbx DriveRack VENU360",
-                  "3×6 XLR",
-                  "BW / LR to 48",
-                  "Attack, hold, release; threshold vs full scale",
-                  "8",
-                  "$1,149 new, ~$750 used",
-                  "Best overall: independent outputs, up to 1 s delay, app control.",
-                ],
-                [
-                  "Behringer DCX2496",
-                  "3×6 XLR (+AES)",
-                  "BW / LR to 48",
-                  "Per output, release only; units unclear",
-                  "Shared pool",
-                  "~$339",
-                  "Budget pick. Steep slopes use up EQ filters. PC control over RS-232/485.",
-                ],
-                [
-                  "Behringer DCX2496LE",
-                  "2×6 XLR",
-                  "BW / LR to 48",
-                  "Same as DCX2496",
-                  "Shared pool",
-                  "~$289",
-                  "Same DSP, but no third input, no digital I/O and no PC port: front panel only.",
-                ],
-                [
-                  "Ashly AQM408",
-                  "4×8 XLR",
-                  "BW / LR / Bessel to 48; FIR (512 taps)",
-                  "Brick-wall, peak detect, −20 to +20 dBu, attack & release; plus compressor (peak or average) for an RMS stage",
-                  "PEQ blocks (count unconfirmed)",
-                  "$999 new (Sweetwater, Full Compass, B&H), ~$800 used",
-                  "Current. Meets every requirement; 2 spare outputs. Control is browser-only over Ethernet (no front-panel editing), so bring a phone or tablet on the rack's network.",
-                ],
-                [
-                  "t.racks DSP 408",
-                  "4×8 XLR",
-                  "up to 48 (unconfirmed)",
-                  "Attack, release; units unclear",
-                  "9",
-                  "$439",
-                  "Thomann only in the US.",
-                ],
-                [
-                  "dbx DriveRack PA2 (current)",
-                  "2×6 XLR",
-                  "BW / LR to 48",
-                  "No attack or release; up to 3 dB overshoot",
-                  "8, linked L/R",
-                  "~$599, ~$366 used",
-                  "Left and right share EQ and delay per band; 10 ms output delay.",
-                ],
-              ].map((r) => (
+              {DSP_UNITS.map((r) => (
                 <tr key={r[0]} className="border-b border-stone-300 align-top">
                   {r.map((c, i) => (
                     <td
@@ -404,7 +355,7 @@ export function NotesPage() {
             ],
             [
               "Compression driver",
-              "DE360 at $117 is the default; crossover floor on the A400G2 needs a distortion sweep to confirm ~1.1 kHz.",
+              `DE360 at ${formatDollars(DE360.price)} is the default; crossover floor on the A400G2 needs a distortion sweep to confirm ~1.1 kHz.`,
             ],
             [
               "Horn print",

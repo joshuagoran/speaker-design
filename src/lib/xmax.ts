@@ -14,11 +14,14 @@ import type {
   MakerId,
   PassiveRadiator,
   PublishedExcursion,
+  RawPassiveRadiator,
   RawTS,
   ThieleSmall,
   XmaxBand,
   XmaxFormula,
 } from "../types";
+import { MAKER_SEGMENT } from "../data/catalog/makers";
+import { keysOf } from "./records";
 
 /** the share of Hg each maker formula adds to the plain overhang */
 const GAP_SHARE: Record<GapFormula, number> = {
@@ -59,15 +62,9 @@ export const ESTIMATE: Record<
 };
 
 /** Makers whose published Xmax is estimated with the hi-fi band when no heights are known. */
-export const HIFI_MAKERS: ReadonlySet<MakerId> = new Set<MakerId>([
-  "dayton",
-  "peerless",
-  "fostex",
-  "scanSpeak",
-  "sbAcoustics",
-  "seas",
-  "purifi",
-]);
+export const HIFI_MAKERS: ReadonlySet<MakerId> = new Set(
+  keysOf(MAKER_SEGMENT).filter((m) => MAKER_SEGMENT[m] === "hifi"),
+);
 
 const exact = (mm: number, basis: XmaxBand["basis"]): XmaxBand => ({ basis, lo: mm, hi: mm });
 const estimate = (mm: number, [lo, hi]: readonly [number, number]): XmaxBand => ({
@@ -119,9 +116,6 @@ export function withXmax<T extends RawTS<ThieleSmall>>(
   const xmax = xmaxBandOf(ts, maker, who);
   return { ...ts, Xmax: centreOf(xmax), xmax };
 }
-
-/** A passive radiator as its table holds it: the published limit, before the comparable one is added. */
-export type RawPassiveRadiator = Omit<PassiveRadiator, "Xmax" | "xmax">;
 
 /** A passive radiator with its `Xmax`: the linear limit, or the mechanical one where that is all the maker gives. */
 export function passiveWithXmax(p: RawPassiveRadiator): PassiveRadiator {

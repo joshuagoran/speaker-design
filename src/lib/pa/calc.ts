@@ -20,9 +20,8 @@ import type {
   MidSystem,
   MidSystemConfig,
   PaMaxPoint,
+  PanelThickness,
   PhasedPoint,
-  PlywoodSheet,
-  PlywoodSheetKind,
   PortStyle,
   SealedBoxModel,
   SealedPoint,
@@ -38,7 +37,23 @@ import type {
   VentGeometry,
   VentSpec,
 } from "../../types";
+import { DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
+import { PLYWOOD_LB_PER_SQ_FT } from "../../data/catalog/plywood";
 import { crossoverSlopeName } from "../../constants/crossovers";
+
+// Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
+const ROUND_PORT: Record<PortStyle, boolean> = {
+  slots: false,
+  folded: false,
+  vslots: false,
+  vslot1: false,
+  round1: true,
+  round2: true,
+  round4: true,
+};
+/** Whether the sub's vents are round tubes (`round1`, `round2`, `round4`) rather than rectangular ducts. */
+export const isRoundPort = (style: PortStyle): style is Extract<PortStyle, `round${string}`> =>
+  ROUND_PORT[style];
 
 // ---------------------------------------------------------------
 // Vented-box model. Same lumped-element circuit used to check this
@@ -354,24 +369,20 @@ export function closedBox(
 // Internal litres with walls of thickness t and a 3/4″ baffle recessed `inset` into the frame.
 export const boxInternalLiters = (w: number, h: number, d: number, t: number, inset = 0.75) =>
   ((w - 2 * t) * (h - 2 * t) * (d - inset - 0.75 - t) * 16.387) / 1000;
-// Plywood weight, lb/ft² (birch). The baffle stays 3/4″ either way.
-export const PLYWOOD_LB_PER_SQ_FT: Partial<Record<number, number>> = { 0.75: 2.3, 0.5: 1.6 };
-export const plywoodLbPerSqFt = (t: number) => PLYWOOD_LB_PER_SQ_FT[t] ?? 2.3; // lb/ft²; unknown thicknesses fall back to 3/4″
+export { PLYWOOD_LB_PER_SQ_FT };
+/** Whether a wall thickness is one the catalogue lists panel weights for. */
+export const isPanelThickness = (t: number): t is PanelThickness =>
+  Object.hasOwn(PLYWOOD_LB_PER_SQ_FT, t);
+// Plywood weight, lb/ft². The wall comes from user input or a saved config, so it can be any number: a thickness the
+// catalogue doesn't list is weighed as 3/4″ (deliberate fallback, not a missing entry).
+export const plywoodLbPerSqFt = (t: number) => PLYWOOD_LB_PER_SQ_FT[isPanelThickness(t) ? t : 0.75];
 
 // ---------------------------------------------------------------
 // Cutlist: panels for the sub and mid boxes from the planner's current
 // dimensions (cutlist.ts lays them out on 4x8 or 5x5 sheets).
 // ---------------------------------------------------------------
-export const DRIVER_CUTOUT_IN: Partial<Record<number, number>> = {
-  18: 16.6,
-  15: 13.9,
-  12: 11.1,
-  10: 9.2,
-}; // typical front-mount cutouts, in
-export const PLYWOOD_SHEETS: Record<PlywoodSheetKind, PlywoodSheet> = {
-  "4x8": { w: 48, h: 96, name: "4 × 8 ft" },
-  "5x5": { w: 60, h: 60, name: "5 × 5 ft" },
-};
+export { DRIVER_CUTOUT_IN };
+export { PLYWOOD_SHEETS } from "../../data/catalog/plywood";
 export const formatInches = (x: number) => {
   // inches to the nearest 1/16, as 12 5/8
   const n = Math.round(x * 16),
@@ -482,7 +493,7 @@ export function cutParts({
   const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
     braces: wall === 0.5 ? 3 : 2,
     band: portStyle === "slots" || portStyle === "folded" ? cVent.slotH + t : 0,
-    cutNote: `${formatInches(DRIVER_CUTOUT_IN[sub.size] || 16.6)}″ driver cutout (check the datasheet)`,
+    cutNote: `${formatInches(DRIVER_CUTOUT_IN[sub.size])}″ driver cutout (check the datasheet)`,
   });
   all.push(...s.P);
   if (portStyle === "slots" || portStyle === "folded") {
@@ -546,7 +557,7 @@ export function cutParts({
   if (layout !== "tower") {
     const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
       braces: wall === 0.5 ? 2 : 1,
-      cutNote: `${formatInches(DRIVER_CUTOUT_IN[mid.size] || 11.1)}″ driver cutout (check the datasheet)`,
+      cutNote: `${formatInches(DRIVER_CUTOUT_IN[mid.size])}″ driver cutout (check the datasheet)`,
     });
     all.push(...m.P);
   }
@@ -705,14 +716,7 @@ export function subwooferLimits(
   const L = Math.min(vp, vx, vt, AMP_V);
   const sc = 20 * Math.log10(L / AMP_V);
   return {
-    who:
-      L === vp
-        ? "port air speed"
-        : L === vx
-          ? "cone travel (Xmax)"
-          : L === vt
-            ? "driver program rating"
-            : "amplifier power",
+    who: L === vp ? "port" : L === vx ? "Xmax" : L === vt ? "thermal" : "amp",
     V: L,
     W: (L * L) / 8,
     vel: (mdl.peakVel * L) / AMP_V,
@@ -807,7 +811,7 @@ export function hornResponse(
     pProg,
     derate,
     imp,
-    who: P === pAmp ? "amp" : "program rating",
+    who: P === pAmp ? "amp" : "thermal",
     flat: hf.sens + 10 * Math.log10(P),
   };
 }

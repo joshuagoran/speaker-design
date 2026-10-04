@@ -62,7 +62,6 @@ import type {
   PaRoom,
   PortStyle,
   SubDriver,
-  SubLimitWho,
   SubLimits,
   SubSystemModelled,
   VentedBoxModel,
@@ -77,6 +76,7 @@ import { savedCrossoverOrder } from "../../constants/crossovers";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
 import { goalKeeps, PA_UNMODELLED_F3_HZ } from "../optimizer/goalKeeps";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
+import { SUB_LIMITED_BY } from "../../constants/limits";
 import { ampForGain, onSlider, type AmpSteps } from "../optimizer/ampSteps";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
@@ -805,7 +805,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
             });
             evals++;
             if (!s.mdl) continue;
-            const portOk = s.lim.who !== "port air speed" && s.lim.vel <= 0.9 * cur.portMax;
+            const portOk = s.lim.who !== "port" && s.lim.vel <= 0.9 * cur.portMax;
             if (!portOk) {
               fallback = { c, cVent, s };
               continue;
@@ -842,7 +842,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
                 layout: cur.layout,
               });
               evals++;
-              if (s.mdl && s.lim.who !== "port air speed")
+              if (s.mdl && s.lim.who !== "port")
                 subCands.push({
                   c,
                   s,
@@ -1476,12 +1476,6 @@ const summary = (m: PaEvaluation): PaMetricsSummary => ({
   Fb: m.Fb,
   who: m.who,
 });
-const WHO: Record<SubLimitWho, string> = {
-  "port air speed": "port air speed",
-  "cone travel (Xmax)": "cone travel",
-  "driver program rating": "the driver's program rating",
-  "amplifier power": "amplifier power",
-};
 
 // what the card's front-view drawing needs
 export function boxGeometry(c: PaDesignConfig): PaBoxGeometry {
@@ -1561,7 +1555,7 @@ function card(
       : null,
     names: { sub: sub.name, mid: mid.name, cd: cd.name, horn: horn.name },
     vent: m.port.desc,
-    limitedBy: WHO[m.who] || m.who,
+    limitedBy: SUB_LIMITED_BY[m.who],
     warnings: [...m.chips.sub, ...m.chips.mid, ...m.chips.horn].filter(([k]) => k !== "ok"),
     build: { qtc: m.qtc, sheets, parts, cutlist: cl },
     changed,

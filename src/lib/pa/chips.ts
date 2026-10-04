@@ -12,6 +12,7 @@ import type {
   SubChipsInput,
   VentSpec,
 } from "../../types";
+import { isRoundPort } from "./calc";
 
 // Longest duct each layout can hold, leaving an opening at least as wide as the duct.
 export function ductFit(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
@@ -27,7 +28,7 @@ export function ductFit(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT
       ? maxStraight
       : portStyle === "folded"
         ? maxFold
-        : portStyle.startsWith("round")
+        : isRoundPort(portStyle)
           ? maxTube
           : maxSide;
   return { maxStraight, maxFold, maxSide, maxTube, fit };
@@ -78,21 +79,21 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       : ["ok", "Inside 125 lb", `${subLbLoaded.toFixed(0)} lb loaded.`, "subWeight"],
   );
   F.push(
-    lim.who === "port air speed"
+    lim.who === "port"
       ? [
           "warn",
           "Port-limited",
           `The vent chokes at ${Math.round(lim.W)} W, below the driver's ${2 * aes} W program rating. Open the port up or lengthen it.`,
           "subPortLimited",
         ]
-      : lim.who === "cone travel (Xmax)"
+      : lim.who === "Xmax"
         ? [
             "warn",
             "Excursion-limited",
             `The cone reaches Xmax at ${Math.round(lim.W)} W (first at ${peakXF.toFixed(0)} Hz), below the ${2 * aes} W program rating. A bigger box or higher tuning helps; a bigger port does not.`,
             "subExcursionLimited",
           ]
-        : lim.who === "amplifier power"
+        : lim.who === "amp"
           ? [
               "warn",
               "Amp-limited",
