@@ -34,6 +34,9 @@ export const DEFAULT_XO_HI = hz(d.xoHi);
 /** The signal path's crossover line: the default highpass and both crossovers with their slopes. */
 export const DEFAULT_CROSSOVERS = `sub HPF ~${d.hpf} Hz ${d.hpType} · sub/mid ${hz(d.xoLo)} ${crossoverSlopeName(d.xoLoOrder)} · mid/horn ~${hz(d.xoHi)} ${crossoverSlopeName(d.xoHiOrder)}`;
 
+/** The default wall thickness in words (¾″). */
+export const DEFAULT_WALL = formatInches(d.wall);
+
 /** The default sub box's loaded weight on each plywood thickness the planner models, thickest first. */
 export const DEFAULT_SUB_WEIGHTS = keysOf(PLYWOOD_LB_PER_SQ_FT)
   .map(Number)

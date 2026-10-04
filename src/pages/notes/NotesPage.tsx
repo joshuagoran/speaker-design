@@ -10,6 +10,7 @@ import {
   DEFAULT_HORN,
   DEFAULT_SUB,
   DEFAULT_SUB_WEIGHTS,
+  DEFAULT_WALL,
   DEFAULT_XO_HI,
 } from "../../lib/defaultParts";
 
@@ -18,15 +19,26 @@ import {
 const GXD = QSC_GXD.models;
 const OHM = "Ω";
 
-/** The default sub's published sensitivity against what its T/S give, or the T/S figure alone when none is entered. */
+/** How far a sensitivity claim may sit above the T/S figure and still count as agreeing with it, dB. */
+const SENS_AGREE_DB = 0.5;
+
+/**
+ * The default sub's published sensitivity against what its T/S give: a claim more than SENS_AGREE_DB above the T/S is
+ * flagged (assume the lower figure); one at, near or below it agrees; with no claim entered, the T/S figure alone.
+ */
 function sensitivityText(): string {
   const { maker, sens, tsSens } = DEFAULT_SUB;
   const ts = `${tsSens.toFixed(1)} dB/2.83V`;
   if (sens == null)
-    return `${maker} publish no sensitivity in the catalogue; their published T/S parameters give ${ts}.`;
+    return `${maker}'s sensitivity isn't in the catalogue; their published T/S parameters give ${ts}. Levels and limiter settings depend on it, so measure it.`;
   const gap = sens - tsSens;
-  return `${maker}'s ${sens} dB claim is ${Math.abs(gap).toFixed(1)} dB ${gap >= 0 ? "above" : "below"} what their own published T/S parameters give (${ts}).`;
+  if (gap > SENS_AGREE_DB)
+    return `${maker}'s ${sens} dB claim is ${gap.toFixed(1)} dB above what their own published T/S parameters give (${ts}). Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure.`;
+  return `${maker}'s ${sens} dB claim agrees with what their own published T/S parameters give (${ts}), so levels and limiter settings can rest on it; a measurement would confirm it.`;
 }
+
+/** The plywood thicknesses the planner models other than the default wall, as the heading offers them. */
+const OTHER_THICKNESSES = DEFAULT_SUB_WEIGHTS.filter((w) => w.t !== DEFAULT_WALL).map((w) => w.t);
 
 /** Notes page: reference material and parts research behind the design. */
 export function NotesPage() {
@@ -307,7 +319,7 @@ export function NotesPage() {
               "Cheap and flat. Build it to verify duct tuning, then transfer interior dimensions \u2014 not the cut list \u2014 to the real material.",
             ],
             [
-              'Consider 5/8" or 1/2" for the final boxes',
+              `Consider ${OTHER_THICKNESSES.join(" or ")} for the final boxes`,
               `Sub column drops ${DEFAULT_SUB_WEIGHTS.map((w) => w.lb).join(" \u2192 ")} lb loaded (${DEFAULT_SUB_WEIGHTS.map((w) => w.t).join(" \u2192 ")}). Needs more bracing, and the extra interior volume lowers Fb, so the duct gets shorter.`,
             ],
             [
@@ -350,10 +362,7 @@ export function NotesPage() {
               "Duct tuning",
               "Verify Fb by impedance sweep on the particleboard prototype and trim the duct before cutting birch. End correction is the largest source of error in the modelled Fb.",
             ],
-            [
-              "Sensitivity",
-              `${sensitivityText()} Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure.`,
-            ],
+            ["Sensitivity", sensitivityText()],
             [
               "Driver clearance",
               `Check the ${DEFAULT_SUB.name}'s frame and ${DEFAULT_SUB.depthIn != null ? `${DEFAULT_SUB.depthIn}" ` : ""}mounting depth against the baffle margin and anything that ends up behind the magnet.`,

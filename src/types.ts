@@ -142,7 +142,7 @@ export interface SubDriver {
   ts: SubTS;
   /** the maker's published sensitivity, dB at 1 m (informational: the models use the T/S); absent where not entered */
   sens?: number;
-  /** mounting depth in inches, where entered */
+  /** mounting depth in inches, from the maker's datasheet; absent where it isn't published (a gap the Notes page words around) */
   depthIn?: number;
   note: string;
 }
