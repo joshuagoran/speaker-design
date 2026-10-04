@@ -20,6 +20,10 @@ interface Props {
   fills: FillsPlanner;
 }
 
+const fillSizes = FILL_OPTIONS.map((o) => o.size);
+/** the catalogue's fill size range, e.g. "8–12″" */
+const FILL_SIZE_RANGE = `${Math.min(...fillSizes)}–${Math.max(...fillSizes)}″`;
+
 /** Fills page: choose and size the fill speakers. */
 export function FillsPage({ fills }: Props) {
   const {
@@ -103,7 +107,9 @@ export function FillsPage({ fills }: Props) {
     >
       <div className="min-w-0 md:col-span-3 flex flex-col gap-4">
         <p className="text-sm text-stone-500">
-          <Tooltip tip="Passive 8–10″ coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).">
+          <Tooltip
+            tip={`Passive ${FILL_SIZE_RANGE} coaxial fills or booth monitors, highpassed to the subs. One amp channel each (or a pair in parallel).`}
+          >
             Passive fills
           </Tooltip>
         </p>
