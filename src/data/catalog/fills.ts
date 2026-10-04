@@ -565,7 +565,7 @@ export const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     },
     hf: { sens: 104, aes: 40, xo: 2000, imp: 8, cov: 100 },
     lfSens: 96,
-    note: "[datasheet, celestion.com, Oct 2026] Ferrite common motor for LF and HF. LF 300 W AES / 600 W continuous, 2.5 in edgewound CCAW coil, Le 0.48 mH, 60 Hz\u20135 kHz. HF 40 W AES / 80 W continuous, 34 mm polyimide diaphragm, 1\u201320 kHz, minimum crossover 2 kHz at 12 dB/oct, 100\u00b0. 4.84 in deep, 9.9 lb (Parts Express lists 11.4 lb shipped). HF exit not published. Celestion publishes a suggested passive crossover (PDF) but sells no network (DIY or DSP). Displacement not published.",
+    note: "[datasheet, celestion.com, Oct 2026] Ferrite common motor for LF and HF. LF 300 W AES / 600 W continuous (the product page lists the two swapped; Celestion defines continuous as AES + 3 dB), 2.5 in edgewound CCAW coil, Le 0.48 mH, 60 Hz\u20135 kHz. HF 40 W AES / 80 W continuous, 34 mm polyimide diaphragm, 1\u201320 kHz, minimum crossover 2 kHz at 12 dB/oct, 100\u00b0. 4.84 in deep, 9.9 lb (Parts Express lists 11.4 lb shipped). HF exit not published. Celestion publishes a suggested passive crossover (PDF) but sells no network (DIY or DSP). Displacement not published.",
   },
   {
     id: "celftx1225",
@@ -597,6 +597,6 @@ export const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     },
     hf: { sens: 104, aes: 60, xo: 2000, imp: 8, cov: 90 },
     lfSens: 97,
-    note: "[datasheet, celestion.com, Oct 2026] Ferrite common motor for LF and HF. The only 12\u2033 fill here: it needs about 13\u2033 of baffle. LF 300 W AES / 600 W continuous, 2.5 in edgewound CCAW coil, Le 3.36 mH, 50 Hz\u20134 kHz. HF 60 W AES / 120 W continuous, 45 mm polyimide diaphragm, 1\u201320 kHz, minimum crossover 2 kHz at 12 dB/oct, 90\u00b0. 6.6 in deep, 13 lb (Parts Express lists 15.5 lb shipped). HF exit not published. Celestion publishes a suggested passive crossover (PDF) but sells no network (DIY or DSP). Displacement not published.",
+    note: "[datasheet, celestion.com, Oct 2026] Ferrite common motor for LF and HF. The only 12\u2033 fill here: it needs about 13\u2033 of baffle. LF 300 W AES / 600 W continuous (the product page lists the two swapped; Celestion defines continuous as AES + 3 dB), 2.5 in edgewound CCAW coil, Le 3.36 mH, 50 Hz\u20134 kHz. HF 60 W AES / 120 W continuous, 45 mm polyimide diaphragm, 1\u201320 kHz, minimum crossover 2 kHz at 12 dB/oct, 90\u00b0. 6.6 in deep, 13 lb (Parts Express lists 15.5 lb shipped). HF exit not published. Celestion publishes a suggested passive crossover (PDF) but sells no network (DIY or DSP). Displacement not published.",
   },
 ];
