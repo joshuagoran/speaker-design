@@ -1064,9 +1064,10 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
 
   // 4. exact evaluation of the best combos for each objective
   // objective per goal; small nudges toward fewer changes and fewer warnings (w). Cheaper ranks fewest warnings
-  // first, then strictly the price, with weight then changes only breaking ties (both terms stay under a cent)
+  // first (a warning outweighs any price), then strictly the price, with weight then changes only breaking ties: prices
+  // differ by whole cents, and 1e-6 a lb plus 1e-8 a change (six at most) stay under a cent for any box under 9000 lb
   const obj: Record<PaGoal, (x: Metric) => number> = {
-    cheaper: (x) => 1e6 * (x.w || 0) + x.price + 1e-4 * x.heaviest + 1e-6 * x.ch,
+    cheaper: (x) => 1e6 * (x.w || 0) + x.price + 1e-6 * x.heaviest + 1e-8 * x.ch,
     lighter: (x) => x.heaviest + 0.5 * x.ch + 2 * (x.w || 0),
     lower: (x) => x.f3 + 0.1 * x.ch + 0.7 * (x.w || 0),
     louder: (x) => -x.out + 0.05 * x.ch + 0.5 * (x.w || 0),
