@@ -610,3 +610,22 @@ test("a band is turned down only as far as the keep-up check needs, not level wi
   assert.ok(m.midGap < 0 && m.midGap >= -KEEP_UP_SLACK_DB, `mid gap ${m.midGap.toFixed(2)} dB`);
   assert.ok(k.metrics.out > 125, `${k.metrics.out.toFixed(2)} dB`);
 });
+
+test("the mids are chosen with the horn in view: a dearer mid the horn keeps up with is tried", () => {
+  // a 20 W HF amp, locked, and every band asked to match the one below flat out. With the lighter sub boxes, the
+  // cheapest and lightest mid that keeps the target at full power outruns every horn and comes down below it; the
+  // search used to try only that one (and the loudest), and offered only a heavier fix. A mid $11 dearer that the horn
+  // keeps up with keeps the target in a box lighter than the design's.
+  const c = { ...pick("blocky"), tilt: 0, hfTilt: 0, hfAmpW: 20 },
+    lim = { maxLb: base.maxLb, budget: base.budget };
+  const out = optimizePaStack({ ...base, cur: c, goals: ["lighter"], locks: { hfAmpW: true } });
+  const k = out.cards[0];
+  assert.ok(k, out.goalMissing ?? "no card");
+  assert.deepEqual(designProblems(evaluateDesign(k.config), lim), [], "the card passes as it is");
+  assert.ok(k.metrics.out >= out.target - 0.5, "and keeps the target");
+  assert.ok(out.curM, "the design evaluates");
+  assert.ok(
+    k.metrics.heaviest <= out.curM.heaviest - 3,
+    `${k.metrics.heaviest.toFixed(1)} lb, the design ${out.curM.heaviest.toFixed(1)} lb`,
+  );
+});

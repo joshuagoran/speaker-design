@@ -13,10 +13,12 @@ import {
   highpassGain,
   rectangleEndCorrection,
   ductEndCorrection2D,
+  logGridCount,
 } from "../pa/calc";
 import { MDF_LB_PER_SQ_FT } from "../../data/catalog/plywood";
 import type {
   BoxModelTS,
+  CrossoverOrder,
   Dims3,
   DispersionPlane,
   DriverLayout,
@@ -39,6 +41,8 @@ import type {
   PassiveRadiator,
   PassiveRadiatorChoice,
   PortMemory,
+  SealedBoxModel,
+  VentedBoxModel,
   WooferMaxPoint,
   WooferPoint,
 } from "../../types";
@@ -299,9 +303,9 @@ export function passiveRadiatorBox(
   hpf: number,
   volts: number,
   hpType: HighpassType = "BW24",
-  opts: { QL?: number; N?: number; fmin?: number; fmax?: number } = {},
+  opts: { QL?: number; N?: number; fmin?: number; fmax?: number; fTop?: number } = {},
 ) {
-  const { QL = 7, N = 420, fmin = 12, fmax = 300 } = opts;
+  const { QL = 7, N = 420, fmin = 12, fmax = 300, fTop } = opts;
   const { drv, n } = pr;
   if (!ts || !VbL || !drv || !n) return null;
   const rho = 1.18,
@@ -318,25 +322,41 @@ export function passiveRadiatorBox(
   const Ral = QL / (2 * Math.PI * Fb * Cab);
   const Pg = (volts * ts.Bl) / (ts.Re * Sd);
   const out = [];
-  for (let i = 0; i < N; i++) {
+  const count = logGridCount(N, fmin, fmax, fTop);
+  for (let i = 0; i < count; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
-    const w = 2 * Math.PI * f,
-      s = cm(0, w);
-    const Zd = cadd(cm(Ras + Rae), cadd(cmul(s, cm(Mas)), cdiv(cm(1), cmul(s, cm(Cas)))));
-    const Zc = cdiv(cm(1), cmul(s, cm(Cab)));
-    const Zp = cadd(cadd(cmul(s, cm(Map)), cdiv(cm(1), cmul(s, cm(Cap)))), cm(Rap));
-    const Zbox = cdiv(cm(1), cadd(cadd(cdiv(cm(1), Zc), cdiv(cm(1), Zp)), cm(1 / Ral)));
-    const Ud = cdiv(cm(Pg), cadd(Zd, Zbox));
-    const Up = cdiv(cmul(Ud, Zbox), Zp);
-    const Ut = cdiv(cmul(Ud, Zbox), Zc); // radiated = cone - radiators - leak
+    // the same circuit in plain real arithmetic (the optimizer runs this loop for every radiator box it tries):
+    // Zd = Ras + Rae + j(w Mas - 1/(w Cas)); 1/Zc = j w Cab; Zp = Rap + j(w Map - 1/(w Cap)); Zbox = 1 / (1/Zc + 1/Zp + 1/Ral)
+    const w = 2 * Math.PI * f;
+    const dRe = Ras + Rae,
+      dIm = w * Mas - 1 / (w * Cas);
+    const pRe = Rap,
+      pIm = w * Map - 1 / (w * Cap),
+      pM = pRe * pRe + pIm * pIm;
+    const yRe = pRe / pM + 1 / Ral,
+      yIm = -pIm / pM + w * Cab,
+      yM = yRe * yRe + yIm * yIm;
+    const bRe = yRe / yM,
+      bIm = -yIm / yM;
+    const tRe = dRe + bRe,
+      tIm = dIm + bIm,
+      tM = tRe * tRe + tIm * tIm;
+    const uRe = (Pg * tRe) / tM,
+      uIm = (-Pg * tIm) / tM; // Ud = Pg / (Zd + Zbox)
+    const vRe = uRe * bRe - uIm * bIm,
+      vIm = uRe * bIm + uIm * bRe; // Ud Zbox
+    const pv = Math.sqrt(vRe * vRe + vIm * vIm);
+    const Ud = Math.sqrt(uRe * uRe + uIm * uIm),
+      Up = pv / Math.sqrt(pM), // |Ud Zbox / Zp|
+      Ut = pv * w * Cab; // radiated = cone - radiators - leak: |Ud Zbox / Zc|
     const hp = highpassGain(f, hpf, hpType);
-    const raw = 20 * Math.log10((rho * w * cabs(Ut)) / (2 * Math.PI) / 2e-5);
+    const raw = 20 * Math.log10((rho * w * Ut) / (2 * Math.PI) / 2e-5);
     out.push({
       f,
       raw,
       spl: raw + 20 * Math.log10(hp),
-      xmm: Math.SQRT2 * (cabs(Ud) / (w * Sd)) * hp * 1000,
-      prx: Math.SQRT2 * (cabs(Up) / (w * Sp * n)) * hp * 1000,
+      xmm: Math.SQRT2 * (Ud / (w * Sd)) * hp * 1000,
+      prx: Math.SQRT2 * (Up / (w * Sp * n)) * hp * 1000,
     });
   }
   const ref = 20 * Math.log10((rho * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
@@ -347,24 +367,54 @@ export function passiveRadiatorBox(
 // ---- the whole speaker ----
 /** What the box models return that `hifiSystem` reads: a response curve and its F3 and level reference. */
 interface BoxModel {
-  curve: { f: number; spl: number; xmm: number; vel?: number; prx?: number }[];
+  curve: { f: number; spl: number; raw: number; xmm: number; vel?: number; prx?: number }[];
   f3: number;
   ref: number;
 }
-// cfg: { box: "sealed"|"vented"|"radiator", pr: { drv, n, addG } (radiator), dim: {w,h,d} (in), wall (in), mat, port: {n, dia, len} (in), xo (Hz), order (4|8),
-//        wAmpW, tAmpW, bsc (dB), place, wallFt, portMax (m/s), hpf (Hz, optional subsonic for vented), guide (waveguide or null) }
-export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): HifiSystem | null {
+/** The fields of a design the box model reads (the crossover, tweeter and room come after it). */
+export type HifiBoxConfig = Pick<
+  HifiConfig,
+  "box" | "port" | "pr" | "dim" | "wall" | "wAmpW" | "hpf" | "N"
+>;
+/** The woofer in its box, before the crossover, tweeter and room: volumes, the vent or radiators and the box's response. */
+export interface HifiBox {
+  gross: number;
+  net: number;
+  disp: number;
+  pVol: number;
+  pA: number;
+  ventPort: RoundPort | SizedSlotPort | null;
+  pr: PassiveRadiatorChoice | null;
+  V: number;
+  hpf: number | null;
+  /** points 15 Hz-2 kHz; the curve runs on at the same spacing to fTop */
+  N: number;
+  vM: VentedBoxModel | null;
+  rM: ReturnType<typeof passiveRadiatorBox>;
+  sM: SealedBoxModel | null;
+  m: BoxModel;
+}
+// the woofer's frequency grid: N points 15 Hz-2 kHz (about 92 per decade), run on at the same spacing to 3 × the
+// crossover, so a box modelled once to the highest crossover reads exactly as it does at a lower one
+const GRID = { fmin: 15, fmax: 2000, N: 196 };
+export const hifiGridTop = (xo: number) => Math.max(GRID.fmax, xo * 3);
+/** The port a vented box's model uses (a slot is one opening across the whole baffle); null for any other box. */
+export const hifiVentPort = (
+  cfg: Pick<HifiConfig, "box" | "port" | "dim" | "wall">,
+): RoundPort | SizedSlotPort | null =>
+  cfg.box !== "vented"
+    ? null
+    : cfg.port.shape === "slot"
+      ? { ...cfg.port, n: 1, w: slotWidth(cfg.dim, cfg.wall || 0.75) }
+      : cfg.port;
+/** The box alone, its curve run to fTop (Hz): xo-independent, so one box serves every crossover. */
+export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBox | null {
   const ts = w.ts,
     dim = cfg.dim,
     wall = cfg.wall || 0.75;
   const gross = grossVolumeLiters(dim, wall);
-  // the port the model uses (a slot is one opening across the whole baffle), and the radiators, each only for its box
-  const ventPort: RoundPort | SizedSlotPort | null =
-    cfg.box !== "vented"
-      ? null
-      : cfg.port.shape === "slot"
-        ? { ...cfg.port, n: 1, w: slotWidth(dim, wall) }
-        : cfg.port;
+  // the port the model uses, and the radiators, each only for its box
+  const ventPort = hifiVentPort(cfg);
   const pr = cfg.box === "radiator" && cfg.pr && cfg.pr.drv ? cfg.pr : null;
   const pA = ventPort ? portArea(ventPort) : 0;
   // the slot's shelf takes volume too
@@ -376,9 +426,8 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
   const disp = ts.disp != null ? ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6);
   const net = Math.max(1, gross * 0.97 - disp - pVol); // 3% for bracing and damping
   const V = ampVoltage(cfg.wAmpW),
-    order = cfg.order || 4,
-    xo = cfg.xo;
-  const opts = { fmin: 15, fmax: Math.max(2000, xo * 3), N: cfg.N || 240 };
+    N = cfg.N || GRID.N;
+  const opts = { fmin: GRID.fmin, fmax: GRID.fmax, N, fTop };
   // a vented box unloads below its tuning; with DSP you'd highpass it there (default 0.75 × Fb, BW24)
   const hpf =
     cfg.hpf != null
@@ -396,28 +445,313 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
       })
     : null;
   const rM = pr ? passiveRadiatorBox(ts, net, pr, hpf || 1, V, "BW24", opts) : null;
-  // lightly stuffed; an LR24 highpass, and no lowpass here (the crossover's is applied below)
+  // lightly stuffed; an LR24 highpass, and no lowpass here (the crossover's is applied in hifiSystemFromBox)
   const sM =
     ventPort || pr
       ? null
-      : closedBox(ts, net * 1.1, hpf || null, null, V, { ...opts, hpOrder: 4, lpOrder: order });
+      : closedBox(ts, net * 1.1, hpf || null, null, V, { ...opts, hpOrder: 4, lpOrder: 4 });
   const m: BoxModel | null = vM || rM || sM;
   if (!m) return null;
-  const bw = dim.w,
-    place = cfg.place || "free",
-    wallM = (cfg.wallFt || 2) * 0.3048;
-  const shelf = (f: number) => baffleStepGain(f, bw) * boundaryGain(f, place, wallM);
-  const eq = (f: number) => baffleStepCompensation(f, bw, cfg.bsc || 0);
+  return { gross, net, disp, pVol, pA, ventPort, pr, V, hpf, N, vM, rM, sM, m };
+}
+
+// cfg: { box: "sealed"|"vented"|"radiator", pr: { drv, n, addG } (radiator), dim: {w,h,d} (in), wall (in), mat, port: {n, dia, len} (in), xo (Hz), order (4|8),
+//        wAmpW, tAmpW, bsc (dB), place, wallFt, portMax (m/s), hpf (Hz, optional subsonic for vented), guide (waveguide or null) }
+export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): HifiSystem | null {
+  const b = hifiBox(w, cfg, hifiGridTop(cfg.xo));
+  return b && hifiSystemFromBox(b, w, t, cfg);
+}
+
+/** A tweeter's clean maximum level at 1 m: its sensitivity and power, derated below the frequency its rating assumes. */
+export function tweeterMaxLevel(
+  t: HifiTweeter,
+  cfg: Pick<HifiConfig, "xo" | "tAmpW" | "guideGain">,
+) {
+  const hf: Partial<HifiTweeter["hf"]> = t.hf || {};
+  const imp = hf.imp || 8;
+  const pAmp = ((cfg.tAmpW || 50) * 8) / imp;
+  const derate = hf.aesXo && cfg.xo < hf.aesXo ? Math.pow(cfg.xo / hf.aesXo, 2) : 1;
+  const pProg = hf.aes ? 2 * hf.aes * derate : Infinity;
+  const pMax = Math.min(pAmp, pProg);
+  const tSens = hf.sens != null ? hf.sens + (cfg.guideGain || 0) : 90;
+  return { imp, derate, pMax, tSens, tLevel: tSens + 10 * Math.log10(pMax) };
+}
+/** One speaker's weight, lb: the box, the drivers, a pound of hardware and the radiators with their added mass. */
+export const hifiWeightLb = (
+  w: HifiWoofer,
+  t: HifiTweeter,
+  cfg: Pick<HifiConfig, "dim" | "wall" | "mat">,
+  pr: PassiveRadiatorChoice | null,
+) =>
+  boxWeightLb(cfg.dim, cfg.wall || 0.75, cfg.mat) +
+  (w.lb || 5) +
+  (t.lb || 1.5) +
+  1 +
+  (pr ? pr.n * ((pr.drv.lb || 0.75) + (pr.addG || 0) / 454) : 0);
+/** The woofer clears the bottom of the baffle (and a slot with its shelf along the bottom) by half an inch. */
+export const driversFitBaffle = (
+  lay: Pick<DriverLayout, "wooferIn">,
+  w: HifiWoofer,
+  cfg: Pick<HifiConfig, "box" | "port" | "wall">,
+) =>
+  lay.wooferIn - w.size / 2 >=
+  0.5 + (cfg.box === "vented" && cfg.port.shape === "slot" ? cfg.port.h + (cfg.wall || 0.75) : 0);
+/** The crossover sits below the tweeter's recommended minimum. */
+export const belowTweeterMinXo = (t: HifiTweeter, xo: number) =>
+  !!(t.hf && t.hf.minXo && xo < t.hf.minXo);
+/** The crossover sits within an octave of the tweeter's resonance. */
+export const nearTweeterResonance = (t: HifiTweeter, xo: number) =>
+  !!(t.hf && t.hf.fs && xo < 2 * t.hf.fs);
+
+/** The fewest elbows that fit a port's length (0 with no port; null: too long even with two, or a slot past the back). */
+export function hifiPortElbows(
+  dim: Dims3,
+  wall: number,
+  ventPort: RoundPort | SizedSlotPort | null,
+): number | null {
+  if (!ventPort) return 0;
+  if (ventPort.shape === "slot")
+    return ventPort.len <= slotMaxLength(dim, wall, ventPort) + 1e-9 ? 0 : null;
+  return (
+    [0, 1, 2].find(
+      (e) => ventPort.len <= portMaxLength(dim, wall, { ...ventPort, elbows: e }) + 1e-9,
+    ) ?? null
+  );
+}
+/** The woofer fits the baffle's width. */
+export const wooferFitsBaffle = (w: HifiWoofer, dim: Dims3) => dim.w >= w.size + 0.8;
+/** The crossover sits above the woofer's usable range. */
+export const wooferPastRange = (w: HifiWoofer, xo: number) => !!(w.fmax && xo > w.fmax);
+/** A sealed box's Qtc between overdamped and peaky. */
+export const qtcInRange = (Qtc: number) => Qtc >= 0.5 && Qtc <= 0.8;
+
+/**
+ * What the woofer's response reads per point without the crossover: the baffle step, placement and EQ (e, and the
+ * level it adds, g in dB) on the box's grid, cached per baffle width and room, since many boxes share them.
+ */
+const shelfCache = new Map<string, { e: Float64Array; gDb: Float64Array }>();
+function shelfOn(b: HifiBox, bw: number, bsc: number, place: HifiPlacement, wallM: number) {
+  const c = b.m.curve,
+    key = `${b.N}|${c.length}|${bw}|${bsc}|${place}|${wallM}`;
+  let v = shelfCache.get(key);
+  if (!v) {
+    const e = new Float64Array(c.length),
+      gDb = new Float64Array(c.length);
+    for (let i = 0; i < c.length; i++) {
+      const f = c[i].f;
+      e[i] = baffleStepCompensation(f, bw, bsc);
+      gDb[i] = 20 * Math.log10(baffleStepGain(f, bw) * boundaryGain(f, place, wallM) * e[i]);
+    }
+    if (shelfCache.size > 64) shelfCache.clear();
+    shelfCache.set(key, (v = { e, gDb }));
+  }
+  return v;
+}
+// the crossover's low-pass gain on the shared grid, per crossover and slope
+const lowpassCache = new Map<string, Float64Array>();
+function lowpassOn(b: HifiBox, n: number, xo: number, order: CrossoverOrder) {
+  const key = `${b.N}|${n}|${xo}|${order}`;
+  let lp = lowpassCache.get(key);
+  if (!lp) {
+    lp = new Float64Array(n);
+    for (let i = 0; i < n; i++) lp[i] = cabs(linkwitzRileyFilter(b.m.curve[i].f, xo, order, "lp"));
+    if (lowpassCache.size > 64) lowpassCache.clear();
+    lowpassCache.set(key, lp);
+  }
+  return lp;
+}
+/** The lowest of the driver's own limits at a point, and which it is (the cone's first, then port, radiators, coil). */
+const driverLimit = (
+  sTh: number,
+  sX: number,
+  sP: number,
+  sR: number,
+): { s: number; who: WooferMaxPoint["who"] } => {
+  const s = Math.min(sTh, sX, sP, sR);
+  return { s, who: s === sX ? "Xmax" : s === sP ? "port" : s === sR ? "radiator" : "thermal" };
+};
+/** The woofer on its baffle in the room, without the crossover: per point, its level and limits; and its in-room F3. */
+export interface HifiWooferPrep {
+  /** the small-signal level with baffle step, placement and EQ, dB */
+  raw: Float64Array;
+  /** the lowest of `raw` from 150 Hz up to each point (the passband level a crossover reads below its corner) */
+  rawMin: Float64Array;
+  /** the EQ's gain at each point, and the level the baffle step, placement and EQ add, dB */
+  e: Float64Array;
+  gDb: Float64Array;
+  /** the scale the amp allows at each point (with the EQ in the signal) */
+  sAmp: Float64Array;
+  /**
+   * the scales the driver's own limits allow before the low-pass: the coil rating, the cone per mm of Xmax, the port's
+   * air speed and the radiators' travel (Infinity where there is none)
+   */
+  sTh: Float64Array;
+  sX1: Float64Array;
+  sP: Float64Array;
+  sR: Float64Array;
+  /** the lowest of those at the woofer's Xmax, and which it is */
+  sDrv: Float64Array;
+  who: WooferMaxPoint["who"][];
+  /** the level at 200-500 Hz the in-room F3 is read against */
+  ref: number;
+  /** in-room F3, Hz (the crossover doesn't move it) */
+  f3: number;
+}
+export function hifiWooferPrep(
+  b: HifiBox,
+  w: HifiWoofer,
+  cfg: Pick<HifiConfig, "dim" | "bsc" | "place" | "wallFt" | "portMax">,
+): HifiWooferPrep {
+  const c = b.m.curve,
+    n = c.length;
+  const { e, gDb } = shelfOn(
+    b,
+    cfg.dim.w,
+    cfg.bsc || 0,
+    cfg.place || "free",
+    (cfg.wallFt || 2) * 0.3048,
+  );
+  const V = b.V,
+    vT = thermalVoltageLimit(w.ts.aes || 100),
+    portMax = cfg.portMax || 17,
+    pr = b.pr,
+    xR = pr ? pr.drv.Xmax : 0;
+  const raw = new Float64Array(n),
+    rawMin = new Float64Array(n),
+    sAmp = new Float64Array(n),
+    sTh = new Float64Array(n),
+    sX1 = new Float64Array(n),
+    sP = new Float64Array(n),
+    sR = new Float64Array(n),
+    sDrv = new Float64Array(n),
+    who: WooferMaxPoint["who"][] = [];
+  let low = Infinity;
+  for (let i = 0; i < n; i++) {
+    const o = c[i],
+      ei = e[i];
+    raw[i] = o.spl + gDb[i];
+    if (o.f >= 150 && raw[i] < low) low = raw[i];
+    rawMin[i] = low;
+    // per-frequency limits with the EQ in the signal (the boosted drive can't pass the amp or the coil rating); the
+    // low-pass divides every one but the amp's
+    sAmp[i] = V / Math.max(1e-9, V * ei);
+    sTh[i] = vT / Math.max(1e-9, V * ei);
+    sX1[i] = 1 / Math.max(1e-9, o.xmm * ei);
+    sP[i] = o.vel ? portMax / (o.vel * ei) : Infinity;
+    sR[i] = o.prx && pr ? xR / (o.prx * ei) : Infinity;
+    const d = driverLimit(sTh[i], w.ts.Xmax * sX1[i], sP[i], sR[i]);
+    sDrv[i] = d.s;
+    who.push(d.who);
+  }
+  // in-room F3: small-signal response (baffle step, placement, EQ) against its own level at 200-500 Hz
+  let sum = 0,
+    cnt = 0;
+  for (let i = 0; i < n; i++)
+    if (c[i].f >= 200 && c[i].f <= 500) {
+      sum += raw[i];
+      cnt++;
+    }
+  const ref = cnt ? sum / cnt : b.m.ref;
+  let f3 = c[n - 1].f;
+  for (let i = n - 1; i >= 0; i--) {
+    if (c[i].f > 500) continue;
+    if (raw[i] < ref - 3) {
+      f3 = c[Math.min(n - 1, i + 1)].f;
+      break;
+    }
+    f3 = c[i].f;
+  }
+  return { e, gDb, raw, rawMin, sAmp, sTh, sX1, sP, sR, sDrv, who, ref, f3 };
+}
+/**
+ * The woofer's clean music level at 1 m at one crossover: the worst-case scale across its band (30 Hz to 1.5 × the
+ * crossover; the low-pass in the signal) on its passband level (the lowest from 150 Hz to the crossover / 1.4).
+ */
+export function hifiWooferLevel(
+  b: HifiBox,
+  p: HifiWooferPrep,
+  cfg: Pick<HifiConfig, "xo" | "order">,
+): {
+  sMusic: number;
+  whoW: WooferMaxPoint["who"];
+  wLevel: number;
+  /** the level the amp alone allows, and what cone, port, radiators and coil allow (the latter doesn't move with power) */
+  ampDb: number;
+  drvDb: number;
+} {
+  const c = b.m.curve,
+    xo = cfg.xo,
+    n = Math.min(c.length, logGridCount(b.N, GRID.fmin, GRID.fmax, hifiGridTop(xo)));
+  const lp = lowpassOn(b, n, xo, cfg.order || 4);
+  let sMusic = Infinity,
+    whoW: WooferMaxPoint["who"] = "amp",
+    minAmp = Infinity,
+    minDrv = Infinity,
+    pb = -1;
+  for (let i = 0; i < n; i++) {
+    const f = c[i].f;
+    if (f <= xo / 1.4) pb = i;
+    if (f < 30) continue;
+    if (f > xo * 1.5) break;
+    const d = p.sDrv[i] / Math.max(1e-9, lp[i]),
+      a = p.sAmp[i];
+    if (a < minAmp) minAmp = a;
+    if (d < minDrv) minDrv = d;
+    if (d <= a ? d < sMusic : a < sMusic) {
+      sMusic = d <= a ? d : a;
+      whoW = d <= a ? p.who[i] : "amp";
+    }
+  }
+  const pass = pb >= 0 && p.rawMin[pb] < Infinity ? p.rawMin[pb] : b.m.ref;
+  return {
+    sMusic,
+    whoW,
+    wLevel: pass + 20 * Math.log10(sMusic),
+    ampDb: pass + 20 * Math.log10(minAmp),
+    drvDb: pass + 20 * Math.log10(minDrv),
+  };
+}
+
+/**
+ * The whole speaker on a box from hifiBox (modelled to at least this crossover's grid top, with the same box fields).
+ * `band: false` leaves out the woofer's Xmax-band curves (the chart's shading), which nothing scores.
+ */
+export function hifiSystemFromBox(
+  b: HifiBox,
+  w: HifiWoofer,
+  t: HifiTweeter,
+  cfg: HifiConfig,
+  { band: withBand = true } = {},
+): HifiSystem | null {
+  const ts = w.ts,
+    dim = cfg.dim,
+    wall = cfg.wall || 0.75;
+  const { gross, net, disp, pVol, pA, ventPort, pr, V, hpf, vM, rM, sM } = b;
+  const order = cfg.order || 4,
+    xo = cfg.xo;
+  // the box's curve up to this crossover's grid top, and its F3 read on that (as the box model reads it)
+  const count = logGridCount(b.N, GRID.fmin, GRID.fmax, hifiGridTop(xo));
+  const curve = b.m.curve.length > count ? b.m.curve.slice(0, count) : b.m.curve;
+  const m: BoxModel = {
+    curve,
+    ref: b.m.ref,
+    f3:
+      (vM ? curve.find((o) => o.spl >= b.m.ref - 3) : curve.find((o) => o.raw >= b.m.ref - 3))?.f ??
+      curve[curve.length - 1].f,
+  };
+  const bw = dim.w;
+  // the woofer's per-point EQ, levels and limits (shared with the optimizer), and the crossover's low-pass
+  const prep = hifiWooferPrep(b, w, cfg);
+  const lps = lowpassOn(b, curve.length, xo, order);
 
   // on-axis woofer response (small signal at the amp voltage) with baffle step, placement, EQ and the low-pass
-  const woofer: WooferPoint[] = m.curve.map((o) => {
-    const e = eq(o.f),
-      g = shelf(o.f) * e,
-      lp = cabs(linkwitzRileyFilter(o.f, xo, order, "lp"));
+  const woofer: WooferPoint[] = m.curve.map((o, i) => {
+    const e = prep.e[i],
+      lp = lps[i];
     return {
       f: o.f,
-      spl: o.spl + 20 * Math.log10(g * lp),
-      raw: o.spl + 20 * Math.log10(g),
+      spl: prep.raw[i] + 20 * Math.log10(lp),
+      raw: prep.raw[i],
       xmm: o.xmm * e * lp,
       vel: o.vel != null ? o.vel * e * lp : null,
       prx: o.prx != null ? o.prx * e * lp : null,
@@ -425,53 +759,23 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
       lp,
     };
   });
-  // per-frequency limits of the woofer with the EQ in the signal (the boosted drive can't pass the amp or the coil rating)
-  const vT = thermalVoltageLimit(ts.aes || 100),
-    portMax = cfg.portMax || 17;
-  // at a woofer Xmax (its centre, or the ends of an estimated band for the chart's shading) and the radiator's limit
-  const wMaxAt = (xW: number, xR: number): WooferMaxPoint[] =>
-    woofer.map((o) => {
-      const { e, lp } = o;
-      const drive = V * e * lp; // volts at the terminals for full-scale input
-      const sAmp = V / Math.max(1e-9, V * e),
-        sTh = vT / Math.max(1e-9, drive),
-        sX = xW / Math.max(1e-9, o.xmm);
-      const sP = o.vel ? portMax / o.vel : Infinity,
-        sR = o.prx && pr ? xR / o.prx : Infinity;
-      const s = Math.min(sAmp, sTh, sX, sP, sR);
-      return {
-        f: o.f,
-        spl: o.spl + 20 * Math.log10(s),
-        who:
-          s === sX
-            ? "Xmax"
-            : s === sP
-              ? "port"
-              : s === sR
-                ? "radiator"
-                : s === sTh
-                  ? "thermal"
-                  : "amp",
-        s,
-      };
+  // the clean level at each point at a woofer Xmax (its centre, or the ends of an estimated band for the chart's
+  // shading): the amp's limit, or the driver's own divided by the low-pass, as the optimizer reads them
+  const wMaxAt = (xW: number): WooferMaxPoint[] =>
+    woofer.map((o, i) => {
+      const d = driverLimit(prep.sTh[i], xW * prep.sX1[i], prep.sP[i], prep.sR[i]),
+        dl = d.s / Math.max(1e-9, o.lp),
+        a = prep.sAmp[i];
+      const s = dl <= a ? dl : a;
+      return { f: o.f, spl: o.spl + 20 * Math.log10(s), who: dl <= a ? d.who : "amp", s };
     });
-  const xR = pr ? pr.drv.Xmax : 0; // a radiator's limit is published, never a band
-  const wMax = wMaxAt(ts.Xmax, xR);
-  const wMaxBand = xmaxBandCurves(ts.xmax, (xW) => wMaxAt(xW, xR));
+  const wMax = wMaxAt(ts.Xmax);
+  const wMaxBand = withBand ? xmaxBandCurves(ts.xmax, wMaxAt) : null;
   // one scale for music (the worst case across the woofer's band), like the PA planner's music limit
-  const band = wMax.filter((o) => o.f >= 30 && o.f <= xo * 1.5);
-  const sMusic = Math.min(...band.map((o) => o.s)),
-    whoW = band.reduce((a, o) => (o.s < a.s ? o : a)).who;
+  const { sMusic, whoW, wLevel } = hifiWooferLevel(b, prep, cfg);
 
   // tweeter: sensitivity and power, derated below the frequency its rating assumes, then the high-pass
-  const hf: Partial<HifiTweeter["hf"]> = t.hf || {};
-  const imp = hf.imp || 8,
-    tV = ampVoltage(cfg.tAmpW || 50);
-  const pAmp = ((cfg.tAmpW || 50) * 8) / imp;
-  const derate = hf.aesXo && xo < hf.aesXo ? Math.pow(xo / hf.aesXo, 2) : 1;
-  const pProg = hf.aes ? 2 * hf.aes * derate : Infinity;
-  const pMax = Math.min(pAmp, pProg);
-  const tSens = hf.sens != null ? hf.sens + (cfg.guideGain || 0) : 90;
+  const { imp, derate, pMax, tSens, tLevel } = tweeterMaxLevel(t, cfg);
   // level match: the woofer's passband level at 2.83 V (on-axis, above the baffle step)
   const refW = m.ref - 20 * Math.log10(V / 2.83);
   const tSens283 = tSens + 10 * Math.log10(8 / imp);
@@ -481,40 +785,13 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
     20 * Math.log10(volts / 2.83) +
     20 * Math.log10(cabs(linkwitzRileyFilter(f, xo, order, "hp")));
   // clean max level, flat target: the woofer's music level in its passband vs the tweeter's max (both at 1 m)
-  const pb = woofer.filter((o) => o.f >= Math.max(150, bw * 0 + 150) && o.f <= xo / 1.4);
-  const wLevel = (pb.length ? Math.min(...pb.map((o) => o.raw)) : m.ref) + 20 * Math.log10(sMusic);
-  const tLevel = tSens + 10 * Math.log10(pMax);
   const maxLevel = Math.min(wLevel, tLevel);
 
-  // in-room F3: small-signal response (baffle step, placement, EQ) against its own level at 200-500 Hz
-  const refBand = woofer.filter((o) => o.f >= 200 && o.f <= 500);
-  const ref = refBand.length ? refBand.reduce((a, o) => a + o.raw, 0) / refBand.length : m.ref;
-  let f3 = woofer[woofer.length - 1].f;
-  for (let i = woofer.length - 1; i >= 0; i--) {
-    if (woofer[i].f > 500) continue;
-    if (woofer[i].raw < ref - 3) {
-      f3 = woofer[Math.min(woofer.length - 1, i + 1)].f;
-      break;
-    }
-    f3 = woofer[i].f;
-  }
+  // in-room F3 (the crossover doesn't move it)
+  const { ref, f3 } = prep;
 
-  const lb =
-    boxWeightLb(dim, wall, cfg.mat) +
-    (w.lb || 5) +
-    (t.lb || 1.5) +
-    1 +
-    (pr ? pr.n * ((pr.drv.lb || 0.75) + (pr.addG || 0) / 454) : 0);
-  // the fewest elbows that fit the port's length (null: too long even with two)
-  const portElbows = !ventPort
-    ? 0
-    : ventPort.shape === "slot"
-      ? ventPort.len <= slotMaxLength(dim, wall, ventPort) + 1e-9
-        ? 0
-        : null
-      : ([0, 1, 2].find(
-          (e) => ventPort.len <= portMaxLength(dim, wall, { ...ventPort, elbows: e }) + 1e-9,
-        ) ?? null);
+  const lb = hifiWeightLb(w, t, cfg, pr);
+  const portElbows = hifiPortElbows(dim, wall, ventPort);
   const portFits = !ventPort || portElbows != null;
   const lay = driverLayout(w, t, dim, !!(cfg.guide && cfg.guide.freestanding));
   const common = {
@@ -829,21 +1106,21 @@ export function hifiChips(
       `The woofer is about ${Math.round(beam)}° wide at ${xo} Hz.`,
       "hifiDispersion",
     ]);
-  if (hf.minXo && xo < hf.minXo)
+  if (belowTweeterMinXo(t, xo))
     F.push([
       "warn",
       "Below the tweeter's minimum crossover",
       `${xo} Hz against ${hf.minXo} Hz recommended.`,
       "hifiTweeterMinXo",
     ]);
-  if (hf.fs && xo < 2 * hf.fs)
+  if (nearTweeterResonance(t, xo))
     F.push([
       "warn",
       "Close to the tweeter's resonance",
       `${xo} Hz is within an octave of its ${hf.fs} Hz resonance; distortion rises there.`,
       "hifiTweeterResonance",
     ]);
-  if (w.fmax && xo > w.fmax)
+  if (wooferPastRange(w, xo))
     F.push([
       "warn",
       "Woofer past its usable range",
@@ -852,21 +1129,21 @@ export function hifiChips(
     ]);
   if (sys.kind === "sealed")
     F.push(
-      sys.Qtc > 0.8
-        ? [
-            "warn",
-            `Qtc ${sys.Qtc.toFixed(2)}`,
-            "Peaky; the box is small for this woofer.",
-            "hifiQtc",
-          ]
-        : sys.Qtc < 0.5
+      qtcInRange(sys.Qtc)
+        ? ["ok", `Qtc ${sys.Qtc.toFixed(2)}`, "Well damped.", "hifiQtc"]
+        : sys.Qtc > 0.8
           ? [
+              "warn",
+              `Qtc ${sys.Qtc.toFixed(2)}`,
+              "Peaky; the box is small for this woofer.",
+              "hifiQtc",
+            ]
+          : [
               "warn",
               `Qtc ${sys.Qtc.toFixed(2)}`,
               "Overdamped; the box could be smaller.",
               "hifiQtc",
-            ]
-          : ["ok", `Qtc ${sys.Qtc.toFixed(2)}`, "Well damped.", "hifiQtc"],
+            ],
     );
   if (sys.kind === "vented" && sys.slotW != null && !sys.portFits) {
     F.push([
@@ -928,7 +1205,7 @@ export function hifiChips(
       ]);
   }
   const need = w.size + 0.8;
-  if (cfg.dim.w < need)
+  if (!wooferFitsBaffle(w, cfg.dim))
     F.push([
       "bad",
       "Woofer won't fit",
@@ -937,7 +1214,7 @@ export function hifiChips(
     ]);
   const floor =
     sys.kind === "vented" && cfg.port.shape === "slot" ? cfg.port.h + (cfg.wall || 0.75) : 0; // the slot and its shelf along the bottom
-  if (sys.lay.wooferIn - w.size / 2 < 0.5 + floor)
+  if (!driversFitBaffle(sys.lay, w, cfg))
     F.push([
       "bad",
       "Drivers won't fit the baffle",

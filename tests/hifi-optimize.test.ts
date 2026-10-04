@@ -1,6 +1,13 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { optimizeHifiSpeaker, hifiDesignProblems, portsDiffer } from "../src/lib/hifi/optimize";
+import {
+  optimizeHifiSpeaker,
+  hifiDesignProblems,
+  hifiSearchSpace,
+  hifiScoreBoxes,
+  runHifiJob,
+  portsDiffer,
+} from "../src/lib/hifi/optimize";
 import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
 import { chipOf } from "./helpers";
@@ -290,6 +297,92 @@ test("hi-fi optimizer: a sealed box locked in place gets sealed cards (an ok Qtc
   }
 });
 
+test("hi-fi optimizer: the first card is the best design on its grid, checked one by one with the page's model", () => {
+  // a small grid: one woofer and baffle width, sealed or vented, every height, depth, port and crossover, three tweeters
+  const tweeters = HIFI_TWEETERS.filter((t) => ["sb26stcn", "rst28f", "ne25vts"].includes(t.id));
+  const opts = {
+    ...base,
+    tweeters,
+    locks: { woofer: true, wall: true, wAmpW: true, tAmpW: true, dim: { w: "exact" as const } },
+  };
+  const { space } = hifiSearchSpace(opts);
+  assert.ok(space && space.grid.length > 100, "a grid to search");
+  const seat = base.seatM;
+  const designs: HifiMetrics[] = [];
+  // the grid, and the next radiators of any box whose radiators set its level (as the search adds them)
+  const queue = [...space.grid];
+  for (let qi = 0; qi < queue.length; qi++) {
+    const e = queue[qi],
+      { w, cfg } = e;
+    let radiatorLimited = false;
+    for (const xo of space.xos)
+      for (const t of space.tList) {
+        const tt = space.tweeterCfg(t);
+        if (!tt) continue;
+        const c = { ...cfg, xo, guide: space.guideOf(t) },
+          sys = hifiSystem(w, tt, c);
+        if (sys && sys.whoW === "radiator") radiatorLimited = true;
+        if (!sys || hifiDesignProblems(sys, hifiChips(sys, w, tt, c)).length) continue;
+        const price = space.priceOf(w, t, c);
+        if (price > base.budget) continue;
+        designs.push({
+          gross: sys.gross,
+          f3: sys.f3,
+          price,
+          lb: sys.lb,
+          level: sys.maxLevel - 20 * Math.log10(seat) + 3,
+        });
+      }
+    const next = radiatorLimited ? space.bigger(e) : null;
+    if (next) queue.push(next);
+  }
+  // what each goal keeps from your design, and its objective (lower is better)
+  const keeps: Record<HifiGoal, (m: HifiMetrics, c: HifiMetrics) => boolean> = {
+    cheaper: (m, c) => m.level >= c.level - 0.5 && m.f3 <= c.f3 + 2,
+    lighter: (m, c) => m.level >= c.level - 0.5 && m.f3 <= c.f3 + 2,
+    lower: (m, c) => m.level >= c.level - 1.5,
+    louder: (m, c) => m.f3 <= c.f3 + 3,
+  };
+  const objective: Record<HifiGoal, (m: HifiMetrics) => number> = {
+    cheaper: (m) => m.price,
+    lighter: (m) => m.lb,
+    lower: (m) => m.f3,
+    louder: (m) => -m.level,
+  };
+  for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
+    const out = optimizeHifiSpeaker({ ...opts, goals: [goal] }),
+      c = out.cur;
+    assert.ok(c, `${goal}: your design is modelled`);
+    const ok = designs.filter((m) => keeps[goal](m, c) && beat[goal](m, c));
+    const best = Math.min(...ok.map(objective[goal]));
+    if (!ok.length) {
+      assert.ok(out.goalMissing, `${goal}: nothing beats your design, and the page says so`);
+      continue;
+    }
+    const k = out.cards[0];
+    assert.ok(k && !out.goalMissing, `${goal}: a card`);
+    assert.strictEqual(
+      objective[goal](k.metrics),
+      best,
+      `${goal}: the first card is the best on the grid`,
+    );
+  }
+});
+
+test("hi-fi optimizer: the box step split across workers gives exactly what one run gives", () => {
+  // (a third of the woofers: still three parts with several woofers each)
+  const input = {
+    ...base,
+    woofers: HIFI_WOOFERS.slice(0, 9),
+    goals: ["lighter" as const, "cheaper" as const],
+  };
+  const one = optimizeHifiSpeaker(input);
+  // as the workers hand their shares back: copied, not shared
+  const shares = structuredClone([0, 1, 2].map((part) => hifiScoreBoxes(input, part, 3)));
+  const split = optimizeHifiSpeaker(input, shares);
+  assert.deepStrictEqual({ ...split, stats: null }, { ...one, stats: null });
+});
+
 test("hi-fi optimizer: a tweeter that keeps up only below full woofer power turns the woofer down instead of ruling the design out", () => {
   // a 5 W tweeter amp, locked with both drivers: the 8 in woofer at 500 W outruns it, at the 20 W the design uses it doesn't
   const quiet: HifiOptimizerCurrent = {
@@ -323,4 +416,37 @@ test("hi-fi optimizer: a tweeter that keeps up only below full woofer power turn
   const full = at(500);
   const tweeter = chipOf(full.chips, "hifiTweeterLevel", "warn");
   assert.ok(full.problems.includes(tweeter[1]), full.problems.join("; "));
+});
+
+test("hi-fi optimizer: your box is searched on the other plywood even when your woofer isn't in the offered list", () => {
+  const { space } = hifiSearchSpace({
+    ...base,
+    woofers: HIFI_WOOFERS.filter((o) => o.id !== cur.woofer),
+    goals: ["lighter"],
+  });
+  assert.ok(space, "a search");
+  const yours = space.grid.filter((e) => e.w.id === cur.woofer);
+  assert.deepEqual(
+    yours.map((e) => [e.wall, e.dim]),
+    [[0.5, cur.dim]],
+    "your box on 1/2 in ply only (your woofer itself is filtered out)",
+  );
+});
+
+test("hi-fi optimizer: the first worker's kept share (or, if lost, its share scored again) gives what one run gives", () => {
+  const input = { ...base, woofers: HIFI_WOOFERS.slice(0, 9), goals: ["cheaper" as const] };
+  const one = optimizeHifiSpeaker(input);
+  const others = structuredClone([1, 2].map((part) => hifiScoreBoxes(input, part, 3)));
+  const sent = runHifiJob({ kind: "score", input, part: 0, parts: 3, keep: "run-a" });
+  assert.deepStrictEqual(sent, { kind: "scored", scored: [] }, "the kept share isn't sent back");
+  for (const run of ["run-a", "run-b"]) {
+    const done = runHifiJob({
+      kind: "select",
+      input,
+      scored: others,
+      kept: { run, part: 0, parts: 3 },
+    });
+    assert.ok(done.kind === "result");
+    assert.deepStrictEqual({ ...done.result, stats: null }, { ...one, stats: null }, run);
+  }
 });

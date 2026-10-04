@@ -125,14 +125,18 @@ interface MidLevel {
   max: number;
   sig: number;
 }
-/** A mid driver in a box at one crossover, with its level there and at each upper crossover (through its lowpass). */
+/**
+ * A mid driver in a box at one crossover, with its level there, and per upper crossover the horn pairs it can keep up
+ * with (cheapest first) and its loudest limit at its own crossover with any of them.
+ */
 interface MidEntry {
   m: MidDriver;
   bx: Dims3;
   t: number;
   xoLo: number;
   lo: MidLevel;
-  hi: Record<number, MidLevel>;
+  pairs: Record<number, MidPair[]>;
+  loudest: Record<number, number>;
   qtc: number;
   lb: number;
 }
@@ -144,6 +148,12 @@ interface HornEntry {
   price: number;
   horn: number;
   same: boolean;
+}
+/** A horn pair a mid keeps up with: the mid's amp once it does, and its limit at the lower crossover then, dB. */
+interface MidPair {
+  hp: HornEntry;
+  mAmpW: number;
+  lo: number;
 }
 /** A whole design the combine step offers for evaluation. */
 interface Combo extends Score {
@@ -891,47 +901,6 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     }
     return out;
   };
-  const midPrice = (e: MidEntry) => e.m.price ?? 0; // an unpriced mid (only a locked one gets here) counts as 0
-  const curMidPrice = curMid?.price || 0;
-  // the upper crossover's lowpass at its own frequency, dB, per xoHi
-  const lowpassAtXo: Record<number, number> = Object.fromEntries(
-    xoHis.map((f) => [f, 20 * Math.log10(linkwitzRileyLowpass(f, f, cur.xoHiOrder))]),
-  );
-  const midTable: MidEntry[] = [];
-  for (const m of mids)
-    for (const t of walls)
-      for (const bx of midBoxes(m, t)) {
-        if (!bx) continue;
-        const disp = m.ts.disp != null ? m.ts.disp : m.size === 15 ? 4 : 2.5;
-        const eff =
-          Math.max(5, boxInternalLiters(bx.w, bx.h, bx.d, t, cur.inset) - disp) *
-          STUFFING_VOLUME_GAIN;
-        for (const xoLo of xoLos) {
-          const V = ampVoltage(amps.mAmpW),
-            mdl = closedBox(m.ts, eff, xoLo, null, V, {
-              N: 120,
-              hpOrder: cur.xoLoOrder,
-              lpOrder: cur.xoHiOrder, // no lowpass here: it is applied at each xoHi below
-            });
-          evals++;
-          if (!mdl || mdl.Qtc < 0.5 || mdl.Qtc > 0.8 || mdl.f3 > xoLo) continue;
-          const max = maxOutputCurve(mdl.curve, m.ts, V, Infinity);
-          const levelAt = (f: number, lp = 0): MidLevel => ({
-            max: nearestPoint(max, f).spl + lp,
-            sig: nearestPoint(mdl.curve, f).spl + lp,
-          });
-          midTable.push({
-            m,
-            bx,
-            t,
-            xoLo,
-            lo: levelAt(xoLo),
-            hi: Object.fromEntries(xoHis.map((f) => [f, levelAt(f, lowpassAtXo[f])])),
-            qtc: mdl.Qtc,
-            lb: midWeightLb(bx, t) + (m.lb || 0),
-          });
-        }
-      }
   // horn pairs per xoHi, with their level at the crossover
   // (a locked driver or horn that isn't in the tables leaves nothing to search, like a locked sub or mid)
   const curCd = byId(CD_OPTIONS, cur.cd),
@@ -970,6 +939,79 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       }
     hornTable[xoHi].sort((a, b) => a.price - b.price || a.horn - b.horn);
   }
+  const midPrice = (e: MidEntry) => e.m.price ?? 0; // an unpriced mid (only a locked one gets here) counts as 0
+  const curMidPrice = curMid?.price || 0;
+  // the upper crossover's lowpass at its own frequency, dB, per xoHi
+  const lowpassAtXo: Record<number, number> = Object.fromEntries(
+    xoHis.map((f) => [f, 20 * Math.log10(linkwitzRileyLowpass(f, f, cur.xoHiOrder))]),
+  );
+  // the horn pairs a mid at these levels (at xoLo, and at xoHi through its lowpass) keeps up with, cheapest first. A
+  // horn that runs out first caps the mid when its amp is free: the mid comes down to the highest power (slider steps)
+  // where it stands no more than the check's slack above the horn, and its level at xoLo with it.
+  const pairsAt = (lo: MidLevel, hi: MidLevel, xoHi: number): MidPair[] =>
+    hornTable[xoHi].flatMap((hp) => {
+      const room = hp.at + cur.hfTilt + KEEP_UP_SLACK_DB;
+      const mAmpW =
+        hi.max <= room
+          ? amps.mAmpW
+          : locks.mAmpW
+            ? null
+            : ampForGain(amps.mAmpW, room - hi.sig, AMP_WATTS_STEPS.mAmpW);
+      if (mAmpW === null) return [];
+      return [{ hp, mAmpW, lo: Math.min(lo.max, lo.sig + 10 * Math.log10(mAmpW / amps.mAmpW)) }];
+    });
+  const midTable: MidEntry[] = [];
+  for (const m of mids)
+    for (const t of walls)
+      for (const bx of midBoxes(m, t)) {
+        if (!bx) continue;
+        const disp = m.ts.disp != null ? m.ts.disp : m.size === 15 ? 4 : 2.5;
+        const eff =
+          Math.max(5, boxInternalLiters(bx.w, bx.h, bx.d, t, cur.inset) - disp) *
+          STUFFING_VOLUME_GAIN;
+        for (const xoLo of xoLos) {
+          const V = ampVoltage(amps.mAmpW),
+            mdl = closedBox(m.ts, eff, xoLo, null, V, {
+              N: 120,
+              hpOrder: cur.xoLoOrder,
+              lpOrder: cur.xoHiOrder, // no lowpass here: it is applied at each xoHi below
+            });
+          evals++;
+          if (!mdl || mdl.Qtc < 0.5 || mdl.Qtc > 0.8 || mdl.f3 > xoLo) continue;
+          const max = maxOutputCurve(mdl.curve, m.ts, V, Infinity);
+          const levelAt = (f: number, lp = 0): MidLevel => ({
+            max: nearestPoint(max, f).spl + lp,
+            sig: nearestPoint(mdl.curve, f).spl + lp,
+          });
+          const lo = levelAt(xoLo);
+          const pairs: Record<number, MidPair[]> = Object.fromEntries(
+            xoHis.map((f) => [f, pairsAt(lo, levelAt(f, lowpassAtXo[f]), f)]),
+          );
+          midTable.push({
+            m,
+            bx,
+            t,
+            xoLo,
+            lo,
+            pairs,
+            loudest: Object.fromEntries(
+              xoHis.map((f) => [f, Math.max(...pairs[f].map((p) => p.lo))]),
+            ),
+            qtc: mdl.Qtc,
+            lb: midWeightLb(bx, t) + (m.lb || 0),
+          });
+        }
+      }
+  // per lower crossover and plywood, the table's entries (with their place in it) by price and by weight, the table's
+  // order on ties: the combine step scans them with early exits
+  const midOrder = (key: (e: MidEntry) => number) => {
+    const groups: Record<string, { e: MidEntry; i: number }[]> = {};
+    midTable.forEach((e, i) => (groups[`${e.xoLo} ${e.t}`] ??= []).push({ e, i }));
+    for (const g of Object.values(groups)) g.sort((a, b) => key(a.e) - key(b.e));
+    return (xoLo: number, t: number) => groups[`${xoLo} ${t}`] ?? [];
+  };
+  const midsByPrice = midOrder(midPrice),
+    midsByLb = midOrder((e) => e.lb);
 
   // combine: for each sub and crossover pair, the mid and horn that keep up, best for each objective.
   // A band that runs out first caps the design's level instead of ruling it out, when the amp of the band below it is
@@ -1004,43 +1046,89 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       });
       // the tower layout takes the mid as it is, so it needs the current mid to exist
       const towerMid = cur.layout === "tower" && curMid !== undefined;
-      const choices: (MidEntry | null)[] = [];
-      // the cheapest and the lightest that keep the target, and that keep the most output; the current mid at its loudest
-      const top = Math.max(...okMids.map((x) => x.out));
-      const byPrice = (l: typeof okMids) =>
-        l.slice().sort((a, b) => midPrice(a.e) - midPrice(b.e) || a.e.lb - b.e.lb)[0];
-      const byLb = (l: typeof okMids) =>
-        l.slice().sort((a, b) => a.e.lb - b.e.lb || midPrice(a.e) - midPrice(b.e))[0];
-      const keepT = okMids.filter((x) => x.out >= target - 0.5),
-        loud = okMids.filter((x) => x.out >= top - 1e-9);
+      // the current mid at its loudest
       const same = okMids
         .filter((x) => x.e.m.id === cur.mid)
         .sort((a, b) => b.out - a.out || a.e.lb - b.e.lb)[0];
-      for (const x of [byPrice(keepT), byLb(keepT), byPrice(loud), byLb(loud), same])
-        if (x && !choices.includes(x.e)) choices.push(x.e);
-      if (towerMid) choices.push(null);
-      for (const e of choices) {
-        for (const xoHi of xoHis) {
+      // the mids chosen at each upper crossover; their combos then go in mid by mid (the ranking keeps that order on ties)
+      const choices = new Map<MidEntry | null, number[]>();
+      const fullOut = new Map(okMids.map((x) => [x.e, x.out]));
+      // a mid's output at a level `lo` at xoLo (at its full level, the output found above); -Infinity: none
+      const outAt = (e: MidEntry, lo: number) =>
+        lo === e.lo.max ? (fullOut.get(e) ?? -Infinity) : (subFor(sc, lo - need)?.out ?? -Infinity);
+      for (const xoHi of xoHis) {
+        // the most output any mid keeps with any pair: it rises with the mid's level, so the loudest level sets it
+        const loudest = okMids.reduce<MidEntry | undefined>(
+          (a, { e }) => (!a || e.loudest[xoHi] > a.loudest[xoHi] ? e : a),
+          undefined,
+        );
+        const top = loudest ? outAt(loudest, loudest.loudest[xoHi]) : -Infinity;
+        const cheapestPair = hornTable[xoHi].length ? hornTable[xoHi][0].price : Infinity;
+        // the price of mid `e` with the cheapest pair it reaches `level` with; null when none does for `most` or less (the
+        // pairs go cheapest first, so the scan stops there)
+        const pricedAt = (e: MidEntry, level: number, most: number) => {
+          for (const q of e.pairs[xoHi]) {
+            const price = midPrice(e) + q.hp.price;
+            if (price > most) return null;
+            if (outAt(e, q.lo) >= level) return price;
+          }
+          return null;
+        };
+        // mid `e` is one of this sub's and reaches `level` with the pair that leaves it loudest
+        const reaches = (e: MidEntry, level: number) => {
+          const out = fullOut.has(e) ? outAt(e, e.loudest[xoHi]) : -Infinity;
+          return out > -Infinity && out >= level;
+        };
+        // of the mids that reach `level` with some pair, each priced with the cheapest pair that does: the cheapest (then
+        // the lightest, then the first in the table), scanned by price until the mid with the cheapest horn costs more;
+        // and the lightest (then the cheapest), scanned by weight
+        const bestAt = (level: number) => {
+          if (top === -Infinity || level > top) return []; // none does
+          let cheap: { e: MidEntry; i: number; price: number } | undefined;
+          for (const { e, i } of midsByPrice(xoLo, sc.c.wall)) {
+            if (cheap && midPrice(e) + cheapestPair > cheap.price) break;
+            if (!reaches(e, level)) continue;
+            const c = pricedAt(e, level, cheap ? cheap.price : Infinity);
+            if (
+              c !== null &&
+              (!cheap ||
+                c < cheap.price ||
+                (c === cheap.price && (e.lb < cheap.e.lb || (e.lb === cheap.e.lb && i < cheap.i))))
+            )
+              cheap = { e, i, price: c };
+          }
+          let light: typeof cheap;
+          for (const { e, i } of midsByLb(xoLo, sc.c.wall)) {
+            if (light && e.lb > light.e.lb) break;
+            if (!reaches(e, level)) continue;
+            const l = pricedAt(e, level, light ? light.price : Infinity);
+            if (l !== null && (!light || l < light.price)) light = { e, i, price: l };
+          }
+          return [cheap, light];
+        };
+        // chosen with the horn in view (a mid the horn can't keep up with comes down, and the sub with it): the cheapest
+        // and the lightest that keep the target, and that keep the most output; and the current mid at its loudest
+        for (const x of [...bestAt(target - 0.5), ...bestAt(top - 1e-9), same]) {
+          if (!x) continue;
+          const his = choices.get(x.e) ?? [];
+          if (!his.includes(xoHi)) choices.set(x.e, [...his, xoHi]);
+        }
+      }
+      if (towerMid) choices.set(null, xoHis);
+      for (const [e, his] of choices)
+        for (const xoHi of his) {
           // each pair with the amps and output once every band keeps up (the tower's mid isn't checked here)
-          const fits = hornTable[xoHi].flatMap((hp) => {
-            if (!e) return [{ hp, ampW: sc.c.ampW, mAmpW: amps.mAmpW, out: sc.out }];
-            const { lo } = e,
-              hi = e.hi[xoHi];
-            // the mid may stand up to the check's slack above what the horn keeps up with
-            const room = hp.at + cur.hfTilt + KEEP_UP_SLACK_DB;
-            const mAmpW =
-              hi.max <= room
-                ? amps.mAmpW
-                : locks.mAmpW
-                  ? null
-                  : ampForGain(amps.mAmpW, room - hi.sig, AMP_WATTS_STEPS.mAmpW);
-            if (mAmpW === null) return [];
-            const s = subFor(
-              sc,
-              Math.min(lo.max, lo.sig + 10 * Math.log10(mAmpW / amps.mAmpW)) - need,
-            );
-            return s ? [{ hp, mAmpW, ...s }] : [];
-          });
+          const fits = e
+            ? e.pairs[xoHi].flatMap(({ hp, mAmpW, lo }) => {
+                const s = subFor(sc, lo - need);
+                return s ? [{ hp, mAmpW, ...s }] : [];
+              })
+            : hornTable[xoHi].map((hp) => ({
+                hp,
+                ampW: sc.c.ampW,
+                mAmpW: amps.mAmpW,
+                out: sc.out,
+              }));
           // the cheapest pair that keeps the target, the cheapest that keeps the most output, and the current one (the
           // smaller change)
           const topHf = Math.max(...fits.map((x) => x.out));
@@ -1068,7 +1156,6 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
             combos.push({ c, price, heaviest, out: x.out, f3: sc.s.mdl.f3, ch: changes(c) });
           }
         }
-      }
     }
   }
 

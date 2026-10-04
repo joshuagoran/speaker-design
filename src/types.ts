@@ -522,7 +522,7 @@ export interface HifiConfig {
   guide?: WaveguideSpec | null;
   /** extra tweeter sensitivity from the waveguide, dB */
   guideGain?: number;
-  /** frequency points for the woofer response (240 when absent) */
+  /** the woofer response's frequency points from 15 Hz to 2 kHz (196 when absent); the curve runs on at the same spacing */
   N?: number;
   /** radius of the roundover on the baffle's edges, inches; 0 (sharp) when absent */
   roundoverIn?: number;
@@ -1884,6 +1884,50 @@ export interface OptimizerRequest<I = PaOptimizerInput> {
   id: number;
   input: I;
 }
+
+/** A box's fields on the search grid (the rest of its config is your design's). */
+export interface HifiGridBox {
+  box: HifiBoxKind;
+  dim: Dims3;
+  wall: number;
+  port: HifiPort | null;
+  pr: PassiveRadiatorChoice | null;
+}
+/** A box from the box step, as a worker hands it back: its fields, place in the grid, and its numbers per crossover. */
+export interface HifiScoredBox extends HifiGridBox {
+  key: string;
+  /** its place in the grid's order: the woofer's, the box's, and how many vents up from the box's own */
+  order: [woofer: number, box: number, vent: number];
+  wId: string;
+  gross: number;
+  ch: number;
+  f3: number;
+  /**
+   * per crossover (null: past the woofer's range), the woofer's clean level at 1 m at the searched power, and the
+   * levels the amp alone and the driver alone allow there (a lower power moves the first, never the second)
+   */
+  levels: ({ wLevel: number; ampDb: number; drvDb: number } | null)[];
+}
+/** A job for a Hi-fi optimizer worker: one share of the box step, or the rest of the search on every share. */
+export type HifiOptimizerJob =
+  | {
+      kind: "score";
+      input: HifiOptimizerInput;
+      part: number;
+      parts: number;
+      /** keep this share in the worker for the select job of the same run, instead of sending it back */
+      keep?: string;
+    }
+  | {
+      kind: "select";
+      input: HifiOptimizerInput;
+      /** the other workers' shares; the share kept for this run joins them (or is scored again if it was lost) */
+      scored: HifiScoredBox[][];
+      kept?: { run: string; part: number; parts: number };
+    };
+export type HifiOptimizerJobResult =
+  | { kind: "scored"; scored: HifiScoredBox[] }
+  | { kind: "result"; result: HifiOptimizerResult };
 
 /** The worker's reply: the result, or the message of what it threw. */
 export type OptimizerResponse<R = PaOptimizerResult> =
