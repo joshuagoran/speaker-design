@@ -2,7 +2,7 @@
 // strips and the offcut the least-full sheet keeps.
 import type {
   CutPart,
-  CutPartName,
+  CutPartId,
   CutStats,
   CutlistChoices,
   CutlistGroup,
@@ -23,6 +23,7 @@ import type {
 } from "../../types";
 import { PLYWOOD_SHEETS, formatInches } from "./calc";
 import { keysOf } from "../records";
+import { CUT_BOX_NAMES } from "../../constants/cutParts";
 
 type SheetSize = Pick<PlywoodSheet, "w" | "h">;
 type Rect = Pick<PlacedPart<PackRect>, "x" | "y" | "w" | "h">;
@@ -37,26 +38,26 @@ export const KERF_OPTIONS = [
 export const TRIM_OPTIONS = [0, 0.25] as const;
 
 export const GRAIN_PRESETS: Record<GrainPreset, GrainSettings> = {
-  wrap: { Side: "b", "Top / bottom": "b", Baffle: "b", Back: "b" },
-  horizontal: { Side: "a", "Top / bottom": "a", Baffle: "a", Back: "a" },
-  none: { Side: "any", "Top / bottom": "any", Baffle: "any", Back: "any" },
+  wrap: { side: "b", topBottom: "b", baffle: "b", back: "b" },
+  horizontal: { side: "a", topBottom: "a", baffle: "a", back: "a" },
+  none: { side: "any", topBottom: "any", baffle: "any", back: "any" },
 };
 /** The preset these settings match, or null when they are mixed. */
 export const grainPresetOf = (g: GrainSettings): GrainPreset | null =>
   keysOf(GRAIN_PRESETS).find((k) => keysOf(g).every((p) => GRAIN_PRESETS[k][p] === g[p])) ?? null;
 
 /** Which grain setting each part follows; parts not listed take either direction. */
-export const GRAIN_PANEL_OF: Partial<Record<CutPartName, GrainPanel>> = {
-  Side: "Side",
-  "Top / bottom": "Top / bottom",
-  Bottom: "Top / bottom",
-  Baffle: "Baffle",
-  Back: "Back",
+export const GRAIN_PANEL_OF: Partial<Record<CutPartId, GrainPanel>> = {
+  side: "side",
+  topBottom: "topBottom",
+  bottom: "topBottom",
+  baffle: "baffle",
+  back: "back",
 };
 /** The narrowest offcut worth reporting, inches. */
 export const MIN_OFFCUT_IN = 3;
 /** Small parts cut from offcuts, left out of the sheet count. */
-export const FROM_OFFCUT: ReadonlySet<CutPartName> = new Set(["Baffle cleat", "Duct divider"]);
+export const FROM_OFFCUT: ReadonlySet<CutPartId> = new Set(["baffleCleat", "ductDivider"]);
 
 /** Reads saved grain settings, falling back to the default for anything missing or unknown. */
 const savedGrain = (g: Partial<Record<GrainPanel, unknown>> | undefined): GrainSettings => {
@@ -551,21 +552,21 @@ export function waterfallStrips(
   const notes: string[] = [];
   let out = parts;
   for (const box of new Set(parts.map((p) => p.box))) {
-    const side = out.find((p) => p.box === box && p.part === "Side"),
-      top = out.find((p) => p.box === box && p.part === "Top / bottom");
+    const side = out.find((p) => p.box === box && p.part === "side"),
+      top = out.find((p) => p.box === box && p.part === "topBottom");
     if (!side || !top || side.qty < 2 || top.qty < 1) continue;
     const gap = s.joint === "miter" ? s.kerf * Math.SQRT2 : s.kerf;
     const len = 2 * side.b + top.b + 2 * gap,
       wide = Math.max(side.a, top.a);
     if (len > usable.h + EPS || wide > usable.w + EPS) {
       notes.push(
-        `${box}: the side-top-side strip would be ${formatInches(len)}″ long, more than the sheet's ${formatInches(usable.h)}″; sides and top are cut separately.`,
+        `${CUT_BOX_NAMES[box]}: the side-top-side strip would be ${formatInches(len)}″ long, more than the sheet's ${formatInches(usable.h)}″; sides and top are cut separately.`,
       );
       continue;
     }
     const strip: CutPart = {
       box,
-      part: "Side-top-side strip",
+      part: "sideTopSideStrip",
       qty: side.qty / 2,
       a: wide,
       b: len,
@@ -575,7 +576,7 @@ export function waterfallStrips(
       pieces: [side.b, top.b, side.b],
     };
     out = out.flatMap((p) =>
-      p === side ? [strip] : p === top ? [{ ...top, part: "Bottom", qty: top.qty / 2 }] : [p],
+      p === side ? [strip] : p === top ? [{ ...top, part: "bottom", qty: top.qty / 2 }] : [p],
     );
   }
   return { parts: out, notes };

@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
+import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
 
 // Shapes of the driver, horn, cabinet and fill tables in lib/data.ts.
 //
@@ -1221,26 +1222,15 @@ export type FillSystem = FillSystemVented | FillSystemSealed;
 
 // ---- Cutlist ----
 
-/** Every part the cutlist names. */
-export type CutPartName =
-  | "Side"
-  | "Top / bottom"
-  | "Bottom"
-  | "Side-top-side strip"
-  | "Back"
-  | "Baffle"
-  | "Baffle cleat"
-  | "Window brace"
-  | "Duct shelf"
-  | "Duct fin"
-  | "Duct rear wall"
-  | "Side duct wall"
-  | "Duct divider";
+/** A cutlist part's stable id (`CUT_PART_NAMES` holds the name it shows). */
+export type CutPartId = keyof typeof CUT_PART_NAMES;
+/** The box a cutlist part belongs to, by id (`CUT_BOX_NAMES` holds the name it shows). */
+export type CutBoxId = keyof typeof CUT_BOX_NAMES;
 
 /** Which of a part's dimensions runs along the grain (the sheet's length): `a`, `b`, or either. */
 export type GrainDir = "a" | "b" | "any";
 /** The panels whose grain can be set; every other part takes either direction. */
-export type GrainPanel = "Side" | "Top / bottom" | "Baffle" | "Back";
+export type GrainPanel = Extract<CutPartId, "side" | "topBottom" | "baffle" | "back">;
 /** The grain direction of each settable panel. */
 export type GrainSettings = Record<GrainPanel, GrainDir>;
 /** Grain presets: wrap (sides vertical, top/bottom across, baffle and back vertical), horizontal, or none (MDF). */
@@ -1252,8 +1242,8 @@ export type OffcutShape = "strip" | "panel";
 
 /** One line of the cutlist: a part of a box, cut `qty` times from `t`-inch ply, `a` by `b` inches. */
 export interface CutPart {
-  box: string;
-  part: CutPartName;
+  box: CutBoxId;
+  part: CutPartId;
   qty: number;
   a: number;
   b: number;

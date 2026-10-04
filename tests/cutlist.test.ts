@@ -2,27 +2,27 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { boxParts, formatInches, PLYWOOD_SHEETS } from "../src/lib/pa/calc";
 import { packSheets } from "../src/lib/pa/cutlist";
-import type { CutPart } from "../src/types";
+import type { CutPart, CutPartId } from "../src/types";
 import { close } from "./helpers";
 
-const get = (P: CutPart[], name: string) => P.find((p) => p.part === name)!;
+const get = (P: CutPart[], id: CutPartId) => P.find((p) => p.part === id)!;
 for (const joint of ["butt", "rabbet", "miter"] as const) {
   test(`boxParts ${joint}: panels reassemble to the outer box`, (t) => {
     const W = 22,
       H = 30,
       D = 20,
       tt = 0.75,
-      { P } = boxParts("Sub", W, H, D, tt, 0.75, joint);
-    const side = get(P, "Side"),
-      top = get(P, "Top / bottom"),
-      back = get(P, "Back");
+      { P } = boxParts("sub", W, H, D, tt, 0.75, joint);
+    const side = get(P, "side"),
+      top = get(P, "topBottom"),
+      back = get(P, "back");
     close(t, Math.max(side.a, side.b), H, 1e-9);
     close(t, Math.min(side.a, side.b), D, 1e-9);
     const overlap = joint === "butt" ? 2 * tt : joint === "rabbet" ? tt : 0; // how much of W the sides supply
     close(t, top.b + overlap, W, 1e-9, "width");
     close(t, back.a, W - tt, 1e-9);
     close(t, back.b, H - tt, 1e-9); // inner opening + two t/2 rabbets
-    const baffle = get(P, "Baffle");
+    const baffle = get(P, "baffle");
     close(t, baffle.a, W - 2 * tt, 1e-9);
     close(t, baffle.b, H - 2 * tt, 1e-9);
   });
