@@ -79,9 +79,8 @@ export const HIGHPASS_ALIGNMENTS: Record<
 export const highpassGain = (f: number, fc: number, type: HighpassType = "BW24") => {
   const [kind, n] = HIGHPASS_ALIGNMENTS[type] || HIGHPASS_ALIGNMENTS.BW24,
     x = f / fc;
-  return kind === "bw"
-    ? Math.pow(x, n) / Math.sqrt(1 + Math.pow(x, 2 * n))
-    : Math.pow(x, n) / (1 + Math.pow(x, n));
+  const xn = Math.pow(x, n);
+  return kind === "bw" ? xn / Math.sqrt(1 + xn * xn) : xn / (1 + xn);
 };
 // The normalised Butterworth sections of even order n, s² + b·s + 1: each b = 2 sin((2k − 1)π / 2n), k = 1 … n/2.
 // Kept per order: the hi-fi crossover calls for them at every frequency of every design the optimizer tries.
@@ -238,8 +237,8 @@ export function boxModel(
       uIm = (-Pg * tIm) / tM; // Ud = Pg / (Zd + Zbox)
     const vRe = uRe * bRe - uIm * bIm,
       vIm = uRe * bIm + uIm * bRe; // Ud Zbox: box pressure
-    const pv = Math.hypot(vRe, vIm),
-      Ud = Math.hypot(uRe, uIm);
+    const pv = Math.sqrt(vRe * vRe + vIm * vIm),
+      Ud = Math.sqrt(uRe * uRe + uIm * uIm);
     const Up = pv / Math.sqrt(pM); // |Ud Zbox / Zp|
     // radiated = cone - port - leak = the flow into the box air: |Ud Zbox / Zc| = |Ud Zbox| w Cab
     const Ut = pv * w * Cab;
@@ -323,20 +322,14 @@ export function closedBox(
   const count = logGridCount(N, fmin, fmax, fTop);
   for (let i = 0; i < count; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
+    // Z = Ras + Rae + j(w Mas - 1/(w Cas) - 1/(w Cab)), in plain real arithmetic (the optimizers run this loop millions
+    // of times); Uc = Pg / Z
     const w = 2 * Math.PI * f,
-      s = complex(0, w);
-    const Z = addComplex(
-      complex(Ras + Rae),
-      addComplex(
-        multiplyComplex(s, complex(Mas)),
-        addComplex(
-          invertComplex(multiplyComplex(s, complex(Cas))),
-          invertComplex(multiplyComplex(s, complex(Cab))),
-        ),
-      ),
-    );
-    const Uc = divideComplex(complex(Pg), Z),
-      U = complexMagnitude(Uc);
+      zRe = Ras + Rae,
+      zIm = w * Mas - 1 / (w * Cas) - 1 / (w * Cab),
+      zM = zRe * zRe + zIm * zIm;
+    const Uc = { re: (Pg * zRe) / zM, im: (-Pg * zIm) / zM },
+      U = Pg / Math.sqrt(zM);
     const g =
       (hp ? linkwitzRileyHighpass(f, hp, hpOrder) : 1) *
       (lp ? linkwitzRileyLowpass(f, lp, lpOrder) : 1);

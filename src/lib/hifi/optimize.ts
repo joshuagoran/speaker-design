@@ -5,7 +5,13 @@
 import {
   hifiSystem,
   hifiBox,
-  hifiSystemFromBox,
+  hifiPortElbows,
+  hifiVentPort,
+  hifiWooferPrep,
+  hifiWooferLevel,
+  wooferFitsBaffle,
+  wooferPastRange,
+  qtcInRange,
   hifiGridTop,
   hifiWeightLb,
   tweeterMaxLevel,
@@ -13,7 +19,6 @@ import {
   driverLayout,
   belowTweeterMinXo,
   nearTweeterResonance,
-  type HifiBox,
   hifiChips,
   grossVolumeLiters,
   linkwitzRileyFilter,
@@ -70,11 +75,12 @@ interface RunResult {
   cfg: SearchConfig;
   tt: HifiTweeter;
 }
-/** A box on the search grid: its woofer and config (no crossover yet), its model, and how many things it changes. */
+/** A box on the search grid: its woofer and config (no crossover yet), its volume and radiators, and how many things it changes. */
 interface BoxEntry {
   w: HifiWoofer;
   cfg: SearchConfig;
-  b: HifiBox;
+  gross: number;
+  pr: PassiveRadiatorChoice | null;
   ch: number;
 }
 /** A box at one crossover that passes the box's own checks: the woofer's F3 and level (indices into the box and crossover lists). */
@@ -157,13 +163,6 @@ const keeps = (cur: HifiMetrics): Record<HifiGoal, Keep> => ({
   louder: { db: -Infinity, f3: cur.f3 + 3 },
 });
 const gapTo = (k: Keep, x: HifiMetrics) => keepGap(k, { db: x.level, f3: x.f3 });
-// the checks that depend on the tweeter (made per tweeter in the search; every other check is the box's own)
-const TWEETER_PROBLEMS = new Set([
-  "Drivers won't fit the baffle",
-  "Below the tweeter's minimum crossover",
-  "Close to the tweeter's resonance",
-  "Tweeter runs out first",
-]);
 // warnings that rule a design out (the soft ones stay on the card)
 const HARD = new Set([
   "Below the tweeter's minimum crossover",
@@ -266,8 +265,13 @@ function prsFor(
 
 // input: { cur: page cfg + { woofer, tweeter } ids, woofers, tweeters, passives, goals, locks: { woofer, tweeter, box, wall, xo, wAmpW, tAmpW,
 //          dim: {w,h,d} }, budget (pair, drivers), seatM (listening distance), guidePrice }
-export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerResult {
-  const t0 = Date.now();
+/**
+ * What the search covers for these inputs: your design resolved (its radiator looked up), the drivers, the amps it
+ * searches at, the crossovers and tweeters, and every box on the grid (woofer × size × type × plywood × port or
+ * radiator, and your box on each plywood the search allows), not yet modelled. Null when your drivers aren't in the
+ * tables.
+ */
+export function hifiSearchSpace(input: HifiOptimizerInput) {
   const { woofers, tweeters, locks = {} } = input;
   // boundary cast: `pr` may still lack its driver here; the block below looks it up
   const cur = { wall: 0.75, ...(input.cur as HifiOptimizerCurrent) };
@@ -281,28 +285,11 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     cur.pr = drv ? { ...cur.pr, drv } : undefined;
     curPrMissing = cur.box === "radiator" && !drv; // a sealed or vented design may carry a leftover id
   }
-  const goals = (input.goals || []).filter(
-    (g, i, a) => HIFI_OPTIMIZER_GOALS[g] && a.indexOf(g) === i,
-  );
-  if (!goals.length) return { cards: [], goals, curProblems: [], stats: { evaluated: 0, ms: 0 } };
-  const goal = goals[0],
-    also = goals.slice(1);
-  const dl: NonNullable<typeof locks.dim> = locks.dim || {};
-  const seat = input.seatM || 2.5,
-    levelOf = (sys: HifiSystem) => sys.maxLevel - 20 * Math.log10(seat) + 3;
   // your drivers: from the lists the search uses, else from the full tables (a budget or size filter doesn't remove them from your design)
   const W0 = byId(woofers, cur.woofer) ?? byId(HIFI_WOOFERS, cur.woofer),
     T0 = byId(tweeters, cur.tweeter) ?? byId(HIFI_TWEETERS, cur.tweeter);
-  if (!W0 || !T0)
-    return {
-      goals,
-      cards: [],
-      cur: null,
-      curProblems: [`${W0 ? "tweeter" : "woofer"} isn't in the driver tables`],
-      curCurve: null,
-      goalMissing: null,
-      stats: { evaluated: 0, ms: Date.now() - t0 },
-    };
+  if (!W0 || !T0) return { cur, W0, T0, space: null };
+  const dl: NonNullable<typeof locks.dim> = locks.dim || {};
   const guide = cur.guide || null,
     gp = input.guidePrice || 0;
   const tweeterCfg = (t: HifiTweeter): HifiTweeter | null =>
@@ -317,37 +304,6 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     wAmpW: locks.wAmpW ? cur.wAmpW : HIFI_AMP_WATTS_MAX.wAmpW,
     tAmpW: locks.tAmpW ? cur.tAmpW : HIFI_AMP_WATTS_MAX.tAmpW,
   };
-  let evals = 0;
-  const run = (w: HifiWoofer, t: HifiTweeter, c: SearchConfig): RunResult | null => {
-    evals++;
-    const tt = tweeterCfg(t);
-    if (!tt) return null;
-    const cc = { ...c, guide: guideOf(t) };
-    const sys = hifiSystem(w, tt, cc);
-    return sys && { sys, chips: hifiChips(sys, w, tt, cc), cfg: cc, tt };
-  };
-  const metricOf = (
-    r: Pick<RunResult, "sys" | "cfg">,
-    w: HifiWoofer,
-    t: HifiTweeter,
-  ): HifiMetrics => ({
-    gross: r.sys.gross,
-    f3: r.sys.f3,
-    price: priceOf(w, t, r.cfg),
-    level: levelOf(r.sys),
-    lb: r.sys.lb,
-  });
-
-  // a radiator box whose radiator isn't in any table has no model: say so instead of scoring it as if it had none
-  const curR = curPrMissing ? null : run(W0, T0, cur);
-  const curM = curR && metricOf(curR, W0, T0);
-  const curProblems = curR
-    ? hifiDesignProblems(curR.sys, curR.chips)
-    : [curPrMissing ? "the passive radiator isn't in the driver tables" : "can't be modelled"];
-  const curFails = curProblems.length > 0;
-
-  // 1. every box on the grid (woofer × size × type × plywood × port or radiator, and your box on each plywood the
-  //    search allows), modelled once to the top crossover's grid
   const wList: HifiWoofer[] = locks.woofer
     ? [W0]
     : woofers.filter((o) => o.ts && o.ts.Fs && o.ts.Sd);
@@ -362,12 +318,11 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     ? [T0]
     : tweeters.filter((t) => t.hf && t.hf.sens != null && (!needsWaveguide(t) || guide));
   const xos = locks.xo ? [cur.xo] : XOS.includes(cur.xo) ? XOS : [...XOS, cur.xo];
-  const top = hifiGridTop(Math.max(...xos));
   const face =
     needsWaveguide(T0) && guide ? (guide.freestanding ? { w: 0, h: -1 } : guide) : T0.faceplate;
-  const boxList: BoxEntry[] = [];
+  const grid: { w: HifiWoofer; cfg: SearchConfig }[] = [];
   const seen = new Set<string>();
-  const addBox = (
+  const add = (
     w: HifiWoofer,
     dim: Dims3,
     box: HifiBoxKind,
@@ -378,22 +333,10 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
     const key = `${w.id}|${box}|${wall}|${dim.w}|${dim.h}|${dim.d}|${box === "vented" && port ? JSON.stringify(port) : ""}|${box === "radiator" && pr ? `${pr.drv.id}|${pr.n}|${pr.addG}` : ""}`;
     if (seen.has(key)) return;
     seen.add(key);
-    const cfg: SearchConfig = {
-      ...cur,
-      ...amps,
-      box,
-      dim,
-      wall,
-      port: port || cur.port,
-      pr: pr || cur.pr,
-    };
-    evals++;
-    const b = hifiBox(w, cfg, top);
-    if (!b) return;
-    const ch = changes({ w, t: T0, c: { ...cfg, xo: cur.xo } }, cur).filter(
-      (x) => x !== "amp power",
-    ).length;
-    boxList.push({ w, cfg, b, ch });
+    grid.push({
+      w,
+      cfg: { ...cur, ...amps, box, dim, wall, port: port || cur.port, pr: pr || cur.pr },
+    });
   };
   for (const w of wList) {
     const minW = Math.max(w.size + 1.5, face.w + 1),
@@ -428,49 +371,123 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
                       .filter(Boolean)
                       .slice(0, 1),
                   ])
-                    addBox(w, dim, box, wall, port, null);
+                    add(w, dim, box, wall, port, null);
                 }
               else if (box === "radiator")
                 for (const k of [0.8, 1, 1.2])
                   for (const pr of prsFor(w, dim, wall, passives, w.ts.Fs * k))
-                    addBox(w, dim, box, wall, null, pr);
-              else addBox(w, dim, box, wall, null, null);
+                    add(w, dim, box, wall, null, pr);
+              else add(w, dim, box, wall, null, null);
             }
   }
   // your box as it is, on each plywood (the smallest change for Lighter; a new tweeter or crossover keeps it)
-  if (curR && wList.includes(W0) && boxes.includes(cur.box))
-    for (const wall of walls) addBox(W0, cur.dim, cur.box, wall, cur.port, cur.pr);
+  if (!curPrMissing && wList.includes(W0) && boxes.includes(cur.box))
+    for (const wall of walls) add(W0, cur.dim, cur.box, wall, cur.port, cur.pr);
+  return {
+    cur,
+    W0,
+    T0,
+    space: {
+      curPrMissing,
+      guide,
+      tweeterCfg,
+      guideOf,
+      priceOf,
+      amps,
+      tList,
+      xos,
+      grid,
+    },
+  };
+}
 
-  // 2. each crossover on each box: the box's own checks with any tweeter, then each tweeter's checks, exactly as the
-  //    page makes them (its level, its crossover limits and the baffle), so every design on the grid is scored
-  const tRef = tList.find((t) => tweeterCfg(t));
-  const tRefCfg = tRef && tweeterCfg(tRef);
+export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerResult {
+  const t0 = Date.now();
+  const { locks = {} } = input;
+  const goals = (input.goals || []).filter(
+    (g, i, a) => HIFI_OPTIMIZER_GOALS[g] && a.indexOf(g) === i,
+  );
+  if (!goals.length) return { cards: [], goals, curProblems: [], stats: { evaluated: 0, ms: 0 } };
+  const goal = goals[0],
+    also = goals.slice(1);
+  const seat = input.seatM || 2.5,
+    levelOf = (sys: HifiSystem) => sys.maxLevel - 20 * Math.log10(seat) + 3;
+  const { cur, W0, T0, space } = hifiSearchSpace(input);
+  if (!W0 || !T0 || !space)
+    return {
+      goals,
+      cards: [],
+      cur: null,
+      curProblems: [`${W0 ? "tweeter" : "woofer"} isn't in the driver tables`],
+      curCurve: null,
+      goalMissing: null,
+      stats: { evaluated: 0, ms: Date.now() - t0 },
+    };
+  const { curPrMissing, tweeterCfg, guideOf, priceOf, amps, tList, xos, grid } = space;
+  let evals = 0;
+  const run = (w: HifiWoofer, t: HifiTweeter, c: SearchConfig): RunResult | null => {
+    evals++;
+    const tt = tweeterCfg(t);
+    if (!tt) return null;
+    const cc = { ...c, guide: guideOf(t) };
+    const sys = hifiSystem(w, tt, cc);
+    return sys && { sys, chips: hifiChips(sys, w, tt, cc), cfg: cc, tt };
+  };
+  const metricOf = (
+    r: Pick<RunResult, "sys" | "cfg">,
+    w: HifiWoofer,
+    t: HifiTweeter,
+  ): HifiMetrics => ({
+    gross: r.sys.gross,
+    f3: r.sys.f3,
+    price: priceOf(w, t, r.cfg),
+    level: levelOf(r.sys),
+    lb: r.sys.lb,
+  });
+
+  // a radiator box whose radiator isn't in any table has no model: say so instead of scoring it as if it had none
+  const curR = curPrMissing ? null : run(W0, T0, cur);
+  const curM = curR && metricOf(curR, W0, T0);
+  const curProblems = curR
+    ? hifiDesignProblems(curR.sys, curR.chips)
+    : [curPrMissing ? "the passive radiator isn't in the driver tables" : "can't be modelled"];
+  const curFails = curProblems.length > 0;
+
+  // 1. every box on the grid that passes its own checks, modelled once (to 1.5 × the top crossover: the woofer's limits
+  //    are read that far), and each crossover on it: the woofer's clean level there (its F3 is the box's), exactly as the
+  //    page reads it. Only these numbers are kept, not the box's curve.
+  const top = Math.max(hifiGridTop(0), 1.5 * Math.max(...xos));
+  const boxList: BoxEntry[] = [];
   const recs: Rec[] = [];
-  if (tRef && tRefCfg)
-    for (let bi = 0; bi < boxList.length; bi++) {
-      const e = boxList[bi];
-      for (let xi = 0; xi < xos.length; xi++) {
-        const c = { ...e.cfg, xo: xos[xi], guide: guideOf(tRef) };
-        evals++;
-        const sys = hifiSystemFromBox(e.b, e.w, tRefCfg, c, { band: false });
-        if (!sys) continue;
-        if (
-          hifiDesignProblems(sys, hifiChips(sys, e.w, tRefCfg, c)).some(
-            (h) => !TWEETER_PROBLEMS.has(h),
-          )
-        )
-          continue;
-        recs.push({
-          bi,
-          xi,
-          f3: sys.f3,
-          wLevel: sys.wLevel,
-          // a design that passes has the woofer setting the level (the tweeter running out first rules it out)
-          level: sys.wLevel - 20 * Math.log10(seat) + 3,
-        });
-      }
+  for (const { w, cfg } of grid) {
+    const { dim, wall, box, pr } = cfg;
+    if (!wooferFitsBaffle(w, dim)) continue;
+    if (box === "vented" && hifiPortElbows(dim, wall, hifiVentPort(cfg)) == null) continue;
+    if (box === "radiator" && (!pr || !passiveRadiatorFits(dim, wall, pr))) continue;
+    evals++;
+    const b = hifiBox(w, cfg, top);
+    if (!b || (b.sM && !qtcInRange(b.sM.Qtc))) continue;
+    const ch = changes({ w, t: T0, c: { ...cfg, xo: cur.xo } }, cur).filter(
+      (x) => x !== "amp power",
+    ).length;
+    const bi = boxList.length,
+      prep = hifiWooferPrep(b, cfg);
+    boxList.push({ w, cfg, gross: b.gross, pr: b.pr, ch });
+    for (let xi = 0; xi < xos.length; xi++) {
+      if (wooferPastRange(w, xos[xi])) continue;
+      const { wLevel } = hifiWooferLevel(b, prep, w, { ...cfg, xo: xos[xi] });
+      recs.push({
+        bi,
+        xi,
+        f3: prep.f3,
+        wLevel,
+        // a design that passes has the woofer setting the level (the tweeter running out first rules it out)
+        level: wLevel - 20 * Math.log10(seat) + 3,
+      });
     }
-  // the tweeters' own checks per crossover: its limits and its clean level
+  }
+
+  // 2. the tweeters' own checks per crossover: its limits and its clean level
   const tws = tList.flatMap((t) => {
     const tt = tweeterCfg(t);
     if (!tt) return [];
@@ -504,7 +521,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
       for (let ti = 0; ti < tws.length; ti++) {
         const x = tws[ti];
         bPrice[ti] = priceOf(e.w, x.t, e.cfg);
-        bLb[ti] = hifiWeightLb(e.w, x.tt, e.cfg, e.b.pr);
+        bLb[ti] = hifiWeightLb(e.w, x.tt, e.cfg, e.pr);
         bFits[ti] = driversFitBaffle(driverLayout(e.w, x.tt, e.cfg.dim, x.onTop), e.w, e.cfg);
       }
     }
@@ -521,7 +538,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
   const metricsAt = (i: number): HifiMetrics => {
     const r = recs[dRec[i]];
     return {
-      gross: boxList[r.bi].b.gross,
+      gross: boxList[r.bi].gross,
       f3: r.f3,
       price: dPrice[i],
       level: r.level,
@@ -559,7 +576,7 @@ export function optimizeHifiSpeaker(input: HifiOptimizerInput): HifiOptimizerRes
           dTw[j] !== dTw[i] ||
           k.cfg.box !== p.cfg.box ||
           k.cfg.wall !== p.cfg.wall ||
-          Math.abs(p.b.gross / k.b.gross - 1) >= 0.15
+          Math.abs(p.gross / k.gross - 1) >= 0.15
         );
       });
     },

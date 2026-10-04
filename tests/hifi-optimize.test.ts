@@ -1,6 +1,11 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { optimizeHifiSpeaker, hifiDesignProblems, portsDiffer } from "../src/lib/hifi/optimize";
+import {
+  optimizeHifiSpeaker,
+  hifiDesignProblems,
+  hifiSearchSpace,
+  portsDiffer,
+} from "../src/lib/hifi/optimize";
 import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
 import type { HifiGoal, HifiMetrics, HifiOptimizerCurrent, HifiOptimizerLocks } from "../src/types";
@@ -286,5 +291,67 @@ test("hi-fi optimizer: a sealed box locked in place gets sealed cards (an ok Qtc
     const out = optimizeHifiSpeaker({ ...base, cur: sealed, goals: [goal], locks: { box: true } });
     assert.ok(!out.goalMissing, `${goal}: a sealed design that beats yours exists`);
     for (const k of out.cards) assert.equal(k.config.box, "sealed", k.label);
+  }
+});
+
+test("hi-fi optimizer: the first card is the best design on its grid, checked one by one with the page's model", () => {
+  // a small grid: one woofer and baffle width, sealed or vented, every height, depth, port and crossover, three tweeters
+  const tweeters = HIFI_TWEETERS.filter((t) => ["sb26stcn", "rst28f", "ne25vts"].includes(t.id));
+  const opts = {
+    ...base,
+    tweeters,
+    locks: { woofer: true, wall: true, wAmpW: true, tAmpW: true, dim: { w: "exact" as const } },
+  };
+  const { space } = hifiSearchSpace(opts);
+  assert.ok(space && space.grid.length > 100, "a grid to search");
+  const seat = base.seatM;
+  const designs: HifiMetrics[] = [];
+  for (const { w, cfg } of space.grid)
+    for (const xo of space.xos)
+      for (const t of space.tList) {
+        const tt = space.tweeterCfg(t);
+        if (!tt) continue;
+        const c = { ...cfg, xo, guide: space.guideOf(t) },
+          sys = hifiSystem(w, tt, c);
+        if (!sys || hifiDesignProblems(sys, hifiChips(sys, w, tt, c)).length) continue;
+        const price = space.priceOf(w, t, c);
+        if (price > base.budget) continue;
+        designs.push({
+          gross: sys.gross,
+          f3: sys.f3,
+          price,
+          lb: sys.lb,
+          level: sys.maxLevel - 20 * Math.log10(seat) + 3,
+        });
+      }
+  // what each goal keeps from your design, and its objective (lower is better)
+  const keeps: Record<HifiGoal, (m: HifiMetrics, c: HifiMetrics) => boolean> = {
+    cheaper: (m, c) => m.level >= c.level - 0.5 && m.f3 <= c.f3 + 2,
+    lighter: (m, c) => m.level >= c.level - 0.5 && m.f3 <= c.f3 + 2,
+    lower: (m, c) => m.level >= c.level - 1.5,
+    louder: (m, c) => m.f3 <= c.f3 + 3,
+  };
+  const objective: Record<HifiGoal, (m: HifiMetrics) => number> = {
+    cheaper: (m) => m.price,
+    lighter: (m) => m.lb,
+    lower: (m) => m.f3,
+    louder: (m) => -m.level,
+  };
+  for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
+    const out = optimizeHifiSpeaker({ ...opts, goals: [goal] }),
+      c = out.cur!;
+    const ok = designs.filter((m) => keeps[goal](m, c) && beat[goal](m, c));
+    const best = Math.min(...ok.map(objective[goal]));
+    if (!ok.length) {
+      assert.ok(out.goalMissing, `${goal}: nothing beats your design, and the page says so`);
+      continue;
+    }
+    const k = out.cards[0];
+    assert.ok(k && !out.goalMissing, `${goal}: a card`);
+    assert.strictEqual(
+      objective[goal](k.metrics),
+      best,
+      `${goal}: the first card is the best on the grid`,
+    );
   }
 });
