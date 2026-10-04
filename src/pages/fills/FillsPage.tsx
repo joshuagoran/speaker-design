@@ -14,6 +14,7 @@ import { FILL_OPTIONS } from "../../lib/data";
 import { fillSystem, nearestPoint } from "../../lib/pa/calc";
 import type { FillsPlanner } from "./useFillsPlanner";
 import { xmaxBandCurves, xmaxRows } from "../../lib/xmax";
+import { LIMIT_NAMES } from "../../constants/limits";
 
 interface Props {
   fills: FillsPlanner;
@@ -153,7 +154,7 @@ export function FillsPage({ fills }: Props) {
             [
               "Max SPL at 100 Hz",
               `${maxCurveNearest(100).spl.toFixed(1)} dB`,
-              `sine, ${maxCurveNearest(100).who}-limited`,
+              `sine, ${LIMIT_NAMES[maxCurveNearest(100).who]}-limited`,
               MAX_SPL_TIP,
             ],
             ...xmaxRows(thieleSmall),

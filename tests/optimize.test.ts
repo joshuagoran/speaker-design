@@ -382,7 +382,7 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
     ...pick("light block"),
     ampW: 200,
   }; // a small amp: the sub is amp-limited
-  assert.equal(evaluateDesign(c)!.who, "amplifier power");
+  assert.equal(evaluateDesign(c)!.who, "amp");
   const out = optimizePaStack({
     ...base,
     cur: c,
