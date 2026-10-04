@@ -13,6 +13,7 @@ import { ResultCards } from "./ResultCards";
 import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize";
 import { keepLines, PA_KEEP_WORDS } from "../../lib/optimizer/goalKeeps";
 import type {
+  OptimizerProgress,
   PaGoal,
   PaOptimizerCard,
   PaOptimizerInputState,
@@ -27,6 +28,10 @@ interface Props {
   /** starts a search; given limits to change first, or called as the run button's click handler */
   run: (over?: PaSearchOverrides) => unknown;
   busy: boolean;
+  /** how far the running search has got; null before its first report */
+  progress: OptimizerProgress | null;
+  /** stops the running search */
+  onCancel: () => void;
   res: PaOptimizerResult | null;
   err: string;
   /** the current design's clean sub output in dB; null when it can't be scored */
@@ -45,6 +50,8 @@ export function OptimizerPanel({
   setOpt,
   run,
   busy,
+  progress,
+  onCancel,
   res,
   err,
   curOut,
@@ -140,6 +147,8 @@ export function OptimizerPanel({
           busy={busy}
           hasGoal={!!g}
           onRun={run}
+          onCancel={onCancel}
+          progress={progress}
           stats={res && res.stats}
           note={
             res && res.cards.length

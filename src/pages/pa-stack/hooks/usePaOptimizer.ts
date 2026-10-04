@@ -7,6 +7,7 @@ import { useOptimizerRun } from "../../../hooks/useOptimizerRun";
 import { useStoredState, useStoredStateFrom } from "../../../hooks/useStoredState";
 import type {
   ConfigDb,
+  OptimizerProgress,
   CutlistSettings,
   PaDesignConfig,
   PaGoal,
@@ -53,6 +54,10 @@ export interface PaOptimizer
   optimizerResult: PaOptimizerResult | null;
   isOptimizing: boolean;
   optimizerError: string;
+  /** how far the running search has got; null before its first report */
+  optimizerProgress: OptimizerProgress | null;
+  /** stops the running search and goes back to idle */
+  cancelOptimizerSearch: () => void;
   toastMessage: string;
   setToastMessage: Setter<string>;
   startOptimizerSearch: (over?: PaSearchOverrides) => Promise<void>;
@@ -105,24 +110,33 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     applyCard: (k) => restore({ ...snapshot(), ...pickOptimizedFields(k.config) }),
     restore,
   });
-  const { optimizerResult, isOptimizing, optimizerError, runOptimizerSearch } =
-    useOptimizerRun<PaOptimizerResult>();
+  const {
+    optimizerResult,
+    isOptimizing,
+    optimizerError,
+    optimizerProgress,
+    runOptimizerSearch,
+    cancelOptimizerSearch,
+  } = useOptimizerRun<PaOptimizerResult>();
   const [toastMessage, setToastMessage] = useState("");
   const startOptimizerSearch = async (over?: PaSearchOverrides) => {
     if (isOptimizing) return;
     const inp = { ...optimizerInput, ...(over && over.nativeEvent ? {} : over || {}) };
     if (over && !over.nativeEvent) updateOptimizerInput(over);
     if (!inp.goals.length) return;
-    await runOptimizerSearch(() =>
-      runPaOptimizer({
-        cur: preview.baseDesign(),
-        room: inp.room,
-        maxLb: inp.maxLb,
-        budget: inp.budget,
-        goals: inp.goals,
-        locks: optimizerLocks,
-        cutlist,
-      }),
+    await runOptimizerSearch((options) =>
+      runPaOptimizer(
+        {
+          cur: preview.baseDesign(),
+          room: inp.room,
+          maxLb: inp.maxLb,
+          budget: inp.budget,
+          goals: inp.goals,
+          locks: optimizerLocks,
+          cutlist,
+        },
+        options,
+      ),
     );
   };
   const loadOptimizerResult = async (k: PaOptimizerCard) => {
@@ -188,6 +202,8 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     optimizerResult,
     isOptimizing,
     optimizerError,
+    optimizerProgress,
+    cancelOptimizerSearch,
     designPreview: preview.designPreview,
     undoSnapshot: preview.undoSnapshot,
     toastMessage,

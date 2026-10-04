@@ -15,6 +15,7 @@ import type {
   HifiOptimizerLocks,
   HifiOptimizerResult,
   HifiPlannerLocks,
+  OptimizerProgress,
 } from "../../types";
 import { useState } from "react";
 
@@ -54,6 +55,10 @@ export interface HifiOptimizer
   optimizerResult: HifiOptimizerResult | null;
   isOptimizing: boolean;
   optimizerError: string;
+  /** how far the running search has got; null before its first report */
+  optimizerProgress: OptimizerProgress | null;
+  /** stops the running search and goes back to idle */
+  cancelOptimizerSearch: () => void;
   runOptimizerSearch: () => Promise<void>;
   /** Drops the result, any preview and the undo (a restored saved design makes them stale). */
   clearOptimizerResults: () => void;
@@ -98,22 +103,27 @@ export function useHifiOptimizer({
     optimizerResult,
     isOptimizing,
     optimizerError,
+    optimizerProgress,
     runOptimizerSearch,
+    cancelOptimizerSearch,
     clearOptimizerResult,
   } = useOptimizerRun<HifiOptimizerResult>();
   const search = () =>
-    runOptimizerSearch(() =>
-      runHifiOptimizer({
-        cur: { ...speakerConfig, ...preview.baseDesign(), guide: compressionWaveguide },
-        woofers: HIFI_WOOFERS,
-        tweeters: HIFI_TWEETERS,
-        passives: HIFI_PASSIVES,
-        goals: optimizerGoals,
-        locks: optimizerLocks,
-        budget: optimizerBudget,
-        seatM: seatDistanceM,
-        guidePrice,
-      }),
+    runOptimizerSearch((options) =>
+      runHifiOptimizer(
+        {
+          cur: { ...speakerConfig, ...preview.baseDesign(), guide: compressionWaveguide },
+          woofers: HIFI_WOOFERS,
+          tweeters: HIFI_TWEETERS,
+          passives: HIFI_PASSIVES,
+          goals: optimizerGoals,
+          locks: optimizerLocks,
+          budget: optimizerBudget,
+          seatM: seatDistanceM,
+          guidePrice,
+        },
+        options,
+      ),
     );
   return {
     isOptimizerOn,
@@ -128,6 +138,8 @@ export function useHifiOptimizer({
     optimizerResult,
     isOptimizing,
     optimizerError,
+    optimizerProgress,
+    cancelOptimizerSearch,
     designPreview: preview.designPreview,
     undoSnapshot: preview.undoSnapshot,
     runOptimizerSearch: search,

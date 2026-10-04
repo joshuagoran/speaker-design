@@ -1885,6 +1885,22 @@ export interface OptimizerRequest<I = PaOptimizerInput> {
   input: I;
 }
 
+/** How far a search has got: designs checked of the total (the total may grow as a search finds more to check), and the best so far on the first goal, in words. */
+export interface OptimizerProgress {
+  done: number;
+  total: number;
+  best?: string;
+}
+
+/** Where a search sends its progress (an engine calls it now and then, cheaply; it never changes the result). */
+export type OptimizerProgressCallback = (p: OptimizerProgress) => void;
+
+/** What a run of an optimizer can be given besides its input: where progress goes, and a signal that cancels it. */
+export interface OptimizerRunOptions {
+  onProgress?: OptimizerProgressCallback;
+  signal?: AbortSignal;
+}
+
 /** A box's fields on the search grid (the rest of its config is your design's). */
 export interface HifiGridBox {
   box: HifiBoxKind;
@@ -1933,6 +1949,10 @@ export type HifiOptimizerJobResult =
 export type OptimizerResponse<R = PaOptimizerResult> =
   | { id: number; out: R }
   | { id: number; error: string };
+/** What an optimizer's worker posts for a request: progress any number of times, then its reply. */
+export type OptimizerMessage<R = PaOptimizerResult> =
+  | { id: number; progress: OptimizerProgress }
+  | OptimizerResponse<R>;
 
 // ---- Saved configurations ----
 

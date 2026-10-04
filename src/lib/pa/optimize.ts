@@ -57,6 +57,7 @@ import type {
   PaOptimizedFields,
   PaOptimizerCard,
   PaOptimizerInput,
+  OptimizerProgressCallback,
   PaOptimizerLocks,
   PaOptimizerResult,
   PaRoom,
@@ -78,6 +79,7 @@ import { goalKeeps, PA_UNMODELLED_F3_HZ } from "../optimizer/goalKeeps";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { SUB_LIMITED_BY } from "../../constants/limits";
 import { ampForGain, onSlider, type AmpSteps } from "../optimizer/ampSteps";
+import { throttledProgress } from "../optimizer/progress";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -520,8 +522,30 @@ export const pickOptimizedFields = (c: PaDesignConfig) =>
   // boundary cast: Object.fromEntries types its result as an index signature; these are exactly the optimized fields
   Object.fromEntries(OPTIMIZED_FIELDS.map((k) => [k, c[k]])) as PaOptimizedFields;
 
-export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
+// Progress: the screen's grid points one by one make the first half of the bar; the steps after it share the second half
+// by their rough share of the work (the boxes for the seeds, the mid designs, the combine step, the finalists).
+const PA_STEP_SHARES = { boxes: 0.5, mids: 0.3, combine: 0.1, finalists: 0.1 } as const;
+type PaStep = keyof typeof PA_STEP_SHARES;
+// where each step starts in that half: the shares before it
+const PA_STEP_START: Record<PaStep, number> = { boxes: 0, mids: 0.5, combine: 0.8, finalists: 0.9 };
+
+/** The PA search; `onProgress` hears how far it has got (coarse: grid points, then work units per step). */
+export function optimizePaStack(
+  input: PaOptimizerInput,
+  onProgress?: OptimizerProgressCallback,
+): PaOptimizerResult {
   const t0 = Date.now();
+  const report = throttledProgress(onProgress);
+  // set once the screen's grid is known: its point count, which is also the units the later steps share
+  let screenUnits = 1;
+  /** reports item `i` of `n` in a step after the screen */
+  const stepAt = (step: PaStep, i: number, n: number) =>
+    report(
+      Math.round(
+        screenUnits * (1 + PA_STEP_START[step] + (PA_STEP_SHARES[step] * i) / Math.max(n, 1)),
+      ),
+      2 * screenUnits,
+    );
   const { room = 1000 } = input;
   const goals = (
     input.goals && input.goals.length ? input.goals : [input.goal || "cheaper"]
@@ -669,6 +693,9 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     for (let i = 0; i < 10; i++)
       vols.push(Vmin * Math.pow(Math.max(Vmax * 0.85, Vmin * 1.01) / Vmin, i / 9));
   const fbs = [28, 31, 34, 37, 40, 43];
+  // the grid's points: a highpass per tuning when it's locked, else two
+  screenUnits = Math.max(1, subs.length * vols.length * fbs.length * (locks.hpf ? 1 : 2));
+  let screened = 0;
   for (const sub of subs)
     for (const V of vols)
       for (const Fb of fbs) {
@@ -676,6 +703,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           ? [cur.hpf]
           : [Math.max(20, Math.round(Fb * 0.85)), Math.max(20, Math.round(Fb))];
         for (const hpf of hps) {
+          report(screened++, 2 * screenUnits);
           const Sp = 80,
             Leff = (Sp * 0.00064516 * 343 * 343) / ((2 * Math.PI * Fb) ** 2 * (V / 1000));
           const Lp = Leff / 0.0254 - 1.46 * Math.sqrt(Sp / Math.PI);
@@ -741,7 +769,9 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   // the sub's geometry reads only the sub's own cut parts; the mid just has to exist for the cut list, so with no known
   // current mid the first table entry will do
   const midForGeom = curMid ?? MID_OPTIONS[0];
+  let seedNo = 0;
   for (const sd of seedSet) {
+    stepAt("boxes", seedNo++, seedSet.size);
     for (const t of walls) {
       const G = sd.V + (sd.sub.ts.disp || 10) + 0.08 * sd.V + 3;
       for (const { box } of shapes(G, t, sd.sub.lb, sd.sub.size)) {
@@ -961,9 +991,10 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       return [{ hp, mAmpW, lo: Math.min(lo.max, lo.sig + 10 * Math.log10(mAmpW / amps.mAmpW)) }];
     });
   const midTable: MidEntry[] = [];
-  for (const m of mids)
-    for (const t of walls)
+  for (const [mi, m] of mids.entries())
+    for (const [ti, t] of walls.entries())
       for (const bx of midBoxes(m, t)) {
+        stepAt("mids", mi * walls.length + ti, mids.length * walls.length);
         if (!bx) continue;
         const disp = m.ts.disp != null ? m.ts.disp : m.size === 15 ? 4 : 2.5;
         const eff =
@@ -1032,7 +1063,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       : ampForGain(sc.s.lim.W, gap + KEEP_UP_SLACK_DB, AMP_WATTS_STEPS.ampW);
     return ampW === null ? null : { ampW, out: sc.out + 10 * Math.log10(ampW / sc.s.lim.W) };
   };
-  for (const sc of subCands) {
+  for (const [ci, sc] of subCands.entries()) {
+    stepAt("combine", ci, subCands.length);
     if (sc.lb > slack.lb || sc.sub.price > slack.budget) continue;
     for (const xoLo of xoLos) {
       const need = subMusicOutputAt(sc.s.mdl, sc.s.lim, sc.s.AMP_V, xoLo, cur.xoLoOrder) - cur.tilt;
@@ -1209,7 +1241,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     add(ranked, 4);
   }
   const pool: PoolEntry[] = [];
-  for (const x of finalists.values()) {
+  for (const [fi, x] of [...finalists.values()].entries()) {
+    stepAt("finalists", fi, finalists.size);
     const m = evaluateDesign(x.c);
     evals++;
     if (m) pool.push({ c: x.c, m, ch: changes(x.c) });
@@ -1440,6 +1473,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           : ["no sub fits these limits and locks"],
     };
   }
+  report(2 * screenUnits, 2 * screenUnits, true);
   return {
     target,
     need,

@@ -1,25 +1,61 @@
-import type { OptimizerRequest, OptimizerResponse } from "../types";
+import type {
+  OptimizerProgressCallback,
+  OptimizerRequest,
+  OptimizerMessage,
+  OptimizerRunOptions,
+} from "../types";
 
-/** Runs an optimizer in its worker, falling back to the main thread where workers are unavailable. */
+/** How long a worker may go without a word (progress included) before the search is stopped as hung, ms. */
+export const OPTIMIZER_STALL_MS = 30_000;
+
+/** What a cancelled search rejects with; the page tells it from a failure by its class (`isOptimizerCancel`). */
+export class OptimizerCancelled extends Error {
+  override name = "AbortError";
+  constructor() {
+    super("the search was cancelled");
+  }
+}
+
+/** Whether a search stopped because it was cancelled, rather than failed. */
+export const isOptimizerCancel = (e: unknown): e is OptimizerCancelled =>
+  e instanceof OptimizerCancelled;
+
+/**
+ * Runs an optimizer in its worker, falling back to the main thread where workers are unavailable. The worker may post
+ * progress for a request any number of times before its result. A run stops when its `signal` aborts (the worker is
+ * terminated; the next run makes a new one) or when the worker goes `stallMs` without a message.
+ */
 export function makeOptimizerRunner<I, R>(
   WorkerCtor: new () => Worker,
-  optimizeLocal: (input: I) => R,
-): (input: I) => Promise<R> {
+  optimizeLocal: (input: I, onProgress?: OptimizerProgressCallback) => R,
+  stallMs = OPTIMIZER_STALL_MS,
+): (input: I, options?: OptimizerRunOptions) => Promise<R> {
   let optWorker: Worker | null = null,
     optNoWorker = false,
     optSeq = 0;
-  return function run(input: I): Promise<R> {
+  return function run(input: I, { onProgress, signal }: OptimizerRunOptions = {}): Promise<R> {
+    if (signal?.aborted) return Promise.reject(new OptimizerCancelled());
     const id = ++optSeq;
+    // On the main thread the search can't be interrupted once it starts (it holds the thread): a cancel before then
+    // stops it, one during it only drops the result. Progress reaches the callback synchronously as the search runs.
     const local = () =>
-      new Promise<R>((res, rej) =>
-        setTimeout(() => {
+      new Promise<R>((res, rej) => {
+        const onAbort = () => {
+          clearTimeout(timer);
+          rej(new OptimizerCancelled());
+        };
+        const timer = setTimeout(() => {
+          signal?.removeEventListener("abort", onAbort);
           try {
-            res(optimizeLocal(input));
+            const out = optimizeLocal(input, onProgress);
+            if (signal?.aborted) rej(new OptimizerCancelled());
+            else res(out);
           } catch (e) {
             rej(e);
           }
-        }, 30),
-      );
+        }, 30);
+        signal?.addEventListener("abort", onAbort, { once: true });
+      });
     if (optNoWorker) return local();
     try {
       if (!optWorker) {
@@ -33,15 +69,40 @@ export function makeOptimizerRunner<I, R>(
     const w = optWorker;
     return new Promise<R>((res, rej) => {
       const done = () => {
-        clearTimeout(timer);
+        clearTimeout(stall);
         w.removeEventListener("message", onMsg);
         w.removeEventListener("error", onErr);
+        signal?.removeEventListener("abort", onAbort);
       };
-      const onMsg = (e: MessageEvent<OptimizerResponse<R>>) => {
-        if (e.data.id !== id) return;
+      // stops the worker; the next run makes a new one
+      const stop = () => {
         done();
-        if ("error" in e.data) rej(new Error(e.data.error));
-        else res(e.data.out);
+        try {
+          w.terminate();
+        } catch {}
+        if (optWorker === w) optWorker = null;
+      };
+      // a hung worker: stop it and report, rather than leaving the button on "Searching…". A search that keeps
+      // reporting progress may run as long as it needs.
+      let stall: ReturnType<typeof setTimeout> | undefined;
+      const watch = () => {
+        clearTimeout(stall);
+        stall = setTimeout(() => {
+          stop();
+          rej(new Error(`no word from the search for ${Math.round(stallMs / 1000)} s`));
+        }, stallMs);
+      };
+      const onMsg = (e: MessageEvent<OptimizerMessage<R>>) => {
+        const m = e.data;
+        if (m.id !== id) return;
+        if ("progress" in m) {
+          watch();
+          onProgress?.(m.progress);
+          return;
+        }
+        done();
+        if ("error" in m) rej(new Error(m.error));
+        else res(m.out);
       };
       const onErr = () => {
         done();
@@ -49,17 +110,14 @@ export function makeOptimizerRunner<I, R>(
         if (optWorker === w) optWorker = null;
         local().then(res, rej);
       };
-      // a hung worker: stop it and report, rather than leaving the button on "Searching…"
-      const timer = setTimeout(() => {
-        done();
-        try {
-          w.terminate();
-        } catch {}
-        if (optWorker === w) optWorker = null;
-        rej(new Error("took longer than 60 s"));
-      }, 60000);
+      const onAbort = () => {
+        stop();
+        rej(new OptimizerCancelled());
+      };
+      watch();
       w.addEventListener("message", onMsg);
       w.addEventListener("error", onErr);
+      signal?.addEventListener("abort", onAbort, { once: true });
       w.postMessage({ id, input } satisfies OptimizerRequest<I>);
     });
   };

@@ -121,6 +121,8 @@ export function HifiPage({ hifi }: Props) {
     optimizerResult,
     isOptimizing,
     optimizerError,
+    optimizerProgress,
+    cancelOptimizerSearch,
     designPreview,
     undoSnapshot,
     setIsOptimizerOn,
@@ -222,6 +224,8 @@ export function HifiPage({ hifi }: Props) {
         busy={isOptimizing}
         hasGoal={optimizerGoals.length > 0}
         onRun={runOptimizerSearch}
+        onCancel={cancelOptimizerSearch}
+        progress={optimizerProgress}
         stats={optimizerResult && optimizerResult.stats}
         note={
           optimizerResult && optimizerResult.cards.length

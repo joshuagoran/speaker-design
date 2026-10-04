@@ -15,6 +15,8 @@ interface Props {
     | "optimizerResult"
     | "isOptimizing"
     | "optimizerError"
+    | "optimizerProgress"
+    | "cancelOptimizerSearch"
     | "designPreview"
     | "undoSnapshot"
     | "toastMessage"
@@ -41,6 +43,8 @@ export function OptimizerControls({ planner }: Props) {
     optimizerResult,
     isOptimizing,
     optimizerError,
+    optimizerProgress,
+    cancelOptimizerSearch,
     designPreview,
     undoSnapshot,
     toastMessage,
@@ -72,6 +76,8 @@ export function OptimizerControls({ planner }: Props) {
           setOpt={updateOptimizerInput}
           run={startOptimizerSearch}
           busy={isOptimizing}
+          progress={optimizerProgress}
+          onCancel={cancelOptimizerSearch}
           res={optimizerResult}
           err={optimizerError}
           curOut={currentDesignOutput}
