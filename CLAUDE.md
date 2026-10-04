@@ -19,11 +19,14 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - Narrowest type, derived from an existing one (`Pick`, `Omit`, indexed access); never redeclare a shape, grep `src/types.ts` first.
 - Avoid `!`: fix the type at its source or use existing narrowing; a last-resort `!` carries a one-line reason.
 - No `any` (lint errors), no `@ts-ignore`, `@ts-expect-error` needs a reason; `as` only as `as const` or a commented boundary cast.
+- A string used once and not for logic may stay inline; any string compared in code or tests, or used in more than one place, is defined once (ids in `src/constants/`, label maps for display) and imported.
 
 ## Project conventions
 
 - Driver prices come from US vendors only; don't drop a driver because some specs are missing (mark the gap).
-- The parts catalogue (drivers, horns, waveguides, passive radiators, amps, makers, cabinets, racks, DSP units, plywood, driver cutouts) lives in `src/data/catalog/<kind>.ts` as typed pure data; adding a part is a data edit there, never in code (`src/lib/data.ts` only derives).
+- The parts catalogue (drivers, horns, waveguides, passive radiators, port tubes, amps, makers, cabinets, racks, DSP units, plywood, driver cutouts) lives in `src/data/catalog/<kind>.ts`, and the room acoustics tables (materials, air absorption) in `src/data/acoustics/`, as typed pure data; adding a part is a data edit there, never in code (`src/lib/data.ts` only derives).
+- UI text that names parts or defaults (Notes, racks, signal path) reads them from the catalogue and the defaults (`src/lib/defaults.ts`), never hardcoded.
+- Any change to an optimizer (PA or Hi-fi search, card selection, or the models they call) regenerates `tests/optimizer-dump.json` with `vp run optimizer-dump` on the merged main and commits it; the quick snapshot test (`tests/optimizer-snapshot.test.ts`) is updated in the same PR.
 - Don't push straight to `main` (it deploys via GitHub Actions). Before pushing a change, ask the user whether they want a PR or a direct push to `main`.
 
 ## Commits and PRs
