@@ -52,6 +52,7 @@ import { keysOf } from "../records";
 import { byId } from "../tables";
 import { selectCards } from "../optimizer/selectCards";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
+import { goalKeeps } from "../optimizer/goalKeeps";
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };
@@ -138,12 +139,7 @@ const obj: Record<HifiGoal, (x: HifiMetrics) => number> = {
 };
 // what each goal keeps from your design (as the PA optimizer: same output, F3 within a couple of Hz): the level it has
 // to reach and the F3 it can't pass
-const keeps = (cur: HifiMetrics): Record<HifiGoal, Keep> => ({
-  cheaper: { db: cur.level - 0.5, f3: cur.f3 + 2 },
-  lighter: { db: cur.level - 0.5, f3: cur.f3 + 2 },
-  lower: { db: cur.level - 1.5, f3: Infinity },
-  louder: { db: -Infinity, f3: cur.f3 + 3 },
-});
+const keeps = (cur: HifiMetrics): Record<HifiGoal, Keep> => goalKeeps(cur.level, cur.f3);
 const gapTo = (k: Keep, x: HifiMetrics) => keepGap(k, { db: x.level, f3: x.f3 });
 // warnings that rule a design out (the soft ones stay on the card)
 const HARD = new Set([

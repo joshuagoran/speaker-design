@@ -76,6 +76,7 @@ import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
 import { savedCrossoverOrder } from "../../constants/crossovers";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
+import { goalKeeps } from "../optimizer/goalKeeps";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -1055,12 +1056,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     louder: (x) => -x.out + 0.05 * x.ch + 0.5 * (x.w || 0),
   };
   // what each goal keeps from your design: the output it has to reach and the F3 it can't pass
-  const keep: Record<PaGoal, Keep> = {
-    cheaper: { db: target - 0.5, f3: curF3 + 2 },
-    lighter: { db: target - 0.5, f3: curF3 + 2 },
-    lower: { db: target - 1.5, f3: Infinity },
-    louder: { db: -Infinity, f3: curF3 + 3 },
-  };
+  const keep: Record<PaGoal, Keep> = goalKeeps(target, curF3);
   const goalGap = (g: PaGoal, x: Score) => keepGap(keep[g], { db: x.out, f3: x.f3 });
   const goalOk = (g: PaGoal, x: Score) => goalGap(g, x) === 0;
   // an alternative has to beat the first card on its own axis by a margin that matters

@@ -39,6 +39,7 @@ import {
 import { roundoverOnsetHz } from "../../lib/hifi/diffraction";
 import { formatInches } from "../../lib/format";
 import { HIFI_OPTIMIZER_GOALS } from "../../lib/hifi/optimize";
+import { HIFI_KEEP_WORDS } from "../../lib/optimizer/goalKeeps";
 import type { HifiPlanner } from "./useHifiPlanner";
 import type { Dims3 } from "../../types";
 import { entriesOf } from "../../lib/records";
@@ -200,6 +201,7 @@ export function HifiPage({ hifi }: Props) {
           defs={HIFI_OPTIMIZER_GOALS}
           selected={optimizerGoals}
           onTap={toggleOptimizerGoal}
+          keepWords={HIFI_KEEP_WORDS}
         />
       </div>
       <RunRow
