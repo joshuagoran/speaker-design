@@ -8,7 +8,16 @@ import {
   HIFI_WOOFERS,
   HIFI_PASSIVES,
 } from "../src/lib/data";
-import { ESTIMATE, comparableXmax, isGapFormula, xmaxBandOf, xmaxByFormula } from "../src/lib/xmax";
+import {
+  ESTIMATE,
+  HIFI_MAKERS,
+  comparableXmax,
+  isGapFormula,
+  xmaxBandOf,
+  xmaxByFormula,
+} from "../src/lib/xmax";
+import { MAKER_NAMES } from "../src/constants/makers";
+import { keysOf } from "../src/lib/records";
 import type { ThieleSmall } from "../src/types";
 import { close, tsModel } from "./helpers";
 
@@ -103,32 +112,35 @@ test("xmax: derived, converted and estimated bands", (t) => {
   // (31 − 15)/2 + 15/4
   close(
     t,
-    xmaxBandOf({ pub: { Xmax: 12, formula: "hg/4" }, Hvc: 31, Hg: 15 }, name).lo,
+    xmaxBandOf({ pub: { Xmax: 12, formula: "hg/4" }, Hvc: 31, Hg: 15 }, "bc", name).lo,
     11.75,
     1e-9,
   );
   // an Hg/4 figure is already on the scale; an Hg/3 one drops Hg/12
-  assert.deepEqual(xmaxBandOf({ pub: { Xmax: 12, formula: "hg/4" } }, name), {
+  assert.deepEqual(xmaxBandOf({ pub: { Xmax: 12, formula: "hg/4" } }, "bc", name), {
     basis: "converted",
     lo: 12,
     hi: 12,
   });
   close(
     t,
-    xmaxBandOf({ pub: { Xmax: 9.25, formula: "hg/3" }, Hg: 10.5 }, name).lo,
+    xmaxBandOf({ pub: { Xmax: 9.25, formula: "hg/3" }, Hg: 10.5 }, "bc", name).lo,
     9.25 - 10.5 / 12,
     1e-9,
   );
   // Hg/3 without the gap height can't be converted: a table error
-  assert.throws(() => xmaxBandOf({ pub: { Xmax: 9.25, formula: "hg/3" } }, name));
+  assert.throws(() => xmaxBandOf({ pub: { Xmax: 9.25, formula: "hg/3" } }, "bc", name));
   // Eminence: between its figure and the figure + Hg/4
-  assert.deepEqual(xmaxBandOf({ pub: { Xmax: 5, formula: "overhang-or-x10" }, Hg: 8 }, name), {
-    basis: "estimated",
-    lo: 5,
-    hi: 7,
-  });
-  const pro = xmaxBandOf({ pub: { Xmax: 10, formula: "unstated" } }, name),
-    hifi = xmaxBandOf({ pub: { Xmax: 10, formula: "unstated" } }, "Dayton Audio X");
+  assert.deepEqual(
+    xmaxBandOf({ pub: { Xmax: 5, formula: "overhang-or-x10" }, Hg: 8 }, "bc", name),
+    {
+      basis: "estimated",
+      lo: 5,
+      hi: 7,
+    },
+  );
+  const pro = xmaxBandOf({ pub: { Xmax: 10, formula: "unstated" } }, "bc", name),
+    hifi = xmaxBandOf({ pub: { Xmax: 10, formula: "unstated" } }, "dayton", name);
   assert.deepEqual(
     [pro.lo, pro.hi],
     ESTIMATE.XmaxPro.map((k) => k * 10),
@@ -137,5 +149,27 @@ test("xmax: derived, converted and estimated bands", (t) => {
     [hifi.lo, hifi.hi],
     ESTIMATE.XmaxHifi.map((k) => k * 10),
   );
-  assert.throws(() => xmaxBandOf({ pub: { Xmax: null, formula: "unstated" } }, name));
+  assert.throws(() => xmaxBandOf({ pub: { Xmax: null, formula: "unstated" } }, "bc", name));
+});
+
+test("xmax: the maker id, not the driver's name, picks the hi-fi estimate band", () => {
+  const ts = { pub: { Xmax: 10, formula: "unstated" } } as const;
+  // a pro maker's driver named like a hi-fi one stays pro, and the other way round
+  assert.deepEqual(xmaxBandOf(ts, "sbAudience", "SB Acoustics X"), xmaxBandOf(ts, "bc", "X"));
+  assert.deepEqual(xmaxBandOf(ts, "sbAcoustics", "SB Audience X"), xmaxBandOf(ts, "dayton", "X"));
+  for (const m of keysOf(MAKER_NAMES)) {
+    const band = xmaxBandOf(ts, m, "X");
+    assert.deepEqual(
+      [band.lo, band.hi],
+      (HIFI_MAKERS.has(m) ? ESTIMATE.XmaxHifi : ESTIMATE.XmaxPro).map((k) => k * 10),
+      m,
+    );
+  }
+  // every table row with an estimated Xmax got its band from its maker
+  for (const d of [...SUB_OPTIONS, ...MID_OPTIONS, ...FILL_OPTIONS, ...HIFI_WOOFERS]) {
+    const { pub, xmax } = d.ts;
+    if (xmax.basis !== "estimated" || pub.Xmax == null || pub.formula !== "unstated") continue;
+    const k = HIFI_MAKERS.has(d.maker) ? ESTIMATE.XmaxHifi : ESTIMATE.XmaxPro;
+    assert.deepEqual([xmax.lo, xmax.hi], [k[0] * pub.Xmax, k[1] * pub.Xmax], d.id);
+  }
 });

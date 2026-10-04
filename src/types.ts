@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
+import type { MAKER_NAMES } from "./constants/makers";
 
 // Shapes of the driver, horn, cabinet and fill tables in lib/data.ts.
 //
@@ -121,10 +122,15 @@ export interface HifiWooferTS extends ThieleSmall {
 
 // ---- PA stack ----
 
+/** A driver maker's id (`MAKER_NAMES` holds its name). */
+export type MakerId = keyof typeof MAKER_NAMES;
+
 export interface SubDriver {
   id: string;
   lb: number;
   name: string;
+  /** who makes it (`MAKER_NAMES`): code reads this, never the start of `name` */
+  maker: MakerId;
   price: number;
   src: string;
   size: SubSize;
@@ -137,6 +143,8 @@ export interface MidDriver {
   size: MidSize;
   lb: number;
   name: string;
+  /** who makes it (`MAKER_NAMES`): code reads this, never the start of `name` */
+  maker: MakerId;
   price: number | null;
   src: string;
   ts: ThieleSmall;
@@ -272,6 +280,8 @@ export interface FillDriver {
   size: number;
   lb: number;
   name: string;
+  /** who makes it (`MAKER_NAMES`): code reads this, never the start of `name` */
+  maker: MakerId;
   price: number | null;
   src: string;
   ts: ThieleSmall;
@@ -288,6 +298,8 @@ export interface HifiWoofer {
   size: number;
   lb: number;
   name: string;
+  /** who makes it (`MAKER_NAMES`): code reads this, never the start of `name` */
+  maker: MakerId;
   price: number;
   src: string;
   ts: HifiWooferTS;
@@ -347,6 +359,8 @@ export type HifiTweeterRaw = Omit<HifiTweeter, "faceplate" | "domeIn"> & {
 export interface PassiveRadiator {
   id: string;
   name: string;
+  /** who makes it (`MAKER_NAMES`): code reads this, never the start of `name` */
+  maker: MakerId;
   size: number;
   Sd: number;
   Mms: number;

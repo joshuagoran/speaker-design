@@ -11,6 +11,7 @@
 //   estimated  from the maker's figure times the ESTIMATE band, centre in the middle.
 import type {
   GapFormula,
+  MakerId,
   PassiveRadiator,
   PublishedExcursion,
   RawTS,
@@ -58,16 +59,15 @@ export const ESTIMATE: Record<
 };
 
 /** Makers whose published Xmax is estimated with the hi-fi band when no heights are known. */
-export const HIFI_MAKERS = [
-  "Dayton Audio",
-  "Peerless",
-  "Fostex",
-  "Scan-Speak",
-  "SB Acoustics",
-  "Seas",
-  "Purifi",
-];
-const isHifiMaker = (name: string) => HIFI_MAKERS.some((m) => name.startsWith(m));
+export const HIFI_MAKERS: ReadonlySet<MakerId> = new Set<MakerId>([
+  "dayton",
+  "peerless",
+  "fostex",
+  "scanSpeak",
+  "sbAcoustics",
+  "seas",
+  "purifi",
+]);
 
 const exact = (mm: number, basis: XmaxBand["basis"]): XmaxBand => ({ basis, lo: mm, hi: mm });
 const estimate = (mm: number, [lo, hi]: readonly [number, number]): XmaxBand => ({
@@ -77,11 +77,12 @@ const estimate = (mm: number, [lo, hi]: readonly [number, number]): XmaxBand => 
 });
 
 /**
- * The comparable Xmax band from the published figures. `who` is the driver's name: its maker picks the estimate band.
- * Throws on a table row that gives no figure.
+ * The comparable Xmax band from the published figures. `maker` picks the estimate band; `who` is the driver's name, for
+ * the errors. Throws on a table row that gives no figure.
  */
 export function xmaxBandOf(
   ts: { pub: PublishedExcursion; Hvc?: number; Hg?: number },
+  maker: MakerId,
   who: string,
 ): XmaxBand {
   const { pub, Hvc, Hg } = ts;
@@ -100,7 +101,7 @@ export function xmaxBandOf(
     return { basis: "estimated", lo: pub.Xmax, hi: pub.Xmax + SCALE_SHARE * Hg };
   }
   if (pub.Xmax != null)
-    return estimate(pub.Xmax, isHifiMaker(who) ? ESTIMATE.XmaxHifi : ESTIMATE.XmaxPro);
+    return estimate(pub.Xmax, HIFI_MAKERS.has(maker) ? ESTIMATE.XmaxHifi : ESTIMATE.XmaxPro);
   if (pub.Xvar != null) return estimate(pub.Xvar, ESTIMATE.Xvar);
   if (pub.travelPP != null) return estimate(pub.travelPP, ESTIMATE.travelPP);
   throw new Error(`${who}: no excursion figure`);
@@ -109,12 +110,13 @@ export function xmaxBandOf(
 /** The band's centre, the value the models use. */
 export const centreOf = (b: Pick<XmaxBand, "lo" | "hi">) => (b.lo + b.hi) / 2;
 
-/** A table's Thiele-Small block with the comparable `Xmax` and its band added. */
+/** A table's Thiele-Small block with the comparable `Xmax` and its band added; `maker` and `who` as for `xmaxBandOf`. */
 export function withXmax<T extends RawTS<ThieleSmall>>(
   ts: T,
+  maker: MakerId,
   who: string,
 ): T & Pick<ThieleSmall, "Xmax" | "xmax"> {
-  const xmax = xmaxBandOf(ts, who);
+  const xmax = xmaxBandOf(ts, maker, who);
   return { ...ts, Xmax: centreOf(xmax), xmax };
 }
 
