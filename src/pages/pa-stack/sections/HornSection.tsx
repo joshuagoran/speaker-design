@@ -100,6 +100,7 @@ export function HornSection({ planner }: Props) {
                   step={30}
                   H={220}
                   yLabel="horizontal beamwidth, °"
+                  unit="°"
                   series={[
                     ...(beamCurves.midB.length
                       ? [

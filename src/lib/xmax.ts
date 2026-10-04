@@ -185,14 +185,15 @@ export function xmaxRows(
         : xmax.basis === "published"
           ? "as published"
           : `estimate ${xmax.lo.toFixed(1)}–${xmax.hi.toFixed(1)}`;
+  // the maker's own figure, named when it is not an Xmax
   const [kind, value] =
     pub.Xmax != null
-      ? ["Xmax", pub.Xmax]
+      ? ["", pub.Xmax]
       : pub.Xvar != null
-        ? ["Xvar", pub.Xvar]
+        ? ["Xvar ", pub.Xvar]
         : pub.travelPP != null
-          ? ["travel p-p", pub.travelPP]
-          : ["Xlim", pub.Xlim];
+          ? ["travel p-p ", pub.travelPP]
+          : ["Xlim ", pub.Xlim];
   return [
     [
       "Xmax (comparable)",
@@ -202,8 +203,8 @@ export function xmaxRows(
     ],
     [
       "Xmax (maker)",
-      value != null ? `${kind === "Xmax" ? "" : kind + " "}${mm(value)} mm` : "—",
-      kind === "Xmax" ? FORMULA_LABEL[pub.formula] : "no Xmax published",
+      value != null ? `${kind}${mm(value)} mm` : "—",
+      pub.Xmax != null ? FORMULA_LABEL[pub.formula] : "no Xmax published",
       `As the maker publishes it: ${publishedText(pub) || "nothing"}.${pub.src ? ` Source: ${new URL(pub.src).hostname}.` : ""}`,
     ],
   ];

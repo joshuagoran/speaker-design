@@ -34,6 +34,8 @@ interface Props {
   /** gridline spacing on the y axis */
   step?: number;
   yLabel?: string;
+  /** what the hover readout puts after each value: " dB", or "°" on a beamwidth chart */
+  unit?: string;
   /** height in px */
   H?: number;
 }
@@ -49,6 +51,7 @@ export function ResponseChart({
   bot = 80,
   step = 5,
   yLabel = "max dB SPL @ 1 m",
+  unit = " dB",
   H = 300,
 }: Props) {
   // drawn in real pixels so text stays 11 px at any width
@@ -125,7 +128,6 @@ export function ResponseChart({
       X = ((e.clientX - r.left) / r.width) * W;
     setHf(X >= x0 && X <= x1 ? fmin * Math.pow(fmax / fmin, (X - x0) / (x1 - x0)) : null);
   };
-  const unit = yLabel.includes("°") ? "°" : " dB";
   const hits = hf
     ? (paths
         .map((p) => {
