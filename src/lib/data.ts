@@ -3,6 +3,14 @@
 // starting parts. Plain data, no React. Dimensions in inches (outer). Verify every driver spec and price against the
 // vendor before ordering.
 import type {
+  AmpId,
+  AmpModel,
+  AmpSeries,
+  DspUnit,
+  DspUnitId,
+  RackItem,
+  PriceRange,
+  RackView,
   CabinetFinish,
   CompressionDriver,
   FillDriver,
@@ -31,16 +39,21 @@ import { HORN_RAW } from "../data/catalog/horns";
 import { BC15NDL76_RAW, F12PR300_RAW, MID_RAW } from "../data/catalog/mids";
 import { BC18NBX_RAW, SUB_RAW } from "../data/catalog/subs";
 import { passiveWithXmax, withXmax } from "./xmax";
+import { AMP_SERIES } from "../data/catalog/amps";
+import { DSP_UNITS } from "../data/catalog/dsp-units";
+import { MAINS_RACK, RACKS as RACK_TABLE } from "../data/catalog/racks";
+import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
+import { byIdOrThrow } from "./tables";
 
 // Tables the app reads as written.
 export { CABINETS } from "../data/catalog/cabinets";
 export { N314T } from "../data/catalog/compression-drivers";
-export { DSP_UNITS } from "../data/catalog/dsp-units";
+export { DSP_UNITS };
 export { CABINET_FINISHES, PAINT_SWATCHES } from "../data/catalog/finishes";
 export { FORMATS } from "../data/catalog/formats";
 export { A460G2_14, ST260, ST260_PROFILE } from "../data/catalog/horns";
 export { B15, B18, MID_BOXES } from "../data/catalog/mid-boxes";
-export { RACKS } from "../data/catalog/racks";
+export { HORN_AMP_SAFETY_HPF_HZ } from "../data/catalog/racks";
 
 // Every driver table holds the maker's excursion figures; this adds the comparable Xmax the models read.
 const withTsXmax = <D extends { name: string; maker: MakerId; ts: RawTS<ThieleSmall> }>(d: D) => ({
@@ -123,3 +136,65 @@ export const ownGuideCfg = (
   t && t.ownGuide ? { ...t.ownGuide, freestanding: false } : null;
 export const passiveRadiatorMassMax = (p: PassiveRadiator): number =>
   Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
+
+// ---- Racks: a line that names a catalogue part takes that part's name (and, for an amp, its rating and price) ----
+
+/** An amp by id, with its series (for the brand). */
+export function ampById(id: AmpId): { series: AmpSeries; model: AmpModel } {
+  for (const series of AMP_SERIES)
+    for (const model of series.models) if (model.id === id) return { series, model };
+  throw new Error(`${CATALOG_TABLE_NAMES.amps}: no entry with id "${id}"`);
+}
+
+/** A DSP unit by id. */
+export const dspUnitById = (id: DspUnitId): DspUnit =>
+  byIdOrThrow(DSP_UNITS, id, CATALOG_TABLE_NAMES.dspUnits);
+
+/** A single price as a range. */
+const exactly = (price: number): PriceRange => ({ lo: price, hi: price });
+
+/** A rack line's words and price. */
+function rackLine(item: RackItem): RackView["items"][number] {
+  if ("amp" in item) {
+    const { series, model } = ampById(item.amp);
+    const what = [item.use, item.rating && `${model.w8} W/ch at 8 Ω`, item.note].filter(Boolean);
+    return {
+      label: `${series.brand} ${model.model} (used) — ${what.join(", ")}`,
+      price: exactly(model.usedPrice),
+    };
+  }
+  if ("dsp" in item) {
+    const unit = dspUnitById(item.dsp);
+    // the id's type admits only priced units; this guards a catalogue edit that drops the price
+    if (!unit.usedPrice)
+      throw new Error(`${CATALOG_TABLE_NAMES.dspUnits}: ${item.dsp} has no used price`);
+    return { label: `${unit.row.unit} (used) — ${item.note}`, price: unit.usedPrice };
+  }
+  const [label, price] = item;
+  return { label, price: exactly(price) };
+}
+
+/** A price range in dollars: $300–400, or $300 when it is one price. */
+export const formatPriceRange = ({ lo, hi }: PriceRange): string =>
+  lo === hi ? `$${lo.toLocaleString()}` : `$${lo.toLocaleString()}–${hi.toLocaleString()}`;
+
+/** A rack's total, low to high: the sum of its lines' ranges. */
+export const rackTotal = (r: RackView): PriceRange =>
+  r.items.reduce((t, i) => ({ lo: t.lo + i.price.lo, hi: t.hi + i.price.hi }), exactly(0));
+
+/** The racks with every line in words. */
+export const RACKS: readonly RackView[] = RACK_TABLE.map((r) => ({
+  ...r,
+  items: r.items.map(rackLine),
+}));
+
+/** The DSP units the racks use: the Notes table marks them "(current)". */
+export const RACK_DSP_IDS: ReadonlySet<DspUnitId> = new Set(
+  RACK_TABLE.flatMap((r) => r.items.flatMap((i) => ("dsp" in i ? [i.dsp] : []))),
+);
+
+/** The mains rack's processor, as the signal-path drawing names it. */
+export function mainsDsp(): DspUnit {
+  for (const i of MAINS_RACK.items) if ("dsp" in i) return dspUnitById(i.dsp);
+  throw new Error("racks: the mains rack lists no DSP unit");
+}

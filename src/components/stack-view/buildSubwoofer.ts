@@ -4,6 +4,7 @@ import { buildCabinet } from "./buildCabinet";
 import { buildCone } from "./buildCone";
 import { towerBaffleHoles, buildTowerPartitions } from "./towerParts";
 import { towerSpec } from "./stackHeights";
+import { isRoundPort } from "../../lib/pa/calc";
 import type { SceneContext } from "./sceneContext";
 import type { Props } from "./buildStackScene";
 import type { Dims3, Horn, MidDriver, PortStyle, SubDriver } from "../../types";
@@ -52,7 +53,7 @@ export function buildSubwoofer(
     innerW = s.w - 2 * T,
     ductW = (innerW - 2 * T) / 3;
   const drvR = sub.size / 2 - 0.9;
-  const round = !["slots", "folded", "vslots", "vslot1"].includes(portStyle); // round-tube ports only
+  const round = isRoundPort(portStyle); // round-tube ports only
   const corners = portStyle === "round4";
   const nPorts = pg.nPorts != null ? pg.nPorts : portStyle === "round1" ? 1 : corners ? 4 : 2;
   const portR =

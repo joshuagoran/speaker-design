@@ -1,5 +1,6 @@
 import { SectionHeading } from "../../../components/ui/SectionHeading";
 import type { PaPlanner } from "../hooks/usePaPlanner";
+import { FONT } from "../../../styles/fonts";
 
 interface Props {
   planner: Pick<
@@ -49,7 +50,7 @@ export function DetailsSection({ planner }: Props) {
   } = planner;
   return (
     <>
-      <div className="min-w-0 md:col-span-5 mt-4" style={{ fontFamily: "var(--font)" }}>
+      <div className="min-w-0 md:col-span-5 mt-4" style={{ fontFamily: FONT }}>
         <button
           onClick={() => setShowDetails((v) => !v)}
           aria-expanded={showDetails}
@@ -61,7 +62,7 @@ export function DetailsSection({ planner }: Props) {
       {showDetails && (
         <section
           className="min-w-0 md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6"
-          style={{ fontFamily: "var(--font)" }}
+          style={{ fontFamily: FONT }}
         >
           <div>
             <SectionHeading className="mb-2">Sub</SectionHeading>

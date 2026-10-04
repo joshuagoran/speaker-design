@@ -27,6 +27,7 @@ import type {
   Setter,
 } from "../../types";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 
 /** Everything the Hi-fi page reads: the design state and its setters, the model derived from it, the optimizer, and saving. */
 export interface HifiPlanner extends HifiDesignState, HifiDesign, HifiOptimizer {
@@ -153,8 +154,8 @@ export function useHifiPlanner(): HifiPlanner {
     );
   const applyDesign = (c: HifiCardConfig) => {
     // a card's or snapshot's driver ids come from these lists
-    setWoofer(byIdOrThrow(HIFI_WOOFERS, c.woofer, "hi-fi woofers"));
-    setTweeter(byIdOrThrow(HIFI_TWEETERS, c.tweeter, "hi-fi tweeters"));
+    setWoofer(byIdOrThrow(HIFI_WOOFERS, c.woofer, CATALOG_TABLE_NAMES.hifiWoofers));
+    setTweeter(byIdOrThrow(HIFI_TWEETERS, c.tweeter, CATALOG_TABLE_NAMES.hifiTweeters));
     setBoxType(c.box);
     setBoxDims(c.dim);
     if (c.port) setPortSpec(c.port);

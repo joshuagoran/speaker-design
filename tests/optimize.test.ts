@@ -10,11 +10,14 @@ import {
   SUB_BAND_HZ,
   AMP_WATTS_MAX,
   ventSizesFor,
+  PA_REACH_WORDS,
 } from "../src/lib/pa/optimize";
 import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc";
 import { KEEP_UP_SLACK_DB } from "../src/lib/pa/chips";
 import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data";
+import { CHANGE_NAMES, OUT_OF_REACH_LEAD } from "../src/constants/optimizerText";
 import type {
+  ChipId,
   Dims3,
   PaDesignConfig,
   PaGoal,
@@ -25,6 +28,7 @@ import type {
   PaOptimizerResult,
 } from "../src/types";
 import { close } from "./helpers";
+import { SEED_NAMES } from "./seeds";
 
 // boundary: the seed file is saved configurations (older ones lack mDim; all carry ampW), and golden.json holds the numbers checked below
 const seeds = JSON.parse(
@@ -58,11 +62,21 @@ const pick = (name: string): Picked => {
     ...c,
   };
 };
-const cur = pick("lil block stack LE (optimized)");
+/** The design fails on this check: it warns or fails, and the optimizer counts it as a problem. */
+const failsOn = (
+  m: ReturnType<typeof evaluateDesign>,
+  lim: { maxLb: number; budget: number },
+  id: ChipId<"sub" | "mid" | "horn">,
+) =>
+  !!m &&
+  [...m.chips.sub, ...m.chips.mid, ...m.chips.horn].some(([kind, h, , i]) => {
+    return i === id && kind !== "ok" && designProblems(m, lim).includes(h);
+  });
+const cur = pick(SEED_NAMES.lilBlockOptimized);
 const base: PaOptimizerInput = { cur, room: 1000, maxLb: 125, budget: 1100, locks: {} };
 
 test("evaluate() gives the planner's numbers (golden snapshot)", (t) => {
-  for (const name of ["lil block stack LE (optimized)", "blocky", "lil tower"]) {
+  for (const name of [SEED_NAMES.lilBlockOptimized, SEED_NAMES.blocky, SEED_NAMES.lilTower]) {
     // the seeds carry the crossovers and amps now; the type keeps them optional, as older saves lack them
     const m = evaluateDesign(pick(name) as PaDesignConfig)!,
       g = golden[name];
@@ -129,37 +143,24 @@ for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
 test("every card's label is true against the current design", (t) => {
   // (also run with a current design that fails: over budget, so the fix card appears)
   runs.failing = optimizePaStack({ ...base, budget: 850, goal: "cheaper" });
-  const goalName: Record<string, string> = {
-    cheaper: "Same output, cheaper",
-    lighter: "Same output, lighter",
-    lower: "Go lower",
-    louder: "Louder",
-  };
   for (const goal of ["cheaper", "lighter", "lower", "louder", "failing"] as const) {
     // "failing" is always in `runs` (set above), so the fallback only ever gets a real goal
     const out = runs[goal] || optimizePaStack({ ...base, goal: goal as PaGoal }),
       c = out.curM!;
     for (const k of out.cards) {
       const m = k.metrics;
-      if (k.label === "Fixes your design") {
+      if (k.slot.kind === "fix" || k.slot.kind === "closest") {
         assert.ok(out.curProblems.length > 0, "only when the current design fails a check");
         continue;
       }
-      const beat: Record<string, boolean> = {
+      const beat: Record<PaGoal, boolean> = {
         cheaper: m.price < c.price,
         lighter: m.heaviest <= c.heaviest - 3,
         louder: m.out >= c.out + 1,
         lower: m.f3 <= c.f3 - 2,
       };
-      const labelAxis: Record<string, string> = {
-        Cheaper: "cheaper",
-        Lighter: "lighter",
-        Louder: "louder",
-        "Goes lower": "lower",
-        "Smallest change": goal === "failing" ? "cheaper" : goal,
-      };
-      const axis =
-        labelAxis[k.label] || Object.keys(goalName).find((g) => k.label === goalName[g])!;
+      // an alternative is held to its own goal; the first card and the smallest change to the primary goal
+      const axis = k.slot.kind === "alt" ? k.slot.axis : out.goals[0];
       assert.ok(beat[axis], `${goal}: "${k.label}" doesn't beat the current design on ${axis}`);
     }
     if (!out.cards.length || out.goalMissing) continue;
@@ -222,7 +223,7 @@ test("amps: unlocked amps stay within the sliders; locked amps stay; same-output
 });
 
 test("all three sub dimensions exact: tunes that one box (sub locked)", (t) => {
-  const c = { ...pick("light block"), horn: "a460g2_14" };
+  const c = { ...pick(SEED_NAMES.lightBlock), horn: "a460g2_14" };
   const out = optimizePaStack({
     ...base,
     cur: c,
@@ -264,7 +265,12 @@ test("Lighter with everything locked but the plywood offers the same design on 1
     hfAmpW: 100,
   } as const;
   let tried = 0;
-  for (const name of ["lil block stack LE", "blocky", "light block", "lil tower"]) {
+  for (const name of [
+    SEED_NAMES.lilBlock,
+    SEED_NAMES.blocky,
+    SEED_NAMES.lightBlock,
+    SEED_NAMES.lilTower,
+  ]) {
     const c0 = { ...defaults, ...pick(name) };
     const c = { ...c0, horn: c0.cd === "n314t" && c0.horn === "a460g2" ? "a460g2_14" : c0.horn };
     if (designProblems(evaluateDesign(c), { maxLb: 150, budget: 2000 }).length) continue; // locked as it is, it can't pass anyway
@@ -303,9 +309,11 @@ test("Lighter with everything locked but the plywood offers the same design on 1
 });
 
 test("Lighter with free choices still shows the plywood-only change when it beats the current design", (t) => {
-  const c = { ...pick("light block"), xoLo: 120, xoHi: 900, mAmpW: 400, hfAmpW: 100 };
+  const c = { ...pick(SEED_NAMES.lightBlock), xoLo: 120, xoHi: 900, mAmpW: 400, hfAmpW: 100 };
   const out = optimizePaStack({ ...base, cur: c, maxLb: 150, budget: 2000, goal: "lighter" });
-  const small = out.cards.find((k) => k.config.wall !== c.wall && k.changed.join() === "plywood");
+  const small = out.cards.find(
+    (k) => k.config.wall !== c.wall && k.changed.join() === CHANGE_NAMES.plywood,
+  );
   assert.ok(
     small || out.cards.some((k) => k.config.wall === 0.5),
     out.cards.map((k) => `${k.label}: ${k.changed.join("/")}`).join(" | "),
@@ -335,7 +343,7 @@ test("stacked goals: the main card beats the current design on every goal; the f
   ] as const) {
     const out = optimizePaStack({ ...base, goals });
     assert.deepEqual(out.goals, goals);
-    const main = out.cards.find((k) => k.label.includes(" + "));
+    const main = out.cards.find((k) => k.slot.kind === "first");
     if (!main) {
       assert.ok(
         out.goalMissing || out.curProblems.length,
@@ -352,7 +360,7 @@ test("stacked goals: the main card beats the current design on every goal; the f
   }
   const a = optimizePaStack({ ...base, goals: ["cheaper", "lighter"] }).cards[0],
     b = optimizePaStack({ ...base, goals: ["lighter", "cheaper"] }).cards[0];
-  if (a && b && a.label.includes("+") && b.label.includes("+"))
+  if (a && b && a.slot.kind === "first" && b.slot.kind === "first")
     assert.ok(
       a.metrics.price <= b.metrics.price + 1e-9 && b.metrics.heaviest <= a.metrics.heaviest + 1e-9,
     );
@@ -379,7 +387,7 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
     xoHiOrder: 4 as const,
     mAmpW: 400,
     hfAmpW: 100,
-    ...pick("light block"),
+    ...pick(SEED_NAMES.lightBlock),
     ampW: 200,
   }; // a small amp: the sub is amp-limited
   assert.equal(evaluateDesign(c)!.who, "amp");
@@ -424,7 +432,7 @@ test("vent locked on a round1 or round4 style searches that style's tubes instea
     xoHi: 900,
     mAmpW: 400,
     hfAmpW: 100,
-    ...pick("light block"),
+    ...pick(SEED_NAMES.lightBlock),
     portStyle: "round1" as const,
     cVent: { slotH: 3, nt: 1, dia: 5, throat: 3, len: 12 },
   };
@@ -445,7 +453,7 @@ test("vent locked on a round1 or round4 style searches that style's tubes instea
 
 test("evaluate() rejects a config missing a number it needs, and every seed completes to finite metrics", () => {
   // boundary: `Picked` types the defaulted fields as optional; a seed carries them all
-  const full = { ...pick("blocky") } as PaDesignConfig;
+  const full = { ...pick(SEED_NAMES.blocky) } as PaDesignConfig;
   const m = evaluateDesign(full);
   assert.ok(m, "a complete design evaluates");
   for (const [k, v] of Object.entries(m))
@@ -516,28 +524,32 @@ test("a failing design with nothing in reach: the closest design that passes, an
   assert.ok(out.curProblems.length > 0, "the current design fails a check");
   const k = out.cards[0];
   assert.ok(k, "a card is shown");
-  assert.equal(k.label, "Fixes your design");
+  assert.equal(k.slot.kind, "closest");
   assert.deepEqual(
     designProblems(evaluateDesign(k.config)!, { maxLb: base.maxLb, budget: 700 }),
     [],
   );
   assert.ok(k.metrics.out < out.target - 0.5, "it misses the target");
   const note = out.goalMissing ?? "";
-  assert.match(note, /^Out of reach within the checks: .*dB of output/);
+  assert.ok(note.startsWith(OUT_OF_REACH_LEAD), note);
+  assert.ok(note.includes(`dB ${PA_REACH_WORDS.level}`), note);
   assert.ok(note.includes(`${k.metrics.out.toFixed(1)} dB`), note);
 });
 
 test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
   // over an $800 budget nothing that passes keeps the output; $880 does
   const out = optimizePaStack({ ...base, budget: 800, goal: "cheaper" });
-  assert.match(out.goalMissing ?? "", /^Out of reach/);
+  assert.ok((out.goalMissing ?? "").startsWith(OUT_OF_REACH_LEAD), out.goalMissing ?? "no notice");
   assert.ok(out.cards.length > 0);
-  const opts = out.nearMiss ? out.nearMiss.options.map((o) => o.text) : [];
-  assert.ok(opts.includes("Budget +$80"), JSON.stringify(opts));
+  const opts = out.nearMiss ? out.nearMiss.options : [];
+  assert.ok(
+    opts.some((o) => o.set.budget === 880),
+    JSON.stringify(opts.map((o) => o.text)),
+  );
 });
 
 test("Cheaper swaps the compression driver when a cheaper one keeps up", () => {
-  const out = optimizePaStack({ ...base, cur: pick("light block"), goal: "cheaper" });
+  const out = optimizePaStack({ ...base, cur: pick(SEED_NAMES.lightBlock), goal: "cheaper" });
   const k = out.cards[0];
   assert.ok(k, "a card");
   assert.equal(k.config.cd, "hf143n", `kept ${k.config.cd} at $${Math.round(k.metrics.price)}`);
@@ -559,7 +571,7 @@ test("Cheaper: fewest warnings, then strictly the cheapest, with weight breaking
 test("a horn that keeps up only below full mid power turns the mid down instead of ruling the design out", () => {
   // a 20 W HF amp, locked with its driver and horn, and every band asked to match the one below flat out: the cheapest
   // mids at the full 2000 W outrun it
-  const c = { ...pick("light block"), tilt: 0, hfTilt: 0, hfAmpW: 20 },
+  const c = { ...pick(SEED_NAMES.lightBlock), tilt: 0, hfTilt: 0, hfAmpW: 20 },
     lim = { maxLb: base.maxLb, budget: base.budget };
   const out = optimizePaStack({
     ...base,
@@ -568,13 +580,11 @@ test("a horn that keeps up only below full mid power turns the mid down instead 
     locks: { cd: true, horn: true, hfAmpW: true },
   });
   const k = out.cards[0];
-  assert.ok(k && k.label === "Same output, cheaper", out.goalMissing ?? "no card");
+  assert.ok(k && k.slot.kind === "first", out.goalMissing ?? "no card");
   assert.deepEqual(designProblems(evaluateDesign(k.config), lim), [], "the card passes as it is");
   assert.ok(k.metrics.out >= out.target - 0.5, "and keeps the target");
   assert.ok(
-    designProblems(evaluateDesign({ ...k.config, mAmpW: AMP_WATTS_MAX.mAmpW }), lim).includes(
-      "Horn runs out first",
-    ),
+    failsOn(evaluateDesign({ ...k.config, mAmpW: AMP_WATTS_MAX.mAmpW }), lim, "hornKeepsUp"),
     "at full mid power the horn would run out first",
   );
 });
@@ -582,18 +592,16 @@ test("a horn that keeps up only below full mid power turns the mid down instead 
 test("a mid that keeps up only below full sub power turns the sub down instead of ruling the design out", () => {
   // a 150 W mid amp, locked, asked to match the sub flat out: the subs that go lowest outrun it at full power (the
   // search used to stop at 41.7 Hz; turned down to where the mid keeps up, a 4018 reaches 36 Hz)
-  const c = { ...pick("light block"), tilt: 0, mAmpW: 150 },
+  const c = { ...pick(SEED_NAMES.lightBlock), tilt: 0, mAmpW: 150 },
     lim = { maxLb: base.maxLb, budget: base.budget };
   const out = optimizePaStack({ ...base, cur: c, goals: ["lower"], locks: { mAmpW: true } });
   const k = out.cards[0];
-  assert.ok(k && k.label === "Go lower", out.goalMissing ?? "no card");
+  assert.ok(k && k.slot.kind === "first", out.goalMissing ?? "no card");
   assert.deepEqual(designProblems(evaluateDesign(k.config), lim), [], "the card passes as it is");
   assert.ok(k.metrics.out >= out.target - 1.5, "and keeps the output");
   assert.ok(k.metrics.f3 < 38, `F3 ${k.metrics.f3.toFixed(1)} Hz`);
   assert.ok(
-    designProblems(evaluateDesign({ ...k.config, ampW: AMP_WATTS_MAX.ampW }), lim).includes(
-      "Mid runs out first",
-    ),
+    failsOn(evaluateDesign({ ...k.config, ampW: AMP_WATTS_MAX.ampW }), lim, "midKeepsUp"),
     "at full sub power the mid would run out first",
   );
 });
@@ -616,7 +624,7 @@ test("the mids are chosen with the horn in view: a dearer mid the horn keeps up 
   // cheapest and lightest mid that keeps the target at full power outruns every horn and comes down below it; the
   // search used to try only that one (and the loudest), and offered only a heavier fix. A mid $11 dearer that the horn
   // keeps up with keeps the target in a box lighter than the design's.
-  const c = { ...pick("blocky"), tilt: 0, hfTilt: 0, hfAmpW: 20 },
+  const c = { ...pick(SEED_NAMES.blocky), tilt: 0, hfTilt: 0, hfAmpW: 20 },
     lim = { maxLb: base.maxLb, budget: base.budget };
   const out = optimizePaStack({ ...base, cur: c, goals: ["lighter"], locks: { hfAmpW: true } });
   const k = out.cards[0];

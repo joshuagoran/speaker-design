@@ -11,6 +11,7 @@ import {
 import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
 import { chipOf } from "./helpers";
+import { DESIGN_PROBLEM_TEXT } from "../src/constants/optimizerText";
 import type { HifiGoal, HifiMetrics, HifiOptimizerCurrent, HifiOptimizerLocks } from "../src/types";
 
 const cur: HifiOptimizerCurrent = {
@@ -37,15 +38,6 @@ const beat: Record<HifiGoal, (m: HifiMetrics, c: HifiMetrics) => boolean> = {
   lower: (m, c) => m.f3 <= c.f3 - 2,
   louder: (m, c) => m.level >= c.level + 1,
 };
-const axisOf: Record<string, HifiGoal> = {
-  "Same level, cheaper": "cheaper",
-  "Same level, lighter": "lighter",
-  "Go lower": "lower",
-  Cheaper: "cheaper",
-  Lighter: "lighter",
-  Lower: "lower",
-  Louder: "louder",
-};
 
 test("every driver in the hi-fi list can be modelled", (t) => {
   const tw = HIFI_TWEETERS.find((o) => o.id === "sb26stcn")!;
@@ -66,8 +58,8 @@ for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
         sys = hifiSystem(w, tw, c)!;
       assert.deepEqual(hifiDesignProblems(sys, hifiChips(sys, w, tw, c)), [], k.label);
       assert.ok(k.metrics.price <= base.budget, "within budget");
-      if (k.label === "Fixes your design") continue;
-      const axis = axisOf[k.label] || goal; // "Smallest change" is held to the goal
+      if (k.slot.kind === "fix" || k.slot.kind === "closest") continue;
+      const axis = k.slot.kind === "alt" ? k.slot.axis : goal; // the first card and the smallest change are held to the goal
       assert.ok(beat[axis](k.metrics, out.cur!), `${k.label} beats the current design on ${axis}`);
     }
   });
@@ -222,9 +214,9 @@ test("hi-fi optimizer: a driver that is in no table gives an explicit empty resu
   });
   assert.equal(out.cards.length, 0);
   assert.equal(out.cur, null);
-  assert.ok(out.curProblems && out.curProblems[0].includes("woofer"), String(out.curProblems));
+  assert.deepEqual(out.curProblems, [DESIGN_PROBLEM_TEXT.missingWoofer]);
   const t = optimizeHifiSpeaker({ ...base, cur: { ...cur, tweeter: "nope" }, goals: ["cheaper"] });
-  assert.ok(t.curProblems && t.curProblems[0].includes("tweeter"));
+  assert.deepEqual(t.curProblems, [DESIGN_PROBLEM_TEXT.missingTweeter]);
 });
 
 test("hi-fi optimizer: a handed-over radiator not in `passives` is looked up in the full table; an unknown one is reported", () => {
@@ -253,7 +245,7 @@ test("hi-fi optimizer: a handed-over radiator not in `passives` is looked up in 
     passives: HIFI_PASSIVES,
   });
   assert.equal(unknown.cur, null, "no comparison against a design with its radiator dropped");
-  assert.ok(unknown.curProblems && unknown.curProblems[0].includes("radiator"));
+  assert.deepEqual(unknown.curProblems, [DESIGN_PROBLEM_TEXT.missingRadiator]);
 });
 
 test("hi-fi optimizer: a stale radiator id on a vented design still gets a comparison", () => {
@@ -402,7 +394,7 @@ test("hi-fi optimizer: a tweeter that keeps up only below full woofer power turn
   const k = out.cards[0],
     w = HIFI_WOOFERS.find((o) => o.id === quiet.woofer),
     tw = HIFI_TWEETERS.find((o) => o.id === quiet.tweeter);
-  assert.ok(k && k.label === "Same level, lighter", out.goalMissing ?? "no card");
+  assert.ok(k && k.slot.kind === "first", out.goalMissing ?? "no card");
   assert.ok(w && tw && out.cur);
   const at = (wAmpW: number) => {
     const c = { ...quiet, ...k.config, pr: undefined, wAmpW },

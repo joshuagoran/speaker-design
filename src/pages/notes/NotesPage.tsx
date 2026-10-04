@@ -2,36 +2,72 @@ import { Fragment } from "react";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { SignalPath } from "../../components/drawings/SignalPath";
-import { CD_OPTIONS, DSP_UNITS, RACKS } from "../../lib/data";
+import {
+  DSP_UNITS,
+  HORN_AMP_SAFETY_HPF_HZ,
+  RACK_DSP_IDS,
+  RACKS,
+  formatPriceRange,
+  rackTotal,
+} from "../../lib/data";
 import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
-import { formatDollars } from "../../lib/format";
-import { byIdOrThrow } from "../../lib/tables";
-import type { CompressionDriver, CompressionHf } from "../../types";
+import { FONT } from "../../styles/fonts";
+import type { DspColumn, DspUnit, DspUnitId } from "../../types";
+import { DSP_COLUMNS } from "../../constants/dspColumns";
+import { entriesOf, keysOf } from "../../lib/records";
+import {
+  DEFAULT_CD,
+  DEFAULT_HORN,
+  DEFAULT_SUB,
+  DEFAULT_SUB_WEIGHTS,
+  DEFAULT_WALL,
+  DEFAULT_XO_HI,
+} from "../../lib/defaultParts";
 
-// The prose quotes these parts' catalogue figures, so a price or rating edited there shows up here.
-/** The DE360's AES rating and price; throws if its catalogue entry loses either. */
-function de360Figures(): Pick<CompressionHf, "aes"> & {
-  price: NonNullable<CompressionDriver["price"]>;
-} {
-  const d = byIdOrThrow(CD_OPTIONS, "de360", "compression drivers");
-  if (!d.hf || d.price === null)
-    throw new Error("compression drivers: the Notes page quotes the DE360's AES rating and price");
-  return { aes: d.hf.aes, price: d.price };
-}
-const DE360 = de360Figures();
+// The prose quotes the starting design's parts and the catalogue's figures (defaultParts.ts), so a change of default
+// part, price or rating shows up here.
 const GXD = QSC_GXD.models;
 const OHM = "Ω";
+
+/** A DSP table cell: the unit the racks use marked "(current)", a settled used price added to the price cell. */
+function dspCell(u: DspUnit & { id: DspUnitId }, col: DspColumn): string {
+  const text = u.row[col];
+  if (col === "unit" && RACK_DSP_IDS.has(u.id)) return `${text} (current)`;
+  if (col === "priceUs" && u.usedPrice) return `${text}, ${formatPriceRange(u.usedPrice)} used`;
+  return text;
+}
+
+/** How far a sensitivity claim may sit from the T/S figure, either way, and still count as agreeing with it, dB. */
+const SENS_AGREE_DB = 0.5;
+
+/**
+ * The default sub's published sensitivity against what its T/S give: within SENS_AGREE_DB either way it agrees; further
+ * above it is flagged (assume the lower figure); further below it is the conservative one; with no claim entered, the
+ * T/S figure alone.
+ */
+function sensitivityText(): string {
+  const { maker, sens, tsSens } = DEFAULT_SUB;
+  const ts = `${tsSens.toFixed(1)} dB/2.83V`;
+  if (sens == null)
+    return `${maker}'s sensitivity isn't in the catalogue; their published T/S parameters give ${ts}. Levels and limiter settings depend on it, so measure it.`;
+  const gap = sens - tsSens;
+  if (gap > SENS_AGREE_DB)
+    return `${maker}'s ${sens} dB claim is ${gap.toFixed(1)} dB above what their own published T/S parameters give (${ts}). Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure.`;
+  if (gap < -SENS_AGREE_DB)
+    return `${maker}'s ${sens} dB claim is ${(-gap).toFixed(1)} dB below what their own published T/S parameters give (${ts}), so it is the conservative figure for levels and limiter settings; a measurement would tell which is right.`;
+  return `${maker}'s ${sens} dB claim agrees with what their own published T/S parameters give (${ts}), so levels and limiter settings can rest on it; a measurement would confirm it.`;
+}
+
+/** The plywood thicknesses the planner models other than the default wall, as the heading offers them. */
+const OTHER_THICKNESSES = DEFAULT_SUB_WEIGHTS.filter((w) => w.t !== DEFAULT_WALL).map((w) => w.t);
 
 /** Notes page: reference material and parts research behind the design. */
 export function NotesPage() {
   return (
     <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16 flex flex-col gap-2">
-      <section
-        className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6"
-        style={{ fontFamily: "var(--font)" }}
-      >
+      <section className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6" style={{ fontFamily: FONT }}>
         {RACKS.map((r) => {
-          const total = r.items.reduce((a, [, c]) => a + c, 0);
+          const total = rackTotal(r);
           return (
             <div key={r.id} className="border border-stone-300 rounded-lg p-4 bg-stone-50">
               <div className="flex justify-between items-baseline mb-1">
@@ -39,15 +75,15 @@ export function NotesPage() {
                   <Tooltip tip={r.note}>{r.name}</Tooltip>
                 </SectionHeading>
                 <span className="text-sm tabular-nums text-stone-500">
-                  ≈ ${total.toLocaleString()}
+                  ≈ {formatPriceRange(total)}
                 </span>
               </div>
               <div className="mb-3" />
               <ul className="text-sm text-stone-900 space-y-1">
-                {r.items.map(([label, cost]) => (
+                {r.items.map(({ label, price }) => (
                   <li key={label} className="flex justify-between gap-3">
                     <span>{label}</span>
-                    <span className="tabular-nums text-stone-500">${cost}</span>
+                    <span className="tabular-nums text-stone-500">{formatPriceRange(price)}</span>
                   </li>
                 ))}
               </ul>
@@ -56,18 +92,20 @@ export function NotesPage() {
         })}
       </section>
 
-      <section className="mt-2" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-2" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-2">Signal path (mains rack)</SectionHeading>
         <div className="max-w-4xl">
           <SignalPath />
         </div>
         <p className="text-sm text-stone-900 max-w-3xl mt-3">
-          <Tooltip tip="the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around 500 Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.">
+          <Tooltip
+            tip={`the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around ${HORN_AMP_SAFETY_HPF_HZ} Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.`}
+          >
             How the DSP work is split
           </Tooltip>
         </p>
       </section>
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">
           {`Amp DSP: ${QSC_GXD.brand} ${GXD.map((m) => m.model).join(" / ")}`}
         </SectionHeading>
@@ -120,7 +158,7 @@ export function NotesPage() {
             ],
             [
               "Horns",
-              `A ${GXD4.model} puts ${GXD4.w8} W on a ${DE360.aes} W AES driver like the DE360. Its limiter, set to the driver's rating, is the protection; set the planner's HF amp slider to the same power so its numbers match.`,
+              `A ${GXD4.model} puts ${GXD4.w8} W on a ${DEFAULT_CD.aes} W AES driver like the ${DEFAULT_CD.name}. Its limiter, set to the driver's rating, is the protection; set the planner's HF amp slider to the same power so its numbers match.`,
             ],
           ].map(([t, d]) => (
             <li key={t} className="flex gap-3">
@@ -147,7 +185,7 @@ export function NotesPage() {
         </p>
       </section>
 
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">Crossover / DSP: PA2 and alternatives</SectionHeading>
         <p className="text-sm text-stone-900 mb-3 max-w-3xl">
           What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set in
@@ -158,27 +196,25 @@ export function NotesPage() {
           <table className="text-sm w-full min-w-[720px] border-collapse">
             <thead>
               <tr className="text-stone-500 text-left border-b border-stone-300">
-                {["Unit", "I/O", "Slopes", "Limiter", "PEQ / out", "Price (US)", "Notes"].map(
-                  (h, i) => (
-                    <th
-                      key={h}
-                      className={`py-1 pr-4 font-normal ${i === 0 ? "sticky left-0 bg-stone-50" : ""}`}
-                    >
-                      {h}
-                    </th>
-                  ),
-                )}
+                {entriesOf(DSP_COLUMNS).map(([col, h]) => (
+                  <th
+                    key={col}
+                    className={`py-1 pr-4 font-normal ${col === "unit" ? "sticky left-0 bg-stone-50" : ""}`}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {DSP_UNITS.map((r) => (
-                <tr key={r[0]} className="border-b border-stone-300 align-top">
-                  {r.map((c, i) => (
+              {DSP_UNITS.map((u) => (
+                <tr key={u.id} className="border-b border-stone-300 align-top">
+                  {keysOf(DSP_COLUMNS).map((col) => (
                     <td
-                      key={i}
-                      className={`py-1.5 pr-4 ${i === 0 ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : ""}`}
+                      key={col}
+                      className={`py-1.5 pr-4 ${col === "unit" ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : ""}`}
                     >
-                      {c}
+                      {dspCell(u, col)}
                     </td>
                   ))}
                 </tr>
@@ -196,7 +232,7 @@ export function NotesPage() {
         </p>
       </section>
 
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">Home inputs: Gemini MXR-01BT</SectionHeading>
         <p className="text-sm text-stone-900 mb-3 max-w-3xl">
           Turntable, line and phone into the same DSP and amps, with one master volume. A 2-channel
@@ -244,7 +280,7 @@ export function NotesPage() {
         </p>
       </section>
 
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">Passive crossover: calibrate and build</SectionHeading>
         <p className="text-sm text-stone-900 mb-3 max-w-3xl">
           For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8
@@ -293,7 +329,7 @@ export function NotesPage() {
         </p>
       </section>
 
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">Materials</SectionHeading>
         <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
           {[
@@ -302,8 +338,8 @@ export function NotesPage() {
               "Cheap and flat. Build it to verify duct tuning, then transfer interior dimensions \u2014 not the cut list \u2014 to the real material.",
             ],
             [
-              'Consider 5/8" or 1/2" for the final boxes',
-              "Sub column drops 119 \u2192 107 \u2192 95 lb loaded. Needs more bracing, and the extra interior volume lowers Fb, so the duct gets shorter.",
+              `Consider ${OTHER_THICKNESSES.join(" or ")} for the final boxes`,
+              `Sub column drops ${DEFAULT_SUB_WEIGHTS.map((w) => w.lb).join(" \u2192 ")} lb loaded (${DEFAULT_SUB_WEIGHTS.map((w) => w.t).join(" \u2192 ")}). Needs more bracing, and the extra interior volume lowers Fb, so the duct gets shorter.`,
             ],
             [
               "MDO for the baffles",
@@ -320,7 +356,7 @@ export function NotesPage() {
         </ul>
       </section>
 
-      <section className="mt-8" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-8" style={{ fontFamily: FONT }}>
         <SectionHeading className="mb-3">Still to decide</SectionHeading>
         <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
           {[
@@ -345,21 +381,18 @@ export function NotesPage() {
               "Duct tuning",
               "Verify Fb by impedance sweep on the particleboard prototype and trim the duct before cutting birch. End correction is the largest source of error in the modelled Fb.",
             ],
-            [
-              "Sensitivity",
-              "SB's 99 dB claim is 3 dB above what their own published T/S parameters give (95.9 dB/2.83V). Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure.",
-            ],
+            ["Sensitivity", sensitivityText()],
             [
               "Driver clearance",
-              "Check the Nero's frame and 8.4\" mounting depth against the baffle margin and anything that ends up behind the magnet.",
+              `Check the ${DEFAULT_SUB.name}'s frame and ${DEFAULT_SUB.depthIn != null ? `${DEFAULT_SUB.depthIn}" ` : ""}mounting depth against the baffle margin and anything that ends up behind the magnet.`,
             ],
             [
               "Compression driver",
-              `DE360 at ${formatDollars(DE360.price)} is the default; crossover floor on the A400G2 needs a distortion sweep to confirm ~1.1 kHz.`,
+              `${DEFAULT_CD.name} at ${DEFAULT_CD.price} is the default; crossover floor on the ${DEFAULT_HORN.name} needs a distortion sweep to confirm ~${DEFAULT_XO_HI}.`,
             ],
             [
               "Horn print",
-              "A400G2 in one piece needs a 400 mm+ bed; otherwise sectioned. Filament, print service, or buy the RX-28 instead.",
+              `${DEFAULT_HORN.name} in one piece needs a ${DEFAULT_HORN.bedMm} mm+ bed; otherwise sectioned. Filament, print service, or buy the RX-28 instead.`,
             ],
             [
               "Prototype material",

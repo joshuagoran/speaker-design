@@ -23,6 +23,8 @@ import {
 } from "./useCoverageLayout";
 import { CoverageAssumptions } from "./CoverageAssumptions";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
+import { FONT } from "../../styles/fonts";
+import { UI_TEXT } from "../../constants/uiText";
 
 /** The tabs of the phone settings sheet. */
 type CoverageTab = "listener" | "band" | "room" | "stacks";
@@ -114,7 +116,7 @@ export function CoveragePage({ planner }: Props) {
   return (
     <main
       className={`max-w-6xl mx-auto px-4 md:px-8 pb-16 grid ${sheetOpen ? "max-md:pb-[52dvh]" : "max-md:pb-24"} grid-cols-1 md:grid-cols-5 gap-8`}
-      style={{ fontFamily: "var(--font)" }}
+      style={{ fontFamily: FONT }}
     >
       <div className="min-w-0 md:col-span-3 flex flex-col gap-5">
         <section>
@@ -259,7 +261,7 @@ export function CoveragePage({ planner }: Props) {
           {sheetOpen && (
             <button
               onClick={() => setSheetOpen(false)}
-              aria-label="Close settings"
+              aria-label={UI_TEXT.closeSettings}
               className="px-3 rounded border border-stone-300 bg-stone-50 text-sm"
             >
               ✕
@@ -413,7 +415,7 @@ export function CoveragePage({ planner }: Props) {
                 Indoors
               </ToggleButton>
               <ToggleButton on={room.outdoors} onClick={() => state.setOutdoors(true)}>
-                Outdoors
+                {UI_TEXT.outdoors}
               </ToggleButton>
             </div>
             <Slider

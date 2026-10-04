@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import type { ConfigDb, SavedConfig, SavedConfigData } from "../../types";
 import type { FirebaseStore } from "./firebaseStore";
+import { UI_TEXT } from "../../constants/uiText";
+import { WRITE_DENIED_CODES } from "../../constants/firebaseErrors";
 
 /** The GitHub Pages build is `vp build --mode pages`; only that build bundles Firebase (see firebaseStore.ts). */
 const PAGES_BUILD = import.meta.env.MODE === "pages";
@@ -145,11 +147,9 @@ export function useConfigStore(collection: string) {
     } catch (e) {
       flash(
         // the error is a Firebase or artifact-database error carrying a `code`
-        e &&
-          ((e as { code?: string }).code === "invalid_argument" ||
-            (e as { code?: string }).code === "permission-denied")
+        e && WRITE_DENIED_CODES.has((e as { code?: string }).code ?? "")
           ? "You don't have write access here"
-          : "Couldn't save — try again",
+          : UI_TEXT.saveFailed,
       );
       return false;
     }
