@@ -12,6 +12,7 @@ import type {
   SubChipsInput,
   VentSpec,
 } from "../../types";
+import { isRoundPort } from "./calc";
 
 // Longest duct each layout can hold, leaving an opening at least as wide as the duct.
 export function ductFit(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
@@ -27,7 +28,7 @@ export function ductFit(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT
       ? maxStraight
       : portStyle === "folded"
         ? maxFold
-        : portStyle.startsWith("round")
+        : isRoundPort(portStyle)
           ? maxTube
           : maxSide;
   return { maxStraight, maxFold, maxSide, maxTube, fit };

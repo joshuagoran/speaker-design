@@ -40,6 +40,20 @@ import type {
 } from "../../types";
 import { crossoverSlopeName } from "../../constants/crossovers";
 
+// Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
+const ROUND_PORT: Record<PortStyle, boolean> = {
+  slots: false,
+  folded: false,
+  vslots: false,
+  vslot1: false,
+  round1: true,
+  round2: true,
+  round4: true,
+};
+/** Whether the sub's vents are round tubes (`round1`, `round2`, `round4`) rather than rectangular ducts. */
+export const isRoundPort = (style: PortStyle): style is Extract<PortStyle, `round${string}`> =>
+  ROUND_PORT[style];
+
 // ---------------------------------------------------------------
 // Vented-box model. Same lumped-element circuit used to check this
 // design offline; see the provenance note under the table.
