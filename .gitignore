@@ -4,3 +4,4 @@ dist/
 .DS_Store
 serve/
 .vitest/
+tests/.optimizer-dump/
