@@ -1,7 +1,7 @@
 import os from "node:os";
 import { defineConfig } from "vite-plus";
 import type { Reporter } from "vite-plus/test/node";
-import { DUMP_KINDS, clearPartials, mergeDump } from "./optimizer-dump-merge";
+import { DUMP_ENV, DUMP_KINDS, clearPartials, mergeDump } from "./optimizer-dump-merge";
 
 // The config behind `vp run optimizer-dump` (and `optimizer-dump:pa` / `optimizer-dump:hifi`, which pick one kind's
 // projects with --project): it runs only the optimizer dump writer, which the main config's test include leaves out.
@@ -31,9 +31,9 @@ export default defineConfig({
           name: `${kind}-${shard + 1}`,
           include: ["tests/optimizer-dump.ts"],
           env: {
-            OPTIMIZER_DUMP_KIND: kind,
-            OPTIMIZER_DUMP_SHARD: String(shard),
-            OPTIMIZER_DUMP_SHARDS: String(cores),
+            [DUMP_ENV.kind]: kind,
+            [DUMP_ENV.shard]: String(shard),
+            [DUMP_ENV.shards]: String(cores),
           },
         },
       })),

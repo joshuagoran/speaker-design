@@ -9,6 +9,13 @@ export type Json = number | string | boolean | null | undefined | Json[] | { [k:
 export const DUMP_KINDS = ["pa", "hifi"] as const;
 export type DumpKind = (typeof DUMP_KINDS)[number];
 
+/** The env vars that tell a shard (tests/optimizer-dump.ts) which cases are its own; set per project by the config. */
+export const DUMP_ENV = {
+  kind: "OPTIMIZER_DUMP_KIND",
+  shard: "OPTIMIZER_DUMP_SHARD",
+  shards: "OPTIMIZER_DUMP_SHARDS",
+} as const;
+
 export const DUMP_FILE = new URL("./optimizer-dump.json", import.meta.url);
 /** Where each shard leaves its cases until the run's end merges them (gitignored). */
 export const PARTIAL_DIR = new URL("./.optimizer-dump/", import.meta.url);

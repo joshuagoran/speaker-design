@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import fs from "node:fs";
 import { DUMP_CASES, shardCases } from "./optimizer-dump-cases";
-import { DUMP_KINDS, PARTIAL_DIR } from "./optimizer-dump-merge";
+import { DUMP_ENV, DUMP_KINDS, PARTIAL_DIR } from "./optimizer-dump-merge";
 import type { DumpPartial } from "./optimizer-dump-merge";
 
 // One shard of tests/optimizer-dump.json (the cards both optimizers pick for a fixed set of designs and goal sets). A
@@ -13,11 +13,11 @@ import type { DumpPartial } from "./optimizer-dump-merge";
 //   vp run optimizer-dump:hifi   # Hi-fi only; the PA part is kept
 
 const env = process.env;
-const kind = DUMP_KINDS.find((k) => k === env.OPTIMIZER_DUMP_KIND);
-const shard = Number(env.OPTIMIZER_DUMP_SHARD);
-const shards = Number(env.OPTIMIZER_DUMP_SHARDS);
+const kind = DUMP_KINDS.find((k) => k === env[DUMP_ENV.kind]);
+const shard = Number(env[DUMP_ENV.shard]);
+const shards = Number(env[DUMP_ENV.shards]);
 
-test(`optimizer dump: ${env.OPTIMIZER_DUMP_KIND} shard ${shard + 1} of ${shards}`, () => {
+test(`optimizer dump: ${kind} shard ${shard + 1} of ${shards}`, () => {
   if (!kind || !(shard >= 0 && shard < shards)) {
     throw new Error("run the optimizer dump through tests/optimizer-dump.config.ts");
   }
