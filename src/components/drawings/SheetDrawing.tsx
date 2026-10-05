@@ -27,6 +27,8 @@ interface Props {
 
 /** A monospace character's width, in font sizes (Inconsolata). */
 const CHAR_EM = 0.5;
+/** The kept offcut's label (its width decides whether it fits). */
+const OFFCUT_LABEL = "offcut";
 
 /**
  * One plywood sheet with its cut pieces laid out at the fixed sheet scale; grain runs down the sheet. Each piece carries
@@ -94,7 +96,7 @@ export function SheetDrawing({ sheet, S, idx, count, t, offcut, tagOf, hot, onHo
               strokeWidth="1"
               strokeDasharray="5 4"
             />
-            {offcut.w * sc > textWidth("offcut") + 4 && offcut.h * sc > fs * 3 && (
+            {offcut.w * sc > textWidth(OFFCUT_LABEL) + 4 && offcut.h * sc > fs * 3 && (
               <text
                 x={(offcut.x + offcut.w / 2) * sc}
                 y={(offcut.y + offcut.h / 2) * sc}
@@ -103,7 +105,7 @@ export function SheetDrawing({ sheet, S, idx, count, t, offcut, tagOf, hot, onHo
                 fill={pal.muted}
                 fontFamily={SVG_FONT}
               >
-                <tspan x={(offcut.x + offcut.w / 2) * sc}>offcut</tspan>
+                <tspan x={(offcut.x + offcut.w / 2) * sc}>{OFFCUT_LABEL}</tspan>
                 <tspan x={(offcut.x + offcut.w / 2) * sc} dy={fs * 1.15}>
                   {formatInches(offcut.w)}×{formatInches(offcut.h)}
                 </tspan>
@@ -121,17 +123,19 @@ export function SheetDrawing({ sheet, S, idx, count, t, offcut, tagOf, hot, onHo
           const name = it.pieces ? "strip" : CUT_PART_NAMES[it.part];
           const isHot = hot === key;
           const dim = hot != null && !isHot;
-          // a panel's grain arrow sits at its right edge: the label keeps clear of it
+          // a panel's grain arrow sits at its right edge, from the top down to `arrowEnd`: the label keeps clear of it
           const reserve = it.grain && !it.pieces && h > fs * 1.6 && w > fs * 1.2 ? fs * 1.2 : 0;
-          // the label: tag and name, or the tag alone; across the piece, or along it when it is tall and narrow (and
-          // always along a waterfall strip)
+          const arrowEnd = reserve ? 4 + Math.min(h - 8, fs * 2) : 0;
+          // the label: tag and name, or the tag alone; across the piece left of the arrow, or along it below the arrow
+          // when it is tall and narrow (and always along a waterfall strip, whose arrow runs beside it)
           const along = !!it.pieces || (w - reserve < textWidth(tag) + 4 && h > w);
-          const [run, across] = along ? [h, w] : [w - reserve, h];
+          const top = along ? arrowEnd : 0;
+          const [run, across] = along ? [h - top, w] : [w - reserve, h];
           const label = [`${tag} ${name}`, tag].find(
             (s) => run > textWidth(s) + 6 && across > fs * (along ? 0.95 : 1.2),
           );
           const cx = x + (along ? w : w - reserve) / 2,
-            cy = y + h / 2;
+            cy = y + top + (h - top) / 2;
           // waterfall strips: a tick at each cut and the panels numbered in cut order
           const cuts: number[] = [];
           if (it.pieces && !it.crossed) {
@@ -196,7 +200,7 @@ export function SheetDrawing({ sheet, S, idx, count, t, offcut, tagOf, hot, onHo
                 arrow(
                   x + w - fs * 0.6,
                   y + 4,
-                  it.pieces ? y + h - 4 : y + 4 + Math.min(h - 8, fs * 2),
+                  it.pieces ? y + h - 4 : y + arrowEnd,
                   it.crossed ? pal.status.orange.text : pal.muted,
                 )}
               {label && (

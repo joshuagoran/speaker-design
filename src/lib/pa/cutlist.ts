@@ -66,6 +66,26 @@ export const FROM_OFFCUT: ReadonlySet<CutPartId> = new Set(["baffleCleat", "duct
 export const cutRowKey = (p: Pick<CutPart, "box" | "part" | "a" | "b" | "t">) =>
   `${p.box}|${p.part}|${p.a}|${p.b}|${p.t}`;
 
+/**
+ * The cutlist's rows, one per `cutRowKey`: rows of the same part at the same size (a box's two cleat pairs when its
+ * inside is square) become one, their quantities added and their notes joined, so every row gets its own tag and its
+ * pieces on the sheets point back to it alone.
+ */
+export const cutRows = (parts: readonly CutPart[]): CutPart[] => {
+  const rows = new Map<string, CutPart>();
+  for (const p of parts) {
+    const k = cutRowKey(p),
+      seen = rows.get(k);
+    if (!seen) rows.set(k, { ...p });
+    else {
+      seen.qty += p.qty;
+      if (p.note && !seen.note.split("; ").includes(p.note))
+        seen.note = seen.note ? `${seen.note}; ${p.note}` : p.note;
+    }
+  }
+  return [...rows.values()];
+};
+
 /** Reads saved grain settings, falling back to the default for anything missing or unknown. */
 const savedGrain = (g: Partial<Record<GrainPanel, unknown>> | undefined): GrainSettings => {
   const out = { ...GRAIN_PRESETS.wrap };

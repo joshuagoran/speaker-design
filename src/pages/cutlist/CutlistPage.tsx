@@ -32,6 +32,7 @@ import {
   KERF_OPTIONS,
   TRIM_OPTIONS,
   cutRowKey,
+  cutRows,
   grainPresetOf,
   layoutCutlist,
 } from "../../lib/pa/cutlist";
@@ -216,16 +217,20 @@ export function CutlistPage({ planner }: Props) {
   const preset = grainPresetOf(grain);
   const kerfName = KERF_OPTIONS.find((k) => k.v === kerfIn)?.label ?? `${formatInches(kerfIn)}″`;
 
-  // each row's tag, numbered per box in table order (S1, S2 … M1 …); its pieces on the sheets carry the same tag
+  // each row's tag, numbered per box in table order (S1, S2 … M1 …); its pieces on the sheets carry the same tag. Rows
+  // are one per key (`cutRows`), so no two share a tag.
+  const allRows = cutRows(cut.parts);
   const tags = new Map<string, string>();
   const byBox = new Map<CutBoxId, CutPart[]>();
-  for (const p of cut.parts) {
+  for (const p of allRows) {
     const rows = byBox.get(p.box) ?? [];
     rows.push(p);
     byBox.set(p.box, rows);
-    if (!tags.has(cutRowKey(p))) tags.set(cutRowKey(p), `${CUT_BOX_TAGS[p.box]}${rows.length}`);
+    tags.set(cutRowKey(p), `${CUT_BOX_TAGS[p.box]}${rows.length}`);
   }
   const tagOf = (p: CutPart) => tags.get(cutRowKey(p)) ?? CUT_BOX_TAGS[p.box];
+  // the highlighted row, while it is still in the list (a settings change can take it away)
+  const hotRow = hot != null && tags.has(hot) ? hot : null;
   const boxes = entriesOf(CUT_BOX_NAMES).flatMap(([box, name]) => {
     const rows = byBox.get(box);
     return rows
@@ -235,7 +240,7 @@ export function CutlistPage({ planner }: Props) {
   const drawn = new Set(
     cut.groups.flatMap((g) => g.sheets.flatMap((s) => s.items.map((it) => cutRowKey(it)))),
   );
-  const hotDrawn = hot != null && drawn.has(hot) ? hot : null;
+  const hotDrawn = hotRow != null && drawn.has(hotRow) ? hotRow : null;
   const totalPieces = boxes.reduce((a, b) => a + b.pieces, 0);
   const totalSheets = cut.groups.reduce((a, g) => a + g.sheets.length, 0);
   const rips = cut.groups.reduce((a, g) => a + g.cuts.rips, 0);
@@ -305,7 +310,7 @@ export function CutlistPage({ planner }: Props) {
               </tr>
               {rows.map((p, i) => {
                 const k = cutRowKey(p);
-                const isHot = hot === k;
+                const isHot = hotRow === k;
                 const note = FROM_OFFCUT.has(p.part)
                   ? `cut from offcut${p.note ? `; ${p.note}` : ""}`
                   : p.note;
@@ -313,13 +318,13 @@ export function CutlistPage({ planner }: Props) {
                 return (
                   <tr
                     key={i}
-                    data-cut-row
                     tabIndex={0}
                     onMouseEnter={() => setHot(k)}
                     onMouseLeave={() => setHot(null)}
                     onFocus={() => setHot(k)}
                     onBlur={() => setHot(null)}
-                    className={`border-b border-stone-300 outline-none focus-visible:outline-2 focus-visible:outline-cmy-a ${isHot ? "bg-stone-300" : ""}`}
+                    // the focus ring sits inside the row: drawn outside, the table's scroll box clips it away
+                    className={`border-b border-stone-300 focus-visible:-outline-offset-2 ${isHot ? "bg-stone-300" : ""}`}
                   >
                     <td className={`${td} pr-2`}>
                       {/* the box's colour on the sheets, so the tag reads the same in both places */}
@@ -357,7 +362,7 @@ export function CutlistPage({ planner }: Props) {
               </td>
               <td className="py-1.5 pr-3 text-right">{totalPieces}</td>
               <td className="py-1.5 text-stone-500 font-normal" colSpan={5}>
-                {plural(cut.parts.length, "part")}, {plural(totalSheets, "sheet")}
+                {plural(allRows.length, "part")}, {plural(totalSheets, "sheet")}
               </td>
             </tr>
           </tfoot>
