@@ -9,6 +9,7 @@ import {
 } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import {
+  CONTOUR_STEP_DB,
   DISPERSION_ANGLE_MAX_DEG,
   DISPERSION_GRID_DEG,
   DISPERSION_LABEL_DEG,
@@ -24,7 +25,7 @@ interface Props {
   title: string;
 }
 
-const { topDb, botDb, contourDb, contourShade, keyStepDb, stops } = DISPERSION_SCALE;
+const { topDb, botDb, contourShade, keyStepDb, stops } = DISPERSION_SCALE;
 const A = DISPERSION_ANGLE_MAX_DEG;
 const LOG_SPAN = Math.log(DISPERSION_FREQ_MAX_HZ / DISPERSION_FREQ_MIN_HZ);
 
@@ -75,7 +76,8 @@ function mapImage(map: HifiDispersionMap, pw: number, ph: number): string | null
     }
   }
   // contours sit a quarter dB below each step, so the 0° row (exactly 0) and hundredths-of-a-dB noise beside it draw none
-  const band = (v: number) => Math.floor((Math.max(botDb, Math.min(topDb, v)) + 0.25) / contourDb);
+  const band = (v: number) =>
+    Math.floor((Math.max(botDb, Math.min(topDb, v)) + 0.25) / CONTOUR_STEP_DB);
   const img = g.createImageData(pw, ph);
   for (let j = 0; j < ph; j++)
     for (let i = 0; i < pw; i++) {

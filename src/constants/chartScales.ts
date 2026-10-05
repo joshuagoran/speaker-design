@@ -42,5 +42,5 @@ export const DISPERSION_FREQ_POINTS = 78;
  */
 export const COVERAGE_MAP_DB: [lo: number, hi: number] = [-12, 6];
 
-/** The coverage map draws a thin contour line every this many dB. */
-export const COVERAGE_CONTOUR_DB = 3;
+/** Every dB heat map (the dispersion maps, the coverage map) draws a thin contour line every this many dB. */
+export const CONTOUR_STEP_DB = 3;

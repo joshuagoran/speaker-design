@@ -20,6 +20,7 @@ import {
   type Complex,
 } from "../hifi/hifi";
 import { METERS_PER_FOOT as FT } from "../../constants/units";
+import { COVERAGE_EDGE_DB } from "../../constants/coverageLevel";
 import { paStackSources, type StackBand, type StackSource } from "./dispersion";
 import {
   airDbPerM,
@@ -887,7 +888,7 @@ export function coverageStats(
   const share = (t: number) => vals.filter((v) => v >= t).length / vals.length;
   return {
     within3: share(-3),
-    within6: share(-6),
+    within6: share(COVERAGE_EDGE_DB),
     spread: vals[Math.floor(vals.length * 0.9)] - vals[Math.floor(vals.length * 0.1)],
   };
 }

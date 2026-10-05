@@ -27,6 +27,7 @@ import { formatHz } from "../../lib/format";
 import { SettingsColumn } from "../../components/ui/SettingsColumn";
 import { UI_TEXT } from "../../constants/uiText";
 import {
+  COVERAGE_EDGE_DB,
   COVERAGE_LEVEL_REF_PLACE,
   COVERAGE_LEVEL_REFS,
   COVERAGE_TARGET_DB,
@@ -95,7 +96,7 @@ export function CoveragePage({ planner }: Props) {
       ? ""
       : rel >= -3
         ? "text-green-700"
-        : rel >= -6
+        : rel >= COVERAGE_EDGE_DB
           ? "text-orange-700"
           : "text-red-700";
   const bandName =
@@ -175,7 +176,8 @@ export function CoveragePage({ planner }: Props) {
                   <b className="text-stone-900">{pct(map.stats.within3)}</b> ≥ −3 dB
                 </span>
                 <span>
-                  <b className="text-stone-900">{pct(map.stats.within6)}</b> ≥ −6 dB
+                  <b className="text-stone-900">{pct(map.stats.within6)}</b> ≥{" "}
+                  {signed(COVERAGE_EDGE_DB, 0)} dB
                 </span>
               </div>
             )}
@@ -243,7 +245,7 @@ export function CoveragePage({ planner }: Props) {
                 {(
                   [
                     [pct(map.stats.within3), "of the floor ≥ −3 dB"],
-                    [pct(map.stats.within6), "of the floor ≥ −6 dB"],
+                    [pct(map.stats.within6), `of the floor ≥ ${signed(COVERAGE_EDGE_DB, 0)} dB`],
                     [`${map.stats.spread.toFixed(1)} dB`, "spread, 10th–90th %"],
                   ] as const
                 ).map(([v, k]) => (
