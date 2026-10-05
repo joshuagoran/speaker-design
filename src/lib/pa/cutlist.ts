@@ -1,6 +1,7 @@
 // Cutlist layout: a guillotine sheet packer (straight through-cuts only), grain direction per panel, waterfall
 // strips and the offcut the least-full sheet keeps.
 import type {
+  CutBoxId,
   CutPart,
   CutPartId,
   CutStats,
@@ -23,7 +24,7 @@ import type {
 } from "../../types";
 import { PLYWOOD_SHEETS, formatInches } from "./calc";
 import { keysOf } from "../records";
-import { CUT_BOX_NAMES } from "../../constants/cutParts";
+import { CUT_BOX_NAMES, CUT_BOX_TAGS } from "../../constants/cutParts";
 
 type SheetSize = Pick<PlywoodSheet, "w" | "h">;
 type Rect = Pick<PlacedPart<PackRect>, "x" | "y" | "w" | "h">;
@@ -86,6 +87,22 @@ export const cutRows = (parts: readonly CutPart[]): CutPart[] => {
     }
   }
   return [...rows.values()];
+};
+
+/**
+ * Each row's tag, numbered per box in table order (S1, S2 … M1 … H1 …), by `cutRowKey`, and the rows grouped by box.
+ * Its pieces on the sheets carry the same tag; rows are one per key (`cutRows`), so no two share a tag.
+ */
+export const cutRowTags = (rows: readonly CutPart[]) => {
+  const tags = new Map<string, string>();
+  const byBox = new Map<CutBoxId, CutPart[]>();
+  for (const p of rows) {
+    const list = byBox.get(p.box) ?? [];
+    list.push(p);
+    byBox.set(p.box, list);
+    tags.set(cutRowKey(p), `${CUT_BOX_TAGS[p.box]}${list.length}`);
+  }
+  return { tags, byBox };
 };
 
 /** Reads saved grain settings, falling back to the default for anything missing or unknown. */
