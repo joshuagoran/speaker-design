@@ -28,6 +28,8 @@ import {
   VENT_STYLES,
   XO_HI_OPTIONS,
   XO_LO_OPTIONS,
+  WALL_OPTIONS,
+  highpassOptions,
   designProblems,
   evaluateDesign,
   optimizePaStack,
@@ -218,11 +220,7 @@ function exactSpace(input: PaOptimizerInput, grid: PaExactGrid): ExactSpace {
   const fbs: number[] = [];
   for (let f = grid.fb.from; f <= grid.fb.to; f += grid.fb.step) fbs.push(f);
   const hps = fbs.map((fb) =>
-    locks.hpf
-      ? [cur.hpf]
-      : [Math.max(20, Math.round(fb * 0.85)), Math.max(20, Math.round(fb))].filter(
-          (h, i, a) => a.indexOf(h) === i,
-        ),
+    locks.hpf ? [cur.hpf] : highpassOptions(fb).filter((h, i, a) => a.indexOf(h) === i),
   );
   const sr = {
     w: rangeOf(locks.subDim.w, cur.cDim.w, SUB_BOX_RANGE.w),
@@ -234,7 +232,7 @@ function exactSpace(input: PaOptimizerInput, grid: PaExactGrid): ExactSpace {
   const fixed = (["w", "h", "d"] as const)
     .filter((k) => k !== free)
     .map((k): [keyof Dims3, number[]] => [k, inchSteps(sr[k])]);
-  const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
+  const walls = locks.wall ? [cur.wall] : WALL_OPTIONS;
   const top = boxInternalLiters(sr.w[1], sr.h[1], sr.d[1], Math.min(...walls), cur.inset);
   const rungs: number[] = [];
   if (free) for (let v = grid.minNetL; v <= top; v *= 1 + grid.volumeStep) rungs.push(v);
@@ -1166,12 +1164,8 @@ function exactHook(
     return best;
   };
   /** The uppers that pass a query's own limits on weight, changes and price, as the bounds read them. */
-  interface Fitted {
-    loDesc: Float64Array;
-    stair: Float64Array;
-    minPrice: number;
-    minLb: number;
-  }
+  // an upper set fitted to a query: its stair for the query's goal only
+  type Fitted = Pick<UpperSet, "loDesc" | "minPrice" | "minLb"> & { stair: Float64Array };
   const fittedMemo = new WeakMap<Query, Map<string | number, Fitted>>();
   const cheapestSub = Math.min(...s.subs.map((o) => o.price));
   // a query's uppers for a plywood and lower crossover: those no design of the query can turn down for being too

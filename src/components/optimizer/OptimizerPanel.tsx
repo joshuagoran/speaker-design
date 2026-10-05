@@ -12,7 +12,7 @@ import { RunRow } from "./RunRow";
 import { ResultCards } from "./ResultCards";
 import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize";
 import { keepLines, PA_KEEP_WORDS } from "../../lib/optimizer/goalKeeps";
-import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
+import { OPTIMIZER_PANEL_TEXT, PA_RUN_LABELS } from "../../constants/optimizerText";
 import type {
   OptimizerProgress,
   PaGoal,
@@ -150,8 +150,8 @@ export function OptimizerPanel({
           <KeepDetails
             lines={keepLines(goals, OPTIMIZER_GOALS, PA_KEEP_WORDS, curOut != null)}
             more={[
-              "Improve: a quick search around your design (about a second).",
-              "Fully optimize: Improve's designs and every design on the grid below, so its first card is never behind Improve's and nothing on the grid beats it (up to a minute or so):",
+              `${PA_RUN_LABELS.improve}: a quick search around your design (about a second).`,
+              `${PA_RUN_LABELS.full}: ${PA_RUN_LABELS.improve}'s designs and every design on the grid below, so its first card is never behind ${PA_RUN_LABELS.improve}'s and nothing on the grid beats it (up to a minute or so):`,
               ...fullGridLines.map((line) => `· ${line}`),
             ]}
           />
@@ -169,8 +169,8 @@ export function OptimizerPanel({
           busy={busy}
           hasGoal={!!g}
           onRun={run}
-          runLabel="Improve"
-          alt={{ label: "Fully optimize", onRun: runFull, running: runningMode === "full" }}
+          runLabel={PA_RUN_LABELS.improve}
+          alt={{ label: PA_RUN_LABELS.full, onRun: runFull, running: runningMode === "full" }}
           onCancel={onCancel}
           progress={progress}
           stats={res && res.stats}

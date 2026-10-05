@@ -515,6 +515,13 @@ export const SAME_VOLUME = 0.15;
 /** The crossovers the search tries when they aren't locked, Hz. */
 export const XO_LO_OPTIONS = [90, 100, 110, 120, 140];
 export const XO_HI_OPTIONS = [800, 900, 1000, 1200, 1500];
+/** The plywoods the search tries when the plywood isn't locked, in. */
+export const WALL_OPTIONS = [0.75, 0.5];
+/** The highpasses the search tries for a tuning when the highpass isn't locked: 0.85× and 1× the tuning, 20 Hz at least. */
+export const highpassOptions = (fb: number) => [
+  Math.max(20, Math.round(fb * 0.85)),
+  Math.max(20, Math.round(fb)),
+];
 
 /** Your design as the search reads it. */
 export function paSearchDesign(input: Pick<PaOptimizerInput, "cur">): PaDesignConfig {
@@ -619,7 +626,7 @@ export function optimizePaStack(
       ? [curSub]
       : []
     : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
-  const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
+  const walls = locks.wall ? [cur.wall] : WALL_OPTIONS;
   const styles: PortStyle[] = locks.vent ? [cur.portStyle] : ["slots", "vslots", "round2"];
   const xoLos = locks.xoLo ? [cur.xoLo] : XO_LO_OPTIONS;
   const xoHis = locks.xoHi ? [cur.xoHi] : XO_HI_OPTIONS;
@@ -698,9 +705,7 @@ export function optimizePaStack(
   for (const sub of subs)
     for (const V of vols)
       for (const Fb of fbs) {
-        const hps = locks.hpf
-          ? [cur.hpf]
-          : [Math.max(20, Math.round(Fb * 0.85)), Math.max(20, Math.round(Fb))];
+        const hps = locks.hpf ? [cur.hpf] : highpassOptions(Fb);
         for (const hpf of hps) {
           report(screened++, 2 * screenUnits);
           const Sp = 80,
@@ -1364,8 +1369,6 @@ export function optimizePaStack(
         keep,
         curMet,
         curFails,
-        walls,
-        xoLos,
         xoHis,
         mids,
         midBoxes,
@@ -1483,10 +1486,12 @@ export function optimizePaStack(
           designProblems(a.m, lim).length - designProblems(b.m, lim).length ||
           obj[goal](metric(a)) - obj[goal](metric(b)),
       )[0];
-    const lightest = [
-      exact ? exact.lightestSubLb() : null,
-      subCands.length ? Math.min(...subCands.map((x) => x.lb)) : null,
-    ].reduce<number | null>((a, b) => (a === null ? b : b === null ? a : Math.min(a, b)), null);
+    // only when there is no closest design to name (the exact search's lightest box takes a long scan of the grid)
+    const lightestLb = () =>
+      [
+        exact ? exact.lightestSubLb() : null,
+        subCands.length ? Math.min(...subCands.map((x) => x.lb)) : null,
+      ].reduce<number | null>((a, b) => (a === null ? b : b === null ? a : Math.min(a, b)), null);
     nearMiss = {
       options: worked.map(({ text, set }) => ({ text, set })),
       closest: closest
@@ -1504,11 +1509,14 @@ export function optimizePaStack(
           : [
               `the closest design reaches ${closest.m.out.toFixed(1)} dB, short of the ${target.toFixed(0)} dB target`,
             ]
-        : lightest != null
-          ? [
-              `nothing inside the limits reaches the target (the lightest working sub box is ${Math.round(lightest)} lb)`,
-            ]
-          : ["no sub fits these limits and locks"],
+        : (() => {
+            const lightest = lightestLb();
+            return lightest != null
+              ? [
+                  `nothing inside the limits reaches the target (the lightest working sub box is ${Math.round(lightest)} lb)`,
+                ]
+              : ["no sub fits these limits and locks"];
+          })(),
     };
   }
   report(2 * screenUnits, 2 * screenUnits, true);

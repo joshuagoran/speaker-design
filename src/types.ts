@@ -2017,8 +2017,6 @@ export interface PaSearchContext {
   keep: Record<PaGoal, Keep>;
   curMet: PaScore | null;
   curFails: boolean;
-  walls: number[];
-  xoLos: number[];
   xoHis: number[];
   mids: MidDriver[];
   midBoxes: (m: MidDriver, t: number) => (Dims3 | null)[];

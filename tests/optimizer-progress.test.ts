@@ -114,7 +114,8 @@ test("runner: abort terminates the worker, rejects with the cancel error, and th
 });
 
 test("runner: a worker with nothing to say is stopped as stalled; one that keeps reporting runs on", async () => {
-  const run = makeOptimizerRunner(FakeCtor, local, 60);
+  // a 300 ms guard against progress every 20 ms: room for a busy machine's late timers
+  const run = makeOptimizerRunner(FakeCtor, local, 300);
   FakeWorker.script = () => {}; // silent
   const err = await run(1).then(
     () => null,
@@ -122,12 +123,12 @@ test("runner: a worker with nothing to say is stopped as stalled; one that keeps
   );
   assert.ok(err instanceof Error && !isOptimizerCancel(err), "a failure, not a cancel");
   assert.ok(FakeWorker.made[0].terminated);
-  // progress every 30 ms for 300 ms (five stall windows) keeps it alive
+  // progress every 20 ms for 1 s (over three stall windows) keeps it alive
   FakeWorker.script = (req, post) => {
     void (async () => {
-      for (let i = 0; i < 10; i++) {
-        await wait(30);
-        post({ id: req.id, progress: { done: i, total: 10 } });
+      for (let i = 0; i < 50; i++) {
+        await wait(20);
+        post({ id: req.id, progress: { done: i, total: 50 } });
       }
       post({ id: req.id, out: 3 });
     })();

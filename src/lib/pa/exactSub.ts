@@ -24,7 +24,7 @@ import type {
   HighpassType,
   MidDriver,
   PortStyle,
-  SubLimitWho,
+  SubLimits,
   SubTS,
   VentSpec,
 } from "../../types";
@@ -202,11 +202,7 @@ export function ventedCurves(
 }
 
 /** A sub design's music limit from its curve and vent area (in²), as subwooferLimits computes it. */
-export interface SubLimit {
-  who: SubLimitWho;
-  V: number;
-  W: number;
-}
+export type SubLimit = Pick<SubLimits, "who" | "V" | "W">;
 export function subLimitOf(
   s: CurveSummary,
   areaIn2: number,
@@ -246,11 +242,8 @@ export const musicAt = (
   20 * Math.log10(linkwitzRileyLowpass(fAtXo, xoLo, order)) +
   20 * Math.log10(lim.V / volts);
 
-/**
- * The mid's Qtc in a box, as midSystem and closedBox compute it (the same arithmetic). It falls as the box grows: the
- * box's compliance rises with its volume, so the resonance and with it the Qtc come down.
- */
-export function sealedQtc(mid: MidDriver, box: Dims3, t: number, inset: number) {
+/** The mid in a sealed box, as midSystem and closedBox set it up: the driver's and the box's acoustic parts, and the system's resonance. */
+function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number) {
   const ts = mid.ts;
   const disp = ts.disp != null ? ts.disp : mid.size === 15 ? 4 : 2.5;
   const effL =
@@ -266,7 +259,16 @@ export function sealedQtc(mid: MidDriver, box: Dims3, t: number, inset: number) 
   const Fc = 1 / (2 * Math.PI * Math.sqrt(Mas * Ctot));
   const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl);
   const Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
-  return Qts * (Fc / ts.Fs);
+  return { Sd, Mms, Mas, Cas, Cab, Fc, Qts };
+}
+
+/**
+ * The mid's Qtc in a box, as midSystem and closedBox compute it (the same arithmetic). It falls as the box grows: the
+ * box's compliance rises with its volume, so the resonance and with it the Qtc come down.
+ */
+export function sealedQtc(mid: MidDriver, box: Dims3, t: number, inset: number) {
+  const { Fc, Qts } = sealedBox(mid, box, t, inset);
+  return Qts * (Fc / mid.ts.Fs);
 }
 
 // the grid closedBox runs the mid on: 420 points from 20 Hz to 2 kHz, run on at the same spacing past the lowpass
@@ -319,23 +321,10 @@ export function sealedMid(
 ): SealedMid {
   const ts = mid.ts;
   const volts = Math.sqrt(mAmpW * 8);
-  const disp = ts.disp != null ? ts.disp : mid.size === 15 ? 4 : 2.5;
-  const VbL =
-    Math.max(5, boxInternalLiters(box.w, box.h, box.d, t, inset) - disp) * STUFFING_VOLUME_GAIN;
-  const Sd = ts.Sd / 10000,
-    Mms = ts.Mms / 1000,
-    Vb = VbL / 1000;
-  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
-  const Mas = Mms / (Sd * Sd),
-    Cas = Cms * Sd * Sd;
+  const { Sd, Mms, Mas, Cas, Cab, Fc, Qts } = sealedBox(mid, box, t, inset);
   const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
   const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
-  const Cab = Vb / (RHO * C * C);
   const Pg = (volts * ts.Bl) / (ts.Re * Sd);
-  const Ctot = (Cas * Cab) / (Cas + Cab);
-  const Fc = 1 / (2 * Math.PI * Math.sqrt(Mas * Ctot));
-  const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl);
-  const Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
   const ref = 20 * Math.log10((RHO * volts * ts.Bl * Sd) / (2 * Math.PI * ts.Re * Mms) / 2e-5);
   // the cone's flow at a grid point
   const flow = (f: number) => {
