@@ -1,7 +1,7 @@
 import { afterEach, test } from "vite-plus/test";
 import assert from "node:assert";
 import fs from "node:fs";
-import { makeOptimizerRunner, isOptimizerCancel } from "../src/lib/makeOptimizerRunner";
+import { makeOptimizerRunner, isOptimizerCancel, runParts } from "../src/lib/makeOptimizerRunner";
 import { throttledProgress } from "../src/lib/optimizer/progress";
 import { hifiScoreBoxes } from "../src/lib/hifi/optimize";
 import { optimizePaStack } from "../src/lib/pa/optimize";
@@ -150,6 +150,29 @@ test("runner: without workers the search runs on the main thread, with progress"
   } finally {
     Object.assign(globalThis, { Worker: FakeWorker });
   }
+});
+
+test("runParts: when one part fails the others are stopped; the caller's signal stops them all", async () => {
+  const seen: AbortSignal[] = [];
+  const hang = (sig: AbortSignal) => {
+    seen.push(sig);
+    return new Promise<number>((_, rej) =>
+      sig.addEventListener("abort", () => rej(new Error("stopped"))),
+    );
+  };
+  await assert.rejects(
+    runParts(undefined, (sig) => [hang(sig), Promise.reject(new Error("part failed")), hang(sig)]),
+    /part failed/,
+  );
+  assert.ok(seen.length === 2 && seen.every((sig) => sig.aborted), "the other parts were stopped");
+  const ctl = new AbortController();
+  const run = runParts(ctl.signal, (sig) => [hang(sig), hang(sig)]);
+  ctl.abort();
+  await assert.rejects(run, /stopped/);
+  assert.deepStrictEqual(
+    await runParts(undefined, () => [Promise.resolve(1), Promise.resolve(2)]),
+    [1, 2],
+  );
 });
 
 test("throttledProgress passes on at most one report per interval, and always the final one", () => {

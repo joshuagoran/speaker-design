@@ -1,5 +1,5 @@
 import { runHifiJob } from "./optimize";
-import { makeOptimizerRunner } from "../makeOptimizerRunner";
+import { makeOptimizerRunner, runParts } from "../makeOptimizerRunner";
 import { throttledProgress } from "../optimizer/progress";
 import OptimizerWorker from "./optimize.worker.ts?worker&inline";
 import type {
@@ -43,12 +43,12 @@ export async function runHifiOptimizer(
     report(done, total + Math.ceil(total * SELECT_SHARE), final);
   };
   // the first worker keeps its own share for the select job it runs next; the others send theirs over
-  const shares = await Promise.all(
+  const shares = await runParts(signal, (partSignal) =>
     runners.map((go, part) =>
       go(
         { kind: "score", input, part, parts: PARTS, keep: part === 0 ? run : undefined },
         {
-          signal,
+          signal: partSignal,
           onProgress: (p) => {
             parts[part] = p;
             sum();

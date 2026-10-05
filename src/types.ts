@@ -2048,7 +2048,7 @@ export interface PaExactGrid {
 }
 /**
  * One share of the exact PA search's model step, per sub driver: its place in the searched list and its curves packed
- * by row (see `PA_EXACT_ROW` in lib/pa/optimizeExact).
+ * by row (see `ROW_HEAD` in lib/pa/optimizeExact).
  */
 export interface PaExactScored {
   sub: number;
@@ -2056,7 +2056,7 @@ export interface PaExactScored {
 }
 /** A job for an exact PA search worker: one share of the model step, or the search on every share. */
 export type PaExactJob =
-  | { kind: "score"; input: PaOptimizerInput; part: number; parts: number }
+  | { kind: "score"; input: PaOptimizerInput; part: number; parts: number; grid?: PaExactGrid }
   | { kind: "select"; input: PaOptimizerInput; scored: PaExactScored[][] };
 export type PaExactJobResult =
   | { kind: "scored"; scored: PaExactScored[] }

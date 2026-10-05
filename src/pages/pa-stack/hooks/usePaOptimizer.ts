@@ -68,6 +68,8 @@ export interface PaOptimizer
   toastMessage: string;
   setToastMessage: Setter<string>;
   startOptimizerSearch: (over?: PaSearchOverrides, mode?: PaRunMode) => Promise<void>;
+  /** runs again with these limits changed, in the mode that found the result shown (the near miss's options) */
+  retryOptimizerSearch: (over: PaSearchOverrides) => Promise<void>;
   loadOptimizerResult: (k: PaOptimizerCard) => Promise<void>;
   saveOptimizerResult: (k: PaOptimizerCard) => Promise<void>;
   /** the current design's clean sub output in dB; null when the optimizer is off or the design can't be scored */
@@ -127,6 +129,8 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
   } = useOptimizerRun<PaOptimizerResult>();
   const [toastMessage, setToastMessage] = useState("");
   const [runMode, setRunMode] = useState<PaRunMode>("improve");
+  // the mode of the result shown (a cancelled run leaves it as it was)
+  const [resultMode, setResultMode] = useState<PaRunMode>("improve");
   /** the search's input for the design as it is and these optimizer inputs */
   const searchInput = (inp: PaOptimizerInputState) => ({
     cur: preview.baseDesign(),
@@ -143,8 +147,14 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     if (over && !over.nativeEvent) updateOptimizerInput(over);
     if (!inp.goals.length) return;
     setRunMode(mode);
-    await runOptimizerSearch((options) => PA_RUNNERS[mode](searchInput(inp), options));
+    await runOptimizerSearch((options) =>
+      PA_RUNNERS[mode](searchInput(inp), options).then((r) => {
+        setResultMode(mode);
+        return r;
+      }),
+    );
   };
+  const retryOptimizerSearch = (over: PaSearchOverrides) => startOptimizerSearch(over, resultMode);
   const loadOptimizerResult = async (k: PaOptimizerCard) => {
     const before = preview.loadOptimizerResult(k);
     let msg = `Loaded "${k.label}".`;
@@ -218,6 +228,7 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     toastMessage,
     setToastMessage,
     startOptimizerSearch,
+    retryOptimizerSearch,
     previewOptimizerResult: preview.previewOptimizerResult,
     exitPreview: preview.exitPreview,
     loadOptimizerResult,

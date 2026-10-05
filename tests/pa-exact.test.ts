@@ -445,7 +445,8 @@ test("exact PA search: the model step split across workers gives exactly what on
   assert.ok(one.cards.length > 1, "cards to compare");
   assert.deepStrictEqual({ ...split, stats: null }, { ...one, stats: null });
   // the job runner's score job gives the same shares
-  const job = runPaExactJob({ kind: "score", input, part: 1, parts: 3 });
-  assert.strictEqual(job.kind, "scored");
+  const job = runPaExactJob({ kind: "score", input, part: 1, parts: 3, grid: smallGrid });
+  assert.ok(job.kind === "scored", "a score job returns its share");
+  assert.deepStrictEqual(structuredClone(job.scored), shares[1]);
   assert.ok(paExactGridText(input).length > 3, "the grid in words");
 });

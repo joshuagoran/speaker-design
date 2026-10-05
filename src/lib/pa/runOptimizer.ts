@@ -1,6 +1,6 @@
 import { optimizePaStack } from "./optimize";
 import { runPaExactJob } from "./optimizeExact";
-import { makeOptimizerRunner } from "../makeOptimizerRunner";
+import { makeOptimizerRunner, runParts } from "../makeOptimizerRunner";
 // the optimizers' workers, bundled separately by Vite and inlined in the page (they start from Blob URLs)
 import OptimizerWorker from "./optimize.worker.ts?worker&inline";
 import ExactWorker from "./optimizeExact.worker.ts?worker&inline";
@@ -45,12 +45,12 @@ export async function runPaExactOptimizer(
     onProgress?.({ done: Math.round(1000 * shown), total: 1000, best });
   };
   const parts: OptimizerProgress[] = exactRunners.map(() => ({ done: 0, total: 0 }));
-  const shares = await Promise.all(
+  const shares = await runParts(signal, (partSignal) =>
     exactRunners.map((go, part) =>
       go(
         { kind: "score", input, part, parts: PARTS },
         {
-          signal,
+          signal: partSignal,
           onProgress: (p) => {
             parts[part] = p;
             let done = 0,

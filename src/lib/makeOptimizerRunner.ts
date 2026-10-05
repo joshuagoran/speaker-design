@@ -122,3 +122,29 @@ export function makeOptimizerRunner<I, R>(
     });
   };
 }
+
+/**
+ * Runs a search's parts side by side under the caller's signal: when one part fails, the others are stopped too (their
+ * workers terminated), so a failed run leaves no jobs behind for the next run to queue after.
+ */
+export async function runParts<T>(
+  signal: AbortSignal | undefined,
+  parts: (signal: AbortSignal) => Promise<T>[],
+): Promise<T[]> {
+  const ctl = new AbortController();
+  const follow = () => ctl.abort();
+  if (signal?.aborted) ctl.abort();
+  else signal?.addEventListener("abort", follow, { once: true });
+  try {
+    return await Promise.all(
+      parts(ctl.signal).map((p) =>
+        p.catch((e: unknown) => {
+          ctl.abort();
+          throw e;
+        }),
+      ),
+    );
+  } finally {
+    signal?.removeEventListener("abort", follow);
+  }
+}

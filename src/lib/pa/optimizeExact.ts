@@ -18,6 +18,7 @@
 //      the port ignored, the lightest box that holds the volume, the cheapest mid and horn); the card selection runs on
 //      a pool that grows until no design on the grid beats one of its picks, and every pick is checked with the
 //      planner's own evaluateDesign (a design the fast path got wrong is set aside and the cards are picked again).
+import { throttledProgress } from "../optimizer/progress";
 import {
   ALT_OUTPUT_DB,
   AMP_WATTS_STEPS,
@@ -85,6 +86,7 @@ import type {
   HornHf,
   MidDriver,
   OptimizerProgress,
+  OptimizerProgressCallback,
   PaChoose,
   PaChosen,
   PaDesignConfig,
@@ -107,6 +109,9 @@ import type {
   SubDriver,
   VentSpec,
 } from "../../types";
+
+// the most vent sizes any style has (a cache key's stride)
+const MAX_VENT_SIZES = Math.max(...VENT_STYLES.map((st) => ventSizesFor(st).length));
 
 /** The grid's steps (see `PaExactGrid`). */
 export const PA_EXACT_GRID: PaExactGrid = {
@@ -371,17 +376,6 @@ function barePairs(s: ExactSpace, sub: SubDriver, t: number, V: number): Pairs {
 
 // ---- the model step (split across workers by sub driver) ----
 
-/** A progress callback called at most ~10 times a second (always when forced). */
-const throttled = (onProgress?: (p: OptimizerProgress) => void) => {
-  let at = -Infinity;
-  return (p: OptimizerProgress, force = false) => {
-    if (!onProgress) return;
-    const now = Date.now();
-    if (!force && now - at < 100) return;
-    at = now;
-    onProgress(p);
-  };
-};
 /** The model step's count of work: a sub's rung and tuning (the share of progress the model step reports). */
 const modelSteps = (s: ExactSpace, subs: number) => subs * s.rungs.length * s.fbs.length;
 
@@ -395,13 +389,13 @@ export function paExactScore(
   input: PaOptimizerInput,
   part = 0,
   parts = 1,
-  onProgress?: (p: OptimizerProgress) => void,
+  onProgress?: OptimizerProgressCallback,
   grid = PA_EXACT_GRID,
 ): PaExactScored[] {
   const s = exactSpace(input, grid);
   const out: PaExactScored[] = [];
   const mine = s.subs.map((_, i) => i).filter((i) => i % parts === part);
-  const report = throttled(onProgress);
+  const report = throttledProgress(onProgress);
   let done = 0;
   const total = modelSteps(s, mine.length);
   for (const si of mine) {
@@ -418,11 +412,11 @@ export function paExactScore(
           rows.push(ri, fi, hi, cs.f3, cs.bandMin, cs.xmaxPct, cs.velArea, ...cs.xoSpl),
         );
       }
-      report({ done, total });
+      report(done, total);
     }
     out.push({ sub: si, rows: Float64Array.from(rows) });
   }
-  report({ done, total }, true);
+  report(done, total, true);
   return out;
 }
 
@@ -490,6 +484,8 @@ interface Found {
   ampW: number;
   m: PaMetric & { w: number };
   rank: [number, number];
+  /** the query that found it, whose test the planner's own numbers must pass too */
+  q: Query;
 }
 /** What a card needs: thresholds every design it can be must meet (for the bounds), and the exact test. */
 interface Need {
@@ -584,7 +580,7 @@ interface Unit {
 function exactHook(
   input: PaOptimizerInput,
   scored: readonly (readonly PaExactScored[])[],
-  onProgress: ((p: OptimizerProgress) => void) | undefined,
+  onProgress: OptimizerProgressCallback | undefined,
   grid: PaExactGrid,
 ): PaExactHook & { stats: () => { designs: number; subDesigns: number } } {
   const s = exactSpace(input, grid);
@@ -622,8 +618,8 @@ function exactHook(
   const rejected = new Set<string>();
   // progress: the units settled out of the units to settle, growing with every search (the model step reports its own)
   const progress: OptimizerProgress = { done: 0, total: 0 };
-  const throttle = throttled(onProgress);
-  const report = (force = false) => throttle({ ...progress }, force);
+  const throttle = throttledProgress(onProgress);
+  const report = (force = false) => throttle(progress.done, progress.total, force, progress.best);
 
   const bare = (si: number, ti: number, ri: number) => {
     const k = (si * s.walls.length + ti) * s.rungs.length + ri;
@@ -680,7 +676,9 @@ function exactHook(
   ): Shape[] => {
     const style = s.styles[st];
     const k =
-      ((((si * s.walls.length + ti) * VENT_STYLES.length + VENT_STYLES.indexOf(style)) * 32 + zi) *
+      ((((si * s.walls.length + ti) * VENT_STYLES.length + VENT_STYLES.indexOf(style)) *
+        MAX_VENT_SIZES +
+        zi) *
         s.fbs.length +
         fi) *
         s.rungs.length +
@@ -1324,7 +1322,7 @@ function exactHook(
             const f = design(c, sd, xi, e, q);
             if (!f || rejected.has(`${sd.key}|${xi}|${ui}`)) continue;
             if (before(f.rank, bestRank)) {
-              best = { ...f, sd, xi, u: e, ui };
+              best = { ...f, sd, xi, u: e, ui, q };
               bestRank = f.rank;
               if (first) {
                 progress.best = bestText(c.goals[0], f.m);
@@ -1413,6 +1411,9 @@ function exactHook(
       rejected.add(`${sd.key}|${f.xi}|${f.ui}`);
       return null;
     }
+    // the fast numbers can sit on a threshold the planner's land just past: the design still joins the pool (another
+    // card may take it) but the searches skip it from now on, or the next round would find it again
+    if (!f.q.ok(c.metric(p))) rejected.add(`${sd.key}|${f.xi}|${f.ui}`);
     return p;
   };
 
@@ -1761,7 +1762,7 @@ const BEST_WORDS: Record<PaGoal, (m: PaMetric) => string> = {
  */
 export function optimizePaStackExact(
   input: PaOptimizerInput,
-  onProgress?: (p: OptimizerProgress) => void,
+  onProgress?: OptimizerProgressCallback,
   opts: { scored?: readonly (readonly PaExactScored[])[]; grid?: PaExactGrid } = {},
 ): PaOptimizerResult {
   const t0 = Date.now();
@@ -1785,12 +1786,12 @@ export function optimizePaStackExact(
 /** One job for an exact-search worker: a share of the model step, or the search on all the shares. */
 export function runPaExactJob(
   job: PaExactJob,
-  onProgress?: (p: OptimizerProgress) => void,
+  onProgress?: OptimizerProgressCallback,
 ): PaExactJobResult {
   if (job.kind === "score")
     return {
       kind: "scored",
-      scored: paExactScore(job.input, job.part, job.parts, onProgress),
+      scored: paExactScore(job.input, job.part, job.parts, onProgress, job.grid),
     };
   return {
     kind: "result",

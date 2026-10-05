@@ -32,6 +32,8 @@ interface Props {
   run: (over?: PaSearchOverrides) => unknown;
   /** starts the exact search (Fully optimize) */
   runFull: () => unknown;
+  /** runs again with these limits changed, in the mode of the result shown (the near miss's options) */
+  retry: (over: PaSearchOverrides) => unknown;
   /** which search is running; null when none is */
   runningMode: PaRunMode | null;
   /** the grid Fully optimize searches, one line per part */
@@ -59,6 +61,7 @@ export function OptimizerPanel({
   setOpt,
   run,
   runFull,
+  retry,
   runningMode,
   fullGridLines,
   busy,
@@ -213,7 +216,7 @@ export function OptimizerPanel({
             <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs text-stone-500">
               Reaches the goal with a looser limit:
               {res.nearMiss.options.map((o) => (
-                <ToggleButton key={o.text} on={false} onClick={() => run(o.set)}>
+                <ToggleButton key={o.text} on={false} onClick={() => retry(o.set)}>
                   {o.text}
                 </ToggleButton>
               ))}
@@ -233,7 +236,7 @@ export function OptimizerPanel({
             {res.nearMiss.options.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {res.nearMiss.options.map((o) => (
-                  <ToggleButton key={o.text} on={false} onClick={() => run(o.set)}>
+                  <ToggleButton key={o.text} on={false} onClick={() => retry(o.set)}>
                     {o.text}
                   </ToggleButton>
                 ))}

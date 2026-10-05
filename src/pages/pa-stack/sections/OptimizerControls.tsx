@@ -25,6 +25,7 @@ interface Props {
     | "toastMessage"
     | "setToastMessage"
     | "startOptimizerSearch"
+    | "retryOptimizerSearch"
     | "previewOptimizerResult"
     | "exitPreview"
     | "loadOptimizerResult"
@@ -55,6 +56,7 @@ export function OptimizerControls({ planner }: Props) {
     toastMessage,
     setToastMessage,
     startOptimizerSearch,
+    retryOptimizerSearch,
     previewOptimizerResult,
     exitPreview,
     loadOptimizerResult,
@@ -78,6 +80,7 @@ export function OptimizerControls({ planner }: Props) {
           setOpt={updateOptimizerInput}
           run={startOptimizerSearch}
           runFull={() => startOptimizerSearch(undefined, "full")}
+          retry={retryOptimizerSearch}
           runningMode={runningMode}
           fullGridLines={fullGridLines}
           busy={isOptimizing}
