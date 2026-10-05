@@ -1425,6 +1425,21 @@ export interface CutPartsConfig {
   layout: PaLayout;
 }
 
+/** The panel a Hi-fi box's passive radiators are cut into. */
+export type RadiatorPanel = Extract<CutPartId, "baffle" | "back" | "side">;
+
+/** What the Hi-fi cutlist needs: the model's config, the drivers (the tweeter with its waveguide), the joint and the radiators' panel. */
+export interface HifiCutPartsConfig {
+  cfg: Pick<
+    HifiConfig,
+    "box" | "dim" | "wall" | "port" | "pr" | "guide" | "roundoverIn" | "tweeterOffsetIn"
+  >;
+  woofer: HifiWoofer;
+  tweeter: HifiTweeter;
+  joint: CornerJoint;
+  prPanel: RadiatorPanel;
+}
+
 /** How the cutlist lays parts on sheets: sheet and stack count, saw kerf and edge trim (inches), grain, waterfall and offcut. */
 export interface CutlistSettings {
   sheet: PlywoodSheetKind;

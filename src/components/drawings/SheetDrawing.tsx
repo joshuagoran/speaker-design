@@ -1,8 +1,20 @@
-import type { CutBoxId, CutPart, Offcut, PackedSheet, PlywoodSheet } from "../../types";
+import type {
+  CutBoxId,
+  CutPart,
+  Offcut,
+  PackedSheet,
+  PanelMaterial,
+  PlywoodSheet,
+} from "../../types";
 import { formatInches, formatThickness } from "../../lib/pa/calc";
 import { cutRowKey } from "../../lib/pa/cutlist";
 import { usePalette } from "../../hooks/useTheme";
-import { CUT_BOX_NAMES, CUT_PART_NAMES } from "../../constants/cutParts";
+import {
+  CUT_BOX_NAMES,
+  CUT_BOX_TINTS,
+  CUT_PART_NAMES,
+  PANEL_MATERIAL_NAMES,
+} from "../../constants/cutParts";
 import { SHEET_LABEL_PX, SHEET_PX_PER_IN } from "../../constants/chartScales";
 import { SVG_FONT } from "../../styles/fonts";
 
@@ -13,8 +25,9 @@ interface Props {
   /** which sheet this is, from 0, and how many sheets of this thickness there are */
   idx: number;
   count: number;
-  /** the ply thickness, inches */
+  /** the panel thickness, inches, and its material (ply when absent; MDF has no grain to show) */
   t: number;
+  material?: PanelMaterial;
   /** the offcut this sheet keeps, if any */
   offcut?: Offcut | null;
   /** a part's tag, shared with its row in the cutlist (S1, M2 …) */
@@ -34,13 +47,24 @@ const OFFCUT_LABEL = "offcut";
  * One plywood sheet with its cut pieces laid out at the fixed sheet scale; grain runs down the sheet. Each piece carries
  * its cutlist row's tag, and hovering or focusing a piece highlights it with its row.
  */
-export function SheetDrawing({ sheet, S, idx, count, t, offcut, tagOf, hot, onHot }: Props) {
+export function SheetDrawing({
+  sheet,
+  S,
+  idx,
+  count,
+  t,
+  material = "ply",
+  offcut,
+  tagOf,
+  hot,
+  onHot,
+}: Props) {
   const pal = usePalette();
   const sc = SHEET_PX_PER_IN,
     W = S.w * sc,
     H = S.h * sc,
     fs = SHEET_LABEL_PX;
-  const colors: Record<CutBoxId, string> = { sub: pal.subTint, mid: pal.midTint };
+
   // what the sheet is for: each box's parts on it, in the order they first appear
   const uses = new Map<CutBoxId, Set<string>>();
   for (const it of sheet.items) {
@@ -70,10 +94,15 @@ export function SheetDrawing({ sheet, S, idx, count, t, offcut, tagOf, hot, onHo
           Sheet {idx + 1} of {count}
         </span>
         <span className="block text-xs text-stone-500">
-          {formatThickness(t)} ply, {S.name} ·{" "}
-          <span title="Face grain runs top to bottom on this drawing: load the sheet that way">
-            grain ↕
-          </span>
+          {formatThickness(t)} {PANEL_MATERIAL_NAMES[material].short}, {S.name}
+          {material === "ply" && (
+            <>
+              {" · "}
+              <span title="Face grain runs top to bottom on this drawing: load the sheet that way">
+                grain ↕
+              </span>
+            </>
+          )}
         </span>
       </figcaption>
       <svg
@@ -166,7 +195,7 @@ export function SheetDrawing({ sheet, S, idx, count, t, offcut, tagOf, hot, onHo
                 y={y}
                 width={w}
                 height={h}
-                fill={colors[it.box]}
+                fill={pal[CUT_BOX_TINTS[it.box]]}
                 stroke={edge}
                 strokeWidth={isHot ? 3 : it.crossed ? 2 : 0.8}
               />

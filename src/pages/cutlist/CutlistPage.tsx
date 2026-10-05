@@ -9,8 +9,9 @@ import type {
   GrainPanel,
   GrainPreset,
   OffcutShape,
+  PanelMaterial,
 } from "../../types";
-import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
+import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
@@ -24,7 +25,8 @@ import {
 } from "../../components/ui/SettingsSheetTabs";
 import { StatTileGrid } from "../../components/stats/StatTileGrid";
 import { SheetDrawing } from "../../components/drawings/SheetDrawing";
-import { PLYWOOD_SHEETS, formatInches, formatThickness, cutParts } from "../../lib/pa/calc";
+import { PLYWOOD_SHEETS, formatInches, formatThickness } from "../../lib/pa/calc";
+import { settingsForMaterial } from "../../lib/hifi/cutlist";
 import {
   FROM_OFFCUT,
   FROM_OFFCUT_NOTE,
@@ -32,9 +34,11 @@ import {
   KERF_OPTIONS,
   TRIM_OPTIONS,
   cutRowKey,
+  cutRowTags,
   cutRows,
   grainPresetOf,
   layoutCutlist,
+  noteLines,
 } from "../../lib/pa/cutlist";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import { useFolds } from "../../hooks/useFolds";
@@ -43,46 +47,31 @@ import { entriesOf, keysOf } from "../../lib/records";
 import {
   CUT_BOX_NAMES,
   CUT_BOX_TAGS,
+  CUT_BOX_TINTS,
   CUT_PART_NAMES,
   GRAIN_LOOK_NAMES,
+  PANEL_MATERIAL_NAMES,
   type GrainLook,
 } from "../../constants/cutParts";
 import {
   CUTLIST_SETTINGS_SECTIONS,
   type CutlistSettingsSection,
 } from "../../constants/settingsSections";
+import { CUTLIST_PROJECTS } from "../../constants/cutlistProjects";
+import type { ProjectId } from "../../constants/pages";
 
 interface Props {
-  planner: Pick<
-    PaPlanner,
-    | "subDriver"
-    | "midDriver"
-    | "subBox"
-    | "effectiveMidBoxDims"
-    | "wallThicknessIn"
-    | "baffleInsetIn"
-    | "cornerJoint"
-    | "setCornerJoint"
-    | "plywoodSheetKind"
-    | "setPlywoodSheetKind"
-    | "boxSetCount"
-    | "setBoxSetCount"
-    | "kerfIn"
-    | "setKerfIn"
-    | "edgeTrimIn"
-    | "setEdgeTrimIn"
-    | "grain"
-    | "setGrain"
-    | "waterfall"
-    | "setWaterfall"
-    | "offcutShape"
-    | "setOffcutShape"
-    | "cutStyle"
-    | "setCutStyle"
-    | "portStyle"
-    | "subVentSpec"
-    | "layout"
-  >;
+  /** whose boxes these are: the page's words and set choices follow it */
+  project: ProjectId;
+  /** this project's cutlist choices */
+  options: CutlistOptions;
+  /** one set's parts (one stack, one speaker) */
+  parts: CutPart[];
+  /** bought parts and other lines that aren't cut, shown under the list */
+  also: string[];
+  /** the wall thickness and material, inches */
+  wall: number;
+  material: PanelMaterial;
 }
 
 const JOINT_NAMES: Record<CornerJoint, string> = { butt: "Butt", rabbet: "Rabbet", miter: "Miter" };
@@ -93,7 +82,6 @@ const PRESET_NAMES: Record<GrainPreset, string> = {
 };
 const OFFCUT_NAMES: Record<OffcutShape, string> = { strip: "Long strip", panel: "Wide panel" };
 const CUT_STYLE_NAMES: Record<CutStyle, string> = { sheets: "Fewest sheets", rips: "Rip first" };
-const STACK_CHOICES = [1, 2, 4] as const;
 /** Each panel's grain choices: what `b` and `a` along the grain look like on the box (`any` lets the layout turn it). */
 const GRAIN_LOOKS: [GrainPanel, string, Record<Exclude<GrainDir, "any">, GrainLook>][] = [
   ["side", "Sides", { b: "vertical", a: "frontToBack" }],
@@ -131,16 +119,13 @@ const sizeOf = (p: CutPart): [string, string] => {
 };
 const trimName = (v: number) => (v ? `${formatInches(v)}″` : "None");
 
-/** Cutlist page: the settings beside the plywood parts for each box and how they pack onto sheets. */
-export function CutlistPage({ planner }: Props) {
+/**
+ * Cutlist page, for either project: the settings beside the panels of each box and how they pack onto sheets. The
+ * project's own page (`PaCutlistPage`, `HifiCutlistPage`) works out its parts and passes its choices.
+ */
+export function CutlistPage({ project, options, parts, also, wall, material }: Props) {
   const pal = usePalette();
   const {
-    subDriver,
-    midDriver,
-    subBox,
-    effectiveMidBoxDims,
-    wallThicknessIn,
-    baffleInsetIn,
     cornerJoint,
     setCornerJoint,
     plywoodSheetKind,
@@ -159,10 +144,11 @@ export function CutlistPage({ planner }: Props) {
     setOffcutShape,
     cutStyle,
     setCutStyle,
-    portStyle,
-    subVentSpec,
-    layout,
-  } = planner;
+  } = options;
+  const proj = CUTLIST_PROJECTS[project];
+  const mat = PANEL_MATERIAL_NAMES[material];
+  // MDF has no grain: its panels turn freely and the grain settings step aside
+  const grainless = material === "mdf";
   const folds = useFolds("cutlist.settingsFolds", keysOf(CUTLIST_SETTINGS_SECTIONS));
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tab, setTab] = useState<CutlistSettingsSection>("boxes");
@@ -170,29 +156,20 @@ export function CutlistPage({ planner }: Props) {
   /** the row (by `cutRowKey`) highlighted with its pieces on the sheets */
   const [hot, setHot] = useState<string | null>(null);
 
-  const { parts, vent } = cutParts({
-    sub: subDriver,
-    mid: midDriver,
-    subBox,
-    midDims: effectiveMidBoxDims,
-    wall: wallThicknessIn,
-    inset: baffleInsetIn,
-    joint: cornerJoint,
-    portStyle,
-    cVent: subVentSpec,
-    layout,
-  });
-  const settings: CutlistSettings = {
-    sheet: plywoodSheetKind,
-    stacks: boxSetCount,
-    kerf: kerfIn,
-    trim: edgeTrimIn,
-    grain,
-    waterfall,
-    joint: cornerJoint,
-    offcut: offcutShape,
-    cuts: cutStyle,
-  };
+  const settings: CutlistSettings = settingsForMaterial(
+    {
+      sheet: plywoodSheetKind,
+      stacks: boxSetCount,
+      kerf: kerfIn,
+      trim: edgeTrimIn,
+      grain,
+      waterfall,
+      joint: cornerJoint,
+      offcut: offcutShape,
+      cuts: cutStyle,
+    },
+    material,
+  );
   // the inputs as one string: the layout is redone only when it changes
   const key = JSON.stringify({ parts, settings });
   // the quick deterministic layout shows at once; the worker's longer search replaces it when it is done
@@ -202,17 +179,9 @@ export function CutlistPage({ planner }: Props) {
   const preset = grainPresetOf(grain);
   const kerfName = KERF_OPTIONS.find((k) => k.v === kerfIn)?.label ?? `${formatInches(kerfIn)}″`;
 
-  // each row's tag, numbered per box in table order (S1, S2 … M1 …); its pieces on the sheets carry the same tag. Rows
-  // are one per key (`cutRows`), so no two share a tag.
+  // each row's tag (S1, S2 … M1 … H1 …); its pieces on the sheets carry the same tag
   const allRows = cutRows(cut.parts);
-  const tags = new Map<string, string>();
-  const byBox = new Map<CutBoxId, CutPart[]>();
-  for (const p of allRows) {
-    const rows = byBox.get(p.box) ?? [];
-    rows.push(p);
-    byBox.set(p.box, rows);
-    tags.set(cutRowKey(p), `${CUT_BOX_TAGS[p.box]}${rows.length}`);
-  }
+  const { tags, byBox } = cutRowTags(allRows);
   const tagOf = (p: CutPart) => tags.get(cutRowKey(p)) ?? CUT_BOX_TAGS[p.box];
   // the highlighted row, while it is still in the list (a settings change can take it away)
   const hotRow = hot != null && tags.has(hot) ? hot : null;
@@ -230,12 +199,14 @@ export function CutlistPage({ planner }: Props) {
   const totalSheets = cut.groups.reduce((a, g) => a + g.sheets.length, 0);
   const rips = cut.groups.reduce((a, g) => a + g.cuts.rips, 0);
   const crosscuts = cut.groups.reduce((a, g) => a + g.cuts.crosscuts, 0);
-  const boxColour: Record<CutBoxId, string> = { sub: pal.subTint, mid: pal.midTint };
+  const boxColour = (box: CutBoxId) => pal[CUT_BOX_TINTS[box]];
 
   const summaries: Record<CutlistSettingsSection, string> = {
-    boxes: `${JOINT_NAMES[cornerJoint]} joints, ${plural(boxSetCount, "stack")}`,
+    boxes: `${JOINT_NAMES[cornerJoint]} joints, ${plural(boxSetCount, proj.set)}`,
     sheets: `${sheetSize.name}, ${kerfName} kerf, ${edgeTrimIn ? `${trimName(edgeTrimIn)} trim` : "no trim"}`,
-    grain: `${preset ? PRESET_NAMES[preset] : "Custom"}${waterfall ? ", waterfall" : ""}`,
+    grain: grainless
+      ? `${mat.word}: no grain`
+      : `${preset ? PRESET_NAMES[preset] : "Custom"}${waterfall ? ", waterfall" : ""}`,
     cuts: `${CUT_STYLE_NAMES[cutStyle]}, keep ${OFFCUT_NAMES[cutStyle === "rips" ? "strip" : offcutShape].toLowerCase()}`,
   };
   const section = (id: CutlistSettingsSection, children: React.ReactNode) => (
@@ -258,8 +229,12 @@ export function CutlistPage({ planner }: Props) {
         Panels
       </h3>
       <p className="text-sm text-stone-500 mb-2">
-        Finished sizes in inches, along the grain first (↕) for grain-locked parts. Quantities for{" "}
-        {plural(boxSetCount, "stack")}. Hover or focus a row to find its pieces on the sheets.
+        Finished sizes in inches,{" "}
+        {grainless
+          ? `short side first (${mat.word} has no grain)`
+          : "along the grain first (↕) for grain-locked parts"}
+        . Quantities for {plural(boxSetCount, proj.set)}. Hover or focus a row to find its pieces on
+        the sheets.
       </p>
       <div className="overflow-x-auto">
         <table className="text-sm w-full border-collapse tabular-nums">
@@ -274,7 +249,7 @@ export function CutlistPage({ planner }: Props) {
               <th className={`${th} px-2 text-center`} title="Grain direction">
                 Grain
               </th>
-              <th className={`${th} text-right`}>Ply</th>
+              <th className={`${th} text-right`}>{mat.column}</th>
             </tr>
           </thead>
           {boxes.map(({ box, name, rows, pieces }) => (
@@ -296,9 +271,11 @@ export function CutlistPage({ planner }: Props) {
               {rows.map((p, i) => {
                 const k = cutRowKey(p);
                 const isHot = hotRow === k;
-                const note = FROM_OFFCUT.has(p.part)
-                  ? `${FROM_OFFCUT_NOTE}${p.note ? `; ${p.note}` : ""}`
-                  : p.note;
+                // one short line per note (each cutout, joint or warning), so the list stays easy to scan
+                const notes = [
+                  ...(FROM_OFFCUT.has(p.part) ? [FROM_OFFCUT_NOTE] : []),
+                  ...noteLines(p.note),
+                ];
                 const [first, second] = sizeOf(p);
                 return (
                   <tr
@@ -315,14 +292,20 @@ export function CutlistPage({ planner }: Props) {
                       {/* the box's colour on the sheets, so the tag reads the same in both places */}
                       <span
                         className="inline-block min-w-[2.5rem] px-1 rounded border border-stone-500 text-center font-bold"
-                        style={{ background: boxColour[p.box] }}
+                        style={{ background: boxColour(p.box) }}
                       >
                         {tagOf(p)}
                       </span>
                     </td>
                     <td className={`${td} pr-3`}>
                       {CUT_PART_NAMES[p.part]}
-                      {note && <span className="block text-xs text-stone-500">{note}</span>}
+                      {notes.length > 0 && (
+                        <ul className="text-xs text-stone-500">
+                          {notes.map((n) => (
+                            <li key={n}>{n}</li>
+                          ))}
+                        </ul>
+                      )}
                     </td>
                     <td className={`${td} pr-3 text-right`}>{p.qty * boxSetCount}</td>
                     <td className={`${td} text-right whitespace-nowrap`}>{first}</td>
@@ -353,7 +336,7 @@ export function CutlistPage({ planner }: Props) {
           </tfoot>
         </table>
       </div>
-      {vent.length > 0 && <p className="text-sm text-stone-500 mt-3">Also: {vent.join("; ")}.</p>}
+      {also.length > 0 && <p className="text-sm text-stone-500 mt-3">Also: {also.join("; ")}.</p>}
     </section>
   );
 
@@ -367,7 +350,8 @@ export function CutlistPage({ planner }: Props) {
         return (
           <div key={g.t} className="mb-6">
             <h4 className="text-base font-semibold">
-              {formatThickness(g.t)} ply: {plural(g.sheets.length, "sheet")} of {sheetSize.name}
+              {formatThickness(g.t)} {mat.short}: {plural(g.sheets.length, "sheet")} of{" "}
+              {sheetSize.name}
             </h4>
             <p className="text-sm text-stone-500 mb-3">
               {plural(g.cuts.rips, "full-length rip")},{" "}
@@ -401,6 +385,7 @@ export function CutlistPage({ planner }: Props) {
                   idx={i}
                   count={g.sheets.length}
                   t={g.t}
+                  material={material}
                   offcut={g.offcut?.sheet === i ? g.offcut : null}
                   tagOf={tagOf}
                   hot={hotDrawn}
@@ -422,8 +407,8 @@ export function CutlistPage({ planner }: Props) {
           <div>
             <SectionHeading className="mb-1">Cutlist</SectionHeading>
             <p className="text-sm text-stone-500">
-              The plywood parts of the Design page's boxes, {formatThickness(wallThicknessIn)}{" "}
-              walls, for {plural(boxSetCount, "stack")}, packed onto {sheetSize.name} sheets.
+              The {mat.word} parts of {proj.source}, {formatThickness(wall)} walls, for{" "}
+              {plural(boxSetCount, proj.set)}, packed onto {sheetSize.name} sheets.
             </p>
           </div>
           <StatTileGrid
@@ -479,10 +464,10 @@ export function CutlistPage({ planner }: Props) {
                 options={entriesOf(JOINT_NAMES)}
               />
               <ToggleGroup
-                label="Stacks"
+                label={proj.setsLabel}
                 value={boxSetCount}
                 onChange={setBoxSetCount}
-                options={STACK_CHOICES.map((n) => [n, n] as const)}
+                options={proj.sets.map((n) => [n, n] as const)}
               />
             </>,
           )}
@@ -515,49 +500,56 @@ export function CutlistPage({ planner }: Props) {
           )}
           {section(
             "grain",
-            <>
-              <div>
+            grainless ? (
+              <p className="text-sm text-stone-500">
+                {mat.word} has no grain: every panel turns freely to save sheets, and there is no
+                waterfall strip.
+              </p>
+            ) : (
+              <>
+                <div>
+                  <ToggleGroup
+                    label={
+                      <Tooltip tip="Which way the face grain runs on each panel. A locked panel lies along the sheet's length; Any lets the layout turn it to save ply.">
+                        Grain
+                      </Tooltip>
+                    }
+                    value={preset}
+                    onChange={(k) => setGrain(GRAIN_PRESETS[k])}
+                    options={entriesOf(PRESET_NAMES)}
+                    className="mb-2"
+                  />
+                  <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 items-center">
+                    {GRAIN_ROWS.map(([panel, label, opts]) => (
+                      <div key={panel} className="contents">
+                        <div className="text-xs text-stone-500">{label}</div>
+                        <ToggleGroup
+                          size="xs"
+                          value={grain[panel]}
+                          onChange={(g) => setGrain({ ...grain, [panel]: g })}
+                          options={opts}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <ToggleGroup
                   label={
-                    <Tooltip tip="Which way the face grain runs on each panel. A locked panel lies along the sheet's length; Any lets the layout turn it to save ply.">
-                      Grain
+                    <Tooltip tip="Cuts each box's side, top and side in order from one strip, so the grain runs unbroken over both top corners. On by default with mitre joints.">
+                      Waterfall
                     </Tooltip>
                   }
-                  value={preset}
-                  onChange={(k) => setGrain(GRAIN_PRESETS[k])}
-                  options={entriesOf(PRESET_NAMES)}
-                  className="mb-2"
+                  value={waterfall}
+                  onChange={setWaterfall}
+                  options={
+                    [
+                      [false, "Off"],
+                      [true, "Side-top-side"],
+                    ] as const
+                  }
                 />
-                <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 items-center">
-                  {GRAIN_ROWS.map(([panel, label, opts]) => (
-                    <div key={panel} className="contents">
-                      <div className="text-xs text-stone-500">{label}</div>
-                      <ToggleGroup
-                        size="xs"
-                        value={grain[panel]}
-                        onChange={(g) => setGrain({ ...grain, [panel]: g })}
-                        options={opts}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <ToggleGroup
-                label={
-                  <Tooltip tip="Cuts each box's side, top and side in order from one strip, so the grain runs unbroken over both top corners. On by default with mitre joints.">
-                    Waterfall
-                  </Tooltip>
-                }
-                value={waterfall}
-                onChange={setWaterfall}
-                options={
-                  [
-                    [false, "Off"],
-                    [true, "Side-top-side"],
-                  ] as const
-                }
-              />
-            </>,
+              </>
+            ),
           )}
           {section(
             "cuts",

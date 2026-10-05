@@ -552,7 +552,7 @@ export function boxParts(
 }
 
 /** A baffle row's cutout note: the cutout is a typical size, and the driver's datasheet has the real one. */
-const cutoutNote = (inches: number) =>
+export const cutoutNote = (inches: number) =>
   `${formatInches(inches)}″ driver cutout (typical; use the datasheet's)`;
 
 export function cutParts({

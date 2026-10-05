@@ -43,6 +43,7 @@ import type {
   PassiveRadiator,
   PassiveRadiatorChoice,
   PortMemory,
+  RadiatorPanel,
   SealedBoxModel,
   VentedBoxModel,
   WooferMaxPoint,
@@ -301,7 +302,11 @@ export function passiveRadiatorTuning(drv: PassiveRadiator, n: number, addG: num
     Fp: 1 / (2 * Math.PI * Math.sqrt(Map * Cap)),
   };
 }
-// radiators go on the back panel, stacked; each needs its size plus a little frame margin
+/**
+ * The panel the radiators go on: the back, stacked, each needing its size plus a little frame margin. The fit check
+ * below sizes them against it, the front view draws them dashed (behind), and the cutlist puts their cutouts on it.
+ */
+export const RADIATOR_PANEL: RadiatorPanel = "back";
 export const passiveRadiatorShape = (drv: PassiveRadiator) =>
   drv.shape || { w: drv.size, h: drv.size };
 export const passiveRadiatorFits = (
