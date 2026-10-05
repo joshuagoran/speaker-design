@@ -10,6 +10,7 @@ import { TotalsSection } from "./sections/TotalsSection";
 import { DetailsSection } from "./sections/DetailsSection";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
+import { settingsSheetRoomClass } from "../../components/ui/SettingsSheetTabs";
 import type { PaPlanner } from "./hooks/usePaPlanner";
 
 interface Props {
@@ -21,7 +22,7 @@ export function PaStackPage({ planner }: Props) {
   const { isSettingsSheetOpen, store, fbUser, importSeed, snapshot, restore } = planner;
   return (
     <SettingsLayout
-      className={isSettingsSheetOpen ? "max-md:pb-[52dvh]" : "max-md:pb-24"}
+      className={settingsSheetRoomClass(isSettingsSheetOpen)}
       results={
         <>
           <SavedConfigs

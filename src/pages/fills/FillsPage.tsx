@@ -4,7 +4,7 @@ import { WarningChips } from "../../components/chips/WarningChips";
 import { StatRowGrid } from "../../components/stats/StatRowGrid";
 import { MAX_SPL_TIP, STATS, statLabel, type StatName } from "../../components/optimizer/StatRow";
 import { StatTile } from "../../components/stats/StatTile";
-import { ToggleButton } from "../../components/ui/ToggleButton";
+import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { CrossoverSlopeButtons } from "../../components/ui/CrossoverSlopeButtons";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { Card } from "../../components/ui/Card";
@@ -196,19 +196,19 @@ export function FillsPage({ fills }: Props) {
             value={driver}
             onChange={setDriver}
           />
-          <div className="text-sm text-stone-500 mb-1">Box</div>
-          <div className="flex gap-1 mb-2">
-            {(
+          <ToggleGroup
+            label="Box"
+            value={boxType}
+            onChange={setBoxType}
+            options={
               [
-                ["Vented", "vented"],
-                ["Sealed", "sealed"],
+                ["vented", "Vented"],
+                ["sealed", "Sealed"],
               ] as const
-            ).map(([l, v]) => (
-              <ToggleButton key={v} onClick={() => setBoxType(v)} on={boxType === v}>
-                {l}
-              </ToggleButton>
-            ))}
-          </div>
+            }
+            wrap={false}
+            className="mb-2"
+          />
           <Card className="mb-4">
             <Slider
               label="Width"

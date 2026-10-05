@@ -1,5 +1,6 @@
 import { PA_SLIDERS, PA_THROAT_MAX_VSLOT1 } from "../../../constants/paSliders";
 import { ToggleButton } from "../../../components/ui/ToggleButton";
+import { ToggleGroup } from "../../../components/ui/ToggleGroup";
 import { Tooltip } from "../../../components/ui/Tooltip";
 import { SwatchPicker } from "../../../components/ui/SwatchPicker";
 import { Card } from "../../../components/ui/Card";
@@ -19,6 +20,11 @@ import type { PaPlanner } from "../hooks/usePaPlanner";
 import { entriesOf, keysOf } from "../../../lib/records";
 import { CrossoverSlopeButtons } from "../../../components/ui/CrossoverSlopeButtons";
 import { SettingsColumn, SettingsSection } from "../../../components/ui/SettingsColumn";
+import {
+  SETTINGS_SHEET_CLASS,
+  SettingsSheetTabs,
+  settingsSheetBodyClass,
+} from "../../../components/ui/SettingsSheetTabs";
 import { useFolds } from "../../../hooks/useFolds";
 import { formatDims, formatHz, formatInches } from "../../../lib/format";
 import { crossoverSlopeName } from "../../../constants/crossovers";
@@ -219,37 +225,19 @@ export function SettingsPanel({ planner }: Props) {
     <SettingsColumn
       folds={folds}
       foldsAt="desktop"
-      className="max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet"
-      bodyClassName={`max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${isSettingsSheetOpen ? "" : "max-md:hidden"}`}
+      className={SETTINGS_SHEET_CLASS}
+      bodyClassName={settingsSheetBodyClass(isSettingsSheetOpen)}
       top={
-        <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
-          {entriesOf(PA_SETTINGS_TABS).map(([t, label]) => (
-            <button
-              key={t}
-              role="tab"
-              aria-selected={isSettingsSheetOpen && activeTab === t}
-              onClick={() => {
-                if (isSettingsSheetOpen && activeTab === t) setSettingsSheetOpen(false);
-                else {
-                  setActiveTab(t);
-                  setSettingsSheetOpen(true);
-                }
-              }}
-              className={`flex-1 px-2 py-2 rounded border text-sm ${isSettingsSheetOpen && activeTab === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50"}`}
-            >
-              {label}
-            </button>
-          ))}
-          {isSettingsSheetOpen && (
-            <button
-              onClick={() => setSettingsSheetOpen(false)}
-              aria-label={UI_TEXT.closeSettings}
-              className="px-3 rounded border border-stone-300 bg-stone-50 text-sm"
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        <SettingsSheetTabs
+          tabs={entriesOf(PA_SETTINGS_TABS)}
+          open={isSettingsSheetOpen}
+          active={activeTab}
+          onOpen={(t) => {
+            setActiveTab(t);
+            setSettingsSheetOpen(true);
+          }}
+          onClose={() => setSettingsSheetOpen(false)}
+        />
       }
     >
       {section(
@@ -417,16 +405,14 @@ export function SettingsPanel({ planner }: Props) {
       {section(
         "mid",
         <div className={tabClass("mid")}>
-          <div className="mb-2">
-            <div className="text-sm text-stone-500 mb-1">Mid-bass size</div>
-            <div className="flex gap-1">
-              {([12, 15] as const).map((n) => (
-                <ToggleButton key={n} onClick={() => setMidSize(n)} on={midSize === n}>
-                  {n}″
-                </ToggleButton>
-              ))}
-            </div>
-          </div>
+          <ToggleGroup
+            label="Mid-bass size"
+            value={midSize}
+            onChange={setMidSize}
+            options={([12, 15] as const).map((n) => [n, `${n}″`] as const)}
+            wrap={false}
+            className="mb-2"
+          />
           <SelectField
             label={`Mid-bass ${midSize}″`}
             options={midDriverChoices}
@@ -646,26 +632,23 @@ export function SettingsPanel({ planner }: Props) {
         "look",
         <div className={tabClass("look")}>
           <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2">
-              <span>Plywood (baffles stay 3/4″)</span>
-              {renderLockButton("wall", "the plywood")}
-            </div>
-            <div className="flex gap-1">
-              {(
+            <ToggleGroup
+              label={
+                <span className="flex items-center justify-between gap-2">
+                  <span>Plywood (baffles stay 3/4″)</span>
+                  {renderLockButton("wall", "the plywood")}
+                </span>
+              }
+              value={wallThicknessIn}
+              onChange={setWallThicknessIn}
+              options={
                 [
                   [0.75, "3/4″ birch"],
                   [0.5, "1/2″ birch, braced"],
                 ] as const
-              ).map(([t, label]) => (
-                <ToggleButton
-                  key={t}
-                  onClick={() => setWallThicknessIn(t)}
-                  on={wallThicknessIn === t}
-                >
-                  {label}
-                </ToggleButton>
-              ))}
-            </div>
+              }
+              wrap={false}
+            />
             <div className="mt-3">
               <Slider
                 label="Baffle inset"
@@ -694,30 +677,26 @@ export function SettingsPanel({ planner }: Props) {
             swatches={PAINT_SWATCHES}
             note={baffleColor}
           />
+          <ToggleGroup
+            label="View"
+            value={cutaway}
+            onChange={setCutaway}
+            options={
+              [
+                [false, "Finished"],
+                [true, "Cutaway"],
+              ] as const
+            }
+            wrap={false}
+            className="mb-5"
+          />
           <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">View</div>
-            <div className="flex gap-1">
-              {(
-                [
-                  ["Finished", false],
-                  ["Cutaway", true],
-                ] as const
-              ).map(([label, v]) => (
-                <ToggleButton key={label} onClick={() => setCutaway(v)} on={cutaway === v}>
-                  {label}
-                </ToggleButton>
-              ))}
-            </div>
-          </div>
-          <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">Layout</div>
-            <div className="flex flex-wrap gap-1">
-              {entriesOf(PA_LAYOUT_NAMES).map(([v, label]) => (
-                <ToggleButton key={v} onClick={() => setLayout(v)} on={layout === v}>
-                  {label}
-                </ToggleButton>
-              ))}
-            </div>
+            <ToggleGroup
+              label="Layout"
+              value={layout}
+              onChange={setLayout}
+              options={entriesOf(PA_LAYOUT_NAMES)}
+            />
             {layout === "pole" && (
               <div className="mt-3">
                 <Slider

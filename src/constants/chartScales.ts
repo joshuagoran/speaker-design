@@ -44,3 +44,12 @@ export const COVERAGE_MAP_DB: [lo: number, hi: number] = [-12, 6];
 
 /** Every dB heat map (the dispersion maps, the coverage map) draws a thin contour line every this many dB. */
 export const CONTOUR_STEP_DB = 3;
+
+/**
+ * The fixed scale of every sheet drawing on the Cutlist page, CSS px per inch: a 4 × 8 ft sheet draws 192 px wide at any
+ * window width (narrower only where the screen is), so sheets and layouts compare by eye.
+ */
+export const SHEET_PX_PER_IN = 4;
+
+/** The font size of the panel labels on the sheet drawings, CSS px. */
+export const SHEET_LABEL_PX = 12;

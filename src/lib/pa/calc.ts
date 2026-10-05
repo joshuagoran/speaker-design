@@ -551,6 +551,10 @@ export function boxParts(
   return { P, iw, ih, inD };
 }
 
+/** A baffle row's cutout note: the cutout is a typical size, and the driver's datasheet has the real one. */
+const cutoutNote = (inches: number) =>
+  `${formatInches(inches)}″ driver cutout (typical; use the datasheet's)`;
+
 export function cutParts({
   sub,
   mid,
@@ -572,7 +576,7 @@ export function cutParts({
     braces: wall === 0.5 ? 3 : 2,
     band: portStyle === "slots" ? cVent.slotH + t : 0,
     cutNote:
-      `${formatInches(DRIVER_CUTOUT_IN[sub.size])}″ driver cutout (check the datasheet)` +
+      cutoutNote(DRIVER_CUTOUT_IN[sub.size]) +
       (kit
         ? `; ${cVent.nt} × ${formatInches(kit.pipe?.odIn ?? cVent.dia)}″ tube holes, rounded over ${formatInches(TUBE_FLARE_RADIUS_IN)}″`
         : ""),
@@ -643,7 +647,7 @@ export function cutParts({
   if (layout !== "tower") {
     const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
       braces: wall === 0.5 ? 2 : 1,
-      cutNote: `${formatInches(DRIVER_CUTOUT_IN[mid.size])}″ driver cutout (check the datasheet)`,
+      cutNote: cutoutNote(DRIVER_CUTOUT_IN[mid.size]),
     });
     all.push(...m.P);
   }

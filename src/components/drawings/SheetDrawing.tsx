@@ -1,34 +1,62 @@
-import type { CutBoxId, Offcut, PackedSheet, PlywoodSheet } from "../../types";
-import { formatInches } from "../../lib/pa/calc";
+import type { CutBoxId, CutPart, Offcut, PackedSheet, PlywoodSheet } from "../../types";
+import { formatInches, formatThickness } from "../../lib/pa/calc";
+import { cutRowKey } from "../../lib/pa/cutlist";
 import { usePalette } from "../../hooks/useTheme";
-import { useElementWidth } from "../../hooks/useElementWidth";
 import { CUT_BOX_NAMES, CUT_PART_NAMES } from "../../constants/cutParts";
+import { SHEET_LABEL_PX, SHEET_PX_PER_IN } from "../../constants/chartScales";
 import { SVG_FONT } from "../../styles/fonts";
 
 interface Props {
   sheet: PackedSheet;
   /** the sheet's size, inches */
   S: PlywoodSheet;
-  /** which sheet this is, from 0 */
+  /** which sheet this is, from 0, and how many sheets of this thickness there are */
   idx: number;
+  count: number;
+  /** the ply thickness, inches */
+  t: number;
   /** the offcut this sheet keeps, if any */
   offcut?: Offcut | null;
+  /** a part's tag, shared with its row in the cutlist (S1, M2 …) */
+  tagOf: (p: CutPart) => string;
+  /** the row key (`cutRowKey`) highlighted on the page, if any of its pieces are drawn */
+  hot: string | null;
+  /** highlights a row's pieces and its cutlist row (null clears it) */
+  onHot: (key: string | null) => void;
 }
 
-/** One plywood sheet with its cut pieces laid out; grain runs down the sheet. */
-export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
+/** A monospace character's width, in font sizes (Inconsolata). */
+const CHAR_EM = 0.5;
+/** The kept offcut's label (its width decides whether it fits). */
+const OFFCUT_LABEL = "offcut";
+
+/**
+ * One plywood sheet with its cut pieces laid out at the fixed sheet scale; grain runs down the sheet. Each piece carries
+ * its cutlist row's tag, and hovering or focusing a piece highlights it with its row.
+ */
+export function SheetDrawing({ sheet, S, idx, count, t, offcut, tagOf, hot, onHot }: Props) {
   const pal = usePalette();
-  const sc = 4,
+  const sc = SHEET_PX_PER_IN,
     W = S.w * sc,
-    H = S.h * sc;
-  const [box, cw] = useElementWidth(S.w === 48 ? 160 : 200);
-  const fs = (12 * (W + 4)) / cw; // 12 css px
+    H = S.h * sc,
+    fs = SHEET_LABEL_PX;
   const colors: Record<CutBoxId, string> = { sub: pal.subTint, mid: pal.midTint };
-  // a grain arrow down the middle of a piece, from y0 to y1 (sheet units)
-  const arrow = (x: number, y0: number, y1: number, colour: string, key?: string) => {
-    const head = fs * 0.45;
+  // what the sheet is for: each box's parts on it, in the order they first appear
+  const uses = new Map<CutBoxId, Set<string>>();
+  for (const it of sheet.items) {
+    const names = uses.get(it.box) ?? new Set<string>();
+    names.add(CUT_PART_NAMES[it.part].toLowerCase());
+    uses.set(it.box, names);
+  }
+  const use = [...uses]
+    .map(([box, names]) => `${CUT_BOX_NAMES[box]} ${[...names].join(", ")}`)
+    .join("; ");
+  const textWidth = (s: string) => fs * CHAR_EM * s.length;
+  // a grain arrow down a piece, from y0 to y1 (sheet units)
+  const arrow = (x: number, y0: number, y1: number, colour: string) => {
+    const head = fs * 0.35;
     return (
-      <g key={key} stroke={colour} strokeWidth={fs * 0.12} fill="none">
+      <g stroke={colour} strokeWidth={1} fill="none">
         <line x1={x} y1={y0} x2={x} y2={y1} />
         <polyline points={`${x - head},${y0 + head} ${x},${y0} ${x + head},${y0 + head}`} />
         <polyline points={`${x - head},${y1 - head} ${x},${y1} ${x + head},${y1 - head}`} />
@@ -36,21 +64,24 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
     );
   };
   return (
-    <div
-      ref={box}
-      className={`flex flex-col gap-1 w-full ${S.w === 48 ? "max-w-[240px] sm:w-[160px]" : "max-w-[300px] sm:w-[200px]"}`}
-    >
-      <div className="text-xs text-stone-500 flex justify-between">
-        <span>Sheet {idx + 1}</span>
-        <span title="Face grain runs top to bottom on this drawing: load the sheet that way">
-          grain ↕
+    <figure className="flex flex-col gap-1.5 m-0" style={{ width: W + 4, maxWidth: "100%" }}>
+      <figcaption className="text-sm leading-snug">
+        <span className="font-bold">
+          Sheet {idx + 1} of {count}
         </span>
-      </div>
+        <span className="block text-xs text-stone-500">
+          {formatThickness(t)} ply, {S.name} ·{" "}
+          <span title="Face grain runs top to bottom on this drawing: load the sheet that way">
+            grain ↕
+          </span>
+        </span>
+      </figcaption>
       <svg
         viewBox={`-2 -2 ${W + 4} ${H + 4}`}
-        style={{ width: "100%", height: "auto" }}
-        role="img"
-        aria-label={`Sheet ${idx + 1} layout`}
+        width={W + 4}
+        style={{ maxWidth: "100%", height: "auto" }}
+        role="group"
+        aria-label={`Sheet ${idx + 1} of ${count} layout`}
       >
         <rect x="0" y="0" width={W} height={H} fill={pal.white} stroke={pal.muted} />
         {offcut && (
@@ -62,10 +93,10 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
               height={offcut.h * sc}
               fill="none"
               stroke={pal.muted}
-              strokeWidth="0.8"
-              strokeDasharray={`${fs * 0.5} ${fs * 0.4}`}
+              strokeWidth="1"
+              strokeDasharray="5 4"
             />
-            {offcut.w * sc > fs * 2.2 && offcut.h * sc > fs * 4 && (
+            {offcut.w * sc > textWidth(OFFCUT_LABEL) + 4 && offcut.h * sc > fs * 3 && (
               <text
                 x={(offcut.x + offcut.w / 2) * sc}
                 y={(offcut.y + offcut.h / 2) * sc}
@@ -74,8 +105,8 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                 fill={pal.muted}
                 fontFamily={SVG_FONT}
               >
-                <tspan x={(offcut.x + offcut.w / 2) * sc}>offcut</tspan>
-                <tspan x={(offcut.x + offcut.w / 2) * sc} dy={fs * 1.1}>
+                <tspan x={(offcut.x + offcut.w / 2) * sc}>{OFFCUT_LABEL}</tspan>
+                <tspan x={(offcut.x + offcut.w / 2) * sc} dy={fs * 1.15}>
                   {formatInches(offcut.w)}×{formatInches(offcut.h)}
                 </tspan>
               </text>
@@ -83,17 +114,28 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
           </g>
         )}
         {sheet.items.map((it, i) => {
+          const key = cutRowKey(it);
           const x = it.x * sc,
             y = it.y * sc,
             w = it.w * sc,
-            h = it.h * sc,
-            cx = x + w / 2;
-          // strips are labelled along their length; the box name goes first where it fits (the fill colour shows it too)
-          const name = it.pieces ? "strip" : CUT_PART_NAMES[it.part].split(" ")[0];
-          const [run, across] = it.pieces ? [h, w] : [w, h];
-          const fits = (t: string) => run > fs * (0.55 * t.length + 0.6) && across > fs * 1.3;
-          const label = [`${CUT_BOX_NAMES[it.box]} ${name}`, name].find(fits);
-          const labelled = !!label;
+            h = it.h * sc;
+          const tag = tagOf(it);
+          const name = it.pieces ? "strip" : CUT_PART_NAMES[it.part];
+          const isHot = hot === key;
+          const dim = hot != null && !isHot;
+          // a panel's grain arrow sits at its right edge, from the top down to `arrowEnd`: the label keeps clear of it
+          const reserve = it.grain && !it.pieces && h > fs * 1.6 && w > fs * 1.2 ? fs * 1.2 : 0;
+          const arrowEnd = reserve ? 4 + Math.min(h - 8, fs * 2) : 0;
+          // the label: tag and name, or the tag alone; across the piece left of the arrow, or along it below the arrow
+          // when it is tall and narrow (and always along a waterfall strip, whose arrow runs beside it)
+          const along = !!it.pieces || (w - reserve < textWidth(tag) + 4 && h > w);
+          const top = along ? arrowEnd : 0;
+          const [run, across] = along ? [h - top, w] : [w - reserve, h];
+          const label = [`${tag} ${name}`, tag].find(
+            (s) => run > textWidth(s) + 6 && across > fs * (along ? 0.95 : 1.2),
+          );
+          const cx = x + (along ? w : w - reserve) / 2,
+            cy = y + top + (h - top) / 2;
           // waterfall strips: a tick at each cut and the panels numbered in cut order
           const cuts: number[] = [];
           if (it.pieces && !it.crossed) {
@@ -105,16 +147,28 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
               at += gap / 2;
             }
           }
+          const edge = isHot ? pal.ink : it.crossed ? pal.status.orange.text : pal.muted;
           return (
-            <g key={i}>
+            <g
+              key={i}
+              tabIndex={0}
+              aria-label={`${tag}: ${CUT_BOX_NAMES[it.box]} ${CUT_PART_NAMES[it.part]}, ${formatInches(it.w)} × ${formatInches(it.h)}″`}
+              onMouseEnter={() => onHot(key)}
+              onMouseLeave={() => onHot(null)}
+              onFocus={() => onHot(key)}
+              onBlur={() => onHot(null)}
+              opacity={dim ? 0.35 : 1}
+              className="cursor-default outline-none"
+            >
+              <title>{`${tag}: ${CUT_BOX_NAMES[it.box]} ${CUT_PART_NAMES[it.part]}`}</title>
               <rect
                 x={x}
                 y={y}
                 width={w}
                 height={h}
                 fill={colors[it.box]}
-                stroke={it.crossed ? pal.status.orange.text : pal.muted}
-                strokeWidth={it.crossed ? "2" : "0.8"}
+                stroke={edge}
+                strokeWidth={isHot ? 3 : it.crossed ? 2 : 0.8}
               />
               {cuts.map((cy, k) => (
                 <line
@@ -131,8 +185,8 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                 [it.y, ...cuts.map((c) => c / sc)].map((top, k) => (
                   <text
                     key={`n${k}`}
-                    x={x + fs * 0.4}
-                    y={top * sc + fs * 1.1}
+                    x={x + 3}
+                    y={top * sc + fs}
                     fontSize={fs}
                     fill={pal.ink}
                     fontFamily={SVG_FONT}
@@ -140,33 +194,34 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                     {k + 1}
                   </text>
                 ))}
-              {/* grain: one arrow the length of a strip, a short one in a panel's corner */}
+              {/* grain: one arrow the length of a strip, a short one at a panel's right edge */}
               {it.grain &&
-                h > fs * 1.6 &&
-                w > fs * 1.2 &&
+                (it.pieces || reserve > 0) &&
                 arrow(
-                  x + w - fs * 0.7,
-                  y + fs * 0.4,
-                  it.pieces ? y + h - fs * 0.4 : y + fs * 0.4 + Math.min(h - fs * 0.8, fs * 2.4),
+                  x + w - fs * 0.6,
+                  y + 4,
+                  it.pieces ? y + h - 4 : y + arrowEnd,
                   it.crossed ? pal.status.orange.text : pal.muted,
                 )}
-              {labelled && (
+              {label && (
                 <text
                   x={cx}
-                  y={y + h / 2 + fs * 0.35}
+                  y={cy + fs * 0.35}
                   textAnchor="middle"
                   fontSize={fs}
                   fill={pal.ink}
                   fontFamily={SVG_FONT}
-                  transform={it.pieces ? `rotate(-90 ${cx} ${y + h / 2})` : undefined}
+                  transform={along ? `rotate(-90 ${cx} ${cy})` : undefined}
                 >
-                  {label}
+                  <tspan fontWeight={700}>{tag}</tspan>
+                  {label !== tag && ` ${name}`}
                 </text>
               )}
             </g>
           );
         })}
       </svg>
-    </div>
+      {use && <div className="text-xs text-stone-500 leading-snug">{use}</div>}
+    </figure>
   );
 }
