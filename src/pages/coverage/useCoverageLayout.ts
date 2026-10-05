@@ -1,8 +1,15 @@
+import {
+  COVERAGE_LEVEL_REF,
+  COVERAGE_TARGET_DB,
+  LEGACY_LEVEL_MODE,
+} from "../../constants/coverageLevel";
 import { useStoredStateFrom } from "../../hooks/useStoredState";
+import { LISTENER_TARGET_DB } from "../../lib/pa/optimize";
 import type {
   CoverageBand,
   CoverageLayout,
   CoverageLevelMode,
+  CoverageLevelRef,
   CoverageRoom,
   FloorCrowd,
   FloorPoint,
@@ -40,7 +47,8 @@ export const DEFAULT_COVERAGE_LAYOUT: CoverageLayout = {
   mirror: true,
   band: "sub",
   freqHz: 50,
-  levelMode: "listener",
+  targetDb: LISTENER_TARGET_DB,
+  levelRef: COVERAGE_LEVEL_REF.audience,
   earFt: 5.3,
   listener: { x: 3, y: 24 },
 };
@@ -76,17 +84,31 @@ const fitted = (l: CoverageLayout): CoverageLayout => ({
 
 /**
  * A layout as stored: any saved field over the defaults. Layouts saved before materials had a wall on or off per side
- * (`walls`) and one `absorption` for them all.
+ * (`walls`) and one `absorption` for them all; layouts saved before the target level had a `levelMode`.
  */
 export type StoredCoverageLayout = Partial<Omit<CoverageLayout, "room">> & {
+  levelMode?: CoverageLevelMode;
   room?: Partial<CoverageRoom> & {
     walls?: Partial<Record<RoomSide, boolean>>;
     absorption?: number;
   };
 };
 
+/**
+ * The target and its reference for an old `levelMode`: "target at the listener" keeps the planner's target there; "at
+ * its limit" asks the listener for the most the slider offers, so the system plays as loud as it can.
+ */
+const fromLevelMode = (
+  mode: CoverageLevelMode | undefined,
+): Partial<Pick<CoverageLayout, "targetDb" | "levelRef">> =>
+  mode === LEGACY_LEVEL_MODE.listener
+    ? { levelRef: COVERAGE_LEVEL_REF.listener }
+    : mode === LEGACY_LEVEL_MODE.limit
+      ? { levelRef: COVERAGE_LEVEL_REF.listener, targetDb: COVERAGE_TARGET_DB[1] }
+      : {};
+
 /** A stored layout over the defaults, so a layout saved before a field existed still loads. */
-export const fromStored = (s: StoredCoverageLayout): CoverageLayout => {
+export const fromStored = ({ levelMode, ...s }: StoredCoverageLayout): CoverageLayout => {
   const { walls, absorption: _absorption, ...room } = s.room ?? {};
   // an old wall that was there is drywall, one that wasn't is open; its single absorption is dropped
   const old: Partial<Record<RoomSurface, RoomMaterial>> = {};
@@ -97,6 +119,7 @@ export const fromStored = (s: StoredCoverageLayout): CoverageLayout => {
   const def = DEFAULT_COVERAGE_LAYOUT.room;
   return {
     ...DEFAULT_COVERAGE_LAYOUT,
+    ...fromLevelMode(levelMode),
     ...s,
     room: { ...def, ...room, materials: { ...def.materials, ...old, ...room.materials } },
   };
@@ -118,7 +141,8 @@ export interface CoverageLayoutState {
   setOutdoors: (outdoors: boolean) => void;
   setBand: (band: CoverageBand) => void;
   setFreqHz: (f: number) => void;
-  setLevelMode: (mode: CoverageLevelMode) => void;
+  setTargetDb: (db: number) => void;
+  setLevelRef: (ref: CoverageLevelRef) => void;
   setSubs: (subs: SubPlacement) => void;
   setMirror: (mirror: boolean) => void;
   setEarFt: (ft: number) => void;
@@ -165,7 +189,8 @@ export function useCoverageLayout(): CoverageLayoutState {
     setOutdoors: (outdoors) => update((l) => ({ ...l, room: { ...l.room, outdoors } })),
     setBand: (band) => update((l) => ({ ...l, band })),
     setFreqHz: (freqHz) => update((l) => ({ ...l, freqHz })),
-    setLevelMode: (levelMode) => update((l) => ({ ...l, levelMode })),
+    setTargetDb: (targetDb) => update((l) => ({ ...l, targetDb })),
+    setLevelRef: (levelRef) => update((l) => ({ ...l, levelRef })),
     setSubs: (subs) => update((l) => ({ ...l, subs })),
     setMirror: (mirror) =>
       update((l) => {

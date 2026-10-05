@@ -25,6 +25,11 @@ import { CoverageAssumptions } from "./CoverageAssumptions";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
 import { FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
+import {
+  COVERAGE_LEVEL_REF_PLACE,
+  COVERAGE_LEVEL_REFS,
+  COVERAGE_TARGET_DB,
+} from "../../constants/coverageLevel";
 
 /** The tabs of the phone settings sheet. */
 type CoverageTab = "listener" | "band" | "room" | "stacks";
@@ -122,8 +127,8 @@ export function CoveragePage({ planner }: Props) {
         <section>
           <SectionHeading className="mb-1">Audience coverage</SectionHeading>
           <p className="text-sm text-stone-500 mb-3">
-            {bandName},{" "}
-            {layout.levelMode === "listener" ? "target at the listener" : "at full output"}
+            {bandName}, {map.target.toFixed(0)} dB target at{" "}
+            {COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}
             {map.isRefining && (
               <>
                 {" "}
@@ -226,8 +231,12 @@ export function CoveragePage({ planner }: Props) {
               every side as solid: with an open side they are only a rough guide.
             </li>
             <li>
-              The target is the planner's {LISTENER_TARGET_DB} dB at the listener in the sub band (
-              {map.target} dB in this band).
+              The target is {layout.targetDb} dB in the sub band ({map.target} dB in this band; the
+              planner's is {LISTENER_TARGET_DB} dB), measured at{" "}
+              {COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}. The audience average is the mean level
+              over the floor the coverage figures count; 1 m from the stacks is 1 m out from the
+              front of each stack along its aim, at ear height, averaged over the two. The system is
+              turned down until it gets the target there, and never plays past its limit.
             </li>
           </ul>
           <div className="mt-3">
@@ -344,27 +353,38 @@ export function CoveragePage({ planner }: Props) {
           </div>
 
           <div className={tabClass("band")}>
-            <div className={label}>System level</div>
+            <Slider
+              label="Target level, sub band"
+              value={layout.targetDb}
+              min={COVERAGE_TARGET_DB[0]}
+              max={COVERAGE_TARGET_DB[1]}
+              step={1}
+              unit=" dB SPL"
+              onChange={state.setTargetDb}
+            />
+            <div className={label}>Measured at</div>
             <div className="flex flex-wrap gap-1 mb-1">
-              <ToggleButton
-                on={layout.levelMode === "listener"}
-                onClick={() => state.setLevelMode("listener")}
-              >
-                Target at the listener
-              </ToggleButton>
-              <ToggleButton
-                on={layout.levelMode === "limit"}
-                onClick={() => state.setLevelMode("limit")}
-              >
-                At its limit
-              </ToggleButton>
+              {COVERAGE_LEVEL_REFS.map(([ref, name]) => (
+                <ToggleButton
+                  key={ref}
+                  on={layout.levelRef === ref}
+                  onClick={() => state.setLevelRef(ref)}
+                >
+                  {name}
+                </ToggleButton>
+              ))}
             </div>
-            <p className="text-xs text-stone-500 mb-4">
-              {layout.levelMode === "listener"
-                ? map.gain < 0
-                  ? `Turned down ${Math.abs(map.gain).toFixed(1)} dB so the listener gets the target: the map shows how even the coverage is.`
-                  : "It can't reach the target at the listener, so it plays at its limit."
-                : "Full output: the map shows how far the target reaches."}
+            <p className="text-xs text-stone-500 mb-4 tabular-nums">
+              {map.refDb == null ? (
+                <>
+                  Working out the level
+                  <Ellipsis />
+                </>
+              ) : map.refDb < map.target - 0.05 ? (
+                `It can't reach ${map.target.toFixed(0)} dB at ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}: at its limit it gives ${map.refDb.toFixed(1)} dB there, and it never plays past its limit.`
+              ) : (
+                `Turned down ${Math.abs(map.gain).toFixed(1)} dB so ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]} gets ${map.target.toFixed(0)} dB in this band.`
+              )}
             </p>
             <div className={label}>Band</div>
             <div className="flex flex-wrap gap-1">

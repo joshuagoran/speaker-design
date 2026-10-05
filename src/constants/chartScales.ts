@@ -29,3 +29,6 @@ export const DISPERSION_FREQ_MAX_HZ = 20000;
 
 /** How many log-spaced frequencies a dispersion map samples between its axis ends (about 9 per octave). */
 export const DISPERSION_FREQ_POINTS = 78;
+
+/** The coverage map's colour scale, dB SPL: fixed at the PA response chart's 80–135 dB, so layouts compare by eye. */
+export const COVERAGE_MAP_DB: [lo: number, hi: number] = [80, 135];

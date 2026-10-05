@@ -1,6 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
+  audienceAverage,
   autoSubDelayMs,
   balanceLevels,
   bandTarget,
@@ -14,6 +15,8 @@ import {
   coverageStats,
   curveLevelAt,
   levelAtPoint,
+  ONE_METRE_FT,
+  oneMetreSpot,
   pistonQ,
   withOwnPhase,
 } from "../src/lib/pa/coverage";
@@ -28,6 +31,12 @@ import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { paResponseAt, paStackSources } from "../src/lib/pa/dispersion";
 import { materialAlpha, surfaceReflection } from "../src/lib/pa/roomAcoustics";
 import { DEFAULT_COVERAGE_LAYOUT, fromStored } from "../src/pages/coverage/useCoverageLayout";
+import {
+  COVERAGE_LEVEL_REF,
+  COVERAGE_TARGET_DB,
+  LEGACY_LEVEL_MODE,
+} from "../src/constants/coverageLevel";
+import { LISTENER_TARGET_DB } from "../src/lib/pa/optimize";
 import { baffleStepGain, logSpacedFrequencies, type Complex } from "../src/lib/hifi/hifi";
 import { METERS_PER_FOOT as FT } from "../src/constants/units";
 import type {
@@ -92,7 +101,8 @@ const layout = (o: Partial<CoverageLayout> = {}): CoverageLayout => ({
   mirror: true,
   band: "sub",
   freqHz: 50,
-  levelMode: "limit",
+  targetDb: 105,
+  levelRef: "audience",
   earFt: 5,
   listener: { x: 0, y: 25 },
   ...o,
@@ -789,4 +799,51 @@ test("coverage: a box model run without its phase can't be given to the map", ()
   assert.ok(plain.mdl);
   const curve = plain.mdl.curve;
   assert.throws(() => phasedCurve(curve), /without its phase/);
+});
+
+test("coverage: the audience average is the mean level over the floor the stats count", () => {
+  const room = { widthFt: 20, lengthFt: 20 };
+  // 4 × 4 cells, 5 ft each: 100 dB everywhere but 130 dB in the cell by the box, which the stats leave out
+  const db = new Float32Array(16).fill(100);
+  db[0] = 130;
+  db[15] = 88;
+  const grid = { cols: 4, rows: 4, db };
+  const box = { x: -7.5, y: 2.5 };
+  const avg = audienceAverage(grid, room, [box]);
+  assert.ok(avg != null && Math.abs(avg - (100 * 14 + 88) / 15) < 1e-6, String(avg));
+  // consistent with the stats: everything counted is at or above the average − 12
+  assert.equal(coverageStats(grid, room, [box], (100 * 14 + 88) / 15).within6, 14 / 15);
+  assert.equal(
+    audienceAverage({ cols: 1, rows: 1, db: new Float32Array([90]) }, room, [{ x: 0, y: 10 }]),
+    null,
+  );
+});
+
+test("coverage: a stack's 1 m spot is 1 m out from its front along its aim, inside the room", () => {
+  const room = { widthFt: 30, lengthFt: 40 };
+  const p = oneMetreSpot({ x: -8, y: 3, aim: 0 }, stack.footprint, room);
+  assert.ok(Math.abs(p.x + 8) < 1e-9 && Math.abs(p.y - (3 + 1 + ONE_METRE_FT)) < 1e-9);
+  const t = oneMetreSpot({ x: -8, y: 3, aim: 30 }, stack.footprint, room);
+  assert.ok(Math.abs(Math.hypot(t.x + 8, t.y - 3) - (1 + ONE_METRE_FT)) < 1e-9 && t.x > -8);
+  const edge = oneMetreSpot({ x: 14, y: 1, aim: 60 }, stack.footprint, room);
+  assert.ok(edge.x <= 15 && edge.x > 14);
+});
+
+test("coverage: layouts saved with the old level mode still load", () => {
+  const def = fromStored({});
+  assert.equal(def.levelRef, COVERAGE_LEVEL_REF.audience);
+  assert.equal(def.targetDb, LISTENER_TARGET_DB);
+  const atListener = fromStored({ levelMode: LEGACY_LEVEL_MODE.listener });
+  assert.equal(atListener.levelRef, COVERAGE_LEVEL_REF.listener);
+  assert.equal(atListener.targetDb, LISTENER_TARGET_DB);
+  const atLimit = fromStored({ levelMode: LEGACY_LEVEL_MODE.limit });
+  assert.equal(atLimit.levelRef, COVERAGE_LEVEL_REF.listener);
+  assert.equal(atLimit.targetDb, COVERAGE_TARGET_DB[1]);
+  assert.ok(!("levelMode" in atLimit));
+  // a newer field wins over the old one
+  assert.equal(
+    fromStored({ levelMode: LEGACY_LEVEL_MODE.limit, levelRef: COVERAGE_LEVEL_REF.stacks })
+      .levelRef,
+    COVERAGE_LEVEL_REF.stacks,
+  );
 });

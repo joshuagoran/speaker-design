@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { highpassPhase, subMusicThroughLowpass } from "../../lib/pa/calc";
+import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
 import {
+  audienceAverage,
   autoSubDelayMs,
   balanceLevels,
   balancedTarget,
@@ -10,9 +12,9 @@ import {
   coverageResponse,
   coverageScene,
   coverageStats,
+  oneMetreSpot,
   withOwnPhase,
 } from "../../lib/pa/coverage";
-import { LISTENER_TARGET_DB } from "../../lib/pa/optimize";
 import { runCoverageGrid } from "../../lib/pa/runCoverage";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import type {
@@ -20,6 +22,7 @@ import type {
   CoverageGrid,
   CoverageGridView,
   CoverageLayout,
+  CoverageLevelRef,
   CoverageLevels,
   CoverageRequest,
   CoverageStack,
@@ -82,18 +85,40 @@ export interface CoverageMap {
   response: FrequencyPoint[];
   /** the target the readouts compare against: the band's, under the music balance */
   target: number;
-  /** the system's gain, dB: 0 at its limit, less when turned down so the listener gets the target */
+  /** the system's gain, dB: 0 at its limit, less when turned down so the reference gets the target */
   gain: number;
+  /** the level at the reference at the system's level, dB (null until it can be worked out) */
+  refDb: number | null;
   /** the balanced target against frequency, for the response chart */
   targetCurve: FrequencyPoint[];
 }
 
 /**
- * The system's gain, dB: 0 at its limit, or what brings the listener's level (at the limit) down to the target. A gain
- * only ever turns the system down: it can't play past its limit.
+ * The system's gain, dB: what brings the reference's level (at the limit) down to the target, or 0 (its limit) when
+ * the reference doesn't reach it. A gain only ever turns the system down: it can't play past its limit.
  */
-const systemGain = (mode: CoverageLayout["levelMode"], target: number, atLimit: number | null) =>
-  mode === "listener" && atLimit != null ? Math.min(0, target - atLimit) : 0;
+const systemGain = (target: number, atLimit: number | null) =>
+  atLimit != null ? Math.min(0, target - atLimit) : 0;
+
+/**
+ * A request's level at the limit at a reference worked out from points alone: at the listener (given only when it is
+ * the reference), or the mean of the two stacks' 1 m levels; null for the audience average, which needs the grid.
+ */
+function pointRefAtLimit(
+  req: CoverageJob["req"],
+  ref: CoverageLevelRef,
+  listener: CoverageLayout["listener"] | null,
+): number | null {
+  if (ref === COVERAGE_LEVEL_REF.listener) return listener && coverageLevelAt(req, listener);
+  if (ref === COVERAGE_LEVEL_REF.stacks) {
+    const { stacks, room } = req.layout;
+    const [a, b] = stacks.map((s) =>
+      coverageLevelAt(req, oneMetreSpot(s, req.stack.footprint, room)),
+    );
+    return (a + b) / 2;
+  }
+  return null;
+}
 
 /**
  * Builds the coverage model from the planner's design and the floor layout. The grid runs in a worker, newest
@@ -179,7 +204,9 @@ export function useCoverageMap(
     ],
   );
   const levels = balanced && balanced.levels;
-  const { room, stacks, cluster, band, freqHz, earFt, listener, levelMode } = layout;
+  const { room, stacks, cluster, band, freqHz, earFt, listener, targetDb, levelRef } = layout;
+  // the listener moves the level only when it is the reference; otherwise it is a probe
+  const refListener = levelRef === COVERAGE_LEVEL_REF.listener ? listener : null;
   // the sub delayed as a DSP setup would: in phase with the mid at the crossover
   const subDelayMs = useMemo(
     () => (geometry && levels ? autoSubDelayMs(geometry, levels) : null),
@@ -267,42 +294,49 @@ export function useCoverageMap(
     () => (job ? coverageLevelAt(job.req, listener) : null),
     [job, listener],
   );
-  const target = bandTarget(LISTENER_TARGET_DB, band, freqHz, balance);
-  const gain = systemGain(levelMode, target, listenerAtLimit);
+  const target = bandTarget(targetDb, band, freqHz, balance);
   const responseAtLimit = useMemo(
     () => (scene && levels ? coverageResponse(scene, levels, listener, earFt) : []),
     [scene, levels, listener, earFt],
   );
+  // the reference's level at the limit for the current layout, when points alone give it
+  const refAtLimit = useMemo(
+    () => (!job ? null : refListener ? listenerAtLimit : pointRefAtLimit(job.req, levelRef, null)),
+    // the listener only counts when it is the reference
+    [job, levelRef, refListener, listenerAtLimit],
+  );
+  // the grid on show, with the room, target and gain of the job it came from (an older one while the next computes)
+  const drawn = job ? shown : null;
+  const view = useMemo<CoverageGridView | null>(() => {
+    if (!drawn) return null;
+    const { req, balance: b } = drawn.job;
+    const atLimit =
+      levelRef === COVERAGE_LEVEL_REF.audience
+        ? audienceAverage(drawn.grid, req.layout.room, coverageBoxes(req.layout, req.stack))
+        : drawn.job === job
+          ? refAtLimit
+          : pointRefAtLimit(req, levelRef, refListener);
+    const t = bandTarget(targetDb, req.layout.band, req.layout.freqHz, b),
+      g = systemGain(t, atLimit);
+    return { grid: drawn.grid, room: req.layout.room, target: t - g, gain: g, atLimit };
+    // the listener only counts when it is the reference
+  }, [drawn, job, refAtLimit, levelRef, refListener, targetDb]);
+  // the audience average needs the grid, so its gain follows the grid on show
+  const currentAtLimit =
+    levelRef === COVERAGE_LEVEL_REF.audience ? (view ? view.atLimit : null) : refAtLimit;
+  const gain = systemGain(target, currentAtLimit);
   const response = useMemo(
     () => responseAtLimit.map((o) => ({ f: o.f, spl: o.spl + gain })),
     [responseAtLimit, gain],
   );
-  // the grid on show, with the room, target and gain of the job it came from (an older one while the next computes)
-  const drawn = job ? shown : null;
-  const drawnAtLimit = useMemo(
-    () =>
-      !drawn
-        ? null
-        : drawn.job === job
-          ? listenerAtLimit
-          : coverageLevelAt(drawn.job.req, listener),
-    [drawn, job, listenerAtLimit, listener],
-  );
-  const view = useMemo<CoverageGridView | null>(() => {
-    if (!drawn) return null;
-    const { req, balance: b } = drawn.job;
-    const t = bandTarget(LISTENER_TARGET_DB, req.layout.band, req.layout.freqHz, b),
-      g = systemGain(levelMode, t, drawnAtLimit);
-    return { grid: drawn.grid, room: req.layout.room, target: t - g, gain: g };
-  }, [drawn, drawnAtLimit, levelMode]);
   const stats = useMemo(() => {
     if (!view || !drawn) return null;
     const { stack: s, layout: l } = drawn.job.req;
     return coverageStats(view.grid, view.room, coverageBoxes(l, s), view.target);
   }, [view, drawn]);
   const targetCurve = useMemo(
-    () => response.map((o) => ({ f: o.f, spl: balancedTarget(LISTENER_TARGET_DB, o.f, balance) })),
-    [response, balance],
+    () => response.map((o) => ({ f: o.f, spl: balancedTarget(targetDb, o.f, balance) })),
+    [response, balance, targetDb],
   );
   const jobFailed = !!job && failed?.job === job;
   return {
@@ -320,6 +354,7 @@ export function useCoverageMap(
     response,
     target,
     gain,
+    refDb: currentAtLimit != null ? currentAtLimit + gain : null,
     targetCurve,
   };
 }
