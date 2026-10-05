@@ -1,3 +1,5 @@
+import type { Dims3 } from "../types";
+
 /** Formats an amount as whole US dollars, e.g. $1,234. */
 export const formatDollars = (x: number): string => `$${Math.round(x).toLocaleString()}`;
 
@@ -12,3 +14,10 @@ export const formatInches = (v: number): string => {
     frac = INCH_FRACTIONS[+(v - whole).toFixed(3)];
   return frac ? `${whole || ""}${frac}″` : `${+v.toFixed(2)}″`;
 };
+
+/** Formats a frequency in whole hertz: 900 Hz, 1150 Hz (never kHz: 1150 Hz reads better than 1.15 kHz). */
+export const formatHz = (f: number): string => `${Math.round(f)} Hz`;
+
+/** Formats a box's outside size, width × height × depth, e.g. 22 × 30 × 20″. */
+export const formatDims = ({ w, h, d }: Dims3): string =>
+  `${+w.toFixed(2)} × ${+h.toFixed(2)} × ${+d.toFixed(2)}″`;

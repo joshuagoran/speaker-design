@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "../ui/Button";
+import { AnimatedDetails } from "../ui/AnimatedDetails";
 import { ToggleButton } from "../ui/ToggleButton";
 import { formatDollars } from "../../lib/format";
 import { entriesOf } from "../../lib/records";
@@ -45,98 +46,99 @@ interface Props {
  * else as it is, side by side. Modelled only while open (a few dozen model runs, well under a second).
  */
 export function DriverCompare({ rows, onUse }: Props) {
-  const [open, setOpen] = useState(false);
   const [part, setPart] = useState<PaDriverPart>("sub");
   return (
-    <details
+    <AnimatedDetails
+      summary="Compare drivers"
       className="mt-4 text-sm rounded border border-stone-300 bg-stone-50 px-3 py-2"
-      onToggle={(e) => setOpen(e.currentTarget.open)}
+      summaryClassName="cursor-pointer py-1"
     >
-      <summary className="cursor-pointer py-1">Compare drivers</summary>
-      {open && (
-        <div className="mt-2">
-          <div className="text-xs text-stone-500 mb-2">
-            Each option in your design with everything else as it is, checked against your limits.
-          </div>
-          <div className="flex flex-wrap gap-1" role="group" aria-label="Part to compare">
-            {entriesOf(DRIVER_PART_NAMES).map(([k, name]) => (
-              <ToggleButton key={k} on={part === k} onClick={() => setPart(k)}>
-                {name}
-              </ToggleButton>
-            ))}
-          </div>
-          <div className="mt-2 overflow-x-auto">
-            <table className="text-xs w-full min-w-[600px] border-collapse tabular-nums">
-              <thead>
-                <tr className="text-stone-500 text-left border-b border-stone-300">
-                  <th className="py-1 pr-3 font-normal sticky left-0 bg-stone-50">
-                    {DRIVER_PART_NAMES[part]}
-                  </th>
-                  <th className="py-1 pr-3 font-normal text-right">Its price</th>
-                  <th className="py-1 pr-3 font-normal text-right">Drivers / stack</th>
-                  <th className="py-1 pr-3 font-normal text-right">{WEIGHT_HEAD[part]}</th>
-                  {PART_COLUMNS[part].map((c) => (
-                    <th key={c.head} className="py-1 pr-3 font-normal text-right">
-                      {c.head}
+      {(open) =>
+        open && (
+          <div className="pt-2">
+            <div className="text-xs text-stone-500 mb-2">
+              Each option in your design with everything else as it is, checked against your limits.
+            </div>
+            <div className="flex flex-wrap gap-1" role="group" aria-label="Part to compare">
+              {entriesOf(DRIVER_PART_NAMES).map(([k, name]) => (
+                <ToggleButton key={k} on={part === k} onClick={() => setPart(k)}>
+                  {name}
+                </ToggleButton>
+              ))}
+            </div>
+            <div className="mt-2 overflow-x-auto">
+              <table className="text-xs w-full min-w-[600px] border-collapse tabular-nums">
+                <thead>
+                  <tr className="text-stone-500 text-left border-b border-stone-300">
+                    <th className="py-1 pr-3 font-normal sticky left-0 bg-stone-50">
+                      {DRIVER_PART_NAMES[part]}
                     </th>
-                  ))}
-                  <th className="py-1 pr-3 font-normal">Checks</th>
-                  <th className="py-1 font-normal" />
-                </tr>
-              </thead>
-              <tbody>
-                {rows(part).map((r) => (
-                  <tr key={r.id} className="border-b border-stone-300 last:border-0 align-top">
-                    <td
-                      className={`py-1.5 pr-3 sticky left-0 bg-stone-50 ${r.yours ? "font-bold" : ""}`}
-                    >
-                      {r.name}
-                      {r.yours && <span className="font-normal text-stone-500"> · yours</span>}
-                    </td>
-                    <td className="py-1.5 pr-3 text-right whitespace-nowrap">
-                      {r.price == null ? "?" : formatDollars(r.price)}
-                    </td>
-                    <td className="py-1.5 pr-3 text-right whitespace-nowrap">
-                      {r.m ? `${formatDollars(r.m.price)}${r.m.priceKnown ? "" : "+"}` : "–"}
-                    </td>
-                    <td className="py-1.5 pr-3 text-right whitespace-nowrap">
-                      {r.lb == null ? "–" : `${r.lb.toFixed(r.lb < 10 ? 1 : 0)} lb`}
-                    </td>
+                    <th className="py-1 pr-3 font-normal text-right">Its price</th>
+                    <th className="py-1 pr-3 font-normal text-right">Drivers / stack</th>
+                    <th className="py-1 pr-3 font-normal text-right">{WEIGHT_HEAD[part]}</th>
                     {PART_COLUMNS[part].map((c) => (
-                      <td key={c.head} className="py-1.5 pr-3 text-right whitespace-nowrap">
-                        {r.m ? c.value(r.m) : "–"}
-                      </td>
+                      <th key={c.head} className="py-1 pr-3 font-normal text-right">
+                        {c.head}
+                      </th>
                     ))}
-                    <td className="py-1.5 pr-3">
-                      {r.problems.length ? (
-                        // a problem your design has whatever you pick is grey; what this option adds is orange
-                        r.problems.map((p, i) => (
-                          <span
-                            key={`${p.id}-${i}`}
-                            className={p.yoursToo ? "text-stone-500" : "text-orange-700"}
-                          >
-                            {i > 0 && "; "}
-                            {p.text}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-green-700">passes</span>
-                      )}
-                    </td>
-                    <td className="py-1 text-right">
-                      {!r.yours && (
-                        <Button size="xs" onClick={() => onUse(part, r.id)}>
-                          Use
-                        </Button>
-                      )}
-                    </td>
+                    <th className="py-1 pr-3 font-normal">Checks</th>
+                    <th className="py-1 font-normal" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows(part).map((r) => (
+                    <tr key={r.id} className="border-b border-stone-300 last:border-0 align-top">
+                      <td
+                        className={`py-1.5 pr-3 sticky left-0 bg-stone-50 ${r.yours ? "font-bold" : ""}`}
+                      >
+                        {r.name}
+                        {r.yours && <span className="font-normal text-stone-500"> · yours</span>}
+                      </td>
+                      <td className="py-1.5 pr-3 text-right whitespace-nowrap">
+                        {r.price == null ? "?" : formatDollars(r.price)}
+                      </td>
+                      <td className="py-1.5 pr-3 text-right whitespace-nowrap">
+                        {r.m ? `${formatDollars(r.m.price)}${r.m.priceKnown ? "" : "+"}` : "–"}
+                      </td>
+                      <td className="py-1.5 pr-3 text-right whitespace-nowrap">
+                        {r.lb == null ? "–" : `${r.lb.toFixed(r.lb < 10 ? 1 : 0)} lb`}
+                      </td>
+                      {PART_COLUMNS[part].map((c) => (
+                        <td key={c.head} className="py-1.5 pr-3 text-right whitespace-nowrap">
+                          {r.m ? c.value(r.m) : "–"}
+                        </td>
+                      ))}
+                      <td className="py-1.5 pr-3">
+                        {r.problems.length ? (
+                          // a problem your design has whatever you pick is grey; what this option adds is orange
+                          r.problems.map((p, i) => (
+                            <span
+                              key={`${p.id}-${i}`}
+                              className={p.yoursToo ? "text-stone-500" : "text-orange-700"}
+                            >
+                              {i > 0 && "; "}
+                              {p.text}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-green-700">passes</span>
+                        )}
+                      </td>
+                      <td className="py-1 text-right">
+                        {!r.yours && (
+                          <Button size="xs" onClick={() => onUse(part, r.id)}>
+                            Use
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
-    </details>
+        )
+      }
+    </AnimatedDetails>
   );
 }

@@ -4,14 +4,11 @@ import { DEFAULT_PA } from "./defaults";
 import { PLYWOOD_LB_PER_SQ_FT } from "../data/catalog/plywood";
 import { MAKER_NAMES } from "../data/catalog/makers";
 import { subSystem, subWeightLb } from "./pa/calc";
-import { formatDollars, formatInches } from "./format";
+import { formatDollars, formatHz, formatInches } from "./format";
 import { keysOf } from "./records";
 import { crossoverSlopeName } from "../constants/crossovers";
 
 const d = DEFAULT_PA;
-
-/** A crossover frequency in words: 900 Hz, 1.1 kHz. */
-const hz = (f: number) => (f >= 1000 ? `${+(f / 1000).toFixed(1)} kHz` : `${f} Hz`);
 
 /** The default compression driver's name, price and AES rating; throws if its entry loses the price or rating. */
 function compressionDriver() {
@@ -29,10 +26,10 @@ export const DEFAULT_HORN = {
 };
 
 /** The default mid-to-horn crossover in words. */
-export const DEFAULT_XO_HI = hz(d.xoHi);
+export const DEFAULT_XO_HI = formatHz(d.xoHi);
 
 /** The signal path's crossover line: the default highpass and both crossovers with their slopes. */
-export const DEFAULT_CROSSOVERS = `sub HPF ~${d.hpf} Hz ${d.hpType} · sub/mid ${hz(d.xoLo)} ${crossoverSlopeName(d.xoLoOrder)} · mid/horn ~${hz(d.xoHi)} ${crossoverSlopeName(d.xoHiOrder)}`;
+export const DEFAULT_CROSSOVERS = `sub HPF ~${d.hpf} Hz ${d.hpType} · sub/mid ${formatHz(d.xoLo)} ${crossoverSlopeName(d.xoLoOrder)} · mid/horn ~${formatHz(d.xoHi)} ${crossoverSlopeName(d.xoHiOrder)}`;
 
 /** The default wall thickness in words (¾″). */
 export const DEFAULT_WALL = formatInches(d.wall);

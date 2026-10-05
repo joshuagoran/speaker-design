@@ -1,10 +1,11 @@
 import { useState } from "react";
 import type { Setter } from "../../../types";
+import type { PA_SETTINGS_TABS } from "../../../constants/paSettingsTabs";
 
 /** The result sections that fold on phones. */
 export type FoldId = "sub" | "mid" | "horn" | "totals";
 /** The tabs of the phone settings sheet. */
-export type SettingsTab = "sub" | "mid" | "horn" | "look";
+export type SettingsTab = keyof typeof PA_SETTINGS_TABS;
 
 export interface PhoneLayout {
   isSettingsSheetOpen: boolean;
@@ -15,7 +16,6 @@ export interface PhoneLayout {
   expandedSections: Record<FoldId, boolean>;
   setExpandedSections: Setter<Record<FoldId, boolean>>;
   toggleSection: (id: FoldId) => void;
-  sectionClass: (id: FoldId) => string;
 }
 
 /** Phone layout: the bottom settings sheet with its tabs, and which result sections are folded open (remembered per viewer). */
@@ -45,7 +45,6 @@ export function usePhoneLayout(): PhoneLayout {
       } catch {}
       return n;
     });
-  const sectionClass = (id: FoldId) => (expandedSections[id] ? "" : "max-md:hidden");
   return {
     isSettingsSheetOpen,
     setSettingsSheetOpen,
@@ -55,6 +54,5 @@ export function usePhoneLayout(): PhoneLayout {
     expandedSections,
     setExpandedSections,
     toggleSection,
-    sectionClass,
   };
 }

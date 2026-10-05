@@ -1,6 +1,6 @@
 import { WarningChips } from "../../../components/chips/WarningChips";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
-import { FoldHeading } from "../../../components/ui/FoldHeading";
+import { FoldBody, FoldHeading } from "../../../components/ui/FoldHeading";
 import { MAX_SPL_TIP, STATS } from "../../../components/optimizer/StatRow";
 import { StatRowGrid, type StatRowItem } from "../../../components/stats/StatRowGrid";
 import { midChips } from "../../../lib/pa/chips";
@@ -16,7 +16,6 @@ interface Props {
     PaPlanner,
     | "expandedSections"
     | "toggleSection"
-    | "sectionClass"
     | "midDriver"
     | "midAmpWatts"
     | "midBandTiltDb"
@@ -40,7 +39,6 @@ export function MidSection({ planner }: Props) {
   const {
     expandedSections,
     toggleSection,
-    sectionClass,
     midDriver,
     midAmpWatts,
     midBandTiltDb,
@@ -67,7 +65,7 @@ export function MidSection({ planner }: Props) {
           toggle={toggleSection}
           className="mb-3"
         />
-        <div className={sectionClass("mid")}>
+        <FoldBody open={expandedSections.mid}>
           {midModelled ? (
             <>
               <StatTileGrid
@@ -151,7 +149,7 @@ export function MidSection({ planner }: Props) {
               {midDriver.note}
             </p>
           )}
-        </div>
+        </FoldBody>
       </section>
     </>
   );

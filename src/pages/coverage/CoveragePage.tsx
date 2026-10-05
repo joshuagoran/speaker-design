@@ -21,7 +21,9 @@ import {
 } from "./useCoverageLayout";
 import { CoverageAssumptions } from "./CoverageAssumptions";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
-import { FONT } from "../../styles/fonts";
+import { SettingsLayout } from "../../components/ui/SettingsLayout";
+import { formatHz } from "../../lib/format";
+import { SettingsColumn } from "../../components/ui/SettingsColumn";
 import { UI_TEXT } from "../../constants/uiText";
 import {
   COVERAGE_LEVEL_REF_PLACE,
@@ -54,9 +56,6 @@ const SUB_PLACEMENTS: [SubPlacement, string][] = [
 interface Props {
   planner: CoverageInputs;
 }
-
-const hz = (f: number) =>
-  f >= 1000 ? `${(f / 1000).toFixed(f >= 10000 ? 0 : 1)} kHz` : `${Math.round(f)} Hz`;
 
 /** The height the map may take: on phones, half the screen, so it stays in view above the open settings sheet. */
 function useMapMaxHeight() {
@@ -99,8 +98,8 @@ export function CoveragePage({ planner }: Props) {
           : "text-red-700";
   const bandName =
     layout.band === "one"
-      ? `${hz(layout.freqHz)}, one frequency`
-      : `${COVERAGE_BANDS[layout.band].name} band, ${hz(COVERAGE_BANDS[layout.band].lo)}–${hz(COVERAGE_BANDS[layout.band].hi)}`;
+      ? `${formatHz(layout.freqHz)}, one frequency`
+      : `${COVERAGE_BANDS[layout.band].name} band, ${formatHz(COVERAGE_BANDS[layout.band].lo)}–${formatHz(COVERAGE_BANDS[layout.band].hi)}`;
   const [left, right] = layout.stacks;
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   const logPos = (f: number) =>
@@ -117,108 +116,108 @@ export function CoveragePage({ planner }: Props) {
     ms < 0 ? `the tops wait ${(-ms).toFixed(1)} ms` : `${ms.toFixed(1)} ms on the sub`;
 
   return (
-    <main
-      className={`max-w-6xl mx-auto px-4 md:px-8 pb-16 grid ${sheetOpen ? "max-md:pb-[52dvh]" : "max-md:pb-24"} grid-cols-1 md:grid-cols-5 gap-8`}
-      style={{ fontFamily: FONT }}
-    >
-      <div className="min-w-0 md:col-span-3 flex flex-col gap-5">
-        <section>
-          <SectionHeading className="mb-1">Audience coverage</SectionHeading>
-          <p className="text-sm text-stone-500 mb-3">
-            {bandName}, {map.target.toFixed(0)} dB target at{" "}
-            {COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}
-            {map.isRefining && (
-              <>
-                {" "}
-                · updating
-                <Ellipsis />
-              </>
+    <SettingsLayout
+      className={sheetOpen ? "max-md:pb-[52dvh]" : "max-md:pb-24"}
+      results={
+        <div className="min-w-0 flex flex-col gap-5">
+          <section>
+            <SectionHeading className="mb-1">Audience coverage</SectionHeading>
+            <p className="text-sm text-stone-500 mb-3">
+              {bandName}, {map.target.toFixed(0)} dB target at{" "}
+              {COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}
+              {map.isRefining && (
+                <>
+                  {" "}
+                  · updating
+                  <Ellipsis />
+                </>
+              )}
+              . Drag a stack to move it, its dot to toe it in, or the listener (tap the floor to put
+              them there).
+            </p>
+            {map.stack && map.levels ? (
+              <CoverageMap
+                view={map.view}
+                layout={layout}
+                actions={state}
+                boxes={map.boxes}
+                stack={map.stack}
+                onDragChange={setDragging}
+                maxHeight={maxHeight}
+              />
+            ) : (
+              <Notice>
+                The map needs the mid-bass driver's T/S parameters and the horn's coverage angles.
+                Pick a mid and horn that have them on the Design page.
+              </Notice>
             )}
-            . Drag a stack to move it, its dot to toe it in, or the listener (tap the floor to put
-            them there).
-          </p>
-          {map.stack && map.levels ? (
-            <CoverageMap
-              view={map.view}
-              layout={layout}
-              actions={state}
-              boxes={map.boxes}
-              stack={map.stack}
-              onDragChange={setDragging}
-              maxHeight={maxHeight}
-            />
-          ) : (
-            <Notice>
-              The map needs the mid-bass driver's T/S parameters and the horn's coverage angles.
-              Pick a mid and horn that have them on the Design page.
-            </Notice>
-          )}
-          {map.error && <Notice>The map couldn't be computed: {map.error}</Notice>}
-          {map.stack && !planner.hornModel && (
-            <Notice>
-              The compression driver has no sensitivity or power rating, so the horn is left out of
-              the map.
-            </Notice>
-          )}
-          {map.stack && !planner.subModelled && (
-            <Notice>
-              The sub can't be modelled for this design, so it is left out of the map.
-            </Notice>
-          )}
-          {rel != null && map.stats && (
-            <div className="md:hidden flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-stone-500 tabular-nums">
-              <span>
-                Listener <b className="text-stone-900">{map.listenerDb?.toFixed(1)} dB</b>{" "}
-                <span className={relClass}>({signed(rel)})</span>
-              </span>
-              <span>
-                <b className="text-stone-900">{pct(map.stats.within3)}</b> ≥ −3 dB
-              </span>
-              <span>
-                <b className="text-stone-900">{pct(map.stats.within6)}</b> ≥ −6 dB
-              </span>
-            </div>
-          )}
-        </section>
-        <section className="max-w-prose">
-          <CoverageAssumptions room={room} planner={planner} target={map.target} level={layout} />
-        </section>
-      </div>
-
-      <aside
-        className="min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet"
-        aria-label="Coverage settings"
-      >
-        <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
-          {TABS.map(([t, name]) => (
-            <button
-              key={t}
-              role="tab"
-              aria-selected={sheetOpen && tab === t}
-              onClick={() => {
-                if (sheetOpen && tab === t) setSheetOpen(false);
-                else {
-                  setTab(t);
-                  setSheetOpen(true);
-                }
-              }}
-              className={`flex-1 px-2 py-2 rounded border text-sm ${sheetOpen && tab === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50"}`}
-            >
-              {name}
-            </button>
-          ))}
-          {sheetOpen && (
-            <button
-              onClick={() => setSheetOpen(false)}
-              aria-label={UI_TEXT.closeSettings}
-              className="px-3 rounded border border-stone-300 bg-stone-50 text-sm"
-            >
-              ✕
-            </button>
-          )}
+            {map.error && <Notice>The map couldn't be computed: {map.error}</Notice>}
+            {map.stack && !planner.hornModel && (
+              <Notice>
+                The compression driver has no sensitivity or power rating, so the horn is left out
+                of the map.
+              </Notice>
+            )}
+            {map.stack && !planner.subModelled && (
+              <Notice>
+                The sub can't be modelled for this design, so it is left out of the map.
+              </Notice>
+            )}
+            {rel != null && map.stats && (
+              <div className="md:hidden flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-stone-500 tabular-nums">
+                <span>
+                  Listener <b className="text-stone-900">{map.listenerDb?.toFixed(1)} dB</b>{" "}
+                  <span className={relClass}>({signed(rel)})</span>
+                </span>
+                <span>
+                  <b className="text-stone-900">{pct(map.stats.within3)}</b> ≥ −3 dB
+                </span>
+                <span>
+                  <b className="text-stone-900">{pct(map.stats.within6)}</b> ≥ −6 dB
+                </span>
+              </div>
+            )}
+          </section>
+          <section className="max-w-prose">
+            <CoverageAssumptions room={room} planner={planner} target={map.target} level={layout} />
+          </section>
         </div>
-        <div
-          className={`flex flex-col gap-6 max-md:gap-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${sheetOpen ? "" : "max-md:hidden"}`}
+      }
+      settings={
+        <SettingsColumn
+          label="Coverage settings"
+          className="max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet"
+          bodyClassName={`flex flex-col gap-6 md:pb-4 max-md:gap-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${sheetOpen ? "" : "max-md:hidden"}`}
+          top={
+            <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
+              {TABS.map(([t, name]) => (
+                <button
+                  key={t}
+                  role="tab"
+                  aria-selected={sheetOpen && tab === t}
+                  onClick={() => {
+                    if (sheetOpen && tab === t) setSheetOpen(false);
+                    else {
+                      setTab(t);
+                      setSheetOpen(true);
+                    }
+                  }}
+                  className={`flex-1 px-2 py-2 rounded border text-sm ${sheetOpen && tab === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50"}`}
+                >
+                  {name}
+                </button>
+              ))}
+              {sheetOpen && (
+                <button
+                  onClick={() => setSheetOpen(false)}
+                  aria-label={UI_TEXT.closeSettings}
+                  className="px-3 rounded border border-stone-300 bg-stone-50 text-sm"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          }
         >
           <div className={tabClass("listener")}>
             <div className={label}>Listener</div>
@@ -285,7 +284,9 @@ export function CoveragePage({ planner }: Props) {
                       : { lo: COVERAGE_BANDS[layout.band].lo, hi: COVERAGE_BANDS[layout.band].hi }
                   }
                   marks={
-                    layout.band === "one" ? [{ f: layout.freqHz, label: hz(layout.freqHz) }] : []
+                    layout.band === "one"
+                      ? [{ f: layout.freqHz, label: formatHz(layout.freqHz) }]
+                      : []
                   }
                 />
               </div>
@@ -332,7 +333,7 @@ export function CoveragePage({ planner }: Props) {
                 <ToggleButton key={b} on={layout.band === b} onClick={() => state.setBand(b)}>
                   {COVERAGE_BANDS[b].name}{" "}
                   <span className="text-xs opacity-70">
-                    {hz(COVERAGE_BANDS[b].lo)}–{hz(COVERAGE_BANDS[b].hi)}
+                    {formatHz(COVERAGE_BANDS[b].lo)}–{formatHz(COVERAGE_BANDS[b].hi)}
                   </span>
                 </ToggleButton>
               ))}
@@ -346,7 +347,9 @@ export function CoveragePage({ planner }: Props) {
                   <label htmlFor={freqId} className="text-sm text-stone-500">
                     Frequency
                   </label>
-                  <span className="text-sm tabular-nums font-medium">{hz(layout.freqHz)}</span>
+                  <span className="text-sm tabular-nums font-medium">
+                    {formatHz(layout.freqHz)}
+                  </span>
                 </div>
                 <input
                   id={freqId}
@@ -355,7 +358,7 @@ export function CoveragePage({ planner }: Props) {
                   max={1000}
                   step={1}
                   value={logPos(layout.freqHz)}
-                  aria-valuetext={hz(layout.freqHz)}
+                  aria-valuetext={formatHz(layout.freqHz)}
                   onChange={(e) => state.setFreqHz(fromPos(parseFloat(e.target.value)))}
                   className="w-full accent-stone-900"
                 />
@@ -453,7 +456,8 @@ export function CoveragePage({ planner }: Props) {
             {map.subDelayMs != null && (
               <p className="text-sm text-stone-500 tabular-nums mb-3">
                 Sub delay: {delay(map.subDelayMs)}, in phase with the mid at{" "}
-                {hz(planner.subMidCrossoverHz)} on the stack's axis, as a DSP setup would set it.
+                {formatHz(planner.subMidCrossoverHz)} on the stack's axis, as a DSP setup would set
+                it.
               </p>
             )}
             <Slider
@@ -471,8 +475,8 @@ export function CoveragePage({ planner }: Props) {
             </p>
             <Button onClick={state.reset}>Reset the layout</Button>
           </div>
-        </div>
-      </aside>
-    </main>
+        </SettingsColumn>
+      }
+    />
   );
 }

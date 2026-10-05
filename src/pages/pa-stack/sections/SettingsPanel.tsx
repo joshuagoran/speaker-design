@@ -18,7 +18,14 @@ import { ductFit, ductLenSliderMax } from "../../../lib/pa/chips";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { entriesOf, keysOf } from "../../../lib/records";
 import { CrossoverSlopeButtons } from "../../../components/ui/CrossoverSlopeButtons";
-import { FONT } from "../../../styles/fonts";
+import { SettingsColumn, SettingsSection } from "../../../components/ui/SettingsColumn";
+import { useFolds } from "../../../hooks/useFolds";
+import { formatDims, formatHz, formatInches } from "../../../lib/format";
+import { crossoverSlopeName } from "../../../constants/crossovers";
+import { PA_LAYOUT_NAMES } from "../../../constants/paLayouts";
+import { PA_SETTINGS_SECTIONS } from "../../../constants/settingsSections";
+import { PA_SETTINGS_TABS } from "../../../constants/paSettingsTabs";
+import type { PaSettingsSection } from "../../../constants/settingsSections";
 import { SLOT_LAYOUT_NAMES } from "../../../constants/portStyles";
 import { UI_TEXT } from "../../../constants/uiText";
 
@@ -90,12 +97,17 @@ interface Props {
     | "midDriverChoices"
     | "hornExitMismatch"
     | "port"
+    | "subModelled"
+    | "effectiveMidBoxDims"
     | "renderLockButton"
     | "renderDimensionLock"
   >;
 }
 
-/** Settings: sliders and pickers for the sub, mid-bass, horn and the look. A bottom sheet with tabs on phones. */
+/**
+ * Settings: sliders and pickers for the sub, mid-bass, horn, crossovers and amps, and the look. From md up a sticky
+ * column of fold sections, each with a one-line summary while folded; a bottom sheet with tabs on phones.
+ */
 export function SettingsPanel({ planner }: Props) {
   const {
     isSettingsSheetOpen,
@@ -163,28 +175,55 @@ export function SettingsPanel({ planner }: Props) {
     midDriverChoices,
     hornExitMismatch,
     port,
+    subModelled,
+    effectiveMidBoxDims,
     renderLockButton,
     renderDimensionLock,
   } = planner;
+  const folds = useFolds("planner.settingsFolds", keysOf(PA_SETTINGS_SECTIONS));
   // a bottom slot's duct lengths: straight, then folded up the back wall (the lengths between fit neither way)
   const slotFit =
     portStyle === "slots" ? ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn) : null;
+  const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
+  const summaries: Record<PaSettingsSection, string> = {
+    sub: [
+      subDriver.name,
+      formatDims(subBoxDims),
+      subModelled && `tuned to ${subModelled.mdl.Fb.toFixed(0)} Hz`,
+      port.desc,
+    ]
+      .filter(Boolean)
+      .join(", "),
+    mid: `${midDriver.name}, ${formatDims(effectiveMidBoxDims)} sealed`,
+    horn: `${compressionDriver.name} on ${hornOption.name}`,
+    xo: [
+      `${formatHz(subMidCrossoverHz)} ${crossoverSlopeName(subMidCrossoverOrder)}`,
+      `${formatHz(midHornCrossoverHz)} ${crossoverSlopeName(midHornCrossoverOrder)}`,
+      `highpass ${subHighpassHz} Hz`,
+      `amps ${subAmpWatts} / ${midAmpWatts} / ${hornAmpWatts} W`,
+    ].join(" · "),
+    look: `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${formatInches(wallThicknessIn)} ply`,
+  };
+  const section = (id: PaSettingsSection, children: React.ReactNode) => (
+    <SettingsSection
+      id={id}
+      title={PA_SETTINGS_SECTIONS[id]}
+      folds={folds}
+      foldsAt="desktop"
+      summary={summaries[id]}
+    >
+      {children}
+    </SettingsSection>
+  );
   return (
-    <>
-      <aside
-        className={`min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet`}
-        style={{ fontFamily: FONT }}
-        aria-label="Settings"
-      >
+    <SettingsColumn
+      folds={folds}
+      foldsAt="desktop"
+      className="max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet"
+      bodyClassName={`max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${isSettingsSheetOpen ? "" : "max-md:hidden"}`}
+      top={
         <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
-          {(
-            [
-              ["sub", "Sub"],
-              ["mid", "Mid"],
-              ["horn", "Horn"],
-              ["look", "Look"],
-            ] as const
-          ).map(([t, label]) => (
+          {entriesOf(PA_SETTINGS_TABS).map(([t, label]) => (
             <button
               key={t}
               role="tab"
@@ -211,265 +250,292 @@ export function SettingsPanel({ planner }: Props) {
             </button>
           )}
         </div>
-        <div
-          className={`max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${isSettingsSheetOpen ? "" : "max-md:hidden"}`}
-        >
-          <div className={tabClass("look")}>
-            <div className="mb-5">
-              <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2">
-                <span>Plywood (baffles stay 3/4″)</span>
-                {renderLockButton("wall", "the plywood")}
+      }
+    >
+      {section(
+        "sub",
+        <div className={tabClass("sub")}>
+          <SelectField
+            label="Sub driver"
+            options={subDriverChoices}
+            value={subDriver}
+            onChange={setSubDriver}
+            extra={renderLockButton("sub", "the sub driver")}
+          />
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Cabinet</div>
+            <Card>
+              <Slider
+                label="Width"
+                value={subBoxDims.w}
+                min={PA_SLIDERS.subW.min}
+                max={PA_SLIDERS.subW.max}
+                step={PA_SLIDERS.subW.step}
+                unit="″"
+                onChange={(v) => setSubBoxDim("w", v)}
+                extra={renderDimensionLock("subDim", "w", "Sub width")}
+              />
+              <Slider
+                label="Height"
+                value={subBoxDims.h}
+                min={PA_SLIDERS.subH.min}
+                max={PA_SLIDERS.subH.max}
+                step={PA_SLIDERS.subH.step}
+                unit="″"
+                onChange={(v) => setSubBoxDim("h", v)}
+                extra={renderDimensionLock("subDim", "h", "Sub height")}
+              />
+              <Slider
+                label="Depth"
+                value={subBoxDims.d}
+                min={PA_SLIDERS.subD.min}
+                max={PA_SLIDERS.subD.max}
+                step={PA_SLIDERS.subD.step}
+                unit="″"
+                onChange={(v) => setSubBoxDim("d", v)}
+                extra={renderDimensionLock("subDim", "d", "Sub depth")}
+              />
+            </Card>
+          </div>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2">
+              <span>Vent</span>
+              {renderLockButton("vent", "the vent style")}
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {(
+                [
+                  ["Rectangular", !isRoundPort(portStyle), "slots"],
+                  ["Round tubes", isRoundPort(portStyle), "round2"],
+                ] as const
+              ).map(([label, on, v]) => (
+                <ToggleButton
+                  key={label}
+                  onClick={() => {
+                    if (!on) setPortStyle(v);
+                  }}
+                  on={on}
+                >
+                  {label}
+                </ToggleButton>
+              ))}
+            </div>
+            {!isRoundPort(portStyle) && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {entriesOf(SLOT_LAYOUT_NAMES).map(([v, label]) => {
+                  const on = portStyle === v;
+                  return (
+                    <ToggleButton key={v} onClick={() => setPortStyle(v)} on={on} size="xs">
+                      {label}
+                    </ToggleButton>
+                  );
+                })}
               </div>
-              <div className="flex gap-1">
-                {(
-                  [
-                    [0.75, "3/4″ birch"],
-                    [0.5, "1/2″ birch, braced"],
-                  ] as const
-                ).map(([t, label]) => (
-                  <ToggleButton
-                    key={t}
-                    onClick={() => setWallThicknessIn(t)}
-                    on={wallThicknessIn === t}
-                  >
-                    {label}
-                  </ToggleButton>
-                ))}
-              </div>
-              <div className="mt-3">
+            )}
+            <Card className="mt-2">
+              {portStyle === "slots" && (
                 <Slider
-                  label="Baffle inset"
-                  value={baffleInsetIn}
-                  min={0}
-                  max={1.5}
-                  step={0.25}
+                  label="Slot height"
+                  value={subVentSpec.slotH}
+                  min={PA_SLIDERS.slotH.min}
+                  max={PA_SLIDERS.slotH.max}
+                  step={PA_SLIDERS.slotH.step}
                   unit="″"
-                  onChange={setBaffleInsetIn}
+                  onChange={(v) => setSubVentField("slotH", v)}
                 />
-              </div>
-            </div>
-          </div>
-          <div className={tabClass("sub")}>
-            <SelectField
-              label="Sub driver"
-              options={subDriverChoices}
-              value={subDriver}
-              onChange={setSubDriver}
-              extra={renderLockButton("sub", "the sub driver")}
-            />
-          </div>
-          <div className={tabClass("look")}>
-            <SwatchPicker
-              label="Cabinet finish"
-              value={cabinetFinish}
-              onChange={setCabinetFinish}
-              swatches={PAINT_SWATCHES}
-              presets={CABINET_FINISHES}
-              titlePrefix="Painted: "
-              note={cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`}
-            />
-          </div>
-          <div className={tabClass("look")}>
-            <SwatchPicker
-              label="Baffle colour"
-              value={baffleColor}
-              onChange={setBaffleColor}
-              swatches={PAINT_SWATCHES}
-              note={baffleColor}
-            />
-          </div>
-          <div className={tabClass("look")}>
-            <div className="mb-5">
-              <div className="text-sm text-stone-500 mb-1">View</div>
-              <div className="flex gap-1">
-                {(
-                  [
-                    ["Finished", false],
-                    ["Cutaway", true],
-                  ] as const
-                ).map(([label, v]) => (
-                  <ToggleButton key={label} onClick={() => setCutaway(v)} on={cutaway === v}>
-                    {label}
-                  </ToggleButton>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className={tabClass("look")}>
-            <div className="mb-5">
-              <div className="text-sm text-stone-500 mb-1">Layout</div>
-              <div className="flex gap-1">
-                {(
-                  [
-                    ["Two stacks", "stack"],
-                    ["Tops on spacers", "pole"],
-                    ["Tower", "tower"],
-                    ["One sub + satellites", "satellite"],
-                  ] as const
-                ).map(([label, v]) => (
-                  <ToggleButton key={v} onClick={() => setLayout(v)} on={layout === v}>
-                    {label}
-                  </ToggleButton>
-                ))}
-              </div>
-              {layout === "pole" && (
-                <div className="mt-3">
-                  <Slider
-                    label="Spacer height"
-                    value={spacerHeightIn}
-                    min={4}
-                    max={36}
-                    step={1}
-                    unit="″"
-                    onChange={setSpacerHeightIn}
-                  />
-                </div>
               )}
+              {(portStyle === "vslots" || portStyle === "vslot1") && (
+                <Slider
+                  label="Duct throat"
+                  value={subVentSpec.throat}
+                  min={PA_SLIDERS.throat.min}
+                  max={portStyle === "vslot1" ? PA_THROAT_MAX_VSLOT1 : PA_SLIDERS.throat.max}
+                  step={PA_SLIDERS.throat.step}
+                  unit="″"
+                  onChange={(v) => setSubVentField("throat", v)}
+                />
+              )}
+              {isRoundPort(portStyle) && (
+                <>
+                  <Slider
+                    label="Tubes"
+                    value={subVentSpec.nt}
+                    min={PA_SLIDERS.tubes.min}
+                    max={PA_SLIDERS.tubes.max}
+                    step={PA_SLIDERS.tubes.step}
+                    unit=""
+                    onChange={(v) => setSubVentField("nt", v)}
+                  />
+                  <Slider
+                    label="Tube diameter"
+                    value={subVentSpec.dia}
+                    min={PA_SLIDERS.tubeDia.min}
+                    max={PA_SLIDERS.tubeDia.max}
+                    step={PA_SLIDERS.tubeDia.step}
+                    unit="″"
+                    onChange={(v) => setSubVentField("dia", v)}
+                  />
+                </>
+              )}
+              <Slider
+                label="Duct length"
+                value={subVentSpec.len}
+                min={PA_SLIDERS.ductLen.min}
+                max={ductLenSliderMax(subBoxDims, portStyle, subVentSpec, wallThicknessIn)}
+                step={PA_SLIDERS.ductLen.step}
+                unit="″"
+                onChange={(v) => setSubVentField("len", v)}
+                // a bottom slot skips the lengths that fit neither way, and stops at the longest fold
+                ranges={slotFit?.spans}
+              />
+              <Slider
+                label="Port velocity limit"
+                value={maxPortAirSpeedMs}
+                min={12}
+                max={30}
+                step={0.5}
+                unit=" m/s"
+                onChange={setMaxPortAirSpeedMs}
+              />
+              <div className="text-xs text-stone-500">
+                {port.desc}. {port.area.toFixed(1)} in&#178;.
+              </div>
+            </Card>
+          </div>
+        </div>,
+      )}
+      {section(
+        "mid",
+        <div className={tabClass("mid")}>
+          <div className="mb-2">
+            <div className="text-sm text-stone-500 mb-1">Mid-bass size</div>
+            <div className="flex gap-1">
+              {([12, 15] as const).map((n) => (
+                <ToggleButton key={n} onClick={() => setMidSize(n)} on={midSize === n}>
+                  {n}″
+                </ToggleButton>
+              ))}
             </div>
           </div>
-          <div className={tabClass("sub")}>
+          <SelectField
+            label={`Mid-bass ${midSize}″`}
+            options={midDriverChoices}
+            value={midDriver}
+            onChange={setMidDriver}
+            extra={renderLockButton("mid", "the mid-bass driver")}
+          />
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
+            <Card>
+              {layout === "tower" ? (
+                <div className="text-xs text-stone-500">
+                  Tower layout: the mid chamber is the sub's footprint, {subBoxDims.w}″ × 15.5″ ×{" "}
+                  {subBoxDims.d}″.
+                </div>
+              ) : (
+                <>
+                  <Slider
+                    label="Width"
+                    value={midBoxDims.w}
+                    min={PA_SLIDERS.midW.min}
+                    max={PA_SLIDERS.midW.max}
+                    step={PA_SLIDERS.midW.step}
+                    unit="″"
+                    onChange={(v) => setMidBoxDim("w", v)}
+                    extra={renderDimensionLock("midDim", "w", "Mid width")}
+                  />
+                  <Slider
+                    label="Height"
+                    value={midBoxDims.h}
+                    min={PA_SLIDERS.midH.min}
+                    max={PA_SLIDERS.midH.max}
+                    step={PA_SLIDERS.midH.step}
+                    unit="″"
+                    onChange={(v) => setMidBoxDim("h", v)}
+                    extra={renderDimensionLock("midDim", "h", "Mid height")}
+                  />
+                  <Slider
+                    label="Depth"
+                    value={midBoxDims.d}
+                    min={PA_SLIDERS.midD.min}
+                    max={PA_SLIDERS.midD.max}
+                    step={PA_SLIDERS.midD.step}
+                    unit="″"
+                    onChange={(v) => setMidBoxDim("d", v)}
+                    extra={renderDimensionLock("midDim", "d", "Mid depth")}
+                  />
+                </>
+              )}
+            </Card>
+          </div>
+        </div>,
+      )}
+      {section(
+        "horn",
+        <div className={tabClass("horn")}>
+          <SelectField
+            label="Compression driver"
+            options={CD_OPTIONS}
+            value={compressionDriver}
+            onChange={setCompressionDriver}
+            extra={renderLockButton("cd", "the compression driver")}
+          />
+          <SelectField
+            label="Horn"
+            options={HORN_OPTIONS}
+            value={hornOption}
+            onChange={setHornOption}
+            extra={renderLockButton("horn", "the horn")}
+          />
+          {hornExitMismatch && (
+            <div className="text-sm text-red-700 mb-4">
+              Horn throat and driver exit don't match ({hornOption.exit}″ vs{" "}
+              {compressionDriver.exit}″).
+            </div>
+          )}
+        </div>,
+      )}
+      {section(
+        "xo",
+        <>
+          <div className={tabClass("mid")}>
             <div className="mb-5">
-              <div className="text-sm text-stone-500 mb-1">Cabinet</div>
+              <div className="text-sm text-stone-500 mb-1">Crossovers</div>
               <Card>
                 <Slider
-                  label="Width"
-                  value={subBoxDims.w}
-                  min={PA_SLIDERS.subW.min}
-                  max={PA_SLIDERS.subW.max}
-                  step={PA_SLIDERS.subW.step}
-                  unit="″"
-                  onChange={(v) => setSubBoxDim("w", v)}
-                  extra={renderDimensionLock("subDim", "w", "Sub width")}
+                  label="Crossover, sub to mid"
+                  value={subMidCrossoverHz}
+                  min={PA_SLIDERS.xoLo.min}
+                  max={PA_SLIDERS.xoLo.max}
+                  step={PA_SLIDERS.xoLo.step}
+                  unit=" Hz"
+                  onChange={setSubMidCrossoverHz}
+                  extra={renderLockButton("xoLo", "the sub-to-mid crossover")}
+                />
+                <CrossoverSlopeButtons
+                  order={subMidCrossoverOrder}
+                  onChange={setSubMidCrossoverOrder}
+                  label="Crossover slope, sub to mid"
                 />
                 <Slider
-                  label="Height"
-                  value={subBoxDims.h}
-                  min={PA_SLIDERS.subH.min}
-                  max={PA_SLIDERS.subH.max}
-                  step={PA_SLIDERS.subH.step}
-                  unit="″"
-                  onChange={(v) => setSubBoxDim("h", v)}
-                  extra={renderDimensionLock("subDim", "h", "Sub height")}
+                  label="Crossover, mid to horn"
+                  value={midHornCrossoverHz}
+                  min={PA_SLIDERS.xoHi.min}
+                  max={PA_SLIDERS.xoHi.max}
+                  step={PA_SLIDERS.xoHi.step}
+                  unit=" Hz"
+                  onChange={setMidHornCrossoverHz}
+                  extra={renderLockButton("xoHi", "the mid-to-horn crossover")}
                 />
-                <Slider
-                  label="Depth"
-                  value={subBoxDims.d}
-                  min={PA_SLIDERS.subD.min}
-                  max={PA_SLIDERS.subD.max}
-                  step={PA_SLIDERS.subD.step}
-                  unit="″"
-                  onChange={(v) => setSubBoxDim("d", v)}
-                  extra={renderDimensionLock("subDim", "d", "Sub depth")}
+                <CrossoverSlopeButtons
+                  order={midHornCrossoverOrder}
+                  onChange={setMidHornCrossoverOrder}
+                  label="Crossover slope, mid to horn"
                 />
               </Card>
             </div>
           </div>
           <div className={tabClass("sub")}>
-            <div className="mb-5">
-              <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2">
-                <span>Vent</span>
-                {renderLockButton("vent", "the vent style")}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {(
-                  [
-                    ["Rectangular", !isRoundPort(portStyle), "slots"],
-                    ["Round tubes", isRoundPort(portStyle), "round2"],
-                  ] as const
-                ).map(([label, on, v]) => (
-                  <ToggleButton
-                    key={label}
-                    onClick={() => {
-                      if (!on) setPortStyle(v);
-                    }}
-                    on={on}
-                  >
-                    {label}
-                  </ToggleButton>
-                ))}
-              </div>
-              {!isRoundPort(portStyle) && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {entriesOf(SLOT_LAYOUT_NAMES).map(([v, label]) => {
-                    const on = portStyle === v;
-                    return (
-                      <ToggleButton key={v} onClick={() => setPortStyle(v)} on={on} size="xs">
-                        {label}
-                      </ToggleButton>
-                    );
-                  })}
-                </div>
-              )}
-              <Card className="mt-2">
-                {portStyle === "slots" && (
-                  <Slider
-                    label="Slot height"
-                    value={subVentSpec.slotH}
-                    min={PA_SLIDERS.slotH.min}
-                    max={PA_SLIDERS.slotH.max}
-                    step={PA_SLIDERS.slotH.step}
-                    unit="″"
-                    onChange={(v) => setSubVentField("slotH", v)}
-                  />
-                )}
-                {(portStyle === "vslots" || portStyle === "vslot1") && (
-                  <Slider
-                    label="Duct throat"
-                    value={subVentSpec.throat}
-                    min={PA_SLIDERS.throat.min}
-                    max={portStyle === "vslot1" ? PA_THROAT_MAX_VSLOT1 : PA_SLIDERS.throat.max}
-                    step={PA_SLIDERS.throat.step}
-                    unit="″"
-                    onChange={(v) => setSubVentField("throat", v)}
-                  />
-                )}
-                {isRoundPort(portStyle) && (
-                  <>
-                    <Slider
-                      label="Tubes"
-                      value={subVentSpec.nt}
-                      min={PA_SLIDERS.tubes.min}
-                      max={PA_SLIDERS.tubes.max}
-                      step={PA_SLIDERS.tubes.step}
-                      unit=""
-                      onChange={(v) => setSubVentField("nt", v)}
-                    />
-                    <Slider
-                      label="Tube diameter"
-                      value={subVentSpec.dia}
-                      min={PA_SLIDERS.tubeDia.min}
-                      max={PA_SLIDERS.tubeDia.max}
-                      step={PA_SLIDERS.tubeDia.step}
-                      unit="″"
-                      onChange={(v) => setSubVentField("dia", v)}
-                    />
-                  </>
-                )}
-                <Slider
-                  label="Duct length"
-                  value={subVentSpec.len}
-                  min={PA_SLIDERS.ductLen.min}
-                  max={ductLenSliderMax(subBoxDims, portStyle, subVentSpec, wallThicknessIn)}
-                  step={PA_SLIDERS.ductLen.step}
-                  unit="″"
-                  onChange={(v) => setSubVentField("len", v)}
-                  // a bottom slot skips the lengths that fit neither way, and stops at the longest fold
-                  ranges={slotFit?.spans}
-                />
-                <Slider
-                  label="Port velocity limit"
-                  value={maxPortAirSpeedMs}
-                  min={12}
-                  max={30}
-                  step={0.5}
-                  unit=" m/s"
-                  onChange={setMaxPortAirSpeedMs}
-                />
-                <div className="text-xs text-stone-500">
-                  {port.desc}. {port.area.toFixed(1)} in&#178;.
-                </div>
-              </Card>
-            </div>
             <div className="mb-5">
               <div className="text-sm text-stone-500 mb-1">Sub highpass and amp</div>
               <Card>
@@ -509,95 +575,9 @@ export function SettingsPanel({ planner }: Props) {
             </div>
           </div>
           <div className={tabClass("mid")}>
-            <div className="mb-2">
-              <div className="text-sm text-stone-500 mb-1">Mid-bass size</div>
-              <div className="flex gap-1">
-                {([12, 15] as const).map((n) => (
-                  <ToggleButton key={n} onClick={() => setMidSize(n)} on={midSize === n}>
-                    {n}″
-                  </ToggleButton>
-                ))}
-              </div>
-            </div>
-            <SelectField
-              label={`Mid-bass ${midSize}″`}
-              options={midDriverChoices}
-              value={midDriver}
-              onChange={setMidDriver}
-              extra={renderLockButton("mid", "the mid-bass driver")}
-            />
             <div className="mb-5">
-              <div className="text-sm text-stone-500 mb-1">Mid-bass cabinet (sealed)</div>
+              <div className="text-sm text-stone-500 mb-1">{UI_TEXT.midBass} amp</div>
               <Card>
-                {layout === "tower" ? (
-                  <div className="text-xs text-stone-500 mb-3">
-                    Tower layout: the mid chamber is the sub's footprint, {subBoxDims.w}″ × 15.5″ ×{" "}
-                    {subBoxDims.d}″.
-                  </div>
-                ) : (
-                  <>
-                    <Slider
-                      label="Width"
-                      value={midBoxDims.w}
-                      min={PA_SLIDERS.midW.min}
-                      max={PA_SLIDERS.midW.max}
-                      step={PA_SLIDERS.midW.step}
-                      unit="″"
-                      onChange={(v) => setMidBoxDim("w", v)}
-                      extra={renderDimensionLock("midDim", "w", "Mid width")}
-                    />
-                    <Slider
-                      label="Height"
-                      value={midBoxDims.h}
-                      min={PA_SLIDERS.midH.min}
-                      max={PA_SLIDERS.midH.max}
-                      step={PA_SLIDERS.midH.step}
-                      unit="″"
-                      onChange={(v) => setMidBoxDim("h", v)}
-                      extra={renderDimensionLock("midDim", "h", "Mid height")}
-                    />
-                    <Slider
-                      label="Depth"
-                      value={midBoxDims.d}
-                      min={PA_SLIDERS.midD.min}
-                      max={PA_SLIDERS.midD.max}
-                      step={PA_SLIDERS.midD.step}
-                      unit="″"
-                      onChange={(v) => setMidBoxDim("d", v)}
-                      extra={renderDimensionLock("midDim", "d", "Mid depth")}
-                    />
-                  </>
-                )}
-                <Slider
-                  label="Crossover, sub to mid"
-                  value={subMidCrossoverHz}
-                  min={PA_SLIDERS.xoLo.min}
-                  max={PA_SLIDERS.xoLo.max}
-                  step={PA_SLIDERS.xoLo.step}
-                  unit=" Hz"
-                  onChange={setSubMidCrossoverHz}
-                  extra={renderLockButton("xoLo", "the sub-to-mid crossover")}
-                />
-                <CrossoverSlopeButtons
-                  order={subMidCrossoverOrder}
-                  onChange={setSubMidCrossoverOrder}
-                  label="Crossover slope, sub to mid"
-                />
-                <Slider
-                  label="Crossover, mid to horn"
-                  value={midHornCrossoverHz}
-                  min={PA_SLIDERS.xoHi.min}
-                  max={PA_SLIDERS.xoHi.max}
-                  step={PA_SLIDERS.xoHi.step}
-                  unit=" Hz"
-                  onChange={setMidHornCrossoverHz}
-                  extra={renderLockButton("xoHi", "the mid-to-horn crossover")}
-                />
-                <CrossoverSlopeButtons
-                  order={midHornCrossoverOrder}
-                  onChange={setMidHornCrossoverOrder}
-                  label="Crossover slope, mid to horn"
-                />
                 <Slider
                   label="Mid amp power per channel @ 8 Ω"
                   value={midAmpWatts}
@@ -625,50 +605,125 @@ export function SettingsPanel({ planner }: Props) {
             </div>
           </div>
           <div className={tabClass("horn")}>
-            <SelectField
-              label="Compression driver"
-              options={CD_OPTIONS}
-              value={compressionDriver}
-              onChange={setCompressionDriver}
-              extra={renderLockButton("cd", "the compression driver")}
-            />
-            <SelectField
-              label="Horn"
-              options={HORN_OPTIONS}
-              value={hornOption}
-              onChange={setHornOption}
-              extra={renderLockButton("horn", "the horn")}
-            />
-            <Card className="mb-4">
+            <div className="mb-5">
+              <div className="text-sm text-stone-500 mb-1">Horn amp</div>
+              <Card>
+                <Slider
+                  label="HF amp power per channel @ 8 Ω"
+                  value={hornAmpWatts}
+                  min={AMP_WATTS_STEPS.hfAmpW.min}
+                  max={AMP_WATTS_MAX.hfAmpW}
+                  step={AMP_WATTS_STEPS.hfAmpW.step}
+                  unit=" W"
+                  onChange={setHornAmpWatts}
+                  extra={renderLockButton("hfAmpW", "the HF amp power")}
+                />
+                <Slider
+                  label="Music balance: HF band needs less by"
+                  value={hornBandTiltDb}
+                  min={0}
+                  max={12}
+                  step={1}
+                  unit=" dB"
+                  onChange={setHornBandTiltDb}
+                />
+              </Card>
+            </div>
+          </div>
+        </>,
+      )}
+      {section(
+        "look",
+        <div className={tabClass("look")}>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2">
+              <span>Plywood (baffles stay 3/4″)</span>
+              {renderLockButton("wall", "the plywood")}
+            </div>
+            <div className="flex gap-1">
+              {(
+                [
+                  [0.75, "3/4″ birch"],
+                  [0.5, "1/2″ birch, braced"],
+                ] as const
+              ).map(([t, label]) => (
+                <ToggleButton
+                  key={t}
+                  onClick={() => setWallThicknessIn(t)}
+                  on={wallThicknessIn === t}
+                >
+                  {label}
+                </ToggleButton>
+              ))}
+            </div>
+            <div className="mt-3">
               <Slider
-                label="HF amp power per channel @ 8 Ω"
-                value={hornAmpWatts}
-                min={AMP_WATTS_STEPS.hfAmpW.min}
-                max={AMP_WATTS_MAX.hfAmpW}
-                step={AMP_WATTS_STEPS.hfAmpW.step}
-                unit=" W"
-                onChange={setHornAmpWatts}
-                extra={renderLockButton("hfAmpW", "the HF amp power")}
-              />
-              <Slider
-                label="Music balance: HF band needs less by"
-                value={hornBandTiltDb}
+                label="Baffle inset"
+                value={baffleInsetIn}
                 min={0}
-                max={12}
-                step={1}
-                unit=" dB"
-                onChange={setHornBandTiltDb}
+                max={1.5}
+                step={0.25}
+                unit="″"
+                onChange={setBaffleInsetIn}
               />
-            </Card>
-            {hornExitMismatch && (
-              <div className="text-sm text-red-700 mb-4">
-                Horn throat and driver exit don't match ({hornOption.exit}″ vs{" "}
-                {compressionDriver.exit}″).
+            </div>
+          </div>
+          <SwatchPicker
+            label="Cabinet finish"
+            value={cabinetFinish}
+            onChange={setCabinetFinish}
+            swatches={PAINT_SWATCHES}
+            presets={CABINET_FINISHES}
+            titlePrefix="Painted: "
+            note={finishName}
+          />
+          <SwatchPicker
+            label="Baffle colour"
+            value={baffleColor}
+            onChange={setBaffleColor}
+            swatches={PAINT_SWATCHES}
+            note={baffleColor}
+          />
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">View</div>
+            <div className="flex gap-1">
+              {(
+                [
+                  ["Finished", false],
+                  ["Cutaway", true],
+                ] as const
+              ).map(([label, v]) => (
+                <ToggleButton key={label} onClick={() => setCutaway(v)} on={cutaway === v}>
+                  {label}
+                </ToggleButton>
+              ))}
+            </div>
+          </div>
+          <div className="mb-5">
+            <div className="text-sm text-stone-500 mb-1">Layout</div>
+            <div className="flex flex-wrap gap-1">
+              {entriesOf(PA_LAYOUT_NAMES).map(([v, label]) => (
+                <ToggleButton key={v} onClick={() => setLayout(v)} on={layout === v}>
+                  {label}
+                </ToggleButton>
+              ))}
+            </div>
+            {layout === "pole" && (
+              <div className="mt-3">
+                <Slider
+                  label="Spacer height"
+                  value={spacerHeightIn}
+                  min={4}
+                  max={36}
+                  step={1}
+                  unit="″"
+                  onChange={setSpacerHeightIn}
+                />
               </div>
             )}
           </div>
-        </div>
-      </aside>
-    </>
+        </div>,
+      )}
+    </SettingsColumn>
   );
 }

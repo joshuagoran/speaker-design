@@ -14,6 +14,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - Dispersion maps (owner-approved colour exception, these maps only) use the continuous VituixCAD-style scale, +6 to −36 dB with a contour every 3 dB (`DISPERSION_SCALE` in `src/styles/palette.ts`), not the CMYK brand palette. They are the one frequency chart off the 15 Hz–20 kHz axis: every map shares fixed axes of ±90° and 50 Hz–20 kHz (`src/constants/chartScales.ts`), since below about 85 Hz the default designs are flat at every angle; one `DispersionMap` component and key, with the crossovers marked.
 - Font: Inconsolata. Corners 4 px (6 px on large boxes).
 - Reuse UI components (`src/components/ui`) wherever the same control appears; never re-implement one inline, so pages stay consistent.
+- A page with settings uses `SettingsLayout`: from md up the page doesn't scroll; the results and the `SettingsColumn` are two panes, each with its own scrollbar. Long settings (PA, Hi-fi) split into `SettingsSection` folds with a one-line summary each, built from the state and the catalogue. Page width and gutters come from `PAGE_WIDTH` (`src/styles/layout.ts`).
 
 ## TypeScript
 

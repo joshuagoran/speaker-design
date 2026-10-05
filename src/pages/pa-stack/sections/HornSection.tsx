@@ -1,7 +1,7 @@
 import { PAL } from "../../../styles/palette";
 import { WarningChips } from "../../../components/chips/WarningChips";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
-import { FoldHeading } from "../../../components/ui/FoldHeading";
+import { FoldBody, FoldHeading } from "../../../components/ui/FoldHeading";
 import { ResponseChart } from "../../../components/charts/ResponseChart";
 import { hornChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
@@ -14,7 +14,6 @@ interface Props {
     PaPlanner,
     | "expandedSections"
     | "toggleSection"
-    | "sectionClass"
     | "midSize"
     | "hornOption"
     | "compressionDriver"
@@ -34,7 +33,6 @@ export function HornSection({ planner }: Props) {
   const {
     expandedSections,
     toggleSection,
-    sectionClass,
     midSize,
     hornOption,
     compressionDriver,
@@ -57,7 +55,7 @@ export function HornSection({ planner }: Props) {
           toggle={toggleSection}
           className="mb-3"
         />
-        <div className={sectionClass("horn")}>
+        <FoldBody open={expandedSections.horn}>
           {hornModel ? (
             <>
               <StatTileGrid
@@ -140,7 +138,7 @@ export function HornSection({ planner }: Props) {
               {compressionDriver.name} can't be modelled yet: sensitivity or power rating missing.
             </p>
           )}
-        </div>
+        </FoldBody>
       </section>
     </>
   );

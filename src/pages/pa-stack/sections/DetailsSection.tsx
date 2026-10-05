@@ -46,7 +46,7 @@ export function DetailsSection({ planner }: Props) {
     hornCenterHeightIn,
   } = planner;
   return (
-    <div className="min-w-0 md:col-span-5" style={{ fontFamily: FONT }}>
+    <div className="min-w-0" style={{ fontFamily: FONT }}>
       <DetailsDropdown summary={UI_TEXT.details}>
         <div>
           <span className="font-medium text-stone-900">Sub.</span> {subDriver.name} in a {subBox.w}×
