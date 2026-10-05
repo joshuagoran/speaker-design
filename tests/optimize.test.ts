@@ -416,15 +416,7 @@ test("vent locked on a round1 or round4 style searches that style's tubes instea
     assert.ok(ventSizesFor(style).length > 0, `${style} has vent sizes`);
     for (const size of ventSizesFor(style)) assert.equal(size.nt, nt, `${style} tubes`);
   }
-  for (const style of [
-    "slots",
-    "round1",
-    "round2",
-    "vslots",
-    "folded",
-    "round4",
-    "vslot1",
-  ] as const)
+  for (const style of ["slots", "round1", "round2", "vslots", "round4", "vslot1"] as const)
     assert.ok(ventSizesFor(style).length > 0, `${style} has sizes`);
 
   const c = {
@@ -484,15 +476,7 @@ test("evaluate() rejects a config missing a number it needs, and every seed comp
     null,
     "NaN vent length",
   );
-  for (const style of [
-    "slots",
-    "folded",
-    "vslots",
-    "vslot1",
-    "round1",
-    "round2",
-    "round4",
-  ] as const) {
+  for (const style of ["slots", "vslots", "vslot1", "round1", "round2", "round4"] as const) {
     const cVent = { slotH: 3, nt: 2, dia: 4, throat: 2, len: 14 };
     assert.ok(evaluateDesign({ ...full, portStyle: style, cVent }), `${style} with a full vent`);
   }
@@ -519,8 +503,9 @@ test("a locked sub, mid, driver or horn that isn't in the tables leaves nothing 
 });
 
 test("a failing design with nothing in reach: the closest design that passes, and a notice naming what's out of reach", () => {
-  // over a $700 budget nothing that passes keeps the design's output
-  const out = optimizePaStack({ ...base, budget: 700, goal: "cheaper" });
+  // over a $700 budget, with the vent kept to its round tubes (a bottom slot folded up the back wall keeps the output for
+  // less), nothing that passes keeps the design's output
+  const out = optimizePaStack({ ...base, budget: 700, goal: "cheaper", locks: { vent: true } });
   assert.ok(out.curProblems.length > 0, "the current design fails a check");
   const k = out.cards[0];
   assert.ok(k, "a card is shown");
@@ -537,8 +522,8 @@ test("a failing design with nothing in reach: the closest design that passes, an
 });
 
 test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
-  // over an $800 budget nothing that passes keeps the output; $880 does
-  const out = optimizePaStack({ ...base, budget: 800, goal: "cheaper" });
+  // over an $800 budget, with the vent kept to its round tubes, nothing that passes keeps the output; $880 does
+  const out = optimizePaStack({ ...base, budget: 800, goal: "cheaper", locks: { vent: true } });
   assert.ok((out.goalMissing ?? "").startsWith(OUT_OF_REACH_LEAD), out.goalMissing ?? "no notice");
   assert.ok(out.cards.length > 0);
   const opts = out.nearMiss ? out.nearMiss.options : [];

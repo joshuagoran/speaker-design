@@ -240,7 +240,6 @@ const VENT_SIZES: Record<PortStyle, Partial<VentSpec>[]> = {
   round2: tubesOf(),
   round4: tubesOf(4),
   slots: [2, 2.5, 3, 3.5, 4, 4.5, 5, 6].map((slotH) => ({ slotH })),
-  folded: [2, 2.5, 3, 3.5, 4, 4.5, 5].map((slotH) => ({ slotH })),
   vslots: [1, 1.25, 1.5, 1.75, 2, 2.5, 3].map((throat) => ({ throat })),
   vslot1: [1.5, 2, 2.5, 3, 3.5, 4, 5].map((throat) => ({ throat })),
 };
@@ -285,7 +284,6 @@ const hasDims = (d: Partial<Dims3> | undefined) =>
 // diameter for the round ones, and the length for all of them. A known layout with all of its fields is a vent that can be modelled.
 const VENT_FIELDS: Record<PortStyle, readonly (keyof VentSpec)[]> = {
   slots: ["slotH", "len"],
-  folded: ["slotH", "len"],
   vslots: ["throat", "len"],
   vslot1: ["throat", "len"],
   round1: ["nt", "dia", "len"],

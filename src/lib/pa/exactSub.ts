@@ -12,6 +12,8 @@ import {
   thermalVoltageLimit,
   rectangleEndCorrection,
   isRoundPort,
+  maxStraightSlotIn,
+  slotFolds,
   boxInternalLiters,
   logGridCount,
   LOWPASS_SKIRT_SPAN,
@@ -406,8 +408,18 @@ export interface VentShape {
   area: number;
   ec: number | null;
 }
-/** ventGeometry's openings, area and end correction, with the fast end correction. */
-export function ventShape(style: PortStyle, box: Dims3, v: VentSpec, t: number): VentShape {
+/**
+ * ventGeometry's openings, area and end correction, with the fast end correction. `folded` says whether a bottom slot
+ * folds up the back wall (by default, as the planner builds it: when it is too long to run straight); a solver that
+ * looks for the straight length passes false.
+ */
+export function ventShape(
+  style: PortStyle,
+  box: Dims3,
+  v: VentSpec,
+  t: number,
+  folded = style === "slots" && slotFolds(box, v, t),
+): VentShape {
   const iw = box.w - 2 * t,
     ih = box.h - 2 * t;
   if (style === "vslots" || style === "vslot1") {
@@ -422,8 +434,8 @@ export function ventShape(style: PortStyle, box: Dims3, v: VentSpec, t: number):
         FREE_END * endCorrection2D(v.throat, n === 2 ? iw / 2 : iw, L),
     };
   }
-  if (style === "slots" || style === "folded") {
-    const L = style === "folded" ? Infinity : box.d - 0.75 - t - v.len;
+  if (style === "slots") {
+    const L = folded ? Infinity : box.d - 0.75 - t - v.len;
     return {
       n: 1,
       area: v.slotH * (iw - 2 * t),
@@ -459,20 +471,17 @@ export function subWoodIn3(
   const iw = box.w - 2 * t,
     ih = box.h - 2 * t,
     inD = box.d - inset - 0.75 - t;
-  const slotted = style === "slots" || style === "folded";
-  const band = slotted ? v.slotH + t : 0;
+  const band = style === "slots" ? v.slotH + t : 0;
   let in3 = 0.75 * iw * 0.75 * 2 + 0.75 * (ih - band - 1.5) * 0.75 * 2;
   in3 +=
     Math.max(0, 2 * 2 * (Math.min(iw, inD) + Math.max(iw, inD)) - 4 * 2 * 2) *
     t *
     (t === 0.5 ? 3 : 2);
-  if (slotted) {
-    const len =
-      style === "slots"
-        ? Math.min(v.len, box.d - t - v.slotH)
-        : box.d - inset - t - v.slotH - 2 * t;
+  if (style === "slots") {
+    const folded = slotFolds(box, v, t);
+    const len = folded ? box.d - inset - t - v.slotH - 2 * t : v.len;
     in3 += iw * len * t + v.slotH * len * t * 2;
-    if (style === "folded") in3 += iw * Math.max(2, v.len - len) * t;
+    if (folded) in3 += iw * Math.max(2, v.len - len) * t;
   } else if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;
     in3 += ih * v.len * t * n + v.throat * v.len * 0.5 * 2 * n;
@@ -528,19 +537,21 @@ export function solveShape(
   const { style, t, inset, disp, VbL, Fb } = target;
   const box = { ...fixed, [free]: start };
   const v = { ...target.vent, len: 0 };
-  const fixedEc = isRoundPort(style) || style === "folded";
+  const fixedEc = isRoundPort(style);
   let len = 0;
   let prev: { x: number; err: number } | null = null;
   for (let it = 0; it < 60; it++) {
     // the duct length for the tuning at this size; where the end correction reads the gap behind the duct, the root of
-    // len + ec(len) = Leff, which rises with the length (a longer duct leaves a smaller gap, a larger correction)
-    let vs = ventShape(style, box, v, t);
+    // len + ec(len) = Leff, which rises with the length (a longer duct leaves a smaller gap, a larger correction). A
+    // bottom slot is solved straight first; only when that is longer than the straight run holds does it fold, and
+    // the folded length (no back-wall term, so a smaller correction) is then longer still, so it folds too.
+    let vs = ventShape(style, box, v, t, false);
     const Leff = effectiveLengthFor(vs.area, VbL, Fb);
     v.len = ductLengthFor(vs, Leff);
     if (!fixedEc) {
       const g = (x: number) => {
         v.len = x;
-        return x - ductLengthFor(ventShape(style, box, v, t), Leff);
+        return x - ductLengthFor(ventShape(style, box, v, t, false), Leff);
       };
       // secant steps from the last length (the side moved a little, so the root did too), else from near Leff; the
       // bracketed steps below when they stray
@@ -592,6 +603,8 @@ export function solveShape(
         }
         v.len = (a + b) / 2;
       }
+      if (style === "slots" && v.len > maxStraightSlotIn(box, v.slotH, t))
+        v.len = ductLengthFor(ventShape(style, box, v, t, true), Leff);
       vs = ventShape(style, box, v, t);
     }
     len = v.len;

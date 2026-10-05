@@ -44,13 +44,25 @@ import { crossoverSlopeName } from "../../constants/crossovers";
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
 const ROUND_PORT: Record<PortStyle, boolean> = {
   slots: false,
-  folded: false,
   vslots: false,
   vslot1: false,
   round1: true,
   round2: true,
   round4: true,
 };
+/**
+ * The longest straight bottom slot, in inches from the baffle front: the floor run to the back wall (`t` the wall ply),
+ * leaving the slot's own height open behind its mouth.
+ */
+export const maxStraightSlotIn = (box: Pick<Dims3, "d">, slotH: number, t: number) =>
+  box.d - t - slotH;
+/**
+ * Whether a bottom slot (`slots`) folds up the back wall: only when it is longer than the straight run holds. A slot
+ * that fits straight is built, and modelled, straight.
+ */
+export const slotFolds = (box: Pick<Dims3, "d">, v: Pick<VentSpec, "slotH" | "len">, t: number) =>
+  v.len > maxStraightSlotIn(box, v.slotH, t);
+
 /** Whether the sub's vents are round tubes (`round1`, `round2`, `round4`) rather than rectangular ducts. */
 export const isRoundPort = (style: PortStyle): style is Extract<PortStyle, `round${string}`> =>
   ROUND_PORT[style];
@@ -492,15 +504,13 @@ export function cutParts({
   const vent: string[] = [];
   const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
     braces: wall === 0.5 ? 3 : 2,
-    band: portStyle === "slots" || portStyle === "folded" ? cVent.slotH + t : 0,
+    band: portStyle === "slots" ? cVent.slotH + t : 0,
     cutNote: `${formatInches(DRIVER_CUTOUT_IN[sub.size])}″ driver cutout (check the datasheet)`,
   });
   all.push(...s.P);
-  if (portStyle === "slots" || portStyle === "folded") {
-    const len =
-      portStyle === "slots"
-        ? Math.min(cVent.len, subBox.d - t - cVent.slotH)
-        : subBox.d - inset - t - cVent.slotH - 2 * t;
+  if (portStyle === "slots") {
+    const folded = slotFolds(subBox, cVent, t);
+    const len = folded ? subBox.d - inset - t - cVent.slotH - 2 * t : cVent.len;
     all.push({
       box: "sub",
       part: "ductShelf",
@@ -519,7 +529,7 @@ export function cutParts({
       t,
       note: "splits the slot in three",
     });
-    if (portStyle === "folded")
+    if (folded)
       all.push({
         box: "sub",
         part: "ductRearWall",
@@ -652,14 +662,15 @@ export function ventGeometry(
       desc: `${n === 1 ? "one side duct" : "two side ducts"}, ${th.toFixed(2)}\u2033 throat \u00d7 ${ih.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long`,
     };
   }
-  if (portStyle === "slots" || portStyle === "folded") {
+  if (portStyle === "slots") {
     // one letterbox split by two fins (wall ply); the fins run the full length but the mouths
     // sit together, so it is treated as a single opening on the floor (see slotEndCorr)
     const h = cVent.slotH,
       area = h * (iw - 2 * t),
       seg = (iw - 2 * t) / 3;
-    // a folded duct turns up the back wall, so its mouth faces the lid, not the back: no back-wall term
-    const L = portStyle === "folded" ? Infinity : box.d - 0.75 - t - cVent.len;
+    // a slot too long to run straight folds up the back wall, so its mouth faces the lid, not the back: no back-wall term
+    const folded = slotFolds(box, cVent, t);
+    const L = folded ? Infinity : box.d - 0.75 - t - cVent.len;
     return {
       n: 1,
       area,
@@ -668,7 +679,7 @@ export function ventGeometry(
       dh: (4 * (h * seg)) / (2 * (h + seg)),
       desc:
         `letterbox, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` +
-        (portStyle === "folded" ? ", folded up the back wall" : ""),
+        (folded ? ", folded up the back wall" : ""),
     };
   }
   const r = cVent.dia / 2;

@@ -15,6 +15,7 @@ import {
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import type { SubSystemConfig } from "../src/types";
 import { C, rel, close, vent } from "./helpers";
+import { RETIRED_FOLDED_PORT_STYLE, savedPortStyle } from "../src/constants/portStyles";
 
 // Independent check of the closed form: integrate the potential of the rectangle numerically.
 // phi(x, y) = integral of 1/distance over the rectangle, from its four corner sub-rectangles.
@@ -189,7 +190,22 @@ test("side duct: outer end mirrored by the ground along its height", (t) => {
     1e-12,
   );
 });
-test("folded letterbox: no back-wall term (mouth faces the lid)", (t) => {
-  const g = ventGeometry("folded", { w: 22, h: 30, d: 20 }, vent({ slotH: 3, len: 20 }), 0.75);
-  close(t, g.ec!, slotEndCorrection(3, 22 - 3, 30 - 1.5, Infinity), 1e-12);
+test("bottom slot: straight while it fits, folded (no back-wall term, mouth faces the lid) past that", (t) => {
+  const box = { w: 22, h: 30, d: 20 };
+  // the straight run holds d - t - slotH = 16.25
+  const straight = ventGeometry("slots", box, vent({ slotH: 3, len: 16.25 }), 0.75);
+  close(
+    t,
+    straight.ec ?? NaN,
+    slotEndCorrection(3, 22 - 3, 30 - 1.5, 20 - 0.75 - 0.75 - 16.25),
+    1e-12,
+  );
+  assert.ok(!straight.desc.includes("folded"));
+  const folded = ventGeometry("slots", box, vent({ slotH: 3, len: 20 }), 0.75);
+  close(t, folded.ec ?? NaN, slotEndCorrection(3, 22 - 3, 30 - 1.5, Infinity), 1e-12);
+  assert.ok(folded.desc.includes("folded"));
+});
+test("saved designs with the retired folded layout load as the bottom slot", () => {
+  assert.equal(savedPortStyle(RETIRED_FOLDED_PORT_STYLE), "slots");
+  assert.equal(savedPortStyle("vslots"), "vslots");
 });

@@ -13,7 +13,6 @@ import type {
   VentSpec,
 } from "../src/types";
 import { chipList, chipOf, findChip } from "./helpers";
-import { SLOT_LAYOUT_NAMES } from "../src/constants/portStyles";
 
 const kindOf = <I extends ChipId>(F: Chip<I>[], id: NoInfer<I>) => findChip(F, id)?.[0];
 /** whether the check's chip shows, at `kind` when one is given */
@@ -54,12 +53,15 @@ test("sub: driver fit needs size + 1.9 in after the vents", (t) => {
   has(t, sub({ portStyle: "vslots", subBox: { w, h: 30, d: 22 } }), "subDriverFit", false);
   has(t, sub({ portStyle: "vslots", subBox: { w: w - 0.1, h: 30, d: 22 } }), "subDriverFit");
 });
-test("sub: duct fit per layout, with the folded hint", (t) => {
-  // straight slot holds d - PT - slotH = 22 - 0.75 - 3 = 18.25
+test("sub: duct fit per layout; a bottom slot folds past the straight run", (t) => {
+  // straight slot holds d - PT - slotH = 22 - 0.75 - 3 = 18.25; past that it folds up the back wall, which holds
+  // (d - PT) - (slotH + PT) + slotH / 2 + (h - 2 PT - slotH - 1) = 19 + 24.5 = 43.5
   has(t, sub({ cVent: { len: 18.25 } }), "subDuctFit", false);
-  const F = sub({ cVent: { len: 18.5 } });
+  has(t, sub({ cVent: { len: 18.5 } }), "subDuctFit", false);
+  has(t, sub({ cVent: { len: 43.5 } }), "subDuctFit", false);
+  const F = sub({ cVent: { len: 44 } });
   has(t, F, "subDuctFit");
-  assert.ok(chipOf(F, "subDuctFit")[2].includes(SLOT_LAYOUT_NAMES.folded));
+  assert.ok(chipOf(F, "subDuctFit")[2].includes("folded up the back wall"));
   // side ducts hold d - PT - throat = 19.25
   has(t, sub({ portStyle: "vslots", cVent: { len: 19.25 } }), "subDuctFit", false);
   has(t, sub({ portStyle: "vslots", cVent: { len: 19.5 } }), "subDuctFit");

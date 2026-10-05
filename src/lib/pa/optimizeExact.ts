@@ -654,7 +654,7 @@ function exactHook(
   const classOf = (style: PortStyle, dims: Dims3) =>
     s.tower
       ? null
-      : style === "slots" || style === "folded"
+      : style === "slots"
         ? s.free === "w"
           ? null
           : dims.w
@@ -760,7 +760,8 @@ function exactHook(
     let v = deepShapes.get(k);
     if (!v) {
       if (deepShapes.size >= 200_000) deepShapes.clear();
-      v = ventShape(style, dims, { ...vent, len: 1e9 }, s.walls[ti]);
+      // a bottom slot taken straight: its correction at the smallest gap is the largest it can have (folded is smaller)
+      v = ventShape(style, dims, { ...vent, len: 1e9 }, s.walls[ti], false);
       deepShapes.set(k, v);
     }
     return v;
@@ -780,7 +781,7 @@ function exactHook(
     const all = bare(si, ti, ri);
     if (s.free !== "d") return all;
     const [lo, hi] = s.sr.d;
-    const fixedEc = isRoundPort(style) || style === "folded";
+    const fixedEc = isRoundPort(style);
     const out: number[] = [];
     for (let i = 0; i < pairCount(all); i++) {
       const dims = pairDims(s, all, i);

@@ -223,7 +223,7 @@ export interface Horn {
 export type HifiWaveguide = Horn & { hf: HornHf };
 
 /** The cabinet's ported-vent kinds. */
-export type VentKind = "slots" | "round1" | "round2" | "vslots" | "folded" | "round4";
+export type VentKind = "slots" | "round1" | "round2" | "vslots" | "round4";
 
 export interface Cabinet {
   id: string;

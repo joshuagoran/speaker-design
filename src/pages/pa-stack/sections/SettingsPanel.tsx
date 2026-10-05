@@ -396,7 +396,7 @@ export function SettingsPanel({ planner }: Props) {
                 </div>
               )}
               <Card className="mt-2">
-                {(portStyle === "slots" || portStyle === "folded") && (
+                {portStyle === "slots" && (
                   <Slider
                     label="Slot height"
                     value={subVentSpec.slotH}
