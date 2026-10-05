@@ -27,7 +27,7 @@ const sizes = [
     colorScheme: "dark",
   },
 ];
-const views = ["", "#coverage", "#cutlist", "#fills", "#hifi", "#notes"];
+const views = ["", "#coverage", "#cutlist", "#fills", "#hifi", "#hifi-cutlist", "#notes"];
 const failures = [];
 
 // Everything the check measures, evaluated in the page.
