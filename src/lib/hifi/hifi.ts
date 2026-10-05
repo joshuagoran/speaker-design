@@ -236,7 +236,7 @@ export function hifiSlotEndCorrection(
 ) {
   const X = dim.h - 2 * wall,
     L = dim.d - 2 * wall - port.len;
-  return rectangleEndCorrection(port.h, port.w) + slotMouthCorrection(port.h, X, L, wall);
+  return rectangleEndCorrection(port.h, port.w) + slotMouthCorrection(port.h, X, L, wall, port.len);
 }
 export const slotMaxLength = (dim: Dims3, wall: number, port: Pick<SlotPort, "h">) =>
   dim.d - 2 * wall - Math.max(port.h, 1); // leave the mouth's height behind it
