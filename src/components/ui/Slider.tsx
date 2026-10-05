@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useRef } from "react";
 
 /** Decimals a slider readout needs: 0 for whole steps, else as many as the step has (0.5 -> 1, 0.25 -> 2) */
 export const countDecimals = (step: number) => {
@@ -66,6 +66,10 @@ export function Slider({ label, value, min, max, step, unit, onChange, extra, ra
   const shown = typeof value === "number" ? value.toFixed(countDecimals(step)) : value;
   const allowed = ranges && rangesOnSteps(ranges, min, max, step);
   const top = allowed?.[allowed.length - 1]?.[1] ?? max;
+  // While a pointer drags, the way it moves is from its own last position, not from the value it snapped to: from the
+  // snapped value, a slow drag through a gap would read as turning back each move and flip from side to side. Keys
+  // step from the value itself, so a key press drops the pointer's position.
+  const dragFrom = useRef<number | null>(null);
   return (
     <div className="mb-3">
       <div className="flex justify-between items-center gap-3 mb-1">
@@ -88,9 +92,23 @@ export function Slider({ label, value, min, max, step, unit, onChange, extra, ra
         step={step}
         value={value}
         aria-valuetext={`${shown}${unit || ""}`}
+        onPointerDown={() => {
+          dragFrom.current = value;
+        }}
+        onPointerUp={() => {
+          dragFrom.current = null;
+        }}
+        onPointerCancel={() => {
+          dragFrom.current = null;
+        }}
+        onKeyDown={() => {
+          dragFrom.current = null;
+        }}
         onChange={(e) => {
           const v = parseFloat(e.target.value);
-          onChange(allowed ? snapToRanges(allowed, value, v) : v);
+          const from = dragFrom.current ?? value;
+          if (dragFrom.current !== null) dragFrom.current = v;
+          onChange(allowed ? snapToRanges(allowed, from, v) : v);
         }}
         className="w-full accent-stone-900"
       />

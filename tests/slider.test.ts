@@ -36,6 +36,17 @@ test("slider ranges: stepping or dragging into a gap jumps across it, the way it
   assert.equal(snapToRanges(r, 10, 12.5), 12.5);
   assert.equal(snapToRanges([], 10, 12.5), 12.5);
 });
+test("slider ranges: a slow drag through a gap stays on the side it is heading for", () => {
+  const r = [
+    [3, 18],
+    [22.5, 43.5],
+  ] as const;
+  // the Slider takes a drag's direction from the pointer's last position (each move's raw value), not the snapped one
+  const up = [18.5, 19, 19.5, 20, 21, 22].map((to, i, a) => snapToRanges(r, a[i - 1] ?? 18, to));
+  assert.deepEqual(up, [22.5, 22.5, 22.5, 22.5, 22.5, 22.5]);
+  const down = [22, 21, 20, 19, 18.5].map((to, i, a) => snapToRanges(r, a[i - 1] ?? 22.5, to));
+  assert.deepEqual(down, [18, 18, 18, 18, 18]);
+});
 test("slider ranges: a bottom slot's duct lengths skip the ones that fit neither way", () => {
   // 24 × 30 × 22, 3 in slot, 3/4 in ply: straight to 18.25, folded from 22.25 to 43.75
   const { spans } = ductFit({ w: 24, h: 30, d: 22 }, "slots", vent({ slotH: 3, len: 14 }), 0.75);
