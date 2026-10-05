@@ -25,3 +25,20 @@ export const snapshotRuns = (): Record<DumpKind, Json[]> => ({
   pa: CASES.pa.map((i) => DUMP_CASES.pa[i]()),
   hifi: CASES.hifi.map((i) => DUMP_CASES.hifi[i]()),
 });
+
+/** A run on its own line, each of its cards on a line of its own (so a changed card is one changed line). */
+function runLines(run: Json): string {
+  if (!run || typeof run !== "object" || Array.isArray(run) || !Array.isArray(run.cards))
+    return `  ${JSON.stringify(run)}`;
+  const { cards, ...head } = run;
+  const open = `  ${JSON.stringify(head).slice(0, -1)},"cards":[`;
+  return cards.length
+    ? `${open}\n${cards.map((k) => `    ${JSON.stringify(k)}`).join(",\n")}\n  ]}`
+    : `${open}]}`;
+}
+
+/** The snapshot file's text: the runs of each kind, a card a line. */
+export const snapshotText = (runs: Record<DumpKind, Json[]>): string =>
+  `{\n${Object.entries(runs)
+    .map(([kind, list]) => ` ${JSON.stringify(kind)}: [\n${list.map(runLines).join(",\n")}\n ]`)
+    .join(",\n")}\n}\n`;
