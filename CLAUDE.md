@@ -9,6 +9,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
   by eye as settings change.
 - **Charts on the same view share the same scales**, x and y. Frequency charts use the PA stack's x axis (15 Hz–20 kHz);
   every Hi-fi dB chart uses `HIFI_TOP` / `HIFI_BOT`; the PA response chart and the PA optimizer cards use 80–135 dB.
+  The coverage map colours the level against the target on a fixed −12 to +6 dB scale (`COVERAGE_MAP_DB`).
 - Colours: CMYK brand (cyan actions and horn/tweeter, magenta mid-bass/woofer, yellow accents) plus black, white and two
   grays; status colours stay green / orange / red. The palette lives in `src/styles/palette.ts`; Tailwind's colour names are remapped from it in `tailwind.config.js`.
 - Light and dark themes (follows the device, with the header's System / Light / Dark switch): every colour comes from the
