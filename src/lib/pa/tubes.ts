@@ -1,0 +1,401 @@
+// The PA sub's round port tubes (`round1`, `round2`, `round4`): where they sit on the baffle, how they fold to fit
+// (the shared rule in lib/tubeFold), and their end correction. The model, the chips, the optimizers, the cutlist and the
+// 3D view all take the tubes from here, so they agree.
+import type { Dims3, PortStyle, SubDriver, VentSpec } from "../../types";
+import { SUB_DEPTH_FALLBACK_IN, SUB_FRAME_DIA_IN } from "../../data/catalog/driver-cutouts";
+import { TUBE_FLARE_RADIUS_IN, TUBE_WALL_END } from "../../data/acoustics/tube-ends";
+import { PORT_ELBOWS, PORT_PIPES } from "../../data/catalog/port-tubes";
+import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
+import {
+  tubeLegs,
+  tubeSpan,
+  ELBOW_COUNTS,
+  type ElbowCount,
+  type TubeLegs,
+  type TubeRoom,
+} from "../tubeFold";
+
+/** What the tubes read of the sub driver: its size class and, where the datasheet gives it, its mounting depth. */
+export type TubeDriver = Pick<SubDriver, "size" | "depthIn">;
+/** The tube fields a layout reads. */
+export type TubeVent = Pick<VentSpec, "nt" | "dia" | "len">;
+
+/** The baffle's front, inches behind the frame's (the inset ventGeometry's side ducts and the tubes are measured from). */
+export const TUBE_BAFFLE_INSET_IN = 0.75;
+// Clear baffle between a tube's flare and the walls' inside faces (the 3/4" baffle cleats behind are cleared by the
+// pipe's own wall and this), and between two flares or a flare and the driver's frame.
+const EDGE_IN = 0.25;
+const GAP_IN = 0.5;
+
+/** The driver's mounting depth, inches: its datasheet's, else its size class's fallback. */
+export const subDriverDepthIn = (d: TubeDriver) => d.depthIn ?? SUB_DEPTH_FALLBACK_IN[d.size];
+
+/** A point on the baffle, inches: across from its centre line, and up from the inside face of the floor. */
+export interface BafflePoint {
+  x: number;
+  y: number;
+}
+/**
+ * The tubes on the baffle: each tube's axis, the driver's centre and frame radius, and whether every flare clears the
+ * walls, the other flares and the driver's frame.
+ */
+export interface TubeLayout {
+  tubes: BafflePoint[];
+  driver: BafflePoint & { r: number };
+  fits: boolean;
+}
+
+/**
+ * Where the driver sits on a round-tube sub's baffle: in the middle for the corner tubes (`round4`), else high, a
+ * square's width under the lid or an inch over its frame, whichever is lower, so the tubes have the bottom.
+ */
+export function tubeDriverOnBaffle(
+  box: Pick<Dims3, "w" | "h">,
+  style: PortStyle,
+  t: number,
+  size: TubeDriver["size"],
+): TubeLayout["driver"] {
+  const iw = box.w - 2 * t,
+    ih = box.h - 2 * t,
+    r = SUB_FRAME_DIA_IN[size] / 2;
+  return { x: 0, y: style === "round4" ? ih / 2 : ih - Math.min(iw / 2, r + 1), r };
+}
+
+/**
+ * The tubes on the baffle. `round4` puts them in the corners round a centred driver (at most four); the others put
+ * them in one row along the bottom under the driver, spread evenly from one side wall to the other (one tube in the
+ * middle), so they sit as far out from under the driver as they can. A flare is the tube's radius plus
+ * TUBE_FLARE_RADIUS_IN.
+ */
+export function tubeLayout(
+  box: Pick<Dims3, "w" | "h">,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+  size: TubeDriver["size"],
+): TubeLayout {
+  const iw = box.w - 2 * t,
+    ih = box.h - 2 * t;
+  const rf = v.dia / 2 + TUBE_FLARE_RADIUS_IN;
+  const driver = tubeDriverOnBaffle(box, style, t, size);
+  const n = Math.max(0, Math.round(v.nt));
+  let tubes: BafflePoint[];
+  if (style === "round4") {
+    const ox = iw / 2 - rf - EDGE_IN,
+      oy = ih / 2 - rf - EDGE_IN;
+    tubes = [
+      { x: -ox, y: ih / 2 - oy },
+      { x: ox, y: ih / 2 - oy },
+      { x: -ox, y: ih / 2 + oy },
+      { x: ox, y: ih / 2 + oy },
+    ].slice(0, n);
+  } else {
+    const span = iw / 2 - EDGE_IN - rf,
+      y = rf + EDGE_IN;
+    tubes = Array.from({ length: n }, (_, i) => ({
+      x: n > 1 ? -span + (2 * span * i) / (n - 1) : 0,
+      y,
+    }));
+  }
+  const inside = (p: BafflePoint) =>
+    Math.abs(p.x) + rf <= iw / 2 - EDGE_IN + 1e-9 &&
+    p.y - rf >= EDGE_IN - 1e-9 &&
+    p.y + rf <= ih - EDGE_IN + 1e-9;
+  const clear = (a: BafflePoint, b: BafflePoint, d: number) =>
+    Math.hypot(a.x - b.x, a.y - b.y) >= d - 1e-9;
+  const fits =
+    tubes.length === n &&
+    tubes.every(
+      (p, i) =>
+        inside(p) &&
+        clear(p, driver, driver.r + rf + GAP_IN) &&
+        tubes.every((q, j) => j <= i || clear(p, q, 2 * rf + GAP_IN)),
+    );
+  return { tubes, driver, fits };
+}
+
+/**
+ * The highest tube axis on the baffle, inches up from the floor's inside face, as tubeLayout places it (without laying
+ * the tubes out): one row along the bottom, or for `round4` the upper corners once there are more than two tubes.
+ */
+function tubeAxisTopY(
+  box: Pick<Dims3, "h">,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+) {
+  const n = Math.max(0, Math.round(v.nt)),
+    rf = v.dia / 2 + TUBE_FLARE_RADIUS_IN;
+  if (!n) return v.dia / 2;
+  return style === "round4" && n > 2 ? box.h - 2 * t - rf - EDGE_IN : rf + EDGE_IN;
+}
+
+/**
+ * What a sub's tubes are whatever their length, for one box, vent size, plywood and driver: the room their centreline
+ * has (from the baffle front to the back wall and from the axis up to the lid, the driver's back as the stop; every
+ * tube of a row sits at one height, so one room serves them all), and the lengths each elbow count fits (the corner
+ * tubes, `round4`, only run straight: two of them sit over the other two, so neither pair has a clear back wall to rise
+ * up). The length solvers ask for it at every step, so the last one is kept; it needs no baffle layout, so the searches'
+ * fit checks over many box sizes stay cheap.
+ */
+interface TubeSetup {
+  room: TubeRoom;
+  spans: readonly ([number, number] | null)[];
+}
+/** The arguments a tube setup is for, kept with it as plain numbers: a call with the same ones gets it back. */
+interface SetupKey {
+  w: number;
+  h: number;
+  d: number;
+  style: PortStyle;
+  nt: number;
+  dia: number;
+  t: number;
+  size: TubeDriver["size"];
+  depthIn: TubeDriver["depthIn"];
+}
+const sameSetup = (
+  c: SetupKey,
+  box: Dims3,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+  drv: TubeDriver,
+) =>
+  c.w === box.w &&
+  c.h === box.h &&
+  c.d === box.d &&
+  c.style === style &&
+  c.nt === v.nt &&
+  c.dia === v.dia &&
+  c.t === t &&
+  c.size === drv.size &&
+  c.depthIn === drv.depthIn;
+const setupKey = (
+  box: Dims3,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+  drv: TubeDriver,
+): SetupKey => ({
+  w: box.w,
+  h: box.h,
+  d: box.d,
+  style,
+  nt: v.nt,
+  dia: v.dia,
+  t,
+  size: drv.size,
+  depthIn: drv.depthIn,
+});
+let lastSetup: (SetupKey & { setup: TubeSetup }) | null = null;
+function tubeSetup(
+  box: Dims3,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+  drv: TubeDriver,
+): TubeSetup {
+  if (lastSetup && sameSetup(lastSetup, box, style, v, t, drv)) return lastSetup.setup;
+  const room = {
+    run: box.d - TUBE_BAFFLE_INSET_IN - t,
+    rise: box.h - 2 * t - tubeAxisTopY(box, style, v, t),
+    stop: subDriverDepthIn(drv),
+  };
+  const spans = ELBOW_COUNTS.map((e) =>
+    style === "round4" && e > 0 ? null : tubeSpan(room, v.dia, e),
+  );
+  const setup = { room, spans };
+  lastSetup = { ...setupKey(box, style, v, t, drv), setup };
+  return setup;
+}
+
+/**
+ * The end correction's part that doesn't read the tubes' length: the flared ends (a flanged outer, 0.85 r, and a free
+ * inner, 0.61 r, at the flared mouth's size, each less the flare's shortfall) and the neighbouring mouths (r² / 2s on
+ * the baffle, r² / 4s in the box, s the distance between the axes, averaged over the tubes). The last one is kept.
+ */
+let lastFixedEc: (SetupKey & { ec: number }) | null = null;
+function tubeFixedEc(
+  box: Dims3,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+  drv: TubeDriver,
+) {
+  if (lastFixedEc && sameSetup(lastFixedEc, box, style, v, t, drv)) return lastFixedEc.ec;
+  const { tubes } = tubeLayout(box, style, v, t, drv.size);
+  const r = v.dia / 2,
+    R = r + TUBE_FLARE_RADIUS_IN;
+  let near = 0;
+  for (const p of tubes)
+    for (const q of tubes) if (p !== q) near += 1 / Math.hypot(p.x - q.x, p.y - q.y);
+  const ec =
+    (0.85 + 0.61) * r * (r / R) -
+    2 * flareShortfall(r) +
+    (tubes.length ? ((r * r) / tubes.length) * near * (1 / 2 + 1 / 4) : 0);
+  lastFixedEc = { ...setupKey(box, style, v, t, drv), ec };
+  return ec;
+}
+
+/** The room a tube's centreline has (tubeSetup). */
+export const tubeRoom = (
+  box: Dims3,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+  drv: TubeDriver,
+): TubeRoom => tubeSetup(box, style, v, t, drv).room;
+
+/** The lengths a sub's tubes fit with `e` elbows, or null (tubeSetup). */
+export const subTubeSpan = (
+  box: Dims3,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+  drv: TubeDriver,
+  e: ElbowCount,
+) => tubeSetup(box, style, v, t, drv).spans[e];
+
+// the fewest elbows whose span holds the length, as tubeElbows takes them
+const fittingCount = (spans: TubeSetup["spans"], len: number): ElbowCount | null =>
+  ELBOW_COUNTS.find((e) => {
+    const s = spans[e];
+    return s !== null && len >= s[0] - 1e-9 && len <= s[1] + 1e-9;
+  }) ?? null;
+
+/** The elbows a sub's tubes take at their length: the fewest that fit, or null when none does. */
+export const subTubeElbows = (
+  box: Dims3,
+  style: PortStyle,
+  v: TubeVent,
+  t: number,
+  drv: TubeDriver,
+): ElbowCount | null => fittingCount(tubeSetup(box, style, v, t, drv).spans, v.len);
+
+// the model's count from the spans: modelTubeElbows
+function modelCount(spans: TubeSetup["spans"], len: number): ElbowCount {
+  const fit = fittingCount(spans, len);
+  if (fit !== null) return fit;
+  const counts = ELBOW_COUNTS.filter((e) => spans[e] !== null);
+  return counts.find((e) => len <= (spans[e]?.[1] ?? 0)) ?? counts.at(-1) ?? 0;
+}
+
+/**
+ * The elbows the model takes: the fitting count, else (a length that fits no count) the fewest whose longest reaches
+ * it, else the most any span takes, so a design that won't build still models as the nearest one that would.
+ */
+export const modelTubeElbows = (
+  box: Dims3,
+  style: PortStyle,
+  v: TubeVent,
+  t: number,
+  drv: TubeDriver,
+): ElbowCount => modelCount(tubeSetup(box, style, v, t, drv).spans, v.len);
+
+/** The tubes' legs as built with `e` elbows. */
+export const subTubeLegs = (
+  box: Dims3,
+  style: PortStyle,
+  v: TubeVent,
+  t: number,
+  drv: TubeDriver,
+  e: ElbowCount,
+): TubeLegs => tubeLegs(tubeRoom(box, style, v, t, drv), v.dia, v.len, e);
+
+/**
+ * The extra inner end correction of a tube mouth `gap` from a wall (inches, tube radius `r`): TUBE_WALL_END's solve,
+ * falling as a power of the gap through its two points.
+ */
+export function tubeWallEndCorrection(r: number, gap: number) {
+  const [g0, g1] = TUBE_WALL_END.gapOverR,
+    [e0, e1] = TUBE_WALL_END.ecOverR;
+  const p = Math.log(e0 / e1) / Math.log(g1 / g0);
+  const x = Math.max(g0, gap / r);
+  return e0 * Math.pow(g0 / x, p) * r;
+}
+
+// A quarter-round flare of radius b on a tube of radius r, from the throat to the mouth: as a length of the tube, its air
+// is the integral of (r / a)² over its run (a the flare's radius there), short of its run b, and the mouth it radiates
+// from is r + b wide, whose end correction in the tube's terms is (r / (r + b))² of its own. Memoised by radius.
+const flareCache = new Map<number, number>();
+function flareShortfall(r: number) {
+  const hit = flareCache.get(r);
+  if (hit !== undefined) return hit;
+  const b = TUBE_FLARE_RADIUS_IN,
+    N = 64;
+  // z = b sin θ along the flare (θ from the throat), so a = r + b (1 − cos θ) and dz = b cos θ dθ; Simpson's rule
+  let s = 0;
+  for (let i = 0; i <= N; i++) {
+    const th = (i / N) * (Math.PI / 2);
+    const f = (b * Math.cos(th) * r * r) / (r + b * (1 - Math.cos(th))) ** 2;
+    s += f * (i === 0 || i === N ? 1 : i % 2 ? 4 : 2);
+  }
+  const v = b - (s * (Math.PI / 2)) / N / 3;
+  if (flareCache.size > 1000) flareCache.clear();
+  flareCache.set(r, v);
+  return v;
+}
+
+/**
+ * A sub's round tubes' end correction, inches per tube, both ends: a flanged outer end (0.85 r) and a free inner end
+ * (0.61 r), each less its flare's shortfall; a wall facing the inner mouth (TUBE_WALL_END); the neighbouring tubes'
+ * mouths, each adding r² / 2s on the baffle and r² / 4s in the box (s the distance between the axes; a point source's
+ * pressure over a half space and over a whole one), averaged over the tubes; and SHARP_BEND_CORRECTION diameters per
+ * elbow. The elbows are the fitting count unless `elbows` says otherwise.
+ */
+export function subTubeEndCorrection(
+  box: Dims3,
+  style: PortStyle,
+  v: TubeVent,
+  t: number,
+  drv: TubeDriver,
+  elbows?: ElbowCount,
+) {
+  const { room, spans } = tubeSetup(box, style, v, t, drv);
+  const e = elbows ?? modelCount(spans, v.len);
+  const legs = tubeLegs(room, v.dia, v.len, e);
+  return (
+    tubeFixedEc(box, style, v, t, drv) +
+    tubeWallEndCorrection(v.dia / 2, Math.max(legs.gap, 1e-9)) +
+    e * SHARP_BEND_CORRECTION * v.dia
+  );
+}
+
+/**
+ * How many sticks `stickIn` long the pieces need: first fit, longest piece first, each piece cut whole from one stick
+ * (a piece longer than a stick takes sticks of its own, joined end to end).
+ */
+export function sticksFor(pieces: readonly number[], stickIn: number) {
+  const left: number[] = [];
+  let whole = 0;
+  for (const p of [...pieces].sort((a, b) => b - a)) {
+    const over = Math.floor(p / stickIn - 1e-9);
+    whole += over;
+    const rest = p - over * stickIn;
+    const i = left.findIndex((l) => l >= rest - 1e-9);
+    if (i >= 0) left[i] -= rest;
+    else left.push(stickIn - rest);
+  }
+  return whole + left.length;
+}
+
+/**
+ * What a sub's tubes take to build (one sub): the stock pipe and elbow for their size (null where the catalogue has
+ * none), the elbows each tube takes, the pipe sticks its pieces (one per leg between elbows) are cut from, and the price,
+ * or null where a part has no US price.
+ */
+export function subTubeKit(box: Dims3, style: PortStyle, v: TubeVent, t: number, drv: TubeDriver) {
+  const pipe = PORT_PIPES.find((p) => p.dia === v.dia) ?? null,
+    elbow = PORT_ELBOWS.find((p) => p.dia === v.dia) ?? null;
+  const elbows = modelTubeElbows(box, style, v, t, drv);
+  const legs = subTubeLegs(box, style, v, t, drv, elbows);
+  const pieces = [legs.run, legs.rise, legs.back].filter((l) => l > 0);
+  const sticks = pipe
+    ? sticksFor(Array.from({ length: v.nt }, () => pieces).flat(), pipe.stickFt * 12)
+    : 0;
+  const elbowPrice = elbows ? (elbow?.price ?? null) : 0;
+  const price =
+    pipe && elbowPrice !== null ? sticks * pipe.price + v.nt * elbows * elbowPrice : null;
+  return { pipe, elbow, elbows, sticks, price };
+}

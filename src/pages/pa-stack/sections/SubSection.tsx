@@ -186,6 +186,7 @@ export function SubSection({ planner }: Props) {
             <WarningChips
               chips={subChips({
                 subSize: format.sub,
+                subDepthIn: subDriver.depthIn,
                 subBox,
                 portStyle,
                 cVent: subVentSpec,

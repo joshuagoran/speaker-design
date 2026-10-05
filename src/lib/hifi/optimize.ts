@@ -24,7 +24,8 @@ import {
   grossVolumeLiters,
   linkwitzRileyFilter,
   logSpacedFrequencies,
-  portMaxLength,
+  hifiRoundEndCorrection,
+  hifiTubeRoom,
   passiveRadiatorMassFor,
   passiveRadiatorFits,
   hifiSlotEndCorrection,
@@ -33,6 +34,7 @@ import {
   needsWaveguide,
 } from "./hifi";
 import { ampVoltage, ventTuning } from "../pa/calc";
+import { ELBOW_COUNTS, ownSpans, tubeElbows, tubeSpan } from "../tubeFold";
 import { throttledProgress } from "../optimizer/progress";
 import {
   passiveRadiatorMassMax,
@@ -228,7 +230,9 @@ const XOS: number[] = [1500, 1800, 2000, 2200, 2500, 3000];
 const range = (lock: DimensionLockMode | undefined, cur: number, vals: number[]) =>
   lock === "exact" ? [cur] : lock === "max" ? vals.filter((v) => v <= cur + 1e-9) : vals;
 
-// port length for a target tuning (bisection; the port's own volume comes out of the box), with the fewest elbows that fit
+// port length for a target tuning (bisection; the port's own volume comes out of the box): the shortest that tunes it,
+// trying the elbow counts fewest first, each inside the lengths it fits (each elbow's bend correction tunes the port
+// higher, so a count may need a longer port than the last one reached, or none)
 function portFor(
   w: HifiWoofer,
   dim: Dims3,
@@ -241,21 +245,36 @@ function portFor(
   const g = grossVolumeLiters(dim, wall),
     disp = w.ts.disp != null ? w.ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6);
   const A = n * Math.PI * (dia / 2) ** 2,
-    fb = (len: number) =>
-      ventTuning(Math.max(1, g * 0.97 - disp - (A * len * 16.387) / 1e3), A, len, n).Fb;
-  let a = 0.5,
-    b = portMaxLength(dim, wall, { dia, elbows: maxElbows });
-  if (b <= a || fb(a) < Fb || fb(b) > Fb) return null;
-  for (let i = 0; i < 20; i++) {
-    const m = (a + b) / 2;
-    if (fb(m) > Fb) a = m;
-    else b = m;
+    fb = (len: number, e: number) =>
+      ventTuning(
+        Math.max(1, g * 0.97 - disp - (A * len * 16.387) / 1e3),
+        A,
+        len,
+        n,
+        hifiRoundEndCorrection({ dia }, e),
+      ).Fb;
+  const room = hifiTubeRoom(dim, wall);
+  // each count over the lengths where it is the one the model takes, a quarter inch past the fewer counts' (the length
+  // is cut to the quarter inch, and must stay on the count it was tuned with)
+  for (const { e, span } of ownSpans(
+    ELBOW_COUNTS.map((k) => tubeSpan(room, dia, k)),
+    0.25,
+  )) {
+    if (e > maxElbows) break;
+    const lo = Math.ceil(Math.max(0.5, span[0]) * 4) / 4,
+      hi = Math.floor(span[1] * 4) / 4;
+    let a = lo,
+      b = hi;
+    if (b <= a || fb(a, e) < Fb || fb(b, e) > Fb) continue;
+    for (let i = 0; i < 20; i++) {
+      const m = (a + b) / 2;
+      if (fb(m, e) > Fb) a = m;
+      else b = m;
+    }
+    const len = Math.min(hi, Math.max(lo, Math.round(((a + b) / 2) * 4) / 4));
+    if (tubeElbows(room, dia, len) === e) return { n, dia, len, elbows: e };
   }
-  const len = Math.round(((a + b) / 2) * 4) / 4;
-  const elbows = [0, 1, 2].find(
-    (e) => e <= maxElbows && len <= portMaxLength(dim, wall, { dia, elbows: e }) + 1e-9,
-  );
-  return elbows == null ? null : { n, dia, len, elbows };
+  return null;
 }
 
 // slot length for a target tuning (the slot and its shelf come out of the box; the inner end correction depends on the length)

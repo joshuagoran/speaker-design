@@ -15,7 +15,7 @@ import {
 } from "../src/lib/pa/calc";
 import { ductFit } from "../src/lib/pa/chips";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
-import { close, vent } from "./helpers";
+import { close, vent, DRV18 } from "./helpers";
 import { subWoodIn3 } from "../src/lib/pa/exactSub";
 import type { CutPartId } from "../src/types";
 
@@ -26,16 +26,28 @@ test("boxL: inner width/height lose two walls, depth loses inset + 3/4 baffle + 
   close(t, boxInternalLiters(20, 24, 16, 0.5, 1.5), 19 * 23 * 13.25 * IN3_L, 1e-9);
 });
 test("ventGeom: letterbox area = slot height x inner width less two fins", (t) => {
-  const g = ventGeometry("slots", { w: 22, h: 30, d: 20 }, vent({ slotH: 3, len: 14 }), 0.75);
+  const g = ventGeometry(
+    "slots",
+    { w: 22, h: 30, d: 20 },
+    vent({ slotH: 3, len: 14 }),
+    0.75,
+    DRV18,
+  );
   close(t, g.area, 3 * (22 - 1.5 - 1.5), 1e-9);
   assert.equal(g.n, 1);
 });
 test("ventGeom: side ducts = throat x inner height less dividers, one opening each", (t) => {
-  const g2 = ventGeometry("vslots", { w: 22, h: 30, d: 20 }, vent({ throat: 2, len: 16 }), 0.75);
+  const g2 = ventGeometry(
+    "vslots",
+    { w: 22, h: 30, d: 20 },
+    vent({ throat: 2, len: 16 }),
+    0.75,
+    DRV18,
+  );
   close(t, g2.area, 2 * 2 * (28.5 - 1), 1e-9);
   assert.equal(g2.n, 2);
   assert.equal(
-    ventGeometry("vslot1", { w: 22, h: 30, d: 20 }, vent({ throat: 2, len: 16 }), 0.75).n,
+    ventGeometry("vslot1", { w: 22, h: 30, d: 20 }, vent({ throat: 2, len: 16 }), 0.75, DRV18).n,
     1,
   );
 });
@@ -45,6 +57,7 @@ test("ventGeom: round tubes = n circles, n openings", (t) => {
     { w: 20, h: 24, d: 16 },
     vent({ nt: 2, dia: 3.5, len: 14 }),
     0.75,
+    DRV18,
   );
   close(t, g.area, 2 * Math.PI * 1.75 ** 2, 1e-9);
   assert.equal(g.n, 2);
@@ -115,7 +128,7 @@ test("folded slot: the longest fold leaves a slot height under the lid, in the f
   close(t, maxFoldedRearWallIn(box, slotH, t0), 22.5, 1e-12);
   const longest = maxFoldedSlotIn(box, slotH, t0);
   close(t, longest, 20 - 0.75 + 22.5, 1e-12);
-  close(t, ductFit(box, "slots", vent({ slotH, len: 0 }), t0).maxFold, longest, 1e-12);
+  close(t, ductFit(box, "slots", vent({ slotH, len: 0 }), t0, DRV18).maxFold, longest, 1e-12);
   for (const len of [longest, longest + 5]) {
     const v = vent({ slotH, len });
     close(t, foldedRearWallIn(box, v, t0), 22.5, 1e-12);

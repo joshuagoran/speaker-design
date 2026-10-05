@@ -28,6 +28,7 @@ const has = <I extends ChipId>(
 // ---- sub ----
 const subBase: SubChipsInput = {
   subSize: 18,
+  subDepthIn: undefined,
   subBox: { w: 24, h: 30, d: 22 },
   portStyle: "slots",
   cVent: { slotH: 3, nt: 2, len: 14, throat: 2, dia: 4 }, // nt: subChips ignores it
@@ -70,9 +71,30 @@ test("sub: duct fit per layout; a bottom slot folds past the straight run", (t) 
   // side ducts hold d - PT - throat = 19.25
   has(t, sub({ portStyle: "vslots", cVent: { len: 19.25 } }), "subDuctFit", false);
   has(t, sub({ portStyle: "vslots", cVent: { len: 19.5 } }), "subDuctFit");
-  // round tubes hold d - 0.75 - 2 PT - dia/2 = 22 - 0.75 - 1.5 - 2 = 17.75
-  has(t, sub({ portStyle: "round2", cVent: { len: 17.75 } }), "subDuctFit", false);
-  has(t, sub({ portStyle: "round2", cVent: { len: 18 } }), "subDuctFit");
+});
+test("sub: round tubes run straight, then take an elbow up the back wall, then one under the lid", (t) => {
+  // 2 × 4″ in 24 × 30 × 22 behind an 18″ with no published depth (9.5″): from the baffle front (3/4″ in) to the back
+  // wall is 22 - 0.75 - 0.75 = 20.5. Straight: a diameter short of it, 16.5. One elbow: the riser behind the driver
+  // (9.5 + r + a diameter = 15.5 at the shortest), up to a diameter under the lid: the row's axis sits a flare and a
+  // quarter inch up (2 + 0.75 + 0.25 = 3), so 20.5 - 2 + (28.5 - 3) - 4 = 40. Two elbows: the riser to the lid and the
+  // return leg's mouth a diameter behind the driver: 9.5 + 4 + 2 × 4 + (25.5 - 2) = 45 to 2 × 18.5 + 23.5 - 9.5 - 4 = 47.
+  const tube = (len: number) => sub({ portStyle: "round2", cVent: { len } });
+  has(t, tube(16.5), "subDuctFit", false);
+  has(t, tube(40), "subDuctFit", false);
+  has(t, tube(42), "subDuctFit", true, "bad");
+  assert.ok(chipOf(tube(42), "subDuctFit")[2].includes("short of the 45.0″"), chipList(tube(42)));
+  has(t, tube(46), "subDuctFit", false);
+  has(t, tube(47.5), "subDuctFit", true, "bad");
+  assert.ok(chipOf(tube(47.5), "subDuctFit")[2].includes("two elbows"));
+  // the tubes' flares fit the baffle beside the driver, or the chip says they don't
+  has(t, tube(20), "subTubeFit", false);
+  has(
+    t,
+    sub({ portStyle: "round2", cVent: { nt: 4, dia: 6, len: 20 } }),
+    "subTubeFit",
+    true,
+    "bad",
+  );
 });
 test("sub: first-limit chip follows lim.who", (t) => {
   assert.equal(kindOf(sub({ lim: { who: "port", W: 400 } }), "subPortLimited"), "warn");

@@ -1,6 +1,8 @@
 import { FoldBody, FoldHeading } from "../../../components/ui/FoldHeading";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
+import { isRoundPort } from "../../../lib/pa/calc";
+import { subTubeKit } from "../../../lib/pa/tubes";
 
 interface Props {
   planner: Pick<
@@ -17,6 +19,9 @@ interface Props {
     | "midCabinetLb"
     | "subWeightLoadedLb"
     | "stackHeightIn"
+    | "portStyle"
+    | "subVentSpec"
+    | "wallThicknessIn"
   >;
 }
 
@@ -35,6 +40,9 @@ export function TotalsSection({ planner }: Props) {
     midCabinetLb,
     subWeightLoadedLb,
     stackHeightIn,
+    portStyle,
+    subVentSpec,
+    wallThicknessIn,
   } = planner;
   return (
     <>
@@ -56,6 +64,15 @@ export function TotalsSection({ planner }: Props) {
               ["Compression driver", compressionDriver.price, compressionDriver.lb || 0, 0, 0],
               ["Horn", hornOption.price, (hornOption.lb || 0) + 1, 0, hornOption.size.h + 1],
             ];
+            // round tubes: the pipe and elbows from the catalogue (no price where a part has no US vendor)
+            if (isRoundPort(portStyle))
+              rows.push([
+                "Port tubes and elbows",
+                subTubeKit(subBox, portStyle, subVentSpec, wallThicknessIn, subDriver).price,
+                0,
+                0,
+                0,
+              ]);
             const sum = (i: 1 | 2 | 3) => rows.reduce((a, r) => a + (r[i] || 0), 0);
             const stackLb = sum(2) + sum(3) + (plinthHeightIn ? 6 : 0);
             return (
@@ -64,7 +81,7 @@ export function TotalsSection({ planner }: Props) {
                   <thead>
                     <tr className="text-stone-500 text-left border-b border-stone-300">
                       <th className="py-1 pr-4 font-normal">Per stack</th>
-                      <th className="py-1 pr-4 font-normal text-right">Drivers $</th>
+                      <th className="py-1 pr-4 font-normal text-right">Parts $</th>
                       <th className="py-1 pr-4 font-normal text-right">Driver lb</th>
                       <th className="py-1 pr-4 font-normal text-right">Cabinet lb</th>
                       <th className="py-1 pr-4 font-normal text-right">Box lb</th>
@@ -75,7 +92,9 @@ export function TotalsSection({ planner }: Props) {
                     {rows.map(([n, pr, dl, cl, h]) => (
                       <tr key={n} className="border-b border-stone-300">
                         <td className="py-1 pr-4">{n}</td>
-                        <td className="py-1 pr-4 text-right tabular-nums">{pr ? `$${pr}` : "—"}</td>
+                        <td className="py-1 pr-4 text-right tabular-nums">
+                          {pr ? `$${Math.round(pr)}` : "—"}
+                        </td>
                         <td className="py-1 pr-4 text-right tabular-nums">{dl.toFixed(0)}</td>
                         <td className="py-1 pr-4 text-right tabular-nums">
                           {cl ? cl.toFixed(0) : "—"}
@@ -91,7 +110,7 @@ export function TotalsSection({ planner }: Props) {
                         One stack{plinthHeightIn ? ` + ${plinthHeightIn}" plinth` : ""}
                       </td>
                       <td className="py-1 pr-4 text-right tabular-nums">
-                        ${sum(1).toLocaleString()}
+                        ${Math.round(sum(1)).toLocaleString()}
                       </td>
                       <td className="py-1 pr-4 text-right tabular-nums">{sum(2).toFixed(0)}</td>
                       <td className="py-1 pr-4 text-right tabular-nums">
@@ -103,7 +122,7 @@ export function TotalsSection({ planner }: Props) {
                     <tr className="font-medium text-stone-900">
                       <td className="py-1 pr-4">Pair</td>
                       <td className="py-1 pr-4 text-right tabular-nums">
-                        ${(2 * sum(1)).toLocaleString()}
+                        ${Math.round(2 * sum(1)).toLocaleString()}
                       </td>
                       <td className="py-1 pr-4 text-right tabular-nums">
                         {(2 * sum(2)).toFixed(0)}

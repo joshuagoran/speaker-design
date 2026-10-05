@@ -49,12 +49,14 @@ import {
   pistonBeamWidthDeg,
   subGeometry,
   subWeightLb,
+  ventSpeedLimit,
 } from "./calc";
 import {
   ductFit,
+  ductFitMax,
   ductLenSliderMax,
   ductFits,
-  driverClearance,
+  subBaffleFits,
   hornChips,
   subDriverClearanceNeededIn,
   KEEP_UP_SLACK_DB,
@@ -81,6 +83,8 @@ import {
   type SubLimit,
   type VentShape,
 } from "./exactSub";
+import { MAX_ELBOWS } from "../tubeFold";
+import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import { MID_OPTIONS, SUB_OPTIONS } from "../data";
 import { byId } from "../tables";
 import { keepGap } from "../optimizer/shortfall";
@@ -715,8 +719,16 @@ function exactHook(
       groupCache.set(k, g);
     }
     if (!free) return [];
-    const need = subDriverClearanceNeededIn(sub.size);
-    const target = { style, vent, t, inset: s.cur.inset, disp: sub.ts.disp, VbL: V, Fb: s.fbs[fi] };
+    const target = {
+      style,
+      drv: sub,
+      vent,
+      t,
+      inset: s.cur.inset,
+      disp: sub.ts.disp,
+      VbL: V,
+      Fb: s.fbs[fi],
+    };
     const [lo, hi] = s.sr[free];
     while (g.next < pairCount(g.pairs)) {
       const i = g.next;
@@ -738,12 +750,11 @@ function exactHook(
       const v = { ...vent, len: sol.len };
       if (
         sol.len < s.grid.minDuctIn ||
-        sol.len > ductLenSliderMax(sol.box, style, v, t) ||
-        !ductFits(ductFit(sol.box, style, v, t).spans, sol.len)
+        sol.len > ductLenSliderMax(sol.box, style, v, t, sub) ||
+        !ductFits(ductFit(sol.box, style, v, t, sub).spans, sol.len)
       )
         continue;
-      const { clearW, clearH } = driverClearance(sol.box, style, v, t);
-      if (Math.min(clearW, clearH) < need) continue;
+      if (!subBaffleFits(sol.box, style, v, t, sub)) continue;
       const lb = subWeightLb(sol.box, t, sub.lb);
       if (lb > s.cap + 1e-9) continue;
       if (!b || lb < b.lb) {
@@ -763,14 +774,23 @@ function exactHook(
   // the box at least that much bigger, so heavier.
   // the vent's shape in the deepest box of a pair, its end correction at its most, per plywood, vent and pair
   const deepShapes = new Map<string, VentShape>();
-  const deepShape = (ti: number, style: PortStyle, zi: number, vent: VentSpec, dims: Dims3) => {
-    const k = `${ti}|${style}|${zi}|${dims.w}|${dims.h}|${dims.d}`;
+  const deepShape = (
+    si: number,
+    ti: number,
+    style: PortStyle,
+    zi: number,
+    vent: VentSpec,
+    dims: Dims3,
+  ) => {
+    const sub = s.subs[si];
+    // round tubes' layout and elbows read the driver's size and depth
+    const k = `${isRoundPort(style) ? `${sub.size}|${sub.depthIn}|` : ""}${ti}|${style}|${zi}|${dims.w}|${dims.h}|${dims.d}`;
     let v = deepShapes.get(k);
     if (!v) {
       if (deepShapes.size >= 200_000) deepShapes.clear();
       // the end correction at the most it can be in this box, whatever the duct's length (straight or folded, for a
-      // bottom slot)
-      v = ventShape(style, dims, vent, s.walls[ti], false, true);
+      // bottom slot; straight, its mouth nearest the back wall, for round tubes)
+      v = ventShape(style, dims, vent, s.walls[ti], sub, { folded: false, most: true });
       deepShapes.set(k, v);
     }
     return v;
@@ -790,17 +810,18 @@ function exactHook(
     const all = bare(si, ti, ri);
     if (s.free !== "d") return all;
     const [lo, hi] = s.sr.d;
-    const fixedEc = isRoundPort(style);
+    // the most an elbowed tube's correction can fall below a straight one's with no wall in front: its bends
+    const bends = isRoundPort(style) ? MAX_ELBOWS * -SHARP_BEND_CORRECTION * vent.dia : 0;
     const out: number[] = [];
     for (let i = 0; i < pairCount(all); i++) {
       const dims = pairDims(s, all, i);
       const deepest = { ...dims, d: hi };
-      const vs = deepShape(ti, style, zi, vent, deepest);
+      const vs = deepShape(si, ti, style, zi, vent, deepest);
       const Leff = effectiveLengthFor(vs.area, V, fb);
-      const lenHi = fixedEc ? ductLengthFor(vs, Leff) : Leff / 0.0254;
+      const lenHi = Leff / 0.0254 + bends;
       const lenLo = ductLengthFor(vs, Leff);
       if (lenHi < s.grid.minDuctIn) continue;
-      if (lenLo > ductFit(deepest, style, { ...vent, len: lenLo }, t).fit) continue;
+      if (lenLo > ductFitMax(deepest, style, vent, t, sub)) continue;
       const x = bareFree(
         s,
         dims,
@@ -831,7 +852,7 @@ function exactHook(
     key: string,
   ): SubDesign | null => {
     const sub = s.subs[si];
-    let lim = subLimitOf(cs, area, sub.ts, s.volts, s.portMax);
+    let lim = subLimitOf(cs, area, sub.ts, s.volts, ventSpeedLimit(style, s.portMax));
     let ampW = s.amps.ampW;
     // A sub its port limits fails the checks; with its amp free it comes down, as in the quick search, to the highest
     // slider step under the port's limit (then the amp sets the level). A locked amp leaves it out.
@@ -1482,9 +1503,8 @@ function exactHook(
         cVent: vent,
         layout: cur.layout,
       });
-      if (!(vent.len > 0) || !ductFits(ductFit(box, style, vent, t).spans, vent.len)) return;
-      const { clearW, clearH } = driverClearance(box, style, vent, t);
-      if (Math.min(clearW, clearH) < subDriverClearanceNeededIn(sub.size)) return;
+      if (!(vent.len > 0) || !ductFits(ductFit(box, style, vent, t, sub).spans, vent.len)) return;
+      if (!subBaffleFits(box, style, vent, t, sub)) return;
       const lb = subWeightLb(box, t, sub.lb);
       if (lb > s.cap + 1e-9) return;
       const [cs] = ventedCurves(
@@ -1539,23 +1559,20 @@ function exactHook(
     const box = s.cur.cDim;
     const tune = (len: number) => {
       const v = { ...vent, len };
-      const vs = ventShape(style, box, v, t);
+      const vs = ventShape(style, box, v, t, sub);
       const V = subNetLiters(style, box, t, s.cur.inset, v, vs.area, sub.ts.disp);
-      const Leff =
-        len * 0.0254 +
-        (vs.ec !== null
-          ? vs.ec * 0.0254
-          : 1.46 * Math.sqrt((vs.area * 0.00064516) / vs.n / Math.PI));
+      const Leff = (len + vs.ec) * 0.0254;
       return (343 / (2 * Math.PI)) * Math.sqrt((vs.area * 0.00064516) / ((V / 1000) * Leff));
     };
-    // the lengths that fit (a bottom slot straight, then folded, with the lengths that fit neither way between), so the
-    // search takes the shortest span that reaches the tuning, at the fold's shortest when even that tunes lower
-    const spans = ductFit(box, style, { ...vent, len: 0 }, t)
-      .spans.map(
+    // the lengths that fit, one way at a time (a bottom slot straight, then folded, with the lengths that fit neither way
+    // between; round tubes each elbow count apart, as each elbow steps the tuning), so the search takes the shortest
+    // span that reaches the tuning, at the last way's shortest when even that tunes lower
+    const spans = ductFit(box, style, { ...vent, len: 0 }, t, sub)
+      .tune.map(
         ([lo, hi]) =>
           [
             Math.max(lo, s.grid.minDuctIn),
-            Math.min(hi, ductLenSliderMax(box, style, vent, t)),
+            Math.min(hi, ductLenSliderMax(box, style, vent, t, sub)),
           ] as const,
       )
       .filter(([lo, hi]) => hi >= lo);

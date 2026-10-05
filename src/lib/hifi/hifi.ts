@@ -15,6 +15,8 @@ import {
   slotMouthCorrection,
   logGridCount,
 } from "../pa/calc";
+import { MAX_ELBOWS, tubeElbows, tubeMaxLength, type TubeRoom } from "../tubeFold";
+import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import { MDF_LB_PER_SQ_FT } from "../../data/catalog/plywood";
 import type {
   BoxModelTS,
@@ -209,19 +211,32 @@ export const needsWaveguide = (t: Pick<HifiTweeter, "type" | "needsWaveguide">):
 export type PortGeometry =
   | Pick<RoundPort, "shape" | "dia" | "elbows">
   | (Pick<SlotPort, "shape" | "h"> & Pick<RoundPort, "elbows">);
-// longest port (centerline, inches) that fits: straight front to back; one elbow turns it up (or down) the back wall,
-// using at most half the inner height so it stays clear of the woofer; two elbows fold it back along the bottom or top
+/**
+ * The room a round port has (the PA sub's fold rule, lib/tubeFold): from the baffle front to the back wall, and up the
+ * back wall half the inner height, so the riser and the leg the second elbow turns forward stay clear of the woofer;
+ * that leg's mouth keeps its diameter of air from the baffle's inside face (the stop, a wall behind the front).
+ */
+export const hifiTubeRoom = (dim: Dims3, wall: number): TubeRoom => ({
+  run: dim.d - wall,
+  rise: (dim.h - 2 * wall) / 2,
+  stop: wall,
+});
+// longest port (centerline, inches) that fits with up to `elbows` elbows (none when absent): straight front to back,
+// a diameter short of the back wall; one elbow turns it up the back wall; two turn it forward again (lib/tubeFold)
 export function portMaxLength(dim: Dims3, wall: number, port: PortGeometry) {
   if (port.shape === "slot") return slotMaxLength(dim, wall, port);
-  const D = dim.d - 2 * wall,
-    H = dim.h - 2 * wall,
-    dia = port.dia,
-    e = port.elbows || 0;
-  const straight = D - dia / 2 - 1;
-  if (e === 0) return straight;
-  const up = H / 2 - dia;
-  return e === 1 ? D - dia - 1 + Math.max(0, up) : 2 * (D - dia - 1) + Math.max(0, up);
+  return tubeMaxLength(
+    hifiTubeRoom(dim, wall),
+    port.dia,
+    (port.elbows || 0) > 1 ? 2 : port.elbows ? 1 : 0,
+  );
 }
+/**
+ * A round port's end correction, inches per opening: the flanged and free ends' 1.46 r, and the sharp bend's
+ * correction (SHARP_BEND_CORRECTION diameters) for each elbow it takes.
+ */
+export const hifiRoundEndCorrection = (port: Pick<RoundPort, "dia">, elbows: number) =>
+  1.46 * (port.dia / 2) + elbows * SHARP_BEND_CORRECTION * port.dia;
 export const grossVolumeLiters = (d: Dims3, t: number) =>
   (Math.max(0, (d.w - 2 * t) * (d.h - 2 * t) * (d.d - 2 * t)) * 16.387) / 1e3;
 export const portArea = (p: RoundPort | SizedSlotPort) =>
@@ -431,9 +446,14 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
   const ventPort = hifiVentPort(cfg);
   const pr = cfg.box === "radiator" && cfg.pr && cfg.pr.drv ? cfg.pr : null;
   const pA = ventPort ? portArea(ventPort) : 0;
+  // a slot's inner end reads the box; a round port's elbows shorten it acoustically (the fewest that fit; a port too
+  // long for any is modelled with the most)
+  const ec = !ventPort
+    ? undefined
+    : ventPort.shape === "slot"
+      ? hifiSlotEndCorrection(dim, wall, ventPort)
+      : hifiRoundEndCorrection(ventPort, hifiPortElbows(dim, wall, ventPort) ?? MAX_ELBOWS);
   // the slot's shelf takes volume too
-  const ec =
-    ventPort && ventPort.shape === "slot" ? hifiSlotEndCorrection(dim, wall, ventPort) : undefined;
   const pVol = ventPort
     ? ((pA + (ventPort.shape === "slot" ? wall * ventPort.w : 0)) * ventPort.len * 16.387) / 1e3
     : 0;
@@ -517,7 +537,10 @@ export const belowTweeterMinXo = (t: HifiTweeter, xo: number) =>
 export const nearTweeterResonance = (t: HifiTweeter, xo: number) =>
   !!(t.hf && t.hf.fs && xo < 2 * t.hf.fs);
 
-/** The fewest elbows that fit a port's length (0 with no port; null: too long even with two, or a slot past the back). */
+/**
+ * The fewest elbows that fit a port's length (0 with no port; null: too long even with two, in a gap between two
+ * counts' lengths, or a slot past the back).
+ */
 export function hifiPortElbows(
   dim: Dims3,
   wall: number,
@@ -526,11 +549,7 @@ export function hifiPortElbows(
   if (!ventPort) return 0;
   if (ventPort.shape === "slot")
     return ventPort.len <= slotMaxLength(dim, wall, ventPort) + 1e-9 ? 0 : null;
-  return (
-    [0, 1, 2].find(
-      (e) => ventPort.len <= portMaxLength(dim, wall, { ...ventPort, elbows: e }) + 1e-9,
-    ) ?? null
-  );
+  return tubeElbows(hifiTubeRoom(dim, wall), ventPort.dia, ventPort.len);
 }
 /** The woofer fits the baffle's width. */
 export const wooferFitsBaffle = (w: HifiWoofer, dim: Dims3) => dim.w >= w.size + 0.8;
@@ -1197,7 +1216,9 @@ export function hifiChips(
     F.push([
       "bad",
       "Port too long",
-      `${cfg.port.len.toFixed(1)}″ doesn't fit; even with two elbows this box holds about ${fits.toFixed(1)}″. A wider port tunes as low in less length, or the box could be deeper.`,
+      cfg.port.len < fits
+        ? `${cfg.port.len.toFixed(1)}″ falls between the lengths one elbow and two fit, up to about ${fits.toFixed(1)}″ in all; shorten it or lengthen it.`
+        : `${cfg.port.len.toFixed(1)}″ doesn't fit; even with two elbows this box holds about ${fits.toFixed(1)}″. A wider port tunes as low in less length, or the box could be deeper.`,
       "hifiPortFit",
     ]);
   } else if (sys.kind === "vented" && sys.portElbows) {
@@ -1205,7 +1226,7 @@ export function hifiChips(
     F.push([
       "warn",
       `Port needs ${e === 1 ? "an elbow" : "two elbows"}`,
-      `${cfg.port.len.toFixed(1)}″ is longer than a straight port fits (about ${portMaxLength(cfg.dim, cfg.wall || 0.75, { ...cfg.port, elbows: 0 }).toFixed(1)}″); ${e === 1 ? "one elbow turns it up the back wall" : "two elbows fold it along the back and the bottom"}.`,
+      `${cfg.port.len.toFixed(1)}″ is longer than a straight port fits (about ${portMaxLength(cfg.dim, cfg.wall || 0.75, { ...cfg.port, elbows: 0 }).toFixed(1)}″); ${e === 1 ? "one elbow turns it up the back wall" : "two elbows turn it up the back wall and forward again"}. Each elbow tunes it a little higher, so it is longer than a straight port would be.`,
       "hifiPortElbows",
     ]);
   }

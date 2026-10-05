@@ -13,7 +13,7 @@ import {
   CABINET_FINISHES,
   cabinetFinishOf,
 } from "../../../lib/data";
-import { HIGHPASS_ALIGNMENTS, isRoundPort } from "../../../lib/pa/calc";
+import { HIGHPASS_ALIGNMENTS, isRoundPort, ventSpeedLimit } from "../../../lib/pa/calc";
 import { AMP_WATTS_MAX, AMP_WATTS_STEPS } from "../../../lib/pa/optimize";
 import { ductFit, ductLenSliderMax } from "../../../lib/pa/chips";
 import type { PaPlanner } from "../hooks/usePaPlanner";
@@ -187,9 +187,9 @@ export function SettingsPanel({ planner }: Props) {
     renderDimensionLock,
   } = planner;
   const folds = useFolds("planner.settingsFolds", keysOf(PA_SETTINGS_SECTIONS));
-  // a bottom slot's duct lengths: straight, then folded up the back wall (the lengths between fit neither way)
-  const slotFit =
-    portStyle === "slots" ? ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn) : null;
+  // the duct lengths that fit: a bottom slot straight, then folded up the back wall; round tubes straight, then with one
+  // or two elbows (the lengths between fit neither way, and the slider skips them)
+  const ductLens = ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn, subDriver);
   const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
   const summaries: Record<PaSettingsSection, string> = {
     sub: [
@@ -369,15 +369,23 @@ export function SettingsPanel({ planner }: Props) {
                 label="Duct length"
                 value={subVentSpec.len}
                 min={PA_SLIDERS.ductLen.min}
-                max={ductLenSliderMax(subBoxDims, portStyle, subVentSpec, wallThicknessIn)}
+                max={ductLenSliderMax(
+                  subBoxDims,
+                  portStyle,
+                  subVentSpec,
+                  wallThicknessIn,
+                  subDriver,
+                )}
                 step={PA_SLIDERS.ductLen.step}
                 unit="″"
                 onChange={(v) => setSubVentField("len", v)}
-                // a bottom slot skips the lengths that fit neither way, and stops at the longest fold
-                ranges={slotFit?.spans}
+                // a bottom slot and round tubes skip the lengths that fit no way, and stop at the longest
+                ranges={
+                  portStyle === "slots" || isRoundPort(portStyle) ? ductLens.spans : undefined
+                }
               />
               <Slider
-                label="Port velocity limit"
+                label="Port velocity limit, sharp edge"
                 value={maxPortAirSpeedMs}
                 min={12}
                 max={30}
@@ -387,6 +395,8 @@ export function SettingsPanel({ planner }: Props) {
               />
               <div className="text-xs text-stone-500">
                 {port.desc}. {port.area.toFixed(1)} in&#178;.
+                {isRoundPort(portStyle) &&
+                  ` Flared tubes run to ${ventSpeedLimit(portStyle, maxPortAirSpeedMs).toFixed(1)} m/s.`}
               </div>
             </Card>
           </div>

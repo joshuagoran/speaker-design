@@ -63,6 +63,7 @@ export interface SelectedCard<P, G extends string> extends CardRole {
  * card on its own axis, until the cards run out. `goalMissing` is set when no design beats yours and yours passes;
  * `fixMisses` when the fix is only the closest (it passes the checks but misses what the goals keep).
  */
+// A pool entry can be falsy (the Hi-fi search's pool holds indexes, 0 among them), so "none" is always `undefined`.
 export function selectCards<P, G extends string>(
   o: SelectCardsOptions<P, G>,
 ): { cards: SelectedCard<P, G>[]; goalMissing: boolean; fixMisses: boolean } {
@@ -89,10 +90,10 @@ export function selectCards<P, G extends string>(
     goal,
   );
   let fixMisses = false;
-  if (first) cards.push({ p: first, slot: { kind: "first" }, ...o.labels.first });
+  if (first !== undefined) cards.push({ p: first, slot: { kind: "first" }, ...o.labels.first });
   else if (o.currentFails) {
     const fix = best(pool.filter(meets), goal);
-    if (fix) cards.push({ p: fix, slot: { kind: "fix" }, ...o.labels.fix });
+    if (fix !== undefined) cards.push({ p: fix, slot: { kind: "fix" }, ...o.labels.fix });
     else if (o.shortfall && pool.length) {
       const short = o.shortfall;
       const closest = pool.reduce((a, p) => {
@@ -109,7 +110,7 @@ export function selectCards<P, G extends string>(
       pool.filter((p) => o.changeCount(p) <= 1 && differs(p, taken) && meets(p) && beatsAll(p)),
       goal,
     );
-    if (small)
+    if (small !== undefined)
       cards.push({
         p: small,
         slot: { kind: "smallest" },
@@ -126,11 +127,11 @@ export function selectCards<P, G extends string>(
           differs(p, taken) &&
           (!o.altFilter || o.altFilter(g, p)) &&
           beatsCurrent(g, p) &&
-          (!first || beats(g, p, first)),
+          (first === undefined || beats(g, p, first)),
       ),
       g,
     );
-    if (q) cards.push({ p: q, slot: { kind: "alt", axis: g }, ...o.labels.alt(g) });
+    if (q !== undefined) cards.push({ p: q, slot: { kind: "alt", axis: g }, ...o.labels.alt(g) });
   }
-  return { cards, goalMissing: !first && !o.currentFails, fixMisses };
+  return { cards, goalMissing: first === undefined && !o.currentFails, fixMisses };
 }

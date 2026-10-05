@@ -9,6 +9,7 @@ export const CHIP_IDS = {
   sub: [
     "subDriverFit",
     "subDuctFit",
+    "subTubeFit",
     "subWeight",
     "subPortLimited",
     "subExcursionLimited",
