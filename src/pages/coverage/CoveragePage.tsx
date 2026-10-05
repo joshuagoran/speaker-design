@@ -22,6 +22,7 @@ import {
 import { CoverageAssumptions } from "./CoverageAssumptions";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
+import { formatHz } from "../../lib/format";
 import { SettingsColumn } from "../../components/ui/SettingsColumn";
 import { UI_TEXT } from "../../constants/uiText";
 import {
@@ -55,9 +56,6 @@ const SUB_PLACEMENTS: [SubPlacement, string][] = [
 interface Props {
   planner: CoverageInputs;
 }
-
-const hz = (f: number) =>
-  f >= 1000 ? `${(f / 1000).toFixed(f >= 10000 ? 0 : 1)} kHz` : `${Math.round(f)} Hz`;
 
 /** The height the map may take: on phones, half the screen, so it stays in view above the open settings sheet. */
 function useMapMaxHeight() {
@@ -100,8 +98,8 @@ export function CoveragePage({ planner }: Props) {
           : "text-red-700";
   const bandName =
     layout.band === "one"
-      ? `${hz(layout.freqHz)}, one frequency`
-      : `${COVERAGE_BANDS[layout.band].name} band, ${hz(COVERAGE_BANDS[layout.band].lo)}–${hz(COVERAGE_BANDS[layout.band].hi)}`;
+      ? `${formatHz(layout.freqHz)}, one frequency`
+      : `${COVERAGE_BANDS[layout.band].name} band, ${formatHz(COVERAGE_BANDS[layout.band].lo)}–${formatHz(COVERAGE_BANDS[layout.band].hi)}`;
   const [left, right] = layout.stacks;
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   const logPos = (f: number) =>
@@ -286,7 +284,9 @@ export function CoveragePage({ planner }: Props) {
                       : { lo: COVERAGE_BANDS[layout.band].lo, hi: COVERAGE_BANDS[layout.band].hi }
                   }
                   marks={
-                    layout.band === "one" ? [{ f: layout.freqHz, label: hz(layout.freqHz) }] : []
+                    layout.band === "one"
+                      ? [{ f: layout.freqHz, label: formatHz(layout.freqHz) }]
+                      : []
                   }
                 />
               </div>
@@ -333,7 +333,7 @@ export function CoveragePage({ planner }: Props) {
                 <ToggleButton key={b} on={layout.band === b} onClick={() => state.setBand(b)}>
                   {COVERAGE_BANDS[b].name}{" "}
                   <span className="text-xs opacity-70">
-                    {hz(COVERAGE_BANDS[b].lo)}–{hz(COVERAGE_BANDS[b].hi)}
+                    {formatHz(COVERAGE_BANDS[b].lo)}–{formatHz(COVERAGE_BANDS[b].hi)}
                   </span>
                 </ToggleButton>
               ))}
@@ -347,7 +347,9 @@ export function CoveragePage({ planner }: Props) {
                   <label htmlFor={freqId} className="text-sm text-stone-500">
                     Frequency
                   </label>
-                  <span className="text-sm tabular-nums font-medium">{hz(layout.freqHz)}</span>
+                  <span className="text-sm tabular-nums font-medium">
+                    {formatHz(layout.freqHz)}
+                  </span>
                 </div>
                 <input
                   id={freqId}
@@ -356,7 +358,7 @@ export function CoveragePage({ planner }: Props) {
                   max={1000}
                   step={1}
                   value={logPos(layout.freqHz)}
-                  aria-valuetext={hz(layout.freqHz)}
+                  aria-valuetext={formatHz(layout.freqHz)}
                   onChange={(e) => state.setFreqHz(fromPos(parseFloat(e.target.value)))}
                   className="w-full accent-stone-900"
                 />
@@ -454,7 +456,8 @@ export function CoveragePage({ planner }: Props) {
             {map.subDelayMs != null && (
               <p className="text-sm text-stone-500 tabular-nums mb-3">
                 Sub delay: {delay(map.subDelayMs)}, in phase with the mid at{" "}
-                {hz(planner.subMidCrossoverHz)} on the stack's axis, as a DSP setup would set it.
+                {formatHz(planner.subMidCrossoverHz)} on the stack's axis, as a DSP setup would set
+                it.
               </p>
             )}
             <Slider

@@ -29,7 +29,16 @@ export function useHeightAnimation(
   }
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el || !phase) return;
+    if (!el) return;
+    if (!phase) {
+      // an instant change (reduced motion, or a fold that doesn't fold at this width) stops one still running
+      if (running.current) {
+        running.current.cancel();
+        running.current = null;
+        el.style.overflow = "";
+      }
+      return;
+    }
     // from where it is now: mid-way through a fold that turned back, else shut (opening) or full (closing)
     const now = running.current ? el.getBoundingClientRect().height : null;
     running.current?.cancel();
@@ -46,6 +55,7 @@ export function useHeightAnimation(
     );
     running.current = a;
     a.onfinish = () => {
+      if (running.current !== a) return; // a later change took over
       running.current = null;
       el.style.overflow = "";
       // hold it shut until the closed render hides it, so it doesn't flash open for a frame

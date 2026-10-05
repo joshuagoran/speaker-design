@@ -24,6 +24,7 @@ import { formatDims, formatHz, formatInches } from "../../../lib/format";
 import { crossoverSlopeName } from "../../../constants/crossovers";
 import { PA_LAYOUT_NAMES } from "../../../constants/paLayouts";
 import { PA_SETTINGS_SECTIONS } from "../../../constants/settingsSections";
+import { PA_SETTINGS_TABS } from "../../../constants/paSettingsTabs";
 import type { PaSettingsSection } from "../../../constants/settingsSections";
 import { SLOT_LAYOUT_NAMES } from "../../../constants/portStyles";
 import { UI_TEXT } from "../../../constants/uiText";
@@ -222,14 +223,7 @@ export function SettingsPanel({ planner }: Props) {
       bodyClassName={`max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${isSettingsSheetOpen ? "" : "max-md:hidden"}`}
       top={
         <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
-          {(
-            [
-              ["sub", "Sub"],
-              ["mid", "Mid"],
-              ["horn", "Horn"],
-              ["look", "Look"],
-            ] as const
-          ).map(([t, label]) => (
+          {entriesOf(PA_SETTINGS_TABS).map(([t, label]) => (
             <button
               key={t}
               role="tab"

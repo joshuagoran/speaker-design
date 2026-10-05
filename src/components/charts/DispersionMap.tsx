@@ -1,4 +1,5 @@
 import type { HifiDispersionMap } from "../../types";
+import { formatHz } from "../../lib/format";
 import { PAL, DISPERSION_SCALE, dispersionColour, dispersionRgb } from "../../styles/palette";
 import {
   DISPERSION_ANGLE_MAX_DEG,
@@ -23,8 +24,6 @@ const LOG_SPAN = Math.log(DISPERSION_FREQ_MAX_HZ / DISPERSION_FREQ_MIN_HZ);
 /** A signed number with a true minus sign: "+30", "−30", "0". */
 const signed = (v: number) => (v > 0 ? `+${v}` : v < 0 ? `−${-v}` : "0");
 const kHz = (f: number) => (f >= 1000 ? `${+(f / 1000).toFixed(1)}k` : f.toFixed(0));
-/** A frequency with its unit: "120 Hz", "1.2 kHz". */
-const hzLabel = (f: number) => (f >= 1000 ? `${+(f / 1000).toFixed(1)} kHz` : `${f.toFixed(0)} Hz`);
 
 /** Where `x` falls in the ascending `xs`: the index below it and the fraction toward the next, clamped to the ends. */
 function bracket(xs: readonly number[], x: number): [number, number] {
@@ -164,7 +163,7 @@ export function DispersionMap({ map, title }: Props) {
         <span>{title}</span>
         <span className="tabular-nums text-stone-900 shrink-0">
           {hover
-            ? `${signed(map.angles[hover.j])}° · ${hzLabel(map.freqs[hover.i])} ·${map.rows[hover.j][hover.i].toFixed(1)} dB`
+            ? `${signed(map.angles[hover.j])}° · ${formatHz(map.freqs[hover.i])} ·${map.rows[hover.j][hover.i].toFixed(1)} dB`
             : "dB vs on-axis"}
         </span>
       </div>
@@ -235,7 +234,7 @@ export function DispersionMap({ map, title }: Props) {
                 paintOrder="stroke"
                 strokeLinejoin="round"
               >
-                {hzLabel(f)}
+                {formatHz(f)}
               </text>
             </g>
           );

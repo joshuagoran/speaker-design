@@ -6,6 +6,7 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
+import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const page = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -104,7 +105,7 @@ for (const size of sizes) {
     for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().tap();
     await p.waitForTimeout(300);
     await check("#planner, sections open");
-    for (const tab of ["Sub", "Mid", "Horn", "Look"]) {
+    for (const tab of Object.values(PA_SETTINGS_TABS)) {
       await p.getByRole("tab", { name: tab }).tap();
       await p.waitForTimeout(300);
       await check(`#planner, ${tab} tab`);

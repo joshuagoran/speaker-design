@@ -206,6 +206,7 @@ export function HifiPage({ hifi }: Props) {
     boxType === v &&
     (v === "sealed" ||
       (v === "vented" ? (n === "slot" ? slotOn : !slotOn && portSpec.n === n) : radiator.n === n));
+  const edgesText = roundoverIn ? `${formatInches(roundoverIn)} roundover` : "sharp edges";
   const summaries: Record<HifiSettingsSection, string> = {
     drivers: [
       woofer.name,
@@ -219,7 +220,7 @@ export function HifiPage({ hifi }: Props) {
       `${speakerSystem.gross.toFixed(1)} L`,
       PORT_CHOICES.find(isPortChoiceOn)?.[3].toLowerCase(),
       `${formatInches(wallThicknessIn)} ${MATERIAL_CHOICES.find(([, v]) => v === panelMaterial)?.[0]}`,
-      roundoverIn ? `${formatInches(roundoverIn)} roundover` : "sharp edges",
+      edgesText,
     ]
       .filter(Boolean)
       .join(", "),
@@ -518,7 +519,7 @@ export function HifiPage({ hifi }: Props) {
               <div>
                 Edge diffraction: the baffle edges re-radiate each driver's sound a little later,
                 for about ±{edgeRippleDb.toFixed(1)} dB of ripple from 1 to 5 kHz on axis (
-                {roundoverIn ? `${formatInches(roundoverIn)} roundover` : "sharp edges"}, tweeter{" "}
+                {edgesText}, tweeter{" "}
                 {tweeterOffsetUsed
                   ? `${formatInches(Math.abs(tweeterOffsetUsed))} ${tweeterOffsetUsed > 0 ? "inward" : "outward"} of centre`
                   : "centred"}

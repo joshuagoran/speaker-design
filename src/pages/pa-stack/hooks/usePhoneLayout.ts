@@ -1,10 +1,11 @@
 import { useState } from "react";
 import type { Setter } from "../../../types";
+import type { PA_SETTINGS_TABS } from "../../../constants/paSettingsTabs";
 
 /** The result sections that fold on phones. */
 export type FoldId = "sub" | "mid" | "horn" | "totals";
 /** The tabs of the phone settings sheet. */
-export type SettingsTab = "sub" | "mid" | "horn" | "look";
+export type SettingsTab = keyof typeof PA_SETTINGS_TABS;
 
 export interface PhoneLayout {
   isSettingsSheetOpen: boolean;
