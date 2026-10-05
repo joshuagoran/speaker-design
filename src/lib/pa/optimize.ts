@@ -18,6 +18,7 @@ import {
   ampVoltage,
   hornResponse,
   subWeightLb,
+  ventSpeedLimit,
   midWeightLb,
   boxInternalLiters,
   cutParts,
@@ -36,7 +37,7 @@ import {
   ductFit,
   ductLenSliderMax,
   subDriverClearanceNeededIn,
-  driverClearance,
+  subBaffleFits,
   KEEP_UP_SLACK_DB,
 } from "./chips";
 import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS, subDriversOfSize } from "../data";
@@ -356,6 +357,7 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
   const chips = {
     sub: subChips({
       subSize: sub.size,
+      subDepthIn: sub.depthIn,
       subBox: c.cDim,
       portStyle: c.portStyle,
       cVent: c.cVent,
@@ -808,12 +810,12 @@ export function optimizePaStack(
           for (const size of ventSizesFor(style)) {
             // the lengths that fit, inside the duct-length slider: a bottom slot runs straight, then (past the lengths
             // that fit neither way) folds up the back wall
-            const spans = ductFit(box, style, mk(size, 0), t)
+            const spans = ductFit(box, style, mk(size, 0), t, sd.sub)
               .spans.map(
                 ([a, b]) =>
                   [
                     Math.max(a, PA_SLIDERS.ductLen.min),
-                    Math.min(b, ductLenSliderMax(box, style, mk(size, 0), t)),
+                    Math.min(b, ductLenSliderMax(box, style, mk(size, 0), t, sd.sub)),
                   ] as const,
               )
               .filter(([a, b]) => b >= a + 0.25);
@@ -843,8 +845,7 @@ export function optimizePaStack(
                 Math.min(Math.floor(hi * 4) / 4, r2((a + b) / 2, 0.25)),
               ),
             );
-            const { clearW, clearH } = driverClearance(box, style, cVent, t);
-            if (Math.min(clearW, clearH) < subDriverClearanceNeededIn(sd.sub.size)) continue;
+            if (!subBaffleFits(box, style, cVent, t, sd.sub)) continue;
             const c = {
               ...base,
               sub: sd.sub.id,
@@ -869,7 +870,8 @@ export function optimizePaStack(
             });
             evals++;
             if (!s.mdl) continue;
-            const portOk = s.lim.who !== "port" && s.lim.vel <= 0.9 * cur.portMax;
+            const portOk =
+              s.lim.who !== "port" && s.lim.vel <= 0.9 * ventSpeedLimit(style, cur.portMax);
             if (!portOk) {
               fallback = { c, cVent, s };
               continue;
@@ -888,7 +890,11 @@ export function optimizePaStack(
           // with the amp turned down to where the port still has a 10% air-speed margin
           if (!pushed && fallback && !locks.ampW) {
             const vW =
-              Math.pow((fallback.s.AMP_V * (0.9 * cur.portMax)) / fallback.s.mdl.peakVel, 2) / 8;
+              Math.pow(
+                (fallback.s.AMP_V * (0.9 * ventSpeedLimit(style, cur.portMax))) /
+                  fallback.s.mdl.peakVel,
+                2,
+              ) / 8;
             const ampW = onSlider(vW, AMP_WATTS_STEPS.ampW);
             if (ampW !== null) {
               const c = { ...fallback.c, ampW };
@@ -1481,7 +1487,13 @@ export function optimizePaStack(
     );
     // the duct slider runs on to a bottom slot's longest fold (lengths in the gap between straight and folded fail its
     // duct-fit chip, so no try lands there)
-    const lenMax = ductLenSliderMax(p.c.cDim, p.c.portStyle, p.c.cVent, p.c.wall);
+    const lenMax = ductLenSliderMax(
+      p.c.cDim,
+      p.c.portStyle,
+      p.c.cVent,
+      p.c.wall,
+      byIdOrThrow(SUB_OPTIONS, p.c.sub, CATALOG_TABLE_NAMES.subs),
+    );
     const lens = nearSteps(
       p.c.cVent.len,
       { ...PA_SLIDERS.ductLen, max: lenMax },

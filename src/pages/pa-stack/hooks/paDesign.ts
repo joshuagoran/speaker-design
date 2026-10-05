@@ -1,5 +1,6 @@
 import {
   subSystem,
+  ventSpeedLimit,
   maxOutputCurve as maxCurveOf,
   hornResponse,
   pistonBeamWidthDeg,
@@ -169,6 +170,8 @@ export function derivePaDesign({
   });
   const { port, grossL: subGrossLiters, netL: subNetLiters, AMP_V: subAmpVoltage } = subSys;
   const subMdl = subSys.mdl;
+  // the vent's own air-speed limit: the setting for a sharp-edged vent, more for flared tubes
+  const portSpeedLimit = ventSpeedLimit(portStyle, maxPortAirSpeedMs);
   const subModelled = subMdl
     ? {
         mdl: { ...subSys.mdl, curve: phasedCurve(subSys.mdl.curve) },
@@ -177,13 +180,13 @@ export function derivePaDesign({
          * Max SPL for a sine at each frequency (each frequency meets its own port and excursion limits);
          * the broadband limit (`lim`) is what applies to music.
          */
-        maxCurve: maxCurveOf(subSys.mdl.curve, subDriver.ts, subAmpVoltage, maxPortAirSpeedMs),
+        maxCurve: maxCurveOf(subSys.mdl.curve, subDriver.ts, subAmpVoltage, portSpeedLimit),
         /** Sub through its lowpass at the crossover, for the system chart. Its own limits scale with the filter. */
         throughLowpass: subThroughLowpass(
           subSys.mdl,
           subDriver.ts,
           subAmpVoltage,
-          maxPortAirSpeedMs,
+          portSpeedLimit,
           subMidCrossoverHz,
           subMidCrossoverOrder,
         ),
@@ -192,7 +195,7 @@ export function derivePaDesign({
             subMdl,
             { ...subDriver.ts, Xmax },
             subAmpVoltage,
-            maxPortAirSpeedMs,
+            portSpeedLimit,
             subMidCrossoverHz,
             subMidCrossoverOrder,
           ),

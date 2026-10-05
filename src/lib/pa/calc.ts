@@ -41,6 +41,9 @@ import { DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import { PLYWOOD_LB_PER_SQ_FT } from "../../data/catalog/plywood";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../../data/acoustics/slot-inner-end";
+import { modelTubeElbows, subTubeEndCorrection, subTubeKit, type TubeDriver } from "./tubes";
+import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
+import { ELBOW_WORDS } from "../../constants/portStyles";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
 const ROUND_PORT: Record<PortStyle, boolean> = {
@@ -107,6 +110,22 @@ export const foldedLidGapIn = (
   v: Pick<VentSpec, "slotH" | "len">,
   t: number,
 ) => box.h - 2 * t - v.slotH - foldedRearWallIn(box, v, t);
+
+/**
+ * A flared tube's air-speed limit over a sharp-edged vent's: flaring the ends delays the flow's separation at the mouth,
+ * where the jet and its vortices make the noise and compression that set the limit (Roozen, Bockholts, van Eck &
+ * Hirschberg, "Vortex sound in bass-reflex ports of loudspeakers", J. Acoust. Soc. Am. 104 (1998) 1914–1924; Salvatti,
+ * Devantier & Button, "Maximizing performance from loudspeaker ports", J. Audio Eng. Soc. 50 (2002) 19–45, whose flared
+ * ports stay clean to well above a straight port's onset). About 30 m/s against the 23.5 m/s sine peak the planner
+ * allows a sharp-edged slot, whose cut ends the cutlist doesn't round over.
+ */
+export const FLARED_PORT_SPEED_RATIO = 30 / 23.5;
+/**
+ * The air-speed limit for a vent, m/s: `portMax` (the planner's setting, a sharp-edged vent's) for the slots and side
+ * ducts, FLARED_PORT_SPEED_RATIO times it for flared round tubes.
+ */
+export const ventSpeedLimit = (style: PortStyle, portMax: number) =>
+  ROUND_PORT[style] ? portMax * FLARED_PORT_SPEED_RATIO : portMax;
 
 /** Whether the sub's vents are round tubes (`round1`, `round2`, `round4`) rather than rectangular ducts. */
 export const isRoundPort = (style: PortStyle): style is Extract<PortStyle, `round${string}`> =>
@@ -547,10 +566,16 @@ export function cutParts({
   const t = wall,
     all: CutPart[] = [];
   const vent: string[] = [];
+  // round tubes: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes)
+  const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, sub) : null;
   const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
     braces: wall === 0.5 ? 3 : 2,
     band: portStyle === "slots" ? cVent.slotH + t : 0,
-    cutNote: `${formatInches(DRIVER_CUTOUT_IN[sub.size])}″ driver cutout (check the datasheet)`,
+    cutNote:
+      `${formatInches(DRIVER_CUTOUT_IN[sub.size])}″ driver cutout (check the datasheet)` +
+      (kit
+        ? `; ${cVent.nt} × ${formatInches(kit.pipe?.odIn ?? cVent.dia)}″ tube holes, rounded over ${formatInches(TUBE_FLARE_RADIUS_IN)}″`
+        : ""),
   });
   all.push(...s.P);
   if (portStyle === "slots") {
@@ -604,9 +629,15 @@ export function cutParts({
       t: 0.5,
       note: "",
     });
-  } else {
+  } else if (kit) {
     vent.push(
-      `${cVent.nt} × ${formatInches(cVent.dia)}″ port tube, ${formatInches(cVent.len)}″ long (buy, flared)`,
+      `${cVent.nt} × ${formatInches(cVent.dia)}″ port tube, ${formatInches(cVent.len)}″ long on its centreline` +
+        (kit.elbows
+          ? ` with ${ELBOW_WORDS[kit.elbows]} (${cVent.nt * kit.elbows} × 90° elbow)`
+          : "") +
+        (kit.pipe
+          ? `, cut from ${kit.sticks} × ${kit.pipe.stickFt} ft Sch 40 PVC; flare each inner mouth ${formatInches(TUBE_FLARE_RADIUS_IN)}″`
+          : `; no stock pipe in the catalogue for ${formatInches(cVent.dia)}″`),
     );
   }
   if (layout !== "tower") {
@@ -732,6 +763,7 @@ export function ventGeometry(
   box: Dims3,
   cVent: VentSpec,
   t: number,
+  drv: TubeDriver,
 ): VentGeometry {
   const iw = box.w - 2 * t,
     ih = box.h - 2 * t;
@@ -769,13 +801,19 @@ export function ventGeometry(
         (folded ? ", folded up the back wall" : ""),
     };
   }
+  // round tubes: straight while they fit, then up the back wall and forward under the lid (lib/pa/tubes)
   const r = cVent.dia / 2;
+  const elbows = modelTubeElbows(box, portStyle, cVent, t, drv);
   return {
     n: cVent.nt,
     area: cVent.nt * Math.PI * r * r,
     len: cVent.len,
+    ec: subTubeEndCorrection(box, portStyle, cVent, t, drv, elbows),
     dh: cVent.dia,
-    desc: `${cVent.nt} \u00d7 ${cVent.dia.toFixed(2)}\u2033 round, ${cVent.len.toFixed(1)}\u2033 long`,
+    elbows,
+    desc:
+      `${cVent.nt} \u00d7 ${cVent.dia.toFixed(2)}\u2033 round, ${cVent.len.toFixed(1)}\u2033 long` +
+      (elbows ? `, ${ELBOW_WORDS[elbows]} each` : ""),
   };
 }
 
@@ -946,7 +984,7 @@ export const midWeightLb = (b: Dims3, wall: number) =>
 // cfg: { subBox, midDims, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout }
 // Vent and volumes only (no model): what the optimizer's vent solver iterates on.
 export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConfig): SubGeometry {
-  const port = ventGeometry(cfg.portStyle, cfg.subBox, cfg.cVent, cfg.wall);
+  const port = ventGeometry(cfg.portStyle, cfg.subBox, cfg.cVent, cfg.wall, sub);
   const grossL = boxInternalLiters(cfg.subBox.w, cfg.subBox.h, cfg.subBox.d, cfg.wall, cfg.inset);
   const ductL = (port.area * port.len * 16.387) / 1000;
   const woodL = internalWoodLiters(
@@ -994,7 +1032,7 @@ export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig):
     netL,
     AMP_V,
     mdl,
-    lim: subwooferLimits(mdl, sub.ts, AMP_V, cfg.portMax),
+    lim: subwooferLimits(mdl, sub.ts, AMP_V, ventSpeedLimit(cfg.portStyle, cfg.portMax)),
   };
 }
 

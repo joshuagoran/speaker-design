@@ -503,17 +503,21 @@ test("a locked sub, mid, driver or horn that isn't in the tables leaves nothing 
 });
 
 test("a failing design with nothing in reach: the closest design that passes, and a notice naming what's out of reach", () => {
-  // over a $700 budget, with the vent kept to its round tubes (a bottom slot folded up the back wall keeps the output for
-  // less), nothing that passes keeps the design's output
-  const out = optimizePaStack({ ...base, budget: 700, goal: "cheaper", locks: { vent: true } });
+  // "blocky" under an $800 budget and 90 lb, with the vent kept to its bottom slot: nothing that passes keeps the
+  // design's output (round tubes with elbows keep the round-tube seeds' output for less, so they no longer get here)
+  const lim = { maxLb: 90, budget: 800 };
+  const out = optimizePaStack({
+    ...base,
+    ...lim,
+    cur: pick(SEED_NAMES.blocky),
+    goal: "cheaper",
+    locks: { vent: true },
+  });
   assert.ok(out.curProblems.length > 0, "the current design fails a check");
   const k = out.cards[0];
   assert.ok(k, "a card is shown");
   assert.equal(k.slot.kind, "closest");
-  assert.deepEqual(
-    designProblems(evaluateDesign(k.config)!, { maxLb: base.maxLb, budget: 700 }),
-    [],
-  );
+  assert.deepEqual(designProblems(evaluateDesign(k.config)!, lim), []);
   assert.ok(k.metrics.out < out.target - 0.5, "it misses the target");
   const note = out.goalMissing ?? "";
   assert.ok(note.startsWith(OUT_OF_REACH_LEAD), note);
@@ -522,8 +526,16 @@ test("a failing design with nothing in reach: the closest design that passes, an
 });
 
 test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
-  // over an $800 budget, with the vent kept to its round tubes, nothing that passes keeps the output; $880 does
-  const out = optimizePaStack({ ...base, budget: 800, goal: "cheaper", locks: { vent: true } });
+  // "blocky" under an $800 budget and 90 lb, with the vent kept to its bottom slot, nothing that passes keeps the
+  // output; $880 does
+  const out = optimizePaStack({
+    ...base,
+    cur: pick(SEED_NAMES.blocky),
+    maxLb: 90,
+    budget: 800,
+    goal: "cheaper",
+    locks: { vent: true },
+  });
   assert.ok((out.goalMissing ?? "").startsWith(OUT_OF_REACH_LEAD), out.goalMissing ?? "no notice");
   assert.ok(out.cards.length > 0);
   const opts = out.nearMiss ? out.nearMiss.options : [];

@@ -4,6 +4,8 @@ import { buildCabinet } from "./buildCabinet";
 import { buildCone } from "./buildCone";
 import { towerBaffleHoles, buildTowerPartitions } from "./towerParts";
 import { towerSpec } from "./stackHeights";
+import { modelTubeElbows, subTubeLegs, tubeLayout } from "../../lib/pa/tubes";
+import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import {
   foldedRearWallIn,
   foldedShelfIn,
@@ -30,7 +32,7 @@ export function buildSubwoofer(
     plinth,
     tower,
   }: {
-    sub: Pick<SubDriver, "size">;
+    sub: Pick<SubDriver, "size" | "depthIn">;
     box: Dims3;
     portStyle: PortStyle;
     portGeom?: Props["portGeom"];
@@ -66,18 +68,24 @@ export function buildSubwoofer(
     pg.portR != null
       ? pg.portR
       : (portStyle === "round1" ? 8 : corners ? (sub.size >= 18 ? 4 : 3.5) : 5) / 2;
+  // round tubes: where they sit on the baffle and how they fold, as the model and the cutlist take them (lib/pa/tubes)
+  const tubeVent = {
+    nt: nPorts,
+    dia: 2 * portR,
+    len: pg.tubeLen != null ? pg.tubeLen : portStyle === "round1" ? 11 : corners ? 11.5 : 9.8,
+  };
+  const tubes = round ? tubeLayout(s, portStyle, tubeVent, T, sub.size) : null;
   const bandH = round || vSlot ? 0 : ductH + T; // slots: baffle starts above the duct shelf
   // Tower: one shell and one continuous baffle; sections are divided internally.
   const { archTop, extH } = tower ? towerSpec(s, T, tower.horn) : { archTop: false, extH: 0 };
   const baffleH = s.h + extH - 2 * T - bandH;
   const baffleCy = pl + T + bandH + baffleH / 2; // absolute center of the baffle
   // centered when symmetric; bottom slots: centered in the baffle above the duct (sub section only in a tower)
-  const drvAbsY =
-    corners || vSlot
+  const drvAbsY = tubes
+    ? pl + T + tubes.driver.y
+    : vSlot
       ? pl + s.h / 2
-      : !round
-        ? pl + T + bandH + (s.h - 2 * T - bandH) / 2
-        : pl + s.h - T - innerW / 2;
+      : pl + T + bandH + (s.h - 2 * T - bandH) / 2;
   const vThroat =
     pg.throat != null
       ? pg.throat
@@ -85,20 +93,8 @@ export function buildSubwoofer(
   // a single side duct pushes the driver into the middle of the remaining baffle
   const drvX = sides.length === 1 && vSlot ? (-sides[0] * (vThroat + 0.43 + T)) / 2 : 0;
   const holes = [circlePath(drvX, drvAbsY - baffleCy, drvR)];
-  let portCy = 0;
-  if (round) {
-    // 8" sits low on the baffle; 5" pair centered 10" up
-    portCy = corners
-      ? 0
-      : (portStyle === "round1" ? pl + T + portR + 0.75 + 1 : pl + 10) - baffleCy;
-    if (corners) {
-      const off = innerW / 2 - portR - 0.75 - 0.4;
-      [-1, 1].forEach((kx) =>
-        [-1, 1].forEach((ky) => holes.push(circlePath(kx * off, ky * off, portR))),
-      );
-    } else if (nPorts === 1) holes.push(circlePath(0, portCy, portR));
-    else [-1, 1].forEach((k) => holes.push(circlePath(k * (portR + 2.6), portCy, portR)));
-  }
+  if (tubes)
+    tubes.tubes.forEach((p) => holes.push(circlePath(p.x, pl + T + p.y - baffleCy, portR)));
   if (vSlot) {
     // full-height ducts using the side walls as their outer face
     const slotH = s.h - 2 * T;
@@ -181,44 +177,65 @@ export function buildSubwoofer(
       nose.position.set(0, pl + T + bandH / 2, s.d / 2 - REVEAL);
       subGroup.add(nose);
     }
-  } else {
-    // flared tubes behind the baffle: bell, straight section, inner bell
-    const tubeLen =
-      pg.tubeLen != null ? pg.tubeLen : portStyle === "round1" ? 11 : corners ? 11.5 : 9.8;
-    const off = innerW / 2 - portR - 0.75 - 0.4;
-    const spots = corners
-      ? [
-          [-off, -off],
-          [off, -off],
-          [-off, off],
-          [off, off],
-        ].map(([a, b]) => [a, pl + s.h / 2 + b])
-      : (nPorts === 1 ? [0] : [-(portR + 2.6), portR + 2.6]).map((a) => [a, baffleCy + portCy]);
-    spots.forEach(([x, yy]) => {
-      const tube = new THREE.Mesh(
-        new THREE.CylinderGeometry(portR, portR, tubeLen, 32, 1, true),
-        portMat,
-      );
-      tube.rotation.x = Math.PI / 2;
-      tube.position.set(x, yy, subZ - tubeLen / 2); // starts at the baffle face, runs back
-      subGroup.add(tube);
-      // quarter-round flares, tangent to the tube at the throat
-      const RB = 0.75,
-        seg = 10;
-      const prof: THREE.Vector2[] = [];
-      for (let i = 0; i <= seg; i++) {
-        const t = (i / seg) * (Math.PI / 2);
-        prof.push(new THREE.Vector2(portR + RB * (1 - Math.cos(t)), RB * Math.sin(t)));
+  } else if (tubes) {
+    // flared tubes behind the baffle: bell, straight run back, then (as the model folds them) an elbow up the back
+    // wall and a second forward under the lid, and the inner bell at the mouth
+    const e = modelTubeElbows(s, portStyle, tubeVent, T, sub);
+    const legs = subTubeLegs(s, portStyle, tubeVent, T, sub, e);
+    const RB = TUBE_FLARE_RADIUS_IN,
+      seg = 10,
+      bend = Math.min(portR * 1.5, legs.run / 2, legs.rise / 2); // the elbows' centreline radius
+    const prof: THREE.Vector2[] = [];
+    for (let i = 0; i <= seg; i++) {
+      const t = (i / seg) * (Math.PI / 2);
+      prof.push(new THREE.Vector2(portR + RB * (1 - Math.cos(t)), RB * Math.sin(t)));
+    }
+    // a straight length of tube from a to b (centreline points)
+    const pipe = (a: THREE.Vector3, b: THREE.Vector3) => {
+      const len = a.distanceTo(b);
+      if (len < 1e-3) return;
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(portR, portR, len, 32, 1, true), portMat);
+      m.position.copy(a).add(b).multiplyScalar(0.5);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+      subGroup.add(m);
+    };
+    // a quarter-torus elbow about `c`, its arc from local +X to +Y laid on the world axes `ax`, `ay`
+    const elbow = (c: THREE.Vector3, ax: THREE.Vector3, ay: THREE.Vector3) => {
+      const m = new THREE.Mesh(new THREE.TorusGeometry(bend, portR, 16, 12, Math.PI / 2), portMat);
+      m.setRotationFromMatrix(new THREE.Matrix4().makeBasis(ax, ay, ax.clone().cross(ay)));
+      m.position.copy(c);
+      subGroup.add(m);
+    };
+    // a quarter-round flare at a mouth, opening along `dir`
+    const bell = (at: THREE.Vector3, dir: THREE.Vector3) => {
+      const m = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), portMat);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      m.position.copy(at);
+      subGroup.add(m);
+    };
+    const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+    tubes.tubes.forEach((p) => {
+      const x = p.x,
+        y = pl + T + p.y,
+        zc = subZ - legs.run; // the first corner, behind the baffle face
+      bell(V(x, y, subZ), V(0, 0, 1));
+      if (e === 0) {
+        pipe(V(x, y, subZ), V(x, y, zc));
+        bell(V(x, y, zc), V(0, 0, -1));
+        return;
       }
-      [
-        [subZ, 1],
-        [subZ - tubeLen, -1],
-      ].forEach(([z, dir]) => {
-        const bell = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), portMat);
-        bell.rotation.x = dir > 0 ? Math.PI / 2 : -Math.PI / 2; // opens away from the tube at each end
-        bell.position.set(x, yy, z);
-        subGroup.add(bell);
-      });
+      pipe(V(x, y, subZ), V(x, y, zc + bend));
+      elbow(V(x, y + bend, zc + bend), V(0, -1, 0), V(0, 0, -1));
+      const top = y + legs.rise;
+      if (e === 1) {
+        pipe(V(x, y + bend, zc), V(x, top, zc));
+        bell(V(x, top, zc), V(0, 1, 0));
+        return;
+      }
+      pipe(V(x, y + bend, zc), V(x, top - bend, zc));
+      elbow(V(x, top - bend, zc + bend), V(0, 0, -1), V(0, 1, 0));
+      pipe(V(x, top, zc + bend), V(x, top, zc + legs.back));
+      bell(V(x, top, zc + legs.back), V(0, 0, 1));
     });
   }
   buildCone(ctx, { r: drvR, y: drvAbsY, z: subZ, x: drvX, parent: subGroup });

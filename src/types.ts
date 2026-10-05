@@ -1010,6 +1010,28 @@ export interface VentSpec {
 export type PortTubeSet = Pick<VentSpec, "nt" | "dia">;
 
 /**
+ * Stock pipe a tube size is cut from: `dia` the size the planner models (the nominal inside diameter, in), the pipe's
+ * measured inside and outside diameters (in), and a stick's length (ft) and price from a US vendor.
+ */
+export interface PortPipe {
+  dia: number;
+  idIn: number;
+  odIn: number;
+  stickFt: number;
+  price: number;
+  src: string;
+  note: string;
+}
+
+/** A 90° elbow for a tube size: its price from a US vendor, or null where none sells one (the gap is in `note`). */
+export interface PortElbow {
+  dia: number;
+  price: number | null;
+  src: string | null;
+  note: string;
+}
+
+/**
  * The PA design the planner snapshots and the optimizer works on: driver and box ids, dimensions in inches, crossovers in Hz,
  * amp watts and balance in dB. The fields after `layout` are looks and cutlist choices; the optimizer leaves them alone.
  */
@@ -1149,9 +1171,10 @@ export interface VentGeometry {
   n: number;
   area: number;
   len: number;
-  /** absent for round tubes, which take the model's default */
-  ec?: number;
+  ec: number;
   dh: number;
+  /** round tubes: the elbows each takes to fit (0 straight) */
+  elbows?: number;
   desc: string;
 }
 
@@ -1509,6 +1532,8 @@ export type Chip<I extends ChipId = ChipId> = [
 
 export interface SubChipsInput {
   subSize: SubSize;
+  /** the driver's mounting depth, in, where its datasheet gives it (the tubes' elbows route behind it) */
+  subDepthIn: SubDriver["depthIn"];
   subBox: Dims3;
   portStyle: PortStyle;
   cVent: VentSpec;

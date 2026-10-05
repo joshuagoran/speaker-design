@@ -18,3 +18,6 @@ export const RETIRED_FOLDED_PORT_STYLE = "folded";
 /** A saved design's port style as the planner takes it: the retired folded layout becomes the bottom slot. */
 export const savedPortStyle = (style: PortStyle | typeof RETIRED_FOLDED_PORT_STYLE): PortStyle =>
   style === RETIRED_FOLDED_PORT_STYLE ? "slots" : style;
+
+/** How a vent description words a tube's elbows, by count (none for a straight tube). */
+export const ELBOW_WORDS = { 1: "one elbow", 2: "two elbows" } as const;

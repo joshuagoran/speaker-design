@@ -13,49 +13,71 @@ import type {
   VentSpec,
 } from "../../types";
 import { isRoundPort, maxFoldedSlotIn, maxStraightSlotIn, minFoldedSlotIn } from "./calc";
+import { subTubeSpan, tubeLayout, type TubeDriver } from "./tubes";
+import { ELBOW_COUNTS, mergeSpans, type ElbowCount } from "../tubeFold";
 import { PA_SLIDERS } from "../../constants/paSliders";
 import { crossoverSlopeName } from "../../constants/crossovers";
 
 // Longest duct each layout can hold, leaving an opening at least as wide as the duct. A bottom slot runs straight
 // while it fits (maxStraight) and folds up the back wall past that, so it holds the longer of the two; a fold is never
 // shorter than its floor run plus the least rise (minFold), so the lengths between the two fit neither way, nor longer
-// than leaves a slot height under the lid (maxFold). `spans` lists the lengths that fit, shortest first.
-export function ductFit(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
+// than leaves a slot height under the lid (maxFold). Round tubes run straight, then take one elbow up the back wall and
+// a second forward under the lid (lib/pa/tubes), each count with its own lengths (`ways`, labelled for the chip).
+// `spans` lists the lengths that fit, shortest first.
+export function ductFit(
+  subBox: Dims3,
+  portStyle: PortStyle,
+  cVent: VentSpec,
+  PT: number,
+  drv: TubeDriver,
+) {
   const inD = subBox.d - PT,
     sH = cVent.slotH;
   const maxStraight = maxStraightSlotIn(subBox, sH, PT); // bottom slot, straight
   const minFold = minFoldedSlotIn(subBox, PT); // bottom slot, folded at the least rise
   const maxFold = maxFoldedSlotIn(subBox, sH, PT); // bottom slot, folded up to a slot height under the lid
   const maxSide = inD - cVent.throat; // side ducts
-  const maxTube = subBox.d - 0.75 - 2 * PT - cVent.dia / 2; // round tubes off the baffle
-  const fit =
+  const ways: { span: readonly [number, number]; what: string }[] =
     portStyle === "slots"
-      ? Math.max(maxStraight, maxFold)
+      ? [
+          { span: [0, maxStraight] as const, what: "a straight slot" },
+          { span: [minFold, maxFold] as const, what: "a slot folded up the back wall" },
+        ].filter(({ span: [a, b] }) => b >= a)
       : isRoundPort(portStyle)
-        ? maxTube
-        : maxSide;
-  const spans: (readonly [number, number])[] =
-    portStyle === "slots"
-      ? [[0, maxStraight] as const, [minFold, maxFold] as const].filter(([a, b]) => b >= a)
-      : [[0, fit]];
-  return { maxStraight, minFold, maxFold, maxSide, maxTube, fit, spans };
+        ? ELBOW_COUNTS.flatMap((e) => {
+            const span = subTubeSpan(subBox, portStyle, cVent, PT, drv, e);
+            return span ? [{ span, what: TUBE_WAYS[e] }] : [];
+          })
+        : [{ span: [0, maxSide] as const, what: "a side duct" }];
+  const spans = mergeSpans(ways.map((w) => w.span));
+  const fit = Math.max(0, ...spans.map(([, b]) => b));
+  return { maxStraight, minFold, maxFold, maxSide, fit, spans, ways };
 }
+/** How the duct-fit chip names a tube with each count of elbows. */
+const TUBE_WAYS = {
+  0: "a straight tube",
+  1: "a tube with an elbow up the back wall",
+  2: "a tube with a second elbow under the lid",
+} as const satisfies Record<ElbowCount, string>;
 /**
- * The duct-length slider's top: its own, or a bottom slot's longest fold where that runs past it. The settings panel and
- * the optimizers take this one limit, so every card's duct is a length the slider can show.
+ * The duct-length slider's top: its own, or a bottom slot's longest fold or the longest tube where that runs past it.
+ * The settings panel and the optimizers take this one limit, so every card's duct is a length the slider can show.
  */
 export const ductLenSliderMax = (
-  subBox: Pick<Dims3, "d" | "h">,
+  subBox: Dims3,
   portStyle: PortStyle,
-  cVent: Pick<VentSpec, "slotH">,
+  cVent: VentSpec,
   PT: number,
+  drv: TubeDriver,
 ) =>
   portStyle === "slots"
     ? Math.max(PA_SLIDERS.ductLen.max, maxFoldedSlotIn(subBox, cVent.slotH, PT))
-    : PA_SLIDERS.ductLen.max;
+    : isRoundPort(portStyle)
+      ? Math.max(PA_SLIDERS.ductLen.max, ductFit(subBox, portStyle, cVent, PT, drv).fit)
+      : PA_SLIDERS.ductLen.max;
 /** Whether a duct `len` long fits the layout: inside one of ductFit's spans. */
 export const ductFits = (spans: ReturnType<typeof ductFit>["spans"], len: number) =>
-  spans.some(([a, b]) => len >= a && len <= b);
+  spans.some(([a, b]) => len >= a - 1e-9 && len <= b + 1e-9);
 // Clear baffle a driver needs: the sub's cone plus its frame.
 export const subDriverClearanceNeededIn = (subSize: number) => subSize + 1.9;
 export function driverClearance(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
@@ -66,11 +88,31 @@ export function driverClearance(subBox: Dims3, portStyle: PortStyle, cVent: Vent
   };
 }
 
+/**
+ * Whether the sub's baffle holds its driver and vents: the driver's clearance after the vents (driverClearance), and
+ * round tubes' flares clear of the walls, each other and the driver's frame (tubeLayout). The optimizers keep only these.
+ */
+export const subBaffleFits = (
+  subBox: Dims3,
+  portStyle: PortStyle,
+  cVent: VentSpec,
+  PT: number,
+  sub: TubeDriver,
+) => {
+  const { clearW, clearH } = driverClearance(subBox, portStyle, cVent, PT);
+  return (
+    Math.min(clearW, clearH) >= subDriverClearanceNeededIn(sub.size) &&
+    (!isRoundPort(portStyle) || tubeLayout(subBox, portStyle, cVent, PT, sub.size).fits)
+  );
+};
+
 /** How far a band may fall short of the band below at their crossover before its chip says it runs out first, dB. */
 export const KEEP_UP_SLACK_DB = 0.5;
 
 /** The title the sub, mid and fill share for a driver its baffle has no room for. */
 const DRIVER_WONT_FIT = "Driver won't fit";
+/** The title of the sub's tube-layout chip, when the round tubes' flares don't fit the baffle round the driver. */
+const TUBES_WONT_FIT = "Tubes won't fit";
 /** The title of the sub's duct-fit chip, past the layout's room or in the lengths a bottom slot can't take either way. */
 const DUCT_TOO_LONG = "Duct too long";
 /** The title the sub and mid share when the driver's program rating sets the level. */
@@ -78,7 +120,9 @@ const THERMALLY_LIMITED = "Thermally limited";
 
 // s: { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW }
 export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
-  const { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW } = s;
+  const { subSize, subDepthIn, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW } =
+    s;
+  const sub = { size: subSize, depthIn: subDepthIn };
   const F: Chip<ChipId<"sub">>[] = [];
   const need = subDriverClearanceNeededIn(subSize);
   const { clearW, clearH } = driverClearance(subBox, portStyle, cVent, PT);
@@ -89,22 +133,37 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       `The baffle needs about ${need.toFixed(1)}″ clear; after the vents it has ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`,
       "subDriverFit",
     ]);
-  const { fit, spans, maxStraight, minFold } = ductFit(subBox, portStyle, cVent, PT);
+  const { fit, spans, ways } = ductFit(subBox, portStyle, cVent, PT, sub);
   if (cVent.len > fit)
     F.push([
       "bad",
       DUCT_TOO_LONG,
       `${cVent.len.toFixed(1)}″ won't fit; this layout holds about ${fit.toFixed(1)}″` +
-        (portStyle === "slots" ? ", folded up the back wall." : "."),
+        (portStyle === "slots"
+          ? ", folded up the back wall."
+          : isRoundPort(portStyle) && ways.length > 1
+            ? `, with ${ways.length === 2 ? "an elbow" : "two elbows"}.`
+            : "."),
       "subDuctFit",
     ]);
-  else if (!ductFits(spans, cVent.len))
+  else if (!ductFits(spans, cVent.len)) {
+    // in a gap: the longest way short of it and the shortest past it
+    const below = ways.filter(({ span }) => span[1] < cVent.len).at(-1),
+      above = ways.find(({ span }) => span[0] > cVent.len);
     F.push([
       "bad",
       DUCT_TOO_LONG,
-      `${cVent.len.toFixed(1)}″ is past the ${maxStraight.toFixed(1)}″ a straight slot holds but short of the ` +
-        `${minFold.toFixed(1)}″ a slot folded up the back wall needs; shorten it or lengthen it.`,
+      `${cVent.len.toFixed(1)}″ is past the ${(below?.span[1] ?? 0).toFixed(1)}″ ${below?.what ?? "the duct"} holds ` +
+        `but short of the ${(above?.span[0] ?? fit).toFixed(1)}″ ${above?.what ?? "the duct"} needs; shorten it or lengthen it.`,
       "subDuctFit",
+    ]);
+  }
+  if (isRoundPort(portStyle) && !tubeLayout(subBox, portStyle, cVent, PT, subSize).fits)
+    F.push([
+      "bad",
+      TUBES_WONT_FIT,
+      `${cVent.nt} × ${cVent.dia}″ tubes with their flares don't fit the baffle beside the driver; fewer or narrower tubes, or a wider box.`,
+      "subTubeFit",
     ]);
   F.push(
     subLbLoaded > 125

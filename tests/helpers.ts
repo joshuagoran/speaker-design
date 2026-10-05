@@ -4,6 +4,8 @@ import type { Chip, ChipId, ChipSeverity, ThieleSmall, VentSpec } from "../src/t
 
 // The tests give a vent only the fields its layout reads; the cast marks the partial on purpose.
 export const vent = (v: Partial<VentSpec>) => v as VentSpec;
+/** An 18″ sub driver with no published depth, for the vent functions round tubes read it in. */
+export const DRV18 = { size: 18 } as const;
 // Chips are found by their id (a typo fails the type check), never by their words; `kind` narrows to one severity.
 export const findChip = <I extends ChipId>(
   F: readonly Chip<I>[],

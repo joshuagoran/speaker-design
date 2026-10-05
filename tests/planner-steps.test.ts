@@ -5,12 +5,16 @@ import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
 import { PA_SLIDERS, PA_THROAT_MAX_VSLOT1 } from "../src/constants/paSliders";
 import { ductFit, ductFits, ductLenSliderMax } from "../src/lib/pa/chips";
 import { paCurrent } from "./optimizer-dump-cases";
+import { SUB_OPTIONS } from "../src/lib/data";
+import { byIdOrThrow } from "../src/lib/tables";
+import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import type { PaDesignConfig, PaOptimizerInput, PaOptimizerResult, SliderSpec } from "../src/types";
 
 // Every card either search returns, and the near miss's closest design, loads as a design the planner can show: each
 // field the optimizer sets sits on its slider's step and inside its range (a value that is your design's own, such as a
 // side you locked, is left as you set it).
 
+const subOf = (c: PaDesignConfig) => byIdOrThrow(SUB_OPTIONS, c.sub, CATALOG_TABLE_NAMES.subs);
 const fields = (c: PaDesignConfig): [string, number, SliderSpec][] => [
   ["sub width", c.cDim.w, PA_SLIDERS.subW],
   ["sub height", c.cDim.h, PA_SLIDERS.subH],
@@ -22,7 +26,10 @@ const fields = (c: PaDesignConfig): [string, number, SliderSpec][] => [
   [
     "duct length",
     c.cVent.len,
-    { ...PA_SLIDERS.ductLen, max: ductLenSliderMax(c.cDim, c.portStyle, c.cVent, c.wall) },
+    {
+      ...PA_SLIDERS.ductLen,
+      max: ductLenSliderMax(c.cDim, c.portStyle, c.cVent, c.wall, subOf(c)),
+    },
   ],
   ["slot height", c.cVent.slotH, PA_SLIDERS.slotH],
   [
@@ -51,7 +58,7 @@ function checkResult(what: string, r: PaOptimizerResult, cur?: PaDesignConfig) {
     // and a duct the layout can build (a bottom slot never in the lengths that fit neither straight nor folded)
     if (own.get("duct length") !== c.cVent.len)
       assert.ok(
-        ductFits(ductFit(c.cDim, c.portStyle, c.cVent, c.wall).spans, c.cVent.len),
+        ductFits(ductFit(c.cDim, c.portStyle, c.cVent, c.wall, subOf(c)).spans, c.cVent.len),
         `${what}, ${label}: duct length ${c.cVent.len} doesn't fit the box`,
       );
     for (const [name, x, s] of fields(c)) {

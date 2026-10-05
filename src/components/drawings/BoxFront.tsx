@@ -1,6 +1,7 @@
 import type { PaBoxGeometry } from "../../types";
 import { PAL } from "../../styles/palette";
 import { isRoundPort } from "../../lib/pa/calc";
+import { tubeLayout, type BafflePoint } from "../../lib/pa/tubes";
 
 interface Props {
   g: PaBoxGeometry;
@@ -84,22 +85,19 @@ export function BoxFront({ g, cur }: Props) {
           fill={PAL.ink}
         />,
       );
-  } else
-    for (let i = 0; i < (v.nt || 1); i++) {
-      const n = v.nt || 1,
-        gap = a.sb.w / (n + 1);
-      vent.push(
-        <circle
-          key={i}
-          cx={a.sb.x + gap * (i + 1)}
-          cy={a.sb.y + a.sb.h - t - (v.dia * k) / 2 - 2}
-          r={(v.dia * k) / 2}
-          fill={PAL.ink}
-        />,
-      );
-    }
-  const ventH =
-    g.portStyle === "slots" ? v.slotH * k + t : isRoundPort(g.portStyle) ? v.dia * k + 4 : 0;
+  }
+  // round tubes and their driver where the planner lays them out (lib/pa/tubes)
+  const tubes = isRoundPort(g.portStyle)
+    ? tubeLayout(g.sub, g.portStyle, v, g.wall, g.subSize)
+    : null;
+  const onBaffle = (p: BafflePoint) => ({
+    cx: a.sb.x + a.sb.w / 2 + p.x * k,
+    cy: a.sb.y + a.sb.h - t - p.y * k,
+  });
+  tubes?.tubes.forEach((p, i) =>
+    vent.push(<circle key={i} {...onBaffle(p)} r={(v.dia * k) / 2} fill={PAL.ink} />),
+  );
+  const ventH = g.portStyle === "slots" ? v.slotH * k + t : 0;
   const driver = (box: Rect, size: number, below = 0) => (
     <circle
       cx={box.x + box.w / 2}
@@ -156,10 +154,20 @@ export function BoxFront({ g, cur }: Props) {
           strokeWidth="1.2"
         />
       )}
-      {driver(
-        g.tower ? { ...a.sb, y: a.mb.y + a.mb.h, h: a.sb.h - a.mb.h } : a.sb,
-        g.subSize,
-        ventH,
+      {tubes && !g.tower ? (
+        <circle
+          {...onBaffle(tubes.driver)}
+          r={(Math.min(g.subSize * 0.9, g.sub.w - 2 * g.wall) * k) / 2}
+          fill={PAL.edge}
+          stroke={PAL.muted}
+          strokeWidth="1"
+        />
+      ) : (
+        driver(
+          g.tower ? { ...a.sb, y: a.mb.y + a.mb.h, h: a.sb.h - a.mb.h } : a.sb,
+          g.subSize,
+          ventH,
+        )
       )}
       {driver(a.mb, g.midSize)}
     </svg>

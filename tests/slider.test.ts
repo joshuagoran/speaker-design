@@ -2,7 +2,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { rangesOnSteps, snapDrag, snapToRanges } from "../src/components/ui/Slider";
 import { ductFit } from "../src/lib/pa/chips";
-import { vent } from "./helpers";
+import { vent, DRV18 } from "./helpers";
 
 test("slider ranges: edges move inward to the steps, and a range with no step drops out", () => {
   assert.deepEqual(
@@ -73,7 +73,13 @@ test("slider ranges: a drag that wobbles inside a gap holds the side it jumped t
 });
 test("slider ranges: a bottom slot's duct lengths skip the ones that fit neither way", () => {
   // 24 × 30 × 22, 3 in slot, 3/4 in ply: straight to 18.25, folded from 22.25 to 43.75
-  const { spans } = ductFit({ w: 24, h: 30, d: 22 }, "slots", vent({ slotH: 3, len: 14 }), 0.75);
+  const { spans } = ductFit(
+    { w: 24, h: 30, d: 22 },
+    "slots",
+    vent({ slotH: 3, len: 14 }),
+    0.75,
+    DRV18,
+  );
   const r = rangesOnSteps(spans, 3, 50, 0.5);
   assert.deepEqual(r, [
     [3, 18],

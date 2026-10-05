@@ -133,9 +133,12 @@ describe("stack scene", () => {
       expect(fins).toHaveLength(2);
     });
 
-    test("round1 has one tube with two bells", () => {
+    test("round1 has one tube with two bells, turned up the back wall when it's too long to run straight", () => {
+      // the default 8″ tube, 11″ long, in an 18″ deep box: 16.5″ from the baffle front to the back wall holds 8.5″
+      // straight, so it takes an elbow: a run back, a quarter-torus and a riser
       const g = withPort("round1");
-      expect(tubes(g)).toBe(1);
+      expect(tubes(g)).toBe(2);
+      expect(portMeshes(g, "TorusGeometry")).toBe(1);
       expect(bells(g)).toBe(2);
     });
 

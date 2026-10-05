@@ -33,6 +33,9 @@ import type {
   SubTS,
   VentSpec,
 } from "../../types";
+import { subTubeEndCorrection, subTubeSpan, type TubeDriver } from "./tubes";
+import { ELBOW_COUNTS, MAX_ELBOWS, type ElbowCount } from "../tubeFold";
+import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 
 const RHO = 1.18,
   C = 343,
@@ -405,23 +408,28 @@ export function endCorrection2D(h: number, X: number, L = Infinity) {
   return ((2 * X * X) / (Math.PI ** 3 * h)) * sum;
 }
 
-/** A vent as the box model takes it: openings, area (in²), and its end correction in inches (none: the round default). */
+/** A vent as the box model takes it: openings, area (in²), and its end correction in inches. */
 export interface VentShape {
   n: number;
   area: number;
-  ec: number | null;
+  ec: number;
 }
 /**
  * ventGeometry's openings, area and end correction, with the fast end correction. `folded` says whether a bottom slot
- * folds up the back wall (by default, as the planner builds it: when it is too long to run straight); a solver that
- * looks for the straight length passes false.
+ * folds up the back wall, and `elbows` how many elbows round tubes take (by default, as the planner builds them: a slot
+ * folds when it is too long to run straight, a tube takes the fewest elbows that fit); a solver that looks for one
+ * way's length passes it.
  */
 export function ventShape(
   style: PortStyle,
   box: Dims3,
   v: VentSpec,
   t: number,
-  folded = style === "slots" && slotFolds(box, v, t),
+  drv: TubeDriver,
+  {
+    folded = style === "slots" && slotFolds(box, v, t),
+    elbows,
+  }: { folded?: boolean; elbows?: ElbowCount } = {},
 ): VentShape {
   const iw = box.w - 2 * t,
     ih = box.h - 2 * t;
@@ -445,17 +453,17 @@ export function ventShape(
         rectangleEndCorrection(2 * v.slotH, iw - 2 * t) + slotInnerEndCorrection(box, v, t, folded),
     };
   const r = v.dia / 2;
-  return { n: v.nt, area: v.nt * Math.PI * r * r, ec: null };
+  return {
+    n: v.nt,
+    area: v.nt * Math.PI * r * r,
+    ec: subTubeEndCorrection(box, style, v, t, drv, elbows),
+  };
 }
 /** The effective length (m) a vent needs for a tuning in a net volume (ventTuning solved for Leff). */
 export const effectiveLengthFor = (areaIn2: number, VbL: number, Fb: number) =>
   ((areaIn2 * 0.00064516) / (VbL / 1000)) * (C / (2 * Math.PI * Fb)) ** 2;
 /** The duct length (in) that gives an effective length (m): ventTuning's Leff less the end correction. */
-export function ductLengthFor(vs: VentShape, Leff: number) {
-  const ecM =
-    vs.ec !== null ? vs.ec * 0.0254 : 1.46 * Math.sqrt((vs.area * 0.00064516) / vs.n / Math.PI);
-  return (Leff - ecM) / 0.0254;
-}
+export const ductLengthFor = (vs: VentShape, Leff: number) => Leff / 0.0254 - vs.ec;
 
 /**
  * The sub box's internal wood (internalWoodLiters of cutParts' sub panels), in³: baffle cleats, window braces and the
@@ -506,9 +514,13 @@ export const subNetLiters = (
       (subWoodIn3(style, box, t, inset, v) * 16.387) / 1000,
   );
 
-/** One box to solve: the vent, plywood and baffle inset, the sub's displacement, and the net volume and tuning it must give. */
+/**
+ * One box to solve: the vent, plywood and baffle inset, the sub (its displacement, and its size and depth for round
+ * tubes' layout and elbows), and the net volume and tuning it must give.
+ */
 export interface ShapeTarget {
   style: PortStyle;
+  drv: TubeDriver;
   vent: VentSpec;
   t: number;
   inset: number;
@@ -546,6 +558,42 @@ function illinoisRoot(g: (x: number) => number, a: number, b: number) {
   return (a + b) / 2;
 }
 /**
+ * The length round tubes need for an effective length `Leff` (m): the shortest root of len + ec(len) = Leff/0.0254 that
+ * builds, trying the elbow counts fewest first, each inside its own span (the correction rises with the length there,
+ * as the mouth nears the wall or lid it faces, and drops by the bend correction with each elbow, so a tuning can fall
+ * between two counts' spans). With no count reaching it, the straight root (past the room), not `reached`, so a solver's
+ * steps carry on.
+ */
+export function tubeLengthFor(
+  style: PortStyle,
+  box: Dims3,
+  v: VentSpec,
+  t: number,
+  drv: TubeDriver,
+  Leff: number,
+): { len: number; reached: boolean } {
+  const w = { ...v };
+  const g = (e: ElbowCount) => (x: number) => {
+    w.len = x;
+    return x - ductLengthFor(ventShape(style, box, w, t, drv, { elbows: e }), Leff);
+  };
+  for (const e of ELBOW_COUNTS) {
+    const span = subTubeSpan(box, style, w, t, drv, e);
+    if (!span) continue;
+    const ge = g(e),
+      [a, b] = span;
+    if (ge(b) < 0) continue; // even its longest tunes higher: more elbows
+    if (ge(a) > 0) continue; // even its shortest tunes lower: the next count's bends may reach it
+    return { len: illinoisRoot(ge, a, b), reached: true };
+  }
+  // the straight root: the correction is bounded (the wall's term by its value at a radius), so it lies under Leff plus
+  // a diameter for each elbow's bend correction
+  const g0 = g(0),
+    hi = Leff / 0.0254 + MAX_ELBOWS * -SHARP_BEND_CORRECTION * v.dia + v.dia;
+  return { len: g0(0) > 0 ? 0 : illinoisRoot(g0, 0, hi), reached: false };
+}
+
+/**
  * The box with two sides fixed whose third side (`free`) and duct length give exactly the target's net volume and
  * tuning: Newton steps on the free side, each with the duct length for the tuning at that size (the slot and side-duct
  * end corrections depend on the gap behind the duct, so the length is iterated with it). Null when it doesn't settle
@@ -557,10 +605,10 @@ export function solveShape(
   free: keyof Dims3,
   start: number,
 ): SolvedShape | null {
-  const { style, t, inset, disp, VbL, Fb } = target;
+  const { style, drv, t, inset, disp, VbL, Fb } = target;
   const box = { ...fixed, [free]: start };
   const v = { ...target.vent, len: 0 };
-  const fixedEc = isRoundPort(style);
+  const round = isRoundPort(style);
   let len = 0;
   let prev: { x: number; err: number } | null = null;
   for (let it = 0; it < 60; it++) {
@@ -568,13 +616,19 @@ export function solveShape(
     // the duct length for the tuning at this size; where the end correction reads the gap behind the duct, the root of
     // len + ec(len) = Leff, which rises with the length (a longer duct leaves a smaller gap, a larger correction). A
     // bottom slot is solved straight first; only when that is longer than the straight run holds does it fold.
-    let vs = ventShape(style, box, v, t, false);
+    let vs = ventShape(style, box, v, t, drv, { folded: false, elbows: 0 });
     const Leff = effectiveLengthFor(vs.area, VbL, Fb);
     v.len = ductLengthFor(vs, Leff);
-    if (!fixedEc) {
+    if (round) {
+      // round tubes: the shortest length that tunes it, over the elbow counts (tubeLengthFor)
+      const tube = tubeLengthFor(style, box, v, t, drv, Leff);
+      v.len = tube.len;
+      unreached = !tube.reached;
+      vs = ventShape(style, box, v, t, drv);
+    } else {
       const g = (x: number) => {
         v.len = x;
-        return x - ductLengthFor(ventShape(style, box, v, t, false), Leff);
+        return x - ductLengthFor(ventShape(style, box, v, t, drv, { folded: false }), Leff);
       };
       // secant steps from the last length (the side moved a little, so the root did too), else from near Leff; the
       // bracketed steps below when they stray
@@ -611,12 +665,12 @@ export function solveShape(
         const straightLen = v.len;
         const gf = (x: number) => {
           v.len = x;
-          return x - ductLengthFor(ventShape(style, box, v, t, true), Leff);
+          return x - ductLengthFor(ventShape(style, box, v, t, drv, { folded: true }), Leff);
         };
         unreached = gf(straightMax) >= 0;
         v.len = unreached ? straightLen : illinoisRoot(gf, straightMax, Leff / 0.0254);
       }
-      vs = ventShape(style, box, v, t);
+      vs = ventShape(style, box, v, t, drv);
     }
     len = v.len;
     const net =
