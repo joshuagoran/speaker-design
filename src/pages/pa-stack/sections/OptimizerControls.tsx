@@ -32,6 +32,8 @@ interface Props {
     | "undoOptimizerLoad"
     | "saveOptimizerResult"
     | "currentDesignOutput"
+    | "compareDriverRows"
+    | "swapDriver"
   >;
 }
 
@@ -63,6 +65,8 @@ export function OptimizerControls({ planner }: Props) {
     undoOptimizerLoad,
     saveOptimizerResult,
     currentDesignOutput,
+    compareDriverRows,
+    swapDriver,
   } = planner;
   return (
     <>
@@ -81,6 +85,8 @@ export function OptimizerControls({ planner }: Props) {
           run={startOptimizerSearch}
           runFull={() => startOptimizerSearch(undefined, "full")}
           retry={retryOptimizerSearch}
+          compareRows={compareDriverRows}
+          onSwapDriver={swapDriver}
           runningMode={runningMode}
           fullGridLines={fullGridLines}
           busy={isOptimizing}

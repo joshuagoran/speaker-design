@@ -1,0 +1,46 @@
+import { test } from "vite-plus/test";
+import assert from "node:assert";
+import { compareDrivers } from "../src/lib/pa/compareDrivers";
+import { designProblems, evaluateDesign, paSearchDesign } from "../src/lib/pa/optimize";
+import { CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
+import { paCurrent } from "./optimizer-dump-cases";
+
+test("compare drivers: every option once, yours as the planner models it, the ones that add no problem first", () => {
+  const cur = paSearchDesign({ cur: paCurrent("lil block stack") });
+  const lim = { maxLb: 125, budget: 1100 };
+  const counts = { sub: SUB_OPTIONS, mid: MID_OPTIONS, cd: CD_OPTIONS, horn: HORN_OPTIONS };
+  for (const part of ["sub", "mid", "cd", "horn"] as const) {
+    const rows = compareDrivers(cur, part, lim);
+    assert.deepStrictEqual(
+      rows.map((r) => r.id).sort(),
+      counts[part].map((o) => o.id).sort(),
+      `${part}: every option once`,
+    );
+    const yours = rows.filter((r) => r.yours);
+    assert.strictEqual(yours.length, 1, `${part}: one row is yours`);
+    const m = evaluateDesign(cur);
+    assert.ok(m && yours[0].m, `${part}: yours is modelled`);
+    assert.strictEqual(yours[0].m.out, m.out);
+    // the weight the part brings: its box for the sub and mid, the part itself for the driver and horn
+    const own = { sub: m.subLb, mid: m.midLb, cd: null, horn: null }[part];
+    if (own != null) assert.strictEqual(yours[0].lb, own, `${part}: its box's weight`);
+    else assert.ok(yours[0].lb != null && yours[0].lb > 0, `${part}: its own weight`);
+    assert.deepStrictEqual(
+      yours[0].problems.map((p) => p.text),
+      designProblems(m, lim),
+    );
+    // your own problems are your design's too, but for those whose amount differs per option
+    assert.ok(
+      yours[0].problems.every(
+        (p) => p.yoursToo || ["midQtc", "overWeight", "overBudget"].includes(p.id),
+      ),
+      `${part}: your problems are marked as yours`,
+    );
+    const adds = (r: (typeof rows)[number]) => r.problems.some((p) => !p.yoursToo);
+    const firstAdding = rows.findIndex(adds);
+    assert.ok(
+      firstAdding < 0 || rows.slice(firstAdding).every(adds),
+      `${part}: the ones that add no problem come first`,
+    );
+  }
+});

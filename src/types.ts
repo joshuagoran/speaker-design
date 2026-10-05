@@ -1965,7 +1965,48 @@ export interface PaOptimizerResult {
 
 /** A check on the PA stack's sub, mid or horn. */
 export type PaChipId = ChipId<"sub" | "mid" | "horn">;
+/**
+ * What a PA design fails, by id: a check's chip, or one of the search's own tests (it can't be modelled, the mid's Qtc,
+ * horn and driver exits that differ, a box over the weight limit, drivers over the budget).
+ */
+export type PaProblemId =
+  | PaChipId
+  | "unmodelled"
+  | "midQtc"
+  | "exitMismatch"
+  | "overWeight"
+  | "overBudget";
+/** A problem with a design: its id and its words. */
+export interface PaProblem {
+  id: PaProblemId;
+  text: string;
+}
 /** The limits a PA design is checked against: the heaviest box, the driver budget and the warnings let through. */
+/** The parts the driver comparison swaps: the drivers and the horn (`PaLockKey`s, so each has its lock). */
+export type PaDriverPart = Extract<PaLockKey, "sub" | "mid" | "cd" | "horn">;
+
+/** One option in the driver comparison: the part's own price, and the whole design's numbers with it in. */
+export interface PaDriverCompareRow {
+  id: string;
+  name: string;
+  /** the part's own price; null when unpublished */
+  price: number | null;
+  /** your design's part */
+  yours: boolean;
+  /** the weight it brings, lb: the sub's or mid's box with the driver in it, or the compression driver or horn itself
+   * (they add to no box); null when the box can't be modelled */
+  lb: number | null;
+  /** the design with this part (null: the planner can't model it) */
+  m: Pick<
+    PaEvaluation,
+    "price" | "priceKnown" | "out" | "f3" | "qtc" | "midGap" | "hornGap"
+  > | null;
+  /** what fails the planner's checks or the optimizer's limits (empty: passes); `yoursToo` when your design fails the
+   * same way (whatever you pick, so it doesn't tell the options apart; amounts over a limit and the mid's Qtc differ
+   * per option, so those are never marked) */
+  problems: (PaProblem & { yoursToo: boolean })[];
+}
+
 export interface PaProblemLimits {
   maxLb: number;
   budget: number;

@@ -1,5 +1,6 @@
 import { LOCK_KEYS } from "../../../constants/lockKeys";
 import { PA_RUNNERS } from "../../../lib/pa/runOptimizer";
+import { compareDrivers } from "../../../lib/pa/compareDrivers";
 import { paExactGridText } from "../../../lib/pa/optimizeExact";
 import { evaluateDesign as evaluateConfig, pickOptimizedFields } from "../../../lib/pa/optimize";
 import { useDesignPreview } from "../../../hooks/useDesignPreview";
@@ -17,6 +18,8 @@ import type {
   PaOptimizerInputState,
   PaOptimizerLocks,
   PaOptimizerResult,
+  PaDriverCompareRow,
+  PaDriverPart,
   PaPlannerLocks,
   PaRunMode,
   PaSearchOverrides,
@@ -72,6 +75,10 @@ export interface PaOptimizer
   retryOptimizerSearch: (over: PaSearchOverrides) => Promise<void>;
   loadOptimizerResult: (k: PaOptimizerCard) => Promise<void>;
   saveOptimizerResult: (k: PaOptimizerCard) => Promise<void>;
+  /** every option for a part in your design as it is (the rest unchanged), checked against the optimizer's limits */
+  compareDriverRows: (part: PaDriverPart) => PaDriverCompareRow[];
+  /** puts a compared option into your design */
+  swapDriver: (part: PaDriverPart, id: string) => void;
   /** the current design's clean sub output in dB; null when the optimizer is off or the design can't be scored */
   currentDesignOutput: number | null;
 }
@@ -208,6 +215,12 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
         }
       })()
     : null;
+  const compareDriverRows = (part: PaDriverPart) =>
+    compareDrivers(preview.baseDesign(), part, {
+      maxLb: optimizerInput.maxLb,
+      budget: optimizerInput.budget,
+    });
+  const swapDriver = (part: PaDriverPart, id: string) => restore({ ...snapshot(), [part]: id });
   return {
     isOptimizerOn,
     setIsOptimizerOn,
@@ -235,5 +248,7 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     undoOptimizerLoad,
     saveOptimizerResult,
     currentDesignOutput,
+    compareDriverRows,
+    swapDriver,
   };
 }
