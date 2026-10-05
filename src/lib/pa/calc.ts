@@ -843,6 +843,16 @@ export function maxOutputCurve(
     };
   });
 }
+// The sub-bass band, Hz: the low end the sub's readout averages, an absolute level to compare designs by (F3 is relative
+// to each driver's own passband).
+export const SUB_BASS_BAND_HZ = [30, 50] as const;
+// The mean level of a curve over the sub-bass band, dB: on maxOutputCurve, the sub-bass the design can play. The grid is
+// log-spaced, so this is a mean over log frequency.
+export function subBassLevel(curve: FrequencyPoint[]) {
+  const [lo, hi] = SUB_BASS_BAND_HZ;
+  const band = curve.filter((o) => o.f >= lo && o.f <= hi);
+  return band.reduce((a, o) => a + o.spl, 0) / band.length;
+}
 export const nearestPoint = <P extends { f: number }>(curve: P[], f: number): P =>
   curve.reduce((b, o) => (Math.abs(o.f - f) < Math.abs(b.f - f) ? o : b));
 // One point of the sub at its music limit (one drive level for the whole band) through the lowpass at xoLo

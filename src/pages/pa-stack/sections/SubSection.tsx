@@ -7,7 +7,7 @@ import { ResponseChart } from "../../../components/charts/ResponseChart";
 import { MAX_SPL_TIP, STATS } from "../../../components/optimizer/StatRow";
 import { StatRowGrid, type StatRowItem } from "../../../components/stats/StatRowGrid";
 import { subChips } from "../../../lib/pa/chips";
-import { nearestPoint } from "../../../lib/pa/calc";
+import { nearestPoint, subBassLevel } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { xmaxRows } from "../../../lib/xmax";
 import { LIMIT_NAMES, SUB_LIMIT_NAMES } from "../../../constants/limits";
@@ -81,8 +81,8 @@ export function SubSection({ planner }: Props) {
               tiles={[
                 [STATS.netVolume, subNetLiters.toFixed(0), "L"],
                 [STATS.tuningFb, subModelled.mdl.Fb.toFixed(1), "Hz"],
-                ["System F3", subModelled.mdl.f3.toFixed(0), "Hz"],
-                ["Max SPL @ 35 Hz", nearestPoint(subModelled.maxCurve, 35).spl.toFixed(1), "dB"],
+                [STATS.systemF3, subModelled.mdl.f3.toFixed(0), "Hz"],
+                [STATS.subBass, subBassLevel(subModelled.maxCurve).toFixed(1), "dB"],
                 ["Weight", subWeightLoadedLb.toFixed(0), "lb"],
               ]}
             />

@@ -1863,6 +1863,8 @@ export interface PaEvaluation {
   out: number;
   spl45: number;
   spl35: number;
+  /** the sub's maximum-output curve averaged over the sub-bass band (SUB_BASS_BAND_HZ), dB */
+  subBass: number;
   f3: number;
   Fb: number;
   who: SubLimitWho;
@@ -1885,6 +1887,7 @@ export interface PaMetricsSummary {
   heaviest: number;
   out: number;
   spl45: number;
+  subBass: number;
   f3: number;
   Fb: number;
   who: SubLimitWho;
@@ -1895,6 +1898,7 @@ export interface PaMetricsDelta {
   price: number;
   heaviest: number;
   out: number;
+  subBass: number;
   f3: number;
 }
 
