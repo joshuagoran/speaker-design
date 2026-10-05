@@ -172,7 +172,7 @@ export function DispersionMap({ map, title }: Props) {
         width={W}
         height={H}
         viewBox={`0 0 ${W} ${H}`}
-        className="block max-w-full h-auto"
+        className="block max-w-full h-auto select-none"
         style={{ touchAction: "pan-y" }}
         onPointerMove={move}
         onPointerDown={move}

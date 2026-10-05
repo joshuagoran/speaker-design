@@ -266,7 +266,9 @@ export function CoverageMap({
         viewBox={`0 0 ${W} ${H}`}
         width={W}
         height={H}
-        className="block max-w-full h-auto mx-auto outline-none focus-visible:outline-2 focus-visible:outline-stone-900"
+        // select-none: a drag would otherwise select the labels, and the next drag that starts on that selection
+        // becomes the browser's own drag-and-drop (a ghost of the map, the pointer cancelled, the map frozen)
+        className="block max-w-full h-auto mx-auto select-none outline-none focus-visible:outline-2 focus-visible:outline-stone-900"
         style={{ touchAction: "none", cursor: drag ? "grabbing" : "crosshair" }}
         tabIndex={0}
         role="img"

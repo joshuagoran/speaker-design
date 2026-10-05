@@ -171,6 +171,7 @@ export function ResponseChart({
         viewBox={`0 0 ${W} ${H}`}
         role="img"
         aria-label={`${yLabel} against frequency`}
+        className="select-none"
         style={{ display: "block", width: "100%", height: "auto", touchAction: "pan-y" }}
         onPointerMove={move}
         onPointerDown={move}

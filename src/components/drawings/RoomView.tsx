@@ -42,7 +42,7 @@ export function RoomView({ spacing, toe, seat, setSeat, angles }: Props) {
   return (
     <svg
       viewBox={`0 0 ${W} ${H + 20}`}
-      className="w-full h-auto rounded border border-stone-300 bg-white"
+      className="w-full h-auto rounded border border-stone-300 bg-white select-none"
       style={{ touchAction: "none" }}
       onPointerDown={drag}
       onPointerMove={drag}
