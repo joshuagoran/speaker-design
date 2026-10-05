@@ -8,6 +8,7 @@ import { CoveragePage } from "./pages/coverage/CoveragePage";
 import { useHifiPlanner } from "./pages/hifi/useHifiPlanner";
 import { useFillsPlanner } from "./pages/fills/useFillsPlanner";
 import { useEffect, useState, type MouseEvent } from "react";
+import { FONT } from "./styles/fonts";
 
 /** The pages: the PA stack's five ("planner" is Design) and Hi-fi. */
 type AppTab = "planner" | "coverage" | "cutlist" | "fills" | "notes" | "hifi";
@@ -38,7 +39,7 @@ export function App() {
   const hifi = useHifiPlanner();
   const fills = useFillsPlanner();
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900" style={{ fontFamily: "var(--font)" }}>
+    <div className="min-h-screen bg-stone-50 text-stone-900" style={{ fontFamily: FONT }}>
       <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 max-w-6xl mx-auto">
         {(() => {
           // two levels: the project (PA stack or hi-fi), then the PA stack's own pages
@@ -68,11 +69,7 @@ export function App() {
                 <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">
                   SpeakNow
                 </h1>
-                <nav
-                  className="flex gap-1"
-                  style={{ fontFamily: "var(--font)" }}
-                  aria-label="Projects"
-                >
+                <nav className="flex gap-1" style={{ fontFamily: FONT }} aria-label="Projects">
                   {projectLinks.map(([v, label, href, on]) => (
                     <a
                       key={v}
@@ -89,7 +86,7 @@ export function App() {
               {isPaProject && (
                 <nav
                   className="flex gap-4 mt-3 border-b border-stone-300"
-                  style={{ fontFamily: "var(--font)" }}
+                  style={{ fontFamily: FONT }}
                   aria-label="PA stack pages"
                 >
                   {paPageLinks.map(([v, label, href]) => (

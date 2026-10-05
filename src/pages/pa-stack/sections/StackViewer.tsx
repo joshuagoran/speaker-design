@@ -41,6 +41,7 @@ export function StackViewer({ planner }: Props) {
     subWithBox,
     portGeom,
   } = planner;
+  const fullScreenLabel = isFull3d ? "Close full screen" : "Full screen";
   return (
     <>
       <section
@@ -52,8 +53,8 @@ export function StackViewer({ planner }: Props) {
       >
         <button
           onClick={() => setIsFull3d((v) => !v)}
-          aria-label={isFull3d ? "Close full screen" : "Full screen"}
-          title={isFull3d ? "Close full screen" : "Full screen"}
+          aria-label={fullScreenLabel}
+          title={fullScreenLabel}
           className="absolute top-2 right-2 z-10 w-9 h-9 inline-flex items-center justify-center rounded border border-stone-300 bg-white/90 hover:border-stone-500"
         >
           <svg

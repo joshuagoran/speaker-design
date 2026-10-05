@@ -649,7 +649,12 @@ test("coverage: a map of the subs alone doesn't change with their delay, in the 
 });
 
 /** The planner's f18fh500 sub and bc12ndl76 mid in a stack, their curves with their boxes' phase. */
-function plannerStack(xoLo: number, hpf: number, hpType: HighpassType) {
+function plannerStack(
+  xoLo: number,
+  hpf: number,
+  hpType: HighpassType,
+  orderLo: CoverageStack["orderLo"] = 4,
+) {
   const mid = MID_OPTIONS.find((o) => o.id === "bc12ndl76"),
     sub = SUB_OPTIONS.find((o) => o.id === "f18fh500");
   assert.ok(mid?.ts && sub?.ts);
@@ -675,7 +680,7 @@ function plannerStack(xoLo: number, hpf: number, hpType: HighpassType) {
     inset: 0.75,
     xoLo,
     xoHi: 900,
-    xoLoOrder: 4,
+    xoLoOrder: orderLo,
     xoHiOrder: 4,
     mAmpW: 400,
     phase: true,
@@ -686,13 +691,14 @@ function plannerStack(xoLo: number, hpf: number, hpType: HighpassType) {
     sub: { zIn: 15, Sd: sub.ts.Sd },
     mid: { zIn: 40, Sd: mid.ts.Sd },
     xoLo,
+    orderLo,
     footprint: { w: 24, d: 26 },
     midW: midDims.w,
   };
   const lv = balanceLevels(
     {
       sub: withOwnPhase(
-        subMusicThroughLowpass(s.mdl, s.lim, s.AMP_V, xoLo, 4),
+        subMusicThroughLowpass(s.mdl, s.lim, s.AMP_V, xoLo, orderLo),
         phasedCurve(s.mdl.curve),
         (f) => highpassPhase(f, hpf, hpType),
       ),
@@ -736,6 +742,32 @@ test("coverage: the auto sub delay follows the design smoothly, never a period o
         last = ms;
       }
     }
+});
+
+test("coverage: an LR48 low crossover steepens the planner's skirts an octave either side by 24 dB/oct, and leaves the crossover", () => {
+  // xoLo at the kick band's foot, so an octave above it is the band's top, where only the mid should play
+  const xoLo = 80;
+  const lr24 = plannerStack(xoLo, 30, "BW24", 4),
+    lr48 = plannerStack(xoLo, 30, "BW24", 8);
+  const db = (v: Complex | undefined) => (v ? 20 * Math.log10(Math.hypot(v.re, v.im)) : -Infinity);
+  const band = (p: typeof lr24, b: "sub" | "mid", f: number) => db(outsAt(p.planner, p.lv, f)[b]);
+  // Linkwitz-Riley: |H| = 1 / (1 + 2^n) an octave from fc, so LR48 is 20 log10(17 / 257) ≈ −23.6 dB under LR24
+  const extra = 20 * Math.log10(17 / 257);
+  const above = band(lr48, "sub", 2 * xoLo) - band(lr24, "sub", 2 * xoLo),
+    below = band(lr48, "mid", xoLo / 2) - band(lr24, "mid", xoLo / 2);
+  assert.ok(Math.abs(above - extra) < 1, `sub an octave above xoLo: ${above.toFixed(2)} dB`);
+  assert.ok(Math.abs(below - extra) < 1, `mid an octave below xoLo: ${below.toFixed(2)} dB`);
+  // the sub's skirt sits that much further under the mid at the kick band's top
+  const gap = (p: typeof lr24) => band(p, "sub", 2 * xoLo) - band(p, "mid", 2 * xoLo);
+  assert.ok(
+    gap(lr48) - gap(lr24) < extra + 1,
+    `${gap(lr24).toFixed(1)} to ${gap(lr48).toFixed(1)} dB`,
+  );
+  // at the crossover both orders are 6 dB down: each band's level is unchanged
+  for (const b of ["sub", "mid"] as const) {
+    const d = band(lr48, b, xoLo) - band(lr24, b, xoLo);
+    assert.ok(Math.abs(d) < 0.1, `${b} at xoLo: ${d.toFixed(3)} dB`);
+  }
 });
 
 test("coverage: a box model run without its phase can't be given to the map", () => {

@@ -1,6 +1,7 @@
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { LIMIT_NAMES } from "../../../constants/limits";
+import { FONT } from "../../../styles/fonts";
 
 interface Props {
   planner: Pick<PaPlanner, "subModelled" | "subWeightLoadedLb">;
@@ -14,7 +15,7 @@ export function MobileSummaryStrip({ planner }: Props) {
       {subModelled && (
         <div
           className="md:hidden sticky top-0 z-30 bg-stone-50/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center"
-          style={{ fontFamily: "var(--font)" }}
+          style={{ fontFamily: FONT }}
         >
           {[
             ["Fb", `${subModelled.mdl.Fb.toFixed(1)}`, "Hz"],

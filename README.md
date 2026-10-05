@@ -50,6 +50,8 @@ pnpm install            # or `vp install` with the global vp CLI
 pnpm exec vp check      # format, lint, type check
 pnpm exec vp test       # tests (Vitest)
 pnpm run golden         # rewrite tests/golden.json after an intentional change (golden.test.ts only reads it)
+pnpm run optimizer-dump # rewrite tests/optimizer-dump.json (optimizer cards for fixed cases), sharded over all cores
+                        # optimizer-dump:pa / optimizer-dump:hifi redo one part and keep the other
 ```
 
 ## Build

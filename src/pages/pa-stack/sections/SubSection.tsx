@@ -10,6 +10,8 @@ import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { xmaxRows } from "../../../lib/xmax";
 import { LIMIT_NAMES, SUB_LIMIT_NAMES } from "../../../constants/limits";
+import { FONT } from "../../../styles/fonts";
+import { UI_TEXT } from "../../../constants/uiText";
 
 interface Props {
   planner: Pick<
@@ -65,7 +67,7 @@ export function SubSection({ planner }: Props) {
   } = planner;
   return (
     <>
-      <section className="mt-1" style={{ fontFamily: "var(--font)" }}>
+      <section className="mt-1" style={{ fontFamily: FONT }}>
         <FoldHeading
           id="sub"
           title="Sub"
@@ -102,7 +104,7 @@ export function SubSection({ planner }: Props) {
                         {
                           curve: midModelled.max,
                           band: midMaxBand,
-                          label: "Mid-bass",
+                          label: UI_TEXT.midBass,
                           stroke: PAL.magenta,
                           tint: PAL.alpha(PAL.magenta, 0.06),
                         },
@@ -144,7 +146,7 @@ export function SubSection({ planner }: Props) {
                 [
                   STATS.midbandSensitivity,
                   `${(subModelled.mdl.ref - 20 * Math.log10(subAmpVoltage / 2.83)).toFixed(1)} dB`,
-                  "2.83 V, half space, 1 m",
+                  UI_TEXT.splConditions,
                 ],
                 ...[30, 35, 45, 60].map((f): StatRowItem => {
                   const m = nearestPoint(subModelled.maxCurve, f);

@@ -46,10 +46,12 @@ import {
   HIFI_OPTIMIZER_GOALS,
 } from "../../lib/hifi/optimize";
 import { HIFI_KEEP_WORDS, keepLines } from "../../lib/optimizer/goalKeeps";
+import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import type { HifiPlanner } from "./useHifiPlanner";
 import type { Dims3 } from "../../types";
 import { entriesOf } from "../../lib/records";
 import { xmaxRows } from "../../lib/xmax";
+import { FONT } from "../../styles/fonts";
 
 interface Props {
   hifi: HifiPlanner;
@@ -185,7 +187,7 @@ export function HifiPage({ hifi }: Props) {
   );
   const optimizerPanel = isOptimizerOn && (
     <Card pad="lg" className="mt-3">
-      <SectionHeading>Find a better design</SectionHeading>
+      <SectionHeading>{OPTIMIZER_PANEL_TEXT.heading}</SectionHeading>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
         <div className="mt-3">
           <NumberField
@@ -279,7 +281,7 @@ export function HifiPage({ hifi }: Props) {
   return (
     <main
       className="max-w-6xl mx-auto px-4 md:px-8 pb-16 grid grid-cols-1 md:grid-cols-5 gap-8"
-      style={{ fontFamily: "var(--font)" }}
+      style={{ fontFamily: FONT }}
     >
       <div className="md:col-span-5 min-w-0">
         <SavedConfigs
@@ -368,7 +370,6 @@ export function HifiPage({ hifi }: Props) {
           top={HIFI_TOP}
           bot={HIFI_BOT}
           step={10}
-          yLabel="max dB SPL @ 1 m"
           series={[
             {
               curve: speakerSystem.wMax,

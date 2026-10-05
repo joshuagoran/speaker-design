@@ -22,6 +22,7 @@ import type {
   Setter,
 } from "../../../types";
 import { useState } from "react";
+import { UI_TEXT } from "../../../constants/uiText";
 
 interface Props {
   /** the whole design as it is now */
@@ -147,6 +148,7 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
   const loadOptimizerResult = async (k: PaOptimizerCard) => {
     const before = preview.loadOptimizerResult(k);
     let msg = `Loaded "${k.label}".`;
+    const undoHint = " Undo brings your previous design back.";
     if (db) {
       const name = `Before optimizer, ${today()}`;
       try {
@@ -156,9 +158,9 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
           .set({ ...before, name, savedAt: Date.now() });
         msg += ` Your previous design was saved as "${name}".`;
       } catch {
-        msg += " Undo brings your previous design back.";
+        msg += undoHint;
       }
-    } else msg += " Undo brings your previous design back.";
+    } else msg += undoHint;
     setToastMessage(msg);
   };
   const undoOptimizerLoad = () => {
@@ -183,7 +185,7 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
         });
       setToastMessage(`Saved "${name.slice(0, 60)}".`);
     } catch {
-      setToastMessage("Couldn't save — try again");
+      setToastMessage(UI_TEXT.saveFailed);
     }
   };
   const currentDesignOutput = isOptimizerOn

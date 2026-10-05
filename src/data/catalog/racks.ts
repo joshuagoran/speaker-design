@@ -1,24 +1,39 @@
-// Electronics racks for the Notes page: each line is [description, price $], the page sums them.
-// To add a line or a rack, append to the table; the compiler checks the shape (Rack in src/types.ts).
+// Electronics racks for the Notes page; the page sums each rack's lines. A line is a catalogue part named by id (an amp
+// from amps.ts, whose name, rating and used price the line takes; a DSP unit from dsp-units.ts, whose name and used
+// price range it takes) or, for anything not in the catalogue, [description, price $]. To add a line or a rack, append
+// to the table; the compiler checks the shape and the ids (Rack in src/types.ts).
 // Prices are US dollars, checked Sep 2026, single unit, before tax/shipping.
 import type { Rack } from "../../types";
 
+/** The safety high-pass in the horn amp, Hz: it catches a mis-recalled preset, which a level limiter cannot. */
+export const HORN_AMP_SAFETY_HPF_HZ = 500;
+
+/** The mains rack: the signal-path drawing names its processor. */
+export const MAINS_RACK: Rack = {
+  id: "mains",
+  name: "Mains rack",
+  note: "PA2 does the system tuning; each amp channel runs full-range with its own driver limiter.",
+  items: [
+    {
+      dsp: "pa2",
+      note: "input EQ, master level, 6 outputs: XO, delay, driver EQ",
+    },
+    ["dbx RTA-M mic — for the PA2's RTA/AutoEQ", 100],
+    { amp: "gxd8", use: "subs", rating: true, note: "limiter set by power + impedance" },
+    { amp: "gxd4", use: "mids", rating: true },
+    {
+      amp: "gxd4",
+      use: "horns",
+      note: `gain trimmed, safety HPF ~${HORN_AMP_SAFETY_HPF_HZ} Hz in the amp`,
+    },
+    ["Furman PL-8 / M-8x2 (used) — 1U 15 A power conditioner", 90],
+    ["Optional: GL.iNet travel router in the rack — PA2 app over its own Wi-Fi", 25],
+    ["8U rack case, 6× XLR looms, 1U blank panel on the rear rail with 4× NL4MP sockets", 250],
+  ],
+};
+
 export const RACKS: readonly Rack[] = [
-  {
-    id: "mains",
-    name: "Mains rack",
-    note: "PA2 does the system tuning; each amp channel runs full-range with its own driver limiter.",
-    items: [
-      ["dbx DriveRack PA2 (used) — input EQ, master level, 6 outputs: XO, delay, driver EQ", 300],
-      ["dbx RTA-M mic — for the PA2's RTA/AutoEQ", 100],
-      ["QSC GXD8 (used) — subs, 800 W/ch at 8 Ω, limiter set by power + impedance", 600],
-      ["QSC GXD4 (used) — mids, 400 W/ch at 8 Ω", 400],
-      ["QSC GXD4 (used) — horns, gain trimmed, safety HPF ~500 Hz in the amp", 400],
-      ["Furman PL-8 / M-8x2 (used) — 1U 15 A power conditioner", 90],
-      ["Optional: GL.iNet travel router in the rack — PA2 app over its own Wi-Fi", 25],
-      ["8U rack case, 6× XLR looms, 1U blank panel on the rear rail with 4× NL4MP sockets", 250],
-    ],
-  },
+  MAINS_RACK,
   {
     id: "battery",
     name: "Battery rack",

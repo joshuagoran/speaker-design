@@ -3,6 +3,7 @@ import { Card } from "../ui/Card";
 import { useState } from "react";
 import type { ConfigStore } from "./useConfigStore";
 import type { SavedConfig, SavedConfigData } from "../../types";
+import { FONT } from "../../styles/fonts";
 
 interface Props {
   store: ConfigStore;
@@ -26,10 +27,11 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
     if (await save(name.trim(), snapshot())) setName("");
   };
   const Wrap = bare ? "div" : "section";
+  const namePrompt = "Name this setup";
   return (
     <Wrap
       className={bare ? "mb-3" : "max-w-6xl mx-auto px-4 md:px-8 pb-2"}
-      style={{ fontFamily: "var(--font)" }}
+      style={{ fontFamily: FONT }}
     >
       <Card pad="lg" tone="tint">
         <div className="flex flex-wrap items-center gap-2">
@@ -37,13 +39,13 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
           {db ? (
             <>
               <input
-                aria-label="Name this setup"
+                aria-label={namePrompt}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void doSave(); // `save` shows its own failure message
                 }}
-                placeholder="Name this setup"
+                placeholder={namePrompt}
                 maxLength={60}
                 className="px-3 py-1.5 rounded border border-stone-300 bg-white text-sm w-56"
               />

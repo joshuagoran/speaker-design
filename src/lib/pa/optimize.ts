@@ -38,7 +38,9 @@ import {
   KEEP_UP_SLACK_DB,
 } from "./chips";
 import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS, subDriversOfSize } from "../data";
+import { PORT_TUBES } from "../../data/catalog/port-tubes";
 import type {
+  ChangeName,
   ChipId,
   CompressionDriver,
   CutlistSettings,
@@ -78,8 +80,18 @@ import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
 import { goalKeeps, PA_UNMODELLED_F3_HZ } from "../optimizer/goalKeeps";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { SUB_LIMITED_BY } from "../../constants/limits";
+import {
+  CARD_LABELS,
+  CARD_WHY,
+  CHANGE_NAMES,
+  DESIGN_PROBLEM_TEXT,
+  GOAL_SHORT_NAMES,
+  SHARED_GOAL_NAMES,
+} from "../../constants/optimizerText";
 import { ampForGain, onSlider, type AmpSteps } from "../optimizer/ampSteps";
 import { throttledProgress } from "../optimizer/progress";
+import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
+import { UI_TEXT } from "../../constants/uiText";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -201,7 +213,7 @@ export const ROOMS: Record<PaRoom, { d: number; gain: number; name: string; shor
   500: { d: 5, gain: 3, name: "500 sq ft", short: "500" },
   750: { d: 6, gain: 3, name: "750 sq ft", short: "750" },
   1000: { d: 7, gain: 3, name: "1000 sq ft", short: "1000" },
-  outdoor: { d: 10, gain: 0, name: "Outdoors", short: "Outdoors" },
+  outdoor: { d: 10, gain: 0, name: UI_TEXT.outdoors, short: UI_TEXT.outdoors },
 };
 /** The level the planner aims for at the listener, dB SPL. */
 export const LISTENER_TARGET_DB = 105;
@@ -212,24 +224,29 @@ export const roomRequiredSpl = (room: PaRoom) => {
 
 export const OPTIMIZER_GOALS: Record<PaGoal, { short: string; name: string; why: string }> = {
   cheaper: {
-    short: "Cheaper",
+    short: GOAL_SHORT_NAMES.cheaper,
     name: "Same output, cheaper",
     why: "Cheapest drivers that still reach the target.",
   },
   lighter: {
-    short: "Lighter",
+    short: GOAL_SHORT_NAMES.lighter,
     name: "Same output, lighter",
     why: "Lightest boxes that still reach the target.",
   },
-  lower: { short: "Lower", name: "Go lower", why: "Lowest F3 that keeps the target output." },
-  louder: { short: "Louder", name: "Louder", why: "Most output inside your limits." },
+  lower: {
+    short: GOAL_SHORT_NAMES.lower,
+    name: SHARED_GOAL_NAMES.lower,
+    why: "Lowest F3 that keeps the target output.",
+  },
+  louder: {
+    short: GOAL_SHORT_NAMES.louder,
+    name: SHARED_GOAL_NAMES.louder,
+    why: "Most output inside your limits.",
+  },
 };
-const ALT_LABEL: Record<PaGoal, string> = {
-  cheaper: "Cheaper",
-  lighter: "Lighter",
-  lower: "Goes lower",
-  louder: "Louder",
-};
+const ALT_LABEL: Record<PaGoal, string> = { ...GOAL_SHORT_NAMES, lower: "Goes lower" };
+/** How the PA notice names its level, F3 and the pair, when the first card only comes closest. */
+export const PA_REACH_WORDS = { level: "of output", f3: "an F3", both: "output and bass" };
 const ALT_ORDER: Record<PaGoal, PaGoal[]> = {
   cheaper: ["lighter", "louder"],
   lighter: ["cheaper", "louder"],
@@ -237,27 +254,15 @@ const ALT_ORDER: Record<PaGoal, PaGoal[]> = {
   louder: ["cheaper", "lighter"],
 };
 
-// Vent sizes per style, smallest area first.
-const TUBES = [
-  [1, 3],
-  [1, 4],
-  [2, 3],
-  [2, 3.5],
-  [1, 5],
-  [2, 4],
-  [3, 4],
-  [2, 5],
-  [4, 4],
-  [2, 6],
-  [3, 5],
-  [4, 5],
-  [3, 6],
-  [4, 6],
-];
+// Vent sizes per style, smallest area first: the round styles from the port-tube catalogue (stock pipe), the rectangular
+// ones (ply ducts, cut to any size) from the search's own grid of slot heights and duct throats.
 // "round1" and "round4" are the one-tube and four-corner-tube layouts (the geometry treats every round style alike, from `nt` and
 // `dia`), so they take the tubes of that count; "round2" tries every tube count, as it always has.
 const tubesOf = (count?: number) =>
-  TUBES.filter(([nt]) => count === undefined || nt === count).map(([nt, dia]) => ({ nt, dia }));
+  PORT_TUBES.filter(({ nt }) => count === undefined || nt === count).map(({ nt, dia }) => ({
+    nt,
+    dia,
+  }));
 const VENT_SIZES: Record<PortStyle, Partial<VentSpec>[]> = {
   round1: tubesOf(1),
   round2: tubesOf(),
@@ -470,7 +475,7 @@ const SOFT_OK = new Set<PaChipId>([
 ]);
 export function designProblems(m: PaEvaluation | null, lim: ProblemLimits) {
   const out: string[] = [];
-  if (!m) return ["can't be modelled"];
+  if (!m) return [DESIGN_PROBLEM_TEXT.unmodelled];
   for (const k of ["sub", "mid", "horn"] as const)
     for (const [kind, head, , id] of m.chips[k]) {
       if (
@@ -480,7 +485,7 @@ export function designProblems(m: PaEvaluation | null, lim: ProblemLimits) {
         out.push(head);
     }
   if (m.qtc < 0.5 || m.qtc > 0.8) out.push(`mid Qtc ${m.qtc.toFixed(2)}`);
-  if (m.mismatch) out.push("horn and driver exits differ");
+  if (m.mismatch) out.push(DESIGN_PROBLEM_TEXT.exitMismatch);
   if (m.heaviest > lim.maxLb + 1e-9) out.push(`${m.heaviest.toFixed(0)} lb box`);
   if (m.price > lim.budget + 1e-9) out.push(`drivers $${Math.round(m.price)} per stack`);
   return out;
@@ -1301,7 +1306,7 @@ export function optimizePaStack(
   const trueVsCur = (axis: PaGoal, p: PoolEntry) => !curMet || beats[axis](metric(p), curMet);
   const ALT_WHY: Record<PaGoal, string> = {
     louder: "More output than your design.",
-    lower: "Goes lower than your design.",
+    lower: CARD_WHY.altLower,
     cheaper: "Costs less than your design, close to the target.",
     lighter: "Lighter than your design, close to the target.",
   };
@@ -1340,11 +1345,11 @@ export function optimizePaStack(
       labels: {
         first: { label: goalLabel, why: goalWhy },
         // your design fails a check: the goal's best design that passes (it may cost or weigh more)
-        fix: { label: "Fixes your design", why: FIX_WHY[goal] },
+        fix: { label: CARD_LABELS.fix, why: FIX_WHY[goal] },
         // nothing that passes keeps what the goals keep: the one that comes closest (the notice says what it misses)
         closest: {
-          label: "Fixes your design",
-          why: "Passes the checks and comes closest to your goal.",
+          label: CARD_LABELS.closest,
+          why: CARD_WHY.closest,
         },
         alt: (g) => ({ label: ALT_LABEL[g], why: ALT_WHY[g] }),
       },
@@ -1427,7 +1432,7 @@ export function optimizePaStack(
     outOfReachNotice(
       goals.map((g) => keep[g]),
       { db: m.out, f3: m.f3 },
-      { level: "of output", f3: "an F3", both: "output and bass" },
+      PA_REACH_WORDS,
     );
   // no card, or only the closest: what loosening a limit would buy
   if (!cards || (chosen && chosen.fixMisses)) {
@@ -1459,7 +1464,15 @@ export function optimizePaStack(
     const lightest = subCands.length ? Math.min(...subCands.map((x) => x.lb)) : null;
     nearMiss = {
       options: worked.map(({ text, set }) => ({ text, set })),
-      closest: closest ? card(closest, "Closest", "", curM, cur, cl) : null,
+      closest: closest
+        ? card(
+            closest,
+            { label: CARD_LABELS.nearMiss, why: "", slot: { kind: "closest" } },
+            curM,
+            cur,
+            cl,
+          )
+        : null,
       blocking: closest
         ? designProblems(closest.m, lim).length
           ? designProblems(closest.m, lim)
@@ -1480,7 +1493,7 @@ export function optimizePaStack(
     curM: curM && summary(curM),
     curProblems: designProblems(curM, lim),
     cur: curM ? { curve: curM.curve, geom: boxGeometry(cur) } : null,
-    cards: cards ? cards.map((k) => card(k.p, k.label, k.why, curM, cur, cl)) : [],
+    cards: cards ? cards.map((k) => card(k.p, k, curM, cur, cl)) : [],
     goals,
     goalMissing:
       chosen && chosen.fixMisses
@@ -1531,17 +1544,16 @@ export function boxGeometry(c: PaDesignConfig): PaBoxGeometry {
 
 function card(
   p: PoolEntry,
-  label: string,
-  why: string,
+  role: Pick<PaOptimizerCard, "label" | "why" | "slot">,
   curM: PaEvaluation | null,
   cur: PaDesignConfig,
   cl: CutlistSettings,
 ): PaOptimizerCard {
   const { c, m } = p;
-  const sub = byIdOrThrow(SUB_OPTIONS, c.sub, "subwoofers"),
-    mid = byIdOrThrow(MID_OPTIONS, c.mid, "mid drivers"),
-    cd = byIdOrThrow(CD_OPTIONS, c.cd, "compression drivers"),
-    horn = byIdOrThrow(HORN_OPTIONS, c.horn, "horns");
+  const sub = byIdOrThrow(SUB_OPTIONS, c.sub, CATALOG_TABLE_NAMES.subs),
+    mid = byIdOrThrow(MID_OPTIONS, c.mid, CATALOG_TABLE_NAMES.mids),
+    cd = byIdOrThrow(CD_OPTIONS, c.cd, CATALOG_TABLE_NAMES.compressionDrivers),
+    horn = byIdOrThrow(HORN_OPTIONS, c.horn, CATALOG_TABLE_NAMES.horns);
   const midDims = c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim;
   const { parts } = cutParts({
     sub,
@@ -1560,23 +1572,25 @@ function card(
     t: g.t,
     n: g.sheets.length,
   }));
-  const changed: string[] = [];
-  if (c.sub !== cur.sub) changed.push("sub driver");
+  const changed: ChangeName[] = [];
+  if (c.sub !== cur.sub) changed.push(CHANGE_NAMES.subDriver);
   if (c.cDim.w !== cur.cDim.w || c.cDim.h !== cur.cDim.h || c.cDim.d !== cur.cDim.d)
-    changed.push("sub box");
-  if (c.portStyle !== cur.portStyle || c.cVent.len !== cur.cVent.len) changed.push("vent");
-  if (c.wall !== cur.wall) changed.push("plywood");
-  if (c.mid !== cur.mid) changed.push("mid driver");
+    changed.push(CHANGE_NAMES.subBox);
+  if (c.portStyle !== cur.portStyle || c.cVent.len !== cur.cVent.len)
+    changed.push(CHANGE_NAMES.vent);
+  if (c.wall !== cur.wall) changed.push(CHANGE_NAMES.plywood);
+  if (c.mid !== cur.mid) changed.push(CHANGE_NAMES.midDriver);
   if (c.mDim.w !== cur.mDim.w || c.mDim.h !== cur.mDim.h || c.mDim.d !== cur.mDim.d)
-    changed.push("mid box");
-  if (c.cd !== cur.cd || c.horn !== cur.horn) changed.push("HF");
-  if (c.hpf !== cur.hpf) changed.push("highpass");
-  if (c.xoLo !== cur.xoLo || c.xoHi !== cur.xoHi) changed.push("crossovers");
+    changed.push(CHANGE_NAMES.midBox);
+  if (c.cd !== cur.cd || c.horn !== cur.horn) changed.push(CHANGE_NAMES.hf);
+  if (c.hpf !== cur.hpf) changed.push(CHANGE_NAMES.highpass);
+  if (c.xoLo !== cur.xoLo || c.xoHi !== cur.xoHi) changed.push(CHANGE_NAMES.crossovers);
   if (c.ampW !== cur.ampW || c.mAmpW !== cur.mAmpW || c.hfAmpW !== cur.hfAmpW)
-    changed.push("amp power");
+    changed.push(CHANGE_NAMES.ampPower);
   return {
-    label,
-    why,
+    label: role.label,
+    why: role.why,
+    slot: role.slot,
     config: c,
     metrics: summary(m),
     delta: curM

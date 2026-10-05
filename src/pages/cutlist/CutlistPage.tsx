@@ -17,6 +17,7 @@ import {
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import { entriesOf } from "../../lib/records";
 import { CUT_BOX_NAMES, CUT_PART_NAMES } from "../../constants/cutParts";
+import { FONT } from "../../styles/fonts";
 
 interface Props {
   planner: Pick<
@@ -198,7 +199,7 @@ export function CutlistPage({ planner }: Props) {
     </div>
   );
   return (
-    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16" style={{ fontFamily: "var(--font)" }}>
+    <main className="max-w-6xl mx-auto px-4 md:px-8 pb-16" style={{ fontFamily: FONT }}>
       <div className="flex flex-wrap gap-6 mb-5">
         {toggles(
           "Corner joints",

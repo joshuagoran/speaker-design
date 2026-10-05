@@ -42,6 +42,7 @@ import {
   HIFI_PASSIVES,
 } from "../data";
 import type {
+  ChangeName,
   ChipId,
   Dims3,
   DimensionLockMode,
@@ -75,6 +76,14 @@ import { byId } from "../tables";
 import { selectCards } from "../optimizer/selectCards";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
 import { goalKeeps } from "../optimizer/goalKeeps";
+import {
+  CARD_LABELS,
+  CARD_WHY,
+  CHANGE_NAMES,
+  DESIGN_PROBLEM_TEXT,
+  GOAL_SHORT_NAMES,
+  SHARED_GOAL_NAMES,
+} from "../../constants/optimizerText";
 import { ampForGain, type AmpSteps } from "../optimizer/ampSteps";
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
@@ -126,17 +135,25 @@ interface PoolEntry {
 export const HIFI_OPTIMIZER_GOALS: Record<HifiGoal, { short: string; name: string; why: string }> =
   {
     cheaper: {
-      short: "Cheaper",
+      short: GOAL_SHORT_NAMES.cheaper,
       name: "Same level, cheaper",
       why: "Cheapest pair of drivers that keeps the bass and the level.",
     },
     lighter: {
-      short: "Lighter",
+      short: GOAL_SHORT_NAMES.lighter,
       name: "Same level, lighter",
       why: "Lightest box that keeps the bass and the level.",
     },
-    lower: { short: "Lower", name: "Go lower", why: "Lowest in-room F3 that keeps the level." },
-    louder: { short: "Louder", name: "Louder", why: "Most clean level at the seat." },
+    lower: {
+      short: GOAL_SHORT_NAMES.lower,
+      name: SHARED_GOAL_NAMES.lower,
+      why: "Lowest in-room F3 that keeps the level.",
+    },
+    louder: {
+      short: GOAL_SHORT_NAMES.louder,
+      name: SHARED_GOAL_NAMES.louder,
+      why: "Most clean level at the seat.",
+    },
   };
 export const HIFI_AMP_WATTS_MAX = { wAmpW: 500, tAmpW: 200 };
 /** The amps the Hi-fi optimizer searches. */
@@ -205,7 +222,7 @@ const failedChecks = (chips: HifiChip[]) =>
   chips.filter(([k, , , id]) => k === "bad" || (k === "warn" && HARD.has(id)));
 /** What fails in a design, as the checks' titles (empty when it passes). */
 export const hifiDesignProblems = (sys: HifiSystem | null, chips: HifiChip[]): string[] =>
-  !sys ? ["can't be modelled"] : failedChecks(chips).map(([, h]) => h);
+  !sys ? [DESIGN_PROBLEM_TEXT.unmodelled] : failedChecks(chips).map(([, h]) => h);
 
 const XOS: number[] = [1500, 1800, 2000, 2200, 2500, 3000];
 const range = (lock: DimensionLockMode | undefined, cur: number, vals: number[]) =>
@@ -546,8 +563,9 @@ export function hifiScoreBoxes(
       port: e.port,
       pr: e.pr,
       gross: b.gross,
-      ch: changes({ w, t: T0, c: { ...cfg, xo: cur.xo } }, cur).filter((x) => x !== "amp power")
-        .length,
+      ch: changes({ w, t: T0, c: { ...cfg, xo: cur.xo } }, cur).filter(
+        (x) => x !== CHANGE_NAMES.ampPower,
+      ).length,
       f3: prep.f3,
       levels: xos.map((xo) => {
         if (wooferPastRange(w, xo)) return null;
@@ -586,7 +604,7 @@ export function optimizeHifiSpeaker(
       goals,
       cards: [],
       cur: null,
-      curProblems: [`${W0 ? "tweeter" : "woofer"} isn't in the driver tables`],
+      curProblems: [W0 ? DESIGN_PROBLEM_TEXT.missingTweeter : DESIGN_PROBLEM_TEXT.missingWoofer],
       curCurve: null,
       goalMissing: null,
       stats: { evaluated: 0, ms: Date.now() - t0 },
@@ -618,7 +636,7 @@ export function optimizeHifiSpeaker(
   const curM = curR && metricOf(curR, W0, T0);
   const curProblems = curR
     ? hifiDesignProblems(curR.sys, curR.chips)
-    : [curPrMissing ? "the passive radiator isn't in the driver tables" : "can't be modelled"];
+    : [curPrMissing ? DESIGN_PROBLEM_TEXT.missingRadiator : DESIGN_PROBLEM_TEXT.unmodelled];
   const curFails = curProblems.length > 0;
 
   // 1. the box step (here or in parts), merged in the grid's order (so a split run picks exactly what one run does),
@@ -761,7 +779,7 @@ export function optimizeHifiSpeaker(
   const ALT_WHY: Record<HifiGoal, string> = {
     cheaper: "Costs less than your design.",
     lighter: "Lighter than your design.",
-    lower: "Goes lower than your design.",
+    lower: CARD_WHY.altLower,
     louder: "Louder than your design.",
   };
   const boxOf = (i: number) => boxList[recs[dRec[i]].bi];
@@ -806,13 +824,13 @@ export function optimizeHifiSpeaker(
       labels: {
         first: { label, why: HIFI_OPTIMIZER_GOALS[goal].why },
         fix: {
-          label: "Fixes your design",
+          label: CARD_LABELS.fix,
           why: "Your design fails a check; this is the best that passes.",
         },
         // nothing that passes keeps what the goals keep: the one that comes closest (the notice says what it misses)
         closest: {
-          label: "Fixes your design",
-          why: "Passes the checks and comes closest to your goal.",
+          label: CARD_LABELS.closest,
+          why: CARD_WHY.closest,
         },
         alt: (g) => ({ label: HIFI_OPTIMIZER_GOALS[g].short, why: ALT_WHY[g] }),
       },
@@ -835,9 +853,9 @@ export function optimizeHifiSpeaker(
     picked = pick();
     modelled = picked.cards.map((k) => model(k.p));
   }
-  const cards = picked.cards.flatMap(({ label, why }, j) => {
+  const cards = picked.cards.flatMap(({ label, why, slot }, j) => {
     const p = modelled[j];
-    return p ? [{ ...p, label, why }] : [];
+    return p ? [{ ...p, label, why, slot }] : [];
   });
 
   // trim unlocked amps: the least power (slider steps) that keeps the card's clean level and keeps the tweeter up
@@ -914,6 +932,7 @@ export function optimizeHifiSpeaker(
     cards: done.map((k) => ({
       label: k.label,
       why: k.why,
+      slot: k.slot,
       woofer: k.w.id,
       tweeter: k.t.id,
       config: {
@@ -965,14 +984,16 @@ export function portsDiffer(a: HifiPort, b: HifiPort): boolean {
 }
 
 // what a card changes from your design
-function changes(p: Pick<PoolEntry, "w" | "t" | "c">, cur: HifiOptimizerCurrent): string[] {
+function changes(p: Pick<PoolEntry, "w" | "t" | "c">, cur: HifiOptimizerCurrent): ChangeName[] {
   const c = p.c,
-    out = [];
-  if (p.w.id !== cur.woofer) out.push("woofer");
-  if (p.t.id !== cur.tweeter) out.push("tweeter");
-  if (c.box !== cur.box) out.push("box type");
-  if (c.dim.w !== cur.dim.w || c.dim.h !== cur.dim.h || c.dim.d !== cur.dim.d) out.push("box size");
-  if (c.box === "vented" && cur.box === "vented" && portsDiffer(c.port, cur.port)) out.push("port");
+    out: ChangeName[] = [];
+  if (p.w.id !== cur.woofer) out.push(CHANGE_NAMES.woofer);
+  if (p.t.id !== cur.tweeter) out.push(CHANGE_NAMES.tweeter);
+  if (c.box !== cur.box) out.push(CHANGE_NAMES.boxType);
+  if (c.dim.w !== cur.dim.w || c.dim.h !== cur.dim.h || c.dim.d !== cur.dim.d)
+    out.push(CHANGE_NAMES.boxSize);
+  if (c.box === "vented" && cur.box === "vented" && portsDiffer(c.port, cur.port))
+    out.push(CHANGE_NAMES.port);
   if (
     c.box === "radiator" &&
     cur.box === "radiator" &&
@@ -980,10 +1001,10 @@ function changes(p: Pick<PoolEntry, "w" | "t" | "c">, cur: HifiOptimizerCurrent)
     cur.pr &&
     (c.pr.drv.id !== cur.pr.drv.id || c.pr.n !== cur.pr.n || c.pr.addG !== cur.pr.addG)
   )
-    out.push("radiator");
-  if (c.wall !== cur.wall) out.push("plywood");
-  if (c.xo !== cur.xo) out.push("crossover");
-  if (c.wAmpW !== cur.wAmpW || c.tAmpW !== cur.tAmpW) out.push("amp power");
+    out.push(CHANGE_NAMES.radiator);
+  if (c.wall !== cur.wall) out.push(CHANGE_NAMES.plywood);
+  if (c.xo !== cur.xo) out.push(CHANGE_NAMES.crossover);
+  if (c.wAmpW !== cur.wAmpW || c.tAmpW !== cur.tAmpW) out.push(CHANGE_NAMES.ampPower);
   return out;
 }
 

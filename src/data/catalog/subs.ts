@@ -42,6 +42,9 @@ export const BC18NBX_RAW: RawDriver<SubDriver> = {
     aes: 1200,
     disp: 10.5,
   },
+  sens: 96.5,
+  // B&C datasheet (bcspeakers.com product page, Oct 2026): depth 208 mm (8.19 in)
+  depthIn: 8.19,
   note: "[datasheet, bcspeakers.com, Sep 2026] Neo, 1200 W nominal / 2400 W continuous, 96.5 dB, Xvar 12 mm, Le 1.85 mH, 20 lb. Displacement not published; 10.5 L assumed.",
 };
 
@@ -75,6 +78,8 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
       aes: 1100,
       disp: 10.5,
     },
+    sens: 99,
+    depthIn: 8.4,
     note: "[datasheet] Ferrite, 1100 W AES, 10.5 L displacement, 45.6 lb. SB claim 99 dB; their own T/S give about 96 dB/2.83 V.",
   },
   {

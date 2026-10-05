@@ -2,6 +2,7 @@ import type { BandCurves, FrequencyPoint } from "../../types";
 import { PAL } from "../../styles/palette";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { useState } from "react";
+import { SVG_FONT, FONT } from "../../styles/fonts";
 
 /**
  * One curve on the chart: its points, legend label, line colour and fill colour. `band` shades the curve at the low and
@@ -115,7 +116,7 @@ export function ResponseChart({
         textAnchor={X > x1 - 12 ? "end" : "middle"}
         fill={PAL.muted}
         fontSize="12"
-        fontFamily="Inconsolata, monospace"
+        fontFamily={SVG_FONT}
       >
         {f >= 1000 ? f / 1000 + "k" : f}
       </text>,
@@ -157,7 +158,7 @@ export function ResponseChart({
           textAnchor="end"
           fill={PAL.muted}
           fontSize="12"
-          fontFamily="Inconsolata, monospace"
+          fontFamily={SVG_FONT}
         >
           {v}
         </text>,
@@ -204,7 +205,7 @@ export function ResponseChart({
                 }
                 fill={PAL.muted}
                 fontSize="12"
-                fontFamily="Inconsolata, monospace"
+                fontFamily={SVG_FONT}
               >
                 {m.label}
               </text>
@@ -255,7 +256,7 @@ export function ResponseChart({
                     y={y1 + 17.5}
                     textAnchor="middle"
                     fontSize="12"
-                    fontFamily="Inconsolata, monospace"
+                    fontFamily={SVG_FONT}
                     fill={PAL.white}
                   >
                     {t}
@@ -268,7 +269,7 @@ export function ResponseChart({
               y={y0 - 4}
               textAnchor="end"
               fontSize="12"
-              fontFamily="Inconsolata, monospace"
+              fontFamily={SVG_FONT}
               fill={PAL.ink}
               stroke={PAL.white}
               strokeWidth="3"
@@ -285,7 +286,7 @@ export function ResponseChart({
           textAnchor="middle"
           fill={PAL.muted}
           fontSize="12"
-          fontFamily="Inconsolata, monospace"
+          fontFamily={SVG_FONT}
         >
           frequency, Hz
         </text>
@@ -294,7 +295,7 @@ export function ResponseChart({
           textAnchor="middle"
           fill={PAL.muted}
           fontSize="12"
-          fontFamily="Inconsolata, monospace"
+          fontFamily={SVG_FONT}
         >
           {yLabel}
         </text>
@@ -302,7 +303,7 @@ export function ResponseChart({
       {paths.length > 0 && (
         <div
           className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-1 text-xs text-stone-500"
-          style={{ fontFamily: "var(--font)" }}
+          style={{ fontFamily: FONT }}
         >
           {paths.map((p) => (
             <span key={p.label} className="flex items-center gap-1.5">
