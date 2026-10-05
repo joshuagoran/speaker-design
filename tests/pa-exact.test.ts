@@ -20,7 +20,6 @@ import {
   runPaExactJob,
 } from "../src/lib/pa/optimizeExact";
 import {
-  endCorrection2D,
   gridIndexNear,
   sealedQtc,
   sealedMid,
@@ -37,7 +36,6 @@ import {
 import {
   ampVoltage,
   boxInternalLiters,
-  ductEndCorrection2D,
   midSystem,
   nearestPoint,
   subGeometry,
@@ -195,17 +193,6 @@ test("exact PA search: a box solved for a volume and tuning gives them back in t
     assert.strictEqual(sol.box.h, fixed.h);
   }
   assert.ok(n > 150, `solved ${n}`);
-  // the fast end correction, on and off the back-wall gap
-  for (const [h, X, L] of [
-    [3, 22.5, 4],
-    [2, 30, 0.5],
-    [1.5, 11, 9],
-    [4, 26, Infinity],
-  ])
-    assert.ok(
-      Math.abs(endCorrection2D(h, X, L) / ductEndCorrection2D(h, X, L) - 1) < 1e-12,
-      `${h} ${X} ${L}`,
-    );
 });
 
 test("exact PA search: the tower mid's Qtc is midSystem's, and falls as the box grows", () => {

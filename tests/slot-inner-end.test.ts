@@ -1,8 +1,8 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { foldedSlotInnerEnd, straightSlotInnerEnd } from "./slot-flow";
+import { foldedSlotInnerEnd, modalInnerEnd, straightSlotInnerEnd } from "./slot-flow";
 import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../src/data/acoustics/slot-inner-end";
-import { ductEndCorrection2D, slotMouthCorrection } from "../src/lib/pa/calc";
+import { slotMouthCorrection } from "../src/lib/pa/calc";
 
 // The slot inner-end table and the potential-flow solver behind it (tests/slot-flow.ts), at a coarser grid than the
 // table's (8 cells a slot height, not 16) so the checks stay quick; the two grids agree to within 2–3 %.
@@ -11,24 +11,32 @@ test("slot flow: with the space over the shelf walled off it is the modal (pisto
   // a uniform piston bounds the flow's mass from above (the real flow is not uniform across the mouth)
   for (const gap of [1, 2, 4]) {
     const flow = straightSlotInnerEnd({ t: 0.25, span: 9.5, gap, run: 4 }, 8, true);
-    const modal = ductEndCorrection2D(1, 9.5, gap);
+    const modal = modalInnerEnd(1, 9.5, gap);
     assert.ok(flow < modal && flow > 0.97 * modal, `gap ${gap}: ${flow} vs ${modal}`);
   }
 });
 test("slot inner-end table: the solver gives its values back", () => {
   const { gap, span, wall, run, ecOverH } = SLOT_INNER_END;
-  for (const [a, b, c] of [
-    [3, 3, 1],
-    [6, 4, 0],
-    [8, 5, 2],
-    [7, 3, 1], // (a quarter-slot gap, the last row, is only two cells on this grid)
+  // (a quarter-slot gap, the last row, is only two cells on this grid, and the thinnest shelf half a cell)
+  for (const [a, b, c, d] of [
+    [3, 3, 2, 3],
+    [6, 4, 1, 4],
+    [8, 5, 3, 1],
+    [7, 3, 2, 5],
+    [5, 7, 2, 3],
+    [6, 6, 4, 2],
   ] as const) {
-    const flow = straightSlotInnerEnd({ t: wall[c], span: 1 / span[b], gap: 1 / gap[a], run }, 8);
-    const table = ecOverH[a][b][c];
-    assert.ok(Math.abs(flow / table - 1) < 0.03, `${a} ${b} ${c}: ${flow} vs ${table}`);
+    const flow = straightSlotInnerEnd(
+      { t: wall[c], span: 1 / span[b], gap: 1 / gap[a], run: run[d] },
+      8,
+    );
+    const table = ecOverH[a][b][c][d];
+    assert.ok(Math.abs(flow / table - 1) < 0.03, `${a} ${b} ${c} ${d}: ${flow} vs ${table}`);
     // and the planner reads the table at its own points
     assert.ok(
-      Math.abs(slotMouthCorrection(3, 3 / span[b], 3 / gap[a], 3 * wall[c]) - 3 * table) < 1e-9,
+      Math.abs(
+        slotMouthCorrection(3, 3 / span[b], 3 / gap[a], 3 * wall[c], 3 * run[d]) - 3 * table,
+      ) < 1e-9,
     );
   }
 });

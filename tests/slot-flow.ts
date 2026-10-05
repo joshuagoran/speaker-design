@@ -87,8 +87,12 @@ function flowMass(nz: number, ny: number, kind: Uint8Array, inlet: number[]) {
   return ke / (Q * Q);
 }
 
-/** 1D uniform-sink flow's mass over a run `len` of height `H` that takes the share `q` of the flux. */
-const bulk = (q: number, len: number, H: number) => (len > 0 ? (q * q * len) / (3 * H) : 0);
+/**
+ * 1D uniform-sink flow's mass over a run `len` of height `H` that takes the share `q` of the flux (none where the run has
+ * no air: a shelf as thick as the room over the slot walls it off).
+ */
+const bulk = (q: number, len: number, H: number) =>
+  len > 0 && H > 0 ? (q * q * len) / (3 * H) : 0;
 
 /**
  * A straight bottom slot's inner end correction, in slot heights: slot height 1 on the floor, shelf `t` over it running
@@ -160,4 +164,20 @@ export function foldedSlotInnerEnd(
   const Af = Wf * Lf,
     Ab = Wb * Lb;
   return M - (centre + bulk(Af / (Af + Ab), Lf, Wf) + bulk(Ab / (Af + Ab), Lb, Wb)) + 0.5 / n;
+}
+
+/**
+ * The modal (piston) inner end correction the solver is checked against: a uniform piston `h` high against one wall of a
+ * rigid 2D duct `X` tall, its plane rigid out to the far wall, the duct ending `L` behind it (the evanescent cross-modes
+ * carry the added mass):
+ *   end correction = 2 X² / (π³ h) Σ sin²(m π h / X) coth(m π L / X) / m³
+ */
+export function modalInnerEnd(h: number, X: number, L = Infinity) {
+  let sum = 0;
+  for (let m = 1; m <= 2000; m++) {
+    const k = (m * Math.PI) / X,
+      sn = Math.sin(k * h);
+    sum += ((sn * sn) / (m * m * m)) * (Number.isFinite(L) ? 1 / Math.tanh(k * L) : 1);
+  }
+  return ((2 * X * X) / (Math.PI ** 3 * h)) * sum;
 }

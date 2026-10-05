@@ -20,7 +20,8 @@ import {
   boxInternalLiters,
   logGridCount,
   LOWPASS_SKIRT_SPAN,
-  FREE_END,
+  sideDuctEndCorrection,
+  SIDE_DUCT_DIVIDER_IN,
   STUFFING_VOLUME_GAIN,
 } from "./calc";
 import type {
@@ -367,44 +368,6 @@ export function sealedMid(
 
 // ---- geometry: the planner's vent geometry, duct volume and internal wood in closed form ----
 
-// ductEndCorrection2D's sum, kept per mouth height and interior span: each term (with coth at 1) and their total
-const D2 = new Map<string, { s: Float64Array; total: number }>();
-function d2Terms(h: number, X: number) {
-  const key = `${h}|${X}`;
-  let e = D2.get(key);
-  if (!e) {
-    const s = new Float64Array(2000);
-    let total = 0;
-    for (let m = 1; m <= 2000; m++) {
-      const sn = Math.sin(((m * Math.PI) / X) * h);
-      s[m - 1] = (sn * sn) / (m * m * m);
-      total += s[m - 1];
-    }
-    e = { s, total };
-    if (D2.size > 5000) D2.clear();
-    D2.set(key, e);
-  }
-  return e;
-}
-/**
- * ductEndCorrection2D, fast: each term's coth(mπL/X) is 1 + 2rᵐ/(1 − rᵐ) with r = exp(−2πL/X), so the sum is the
- * terms' total plus a short series in rᵐ, stopped once rᵐ no longer counts at double precision.
- */
-export function endCorrection2D(h: number, X: number, L = Infinity) {
-  if (h >= X) return 0;
-  L = Math.max(L, h);
-  const e = d2Terms(h, X);
-  let sum = e.total;
-  if (Number.isFinite(L)) {
-    const r = Math.exp((-2 * Math.PI * L) / X);
-    let extra = 0;
-    for (let m = 1, rm = r; m <= 2000 && rm > 1e-18; m++, rm *= r)
-      extra += (e.s[m - 1] * rm) / (1 - rm);
-    sum += 2 * extra;
-  }
-  return ((2 * X * X) / (Math.PI ** 3 * h)) * sum;
-}
-
 /** A vent as the box model takes it: openings, area (in²), and its end correction in inches (none: the round default). */
 export interface VentShape {
   n: number;
@@ -412,9 +375,10 @@ export interface VentShape {
   ec: number | null;
 }
 /**
- * ventGeometry's openings, area and end correction, with the fast end correction. `folded` says whether a bottom slot
- * folds up the back wall (by default, as the planner builds it: when it is too long to run straight); a solver that
- * looks for the straight length passes false.
+ * ventGeometry's openings, area and end correction. `folded` says whether a bottom slot folds up the back wall (by
+ * default, as the planner builds it: when it is too long to run straight); a solver that looks for the straight length
+ * passes false. `most` takes the end correction at the most it can be in this box, whatever the duct's length (a bound
+ * for a search that hasn't cut the duct yet).
  */
 export function ventShape(
   style: PortStyle,
@@ -422,19 +386,16 @@ export function ventShape(
   v: VentSpec,
   t: number,
   folded = style === "slots" && slotFolds(box, v, t),
+  most = false,
 ): VentShape {
   const iw = box.w - 2 * t,
     ih = box.h - 2 * t;
   if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;
-    const H = ih - 2 * 0.5;
-    const L = box.d - 0.75 - t - v.len;
     return {
       n,
-      area: n * v.throat * H,
-      ec:
-        rectangleEndCorrection(v.throat, 2 * H) +
-        FREE_END * endCorrection2D(v.throat, n === 2 ? iw / 2 : iw, L),
+      area: n * v.throat * (ih - 2 * SIDE_DUCT_DIVIDER_IN),
+      ec: sideDuctEndCorrection(box, v, t, n, most),
     };
   }
   if (style === "slots")
@@ -442,7 +403,8 @@ export function ventShape(
       n: 1,
       area: v.slotH * (iw - 2 * t),
       ec:
-        rectangleEndCorrection(2 * v.slotH, iw - 2 * t) + slotInnerEndCorrection(box, v, t, folded),
+        rectangleEndCorrection(2 * v.slotH, iw - 2 * t) +
+        slotInnerEndCorrection(box, v, t, folded, most),
     };
   const r = v.dia / 2;
   return { n: v.nt, area: v.nt * Math.PI * r * r, ec: null };
@@ -484,7 +446,7 @@ export function subWoodIn3(
     if (folded) in3 += iw * foldedRearWallIn(box, v, t) * t;
   } else if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;
-    in3 += ih * v.len * t * n + v.throat * v.len * 0.5 * 2 * n;
+    in3 += ih * v.len * t * n + v.throat * v.len * SIDE_DUCT_DIVIDER_IN * 2 * n;
   }
   return in3;
 }
