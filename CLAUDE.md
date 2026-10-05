@@ -14,7 +14,9 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - Light and dark themes (follows the device, with the header's System / Light / Dark switch): every colour comes from the
   palette tokens and works in both. Classes switch through CSS variables (no `dark:` variants, no `bg-white`; cards use
   `bg-panel`); colours drawn from code read `usePalette()` (`src/hooks/useTheme.ts`). Data colours (`DISPERSION_SCALE`,
-  the coverage scale, cabinet finishes) and the marks drawn on them (`ON_DATA`) are the same in both themes.
+  the coverage scale, cabinet finishes, the 3D view's driver parts `PARTS_3D`) and the marks drawn on them (`ON_DATA`)
+  are the same in both themes. The only colour literals outside the palette are the favicon, the colour picker's
+  rainbow ring and the cabinet finish data.
   `tests/contrast.test.ts` checks text 4.5:1 and lines 3:1 in both.
 - Dispersion maps (owner-approved colour exception, these maps only) use the continuous VituixCAD-style scale, +6 to −36 dB with a contour every 3 dB (`DISPERSION_SCALE` in `src/styles/palette.ts`), not the CMYK brand palette. They are the one frequency chart off the 15 Hz–20 kHz axis: every map shares fixed axes of ±90° and 50 Hz–20 kHz (`src/constants/chartScales.ts`), since below about 85 Hz the default designs are flat at every angle; one `DispersionMap` component and key, with the crossovers marked.
 - Font: Inconsolata. Corners 4 px (6 px on large boxes).

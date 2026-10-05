@@ -1,6 +1,6 @@
 // WCAG contrast of the palette in both themes: text 4.5:1 on its background, chart lines and large text 3:1.
 import { assert, test } from "vite-plus/test";
-import { PALETTES } from "../src/styles/palette";
+import { ON_DATA, PALETTES } from "../src/styles/palette";
 import type { Palette } from "../src/styles/palette";
 
 const luminance = (hex: string) => {
@@ -36,8 +36,14 @@ const pairs = (p: Palette): [string, string, string, number][] => {
     ["page text on accent (primary buttons)", p.white, p.accent, 4.5],
     ["page text on magenta (special buttons)", p.white, p.magenta, 4.5],
     ["muted on edge (section headers)", p.muted, p.edge, 4.5],
+    ["ink on edge (section headers)", p.ink, p.edge, 4.5],
+    ["focus ring (accent) on the page", p.accent, p.white, 3],
     ["ink on sub tint (cutlist)", p.ink, p.subTint, 4.5],
     ["ink on mid tint (cutlist)", p.ink, p.midTint, 4.5],
+    ["muted line on sub tint (cutlist outlines, grain)", p.muted, p.subTint, 3],
+    ["muted line on mid tint (cutlist outlines, grain)", p.muted, p.midTint, 3],
+    ["crossed grain (orange text shade) on sub tint", s.orange.text, p.subTint, 3],
+    ["crossed grain (orange text shade) on mid tint", s.orange.text, p.midTint, 3],
     ["green text on its tint", s.green.text, s.green.tint, 4.5],
     ["red text on its tint", s.red.text, s.red.tint, 4.5],
     ["orange text on its tint", s.orange.text, s.orange.tint, 4.5],
@@ -50,3 +56,14 @@ for (const [theme, p] of Object.entries(PALETTES))
       const c = contrast(fg, bg);
       assert.isAtLeast(c, min, `${fg} on ${bg} is ${c.toFixed(2)}:1`);
     });
+
+// marks and labels drawn on the fixed data colours (the same in both themes)
+const onData: [string, string, string, number][] = [
+  ["stack labels on the coverage map (white on ink)", ON_DATA.white, ON_DATA.ink, 4.5],
+  ["contours on the coverage map's floor (ink on edge)", ON_DATA.ink, ON_DATA.edge, 3],
+];
+for (const [what, fg, bg, min] of onData)
+  test(`on data: ${what} ≥ ${min}:1`, () => {
+    const c = contrast(fg, bg);
+    assert.isAtLeast(c, min, `${fg} on ${bg} is ${c.toFixed(2)}:1`);
+  });

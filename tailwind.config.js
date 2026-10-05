@@ -57,6 +57,8 @@ export default {
         cmy: { y: v("yellow"), m: v("magenta"), a: v("accent") },
         soft: v("muted", 0.5),
       },
+      // a bare `border` (and preflight) takes the palette's edge, not Tailwind's own gray
+      borderColor: { DEFAULT: v("edge") },
       borderRadius: { DEFAULT: "4px", lg: "6px" },
       boxShadow: { sheet: `0 -6px 20px ${v("shadow", 0.1)}` },
       fontFamily: { sans: font, serif: font, mono: font },
@@ -69,6 +71,8 @@ export default {
         ":root": { ...vars(PALETTES[THEME_LIGHT]), colorScheme: THEME_LIGHT },
         [`@media ${DARK_QUERY}`]: { [`:root:not([${THEME_ATTR}="${THEME_LIGHT}"])`]: dark },
         [`:root[${THEME_ATTR}="${THEME_DARK}"]`]: dark,
+        // after preflight, which gives placeholders Tailwind's own gray
+        "input::placeholder, textarea::placeholder": { color: v("muted", 1) },
       }),
     ),
   ],

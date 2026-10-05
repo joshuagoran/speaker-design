@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   DARK_QUERY,
   HOST_THEME_ATTR,
@@ -35,8 +35,8 @@ function subscribe(onChange: () => void) {
 }
 
 function themeNow(): ThemeName {
-  const pinned = document.documentElement.getAttribute(THEME_ATTR);
-  if (isThemeName(pinned)) return pinned;
+  const set = document.documentElement.getAttribute(THEME_ATTR);
+  if (isThemeName(set)) return set;
   return deviceDark() ? THEME_DARK : THEME_LIGHT;
 }
 
@@ -47,13 +47,45 @@ export const useThemeName = (): ThemeName =>
 /** The palette of the theme in use, for colours drawn from code (SVG charts, drawings, the 3D view). */
 export const usePalette = (): Palette => PALETTES[useThemeName()];
 
+// The host page (the claude.ai artifact frame) and the switch both write <html data-theme>. The switch's pin wins; the
+// host's latest theme is kept in data-host-theme for System to return to, so a host change after load neither overrides
+// a pinned theme nor leaves System on a stale one.
+/** The theme pinned with the switch, or null for System. */
+let pinned: ThemeName | null = null;
+/** The data-theme value this app last wrote, to tell the host page's writes from ours. */
+let written: string | null = null;
+
+function writeTheme(theme: string | null) {
+  const root = document.documentElement;
+  written = theme;
+  if (theme) root.setAttribute(THEME_ATTR, theme);
+  else root.removeAttribute(THEME_ATTR);
+}
+
 /** Pins the chosen theme on <html>, or, for System, hands back to the host page's theme or the device's setting. */
 function applyThemeChoice(choice: ThemeChoice) {
+  pinned = choice === THEME_SYSTEM ? null : choice;
+  writeTheme(pinned ?? document.documentElement.getAttribute(HOST_THEME_ATTR));
+}
+
+/** Follows the host page's later data-theme writes: records them for System, and puts the pin back over them. */
+function watchHostTheme(choice: ThemeChoice) {
   const root = document.documentElement;
-  if (choice !== THEME_SYSTEM) return root.setAttribute(THEME_ATTR, choice);
-  const host = root.getAttribute(HOST_THEME_ATTR);
-  if (host) root.setAttribute(THEME_ATTR, host);
-  else root.removeAttribute(THEME_ATTR);
+  pinned = choice === THEME_SYSTEM ? null : choice;
+  // what we would have written: the pin, or the host theme the boot script recorded
+  written = pinned ?? root.getAttribute(HOST_THEME_ATTR);
+  const sync = () => {
+    const now = root.getAttribute(THEME_ATTR);
+    if (now === written) return;
+    if (now) root.setAttribute(HOST_THEME_ATTR, now);
+    else root.removeAttribute(HOST_THEME_ATTR);
+    if (pinned) writeTheme(pinned);
+    else written = now;
+  };
+  sync(); // the host may have written between the boot script and now
+  const attr = new MutationObserver(sync);
+  attr.observe(root, { attributes: true, attributeFilter: [THEME_ATTR] });
+  return () => attr.disconnect();
 }
 
 /** The header switch's choice, kept per browser; the boot script in index.html applied the stored one before first paint. */
@@ -63,6 +95,7 @@ export function useThemeChoice(): [ThemeChoice, (choice: ThemeChoice) => void] {
     THEME_SYSTEM,
     (stored) => (isThemeChoice(stored) ? stored : THEME_SYSTEM),
   );
+  useEffect(() => watchHostTheme(choice), [choice]);
   return [
     choice,
     (next) => {

@@ -113,7 +113,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                 width={w}
                 height={h}
                 fill={colors[it.box]}
-                stroke={it.crossed ? pal.status.orange.base : pal.muted}
+                stroke={it.crossed ? pal.status.orange.text : pal.muted}
                 strokeWidth={it.crossed ? "2" : "0.8"}
               />
               {cuts.map((cy, k) => (
@@ -148,7 +148,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                   x + w - fs * 0.7,
                   y + fs * 0.4,
                   it.pieces ? y + h - fs * 0.4 : y + fs * 0.4 + Math.min(h - fs * 0.8, fs * 2.4),
-                  it.crossed ? pal.status.orange.base : pal.muted,
+                  it.crossed ? pal.status.orange.text : pal.muted,
                 )}
               {labelled && (
                 <text

@@ -1,6 +1,8 @@
 // The one palette, in a light and a dark theme of the same shape. Every colour in the app comes from here: the CSS
 // variables and Tailwind's colour names are generated from it at build time (tailwind.config.js), and the app code reads
-// the active theme's palette with usePalette() (src/hooks/useTheme.ts). Nothing else in the project writes a colour literal.
+// the active theme's palette with usePalette() (src/hooks/useTheme.ts). Nothing else in the project writes a colour literal,
+// except three that show real things, the same in both themes: the favicon (index.html), the custom colour picker's
+// rainbow ring (SwatchPicker) and the cabinet finish data (src/data/catalog/finishes.ts, the default baffle paint).
 import type { ThemeName } from "../types";
 
 export interface StatusColour {
@@ -81,8 +83,8 @@ export const PALETTES: Record<ThemeName, Palette> = { light: LIGHT, dark: DARK }
 export const ON_DATA: Pick<Palette, "ink" | "white" | "muted" | "edge" | "magenta" | "cyan"> =
   LIGHT;
 
-/** The 3D view's stage in each theme: floor, grid and lights (three.js hex numbers). The cabinet finishes and driver parts
- * keep their true colours in both. */
+/** The 3D view's stage in each theme: floor, grid and lights (three.js hex numbers). The cabinet finishes and the driver
+ * parts (PARTS_3D) keep their true colours in both. */
 export const STAGE: Record<
   ThemeName,
   {
@@ -114,6 +116,20 @@ export const STAGE: Record<
     key: 0.55,
   },
 };
+
+/** The 3D view's driver and hardware parts (three.js hex numbers): their true colours, the same in both themes. */
+export const PARTS_3D = {
+  /** cones, surrounds, throats, stands and rods */
+  black: 0x1c1c1c,
+  /** horn bodies */
+  cream: 0xece4c8,
+  /** the cabinet shell in the cutaway, a ghost of clear birch */
+  ghost: 0xd7b98a,
+  /** port tubes */
+  port: 0x8a7458,
+  /** the scale figure beside the stack, drawn semi-transparent */
+  figure: 0x8b847d,
+} as const;
 
 /** A colour with transparency, for chart tints and shadows. */
 export const alpha = (hex: string, a: number) => {

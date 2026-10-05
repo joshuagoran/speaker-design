@@ -119,7 +119,7 @@ export function OptimizerControls({ planner }: Props) {
           </Button>
           <button
             onClick={exitPreview}
-            className="px-3 py-1.5 rounded border border-stone-900 bg-panel"
+            className="px-3 py-1.5 rounded border border-stone-900 bg-panel text-stone-900"
           >
             Back
           </button>
