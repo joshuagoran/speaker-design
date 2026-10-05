@@ -1,4 +1,5 @@
 import type { BandCurves, FrequencyPoint } from "../../types";
+import { PA_DB_BOT, PA_DB_TOP } from "../../constants/chartScales";
 import { PAL } from "../../styles/palette";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { useState } from "react";
@@ -48,8 +49,8 @@ export function ResponseChart({
   span,
   fmax = 200,
   fmin = 15,
-  top = 135,
-  bot = 80,
+  top = PA_DB_TOP,
+  bot = PA_DB_BOT,
   step = 5,
   yLabel = "max dB SPL @ 1 m",
   unit = " dB",

@@ -52,6 +52,7 @@ import type {
   CoverageStack,
   CoverageStats,
   BalancedLevels,
+  FloorPlacement,
   FloorPoint,
   FrequencyPoint,
   MusicBalance,
@@ -818,13 +819,12 @@ export function gridLevelAt(
   return top * (1 - ty) + bot * ty;
 }
 
-/** How much of the floor reaches the target, leaving out the space right in front of each box. */
-export function coverageStats(
+/** The grid's levels over the audience's floor: every cell but those right in front of a box, dB. */
+function audienceLevels(
   grid: CoverageGrid,
   room: Pick<CoverageRoom, "widthFt" | "lengthFt">,
   boxes: readonly FloorPoint[],
-  target: number,
-): CoverageStats {
+): number[] {
   const { cols, rows, db } = grid;
   const vals: number[] = [];
   for (let j = 0; j < rows; j++)
@@ -832,8 +832,56 @@ export function coverageStats(
       const x = -room.widthFt / 2 + ((i + 0.5) * room.widthFt) / cols,
         y = ((j + 0.5) * room.lengthFt) / rows;
       if (boxes.some((b) => Math.hypot(x - b.x, y - b.y) < STATS_CLEARANCE_FT)) continue;
-      vals.push(db[j * cols + i] - target);
+      vals.push(db[j * cols + i]);
     }
+  return vals;
+}
+
+/**
+ * The audience's average level: the mean of the grid's levels in dB over the floor `coverageStats` counts (null when
+ * no cell is left).
+ */
+export function audienceAverage(
+  grid: CoverageGrid,
+  room: Pick<CoverageRoom, "widthFt" | "lengthFt">,
+  boxes: readonly FloorPoint[],
+): number | null {
+  const vals = audienceLevels(grid, room, boxes);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+}
+
+/** How far out from a stack's front its "1 m" level is read, ft. */
+export const ONE_METRE_FT = 1 / FT;
+
+/**
+ * Where a stack's 1 m level is read: 1 m out from the middle of its front along its aim, kept just inside the room.
+ * Feet.
+ */
+export function oneMetreSpot(
+  box: FloorPlacement,
+  footprint: CoverageStack["footprint"],
+  room: Pick<CoverageRoom, "widthFt" | "lengthFt">,
+): FloorPoint {
+  const a = (box.aim * Math.PI) / 180,
+    r = footprint.d / 24 + ONE_METRE_FT,
+    edge = 0.25;
+  return {
+    x: Math.max(
+      -room.widthFt / 2 + edge,
+      Math.min(room.widthFt / 2 - edge, box.x + Math.sin(a) * r),
+    ),
+    y: Math.max(edge, Math.min(room.lengthFt - edge, box.y + Math.cos(a) * r)),
+  };
+}
+
+/** How much of the floor reaches the target, leaving out the space right in front of each box. */
+export function coverageStats(
+  grid: CoverageGrid,
+  room: Pick<CoverageRoom, "widthFt" | "lengthFt">,
+  boxes: readonly FloorPoint[],
+  target: number,
+): CoverageStats {
+  const vals = audienceLevels(grid, room, boxes).map((v) => v - target);
   if (!vals.length) return { within3: 0, within6: 0, spread: 0 };
   vals.sort((a, b) => a - b);
   const share = (t: number) => vals.filter((v) => v >= t).length / vals.length;

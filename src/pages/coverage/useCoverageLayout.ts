@@ -1,9 +1,18 @@
+import { useEffect } from "react";
+import {
+  COVERAGE_LEVEL_REF,
+  COVERAGE_TARGET_DB,
+  LEGACY_LEVEL_MODE,
+} from "../../constants/coverageLevel";
 import { useStoredStateFrom } from "../../hooks/useStoredState";
+import { LISTENER_TARGET_DB } from "../../lib/pa/optimize";
 import type {
   CoverageBand,
   CoverageLayout,
   CoverageLevelMode,
+  CoverageLevelRef,
   CoverageRoom,
+  CoverageStack,
   FloorCrowd,
   FloorPoint,
   RoomMaterial,
@@ -40,7 +49,8 @@ export const DEFAULT_COVERAGE_LAYOUT: CoverageLayout = {
   mirror: true,
   band: "sub",
   freqHz: 50,
-  levelMode: "listener",
+  targetDb: LISTENER_TARGET_DB,
+  levelRef: COVERAGE_LEVEL_REF.audience,
   earFt: 5.3,
   listener: { x: 3, y: 24 },
 };
@@ -55,38 +65,97 @@ const MAX_AIM_DEG = 60;
 /** Snaps to a quarter foot. */
 const snap = (v: number) => Math.round(v * 4) / 4;
 
-/** Keeps a point inside the room, `margin` ft from every side. */
-const inRoom = <P extends FloorPoint>(
-  p: P,
-  room: Pick<CoverageRoom, "widthFt" | "lengthFt">,
-  margin: number,
-): P => ({
-  ...p,
-  x: Math.max(-room.widthFt / 2 + margin, Math.min(room.widthFt / 2 - margin, snap(p.x))),
-  y: Math.max(margin, Math.min(room.lengthFt - margin, snap(p.y))),
-});
+/** The room's floor size, ft. */
+type RoomFloor = Pick<CoverageRoom, "widthFt" | "lengthFt">;
+/** The boxes' footprint, inches: the sub box's, which the map draws every box at. */
+type Footprint = CoverageStack["footprint"];
+/** How far something reaches from its position point either way across (`x`) and along (`y`) the room, ft. */
+type Reach = FloorPoint;
 
-/** Everything placed back inside the room after it changes size. */
-const fitted = (l: CoverageLayout): CoverageLayout => ({
+/** The listener stays this far from every side, ft. */
+const LISTENER_REACH: Reach = { x: 0.5, y: 0.5 };
+
+/**
+ * How far a box of this footprint reaches from its position point when turned `aim` degrees. The point is the box's
+ * center (the map draws the box around it and the model puts its drivers there), so it reaches half its turned extent
+ * each way.
+ */
+export const boxReach = (footprint: Footprint, aim: number): Reach => {
+  const a = (aim * Math.PI) / 180,
+    c = Math.abs(Math.cos(a)),
+    s = Math.abs(Math.sin(a));
+  const w = footprint.w / 12,
+    d = footprint.d / 12;
+  return { x: (w * c + d * s) / 2, y: (w * s + d * c) / 2 };
+};
+
+/**
+ * How far the center subs reach from the cluster point: a pair side by side reaches a whole box width either way
+ * (see `coverageBoxes`), one sub half of one. The subs face straight down the room.
+ */
+export const clusterReach = (footprint: Footprint, subs: CoverageLayout["subs"]): Reach => {
+  const one = boxReach(footprint, 0);
+  return subs === "center" ? { x: one.x * 2, y: one.y } : one;
+};
+
+/** Keeps a point inside the room, so that what reaches `reach` from it at most touches the sides. */
+const inRoom = <P extends FloorPoint>(p: P, room: RoomFloor, reach: Reach): P => {
+  // something wider than the room sits in its middle
+  const clamp = (v: number, lo: number, hi: number) =>
+    lo > hi ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v));
+  const half = room.widthFt / 2;
+  return {
+    ...p,
+    x: clamp(snap(p.x), -half + reach.x, half - reach.x),
+    y: clamp(snap(p.y), reach.y, room.lengthFt - reach.y),
+  };
+};
+
+/** A stack kept inside the room: at its aim, its box at most against the walls. */
+export const stackInRoom = <S extends CoverageLayout["stacks"][0]>(
+  s: S,
+  room: RoomFloor,
+  footprint: Footprint,
+): S => inRoom(s, room, boxReach(footprint, s.aim));
+
+/** Everything placed back inside the room after it, or the sub placement, changes. */
+export const fitted = (l: CoverageLayout, footprint: Footprint): CoverageLayout => ({
   ...l,
-  stacks: [inRoom(l.stacks[0], l.room, 1), inRoom(l.stacks[1], l.room, 1)],
-  cluster: inRoom(l.cluster, l.room, 2),
-  listener: inRoom(l.listener, l.room, 0.5),
+  stacks: [
+    stackInRoom(l.stacks[0], l.room, footprint),
+    stackInRoom(l.stacks[1], l.room, footprint),
+  ],
+  cluster: inRoom(l.cluster, l.room, clusterReach(footprint, l.subs)),
+  listener: inRoom(l.listener, l.room, LISTENER_REACH),
 });
 
 /**
  * A layout as stored: any saved field over the defaults. Layouts saved before materials had a wall on or off per side
- * (`walls`) and one `absorption` for them all.
+ * (`walls`) and one `absorption` for them all; layouts saved before the target level had a `levelMode`.
  */
 export type StoredCoverageLayout = Partial<Omit<CoverageLayout, "room">> & {
+  levelMode?: CoverageLevelMode;
   room?: Partial<CoverageRoom> & {
     walls?: Partial<Record<RoomSide, boolean>>;
     absorption?: number;
   };
 };
 
+/**
+ * The target and its reference for an old `levelMode`: "target at the listener" keeps the planner's target there; "at
+ * its limit" asks the listener for the most the slider offers, so the system plays as loud as it can.
+ */
+const fromLevelMode = (
+  mode: CoverageLevelMode | undefined,
+): Partial<Pick<CoverageLayout, "targetDb" | "levelRef">> =>
+  mode === LEGACY_LEVEL_MODE.listener
+    ? { levelRef: COVERAGE_LEVEL_REF.listener }
+    : mode === LEGACY_LEVEL_MODE.limit
+      ? { levelRef: COVERAGE_LEVEL_REF.listener, targetDb: COVERAGE_TARGET_DB[1] }
+      : {};
+
 /** A stored layout over the defaults, so a layout saved before a field existed still loads. */
-export const fromStored = (s: StoredCoverageLayout): CoverageLayout => {
+export const fromStored = ({ levelMode, ...s }: StoredCoverageLayout): CoverageLayout => {
   const { walls, absorption: _absorption, ...room } = s.room ?? {};
   // an old wall that was there is drywall, one that wasn't is open; its single absorption is dropped
   const old: Partial<Record<RoomSurface, RoomMaterial>> = {};
@@ -97,6 +166,7 @@ export const fromStored = (s: StoredCoverageLayout): CoverageLayout => {
   const def = DEFAULT_COVERAGE_LAYOUT.room;
   return {
     ...DEFAULT_COVERAGE_LAYOUT,
+    ...fromLevelMode(levelMode),
     ...s,
     room: { ...def, ...room, materials: { ...def.materials, ...old, ...room.materials } },
   };
@@ -118,21 +188,27 @@ export interface CoverageLayoutState {
   setOutdoors: (outdoors: boolean) => void;
   setBand: (band: CoverageBand) => void;
   setFreqHz: (f: number) => void;
-  setLevelMode: (mode: CoverageLevelMode) => void;
+  setTargetDb: (db: number) => void;
+  setLevelRef: (ref: CoverageLevelRef) => void;
   setSubs: (subs: SubPlacement) => void;
   setMirror: (mirror: boolean) => void;
   setEarFt: (ft: number) => void;
   reset: () => void;
 }
 
-/** The floor layout, remembered per viewer: it belongs to the venue, not to the design, so it isn't saved with configs. */
-export function useCoverageLayout(): CoverageLayoutState {
+/**
+ * The floor layout, remembered per viewer: it belongs to the venue, not to the design, so it isn't saved with configs.
+ * `footprint` is the design's box, inches, so a box can go right against a wall and no further.
+ */
+export function useCoverageLayout(footprint: Footprint): CoverageLayoutState {
   const [layout, setLayout] = useStoredStateFrom<CoverageLayout, StoredCoverageLayout>(
     "coverage.layout",
     {},
     fromStored,
   );
   const update = (fn: (l: CoverageLayout) => CoverageLayout) => setLayout((l) => fn(l));
+  // a new sub box may reach through a wall it stood against: fit everything back inside
+  useEffect(() => setLayout((l) => fitted(l, footprint)), [footprint.w, footprint.d]);
   const withStack = (l: CoverageLayout, i: 0 | 1, s: CoverageLayout["stacks"][0]) => {
     const stacks: CoverageLayout["stacks"] = [...l.stacks];
     stacks[i] = s;
@@ -142,19 +218,21 @@ export function useCoverageLayout(): CoverageLayoutState {
   return {
     layout,
     moveStack: (i, p) =>
-      update((l) => withStack(l, i, inRoom({ ...l.stacks[i], x: p.x, y: p.y }, l.room, 1))),
+      update((l) =>
+        withStack(l, i, stackInRoom({ ...l.stacks[i], x: p.x, y: p.y }, l.room, footprint)),
+      ),
     aimStack: (i, p) =>
       update((l) => {
         const s = l.stacks[i],
           deg = (Math.atan2(p.x - s.x, p.y - s.y) * 180) / Math.PI;
-        return withStack(l, i, {
-          ...s,
-          aim: Math.round(Math.max(-MAX_AIM_DEG, Math.min(MAX_AIM_DEG, deg))),
-        });
+        const aim = Math.round(Math.max(-MAX_AIM_DEG, Math.min(MAX_AIM_DEG, deg)));
+        // a box turned against a wall would reach through it, so it moves back just enough
+        return withStack(l, i, stackInRoom({ ...s, aim }, l.room, footprint));
       }),
-    moveCluster: (p) => update((l) => ({ ...l, cluster: inRoom(p, l.room, 2) })),
-    moveListener: (p) => update((l) => ({ ...l, listener: inRoom(p, l.room, 0.5) })),
-    setRoomSize: (size) => update((l) => fitted({ ...l, room: { ...l.room, ...size } })),
+    moveCluster: (p) =>
+      update((l) => ({ ...l, cluster: inRoom(p, l.room, clusterReach(footprint, l.subs)) })),
+    moveListener: (p) => update((l) => ({ ...l, listener: inRoom(p, l.room, LISTENER_REACH) })),
+    setRoomSize: (size) => update((l) => fitted({ ...l, room: { ...l.room, ...size } }, footprint)),
     setMaterial: (surface, material) =>
       update((l) => ({
         ...l,
@@ -165,8 +243,10 @@ export function useCoverageLayout(): CoverageLayoutState {
     setOutdoors: (outdoors) => update((l) => ({ ...l, room: { ...l.room, outdoors } })),
     setBand: (band) => update((l) => ({ ...l, band })),
     setFreqHz: (freqHz) => update((l) => ({ ...l, freqHz })),
-    setLevelMode: (levelMode) => update((l) => ({ ...l, levelMode })),
-    setSubs: (subs) => update((l) => ({ ...l, subs })),
+    setTargetDb: (targetDb) => update((l) => ({ ...l, targetDb })),
+    setLevelRef: (levelRef) => update((l) => ({ ...l, levelRef })),
+    // a pair is twice as wide as one sub, so the cluster may have to come off a wall
+    setSubs: (subs) => update((l) => fitted({ ...l, subs }, footprint)),
     setMirror: (mirror) =>
       update((l) => {
         const m = { ...l, mirror };

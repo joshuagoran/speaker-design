@@ -15,9 +15,9 @@ import type {
 import type { CoverageLayoutState } from "../../pages/coverage/useCoverageLayout";
 import { SVG_FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
+import { COVERAGE_MAP_DB } from "../../constants/chartScales";
 
-/** The colour scale, dB against the target: fixed, so layouts compare by eye. */
-export const COVERAGE_SCALE: [lo: number, hi: number] = [-18, 6];
+const [LO_DB, HI_DB] = COVERAGE_MAP_DB;
 
 type Rgb = [r: number, g: number, b: number];
 const hexRgb = (hex: string): Rgb => {
@@ -30,28 +30,31 @@ const lerp = (x: Rgb, y: Rgb, t: number): Rgb => [
   Math.round(x[2] + (y[2] - x[2]) * t),
 ];
 const mix = (a: string, b: string, t: number) => lerp(hexRgb(a), hexRgb(b), t);
-/** white well below target, magenta at target, deep magenta above */
+/** dB SPL on a fixed scale: white at the quiet end, through magenta, to deep magenta at the loud end */
 const STOPS: [db: number, rgb: Rgb][] = [
-  [COVERAGE_SCALE[0], hexRgb(PAL.white)],
-  [-9, mix(PAL.white, PAL.magenta, 0.22)],
-  [0, hexRgb(PAL.magenta)],
-  [COVERAGE_SCALE[1], mix(PAL.magenta, PAL.ink, 0.45)],
+  [LO_DB, hexRgb(PAL.white)],
+  [92, mix(PAL.white, PAL.magenta, 0.15)],
+  [100, mix(PAL.white, PAL.magenta, 0.55)],
+  [108, hexRgb(PAL.magenta)],
+  [118, mix(PAL.magenta, PAL.ink, 0.45)],
+  [HI_DB, mix(PAL.magenta, PAL.ink, 0.8)],
 ];
-/** The colour for a level against the target. */
-export function coverageColour(rel: number): Rgb {
-  if (rel <= STOPS[0][0]) return STOPS[0][1];
+/** Where a level sits along the scale, 0–1. */
+const scalePos = (db: number) => Math.max(0, Math.min(1, (db - LO_DB) / (HI_DB - LO_DB)));
+/** The colour for a level, dB SPL. */
+export function coverageColour(db: number): Rgb {
+  if (db <= STOPS[0][0]) return STOPS[0][1];
   for (let i = 1; i < STOPS.length; i++)
-    if (rel <= STOPS[i][0]) {
+    if (db <= STOPS[i][0]) {
       const [a, ca] = STOPS[i - 1],
         [b, cb] = STOPS[i];
-      return lerp(ca, cb, (rel - a) / (b - a));
+      return lerp(ca, cb, (db - a) / (b - a));
     }
   return STOPS[STOPS.length - 1][1];
 }
 /** The scale as a CSS gradient, for the legend. */
 export const COVERAGE_GRADIENT = `linear-gradient(to right, ${STOPS.map(
-  ([db, c]) =>
-    `rgb(${c.join(",")}) ${(((db - COVERAGE_SCALE[0]) / (COVERAGE_SCALE[1] - COVERAGE_SCALE[0])) * 100).toFixed(1)}%`,
+  ([db, c]) => `rgb(${c.join(",")}) ${(scalePos(db) * 100).toFixed(1)}%`,
 ).join(", ")})`;
 
 /** where the toe-in handle sits along a stack's axis, ft */
@@ -80,7 +83,7 @@ interface Props {
 }
 
 /**
- * Top-down floor map: level against the target across the room, with the target and −6 dB contours. Drag a stack to
+ * Top-down floor map: level in dB SPL across the room on a fixed scale, with the target and −6 dB contours. Drag a stack to
  * move it, its dot to turn it, the center subs, or the listener (or tap the floor to put the listener there).
  */
 export function CoverageMap({
@@ -118,7 +121,7 @@ export function CoverageMap({
   // the heat map as a small image, one pixel a cell, scaled up smoothly
   const image = useMemo(() => {
     if (!view || typeof document === "undefined") return null;
-    const { grid, target } = view;
+    const { grid, gain } = view;
     const c = document.createElement("canvas");
     c.width = grid.cols;
     c.height = grid.rows;
@@ -126,7 +129,7 @@ export function CoverageMap({
     if (!ctx) return null;
     const img = ctx.createImageData(grid.cols, grid.rows);
     grid.db.forEach((db, i) => {
-      const [r, g, b] = coverageColour(db - target);
+      const [r, g, b] = coverageColour(db + gain);
       img.data.set([r, g, b, 255], i * 4);
     });
     ctx.putImageData(img, 0, 0);
@@ -256,7 +259,7 @@ export function CoverageMap({
         <span className="tabular-nums text-stone-900">
           {readout != null && hover && view
             ? `${hover.x.toFixed(1)}, ${hover.y.toFixed(1)} ft · ${(readout + view.gain).toFixed(1)} dB (${formatSigned(readout - view.target)})`
-            : "dB against the target"}
+            : "dB SPL"}
         </span>
       </div>
       <svg
@@ -267,7 +270,7 @@ export function CoverageMap({
         style={{ touchAction: "none", cursor: drag ? "grabbing" : "crosshair" }}
         tabIndex={0}
         role="img"
-        aria-label={`Floor map seen from above, level against the target. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room; arrow keys move them.`}
+        aria-label={`Floor map seen from above, level in dB SPL with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room; arrow keys move them.`}
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
@@ -418,25 +421,29 @@ export function CoverageMap({
         />
       </svg>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 mt-2 tabular-nums">
-        <span>{COVERAGE_SCALE[0]} dB</span>
+        <span>{LO_DB} dB</span>
         <span
           className="relative h-2.5 flex-1 min-w-[120px] max-w-[240px] rounded border border-stone-300"
           style={{ background: COVERAGE_GRADIENT }}
         >
-          {[-6, 0].map((v) => (
-            <span
-              key={v}
-              className="absolute -top-1 -bottom-1 w-0.5"
-              style={{
-                left: `${((v - COVERAGE_SCALE[0]) / (COVERAGE_SCALE[1] - COVERAGE_SCALE[0])) * 100}%`,
-                background: PAL.ink,
-                opacity: v ? 0.45 : 1,
-              }}
-            />
-          ))}
+          {view &&
+            [-6, 0].map((v) => (
+              <span
+                key={v}
+                className="absolute -top-1 -bottom-1 w-0.5"
+                style={{
+                  left: `${scalePos(view.target + view.gain + v) * 100}%`,
+                  background: PAL.ink,
+                  opacity: v ? 0.45 : 1,
+                }}
+              />
+            ))}
         </span>
-        <span>+{COVERAGE_SCALE[1]} dB against the target</span>
-        <span>Solid line: target. Faint line: −6 dB.</span>
+        <span>{HI_DB} dB SPL</span>
+        <span>
+          Solid line: target
+          {view ? ` (${(view.target + view.gain).toFixed(0)} dB)` : ""}. Faint line: −6 dB.
+        </span>
       </div>
     </div>
   );

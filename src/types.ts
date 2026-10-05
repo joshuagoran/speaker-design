@@ -1641,7 +1641,13 @@ export interface CoverageBox extends FloorPlacement {
 /** What the map averages: a named band, or one frequency (`freqHz`) summed with phase. */
 export type CoverageBand = "sub" | "kick" | "mid" | "high" | "one";
 
-/** How loud the system plays: at its limit, or turned down until the listener gets the target. */
+/**
+ * Where the coverage map's target level is measured: at the listener, as the audience's average (the floor the stats
+ * count), or 1 m in front of the stacks.
+ */
+export type CoverageLevelRef = "listener" | "audience" | "stacks";
+
+/** The coverage page's old level setting, read only from layouts saved before `targetDb` and `levelRef`. */
 export type CoverageLevelMode = "limit" | "listener";
 
 /** The subs in their stacks, both together in the middle, or one sub alone in the middle. */
@@ -1658,7 +1664,10 @@ export interface CoverageLayout {
   mirror: boolean;
   band: CoverageBand;
   freqHz: number;
-  levelMode: CoverageLevelMode;
+  /** the target level in the sub band, dB SPL (the other bands follow the music balance) */
+  targetDb: number;
+  /** where the target is measured: the system is turned down until it gets the target there, never past its limit */
+  levelRef: CoverageLevelRef;
   earFt: number;
   listener: FloorPoint;
 }
@@ -1709,6 +1718,8 @@ export interface CoverageGridView {
   target: number;
   /** the system's gain for this grid, dB, added to a grid level for the absolute level */
   gain: number;
+  /** the level reference's level at the limit for this grid, dB (null when it can't be worked out) */
+  atLimit: number | null;
 }
 
 /** What the floor map's worker computes from: the stack and its levels, where the boxes stand, the band, the grid size. */
