@@ -22,8 +22,8 @@ interface Props<Id extends string> {
 }
 
 /**
- * A page's settings column, beside its charts. From md up it stays in view while the page scrolls, and scrolls on its
- * own when taller than the screen, so a setting can be changed beside the chart it affects.
+ * A page's settings column, the right-hand pane of a `SettingsLayout`. From md up it scrolls on its own when taller than
+ * the screen, so a setting can be changed beside the chart it affects.
  */
 export function SettingsColumn<Id extends string>({
   label = UI_TEXT.settings,
@@ -38,7 +38,7 @@ export function SettingsColumn<Id extends string>({
     <aside
       aria-label={label}
       style={{ fontFamily: FONT }}
-      className={`min-w-0 md:col-span-2 md:sticky md:top-4 md:self-start md:flex md:flex-col md:max-h-[calc(100dvh-2rem)] md:border md:border-stone-300 md:rounded-lg ${className}`}
+      className={`min-w-0 md:self-start md:flex md:flex-col md:max-h-[calc(100%-1rem)] md:border md:border-stone-300 md:rounded-lg ${className}`}
     >
       {top}
       {folds && (
@@ -57,7 +57,7 @@ export function SettingsColumn<Id extends string>({
         </div>
       )}
       <div
-        className={`md:min-h-0 md:overflow-y-auto md:overscroll-contain md:px-4 md:pt-3 ${bodyClassName}`}
+        className={`md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable] md:px-4 md:pt-3 ${bodyClassName}`}
       >
         {children}
       </div>

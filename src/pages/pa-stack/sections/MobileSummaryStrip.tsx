@@ -14,7 +14,7 @@ export function MobileSummaryStrip({ planner }: Props) {
     <>
       {subModelled && (
         <div
-          className="md:hidden sticky top-0 z-30 bg-stone-50/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center"
+          className="md:hidden sticky top-0 z-30 -mx-4 bg-stone-50/95 backdrop-blur border-b border-stone-300 px-4 py-1.5 grid grid-cols-4 gap-2 text-center"
           style={{ fontFamily: FONT }}
         >
           {[

@@ -18,9 +18,13 @@
      grays. Status uses its own green / orange / red. Tailwind's colour names are remapped in tailwind.config.js, so class names stay as they were. */
 :root {
   --font: "Inconsolata", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  /* keep the scrollbar's space on every page, so a page short enough to need none (Fills on a tall screen) doesn't
-     shift sideways when you switch to it */
-  scrollbar-gutter: stable;
+}
+/* below md the page scrolls: keep the scrollbar's space on every page, so a page short enough to need none doesn't
+   shift sideways when you switch to it (from md up the panes keep their own) */
+@media (max-width: 767.98px) {
+  :root {
+    scrollbar-gutter: stable;
+  }
 }
 body {
   margin: 0;

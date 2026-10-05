@@ -40,7 +40,7 @@ export function TotalsSection({ planner }: Props) {
   } = planner;
   return (
     <>
-      <section className="min-w-0 md:col-span-5 mt-6" style={{ fontFamily: FONT }}>
+      <section className="min-w-0 mt-6" style={{ fontFamily: FONT }}>
         <FoldHeading
           id="totals"
           title="Totals for the current selection"

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ConfigStore } from "./useConfigStore";
 import type { SavedConfig, SavedConfigData } from "../../types";
 import { FONT } from "../../styles/fonts";
+import { PAGE_WIDTH } from "../../styles/layout";
 
 interface Props {
   store: ConfigStore;
@@ -29,10 +30,7 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
   const Wrap = bare ? "div" : "section";
   const namePrompt = "Name this setup";
   return (
-    <Wrap
-      className={bare ? "mb-3" : "max-w-6xl mx-auto px-4 md:px-8 pb-2"}
-      style={{ fontFamily: FONT }}
-    >
+    <Wrap className={bare ? "mb-3" : `${PAGE_WIDTH} pb-2`} style={{ fontFamily: FONT }}>
       <Card pad="lg" tone="tint">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-stone-500 mr-1">Saved configurations</span>

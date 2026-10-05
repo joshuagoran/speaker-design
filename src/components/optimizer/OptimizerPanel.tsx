@@ -108,7 +108,7 @@ export function OptimizerPanel({
             .join(" and ")} than yours`
         : "");
   return (
-    <section className="max-w-6xl mx-auto px-4 md:px-8 pb-4" style={{ fontFamily: FONT }}>
+    <section className="pb-4" style={{ fontFamily: FONT }}>
       <Card pad="lg">
         <SectionHeading>{OPTIMIZER_PANEL_TEXT.heading}</SectionHeading>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
