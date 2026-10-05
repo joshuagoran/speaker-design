@@ -711,9 +711,11 @@ export function slotInnerEndCorrection(
   t: number,
   folded: boolean,
 ) {
-  const h = v.slotH,
-    depth = box.d - 0.75 - t; // baffle to back panel, as the gap behind a straight slot is measured
-  if (!folded) return slotMouthCorrection(h, box.h - 2 * t, depth - v.len, t);
+  const h = v.slotH;
+  // the slot runs from the frame front under the baffle (as maxStraightSlotIn, the 3D view and the cutlist take it), so
+  // its mouth is `d - t - len` from the back panel: a slot height at the longest straight run
+  if (!folded) return slotMouthCorrection(h, box.h - 2 * t, box.d - t - v.len, t);
+  const depth = box.d - 0.75 - t; // across the rear channel's mouth, the box's depth (behind a 3/4" baffle inset)
   return SHARP_BEND_CORRECTION * h + slotMouthCorrection(h, depth, foldedLidGapIn(box, v, t), t);
 }
 // Side duct (throat th, open height H) against a side wall: outside, the ground mirrors the bottom of the

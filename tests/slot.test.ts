@@ -65,7 +65,7 @@ test("letterbox Fb = Helmholtz with the slot end correction", (t) => {
   close(
     t,
     g.ec!,
-    rectangleEndCorrection(6, W) + slotMouthCorrection(3, 30 - 1.5, 20 - 0.75 - 0.75 - 14, 0.75),
+    rectangleEndCorrection(6, W) + slotMouthCorrection(3, 30 - 1.5, 20 - 0.75 - 14, 0.75),
     1e-12,
   );
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
@@ -185,9 +185,9 @@ test("side duct: outer end mirrored by the ground along its height", (t) => {
 test("bottom slot: straight while it fits, folded past that (a sharp bend, and its mouth under the lid)", (t) => {
   const box = { w: 22, h: 30, d: 20 },
     outer = rectangleEndCorrection(6, 19);
-  // the straight run holds d - t - slotH = 16.25; its mouth is 20 - 0.75 - 0.75 - 16.25 = 2.25 from the back wall
+  // the straight run holds d - t - slotH = 16.25 (from the frame front); its mouth is a slot height from the back wall
   const straight = ventGeometry("slots", box, vent({ slotH: 3, len: 16.25 }), 0.75);
-  close(t, straight.ec ?? NaN, outer + slotMouthCorrection(3, 28.5, 2.25, 0.75), 1e-12);
+  close(t, straight.ec ?? NaN, outer + slotMouthCorrection(3, 28.5, 3, 0.75), 1e-12);
   assert.ok(!straight.desc.includes("folded"));
   // folded 20 long: the rear wall would rise 20 - 19.25 = 0.75, held at the least 1, so the mouth is 28.5 - 3 - 1 under
   // the lid, the box's inside depth (20 - 0.75 - 0.75) across it
@@ -218,9 +218,10 @@ test("slot mouth: a nearer facing wall always adds (no flat stretch over the las
   assert.ok(slotMouthCorrection(3, 28.5, 3, 1.5) > slotMouthCorrection(3, 28.5, 3, 0.75));
 });
 test("bottom slot: the shortest fold tunes a little above the longest straight run, as the 2D flow says", () => {
-  // At the straight run's end the mouth is under a slot height from the back wall, and squeezing through that gap adds
-  // more mass than the shortest fold's open rear channel; solved directly in 2D (tests/slot-flow.ts) the shortest fold's
-  // effective length is 1.4–2.7 in under the longest straight slot's in these boxes, so it tunes 1–2 Hz higher.
+  // At the straight run's end the mouth is a slot height from the back wall; the shortest fold is 4 in or so longer
+  // but its sharp bend takes some back, and its mouth opens wide under the lid, so its effective length is within about
+  // an inch of the longest straight slot's in these boxes (tests/slot-flow.ts), and with the rear wall's wood and the
+  // duct's own air off the box it tunes 0.4–1.2 Hz higher.
   const cases: [SubSystemConfig["subBox"], number][] = [
     [{ w: 22, h: 30, d: 20 }, 3],
     [{ w: 21, h: 37, d: 18 }, 3],

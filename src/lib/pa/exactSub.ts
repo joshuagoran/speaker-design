@@ -564,6 +564,7 @@ export function solveShape(
   let len = 0;
   let prev: { x: number; err: number } | null = null;
   for (let it = 0; it < 60; it++) {
+    let unreached = false; // a bottom slot this size tunes neither straight nor folded
     // the duct length for the tuning at this size; where the end correction reads the gap behind the duct, the root of
     // len + ec(len) = Leff, which rises with the length (a longer duct leaves a smaller gap, a larger correction). A
     // bottom slot is solved straight first; only when that is longer than the straight run holds does it fold.
@@ -605,13 +606,15 @@ export function solveShape(
       if (style === "slots" && v.len > straightMax) {
         // past the straight run it folds: the folded length's root (its correction rises with the length too, as the
         // mouth nears the lid). A fold takes a different correction from the straight slot's at the back wall, so
-        // there can be tunings neither reaches: none past the straight run, and no box of this size for the target.
+        // there can be tunings neither reaches: none past the straight run. A size on the way there keeps the straight
+        // root so the steps carry on; only a box that settles there has no duct for the target.
+        const straightLen = v.len;
         const gf = (x: number) => {
           v.len = x;
           return x - ductLengthFor(ventShape(style, box, v, t, true), Leff);
         };
-        if (gf(straightMax) >= 0) return null;
-        v.len = illinoisRoot(gf, straightMax, Leff / 0.0254);
+        unreached = gf(straightMax) >= 0;
+        v.len = unreached ? straightLen : illinoisRoot(gf, straightMax, Leff / 0.0254);
       }
       vs = ventShape(style, box, v, t);
     }
@@ -622,7 +625,8 @@ export function solveShape(
       (vs.area * len * 16.387) / 1000 -
       subWoodIn3(style, box, t, inset, v) * IN3_TO_L;
     const err = VbL - net;
-    if (Math.abs(err) <= 1e-11 * VbL) return { box: { ...box }, len, area: vs.area };
+    if (Math.abs(err) <= 1e-11 * VbL)
+      return unreached ? null : { box: { ...box }, len, area: vs.area };
     // the net volume's slope along the free side: the gross volume's at first (the wood and duct move far less), then
     // the secant through the last two sizes
     const secant = prev && (prev.err - err) / (box[free] - prev.x);
