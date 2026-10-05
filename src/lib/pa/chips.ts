@@ -13,6 +13,7 @@ import type {
   VentSpec,
 } from "../../types";
 import { isRoundPort, maxFoldedSlotIn, maxStraightSlotIn, minFoldedSlotIn } from "./calc";
+import { PA_SLIDERS } from "../../constants/paSliders";
 
 // Longest duct each layout can hold, leaving an opening at least as wide as the duct. A bottom slot runs straight
 // while it fits (maxStraight) and folds up the back wall past that, so it holds the longer of the two; a fold is never
@@ -38,6 +39,19 @@ export function ductFit(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT
       : [[0, fit]];
   return { maxStraight, minFold, maxFold, maxSide, maxTube, fit, spans };
 }
+/**
+ * The duct-length slider's top: its own, or a bottom slot's longest fold where that runs past it. The settings panel and
+ * the optimizers take this one limit, so every card's duct is a length the slider can show.
+ */
+export const ductLenSliderMax = (
+  subBox: Pick<Dims3, "d" | "h">,
+  portStyle: PortStyle,
+  cVent: Pick<VentSpec, "slotH">,
+  PT: number,
+) =>
+  portStyle === "slots"
+    ? Math.max(PA_SLIDERS.ductLen.max, maxFoldedSlotIn(subBox, cVent.slotH, PT))
+    : PA_SLIDERS.ductLen.max;
 /** Whether a duct `len` long fits the layout: inside one of ductFit's spans. */
 export const ductFits = (spans: ReturnType<typeof ductFit>["spans"], len: number) =>
   spans.some(([a, b]) => len >= a && len <= b);
