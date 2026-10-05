@@ -62,6 +62,8 @@ interface Props<Id extends string> {
   folds: Record<Id, boolean>;
   toggle: (id: Id) => void;
   className?: string;
+  /** extra classes on the button, which fills the heading: padding here keeps the whole heading clickable */
+  buttonClassName?: string;
   /** the widths it folds at (default: phones only) */
   foldsAt?: FoldsAt;
   /** one line of the section's current values, shown while it is folded */
@@ -77,6 +79,7 @@ export function FoldHeading<Id extends string>({
   folds,
   toggle,
   className = "",
+  buttonClassName = "",
   foldsAt = "phone",
   summary,
   level = 2,
@@ -93,7 +96,7 @@ export function FoldHeading<Id extends string>({
         type="button"
         onClick={() => toggle(id)}
         aria-expanded={open}
-        className={`w-full flex justify-between items-center gap-3 text-left ${at.minH} ${at.inert}`}
+        className={`w-full flex justify-between items-center gap-3 text-left ${at.minH} ${at.inert} ${buttonClassName}`}
       >
         <span className="min-w-0 flex-1 flex flex-col">
           <span>{title}</span>
