@@ -48,6 +48,13 @@ import type {
 } from "../../types";
 import { METERS_PER_FOOT } from "../../constants/units";
 import { WOOFER_LIMITED_BY } from "../../constants/limits";
+import {
+  DISPERSION_ANGLE_MAX_DEG,
+  DISPERSION_ANGLE_STEP_DEG,
+  DISPERSION_FREQ_POINTS,
+  DISPERSION_FREQ_MAX_HZ,
+  DISPERSION_FREQ_MIN_HZ,
+} from "../../constants/chartScales";
 import { formatInches } from "../format";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
 import { xmaxBandCurves } from "../xmax";
@@ -960,6 +967,7 @@ export function hifiResponseAt(
     a = Math.sqrt(w.ts.Sd / 1e4 / Math.PI);
   const dome = (t.domeIn * IN) / 2;
   const dist = geo.distM,
+    align = geo.alignM ?? dist,
     dz = (h: number) => (geo.eyeIn - h) * IN;
   // the angle is measured on the tweeter's axis, which an offset moves off the woofer's (centred) one
   const xT = tweeterOffset(cfg, t, sys.lay) * IN,
@@ -968,8 +976,8 @@ export function hifiResponseAt(
     thW = Math.atan2(Math.abs(p.x * IN), p.z * IN);
   const rW = Math.hypot(hW, dz(sys.lay.wooferIn)),
     rT = Math.hypot(dist, dz(sys.lay.tweeterIn));
-  const r0W = Math.hypot(Math.hypot(dist, xT), (sys.lay.tweeterIn - sys.lay.wooferIn) * IN),
-    r0T = dist; // alignment point: tweeter axis
+  const r0W = Math.hypot(Math.hypot(align, xT), (sys.lay.tweeterIn - sys.lay.wooferIn) * IN),
+    r0T = align; // alignment point: tweeter axis
   const tvW = Math.atan2(dz(sys.lay.wooferIn), hW),
     tvT = Math.atan2(dz(sys.lay.tweeterIn), dist);
   const offW = Math.acos(Math.cos(thW) * Math.cos(tvW)),
@@ -1037,6 +1045,34 @@ export const listenerGeometry = (
 
 export const logSpacedFrequencies = (a: number, b: number, n: number) =>
   Array.from({ length: n }, (_, i) => a * Math.pow(b / a, i / (n - 1)));
+
+/** The grid every dispersion map (PA and Hi-fi, both planes) is sampled on: −90..90° at one step, the dispersion frequency axis (50 Hz-20 kHz). */
+export const dispersionGrid = (): Pick<HifiDispersionMap, "angles" | "freqs"> => ({
+  angles: Array.from(
+    { length: (2 * DISPERSION_ANGLE_MAX_DEG) / DISPERSION_ANGLE_STEP_DEG + 1 },
+    (_, i) => -DISPERSION_ANGLE_MAX_DEG + i * DISPERSION_ANGLE_STEP_DEG,
+  ),
+  freqs: logSpacedFrequencies(
+    DISPERSION_FREQ_MIN_HZ,
+    DISPERSION_FREQ_MAX_HZ,
+    DISPERSION_FREQ_POINTS,
+  ),
+});
+
+/**
+ * The listener on a vertical map's arc: `deg` above (+) or below (−) the axis of a source at `axisIn`, `distM` from it,
+ * with the drivers still time-aligned on that axis at `distM`.
+ */
+export const verticalArcPoint = (deg: number, axisIn: number, distM: number): ListenerGeometry => {
+  const rad = (deg * Math.PI) / 180;
+  // at ±90° the cosine is not exactly 0, which keeps the listener just in front of the baffle
+  return {
+    th: 0,
+    eyeIn: axisIn + (Math.sin(rad) * distM) / IN,
+    distM: Math.cos(rad) * distM,
+    alignM: distM,
+  };
+};
 const nearestF = (curve: WooferPoint[], f: number) => {
   let lo = 0,
     hi = curve.length - 1;
@@ -1050,9 +1086,10 @@ const nearestF = (curve: WooferPoint[], f: number) => {
   return f - curve[lo].f < curve[hi].f - f ? curve[lo] : curve[hi];
 };
 
-// Dispersion map: level vs angle and frequency, normalised to on-axis. plane "h" (horizontal, at the tweeter
-// height, from the outside (−) to the inside (+) of the pair, so an offset tweeter's two sides both show) or "v"
-// (vertical, from below to above the tweeter axis). Returns { angles, freqs, rows: [[dB]] }.
+// Dispersion map: level vs angle and frequency, normalised to on-axis, on the shared grid (−90..90°, 50 Hz-20 kHz).
+// plane "h" (horizontal, at the tweeter height, from the outside (−) to the inside (+) of the pair, so an offset
+// tweeter's two sides both show) or "v" (vertical, on an arc from below to above the tweeter axis).
+// Returns { angles, freqs, rows: [[dB]] }.
 export function hifiDispersionMap(
   sys: HifiSystem,
   w: HifiWoofer,
@@ -1061,22 +1098,18 @@ export function hifiDispersionMap(
   plane: DispersionPlane = "h",
   distM = 2,
 ): HifiDispersionMap {
-  const freqs = logSpacedFrequencies(100, 20000, 72);
-  const angles =
-    plane === "h"
-      ? Array.from({ length: 37 }, (_, i) => -90 + i * 5)
-      : Array.from({ length: 25 }, (_, i) => -60 + i * 5);
+  const { angles, freqs } = dispersionGrid();
   const on = hifiResponseAt(sys, w, t, cfg, { th: 0, eyeIn: sys.lay.tweeterIn, distM }, freqs);
   const rows = angles.map((deg) => {
     const rad = (deg * Math.PI) / 180;
     const geo: ListenerGeometry =
       plane === "h"
         ? { th: Math.abs(rad), eyeIn: sys.lay.tweeterIn, distM, side: deg < 0 ? -1 : 1 }
-        : { th: 0, eyeIn: sys.lay.tweeterIn + (Math.tan(rad) * distM) / IN, distM: distM };
+        : verticalArcPoint(deg, sys.lay.tweeterIn, distM);
     const r = hifiResponseAt(sys, w, t, cfg, geo, freqs);
     return r.map((o, i) => o.spl - on[i].spl);
   });
-  return { angles, freqs, rows };
+  return { angles, freqs, rows, crossovers: [cfg.xo] };
 }
 
 // ---- checks ----

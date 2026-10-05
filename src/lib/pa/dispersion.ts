@@ -6,7 +6,8 @@ import {
   linkwitzRileyFilter,
   pistonDirectivity,
   waveguideDirectivity,
-  logSpacedFrequencies,
+  dispersionGrid,
+  verticalArcPoint,
   type Complex,
 } from "../hifi/hifi";
 import type {
@@ -89,11 +90,12 @@ export function paResponseAt(
   freqs: number[],
 ): FrequencyPoint[] {
   const dist = geo.distM,
+    align = geo.alignM ?? dist,
     ref = s.horn.zIn;
   const src = paStackSources(s).map((o) => {
     const dz = (geo.eyeIn - o.z) * IN,
       r = Math.hypot(dist, dz),
-      r0 = Math.hypot(dist, (ref - o.z) * IN);
+      r0 = Math.hypot(align, (ref - o.z) * IN);
     return { o, r, r0, tv: Math.atan2(dz, dist) };
   });
   return freqs.map((f) => {
@@ -101,33 +103,39 @@ export function paResponseAt(
     let p = cm(0);
     for (const { o, r, r0, tv } of src) {
       const d = stackSourceDirectivity(s, o, f, geo.th, tv);
-      p = cadd(p, cmul(cmul(o.filt(f), cm((d * dist) / r)), cexp(-k * (r - r0))));
+      p = cadd(p, cmul(cmul(o.filt(f), cm((d * align) / r)), cexp(-k * (r - r0))));
     }
     return { f, spl: 20 * Math.log10(Math.max(1e-9, cabs(p))) };
   });
 }
 
-// level vs angle and frequency, normalised to the horn axis. plane "h" (at horn height) or "v" (−60° below to +60° above)
+// level vs angle and frequency, normalised to the horn axis, on the shared grid (−90..90°, 50 Hz-20 kHz). plane "h"
+// (at horn height; the stack is symmetric left to right, so 0..90° is computed and mirrored) or "v" (on an arc from
+// below (−) to above (+) the horn axis, the drivers time-aligned on that axis at `distM`)
 export function paDispersionMap(
   s: PaStackGeometry,
   plane: DispersionPlane = "v",
   distM = 5,
 ): HifiDispersionMap {
-  const freqs = logSpacedFrequencies(100, 20000, 72);
-  const angles =
-    plane === "h"
-      ? Array.from({ length: 19 }, (_, i) => i * 5)
-      : Array.from({ length: 25 }, (_, i) => -60 + i * 5);
+  const { angles, freqs } = dispersionGrid();
   const on = paResponseAt(s, { th: 0, eyeIn: s.horn.zIn, distM }, freqs);
-  const rows = angles.map((deg) => {
-    const rad = (deg * Math.PI) / 180;
+  const row = (deg: number) => {
     const geo =
       plane === "h"
-        ? { th: rad, eyeIn: s.horn.zIn, distM }
-        : { th: 0, eyeIn: s.horn.zIn + (Math.tan(rad) * distM) / IN, distM };
+        ? { th: (deg * Math.PI) / 180, eyeIn: s.horn.zIn, distM }
+        : verticalArcPoint(deg, s.horn.zIn, distM);
     return paResponseAt(s, geo, freqs).map((o, i) => o.spl - on[i].spl);
+  };
+  // horizontal: each side's row is computed once, for |angle|
+  const halves = new Map<number, number[]>();
+  const rows = angles.map((deg) => {
+    if (plane === "v") return row(deg);
+    const a = Math.abs(deg);
+    const r = halves.get(a) ?? row(a);
+    halves.set(a, r);
+    return r;
   });
-  return { angles, freqs, rows };
+  return { angles, freqs, rows, crossovers: s.sub && s.sub.Sd ? [s.xoLo, s.xoHi] : [s.xoHi] };
 }
 
 // first vertical null near the mid/horn crossover: the angle where the path difference is half a wavelength
