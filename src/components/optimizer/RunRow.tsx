@@ -97,7 +97,9 @@ function SearchProgress({
         aria-valuenow={Math.round(pct)}
       >
         <div
-          className="h-full bg-cmy-a transition-[width] duration-150 motion-reduce:transition-none"
+          // the fill pulses while the search runs, so a stretch without a new share (a card's search settling) still
+          // reads as working
+          className="h-full bg-cmy-a transition-[width] duration-150 animate-pulse motion-reduce:transition-none motion-reduce:animate-none"
           style={{ width: `${pct}%` }}
         />
       </div>

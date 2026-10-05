@@ -147,7 +147,14 @@ export function OptimizerPanel({
             />
           </div>
           <GoalPicker defs={OPTIMIZER_GOALS} selected={goals} onTap={tapGoal} />
-          <KeepDetails lines={keepLines(goals, OPTIMIZER_GOALS, PA_KEEP_WORDS, curOut != null)} />
+          <KeepDetails
+            lines={keepLines(goals, OPTIMIZER_GOALS, PA_KEEP_WORDS, curOut != null)}
+            more={[
+              "Improve: a quick search around your design (about a second).",
+              "Fully optimize: Improve's designs and every design on the grid below, so its first card is never behind Improve's and nothing on the grid beats it (up to a minute or so):",
+              ...fullGridLines.map((line) => `· ${line}`),
+            ]}
+          />
         </div>
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">
           Target: {tgtText}
@@ -175,14 +182,6 @@ export function OptimizerPanel({
         >
           {err && <span className="text-xs text-red-700">{err}</span>}
         </RunRow>
-        <KeepDetails
-          summary="Improve or Fully optimize"
-          lines={[
-            "Improve: a quick search around your design (about a second).",
-            "Fully optimize: Improve's designs and every design on the grid below, so its first card is never behind Improve's and nothing on the grid beats it (up to a minute or so):",
-            ...fullGridLines.map((line) => `· ${line}`),
-          ]}
-        />
         {res && !busy && res.curProblems && res.curProblems.length > 0 && (
           <Notice>
             Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.

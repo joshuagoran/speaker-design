@@ -85,6 +85,7 @@ import type {
   Dims3,
   HornHf,
   MidDriver,
+  OptimizerProgress,
   OptimizerProgressCallback,
   PaChoose,
   PaChosen,
@@ -1771,6 +1772,10 @@ const BEST_WORDS: Record<PaGoal, (m: PaMetric) => string> = {
   louder: (m) => `${m.out.toFixed(1)} dB`,
 };
 
+// the selection's progress in fixed units, and the share of it Improve's steps take before the card slots' searches
+const SELECT_UNITS = 1000;
+const QUICK_SHARE = 0.25;
+
 /**
  * The exact search, with the same input, cards and near miss as `optimizePaStack`. `opts.scored` are the model step's
  * shares already done (by workers; else it runs here); `opts.grid` narrows the grid (tests).
@@ -1783,13 +1788,20 @@ export function optimizePaStackExact(
   const t0 = Date.now();
   const grid = opts.grid ?? PA_EXACT_GRID;
   const shares = opts.scored ?? [paExactScore(input, 0, 1, onProgress, grid)];
-  const hook = exactHook(input, shares, onProgress, grid);
-  const res = optimizePaStack(input, undefined, hook);
+  // the selection's progress: Improve's steps first (its designs join the pool), then the card slots' searches
+  const share = (from: number, to: number) => (p: OptimizerProgress) =>
+    onProgress?.({
+      done: Math.round(SELECT_UNITS * (from + ((to - from) * p.done) / Math.max(p.total, 1))),
+      total: SELECT_UNITS,
+      best: p.best,
+    });
+  const hook = exactHook(input, shares, onProgress && share(QUICK_SHARE, 1), grid);
+  const res = optimizePaStack(input, onProgress && share(0, QUICK_SHARE), hook);
   const st = hook.stats();
   return {
     ...res,
     stats: {
-      evaluated: st.designs,
+      evaluated: res.stats.evaluated + st.designs,
       ms: Date.now() - t0,
       subs: st.subDesigns,
       combos: st.designs,
