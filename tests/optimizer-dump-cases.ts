@@ -72,12 +72,20 @@ const hifiConfigs: { name: string; cur: HifiOptimizerInput["cur"] }[] = [
   },
 ];
 
-/** PA: each seed × the page's default budget and the tests' (which leaves room for a "Smallest change" card) × goal set. */
-const paCases = seeds.flatMap(({ name, ...seed }) => {
-  const cur: PaOptimizerCurrent = {
+/** A saved design as the PA search reads it (older saves lack mDim: their mid box's own). */
+export function paCurrent(name: string): PaOptimizerCurrent {
+  const found = seeds.find((x) => x.name === name);
+  if (!found) throw new Error(`no saved design "${name}"`);
+  const { name: _name, ...seed } = found;
+  return {
     ...seed,
     mDim: seed.mDim ?? (MID_BOXES.find((b) => b.id === seed.midBox) || MID_BOXES[0]).box,
   };
+}
+
+/** PA: each seed × the page's default budget and the tests' (which leaves room for a "Smallest change" card) × goal set. */
+const paCases = seeds.flatMap(({ name }) => {
+  const cur = paCurrent(name);
   return [900, 1100].flatMap((budget) =>
     goalSets.map((goals) => (): Json => {
       const r = optimizePaStack({ cur, room: 1000, maxLb: 125, budget, goals, locks: {} });
