@@ -18,6 +18,7 @@
 //      the port ignored, the lightest box that holds the volume, the cheapest mid and horn); the card selection runs on
 //      a pool that grows until no design on the grid beats one of its picks, and every pick is checked with the
 //      planner's own evaluateDesign (a design the fast path got wrong is set aside and the cards are picked again).
+import { PA_SLIDERS } from "../../constants/paSliders";
 import { throttledProgress } from "../optimizer/progress";
 import {
   ALT_OUTPUT_DB,
@@ -121,7 +122,7 @@ export const PA_EXACT_GRID: PaExactGrid = {
   volumeStep: 0.02,
   minNetL: 20,
   fb: { from: 20, to: 50, step: 2 },
-  minDuctIn: 2,
+  minDuctIn: PA_SLIDERS.ductLen.min,
 };
 // the most entries a cache that grows with the boxes looked at keeps before it starts again
 const CACHE_MAX = 4096;
@@ -734,7 +735,11 @@ function exactHook(
       const x = sol.box[free];
       if (x < lo - 1e-9 || x > hi + 1e-9) continue;
       const v = { ...vent, len: sol.len };
-      if (sol.len < s.grid.minDuctIn || !ductFits(ductFit(sol.box, style, v, t).spans, sol.len))
+      if (
+        sol.len < s.grid.minDuctIn ||
+        sol.len > PA_SLIDERS.ductLen.max ||
+        !ductFits(ductFit(sol.box, style, v, t).spans, sol.len)
+      )
         continue;
       const { clearW, clearH } = driverClearance(sol.box, style, v, t);
       if (Math.min(clearW, clearH) < need) continue;
@@ -1544,7 +1549,10 @@ function exactHook(
     // the lengths that fit (a bottom slot straight, then folded); the tuning steps at a slot's fold, so the search
     // takes the shortest span that reaches it, at the fold's shortest when even that tunes lower
     const spans = ductFit(box, style, { ...vent, len: 0 }, t)
-      .spans.map(([lo, hi]) => [Math.max(lo, s.grid.minDuctIn), hi] as const)
+      .spans.map(
+        ([lo, hi]) =>
+          [Math.max(lo, s.grid.minDuctIn), Math.min(hi, PA_SLIDERS.ductLen.max)] as const,
+      )
       .filter(([lo, hi]) => hi >= lo);
     const first = spans[0],
       last = spans[spans.length - 1];

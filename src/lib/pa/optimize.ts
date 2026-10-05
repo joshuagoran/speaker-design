@@ -171,9 +171,9 @@ export const SUB_BOX_RANGE: Record<keyof Dims3, [number, number]> = {
   d: [PA_SLIDERS.subD.min, PA_SLIDERS.subD.max],
 };
 export const MID_BOX_RANGE: Record<keyof Dims3, [number, number]> = {
-  w: [10, 24],
-  h: [10, 24],
-  d: [8, 24],
+  w: [PA_SLIDERS.midW.min, PA_SLIDERS.midW.max],
+  h: [PA_SLIDERS.midH.min, PA_SLIDERS.midH.max],
+  d: [PA_SLIDERS.midD.min, PA_SLIDERS.midD.max],
 };
 export const rangeOf = (
   mode: DimensionLockMode | undefined,
@@ -805,10 +805,16 @@ export function optimizePaStack(
           let pushed = false,
             fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystemModelled } | null = null;
           for (const size of ventSizesFor(style)) {
-            // the lengths that fit, from 2 in: a bottom slot runs straight, then (past the lengths that fit neither
-            // way) folds up the back wall
+            // the lengths that fit, inside the duct-length slider: a bottom slot runs straight, then (past the lengths
+            // that fit neither way) folds up the back wall
             const spans = ductFit(box, style, mk(size, 0), t)
-              .spans.map(([a, b]) => [Math.max(a, 2), b] as const)
+              .spans.map(
+                ([a, b]) =>
+                  [
+                    Math.max(a, PA_SLIDERS.ductLen.min),
+                    Math.min(b, PA_SLIDERS.ductLen.max),
+                  ] as const,
+              )
               .filter(([a, b]) => b >= a + 0.25);
             const first = spans[0],
               last = spans[spans.length - 1];
@@ -1449,16 +1455,19 @@ export function optimizePaStack(
   };
   // Every card on the planner's sliders, so it loads as a design the planner can show: a box side or the duct length
   // off its slider's step is rounded to the steps either side (and one further, since rounding the duct retunes the
-  // box), each try checked with the planner's model. The try with no more problems than the card had, keeping each goal's
-  // keep the card kept, that does best on the card's own goal wins; with none, the card stays as it is. (Fully optimize
+  // box), each try checked with the planner's model. The try that fails nothing the card didn't, keeping each goal's keep
+  // the card kept, that does best on the card's own goal wins; with none, the card stays as it is. (Fully optimize
   // cuts the depth and the duct to exact volumes and tunings; Improve rounds its ducts to the quarter inch.)
   const onStep = (x: number, s: SliderSpec) => Math.abs(x / s.step - Math.round(x / s.step)) < 1e-9;
-  const nearSteps = (x: number, s: SliderSpec, [lo, hi]: [number, number]) => {
-    if (onStep(x, s)) return [x];
+  // a value's tries: your design's own value and a value already on its step and in range stay as they are (only what
+  // the search chose is rounded); with no step in range (a locked side off its step), the value stays too
+  const nearSteps = (x: number, s: SliderSpec, [lo, hi]: [number, number], own: number) => {
+    const inRange = (v: number) =>
+      v >= Math.max(lo, s.min) - 1e-9 && v <= Math.min(hi, s.max) + 1e-9;
+    if (x === own || (onStep(x, s) && inRange(x))) return [x];
     const below = Math.floor(x / s.step) * s.step;
-    return [below - s.step, below, below + s.step, below + 2 * s.step].filter(
-      (v) => v >= Math.max(lo, s.min) - 1e-9 && v <= Math.min(hi, s.max) + 1e-9,
-    );
+    const tries = [below - s.step, below, below + s.step, below + 2 * s.step].filter(inRange);
+    return tries.length ? tries : [x];
   };
   const SUB_SIDE: Record<keyof Dims3, SliderSpec> = {
     w: PA_SLIDERS.subW,
@@ -1466,13 +1475,18 @@ export function optimizePaStack(
     d: PA_SLIDERS.subD,
   };
   const onSliders = (p: PoolEntry, axis: PaGoal): PoolEntry => {
-    const sides = (["w", "h", "d"] as const).map((k) => nearSteps(p.c.cDim[k], SUB_SIDE[k], sr[k]));
-    const lens = nearSteps(p.c.cVent.len, PA_SLIDERS.ductLen, [
-      PA_SLIDERS.ductLen.min,
-      PA_SLIDERS.ductLen.max,
-    ]);
+    const sides = (["w", "h", "d"] as const).map((k) =>
+      nearSteps(p.c.cDim[k], SUB_SIDE[k], sr[k], cur.cDim[k]),
+    );
+    const lens = nearSteps(
+      p.c.cVent.len,
+      PA_SLIDERS.ductLen,
+      [PA_SLIDERS.ductLen.min, PA_SLIDERS.ductLen.max],
+      cur.cVent.len,
+    );
     if (sides.every((o) => o.length === 1) && lens.length === 1) return p;
-    const problems = designProblems(p.m, lim).length;
+    // a try may fail only what the card already fails (the near miss names its blockers from these)
+    const had = new Set(designProblemList(p.m, lim).map((x) => x.id));
     const kept = goals.filter((g) => goalGap(g, p.m) === 0);
     let best: PoolEntry | null = null;
     for (const w of sides[0])
@@ -1482,7 +1496,7 @@ export function optimizePaStack(
             const c = { ...p.c, cDim: { w, h, d }, cVent: { ...p.c.cVent, len } },
               m = evaluateDesign(c);
             evals++;
-            if (!m || designProblems(m, lim).length > problems) continue;
+            if (!m || designProblemList(m, lim).some((x) => !had.has(x.id))) continue;
             if (kept.some((g) => goalGap(g, m) > 0)) continue;
             const q = { c, m, ch: changes(c) };
             if (!best || obj[axis](metric(q)) < obj[axis](metric(best))) best = q;
