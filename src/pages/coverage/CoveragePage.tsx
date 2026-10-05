@@ -1,5 +1,4 @@
 import { useEffect, useId, useState } from "react";
-import { crossoverSlopesText } from "../../constants/crossovers";
 import { CoverageMap } from "../../components/charts/CoverageMap";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { Button } from "../../components/ui/Button";
@@ -11,8 +10,7 @@ import { SelectField } from "../../components/ui/SelectField";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { formatSigned as signed } from "../../lib/format";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
-import { LISTENER_TARGET_DB } from "../../lib/pa/optimize";
-import { MODAL_HZ, ROOM_MATERIAL_OPTIONS } from "../../lib/pa/roomAcoustics";
+import { ROOM_MATERIAL_OPTIONS } from "../../lib/pa/roomAcoustics";
 import { PAL } from "../../styles/palette";
 import type { RoomSurface, SubPlacement } from "../../types";
 import {
@@ -74,7 +72,7 @@ function useMapMaxHeight() {
 
 /** Audience coverage: both stacks on a floor plan, level against the target across the room, and the listener's response. */
 export function CoveragePage({ planner }: Props) {
-  const state = useCoverageLayout();
+  const state = useCoverageLayout(planner.subBox);
   const { layout } = state;
   const { room } = layout;
   const [dragging, setDragging] = useState(false);
@@ -177,62 +175,8 @@ export function CoveragePage({ planner }: Props) {
             </div>
           )}
         </section>
-        <section className="text-sm text-stone-500 max-w-prose">
-          <h3 className="text-stone-900 font-semibold mb-1">How it's modelled</h3>
-          <ul className="list-disc pl-5 flex flex-col gap-1">
-            <li>
-              Each stack is this design: sub, mid and horn at their heights, through the crossovers
-              ({crossoverSlopesText(planner.subMidCrossoverOrder, planner.midHornCrossoverOrder)}),
-              time-aligned on the horn axis. Each band has its own phase too: the sub's vented box
-              and highpass, the mid's sealed box and the baffle step. The sub's delay lines it up
-              with the mid at the crossover.
-            </li>
-            <li>
-              The system plays at its limit with the Design page's music balance: the mid band{" "}
-              {planner.midBandTiltDb} dB under the sub, the horn {planner.hornBandTiltDb} dB under
-              the mid. The band with the least to spare sets the level and the others are turned
-              down to match. The target follows the same balance.
-            </li>
-            <li>
-              Sub and mid radiate as pistons; the horn holds its coverage above its control
-              frequency and widens below it.
-            </li>
-            <li>
-              The planner's sub and mid levels are measured on the floor, so the map takes the floor
-              out of them (below the baffle step) and adds it back as a reflection from each box's
-              real height. A full dance floor soaks up the floor bounce above about 200 Hz. The air
-              absorbs the highs along every path (20 °C, 50 % humidity).
-            </li>
-            <li>
-              Indoors the room is a box with flat sides, each side and the ceiling of its own
-              material. Below {MODAL_HZ[0]}–{MODAL_HZ[1]} Hz (lower in big, dead rooms) the map sums
-              the room's modes, so it shows the peaks and nulls of the room's resonances; the walls'
-              and ceiling's first and second reflections are as their materials reflect.
-            </li>
-            <li>
-              Above that, each wall and the ceiling adds one reflection of every box, less what its
-              material absorbs at that frequency, and the rest of the room's sound comes back as an
-              even reverberant field, from the materials, the crowd and the room's size. The two
-              methods blend over half an octave.
-            </li>
-            <li>
-              Below 500 Hz the direct sound and reflections add with phase, so the stacks interfere.
-              Above it, a band average adds them by power, since their comb filtering averages out
-              across a band.
-            </li>
-            <li>
-              Left out: rooms that aren't rectangular, balconies and pillars, sound bending around
-              the people in front of you, and each driver's measured directivity. The modes take
-              every side as solid: with an open side they are only a rough guide.
-            </li>
-            <li>
-              The target is the planner's {LISTENER_TARGET_DB} dB at the listener in the sub band (
-              {map.target} dB in this band).
-            </li>
-          </ul>
-          <div className="mt-3">
-            <CoverageAssumptions room={room} />
-          </div>
+        <section className="max-w-prose">
+          <CoverageAssumptions room={room} planner={planner} target={map.target} />
         </section>
       </div>
 
