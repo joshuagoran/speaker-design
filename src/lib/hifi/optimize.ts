@@ -259,18 +259,29 @@ function portFor(
 }
 
 // slot length for a target tuning (the slot and its shelf come out of the box; the inner end correction depends on the length)
-function slotFor(w: HifiWoofer, dim: Dims3, wall: number, h: number, Fb: number): SlotPort | null {
+export function slotFor(
+  w: HifiWoofer,
+  dim: Dims3,
+  wall: number,
+  h: number,
+  Fb: number,
+): SlotPort | null {
   const g = grossVolumeLiters(dim, wall),
     disp = w.ts.disp != null ? w.ts.disp : Math.max(0.2, Math.pow(w.size / 6.5, 3) * 0.6);
   const sw = slotWidth(dim, wall),
     A = h * sw;
   let a = 0.5,
     b = slotMaxLength(dim, wall, { h });
-  // the inner end correction barely changes with the gap behind the slot: take it once, at mid length
-  const ec = hifiSlotEndCorrection(dim, wall, { h, w: sw, len: (a + b) / 2 });
+  // the inner end correction reads the length (the shelf's run, and the gap behind the mouth), so take it at each length
+  // as the planner does; it never falls as fast as the length grows, so the tuning still falls with the length
   const fb = (len: number) =>
-    ventTuning(Math.max(1, g * 0.97 - disp - ((A + wall * sw) * len * 16.387) / 1e3), A, len, 1, ec)
-      .Fb;
+    ventTuning(
+      Math.max(1, g * 0.97 - disp - ((A + wall * sw) * len * 16.387) / 1e3),
+      A,
+      len,
+      1,
+      hifiSlotEndCorrection(dim, wall, { h, w: sw, len }),
+    ).Fb;
   if (b <= a || fb(a) < Fb || fb(b) > Fb) return null;
   for (let i = 0; i < 20; i++) {
     const m = (a + b) / 2;
