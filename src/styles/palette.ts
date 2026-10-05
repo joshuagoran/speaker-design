@@ -144,8 +144,6 @@ export const DISPERSION_SCALE = {
   /** top and bottom of the scale, dB re on-axis; levels outside are clamped */
   topDb: 6,
   botDb: -36,
-  /** a thin darker contour line every this many dB */
-  contourDb: 3,
   /** how dark a contour line is drawn: the cell's colour times this */
   contourShade: 0.45,
   /** the key's ticks, dB apart */

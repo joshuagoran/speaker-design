@@ -27,5 +27,8 @@ export const LEGACY_LEVEL_MODE = {
   listener: "listener",
 } as const satisfies Record<CoverageLevelMode, CoverageLevelMode>;
 
+/** The coverage edge, dB against the target: the coverage map's medium line and the "≥ −6 dB" share of the floor. */
+export const COVERAGE_EDGE_DB = -6;
+
 /** The target level slider's range, dB SPL. */
 export const COVERAGE_TARGET_DB: [lo: number, hi: number] = [85, 125];
