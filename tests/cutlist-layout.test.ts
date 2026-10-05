@@ -3,6 +3,8 @@ import assert from "node:assert";
 import { PLYWOOD_SHEETS, cutParts } from "../src/lib/pa/calc";
 import {
   FROM_OFFCUT,
+  cutRowKey,
+  cutRows,
   cutStats,
   GRAIN_PRESETS,
   SEARCH_RUNS,
@@ -345,5 +347,40 @@ describe("review fixes", () => {
     assert.equal(c.waterfall, true);
     assert.equal(savedCutlist({ joint: "miter", waterfall: false }).waterfall, false);
     assert.equal(savedCutlist({ kerf: 0.25 }).kerf, 0.25);
+  });
+});
+
+describe("cutlist rows", () => {
+  const cleats = (ps: CutPart[]) => ps.filter((p) => p.part === "baffleCleat");
+  const total = (ps: CutPart[]) => ps.reduce((a, p) => a + p.qty, 0);
+
+  test("cutRows: a box's two cleat pairs of one size become one row, so one tag", () => {
+    // a box whose inside is square: both cleat pairs come out 3/4 × 14.5
+    const P: CutPart[] = [
+      { box: "mid", part: "side", qty: 2, a: 12, b: 16, t: 0.75, note: "" },
+      { box: "mid", part: "baffleCleat", qty: 2, a: 0.75, b: 14.5, t: 0.75, note: "glue" },
+      { box: "mid", part: "baffleCleat", qty: 2, a: 0.75, b: 14.5, t: 0.75, note: "" },
+      { box: "sub", part: "baffleCleat", qty: 2, a: 0.75, b: 14.5, t: 0.75, note: "" },
+    ];
+    const rows = cutRows(P);
+    const keys = rows.map(cutRowKey);
+    assert.equal(new Set(keys).size, keys.length);
+    assert.equal(rows.length, 3);
+    assert.deepEqual(
+      cleats(rows).map((p) => [p.box, p.qty, p.note]),
+      [
+        ["mid", 4, "glue"],
+        ["sub", 2, ""],
+      ],
+    );
+    assert.equal(total(rows), total(P));
+    // the input is left as it was
+    assert.equal(P[1].qty, 2);
+  });
+
+  test("cutRows: the starting design's rows are already one per key, in order", () => {
+    const P = parts();
+    assert.deepEqual(cutRows(P), P);
+    assert.equal(cleats(cutRows(P)).length, cleats(P).length);
   });
 });

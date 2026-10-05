@@ -19,3 +19,12 @@ export const HIFI_SETTINGS_SECTIONS = {
   room: "Room and seat",
 } as const;
 export type HifiSettingsSection = keyof typeof HIFI_SETTINGS_SECTIONS;
+
+/** The Cutlist settings column's fold sections, by id, and the name each shows (also the phone sheet's tab names). */
+export const CUTLIST_SETTINGS_SECTIONS = {
+  boxes: "Boxes",
+  sheets: "Sheets",
+  grain: "Grain",
+  cuts: "Cuts",
+} as const;
+export type CutlistSettingsSection = keyof typeof CUTLIST_SETTINGS_SECTIONS;

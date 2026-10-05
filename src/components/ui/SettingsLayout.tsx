@@ -72,7 +72,9 @@ export function SettingsLayout({ results, settings, className = "" }: Props) {
       className={`${PAGE_WIDTH} pb-16 grid grid-cols-1 gap-8 md:h-full md:pb-0 md:gap-0 md:grid-rows-[minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_1.5rem_var(--settings-w)] md:[--settings-default:40%] xl:[--settings-default:26rem] ${className}`}
       style={{ fontFamily: FONT, ["--settings-w" as string]: settingsWidth(widthPx) }} // boundary cast: React's style type has no custom properties
     >
-      <div className="min-w-0 md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable] md:pr-2 md:pb-16">
+      {/* the pane scrolls, so it clips whatever is drawn past its edges: 4 px of room on the left (taken back from the
+          page's gutter, so the content stays put) keep a focus ring there whole */}
+      <div className="min-w-0 md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable] md:-ml-1 md:pl-1 md:pr-2 md:pb-16">
         {results}
       </div>
       <div

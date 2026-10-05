@@ -58,6 +58,35 @@ export const GRAIN_PANEL_OF: Partial<Record<CutPartId, GrainPanel>> = {
 export const MIN_OFFCUT_IN = 3;
 /** Small parts cut from offcuts, left out of the sheet count. */
 export const FROM_OFFCUT: ReadonlySet<CutPartId> = new Set(["baffleCleat", "ductDivider"]);
+/** The note on those parts' rows in the cutlist. */
+export const FROM_OFFCUT_NOTE = "from offcuts; not in the sheet count";
+
+/**
+ * A cutlist row's identity, which its pieces on the sheets carry too (a placed piece keeps its part's fields): the page
+ * matches a row to its drawn pieces by it, also after the layout worker has copied them.
+ */
+export const cutRowKey = (p: Pick<CutPart, "box" | "part" | "a" | "b" | "t">) =>
+  `${p.box}|${p.part}|${p.a}|${p.b}|${p.t}`;
+
+/**
+ * The cutlist's rows, one per `cutRowKey`: rows of the same part at the same size (a box's two cleat pairs when its
+ * inside is square) become one, their quantities added and their notes joined, so every row gets its own tag and its
+ * pieces on the sheets point back to it alone.
+ */
+export const cutRows = (parts: readonly CutPart[]): CutPart[] => {
+  const rows = new Map<string, CutPart>();
+  for (const p of parts) {
+    const k = cutRowKey(p),
+      seen = rows.get(k);
+    if (!seen) rows.set(k, { ...p });
+    else {
+      seen.qty += p.qty;
+      if (p.note && !seen.note.split("; ").includes(p.note))
+        seen.note = seen.note ? `${seen.note}; ${p.note}` : p.note;
+    }
+  }
+  return [...rows.values()];
+};
 
 /** Reads saved grain settings, falling back to the default for anything missing or unknown. */
 const savedGrain = (g: Partial<Record<GrainPanel, unknown>> | undefined): GrainSettings => {
