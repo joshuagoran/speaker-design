@@ -1,5 +1,5 @@
 import type { PaBoxGeometry } from "../../types";
-import { PAL } from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
 import { isRoundPort } from "../../lib/pa/calc";
 import { tubeLayout, type BafflePoint } from "../../lib/pa/tubes";
 
@@ -19,6 +19,7 @@ interface Rect {
 
 /** Front view of a design, to scale, with your current design's outline dashed behind it. */
 export function BoxFront({ g, cur }: Props) {
+  const pal = usePalette();
   const W = 150,
     H = 150,
     pad = 4;
@@ -60,7 +61,7 @@ export function BoxFront({ g, cur }: Props) {
         y={a.sb.y + a.sb.h - t - v.slotH * k}
         width={a.sb.w - 2 * t}
         height={v.slotH * k}
-        fill={PAL.ink}
+        fill={pal.ink}
       />,
     );
   else if (g.portStyle === "vslots" || g.portStyle === "vslot1") {
@@ -71,7 +72,7 @@ export function BoxFront({ g, cur }: Props) {
         y={a.sb.y + t}
         width={v.throat * k}
         height={a.sb.h - 2 * t}
-        fill={PAL.ink}
+        fill={pal.ink}
       />,
     );
     if (g.portStyle === "vslots")
@@ -82,7 +83,7 @@ export function BoxFront({ g, cur }: Props) {
           y={a.sb.y + t}
           width={v.throat * k}
           height={a.sb.h - 2 * t}
-          fill={PAL.ink}
+          fill={pal.ink}
         />,
       );
   }
@@ -95,7 +96,7 @@ export function BoxFront({ g, cur }: Props) {
     cy: a.sb.y + a.sb.h - t - p.y * k,
   });
   tubes?.tubes.forEach((p, i) =>
-    vent.push(<circle key={i} {...onBaffle(p)} r={(v.dia * k) / 2} fill={PAL.ink} />),
+    vent.push(<circle key={i} {...onBaffle(p)} r={(v.dia * k) / 2} fill={pal.ink} />),
   );
   const ventH = g.portStyle === "slots" ? v.slotH * k + t : 0;
   const driver = (box: Rect, size: number, below = 0) => (
@@ -103,8 +104,8 @@ export function BoxFront({ g, cur }: Props) {
       cx={box.x + box.w / 2}
       cy={box.y + (box.h - below) / 2}
       r={Math.min(size * 0.9 * k, box.w - 2 * t - 2, box.h - below - 2 * t - 2) / 2}
-      fill={PAL.edge}
-      stroke={PAL.muted}
+      fill={pal.edge}
+      stroke={pal.muted}
       strokeWidth="1"
     />
   );
@@ -124,7 +125,7 @@ export function BoxFront({ g, cur }: Props) {
             width={q.w}
             height={q.h}
             fill="none"
-            stroke={PAL.muted}
+            stroke={pal.muted}
             strokeWidth="1"
             strokeDasharray="3 2"
           />
@@ -137,9 +138,9 @@ export function BoxFront({ g, cur }: Props) {
           width={q.w}
           height={q.h}
           rx="1"
-          fill={q === a.hb ? PAL.muted : PAL.edge}
+          fill={q === a.hb ? pal.muted : pal.edge}
           fillOpacity={q === a.hb ? 1 : 0.85}
-          stroke={PAL.ink}
+          stroke={pal.ink}
           strokeWidth="1.2"
         />
       ))}
@@ -150,7 +151,7 @@ export function BoxFront({ g, cur }: Props) {
           x2={a.sb.x + a.sb.w}
           y1={a.mb.y + a.mb.h}
           y2={a.mb.y + a.mb.h}
-          stroke={PAL.ink}
+          stroke={pal.ink}
           strokeWidth="1.2"
         />
       )}
@@ -158,8 +159,8 @@ export function BoxFront({ g, cur }: Props) {
         <circle
           {...onBaffle(tubes.driver)}
           r={(Math.min(g.subSize * 0.9, g.sub.w - 2 * g.wall) * k) / 2}
-          fill={PAL.edge}
-          stroke={PAL.muted}
+          fill={pal.edge}
+          stroke={pal.muted}
           strokeWidth="1"
         />
       ) : (

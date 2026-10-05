@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { cabinetFinishOf } from "../../lib/data";
+import { PARTS_3D } from "../../styles/palette";
 import type { Props } from "./buildStackScene";
 
 /** What the builders share: the group they add to, the materials, and the cabinet construction. */
@@ -41,14 +42,14 @@ export function createSceneContext({
     color: finish ? finish.color : new THREE.Color(cabFinish),
     roughness: finish ? finish.rough : 0.8,
   });
-  const black = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.9 });
-  const cream = new THREE.MeshStandardMaterial({ color: 0xece4c8, roughness: 0.55 });
+  const black = new THREE.MeshStandardMaterial({ color: PARTS_3D.black, roughness: 0.9 });
+  const cream = new THREE.MeshStandardMaterial({ color: PARTS_3D.cream, roughness: 0.55 });
   const painted = new THREE.MeshStandardMaterial({
     color: new THREE.Color(baffleColor),
     roughness: 0.9,
   });
   const ghost = new THREE.MeshStandardMaterial({
-    color: 0xd7b98a,
+    color: PARTS_3D.ghost,
     roughness: 0.9,
     transparent: true,
     opacity: 0.16,
@@ -60,7 +61,7 @@ export function createSceneContext({
     roughness: 0.9,
   });
   const port = new THREE.MeshStandardMaterial({
-    color: 0x8a7458,
+    color: PARTS_3D.port,
     roughness: 0.95,
     side: THREE.DoubleSide,
   });
@@ -75,7 +76,7 @@ export function createSceneContext({
       })
     : painted;
   const hornShell = new THREE.MeshStandardMaterial({
-    color: 0xece4c8,
+    color: PARTS_3D.cream,
     roughness: 0.55,
     side: THREE.DoubleSide,
   });

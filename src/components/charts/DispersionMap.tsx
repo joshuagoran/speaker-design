@@ -1,7 +1,15 @@
 import type { HifiDispersionMap } from "../../types";
 import { formatHz } from "../../lib/format";
-import { PAL, DISPERSION_SCALE, dispersionColour, dispersionRgb } from "../../styles/palette";
 import {
+  DISPERSION_SCALE,
+  dispersionColour,
+  dispersionRgb,
+  alpha,
+  ON_DATA,
+} from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
+import {
+  CONTOUR_STEP_DB,
   DISPERSION_ANGLE_MAX_DEG,
   DISPERSION_GRID_DEG,
   DISPERSION_LABEL_DEG,
@@ -17,7 +25,7 @@ interface Props {
   title: string;
 }
 
-const { topDb, botDb, contourDb, contourShade, keyStepDb, stops } = DISPERSION_SCALE;
+const { topDb, botDb, contourShade, keyStepDb, stops } = DISPERSION_SCALE;
 const A = DISPERSION_ANGLE_MAX_DEG;
 const LOG_SPAN = Math.log(DISPERSION_FREQ_MAX_HZ / DISPERSION_FREQ_MIN_HZ);
 
@@ -68,7 +76,8 @@ function mapImage(map: HifiDispersionMap, pw: number, ph: number): string | null
     }
   }
   // contours sit a quarter dB below each step, so the 0° row (exactly 0) and hundredths-of-a-dB noise beside it draw none
-  const band = (v: number) => Math.floor((Math.max(botDb, Math.min(topDb, v)) + 0.25) / contourDb);
+  const band = (v: number) =>
+    Math.floor((Math.max(botDb, Math.min(topDb, v)) + 0.25) / CONTOUR_STEP_DB);
   const img = g.createImageData(pw, ph);
   for (let j = 0; j < ph; j++)
     for (let i = 0; i < pw; i++) {
@@ -117,6 +126,7 @@ export function DispersionKey() {
  * 50 Hz-20 kHz) and the one colour scale (+6 to −36 dB, a contour every 3 dB). Hover or drag to read a point.
  */
 export function DispersionMap({ map, title }: Props) {
+  const pal = usePalette();
   const [hover, setHover] = useState<{ i: number; j: number } | null>(null);
   // drawn in real pixels so text stays 11 px at any width
   const [box, cw] = useElementWidth(560);
@@ -156,7 +166,7 @@ export function DispersionMap({ map, title }: Props) {
   const crossovers = map.crossovers.filter(
     (f) => f >= DISPERSION_FREQ_MIN_HZ && f <= DISPERSION_FREQ_MAX_HZ,
   );
-  const gridStroke = PAL.alpha(PAL.ink, 0.18);
+  const gridStroke = alpha(ON_DATA.ink, 0.18);
   return (
     <div ref={box}>
       <div className="flex justify-between items-baseline gap-2 text-xs text-stone-500 mb-1">
@@ -190,7 +200,7 @@ export function DispersionMap({ map, title }: Props) {
           <g key={deg}>
             <line x1={L} x2={L + pw} y1={ay(deg)} y2={ay(deg)} stroke={gridStroke} />
             {deg % DISPERSION_LABEL_DEG === 0 && (
-              <text x={L - 5} y={ay(deg) + 4} textAnchor="end" fill={PAL.muted}>
+              <text x={L - 5} y={ay(deg) + 4} textAnchor="end" fill={pal.muted}>
                 {signed(deg)}°
               </text>
             )}
@@ -209,27 +219,35 @@ export function DispersionMap({ map, title }: Props) {
                     ? "start"
                     : "middle"
               }
-              fill={PAL.muted}
+              fill={pal.muted}
             >
               {kHz(f)}
             </text>
           </g>
         ))}
-        <rect x={L + 0.5} y={T + 0.5} width={pw - 1} height={ph - 1} fill="none" stroke={PAL.ink} />
+        <rect
+          x={L + 0.5}
+          y={T + 0.5}
+          width={pw - 1}
+          height={ph - 1}
+          fill="none"
+          stroke={ON_DATA.ink}
+        />
+        {/* the frame, grid and marks sit on the map, so they keep its fixed colours (ON_DATA) in both themes */}
         {/* crossovers: a white line with a dark outline and an outlined label, legible on any colour of the scale */}
         {crossovers.map((f, k) => {
           const x = fx(f),
             right = x > L + pw - 60;
           return (
             <g key={f}>
-              <line x1={x} x2={x} y1={T} y2={T + ph} stroke={PAL.ink} strokeWidth="3" />
-              <line x1={x} x2={x} y1={T} y2={T + ph} stroke={PAL.white} strokeWidth="1" />
+              <line x1={x} x2={x} y1={T} y2={T + ph} stroke={ON_DATA.ink} strokeWidth="3" />
+              <line x1={x} x2={x} y1={T} y2={T + ph} stroke={ON_DATA.white} strokeWidth="1" />
               <text
                 x={right ? x - 4 : x + 4}
                 y={T + 13 + k * 14}
                 textAnchor={right ? "end" : "start"}
-                fill={PAL.white}
-                stroke={PAL.ink}
+                fill={ON_DATA.white}
+                stroke={ON_DATA.ink}
                 strokeWidth="3"
                 paintOrder="stroke"
                 strokeLinejoin="round"
@@ -245,7 +263,7 @@ export function DispersionMap({ map, title }: Props) {
             cy={ay(map.angles[hover.j])}
             r="4"
             fill="none"
-            stroke={PAL.white}
+            stroke={ON_DATA.white}
             strokeWidth="1.5"
           />
         )}

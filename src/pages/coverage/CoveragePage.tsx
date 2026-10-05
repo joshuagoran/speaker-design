@@ -11,7 +11,8 @@ import { ToggleButton } from "../../components/ui/ToggleButton";
 import { formatSigned as signed } from "../../lib/format";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
 import { ROOM_MATERIAL_OPTIONS } from "../../lib/pa/roomAcoustics";
-import { PAL } from "../../styles/palette";
+import { alpha } from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
 import type { RoomSurface, SubPlacement } from "../../types";
 import {
   ROOM_CEILING_FT,
@@ -26,6 +27,7 @@ import { formatHz } from "../../lib/format";
 import { SettingsColumn } from "../../components/ui/SettingsColumn";
 import { UI_TEXT } from "../../constants/uiText";
 import {
+  COVERAGE_EDGE_DB,
   COVERAGE_LEVEL_REF_PLACE,
   COVERAGE_LEVEL_REFS,
   COVERAGE_TARGET_DB,
@@ -76,6 +78,7 @@ function useMapMaxHeight() {
 
 /** Audience coverage: both stacks on a floor plan, level against the target across the room, and the listener's response. */
 export function CoveragePage({ planner }: Props) {
+  const pal = usePalette();
   const state = useCoverageLayout(planner.subBox);
   const { layout } = state;
   const { room } = layout;
@@ -93,7 +96,7 @@ export function CoveragePage({ planner }: Props) {
       ? ""
       : rel >= -3
         ? "text-green-700"
-        : rel >= -6
+        : rel >= COVERAGE_EDGE_DB
           ? "text-orange-700"
           : "text-red-700";
   const bandName =
@@ -173,7 +176,8 @@ export function CoveragePage({ planner }: Props) {
                   <b className="text-stone-900">{pct(map.stats.within3)}</b> ≥ −3 dB
                 </span>
                 <span>
-                  <b className="text-stone-900">{pct(map.stats.within6)}</b> ≥ −6 dB
+                  <b className="text-stone-900">{pct(map.stats.within6)}</b> ≥{" "}
+                  {signed(COVERAGE_EDGE_DB, 0)} dB
                 </span>
               </div>
             )}
@@ -241,7 +245,7 @@ export function CoveragePage({ planner }: Props) {
                 {(
                   [
                     [pct(map.stats.within3), "of the floor ≥ −3 dB"],
-                    [pct(map.stats.within6), "of the floor ≥ −6 dB"],
+                    [pct(map.stats.within6), `of the floor ≥ ${signed(COVERAGE_EDGE_DB, 0)} dB`],
                     [`${map.stats.spread.toFixed(1)} dB`, "spread, 10th–90th %"],
                   ] as const
                 ).map(([v, k]) => (
@@ -268,14 +272,14 @@ export function CoveragePage({ planner }: Props) {
                     {
                       curve: map.response,
                       label: "Listener",
-                      stroke: PAL.ink,
-                      tint: PAL.alpha(PAL.ink, 0.05),
+                      stroke: pal.ink,
+                      tint: alpha(pal.ink, 0.05),
                     },
                     {
                       curve: map.targetCurve,
                       label: "Target, music balance",
-                      stroke: PAL.magenta,
-                      tint: PAL.alpha(PAL.magenta, 0),
+                      stroke: pal.magenta,
+                      tint: alpha(pal.magenta, 0),
                     },
                   ]}
                   span={

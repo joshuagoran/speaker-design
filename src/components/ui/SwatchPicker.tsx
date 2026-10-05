@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette";
+import { ON_DATA } from "../../styles/palette";
 import { useId } from "react";
 import type { PaintSwatch } from "../../types";
 
@@ -41,7 +41,7 @@ export function SwatchPicker({
               aria-pressed={value === k}
               onClick={() => onChange(k)}
               className={`px-2.5 h-7 rounded-full border-2 text-xs ${ring(value === k)}`}
-              style={{ background: f.swatch, color: k === "walnut" ? PAL.white : PAL.ink }}
+              style={{ background: f.swatch, color: k === "walnut" ? ON_DATA.white : ON_DATA.ink }}
             >
               {f.name}
             </button>
@@ -69,7 +69,7 @@ export function SwatchPicker({
           <input
             type="color"
             aria-label={`Custom ${label.toLowerCase()}`}
-            value={preset ? PAL.white : value}
+            value={preset ? ON_DATA.white : value}
             onChange={(e) => onChange(e.target.value)}
             className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
           />

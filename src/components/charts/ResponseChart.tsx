@@ -1,6 +1,7 @@
 import type { BandCurves, FrequencyPoint } from "../../types";
 import { PA_DB_BOT, PA_DB_TOP } from "../../constants/chartScales";
-import { PAL } from "../../styles/palette";
+import { alpha } from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { useState } from "react";
 import { SVG_FONT, FONT } from "../../styles/fonts";
@@ -56,6 +57,7 @@ export function ResponseChart({
   unit = " dB",
   H = 300,
 }: Props) {
+  const pal = usePalette();
   // drawn in real pixels so text stays 11 px at any width
   const [box, cw] = useElementWidth(760);
   const narrow = cw < 500;
@@ -107,7 +109,7 @@ export function ResponseChart({
   ticks.forEach((f) => {
     const X = px(f);
     grid.push(
-      <line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke={PAL.edge} strokeWidth="1" />,
+      <line key={"v" + f} x1={X} y1={y0} x2={X} y2={y1} stroke={pal.edge} strokeWidth="1" />,
     );
     grid.push(
       <text
@@ -115,7 +117,7 @@ export function ResponseChart({
         x={X}
         y={y1 + 18}
         textAnchor={X > x1 - 12 ? "end" : "middle"}
-        fill={PAL.muted}
+        fill={pal.muted}
         fontSize="12"
         fontFamily={SVG_FONT}
       >
@@ -148,7 +150,7 @@ export function ResponseChart({
   for (let v = BOT, k = 0; v <= TOP; v += step, k++) {
     const Y = py(v);
     grid.push(
-      <line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke={PAL.edge} strokeWidth="1" />,
+      <line key={"h" + v} x1={x0} y1={Y} x2={x1} y2={Y} stroke={pal.edge} strokeWidth="1" />,
     );
     if (k % every === 0)
       grid.push(
@@ -157,7 +159,7 @@ export function ResponseChart({
           x={x0 - 8}
           y={Y + 3.5}
           textAnchor="end"
-          fill={PAL.muted}
+          fill={pal.muted}
           fontSize="12"
           fontFamily={SVG_FONT}
         >
@@ -183,7 +185,7 @@ export function ResponseChart({
             y={y0}
             width={Math.max(0, px(Math.min(fmax, span.hi)) - px(Math.max(fmin, span.lo)))}
             height={y1 - y0}
-            fill={PAL.alpha(PAL.cyan, 0.08)}
+            fill={alpha(pal.cyan, 0.08)}
           />
         )}
         {grid}
@@ -196,7 +198,7 @@ export function ResponseChart({
                 y1={y0}
                 x2={px(m.f)}
                 y2={y1}
-                stroke={PAL.muted}
+                stroke={pal.muted}
                 strokeWidth="1"
                 strokeDasharray="3 4"
               />
@@ -205,7 +207,7 @@ export function ResponseChart({
                 y={
                   y0 + 13 + (ms.slice(0, i).some((o) => Math.abs(px(o.f) - px(m.f)) < 70) ? 14 : 0)
                 }
-                fill={PAL.muted}
+                fill={pal.muted}
                 fontSize="12"
                 fontFamily={SVG_FONT}
               >
@@ -218,7 +220,7 @@ export function ResponseChart({
         ))}
         {paths.map((p) =>
           p.bandD ? (
-            <path key={p.label + "b"} d={p.bandD} fill={PAL.alpha(p.stroke, 0.18)} stroke="none" />
+            <path key={p.label + "b"} d={p.bandD} fill={alpha(p.stroke, 0.18)} stroke="none" />
           ) : null,
         )}
         {paths.map((p) => (
@@ -234,7 +236,7 @@ export function ResponseChart({
         ))}
         {hf && (
           <g pointerEvents="none">
-            <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke={PAL.muted} strokeWidth="1" />
+            <line x1={px(hf)} x2={px(hf)} y1={y0} y2={y1} stroke={pal.muted} strokeWidth="1" />
             {hits.map((h) => (
               <circle
                 key={h.label}
@@ -242,7 +244,7 @@ export function ResponseChart({
                 cy={py(h.o.spl)}
                 r="3.5"
                 fill={h.stroke}
-                stroke={PAL.white}
+                stroke={pal.white}
                 strokeWidth="1.5"
               />
             ))}
@@ -252,14 +254,14 @@ export function ResponseChart({
                 X = Math.max(x0 + w / 2, Math.min(x1 - w / 2, px(hf)));
               return (
                 <g>
-                  <rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill={PAL.ink} />
+                  <rect x={X - w / 2} y={y1 + 5} width={w} height={17} rx="3" fill={pal.ink} />
                   <text
                     x={X}
                     y={y1 + 17.5}
                     textAnchor="middle"
                     fontSize="12"
                     fontFamily={SVG_FONT}
-                    fill={PAL.white}
+                    fill={pal.white}
                   >
                     {t}
                   </text>
@@ -272,8 +274,8 @@ export function ResponseChart({
               textAnchor="end"
               fontSize="12"
               fontFamily={SVG_FONT}
-              fill={PAL.ink}
-              stroke={PAL.white}
+              fill={pal.ink}
+              stroke={pal.white}
               strokeWidth="3"
               paintOrder="stroke"
             >
@@ -286,7 +288,7 @@ export function ResponseChart({
           x={W / 2}
           y={H - 4}
           textAnchor="middle"
-          fill={PAL.muted}
+          fill={pal.muted}
           fontSize="12"
           fontFamily={SVG_FONT}
         >
@@ -295,7 +297,7 @@ export function ResponseChart({
         <text
           transform={`translate(13,${(y0 + y1) / 2}) rotate(-90)`}
           textAnchor="middle"
-          fill={PAL.muted}
+          fill={pal.muted}
           fontSize="12"
           fontFamily={SVG_FONT}
         >
@@ -317,7 +319,7 @@ export function ResponseChart({
             <span className="flex items-center gap-1.5">
               <span
                 className="inline-block w-4 h-2.5 rounded-sm"
-                style={{ background: PAL.alpha(PAL.ink, 0.18) }}
+                style={{ background: alpha(pal.ink, 0.18) }}
               />
               Xmax estimated: shaded range
             </span>

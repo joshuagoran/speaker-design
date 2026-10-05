@@ -45,7 +45,7 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
                 }}
                 placeholder={namePrompt}
                 maxLength={60}
-                className="px-3 py-1.5 rounded border border-stone-300 bg-white text-sm w-56"
+                className="px-3 py-1.5 rounded border border-stone-300 bg-panel text-sm w-56"
               />
               <Button variant="dark" onClick={doSave} disabled={!name.trim()}>
                 Save current
@@ -91,7 +91,7 @@ export function SavedConfigs({ store, snapshot, restore, extra, bare = false }: 
                 setSel(e.target.value);
                 if (c) restore(c);
               }}
-              className="px-2 py-1.5 rounded border border-stone-300 bg-white text-sm min-w-0 max-w-full flex-1"
+              className="px-2 py-1.5 rounded border border-stone-300 bg-panel text-sm min-w-0 max-w-full flex-1"
             >
               <option value="" disabled>
                 Load a saved configuration ({saved.length})…

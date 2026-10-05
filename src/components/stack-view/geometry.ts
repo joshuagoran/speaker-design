@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { PARTS_3D } from "../../styles/palette";
 /** Rounded rectangle outline centred on the origin, as a THREE.Shape. */
 export function roundedRectShape(width: number, height: number, radius: number) {
   const x = width / 2,
@@ -118,7 +119,7 @@ export function createScaleFigure(heightIn: number) {
   const u = heightIn / 100;
   const figure = new THREE.Group();
   const material = new THREE.MeshBasicMaterial({
-    color: 0x8b847d,
+    color: PARTS_3D.figure,
     transparent: true,
     opacity: 0.38,
     side: THREE.DoubleSide,

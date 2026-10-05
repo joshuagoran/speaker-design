@@ -10,6 +10,7 @@ import { useFillsPlanner } from "./pages/fills/useFillsPlanner";
 import { useEffect, useState, type MouseEvent } from "react";
 import { FONT } from "./styles/fonts";
 import { PAGE_WIDTH } from "./styles/layout";
+import { ThemeSwitch } from "./components/ui/ThemeSwitch";
 
 /** The pages: the PA stack's five ("planner" is Design) and Hi-fi. */
 type AppTab = "planner" | "coverage" | "cutlist" | "fills" | "notes" | "hifi";
@@ -90,6 +91,9 @@ export function App() {
                       </a>
                     ))}
                   </nav>
+                  <div className="ml-auto">
+                    <ThemeSwitch />
+                  </div>
                 </div>
                 {isPaProject && (
                   <nav

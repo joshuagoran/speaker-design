@@ -45,7 +45,7 @@ export function NumberField({
             if (Number.isFinite(n)) onChange(n);
           }}
           onBlur={() => setRaw(String(value))}
-          className="w-24 px-3 py-2 rounded border border-stone-300 bg-white"
+          className="w-24 px-3 py-2 rounded border border-stone-300 bg-panel"
         />
         {unit}
       </div>

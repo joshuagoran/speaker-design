@@ -57,7 +57,7 @@ export function HifiResultCard({
   const limitedBy = WOOFER_LIMITED_BY[result.whoW];
   return (
     <div
-      className={`bg-white border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}
+      className={`bg-panel border rounded-lg p-3.5 flex flex-col gap-2.5 min-w-full md:min-w-0 snap-start ${previewing ? "border-stone-900 ring-1 ring-stone-900" : "border-stone-300"}`}
     >
       <div className="text-xs uppercase tracking-wider font-bold text-stone-500">
         {result.label} · {index + 1} of {total}

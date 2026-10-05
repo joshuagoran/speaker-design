@@ -5,6 +5,7 @@ import { dispersionGrid, logSpacedFrequencies } from "../src/lib/hifi/hifi";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import {
+  CONTOUR_STEP_DB,
   DISPERSION_ANGLE_MAX_DEG,
   DISPERSION_ANGLE_STEP_DEG,
   DISPERSION_FREQ_POINTS,
@@ -105,7 +106,7 @@ test("dispersion colour: hits its stops and clamps outside +6..−36 dB", () => 
   assert.strictEqual(dispersionColour(0), "rgb(255,26,0)");
   assert.strictEqual(dispersionColour(6, 0.5), "rgb(128,128,128)");
   assert.deepStrictEqual(
-    [DISPERSION_SCALE.topDb, DISPERSION_SCALE.botDb, DISPERSION_SCALE.contourDb],
+    [DISPERSION_SCALE.topDb, DISPERSION_SCALE.botDb, CONTOUR_STEP_DB],
     [6, -36, 3],
   );
 });

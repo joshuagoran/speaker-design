@@ -5,11 +5,11 @@ export type ButtonSize = keyof typeof BUTTON_SIZE_CLASSES;
 
 /** Tailwind classes for each Button variant. */
 export const BUTTON_VARIANT_CLASSES = {
-  primary: "border-cmy-a bg-cmy-a text-white font-semibold",
+  primary: "border-cmy-a bg-cmy-a text-stone-50 font-semibold",
   dark: "border-stone-900 bg-stone-900 text-stone-50",
-  secondary: "border-stone-300 bg-white hover:border-stone-500",
+  secondary: "border-stone-300 bg-panel hover:border-stone-500",
   /** a run that stands apart from the usual one (Fully optimize), in brand magenta */
-  special: "border-cmy-m bg-cmy-m text-white font-semibold italic",
+  special: "border-cmy-m bg-cmy-m text-stone-50 font-semibold italic",
 };
 
 export type ButtonVariant = keyof typeof BUTTON_VARIANT_CLASSES;

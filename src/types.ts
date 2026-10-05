@@ -10,6 +10,7 @@ import type { MAKER_NAMES } from "./data/catalog/makers";
 import type { AMP_SERIES } from "./data/catalog/amps";
 import type { DSP_UNITS } from "./data/catalog/dsp-units";
 import type { Keep } from "./lib/optimizer/shortfall";
+import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { SelectedCard } from "./lib/optimizer/selectCards";
 
 // Shapes of the parts catalogue tables in data/catalog/ (lib/data.ts derives the app's view of them).
@@ -2268,3 +2269,9 @@ export interface ConfigCollection extends ConfigQuery {
 export interface ConfigDb {
   collection(name: string): ConfigCollection;
 }
+
+/** The header's theme switch: System (follow the device), Light or Dark. */
+export type ThemeChoice = (typeof THEME_CHOICES)[number][0];
+
+/** A theme: the palette in use, picked by the device's setting or the switch. */
+export type ThemeName = Exclude<ThemeChoice, typeof THEME_SYSTEM>;
