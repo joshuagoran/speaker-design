@@ -33,10 +33,11 @@ const mix = (a: string, b: string, t: number) => lerp(hexRgb(a), hexRgb(b), t);
 /** dB SPL on a fixed scale: white at the quiet end, through magenta, to deep magenta at the loud end */
 const STOPS: [db: number, rgb: Rgb][] = [
   [LO_DB, hexRgb(PAL.white)],
-  [95, mix(PAL.white, PAL.magenta, 0.25)],
-  [110, hexRgb(PAL.magenta)],
-  [122, mix(PAL.magenta, PAL.ink, 0.35)],
-  [HI_DB, mix(PAL.magenta, PAL.ink, 0.7)],
+  [92, mix(PAL.white, PAL.magenta, 0.15)],
+  [100, mix(PAL.white, PAL.magenta, 0.55)],
+  [108, hexRgb(PAL.magenta)],
+  [118, mix(PAL.magenta, PAL.ink, 0.45)],
+  [HI_DB, mix(PAL.magenta, PAL.ink, 0.8)],
 ];
 /** Where a level sits along the scale, 0–1. */
 const scalePos = (db: number) => Math.max(0, Math.min(1, (db - LO_DB) / (HI_DB - LO_DB)));

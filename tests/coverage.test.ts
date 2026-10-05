@@ -30,7 +30,13 @@ import {
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { paResponseAt, paStackSources } from "../src/lib/pa/dispersion";
 import { materialAlpha, surfaceReflection } from "../src/lib/pa/roomAcoustics";
-import { DEFAULT_COVERAGE_LAYOUT, fromStored } from "../src/pages/coverage/useCoverageLayout";
+import {
+  DEFAULT_COVERAGE_LAYOUT,
+  boxReach,
+  fitted,
+  fromStored,
+  stackInRoom,
+} from "../src/pages/coverage/useCoverageLayout";
 import {
   COVERAGE_LEVEL_REF,
   COVERAGE_TARGET_DB,
@@ -846,4 +852,60 @@ test("coverage: layouts saved with the old level mode still load", () => {
       .levelRef,
     COVERAGE_LEVEL_REF.stacks,
   );
+});
+
+test("coverage layout: a box can go right against a wall, its edge and no further", () => {
+  const room = { widthFt: 30, lengthFt: 40 };
+  const footprint = { w: 24, d: 30 }; // 2 ft wide, 2.5 ft deep
+  // facing down the room, pushed past the front-left corner: its edges land on both walls
+  assert.deepEqual(stackInRoom({ x: -100, y: -100, aim: 0 }, room, footprint), {
+    x: -15 + 1,
+    y: 1.25,
+    aim: 0,
+  });
+  // and the back-right corner
+  assert.deepEqual(stackInRoom({ x: 100, y: 100, aim: 0 }, room, footprint), {
+    x: 15 - 1,
+    y: 40 - 1.25,
+    aim: 0,
+  });
+  // turned, it reaches by its rotated extent, the same either way
+  const r = boxReach(footprint, 30);
+  assert.deepEqual(boxReach(footprint, -30), r);
+  assert.ok(r.x > 1 && r.x < Math.hypot(1, 1.25));
+  const u = stackInRoom({ x: -100, y: 5, aim: 30 }, room, footprint);
+  assert.ok(Math.abs(u.x - (-15 + r.x)) < 1e-9);
+  // a point well inside is left alone (snapped to a quarter foot)
+  assert.deepEqual(stackInRoom({ x: 3.1, y: 7.9, aim: 0 }, room, footprint), {
+    x: 3,
+    y: 8,
+    aim: 0,
+  });
+});
+
+test("coverage layout: fitted to a smaller room, the boxes stand against its walls", () => {
+  const footprint = { w: 24, d: 30 };
+  const l = fitted(
+    {
+      ...DEFAULT_COVERAGE_LAYOUT,
+      room: { ...DEFAULT_COVERAGE_LAYOUT.room, widthFt: 16 },
+      stacks: [
+        { x: -20, y: 0, aim: 0 },
+        { x: 20, y: 0, aim: 0 },
+      ],
+      subs: "center",
+      cluster: { x: 20, y: 0 },
+      listener: { x: 20, y: 0 },
+    },
+    footprint,
+  );
+  // mirrored stacks each with an edge on its side wall and its back on the front wall
+  assert.deepEqual(l.stacks, [
+    { x: -7, y: 1.25, aim: 0 },
+    { x: 7, y: 1.25, aim: 0 },
+  ]);
+  // the center pair is two boxes side by side about the cluster point: the outer one's edge on the wall
+  assert.deepEqual(l.cluster, { x: 6, y: 1.25 });
+  // the listener keeps its half-foot margin
+  assert.deepEqual(l.listener, { x: 7.5, y: 0.5 });
 });
