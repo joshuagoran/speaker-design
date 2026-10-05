@@ -5,6 +5,7 @@ import { StatRowGrid } from "../../components/stats/StatRowGrid";
 import { MAX_SPL_TIP, STATS, statLabel, type StatName } from "../../components/optimizer/StatRow";
 import { StatTile } from "../../components/stats/StatTile";
 import { ToggleButton } from "../../components/ui/ToggleButton";
+import { CrossoverSlopeButtons } from "../../components/ui/CrossoverSlopeButtons";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { Card } from "../../components/ui/Card";
 import { SelectField } from "../../components/ui/SelectField";
@@ -44,6 +45,8 @@ export function FillsPage({ fills }: Props) {
     setPortField,
     highpassHz,
     setHighpassHz,
+    highpassOrder,
+    setHighpassOrder,
     ampWatts,
     setAmpWatts,
     maxPortAirSpeedMs,
@@ -55,6 +58,7 @@ export function FillsPage({ fills }: Props) {
     dim: boxDims,
     port: portSpec,
     hp: highpassHz,
+    hpOrder: highpassOrder,
     ampW: ampWatts,
     portMax: maxPortAirSpeedMs,
   };
@@ -99,6 +103,7 @@ export function FillsPage({ fills }: Props) {
     Fb: ventedModel ? ventedModel.Fb : null,
     Qtc: sealedModel ? sealedModel.Qtc : null,
     hp: highpassHz,
+    hpOrder: highpassOrder,
     portLimited,
     portMax: maxPortAirSpeedMs,
     f3: f3Hz,
@@ -279,13 +284,18 @@ export function FillsPage({ fills }: Props) {
           </Card>
           <Card>
             <Slider
-              label="Highpass to the subs (LR24)"
+              label="Highpass to the subs"
               value={highpassHz}
               min={50}
               max={160}
               step={5}
               unit=" Hz"
               onChange={setHighpassHz}
+            />
+            <CrossoverSlopeButtons
+              order={highpassOrder}
+              onChange={setHighpassOrder}
+              label="Highpass slope"
             />
             <Slider
               label="Amp power per box @ 8 Ω"

@@ -96,6 +96,7 @@ const fillBase: FillChipsInput = {
   Fb: 60,
   Qtc: null,
   hp: 70,
+  hpOrder: 4,
   portLimited: true,
   portMax: 20,
   f3: 80,

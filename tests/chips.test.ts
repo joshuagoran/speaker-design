@@ -13,6 +13,7 @@ import type {
   VentSpec,
 } from "../src/types";
 import { chipList, chipOf, findChip } from "./helpers";
+import { crossoverSlopeName } from "../src/constants/crossovers";
 
 const kindOf = <I extends ChipId>(F: Chip<I>[], id: NoInfer<I>) => findChip(F, id)?.[0];
 /** whether the check's chip shows, at `kind` when one is given */
@@ -199,6 +200,7 @@ const fillBase: FillChipsInput = {
   Fb: 60,
   Qtc: null,
   hp: 70,
+  hpOrder: 4,
   portLimited: false,
   portMax: 20,
   f3: 80,
@@ -219,6 +221,14 @@ test("fills: tuned low below 0.6 x highpass", (t) => {
   assert.equal(kindOf(fill({ Fb: 41.9 }), "fillTuning"), "warn");
   has(t, fill({}), "fillPortLimited", false);
   has(t, fill({ portLimited: true }), "fillPortLimited", true, "warn");
+});
+test("fills: the tuning chip names the highpass slope", () => {
+  for (const hpOrder of [4, 8] as const)
+    assert.ok(
+      findChip(fill({ hpOrder }), "fillTuning")?.[2].includes(
+        `${crossoverSlopeName(hpOrder)} highpass`,
+      ),
+    );
 });
 test("fills sealed: Qtc bands", (t) => {
   for (const [q, k] of [
