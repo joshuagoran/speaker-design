@@ -1,4 +1,5 @@
-import { PAL } from "../../styles/palette";
+import { alpha } from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
 import { CrossoverSlopeButtons } from "../../components/ui/CrossoverSlopeButtons";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { StatTile } from "../../components/stats/StatTile";
@@ -88,6 +89,7 @@ const PORT_CHOICES = [
 
 /** Hi-fi page: 2-way home speakers with an active crossover. */
 export function HifiPage({ hifi }: Props) {
+  const pal = usePalette();
   const {
     woofer,
     setWoofer,
@@ -359,17 +361,17 @@ export function HifiPage({ hifi }: Props) {
             {optimizerBar}
             {optimizerPanel}
             {designPreview && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 rounded bg-stone-900 text-white border-t-4 border-cmy-y px-3 py-2 text-sm font-semibold">
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded bg-stone-900 text-stone-50 border-t-4 border-cmy-y px-3 py-2 text-sm font-semibold">
                 <span className="flex-1">Previewing “{designPreview.label}”</span>
                 <button
                   onClick={() => loadOptimizerResult(designPreview.card)}
-                  className="px-3 py-1.5 rounded border border-stone-900 bg-white text-stone-900"
+                  className="px-3 py-1.5 rounded border border-stone-900 bg-panel text-stone-900"
                 >
                   Keep
                 </button>
                 <button
                   onClick={exitPreview}
-                  className="px-3 py-1.5 rounded border border-stone-900 bg-white text-stone-900"
+                  className="px-3 py-1.5 rounded border border-stone-900 bg-panel text-stone-900"
                 >
                   Back
                 </button>
@@ -414,14 +416,14 @@ export function HifiPage({ hifi }: Props) {
                 {
                   curve: onAxisResponse,
                   label: "On axis, 1 m",
-                  stroke: PAL.ink,
-                  tint: PAL.alpha(PAL.ink, 0),
+                  stroke: pal.ink,
+                  tint: alpha(pal.ink, 0),
                 },
                 {
                   curve: pairResponse,
                   label: `Pair at the seat (${seatDistanceFt.toFixed(1)} ft)`,
-                  stroke: PAL.cyan,
-                  tint: PAL.alpha(PAL.cyan, 0.06),
+                  stroke: pal.cyan,
+                  tint: alpha(pal.cyan, 0.06),
                 },
               ]}
               marks={[
@@ -441,14 +443,14 @@ export function HifiPage({ hifi }: Props) {
                   curve: speakerSystem.wMax,
                   band: speakerSystem.wMaxBand,
                   label: woofer.name,
-                  stroke: PAL.magenta,
-                  tint: PAL.alpha(PAL.magenta, 0.06),
+                  stroke: pal.magenta,
+                  tint: alpha(pal.magenta, 0.06),
                 },
                 {
                   curve: tweeterMaxCurve,
                   label: tweeter.name,
-                  stroke: PAL.cyan,
-                  tint: PAL.alpha(PAL.cyan, 0.06),
+                  stroke: pal.cyan,
+                  tint: alpha(pal.cyan, 0.06),
                 },
               ]}
               marks={[{ f: crossoverHz, label: "XO" }]}

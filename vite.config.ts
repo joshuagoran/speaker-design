@@ -1,4 +1,31 @@
 import { defineConfig } from "vite-plus";
+import type { Plugin } from "vite-plus";
+import {
+  HOST_THEME_ATTR,
+  THEME_ATTR,
+  THEME_DARK,
+  THEME_LIGHT,
+  THEME_STORAGE_KEY,
+} from "./src/constants/themes";
+
+// Applies the stored theme choice before first paint, so a page pinned to light or dark never flashes the other: a tiny
+// classic script at the top of <head>, ahead of the stylesheet. It keeps a theme the host page set first (the claude.ai
+// artifact frame) for System to return to; without storage it does nothing and the device's setting applies.
+const q = (v: unknown) => JSON.stringify(v);
+const themeBootScript = (): Plugin => ({
+  name: "speaknow-theme-boot",
+  transformIndexHtml: () => [
+    {
+      tag: "script",
+      injectTo: "head-prepend",
+      children:
+        `(function(){var r=document.documentElement,h=r.getAttribute(${q(THEME_ATTR)});` +
+        `if(h)r.setAttribute(${q(HOST_THEME_ATTR)},h);` +
+        `try{var t=JSON.parse(localStorage.getItem(${q(THEME_STORAGE_KEY)}));` +
+        `if(${q([THEME_LIGHT, THEME_DARK])}.indexOf(t)>=0)r.setAttribute(${q(THEME_ATTR)},t)}catch(e){}})()`,
+    },
+  ],
+});
 
 // The Pages build (build/build.sh sets this) keeps Firebase in its own file next to the page, fetched only when someone
 // signs in; the artifact page stays a single file with everything inlined.
@@ -7,6 +34,7 @@ const splitFirebase = process.env.SPEAKNOW_SPLIT_FIREBASE === "1";
 export default defineConfig({
   // relative URLs, so the separate Firebase file resolves next to the page on GitHub Pages
   base: "./",
+  plugins: [themeBootScript()],
   // one self-contained page: a single JS chunk (dynamic imports and the worker inlined), one stylesheet, and every
   // asset (fonts) inlined as data URLs; build/inline.mjs then puts the JS and CSS into the HTML itself
   build: {

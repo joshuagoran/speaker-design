@@ -6,7 +6,7 @@ import type {
   HifiWoofer,
   PassiveRadiatorChoice,
 } from "../../types";
-import { PAL } from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
 import { passiveRadiatorShape } from "../../lib/hifi/hifi";
 
 interface Props {
@@ -41,6 +41,7 @@ export function HifiFront({
   roundoverIn = 0,
   tweeterOffsetIn = 0,
 }: Props) {
+  const pal = usePalette();
   const face = guide ? { w: guide.w, h: guide.h } : t.faceplate;
   const top = lay.onTop ? face.h : 0,
     k = 120 / Math.max(dim.h + top, dim.w * 1.2, face.w * 1.2),
@@ -64,8 +65,8 @@ export function HifiFront({
         width={dim.w * k}
         height={dim.h * k}
         rx="2"
-        fill={PAL.edge}
-        stroke={PAL.ink}
+        fill={pal.edge}
+        stroke={pal.ink}
         strokeWidth="1.2"
       />
       {ro > 0 && (
@@ -76,7 +77,7 @@ export function HifiFront({
           height={(dim.h - 2 * ro) * k}
           rx="2"
           fill="none"
-          stroke={PAL.muted}
+          stroke={pal.muted}
           strokeWidth="0.8"
           strokeDasharray="2 2"
         />
@@ -88,7 +89,7 @@ export function HifiFront({
             y={top * k - 3}
             width={(face.w * k) / 4}
             height={3}
-            fill={PAL.ink}
+            fill={pal.ink}
           />
           <rect
             x={W / 2 - (face.w * k) / 2}
@@ -96,8 +97,8 @@ export function HifiFront({
             width={face.w * k}
             height={top * k - 3}
             rx={(face.h * k) / 3}
-            fill={PAL.muted}
-            stroke={PAL.ink}
+            fill={pal.muted}
+            stroke={pal.ink}
             strokeWidth="1"
           />
         </g>
@@ -108,16 +109,16 @@ export function HifiFront({
           width={face.w * k}
           height={face.h * k}
           rx={guide ? 3 : (face.w * k) / 2}
-          fill={PAL.muted}
+          fill={pal.muted}
         />
       )}
-      <circle cx={tx} cy={y(lay.tweeterIn)} r={0.5 * k} fill={PAL.edge} />
+      <circle cx={tx} cy={y(lay.tweeterIn)} r={0.5 * k} fill={pal.edge} />
       <circle
         cx={W / 2}
         cy={y(lay.wooferIn)}
         r={(w.size * 0.95 * k) / 2}
-        fill={PAL.edge}
-        stroke={PAL.muted}
+        fill={pal.edge}
+        stroke={pal.muted}
       />
       {pr &&
         Array.from({ length: pr.n }, (_, i) => {
@@ -132,7 +133,7 @@ export function HifiFront({
               height={s.h * k}
               rx={(s.w * k) / 2}
               fill="none"
-              stroke={PAL.muted}
+              stroke={pal.muted}
               strokeDasharray="3 2"
             />
           );
@@ -143,7 +144,7 @@ export function HifiFront({
           y={H - (0.75 + port.h) * k}
           width={(dim.w - 1.5) * k}
           height={port.h * k}
-          fill={PAL.ink}
+          fill={pal.ink}
         />
       )}
       {vented &&
@@ -154,7 +155,7 @@ export function HifiFront({
             cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k}
             cy={H - (port.dia / 2 + 1) * k}
             r={(port.dia * k) / 2}
-            fill={PAL.ink}
+            fill={pal.ink}
           />
         ))}
     </svg>

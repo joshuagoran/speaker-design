@@ -1,4 +1,5 @@
-import { PAL } from "../../styles/palette";
+import { alpha } from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { StatRowGrid } from "../../components/stats/StatRowGrid";
 import { MAX_SPL_TIP, STATS, statLabel, type StatName } from "../../components/optimizer/StatRow";
@@ -31,6 +32,7 @@ const FILL_SIZE_RANGE = `${Math.min(...fillSizes)}â€“${Math.max(...fillSizes)}â€
 
 /** Fills page: choose and size the fill speakers. */
 export function FillsPage({ fills }: Props) {
+  const pal = usePalette();
   const {
     driver,
     setDriver,
@@ -133,8 +135,8 @@ export function FillsPage({ fills }: Props) {
                 curve: maxCurve,
                 band: maxBand,
                 label: driver.name,
-                stroke: PAL.cyan,
-                tint: PAL.alpha(PAL.cyan, 0.07),
+                stroke: pal.cyan,
+                tint: alpha(pal.cyan, 0.07),
               },
             ]}
             marks={[

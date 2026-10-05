@@ -1,4 +1,5 @@
-import { PAL } from "../../../styles/palette";
+import { alpha } from "../../../styles/palette";
+import { usePalette } from "../../../hooks/useTheme";
 import { WarningChips } from "../../../components/chips/WarningChips";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
 import { FoldBody, FoldHeading } from "../../../components/ui/FoldHeading";
@@ -41,6 +42,7 @@ interface Props {
 
 /** Sub results: headline stats, system response chart, details table and warning chips. */
 export function SubSection({ planner }: Props) {
+  const pal = usePalette();
   const {
     expandedSections,
     toggleSection,
@@ -94,8 +96,8 @@ export function SubSection({ planner }: Props) {
                     curve: subModelled.throughLowpass,
                     band: subModelled.throughLowpassBand,
                     label: "Sub",
-                    stroke: PAL.ink,
-                    tint: PAL.alpha(PAL.ink, 0.07),
+                    stroke: pal.ink,
+                    tint: alpha(pal.ink, 0.07),
                   },
                   ...(midModelled
                     ? [
@@ -103,8 +105,8 @@ export function SubSection({ planner }: Props) {
                           curve: midModelled.max,
                           band: midMaxBand,
                           label: UI_TEXT.midBass,
-                          stroke: PAL.magenta,
-                          tint: PAL.alpha(PAL.magenta, 0.06),
+                          stroke: pal.magenta,
+                          tint: alpha(pal.magenta, 0.06),
                         },
                       ]
                     : []),
@@ -113,8 +115,8 @@ export function SubSection({ planner }: Props) {
                         {
                           curve: hornModel.curve,
                           label: "Horn",
-                          stroke: PAL.cyan,
-                          tint: PAL.alpha(PAL.cyan, 0.06),
+                          stroke: pal.cyan,
+                          tint: alpha(pal.cyan, 0.06),
                         },
                       ]
                     : []),

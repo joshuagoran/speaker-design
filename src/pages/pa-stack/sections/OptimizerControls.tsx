@@ -104,7 +104,7 @@ export function OptimizerControls({ planner }: Props) {
       )}
       {designPreview && (
         <div
-          className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-white border-b-4 border-cmy-y px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm"
+          className="fixed top-0 inset-x-0 z-50 bg-stone-900 text-stone-50 border-b-4 border-cmy-y px-4 py-2 flex flex-wrap items-center justify-center gap-3 text-sm"
           style={{ fontFamily: FONT }}
         >
           <span>
@@ -119,7 +119,7 @@ export function OptimizerControls({ planner }: Props) {
           </Button>
           <button
             onClick={exitPreview}
-            className="px-3 py-1.5 rounded border border-stone-900 bg-white"
+            className="px-3 py-1.5 rounded border border-stone-900 bg-panel"
           >
             Back
           </button>
