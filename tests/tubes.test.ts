@@ -15,6 +15,7 @@ import {
   sticksFor,
   subTubeKit,
   tubeLayout,
+  tubeRoom,
   tubeWallEndCorrection,
 } from "../src/lib/pa/tubes";
 import {
@@ -28,6 +29,7 @@ import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
 import { TUBE_FLARE_RADIUS_IN, TUBE_WALL_END } from "../src/data/acoustics/tube-ends";
 import { PORT_ELBOWS, PORT_PIPES, PORT_TUBES } from "../src/data/catalog/port-tubes";
 import { PA_SLIDERS } from "../src/constants/paSliders";
+import { ductFit, ductFitMax } from "../src/lib/pa/chips";
 import { hifiBox, hifiPortElbows, hifiTubeRoom, portMaxLength } from "../src/lib/hifi/hifi";
 import { HIFI_WOOFERS } from "../src/lib/data";
 import { close, vent, DRV18 } from "./helpers";
@@ -226,4 +228,36 @@ test("hi-fi: a port's return leg keeps its diameter of air from the baffle's ins
   assert.ok(span);
   const legs = tubeLegs(room, 2, span[1], 2);
   assert.ok(legs.gap >= 2 - 1e-9, `${legs.gap}`);
+});
+
+test("ductFitMax is ductFit's fit, and the tubes' room reads the layout's highest axis", () => {
+  for (const style of ["slots", "vslots", "vslot1", "round1", "round2", "round4"] as const)
+    for (const box of [
+      { w: 20, h: 24, d: 16 },
+      { w: 24, h: 34, d: 21 },
+      { w: 38, h: 22, d: 28 },
+    ])
+      for (const v of [
+        vent({ slotH: 3, throat: 2, nt: 2, dia: 4, len: 0 }),
+        vent({ slotH: 6, throat: 5, nt: 4, dia: 6, len: 0 }),
+        vent({ slotH: 2, throat: 1, nt: 1, dia: 10, len: 0 }),
+      ]) {
+        const at = `${style} ${JSON.stringify(box)} ${JSON.stringify(v)}`;
+        close(
+          null,
+          ductFitMax(box, style, v, 0.75, DRV18),
+          ductFit(box, style, v, 0.75, DRV18).fit,
+          1e-12,
+          at,
+        );
+        const { tubes } = tubeLayout(box, style, v, 0.75, 18);
+        if (tubes.length)
+          close(
+            null,
+            tubeRoom(box, style, v, 0.75, DRV18).rise,
+            box.h - 1.5 - Math.max(...tubes.map((p) => p.y)),
+            1e-12,
+            at,
+          );
+      }
 });

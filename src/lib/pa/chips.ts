@@ -61,6 +61,33 @@ export function ductFit(
     : ways.map((w) => w.span);
   return { maxStraight, minFold, maxFold, maxSide, fit, spans, ways, tune };
 }
+/**
+ * ductFit's `fit` alone (the longest duct the layout holds), without the spans and their labels: the exact search's
+ * pruning asks it of every box it tries.
+ */
+export function ductFitMax(
+  subBox: Dims3,
+  portStyle: PortStyle,
+  cVent: VentSpec,
+  PT: number,
+  drv: TubeDriver,
+) {
+  if (portStyle === "slots") {
+    const maxFold = maxFoldedSlotIn(subBox, cVent.slotH, PT);
+    return Math.max(
+      0,
+      maxStraightSlotIn(subBox, cVent.slotH, PT),
+      maxFold >= minFoldedSlotIn(subBox, PT) ? maxFold : 0,
+    );
+  }
+  if (!isRoundPort(portStyle)) return Math.max(0, subBox.d - PT - cVent.throat);
+  let fit = 0;
+  for (const e of ELBOW_COUNTS) {
+    const span = subTubeSpan(subBox, portStyle, cVent, PT, drv, e);
+    if (span) fit = Math.max(fit, span[1]);
+  }
+  return fit;
+}
 /** How the duct-fit chip names a tube with each count of elbows. */
 const TUBE_WAYS = {
   0: "a straight tube",

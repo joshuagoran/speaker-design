@@ -53,6 +53,7 @@ import {
 } from "./calc";
 import {
   ductFit,
+  ductFitMax,
   ductLenSliderMax,
   ductFits,
   subBaffleFits,
@@ -820,7 +821,7 @@ function exactHook(
       const lenHi = Leff / 0.0254 + bends;
       const lenLo = ductLengthFor(vs, Leff);
       if (lenHi < s.grid.minDuctIn) continue;
-      if (lenLo > ductFit(deepest, style, { ...vent, len: lenLo }, t, sub).fit) continue;
+      if (lenLo > ductFitMax(deepest, style, vent, t, sub)) continue;
       const x = bareFree(
         s,
         dims,

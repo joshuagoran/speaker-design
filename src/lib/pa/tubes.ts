@@ -115,27 +115,80 @@ export function tubeLayout(
 }
 
 /**
+ * The highest tube axis on the baffle, inches up from the floor's inside face, as tubeLayout places it (without laying
+ * the tubes out): one row along the bottom, or for `round4` the upper corners once there are more than two tubes.
+ */
+function tubeAxisTopY(
+  box: Pick<Dims3, "h">,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+) {
+  const n = Math.max(0, Math.round(v.nt)),
+    rf = v.dia / 2 + TUBE_FLARE_RADIUS_IN;
+  if (!n) return v.dia / 2;
+  return style === "round4" && n > 2 ? box.h - 2 * t - rf - EDGE_IN : rf + EDGE_IN;
+}
+
+/**
  * What a sub's tubes are whatever their length, for one box, vent size, plywood and driver: the room their centreline
  * has (from the baffle front to the back wall and from the axis up to the lid, the driver's back as the stop; every
- * tube of a row sits at one height, so one room serves them all), the lengths each elbow count fits (the corner tubes,
- * `round4`, only run straight: two of them sit over the other two, so neither pair has a clear back wall to rise up),
- * and the end correction's part that doesn't read the length (the flared ends and the neighbouring mouths). The length
- * solvers ask for it at every step, so the last one is kept.
+ * tube of a row sits at one height, so one room serves them all), and the lengths each elbow count fits (the corner
+ * tubes, `round4`, only run straight: two of them sit over the other two, so neither pair has a clear back wall to rise
+ * up). The length solvers ask for it at every step, so the last one is kept; it needs no baffle layout, so the searches'
+ * fit checks over many box sizes stay cheap.
  */
 interface TubeSetup {
   room: TubeRoom;
   spans: readonly ([number, number] | null)[];
-  fixedEc: number;
 }
-let lastSetup: {
-  box: Dims3;
+/** The arguments a tube setup is for, kept with it as plain numbers: a call with the same ones gets it back. */
+interface SetupKey {
+  w: number;
+  h: number;
+  d: number;
   style: PortStyle;
   nt: number;
   dia: number;
   t: number;
-  drv: TubeDriver;
-  setup: TubeSetup;
-} | null = null;
+  size: TubeDriver["size"];
+  depthIn: TubeDriver["depthIn"];
+}
+const sameSetup = (
+  c: SetupKey,
+  box: Dims3,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+  drv: TubeDriver,
+) =>
+  c.w === box.w &&
+  c.h === box.h &&
+  c.d === box.d &&
+  c.style === style &&
+  c.nt === v.nt &&
+  c.dia === v.dia &&
+  c.t === t &&
+  c.size === drv.size &&
+  c.depthIn === drv.depthIn;
+const setupKey = (
+  box: Dims3,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+  drv: TubeDriver,
+): SetupKey => ({
+  w: box.w,
+  h: box.h,
+  d: box.d,
+  style,
+  nt: v.nt,
+  dia: v.dia,
+  t,
+  size: drv.size,
+  depthIn: drv.depthIn,
+});
+let lastSetup: (SetupKey & { setup: TubeSetup }) | null = null;
 function tubeSetup(
   box: Dims3,
   style: PortStyle,
@@ -143,44 +196,46 @@ function tubeSetup(
   t: number,
   drv: TubeDriver,
 ): TubeSetup {
-  const c = lastSetup;
-  if (
-    c &&
-    c.box.w === box.w &&
-    c.box.h === box.h &&
-    c.box.d === box.d &&
-    c.style === style &&
-    c.nt === v.nt &&
-    c.dia === v.dia &&
-    c.t === t &&
-    c.drv.size === drv.size &&
-    c.drv.depthIn === drv.depthIn
-  )
-    return c.setup;
-  const { tubes } = tubeLayout(box, style, v, t, drv.size);
-  const y = tubes.length ? Math.max(...tubes.map((p) => p.y)) : v.dia / 2;
+  if (lastSetup && sameSetup(lastSetup, box, style, v, t, drv)) return lastSetup.setup;
   const room = {
     run: box.d - TUBE_BAFFLE_INSET_IN - t,
-    rise: box.h - 2 * t - y,
+    rise: box.h - 2 * t - tubeAxisTopY(box, style, v, t),
     stop: subDriverDepthIn(drv),
   };
   const spans = ELBOW_COUNTS.map((e) =>
     style === "round4" && e > 0 ? null : tubeSpan(room, v.dia, e),
   );
-  // the flared ends (a flanged outer, 0.85 r, and a free inner, 0.61 r, at the flared mouth's size, each less the
-  // flare's shortfall) and the neighbouring mouths (r² / 2s on the baffle, r² / 4s in the box, averaged over the tubes)
+  const setup = { room, spans };
+  lastSetup = { ...setupKey(box, style, v, t, drv), setup };
+  return setup;
+}
+
+/**
+ * The end correction's part that doesn't read the tubes' length: the flared ends (a flanged outer, 0.85 r, and a free
+ * inner, 0.61 r, at the flared mouth's size, each less the flare's shortfall) and the neighbouring mouths (r² / 2s on
+ * the baffle, r² / 4s in the box, s the distance between the axes, averaged over the tubes). The last one is kept.
+ */
+let lastFixedEc: (SetupKey & { ec: number }) | null = null;
+function tubeFixedEc(
+  box: Dims3,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+  drv: TubeDriver,
+) {
+  if (lastFixedEc && sameSetup(lastFixedEc, box, style, v, t, drv)) return lastFixedEc.ec;
+  const { tubes } = tubeLayout(box, style, v, t, drv.size);
   const r = v.dia / 2,
     R = r + TUBE_FLARE_RADIUS_IN;
   let near = 0;
   for (const p of tubes)
     for (const q of tubes) if (p !== q) near += 1 / Math.hypot(p.x - q.x, p.y - q.y);
-  const fixedEc =
+  const ec =
     (0.85 + 0.61) * r * (r / R) -
     2 * flareShortfall(r) +
     (tubes.length ? ((r * r) / tubes.length) * near * (1 / 2 + 1 / 4) : 0);
-  const setup = { room, spans, fixedEc };
-  lastSetup = { box: { ...box }, style, nt: v.nt, dia: v.dia, t, drv: { ...drv }, setup };
-  return setup;
+  lastFixedEc = { ...setupKey(box, style, v, t, drv), ec };
+  return ec;
 }
 
 /** The room a tube's centreline has (tubeSetup). */
@@ -297,11 +352,11 @@ export function subTubeEndCorrection(
   drv: TubeDriver,
   elbows?: ElbowCount,
 ) {
-  const { room, spans, fixedEc } = tubeSetup(box, style, v, t, drv);
+  const { room, spans } = tubeSetup(box, style, v, t, drv);
   const e = elbows ?? modelCount(spans, v.len);
   const legs = tubeLegs(room, v.dia, v.len, e);
   return (
-    fixedEc +
+    tubeFixedEc(box, style, v, t, drv) +
     tubeWallEndCorrection(v.dia / 2, Math.max(legs.gap, 1e-9)) +
     e * SHARP_BEND_CORRECTION * v.dia
   );
