@@ -9,6 +9,7 @@ import { OptimizerResultCard } from "./OptimizerResultCard";
 import { GoalPicker } from "./GoalPicker";
 import { KeepDetails } from "./KeepDetails";
 import { RunRow } from "./RunRow";
+import { DriverCompare } from "./DriverCompare";
 import { ResultCards } from "./ResultCards";
 import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize";
 import { keepLines, PA_KEEP_WORDS } from "../../lib/optimizer/goalKeeps";
@@ -20,6 +21,8 @@ import type {
   PaOptimizerInputState,
   PaOptimizerResult,
   PaRoom,
+  PaDriverCompareRow,
+  PaDriverPart,
   PaRunMode,
   PaSearchOverrides,
 } from "../../types";
@@ -34,6 +37,10 @@ interface Props {
   runFull: () => unknown;
   /** runs again with these limits changed, in the mode of the result shown (the near miss's options) */
   retry: (over: PaSearchOverrides) => unknown;
+  /** every option for a part in your design as it is */
+  compareRows: (part: PaDriverPart) => PaDriverCompareRow[];
+  /** puts a compared option into your design */
+  onSwapDriver: (part: PaDriverPart, id: string) => void;
   /** which search is running; null when none is */
   runningMode: PaRunMode | null;
   /** the grid Fully optimize searches, one line per part */
@@ -62,6 +69,8 @@ export function OptimizerPanel({
   run,
   runFull,
   retry,
+  compareRows,
+  onSwapDriver,
   runningMode,
   fullGridLines,
   busy,
@@ -243,6 +252,7 @@ export function OptimizerPanel({
             )}
           </div>
         )}
+        <DriverCompare rows={compareRows} onUse={onSwapDriver} />
       </Card>
     </section>
   );

@@ -1966,6 +1966,26 @@ export interface PaOptimizerResult {
 /** A check on the PA stack's sub, mid or horn. */
 export type PaChipId = ChipId<"sub" | "mid" | "horn">;
 /** The limits a PA design is checked against: the heaviest box, the driver budget and the warnings let through. */
+/** The parts the driver comparison swaps: the drivers and the horn (`PaLockKey`s, so each has its lock). */
+export type PaDriverPart = Extract<PaLockKey, "sub" | "mid" | "cd" | "horn">;
+
+/** One option in the driver comparison: the part's own price, and the whole design's numbers with it in. */
+export interface PaDriverCompareRow {
+  id: string;
+  name: string;
+  /** the part's own price; null when unpublished */
+  price: number | null;
+  /** your design's part */
+  yours: boolean;
+  /** the design with this part (null: the planner can't model it) */
+  m: Pick<
+    PaEvaluation,
+    "price" | "priceKnown" | "heaviest" | "out" | "f3" | "qtc" | "midGap" | "hornGap"
+  > | null;
+  /** what fails the planner's checks or the optimizer's limits, in words (empty: passes) */
+  problems: string[];
+}
+
 export interface PaProblemLimits {
   maxLb: number;
   budget: number;

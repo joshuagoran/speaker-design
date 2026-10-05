@@ -1,4 +1,4 @@
-import type { HifiGoal, PaGoal, PaRunMode } from "../types";
+import type { HifiGoal, PaDriverPart, PaGoal, PaRunMode } from "../types";
 
 /** A goal both optimizers offer. */
 type SharedGoal = PaGoal & HifiGoal;
@@ -45,6 +45,14 @@ export const OPTIMIZER_PANEL_TEXT = {
   heading: "Find a better design",
   limitedBy: "Limited by:",
 } as const;
+
+/** The driver comparison's part buttons, by part. */
+export const DRIVER_PART_NAMES = {
+  sub: "Sub",
+  mid: "Mid",
+  cd: "Compression driver",
+  horn: "Horn",
+} as const satisfies Record<PaDriverPart, string>;
 
 /** The PA run buttons' words, by run mode (the Details drop-down names them too; the phone check taps Improve). */
 export const PA_RUN_LABELS = {
