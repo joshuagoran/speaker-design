@@ -2007,6 +2007,13 @@ export interface PaDriverCompareRow {
   problems: (PaProblem & { yoursToo: boolean })[];
 }
 
+/** A slider's range and step. */
+export interface SliderSpec {
+  min: number;
+  max: number;
+  step: number;
+}
+
 export interface PaProblemLimits {
   maxLb: number;
   budget: number;
