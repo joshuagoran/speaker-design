@@ -1,4 +1,5 @@
 import { Tooltip } from "../ui/Tooltip";
+import { SUB_BASS_BAND_HZ } from "../../lib/pa/calc";
 
 /** A statistic with plain-language help: its label, and the tooltip shown on it. */
 export interface StatDef {
@@ -46,6 +47,14 @@ export const STATS = {
   tuningFb: {
     label: "Tuning Fb",
     tip: "Frequency the port resonates at. Output falls away quickly below it.",
+  },
+  systemF3: {
+    label: "System F3",
+    tip: "Frequency where the response falls 3 dB under this driver's own midband, with the highpass. It compares the shape of the low end, not how loud it plays.",
+  },
+  subBass: {
+    label: `Sub-bass ${SUB_BASS_BAND_HZ[0]}–${SUB_BASS_BAND_HZ[1]} Hz`,
+    tip: `Average of the max SPL curve from ${SUB_BASS_BAND_HZ[0]} to ${SUB_BASS_BAND_HZ[1]} Hz: the most a steady sine can play before a limit (excursion, port air speed or amp), with the highpass.`,
   },
   f3InRoom: {
     label: "F3 in room",

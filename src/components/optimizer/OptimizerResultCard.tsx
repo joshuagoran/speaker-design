@@ -5,6 +5,7 @@ import { BoxFront } from "../drawings/BoxFront";
 import { formatDollars } from "../../lib/format";
 import { formatThickness } from "../../lib/pa/calc";
 import { Delta } from "./Delta";
+import { STATS } from "./StatRow";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import { Ellipsis } from "../ui/Ellipsis";
@@ -82,7 +83,7 @@ export function OptimizerResultCard({
         Mid {result.names.mid} · {result.names.cd} on {result.names.horn} · amps {config.ampW} /{" "}
         {config.mAmpW} / {config.hfAmpW} W
       </div>
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5 [&>*:last-child:nth-child(odd)]:col-span-2">
         {tile(
           "Drivers",
           formatDollars(metrics.price),
@@ -97,6 +98,11 @@ export function OptimizerResultCard({
           "Output",
           `${metrics.out.toFixed(1)} dB`,
           <Delta v={deltas.out} unit=" dB" digits={1} />,
+        )}
+        {tile(
+          STATS.subBass.label,
+          `${metrics.subBass.toFixed(1)} dB`,
+          <Delta v={deltas.subBass} unit=" dB" digits={1} />,
         )}
         {tile(
           "F3",

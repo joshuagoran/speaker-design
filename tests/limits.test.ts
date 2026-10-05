@@ -4,6 +4,8 @@ import {
   boxModel,
   subwooferLimits,
   maxOutputCurve,
+  subBassLevel,
+  SUB_BASS_BAND_HZ,
   thermalVoltageLimit,
   ampVoltage,
 } from "../src/lib/pa/calc";
@@ -50,6 +52,27 @@ test("maxCurve never exceeds the amp-limited curve and stays below Xmax", (t) =>
       s = 10 ** ((c.spl - o.spl) / 20);
     assert.ok(o.xmm * s <= fh.Xmax * (1 + 1e-9) && o.vel * s <= 23.5 * (1 + 1e-9), `${f} Hz`);
   }
+});
+test("sub-bass level: the mean of the curve inside its band only", (t) => {
+  const [lo, hi] = SUB_BASS_BAND_HZ;
+  const curve = [
+    { f: lo - 1, spl: 0 },
+    { f: lo, spl: 100 },
+    { f: (lo + hi) / 2, spl: 110 },
+    { f: hi, spl: 120 },
+    { f: hi + 1, spl: 0 },
+  ];
+  close(t, subBassLevel(curve), 110, 1e-12);
+});
+test("sub-bass level of a max curve lies between its lowest and highest point in the band", () => {
+  const V = ampVoltage(800),
+    m = boxModel(fh, 148, 57, 14, 31, V, "BW24")!,
+    mc = maxOutputCurve(m.curve, fh, V, 23.5);
+  const band = mc.filter((o) => o.f >= SUB_BASS_BAND_HZ[0] && o.f <= SUB_BASS_BAND_HZ[1]);
+  const level = subBassLevel(mc);
+  assert.ok(band.length > 10);
+  assert.ok(level >= Math.min(...band.map((o) => o.spl)));
+  assert.ok(level <= Math.max(...band.map((o) => o.spl)));
 });
 test("limit ids show the words the pages have always shown", () => {
   assert.deepEqual(LIMIT_NAMES, {

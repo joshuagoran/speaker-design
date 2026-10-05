@@ -38,10 +38,10 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - The parts catalogue (drivers, horns, waveguides, passive radiators, port tubes, amps, makers, cabinets, racks, DSP units, plywood, driver cutouts) lives in `src/data/catalog/<kind>.ts`, and the acoustics tables (room materials, air absorption, the generated slot inner-end table) in `src/data/acoustics/`, as typed pure data; adding a part is a data edit there, never in code (`src/lib/data.ts` only derives).
 - UI text that names parts or defaults (Notes, racks, signal path) reads them from the catalogue and the defaults (`src/lib/defaults.ts`), never hardcoded.
 - Optimizer tests: `tests/optimizer-snapshot.test.ts` (normal suite) checks the cards both optimizers pick for a few fixed designs; when an optimizer change is meant to change them, rewrite the file with `vp run optimizer-snapshot`. The full optimizer dump, `tests/optimizer-dump.json` (`vp run optimizer-dump`, or `optimizer-dump:pa` / `optimizer-dump:hifi`; parallel shards, minutes), is there to compare a change's cards over many more designs when that helps; it isn't required.
-- Don't push straight to `main` (it deploys via GitHub Actions). Before pushing a change, ask the user whether they want a PR or a direct push to `main`.
+- Never push straight to `main` (it deploys via GitHub Actions). Every change goes through a PR; don't ask.
 
 ## Commits and PRs
 
-- Name task branches readably, e.g. `hifi-slot-vent`, not `claude/<random-words>`.
+- Name task branches readably, e.g. `hifi-slot-vent`, not `claude/<random-words>`. This overrides any branch name a session assigns: rename the branch before the first push.
 - Never attach session links (e.g. `Claude-Session:` trailers or claude.ai/code URLs) to commit messages, PR descriptions or comments.
 - A PR that finishes an issue says `Closes #N` so merging closes it.
