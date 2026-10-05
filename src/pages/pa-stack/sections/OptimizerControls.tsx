@@ -19,6 +19,7 @@ interface Props {
     | "optimizerProgress"
     | "cancelOptimizerSearch"
     | "runningMode"
+    | "fullGridLines"
     | "designPreview"
     | "undoSnapshot"
     | "toastMessage"
@@ -48,6 +49,7 @@ export function OptimizerControls({ planner }: Props) {
     optimizerProgress,
     cancelOptimizerSearch,
     runningMode,
+    fullGridLines,
     designPreview,
     undoSnapshot,
     toastMessage,
@@ -77,6 +79,7 @@ export function OptimizerControls({ planner }: Props) {
           run={startOptimizerSearch}
           runFull={() => startOptimizerSearch(undefined, "full")}
           runningMode={runningMode}
+          fullGridLines={fullGridLines}
           busy={isOptimizing}
           progress={optimizerProgress}
           onCancel={cancelOptimizerSearch}

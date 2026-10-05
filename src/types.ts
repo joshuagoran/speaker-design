@@ -8,6 +8,8 @@ import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { MAKER_NAMES } from "./data/catalog/makers";
 import type { AMP_SERIES } from "./data/catalog/amps";
 import type { DSP_UNITS } from "./data/catalog/dsp-units";
+import type { Keep } from "./lib/optimizer/shortfall";
+import type { SelectedCard } from "./lib/optimizer/selectCards";
 
 // Shapes of the parts catalogue tables in data/catalog/ (lib/data.ts derives the app's view of them).
 //
@@ -1945,6 +1947,120 @@ export interface PaOptimizerResult {
   nearMiss: PaNearMiss | null;
   stats: { evaluated: number; ms: number; subs: number; combos: number; pool: number };
 }
+
+/** A check on the PA stack's sub, mid or horn. */
+export type PaChipId = ChipId<"sub" | "mid" | "horn">;
+/** The limits a PA design is checked against: the heaviest box, the driver budget and the warnings let through. */
+export interface PaProblemLimits {
+  maxLb: number;
+  budget: number;
+  allow?: Set<PaChipId>;
+}
+/** The numbers the PA goals rank by. */
+export interface PaScore {
+  price: number;
+  heaviest: number;
+  out: number;
+  f3: number;
+}
+/** A score plus how many things differ from the current design and how many warnings it has (`w`, once evaluated). */
+export interface PaMetric extends PaScore {
+  ch: number;
+  w?: number;
+}
+/** A compression driver on a horn, with its level at the crossover. */
+export interface PaHornEntry {
+  cd: CompressionDriver;
+  h: Horn;
+  at: number;
+  price: number;
+  horn: number;
+  same: boolean;
+}
+/** An evaluated PA design. */
+export interface PaPoolEntry {
+  c: PaDesignConfig;
+  m: PaEvaluation;
+  ch: number;
+}
+/** The PA locks with both box-dimension modes present. */
+export interface PaResolvedLocks extends PaOptimizerLocks {
+  subDim: Partial<Record<keyof Dims3, DimensionLockMode>>;
+  midDim: Partial<Record<keyof Dims3, DimensionLockMode>>;
+}
+/** The PA card selection's picks from a pool (`selectCards`' result). */
+export interface PaChosen {
+  cards: SelectedCard<PaPoolEntry, PaGoal>[];
+  goalMissing: boolean;
+  fixMisses: boolean;
+}
+/** The PA card selection over the pool, within some limits and at an output target (null: no card). */
+export type PaChoose = (L: PaProblemLimits, tgt: number) => PaChosen | null;
+/**
+ * What the PA search's setup and card rules hand the exact search (lib/pa/optimizeExact): your design and the amps,
+ * locks and limits as the search reads them, the target and what each goal keeps, the crossovers, mids and horn pairs,
+ * the ranking and comparisons the cards use, and the pool the cards are chosen from.
+ */
+export interface PaSearchContext {
+  cur: PaDesignConfig;
+  /** your design at the searched amps */
+  base: PaDesignConfig;
+  amps: Pick<PaDesignConfig, "ampW" | "mAmpW" | "hfAmpW">;
+  locks: PaResolvedLocks;
+  lim: Required<PaProblemLimits>;
+  goals: PaGoal[];
+  target: number;
+  keep: Record<PaGoal, Keep>;
+  curMet: PaScore | null;
+  curFails: boolean;
+  walls: number[];
+  xoLos: number[];
+  xoHis: number[];
+  mids: MidDriver[];
+  midBoxes: (m: MidDriver, t: number) => (Dims3 | null)[];
+  /** per upper crossover, the horn pairs that load there, cheapest first */
+  hornTable: Record<number, PaHornEntry[]>;
+  /** the alternatives' axes, in the order the cards take them */
+  altAxes: PaGoal[];
+  obj: Record<PaGoal, (x: PaMetric) => number>;
+  beats: Record<PaGoal, (x: PaScore, y: PaScore) => boolean>;
+  metric: (p: PaPoolEntry) => PaMetric;
+  changes: (c: PaDesignConfig) => number;
+  pool: PaPoolEntry[];
+}
+/**
+ * How the exact search plugs into the PA search: it wraps the card selection so the pool holds every design a card
+ * could be (adding designs until no design on its grid beats a pick), and says how light a working sub box gets.
+ */
+export interface PaExactHook {
+  close(choose: PaChoose, ctx: PaSearchContext): PaChoose;
+  lightestSubLb(): number | null;
+}
+/** The exact PA search's grid steps (lib/pa/optimizeExact's PA_EXACT_GRID). */
+export interface PaExactGrid {
+  /** net volumes run from `minNetL` (the planner's floor) up by this share each rung */
+  volumeStep: number;
+  minNetL: number;
+  /** tunings, Hz */
+  fb: { from: number; to: number; step: number };
+  /** the shortest duct, in: a vent that tunes the box only when shorter isn't used (as the quick search) */
+  minDuctIn: number;
+}
+/**
+ * One share of the exact PA search's model step, per sub driver: its place in the searched list and its curves packed
+ * by row (see `PA_EXACT_ROW` in lib/pa/optimizeExact).
+ */
+export interface PaExactScored {
+  sub: number;
+  rows: Float64Array;
+}
+/** A job for an exact PA search worker: one share of the model step, or the search on every share. */
+export type PaExactJob =
+  | { kind: "score"; input: PaOptimizerInput; part: number; parts: number }
+  | { kind: "select"; input: PaOptimizerInput; scored: PaExactScored[][] };
+export type PaExactJobResult =
+  | { kind: "scored"; scored: PaExactScored[] }
+  | { kind: "result"; result: PaOptimizerResult };
 
 /** What the page posts to an optimizer's worker; the PA stack's unless another input type is given. */
 export interface OptimizerRequest<I = PaOptimizerInput> {

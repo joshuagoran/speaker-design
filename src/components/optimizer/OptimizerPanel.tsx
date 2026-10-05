@@ -34,6 +34,8 @@ interface Props {
   runFull: () => unknown;
   /** which search is running; null when none is */
   runningMode: PaRunMode | null;
+  /** the grid Fully optimize searches, one line per part */
+  fullGridLines: readonly string[];
   busy: boolean;
   /** how far the running search has got; null before its first report */
   progress: OptimizerProgress | null;
@@ -58,6 +60,7 @@ export function OptimizerPanel({
   run,
   runFull,
   runningMode,
+  fullGridLines,
   busy,
   progress,
   onCancel,
@@ -169,6 +172,14 @@ export function OptimizerPanel({
         >
           {err && <span className="text-xs text-red-700">{err}</span>}
         </RunRow>
+        <KeepDetails
+          summary="Improve or Fully optimize"
+          lines={[
+            "Improve: a quick search around your design (about a second).",
+            "Fully optimize: every design on the grid below, so its first card is the best there is on it (under a minute):",
+            ...fullGridLines.map((line) => `· ${line}`),
+          ]}
+        />
         {res && !busy && res.curProblems && res.curProblems.length > 0 && (
           <Notice>
             Your design fails: {res.curProblems.join("; ")}. Fixes may cost or weigh more.

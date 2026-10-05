@@ -1,5 +1,6 @@
 import { LOCK_KEYS } from "../../../constants/lockKeys";
 import { PA_RUNNERS } from "../../../lib/pa/runOptimizer";
+import { paExactGridText } from "../../../lib/pa/optimizeExact";
 import { evaluateDesign as evaluateConfig, pickOptimizedFields } from "../../../lib/pa/optimize";
 import { useDesignPreview } from "../../../hooks/useDesignPreview";
 import { useOptimizerLocks } from "../../../hooks/useOptimizerLocks";
@@ -62,6 +63,8 @@ export interface PaOptimizer
   cancelOptimizerSearch: () => void;
   /** which search is running; null when none is */
   runningMode: PaRunMode | null;
+  /** the grid Fully optimize searches for the design and locks as they are, one line per part; empty when the optimizer is off */
+  fullGridLines: string[];
   toastMessage: string;
   setToastMessage: Setter<string>;
   startOptimizerSearch: (over?: PaSearchOverrides, mode?: PaRunMode) => Promise<void>;
@@ -124,26 +127,23 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
   } = useOptimizerRun<PaOptimizerResult>();
   const [toastMessage, setToastMessage] = useState("");
   const [runMode, setRunMode] = useState<PaRunMode>("improve");
+  /** the search's input for the design as it is and these optimizer inputs */
+  const searchInput = (inp: PaOptimizerInputState) => ({
+    cur: preview.baseDesign(),
+    room: inp.room,
+    maxLb: inp.maxLb,
+    budget: inp.budget,
+    goals: inp.goals,
+    locks: optimizerLocks,
+    cutlist,
+  });
   const startOptimizerSearch = async (over?: PaSearchOverrides, mode: PaRunMode = "improve") => {
     if (isOptimizing) return;
     const inp = { ...optimizerInput, ...(over && over.nativeEvent ? {} : over || {}) };
     if (over && !over.nativeEvent) updateOptimizerInput(over);
     if (!inp.goals.length) return;
     setRunMode(mode);
-    await runOptimizerSearch((options) =>
-      PA_RUNNERS[mode](
-        {
-          cur: preview.baseDesign(),
-          room: inp.room,
-          maxLb: inp.maxLb,
-          budget: inp.budget,
-          goals: inp.goals,
-          locks: optimizerLocks,
-          cutlist,
-        },
-        options,
-      ),
-    );
+    await runOptimizerSearch((options) => PA_RUNNERS[mode](searchInput(inp), options));
   };
   const loadOptimizerResult = async (k: PaOptimizerCard) => {
     const before = preview.loadOptimizerResult(k);
@@ -212,6 +212,7 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     optimizerProgress,
     cancelOptimizerSearch,
     runningMode: isOptimizing ? runMode : null,
+    fullGridLines: isOptimizerOn ? paExactGridText(searchInput(optimizerInput)) : [],
     designPreview: preview.designPreview,
     undoSnapshot: preview.undoSnapshot,
     toastMessage,
