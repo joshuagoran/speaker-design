@@ -44,6 +44,24 @@ export function snapToRanges(ranges: SliderRanges, from: number, to: number) {
   return to >= from ? (next?.[0] ?? last[1]) : (prev?.[1] ?? first[0]);
 }
 
+/**
+ * Where a pointer drag lands when only `ranges` are allowed: as snapToRanges, from the pointer's last raw position
+ * `from`, except that a pointer still inside the same gap holds `current` when it sits on that gap's edge. Without the
+ * hold, each small move back and forth in a gap reads as a turn and flips the value from one side to the other.
+ */
+export function snapDrag(ranges: SliderRanges, from: number, to: number, current: number) {
+  const gapAt = (x: number) => {
+    if (ranges.some(([a, b]) => x >= a && x <= b)) return null;
+    const below = ranges.findLast(([, b]) => b < x),
+      above = ranges.find(([a]) => a > x);
+    return below && above ? ([below[1], above[0]] as const) : null;
+  };
+  const gap = gapAt(to),
+    was = gapAt(from);
+  if (gap && was && gap[0] === was[0] && (current === gap[0] || current === gap[1])) return current;
+  return snapToRanges(ranges, from, to);
+}
+
 interface Props {
   label: React.ReactNode;
   value: number;
@@ -67,8 +85,9 @@ export function Slider({ label, value, min, max, step, unit, onChange, extra, ra
   const allowed = ranges && rangesOnSteps(ranges, min, max, step);
   const top = allowed?.[allowed.length - 1]?.[1] ?? max;
   // While a pointer drags, the way it moves is from its own last position, not from the value it snapped to: from the
-  // snapped value, a slow drag through a gap would read as turning back each move and flip from side to side. Keys
-  // step from the value itself, so a key press drops the pointer's position.
+  // snapped value, a slow drag through a gap would read as turning back each move and flip from side to side. Inside a
+  // gap the drag holds the side it jumped to (snapDrag). Keys step from the value itself, so a key press drops the
+  // pointer's position.
   const dragFrom = useRef<number | null>(null);
   return (
     <div className="mb-3">
@@ -106,9 +125,12 @@ export function Slider({ label, value, min, max, step, unit, onChange, extra, ra
         }}
         onChange={(e) => {
           const v = parseFloat(e.target.value);
-          const from = dragFrom.current ?? value;
-          if (dragFrom.current !== null) dragFrom.current = v;
-          onChange(allowed ? snapToRanges(allowed, from, v) : v);
+          const from = dragFrom.current;
+          if (from !== null) dragFrom.current = v;
+          if (!allowed) return onChange(v);
+          const next =
+            from === null ? snapToRanges(allowed, value, v) : snapDrag(allowed, from, v, value);
+          if (next !== value) onChange(next);
         }}
         className="w-full accent-stone-900"
       />
