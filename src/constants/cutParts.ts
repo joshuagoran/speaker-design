@@ -32,3 +32,16 @@ export const CUT_BOX_TAGS: Record<keyof typeof CUT_BOX_NAMES, string> = {
   sub: "S",
   mid: "M",
 };
+
+/**
+ * How a panel's face grain can look on the box, by id, and the name the Cutlist grain settings show for it: each panel
+ * offers two of these for its sides along the grain, and `any` lets the layout turn it.
+ */
+export const GRAIN_LOOK_NAMES = {
+  vertical: "Vertical",
+  horizontal: "Horizontal",
+  across: "Across",
+  frontToBack: "Front-to-back",
+  any: "Any",
+} as const;
+export type GrainLook = keyof typeof GRAIN_LOOK_NAMES;

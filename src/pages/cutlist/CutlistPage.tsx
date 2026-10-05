@@ -40,7 +40,13 @@ import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import { useFolds } from "../../hooks/useFolds";
 import { usePalette } from "../../hooks/useTheme";
 import { entriesOf, keysOf } from "../../lib/records";
-import { CUT_BOX_NAMES, CUT_BOX_TAGS, CUT_PART_NAMES } from "../../constants/cutParts";
+import {
+  CUT_BOX_NAMES,
+  CUT_BOX_TAGS,
+  CUT_PART_NAMES,
+  GRAIN_LOOK_NAMES,
+  type GrainLook,
+} from "../../constants/cutParts";
 import {
   CUTLIST_SETTINGS_SECTIONS,
   type CutlistSettingsSection,
@@ -83,51 +89,31 @@ interface Props {
 const JOINT_NAMES: Record<CornerJoint, string> = { butt: "Butt", rabbet: "Rabbet", miter: "Miter" };
 const PRESET_NAMES: Record<GrainPreset, string> = {
   wrap: "Wrap",
-  horizontal: "Horizontal",
+  horizontal: GRAIN_LOOK_NAMES.horizontal,
   none: "None (MDF)",
 };
 const OFFCUT_NAMES: Record<OffcutShape, string> = { strip: "Long strip", panel: "Wide panel" };
 const CUT_STYLE_NAMES: Record<CutStyle, string> = { sheets: "Fewest sheets", rips: "Rip first" };
 const STACK_CHOICES = [1, 2, 4] as const;
-/** Each panel's grain choices: what `b` and `a` along the grain look like on the box. */
-const GRAIN_ROWS: [GrainPanel, string, [GrainDir, string][]][] = [
-  [
-    "side",
-    "Sides",
-    [
-      ["b", "Vertical"],
-      ["a", "Front-to-back"],
-      ["any", "Any"],
-    ],
-  ],
-  [
-    "topBottom",
-    "Top/bottom",
-    [
-      ["b", "Across"],
-      ["a", "Front-to-back"],
-      ["any", "Any"],
-    ],
-  ],
-  [
-    "baffle",
-    "Baffle",
-    [
-      ["b", "Vertical"],
-      ["a", "Horizontal"],
-      ["any", "Any"],
-    ],
-  ],
-  [
-    "back",
-    "Back",
-    [
-      ["b", "Vertical"],
-      ["a", "Horizontal"],
-      ["any", "Any"],
-    ],
-  ],
+/** Each panel's grain choices: what `b` and `a` along the grain look like on the box (`any` lets the layout turn it). */
+const GRAIN_LOOKS: [GrainPanel, string, Record<Exclude<GrainDir, "any">, GrainLook>][] = [
+  ["side", "Sides", { b: "vertical", a: "frontToBack" }],
+  ["topBottom", "Top/bottom", { b: "across", a: "frontToBack" }],
+  ["baffle", "Baffle", { b: "vertical", a: "horizontal" }],
+  ["back", "Back", { b: "vertical", a: "horizontal" }],
 ];
+const GRAIN_ROWS = GRAIN_LOOKS.map(
+  ([panel, label, look]) =>
+    [
+      panel,
+      label,
+      [
+        ["b", GRAIN_LOOK_NAMES[look.b]],
+        ["a", GRAIN_LOOK_NAMES[look.a]],
+        ["any", GRAIN_LOOK_NAMES.any],
+      ],
+    ] as const,
+);
 
 const plural = (n: number, what: string) => `${n} ${what}${n === 1 ? "" : "s"}`;
 /** A part as the notes under a layout name it: its box, then the part, e.g. "Sub Baffle". */
