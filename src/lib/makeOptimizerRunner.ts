@@ -6,7 +6,7 @@ import type {
 } from "../types";
 
 /** How long a worker may go without a word (progress included) before the search is stopped as hung, ms. */
-export const OPTIMIZER_STALL_MS = 30_000;
+export const OPTIMIZER_STALL_MS = 60_000;
 
 /** What a cancelled search rejects with; the page tells it from a failure by its class (`isOptimizerCancel`). */
 export class OptimizerCancelled extends Error {

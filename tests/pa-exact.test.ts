@@ -376,7 +376,9 @@ const beats: Record<PaGoal, (m: PaEvaluation, c: PaEvaluation) => boolean> = {
   louder: (m, c) => m.out >= c.out + 1,
 };
 
-test("exact PA search: the first card is the best design on its grid, checked one by one with the planner's model", () => {
+// The first card is at least as good as every design on the grid (it can be better: Improve's designs, off the grid,
+// join the pool too).
+test("exact PA search: no design on its grid beats the first card, checked one by one with the planner's model", () => {
   const input = fixture();
   const cur = paSearchDesign(input);
   const curM = evaluateDesign(cur);
@@ -418,8 +420,8 @@ test("exact PA search: the first card is the best design on its grid, checked on
         out.cards.map((c) => c.label).join(" / "),
       );
     assert.ok(
-      Math.abs(got - best) < 1e-6,
-      `${goal}: the first card (${got}) is the best on the grid (${best})`,
+      got <= best + 1e-6,
+      `${goal}: the first card (${got}) is at least the best on the grid (${best})`,
     );
   }
 });

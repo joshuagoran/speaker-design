@@ -5,11 +5,10 @@ import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
 import { paCurrent } from "./optimizer-dump-cases";
 import type { PaGoal, PaMetricsSummary, PaOptimizerInput } from "../src/types";
 
-// Fully optimize's grid is far finer than Improve's, though not a superset of it (Improve tunes on its own steps and
-// volumes), so its first card isn't behind Improve's by construction; this checks that it isn't in practice, on saved
-// designs with the sub driver, plywood, vent style and box height locked (so the full search stays about a second a
-// run). A quick-search change that makes Fully optimize look worse, or an exact-search change that loses a design the
-// quick one finds, fails here.
+// Fully optimize adds its grid's designs to the pool Improve picks from, so its first card is never behind Improve's.
+// Checked on saved designs with the sub driver, plywood, vent style and box height locked (so the full search stays
+// about a second a run), including one (light block) where the exact grid alone finds a slightly heavier box than
+// Improve's.
 
 /**
  * How much better `a` is than `b` on the goal's own axis (negative: worse). Not the weight that breaks a price tie: on
@@ -22,7 +21,7 @@ const ahead: Record<PaGoal, (a: PaMetricsSummary, b: PaMetricsSummary) => number
   louder: (a, b) => a.out - b.out,
 };
 
-for (const name of ["rectangle sub", "lil block stack"])
+for (const name of ["rectangle sub", "lil block stack", "light block"])
   test(`exact PA search: Fully optimize's first card is at least as good as Improve's (${name})`, () => {
     for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
       const input: PaOptimizerInput = {

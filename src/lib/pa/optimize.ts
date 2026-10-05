@@ -549,7 +549,7 @@ export const paSearchAmps = (cur: PaDesignConfig, locks: PaOptimizerLocks) => ({
 
 /**
  * The quick search; `onProgress` hears how far it has got (coarse: grid points, then work units per step). With `exact`,
- * the exact search (lib/pa/optimizeExact) supplies the designs instead and reports its own progress.
+ * the exact search (lib/pa/optimizeExact) adds its grid's designs to this search's pool and reports its own progress.
  */
 export function optimizePaStack(
   input: PaOptimizerInput,
@@ -612,14 +612,13 @@ export function optimizePaStack(
   const priced = <T extends { ts: object; price: number | null }>(
     o: T,
   ): o is T & { price: number } => !!o.ts && o.price != null;
-  // a locked driver that isn't in the tables leaves nothing to search (the exact search brings its own subs)
-  const subs = exact
-    ? []
-    : locks.sub
-      ? curSub
-        ? [curSub]
-        : []
-      : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
+  // a locked driver that isn't in the tables leaves nothing to search. The exact search runs this one too: its designs
+  // join the exact search's pool, so Fully optimize's cards are never behind Improve's (the two grids differ)
+  const subs = locks.sub
+    ? curSub
+      ? [curSub]
+      : []
+    : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
   const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
   const styles: PortStyle[] = locks.vent ? [cur.portStyle] : ["slots", "vslots", "round2"];
   const xoLos = locks.xoLo ? [cur.xoLo] : XO_LO_OPTIONS;
@@ -1484,11 +1483,10 @@ export function optimizePaStack(
           designProblems(a.m, lim).length - designProblems(b.m, lim).length ||
           obj[goal](metric(a)) - obj[goal](metric(b)),
       )[0];
-    const lightest = exact
-      ? exact.lightestSubLb()
-      : subCands.length
-        ? Math.min(...subCands.map((x) => x.lb))
-        : null;
+    const lightest = [
+      exact ? exact.lightestSubLb() : null,
+      subCands.length ? Math.min(...subCands.map((x) => x.lb)) : null,
+    ].reduce<number | null>((a, b) => (a === null ? b : b === null ? a : Math.min(a, b)), null);
     nearMiss = {
       options: worked.map(({ text, set }) => ({ text, set })),
       closest: closest

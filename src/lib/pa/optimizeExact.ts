@@ -85,7 +85,6 @@ import type {
   Dims3,
   HornHf,
   MidDriver,
-  OptimizerProgress,
   OptimizerProgressCallback,
   PaChoose,
   PaChosen,
@@ -122,7 +121,8 @@ export const PA_EXACT_GRID: PaExactGrid = {
 };
 // the most entries a cache that grows with the boxes looked at keeps before it starts again
 const CACHE_MAX = 4096;
-// the most numbers the cached box pairs hold (8 bytes each: 192 MB a cache)
+// the most numbers the cached box pairs hold (8 bytes each: 192 MB a cache at most; a lower cap measured no lower peak
+// memory, as the rest of the search dominates, and up to twice the time)
 const PAIR_FLOATS_MAX = 24_000_000;
 /**
  * A cache of packed box pairs held to a size: a hit moves to the back, and once the pairs it holds pass the budget the
@@ -616,10 +616,21 @@ function exactHook(
   const bareCache = new PairCache<{ pairs: Pairs; size: number }>();
   const groupCache = new PairCache<GroupState>();
   const rejected = new Set<string>();
-  // progress: the units settled out of the units to settle, growing with every search (the model step reports its own)
-  const progress: OptimizerProgress = { done: 0, total: 0 };
+  // progress (the model step reports its own): each card slot an equal share, the slot being searched filled by the units
+  // its search has settled. The selection runs the slots again each round and for the near miss, so this can go back;
+  // the page's runner shows the furthest it has got.
+  const progress = { slot: 0, slots: 1, done: 0, total: 0, best: "" };
   const throttle = throttledProgress(onProgress);
-  const report = (force = false) => throttle(progress.done, progress.total, force, progress.best);
+  const SLOT_UNITS = 1000;
+  const report = (force = false) =>
+    throttle(
+      Math.round(
+        SLOT_UNITS * (progress.slot + (progress.total ? progress.done / progress.total : 0)),
+      ),
+      SLOT_UNITS * progress.slots,
+      force,
+      progress.best || undefined,
+    );
 
   const bare = (si: number, ti: number, ri: number) => {
     const k = (si * s.walls.length + ti) * s.rungs.length + ri;
@@ -1253,7 +1264,8 @@ function exactHook(
       if (r && before(r, bestRank)) cand.push({ u, r });
     }
     cand.sort((a, b) => a.r[0] - b.r[0] || a.r[1] - b.r[1]);
-    progress.total += cand.length;
+    progress.done = 0;
+    progress.total = cand.length;
     let k = 0;
     for (; k < cand.length; k++) {
       const { u, r } = cand[k];
@@ -1334,7 +1346,7 @@ function exactHook(
       }
       report();
     }
-    progress.done += cand.length - k;
+    progress.done = cand.length;
     report();
     return best;
   };
@@ -1604,7 +1616,10 @@ function exactHook(
     const limited = both(ANY, limitsNeed(L));
     // the grid's best for a slot when it ranks clearly ahead of the pool's pick, or when the pool has none (null: the
     // pick stands)
+    // the slots this selection fills (up to three cards: the first, the smallest change, alternatives), for progress
+    progress.slots = Math.min(3, 1 + (c.curMet ? 1 : 0) + c.altAxes.length);
     const check = (q: Query, pick: PaPoolEntry | undefined, first = false) => {
+      progress.slot = Math.min(taken.length, progress.slots - 1);
       const pr = pick ? q.rank(c.metric(pick)) : null;
       const f = search(c, q, pr ?? [Infinity, Infinity], first);
       return f &&

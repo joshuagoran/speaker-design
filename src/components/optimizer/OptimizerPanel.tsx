@@ -179,7 +179,7 @@ export function OptimizerPanel({
           summary="Improve or Fully optimize"
           lines={[
             "Improve: a quick search around your design (about a second).",
-            "Fully optimize: every design on the grid below, so its first card is the best there is on it (under a minute):",
+            "Fully optimize: Improve's designs and every design on the grid below, so its first card is never behind Improve's and nothing on the grid beats it (up to a minute or so):",
             ...fullGridLines.map((line) => `· ${line}`),
           ]}
         />
