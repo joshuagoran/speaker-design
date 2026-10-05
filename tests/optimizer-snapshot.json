@@ -25,7 +25,7 @@
  ],
  "hifi": [
   {"config":"radiator","goals":["lower"],"goalMissing":null,"cards":[
-    {"label":"Go lower","why":"Lowest in-room F3 that keeps the level.","config":{"woofer":"rs225","tweeter":"rst28f","box":"vented","dim":{"w":12.5,"h":36,"d":14.5},"port":{"shape":"slot","n":1,"h":1,"len":10.25},"wall":0.5,"xo":1500,"wAmpW":40,"tAmpW":5},"metrics":{"gross":89.043,"f3":28.802,"price":259.92,"level":92.355,"lb":34.528},"changed":["woofer","tweeter","box type","box size","plywood","crossover","amp power"]},
+    {"label":"Go lower","why":"Lowest in-room F3 that keeps the level.","config":{"woofer":"rs225","tweeter":"rst28f","box":"vented","dim":{"w":12.5,"h":36,"d":14.5},"port":{"shape":"slot","n":1,"h":1,"len":10},"wall":0.5,"xo":1500,"wAmpW":40,"tAmpW":5},"metrics":{"gross":89.043,"f3":28.802,"price":259.92,"level":92.418,"lb":34.528},"changed":["woofer","tweeter","box type","box size","plywood","crossover","amp power"]},
     {"label":"Smallest change","why":"Changes one thing from your design.","config":{"woofer":"sb17nrx","tweeter":"sb26stcn","box":"radiator","dim":{"w":9,"h":16,"d":11},"port":{"n":1,"dia":2,"len":6},"pr":{"id":"sb16pfcr","n":2,"addG":0},"wall":0.5,"xo":2200,"wAmpW":30,"tAmpW":5},"metrics":{"gross":19.664,"f3":50.021,"price":349.6,"level":90.844,"lb":14.711},"changed":["plywood","amp power"]},
     {"label":"Cheaper","why":"Costs less than your design.","config":{"woofer":"hds875","tweeter":"rst28f","box":"vented","dim":{"w":8,"h":19.5,"d":11.5},"port":{"n":1,"dia":3,"len":6.5,"elbows":0},"wall":0.5,"xo":1500,"wAmpW":50,"tAmpW":10},"metrics":{"gross":22.282,"f3":53.932,"price":178.96,"level":95.622,"lb":16.734},"changed":["woofer","tweeter","box type","box size","plywood","crossover","amp power"]}
   ]}

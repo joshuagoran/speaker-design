@@ -7,8 +7,9 @@ import {
   hifiScoreBoxes,
   runHifiJob,
   portsDiffer,
+  slotFor,
 } from "../src/lib/hifi/optimize";
-import { hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
+import { hifiBox, hifiGridTop, hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
 import { chipOf } from "./helpers";
 import { DESIGN_PROBLEM_TEXT } from "../src/constants/optimizerText";
@@ -515,4 +516,38 @@ test("hi-fi optimizer: shares handed back out of order merge in the grid's order
     [1, 0].map((part) => hifiScoreBoxes(input, part, 2)),
   );
   assert.deepStrictEqual({ ...late, stats: null }, { ...one, stats: null });
+});
+
+test("hi-fi optimizer: a slot it sizes tunes, in the page's model, to the target (the length rounded down to 1/4 in)", () => {
+  // the slot's inner end correction reads its length (the shelf's run and the gap behind the mouth), so the length is
+  // solved with it at every step, as the page models it
+  const w = HIFI_WOOFERS.find((x) => x.id === cur.woofer),
+    wall = 0.75;
+  assert.ok(w);
+  const fbOf = (dim: HifiOptimizerCurrent["dim"], port: { h: number; len: number }) =>
+    hifiBox(w, { ...cur, wall, dim, port: { shape: "slot", n: 1, ...port } }, hifiGridTop(cur.xo))
+      ?.vM?.Fb ?? NaN;
+  let n = 0;
+  for (const dim of [
+    { w: 9, h: 34, d: 7 },
+    { w: 9, h: 15, d: 11 },
+    { w: 11, h: 22, d: 14.5 },
+    { w: 9, h: 20, d: 10 },
+    { w: 13, h: 40, d: 13 },
+    { w: 8, h: 28, d: 8.5 },
+    { w: 10, h: 44, d: 11.5 },
+  ])
+    for (const h of [0.75, 1, 1.5])
+      for (const k of [0.8, 1, 1.2]) {
+        const Fb: number = w.ts.Fs * k;
+        const slot = slotFor(w, dim, wall, h, Fb);
+        if (!slot) continue;
+        assert.ok(
+          fbOf(dim, slot) >= Fb,
+          `${JSON.stringify(dim)} ${h} ${k}: ${fbOf(dim, slot)} < ${Fb}`,
+        );
+        assert.ok(fbOf(dim, { h, len: slot.len + 0.25 }) < Fb, `${JSON.stringify(dim)} ${h} ${k}`);
+        n++;
+      }
+  assert.ok(n >= 10, `${n} slots`);
 });

@@ -528,8 +528,9 @@ export function solveShape(
   for (let it = 0; it < 60; it++) {
     let unreached = false; // a bottom slot this size tunes neither straight nor folded
     // the duct length for the tuning at this size; where the end correction reads the gap behind the duct, the root of
-    // len + ec(len) = Leff, which rises with the length (a longer duct leaves a smaller gap, a larger correction). A
-    // bottom slot is solved straight first; only when that is longer than the straight run holds does it fold.
+    // len + ec(len) = Leff, which rises with the length (the correction can fall as the shelf's run grows, but never as
+    // fast as the length: tests/pa-exact.test.ts). A bottom slot is solved straight first; only when that is longer
+    // than the straight run holds does it fold.
     let vs = ventShape(style, box, v, t, false);
     const Leff = effectiveLengthFor(vs.area, VbL, Fb);
     v.len = ductLengthFor(vs, Leff);
@@ -566,10 +567,10 @@ export function solveShape(
       }
       const straightMax = maxStraightSlotIn(box, v.slotH, t);
       if (style === "slots" && v.len > straightMax) {
-        // past the straight run it folds: the folded length's root (its correction rises with the length too, as the
-        // mouth nears the lid). A fold takes a different correction from the straight slot's at the back wall, so
-        // there can be tunings neither reaches: none past the straight run. A size on the way there keeps the straight
-        // root so the steps carry on; only a box that settles there has no duct for the target.
+        // past the straight run it folds: the folded length's root (len + ec rises with the length here too). A fold
+        // takes a different correction from the straight slot's at the back wall, so there can be tunings neither
+        // reaches: none past the straight run. A size on the way there keeps the straight root so the steps carry on;
+        // only a box that settles there has no duct for the target.
         const straightLen = v.len;
         const gf = (x: number) => {
           v.len = x;

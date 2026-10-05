@@ -38,6 +38,7 @@ import {
   boxInternalLiters,
   midSystem,
   nearestPoint,
+  slotFolds,
   subGeometry,
   subSystem,
   subWeightLb,
@@ -49,6 +50,8 @@ import {
   subDriverClearanceNeededIn,
 } from "../src/lib/pa/chips";
 import { goalKeeps } from "../src/lib/optimizer/goalKeeps";
+import { PA_SLIDERS, PA_THROAT_MAX_VSLOT1 } from "../src/constants/paSliders";
+import { vent } from "./helpers";
 import { LIMIT_CHIP_IDS } from "../src/constants/chipIds";
 import { CD_OPTIONS, HORN_OPTIONS, MID_BOXES, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import type {
@@ -193,6 +196,43 @@ test("exact PA search: a box solved for a volume and tuning gives them back in t
     assert.strictEqual(sol.box.h, fixed.h);
   }
   assert.ok(n > 150, `solved ${n}`);
+});
+
+test("exact PA search: the vent's most end correction bounds every duct length, and len + ec rises with the length", () => {
+  // the search prunes box pairs with the duct length at this bound (deepShape): a correction past it would drop a design;
+  // and solveShape takes a single root of len + ec(len) = Leff, straight or folded
+  let n = 0;
+  for (const t of [0.5, 0.75])
+    for (const w of [PA_SLIDERS.subW.min, 26, PA_SLIDERS.subW.max])
+      for (const h of [PA_SLIDERS.subH.min, 30, PA_SLIDERS.subH.max])
+        for (const d of [PA_SLIDERS.subD.min, 20, PA_SLIDERS.subD.max])
+          for (const style of ["slots", "vslots", "vslot1"] as const) {
+            const { min, max } = style === "slots" ? PA_SLIDERS.slotH : PA_SLIDERS.throat;
+            for (const size of [
+              min,
+              (min + max) / 2,
+              style === "vslot1" ? PA_THROAT_MAX_VSLOT1 : max,
+            ]) {
+              const box = { w, h, d },
+                base = style === "slots" ? { slotH: size } : { throat: size };
+              const most = ventShape(style, box, vent(base), t, false, true).ec ?? NaN;
+              // len + ec at the last length, and whether that one folded (a fold's correction starts afresh)
+              let prevLeff = -Infinity,
+                prevFolded = false;
+              for (let len = PA_SLIDERS.ductLen.min; len <= PA_SLIDERS.ductLen.max; len += 0.25) {
+                const v = vent({ ...base, len }),
+                  folded = style === "slots" && slotFolds(box, v, t),
+                  ec = ventShape(style, box, v, t).ec ?? NaN,
+                  at = `${style} ${size} ${t} ${w}x${h}x${d} ${len}`;
+                assert.ok(Number.isFinite(ec) && ec <= most, at);
+                if (prevFolded === folded) assert.ok(len + ec > prevLeff, at);
+                prevLeff = len + ec;
+                prevFolded = folded;
+                n++;
+              }
+            }
+          }
+  assert.ok(n > 10_000);
 });
 
 test("exact PA search: the tower mid's Qtc is midSystem's, and falls as the box grows", () => {
