@@ -6,7 +6,7 @@ interface Props {
   busy: boolean;
   hasGoal: boolean;
   onRun: () => void;
-  /** the run button's words when idle with a goal picked */
+  /** the run button's words */
   runLabel?: string;
   /** a second run button beside the first (the PA's Fully optimize); `running` when the search running is its own */
   alt?: { label: string; onRun: () => void; running: boolean };
@@ -20,7 +20,10 @@ interface Props {
   children?: React.ReactNode;
 }
 
-/** Run button with search statistics; while searching, a Cancel button and the search's progress. */
+/**
+ * Run button with search statistics; while searching, a Cancel button and the search's progress. The buttons keep their
+ * words and only grey out while a search runs or no goal is picked.
+ */
 export function RunRow({
   busy,
   hasGoal,
@@ -33,19 +36,23 @@ export function RunRow({
   note,
   children,
 }: Props) {
-  const label = (idle: string, mine: boolean) =>
-    busy && mine ? <Searching /> : hasGoal ? idle : "Pick a goal first";
   return (
     <div className="mt-3">
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="primary" onClick={onRun} disabled={busy || !hasGoal} className="px-4">
-          {label(runLabel, !alt?.running)}
+          {runLabel}
         </Button>
         {alt && (
-          <Button onClick={alt.onRun} disabled={busy || !hasGoal} className="px-4">
-            {label(alt.label, alt.running)}
+          <Button
+            variant="special"
+            onClick={alt.onRun}
+            disabled={busy || !hasGoal}
+            className="px-4"
+          >
+            {alt.label}
           </Button>
         )}
+        {!hasGoal && !busy && <span className="text-xs text-stone-500">Pick a goal first</span>}
         {busy && onCancel && (
           <Button onClick={onCancel} className="min-h-10 min-w-10">
             Cancel
@@ -59,22 +66,22 @@ export function RunRow({
         )}
         {children}
       </div>
-      {busy && <SearchProgress progress={progress ?? null} />}
+      {busy && (
+        <SearchProgress progress={progress ?? null} search={alt?.running ? alt.label : runLabel} />
+      )}
     </div>
   );
 }
 
-function Searching() {
-  return (
-    <span>
-      Searching
-      <Ellipsis />
-    </span>
-  );
-}
-
 /** A slim bar on a fixed 0–100 % track and one line of words; both keep their size as the numbers change. */
-function SearchProgress({ progress }: { progress: OptimizerProgress | null }) {
+function SearchProgress({
+  progress,
+  search,
+}: {
+  progress: OptimizerProgress | null;
+  /** the search running, by its button's words */
+  search: string;
+}) {
   const pct =
     progress && progress.total > 0
       ? Math.min(100, Math.max(0, (100 * progress.done) / progress.total))
@@ -95,8 +102,10 @@ function SearchProgress({ progress }: { progress: OptimizerProgress | null }) {
         />
       </div>
       <div className="mt-1 h-4 truncate text-xs leading-4 tabular-nums text-stone-500">
+        {search}
+        <Ellipsis />{" "}
         {/* a share, not counts: a search's units (boxes, grid points) aren't the designs its result counts */}
-        {progress && progress.total > 0 ? `${Math.floor(pct)} %` : "starting"}
+        {progress && progress.total > 0 ? `${Math.floor(pct)} %` : ""}
         {progress && progress.best ? ` · best so far: ${progress.best}` : ""}
       </div>
     </div>
