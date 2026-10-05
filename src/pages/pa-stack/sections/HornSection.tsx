@@ -1,4 +1,5 @@
-import { PAL } from "../../../styles/palette";
+import { alpha } from "../../../styles/palette";
+import { usePalette } from "../../../hooks/useTheme";
 import { WarningChips } from "../../../components/chips/WarningChips";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
 import { FoldBody, FoldHeading } from "../../../components/ui/FoldHeading";
@@ -30,6 +31,7 @@ interface Props {
 
 /** Horn results: headline stats, beamwidth chart and warning chips (the dispersion map sits above the totals). */
 export function HornSection({ planner }: Props) {
+  const pal = usePalette();
   const {
     expandedSections,
     toggleSection,
@@ -93,8 +95,8 @@ export function HornSection({ planner }: Props) {
                           {
                             curve: beamCurves.midB,
                             label: `${UI_TEXT.midBass} ${midSize}″`,
-                            stroke: PAL.magenta,
-                            tint: PAL.alpha(PAL.magenta, 0),
+                            stroke: pal.magenta,
+                            tint: alpha(pal.magenta, 0),
                           },
                         ]
                       : []),
@@ -103,8 +105,8 @@ export function HornSection({ planner }: Props) {
                           {
                             curve: beamCurves.hornB,
                             label: hornOption.name,
-                            stroke: PAL.cyan,
-                            tint: PAL.alpha(PAL.cyan, 0),
+                            stroke: pal.cyan,
+                            tint: alpha(pal.cyan, 0),
                           },
                         ]
                       : []),

@@ -11,7 +11,8 @@ import { ToggleButton } from "../../components/ui/ToggleButton";
 import { formatSigned as signed } from "../../lib/format";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
 import { ROOM_MATERIAL_OPTIONS } from "../../lib/pa/roomAcoustics";
-import { PAL } from "../../styles/palette";
+import { alpha } from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
 import type { RoomSurface, SubPlacement } from "../../types";
 import {
   ROOM_CEILING_FT,
@@ -76,6 +77,7 @@ function useMapMaxHeight() {
 
 /** Audience coverage: both stacks on a floor plan, level against the target across the room, and the listener's response. */
 export function CoveragePage({ planner }: Props) {
+  const pal = usePalette();
   const state = useCoverageLayout(planner.subBox);
   const { layout } = state;
   const { room } = layout;
@@ -268,14 +270,14 @@ export function CoveragePage({ planner }: Props) {
                     {
                       curve: map.response,
                       label: "Listener",
-                      stroke: PAL.ink,
-                      tint: PAL.alpha(PAL.ink, 0.05),
+                      stroke: pal.ink,
+                      tint: alpha(pal.ink, 0.05),
                     },
                     {
                       curve: map.targetCurve,
                       label: "Target, music balance",
-                      stroke: PAL.magenta,
-                      tint: PAL.alpha(PAL.magenta, 0),
+                      stroke: pal.magenta,
+                      tint: alpha(pal.magenta, 0),
                     },
                   ]}
                   span={

@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { useEffect, useRef, useState } from "react";
 import { buildStackScene, type Props } from "./buildStackScene";
+import { useThemeName } from "../../hooks/useTheme";
+import { STAGE } from "../../styles/palette";
 
 /** Rotatable 3D view of the PA stack. */
 export function StackView3D({
@@ -19,6 +21,8 @@ export function StackView3D({
   spacerH = 20,
 }: Props) {
   const mount = useRef<HTMLDivElement>(null);
+  // the stage (floor, grid, lights) follows the theme; the scene is rebuilt when it changes
+  const theme = useThemeName();
   const state = useRef<{
     rotY: number;
     rotX: number;
@@ -68,8 +72,9 @@ export function StackView3D({
     renderer.setSize(W, H);
     el.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x777766, 1.1));
-    const key = new THREE.DirectionalLight(0xffffff, 0.6);
+    const stage = STAGE[theme];
+    scene.add(new THREE.HemisphereLight(stage.sky, stage.ground, stage.hemi));
+    const key = new THREE.DirectionalLight(stage.sky, stage.key);
     key.position.set(40, 80, 30);
     scene.add(key);
 
@@ -93,11 +98,11 @@ export function StackView3D({
     // floor
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(200, 200),
-      new THREE.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 1 }),
+      new THREE.MeshStandardMaterial({ color: stage.floor, roughness: 1 }),
     );
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
-    scene.add(new THREE.GridHelper(120, 10, 0xdddddd, 0xeaeaea));
+    scene.add(new THREE.GridHelper(120, 10, stage.gridMajor, stage.gridMinor));
 
     group.position.y = 0;
 
@@ -227,7 +232,7 @@ export function StackView3D({
       renderer.dispose();
       el.removeChild(renderer.domElement);
     };
-  }, [builtKey]);
+  }, [builtKey, theme]);
 
   return <div ref={mount} className="w-full h-full cursor-grab" />;
 }

@@ -6,7 +6,7 @@ interface Props {
 export function RankBadge({ n }: Props) {
   return (
     <span
-      className="absolute -top-2 -left-2 min-w-[18px] h-[18px] px-1 rounded-full bg-cmy-m text-white text-xs font-bold leading-[18px] text-center"
+      className="absolute -top-2 -left-2 min-w-[18px] h-[18px] px-1 rounded-full bg-cmy-m text-stone-50 text-xs font-bold leading-[18px] text-center"
       aria-label={`priority ${n}`}
     >
       {n}

@@ -1,4 +1,5 @@
-import { PAL } from "../../styles/palette";
+import { alpha } from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
 import { PA_DB_BOT, PA_DB_TOP } from "../../constants/chartScales";
 import { useState } from "react";
 
@@ -29,6 +30,7 @@ export function OptimizerCurveChart({
   top = PA_DB_TOP,
   bot = PA_DB_BOT,
 }: Props) {
+  const pal = usePalette();
   const [hover, setHover] = useState<number | null>(null);
   const W = 220,
     H = 150,
@@ -69,13 +71,13 @@ export function OptimizerCurveChart({
           y={T}
           width={x(band[1]) - x(band[0])}
           height={H - T - B}
-          fill={PAL.alpha(PAL.ink, 0.05)}
+          fill={alpha(pal.ink, 0.05)}
         />
       )}
       {ticks.map((d) => (
         <g key={d}>
-          <line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke={PAL.edge} />
-          <text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill={PAL.muted}>
+          <line x1={L} x2={W - R} y1={y(d)} y2={y(d)} stroke={pal.edge} />
+          <text x={L - 3} y={y(d) + 3} fontSize="8" textAnchor="end" fill={pal.muted}>
             {d}
           </text>
         </g>
@@ -83,7 +85,7 @@ export function OptimizerCurveChart({
       {(fmax > 1000 ? [20, 100, 1000, 10000] : [20, 50, 100, 200, 500])
         .filter((f) => f >= fmin && f <= fmax)
         .map((f) => (
-          <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill={PAL.muted}>
+          <text key={f} x={x(f)} y={H - 6} fontSize="8" textAnchor="middle" fill={pal.muted}>
             {f >= 1000 ? f / 1000 + "k" : f}
           </text>
         ))}
@@ -91,12 +93,12 @@ export function OptimizerCurveChart({
         <path
           d={path(cur)}
           fill="none"
-          stroke={PAL.muted}
+          stroke={pal.muted}
           strokeWidth="1.5"
           strokeDasharray="4 3"
         />
       )}
-      <path d={path(curve)} fill="none" stroke={PAL.ink} strokeWidth="2" />
+      <path d={path(curve)} fill="none" stroke={pal.ink} strokeWidth="2" />
       {hov ? (
         <>
           <line
@@ -104,36 +106,36 @@ export function OptimizerCurveChart({
             x2={x(hov.f)}
             y1={T}
             y2={H - B}
-            stroke={PAL.muted}
+            stroke={pal.muted}
             strokeWidth="0.75"
           />
           <circle
             cx={x(hov.h1[0])}
             cy={y(hov.h1[1])}
             r="2.5"
-            fill={PAL.ink}
-            stroke={PAL.white}
+            fill={pal.ink}
+            stroke={pal.white}
             strokeWidth="1"
           />
           {(() => {
             const X = Math.max(L + 14, Math.min(W - R - 14, x(hov.f)));
             return (
               <g>
-                <rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill={PAL.ink} />
-                <text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill={PAL.white}>
+                <rect x={X - 14} y={H - B + 2} width="28" height="12" rx="2" fill={pal.ink} />
+                <text x={X} y={H - B + 11} fontSize="8" textAnchor="middle" fill={pal.white}>
                   {hov.f.toFixed(0)} Hz
                 </text>
               </g>
             );
           })()}
-          <text x={L} y={9} fontSize="8.5" fill={PAL.ink}>
+          <text x={L} y={9} fontSize="8.5" fill={pal.ink}>
             {hov.f.toFixed(0)} Hz: {hov.h1[1].toFixed(0)} dB
             {hov.h2 ? ` · yours ${hov.h2[1].toFixed(0)} dB` : ""}
           </text>
         </>
       ) : (
-        <text x={L} y={9} fontSize="8.5" fill={PAL.muted}>
-          <tspan fill={PAL.ink}>━ this</tspan>
+        <text x={L} y={9} fontSize="8.5" fill={pal.muted}>
+          <tspan fill={pal.ink}>━ this</tspan>
           {cur ? "  ╌ yours" : ""} · dB, clean
         </text>
       )}

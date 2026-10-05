@@ -55,7 +55,7 @@ export function StackViewer({ planner }: Props) {
           onClick={() => setIsFull3d((v) => !v)}
           aria-label={fullScreenLabel}
           title={fullScreenLabel}
-          className="absolute top-2 right-2 z-10 w-9 h-9 inline-flex items-center justify-center rounded border border-stone-300 bg-white/90 hover:border-stone-500"
+          className="absolute top-2 right-2 z-10 w-9 h-9 inline-flex items-center justify-center rounded border border-stone-300 bg-panel/90 hover:border-stone-500"
         >
           <svg
             width="16"

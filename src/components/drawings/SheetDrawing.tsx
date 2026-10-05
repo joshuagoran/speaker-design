@@ -1,6 +1,6 @@
 import type { CutBoxId, Offcut, PackedSheet, PlywoodSheet } from "../../types";
 import { formatInches } from "../../lib/pa/calc";
-import { PAL } from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { CUT_BOX_NAMES, CUT_PART_NAMES } from "../../constants/cutParts";
 import { SVG_FONT } from "../../styles/fonts";
@@ -17,12 +17,13 @@ interface Props {
 
 /** One plywood sheet with its cut pieces laid out; grain runs down the sheet. */
 export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
+  const pal = usePalette();
   const sc = 4,
     W = S.w * sc,
     H = S.h * sc;
   const [box, cw] = useElementWidth(S.w === 48 ? 160 : 200);
   const fs = (12 * (W + 4)) / cw; // 12 css px
-  const colors: Record<CutBoxId, string> = { sub: PAL.subTint, mid: PAL.midTint };
+  const colors: Record<CutBoxId, string> = { sub: pal.subTint, mid: pal.midTint };
   // a grain arrow down the middle of a piece, from y0 to y1 (sheet units)
   const arrow = (x: number, y0: number, y1: number, colour: string, key?: string) => {
     const head = fs * 0.45;
@@ -51,7 +52,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
         role="img"
         aria-label={`Sheet ${idx + 1} layout`}
       >
-        <rect x="0" y="0" width={W} height={H} fill={PAL.white} stroke={PAL.muted} />
+        <rect x="0" y="0" width={W} height={H} fill={pal.white} stroke={pal.muted} />
         {offcut && (
           <g>
             <rect
@@ -60,7 +61,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
               width={offcut.w * sc}
               height={offcut.h * sc}
               fill="none"
-              stroke={PAL.muted}
+              stroke={pal.muted}
               strokeWidth="0.8"
               strokeDasharray={`${fs * 0.5} ${fs * 0.4}`}
             />
@@ -70,7 +71,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                 y={(offcut.y + offcut.h / 2) * sc}
                 textAnchor="middle"
                 fontSize={fs}
-                fill={PAL.muted}
+                fill={pal.muted}
                 fontFamily={SVG_FONT}
               >
                 <tspan x={(offcut.x + offcut.w / 2) * sc}>offcut</tspan>
@@ -112,7 +113,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                 width={w}
                 height={h}
                 fill={colors[it.box]}
-                stroke={it.crossed ? PAL.status.orange.base : PAL.muted}
+                stroke={it.crossed ? pal.status.orange.text : pal.muted}
                 strokeWidth={it.crossed ? "2" : "0.8"}
               />
               {cuts.map((cy, k) => (
@@ -122,7 +123,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                   y1={cy}
                   x2={x + w}
                   y2={cy}
-                  stroke={PAL.ink}
+                  stroke={pal.ink}
                   strokeWidth="1.2"
                 />
               ))}
@@ -133,7 +134,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                     x={x + fs * 0.4}
                     y={top * sc + fs * 1.1}
                     fontSize={fs}
-                    fill={PAL.ink}
+                    fill={pal.ink}
                     fontFamily={SVG_FONT}
                   >
                     {k + 1}
@@ -147,7 +148,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                   x + w - fs * 0.7,
                   y + fs * 0.4,
                   it.pieces ? y + h - fs * 0.4 : y + fs * 0.4 + Math.min(h - fs * 0.8, fs * 2.4),
-                  it.crossed ? PAL.status.orange.base : PAL.muted,
+                  it.crossed ? pal.status.orange.text : pal.muted,
                 )}
               {labelled && (
                 <text
@@ -155,7 +156,7 @@ export function SheetDrawing({ sheet, S, idx, offcut }: Props) {
                   y={y + h / 2 + fs * 0.35}
                   textAnchor="middle"
                   fontSize={fs}
-                  fill={PAL.ink}
+                  fill={pal.ink}
                   fontFamily={SVG_FONT}
                   transform={it.pieces ? `rotate(-90 ${cx} ${y + h / 2})` : undefined}
                 >
