@@ -12,6 +12,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - Colours: CMYK brand (cyan actions and horn/tweeter, magenta mid-bass/woofer, yellow accents) plus black, white and two
   grays; status colours stay green / orange / red. The palette lives in `src/styles/palette.ts`; Tailwind's colour names are remapped from it in `tailwind.config.js`.
 - Font: Inconsolata. Corners 4 px (6 px on large boxes).
+- Reuse UI components (`src/components/ui`) wherever the same control appears; never re-implement one inline, so pages stay consistent.
 
 ## TypeScript
 
