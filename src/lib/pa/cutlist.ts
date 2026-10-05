@@ -58,6 +58,8 @@ export const GRAIN_PANEL_OF: Partial<Record<CutPartId, GrainPanel>> = {
 export const MIN_OFFCUT_IN = 3;
 /** Small parts cut from offcuts, left out of the sheet count. */
 export const FROM_OFFCUT: ReadonlySet<CutPartId> = new Set(["baffleCleat", "ductDivider"]);
+/** The note on those parts' rows in the cutlist. */
+export const FROM_OFFCUT_NOTE = "from offcuts; not in the sheet count";
 
 /**
  * A cutlist row's identity, which its pieces on the sheets carry too (a placed piece keeps its part's fields): the page

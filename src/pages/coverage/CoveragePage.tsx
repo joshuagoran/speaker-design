@@ -8,6 +8,7 @@ import { Ellipsis } from "../../components/ui/Ellipsis";
 import { Slider } from "../../components/ui/Slider";
 import { SelectField } from "../../components/ui/SelectField";
 import { ToggleButton } from "../../components/ui/ToggleButton";
+import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { formatSigned as signed } from "../../lib/format";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
 import { ROOM_MATERIAL_OPTIONS } from "../../lib/pa/roomAcoustics";
@@ -295,18 +296,13 @@ export function CoveragePage({ planner }: Props) {
               unit=" dB SPL"
               onChange={state.setTargetDb}
             />
-            <div className={label}>Measured at</div>
-            <div className="flex flex-wrap gap-1 mb-1">
-              {COVERAGE_LEVEL_REFS.map(([ref, name]) => (
-                <ToggleButton
-                  key={ref}
-                  on={layout.levelRef === ref}
-                  onClick={() => state.setLevelRef(ref)}
-                >
-                  {name}
-                </ToggleButton>
-              ))}
-            </div>
+            <ToggleGroup
+              label="Measured at"
+              value={layout.levelRef}
+              onChange={state.setLevelRef}
+              options={COVERAGE_LEVEL_REFS}
+              className="mb-1"
+            />
             <p className="text-xs text-stone-500 mb-4 tabular-nums">
               {map.refDb == null ? (
                 <>
@@ -319,20 +315,26 @@ export function CoveragePage({ planner }: Props) {
                 `Turned down ${Math.abs(map.gain).toFixed(1)} dB so ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]} gets ${map.refTarget.toFixed(0)} dB in this band.`
               )}
             </p>
-            <div className={label}>Band</div>
-            <div className="flex flex-wrap gap-1">
-              {NAMED_BANDS.map((b) => (
-                <ToggleButton key={b} on={layout.band === b} onClick={() => state.setBand(b)}>
-                  {COVERAGE_BANDS[b].name}{" "}
-                  <span className="text-xs opacity-70">
-                    {formatHz(COVERAGE_BANDS[b].lo)}–{formatHz(COVERAGE_BANDS[b].hi)}
-                  </span>
-                </ToggleButton>
-              ))}
-              <ToggleButton on={layout.band === "one"} onClick={() => state.setBand("one")}>
-                One frequency
-              </ToggleButton>
-            </div>
+            <ToggleGroup
+              label="Band"
+              value={layout.band}
+              onChange={state.setBand}
+              options={[
+                ...NAMED_BANDS.map(
+                  (b) =>
+                    [
+                      b,
+                      <>
+                        {COVERAGE_BANDS[b].name}{" "}
+                        <span className="text-xs opacity-70">
+                          {formatHz(COVERAGE_BANDS[b].lo)}–{formatHz(COVERAGE_BANDS[b].hi)}
+                        </span>
+                      </>,
+                    ] as const,
+                ),
+                ["one", "One frequency"] as const,
+              ]}
+            />
             {layout.band === "one" && (
               <div className="mt-3">
                 <div className="flex justify-between items-center gap-3 mb-1">
@@ -364,15 +366,19 @@ export function CoveragePage({ planner }: Props) {
           </div>
 
           <div className={tabClass("room")}>
-            <div className={label}>Room</div>
-            <div className="flex gap-1 mb-3">
-              <ToggleButton on={!room.outdoors} onClick={() => state.setOutdoors(false)}>
-                Indoors
-              </ToggleButton>
-              <ToggleButton on={room.outdoors} onClick={() => state.setOutdoors(true)}>
-                {UI_TEXT.outdoors}
-              </ToggleButton>
-            </div>
+            <ToggleGroup
+              label="Room"
+              value={room.outdoors}
+              onChange={state.setOutdoors}
+              options={
+                [
+                  [false, "Indoors"],
+                  [true, UI_TEXT.outdoors],
+                ] as const
+              }
+              wrap={false}
+              className="mb-3"
+            />
             <Slider
               label={room.outdoors ? "Area width" : "Width"}
               value={room.widthFt}
@@ -415,31 +421,33 @@ export function CoveragePage({ planner }: Props) {
                 </div>
               </>
             )}
-            <div className={label}>Dance floor</div>
-            <div className="flex gap-1">
-              <ToggleButton on={room.crowd === "empty"} onClick={() => state.setCrowd("empty")}>
-                Empty
-              </ToggleButton>
-              <ToggleButton on={room.crowd === "full"} onClick={() => state.setCrowd("full")}>
-                Full
-              </ToggleButton>
-            </div>
+            <ToggleGroup
+              label="Dance floor"
+              value={room.crowd}
+              onChange={state.setCrowd}
+              options={
+                [
+                  ["empty", "Empty"],
+                  ["full", "Full"],
+                ] as const
+              }
+              wrap={false}
+            />
           </div>
 
           <div className={tabClass("stacks")}>
-            <div className={label}>Stacks</div>
-            <div className="flex flex-wrap gap-1 mb-3">
-              {SUB_PLACEMENTS.map(([subs, name]) => (
-                <ToggleButton
-                  key={subs}
-                  on={map.subs === subs}
-                  onClick={() => state.setSubs(subs)}
-                  disabled={subs !== "stacks" && !map.levels?.sub}
-                >
-                  {name}
-                </ToggleButton>
-              ))}
-            </div>
+            <ToggleGroup
+              label="Stacks"
+              value={map.subs}
+              onChange={state.setSubs}
+              options={SUB_PLACEMENTS}
+              disabled={
+                map.levels?.sub
+                  ? undefined
+                  : { values: SUB_PLACEMENTS.map(([s]) => s).filter((s) => s !== "stacks") }
+              }
+              className="mb-3"
+            />
             <div className="flex flex-wrap gap-1 mb-3">
               <ToggleButton on={layout.mirror} onClick={() => state.setMirror(!layout.mirror)}>
                 Move the pair as a mirror image

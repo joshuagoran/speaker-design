@@ -1,5 +1,6 @@
 import { PA_SLIDERS, PA_THROAT_MAX_VSLOT1 } from "../../../constants/paSliders";
 import { ToggleButton } from "../../../components/ui/ToggleButton";
+import { ToggleGroup } from "../../../components/ui/ToggleGroup";
 import { Tooltip } from "../../../components/ui/Tooltip";
 import { SwatchPicker } from "../../../components/ui/SwatchPicker";
 import { Card } from "../../../components/ui/Card";
@@ -394,16 +395,14 @@ export function SettingsPanel({ planner }: Props) {
       {section(
         "mid",
         <div className={tabClass("mid")}>
-          <div className="mb-2">
-            <div className="text-sm text-stone-500 mb-1">Mid-bass size</div>
-            <div className="flex gap-1">
-              {([12, 15] as const).map((n) => (
-                <ToggleButton key={n} onClick={() => setMidSize(n)} on={midSize === n}>
-                  {n}″
-                </ToggleButton>
-              ))}
-            </div>
-          </div>
+          <ToggleGroup
+            label="Mid-bass size"
+            value={midSize}
+            onChange={setMidSize}
+            options={([12, 15] as const).map((n) => [n, `${n}″`] as const)}
+            wrap={false}
+            className="mb-2"
+          />
           <SelectField
             label={`Mid-bass ${midSize}″`}
             options={midDriverChoices}
@@ -623,26 +622,23 @@ export function SettingsPanel({ planner }: Props) {
         "look",
         <div className={tabClass("look")}>
           <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2">
-              <span>Plywood (baffles stay 3/4″)</span>
-              {renderLockButton("wall", "the plywood")}
-            </div>
-            <div className="flex gap-1">
-              {(
+            <ToggleGroup
+              label={
+                <span className="flex items-center justify-between gap-2">
+                  <span>Plywood (baffles stay 3/4″)</span>
+                  {renderLockButton("wall", "the plywood")}
+                </span>
+              }
+              value={wallThicknessIn}
+              onChange={setWallThicknessIn}
+              options={
                 [
                   [0.75, "3/4″ birch"],
                   [0.5, "1/2″ birch, braced"],
                 ] as const
-              ).map(([t, label]) => (
-                <ToggleButton
-                  key={t}
-                  onClick={() => setWallThicknessIn(t)}
-                  on={wallThicknessIn === t}
-                >
-                  {label}
-                </ToggleButton>
-              ))}
-            </div>
+              }
+              wrap={false}
+            />
             <div className="mt-3">
               <Slider
                 label="Baffle inset"
@@ -671,30 +667,26 @@ export function SettingsPanel({ planner }: Props) {
             swatches={PAINT_SWATCHES}
             note={baffleColor}
           />
+          <ToggleGroup
+            label="View"
+            value={cutaway}
+            onChange={setCutaway}
+            options={
+              [
+                [false, "Finished"],
+                [true, "Cutaway"],
+              ] as const
+            }
+            wrap={false}
+            className="mb-5"
+          />
           <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">View</div>
-            <div className="flex gap-1">
-              {(
-                [
-                  ["Finished", false],
-                  ["Cutaway", true],
-                ] as const
-              ).map(([label, v]) => (
-                <ToggleButton key={label} onClick={() => setCutaway(v)} on={cutaway === v}>
-                  {label}
-                </ToggleButton>
-              ))}
-            </div>
-          </div>
-          <div className="mb-5">
-            <div className="text-sm text-stone-500 mb-1">Layout</div>
-            <div className="flex flex-wrap gap-1">
-              {entriesOf(PA_LAYOUT_NAMES).map(([v, label]) => (
-                <ToggleButton key={v} onClick={() => setLayout(v)} on={layout === v}>
-                  {label}
-                </ToggleButton>
-              ))}
-            </div>
+            <ToggleGroup
+              label="Layout"
+              value={layout}
+              onChange={setLayout}
+              options={entriesOf(PA_LAYOUT_NAMES)}
+            />
             {layout === "pole" && (
               <div className="mt-3">
                 <Slider

@@ -14,7 +14,6 @@ import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
-import { DetailsDropdown } from "../../components/ui/DetailsDropdown";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsColumn";
 import {
@@ -28,6 +27,7 @@ import { SheetDrawing } from "../../components/drawings/SheetDrawing";
 import { PLYWOOD_SHEETS, formatInches, formatThickness, cutParts } from "../../lib/pa/calc";
 import {
   FROM_OFFCUT,
+  FROM_OFFCUT_NOTE,
   GRAIN_PRESETS,
   KERF_OPTIONS,
   TRIM_OPTIONS,
@@ -51,7 +51,6 @@ import {
   CUTLIST_SETTINGS_SECTIONS,
   type CutlistSettingsSection,
 } from "../../constants/settingsSections";
-import { UI_TEXT } from "../../constants/uiText";
 
 interface Props {
   planner: Pick<
@@ -298,7 +297,7 @@ export function CutlistPage({ planner }: Props) {
                 const k = cutRowKey(p);
                 const isHot = hotRow === k;
                 const note = FROM_OFFCUT.has(p.part)
-                  ? `cut from offcut${p.note ? `; ${p.note}` : ""}`
+                  ? `${FROM_OFFCUT_NOTE}${p.note ? `; ${p.note}` : ""}`
                   : p.note;
                 const [first, second] = sizeOf(p);
                 return (
@@ -444,25 +443,6 @@ export function CutlistPage({ planner }: Props) {
             {panelList}
             {sheetLayout}
           </div>
-          <div className="max-w-prose">
-            <DetailsDropdown summary={UI_TEXT.details}>
-              <span>
-                From the planner's current boxes: {formatThickness(wallThicknessIn)} walls, 3/4″
-                baffles set {formatInches(baffleInsetIn)}″ back, back panels in a rabbet. {kerfName}{" "}
-                kerf allowed between parts in the layout.
-              </span>
-              <span>
-                Every layout cuts with straight through-cuts (a table saw or track saw can make each
-                one edge to edge). Grain runs along each sheet's length: load the sheet that way.
-                Cleats and duct dividers come from offcuts and aren't in the sheet count. Driver
-                cutouts are typical values; use the datasheet's.
-              </span>
-              <span>
-                Tags: S for the sub's parts, M for the mid's. A row and its pieces on the sheets
-                share a tag; colours on the sheets follow the box.
-              </span>
-            </DetailsDropdown>
-          </div>
         </div>
       }
       settings={
@@ -604,7 +584,7 @@ export function CutlistPage({ planner }: Props) {
                 disabled={
                   cutStyle === "rips"
                     ? {
-                        value: "panel",
+                        values: ["panel"],
                         why: "Keeping a full-width panel takes a full-width crosscut",
                       }
                     : undefined

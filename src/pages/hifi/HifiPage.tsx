@@ -14,6 +14,7 @@ import {
 } from "./hifiDriverLists";
 import { HifiResultCard } from "./HifiResultCard";
 import { ToggleButton } from "../../components/ui/ToggleButton";
+import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { DispersionPlaneToggle } from "../../components/ui/DispersionPlaneToggle";
 import { dispersionPlaneName } from "../../constants/dispersionPlanes";
 import { Button } from "../../components/ui/Button";
@@ -71,10 +72,10 @@ interface Props {
 /** The roundover radii on offer, inches (0: sharp edges); a router bit's usual sizes. */
 const ROUNDOVER_CHOICES = [0, 0.5, 0.75, 1, 1.5, 2] as const;
 
-/** The panel materials on offer: the button's label and the material id. */
+/** The panel materials on offer: the material id and the button's label. */
 const MATERIAL_CHOICES = [
-  ["Birch ply", "ply"],
-  ["MDF", "mdf"],
+  ["ply", "Birch ply"],
+  ["mdf", "MDF"],
 ] as const;
 
 /** The Ports row's choices: the button's label, the box type, the port or radiator count (or a slot), and its tip. */
@@ -221,7 +222,7 @@ export function HifiPage({ hifi }: Props) {
       formatDims(boxDims),
       `${speakerSystem.gross.toFixed(1)} L`,
       PORT_CHOICES.find(isPortChoiceOn)?.[3].toLowerCase(),
-      `${formatInches(wallThicknessIn)} ${MATERIAL_CHOICES.find(([, v]) => v === panelMaterial)?.[0]}`,
+      `${formatInches(wallThicknessIn)} ${MATERIAL_CHOICES.find(([v]) => v === panelMaterial)?.[1]}`,
       edgesText,
     ]
       .filter(Boolean)
@@ -591,35 +592,23 @@ export function HifiPage({ hifi }: Props) {
             <>
               <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
                 <span className="text-stone-500">Material</span>
-                <div className="flex flex-wrap gap-1">
-                  {MATERIAL_CHOICES.map(([l, v]) => (
-                    <ToggleButton
-                      key={v}
-                      onClick={() => setPanelMaterial(v)}
-                      on={panelMaterial === v}
-                    >
-                      {l}
-                    </ToggleButton>
-                  ))}
-                </div>
+                <ToggleGroup
+                  value={panelMaterial}
+                  onChange={setPanelMaterial}
+                  options={MATERIAL_CHOICES}
+                />
                 <span />
                 <span className="text-stone-500">Thickness</span>
-                <div className="flex flex-wrap gap-1">
-                  {(
+                <ToggleGroup
+                  value={wallThicknessIn}
+                  onChange={setWallThicknessIn}
+                  options={
                     [
                       [0.75, "3/4″"],
                       [0.5, "1/2″"],
                     ] as const
-                  ).map(([v, l]) => (
-                    <ToggleButton
-                      key={v}
-                      onClick={() => setWallThicknessIn(v)}
-                      on={wallThicknessIn === v}
-                    >
-                      {l}
-                    </ToggleButton>
-                  ))}
-                </div>
+                  }
+                />
                 <span>{renderLockButton("wall", "the panel thickness")}</span>
               </div>
               <Card className="mb-4">
@@ -856,14 +845,13 @@ export function HifiPage({ hifi }: Props) {
             "room",
             <>
               <Card className="mb-4">
-                <div className="text-sm text-stone-500 mb-1">Placement</div>
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {entriesOf(HIFI_PLACES).map(([k, p]) => (
-                    <ToggleButton key={k} onClick={() => setPlacement(k)} on={placement === k}>
-                      {p.name}
-                    </ToggleButton>
-                  ))}
-                </div>
+                <ToggleGroup
+                  label="Placement"
+                  value={placement}
+                  onChange={setPlacement}
+                  options={entriesOf(HIFI_PLACES).map(([k, p]) => [k, p.name] as const)}
+                  className="mb-3"
+                />
                 {placement !== "free" && (
                   <Slider
                     label="Distance to the wall"

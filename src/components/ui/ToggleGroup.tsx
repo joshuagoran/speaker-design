@@ -11,9 +11,11 @@ interface Props<T extends string | number | boolean> {
   value: T | null;
   onChange: (v: T) => void;
   options: readonly ToggleOption<T>[];
-  /** a choice that can't be picked now, and why (shown as its tooltip) */
-  disabled?: { value: T; why: string };
+  /** choices that can't be picked now, and why (shown as their tooltip) when one reason covers them */
+  disabled?: { values: readonly T[]; why?: string };
   size?: ButtonSize;
+  /** whether the buttons wrap onto more lines when they don't fit (default); false keeps them on one */
+  wrap?: boolean;
   className?: string;
 }
 
@@ -25,14 +27,15 @@ export function ToggleGroup<T extends string | number | boolean>({
   options,
   disabled,
   size = "md",
+  wrap = true,
   className = "",
 }: Props<T>) {
   return (
     <div className={className}>
       {label != null && <div className="text-sm text-stone-500 mb-1">{label}</div>}
-      <div className="flex flex-wrap gap-1">
+      <div className={wrap ? "flex flex-wrap gap-1" : "flex gap-1"}>
         {options.map(([v, l, tip]) => {
-          const off = disabled?.value === v;
+          const off = disabled?.values.includes(v) ?? false;
           return (
             <ToggleButton
               key={String(v)}
@@ -40,7 +43,7 @@ export function ToggleGroup<T extends string | number | boolean>({
               on={value === v}
               onClick={() => onChange(v)}
               disabled={off}
-              title={off ? disabled.why : tip}
+              title={off ? (disabled?.why ?? tip) : tip}
             >
               {l}
             </ToggleButton>
