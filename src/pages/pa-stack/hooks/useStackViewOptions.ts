@@ -12,7 +12,7 @@ export interface StackViewOptions {
 
 /** View toggles on the PA stack page: dispersion plane, details panel and full-screen 3D. */
 export function useStackViewOptions(): StackViewOptions {
-  const [dispersionPlane, setDispersionPlane] = useState<DispersionPlane>("v"); // dispersion map: vertical (lobing) or horizontal
+  const [dispersionPlane, setDispersionPlane] = useState<DispersionPlane>("h"); // dispersion map: horizontal (first, as on Hi-fi) or vertical (lobing)
   const [showDetails, setShowDetails] = useState(false);
   const [isFull3d, setIsFull3d] = useState(false);
   useEffect(() => {

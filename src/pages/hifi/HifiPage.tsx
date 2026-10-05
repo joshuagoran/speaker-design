@@ -13,6 +13,8 @@ import {
 } from "./hifiDriverLists";
 import { HifiResultCard } from "./HifiResultCard";
 import { ToggleButton } from "../../components/ui/ToggleButton";
+import { DispersionPlaneToggle } from "../../components/ui/DispersionPlaneToggle";
+import { dispersionPlaneName } from "../../constants/dispersionPlanes";
 import { Button } from "../../components/ui/Button";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { Card } from "../../components/ui/Card";
@@ -418,28 +420,13 @@ export function HifiPage({ hifi }: Props) {
           </div>
         </div>
         <div>
-          <div className="flex gap-1 mb-2">
-            {(
-              [
-                ["Horizontal", "h"],
-                ["Vertical", "v"],
-              ] as const
-            ).map(([l, v]) => (
-              <ToggleButton
-                key={v}
-                onClick={() => setDispersionPlane(v)}
-                on={dispersionPlane === v}
-              >
-                {l}
-              </ToggleButton>
-            ))}
-          </div>
+          <DispersionPlaneToggle value={dispersionPlane} onChange={setDispersionPlane} />
           <DispersionMap
             map={dispersion}
             title={
               dispersionPlane === "h"
-                ? "Horizontal dispersion, one speaker: outside (−) to inside (+), 0° on axis"
-                : "Vertical dispersion: below (−) to above (+) the tweeter axis"
+                ? `${dispersionPlaneName("h")} dispersion, one speaker: outside (−) to inside (+), 0° on axis`
+                : `${dispersionPlaneName("v")} dispersion: below (−) to above (+) the tweeter axis`
             }
           />
         </div>
