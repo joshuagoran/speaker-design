@@ -710,6 +710,8 @@ export interface ListenerGeometry {
   distM: number;
   /** which side of the axis the listener is on: 1 toward the other speaker (where a + tweeter offset goes), -1 away; 1 when absent */
   side?: -1 | 1;
+  /** the on-axis distance the drivers are time-aligned at, m; `distM` when absent (a map's arc keeps it while the listener moves round) */
+  alignM?: number;
 }
 
 export interface FrequencyPoint {
@@ -728,6 +730,8 @@ export interface HifiDispersionMap {
   angles: number[];
   freqs: number[];
   rows: number[][];
+  /** the design's crossover frequencies, Hz, low to high, which the map marks */
+  crossovers: number[];
 }
 
 // ---- Hi-fi optimizer (lib/hifi/optimize) ----

@@ -1,10 +1,8 @@
 import { PAL } from "../../../styles/palette";
 import { WarningChips } from "../../../components/chips/WarningChips";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
-import { ToggleButton } from "../../../components/ui/ToggleButton";
 import { FoldHeading } from "../../../components/ui/FoldHeading";
 import { ResponseChart } from "../../../components/charts/ResponseChart";
-import { DispersionMap } from "../../../components/charts/DispersionMap";
 import { hornChips } from "../../../lib/pa/chips";
 import { nearestPoint } from "../../../lib/pa/calc";
 import type { PaPlanner } from "../hooks/usePaPlanner";
@@ -14,8 +12,6 @@ import { UI_TEXT } from "../../../constants/uiText";
 interface Props {
   planner: Pick<
     PaPlanner,
-    | "dispersionPlane"
-    | "setDispersionPlane"
     | "expandedSections"
     | "toggleSection"
     | "sectionClass"
@@ -30,18 +26,12 @@ interface Props {
     | "hornModel"
     | "midBeamWidthDeg"
     | "beamCurves"
-    | "dispersionMapDistanceM"
-    | "paDispersion"
-    | "midHornGapIn"
-    | "midHornNullAngleDeg"
   >;
 }
 
-/** Horn results: headline stats, beamwidth chart, dispersion map and warning chips. */
+/** Horn results: headline stats, beamwidth chart and warning chips (the dispersion map sits above the totals). */
 export function HornSection({ planner }: Props) {
   const {
-    dispersionPlane,
-    setDispersionPlane,
     expandedSections,
     toggleSection,
     sectionClass,
@@ -56,10 +46,6 @@ export function HornSection({ planner }: Props) {
     hornModel,
     midBeamWidthDeg,
     beamCurves,
-    dispersionMapDistanceM,
-    paDispersion,
-    midHornGapIn,
-    midHornNullAngleDeg,
   } = planner;
   return (
     <>
@@ -131,41 +117,6 @@ export function HornSection({ planner }: Props) {
                   ]}
                 />
               </div>
-              {paDispersion && (
-                <div className="mb-4">
-                  <div className="flex gap-1 mb-2">
-                    {(
-                      [
-                        ["v", "Vertical"],
-                        ["h", "Horizontal"],
-                      ] as const
-                    ).map(([v, l]) => (
-                      <ToggleButton
-                        key={v}
-                        size="xs"
-                        on={dispersionPlane === v}
-                        onClick={() => setDispersionPlane(v)}
-                      >
-                        {l}
-                      </ToggleButton>
-                    ))}
-                  </div>
-                  <DispersionMap
-                    map={paDispersion}
-                    title={
-                      dispersionPlane === "v"
-                        ? `Vertical dispersion at ${dispersionMapDistanceM} m: below (−) to above (+) the horn axis`
-                        : `Horizontal dispersion at ${dispersionMapDistanceM} m, at horn height (0° is on axis)`
-                    }
-                  />
-                  <div className="text-xs text-stone-500 mt-1">
-                    Mid and horn centers {midHornGapIn.toFixed(1)}″ apart:{" "}
-                    {midHornNullAngleDeg
-                      ? `the first null at the ${midHornCrossoverHz} Hz crossover is about ${midHornNullAngleDeg.toFixed(0)}° above and below the horn axis.`
-                      : `under half a wavelength at ${midHornCrossoverHz} Hz, so no null at the crossover.`}
-                  </div>
-                </div>
-              )}
               <WarningChips
                 chips={hornChips({
                   hf: hornModel.hf,

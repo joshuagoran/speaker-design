@@ -38,7 +38,34 @@ test("PA dispersion: a vertical null opens near the predicted angle at the mid/h
 
 test("PA dispersion: horizontal map is 0 dB on axis", (t) => {
   const m = paDispersionMap(stack(15), "h", 5);
-  assert.ok(m.rows[0].every((v) => Math.abs(v) < 1e-9));
+  assert.ok(m.rows[m.angles.indexOf(0)].every((v) => Math.abs(v) < 1e-9));
+});
+
+test("PA dispersion: the horizontal map mirrors the stack's left and right sides, out to ±90°", () => {
+  const m = paDispersionMap(stack(15), "h", 5);
+  for (const deg of [15, 45, 90])
+    assert.deepStrictEqual(
+      m.rows[m.angles.indexOf(-deg)],
+      m.rows[m.angles.indexOf(deg)],
+      `±${deg}°`,
+    );
+  // straight to the side, the horn is far below its on-axis level up top
+  assert.ok(at(m, 90, 10000) < -12, `90° at 10 kHz: ${at(m, 90, 10000).toFixed(1)} dB`);
+});
+
+test("PA dispersion: the vertical map runs on an arc to straight above and below, every level finite", () => {
+  const m = paDispersionMap(stack(15), "v", 10);
+  assert.ok(
+    m.rows.every((r) => r.every(Number.isFinite)),
+    "no NaN or infinity at ±90°",
+  );
+  assert.ok(
+    m.rows[m.angles.indexOf(0)].every((v) => Math.abs(v) < 1e-9),
+    "0° is the reference",
+  );
+  // straight above, the horn is far outside its 40° vertical coverage at high frequency, while low down the sub and mid are wide
+  assert.ok(at(m, 90, 10000) < -12, `+90° at 10 kHz: ${at(m, 90, 10000).toFixed(1)} dB`);
+  assert.ok(at(m, -90, 60) > -6, `−90° at 60 Hz: ${at(m, -90, 60).toFixed(1)} dB`);
 });
 
 // level at the angle and frequency nearest the ones asked for
