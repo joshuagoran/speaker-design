@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { Setter } from "../../../types";
-import { foldClass } from "../../../components/ui/FoldHeading";
 
 /** The result sections that fold on phones. */
 export type FoldId = "sub" | "mid" | "horn" | "totals";
@@ -16,7 +15,6 @@ export interface PhoneLayout {
   expandedSections: Record<FoldId, boolean>;
   setExpandedSections: Setter<Record<FoldId, boolean>>;
   toggleSection: (id: FoldId) => void;
-  sectionClass: (id: FoldId) => string;
 }
 
 /** Phone layout: the bottom settings sheet with its tabs, and which result sections are folded open (remembered per viewer). */
@@ -46,7 +44,6 @@ export function usePhoneLayout(): PhoneLayout {
       } catch {}
       return n;
     });
-  const sectionClass = (id: FoldId) => foldClass(expandedSections[id]);
   return {
     isSettingsSheetOpen,
     setSettingsSheetOpen,
@@ -56,6 +53,5 @@ export function usePhoneLayout(): PhoneLayout {
     expandedSections,
     setExpandedSections,
     toggleSection,
-    sectionClass,
   };
 }

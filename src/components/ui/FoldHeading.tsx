@@ -1,4 +1,6 @@
 import { FONT } from "../../styles/fonts";
+import { MD_UP } from "../../styles/layout";
+import { useHeightAnimation } from "../../hooks/useHeightAnimation";
 
 /**
  * The widths a section folds at: phones only (the result sections, always open from md up), md and up only (the PA
@@ -30,6 +32,28 @@ const AT: Record<
 
 /** The class that hides a section's body while it is folded, at the widths it folds at. */
 export const foldClass = (open: boolean, at: FoldsAt = "phone") => (open ? "" : AT[at].hidden);
+
+/** Whether a section folds at the window's current width. */
+const foldsNow = (at: FoldsAt) =>
+  at === "always" || window.matchMedia(MD_UP).matches === (at === "desktop");
+
+interface BodyProps {
+  open: boolean;
+  /** the widths it folds at (default: phones only) */
+  foldsAt?: FoldsAt;
+  className?: string;
+  children: React.ReactNode;
+}
+
+/** A fold section's body: hidden while folded at the widths it folds at, its height animated as it opens and closes. */
+export function FoldBody({ open, foldsAt = "phone", className = "", children }: BodyProps) {
+  const [ref, shown] = useHeightAnimation(open, () => foldsNow(foldsAt));
+  return (
+    <div ref={ref} className={`${foldClass(shown, foldsAt)} ${className}`}>
+      {children}
+    </div>
+  );
+}
 
 interface Props<Id extends string> {
   id: Id;

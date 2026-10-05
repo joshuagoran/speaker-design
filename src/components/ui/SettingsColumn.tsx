@@ -1,5 +1,5 @@
 import { Button } from "./Button";
-import { FoldHeading, foldClass } from "./FoldHeading";
+import { FoldBody, FoldHeading } from "./FoldHeading";
 import type { FoldsAt } from "./FoldHeading";
 import type { Folds } from "../../hooks/useFolds";
 import { FONT } from "../../styles/fonts";
@@ -43,7 +43,7 @@ export function SettingsColumn<Id extends string>({
       {top}
       {folds && (
         <div
-          className={`flex flex-wrap items-center justify-between gap-2 pb-2 md:px-4 md:py-2 border-b border-stone-300 ${foldsAt === "desktop" ? "max-md:hidden" : ""}`}
+          className={`flex flex-wrap items-center justify-between gap-2 pb-2 md:px-4 md:py-2 ${foldsAt === "desktop" ? "max-md:hidden" : ""}`}
         >
           <h2 className="text-xl font-bold">{UI_TEXT.settings}</h2>
           <div className="flex gap-1">
@@ -57,7 +57,7 @@ export function SettingsColumn<Id extends string>({
         </div>
       )}
       <div
-        className={`md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable] md:px-4 md:pt-3 ${bodyClassName}`}
+        className={`md:min-h-0 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable] md:px-4 ${folds ? "" : "md:pt-3"} ${bodyClassName}`}
       >
         {children}
       </div>
@@ -86,9 +86,7 @@ export function SettingsSection<Id extends string>({
   children,
 }: SectionProps<Id>) {
   return (
-    <section
-      className={`border-b border-stone-300 last:border-b-0 mb-3 ${foldsAt === "desktop" ? "max-md:border-b-0 max-md:mb-0" : ""}`}
-    >
+    <section className={`mb-4 last:mb-0 ${foldsAt === "desktop" ? "max-md:mb-0" : ""}`}>
       <FoldHeading
         id={id}
         title={title}
@@ -97,9 +95,12 @@ export function SettingsSection<Id extends string>({
         foldsAt={foldsAt}
         summary={summary}
         level={3}
-        className={`mb-2 ${foldsAt === "desktop" ? "max-md:hidden" : ""}`}
+        // a light grey bar across the panel under a black rule, so each section starts clearly
+        className={`mb-3 px-3 md:-mx-4 md:px-4 bg-stone-300 border-t-2 border-stone-900 ${foldsAt === "desktop" ? "max-md:hidden" : ""}`}
       />
-      <div className={`pb-1 ${foldClass(folds.open[id], foldsAt)}`}>{children}</div>
+      <FoldBody open={folds.open[id]} foldsAt={foldsAt} className="pb-1">
+        {children}
+      </FoldBody>
     </section>
   );
 }

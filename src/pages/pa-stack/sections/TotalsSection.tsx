@@ -1,4 +1,4 @@
-import { FoldHeading } from "../../../components/ui/FoldHeading";
+import { FoldBody, FoldHeading } from "../../../components/ui/FoldHeading";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
 
@@ -7,7 +7,6 @@ interface Props {
     PaPlanner,
     | "expandedSections"
     | "toggleSection"
-    | "sectionClass"
     | "subDriver"
     | "midDriver"
     | "hornOption"
@@ -26,7 +25,6 @@ export function TotalsSection({ planner }: Props) {
   const {
     expandedSections,
     toggleSection,
-    sectionClass,
     subDriver,
     midDriver,
     hornOption,
@@ -48,7 +46,7 @@ export function TotalsSection({ planner }: Props) {
           toggle={toggleSection}
           className="mb-2"
         />
-        <div className={sectionClass("totals")}>
+        <FoldBody open={expandedSections.totals}>
           {(() => {
             const subBoxLb = subWeightLoadedLb - (subDriver.lb || 0); // same estimate as the stats row
             const midBoxLb = midCabinetLb; // same estimate as the mid-bass stats row
@@ -123,7 +121,7 @@ export function TotalsSection({ planner }: Props) {
               </div>
             );
           })()}
-        </div>
+        </FoldBody>
       </section>
     </>
   );

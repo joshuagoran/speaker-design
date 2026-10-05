@@ -1,7 +1,7 @@
 import { PAL } from "../../../styles/palette";
 import { WarningChips } from "../../../components/chips/WarningChips";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
-import { FoldHeading } from "../../../components/ui/FoldHeading";
+import { FoldBody, FoldHeading } from "../../../components/ui/FoldHeading";
 import { ResponseChart } from "../../../components/charts/ResponseChart";
 import { MAX_SPL_TIP, STATS } from "../../../components/optimizer/StatRow";
 import { StatRowGrid, type StatRowItem } from "../../../components/stats/StatRowGrid";
@@ -18,7 +18,6 @@ interface Props {
     PaPlanner,
     | "expandedSections"
     | "toggleSection"
-    | "sectionClass"
     | "subDriver"
     | "portStyle"
     | "subVentSpec"
@@ -45,7 +44,6 @@ export function SubSection({ planner }: Props) {
   const {
     expandedSections,
     toggleSection,
-    sectionClass,
     subDriver,
     portStyle,
     subVentSpec,
@@ -75,7 +73,7 @@ export function SubSection({ planner }: Props) {
           toggle={toggleSection}
           className="mb-3 md:hidden"
         />
-        <div className={sectionClass("sub")}>
+        <FoldBody open={expandedSections.sub}>
           {subModelled && (
             <StatTileGrid
               tiles={[
@@ -199,7 +197,7 @@ export function SubSection({ planner }: Props) {
               className="mt-4"
             />
           )}
-        </div>
+        </FoldBody>
       </section>
     </>
   );
