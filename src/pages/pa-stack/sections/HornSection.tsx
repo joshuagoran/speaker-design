@@ -1,7 +1,8 @@
 import { PAL } from "../../../styles/palette";
 import { WarningChips } from "../../../components/chips/WarningChips";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
-import { ToggleButton } from "../../../components/ui/ToggleButton";
+import { DispersionPlaneToggle } from "../../../components/ui/DispersionPlaneToggle";
+import { dispersionPlaneName } from "../../../constants/dispersionPlanes";
 import { FoldHeading } from "../../../components/ui/FoldHeading";
 import { ResponseChart } from "../../../components/charts/ResponseChart";
 import { DispersionMap } from "../../../components/charts/DispersionMap";
@@ -133,29 +134,13 @@ export function HornSection({ planner }: Props) {
               </div>
               {paDispersion && (
                 <div className="mb-4">
-                  <div className="flex gap-1 mb-2">
-                    {(
-                      [
-                        ["v", "Vertical"],
-                        ["h", "Horizontal"],
-                      ] as const
-                    ).map(([v, l]) => (
-                      <ToggleButton
-                        key={v}
-                        size="xs"
-                        on={dispersionPlane === v}
-                        onClick={() => setDispersionPlane(v)}
-                      >
-                        {l}
-                      </ToggleButton>
-                    ))}
-                  </div>
+                  <DispersionPlaneToggle value={dispersionPlane} onChange={setDispersionPlane} />
                   <DispersionMap
                     map={paDispersion}
                     title={
                       dispersionPlane === "v"
-                        ? `Vertical dispersion at ${dispersionMapDistanceM} m: below (−) to above (+) the horn axis`
-                        : `Horizontal dispersion at ${dispersionMapDistanceM} m, at horn height (0° is on axis)`
+                        ? `${dispersionPlaneName("v")} dispersion at ${dispersionMapDistanceM} m: below (−) to above (+) the horn axis`
+                        : `${dispersionPlaneName("h")} dispersion at ${dispersionMapDistanceM} m, at horn height (0° is on axis)`
                     }
                   />
                   <div className="text-xs text-stone-500 mt-1">
