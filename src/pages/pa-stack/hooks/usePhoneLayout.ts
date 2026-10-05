@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Setter } from "../../../types";
+import { foldClass } from "../../../components/ui/FoldHeading";
 
 /** The result sections that fold on phones. */
 export type FoldId = "sub" | "mid" | "horn" | "totals";
@@ -45,7 +46,7 @@ export function usePhoneLayout(): PhoneLayout {
       } catch {}
       return n;
     });
-  const sectionClass = (id: FoldId) => (expandedSections[id] ? "" : "max-md:hidden");
+  const sectionClass = (id: FoldId) => foldClass(expandedSections[id]);
   return {
     isSettingsSheetOpen,
     setSettingsSheetOpen,

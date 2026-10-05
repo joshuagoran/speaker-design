@@ -18,6 +18,7 @@ import { LIMIT_NAMES } from "../../constants/limits";
 import { FONT } from "../../styles/fonts";
 import { GXD4 } from "../../data/catalog/amps";
 import { UI_TEXT } from "../../constants/uiText";
+import { SettingsColumn } from "../../components/ui/SettingsColumn";
 
 interface Props {
   fills: FillsPlanner;
@@ -180,7 +181,7 @@ export function FillsPage({ fills }: Props) {
           </Tooltip>
         </p>
       </div>
-      <aside className="min-w-0 md:col-span-2">
+      <SettingsColumn bodyClassName="md:pb-4">
         <SelectField
           label="Coaxial driver"
           options={FILL_OPTIONS}
@@ -296,7 +297,7 @@ export function FillsPage({ fills }: Props) {
             {`A freed ${GXD4.model} channel with two 8 Ω fills in parallel gives about ${GXD4.w4 / 2} W each.`}
           </div>
         </Card>
-      </aside>
+      </SettingsColumn>
     </main>
   );
 }

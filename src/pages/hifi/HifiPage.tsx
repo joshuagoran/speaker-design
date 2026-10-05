@@ -42,7 +42,12 @@ import {
   tweeterOffsetMax,
 } from "../../lib/hifi/hifi";
 import { roundoverOnsetHz } from "../../lib/hifi/diffraction";
-import { formatInches } from "../../lib/format";
+import { formatDims, formatHz, formatInches } from "../../lib/format";
+import { crossoverSlopeName } from "../../constants/crossovers";
+import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsColumn";
+import { useFolds } from "../../hooks/useFolds";
+import { HIFI_SETTINGS_SECTIONS } from "../../constants/settingsSections";
+import type { HifiSettingsSection } from "../../constants/settingsSections";
 import {
   HIFI_AMP_WATTS_MAX,
   HIFI_AMP_WATTS_STEPS,
@@ -52,7 +57,7 @@ import { HIFI_KEEP_WORDS, keepLines } from "../../lib/optimizer/goalKeeps";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import type { HifiPlanner } from "./useHifiPlanner";
 import type { Dims3 } from "../../types";
-import { entriesOf } from "../../lib/records";
+import { entriesOf, keysOf } from "../../lib/records";
 import { xmaxRows } from "../../lib/xmax";
 import { FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
@@ -63,6 +68,22 @@ interface Props {
 
 /** The roundover radii on offer, inches (0: sharp edges); a router bit's usual sizes. */
 const ROUNDOVER_CHOICES = [0, 0.5, 0.75, 1, 1.5, 2] as const;
+
+/** The panel materials on offer: the button's label and the material id. */
+const MATERIAL_CHOICES = [
+  ["Birch ply", "ply"],
+  ["MDF", "mdf"],
+] as const;
+
+/** The Ports row's choices: the button's label, the box type, the port or radiator count (or a slot), and its tip. */
+const PORT_CHOICES = [
+  ["Sealed", "sealed", 0, "Sealed"],
+  ["1 port", "vented", 1, "One round port"],
+  ["2 ports", "vented", 2, "Two round ports"],
+  ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"],
+  ["1 PR", "radiator", 1, "One passive radiator"],
+  ["2 PR", "radiator", 2, "Two passive radiators"],
+] as const;
 
 /** Hi-fi page: 2-way home speakers with an active crossover. */
 export function HifiPage({ hifi }: Props) {
@@ -151,6 +172,7 @@ export function HifiPage({ hifi }: Props) {
     pairCostUsd,
     speakerModel,
   } = hifi;
+  const folds = useFolds("hifi.settingsFolds", keysOf(HIFI_SETTINGS_SECTIONS));
   const setBoxDim = (k: keyof Dims3, v: number) => setBoxDims((p) => ({ ...p, [k]: v }));
   const setPortField = (k: "h" | "dia" | "len", v: number) =>
     setPortSpec((p) => ({ ...p, [k]: v }));
@@ -178,6 +200,45 @@ export function HifiPage({ hifi }: Props) {
     speakerSystem.kind === "vented" && speakerSystem.slotW != null
       ? ` (${speakerSystem.slotW.toFixed(1)}″ wide)`
       : "";
+  const slotOn = portSpec.shape === "slot";
+  const isPortChoiceOn = ([, v, n]: (typeof PORT_CHOICES)[number]) =>
+    boxType === v &&
+    (v === "sealed" ||
+      (v === "vented" ? (n === "slot" ? slotOn : !slotOn && portSpec.n === n) : radiator.n === n));
+  const summaries: Record<HifiSettingsSection, string> = {
+    drivers: [
+      woofer.name,
+      tweeter.name,
+      waveguideSpec && !tweeter.ownGuide && selectedWaveguide.name,
+    ]
+      .filter(Boolean)
+      .join(", "),
+    box: [
+      formatDims(boxDims),
+      `${speakerSystem.gross.toFixed(1)} L`,
+      PORT_CHOICES.find(isPortChoiceOn)?.[3].toLowerCase(),
+      `${formatInches(wallThicknessIn)} ${MATERIAL_CHOICES.find(([, v]) => v === panelMaterial)?.[0]}`,
+      roundoverIn ? `${formatInches(roundoverIn)} roundover` : "sharp edges",
+    ]
+      .filter(Boolean)
+      .join(", "),
+    xo: [
+      `${formatHz(crossoverHz)} ${crossoverSlopeName(crossoverOrder)}`,
+      `baffle step +${baffleStepCompensationDb} dB`,
+      `amps ${wooferAmpWatts} / ${tweeterAmpWatts} W`,
+    ].join(" · "),
+    room: `${HIFI_PLACES[placement].name}, ${speakerSpacingFt} ft apart, toe-in ${toeInDeg}°`,
+  };
+  const section = (id: HifiSettingsSection, children: React.ReactNode) => (
+    <SettingsSection
+      id={id}
+      title={HIFI_SETTINGS_SECTIONS[id]}
+      folds={folds}
+      summary={summaries[id]}
+    >
+      {children}
+    </SettingsSection>
+  );
   const tile = (k: StatName, v: string, u: string) => (
     <StatTile key={statLabel(k)} label={k} value={v} unit={u} />
   );
@@ -487,360 +548,363 @@ export function HifiPage({ hifi }: Props) {
           )}
         </DetailsDropdown>
       </div>
-      <aside className="min-w-0 md:col-span-2">
-        <SelectField
-          label={`Woofer · ${woofer.size}″`}
-          options={HIFI_WOOFERS_BY_SIZE}
-          value={woofer}
-          onChange={setWoofer}
-          extra={renderLockButton("woofer", "the woofer")}
-          group={(o) => `${o.size}″ woofers`}
-        />
-        <SelectField
-          label={`Tweeter · ${TWEETER_KIND_LABELS[tweeterKind(tweeter)]}`}
-          options={HIFI_TWEETERS_BY_TYPE}
-          value={tweeter}
-          onChange={setTweeter}
-          extra={renderLockButton("tweeter", "the tweeter")}
-          group={(o) => TWEETER_GROUP_LABELS[tweeterKind(o)]}
-        />
-        {waveguideSpec && !tweeter.ownGuide && (
-          <SelectField
-            label="Waveguide"
-            options={waveguideChoices}
-            value={selectedWaveguide}
-            onChange={setSelectedWaveguide}
-          />
+      <SettingsColumn folds={folds}>
+        {section(
+          "drivers",
+          <>
+            <SelectField
+              label={`Woofer · ${woofer.size}″`}
+              options={HIFI_WOOFERS_BY_SIZE}
+              value={woofer}
+              onChange={setWoofer}
+              extra={renderLockButton("woofer", "the woofer")}
+              group={(o) => `${o.size}″ woofers`}
+            />
+            <SelectField
+              label={`Tweeter · ${TWEETER_KIND_LABELS[tweeterKind(tweeter)]}`}
+              options={HIFI_TWEETERS_BY_TYPE}
+              value={tweeter}
+              onChange={setTweeter}
+              extra={renderLockButton("tweeter", "the tweeter")}
+              group={(o) => TWEETER_GROUP_LABELS[tweeterKind(o)]}
+            />
+            {waveguideSpec && !tweeter.ownGuide && (
+              <SelectField
+                label="Waveguide"
+                options={waveguideChoices}
+                value={selectedWaveguide}
+                onChange={setSelectedWaveguide}
+              />
+            )}
+          </>,
         )}
-        <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
-          <span className="text-stone-500">Material</span>
-          <div className="flex flex-wrap gap-1">
-            {(
-              [
-                ["Birch ply", "ply"],
-                ["MDF", "mdf"],
-              ] as const
-            ).map(([l, v]) => (
-              <ToggleButton key={v} onClick={() => setPanelMaterial(v)} on={panelMaterial === v}>
-                {l}
-              </ToggleButton>
-            ))}
-          </div>
-          <span />
-          <span className="text-stone-500">Thickness</span>
-          <div className="flex flex-wrap gap-1">
-            {(
-              [
-                [0.75, "3/4″"],
-                [0.5, "1/2″"],
-              ] as const
-            ).map(([v, l]) => (
-              <ToggleButton
-                key={v}
-                onClick={() => setWallThicknessIn(v)}
-                on={wallThicknessIn === v}
-              >
-                {l}
-              </ToggleButton>
-            ))}
-          </div>
-          <span>{renderLockButton("wall", "the panel thickness")}</span>
-        </div>
-        <Card className="mb-4">
-          <Slider
-            label="Width"
-            value={boxDims.w}
-            min={6}
-            max={16}
-            step={0.25}
-            unit="″"
-            onChange={(v) => setBoxDim("w", v)}
-            extra={renderDimensionLock("dim", "w", "Width")}
-          />
-          <Slider
-            label="Height"
-            value={boxDims.h}
-            min={9}
-            max={44}
-            step={0.25}
-            unit="″"
-            onChange={(v) => setBoxDim("h", v)}
-            extra={renderDimensionLock("dim", "h", "Height")}
-          />
-          <Slider
-            label="Depth"
-            value={boxDims.d}
-            min={6}
-            max={16}
-            step={0.25}
-            unit="″"
-            onChange={(v) => setBoxDim("d", v)}
-            extra={renderDimensionLock("dim", "d", "Depth")}
-          />
-          <div className="flex items-center justify-between gap-2 mb-1 mt-1">
-            <span className="text-sm text-stone-500">Ports</span>
-            {renderLockButton("box", "sealed, ported or radiator")}
-          </div>
-          <div className="grid grid-cols-3 gap-1 mb-3">
-            {(
-              [
-                ["Sealed", "sealed", 0, "Sealed"],
-                ["1 port", "vented", 1, "One round port"],
-                ["2 ports", "vented", 2, "Two round ports"],
-                ["Slot", "vented", "slot", "Slot vent along the bottom of the baffle"],
-                ["1 PR", "radiator", 1, "One passive radiator"],
-                ["2 PR", "radiator", 2, "Two passive radiators"],
-              ] as const
-            ).map(([l, v, n, tip]) => {
-              const slotOn = portSpec.shape === "slot";
-              const on =
-                boxType === v &&
-                (v === "sealed" ||
-                  (v === "vented"
-                    ? n === "slot"
-                      ? slotOn
-                      : !slotOn && portSpec.n === n
-                    : radiator.n === n));
-              return (
-                <ToggleButton
-                  key={l}
-                  size="xs"
-                  className="min-w-0 whitespace-nowrap"
-                  title={tip}
-                  aria-label={tip}
-                  on={on}
-                  onClick={() => {
-                    setBoxType(v);
-                    if (v === "vented") togglePort(n);
-                    if (v === "radiator") setRadiatorSelection((p) => ({ ...p, n }));
-                  }}
-                >
-                  {l}
-                </ToggleButton>
-              );
-            })}
-          </div>
-          {boxType === "vented" && (
-            <>
-              {portSpec.shape === "slot" ? (
+        {section(
+          "box",
+          <>
+            <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
+              <span className="text-stone-500">Material</span>
+              <div className="flex flex-wrap gap-1">
+                {MATERIAL_CHOICES.map(([l, v]) => (
+                  <ToggleButton
+                    key={v}
+                    onClick={() => setPanelMaterial(v)}
+                    on={panelMaterial === v}
+                  >
+                    {l}
+                  </ToggleButton>
+                ))}
+              </div>
+              <span />
+              <span className="text-stone-500">Thickness</span>
+              <div className="flex flex-wrap gap-1">
+                {(
+                  [
+                    [0.75, "3/4″"],
+                    [0.5, "1/2″"],
+                  ] as const
+                ).map(([v, l]) => (
+                  <ToggleButton
+                    key={v}
+                    onClick={() => setWallThicknessIn(v)}
+                    on={wallThicknessIn === v}
+                  >
+                    {l}
+                  </ToggleButton>
+                ))}
+              </div>
+              <span>{renderLockButton("wall", "the panel thickness")}</span>
+            </div>
+            <Card className="mb-4">
+              <Slider
+                label="Width"
+                value={boxDims.w}
+                min={6}
+                max={16}
+                step={0.25}
+                unit="″"
+                onChange={(v) => setBoxDim("w", v)}
+                extra={renderDimensionLock("dim", "w", "Width")}
+              />
+              <Slider
+                label="Height"
+                value={boxDims.h}
+                min={9}
+                max={44}
+                step={0.25}
+                unit="″"
+                onChange={(v) => setBoxDim("h", v)}
+                extra={renderDimensionLock("dim", "h", "Height")}
+              />
+              <Slider
+                label="Depth"
+                value={boxDims.d}
+                min={6}
+                max={16}
+                step={0.25}
+                unit="″"
+                onChange={(v) => setBoxDim("d", v)}
+                extra={renderDimensionLock("dim", "d", "Depth")}
+              />
+              <div className="flex items-center justify-between gap-2 mb-1 mt-1">
+                <span className="text-sm text-stone-500">Ports</span>
+                {renderLockButton("box", "sealed, ported or radiator")}
+              </div>
+              <div className="grid grid-cols-3 gap-1 mb-3">
+                {PORT_CHOICES.map((choice) => {
+                  const [l, v, n, tip] = choice;
+                  const on = isPortChoiceOn(choice);
+                  return (
+                    <ToggleButton
+                      key={l}
+                      size="xs"
+                      className="min-w-0 whitespace-nowrap"
+                      title={tip}
+                      aria-label={tip}
+                      on={on}
+                      onClick={() => {
+                        setBoxType(v);
+                        if (v === "vented") togglePort(n);
+                        if (v === "radiator") setRadiatorSelection((p) => ({ ...p, n }));
+                      }}
+                    >
+                      {l}
+                    </ToggleButton>
+                  );
+                })}
+              </div>
+              {boxType === "vented" && (
+                <>
+                  {portSpec.shape === "slot" ? (
+                    <Slider
+                      label={`Slot height${slotWidthNote}`}
+                      value={portSpec.h}
+                      min={0.5}
+                      max={3}
+                      step={0.125}
+                      unit="″"
+                      onChange={(v) => setPortField("h", v)}
+                    />
+                  ) : (
+                    <Slider
+                      label="Port diameter"
+                      value={portSpec.dia}
+                      min={1}
+                      max={4}
+                      step={0.25}
+                      unit="″"
+                      onChange={(v) => setPortField("dia", v)}
+                    />
+                  )}
+                  <Slider
+                    label={portSpec.shape === "slot" ? "Slot length" : "Port length (centerline)"}
+                    value={portSpec.len}
+                    min={1}
+                    max={30}
+                    step={0.25}
+                    unit="″"
+                    onChange={(v) => setPortField("len", v)}
+                  />
+                </>
+              )}
+              {boxType === "radiator" && (
+                <>
+                  <SelectField
+                    label={`Passive radiator · ${radiatorDriver.shape ? "5 × 8″ oval" : `${radiatorDriver.size}″`}`}
+                    options={HIFI_PASSIVES_BY_SIZE}
+                    value={radiatorDriver}
+                    onChange={(o) =>
+                      setRadiatorSelection((p) => ({
+                        ...p,
+                        id: o.id,
+                        addG: Math.min(p.addG, passiveRadiatorMassMax(o)),
+                      }))
+                    }
+                    group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)}
+                  />
+                  <Slider
+                    label="Added mass, each"
+                    value={radiator.addG}
+                    min={0}
+                    max={passiveRadiatorMassMax(radiatorDriver)}
+                    step={5}
+                    unit=" g"
+                    onChange={(v) => setRadiatorSelection((p) => ({ ...p, addG: v }))}
+                  />
+                </>
+              )}
+              <div className="text-xs text-stone-500">
+                {speakerSystem.gross.toFixed(1)} L gross
+                {speakerSystem.kind === "vented"
+                  ? `, ${speakerSystem.pArea.toFixed(1)} in² of ${speakerSystem.slotW != null ? "slot" : "port"}`
+                  : speakerSystem.kind === "radiator"
+                    ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their own resonance)${radiatorDriver.pub.Xmax == null ? `. Its travel limit is the mechanical one (${radiatorDriver.Xmax} mm); no linear figure is published, so expect some noise near it` : ""}`
+                    : ", lightly stuffed"}
+                .
+              </div>
+            </Card>
+            <Card className="mb-4">
+              <div className="text-sm text-stone-500 mb-1">Edge roundover</div>
+              <div className="grid grid-cols-6 gap-1 mb-3">
+                {ROUNDOVER_CHOICES.map((r) => (
+                  <ToggleButton
+                    key={r}
+                    size="xs"
+                    className="min-w-0 whitespace-nowrap"
+                    title={
+                      r ? `${formatInches(r)} roundover on the baffle edges` : "Sharp baffle edges"
+                    }
+                    on={roundoverIn === r}
+                    onClick={() => setRoundoverIn(r)}
+                  >
+                    {r ? formatInches(r) : "Sharp"}
+                  </ToggleButton>
+                ))}
+              </div>
+              <Slider
+                label="Tweeter offset (+ inward)"
+                value={tweeterOffsetIn}
+                min={-3}
+                max={3}
+                step={0.25}
+                unit="″"
+                onChange={setTweeterOffsetIn}
+              />
+              <div className="text-xs text-stone-500 leading-relaxed">
+                Edges ripple the response ±{edgeRippleDb.toFixed(1)} dB from 1 to 5 kHz on axis.{" "}
+                {roundoverIn
+                  ? `The roundover cuts edge re-radiation above about ${(roundoverOnset / 1000).toFixed(1)} kHz (wavelengths under 4× its radius)`
+                  : "A roundover cuts it where the wavelength is under 4× its radius (1½″ works above about 2 kHz)"}
+                ; it barely moves the baffle step itself. An off-centre tweeter spreads the ripple
+                so it partly cancels; the pair is mirror-imaged
+                {speakerSystem.lay.onTop
+                  ? " (the waveguide on top stays centred)"
+                  : `, at most ${tweeterOffsetMax(speakerConfig, tweeterWithWaveguide).toFixed(2)}″ either way on this baffle`}
+                .
+                {roundoverTooDeep && (
+                  <span className="text-orange-900">
+                    {" "}
+                    {formatInches(roundoverIn)} is more than the {formatInches(wallThicknessIn)}{" "}
+                    panel takes: double the baffle or add hardwood edge strips.
+                  </span>
+                )}
+              </div>
+            </Card>
+          </>,
+        )}
+        {section(
+          "xo",
+          <>
+            <Card className="mb-4">
+              <Slider
+                label="Crossover"
+                value={crossoverHz}
+                min={800}
+                max={4000}
+                step={50}
+                unit=" Hz"
+                onChange={setCrossoverHz}
+                extra={renderLockButton("xo", "the crossover")}
+              />
+              <CrossoverSlopeButtons
+                order={crossoverOrder}
+                onChange={setCrossoverOrder}
+                label="Crossover slope"
+              />
+              <Slider
+                label="Baffle-step boost"
+                value={baffleStepCompensationDb}
+                min={0}
+                max={6}
+                step={0.5}
+                unit=" dB"
+                onChange={setBaffleStepCompensationDb}
+              />
+              <Slider
+                label="Woofer amp @ 8 Ω"
+                value={wooferAmpWatts}
+                min={HIFI_AMP_WATTS_STEPS.wAmpW.min}
+                max={HIFI_AMP_WATTS_MAX.wAmpW}
+                step={HIFI_AMP_WATTS_STEPS.wAmpW.step}
+                unit=" W"
+                onChange={setWooferAmpWatts}
+                extra={renderLockButton("wAmpW", "the woofer amp power")}
+              />
+              <Slider
+                label="Tweeter amp @ 8 Ω"
+                value={tweeterAmpWatts}
+                min={HIFI_AMP_WATTS_STEPS.tAmpW.min}
+                max={HIFI_AMP_WATTS_MAX.tAmpW}
+                step={HIFI_AMP_WATTS_STEPS.tAmpW.step}
+                unit=" W"
+                onChange={setTweeterAmpWatts}
+                extra={renderLockButton("tAmpW", "the tweeter amp power")}
+              />
+            </Card>
+          </>,
+        )}
+        {section(
+          "room",
+          <>
+            <Card className="mb-4">
+              <div className="text-sm text-stone-500 mb-1">Placement</div>
+              <div className="flex flex-wrap gap-1 mb-3">
+                {entriesOf(HIFI_PLACES).map(([k, p]) => (
+                  <ToggleButton key={k} onClick={() => setPlacement(k)} on={placement === k}>
+                    {p.name}
+                  </ToggleButton>
+                ))}
+              </div>
+              {placement !== "free" && (
                 <Slider
-                  label={`Slot height${slotWidthNote}`}
-                  value={portSpec.h}
+                  label="Distance to the wall"
+                  value={distanceToWallFt}
                   min={0.5}
-                  max={3}
-                  step={0.125}
-                  unit="″"
-                  onChange={(v) => setPortField("h", v)}
-                />
-              ) : (
-                <Slider
-                  label="Port diameter"
-                  value={portSpec.dia}
-                  min={1}
-                  max={4}
+                  max={6}
                   step={0.25}
-                  unit="″"
-                  onChange={(v) => setPortField("dia", v)}
+                  unit=" ft"
+                  onChange={setDistanceToWallFt}
                 />
               )}
               <Slider
-                label={portSpec.shape === "slot" ? "Slot length" : "Port length (centerline)"}
-                value={portSpec.len}
-                min={1}
-                max={30}
-                step={0.25}
-                unit="″"
-                onChange={(v) => setPortField("len", v)}
-              />
-            </>
-          )}
-          {boxType === "radiator" && (
-            <>
-              <SelectField
-                label={`Passive radiator · ${radiatorDriver.shape ? "5 × 8″ oval" : `${radiatorDriver.size}″`}`}
-                options={HIFI_PASSIVES_BY_SIZE}
-                value={radiatorDriver}
-                onChange={(o) =>
-                  setRadiatorSelection((p) => ({
-                    ...p,
-                    id: o.id,
-                    addG: Math.min(p.addG, passiveRadiatorMassMax(o)),
-                  }))
-                }
-                group={(o) => (o.shape ? "Oval radiators" : `${o.size}″ radiators`)}
+                label="Speaker spacing"
+                value={speakerSpacingFt}
+                min={3}
+                max={14}
+                step={0.5}
+                unit=" ft"
+                onChange={setSpeakerSpacingFt}
               />
               <Slider
-                label="Added mass, each"
-                value={radiator.addG}
+                label="Toe-in"
+                value={toeInDeg}
                 min={0}
-                max={passiveRadiatorMassMax(radiatorDriver)}
-                step={5}
-                unit=" g"
-                onChange={(v) => setRadiatorSelection((p) => ({ ...p, addG: v }))}
+                max={35}
+                step={1}
+                unit="°"
+                onChange={setToeInDeg}
               />
-            </>
-          )}
-          <div className="text-xs text-stone-500">
-            {speakerSystem.gross.toFixed(1)} L gross
-            {speakerSystem.kind === "vented"
-              ? `, ${speakerSystem.pArea.toFixed(1)} in² of ${speakerSystem.slotW != null ? "slot" : "port"}`
-              : speakerSystem.kind === "radiator"
-                ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their own resonance)${radiatorDriver.pub.Xmax == null ? `. Its travel limit is the mechanical one (${radiatorDriver.Xmax} mm); no linear figure is published, so expect some noise near it` : ""}`
-                : ", lightly stuffed"}
-            .
-          </div>
-        </Card>
-        <Card className="mb-4">
-          <div className="text-sm text-stone-500 mb-1">Edge roundover</div>
-          <div className="grid grid-cols-6 gap-1 mb-3">
-            {ROUNDOVER_CHOICES.map((r) => (
-              <ToggleButton
-                key={r}
-                size="xs"
-                className="min-w-0 whitespace-nowrap"
-                title={
-                  r ? `${formatInches(r)} roundover on the baffle edges` : "Sharp baffle edges"
-                }
-                on={roundoverIn === r}
-                onClick={() => setRoundoverIn(r)}
-              >
-                {r ? formatInches(r) : "Sharp"}
-              </ToggleButton>
-            ))}
-          </div>
-          <Slider
-            label="Tweeter offset (+ inward)"
-            value={tweeterOffsetIn}
-            min={-3}
-            max={3}
-            step={0.25}
-            unit="″"
-            onChange={setTweeterOffsetIn}
-          />
-          <div className="text-xs text-stone-500 leading-relaxed">
-            Edges ripple the response ±{edgeRippleDb.toFixed(1)} dB from 1 to 5 kHz on axis.{" "}
-            {roundoverIn
-              ? `The roundover cuts edge re-radiation above about ${(roundoverOnset / 1000).toFixed(1)} kHz (wavelengths under 4× its radius)`
-              : "A roundover cuts it where the wavelength is under 4× its radius (1½″ works above about 2 kHz)"}
-            ; it barely moves the baffle step itself. An off-centre tweeter spreads the ripple so it
-            partly cancels; the pair is mirror-imaged
-            {speakerSystem.lay.onTop
-              ? " (the waveguide on top stays centred)"
-              : `, at most ${tweeterOffsetMax(speakerConfig, tweeterWithWaveguide).toFixed(2)}″ either way on this baffle`}
-            .
-            {roundoverTooDeep && (
-              <span className="text-orange-900">
-                {" "}
-                {formatInches(roundoverIn)} is more than the {formatInches(wallThicknessIn)} panel
-                takes: double the baffle or add hardwood edge strips.
-              </span>
-            )}
-          </div>
-        </Card>
-        <Card className="mb-4">
-          <Slider
-            label="Crossover"
-            value={crossoverHz}
-            min={800}
-            max={4000}
-            step={50}
-            unit=" Hz"
-            onChange={setCrossoverHz}
-            extra={renderLockButton("xo", "the crossover")}
-          />
-          <CrossoverSlopeButtons
-            order={crossoverOrder}
-            onChange={setCrossoverOrder}
-            label="Crossover slope"
-          />
-          <Slider
-            label="Baffle-step boost"
-            value={baffleStepCompensationDb}
-            min={0}
-            max={6}
-            step={0.5}
-            unit=" dB"
-            onChange={setBaffleStepCompensationDb}
-          />
-          <Slider
-            label="Woofer amp @ 8 Ω"
-            value={wooferAmpWatts}
-            min={HIFI_AMP_WATTS_STEPS.wAmpW.min}
-            max={HIFI_AMP_WATTS_MAX.wAmpW}
-            step={HIFI_AMP_WATTS_STEPS.wAmpW.step}
-            unit=" W"
-            onChange={setWooferAmpWatts}
-            extra={renderLockButton("wAmpW", "the woofer amp power")}
-          />
-          <Slider
-            label="Tweeter amp @ 8 Ω"
-            value={tweeterAmpWatts}
-            min={HIFI_AMP_WATTS_STEPS.tAmpW.min}
-            max={HIFI_AMP_WATTS_MAX.tAmpW}
-            step={HIFI_AMP_WATTS_STEPS.tAmpW.step}
-            unit=" W"
-            onChange={setTweeterAmpWatts}
-            extra={renderLockButton("tAmpW", "the tweeter amp power")}
-          />
-        </Card>
-        <Card>
-          <div className="text-sm text-stone-500 mb-1">Placement</div>
-          <div className="flex flex-wrap gap-1 mb-3">
-            {entriesOf(HIFI_PLACES).map(([k, p]) => (
-              <ToggleButton key={k} onClick={() => setPlacement(k)} on={placement === k}>
-                {p.name}
-              </ToggleButton>
-            ))}
-          </div>
-          {placement !== "free" && (
-            <Slider
-              label="Distance to the wall"
-              value={distanceToWallFt}
-              min={0.5}
-              max={6}
-              step={0.25}
-              unit=" ft"
-              onChange={setDistanceToWallFt}
-            />
-          )}
-          <Slider
-            label="Speaker spacing"
-            value={speakerSpacingFt}
-            min={3}
-            max={14}
-            step={0.5}
-            unit=" ft"
-            onChange={setSpeakerSpacingFt}
-          />
-          <Slider
-            label="Toe-in"
-            value={toeInDeg}
-            min={0}
-            max={35}
-            step={1}
-            unit="°"
-            onChange={setToeInDeg}
-          />
-          <Slider
-            label="Box bottom height (stand)"
-            value={standHeightIn}
-            min={0}
-            max={40}
-            step={1}
-            unit="″"
-            onChange={setStandHeightIn}
-          />
-          <Slider
-            label="Ear height"
-            value={earHeightIn}
-            min={24}
-            max={60}
-            step={1}
-            unit="″"
-            onChange={setEarHeightIn}
-          />
-        </Card>
-      </aside>
+              <Slider
+                label="Box bottom height (stand)"
+                value={standHeightIn}
+                min={0}
+                max={40}
+                step={1}
+                unit="″"
+                onChange={setStandHeightIn}
+              />
+              <Slider
+                label="Ear height"
+                value={earHeightIn}
+                min={24}
+                max={60}
+                step={1}
+                unit="″"
+                onChange={setEarHeightIn}
+              />
+            </Card>
+          </>,
+        )}
+      </SettingsColumn>
     </main>
   );
 }

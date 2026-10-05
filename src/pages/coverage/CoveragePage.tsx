@@ -22,6 +22,7 @@ import {
 import { CoverageAssumptions } from "./CoverageAssumptions";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
 import { FONT } from "../../styles/fonts";
+import { SettingsColumn } from "../../components/ui/SettingsColumn";
 import { UI_TEXT } from "../../constants/uiText";
 import {
   COVERAGE_LEVEL_REF_PLACE,
@@ -185,294 +186,292 @@ export function CoveragePage({ planner }: Props) {
         </section>
       </div>
 
-      <aside
-        className="min-w-0 md:col-span-2 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet"
-        aria-label="Coverage settings"
+      <SettingsColumn
+        label="Coverage settings"
+        className="max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet"
+        bodyClassName={`flex flex-col gap-6 md:pb-4 max-md:gap-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${sheetOpen ? "" : "max-md:hidden"}`}
+        top={
+          <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
+            {TABS.map(([t, name]) => (
+              <button
+                key={t}
+                role="tab"
+                aria-selected={sheetOpen && tab === t}
+                onClick={() => {
+                  if (sheetOpen && tab === t) setSheetOpen(false);
+                  else {
+                    setTab(t);
+                    setSheetOpen(true);
+                  }
+                }}
+                className={`flex-1 px-2 py-2 rounded border text-sm ${sheetOpen && tab === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50"}`}
+              >
+                {name}
+              </button>
+            ))}
+            {sheetOpen && (
+              <button
+                onClick={() => setSheetOpen(false)}
+                aria-label={UI_TEXT.closeSettings}
+                className="px-3 rounded border border-stone-300 bg-stone-50 text-sm"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        }
       >
-        <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
-          {TABS.map(([t, name]) => (
-            <button
-              key={t}
-              role="tab"
-              aria-selected={sheetOpen && tab === t}
-              onClick={() => {
-                if (sheetOpen && tab === t) setSheetOpen(false);
-                else {
-                  setTab(t);
-                  setSheetOpen(true);
+        <div className={tabClass("listener")}>
+          <div className={label}>Listener</div>
+          {rel != null ? (
+            <div className="flex items-baseline flex-wrap gap-x-3 tabular-nums">
+              <span className="text-3xl font-bold">{map.listenerDb?.toFixed(1)} dB</span>
+              <span className={`text-lg font-semibold ${relClass}`}>
+                {signed(rel)} against the target
+              </span>
+            </div>
+          ) : (
+            <div className="text-stone-500">—</div>
+          )}
+          <div className="text-sm text-stone-500 mt-1">
+            {layout.listener.y.toFixed(1)} ft from the front wall,{" "}
+            {Math.abs(layout.listener.x).toFixed(1)} ft{" "}
+            {layout.listener.x < 0 ? "left of" : layout.listener.x > 0 ? "right of" : "on"} center
+          </div>
+          {map.stats && (
+            <div className="grid grid-cols-3 gap-3 mt-3 tabular-nums">
+              {(
+                [
+                  [pct(map.stats.within3), "of the floor ≥ −3 dB"],
+                  [pct(map.stats.within6), "of the floor ≥ −6 dB"],
+                  [`${map.stats.spread.toFixed(1)} dB`, "spread, 10th–90th %"],
+                ] as const
+              ).map(([v, k]) => (
+                <div key={k} className="border-t border-stone-300 pt-1">
+                  <div className="text-lg font-semibold">{v}</div>
+                  <div className="text-xs text-stone-500">{k}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {map.pads && (
+            <p className="text-xs text-stone-500 mt-3 tabular-nums">
+              Turned down to balance: sub {signed(map.pads.sub)} dB, mid {signed(map.pads.mid)} dB,
+              horn {signed(map.pads.horn)} dB.
+            </p>
+          )}
+          {map.response.length > 0 && (
+            <div className="mt-4">
+              <ResponseChart
+                fmax={20000}
+                H={240}
+                yLabel="dB SPL at the listener"
+                series={[
+                  {
+                    curve: map.response,
+                    label: "Listener",
+                    stroke: PAL.ink,
+                    tint: PAL.alpha(PAL.ink, 0.05),
+                  },
+                  {
+                    curve: map.targetCurve,
+                    label: "Target, music balance",
+                    stroke: PAL.magenta,
+                    tint: PAL.alpha(PAL.magenta, 0),
+                  },
+                ]}
+                span={
+                  layout.band === "one"
+                    ? undefined
+                    : { lo: COVERAGE_BANDS[layout.band].lo, hi: COVERAGE_BANDS[layout.band].hi }
                 }
-              }}
-              className={`flex-1 px-2 py-2 rounded border text-sm ${sheetOpen && tab === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50"}`}
-            >
-              {name}
-            </button>
-          ))}
-          {sheetOpen && (
-            <button
-              onClick={() => setSheetOpen(false)}
-              aria-label={UI_TEXT.closeSettings}
-              className="px-3 rounded border border-stone-300 bg-stone-50 text-sm"
-            >
-              ✕
-            </button>
+                marks={
+                  layout.band === "one" ? [{ f: layout.freqHz, label: hz(layout.freqHz) }] : []
+                }
+              />
+            </div>
           )}
         </div>
-        <div
-          className={`flex flex-col gap-6 max-md:gap-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${sheetOpen ? "" : "max-md:hidden"}`}
-        >
-          <div className={tabClass("listener")}>
-            <div className={label}>Listener</div>
-            {rel != null ? (
-              <div className="flex items-baseline flex-wrap gap-x-3 tabular-nums">
-                <span className="text-3xl font-bold">{map.listenerDb?.toFixed(1)} dB</span>
-                <span className={`text-lg font-semibold ${relClass}`}>
-                  {signed(rel)} against the target
-                </span>
-              </div>
+
+        <div className={tabClass("band")}>
+          <Slider
+            label="Target level, sub band"
+            value={layout.targetDb}
+            min={COVERAGE_TARGET_DB[0]}
+            max={COVERAGE_TARGET_DB[1]}
+            step={1}
+            unit=" dB SPL"
+            onChange={state.setTargetDb}
+          />
+          <div className={label}>Measured at</div>
+          <div className="flex flex-wrap gap-1 mb-1">
+            {COVERAGE_LEVEL_REFS.map(([ref, name]) => (
+              <ToggleButton
+                key={ref}
+                on={layout.levelRef === ref}
+                onClick={() => state.setLevelRef(ref)}
+              >
+                {name}
+              </ToggleButton>
+            ))}
+          </div>
+          <p className="text-xs text-stone-500 mb-4 tabular-nums">
+            {map.refDb == null ? (
+              <>
+                Working out the level
+                <Ellipsis />
+              </>
+            ) : map.refDb < map.refTarget - 0.05 ? (
+              `It can't reach ${map.refTarget.toFixed(0)} dB at ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}: at its limit it gives ${map.refDb.toFixed(1)} dB there, and it never plays past its limit.`
             ) : (
-              <div className="text-stone-500">—</div>
+              `Turned down ${Math.abs(map.gain).toFixed(1)} dB so ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]} gets ${map.refTarget.toFixed(0)} dB in this band.`
             )}
-            <div className="text-sm text-stone-500 mt-1">
-              {layout.listener.y.toFixed(1)} ft from the front wall,{" "}
-              {Math.abs(layout.listener.x).toFixed(1)} ft{" "}
-              {layout.listener.x < 0 ? "left of" : layout.listener.x > 0 ? "right of" : "on"} center
+          </p>
+          <div className={label}>Band</div>
+          <div className="flex flex-wrap gap-1">
+            {NAMED_BANDS.map((b) => (
+              <ToggleButton key={b} on={layout.band === b} onClick={() => state.setBand(b)}>
+                {COVERAGE_BANDS[b].name}{" "}
+                <span className="text-xs opacity-70">
+                  {hz(COVERAGE_BANDS[b].lo)}–{hz(COVERAGE_BANDS[b].hi)}
+                </span>
+              </ToggleButton>
+            ))}
+            <ToggleButton on={layout.band === "one"} onClick={() => state.setBand("one")}>
+              One frequency
+            </ToggleButton>
+          </div>
+          {layout.band === "one" && (
+            <div className="mt-3">
+              <div className="flex justify-between items-center gap-3 mb-1">
+                <label htmlFor={freqId} className="text-sm text-stone-500">
+                  Frequency
+                </label>
+                <span className="text-sm tabular-nums font-medium">{hz(layout.freqHz)}</span>
+              </div>
+              <input
+                id={freqId}
+                type="range"
+                min={0}
+                max={1000}
+                step={1}
+                value={logPos(layout.freqHz)}
+                aria-valuetext={hz(layout.freqHz)}
+                onChange={(e) => state.setFreqHz(fromPos(parseFloat(e.target.value)))}
+                className="w-full accent-stone-900"
+              />
+              <p className="text-xs text-stone-500 mt-1">
+                One frequency adds everything with phase: the interference between the stacks shows
+                plainly. Up to {SINGLE_FREQ_RANGE[1]} Hz; above that it's finer than the map.
+              </p>
             </div>
-            {map.stats && (
-              <div className="grid grid-cols-3 gap-3 mt-3 tabular-nums">
-                {(
-                  [
-                    [pct(map.stats.within3), "of the floor ≥ −3 dB"],
-                    [pct(map.stats.within6), "of the floor ≥ −6 dB"],
-                    [`${map.stats.spread.toFixed(1)} dB`, "spread, 10th–90th %"],
-                  ] as const
-                ).map(([v, k]) => (
-                  <div key={k} className="border-t border-stone-300 pt-1">
-                    <div className="text-lg font-semibold">{v}</div>
-                    <div className="text-xs text-stone-500">{k}</div>
-                  </div>
+          )}
+        </div>
+
+        <div className={tabClass("room")}>
+          <div className={label}>Room</div>
+          <div className="flex gap-1 mb-3">
+            <ToggleButton on={!room.outdoors} onClick={() => state.setOutdoors(false)}>
+              Indoors
+            </ToggleButton>
+            <ToggleButton on={room.outdoors} onClick={() => state.setOutdoors(true)}>
+              {UI_TEXT.outdoors}
+            </ToggleButton>
+          </div>
+          <Slider
+            label={room.outdoors ? "Area width" : "Width"}
+            value={room.widthFt}
+            min={ROOM_WIDTH_FT[0]}
+            max={ROOM_WIDTH_FT[1]}
+            step={1}
+            unit=" ft"
+            onChange={(widthFt) => state.setRoomSize({ widthFt, lengthFt: room.lengthFt })}
+          />
+          <Slider
+            label={room.outdoors ? "Area length" : "Length"}
+            value={room.lengthFt}
+            min={ROOM_LENGTH_FT[0]}
+            max={ROOM_LENGTH_FT[1]}
+            step={1}
+            unit=" ft"
+            onChange={(lengthFt) => state.setRoomSize({ widthFt: room.widthFt, lengthFt })}
+          />
+          {!room.outdoors && (
+            <>
+              <Slider
+                label="Ceiling height"
+                value={room.ceilingFt}
+                min={ROOM_CEILING_FT[0]}
+                max={ROOM_CEILING_FT[1]}
+                step={1}
+                unit=" ft"
+                onChange={state.setCeilingFt}
+              />
+              <div className="grid grid-cols-2 gap-x-3">
+                {SURFACES.map(([surface, name]) => (
+                  <SelectField
+                    key={surface}
+                    label={name}
+                    options={ROOM_MATERIAL_OPTIONS}
+                    value={ROOM_MATERIAL_OPTIONS.find((o) => o.id === room.materials[surface])}
+                    onChange={(o) => state.setMaterial(surface, o.id)}
+                  />
                 ))}
               </div>
-            )}
-            {map.pads && (
-              <p className="text-xs text-stone-500 mt-3 tabular-nums">
-                Turned down to balance: sub {signed(map.pads.sub)} dB, mid {signed(map.pads.mid)}{" "}
-                dB, horn {signed(map.pads.horn)} dB.
-              </p>
-            )}
-            {map.response.length > 0 && (
-              <div className="mt-4">
-                <ResponseChart
-                  fmax={20000}
-                  H={240}
-                  yLabel="dB SPL at the listener"
-                  series={[
-                    {
-                      curve: map.response,
-                      label: "Listener",
-                      stroke: PAL.ink,
-                      tint: PAL.alpha(PAL.ink, 0.05),
-                    },
-                    {
-                      curve: map.targetCurve,
-                      label: "Target, music balance",
-                      stroke: PAL.magenta,
-                      tint: PAL.alpha(PAL.magenta, 0),
-                    },
-                  ]}
-                  span={
-                    layout.band === "one"
-                      ? undefined
-                      : { lo: COVERAGE_BANDS[layout.band].lo, hi: COVERAGE_BANDS[layout.band].hi }
-                  }
-                  marks={
-                    layout.band === "one" ? [{ f: layout.freqHz, label: hz(layout.freqHz) }] : []
-                  }
-                />
-              </div>
-            )}
-          </div>
-
-          <div className={tabClass("band")}>
-            <Slider
-              label="Target level, sub band"
-              value={layout.targetDb}
-              min={COVERAGE_TARGET_DB[0]}
-              max={COVERAGE_TARGET_DB[1]}
-              step={1}
-              unit=" dB SPL"
-              onChange={state.setTargetDb}
-            />
-            <div className={label}>Measured at</div>
-            <div className="flex flex-wrap gap-1 mb-1">
-              {COVERAGE_LEVEL_REFS.map(([ref, name]) => (
-                <ToggleButton
-                  key={ref}
-                  on={layout.levelRef === ref}
-                  onClick={() => state.setLevelRef(ref)}
-                >
-                  {name}
-                </ToggleButton>
-              ))}
-            </div>
-            <p className="text-xs text-stone-500 mb-4 tabular-nums">
-              {map.refDb == null ? (
-                <>
-                  Working out the level
-                  <Ellipsis />
-                </>
-              ) : map.refDb < map.refTarget - 0.05 ? (
-                `It can't reach ${map.refTarget.toFixed(0)} dB at ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}: at its limit it gives ${map.refDb.toFixed(1)} dB there, and it never plays past its limit.`
-              ) : (
-                `Turned down ${Math.abs(map.gain).toFixed(1)} dB so ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]} gets ${map.refTarget.toFixed(0)} dB in this band.`
-              )}
-            </p>
-            <div className={label}>Band</div>
-            <div className="flex flex-wrap gap-1">
-              {NAMED_BANDS.map((b) => (
-                <ToggleButton key={b} on={layout.band === b} onClick={() => state.setBand(b)}>
-                  {COVERAGE_BANDS[b].name}{" "}
-                  <span className="text-xs opacity-70">
-                    {hz(COVERAGE_BANDS[b].lo)}–{hz(COVERAGE_BANDS[b].hi)}
-                  </span>
-                </ToggleButton>
-              ))}
-              <ToggleButton on={layout.band === "one"} onClick={() => state.setBand("one")}>
-                One frequency
-              </ToggleButton>
-            </div>
-            {layout.band === "one" && (
-              <div className="mt-3">
-                <div className="flex justify-between items-center gap-3 mb-1">
-                  <label htmlFor={freqId} className="text-sm text-stone-500">
-                    Frequency
-                  </label>
-                  <span className="text-sm tabular-nums font-medium">{hz(layout.freqHz)}</span>
-                </div>
-                <input
-                  id={freqId}
-                  type="range"
-                  min={0}
-                  max={1000}
-                  step={1}
-                  value={logPos(layout.freqHz)}
-                  aria-valuetext={hz(layout.freqHz)}
-                  onChange={(e) => state.setFreqHz(fromPos(parseFloat(e.target.value)))}
-                  className="w-full accent-stone-900"
-                />
-                <p className="text-xs text-stone-500 mt-1">
-                  One frequency adds everything with phase: the interference between the stacks
-                  shows plainly. Up to {SINGLE_FREQ_RANGE[1]} Hz; above that it's finer than the
-                  map.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className={tabClass("room")}>
-            <div className={label}>Room</div>
-            <div className="flex gap-1 mb-3">
-              <ToggleButton on={!room.outdoors} onClick={() => state.setOutdoors(false)}>
-                Indoors
-              </ToggleButton>
-              <ToggleButton on={room.outdoors} onClick={() => state.setOutdoors(true)}>
-                {UI_TEXT.outdoors}
-              </ToggleButton>
-            </div>
-            <Slider
-              label={room.outdoors ? "Area width" : "Width"}
-              value={room.widthFt}
-              min={ROOM_WIDTH_FT[0]}
-              max={ROOM_WIDTH_FT[1]}
-              step={1}
-              unit=" ft"
-              onChange={(widthFt) => state.setRoomSize({ widthFt, lengthFt: room.lengthFt })}
-            />
-            <Slider
-              label={room.outdoors ? "Area length" : "Length"}
-              value={room.lengthFt}
-              min={ROOM_LENGTH_FT[0]}
-              max={ROOM_LENGTH_FT[1]}
-              step={1}
-              unit=" ft"
-              onChange={(lengthFt) => state.setRoomSize({ widthFt: room.widthFt, lengthFt })}
-            />
-            {!room.outdoors && (
-              <>
-                <Slider
-                  label="Ceiling height"
-                  value={room.ceilingFt}
-                  min={ROOM_CEILING_FT[0]}
-                  max={ROOM_CEILING_FT[1]}
-                  step={1}
-                  unit=" ft"
-                  onChange={state.setCeilingFt}
-                />
-                <div className="grid grid-cols-2 gap-x-3">
-                  {SURFACES.map(([surface, name]) => (
-                    <SelectField
-                      key={surface}
-                      label={name}
-                      options={ROOM_MATERIAL_OPTIONS}
-                      value={ROOM_MATERIAL_OPTIONS.find((o) => o.id === room.materials[surface])}
-                      onChange={(o) => state.setMaterial(surface, o.id)}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-            <div className={label}>Dance floor</div>
-            <div className="flex gap-1">
-              <ToggleButton on={room.crowd === "empty"} onClick={() => state.setCrowd("empty")}>
-                Empty
-              </ToggleButton>
-              <ToggleButton on={room.crowd === "full"} onClick={() => state.setCrowd("full")}>
-                Full
-              </ToggleButton>
-            </div>
-          </div>
-
-          <div className={tabClass("stacks")}>
-            <div className={label}>Stacks</div>
-            <div className="flex flex-wrap gap-1 mb-3">
-              {SUB_PLACEMENTS.map(([subs, name]) => (
-                <ToggleButton
-                  key={subs}
-                  on={map.subs === subs}
-                  onClick={() => state.setSubs(subs)}
-                  disabled={subs !== "stacks" && !map.levels?.sub}
-                >
-                  {name}
-                </ToggleButton>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-1 mb-3">
-              <ToggleButton on={layout.mirror} onClick={() => state.setMirror(!layout.mirror)}>
-                Move the pair as a mirror image
-              </ToggleButton>
-            </div>
-            {map.subDelayMs != null && (
-              <p className="text-sm text-stone-500 tabular-nums mb-3">
-                Sub delay: {delay(map.subDelayMs)}, in phase with the mid at{" "}
-                {hz(planner.subMidCrossoverHz)} on the stack's axis, as a DSP setup would set it.
-              </p>
-            )}
-            <Slider
-              label="Ear height"
-              value={layout.earFt}
-              min={3}
-              max={6.5}
-              step={0.1}
-              unit=" ft"
-              onChange={state.setEarFt}
-            />
-            <p className="text-sm text-stone-500 tabular-nums mb-3">
-              {Math.hypot(left.x - right.x, left.y - right.y).toFixed(1)} ft apart · toe-in L{" "}
-              {left.aim}°, R {-right.aim}°
-            </p>
-            <Button onClick={state.reset}>Reset the layout</Button>
+            </>
+          )}
+          <div className={label}>Dance floor</div>
+          <div className="flex gap-1">
+            <ToggleButton on={room.crowd === "empty"} onClick={() => state.setCrowd("empty")}>
+              Empty
+            </ToggleButton>
+            <ToggleButton on={room.crowd === "full"} onClick={() => state.setCrowd("full")}>
+              Full
+            </ToggleButton>
           </div>
         </div>
-      </aside>
+
+        <div className={tabClass("stacks")}>
+          <div className={label}>Stacks</div>
+          <div className="flex flex-wrap gap-1 mb-3">
+            {SUB_PLACEMENTS.map(([subs, name]) => (
+              <ToggleButton
+                key={subs}
+                on={map.subs === subs}
+                onClick={() => state.setSubs(subs)}
+                disabled={subs !== "stacks" && !map.levels?.sub}
+              >
+                {name}
+              </ToggleButton>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1 mb-3">
+            <ToggleButton on={layout.mirror} onClick={() => state.setMirror(!layout.mirror)}>
+              Move the pair as a mirror image
+            </ToggleButton>
+          </div>
+          {map.subDelayMs != null && (
+            <p className="text-sm text-stone-500 tabular-nums mb-3">
+              Sub delay: {delay(map.subDelayMs)}, in phase with the mid at{" "}
+              {hz(planner.subMidCrossoverHz)} on the stack's axis, as a DSP setup would set it.
+            </p>
+          )}
+          <Slider
+            label="Ear height"
+            value={layout.earFt}
+            min={3}
+            max={6.5}
+            step={0.1}
+            unit=" ft"
+            onChange={state.setEarFt}
+          />
+          <p className="text-sm text-stone-500 tabular-nums mb-3">
+            {Math.hypot(left.x - right.x, left.y - right.y).toFixed(1)} ft apart · toe-in L{" "}
+            {left.aim}°, R {-right.aim}°
+          </p>
+          <Button onClick={state.reset}>Reset the layout</Button>
+        </div>
+      </SettingsColumn>
     </main>
   );
 }

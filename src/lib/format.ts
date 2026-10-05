@@ -1,3 +1,5 @@
+import type { Dims3 } from "../types";
+
 /** Formats an amount as whole US dollars, e.g. $1,234. */
 export const formatDollars = (x: number): string => `$${Math.round(x).toLocaleString()}`;
 
@@ -12,3 +14,11 @@ export const formatInches = (v: number): string => {
     frac = INCH_FRACTIONS[+(v - whole).toFixed(3)];
   return frac ? `${whole || ""}${frac}″` : `${+v.toFixed(2)}″`;
 };
+
+/** Formats a frequency in words: 900 Hz, 1.1 kHz. */
+export const formatHz = (f: number): string =>
+  f >= 1000 ? `${+(f / 1000).toFixed(1)} kHz` : `${Math.round(f)} Hz`;
+
+/** Formats a box's outside size, width × height × depth, e.g. 22 × 30 × 20″. */
+export const formatDims = ({ w, h, d }: Dims3): string =>
+  `${+w.toFixed(2)} × ${+h.toFixed(2)} × ${+d.toFixed(2)}″`;
