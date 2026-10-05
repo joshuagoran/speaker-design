@@ -18,6 +18,14 @@ const browser = await chromium.launch({
 const sizes = [
   { name: "phone", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
   { name: "tablet", viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true },
+  // the dark theme (the device's setting): the same views, so a dark-only layout problem or page error shows up too
+  {
+    name: "phone-dark",
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+    colorScheme: "dark",
+  },
 ];
 const views = ["", "#coverage", "#cutlist", "#fills", "#hifi", "#notes"];
 const failures = [];

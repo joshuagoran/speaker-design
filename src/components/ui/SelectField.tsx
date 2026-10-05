@@ -49,7 +49,7 @@ export function SelectField<T extends SelectOption>({
           const picked = byId(options, e.target.value);
           if (picked) onChange(picked);
         }}
-        className="w-full px-3 py-2 rounded border border-stone-300 bg-white text-sm hover:border-stone-500"
+        className="w-full px-3 py-2 rounded border border-stone-300 bg-panel text-sm hover:border-stone-500"
       >
         {groups
           ? groups.map(({ heading, items }) => (

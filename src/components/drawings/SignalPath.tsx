@@ -1,4 +1,4 @@
-import { PAL } from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
 import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
 import { HORN_AMP_SAFETY_HPF_HZ, mainsDsp } from "../../lib/data";
 import { DEFAULT_CROSSOVERS } from "../../lib/defaultParts";
@@ -10,10 +10,11 @@ const TOP_PINS = "1± mid · 2± horn";
 const ampName = (m: Pick<AmpModel, "model">) => `${QSC_GXD.brand} ${m.model}`;
 /** Block diagram of the PA signal path. */
 export function SignalPath() {
-  const ink = PAL.ink,
-    mute = PAL.muted,
-    line = PAL.muted;
-  const col = { pa2: PAL.muted, sub: PAL.cyan, mid: PAL.magenta, hf: PAL.magenta, grey: PAL.muted };
+  const pal = usePalette();
+  const ink = pal.ink,
+    mute = pal.muted,
+    line = pal.muted;
+  const col = { pa2: pal.muted, sub: pal.cyan, mid: pal.magenta, hf: pal.magenta, grey: pal.muted };
   const Box = ({
     x,
     y,
@@ -30,7 +31,7 @@ export function SignalPath() {
     children: React.ReactNode;
   }) => (
     <g>
-      <rect x={x} y={y} width={w} height={h} rx="6" fill={PAL.white} stroke={c} strokeWidth="1.5" />
+      <rect x={x} y={y} width={w} height={h} rx="6" fill={pal.white} stroke={c} strokeWidth="1.5" />
       {children}
     </g>
   );

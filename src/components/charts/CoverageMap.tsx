@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { PAL } from "../../styles/palette";
+import { ON_DATA } from "../../styles/palette";
+import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { formatSigned } from "../../lib/format";
 import { contourSegments, gridLevelAt } from "../../lib/pa/coverage";
@@ -30,14 +31,15 @@ const lerp = (x: Rgb, y: Rgb, t: number): Rgb => [
   Math.round(x[2] + (y[2] - x[2]) * t),
 ];
 const mix = (a: string, b: string, t: number) => lerp(hexRgb(a), hexRgb(b), t);
-/** dB SPL on a fixed scale: white at the quiet end, through magenta, to deep magenta at the loud end */
+/** dB SPL on a fixed scale: white at the quiet end, through magenta, to deep magenta at the loud end. A data scale, the
+ * same in both themes; the room, stacks and listener drawn on it use the same fixed colours (ON_DATA). */
 const STOPS: [db: number, rgb: Rgb][] = [
-  [LO_DB, hexRgb(PAL.white)],
-  [92, mix(PAL.white, PAL.magenta, 0.15)],
-  [100, mix(PAL.white, PAL.magenta, 0.55)],
-  [108, hexRgb(PAL.magenta)],
-  [118, mix(PAL.magenta, PAL.ink, 0.45)],
-  [HI_DB, mix(PAL.magenta, PAL.ink, 0.8)],
+  [LO_DB, hexRgb(ON_DATA.white)],
+  [92, mix(ON_DATA.white, ON_DATA.magenta, 0.15)],
+  [100, mix(ON_DATA.white, ON_DATA.magenta, 0.55)],
+  [108, hexRgb(ON_DATA.magenta)],
+  [118, mix(ON_DATA.magenta, ON_DATA.ink, 0.45)],
+  [HI_DB, mix(ON_DATA.magenta, ON_DATA.ink, 0.8)],
 ];
 /** Where a level sits along the scale, 0–1. */
 const scalePos = (db: number) => Math.max(0, Math.min(1, (db - LO_DB) / (HI_DB - LO_DB)));
@@ -95,6 +97,7 @@ export function CoverageMap({
   onDragChange,
   maxHeight,
 }: Props) {
+  const pal = usePalette();
   const { room, listener } = layout;
   const [box, cw] = useElementWidth(560);
   const k = Math.max(
@@ -229,12 +232,13 @@ export function CoverageMap({
     hover.y <= view.room.lengthFt
       ? gridLevelAt(view.grid, view.room, hover)
       : null;
-  // each side's line: heavy for a hard wall, lighter for an absorbent one (curtains), dashed for open
+  // each side's line: heavy for a hard wall, lighter for an absorbent one (curtains), dashed for open. The walls frame
+  // the map against the page, so they follow the theme
   const sideLine = (side: RoomSide) => {
     const m = room.materials[side];
     if (room.outdoors || m === "open")
-      return { stroke: PAL.muted, strokeWidth: 1.25, strokeDasharray: "4 4" };
-    return { stroke: PAL.ink, strokeWidth: materialAlpha(m, 1000) >= 0.5 ? 2 : 4 };
+      return { stroke: pal.muted, strokeWidth: 1.25, strokeDasharray: "4 4" };
+    return { stroke: pal.ink, strokeWidth: materialAlpha(m, 1000) >= 0.5 ? 2 : 4 };
   };
   const sides: [RoomSide, number, number, number, number][] = [
     ["front", px(-room.widthFt / 2), py(0), px(room.widthFt / 2), py(0)],
@@ -285,7 +289,7 @@ export function CoverageMap({
             <rect x={PAD.l} y={PAD.t} width={w} height={h} />
           </clipPath>
         </defs>
-        <rect x={PAD.l} y={PAD.t} width={w} height={h} fill={PAL.edge} />
+        <rect x={PAD.l} y={PAD.t} width={w} height={h} fill={ON_DATA.edge} />
         <g clipPath="url(#coverage-room)">
           {image && (
             <image
@@ -300,12 +304,12 @@ export function CoverageMap({
           )}
           <path
             d={contours.minus6}
-            stroke={PAL.ink}
+            stroke={ON_DATA.ink}
             strokeOpacity="0.45"
             strokeWidth="1"
             fill="none"
           />
-          <path d={contours.target} stroke={PAL.ink} strokeWidth="1.5" fill="none" />
+          <path d={contours.target} stroke={ON_DATA.ink} strokeWidth="1.5" fill="none" />
         </g>
         <g clipPath="url(#coverage-room)">
           {stack.horn.covH > 0 &&
@@ -320,8 +324,8 @@ export function CoverageMap({
                 };
                 return (
                   <g key={b.label + sg}>
-                    <line {...p} stroke={PAL.ink} strokeOpacity="0.5" strokeWidth="2.5" />
-                    <line {...p} stroke={PAL.white} strokeWidth="1.2" strokeDasharray="4 4" />
+                    <line {...p} stroke={ON_DATA.ink} strokeOpacity="0.5" strokeWidth="2.5" />
+                    <line {...p} stroke={ON_DATA.white} strokeWidth="1.2" strokeDasharray="4 4" />
                   </g>
                 );
               }),
@@ -344,7 +348,7 @@ export function CoverageMap({
             x={px(f)}
             y={PAD.t - 8}
             textAnchor="middle"
-            fill={PAL.muted}
+            fill={pal.muted}
             {...font}
           >
             {Math.abs(f)}
@@ -356,7 +360,7 @@ export function CoverageMap({
             x={PAD.l - 6}
             y={py(f) + 4}
             textAnchor="end"
-            fill={PAL.muted}
+            fill={pal.muted}
             {...font}
           >
             {f}
@@ -374,15 +378,15 @@ export function CoverageMap({
                     y1={py(b.y)}
                     x2={hp.x}
                     y2={hp.y}
-                    stroke={PAL.ink}
+                    stroke={ON_DATA.ink}
                     strokeWidth="1.5"
                   />
                   <circle
                     cx={hp.x}
                     cy={hp.y}
                     r="7"
-                    fill={PAL.white}
-                    stroke={PAL.ink}
+                    fill={ON_DATA.white}
+                    stroke={ON_DATA.ink}
                     strokeWidth="2"
                   />
                 </>
@@ -394,8 +398,8 @@ export function CoverageMap({
                   width={boxPx}
                   height={bh}
                   rx="3"
-                  fill={PAL.ink}
-                  stroke={PAL.white}
+                  fill={ON_DATA.ink}
+                  stroke={ON_DATA.white}
                   strokeWidth="1.5"
                 />
               </g>
@@ -403,7 +407,7 @@ export function CoverageMap({
                 x={px(b.x)}
                 y={py(b.y) + 4}
                 textAnchor="middle"
-                fill={PAL.white}
+                fill={ON_DATA.white}
                 {...font}
                 fontWeight="600"
               >
@@ -412,13 +416,13 @@ export function CoverageMap({
             </g>
           );
         })}
-        <circle cx={px(listener.x)} cy={py(listener.y)} r="9" fill={PAL.ink} />
+        <circle cx={px(listener.x)} cy={py(listener.y)} r="9" fill={ON_DATA.ink} />
         <circle
           cx={px(listener.x)}
           cy={py(listener.y)}
           r="7"
-          fill={PAL.cyan}
-          stroke={PAL.white}
+          fill={ON_DATA.cyan}
+          stroke={ON_DATA.white}
           strokeWidth="2"
         />
       </svg>
@@ -435,7 +439,7 @@ export function CoverageMap({
                 className="absolute -top-1 -bottom-1 w-0.5"
                 style={{
                   left: `${scalePos(view.target + view.gain + v) * 100}%`,
-                  background: PAL.ink,
+                  background: ON_DATA.ink,
                   opacity: v ? 0.45 : 1,
                 }}
               />
