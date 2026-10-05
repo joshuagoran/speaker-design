@@ -43,11 +43,11 @@ export function PaStackPage({ planner }: Props) {
           <SubSection planner={planner} />
           <MidSection planner={planner} />
           <HornSection planner={planner} />
+          <DispersionSection planner={planner} />
         </div>
 
         <SettingsPanel planner={planner} />
 
-        <DispersionSection planner={planner} />
         <TotalsSection planner={planner} />
         <DetailsSection planner={planner} />
       </main>
