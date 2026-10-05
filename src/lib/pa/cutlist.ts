@@ -59,6 +59,13 @@ export const MIN_OFFCUT_IN = 3;
 /** Small parts cut from offcuts, left out of the sheet count. */
 export const FROM_OFFCUT: ReadonlySet<CutPartId> = new Set(["baffleCleat", "ductDivider"]);
 
+/**
+ * A cutlist row's identity, which its pieces on the sheets carry too (a placed piece keeps its part's fields): the page
+ * matches a row to its drawn pieces by it, also after the layout worker has copied them.
+ */
+export const cutRowKey = (p: Pick<CutPart, "box" | "part" | "a" | "b" | "t">) =>
+  `${p.box}|${p.part}|${p.a}|${p.b}|${p.t}`;
+
 /** Reads saved grain settings, falling back to the default for anything missing or unknown. */
 const savedGrain = (g: Partial<Record<GrainPanel, unknown>> | undefined): GrainSettings => {
   const out = { ...GRAIN_PRESETS.wrap };

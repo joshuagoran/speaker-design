@@ -23,3 +23,12 @@ export const CUT_BOX_NAMES = {
   sub: "Sub",
   mid: "Mid",
 } as const;
+
+/**
+ * The letter each box's parts are tagged with: a row of the cutlist and its pieces on the sheet drawings share a tag
+ * (S1, S2 … for the sub, M1 … for the mid), so a row is easy to find on the sheets and back.
+ */
+export const CUT_BOX_TAGS: Record<keyof typeof CUT_BOX_NAMES, string> = {
+  sub: "S",
+  mid: "M",
+};

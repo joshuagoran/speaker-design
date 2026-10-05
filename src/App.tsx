@@ -42,7 +42,7 @@ export function App() {
   const fills = useFillsPlanner();
   return (
     // from md up the shell fills the window and doesn't scroll: the header stays, and the page below scrolls in its own
-    // panes (one for Cutlist and Notes; results and settings for the others, see SettingsLayout)
+    // panes (one for Notes; results and settings for the others, see SettingsLayout)
     <div
       className="min-h-screen bg-stone-50 text-stone-900 md:min-h-0 md:h-dvh md:flex md:flex-col md:overflow-hidden"
       style={{ fontFamily: FONT }}

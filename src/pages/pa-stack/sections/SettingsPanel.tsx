@@ -19,6 +19,11 @@ import type { PaPlanner } from "../hooks/usePaPlanner";
 import { entriesOf, keysOf } from "../../../lib/records";
 import { CrossoverSlopeButtons } from "../../../components/ui/CrossoverSlopeButtons";
 import { SettingsColumn, SettingsSection } from "../../../components/ui/SettingsColumn";
+import {
+  SETTINGS_SHEET_CLASS,
+  SettingsSheetTabs,
+  settingsSheetBodyClass,
+} from "../../../components/ui/SettingsSheetTabs";
 import { useFolds } from "../../../hooks/useFolds";
 import { formatDims, formatHz, formatInches } from "../../../lib/format";
 import { crossoverSlopeName } from "../../../constants/crossovers";
@@ -219,37 +224,19 @@ export function SettingsPanel({ planner }: Props) {
     <SettingsColumn
       folds={folds}
       foldsAt="desktop"
-      className="max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet"
-      bodyClassName={`max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${isSettingsSheetOpen ? "" : "max-md:hidden"}`}
+      className={SETTINGS_SHEET_CLASS}
+      bodyClassName={settingsSheetBodyClass(isSettingsSheetOpen)}
       top={
-        <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
-          {entriesOf(PA_SETTINGS_TABS).map(([t, label]) => (
-            <button
-              key={t}
-              role="tab"
-              aria-selected={isSettingsSheetOpen && activeTab === t}
-              onClick={() => {
-                if (isSettingsSheetOpen && activeTab === t) setSettingsSheetOpen(false);
-                else {
-                  setActiveTab(t);
-                  setSettingsSheetOpen(true);
-                }
-              }}
-              className={`flex-1 px-2 py-2 rounded border text-sm ${isSettingsSheetOpen && activeTab === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50"}`}
-            >
-              {label}
-            </button>
-          ))}
-          {isSettingsSheetOpen && (
-            <button
-              onClick={() => setSettingsSheetOpen(false)}
-              aria-label={UI_TEXT.closeSettings}
-              className="px-3 rounded border border-stone-300 bg-stone-50 text-sm"
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        <SettingsSheetTabs
+          tabs={entriesOf(PA_SETTINGS_TABS)}
+          open={isSettingsSheetOpen}
+          active={activeTab}
+          onOpen={(t) => {
+            setActiveTab(t);
+            setSettingsSheetOpen(true);
+          }}
+          onClose={() => setSettingsSheetOpen(false)}
+        />
       }
     >
       {section(

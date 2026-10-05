@@ -25,6 +25,12 @@ import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { formatHz } from "../../lib/format";
 import { SettingsColumn } from "../../components/ui/SettingsColumn";
+import {
+  SETTINGS_SHEET_CLASS,
+  SettingsSheetTabs,
+  settingsSheetBodyClass,
+  settingsSheetRoomClass,
+} from "../../components/ui/SettingsSheetTabs";
 import { UI_TEXT } from "../../constants/uiText";
 import {
   COVERAGE_EDGE_DB,
@@ -120,7 +126,7 @@ export function CoveragePage({ planner }: Props) {
 
   return (
     <SettingsLayout
-      className={sheetOpen ? "max-md:pb-[52dvh]" : "max-md:pb-24"}
+      className={settingsSheetRoomClass(sheetOpen)}
       results={
         <div className="min-w-0 flex flex-col gap-5">
           <section>
@@ -190,37 +196,19 @@ export function CoveragePage({ planner }: Props) {
       settings={
         <SettingsColumn
           label="Coverage settings"
-          className="max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:bg-stone-50 max-md:border-t max-md:border-stone-300 max-md:rounded-t-lg max-md:shadow-sheet"
-          bodyClassName={`flex flex-col gap-6 md:pb-4 max-md:gap-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:px-4 max-md:pt-1 max-md:pb-4 max-md:max-h-[45dvh] ${sheetOpen ? "" : "max-md:hidden"}`}
+          className={SETTINGS_SHEET_CLASS}
+          bodyClassName={`flex flex-col gap-6 md:pb-4 max-md:gap-0 ${settingsSheetBodyClass(sheetOpen)}`}
           top={
-            <div className="md:hidden flex gap-1 px-3 pt-2 pb-2" role="tablist">
-              {TABS.map(([t, name]) => (
-                <button
-                  key={t}
-                  role="tab"
-                  aria-selected={sheetOpen && tab === t}
-                  onClick={() => {
-                    if (sheetOpen && tab === t) setSheetOpen(false);
-                    else {
-                      setTab(t);
-                      setSheetOpen(true);
-                    }
-                  }}
-                  className={`flex-1 px-2 py-2 rounded border text-sm ${sheetOpen && tab === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50"}`}
-                >
-                  {name}
-                </button>
-              ))}
-              {sheetOpen && (
-                <button
-                  onClick={() => setSheetOpen(false)}
-                  aria-label={UI_TEXT.closeSettings}
-                  className="px-3 rounded border border-stone-300 bg-stone-50 text-sm"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+            <SettingsSheetTabs
+              tabs={TABS}
+              open={sheetOpen}
+              active={tab}
+              onOpen={(t) => {
+                setTab(t);
+                setSheetOpen(true);
+              }}
+              onClose={() => setSheetOpen(false)}
+            />
           }
         >
           <div className={tabClass("listener")}>
