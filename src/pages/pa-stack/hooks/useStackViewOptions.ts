@@ -4,16 +4,13 @@ import { useEffect, useState } from "react";
 export interface StackViewOptions {
   dispersionPlane: DispersionPlane;
   setDispersionPlane: Setter<DispersionPlane>;
-  showDetails: boolean;
-  setShowDetails: Setter<boolean>;
   isFull3d: boolean;
   setIsFull3d: Setter<boolean>;
 }
 
-/** View toggles on the PA stack page: dispersion plane, details panel and full-screen 3D. */
+/** View toggles on the PA stack page: dispersion plane and full-screen 3D. */
 export function useStackViewOptions(): StackViewOptions {
   const [dispersionPlane, setDispersionPlane] = useState<DispersionPlane>("h"); // dispersion map: horizontal (first, as on Hi-fi) or vertical (lobing)
-  const [showDetails, setShowDetails] = useState(false);
   const [isFull3d, setIsFull3d] = useState(false);
   useEffect(() => {
     if (!isFull3d) return;
@@ -26,8 +23,6 @@ export function useStackViewOptions(): StackViewOptions {
   return {
     dispersionPlane,
     setDispersionPlane,
-    showDetails,
-    setShowDetails,
     isFull3d,
     setIsFull3d,
   };

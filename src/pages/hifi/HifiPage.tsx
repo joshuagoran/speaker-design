@@ -23,6 +23,7 @@ import { NumberField } from "../../components/ui/NumberField";
 import { SelectField } from "../../components/ui/SelectField";
 import { Slider } from "../../components/ui/Slider";
 import { Notice } from "../../components/ui/Notice";
+import { DetailsDropdown } from "../../components/ui/DetailsDropdown";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { DispersionMap } from "../../components/charts/DispersionMap";
 import { RoomView } from "../../components/drawings/RoomView";
@@ -54,6 +55,7 @@ import type { Dims3 } from "../../types";
 import { entriesOf } from "../../lib/records";
 import { xmaxRows } from "../../lib/xmax";
 import { FONT } from "../../styles/fonts";
+import { UI_TEXT } from "../../constants/uiText";
 
 interface Props {
   hifi: HifiPlanner;
@@ -430,59 +432,56 @@ export function HifiPage({ hifi }: Props) {
             }
           />
         </div>
-        <details className="text-xs text-stone-500 rounded border border-stone-300 bg-stone-50 px-3 py-2">
-          <summary className="cursor-pointer text-sm text-stone-900 py-1">Details</summary>
-          <div className="leading-relaxed mt-1 flex flex-col gap-1.5">
-            <div>
-              Woofer {speakerSystem.lay.wooferIn.toFixed(1)}″ and tweeter{" "}
-              {speakerSystem.lay.tweeterIn.toFixed(1)}″ from the bottom,{" "}
-              {speakerSystem.lay.spacingIn.toFixed(1)}″ apart. {speakerSystem.gross.toFixed(1)} L
-              gross, {speakerSystem.net.toFixed(1)} L net
-              {speakerSystem.hpf
-                ? `; DSP highpass ${speakerSystem.hpf} Hz (BW24) below the port tuning`
-                : ""}
-              .
-            </div>
-            <div>
-              Tweeter trimmed {speakerSystem.trim.toFixed(1)} dB in the DSP to match the woofer;
-              baffle step centered at {speakerSystem.bsF3.toFixed(0)} Hz
-              {baffleStepCompensationDb ? `, ${baffleStepCompensationDb} dB boost` : ""}.
-            </div>
-            <div>
-              Edge diffraction: the baffle edges re-radiate each driver's sound a little later, for
-              about ±{edgeRippleDb.toFixed(1)} dB of ripple from 1 to 5 kHz on axis (
-              {roundoverIn ? `${formatInches(roundoverIn)} roundover` : "sharp edges"}, tweeter{" "}
-              {tweeterOffsetUsed
-                ? `${formatInches(Math.abs(tweeterOffsetUsed))} ${tweeterOffsetUsed > 0 ? "inward" : "outward"} of centre`
-                : "centred"}
-              ). The ripple and the tweeter's position are in the responses and the dispersion map;
-              the ripple shifts with angle.
-            </div>
-            <div>
-              <Tooltip tip={woofer.note}>
-                <span className="font-medium text-stone-900">{woofer.name}</span>
-              </Tooltip>
-              {xmaxRows(woofer.ts).map(([k, v, note, tip]) => (
-                <span key={k}>
-                  {" · "}
-                  <Tooltip tip={tip}>{k}</Tooltip> {v} ({note})
-                </span>
-              ))}
-            </div>
-            <div>
-              <Tooltip tip={tweeter.note}>
-                <span className="font-medium text-stone-900">{tweeter.name}</span>
-              </Tooltip>
-            </div>
-            {waveguideSpec && !tweeter.ownGuide && (
-              <div>
-                <Tooltip tip={selectedWaveguide.note}>
-                  <span className="font-medium text-stone-900">{waveguideSpec.name}</span>
-                </Tooltip>
-              </div>
-            )}
+        <DetailsDropdown summary={UI_TEXT.details}>
+          <div>
+            Woofer {speakerSystem.lay.wooferIn.toFixed(1)}″ and tweeter{" "}
+            {speakerSystem.lay.tweeterIn.toFixed(1)}″ from the bottom,{" "}
+            {speakerSystem.lay.spacingIn.toFixed(1)}″ apart. {speakerSystem.gross.toFixed(1)} L
+            gross, {speakerSystem.net.toFixed(1)} L net
+            {speakerSystem.hpf
+              ? `; DSP highpass ${speakerSystem.hpf} Hz (BW24) below the port tuning`
+              : ""}
+            .
           </div>
-        </details>
+          <div>
+            Tweeter trimmed {speakerSystem.trim.toFixed(1)} dB in the DSP to match the woofer;
+            baffle step centered at {speakerSystem.bsF3.toFixed(0)} Hz
+            {baffleStepCompensationDb ? `, ${baffleStepCompensationDb} dB boost` : ""}.
+          </div>
+          <div>
+            Edge diffraction: the baffle edges re-radiate each driver's sound a little later, for
+            about ±{edgeRippleDb.toFixed(1)} dB of ripple from 1 to 5 kHz on axis (
+            {roundoverIn ? `${formatInches(roundoverIn)} roundover` : "sharp edges"}, tweeter{" "}
+            {tweeterOffsetUsed
+              ? `${formatInches(Math.abs(tweeterOffsetUsed))} ${tweeterOffsetUsed > 0 ? "inward" : "outward"} of centre`
+              : "centred"}
+            ). The ripple and the tweeter's position are in the responses and the dispersion map;
+            the ripple shifts with angle.
+          </div>
+          <div>
+            <Tooltip tip={woofer.note}>
+              <span className="font-medium text-stone-900">{woofer.name}</span>
+            </Tooltip>
+            {xmaxRows(woofer.ts).map(([k, v, note, tip]) => (
+              <span key={k}>
+                {" · "}
+                <Tooltip tip={tip}>{k}</Tooltip> {v} ({note})
+              </span>
+            ))}
+          </div>
+          <div>
+            <Tooltip tip={tweeter.note}>
+              <span className="font-medium text-stone-900">{tweeter.name}</span>
+            </Tooltip>
+          </div>
+          {waveguideSpec && !tweeter.ownGuide && (
+            <div>
+              <Tooltip tip={selectedWaveguide.note}>
+                <span className="font-medium text-stone-900">{waveguideSpec.name}</span>
+              </Tooltip>
+            </div>
+          )}
+        </DetailsDropdown>
       </div>
       <aside className="min-w-0 md:col-span-2">
         <SelectField

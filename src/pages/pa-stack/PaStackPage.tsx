@@ -5,6 +5,7 @@ import { SubSection } from "./sections/SubSection";
 import { MidSection } from "./sections/MidSection";
 import { HornSection } from "./sections/HornSection";
 import { SettingsPanel } from "./sections/SettingsPanel";
+import { DispersionSection } from "./sections/DispersionSection";
 import { TotalsSection } from "./sections/TotalsSection";
 import { DetailsSection } from "./sections/DetailsSection";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
@@ -14,7 +15,7 @@ interface Props {
   planner: PaPlanner;
 }
 
-/** PA stack page: saved configurations, optimizer, 3D view, the Sub / Mid-bass / Horn results and the settings panel. */
+/** PA stack page: saved configurations, optimizer, 3D view, the Sub / Mid-bass / Horn results, the settings panel, then the dispersion map, totals and details. */
 export function PaStackPage({ planner }: Props) {
   const { isSettingsSheetOpen, store, fbUser, importSeed, snapshot, restore } = planner;
   return (
@@ -46,6 +47,7 @@ export function PaStackPage({ planner }: Props) {
 
         <SettingsPanel planner={planner} />
 
+        <DispersionSection planner={planner} />
         <TotalsSection planner={planner} />
         <DetailsSection planner={planner} />
       </main>
