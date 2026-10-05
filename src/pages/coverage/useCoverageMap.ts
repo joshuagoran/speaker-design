@@ -89,6 +89,8 @@ export interface CoverageMap {
   gain: number;
   /** the level at the reference at the system's level, dB (null until it can be worked out) */
   refDb: number | null;
+  /** the target `refDb` is held to, dB: `target`, or for the audience average the target of the grid on show */
+  refTarget: number;
   /** the balanced target against frequency, for the response chart */
   targetCurve: FrequencyPoint[];
 }
@@ -321,10 +323,12 @@ export function useCoverageMap(
     return { grid: drawn.grid, room: req.layout.room, target: t - g, gain: g, atLimit };
     // the listener only counts when it is the reference
   }, [drawn, job, refAtLimit, levelRef, refListener, targetDb]);
-  // the audience average needs the grid, so its gain follows the grid on show
-  const currentAtLimit =
-    levelRef === COVERAGE_LEVEL_REF.audience ? (view ? view.atLimit : null) : refAtLimit;
-  const gain = systemGain(target, currentAtLimit);
+  // the audience average needs the grid, so its gain and target follow the grid on show (an older band's while the
+  // next computes), never mixing that grid's average with the current band's target
+  const fromGrid = levelRef === COVERAGE_LEVEL_REF.audience;
+  const currentAtLimit = fromGrid ? (view ? view.atLimit : null) : refAtLimit;
+  const refTarget = fromGrid && view ? view.target + view.gain : target;
+  const gain = fromGrid ? (view ? view.gain : 0) : systemGain(target, currentAtLimit);
   const response = useMemo(
     () => responseAtLimit.map((o) => ({ f: o.f, spl: o.spl + gain })),
     [responseAtLimit, gain],
@@ -355,6 +359,7 @@ export function useCoverageMap(
     target,
     gain,
     refDb: currentAtLimit != null ? currentAtLimit + gain : null,
+    refTarget,
     targetCurve,
   };
 }

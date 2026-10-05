@@ -1,4 +1,5 @@
 import { PAL } from "../../styles/palette";
+import { PA_DB_BOT, PA_DB_TOP } from "../../constants/chartScales";
 import { useState } from "react";
 
 /** One curve point: frequency in Hz, level in dB. */
@@ -25,8 +26,8 @@ export function OptimizerCurveChart({
   fmin = 20,
   fmax = 200,
   band = [40, 90],
-  top = 135,
-  bot = 80,
+  top = PA_DB_TOP,
+  bot = PA_DB_BOT,
 }: Props) {
   const [hover, setHover] = useState<number | null>(null);
   const W = 220,

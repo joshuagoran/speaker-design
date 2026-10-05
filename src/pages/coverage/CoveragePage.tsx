@@ -320,10 +320,10 @@ export function CoveragePage({ planner }: Props) {
                   Working out the level
                   <Ellipsis />
                 </>
-              ) : map.refDb < map.target - 0.05 ? (
-                `It can't reach ${map.target.toFixed(0)} dB at ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}: at its limit it gives ${map.refDb.toFixed(1)} dB there, and it never plays past its limit.`
+              ) : map.refDb < map.refTarget - 0.05 ? (
+                `It can't reach ${map.refTarget.toFixed(0)} dB at ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}: at its limit it gives ${map.refDb.toFixed(1)} dB there, and it never plays past its limit.`
               ) : (
-                `Turned down ${Math.abs(map.gain).toFixed(1)} dB so ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]} gets ${map.target.toFixed(0)} dB in this band.`
+                `Turned down ${Math.abs(map.gain).toFixed(1)} dB so ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]} gets ${map.refTarget.toFixed(0)} dB in this band.`
               )}
             </p>
             <div className={label}>Band</div>
