@@ -1,3 +1,4 @@
+import { PA_SLIDERS, PA_THROAT_MAX_VSLOT1 } from "../../../constants/paSliders";
 import { ToggleButton } from "../../../components/ui/ToggleButton";
 import { Tooltip } from "../../../components/ui/Tooltip";
 import { SwatchPicker } from "../../../components/ui/SwatchPicker";
@@ -329,9 +330,9 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label="Width"
                   value={subBoxDims.w}
-                  min={18}
-                  max={40}
-                  step={0.5}
+                  min={PA_SLIDERS.subW.min}
+                  max={PA_SLIDERS.subW.max}
+                  step={PA_SLIDERS.subW.step}
                   unit="″"
                   onChange={(v) => setSubBoxDim("w", v)}
                   extra={renderDimensionLock("subDim", "w", "Sub width")}
@@ -339,9 +340,9 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label="Height"
                   value={subBoxDims.h}
-                  min={18}
-                  max={42}
-                  step={0.5}
+                  min={PA_SLIDERS.subH.min}
+                  max={PA_SLIDERS.subH.max}
+                  step={PA_SLIDERS.subH.step}
                   unit="″"
                   onChange={(v) => setSubBoxDim("h", v)}
                   extra={renderDimensionLock("subDim", "h", "Sub height")}
@@ -349,9 +350,9 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label="Depth"
                   value={subBoxDims.d}
-                  min={14}
-                  max={32}
-                  step={0.5}
+                  min={PA_SLIDERS.subD.min}
+                  max={PA_SLIDERS.subD.max}
+                  step={PA_SLIDERS.subD.step}
                   unit="″"
                   onChange={(v) => setSubBoxDim("d", v)}
                   extra={renderDimensionLock("subDim", "d", "Sub depth")}
@@ -400,9 +401,9 @@ export function SettingsPanel({ planner }: Props) {
                   <Slider
                     label="Slot height"
                     value={subVentSpec.slotH}
-                    min={1.5}
-                    max={9}
-                    step={0.25}
+                    min={PA_SLIDERS.slotH.min}
+                    max={PA_SLIDERS.slotH.max}
+                    step={PA_SLIDERS.slotH.step}
                     unit="″"
                     onChange={(v) => setSubVentField("slotH", v)}
                   />
@@ -411,9 +412,9 @@ export function SettingsPanel({ planner }: Props) {
                   <Slider
                     label="Duct throat"
                     value={subVentSpec.throat}
-                    min={1}
-                    max={portStyle === "vslot1" ? 10 : 7}
-                    step={0.25}
+                    min={PA_SLIDERS.throat.min}
+                    max={portStyle === "vslot1" ? PA_THROAT_MAX_VSLOT1 : PA_SLIDERS.throat.max}
+                    step={PA_SLIDERS.throat.step}
                     unit="″"
                     onChange={(v) => setSubVentField("throat", v)}
                   />
@@ -423,18 +424,18 @@ export function SettingsPanel({ planner }: Props) {
                     <Slider
                       label="Tubes"
                       value={subVentSpec.nt}
-                      min={1}
-                      max={6}
-                      step={1}
+                      min={PA_SLIDERS.tubes.min}
+                      max={PA_SLIDERS.tubes.max}
+                      step={PA_SLIDERS.tubes.step}
                       unit=""
                       onChange={(v) => setSubVentField("nt", v)}
                     />
                     <Slider
                       label="Tube diameter"
                       value={subVentSpec.dia}
-                      min={3}
-                      max={10}
-                      step={0.25}
+                      min={PA_SLIDERS.tubeDia.min}
+                      max={PA_SLIDERS.tubeDia.max}
+                      step={PA_SLIDERS.tubeDia.step}
                       unit="″"
                       onChange={(v) => setSubVentField("dia", v)}
                     />
@@ -443,9 +444,9 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label="Duct length"
                   value={subVentSpec.len}
-                  min={3}
-                  max={30}
-                  step={0.5}
+                  min={PA_SLIDERS.ductLen.min}
+                  max={PA_SLIDERS.ductLen.max}
+                  step={PA_SLIDERS.ductLen.step}
                   unit="″"
                   onChange={(v) => setSubVentField("len", v)}
                 />
@@ -469,9 +470,9 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label={`Highpass (${subHighpassType})`}
                   value={subHighpassHz}
-                  min={20}
-                  max={50}
-                  step={1}
+                  min={PA_SLIDERS.hpf.min}
+                  max={PA_SLIDERS.hpf.max}
+                  step={PA_SLIDERS.hpf.step}
                   unit=" Hz"
                   onChange={setSubHighpassHz}
                   extra={renderLockButton("hpf", "the highpass")}
@@ -532,9 +533,9 @@ export function SettingsPanel({ planner }: Props) {
                     <Slider
                       label="Width"
                       value={midBoxDims.w}
-                      min={10}
-                      max={24}
-                      step={0.5}
+                      min={PA_SLIDERS.midW.min}
+                      max={PA_SLIDERS.midW.max}
+                      step={PA_SLIDERS.midW.step}
                       unit="″"
                       onChange={(v) => setMidBoxDim("w", v)}
                       extra={renderDimensionLock("midDim", "w", "Mid width")}
@@ -542,9 +543,9 @@ export function SettingsPanel({ planner }: Props) {
                     <Slider
                       label="Height"
                       value={midBoxDims.h}
-                      min={10}
-                      max={24}
-                      step={0.5}
+                      min={PA_SLIDERS.midH.min}
+                      max={PA_SLIDERS.midH.max}
+                      step={PA_SLIDERS.midH.step}
                       unit="″"
                       onChange={(v) => setMidBoxDim("h", v)}
                       extra={renderDimensionLock("midDim", "h", "Mid height")}
@@ -552,9 +553,9 @@ export function SettingsPanel({ planner }: Props) {
                     <Slider
                       label="Depth"
                       value={midBoxDims.d}
-                      min={8}
-                      max={24}
-                      step={0.5}
+                      min={PA_SLIDERS.midD.min}
+                      max={PA_SLIDERS.midD.max}
+                      step={PA_SLIDERS.midD.step}
                       unit="″"
                       onChange={(v) => setMidBoxDim("d", v)}
                       extra={renderDimensionLock("midDim", "d", "Mid depth")}
@@ -564,9 +565,9 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label="Crossover, sub to mid"
                   value={subMidCrossoverHz}
-                  min={60}
-                  max={250}
-                  step={5}
+                  min={PA_SLIDERS.xoLo.min}
+                  max={PA_SLIDERS.xoLo.max}
+                  step={PA_SLIDERS.xoLo.step}
                   unit=" Hz"
                   onChange={setSubMidCrossoverHz}
                   extra={renderLockButton("xoLo", "the sub-to-mid crossover")}
@@ -579,9 +580,9 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label="Crossover, mid to horn"
                   value={midHornCrossoverHz}
-                  min={500}
-                  max={2000}
-                  step={50}
+                  min={PA_SLIDERS.xoHi.min}
+                  max={PA_SLIDERS.xoHi.max}
+                  step={PA_SLIDERS.xoHi.step}
                   unit=" Hz"
                   onChange={setMidHornCrossoverHz}
                   extra={renderLockButton("xoHi", "the mid-to-horn crossover")}

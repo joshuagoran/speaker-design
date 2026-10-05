@@ -1,3 +1,4 @@
+import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
@@ -2006,6 +2007,9 @@ export interface PaDriverCompareRow {
    * per option, so those are never marked) */
   problems: (PaProblem & { yoursToo: boolean })[];
 }
+
+/** A slider's range and step (an amp slider's steps, with its top). */
+export type SliderSpec = AmpSteps & { max: number };
 
 export interface PaProblemLimits {
   maxLb: number;

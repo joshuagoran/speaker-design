@@ -160,7 +160,8 @@ export function OptimizerPanel({
             lines={keepLines(goals, OPTIMIZER_GOALS, PA_KEEP_WORDS, curOut != null)}
             more={[
               `${PA_RUN_LABELS.improve}: a quick search around your design (about a second).`,
-              `${PA_RUN_LABELS.full}: ${PA_RUN_LABELS.improve}'s designs and every design on the grid below, so its first card is never behind ${PA_RUN_LABELS.improve}'s and nothing on the grid beats it (up to a minute or so):`,
+              `${PA_RUN_LABELS.full}: ${PA_RUN_LABELS.improve}'s designs and every design on the grid below, so its first card is never behind ${PA_RUN_LABELS.improve}'s and nothing on the grid beats it (up to a minute or so). Both round each card's box and duct to the settings' steps and check it again.`,
+              `${PA_RUN_LABELS.full}'s grid:`,
               ...fullGridLines.map((line) => `· ${line}`),
             ]}
           />
