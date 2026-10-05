@@ -9,6 +9,7 @@
     "optimizer-dump": "vp test --run --config tests/optimizer-dump.config.ts",
     "optimizer-dump:pa": "vp test --run --config tests/optimizer-dump.config.ts --project \"pa-*\"",
     "optimizer-dump:hifi": "vp test --run --config tests/optimizer-dump.config.ts --project \"hifi-*\"",
+    "optimizer-snapshot": "vp test --run --config tests/optimizer-snapshot.config.ts",
     "xmax-audit": "vp test --run --config tests/xmax-audit.config.ts",
     "prepare": "vp config"
   },
