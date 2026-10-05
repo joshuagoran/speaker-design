@@ -256,15 +256,37 @@ export function subTubeEndCorrection(
 }
 
 /**
+ * How many sticks `stickIn` long the pieces need: first fit, longest piece first, each piece cut whole from one stick
+ * (a piece longer than a stick takes sticks of its own, joined end to end).
+ */
+export function sticksFor(pieces: readonly number[], stickIn: number) {
+  const left: number[] = [];
+  let whole = 0;
+  for (const p of [...pieces].sort((a, b) => b - a)) {
+    const over = Math.floor(p / stickIn - 1e-9);
+    whole += over;
+    const rest = p - over * stickIn;
+    const i = left.findIndex((l) => l >= rest - 1e-9);
+    if (i >= 0) left[i] -= rest;
+    else left.push(stickIn - rest);
+  }
+  return whole + left.length;
+}
+
+/**
  * What a sub's tubes take to build (one sub): the stock pipe and elbow for their size (null where the catalogue has
- * none), the elbows each tube takes, the pipe sticks the tubes are cut from, and the price, or null where a part has no
- * US price.
+ * none), the elbows each tube takes, the pipe sticks its pieces (one per leg between elbows) are cut from, and the price,
+ * or null where a part has no US price.
  */
 export function subTubeKit(box: Dims3, style: PortStyle, v: TubeVent, t: number, drv: TubeDriver) {
   const pipe = PORT_PIPES.find((p) => p.dia === v.dia) ?? null,
     elbow = PORT_ELBOWS.find((p) => p.dia === v.dia) ?? null;
   const elbows = modelTubeElbows(box, style, v, t, drv);
-  const sticks = pipe ? Math.ceil((v.nt * v.len) / (pipe.stickFt * 12) - 1e-9) : 0;
+  const legs = subTubeLegs(box, style, v, t, drv, elbows);
+  const pieces = [legs.run, legs.rise, legs.back].filter((l) => l > 0);
+  const sticks = pipe
+    ? sticksFor(Array.from({ length: v.nt }, () => pieces).flat(), pipe.stickFt * 12)
+    : 0;
   const elbowPrice = elbows ? (elbow?.price ?? null) : 0;
   const price =
     pipe && elbowPrice !== null ? sticks * pipe.price + v.nt * elbows * elbowPrice : null;

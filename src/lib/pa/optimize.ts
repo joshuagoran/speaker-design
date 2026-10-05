@@ -810,10 +810,11 @@ export function optimizePaStack(
           let pushed = false,
             fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystemModelled } | null = null;
           for (const size of ventSizesFor(style)) {
-            // the lengths that fit, inside the duct-length slider: a bottom slot runs straight, then (past the lengths
-            // that fit neither way) folds up the back wall
+            // the lengths that fit, inside the duct-length slider, one way at a time: a bottom slot runs straight, then
+            // (past the lengths that fit neither way) folds up the back wall; round tubes take each elbow count apart,
+            // since each elbow steps the tuning
             const spans = ductFit(box, style, mk(size, 0), t, sd.sub)
-              .spans.map(
+              .tune.map(
                 ([a, b]) =>
                   [
                     Math.max(a, PA_SLIDERS.ductLen.min),

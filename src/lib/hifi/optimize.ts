@@ -34,7 +34,7 @@ import {
   needsWaveguide,
 } from "./hifi";
 import { ampVoltage, ventTuning } from "../pa/calc";
-import { ELBOW_COUNTS, tubeElbows, tubeSpan } from "../tubeFold";
+import { ELBOW_COUNTS, ownSpans, tubeElbows, tubeSpan } from "../tubeFold";
 import { throttledProgress } from "../optimizer/progress";
 import {
   passiveRadiatorMassMax,
@@ -254,20 +254,25 @@ function portFor(
         hifiRoundEndCorrection({ dia }, e),
       ).Fb;
   const room = hifiTubeRoom(dim, wall);
-  for (const e of ELBOW_COUNTS) {
-    const span = e <= maxElbows ? tubeSpan(room, dia, e) : null;
-    if (!span) continue;
-    let a = Math.max(0.5, span[0]),
-      b = span[1];
+  // each count over the lengths where it is the one the model takes, a quarter inch past the fewer counts' (the length
+  // is cut to the quarter inch, and must stay on the count it was tuned with)
+  for (const { e, span } of ownSpans(
+    ELBOW_COUNTS.map((k) => tubeSpan(room, dia, k)),
+    0.25,
+  )) {
+    if (e > maxElbows) break;
+    const lo = Math.ceil(Math.max(0.5, span[0]) * 4) / 4,
+      hi = Math.floor(span[1] * 4) / 4;
+    let a = lo,
+      b = hi;
     if (b <= a || fb(a, e) < Fb || fb(b, e) > Fb) continue;
     for (let i = 0; i < 20; i++) {
       const m = (a + b) / 2;
       if (fb(m, e) > Fb) a = m;
       else b = m;
     }
-    const len = Math.round(((a + b) / 2) * 4) / 4;
-    const elbows = tubeElbows(room, dia, len);
-    if (elbows !== null && elbows <= maxElbows) return { n, dia, len, elbows };
+    const len = Math.min(hi, Math.max(lo, Math.round(((a + b) / 2) * 4) / 4));
+    if (tubeElbows(room, dia, len) === e) return { n, dia, len, elbows: e };
   }
   return null;
 }

@@ -212,12 +212,13 @@ export type PortGeometry =
   | (Pick<SlotPort, "shape" | "h"> & Pick<RoundPort, "elbows">);
 /**
  * The room a round port has (the PA sub's fold rule, lib/tubeFold): from the baffle front to the back wall, and up the
- * back wall half the inner height, so the riser and the leg the second elbow turns forward stay clear of the woofer.
+ * back wall half the inner height, so the riser and the leg the second elbow turns forward stay clear of the woofer;
+ * that leg's mouth keeps its diameter of air from the baffle's inside face (the stop, a wall behind the front).
  */
 export const hifiTubeRoom = (dim: Dims3, wall: number): TubeRoom => ({
   run: dim.d - wall,
   rise: (dim.h - 2 * wall) / 2,
-  stop: 0,
+  stop: wall,
 });
 // longest port (centerline, inches) that fits with up to `elbows` elbows (none when absent): straight front to back,
 // a diameter short of the back wall; one elbow turns it up the back wall; two turn it forward again (lib/tubeFold)

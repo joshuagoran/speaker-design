@@ -1,9 +1,18 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { tubeElbows, tubeLegs, tubeSpan, tubeSpans, type TubeRoom } from "../src/lib/tubeFold";
+import {
+  ELBOW_COUNTS,
+  ownSpans,
+  tubeElbows,
+  tubeLegs,
+  tubeSpan,
+  tubeSpans,
+  type TubeRoom,
+} from "../src/lib/tubeFold";
 import {
   modelTubeElbows,
   subTubeEndCorrection,
+  sticksFor,
   subTubeKit,
   tubeLayout,
   tubeWallEndCorrection,
@@ -19,7 +28,7 @@ import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
 import { TUBE_FLARE_RADIUS_IN, TUBE_WALL_END } from "../src/data/acoustics/tube-ends";
 import { PORT_ELBOWS, PORT_PIPES, PORT_TUBES } from "../src/data/catalog/port-tubes";
 import { PA_SLIDERS } from "../src/constants/paSliders";
-import { hifiBox, hifiPortElbows, portMaxLength } from "../src/lib/hifi/hifi";
+import { hifiBox, hifiPortElbows, hifiTubeRoom, portMaxLength } from "../src/lib/hifi/hifi";
 import { HIFI_WOOFERS } from "../src/lib/data";
 import { close, vent, DRV18 } from "./helpers";
 
@@ -175,4 +184,46 @@ test("hi-fi: the same fold rule, and each elbow tunes the port higher", () => {
   );
   const A = Math.PI;
   close(null, b!.vM!.Fb, ventTuning(b!.net, A, len, 1, 1.46 + SHARP_BEND_CORRECTION * 2).Fb, 1e-9);
+});
+
+test("tube fold: no elbow up a wall too short for a leg and the mouth's gap", () => {
+  // 4″: a riser needs a leg (4) plus the lid gap (4) above the axis; 7.5 isn't enough, 8 is
+  assert.equal(tubeSpan({ run: 20, rise: 7.5, stop: 0 }, 4, 1), null);
+  assert.ok(tubeSpan({ run: 20, rise: 8, stop: 0 }, 4, 1));
+  // a riser behind a stop deeper than the back wall allows has nowhere to stand
+  assert.equal(tubeSpan({ run: 12, rise: 25, stop: 11 }, 4, 1), null);
+});
+
+test("tube fold: each count's own lengths, where the model takes it, never overlapping", () => {
+  // straight to 16, one elbow from 15 (overlapping), two from 44: the elbow's own lengths start past the straight ones
+  const own = ownSpans(
+    ELBOW_COUNTS.map((e) => tubeSpan(room, 4, e)),
+    0.25,
+  );
+  assert.deepEqual(
+    own.map((o) => [o.e, o.span]),
+    [
+      [0, [0, 16]],
+      [1, [16.25, 39]],
+      [2, [44, 46]],
+    ],
+  );
+  for (const { e, span } of own) assert.equal(tubeElbows(room, 4, span[0]), e);
+});
+
+test("tube kit: sticks hold whole pieces, not the tubes' total length", () => {
+  // three 35″ pieces from 60″ sticks: one per stick, though 105″ is under two sticks
+  assert.equal(sticksFor([35, 35, 35], 60), 3);
+  assert.equal(sticksFor([30, 30, 20, 20], 60), 2);
+  // a piece longer than a stick takes a whole one and its rest goes in with the others
+  assert.equal(sticksFor([70, 50], 60), 2);
+});
+
+test("hi-fi: a port's return leg keeps its diameter of air from the baffle's inside face", () => {
+  const room = hifiTubeRoom({ w: 9, h: 30, d: 14 }, 0.75);
+  assert.equal(room.stop, 0.75);
+  const span = tubeSpan(room, 2, 2);
+  assert.ok(span);
+  const legs = tubeLegs(room, 2, span[1], 2);
+  assert.ok(legs.gap >= 2 - 1e-9, `${legs.gap}`);
 });

@@ -35,7 +35,7 @@ import type {
   VentSpec,
 } from "../../types";
 import { subTubeEndCorrection, subTubeSpan, type TubeDriver } from "./tubes";
-import { ELBOW_COUNTS, MAX_ELBOWS, type ElbowCount } from "../tubeFold";
+import { ELBOW_COUNTS, MAX_ELBOWS, ownSpans, type ElbowCount } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 
 const RHO = 1.18,
@@ -542,9 +542,10 @@ export function tubeLengthFor(
     w.len = x;
     return x - ductLengthFor(ventShape(style, box, w, t, drv, { elbows: e }), Leff);
   };
-  for (const e of ELBOW_COUNTS) {
-    const span = subTubeSpan(box, style, w, t, drv, e);
-    if (!span) continue;
+  // each count over the lengths where the model takes it (ownSpans), fewest first
+  for (const { e, span } of ownSpans(
+    ELBOW_COUNTS.map((k) => subTubeSpan(box, style, w, t, drv, k)),
+  )) {
     const ge = g(e),
       [a, b] = span;
     if (ge(b) < 0) continue; // even its longest tunes higher: more elbows

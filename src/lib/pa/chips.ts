@@ -14,7 +14,7 @@ import type {
 } from "../../types";
 import { isRoundPort, maxFoldedSlotIn, maxStraightSlotIn, minFoldedSlotIn } from "./calc";
 import { subTubeSpan, tubeLayout, type TubeDriver } from "./tubes";
-import { ELBOW_COUNTS, mergeSpans, type ElbowCount } from "../tubeFold";
+import { ELBOW_COUNTS, mergeSpans, ownSpans, type ElbowCount } from "../tubeFold";
 import { PA_SLIDERS } from "../../constants/paSliders";
 import { crossoverSlopeName } from "../../constants/crossovers";
 
@@ -51,7 +51,15 @@ export function ductFit(
         : [{ span: [0, maxSide] as const, what: "a side duct" }];
   const spans = mergeSpans(ways.map((w) => w.span));
   const fit = Math.max(0, ...spans.map(([, b]) => b));
-  return { maxStraight, minFold, maxFold, maxSide, fit, spans, ways };
+  // the lengths a solver tunes over, one way at a time (each turn steps the tuning): a slot's two ways never overlap;
+  // a tube's counts are cut to where each is the fewest that fit (the model's count), a slider step past the fewer
+  const tune: (readonly [number, number])[] = isRoundPort(portStyle)
+    ? ownSpans(
+        ELBOW_COUNTS.map((e) => subTubeSpan(subBox, portStyle, cVent, PT, drv, e)),
+        PA_SLIDERS.ductLen.step,
+      ).map((w) => w.span)
+    : ways.map((w) => w.span);
+  return { maxStraight, minFold, maxFold, maxSide, fit, spans, ways, tune };
 }
 /** How the duct-fit chip names a tube with each count of elbows. */
 const TUBE_WAYS = {

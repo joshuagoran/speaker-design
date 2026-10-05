@@ -2,6 +2,7 @@ import type { PaBoxGeometry } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
 import { isRoundPort } from "../../lib/pa/calc";
 import { tubeLayout, type BafflePoint } from "../../lib/pa/tubes";
+import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 
 interface Props {
   g: PaBoxGeometry;
@@ -98,7 +99,12 @@ export function BoxFront({ g, cur }: Props) {
   tubes?.tubes.forEach((p, i) =>
     vent.push(<circle key={i} {...onBaffle(p)} r={(v.dia * k) / 2} fill={pal.ink} />),
   );
-  const ventH = g.portStyle === "slots" ? v.slotH * k + t : 0;
+  // what the driver clears below it: the slot and its shelf, or the tube row's flares (the tower's sub section draws its
+  // driver centred above them; the stacks place it where the layout does)
+  const rowTop = tubes?.tubes.length
+    ? Math.max(...tubes.tubes.map((p) => p.y)) + v.dia / 2 + TUBE_FLARE_RADIUS_IN
+    : 0;
+  const ventH = g.portStyle === "slots" ? v.slotH * k + t : tubes ? rowTop * k + t : 0;
   const driver = (box: Rect, size: number, below = 0) => (
     <circle
       cx={box.x + box.w / 2}

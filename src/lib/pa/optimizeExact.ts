@@ -1563,10 +1563,11 @@ function exactHook(
       const Leff = (len + vs.ec) * 0.0254;
       return (343 / (2 * Math.PI)) * Math.sqrt((vs.area * 0.00064516) / ((V / 1000) * Leff));
     };
-    // the lengths that fit (a bottom slot straight, then folded, with the lengths that fit neither way between), so the
-    // search takes the shortest span that reaches the tuning, at the fold's shortest when even that tunes lower
+    // the lengths that fit, one way at a time (a bottom slot straight, then folded, with the lengths that fit neither way
+    // between; round tubes each elbow count apart, as each elbow steps the tuning), so the search takes the shortest
+    // span that reaches the tuning, at the last way's shortest when even that tunes lower
     const spans = ductFit(box, style, { ...vent, len: 0 }, t, sub)
-      .spans.map(
+      .tune.map(
         ([lo, hi]) =>
           [
             Math.max(lo, s.grid.minDuctIn),

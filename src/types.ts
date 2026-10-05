@@ -1168,6 +1168,9 @@ export interface PaMaxPoint {
 }
 
 /** The vent as the model uses it: openings, total area (in²), length (in), end correction (in), hydraulic diameter (in) and a description. */
+/** How many 90° elbows a round port tube takes to fit its box (lib/tubeFold). */
+export type ElbowCount = 0 | 1 | 2;
+
 export interface VentGeometry {
   n: number;
   area: number;
@@ -1175,7 +1178,7 @@ export interface VentGeometry {
   ec: number;
   dh: number;
   /** round tubes: the elbows each takes to fit (0 straight) */
-  elbows?: number;
+  elbows?: ElbowCount;
   desc: string;
 }
 
