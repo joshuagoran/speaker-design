@@ -1292,8 +1292,10 @@ export interface FillDesignState {
   boxType: FillBoxType;
   boxDims: Dims3;
   portSpec: FillPort;
-  /** the highpass to the subs, Hz (LR24) */
+  /** the highpass to the subs, Hz */
   highpassHz: number;
+  /** the highpass's slope: LR24 (4) or LR48 (8) */
+  highpassOrder: CrossoverOrder;
   /** per box, rated into 8 Ω */
   ampWatts: number;
   maxPortAirSpeedMs: number;
@@ -1306,6 +1308,8 @@ export interface FillSystemConfig {
   port: FillPort;
   /** the highpass to the subs, Hz */
   hp: number;
+  /** the highpass's slope: LR24 (4) or LR48 (8) */
+  hpOrder: CrossoverOrder;
   ampW: number;
   portMax: number;
 }
@@ -1564,6 +1568,7 @@ export interface FillChipsInput {
   /** the sealed box's Qtc, or null for a vented box */
   Qtc: number | null;
   hp: number;
+  hpOrder: FillSystemConfig["hpOrder"];
   portLimited: boolean;
   portMax: number;
   f3: number;

@@ -137,6 +137,7 @@ export const DEFAULT_FILL = {
   boxDims: { w: 11.5, h: 16, d: 11 },
   portSpec: { n: 1, dia: 3, len: 4 },
   highpassHz: 70,
+  highpassOrder: 4,
   ampWatts: 300,
   maxPortAirSpeedMs: 20,
 } satisfies FillDesignState;

@@ -162,6 +162,7 @@ export function evaluateFill(c: FillGoldenConfig): GoldenValues {
     dim: c.dim || { w: 11.5, h: 16, d: 11 },
     port: c.port || { n: 1, dia: 3, len: 4 },
     hp: c.hp || 70,
+    hpOrder: 4,
     ampW: c.ampW || 300,
     portMax: c.portMax || 20,
   });
