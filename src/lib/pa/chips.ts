@@ -14,6 +14,7 @@ import type {
 } from "../../types";
 import { isRoundPort, maxFoldedSlotIn, maxStraightSlotIn, minFoldedSlotIn } from "./calc";
 import { PA_SLIDERS } from "../../constants/paSliders";
+import { crossoverSlopeName } from "../../constants/crossovers";
 
 // Longest duct each layout can hold, leaving an opening at least as wide as the duct. A bottom slot runs straight
 // while it fits (maxStraight) and folds up the back wall past that, so it holds the longer of the two; a fold is never
@@ -344,9 +345,9 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
   return F;
 }
 
-// s: { drv, dim, Fb (vented) | Qtc (sealed), hp, portLimited, portMax, f3, hf, hfLimW, ampW, pad }
+// s: { drv, dim, Fb (vented) | Qtc (sealed), hp, hpOrder, portLimited, portMax, f3, hf, hfLimW, ampW, pad }
 export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
-  const { drv, dim, Fb, Qtc, hp, portLimited, portMax, f3, hf, hfLimW, ampW, pad } = s;
+  const { drv, dim, Fb, Qtc, hp, hpOrder, portLimited, portMax, f3, hf, hfLimW, ampW, pad } = s;
   const F: Chip<ChipId<"fill">>[] = [];
   if (Math.min(dim.w, dim.h) < drv.size + 1)
     F.push([
@@ -367,7 +368,7 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
         : [
             "ok",
             `Tuned to ${Fb.toFixed(0)} Hz`,
-            `with a ${hp} Hz LR24 highpass to the subs.`,
+            `with a ${hp} Hz ${crossoverSlopeName(hpOrder)} highpass to the subs.`,
             "fillTuning",
           ],
     );

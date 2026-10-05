@@ -1051,9 +1051,9 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
 
 // ---- passive coaxial fills ----
 // drv: FILL_OPTIONS entry. cfg: { boxType: "vented" | "sealed", dim {w,h,d} external in, port {n, dia, len},
-// hp (LR24 highpass to the subs), ampW (per box, 8 ohm rating), portMax }. 1/2" walls throughout.
+// hp (highpass to the subs, Hz), hpOrder (its slope: 4 = LR24, 8 = LR48), ampW (per box, 8 ohm rating), portMax }. 1/2" walls throughout.
 export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem | null {
-  const { boxType, dim, port, hp, ampW, portMax } = cfg;
+  const { boxType, dim, port, hp, hpOrder, ampW, portMax } = cfg;
   const ts = drv.ts,
     V = ampVoltage(ampW),
     vented = boxType === "vented";
@@ -1063,9 +1063,11 @@ export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem |
   const disp = ts.disp != null ? ts.disp : drv.size >= 10 ? 1.5 : 1;
   const net = Math.max(3, gross - disp - (vented ? pVol : 0));
   const eff = vented ? net : net * STUFFING_VOLUME_GAIN; // sealed boxes are stuffed
-  const vM = vented ? boxModel(ts, eff, pArea, port.len, hp, V, "LR24", { nPorts: port.n }) : null;
-  // sealed: the same LR24 highpass to the subs, and no lowpass
-  const sM = vented ? null : closedBox(ts, eff, hp, null, V, { hpOrder: 4, lpOrder: 4 });
+  const vM = vented
+    ? boxModel(ts, eff, pArea, port.len, hp, V, crossoverSlopeName(hpOrder), { nPorts: port.n })
+    : null;
+  // sealed: the same highpass to the subs, and no lowpass (lpOrder is unused without one)
+  const sM = vented ? null : closedBox(ts, eff, hp, null, V, { hpOrder, lpOrder: hpOrder });
   const m = vM || sM;
   if (!m) return null; // a vented box with no port area or length has no model
   const max = maxOutputCurve(m.curve, ts, V, portMax).filter((o) => o.f <= 300);

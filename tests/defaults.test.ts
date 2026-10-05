@@ -97,6 +97,7 @@ describe("default designs", () => {
       dim: d.boxDims,
       port: d.portSpec,
       hp: d.highpassHz,
+      hpOrder: d.highpassOrder,
       ampW: d.ampWatts,
       portMax: d.maxPortAirSpeedMs,
     });
