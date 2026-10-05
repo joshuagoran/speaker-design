@@ -160,11 +160,17 @@ function flowMass(dx: Float64Array, dy: Float64Array, kind: Uint8Array, warm?: F
   p.set(z);
   let rz = 0;
   for (let k = 0; k < n; k++) rz += r[k] * z[k];
+  // the table's grids converge in a few hundred iterations; one that reaches the cap fails rather than give a wrong value
+  const MAX_ITERATIONS = 20_000;
   let it = 0;
-  for (; it < 20_000; it++) {
+  for (; ; it++) {
     let rr = 0;
     for (let k = 0; k < n; k++) rr += r[k] * r[k];
     if (rr < 1e-18 * b2) break;
+    if (it === MAX_ITERATIONS)
+      throw new Error(
+        `slot flow: CG did not converge in ${MAX_ITERATIONS} iterations (${n} cells)`,
+      );
     apply(p, Ap);
     let pAp = 0;
     for (let k = 0; k < n; k++) pAp += p[k] * Ap[k];
@@ -339,23 +345,46 @@ export async function solveGroups(groups: StraightSlot[][], warm = true) {
     .sort((a, b) => b.cells - a.cells)
     .map((g) => g.i);
   let next = 0;
+  // the first failure stops the pool: no more groups go out, and every worker is terminated
+  let failed = false;
+  const workers: Worker[] = [];
+  const stopAll = () => {
+    failed = true;
+    for (const w of workers) void w.terminate();
+  };
   await Promise.all(
     Array.from(
       { length: Math.min(os.availableParallelism(), groups.length) },
       () =>
         new Promise<void>((resolve, reject) => {
           const worker = new Worker(new URL("./slot-flow-worker.mjs", import.meta.url));
+          workers.push(worker);
+          let done = false;
+          const fail = (err: unknown) => {
+            done = true;
+            stopAll();
+            reject(err);
+          };
           const send = () => {
+            if (failed) return;
             if (next < order.length) {
               const i = order[next++];
               worker.postMessage({ i, points: groups[i], warm });
-            } else void worker.terminate().then(() => resolve());
+            } else {
+              done = true;
+              void worker.terminate().then(() => resolve());
+            }
           };
           worker.on("message", (m: { i: number; out: GroupResult[] }) => {
             results[m.i] = m.out;
             send();
           });
-          worker.on("error", reject);
+          worker.on("error", fail);
+          worker.on("messageerror", fail);
+          // a worker that exits before its last group (not by our terminate) would otherwise leave the pool waiting
+          worker.on("exit", (code) => {
+            if (!done) fail(new Error(`slot-flow worker exited with code ${code}`));
+          });
           send();
         }),
     ),
