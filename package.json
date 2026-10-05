@@ -7,6 +7,7 @@
     "test": "vp test",
     "golden": "vp test --run --config tests/update-golden.config.ts",
     "optimizer-dump": "vp test --run --config tests/optimizer-dump.config.ts",
+    "optimizer-snapshot": "vp test --run --config tests/optimizer-snapshot.config.ts",
     "xmax-audit": "vp test --run --config tests/xmax-audit.config.ts",
     "prepare": "vp config"
   },
