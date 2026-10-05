@@ -1,12 +1,11 @@
-import { SectionHeading } from "../../../components/ui/SectionHeading";
+import { DetailsDropdown } from "../../../components/ui/DetailsDropdown";
+import { UI_TEXT } from "../../../constants/uiText";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
 
 interface Props {
   planner: Pick<
     PaPlanner,
-    | "showDetails"
-    | "setShowDetails"
     | "subDriver"
     | "midDriver"
     | "hornOption"
@@ -26,11 +25,9 @@ interface Props {
   >;
 }
 
-/** Toggle for, and text of, the written details of the sub, mid-bass cube and horn. */
+/** The Details drop-down: the written details of the sub, mid-bass cube and horn, and the parts' notes. */
 export function DetailsSection({ planner }: Props) {
   const {
-    showDetails,
-    setShowDetails,
     subDriver,
     midDriver,
     hornOption,
@@ -49,69 +46,37 @@ export function DetailsSection({ planner }: Props) {
     hornCenterHeightIn,
   } = planner;
   return (
-    <>
-      <div className="min-w-0 md:col-span-5 mt-4" style={{ fontFamily: FONT }}>
-        <button
-          onClick={() => setShowDetails((v) => !v)}
-          aria-expanded={showDetails}
-          className="text-sm px-3 py-1.5 rounded border border-stone-300 hover:border-stone-500"
-        >
-          {showDetails ? "Hide" : "Show"} sub, mid-bass and horn details
-        </button>
-      </div>
-      {showDetails && (
-        <section
-          className="min-w-0 md:col-span-5 grid grid-cols-1 md:grid-cols-3 gap-6"
-          style={{ fontFamily: FONT }}
-        >
-          <div>
-            <SectionHeading className="mb-2">Sub</SectionHeading>
-            <p className="text-sm text-stone-900">
-              {subDriver.name} in a {subBox.w}×{subBox.h}×{subBox.d} in cabinet,{" "}
-              {subGrossLiters.toFixed(0)} L gross, {subNetLiters.toFixed(0)} L net. Vent:{" "}
-              {port.desc}. 3/4″ baffle set {baffleInsetIn}″ behind the frame,{" "}
-              {wallThicknessIn === 0.5 ? "1/2″" : "3/4″"} birch walls, 1/4″ roundovers on the front
-              edges.
-            </p>
-          </div>
-          <div>
-            <SectionHeading className="mb-2">Mid-bass cube</SectionHeading>
-            <p className="text-sm text-stone-900">
-              {midDriver.name} in a {effectiveMidBoxDims.w}×{effectiveMidBoxDims.h}×
-              {effectiveMidBoxDims.d} in sealed box, gross {midBoxLiters.toFixed(0)} L, lightly
-              stuffed. Covers {subMidCrossoverHz} Hz to {midHornCrossoverHz} Hz. Same construction,
-              flush-mounted driver.
-            </p>
-            {midDriver.note && (
-              <p className="text-sm text-stone-500 mt-2">
-                <span className="font-medium text-stone-900">{midDriver.name}.</span>{" "}
-                {midDriver.note}
-              </p>
-            )}
-          </div>
-          <div>
-            <SectionHeading className="mb-2">Horn</SectionHeading>
-            <p className="text-sm text-stone-900">
-              {hornOption.name} with {compressionDriver.name}, crossed at {midHornCrossoverHz} Hz
-              (maker suggests {hornOption.xo}). Sits on a short block so the mouth clears the cube.
-              Total stack height about {stackHeightIn.toFixed(0)} in, horn center at{" "}
-              {hornCenterHeightIn.toFixed(0)} in.
-            </p>
-            {compressionDriver.note && (
-              <p className="text-sm text-stone-500 mt-2">
-                <span className="font-medium text-stone-900">{compressionDriver.name}.</span>{" "}
-                {compressionDriver.note}
-              </p>
-            )}
-            {hornOption.note && (
-              <p className="text-sm text-stone-500 mt-2">
-                <span className="font-medium text-stone-900">{hornOption.name}.</span>{" "}
-                {hornOption.note}
-              </p>
-            )}
-          </div>
-        </section>
-      )}
-    </>
+    <div className="min-w-0 md:col-span-5" style={{ fontFamily: FONT }}>
+      <DetailsDropdown summary={UI_TEXT.details}>
+        <div>
+          <span className="font-medium text-stone-900">Sub.</span> {subDriver.name} in a {subBox.w}×
+          {subBox.h}×{subBox.d} in cabinet, {subGrossLiters.toFixed(0)} L gross,{" "}
+          {subNetLiters.toFixed(0)} L net. Vent: {port.desc}. 3/4″ baffle set {baffleInsetIn}″
+          behind the frame, {wallThicknessIn === 0.5 ? "1/2″" : "3/4″"} birch walls, 1/4″ roundovers
+          on the front edges.
+        </div>
+        <div>
+          <span className="font-medium text-stone-900">{UI_TEXT.midBass} cube.</span>{" "}
+          {midDriver.name} in a {effectiveMidBoxDims.w}×{effectiveMidBoxDims.h}×
+          {effectiveMidBoxDims.d} in sealed box, gross {midBoxLiters.toFixed(0)} L, lightly stuffed.
+          Covers {subMidCrossoverHz} Hz to {midHornCrossoverHz} Hz. Same construction, flush-mounted
+          driver.
+        </div>
+        <div>
+          <span className="font-medium text-stone-900">Horn.</span> {hornOption.name} with{" "}
+          {compressionDriver.name}, crossed at {midHornCrossoverHz} Hz (maker suggests{" "}
+          {hornOption.xo}). Sits on a short block so the mouth clears the cube. Total stack height
+          about {stackHeightIn.toFixed(0)} in, horn center at {hornCenterHeightIn.toFixed(0)} in.
+        </div>
+        {[midDriver, compressionDriver, hornOption].map(
+          (part) =>
+            part.note && (
+              <div key={part.name}>
+                <span className="font-medium text-stone-900">{part.name}.</span> {part.note}
+              </div>
+            ),
+        )}
+      </DetailsDropdown>
+    </div>
   );
 }

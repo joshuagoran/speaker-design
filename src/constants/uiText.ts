@@ -10,4 +10,6 @@ export const UI_TEXT = {
   midBass: "Mid-bass",
   /** a room with no walls: the optimizer's room choice and the coverage map's */
   outdoors: "Outdoors",
+  /** the summary line of the Details drop-downs (each page's written details, the optimizer's goal notes) */
+  details: "Details",
 } as const;
