@@ -9,7 +9,7 @@ import type {
   RadiatorPanel,
 } from "../../types";
 import { cutoutNote, formatInches } from "../pa/calc";
-import { GRAIN_PRESETS } from "../pa/cutlist";
+import { GRAIN_PRESETS, NOTE_SEP } from "../pa/cutlist";
 import { HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import {
   driverLayout,
@@ -25,7 +25,7 @@ const sizedCutout = (size: number) => {
   return c != null ? cutoutNote(c) : "driver cutout: use the datasheet's (no typical size on file)";
 };
 const joinNotes = (notes: (string | false | null | undefined)[]) =>
-  notes.filter((n): n is string => !!n).join("; ");
+  notes.filter((n): n is string => !!n).join(NOTE_SEP);
 
 /**
  * How each joint puts the box together, as the panels' sizes against the outside W × H × D (t the wall):
@@ -68,20 +68,28 @@ export function hifiCutParts({ cfg, woofer, tweeter, joint, prPanel }: HifiCutPa
   const faceNote = (where: "front" | "rear") =>
     joint === "butt" ? `covers the ${where} edges` : `sits in the ${where} rabbets`;
 
-  // the baffle's cutouts, inches from the box bottom (the model's driver layout)
+  // the baffle's cutouts, as heights up from the baffle's own bottom edge, so they can be marked on the loose panel:
+  // the model's driver layout is from the box bottom, and a rabbeted or mitred baffle sits t/2 above it
+  const edge = joint === "butt" ? 0 : t / 2;
+  const up = (fromBoxBottom: number) =>
+    `${formatInches(fromBoxBottom - edge)}″ above the bottom edge`;
   const lay = driverLayout(woofer, tweeter, cfg.dim, !!cfg.guide?.freestanding);
   const off = tweeterOffset(cfg, tweeter, lay);
   const tweeterNote = lay.onTop
     ? "no tweeter cutout: its waveguide sits on the box top"
-    : `tweeter ${formatInches(tweeter.faceplate.w)} × ${formatInches(tweeter.faceplate.h)}″ cutout (faceplate; use the datasheet's), centred ${formatInches(lay.tweeterIn)}″ above the box bottom${off ? `, ${formatInches(Math.abs(off))}″ ${off > 0 ? "inward" : "outward"} of centre (mirror the pair)` : ""}`;
-  const wooferNote = `woofer ${sizedCutout(woofer.size)}, centred ${formatInches(lay.wooferIn)}″ above the box bottom`;
+    : `tweeter: ${formatInches(tweeter.faceplate.w)} × ${formatInches(tweeter.faceplate.h)}″ cutout (faceplate; use the datasheet's), centre ${up(lay.tweeterIn)}${off ? `, ${formatInches(Math.abs(off))}″ ${off > 0 ? "inward" : "outward"} of centre (mirror the pair)` : ""}`;
+  const wooferNote = `woofer: ${sizedCutout(woofer.size)}, centre ${up(lay.wooferIn)}`;
 
   const ventPort = hifiVentPort({ ...cfg, wall: t });
   const also: string[] = [];
   let portNote: string | null = null;
   const extra: CutPart[] = [];
+  // the model's check that the port fits the box (null: too long for it)
+  const elbows = ventPort ? hifiPortElbows(cfg.dim, t, ventPort) : 0;
+  const tooLong = "too long for this box (see the Hi-fi page)";
   if (ventPort?.shape === "slot") {
-    portNote = `slot opening ${formatInches(ventPort.w)} × ${formatInches(ventPort.h)}″ along the bottom, from the bottom panel's inside face`;
+    // the slot runs from the bottom panel's inside face (t up the box) to the shelf
+    portNote = `slot: ${formatInches(ventPort.w)} × ${formatInches(ventPort.h)}″ opening, centred, ${up(t)}`;
     extra.push({
       box,
       part: "slotShelf",
@@ -89,13 +97,17 @@ export function hifiCutParts({ cfg, woofer, tweeter, joint, prPanel }: HifiCutPa
       a: ventPort.w,
       b: ventPort.len,
       t,
-      note: `roof of the slot, ${formatInches(ventPort.h)}″ above the bottom; runs back from the baffle`,
+      note: joinNotes([
+        `roof of the slot: underside ${formatInches(ventPort.h)}″ above the bottom panel`,
+        "runs back from the baffle",
+        elbows == null && tooLong,
+      ]),
     });
   } else if (ventPort) {
-    portNote = `${ventPort.n} × port hole for the ${formatInches(ventPort.dia)}″ tube (size it to the tube's outside)`;
-    const e = hifiPortElbows(cfg.dim, t, ventPort);
+    portNote = `port: ${ventPort.n} × hole for the ${formatInches(ventPort.dia)}″ tube (size it to the tube's outside)`;
+    const e = elbows;
     also.push(
-      `${ventPort.n} × ${formatInches(ventPort.dia)}″ port tube per speaker, ${formatInches(ventPort.len)}″ long (buy, flared)${e == null ? "; too long for this box (see the Hi-fi page)" : e ? `, with ${e} elbow${e > 1 ? "s" : ""}` : ""}`,
+      `${ventPort.n} × ${formatInches(ventPort.dia)}″ port tube per speaker, ${formatInches(ventPort.len)}″ long (buy, flared)${e == null ? `; ${tooLong}` : e ? `, with ${e} elbow${e > 1 ? "s" : ""}` : ""}`,
     );
   }
 
@@ -120,7 +132,7 @@ export function hifiCutParts({ cfg, woofer, tweeter, joint, prPanel }: HifiCutPa
   const r = cfg.roundoverIn || 0;
   const roundover =
     r > 0 &&
-    `${formatInches(r)}″ roundover on the front edges${joint === "butt" ? "" : " (rout after glue-up)"}${r > t + 1e-9 ? `; deeper than the ${full}″ stock: double the baffle up or glue hardwood strips along its edges` : ""}`;
+    `${formatInches(r)}″ roundover on the front edges${joint === "butt" ? "" : " (rout after glue-up)"}${r > t + 1e-9 ? `${NOTE_SEP}roundover deeper than the ${full}″ stock: double the baffle up or glue hardwood strips along its edges` : ""}`;
 
   const parts: CutPart[] = [
     {

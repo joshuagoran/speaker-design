@@ -1,6 +1,6 @@
 import { describe, test } from "vite-plus/test";
 import assert from "node:assert";
-import { PLYWOOD_SHEETS, cutParts } from "../src/lib/pa/calc";
+import { PLYWOOD_SHEETS, cutParts, formatInches } from "../src/lib/pa/calc";
 import {
   GRAIN_PRESETS,
   KERF_OPTIONS,
@@ -9,9 +9,10 @@ import {
   cutRowTags,
   cutRows,
   layoutCutlist,
+  noteLines,
 } from "../src/lib/pa/cutlist";
 import { hifiCutParts, settingsForMaterial } from "../src/lib/hifi/cutlist";
-import { RADIATOR_PANEL } from "../src/lib/hifi/hifi";
+import { RADIATOR_PANEL, driverLayout } from "../src/lib/hifi/hifi";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_HIFI, DEFAULT_PA } from "../src/lib/defaults";
 import { CUT_BOX_TAGS } from "../src/constants/cutParts";
@@ -114,12 +115,12 @@ describe("Hi-fi panels", () => {
     const shelf = get(slot.parts, "slotShelf");
     close(null, shelf.a, DEFAULT_HIFI.boxDims.w - 2 * DEFAULT_HIFI.wallThicknessIn, 1e-9);
     close(null, shelf.b, 7, 1e-9);
-    assert.match(get(slot.parts, "baffle").note, /slot opening/);
+    assert.match(get(slot.parts, "baffle").note, /slot: .*opening/);
     assert.equal(slot.also.length, 0);
     const round = partsOf();
     assert.ok(!round.parts.some((p) => p.part === "slotShelf"));
     assert.match(round.also.join(), /port tube per speaker/);
-    assert.match(get(round.parts, "baffle").note, /port hole/);
+    assert.match(get(round.parts, "baffle").note, /port: .*hole for/);
     const sealed = partsOf({ boxType: "sealed" });
     assert.ok(!sealed.parts.some((p) => p.part === "slotShelf"));
     assert.equal(sealed.also.length, 0);
@@ -128,8 +129,8 @@ describe("Hi-fi panels", () => {
 
   test("the baffle carries the driver cutouts and the roundover", () => {
     const sharp = get(partsOf().parts, "baffle").note;
-    assert.match(sharp, /woofer .*driver cutout \(typical; use the datasheet's\)/);
-    assert.match(sharp, /tweeter .*cutout/);
+    assert.match(sharp, /woofer: .*driver cutout \(typical; use the datasheet's\)/);
+    assert.match(sharp, /tweeter: .*cutout/);
     assert.doesNotMatch(sharp, /roundover/);
     const round = get(partsOf({ roundoverIn: 0.75 }).parts, "baffle").note;
     assert.match(round, /3\/4″ roundover on the front edges/);
@@ -167,6 +168,58 @@ describe("Hi-fi panels", () => {
     const { parts } = partsOf({ boxType: "radiator" });
     assert.match(get(parts, RADIATOR_PANEL).note, /passive radiator/);
     assert.equal(RADIATOR_PANEL, "back");
+  });
+
+  for (const joint of JOINTS)
+    test(`${joint}: cutout heights are from the baffle's own bottom edge`, () => {
+      const o = { portSpec: { shape: "slot", n: 1, h: 1.5, len: 7 } } as const;
+      const d = design(o);
+      const t = DEFAULT_HIFI.wallThicknessIn;
+      const lay = driverLayout(
+        DEFAULT_HIFI.woofer,
+        d.tweeterWithWaveguide,
+        d.speakerConfig.dim,
+        !!d.speakerConfig.guide?.freestanding,
+      );
+      const edge = joint === "butt" ? 0 : t / 2;
+      const lines = noteLines(get(partsOf(o, joint).parts, "baffle").note);
+      const line = (what: string) => lines.find((l) => l.startsWith(what)) ?? "";
+      assert.ok(
+        line("woofer:").endsWith(
+          `centre ${formatInches(lay.wooferIn - edge)}″ above the bottom edge`,
+        ),
+        line("woofer:"),
+      );
+      if (!lay.onTop)
+        assert.match(
+          line("tweeter:"),
+          new RegExp(`centre ${formatInches(lay.tweeterIn - edge)}″ above the bottom edge`),
+        );
+      assert.ok(
+        line("slot:").endsWith(`centred, ${formatInches(t - edge)}″ above the bottom edge`),
+        line("slot:"),
+      );
+    });
+
+  test("a slot too long for the box is flagged on its shelf", () => {
+    const fits = get(
+      partsOf({ portSpec: { shape: "slot", n: 1, h: 1.5, len: 7 } }).parts,
+      "slotShelf",
+    );
+    assert.doesNotMatch(fits.note, /too long/);
+    const long = get(
+      partsOf({ portSpec: { shape: "slot", n: 1, h: 1.5, len: 40 } }).parts,
+      "slotShelf",
+    );
+    assert.match(long.note, /too long for this box/);
+  });
+
+  test("a row's note lists each note on its own line, brackets kept whole", () => {
+    const lines = noteLines(get(partsOf().parts, "baffle").note);
+    assert.ok(lines.length >= 3, "the joint, the woofer and the tweeter at least");
+    assert.ok(lines.some((l) => /^woofer: .*\(typical; use the datasheet's\)/.test(l)));
+    assert.deepEqual(noteLines("a; b (c; d); e"), ["a", "b (c; d)", "e"]);
+    assert.deepEqual(noteLines(""), []);
   });
 
   test("the rows are tagged H1, H2 …", () => {

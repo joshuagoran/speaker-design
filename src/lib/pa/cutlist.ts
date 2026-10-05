@@ -62,6 +62,30 @@ export const FROM_OFFCUT: ReadonlySet<CutPartId> = new Set(["baffleCleat", "duct
 /** The note on those parts' rows in the cutlist. */
 export const FROM_OFFCUT_NOTE = "from offcuts; not in the sheet count";
 
+/** What joins a cutlist row's notes into its `note`; the page shows each as its own line (`noteLines`). */
+export const NOTE_SEP = "; ";
+/**
+ * A row's note as its lines, as the Cutlist page lists them: split at each `NOTE_SEP` outside brackets, so a note such
+ * as "5.6″ driver cutout (typical; use the datasheet's)" stays one line.
+ */
+export const noteLines = (note: string): string[] => {
+  const lines: string[] = [];
+  let depth = 0,
+    from = 0;
+  for (let i = 0; i < note.length; i++) {
+    const c = note[i];
+    if (c === "(") depth++;
+    else if (c === ")") depth = Math.max(0, depth - 1);
+    else if (depth === 0 && note.startsWith(NOTE_SEP, i)) {
+      lines.push(note.slice(from, i));
+      from = i + NOTE_SEP.length;
+      i = from - 1;
+    }
+  }
+  lines.push(note.slice(from));
+  return lines.filter((l) => l.length > 0);
+};
+
 /**
  * A cutlist row's identity, which its pieces on the sheets carry too (a placed piece keeps its part's fields): the page
  * matches a row to its drawn pieces by it, also after the layout worker has copied them.
@@ -82,8 +106,8 @@ export const cutRows = (parts: readonly CutPart[]): CutPart[] => {
     if (!seen) rows.set(k, { ...p });
     else {
       seen.qty += p.qty;
-      if (p.note && !seen.note.split("; ").includes(p.note))
-        seen.note = seen.note ? `${seen.note}; ${p.note}` : p.note;
+      if (p.note && !noteLines(seen.note).includes(p.note))
+        seen.note = seen.note ? `${seen.note}${NOTE_SEP}${p.note}` : p.note;
     }
   }
   return [...rows.values()];

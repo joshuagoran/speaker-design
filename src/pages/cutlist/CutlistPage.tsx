@@ -38,6 +38,7 @@ import {
   cutRows,
   grainPresetOf,
   layoutCutlist,
+  noteLines,
 } from "../../lib/pa/cutlist";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import { useFolds } from "../../hooks/useFolds";
@@ -270,9 +271,11 @@ export function CutlistPage({ project, options, parts, also, wall, material }: P
               {rows.map((p, i) => {
                 const k = cutRowKey(p);
                 const isHot = hotRow === k;
-                const note = FROM_OFFCUT.has(p.part)
-                  ? `${FROM_OFFCUT_NOTE}${p.note ? `; ${p.note}` : ""}`
-                  : p.note;
+                // one short line per note (each cutout, joint or warning), so the list stays easy to scan
+                const notes = [
+                  ...(FROM_OFFCUT.has(p.part) ? [FROM_OFFCUT_NOTE] : []),
+                  ...noteLines(p.note),
+                ];
                 const [first, second] = sizeOf(p);
                 return (
                   <tr
@@ -296,7 +299,13 @@ export function CutlistPage({ project, options, parts, also, wall, material }: P
                     </td>
                     <td className={`${td} pr-3`}>
                       {CUT_PART_NAMES[p.part]}
-                      {note && <span className="block text-xs text-stone-500">{note}</span>}
+                      {notes.length > 0 && (
+                        <ul className="text-xs text-stone-500">
+                          {notes.map((n) => (
+                            <li key={n}>{n}</li>
+                          ))}
+                        </ul>
+                      )}
                     </td>
                     <td className={`${td} pr-3 text-right`}>{p.qty * boxSetCount}</td>
                     <td className={`${td} text-right whitespace-nowrap`}>{first}</td>
