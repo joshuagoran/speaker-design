@@ -109,9 +109,16 @@ export function DriverCompare({ rows, onUse }: Props) {
                     ))}
                     <td className="py-1.5 pr-3">
                       {r.problems.length ? (
-                        <span className="text-orange-700" title={r.problems.join("\n")}>
-                          {r.problems.join("; ")}
-                        </span>
+                        // a problem your design has whatever you pick is grey; what this option adds is orange
+                        r.problems.map((p, i) => (
+                          <span
+                            key={`${p.id}-${i}`}
+                            className={p.yoursToo ? "text-stone-500" : "text-orange-700"}
+                          >
+                            {i > 0 && "; "}
+                            {p.text}
+                          </span>
+                        ))
                       ) : (
                         <span className="text-green-700">passes</span>
                       )}

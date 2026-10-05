@@ -65,6 +65,7 @@ import type {
   PaOptimizerLocks,
   PaOptimizerResult,
   PaPoolEntry,
+  PaProblem,
   PaProblemLimits,
   PaResolvedLocks,
   PaRoom,
@@ -447,23 +448,29 @@ const SOFT_OK = new Set<PaChipId>([
   "hornMidNarrower",
   "hornMidWider",
 ]);
-export function designProblems(m: PaEvaluation | null, lim: ProblemLimits) {
-  const out: string[] = [];
-  if (!m) return [DESIGN_PROBLEM_TEXT.unmodelled];
+/** What a design fails, by id with its words: the checks' bad and warning chips, then the search's own tests. */
+export function designProblemList(m: PaEvaluation | null, lim: ProblemLimits): PaProblem[] {
+  if (!m) return [{ id: "unmodelled", text: DESIGN_PROBLEM_TEXT.unmodelled }];
+  const out: PaProblem[] = [];
   for (const k of ["sub", "mid", "horn"] as const)
     for (const [kind, head, , id] of m.chips[k]) {
       if (
         kind === "bad" ||
         (kind === "warn" && !SOFT_OK.has(id) && !(lim.allow && lim.allow.has(id)))
       )
-        out.push(head);
+        out.push({ id, text: head });
     }
-  if (m.qtc < 0.5 || m.qtc > 0.8) out.push(`mid Qtc ${m.qtc.toFixed(2)}`);
-  if (m.mismatch) out.push(DESIGN_PROBLEM_TEXT.exitMismatch);
-  if (m.heaviest > lim.maxLb + 1e-9) out.push(`${m.heaviest.toFixed(0)} lb box`);
-  if (m.price > lim.budget + 1e-9) out.push(`drivers $${Math.round(m.price)} per stack`);
+  if (m.qtc < 0.5 || m.qtc > 0.8) out.push({ id: "midQtc", text: `mid Qtc ${m.qtc.toFixed(2)}` });
+  if (m.mismatch) out.push({ id: "exitMismatch", text: DESIGN_PROBLEM_TEXT.exitMismatch });
+  if (m.heaviest > lim.maxLb + 1e-9)
+    out.push({ id: "overWeight", text: `${m.heaviest.toFixed(0)} lb box` });
+  if (m.price > lim.budget + 1e-9)
+    out.push({ id: "overBudget", text: `drivers $${Math.round(m.price)} per stack` });
   return out;
 }
+/** What a design fails, in words. */
+export const designProblems = (m: PaEvaluation | null, lim: ProblemLimits) =>
+  designProblemList(m, lim).map((p) => p.text);
 
 // ---- search ----
 // input: { cur (the planner's snapshot), room, maxLb, budget (drivers per stack), goals, locks }

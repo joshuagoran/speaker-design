@@ -1,7 +1,8 @@
 import { CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../data";
-import { designProblems, evaluateDesign } from "./optimize";
+import { designProblemList, evaluateDesign } from "./optimize";
 import type {
   PaDesignConfig,
+  PaProblemId,
   PaDriverCompareRow,
   PaDriverPart,
   PaProblemLimits,
@@ -20,13 +21,22 @@ const OPTIONS = {
 
 /**
  * Every option for one part dropped into your design with everything else as it is, modelled with the planner's own
- * model and checked against the optimizer's limits: the ones that pass first, then by the part's price (unpriced last).
+ * model and checked against the optimizer's limits: the ones that add no problem first, then by the part's price
+ * (unpriced last).
  */
+// problems whose words carry an amount that differs per option: never marked as your design's too
+const PER_OPTION: ReadonlySet<PaProblemId> = new Set<PaProblemId>([
+  "midQtc",
+  "overWeight",
+  "overBudget",
+]);
+
 export function compareDrivers(
   cur: PaDesignConfig,
   part: PaDriverPart,
   lim: PaProblemLimits,
 ): PaDriverCompareRow[] {
+  const yours = new Set(designProblemList(evaluateDesign(cur), lim).map((p) => p.id));
   const rows = OPTIONS[part].map((o): PaDriverCompareRow => {
     const m = evaluateDesign({ ...cur, [part]: o.id });
     return {
@@ -53,12 +63,13 @@ export function compareDrivers(
         midGap: m.midGap,
         hornGap: m.hornGap,
       },
-      problems: designProblems(m, lim),
+      problems: designProblemList(m, lim).map((p) => ({
+        ...p,
+        yoursToo: yours.has(p.id) && !PER_OPTION.has(p.id),
+      })),
     };
   });
-  return rows.sort(
-    (a, b) =>
-      Number(a.problems.length > 0) - Number(b.problems.length > 0) ||
-      (a.price ?? Infinity) - (b.price ?? Infinity),
-  );
+  // an option fails only by what it adds: a problem your design has whatever you pick doesn't sort it down
+  const fails = (r: PaDriverCompareRow) => Number(r.problems.some((p) => !p.yoursToo));
+  return rows.sort((a, b) => fails(a) - fails(b) || (a.price ?? Infinity) - (b.price ?? Infinity));
 }
