@@ -51,6 +51,7 @@ import {
 } from "./calc";
 import {
   ductFit,
+  ductFits,
   driverClearance,
   hornChips,
   subDriverClearanceNeededIn,
@@ -733,7 +734,8 @@ function exactHook(
       const x = sol.box[free];
       if (x < lo - 1e-9 || x > hi + 1e-9) continue;
       const v = { ...vent, len: sol.len };
-      if (sol.len < s.grid.minDuctIn || sol.len > ductFit(sol.box, style, v, t).fit) continue;
+      if (sol.len < s.grid.minDuctIn || !ductFits(ductFit(sol.box, style, v, t).spans, sol.len))
+        continue;
       const { clearW, clearH } = driverClearance(sol.box, style, v, t);
       if (Math.min(clearW, clearH) < need) continue;
       const lb = subWeightLb(sol.box, t, sub.lb);
@@ -1473,7 +1475,7 @@ function exactHook(
         cVent: vent,
         layout: cur.layout,
       });
-      if (!(vent.len > 0) || vent.len > ductFit(box, style, vent, t).fit) return;
+      if (!(vent.len > 0) || !ductFits(ductFit(box, style, vent, t).spans, vent.len)) return;
       const { clearW, clearH } = driverClearance(box, style, vent, t);
       if (Math.min(clearW, clearH) < subDriverClearanceNeededIn(sub.size)) return;
       const lb = subWeightLb(box, t, sub.lb);
@@ -1539,9 +1541,15 @@ function exactHook(
           : 1.46 * Math.sqrt((vs.area * 0.00064516) / vs.n / Math.PI));
       return (343 / (2 * Math.PI)) * Math.sqrt((vs.area * 0.00064516) / ((V / 1000) * Leff));
     };
-    let a = s.grid.minDuctIn,
-      b = ductFit(box, style, { ...vent, len: 0 }, t).fit;
-    if (b < a || tune(a) < fb || tune(b) > fb) return null;
+    // the lengths that fit (a bottom slot straight, then folded); the tuning steps at a slot's fold, so the search
+    // takes the shortest span that reaches it, at the fold's shortest when even that tunes lower
+    const spans = ductFit(box, style, { ...vent, len: 0 }, t)
+      .spans.map(([lo, hi]) => [Math.max(lo, s.grid.minDuctIn), hi] as const)
+      .filter(([lo, hi]) => hi >= lo);
+    const first = spans[0],
+      last = spans[spans.length - 1];
+    if (!first || !last || tune(first[0]) < fb || tune(last[1]) > fb) return null;
+    let [a, b] = spans.find(([, hi]) => hi === last[1] || tune(hi) <= fb) ?? last;
     for (let i = 0; i < 60; i++) {
       const m = (a + b) / 2;
       if (tune(m) > fb) a = m;

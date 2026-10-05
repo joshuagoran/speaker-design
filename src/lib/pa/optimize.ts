@@ -796,13 +796,22 @@ export function optimizePaStack(
           let pushed = false,
             fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystemModelled } | null = null;
           for (const size of ventSizesFor(style)) {
-            const hi = ductFit(box, style, mk(size, 0), t).fit,
-              lo = 2;
-            if (hi < lo + 0.25) continue;
-            const fbShort = geom(mk(size, lo)).Fb,
-              fbLong = geom(mk(size, hi)).Fb;
+            // the lengths that fit, from 2 in: a bottom slot runs straight, then (past the lengths that fit neither
+            // way) folds up the back wall
+            const spans = ductFit(box, style, mk(size, 0), t)
+              .spans.map(([a, b]) => [Math.max(a, 2), b] as const)
+              .filter(([a, b]) => b >= a + 0.25);
+            const first = spans[0],
+              last = spans[spans.length - 1];
+            if (!first || !last) continue;
+            const fbShort = geom(mk(size, first[0])).Fb,
+              fbLong = geom(mk(size, last[1])).Fb;
             if (sd.Fb > fbShort) continue; // vent too small to tune this high: next size
             if (sd.Fb < fbLong) break; // too big for the room it has: bigger won't fit either
+            // the shortest span that reaches the tuning (it steps at a slot's fold, so one search could land on
+            // either side): a straight slot when one tunes it, else the fold, at its shortest when even that tunes lower
+            const [lo, hi] =
+              spans.find(([, b]) => b === last[1] || geom(mk(size, b)).Fb <= sd.Fb) ?? last;
             let a = lo,
               b = hi;
             for (let i = 0; i < 12; i++) {
@@ -810,7 +819,14 @@ export function optimizePaStack(
               if (geom(mk(size, m)).Fb > sd.Fb) a = m;
               else b = m;
             }
-            const cVent = mk(size, Math.min(Math.floor(hi * 4) / 4, r2((a + b) / 2, 0.25))); // never past the fit
+            // to the quarter inch, never out of its span (a slot rounded across its fold would retune by a few Hz)
+            const cVent = mk(
+              size,
+              Math.max(
+                Math.ceil(lo * 4) / 4,
+                Math.min(Math.floor(hi * 4) / 4, r2((a + b) / 2, 0.25)),
+              ),
+            );
             const { clearW, clearH } = driverClearance(box, style, cVent, t);
             if (Math.min(clearW, clearH) < subDriverClearanceNeededIn(sd.sub.size)) continue;
             const c = {

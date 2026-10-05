@@ -14,6 +14,7 @@ import {
   isRoundPort,
   maxStraightSlotIn,
   slotFolds,
+  foldedRearWallIn,
   boxInternalLiters,
   logGridCount,
   LOWPASS_SKIRT_SPAN,
@@ -481,7 +482,7 @@ export function subWoodIn3(
     const folded = slotFolds(box, v, t);
     const len = folded ? box.d - inset - t - v.slotH - 2 * t : v.len;
     in3 += iw * len * t + v.slotH * len * t * 2;
-    if (folded) in3 += iw * Math.max(2, v.len - len) * t;
+    if (folded) in3 += iw * foldedRearWallIn(box, v.len, t) * t;
   } else if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;
     in3 += ih * v.len * t * n + v.throat * v.len * 0.5 * 2 * n;

@@ -4,7 +4,7 @@ import { buildCabinet } from "./buildCabinet";
 import { buildCone } from "./buildCone";
 import { towerBaffleHoles, buildTowerPartitions } from "./towerParts";
 import { towerSpec } from "./stackHeights";
-import { isRoundPort, maxStraightSlotIn, slotFolds } from "../../lib/pa/calc";
+import { foldedRearWallIn, isRoundPort, maxStraightSlotIn, slotFolds } from "../../lib/pa/calc";
 import type { SceneContext } from "./sceneContext";
 import type { Props } from "./buildStackScene";
 import type { Dims3, Horn, MidDriver, PortStyle, SubDriver } from "../../types";
@@ -235,15 +235,11 @@ export function buildSubwoofer(
       fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, roofZ);
       subGroup.add(fin);
     });
-    // the rear channel rises until the centerline adds up to the set duct length
+    // the rear channel rises until the centerline adds up to the set duct length (the cutlist's rear wall)
     // The wall starts at the floor leg's roof, so the floor leg runs on under it into the
     // rear channel, turns, and rises between this wall and the back panel.
-    const floorRun = roofLen + T + ductH / 2;
     const wallBot = pl + T + ductH;
-    const wallTop = Math.min(
-      pl + s.h - T - 1,
-      Math.max(wallBot + 1, pl + T + ductH / 2 + (wantLen - floorRun)),
-    );
+    const wallTop = Math.min(pl + s.h - T - 1, wallBot + foldedRearWallIn(s, wantLen, T));
     const wallH = wallTop - wallBot;
     const rw = new THREE.Mesh(new THREE.BoxGeometry(innerW, wallH, T), plyIn);
     rw.position.set(0, wallBot + wallH / 2, wallZ);

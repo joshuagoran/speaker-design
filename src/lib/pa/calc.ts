@@ -62,6 +62,20 @@ export const maxStraightSlotIn = (box: Pick<Dims3, "d">, slotH: number, t: numbe
  */
 export const slotFolds = (box: Pick<Dims3, "d">, v: Pick<VentSpec, "slotH" | "len">, t: number) =>
   v.len > maxStraightSlotIn(box, v.slotH, t);
+// The least the rear channel's wall rises above the floor leg's roof, so the folded duct has a mouth to open into.
+const FOLD_MIN_WALL_IN = 1;
+/**
+ * A folded bottom slot's rear channel wall, in inches above the floor leg's roof. The duct's length is its centreline:
+ * the floor run from the baffle front to the middle of the rear channel (`d - t - slotH / 2`), then up the channel to
+ * the wall's top (`slotH / 2` + the wall), so the wall is `len - (d - t)`, never under the least rise.
+ */
+export const foldedRearWallIn = (box: Pick<Dims3, "d">, len: number, t: number) =>
+  Math.max(FOLD_MIN_WALL_IN, len - (box.d - t));
+/**
+ * The shortest folded bottom slot that can be built (its rear wall at the least rise). A slot longer than the straight
+ * run holds but shorter than this fits neither way.
+ */
+export const minFoldedSlotIn = (box: Pick<Dims3, "d">, t: number) => box.d - t + FOLD_MIN_WALL_IN;
 
 /** Whether the sub's vents are round tubes (`round1`, `round2`, `round4`) rather than rectangular ducts. */
 export const isRoundPort = (style: PortStyle): style is Extract<PortStyle, `round${string}`> =>
@@ -535,7 +549,7 @@ export function cutParts({
         part: "ductRearWall",
         qty: 1,
         a: s.iw,
-        b: Math.max(2, cVent.len - len),
+        b: foldedRearWallIn(subBox, cVent.len, t),
         t,
         note: "rear channel, rises up the back",
       });

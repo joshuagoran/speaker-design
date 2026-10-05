@@ -39,7 +39,7 @@ const synth = (
     {
       name: "synthetic: slots",
       portStyle: "slots",
-      cVent: { slotH: 3, nt: 2, dia: 3.5, throat: 2, len: 14 },
+      cVent: { slotH: 3, nt: 2, dia: 3.5, throat: 2, len: 12 },
     },
     {
       name: "synthetic: slots, folded",
