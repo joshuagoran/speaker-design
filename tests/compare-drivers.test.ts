@@ -21,6 +21,10 @@ test("compare drivers: every option once, yours as the planner models it, the on
     const m = evaluateDesign(cur);
     assert.ok(m && yours[0].m, `${part}: yours is modelled`);
     assert.strictEqual(yours[0].m.out, m.out);
+    // the weight the part brings: its box for the sub and mid, the part itself for the driver and horn
+    const own = { sub: m.subLb, mid: m.midLb, cd: null, horn: null }[part];
+    if (own != null) assert.strictEqual(yours[0].lb, own, `${part}: its box's weight`);
+    else assert.ok(yours[0].lb != null && yours[0].lb > 0, `${part}: its own weight`);
     assert.deepStrictEqual(yours[0].problems, designProblems(m, lim));
     const firstFailing = rows.findIndex((r) => r.problems.length > 0);
     assert.ok(

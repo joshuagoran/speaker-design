@@ -1977,10 +1977,13 @@ export interface PaDriverCompareRow {
   price: number | null;
   /** your design's part */
   yours: boolean;
+  /** the weight it brings, lb: the sub's or mid's box with the driver in it, or the compression driver or horn itself
+   * (they add to no box); null when the box can't be modelled */
+  lb: number | null;
   /** the design with this part (null: the planner can't model it) */
   m: Pick<
     PaEvaluation,
-    "price" | "priceKnown" | "heaviest" | "out" | "f3" | "qtc" | "midGap" | "hornGap"
+    "price" | "priceKnown" | "out" | "f3" | "qtc" | "midGap" | "hornGap"
   > | null;
   /** what fails the planner's checks or the optimizer's limits, in words (empty: passes) */
   problems: string[];

@@ -18,6 +18,13 @@ const F3: Column = { head: "F3", value: (m) => `${m.f3.toFixed(1)} Hz` };
 const MID_HEADROOM: Column = { head: "Mid headroom", value: (m) => dB(m.midGap) };
 const QTC: Column = { head: "Mid Qtc", value: (m) => m.qtc.toFixed(2) };
 const HF_HEADROOM: Column = { head: "HF headroom", value: (m) => dB(m.hornGap) };
+/** The weight column's heading: what the part's weight is (the drivers' boxes; the compression driver and horn alone). */
+const WEIGHT_HEAD: Record<PaDriverPart, string> = {
+  sub: "Sub box",
+  mid: "Mid box",
+  cd: "Its weight",
+  horn: "Its weight",
+};
 /** What each part changes, beyond price and weight: the sub sets the output and the bass; the others keep up or not. */
 const PART_COLUMNS: Record<PaDriverPart, Column[]> = {
   sub: [OUTPUT, F3],
@@ -67,7 +74,7 @@ export function DriverCompare({ rows, onUse }: Props) {
                   </th>
                   <th className="py-1 pr-3 font-normal text-right">Its price</th>
                   <th className="py-1 pr-3 font-normal text-right">Drivers / stack</th>
-                  <th className="py-1 pr-3 font-normal text-right">Heaviest box</th>
+                  <th className="py-1 pr-3 font-normal text-right">{WEIGHT_HEAD[part]}</th>
                   {PART_COLUMNS[part].map((c) => (
                     <th key={c.head} className="py-1 pr-3 font-normal text-right">
                       {c.head}
@@ -93,7 +100,7 @@ export function DriverCompare({ rows, onUse }: Props) {
                       {r.m ? `${formatDollars(r.m.price)}${r.m.priceKnown ? "" : "+"}` : "–"}
                     </td>
                     <td className="py-1.5 pr-3 text-right whitespace-nowrap">
-                      {r.m ? `${r.m.heaviest.toFixed(0)} lb` : "–"}
+                      {r.lb == null ? "–" : `${r.lb.toFixed(r.lb < 10 ? 1 : 0)} lb`}
                     </td>
                     {PART_COLUMNS[part].map((c) => (
                       <td key={c.head} className="py-1.5 pr-3 text-right whitespace-nowrap">

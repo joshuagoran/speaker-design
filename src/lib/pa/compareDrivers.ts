@@ -13,7 +13,10 @@ const OPTIONS = {
   mid: MID_OPTIONS,
   cd: CD_OPTIONS,
   horn: HORN_OPTIONS,
-} satisfies Record<PaDriverPart, readonly { id: string; name: string; price: number | null }[]>;
+} satisfies Record<
+  PaDriverPart,
+  readonly { id: string; name: string; price: number | null; lb?: number }[]
+>;
 
 /**
  * Every option for one part dropped into your design with everything else as it is, modelled with the planner's own
@@ -31,10 +34,19 @@ export function compareDrivers(
       name: o.name,
       price: o.price,
       yours: o.id === cur[part],
+      lb:
+        part === "sub"
+          ? m
+            ? m.subLb
+            : null
+          : part === "mid"
+            ? m
+              ? m.midLb
+              : null
+            : (o.lb ?? null),
       m: m && {
         price: m.price,
         priceKnown: m.priceKnown,
-        heaviest: m.heaviest,
         out: m.out,
         f3: m.f3,
         qtc: m.qtc,
