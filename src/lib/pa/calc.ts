@@ -613,7 +613,7 @@ export function ductEndCorrection2D(h: number, X: number, L = Infinity) {
   d2Cache.set(key, v);
   return v;
 }
-const FREE_END = 0.61 / 0.85; // an unflanged (free) end relative to a flanged one, as in 1.46 r
+export const FREE_END = 0.61 / 0.85; // an unflanged (free) end relative to a flanged one, as in 1.46 r
 // Letterbox on the floor: outside, the ground mirrors the mouth (slot twice as tall, open width w);
 // inside, the box interior (height X, back wall L behind the mouth) with the side walls at both ends.
 export const slotEndCorrection = (h: number, w: number, X?: number, L?: number) =>
