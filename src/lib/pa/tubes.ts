@@ -7,7 +7,6 @@ import { TUBE_FLARE_RADIUS_IN, TUBE_WALL_END } from "../../data/acoustics/tube-e
 import { PORT_ELBOWS, PORT_PIPES } from "../../data/catalog/port-tubes";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import {
-  tubeElbows,
   tubeLegs,
   tubeSpan,
   ELBOW_COUNTS,
@@ -116,70 +115,128 @@ export function tubeLayout(
 }
 
 /**
- * The room a tube's centreline has, from the baffle front to the back wall and from the tube's axis up to the lid, with
- * the driver's back as the stop. Every tube of a row sits at one height, so one room serves them all.
+ * What a sub's tubes are whatever their length, for one box, vent size, plywood and driver: the room their centreline
+ * has (from the baffle front to the back wall and from the axis up to the lid, the driver's back as the stop; every
+ * tube of a row sits at one height, so one room serves them all), the lengths each elbow count fits (the corner tubes,
+ * `round4`, only run straight: two of them sit over the other two, so neither pair has a clear back wall to rise up),
+ * and the end correction's part that doesn't read the length (the flared ends and the neighbouring mouths). The length
+ * solvers ask for it at every step, so the last one is kept.
  */
-export function tubeRoom(
+interface TubeSetup {
+  room: TubeRoom;
+  spans: readonly ([number, number] | null)[];
+  fixedEc: number;
+}
+let lastSetup: {
+  box: Dims3;
+  style: PortStyle;
+  nt: number;
+  dia: number;
+  t: number;
+  drv: TubeDriver;
+  setup: TubeSetup;
+} | null = null;
+function tubeSetup(
   box: Dims3,
   style: PortStyle,
   v: Pick<VentSpec, "nt" | "dia">,
   t: number,
   drv: TubeDriver,
-): TubeRoom {
+): TubeSetup {
+  const c = lastSetup;
+  if (
+    c &&
+    c.box.w === box.w &&
+    c.box.h === box.h &&
+    c.box.d === box.d &&
+    c.style === style &&
+    c.nt === v.nt &&
+    c.dia === v.dia &&
+    c.t === t &&
+    c.drv.size === drv.size &&
+    c.drv.depthIn === drv.depthIn
+  )
+    return c.setup;
   const { tubes } = tubeLayout(box, style, v, t, drv.size);
   const y = tubes.length ? Math.max(...tubes.map((p) => p.y)) : v.dia / 2;
-  return {
+  const room = {
     run: box.d - TUBE_BAFFLE_INSET_IN - t,
     rise: box.h - 2 * t - y,
     stop: subDriverDepthIn(drv),
   };
+  const spans = ELBOW_COUNTS.map((e) =>
+    style === "round4" && e > 0 ? null : tubeSpan(room, v.dia, e),
+  );
+  // the flared ends (a flanged outer, 0.85 r, and a free inner, 0.61 r, at the flared mouth's size, each less the
+  // flare's shortfall) and the neighbouring mouths (r² / 2s on the baffle, r² / 4s in the box, averaged over the tubes)
+  const r = v.dia / 2,
+    R = r + TUBE_FLARE_RADIUS_IN;
+  let near = 0;
+  for (const p of tubes)
+    for (const q of tubes) if (p !== q) near += 1 / Math.hypot(p.x - q.x, p.y - q.y);
+  const fixedEc =
+    (0.85 + 0.61) * r * (r / R) -
+    2 * flareShortfall(r) +
+    (tubes.length ? ((r * r) / tubes.length) * near * (1 / 2 + 1 / 4) : 0);
+  const setup = { room, spans, fixedEc };
+  lastSetup = { box: { ...box }, style, nt: v.nt, dia: v.dia, t, drv: { ...drv }, setup };
+  return setup;
 }
 
-/**
- * The lengths a sub's tubes fit with `e` elbows, or null. The corner tubes (`round4`) only run straight: two of them sit
- * over the other two, so neither pair has a clear back wall to rise up.
- */
-export function subTubeSpan(
+/** The room a tube's centreline has (tubeSetup). */
+export const tubeRoom = (
+  box: Dims3,
+  style: PortStyle,
+  v: Pick<VentSpec, "nt" | "dia">,
+  t: number,
+  drv: TubeDriver,
+): TubeRoom => tubeSetup(box, style, v, t, drv).room;
+
+/** The lengths a sub's tubes fit with `e` elbows, or null (tubeSetup). */
+export const subTubeSpan = (
   box: Dims3,
   style: PortStyle,
   v: Pick<VentSpec, "nt" | "dia">,
   t: number,
   drv: TubeDriver,
   e: ElbowCount,
-) {
-  if (style === "round4" && e > 0) return null;
-  return tubeSpan(tubeRoom(box, style, v, t, drv), v.dia, e);
-}
+) => tubeSetup(box, style, v, t, drv).spans[e];
+
+// the fewest elbows whose span holds the length, as tubeElbows takes them
+const fittingCount = (spans: TubeSetup["spans"], len: number): ElbowCount | null =>
+  ELBOW_COUNTS.find((e) => {
+    const s = spans[e];
+    return s !== null && len >= s[0] - 1e-9 && len <= s[1] + 1e-9;
+  }) ?? null;
 
 /** The elbows a sub's tubes take at their length: the fewest that fit, or null when none does. */
-export function subTubeElbows(
+export const subTubeElbows = (
   box: Dims3,
   style: PortStyle,
   v: TubeVent,
   t: number,
   drv: TubeDriver,
-): ElbowCount | null {
-  const e = tubeElbows(tubeRoom(box, style, v, t, drv), v.dia, v.len);
-  return style === "round4" && e !== 0 ? null : e;
+): ElbowCount | null => fittingCount(tubeSetup(box, style, v, t, drv).spans, v.len);
+
+// the model's count from the spans: modelTubeElbows
+function modelCount(spans: TubeSetup["spans"], len: number): ElbowCount {
+  const fit = fittingCount(spans, len);
+  if (fit !== null) return fit;
+  const counts = ELBOW_COUNTS.filter((e) => spans[e] !== null);
+  return counts.find((e) => len <= (spans[e]?.[1] ?? 0)) ?? counts.at(-1) ?? 0;
 }
 
 /**
  * The elbows the model takes: the fitting count, else (a length that fits no count) the fewest whose longest reaches
  * it, else the most any span takes, so a design that won't build still models as the nearest one that would.
  */
-export function modelTubeElbows(
+export const modelTubeElbows = (
   box: Dims3,
   style: PortStyle,
   v: TubeVent,
   t: number,
   drv: TubeDriver,
-): ElbowCount {
-  const fit = subTubeElbows(box, style, v, t, drv);
-  if (fit !== null) return fit;
-  const counts = ELBOW_COUNTS.filter((e) => subTubeSpan(box, style, v, t, drv, e) !== null);
-  const reach = counts.find((e) => v.len <= (subTubeSpan(box, style, v, t, drv, e)?.[1] ?? 0));
-  return reach ?? counts.at(-1) ?? 0;
-}
+): ElbowCount => modelCount(tubeSetup(box, style, v, t, drv).spans, v.len);
 
 /** The tubes' legs as built with `e` elbows. */
 export const subTubeLegs = (
@@ -238,21 +295,16 @@ export function subTubeEndCorrection(
   v: TubeVent,
   t: number,
   drv: TubeDriver,
-  elbows: ElbowCount = modelTubeElbows(box, style, v, t, drv),
+  elbows?: ElbowCount,
 ) {
-  const r = v.dia / 2,
-    R = r + TUBE_FLARE_RADIUS_IN;
-  const flare = flareShortfall(r);
-  const outer = 0.85 * r * (r / R) - flare,
-    inner = 0.61 * r * (r / R) - flare;
-  const legs = subTubeLegs(box, style, v, t, drv, elbows);
-  const wall = tubeWallEndCorrection(r, Math.max(legs.gap, 1e-9));
-  const { tubes } = tubeLayout(box, style, v, t, drv.size);
-  let near = 0;
-  for (const p of tubes)
-    for (const q of tubes) if (p !== q) near += 1 / Math.hypot(p.x - q.x, p.y - q.y);
-  const mutual = tubes.length ? ((r * r) / tubes.length) * near * (1 / 2 + 1 / 4) : 0;
-  return outer + inner + wall + mutual + elbows * SHARP_BEND_CORRECTION * v.dia;
+  const { room, spans, fixedEc } = tubeSetup(box, style, v, t, drv);
+  const e = elbows ?? modelCount(spans, v.len);
+  const legs = tubeLegs(room, v.dia, v.len, e);
+  return (
+    fixedEc +
+    tubeWallEndCorrection(v.dia / 2, Math.max(legs.gap, 1e-9)) +
+    e * SHARP_BEND_CORRECTION * v.dia
+  );
 }
 
 /**
