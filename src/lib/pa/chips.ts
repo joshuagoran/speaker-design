@@ -12,35 +12,43 @@ import type {
   SubChipsInput,
   VentSpec,
 } from "../../types";
-import { isRoundPort } from "./calc";
-import { SLOT_LAYOUT_NAMES } from "../../constants/portStyles";
+import { isRoundPort, maxStraightSlotIn, minFoldedSlotIn } from "./calc";
 
-// Longest duct each layout can hold, leaving an opening at least as wide as the duct.
+// Longest duct each layout can hold, leaving an opening at least as wide as the duct. A bottom slot runs straight
+// while it fits (maxStraight) and folds up the back wall past that, so it holds the longer of the two; a fold is never
+// shorter than its floor run plus the least rise (minFold), so the lengths between the two fit neither way. `spans`
+// lists the lengths that fit, shortest first.
 export function ductFit(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
   const inD = subBox.d - PT,
     inH = subBox.h - 2 * PT,
     sH = cVent.slotH;
-  const maxStraight = inD - sH; // bottom slot
+  const maxStraight = maxStraightSlotIn(subBox, sH, PT); // bottom slot, straight
+  const minFold = minFoldedSlotIn(subBox, PT); // bottom slot, folded at the least rise
   const maxFold = inD - (sH + PT) + sH / 2 + (inH - sH - 1); // floor run + rise up the back
   const maxSide = inD - cVent.throat; // side ducts
   const maxTube = subBox.d - 0.75 - 2 * PT - cVent.dia / 2; // round tubes off the baffle
   const fit =
     portStyle === "slots"
-      ? maxStraight
-      : portStyle === "folded"
-        ? maxFold
-        : isRoundPort(portStyle)
-          ? maxTube
-          : maxSide;
-  return { maxStraight, maxFold, maxSide, maxTube, fit };
+      ? Math.max(maxStraight, maxFold)
+      : isRoundPort(portStyle)
+        ? maxTube
+        : maxSide;
+  const spans: (readonly [number, number])[] =
+    portStyle === "slots"
+      ? [[0, maxStraight] as const, [minFold, maxFold] as const].filter(([a, b]) => b >= a)
+      : [[0, fit]];
+  return { maxStraight, minFold, maxFold, maxSide, maxTube, fit, spans };
 }
+/** Whether a duct `len` long fits the layout: inside one of ductFit's spans. */
+export const ductFits = (spans: ReturnType<typeof ductFit>["spans"], len: number) =>
+  spans.some(([a, b]) => len >= a && len <= b);
 // Clear baffle a driver needs: the sub's cone plus its frame.
 export const subDriverClearanceNeededIn = (subSize: number) => subSize + 1.9;
 export function driverClearance(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
   const nSide = portStyle === "vslot1" ? 1 : portStyle === "vslots" ? 2 : 0;
   return {
     clearW: subBox.w - nSide * (cVent.throat + 0.43 + PT),
-    clearH: subBox.h - (portStyle === "slots" || portStyle === "folded" ? cVent.slotH + PT : 0),
+    clearH: subBox.h - (portStyle === "slots" ? cVent.slotH + PT : 0),
   };
 }
 
@@ -49,6 +57,8 @@ export const KEEP_UP_SLACK_DB = 0.5;
 
 /** The title the sub, mid and fill share for a driver its baffle has no room for. */
 const DRIVER_WONT_FIT = "Driver won't fit";
+/** The title of the sub's duct-fit chip, past the layout's room or in the lengths a bottom slot can't take either way. */
+const DUCT_TOO_LONG = "Duct too long";
 /** The title the sub and mid share when the driver's program rating sets the level. */
 const THERMALLY_LIMITED = "Thermally limited";
 
@@ -65,15 +75,21 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       `The baffle needs about ${need.toFixed(1)}″ clear; after the vents it has ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`,
       "subDriverFit",
     ]);
-  const { maxFold, fit } = ductFit(subBox, portStyle, cVent, PT);
+  const { fit, spans, maxStraight, minFold } = ductFit(subBox, portStyle, cVent, PT);
   if (cVent.len > fit)
     F.push([
       "bad",
-      "Duct too long",
-      `${cVent.len.toFixed(1)}″ won't fit; this layout holds about ${fit.toFixed(1)}″.` +
-        (portStyle === "slots" && cVent.len <= maxFold
-          ? ` Switch to ${SLOT_LAYOUT_NAMES.folded}.`
-          : ""),
+      DUCT_TOO_LONG,
+      `${cVent.len.toFixed(1)}″ won't fit; this layout holds about ${fit.toFixed(1)}″` +
+        (portStyle === "slots" ? ", folded up the back wall." : "."),
+      "subDuctFit",
+    ]);
+  else if (!ductFits(spans, cVent.len))
+    F.push([
+      "bad",
+      DUCT_TOO_LONG,
+      `${cVent.len.toFixed(1)}″ is past the ${maxStraight.toFixed(1)}″ a straight slot holds but short of the ` +
+        `${minFold.toFixed(1)}″ a slot folded up the back wall needs; shorten it or lengthen it.`,
       "subDuctFit",
     ]);
   F.push(

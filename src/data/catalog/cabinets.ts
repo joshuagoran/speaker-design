@@ -49,9 +49,9 @@ export const CABINETS: readonly Cabinet[] = [
   {
     id: "towerCol",
     name: "Tower column, 18 deep",
-    vents: ["folded"],
+    vents: ["slots"],
     dims: { 18: { w: 21, h: 37, d: 18 }, 15: { w: 19, h: 31, d: 16 } },
-    note: "For the Tower layout. 155 L net in an 18 in deep shell; the letterbox duct runs back along the floor and turns up the back wall to get its length.",
+    note: "For the Tower layout. 155 L net in an 18 in deep shell; the letterbox duct runs back along the floor and, once it is longer than the depth holds, turns up the back wall to get its length.",
   },
   {
     id: "es18app",

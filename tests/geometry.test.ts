@@ -11,6 +11,8 @@ import {
 } from "../src/lib/pa/calc";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import { close, vent } from "./helpers";
+import { subWoodIn3 } from "../src/lib/pa/exactSub";
+import type { CutPartId } from "../src/types";
 
 const IN3_L = 16.387 / 1000;
 test("boxL: inner width/height lose two walls, depth loses inset + 3/4 baffle + back", (t) => {
@@ -68,6 +70,35 @@ test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => 
   const braces = 2 * (2 * 2 * (iw + inD) - 16) * t0;
   const duct = iw * len * t0 + 2 * 3 * len * t0;
   close(t, internalWoodLiters(parts, "sub"), (cleats + braces + duct) * IN3_L, 1e-9);
+});
+test("folded slot: the rear wall makes the centreline the set length, and the fast wood volume matches the cutlist", (t) => {
+  const box = { w: 22, h: 30, d: 20 },
+    t0 = 0.75,
+    cVent = vent({ slotH: 3, len: 26 });
+  const parts = cutParts({
+    sub: SUB_OPTIONS[0],
+    mid: MID_OPTIONS[0],
+    subBox: box,
+    midDims: { w: 15, h: 15, d: 15 },
+    wall: t0,
+    inset: 0.75,
+    joint: "butt",
+    portStyle: "slots",
+    cVent,
+    layout: "stack",
+  }).parts;
+  const part = (id: CutPartId) => parts.find((p) => p.box === "sub" && p.part === id);
+  // floor shelf from the baffle's back to the rear channel's wall: 20 - 0.75 inset - 3 × 0.75 - 3 = 14
+  close(t, part("ductShelf")?.b ?? NaN, 14, 1e-12);
+  // centreline: the floor run to the channel's middle (20 - 0.75 - 1.5 = 17.75), then 1.5 up to the roof and the wall
+  // above it, so the wall is 26 - 17.75 - 1.5 = 6.75
+  close(t, part("ductRearWall")?.b ?? NaN, 6.75, 1e-12);
+  close(
+    t,
+    subWoodIn3("slots", box, t0, 0.75, cVent) * IN3_L,
+    internalWoodLiters(parts, "sub"),
+    1e-12,
+  );
 });
 test("weights: shell from panel areas at the ply density matches the cutlist parts", (t) => {
   // independent: sum the cutlist panels (butt joints), + driver + hardware; formula counts full outer

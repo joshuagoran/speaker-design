@@ -51,7 +51,7 @@ export function BoxFront({ g, cur }: Props) {
     t = g.wall * k,
     v = g.cVent;
   const vent: React.ReactElement[] = [];
-  if (g.portStyle === "slots" || g.portStyle === "folded")
+  if (g.portStyle === "slots")
     vent.push(
       <rect
         key="v"
@@ -99,11 +99,7 @@ export function BoxFront({ g, cur }: Props) {
       );
     }
   const ventH =
-    g.portStyle === "slots" || g.portStyle === "folded"
-      ? v.slotH * k + t
-      : isRoundPort(g.portStyle)
-        ? v.dia * k + 4
-        : 0;
+    g.portStyle === "slots" ? v.slotH * k + t : isRoundPort(g.portStyle) ? v.dia * k + 4 : 0;
   const driver = (box: Rect, size: number, below = 0) => (
     <circle
       cx={box.x + box.w / 2}

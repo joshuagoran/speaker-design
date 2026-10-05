@@ -18,6 +18,7 @@ import { DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../../../lib/defaults";
 import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
 import { savedCutlist } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
+import { savedPortStyle } from "../../../constants/portStyles";
 import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
 import { derivePaDesign } from "./paDesign";
 import type { PaDerivedDesign } from "./paDesign";
@@ -316,7 +317,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setWaterfall(cl.waterfall);
     setOffcutShape(cl.offcut);
     setCutStyle(cl.cuts);
-    if (c.portStyle) setPortStyle(c.portStyle);
+    if (c.portStyle) setPortStyle(savedPortStyle(c.portStyle));
   };
   return {
     subDriver,

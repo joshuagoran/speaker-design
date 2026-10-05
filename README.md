@@ -114,7 +114,7 @@ collection `configs`, one document per configuration:
   "cd": "n314t", // CD_OPTIONS id
   "horn": "a460g2_14", // HORN_OPTIONS id
   "cabinet": "column", // last "Start from" choice, label only
-  "portStyle": "slots", // slots (bottom) | folded | vslots (both sides) | vslot1 (one side) | round2
+  "portStyle": "slots", // slots (bottom; folds up the back wall when longer than the depth holds; old saves with folded load as slots) | vslots (both sides) | vslot1 (one side) | round2
   "cDim": { "w": 28, "h": 32, "d": 24 }, // external inches
   "cVent": { "slotH": 3, "nt": 2, "dia": 6, "throat": 3, "len": 14 },
   "hpf": 33,

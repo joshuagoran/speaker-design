@@ -4,7 +4,7 @@ import { buildCabinet } from "./buildCabinet";
 import { buildCone } from "./buildCone";
 import { towerBaffleHoles, buildTowerPartitions } from "./towerParts";
 import { towerSpec } from "./stackHeights";
-import { isRoundPort } from "../../lib/pa/calc";
+import { foldedRearWallIn, isRoundPort, maxStraightSlotIn, slotFolds } from "../../lib/pa/calc";
 import type { SceneContext } from "./sceneContext";
 import type { Props } from "./buildStackScene";
 import type { Dims3, Horn, MidDriver, PortStyle, SubDriver } from "../../types";
@@ -218,8 +218,10 @@ export function buildSubwoofer(
   buildCone(ctx, { r: drvR, y: drvAbsY, z: subZ, x: drvX, parent: subGroup });
   // duct structure inside: top shelf, two fins (slot version only)
   const wantLen = pg.tubeLen != null ? pg.tubeLen : s.d - T - 3;
-  const ductLen = Math.max(2, Math.min(wantLen, s.d - T - ductH)); // from the frame face back, open gap behind
-  if (portStyle === "folded") {
+  const ductLen = Math.max(2, Math.min(wantLen, maxStraightSlotIn(s, ductH, T))); // from the frame face back, open gap behind
+  // a slot longer than the straight run holds folds up the back wall, as the model and the cutlist take it
+  const folded = portStyle === "slots" && slotFolds(s, { slotH: ductH, len: wantLen }, T);
+  if (folded) {
     // floor leg to a rear channel, then up the back wall; open at the top of the rear channel
     const bz = -s.d / 2 + T; // inside face of the back panel
     const wallZ = bz + ductH + T / 2; // rear channel's front wall
@@ -233,21 +235,16 @@ export function buildSubwoofer(
       fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, roofZ);
       subGroup.add(fin);
     });
-    // the rear channel rises until the centerline adds up to the set duct length
+    // the rear channel rises until the centerline adds up to the set duct length (the cutlist's rear wall)
     // The wall starts at the floor leg's roof, so the floor leg runs on under it into the
     // rear channel, turns, and rises between this wall and the back panel.
-    const floorRun = roofLen + T + ductH / 2;
     const wallBot = pl + T + ductH;
-    const wallTop = Math.min(
-      pl + s.h - T - 1,
-      Math.max(wallBot + 1, pl + T + ductH / 2 + (wantLen - floorRun)),
-    );
+    const wallTop = Math.min(pl + s.h - T - 1, wallBot + foldedRearWallIn(s, wantLen, T));
     const wallH = wallTop - wallBot;
     const rw = new THREE.Mesh(new THREE.BoxGeometry(innerW, wallH, T), plyIn);
     rw.position.set(0, wallBot + wallH / 2, wallZ);
     subGroup.add(rw);
-  }
-  if (portStyle === "slots") {
+  } else if (portStyle === "slots") {
     const ductZ = s.d / 2 - ductLen / 2;
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(innerW, T, ductLen), plyIn);
     shelf.position.set(0, pl + T + ductH + T / 2, ductZ);
