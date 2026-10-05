@@ -33,7 +33,7 @@ export function DispersionSection({ planner }: Props) {
   // as when it sat in the horn results: only while the horn can be modelled
   if (!hornModel || !paDispersion) return null;
   return (
-    <section className="min-w-0 md:col-span-5 max-w-3xl" style={{ fontFamily: FONT }}>
+    <section className="min-w-0" style={{ fontFamily: FONT }}>
       <DispersionPlaneToggle value={dispersionPlane} onChange={setDispersionPlane} />
       <DispersionMap
         map={paDispersion}
