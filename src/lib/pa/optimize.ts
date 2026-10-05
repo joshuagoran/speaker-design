@@ -28,6 +28,7 @@ import {
   pistonBeamWidthDeg,
   keeleFrequency,
   maxOutputCurve,
+  subBassLevel,
   STUFFING_VOLUME_GAIN,
 } from "./calc";
 import {
@@ -412,6 +413,7 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
     spl45: s.lim.spl45,
     spl35: s.lim.spl35,
+    subBass: subBassLevel(maxOutputCurve(s.mdl.curve, sub.ts, s.AMP_V, c.portMax)),
     f3: s.mdl.f3,
     Fb: s.mdl.Fb,
     who: s.lim.who,
@@ -1650,6 +1652,7 @@ const summary = (m: PaEvaluation): PaMetricsSummary => ({
   heaviest: m.heaviest,
   out: m.out,
   spl45: m.spl45,
+  subBass: m.subBass,
   f3: m.f3,
   Fb: m.Fb,
   who: m.who,
@@ -1729,6 +1732,7 @@ function card(
           price: m.price - curM.price,
           heaviest: m.heaviest - curM.heaviest,
           out: m.out - curM.out,
+          subBass: m.subBass - curM.subBass,
           f3: m.f3 - curM.f3,
         }
       : null,
