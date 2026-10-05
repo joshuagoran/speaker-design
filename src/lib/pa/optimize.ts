@@ -34,6 +34,7 @@ import {
   midChips,
   hornChips,
   ductFit,
+  ductLenSliderMax,
   subDriverClearanceNeededIn,
   driverClearance,
   KEEP_UP_SLACK_DB,
@@ -812,7 +813,7 @@ export function optimizePaStack(
                 ([a, b]) =>
                   [
                     Math.max(a, PA_SLIDERS.ductLen.min),
-                    Math.min(b, PA_SLIDERS.ductLen.max),
+                    Math.min(b, ductLenSliderMax(box, style, mk(size, 0), t)),
                   ] as const,
               )
               .filter(([a, b]) => b >= a + 0.25);
@@ -823,8 +824,8 @@ export function optimizePaStack(
               fbLong = geom(mk(size, last[1])).Fb;
             if (sd.Fb > fbShort) continue; // vent too small to tune this high: next size
             if (sd.Fb < fbLong) break; // too big for the room it has: bigger won't fit either
-            // the shortest span that reaches the tuning (it steps at a slot's fold, so one search could land on
-            // either side): a straight slot when one tunes it, else the fold, at its shortest when even that tunes lower
+            // the shortest span that reaches the tuning (a slot's spans have the lengths that fit neither way between
+            // them): a straight slot when one tunes it, else the fold, at its shortest when even that tunes lower
             const [lo, hi] =
               spans.find(([, b]) => b === last[1] || geom(mk(size, b)).Fb <= sd.Fb) ?? last;
             let a = lo,
@@ -834,7 +835,7 @@ export function optimizePaStack(
               if (geom(mk(size, m)).Fb > sd.Fb) a = m;
               else b = m;
             }
-            // to the quarter inch, never out of its span (a slot rounded across its fold would retune by a few Hz)
+            // to the quarter inch, never out of its span (a slot rounded across its fold would land where it fits neither way)
             const cVent = mk(
               size,
               Math.max(
@@ -1478,10 +1479,13 @@ export function optimizePaStack(
     const sides = (["w", "h", "d"] as const).map((k) =>
       nearSteps(p.c.cDim[k], SUB_SIDE[k], sr[k], cur.cDim[k]),
     );
+    // the duct slider runs on to a bottom slot's longest fold (lengths in the gap between straight and folded fail its
+    // duct-fit chip, so no try lands there)
+    const lenMax = ductLenSliderMax(p.c.cDim, p.c.portStyle, p.c.cVent, p.c.wall);
     const lens = nearSteps(
       p.c.cVent.len,
-      PA_SLIDERS.ductLen,
-      [PA_SLIDERS.ductLen.min, PA_SLIDERS.ductLen.max],
+      { ...PA_SLIDERS.ductLen, max: lenMax },
+      [PA_SLIDERS.ductLen.min, lenMax],
       cur.cVent.len,
     );
     if (sides.every((o) => o.length === 1) && lens.length === 1) return p;

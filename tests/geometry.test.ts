@@ -8,7 +8,12 @@ import {
   subWeightLb,
   midWeightLb,
   plywoodLbPerSqFt,
+  maxFoldedRearWallIn,
+  maxFoldedSlotIn,
+  foldedRearWallIn,
+  foldedLidGapIn,
 } from "../src/lib/pa/calc";
+import { ductFit } from "../src/lib/pa/chips";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import { close, vent } from "./helpers";
 import { subWoodIn3 } from "../src/lib/pa/exactSub";
@@ -88,8 +93,9 @@ test("folded slot: the rear wall makes the centreline the set length, and the fa
     layout: "stack",
   }).parts;
   const part = (id: CutPartId) => parts.find((p) => p.box === "sub" && p.part === id);
-  // floor shelf from the baffle's back to the rear channel's wall: 20 - 0.75 inset - 3 × 0.75 - 3 = 14
-  close(t, part("ductShelf")?.b ?? NaN, 14, 1e-12);
+  // floor shelf from the baffle front to the rear channel's wall, as a straight slot's shelf runs: the longest straight
+  // run less the wall, 20 - 0.75 - 3 - 0.75 = 15.5
+  close(t, part("ductShelf")?.b ?? NaN, 15.5, 1e-12);
   // centreline: the floor run to the channel's middle (20 - 0.75 - 1.5 = 17.75), then 1.5 up to the roof and the wall
   // above it, so the wall is 26 - 17.75 - 1.5 = 6.75
   close(t, part("ductRearWall")?.b ?? NaN, 6.75, 1e-12);
@@ -99,6 +105,35 @@ test("folded slot: the rear wall makes the centreline the set length, and the fa
     internalWoodLiters(parts, "sub"),
     1e-12,
   );
+});
+test("folded slot: the longest fold leaves a slot height under the lid, in the fit, the model and the cutlist", (t) => {
+  const box = { w: 22, h: 30, d: 20 },
+    t0 = 0.75,
+    slotH = 3;
+  // the wall rises at most h - 2t - 2 slotH = 22.5 over the floor leg's roof (at t + slotH), so the mouth sits at
+  // 0.75 + 3 + 22.5 = 26.25, a slot height under the lid's inside face (30 - 0.75)
+  close(t, maxFoldedRearWallIn(box, slotH, t0), 22.5, 1e-12);
+  const longest = maxFoldedSlotIn(box, slotH, t0);
+  close(t, longest, 20 - 0.75 + 22.5, 1e-12);
+  close(t, ductFit(box, "slots", vent({ slotH, len: 0 }), t0).maxFold, longest, 1e-12);
+  for (const len of [longest, longest + 5]) {
+    const v = vent({ slotH, len });
+    close(t, foldedRearWallIn(box, v, t0), 22.5, 1e-12);
+    close(t, foldedLidGapIn(box, v, t0), slotH, 1e-12);
+    const parts = cutParts({
+      sub: SUB_OPTIONS[0],
+      mid: MID_OPTIONS[0],
+      subBox: box,
+      midDims: { w: 15, h: 15, d: 15 },
+      wall: t0,
+      inset: 0.75,
+      joint: "butt",
+      portStyle: "slots",
+      cVent: v,
+      layout: "stack",
+    }).parts;
+    close(t, parts.find((p) => p.part === "ductRearWall")?.b ?? NaN, 22.5, 1e-12);
+  }
 });
 test("weights: shell from panel areas at the ply density matches the cutlist parts", (t) => {
   // independent: sum the cutlist panels (butt joints), + driver + hardware; formula counts full outer

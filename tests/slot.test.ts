@@ -3,7 +3,6 @@ import assert from "node:assert";
 import {
   rectangleEndCorrectionIntegral,
   rectangleEndCorrection,
-  slotEndCorrection,
   sideDuctEndCorrection,
   ductEndCorrection,
   ductEndCorrection2D,
@@ -11,7 +10,12 @@ import {
   ventGeometry,
   boxModel,
   subSystem,
+  slotMouthCorrection,
+  subGeometry,
+  maxStraightSlotIn,
+  minFoldedSlotIn,
 } from "../src/lib/pa/calc";
+import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import type { SubSystemConfig } from "../src/types";
 import { C, rel, close, vent } from "./helpers";
@@ -53,20 +57,17 @@ test("long thin slot: end correction grows only as log of the width", (t) => {
   const d = rectangleEndCorrection(1, 400) - rectangleEndCorrection(1, 200);
   close(t, d, Math.log(2) / Math.PI, 0.01);
 });
-test("slotEndCorr uses the floor image: a slot twice as tall", (t) => {
-  close(
-    t,
-    slotEndCorrection(3, 25),
-    BOTH_ENDS_CORRECTION_RATIO * rectangleEndCorrection(6, 25),
-    1e-12,
-  );
-  assert.ok(slotEndCorrection(3, 25) > BOTH_ENDS_CORRECTION_RATIO * rectangleEndCorrection(3, 25));
-});
 test("letterbox Fb = Helmholtz with the slot end correction", (t) => {
   const box = { w: 22, h: 30, d: 20 },
     g = ventGeometry("slots", box, vent({ slotH: 3, len: 14 }), 0.75);
   const W = box.w - 1.5 - 1.5;
-  close(t, g.ec!, slotEndCorrection(3, W, 30 - 1.5, 20 - 0.75 - 0.75 - 14), 1e-12);
+  // outside, the floor mirrors the mouth (a slot twice as tall); inside, its mouth on the floor, the back wall behind
+  close(
+    t,
+    g.ec!,
+    rectangleEndCorrection(6, W) + slotMouthCorrection(3, 30 - 1.5, 20 - 0.75 - 14, 0.75),
+    1e-12,
+  );
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
   const m = boxModel(ts, 120, g.area, g.len, 25, 20, "BW24", { ecIn: g.ec })!;
   const Sp = g.area * 0.00064516,
@@ -92,7 +93,6 @@ test("side duct: side wall mirrors the inner end only", (t) => {
     sideDuctEndCorrection(2, 27.5) > BOTH_ENDS_CORRECTION_RATIO * rectangleEndCorrection(2, 27.5) &&
       sideDuctEndCorrection(2, 27.5) < ductEndCorrection(2, 27.5),
   );
-  close(t, slotEndCorrection(3, 25), ductEndCorrection(3, 25), 1e-12);
 });
 test("side ducts: each opening gets the correction for its own throat x open height", (t) => {
   const box = { w: 22, h: 30, d: 20 };
@@ -174,14 +174,6 @@ test("duct2D: two ducts on opposite walls = one duct in half the width (symmetry
     })();
   close(t, ductEndCorrection2D(h, X / 2), pair, 1e-3);
 });
-test("slot: ground-mirrored outer end + free inner end in the box", (t) => {
-  close(
-    t,
-    slotEndCorrection(3, 25, 30.5, 8),
-    rectangleEndCorrection(6, 25) + FE * ductEndCorrection2D(3, 30.5, 8),
-    1e-12,
-  );
-});
 test("side duct: outer end mirrored by the ground along its height", (t) => {
   close(
     t,
@@ -190,20 +182,69 @@ test("side duct: outer end mirrored by the ground along its height", (t) => {
     1e-12,
   );
 });
-test("bottom slot: straight while it fits, folded (no back-wall term, mouth faces the lid) past that", (t) => {
-  const box = { w: 22, h: 30, d: 20 };
-  // the straight run holds d - t - slotH = 16.25
+test("bottom slot: straight while it fits, folded past that (a sharp bend, and its mouth under the lid)", (t) => {
+  const box = { w: 22, h: 30, d: 20 },
+    outer = rectangleEndCorrection(6, 19);
+  // the straight run holds d - t - slotH = 16.25 (from the frame front); its mouth is a slot height from the back wall
   const straight = ventGeometry("slots", box, vent({ slotH: 3, len: 16.25 }), 0.75);
+  close(t, straight.ec ?? NaN, outer + slotMouthCorrection(3, 28.5, 3, 0.75), 1e-12);
+  assert.ok(!straight.desc.includes("folded"));
+  // folded 20 long: the rear wall would rise 20 - 19.25 = 0.75, held at the least 1, so the mouth is 28.5 - 3 - 1 under
+  // the lid, the box's inside depth (20 - 0.75 - 0.75) across it
+  const folded = ventGeometry("slots", box, vent({ slotH: 3, len: 20 }), 0.75);
   close(
     t,
-    straight.ec ?? NaN,
-    slotEndCorrection(3, 22 - 3, 30 - 1.5, 20 - 0.75 - 0.75 - 16.25),
+    folded.ec ?? NaN,
+    outer + SHARP_BEND_CORRECTION * 3 + slotMouthCorrection(3, 18.5, 24.5, 0.75),
     1e-12,
   );
-  assert.ok(!straight.desc.includes("folded"));
-  const folded = ventGeometry("slots", box, vent({ slotH: 3, len: 20 }), 0.75);
-  close(t, folded.ec ?? NaN, slotEndCorrection(3, 22 - 3, 30 - 1.5, Infinity), 1e-12);
   assert.ok(folded.desc.includes("folded"));
+  // folded as far as it goes: the mouth a slot height under the lid
+  const top = ventGeometry("slots", box, vent({ slotH: 3, len: 50 }), 0.75);
+  close(
+    t,
+    top.ec ?? NaN,
+    outer + SHARP_BEND_CORRECTION * 3 + slotMouthCorrection(3, 18.5, 3, 0.75),
+    1e-12,
+  );
+});
+test("slot mouth: a nearer facing wall always adds (no flat stretch over the last inch), a thicker shelf adds", () => {
+  let prev = 0;
+  for (const gap of [24, 12, 6, 4, 3, 2.25, 1.5, 1, 0.75]) {
+    const ec = slotMouthCorrection(3, 28.5, gap, 0.75);
+    assert.ok(ec > prev, `gap ${gap}: ${ec}`);
+    prev = ec;
+  }
+  assert.ok(slotMouthCorrection(3, 28.5, 3, 1.5) > slotMouthCorrection(3, 28.5, 3, 0.75));
+});
+test("bottom slot: the shortest fold tunes a little above the longest straight run, as the 2D flow says", () => {
+  // At the straight run's end the mouth is a slot height from the back wall; the shortest fold is 4 in or so longer
+  // but its sharp bend takes some back, and its mouth opens wide under the lid, so its effective length is within about
+  // an inch of the longest straight slot's in these boxes (tests/slot-flow.ts), and with the rear wall's wood and the
+  // duct's own air off the box it tunes 0.4–1.2 Hz higher.
+  const cases: [SubSystemConfig["subBox"], number][] = [
+    [{ w: 22, h: 30, d: 20 }, 3],
+    [{ w: 21, h: 37, d: 18 }, 3],
+    [{ w: 24, h: 24, d: 24 }, 4],
+    [{ w: 20, h: 20, d: 16 }, 2.5],
+  ];
+  for (const [box, slotH] of cases) {
+    const at = (len: number) =>
+      subGeometry(SUB_OPTIONS[0], MID_OPTIONS[0], {
+        subBox: box,
+        midDims: { w: 15, h: 15, d: 15 },
+        wall: 0.75,
+        inset: 0.75,
+        portStyle: "slots",
+        cVent: vent({ slotH, len }),
+        layout: "stack",
+      });
+    const straight = at(maxStraightSlotIn(box, slotH, 0.75)),
+      fold = at(minFoldedSlotIn(box, 0.75));
+    assert.ok(!straight.port.desc.includes("folded") && fold.port.desc.includes("folded"));
+    const step = fold.Fb - straight.Fb;
+    assert.ok(step > 0.3 && step < 3, `${box.h}: ${straight.Fb} -> ${fold.Fb} Hz`);
+  }
 });
 test("saved designs with the retired folded layout load as the bottom slot", () => {
   assert.equal(savedPortStyle(RETIRED_FOLDED_PORT_STYLE), "slots");

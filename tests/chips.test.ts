@@ -55,14 +55,14 @@ test("sub: driver fit needs size + 1.9 in after the vents", (t) => {
 });
 test("sub: duct fit per layout; a bottom slot folds past the straight run", (t) => {
   // straight slot holds d - PT - slotH = 22 - 0.75 - 3 = 18.25; past that it folds up the back wall, which holds
-  // (d - PT) - (slotH + PT) + slotH / 2 + (h - 2 PT - slotH - 1) = 19 + 24.5 = 43.5, and is never shorter than its
-  // centreline at the least rise, d - PT + 1 = 22.25; the lengths between fit neither way
+  // (d - PT) + (h - 2 PT - 2 slotH) = 21.25 + 22.5 = 43.75 (a slot height left under the lid), and is never shorter
+  // than its centreline at the least rise, d - PT + 1 = 22.25; the lengths between fit neither way
   has(t, sub({ cVent: { len: 18.25 } }), "subDuctFit", false);
   has(t, sub({ cVent: { len: 18.5 } }), "subDuctFit", true, "bad");
   has(t, sub({ cVent: { len: 22 } }), "subDuctFit", true, "bad");
   assert.ok(chipOf(sub({ cVent: { len: 22 } }), "subDuctFit")[2].includes("short of the 22.3″"));
   has(t, sub({ cVent: { len: 22.25 } }), "subDuctFit", false);
-  has(t, sub({ cVent: { len: 43.5 } }), "subDuctFit", false);
+  has(t, sub({ cVent: { len: 43.75 } }), "subDuctFit", false);
   const F = sub({ cVent: { len: 44 } });
   has(t, F, "subDuctFit");
   assert.ok(chipOf(F, "subDuctFit")[2].includes("folded up the back wall"));

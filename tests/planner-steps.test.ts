@@ -3,6 +3,7 @@ import assert from "node:assert";
 import { optimizePaStack, paSearchDesign } from "../src/lib/pa/optimize";
 import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
 import { PA_SLIDERS, PA_THROAT_MAX_VSLOT1 } from "../src/constants/paSliders";
+import { ductFit, ductFits, ductLenSliderMax } from "../src/lib/pa/chips";
 import { paCurrent } from "./optimizer-dump-cases";
 import type { PaDesignConfig, PaOptimizerInput, PaOptimizerResult, SliderSpec } from "../src/types";
 
@@ -17,7 +18,12 @@ const fields = (c: PaDesignConfig): [string, number, SliderSpec][] => [
   ["mid width", c.mDim.w, PA_SLIDERS.midW],
   ["mid height", c.mDim.h, PA_SLIDERS.midH],
   ["mid depth", c.mDim.d, PA_SLIDERS.midD],
-  ["duct length", c.cVent.len, PA_SLIDERS.ductLen],
+  // the duct slider runs on to a bottom slot's longest fold
+  [
+    "duct length",
+    c.cVent.len,
+    { ...PA_SLIDERS.ductLen, max: ductLenSliderMax(c.cDim, c.portStyle, c.cVent, c.wall) },
+  ],
   ["slot height", c.cVent.slotH, PA_SLIDERS.slotH],
   [
     "duct throat",
@@ -41,7 +47,13 @@ function checkResult(what: string, r: PaOptimizerResult, cur?: PaDesignConfig) {
     ...(r.nearMiss?.closest ? [["near miss", r.nearMiss.closest.config] as const] : []),
   ];
   assert.ok(configs.length > 0, `${what}: something to check`);
-  for (const [label, c] of configs)
+  for (const [label, c] of configs) {
+    // and a duct the layout can build (a bottom slot never in the lengths that fit neither straight nor folded)
+    if (own.get("duct length") !== c.cVent.len)
+      assert.ok(
+        ductFits(ductFit(c.cDim, c.portStyle, c.cVent, c.wall).spans, c.cVent.len),
+        `${what}, ${label}: duct length ${c.cVent.len} doesn't fit the box`,
+      );
     for (const [name, x, s] of fields(c)) {
       if (own.get(name) === x) continue;
       const where = `${what}, ${label}: ${name} ${x}`;
@@ -51,6 +63,7 @@ function checkResult(what: string, r: PaOptimizerResult, cur?: PaDesignConfig) {
         `${where} is off its ${s.step} step`,
       );
     }
+  }
 }
 
 for (const name of ["rectangle sub"])
