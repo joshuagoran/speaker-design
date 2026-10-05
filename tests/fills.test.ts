@@ -8,7 +8,9 @@ import {
   thermalVoltageLimit,
   STUFFING_VOLUME_GAIN,
   nearestPoint,
+  linkwitzRileyHighpass,
 } from "../src/lib/pa/calc";
+import { DEFAULT_FILL } from "../src/lib/defaults";
 import { FILL_OPTIONS } from "../src/lib/data";
 import type { FillSystemConfig } from "../src/types";
 import { close, massLineSPL, LR24_ORDERS } from "./helpers";
@@ -26,6 +28,7 @@ const base: FillSystemConfig = {
   dim: { w: 11.5, h: 16, d: 11 },
   port: { n: 1, dia: 3, len: 4 },
   hp: 70,
+  hpOrder: 4,
   ampW: 300,
   portMax: 20,
 };
@@ -95,4 +98,35 @@ test("fills HF: limit through the pad = 2 x AES x (Z/8) x 10^(pad/10); pad from 
 test("fills weight: 1/2 in birch shell at 1.6 lb/ft2 + driver + 1 lb", (t) => {
   const v = fillSystem(drv, base);
   close(t, v.lb, ((2 * (11.5 * 16 + 11.5 * 11 + 16 * 11)) / 144) * 1.6 + drv.lb + 1, 1e-9);
+});
+
+/** The fill's model curve (highpass included), whichever box. */
+const modelCurve = (s: ReturnType<typeof fillSystem>) => (s.vM ? s.vM.curve : s.sM.curve);
+/** LR24 over LR48 highpass gain at f, dB: how much more the steeper slope takes off there. */
+const slopeGapDb = (f: number, fc: number) =>
+  20 * Math.log10(linkwitzRileyHighpass(f, fc, 4) / linkwitzRileyHighpass(f, fc, 8));
+test("fills highpass slope: LR48 drops ~24 dB more an octave below the corner, same level at it", (t) => {
+  const hp = 100;
+  for (const boxType of ["vented", "sealed"] as const) {
+    const lr24 = modelCurve(fillSystem(drv, { ...base, boxType, hp, hpOrder: 4 })),
+      lr48 = modelCurve(fillSystem(drv, { ...base, boxType, hp, hpOrder: 8 }));
+    const gapAt = (f: number) => {
+      const a = nearestPoint(lr24, f),
+        b = nearestPoint(lr48, f);
+      assert.equal(a.f, b.f); // one frequency grid for both
+      return { f: a.f, gap: a.spl - b.spl };
+    };
+    // an octave down: the filters' own difference, 1 / (1 + 2^4) against 1 / (1 + 2^8), about 24 dB
+    const oct = gapAt(hp / 2);
+    close(t, oct.gap, slopeGapDb(oct.f, hp), 1e-6, boxType);
+    close(t, oct.gap, 24, 0.75, boxType);
+    // at the corner both are -6 dB
+    close(t, gapAt(hp).gap, 0, 0.1, boxType);
+  }
+});
+test("fills highpass slope: sensitivity doesn't depend on it", () => {
+  assert.equal(fillSystem(drv, { ...base, hpOrder: 8 }).sens, fillSystem(drv, base).sens);
+});
+test("fills highpass slope: the default design stays LR24", () => {
+  assert.equal(DEFAULT_FILL.highpassOrder, 4);
 });

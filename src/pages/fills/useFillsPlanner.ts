@@ -1,5 +1,6 @@
 import { DEFAULT_FILL } from "../../lib/defaults";
 import type {
+  CrossoverOrder,
   Dims3,
   FillBoxType,
   FillDesignState,
@@ -17,6 +18,7 @@ export interface FillsPlanner extends FillDesignState {
   setPortSpec: Setter<FillPort>;
   setPortField: (k: keyof FillPort, v: number) => void;
   setHighpassHz: Setter<number>;
+  setHighpassOrder: Setter<CrossoverOrder>;
   setAmpWatts: Setter<number>;
   setMaxPortAirSpeedMs: Setter<number>;
 }
@@ -28,6 +30,7 @@ export function useFillsPlanner(): FillsPlanner {
   const [boxDims, setBoxDims] = useState<Dims3>(DEFAULT_FILL.boxDims);
   const [portSpec, setPortSpec] = useState<FillPort>(DEFAULT_FILL.portSpec);
   const [highpassHz, setHighpassHz] = useState(DEFAULT_FILL.highpassHz);
+  const [highpassOrder, setHighpassOrder] = useState<CrossoverOrder>(DEFAULT_FILL.highpassOrder);
   const [ampWatts, setAmpWatts] = useState(DEFAULT_FILL.ampWatts);
   const [maxPortAirSpeedMs, setMaxPortAirSpeedMs] = useState(DEFAULT_FILL.maxPortAirSpeedMs);
   const setBoxDim = (k: keyof Dims3, v: number) => setBoxDims((p) => ({ ...p, [k]: v }));
@@ -45,6 +48,8 @@ export function useFillsPlanner(): FillsPlanner {
     setPortField,
     highpassHz,
     setHighpassHz,
+    highpassOrder,
+    setHighpassOrder,
     ampWatts,
     setAmpWatts,
     maxPortAirSpeedMs,
