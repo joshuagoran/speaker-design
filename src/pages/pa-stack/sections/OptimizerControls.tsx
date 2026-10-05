@@ -16,11 +16,16 @@ interface Props {
     | "optimizerResult"
     | "isOptimizing"
     | "optimizerError"
+    | "optimizerProgress"
+    | "cancelOptimizerSearch"
+    | "runningMode"
+    | "fullGridLines"
     | "designPreview"
     | "undoSnapshot"
     | "toastMessage"
     | "setToastMessage"
     | "startOptimizerSearch"
+    | "retryOptimizerSearch"
     | "previewOptimizerResult"
     | "exitPreview"
     | "loadOptimizerResult"
@@ -42,11 +47,16 @@ export function OptimizerControls({ planner }: Props) {
     optimizerResult,
     isOptimizing,
     optimizerError,
+    optimizerProgress,
+    cancelOptimizerSearch,
+    runningMode,
+    fullGridLines,
     designPreview,
     undoSnapshot,
     toastMessage,
     setToastMessage,
     startOptimizerSearch,
+    retryOptimizerSearch,
     previewOptimizerResult,
     exitPreview,
     loadOptimizerResult,
@@ -69,7 +79,13 @@ export function OptimizerControls({ planner }: Props) {
           optIn={optimizerInput}
           setOpt={updateOptimizerInput}
           run={startOptimizerSearch}
+          runFull={() => startOptimizerSearch(undefined, "full")}
+          retry={retryOptimizerSearch}
+          runningMode={runningMode}
+          fullGridLines={fullGridLines}
           busy={isOptimizing}
+          progress={optimizerProgress}
+          onCancel={cancelOptimizerSearch}
           res={optimizerResult}
           err={optimizerError}
           curOut={currentDesignOutput}

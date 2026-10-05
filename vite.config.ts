@@ -28,8 +28,13 @@ export default defineConfig({
     testTimeout: 30_000,
   },
   fmt: {
-    // golden.json and optimizer-dump.json are generated
-    ignorePatterns: ["dist/**", "tests/golden.json", "tests/optimizer-dump.json"],
+    // golden.json, optimizer-dump.json and optimizer-snapshot.json are generated
+    ignorePatterns: [
+      "dist/**",
+      "tests/golden.json",
+      "tests/optimizer-dump.json",
+      "tests/optimizer-snapshot.json",
+    ],
   },
   lint: {
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],

@@ -1,4 +1,4 @@
-import type { HifiGoal, PaGoal } from "../types";
+import type { HifiGoal, PaGoal, PaRunMode } from "../types";
 
 /** A goal both optimizers offer. */
 type SharedGoal = PaGoal & HifiGoal;
@@ -45,6 +45,12 @@ export const OPTIMIZER_PANEL_TEXT = {
   heading: "Find a better design",
   limitedBy: "Limited by:",
 } as const;
+
+/** The PA run buttons' words, by run mode (the Details drop-down names them too; the phone check taps Improve). */
+export const PA_RUN_LABELS = {
+  improve: "Improve",
+  full: "Fully optimize",
+} as const satisfies Record<PaRunMode, string>;
 
 /**
  * What a card changes from your design, as its "changes" line says it. Code that asks whether a card changed

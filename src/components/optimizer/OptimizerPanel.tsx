@@ -12,13 +12,15 @@ import { RunRow } from "./RunRow";
 import { ResultCards } from "./ResultCards";
 import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize";
 import { keepLines, PA_KEEP_WORDS } from "../../lib/optimizer/goalKeeps";
-import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
+import { OPTIMIZER_PANEL_TEXT, PA_RUN_LABELS } from "../../constants/optimizerText";
 import type {
+  OptimizerProgress,
   PaGoal,
   PaOptimizerCard,
   PaOptimizerInputState,
   PaOptimizerResult,
   PaRoom,
+  PaRunMode,
   PaSearchOverrides,
 } from "../../types";
 import { FONT } from "../../styles/fonts";
@@ -28,7 +30,19 @@ interface Props {
   setOpt: (o: Partial<PaOptimizerInputState>) => void;
   /** starts a search; given limits to change first, or called as the run button's click handler */
   run: (over?: PaSearchOverrides) => unknown;
+  /** starts the exact search (Fully optimize) */
+  runFull: () => unknown;
+  /** runs again with these limits changed, in the mode of the result shown (the near miss's options) */
+  retry: (over: PaSearchOverrides) => unknown;
+  /** which search is running; null when none is */
+  runningMode: PaRunMode | null;
+  /** the grid Fully optimize searches, one line per part */
+  fullGridLines: readonly string[];
   busy: boolean;
+  /** how far the running search has got; null before its first report */
+  progress: OptimizerProgress | null;
+  /** stops the running search */
+  onCancel: () => void;
   res: PaOptimizerResult | null;
   err: string;
   /** the current design's clean sub output in dB; null when it can't be scored */
@@ -46,7 +60,13 @@ export function OptimizerPanel({
   optIn,
   setOpt,
   run,
+  runFull,
+  retry,
+  runningMode,
+  fullGridLines,
   busy,
+  progress,
+  onCancel,
   res,
   err,
   curOut,
@@ -127,7 +147,14 @@ export function OptimizerPanel({
             />
           </div>
           <GoalPicker defs={OPTIMIZER_GOALS} selected={goals} onTap={tapGoal} />
-          <KeepDetails lines={keepLines(goals, OPTIMIZER_GOALS, PA_KEEP_WORDS, curOut != null)} />
+          <KeepDetails
+            lines={keepLines(goals, OPTIMIZER_GOALS, PA_KEEP_WORDS, curOut != null)}
+            more={[
+              `${PA_RUN_LABELS.improve}: a quick search around your design (about a second).`,
+              `${PA_RUN_LABELS.full}: ${PA_RUN_LABELS.improve}'s designs and every design on the grid below, so its first card is never behind ${PA_RUN_LABELS.improve}'s and nothing on the grid beats it (up to a minute or so):`,
+              ...fullGridLines.map((line) => `· ${line}`),
+            ]}
+          />
         </div>
         <div className="mt-3 text-sm px-3 py-2 rounded border border-dashed border-stone-300 bg-stone-50">
           Target: {tgtText}
@@ -142,6 +169,10 @@ export function OptimizerPanel({
           busy={busy}
           hasGoal={!!g}
           onRun={run}
+          runLabel={PA_RUN_LABELS.improve}
+          alt={{ label: PA_RUN_LABELS.full, onRun: runFull, running: runningMode === "full" }}
+          onCancel={onCancel}
+          progress={progress}
           stats={res && res.stats}
           note={
             res && res.cards.length
@@ -184,7 +215,7 @@ export function OptimizerPanel({
             <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs text-stone-500">
               Reaches the goal with a looser limit:
               {res.nearMiss.options.map((o) => (
-                <ToggleButton key={o.text} on={false} onClick={() => run(o.set)}>
+                <ToggleButton key={o.text} on={false} onClick={() => retry(o.set)}>
                   {o.text}
                 </ToggleButton>
               ))}
@@ -204,7 +235,7 @@ export function OptimizerPanel({
             {res.nearMiss.options.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {res.nearMiss.options.map((o) => (
-                  <ToggleButton key={o.text} on={false} onClick={() => run(o.set)}>
+                  <ToggleButton key={o.text} on={false} onClick={() => retry(o.set)}>
                     {o.text}
                   </ToggleButton>
                 ))}

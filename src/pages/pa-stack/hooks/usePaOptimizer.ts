@@ -1,5 +1,6 @@
 import { LOCK_KEYS } from "../../../constants/lockKeys";
-import { runPaOptimizer } from "../../../lib/pa/runOptimizer";
+import { PA_RUNNERS } from "../../../lib/pa/runOptimizer";
+import { paExactGridText } from "../../../lib/pa/optimizeExact";
 import { evaluateDesign as evaluateConfig, pickOptimizedFields } from "../../../lib/pa/optimize";
 import { useDesignPreview } from "../../../hooks/useDesignPreview";
 import { useOptimizerLocks } from "../../../hooks/useOptimizerLocks";
@@ -7,6 +8,7 @@ import { useOptimizerRun } from "../../../hooks/useOptimizerRun";
 import { useStoredState, useStoredStateFrom } from "../../../hooks/useStoredState";
 import type {
   ConfigDb,
+  OptimizerProgress,
   CutlistSettings,
   PaDesignConfig,
   PaGoal,
@@ -16,6 +18,7 @@ import type {
   PaOptimizerLocks,
   PaOptimizerResult,
   PaPlannerLocks,
+  PaRunMode,
   PaSearchOverrides,
   Setter,
 } from "../../../types";
@@ -54,9 +57,19 @@ export interface PaOptimizer
   optimizerResult: PaOptimizerResult | null;
   isOptimizing: boolean;
   optimizerError: string;
+  /** how far the running search has got; null before its first report */
+  optimizerProgress: OptimizerProgress | null;
+  /** stops the running search and goes back to idle */
+  cancelOptimizerSearch: () => void;
+  /** which search is running; null when none is */
+  runningMode: PaRunMode | null;
+  /** the grid Fully optimize searches for the design and locks as they are, one line per part; empty when the optimizer is off */
+  fullGridLines: string[];
   toastMessage: string;
   setToastMessage: Setter<string>;
-  startOptimizerSearch: (over?: PaSearchOverrides) => Promise<void>;
+  startOptimizerSearch: (over?: PaSearchOverrides, mode?: PaRunMode) => Promise<void>;
+  /** runs again with these limits changed, in the mode that found the result shown (the near miss's options) */
+  retryOptimizerSearch: (over: PaSearchOverrides) => Promise<void>;
   loadOptimizerResult: (k: PaOptimizerCard) => Promise<void>;
   saveOptimizerResult: (k: PaOptimizerCard) => Promise<void>;
   /** the current design's clean sub output in dB; null when the optimizer is off or the design can't be scored */
@@ -106,26 +119,42 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     applyCard: (k) => restore({ ...snapshot(), ...pickOptimizedFields(k.config) }),
     restore,
   });
-  const { optimizerResult, isOptimizing, optimizerError, runOptimizerSearch } =
-    useOptimizerRun<PaOptimizerResult>();
+  const {
+    optimizerResult,
+    isOptimizing,
+    optimizerError,
+    optimizerProgress,
+    runOptimizerSearch,
+    cancelOptimizerSearch,
+  } = useOptimizerRun<PaOptimizerResult>();
   const [toastMessage, setToastMessage] = useState("");
-  const startOptimizerSearch = async (over?: PaSearchOverrides) => {
+  const [runMode, setRunMode] = useState<PaRunMode>("improve");
+  // the mode of the result shown (a cancelled run leaves it as it was)
+  const [resultMode, setResultMode] = useState<PaRunMode>("improve");
+  /** the search's input for the design as it is and these optimizer inputs */
+  const searchInput = (inp: PaOptimizerInputState) => ({
+    cur: preview.baseDesign(),
+    room: inp.room,
+    maxLb: inp.maxLb,
+    budget: inp.budget,
+    goals: inp.goals,
+    locks: optimizerLocks,
+    cutlist,
+  });
+  const startOptimizerSearch = async (over?: PaSearchOverrides, mode: PaRunMode = "improve") => {
     if (isOptimizing) return;
     const inp = { ...optimizerInput, ...(over && over.nativeEvent ? {} : over || {}) };
     if (over && !over.nativeEvent) updateOptimizerInput(over);
     if (!inp.goals.length) return;
-    await runOptimizerSearch(() =>
-      runPaOptimizer({
-        cur: preview.baseDesign(),
-        room: inp.room,
-        maxLb: inp.maxLb,
-        budget: inp.budget,
-        goals: inp.goals,
-        locks: optimizerLocks,
-        cutlist,
+    setRunMode(mode);
+    await runOptimizerSearch((options) =>
+      PA_RUNNERS[mode](searchInput(inp), options).then((r) => {
+        setResultMode(mode);
+        return r;
       }),
     );
   };
+  const retryOptimizerSearch = (over: PaSearchOverrides) => startOptimizerSearch(over, resultMode);
   const loadOptimizerResult = async (k: PaOptimizerCard) => {
     const before = preview.loadOptimizerResult(k);
     let msg = `Loaded "${k.label}".`;
@@ -190,11 +219,16 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     optimizerResult,
     isOptimizing,
     optimizerError,
+    optimizerProgress,
+    cancelOptimizerSearch,
+    runningMode: isOptimizing ? runMode : null,
+    fullGridLines: isOptimizerOn ? paExactGridText(searchInput(optimizerInput)) : [],
     designPreview: preview.designPreview,
     undoSnapshot: preview.undoSnapshot,
     toastMessage,
     setToastMessage,
     startOptimizerSearch,
+    retryOptimizerSearch,
     previewOptimizerResult: preview.previewOptimizerResult,
     exitPreview: preview.exitPreview,
     loadOptimizerResult,

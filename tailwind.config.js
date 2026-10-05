@@ -1,6 +1,6 @@
 // Tailwind, compiled at build time (it used to run in the browser from the Play CDN). The colour names are mapped onto the
 // palette: stone = the grays; green / orange (amber) / red = status; cmy-* = brand (cmy-a = actions and focus, ink today;
-// cmy-y = yellow accents; chart colours are read from PAL in the app code); 4 px corners, 6 px for large ones.
+// cmy-y = yellow accents, cmy-m = magenta (goal rank badges); chart colours are read from PAL in the app code); 4 px corners, 6 px for large ones.
 import plugin from "tailwindcss/plugin";
 import { PAL } from "./src/styles/palette.ts";
 
@@ -27,7 +27,7 @@ export default {
         red: scale(S.red),
         orange: scale(S.orange),
         amber: scale(S.orange),
-        cmy: { y: PAL.yellow, a: PAL.accent },
+        cmy: { y: PAL.yellow, m: PAL.magenta, a: PAL.accent },
         soft: PAL.alpha(PAL.muted, 0.5),
       },
       borderRadius: { DEFAULT: "4px", lg: "6px" },

@@ -41,27 +41,34 @@ import { SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS, subDriversOfSize } 
 import { PORT_TUBES } from "../../data/catalog/port-tubes";
 import type {
   ChangeName,
-  ChipId,
-  CompressionDriver,
   CutlistSettings,
   Dims3,
   DimensionLockMode,
-  Horn,
   HornHf,
   MidDriver,
   PaBoxGeometry,
   PaDesignConfig,
+  PaChipId,
+  PaChosen,
   PaEvaluation,
+  PaExactHook,
   PaGoal,
+  PaHornEntry,
   PaMetricsSummary,
   PaNearMiss,
   PaOptimizedField,
   PaOptimizedFields,
   PaOptimizerCard,
+  PaMetric,
   PaOptimizerInput,
+  OptimizerProgressCallback,
   PaOptimizerLocks,
   PaOptimizerResult,
+  PaPoolEntry,
+  PaProblemLimits,
+  PaResolvedLocks,
   PaRoom,
+  PaScore,
   PortStyle,
   SubDriver,
   SubLimits,
@@ -88,31 +95,15 @@ import {
   SHARED_GOAL_NAMES,
 } from "../../constants/optimizerText";
 import { ampForGain, onSlider, type AmpSteps } from "../optimizer/ampSteps";
+import { throttledProgress } from "../optimizer/progress";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { UI_TEXT } from "../../constants/uiText";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
-/** The limits a design is checked against: the heaviest box, the driver budget and the warnings let through. */
-interface ProblemLimits {
-  maxLb: number;
-  budget: number;
-  allow?: Set<PaChipId>;
-}
-/** A check on the PA stack's sub, mid or horn. */
-type PaChipId = ChipId<"sub" | "mid" | "horn">;
-/** The numbers the goals rank by. */
-interface Score {
-  price: number;
-  heaviest: number;
-  out: number;
-  f3: number;
-}
-/** A score plus how many things differ from the current design and how many warnings it has (`w`, once evaluated). */
-interface Metric extends Score {
-  ch: number;
-  w?: number;
-}
+type ProblemLimits = PaProblemLimits;
+type Score = PaScore;
+type Metric = PaMetric;
 /** A sub and its box volume, tuning and highpass from the coarse screen. */
 interface Seed {
   sub: SubDriver;
@@ -152,15 +143,7 @@ interface MidEntry {
   qtc: number;
   lb: number;
 }
-/** A compression driver on a horn, with its level at the crossover. */
-interface HornEntry {
-  cd: CompressionDriver;
-  h: Horn;
-  at: number;
-  price: number;
-  horn: number;
-  same: boolean;
-}
+type HornEntry = PaHornEntry;
 /** A horn pair a mid keeps up with: the mid's amp once it does, and its limit at the lower crossover then, dB. */
 interface MidPair {
   hp: HornEntry;
@@ -172,19 +155,10 @@ interface Combo extends Score {
   c: PaDesignConfig;
   ch: number;
 }
-/** An evaluated design. */
-interface PoolEntry {
-  c: PaDesignConfig;
-  m: PaEvaluation;
-  ch: number;
-}
+type PoolEntry = PaPoolEntry;
 /** A card as `choose` picks it: the design, its label and its why. */
 type PlannedCard = SelectedCard<PoolEntry, PaGoal>;
-/** The locks with both box-dimension modes present. */
-interface ResolvedLocks extends PaOptimizerLocks {
-  subDim: Partial<Record<keyof Dims3, DimensionLockMode>>;
-  midDim: Partial<Record<keyof Dims3, DimensionLockMode>>;
-}
+type ResolvedLocks = PaResolvedLocks;
 type AmpKey = "ampW" | "mAmpW" | "hfAmpW";
 
 // Slider ranges in the planner, used when a dimension is free.
@@ -198,7 +172,7 @@ export const MID_BOX_RANGE: Record<keyof Dims3, [number, number]> = {
   h: [10, 24],
   d: [8, 24],
 };
-const rangeOf = (
+export const rangeOf = (
   mode: DimensionLockMode | undefined,
   cur: number,
   [lo, hi]: [number, number],
@@ -272,6 +246,8 @@ const VENT_SIZES: Record<PortStyle, Partial<VentSpec>[]> = {
 };
 /** The vent sizes the search tries for a style, smallest area first. */
 export const ventSizesFor = (style: PortStyle) => VENT_SIZES[style];
+/** Every vent style. */
+export const VENT_STYLES = keysOf(VENT_SIZES);
 
 // Clean output: the lowest music-limit level from 40 to 90 Hz, so a peak in the response can't win.
 export const SUB_BAND_HZ = [40, 90];
@@ -525,19 +501,35 @@ export const pickOptimizedFields = (c: PaDesignConfig) =>
   // boundary cast: Object.fromEntries types its result as an index signature; these are exactly the optimized fields
   Object.fromEntries(OPTIMIZED_FIELDS.map((k) => [k, c[k]])) as PaOptimizedFields;
 
-export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
-  const t0 = Date.now();
-  const { room = 1000 } = input;
-  const goals = (
-    input.goals && input.goals.length ? input.goals : [input.goal || "cheaper"]
-  ).filter((g, i, a) => OPTIMIZER_GOALS[g] && a.indexOf(g) === i);
-  const goal = goals[0],
-    also = goals.slice(1);
+// Progress: the screen's grid points one by one make the first half of the bar; the steps after it share the second half
+// by their rough share of the work (the boxes for the seeds, the mid designs, the combine step, the finalists).
+const PA_STEP_SHARES = { boxes: 0.5, mids: 0.3, combine: 0.1, finalists: 0.1 } as const;
+type PaStep = keyof typeof PA_STEP_SHARES;
+// where each step starts in that half: the shares before it
+const PA_STEP_START: Record<PaStep, number> = { boxes: 0, mids: 0.5, combine: 0.8, finalists: 0.9 };
+
+/** How far under the target an alternative card's output may be, dB. */
+export const ALT_OUTPUT_DB = 1.5;
+/** Two designs on the same sub, vent style, mid and plywood are the same card unless their sub boxes' volumes differ by this share. */
+export const SAME_VOLUME = 0.15;
+/** The crossovers the search tries when they aren't locked, Hz. */
+export const XO_LO_OPTIONS = [90, 100, 110, 120, 140];
+export const XO_HI_OPTIONS = [800, 900, 1000, 1200, 1500];
+/** The plywoods the search tries when the plywood isn't locked, in. */
+export const WALL_OPTIONS = [0.75, 0.5];
+/** The highpasses the search tries for a tuning when the highpass isn't locked: 0.85× and 1× the tuning, 20 Hz at least. */
+export const highpassOptions = (fb: number) => [
+  Math.max(20, Math.round(fb * 0.85)),
+  Math.max(20, Math.round(fb)),
+];
+
+/** Your design as the search reads it. */
+export function paSearchDesign(input: Pick<PaOptimizerInput, "cur">): PaDesignConfig {
   // older saved configs can lack some fields; they fall back to the planner's starting design
   const { xoLo, xoHi, tilt, hfTilt, ampW, mAmpW, hfAmpW, hpType, portMax, wall, inset, layout } =
     DEFAULT_PA;
   // the crossover slopes are the design's own: every candidate keeps them (the search varies only the frequencies)
-  const cur: PaDesignConfig = {
+  return {
     xoLo,
     xoHi,
     tilt,
@@ -554,6 +546,42 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     xoLoOrder: savedCrossoverOrder(input.cur.xoLoOrder),
     xoHiOrder: savedCrossoverOrder(input.cur.xoHiOrder),
   };
+}
+/** The amps the search runs at: a locked amp as it is, an unlocked one at the top of its slider. */
+export const paSearchAmps = (cur: PaDesignConfig, locks: PaOptimizerLocks) => ({
+  ampW: locks.ampW ? cur.ampW : AMP_WATTS_MAX.ampW,
+  mAmpW: locks.mAmpW ? cur.mAmpW : AMP_WATTS_MAX.mAmpW,
+  hfAmpW: locks.hfAmpW ? cur.hfAmpW : AMP_WATTS_MAX.hfAmpW,
+});
+
+/**
+ * The quick search; `onProgress` hears how far it has got (coarse: grid points, then work units per step). With `exact`,
+ * the exact search (lib/pa/optimizeExact) adds its grid's designs to this search's pool and reports its own progress.
+ */
+export function optimizePaStack(
+  input: PaOptimizerInput,
+  onProgress?: OptimizerProgressCallback,
+  exact?: PaExactHook,
+): PaOptimizerResult {
+  const t0 = Date.now();
+  const report = throttledProgress(onProgress);
+  // set once the screen's grid is known: its point count, which is also the units the later steps share
+  let screenUnits = 1;
+  /** reports item `i` of `n` in a step after the screen */
+  const stepAt = (step: PaStep, i: number, n: number) =>
+    report(
+      Math.round(
+        screenUnits * (1 + PA_STEP_START[step] + (PA_STEP_SHARES[step] * i) / Math.max(n, 1)),
+      ),
+      2 * screenUnits,
+    );
+  const { room = 1000 } = input;
+  const goals = (
+    input.goals && input.goals.length ? input.goals : [input.goal || "cheaper"]
+  ).filter((g, i, a) => OPTIMIZER_GOALS[g] && a.indexOf(g) === i);
+  const goal = goals[0],
+    also = goals.slice(1);
+  const cur = paSearchDesign(input);
   // the cards count sheets as the Cutlist tab does
   const cl: CutlistSettings = {
     ...savedCutlist(cur),
@@ -567,11 +595,7 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   // Unlocked amps are searched at the top of their slider (so the drivers, not the amp, set the limit), turned down where
   // the band above can't keep up (the combine step), then every card comes back at the least power that keeps its output
   // and keeps each band up with the one below.
-  const amps = {
-    ampW: locks.ampW ? cur.ampW : AMP_WATTS_MAX.ampW,
-    mAmpW: locks.mAmpW ? cur.mAmpW : AMP_WATTS_MAX.mAmpW,
-    hfAmpW: locks.hfAmpW ? cur.hfAmpW : AMP_WATTS_MAX.hfAmpW,
-  };
+  const amps = paSearchAmps(cur, locks);
   const base = { ...cur, ...amps };
   const curM = evaluateDesign(cur);
   // horn loading is fixable by the horn, the driver or the crossover; only when all three are locked and the
@@ -595,16 +619,17 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   const priced = <T extends { ts: object; price: number | null }>(
     o: T,
   ): o is T & { price: number } => !!o.ts && o.price != null;
-  // a locked driver that isn't in the tables leaves nothing to search
+  // a locked driver that isn't in the tables leaves nothing to search. The exact search runs this one too: its designs
+  // join the exact search's pool, so Fully optimize's cards are never behind Improve's (the two grids differ)
   const subs = locks.sub
     ? curSub
       ? [curSub]
       : []
     : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
-  const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
+  const walls = locks.wall ? [cur.wall] : WALL_OPTIONS;
   const styles: PortStyle[] = locks.vent ? [cur.portStyle] : ["slots", "vslots", "round2"];
-  const xoLos = locks.xoLo ? [cur.xoLo] : [90, 100, 110, 120, 140];
-  const xoHis = locks.xoHi ? [cur.xoHi] : [800, 900, 1000, 1200, 1500];
+  const xoLos = locks.xoLo ? [cur.xoLo] : XO_LO_OPTIONS;
+  const xoHis = locks.xoHi ? [cur.xoHi] : XO_HI_OPTIONS;
   const sr = {
     w: rangeOf(locks.subDim.w, cur.cDim.w, SUB_BOX_RANGE.w),
     h: rangeOf(locks.subDim.h, cur.cDim.h, SUB_BOX_RANGE.h),
@@ -674,13 +699,15 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     for (let i = 0; i < 10; i++)
       vols.push(Vmin * Math.pow(Math.max(Vmax * 0.85, Vmin * 1.01) / Vmin, i / 9));
   const fbs = [28, 31, 34, 37, 40, 43];
+  // the grid's points: a highpass per tuning when it's locked, else two
+  screenUnits = Math.max(1, subs.length * vols.length * fbs.length * (locks.hpf ? 1 : 2));
+  let screened = 0;
   for (const sub of subs)
     for (const V of vols)
       for (const Fb of fbs) {
-        const hps = locks.hpf
-          ? [cur.hpf]
-          : [Math.max(20, Math.round(Fb * 0.85)), Math.max(20, Math.round(Fb))];
+        const hps = locks.hpf ? [cur.hpf] : highpassOptions(Fb);
         for (const hpf of hps) {
+          report(screened++, 2 * screenUnits);
           const Sp = 80,
             Leff = (Sp * 0.00064516 * 343 * 343) / ((2 * Math.PI * Fb) ** 2 * (V / 1000));
           const Lp = Leff / 0.0254 - 1.46 * Math.sqrt(Sp / Math.PI);
@@ -746,7 +773,9 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
   // the sub's geometry reads only the sub's own cut parts; the mid just has to exist for the cut list, so with no known
   // current mid the first table entry will do
   const midForGeom = curMid ?? MID_OPTIONS[0];
+  let seedNo = 0;
   for (const sd of seedSet) {
+    stepAt("boxes", seedNo++, seedSet.size);
     for (const t of walls) {
       const G = sd.V + (sd.sub.ts.disp || 10) + 0.08 * sd.V + 3;
       for (const { box } of shapes(G, t, sd.sub.lb, sd.sub.size)) {
@@ -966,9 +995,10 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       return [{ hp, mAmpW, lo: Math.min(lo.max, lo.sig + 10 * Math.log10(mAmpW / amps.mAmpW)) }];
     });
   const midTable: MidEntry[] = [];
-  for (const m of mids)
-    for (const t of walls)
+  for (const [mi, m] of mids.entries())
+    for (const [ti, t] of walls.entries())
       for (const bx of midBoxes(m, t)) {
+        stepAt("mids", mi * walls.length + ti, mids.length * walls.length);
         if (!bx) continue;
         const disp = m.ts.disp != null ? m.ts.disp : m.size === 15 ? 4 : 2.5;
         const eff =
@@ -1037,7 +1067,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
       : ampForGain(sc.s.lim.W, gap + KEEP_UP_SLACK_DB, AMP_WATTS_STEPS.ampW);
     return ampW === null ? null : { ampW, out: sc.out + 10 * Math.log10(ampW / sc.s.lim.W) };
   };
-  for (const sc of subCands) {
+  for (const [ci, sc] of subCands.entries()) {
+    stepAt("combine", ci, subCands.length);
     if (sc.lb > slack.lb || sc.sub.price > slack.budget) continue;
     for (const xoLo of xoLos) {
       const need = subMusicOutputAt(sc.s.mdl, sc.s.lim, sc.s.AMP_V, xoLo, cur.xoLoOrder) - cur.tilt;
@@ -1214,7 +1245,8 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     add(ranked, 4);
   }
   const pool: PoolEntry[] = [];
-  for (const x of finalists.values()) {
+  for (const [fi, x] of [...finalists.values()].entries()) {
+    stepAt("finalists", fi, finalists.size);
     const m = evaluateDesign(x.c);
     evals++;
     if (m) pool.push({ c: x.c, m, ch: changes(x.c) });
@@ -1277,7 +1309,11 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     cheaper: "Costs less than your design, close to the target.",
     lighter: "Lighter than your design, close to the target.",
   };
-  const choose = (L: ProblemLimits, tgt: number) => {
+  // stacked goals: single-goal options first, so you can see what dropping the others buys
+  const altAxes = [...(also.length ? goals : []), ...ALT_ORDER[goal], ...keysOf(ALT_LABEL)].filter(
+    (a, i, arr) => arr.indexOf(a) === i && (also.length || a !== goal),
+  );
+  const chooseFrom = (L: ProblemLimits, tgt: number): PaChosen | null => {
     const ok = pool.filter((p) => designProblems(p.m, L).length === 0);
     const vol = (c: PaDesignConfig) => c.cDim.w * c.cDim.h * c.cDim.d;
     const relaxed = (p: PoolEntry) => ({ ...metric(p), out: p.m.out + (target - tgt) });
@@ -1298,17 +1334,14 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
             k.c.portStyle !== p.c.portStyle ||
             k.c.mid !== p.c.mid ||
             k.c.wall !== p.c.wall ||
-            Math.abs(vol(p.c) / vol(k.c) - 1) >= 0.15,
+            Math.abs(vol(p.c) / vol(k.c) - 1) >= SAME_VOLUME,
         ),
       changeCount: (p) => p.ch,
       currentFails: curFails,
       hasCurrent: !!curMet,
-      // stacked goals: single-goal options first, so you can see what dropping the others buys
-      altAxes: [...(also.length ? goals : []), ...ALT_ORDER[goal], ...keysOf(ALT_LABEL)].filter(
-        (a, i, arr) => arr.indexOf(a) === i && (also.length || a !== goal),
-      ),
+      altAxes,
       // alternatives stay close to the target
-      altFilter: (_g, p) => p.m.out >= tgt - 1.5,
+      altFilter: (_g, p) => p.m.out >= tgt - ALT_OUTPUT_DB,
       labels: {
         first: { label: goalLabel, why: goalWhy },
         // your design fails a check: the goal's best design that passes (it may cost or weigh more)
@@ -1323,6 +1356,31 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
     });
     return cards.length ? { cards, goalMissing, fixMisses } : null;
   };
+  // the exact search adds designs to the pool until no design on its grid beats a pick
+  const choose = exact
+    ? exact.close(chooseFrom, {
+        cur,
+        base,
+        amps,
+        locks,
+        lim,
+        goals,
+        target,
+        keep,
+        curMet,
+        curFails,
+        xoHis,
+        mids,
+        midBoxes,
+        hornTable,
+        altAxes,
+        obj,
+        beats,
+        metric,
+        changes,
+        pool,
+      })
+    : chooseFrom;
 
   // Unlocked amps: the least power per channel (in the sliders' steps) that still reaches the target and keeps
   // each band up with the one below it. Sub first (a quieter sub asks less of the mid), then mid, then HF.
@@ -1428,7 +1486,12 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           designProblems(a.m, lim).length - designProblems(b.m, lim).length ||
           obj[goal](metric(a)) - obj[goal](metric(b)),
       )[0];
-    const lightest = subCands.length ? Math.min(...subCands.map((x) => x.lb)) : null;
+    // only when there is no closest design to name (the exact search's lightest box takes a long scan of the grid)
+    const lightestLb = () =>
+      [
+        exact ? exact.lightestSubLb() : null,
+        subCands.length ? Math.min(...subCands.map((x) => x.lb)) : null,
+      ].reduce<number | null>((a, b) => (a === null ? b : b === null ? a : Math.min(a, b)), null);
     nearMiss = {
       options: worked.map(({ text, set }) => ({ text, set })),
       closest: closest
@@ -1446,13 +1509,17 @@ export function optimizePaStack(input: PaOptimizerInput): PaOptimizerResult {
           : [
               `the closest design reaches ${closest.m.out.toFixed(1)} dB, short of the ${target.toFixed(0)} dB target`,
             ]
-        : lightest != null
-          ? [
-              `nothing inside the limits reaches the target (the lightest working sub box is ${Math.round(lightest)} lb)`,
-            ]
-          : ["no sub fits these limits and locks"],
+        : (() => {
+            const lightest = lightestLb();
+            return lightest != null
+              ? [
+                  `nothing inside the limits reaches the target (the lightest working sub box is ${Math.round(lightest)} lb)`,
+                ]
+              : ["no sub fits these limits and locks"];
+          })(),
     };
   }
+  report(2 * screenUnits, 2 * screenUnits, true);
   return {
     target,
     need,

@@ -72,13 +72,22 @@ const hifiConfigs: { name: string; cur: HifiOptimizerInput["cur"] }[] = [
   },
 ];
 
-/** PA: each seed × the page's default budget and the tests' (which leaves room for a "Smallest change" card) × goal set. */
-const paCases = seeds.flatMap(({ name, ...seed }) => {
-  const cur: PaOptimizerCurrent = {
+/** A saved design as the PA search reads it (older saves lack mDim: their mid box's own). */
+export function paCurrent(name: string): PaOptimizerCurrent {
+  const found = seeds.find((x) => x.name === name);
+  if (!found) throw new Error(`no saved design "${name}"`);
+  const { name: _name, ...seed } = found;
+  return {
     ...seed,
     mDim: seed.mDim ?? (MID_BOXES.find((b) => b.id === seed.midBox) || MID_BOXES[0]).box,
   };
-  return [900, 1100].flatMap((budget) =>
+}
+
+/** PA: each seed × the page's default budget and the tests' (which leaves room for a "Smallest change" card) × goal set. */
+const PA_BUDGETS = [900, 1100];
+const paCases = seeds.flatMap(({ name }) => {
+  const cur = paCurrent(name);
+  return PA_BUDGETS.flatMap((budget) =>
     goalSets.map((goals) => (): Json => {
       const r = optimizePaStack({ cur, room: 1000, maxLb: 125, budget, goals, locks: {} });
       return round({
@@ -132,6 +141,25 @@ const hifiCases = hifiConfigs.flatMap(({ name, cur }) =>
     });
   }),
 );
+
+const goalSetIndex = (goals: readonly PaGoal[]) => {
+  const i = goalSets.findIndex((g) => g.join() === goals.join());
+  if (i < 0) throw new Error(`no goal set ${goals.join(", ")}`);
+  return i;
+};
+/** Where a PA case sits in the dump: its saved design, budget and goal set. */
+export function paCaseIndex(name: string, budget: number, goals: readonly PaGoal[]): number {
+  const seed = seeds.findIndex((x) => x.name === name),
+    b = PA_BUDGETS.indexOf(budget);
+  if (seed < 0 || b < 0) throw new Error(`no PA case for ${name} at $${budget}`);
+  return (seed * PA_BUDGETS.length + b) * goalSets.length + goalSetIndex(goals);
+}
+/** Where a Hi-fi case sits in the dump: its design and goal set. */
+export function hifiCaseIndex(name: string, goals: readonly PaGoal[]): number {
+  const config = hifiConfigs.findIndex((c) => c.name === name);
+  if (config < 0) throw new Error(`no Hi-fi design ${name}`);
+  return config * goalSets.length + goalSetIndex(goals);
+}
 
 /** Each kind's cases, in dump order. */
 export const DUMP_CASES: Record<DumpKind, (() => Json)[]> = { pa: paCases, hifi: hifiCases };

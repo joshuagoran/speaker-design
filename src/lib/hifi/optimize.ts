@@ -33,6 +33,7 @@ import {
   needsWaveguide,
 } from "./hifi";
 import { ampVoltage, ventTuning } from "../pa/calc";
+import { throttledProgress } from "../optimizer/progress";
 import {
   passiveRadiatorMassMax,
   ownGuideCfg,
@@ -57,6 +58,7 @@ import type {
   HifiGridBox,
   HifiOptimizerJob,
   HifiOptimizerJobResult,
+  OptimizerProgressCallback,
   HifiScoredBox,
   HifiOptimizerResult,
   HifiPort,
@@ -521,16 +523,27 @@ export function hifiSearchSpace(
  * One share of the box step (a worker's, or all of it): every box in this part of the grid that passes its own checks,
  * modelled once (to 1.5 × the top crossover: the woofer's limits are read that far), with the woofer's F3 and its clean
  * level at each crossover, exactly as the page reads them. Only these numbers come back, not the box's curve.
+ * `onProgress` hears the boxes done of this part's grid (the total grows as bigger radiators join the queue).
  */
-export function hifiScoreBoxes(input: HifiOptimizerInput, part = 0, parts = 1): HifiScoredBox[] {
+export function hifiScoreBoxes(
+  input: HifiOptimizerInput,
+  part = 0,
+  parts = 1,
+  onProgress?: OptimizerProgressCallback,
+): HifiScoredBox[] {
+  const report = throttledProgress(onProgress);
   const { cur, W0, T0, space } = hifiSearchSpace(input, { part, parts });
-  if (!W0 || !T0 || !space) return [];
+  if (!W0 || !T0 || !space) {
+    report(0, 0, true);
+    return [];
+  }
   const { xos, grid, bigger } = space;
   const top = Math.max(hifiGridTop(0), 1.5 * Math.max(...xos));
   const out: HifiScoredBox[] = [];
   // the grid, and the next radiators of boxes whose radiators set their level, as they come up
   const queue = [...grid];
   for (let qi = 0; qi < queue.length; qi++) {
+    report(qi, queue.length);
     const e = queue[qi];
     const { w, cfg, dim, wall, box, pr } = e;
     if (!wooferFitsBaffle(w, dim)) continue;
@@ -566,6 +579,7 @@ export function hifiScoreBoxes(input: HifiOptimizerInput, part = 0, parts = 1): 
       if (next) queue.push(next);
     }
   }
+  report(queue.length, queue.length, true);
   return out;
 }
 
@@ -994,12 +1008,15 @@ function changes(p: Pick<PoolEntry, "w" | "t" | "c">, cur: HifiOptimizerCurrent)
   return out;
 }
 
-/** One job for a worker: a share of the box step, or the rest of the search on the shares. */
+/** One job for a worker: a share of the box step (its progress goes to `onProgress`), or the rest of the search on the shares. */
 // a share kept by this worker (or the page, without workers) for its run's select job, so it isn't copied out and back
 let keptShare: { run: string; scored: HifiScoredBox[] } | null = null;
-export function runHifiJob(job: HifiOptimizerJob): HifiOptimizerJobResult {
+export function runHifiJob(
+  job: HifiOptimizerJob,
+  onProgress?: OptimizerProgressCallback,
+): HifiOptimizerJobResult {
   if (job.kind === "score") {
-    const scored = hifiScoreBoxes(job.input, job.part, job.parts);
+    const scored = hifiScoreBoxes(job.input, job.part, job.parts, onProgress);
     if (!job.keep) return { kind: "scored", scored };
     keptShare = { run: job.keep, scored };
     return { kind: "scored", scored: [] };

@@ -4,6 +4,7 @@ import { runHifiJob } from "./optimize";
 import type {
   HifiOptimizerJob,
   HifiOptimizerJobResult,
+  OptimizerMessage,
   OptimizerRequest,
   OptimizerResponse,
 } from "../../types";
@@ -11,10 +12,11 @@ import type {
 self.onmessage = (e: MessageEvent<OptimizerRequest<HifiOptimizerJob>>) => {
   const { id, input } = e.data;
   try {
-    self.postMessage({
-      id,
-      out: runHifiJob(input),
-    } satisfies OptimizerResponse<HifiOptimizerJobResult>);
+    // progress goes out as it comes (the box step passes it on about ten times a second), then the result
+    const out = runHifiJob(input, (progress) =>
+      self.postMessage({ id, progress } satisfies OptimizerMessage<HifiOptimizerJobResult>),
+    );
+    self.postMessage({ id, out } satisfies OptimizerResponse<HifiOptimizerJobResult>);
   } catch (err) {
     // boundary cast: a catch variable is unknown; whatever was thrown is read for a message, as before
     self.postMessage({

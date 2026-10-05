@@ -5,6 +5,7 @@
 // request outside the page: everything is bundled in, so the page must work with the network blocked.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const page = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -117,7 +118,7 @@ for (const size of sizes) {
     await p.waitForTimeout(300);
     await check("#planner, optimizer on");
     await p.locator('button[title="Same output, cheaper"]').tap(); // goals start unselected
-    await p.locator('button:has-text("Find 3 designs")').tap();
+    await p.getByRole("button", { name: PA_RUN_LABELS.improve, exact: true }).tap();
     await p.waitForSelector("text=Searched", { timeout: 90000 });
     await check("#planner, optimizer results");
   }
