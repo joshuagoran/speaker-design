@@ -40,6 +40,7 @@ import type {
 import { DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import { PLYWOOD_LB_PER_SQ_FT } from "../../data/catalog/plywood";
 import { crossoverSlopeName } from "../../constants/crossovers";
+import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../../data/acoustics/slot-inner-end";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
 const ROUND_PORT: Record<PortStyle, boolean> = {
@@ -64,21 +65,24 @@ export const slotFolds = (box: Pick<Dims3, "d">, v: Pick<VentSpec, "slotH" | "le
   v.len > maxStraightSlotIn(box, v.slotH, t);
 /**
  * A folded bottom slot's floor shelf (the floor leg's roof), from the baffle front as a straight slot's shelf is: the
- * longest straight run less the rear channel's wall, which stands on the floor in front of the channel.
+ * longest straight run less the rear channel's wall (`t`), which the shelf runs up to.
  */
 export const foldedShelfIn = (box: Pick<Dims3, "d">, slotH: number, t: number) =>
   maxStraightSlotIn(box, slotH, t) - t;
-// The least the rear channel's wall rises above the floor leg's roof, so the folded duct has a mouth to open into.
+// The least the rear channel's wall rises from the floor leg's roof's underside, so the folded duct has a mouth to open
+// into.
 const FOLD_MIN_WALL_IN = 1;
 /**
- * The most a folded bottom slot's rear channel wall rises above the floor leg's roof: up to one slot height under the
- * lid's inside face, so the channel's mouth has the same gap to the lid as a straight slot's has to the back wall. The
+ * The most a folded bottom slot's rear channel wall rises from the floor leg's roof's underside: up to one slot height
+ * under the lid's inside face, so the channel's mouth has the same gap to the lid as a straight slot's has to the back wall. The
  * floor (`t`) and the slot sit under the roof's underside, the lid (`t`) over the gap.
  */
 export const maxFoldedRearWallIn = (box: Pick<Dims3, "h">, slotH: number, t: number) =>
   box.h - 2 * t - 2 * slotH;
 /**
- * A folded bottom slot's rear channel wall, in inches above the floor leg's roof. The duct's length is its centreline:
+ * A folded bottom slot's rear channel wall, in inches up from the underside of the floor leg's roof (`t + slotH` above
+ * the box's bottom, where the wall starts: the floor leg runs on under it into the channel). The duct's length is its
+ * centreline:
  * the floor run from the baffle front to the middle of the rear channel (`d - t - slotH / 2`), then up the channel to
  * the wall's top (`slotH / 2` + the wall), so the wall is `len - (d - t)`, never under the least rise nor over the most
  * (the model, the 3D view and the cutlist all take this one wall).
@@ -644,8 +648,9 @@ export const ductEndCorrection = (
 // modal sum for a piston in a rigid 2D duct (the evanescent cross-modes carry the added mass):
 //   end correction = 2 X^2 / (pi^3 h) * sum sin^2(m pi h / X) coth(m pi L / X) / m^3
 // It includes the wall the vent sits on and the opposite wall, and tends to the free-space strip as X grows.
-// The gap to the back wall is taken as at least h: the planner's "Duct too long" check asks for that much,
-// and closer than that the flow turns through the gap and the model no longer holds.
+// It walls off the box over the duct (the plane of the mouth is rigid out to X), so it is kept for the side ducts only;
+// a bottom slot's inner end is slotInnerEndCorrection's. The gap to the back wall is taken as at least h: closer than
+// that the flow turns through the gap and the model no longer holds.
 const d2Cache = new Map<string, number>();
 export function ductEndCorrection2D(h: number, X: number, L = Infinity) {
   if (h >= X) return 0;
@@ -665,48 +670,51 @@ export function ductEndCorrection2D(h: number, X: number, L = Infinity) {
   return v;
 }
 export const FREE_END = 0.61 / 0.85; // an unflanged (free) end relative to a flanged one, as in 1.46 r
-// Letterbox on the floor: outside, the ground mirrors the mouth (slot twice as tall, open width w);
-// inside, the box interior (height X, back wall L behind the mouth) with the side walls at both ends.
-export const slotEndCorrection = (h: number, w: number, X?: number, L?: number) =>
-  X
-    ? rectangleEndCorrection(2 * h, w) + FREE_END * ductEndCorrection2D(h, X, L)
-    : ductEndCorrection(h, w);
-/** A 2D inner-end correction: ductEndCorrection2D, or exactSub's fast endCorrection2D (the same values). */
-export type EndCorrection2D = (h: number, X: number, L?: number) => number;
-/** What a wall a distance `L` in front of a mouth (`h` wide, interior `X` across it) adds to its open-room correction. */
-const nearWallCorrection = (ec2D: EndCorrection2D, h: number, X: number, L: number) =>
-  ec2D(h, X, L) - ec2D(h, X);
+// Where `x` falls on an ascending axis: the cell's lower index and the fraction across it, clamped to the axis' ends.
+function axisCell(axis: readonly number[], x: number) {
+  const last = axis.length - 1;
+  if (!(x > axis[0])) return { i: 0, f: 0 };
+  if (x >= axis[last]) return { i: last - 1, f: 1 };
+  let i = 0;
+  while (axis[i + 1] < x) i++;
+  return { i, f: (x - axis[i]) / (axis[i + 1] - axis[i]) };
+}
 /**
- * A folded bottom slot's added length for its 90° turn up the back wall (`h` the slot, `X` the box's inside height):
- * the back-wall term a straight slot gets with its mouth one slot height from the back wall, the longest it runs. It is
- * the same air in the same corner, so the tuning carries on across the fold instead of stepping up.
+ * The inner end correction (in) of a slot `h` high that runs along a wall and opens into the box: the shelf forming it
+ * `t` thick with the box open beyond it, a facing wall `gap` from the mouth, the box spanning `span` across the mouth
+ * (SLOT_INNER_END, interpolated in its axes; outside them, its nearest edge).
  */
-export const slotBendCorrection = (
-  h: number,
-  X: number,
-  ec2D: EndCorrection2D = ductEndCorrection2D,
-) => nearWallCorrection(ec2D, h, X, h);
+export function slotMouthCorrection(h: number, span: number, gap: number, t: number) {
+  const T = SLOT_INNER_END;
+  const a = axisCell(T.gap, gap > 0 ? h / gap : Infinity),
+    b = axisCell(T.span, h / span),
+    c = axisCell(T.wall, t / h);
+  let v = 0;
+  for (let da = 0; da < 2; da++)
+    for (let db = 0; db < 2; db++)
+      for (let dc = 0; dc < 2; dc++) {
+        const k = (da ? a.f : 1 - a.f) * (db ? b.f : 1 - b.f) * (dc ? c.f : 1 - c.f);
+        if (k) v += k * T.ecOverH[a.i + da][b.i + db][c.i + dc];
+      }
+  return v * h;
+}
 /**
- * A bottom slot's inner end (as a flanged end; times FREE_END in the vent's correction). Straight: the box interior
- * with the back wall behind the mouth. Folded up the back wall: the open interior, plus the turn (slotBendCorrection),
- * plus the lid's term at the gap over the rear channel's mouth (as the back wall's for a straight slot; the near-wall
- * term hardly reads the interior's span at gaps of a slot height or so, so the box's height stands for it).
+ * A bottom slot's inner end correction (in). Straight: its mouth on the floor, the back wall behind it, the box's inside
+ * height across it. Folded up the back wall: the floor leg turns a sharp 90° into the rear channel (SHARP_BEND_CORRECTION
+ * against the centreline the length is measured on), and the channel's mouth, under the lid, is the same kind of mouth
+ * turned on its side: along the back panel, the rear wall its shelf, the lid the facing wall, the box's inside depth
+ * across it.
  */
 export function slotInnerEndCorrection(
   box: Dims3,
   v: Pick<VentSpec, "slotH" | "len">,
   t: number,
   folded: boolean,
-  ec2D: EndCorrection2D = ductEndCorrection2D,
 ) {
   const h = v.slotH,
-    X = box.h - 2 * t;
-  if (!folded) return ec2D(h, X, box.d - 0.75 - t - v.len);
-  return (
-    ec2D(h, X) +
-    slotBendCorrection(h, X, ec2D) +
-    nearWallCorrection(ec2D, h, X, foldedLidGapIn(box, v, t))
-  );
+    depth = box.d - 0.75 - t; // baffle to back panel, as the gap behind a straight slot is measured
+  if (!folded) return slotMouthCorrection(h, box.h - 2 * t, depth - v.len, t);
+  return SHARP_BEND_CORRECTION * h + slotMouthCorrection(h, depth, foldedLidGapIn(box, v, t), t);
 }
 // Side duct (throat th, open height H) against a side wall: outside, the ground mirrors the bottom of the
 // mouth; inside, the box interior across its width X (for a pair of ducts, half the width: symmetry).
@@ -742,19 +750,17 @@ export function ventGeometry(
   }
   if (portStyle === "slots") {
     // one letterbox split by two fins (wall ply); the fins run the full length but the mouths
-    // sit together, so it is treated as a single opening on the floor (see slotEndCorr)
+    // sit together, so it is treated as a single opening on the floor (see slotInnerEndCorrection)
     const h = cVent.slotH,
       area = h * (iw - 2 * t),
       seg = (iw - 2 * t) / 3;
-    // a slot too long to run straight folds up the back wall: its mouth faces the lid, and the turn adds its own length
+    // a slot too long to run straight folds up the back wall: its mouth faces the lid, and the turn takes its own length
     const folded = slotFolds(box, cVent, t);
     return {
       n: 1,
       area,
       len: cVent.len,
-      ec:
-        rectangleEndCorrection(2 * h, iw - 2 * t) +
-        FREE_END * slotInnerEndCorrection(box, cVent, t, folded),
+      ec: rectangleEndCorrection(2 * h, iw - 2 * t) + slotInnerEndCorrection(box, cVent, t, folded),
       dh: (4 * (h * seg)) / (2 * (h + seg)),
       desc:
         `letterbox, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` +

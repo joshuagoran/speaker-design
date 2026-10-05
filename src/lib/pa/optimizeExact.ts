@@ -762,9 +762,9 @@ function exactHook(
     let v = deepShapes.get(k);
     if (!v) {
       if (deepShapes.size >= 200_000) deepShapes.clear();
-      // a bottom slot taken folded to the lid: the straight run's largest correction (the turn carries it on) plus the
-      // lid's at its smallest gap, the largest it can have
-      v = ventShape(style, dims, { ...vent, len: 1e9 }, s.walls[ti], style === "slots");
+      // a bottom slot taken straight, its mouth as close to the back wall as the correction reads: the largest it can
+      // have (a fold's is smaller: its bend shortens it, and its mouth is never closer than a slot height to the lid)
+      v = ventShape(style, dims, { ...vent, len: 1e9 }, s.walls[ti], false);
       deepShapes.set(k, v);
     }
     return v;

@@ -28,9 +28,10 @@ export default defineConfig({
     testTimeout: 30_000,
   },
   fmt: {
-    // golden.json, optimizer-dump.json and optimizer-snapshot.json are generated
+    // golden.json, optimizer-dump.json, optimizer-snapshot.json and the slot inner-end table are generated
     ignorePatterns: [
       "dist/**",
+      "src/data/acoustics/slot-inner-end.ts",
       "tests/golden.json",
       "tests/optimizer-dump.json",
       "tests/optimizer-snapshot.json",

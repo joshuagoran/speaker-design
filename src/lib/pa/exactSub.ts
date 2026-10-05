@@ -442,8 +442,7 @@ export function ventShape(
       n: 1,
       area: v.slotH * (iw - 2 * t),
       ec:
-        rectangleEndCorrection(2 * v.slotH, iw - 2 * t) +
-        FREE_END * slotInnerEndCorrection(box, v, t, folded, endCorrection2D),
+        rectangleEndCorrection(2 * v.slotH, iw - 2 * t) + slotInnerEndCorrection(box, v, t, folded),
     };
   const r = v.dia / 2;
   return { n: v.nt, area: v.nt * Math.PI * r * r, ec: null };
@@ -567,8 +566,7 @@ export function solveShape(
   for (let it = 0; it < 60; it++) {
     // the duct length for the tuning at this size; where the end correction reads the gap behind the duct, the root of
     // len + ec(len) = Leff, which rises with the length (a longer duct leaves a smaller gap, a larger correction). A
-    // bottom slot is solved straight first; only when that is longer than the straight run holds does it fold (the
-    // turn carries the straight run's correction on, so the folded root lies past the straight run too).
+    // bottom slot is solved straight first; only when that is longer than the straight run holds does it fold.
     let vs = ventShape(style, box, v, t, false);
     const Leff = effectiveLengthFor(vs.area, VbL, Fb);
     v.len = ductLengthFor(vs, Leff);
@@ -605,15 +603,15 @@ export function solveShape(
       }
       const straightMax = maxStraightSlotIn(box, v.slotH, t);
       if (style === "slots" && v.len > straightMax) {
-        // past the straight run it folds: the folded length's root (the turn carries on the straight correction, and
-        // the lid's term reads the rear channel's rise). Where the lid's small term leaves no fold root past the
-        // straight run, the straight answer stands (the two differ by a hair there).
-        const straightLen = v.len;
+        // past the straight run it folds: the folded length's root (its correction rises with the length too, as the
+        // mouth nears the lid). A fold takes a different correction from the straight slot's at the back wall, so
+        // there can be tunings neither reaches: none past the straight run, and no box of this size for the target.
         const gf = (x: number) => {
           v.len = x;
           return x - ductLengthFor(ventShape(style, box, v, t, true), Leff);
         };
-        v.len = gf(straightMax) < 0 ? illinoisRoot(gf, straightMax, Leff / 0.0254) : straightLen;
+        if (gf(straightMax) >= 0) return null;
+        v.len = illinoisRoot(gf, straightMax, Leff / 0.0254);
       }
       vs = ventShape(style, box, v, t);
     }

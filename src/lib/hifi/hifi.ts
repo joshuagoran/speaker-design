@@ -12,7 +12,7 @@ import {
   plywoodLbPerSqFt,
   highpassGain,
   rectangleEndCorrection,
-  ductEndCorrection2D,
+  slotMouthCorrection,
   logGridCount,
 } from "../pa/calc";
 import { MDF_LB_PER_SQ_FT } from "../../data/catalog/plywood";
@@ -225,17 +225,18 @@ export const grossVolumeLiters = (d: Dims3, t: number) =>
   (Math.max(0, (d.w - 2 * t) * (d.h - 2 * t) * (d.d - 2 * t)) * 16.387) / 1e3;
 export const portArea = (p: RoundPort | SizedSlotPort) =>
   p.shape === "slot" ? p.h * p.w : p.n * Math.PI * Math.pow(p.dia / 2, 2);
-// Slot vent: a full-width letterbox along the bottom of the baffle, formed by a shelf, running straight back.
-// Outer end flanged by the baffle; inner end opens into the box (height X, back wall L behind the mouth).
+// Slot vent: a full-width letterbox along the bottom of the baffle, formed by a shelf (wall ply), running straight back.
+// Outer end flanged by the baffle; inner end opens into the box (its inside height across the mouth, the back wall
+// behind it, the box open over the shelf), as the PA sub's bottom slot (slotMouthCorrection).
 export const slotWidth = (dim: Dims3, wall: number) => dim.w - 2 * wall;
 export function hifiSlotEndCorrection(
   dim: Dims3,
   wall: number,
   port: Pick<SizedSlotPort, "h" | "w" | "len">,
 ) {
-  const X = dim.h - 2 * wall - wall,
+  const X = dim.h - 2 * wall,
     L = dim.d - 2 * wall - port.len;
-  return rectangleEndCorrection(port.h, port.w) + (0.61 / 0.85) * ductEndCorrection2D(port.h, X, L);
+  return rectangleEndCorrection(port.h, port.w) + slotMouthCorrection(port.h, X, L, wall);
 }
 export const slotMaxLength = (dim: Dims3, wall: number, port: Pick<SlotPort, "h">) =>
   dim.d - 2 * wall - Math.max(port.h, 1); // leave the mouth's height behind it
