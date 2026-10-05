@@ -626,7 +626,7 @@ export function cutParts({
       qty: 2 * n,
       a: cVent.throat,
       b: cVent.len,
-      t: 0.5,
+      t: SIDE_DUCT_DIVIDER_IN,
       note: "",
     });
   } else if (kit) {
@@ -665,42 +665,6 @@ export const rectangleEndCorrection = (a: number, b: number) =>
   rectangleEndCorrectionIntegral(a, b) / (2 * Math.PI * a * b);
 // Flanged + free end, as the 1.46 r (0.85 r + 0.61 r) used for round tubes.
 export const BOTH_ENDS_CORRECTION_RATIO = 1 + 0.61 / 0.85;
-// Rectangular duct of throat a x height b along a panel: a wall at an end mirrors the mouth, so that end
-// acts as one twice as wide in a (image method). Outer end flanged (baffle), inner end free (0.61/0.85).
-export const ductEndCorrection = (
-  a: number,
-  b: number,
-  { inner = true, outer = true }: { inner?: boolean; outer?: boolean } = {},
-) =>
-  rectangleEndCorrection(outer ? 2 * a : a, b) +
-  (0.61 / 0.85) * rectangleEndCorrection(inner ? 2 * a : a, b);
-// Inner end, inside the box: the vent mouth (height h against one wall, spanning the box from wall to wall)
-// opens into the box interior, a duct of height X that ends at the back wall a distance L away. Low-frequency
-// modal sum for a piston in a rigid 2D duct (the evanescent cross-modes carry the added mass):
-//   end correction = 2 X^2 / (pi^3 h) * sum sin^2(m pi h / X) coth(m pi L / X) / m^3
-// It includes the wall the vent sits on and the opposite wall, and tends to the free-space strip as X grows.
-// It walls off the box over the duct (the plane of the mouth is rigid out to X), so it is kept for the side ducts only;
-// a bottom slot's inner end is slotInnerEndCorrection's. The gap to the back wall is taken as at least h: closer than
-// that the flow turns through the gap and the model no longer holds.
-const d2Cache = new Map<string, number>();
-export function ductEndCorrection2D(h: number, X: number, L = Infinity) {
-  if (h >= X) return 0;
-  L = Math.max(L, h);
-  const key = h + "|" + X + "|" + L,
-    hit = d2Cache.get(key);
-  if (hit !== undefined) return hit;
-  if (d2Cache.size > 20000) d2Cache.clear();
-  let sum = 0;
-  for (let m = 1; m <= 2000; m++) {
-    const k = (m * Math.PI) / X,
-      sn = Math.sin(k * h);
-    sum += ((sn * sn) / (m * m * m)) * (Number.isFinite(L) ? 1 / Math.tanh(k * L) : 1);
-  }
-  const v = ((2 * X * X) / (Math.PI ** 3 * h)) * sum;
-  d2Cache.set(key, v);
-  return v;
-}
-export const FREE_END = 0.61 / 0.85; // an unflanged (free) end relative to a flanged one, as in 1.46 r
 // Where `x` falls on an ascending axis: the cell's lower index and the fraction across it, clamped to the axis' ends.
 function axisCell(axis: readonly number[], x: number) {
   const last = axis.length - 1;
@@ -710,51 +674,106 @@ function axisCell(axis: readonly number[], x: number) {
   while (axis[i + 1] < x) i++;
   return { i, f: (x - axis[i]) / (axis[i + 1] - axis[i]) };
 }
+// the run axis doubles at each step, so it is read on a log scale
+const RUN_LOG2 = SLOT_INNER_END.run.map(Math.log2);
 /**
  * The inner end correction (in) of a slot `h` high that runs along a wall and opens into the box: the shelf forming it
- * `t` thick with the box open beyond it, a facing wall `gap` from the mouth, the box spanning `span` across the mouth
- * (SLOT_INNER_END, interpolated in its axes; outside them, its nearest edge).
+ * `t` thick with the box open beyond it, running `run` from the box's front to the mouth, a facing wall `gap` from the
+ * mouth, the box spanning `span` across the mouth (SLOT_INNER_END, interpolated in its axes; outside them, its nearest
+ * edge).
  */
-export function slotMouthCorrection(h: number, span: number, gap: number, t: number) {
+export function slotMouthCorrection(h: number, span: number, gap: number, t: number, run: number) {
   const T = SLOT_INNER_END;
   const a = axisCell(T.gap, gap > 0 ? h / gap : Infinity),
     b = axisCell(T.span, h / span),
-    c = axisCell(T.wall, t / h);
+    c = axisCell(T.wall, t / h),
+    d = axisCell(RUN_LOG2, run > 0 ? Math.log2(run / h) : -Infinity);
   let v = 0;
   for (let da = 0; da < 2; da++)
     for (let db = 0; db < 2; db++)
-      for (let dc = 0; dc < 2; dc++) {
-        const k = (da ? a.f : 1 - a.f) * (db ? b.f : 1 - b.f) * (dc ? c.f : 1 - c.f);
-        if (k) v += k * T.ecOverH[a.i + da][b.i + db][c.i + dc];
-      }
+      for (let dc = 0; dc < 2; dc++)
+        for (let dd = 0; dd < 2; dd++) {
+          const k =
+            (da ? a.f : 1 - a.f) *
+            (db ? b.f : 1 - b.f) *
+            (dc ? c.f : 1 - c.f) *
+            (dd ? d.f : 1 - d.f);
+          if (k) v += k * T.ecOverH[a.i + da][b.i + db][c.i + dc][d.i + dd];
+        }
   return v * h;
 }
+/**
+ * The most slotMouthCorrection can be for a mouth `h` high across `span`, its shelf `t` thick, whatever the gap and the
+ * run (in): at the nearest gap (the table rises toward the facing wall), at the run there that gives the most (a short
+ * run's narrow room behind the mouth can give more than a long one's). A bound for a search that hasn't cut the duct.
+ */
+export function slotMouthCorrectionMost(h: number, span: number, t: number) {
+  let most = 0;
+  for (const r of SLOT_INNER_END.run)
+    most = Math.max(most, slotMouthCorrection(h, span, 0, t, r * h));
+  return most;
+}
+/** A side duct's dividers, in: two per duct, bracing its inner wall to the side wall across the throat. */
+export const SIDE_DUCT_DIVIDER_IN = 0.5;
+// A sub's baffle, in: the box's air starts behind it, so a duct from the frame front runs this much less beside it (the
+// reveal's fraction of an inch more is left out: it moves the correction well under 1 %).
+const SUB_BAFFLE_IN = 0.75;
 /**
  * A bottom slot's inner end correction (in). Straight: its mouth on the floor, the back wall behind it, the box's inside
  * height across it. Folded up the back wall: the floor leg turns a sharp 90° into the rear channel (SHARP_BEND_CORRECTION
  * against the centreline the length is measured on), and the channel's mouth, under the lid, is the same kind of mouth
- * turned on its side: along the back panel, the rear wall its shelf, the lid the facing wall, the box's inside depth
- * across it.
+ * turned on its side: along the back panel, the rear wall its shelf (rising from the floor leg's roof), the lid the
+ * facing wall, the box's inside depth across it. `most`: the most it can be in this box, straight or folded, whatever
+ * the length (slotMouthCorrectionMost).
  */
 export function slotInnerEndCorrection(
   box: Dims3,
   v: Pick<VentSpec, "slotH" | "len">,
   t: number,
   folded: boolean,
+  most = false,
 ) {
   const h = v.slotH;
+  if (most)
+    return Math.max(
+      slotMouthCorrectionMost(h, box.h - 2 * t, t),
+      SHARP_BEND_CORRECTION * h + slotMouthCorrectionMost(h, box.d - SUB_BAFFLE_IN - t, t),
+    );
   // the slot runs from the frame front under the baffle (as maxStraightSlotIn, the 3D view and the cutlist take it), so
   // its mouth is `d - t - len` from the back panel: a slot height at the longest straight run
-  if (!folded) return slotMouthCorrection(h, box.h - 2 * t, box.d - t - v.len, t);
-  const depth = box.d - 0.75 - t; // across the rear channel's mouth, the box's depth (behind a 3/4" baffle inset)
-  return SHARP_BEND_CORRECTION * h + slotMouthCorrection(h, depth, foldedLidGapIn(box, v, t), t);
+  if (!folded)
+    return slotMouthCorrection(h, box.h - 2 * t, box.d - t - v.len, t, v.len - SUB_BAFFLE_IN);
+  const depth = box.d - SUB_BAFFLE_IN - t; // across the rear channel's mouth, the box's depth behind the baffle
+  return (
+    SHARP_BEND_CORRECTION * h +
+    slotMouthCorrection(h, depth, foldedLidGapIn(box, v, t), t, foldedRearWallIn(box, v, t) - t)
+  );
 }
-// Side duct (throat th, open height H) against a side wall: outside, the ground mirrors the bottom of the
-// mouth; inside, the box interior across its width X (for a pair of ducts, half the width: symmetry).
-export const sideDuctEndCorrection = (th: number, H: number, X?: number, L?: number) =>
-  X
-    ? rectangleEndCorrection(th, 2 * H) + FREE_END * ductEndCorrection2D(th, X, L)
-    : ductEndCorrection(th, H, { outer: false });
+/**
+ * A side duct's end corrections (in), each duct's (`n` of them, one against each side wall for a pair). Outside, the
+ * ground mirrors the bottom of its mouth (throat × open height). Inside, the same mouth as a bottom slot's, turned on its
+ * side: the side wall its floor, the duct's inner wall (`t`, from the frame front as the cutlist and the 3D view take it)
+ * its shelf, the back wall `d - t - len` behind the mouth, and across it the box's inside width (half of it for a pair:
+ * the centre line is a plane of symmetry). `most`: the most it can be in this box, whatever the length
+ * (slotMouthCorrectionMost).
+ */
+export function sideDuctEndCorrection(
+  box: Dims3,
+  v: Pick<VentSpec, "throat" | "len">,
+  t: number,
+  n: 1 | 2,
+  most = false,
+) {
+  const th = v.throat,
+    span = (box.w - 2 * t) / n,
+    open = box.h - 2 * t - 2 * SIDE_DUCT_DIVIDER_IN;
+  return (
+    rectangleEndCorrection(th, 2 * open) +
+    (most
+      ? slotMouthCorrectionMost(th, span, t)
+      : slotMouthCorrection(th, span, box.d - t - v.len, t, v.len - SUB_BAFFLE_IN))
+  );
+}
 
 // Vent geometry for the sub. t is the wall (and fin) ply. n is the number of separate openings,
 // which sets the end correction in boxModel.
@@ -770,14 +789,14 @@ export function ventGeometry(
   if (portStyle === "vslots" || portStyle === "vslot1") {
     const n = portStyle === "vslot1" ? 1 : 2;
     const th = cVent.throat,
-      area = n * th * (ih - 2 * 0.5),
-      seg = (ih - 2 * 0.5) / 3; // two 1/2\u2033 dividers per duct
-    const L = box.d - 0.75 - t - cVent.len; // mouth to back wall (duct measured from the baffle front, 3/4" inset)
+      open = ih - 2 * SIDE_DUCT_DIVIDER_IN, // two dividers per duct
+      area = n * th * open,
+      seg = open / 3;
     return {
       n,
       area,
       len: cVent.len,
-      ec: sideDuctEndCorrection(th, ih - 2 * 0.5, n === 2 ? iw / 2 : iw, L),
+      ec: sideDuctEndCorrection(box, cVent, t, n),
       dh: (4 * (th * seg)) / (2 * (th + seg)),
       desc: `${n === 1 ? "one side duct" : "two side ducts"}, ${th.toFixed(2)}\u2033 throat \u00d7 ${ih.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long`,
     };

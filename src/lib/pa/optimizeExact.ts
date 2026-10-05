@@ -768,10 +768,10 @@ function exactHook(
   };
   // A group's box pairs, each with a floor on its weight. With depth free the vent's area is the pair's own, so the duct
   // length for the tuning is exact where the end correction doesn't read the gap behind the duct, and otherwise lies
-  // between the length with no correction and the one with the correction at its largest (the smallest gap). A duct
+  // between the length with no correction and the one with the correction at the most it can be in the box. A duct
   // shorter than the shortest allowed, or longer than the deepest box holds, rules the pair out; the duct's own air makes
   // the box at least that much bigger, so heavier.
-  // the vent's shape in the deepest box of a pair (the duct's far end at the back wall), per plywood, vent and pair
+  // the vent's shape in the deepest box of a pair, its end correction at its most, per plywood, vent and pair
   const deepShapes = new Map<string, VentShape>();
   const deepShape = (
     si: number,
@@ -787,13 +787,9 @@ function exactHook(
     let v = deepShapes.get(k);
     if (!v) {
       if (deepShapes.size >= 200_000) deepShapes.clear();
-      // a bottom slot or a tube taken straight, its mouth as close to the back wall as the correction reads: the largest
-      // it can have (a fold's or an elbow's is smaller: its bend shortens it, and its mouth is never closer than a slot
-      // height, or a tube diameter, to the lid)
-      v = ventShape(style, dims, { ...vent, len: 1e9 }, s.walls[ti], sub, {
-        folded: false,
-        elbows: 0,
-      });
+      // the end correction at the most it can be in this box, whatever the duct's length (straight or folded, for a
+      // bottom slot; straight, its mouth nearest the back wall, for round tubes)
+      v = ventShape(style, dims, vent, s.walls[ti], sub, { folded: false, most: true });
       deepShapes.set(k, v);
     }
     return v;

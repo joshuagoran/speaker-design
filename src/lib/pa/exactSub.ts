@@ -20,7 +20,8 @@ import {
   boxInternalLiters,
   logGridCount,
   LOWPASS_SKIRT_SPAN,
-  FREE_END,
+  sideDuctEndCorrection,
+  SIDE_DUCT_DIVIDER_IN,
   STUFFING_VOLUME_GAIN,
 } from "./calc";
 import type {
@@ -370,44 +371,6 @@ export function sealedMid(
 
 // ---- geometry: the planner's vent geometry, duct volume and internal wood in closed form ----
 
-// ductEndCorrection2D's sum, kept per mouth height and interior span: each term (with coth at 1) and their total
-const D2 = new Map<string, { s: Float64Array; total: number }>();
-function d2Terms(h: number, X: number) {
-  const key = `${h}|${X}`;
-  let e = D2.get(key);
-  if (!e) {
-    const s = new Float64Array(2000);
-    let total = 0;
-    for (let m = 1; m <= 2000; m++) {
-      const sn = Math.sin(((m * Math.PI) / X) * h);
-      s[m - 1] = (sn * sn) / (m * m * m);
-      total += s[m - 1];
-    }
-    e = { s, total };
-    if (D2.size > 5000) D2.clear();
-    D2.set(key, e);
-  }
-  return e;
-}
-/**
- * ductEndCorrection2D, fast: each term's coth(mπL/X) is 1 + 2rᵐ/(1 − rᵐ) with r = exp(−2πL/X), so the sum is the
- * terms' total plus a short series in rᵐ, stopped once rᵐ no longer counts at double precision.
- */
-export function endCorrection2D(h: number, X: number, L = Infinity) {
-  if (h >= X) return 0;
-  L = Math.max(L, h);
-  const e = d2Terms(h, X);
-  let sum = e.total;
-  if (Number.isFinite(L)) {
-    const r = Math.exp((-2 * Math.PI * L) / X);
-    let extra = 0;
-    for (let m = 1, rm = r; m <= 2000 && rm > 1e-18; m++, rm *= r)
-      extra += (e.s[m - 1] * rm) / (1 - rm);
-    sum += 2 * extra;
-  }
-  return ((2 * X * X) / (Math.PI ** 3 * h)) * sum;
-}
-
 /** A vent as the box model takes it: openings, area (in²), and its end correction in inches. */
 export interface VentShape {
   n: number;
@@ -415,10 +378,11 @@ export interface VentShape {
   ec: number;
 }
 /**
- * ventGeometry's openings, area and end correction, with the fast end correction. `folded` says whether a bottom slot
- * folds up the back wall, and `elbows` how many elbows round tubes take (by default, as the planner builds them: a slot
- * folds when it is too long to run straight, a tube takes the fewest elbows that fit); a solver that looks for one
- * way's length passes it.
+ * ventGeometry's openings, area and end correction. `folded` says whether a bottom slot folds up the back wall, and
+ * `elbows` how many elbows round tubes take (by default, as the planner builds them: a slot folds when it is too long to
+ * run straight, a tube takes the fewest elbows that fit); a solver that looks for one way's length passes it. `most`
+ * takes the end correction at the most it can be in this box, whatever the duct's length (a bound for a search that
+ * hasn't cut the duct yet).
  */
 export function ventShape(
   style: PortStyle,
@@ -429,20 +393,17 @@ export function ventShape(
   {
     folded = style === "slots" && slotFolds(box, v, t),
     elbows,
-  }: { folded?: boolean; elbows?: ElbowCount } = {},
+    most = false,
+  }: { folded?: boolean; elbows?: ElbowCount; most?: boolean } = {},
 ): VentShape {
   const iw = box.w - 2 * t,
     ih = box.h - 2 * t;
   if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;
-    const H = ih - 2 * 0.5;
-    const L = box.d - 0.75 - t - v.len;
     return {
       n,
-      area: n * v.throat * H,
-      ec:
-        rectangleEndCorrection(v.throat, 2 * H) +
-        FREE_END * endCorrection2D(v.throat, n === 2 ? iw / 2 : iw, L),
+      area: n * v.throat * (ih - 2 * SIDE_DUCT_DIVIDER_IN),
+      ec: sideDuctEndCorrection(box, v, t, n, most),
     };
   }
   if (style === "slots")
@@ -450,13 +411,17 @@ export function ventShape(
       n: 1,
       area: v.slotH * (iw - 2 * t),
       ec:
-        rectangleEndCorrection(2 * v.slotH, iw - 2 * t) + slotInnerEndCorrection(box, v, t, folded),
+        rectangleEndCorrection(2 * v.slotH, iw - 2 * t) +
+        slotInnerEndCorrection(box, v, t, folded, most),
     };
   const r = v.dia / 2;
   return {
     n: v.nt,
     area: v.nt * Math.PI * r * r,
-    ec: subTubeEndCorrection(box, style, v, t, drv, elbows),
+    // the most a tube's correction can be: straight, its mouth as close to the back wall as the correction reads
+    ec: most
+      ? subTubeEndCorrection(box, style, { ...v, len: 1e9 }, t, drv, 0)
+      : subTubeEndCorrection(box, style, v, t, drv, elbows),
   };
 }
 /** The effective length (m) a vent needs for a tuning in a net volume (ventTuning solved for Leff). */
@@ -492,7 +457,7 @@ export function subWoodIn3(
     if (folded) in3 += iw * foldedRearWallIn(box, v, t) * t;
   } else if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;
-    in3 += ih * v.len * t * n + v.throat * v.len * 0.5 * 2 * n;
+    in3 += ih * v.len * t * n + v.throat * v.len * SIDE_DUCT_DIVIDER_IN * 2 * n;
   }
   return in3;
 }
@@ -614,8 +579,9 @@ export function solveShape(
   for (let it = 0; it < 60; it++) {
     let unreached = false; // a bottom slot this size tunes neither straight nor folded
     // the duct length for the tuning at this size; where the end correction reads the gap behind the duct, the root of
-    // len + ec(len) = Leff, which rises with the length (a longer duct leaves a smaller gap, a larger correction). A
-    // bottom slot is solved straight first; only when that is longer than the straight run holds does it fold.
+    // len + ec(len) = Leff, which rises with the length (the correction can fall as the shelf's run grows, but never as
+    // fast as the length: tests/pa-exact.test.ts). A bottom slot is solved straight first; only when that is longer
+    // than the straight run holds does it fold.
     let vs = ventShape(style, box, v, t, drv, { folded: false, elbows: 0 });
     const Leff = effectiveLengthFor(vs.area, VbL, Fb);
     v.len = ductLengthFor(vs, Leff);
@@ -658,10 +624,10 @@ export function solveShape(
       }
       const straightMax = maxStraightSlotIn(box, v.slotH, t);
       if (style === "slots" && v.len > straightMax) {
-        // past the straight run it folds: the folded length's root (its correction rises with the length too, as the
-        // mouth nears the lid). A fold takes a different correction from the straight slot's at the back wall, so
-        // there can be tunings neither reaches: none past the straight run. A size on the way there keeps the straight
-        // root so the steps carry on; only a box that settles there has no duct for the target.
+        // past the straight run it folds: the folded length's root (len + ec rises with the length here too). A fold
+        // takes a different correction from the straight slot's at the back wall, so there can be tunings neither
+        // reaches: none past the straight run. A size on the way there keeps the straight root so the steps carry on;
+        // only a box that settles there has no duct for the target.
         const straightLen = v.len;
         const gf = (x: number) => {
           v.len = x;
