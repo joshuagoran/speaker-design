@@ -15,6 +15,8 @@ import {
   maxStraightSlotIn,
   slotFolds,
   foldedRearWallIn,
+  foldedShelfIn,
+  slotInnerEndCorrection,
   boxInternalLiters,
   logGridCount,
   LOWPASS_SKIRT_SPAN,
@@ -435,16 +437,14 @@ export function ventShape(
         FREE_END * endCorrection2D(v.throat, n === 2 ? iw / 2 : iw, L),
     };
   }
-  if (style === "slots") {
-    const L = folded ? Infinity : box.d - 0.75 - t - v.len;
+  if (style === "slots")
     return {
       n: 1,
       area: v.slotH * (iw - 2 * t),
       ec:
         rectangleEndCorrection(2 * v.slotH, iw - 2 * t) +
-        FREE_END * endCorrection2D(v.slotH, ih, L),
+        FREE_END * slotInnerEndCorrection(box, v, t, folded, endCorrection2D),
     };
-  }
   const r = v.dia / 2;
   return { n: v.nt, area: v.nt * Math.PI * r * r, ec: null };
 }
@@ -480,9 +480,9 @@ export function subWoodIn3(
     (t === 0.5 ? 3 : 2);
   if (style === "slots") {
     const folded = slotFolds(box, v, t);
-    const len = folded ? box.d - inset - t - v.slotH - 2 * t : v.len;
+    const len = folded ? foldedShelfIn(box, v.slotH, t) : v.len;
     in3 += iw * len * t + v.slotH * len * t * 2;
-    if (folded) in3 += iw * foldedRearWallIn(box, v.len, t) * t;
+    if (folded) in3 += iw * foldedRearWallIn(box, v, t) * t;
   } else if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;
     in3 += ih * v.len * t * n + v.throat * v.len * 0.5 * 2 * n;
@@ -523,6 +523,29 @@ export interface SolvedShape {
   len: number;
   area: number;
 }
+/** The root of a rising `g` with g(a) <= 0 < g(b), by Illinois steps (regula falsi that halves a stale end). */
+function illinoisRoot(g: (x: number) => number, a: number, b: number) {
+  let ga = g(a),
+    gb = g(b),
+    side = 0;
+  for (let j = 0; j < 100 && b - a > 1e-13 * Math.max(1, b); j++) {
+    const x = (a * gb - b * ga) / (gb - ga);
+    const gx = g(x);
+    if (gx === 0) return x;
+    if (gx > 0) {
+      b = x;
+      gb = gx;
+      if (side === -1) ga /= 2;
+      side = -1;
+    } else {
+      a = x;
+      ga = gx;
+      if (side === 1) gb /= 2;
+      side = 1;
+    }
+  }
+  return (a + b) / 2;
+}
 /**
  * The box with two sides fixed whose third side (`free`) and duct length give exactly the target's net volume and
  * tuning: Newton steps on the free side, each with the duct length for the tuning at that size (the slot and side-duct
@@ -544,8 +567,8 @@ export function solveShape(
   for (let it = 0; it < 60; it++) {
     // the duct length for the tuning at this size; where the end correction reads the gap behind the duct, the root of
     // len + ec(len) = Leff, which rises with the length (a longer duct leaves a smaller gap, a larger correction). A
-    // bottom slot is solved straight first; only when that is longer than the straight run holds does it fold, and
-    // the folded length (no back-wall term, so a smaller correction) is then longer still, so it folds too.
+    // bottom slot is solved straight first; only when that is longer than the straight run holds does it fold (the
+    // turn carries the straight run's correction on, so the folded root lies past the straight run too).
     let vs = ventShape(style, box, v, t, false);
     const Leff = effectiveLengthFor(vs.area, VbL, Fb);
     v.len = ductLengthFor(vs, Leff);
@@ -577,35 +600,21 @@ export function solveShape(
       }
       if (!warm) {
         // Illinois steps on [0, Leff]: the correction is never negative, so the root is under Leff
-        let a = 0,
-          b = Leff / 0.0254,
-          ga = g(a),
-          gb = g(b);
-        if (ga > 0) return null; // too short a box behind the duct: no length tunes it
-        let side = 0;
-        for (let j = 0; j < 100 && b - a > 1e-13 * Math.max(1, b); j++) {
-          const x = (a * gb - b * ga) / (gb - ga);
-          const gx = g(x);
-          if (gx === 0) {
-            a = b = x;
-            break;
-          }
-          if (gx > 0) {
-            b = x;
-            gb = gx;
-            if (side === -1) ga /= 2;
-            side = -1;
-          } else {
-            a = x;
-            ga = gx;
-            if (side === 1) gb /= 2;
-            side = 1;
-          }
-        }
-        v.len = (a + b) / 2;
+        if (g(0) > 0) return null; // too short a box behind the duct: no length tunes it
+        v.len = illinoisRoot(g, 0, Leff / 0.0254);
       }
-      if (style === "slots" && v.len > maxStraightSlotIn(box, v.slotH, t))
-        v.len = ductLengthFor(ventShape(style, box, v, t, true), Leff);
+      const straightMax = maxStraightSlotIn(box, v.slotH, t);
+      if (style === "slots" && v.len > straightMax) {
+        // past the straight run it folds: the folded length's root (the turn carries on the straight correction, and
+        // the lid's term reads the rear channel's rise). Where the lid's small term leaves no fold root past the
+        // straight run, the straight answer stands (the two differ by a hair there).
+        const straightLen = v.len;
+        const gf = (x: number) => {
+          v.len = x;
+          return x - ductLengthFor(ventShape(style, box, v, t, true), Leff);
+        };
+        v.len = gf(straightMax) < 0 ? illinoisRoot(gf, straightMax, Leff / 0.0254) : straightLen;
+      }
       vs = ventShape(style, box, v, t);
     }
     len = v.len;

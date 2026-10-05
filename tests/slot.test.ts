@@ -11,6 +11,9 @@ import {
   ventGeometry,
   boxModel,
   subSystem,
+  subGeometry,
+  slotBendCorrection,
+  maxStraightSlotIn,
 } from "../src/lib/pa/calc";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import type { SubSystemConfig } from "../src/types";
@@ -190,20 +193,53 @@ test("side duct: outer end mirrored by the ground along its height", (t) => {
     1e-12,
   );
 });
-test("bottom slot: straight while it fits, folded (no back-wall term, mouth faces the lid) past that", (t) => {
-  const box = { w: 22, h: 30, d: 20 };
+test("bottom slot: straight while it fits, folded past that (the turn and the lid add their lengths)", (t) => {
+  const box = { w: 22, h: 30, d: 20 },
+    X = 30 - 1.5,
+    D = (L?: number) => ductEndCorrection2D(3, X, L);
   // the straight run holds d - t - slotH = 16.25
   const straight = ventGeometry("slots", box, vent({ slotH: 3, len: 16.25 }), 0.75);
-  close(
-    t,
-    straight.ec ?? NaN,
-    slotEndCorrection(3, 22 - 3, 30 - 1.5, 20 - 0.75 - 0.75 - 16.25),
-    1e-12,
-  );
+  close(t, straight.ec ?? NaN, slotEndCorrection(3, 22 - 3, X, 20 - 0.75 - 0.75 - 16.25), 1e-12);
   assert.ok(!straight.desc.includes("folded"));
+  // the turn: the back-wall term a straight slot gets one slot height from the back wall
+  close(t, slotBendCorrection(3, X), D(3) - D(), 1e-12);
+  // folded 20 long: the rear wall would rise 20 - 19.25 = 0.75, held at the least 1, so the mouth is 28.5 - 3 - 1 under
+  // the lid
   const folded = ventGeometry("slots", box, vent({ slotH: 3, len: 20 }), 0.75);
-  close(t, folded.ec ?? NaN, slotEndCorrection(3, 22 - 3, 30 - 1.5, Infinity), 1e-12);
+  close(t, folded.ec ?? NaN, rectangleEndCorrection(6, 19) + FE * (D(3) + D(24.5) - D()), 1e-12);
   assert.ok(folded.desc.includes("folded"));
+  // folded as far as it goes: the mouth a slot height under the lid takes the near-wall term the back wall gives a
+  // straight slot that close
+  const top = ventGeometry("slots", box, vent({ slotH: 3, len: 50 }), 0.75);
+  close(t, top.ec ?? NaN, rectangleEndCorrection(6, 19) + FE * (2 * D(3) - D()), 1e-12);
+});
+test("bottom slot: the tuning carries on across the fold instead of stepping up", (t) => {
+  const cases: [SubSystemConfig["subBox"], number][] = [
+    [{ w: 22, h: 30, d: 20 }, 3],
+    [{ w: 21, h: 37, d: 18 }, 3],
+    [{ w: 24, h: 24, d: 24 }, 4],
+    [{ w: 20, h: 20, d: 16 }, 2.5],
+  ];
+  for (const [box, slotH] of cases) {
+    const at = (len: number) =>
+      subGeometry(SUB_OPTIONS[0], MID_OPTIONS[0], {
+        subBox: box,
+        midDims: { w: 15, h: 15, d: 15 },
+        wall: 0.75,
+        inset: 0.75,
+        portStyle: "slots",
+        cVent: vent({ slotH, len }),
+        layout: "stack",
+      });
+    const edge = maxStraightSlotIn(box, slotH, 0.75);
+    const below = at(edge - 1e-6),
+      above = at(edge + 1e-6);
+    assert.ok(!below.port.desc.includes("folded") && above.port.desc.includes("folded"));
+    // the same correction but for the lid's small term (the fold's least rise leaves the mouth far under the lid), and
+    // the same wood but for the rear wall's least rise against the shelf's last ply
+    close(t, above.port.ec ?? NaN, below.port.ec ?? NaN, 0.03);
+    close(t, above.Fb, below.Fb, 0.05);
+  }
 });
 test("saved designs with the retired folded layout load as the bottom slot", () => {
   assert.equal(savedPortStyle(RETIRED_FOLDED_PORT_STYLE), "slots");

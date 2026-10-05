@@ -12,19 +12,18 @@ import type {
   SubChipsInput,
   VentSpec,
 } from "../../types";
-import { isRoundPort, maxStraightSlotIn, minFoldedSlotIn } from "./calc";
+import { isRoundPort, maxFoldedSlotIn, maxStraightSlotIn, minFoldedSlotIn } from "./calc";
 
 // Longest duct each layout can hold, leaving an opening at least as wide as the duct. A bottom slot runs straight
 // while it fits (maxStraight) and folds up the back wall past that, so it holds the longer of the two; a fold is never
-// shorter than its floor run plus the least rise (minFold), so the lengths between the two fit neither way. `spans`
-// lists the lengths that fit, shortest first.
+// shorter than its floor run plus the least rise (minFold), so the lengths between the two fit neither way, nor longer
+// than leaves a slot height under the lid (maxFold). `spans` lists the lengths that fit, shortest first.
 export function ductFit(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
   const inD = subBox.d - PT,
-    inH = subBox.h - 2 * PT,
     sH = cVent.slotH;
   const maxStraight = maxStraightSlotIn(subBox, sH, PT); // bottom slot, straight
   const minFold = minFoldedSlotIn(subBox, PT); // bottom slot, folded at the least rise
-  const maxFold = inD - (sH + PT) + sH / 2 + (inH - sH - 1); // floor run + rise up the back
+  const maxFold = maxFoldedSlotIn(subBox, sH, PT); // bottom slot, folded up to a slot height under the lid
   const maxSide = inD - cVent.throat; // side ducts
   const maxTube = subBox.d - 0.75 - 2 * PT - cVent.dia / 2; // round tubes off the baffle
   const fit =

@@ -762,8 +762,9 @@ function exactHook(
     let v = deepShapes.get(k);
     if (!v) {
       if (deepShapes.size >= 200_000) deepShapes.clear();
-      // a bottom slot taken straight: its correction at the smallest gap is the largest it can have (folded is smaller)
-      v = ventShape(style, dims, { ...vent, len: 1e9 }, s.walls[ti], false);
+      // a bottom slot taken folded to the lid: the straight run's largest correction (the turn carries it on) plus the
+      // lid's at its smallest gap, the largest it can have
+      v = ventShape(style, dims, { ...vent, len: 1e9 }, s.walls[ti], style === "slots");
       deepShapes.set(k, v);
     }
     return v;
@@ -1541,8 +1542,8 @@ function exactHook(
           : 1.46 * Math.sqrt((vs.area * 0.00064516) / vs.n / Math.PI));
       return (343 / (2 * Math.PI)) * Math.sqrt((vs.area * 0.00064516) / ((V / 1000) * Leff));
     };
-    // the lengths that fit (a bottom slot straight, then folded); the tuning steps at a slot's fold, so the search
-    // takes the shortest span that reaches it, at the fold's shortest when even that tunes lower
+    // the lengths that fit (a bottom slot straight, then folded, with the lengths that fit neither way between), so the
+    // search takes the shortest span that reaches the tuning, at the fold's shortest when even that tunes lower
     const spans = ductFit(box, style, { ...vent, len: 0 }, t)
       .spans.map(([lo, hi]) => [Math.max(lo, s.grid.minDuctIn), hi] as const)
       .filter(([lo, hi]) => hi >= lo);

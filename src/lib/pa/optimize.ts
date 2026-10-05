@@ -815,8 +815,8 @@ export function optimizePaStack(
               fbLong = geom(mk(size, last[1])).Fb;
             if (sd.Fb > fbShort) continue; // vent too small to tune this high: next size
             if (sd.Fb < fbLong) break; // too big for the room it has: bigger won't fit either
-            // the shortest span that reaches the tuning (it steps at a slot's fold, so one search could land on
-            // either side): a straight slot when one tunes it, else the fold, at its shortest when even that tunes lower
+            // the shortest span that reaches the tuning (a slot's spans have the lengths that fit neither way between
+            // them): a straight slot when one tunes it, else the fold, at its shortest when even that tunes lower
             const [lo, hi] =
               spans.find(([, b]) => b === last[1] || geom(mk(size, b)).Fb <= sd.Fb) ?? last;
             let a = lo,
@@ -826,7 +826,7 @@ export function optimizePaStack(
               if (geom(mk(size, m)).Fb > sd.Fb) a = m;
               else b = m;
             }
-            // to the quarter inch, never out of its span (a slot rounded across its fold would retune by a few Hz)
+            // to the quarter inch, never out of its span (a slot rounded across its fold would land where it fits neither way)
             const cVent = mk(
               size,
               Math.max(
