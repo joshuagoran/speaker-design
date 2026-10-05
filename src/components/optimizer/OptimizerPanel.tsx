@@ -19,6 +19,7 @@ import type {
   PaOptimizerInputState,
   PaOptimizerResult,
   PaRoom,
+  PaRunMode,
   PaSearchOverrides,
 } from "../../types";
 
@@ -27,6 +28,10 @@ interface Props {
   setOpt: (o: Partial<PaOptimizerInputState>) => void;
   /** starts a search; given limits to change first, or called as the run button's click handler */
   run: (over?: PaSearchOverrides) => unknown;
+  /** starts the exact search (Fully optimize) */
+  runFull: () => unknown;
+  /** which search is running; null when none is */
+  runningMode: PaRunMode | null;
   busy: boolean;
   /** how far the running search has got; null before its first report */
   progress: OptimizerProgress | null;
@@ -49,6 +54,8 @@ export function OptimizerPanel({
   optIn,
   setOpt,
   run,
+  runFull,
+  runningMode,
   busy,
   progress,
   onCancel,
@@ -147,6 +154,8 @@ export function OptimizerPanel({
           busy={busy}
           hasGoal={!!g}
           onRun={run}
+          runLabel="Improve"
+          alt={{ label: "Fully optimize", onRun: runFull, running: runningMode === "full" }}
           onCancel={onCancel}
           progress={progress}
           stats={res && res.stats}

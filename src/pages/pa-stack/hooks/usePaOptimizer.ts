@@ -1,5 +1,5 @@
 import { LOCK_KEYS } from "../../../constants/lockKeys";
-import { runPaOptimizer } from "../../../lib/pa/runOptimizer";
+import { PA_RUNNERS } from "../../../lib/pa/runOptimizer";
 import { evaluateDesign as evaluateConfig, pickOptimizedFields } from "../../../lib/pa/optimize";
 import { useDesignPreview } from "../../../hooks/useDesignPreview";
 import { useOptimizerLocks } from "../../../hooks/useOptimizerLocks";
@@ -17,6 +17,7 @@ import type {
   PaOptimizerLocks,
   PaOptimizerResult,
   PaPlannerLocks,
+  PaRunMode,
   PaSearchOverrides,
   Setter,
 } from "../../../types";
@@ -58,9 +59,11 @@ export interface PaOptimizer
   optimizerProgress: OptimizerProgress | null;
   /** stops the running search and goes back to idle */
   cancelOptimizerSearch: () => void;
+  /** which search is running; null when none is */
+  runningMode: PaRunMode | null;
   toastMessage: string;
   setToastMessage: Setter<string>;
-  startOptimizerSearch: (over?: PaSearchOverrides) => Promise<void>;
+  startOptimizerSearch: (over?: PaSearchOverrides, mode?: PaRunMode) => Promise<void>;
   loadOptimizerResult: (k: PaOptimizerCard) => Promise<void>;
   saveOptimizerResult: (k: PaOptimizerCard) => Promise<void>;
   /** the current design's clean sub output in dB; null when the optimizer is off or the design can't be scored */
@@ -119,13 +122,15 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     cancelOptimizerSearch,
   } = useOptimizerRun<PaOptimizerResult>();
   const [toastMessage, setToastMessage] = useState("");
-  const startOptimizerSearch = async (over?: PaSearchOverrides) => {
+  const [runMode, setRunMode] = useState<PaRunMode>("improve");
+  const startOptimizerSearch = async (over?: PaSearchOverrides, mode: PaRunMode = "improve") => {
     if (isOptimizing) return;
     const inp = { ...optimizerInput, ...(over && over.nativeEvent ? {} : over || {}) };
     if (over && !over.nativeEvent) updateOptimizerInput(over);
     if (!inp.goals.length) return;
+    setRunMode(mode);
     await runOptimizerSearch((options) =>
-      runPaOptimizer(
+      PA_RUNNERS[mode](
         {
           cur: preview.baseDesign(),
           room: inp.room,
@@ -204,6 +209,7 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     optimizerError,
     optimizerProgress,
     cancelOptimizerSearch,
+    runningMode: isOptimizing ? runMode : null,
     designPreview: preview.designPreview,
     undoSnapshot: preview.undoSnapshot,
     toastMessage,

@@ -117,7 +117,7 @@ for (const size of sizes) {
     await p.waitForTimeout(300);
     await check("#planner, optimizer on");
     await p.locator('button[title="Same output, cheaper"]').tap(); // goals start unselected
-    await p.locator('button:has-text("Find 3 designs")').tap();
+    await p.locator('button:has-text("Improve")').tap();
     await p.waitForSelector("text=Searched", { timeout: 90000 });
     await check("#planner, optimizer results");
   }

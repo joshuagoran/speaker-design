@@ -1704,6 +1704,9 @@ export interface PaOptimizerInputState {
 /** What `startOptimizerSearch` takes: input fields to change for this run, or the click event when it is used as a handler. */
 export type PaSearchOverrides = Partial<PaOptimizerInputState> & { nativeEvent?: Event };
 
+/** Which PA search a run is: the quick one that improves on your design (`improve`), or the exact one over its stated grid (`full`). */
+export type PaRunMode = "improve" | "full";
+
 /** The fields an older saved design can lack; the optimizer fills these in. */
 export type PaDefaultedField =
   | "xoLo"
