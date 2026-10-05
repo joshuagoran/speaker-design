@@ -44,7 +44,12 @@ import {
   subSystem,
   subWeightLb,
 } from "../src/lib/pa/calc";
-import { ductFit, driverClearance, subDriverClearanceNeededIn } from "../src/lib/pa/chips";
+import {
+  ductFit,
+  ductFits,
+  driverClearance,
+  subDriverClearanceNeededIn,
+} from "../src/lib/pa/chips";
 import { goalKeeps } from "../src/lib/optimizer/goalKeeps";
 import { LIMIT_CHIP_IDS } from "../src/constants/chipIds";
 import { CD_OPTIONS, HORN_OPTIONS, MID_BOXES, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
@@ -337,7 +342,8 @@ function gridDesigns(input: PaOptimizerInput, grid: PaExactGrid): PaDesignConfig
             );
             if (!sol || sol.box.d < sr.d[0] - 1e-9 || sol.box.d > sr.d[1] + 1e-9) continue;
             const v = { ...vent, len: sol.len };
-            if (sol.len < grid.minDuctIn || sol.len > ductFit(sol.box, style, v, t).fit) continue;
+            if (sol.len < grid.minDuctIn || !ductFits(ductFit(sol.box, style, v, t).spans, sol.len))
+              continue;
             const { clearW, clearH } = driverClearance(sol.box, style, v, t);
             if (Math.min(clearW, clearH) < subDriverClearanceNeededIn(sub.size)) continue;
             if (subWeightLb(sol.box, t, sub.lb) > cap) continue;

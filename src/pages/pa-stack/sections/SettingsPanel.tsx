@@ -14,6 +14,7 @@ import {
 } from "../../../lib/data";
 import { HIGHPASS_ALIGNMENTS, isRoundPort } from "../../../lib/pa/calc";
 import { AMP_WATTS_MAX, AMP_WATTS_STEPS } from "../../../lib/pa/optimize";
+import { ductFit, ductLenSliderMax } from "../../../lib/pa/chips";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { entriesOf, keysOf } from "../../../lib/records";
 import { CrossoverSlopeButtons } from "../../../components/ui/CrossoverSlopeButtons";
@@ -179,6 +180,9 @@ export function SettingsPanel({ planner }: Props) {
     renderDimensionLock,
   } = planner;
   const folds = useFolds("planner.settingsFolds", keysOf(PA_SETTINGS_SECTIONS));
+  // a bottom slot's duct lengths: straight, then folded up the back wall (the lengths between fit neither way)
+  const slotFit =
+    portStyle === "slots" ? ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn) : null;
   const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
   const summaries: Record<PaSettingsSection, string> = {
     sub: [
@@ -383,10 +387,12 @@ export function SettingsPanel({ planner }: Props) {
                 label="Duct length"
                 value={subVentSpec.len}
                 min={PA_SLIDERS.ductLen.min}
-                max={PA_SLIDERS.ductLen.max}
+                max={ductLenSliderMax(subBoxDims, portStyle, subVentSpec, wallThicknessIn)}
                 step={PA_SLIDERS.ductLen.step}
                 unit="″"
                 onChange={(v) => setSubVentField("len", v)}
+                // a bottom slot skips the lengths that fit neither way, and stops at the longest fold
+                ranges={slotFit?.spans}
               />
               <Slider
                 label="Port velocity limit"

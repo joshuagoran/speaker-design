@@ -10,6 +10,7 @@
     "optimizer-dump:pa": "vp test --run --config tests/optimizer-dump.config.ts --project \"pa-*\"",
     "optimizer-dump:hifi": "vp test --run --config tests/optimizer-dump.config.ts --project \"hifi-*\"",
     "optimizer-snapshot": "vp test --run --config tests/optimizer-snapshot.config.ts",
+    "slot-inner-end": "vp test --run --config tests/update-slot-inner-end.config.ts",
     "xmax-audit": "vp test --run --config tests/xmax-audit.config.ts",
     "prepare": "vp config"
   },
