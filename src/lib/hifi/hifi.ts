@@ -1252,7 +1252,7 @@ export function hifiChips(
       "Port too long",
       cfg.port.len < fits
         ? `${cfg.port.len.toFixed(1)}″ is between the lengths that one elbow and two elbows fit (up to about ${fits.toFixed(1)}″). Make it shorter or longer.`
-        : `${cfg.port.len.toFixed(1)}″ does not fit. With two elbows, this box holds about ${fits.toFixed(1)}″. A wider port tunes as low in less length. A deeper box also works.`,
+        : `${cfg.port.len.toFixed(1)}″ does not fit. With two elbows, this box holds about ${fits.toFixed(1)}″. A narrower port gets the same tuning in less length, but with higher air speed. A deeper box also works.`,
       "hifiPortFit",
     ]);
   } else if (sys.kind === "vented" && sys.portElbows) {
