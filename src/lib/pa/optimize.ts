@@ -663,7 +663,10 @@ export function optimizePaStack(
   // and keeps each band up with the one below.
   const amps = paSearchAmps(cur, locks);
   const base = { ...cur, ...amps };
-  const curM = evaluateDesign(cur);
+  // your design as the cards and the pool are scored (the bracing rule), and as the search loops count it (the braces
+  // by estimate, braceWoodEstimate), so each side compares like with like
+  const curM = evaluateDesign(cur),
+    curEst = evaluateDesign(cur, true);
   // horn loading is fixable by the horn, the driver or the crossover; only when all three are locked and the
   // current design already has the warning is it allowed through
   const hornLoadOk = !!(
@@ -805,16 +808,16 @@ export function optimizePaStack(
   // the current design itself (its sub, volume, tuning and highpass): small changes such as plywood or a vent
   // size are always tried, even when the grid above has no point near it
   const curSeed =
-    curM && curSub && curSub.ts && subs.includes(curSub)
+    curEst && curSub && curSub.ts && subs.includes(curSub)
       ? [
           {
             sub: curSub,
-            V: curM.netL,
-            Fb: curM.Fb,
+            V: curEst.netL,
+            Fb: curEst.Fb,
             hpf: cur.hpf,
-            out: curM.out,
-            f3: curM.f3,
-            lb: curM.subLb,
+            out: curEst.out,
+            f3: curEst.f3,
+            lb: curEst.subLb,
             price: curSub.price,
           },
         ]
@@ -1342,29 +1345,32 @@ export function optimizePaStack(
     combos.filter(inLimits).sort((a, b) => gapSum(a) - gapSum(b)),
     8,
   );
-  if (also.length && curM) {
-    const cm = { price: curM.price, heaviest: curM.heaviest, out: curM.out, f3: curM.f3 };
+  if (also.length && curEst) {
+    const cm = { price: curEst.price, heaviest: curEst.heaviest, out: curEst.out, f3: curEst.f3 };
     const ranked = combos
       .filter((x) => goals.every((g) => goalOk(g, x)) && also.every((g) => beats[g](x, cm)))
       .sort((a, b) => obj[goal](a) - obj[goal](b));
     add(ranked.filter(inLimits), 14);
     add(ranked, 4);
   }
+  // the pool the cards are picked from, scored as your design is (curM): the bracing rule, as the planner shows it
   const pool: PoolEntry[] = [];
   for (const [fi, x] of [...finalists.values()].entries()) {
     stepAt("finalists", fi, finalists.size);
-    const m = evaluateDesign(x.c, true);
+    const m = evaluateDesign(x.c),
+      est = exact ? evaluateDesign(x.c, true) : null;
     evals++;
-    if (m) pool.push({ c: x.c, m, ch: changes(x.c) });
+    if (m) pool.push({ c: x.c, m, ch: changes(x.c), ...(est ? { est } : {}) });
   }
   // a one-change tweak of the current design, evaluated as it is: in the optimizer's plywood, if yours is another
   if (curM)
     for (const w of walls)
       if (w !== cur.wall) {
         const c = { ...base, wall: w },
-          m = evaluateDesign(c, true);
+          m = evaluateDesign(c),
+          est = exact ? evaluateDesign(c, true) : null;
         evals++;
-        if (m) pool.push({ c, m, ch: changes(c) });
+        if (m) pool.push({ c, m, ch: changes(c), ...(est ? { est } : {}) });
       }
   const warnCount = (m: PaEvaluation) =>
     (["sub", "mid", "horn"] as const).reduce(
@@ -1499,7 +1505,7 @@ export function optimizePaStack(
       const { min: lo, step } = AMP_WATTS_STEPS[key];
       if (locks[key] || c[key] <= lo) return;
       const floor = { ...c, [key]: lo },
-        fm = evaluateDesign(floor, true);
+        fm = evaluateDesign(floor);
       evals++;
       if (ok(fm) && good(fm)) {
         c = floor;
@@ -1511,14 +1517,14 @@ export function optimizePaStack(
       while (b - a > step) {
         const mid = Math.round((a + b) / 2 / step) * step,
           cc = { ...c, [key]: mid },
-          mm = evaluateDesign(cc, true);
+          mm = evaluateDesign(cc);
         evals++;
         if (mid <= a || mid >= b) break;
         if (ok(mm) && good(mm)) b = mid;
         else a = mid;
       }
       const cc = { ...c, [key]: b },
-        mm = evaluateDesign(cc, true);
+        mm = evaluateDesign(cc);
       evals++;
       if (ok(mm) && good(mm)) {
         c = cc;
@@ -1580,7 +1586,7 @@ export function optimizePaStack(
         for (const d of sides[2])
           for (const len of lens) {
             const c = { ...p.c, cDim: { w, h, d }, cVent: { ...p.c.cVent, len } },
-              m = evaluateDesign(c, true);
+              m = evaluateDesign(c);
             evals++;
             if (!m || designProblemList(m, lim).some((x) => !had.has(x.id))) continue;
             if (kept.some((g) => goalGap(g, m) > 0)) continue;
@@ -1610,13 +1616,7 @@ export function optimizePaStack(
     };
   };
 
-  // a design picked to show, with its own numbers: the bracing rule on it (the search estimated the braces)
-  const ruled = (p: PoolEntry): PoolEntry => {
-    const m = evaluateDesign(p.c);
-    return m ? { ...p, m } : p;
-  };
-  const picked = chooseAmps(lim, target);
-  const chosen = picked && { ...picked, cards: picked.cards.map((k) => ({ ...k, p: ruled(k.p) })) },
+  const chosen = chooseAmps(lim, target),
     cards = chosen ? chosen.cards : null;
   let nearMiss: PaNearMiss | null = null;
   const GOAL_MISSING: Record<PaGoal, string> = {
@@ -1659,7 +1659,7 @@ export function optimizePaStack(
           designProblems(a.m, lim).length - designProblems(b.m, lim).length ||
           obj[goal](metric(a)) - obj[goal](metric(b)),
       )[0];
-    const closest = nearest && ruled(onSliders(nearest, goal));
+    const closest = nearest && onSliders(nearest, goal);
     // only when there is no closest design to name (the exact search's lightest box takes a long scan of the grid)
     const lightestLb = () =>
       [

@@ -2260,7 +2260,10 @@ export interface PaHornEntry {
 /** An evaluated PA design. */
 export interface PaPoolEntry {
   c: PaDesignConfig;
+  /** its numbers as the cards show them: the bracing rule on its braces */
   m: PaEvaluation;
+  /** with its braces by estimate, as the searches count them (for the exact search to rank it against its grid) */
+  est?: PaEvaluation;
   ch: number;
 }
 /** The PA locks with both box-dimension modes present. */

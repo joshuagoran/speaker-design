@@ -767,7 +767,8 @@ function paBracing(
 }
 /**
  * The sub box's braces and ribs by rule, and its panels' resonances: its vent's parts as supports, and its driver and
- * vent kept clear (subKeepOut). The planner's and the cards' (the optimizers' searches estimate it: braceWoodEstimate).
+ * vent kept clear (subKeepOut). The planner's, and the optimizers' pool and cards' (their search loops estimate it:
+ * braceWoodEstimate).
  */
 export function subBoxBracing(
   box: Dims3,

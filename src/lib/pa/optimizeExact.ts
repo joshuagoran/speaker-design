@@ -1459,6 +1459,7 @@ function exactHook(
       cd: u.hp.cd.id,
       horn: u.hp.h.id,
     };
+    // the planner's model with the braces as the search counts them (by estimate), which its numbers must match
     const m = evaluateDesign(cfg, true);
     const p = m && { c: cfg, m, ch: c.changes(cfg) };
     const ok =
@@ -1475,10 +1476,12 @@ function exactHook(
       rejected.add(`${sd.key}|${f.xi}|${f.ui}`);
       return null;
     }
-    // the fast numbers can sit on a threshold the planner's land just past: the design still joins the pool (another
-    // card may take it) but the searches skip it from now on, or the next round would find it again
-    if (!f.q.ok(c.metric(p))) rejected.add(`${sd.key}|${f.xi}|${f.ui}`);
-    return p;
+    // in the pool as the pool is scored (the bracing rule on its braces), and skipped by the searches from now on: the
+    // cards are picked on the rule's numbers, which can land past a threshold the estimate's don't, and a design the
+    // picks pass over would be found again every round
+    rejected.add(`${sd.key}|${f.xi}|${f.ui}`);
+    const ruled = evaluateDesign(cfg);
+    return ruled && { ...p, m: ruled, est: m };
   };
 
   // ---- setup on the first card selection ----
@@ -1683,7 +1686,8 @@ function exactHook(
     progress.slots = Math.min(3, 1 + (c.curMet ? 1 : 0) + c.altAxes.length);
     const check = (q: Query, pick: PaPoolEntry | undefined, first = false) => {
       progress.slot = Math.min(taken.length, progress.slots - 1);
-      const pr = pick ? q.rank(c.metric(pick)) : null;
+      // the pick as the grid counts it (its braces by estimate), so the two rank alike
+      const pr = pick ? q.rank(c.metric(pick.est ? { ...pick, m: pick.est } : pick)) : null;
       const f = search(c, q, pr ?? [Infinity, Infinity], first);
       return f &&
         (!pr || f.rank[0] < pr[0] - TOL || (f.rank[0] <= pr[0] + TOL && f.rank[1] < pr[1] - TOL))
