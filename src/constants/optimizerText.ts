@@ -45,9 +45,9 @@ export const OPTIMIZER_PANEL_TEXT = {
   heading: "Find a better design",
   limitedBy: "Limited by:",
   /** after the run stats when there are cards (PA and Hi-fi) */
-  cardsPass: " · every design passes the checks (each card lists its warnings)",
+  cardsPass: " · all pass the checks (warnings on each card)",
   /** the notice when no design fits */
-  noFit: "No design fits all your limits",
+  noFit: "No design fits your limits",
 } as const;
 
 /** The driver comparison's part buttons, by part. */
