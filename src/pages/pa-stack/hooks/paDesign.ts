@@ -12,6 +12,7 @@ import {
   subThroughLowpass,
   subMusicOutputAt,
   phasedCurve,
+  ductDividerIn,
 } from "../../../lib/pa/calc";
 import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion";
 import type {
@@ -292,6 +293,7 @@ export function derivePaDesign({
     portR: subVentSpec.dia / 2,
     tubeLen: subVentSpec.len,
     throat: subVentSpec.throat,
+    divider: ductDividerIn(subVentSpec),
   };
 
   const subWeightLoadedLb = subWeightLb(subBox, wallThicknessIn, subDriver.lb);

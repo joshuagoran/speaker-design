@@ -32,6 +32,7 @@ import type {
   SubDriver,
 } from "../types";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
+import { DUCT_DIVIDER_DEFAULT } from "../constants/panelSizes";
 
 /** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
 export type PaDefaults = Omit<
@@ -73,6 +74,7 @@ export const DEFAULT_PA = {
   mDim: { w: 15, h: 15, d: 15 },
   wall: 0.75,
   panel: "3/4",
+  divider: DUCT_DIVIDER_DEFAULT,
   inset: 0.75,
   xoLo: 120,
   xoHi: 900,

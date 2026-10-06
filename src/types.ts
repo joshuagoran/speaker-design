@@ -1019,7 +1019,9 @@ export type PanelStock = { in: number; mm: number } & Record<PanelMaterial, Pane
 
 /**
  * The sub's vent, in inches: the planner keeps every field, whichever layout uses it (`slotH` the slots, `throat` the
- * side ducts, `nt` and `dia` the tubes), and `len` is the duct length in all of them.
+ * side ducts, `nt` and `dia` the tubes), and `len` is the duct length in all of them. `div` is the side ducts'
+ * dividers' exact thickness (the design's divider size at the Cutlist page's measured thickness, lib/panel); absent,
+ * as in saves from before the choice, they are ½″ (`ductDividerIn`).
  */
 export interface VentSpec {
   slotH: number;
@@ -1027,6 +1029,7 @@ export interface VentSpec {
   dia: number;
   throat: number;
   len: number;
+  div?: number;
 }
 
 /** A set of round port tubes from stock pipe: how many, and each one's inside diameter in inches. */
@@ -1083,6 +1086,8 @@ export interface PaDesignConfig {
   wall: number;
   /** the walls' nominal size; absent in designs saved before the sizes (their `wall` names it) */
   panel?: PanelNominal;
+  /** the side ducts' dividers' nominal size (their exact thickness is `cVent.div`); absent in older saves: ½″ */
+  divider?: PanelNominal;
   /** how far the baffles sit behind the frame front, inches */
   inset: number;
   /** sub to mid and mid to horn crossovers, Hz */
@@ -1208,13 +1213,14 @@ export interface VentGeometry {
   desc: string;
 }
 
-/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length and throat (all inches). */
+/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches). */
 export interface PaPortGeometry {
   ductH: number;
   nPorts: number;
   portR: number;
   tubeLen: number;
   throat: number;
+  divider: number;
 }
 
 /** What `subGeometry` needs: boxes, plywood, vent and layout. */

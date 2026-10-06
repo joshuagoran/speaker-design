@@ -51,6 +51,8 @@ interface Props {
     | "setPortStyle"
     | "subBoxDims"
     | "subVentSpec"
+    | "ductDividerPanel"
+    | "setDuctDividerPanel"
     | "subHighpassHz"
     | "setSubHighpassHz"
     | "subHighpassType"
@@ -130,6 +132,8 @@ export function SettingsPanel({ planner }: Props) {
     setPortStyle,
     subBoxDims,
     subVentSpec,
+    ductDividerPanel,
+    setDuctDividerPanel,
     subHighpassHz,
     setSubHighpassHz,
     subHighpassType,
@@ -337,15 +341,27 @@ export function SettingsPanel({ planner }: Props) {
                 />
               )}
               {(portStyle === "vslots" || portStyle === "vslot1") && (
-                <Slider
-                  label="Duct throat"
-                  value={subVentSpec.throat}
-                  min={PA_SLIDERS.throat.min}
-                  max={portStyle === "vslot1" ? PA_THROAT_MAX_VSLOT1 : PA_SLIDERS.throat.max}
-                  step={PA_SLIDERS.throat.step}
-                  unit="″"
-                  onChange={(v) => setSubVentField("throat", v)}
-                />
+                <>
+                  <Slider
+                    label="Duct throat"
+                    value={subVentSpec.throat}
+                    min={PA_SLIDERS.throat.min}
+                    max={portStyle === "vslot1" ? PA_THROAT_MAX_VSLOT1 : PA_SLIDERS.throat.max}
+                    step={PA_SLIDERS.throat.step}
+                    unit="″"
+                    onChange={(v) => setSubVentField("throat", v)}
+                  />
+                  <ToggleGroup
+                    label={
+                      <Tooltip tip="Two plywood dividers per duct brace its inner wall to the side wall across the throat. Thicker ones take more of the duct's height, so the vent is smaller and tunes lower. The Cutlist page takes the sheet's measured thickness.">
+                        Dividers
+                      </Tooltip>
+                    }
+                    value={ductDividerPanel}
+                    onChange={setDuctDividerPanel}
+                    options={PANEL_NOMINAL_OPTIONS}
+                  />
+                </>
               )}
               {isRoundPort(portStyle) && (
                 <>

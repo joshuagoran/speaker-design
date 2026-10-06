@@ -19,8 +19,8 @@ import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
 import { savedCutlist } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
 import { savedPortStyle } from "../../../constants/portStyles";
-import { PLYWOOD_MATERIAL } from "../../../constants/panelSizes";
-import { panelFor, panelIn, savedPanelExactIn } from "../../../lib/panel";
+import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../../constants/panelSizes";
+import { isPanelNominal, panelFor, panelIn, savedPanelExactIn } from "../../../lib/panel";
 import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
 import { derivePaDesign } from "./paDesign";
 import type { PaDerivedDesign } from "./paDesign";
@@ -68,8 +68,10 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setPortStyle,
     subBoxDims,
     setSubBoxDims,
-    subVentSpec,
+    subVentSpec: subVentState,
     setSubVentSpec,
+    ductDividerPanel,
+    setDuctDividerPanel,
     subHighpassHz,
     setSubHighpassHz,
     subHighpassType,
@@ -181,6 +183,12 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
   /** The walls' exact thickness and plywood thickness, in. */
   const wallThicknessIn = panelIn(wallPanel, PLYWOOD_MATERIAL, panelExactIn);
   const PT = wallThicknessIn;
+  // the side ducts' dividers at their size's measured thickness, carried on the vent every model and view reads
+  const ductDividerIn = panelIn(ductDividerPanel, PLYWOOD_MATERIAL, panelExactIn);
+  const subVentSpec = useMemo(
+    () => ({ ...subVentState, div: ductDividerIn }),
+    [subVentState, ductDividerIn],
+  );
   // derived once per change to the inputs below, not on every render of every tab (App holds this planner)
   const derived = useMemo(
     () =>
@@ -258,6 +266,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     mDim: midBoxDims,
     wall: wallThicknessIn,
     panel: wallPanel,
+    divider: ductDividerPanel,
     inset: baffleInsetIn,
     xoLo: subMidCrossoverHz,
     xoHi: midHornCrossoverHz,
@@ -301,6 +310,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     if (c.horn) setHornOption(byId(HORN_OPTIONS, c.horn) ?? hornOption);
     if (c.cDim) setSubBoxDims(c.cDim);
     if (c.cVent) setSubVentSpec(c.cVent);
+    setDuctDividerPanel(isPanelNominal(c.divider) ? c.divider : DUCT_DIVIDER_DEFAULT);
     if (typeof c.hpf === "number") setSubHighpassHz(c.hpf);
     if (c.hpType && HIGHPASS_ALIGNMENTS[c.hpType]) setSubHighpassType(c.hpType);
     if (typeof c.ampW === "number") setSubAmpWatts(c.ampW);
@@ -339,6 +349,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setSubBoxDims,
     subVentSpec,
     setSubVentSpec,
+    ductDividerPanel,
+    setDuctDividerPanel,
     subHighpassHz,
     setSubHighpassHz,
     subHighpassType,

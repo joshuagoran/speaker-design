@@ -37,8 +37,8 @@ import type {
   VentSpec,
 } from "../../types";
 import { DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
-import { isThinPanel, panelLbPerSqFt } from "../panel";
-import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
+import { defaultPanelIn, isThinPanel, panelLbPerSqFt } from "../panel";
+import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../../data/acoustics/slot-inner-end";
 import { modelTubeElbows, subTubeEndCorrection, subTubeKit, type TubeDriver } from "./tubes";
@@ -625,7 +625,7 @@ export function cutParts({
       qty: 2 * n,
       a: cVent.throat,
       b: cVent.len,
-      t: SIDE_DUCT_DIVIDER_IN,
+      t: ductDividerIn(cVent),
       note: "",
     });
   } else if (kit) {
@@ -712,8 +712,12 @@ export function slotMouthCorrectionMost(h: number, span: number, t: number) {
     most = Math.max(most, slotMouthCorrection(h, span, 0, t, r * h));
   return most;
 }
-/** A side duct's dividers, in: two per duct, bracing its inner wall to the side wall across the throat. */
-export const SIDE_DUCT_DIVIDER_IN = 0.5;
+/**
+ * A side duct's dividers' thickness, in: two per duct, bracing its inner wall to the side wall across the throat. The
+ * vent carries the design's (its divider size at the measured thickness); a vent without one, as in older saves, is ½″.
+ */
+export const ductDividerIn = (v: Pick<VentSpec, "div">) =>
+  v.div ?? defaultPanelIn(DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL);
 // A sub's baffle, in: the box's air starts behind it, so a duct from the frame front runs this much less beside it (the
 // reveal's fraction of an inch more is left out: it moves the correction well under 1 %).
 const SUB_BAFFLE_IN = 0.75;
@@ -758,14 +762,14 @@ export function slotInnerEndCorrection(
  */
 export function sideDuctEndCorrection(
   box: Dims3,
-  v: Pick<VentSpec, "throat" | "len">,
+  v: Pick<VentSpec, "throat" | "len" | "div">,
   t: number,
   n: 1 | 2,
   most = false,
 ) {
   const th = v.throat,
     span = (box.w - 2 * t) / n,
-    open = box.h - 2 * t - 2 * SIDE_DUCT_DIVIDER_IN;
+    open = box.h - 2 * t - 2 * ductDividerIn(v);
   return (
     rectangleEndCorrection(th, 2 * open) +
     (most
@@ -788,7 +792,7 @@ export function ventGeometry(
   if (portStyle === "vslots" || portStyle === "vslot1") {
     const n = portStyle === "vslot1" ? 1 : 2;
     const th = cVent.throat,
-      open = ih - 2 * SIDE_DUCT_DIVIDER_IN, // two dividers per duct
+      open = ih - 2 * ductDividerIn(cVent), // two dividers per duct
       area = n * th * open,
       seg = open / 3;
     return {
