@@ -77,7 +77,7 @@ export function OptimizerControls({ planner }: Props) {
         <OptimizerBar
           on={isOptimizerOn}
           onToggle={() => setIsOptimizerOn(!isOptimizerOn)}
-          hint="Find cheaper, lighter or louder designs inside your limits."
+          hint="Find cheaper, lighter or louder designs within your limits."
           note={wallPanel !== PA_OPTIMIZER_PANEL && optimizerPanelNote(PA_OPTIMIZER_PANEL)}
           {...lockBar}
         />

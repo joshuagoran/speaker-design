@@ -148,14 +148,14 @@ test("mid: excursion at 100 % of Xmax is the line", (t) => {
 });
 test("mid vs sub: -0.5 dB gap is the line; amp advice only while under 2 x AES", (t) => {
   // need = 120 - 6 = 114
-  // "ok" keeps up with the sub, "warn" runs out first
+  // "ok" keeps up with the sub, "warn" reaches its limit first
   assert.equal(kindOf(mid({ midAtXo: { spl: 113.5, who: "amp" } }), "midKeepsUp"), "ok");
   const F = mid({ midAtXo: { spl: 113.4, who: "amp" } });
   assert.equal(kindOf(F, "midKeepsUp"), "warn");
-  assert.match(chipOf(F, "midKeepsUp")[2], /W per mid channel would cover it/);
+  assert.match(chipOf(F, "midKeepsUp")[2], /W per mid channel is enough/);
   const G = mid({ midAtXo: { spl: 100, who: "amp" } }); // needs far more than 800 W
   assert.equal(kindOf(G, "midKeepsUp"), "warn");
-  assert.match(chipOf(G, "midKeepsUp")[2], /More amp won't get there/);
+  assert.match(chipOf(G, "midKeepsUp")[2], /More amp power does not help/);
   has(t, mid({ subMusicAtXo: null }), "midKeepsUp", false);
 });
 
@@ -187,7 +187,7 @@ test("horn: loading limit within 80 % of the crossover", (t) => {
 });
 test("horn vs mid: -0.5 dB gap is the line", (t) => {
   // need = 118 - 6 = 112
-  // "ok" keeps up with the mid, "warn" runs out first
+  // "ok" keeps up with the mid, "warn" reaches its limit first
   assert.equal(kindOf(horn({ hornAtXo: 111.5 }), "hornKeepsUp"), "ok");
   assert.equal(kindOf(horn({ hornAtXo: 111.4 }), "hornKeepsUp"), "warn");
   has(t, horn({ midAtXoHi: null }), "hornKeepsUp", false);

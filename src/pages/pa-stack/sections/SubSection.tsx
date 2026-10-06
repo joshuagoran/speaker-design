@@ -94,7 +94,7 @@ export function SubSection({ planner, summary }: Props) {
                   STATS.firstLimit,
                   SUB_LIMIT_NAMES[subModeled.lim.who],
                   `at ${Math.round(subModeled.lim.W / 10) * 10} W`,
-                  `at ${Math.round(subModeled.lim.W / 10) * 10} W${subModeled.lim.who === "Xmax" ? `, reached first at ${subModeled.mdl.peakXF.toFixed(0)} Hz` : subModeled.lim.who === "port" ? `, reached first at ${subModeled.mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`,
+                  `at ${Math.round(subModeled.lim.W / 10) * 10} W${subModeled.lim.who === "Xmax" ? `, reached first at ${subModeled.mdl.peakXF.toFixed(0)} Hz` : subModeled.lim.who === "port" ? `, reached first at ${subModeled.mdl.peakVelF.toFixed(0)} Hz` : ""}. The next two rows use this power.`,
                 ],
                 [
                   STATS.peakPortVelocity,

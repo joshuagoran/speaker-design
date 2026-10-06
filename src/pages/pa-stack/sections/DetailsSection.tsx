@@ -92,24 +92,24 @@ export function DetailsSection({ planner }: Props) {
         <div>
           <span className="font-medium text-stone-900">Horn.</span> {hornOption.name} with{" "}
           {compressionDriver.name}, crossed at {midHornCrossoverHz} Hz (maker suggests{" "}
-          {hornOption.xo}). Sits on a short block so the mouth clears the cube. Total stack height
+          {hornOption.xo}). A short block lifts the mouth clear of the cube. Total stack height
           about {stackHeightIn.toFixed(0)} in, horn center at {hornCenterHeightIn.toFixed(0)} in.
         </div>
         <div>
-          <span className="font-medium text-stone-900">Bracing.</span> By rule: braces and ribs go
-          in, the one that lifts the panels most for its wood first, until every panel&rsquo;s first
-          resonance clears {formatHz(subBracing.targetHz)} ({PANEL_TARGET_CROSSOVER_MULTIPLE} ×{" "}
+          <span className="font-medium text-stone-900">Bracing.</span> The planner adds braces and
+          ribs, best gain per wood first, until each panel&rsquo;s first resonance is above{" "}
+          {formatHz(subBracing.targetHz)} ({PANEL_TARGET_CROSSOVER_MULTIPLE} ×{" "}
           {PA_BRACING_CROSSOVER_HZ} Hz, the highest sub-to-mid crossover the optimizers pick). Sub,{" "}
           {BRACE_STYLE_NAMES[subBracing.style].toLowerCase()}: {braceCount(subBracing)}
           {midBracing
             ? `; ${UI_TEXT.midBass.toLowerCase()} cube, ${BRACE_STYLE_NAMES[midBracing.style].toLowerCase()}: ${braceCount(midBracing)}`
             : ""}
-          . Each panel and each bay between supports is a thin plate simply supported at its edges
-          (glued edges are stiffer, so this reads low); the vent shelf, its fins and the side-duct
-          walls count as supports. Every brace and rib stays {formatInches(DRIVER_CLEARANCE_IN)}″
-          clear of the driver&rsquo;s cutout, basket and magnet and of the vent: a window brace that
-          ties the sides goes behind the magnet or above or below the driver, and one across the box
-          front to back opens its frame round it. The Cutlist has where each one goes.
+          . The model treats each panel and each bay between supports as a thin plate with simply
+          supported edges. Glued edges are stiffer, so real values are higher. The vent shelf, its
+          fins and the side-duct walls are supports. Each brace and rib stays{" "}
+          {formatInches(DRIVER_CLEARANCE_IN)}″ clear of the driver and the vent. A side-to-side
+          window brace goes behind the magnet, or above or below the driver. A front-to-back window
+          brace has an opening around the driver. The Cutlist shows where each brace goes.
           {(
             [
               ["Sub", subBracing],
@@ -131,9 +131,8 @@ export function DetailsSection({ planner }: Props) {
                         .filter((p) => p.hz < b.targetHz - 1e-9)
                         .map((p) => BRACE_PANEL_NAMES[p.id].toLowerCase())
                         .join(", ")}
-                      . No brace or rib position that clears the driver and the vent lifts it
-                      further with this style; try {BRACE_STYLE_NAMES.both.toLowerCase()}, or
-                      thicker walls.
+                      . With this style, no more braces or ribs fit clear of the driver and the
+                      vent. Try {BRACE_STYLE_NAMES.both.toLowerCase()}, or thicker walls.
                     </div>
                   )}
                 </div>
