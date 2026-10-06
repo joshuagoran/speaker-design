@@ -228,7 +228,7 @@ function sumOverZ(modes: RoomModes, sources: readonly ModalSource[], ms: ModalSl
           ar += sre[s] * c;
           ai += sim[s] * c;
         }
-        // (ar + j·ai) / (kn² − k² + j·damp), times the normalisation and the receiver's z shape
+        // (ar + j·ai) / (kn² − k² + j·damp), times the normalization and the receiver's z shape
         const dr = kn2 - k2,
           g = (exy * (iz ? 2 : 1) * rz[iz]) / (dr * dr + damp * damp);
         re += g * (ar * dr + ai * damp);

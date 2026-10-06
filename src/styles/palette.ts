@@ -1,11 +1,11 @@
-// The one palette, in a light and a dark theme of the same shape. Every colour in the app comes from here: the CSS
-// variables and Tailwind's colour names are generated from it at build time (tailwind.config.js), and the app code reads
-// the active theme's palette with usePalette() (src/hooks/useTheme.ts). Nothing else in the project writes a colour literal,
-// except three that show real things, the same in both themes: the favicon (index.html), the custom colour picker's
+// The one palette, in a light and a dark theme of the same shape. Every color in the app comes from here: the CSS
+// variables and Tailwind's color names are generated from it at build time (tailwind.config.js), and the app code reads
+// the active theme's palette with usePalette() (src/hooks/useTheme.ts). Nothing else in the project writes a color literal,
+// except three that show real things, the same in both themes: the favicon (index.html), the custom color picker's
 // rainbow ring (SwatchPicker) and the cabinet finish data (src/data/catalog/finishes.ts, the default baffle paint).
 import type { ThemeName } from "../types";
 
-export interface StatusColour {
+export interface StatusColor {
   tint: string;
   edge: string;
   base: string;
@@ -30,7 +30,7 @@ export interface Palette {
   shadow: string;
   /** actions and focus */
   accent: string;
-  status: { green: StatusColour; red: StatusColour; orange: StatusColour };
+  status: { green: StatusColor; red: StatusColor; orange: StatusColor };
 }
 
 const LIGHT: Palette = {
@@ -46,8 +46,8 @@ const LIGHT: Palette = {
   midTint: "#cce6f4",
   shadow: "#111111",
   accent: "#111111",
-  // status colours stay conventional and separate from the brand colours. tint: background, edge: border of a tinted note,
-  // base: the colour, text: its dark shade for text
+  // status colors stay conventional and separate from the brand colors. tint: background, edge: border of a tinted note,
+  // base: the color, text: its dark shade for text
   status: {
     green: { tint: "#ecf8f0", edge: "#8fcf9f", base: "#1a7f37", text: "#1a7f37" },
     red: { tint: "#fdeeee", edge: "#ee9a9a", base: "#c81e1e", text: "#c81e1e" },
@@ -55,7 +55,7 @@ const LIGHT: Palette = {
   },
 };
 
-// the same roles on a near-black page: light text, brand and status colours re-tuned for contrast on dark, dark tints
+// the same roles on a near-black page: light text, brand and status colors re-tuned for contrast on dark, dark tints
 const DARK: Palette = {
   ink: "#e8e8e6",
   white: "#141516",
@@ -78,13 +78,13 @@ const DARK: Palette = {
 
 export const PALETTES: Record<ThemeName, Palette> = { light: LIGHT, dark: DARK };
 
-/** Colours drawn on data colours that stay the same in both themes (the dispersion and coverage maps' scales, the
+/** Colors drawn on data colors that stay the same in both themes (the dispersion and coverage maps' scales, the
  * cabinet finishes): the light palette's, so lines, marks and labels on them read the same in either theme. */
 export const ON_DATA: Pick<Palette, "ink" | "white" | "muted" | "edge" | "magenta" | "cyan"> =
   LIGHT;
 
 /** The 3D view's stage in each theme: floor, grid and lights (three.js hex numbers). The cabinet finishes and the driver
- * parts (PARTS_3D) keep their true colours in both. */
+ * parts (PARTS_3D) keep their true colors in both. */
 export const STAGE: Record<
   ThemeName,
   {
@@ -117,7 +117,7 @@ export const STAGE: Record<
   },
 };
 
-/** The 3D view's driver and hardware parts (three.js hex numbers): their true colours, the same in both themes. */
+/** The 3D view's driver and hardware parts (three.js hex numbers): their true colors, the same in both themes. */
 export const PARTS_3D = {
   /** cones, surrounds, throats, stands and rods */
   black: 0x1c1c1c,
@@ -138,7 +138,7 @@ export const PARTS_3D = {
   figure: 0x8b847d,
 } as const;
 
-/** A colour with transparency, for chart tints and shadows. */
+/** A color with transparency, for chart tints and shadows. */
 export const alpha = (hex: string, a: number) => {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`;
@@ -151,11 +151,11 @@ export const DISPERSION_SCALE = {
   /** top and bottom of the scale, dB re on-axis; levels outside are clamped */
   topDb: 6,
   botDb: -36,
-  /** how dark a contour line is drawn: the cell's colour times this */
+  /** how dark a contour line is drawn: the cell's color times this */
   contourShade: 0.45,
   /** the key's ticks, dB apart */
   keyStepDb: 6,
-  /** [dB, colour], from the top down */
+  /** [dB, color], from the top down */
   stops: [
     [6, "#ffffff"], // white
     [3, "#ff8fa3"], // pink
@@ -183,7 +183,7 @@ const hexRgb = (hex: string): Rgb => {
 };
 const DISPERSION_RGB = DISPERSION_SCALE.stops.map(([db, hex]) => [db, hexRgb(hex)] as const);
 
-/** A level's colour on the dispersion scale, interpolated between the stops; clamped to +6..−36 dB. */
+/** A level's color on the dispersion scale, interpolated between the stops; clamped to +6..−36 dB. */
 export function dispersionRgb(db: number): Rgb {
   const d = Math.max(DISPERSION_SCALE.botDb, Math.min(DISPERSION_SCALE.topDb, db));
   for (let i = 0; i + 1 < DISPERSION_RGB.length; i++) {
@@ -198,8 +198,8 @@ export function dispersionRgb(db: number): Rgb {
   return DISPERSION_RGB[DISPERSION_RGB.length - 1][1];
 }
 
-/** The same colour as a CSS `rgb()` string, darkened by `shade` (1 for none, `contourShade` on a contour line). */
-export const dispersionColour = (db: number, shade = 1): string =>
+/** The same color as a CSS `rgb()` string, darkened by `shade` (1 for none, `contourShade` on a contour line). */
+export const dispersionColor = (db: number, shade = 1): string =>
   `rgb(${dispersionRgb(db)
     .map((v) => Math.round(v * shade))
     .join(",")})`;

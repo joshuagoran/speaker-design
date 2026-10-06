@@ -25,7 +25,7 @@ interface Props {
     | "port"
     | "subGrossLiters"
     | "subAmpVoltage"
-    | "subModelled"
+    | "subModeled"
     | "subWeightLoadedLb"
   >;
   /** shown first inside the fold (the system summary in one column, so it folds with Sub on phones) */
@@ -47,7 +47,7 @@ export function SubSection({ planner, summary }: Props) {
     port,
     subGrossLiters,
     subAmpVoltage,
-    subModelled,
+    subModeled,
     subWeightLoadedLb,
   } = planner;
   return (
@@ -62,7 +62,7 @@ export function SubSection({ planner, summary }: Props) {
         />
         <FoldBody open={expandedSections.sub}>
           {summary}
-          {subModelled ? (
+          {subModeled ? (
             <StatRowGrid
               rows={[
                 [STATS.grossInternal, `${subGrossLiters.toFixed(0)} L`],
@@ -78,11 +78,11 @@ export function SubSection({ planner, summary }: Props) {
                 ],
                 [
                   STATS.midbandSensitivity,
-                  `${(subModelled.mdl.ref - 20 * Math.log10(subAmpVoltage / 2.83)).toFixed(1)} dB`,
+                  `${(subModeled.mdl.ref - 20 * Math.log10(subAmpVoltage / 2.83)).toFixed(1)} dB`,
                   UI_TEXT.splConditions,
                 ],
                 ...[30, 35, 45, 60].map((f): StatRowItem => {
-                  const m = nearestPoint(subModelled.maxCurve, f);
+                  const m = nearestPoint(subModeled.maxCurve, f);
                   return [
                     `Max SPL at ${f} Hz`,
                     `${m.spl.toFixed(1)} dB`,
@@ -92,30 +92,29 @@ export function SubSection({ planner, summary }: Props) {
                 }),
                 [
                   STATS.firstLimit,
-                  SUB_LIMIT_NAMES[subModelled.lim.who],
-                  `at ${Math.round(subModelled.lim.W / 10) * 10} W`,
-                  `at ${Math.round(subModelled.lim.W / 10) * 10} W${subModelled.lim.who === "Xmax" ? `, reached first at ${subModelled.mdl.peakXF.toFixed(0)} Hz` : subModelled.lim.who === "port" ? `, reached first at ${subModelled.mdl.peakVelF.toFixed(0)} Hz` : ""}; the two rows below are at this power.`,
+                  SUB_LIMIT_NAMES[subModeled.lim.who],
+                  `at ${Math.round(subModeled.lim.W / 10) * 10} W`,
+                  `at ${Math.round(subModeled.lim.W / 10) * 10} W${subModeled.lim.who === "Xmax" ? `, reached first at ${subModeled.mdl.peakXF.toFixed(0)} Hz` : subModeled.lim.who === "port" ? `, reached first at ${subModeled.mdl.peakVelF.toFixed(0)} Hz` : ""}. The next two rows use it.`,
                 ],
                 [
                   STATS.peakPortVelocity,
-                  `${subModelled.lim.vel.toFixed(1)} m/s`,
-                  `at ${subModelled.mdl.peakVelF.toFixed(0)} Hz`,
+                  `${subModeled.lim.vel.toFixed(1)} m/s`,
+                  `at ${subModeled.mdl.peakVelF.toFixed(0)} Hz`,
                 ],
                 [
                   STATS.peakExcursion,
-                  `${((subModelled.mdl.peakX * subModelled.lim.V) / subAmpVoltage).toFixed(1)} mm`,
-                  `${subModelled.lim.xPct.toFixed(0)}% of Xmax, at ${subModelled.mdl.peakXF.toFixed(0)} Hz`,
+                  `${((subModeled.mdl.peakX * subModeled.lim.V) / subAmpVoltage).toFixed(1)} mm`,
+                  `${subModeled.lim.xPct.toFixed(0)}% of Xmax, at ${subModeled.mdl.peakXF.toFixed(0)} Hz`,
                 ],
                 ...xmaxRows(subDriver.ts),
               ]}
             />
           ) : (
             <p className="text-sm text-stone-500 ">
-              {subDriver.name} can't be modelled yet: its parameters are incomplete.{" "}
-              {subDriver.note}
+              {subDriver.name} can't be modeled yet: its parameters are incomplete. {subDriver.note}
             </p>
           )}
-          {subModelled && (
+          {subModeled && (
             <WarningChips
               chips={subChips({
                 subSize: format.sub,
@@ -125,8 +124,8 @@ export function SubSection({ planner, summary }: Props) {
                 cVent: subVentSpec,
                 PT,
                 subLbLoaded: subWeightLoadedLb,
-                lim: subModelled.lim,
-                peakXF: subModelled.mdl.peakXF,
+                lim: subModeled.lim,
+                peakXF: subModeled.mdl.peakXF,
                 aes: subDriver.ts.aes,
                 ampW: subAmpWatts,
               })}

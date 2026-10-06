@@ -3,7 +3,7 @@
 // added mass, so the planner allows up to 3 × Mms.
 // src/lib/xmax adds the comparable Xmax.
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
-// a misspelt, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
+// a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
 // class, tweeter type) is an error.
 // Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
@@ -44,7 +44,7 @@ export const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
     lb: 0.75,
     price: 24.98,
     src: "parts-express.com, Oct 2026",
-    note: "Aluminium cone; M5 screw for added mass. Backordered to late Oct 2026.",
+    note: "Aluminum cone; M5 screw for added mass. Backordered to late Oct 2026.",
   },
   {
     id: "sb16pfcr",
@@ -141,7 +141,7 @@ export const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
     lb: 1.15,
     price: 33.98,
     src: "parts-express.com, Oct 2026",
-    note: "Aluminium cone; M5 hole for added mass.",
+    note: "Aluminum cone; M5 hole for added mass.",
   },
   {
     id: "ds215pr",
@@ -221,6 +221,6 @@ export const HIFI_PASSIVES_RAW: readonly RawPassiveRadiator[] = [
     lb: 1.9,
     price: 56.98,
     src: "parts-express.com, Oct 2026",
-    note: "Aluminium cone; M5 hole for added mass. Check the cutout (listed two ways).",
+    note: "Aluminum cone; M5 hole for added mass. Check the cutout (listed two ways).",
   },
 ];

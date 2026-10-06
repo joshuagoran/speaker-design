@@ -10,7 +10,7 @@ export const MID_GAP_IN = 0.4;
 export const SATELLITE_COLUMN_H_IN = 34;
 /** Height of the tower's mid chamber. */
 export const TOWER_MID_HEIGHT_IN = 15.5;
-/** A rect or lathe horn sits this far above the mid box (centre = this + half its height). */
+/** A rect or lathe horn sits this far above the mid box (center = this + half its height). */
 export const HORN_LIFT_IN = 0.3;
 /** The plain flared block sits this far above the mid box, and its bevel adds `PLAIN_HORN_BEVEL_IN` on top. */
 export const PLAIN_HORN_LIFT_IN = 2.2;

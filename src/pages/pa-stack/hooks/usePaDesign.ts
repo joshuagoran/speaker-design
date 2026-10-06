@@ -256,7 +256,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
       dispersionPlane,
     ],
   );
-  const { effectiveMidBoxDims, port, subModelled } = derived;
+  const { effectiveMidBoxDims, port, subModeled } = derived;
   const midWithBox = { ...midDriver, box: effectiveMidBoxDims };
   /** One named snapshot of the whole system. */
   const snapshot = (): PaDesignConfig => ({
@@ -302,7 +302,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     offcut: offcutShape,
     cuts: cutStyle,
     exactIn: panelExactIn,
-    summary: `${subDriver.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${subModelled ? subModelled.mdl.Fb.toFixed(1) + " Hz" : "—"}`,
+    summary: `${subDriver.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${subModeled ? subModeled.mdl.Fb.toFixed(1) + " Hz" : "—"}`,
   });
   const restore = (c: Partial<PaDesignConfig>) => {
     // the measured thicknesses saved with the design (none in older saves: the nominal sizes), then its walls' size

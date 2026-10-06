@@ -22,7 +22,7 @@ interface Props {
 
 /**
  * Run button with search statistics; while searching, a Cancel button and the search's progress. The buttons keep their
- * words and only grey out while a search runs or no goal is picked.
+ * words and only gray out while a search runs or no goal is picked.
  */
 export function RunRow({
   busy,
@@ -52,7 +52,7 @@ export function RunRow({
             {alt.label}
           </Button>
         )}
-        {!hasGoal && !busy && <span className="text-xs text-stone-500">Pick a goal first</span>}
+        {!hasGoal && !busy && <span className="text-xs text-stone-500">Select a goal first</span>}
         {busy && onCancel && (
           <Button onClick={onCancel} className="min-h-10 min-w-10">
             Cancel

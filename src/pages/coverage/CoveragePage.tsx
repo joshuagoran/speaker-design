@@ -156,22 +156,14 @@ export function CoveragePage({ planner }: Props) {
                 maxHeight={maxHeight}
               />
             ) : (
-              <Notice>
-                The map needs the mid-bass driver's T/S parameters and the horn's coverage angles.
-                Pick a mid and horn that have them on the Design page.
-              </Notice>
+              <Notice>Needs a mid with T/S parameters and a horn with coverage angles.</Notice>
             )}
-            {map.error && <Notice>The map couldn't be computed: {map.error}</Notice>}
+            {map.error && <Notice>Map failed: {map.error}</Notice>}
             {map.stack && !planner.hornModel && (
-              <Notice>
-                The compression driver has no sensitivity or power rating, so the horn is left out
-                of the map.
-              </Notice>
+              <Notice>No horn in the map: its driver has no sensitivity or power rating.</Notice>
             )}
-            {map.stack && !planner.subModelled && (
-              <Notice>
-                The sub can't be modelled for this design, so it is left out of the map.
-              </Notice>
+            {map.stack && !planner.subModeled && (
+              <Notice>No sub in the map: the planner cannot model it.</Notice>
             )}
             {rel != null && map.stats && (
               <div className="md:hidden flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-stone-500 tabular-nums">
@@ -306,11 +298,11 @@ export function CoveragePage({ planner }: Props) {
             <p className="text-xs text-stone-500 mb-4 tabular-nums">
               {map.refDb == null ? (
                 <>
-                  Working out the level
+                  Calculating the level
                   <Ellipsis />
                 </>
               ) : map.refDb < map.refTarget - 0.05 ? (
-                `It can't reach ${map.refTarget.toFixed(0)} dB at ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}: at its limit it gives ${map.refDb.toFixed(1)} dB there, and it never plays past its limit.`
+                `It cannot reach ${map.refTarget.toFixed(0)} dB at ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}: ${map.refDb.toFixed(1)} dB at its limit.`
               ) : (
                 `Turned down ${Math.abs(map.gain).toFixed(1)} dB so ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]} gets ${map.refTarget.toFixed(0)} dB in this band.`
               )}

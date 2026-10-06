@@ -1,4 +1,4 @@
-// Handles and input plates (lib/pa/hardware): the presets' fit checks, the litres their recesses take off the boxes,
+// Handles and input plates (lib/pa/hardware): the presets' fit checks, the liters their recesses take off the boxes,
 // the cutlist's cutout notes and the defaults older saves load with.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
@@ -11,7 +11,7 @@ import {
   midHardwarePlan,
   midSystem,
   subBoxBracing,
-  subDriverCentre,
+  subDriverCenter,
   subGeometry,
   subHardwarePlan,
   subKeepOut,
@@ -19,14 +19,14 @@ import {
 } from "../src/lib/pa/calc";
 import { subDriverDepthIn } from "../src/lib/pa/tubes";
 import {
-  boxCentreOfGravity,
+  boxCenterOfGravity,
   DEFAULT_HARDWARE,
   hardwareFits,
   hardwareLb,
-  hardwareLitres,
+  hardwareLiters,
   handlePart,
   HORN_POSTS_FIT_DEPTH_IN,
-  partRecessLitres,
+  partRecessLiters,
   planBoxHardware,
   savedHardware,
 } from "../src/lib/pa/hardware";
@@ -83,18 +83,18 @@ test("the default boxes take their handles, dish and posts with nothing in the w
   assert.equal(hardwareChip(s)[0], "ok");
 });
 
-test("handles sit at the centre-of-gravity height and move with the offsets", () => {
+test("handles sit at the center-of-gravity height and move with the offsets", () => {
   const base = subPlan();
   const up = subPlan({ ...DEFAULT_HARDWARE.sub, upIn: 2, backIn: 1 });
   close(null, up.parts[0].v, base.parts[0].v + 2, 1e-9);
   close(null, up.parts[0].u, base.parts[0].u + 1, 1e-9);
-  // at the centre of gravity's height: the walls, baffle, driver (above the bottom slot) and the slot's own panels
-  const cog = boxCentreOfGravity(
+  // at the center of gravity's height: the walls, baffle, driver (above the bottom slot) and the slot's own panels
+  const cog = boxCenterOfGravity(
     d.cDim,
     t,
     d.inset,
     {
-      centre: subDriverCentre(d.cDim, t, d.portStyle, vent, d.sub.size),
+      center: subDriverCenter(d.cDim, t, d.portStyle, vent, d.sub.size),
       lb: d.sub.lb,
       depthIn: subDriverDepthIn(d.sub),
     },
@@ -142,7 +142,7 @@ test("a handle that runs into the vent, an edge, a rib or the driver says so", (
     t,
     inset: d.inset,
     handles: DEFAULT_HARDWARE.sub,
-    driver: { centre: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
+    driver: { center: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
     bracing: ribbed,
     keepOut: { driver: [], vent: [] },
   });
@@ -159,7 +159,7 @@ test("a handle that runs into the vent, an edge, a rib or the driver says so", (
       t,
       inset: d.inset,
       handles: DEFAULT_HARDWARE.sub,
-      driver: { centre: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
+      driver: { center: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
       bracing: null,
       keepOut: { driver: [], vent: [] },
     }).parts.map((p) => [p.u, p.v]),
@@ -172,27 +172,27 @@ test("a handle that runs into the vent, an edge, a rib or the driver says so", (
     t,
     inset: d.inset,
     handles: DEFAULT_HARDWARE.mid,
-    driver: { centre: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
+    driver: { center: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
     bracing: null,
     keepOut: { driver: [full], vent: [] },
   });
   assert.ok(crowded.parts[0].hits.includes("driver"), hitsOf(crowded));
 });
 
-test("each recess's litres come off the box's net volume, and the tuning follows", () => {
+test("each recess's liters come off the box's net volume, and the tuning follows", () => {
   const h1105 = HANDLES.find((h) => h.id === "H1105");
   assert.ok(h1105);
   // Parts Express's drawing: a 175 × 115 mm cutout, 63 mm deep over the 5 mm flange (58 mm from the panel's face)
   close(
     null,
-    partRecessLitres(h1105, t),
+    partRecessLiters(h1105, t),
     ((175 * 115) / 25.4 ** 2) * (58 / 25.4 - t) * IN3_TO_L,
     1e-12,
   );
   // the dish is shallower than the wall, and the posts' depth isn't listed: neither takes room
-  assert.equal(partRecessLitres(INPUT_PLATE, t), 0);
-  assert.equal(partRecessLitres(HORN_POSTS, t), 0);
-  assert.equal(partRecessLitres(INPUT_JACK, t), 0);
+  assert.equal(partRecessLiters(INPUT_PLATE, t), 0);
+  assert.equal(partRecessLiters(HORN_POSTS, t), 0);
+  assert.equal(partRecessLiters(INPUT_JACK, t), 0);
   const cfg = {
     subBox: d.cDim,
     midDims: d.mDim,
@@ -204,15 +204,15 @@ test("each recess's litres come off the box's net volume, and the tuning follows
   };
   const bare = subGeometry(d.sub, d.mid, cfg),
     fitted = subGeometry(d.sub, d.mid, { ...cfg, hardware: DEFAULT_HARDWARE });
-  const litres = hardwareLitres(DEFAULT_HARDWARE, "sub", t, d.layout);
+  const liters = hardwareLiters(DEFAULT_HARDWARE, "sub", t, d.layout);
   const handle = handlePart(DEFAULT_HARDWARE.sub.model);
   assert.ok(handle);
-  close(null, litres, 2 * partRecessLitres(handle, t), 1e-12);
-  close(null, fitted.recessL, litres, 1e-12);
-  close(null, bare.netL - fitted.netL, litres, 1e-9);
+  close(null, liters, 2 * partRecessLiters(handle, t), 1e-12);
+  close(null, fitted.recessL, liters, 1e-12);
+  close(null, bare.netL - fitted.netL, liters, 1e-9);
   assert.ok(fitted.Fb > bare.Fb, "a smaller box tunes higher on the same vent");
-  // the planner's plan counts the same litres
-  close(null, subPlan().litres, litres, 1e-12);
+  // the planner's plan counts the same liters
+  close(null, subPlan().liters, liters, 1e-12);
   const mcfg = {
     midDims: d.mDim,
     wall: t,
@@ -226,14 +226,14 @@ test("each recess's litres come off the box's net volume, and the tuning follows
   };
   const m0 = midSystem(d.mid, mcfg),
     m1 = midSystem(d.mid, { ...mcfg, hardware: DEFAULT_HARDWARE });
-  close(null, m0.netL - m1.netL, hardwareLitres(DEFAULT_HARDWARE, "mid", t, d.layout), 1e-9);
+  close(null, m0.netL - m1.netL, hardwareLiters(DEFAULT_HARDWARE, "mid", t, d.layout), 1e-9);
   // no handles: only the dish, which takes none; the tower's mid chamber has no hardware of its own
   const none: PaHardware = {
     ...DEFAULT_HARDWARE,
     sub: { ...DEFAULT_HARDWARE.sub, model: NO_HANDLES },
   };
-  assert.equal(hardwareLitres(none, "sub", t, d.layout), 0);
-  assert.equal(hardwareLitres(DEFAULT_HARDWARE, "mid", t, "tower"), 0);
+  assert.equal(hardwareLiters(none, "sub", t, d.layout), 0);
+  assert.equal(hardwareLiters(DEFAULT_HARDWARE, "mid", t, "tower"), 0);
   assert.equal(hardwareLb(DEFAULT_HARDWARE, "mid", "tower"), 0);
   close(null, hardwareLb(none, "sub", d.layout), INPUT_PLATE.lb + 2 * INPUT_JACK.lb, 1e-12);
 });
@@ -295,7 +295,7 @@ test("the cutlist notes each cutout on its panel, from a named edge", () => {
   );
 });
 
-test("each handle is mounted as its catalogue entry says: the H1105 tall, the 30769 wide", () => {
+test("each handle is mounted as its catalog entry says: the H1105 tall, the 30769 wide", () => {
   const h1105 = HANDLES.find((h) => h.id === "H1105");
   assert.ok(h1105);
   // the default sub is deep enough for the H1105's 220 mm flange lying either way; it stands tall now
@@ -344,7 +344,7 @@ test("a bottom slot's shelf, fins and folded rear wall pull the sub's handles do
       inset: d.inset,
       handles: DEFAULT_HARDWARE.sub,
       driver: {
-        centre: subDriverCentre(d.cDim, t, "slots", v, d.sub.size),
+        center: subDriverCenter(d.cDim, t, "slots", v, d.sub.size),
         lb: d.sub.lb,
         depthIn: subDriverDepthIn(d.sub),
       },
@@ -373,7 +373,7 @@ test("the horn posts' fit check takes an assumed depth, their volume none", () =
   const m = midPlan();
   assert.ok(m);
   const posts = m.parts[3];
-  assert.equal(posts.litres, 0);
+  assert.equal(posts.liters, 0);
   // a window brace an inch under the lid, under the posts: the posts reach it only with the assumed depth
   const inner = { x: d.mDim.w - 2 * t, y: d.mDim.h - 2 * t, z: d.mDim.d - d.inset - 0.75 - t };
   const under = HORN_POSTS_FIT_DEPTH_IN - t;
@@ -388,7 +388,7 @@ test("the horn posts' fit check takes an assumed depth, their volume none", () =
     t,
     inset: d.inset,
     handles: { ...DEFAULT_HARDWARE.mid, model: NO_HANDLES },
-    driver: { centre: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
+    driver: { center: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
     bracing: null,
     keepOut: { driver: [block], vent: [] },
   });

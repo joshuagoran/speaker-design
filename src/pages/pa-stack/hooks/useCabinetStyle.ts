@@ -31,7 +31,7 @@ export interface CabinetStyle {
   setBaffleInsetIn: Setter<number>;
   baffleColor: string;
   setBaffleColor: Setter<string>;
-  /** a `FinishId` or a paint colour (hex) */
+  /** a `FinishId` or a paint color (hex) */
   cabinetFinish: string;
   setCabinetFinish: Setter<string>;
   spacerHeightIn: number;

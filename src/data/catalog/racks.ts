@@ -1,6 +1,6 @@
-// Electronics racks for the Notes page; the page sums each rack's lines. A line is a catalogue part named by id (an amp
+// Electronics racks for the Notes page; the page sums each rack's lines. A line is a catalog part named by id (an amp
 // from amps.ts, whose name, rating and used price the line takes; a DSP unit from dsp-units.ts, whose name and used
-// price range it takes) or, for anything not in the catalogue, [description, price $]. To add a line or a rack, append
+// price range it takes) or, for anything not in the catalog, [description, price $]. To add a line or a rack, append
 // to the table; the compiler checks the shape and the ids (Rack in src/types.ts).
 // Prices are US dollars, checked Sep 2026, single unit, before tax/shipping.
 import type { Rack } from "../../types";

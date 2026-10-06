@@ -26,7 +26,7 @@ import type {
   NO_HANDLES,
 } from "./constants/hardware";
 
-// Shapes of the parts catalogue tables in data/catalog/ (lib/data.ts derives the app's view of them).
+// Shapes of the parts catalog tables in data/catalog/ (lib/data.ts derives the app's view of them).
 //
 // A spec the vendor does not publish is `null` in the table (the note says so), so it stays in the type as `number | null`.
 // A field that only some entries have is optional (`?`).
@@ -87,7 +87,7 @@ export type XmaxBasis = "derived" | "converted" | "published" | "estimated";
 
 /**
  * The comparable Xmax, (Hvc − Hg)/2 + Hg/4 one-way mm, as a band: `lo` = `hi` unless `basis` is "estimated", and the
- * driver's `Xmax` is its centre.
+ * driver's `Xmax` is its center.
  */
 export interface XmaxBand {
   basis: XmaxBasis;
@@ -95,7 +95,7 @@ export interface XmaxBand {
   hi: number;
 }
 
-/** The Thiele-Small parameters and ratings every driver table lists. `disp` is the driver's displacement in litres, null where unpublished. */
+/** The Thiele-Small parameters and ratings every driver table lists. `disp` is the driver's displacement in liters, null where unpublished. */
 export interface ThieleSmall {
   Fs: number;
   Qts: number;
@@ -103,7 +103,7 @@ export interface ThieleSmall {
   Qms: number;
   Vas: number;
   Sd: number;
-  /** the comparable one-way excursion the models use, mm: the centre of `xmax` (see `lib/xmax`) */
+  /** the comparable one-way excursion the models use, mm: the center of `xmax` (see `lib/xmax`) */
   Xmax: number;
   xmax: XmaxBand;
   pub: PublishedExcursion;
@@ -261,7 +261,7 @@ export interface MidBox {
   size?: MidSize;
 }
 
-/** The named cabinet finishes; the cabinet's `cabFinish` can also be any paint colour, as a hex string. */
+/** The named cabinet finishes; the cabinet's `cabFinish` can also be any paint color, as a hex string. */
 export type FinishId = "birch" | "walnut";
 
 export interface CabinetFinish {
@@ -281,20 +281,20 @@ export interface Format {
   note: string;
 }
 
-/** An amp's id: one of the models in the amps catalogue (`AMP_SERIES`), so a rack can't name an amp that isn't there. */
+/** An amp's id: one of the models in the amps catalog (`AMP_SERIES`), so a rack can't name an amp that isn't there. */
 export type AmpId = (typeof AMP_SERIES)[number]["models"][number]["id"];
 
-/** A DSP unit's id: one of the rows in the DSP catalogue (`DSP_UNITS`). */
+/** A DSP unit's id: one of the rows in the DSP catalog (`DSP_UNITS`). */
 export type DspUnitId = (typeof DSP_UNITS)[number]["id"];
 
 /** A DSP unit with a settled used price: only these can be a rack line, which takes the price from the unit. */
 export type PricedDspUnitId = Extract<(typeof DSP_UNITS)[number], { usedPrice: PriceRange }>["id"];
 
-/** A rack line that is no catalogue part: description and price in dollars. */
+/** A rack line that is no catalog part: description and price in dollars. */
 export type RackTextItem = readonly [text: string, price: number];
 
 /**
- * A rack line that is a used amp from the amps catalogue: its name and price come from the amp entry. `use` says what
+ * A rack line that is a used amp from the amps catalog: its name and price come from the amp entry. `use` says what
  * it drives, `rating` adds its 8 Ω power, `note` follows.
  */
 export interface RackAmpItem {
@@ -305,7 +305,7 @@ export interface RackAmpItem {
 }
 
 /**
- * A rack line that is a used DSP unit from the DSP catalogue: its name and used price come from the unit's entry.
+ * A rack line that is a used DSP unit from the DSP catalog: its name and used price come from the unit's entry.
  */
 export interface RackDspItem {
   dsp: PricedDspUnitId;
@@ -331,7 +331,7 @@ export type DspUnitRow = Readonly<Record<DspColumn, string>>;
 /** A column of the DSP comparison table: a cell of every unit's row (`DSP_COLUMNS` holds their order and headers). */
 export type DspColumn = keyof typeof DSP_COLUMNS;
 
-/** A DSP unit in the catalogue: its id (racks name it by this) and its comparison-table row. */
+/** A DSP unit in the catalog: its id (racks name it by this) and its comparison-table row. */
 export interface DspUnit {
   id: string;
   row: DspUnitRow;
@@ -372,7 +372,7 @@ export interface AmpSeries {
   src: readonly { name: string; url: string }[];
 }
 
-/** A paint colour: [hex, name]. */
+/** A paint color: [hex, name]. */
 export type PaintSwatch = readonly [hex: string, name: string];
 
 // ---- Fills ----
@@ -596,7 +596,7 @@ export interface HifiConfig {
   N?: number;
   /** radius of the roundover on the baffle's edges, inches; 0 (sharp) when absent */
   roundoverIn?: number;
-  /** how far the tweeter sits off the baffle's centre line, inches, + toward the inside of the pair (mirror-imaged); 0 when absent */
+  /** how far the tweeter sits off the baffle's center line, inches, + toward the inside of the pair (mirror-imaged); 0 when absent */
   tweeterOffsetIn?: number;
 }
 
@@ -635,7 +635,7 @@ export interface WooferMaxPoint {
   s: number;
 }
 
-/** What every modelled Hi-fi speaker has, whatever its box. */
+/** What every modeled Hi-fi speaker has, whatever its box. */
 export interface HifiSystemBase {
   gross: number;
   net: number;
@@ -706,7 +706,7 @@ export interface HifiRadiatorSystem extends HifiSystemBase {
 }
 
 /**
- * The modelled speaker: `hifiSystem`'s result, one variant per box kind. The `?: undefined` fields are the other
+ * The modeled speaker: `hifiSystem`'s result, one variant per box kind. The `?: undefined` fields are the other
  * boxes', so `Fb`, `Fp` and `Qtc` can be read without narrowing and `kind` says which one is set.
  */
 export type HifiSystem = HifiSealedSystem | HifiVentedSystem | HifiRadiatorSystem;
@@ -837,11 +837,11 @@ export interface HifiDesignState {
   dispersionPlane: DispersionPlane;
   /** baffle edge roundover radius, inches (0: sharp) */
   roundoverIn: number;
-  /** tweeter offset from the baffle's centre line, inches, + toward the inside of the pair */
+  /** tweeter offset from the baffle's center line, inches, + toward the inside of the pair */
   tweeterOffsetIn: number;
 }
 
-/** What the model reads off a design that can be modelled: the system, and the curves and numbers worked out from it. */
+/** What the model reads off a design that can be modeled: the system, and the curves and numbers worked out from it. */
 export interface HifiSpeakerModel {
   speakerSystem: HifiSystem;
   warningChips: HifiChip[];
@@ -878,7 +878,7 @@ export interface HifiDesign {
   /** the same distance in feet, as the page shows it */
   seatDistanceFt: number;
   pairCostUsd: number;
-  /** null when the woofer can't be modelled (its parameters aren't published) */
+  /** null when the woofer can't be modeled (its parameters aren't published) */
   speakerModel: HifiSpeakerModel | null;
 }
 
@@ -945,7 +945,7 @@ export interface SavedHifiConfig extends Omit<HifiCardConfig, "pr"> {
   standIn: number;
   /** baffle edge roundover radius, inches; absent in configs saved before it existed (sharp edges) */
   roundover?: number;
-  /** tweeter offset, inches, + toward the inside; absent in configs saved before it existed (centred) */
+  /** tweeter offset, inches, + toward the inside; absent in configs saved before it existed (centered) */
   tweeterOffset?: number;
   summary: string;
 }
@@ -1028,7 +1028,7 @@ export interface PanelStockMaterial {
   lb: number;
 }
 
-/** A nominal panel size in the catalogue: its imperial and metric sizes, and each material's default thickness and weight. */
+/** A nominal panel size in the catalog: its imperial and metric sizes, and each material's default thickness and weight. */
 export type PanelStock = { in: number; mm: number } & Record<PanelMaterial, PanelStockMaterial>;
 
 /**
@@ -1123,7 +1123,7 @@ export interface PaDesignConfig {
   hardware?: PaHardware;
   cutaway?: boolean;
   baffleColor?: string;
-  /** a `FinishId`, or a paint colour as a hex string (`SwatchPicker` offers both) */
+  /** a `FinishId`, or a paint color as a hex string (`SwatchPicker` offers both) */
   cabFinish?: string;
   spacerH?: number;
   joint?: CornerJoint;
@@ -1276,7 +1276,7 @@ export interface SubGeometry {
   grossL: number;
   ductL: number;
   woodL: number;
-  /** the litres the hardware's recesses take (lib/pa/hardware) */
+  /** the liters the hardware's recesses take (lib/pa/hardware) */
   recessL: number;
   netL: number;
   Fb: number;
@@ -1288,26 +1288,26 @@ export interface SubSystemBase {
   grossL: number;
   ductL: number;
   woodL: number;
-  /** the litres the hardware's recesses take (lib/pa/hardware) */
+  /** the liters the hardware's recesses take (lib/pa/hardware) */
   recessL: number;
   netL: number;
   AMP_V: number;
 }
 
 /** A sub with no model: the driver has no T/S, or the box or vent is degenerate (no net volume, no port area, port length at or under 0). */
-export interface SubSystemUnmodelled extends SubSystemBase {
+export interface SubSystemUnmodeled extends SubSystemBase {
   mdl: null;
   lim: null;
 }
 
 /** A sub with its vented-box model and the music limit that comes from it. */
-export interface SubSystemModelled extends SubSystemBase {
+export interface SubSystemModeled extends SubSystemBase {
   mdl: VentedBoxModel;
   lim: SubLimits;
 }
 
 /** `subSystem`: check `mdl` and `lim` narrows with it. */
-export type SubSystem = SubSystemUnmodelled | SubSystemModelled;
+export type SubSystem = SubSystemUnmodeled | SubSystemModeled;
 
 export interface MidSystemConfig
   extends
@@ -1330,7 +1330,7 @@ export interface MidSystemBase {
   V: number;
   grossL: number;
   disp: number;
-  /** the litres the hardware's recesses take (lib/pa/hardware) */
+  /** the liters the hardware's recesses take (lib/pa/hardware) */
   recessL: number;
   netL: number;
   effL: number;
@@ -1339,19 +1339,19 @@ export interface MidSystemBase {
 }
 
 /** A mid with no model (the driver has no T/S): no response and no limit curve. */
-export interface MidSystemUnmodelled extends MidSystemBase {
+export interface MidSystemUnmodeled extends MidSystemBase {
   mdl: null;
   max: null;
 }
 
 /** A mid with its sealed-box model and the most it can play at each frequency. */
-export interface MidSystemModelled extends MidSystemBase {
+export interface MidSystemModeled extends MidSystemBase {
   mdl: SealedBoxModel;
   max: PaMaxPoint[];
 }
 
 /** `midSystem`: check `mdl` and `max` narrows with it. */
-export type MidSystem = MidSystemUnmodelled | MidSystemModelled;
+export type MidSystem = MidSystemUnmodeled | MidSystemModeled;
 
 /** The compression driver on its horn: power available, the cap, and the response from the crossover up. */
 export interface HornResponse {
@@ -1408,7 +1408,7 @@ export interface FillSystemConfig {
   portMax: number;
 }
 
-/** What every modelled fill has, whichever box. */
+/** What every modeled fill has, whichever box. */
 export interface FillSystemBase {
   V: number;
   gross: number;
@@ -1610,7 +1610,7 @@ export type HandleChoice = HandleId | typeof NO_HANDLES;
 /** The boxes that take hardware: the sub and the mid (top) box. */
 export type HardwareBoxId = Extract<CutBoxId, "sub" | "mid">;
 /**
- * A box's handles: the model (two, one each side) and how far they sit from the preset, the box's centre of gravity:
+ * A box's handles: the model (two, one each side) and how far they sit from the preset, the box's center of gravity:
  * up (in) and back toward the rear (in).
  */
 export interface BoxHandles {
@@ -1627,9 +1627,9 @@ export type HardwareObstacle = keyof typeof HARDWARE_OBSTACLE_NAMES;
 /** The panels a part goes on. */
 export type HardwarePanel = Extract<BracePanelId, "sideL" | "sideR" | "back" | "top">;
 /**
- * A part on a box: its panel, its cutout's centre on the panel's outside face (`u` along it, `v` up it, in from the
+ * A part on a box: its panel, its cutout's center on the panel's outside face (`u` along it, `v` up it, in from the
  * box's outside edges: sides back from the front and up from the bottom, the back across from the left and up, the top
- * across from the left and back from the front), the room its recess takes inside (box axes, as BoxRegion) and its litres.
+ * across from the left and back from the front), the room its recess takes inside (box axes, as BoxRegion) and its liters.
  */
 export interface PlacedHardware {
   kind: HardwareKind;
@@ -1640,21 +1640,21 @@ export interface PlacedHardware {
   recess: BoxRegion;
   /** the room the fit check takes behind the panel: the recess, at least a hole's depth (and the posts' assumed cup) */
   fit: BoxRegion;
-  litres: number;
+  liters: number;
   /** what it runs into; empty when it fits */
   hits: HardwareObstacle[];
 }
-/** A weight inside a box for its centre of gravity (lb), at `y` up from its bottom and `z` back from its front (in). */
+/** A weight inside a box for its center of gravity (lb), at `y` up from its bottom and `z` back from its front (in). */
 export interface CogMass {
   lb: number;
   y: number;
   z: number;
 }
-/** A box's hardware as placed: each part, their recesses' litres, weight (lb) and price ($), every part bought. */
+/** A box's hardware as placed: each part, their recesses' liters, weight (lb) and price ($), every part bought. */
 export interface BoxHardwarePlan {
   box: HardwareBoxId;
   parts: PlacedHardware[];
-  litres: number;
+  liters: number;
   lb: number;
   price: number;
   /** each part bought, with its count, for the totals */
@@ -2165,7 +2165,7 @@ export interface PaOptimizerInput {
   cutlist?: Pick<CutlistSettings, "sheet" | "stacks">;
 }
 
-/** The fields a result card sets; everything else (finish, colours, layout, balance) stays as the page has it. */
+/** The fields a result card sets; everything else (finish, colors, layout, balance) stays as the page has it. */
 export type PaOptimizedField =
   | "sub"
   | "mid"
@@ -2312,12 +2312,12 @@ export interface PaOptimizerResult {
 /** A check on the PA stack's sub, mid or horn. */
 export type PaChipId = ChipId<"sub" | "mid" | "horn">;
 /**
- * What a PA design fails, by id: a check's chip, or one of the search's own tests (it can't be modelled, the mid's Qtc,
+ * What a PA design fails, by id: a check's chip, or one of the search's own tests (it can't be modeled, the mid's Qtc,
  * horn and driver exits that differ, a box over the weight limit, drivers over the budget).
  */
 export type PaProblemId =
   | PaChipId
-  | "unmodelled"
+  | "unmodeled"
   | "midQtc"
   | "exitMismatch"
   | "overWeight"
@@ -2340,7 +2340,7 @@ export interface PaDriverCompareRow {
   /** your design's part */
   yours: boolean;
   /** the weight it brings, lb: the sub's or mid's box with the driver in it, or the compression driver or horn itself
-   * (they add to no box); null when the box can't be modelled */
+   * (they add to no box); null when the box can't be modeled */
   lb: number | null;
   /** the design with this part (null: the planner can't model it) */
   m: Pick<

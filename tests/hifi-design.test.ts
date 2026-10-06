@@ -12,7 +12,7 @@ test("a seat at the speakers floors the seat distance at 1 m, so the level stays
     listeningSeat: { x: 0, y: 0 },
   });
   assert.strictEqual(d.seatDistanceM, 1);
-  assert.ok(d.speakerModel, "the default drivers can be modelled");
+  assert.ok(d.speakerModel, "the default drivers can be modeled");
   const m = d.speakerModel;
   assert.ok(Number.isFinite(m.maxLevelAtSeatDb));
   // at 1 m the level is the system's clean output plus 3 dB for two speakers
@@ -37,7 +37,7 @@ test("beyond 1 m the seat distance is the average of the two speakers' distances
   assert.ok(d.seatDistanceM > 1);
 });
 
-test("the seat distance is also given in feet, from the floored metres", (t) => {
+test("the seat distance is also given in feet, from the floored meters", (t) => {
   const far = deriveHifiDesign(DEFAULT_HIFI);
   close(t, far.seatDistanceFt * 0.3048, far.seatDistanceM, 1e-12);
   const at = deriveHifiDesign({

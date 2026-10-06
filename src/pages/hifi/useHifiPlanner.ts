@@ -307,7 +307,7 @@ export function useHifiPlanner(): HifiPlanner {
     ok(setListeningSeat, c.seat);
     ok(setEarHeightIn, c.earIn);
     ok(setStandHeightIn, c.standIn);
-    // configs saved before these existed had sharp edges and a centred tweeter
+    // configs saved before these existed had sharp edges and a centered tweeter
     setRoundoverIn(c.roundover ?? DEFAULT_HIFI.roundoverIn);
     setTweeterOffsetIn(c.tweeterOffset ?? DEFAULT_HIFI.tweeterOffsetIn);
     optimizer.clearOptimizerResults();

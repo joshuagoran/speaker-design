@@ -12,7 +12,7 @@ import {
   coverageResponse,
   coverageScene,
   coverageStats,
-  oneMetreSpot,
+  oneMeterSpot,
   withOwnPhase,
 } from "../../lib/pa/coverage";
 import { runCoverageGrid } from "../../lib/pa/runCoverage";
@@ -49,14 +49,14 @@ export type CoverageInputs = Pick<
   | "stackGeometry"
   | "subBox"
   | "effectiveMidBoxDims"
-  | "subModelled"
+  | "subModeled"
   | "subAmpVoltage"
   | "subMidCrossoverHz"
   | "subMidCrossoverOrder"
   | "subHighpassHz"
   | "subHighpassType"
   | "midHornCrossoverOrder"
-  | "midModelled"
+  | "midModeled"
   | "hornModel"
   | "midHornCrossoverHz"
   | "midBandTiltDb"
@@ -115,7 +115,7 @@ function pointRefAtLimit(
   if (ref === COVERAGE_LEVEL_REF.stacks) {
     const { stacks, room } = req.layout;
     const [a, b] = stacks.map((s) =>
-      coverageLevelAt(req, oneMetreSpot(s, req.stack.footprint, room)),
+      coverageLevelAt(req, oneMeterSpot(s, req.stack.footprint, room)),
     );
     return (a + b) / 2;
   }
@@ -135,12 +135,12 @@ export function useCoverageMap(
     stackGeometry,
     subBox,
     effectiveMidBoxDims,
-    subModelled,
+    subModeled,
     subAmpVoltage,
     subMidCrossoverHz,
     subHighpassHz,
     subHighpassType,
-    midModelled,
+    midModeled,
     hornModel,
     midHornCrossoverHz,
     midBandTiltDb,
@@ -170,23 +170,23 @@ export function useCoverageMap(
   // system chart draws them), with the sub's and mid's own phase, then balanced: the weakest band sets the level
   const balanced = useMemo<BalancedLevels | null>(
     () =>
-      midModelled && geometry
+      midModeled && geometry
         ? balanceLevels(
             {
-              sub: subModelled
+              sub: subModeled
                 ? withOwnPhase(
                     subMusicThroughLowpass(
-                      subModelled.mdl,
-                      subModelled.lim,
+                      subModeled.mdl,
+                      subModeled.lim,
                       subAmpVoltage,
                       subMidCrossoverHz,
                       geometry.orderLo,
                     ),
-                    subModelled.mdl.curve,
+                    subModeled.mdl.curve,
                     (f) => highpassPhase(f, subHighpassHz, subHighpassType),
                   )
                 : null,
-              mid: withOwnPhase(midModelled.max, midModelled.mdl.curve),
+              mid: withOwnPhase(midModeled.max, midModeled.mdl.curve),
               horn: hornModel ? hornModel.curve : [],
             },
             balance,
@@ -194,12 +194,12 @@ export function useCoverageMap(
           )
         : null,
     [
-      subModelled,
+      subModeled,
       subAmpVoltage,
       subMidCrossoverHz,
       subHighpassHz,
       subHighpassType,
-      midModelled,
+      midModeled,
       hornModel,
       balance,
       geometry,

@@ -7,7 +7,7 @@ import type { Dims3, Horn } from "../../types";
 /**
  * The horn and its compression-driver throat, one per x: a rectangular horn, a lathe profile, or the plain flared block.
  * `y` is the base of the horn (the top of the box below) and `mount` the footprint it sits on. In the tower the horn sits on
- * the shared shell instead: `tower` gives its centre height, the z of its throat, the mouth width and the section height.
+ * the shared shell instead: `tower` gives its center height, the z of its throat, the mouth width and the section height.
  * Returns the y of the horn envelope's top.
  */
 export function buildHorn(

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { PARTS_3D } from "../../styles/palette";
-/** Rounded rectangle outline centred on the origin, as a THREE.Shape. */
+/** Rounded rectangle outline centered on the origin, as a THREE.Shape. */
 export function roundedRectShape(width: number, height: number, radius: number) {
   const x = width / 2,
     y = height / 2,
@@ -18,7 +18,7 @@ export function roundedRectShape(width: number, height: number, radius: number) 
   return shape;
 }
 
-/** Rounded rectangle hole outline centred on (centerX, centerY), as a THREE.Path. */
+/** Rounded rectangle hole outline centered on (centerX, centerY), as a THREE.Path. */
 export function roundedRectPath(
   centerX: number,
   centerY: number,
@@ -44,7 +44,7 @@ export function roundedRectPath(
   return path;
 }
 
-/** Circular hole outline centred on (centerX, centerY), as a THREE.Path. */
+/** Circular hole outline centered on (centerX, centerY), as a THREE.Path. */
 export function circlePath(centerX: number, centerY: number, radius: number) {
   const path = new THREE.Path();
   path.absarc(centerX, centerY, radius, 0, Math.PI * 2, true);

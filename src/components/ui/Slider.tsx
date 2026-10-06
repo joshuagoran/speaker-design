@@ -78,7 +78,7 @@ interface Props {
   ranges?: SliderRanges;
 }
 
-/** Labelled range slider with a numeric readout. */
+/** Labeled range slider with a numeric readout. */
 export function Slider({ label, value, min, max, step, unit, onChange, extra, ranges }: Props) {
   const id = useId();
   const shown = typeof value === "number" ? value.toFixed(countDecimals(step)) : value;

@@ -12,8 +12,8 @@
 // The grid is rectilinear: cells `1/n` of a slot height square near the mouth, the shelf and the walls, growing by a
 // fixed ratio a cell away from them where the flow is smooth, up to a quarter of a slot height along the slot and a slot
 // height across it (the straight slot's; the folded slot's grid is uniform). Five-point finite volumes, each face's flux
-// its length times the potential's step over the distance between the cell centres, so the scheme stays conservative on
-// the uneven grid; conjugate gradients preconditioned by a modified incomplete Cholesky factorisation, one box cell
+// its length times the potential's step over the distance between the cell centers, so the scheme stays conservative on
+// the uneven grid; conjugate gradients preconditioned by a modified incomplete Cholesky factorization, one box cell
 // pinned to make the Neumann problem definite.
 
 import os from "node:os";
@@ -27,7 +27,7 @@ const SOLID = 0,
 /** The modified incomplete Cholesky's share of the dropped fill kept on the diagonal (1 keeps A's row sums exactly). */
 const MIC = 0.995;
 
-/** A solve's result: the acoustic mass over the flux squared, and the potential (to start a neighbouring solve from). */
+/** A solve's result: the acoustic mass over the flux squared, and the potential (to start a neighboring solve from). */
 interface Flow {
   mass: number;
   phi: Float64Array;
@@ -63,7 +63,7 @@ function flowMass(dx: Float64Array, dy: Float64Array, kind: Uint8Array, warm?: F
       }
       if (i === 0 && kind[k] === DUCT) b[k] += dy[j] / inletHeight;
     }
-  // face conductances (length over centre distance) to the east and north neighbours, 0 where either side is solid
+  // face conductances (length over center distance) to the east and north neighbors, 0 where either side is solid
   const cE = new Float64Array(n),
     cN = new Float64Array(n),
     diag = new Float64Array(n);
@@ -80,7 +80,7 @@ function flowMass(dx: Float64Array, dy: Float64Array, kind: Uint8Array, warm?: F
     if (cN[k]) diag[k + nz] += cN[k];
   }
   // the pinned cell is held at 0 (the potential is defined up to a constant, and b sums to 0, so its equation is the
-  // others' sum): its row and column leave the system, its faces stay in its neighbours' diagonals
+  // others' sum): its row and column leave the system, its faces stay in its neighbors' diagonals
   const active = new Uint8Array(n);
   for (let k = 0; k < n; k++) active[k] = kind[k] !== SOLID && k !== pin ? 1 : 0;
   const west = (k: number) => (k % nz > 0 && active[k - 1] ? cE[k - 1] : 0),
@@ -259,7 +259,7 @@ export interface SolveOptions {
 }
 
 /**
- * A straight slot's inner end, with the grid's key and the potential (a neighbouring point on the same grid can start
+ * A straight slot's inner end, with the grid's key and the potential (a neighboring point on the same grid can start
  * from it: the grid does not depend on the shelf's thickness, up to a slot height).
  */
 export function solveStraightSlot(
@@ -307,7 +307,7 @@ export function solveStraightSlot(
   const Af = closedAbove ? 0 : Hf * Lf,
     Ab = Hb * Lb;
   const M1D = Lf + bulk(Af / (Af + Ab), Lf, Hf) + bulk(Ab / (Af + Ab), Lb, Hb);
-  // the inlet cells' centre starts the duct's plane flow half a cell in
+  // the inlet cells' center starts the duct's plane flow half a cell in
   return {
     ec: flow.mass - M1D + dx[0] / 2,
     key,
@@ -393,7 +393,7 @@ export async function solveGroups(groups: StraightSlot[][], warm = true) {
 }
 
 /**
- * A folded bottom slot's inner end beyond its centreline (the floor run to the rear channel's middle, then up to the
+ * A folded bottom slot's inner end beyond its centerline (the floor run to the rear channel's middle, then up to the
  * mouth), in slot heights: floor leg 1 tall to the back panel, shelf `t` over it to the rear wall (`t` thick, 1 in front
  * of the back panel), the wall rising `wall` from the roof's underside; the box `span` deep and `height` tall.
  */
@@ -417,14 +417,14 @@ export function foldedSlotInnerEnd(
   const M = flowMass(new Float64Array(nz).fill(1 / n), new Float64Array(ny).fill(1 / n), kind).mass;
   const D = nz / n,
     ym = nm / n,
-    centre = D - 0.5 + (ym - 0.5);
+    center = D - 0.5 + (ym - 0.5);
   const Wf = zWall / n,
     Lf = Math.max(0, ym - 1 - nt / n),
     Wb = D,
     Lb = ny / n - ym;
   const Af = Wf * Lf,
     Ab = Wb * Lb;
-  return M - (centre + bulk(Af / (Af + Ab), Lf, Wf) + bulk(Ab / (Af + Ab), Lb, Wb)) + 0.5 / n;
+  return M - (center + bulk(Af / (Af + Ab), Lf, Wf) + bulk(Ab / (Af + Ab), Lb, Wb)) + 0.5 / n;
 }
 
 /**

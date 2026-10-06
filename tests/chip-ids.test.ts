@@ -208,7 +208,7 @@ test("PA problems are decided on ids, not on titles", () => {
 
 test("Hi-fi problems are decided on ids, not on titles", () => {
   let failing = 0;
-  // the system only decides "can't be modelled"; what fails comes from the chips
+  // the system only decides "can't be modeled"; what fails comes from the chips
   const sys = hifiSystem(HIFI_WOOFERS[0], HIFI_TWEETERS[0], hifiBase);
   for (const chips of hifiLists) {
     const before = hifiDesignProblems(sys, chips);

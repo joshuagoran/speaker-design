@@ -54,7 +54,7 @@ export function SettingsLayout({ results, settings, className = "" }: Props) {
     ro.observe(aside);
     return () => ro.disconnect();
   }, []);
-  /** the settings width that puts the divider's centre at `x` (a pointer's clientX) */
+  /** the settings width that puts the divider's center at `x` (a pointer's clientX) */
   const widthAt = (x: number) => {
     const el = page.current;
     if (!el) return null;
@@ -80,7 +80,7 @@ export function SettingsLayout({ results, settings, className = "" }: Props) {
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="Settings width (drag, or use the arrow keys; double-click to reset)"
+        aria-label="Settings width (drag or arrow keys; double-click resets)"
         aria-valuemin={SETTINGS_MIN_PX}
         aria-valuemax={size.max}
         aria-valuenow={size.now}

@@ -10,7 +10,7 @@ interface Props {
   setSeat: (seat: ListeningSeat) => void;
   /** each speaker's angle to the seat, degrees: left, right */
   angles: readonly [left: number, right: number];
-  /** size classes for the drawing (default: full width, its own height); a box larger than the room centres it */
+  /** size classes for the drawing (default: full width, its own height); a box larger than the room centers it */
   className?: string;
 }
 

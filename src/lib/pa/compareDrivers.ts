@@ -20,7 +20,7 @@ const OPTIONS = {
 >;
 
 /**
- * Every option for one part dropped into your design with everything else as it is, modelled with the planner's own
+ * Every option for one part dropped into your design with everything else as it is, modeled with the planner's own
  * model and checked against the optimizer's limits: the ones that add no problem first, then by the part's price
  * (unpriced last).
  */

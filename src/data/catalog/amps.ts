@@ -48,5 +48,5 @@ export const QSC_GXD = {
   ],
 } as const satisfies AmpSeries;
 
-/** Every amp series in the catalogue; a rack's amp ids are the models listed here. */
+/** Every amp series in the catalog; a rack's amp ids are the models listed here. */
 export const AMP_SERIES = [QSC_GXD] as const;

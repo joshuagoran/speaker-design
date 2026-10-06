@@ -302,7 +302,7 @@ describe("review fixes", () => {
     }
   });
 
-  test("savedCutlist: unknown values fall back, older designs get waterfall with mitres", () => {
+  test("savedCutlist: unknown values fall back, older designs get waterfall with miters", () => {
     const c = savedCutlist({ kerf: 0.2, trim: 0.3, joint: "miter" });
     assert.equal(c.kerf, 0.125);
     assert.equal(c.trim, 0);

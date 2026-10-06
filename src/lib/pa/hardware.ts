@@ -1,6 +1,6 @@
-// The PA boxes' hardware from presets: two recessed handles at the box's centre of gravity (one each side, moved by the
-// offsets), the input dish with its two Speakons low on the back, centred, and on the mid (top) box the horn's binding
-// posts on the lid. Each part's recess takes room inside the box (its litres come off the net volume) and must stay
+// The PA boxes' hardware from presets: two recessed handles at the box's center of gravity (one each side, moved by the
+// offsets), the input dish with its two Speakons low on the back, centered, and on the mid (top) box the horn's binding
+// posts on the lid. Each part's recess takes room inside the box (its liters come off the net volume) and must stay
 // clear of the driver, the vent, the other parts and the panels' edges and joints. The parts are placed first and the
 // braces and ribs after them, around their recesses (lib/bracing keeps out of hardwareKeepOut), so a brace or rib in a
 // part's way is a fault the check still reports, not a reason to move the part.
@@ -28,7 +28,7 @@ import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { panelLbPerSqFt } from "../panel";
 import { bracingRegions } from "../bracing";
 
-/** Cubic inches to litres. */
+/** Cubic inches to liters. */
 const IN3_TO_L = 16.387 / 1000;
 /** The baffle's ply, in (3/4″ whatever the walls, as everywhere in the PA boxes). */
 const BAFFLE_IN = 0.75;
@@ -48,7 +48,7 @@ export const HARDWARE_FLANGE_EDGE_IN = 0.25;
 const FIT_MIN_DEPTH_IN = 0.1;
 /**
  * The depth the fit check takes for the horn's binding-post cup, in from the lid's outside face: Parts Express doesn't
- * list it (the catalogue keeps it null, so its recess counts no volume), and a cup reaching an inch down is the
+ * list it (the catalog keeps it null, so its recess counts no volume), and a cup reaching an inch down is the
  * conservative guess that still lets a brace or the mid's magnet under the lid show up as a clash.
  */
 export const HORN_POSTS_FIT_DEPTH_IN = 1;
@@ -57,13 +57,13 @@ const SCAN_STEP_IN = 0.25;
 /** Share of a driver's mounting depth behind the baffle's front where its weight sits (the magnet is at the back). */
 const DRIVER_MASS_DEPTH_SHARE = 0.5;
 
-/** Each box's handles on first load and in saves from before the setting: the 30769 at the centre of gravity. */
+/** Each box's handles on first load and in saves from before the setting: the 30769 at the center of gravity. */
 export const DEFAULT_HARDWARE: PaHardware = {
   sub: { model: "30769", upIn: 0, backIn: 0 },
   mid: { model: "30769", upIn: 0, backIn: 0 },
 };
 
-/** The handle choices in the settings' order: none, then the catalogue's. */
+/** The handle choices in the settings' order: none, then the catalog's. */
 export const HANDLE_CHOICES: readonly HandleChoice[] = [NO_HANDLES, ...HANDLES.map((h) => h.id)];
 /** A handle model's part; null for no handles. */
 export const handlePart = (id: HandleChoice): CabinetPart | null =>
@@ -108,8 +108,8 @@ export const mountedCutout = (part: CabinetPart) =>
 export const mountedFlange = (part: CabinetPart) =>
   part.flange ? mountedSize(part.flange, part) : mountedCutout(part);
 
-/** The litres a part's recess takes inside a box with walls `t` thick: its cutout over the depth past the wall. */
-export const partRecessLitres = (part: CabinetPart, t: number) =>
+/** The liters a part's recess takes inside a box with walls `t` thick: its cutout over the depth past the wall. */
+export const partRecessLiters = (part: CabinetPart, t: number) =>
   part.cutout && part.depthIn !== null
     ? part.cutout.w * part.cutout.h * Math.max(0, part.depthIn - t) * IN3_TO_L
     : 0;
@@ -131,15 +131,15 @@ function boughtWith(box: HardwareBoxId, handle: CabinetPart | null): BoxHardware
     ...(box === "mid" ? [{ part: HORN_POSTS, qty: 1 }] : []),
   ];
 }
-/** The litres a box's recesses take (none for a box without hardware, or with no `hw`). */
-export const hardwareLitres = (
+/** The liters a box's recesses take (none for a box without hardware, or with no `hw`). */
+export const hardwareLiters = (
   hw: PaHardware | undefined,
   box: HardwareBoxId,
   t: number,
   layout: PaLayout | undefined,
 ) =>
   hw
-    ? hardwareBought(hw, box, layout).reduce((a, b) => a + b.qty * partRecessLitres(b.part, t), 0)
+    ? hardwareBought(hw, box, layout).reduce((a, b) => a + b.qty * partRecessLiters(b.part, t), 0)
     : 0;
 /** A box's hardware weight, lb (a part with no listed weight counts none). */
 export const hardwareLb = (
@@ -154,9 +154,9 @@ export const hardwarePrice = (
   layout: PaLayout | undefined,
 ) => (hw ? hardwareBought(hw, box, layout).reduce((a, b) => a + b.qty * b.part.price, 0) : 0);
 
-/** The driver as the centre of gravity reads it: its centre on the baffle (box axes), weight (lb) and mounting depth (in). */
+/** The driver as the center of gravity reads it: its center on the baffle (box axes), weight (lb) and mounting depth (in). */
 export interface HardwareDriver {
-  centre: { x: number; y: number };
+  center: { x: number; y: number };
   lb: number;
   depthIn: number;
 }
@@ -168,11 +168,11 @@ const insideOf = (box: Dims3, t: number, inset: number) => ({
 });
 
 /**
- * A box's centre of gravity, in from its outside: `y` up from the bottom, `z` back from the front. The walls (each at
+ * A box's center of gravity, in from its outside: `y` up from the bottom, `z` back from the front. The walls (each at
  * its middle), the baffle, the driver (its weight at half its mounting depth) and `more` (the vent's panels, where
  * they sit: lib/pa/calc subVentMasses) count; the braces spread through the box and are left out.
  */
-export function boxCentreOfGravity(
+export function boxCenterOfGravity(
   box: Dims3,
   t: number,
   inset: number,
@@ -189,7 +189,7 @@ export function boxCentreOfGravity(
     [sides + topBottom, h / 2, d / 2],
     [back, h / 2, d - t / 2],
     [baffle, h / 2, inset + BAFFLE_IN / 2],
-    [drv.lb, t + drv.centre.y, inset + DRIVER_MASS_DEPTH_SHARE * drv.depthIn],
+    [drv.lb, t + drv.center.y, inset + DRIVER_MASS_DEPTH_SHARE * drv.depthIn],
     ...more.map((m): [number, number, number] => [m.lb, m.y, m.z]),
   ];
   const total = masses.reduce((a, [m]) => a + m, 0);
@@ -245,12 +245,12 @@ function obstaclesOf(
   };
 }
 
-/** A part about to be placed: what it is, its panel, and its cutout's centre on the box axes (the two in the panel). */
+/** A part about to be placed: what it is, its panel, and its cutout's center on the box axes (the two in the panel). */
 interface Draft {
   kind: HardwareKind;
   part: CabinetPart;
   panel: HardwarePanel;
-  /** the cutout's centre in the panel's plane, box axes (the panel's own axis is ignored) */
+  /** the cutout's center in the panel's plane, box axes (the panel's own axis is ignored) */
   at: { x: number; y: number; z: number };
 }
 /** The cutout's size on the box axes as mounted: a side's across along z (front to back) by up along y, the back's x by y, the lid's x by z. */
@@ -338,7 +338,7 @@ function fitOf(d: Draft, inner: Record<"x" | "y" | "z", number>, t: number) {
   return fitRegion(recessOf(d, inner, t, fitDepth), d.panel, inner);
 }
 
-/** A part placed at its draft: its face position (outside), recess, litres and hits. */
+/** A part placed at its draft: its face position (outside), recess, liters and hits. */
 function place(
   d: Draft,
   box: Dims3,
@@ -361,13 +361,13 @@ function place(
     ...uv,
     recess: recessOf(d, inner, t),
     fit: fitOf(d, inner, t),
-    litres: partRecessLitres(d.part, t),
+    liters: partRecessLiters(d.part, t),
     hits,
   };
 }
 
 /**
- * The first clear place for a part, stepping its centre from `from` toward `to` (SCAN_STEP_IN at a time);
+ * The first clear place for a part, stepping its center from `from` toward `to` (SCAN_STEP_IN at a time);
  * where none is clear, the place at `from` with what it runs into.
  */
 function firstClear(
@@ -393,8 +393,8 @@ function firstClear(
 }
 
 /**
- * The handles' preset centre (box axes): at the box's centre-of-gravity height, and front to back at the place nearest
- * its centre of gravity where both handles are clear (stepping back and forward in turn); the centre of gravity itself
+ * The handles' preset center (box axes): at the box's center-of-gravity height, and front to back at the place nearest
+ * its center of gravity where both handles are clear (stepping back and forward in turn); the center of gravity itself
  * where no place is.
  */
 function handlePreset(
@@ -407,7 +407,7 @@ function handlePreset(
   obs: Obstacles,
   inner: Record<"x" | "y" | "z", number>,
 ) {
-  const cog = boxCentreOfGravity(dims, t, inset, driver, more);
+  const cog = boxCenterOfGravity(dims, t, inset, driver, more);
   const y = cog.y - t,
     z0 = cog.z - inset - BAFFLE_IN;
   const clearAt = (z: number) =>
@@ -432,7 +432,7 @@ function handlePreset(
 
 /**
  * What `planBoxHardware` reads: the box, its walls and inset, its handles, driver, braces and keep-out, and the vent's
- * panels for the centre of gravity (none in the mid box).
+ * panels for the center of gravity (none in the mid box).
  */
 export interface BoxHardwareInput {
   box: HardwareBoxId;
@@ -447,9 +447,9 @@ export interface BoxHardwareInput {
 }
 
 /**
- * A box's hardware from the presets: the handles at its centre of gravity plus the offsets (one each side), the input
- * dish low on the back, centred (the lowest place clear of the vent and the braces), and on the mid box the horn's
- * posts on the lid, centred, as far back as is clear. Each part says what it runs into.
+ * A box's hardware from the presets: the handles at its center of gravity plus the offsets (one each side), the input
+ * dish low on the back, centered (the lowest place clear of the vent and the braces), and on the mid box the horn's
+ * posts on the lid, centered, as far back as is clear. Each part says what it runs into.
  */
 export function planBoxHardware({
   box,
@@ -527,7 +527,7 @@ export function planBoxHardware({
   return {
     box,
     parts,
-    litres: parts.reduce((a, p) => a + p.litres, 0),
+    liters: parts.reduce((a, p) => a + p.liters, 0),
     lb: bought.reduce((a, b) => a + b.qty * (b.part.lb ?? 0), 0),
     price: bought.reduce((a, b) => a + b.qty * b.part.price, 0),
     bought,

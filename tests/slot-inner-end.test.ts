@@ -51,8 +51,8 @@ test("slot inner-end table: the solver gives its values back", { timeout: 60_000
   }
 });
 test("slot flow: a folded slot's inner end is its mouth's (turned on its side) plus a sharp 90° bend's", () => {
-  // the floor leg turns into the rear channel as a mitred bend of equal widths: about 0.44 slot heights under the
-  // centreline (0.42 on this grid), whatever the rise and the box
+  // the floor leg turns into the rear channel as a mitered bend of equal widths: about 0.44 slot heights under the
+  // centerline (0.42 on this grid), whatever the rise and the box
   for (const [span, height, wall] of [
     [6, 9.5, 2],
     [6, 9.5, 5],

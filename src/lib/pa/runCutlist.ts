@@ -15,7 +15,7 @@ export interface CutlistJob {
 }
 
 /**
- * Starts the full cutlist search in a worker of its own, so cancelling a stale job just terminates it. Where workers
+ * Starts the full cutlist search in a worker of its own, so canceling a stale job just terminates it. Where workers
  * are unavailable it runs on the main thread with the time cap.
  */
 export function startCutlistLayout(req: CutlistRequest): CutlistJob {

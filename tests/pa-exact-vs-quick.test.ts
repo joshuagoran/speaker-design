@@ -45,7 +45,7 @@ for (const name of ["rectangle sub", "lil block stack", "light block"])
       // as both searches count the designs (the braces by estimate: the cards then show the rule's own numbers)
       const e = evaluateDesign(exact.config, true),
         q = evaluateDesign(quick.config, true);
-      assert.ok(e && q, `${goal}: both cards are modelled`);
+      assert.ok(e && q, `${goal}: both cards are modeled`);
       assert.ok(
         ahead[goal](e, q) >= -ROUNDING[goal] - 1e-9,
         `${goal}: Fully optimize ${JSON.stringify(summaryOf(e))} is behind Improve ${JSON.stringify(summaryOf(q))}`,

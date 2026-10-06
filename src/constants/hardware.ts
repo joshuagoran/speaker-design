@@ -97,9 +97,9 @@ export const HARDWARE_ADVICE = {
 /** The handle offset sliders' range and step, in: either way from the preset. */
 export const HANDLE_OFFSET_SLIDER = { min: -8, max: 8, step: 0.25 } as const;
 
-/** The fit chip's line when every part fits, with the litres the recesses take (already formatted). */
-export const hardwareFitsLine = (litres: string) =>
-  `Clear of the driver, the vent, the braces and ribs, the panel edges and each other; the recesses take ${litres} L.`;
+/** The fit chip's line when every part fits, with the liters the recesses take (already formatted). */
+export const hardwareFitsLine = (liters: string) =>
+  `Clear of the driver, the vent, the braces and ribs, the panel edges and each other; the recesses take ${liters} L.`;
 
 /** The fit chip's titles. */
 export const HARDWARE_FIT_TITLES = {

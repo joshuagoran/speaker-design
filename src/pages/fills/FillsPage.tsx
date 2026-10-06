@@ -28,7 +28,7 @@ interface Props {
 }
 
 const fillSizes = FILL_OPTIONS.map((o) => o.size);
-/** the catalogue's fill size range, e.g. "8–12″" */
+/** the catalog's fill size range, e.g. "8–12″" */
 const FILL_SIZE_RANGE = `${Math.min(...fillSizes)}–${Math.max(...fillSizes)}″`;
 
 /** Fills page: choose and size the fill speakers. */
@@ -66,7 +66,7 @@ export function FillsPage({ fills }: Props) {
   if (!fill)
     return (
       <main className={`${PAGE_WIDTH} pb-16 text-sm`}>
-        This box can't be modelled: its port has no area or length.
+        Cannot model this box: its port has no area or length.
       </main>
     );
   const {
@@ -154,7 +154,7 @@ export function FillsPage({ fills }: Props) {
               [
                 "Woofer sensitivity",
                 `${sensitivityDb.toFixed(1)} dB`,
-                `${UI_TEXT.splConditions}, modelled`,
+                `${UI_TEXT.splConditions}, modeled`,
               ],
               [
                 "HF sensitivity",
@@ -307,7 +307,7 @@ export function FillsPage({ fills }: Props) {
               onChange={setAmpWatts}
             />
             <div className="text-xs text-stone-500">
-              {`A freed ${GXD4.model} channel with two 8 Ω fills in parallel gives about ${GXD4.w4 / 2} W each.`}
+              {`A spare ${GXD4.model} channel: ${GXD4.w4 / 2} W each to two 8 Ω fills in parallel.`}
             </div>
           </Card>
         </SettingsColumn>

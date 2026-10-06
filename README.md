@@ -3,7 +3,7 @@
 Design tools for a DIY sound-system-style rig: two full-range stacks for rooms of
 500–1000 sq ft, sometimes outdoors, plus loud home listening.
 
-Everything here is modelled, not measured. The numbers are good enough to choose
+Everything here is modeled, not measured. The numbers are good enough to choose
 between cabinets and catch a bad alignment before you cut plywood; they are not a
 substitute for an impedance sweep on the prototype.
 
@@ -20,10 +20,10 @@ src/pages/{hifi,fills,cutlist,notes}/   the other pages
 src/components/                 ui/ charts/ drawings/ lock/ optimizer/ stats/ chips/ saved-configs/ stack-view/
 src/components/saved-configs/firebaseStore.ts   saving on GitHub Pages (bundled only into that build)
 src/hooks/  src/constants/      shared hooks, chart scales, lock keys, units
-src/styles/palette.ts           the colours (CSS variables and Tailwind names come from here)
+src/styles/palette.ts           the colors (CSS variables and Tailwind names come from here)
 src/styles/app.css              page styles + Tailwind layers; font
-src/data/catalog/               the parts catalogue as typed data, one file per kind (drivers, horns, amps, cabinets, plywood, …)
-src/lib/data.ts                 the catalogue as the app reads it: comparable Xmax, tweeter faceplates, picker order
+src/data/catalog/               the parts catalog as typed data, one file per kind (drivers, horns, amps, cabinets, plywood, …)
+src/lib/data.ts                 the catalog as the app reads it: comparable Xmax, tweeter faceplates, picker order
 src/lib/tables.ts               byId / byIdOrThrow for those tables
 src/lib/defaults.ts             DEFAULT_PA / DEFAULT_HIFI / DEFAULT_FILL: the first-load designs, as whole objects
 src/types.ts                    types shared across modules (drivers, horns, cabinets, design config, Setter)
@@ -152,21 +152,21 @@ configurations and can be edited or deleted like any other.
 
 ## How the planner is put together
 
-- `src/data/catalog/<kind>.ts` — the parts catalogue, pure typed data: subs, mids, fills, compression drivers, horns and waveguides, Hi-fi woofers, tweeters and passive radiators, amps, makers, cabinets, mid boxes, formats, finishes, racks, DSP units, plywood and driver cutouts. Adding a part is an edit there; each file's header lists its fields and units.
-- `src/lib/data.ts` — the tables the app reads (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …), derived from the catalogue (comparable Xmax, tweeter faceplates, picker order). Drivers with a `ts` block get modelled; ones without show a note instead.
+- `src/data/catalog/<kind>.ts` — the parts catalog, pure typed data: subs, mids, fills, compression drivers, horns and waveguides, Hi-fi woofers, tweeters and passive radiators, amps, makers, cabinets, mid boxes, formats, finishes, racks, DSP units, plywood and driver cutouts. Adding a part is an edit there; each file's header lists its fields and units.
+- `src/lib/data.ts` — the tables the app reads (`SUB_OPTIONS`, `MID_OPTIONS`, `CD_OPTIONS`, `HORN_OPTIONS`, `CABINETS`, `FILL_OPTIONS`, …), derived from the catalog (comparable Xmax, tweeter faceplates, picker order). Drivers with a `ts` block get modeled; ones without show a note instead.
 - `src/lib/pa/optimize.ts` — the optimizer (Planner → "Optimizer: on"): screens sub driver × volume × tuning × highpass, builds real boxes and vents (duct length solved for the tuning), picks mid and HF that keep up, then scores the finalists with the planner's own functions. Runs in a Web Worker (`src/lib/pa/optimize.worker.ts`, inlined by the build), with a main-thread fallback. See `docs/optimizer-plan.md`.
 - `src/lib/pa/coverage.ts` — the Coverage page's floor map: both stacks (the dispersion model's sub, mid and horn, driven at the planner's curves and balanced with its music tilts) placed and aimed on a floor plan, summed with the floor and first-order wall reflections. Coherent below 500 Hz (the stacks interfere), power-summed above it in a band average. Runs in a Web Worker (`coverage.worker.ts`), coarse while dragging, then fine.
 - `src/lib/pa/chips.ts` — the warning chips for each section (sub, mid, horn, fills), pure functions tested at each threshold.
 - `src/lib/pa/calc.ts` — every calculation, pure TypeScript, imported by the page and the tests (`vp test`):
   - `boxModel(ts, VbL, SpIn2, LpIn, hpf, volts, hpType, { nPorts, QL, Qp })` — vented box. Leakage QL 7, port losses Qp 50; each of `nPorts` openings gets its own end correction (1.46·r); letterbox and side ducts pass `ecIn` (rectangular mouth; outside, the floor mirrors a letterbox's mouth and the ground a side duct's; inside, a letterbox's mouth reads `slotInnerEndCorrection`: the potential-flow table in `src/data/acoustics/slot-inner-end.ts` for a mouth on the floor with the back wall behind it, and for a fold a sharp 90° bend plus the same mouth under the lid; a side duct's the modal `sideDuctEndCorrection`). Radiated output is the flow into the box air (cone − port − leak). `ref` is the mass-controlled asymptote; `f3` includes the highpass, `f3Box` doesn't. Limits are searched over the whole 12–300 Hz curve.
-  - `closedBox(ts, VbL, hp, lp, volts, { hpOrder, lpOrder })` — sealed mid-bass, LR24 or LR48 crossovers. `ref` is the mass-controlled asymptote, so `f3` is right for low-Qtc boxes. Coil inductance is not modelled.
+  - `closedBox(ts, VbL, hp, lp, volts, { hpOrder, lpOrder })` — sealed mid-bass, LR24 or LR48 crossovers. `ref` is the mass-controlled asymptote, so `f3` is right for low-Qtc boxes. Coil inductance is not modeled.
   - `midSystem` (sealed mid volume, model, per-frequency max), `subThroughLp` (sub through the crossover), `fillSystem` (the Fills page).
   - `subSystem` (vent geometry, gross/net volume incl. internal wood from the cutlist parts, model, limits), `subLimits`, `maxCurve`, `hornResponse`, `pistonBeam`, `keeleF`, weights, cutlist (`boxParts`, `cutParts`, `packSheets`).
 - Horn — datasheet model, not T/S: `cd.hf` (sensitivity and its reference, AES power and the crossover it was rated at, minimum crossover, impedance) and `horn.hf` (coverage, minimum crossover, loading limit `lowHz`). Output is sensitivity + 10 log P through the crossover's highpass (LR24 or LR48) and a 12 dB/oct rolloff below `lowHz`; power is capped at 2 × AES, derated 6 dB per octave below the AES rating's crossover.
 - Tests (`tests/`) check each function against an independent reference; `tests/golden.json` snapshots the key outputs of the saved and synthetic configs (regenerate with `vp run golden` after an intentional change; `golden.test.ts` only reads it, and the writer, `tests/update-golden.ts`, is a separate run because rewriting `golden.json` inside the full suite would race `tests/optimize.test.ts`, which reads it in a parallel worker). CI runs them before every deploy, plus `tests/mobile-check.mjs` (Playwright: no sideways scroll, 40 px touch targets, chip text not squeezed, at phone and tablet widths). See `docs/testing-plan.md` and `docs/calc-audit.md`.
 - `StackView` — the three.js scene. Takes `sub` (whose `.box` carries the
   dimensions) and `portGeom` (explicit vent geometry), so the drawn box always
-  matches the modelled one. Its `useEffect` rebuilds the whole scene; the
+  matches the modeled one. Its `useEffect` rebuilds the whole scene; the
   dependency array must include anything that changes the geometry.
 - `ResponseChart` — max-SPL curves (sub through its lowpass, mid-bass through
   its crossovers), fixed 80–135 dB so configurations compare directly.

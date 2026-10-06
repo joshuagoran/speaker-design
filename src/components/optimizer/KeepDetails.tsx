@@ -15,7 +15,7 @@ export function KeepDetails({ lines, more = [] }: Props) {
         {lines.length ? (
           lines.map((line) => <div key={line}>{line}</div>)
         ) : (
-          <div>Pick a goal to see how far it may move from your design.</div>
+          <div>Select a goal to see how far it can move.</div>
         )}
         {more.length > 0 && (
           <div className="mt-1 flex flex-col gap-1.5">

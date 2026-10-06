@@ -26,8 +26,8 @@ const JACK_DIA_IN = 1.0;
 const POST_DIA_IN = 0.45;
 
 /**
- * Where a part's face sits in the scene, for the cabinet `box` whose bottom is at `y` and centre at `x`: the point on
- * the outside face (past the frame's roundovers on the sides and top) at the cutout's centre, and the outward normal.
+ * Where a part's face sits in the scene, for the cabinet `box` whose bottom is at `y` and center at `x`: the point on
+ * the outside face (past the frame's roundovers on the sides and top) at the cutout's center, and the outward normal.
  */
 function faceOf(p: PlacedHardware, box: Dims3, y: number, x: number) {
   const left = x - box.w / 2;
@@ -147,7 +147,7 @@ function plate(
   m.name = HARDWARE_MESH_NAME;
   return m;
 }
-/** A short cylinder standing out of a face at `du` along the part's width from its centre. */
+/** A short cylinder standing out of a face at `du` along the part's width from its center. */
 function stud(
   p: PlacedHardware,
   face: ReturnType<typeof faceOf>,
@@ -172,7 +172,7 @@ function stud(
 
 /**
  * A box's handles, input dish and horn posts (lib/pa/hardware) on its faces, for the cabinet `box` whose bottom is at
- * `y` and centre at `x`: each part's flange in steel (PARTS_3D.hardware) with its opening in black, the handle's grip,
+ * `y` and center at `x`: each part's flange in steel (PARTS_3D.hardware) with its opening in black, the handle's grip,
  * the dish's two Speakons and the cup's two posts; in the cutaway, each recess's pocket inside the box as well.
  */
 export function buildHardware(
@@ -187,7 +187,7 @@ export function buildHardware(
 ) {
   const { hardware: steel, black, holeMask } = ctx.materials;
   for (const p of plan.parts) {
-    // each size as mounted (the catalogue's `upright`): across the panel and up it
+    // each size as mounted (the catalog's `upright`): across the panel and up it
     const c = mountedCutout(p.part);
     if (!c) continue;
     const face = faceOf(p, box, y, x);

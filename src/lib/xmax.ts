@@ -8,7 +8,7 @@
 //   converted  from the maker's Xmax and its stated formula (needs Hg unless the formula is already Hg/4), exact;
 //   published  a passive radiator's limit, used as is (no motor, so no gap): its linear Xmax, or the mechanical limit
 //              where that is all the maker gives (pushing a radiator to it costs noise and distortion, not a coil);
-//   estimated  from the maker's figure times the ESTIMATE band, centre in the middle.
+//   estimated  from the maker's figure times the ESTIMATE band, center in the middle.
 import type {
   GapFormula,
   MakerId,
@@ -104,8 +104,8 @@ export function xmaxBandOf(
   throw new Error(`${who}: no excursion figure`);
 }
 
-/** The band's centre, the value the models use. */
-export const centreOf = (b: Pick<XmaxBand, "lo" | "hi">) => (b.lo + b.hi) / 2;
+/** The band's center, the value the models use. */
+export const centerOf = (b: Pick<XmaxBand, "lo" | "hi">) => (b.lo + b.hi) / 2;
 
 /** A table's Thiele-Small block with the comparable `Xmax` and its band added; `maker` and `who` as for `xmaxBandOf`. */
 export function withXmax<T extends RawTS<ThieleSmall>>(
@@ -114,7 +114,7 @@ export function withXmax<T extends RawTS<ThieleSmall>>(
   who: string,
 ): T & Pick<ThieleSmall, "Xmax" | "xmax"> {
   const xmax = xmaxBandOf(ts, maker, who);
-  return { ...ts, Xmax: centreOf(xmax), xmax };
+  return { ...ts, Xmax: centerOf(xmax), xmax };
 }
 
 /** A passive radiator with its `Xmax`: the linear limit, or the mechanical one where that is all the maker gives. */
@@ -157,7 +157,7 @@ export function publishedText(p: PublishedExcursion): string {
 /** Why a value is an estimate, for its tooltip. */
 const estimateWhy = (formula: XmaxFormula, Hg: number | undefined) =>
   formula === "overhang-or-x10"
-    ? "Eminence publishes the greater of the plain overhang and the 10 % distortion point, and the gap height but no coil height, so the value lies between its figure and the figure + Hg/4."
+    ? "Eminence: the larger of overhang and 10 % distortion point; no coil height. Between its figure and figure + Hg/4."
     : Hg != null
       ? "The maker publishes the gap height but no coil height and no method."
       : "The maker publishes no coil or gap height and no method.";
@@ -193,7 +193,7 @@ export function xmaxRows(
       "Xmax (comparable)",
       `${est ? "≈" : ""}${ts.Xmax.toFixed(1)} mm`,
       how,
-      `One scale for every driver: (Hvc − Hg)/2 + Hg/4, which B&C, Lavoce and Ciare publish and most makers' figures sit near. The models use this value.${est ? ` ${estimateWhy(pub.formula, Hg)} The value is the middle of the band; the max-SPL chart shades it.` : ""}`,
+      `One scale for all drivers: (Hvc − Hg)/2 + Hg/4, as B&C, Lavoce and Ciare publish. The models use it.${est ? ` ${estimateWhy(pub.formula, Hg)} The value is the middle of the band; the max-SPL chart shades it.` : ""}`,
     ],
     [
       "Xmax (maker)",

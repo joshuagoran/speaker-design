@@ -126,7 +126,7 @@ interface Props {
     | "midDriverChoices"
     | "hornExitMismatch"
     | "port"
-    | "subModelled"
+    | "subModeled"
     | "effectiveMidBoxDims"
     | "renderLockButton"
     | "renderDimensionLock"
@@ -212,7 +212,7 @@ export function SettingsPanel({ planner }: Props) {
     midDriverChoices,
     hornExitMismatch,
     port,
-    subModelled,
+    subModeled,
     effectiveMidBoxDims,
     renderLockButton,
     renderDimensionLock,
@@ -235,7 +235,7 @@ export function SettingsPanel({ planner }: Props) {
     sub: [
       subDriver.name,
       formatDims(subBoxDims),
-      subModelled && `tuned to ${subModelled.mdl.Fb.toFixed(0)} Hz`,
+      subModeled && `tuned to ${subModeled.mdl.Fb.toFixed(0)} Hz`,
       port.desc,
     ]
       .filter(Boolean)
@@ -393,7 +393,7 @@ export function SettingsPanel({ planner }: Props) {
                   />
                   <ToggleGroup
                     label={
-                      <Tooltip tip="Two plywood dividers per duct brace its inner wall to the side wall across the throat. Thicker ones take more of the duct's height, so the vent is smaller and tunes lower. The Cutlist page takes the sheet's measured thickness.">
+                      <Tooltip tip="Two per duct. Thicker dividers shrink the vent, so it tunes lower.">
                         Dividers
                       </Tooltip>
                     }
@@ -485,7 +485,7 @@ export function SettingsPanel({ planner }: Props) {
             <Card>
               {layout === "tower" ? (
                 <div className="text-xs text-stone-500">
-                  Tower layout: the mid chamber is the sub's footprint, {subBoxDims.w}″ × 15.5″ ×{" "}
+                  Tower: the mid chamber has the sub's footprint, {subBoxDims.w}″ × 15.5″ ×{" "}
                   {subBoxDims.d}″.
                 </div>
               ) : (
@@ -646,7 +646,7 @@ export function SettingsPanel({ planner }: Props) {
                 />
                 <Slider
                   label={
-                    <Tooltip tip="0 dB asks the mid to match the sub flat out. Bass-heavy music usually carries 6–10 dB less from 200 Hz to 1 kHz than at 40–60 Hz.">
+                    <Tooltip tip="Bass-heavy music has 6–10 dB less at 200 Hz–1 kHz than 40–60 Hz.">
                       Music balance: mid band needs less by
                     </Tooltip>
                   }
@@ -695,7 +695,7 @@ export function SettingsPanel({ planner }: Props) {
             <ToggleGroup
               label={
                 <span className="flex items-center justify-between gap-2">
-                  <Tooltip tip="Birch plywood for the sides, top, bottom and back; thinner walls are braced more. The Cutlist page takes the sheet's measured thickness.">
+                  <Tooltip tip="Sides, top, bottom and back. Thinner walls get more braces.">
                     Plywood (baffles stay ¾″)
                   </Tooltip>
                 </span>
@@ -743,7 +743,7 @@ export function SettingsPanel({ planner }: Props) {
             note={finishName}
           />
           <SwatchPicker
-            label="Baffle colour"
+            label="Baffle color"
             value={baffleColor}
             onChange={setBaffleColor}
             swatches={PAINT_SWATCHES}

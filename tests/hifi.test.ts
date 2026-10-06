@@ -348,7 +348,7 @@ test("port toggle: round 3 in, to a slot and back, is round 3 in again; a slot k
   assert.equal(slotAgain.h, 2, "and the slot height the user last had");
 });
 
-test("listenerGeometry: a centred seat is symmetric, toe-in cuts the off-axis angle, and distance and ear height follow the room", (t) => {
+test("listenerGeometry: a centered seat is symmetric, toe-in cuts the off-axis angle, and distance and ear height follow the room", (t) => {
   const room = {
     speakerSpacingFt: 8,
     listeningSeat: { x: 0, y: 8 },
@@ -370,7 +370,7 @@ test("listenerGeometry: a centred seat is symmetric, toe-in cuts the off-axis an
   assert.ok(listenerGeometry(1, right).distM < listenerGeometry(-1, right).distM);
 });
 
-test("a box modelled once to the top crossover reads exactly as hifiSystem at every crossover", () => {
+test("a box modeled once to the top crossover reads exactly as hifiSystem at every crossover", () => {
   for (const c of [
     cfg,
     { ...cfg, box: "sealed" as const },

@@ -15,7 +15,7 @@ interface Props {
 export function LockButton({ on, onClick, what }: Props) {
   const tip = on
     ? `Locked: the optimizer keeps ${what}`
-    : `Unlocked: the optimizer may change ${what}`;
+    : `Unlocked: the optimizer can change ${what}`;
   return (
     <button
       type="button"

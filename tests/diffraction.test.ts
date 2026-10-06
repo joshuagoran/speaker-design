@@ -58,7 +58,7 @@ test("edge sum: no ripple far below the step (every path the same length) and no
 // The classic case (Olson; The Edge and VituixCAD's diffraction tool show the same): a source in the middle of a
 // square baffle hears all four edges at the same delay, a/2 extra path. They add in phase (inverted, half a wavelength
 // late) at f = c / a for a peak of about +3.5 dB, and cancel at twice that for a deep dip.
-test("centred on a square baffle: peak at c / width, dip an octave up, about ±4 dB (the textbook worst case)", () => {
+test("centered on a square baffle: peak at c / width, dip an octave up, about ±4 dB (the textbook worst case)", () => {
   const w = 9,
     c = onAxis({ w, h: w }, { x: 0, y: w / 2 });
   const fPeak = C / (w * IN); // ≈ 1.5 kHz: the edge is half a wavelength away
@@ -73,10 +73,10 @@ test("centred on a square baffle: peak at c / width, dip an octave up, about ±4
   assert.ok(peak(big, 300, 2000, 1).f < 0.7 * p.f, "18″ square peaks lower");
 });
 
-test("moving the source off centre spreads the edge delays: the square's ripple roughly halves", () => {
-  const centred = rippleDb(onAxis({ w: 9, h: 9 }, { x: 0, y: 4.5 }), 1000, 5000),
+test("moving the source off center spreads the edge delays: the square's ripple roughly halves", () => {
+  const centered = rippleDb(onAxis({ w: 9, h: 9 }, { x: 0, y: 4.5 }), 1000, 5000),
     offset = rippleDb(onAxis({ w: 9, h: 9 }, { x: 2, y: 5.5 }), 1000, 5000);
-  assert.ok(offset < 0.65 * centred, `${offset.toFixed(2)} vs ${centred.toFixed(2)} dB`);
+  assert.ok(offset < 0.65 * centered, `${offset.toFixed(2)} vs ${centered.toFixed(2)} dB`);
 });
 
 test("a small tall box with the tweeter near the top: ±1.5–3 dB of ripple, mostly 1–5 kHz", () => {
@@ -141,7 +141,7 @@ const sysOf = (c: HifiConfig) => {
   return s;
 };
 
-test("hifi: no roundover and no offset in a config is the same as sharp edges and a centred tweeter", () => {
+test("hifi: no roundover and no offset in a config is the same as sharp edges and a centered tweeter", () => {
   const s = sysOf(cfg),
     geo = { th: 0.3, eyeIn: s.lay.tweeterIn, distM: 2 };
   assert.deepStrictEqual(
@@ -166,12 +166,12 @@ test("hifi: a roundover smooths the on-axis response above 2 kHz and leaves the 
   assert.ok(rRound < rSharp && rSharp > 1, `±${rRound.toFixed(2)} vs ±${rSharp.toFixed(2)} dB`);
 });
 
-test("hifi: a centred tweeter's horizontal map is symmetric; an offset one is not, and the seat sees the inside", (t) => {
+test("hifi: a centered tweeter's horizontal map is symmetric; an offset one is not, and the seat sees the inside", (t) => {
   const s = sysOf(cfg);
   const row = (m: ReturnType<typeof hifiDispersionMap>, deg: number) =>
     m.rows[m.angles.indexOf(deg)];
-  const centred = hifiDispersionMap(s, W, T, cfg, "h", 2);
-  row(centred, 30).forEach((v, i) => close(t, v, row(centred, -30)[i], 1e-9, "±30° match"));
+  const centered = hifiDispersionMap(s, W, T, cfg, "h", 2);
+  row(centered, 30).forEach((v, i) => close(t, v, row(centered, -30)[i], 1e-9, "±30° match"));
   const off = { ...cfg, tweeterOffsetIn: 1.5 };
   const offMap = hifiDispersionMap(s, W, T, off, "h", 2);
   const diff = Math.max(...row(offMap, 30).map((v, i) => Math.abs(v - row(offMap, -30)[i])));
@@ -238,7 +238,7 @@ test("inches are written as a woodworker would", () => {
 
 test("hifi: an offset tweeter's own path changes the crossover sum off axis, not just its edge ripple", () => {
   const wide = { ...cfg, dim: { ...cfg.dim, w: 14 }, tweeterOffsetIn: 3 },
-    centred = { ...wide, tweeterOffsetIn: 0 };
+    centered = { ...wide, tweeterOffsetIn: 0 };
   const s = sysOf(wide);
   // the crossover sum with each driver's edge ripple taken out
   const direct = (c: HifiConfig, th: number) => {
@@ -249,10 +249,10 @@ test("hifi: an offset tweeter's own path changes the crossover sum off axis, not
     );
   };
   // at 45° inside the tweeter is about 2″ nearer than the woofer: over 100° of phase at 2 kHz
-  const at45 = direct(wide, Math.PI / 4) - direct(centred, Math.PI / 4);
-  assert.ok(at45 < -1, `45° inside at the crossover, offset vs centred: ${at45.toFixed(2)} dB`);
+  const at45 = direct(wide, Math.PI / 4) - direct(centered, Math.PI / 4);
+  assert.ok(at45 < -1, `45° inside at the crossover, offset vs centered: ${at45.toFixed(2)} dB`);
   // on axis the DSP alignment still holds
-  const on = direct(wide, 0) - direct(centred, 0);
+  const on = direct(wide, 0) - direct(centered, 0);
   assert.ok(Math.abs(on) < 0.5, `on axis at the crossover: ${on.toFixed(2)} dB`);
 });
 

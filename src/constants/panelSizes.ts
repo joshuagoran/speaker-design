@@ -4,7 +4,7 @@ import type { PanelMaterial, PanelNominal } from "../types";
  * The nominal panel sizes the PA plywood and Hi-fi thickness settings offer, by id: each pairs an imperial size with
  * the near-equal metric one sold beside it, under one name (`name`), and `short` is the imperial size alone, as a
  * thickness reads in a sentence. The boxes are worked out at the thickness the Cutlist page has measured for each
- * (`panelIn` in `src/lib/panel.ts`); the catalogue (`src/data/catalog/plywood.ts`) holds each size's weights.
+ * (`panelIn` in `src/lib/panel.ts`); the catalog (`src/data/catalog/plywood.ts`) holds each size's weights.
  */
 export const PANEL_NOMINAL_NAMES = {
   "3/4": { name: "¾″ / 18 mm", short: "¾″" },

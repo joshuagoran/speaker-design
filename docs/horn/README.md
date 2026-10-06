@@ -57,7 +57,7 @@ the top of the band are approximate (the same is true of Hornresp).
   panel positions along the depth, driver baffle location at S2/S3.
 - Compute gross volume, panel list and weight (3/4″ birch, 2.3 lb/ft²,
   plus bracing) from that layout, not from a rule of thumb.
-- Folds change the effective path length; use the centre-line length of
+- Folds change the effective path length; use the center-line length of
   each fold as the segment length.
 
 ## Steps

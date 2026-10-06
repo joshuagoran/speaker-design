@@ -93,7 +93,7 @@ describe("Hi-fi panels", () => {
           baffle = get(parts, "baffle"),
           back = get(parts, "back");
         // how much of each outside size the other panels supply: butt-jointed sides cover the top's ends and the
-        // baffle and back cover the sides' edges; rabbets leave t/2 of each side outside the rabbet; mitres meet at
+        // baffle and back cover the sides' edges; rabbets leave t/2 of each side outside the rabbet; miters meet at
         // the outside corner, with the baffle and back in rabbets
         const topEnds = { butt: 2 * t, rabbet: t, miter: 0 }[joint];
         const faceEdges = { butt: 0, rabbet: t, miter: t }[joint];
@@ -106,7 +106,7 @@ describe("Hi-fi panels", () => {
         close(null, top.a, side.a, 1e-9, "top as deep as the side");
         assert.deepEqual([back.a, back.b], [baffle.a, baffle.b], "back matches the baffle");
         // the box's inside, which the model's volume uses: (W − 2t) × (H − 2t) × (D − 2t)
-        // (the top runs into a t/2 rabbet at each end, or out to the mitred corner)
+        // (the top runs into a t/2 rabbet at each end, or out to the mitered corner)
         const intoSides = { butt: 0, rabbet: t, miter: 2 * t }[joint];
         close(null, top.b - intoSides, B.w - 2 * t, 1e-9, "inside width");
         for (const p of parts) assert.equal(p.t, t, `${p.part} at the wall thickness`);
@@ -193,17 +193,17 @@ describe("Hi-fi panels", () => {
       const line = (what: string) => lines.find((l) => l.startsWith(what)) ?? "";
       assert.ok(
         line("woofer:").endsWith(
-          `centre ${formatInches(lay.wooferIn - edge)}″ above the bottom edge`,
+          `center ${formatInches(lay.wooferIn - edge)}″ above the bottom edge`,
         ),
         line("woofer:"),
       );
       if (!lay.onTop)
         assert.match(
           line("tweeter:"),
-          new RegExp(`centre ${formatInches(lay.tweeterIn - edge)}″ above the bottom edge`),
+          new RegExp(`center ${formatInches(lay.tweeterIn - edge)}″ above the bottom edge`),
         );
       assert.ok(
-        line("slot:").endsWith(`centred, ${formatInches(t - edge)}″ above the bottom edge`),
+        line("slot:").endsWith(`centered, ${formatInches(t - edge)}″ above the bottom edge`),
         line("slot:"),
       );
     });

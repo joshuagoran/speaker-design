@@ -185,7 +185,7 @@ describe("stack scene", () => {
     expect(derived.subTopHeightIn).toBeCloseTo(p.plinth + p.sub.box.h, 6);
   });
 
-  test("every horn's centre is where the planner says, in each layout", () => {
+  test("every horn's center is where the planner says, in each layout", () => {
     const horns = [...new Set(sceneCases.map((c) => c.props.horn))];
     for (const layout of ["stack", "pole", "satellite", "tower"] as const) {
       for (const horn of horns) {

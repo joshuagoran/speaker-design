@@ -39,7 +39,7 @@ interface Props {
 type Group = [heading: string, lines: string[]];
 
 /**
- * How the map is modelled: everything the calculation takes as given, read from the model's own constants and the
+ * How the map is modeled: everything the calculation takes as given, read from the model's own constants and the
  * design so the list stays in step with them. Folded away until opened.
  */
 export function CoverageAssumptions({ room, planner, target, level }: Props) {
@@ -54,51 +54,51 @@ export function CoverageAssumptions({ room, planner, target, level }: Props) {
     [
       "Levels",
       [
-        `Target: ${level.targetDb} dB SPL in the sub band (the planner's is ${LISTENER_TARGET_DB} dB; ${target} dB in this band), less the music-balance tilts above the crossovers, measured at ${COVERAGE_LEVEL_REF_PLACE[level.levelRef]}. The system is turned down until it gets the target there, never past its limit.`,
-        `The audience average is the mean level in dB over the floor the stats count; 1 m from the stacks is 1 m out from the middle of each stack's front along its aim, at ear height, averaged over the two.`,
-        `Each band plays at the planner's limit (the sub's music limit through its lowpass, the mid's and horn's maximum curves) at the Design page's balance: mid ${planner.midBandTiltDb} dB under the sub, horn ${planner.hornBandTiltDb} dB under the mid. The weakest band sets the level.`,
-        "Past their ends, the planner's curves follow the crossover slope with their end phase held.",
-        "Sub and mid curves are measured on the floor: below the baffle step the floor is taken out and added back as a reflection from each box's height. The horn's sensitivity is free field.",
+        `Target: ${level.targetDb} dB SPL in the sub band at ${COVERAGE_LEVEL_REF_PLACE[level.levelRef]}, less the music-balance tilts (planner: ${LISTENER_TARGET_DB} dB, ${target} dB in this band), never past the limit.`,
+        `Audience average: the mean dB over the counted floor. "1 m from the stacks": ear height, on each stack's aim, averaged.`,
+        `Design-page balance: mid ${planner.midBandTiltDb} dB below the sub, horn ${planner.hornBandTiltDb} dB below the mid. The weakest band sets the level.`,
+        "Past their ends, curves follow the crossover slope with their end phase.",
+        "Sub and mid curves: boxes on the floor; below the baffle step, a reflection from each box's height. Horn sensitivity: free field.",
       ],
     ],
     [
       "Stacks",
       [
-        `A box's drivers sit at its center on the plan, at their real heights, time-aligned on its axis ${ALIGN_DISTANCE_M} m out at horn height.`,
-        `Linkwitz-Riley crossovers (${slopes}), with phase. Each band's own phase: the sub's vented box and highpass, the mid's sealed box (no voice-coil inductance), a first-order baffle-step shelf.`,
-        "Sub delay: in phase with the mid at the crossover on the stack's axis (unwrapped phase); one delay for every sub.",
-        `Sub and mid are rigid pistons; behind the box they lose 3 dB at ${BOX_SHADOW_HZ} Hz and 6 dB per octave above.`,
-        "The horn holds its rated coverage (−6 dB at the edges) above its control frequency and widens below it, at most 40 dB down.",
+        `Drivers at each box's center and real height, time-aligned ${ALIGN_DISTANCE_M} m out at horn height.`,
+        `Linkwitz-Riley crossovers (${slopes}) with phase, plus each band's own: vented sub and highpass, sealed mid (no voice-coil inductance), first-order baffle-step shelf.`,
+        "Sub delay: in phase with the mid at the crossover on axis, one for all subs.",
+        `Sub and mid: rigid pistons, behind the box −3 dB at ${BOX_SHADOW_HZ} Hz and 6 dB/octave above.`,
+        "Horn: rated coverage (−6 dB at the edges) above its control frequency, wider below, at most 40 dB down.",
       ],
     ],
     [
       "Floor, air and crowd",
       [
         `Floor reflection: ${FLOOR_REFLECTION.indoors} of the pressure indoors (hard floor), ${FLOOR_REFLECTION.outdoors} outdoors (ground).`,
-        `A full floor keeps the bounce below ${CROWD_BOUNCE.loHz} Hz, falling to ${CROWD_BOUNCE.hi} of it from ${CROWD_BOUNCE.hiHz / 1000} kHz; its absorption is the seated-audience row.`,
+        `A full floor keeps the bounce below ${CROWD_BOUNCE.loHz} Hz, ${CROWD_BOUNCE.hi} of it from ${CROWD_BOUNCE.hiHz / 1000} kHz. Absorption: the seated-audience row.`,
         `Air absorption on every path: ISO 9613-1, 20 °C, 50 % humidity. Speed of sound ${SPEED_OF_SOUND} m/s.`,
       ],
     ],
     [
       "Room",
       [
-        "A rectangular box with flat sides, each side and the ceiling its own material: published octave-band absorption (Everest & Pohlmann), 125 Hz–4 kHz, held flat outside.",
-        `Below twice the Schroeder frequency (within ${MODAL_HZ[0]}–${MODAL_HZ[1]} Hz${crossover != null ? `; here ${Math.round(crossover)} Hz` : ""}) the room's modes are summed, blending into the reflections over ${MODAL_FADE_OCT} octave. They decay at Sabine's rate and take every side as solid, so with an open side they are a rough guide.`,
-        `Above that: one reflection off each wall and the ceiling (each with its own floor bounce), then an even reverberant field (Hopkins–Stryker less the first reflections; horn directivity by Molloy).${t60 != null ? ` This room rings about ${t60.toFixed(1)} s at 1 kHz.` : ""}`,
+        "A rectangular box. Each side and the ceiling has its own absorption (Everest & Pohlmann, 125 Hz–4 kHz).",
+        `Below twice the Schroeder frequency (within ${MODAL_HZ[0]}–${MODAL_HZ[1]} Hz${crossover != null ? `; here ${Math.round(crossover)} Hz` : ""}) the room modes sum, blended over ${MODAL_FADE_OCT} octave; Sabine decay, solid sides (rough if a side is open).`,
+        `Above: one reflection per wall and ceiling, each with a floor bounce, then a reverberant field (Hopkins–Stryker; Molloy horn directivity).${t60 != null ? ` This room rings about ${t60.toFixed(1)} s at 1 kHz.` : ""}`,
       ],
     ],
     [
       "Summing and readouts",
       [
-        `Below ${COHERENT_BELOW_HZ} Hz everything adds with phase, so the stacks interfere; above it a band average adds boxes and reflections by power.`,
+        `Below ${COHERENT_BELOW_HZ} Hz, sources add with phase (the stacks interfere); above, band averages add by power.`,
         `Bands, Hz: ${bands}; each averaged over ${BAND_POINTS} frequencies.`,
         `The floor stats leave out ${STATS_CLEARANCE_FT} ft around every box.`,
       ],
     ],
     [
-      "Not modelled",
+      "Not modeled",
       [
-        "Non-rectangular rooms, balconies, pillars, sound bending around obstacles, people blocking the direct sound, and each driver's measured directivity.",
+        "Non-rectangular rooms, balconies, pillars, diffraction, crowd shadowing, measured driver directivity.",
       ],
     ],
   ];

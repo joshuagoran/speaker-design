@@ -96,7 +96,7 @@ test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => 
     inD = 20 - 0.75 - 0.75 - 0.75,
     len = Math.min(14, 20 - 0.75 - 3);
   const cleats = 0.75 * 0.75 * (2 * iw + 2 * (ih - band - 1.5));
-  // the braces the rule put in: a window brace's 2″ rails round its cut-out centre, a rib's whole strip
+  // the braces the rule put in: a window brace's 2″ rails round its cut-out center, a rib's whole strip
   const braceRows = parts.filter((p) => p.part === "windowBrace" || p.part === "rib");
   assert.ok(braceRows.length, "the rule braces this box");
   const braces = braceRows.reduce(
@@ -114,7 +114,7 @@ test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => 
   const duct = iw * len * t0 + 2 * 3 * len * t0;
   close(t, internalWoodLiters(parts, "sub"), (cleats + braces + duct) * IN3_L, 1e-9);
 });
-test("folded slot: the rear wall makes the centreline the set length, and the searches' wood volume matches the cutlist", (t) => {
+test("folded slot: the rear wall makes the centerline the set length, and the searches' wood volume matches the cutlist", (t) => {
   const box = { w: 22, h: 30, d: 20 },
     t0 = 0.75,
     cVent = vent({ slotH: 3, len: 26 });
@@ -134,7 +134,7 @@ test("folded slot: the rear wall makes the centreline the set length, and the se
   // floor shelf from the baffle front to the rear channel's wall, as a straight slot's shelf runs: the longest straight
   // run less the wall, 20 - 0.75 - 3 - 0.75 = 15.5
   close(t, part("ductShelf")?.b ?? NaN, 15.5, 1e-12);
-  // centreline: the floor run to the channel's middle (20 - 0.75 - 1.5 = 17.75), then 1.5 up to the roof and the wall
+  // centerline: the floor run to the channel's middle (20 - 0.75 - 1.5 = 17.75), then 1.5 up to the roof and the wall
   // above it, so the wall is 26 - 17.75 - 1.5 = 6.75
   close(t, part("ductRearWall")?.b ?? NaN, 6.75, 1e-12);
   // the searches count the braces by estimate: the cutlist's other wood, and that
@@ -205,7 +205,7 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
       cVent: vent({ nt: 2, dia: 4, len: 12 }),
       layout: "stack",
     }).parts.filter((p) => p.box === "sub");
-    // a window brace weighs its rails only (its centre is cut out)
+    // a window brace weighs its rails only (its center is cut out)
     const area = (p: CutPart) =>
       p.part === "windowBrace" ? p.a * p.b - (p.a - 4) * (p.b - 4) : p.a * p.b;
     const lb =
@@ -231,7 +231,7 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
     );
   }
 });
-test("plyLb: the catalogue's sizes, and measured thicknesses between and beyond them", (t) => {
+test("plyLb: the catalog's sizes, and measured thicknesses between and beyond them", (t) => {
   assert.equal(plywoodLbPerSqFt(0.75), 2.3);
   assert.equal(plywoodLbPerSqFt(0.625), 1.95);
   assert.equal(plywoodLbPerSqFt(0.5), 1.6);

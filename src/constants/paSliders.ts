@@ -1,7 +1,7 @@
 import type { SliderSpec } from "../types";
 import { PORT_TUBES } from "../data/catalog/port-tubes";
 
-// the tube sliders run over the stock tube sets the catalogue holds
+// the tube sliders run over the stock tube sets the catalog holds
 const tubeCounts = PORT_TUBES.map((p) => p.nt),
   tubeDias = PORT_TUBES.map((p) => p.dia);
 

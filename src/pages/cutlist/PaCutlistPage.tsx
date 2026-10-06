@@ -42,7 +42,7 @@ export function PaCutlistPage({ planner }: Props) {
     braceStyle: planner.effectiveBraceStyle,
     hardware: planner.hardware,
   });
-  // the parts each box is fitted with, from the catalogue (the panels' rows carry their cutouts)
+  // the parts each box is fitted with, from the catalog (the panels' rows carry their cutouts)
   const fitted = [planner.subHardware, planner.midHardware].flatMap((plan) =>
     plan
       ? [

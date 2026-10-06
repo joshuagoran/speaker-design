@@ -18,7 +18,7 @@ interface Props {
 
 /** Three-state lock on a box dimension: free, at most this, or exactly this. */
 export function DimensionLock({ mode = "free", onChange, what }: Props) {
-  const tip = `${what}: ${mode === "free" ? "unlocked, the optimizer may change it" : mode === "max" ? "up to this value" : "locked at exactly this value"} (tap to change)`;
+  const tip = `${what}: ${mode === "free" ? "unlocked, the optimizer can change it" : mode === "max" ? "up to this value" : "locked at exactly this value"} (tap to change)`;
   return (
     <button
       type="button"

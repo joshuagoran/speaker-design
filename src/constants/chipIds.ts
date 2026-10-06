@@ -43,7 +43,7 @@ export const CHIP_IDS = {
     "fillQtc",
     "fillKick",
     "fillHfHeadroom",
-    "fillHfUnmodelled",
+    "fillHfUnmodeled",
   ],
   hifi: [
     "hifiDispersion",

@@ -1,4 +1,4 @@
-// The coverage map's colour scale and contour lines: level against the target, on the fixed data colours (ON_DATA), the
+// The coverage map's color scale and contour lines: level against the target, on the fixed data colors (ON_DATA), the
 // same in both themes. The map and its key both read these, so they stay in step.
 import { ON_DATA } from "./palette";
 import type { Rgb } from "./palette";
@@ -18,7 +18,7 @@ const lerp = (x: Rgb, y: Rgb, t: number): Rgb => [
 ];
 const mix = (a: string, b: string, t: number) => lerp(hexRgb(a), hexRgb(b), t);
 
-/** [dB against the target, colour]: white at the quiet end (no coverage), light pink at the coverage edge, magenta at
+/** [dB against the target, color]: white at the quiet end (no coverage), light pink at the coverage edge, magenta at
  * the target, medium-dark magenta at the loud end (dark enough to read, light enough for the black marks on it). */
 const STOPS: readonly (readonly [db: number, rgb: Rgb])[] = [
   [LO_DB, hexRgb(ON_DATA.white)],
@@ -31,8 +31,8 @@ const STOPS: readonly (readonly [db: number, rgb: Rgb])[] = [
 export const coverageScalePos = (db: number) =>
   Math.max(0, Math.min(1, (db - LO_DB) / (HI_DB - LO_DB)));
 
-/** The colour for a level, dB against the target; clamped to the scale's ends. */
-export function coverageColour(db: number): Rgb {
+/** The color for a level, dB against the target; clamped to the scale's ends. */
+export function coverageColor(db: number): Rgb {
   if (db <= STOPS[0][0]) return STOPS[0][1];
   for (let i = 1; i < STOPS.length; i++)
     if (db <= STOPS[i][0]) {
@@ -50,7 +50,7 @@ export const COVERAGE_GRADIENT = `linear-gradient(to right, ${STOPS.map(
 
 /** How a contour line is drawn. */
 export interface CoverageLine {
-  colour: string;
+  color: string;
   opacity: number;
   /** px */
   width: number;
@@ -59,10 +59,10 @@ export interface CoverageLine {
 /** The contour lines' styles: the target thickest, the coverage edge medium, the steps thin. A step above the target is
  * white, since ink would vanish on the dark loud end. */
 export const COVERAGE_LINES = {
-  target: { colour: ON_DATA.ink, opacity: 1, width: 2.2 },
-  edge: { colour: ON_DATA.ink, opacity: 1, width: 1.4 },
-  quietStep: { colour: ON_DATA.ink, opacity: 0.7, width: 0.9 },
-  loudStep: { colour: ON_DATA.white, opacity: 0.8, width: 0.9 },
+  target: { color: ON_DATA.ink, opacity: 1, width: 2.2 },
+  edge: { color: ON_DATA.ink, opacity: 1, width: 1.4 },
+  quietStep: { color: ON_DATA.ink, opacity: 0.7, width: 0.9 },
+  loudStep: { color: ON_DATA.white, opacity: 0.8, width: 0.9 },
 } as const satisfies Record<string, CoverageLine>;
 
 /** Tolerance for comparing step levels, dB. */

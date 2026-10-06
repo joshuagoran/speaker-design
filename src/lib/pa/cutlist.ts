@@ -152,7 +152,7 @@ export const CUTLIST_DEFAULTS: CutlistChoices = {
 
 /**
  * A saved design's cutlist choices, each checked against what the page offers; anything missing or unknown falls back
- * to the default (waterfall: on with mitre joints, as older designs had none).
+ * to the default (waterfall: on with miter joints, as older designs had none).
  */
 export const savedCutlist = (
   c: Pick<PaDesignConfig, keyof CutlistChoices | "joint">,
@@ -612,7 +612,7 @@ function repackForOffcut<R extends PackRect>(
 // ---------------------------------------------------------------
 /**
  * Replaces each box's two sides and top with one side-top-side strip, grain along its length, when it fits on the
- * sheet. Mitred panels lose about a kerf at each V-cut; square cuts lose a kerf.
+ * sheet. Mitered panels lose about a kerf at each V-cut; square cuts lose a kerf.
  */
 export function waterfallStrips(
   parts: CutPart[],
@@ -630,7 +630,7 @@ export function waterfallStrips(
       wide = Math.max(side.a, top.a);
     if (len > usable.h + EPS || wide > usable.w + EPS) {
       notes.push(
-        `${CUT_BOX_NAMES[box]}: the side-top-side strip would be ${formatInches(len)}″ long, more than the sheet's ${formatInches(usable.h)}″; sides and top are cut separately.`,
+        `${CUT_BOX_NAMES[box]}: the side-top-side strip is ${formatInches(len)}″, over the sheet's ${formatInches(usable.h)}″. Cut separately.`,
       );
       continue;
     }
@@ -641,7 +641,7 @@ export function waterfallStrips(
       a: wide,
       b: len,
       t: side.t,
-      note: `side ${formatInches(side.b)}, top ${formatInches(top.b)}, side ${formatInches(side.b)}, cut in that order so the grain runs over the top corners; ${side.note}`,
+      note: `side ${formatInches(side.b)}, top ${formatInches(top.b)}, side ${formatInches(side.b)}, in that order, for continuous grain; ${side.note}`,
       grain: "b",
       pieces: [side.b, top.b, side.b],
     };

@@ -6,7 +6,7 @@ interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
 }
 
-/** Disabled = grey fill with dark text (readable), never faded with opacity */
+/** Disabled = gray fill with dark text (readable), never faded with opacity */
 export function Button({ variant = "secondary", size = "md", className = "", ...p }: Props) {
   return (
     <button

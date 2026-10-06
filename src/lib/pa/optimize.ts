@@ -83,7 +83,7 @@ import type {
   PortStyle,
   SubDriver,
   SubLimits,
-  SubSystemModelled,
+  SubSystemModeled,
   VentedBoxModel,
   VentSpec,
 } from "../../types";
@@ -94,7 +94,7 @@ import { DEFAULT_PA } from "../defaults";
 import { layoutCutlist, savedCutlist } from "./cutlist";
 import { savedCrossoverOrder } from "../../constants/crossovers";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
-import { goalKeeps, PA_UNMODELLED_F3_HZ } from "../optimizer/goalKeeps";
+import { goalKeeps, PA_UNMODELED_F3_HZ } from "../optimizer/goalKeeps";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { SUB_LIMITED_BY } from "../../constants/limits";
 import {
@@ -134,7 +134,7 @@ interface Seed {
 /** A real sub box with its vent and model. */
 interface SubCandidate {
   c: PaDesignConfig;
-  s: SubSystemModelled;
+  s: SubSystemModeled;
   sub: SubDriver;
   lb: number;
   out: number;
@@ -242,7 +242,7 @@ const ALT_ORDER: Record<PaGoal, PaGoal[]> = {
   louder: ["cheaper", "lighter"],
 };
 
-// Vent sizes per style, smallest area first: the round styles from the port-tube catalogue (stock pipe), the rectangular
+// Vent sizes per style, smallest area first: the round styles from the port-tube catalog (stock pipe), the rectangular
 // ones (ply ducts, cut to any size) from the search's own grid of slot heights and duct throats.
 // "round1" and "round4" are the one-tube and four-corner-tube layouts (the geometry treats every round style alike, from `nt` and
 // `dia`), so they take the tubes of that count; "round2" tries every tube count, as it always has.
@@ -297,7 +297,7 @@ const hasDims = (d: Partial<Dims3> | undefined) =>
   d !== undefined && Number.isFinite(d.w) && Number.isFinite(d.h) && Number.isFinite(d.d);
 
 // The vent fields a layout reads: the slot height for the slots, the throat for the side ducts, the tubes' count and
-// diameter for the round ones, and the length for all of them. A known layout with all of its fields is a vent that can be modelled.
+// diameter for the round ones, and the length for all of them. A known layout with all of its fields is a vent that can be modeled.
 const VENT_FIELDS: Record<PortStyle, readonly (keyof VentSpec)[]> = {
   slots: ["slotH", "len"],
   vslots: ["throat", "len"],
@@ -489,7 +489,7 @@ const SOFT_OK = new Set<PaChipId>([
 ]);
 /** What a design fails, by id with its words: the checks' bad and warning chips, then the search's own tests. */
 export function designProblemList(m: PaEvaluation | null, lim: ProblemLimits): PaProblem[] {
-  if (!m) return [{ id: "unmodelled", text: DESIGN_PROBLEM_TEXT.unmodelled }];
+  if (!m) return [{ id: "unmodeled", text: DESIGN_PROBLEM_TEXT.unmodeled }];
   const out: PaProblem[] = [];
   for (const k of ["sub", "mid", "horn"] as const)
     for (const [kind, head, , id] of m.chips[k]) {
@@ -517,7 +517,7 @@ export const designProblems = (m: PaEvaluation | null, lim: ProblemLimits) =>
 // design on every other one (e.g. ["cheaper", "lighter"]: the cheapest design that's also lighter). `goal` alone still works.
 // locks: { sub, mid, cd, horn, vent, wall, hpf, xoLo, xoHi, ampW, mAmpW, hfAmpW, subDim: {w,h,d}, midDim: {w,h,d} }
 // (dims: "free"|"max"|"exact"; an unlocked amp is searched up to AMP_MAX)
-// The fields a result sets; everything else (finish, colours, layout, balance) stays as the page has it.
+// The fields a result sets; everything else (finish, colors, layout, balance) stays as the page has it.
 // the planner's amp sliders top out here; an unlocked amp is searched up to these
 export const AMP_WATTS_MAX = { ampW: 3000, mAmpW: 2000, hfAmpW: 500 };
 // and their steps and minimums: an amp the search turns down stays on a step, never under the minimum
@@ -676,7 +676,7 @@ export function optimizePaStack(
   if (hornLoadOk) lim.allow.add("hornLoading");
   const need = roomRequiredSpl(room);
   const target = Math.max(curM ? curM.out : need, need);
-  const curF3 = curM ? curM.f3 : PA_UNMODELLED_F3_HZ;
+  const curF3 = curM ? curM.f3 : PA_UNMODELED_F3_HZ;
   let evals = 0;
 
   // candidate lists
@@ -865,7 +865,7 @@ export function optimizePaStack(
               braceEstimate: true,
             });
           let pushed = false,
-            fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystemModelled } | null = null;
+            fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystemModeled } | null = null;
           for (const size of ventSizesFor(style)) {
             // the lengths that fit, inside the duct-length slider, one way at a time: a bottom slot runs straight, then
             // (past the lengths that fit neither way) folds up the back wall; round tubes take each elbow count apart,
@@ -1061,7 +1061,7 @@ export function optimizePaStack(
       for (const h of horns) {
         if (h.exit !== cd.exit) continue;
         const hz: Partial<HornHf> = h.hf || {};
-        if (!cd.hf) continue; // a locked driver with no published spec can't be modelled
+        if (!cd.hf) continue; // a locked driver with no published spec can't be modeled
         if ((cd.hf.minXo && xoHi < cd.hf.minXo) || (hz.minXo && xoHi < hz.minXo)) continue;
         if (hz.lowHz && hz.lowHz > xoHi * 0.8 && !hornLoadOk) continue; // horn stops loading near the crossover
         const hm = hornResponse(cd.hf, hz, xoHi, amps.hfAmpW, cur.xoHiOrder);

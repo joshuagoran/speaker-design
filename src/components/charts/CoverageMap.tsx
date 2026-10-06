@@ -21,12 +21,12 @@ import { COVERAGE_EDGE_DB } from "../../constants/coverageLevel";
 import {
   COVERAGE_CONTOURS,
   COVERAGE_GRADIENT,
-  coverageColour,
+  coverageColor,
   coverageScalePos,
 } from "../../styles/coverageScale";
 
 const [LO_DB, HI_DB] = COVERAGE_MAP_DB;
-/** what the map's colours show */
+/** what the map's colors show */
 const SCALE_UNIT = "dB against the target";
 
 /** where the toe-in handle sits along a stack's axis, ft */
@@ -103,7 +103,7 @@ export function CoverageMap({
     if (!ctx) return null;
     const img = ctx.createImageData(grid.cols, grid.rows);
     grid.db.forEach((db, i) => {
-      const [r, g, b] = coverageColour(db - target);
+      const [r, g, b] = coverageColor(db - target);
       img.data.set([r, g, b, 255], i * 4);
     });
     ctx.putImageData(img, 0, 0);
@@ -239,7 +239,7 @@ export function CoverageMap({
         <span className="tabular-nums text-stone-900">
           {readout != null && hover && view
             ? `${hover.x.toFixed(1)}, ${hover.y.toFixed(1)} ft · ${(readout + view.gain).toFixed(1)} dB (${formatSigned(readout - view.target)})`
-            : `Colour: ${SCALE_UNIT}`}
+            : `Color: ${SCALE_UNIT}`}
         </span>
       </div>
       <svg
@@ -247,12 +247,12 @@ export function CoverageMap({
         width={W}
         height={H}
         // select-none: a drag would otherwise select the labels, and the next drag that starts on that selection
-        // becomes the browser's own drag-and-drop (a ghost of the map, the pointer cancelled, the map frozen)
+        // becomes the browser's own drag-and-drop (a ghost of the map, the pointer canceled, the map frozen)
         className="block max-w-full h-auto mx-auto select-none outline-none focus-visible:outline-2 focus-visible:outline-stone-900"
         style={{ touchAction: "none", cursor: drag ? "grabbing" : "crosshair" }}
         tabIndex={0}
         role="img"
-        aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room; arrow keys move them.`}
+        aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room. Arrow keys move the listener.`}
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
@@ -282,7 +282,7 @@ export function CoverageMap({
             <path
               key={db}
               d={d}
-              stroke={line.colour}
+              stroke={line.color}
               strokeOpacity={line.opacity}
               strokeWidth={line.width}
               fill="none"
@@ -417,7 +417,7 @@ export function CoverageMap({
               style={{
                 left: `${coverageScalePos(db) * 100}%`,
                 width: line.width,
-                background: line.colour,
+                background: line.color,
                 opacity: line.opacity,
               }}
             />

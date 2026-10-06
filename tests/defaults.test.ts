@@ -54,7 +54,7 @@ const allFinite = (v: unknown): boolean =>
         : true;
 
 describe("default designs", () => {
-  it("DEFAULT_PA is a modelled system with no NaN", () => {
+  it("DEFAULT_PA is a modeled system with no NaN", () => {
     const m = evaluateDesign(snapshotOf(DEFAULT_PA));
     expect(m).not.toBeNull();
     expect(allFinite(m)).toBe(true);
@@ -71,7 +71,7 @@ describe("default designs", () => {
     expect(hornResponse(d.cd.hf, d.horn.hf ?? {}, d.xoHi, d.hfAmpW, d.xoHiOrder)).not.toBeNull();
   });
 
-  it("DEFAULT_HIFI is a modelled system with no NaN", () => {
+  it("DEFAULT_HIFI is a modeled system with no NaN", () => {
     const d = DEFAULT_HIFI;
     const sys = hifiSystem(d.woofer, d.tweeter, {
       box: d.boxType,
@@ -91,7 +91,7 @@ describe("default designs", () => {
     expect(allFinite(sys)).toBe(true);
   });
 
-  it("DEFAULT_FILL is a modelled system with no NaN", () => {
+  it("DEFAULT_FILL is a modeled system with no NaN", () => {
     const d = DEFAULT_FILL;
     const sys = fillSystem(d.driver, {
       boxType: d.boxType,

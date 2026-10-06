@@ -43,7 +43,7 @@ interface Props {
 
 /**
  * Compare drivers: every option for one part (sub, mid, compression driver or horn) in your design with everything
- * else as it is, side by side. Modelled only while open (a few dozen model runs, well under a second).
+ * else as it is, side by side. Modeled only while open (a few dozen model runs, well under a second).
  */
 export function DriverCompare({ rows, onUse }: Props) {
   const [part, setPart] = useState<PaDriverPart>("sub");
@@ -57,7 +57,7 @@ export function DriverCompare({ rows, onUse }: Props) {
         open && (
           <div className="pt-2">
             <div className="text-xs text-stone-500 mb-2">
-              Each option in your design with everything else as it is, checked against your limits.
+              Each option in your design, all else the same, against your limits.
             </div>
             <div className="flex flex-wrap gap-1" role="group" aria-label="Part to compare">
               {entriesOf(DRIVER_PART_NAMES).map(([k, name]) => (
@@ -110,7 +110,7 @@ export function DriverCompare({ rows, onUse }: Props) {
                       ))}
                       <td className="py-1.5 pr-3">
                         {r.problems.length ? (
-                          // a problem your design has whatever you pick is grey; what this option adds is orange
+                          // a problem your design has whatever you pick is gray; what this option adds is orange
                           r.problems.map((p, i) => (
                             <span
                               key={`${p.id}-${i}`}

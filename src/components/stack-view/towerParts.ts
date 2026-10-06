@@ -4,7 +4,7 @@ import { towerSpec, TOWER_MID_HEIGHT_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import type { Dims3, Horn, MidDriver } from "../../types";
 
-/** The mid and horn cutouts on the tower's baffle; `baffleCy` is the absolute centre of the baffle. */
+/** The mid and horn cutouts on the tower's baffle; `baffleCy` is the absolute center of the baffle. */
 export function towerBaffleHoles(
   ctx: SceneContext,
   {

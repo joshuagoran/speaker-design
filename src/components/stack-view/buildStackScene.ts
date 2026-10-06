@@ -33,7 +33,7 @@ export interface Props {
   portGeom?: Partial<PaPortGeometry>;
   wall?: number;
   inset?: number;
-  /** a `FinishId` or a paint colour (hex) */
+  /** a `FinishId` or a paint color (hex) */
   cabFinish?: string;
   spacerH?: number;
   /** the boxes' braces and ribs (lib/bracing), drawn inside them (they show in the cutaway) */

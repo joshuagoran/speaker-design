@@ -1,7 +1,7 @@
 // Hi-fi tweeters. src/lib/data.ts fills in the faceplate default and the radiating diameter (HIFI_TWEETERS keeps
 // this order). The [maker] / [vendor] tags in each note are explained in hifi-woofers.ts.
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
-// a misspelt, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
+// a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
 // class, tweeter type) is an error.
 // Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
@@ -161,7 +161,7 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     exit: 1,
     faceplate: { w: 4.25, h: 4.25 },
     ownGuide: { name: "Radian LT2.2-WG", covH: 120, covV: 60, w: 4.25, h: 4.25 },
-    note: "[maker: radianaudio.com] Planar ribbon, Kapton diaphragm with aluminium foil conductors, neodymium. 96 dB bare, 101 dB on the LT2.2-WG; 120° × 60° on the waveguide. 20 W AES / 30 W long term / 60 W short term above 1.2 kHz. Recommended crossover 2 kHz at 12 dB/oct (4 kHz at 6 dB); steeper slopes allow lower. 5 Ω. Price is the driver plus its waveguide. fs not published.",
+    note: "[maker: radianaudio.com] Planar ribbon, Kapton diaphragm with aluminum foil conductors, neodymium. 96 dB bare, 101 dB on the LT2.2-WG; 120° × 60° on the waveguide. 20 W AES / 30 W long term / 60 W short term above 1.2 kHz. Recommended crossover 2 kHz at 12 dB/oct (4 kHz at 6 dB); steeper slopes allow lower. 5 Ω. Price is the driver plus its waveguide. fs not published.",
   },
   {
     id: "lt32",

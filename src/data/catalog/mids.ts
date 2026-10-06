@@ -1,6 +1,6 @@
 // PA mid-bass drivers (10, 12 and 15 in). src/lib/data.ts adds the comparable Xmax and sorts MID_OPTIONS by name.
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
-// a misspelt, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
+// a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
 // class, tweeter type) is an error.
 // Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
@@ -541,7 +541,7 @@ export const MID_RAW: readonly RawDriver<MidDriver>[] = [
       aes: 350,
       disp: 2.3,
     },
-    note: "[bcspeakers.com, Oct 2026] Neo, 3 in copper coil on glass fibre, ventilated gap. 350 W nominal / 700 W continuous, 98.5 dB, Le 1.5 mH, 45 Hz\u20133 kHz, 7.39 lb. B&C suggests 40 L tuned to 60 Hz.",
+    note: "[bcspeakers.com, Oct 2026] Neo, 3 in copper coil on glass fiber, ventilated gap. 350 W nominal / 700 W continuous, 98.5 dB, Le 1.5 mH, 45 Hz\u20133 kHz, 7.39 lb. B&C suggests 40 L tuned to 60 Hz.",
   },
   {
     id: "f12pr320",

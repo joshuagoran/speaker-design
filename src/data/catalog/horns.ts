@@ -1,7 +1,7 @@
 // PA horns and Hi-fi waveguides (one table: the Hi-fi page lists the horns with coverage specs as waveguides).
 // src/lib/data.ts sorts HORN_OPTIONS by name.
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
-// a misspelt, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
+// a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
 // class, tweeter type) is an error.
 // Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
@@ -171,7 +171,7 @@ export const HORN_RAW: readonly Horn[] = [
     size: { w: 10.6, h: 10.6, d: 5.5 },
     driver: '1.4" exit, e.g. Eminence N314T',
     xo: "1.2\u20131.3 kHz (900 Hz cutoff)",
-    note: 'Cast aluminium, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt. Cutoff 900 Hz, so cross about 1.2\u20131.3 kHz; the 10.6" mouth holds its pattern to about 1.2\u20131.4 kHz.',
+    note: 'Cast aluminum, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt. Cutoff 900 Hz, so cross about 1.2\u20131.3 kHz; the 10.6" mouth holds its pattern to about 1.2\u20131.4 kHz.',
   },
   {
     id: "hf950",
@@ -210,7 +210,7 @@ export const HORN_RAW: readonly Horn[] = [
     size: { w: 11, h: 10.6, d: 4.5 },
     driver: '1.4" exit, e.g. Eminence N314T',
     xo: "1.2\u20131.3 kHz (900 Hz cutoff)",
-    note: 'Cast aluminium constant-directivity horn, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt, cutoff 900 Hz. 10.6" H \u00d7 11" W \u00d7 4.5" D; cutout 8.8" \u00d7 9.5". Weight not published; 3 lb assumed.',
+    note: 'Cast aluminum constant-directivity horn, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt, cutoff 900 Hz. 10.6" H \u00d7 11" W \u00d7 4.5" D; cutout 8.8" \u00d7 9.5". Weight not published; 3 lb assumed.',
   },
   ST260,
   {
