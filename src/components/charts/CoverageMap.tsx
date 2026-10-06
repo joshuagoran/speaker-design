@@ -52,6 +52,8 @@ interface Props {
   onDragChange: (dragging: boolean) => void;
   /** the most height the map may take, px */
   maxHeight: number;
+  /** whether a finer or newer grid is on its way: aria-busy only, no badge (the fine pass is quick) */
+  busy: boolean;
 }
 
 /**
@@ -67,6 +69,7 @@ export function CoverageMap({
   stack,
   onDragChange,
   maxHeight,
+  busy,
 }: Props) {
   const pal = usePalette();
   const { room, listener } = layout;
@@ -252,6 +255,7 @@ export function CoverageMap({
         style={{ touchAction: "none", cursor: drag ? "grabbing" : "crosshair" }}
         tabIndex={0}
         role="img"
+        aria-busy={busy}
         aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room. Arrow keys move the listener.`}
         onPointerDown={down}
         onPointerMove={move}

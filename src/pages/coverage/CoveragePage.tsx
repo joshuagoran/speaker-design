@@ -134,16 +134,8 @@ export function CoveragePage({ planner }: Props) {
             <SectionHeading className="mb-1">Audience coverage</SectionHeading>
             <p className="text-sm text-stone-500 mb-3">
               {bandName}, {map.target.toFixed(0)} dB target at{" "}
-              {COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}
-              {map.isRefining && (
-                <>
-                  {" "}
-                  · updating
-                  <Ellipsis />
-                </>
-              )}
-              . Drag a stack to move it, its dot to toe it in, or the listener (tap the floor to put
-              them there).
+              {COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}. Drag a stack to move it, its dot to toe
+              it in, or the listener (tap the floor to put them there).
             </p>
             {map.stack && map.levels ? (
               <CoverageMap
@@ -153,6 +145,7 @@ export function CoveragePage({ planner }: Props) {
                 boxes={map.boxes}
                 stack={map.stack}
                 onDragChange={setDragging}
+                busy={map.isRefining}
                 maxHeight={maxHeight}
               />
             ) : (
