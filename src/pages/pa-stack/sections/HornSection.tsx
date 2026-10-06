@@ -52,7 +52,7 @@ export function HornSection({ planner }: Props) {
       <section className="mt-2" style={{ fontFamily: FONT }}>
         <FoldHeading
           id="horn"
-          title="Horn"
+          title={UI_TEXT.horn}
           folds={expandedSections}
           toggle={toggleSection}
           className="mb-3"

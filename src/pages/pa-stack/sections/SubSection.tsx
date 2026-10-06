@@ -28,10 +28,12 @@ interface Props {
     | "subModelled"
     | "subWeightLoadedLb"
   >;
+  /** shown first inside the fold (the system summary in one column, so it folds with Sub on phones) */
+  summary?: React.ReactNode;
 }
 
-/** Sub results: details table and warning chips (the headline tiles and the system response chart are in `SystemSummary`). */
-export function SubSection({ planner }: Props) {
+/** Sub results: details table and warning chips, after `summary` (in one column, the `SystemSummary` tiles and chart). */
+export function SubSection({ planner, summary }: Props) {
   const {
     expandedSections,
     toggleSection,
@@ -59,6 +61,7 @@ export function SubSection({ planner }: Props) {
           className="mb-3"
         />
         <FoldBody open={expandedSections.sub}>
+          {summary}
           {subModelled ? (
             <StatRowGrid
               rows={[

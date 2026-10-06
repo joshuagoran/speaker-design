@@ -21,10 +21,14 @@ interface Props {
     | "hornModel"
     | "subWeightLoadedLb"
   >;
+  className?: string;
 }
 
-/** The system's summary: the headline tiles and the system response chart (sub, mid-bass and horn together). */
-export function SystemSummary({ planner }: Props) {
+/**
+ * The system's summary: the sub's headline tiles and the system response chart (sub, mid-bass and horn together). Nothing
+ * while the sub can't be modelled (the Sub section says why).
+ */
+export function SystemSummary({ planner, className = "" }: Props) {
   const pal = usePalette();
   const {
     subMidCrossoverHz,
@@ -38,14 +42,14 @@ export function SystemSummary({ planner }: Props) {
   } = planner;
   if (!subModelled) return null;
   return (
-    <section className="min-w-0" style={{ fontFamily: FONT }}>
+    <section className={`min-w-0 ${className}`} style={{ fontFamily: FONT }}>
       <StatTileGrid
         tiles={[
           [STATS.netVolume, subNetLiters.toFixed(0), "L"],
           [STATS.tuningFb, subModelled.mdl.Fb.toFixed(1), "Hz"],
           [STATS.systemF3, subModelled.mdl.f3.toFixed(0), "Hz"],
           [STATS.subBass, subBassLevel(subModelled.maxCurve).toFixed(1), "dB"],
-          ["Weight", subWeightLoadedLb.toFixed(0), "lb"],
+          ["Sub weight", subWeightLoadedLb.toFixed(0), "lb"],
         ]}
       />
       <SectionHeading className="mb-3">{UI_TEXT.systemResponse}</SectionHeading>
@@ -74,7 +78,7 @@ export function SystemSummary({ planner }: Props) {
             ? [
                 {
                   curve: hornModel.curve,
-                  label: "Horn",
+                  label: UI_TEXT.horn,
                   stroke: pal.cyan,
                   tint: alpha(pal.cyan, 0.06),
                 },

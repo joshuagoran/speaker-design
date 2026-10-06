@@ -13,6 +13,8 @@ export const UI_TEXT = {
   splConditions: "2.83 V, half space, 1 m",
   /** the PA stack's sub, as its results section and the system response chart name it */
   sub: "Sub",
+  /** the PA stack's horn, as its results section and the system response chart name it */
+  horn: "Horn",
   /** the PA stack's summary chart of the sub, mid-bass and horn together, and its heading */
   systemResponse: "System response",
   /** the PA stack's mid band, as its section, charts and legends name it */
