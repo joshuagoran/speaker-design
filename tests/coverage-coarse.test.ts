@@ -36,7 +36,7 @@ const stack: CoverageStack = {
 /** Every band at 120 dB at 1 m through its crossover's magnitude. */
 const levels: CoverageLevels = (() => {
   const freqs = logSpacedFrequencies(12, 20000, 400);
-  const curve = (band: "sub" | "mid" | "horn") => {
+  const curve = (band: keyof CoverageLevels) => {
     const o = paStackSources(stack).find((s) => s.band === band);
     if (!o) throw new Error(band); // the test stack has all three
     return freqs.map((f) => {
