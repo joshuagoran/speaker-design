@@ -23,6 +23,8 @@ interface Props {
     | "midBracing"
     | "subKeepOut"
     | "midKeepOut"
+    | "subHardware"
+    | "midHardware"
   >;
   /** the view's size and position while it isn't full screen (default: a fixed height for one column) */
   boxClassName?: string;
@@ -53,6 +55,8 @@ export function StackViewer({
     midBracing,
     subKeepOut,
     midKeepOut,
+    subHardware,
+    midHardware,
   } = planner;
   const fullScreenLabel = isFull3d ? "Close full screen" : "Full screen";
   return (
@@ -106,6 +110,8 @@ export function StackViewer({
           midBracing={midBracing}
           subKeepOut={subKeepOut}
           midKeepOut={midKeepOut}
+          subHardware={subHardware}
+          midHardware={midHardware}
         />
       </section>
     </>

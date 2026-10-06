@@ -5,6 +5,7 @@ import { formatHz } from "../../lib/format";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { SignalPath } from "../../components/drawings/SignalPath";
+import { HANDLES, HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
 import {
   DSP_UNITS,
   HORN_AMP_SAFETY_HPF_HZ,
@@ -381,9 +382,12 @@ export function NotesPage() {
             {[
               [
                 "Bracing",
-                `By rule: ribs, window braces or both (one setting for the stack, under ${PA_SETTINGS_TABS.build} in the planner) go in, clear of the drivers and the vent, until every panel's first resonance clears ${formatHz(PA_PANEL_TARGET_HZ)}; they are in the cutlist, the volume, the weight and the cutaway, where the drivers show too. Where they sit still competes with handle recesses for the same panel area.`,
+                `By rule: ribs, window braces or both (one setting for the stack, under ${PA_SETTINGS_TABS.build} in the planner) go in, clear of the drivers and the vent, until every panel's first resonance clears ${formatHz(PA_PANEL_TARGET_HZ)}; they are in the cutlist, the volume, the weight and the cutaway, where the drivers show too. The handles and input dishes are checked against them, with a warning under ${PA_SETTINGS_TABS.build} where one doesn't fit.`,
               ],
-              ["Handles", "Recess type, depth and position on the sub. Interacts with bracing."],
+              [
+                "Handles and input plates",
+                `From presets under ${PA_SETTINGS_TABS.build}: ${HANDLES.map((h) => h.name).join(" or ")} handles (or none) on each box's sides at its centre of gravity, the ${INPUT_PLATE.name} dish with 2 \u00d7 ${INPUT_JACK.name} low on each back, and the ${HORN_POSTS.name} on the ${PA_SETTINGS_TABS.mid.toLowerCase()} box's lid for the horn, all from Parts Express. Still open: the screw patterns (not listed), and whether the ${HANDLES[0].name} takes its backplate and gasket.`,
+              ],
               [
                 "Port edge finish",
                 "Paint carried into the slot ducts, or masked so the ply edge shows; end grain in the mouth needs sealing either way.",

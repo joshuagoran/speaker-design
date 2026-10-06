@@ -11,7 +11,9 @@ import {
 } from "../../../lib/pa/bracing";
 import { formatHz, formatInches } from "../../../lib/format";
 import { panelThicknessName } from "../../../lib/panel";
-import type { BoxBracing } from "../../../types";
+import type { BoxBracing, BoxHardwarePlan } from "../../../types";
+import { HARDWARE_KIND_NAMES } from "../../../constants/hardware";
+import { CUT_BOX_NAMES } from "../../../constants/cutParts";
 
 /** A box's braces and ribs in words: "1 window brace, 6 ribs", or none. */
 const braceCount = (b: BoxBracing) => {
@@ -23,6 +25,23 @@ const braceCount = (b: BoxBracing) => {
   ].filter(Boolean);
   return words.length ? words.join(", ") : "none needed";
 };
+
+/** A box's hardware in words: each part with its place and the litres its recess takes, then the totals. */
+function hardwareWords(plan: BoxHardwarePlan) {
+  const parts = plan.parts
+    .filter((p) => p.panel !== "sideR")
+    .map((p) => {
+      const n = p.kind === "handle" ? "2 × " : "";
+      const where =
+        p.kind === "handle"
+          ? `${formatInches(p.v)}″ up and ${formatInches(p.u)}″ back from the front`
+          : p.kind === "plate"
+            ? `on the back, ${formatInches(p.v)}″ up`
+            : `on the top, ${formatInches(p.v)}″ back from the front`;
+      return `${n}${p.part.name} ${HARDWARE_KIND_NAMES[p.kind]} (${where}; ${p.litres.toFixed(2)} L${n ? " each" : ""})`;
+    });
+  return `${CUT_BOX_NAMES[plan.box]}: ${parts.join(", ")}; ${plan.litres.toFixed(2)} L in all, ${plan.lb.toFixed(1)} lb, $${plan.price.toFixed(2)}.`;
+}
 
 interface Props {
   planner: Pick<
@@ -46,6 +65,8 @@ interface Props {
     | "hornCenterHeightIn"
     | "subBracing"
     | "midBracing"
+    | "subHardware"
+    | "midHardware"
   >;
 }
 
@@ -71,6 +92,8 @@ export function DetailsSection({ planner }: Props) {
     hornCenterHeightIn,
     subBracing,
     midBracing,
+    subHardware,
+    midHardware,
   } = planner;
   return (
     <div className="min-w-0" style={{ fontFamily: FONT }}>
@@ -139,6 +162,16 @@ export function DetailsSection({ planner }: Props) {
                 </div>
               ),
           )}
+        </div>
+        <div>
+          <span className="font-medium text-stone-900">Handles and input plates.</span>{" "}
+          {[subHardware, midHardware]
+            .map((plan) => plan && hardwareWords(plan))
+            .filter(Boolean)
+            .join(" ")}{" "}
+          Each recess takes its cutout times its depth past the wall out of the box (a part whose
+          depth isn&rsquo;t listed counts none); the net volumes and the tuning follow, and the
+          parts&rsquo; weight is in the boxes&rsquo;.
         </div>
         {[midDriver, compressionDriver, hornOption].map(
           (part) =>

@@ -23,6 +23,8 @@ export interface SceneContext {
     brace: THREE.MeshStandardMaterial;
     /** horn bodies */
     hornShell: THREE.MeshStandardMaterial;
+    /** handles, input dishes and horn posts */
+    hardware: THREE.MeshStandardMaterial;
   };
   /** side, top, bottom and back plywood, inches */
   wall: number;
@@ -68,6 +70,11 @@ export function createSceneContext({
     side: THREE.DoubleSide,
   });
   const brace = new THREE.MeshStandardMaterial({ color: PARTS_3D.brace, roughness: 0.9 });
+  const hardware = new THREE.MeshStandardMaterial({
+    color: PARTS_3D.hardware,
+    roughness: 0.5,
+    metalness: 0.3,
+  });
   const baffle = cutaway
     ? new THREE.MeshStandardMaterial({
         color: new THREE.Color(baffleColor),
@@ -95,6 +102,7 @@ export function createSceneContext({
       port,
       brace,
       hornShell,
+      hardware,
     },
     wall,
     inset,

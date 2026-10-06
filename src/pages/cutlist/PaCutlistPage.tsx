@@ -3,6 +3,7 @@ import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
 import { cutParts } from "../../lib/pa/calc";
 import { CutlistPage } from "./CutlistPage";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
+import { CUT_BOX_NAMES } from "../../constants/cutParts";
 
 interface Props {
   planner: CutlistOptions &
@@ -19,6 +20,9 @@ interface Props {
       | "subVentSpec"
       | "layout"
       | "effectiveBraceStyle"
+      | "hardware"
+      | "subHardware"
+      | "midHardware"
     >;
 }
 
@@ -36,13 +40,26 @@ export function PaCutlistPage({ planner }: Props) {
     cVent: planner.subVentSpec,
     layout: planner.layout,
     braceStyle: planner.effectiveBraceStyle,
+    hardware: planner.hardware,
   });
+  // the parts each box is fitted with, from the catalogue (the panels' rows carry their cutouts)
+  const fitted = [planner.subHardware, planner.midHardware].flatMap((plan) =>
+    plan
+      ? [
+          `${CUT_BOX_NAMES[plan.box]} box hardware: ${plan.bought
+            .map(
+              ({ part, qty }) => `${qty} × ${part.name} ($${part.price.toFixed(2)}, ${part.src})`,
+            )
+            .join(", ")}`,
+        ]
+      : [],
+  );
   return (
     <CutlistPage
       project="pa"
       options={planner}
       parts={parts}
-      also={vent}
+      also={[...vent, ...fitted]}
       wall={planner.wallThicknessIn}
       panel={planner.wallPanel}
       material={PLYWOOD_MATERIAL}

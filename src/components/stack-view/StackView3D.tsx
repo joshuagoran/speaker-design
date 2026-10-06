@@ -23,6 +23,8 @@ export function StackView3D({
   midBracing,
   subKeepOut,
   midKeepOut,
+  subHardware,
+  midHardware,
 }: Props) {
   const mount = useRef<HTMLDivElement>(null);
   // the stage (floor, grid, lights) follows the theme; the scene is rebuilt when it changes
@@ -55,6 +57,8 @@ export function StackView3D({
     midBracing,
     subKeepOut,
     midKeepOut,
+    subHardware,
+    midHardware,
   ]);
   const [builtKey, setBuiltKey] = useState(geoKey);
   const lastBuild = useRef(0);
@@ -104,6 +108,8 @@ export function StackView3D({
       midBracing,
       subKeepOut,
       midKeepOut,
+      subHardware,
+      midHardware,
     });
     scene.add(group);
 
