@@ -31,6 +31,7 @@ import { DispersionMap } from "../../components/charts/DispersionMap";
 import { RoomView } from "../../components/drawings/RoomView";
 import { HifiFront } from "../../components/drawings/HifiFront";
 import { OptimizerBar } from "../../components/optimizer/OptimizerBar";
+import { HIFI_OPTIMIZER_PANEL, optimizerPanelNote } from "../../constants/optimizerPanels";
 import { GoalPicker } from "../../components/optimizer/GoalPicker";
 import { KeepDetails } from "../../components/optimizer/KeepDetails";
 import { RunRow } from "../../components/optimizer/RunRow";
@@ -257,6 +258,7 @@ export function HifiPage({ hifi }: Props) {
       on={isOptimizerOn}
       onToggle={() => setIsOptimizerOn(!isOptimizerOn)}
       hint="Find cheaper, lighter, deeper or louder designs inside your limits."
+      note={wallPanel !== HIFI_OPTIMIZER_PANEL && optimizerPanelNote(HIFI_OPTIMIZER_PANEL)}
       {...lockBar}
     />
   );
@@ -620,7 +622,7 @@ export function HifiPage({ hifi }: Props) {
                   onChange={setWallPanel}
                   options={PANEL_NOMINAL_OPTIONS}
                 />
-                <span>{renderLockButton("wall", "the panel thickness")}</span>
+                <span />
               </div>
               <Card className="mb-4">
                 <Slider

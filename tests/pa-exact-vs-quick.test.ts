@@ -6,9 +6,9 @@ import { paCurrent } from "./optimizer-dump-cases";
 import type { PaGoal, PaMetricsSummary, PaOptimizerInput } from "../src/types";
 
 // Fully optimize adds its grid's designs to the pool Improve picks from, so its first card is never behind Improve's.
-// Checked on saved designs with the sub driver, plywood, vent style and box height locked (so the full search stays
-// about a second a run), including one (light block) where the exact grid alone finds a slightly heavier box than
-// Improve's.
+// Checked on saved designs with the sub driver, vent style and box height locked (and the plywood the optimizer's one
+// size), so the full search stays about a second a run, including one (light block) where the exact grid alone finds a
+// slightly heavier box than Improve's.
 
 /**
  * How much better `a` is than `b` on the goal's own axis (negative: worse). Not the weight that breaks a price tie: on
@@ -30,7 +30,7 @@ for (const name of ["rectangle sub", "lil block stack", "light block"])
         maxLb: 125,
         budget: 1100,
         goals: [goal],
-        locks: { sub: true, wall: true, vent: true, subDim: { h: "exact" } },
+        locks: { sub: true, vent: true, subDim: { h: "exact" } },
       };
       const quick = optimizePaStack(input).cards[0];
       const exact = optimizePaStackExact(input).cards[0];

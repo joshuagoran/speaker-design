@@ -69,6 +69,8 @@ import {
   BIRCH_PLY_STIFFNESS,
   BOX_AXES,
   braceBox,
+  carriedWood,
+  carryBracing,
   defaultBraceStyle,
   RIB_DEPTH_IN,
   ribRunAxis,
@@ -535,11 +537,20 @@ export function subVentSupports(
   style: PortStyle,
   v: Pick<VentSpec, "slotH" | "len" | "throat" | "div">,
 ): PaBoxSupports {
-  const { inD } = paInside(box, t, inset);
-  const behind = (len: number) => len - inset - BAFFLE_PLY_IN >= DUCT_SUPPORT_MIN_SHARE * inD;
-  const len = style === "slots" && slotFolds(box, v, t) ? foldedShelfIn(box, v.slotH, t) : v.len;
-  return behind(len) ? subVentLines(box, t, style, v) : NO_SUPPORTS;
+  return ductHolds(box, t, inset, style, v) ? subVentLines(box, t, style, v) : NO_SUPPORTS;
 }
+/** Whether the sub's duct runs far enough back (DUCT_SUPPORT_MIN_SHARE of the depth) to hold the panels it runs along. */
+const ductHolds = (
+  box: Dims3,
+  t: number,
+  inset: number,
+  style: PortStyle,
+  v: Pick<VentSpec, "slotH" | "len">,
+) => {
+  const { inD } = paInside(box, t, inset);
+  const len = style === "slots" && slotFolds(box, v, t) ? foldedShelfIn(box, v.slotH, t) : v.len;
+  return len - inset - BAFFLE_PLY_IN >= DUCT_SUPPORT_MIN_SHARE * inD;
+};
 /**
  * The lines the sub's vent parts run along on its panels, however short the vent (subVentSupports takes them as
  * supports only past DUCT_SUPPORT_MIN_SHARE): a rib may always stop on them to clear the vent.
@@ -756,10 +767,36 @@ export function subBoxBracing(
   drv: TubeDriver,
   braceStyle: BraceStyleId | undefined,
 ): BoxBracing {
-  const { box: g, b: chosen } = subBracingChoice(box, t, inset, style, v, drv, braceStyle);
+  const {
+    box: g,
+    inner: gi,
+    b: chosen,
+  } = subBracingChoice(box, t, inset, style, v, drv, braceStyle);
   return sameBox(g, box)
     ? chosen
-    : subBracingAt(box, t, inset, style, v, drv, braceStyle, chosen.plan);
+    : carryBracing(
+        chosen,
+        gi,
+        subBracingAt(box, t, inset, style, v, drv, braceStyle, chosen.plan),
+        paInner(box, t, inset),
+        t,
+      );
+}
+/**
+ * The sub box's braces' and ribs' wood, in³, as subBoxBracing has it, without placing them: the rule's choice for the
+ * box on the grid, its wood carried to this size (carriedWood). What the volumes, weights and solvers read.
+ */
+export function subBraceWood(
+  box: Dims3,
+  t: number,
+  inset: number,
+  style: PortStyle,
+  v: BraceVent,
+  drv: TubeDriver,
+  braceStyle: BraceStyleId | undefined,
+) {
+  const c = subBracingChoice(box, t, inset, style, v, drv, braceStyle);
+  return carriedWood(c.b, c.inner, paInner(box, t, inset), t);
 }
 /**
  * The bracing the rule chooses for a sub box, as placed in the box on its grid (BRACE_CHOICE_GRID_IN) that it chose
@@ -802,7 +839,10 @@ function subBracingAt(
   plan: BracePlan | undefined,
 ): BoxBracing {
   const bs = braceStyle ?? defaultBraceStyle(t);
-  const key = `${bs}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${v.len}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${plan ? JSON.stringify(plan) : ""}`;
+  // the duct's length counts only where it changes the bracing: whether the duct holds the panels, a slot folds or
+  // the tubes take elbows (subVentSupports, subKeepOut)
+  const lenKey = `${ductHolds(box, t, inset, style, v)}|${style === "slots" && slotFolds(box, v, t)}|${isRoundPort(style) && modelTubeElbows(box, style, { nt: v.nt, dia: v.dia, len: v.len }, t, drv) > 0}`;
+  const key = `${bs}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${lenKey}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${plan ? JSON.stringify(plan) : ""}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = subKeepOut(box, t, inset, style, v, drv);
@@ -851,10 +891,37 @@ export function midBoxBracing(
       braceStyle ?? defaultBraceStyle(t),
       plan,
     );
-  // chosen on the grid and placed in the box itself, as the sub's (subBoxBracing)
+  // chosen on the grid and carried to the box itself, as the sub's (subBoxBracing)
   const g = onBraceGrid(box);
   const chosen = at(g, undefined);
-  return sameBox(g, box) ? chosen : at(box, chosen.plan);
+  return sameBox(g, box)
+    ? chosen
+    : carryBracing(chosen, paInner(g, t, inset), at(box, chosen.plan), paInner(box, t, inset), t);
+}
+/** The mid box's braces' and ribs' wood, in³, as midBoxBracing has it, without placing them (subBraceWood's way). */
+export function midBraceWood(
+  box: Dims3,
+  t: number,
+  inset: number,
+  mid: Pick<MidDriver, "size" | "depthIn">,
+  layout: PaLayout | undefined,
+  braceStyle: BraceStyleId | undefined,
+) {
+  if (layout === "tower") return null;
+  const g = onBraceGrid(box);
+  const chosen = paBracing(
+    g,
+    t,
+    inset,
+    0,
+    NO_SUPPORTS,
+    NO_SUPPORTS,
+    midKeepOut(g, t, mid),
+    `${mid.size}|${mid.depthIn}`,
+    braceStyle ?? defaultBraceStyle(t),
+    undefined,
+  );
+  return carriedWood(chosen, paInner(g, t, inset), paInner(box, t, inset), t);
 }
 /** A box's braces' and ribs' wood, in³. */
 export const braceWoodIn3 = (b: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null | undefined) =>
@@ -1019,8 +1086,7 @@ export function cutParts({
   portStyle,
   cVent,
   layout,
-  subBraceStyle,
-  midBraceStyle,
+  braceStyle,
   subOnly,
 }: CutPartsConfig): { parts: CutPart[]; vent: string[] } {
   const t = wall,
@@ -1029,7 +1095,7 @@ export function cutParts({
   // round tubes: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes)
   const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, sub) : null;
   const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
-    bracing: subBoxBracing(subBox, t, inset, portStyle, cVent, sub, subBraceStyle),
+    bracing: subBoxBracing(subBox, t, inset, portStyle, cVent, sub, braceStyle),
     band: portStyle === "slots" ? cVent.slotH + t : 0,
     cutNote:
       cutoutNote(DRIVER_CUTOUT_IN[sub.size]) +
@@ -1102,7 +1168,7 @@ export function cutParts({
   }
   if (layout !== "tower" && !subOnly) {
     const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
-      bracing: midBoxBracing(midDims, t, inset, mid, layout, midBraceStyle),
+      bracing: midBoxBracing(midDims, t, inset, mid, layout, braceStyle),
       cutNote: cutoutNote(DRIVER_CUTOUT_IN[mid.size]),
     });
     all.push(...m.P);
@@ -1499,7 +1565,7 @@ export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConf
       portStyle: cfg.portStyle,
       cVent: cfg.cVent,
       layout: cfg.layout,
-      subBraceStyle: cfg.subBraceStyle,
+      braceStyle: cfg.braceStyle,
       subOnly: true,
     }).parts,
     "sub",
@@ -1580,7 +1646,7 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const netL = midNetLiters(
     grossL,
     disp,
-    midBoxBracing(cfg.midDims, cfg.wall, cfg.inset, mid, cfg.layout, cfg.midBraceStyle),
+    midBoxBracing(cfg.midDims, cfg.wall, cfg.inset, mid, cfg.layout, cfg.braceStyle),
   );
   const effL = netL * STUFFING_VOLUME_GAIN;
   // the curve runs on past 2 kHz when the lowpass sits above 800 Hz, so its skirt shows on the system chart

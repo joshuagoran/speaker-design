@@ -32,7 +32,7 @@ The Fills page is fine once #1 is fixed (no overflow).
 
 ### Phase 2: layout for phones — done on `mobile-phase1`
 
-7. **Controls next to results.** Below `md`, move the control panel into a bottom sheet with tabs (Sub · Mid · Horn · Look; each band's amp slider sits in its own tab) that stays open over the lower half of the screen, with a sticky mini summary on top (Fb, max SPL @ 35 Hz, weight, first limit) so changes show immediately. Desktop keeps the side column.
+7. **Controls next to results.** Below `md`, move the control panel into a bottom sheet with tabs (Sub · Mid · Horn · Build; each band's amp slider sits in its own tab) that stays open over the lower half of the screen, with a sticky mini summary on top (Fb, max SPL @ 35 Hz, weight, first limit) so changes show immediately. Desktop keeps the side column.
 8. 3D view: `aspect-[4/3]` on phones (~290 px) with a tap-to-expand full-screen button.
 9. Sections (Sub, Mid-bass, Horn, Totals) collapse to accordions on phones, Sub open by default; remember state per viewer in localStorage.
 

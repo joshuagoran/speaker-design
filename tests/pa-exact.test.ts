@@ -335,7 +335,6 @@ const fixture = (): PaOptimizerInput => {
     budget: 1100,
     locks: {
       sub: true,
-      wall: true,
       vent: true,
       hpf: true,
       xoLo: true,

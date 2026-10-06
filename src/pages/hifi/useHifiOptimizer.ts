@@ -1,7 +1,6 @@
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../../lib/data";
 import { toggled } from "../../lib/lists";
 import { HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
-import { defaultLocks } from "../../constants/lockKeys";
 import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
 import { useDesignPreview } from "../../hooks/useDesignPreview";
 import { useOptimizerLocks } from "../../hooks/useOptimizerLocks";
@@ -20,7 +19,8 @@ import type {
   PanelExactIn,
 } from "../../types";
 import { useState } from "react";
-import { panelChoicesIn } from "../../lib/panel";
+import { panelIn } from "../../lib/panel";
+import { HIFI_OPTIMIZER_PANEL } from "../../constants/optimizerPanels";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 
 interface Props {
@@ -75,6 +75,13 @@ const ALL_LOCKED: HifiPlannerLocks = {
   dim: { w: "exact", h: "exact", d: "exact" },
 };
 
+/** Stored locks without any an older version had that no longer exists (the plywood's). */
+function knownHifiLocks(l: HifiOptimizerLocks): HifiOptimizerLocks {
+  const out: HifiOptimizerLocks = {};
+  for (const k of HIFI_LOCK_KEYS) if (l[k] !== undefined) out[k] = l[k];
+  return out;
+}
+
 /** The Hi-fi optimizer: switch, goals, budget, locks, search, previewing, loading and undo. Switch, budget and locks are remembered per viewer. */
 export function useHifiOptimizer({
   snapshot,
@@ -96,10 +103,9 @@ export function useHifiOptimizer({
   >({
     key: "hifi.locks",
     empty: {},
-    // the plywood starts locked (LOCKS_ON_BY_DEFAULT) until the viewer unlocks it
-    fromStored: (l) => ({ ...defaultLocks(true), ...l, dim: { ...l.dim } }),
+    fromStored: (l) => ({ ...knownHifiLocks(l), dim: { ...l.dim } }),
     allLocked: ALL_LOCKED,
-    none: { ...defaultLocks(false), dim: {} },
+    none: { dim: {} },
     enabled: isOptimizerOn,
   });
   const preview = useDesignPreview<HifiOptimizerCard, HifiCardConfig>({
@@ -129,7 +135,7 @@ export function useHifiOptimizer({
           budget: optimizerBudget,
           seatM: seatDistanceM,
           guidePrice,
-          walls: panelChoicesIn(speakerConfig.mat ?? PLYWOOD_MATERIAL, panelExactIn),
+          wall: panelIn(HIFI_OPTIMIZER_PANEL, speakerConfig.mat ?? PLYWOOD_MATERIAL, panelExactIn),
         },
         options,
       ),

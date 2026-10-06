@@ -19,7 +19,7 @@ import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
 import { savedCutlist } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
 import { savedPortStyle } from "../../../constants/portStyles";
-import { savedBraceStyle } from "../../../constants/bracing";
+import { LEGACY_SUB_BRACE_STYLE_KEY, savedBraceStyle } from "../../../constants/bracing";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../../constants/panelSizes";
 import { isPanelNominal, panelFor, panelIn, savedPanelExactIn } from "../../../lib/panel";
 import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
@@ -129,10 +129,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     format,
     wallPanel,
     setWallPanel,
-    subBraceStyle,
-    setSubBraceStyle,
-    midBraceStyle,
-    setMidBraceStyle,
+    braceStyle,
+    setBraceStyle,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,
@@ -219,8 +217,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
         plinthHeightIn,
         layout,
         wallThicknessIn,
-        subBraceStyle,
-        midBraceStyle,
+        braceStyle,
         baffleInsetIn,
         spacerHeightIn,
         dispersionPlane,
@@ -247,8 +244,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
       plinthHeightIn,
       layout,
       wallThicknessIn,
-      subBraceStyle,
-      midBraceStyle,
+      braceStyle,
       baffleInsetIn,
       spacerHeightIn,
       dispersionPlane,
@@ -277,8 +273,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     panel: wallPanel,
     divider: ductDividerPanel,
     inset: baffleInsetIn,
-    ...(subBraceStyle ? { subBraceStyle } : {}),
-    ...(midBraceStyle ? { midBraceStyle } : {}),
+    ...(braceStyle ? { braceStyle } : {}),
     xoLo: subMidCrossoverHz,
     xoHi: midHornCrossoverHz,
     xoLoOrder: subMidCrossoverOrder,
@@ -309,8 +304,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setWallPanel(panelFor(c, PLYWOOD_MATERIAL, exactIn) ?? DEFAULT_PA.panel);
     setBaffleInsetIn(typeof c.inset === "number" ? c.inset : DEFAULT_PA.inset);
     // each box's style; a save without one (older ones, or the plywood's default) follows the plywood
-    setSubBraceStyle(savedBraceStyle(c.subBraceStyle));
-    setMidBraceStyle(savedBraceStyle(c.midBraceStyle));
+    // the stack's style; a save from earlier builds names the sub's instead; neither: the plywood's default
+    setBraceStyle(savedBraceStyle(c.braceStyle ?? Reflect.get(c, LEGACY_SUB_BRACE_STYLE_KEY)));
     if (c.sub) setSubDriver(byId(SUB_OPTIONS, c.sub) ?? subDriver);
     if (c.mid) {
       const m = byId(MID_OPTIONS, c.mid) ?? midDriver;
@@ -414,10 +409,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     wallPanel,
     setWallPanel,
     wallThicknessIn,
-    subBraceStyle,
-    setSubBraceStyle,
-    midBraceStyle,
-    setMidBraceStyle,
+    braceStyle,
+    setBraceStyle,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,

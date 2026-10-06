@@ -1,4 +1,4 @@
-import { LOCK_KEYS, defaultLocks } from "../../../constants/lockKeys";
+import { LOCK_KEYS } from "../../../constants/lockKeys";
 import { PA_RUNNERS } from "../../../lib/pa/runOptimizer";
 import { compareDrivers } from "../../../lib/pa/compareDrivers";
 import { paExactGridText } from "../../../lib/pa/optimizeExact";
@@ -92,6 +92,13 @@ const ALL_LOCKED: PaPlannerLocks = {
   midDim: { w: "exact", h: "exact", d: "exact" },
 };
 
+/** Stored locks without any an older version had that no longer exists (the plywood's). */
+function knownLocks(l: PaOptimizerLocks): PaOptimizerLocks {
+  const out: PaOptimizerLocks = {};
+  for (const k of LOCK_KEYS) if (l[k] !== undefined) out[k] = l[k];
+  return out;
+}
+
 const today = () => new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
 /** The PA optimizer: switch, inputs, locks, search, previewing, loading and undo. Switch, inputs and locks are remembered per viewer. */
@@ -115,15 +122,9 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
   >({
     key: "planner.locks",
     empty: {},
-    // the plywood starts locked (LOCKS_ON_BY_DEFAULT) until the viewer unlocks it
-    fromStored: (l) => ({
-      ...defaultLocks(true),
-      ...l,
-      subDim: { ...l.subDim },
-      midDim: { ...l.midDim },
-    }),
+    fromStored: (l) => ({ ...knownLocks(l), subDim: { ...l.subDim }, midDim: { ...l.midDim } }),
     allLocked: ALL_LOCKED,
-    none: { ...defaultLocks(false), subDim: {}, midDim: {} },
+    none: { subDim: {}, midDim: {} },
     enabled: isOptimizerOn,
   });
   // a result only sets the fields the search changes; finish, colours, layout and balance stay as they are now

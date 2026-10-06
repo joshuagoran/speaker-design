@@ -747,7 +747,7 @@ export type HifiGoal = "cheaper" | "lighter" | "lower" | "louder";
 export type DimensionLockMode = "free" | "exact" | "max";
 
 /** The optimizer locks that are plain on/off switches (a box dimension has its own mode: `dim`). */
-export type HifiLockKey = "woofer" | "tweeter" | "box" | "wall" | "xo" | "wAmpW" | "tAmpW";
+export type HifiLockKey = "woofer" | "tweeter" | "box" | "xo" | "wAmpW" | "tAmpW";
 
 /** The optimizer's on/off locks, plus how each box dimension is held. */
 export interface HifiOptimizerLocks extends Partial<Record<HifiLockKey, boolean>> {
@@ -784,8 +784,8 @@ export interface HifiOptimizerInput {
   seatM?: number;
   /** the price of a waveguide, for one speaker */
   guidePrice?: number;
-  /** the walls the search tries when the wall isn't locked: each nominal size's exact thickness, inches */
-  walls?: readonly number[];
+  /** the plywood the search designs in (HIFI_OPTIMIZER_PANEL) at its measured thickness, inches; absent: its default */
+  wall?: number;
 }
 
 /** What a design is scored on: price for the pair in dollars, weight in lb, in-room F3 in Hz and clean level at the seat in dB. */
@@ -1093,10 +1093,8 @@ export interface PaDesignConfig {
   divider?: PanelNominal;
   /** how far the baffles sit behind the frame front, inches */
   inset: number;
-  /** how the sub box is braced; absent: the default for the plywood (`defaultBraceStyle`) */
-  subBraceStyle?: BraceStyleId;
-  /** how the mid box is braced; absent: the default for the plywood (`defaultBraceStyle`) */
-  midBraceStyle?: BraceStyleId;
+  /** how both boxes are braced; absent: the default for the plywood (`defaultBraceStyle`) */
+  braceStyle?: BraceStyleId;
   /** sub to mid and mid to horn crossovers, Hz */
   xoLo: number;
   xoHi: number;
@@ -1240,7 +1238,7 @@ export interface SubGeometryConfig {
   cVent: VentSpec;
   layout: PaLayout;
   /** absent: the plywood's default (`defaultBraceStyle`) */
-  subBraceStyle?: BraceStyleId;
+  braceStyle?: BraceStyleId;
 }
 
 /** `subSystem` adds the highpass, the amp and the port air speed limit. */
@@ -1292,7 +1290,7 @@ export type SubSystem = SubSystemUnmodelled | SubSystemModelled;
 
 export interface MidSystemConfig extends Pick<
   PaDesignConfig,
-  "xoLoOrder" | "xoHiOrder" | "midBraceStyle"
+  "xoLoOrder" | "xoHiOrder" | "braceStyle"
 > {
   /** the tower's mid chamber is part of the sub's cabinet and takes no braces of its own; absent: a box of its own */
   layout?: PaLayout;
@@ -1578,8 +1576,7 @@ export interface CutPartsConfig {
   cVent: VentSpec;
   layout: PaLayout;
   /** absent: the plywood's default (`defaultBraceStyle`) */
-  subBraceStyle?: BraceStyleId;
-  midBraceStyle?: BraceStyleId;
+  braceStyle?: BraceStyleId;
   /** the sub box's parts only (its volume reads no more): the mid box is left out */
   subOnly?: boolean;
 }
@@ -1965,7 +1962,6 @@ export type PaLockKey =
   | "cd"
   | "horn"
   | "vent"
-  | "wall"
   | "hpf"
   | "xoLo"
   | "xoHi"

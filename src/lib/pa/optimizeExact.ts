@@ -29,7 +29,7 @@ import {
   VENT_STYLES,
   XO_HI_OPTIONS,
   XO_LO_OPTIONS,
-  paSearchWalls,
+  paOptimizerWalls,
   highpassOptions,
   designProblems,
   evaluateDesign,
@@ -45,10 +45,10 @@ import {
   isRoundPort,
   linkwitzRileyLowpass,
   keeleFrequency,
-  midBoxBracing,
+  midBraceWood,
   midWeightLb,
   pistonBeamWidthDeg,
-  subBoxBracing,
+  subBraceWood,
   subGeometry,
   subWeightLb,
   ventSpeedLimit,
@@ -241,7 +241,7 @@ function exactSpace(input: PaOptimizerInput, grid: PaExactGrid): ExactSpace {
   const fixed = (["w", "h", "d"] as const)
     .filter((k) => k !== free)
     .map((k): [keyof Dims3, number[]] => [k, inchSteps(sr[k])]);
-  const walls = paSearchWalls(cur, locks);
+  const walls = paOptimizerWalls(cur);
   const top = boxInternalLiters(sr.w[1], sr.h[1], sr.d[1], Math.min(...walls), cur.inset);
   const rungs: number[] = [];
   if (free) for (let v = grid.minNetL; v <= top; v *= 1 + grid.volumeStep) rungs.push(v);
@@ -732,7 +732,7 @@ function exactHook(
       disp: sub.ts.disp,
       VbL: V,
       Fb: s.fbs[fi],
-      braceStyle: s.cur.subBraceStyle,
+      braceStyle: s.cur.braceStyle,
     };
     const [lo, hi] = s.sr[free];
     while (g.next < pairCount(g.pairs)) {
@@ -764,7 +764,7 @@ function exactHook(
         sol.box,
         t,
         sub.lb,
-        subBoxBracing(sol.box, t, s.cur.inset, style, v, sub, s.cur.subBraceStyle),
+        subBraceWood(sol.box, t, s.cur.inset, style, v, sub, s.cur.braceStyle),
       );
       if (lb > s.cap + 1e-9) continue;
       if (!b || lb < b.lb) {
@@ -1016,7 +1016,7 @@ function exactHook(
           const lo = at(xoLo),
             hi = at(xoHi);
           const midLb =
-            midWeightLb(bx, t, midBoxBracing(bx, t, cur.inset, m, cur.layout, cur.midBraceStyle)) +
+            midWeightLb(bx, t, midBraceWood(bx, t, cur.inset, m, cur.layout, cur.braceStyle)) +
             (m.lb || 0);
           for (const hp of c.hornTable[xoHi]) {
             const room = hp.at + cur.hfTilt + KEEP_UP_SLACK_DB;
@@ -1514,7 +1514,7 @@ function exactHook(
         portStyle: style,
         cVent: vent,
         layout: cur.layout,
-        subBraceStyle: cur.subBraceStyle,
+        braceStyle: cur.braceStyle,
       });
       if (!(vent.len > 0) || !ductFits(ductFit(box, style, vent, t, sub).spans, vent.len)) return;
       if (!subBaffleFits(box, style, vent, t, sub)) return;
@@ -1522,7 +1522,7 @@ function exactHook(
         box,
         t,
         sub.lb,
-        subBoxBracing(box, t, cur.inset, style, vent, sub, cur.subBraceStyle),
+        subBraceWood(box, t, cur.inset, style, vent, sub, cur.braceStyle),
       );
       if (lb > s.cap + 1e-9) return;
       const [cs] = ventedCurves(
@@ -1587,7 +1587,7 @@ function exactHook(
         vs.area,
         sub.ts.disp,
         sub,
-        s.cur.subBraceStyle,
+        s.cur.braceStyle,
       );
 
       const Leff = (len + vs.ec) * 0.0254;

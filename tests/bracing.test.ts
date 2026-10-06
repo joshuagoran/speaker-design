@@ -316,7 +316,7 @@ test("the fast wood volume matches the cutlist's for every style and vent", (t) 
           portStyle,
           cVent,
           layout: "stack",
-          subBraceStyle: style,
+          braceStyle: style,
         }).parts;
         close(
           t,

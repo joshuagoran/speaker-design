@@ -18,7 +18,8 @@
 // with its centre cut out, rails WINDOW_RAIL_IN wide) is stiff in its plane and holds the four walls it touches. A rib
 // (a strip of the panel's stock glued on edge, RIB_DEPTH_IN deep) is a beam: its own first mode, simply supported over
 // the bay it bridges and carrying its share of the panel, f = (π/2) √(EI/μ) / L², is checked against the target too,
-// and the panel reads the lower of the two.
+// and the panel reads the lower of the two. The glued panel beside the rib works with it as a flange, so EI is the
+// T section's (Eurocode 5's effective flange width, the parallel-axis theorem: ribFirstModeHz).
 //
 // No brace or rib goes through the driver or the vent: the box's keep-out (BoxKeepOut) holds the driver's basket and
 // magnet with a clearance, and the vent's parts and air. A window brace goes where its frame clears them all, nearest
@@ -40,6 +41,9 @@ import type {
   PlateStock,
 } from "../types";
 import { panelNominalNear } from "./panel";
+import { formatHz } from "./format";
+import { keysOf } from "./records";
+import { BRACE_NOTES, BRACE_PANEL_NAMES } from "../constants/bracing";
 
 const IN_M = 0.0254;
 /** lb/ft² to kg/m² */
@@ -103,16 +107,44 @@ export function plateFirstModeHz(a: number, b: number, s: PlateStock): number {
 }
 
 /**
+ * The panel either side of a rib that works with it as a flange, as shares of the rib's span and of the panel's
+ * thickness: EN 1995-1-1:2004 (Eurocode 5) §9.1.2, Table 9.1, the effective flange width of glued thin-flanged beams
+ * for plywood with its face grain along the webs (shear lag 0.1 l, plate buckling 20 hf), never more than the clear
+ * bay beside the rib.
+ */
+export const RIB_FLANGE_SPAN_SHARE = 0.1;
+export const RIB_FLANGE_THICKNESSES = 20;
+
+/** A rib's effective flange (the rib's own width and the panel working with it), in: Eurocode 5's rule above. */
+export const ribFlangeIn = (span: number, bay: number, t: number) =>
+  t + Math.max(0, Math.min(RIB_FLANGE_SPAN_SHARE * span, RIB_FLANGE_THICKNESSES * t, bay - t));
+
+/**
+ * The second moment of area of a rib glued on edge with its flange (a T: the flange `b` wide and `h` thick, the rib
+ * `w` wide standing `d` off it), about their joint centroid by the parallel-axis theorem, in the units given.
+ */
+export function teeSecondMoment(b: number, h: number, w: number, d: number) {
+  const af = b * h,
+    aw = w * d;
+  const yf = h / 2,
+    yw = h + d / 2;
+  const y = (af * yf + aw * yw) / (af + aw);
+  return (b * h ** 3) / 12 + af * (y - yf) ** 2 + (w * d ** 3) / 12 + aw * (yw - y) ** 2;
+}
+
+/**
  * A rib's first mode as a beam simply supported over `span` inches, carrying `tributary` inches of the panel beside it,
- * Hz: the rib alone (no help from the panel as a flange, so it reads low), at the stock's weaker modulus.
+ * Hz: the rib and its effective flange of panel (ribFlangeIn) as one T section, at the stock's weaker modulus for both
+ * (plywood's in-plane stiffness either way of the grain is at least that).
  */
 export function ribFirstModeHz(span: number, tributary: number, s: PlateStock): number {
   const w = s.t * IN_M,
     d = RIB_DEPTH_IN * IN_M,
-    L = span * IN_M;
+    L = span * IN_M,
+    b = ribFlangeIn(span, tributary, s.t) * IN_M;
   const kgM2 = s.lbPerSqFt * LB_FT2_KG_M2;
   const mu = kgM2 * d + kgM2 * tributary * IN_M; // the rib's own mass and the panel strip it carries, kg/m
-  return ((Math.PI / 2) * Math.sqrt((s.eWeak * w * d ** 3) / 12 / mu)) / L ** 2;
+  return ((Math.PI / 2) * Math.sqrt((s.eWeak * teeSecondMoment(b, w, w, d)) / mu)) / L ** 2;
 }
 
 // ---- the geometry: regions inside a box, and the braces' and ribs' own ----
@@ -300,19 +332,115 @@ const nearestIn = (spans: readonly Span[], p: number) => {
  * near it, which moves with that wall). braceBox places the braces exactly; this is their wood for a solver's steps,
  * exact at the box they were placed in.
  */
-export function planWoodIn3(
+export function carriedWood(
   ref: Pick<BoxBracing, "plan" | "ribs">,
   refInner: Record<BoxAxis, number>,
   inner: Record<BoxAxis, number>,
   t: number,
 ) {
-  let in3 = BOX_AXES.reduce((a, ax) => a + ref.plan.windows[ax] * windowWoodIn3(inner, ax, t), 0);
-  for (const r of ref.ribs) {
-    const run = ribRunAxis(r.panel, r.across);
-    const grow = r.from + r.len > refInner[run] / 2 ? inner[run] - refInner[run] : 0;
-    in3 += t * RIB_DEPTH_IN * (r.len + grow) * r.at.length;
+  const windowIn3 = BOX_AXES.reduce(
+    (a, ax) => a + ref.plan.windows[ax] * windowWoodIn3(inner, ax, t),
+    0,
+  );
+  let ribIn3 = 0;
+  for (const r of ref.ribs)
+    ribIn3 += t * RIB_DEPTH_IN * (r.len + ribGrow(r, refInner, inner)) * r.at.length;
+  return { windowIn3, ribIn3 };
+}
+/** carriedWood's total, in³. */
+export const planWoodIn3 = (
+  ref: Pick<BoxBracing, "plan" | "ribs">,
+  refInner: Record<BoxAxis, number>,
+  inner: Record<BoxAxis, number>,
+  t: number,
+) => {
+  const w = carriedWood(ref, refInner, inner, t);
+  return w.windowIn3 + w.ribIn3;
+};
+/** How much longer a run of ribs gets carried from one box to another: its span's change where it runs to the far end. */
+const ribGrow = (
+  r: Pick<PanelRibs, "panel" | "across" | "from" | "len">,
+  refInner: Record<BoxAxis, number>,
+  inner: Record<BoxAxis, number>,
+) => {
+  const run = ribRunAxis(r.panel, r.across);
+  return r.from + r.len > refInner[run] / 2 ? inner[run] - refInner[run] : 0;
+};
+/** Whether two plans are the same choice: the same window braces on each axis and the same ribs on each panel. */
+const samePlan = (a: BracePlan, b: BracePlan) =>
+  BOX_AXES.every((k) => a.windows[k] === b.windows[k]) &&
+  keysOf(PANEL_NORMAL).every((id) => {
+    const p = a.ribs[id],
+      q = b.ribs[id];
+    return p === q || (!!p && !!q && p.across === q.across && p.n === q.n);
+  });
+/**
+ * A bracing the rule chose for one box (`chosen`, its inside `refInner`), carried to a box a little different (inside
+ * `inner`): where the same choice placed there (`placed`) fits, its braces and ribs stand where it put them, else where
+ * the choice had them; each rib keeps its run from the choice, longer or shorter by its span's change at the far end,
+ * and the wood is carriedWood's. So the box's volume and weight move smoothly with its size, as a solver needs.
+ */
+export function carryBracing(
+  chosen: BoxBracing,
+  refInner: Record<BoxAxis, number>,
+  placed: BoxBracing,
+  inner: Record<BoxAxis, number>,
+  t: number,
+): BoxBracing {
+  const fits = samePlan(placed.plan, chosen.plan);
+  const src = fits ? placed : chosen;
+  // each panel's ribs in order across it: where they stand (from `src`), the run each keeps (from the choice)
+  const ats = (list: readonly PanelRibs[], id: BracePanelId) =>
+    list
+      .filter((r) => r.panel === id)
+      .flatMap((r) => r.at)
+      .sort((a, b) => a - b);
+  const groups = new Map<string, PanelRibs>();
+  for (const id of new Set(chosen.ribs.map((r) => r.panel))) {
+    const runs = chosen.ribs
+      .filter((r) => r.panel === id)
+      .flatMap((r) => r.at.map((at) => ({ at, r })))
+      .sort((a, b) => a.at - b.at);
+    const where = ats(src.ribs, id);
+    runs.forEach(({ at, r }, i) => {
+      const len = r.len + ribGrow(r, refInner, inner),
+        k = `${r.across}|${r.from}|${len}`;
+      const g = groups.get(id + k);
+      const x = where[i] ?? at;
+      if (g) g.at.push(x);
+      else groups.set(id + k, { panel: id, across: r.across, at: [x], from: r.from, len });
+    });
   }
-  return in3;
+  const wood = carriedWood(chosen, refInner, inner, t);
+  return {
+    ...src,
+    plan: chosen.plan,
+    style: chosen.style,
+    ribs: [...groups.values()],
+    windowIn3: wood.windowIn3,
+    ribIn3: wood.ribIn3,
+  };
+}
+
+/**
+ * Where a box's bracing departs from its style, as the notes beside the Bracing setting (BRACE_NOTES), each panel named
+ * with its box (`box`: "Sub baffle"): the baffle held by window braces under Ribs, the panels that took ribs under
+ * Window braces, and each panel left under the target.
+ */
+export function braceNotes(
+  b: Pick<BoxBracing, "style" | "windows" | "ribs" | "panels" | "targetHz">,
+  box: string,
+): string[] {
+  const name = (id: BracePanelId) => `${box} ${BRACE_PANEL_NAMES[id].toLowerCase()}`;
+  const windows = BOX_AXES.some((a) => b.windows[a].length > 0);
+  const out: string[] = [];
+  if (b.style === "ribs" && windows) out.push(BRACE_NOTES.windowsFor(name("baffle")));
+  if (b.style === "window")
+    for (const id of new Set(b.ribs.map((r) => r.panel))) out.push(BRACE_NOTES.ribsFor(name(id)));
+  for (const p of b.panels)
+    if (p.hz < b.targetHz - 1e-9)
+      out.push(BRACE_NOTES.under(name(p.id), formatHz(p.hz), formatHz(b.targetHz)));
+  return out;
 }
 
 // ---- the rule ----

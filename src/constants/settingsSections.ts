@@ -7,9 +7,11 @@ export const PA_SETTINGS_SECTIONS = {
   mid: UI_TEXT.midBass,
   horn: PA_SETTINGS_TABS.horn,
   xo: "Crossovers and amps",
-  look: PA_SETTINGS_TABS.look,
+  build: PA_SETTINGS_TABS.build,
 } as const;
 export type PaSettingsSection = keyof typeof PA_SETTINGS_SECTIONS;
+/** The PA sections stored under an older id (their fold state carries over): Build was Look. */
+export const PA_SETTINGS_RENAMED: Partial<Record<string, PaSettingsSection>> = { look: "build" };
 
 /** The Hi-fi settings column's fold sections, by id, and the name each shows. */
 export const HIFI_SETTINGS_SECTIONS = {

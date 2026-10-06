@@ -13,11 +13,9 @@ export interface CabinetStyle {
   /** the walls' nominal size (the exact thickness is the Cutlist page's, `PaDesign.wallThicknessIn`) */
   wallPanel: PanelNominal;
   setWallPanel: Setter<PanelNominal>;
-  /** each box's bracing style as chosen; absent: the plywood's default (`defaultBraceStyle`) */
-  subBraceStyle: BraceStyleId | undefined;
-  setSubBraceStyle: Setter<BraceStyleId | undefined>;
-  midBraceStyle: BraceStyleId | undefined;
-  setMidBraceStyle: Setter<BraceStyleId | undefined>;
+  /** the boxes' bracing style as chosen (one for the stack); absent: the plywood's default (`defaultBraceStyle`) */
+  braceStyle: BraceStyleId | undefined;
+  setBraceStyle: Setter<BraceStyleId | undefined>;
   baffleInsetIn: number;
   setBaffleInsetIn: Setter<number>;
   baffleColor: string;
@@ -35,8 +33,7 @@ export function useCabinetStyle(): CabinetStyle {
   const [cutaway, setCutaway] = useState<boolean>(DEFAULT_PA.cutaway);
   const [layout, setLayout] = useState<PaLayout>(DEFAULT_PA.layout);
   const [wallPanel, setWallPanel] = useState<PanelNominal>(DEFAULT_PA.panel); // side/top/bottom/back ply
-  const [subBraceStyle, setSubBraceStyle] = useState<BraceStyleId | undefined>(undefined);
-  const [midBraceStyle, setMidBraceStyle] = useState<BraceStyleId | undefined>(undefined);
+  const [braceStyle, setBraceStyle] = useState<BraceStyleId | undefined>(undefined);
   const [baffleInsetIn, setBaffleInsetIn] = useState(DEFAULT_PA.inset); // how far the baffles sit back from the frame front, in
   const [baffleColor, setBaffleColor] = useState(DEFAULT_PA.baffleColor);
   const [cabinetFinish, setCabinetFinish] = useState(DEFAULT_PA.cabFinish);
@@ -51,10 +48,8 @@ export function useCabinetStyle(): CabinetStyle {
     format: DEFAULT_PA.format, // 18″ sub + compression driver; mid is 12″ or 15″
     wallPanel,
     setWallPanel,
-    subBraceStyle,
-    setSubBraceStyle,
-    midBraceStyle,
-    setMidBraceStyle,
+    braceStyle,
+    setBraceStyle,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,

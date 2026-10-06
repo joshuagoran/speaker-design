@@ -23,16 +23,14 @@ import {
   sideDuctEndCorrection,
   ductDividerIn,
   STUFFING_VOLUME_GAIN,
-  midBoxBracing,
+  midBraceWood,
   midNetLiters,
-  subBoxBracing,
+  subBraceWood,
   braceWoodIn3,
   subBracingChoice,
   paInner,
 } from "./calc";
 import type {
-  BoxAxis,
-  BoxBracing,
   BraceStyleId,
   MidSystemConfig,
   CrossoverOrder,
@@ -265,7 +263,7 @@ export const musicAt = (
   20 * Math.log10(lim.V / volts);
 
 /** What the mid's bracing reads beyond the box (midBoxBracing): the layout and the style. */
-export type MidBrace = Pick<MidSystemConfig, "layout" | "midBraceStyle">;
+export type MidBrace = Pick<MidSystemConfig, "layout" | "braceStyle">;
 /** The mid in a sealed box, as midSystem and closedBox set it up: the driver's and the box's acoustic parts, and the system's resonance. */
 function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: MidBrace) {
   const ts = mid.ts;
@@ -274,7 +272,7 @@ function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: 
     midNetLiters(
       boxInternalLiters(box.w, box.h, box.d, t, inset),
       disp,
-      midBoxBracing(box, t, inset, mid, brace.layout, brace.midBraceStyle),
+      midBraceWood(box, t, inset, mid, brace.layout, brace.braceStyle),
     ) * STUFFING_VOLUME_GAIN;
   const Sd = ts.Sd / 10000,
     Mms = ts.Mms / 1000,
@@ -468,7 +466,7 @@ export const subWoodIn3 = (
     box,
     t,
     v,
-    braceWoodIn3(subBoxBracing(box, t, inset, style, v, drv, braceStyle)),
+    braceWoodIn3(subBraceWood(box, t, inset, style, v, drv, braceStyle)),
   );
 /** subWoodIn3 with the braces' and ribs' wood given (a solver's, holding their choice), in³. */
 function subWoodWithIn3(style: PortStyle, box: Dims3, t: number, v: VentSpec, braceIn3: number) {
@@ -608,7 +606,7 @@ export function solveShape(
   const round = isRoundPort(style);
   let len = 0;
   let prev: { x: number; err: number } | null = null;
-  let ref: { b: BoxBracing; inner: Record<BoxAxis, number> } | undefined,
+  let ref: ReturnType<typeof subBracingChoice> | undefined,
     replans = 0;
   for (let it = 0; it < 60; it++) {
     let unreached = false; // a bottom slot this size tunes neither straight nor folded
@@ -673,24 +671,22 @@ export function solveShape(
       vs = ventShape(style, box, v, t, drv);
     }
     len = v.len;
-    // the braces the rule chose (placed in the box it chose them for), their wood carried to this size (planWoodIn3:
-    // smooth in the side, exact where they were placed); once settled, the rule's own bracing here must give the same
-    // volume, or the steps go on from it (a few times: a volume only a change in the bracing's choice straddles has
-    // no box)
+    // the braces the rule chose for the box on its grid, their wood carried to this size (planWoodIn3: smooth in the
+    // side, and what subBoxBracing gives here); settled in another grid box than the choice's, the steps go on with
+    // that box's choice (a few times: a volume only a change in the choice straddles has no box)
     ref ??= subBracingChoice(box, t, inset, style, v, drv, target.braceStyle);
-    const netWith = (braceIn3: number) =>
+    const net =
       ((box.w - 2 * t) * (box.h - 2 * t) * (box.d - inset - 0.75 - t) * 16.387) / 1000 -
       disp -
       (vs.area * len * 16.387) / 1000 -
-      subWoodWithIn3(style, box, t, v, braceIn3) * IN3_TO_L;
-    let err = VbL - netWith(planWoodIn3(ref.b, ref.inner, paInner(box, t, inset), t));
+      subWoodWithIn3(style, box, t, v, planWoodIn3(ref.b, ref.inner, paInner(box, t, inset), t)) *
+        IN3_TO_L;
+    const err = VbL - net;
     if (Math.abs(err) <= 1e-11 * VbL) {
-      const own = subBoxBracing(box, t, inset, style, v, drv, target.braceStyle);
-      err = VbL - netWith(braceWoodIn3(own));
-      if (Math.abs(err) <= 1e-11 * VbL)
-        return unreached ? null : { box: { ...box }, len, area: vs.area };
+      const own = subBracingChoice(box, t, inset, style, v, drv, target.braceStyle);
+      if (own.b === ref.b) return unreached ? null : { box: { ...box }, len, area: vs.area };
       if (++replans > MAX_REPLANS) return null;
-      ref = { b: own, inner: paInner(box, t, inset) };
+      ref = own;
       prev = null;
     }
     // the net volume's slope along the free side: the gross volume's at first (the wood and duct move far less), then

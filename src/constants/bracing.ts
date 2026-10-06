@@ -26,6 +26,16 @@ export const BRACE_STYLE_SUMMARY = {
   both: "ribs and window braces",
 } as const satisfies Record<keyof typeof BRACE_STYLE_NAMES, string>;
 
+/**
+ * The notes beside a box's Bracing setting where the rule couldn't do as the style says: a panel braced the other way,
+ * or left under the target. Each takes the panel's name (and the frequencies, already in words).
+ */
+export const BRACE_NOTES = {
+  windowsFor: (panel: string) => `${panel}: window braces (ribs can't cross the driver)`,
+  ribsFor: (panel: string) => `${panel}: ribs (no window brace clears the driver or the vent)`,
+  under: (panel: string, hz: string, target: string) => `${panel}: ${hz}, under ${target}`,
+} as const;
+
 /** A box's panels, as the bracing readout names them (left and right as you face the baffle). */
 export const BRACE_PANEL_NAMES = {
   sideL: "Left side",
@@ -42,6 +52,9 @@ export const BOX_AXIS_NAMES = {
   y: "up",
   z: "front to back",
 } as const;
+
+/** The field designs saved by earlier builds (one style per box) kept the sub's style in: it stands for the stack's. */
+export const LEGACY_SUB_BRACE_STYLE_KEY = "subBraceStyle";
 
 /** A saved design's brace style: one of the ids, else absent (the plywood's default). */
 export const savedBraceStyle = (s: unknown) => keysOf(BRACE_STYLE_NAMES).find((k) => k === s);

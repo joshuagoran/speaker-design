@@ -67,12 +67,7 @@ type PaDesignInputs = Pick<
   > &
   Pick<
     CabinetStyle,
-    | "plinthHeightIn"
-    | "layout"
-    | "baffleInsetIn"
-    | "spacerHeightIn"
-    | "subBraceStyle"
-    | "midBraceStyle"
+    "plinthHeightIn" | "layout" | "baffleInsetIn" | "spacerHeightIn" | "braceStyle"
   > & {
     dispersionPlane: DispersionPlane;
     /** the walls' exact thickness, in (lib/panel) */
@@ -168,8 +163,7 @@ export function derivePaDesign({
   plinthHeightIn,
   layout,
   wallThicknessIn,
-  subBraceStyle,
-  midBraceStyle,
+  braceStyle,
   baffleInsetIn,
   spacerHeightIn,
   dispersionPlane,
@@ -185,7 +179,7 @@ export function derivePaDesign({
     portStyle,
     subVentSpec,
     subDriver,
-    subBraceStyle,
+    braceStyle,
   );
   const midBracing = midBoxBracing(
     effectiveMidBoxDims,
@@ -193,7 +187,7 @@ export function derivePaDesign({
     baffleInsetIn,
     midDriver,
     layout,
-    midBraceStyle,
+    braceStyle,
   );
   const subKeepOut = subBoxKeepOut(
     subBox,
@@ -217,7 +211,7 @@ export function derivePaDesign({
     ampW: subAmpWatts,
     portMax: maxPortAirSpeedMs,
     layout,
-    subBraceStyle,
+    braceStyle,
     xoLo: subMidCrossoverHz, // the system chart draws the lowpass skirt
     phase: true, // for the coverage map
   });
@@ -259,7 +253,7 @@ export function derivePaDesign({
   // ---- mid-bass: sealed box ----
   const midSys = midSystem(midDriver, {
     layout,
-    midBraceStyle,
+    braceStyle,
     midDims: effectiveMidBoxDims,
     wall: wallThicknessIn,
     inset: baffleInsetIn,

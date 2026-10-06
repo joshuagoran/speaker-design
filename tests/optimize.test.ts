@@ -373,7 +373,6 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
     cd: true,
     horn: true,
     vent: true,
-    wall: true,
     hpf: true,
     xoLo: true,
     xoHi: true,

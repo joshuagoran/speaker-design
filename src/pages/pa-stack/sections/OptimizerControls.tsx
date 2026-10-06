@@ -3,6 +3,7 @@ import { OptimizerPanel } from "../../../components/optimizer/OptimizerPanel";
 import { OptimizerBar } from "../../../components/optimizer/OptimizerBar";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
+import { PA_OPTIMIZER_PANEL, optimizerPanelNote } from "../../../constants/optimizerPanels";
 
 interface Props {
   planner: Pick<
@@ -34,6 +35,7 @@ interface Props {
     | "currentDesignOutput"
     | "compareDriverRows"
     | "swapDriver"
+    | "wallPanel"
   >;
 }
 
@@ -67,6 +69,7 @@ export function OptimizerControls({ planner }: Props) {
     currentDesignOutput,
     compareDriverRows,
     swapDriver,
+    wallPanel,
   } = planner;
   return (
     <>
@@ -75,6 +78,7 @@ export function OptimizerControls({ planner }: Props) {
           on={isOptimizerOn}
           onToggle={() => setIsOptimizerOn(!isOptimizerOn)}
           hint="Find cheaper, lighter or louder designs inside your limits."
+          note={wallPanel !== PA_OPTIMIZER_PANEL && optimizerPanelNote(PA_OPTIMIZER_PANEL)}
           {...lockBar}
         />
       </section>

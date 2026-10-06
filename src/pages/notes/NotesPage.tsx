@@ -1,3 +1,4 @@
+import { PA_SETTINGS_TABS } from "../../constants/paSettingsTabs";
 import { Fragment } from "react";
 import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
 import { formatHz } from "../../lib/format";
@@ -377,7 +378,7 @@ export function NotesPage() {
               ],
               [
                 "Bracing",
-                `By rule: ribs, window braces or both (set for each cabinet in its section of the planner) go in, clear of the drivers and the vent, until every panel's first resonance clears ${formatHz(PA_PANEL_TARGET_HZ)}; they are in the cutlist, the volume, the weight and the cutaway, where the drivers show too. Where they sit still competes with handle recesses for the same panel area.`,
+                `By rule: ribs, window braces or both (one setting for the stack, under ${PA_SETTINGS_TABS.build} in the planner) go in, clear of the drivers and the vent, until every panel's first resonance clears ${formatHz(PA_PANEL_TARGET_HZ)}; they are in the cutlist, the volume, the weight and the cutaway, where the drivers show too. Where they sit still competes with handle recesses for the same panel area.`,
               ],
               ["Handles", "Recess type, depth and position on the sub. Interacts with bracing."],
               [

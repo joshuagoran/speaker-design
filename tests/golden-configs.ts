@@ -86,14 +86,14 @@ export function evaluate(c: GoldenConfig): GoldenValues {
     ampW: c.ampW || 800,
     portMax: c.portMax || 20,
     layout: c.layout || "stack",
-    subBraceStyle: c.subBraceStyle,
+    braceStyle: c.braceStyle,
   };
   const s = subSystem(sub, mid, cfg);
   const xoLo = c.xoLo || 120;
-  const midBracing = midBoxBracing(mDim, cfg.wall, cfg.inset, mid, cfg.layout, c.midBraceStyle);
+  const midBracing = midBoxBracing(mDim, cfg.wall, cfg.inset, mid, cfg.layout, c.braceStyle);
   const ms = midSystem(mid, {
     layout: cfg.layout,
-    midBraceStyle: c.midBraceStyle,
+    braceStyle: c.braceStyle,
     midDims: mDim,
     wall: cfg.wall,
     inset: cfg.inset,
@@ -132,15 +132,7 @@ export function evaluate(c: GoldenConfig): GoldenValues {
         cfg.subBox,
         cfg.wall,
         sub.lb,
-        subBoxBracing(
-          cfg.subBox,
-          cfg.wall,
-          cfg.inset,
-          cfg.portStyle,
-          cfg.cVent,
-          sub,
-          c.subBraceStyle,
-        ),
+        subBoxBracing(cfg.subBox, cfg.wall, cfg.inset, cfg.portStyle, cfg.cVent, sub, c.braceStyle),
       ),
     ),
     midLb: r2(midWeightLb(mDim, cfg.wall, midBracing)),
