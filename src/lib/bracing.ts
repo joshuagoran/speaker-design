@@ -29,9 +29,9 @@
 import type {
   BoxAxis,
   BoxBracing,
-  BraceFallback,
   BoxKeepOut,
   BoxRegion,
+  BraceFallback,
   BracePanel,
   BracePanelId,
   BracePlan,
@@ -42,9 +42,7 @@ import type {
   PlateStock,
 } from "../types";
 import { panelNominalNear } from "./panel";
-import { formatHz } from "./format";
 import { keysOf } from "./records";
-import { BRACE_NOTES, BRACE_PANEL_NAMES } from "../constants/bracing";
 
 const IN_M = 0.0254;
 /** lb/ft² to kg/m² */
@@ -450,21 +448,6 @@ export function braceFallbacks(
     if (p.hz < b.targetHz - 1e-9) out.push({ panel: p.id, kind: "under", hz: p.hz });
   return out;
 }
-
-/**
- * Where a box's bracing departs from its style, as the notes beside the Bracing setting in words (BRACE_NOTES), each
- * panel named with its box (`box`: "Sub baffle"): braceFallbacks's, in its order.
- */
-export const braceNotes = (
-  b: Pick<BoxBracing, "style" | "windows" | "ribs" | "panels" | "targetHz">,
-  box: string,
-): string[] =>
-  braceFallbacks(b).map((f) => {
-    const name = `${box} ${BRACE_PANEL_NAMES[f.panel].toLowerCase()}`;
-    if (f.kind === "windows") return BRACE_NOTES.windowsFor(name);
-    if (f.kind === "ribs") return BRACE_NOTES.ribsFor(name);
-    return BRACE_NOTES.under(name, formatHz(f.hz ?? NaN), formatHz(b.targetHz));
-  });
 
 // ---- the rule ----
 

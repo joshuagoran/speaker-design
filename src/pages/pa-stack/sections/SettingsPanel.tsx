@@ -39,7 +39,8 @@ import {
   BRACE_STYLE_SUMMARY,
   BRACE_STYLE_TIPS,
 } from "../../../constants/bracing";
-import { braceNotes, defaultBraceStyle } from "../../../lib/bracing";
+import { defaultBraceStyle } from "../../../lib/bracing";
+import { braceNoteLines } from "../../../lib/bracingNotes";
 import { PANEL_NOMINAL_NAMES } from "../../../constants/panelSizes";
 import { PANEL_NOMINAL_OPTIONS } from "../../../lib/panel";
 
@@ -126,7 +127,7 @@ interface Props {
 }
 
 /**
- * Settings: sliders and pickers for the sub, mid-bass, horn, crossovers and amps, and the look. From md up a sticky
+ * Settings: sliders and pickers for the sub, mid-bass, horn, crossovers and amps, and the build. From md up a sticky
  * column of fold sections, each with a one-line summary while folded; a bottom sheet with tabs on phones.
  */
 export function SettingsPanel({ planner }: Props) {
@@ -218,11 +219,11 @@ export function SettingsPanel({ planner }: Props) {
   const ductLens = ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn, subDriver);
   const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
   // the style both boxes are braced with: the one chosen, else the plywood's default (stored as no choice, so it
-  // follows the plywood); a note under it wherever a box's bracing departs from it (braceNotes), naming the box
+  // follows the plywood); a note under it wherever a box's bracing departs from it (braceNoteLines), naming the box
   const shownBrace = braceStyle ?? defaultBraceStyle(wallThicknessIn);
-  const braceNoteLines = [
-    ...braceNotes(subBracing, PA_SETTINGS_TABS.sub),
-    ...(midBracing ? braceNotes(midBracing, PA_SETTINGS_TABS.mid) : []),
+  const braceNotes = [
+    ...braceNoteLines(PA_SETTINGS_TABS.sub, subBracing),
+    ...(midBracing ? braceNoteLines(PA_SETTINGS_TABS.mid, midBracing) : []),
   ];
   const summaries: Record<PaSettingsSection, string> = {
     sub: [
@@ -700,7 +701,7 @@ export function SettingsPanel({ planner }: Props) {
                   (id) => [id, BRACE_STYLE_NAMES[id], BRACE_STYLE_TIPS[id]] as const,
                 )}
               />
-              {braceNoteLines.map((n) => (
+              {braceNotes.map((n) => (
                 <div key={n} className="text-xs text-stone-500">
                   {n}
                 </div>
