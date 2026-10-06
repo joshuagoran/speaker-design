@@ -13,7 +13,7 @@ import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { settingsSheetRoomClass } from "../../components/ui/SettingsSheetTabs";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
-import { RESULTS_TWO_COLUMN_PX } from "../../styles/layout";
+import { RESULTS_TWO_COLUMN_PX, resultsCellClass, resultsGridClass } from "../../styles/layout";
 import type { PaPlanner } from "./hooks/usePaPlanner";
 
 interface Props {
@@ -32,8 +32,7 @@ export function PaStackPage({ planner }: Props) {
   const [results, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   // the summary sits beside the 3D view only when there is one; in one column it opens the Sub fold
   const besideView = wide && !!planner.subModelled;
-  /** a cell's classes: `place` (its row and column) applies in two columns only */
-  const cell = (place: string) => (wide ? `min-w-0 ${place}` : "min-w-0");
+  const cell = (place: string) => resultsCellClass(wide, place);
   return (
     <SettingsLayout
       className={settingsSheetRoomClass(isSettingsSheetOpen)}
@@ -54,17 +53,14 @@ export function PaStackPage({ planner }: Props) {
           />
           <OptimizerControls planner={planner} />
           <MobileSummaryStrip planner={planner} />
-          <div ref={results} className="flex flex-col gap-8">
-            <div
-              className={
-                wide ? "grid grid-cols-2 gap-x-4 gap-y-5 items-start" : "flex flex-col gap-5"
-              }
-            >
-              {/* beside the summary, the summary sets the row's height and the view fills its cell */}
+          <div ref={results} className="flex flex-col gap-8 [container-type:inline-size]">
+            <div className={resultsGridClass(wide)}>
+              {/* beside the summary, the summary sets the row's height and the view fills its cell; at least 20% of
+                  the results' width tall (cqw), so on a very wide pane it stays under 2.5:1, not a flat strip */}
               <div
                 className={cell(
                   besideView
-                    ? "col-start-1 row-start-1 self-stretch relative min-h-[320px]"
+                    ? "col-start-1 row-start-1 self-stretch relative min-h-[max(320px,20cqw)]"
                     : "col-span-2 row-start-1",
                 )}
               >

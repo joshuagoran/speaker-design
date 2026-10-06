@@ -7,9 +7,12 @@ import {
   HORN_AMP_SAFETY_HPF_HZ,
   RACK_DSP_IDS,
   RACKS,
+  dspUnitById,
   formatPriceRange,
+  mainsDsp,
   rackTotal,
 } from "../../lib/data";
+import { STATS } from "../../components/optimizer/StatRow";
 import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
 import { FONT } from "../../styles/fonts";
 import { PAGE_WIDTH, READING_WIDTH } from "../../styles/layout";
@@ -29,6 +32,10 @@ import {
 // part, price or rating shows up here.
 const GXD = QSC_GXD.models;
 const OHM = "Ω";
+/** The mains rack's processor, as the prose names it. */
+const DSP = mainsDsp().row.unit;
+/** A DSP unit's name from the catalogue, for the prose's pick. */
+const dspName = (id: DspUnitId) => dspUnitById(id).row.unit;
 
 /** A DSP table cell: the unit the racks use marked "(current)", a settled used price added to the price cell. */
 function dspCell(u: DspUnit & { id: DspUnitId }, col: DspColumn): string {
@@ -106,7 +113,7 @@ export function NotesPage() {
           </div>
           <p className="text-sm text-stone-900 max-w-3xl mt-3">
             <Tooltip
-              tip={`the PA2 holds input EQ and master level, then crossovers, delay and driver EQ on six outputs. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around ${HORN_AMP_SAFETY_HPF_HZ} Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.`}
+              tip={`The ${DSP} holds input EQ and master level, then crossovers, delay and driver EQ on each output. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around ${HORN_AMP_SAFETY_HPF_HZ} Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.`}
             >
               How the DSP work is split
             </Tooltip>
@@ -143,7 +150,7 @@ export function NotesPage() {
             ))}
           </ul>
           <h3 className="text-base font-medium mt-5 mb-2">
-            Protecting an excursion-limited sub with a GXD
+            Protecting an excursion-limited sub with the amp limiter
           </h3>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
@@ -153,15 +160,15 @@ export function NotesPage() {
               ],
               [
                 "2. Limiter power",
-                `The lower of the planner's \u201ccone reaches Xmax at X W\u201d and the driver's rating; Medium or Aggressive. On a ${GXD8.model} the ceiling is ${GXD8.limiterW[1]} W, which is just the amp's own limit.`,
+                `The lower of the power in the sub's \u201c${STATS.firstLimit.label}\u201d row (when Xmax runs out first) and the driver's rating; Medium or Aggressive. On a ${GXD8.model} the ceiling is ${GXD8.limiterW[1]} W, which is just the amp's own limit.`,
               ],
               [
                 "3. Check it",
-                "Play a sine at the frequency where excursion peaks (the planner's port-velocity row, just above tuning), raise it until the limit indicator lights, and measure AC volts at the speaker terminals. Compare with \u221a(W \u00d7 8).",
+                `Play a sine at the frequency where excursion peaks (the sub's \u201c${STATS.peakExcursion.label}\u201d row), raise it until the limit indicator lights, and measure AC volts at the speaker terminals. Compare with \u221a(W \u00d7 8).`,
               ],
               [
                 "4. Steeper or in volts",
-                "Do it in the PA2 ahead of the amps and keep the GXD limiter as a backstop. Not yet checked against the PA2 manual.",
+                `Do it in the ${DSP} ahead of the amps and keep the amp limiter as a backstop. Not yet checked against the ${DSP} manual.`,
               ],
               [
                 "Horns",
@@ -230,9 +237,9 @@ export function NotesPage() {
             </table>
           </div>
           <p className="text-sm text-stone-900 mt-2 max-w-3xl">
-            Pick: a used DriveRack 260 on a budget; new, the Ashly AQM408 (limiters in dBu with
-            attack and release, 4×8) or the VENU360 (front panel plus app). Keep the GXD limiters as
-            a backstop either way.{" "}
+            Pick: a used {dspName("driverack260")} on a budget; new, the {dspName("aqm408")}{" "}
+            (limiters in dBu with attack and release, 4×8) or the {dspName("venu360")} (front panel
+            plus app). Keep the amp limiters as a backstop either way.{" "}
             <Tooltip tip="Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026.">
               Why not the others?
             </Tooltip>
@@ -290,9 +297,9 @@ export function NotesPage() {
         <section className="mt-8" style={{ fontFamily: FONT }}>
           <SectionHeading className="mb-3">Passive crossover: calibrate and build</SectionHeading>
           <p className="text-sm text-stone-900 mb-3 max-w-3xl">
-            For fills without a maker's network (FaitalPRO, Ciare, B&C 8″). A 2nd-order 2-way is 6–8
-            parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80 per box in
-            parts. All values get tuned, not just the pad.
+            For fills whose maker sells no matching network (each fill's note says). A 2nd-order
+            2-way is 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80
+            per box in parts. All values get tuned, not just the pad.
           </p>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
@@ -310,7 +317,7 @@ export function NotesPage() {
               ],
               [
                 "4. Prototype on DSP (optional)",
-                "Copy the target curves into the PA2 or GXD, listen and measure, then match the passive design to what you liked.",
+                `Copy the target curves into the ${DSP} or the amps, listen and measure, then match the passive design to what you liked.`,
               ],
               [
                 "5. Test build",
@@ -368,21 +375,13 @@ export function NotesPage() {
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               [
-                "Baffle mounting",
-                'Cleats (forgiving, costs 3/4" of interior on each side) or a stopped rabbet in the frame panels (tighter, squares the box, needs a dado). Baffle size changes with the choice.',
-              ],
-              [
                 "Bracing",
                 "Not drawn. Volume and weight allow for two braces. Center ribs, slat ladder or windowed shelves — decide once handle recesses are placed, since they compete for the same panel area.",
               ],
               ["Handles", "Recess type, depth and position on the sub. Interacts with bracing."],
               [
-                "Driver margins",
-                "Currently equal at top and sides. One recommendation is to offset deliberately so baffle modes and diffraction paths don't coincide — likely inaudible below 100 Hz, so mostly a visual decision.",
-              ],
-              [
                 "Port edge finish",
-                "The letterbox mouths are cut in the shell's nose band, so this is a shell-material question, not a baffle one. Paint carried into the ducts, or masked so the ply edge shows — end grain in the mouth needs sealing either way.",
+                "Paint carried into the slot ducts, or masked so the ply edge shows; end grain in the mouth needs sealing either way.",
               ],
               [
                 "Duct tuning",
@@ -399,19 +398,7 @@ export function NotesPage() {
               ],
               [
                 "Horn print",
-                `${DEFAULT_HORN.name} in one piece needs a ${DEFAULT_HORN.bedMm} mm+ bed; otherwise sectioned. Filament, print service, or buy the RX-28 instead.`,
-              ],
-              [
-                "Prototype material",
-                '3/4" particleboard for the first sub, then transfer verified interior dimensions to birch.',
-              ],
-              [
-                "Final panel thickness",
-                '3/4" or braced 1/2" birch (switch it under Plywood in the planner). 1/2" needs bracing on roughly 12" centers and a doubler at the driver cutout. Decide before the prototype, since wall thickness changes the interior volume and therefore the duct length.',
-              ],
-              [
-                "Baffle material",
-                "MDO if the baffles are painted — no baffle edge is exposed in any of the current configurations, so there is no reason not to. Birch only if the baffle is ever meant to be clear-finished.",
+                `${DEFAULT_HORN.name} in one piece needs a ${DEFAULT_HORN.bedMm} mm+ bed; otherwise sectioned. Filament, a print service, or a ready-made horn from the catalogue instead.`,
               ],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
