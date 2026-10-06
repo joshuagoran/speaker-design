@@ -817,9 +817,10 @@ export function subBraceWood(
 }
 /**
  * The bracing the rule chooses for a sub box, as placed in the box on its grid (BRACE_CHOICE_GRID_IN) that it chose
- * for: a solver carries its wood to nearby sizes (planWoodIn3) without placing it each time. On the grid the duct keeps
- * its distance from the back; where that box's duct would hold, fold or take elbows otherwise than this one's, the rule
- * chooses for the box itself, so the choice always sees the duct the box has.
+ * for: a solver carries its wood to nearby sizes (carriedWood) without placing it each time. The grid box reads this
+ * box's duct (its flags: whether it holds the panels, folds or takes elbows), so the choice always sees the duct the
+ * box has. `same`: a choice for this vent and style a solver already holds, given back when this box has the same
+ * grid box and flags (no memo lookup).
  */
 export function subBracingChoice(
   box: Dims3,
@@ -829,25 +830,31 @@ export function subBracingChoice(
   v: BraceVent,
   drv: TubeDriver,
   braceStyle: BraceStyleId | undefined,
+  same?: SubBraceChoice,
 ): SubBraceChoice {
   const g = onBraceGrid(box);
+  const flags = ductFlagsOf(box, t, inset, style, v, drv);
+  if (
+    same &&
+    sameBox(g, same.box) &&
+    flags.holds === same.flags.holds &&
+    flags.folds === same.flags.folds &&
+    flags.elbows === same.flags.elbows
+  )
+    return same;
   return {
     box: g,
     inner: paInner(g, t, inset),
-    b: subBracingAt(
-      g,
-      t,
-      inset,
-      style,
-      v,
-      drv,
-      braceStyle,
-      undefined,
-      ductFlagsOf(box, t, inset, style, v, drv),
-    ),
+    flags,
+    b: subBracingAt(g, t, inset, style, v, drv, braceStyle, undefined, flags),
   };
 }
-type SubBraceChoice = { box: Dims3; inner: Record<BoxAxis, number>; b: BoxBracing };
+type SubBraceChoice = {
+  box: Dims3;
+  inner: Record<BoxAxis, number>;
+  flags: DuctFlags;
+  b: BoxBracing;
+};
 /**
  * The vent's inputs the sub's bracing reads besides the duct's length, for its memo keys: each style's own (a bottom
  * slot's height, a side duct's throat and dividers, the tubes' count and bore), so vents differing elsewhere share it.

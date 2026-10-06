@@ -686,7 +686,7 @@ export function solveShape(
       subWoodWithIn3(style, box, t, v, brace.windowIn3 + brace.ribIn3) * IN3_TO_L;
     const err = VbL - net;
     if (Math.abs(err) <= 1e-11 * VbL) {
-      const own = subBracingChoice(box, t, inset, style, v, drv, target.braceStyle);
+      const own = subBracingChoice(box, t, inset, style, v, drv, target.braceStyle, ref);
       if (own.b === ref.b) return unreached ? null : { box: { ...box }, len, area: vs.area, brace };
       if (++replans > MAX_REPLANS) return null;
       ref = own;
