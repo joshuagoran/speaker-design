@@ -7,6 +7,11 @@ import { SectionHeading } from "../../components/ui/SectionHeading";
 import { SignalPath } from "../../components/drawings/SignalPath";
 import { HANDLES, HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
 import {
+  HARDWARE_KIND_NAMES,
+  HARDWARE_PRESET_WORDS,
+  HARDWARE_SECTION_TITLE,
+} from "../../constants/hardware";
+import {
   DSP_UNITS,
   HORN_AMP_SAFETY_HPF_HZ,
   RACK_DSP_IDS,
@@ -382,11 +387,11 @@ export function NotesPage() {
             {[
               [
                 "Bracing",
-                `By rule: ribs, window braces or both (one setting for the stack, under ${PA_SETTINGS_TABS.build} in the planner) go in, clear of the drivers and the vent, until every panel's first resonance clears ${formatHz(PA_PANEL_TARGET_HZ)}; they are in the cutlist, the volume, the weight and the cutaway, where the drivers show too. The handles and input dishes are checked against them, with a warning under ${PA_SETTINGS_TABS.build} where one doesn't fit.`,
+                `By rule: ribs, window braces or both (one setting for the stack, under ${PA_SETTINGS_TABS.build} in the planner) go in, clear of the drivers and the vent, until every panel's first resonance clears ${formatHz(PA_PANEL_TARGET_HZ)}; they are in the cutlist, the volume, the weight and the cutaway, where the drivers show too. They go round the recesses of the handles, input dishes and horn posts, which are placed first; a warning under ${PA_SETTINGS_TABS.build} says where a part doesn't fit.`,
               ],
               [
-                "Handles and input plates",
-                `From presets under ${PA_SETTINGS_TABS.build}: ${HANDLES.map((h) => h.name).join(" or ")} handles (or none) on each box's sides at its centre of gravity, the ${INPUT_PLATE.name} dish with 2 \u00d7 ${INPUT_JACK.name} low on each back, and the ${HORN_POSTS.name} on the ${PA_SETTINGS_TABS.mid.toLowerCase()} box's lid for the horn, all from Parts Express. The planner takes their recesses off the volumes and their weight onto the boxes; the optimizers leave them out, so a card reads slightly roomier and lighter than the same design in the planner. Still open: the screw patterns (not listed), and whether the ${HANDLES[0].name} takes its backplate and gasket.`,
+                HARDWARE_SECTION_TITLE,
+                `From presets under ${PA_SETTINGS_TABS.build}: ${HANDLES.map((h) => h.name).join(" or ")} ${HARDWARE_KIND_NAMES.handle}s (or none) on each box, ${HARDWARE_PRESET_WORDS.handle}; the ${INPUT_PLATE.name} ${HARDWARE_KIND_NAMES.plate} with 2 \u00d7 ${INPUT_JACK.name} on each box, ${HARDWARE_PRESET_WORDS.plate}; and the ${HORN_POSTS.name} on the ${PA_SETTINGS_TABS.mid.toLowerCase()} box for the horn, ${HARDWARE_PRESET_WORDS.posts}; all from Parts Express. The planner takes their recesses off the volumes and their weight onto the boxes; the optimizers leave them out, so a card reads slightly roomier and lighter than the same design in the planner. Still open: the screw patterns (not listed), and whether the ${HANDLES[0].name} takes its backplate and gasket.`,
               ],
               [
                 "Port edge finish",

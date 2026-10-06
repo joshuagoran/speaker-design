@@ -11,8 +11,9 @@ import {
 } from "../../../lib/pa/bracing";
 import { formatHz, formatInches } from "../../../lib/format";
 import { panelThicknessName } from "../../../lib/panel";
-import type { BoxBracing, BoxHardwarePlan } from "../../../types";
-import { HARDWARE_KIND_NAMES } from "../../../constants/hardware";
+import type { BoxBracing, BoxHardwarePlan, Dims3 } from "../../../types";
+import { HARDWARE_KIND_NAMES, HARDWARE_SECTION_TITLE } from "../../../constants/hardware";
+import { hardwarePlace } from "../../../lib/pa/calc";
 import { CUT_BOX_NAMES } from "../../../constants/cutParts";
 
 /** A box's braces and ribs in words: "1 window brace, 6 ribs", or none. */
@@ -26,19 +27,13 @@ const braceCount = (b: BoxBracing) => {
   return words.length ? words.join(", ") : "none needed";
 };
 
-/** A box's hardware in words: each part with its place and the litres its recess takes, then the totals. */
-function hardwareWords(plan: BoxHardwarePlan) {
+/** A box's hardware in words: each part with its place (as the cutlist says it) and its recess, then the totals. */
+function hardwareWords(plan: BoxHardwarePlan, box: Dims3, t: number) {
   const parts = plan.parts
     .filter((p) => p.panel !== "sideR")
     .map((p) => {
       const n = p.kind === "handle" ? "2 × " : "";
-      const where =
-        p.kind === "handle"
-          ? `${formatInches(p.v)}″ up and ${formatInches(p.u)}″ back from the front`
-          : p.kind === "plate"
-            ? `on the back, ${formatInches(p.v)}″ up`
-            : `on the top, ${formatInches(p.v)}″ back from the front`;
-      return `${n}${p.part.name} ${HARDWARE_KIND_NAMES[p.kind]} (${where}; ${p.litres.toFixed(2)} L${n ? " each" : ""})`;
+      return `${n}${p.part.name} ${HARDWARE_KIND_NAMES[p.kind]} (${hardwarePlace(p, box, t)}; ${p.litres.toFixed(2)} L${n ? " each" : ""})`;
     });
   return `${CUT_BOX_NAMES[plan.box]}: ${parts.join(", ")}; ${plan.litres.toFixed(2)} L in all, ${plan.lb.toFixed(1)} lb, $${plan.price.toFixed(2)}.`;
 }
@@ -164,9 +159,11 @@ export function DetailsSection({ planner }: Props) {
           )}
         </div>
         <div>
-          <span className="font-medium text-stone-900">Handles and input plates.</span>{" "}
-          {[subHardware, midHardware]
-            .map((plan) => plan && hardwareWords(plan))
+          <span className="font-medium text-stone-900">{HARDWARE_SECTION_TITLE}.</span>{" "}
+          {[
+            subHardware && hardwareWords(subHardware, subBox, wallThicknessIn),
+            midHardware && hardwareWords(midHardware, effectiveMidBoxDims, wallThicknessIn),
+          ]
             .filter(Boolean)
             .join(" ")}{" "}
           Each recess takes its cutout times its depth past the wall out of the box (a part whose

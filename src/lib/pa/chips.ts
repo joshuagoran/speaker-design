@@ -3,7 +3,6 @@
 
 import type {
   BoxHardwarePlan,
-  HardwareKind,
   Chip,
   ChipId,
   Dims3,
@@ -21,8 +20,11 @@ import { PA_SLIDERS } from "../../constants/paSliders";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { PA_SETTINGS_TABS } from "../../constants/paSettingsTabs";
 import {
+  HARDWARE_ADVICE,
   HARDWARE_FIT_TITLES,
   HARDWARE_KIND_NAMES,
+  hardwareClashLine,
+  hardwareFitsLine,
   HARDWARE_OBSTACLE_NAMES,
   HARDWARE_PANEL_WORDS,
 } from "../../constants/hardware";
@@ -537,11 +539,6 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
   return F;
 }
 
-const HARDWARE_ADVICE: Record<HardwareKind, string> = {
-  handle: "move them with the offsets, or pick the other handle or none",
-  plate: "no place low on the back is clear",
-  posts: "no place on the lid is clear",
-};
 /**
  * The fit chip for a box's hardware (lib/pa/hardware): ok when every part is clear, else a warning naming each part and
  * what it runs into (the braces and ribs, the driver, the vent, the panel's edges and joints, another part).
@@ -561,15 +558,15 @@ export function hardwareChip(plan: BoxHardwarePlan): Chip<ChipId<"hardware">> {
       ? `${HARDWARE_KIND_NAMES.handle}s`
       : `${HARDWARE_PANEL_WORDS[p.panel]} ${HARDWARE_KIND_NAMES[p.kind]}`;
     lines.push(
-      `${box} ${where} (${p.part.name}) ${both ? "hit" : "hits"} ${p.hits.map((h) => HARDWARE_OBSTACLE_NAMES[h]).join(", ")}: ${HARDWARE_ADVICE[p.kind]}.`,
+      hardwareClashLine(
+        `${box} ${where} (${p.part.name})`,
+        both,
+        p.hits.map((h) => HARDWARE_OBSTACLE_NAMES[h]).join(", "),
+        HARDWARE_ADVICE[p.kind],
+      ),
     );
   }
   return lines.length
     ? ["warn", `${box}: ${HARDWARE_FIT_TITLES.clash}`, lines.join(" "), id]
-    : [
-        "ok",
-        `${box}: ${HARDWARE_FIT_TITLES.fits}`,
-        `Clear of the braces, ribs, driver, vent and panel edges; the recesses take ${plan.litres.toFixed(2)} L.`,
-        id,
-      ];
+    : ["ok", `${box}: ${HARDWARE_FIT_TITLES.fits}`, hardwareFitsLine(plan.litres.toFixed(2)), id];
 }

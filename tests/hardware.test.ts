@@ -6,6 +6,8 @@ import { DEFAULT_PA } from "../src/lib/defaults";
 import {
   cutParts,
   formatInches,
+  hardwareCutNotes,
+  hardwarePlace,
   midHardwarePlan,
   midSystem,
   subBoxBracing,
@@ -31,7 +33,7 @@ import {
 import { HANDLES, HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../src/data/catalog/cabinet-hardware";
 import { hardwareChip } from "../src/lib/pa/chips";
 import { evaluateDesign } from "../src/lib/pa/optimize";
-import { NO_HANDLES } from "../src/constants/hardware";
+import { HANDLE_AXIS_NAMES, NO_HANDLES, handleOffsetLabel } from "../src/constants/hardware";
 import type {
   BoxBracing,
   BoxHandles,
@@ -265,14 +267,14 @@ test("the cutlist notes each cutout on its panel, from a named edge", () => {
   assert.ok(side.startsWith(row(plain, "sub", "side")), "the joint's note stays first");
   assert.ok(
     side.includes(
-      `${formatInches(handle.cutout.w)}″ wide × ${formatInches(handle.cutout.h)}″ high cutout for the ${handle.name} handle, both sides, centred ${formatInches(s.parts[0].u)}″ back from the front edge and ${formatInches(s.parts[0].v)}″ up from the bottom edge`,
+      `${formatInches(handle.cutout.w)}″ wide × ${formatInches(handle.cutout.h)}″ high cutout for the ${handle.name} handle, both sides, centre ${formatInches(s.parts[0].u)}″ from the front edge and ${formatInches(s.parts[0].v)}″ from the bottom edge`,
     ),
     side,
   );
   const back = row(fitted, "sub", "back");
   assert.ok(
     back.includes(
-      `4″ wide × 2 1/2″ high cutout for the ${INPUT_PLATE.name} input dish, centred side to side, its centre ${formatInches(s.parts[2].v - t / 2)}″ up from the bottom edge; 2 × ${INPUT_JACK.name}`,
+      `4″ wide × 2 1/2″ high cutout for the ${INPUT_PLATE.name} input dish, back, centred side to side, centre ${formatInches(s.parts[2].v - t / 2)}″ from the bottom edge; 2 × ${INPUT_JACK.name}`,
     ),
     back,
   );
@@ -281,7 +283,7 @@ test("the cutlist notes each cutout on its panel, from a named edge", () => {
   const top = row(fitted, "mid", "topBottom");
   assert.ok(
     top.includes(
-      `2 7/8″ wide × 2 1/8″ front to back cutout for the ${HORN_POSTS.name} horn binding posts, top only, centred side to side, its centre ${formatInches(d.mDim.d - m.parts[3].v)}″ from the rear edge`,
+      `2 7/8″ wide × 2 1/8″ front to back cutout for the ${HORN_POSTS.name} horn binding posts, top only, centred side to side, centre ${formatInches(d.mDim.d - m.parts[3].v)}″ from the rear edge`,
     ),
     top,
   );
@@ -431,4 +433,26 @@ test("a design saved before the hardware loads with the default handles, and rea
   assert.ok(a && b && none);
   assert.deepStrictEqual(a, b);
   assert.deepStrictEqual(a, none);
+});
+
+test("placement messages share one pattern: the sliders differ by the axis word, the cutlist and Details by nothing", () => {
+  const strip = (axis: keyof typeof HANDLE_AXIS_NAMES, s: string) =>
+    s.replace(HANDLE_AXIS_NAMES[axis], "AXIS");
+  assert.equal(
+    strip("upIn", handleOffsetLabel("upIn")),
+    strip("backIn", handleOffsetLabel("backIn")),
+  );
+  // the cutlist's notes carry the same place words Details shows, for every part
+  const s = subPlan({ model: "H1105", upIn: 1, backIn: -1 });
+  const notes = hardwareCutNotes(s, d.cDim, t);
+  for (const p of s.parts)
+    assert.ok(
+      Object.values(notes).some((n) => n.includes(hardwarePlace(p, d.cDim, t))),
+      `${p.panel} ${p.kind}`,
+    );
+  // the chip agrees with the fit check, for a fitting plan and a clashing one
+  assert.equal(hardwareChip(s)[0] === "ok", hardwareFits(s));
+  const high = subPlan({ ...DEFAULT_HARDWARE.sub, upIn: 8 + d.cDim.h / 2 });
+  assert.equal(hardwareChip(high)[0] === "ok", hardwareFits(high));
+  assert.ok(!hardwareFits(high));
 });

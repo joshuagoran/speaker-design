@@ -91,7 +91,7 @@ import {
 } from "./bracing";
 import { hardwareKeepOut, hardwareLitres, mountedCutout, planBoxHardware } from "./hardware";
 import { INPUT_JACK } from "../../data/catalog/cabinet-hardware";
-import { HARDWARE_KIND_NAMES } from "../../constants/hardware";
+import { HARDWARE_KIND_NAMES, hardwarePlaceWords } from "../../constants/hardware";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
 const ROUND_PORT: Record<PortStyle, boolean> = {
@@ -1054,28 +1054,35 @@ export const hardwareCutoutNote = (
   return `${formatInches(c.across)}″ wide × ${formatInches(c.up)}″ ${up} cutout for the ${part.part.name} ${HARDWARE_KIND_NAMES[part.kind]}, ${where}`;
 };
 /**
- * A box's hardware as cutout notes on its panels, each centre from a named edge of that panel: the handles on both
- * sides (from the front and bottom edges), the dish on the back (its bottom edge sits in the rabbet, t/2 up), the
- * horn's posts on the top only (from its rear edge).
+ * Where a placed part's cutout centre sits, from named edges of its panel (hardwarePlaceWords): the handles on both
+ * sides from the front and bottom edges, the dish on the back from its bottom edge (which sits in the rabbet, t/2 up),
+ * the horn's posts on the top from its rear edge. The cutlist and Details both say it this way.
+ */
+export function hardwarePlace(
+  p: Pick<BoxHardwarePlan["parts"][number], "kind" | "u" | "v">,
+  box: Pick<Dims3, "d">,
+  t: number,
+) {
+  const at = (x: number) => formatInches(x);
+  if (p.kind === "handle")
+    return hardwarePlaceWords("handle", [
+      [at(p.u), "front"],
+      [at(p.v), "bottom"],
+    ]);
+  if (p.kind === "plate") return hardwarePlaceWords("plate", [[at(p.v - t / 2), "bottom"]]);
+  return hardwarePlaceWords("posts", [[at(box.d - p.v), "rear"]]);
+}
+/**
+ * A box's hardware as cutout notes on its panels (hardwarePlace): the handles on both sides, the dish on the back with
+ * its jacks, the horn's posts on the top only.
  */
 export function hardwareCutNotes(plan: BoxHardwarePlan, box: Dims3, t: number): HardwareCutNotes {
   const out: HardwareCutNotes = {};
   for (const p of plan.parts) {
-    if (p.kind === "handle" && p.panel === "sideL")
-      out.side = hardwareCutoutNote(
-        p,
-        `both sides, centred ${formatInches(p.u)}″ back from the front edge and ${formatInches(p.v)}″ up from the bottom edge`,
-      );
-    else if (p.kind === "plate")
-      out.back = hardwareCutoutNote(
-        p,
-        `centred side to side, its centre ${formatInches(p.v - t / 2)}″ up from the bottom edge; 2 × ${INPUT_JACK.name} in it (in, link)`,
-      );
-    else if (p.kind === "posts")
-      out.top = hardwareCutoutNote(
-        p,
-        `top only, centred side to side, its centre ${formatInches(box.d - p.v)}″ from the rear edge`,
-      );
+    const note = hardwareCutoutNote(p, hardwarePlace(p, box, t));
+    if (p.kind === "handle" && p.panel === "sideL") out.side = note;
+    else if (p.kind === "plate") out.back = `${note}; 2 × ${INPUT_JACK.name} in it (in, link)`;
+    else if (p.kind === "posts") out.top = note;
   }
   return out;
 }
