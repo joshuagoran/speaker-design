@@ -1,6 +1,6 @@
 // The parts drawn from their makers' CAD models in the 3D view, by catalog id (data/catalog); every other part is
-// drawn from its listed sizes. Adding one: put its STEP file in build/assets, mesh it (build/handle-mesh.mjs) and list
-// the generated mesh here.
+// drawn from its listed sizes. Adding one: mesh its maker's STEP file (build/handle-mesh.mjs; the STEP files stay out
+// of the repo), commit the generated mesh and list it here.
 import type { CabinetPart, HardwareMesh } from "../../types";
 import { H1105_MESH } from "./h1105";
 

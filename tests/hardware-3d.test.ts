@@ -58,7 +58,7 @@ function scene(model: HandleChoice, cutaway: boolean) {
   return { g, parts, subHardware };
 }
 
-test("the H1105's mesh: the STEP model's flange (220 × 162 × 5 mm) and recess (to −58 mm), within the weld grid", () => {
+test("the committed H1105 mesh matches the catalog: flange 220 × 162 × 5 mm, recess to its depth, within the weld grid", () => {
   const [w, h, z0, z1] = [
     H1105_MESH.max[0] - H1105_MESH.min[0],
     H1105_MESH.max[1] - H1105_MESH.min[1],
@@ -75,6 +75,8 @@ test("the H1105's mesh: the STEP model's flange (220 × 162 × 5 mm) and recess 
   const f = mountedFlange(part);
   assert.ok(f);
   assert.ok(Math.abs(f.up - h * MM_IN) < 0.05 && Math.abs(f.across - w * MM_IN) < 0.05);
+  // and its recess reaches the catalog's depth from the panel's face (z = 0)
+  assert.ok(part.depthIn && Math.abs(-z0 * MM_IN - part.depthIn) < 0.05, `recess ${-z0} mm`);
 });
 
 test("the H1105 is drawn from its model on each side, tall (its 220 mm up the panel), its recess going into the box", () => {
