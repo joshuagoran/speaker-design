@@ -13,10 +13,10 @@ export const BRACE_STYLE_NAMES = {
 
 /** What each style does, for its button's tooltip. */
 export const BRACE_STYLE_TIPS = {
-  ribs: "Strips glued on edge along the sides, top, bottom and back, meeting in rings; the baffle, which a rib can't cross for the driver, takes window braces where they clear it",
+  ribs: "Strips glued on edge along the sides, top, bottom and back, in rings. The baffle gets window braces, because ribs cannot cross the driver.",
   window:
-    "Plywood frames across the box with the center cut out, glued to the walls, placed clear of the driver and the vent; a panel no frame can reach takes ribs",
-  both: "Ribs or window braces, whichever lifts the panels more for the wood, one at a time",
+    "Plywood frames with the center cut out, glued across the box, clear of the driver and the vent. A panel that no frame reaches gets ribs.",
+  both: "Ribs or window braces, one at a time: the one with the best gain per wood",
 } as const satisfies Record<keyof typeof BRACE_STYLE_NAMES, string>;
 
 /** Each style in a folded settings section's summary line ("braced with …"). */
