@@ -77,10 +77,10 @@ export function SheetDrawing({
     .join("; ");
   const textWidth = (s: string) => fs * CHAR_EM * s.length;
   // a grain arrow down a piece, from y0 to y1 (sheet units)
-  const arrow = (x: number, y0: number, y1: number, colour: string) => {
+  const arrow = (x: number, y0: number, y1: number, color: string) => {
     const head = fs * 0.35;
     return (
-      <g stroke={colour} strokeWidth={1} fill="none">
+      <g stroke={color} strokeWidth={1} fill="none">
         <line x1={x} y1={y0} x2={x} y2={y1} />
         <polyline points={`${x - head},${y0 + head} ${x},${y0} ${x + head},${y0 + head}`} />
         <polyline points={`${x - head},${y1 - head} ${x},${y1} ${x + head},${y1 - head}`} />

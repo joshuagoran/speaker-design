@@ -39,7 +39,7 @@ export const floorAlpha = (crowd: FloorCrowd, f: number) => octaveValueAt(FLOOR_
 export const surfaceReflection = (m: RoomMaterial, f: number) =>
   Math.sqrt(Math.max(0, 1 - materialAlpha(m, f)));
 
-/** Air absorption at `f`, dB per metre: the ISO 9613-1 table (data/acoustics) interpolated on log-log axes, its end segments carried on. */
+/** Air absorption at `f`, dB per meter: the ISO 9613-1 table (data/acoustics) interpolated on log-log axes, its end segments carried on. */
 export function airDbPerM(f: number): number {
   const n = AIR_HZ.length;
   let i = 0;
@@ -68,7 +68,7 @@ export function floorReflection(room: Pick<CoverageRoom, "outdoors" | "crowd">, 
   return base * (1 + (CROWD_BOUNCE.hi - 1) * t);
 }
 
-/** The room's size in metres: across (x), down the room (y), up (z). */
+/** The room's size in meters: across (x), down the room (y), up (z). */
 export const roomSizeM = (
   room: Pick<CoverageRoom, "widthFt" | "lengthFt" | "ceilingFt">,
 ): [x: number, y: number, z: number] => [
@@ -106,7 +106,7 @@ export function roomAbsorption(
   const surface = sides.reduce((s, [a]) => s + a, 0),
     absorbed = sides.reduce((s, [a, alpha]) => s + a * alpha, 0),
     volume = w * l * h;
-  // the air's power attenuation per metre, m = dB/m ÷ 10·log10(e)
+  // the air's power attenuation per meter, m = dB/m ÷ 10·log10(e)
   const area = absorbed + (4 * volume * airDbPerM(f)) / (10 * Math.LOG10E);
   return { area, alpha: absorbed / surface, t60: (0.161 * volume) / area, volume };
 }

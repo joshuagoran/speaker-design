@@ -31,7 +31,7 @@ export function PaStackPage({ planner }: Props) {
   // measured on the results, not the viewport: the settings column's width is draggable
   const [results, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   // the summary sits beside the 3D view only when there is one; in one column it opens the Sub fold
-  const besideView = wide && !!planner.subModelled;
+  const besideView = wide && !!planner.subModeled;
   const cell = (place: string) => resultsCellClass(wide, place);
   return (
     <SettingsLayout

@@ -204,7 +204,7 @@ export function HifiPage({ hifi }: Props) {
   if (!speakerModel)
     return (
       <main className={`${PAGE_WIDTH} pb-16 text-sm`}>
-        This woofer can't be modelled (its parameters aren't published).
+        This woofer can't be modeled (its parameters aren't published).
       </main>
     );
   const {
@@ -577,8 +577,8 @@ export function HifiPage({ hifi }: Props) {
                 for about ±{edgeRippleDb.toFixed(1)} dB of ripple from 1 to 5 kHz on axis (
                 {edgesText}, tweeter{" "}
                 {tweeterOffsetUsed
-                  ? `${formatInches(Math.abs(tweeterOffsetUsed))} ${tweeterOffsetUsed > 0 ? "inward" : "outward"} of centre`
-                  : "centred"}
+                  ? `${formatInches(Math.abs(tweeterOffsetUsed))} ${tweeterOffsetUsed > 0 ? "inward" : "outward"} of center`
+                  : "centered"}
                 ). The ripple and the tweeter's position are in the responses and the dispersion
                 map; the ripple shifts with angle.
               </div>
@@ -830,10 +830,10 @@ export function HifiPage({ hifi }: Props) {
                   {roundoverIn
                     ? `The roundover cuts edge re-radiation above about ${(roundoverOnset / 1000).toFixed(1)} kHz (wavelengths under 4× its radius)`
                     : "A roundover cuts it where the wavelength is under 4× its radius (1½″ works above about 2 kHz)"}
-                  ; it barely moves the baffle step itself. An off-centre tweeter spreads the ripple
+                  ; it barely moves the baffle step itself. An off-center tweeter spreads the ripple
                   so it partly cancels; the pair is mirror-imaged
                   {speakerSystem.lay.onTop
-                    ? " (the waveguide on top stays centred)"
+                    ? " (the waveguide on top stays centered)"
                     : `, at most ${tweeterOffsetMax(speakerConfig, tweeterWithWaveguide).toFixed(2)}″ either way on this baffle`}
                   .
                   {roundoverTooDeep && (

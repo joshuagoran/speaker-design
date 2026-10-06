@@ -31,7 +31,7 @@ export function DispersionSection({ planner }: Props) {
     midHornGapIn,
     midHornNullAngleDeg,
   } = planner;
-  // as when it sat in the horn results: only while the horn can be modelled
+  // as when it sat in the horn results: only while the horn can be modeled
   if (!hornModel || !paDispersion) return null;
   return (
     <section className={`${RESULT_MAX_WIDTH} min-w-0`} style={{ fontFamily: FONT }}>

@@ -227,7 +227,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
   const totalSheets = cut.groups.reduce((a, g) => a + g.sheets.length, 0);
   const rips = cut.groups.reduce((a, g) => a + g.cuts.rips, 0);
   const crosscuts = cut.groups.reduce((a, g) => a + g.cuts.crosscuts, 0);
-  const boxColour = (box: CutBoxId) => pal[CUT_BOX_TINTS[box]];
+  const boxColor = (box: CutBoxId) => pal[CUT_BOX_TINTS[box]];
 
   const summaries: Record<CutlistSettingsSection, string> = {
     boxes: `${JOINT_NAMES[cornerJoint]} joints, ${plural(boxSetCount, proj.set)}`,
@@ -317,10 +317,10 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                     className={`border-b border-stone-300 focus-visible:-outline-offset-2 ${isHot ? "bg-stone-300" : ""}`}
                   >
                     <td className={`${td} pr-2`}>
-                      {/* the box's colour on the sheets, so the tag reads the same in both places */}
+                      {/* the box's color on the sheets, so the tag reads the same in both places */}
                       <span
                         className="inline-block min-w-[2.5rem] px-1 rounded border border-stone-500 text-center font-bold"
-                        style={{ background: boxColour(p.box) }}
+                        style={{ background: boxColor(p.box) }}
                       >
                         {tagOf(p)}
                       </span>
@@ -488,7 +488,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                 label="Corner joints"
                 value={cornerJoint}
                 onChange={(k) => {
-                  // mitred boxes get waterfall strips by default; other changes keep your choice
+                  // mitered boxes get waterfall strips by default; other changes keep your choice
                   if ((k === "miter") !== (cornerJoint === "miter")) setWaterfall(k === "miter");
                   setCornerJoint(k);
                 }}
@@ -592,7 +592,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                 </div>
                 <ToggleGroup
                   label={
-                    <Tooltip tip="Cuts each box's side, top and side in order from one strip, so the grain runs unbroken over both top corners. On by default with mitre joints.">
+                    <Tooltip tip="Cuts each box's side, top and side in order from one strip, so the grain runs unbroken over both top corners. On by default with miter joints.">
                       Waterfall
                     </Tooltip>
                   }

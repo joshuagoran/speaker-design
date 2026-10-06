@@ -66,7 +66,7 @@ test("both optimizers build their keep tables from the constant", () => {
     assert.doesNotMatch(s, /(cheaper|lighter|lower|louder): \{ db: [^}]*[-+] \d/);
 });
 
-test("the Details lines: one per picked goal and the footnote, or one honest line when your design can't be modelled", () => {
+test("the Details lines: one per picked goal and the footnote, or one honest line when your design can't be modeled", () => {
   assert.deepStrictEqual(keepLines([], OPTIMIZER_GOALS, PA_KEEP_WORDS, true), []);
   assert.deepStrictEqual(
     keepLines(["lower", "cheaper"], HIFI_OPTIMIZER_GOALS, HIFI_KEEP_WORDS, true),
@@ -79,7 +79,7 @@ test("the Details lines: one per picked goal and the footnote, or one honest lin
   // nothing of your design to keep: no limit is claimed
   for (const words of [HIFI_KEEP_WORDS, PA_KEEP_WORDS])
     assert.deepStrictEqual(keepLines(["cheaper"], OPTIMIZER_GOALS, words, false), [
-      words.unmodelled,
+      words.unmodeled,
     ]);
-  assert.doesNotMatch(HIFI_KEEP_WORDS.unmodelled + PA_KEEP_WORDS.unmodelled, /at most/);
+  assert.doesNotMatch(HIFI_KEEP_WORDS.unmodeled + PA_KEEP_WORDS.unmodeled, /at most/);
 });

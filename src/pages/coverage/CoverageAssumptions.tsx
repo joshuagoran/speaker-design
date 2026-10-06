@@ -39,7 +39,7 @@ interface Props {
 type Group = [heading: string, lines: string[]];
 
 /**
- * How the map is modelled: everything the calculation takes as given, read from the model's own constants and the
+ * How the map is modeled: everything the calculation takes as given, read from the model's own constants and the
  * design so the list stays in step with them. Folded away until opened.
  */
 export function CoverageAssumptions({ room, planner, target, level }: Props) {
@@ -96,7 +96,7 @@ export function CoverageAssumptions({ room, planner, target, level }: Props) {
       ],
     ],
     [
-      "Not modelled",
+      "Not modeled",
       [
         "Non-rectangular rooms, balconies, pillars, sound bending around obstacles, people blocking the direct sound, and each driver's measured directivity.",
       ],

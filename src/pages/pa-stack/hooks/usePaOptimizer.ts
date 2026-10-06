@@ -126,7 +126,7 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     none: { subDim: {}, midDim: {} },
     enabled: isOptimizerOn,
   });
-  // a result only sets the fields the search changes; finish, colours, layout and balance stay as they are now
+  // a result only sets the fields the search changes; finish, colors, layout and balance stay as they are now
   const preview = useDesignPreview<PaOptimizerCard, PaDesignConfig>({
     snapshot,
     applyCard: (k) => restore({ ...snapshot(), ...pickOptimizedFields(k.config) }),
@@ -142,7 +142,7 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
   } = useOptimizerRun<PaOptimizerResult>();
   const [toastMessage, setToastMessage] = useState("");
   const [runMode, setRunMode] = useState<PaRunMode>("improve");
-  // the mode of the result shown (a cancelled run leaves it as it was)
+  // the mode of the result shown (a canceled run leaves it as it was)
   const [resultMode, setResultMode] = useState<PaRunMode>("improve");
   /** the search's input for the design as it is and these optimizer inputs */
   const searchInput = (inp: PaOptimizerInputState) => ({

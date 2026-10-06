@@ -10,7 +10,7 @@ import type { Dims2 } from "../../types";
 const C = 343,
   IN = 0.0254;
 
-/** A point on the baffle, inches: `x` across from the centre line (+ toward the inside of the pair), `y` up from the box bottom. */
+/** A point on the baffle, inches: `x` across from the center line (+ toward the inside of the pair), `y` up from the box bottom. */
 export interface BafflePoint {
   x: number;
   y: number;

@@ -8,7 +8,7 @@ import { SVG_FONT, FONT } from "../../styles/fonts";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 /**
- * One curve on the chart: its points, legend label, line colour and fill colour. `band` shades the curve at the low and
+ * One curve on the chart: its points, legend label, line color and fill color. `band` shades the curve at the low and
  * high ends of an estimated Xmax (see `lib/xmax`); null or absent when the driver's Xmax is exact.
  */
 interface Series {
@@ -19,7 +19,7 @@ interface Series {
   band?: BandCurves<FrequencyPoint> | null;
 }
 
-/** A labelled vertical line at a frequency. */
+/** A labeled vertical line at a frequency. */
 interface Mark {
   f: number;
   label: string;

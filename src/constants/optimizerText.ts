@@ -89,7 +89,7 @@ export const OUT_OF_REACH_LEAD = "Out of reach within the checks";
 
 /** What fails in a design that isn't a check's title: the optimizers' problem lines. */
 export const DESIGN_PROBLEM_TEXT = {
-  unmodelled: "can't be modelled",
+  unmodeled: "can't be modeled",
   exitMismatch: "horn and driver exits differ",
   missingWoofer: "woofer isn't in the driver tables",
   missingTweeter: "tweeter isn't in the driver tables",

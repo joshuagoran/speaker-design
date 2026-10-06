@@ -6,7 +6,7 @@ adds only what a home 2-way needs. Nothing on the PA tabs changes.
 ## Scope (v1)
 
 - 2-way only: a 5–8″ woofer and a tweeter (dome, or a 1″ compression driver on a small waveguide).
-- Crossover is active/DSP: no passive network design, but the crossover point and slope are modelled
+- Crossover is active/DSP: no passive network design, but the crossover point and slope are modeled
   (LR24 by default, LR48 optional).
 - Bookshelf or floorstander; sealed or vented (round port or slot).
 - Optimizer in v1.
@@ -37,7 +37,7 @@ adds only what a home 2-way needs. Nothing on the PA tabs changes.
   x = ka·sin θ; a waveguide as constant coverage above its mouth's control frequency, piston-like below),
   distance loss, and the woofer/tweeter path difference from their vertical spacing, which moves the
   crossover lobe up or down (summed with phase, not just levels).
-- Dispersion map: level vs horizontal angle (0–90°) and frequency, normalised to on-axis, so beaming and the
+- Dispersion map: level vs horizontal angle (0–90°) and frequency, normalized to on-axis, so beaming and the
   crossover hand-off show directly; a vertical map for the lobe.
 - The response chart gains an "at the seat" curve next to the on-axis one.
 

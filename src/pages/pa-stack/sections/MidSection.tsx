@@ -26,7 +26,7 @@ interface Props {
     | "midGrossL"
     | "midNetL"
     | "midEffL"
-    | "midModelled"
+    | "midModeled"
     | "midThermalVoltage"
     | "midUsedVoltage"
     | "midWeightLoadedLb"
@@ -49,7 +49,7 @@ export function MidSection({ planner }: Props) {
     midGrossL,
     midNetL,
     midEffL,
-    midModelled,
+    midModeled,
     midThermalVoltage,
     midUsedVoltage,
     midWeightLoadedLb,
@@ -66,16 +66,16 @@ export function MidSection({ planner }: Props) {
           className="mb-3"
         />
         <FoldBody open={expandedSections.mid}>
-          {midModelled ? (
+          {midModeled ? (
             <>
               <StatTileGrid
                 tiles={[
                   [STATS.netVolume, midNetL.toFixed(0), "L"],
-                  ["Box resonance Fc", midModelled.mdl.Fc.toFixed(0), "Hz"],
-                  ["Box F3", midModelled.mdl.f3.toFixed(0), "Hz"],
+                  ["Box resonance Fc", midModeled.mdl.Fc.toFixed(0), "Hz"],
+                  ["Box F3", midModeled.mdl.f3.toFixed(0), "Hz"],
                   [
                     `Max SPL @ ${subMidCrossoverHz} Hz`,
-                    nearestPoint(midModelled.max, subMidCrossoverHz).spl.toFixed(1),
+                    nearestPoint(midModeled.max, subMidCrossoverHz).spl.toFixed(1),
                     "dB",
                   ],
                   ["Weight", midWeightLoadedLb.toFixed(0), "lb"],
@@ -90,20 +90,20 @@ export function MidSection({ planner }: Props) {
                   ],
                   [
                     STATS.qtc,
-                    midModelled.mdl.Qtc.toFixed(2),
-                    midModelled.mdl.Qtc > 0.8
+                    midModeled.mdl.Qtc.toFixed(2),
+                    midModeled.mdl.Qtc > 0.8
                       ? "peaky"
-                      : midModelled.mdl.Qtc < 0.5
+                      : midModeled.mdl.Qtc < 0.5
                         ? "very damped"
                         : "well damped",
                   ],
                   [
                     STATS.midbandSensitivity,
-                    `${(midModelled.mdl.ref - 20 * Math.log10(midVoltage / 2.83)).toFixed(1)} dB`,
+                    `${(midModeled.mdl.ref - 20 * Math.log10(midVoltage / 2.83)).toFixed(1)} dB`,
                     UI_TEXT.splConditions,
                   ],
                   ...[subMidCrossoverHz, 200, 500].map((f): StatRowItem => {
-                    const m = nearestPoint(midModelled.max, f);
+                    const m = nearestPoint(midModeled.max, f);
                     return [
                       `Max SPL at ${f} Hz`,
                       `${m.spl.toFixed(1)} dB`,
@@ -113,8 +113,8 @@ export function MidSection({ planner }: Props) {
                   }),
                   [
                     STATS.peakExcursion,
-                    `${((midModelled.mdl.peakX * midUsedVoltage) / midVoltage).toFixed(1)} mm`,
-                    `${(((midModelled.mdl.peakX * midUsedVoltage) / midVoltage / midDriver.ts.Xmax) * 100).toFixed(0)}% of Xmax`,
+                    `${((midModeled.mdl.peakX * midUsedVoltage) / midVoltage).toFixed(1)} mm`,
+                    `${(((midModeled.mdl.peakX * midUsedVoltage) / midVoltage / midDriver.ts.Xmax) * 100).toFixed(0)}% of Xmax`,
                     `At ${Math.round((midUsedVoltage * midUsedVoltage) / 8)} W, with the ${subMidCrossoverHz} Hz highpass.`,
                   ],
                   ...xmaxRows(midDriver.ts),
@@ -124,9 +124,9 @@ export function MidSection({ planner }: Props) {
                 chips={midChips({
                   midSize,
                   midDims: effectiveMidBoxDims,
-                  Qtc: midModelled.mdl.Qtc,
-                  f3: midModelled.mdl.f3,
-                  peakX: midModelled.mdl.peakX,
+                  Qtc: midModeled.mdl.Qtc,
+                  f3: midModeled.mdl.f3,
+                  peakX: midModeled.mdl.peakX,
                   xoLo: subMidCrossoverHz,
                   ts: midDriver.ts,
                   V: midVoltage,
@@ -137,7 +137,7 @@ export function MidSection({ planner }: Props) {
                   tilt: midBandTiltDb,
                   midAtXo:
                     subMusicAtCrossover != null
-                      ? nearestPoint(midModelled.max, subMidCrossoverHz)
+                      ? nearestPoint(midModeled.max, subMidCrossoverHz)
                       : null,
                 })}
                 className="mt-4"
@@ -145,8 +145,7 @@ export function MidSection({ planner }: Props) {
             </>
           ) : (
             <p className="text-sm text-stone-500">
-              {midDriver.name} can't be modelled yet: its parameters are incomplete.{" "}
-              {midDriver.note}
+              {midDriver.name} can't be modeled yet: its parameters are incomplete. {midDriver.note}
             </p>
           )}
         </FoldBody>

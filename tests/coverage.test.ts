@@ -15,8 +15,8 @@ import {
   coverageStats,
   curveLevelAt,
   levelAtPoint,
-  ONE_METRE_FT,
-  oneMetreSpot,
+  ONE_METER_FT,
+  oneMeterSpot,
   pistonQ,
   withOwnPhase,
 } from "../src/lib/pa/coverage";
@@ -480,7 +480,7 @@ test("coverage: the reverberant field is the textbook Lw + 10·log10(4/R), from 
   );
 });
 
-test("coverage: air absorbs ISO 9613-1's dB per metre along a long path at 8 kHz", () => {
+test("coverage: air absorbs ISO 9613-1's dB per meter along a long path at 8 kHz", () => {
   const l = layout();
   const scene = coverageScene(stack, l);
   const [slot] = coverageSlots(scene, levels(110), [8000], false);
@@ -827,11 +827,11 @@ test("coverage: the audience average is the mean level over the floor the stats 
 
 test("coverage: a stack's 1 m spot is 1 m out from its front along its aim, inside the room", () => {
   const room = { widthFt: 30, lengthFt: 40 };
-  const p = oneMetreSpot({ x: -8, y: 3, aim: 0 }, stack.footprint, room);
-  assert.ok(Math.abs(p.x + 8) < 1e-9 && Math.abs(p.y - (3 + 1 + ONE_METRE_FT)) < 1e-9);
-  const t = oneMetreSpot({ x: -8, y: 3, aim: 30 }, stack.footprint, room);
-  assert.ok(Math.abs(Math.hypot(t.x + 8, t.y - 3) - (1 + ONE_METRE_FT)) < 1e-9 && t.x > -8);
-  const edge = oneMetreSpot({ x: 14, y: 1, aim: 60 }, stack.footprint, room);
+  const p = oneMeterSpot({ x: -8, y: 3, aim: 0 }, stack.footprint, room);
+  assert.ok(Math.abs(p.x + 8) < 1e-9 && Math.abs(p.y - (3 + 1 + ONE_METER_FT)) < 1e-9);
+  const t = oneMeterSpot({ x: -8, y: 3, aim: 30 }, stack.footprint, room);
+  assert.ok(Math.abs(Math.hypot(t.x + 8, t.y - 3) - (1 + ONE_METER_FT)) < 1e-9 && t.x > -8);
+  const edge = oneMeterSpot({ x: 14, y: 1, aim: 60 }, stack.footprint, room);
   assert.ok(edge.x <= 15 && edge.x > 14);
 });
 

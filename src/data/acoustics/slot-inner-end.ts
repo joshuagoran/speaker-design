@@ -130,9 +130,9 @@ export const SLOT_INNER_END = {
 } as const;
 
 /**
- * A sharp (mitred) 90° bend's length correction against the duct's centreline, in duct widths: the low-frequency mass of
+ * A sharp (mitered) 90° bend's length correction against the duct's centerline, in duct widths: the low-frequency mass of
  * a right-angle bend is a potential-flow problem, and its conformal map gives the corner square of an L-shaped channel
- * 0.56 of a straight square's resistance where the centreline counts a whole one (the same 0.56 squares as an L-shaped
+ * 0.56 of a straight square's resistance where the centerline counts a whole one (the same 0.56 squares as an L-shaped
  * resistor's corner). Bends' low-frequency acoustics: Miles, J. Acoust. Soc. Am. 19 (1947) 572–579; Dequand et al.,
  * "Acoustics of 90 degree sharp bends", Acta Acustica 89 (2003) 1025–1037.
  */

@@ -12,7 +12,7 @@ import {
   DISPERSION_FREQ_MAX_HZ,
   DISPERSION_FREQ_MIN_HZ,
 } from "../src/constants/chartScales";
-import { DISPERSION_SCALE, dispersionColour, dispersionRgb } from "../src/styles/palette";
+import { DISPERSION_SCALE, dispersionColor, dispersionRgb } from "../src/styles/palette";
 import { DISPERSION_PLANES } from "../src/constants/dispersionPlanes";
 import type { HifiDispersionMap, PaStackGeometry } from "../src/types";
 
@@ -59,10 +59,10 @@ test("dispersion grid: −90..90° at the shared step on the 50 Hz-20 kHz axis",
 });
 
 test("dispersion grid: every map builder, PA and Hi-fi, both planes, returns the shared grid", () => {
-  // the Hi-fi page's map, from its defaults (hifiDispersionMap), centred and with an offset tweeter
+  // the Hi-fi page's map, from its defaults (hifiDispersionMap), centered and with an offset tweeter
   const hifi = (state: Partial<Parameters<typeof deriveHifiDesign>[0]>) => {
     const m = deriveHifiDesign({ ...DEFAULT_HIFI, ...state }).speakerModel;
-    assert.ok(m, "the default drivers can be modelled");
+    assert.ok(m, "the default drivers can be modeled");
     return m.dispersion;
   };
   for (const [plane, name] of DISPERSION_PLANES) {
@@ -82,7 +82,7 @@ test("dispersion maps carry the design's crossovers to mark", () => {
     // without a sub there is only the mid/horn crossover
     assert.deepStrictEqual(paDispersionMap({ ...stack, sub: null }, plane, 10).crossovers, [1000]);
     const d = deriveHifiDesign({ ...DEFAULT_HIFI, dispersionPlane: plane });
-    assert.ok(d.speakerModel, "the default drivers can be modelled");
+    assert.ok(d.speakerModel, "the default drivers can be modeled");
     assert.deepStrictEqual(
       d.speakerModel.dispersion.crossovers,
       [d.speakerConfig.xo],
@@ -91,7 +91,7 @@ test("dispersion maps carry the design's crossovers to mark", () => {
   }
 });
 
-test("dispersion colour: hits its stops and clamps outside +6..−36 dB", () => {
+test("dispersion color: hits its stops and clamps outside +6..−36 dB", () => {
   assert.deepStrictEqual(dispersionRgb(0), [255, 26, 0], "0 dB is red");
   assert.deepStrictEqual(dispersionRgb(-36), [0, 0, 0], "−36 dB is black");
   assert.deepStrictEqual(dispersionRgb(6), [255, 255, 255], "+6 dB is white");
@@ -101,10 +101,10 @@ test("dispersion colour: hits its stops and clamps outside +6..−36 dB", () => 
   }
   assert.deepStrictEqual(dispersionRgb(-80), dispersionRgb(-36), "clamped below");
   assert.deepStrictEqual(dispersionRgb(20), dispersionRgb(6), "clamped above");
-  // halfway between two stops is halfway between their colours
+  // halfway between two stops is halfway between their colors
   assert.deepStrictEqual(dispersionRgb(-35), [27, 0, 27]);
-  assert.strictEqual(dispersionColour(0), "rgb(255,26,0)");
-  assert.strictEqual(dispersionColour(6, 0.5), "rgb(128,128,128)");
+  assert.strictEqual(dispersionColor(0), "rgb(255,26,0)");
+  assert.strictEqual(dispersionColor(6, 0.5), "rgb(128,128,128)");
   assert.deepStrictEqual(
     [DISPERSION_SCALE.topDb, DISPERSION_SCALE.botDb, CONTOUR_STEP_DB],
     [6, -36, 3],

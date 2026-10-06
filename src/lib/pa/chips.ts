@@ -22,7 +22,7 @@ import { crossoverSlopeName } from "../../constants/crossovers";
 // while it fits (maxStraight) and folds up the back wall past that, so it holds the longer of the two; a fold is never
 // shorter than its floor run plus the least rise (minFold), so the lengths between the two fit neither way, nor longer
 // than leaves a slot height under the lid (maxFold). Round tubes run straight, then take one elbow up the back wall and
-// a second forward under the lid (lib/pa/tubes), each count with its own lengths (`ways`, labelled for the chip).
+// a second forward under the lid (lib/pa/tubes), each count with its own lengths (`ways`, labeled for the chip).
 // `spans` lists the lengths that fit, shortest first.
 export function ductFit(
   subBox: Dims3,
@@ -521,9 +521,9 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
   else
     F.push([
       "warn",
-      "HF not modelled",
+      "HF not modeled",
       "The HF section's specs aren't published on usspeaker.",
-      "fillHfUnmodelled",
+      "fillHfUnmodeled",
     ]);
   return F;
 }

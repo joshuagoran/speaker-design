@@ -12,7 +12,7 @@ export const DRIVER_BODY_MESH_NAME = "driverBody";
 export const VENT_MESH_NAME = "vent";
 
 /**
- * Inside coordinates to the scene's, for the cabinet `box` whose bottom is at `y` and centre at `x`: x from the left
+ * Inside coordinates to the scene's, for the cabinet `box` whose bottom is at `y` and center at `x`: x from the left
  * wall, y up from the bottom, z back from the baffle's rear face (the scene's -z).
  */
 function insideToScene(ctx: SceneContext, box: Dims3, y: number, x: number) {
@@ -30,7 +30,7 @@ function insideToScene(ctx: SceneContext, box: Dims3, y: number, x: number) {
 }
 
 /**
- * A box's window braces and ribs (lib/bracing) inside the cabinet `box` whose bottom is at `y` and centre at `x`, in
+ * A box's window braces and ribs (lib/bracing) inside the cabinet `box` whose bottom is at `y` and center at `x`, in
  * bare ply (PARTS_3D.brace) on every finish, so they show in the cutaway beside the vent's parts and the drivers: each
  * rail and rib as lib/bracing places it.
  */

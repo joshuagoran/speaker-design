@@ -23,7 +23,7 @@ interface Props {
   small?: boolean;
   /** the baffle edges' roundover radius, inches (drawn as the line where the curve starts); 0 or absent: sharp */
   roundoverIn?: number;
-  /** the tweeter's offset from the centre line, inches, + toward the inside (drawn as the left speaker: inside is to the right) */
+  /** the tweeter's offset from the center line, inches, + toward the inside (drawn as the left speaker: inside is to the right) */
   tweeterOffsetIn?: number;
 }
 

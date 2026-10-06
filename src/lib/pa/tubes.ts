@@ -30,13 +30,13 @@ const GAP_IN = 0.5;
 /** The driver's mounting depth, inches: its datasheet's, else its size class's fallback. */
 export const subDriverDepthIn = (d: TubeDriver) => d.depthIn ?? SUB_DEPTH_FALLBACK_IN[d.size];
 
-/** A point on the baffle, inches: across from its centre line, and up from the inside face of the floor. */
+/** A point on the baffle, inches: across from its center line, and up from the inside face of the floor. */
 export interface BafflePoint {
   x: number;
   y: number;
 }
 /**
- * The tubes on the baffle: each tube's axis, the driver's centre and frame radius, and whether every flare clears the
+ * The tubes on the baffle: each tube's axis, the driver's center and frame radius, and whether every flare clears the
  * walls, the other flares and the driver's frame.
  */
 export interface TubeLayout {
@@ -62,7 +62,7 @@ export function tubeDriverOnBaffle(
 }
 
 /**
- * The tubes on the baffle. `round4` puts them in the corners round a centred driver (at most four); the others put
+ * The tubes on the baffle. `round4` puts them in the corners round a centered driver (at most four); the others put
  * them in one row along the bottom under the driver, spread evenly from one side wall to the other (one tube in the
  * middle), so they sit as far out from under the driver as they can. A flare is the tube's radius plus
  * TUBE_FLARE_RADIUS_IN.
@@ -131,7 +131,7 @@ function tubeAxisTopY(
 }
 
 /**
- * What a sub's tubes are whatever their length, for one box, vent size, plywood and driver: the room their centreline
+ * What a sub's tubes are whatever their length, for one box, vent size, plywood and driver: the room their centerline
  * has (from the baffle front to the back wall and from the axis up to the lid, the driver's back as the stop; every
  * tube of a row sits at one height, so one room serves them all), and the lengths each elbow count fits (the corner
  * tubes, `round4`, only run straight: two of them sit over the other two, so neither pair has a clear back wall to rise
@@ -212,7 +212,7 @@ function tubeSetup(
 
 /**
  * The end correction's part that doesn't read the tubes' length: the flared ends (a flanged outer, 0.85 r, and a free
- * inner, 0.61 r, at the flared mouth's size, each less the flare's shortfall) and the neighbouring mouths (r² / 2s on
+ * inner, 0.61 r, at the flared mouth's size, each less the flare's shortfall) and the neighboring mouths (r² / 2s on
  * the baffle, r² / 4s in the box, s the distance between the axes, averaged over the tubes). The last one is kept.
  */
 let lastFixedEc: (SetupKey & { ec: number }) | null = null;
@@ -238,7 +238,7 @@ function tubeFixedEc(
   return ec;
 }
 
-/** The room a tube's centreline has (tubeSetup). */
+/** The room a tube's centerline has (tubeSetup). */
 export const tubeRoom = (
   box: Dims3,
   style: PortStyle,
@@ -317,7 +317,7 @@ export function tubeWallEndCorrection(r: number, gap: number) {
 
 // A quarter-round flare of radius b on a tube of radius r, from the throat to the mouth: as a length of the tube, its air
 // is the integral of (r / a)² over its run (a the flare's radius there), short of its run b, and the mouth it radiates
-// from is r + b wide, whose end correction in the tube's terms is (r / (r + b))² of its own. Memoised by radius.
+// from is r + b wide, whose end correction in the tube's terms is (r / (r + b))² of its own. Memoized by radius.
 const flareCache = new Map<number, number>();
 function flareShortfall(r: number) {
   const hit = flareCache.get(r);
@@ -339,7 +339,7 @@ function flareShortfall(r: number) {
 
 /**
  * A sub's round tubes' end correction, inches per tube, both ends: a flanged outer end (0.85 r) and a free inner end
- * (0.61 r), each less its flare's shortfall; a wall facing the inner mouth (TUBE_WALL_END); the neighbouring tubes'
+ * (0.61 r), each less its flare's shortfall; a wall facing the inner mouth (TUBE_WALL_END); the neighboring tubes'
  * mouths, each adding r² / 2s on the baffle and r² / 4s in the box (s the distance between the axes; a point source's
  * pressure over a half space and over a whole one), averaged over the tubes; and SHARP_BEND_CORRECTION diameters per
  * elbow. The elbows are the fitting count unless `elbows` says otherwise.
@@ -381,7 +381,7 @@ export function sticksFor(pieces: readonly number[], stickIn: number) {
 }
 
 /**
- * What a sub's tubes take to build (one sub): the stock pipe and elbow for their size (null where the catalogue has
+ * What a sub's tubes take to build (one sub): the stock pipe and elbow for their size (null where the catalog has
  * none), the elbows each tube takes, the pipe sticks its pieces (one per leg between elbows) are cut from, and the price,
  * or null where a part has no US price.
  */

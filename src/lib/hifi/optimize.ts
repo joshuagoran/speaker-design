@@ -219,7 +219,7 @@ const failedChecks = (chips: HifiChip[]) =>
   chips.filter(([k, , , id]) => k === "bad" || (k === "warn" && HARD.has(id)));
 /** What fails in a design, as the checks' titles (empty when it passes). */
 export const hifiDesignProblems = (sys: HifiSystem | null, chips: HifiChip[]): string[] =>
-  !sys ? [DESIGN_PROBLEM_TEXT.unmodelled] : failedChecks(chips).map(([, h]) => h);
+  !sys ? [DESIGN_PROBLEM_TEXT.unmodeled] : failedChecks(chips).map(([, h]) => h);
 
 const XOS: number[] = [1500, 1800, 2000, 2200, 2500, 3000];
 const range = (lock: DimensionLockMode | undefined, cur: number, vals: number[]) =>
@@ -340,7 +340,7 @@ function prsFor(
 /**
  * What the search covers for these inputs: your design resolved (its radiator looked up), the drivers, the amps it
  * searches at, the crossovers and tweeters, and every box on the grid (woofer × size × type × plywood × port or
- * radiator, and your box on each plywood the search allows), not yet modelled. Null when your drivers aren't in the
+ * radiator, and your box on each plywood the search allows), not yet modeled. Null when your drivers aren't in the
  * tables.
  */
 export function hifiSearchSpace(
@@ -547,7 +547,7 @@ export function hifiSearchSpace(
 
 /**
  * One share of the box step (a worker's, or all of it): every box in this part of the grid that passes its own checks,
- * modelled once (to 1.5 × the top crossover: the woofer's limits are read that far), with the woofer's F3 and its clean
+ * modeled once (to 1.5 × the top crossover: the woofer's limits are read that far), with the woofer's F3 and its clean
  * level at each crossover, exactly as the page reads them. Only these numbers come back, not the box's curve.
  * `onProgress` hears the boxes done of this part's grid (the total grows as bigger radiators join the queue).
  */
@@ -662,7 +662,7 @@ export function optimizeHifiSpeaker(
   const curM = curR && metricOf(curR, W0, T0);
   const curProblems = curR
     ? hifiDesignProblems(curR.sys, curR.chips)
-    : [curPrMissing ? DESIGN_PROBLEM_TEXT.missingRadiator : DESIGN_PROBLEM_TEXT.unmodelled];
+    : [curPrMissing ? DESIGN_PROBLEM_TEXT.missingRadiator : DESIGN_PROBLEM_TEXT.unmodeled];
   const curFails = curProblems.length > 0;
 
   // 1. the box step (here or in parts), merged in the grid's order (so a split run picks exactly what one run does),
@@ -861,7 +861,7 @@ export function optimizeHifiSpeaker(
         alt: (g) => ({ label: HIFI_OPTIMIZER_GOALS[g].short, why: ALT_WHY[g] }),
       },
     });
-  // the chosen designs, modelled whole (as the page models them)
+  // the chosen designs, modeled whole (as the page models them)
   const model = (i: number) => {
     const e = boxOf(i),
       t = tws[dTw[i]].t,
@@ -871,16 +871,16 @@ export function optimizeHifiSpeaker(
       : null;
   };
   let picked = pick(),
-    modelled = picked.cards.map((k) => model(k.p));
-  for (let round = 0; round < 5 && modelled.includes(null); round++) {
+    modeled = picked.cards.map((k) => model(k.p));
+  for (let round = 0; round < 5 && modeled.includes(null); round++) {
     picked.cards.forEach((k, j) => {
-      if (!modelled[j]) rejected.add(k.p);
+      if (!modeled[j]) rejected.add(k.p);
     });
     picked = pick();
-    modelled = picked.cards.map((k) => model(k.p));
+    modeled = picked.cards.map((k) => model(k.p));
   }
   const cards = picked.cards.flatMap(({ label, why, slot }, j) => {
-    const p = modelled[j];
+    const p = modeled[j];
     return p ? [{ ...p, label, why, slot }] : [];
   });
 

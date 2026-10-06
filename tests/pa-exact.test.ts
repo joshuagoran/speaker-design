@@ -151,7 +151,7 @@ test("exact PA search: one shared curve per volume and tuning gives the planner'
     assert.strictEqual(lim.who, s.lim.who, "what limits it");
     assert.ok(Math.abs(lim.V / s.lim.V - 1) < 1e-12, "music limit");
   }
-  assert.ok(n > 250, "most designs modelled");
+  assert.ok(n > 250, "most designs modeled");
 });
 
 test("exact PA search: a box solved for a volume and tuning gives them back in the planner's geometry", () => {
@@ -492,7 +492,7 @@ test("exact PA search: no design on its grid beats the first card, checked one b
     const k = out.cards[0];
     assert.ok(k && !out.goalMissing, `${goal}: a card`);
     const m = evaluateDesign(k.config, true);
-    assert.ok(m, `${goal}: the card is modelled`);
+    assert.ok(m, `${goal}: the card is modeled`);
     const got = objective[goal](m, changes(k.config, cur));
     if (process.env.EXACT_DEBUG)
       console.log(

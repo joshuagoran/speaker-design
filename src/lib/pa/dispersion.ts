@@ -29,7 +29,7 @@ const cexp = (ph: number) => cm(Math.cos(ph), Math.sin(ph));
 /** Which part of the stack a driver is. */
 export type StackBand = "sub" | "mid" | "horn";
 
-/** A driver in the sum: its band, height, crossover filters and, for a piston, its radius in metres (the horn has none). */
+/** A driver in the sum: its band, height, crossover filters and, for a piston, its radius in meters (the horn has none). */
 export type StackSource =
   | { band: "sub" | "mid"; z: number; a: number; filt: (f: number) => Complex; horn?: undefined }
   | { band: "horn"; z: number; horn: true; filt: (f: number) => Complex; a?: undefined };
@@ -109,7 +109,7 @@ export function paResponseAt(
   });
 }
 
-// level vs angle and frequency, normalised to the horn axis, on the shared grid (−90..90°, 50 Hz-20 kHz). plane "h"
+// level vs angle and frequency, normalized to the horn axis, on the shared grid (−90..90°, 50 Hz-20 kHz). plane "h"
 // (at horn height; the stack is symmetric left to right, so 0..90° is computed and mirrored) or "v" (on an arc from
 // below (−) to above (+) the horn axis, the drivers time-aligned on that axis at `distM`)
 export function paDispersionMap(

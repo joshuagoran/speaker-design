@@ -8,7 +8,7 @@
 //   converted  from the maker's Xmax and its stated formula (needs Hg unless the formula is already Hg/4), exact;
 //   published  a passive radiator's limit, used as is (no motor, so no gap): its linear Xmax, or the mechanical limit
 //              where that is all the maker gives (pushing a radiator to it costs noise and distortion, not a coil);
-//   estimated  from the maker's figure times the ESTIMATE band, centre in the middle.
+//   estimated  from the maker's figure times the ESTIMATE band, center in the middle.
 import type {
   GapFormula,
   MakerId,
@@ -104,8 +104,8 @@ export function xmaxBandOf(
   throw new Error(`${who}: no excursion figure`);
 }
 
-/** The band's centre, the value the models use. */
-export const centreOf = (b: Pick<XmaxBand, "lo" | "hi">) => (b.lo + b.hi) / 2;
+/** The band's center, the value the models use. */
+export const centerOf = (b: Pick<XmaxBand, "lo" | "hi">) => (b.lo + b.hi) / 2;
 
 /** A table's Thiele-Small block with the comparable `Xmax` and its band added; `maker` and `who` as for `xmaxBandOf`. */
 export function withXmax<T extends RawTS<ThieleSmall>>(
@@ -114,7 +114,7 @@ export function withXmax<T extends RawTS<ThieleSmall>>(
   who: string,
 ): T & Pick<ThieleSmall, "Xmax" | "xmax"> {
   const xmax = xmaxBandOf(ts, maker, who);
-  return { ...ts, Xmax: centreOf(xmax), xmax };
+  return { ...ts, Xmax: centerOf(xmax), xmax };
 }
 
 /** A passive radiator with its `Xmax`: the linear limit, or the mechanical one where that is all the maker gives. */

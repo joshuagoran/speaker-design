@@ -69,7 +69,7 @@ export function hifiCutParts({ cfg, woofer, tweeter, joint, prPanel }: HifiCutPa
     joint === "butt" ? `covers the ${where} edges` : `sits in the ${where} rabbets`;
 
   // the baffle's cutouts, as heights up from the baffle's own bottom edge, so they can be marked on the loose panel:
-  // the model's driver layout is from the box bottom, and a rabbeted or mitred baffle sits t/2 above it
+  // the model's driver layout is from the box bottom, and a rabbeted or mitered baffle sits t/2 above it
   const edge = joint === "butt" ? 0 : t / 2;
   const up = (fromBoxBottom: number) =>
     `${formatInches(fromBoxBottom - edge)}″ above the bottom edge`;
@@ -77,8 +77,8 @@ export function hifiCutParts({ cfg, woofer, tweeter, joint, prPanel }: HifiCutPa
   const off = tweeterOffset(cfg, tweeter, lay);
   const tweeterNote = lay.onTop
     ? "no tweeter cutout: its waveguide sits on the box top"
-    : `tweeter: ${formatInches(tweeter.faceplate.w)} × ${formatInches(tweeter.faceplate.h)}″ cutout (faceplate; use the datasheet's), centre ${up(lay.tweeterIn)}${off ? `, ${formatInches(Math.abs(off))}″ ${off > 0 ? "inward" : "outward"} of centre (mirror the pair)` : ""}`;
-  const wooferNote = `woofer: ${sizedCutout(woofer.size)}, centre ${up(lay.wooferIn)}`;
+    : `tweeter: ${formatInches(tweeter.faceplate.w)} × ${formatInches(tweeter.faceplate.h)}″ cutout (faceplate; use the datasheet's), center ${up(lay.tweeterIn)}${off ? `, ${formatInches(Math.abs(off))}″ ${off > 0 ? "inward" : "outward"} of center (mirror the pair)` : ""}`;
+  const wooferNote = `woofer: ${sizedCutout(woofer.size)}, center ${up(lay.wooferIn)}`;
 
   const ventPort = hifiVentPort({ ...cfg, wall: t });
   const also: string[] = [];
@@ -89,7 +89,7 @@ export function hifiCutParts({ cfg, woofer, tweeter, joint, prPanel }: HifiCutPa
   const tooLong = "too long for this box (see the Hi-fi page)";
   if (ventPort?.shape === "slot") {
     // the slot runs from the bottom panel's inside face (t up the box) to the shelf
-    portNote = `slot: ${formatInches(ventPort.w)} × ${formatInches(ventPort.h)}″ opening, centred, ${up(t)}`;
+    portNote = `slot: ${formatInches(ventPort.w)} × ${formatInches(ventPort.h)}″ opening, centered, ${up(t)}`;
     extra.push({
       box,
       part: "slotShelf",

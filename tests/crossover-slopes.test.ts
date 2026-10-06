@@ -122,7 +122,7 @@ test("sub: an LR48 lowpass is steeper above the crossover, the same at it", (t) 
     portMax: d.portMax,
     layout: d.layout,
   });
-  assert.ok(s.mdl && s.lim, "the default sub is modelled");
+  assert.ok(s.mdl && s.lim, "the default sub is modeled");
   const lp4 = subThroughLowpass(s.mdl, d.sub.ts, s.AMP_V, d.portMax, 120, 4),
     lp8 = subThroughLowpass(s.mdl, d.sub.ts, s.AMP_V, d.portMax, 120, 8);
   assert.ok(nearestPoint(lp8, 240).spl < nearestPoint(lp4, 240).spl - 15);

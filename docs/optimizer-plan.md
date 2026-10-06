@@ -37,11 +37,11 @@ slot/tube sizes × lengths × highpass is ~10⁷ points: hours. The plan cuts th
    and "Duct too long" rules prune impossible ones up front.
 3. **Search volume, not dimensions.** Net volume drives the response; shape only matters for fit,
    weight and the letterbox width. Search ~12 volumes × 3 shapes inside the max dimensions.
-4. **A fast screening model.** A specialised `boxModel` with plain real arithmetic (no complex-number
+4. **A fast screening model.** A specialized `boxModel` with plain real arithmetic (no complex-number
    objects) at ~32 frequencies from 15 to 150 Hz, returning only what the score needs (SPL, excursion,
    port speed): target ~5 µs per candidate instead of 360 µs. Internal wood from a closed-form
    estimate per vent style instead of building the cutlist.
-5. **Prune early.** Drop drivers over the budget or weight before modelling; drop a (driver, volume)
+5. **Prune early.** Drop drivers over the budget or weight before modeling; drop a (driver, volume)
    branch when its best tuning is already worse than the current 15th place (branch and bound).
 6. **Refine with the real model.** Take the top ~40 screened candidates, run a short local search
    (coordinate descent on volume, Fb, highpass) using the planner's own `subSystem`, and report those
@@ -99,9 +99,9 @@ Two reviews: technical (search soundness, speed) and usability (inputs, results,
 - **Goals as outcomes, with a number:** "Match my current output, cheapest", "…lightest",
   "Go as low as possible", "Loudest". The target is shown, e.g. "clean 118 dB at 45 Hz per stack (music
   limit)", derived from the room size. Scores use `spl30/35/45` (add `spl40`) and say music or sine.
-- **Cards labelled by trade-off, not rank.** Each shows deltas vs the current design (price, heaviest box,
+- **Cards labeled by trade-off, not rank.** Each shows deltas vs the current design (price, heaviest box,
   F3, max SPL at 45 Hz, first limit), why it won, what limits it, the spec at a glance, its warning chips,
-  a buildability line ("duct 14″ fits; 2 sheets 3/4″ birch"), "modelled, not measured" and price dates.
+  a buildability line ("duct 14″ fits; 2 sheets 3/4″ birch"), "modeled, not measured" and price dates.
   Cards 2 and 3 must differ in driver or vent style.
 - **Never an empty result.** If nothing fits, re-run with each limit relaxed 10–20 % and say which one
   unlocks results ("nothing under 125 lb reaches it; 140 lb or +$60 would").

@@ -15,8 +15,8 @@ interface Props {
     | "subMidCrossoverHz"
     | "midHornCrossoverHz"
     | "subNetLiters"
-    | "subModelled"
-    | "midModelled"
+    | "subModeled"
+    | "midModeled"
     | "midMaxBand"
     | "hornModel"
     | "subWeightLoadedLb"
@@ -26,7 +26,7 @@ interface Props {
 
 /**
  * The system's summary: the sub's headline tiles and the system response chart (sub, mid-bass and horn together). Nothing
- * while the sub can't be modelled (the Sub section says why).
+ * while the sub can't be modeled (the Sub section says why).
  */
 export function SystemSummary({ planner, className = "" }: Props) {
   const pal = usePalette();
@@ -34,21 +34,21 @@ export function SystemSummary({ planner, className = "" }: Props) {
     subMidCrossoverHz,
     midHornCrossoverHz,
     subNetLiters,
-    subModelled,
-    midModelled,
+    subModeled,
+    midModeled,
     midMaxBand,
     hornModel,
     subWeightLoadedLb,
   } = planner;
-  if (!subModelled) return null;
+  if (!subModeled) return null;
   return (
     <section className={`min-w-0 ${className}`} style={{ fontFamily: FONT }}>
       <StatTileGrid
         tiles={[
           [STATS.netVolume, subNetLiters.toFixed(0), "L"],
-          [STATS.tuningFb, subModelled.mdl.Fb.toFixed(1), "Hz"],
-          [STATS.systemF3, subModelled.mdl.f3.toFixed(0), "Hz"],
-          [STATS.subBass, subBassLevel(subModelled.maxCurve).toFixed(1), "dB"],
+          [STATS.tuningFb, subModeled.mdl.Fb.toFixed(1), "Hz"],
+          [STATS.systemF3, subModeled.mdl.f3.toFixed(0), "Hz"],
+          [STATS.subBass, subBassLevel(subModeled.maxCurve).toFixed(1), "dB"],
           ["Sub weight", subWeightLoadedLb.toFixed(0), "lb"],
         ]}
       />
@@ -57,16 +57,16 @@ export function SystemSummary({ planner, className = "" }: Props) {
         fmax={20000}
         series={[
           {
-            curve: subModelled.throughLowpass,
-            band: subModelled.throughLowpassBand,
+            curve: subModeled.throughLowpass,
+            band: subModeled.throughLowpassBand,
             label: UI_TEXT.sub,
             stroke: pal.ink,
             tint: alpha(pal.ink, 0.07),
           },
-          ...(midModelled
+          ...(midModeled
             ? [
                 {
-                  curve: midModelled.max,
+                  curve: midModeled.max,
                   band: midMaxBand,
                   label: UI_TEXT.midBass,
                   stroke: pal.magenta,
@@ -86,7 +86,7 @@ export function SystemSummary({ planner, className = "" }: Props) {
             : []),
         ]}
         marks={[
-          { f: subModelled.mdl.Fb, label: "Fb" },
+          { f: subModeled.mdl.Fb, label: "Fb" },
           { f: subMidCrossoverHz, label: "XO" },
           { f: midHornCrossoverHz, label: "XO" },
         ]}

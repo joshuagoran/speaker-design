@@ -29,13 +29,13 @@ import type {
   HifiDispersionMap,
   HornHf,
   HornResponse,
-  MidSystemModelled,
+  MidSystemModeled,
   PaMaxPoint,
   PaPortGeometry,
   PaStackGeometry,
   PhasedModel,
   SealedBoxModel,
-  SubSystemModelled,
+  SubSystemModeled,
   VentedBoxModel,
   VentGeometry,
 } from "../../../types";
@@ -47,7 +47,7 @@ import type { MidDesign } from "./useMidDesign";
 import type { SubwooferDesign } from "./useSubwooferDesign";
 import { xmaxBandCurves } from "../../../lib/xmax";
 
-/** The design state the PA models read; the music-balance tilts, finish, colours and cutlist options don't enter them. */
+/** The design state the PA models read; the music-balance tilts, finish, colors and cutlist options don't enter them. */
 type PaDesignInputs = Pick<
   SubwooferDesign,
   | "subDriver"
@@ -91,10 +91,10 @@ export interface PaDerivedDesign {
   subAmpVoltage: number;
   /**
    * the sub's model (with the box's phase, for the coverage map), music limit and curves; null when the driver has no
-   * T/S or the box or vent can't be modelled
+   * T/S or the box or vent can't be modeled
    */
-  subModelled:
-    | (Pick<SubSystemModelled, "lim"> & {
+  subModeled:
+    | (Pick<SubSystemModeled, "lim"> & {
         mdl: PhasedModel<VentedBoxModel>;
         /** the most a sine can play at each frequency */
         maxCurve: PaMaxPoint[];
@@ -109,7 +109,7 @@ export interface PaDerivedDesign {
   midNetL: number;
   midEffL: number;
   /** the mid's model (with the box's phase, for the coverage map) and limit curve; null when the driver has no T/S */
-  midModelled: (Omit<MidSystemModelled, "mdl"> & { mdl: PhasedModel<SealedBoxModel> }) | null;
+  midModeled: (Omit<MidSystemModeled, "mdl"> & { mdl: PhasedModel<SealedBoxModel> }) | null;
   /** the mid's limit curve at the ends of an estimated Xmax; null when its Xmax is exact or it has no model */
   midMaxBand: BandCurves<PaMaxPoint> | null;
   midThermalVoltage: number;
@@ -219,7 +219,7 @@ export function derivePaDesign({
   const subMdl = subSys.mdl;
   // the vent's own air-speed limit: the setting for a sharp-edged vent, more for flared tubes
   const portSpeedLimit = ventSpeedLimit(portStyle, maxPortAirSpeedMs);
-  const subModelled = subMdl
+  const subModeled = subMdl
     ? {
         mdl: { ...subSys.mdl, curve: phasedCurve(subSys.mdl.curve) },
         lim: subSys.lim,
@@ -272,12 +272,12 @@ export function derivePaDesign({
     vTherm: midThermalVoltage,
     useV: midUsedVoltage,
   } = midSys;
-  const midModelled = midSys.mdl
+  const midModeled = midSys.mdl
     ? { ...midSys, mdl: { ...midSys.mdl, curve: phasedCurve(midSys.mdl.curve) } }
     : null;
-  const midMaxBand = midModelled
+  const midMaxBand = midModeled
     ? xmaxBandCurves(midDriver.ts.xmax, (Xmax) =>
-        maxCurveOf(midModelled.mdl.curve, { ...midDriver.ts, Xmax }, midVoltage, Infinity),
+        maxCurveOf(midModeled.mdl.curve, { ...midDriver.ts, Xmax }, midVoltage, Infinity),
       )
     : null;
   /** 3/4" baffle at 2.3 lb/ft\u00b2, other panels, braces and ribs at the chosen ply, plus 2 lb of hardware */
@@ -324,10 +324,10 @@ export function derivePaDesign({
    * What the mid actually has to match: the sub at its music limit (one drive level for the whole
    * band), through its lowpass, less the music-balance allowance.
    */
-  const subMusicAtCrossover = subModelled
+  const subMusicAtCrossover = subModeled
     ? subMusicOutputAt(
-        subModelled.mdl,
-        subModelled.lim,
+        subModeled.mdl,
+        subModeled.lim,
         subAmpVoltage,
         subMidCrossoverHz,
         subMidCrossoverOrder,
@@ -399,12 +399,12 @@ export function derivePaDesign({
     subKeepOut,
     midKeepOut,
     subAmpVoltage,
-    subModelled,
+    subModeled,
     midVoltage,
     midGrossL,
     midNetL,
     midEffL,
-    midModelled,
+    midModeled,
     midMaxBand,
     midThermalVoltage,
     midUsedVoltage,

@@ -49,7 +49,7 @@ const beat: Record<HifiGoal, (m: HifiMetrics, c: HifiMetrics) => boolean> = {
   louder: (m, c) => m.level >= c.level + 1,
 };
 
-test("every driver in the hi-fi list can be modelled", (t) => {
+test("every driver in the hi-fi list can be modeled", (t) => {
   const tw = HIFI_TWEETERS.find((o) => o.id === "sb26stcn")!;
   for (const w of HIFI_WOOFERS) assert.ok(hifiSystem(w, tw, cur), w.id);
 });
@@ -398,7 +398,7 @@ test("hi-fi optimizer: the first card is the best design on its grid, checked on
   for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
     const out = optimizeHifiSpeaker({ ...opts, goals: [goal] }),
       c = out.cur;
-    assert.ok(c, `${goal}: your design is modelled`);
+    assert.ok(c, `${goal}: your design is modeled`);
     const ok = designs.filter((m) => keeps[goal](m, c) && beat[goal](m, c));
     const best = Math.min(...ok.map(objective[goal]));
     if (!ok.length) {

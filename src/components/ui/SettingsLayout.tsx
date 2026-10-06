@@ -54,7 +54,7 @@ export function SettingsLayout({ results, settings, className = "" }: Props) {
     ro.observe(aside);
     return () => ro.disconnect();
   }, []);
-  /** the settings width that puts the divider's centre at `x` (a pointer's clientX) */
+  /** the settings width that puts the divider's center at `x` (a pointer's clientX) */
   const widthAt = (x: number) => {
     const el = page.current;
     if (!el) return null;

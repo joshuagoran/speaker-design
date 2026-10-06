@@ -152,7 +152,7 @@ export const CUTLIST_DEFAULTS: CutlistChoices = {
 
 /**
  * A saved design's cutlist choices, each checked against what the page offers; anything missing or unknown falls back
- * to the default (waterfall: on with mitre joints, as older designs had none).
+ * to the default (waterfall: on with miter joints, as older designs had none).
  */
 export const savedCutlist = (
   c: Pick<PaDesignConfig, keyof CutlistChoices | "joint">,
@@ -612,7 +612,7 @@ function repackForOffcut<R extends PackRect>(
 // ---------------------------------------------------------------
 /**
  * Replaces each box's two sides and top with one side-top-side strip, grain along its length, when it fits on the
- * sheet. Mitred panels lose about a kerf at each V-cut; square cuts lose a kerf.
+ * sheet. Mitered panels lose about a kerf at each V-cut; square cuts lose a kerf.
  */
 export function waterfallStrips(
   parts: CutPart[],

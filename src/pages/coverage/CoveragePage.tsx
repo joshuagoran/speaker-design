@@ -168,9 +168,9 @@ export function CoveragePage({ planner }: Props) {
                 of the map.
               </Notice>
             )}
-            {map.stack && !planner.subModelled && (
+            {map.stack && !planner.subModeled && (
               <Notice>
-                The sub can't be modelled for this design, so it is left out of the map.
+                The sub can't be modeled for this design, so it is left out of the map.
               </Notice>
             )}
             {rel != null && map.stats && (

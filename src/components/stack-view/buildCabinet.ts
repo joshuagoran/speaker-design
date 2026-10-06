@@ -9,7 +9,7 @@ const BAFFLE_THICKNESS_IN = 0.75;
 /**
  * A cabinet: four perimeter panels (wall ply) with 1/4" roundovers front and back, a 3/4" baffle set back by the inset on
  * cleats, painted, and a back panel. With `archTop` the top is a semicircle the full width of the cabinet. `baffleHoles`
- * are in the baffle's centred coordinates; `baffleBottom` leaves that much of the baffle's lower edge open.
+ * are in the baffle's centered coordinates; `baffleBottom` leaves that much of the baffle's lower edge open.
  * Returns the z of the baffle face and the y of the top.
  */
 export function buildCabinet(

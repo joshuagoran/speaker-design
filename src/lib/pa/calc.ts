@@ -104,7 +104,7 @@ export const maxStraightSlotIn = (box: Pick<Dims3, "d">, slotH: number, t: numbe
   box.d - t - slotH;
 /**
  * Whether a bottom slot (`slots`) folds up the back wall: only when it is longer than the straight run holds. A slot
- * that fits straight is built, and modelled, straight.
+ * that fits straight is built, and modeled, straight.
  */
 export const slotFolds = (box: Pick<Dims3, "d">, v: Pick<VentSpec, "slotH" | "len">, t: number) =>
   v.len > maxStraightSlotIn(box, v.slotH, t);
@@ -127,7 +127,7 @@ export const maxFoldedRearWallIn = (box: Pick<Dims3, "h">, slotH: number, t: num
 /**
  * A folded bottom slot's rear channel wall, in inches up from the underside of the floor leg's roof (`t + slotH` above
  * the box's bottom, where the wall starts: the floor leg runs on under it into the channel). The duct's length is its
- * centreline:
+ * centerline:
  * the floor run from the baffle front to the middle of the rear channel (`d - t - slotH / 2`), then up the channel to
  * the wall's top (`slotH / 2` + the wall), so the wall is `len - (d - t)`, never under the least rise nor over the most
  * (the model, the 3D view and the cutlist all take this one wall).
@@ -215,7 +215,7 @@ export const highpassGain = (f: number, fc: number, type: HighpassType = "BW24")
   const xn = Math.pow(x, n);
   return kind === "bw" ? xn / Math.sqrt(1 + xn * xn) : xn / (1 + xn);
 };
-// The normalised Butterworth sections of even order n, s² + b·s + 1: each b = 2 sin((2k − 1)π / 2n), k = 1 … n/2.
+// The normalized Butterworth sections of even order n, s² + b·s + 1: each b = 2 sin((2k − 1)π / 2n), k = 1 … n/2.
 // Kept per order: the hi-fi crossover calls for them at every frequency of every design the optimizer tries.
 const SECTIONS = new Map<number, number[]>();
 function butterworthSections(n: number) {
@@ -226,7 +226,7 @@ function butterworthSections(n: number) {
   }
   return b;
 }
-// Normalised Butterworth denominator of even order n: the product of its sections, in plain real arithmetic
+// Normalized Butterworth denominator of even order n: the product of its sections, in plain real arithmetic
 export function butterworth(s: Complex, n: number): Complex {
   const s2re = s.re * s.re - s.im * s.im,
     s2im = 2 * s.re * s.im;
@@ -418,7 +418,7 @@ export function boxModel(
 // Sealed-box model for the mid-bass: the same driver circuit with the box
 // compliance in series and no port. hp and lp are the crossover corners,
 // Linkwitz-Riley of the orders opts gives (hpOrder, lpOrder). Voice-coil inductance is not
-// modelled, so the top octave reads a little high. Excursion is the sine peak, as in boxModel; opts.phase gives each
+// modeled, so the top octave reads a little high. Excursion is the sine peak, as in boxModel; opts.phase gives each
 // point the box's phase (without the crossover's), as boxModel does.
 // ---------------------------------------------------------------
 export function closedBox(
@@ -484,7 +484,7 @@ export function closedBox(
   return { curve: out, Fc, Qtc, f3, ref, peakX: Math.max(...out.map((o) => o.xmm)) };
 }
 
-// Internal litres with walls of thickness t and a 3/4″ baffle recessed `inset` into the frame.
+// Internal liters with walls of thickness t and a 3/4″ baffle recessed `inset` into the frame.
 export const boxInternalLiters = (w: number, h: number, d: number, t: number, inset = 0.75) =>
   ((w - 2 * t) * (h - 2 * t) * (d - inset - 0.75 - t) * 16.387) / 1000;
 // Plywood weight, lb/ft², at the wall's exact thickness (lib/panel).
@@ -575,11 +575,11 @@ export function subVentLines(
   const { iw, ih } = paInside(box, t, 0);
   if (style === "slots") {
     const shelf = v.slotH + t / 2,
-      fin = ((iw - 2 * t) / 3 + t) / 2; // the fins' centres either side of the middle (the 3D view's)
+      fin = ((iw - 2 * t) / 3 + t) / 2; // the fins' centers either side of the middle (the 3D view's)
     return { sideL: [shelf], sideR: [shelf], top: [], bottom: [iw / 2 - fin, iw / 2 + fin] };
   }
   if (style === "vslots" || style === "vslot1") {
-    // the dividers' centres, splitting the duct's open height in three (ventGeometry)
+    // the dividers' centers, splitting the duct's open height in three (ventGeometry)
     const div = ductDividerIn(v),
       seg = (ih - 2 * div) / 3;
     const dividers = [seg + div / 2, 2 * seg + (3 * div) / 2],
@@ -614,7 +614,7 @@ export function subVentStops(
  * mounting depth from the baffle's front.
  */
 export function driverKeepOut(
-  centre: { x: number; y: number },
+  center: { x: number; y: number },
   size: SubDriver["size"] | MidDriver["size"],
   depthIn: number,
 ): BoxRegion[] {
@@ -625,8 +625,8 @@ export function driverKeepOut(
   const zRing = BASKET_RING_SHARE * depth,
     zMotor = MOTOR_START_SHARE * depth;
   const box = (r: number, z0: number, z1: number): BoxRegion => ({
-    x: [centre.x - r - c, centre.x + r + c],
-    y: [centre.y - r - c, centre.y + r + c],
+    x: [center.x - r - c, center.x + r + c],
+    y: [center.y - r - c, center.y + r + c],
     z: [z0, z1],
   });
   const step = (zMotor - zRing) / BASKET_TAPER_STEPS;
@@ -642,8 +642,8 @@ export function driverKeepOut(
     box(rMotor, zMotor, depth + c),
   ];
 }
-/** Where the sub driver's centre sits on the inside of the baffle, in from the box's inside corner (the 3D view's). */
-export function subDriverCentre(
+/** Where the sub driver's center sits on the inside of the baffle, in from the box's inside corner (the 3D view's). */
+export function subDriverCenter(
   box: Dims3,
   t: number,
   style: PortStyle,
@@ -680,7 +680,7 @@ export function subKeepOut(
 ): BoxKeepOut {
   const { iw, ih, inD } = paInside(box, t, inset);
   const driver = driverKeepOut(
-    subDriverCentre(box, t, style, v, drv.size),
+    subDriverCenter(box, t, style, v, drv.size),
     drv.size,
     subDriverDepthIn(drv),
   );
@@ -968,7 +968,7 @@ export function braceParts(
   t: number,
 ): CutPart[] {
   const out: CutPart[] = [];
-  const rails = `cut out the centre, leave ${formatInches(WINDOW_RAIL_IN)}″ rails`;
+  const rails = `cut out the center, leave ${formatInches(WINDOW_RAIL_IN)}″ rails`;
   for (const axis of ["y", "x", "z"] as const) {
     // across x, the braces that cross the driver open their frame to the baffle round it
     const open = axis === "x" && b.notch ? b.notch.at : [];
@@ -1087,13 +1087,13 @@ export function cutParts({
     });
   } else if (kit) {
     vent.push(
-      `${cVent.nt} × ${formatInches(cVent.dia)}″ port tube, ${formatInches(cVent.len)}″ long on its centreline` +
+      `${cVent.nt} × ${formatInches(cVent.dia)}″ port tube, ${formatInches(cVent.len)}″ long on its centerline` +
         (kit.elbows
           ? ` with ${ELBOW_WORDS[kit.elbows]} (${cVent.nt * kit.elbows} × 90° elbow)`
           : "") +
         (kit.pipe
           ? `, cut from ${kit.sticks} × ${kit.pipe.stickFt} ft Sch 40 PVC; flare each inner mouth ${formatInches(TUBE_FLARE_RADIUS_IN)}″`
-          : `; no stock pipe in the catalogue for ${formatInches(cVent.dia)}″`),
+          : `; no stock pipe in the catalog for ${formatInches(cVent.dia)}″`),
     );
   }
   if (layout !== "tower" && !subOnly) {
@@ -1181,7 +1181,7 @@ const SUB_BAFFLE_IN = 0.75;
 /**
  * A bottom slot's inner end correction (in). Straight: its mouth on the floor, the back wall behind it, the box's inside
  * height across it. Folded up the back wall: the floor leg turns a sharp 90° into the rear channel (SHARP_BEND_CORRECTION
- * against the centreline the length is measured on), and the channel's mouth, under the lid, is the same kind of mouth
+ * against the centerline the length is measured on), and the channel's mouth, under the lid, is the same kind of mouth
  * turned on its side: along the back panel, the rear wall its shelf (rising from the floor leg's roof), the lid the
  * facing wall, the box's inside depth across it. `most`: the most it can be in this box, straight or folded, whatever
  * the length (slotMouthCorrectionMost).
@@ -1214,7 +1214,7 @@ export function slotInnerEndCorrection(
  * ground mirrors the bottom of its mouth (throat × open height). Inside, the same mouth as a bottom slot's, turned on its
  * side: the side wall its floor, the duct's inner wall (`t`, from the frame front as the cutlist and the 3D view take it)
  * its shelf, the back wall `d - t - len` behind the mouth, and across it the box's inside width (half of it for a pair:
- * the centre line is a plane of symmetry). `most`: the most it can be in this box, whatever the length
+ * the center line is a plane of symmetry). `most`: the most it can be in this box, whatever the length
  * (slotMouthCorrectionMost).
  */
 export function sideDuctEndCorrection(
@@ -1296,7 +1296,7 @@ export function ventGeometry(
   };
 }
 
-// Litres of wood inside a box: everything behind the baffle except the shell panels themselves.
+// Liters of wood inside a box: everything behind the baffle except the shell panels themselves.
 // Window braces keep ~2 in rails, so only their rails count.
 const SHELL: ReadonlySet<CutPartId> = new Set(["side", "topBottom", "back", "baffle"]);
 export function internalWoodLiters(parts: CutPart[], box: CutBoxId) {

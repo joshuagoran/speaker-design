@@ -119,7 +119,7 @@ interface Props {
     | "midDriverChoices"
     | "hornExitMismatch"
     | "port"
-    | "subModelled"
+    | "subModeled"
     | "effectiveMidBoxDims"
     | "renderLockButton"
     | "renderDimensionLock"
@@ -204,7 +204,7 @@ export function SettingsPanel({ planner }: Props) {
     midDriverChoices,
     hornExitMismatch,
     port,
-    subModelled,
+    subModeled,
     effectiveMidBoxDims,
     renderLockButton,
     renderDimensionLock,
@@ -227,7 +227,7 @@ export function SettingsPanel({ planner }: Props) {
     sub: [
       subDriver.name,
       formatDims(subBoxDims),
-      subModelled && `tuned to ${subModelled.mdl.Fb.toFixed(0)} Hz`,
+      subModeled && `tuned to ${subModeled.mdl.Fb.toFixed(0)} Hz`,
       port.desc,
     ]
       .filter(Boolean)
@@ -726,7 +726,7 @@ export function SettingsPanel({ planner }: Props) {
             note={finishName}
           />
           <SwatchPicker
-            label="Baffle colour"
+            label="Baffle color"
             value={baffleColor}
             onChange={setBaffleColor}
             swatches={PAINT_SWATCHES}

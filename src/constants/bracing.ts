@@ -15,7 +15,7 @@ export const BRACE_STYLE_NAMES = {
 export const BRACE_STYLE_TIPS = {
   ribs: "Strips glued on edge along the sides, top, bottom and back, meeting in rings; the baffle, which a rib can't cross for the driver, takes window braces where they clear it",
   window:
-    "Plywood frames across the box with the centre cut out, glued to the walls, placed clear of the driver and the vent; a panel no frame can reach takes ribs",
+    "Plywood frames across the box with the center cut out, glued to the walls, placed clear of the driver and the vent; a panel no frame can reach takes ribs",
   both: "Ribs or window braces, whichever lifts the panels more for the wood, one at a time",
 } as const satisfies Record<keyof typeof BRACE_STYLE_NAMES, string>;
 

@@ -31,13 +31,13 @@ import {
   DEFAULT_XO_HI,
 } from "../../lib/defaultParts";
 
-// The prose quotes the starting design's parts and the catalogue's figures (defaultParts.ts), so a change of default
+// The prose quotes the starting design's parts and the catalog's figures (defaultParts.ts), so a change of default
 // part, price or rating shows up here.
 const GXD = QSC_GXD.models;
 const OHM = "Ω";
 /** The mains rack's processor, as the prose names it. */
 const DSP = mainsDsp().row.unit;
-/** A DSP unit's name from the catalogue, for the prose's pick. */
+/** A DSP unit's name from the catalog, for the prose's pick. */
 const dspName = (id: DspUnitId) => dspUnitById(id).row.unit;
 
 /** A DSP table cell: the unit the racks use marked "(current)", a settled used price added to the price cell. */
@@ -60,7 +60,7 @@ function sensitivityText(): string {
   const { maker, sens, tsSens } = DEFAULT_SUB;
   const ts = `${tsSens.toFixed(1)} dB/2.83V`;
   if (sens == null)
-    return `${maker}'s sensitivity isn't in the catalogue; their published T/S parameters give ${ts}. Levels and limiter settings depend on it, so measure it.`;
+    return `${maker}'s sensitivity isn't in the catalog; their published T/S parameters give ${ts}. Levels and limiter settings depend on it, so measure it.`;
   const gap = sens - tsSens;
   if (gap > SENS_AGREE_DB)
     return `${maker}'s ${sens} dB claim is ${gap.toFixed(1)} dB above what their own published T/S parameters give (${ts}). Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure.`;
@@ -390,7 +390,7 @@ export function NotesPage() {
               ],
               [
                 "Duct tuning",
-                "Verify Fb by impedance sweep on the particleboard prototype and trim the duct before cutting birch. End correction is the largest source of error in the modelled Fb.",
+                "Verify Fb by impedance sweep on the particleboard prototype and trim the duct before cutting birch. End correction is the largest source of error in the modeled Fb.",
               ],
               ["Sensitivity", sensitivityText()],
               [
@@ -403,7 +403,7 @@ export function NotesPage() {
               ],
               [
                 "Horn print",
-                `${DEFAULT_HORN.name} in one piece needs a ${DEFAULT_HORN.bedMm} mm+ bed; otherwise sectioned. Filament, a print service, or a ready-made horn from the catalogue instead.`,
+                `${DEFAULT_HORN.name} in one piece needs a ${DEFAULT_HORN.bedMm} mm+ bed; otherwise sectioned. Filament, a print service, or a ready-made horn from the catalog instead.`,
               ],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">

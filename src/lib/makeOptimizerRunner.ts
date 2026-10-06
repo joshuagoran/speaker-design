@@ -8,17 +8,17 @@ import type {
 /** How long a worker may go without a word (progress included) before the search is stopped as hung, ms. */
 export const OPTIMIZER_STALL_MS = 60_000;
 
-/** What a cancelled search rejects with; the page tells it from a failure by its class (`isOptimizerCancel`). */
-export class OptimizerCancelled extends Error {
+/** What a canceled search rejects with; the page tells it from a failure by its class (`isOptimizerCancel`). */
+export class OptimizerCanceled extends Error {
   override name = "AbortError";
   constructor() {
-    super("the search was cancelled");
+    super("the search was canceled");
   }
 }
 
-/** Whether a search stopped because it was cancelled, rather than failed. */
-export const isOptimizerCancel = (e: unknown): e is OptimizerCancelled =>
-  e instanceof OptimizerCancelled;
+/** Whether a search stopped because it was canceled, rather than failed. */
+export const isOptimizerCancel = (e: unknown): e is OptimizerCanceled =>
+  e instanceof OptimizerCanceled;
 
 /**
  * Runs an optimizer in its worker, falling back to the main thread where workers are unavailable. The worker may post
@@ -34,7 +34,7 @@ export function makeOptimizerRunner<I, R>(
     optNoWorker = false,
     optSeq = 0;
   return function run(input: I, { onProgress, signal }: OptimizerRunOptions = {}): Promise<R> {
-    if (signal?.aborted) return Promise.reject(new OptimizerCancelled());
+    if (signal?.aborted) return Promise.reject(new OptimizerCanceled());
     const id = ++optSeq;
     // On the main thread the search can't be interrupted once it starts (it holds the thread): a cancel before then
     // stops it, one during it only drops the result. Progress reaches the callback synchronously as the search runs.
@@ -42,13 +42,13 @@ export function makeOptimizerRunner<I, R>(
       new Promise<R>((res, rej) => {
         const onAbort = () => {
           clearTimeout(timer);
-          rej(new OptimizerCancelled());
+          rej(new OptimizerCanceled());
         };
         const timer = setTimeout(() => {
           signal?.removeEventListener("abort", onAbort);
           try {
             const out = optimizeLocal(input, onProgress);
-            if (signal?.aborted) rej(new OptimizerCancelled());
+            if (signal?.aborted) rej(new OptimizerCanceled());
             else res(out);
           } catch (e) {
             rej(e);
@@ -112,7 +112,7 @@ export function makeOptimizerRunner<I, R>(
       };
       const onAbort = () => {
         stop();
-        rej(new OptimizerCancelled());
+        rej(new OptimizerCanceled());
       };
       watch();
       w.addEventListener("message", onMsg);

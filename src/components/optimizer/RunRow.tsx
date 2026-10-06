@@ -22,7 +22,7 @@ interface Props {
 
 /**
  * Run button with search statistics; while searching, a Cancel button and the search's progress. The buttons keep their
- * words and only grey out while a search runs or no goal is picked.
+ * words and only gray out while a search runs or no goal is picked.
  */
 export function RunRow({
   busy,

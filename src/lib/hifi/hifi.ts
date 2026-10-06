@@ -458,7 +458,7 @@ export interface HifiBox {
   m: BoxModel;
 }
 // the woofer's frequency grid: N points 15 Hz-2 kHz (about 92 per decade), run on at the same spacing to 3 × the
-// crossover, so a box modelled once to the highest crossover reads exactly as it does at a lower one
+// crossover, so a box modeled once to the highest crossover reads exactly as it does at a lower one
 const GRID = { fmin: 15, fmax: 2000, N: 196 };
 export const hifiGridTop = (xo: number) => Math.max(GRID.fmax, xo * 3);
 /** The port a vented box's model uses (a slot is one opening across the whole baffle); null for any other box. */
@@ -481,7 +481,7 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
   const pr = cfg.box === "radiator" && cfg.pr && cfg.pr.drv ? cfg.pr : null;
   const pA = ventPort ? portArea(ventPort) : 0;
   // a slot's inner end reads the box; a round port's elbows shorten it acoustically (the fewest that fit; a port too
-  // long for any is modelled with the most)
+  // long for any is modeled with the most)
   const ec = !ventPort
     ? undefined
     : ventPort.shape === "slot"
@@ -780,7 +780,7 @@ export function hifiWooferLevel(
 }
 
 /**
- * The whole speaker on a box from hifiBox (modelled to at least this crossover's grid top, with the same box fields).
+ * The whole speaker on a box from hifiBox (modeled to at least this crossover's grid top, with the same box fields).
  * `band: false` leaves out the woofer's Xmax-band curves (the chart's shading), which nothing scores.
  */
 export function hifiSystemFromBox(
@@ -826,7 +826,7 @@ export function hifiSystemFromBox(
       lp,
     };
   });
-  // the clean level at each point at a woofer Xmax (its centre, or the ends of an estimated band for the chart's
+  // the clean level at each point at a woofer Xmax (its center, or the ends of an estimated band for the chart's
   // shading): the amp's limit, or the driver's own divided by the low-pass, as the optimizer reads them
   const wMaxAt = (xW: number): WooferMaxPoint[] =>
     woofer.map((o, i) => {
@@ -919,7 +919,7 @@ export function hifiSystemFromBox(
 }
 
 // ---- edge diffraction (see ./diffraction) ----
-/** The furthest the tweeter can sit off the centre line, inches: its faceplate (or waveguide) stays on the flat baffle, a quarter inch inside where the roundover starts. */
+/** The furthest the tweeter can sit off the center line, inches: its faceplate (or waveguide) stays on the flat baffle, a quarter inch inside where the roundover starts. */
 export const tweeterOffsetMax = (
   cfg: Pick<HifiConfig, "dim" | "roundoverIn">,
   t: Pick<HifiTweeter, "faceplate">,
@@ -1028,7 +1028,7 @@ export function hifiResponseAt(
   const dist = geo.distM,
     align = geo.alignM ?? dist,
     dz = (h: number) => (geo.eyeIn - h) * IN;
-  // the angle is measured on the tweeter's axis, which an offset moves off the woofer's (centred) one
+  // the angle is measured on the tweeter's axis, which an offset moves off the woofer's (centered) one
   const xT = tweeterOffset(cfg, t, sys.lay) * IN,
     p = fieldPoint(geo, xT / IN),
     hW = Math.hypot(p.x * IN, p.z * IN), // woofer to listener, across the floor
@@ -1145,7 +1145,7 @@ const nearestF = (curve: WooferPoint[], f: number) => {
   return f - curve[lo].f < curve[hi].f - f ? curve[lo] : curve[hi];
 };
 
-// Dispersion map: level vs angle and frequency, normalised to on-axis, on the shared grid (−90..90°, 50 Hz-20 kHz).
+// Dispersion map: level vs angle and frequency, normalized to on-axis, on the shared grid (−90..90°, 50 Hz-20 kHz).
 // plane "h" (horizontal, at the tweeter height, from the outside (−) to the inside (+) of the pair, so an offset
 // tweeter's two sides both show) or "v" (vertical, on an arc from below to above the tweeter axis).
 // Returns { angles, freqs, rows: [[dB]] }.
@@ -1330,14 +1330,14 @@ export function hifiChips(
     F.push([
       "warn",
       "Tweeter offset ignored",
-      "The waveguide sits on the box top, centred; the offset only applies to a tweeter on the baffle.",
+      "The waveguide sits on the box top, centered; the offset only applies to a tweeter on the baffle.",
       "hifiTweeterOffsetIgnored",
     ]);
   else if (Math.abs(offAsked) > tweeterOffsetMax(cfg, t) + 1e-9)
     F.push([
       "warn",
       "Tweeter offset past the edge",
-      `Its ${t.faceplate.w.toFixed(1)}″ faceplate fits at most ${tweeterOffsetMax(cfg, t).toFixed(2)}″ off centre on this baffle; the model uses that.`,
+      `Its ${t.faceplate.w.toFixed(1)}″ faceplate fits at most ${tweeterOffsetMax(cfg, t).toFixed(2)}″ off center on this baffle; the model uses that.`,
       "hifiTweeterOffsetEdge",
     ]);
   F.push(

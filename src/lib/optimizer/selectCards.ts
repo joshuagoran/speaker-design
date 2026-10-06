@@ -28,7 +28,7 @@ export interface SelectCardsOptions<P, G extends string> {
   changeCount: (p: P) => number;
   /** your design fails a check */
   currentFails: boolean;
-  /** your design could be modelled */
+  /** your design could be modeled */
   hasCurrent: boolean;
   /** orders designs the objective ties on; none keeps the pool's order */
   tieBreak?: (a: P, b: P) => number;
@@ -38,7 +38,7 @@ export interface SelectCardsOptions<P, G extends string> {
   altFilter?: (g: G, p: P) => boolean;
   /**
    * how far a design falls short of what the goals keep (0 when it meets them); with nothing passing `meets`, the fix is
-   * the design that falls least short, labelled `closest`
+   * the design that falls least short, labeled `closest`
    */
   shortfall?: (p: P) => number;
   labels: { first: CardRole; fix: CardRole; closest?: CardRole; alt: (g: G) => CardRole };

@@ -43,7 +43,7 @@ export function buildTower(
     y: subTop,
     baffleZ,
   });
-  // the horn sits on the sub's footprint: centre height, and the mouth flush with the shared baffle face
+  // the horn sits on the sub's footprint: center height, and the mouth flush with the shared baffle face
   return buildHorn(ctx, {
     horn,
     y: hornY,

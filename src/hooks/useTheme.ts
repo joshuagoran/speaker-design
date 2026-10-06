@@ -44,7 +44,7 @@ function themeNow(): ThemeName {
 export const useThemeName = (): ThemeName =>
   useSyncExternalStore(subscribe, themeNow, (): ThemeName => THEME_LIGHT);
 
-/** The palette of the theme in use, for colours drawn from code (SVG charts, drawings, the 3D view). */
+/** The palette of the theme in use, for colors drawn from code (SVG charts, drawings, the 3D view). */
 export const usePalette = (): Palette => PALETTES[useThemeName()];
 
 // The host page (the claude.ai artifact frame) and the switch both write <html data-theme>. The switch's pin wins; the

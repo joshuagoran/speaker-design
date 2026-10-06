@@ -28,7 +28,7 @@ interface Props {
 }
 
 const fillSizes = FILL_OPTIONS.map((o) => o.size);
-/** the catalogue's fill size range, e.g. "8–12″" */
+/** the catalog's fill size range, e.g. "8–12″" */
 const FILL_SIZE_RANGE = `${Math.min(...fillSizes)}–${Math.max(...fillSizes)}″`;
 
 /** Fills page: choose and size the fill speakers. */
@@ -66,7 +66,7 @@ export function FillsPage({ fills }: Props) {
   if (!fill)
     return (
       <main className={`${PAGE_WIDTH} pb-16 text-sm`}>
-        This box can't be modelled: its port has no area or length.
+        This box can't be modeled: its port has no area or length.
       </main>
     );
   const {
@@ -154,7 +154,7 @@ export function FillsPage({ fills }: Props) {
               [
                 "Woofer sensitivity",
                 `${sensitivityDb.toFixed(1)} dB`,
-                `${UI_TEXT.splConditions}, modelled`,
+                `${UI_TEXT.splConditions}, modeled`,
               ],
               [
                 "HF sensitivity",

@@ -58,7 +58,7 @@ test("sub: driver fit needs size + 1.9 in after the vents", (t) => {
 test("sub: duct fit per layout; a bottom slot folds past the straight run", (t) => {
   // straight slot holds d - PT - slotH = 22 - 0.75 - 3 = 18.25; past that it folds up the back wall, which holds
   // (d - PT) + (h - 2 PT - 2 slotH) = 21.25 + 22.5 = 43.75 (a slot height left under the lid), and is never shorter
-  // than its centreline at the least rise, d - PT + 1 = 22.25; the lengths between fit neither way
+  // than its centerline at the least rise, d - PT + 1 = 22.25; the lengths between fit neither way
   has(t, sub({ cVent: { len: 18.25 } }), "subDuctFit", false);
   has(t, sub({ cVent: { len: 18.5 } }), "subDuctFit", true, "bad");
   has(t, sub({ cVent: { len: 22 } }), "subDuctFit", true, "bad");
@@ -267,7 +267,7 @@ test("fills: kick at F3 85 Hz; HF limit vs the amp", (t) => {
   assert.equal(kindOf(fill({ f3: 85.1 }), "fillKick"), "warn");
   assert.equal(kindOf(fill({ hfLimW: 300 }), "fillHfHeadroom"), "ok");
   assert.equal(kindOf(fill({ hfLimW: 299 }), "fillHfHeadroom"), "warn");
-  has(t, fill({}), "fillHfUnmodelled", false);
-  has(t, fill({ hf: null }), "fillHfUnmodelled", true, "warn");
+  has(t, fill({}), "fillHfUnmodeled", false);
+  has(t, fill({ hf: null }), "fillHfUnmodeled", true, "warn");
   has(t, fill({ hf: null }), "fillHfHeadroom", false);
 });

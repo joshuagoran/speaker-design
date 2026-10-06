@@ -1,7 +1,7 @@
 // WCAG contrast of the palette in both themes: text 4.5:1 on its background, chart lines and large text 3:1.
 import { assert, test } from "vite-plus/test";
 import { ON_DATA, PALETTES } from "../src/styles/palette";
-import { COVERAGE_CONTOURS, coverageColour } from "../src/styles/coverageScale";
+import { COVERAGE_CONTOURS, coverageColor } from "../src/styles/coverageScale";
 import type { Palette } from "../src/styles/palette";
 
 const luminance = (hex: string) => {
@@ -58,7 +58,7 @@ for (const [theme, p] of Object.entries(PALETTES))
       assert.isAtLeast(c, min, `${fg} on ${bg} is ${c.toFixed(2)}:1`);
     });
 
-// marks and labels drawn on the fixed data colours (the same in both themes)
+// marks and labels drawn on the fixed data colors (the same in both themes)
 const onData: [string, string, string, number][] = [
   ["stack labels on the coverage map (white on ink)", ON_DATA.white, ON_DATA.ink, 4.5],
   ["contours on the coverage map's floor (ink on edge)", ON_DATA.ink, ON_DATA.edge, 3],
@@ -69,13 +69,13 @@ for (const [what, fg, bg, min] of onData)
     assert.isAtLeast(c, min, `${fg} on ${bg} is ${c.toFixed(2)}:1`);
   });
 
-// each contour line on the coverage map, blended at its opacity, against the map's colour at its own level
+// each contour line on the coverage map, blended at its opacity, against the map's color at its own level
 const rgbHex = (c: readonly number[]) =>
   "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("");
 for (const [db, line] of COVERAGE_CONTOURS)
   test(`on data: coverage contour at ${db} dB on the map ≥ 3:1`, () => {
-    const bg = coverageColour(db);
-    const fg = rgbHex(hexRgbBlend(line.colour, bg, line.opacity));
+    const bg = coverageColor(db);
+    const fg = rgbHex(hexRgbBlend(line.color, bg, line.opacity));
     const c = contrast(fg, rgbHex(bg));
     assert.isAtLeast(c, 3, `${fg} on ${rgbHex(bg)} is ${c.toFixed(2)}:1`);
   });

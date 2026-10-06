@@ -43,7 +43,7 @@ interface Props {
 
 /**
  * Compare drivers: every option for one part (sub, mid, compression driver or horn) in your design with everything
- * else as it is, side by side. Modelled only while open (a few dozen model runs, well under a second).
+ * else as it is, side by side. Modeled only while open (a few dozen model runs, well under a second).
  */
 export function DriverCompare({ rows, onUse }: Props) {
   const [part, setPart] = useState<PaDriverPart>("sub");
@@ -110,7 +110,7 @@ export function DriverCompare({ rows, onUse }: Props) {
                       ))}
                       <td className="py-1.5 pr-3">
                         {r.problems.length ? (
-                          // a problem your design has whatever you pick is grey; what this option adds is orange
+                          // a problem your design has whatever you pick is gray; what this option adds is orange
                           r.problems.map((p, i) => (
                             <span
                               key={`${p.id}-${i}`}

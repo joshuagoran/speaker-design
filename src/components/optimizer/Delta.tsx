@@ -8,7 +8,7 @@ interface Props {
   digits?: number;
 }
 
-/** Difference from the current design, coloured by whether it is an improvement. */
+/** Difference from the current design, colored by whether it is an improvement. */
 export function Delta({ v, unit, lowerIsBetter, digits = 0 }: Props) {
   if (v == null) return null;
   const r = Number(v.toFixed(digits));

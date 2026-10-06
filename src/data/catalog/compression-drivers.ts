@@ -1,6 +1,6 @@
 // PA compression drivers. src/lib/data.ts sorts CD_OPTIONS by name.
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
-// a misspelt, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
+// a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
 // class, tweeter type) is an error.
 // Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
@@ -124,7 +124,7 @@ export const CD_RAW: readonly CompressionDriver[] = [
     exit: 1.4,
     price: 160,
     src: "hoqs.org, Sep 2026 (in stock, ships from the US, per Josh)",
-    note: "[hoqs.org spec table, Sep 2026; no datasheet] 3 in edge-wound aluminium coil, titanium diaphragm, neo, copper ring, 1.9 T. 80 W nominal / 160 W program (the planner treats 80 W as the AES-style rating, so program = 2 \u00d7 80 W), 110 dB, recommended crossover 800 Hz with BW24, 500 Hz\u201318 kHz, 8 \u03a9. 4 \u00d7 M6 on a 102 mm circle (same as the N314T), 4.4 lb.",
+    note: "[hoqs.org spec table, Sep 2026; no datasheet] 3 in edge-wound aluminum coil, titanium diaphragm, neo, copper ring, 1.9 T. 80 W nominal / 160 W program (the planner treats 80 W as the AES-style rating, so program = 2 \u00d7 80 W), 110 dB, recommended crossover 800 Hz with BW24, 500 Hz\u201318 kHz, 8 \u03a9. 4 \u00d7 M6 on a 102 mm circle (same as the N314T), 4.4 lb.",
   },
   {
     id: "hf1440",
@@ -192,7 +192,7 @@ export const CD_RAW: readonly CompressionDriver[] = [
     exit: 1.4,
     price: 192.58,
     src: "Parts Express, Oct 2026",
-    note: "[preliminary datasheet, beyma.com, 01/23] Ferrite, 2.5 in CCAW coil on Nomex, titanium dome and surround, copper shorting cap. 80 W AES above 800 Hz / 100 W AES above 1.2 kHz (160 W / 200 W program), 108 dB 1 W/1 m averaged 1\u20137 kHz on the TD-385, 600 Hz\u201320 kHz, 7.7 lb (PE lists 7.95 lb). Beyma's minimum crossover is 800 Hz at 12 dB/oct, but the diaphragm resonance (impedance peak) sits near 1.1 kHz, so the catalogue uses 1.2 kHz as the reliable minimum, with the 100 W rating. 4 \u00d7 M6 on a 101.6 mm circle, the N314T's pattern, so it bolts to the 1.4\u2033 horns here. 5.71 in across, 2.47 in deep. Exit flare angle not published, which an ATH throat adapter needs.",
+    note: "[preliminary datasheet, beyma.com, 01/23] Ferrite, 2.5 in CCAW coil on Nomex, titanium dome and surround, copper shorting cap. 80 W AES above 800 Hz / 100 W AES above 1.2 kHz (160 W / 200 W program), 108 dB 1 W/1 m averaged 1\u20137 kHz on the TD-385, 600 Hz\u201320 kHz, 7.7 lb (PE lists 7.95 lb). Beyma's minimum crossover is 800 Hz at 12 dB/oct, but the diaphragm resonance (impedance peak) sits near 1.1 kHz, so the catalog uses 1.2 kHz as the reliable minimum, with the 100 W rating. 4 \u00d7 M6 on a 101.6 mm circle, the N314T's pattern, so it bolts to the 1.4\u2033 horns here. 5.71 in across, 2.47 in deep. Exit flare angle not published, which an ATH throat adapter needs.",
   },
   {
     id: "de360",
@@ -219,7 +219,7 @@ export const CD_RAW: readonly CompressionDriver[] = [
     exit: 1,
     price: 229.08,
     src: "Parts Express, Oct 2026",
-    note: "[bcspeakers.com spec page, Oct 2026; no datasheet PDF published] Neo, 2 in aluminium coil, HT polymer diaphragm. 70 W nominal / 140 W continuous program (B&C's 2-hour pink-noise test from the 1.2 kHz recommended crossover up, so the planner treats 70 W as the AES-style rating), 108 dB, 1\u201317 kHz, recommended crossover 1.2 kHz at 12 dB/oct or steeper, 2.58 lb. 2 \u00d7 M6 on a 76 mm circle, 3.62 in across, 1.93 in deep: a 2-bolt flange, so check the 1\u2033 horn's bolt pattern. Exit flare angle not published, which an ATH throat adapter needs.",
+    note: "[bcspeakers.com spec page, Oct 2026; no datasheet PDF published] Neo, 2 in aluminum coil, HT polymer diaphragm. 70 W nominal / 140 W continuous program (B&C's 2-hour pink-noise test from the 1.2 kHz recommended crossover up, so the planner treats 70 W as the AES-style rating), 108 dB, 1\u201317 kHz, recommended crossover 1.2 kHz at 12 dB/oct or steeper, 2.58 lb. 2 \u00d7 M6 on a 76 mm circle, 3.62 in across, 1.93 in deep: a 2-bolt flange, so check the 1\u2033 horn's bolt pattern. Exit flare angle not published, which an ATH throat adapter needs.",
   },
   {
     id: "lavoce171",

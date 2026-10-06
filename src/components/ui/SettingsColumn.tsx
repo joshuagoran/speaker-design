@@ -95,7 +95,7 @@ export function SettingsSection<Id extends string>({
         foldsAt={foldsAt}
         summary={summary}
         level={3}
-        // a light grey bar across the panel under a black rule, so each section starts clearly
+        // a light gray bar across the panel under a black rule, so each section starts clearly
         className={`mb-3 md:-mx-4 bg-stone-300 border-t-2 border-stone-900 ${foldsAt === "desktop" ? "max-md:hidden" : ""}`}
         buttonClassName="px-3 md:px-4"
       />

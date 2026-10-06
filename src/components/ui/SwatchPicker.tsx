@@ -13,7 +13,7 @@ interface Props {
   note?: React.ReactNode;
 }
 
-/** Colour choice: optional named presets, a row of paint swatches and a custom picker */
+/** Color choice: optional named presets, a row of paint swatches and a custom picker */
 export function SwatchPicker({
   label,
   value,
@@ -60,7 +60,7 @@ export function SwatchPicker({
         ))}
         <label
           className="swatch w-7 h-7 rounded-full border-2 border-stone-300 overflow-hidden cursor-pointer relative"
-          title="Custom colour"
+          title="Custom color"
         >
           <span
             className="absolute inset-0"

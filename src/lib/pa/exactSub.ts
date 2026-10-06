@@ -146,7 +146,7 @@ const RAW = new Float64Array(N),
   XA = new Float64Array(N),
   KA = new Float64Array(N);
 /**
- * The vented box's curve for a net volume (L) and tuning (Hz), summarised per highpass: the same circuit, in the same
+ * The vented box's curve for a net volume (L) and tuning (Hz), summarized per highpass: the same circuit, in the same
  * arithmetic, as boxModel. `xoIdx` are the grid points nearest the lower crossovers.
  */
 export function ventedCurves(
