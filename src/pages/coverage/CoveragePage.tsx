@@ -156,15 +156,11 @@ export function CoveragePage({ planner }: Props) {
                 maxHeight={maxHeight}
               />
             ) : (
-              <Notice>
-                Needs a mid with T/S parameters and a horn with coverage angles (Design page).
-              </Notice>
+              <Notice>Needs a mid with T/S parameters and a horn with coverage angles.</Notice>
             )}
             {map.error && <Notice>Map failed: {map.error}</Notice>}
             {map.stack && !planner.hornModel && (
-              <Notice>
-                No horn in the map: the compression driver has no sensitivity or power rating.
-              </Notice>
+              <Notice>No horn in the map: its driver has no sensitivity or power rating.</Notice>
             )}
             {map.stack && !planner.subModeled && (
               <Notice>No sub in the map: the planner cannot model it.</Notice>

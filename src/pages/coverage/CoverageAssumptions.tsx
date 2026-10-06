@@ -54,9 +54,9 @@ export function CoverageAssumptions({ room, planner, target, level }: Props) {
     [
       "Levels",
       [
-        `Target: ${level.targetDb} dB SPL in the sub band at ${COVERAGE_LEVEL_REF_PLACE[level.levelRef]}, less the music-balance tilts (planner: ${LISTENER_TARGET_DB} dB, ${target} dB in this band). The system plays at that level, never past its limit.`,
-        `Audience average: the mean dB over the counted floor. "1 m from the stacks": ear height, 1 m along each stack's aim from its front center, averaged.`,
-        `Bands play at their planner limits, balanced as on the Design page: mid ${planner.midBandTiltDb} dB below the sub, horn ${planner.hornBandTiltDb} dB below the mid. The weakest band sets the level.`,
+        `Target: ${level.targetDb} dB SPL in the sub band at ${COVERAGE_LEVEL_REF_PLACE[level.levelRef]}, less the music-balance tilts (planner: ${LISTENER_TARGET_DB} dB, ${target} dB in this band), never past the limit.`,
+        `Audience average: the mean dB over the counted floor. "1 m from the stacks": ear height, on each stack's aim, averaged.`,
+        `Design-page balance: mid ${planner.midBandTiltDb} dB below the sub, horn ${planner.hornBandTiltDb} dB below the mid. The weakest band sets the level.`,
         "Past their ends, curves follow the crossover slope with their end phase.",
         "Sub and mid curves: boxes on the floor; below the baffle step, a reflection from each box's height. Horn sensitivity: free field.",
       ],
@@ -64,9 +64,9 @@ export function CoverageAssumptions({ room, planner, target, level }: Props) {
     [
       "Stacks",
       [
-        `Drivers at each box's center, at real heights, time-aligned ${ALIGN_DISTANCE_M} m out on axis at horn height.`,
+        `Drivers at each box's center and real height, time-aligned ${ALIGN_DISTANCE_M} m out at horn height.`,
         `Linkwitz-Riley crossovers (${slopes}) with phase, plus each band's own: vented sub and highpass, sealed mid (no voice-coil inductance), first-order baffle-step shelf.`,
-        "Sub delay: in phase with the mid at the crossover on axis (unwrapped phase), the same for all subs.",
+        "Sub delay: in phase with the mid at the crossover on axis, one for all subs.",
         `Sub and mid: rigid pistons, behind the box −3 dB at ${BOX_SHADOW_HZ} Hz and 6 dB/octave above.`,
         "Horn: rated coverage (−6 dB at the edges) above its control frequency, wider below, at most 40 dB down.",
       ],
@@ -82,9 +82,9 @@ export function CoverageAssumptions({ room, planner, target, level }: Props) {
     [
       "Room",
       [
-        "A flat-sided rectangular box. Each side and the ceiling has its own published octave-band absorption (Everest & Pohlmann), 125 Hz–4 kHz, flat outside.",
-        `Below twice the Schroeder frequency (within ${MODAL_HZ[0]}–${MODAL_HZ[1]} Hz${crossover != null ? `; here ${Math.round(crossover)} Hz` : ""}) the room modes sum, blended into the reflections over ${MODAL_FADE_OCT} octave: Sabine decay, every side solid (rough with an open side).`,
-        `Above: one reflection per wall and ceiling, each with its floor bounce, then a reverberant field (Hopkins–Stryker less first reflections; horn directivity by Molloy).${t60 != null ? ` This room rings about ${t60.toFixed(1)} s at 1 kHz.` : ""}`,
+        "A rectangular box. Each side and the ceiling has its own absorption (Everest & Pohlmann, 125 Hz–4 kHz).",
+        `Below twice the Schroeder frequency (within ${MODAL_HZ[0]}–${MODAL_HZ[1]} Hz${crossover != null ? `; here ${Math.round(crossover)} Hz` : ""}) the room modes sum, blended over ${MODAL_FADE_OCT} octave; Sabine decay, solid sides (rough if a side is open).`,
+        `Above: one reflection per wall and ceiling, each with a floor bounce, then a reverberant field (Hopkins–Stryker; Molloy horn directivity).${t60 != null ? ` This room rings about ${t60.toFixed(1)} s at 1 kHz.` : ""}`,
       ],
     ],
     [
@@ -98,7 +98,7 @@ export function CoverageAssumptions({ room, planner, target, level }: Props) {
     [
       "Not modeled",
       [
-        "Non-rectangular rooms, balconies, pillars, diffraction, people blocking the direct sound, measured driver directivity.",
+        "Non-rectangular rooms, balconies, pillars, diffraction, crowd shadowing, measured driver directivity.",
       ],
     ],
   ];
