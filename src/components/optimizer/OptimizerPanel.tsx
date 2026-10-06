@@ -27,6 +27,7 @@ import type {
   PaSearchOverrides,
 } from "../../types";
 import { FONT } from "../../styles/fonts";
+import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 interface Props {
   optIn: PaOptimizerInputState;
@@ -108,7 +109,7 @@ export function OptimizerPanel({
             .join(" and ")} than yours`
         : "");
   return (
-    <section className="pb-4" style={{ fontFamily: FONT }}>
+    <section className={`${RESULT_MAX_WIDTH} pb-4`} style={{ fontFamily: FONT }}>
       <Card pad="lg">
         <SectionHeading>{OPTIMIZER_PANEL_TEXT.heading}</SectionHeading>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">

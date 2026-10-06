@@ -52,7 +52,7 @@ import {
 } from "../../lib/pa/cutlist";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
-import { RESULTS_TWO_COLUMN_PX, RESULT_MAX_WIDTH } from "../../styles/layout";
+import { READING_WIDTH, RESULTS_TWO_COLUMN_PX, RESULT_MAX_WIDTH } from "../../styles/layout";
 import { useFolds } from "../../hooks/useFolds";
 import { usePalette } from "../../hooks/useTheme";
 import { entriesOf, keysOf } from "../../lib/records";
@@ -434,7 +434,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
         <div className="min-w-0 flex flex-col gap-5">
           <div>
             <SectionHeading className="mb-1">Cutlist</SectionHeading>
-            <p className="text-sm text-stone-500">
+            <p className={`${READING_WIDTH} text-sm text-stone-500`}>
               The {mat.word} parts of {proj.source}, {wallName} walls, for{" "}
               {plural(boxSetCount, proj.set)}, packed onto {sheetSize.name} sheets.
             </p>
@@ -448,7 +448,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
             ]}
           />
           {cut.notes.map((n) => (
-            <p key={n} className="text-sm text-orange-700">
+            <p key={n} className={`${READING_WIDTH} text-sm text-orange-700`}>
               {n}
             </p>
           ))}

@@ -3,6 +3,7 @@ import { dispersionPlaneName } from "../../../constants/dispersionPlanes";
 import { DispersionMap } from "../../../components/charts/DispersionMap";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
+import { READING_WIDTH, RESULT_MAX_WIDTH } from "../../../styles/layout";
 
 interface Props {
   planner: Pick<
@@ -33,7 +34,7 @@ export function DispersionSection({ planner }: Props) {
   // as when it sat in the horn results: only while the horn can be modelled
   if (!hornModel || !paDispersion) return null;
   return (
-    <section className="min-w-0" style={{ fontFamily: FONT }}>
+    <section className={`${RESULT_MAX_WIDTH} min-w-0`} style={{ fontFamily: FONT }}>
       <DispersionPlaneToggle value={dispersionPlane} onChange={setDispersionPlane} />
       <DispersionMap
         map={paDispersion}
@@ -43,7 +44,7 @@ export function DispersionSection({ planner }: Props) {
             : `${dispersionPlaneName("h")} dispersion at ${dispersionMapDistanceM} m, at horn height (0° is on axis)`
         }
       />
-      <div className="text-xs text-stone-500 mt-1">
+      <div className={`${READING_WIDTH} text-xs text-stone-500 mt-1`}>
         Mid and horn centers {midHornGapIn.toFixed(1)}″ apart:{" "}
         {midHornNullAngleDeg
           ? `the first null at the ${midHornCrossoverHz} Hz crossover is about ${midHornNullAngleDeg.toFixed(0)}° above and below the horn axis.`

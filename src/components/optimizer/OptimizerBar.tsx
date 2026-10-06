@@ -1,6 +1,7 @@
 import { ToggleButton } from "../ui/ToggleButton";
 import { Button } from "../ui/Button";
 import { LockIcon } from "../lock/LockIcon";
+import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 interface Props {
   on: boolean;
@@ -27,7 +28,7 @@ export function OptimizerBar({
   children,
 }: Props) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className={`${RESULT_MAX_WIDTH} flex flex-wrap items-center gap-2`}>
       <ToggleButton on={on} onClick={onToggle}>
         Optimizer: {on ? "on" : "off"}
       </ToggleButton>

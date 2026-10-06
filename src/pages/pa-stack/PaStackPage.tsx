@@ -53,13 +53,14 @@ export function PaStackPage({ planner }: Props) {
           />
           <OptimizerControls planner={planner} />
           <MobileSummaryStrip planner={planner} />
-          <div ref={results} className="flex flex-col gap-8">
+          <div ref={results} className="flex flex-col gap-8 [container-type:inline-size]">
             <div className={resultsGridClass(wide)}>
-              {/* beside the summary, the summary sets the row's height and the view fills its cell */}
+              {/* beside the summary, the summary sets the row's height and the view fills its cell; at least 20% of
+                  the results' width tall (cqw), so on a very wide pane it stays under 2.5:1, not a flat strip */}
               <div
                 className={cell(
                   besideView
-                    ? "col-start-1 row-start-1 self-stretch relative min-h-[320px]"
+                    ? "col-start-1 row-start-1 self-stretch relative min-h-[max(320px,20cqw)]"
                     : "col-span-2 row-start-1",
                 )}
               >

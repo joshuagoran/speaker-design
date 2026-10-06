@@ -17,7 +17,7 @@ import { fillSystem, nearestPoint } from "../../lib/pa/calc";
 import type { FillsPlanner } from "./useFillsPlanner";
 import { xmaxBandCurves, xmaxRows } from "../../lib/xmax";
 import { LIMIT_NAMES } from "../../constants/limits";
-import { PAGE_WIDTH } from "../../styles/layout";
+import { PAGE_WIDTH, READING_WIDTH } from "../../styles/layout";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { GXD4 } from "../../data/catalog/amps";
 import { UI_TEXT } from "../../constants/uiText";
@@ -178,7 +178,7 @@ export function FillsPage({ fills }: Props) {
             ]}
           />
           <WarningChips chips={warningChips} />
-          <p className="text-xs text-stone-500">
+          <p className={`${READING_WIDTH} text-xs text-stone-500`}>
             <span className="font-medium text-stone-500">{driver.name}.</span> {driver.note}{" "}
             <Tooltip
               tip={`Specs from usspeaker.com, Sep 2026. Box weight assumes 1/2″ birch. Displacement ${thieleSmall.disp != null ? "as published" : `not published; ${driverDisplacement} L assumed`}.`}
