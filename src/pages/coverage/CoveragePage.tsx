@@ -110,7 +110,8 @@ export function CoveragePage({ planner }: Props) {
     layout.band === "one"
       ? `${formatHz(layout.freqHz)}, one frequency`
       : `${COVERAGE_BANDS[layout.band].name} band, ${formatHz(COVERAGE_BANDS[layout.band].lo)}–${formatHz(COVERAGE_BANDS[layout.band].hi)}`;
-  // indoors, below the modal fade only the room modes count, and they ignore which way a box faces
+  // indoors, below the modal fade only the room modes count, and they ignore which way a box faces (the level can
+  // still shift: measured 1 m from the stacks, the spot moves with the aim)
   const modalOnlyHz = room.outdoors ? null : modalBottomHz(modalCrossoverHz(room));
   const bandTopHz = layout.band === "one" ? layout.freqHz : COVERAGE_BANDS[layout.band].hi;
   const [left, right] = layout.stacks;
@@ -156,8 +157,8 @@ export function CoveragePage({ planner }: Props) {
             )}
             {map.stack && map.levels && modalOnlyHz != null && bandTopHz <= modalOnlyHz && (
               <p className="text-xs text-stone-500 mt-2">
-                Toe-in has no effect below about {formatHz(modalOnlyHz)}, where room modes set the
-                level.
+                Below about {formatHz(modalOnlyHz)}, room modes set the pattern, and toe-in doesn't
+                change it.
               </p>
             )}
             {map.error && <Notice>Map failed: {map.error}</Notice>}
