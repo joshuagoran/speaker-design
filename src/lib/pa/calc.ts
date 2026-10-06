@@ -66,7 +66,7 @@ import {
 } from "./tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import { ELBOW_WORDS } from "../../constants/portStyles";
-import { BOX_AXIS_NAMES, BRACE_PANEL_NAMES } from "../../constants/bracing";
+import { BOX_AXIS_NAMES, BRACE_PANEL_NAMES, RIB_HALF_LAP_NOTE } from "../../constants/bracing";
 import {
   BIRCH_PLY_STIFFNESS,
   BOX_AXES,
@@ -1042,12 +1042,12 @@ export function braceParts(
         `${WINDOW_PLANE[axis]}, ${atList(open)} ${AXIS_FROM[axis]}; ${rails}, and leave the front rail out from ${formatInches(b.notch.y[0])}″ to ${formatInches(b.notch.y[1])}″ ${AXIS_FROM.y}, clear of the driver`,
       );
   }
-  // only a box with window braces has one for a rib to cross (Ribs has none)
-  const lap = BOX_AXES.some((a) => b.windows[a].length)
-    ? "; half-lap it where it crosses a window brace"
-    : "";
   for (const r of b.ribs) {
     const run = ribRunAxis(r.panel, r.across);
+    // a rib crosses the window braces across the axis it runs along, where they stand within its length (Ribs has none)
+    const lap = b.windows[run].some((w) => w > r.from + 1e-6 && w < r.from + r.len - 1e-6)
+      ? RIB_HALF_LAP_NOTE
+      : "";
     const from = r.from > 1e-6 ? `, starting ${formatInches(r.from)}″ ${AXIS_FROM[run]}` : "";
     out.push({
       box,

@@ -34,10 +34,12 @@ import {
   subKeepOut,
   braceWoodEstimate,
   braceWoodIn3,
+  braceParts,
 } from "../src/lib/pa/calc";
 import { subDriverDepthIn } from "../src/lib/pa/tubes";
 import { subWoodIn3 } from "../src/lib/pa/exactSub";
 import {
+  RIB_HALF_LAP_NOTE,
   braceUnderNote,
   LEGACY_SUB_BRACE_STYLE_KEY,
   bracePanelName,
@@ -609,8 +611,8 @@ test("the strict styles give the starting sub three different plans, each of its
     const key = (b: BoxBracing) => JSON.stringify([b.windows, b.ribs]);
     assert.strictEqual(new Set([ribs, win, both].map(key)).size, 3, tag);
   }
-  // the cutlist's rib rows say to half-lap a window brace only where the box has one
-  const ribRows = (style: BraceStyleId) =>
+  // the cutlist's rib rows say to half-lap a rib only where it crosses a window brace
+  const lapped = (style: BraceStyleId) =>
     cutParts({
       sub: d.sub,
       mid: d.mid,
@@ -623,11 +625,38 @@ test("the strict styles give the starting sub three different plans, each of its
       cVent: d.cVent,
       layout: "stack",
       braceStyle: style,
-    }).parts.filter((p) => p.box === "sub" && p.part === "rib");
-  const lapped = (style: BraceStyleId) =>
-    ribRows(style).map((p) => (p.note ?? "").includes("window brace"));
-  assert.ok(lapped("ribs").length > 0 && lapped("ribs").every((x) => !x));
-  assert.ok(lapped("both").length > 0 && lapped("both").every((x) => x));
+    })
+      .parts.filter((p) => p.box === "sub" && p.part === "rib")
+      .map((p) => (p.note ?? "").endsWith(RIB_HALF_LAP_NOTE));
+  // Ribs has no window brace; under Both the back's rib runs across, level like the two level frames, so it crosses none
+  for (const style of ["ribs", "both"] as const) {
+    assert.ok(lapped(style).length > 0, style);
+    assert.ok(
+      lapped(style).every((x) => !x),
+      style,
+    );
+  }
+});
+
+test("cutlist: a rib row says to half-lap only where its rib crosses a window brace", () => {
+  const d = DEFAULT_PA;
+  const base = subBoxBracing(d.cDim, d.wall, d.inset, d.portStyle, d.cVent, d.sub, "both");
+  // an upright frame 10″ from the left side; two ribs on the top running across (x), one over it and one past it, and
+  // one on the back running up (y), which no frame crosses
+  const b: BoxBracing = {
+    ...base,
+    windows: { x: [10], y: [], z: [] },
+    notch: null,
+    ribs: [
+      { panel: "top", across: "z", at: [8], from: 0, len: 20 },
+      { panel: "top", across: "z", at: [16], from: 12, len: 8 },
+      { panel: "back", across: "x", at: [10], from: 0, len: 20 },
+    ],
+  };
+  const notes = braceParts("sub", b, { x: 20, y: 20, z: 20 }, d.wall)
+    .filter((p) => p.part === "rib")
+    .map((p) => (p.note ?? "").endsWith(RIB_HALF_LAP_NOTE));
+  assert.deepStrictEqual(notes, [true, false, false]);
 });
 
 test("rib: the T section's EI and first mode against a hand calculation (a ¾″ rib 2½″ deep over 22½″, a 9.2″ bay)", (t) => {

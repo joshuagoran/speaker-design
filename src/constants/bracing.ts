@@ -32,6 +32,9 @@ export const BRACE_STYLE_SUMMARY = {
 export const braceUnderNote = (panel: string, hz: string, target: string) =>
   `${panel}: ${hz}, under the ${target} target`;
 
+/** The end of a cutlist rib row whose rib crosses a window brace. */
+export const RIB_HALF_LAP_NOTE = "; half-lap it where it crosses a window brace";
+
 /** A panel's name with its cabinet's, as the bracing notes start ("Sub baffle", "Mid left side"). */
 export const bracePanelName = (cabinet: string, panel: keyof typeof BRACE_PANEL_NAMES) =>
   `${cabinet} ${BRACE_PANEL_NAMES[panel].toLowerCase()}`;
