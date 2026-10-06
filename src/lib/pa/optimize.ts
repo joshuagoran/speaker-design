@@ -532,6 +532,11 @@ export const XO_HI_OPTIONS = [800, 900, 1000, 1200, 1500];
 /** The plywoods the search tries when the plywood isn't locked: each nominal size at your design's measured thickness, in. */
 export const wallOptions = (cur: Pick<PaDesignConfig, "exactIn">) =>
   panelChoicesIn(PLYWOOD_MATERIAL, savedPanelExactIn(cur.exactIn));
+/** The plywoods a search tries: your design's own (its measured thickness) while the plywood is locked, else every size. */
+export const paSearchWalls = (
+  cur: Pick<PaDesignConfig, "wall" | "exactIn">,
+  locks: Pick<PaOptimizerLocks, "wall">,
+) => (locks.wall ? [cur.wall] : wallOptions(cur));
 /** The highpasses the search tries for a tuning when the highpass isn't locked: 0.85× and 1× the tuning, 20 Hz at least. */
 export const highpassOptions = (fb: number) => [
   Math.max(20, Math.round(fb * 0.85)),
@@ -641,7 +646,7 @@ export function optimizePaStack(
       ? [curSub]
       : []
     : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
-  const walls = locks.wall ? [cur.wall] : wallOptions(cur);
+  const walls = paSearchWalls(cur, locks);
   const styles: PortStyle[] = locks.vent ? [cur.portStyle] : ["slots", "vslots", "round2"];
   const xoLos = locks.xoLo ? [cur.xoLo] : XO_LO_OPTIONS;
   const xoHis = locks.xoHi ? [cur.xoHi] : XO_HI_OPTIONS;

@@ -1,4 +1,4 @@
-import { LOCK_KEYS } from "../../../constants/lockKeys";
+import { LOCK_KEYS, defaultLocks } from "../../../constants/lockKeys";
 import { PA_RUNNERS } from "../../../lib/pa/runOptimizer";
 import { compareDrivers } from "../../../lib/pa/compareDrivers";
 import { paExactGridText } from "../../../lib/pa/optimizeExact";
@@ -115,9 +115,15 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
   >({
     key: "planner.locks",
     empty: {},
-    fromStored: (l) => ({ ...l, subDim: { ...l.subDim }, midDim: { ...l.midDim } }),
+    // the plywood starts locked (LOCKS_ON_BY_DEFAULT) until the viewer unlocks it
+    fromStored: (l) => ({
+      ...defaultLocks(true),
+      ...l,
+      subDim: { ...l.subDim },
+      midDim: { ...l.midDim },
+    }),
     allLocked: ALL_LOCKED,
-    none: { subDim: {}, midDim: {} },
+    none: { ...defaultLocks(false), subDim: {}, midDim: {} },
     enabled: isOptimizerOn,
   });
   // a result only sets the fields the search changes; finish, colours, layout and balance stay as they are now

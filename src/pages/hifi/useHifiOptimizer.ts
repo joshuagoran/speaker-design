@@ -1,6 +1,7 @@
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../../lib/data";
 import { toggled } from "../../lib/lists";
 import { HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
+import { defaultLocks } from "../../constants/lockKeys";
 import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
 import { useDesignPreview } from "../../hooks/useDesignPreview";
 import { useOptimizerLocks } from "../../hooks/useOptimizerLocks";
@@ -95,9 +96,10 @@ export function useHifiOptimizer({
   >({
     key: "hifi.locks",
     empty: {},
-    fromStored: (l) => ({ ...l, dim: { ...l.dim } }),
+    // the plywood starts locked (LOCKS_ON_BY_DEFAULT) until the viewer unlocks it
+    fromStored: (l) => ({ ...defaultLocks(true), ...l, dim: { ...l.dim } }),
     allLocked: ALL_LOCKED,
-    none: { dim: {} },
+    none: { ...defaultLocks(false), dim: {} },
     enabled: isOptimizerOn,
   });
   const preview = useDesignPreview<HifiOptimizerCard, HifiCardConfig>({

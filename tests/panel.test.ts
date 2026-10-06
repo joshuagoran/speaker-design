@@ -17,6 +17,7 @@ import { PANEL_STOCK } from "../src/data/catalog/plywood";
 import { DEFAULT_HIFI, DEFAULT_PA } from "../src/lib/defaults";
 import { boxInternalLiters, subWeightLb } from "../src/lib/pa/calc";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { paSearchWalls } from "../src/lib/pa/optimize";
 
 test("panel sizes: thickest first, each starting at its nominal size in both materials", () => {
   assert.deepEqual(PANEL_NOMINALS, ["3/4", "5/8", "1/2"]);
@@ -115,4 +116,12 @@ test("Hi-fi saves: the named size comes back at the thickness it was saved at", 
   // saves from before the sizes: the size their wall is nominally
   assert.deepEqual(restoredPanel({ wall: 0.5 }, "ply", {}), { panel: "1/2", exactIn: {} });
   assert.equal(restoredPanel({ wall: 0.3 }, "ply", {}), undefined);
+});
+
+test("PA search: a locked plywood tries your size alone, at its measured thickness; unlocked, every size", () => {
+  const measured = { wall: 0.689, exactIn: { "3/4": 0.689 } };
+  assert.deepEqual(paSearchWalls(measured, { wall: true }), [0.689]);
+  assert.deepEqual(paSearchWalls({ wall: 0.5, exactIn: {} }, { wall: true }), [0.5]);
+  assert.deepEqual(paSearchWalls(measured, {}), [0.689, 0.625, 0.5]);
+  assert.deepEqual(paSearchWalls({ wall: 0.75 }, { wall: false }), [0.75, 0.625, 0.5]);
 });
