@@ -7,13 +7,15 @@ export type StatTileItem = [label: StatName, value: React.ReactNode, unit?: Reac
 
 interface Props {
   tiles: StatTileItem[];
+  /** spacing classes; a grid inside a flex column with its own gap passes "" */
+  className?: string;
 }
 
 /** Responsive grid of headline numbers, each `[label, value, unit]`. */
-export function StatTileGrid({ tiles }: Props) {
+export function StatTileGrid({ tiles, className = "mb-4" }: Props) {
   return (
     <div
-      className={`${RESULT_MAX_WIDTH} grid gap-px mb-4 rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1`}
+      className={`${RESULT_MAX_WIDTH} ${className} grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1`}
     >
       {tiles.map(([label, value, unit]) => (
         <StatTile key={statLabel(label)} label={label} value={value} unit={unit} />
