@@ -20,10 +20,15 @@ interface Props {
     | "subWithBox"
     | "portGeom"
   >;
+  /** the view's size and position while it isn't full screen (default: a fixed height for one column) */
+  boxClassName?: string;
 }
 
 /** The 3D view with its full-screen toggle. */
-export function StackViewer({ planner }: Props) {
+export function StackViewer({
+  planner,
+  boxClassName = "relative h-[300px] md:h-[clamp(320px,56vh,560px)]",
+}: Props) {
   const {
     isFull3d,
     setIsFull3d,
@@ -48,7 +53,7 @@ export function StackViewer({ planner }: Props) {
         className={
           isFull3d
             ? "fixed inset-0 z-50 bg-stone-50"
-            : "relative rounded-lg overflow-hidden border border-stone-300 bg-stone-50 h-[300px] md:h-[clamp(320px,56vh,560px)]"
+            : `rounded-lg overflow-hidden border border-stone-300 bg-stone-50 ${boxClassName}`
         }
       >
         <button

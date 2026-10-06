@@ -41,6 +41,8 @@ import {
   noteLines,
 } from "../../lib/pa/cutlist";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
+import { useWidthAtLeast } from "../../hooks/useElementWidth";
+import { RESULTS_TWO_COLUMN_PX } from "../../styles/layout";
 import { useFolds } from "../../hooks/useFolds";
 import { usePalette } from "../../hooks/useTheme";
 import { entriesOf, keysOf } from "../../lib/records";
@@ -153,6 +155,8 @@ export function CutlistPage({ project, options, parts, also, wall, material }: P
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tab, setTab] = useState<CutlistSettingsSection>("boxes");
   const tabClass = (t: CutlistSettingsSection) => (tab === t ? "" : "max-md:hidden");
+  // the parts list beside the sheet layout once the results pane is wide enough (the pane, not the viewport: the divider drags)
+  const [twoColumnBox, twoColumns] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   /** the row (by `cutRowKey`) highlighted with its pieces on the sheets */
   const [hot, setHot] = useState<string | null>(null);
 
@@ -424,7 +428,10 @@ export function CutlistPage({ project, options, parts, also, wall, material }: P
               {n}
             </p>
           ))}
-          <div className="grid grid-cols-1 gap-8 min-[1400px]:grid-cols-[minmax(0,1fr)_26rem]">
+          <div
+            ref={twoColumnBox}
+            className={`grid gap-8 ${twoColumns ? "grid-cols-[minmax(0,1fr)_26rem]" : "grid-cols-1"}`}
+          >
             {panelList}
             {sheetLayout}
           </div>

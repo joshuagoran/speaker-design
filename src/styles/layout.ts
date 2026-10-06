@@ -9,3 +9,11 @@ export const READING_WIDTH = "max-w-6xl";
 
 /** Tailwind's `md` breakpoint as a media query: from here up the app shows two panes and folds the PA settings. */
 export const MD_UP = "(min-width: 768px)";
+
+/**
+ * The results pane width, px, from which a page's results take two columns: PA Design (the 3D view beside the summary,
+ * Sub beside Mid-bass, Dispersion and Totals beside Horn) and Cutlist (the parts list beside the sheet layout). Measured
+ * on the pane, not the viewport, so dragging the settings divider switches every page alike; at the default settings
+ * width it switches at a 1400 px viewport.
+ */
+export const RESULTS_TWO_COLUMN_PX = 858;
