@@ -53,6 +53,8 @@ export interface PaBoxSupports {
   /** across the top and bottom (x): the side-duct walls, the slot's fins */
   top: number[];
   bottom: number[];
+  /** back from the baffle on both sides (z): a folded slot's rear channel wall, glued between them */
+  sideZ?: number[];
 }
 export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], bottom: [] };
 
@@ -78,7 +80,9 @@ export function paBoxPanels(
       spanV: ih,
       stock: wall,
       ribs: true,
+      fixedU: sup.sideZ ?? [],
       fixedV: sup.sideL,
+      stopU: stops.sideZ ?? [],
       stopV: stops.sideL,
     },
     {
@@ -90,7 +94,9 @@ export function paBoxPanels(
       spanV: ih,
       stock: wall,
       ribs: true,
+      fixedU: sup.sideZ ?? [],
       fixedV: sup.sideR,
+      stopU: stops.sideZ ?? [],
       stopV: stops.sideR,
     },
     {

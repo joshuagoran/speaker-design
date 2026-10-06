@@ -534,11 +534,13 @@ export type BraceVent = Pick<VentSpec, "slotH" | "len" | "throat" | "div" | "nt"
  * Where the duct's length changes the sub's bracing: whether the duct runs far enough back to hold the panels it runs
  * along (ductHolds: then its parts' lines, subVentLines, are supports: a bottom slot's shelf across both sides and its
  * two fins along the bottom, a side duct's wall along the top and bottom and its dividers across its side), whether a
- * bottom slot folds up the back and whether the tubes take elbows (subKeepOut).
+ * bottom slot folds up the back (and whether its rear channel wall rises far enough, DUCT_SUPPORT_MIN_SHARE of the
+ * inside height, to hold the sides: `wallHolds`) and whether the tubes take elbows (subKeepOut).
  */
 export interface DuctFlags {
   holds: boolean;
   folds: boolean;
+  wallHolds: boolean;
   elbows: boolean;
 }
 /** The sub's duct's flags (DuctFlags) at its length in this box. */
@@ -552,6 +554,10 @@ export const ductFlagsOf = (
 ): DuctFlags => ({
   holds: ductHolds(box, t, inset, style, v),
   folds: style === "slots" && slotFolds(box, v, t),
+  wallHolds:
+    style === "slots" &&
+    slotFolds(box, v, t) &&
+    foldedRearWallIn(box, v, t) >= DUCT_SUPPORT_MIN_SHARE * paInside(box, t, inset).ih,
   elbows:
     isRoundPort(style) &&
     modelTubeElbows(box, style, { nt: v.nt, dia: v.dia, len: v.len }, t, drv) > 0,
@@ -735,7 +741,16 @@ const BRACING_MEMO = new Map<string, BoxBracing>();
 const INPUT_MEMO = new Map<string, BoxBracing>();
 const BRACING_MEMO_MAX = 20000;
 const linesKey = (s: PaBoxSupports) =>
-  `${s.sideL.join()};${s.sideR.join()};${s.top.join()};${s.bottom.join()}`;
+  `${s.sideL.join()};${s.sideR.join()};${s.top.join()};${s.bottom.join()};${s.sideZ?.join() ?? ""}`;
+/**
+ * A folded slot's rear channel wall as a line on both sides, back from the baffle (inside): the channel's front wall,
+ * a slot height and a wall in from the back, `t` thick, glued between the sides. Where it rises DUCT_SUPPORT_MIN_SHARE
+ * of the inside height (DuctFlags `wallHolds`) it holds both sides there and a side rib may stop on it.
+ */
+function foldWallLine(box: Dims3, t: number, inset: number, v: Pick<VentSpec, "slotH">) {
+  const { inD } = paInside(box, t, inset);
+  return inD - (v.slotH + t) + t / 2;
+}
 const remember = (memo: Map<string, BoxBracing>, key: string, b: BoxBracing) => {
   if (memo.size >= BRACING_MEMO_MAX) memo.clear();
   memo.set(key, b);
@@ -797,7 +812,7 @@ export function subBoxBracing(
     ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
     : [];
   const hwKey = regionsKey(recesses);
-  const key = `${bs}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
+  const key = `${bs}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };
@@ -811,8 +826,16 @@ export function subBoxBracing(
       t,
       inset,
       style === "slots" ? v.slotH + t : 0,
-      flags.holds ? subVentLines(box, t, style, v) : NO_SUPPORTS,
-      subVentStops(box, t, style, v),
+      {
+        ...(flags.holds ? subVentLines(box, t, style, v) : NO_SUPPORTS),
+        // a folded slot's rear channel wall holds both sides where it rises far enough
+        sideZ: flags.wallHolds ? [foldWallLine(box, t, inset, v)] : [],
+      },
+      // and a side rib running back may stop on it there; on a lower wall it would end in the air over the channel
+      {
+        ...subVentStops(box, t, style, v),
+        sideZ: flags.wallHolds ? [foldWallLine(box, t, inset, v)] : [],
+      },
       keepOut,
       keepKey,
       bs,

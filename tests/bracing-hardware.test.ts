@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { bracingRegions, braceFallbacks, regionsOverlap } from "../src/lib/bracing";
 import { PA_PANEL_TARGET_HZ } from "../src/lib/pa/bracing";
 import {
+  ductFlagsOf,
   midBoxBracing,
   midHardwarePlan,
   paInner,
@@ -195,4 +196,35 @@ test("the 3D view draws the plan of the style chosen, every brace and rib of it"
       c.name,
     );
   }
+});
+
+test("a folded slot's rear channel wall holds the sides where it rises far enough, and side ribs stop on it", () => {
+  const sub = DEFAULT_PA.sub,
+    t = 0.5,
+    inset = 0.75,
+    box = { w: 24, h: 40, d: 26 };
+  const handles: BoxHandles = { model: "H1105", upIn: 0, backIn: 0 };
+  // a slot folded up the back: its wall rising 2/3 of the inside height or more, then the least rise (1″)
+  const tall = { ...DEFAULT_PA.cVent, slotH: 3.5, len: box.d - t + 0.75 * (box.h - 2 * t) };
+  const low = { ...tall, len: box.d - t + 1 };
+  const flags = (v: typeof tall) => ductFlagsOf(box, t, inset, "slots", v, sub);
+  assert.ok(flags(tall).folds && flags(tall).wallHolds);
+  assert.ok(flags(low).folds && !flags(low).wallHolds);
+  const b = subBoxBracing(box, t, inset, "slots", tall, sub, "ribs", handles);
+  const plan = subHardwarePlan(box, t, inset, "slots", tall, sub, "ribs", handles);
+  // the sides' ribs run back from the baffle and end on the wall, clear of the handles' recesses
+  const wallAt = paInner(box, t, inset).z - (tall.slotH + t);
+  for (const side of ["sideL", "sideR"] as const) {
+    const ribs = b.ribs.filter((r) => r.panel === side);
+    assert.ok(ribs.length > 0, side);
+    for (const r of ribs)
+      assert.ok(Math.abs(r.from + r.len - wallAt) < 1e-9, `${side} rib ends at ${r.from + r.len}`);
+    const hz = b.panels.find((p) => p.id === side)?.hz ?? 0;
+    assert.ok(hz >= PA_PANEL_TARGET_HZ - 1e-9, `${side} at ${hz.toFixed(0)} Hz`);
+  }
+  assert.deepStrictEqual(clashes(b, plan, box, t, inset), []);
+  // the low wall neither holds the sides nor takes a rib's end: the sides read lower
+  const lowB = subBoxBracing(box, t, inset, "slots", low, sub, "ribs", handles);
+  const side = (x: BoxBracing) => x.panels.find((p) => p.id === "sideL")?.hz ?? 0;
+  assert.ok(side(lowB) < side(b), `${side(lowB).toFixed(0)} vs ${side(b).toFixed(0)} Hz`);
 });
