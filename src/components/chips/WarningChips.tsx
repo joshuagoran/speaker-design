@@ -1,4 +1,5 @@
 import type { Chip } from "../../types";
+import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 /** Background and border classes for each warning-chip status: a light tint of the status colour with a matching border. */
 export const CHIP_BACKGROUND_CLASSES = {
@@ -15,7 +16,7 @@ interface Props {
 /** Stack of warning chips, each `[status, heading, text, id]` as returned by subChips, midChips, hornChips, fillChips and hifiChips. */
 export function WarningChips({ chips, className = "" }: Props) {
   return (
-    <div className={`flex flex-col gap-1.5 ${className}`.trim()}>
+    <div className={`${RESULT_MAX_WIDTH} flex flex-col gap-1.5 ${className}`.trim()}>
       {chips.map(([kind, head, body, id]) => (
         <div
           key={id}

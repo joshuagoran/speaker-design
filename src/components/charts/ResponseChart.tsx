@@ -5,6 +5,7 @@ import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { useState } from "react";
 import { SVG_FONT, FONT } from "../../styles/fonts";
+import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 /**
  * One curve on the chart: its points, legend label, line colour and fill colour. `band` shades the curve at the low and
@@ -168,7 +169,7 @@ export function ResponseChart({
       );
   }
   return (
-    <div ref={box}>
+    <div ref={box} className={RESULT_MAX_WIDTH}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"

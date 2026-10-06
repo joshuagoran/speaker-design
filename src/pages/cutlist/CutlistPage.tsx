@@ -52,7 +52,7 @@ import {
 } from "../../lib/pa/cutlist";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
-import { RESULTS_TWO_COLUMN_PX } from "../../styles/layout";
+import { RESULTS_TWO_COLUMN_PX, RESULT_MAX_WIDTH } from "../../styles/layout";
 import { useFolds } from "../../hooks/useFolds";
 import { usePalette } from "../../hooks/useTheme";
 import { entriesOf, keysOf } from "../../lib/records";
@@ -454,7 +454,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
           ))}
           <div
             ref={twoColumnBox}
-            className={`grid gap-8 ${twoColumns ? "grid-cols-[minmax(0,1fr)_26rem]" : "grid-cols-1"}`}
+            className={`${RESULT_MAX_WIDTH} grid gap-8 ${twoColumns ? "grid-cols-[minmax(0,1fr)_26rem]" : "grid-cols-1"}`}
           >
             {panelList}
             {sheetLayout}
