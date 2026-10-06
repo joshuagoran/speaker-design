@@ -54,17 +54,17 @@ export function CoverageAssumptions({ room, planner, target, level }: Props) {
     [
       "Levels",
       [
-        `Target: ${level.targetDb} dB SPL in the sub band at ${COVERAGE_LEVEL_REF_PLACE[level.levelRef]}, less the music-balance tilts above the crossovers. The planner's target is ${LISTENER_TARGET_DB} dB (${target} dB in this band). The system is turned down to meet the target there. It never plays past its limit.`,
-        `The audience average is the mean level in dB over the floor that the stats count. "1 m from the stacks" is 1 m along each stack's aim from the middle of its front, at ear height, averaged over the two stacks.`,
+        `Target: ${level.targetDb} dB SPL in the sub band at ${COVERAGE_LEVEL_REF_PLACE[level.levelRef]}, less the music-balance tilts above the crossovers. The planner's target is ${LISTENER_TARGET_DB} dB (${target} dB in this band). The planner decreases the system level to meet the target there. It never plays past its limit.`,
+        `The audience average is the mean level in dB over the floor that the stats count. "1 m from the stacks" is at ear height, 1 m along each stack's aim from its front center. The level is the average of the two stacks.`,
         `Each band plays at the planner's limit: the sub's music limit through its lowpass, and the maximum curves of the mid and horn. The balance comes from the Design page: mid ${planner.midBandTiltDb} dB below the sub, horn ${planner.hornBandTiltDb} dB below the mid. The weakest band sets the level.`,
         "Past their ends, the planner's curves follow the crossover slope and keep their end phase.",
-        "The sub and mid curves are for boxes on the floor. Below the baffle step, the model removes the floor and adds it back as a reflection from each box's height. The horn's sensitivity is free field.",
+        "The sub and mid curves are for boxes on the floor. Below the baffle step, the model replaces the floor with a reflection from each box's height. The horn's sensitivity is free field.",
       ],
     ],
     [
       "Stacks",
       [
-        `A box's drivers sit at its center on the plan, at their real heights, time-aligned on its axis ${ALIGN_DISTANCE_M} m out at horn height.`,
+        `On the plan, a box's drivers are at its center, at their real heights. They are time-aligned on its axis, ${ALIGN_DISTANCE_M} m out at horn height.`,
         `Linkwitz-Riley crossovers (${slopes}), with phase. Each band also has its own phase: the sub's vented box and highpass, the mid's sealed box (no voice-coil inductance) and a first-order baffle-step shelf.`,
         "Sub delay: in phase with the mid at the crossover on the stack's axis (unwrapped phase). All subs use the same delay.",
         `The sub and mid are rigid pistons. Behind the box, they lose 3 dB at ${BOX_SHADOW_HZ} Hz and 6 dB per octave above.`,
@@ -82,7 +82,7 @@ export function CoverageAssumptions({ room, planner, target, level }: Props) {
     [
       "Room",
       [
-        "A rectangular box with flat sides. Each side and the ceiling has its own material, with published octave-band absorption (Everest & Pohlmann), 125 Hz–4 kHz, flat outside that range.",
+        "A rectangular box with flat sides. Each side and the ceiling has its own material. Its absorption is the published octave-band data (Everest & Pohlmann), 125 Hz–4 kHz, flat outside that range.",
         `Below twice the Schroeder frequency (within ${MODAL_HZ[0]}–${MODAL_HZ[1]} Hz${crossover != null ? `; here ${Math.round(crossover)} Hz` : ""}) the model sums the room's modes and blends them into the reflections over ${MODAL_FADE_OCT} octave. The modes decay at Sabine's rate and treat every side as solid. With an open side, they are only a rough guide.`,
         `Above that: one reflection from each wall and the ceiling, each with its own floor bounce. Then an even reverberant field (Hopkins–Stryker less the first reflections; horn directivity by Molloy).${t60 != null ? ` This room rings about ${t60.toFixed(1)} s at 1 kHz.` : ""}`,
       ],

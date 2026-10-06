@@ -169,7 +169,7 @@ export function NotesPage() {
               ],
               [
                 "3. Check it",
-                `Play a sine at the peak-excursion frequency (the sub's \u201c${STATS.peakExcursion.label}\u201d row). Increase the level until the limit indicator comes on. Measure the AC volts at the speaker terminals and compare with \u221a(W \u00d7 8).`,
+                `Play a sine at the peak-excursion frequency (the sub's \u201c${STATS.peakExcursion.label}\u201d row). Increase the level until the limit indicator lights. Measure the AC volts at the speaker terminals and compare with \u221a(W \u00d7 8).`,
               ],
               [
                 "4. Steeper or in volts",
@@ -332,7 +332,7 @@ export function NotesPage() {
               ],
               [
                 "6. Final build",
-                "Stripboard is fine for the HF side. Wire the woofer path (~6 A at 300 W) in 14–16 AWG wire, not the strips, or wire point to point on a plywood board. Keep the coils apart or at 90° to each other, away from the woofer magnet. Mount on foam and measure again in the box. Copy for the other boxes and check each one.",
+                "Stripboard is fine for the HF side. Use 14–16 AWG wire for the woofer path (~6 A at 300 W), not the strips. Or wire point to point on a plywood board. Keep the coils apart or at 90° to each other, away from the woofer magnet. Mount on foam and measure again in the box. Copy for the other boxes and check each one.",
               ],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
@@ -383,7 +383,7 @@ export function NotesPage() {
             {[
               [
                 "Bracing",
-                `The planner adds ribs, window braces or both, clear of the drivers and the vent, until each panel's first resonance is above ${formatHz(PA_PANEL_TARGET_HZ)}. One setting under ${PA_SETTINGS_TABS.build} sets the style for the whole stack. The cutlist, volume, weight and cutaway include the braces. Braces and handle recesses still compete for the same panel area.`,
+                `The planner adds ribs, window braces or both until each panel's first resonance is above ${formatHz(PA_PANEL_TARGET_HZ)}. The braces stay clear of the drivers and the vent. One setting under ${PA_SETTINGS_TABS.build} sets the style for the whole stack. The cutlist, volume, weight and cutaway include the braces. Braces and handle recesses still compete for the same panel area.`,
               ],
               ["Handles", "Recess type, depth and position on the sub. This affects the bracing."],
               [

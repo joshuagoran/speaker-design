@@ -508,13 +508,13 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
         ? [
             "warn",
             "HF limits first",
-            `Through a ${pad.toFixed(0)} dB pad the HF reaches its ${2 * hf.aes} W program rating at about ${Math.round(hfLimW)} W of amp, under the ${ampW} W you've set.`,
+            `With a ${pad.toFixed(0)} dB pad, the HF reaches its ${2 * hf.aes} W program rating at about ${Math.round(hfLimW)} W of amp. That is less than the ${ampW} W amp setting.`,
             "fillHfHeadroom",
           ]
         : [
             "ok",
             "HF has headroom",
-            `Through a ${pad.toFixed(0)} dB pad the HF only reaches its program rating at about ${Math.round(hfLimW)} W of amp.`,
+            `With a ${pad.toFixed(0)} dB pad, the HF only reaches its program rating at about ${Math.round(hfLimW)} W of amp.`,
             "fillHfHeadroom",
           ],
     );

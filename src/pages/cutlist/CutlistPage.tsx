@@ -623,7 +623,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
               />
               <ToggleGroup
                 label={
-                  <Tooltip tip="Lays out the least-full sheet again to keep one large piece: a full-length strip or a full-width panel. This never adds a sheet.">
+                  <Tooltip tip="Arranges the least-full sheet again to keep one large piece: a full-length strip or a full-width panel. This never adds a sheet.">
                     Keep offcut
                   </Tooltip>
                 }
