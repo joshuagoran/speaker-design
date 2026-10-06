@@ -375,18 +375,10 @@ export function NotesPage() {
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
               [
-                "Baffle mounting",
-                'Cleats (forgiving, costs 3/4" of interior on each side) or a stopped rabbet in the frame panels (tighter, squares the box, needs a dado). Baffle size changes with the choice.',
-              ],
-              [
                 "Bracing",
                 "Not drawn. Volume and weight allow for two braces. Center ribs, slat ladder or windowed shelves — decide once handle recesses are placed, since they compete for the same panel area.",
               ],
               ["Handles", "Recess type, depth and position on the sub. Interacts with bracing."],
-              [
-                "Driver margins",
-                "Currently equal at top and sides. One recommendation is to offset deliberately so baffle modes and diffraction paths don't coincide — likely inaudible below 100 Hz, so mostly a visual decision.",
-              ],
               [
                 "Port edge finish",
                 "Paint carried into the slot ducts, or masked so the ply edge shows; end grain in the mouth needs sealing either way.",

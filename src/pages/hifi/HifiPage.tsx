@@ -512,9 +512,6 @@ export function HifiPage({ hifi }: Props) {
                   <div
                     className={`text-sm text-stone-500 leading-relaxed ${wide ? "w-48 shrink-0" : ""}`}
                   >
-                    <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold mb-1">
-                      At the seat
-                    </div>
                     <div>{seatDistanceFt.toFixed(1)} ft from the pair</div>
                     <div>
                       Off axis: L {((leftGeometry.th * 180) / Math.PI).toFixed(0)}°, R{" "}
