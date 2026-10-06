@@ -630,7 +630,7 @@ export function waterfallStrips(
       wide = Math.max(side.a, top.a);
     if (len > usable.h + EPS || wide > usable.w + EPS) {
       notes.push(
-        `${CUT_BOX_NAMES[box]}: the side-top-side strip is ${formatInches(len)}″, longer than the sheet's ${formatInches(usable.h)}″. Cut the sides and top separately.`,
+        `${CUT_BOX_NAMES[box]}: the side-top-side strip is ${formatInches(len)}″, over the sheet's ${formatInches(usable.h)}″. Cut separately.`,
       );
       continue;
     }
@@ -641,7 +641,7 @@ export function waterfallStrips(
       a: wide,
       b: len,
       t: side.t,
-      note: `side ${formatInches(side.b)}, top ${formatInches(top.b)}, side ${formatInches(side.b)}, cut in that sequence so the grain is continuous over the top corners; ${side.note}`,
+      note: `side ${formatInches(side.b)}, top ${formatInches(top.b)}, side ${formatInches(side.b)}, in that order, for continuous grain; ${side.note}`,
       grain: "b",
       pieces: [side.b, top.b, side.b],
     };

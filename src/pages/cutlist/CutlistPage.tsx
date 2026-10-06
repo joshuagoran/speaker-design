@@ -390,7 +390,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                 `; keeps a ${formatInches(g.offcut.w)} × ${formatInches(g.offcut.h)}″ offcut on sheet ${g.offcut.sheet + 1}`}
               {g.fewestSheets !== null &&
                 g.fewestSheets < g.sheets.length &&
-                `. Rip first uses ${plural(g.sheets.length - g.fewestSheets, "sheet")} more than the fewest-sheets layout`}
+                `. Rip first uses ${plural(g.sheets.length - g.fewestSheets, "sheet")} more`}
               .
             </p>
             {g.tooBig.length > 0 && (
@@ -507,7 +507,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
             <>
               <NumberField
                 label={
-                  <Tooltip tip="Sheets are rarely their nominal size: 18 mm Baltic birch is often 0.689″, US ¾″ plywood 23/32″. Measure your sheet. The volume, panels, joints, 3D view and weights use this value.">
+                  <Tooltip tip="18 mm birch is often 0.689″; ¾″ plywood, 23/32″. Measure yours.">
                     {`Measured ${PANEL_NOMINAL_NAMES[panel].name}`}
                   </Tooltip>
                 }
@@ -545,7 +545,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
               />
               <ToggleGroup
                 label={
-                  <Tooltip tip="Trims each factory edge square before you cut the parts. Factory edges are often damaged or out of square.">
+                  <Tooltip tip="Trims each factory edge square. They are often damaged.">
                     Edge trim
                   </Tooltip>
                 }
@@ -567,7 +567,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                 <div>
                   <ToggleGroup
                     label={
-                      <Tooltip tip="The face grain direction of each panel. A locked panel is along the sheet's length. Any lets the layout turn it to save plywood.">
+                      <Tooltip tip="Locked: along the sheet's length. Any: the layout can turn it.">
                         Grain
                       </Tooltip>
                     }
@@ -592,7 +592,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                 </div>
                 <ToggleGroup
                   label={
-                    <Tooltip tip="Cuts each box's side, top and side from one strip, so the grain is continuous over both top corners. On by default with miter joints.">
+                    <Tooltip tip="Side, top and side from one strip, for continuous grain over the corners.">
                       Waterfall
                     </Tooltip>
                   }
@@ -613,7 +613,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
             <>
               <ToggleGroup
                 label={
-                  <Tooltip tip="Rip first: rip each sheet into full-length strips before any crosscut. You never crosscut a full sheet on the table saw. This can use more sheets; the layout shows how many.">
+                  <Tooltip tip="Rip first: full-length strips before any crosscut. Can use more sheets.">
                     Cut style
                   </Tooltip>
                 }
@@ -623,7 +623,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
               />
               <ToggleGroup
                 label={
-                  <Tooltip tip="Arranges the least-full sheet again to keep one large piece: a full-length strip or a full-width panel. This never adds a sheet.">
+                  <Tooltip tip="Keeps one large offcut on the least-full sheet. Never adds a sheet.">
                     Keep offcut
                   </Tooltip>
                 }
