@@ -98,9 +98,7 @@ export function SheetDrawing({
           {material === "ply" && (
             <>
               {" · "}
-              <span title="Face grain is top to bottom on this drawing. Load the sheet this way.">
-                grain ↕
-              </span>
+              <span title="Face grain top to bottom. Load the sheet this way.">grain ↕</span>
             </>
           )}
         </span>

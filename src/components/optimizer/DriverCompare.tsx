@@ -57,8 +57,7 @@ export function DriverCompare({ rows, onUse }: Props) {
         open && (
           <div className="pt-2">
             <div className="text-xs text-stone-500 mb-2">
-              Each option in your design, with all other settings the same, checked against your
-              limits.
+              Each option in your design, all else the same, against your limits.
             </div>
             <div className="flex flex-wrap gap-1" role="group" aria-label="Part to compare">
               {entriesOf(DRIVER_PART_NAMES).map(([k, name]) => (

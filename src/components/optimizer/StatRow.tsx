@@ -10,70 +10,70 @@ export interface StatDef {
 export const STATS = {
   grossInternal: {
     label: "Gross internal",
-    tip: "Inside volume of the box, before the driver and port.",
+    tip: "Inside volume, before the driver and port.",
   },
   netVolume: {
     label: "Net volume",
-    tip: "Air volume in the box, after the driver and port.",
+    tip: "Air volume after the driver and port.",
   },
   portArea: {
     label: "Port area",
-    tip: "Total port area, against the cone area. In a small port, the air is fast and noisy.",
+    tip: "Total port area, against cone area. Too small: fast, noisy air.",
   },
   hydraulicDiameter: {
     label: "Hydraulic diameter",
-    tip: "4 × port area ÷ perimeter. A small value gives turbulence; flared mouths help.",
+    tip: "4 × area ÷ perimeter. Small values mean turbulence; flared mouths help.",
   },
   midbandSensitivity: {
     label: "Midband sensitivity",
-    tip: "Midband level for a fixed input voltage. Higher is louder for the same power.",
+    tip: "Level for a fixed voltage. Higher is louder for the same power.",
   },
   firstLimit: {
     label: "First limit, music",
-    tip: "The first limit with music at the amp's power: cone travel (Xmax), port air speed, or other.",
+    tip: "What limits first with music: Xmax, port air speed or other.",
   },
   peakPortVelocity: {
     label: "Peak port velocity",
-    tip: "Maximum port air speed. High speed causes chuffing and compression.",
+    tip: "Maximum port air speed. High speed: chuffing and compression.",
   },
   peakExcursion: {
     label: "Peak excursion",
-    tip: "Maximum cone travel, and its share of the rated travel (Xmax).",
+    tip: "Maximum cone travel and its share of Xmax.",
   },
   qtc: {
     label: "Qtc",
-    tip: "Sealed-box damping. About 0.7 is flat; higher is boomy, lower is dry.",
+    tip: "Sealed-box damping. 0.7 is flat; higher is boomy, lower dry.",
   },
   tuningFb: {
     label: "Tuning Fb",
-    tip: "Port resonance frequency. Output drops quickly below it.",
+    tip: "Port resonance. Output drops quickly below it.",
   },
   systemF3: {
     label: "System F3",
-    tip: "Frequency 3 dB below this driver's midband, with the highpass. It compares the low-end shape, not the level.",
+    tip: "−3 dB point against this driver's midband, with the highpass. Shape, not level.",
   },
   subBass: {
     label: `Sub-bass ${SUB_BASS_BAND_HZ[0]}–${SUB_BASS_BAND_HZ[1]} Hz`,
-    tip: `Average of the max SPL curve from ${SUB_BASS_BAND_HZ[0]} to ${SUB_BASS_BAND_HZ[1]} Hz, with the highpass: the steady sine level at the first limit (excursion, port air speed or amp).`,
+    tip: `Average of the max SPL curve from ${SUB_BASS_BAND_HZ[0]} to ${SUB_BASS_BAND_HZ[1]} Hz, with the highpass: steady sine level at the first limit.`,
   },
   f3InRoom: {
     label: "F3 in room",
-    tip: "Frequency 3 dB below the midband, in the room.",
+    tip: "In-room −3 dB point.",
   },
   maxAtSeat: {
     label: "Max at the seat",
-    tip: "Clean level at the seat from both speakers, below a driver or port limit.",
+    tip: "Clean level at the seat from both speakers.",
   },
   pairPrice: {
     label: "Pair",
-    tip: "Driver cost for both speakers, at the listed prices.",
+    tip: "Driver cost for both speakers.",
   },
 } as const satisfies Record<string, StatDef>;
 /** A row's or tile's name: a statistic from STATS (with its tooltip) or a plain label. */
 export type StatName = StatDef | string;
 export const statLabel = (k: StatName) => (typeof k === "string" ? k : k.label);
 /** The tooltip of a "Max SPL at … Hz" row (its name carries the frequency, so the row passes it as its own tip). */
-export const MAX_SPL_TIP = "Maximum steady sine level at this frequency, below the named limit.";
+export const MAX_SPL_TIP = "Maximum steady sine level here, below the named limit.";
 
 interface StatLabelProps {
   k: StatName;

@@ -29,6 +29,6 @@ export function outOfReachNotice(
   ].filter((x) => x != null);
   const reached = `${got.db.toFixed(1)} dB, F3 ${got.f3.toFixed(0)} Hz`;
   return missed.length
-    ? `${OUT_OF_REACH_LEAD}: ${missed.join(" with ")}. The first card is closest: ${reached}.`
-    : `No design that passes the checks keeps your design's ${words.both}. The first card is closest: ${reached}.`;
+    ? `${OUT_OF_REACH_LEAD}: ${missed.join(" with ")}. Closest (first card): ${reached}.`
+    : `No passing design keeps your ${words.both}. Closest (first card): ${reached}.`;
 }

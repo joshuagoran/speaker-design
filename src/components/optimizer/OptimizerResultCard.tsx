@@ -55,7 +55,7 @@ export function OptimizerResultCard({
   const exact = useCutlistLayout({ parts: build.parts, settings: build.cutlist, countsOnly: true });
   const counts = exact ? exact.groups.map((g) => ({ t: g.t, n: g.sheets.length })) : build.sheets;
   const sheets = (
-    <span title={exact ? undefined : "Quick estimate. The exact count follows."}>
+    <span title={exact ? undefined : "Quick estimate; exact count follows."}>
       {counts
         .map((x) => `${exact ? "" : "~"}${x.n} sheet${x.n > 1 ? "s" : ""} ${formatThickness(x.t)}`)
         .join(" + ")}
@@ -132,7 +132,7 @@ export function OptimizerResultCard({
       </div>
       {!result.priceKnown && (
         <div className="text-xs text-stone-500">
-          <Tooltip tip="Some drivers have no listed price, so the real total is higher.">
+          <Tooltip tip="Some drivers have no price; the real total is higher.">
             Partial prices
           </Tooltip>
         </div>

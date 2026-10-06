@@ -176,7 +176,7 @@ export function SignalPath() {
         s={10}
         a="start"
         c={mute}
-        b={`Crossovers in the PA2: ${DEFAULT_CROSSOVERS}. Amps are full-range. Each amp has limiters set for its driver.`}
+        b={`Crossovers in the PA2: ${DEFAULT_CROSSOVERS}. Full-range amps, limiters set per driver.`}
       />
     </svg>
   );

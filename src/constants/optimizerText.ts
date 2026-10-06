@@ -35,7 +35,7 @@ export const CARD_LABELS = {
 
 /** The sentence under a card both optimizers word the same way. */
 export const CARD_WHY = {
-  closest: "Passes the checks and is closest to your goal.",
+  closest: "Passes the checks; closest to your goal.",
   smallest: "Changes one thing from your design.",
   altLower: "Goes lower than your design.",
 } as const;
