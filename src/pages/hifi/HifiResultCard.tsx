@@ -11,6 +11,7 @@ import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import { STATS } from "../../components/optimizer/StatRow";
 import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
 import { byIdOrThrow } from "../../lib/tables";
+import { formatThickness } from "../../lib/panel";
 import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
 import { FONT } from "../../styles/fonts";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
@@ -96,8 +97,8 @@ export function HifiResultCard({
             : radiator
               ? ` (${radiator.n} × ${radiator.drv.name}, +${radiator.addG} g)`
               : ""}{" "}
-        · {config.wall === 0.5 ? "1/2″" : "3/4″"} · XO {config.xo} Hz · amps {config.wAmpW} /{" "}
-        {config.tAmpW} W
+        · {formatThickness(config.wall)} · XO {config.xo} Hz · amps {config.wAmpW} / {config.tAmpW}{" "}
+        W
       </div>
       <div className="grid grid-cols-2 gap-1.5">
         {tile(

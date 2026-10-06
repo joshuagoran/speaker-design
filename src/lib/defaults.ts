@@ -32,6 +32,7 @@ import type {
   SubDriver,
 } from "../types";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
+import { DUCT_DIVIDER_DEFAULT } from "../constants/panelSizes";
 
 /** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
 export type PaDefaults = Omit<
@@ -72,6 +73,8 @@ export const DEFAULT_PA = {
   portMax: 23.5,
   mDim: { w: 15, h: 15, d: 15 },
   wall: 0.75,
+  panel: "3/4",
+  divider: DUCT_DIVIDER_DEFAULT,
   inset: 0.75,
   xoLo: 120,
   xoHi: 900,
@@ -88,6 +91,7 @@ export const DEFAULT_PA = {
   spacerH: 20,
   joint: "butt",
   ...CUTLIST_DEFAULTS,
+  exactIn: {},
   midSize: 12,
   plywoodSheetKind: "4x8",
   boxSetCount: 2,
@@ -109,7 +113,8 @@ export const DEFAULT_HIFI = {
   selectedWaveguide: ST260,
   boxType: "vented",
   boxDims: { w: 9, h: 15, d: 11 },
-  wallThicknessIn: 0.75,
+  wallPanel: "3/4",
+  panelExactIn: {},
   panelMaterial: "ply",
   portSpec: { n: 1, dia: DEFAULT_PORT_SIZE.dia, len: 6 },
   radiatorSelection: { id: "sb16pfcr", n: 2, addG: 0 },

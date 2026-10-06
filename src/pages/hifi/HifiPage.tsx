@@ -46,6 +46,8 @@ import {
 import { roundoverOnsetHz } from "../../lib/hifi/diffraction";
 import { formatDims, formatHz, formatInches } from "../../lib/format";
 import { crossoverSlopeName } from "../../constants/crossovers";
+import { PANEL_NOMINAL_NAMES } from "../../constants/panelSizes";
+import { PANEL_NOMINAL_OPTIONS, formatThickness } from "../../lib/panel";
 import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsColumn";
 import { useFolds } from "../../hooks/useFolds";
 import { HIFI_SETTINGS_SECTIONS } from "../../constants/settingsSections";
@@ -103,7 +105,8 @@ export function HifiPage({ hifi }: Props) {
     boxDims,
     setBoxDims,
     wallThicknessIn,
-    setWallThicknessIn,
+    wallPanel,
+    setWallPanel,
     panelMaterial,
     setPanelMaterial,
     portSpec,
@@ -222,7 +225,7 @@ export function HifiPage({ hifi }: Props) {
       formatDims(boxDims),
       `${speakerSystem.gross.toFixed(1)} L`,
       PORT_CHOICES.find(isPortChoiceOn)?.[3].toLowerCase(),
-      `${formatInches(wallThicknessIn)} ${MATERIAL_CHOICES.find(([v]) => v === panelMaterial)?.[1]}`,
+      `${PANEL_NOMINAL_NAMES[wallPanel].short} ${MATERIAL_CHOICES.find(([v]) => v === panelMaterial)?.[1]}`,
       edgesText,
     ]
       .filter(Boolean)
@@ -600,14 +603,9 @@ export function HifiPage({ hifi }: Props) {
                 <span />
                 <span className="text-stone-500">Thickness</span>
                 <ToggleGroup
-                  value={wallThicknessIn}
-                  onChange={setWallThicknessIn}
-                  options={
-                    [
-                      [0.75, "3/4″"],
-                      [0.5, "1/2″"],
-                    ] as const
-                  }
+                  value={wallPanel}
+                  onChange={setWallPanel}
+                  options={PANEL_NOMINAL_OPTIONS}
                 />
                 <span>{renderLockButton("wall", "the panel thickness")}</span>
               </div>
@@ -782,8 +780,9 @@ export function HifiPage({ hifi }: Props) {
                   {roundoverTooDeep && (
                     <span className="text-orange-900">
                       {" "}
-                      {formatInches(roundoverIn)} is more than the {formatInches(wallThicknessIn)}{" "}
-                      panel takes: double the baffle or add hardwood edge strips.
+                      {formatInches(roundoverIn)} is more than the{" "}
+                      {formatThickness(wallThicknessIn)} panel takes: double the baffle or add
+                      hardwood edge strips.
                     </span>
                   )}
                 </div>

@@ -8,8 +8,6 @@ import {
   ampVoltage,
   thermalVoltageLimit,
   keeleFrequency,
-  isPanelThickness,
-  plywoodLbPerSqFt,
   highpassGain,
   rectangleEndCorrection,
   slotMouthCorrection,
@@ -17,7 +15,8 @@ import {
 } from "../pa/calc";
 import { MAX_ELBOWS, tubeElbows, tubeMaxLength, type TubeRoom } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
-import { MDF_LB_PER_SQ_FT } from "../../data/catalog/plywood";
+import { panelLbPerSqFt } from "../panel";
+import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import type {
   BoxModelTS,
   CrossoverOrder,
@@ -256,9 +255,9 @@ export function hifiSlotEndCorrection(
 }
 export const slotMaxLength = (dim: Dims3, wall: number, port: Pick<SlotPort, "h">) =>
   dim.d - 2 * wall - Math.max(port.h, 1); // leave the mouth's height behind it
-// lb/ft²; like plywoodLbPerSqFt, a wall thickness the catalogue doesn't list (user input) is weighed as 3/4″
+// lb/ft² at the wall's exact thickness (lib/panel); plywood when the material is absent
 export const panelWeightLb = (t: number, mat: PanelMaterial | undefined) =>
-  mat === "mdf" ? MDF_LB_PER_SQ_FT[isPanelThickness(t) ? t : 0.75] : plywoodLbPerSqFt(t);
+  panelLbPerSqFt(t, mat ?? PLYWOOD_MATERIAL);
 export function boxWeightLb(d: Dims3, t: number, mat: PanelMaterial | undefined) {
   const ft2 = (2 * (d.w * d.h + d.w * d.d + d.h * d.d)) / 144;
   return ft2 * panelWeightLb(t, mat);

@@ -19,6 +19,8 @@ import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
 import { savedCutlist } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
 import { savedPortStyle } from "../../../constants/portStyles";
+import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../../constants/panelSizes";
+import { isPanelNominal, panelFor, panelIn, savedPanelExactIn } from "../../../lib/panel";
 import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
 import { derivePaDesign } from "./paDesign";
 import type { PaDerivedDesign } from "./paDesign";
@@ -48,6 +50,8 @@ export interface PaDesign
   /** set by `restore` so the mid size effect leaves a restored config's driver and box alone */
   skipSizeReset: React.RefObject<boolean>;
   hornExitMismatch: boolean;
+  /** the walls' exact thickness, in: the nominal size at the Cutlist page's measured thickness (lib/panel) */
+  wallThicknessIn: number;
   /** plywood thickness, in */
   PT: number;
   snapshot: () => PaDesignConfig;
@@ -64,8 +68,10 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setPortStyle,
     subBoxDims,
     setSubBoxDims,
-    subVentSpec,
+    subVentSpec: subVentState,
     setSubVentSpec,
+    ductDividerPanel,
+    setDuctDividerPanel,
     subHighpassHz,
     setSubHighpassHz,
     subHighpassType,
@@ -120,8 +126,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     layout,
     setLayout,
     format,
-    wallThicknessIn,
-    setWallThicknessIn,
+    wallPanel,
+    setWallPanel,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,
@@ -150,6 +156,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setOffcutShape,
     cutStyle,
     setCutStyle,
+    panelExactIn,
+    setPanelExactIn,
   } = useCutlistOptions();
   const subDriverChoices = subDriversOfSize(format.sub);
   const midDriverChoices = midDriversOfSize(midSize);
@@ -172,8 +180,15 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
   }, [midSize]);
   const hornExitMismatch = hornOption.exit !== compressionDriver.exit;
 
-  /** Plywood thickness, in. */
+  /** The walls' exact thickness and plywood thickness, in. */
+  const wallThicknessIn = panelIn(wallPanel, PLYWOOD_MATERIAL, panelExactIn);
   const PT = wallThicknessIn;
+  // the side ducts' dividers at their size's measured thickness, carried on the vent every model and view reads
+  const ductDividerIn = panelIn(ductDividerPanel, PLYWOOD_MATERIAL, panelExactIn);
+  const subVentSpec = useMemo(
+    () => ({ ...subVentState, div: ductDividerIn }),
+    [subVentState, ductDividerIn],
+  );
   // derived once per change to the inputs below, not on every render of every tab (App holds this planner)
   const derived = useMemo(
     () =>
@@ -250,6 +265,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     portMax: maxPortAirSpeedMs,
     mDim: midBoxDims,
     wall: wallThicknessIn,
+    panel: wallPanel,
+    divider: ductDividerPanel,
     inset: baffleInsetIn,
     xoLo: subMidCrossoverHz,
     xoHi: midHornCrossoverHz,
@@ -271,11 +288,14 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     waterfall,
     offcut: offcutShape,
     cuts: cutStyle,
+    exactIn: panelExactIn,
     summary: `${subDriver.name} · ${subBox.w}×${subBox.h}×${subBox.d}″ · ${port.area.toFixed(0)} in² · ${subModelled ? subModelled.mdl.Fb.toFixed(1) + " Hz" : "—"}`,
   });
   const restore = (c: Partial<PaDesignConfig>) => {
-    if (c.wall === 0.5 || c.wall === 0.75) setWallThicknessIn(c.wall);
-    else setWallThicknessIn(DEFAULT_PA.wall);
+    // the measured thicknesses saved with the design (none in older saves: the nominal sizes), then its walls' size
+    const exactIn = savedPanelExactIn(c.exactIn);
+    setPanelExactIn(exactIn);
+    setWallPanel(panelFor(c, PLYWOOD_MATERIAL, exactIn) ?? DEFAULT_PA.panel);
     setBaffleInsetIn(typeof c.inset === "number" ? c.inset : DEFAULT_PA.inset);
     if (c.sub) setSubDriver(byId(SUB_OPTIONS, c.sub) ?? subDriver);
     if (c.mid) {
@@ -290,6 +310,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     if (c.horn) setHornOption(byId(HORN_OPTIONS, c.horn) ?? hornOption);
     if (c.cDim) setSubBoxDims(c.cDim);
     if (c.cVent) setSubVentSpec(c.cVent);
+    setDuctDividerPanel(isPanelNominal(c.divider) ? c.divider : DUCT_DIVIDER_DEFAULT);
     if (typeof c.hpf === "number") setSubHighpassHz(c.hpf);
     if (c.hpType && HIGHPASS_ALIGNMENTS[c.hpType]) setSubHighpassType(c.hpType);
     if (typeof c.ampW === "number") setSubAmpWatts(c.ampW);
@@ -328,6 +349,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setSubBoxDims,
     subVentSpec,
     setSubVentSpec,
+    ductDividerPanel,
+    setDuctDividerPanel,
     subHighpassHz,
     setSubHighpassHz,
     subHighpassType,
@@ -374,8 +397,9 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     layout,
     setLayout,
     format,
+    wallPanel,
+    setWallPanel,
     wallThicknessIn,
-    setWallThicknessIn,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,
@@ -402,6 +426,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setOffcutShape,
     cutStyle,
     setCutStyle,
+    panelExactIn,
+    setPanelExactIn,
     ...derived,
     midWithBox,
     subDriverChoices,

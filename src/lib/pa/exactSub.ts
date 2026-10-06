@@ -21,7 +21,7 @@ import {
   logGridCount,
   LOWPASS_SKIRT_SPAN,
   sideDuctEndCorrection,
-  SIDE_DUCT_DIVIDER_IN,
+  ductDividerIn,
   STUFFING_VOLUME_GAIN,
 } from "./calc";
 import type {
@@ -37,6 +37,7 @@ import type {
 import { subTubeEndCorrection, subTubeSpan, type TubeDriver } from "./tubes";
 import { ELBOW_COUNTS, MAX_ELBOWS, ownSpans, type ElbowCount } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
+import { isThinPanel } from "../panel";
 
 const RHO = 1.18,
   C = 343,
@@ -402,7 +403,7 @@ export function ventShape(
     const n = style === "vslot1" ? 1 : 2;
     return {
       n,
-      area: n * v.throat * (ih - 2 * SIDE_DUCT_DIVIDER_IN),
+      area: n * v.throat * (ih - 2 * ductDividerIn(v)),
       ec: sideDuctEndCorrection(box, v, t, n, most),
     };
   }
@@ -449,7 +450,7 @@ export function subWoodIn3(
   in3 +=
     Math.max(0, 2 * 2 * (Math.min(iw, inD) + Math.max(iw, inD)) - 4 * 2 * 2) *
     t *
-    (t === 0.5 ? 3 : 2);
+    (isThinPanel(t) ? 3 : 2);
   if (style === "slots") {
     const folded = slotFolds(box, v, t);
     const len = folded ? foldedShelfIn(box, v.slotH, t) : v.len;
@@ -457,7 +458,7 @@ export function subWoodIn3(
     if (folded) in3 += iw * foldedRearWallIn(box, v, t) * t;
   } else if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;
-    in3 += ih * v.len * t * n + v.throat * v.len * SIDE_DUCT_DIVIDER_IN * 2 * n;
+    in3 += ih * v.len * t * n + v.throat * v.len * ductDividerIn(v) * 2 * n;
   }
   return in3;
 }
