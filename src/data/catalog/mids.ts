@@ -519,7 +519,7 @@ export const MID_RAW: readonly RawDriver<MidDriver>[] = [
     name: "B&C 12CL76",
     maker: "bc",
     price: 229.08,
-    src: "Parts Express, Oct 2026 (https://www.parts-express.com/B-C-12CL76-12-Neodymium-Woofer-294-695)",
+    src: "Parts Express, Oct 2026",
     ts: {
       Fs: 48,
       Qts: 0.21,
