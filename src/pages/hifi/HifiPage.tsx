@@ -72,7 +72,8 @@ import {
 } from "../../styles/layout";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
-import { HIFI_RESULT_HEADINGS, UI_TEXT } from "../../constants/uiText";
+import { UI_TEXT } from "../../constants/uiText";
+import { HIFI_RESULT_HEADINGS } from "../../constants/hifiResults";
 
 interface Props {
   hifi: HifiPlanner;
@@ -491,7 +492,7 @@ export function HifiPage({ hifi }: Props) {
                 <div
                   className={
                     wide
-                      ? `${RESULT_MAX_WIDTH} flex-1 flex gap-4 items-start`
+                      ? "flex-1 flex gap-4 items-start"
                       : `${RESULT_MAX_WIDTH} grid grid-cols-1 sm:grid-cols-2 gap-4 items-start`
                   }
                 >

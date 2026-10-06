@@ -37,9 +37,13 @@ export function RoomView({
     const ctm = e.currentTarget.getScreenCTM();
     if (!ctm) return;
     const { x, y } = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+    // kept to the drawing (0…W, down to its bottom edge), so a press in the letterbox margins can't put the seat
+    // outside the walls or jump the room deeper than a drag on the drawing itself
+    const fx = Math.min(W, Math.max(0, x)),
+      fy = Math.min(H + 20, y);
     setSeat({
-      x: Math.round(((x - W / 2) / k) * 4) / 4,
-      y: Math.max(2, Math.round(((y - 14) / k) * 4) / 4),
+      x: Math.round(((fx - W / 2) / k) * 4) / 4,
+      y: Math.max(2, Math.round(((fy - 14) / k) * 4) / 4),
     });
   };
   const spk = (sx: number, sign: number) => {
