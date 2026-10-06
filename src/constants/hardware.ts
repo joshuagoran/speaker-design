@@ -36,10 +36,10 @@ export const HARDWARE_OBSTACLE_NAMES = {
 /** The settings' labels for a box's handle offsets. */
 export const HANDLE_OFFSET_LABELS = {
   upIn: "Handle height from the centre of gravity",
-  backIn: "Handle front-back from the centre of gravity",
+  backIn: "Handle front-back from the preset",
 } as const;
 
-/** The handle offset sliders' range and step, in: either way from the centre of gravity. */
+/** The handle offset sliders' range and step, in: either way from the preset. */
 export const HANDLE_OFFSET_SLIDER = { min: -8, max: 8, step: 0.25 } as const;
 
 /** The fit chip's titles. */

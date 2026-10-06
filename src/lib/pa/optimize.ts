@@ -720,7 +720,7 @@ export function optimizePaStack(
   const shapes = (G: number, t: number, lb: number, size: number, n = 3) => {
     if (allExact) {
       const box = { w: sr.w[0], h: sr.h[0], d: sr.d[0] };
-      return [{ box, lb: subWeightLb(box, t, lb) }];
+      return [{ box, lb: subWeightLb(box, t, lb, null, subHwLb) }];
     }
     const out: { box: Dims3; lb: number }[] = [];
     // whole inches from the bottom of the range, plus the top itself (a half-inch "up to" value stays reachable)
@@ -746,7 +746,7 @@ export function optimizePaStack(
         )
           continue;
         const box = { w, h, d: sr.d[0] === sr.d[1] ? sr.d[0] : d };
-        out.push({ box, lb: subWeightLb(box, t, lb) });
+        out.push({ box, lb: subWeightLb(box, t, lb, null, subHwLb) });
       }
     out.sort((a, b) => a.lb - b.lb);
     const pick: { box: Dims3; lb: number }[] = [];

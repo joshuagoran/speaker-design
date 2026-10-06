@@ -392,6 +392,8 @@ function barePairs(s: ExactSpace, sub: SubDriver, t: number, V: number): Pairs {
   if (!free) return new Float64Array(0);
   const need = subDriverClearanceNeededIn(sub.size);
   const [[ka, as], [kb, bs]] = s.fixed;
+  const disp = subDisp(s, sub, t),
+    hw = hwLb(s, "sub");
   const out: number[] = [];
   for (const a of as)
     for (const b of bs) {
@@ -402,10 +404,10 @@ function barePairs(s: ExactSpace, sub: SubDriver, t: number, V: number): Pairs {
       )
         continue;
       const dims = { w: 0, h: 0, d: 0, [ka]: a, [kb]: b };
-      const x = bareFree(s, dims, t, subDisp(s, sub, t), V);
+      const x = bareFree(s, dims, t, disp, V);
       if (x === null) continue;
       const box = { ...dims, [free]: x };
-      const lb = subWeightLb(box, t, sub.lb);
+      const lb = subWeightLb(box, t, sub.lb, null, hw);
       if (lb > s.cap + 1e-9 || towerMidFails(s, box, t)) continue;
       out.push(a, b, x, lb);
     }
@@ -851,6 +853,8 @@ function exactHook(
     const [lo, hi] = s.sr.d;
     // the most an elbowed tube's correction can fall below a straight one's with no wall in front: its bends
     const bends = isRoundPort(style) ? MAX_ELBOWS * -SHARP_BEND_CORRECTION * vent.dia : 0;
+    const disp = subDisp(s, sub, t),
+      hw = hwLb(s, "sub");
     const out: number[] = [];
     for (let i = 0; i < pairCount(all); i++) {
       const dims = pairDims(s, all, i);
@@ -861,16 +865,10 @@ function exactHook(
       const lenLo = ductLengthFor(vs, Leff);
       if (lenHi < s.grid.minDuctIn) continue;
       if (lenLo > ductFitMax(deepest, style, vent, t, sub)) continue;
-      const x = bareFree(
-        s,
-        dims,
-        t,
-        subDisp(s, sub, t),
-        V + (vs.area * Math.max(0, lenLo) * 16.387) / 1000,
-      );
+      const x = bareFree(s, dims, t, disp, V + (vs.area * Math.max(0, lenLo) * 16.387) / 1000);
       if (x === null) continue;
       const box = { ...dims, d: Math.max(x, lo) };
-      const lb = subWeightLb(box, t, sub.lb);
+      const lb = subWeightLb(box, t, sub.lb, null, hw);
       if (lb > s.cap + 1e-9 || towerMidFails(s, box, t)) continue;
       out.push(all[i * PAIR], all[i * PAIR + 1], box.d, lb);
     }
