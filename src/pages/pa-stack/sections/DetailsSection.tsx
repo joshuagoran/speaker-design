@@ -92,24 +92,20 @@ export function DetailsSection({ planner }: Props) {
         <div>
           <span className="font-medium text-stone-900">Horn.</span> {hornOption.name} with{" "}
           {compressionDriver.name}, crossed at {midHornCrossoverHz} Hz (maker suggests{" "}
-          {hornOption.xo}). A short block lifts the mouth clear of the cube. Total stack height
-          about {stackHeightIn.toFixed(0)} in, horn center at {hornCenterHeightIn.toFixed(0)} in.
+          {hornOption.xo}). A block lifts the mouth clear of the cube. Stack height about{" "}
+          {stackHeightIn.toFixed(0)} in, horn center at {hornCenterHeightIn.toFixed(0)} in.
         </div>
         <div>
-          <span className="font-medium text-stone-900">Bracing.</span> The planner adds braces and
-          ribs, best gain per wood first, until each panel&rsquo;s first resonance is above{" "}
+          <span className="font-medium text-stone-900">Bracing.</span> Braces and ribs, best gain
+          per wood first, until each panel&rsquo;s first resonance is above{" "}
           {formatHz(subBracing.targetHz)} ({PANEL_TARGET_CROSSOVER_MULTIPLE} ×{" "}
           {PA_BRACING_CROSSOVER_HZ} Hz, the highest sub-to-mid crossover the optimizers pick). Sub,{" "}
           {BRACE_STYLE_NAMES[subBracing.style].toLowerCase()}: {braceCount(subBracing)}
           {midBracing
             ? `; ${UI_TEXT.midBass.toLowerCase()} cube, ${BRACE_STYLE_NAMES[midBracing.style].toLowerCase()}: ${braceCount(midBracing)}`
             : ""}
-          . The model treats each panel and each bay between supports as a thin plate with simply
-          supported edges. Glued edges are stiffer, so real values are higher. The vent shelf, its
-          fins and the side-duct walls are supports. Each brace and rib stays{" "}
-          {formatInches(DRIVER_CLEARANCE_IN)}″ clear of the driver and the vent. A side-to-side
-          window brace goes behind the magnet, or above or below the driver. A front-to-back window
-          brace has an opening around the driver. The Cutlist shows where each brace goes.
+          . Panels are simply supported plates; glued edges make real values higher. Braces stay{" "}
+          {formatInches(DRIVER_CLEARANCE_IN)}″ clear of the driver and the vent.
           {(
             [
               ["Sub", subBracing],
@@ -131,9 +127,8 @@ export function DetailsSection({ planner }: Props) {
                         .filter((p) => p.hz < b.targetHz - 1e-9)
                         .map((p) => BRACE_PANEL_NAMES[p.id].toLowerCase())
                         .join(", ")}
-                      . With this style, no other brace or rib position clear of the driver and the
-                      vent raises their resonance. Try {BRACE_STYLE_NAMES.both.toLowerCase()}, or
-                      thicker walls.
+                      . No other clear brace position raises them. Try{" "}
+                      {BRACE_STYLE_NAMES.both.toLowerCase()} or thicker walls.
                     </div>
                   )}
                 </div>

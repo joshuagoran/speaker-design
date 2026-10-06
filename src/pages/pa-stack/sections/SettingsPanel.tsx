@@ -377,7 +377,7 @@ export function SettingsPanel({ planner }: Props) {
                   />
                   <ToggleGroup
                     label={
-                      <Tooltip tip="Two plywood dividers per duct brace the inner wall to the side wall. Thicker dividers make the vent smaller, so it tunes lower. The Cutlist uses the measured thickness.">
+                      <Tooltip tip="Two per duct. Thicker dividers shrink the vent, so it tunes lower.">
                         Dividers
                       </Tooltip>
                     }
@@ -469,7 +469,7 @@ export function SettingsPanel({ planner }: Props) {
             <Card>
               {layout === "tower" ? (
                 <div className="text-xs text-stone-500">
-                  Tower layout: the mid chamber has the sub's footprint, {subBoxDims.w}″ × 15.5″ ×{" "}
+                  Tower: the mid chamber has the sub's footprint, {subBoxDims.w}″ × 15.5″ ×{" "}
                   {subBoxDims.d}″.
                 </div>
               ) : (
@@ -630,7 +630,7 @@ export function SettingsPanel({ planner }: Props) {
                 />
                 <Slider
                   label={
-                    <Tooltip tip="At 0 dB, the mid must match the sub at full power. Bass-heavy music has 6–10 dB less at 200 Hz–1 kHz than at 40–60 Hz.">
+                    <Tooltip tip="Bass-heavy music has 6–10 dB less at 200 Hz–1 kHz than 40–60 Hz.">
                       Music balance: mid band needs less by
                     </Tooltip>
                   }
@@ -679,7 +679,7 @@ export function SettingsPanel({ planner }: Props) {
             <ToggleGroup
               label={
                 <span className="flex items-center justify-between gap-2">
-                  <Tooltip tip="Birch plywood for the sides, top, bottom and back. Thinner walls get more braces. The Cutlist uses the measured thickness.">
+                  <Tooltip tip="Sides, top, bottom and back. Thinner walls get more braces.">
                     Plywood (baffles stay ¾″)
                   </Tooltip>
                 </span>

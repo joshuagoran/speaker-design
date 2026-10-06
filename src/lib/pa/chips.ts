@@ -165,7 +165,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
     F.push([
       "bad",
       DRIVER_WONT_FIT,
-      `The driver needs about ${need.toFixed(1)}″ of clear baffle. The vents leave ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`,
+      `Needs ${need.toFixed(1)}″ of clear baffle. The vents leave ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`,
       "subDriverFit",
     ]);
   const { fit, spans, ways } = ductFit(subBox, portStyle, cVent, PT, sub);
@@ -173,7 +173,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
     F.push([
       "bad",
       DUCT_TOO_LONG,
-      `${cVent.len.toFixed(1)}″ does not fit. This layout holds about ${fit.toFixed(1)}″` +
+      `${cVent.len.toFixed(1)}″ does not fit. This layout holds ${fit.toFixed(1)}″` +
         (portStyle === "slots"
           ? ", folded up the back wall."
           : isRoundPort(portStyle) && ways.length > 1
@@ -189,7 +189,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       "bad",
       DUCT_TOO_LONG,
       `${cVent.len.toFixed(1)}″ is past the ${(below?.span[1] ?? 0).toFixed(1)}″ ${below?.what ?? "the duct"} holds ` +
-        `but short of the ${(above?.span[0] ?? fit).toFixed(1)}″ ${above?.what ?? "the duct"} needs. Make it shorter or longer.`,
+        `but short of the ${(above?.span[0] ?? fit).toFixed(1)}″ ${above?.what ?? "the duct"} needs.`,
       "subDuctFit",
     ]);
   }
@@ -197,7 +197,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
     F.push([
       "bad",
       TUBES_WONT_FIT,
-      `${cVent.nt} × ${cVent.dia}″ flared tubes do not fit the baffle beside the driver. Use fewer or narrower tubes, or a wider box.`,
+      `${cVent.nt} × ${cVent.dia}″ flared tubes do not fit beside the driver. Use fewer or narrower tubes.`,
       "subTubeFit",
     ]);
   F.push(
@@ -205,7 +205,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       ? [
           "warn",
           "Over 125 lb",
-          `${subLbLoaded.toFixed(0)} lb loaded. This is more than one person can lift.`,
+          `${subLbLoaded.toFixed(0)} lb loaded: too heavy for one person.`,
           "subWeight",
         ]
       : ["ok", "Inside 125 lb", `${subLbLoaded.toFixed(0)} lb loaded.`, "subWeight"],
@@ -215,27 +215,27 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       ? [
           "warn",
           "Port-limited",
-          `The vent chokes at ${Math.round(lim.W)} W, below the driver's ${2 * aes} W program rating. Make the port larger or longer.`,
+          `The vent chokes at ${Math.round(lim.W)} W, below the driver's ${2 * aes} W program rating. Use a larger port.`,
           "subPortLimited",
         ]
       : lim.who === "Xmax"
         ? [
             "warn",
             "Excursion-limited",
-            `The cone reaches Xmax at ${Math.round(lim.W)} W (first at ${peakXF.toFixed(0)} Hz), below the ${2 * aes} W program rating. Use a bigger box or a higher tuning. A bigger port does not help.`,
+            `The cone reaches Xmax at ${Math.round(lim.W)} W (first at ${peakXF.toFixed(0)} Hz), below the ${2 * aes} W program rating. Use a bigger box or higher tuning.`,
             "subExcursionLimited",
           ]
         : lim.who === "amp"
           ? [
               "warn",
               "Amp-limited",
-              `The ${ampW} W amp reaches its limit before the port, the cone or the ${2 * aes} W program rating (2 × ${aes} W AES).`,
+              `The ${ampW} W amp limits before the port, cone or ${2 * aes} W rating (2 × ${aes} W AES).`,
               "subAmpLimited",
             ]
           : [
               "ok",
               THERMALLY_LIMITED,
-              `Reaches its ${2 * aes} W program rating (2 × ${aes} W AES) before the port or the cone reaches its limit.`,
+              `Reaches its ${2 * aes} W program rating (2 × ${aes} W AES) before the port or cone limits.`,
               "subThermalLimited",
             ],
   );
@@ -272,26 +272,16 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
     ]);
   F.push(
     Qtc > 0.8
-      ? [
-          "warn",
-          `Qtc ${Qtc.toFixed(2)}`,
-          "Peaky and loose. The box is small for this driver.",
-          "midQtc",
-        ]
+      ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky and loose: box too small.", "midQtc"]
       : Qtc < 0.5
-        ? [
-            "warn",
-            `Qtc ${Qtc.toFixed(2)}`,
-            "Very damped. This is fine above the crossover, but a smaller box also works.",
-            "midQtc",
-          ]
+        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Very damped. A smaller box works.", "midQtc"]
         : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped.", "midQtc"],
   );
   if (f3 > xoLo)
     F.push([
       "warn",
       "Rolls off above the crossover",
-      `The box is 3 dB down at ${f3.toFixed(0)} Hz, above the ${xoLo} Hz crossover. Raise the crossover or add volume.`,
+      `−3 dB at ${f3.toFixed(0)} Hz, above the ${xoLo} Hz crossover. Raise the crossover.`,
       "midRollOff",
     ]);
   const xPct = ((peakX * useV) / V / ts.Xmax) * 100;
@@ -307,13 +297,13 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
         ? [
             "ok",
             THERMALLY_LIMITED,
-            `Reaches its ${2 * ts.aes} W program rating (2 × ${ts.aes} W AES) before Xmax. The ${mAmpW} W amp has more power than it can use.`,
+            `Reaches its ${2 * ts.aes} W program rating (2 × ${ts.aes} W AES) before Xmax. The ${mAmpW} W amp has spare power.`,
             "midThermalLimited",
           ]
         : [
             "ok",
             "Amp-limited",
-            `The ${mAmpW} W amp reaches its limit before Xmax or the ${2 * ts.aes} W program rating.`,
+            `The ${mAmpW} W amp limits before Xmax or the ${2 * ts.aes} W rating.`,
             "midAmpLimited",
           ],
   );
@@ -327,15 +317,15 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
       gap < -KEEP_UP_SLACK_DB
         ? [
             "warn",
-            "Mid reaches its limit first",
+            "Mid limits first",
             `${(-gap).toFixed(1)} dB short at ${xoLo} Hz of the sub at its music limit, less ${tilt} dB for the mid band. ` +
               (m.who === "amp"
                 ? wNeed <= 2 * ts.aes
                   ? `About ${Math.ceil(wNeed / 25) * 25} W per mid channel is enough.`
-                  : "More amp power does not help. The driver reaches its program rating first."
+                  : "More amp does not help: the driver reaches its rating first."
                 : m.who === "thermal"
-                  ? "Use a driver with more power handling, or a higher crossover."
-                  : "Use a higher crossover, or a driver with more excursion."),
+                  ? "Raise the crossover."
+                  : "Use a driver with more excursion."),
             "midKeepsUp",
           ]
         : [
@@ -360,7 +350,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
     F.push([
       "warn",
       "Below the driver's minimum crossover",
-      `${xoHi} Hz, below the recommended ${hf.minXo} Hz minimum. Power is derated and distortion increases. Measure before you use it.`,
+      `${xoHi} Hz, below the recommended ${hf.minXo} Hz. Power is derated; measure the distortion.`,
       "hornDriverMinXo",
     ]);
   if (hz.minXo && xoHi < hz.minXo)
@@ -374,7 +364,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
     F.push([
       "warn",
       "Horn stops loading near the crossover",
-      `Horn loading decreases below about ${hz.lowHz} Hz. The driver works harder at the crossover.`,
+      `Loading drops below ${hz.lowHz} Hz.`,
       "hornLoading",
     ]);
   F.push(
@@ -400,11 +390,11 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
       gap < -KEEP_UP_SLACK_DB
         ? [
             "warn",
-            "Horn reaches its limit first",
+            "Horn limits first",
             `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hfTilt} dB for the HF band. ` +
               (hornModel.who === "amp" && (wNeed * 8) / hornModel.imp <= hornModel.pProg
                 ? `About ${Math.ceil(wNeed / 25) * 25} W per HF channel is enough.`
-                : "The driver's rating is the limit. Raise the crossover or select a more sensitive driver."),
+                : "The driver's rating is the limit. Raise the crossover."),
             "hornKeepsUp",
           ]
         : [
@@ -419,7 +409,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
     F.push([
       "warn",
       "Mid narrower than the horn at the crossover",
-      `About ${Math.round(midBeam)}° against the horn's ${hz.covH}°. The mid already beams, so off-axis sound dips below the crossover. Use a lower crossover or a smaller mid.`,
+      `About ${Math.round(midBeam)}° against the horn's ${hz.covH}°: an off-axis dip below the crossover. Use a lower crossover.`,
       "hornMidNarrower",
     ]);
   if (fK && xoHi < fK * 0.85)
@@ -433,7 +423,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
     F.push([
       "warn",
       "Mid much wider than the horn at the crossover",
-      `About ${Math.round(midBeam)}° against the horn's ${hz.covH}°. Off-axis energy drops through the crossover. Use a higher crossover or a wider horn. At this frequency, a 12″ is almost omnidirectional.`,
+      `About ${Math.round(midBeam)}° against the horn's ${hz.covH}°: an off-axis step at the crossover. Use a higher crossover.`,
       "hornMidWider",
     ]);
   return F;

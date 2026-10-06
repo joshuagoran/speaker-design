@@ -48,7 +48,7 @@ export function DispersionSection({ planner }: Props) {
         Mid and horn centers {midHornGapIn.toFixed(1)}″ apart:{" "}
         {midHornNullAngleDeg
           ? `the first null at the ${midHornCrossoverHz} Hz crossover is about ${midHornNullAngleDeg.toFixed(0)}° above and below the horn axis.`
-          : `less than half a wavelength at ${midHornCrossoverHz} Hz, so there is no null at the crossover.`}
+          : `under half a wavelength at ${midHornCrossoverHz} Hz: no null at the crossover.`}
       </div>
     </section>
   );

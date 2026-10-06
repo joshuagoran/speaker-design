@@ -155,7 +155,7 @@ test("mid vs sub: -0.5 dB gap is the line; amp advice only while under 2 x AES",
   assert.match(chipOf(F, "midKeepsUp")[2], /W per mid channel is enough/);
   const G = mid({ midAtXo: { spl: 100, who: "amp" } }); // needs far more than 800 W
   assert.equal(kindOf(G, "midKeepsUp"), "warn");
-  assert.match(chipOf(G, "midKeepsUp")[2], /More amp power does not help/);
+  assert.match(chipOf(G, "midKeepsUp")[2], /More amp does not help/);
   has(t, mid({ subMusicAtXo: null }), "midKeepsUp", false);
 });
 
