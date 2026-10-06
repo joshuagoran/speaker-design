@@ -157,21 +157,17 @@ export function CoveragePage({ planner }: Props) {
               />
             ) : (
               <Notice>
-                The map needs the mid-bass driver's T/S parameters and the horn's coverage angles.
-                On the Design page, select a mid and a horn that have them.
+                Needs a mid with T/S parameters and a horn with coverage angles (Design page).
               </Notice>
             )}
-            {map.error && <Notice>The map calculation failed: {map.error}</Notice>}
+            {map.error && <Notice>Map failed: {map.error}</Notice>}
             {map.stack && !planner.hornModel && (
               <Notice>
-                The compression driver has no sensitivity or power rating, so the map does not
-                include the horn.
+                No horn in the map: the compression driver has no sensitivity or power rating.
               </Notice>
             )}
             {map.stack && !planner.subModeled && (
-              <Notice>
-                The planner cannot model the sub for this design, so the map does not include it.
-              </Notice>
+              <Notice>No sub in the map: the planner cannot model it.</Notice>
             )}
             {rel != null && map.stats && (
               <div className="md:hidden flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-stone-500 tabular-nums">
@@ -310,7 +306,7 @@ export function CoveragePage({ planner }: Props) {
                   <Ellipsis />
                 </>
               ) : map.refDb < map.refTarget - 0.05 ? (
-                `It cannot reach ${map.refTarget.toFixed(0)} dB at ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}. At its limit it gives ${map.refDb.toFixed(1)} dB there, and it never plays past its limit.`
+                `It cannot reach ${map.refTarget.toFixed(0)} dB at ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}: ${map.refDb.toFixed(1)} dB at its limit.`
               ) : (
                 `Turned down ${Math.abs(map.gain).toFixed(1)} dB so ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]} gets ${map.refTarget.toFixed(0)} dB in this band.`
               )}
