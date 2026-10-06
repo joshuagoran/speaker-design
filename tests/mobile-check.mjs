@@ -137,8 +137,8 @@ for (const size of sizes) {
   await ctx.close();
 }
 
-// Coverage map, desktop, mid band: dragging a toe-in handle updates the map while dragging and after release, and
-// nothing above the map moves meanwhile.
+// Coverage map, desktop, mid band: dragging a toe-in handle updates the map while dragging and after release, at one
+// resolution throughout, and nothing above the map moves meanwhile.
 {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   await ctx.addInitScript(
@@ -161,6 +161,18 @@ for (const size of sizes) {
     );
   const image = () => map.locator("image").getAttribute("href");
   const top = async () => (await map.boundingBox())?.y;
+  // the grid's size: the map draws it as an image of one pixel a cell
+  const cells = (href) =>
+    p.evaluate(
+      (src) =>
+        new Promise((done) => {
+          const im = new Image();
+          im.onload = () => done(`${im.naturalWidth}x${im.naturalHeight}`);
+          im.onerror = () => done("unreadable");
+          im.src = src;
+        }),
+      href,
+    );
   await settled();
   const before = await image(),
     topBefore = await top();
@@ -185,6 +197,9 @@ for (const size of sizes) {
     if (live.size < 2)
       failures.push(`coverage: the map changed ${live.size} time(s) during a toe-in drag`);
     if (after === before) failures.push("coverage: the settled map ignored a toe-in drag");
+    const sizes = new Set(await Promise.all([before, after, ...live].map(cells)));
+    if (sizes.size !== 1)
+      failures.push(`coverage: the grid changed size during a drag (${[...sizes].join(", ")})`);
     if ((await top()) !== topBefore) failures.push("coverage: the map moved after a drag");
   }
   for (const e of errs) failures.push(`coverage drag: page error: ${e}`);

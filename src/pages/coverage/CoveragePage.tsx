@@ -11,7 +11,7 @@ import { ToggleButton } from "../../components/ui/ToggleButton";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { formatSigned as signed } from "../../lib/format";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
-import { ROOM_MATERIAL_OPTIONS, modalBottomHz, modalCrossoverHz } from "../../lib/pa/roomAcoustics";
+import { ROOM_MATERIAL_OPTIONS } from "../../lib/pa/roomAcoustics";
 import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import type { RoomSurface, SubPlacement } from "../../types";
@@ -89,8 +89,7 @@ export function CoveragePage({ planner }: Props) {
   const state = useCoverageLayout(planner.subBox);
   const { layout } = state;
   const { room } = layout;
-  const [dragging, setDragging] = useState(false);
-  const map = useCoverageMap(planner, layout, dragging);
+  const map = useCoverageMap(planner, layout);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tab, setTab] = useState<CoverageTab>("band");
   const tabClass = (t: CoverageTab) => (tab === t ? "" : "max-md:hidden");
@@ -110,10 +109,6 @@ export function CoveragePage({ planner }: Props) {
     layout.band === "one"
       ? `${formatHz(layout.freqHz)}, one frequency`
       : `${COVERAGE_BANDS[layout.band].name} band, ${formatHz(COVERAGE_BANDS[layout.band].lo)}–${formatHz(COVERAGE_BANDS[layout.band].hi)}`;
-  // indoors, below the modal fade only the room modes count, and they ignore which way a box faces (the level can
-  // still shift: measured 1 m from the stacks, the spot moves with the aim)
-  const modalOnlyHz = room.outdoors ? null : modalBottomHz(modalCrossoverHz(room));
-  const bandTopHz = layout.band === "one" ? layout.freqHz : COVERAGE_BANDS[layout.band].hi;
   const [left, right] = layout.stacks;
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   const logPos = (f: number) =>
@@ -148,18 +143,11 @@ export function CoveragePage({ planner }: Props) {
                 actions={state}
                 boxes={map.boxes}
                 stack={map.stack}
-                onDragChange={setDragging}
-                busy={map.isRefining}
+                busy={map.isPending}
                 maxHeight={maxHeight}
               />
             ) : (
               <Notice>Needs a mid with T/S parameters and a horn with coverage angles.</Notice>
-            )}
-            {map.stack && map.levels && modalOnlyHz != null && bandTopHz <= modalOnlyHz && (
-              <p className="text-xs text-stone-500 mt-2">
-                Below about {formatHz(modalOnlyHz)}, room modes set the pattern, and toe-in doesn't
-                change it.
-              </p>
             )}
             {map.error && <Notice>Map failed: {map.error}</Notice>}
             {map.stack && !planner.hornModel && (
