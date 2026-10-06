@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { insideToScene } from "./buildBraces";
+import { ROUNDOVER_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import type { BoxHardwarePlan, Dims3, PlacedHardware } from "../../types";
 
@@ -15,19 +16,19 @@ const POST_DIA_IN = 0.45;
 
 /**
  * Where a part's face sits in the scene, for the cabinet `box` whose bottom is at `y` and centre at `x`: the point on
- * the outside face at the cutout's centre, the outward normal, and the face's two in-plane axes (along `u` and `v`).
+ * the outside face (past the frame's roundovers on the sides and top) at the cutout's centre, and the outward normal.
  */
 function faceOf(p: PlacedHardware, box: Dims3, y: number, x: number) {
   const left = x - box.w / 2;
   switch (p.panel) {
     case "sideL":
       return {
-        at: new THREE.Vector3(left, y + p.v, box.d / 2 - p.u),
+        at: new THREE.Vector3(left - ROUNDOVER_IN, y + p.v, box.d / 2 - p.u),
         n: new THREE.Vector3(-1, 0, 0),
       };
     case "sideR":
       return {
-        at: new THREE.Vector3(left + box.w, y + p.v, box.d / 2 - p.u),
+        at: new THREE.Vector3(left + box.w + ROUNDOVER_IN, y + p.v, box.d / 2 - p.u),
         n: new THREE.Vector3(1, 0, 0),
       };
     case "back":
@@ -37,7 +38,7 @@ function faceOf(p: PlacedHardware, box: Dims3, y: number, x: number) {
       };
     case "top":
       return {
-        at: new THREE.Vector3(left + p.u, y + box.h, box.d / 2 - p.v),
+        at: new THREE.Vector3(left + p.u, y + box.h + ROUNDOVER_IN, box.d / 2 - p.v),
         n: new THREE.Vector3(0, 1, 0),
       };
   }
