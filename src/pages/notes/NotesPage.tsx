@@ -60,13 +60,13 @@ function sensitivityText(): string {
   const { maker, sens, tsSens } = DEFAULT_SUB;
   const ts = `${tsSens.toFixed(1)} dB/2.83V`;
   if (sens == null)
-    return `${maker}'s sensitivity isn't in the catalog; their published T/S parameters give ${ts}. Levels and limiter settings depend on it, so measure it.`;
+    return `The catalog has no sensitivity from ${maker}. Their published T/S parameters give ${ts}. Levels and limiter settings depend on it, so measure it.`;
   const gap = sens - tsSens;
   if (gap > SENS_AGREE_DB)
-    return `${maker}'s ${sens} dB claim is ${gap.toFixed(1)} dB above what their own published T/S parameters give (${ts}). Everything about levels and limiter settings depends on which is right. Measure it, or assume the lower figure.`;
+    return `${maker}'s ${sens} dB claim is ${gap.toFixed(1)} dB above their own T/S parameters (${ts}). Levels and limiter settings depend on the correct value. Measure it, or use the lower value.`;
   if (gap < -SENS_AGREE_DB)
-    return `${maker}'s ${sens} dB claim is ${(-gap).toFixed(1)} dB below what their own published T/S parameters give (${ts}), so it is the conservative figure for levels and limiter settings; a measurement would tell which is right.`;
-  return `${maker}'s ${sens} dB claim agrees with what their own published T/S parameters give (${ts}), so levels and limiter settings can rest on it; a measurement would confirm it.`;
+    return `${maker}'s ${sens} dB claim is ${(-gap).toFixed(1)} dB below their own T/S parameters (${ts}). It is the safe value for levels and limiter settings. Measure to find the correct value.`;
+  return `${maker}'s ${sens} dB claim agrees with their own T/S parameters (${ts}). Levels and limiter settings can use it. Measure to confirm it.`;
 }
 
 /** The plywood thicknesses the planner models other than the default wall, as the heading offers them. */
@@ -118,7 +118,7 @@ export function NotesPage() {
           </div>
           <p className="text-sm text-stone-900 max-w-3xl mt-3">
             <Tooltip
-              tip={`The ${DSP} holds input EQ and master level, then crossovers, delay and driver EQ on each output. Each output feeds one amp channel, set full-range, with the amp's own limiter configured from the driver's power and impedance so it references real output voltage. A safety high-pass around ${HORN_AMP_SAFETY_HPF_HZ} Hz in the horn amp catches a mis-recalled preset, which a level limiter cannot.`}
+              tip={`The ${DSP} does input EQ and master level, then crossovers, delay and driver EQ on each output. Each output feeds one full-range amp channel. Set each amp limiter from the driver's power and impedance, so it uses the real output voltage. A safety highpass at about ${HORN_AMP_SAFETY_HPF_HZ} Hz in the horn amp stops a wrong preset. A level limiter cannot do this.`}
             >
               How the DSP work is split
             </Tooltip>
@@ -142,7 +142,7 @@ export function NotesPage() {
                   .map((m) => `${m.limiterW[0]}\u2013${m.limiterW[1]} W (${m.model})`)
                   .join(
                     " or ",
-                  )}; and 4 or 8 ${OHM}. ${QSC_GXD.brand} say to set the power to the speaker's continuous rating.`,
+                  )}; and 4 or 8 ${OHM}. ${QSC_GXD.brand}: set the power to the speaker's continuous rating.`,
               ],
               ["What it can't do", QSC_GXD.limits],
             ].map(([t, d]) => (
@@ -161,23 +161,23 @@ export function NotesPage() {
             {[
               [
                 "1. Highpass",
-                "At or a little above tuning, LR24. Set the planner's highpass to LR24 to match.",
+                "At or slightly above the tuning, LR24. Set the planner's highpass to LR24 too.",
               ],
               [
                 "2. Limiter power",
-                `The lower of the power in the sub's \u201c${STATS.firstLimit.label}\u201d row (when Xmax runs out first) and the driver's rating; Medium or Aggressive. On a ${GXD8.model} the ceiling is ${GXD8.limiterW[1]} W, which is just the amp's own limit.`,
+                `Use the lower value: the power in the sub's \u201c${STATS.firstLimit.label}\u201d row (when Xmax is the first limit), or the driver's rating. Use Medium or Aggressive. On a ${GXD8.model}, the maximum is ${GXD8.limiterW[1]} W, the amp's own limit.`,
               ],
               [
                 "3. Check it",
-                `Play a sine at the frequency where excursion peaks (the sub's \u201c${STATS.peakExcursion.label}\u201d row), raise it until the limit indicator lights, and measure AC volts at the speaker terminals. Compare with \u221a(W \u00d7 8).`,
+                `Play a sine at the peak-excursion frequency (the sub's \u201c${STATS.peakExcursion.label}\u201d row). Increase the level until the limit indicator comes on. Measure the AC volts at the speaker terminals and compare with \u221a(W \u00d7 8).`,
               ],
               [
                 "4. Steeper or in volts",
-                `Do it in the ${DSP} ahead of the amps and keep the amp limiter as a backstop. Not yet checked against the ${DSP} manual.`,
+                `Do it in the ${DSP} before the amps. Keep the amp limiter as a backup. Not yet checked against the ${DSP} manual.`,
               ],
               [
                 "Horns",
-                `A ${GXD4.model} puts ${GXD4.w8} W on a ${DEFAULT_CD.aes} W AES driver like the ${DEFAULT_CD.name}. Its limiter, set to the driver's rating, is the protection; set the planner's HF amp slider to the same power so its numbers match.`,
+                `A ${GXD4.model} puts ${GXD4.w8} W on a ${DEFAULT_CD.aes} W AES driver like the ${DEFAULT_CD.name}. Its limiter, set to the driver's rating, gives the protection. Set the planner's HF amp slider to the same power.`,
               ],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
@@ -189,9 +189,8 @@ export function NotesPage() {
             ))}
           </ul>
           <p className="text-xs text-stone-500 mt-3 max-w-3xl">
-            Xmax is where distortion climbs, not where damage starts; the mechanical limit is
-            usually 2–3× further, so 1.2–1.4× the Xmax voltage is a common setting once you've
-            listened. Sources:{" "}
+            At Xmax, distortion increases; damage starts later. The mechanical limit is usually 2–3×
+            further. After a listening test, 1.2–1.4× the Xmax voltage is a common setting. Sources:{" "}
             {QSC_GXD.src.map((d, i) => (
               <Fragment key={d.url}>
                 {i > 0 && ", "}
@@ -207,9 +206,9 @@ export function NotesPage() {
         <section className="mt-8" style={{ fontFamily: FONT }}>
           <SectionHeading className="mb-3">Crossover / DSP: PA2 and alternatives</SectionHeading>
           <p className="text-sm text-stone-900 mb-3 max-w-3xl">
-            What the planner's protection needs per output: 48 dB/oct highpass, a peak limiter set
-            in volts or dBu with attack and release, a slower RMS limiter, PEQ and delay. At ~15 ft
-            from the mixer keep the inputs balanced; outputs to amps in the same rack matter less.
+            Each output needs: a 48 dB/oct highpass, a peak limiter in volts or dBu with attack and
+            release, a slower RMS limiter, PEQ and delay. At ~15 ft from the mixer, use balanced
+            inputs. Outputs to amps in the same rack are less important.
           </p>
           <div className="overflow-x-auto">
             <table className="text-sm w-full min-w-[720px] border-collapse">
@@ -244,8 +243,8 @@ export function NotesPage() {
           <p className="text-sm text-stone-900 mt-2 max-w-3xl">
             Pick: a used {dspName("driverack260")} on a budget; new, the {dspName("aqm408")}{" "}
             (limiters in dBu with attack and release, 4×8) or the {dspName("venu360")} (front panel
-            plus app). Keep the amp limiters as a backstop either way.{" "}
-            <Tooltip tip="Ruled out: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from manufacturer manuals; some prices from search snippets, Sep 2026.">
+            plus app). In all cases, keep the amp limiters as a backup.{" "}
+            <Tooltip tip="Not used: Dayton DSP-408 (RCA only, no limiter, 24 dB/oct max); miniDSP (the only balanced 8-out model is end of life; Flex is 2×4); Xilica XP, Ashly Protea, BSS FDS-366T (discontinued, used only); Symetrix (over budget). Specs from maker manuals; some prices from search results, Sep 2026.">
               Why not the others?
             </Tooltip>
           </p>
@@ -255,7 +254,7 @@ export function NotesPage() {
           <SectionHeading className="mb-3">Home inputs: Gemini MXR-01BT</SectionHeading>
           <p className="text-sm text-stone-900 mb-3 max-w-3xl">
             Turntable, line and phone into the same DSP and amps, with one master volume. A
-            2-channel DJ mixer does it all in one box.
+            2-channel DJ mixer does all of this.
           </p>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
@@ -273,13 +272,16 @@ export function NotesPage() {
               ],
               [
                 "Volume",
-                "Use the mixer master. Set DSP input and amp gains so the master at full is the loudest you'll want; the DSP and amp limiters stay as a backstop.",
+                "Use the mixer master. Set the DSP input and amp gains so that full master is your maximum level. The DSP and amp limiters stay as a backup.",
               ],
               [
                 "Booth out",
-                "Spare RCA with its own level: could feed a fill or booth monitor through the DSP.",
+                "Spare RCA with its own level. It can feed a fill or booth monitor through the DSP.",
               ],
-              ["Turn-on", "Mixer and sources first, amps last; amps off first."],
+              [
+                "Turn-on",
+                "Turn on the mixer and sources first, the amps last. Turn off the amps first.",
+              ],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-stone-500 shrink-0" />
@@ -294,17 +296,17 @@ export function NotesPage() {
             <a className="underline" href="https://www.geminisound.com/products/mxr-01bt">
               Gemini MXR-01BT
             </a>
-            . Alternative without a mixer: a hi-fi preamp with phono, RCA out through an ART
-            CleanBox Pro to balanced.
+            . Without a mixer: a hi-fi preamp with phono, then RCA out through an ART CleanBox Pro
+            to balanced.
           </p>
         </section>
 
         <section className="mt-8" style={{ fontFamily: FONT }}>
           <SectionHeading className="mb-3">Passive crossover: calibrate and build</SectionHeading>
           <p className="text-sm text-stone-900 mb-3 max-w-3xl">
-            For fills whose maker sells no matching network (each fill's note says). A 2nd-order
-            2-way is 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. About $40–80
-            per box in parts. All values get tuned, not just the pad.
+            For fills that have no network from the maker (see each fill's note). A 2nd-order 2-way
+            has 6–8 parts: woofer coil + cap, HF cap + coil, two pad resistors. Parts cost about
+            $40–80 per box. Tune all values, not only the pad.
           </p>
           <ul className="text-sm text-stone-900 space-y-2 max-w-3xl">
             {[
@@ -314,23 +316,23 @@ export function NotesPage() {
               ],
               [
                 "2. Measure in the finished box",
-                "Woofer and HF separately, no crossover: response at 1 m on axis (outdoors or gated), impedance, and a near-field of woofer + port. Don't move the mic between drivers, so the phase stays valid. Optional: 15/30/45° off axis.",
+                "Woofer and HF separately, no crossover: response at 1 m on axis (outdoors or gated), impedance, and a near-field of woofer + port. Keep the mic in the same position for both drivers, so the phase stays valid. Optional: 15/30/45° off axis.",
               ],
               [
                 "3. Design",
-                "Import into VituixCAD, start from the textbook network, tune values for a flat sum with no dip at the crossover. Round to real part values; keep the minimum impedance at about 5 Ω or above.",
+                "Import into VituixCAD. Start from the textbook network. Tune the values for a flat sum with no dip at the crossover. Round to real part values. Keep the minimum impedance at about 5 Ω or more.",
               ],
               [
                 "4. Prototype on DSP (optional)",
-                `Copy the target curves into the ${DSP} or the amps, listen and measure, then match the passive design to what you liked.`,
+                `Copy the target curves into the ${DSP} or the amps. Listen and measure. Then make the passive design match the curves you prefer.`,
               ],
               [
                 "5. Test build",
-                "Clip leads or a loose board outside the box. Measure the whole speaker against the simulation; swap pad resistors to set the HF level (buy a few spare values). Listen at gig level.",
+                "Clip leads or a loose board outside the box. Compare the full speaker with the simulation. Change the pad resistors to set the HF level (buy some spare values). Listen at gig level.",
               ],
               [
                 "6. Final build",
-                "Stripboard is fine for the HF side; run the woofer path (~6 A at 300 W) in 14–16 AWG wire, not the strips, or wire point to point on a ply board. Space the coils or turn them 90° apart, away from the woofer magnet. Mount on foam, re-measure installed, copy for the other boxes and spot-check each.",
+                "Stripboard is fine for the HF side. Wire the woofer path (~6 A at 300 W) in 14–16 AWG wire, not the strips, or wire point to point on a plywood board. Keep the coils apart or at 90° to each other, away from the woofer magnet. Mount on foam and measure again in the box. Copy for the other boxes and check each one.",
               ],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
@@ -342,7 +344,7 @@ export function NotesPage() {
             ))}
           </ul>
           <p className="text-sm text-stone-900 mt-3 max-w-3xl">
-            <Tooltip tip="Roughly a weekend to measure and design, plus an evening to build and verify.">
+            <Tooltip tip="About a weekend to measure and design, and an evening to build and verify.">
               About 1 weekend
             </Tooltip>
           </p>
@@ -354,15 +356,15 @@ export function NotesPage() {
             {[
               [
                 "Prototype in particleboard",
-                "Cheap and flat. Build it to verify duct tuning, then transfer interior dimensions \u2014 not the cut list \u2014 to the real material.",
+                "Cheap and flat. Build it to verify the duct tuning. Then use its interior dimensions, not the cutlist, for the real material.",
               ],
               [
                 `Consider ${OTHER_THICKNESSES.join(" or ")} for the final boxes`,
-                `Sub column drops ${DEFAULT_SUB_WEIGHTS.map((w) => w.lb).join(" \u2192 ")} lb loaded (${DEFAULT_SUB_WEIGHTS.map((w) => w.t).join(" \u2192 ")}). Thinner walls take more bracing by rule (${BRACES_BY_SIZE}), counted in that weight, and the extra interior volume lowers Fb, so the duct gets shorter.`,
+                `Sub column drops ${DEFAULT_SUB_WEIGHTS.map((w) => w.lb).join(" \u2192 ")} lb loaded (${DEFAULT_SUB_WEIGHTS.map((w) => w.t).join(" \u2192 ")}). Thinner walls get more braces (${BRACES_BY_SIZE}); the weight includes them. The extra interior volume lowers Fb, so the duct is shorter.`,
               ],
               [
                 "MDO for the baffles",
-                "Paints far better than birch, no edge penalty since no baffle edge is exposed.",
+                "Paints much better than birch. No baffle edge shows, so its edges are not a problem.",
               ],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
@@ -381,29 +383,29 @@ export function NotesPage() {
             {[
               [
                 "Bracing",
-                `By rule: ribs, window braces or both (one setting for the stack, under ${PA_SETTINGS_TABS.build} in the planner) go in, clear of the drivers and the vent, until every panel's first resonance clears ${formatHz(PA_PANEL_TARGET_HZ)}; they are in the cutlist, the volume, the weight and the cutaway, where the drivers show too. Where they sit still competes with handle recesses for the same panel area.`,
+                `The planner adds ribs, window braces or both, clear of the drivers and the vent, until each panel's first resonance is above ${formatHz(PA_PANEL_TARGET_HZ)}. One setting under ${PA_SETTINGS_TABS.build} sets the style for the whole stack. The cutlist, volume, weight and cutaway include the braces. Braces and handle recesses still compete for the same panel area.`,
               ],
-              ["Handles", "Recess type, depth and position on the sub. Interacts with bracing."],
+              ["Handles", "Recess type, depth and position on the sub. This affects the bracing."],
               [
                 "Port edge finish",
-                "Paint carried into the slot ducts, or masked so the ply edge shows; end grain in the mouth needs sealing either way.",
+                "Paint the slot ducts, or mask them so the plywood edge shows. In both cases, seal the end grain in the mouth.",
               ],
               [
                 "Duct tuning",
-                "Verify Fb by impedance sweep on the particleboard prototype and trim the duct before cutting birch. End correction is the largest source of error in the modeled Fb.",
+                "Verify Fb with an impedance sweep on the particleboard prototype. Trim the duct before you cut the birch. End correction is the largest error in the modeled Fb.",
               ],
               ["Sensitivity", sensitivityText()],
               [
                 "Driver clearance",
-                `Check the ${DEFAULT_SUB.name}'s frame and ${DEFAULT_SUB.depthIn != null ? `${DEFAULT_SUB.depthIn}" ` : ""}mounting depth against the baffle margin and anything that ends up behind the magnet.`,
+                `Check the ${DEFAULT_SUB.name}'s frame and ${DEFAULT_SUB.depthIn != null ? `${DEFAULT_SUB.depthIn}" ` : ""}mounting depth against the baffle margin and all parts behind the magnet.`,
               ],
               [
                 "Compression driver",
-                `${DEFAULT_CD.name} at ${DEFAULT_CD.price} is the default; crossover floor on the ${DEFAULT_HORN.name} needs a distortion sweep to confirm ~${DEFAULT_XO_HI}.`,
+                `${DEFAULT_CD.name} at ${DEFAULT_CD.price} is the default. Do a distortion sweep to confirm the ~${DEFAULT_XO_HI} minimum crossover on the ${DEFAULT_HORN.name}.`,
               ],
               [
                 "Horn print",
-                `${DEFAULT_HORN.name} in one piece needs a ${DEFAULT_HORN.bedMm} mm+ bed; otherwise sectioned. Filament, a print service, or a ready-made horn from the catalog instead.`,
+                `${DEFAULT_HORN.name} in one piece needs a ${DEFAULT_HORN.bedMm} mm+ bed; otherwise print it in sections. Options: your own filament, a print service, or a ready-made horn from the catalog.`,
               ],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">
