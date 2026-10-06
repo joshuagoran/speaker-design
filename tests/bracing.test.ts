@@ -9,7 +9,7 @@ import {
   defaultBraceStyleNear,
   plateFirstModeHz,
   regionsOverlap,
-  braceFallbacks,
+  braceShortfalls,
   ribFirstModeHz,
   ribFlangeIn,
   teeSecondMoment,
@@ -38,7 +38,7 @@ import {
 import { subDriverDepthIn } from "../src/lib/pa/tubes";
 import { subWoodIn3 } from "../src/lib/pa/exactSub";
 import {
-  BRACE_FALLBACK_NOTES,
+  braceUnderNote,
   LEGACY_SUB_BRACE_STYLE_KEY,
   bracePanelName,
   savedBraceStyle,
@@ -493,8 +493,10 @@ test("the starting sub's cutaway under each style: ribs, window braces and both 
         inset: d.inset,
       };
       const b = subBoxBracing(d.cDim, wall, d.inset, d.portStyle, d.cVent, d.sub, style);
-      // every style puts ribs in the starting sub (on the back at least)
-      assert.ok(b.ribs.length > 0, `${wall} ${style}: ribs`);
+      // each style puts in its own kind: ribs under Ribs and Both, frames under Window braces and Both
+      const frames = b.windows.x.length + b.windows.y.length + b.windows.z.length;
+      assert.strictEqual(b.ribs.length > 0, style !== "window", `${wall} ${style}: ribs`);
+      assert.strictEqual(frames > 0, style !== "ribs", `${wall} ${style}: window braces`);
       assert.ok(checkCutaway(c, style) > 0);
     }
 });
@@ -551,57 +553,62 @@ test("rib: the panel beside it is a flange (Eurocode 5's effective width), so th
   assert.ok(ribFirstModeHz(24, 6, s) > 1.5 * alone(24, 6));
 });
 
-test("the notes under the Bracing setting name the cabinet and the panel, and say where the style gave way", () => {
+test("the notes under the Bracing setting name the cabinet and each panel left under the target", () => {
   const d = DEFAULT_PA;
   const b = subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, "ribs");
-  const fallbacks = braceFallbacks(b);
   const notes = braceNoteLines(PA_SETTINGS_TABS.sub, b);
-  assert.strictEqual(notes.length, fallbacks.length);
-  // the starting sub under Ribs: its baffle takes window braces, which ribs can't do across the driver
-  assert.ok(b.windows.y.length > 0);
-  assert.ok(fallbacks.some((f) => f.panel === "baffle" && f.kind === "windows"));
-  assert.ok(notes.includes(BRACE_FALLBACK_NOTES.windows("Sub baffle")), notes.join("; "));
-  for (const p of b.panels)
-    if (p.hz < b.targetHz) {
-      const name = bracePanelName(PA_SETTINGS_TABS.sub, p.id);
-      assert.ok(
-        notes.includes(BRACE_FALLBACK_NOTES.under(name, formatHz(p.hz), formatHz(b.targetHz))),
-      );
-    }
-  // and it does put ribs in, on the back
-  assert.ok(b.ribs.some((r) => r.panel === "back"));
-});
-
-test("braceFallbacks: the panels braced the other way, and those under the target with their first mode", () => {
-  const d = DEFAULT_PA;
-  const sub = (style: BraceStyleId) =>
-    subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, style);
-  // Ribs: the baffle takes window braces (a rib can't cross the driver) and stays under the target
-  const ribs = sub("ribs");
-  const baffleHz = ribs.panels.find((p) => p.id === "baffle")?.hz ?? NaN;
-  assert.ok(baffleHz < ribs.targetHz);
-  assert.deepStrictEqual(braceFallbacks(ribs), [
-    { panel: "baffle", kind: "windows" },
-    { panel: "baffle", kind: "under", hz: baffleHz },
-  ]);
-  // Window braces: each panel that took ribs (here the back)
-  const win = sub("window");
-  const ribbed = [...new Set(win.ribs.map((r) => r.panel))];
-  assert.ok(ribbed.includes("back"));
+  const under = braceShortfalls(b);
+  // the starting sub under Ribs: no rib crosses the driver, so the baffle stays bare and under the target
+  assert.ok(under.some((p) => p.id === "baffle"));
   assert.deepStrictEqual(
-    braceFallbacks(win)
-      .filter((f) => f.kind === "ribs")
-      .map((f) => f.panel),
-    ribbed,
+    notes,
+    under.map((p) =>
+      braceUnderNote(
+        bracePanelName(PA_SETTINGS_TABS.sub, p.id),
+        formatHz(p.hz),
+        formatHz(b.targetHz),
+      ),
+    ),
   );
-  // Both: only "under", never a fallback
-  assert.ok(braceFallbacks(sub("both")).every((f) => f.kind === "under"));
-  // a box that needs nothing has none
+  // a box that needs nothing has no note
   const mid = midBoxBracing(d.mDim, 0.75, d.inset, d.mid, "stack", "ribs");
   assert.ok(mid);
-  assert.deepStrictEqual(braceFallbacks(mid), []);
-  // "under" carries hz, the others don't
-  for (const f of braceFallbacks(ribs)) assert.strictEqual(f.hz === undefined, f.kind !== "under");
+  assert.deepStrictEqual(braceNoteLines(PA_SETTINGS_TABS.mid, mid), []);
+});
+
+test("braceShortfalls: exactly the panels under the target, with their first mode", () => {
+  const d = DEFAULT_PA;
+  for (const style of STYLES) {
+    const b = subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, style);
+    assert.deepStrictEqual(
+      braceShortfalls(b),
+      b.panels.filter((p) => p.hz < b.targetHz),
+      style,
+    );
+    assert.strictEqual(braceShortfalls(b).length === 0, b.meets, style);
+  }
+});
+
+test("the strict styles give the starting sub three different plans, each of its own kind", () => {
+  const d = DEFAULT_PA;
+  for (const handles of [undefined, d.hardware.sub]) {
+    const plan = (style: BraceStyleId) =>
+      subBoxBracing(d.cDim, d.wall, d.inset, d.portStyle, d.cVent, d.sub, style, handles);
+    const ribs = plan("ribs"),
+      win = plan("window"),
+      both = plan("both");
+    const frames = (b: BoxBracing) => b.windows.x.length + b.windows.y.length + b.windows.z.length;
+    const tag = handles ? "with hardware" : "bare";
+    // Ribs: ribs only; Window braces: frames only; Both: the two together
+    assert.strictEqual(frames(ribs), 0, tag);
+    assert.ok(ribs.ribs.length > 0, tag);
+    assert.ok(frames(win) > 0, tag);
+    assert.deepStrictEqual(win.ribs, [], tag);
+    assert.ok(frames(both) > 0 && both.ribs.length > 0, tag);
+    // and no two alike
+    const key = (b: BoxBracing) => JSON.stringify([b.windows, b.ribs]);
+    assert.strictEqual(new Set([ribs, win, both].map(key)).size, 3, tag);
+  }
 });
 
 test("rib: the T section's EI and first mode against a hand calculation (a ¾″ rib 2½″ deep over 22½″, a 9.2″ bay)", (t) => {
@@ -632,7 +639,7 @@ test("the starting sub under Ribs takes ribs: on the back at ¾″, and on the s
   const on = (b: BoxBracing, id: BracePanelId) =>
     b.ribs.filter((r) => r.panel === id).reduce((a, r) => a + r.at.length, 0);
   const hz = (b: BoxBracing, id: BracePanelId) => b.panels.find((p) => p.id === id)?.hz ?? NaN;
-  // ¾″: the baffle's two level window braces already lift the sides past the target; the back takes a rib and clears it
+  // ¾″: the back takes ribs and clears the target, and so do the sides
   const thick = braced(0.75);
   assert.ok(on(thick, "back") >= 1);
   assert.ok(hz(thick, "back") >= thick.targetHz);
@@ -663,11 +670,12 @@ test("the optimizers' brace estimate stays near the rule over the golden boxes, 
           (braceWoodIn3(braceWoodEstimate(mDim, 0.75, inset, style)) - braceWoodIn3(mb)) * IN3_L,
         );
     }
-    // liters of wood: well under a liter on the whole, a couple of liters at worst (a sub box holds 60 to 200)
+    // liters of wood: under a liter on the whole, a couple of liters at worst (a sub box holds 60 to 200); the strict
+    // styles fit worst, since a frame-only or rib-only plan stops where its kind can do no more
     const rms = Math.sqrt(err.reduce((a, e) => a + e * e, 0) / err.length);
-    assert.ok(rms < 0.6, `${style}: ${rms.toFixed(3)} L rms`);
+    assert.ok(rms < 0.8, `${style}: ${rms.toFixed(3)} L rms`);
     assert.ok(
-      Math.max(...err.map(Math.abs)) < 2.2,
+      Math.max(...err.map(Math.abs)) < 2.4,
       `${style}: ${err.map((e) => e.toFixed(2)).join(" ")}`,
     );
   }

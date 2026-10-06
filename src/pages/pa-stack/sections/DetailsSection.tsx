@@ -3,7 +3,11 @@ import { UI_TEXT } from "../../../constants/uiText";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
 import { PanelResonanceTable } from "../../../components/stats/PanelResonanceTable";
-import { BRACE_PANEL_NAMES, BRACE_STYLE_NAMES } from "../../../constants/bracing";
+import {
+  BRACE_PANEL_NAMES,
+  BRACE_STYLE_NAMES,
+  BRACE_STYLE_SUMMARY,
+} from "../../../constants/bracing";
 import {
   DRIVER_CLEARANCE_IN,
   PA_BRACING_CROSSOVER_HZ,
@@ -11,6 +15,7 @@ import {
 } from "../../../lib/pa/bracing";
 import { formatHz, formatInches } from "../../../lib/format";
 import { panelThicknessName } from "../../../lib/panel";
+import { braceShortfalls } from "../../../lib/bracing";
 import type { BoxBracing, BoxHardwarePlan, Dims3 } from "../../../types";
 import { HARDWARE_KIND_NAMES, HARDWARE_SECTION_TITLE } from "../../../constants/hardware";
 import { hardwarePlace } from "../../../lib/pa/calc";
@@ -114,9 +119,9 @@ export function DetailsSection({ planner }: Props) {
           {stackHeightIn.toFixed(0)} in, horn center at {hornCenterHeightIn.toFixed(0)} in.
         </div>
         <div>
-          <span className="font-medium text-stone-900">Bracing.</span> Braces and ribs, best gain
-          per wood first, until each panel&rsquo;s first resonance is above{" "}
-          {formatHz(subBracing.targetHz)} ({PANEL_TARGET_CROSSOVER_MULTIPLE} ×{" "}
+          <span className="font-medium text-stone-900">Bracing.</span> Window braces, ribs or both,
+          as the Bracing setting says, best gain per wood first, until each panel&rsquo;s first
+          resonance is above {formatHz(subBracing.targetHz)} ({PANEL_TARGET_CROSSOVER_MULTIPLE} ×{" "}
           {PA_BRACING_CROSSOVER_HZ} Hz, the highest sub-to-mid crossover the optimizers pick). Sub,{" "}
           {BRACE_STYLE_NAMES[subBracing.style].toLowerCase()}: {braceCount(subBracing)}
           {midBracing
@@ -141,12 +146,12 @@ export function DetailsSection({ planner }: Props) {
                   {!b.meets && (
                     <div className="text-red-700">
                       Under the target:{" "}
-                      {b.panels
-                        .filter((p) => p.hz < b.targetHz - 1e-9)
+                      {braceShortfalls(b)
                         .map((p) => BRACE_PANEL_NAMES[p.id].toLowerCase())
                         .join(", ")}
-                      . No other clear brace position raises them. Try{" "}
-                      {BRACE_STYLE_NAMES.both.toLowerCase()} or thicker walls.
+                      . No more {BRACE_STYLE_SUMMARY[b.style]} fit or help. Try{" "}
+                      {b.style === "both" ? "" : `${BRACE_STYLE_NAMES.both.toLowerCase()} or `}
+                      thicker walls.
                     </div>
                   )}
                 </div>

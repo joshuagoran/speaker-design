@@ -226,7 +226,7 @@ export function SettingsPanel({ planner }: Props) {
   // or two elbows (the lengths between fit neither way, and the slider skips them)
   const ductLens = ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn, subDriver);
   const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
-  // a note under the Bracing setting wherever a box's bracing departs from the style, naming the box and the panel
+  // a note under the Bracing setting for each panel a box's bracing leaves under the target, naming the box and the panel
   const braceNotes = [
     ...braceNoteLines(PA_SETTINGS_TABS.sub, subBracing),
     ...(midBracing ? braceNoteLines(PA_SETTINGS_TABS.mid, midBracing) : []),

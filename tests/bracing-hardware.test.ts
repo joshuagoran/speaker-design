@@ -3,7 +3,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import * as THREE from "three";
-import { bracingRegions, braceFallbacks, regionsOverlap } from "../src/lib/bracing";
+import { bracingRegions, regionsOverlap } from "../src/lib/bracing";
 import { PA_PANEL_TARGET_HZ } from "../src/lib/pa/bracing";
 import {
   ductFlagsOf,
@@ -114,40 +114,30 @@ test("a side panel with a handle still takes ribs, beside the recess, and meets 
 /** The window braces and the ribs of a plan, counted. */
 const windowsOf = (b: BoxBracing) => b.windows.x.length + b.windows.y.length + b.windows.z.length;
 
-test("each bracing style gives its own braces, the other kind only where the rule says why", () => {
+test("each bracing style gives only its own braces: ribs under Ribs, frames under Window braces", () => {
   for (const c of designs) {
     const { sub, mid, mDim, wall, inset, layout } = partsOf(c);
-    const plans = (style: BraceStyleId) => [
-      subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, style),
-      midBoxBracing(mDim, wall, inset, mid, layout, style),
-    ];
-    const byStyle = Object.fromEntries(STYLES.map((s) => [s, plans(s)]));
-    STYLES.forEach((style) =>
-      byStyle[style].forEach((b, i) => {
-        if (!b) return;
-        const tag = `${c.name}, ${style}, ${i ? "mid" : "sub"}`;
-        assert.strictEqual(b.style, style, tag);
-        const fb = braceFallbacks(b);
-        if (style === "window")
-          // ribs only on the panels no frame can lift, each named
-          for (const r of b.ribs)
-            assert.ok(
-              fb.some((f) => f.kind === "ribs" && f.panel === r.panel),
-              `${tag}: ${r.panel} rib`,
-            );
-        if (style === "ribs" && windowsOf(b) > 0)
-          // frames only for the baffle, which a rib can't cross, and named
-          assert.ok(
-            fb.some((f) => f.kind === "windows" && f.panel === "baffle"),
-            tag,
-          );
-        if (style === "both") {
-          // never leaves the baffle lower than Ribs does: it takes the frames the baffle needs before any rib
-          const hz = (x: BoxBracing | null) => x?.panels.find((p) => p.id === "baffle")?.hz ?? 0;
-          assert.ok(hz(b) >= hz(byStyle.ribs[i]) - 1e-6, `${tag}: baffle ${hz(b).toFixed(0)} Hz`);
-        }
-      }),
-    );
+    for (const hw of [undefined, DEFAULT_PA.hardware]) {
+      const plans = (style: BraceStyleId) => [
+        subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, style, hw?.sub),
+        midBoxBracing(mDim, wall, inset, mid, layout, style, hw?.mid),
+      ];
+      const byStyle = Object.fromEntries(STYLES.map((s) => [s, plans(s)]));
+      STYLES.forEach((style) =>
+        byStyle[style].forEach((b, i) => {
+          if (!b) return;
+          const tag = `${c.name}, ${style}, ${i ? "mid" : "sub"}${hw ? ", hardware" : ""}`;
+          assert.strictEqual(b.style, style, tag);
+          if (style === "window") assert.deepStrictEqual(b.ribs, [], tag);
+          if (style === "ribs") assert.strictEqual(windowsOf(b), 0, tag);
+          if (style === "both") {
+            // never leaves the baffle lower than Ribs does: it takes the frames the baffle needs before any rib
+            const hz = (x: BoxBracing | null) => x?.panels.find((p) => p.id === "baffle")?.hz ?? 0;
+            assert.ok(hz(b) >= hz(byStyle.ribs[i]) - 1e-6, `${tag}: baffle ${hz(b).toFixed(0)} Hz`);
+          }
+        }),
+      );
+    }
   }
 });
 

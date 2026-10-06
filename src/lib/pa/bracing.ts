@@ -24,8 +24,8 @@ export const DRIVER_CLEARANCE_IN = 0.5;
  * golden sub boxes in ¾″ ply (their mid boxes need none, and neither does the estimate under `span`).
  */
 export const BRACE_ESTIMATE = {
-  window: { span: 16, scale: 1.536 },
-  ribs: { span: 19, scale: 2.879 },
+  window: { span: 16.5, scale: 0.766 },
+  ribs: { span: 18.5, scale: 2.703 },
   both: { span: 18.5, scale: 2.647 },
 } as const satisfies Record<BraceStyleId, { span: number; scale: number }>;
 /**
