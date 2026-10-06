@@ -10,10 +10,19 @@ interface Props {
   setSeat: (seat: ListeningSeat) => void;
   /** each speaker's angle to the seat, degrees: left, right */
   angles: readonly [left: number, right: number];
+  /** size classes for the drawing (default: full width, its own height); a box larger than the room centres it */
+  className?: string;
 }
 
 /** Top-down room: the pair and a seat you can drag. Units: feet. */
-export function RoomView({ spacing, toe, seat, setSeat, angles }: Props) {
+export function RoomView({
+  spacing,
+  toe,
+  seat,
+  setSeat,
+  angles,
+  className = "w-full h-auto",
+}: Props) {
   const pal = usePalette();
   const Wd = Math.max(12, spacing + 6),
     Dp = Math.max(10, seat.y + 3),
@@ -24,9 +33,10 @@ export function RoomView({ spacing, toe, seat, setSeat, angles }: Props) {
     py = (y: number) => 14 + y * k;
   const drag = (e: React.PointerEvent<SVGSVGElement>) => {
     if (e.type === "pointermove" && !e.buttons) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width) * W,
-      y = ((e.clientY - r.top) / r.height) * (H + 20);
+    // through the drawing's own transform, so the seat follows the pointer however the box letterboxes the room
+    const ctm = e.currentTarget.getScreenCTM();
+    if (!ctm) return;
+    const { x, y } = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
     setSeat({
       x: Math.round(((x - W / 2) / k) * 4) / 4,
       y: Math.max(2, Math.round(((y - 14) / k) * 4) / 4),
@@ -43,7 +53,7 @@ export function RoomView({ spacing, toe, seat, setSeat, angles }: Props) {
   return (
     <svg
       viewBox={`0 0 ${W} ${H + 20}`}
-      className="w-full h-auto rounded border border-stone-300 bg-panel select-none"
+      className={`${className} rounded border border-stone-300 bg-panel select-none`}
       style={{ touchAction: "none" }}
       onPointerDown={drag}
       onPointerMove={drag}

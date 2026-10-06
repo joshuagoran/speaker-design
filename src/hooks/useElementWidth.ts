@@ -20,13 +20,13 @@ export function useElementWidth(fallback: number): [RefObject<HTMLDivElement | n
 /**
  * Whether an element is at least `px` CSS px wide, kept current with a ResizeObserver. Measured before the first paint,
  * so a layout that switches on it draws right the first time, and it re-renders only when the answer flips, not on
- * every pixel of a resize.
+ * every pixel of a resize. Returns a callback ref, so an element that mounts after the first render (a page's results
+ * once there is a design to show) is measured too.
  */
-export function useWidthAtLeast(px: number): [RefObject<HTMLDivElement | null>, boolean] {
-  const ref = useRef<HTMLDivElement>(null);
+export function useWidthAtLeast(px: number): [(el: HTMLDivElement | null) => void, boolean] {
+  const [el, setEl] = useState<HTMLDivElement | null>(null);
   const [atLeast, setAtLeast] = useState(false);
   useLayoutEffect(() => {
-    const el = ref.current;
     if (!el) return;
     const measure = () => {
       const cw = el.clientWidth;
@@ -37,6 +37,6 @@ export function useWidthAtLeast(px: number): [RefObject<HTMLDivElement | null>, 
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [px]);
-  return [ref, atLeast];
+  }, [el, px]);
+  return [setEl, atLeast];
 }

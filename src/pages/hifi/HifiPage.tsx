@@ -63,9 +63,16 @@ import type { HifiPlanner } from "./useHifiPlanner";
 import type { Dims3 } from "../../types";
 import { entriesOf, keysOf } from "../../lib/records";
 import { xmaxRows } from "../../lib/xmax";
-import { PAGE_WIDTH, RESULT_MAX_WIDTH } from "../../styles/layout";
+import {
+  PAGE_WIDTH,
+  RESULT_MAX_WIDTH,
+  RESULTS_TWO_COLUMN_PX,
+  resultsCellClass,
+  resultsGridClass,
+} from "../../styles/layout";
+import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
-import { UI_TEXT } from "../../constants/uiText";
+import { HIFI_RESULT_HEADINGS, UI_TEXT } from "../../constants/uiText";
 
 interface Props {
   hifi: HifiPlanner;
@@ -90,9 +97,16 @@ const PORT_CHOICES = [
   ["2 PR", "radiator", 2, "Two passive radiators"],
 ] as const;
 
-/** Hi-fi page: 2-way home speakers with an active crossover. */
+/**
+ * Hi-fi page: 2-way home speakers with an active crossover. When the results pane is wide enough the results take two
+ * columns with aligned rows (summary | warnings, Response | Max output, Dispersion | Seat position), Details below;
+ * narrower, one column in reading order.
+ */
 export function HifiPage({ hifi }: Props) {
   const pal = usePalette();
+  // measured on the results, not the viewport: the settings column's width is draggable
+  const [resultsGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
+  const cell = (place: string) => resultsCellClass(wide, place);
   const {
     woofer,
     setWoofer,
@@ -355,7 +369,7 @@ export function HifiPage({ hifi }: Props) {
     <SettingsLayout
       results={
         <>
-          <div className="min-w-0 mb-8">
+          <div className={`${RESULT_MAX_WIDTH} min-w-0 mb-8`}>
             <SavedConfigs
               bare
               store={store}
@@ -382,131 +396,163 @@ export function HifiPage({ hifi }: Props) {
               </div>
             )}
           </div>
-          <div className="min-w-0 flex flex-col gap-4">
-            <div className={`${RESULT_MAX_WIDTH} flex gap-4 items-center`}>
-              <div className="shrink-0">
-                <HifiFront
-                  dim={boxDims}
-                  w={woofer}
-                  t={tweeterWithWaveguide}
-                  lay={speakerSystem.lay}
-                  vented={speakerSystem.kind === "vented"}
-                  port={portSpec}
-                  pr={speakerSystem.kind === "radiator" ? radiator : null}
-                  guide={waveguideSpec}
-                  roundoverIn={roundoverIn}
-                  tweeterOffsetIn={tweeterOffsetUsed}
+          <div className="min-w-0 flex flex-col gap-8">
+            <div ref={resultsGrid} className={resultsGridClass(wide)}>
+              <div className={cell("col-start-1 row-start-1")}>
+                <div className={`${RESULT_MAX_WIDTH} flex gap-4 items-center`}>
+                  <div className="shrink-0">
+                    <HifiFront
+                      dim={boxDims}
+                      w={woofer}
+                      t={tweeterWithWaveguide}
+                      lay={speakerSystem.lay}
+                      vented={speakerSystem.kind === "vented"}
+                      port={portSpec}
+                      pr={speakerSystem.kind === "radiator" ? radiator : null}
+                      guide={waveguideSpec}
+                      roundoverIn={roundoverIn}
+                      tweeterOffsetIn={tweeterOffsetUsed}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+                    {tile(STATS.netVolume, speakerSystem.net.toFixed(1), "L")}
+                    {speakerSystem.kind === "sealed"
+                      ? tile(STATS.qtc, speakerSystem.Qtc.toFixed(2), "")
+                      : tile(STATS.tuningFb, speakerSystem.Fb.toFixed(0), "Hz")}
+                    {tile(STATS.f3InRoom, speakerSystem.f3.toFixed(0), "Hz")}
+                    {tile(STATS.maxAtSeat, maxLevelAtSeatDb.toFixed(0), "dB")}
+                    {tile("Weight", speakerSystem.lb.toFixed(0), "lb")}
+                    {tile(STATS.pairPrice, `$${Math.round(pairCostUsd)}`, "")}
+                  </div>
+                </div>
+              </div>
+              <div className={cell("col-start-2 row-start-1")}>
+                <WarningChips chips={warningChips} />
+              </div>
+              <section className={cell("col-start-1 row-start-2")}>
+                <SectionHeading className="mb-3">{HIFI_RESULT_HEADINGS.response}</SectionHeading>
+                <ResponseChart
+                  fmin={15}
+                  fmax={20000}
+                  top={HIFI_TOP}
+                  bot={HIFI_BOT}
+                  step={10}
+                  yLabel="dB SPL at 2.83 V"
+                  series={[
+                    {
+                      curve: onAxisResponse,
+                      label: "On axis, 1 m",
+                      stroke: pal.ink,
+                      tint: alpha(pal.ink, 0),
+                    },
+                    {
+                      curve: pairResponse,
+                      label: `Pair at the seat (${seatDistanceFt.toFixed(1)} ft)`,
+                      stroke: pal.cyan,
+                      tint: alpha(pal.cyan, 0.06),
+                    },
+                  ]}
+                  marks={[
+                    { f: crossoverHz, label: "XO" },
+                    { f: speakerSystem.bsF3, label: "Baffle step" },
+                    ...(speakerSystem.Fb ? [{ f: speakerSystem.Fb, label: "Fb" }] : []),
+                  ]}
                 />
-              </div>
-              <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
-                {tile(STATS.netVolume, speakerSystem.net.toFixed(1), "L")}
-                {speakerSystem.kind === "sealed"
-                  ? tile(STATS.qtc, speakerSystem.Qtc.toFixed(2), "")
-                  : tile(STATS.tuningFb, speakerSystem.Fb.toFixed(0), "Hz")}
-                {tile(STATS.f3InRoom, speakerSystem.f3.toFixed(0), "Hz")}
-                {tile(STATS.maxAtSeat, maxLevelAtSeatDb.toFixed(0), "dB")}
-                {tile("Weight", speakerSystem.lb.toFixed(0), "lb")}
-                {tile(STATS.pairPrice, `$${Math.round(pairCostUsd)}`, "")}
-              </div>
-            </div>
-            <ResponseChart
-              fmin={15}
-              fmax={20000}
-              top={HIFI_TOP}
-              bot={HIFI_BOT}
-              step={10}
-              yLabel="dB SPL at 2.83 V"
-              series={[
-                {
-                  curve: onAxisResponse,
-                  label: "On axis, 1 m",
-                  stroke: pal.ink,
-                  tint: alpha(pal.ink, 0),
-                },
-                {
-                  curve: pairResponse,
-                  label: `Pair at the seat (${seatDistanceFt.toFixed(1)} ft)`,
-                  stroke: pal.cyan,
-                  tint: alpha(pal.cyan, 0.06),
-                },
-              ]}
-              marks={[
-                { f: crossoverHz, label: "XO" },
-                { f: speakerSystem.bsF3, label: "Baffle step" },
-                ...(speakerSystem.Fb ? [{ f: speakerSystem.Fb, label: "Fb" }] : []),
-              ]}
-            />
-            <ResponseChart
-              fmin={15}
-              fmax={20000}
-              top={HIFI_TOP}
-              bot={HIFI_BOT}
-              step={10}
-              series={[
-                {
-                  curve: speakerSystem.wMax,
-                  band: speakerSystem.wMaxBand,
-                  label: woofer.name,
-                  stroke: pal.magenta,
-                  tint: alpha(pal.magenta, 0.06),
-                },
-                {
-                  curve: tweeterMaxCurve,
-                  label: tweeter.name,
-                  stroke: pal.cyan,
-                  tint: alpha(pal.cyan, 0.06),
-                },
-              ]}
-              marks={[{ f: crossoverHz, label: "XO" }]}
-            />
-            <WarningChips chips={warningChips} />
-            <div
-              className={`${RESULT_MAX_WIDTH} grid grid-cols-1 sm:grid-cols-2 gap-4 items-start`}
-            >
-              <RoomView
-                spacing={speakerSpacingFt}
-                toe={toeInDeg}
-                seat={listeningSeat}
-                setSeat={setListeningSeat}
-                angles={[(leftGeometry.th * 180) / Math.PI, (rightGeometry.th * 180) / Math.PI]}
-              />
-              <div className="text-sm text-stone-500 leading-relaxed">
-                <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold mb-1">
-                  At the seat
-                </div>
-                <div>{seatDistanceFt.toFixed(1)} ft from the pair</div>
-                <div>
-                  Off axis: L {((leftGeometry.th * 180) / Math.PI).toFixed(0)}°, R{" "}
-                  {((rightGeometry.th * 180) / Math.PI).toFixed(0)}°
-                </div>
-                <div>
-                  Ears{" "}
-                  {earHeightIn - standHeightIn - speakerSystem.lay.tweeterIn >= 0
-                    ? "above"
-                    : "below"}{" "}
-                  tweeter{" "}
-                  {Math.abs(earHeightIn - standHeightIn - speakerSystem.lay.tweeterIn).toFixed(1)}″
-                </div>
-                <div>
-                  <Tooltip
-                    tip={`Clean up to about ${maxLevelAtSeatDb.toFixed(0)} dB at the seat with both speakers playing.`}
+              </section>
+              <section className={cell("col-start-2 row-start-2")}>
+                <SectionHeading className="mb-3">{HIFI_RESULT_HEADINGS.maxOutput}</SectionHeading>
+                <ResponseChart
+                  fmin={15}
+                  fmax={20000}
+                  top={HIFI_TOP}
+                  bot={HIFI_BOT}
+                  step={10}
+                  series={[
+                    {
+                      curve: speakerSystem.wMax,
+                      band: speakerSystem.wMaxBand,
+                      label: woofer.name,
+                      stroke: pal.magenta,
+                      tint: alpha(pal.magenta, 0.06),
+                    },
+                    {
+                      curve: tweeterMaxCurve,
+                      label: tweeter.name,
+                      stroke: pal.cyan,
+                      tint: alpha(pal.cyan, 0.06),
+                    },
+                  ]}
+                  marks={[{ f: crossoverHz, label: "XO" }]}
+                />
+              </section>
+              {/* beside the dispersion map, the map sets the row's height and the room view fills the rest */}
+              <section className={cell("col-start-2 row-start-3 self-stretch flex flex-col")}>
+                <SectionHeading className="mb-3">{HIFI_RESULT_HEADINGS.seat}</SectionHeading>
+                <div
+                  className={
+                    wide
+                      ? `${RESULT_MAX_WIDTH} flex-1 flex gap-4 items-start`
+                      : `${RESULT_MAX_WIDTH} grid grid-cols-1 sm:grid-cols-2 gap-4 items-start`
+                  }
+                >
+                  <div className={wide ? "relative flex-1 self-stretch min-h-[280px]" : undefined}>
+                    <RoomView
+                      spacing={speakerSpacingFt}
+                      toe={toeInDeg}
+                      seat={listeningSeat}
+                      setSeat={setListeningSeat}
+                      className={wide ? "absolute inset-0 w-full h-full" : undefined}
+                      angles={[
+                        (leftGeometry.th * 180) / Math.PI,
+                        (rightGeometry.th * 180) / Math.PI,
+                      ]}
+                    />
+                  </div>
+                  <div
+                    className={`text-sm text-stone-500 leading-relaxed ${wide ? "w-48 shrink-0" : ""}`}
                   >
-                    Max level
-                  </Tooltip>{" "}
-                  {maxLevelAtSeatDb.toFixed(0)} dB
+                    <div className="text-xs uppercase tracking-wider text-stone-500 font-semibold mb-1">
+                      At the seat
+                    </div>
+                    <div>{seatDistanceFt.toFixed(1)} ft from the pair</div>
+                    <div>
+                      Off axis: L {((leftGeometry.th * 180) / Math.PI).toFixed(0)}°, R{" "}
+                      {((rightGeometry.th * 180) / Math.PI).toFixed(0)}°
+                    </div>
+                    <div>
+                      Ears{" "}
+                      {earHeightIn - standHeightIn - speakerSystem.lay.tweeterIn >= 0
+                        ? "above"
+                        : "below"}{" "}
+                      tweeter{" "}
+                      {Math.abs(earHeightIn - standHeightIn - speakerSystem.lay.tweeterIn).toFixed(
+                        1,
+                      )}
+                      ″
+                    </div>
+                    <div>
+                      <Tooltip
+                        tip={`Clean up to about ${maxLevelAtSeatDb.toFixed(0)} dB at the seat with both speakers playing.`}
+                      >
+                        Max level
+                      </Tooltip>{" "}
+                      {maxLevelAtSeatDb.toFixed(0)} dB
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div>
-              <DispersionPlaneToggle value={dispersionPlane} onChange={setDispersionPlane} />
-              <DispersionMap
-                map={dispersion}
-                title={
-                  dispersionPlane === "h"
-                    ? `${dispersionPlaneName("h")} dispersion, one speaker: outside (−) to inside (+), 0° on axis`
-                    : `${dispersionPlaneName("v")} dispersion: below (−) to above (+) the tweeter axis`
-                }
-              />
+              </section>
+              <section className={`${RESULT_MAX_WIDTH} ${cell("col-start-1 row-start-3")}`}>
+                <SectionHeading className="mb-3">{HIFI_RESULT_HEADINGS.dispersion}</SectionHeading>
+                <DispersionPlaneToggle value={dispersionPlane} onChange={setDispersionPlane} />
+                <DispersionMap
+                  map={dispersion}
+                  title={
+                    dispersionPlane === "h"
+                      ? `${dispersionPlaneName("h")} dispersion, one speaker: outside (−) to inside (+), 0° on axis`
+                      : `${dispersionPlaneName("v")} dispersion: below (−) to above (+) the tweeter axis`
+                  }
+                />
+              </section>
             </div>
             <DetailsDropdown summary={UI_TEXT.details}>
               <div>

@@ -24,3 +24,11 @@ export const UI_TEXT = {
   /** the summary line of the Details drop-downs (each page's written details, the optimizer's goal notes) */
   details: "Details",
 } as const;
+
+/** The Hi-fi Design result headings. */
+export const HIFI_RESULT_HEADINGS = {
+  response: "Response",
+  maxOutput: "Max output",
+  dispersion: "Dispersion",
+  seat: "Seat position",
+} as const;
