@@ -2,7 +2,27 @@ import { DetailsDropdown } from "../../../components/ui/DetailsDropdown";
 import { UI_TEXT } from "../../../constants/uiText";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
+import { PanelResonanceTable } from "../../../components/stats/PanelResonanceTable";
+import { BRACE_PANEL_NAMES, BRACE_STYLE_NAMES } from "../../../constants/bracing";
+import {
+  DRIVER_CLEARANCE_IN,
+  PA_BRACING_CROSSOVER_HZ,
+  PANEL_TARGET_CROSSOVER_MULTIPLE,
+} from "../../../lib/pa/bracing";
+import { formatHz, formatInches } from "../../../lib/format";
 import { panelThicknessName } from "../../../lib/panel";
+import type { BoxBracing } from "../../../types";
+
+/** A box's braces and ribs in words: "1 window brace, 6 ribs", or none. */
+const braceCount = (b: BoxBracing) => {
+  const w = b.windows.x.length + b.windows.y.length + b.windows.z.length,
+    r = b.ribs.reduce((a, x) => a + x.at.length, 0);
+  const words = [
+    w && `${w} window brace${w > 1 ? "s" : ""}`,
+    r && `${r} rib${r > 1 ? "s" : ""}`,
+  ].filter(Boolean);
+  return words.length ? words.join(", ") : "none needed";
+};
 
 interface Props {
   planner: Pick<
@@ -24,6 +44,8 @@ interface Props {
     | "midBoxLiters"
     | "stackHeightIn"
     | "hornCenterHeightIn"
+    | "subBracing"
+    | "midBracing"
   >;
 }
 
@@ -47,6 +69,8 @@ export function DetailsSection({ planner }: Props) {
     midBoxLiters,
     stackHeightIn,
     hornCenterHeightIn,
+    subBracing,
+    midBracing,
   } = planner;
   return (
     <div className="min-w-0" style={{ fontFamily: FONT }}>
@@ -70,6 +94,51 @@ export function DetailsSection({ planner }: Props) {
           {compressionDriver.name}, crossed at {midHornCrossoverHz} Hz (maker suggests{" "}
           {hornOption.xo}). Sits on a short block so the mouth clears the cube. Total stack height
           about {stackHeightIn.toFixed(0)} in, horn center at {hornCenterHeightIn.toFixed(0)} in.
+        </div>
+        <div>
+          <span className="font-medium text-stone-900">Bracing.</span> By rule: braces and ribs go
+          in, the one that lifts the panels most for its wood first, until every panel&rsquo;s first
+          resonance clears {formatHz(subBracing.targetHz)} ({PANEL_TARGET_CROSSOVER_MULTIPLE} ×{" "}
+          {PA_BRACING_CROSSOVER_HZ} Hz, the highest sub-to-mid crossover the optimizers pick). Sub,{" "}
+          {BRACE_STYLE_NAMES[subBracing.style].toLowerCase()}: {braceCount(subBracing)}
+          {midBracing
+            ? `; ${UI_TEXT.midBass.toLowerCase()} cube, ${BRACE_STYLE_NAMES[midBracing.style].toLowerCase()}: ${braceCount(midBracing)}`
+            : ""}
+          . Each panel and each bay between supports is a thin plate simply supported at its edges
+          (glued edges are stiffer, so this reads low); the vent shelf, its fins and the side-duct
+          walls count as supports. Every brace and rib stays {formatInches(DRIVER_CLEARANCE_IN)}″
+          clear of the driver&rsquo;s cutout, basket and magnet and of the vent: a window brace that
+          ties the sides goes behind the magnet or above or below the driver, and one across the box
+          front to back opens its frame round it. The Cutlist has where each one goes.
+          {(
+            [
+              ["Sub", subBracing],
+              [UI_TEXT.midBass, midBracing],
+            ] as const
+          ).map(
+            ([name, b]) =>
+              b && (
+                <div key={name}>
+                  <PanelResonanceTable
+                    caption={`${name} panels, first resonance`}
+                    panels={b.panels}
+                    targetHz={b.targetHz}
+                  />
+                  {!b.meets && (
+                    <div className="text-red-700">
+                      Under the target:{" "}
+                      {b.panels
+                        .filter((p) => p.hz < b.targetHz - 1e-9)
+                        .map((p) => BRACE_PANEL_NAMES[p.id].toLowerCase())
+                        .join(", ")}
+                      . No brace or rib position that clears the driver and the vent lifts it
+                      further with this style; try {BRACE_STYLE_NAMES.both.toLowerCase()}, or
+                      thicker walls.
+                    </div>
+                  )}
+                </div>
+              ),
+          )}
         </div>
         {[midDriver, compressionDriver, hornOption].map(
           (part) =>

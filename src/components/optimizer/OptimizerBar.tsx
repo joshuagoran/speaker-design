@@ -13,6 +13,8 @@ interface Props {
   lockMax: number;
   onLockAll: () => void;
   onClear: () => void;
+  /** one line under the bar while the optimizer is on (e.g. the plywood it designs in, when yours is another) */
+  note?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -25,6 +27,7 @@ export function OptimizerBar({
   lockMax,
   onLockAll,
   onClear,
+  note,
   children,
 }: Props) {
   return (
@@ -60,6 +63,7 @@ export function OptimizerBar({
       )}
       {!on && <span className="text-xs text-stone-500">{hint}</span>}
       {children}
+      {on && note && <span className="w-full text-xs text-stone-500">{note}</span>}
     </div>
   );
 }

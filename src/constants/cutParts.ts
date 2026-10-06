@@ -11,6 +11,7 @@ export const CUT_PART_NAMES = {
   baffle: "Baffle",
   baffleCleat: "Baffle cleat",
   windowBrace: "Window brace",
+  rib: "Rib",
   ductShelf: "Duct shelf",
   ductFin: "Duct fin",
   ductRearWall: "Duct rear wall",

@@ -11,11 +11,15 @@ import {
   AMP_WATTS_MAX,
   ventSizesFor,
   PA_REACH_WORDS,
+  paOptimizerWalls,
 } from "../src/lib/pa/optimize";
 import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc";
+import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
+import { panelIn } from "../src/lib/panel";
+import { PA_OPTIMIZER_PANEL } from "../src/constants/optimizerPanels";
 import { KEEP_UP_SLACK_DB } from "../src/lib/pa/chips";
 import { SUB_OPTIONS, MID_BOXES } from "../src/lib/data";
-import { CHANGE_NAMES, OUT_OF_REACH_LEAD } from "../src/constants/optimizerText";
+import { OUT_OF_REACH_LEAD } from "../src/constants/optimizerText";
 import type {
   ChipId,
   Dims3,
@@ -255,71 +259,6 @@ test("a near-miss option, once applied, finds designs", (t) => {
   assert.ok(out.nearMiss!.blocking.length > 0 && out.nearMiss!.blocking.every((b) => b.length > 0));
 });
 
-test("Lighter with everything locked but the plywood offers the same design on 1/2 in ply", (t) => {
-  const defaults = {
-    xoLo: 120,
-    xoHi: 900,
-    xoLoOrder: 4,
-    xoHiOrder: 4,
-    mAmpW: 400,
-    hfAmpW: 100,
-  } as const;
-  let tried = 0;
-  for (const name of [
-    SEED_NAMES.lilBlock,
-    SEED_NAMES.blocky,
-    SEED_NAMES.lightBlock,
-    SEED_NAMES.lilTower,
-  ]) {
-    const c0 = { ...defaults, ...pick(name) };
-    const c = { ...c0, horn: c0.cd === "n314t" && c0.horn === "a460g2" ? "a460g2_14" : c0.horn };
-    if (designProblems(evaluateDesign(c), { maxLb: 150, budget: 2000 }).length) continue; // locked as it is, it can't pass anyway
-    tried++;
-    const all: PaOptimizerLocks = {
-      sub: true,
-      mid: true,
-      cd: true,
-      horn: true,
-      vent: true,
-      hpf: true,
-      xoLo: true,
-      xoHi: true,
-      ampW: true,
-      mAmpW: true,
-      hfAmpW: true,
-      subDim: { w: "exact", h: "exact", d: "exact" },
-      midDim: { w: "exact", h: "exact", d: "exact" },
-    };
-    const out = optimizePaStack({
-      ...base,
-      cur: c,
-      maxLb: 150,
-      budget: 2000,
-      goal: "lighter",
-      locks: all,
-    });
-    assert.ok(
-      out.cards.length >= 1,
-      `${name}: ${JSON.stringify(out.nearMiss && out.nearMiss.blocking)}`,
-    );
-    assert.equal(out.cards[0].config.wall, 0.5, name);
-    assert.ok(out.cards[0].metrics.heaviest < evaluateDesign(c)!.heaviest, name);
-  }
-  assert.ok(tried >= 2, "at least two saved designs checked");
-});
-
-test("Lighter with free choices still shows the plywood-only change when it beats the current design", (t) => {
-  const c = { ...pick(SEED_NAMES.lightBlock), xoLo: 120, xoHi: 900, mAmpW: 400, hfAmpW: 100 };
-  const out = optimizePaStack({ ...base, cur: c, maxLb: 150, budget: 2000, goal: "lighter" });
-  const small = out.cards.find(
-    (k) => k.config.wall !== c.wall && k.changed.join() === CHANGE_NAMES.plywood,
-  );
-  assert.ok(
-    small || out.cards.some((k) => k.config.wall === 0.5),
-    out.cards.map((k) => `${k.label}: ${k.changed.join("/")}`).join(" | "),
-  );
-});
-
 test("no card carries 'Horn stops loading near the crossover' when the horn, driver or crossover is free", (t) => {
   for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
     const out = runs[goal] || optimizePaStack({ ...base, goal });
@@ -373,7 +312,6 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
     cd: true,
     horn: true,
     vent: true,
-    wall: true,
     hpf: true,
     xoLo: true,
     xoHi: true,
@@ -526,12 +464,12 @@ test("a failing design with nothing in reach: the closest design that passes, an
 });
 
 test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
-  // "blocky" under an $800 budget and 90 lb, with the vent kept to its bottom slot, nothing that passes keeps the
+  // "blocky" under an $800 budget and 95 lb, with the vent kept to its bottom slot, nothing that passes keeps the
   // output; $880 does
   const out = optimizePaStack({
     ...base,
     cur: pick(SEED_NAMES.blocky),
-    maxLb: 90,
+    maxLb: 95,
     budget: 800,
     goal: "cheaper",
     locks: { vent: true },
@@ -557,8 +495,8 @@ test("Cheaper: fewest warnings, then strictly the cheapest, with weight breaking
     [first, ...rest] = out.cards;
   assert.ok(first, "a card");
   for (const k of rest) assert.ok(first.metrics.price <= k.metrics.price, k.label);
-  // the same drivers on 1/2 in ply cost the same and weigh less, and a crossover that avoids the warning exists
-  assert.equal(first.config.wall, 0.5);
+  // every card is in the optimizer's one plywood size, and a crossover that avoids the warning exists
+  assert.equal(first.config.wall, paOptimizerWalls(base.cur)[0]);
   assert.ok(
     !first.warnings.some(([, , , id]) => id === "hornMidWider"),
     "no soft warning on the cheapest card",
@@ -605,15 +543,15 @@ test("a mid that keeps up only below full sub power turns the sub down instead o
 
 test("a band is turned down only as far as the keep-up check needs, not level with the band above", () => {
   // the sub outruns this mid at full power; it comes down until the mid is within the check's slack, which leaves it
-  // ~0.4 dB more output than turning it down until the mid is exactly level (124.8 dB)
+  // ~0.4 dB more output than turning it down until the mid is exactly level (about 129.0 dB)
   const lim = { maxLb: base.maxLb, budget: base.budget };
-  const out = optimizePaStack({ ...base, cur: pick("idk tweaked"), goals: ["lighter", "lower"] });
+  const out = optimizePaStack({ ...base, cur: pick(SEED_NAMES.lightBlock), goals: ["louder"] });
   const k = out.cards[0];
   assert.ok(k, out.goalMissing ?? "no card");
   const m = evaluateDesign(k.config)!;
   assert.deepEqual(designProblems(m, lim), [], "the card passes as it is");
   assert.ok(m.midGap < 0 && m.midGap >= -KEEP_UP_SLACK_DB, `mid gap ${m.midGap.toFixed(2)} dB`);
-  assert.ok(k.metrics.out > 125, `${k.metrics.out.toFixed(2)} dB`);
+  assert.ok(k.metrics.out > 129.2, `${k.metrics.out.toFixed(2)} dB`);
 });
 
 test("the mids are chosen with the horn in view: a dearer mid the horn keeps up with is tried", () => {
@@ -629,8 +567,28 @@ test("the mids are chosen with the horn in view: a dearer mid the horn keeps up 
   assert.deepEqual(designProblems(evaluateDesign(k.config), lim), [], "the card passes as it is");
   assert.ok(k.metrics.out >= out.target - 0.5, "and keeps the target");
   assert.ok(out.curM, "the design evaluates");
+  // lighter by the label's 3 lb as the search counts the braces (an estimate); the card's own braces, by the rule, can
+  // weigh a fraction of a pound more
   assert.ok(
-    k.metrics.heaviest <= out.curM.heaviest - 3,
-    `${k.metrics.heaviest.toFixed(1)} lb, the design ${out.curM.heaviest.toFixed(1)} lb`,
+    k.metrics.heaviest <= out.curM.heaviest - 3 + BRACE_ESTIMATE_SLACK_LB,
+    `${k.metrics.heaviest.toFixed(2)} lb, the design ${out.curM.heaviest.toFixed(2)} lb`,
   );
+});
+/** How far a card's weight with its braces by the rule may sit from the search's, with them by estimate, lb. */
+const BRACE_ESTIMATE_SLACK_LB = 0.5;
+
+test("the PA optimizers design in their one plywood size, at its measured thickness, whatever your design's", () => {
+  // your design in ½″, with ¾″ measured at 18 mm: every card, quick and exact, comes back in ¾″ at that thickness
+  const c = { ...pick("idk tweaked"), wall: 0.5, exactIn: { "3/4": 0.689 } };
+  const input: PaOptimizerInput = {
+    ...base,
+    cur: c,
+    goals: ["cheaper"],
+    locks: { sub: true, vent: true, subDim: { h: "exact" } },
+  };
+  const want = panelIn(PA_OPTIMIZER_PANEL, "ply", { "3/4": 0.689 });
+  const quick = optimizePaStack(input).cards,
+    exact = optimizePaStackExact(input).cards;
+  assert.ok(quick.length && exact.length, "cards");
+  for (const k of [...quick, ...exact]) assert.equal(k.config.wall, want, k.label);
 });

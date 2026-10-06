@@ -17,7 +17,10 @@ import { MAX_ELBOWS, tubeElbows, tubeMaxLength, type TubeRoom } from "../tubeFol
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import { panelLbPerSqFt } from "../panel";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
+import { BIRCH_PLY_STIFFNESS, MDF_STIFFNESS, plateFirstModeHz } from "../bracing";
 import type {
+  BracePanelId,
+  PanelResonance,
   BoxModelTS,
   CrossoverOrder,
   Dims3,
@@ -258,6 +261,38 @@ export const slotMaxLength = (dim: Dims3, wall: number, port: Pick<SlotPort, "h"
 // lb/ft² at the wall's exact thickness (lib/panel); plywood when the material is absent
 export const panelWeightLb = (t: number, mat: PanelMaterial | undefined) =>
   panelLbPerSqFt(t, mat ?? PLYWOOD_MATERIAL);
+/**
+ * The box's panels' first plate resonances (lib/bracing, the PA boxes' plate model), at the material's stiffness and
+ * weight, unbraced. The Hi-fi box has no bracing rule: its woofer plays through every panel mode up to the tweeter
+ * crossover, so no target like the PA's twice the sub-to-mid crossover exists, and the volume keeps its allowance for
+ * bracing and damping (hifiBox). `hz` is the same as `bareHz`.
+ */
+export function hifiPanelResonances(
+  dim: Dims3,
+  t: number,
+  mat: PanelMaterial | undefined,
+): PanelResonance[] {
+  const stock = {
+    t,
+    lbPerSqFt: panelWeightLb(t, mat),
+    ...(mat === "mdf" ? MDF_STIFFNESS : BIRCH_PLY_STIFFNESS),
+  };
+  const w = dim.w - 2 * t,
+    h = dim.h - 2 * t,
+    d = dim.d - 2 * t;
+  const spans: [BracePanelId, number, number][] = [
+    ["sideL", d, h],
+    ["sideR", d, h],
+    ["top", w, d],
+    ["bottom", w, d],
+    ["back", w, h],
+    ["baffle", w, h],
+  ];
+  return spans.map(([id, a, b]) => {
+    const hz = plateFirstModeHz(a, b, stock);
+    return { id, bareHz: hz, hz };
+  });
+}
 export function boxWeightLb(d: Dims3, t: number, mat: PanelMaterial | undefined) {
   const ft2 = (2 * (d.w * d.h + d.w * d.d + d.h * d.d)) / 144;
   return ft2 * panelWeightLb(t, mat);

@@ -29,15 +29,10 @@ export const defaultPanelIn = (n: PanelNominal, mat: PanelMaterial) => PANEL_STO
 export const panelIn = (n: PanelNominal, mat: PanelMaterial, exact: PanelExactIn = {}) =>
   exact[n] ?? defaultPanelIn(n, mat);
 
-/** Each nominal size's thickness, thickest size first and each thickness once: the walls the optimizers try. */
-export const panelChoicesIn = (mat: PanelMaterial, exact: PanelExactIn = {}) => [
-  ...new Set(PANEL_NOMINALS.map((n) => panelIn(n, mat, exact))),
-];
-
 /**
  * The thickness a measurement may set for a nominal size, inches: within a tenth of the size. That takes in the usual
- * undersized sheets (18 mm birch at 0.689″, 23/32″, 15/32″) while keeping ½″ under the extra-brace line and ⅝″ over
- * it, and no size can be measured at another size's nominal thickness.
+ * undersized sheets (18 mm birch at 0.689″, 23/32″, 15/32″), and no size can be measured at another size's nominal
+ * thickness.
  */
 export const panelExactRange = (n: PanelNominal) => ({
   min: +(PANEL_STOCK[n].in * 0.9).toFixed(3),
@@ -69,10 +64,14 @@ export function panelLbPerSqFt(t: number, mat: PanelMaterial): number {
   return a.lb + ((b.lb - a.lb) * (t - a.t)) / (b.t - a.t);
 }
 
-/** Walls thinner than this (inches, halfway from ½″ to ⅝″) are ½″-class stock, which the boxes brace once more. */
-const THIN_PANEL_IN = (PANEL_STOCK["1/2"].in + PANEL_STOCK["5/8"].in) / 2;
-/** Whether a wall is ½″-class stock, which takes an extra brace. */
-export const isThinPanel = (t: number) => t < THIN_PANEL_IN;
+/**
+ * The nominal size a wall thickness stands for, without the Cutlist page's measurements: the size nearest it (a measured
+ * sheet stays within a tenth of its own size, `panelExactRange`; on the exact midpoint, the thicker size).
+ */
+export const panelNominalNear = (t: number): PanelNominal =>
+  PANEL_NOMINALS.reduce((a, n) =>
+    Math.abs(PANEL_STOCK[n].in - t) < Math.abs(PANEL_STOCK[a].in - t) ? n : a,
+  );
 
 /**
  * The nominal size a saved design or an optimizer card is at, from the thickness it was worked out at (`wall`) and the

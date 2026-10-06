@@ -8,6 +8,8 @@ import {
   subWeightLb,
   midWeightLb,
   plywoodLbPerSqFt,
+  subBoxBracing,
+  midBoxBracing,
   maxFoldedRearWallIn,
   maxFoldedSlotIn,
   foldedRearWallIn,
@@ -15,13 +17,16 @@ import {
   ductDividerIn,
   subGeometry,
   ventTuning,
+  braceWoodEstimate,
+  braceWoodIn3,
 } from "../src/lib/pa/calc";
+import { defaultBraceStyleNear } from "../src/lib/bracing";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { ductFit } from "../src/lib/pa/chips";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import { close, vent, DRV18 } from "./helpers";
 import { subWoodIn3, ventShape } from "../src/lib/pa/exactSub";
-import type { CutPartId } from "../src/types";
+import type { CutPart, CutPartId } from "../src/types";
 
 const IN3_L = 16.387 / 1000;
 test("boxL: inner width/height lose two walls, depth loses inset + 3/4 baffle + back", (t) => {
@@ -89,11 +94,25 @@ test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => 
     inD = 20 - 0.75 - 0.75 - 0.75,
     len = Math.min(14, 20 - 0.75 - 3);
   const cleats = 0.75 * 0.75 * (2 * iw + 2 * (ih - band - 1.5));
-  const braces = 2 * (2 * 2 * (iw + inD) - 16) * t0;
+  // the braces the rule put in: a window brace's 2″ rails round its cut-out centre, a rib's whole strip
+  const braceRows = parts.filter((p) => p.part === "windowBrace" || p.part === "rib");
+  assert.ok(braceRows.length, "the rule braces this box");
+  const braces = braceRows.reduce(
+    (a, p) => a + (p.part === "rib" ? p.a * p.b : p.a * p.b - (p.a - 4) * (p.b - 4)) * p.t * p.qty,
+    0,
+  );
+  // each frame spans two of the inside's sides
+  const spans = [iw, ih, inD];
+  assert.ok(
+    braceRows.every(
+      (p) => p.part === "rib" || (spans.includes(p.a) && spans.includes(p.b) && p.a !== p.b),
+    ),
+    "frames across the inside",
+  );
   const duct = iw * len * t0 + 2 * 3 * len * t0;
   close(t, internalWoodLiters(parts, "sub"), (cleats + braces + duct) * IN3_L, 1e-9);
 });
-test("folded slot: the rear wall makes the centreline the set length, and the fast wood volume matches the cutlist", (t) => {
+test("folded slot: the rear wall makes the centreline the set length, and the searches' wood volume matches the cutlist", (t) => {
   const box = { w: 22, h: 30, d: 20 },
     t0 = 0.75,
     cVent = vent({ slotH: 3, len: 26 });
@@ -116,10 +135,25 @@ test("folded slot: the rear wall makes the centreline the set length, and the fa
   // centreline: the floor run to the channel's middle (20 - 0.75 - 1.5 = 17.75), then 1.5 up to the roof and the wall
   // above it, so the wall is 26 - 17.75 - 1.5 = 6.75
   close(t, part("ductRearWall")?.b ?? NaN, 6.75, 1e-12);
+  // the searches count the braces by estimate: the cutlist's other wood, and that
+  const bare = cutParts({
+    sub: SUB_OPTIONS[0],
+    mid: MID_OPTIONS[0],
+    subBox: box,
+    midDims: { w: 15, h: 15, d: 15 },
+    wall: t0,
+    inset: 0.75,
+    joint: "butt",
+    portStyle: "slots",
+    cVent,
+    layout: "stack",
+    noBraces: true,
+  }).parts;
+  const est = braceWoodIn3(braceWoodEstimate(box, t0, 0.75, defaultBraceStyleNear(t0)));
   close(
     t,
-    subWoodIn3("slots", box, t0, 0.75, cVent) * IN3_L,
-    internalWoodLiters(parts, "sub"),
+    subWoodIn3("slots", box, t0, 0.75, cVent, undefined) * IN3_L,
+    internalWoodLiters(bare, "sub") + est * IN3_L,
     1e-12,
   );
 });
@@ -169,9 +203,24 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
       cVent: vent({ nt: 2, dia: 4, len: 12 }),
       layout: "stack",
     }).parts.filter((p) => p.box === "sub");
-    const lb =
-      parts.reduce((a, p) => a + ((p.a * p.b * p.qty) / 144) * plywoodLbPerSqFt(p.t), 0) + 6;
-    const w = subWeightLb(box, wall, 0);
+    // a window brace weighs its rails only (its centre is cut out)
+    const area = (p: CutPart) =>
+      p.part === "windowBrace" ? p.a * p.b - (p.a - 4) * (p.b - 4) : p.a * p.b;
+    const lb = parts.reduce((a, p) => a + ((area(p) * p.qty) / 144) * plywoodLbPerSqFt(p.t), 0) + 6;
+    const w = subWeightLb(
+      box,
+      wall,
+      0,
+      subBoxBracing(
+        box,
+        wall,
+        0.75,
+        "round2",
+        vent({ nt: 2, dia: 4, len: 12 }),
+        SUB_OPTIONS[0],
+        undefined,
+      ),
+    );
     assert.ok(
       w >= lb * 0.98 && w <= lb * 1.12,
       `wall ${wall}: formula ${w.toFixed(1)} vs parts ${lb.toFixed(1)}`,
@@ -191,8 +240,13 @@ test("plyLb: the catalogue's sizes, and measured thicknesses between and beyond 
 test("midWeight: 15 in cube in 3/4 birch", (t) => {
   close(
     t,
-    midWeightLb({ w: 15, h: 15, d: 15 }, 0.75),
-    (225 * 2.3 + (225 + 450 + 450 + 225) * 2.3) / 144 + 2,
+    midWeightLb(
+      { w: 15, h: 15, d: 15 },
+      0.75,
+      midBoxBracing({ w: 15, h: 15, d: 15 }, 0.75, 0.75, MID_OPTIONS[0], "stack", undefined),
+    ),
+    // a 15″ cube in 3/4″ ply needs no braces: every panel clears the target as it is
+    (225 * 2.3 + (225 + 450 + 450) * 2.3) / 144 + 2,
     1e-9,
   );
 });
@@ -228,8 +282,8 @@ test("duct dividers: a thicker divider comes out of the side ducts' open area, n
   close(t, ventShape("vslots", box, cVent(0.75), wall, DRV18).area, threeQ.port.area, 1e-9);
   close(
     t,
-    subWoodIn3("vslots", box, wall, inset, cVent(0.75)) -
-      subWoodIn3("vslots", box, wall, inset, cVent()),
+    subWoodIn3("vslots", box, wall, inset, cVent(0.75), undefined) -
+      subWoodIn3("vslots", box, wall, inset, cVent(), undefined),
     n * 2 * throat * len * grow,
     1e-9,
   );

@@ -6,5 +6,5 @@ export const PA_SETTINGS_TABS = {
   sub: "Sub",
   mid: "Mid",
   horn: "Horn",
-  look: "Look",
+  build: "Build",
 } as const;

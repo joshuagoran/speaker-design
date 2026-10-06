@@ -20,6 +20,11 @@ import {
   subWeightLb,
   ventSpeedLimit,
   midWeightLb,
+  midBraceEstimate,
+  midBoxBracing,
+  midNetLiters,
+  braceWoodEstimate,
+  subBoxBracing,
   boxInternalLiters,
   cutParts,
   nearestPoint,
@@ -105,7 +110,10 @@ import { throttledProgress } from "../optimizer/progress";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { UI_TEXT } from "../../constants/uiText";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
-import { panelChoicesIn, savedPanelExactIn } from "../panel";
+import { panelFor, panelIn, panelNominalNear, savedPanelExactIn } from "../panel";
+import { defaultBraceStyle } from "../bracing";
+import { savedStackBraceStyle } from "../../constants/bracing";
+import { PA_OPTIMIZER_PANEL } from "../../constants/optimizerPanels";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -306,7 +314,11 @@ const hasVent = (style: PortStyle | undefined, vent: Partial<VentSpec> | undefin
 
 // ---- the planner's evaluation of a whole config (same functions, same order as the page) ----
 // Null for a design it can't evaluate: an unknown driver, a config missing a number, a box size or a vent it needs, or a box with no model.
-export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
+export function evaluateDesign(
+  c: PaDesignConfig,
+  /** an optimizer's search: the braces' wood by its cursory estimate (braceWoodEstimate), not the rule */
+  braceEstimate = false,
+): PaEvaluation | null {
   // boundary: the type says every field is there, but a saved or handed-over config may not have them all
   if (
     !REQUIRED_NUMBERS.every((k) => Number.isFinite(c[k])) ||
@@ -320,6 +332,7 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     cd = byId(CD_OPTIONS, c.cd),
     horn = byId(HORN_OPTIONS, c.horn);
   if (!sub || !sub.ts || !mid || !mid.ts || !cd || !horn) return null;
+  const braceStyle = paBraceStyle(c);
   const midDims = c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim;
   // boundary: a save from before the slope setting has no orders, and reads as LR24
   const xoLoOrder = savedCrossoverOrder(c.xoLoOrder),
@@ -336,8 +349,13 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     ampW: c.ampW,
     portMax: c.portMax,
     layout: c.layout,
+    braceStyle,
+    braceEstimate,
   });
   const ms = midSystem(mid, {
+    layout: c.layout,
+    braceStyle,
+    braceEstimate,
     midDims,
     wall: c.wall,
     inset: c.inset,
@@ -347,8 +365,22 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     xoHiOrder,
     mAmpW: c.mAmpW,
   });
-  const subLb = subWeightLb(c.cDim, c.wall, sub.lb),
-    midLb = midWeightLb(midDims, c.wall) + (mid.lb || 0);
+  const subLb = subWeightLb(
+      c.cDim,
+      c.wall,
+      sub.lb,
+      braceEstimate
+        ? braceWoodEstimate(c.cDim, c.wall, c.inset, braceStyle)
+        : subBoxBracing(c.cDim, c.wall, c.inset, c.portStyle, c.cVent, sub, braceStyle),
+    ),
+    midLb =
+      midWeightLb(
+        midDims,
+        c.wall,
+        braceEstimate
+          ? midBraceEstimate(midDims, c.wall, c.inset, c.layout, braceStyle)
+          : midBoxBracing(midDims, c.wall, c.inset, mid, c.layout, braceStyle),
+      ) + (mid.lb || 0);
   if (!s.mdl || !ms.mdl) return null; // a vent or box with no geometry has no model to evaluate
   const subMusic = subMusicOutputAt(s.mdl, s.lim, s.AMP_V, c.xoLo, xoLoOrder);
   const hz: Partial<HornHf> = horn.hf || {};
@@ -529,14 +561,28 @@ export const SAME_VOLUME = 0.15;
 /** The crossovers the search tries when they aren't locked, Hz. */
 export const XO_LO_OPTIONS = [90, 100, 110, 120, 140];
 export const XO_HI_OPTIONS = [800, 900, 1000, 1200, 1500];
-/** The plywoods the search tries when the plywood isn't locked: each nominal size at your design's measured thickness, in. */
-export const wallOptions = (cur: Pick<PaDesignConfig, "exactIn">) =>
-  panelChoicesIn(PLYWOOD_MATERIAL, savedPanelExactIn(cur.exactIn));
-/** The plywoods a search tries: your design's own (its measured thickness) while the plywood is locked, else every size. */
-export const paSearchWalls = (
-  cur: Pick<PaDesignConfig, "wall" | "exactIn">,
-  locks: Pick<PaOptimizerLocks, "wall">,
-) => (locks.wall ? [cur.wall] : wallOptions(cur));
+/**
+ * The plywood the searches design in: PA_OPTIMIZER_PANEL alone, for now, at your design's measured thickness for it,
+ * in (a list, so more sizes can join it).
+ */
+export const paOptimizerWalls = (cur: Pick<PaDesignConfig, "exactIn">) => [
+  panelIn(PA_OPTIMIZER_PANEL, PLYWOOD_MATERIAL, savedPanelExactIn(cur.exactIn)),
+];
+/**
+ * A design's bracing style: its own (or, saved by an earlier build, its sub's: savedStackBraceStyle), else the default
+ * for its nominal plywood size (the size it names at its thickness, else the one measured or nominally at it, else the
+ * nearest), as the planner has it.
+ */
+export const paBraceStyle = (
+  c: Pick<PaDesignConfig, "braceStyle" | "wall" | "panel" | "exactIn">,
+) =>
+  savedStackBraceStyle(c) ??
+  defaultBraceStyle(
+    panelFor(c, PLYWOOD_MATERIAL, savedPanelExactIn(c.exactIn)) ?? panelNominalNear(c.wall),
+  );
+/** The bracing style the searches design with: yours, else the default for their plywood (PA_OPTIMIZER_PANEL). */
+export const paSearchBraceStyle = (cur: Pick<PaDesignConfig, "braceStyle">) =>
+  savedStackBraceStyle(cur) ?? defaultBraceStyle(PA_OPTIMIZER_PANEL);
 /** The highpasses the search tries for a tuning when the highpass isn't locked: 0.85× and 1× the tuning, 20 Hz at least. */
 export const highpassOptions = (fb: number) => [
   Math.max(20, Math.round(fb * 0.85)),
@@ -646,7 +692,8 @@ export function optimizePaStack(
       ? [curSub]
       : []
     : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
-  const walls = paSearchWalls(cur, locks);
+  const walls = paOptimizerWalls(cur);
+  const braceStyle = paSearchBraceStyle(cur);
   const styles: PortStyle[] = locks.vent ? [cur.portStyle] : ["slots", "vslots", "round2"];
   const xoLos = locks.xoLo ? [cur.xoLo] : XO_LO_OPTIONS;
   const xoHis = locks.xoHi ? [cur.xoHi] : XO_HI_OPTIONS;
@@ -814,6 +861,8 @@ export function optimizePaStack(
               portStyle: style,
               cVent,
               layout: cur.layout,
+              braceStyle,
+              braceEstimate: true,
             });
           let pushed = false,
             fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystemModelled } | null = null;
@@ -878,6 +927,8 @@ export function optimizePaStack(
               ampW: amps.ampW,
               portMax: cur.portMax,
               layout: cur.layout,
+              braceStyle,
+              braceEstimate: true,
             });
             evals++;
             if (!s.mdl) continue;
@@ -891,7 +942,7 @@ export function optimizePaStack(
               c,
               s,
               sub: sd.sub,
-              lb: subWeightLb(box, t, sd.sub.lb),
+              lb: subWeightLb(box, t, sd.sub.lb, braceWoodEstimate(box, t, cur.inset, braceStyle)),
               out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
             });
             pushed = true;
@@ -921,6 +972,8 @@ export function optimizePaStack(
                 ampW,
                 portMax: cur.portMax,
                 layout: cur.layout,
+                braceStyle,
+                braceEstimate: true,
               });
               evals++;
               if (s.mdl && s.lim.who !== "port")
@@ -928,7 +981,12 @@ export function optimizePaStack(
                   c,
                   s,
                   sub: sd.sub,
-                  lb: subWeightLb(box, t, sd.sub.lb),
+                  lb: subWeightLb(
+                    box,
+                    t,
+                    sd.sub.lb,
+                    braceWoodEstimate(box, t, cur.inset, braceStyle),
+                  ),
                   out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
                 });
             }
@@ -974,7 +1032,7 @@ export function optimizePaStack(
             d = r2(D + cur.inset + 0.75 + t, 0.5);
           if (d < mr.d[0] || d > mr.d[1] || d < 6) continue;
           const bx = { w, h, d },
-            lb = midWeightLb(bx, t);
+            lb = midWeightLb(bx, t, midBraceEstimate(bx, t, cur.inset, cur.layout, braceStyle));
           if (!best || lb < best.lb) best = { bx, lb };
         }
       if (best && !out.some((o) => o.w === best.bx.w && o.h === best.bx.h && o.d === best.bx.d))
@@ -1048,8 +1106,9 @@ export function optimizePaStack(
         stepAt("mids", mi * walls.length + ti, mids.length * walls.length);
         if (!bx) continue;
         const disp = m.ts.disp != null ? m.ts.disp : m.size === 15 ? 4 : 2.5;
+        const bracing = midBraceEstimate(bx, t, cur.inset, cur.layout, braceStyle);
         const eff =
-          Math.max(5, boxInternalLiters(bx.w, bx.h, bx.d, t, cur.inset) - disp) *
+          midNetLiters(boxInternalLiters(bx.w, bx.h, bx.d, t, cur.inset), disp, bracing) *
           STUFFING_VOLUME_GAIN;
         for (const xoLo of xoLos) {
           const V = ampVoltage(amps.mAmpW),
@@ -1080,7 +1139,7 @@ export function optimizePaStack(
               xoHis.map((f) => [f, Math.max(...pairs[f].map((p) => p.lo))]),
             ),
             qtc: mdl.Qtc,
-            lb: midWeightLb(bx, t) + (m.lb || 0),
+            lb: midWeightLb(bx, t, bracing) + (m.lb || 0),
           });
         }
       }
@@ -1294,16 +1353,16 @@ export function optimizePaStack(
   const pool: PoolEntry[] = [];
   for (const [fi, x] of [...finalists.values()].entries()) {
     stepAt("finalists", fi, finalists.size);
-    const m = evaluateDesign(x.c);
+    const m = evaluateDesign(x.c, true);
     evals++;
     if (m) pool.push({ c: x.c, m, ch: changes(x.c) });
   }
-  // one-change tweaks of the current design, evaluated as they are: the other plywood
-  if (!locks.wall && curM)
+  // a one-change tweak of the current design, evaluated as it is: in the optimizer's plywood, if yours is another
+  if (curM)
     for (const w of walls)
       if (w !== cur.wall) {
         const c = { ...base, wall: w },
-          m = evaluateDesign(c);
+          m = evaluateDesign(c, true);
         evals++;
         if (m) pool.push({ c, m, ch: changes(c) });
       }
@@ -1440,7 +1499,7 @@ export function optimizePaStack(
       const { min: lo, step } = AMP_WATTS_STEPS[key];
       if (locks[key] || c[key] <= lo) return;
       const floor = { ...c, [key]: lo },
-        fm = evaluateDesign(floor);
+        fm = evaluateDesign(floor, true);
       evals++;
       if (ok(fm) && good(fm)) {
         c = floor;
@@ -1452,14 +1511,14 @@ export function optimizePaStack(
       while (b - a > step) {
         const mid = Math.round((a + b) / 2 / step) * step,
           cc = { ...c, [key]: mid },
-          mm = evaluateDesign(cc);
+          mm = evaluateDesign(cc, true);
         evals++;
         if (mid <= a || mid >= b) break;
         if (ok(mm) && good(mm)) b = mid;
         else a = mid;
       }
       const cc = { ...c, [key]: b },
-        mm = evaluateDesign(cc);
+        mm = evaluateDesign(cc, true);
       evals++;
       if (ok(mm) && good(mm)) {
         c = cc;
@@ -1521,7 +1580,7 @@ export function optimizePaStack(
         for (const d of sides[2])
           for (const len of lens) {
             const c = { ...p.c, cDim: { w, h, d }, cVent: { ...p.c.cVent, len } },
-              m = evaluateDesign(c);
+              m = evaluateDesign(c, true);
             evals++;
             if (!m || designProblemList(m, lim).some((x) => !had.has(x.id))) continue;
             if (kept.some((g) => goalGap(g, m) > 0)) continue;
@@ -1551,7 +1610,13 @@ export function optimizePaStack(
     };
   };
 
-  const chosen = chooseAmps(lim, target),
+  // a design picked to show, with its own numbers: the bracing rule on it (the search estimated the braces)
+  const ruled = (p: PoolEntry): PoolEntry => {
+    const m = evaluateDesign(p.c);
+    return m ? { ...p, m } : p;
+  };
+  const picked = chooseAmps(lim, target);
+  const chosen = picked && { ...picked, cards: picked.cards.map((k) => ({ ...k, p: ruled(k.p) })) },
     cards = chosen ? chosen.cards : null;
   let nearMiss: PaNearMiss | null = null;
   const GOAL_MISSING: Record<PaGoal, string> = {
@@ -1594,7 +1659,7 @@ export function optimizePaStack(
           designProblems(a.m, lim).length - designProblems(b.m, lim).length ||
           obj[goal](metric(a)) - obj[goal](metric(b)),
       )[0];
-    const closest = nearest && onSliders(nearest, goal);
+    const closest = nearest && ruled(onSliders(nearest, goal));
     // only when there is no closest design to name (the exact search's lightest box takes a long scan of the grid)
     const lightestLb = () =>
       [
@@ -1709,6 +1774,7 @@ function card(
     portStyle: c.portStyle,
     cVent: c.cVent,
     layout: c.layout,
+    braceStyle: paBraceStyle(c),
   });
   // the quick packing only: the card asks the worker for the exact count afterwards (build.parts and build.cutlist)
   const sheets = layoutCutlist(parts, cl, { countsOnly: true }).groups.map((g) => ({

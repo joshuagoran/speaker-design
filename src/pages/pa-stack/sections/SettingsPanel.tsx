@@ -29,11 +29,18 @@ import { useFolds } from "../../../hooks/useFolds";
 import { formatDims, formatHz } from "../../../lib/format";
 import { crossoverSlopeName } from "../../../constants/crossovers";
 import { PA_LAYOUT_NAMES } from "../../../constants/paLayouts";
-import { PA_SETTINGS_SECTIONS } from "../../../constants/settingsSections";
+import { PA_SETTINGS_RENAMED, PA_SETTINGS_SECTIONS } from "../../../constants/settingsSections";
 import { PA_SETTINGS_TABS } from "../../../constants/paSettingsTabs";
 import type { PaSettingsSection } from "../../../constants/settingsSections";
 import { SLOT_LAYOUT_NAMES } from "../../../constants/portStyles";
 import { UI_TEXT } from "../../../constants/uiText";
+import {
+  BRACE_STYLE_NAMES,
+  BRACE_STYLE_SUMMARY,
+  BRACE_STYLE_TIPS,
+} from "../../../constants/bracing";
+import { defaultBraceStyle } from "../../../lib/bracing";
+import { braceNoteLines } from "../../../lib/bracingNotes";
 import { PANEL_NOMINAL_NAMES } from "../../../constants/panelSizes";
 import { PANEL_NOMINAL_OPTIONS } from "../../../lib/panel";
 
@@ -95,6 +102,10 @@ interface Props {
     | "setLayout"
     | "wallThicknessIn"
     | "wallPanel"
+    | "effectiveBraceStyle"
+    | "setBraceStyle"
+    | "subBracing"
+    | "midBracing"
     | "setWallPanel"
     | "baffleInsetIn"
     | "setBaffleInsetIn"
@@ -116,7 +127,7 @@ interface Props {
 }
 
 /**
- * Settings: sliders and pickers for the sub, mid-bass, horn, crossovers and amps, and the look. From md up a sticky
+ * Settings: sliders and pickers for the sub, mid-bass, horn, crossovers and amps, and the build. From md up a sticky
  * column of fold sections, each with a one-line summary while folded; a bottom sheet with tabs on phones.
  */
 export function SettingsPanel({ planner }: Props) {
@@ -176,6 +187,10 @@ export function SettingsPanel({ planner }: Props) {
     setLayout,
     wallThicknessIn,
     wallPanel,
+    effectiveBraceStyle,
+    setBraceStyle,
+    subBracing,
+    midBracing,
     setWallPanel,
     baffleInsetIn,
     setBaffleInsetIn,
@@ -194,11 +209,20 @@ export function SettingsPanel({ planner }: Props) {
     renderLockButton,
     renderDimensionLock,
   } = planner;
-  const folds = useFolds("planner.settingsFolds", keysOf(PA_SETTINGS_SECTIONS));
+  const folds = useFolds(
+    "planner.settingsFolds",
+    keysOf(PA_SETTINGS_SECTIONS),
+    PA_SETTINGS_RENAMED,
+  );
   // the duct lengths that fit: a bottom slot straight, then folded up the back wall; round tubes straight, then with one
   // or two elbows (the lengths between fit neither way, and the slider skips them)
   const ductLens = ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn, subDriver);
   const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
+  // a note under the Bracing setting wherever a box's bracing departs from the style, naming the box and the panel
+  const braceNotes = [
+    ...braceNoteLines(PA_SETTINGS_TABS.sub, subBracing),
+    ...(midBracing ? braceNoteLines(PA_SETTINGS_TABS.mid, midBracing) : []),
+  ];
   const summaries: Record<PaSettingsSection, string> = {
     sub: [
       subDriver.name,
@@ -216,7 +240,7 @@ export function SettingsPanel({ planner }: Props) {
       `highpass ${subHighpassHz} Hz`,
       `amps ${subAmpWatts} / ${midAmpWatts} / ${hornAmpWatts} W`,
     ].join(" · "),
-    look: `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${PANEL_NOMINAL_NAMES[wallPanel].short} ply`,
+    build: `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${PANEL_NOMINAL_NAMES[wallPanel].short} ply, braced with ${BRACE_STYLE_SUMMARY[effectiveBraceStyle]}`,
   };
   const section = (id: PaSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -649,8 +673,8 @@ export function SettingsPanel({ planner }: Props) {
         </>,
       )}
       {section(
-        "look",
-        <div className={tabClass("look")}>
+        "build",
+        <div className={tabClass("build")}>
           <div className="mb-5">
             <ToggleGroup
               label={
@@ -658,13 +682,28 @@ export function SettingsPanel({ planner }: Props) {
                   <Tooltip tip="Birch plywood for the sides, top, bottom and back; thinner walls are braced more. The Cutlist page takes the sheet's measured thickness.">
                     Plywood (baffles stay ¾″)
                   </Tooltip>
-                  {renderLockButton("wall", "the plywood")}
                 </span>
               }
               value={wallPanel}
               onChange={setWallPanel}
               options={PANEL_NOMINAL_OPTIONS}
             />
+            <div className="mt-3">
+              <ToggleGroup
+                label="Bracing"
+                value={effectiveBraceStyle}
+                // the plywood's own default is stored as no choice, so it follows the plywood
+                onChange={(v) => setBraceStyle(v === defaultBraceStyle(wallPanel) ? undefined : v)}
+                options={keysOf(BRACE_STYLE_NAMES).map(
+                  (id) => [id, BRACE_STYLE_NAMES[id], BRACE_STYLE_TIPS[id]] as const,
+                )}
+              />
+              {braceNotes.map((n) => (
+                <div key={n} className="text-xs text-stone-500">
+                  {n}
+                </div>
+              ))}
+            </div>
             <div className="mt-3">
               <Slider
                 label="Baffle inset"

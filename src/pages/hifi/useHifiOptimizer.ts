@@ -1,7 +1,7 @@
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../../lib/data";
 import { toggled } from "../../lib/lists";
+import { pickDefined } from "../../lib/records";
 import { HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
-import { defaultLocks } from "../../constants/lockKeys";
 import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
 import { useDesignPreview } from "../../hooks/useDesignPreview";
 import { useOptimizerLocks } from "../../hooks/useOptimizerLocks";
@@ -20,7 +20,8 @@ import type {
   PanelExactIn,
 } from "../../types";
 import { useState } from "react";
-import { panelChoicesIn } from "../../lib/panel";
+import { panelIn } from "../../lib/panel";
+import { HIFI_OPTIMIZER_PANEL } from "../../constants/optimizerPanels";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 
 interface Props {
@@ -33,7 +34,7 @@ interface Props {
   seatDistanceM: HifiDesign["seatDistanceM"];
   /** what the picked waveguide costs, $ */
   guidePrice: number;
-  /** the Cutlist page's measured panel thicknesses: the walls the search tries */
+  /** the Cutlist page's measured panel thicknesses: the search's one size (HIFI_OPTIMIZER_PANEL) at its measurement */
   panelExactIn: PanelExactIn;
 }
 
@@ -96,10 +97,10 @@ export function useHifiOptimizer({
   >({
     key: "hifi.locks",
     empty: {},
-    // the plywood starts locked (LOCKS_ON_BY_DEFAULT) until the viewer unlocks it
-    fromStored: (l) => ({ ...defaultLocks(true), ...l, dim: { ...l.dim } }),
+    // without any lock an older version stored that no longer exists (the plywood's)
+    fromStored: (l) => ({ ...pickDefined(l, HIFI_LOCK_KEYS), dim: { ...l.dim } }),
     allLocked: ALL_LOCKED,
-    none: { ...defaultLocks(false), dim: {} },
+    none: { dim: {} },
     enabled: isOptimizerOn,
   });
   const preview = useDesignPreview<HifiOptimizerCard, HifiCardConfig>({
@@ -129,7 +130,7 @@ export function useHifiOptimizer({
           budget: optimizerBudget,
           seatM: seatDistanceM,
           guidePrice,
-          walls: panelChoicesIn(speakerConfig.mat ?? PLYWOOD_MATERIAL, panelExactIn),
+          wall: panelIn(HIFI_OPTIMIZER_PANEL, speakerConfig.mat ?? PLYWOOD_MATERIAL, panelExactIn),
         },
         options,
       ),

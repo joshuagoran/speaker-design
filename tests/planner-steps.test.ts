@@ -85,10 +85,10 @@ for (const name of ["rectangle sub"])
         locks: {},
       };
       checkResult(`Improve, ${goal}`, optimizePaStack(input));
-      // the full search with the sub, plywood, vent style and box height held, so it stays about a second
+      // the full search with the sub, vent style and box height held (the plywood is its one size), so it stays quick
       const held = {
         ...input,
-        locks: { sub: true, wall: true, vent: true, subDim: { h: "exact" as const } },
+        locks: { sub: true, vent: true, subDim: { h: "exact" as const } },
       };
       checkResult(`Fully optimize, ${goal}`, optimizePaStackExact(held));
     }
@@ -98,7 +98,7 @@ for (const name of ["rectangle sub"])
       optimizePaStack({
         cur: paCurrent(name),
         room: 1000,
-        maxLb: 40,
+        maxLb: 80, // under any ¾″ design here (the optimizer's one plywood), so only the closest shows
         budget: 300,
         goals: ["cheaper"],
         locks: {},

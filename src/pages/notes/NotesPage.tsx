@@ -1,4 +1,7 @@
+import { PA_SETTINGS_TABS } from "../../constants/paSettingsTabs";
 import { Fragment } from "react";
+import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
+import { formatHz } from "../../lib/format";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { SignalPath } from "../../components/drawings/SignalPath";
@@ -68,8 +71,10 @@ function sensitivityText(): string {
 
 /** The plywood thicknesses the planner models other than the default wall, as the heading offers them. */
 const OTHER_THICKNESSES = DEFAULT_SUB_WEIGHTS.filter((w) => w.t !== DEFAULT_WALL).map((w) => w.t);
-/** The plywood sizes the boxes brace once more. */
-const BRACED_THICKNESSES = DEFAULT_SUB_WEIGHTS.filter((w) => w.braced).map((w) => w.t);
+/** The default sub's braces at each plywood size, as the rule puts them in. */
+const BRACES_BY_SIZE = DEFAULT_SUB_WEIGHTS.map(
+  (w) => `${w.t}: ${w.windows} window brace(s), ${w.ribs} rib(s)`,
+).join("; ");
 
 /** Notes page: reference material and parts research behind the design. */
 export function NotesPage() {
@@ -353,7 +358,7 @@ export function NotesPage() {
               ],
               [
                 `Consider ${OTHER_THICKNESSES.join(" or ")} for the final boxes`,
-                `Sub column drops ${DEFAULT_SUB_WEIGHTS.map((w) => w.lb).join(" \u2192 ")} lb loaded (${DEFAULT_SUB_WEIGHTS.map((w) => w.t).join(" \u2192 ")}). ${BRACED_THICKNESSES.join(" and ")} takes an extra brace, and the extra interior volume lowers Fb, so the duct gets shorter.`,
+                `Sub column drops ${DEFAULT_SUB_WEIGHTS.map((w) => w.lb).join(" \u2192 ")} lb loaded (${DEFAULT_SUB_WEIGHTS.map((w) => w.t).join(" \u2192 ")}). Thinner walls take more bracing by rule (${BRACES_BY_SIZE}), counted in that weight, and the extra interior volume lowers Fb, so the duct gets shorter.`,
               ],
               [
                 "MDO for the baffles",
@@ -376,7 +381,7 @@ export function NotesPage() {
             {[
               [
                 "Bracing",
-                "Not drawn. Volume and weight allow for two braces. Center ribs, slat ladder or windowed shelves — decide once handle recesses are placed, since they compete for the same panel area.",
+                `By rule: ribs, window braces or both (one setting for the stack, under ${PA_SETTINGS_TABS.build} in the planner) go in, clear of the drivers and the vent, until every panel's first resonance clears ${formatHz(PA_PANEL_TARGET_HZ)}; they are in the cutlist, the volume, the weight and the cutaway, where the drivers show too. Where they sit still competes with handle recesses for the same panel area.`,
               ],
               ["Handles", "Recess type, depth and position on the sub. Interacts with bracing."],
               [

@@ -29,7 +29,8 @@ import {
   VENT_STYLES,
   XO_HI_OPTIONS,
   XO_LO_OPTIONS,
-  paSearchWalls,
+  paOptimizerWalls,
+  paSearchBraceStyle,
   highpassOptions,
   designProblems,
   evaluateDesign,
@@ -45,8 +46,11 @@ import {
   isRoundPort,
   linkwitzRileyLowpass,
   keeleFrequency,
+  midBraceEstimate,
   midWeightLb,
   pistonBeamWidthDeg,
+  braceWoodEstimate,
+  braceWoodIn3,
   subGeometry,
   subWeightLb,
   ventSpeedLimit,
@@ -85,13 +89,13 @@ import {
 } from "./exactSub";
 import { MAX_ELBOWS } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
-import { isThinPanel } from "../panel";
 import { MID_OPTIONS, SUB_OPTIONS } from "../data";
 import { byId } from "../tables";
 import { keepGap } from "../optimizer/shortfall";
 import { ampForGain, onSlider } from "../optimizer/ampSteps";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import type {
+  BraceStyleId,
   Dims3,
   HornHf,
   MidDriver,
@@ -190,6 +194,8 @@ interface ExactSpace {
   portMax: number;
   subs: SubDriver[];
   walls: number[];
+  /** the bracing style the boxes are designed with (paSearchBraceStyle) */
+  braceStyle: BraceStyleId;
   styles: readonly PortStyle[];
   fbs: number[];
   /** per tuning, the highpasses tried */
@@ -240,7 +246,7 @@ function exactSpace(input: PaOptimizerInput, grid: PaExactGrid): ExactSpace {
   const fixed = (["w", "h", "d"] as const)
     .filter((k) => k !== free)
     .map((k): [keyof Dims3, number[]] => [k, inchSteps(sr[k])]);
-  const walls = paSearchWalls(cur, locks);
+  const walls = paOptimizerWalls(cur);
   const top = boxInternalLiters(sr.w[1], sr.h[1], sr.d[1], Math.min(...walls), cur.inset);
   const rungs: number[] = [];
   if (free) for (let v = grid.minNetL; v <= top; v *= 1 + grid.volumeStep) rungs.push(v);
@@ -254,6 +260,7 @@ function exactSpace(input: PaOptimizerInput, grid: PaExactGrid): ExactSpace {
     portMax: cur.portMax,
     subs,
     walls,
+    braceStyle: paSearchBraceStyle(cur),
     styles: locks.vent ? [cur.portStyle] : VENT_STYLES,
     fbs,
     hps,
@@ -297,8 +304,9 @@ export function paExactGridText(input: PaOptimizerInput, grid = PA_EXACT_GRID): 
 }
 const DIM_WORDS: Record<keyof Dims3, string> = { w: "width", h: "height", d: "depth" };
 
-// the bare box for a volume: gross less the driver and the window braces only (no duct, no cleats), so any real box
-// holding that net volume is at least this big; it is linear in the free side
+// the bare box for a volume: gross less the driver and the braces' estimate (no duct or cleats), so any box the search
+// sizes for that net volume is at least this big. Gross less the driver is linear in the free side; the estimate only
+// grows with the box, so its wood in the box without it is a floor on its wood in any box that holds the volume.
 function bareFree(
   s: ExactSpace,
   fixedDims: Dims3,
@@ -310,17 +318,18 @@ function bareFree(
   if (!free) return null;
   const at = (x: number) => {
     const b = { ...fixedDims, [free]: x };
-    const iw = b.w - 2 * t,
-      inD = b.d - s.cur.inset - 0.75 - t;
+    const inD = b.d - s.cur.inset - 0.75 - t;
     const gross = ((b.w - 2 * t) * (b.h - 2 * t) * inD * 16.387) / 1000;
-    const braces = Math.max(0, 4 * (iw + inD) - 16) * t * (isThinPanel(t) ? 3 : 2);
-    return gross - disp - (braces * 16.387) / 1000;
+    return gross - disp;
   };
   const [lo, hi] = s.sr[free];
   const a = at(lo),
     b = at(hi);
+  const root = (need: number) => (a >= need ? lo : lo + ((need - a) * (hi - lo)) / (b - a));
   if (b < V) return null; // the biggest box on the range can't hold it
-  return a >= V ? lo : lo + ((V - a) * (hi - lo)) / (b - a);
+  const est = braceWoodEstimate({ ...fixedDims, [free]: root(V) }, t, s.cur.inset, s.braceStyle);
+  const braced = V + (braceWoodIn3(est) * 16.387) / 1000;
+  return b < braced ? null : root(braced);
 }
 
 /**
@@ -353,7 +362,12 @@ const towerMidFails = (s: ExactSpace, box: Dims3, t: number) => {
   if (!s.tower) return false;
   const m = s.tower.mid;
   const mb = { w: box.w, h: TOWER_MID_H, d: box.d };
-  return !m || Math.min(mb.w, mb.h) < m.size + 1.2 || sealedQtc(m, mb, t, s.cur.inset) < 0.5 - 1e-9;
+  return (
+    !m ||
+    Math.min(mb.w, mb.h) < m.size + 1.2 ||
+    sealedQtc(m, mb, t, s.cur.inset, { layout: s.cur.layout, braceStyle: s.braceStyle }) <
+      0.5 - 1e-9
+  );
 };
 // per sub, plywood and rung: every whole-inch pair that can hold the volume under the weight cap, lightest first
 function barePairs(s: ExactSpace, sub: SubDriver, t: number, V: number): Pairs {
@@ -729,6 +743,7 @@ function exactHook(
       disp: sub.ts.disp,
       VbL: V,
       Fb: s.fbs[fi],
+      braceStyle: s.braceStyle,
     };
     const [lo, hi] = s.sr[free];
     while (g.next < pairCount(g.pairs)) {
@@ -756,7 +771,12 @@ function exactHook(
       )
         continue;
       if (!subBaffleFits(sol.box, style, v, t, sub)) continue;
-      const lb = subWeightLb(sol.box, t, sub.lb);
+      const lb = subWeightLb(
+        sol.box,
+        t,
+        sub.lb,
+        braceWoodEstimate(sol.box, t, s.cur.inset, s.braceStyle),
+      );
       if (lb > s.cap + 1e-9) continue;
       if (!b || lb < b.lb) {
         g.best.set(ck, { lb, area: sol.area, box: sol.box, len: sol.len, done: false });
@@ -998,7 +1018,10 @@ function exactHook(
     for (const m of mids)
       for (const { bx, mDim } of boxes(m)) {
         // midSystem's checks and levels, read where the search looks (lib/pa/exactSub)
-        const mm = sealedMid(m, bx, t, cur.inset, amps.mAmpW, xoLo);
+        const mm = sealedMid(m, bx, t, cur.inset, amps.mAmpW, xoLo, {
+          layout: cur.layout,
+          braceStyle: s.braceStyle,
+        });
         if (mm.Qtc < 0.5 || mm.Qtc > 0.8 || mm.f3 > xoLo || Math.min(bx.w, bx.h) < m.size + 1.2)
           continue;
         for (const xoHi of c.xoHis) {
@@ -1006,7 +1029,9 @@ function exactHook(
             mm.at(midGridIndexNear(f, xoHi), xoLo, xoHi, cur.xoLoOrder, cur.xoHiOrder);
           const lo = at(xoLo),
             hi = at(xoHi);
-          const midLb = midWeightLb(bx, t) + (m.lb || 0);
+          const midLb =
+            midWeightLb(bx, t, midBraceEstimate(bx, t, cur.inset, cur.layout, s.braceStyle)) +
+            (m.lb || 0);
           for (const hp of c.hornTable[xoHi]) {
             const room = hp.at + cur.hfTilt + KEEP_UP_SLACK_DB;
             const mAmpW =
@@ -1434,7 +1459,7 @@ function exactHook(
       cd: u.hp.cd.id,
       horn: u.hp.h.id,
     };
-    const m = evaluateDesign(cfg);
+    const m = evaluateDesign(cfg, true);
     const p = m && { c: cfg, m, ch: c.changes(cfg) };
     const ok =
       p &&
@@ -1503,10 +1528,12 @@ function exactHook(
         portStyle: style,
         cVent: vent,
         layout: cur.layout,
+        braceStyle: s.braceStyle,
+        braceEstimate: true,
       });
       if (!(vent.len > 0) || !ductFits(ductFit(box, style, vent, t, sub).spans, vent.len)) return;
       if (!subBaffleFits(box, style, vent, t, sub)) return;
-      const lb = subWeightLb(box, t, sub.lb);
+      const lb = subWeightLb(box, t, sub.lb, braceWoodEstimate(box, t, cur.inset, s.braceStyle));
       if (lb > s.cap + 1e-9) return;
       const [cs] = ventedCurves(
         circuitOf(si),
@@ -1561,7 +1588,8 @@ function exactHook(
     const tune = (len: number) => {
       const v = { ...vent, len };
       const vs = ventShape(style, box, v, t, sub);
-      const V = subNetLiters(style, box, t, s.cur.inset, v, vs.area, sub.ts.disp);
+      const V = subNetLiters(style, box, t, s.cur.inset, v, vs.area, sub.ts.disp, s.braceStyle);
+
       const Leff = (len + vs.ec) * 0.0254;
       return (343 / (2 * Math.PI)) * Math.sqrt((vs.area * 0.00064516) / ((V / 1000) * Leff));
     };

@@ -3,11 +3,10 @@ import assert from "node:assert";
 import {
   PANEL_NOMINALS,
   formatThickness,
-  isThinPanel,
-  panelChoicesIn,
   panelFor,
   panelIn,
   panelLbPerSqFt,
+  panelNominalNear,
   panelThicknessName,
   panelExactRange,
   restoredPanel,
@@ -17,7 +16,8 @@ import { PANEL_STOCK } from "../src/data/catalog/plywood";
 import { DEFAULT_HIFI, DEFAULT_PA } from "../src/lib/defaults";
 import { boxInternalLiters, subWeightLb } from "../src/lib/pa/calc";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
-import { paSearchWalls } from "../src/lib/pa/optimize";
+import { paOptimizerWalls } from "../src/lib/pa/optimize";
+import { PA_OPTIMIZER_PANEL } from "../src/constants/optimizerPanels";
 
 test("panel sizes: thickest first, each starting at its nominal size in both materials", () => {
   assert.deepEqual(PANEL_NOMINALS, ["3/4", "5/8", "1/2"]);
@@ -32,9 +32,6 @@ test("panel thickness: the measured one wins, for that size only", () => {
   const exact = { "3/4": 0.689 };
   assert.equal(panelIn("3/4", "ply", exact), 0.689);
   assert.equal(panelIn("1/2", "ply", exact), 0.5);
-  assert.deepEqual(panelChoicesIn("ply", exact), [0.689, 0.625, 0.5]);
-  // two sizes measured alike are tried once
-  assert.deepEqual(panelChoicesIn("ply", { "3/4": 0.68, "5/8": 0.68 }), [0.68, 0.5]);
 });
 
 test("old saves: 0.75 and 0.5 load as the matching size at its nominal thickness", () => {
@@ -63,12 +60,11 @@ test("names: the nominal size, with the measured thickness beside it when it dif
   assert.equal(panelThicknessName("3/4", 0.689), "¾″ / 18 mm at 0.689″");
 });
 
-test("thin walls: ½″-class stock, measured or not, takes the extra brace; ⅝″ doesn't", () => {
-  assert.ok(isThinPanel(0.5));
-  assert.ok(isThinPanel(15 / 32));
-  assert.ok(!isThinPanel(0.625));
-  assert.ok(!isThinPanel(19 / 32));
-  assert.ok(!isThinPanel(0.689));
+test("a thickness reads as the nominal size nearest it (the bracing's default style)", () => {
+  for (const n of PANEL_NOMINALS) assert.equal(panelNominalNear(PANEL_STOCK[n].in), n);
+  assert.equal(panelNominalNear(0.689), "3/4");
+  assert.equal(panelNominalNear(19 / 32), "5/8");
+  assert.equal(panelNominalNear(15 / 32), "1/2");
 });
 
 test("the measured thickness reaches the volume and the weight", () => {
@@ -86,11 +82,9 @@ test("the measured thickness reaches the volume and the weight", () => {
   assert.ok(measured.speakerModel.speakerSystem.gross > nominal.speakerModel.speakerSystem.gross);
 });
 
-test("measured ranges: each size stays on its own side of the brace line and off the others' nominal sizes", () => {
+test("measured ranges: each size stays off the others' nominal sizes", () => {
   for (const n of PANEL_NOMINALS) {
     const { min, max } = panelExactRange(n);
-    assert.equal(isThinPanel(min), isThinPanel(PANEL_STOCK[n].in), n);
-    assert.equal(isThinPanel(max), isThinPanel(PANEL_STOCK[n].in), n);
     for (const o of PANEL_NOMINALS)
       if (o !== n) assert.ok(PANEL_STOCK[o].in < min || PANEL_STOCK[o].in > max, `${n} vs ${o}`);
   }
@@ -118,10 +112,10 @@ test("Hi-fi saves: the named size comes back at the thickness it was saved at", 
   assert.equal(restoredPanel({ wall: 0.3 }, "ply", {}), undefined);
 });
 
-test("PA search: a locked plywood tries your size alone, at its measured thickness; unlocked, every size", () => {
-  const measured = { wall: 0.689, exactIn: { "3/4": 0.689 } };
-  assert.deepEqual(paSearchWalls(measured, { wall: true }), [0.689]);
-  assert.deepEqual(paSearchWalls({ wall: 0.5, exactIn: {} }, { wall: true }), [0.5]);
-  assert.deepEqual(paSearchWalls(measured, {}), [0.689, 0.625, 0.5]);
-  assert.deepEqual(paSearchWalls({ wall: 0.75 }, { wall: false }), [0.75, 0.625, 0.5]);
+test("PA search: the optimizer's plywood alone, at its measured thickness, whatever your design's", () => {
+  assert.deepEqual(paOptimizerWalls({ exactIn: { "3/4": 0.689 } }), [0.689]);
+  assert.deepEqual(paOptimizerWalls({ exactIn: { "1/2": 0.47 } }), [
+    panelIn(PA_OPTIMIZER_PANEL, "ply"),
+  ]);
+  assert.deepEqual(paOptimizerWalls({}), [PANEL_STOCK[PA_OPTIMIZER_PANEL].ply.t]);
 });

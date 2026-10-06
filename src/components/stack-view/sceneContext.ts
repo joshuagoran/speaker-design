@@ -19,6 +19,8 @@ export interface SceneContext {
     inner: THREE.MeshStandardMaterial;
     /** port tubes */
     port: THREE.MeshStandardMaterial;
+    /** window braces and ribs */
+    brace: THREE.MeshStandardMaterial;
     /** horn bodies */
     hornShell: THREE.MeshStandardMaterial;
   };
@@ -65,6 +67,7 @@ export function createSceneContext({
     roughness: 0.95,
     side: THREE.DoubleSide,
   });
+  const brace = new THREE.MeshStandardMaterial({ color: PARTS_3D.brace, roughness: 0.9 });
   const baffle = cutaway
     ? new THREE.MeshStandardMaterial({
         color: new THREE.Color(baffleColor),
@@ -90,6 +93,7 @@ export function createSceneContext({
       baffle,
       inner,
       port,
+      brace,
       hornShell,
     },
     wall,

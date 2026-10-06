@@ -127,6 +127,11 @@ export const PARTS_3D = {
   ghost: 0xd7b98a,
   /** port tubes */
   port: 0x8a7458,
+  /**
+   * window braces and ribs in the cutaway: bare birch ply a shade warmer than the vent's parts, the same on every finish
+   * (on a dark paint the finish's inner shade would hide them against the driver)
+   */
+  brace: 0xb98f5a,
   /** the scale figure beside the stack, drawn semi-transparent */
   figure: 0x8b847d,
 } as const;

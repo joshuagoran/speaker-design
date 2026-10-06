@@ -2,6 +2,12 @@ import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
+import type {
+  BOX_AXIS_NAMES,
+  BRACE_FALLBACK_NOTES,
+  BRACE_PANEL_NAMES,
+  BRACE_STYLE_NAMES,
+} from "./constants/bracing";
 import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
@@ -163,6 +169,8 @@ export interface MidDriver {
   price: number | null;
   src: string;
   ts: ThieleSmall;
+  /** mounting depth in inches, from the maker's datasheet; absent where not entered (MID_DEPTH_FALLBACK_IN stands in) */
+  depthIn?: number;
   note: string;
 }
 
@@ -744,7 +752,7 @@ export type HifiGoal = "cheaper" | "lighter" | "lower" | "louder";
 export type DimensionLockMode = "free" | "exact" | "max";
 
 /** The optimizer locks that are plain on/off switches (a box dimension has its own mode: `dim`). */
-export type HifiLockKey = "woofer" | "tweeter" | "box" | "wall" | "xo" | "wAmpW" | "tAmpW";
+export type HifiLockKey = "woofer" | "tweeter" | "box" | "xo" | "wAmpW" | "tAmpW";
 
 /** The optimizer's on/off locks, plus how each box dimension is held. */
 export interface HifiOptimizerLocks extends Partial<Record<HifiLockKey, boolean>> {
@@ -781,8 +789,8 @@ export interface HifiOptimizerInput {
   seatM?: number;
   /** the price of a waveguide, for one speaker */
   guidePrice?: number;
-  /** the walls the search tries when the wall isn't locked: each nominal size's exact thickness, inches */
-  walls?: readonly number[];
+  /** the plywood the search designs in (HIFI_OPTIMIZER_PANEL) at its measured thickness, inches; absent: its default */
+  wall?: number;
 }
 
 /** What a design is scored on: price for the pair in dollars, weight in lb, in-room F3 in Hz and clean level at the seat in dB. */
@@ -1090,6 +1098,8 @@ export interface PaDesignConfig {
   divider?: PanelNominal;
   /** how far the baffles sit behind the frame front, inches */
   inset: number;
+  /** how both boxes are braced; absent: the default for the plywood (`defaultBraceStyle`) */
+  braceStyle?: BraceStyleId;
   /** sub to mid and mid to horn crossovers, Hz */
   xoLo: number;
   xoHi: number;
@@ -1232,6 +1242,10 @@ export interface SubGeometryConfig {
   portStyle: PortStyle;
   cVent: VentSpec;
   layout: PaLayout;
+  /** absent: the plywood's default (`defaultBraceStyle`) */
+  braceStyle?: BraceStyleId;
+  /** an optimizer's search: the braces' wood by its cursory estimate (braceWoodEstimate), not the rule */
+  braceEstimate?: boolean;
 }
 
 /** `subSystem` adds the highpass, the amp and the port air speed limit. */
@@ -1281,7 +1295,12 @@ export interface SubSystemModelled extends SubSystemBase {
 /** `subSystem`: check `mdl` and `lim` narrows with it. */
 export type SubSystem = SubSystemUnmodelled | SubSystemModelled;
 
-export interface MidSystemConfig extends Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder"> {
+export interface MidSystemConfig
+  extends
+    Pick<SubGeometryConfig, "braceEstimate">,
+    Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder" | "braceStyle"> {
+  /** the tower's mid chamber is part of the sub's cabinet and takes no braces of its own; absent: a box of its own */
+  layout?: PaLayout;
   midDims: Dims3;
   wall: number;
   inset: number;
@@ -1408,6 +1427,117 @@ export interface FillSystemSealed extends FillSystemBase {
 /** `fillSystem`'s result: check `boxType`, or `vM` or `sM`, and the other model's type follows. */
 export type FillSystem = FillSystemVented | FillSystemSealed;
 
+// ---- Bracing ----
+
+/** A bracing style's id (`BRACE_STYLE_NAMES` holds the name it shows). */
+export type BraceStyleId = keyof typeof BRACE_STYLE_NAMES;
+/** A box panel the bracing rule reads, by id (`BRACE_PANEL_NAMES` holds the name it shows). */
+export type BracePanelId = keyof typeof BRACE_PANEL_NAMES;
+/** A box axis, from the inside corner: x across, y up, z back from the baffle. */
+export type BoxAxis = keyof typeof BOX_AXIS_NAMES;
+/** How a panel's bracing departs from the box's style (`BRACE_FALLBACK_NOTES` words each). */
+export type BraceFallbackKind = keyof typeof BRACE_FALLBACK_NOTES;
+/** A panel whose bracing departs from the box's style (`braceFallbacks`); `hz`: its first mode, for "under" alone. */
+export interface BraceFallback {
+  panel: BracePanelId;
+  kind: BraceFallbackKind;
+  hz?: number;
+}
+
+/** A panel's stock as the plate model reads it: thickness (in), weight (lb/ft²) and bending moduli (Pa). */
+export interface PlateStock {
+  t: number;
+  lbPerSqFt: number;
+  /** bending modulus along the face grain (the stiffer way), Pa */
+  eStrong: number;
+  /** bending modulus across the face grain, Pa */
+  eWeak: number;
+  /** Poisson's ratio for the plate's bending stiffness */
+  nu: number;
+}
+
+/** One panel for the bracing rule: its two in-plane axes and spans (in), its stock, and the supports it already has. */
+export interface BracePanel {
+  id: BracePanelId;
+  u: BoxAxis;
+  v: BoxAxis;
+  spanU: number;
+  spanV: number;
+  /** where the panel's own edge sits on the box axes (the baffle starts above a bottom slot), in */
+  offU: number;
+  offV: number;
+  stock: PlateStock;
+  /** whether ribs can go on it (not the baffle: a rib can't cross the driver) */
+  ribs: boolean;
+  /** the box's own parts that already hold it in a line across each axis (the vent shelf, duct walls), in from its edge */
+  fixedU: number[];
+  fixedV: number[];
+  /**
+   * the lines a rib may stop on to clear the vent (its duct parts, however short), across each axis, in from its edge;
+   * the supports among them are in `fixedU` / `fixedV` too
+   */
+  stopU: number[];
+  stopV: number[];
+}
+
+/**
+ * Ribs on one panel: they divide its `across` axis and sit at `at` (in from its edge); each runs along the panel's other
+ * axis from `from` (in from that edge) for `len`. A panel's ribs of different lengths are separate entries.
+ */
+export interface PanelRibs {
+  panel: BracePanelId;
+  across: BoxAxis;
+  at: number[];
+  from: number;
+  len: number;
+}
+
+/** A box-shaped region inside a box, in from its inside corner on each axis (x across, y up, z back from the baffle). */
+export type BoxRegion = Record<BoxAxis, readonly [number, number]>;
+/**
+ * What no brace or rib may enter: the driver's basket and magnet behind the baffle (with its clearance), and the
+ * vent's own parts and the air they enclose (ducts, tubes).
+ */
+export interface BoxKeepOut {
+  /** the driver's basket and magnet, as boxes stepping in from the cutout to the motor */
+  driver: readonly BoxRegion[];
+  vent: readonly BoxRegion[];
+}
+
+/** A panel's first plate resonance with its own parts only, and with the braces and ribs, Hz. */
+export interface PanelResonance {
+  id: BracePanelId;
+  bareHz: number;
+  hz: number;
+}
+
+/** The bracing rule's choice in counts, as it works: the window braces across each axis and the ribs on each panel. */
+export interface BracePlan {
+  windows: Record<BoxAxis, number>;
+  ribs: Partial<Record<BracePanelId, { across: BoxAxis; n: number }>>;
+}
+
+/** What the bracing rule picked for a box: the window braces on each axis, the ribs, the resonances and the wood. */
+export interface BoxBracing {
+  style: BraceStyleId;
+  targetHz: number;
+  /** each axis' window braces, in from the box's inside corner along it */
+  windows: Record<BoxAxis, number[]>;
+  /**
+   * The window braces across x whose plane crosses the driver (`at`, as in `windows.x`): their front rail is left out
+   * over `y` (up from the bottom), so the frame opens to the baffle round the basket and magnet. They hold the top,
+   * bottom and back, not the baffle. Null when none does.
+   */
+  notch: { at: number[]; y: readonly [number, number] } | null;
+  ribs: PanelRibs[];
+  panels: PanelResonance[];
+  /** the braces' and ribs' wood, in³ (window braces count their rails only) */
+  windowIn3: number;
+  ribIn3: number;
+  /** whether every panel clears the target */
+  meets: boolean;
+}
+
 // ---- Cutlist ----
 
 /** A cutlist part's stable id (`CUT_PART_NAMES` holds the name it shows). */
@@ -1455,6 +1585,12 @@ export interface CutPartsConfig {
   portStyle: PortStyle;
   cVent: VentSpec;
   layout: PaLayout;
+  /** absent: the plywood's default (`defaultBraceStyle`) */
+  braceStyle?: BraceStyleId;
+  /** the sub box's parts only (its volume reads no more): the mid box is left out */
+  subOnly?: boolean;
+  /** the sub's braces and ribs left out (an optimizer's search counts their wood by estimate instead) */
+  noBraces?: boolean;
 }
 
 /** The panel a Hi-fi box's passive radiators are cut into. */
@@ -1838,7 +1974,6 @@ export type PaLockKey =
   | "cd"
   | "horn"
   | "vent"
-  | "wall"
   | "hpf"
   | "xoLo"
   | "xoHi"

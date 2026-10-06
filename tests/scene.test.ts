@@ -63,6 +63,7 @@ function derivedHeights(p: Props) {
     plinthHeightIn: p.plinth,
     layout: p.layout,
     wallThicknessIn: p.wall ?? 0.75,
+    braceStyle: undefined,
     baffleInsetIn: p.inset ?? 0.75,
     spacerHeightIn: p.spacerH ?? 20,
     dispersionPlane: "h",

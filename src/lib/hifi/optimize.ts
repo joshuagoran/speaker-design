@@ -75,7 +75,8 @@ import type {
 } from "../../types";
 import { keysOf } from "../records";
 import { byId } from "../tables";
-import { panelChoicesIn } from "../panel";
+import { defaultPanelIn } from "../panel";
+import { HIFI_OPTIMIZER_PANEL } from "../../constants/optimizerPanels";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { selectCards } from "../optimizer/selectCards";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
@@ -180,15 +181,7 @@ export const HIFI_OPTIMIZED_FIELDS: readonly HifiOptimizedField[] = [
   "tAmpW",
 ];
 // every on/off lock the optimizer reads (box sizes are separate: dim)
-export const HIFI_LOCK_KEYS: HifiLockKey[] = [
-  "woofer",
-  "tweeter",
-  "box",
-  "wall",
-  "xo",
-  "wAmpW",
-  "tAmpW",
-];
+export const HIFI_LOCK_KEYS: HifiLockKey[] = ["woofer", "tweeter", "box", "xo", "wAmpW", "tAmpW"];
 
 // a card's label must be true against your design by at least this much (PA: $ any, 3 lb, 2 Hz, 1 dB; the boxes are smaller here)
 const beats: Record<HifiGoal, (x: HifiMetrics, y: HifiMetrics) => boolean> = {
@@ -399,9 +392,8 @@ export function hifiSearchSpace(
     : passives.length
       ? ["sealed", "vented", "radiator"]
       : ["sealed", "vented"];
-  const walls = locks.wall
-    ? [cur.wall]
-    : (input.walls ?? panelChoicesIn(cur.mat ?? PLYWOOD_MATERIAL));
+  // the one plywood the search designs in, for now (HIFI_OPTIMIZER_PANEL), at its measured thickness
+  const walls = [input.wall ?? defaultPanelIn(HIFI_OPTIMIZER_PANEL, cur.mat ?? PLYWOOD_MATERIAL)];
   const tList: HifiTweeter[] = locks.tweeter
     ? [T0]
     : tweeters.filter((t) => t.hf && t.hf.sens != null && (!needsWaveguide(t) || guide));
