@@ -55,7 +55,9 @@ const paDesigns = seeds.flatMap((s) => {
     { ...c, xoLo: 80, xoHi: 2500, mDim: { w: 13, h: 13, d: 6 } },
   ];
 });
-const paEvals = paDesigns.map(evaluateDesign).filter((m): m is PaEvaluation => m !== null);
+const paEvals = paDesigns
+  .map((c) => evaluateDesign(c))
+  .filter((m): m is PaEvaluation => m !== null);
 
 const hifiBase: HifiConfig = {
   box: "vented",

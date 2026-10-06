@@ -98,7 +98,7 @@ for (const name of ["rectangle sub"])
       optimizePaStack({
         cur: paCurrent(name),
         room: 1000,
-        maxLb: 70, // under any ¾″ design here (the optimizer's one plywood), so only the closest shows
+        maxLb: 80, // under any ¾″ design here (the optimizer's one plywood), so only the closest shows
         budget: 300,
         goals: ["cheaper"],
         locks: {},

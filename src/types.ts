@@ -1244,6 +1244,8 @@ export interface SubGeometryConfig {
   layout: PaLayout;
   /** absent: the plywood's default (`defaultBraceStyle`) */
   braceStyle?: BraceStyleId;
+  /** an optimizer's search: the braces' wood by its cursory estimate (braceWoodEstimate), not the rule */
+  braceEstimate?: boolean;
 }
 
 /** `subSystem` adds the highpass, the amp and the port air speed limit. */
@@ -1293,10 +1295,10 @@ export interface SubSystemModelled extends SubSystemBase {
 /** `subSystem`: check `mdl` and `lim` narrows with it. */
 export type SubSystem = SubSystemUnmodelled | SubSystemModelled;
 
-export interface MidSystemConfig extends Pick<
-  PaDesignConfig,
-  "xoLoOrder" | "xoHiOrder" | "braceStyle"
-> {
+export interface MidSystemConfig
+  extends
+    Pick<SubGeometryConfig, "braceEstimate">,
+    Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder" | "braceStyle"> {
   /** the tower's mid chamber is part of the sub's cabinet and takes no braces of its own; absent: a box of its own */
   layout?: PaLayout;
   midDims: Dims3;
@@ -1509,10 +1511,7 @@ export interface PanelResonance {
   hz: number;
 }
 
-/**
- * The bracing rule's choice in counts: the window braces across each axis and the ribs on each panel. The same plan
- * placed in a slightly different box moves with it (lib/bracing places it there), so a solver can hold it fixed.
- */
+/** The bracing rule's choice in counts, as it works: the window braces across each axis and the ribs on each panel. */
 export interface BracePlan {
   windows: Record<BoxAxis, number>;
   ribs: Partial<Record<BracePanelId, { across: BoxAxis; n: number }>>;
@@ -1520,8 +1519,6 @@ export interface BracePlan {
 
 /** What the bracing rule picked for a box: the window braces on each axis, the ribs, the resonances and the wood. */
 export interface BoxBracing {
-  /** the choice as counts, to place again in a box a solver moves */
-  plan: BracePlan;
   style: BraceStyleId;
   targetHz: number;
   /** each axis' window braces, in from the box's inside corner along it */
@@ -1592,6 +1589,8 @@ export interface CutPartsConfig {
   braceStyle?: BraceStyleId;
   /** the sub box's parts only (its volume reads no more): the mid box is left out */
   subOnly?: boolean;
+  /** the sub's braces and ribs left out (an optimizer's search counts their wood by estimate instead) */
+  noBraces?: boolean;
 }
 
 /** The panel a Hi-fi box's passive radiators are cut into. */

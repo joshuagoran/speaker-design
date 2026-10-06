@@ -1,5 +1,5 @@
 // The PA boxes' panels for the bracing rule (lib/bracing): their spans, stock and the supports the vent's own parts give.
-import type { BracePanel, PlateStock } from "../../types";
+import type { BracePanel, BraceStyleId, PlateStock } from "../../types";
 
 /** The sub-to-mid crossover the PA boxes are braced for, Hz: the top of the optimizers' range (XO_LO_OPTIONS, tested). */
 export const PA_BRACING_CROSSOVER_HZ = 140;
@@ -18,6 +18,16 @@ export const PA_PANEL_TARGET_HZ = PANEL_TARGET_CROSSOVER_MULTIPLE * PA_BRACING_C
 export const DUCT_SUPPORT_MIN_SHARE = 2 / 3;
 /** How far every brace and rib stays from the driver's basket, magnet and cutout, inches. */
 export const DRIVER_CLEARANCE_IN = 0.5;
+/**
+ * The optimizers' cursory brace estimate (lib/pa/calc braceWoodEstimate), by style: one window brace's wood for every
+ * `span` inches of each inside span past the first, times `scale`. Least squares against the rule's wood over the
+ * golden sub boxes in ¾″ ply (their mid boxes need none, and neither does the estimate under `span`).
+ */
+export const BRACE_ESTIMATE = {
+  window: { span: 16, scale: 1.536 },
+  ribs: { span: 19, scale: 2.879 },
+  both: { span: 18.5, scale: 2.647 },
+} as const satisfies Record<BraceStyleId, { span: number; scale: number }>;
 /**
  * A driver's shape behind the baffle as the braces keep clear of it, as shares of its depth there: the cutout's full
  * width (the frame's ring, the surround and the basket's widest) for the first BASKET_RING_SHARE, the basket narrowing

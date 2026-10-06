@@ -23,15 +23,12 @@ import {
   sideDuctEndCorrection,
   ductDividerIn,
   STUFFING_VOLUME_GAIN,
-  midBraceWood,
+  midBraceEstimate,
   midNetLiters,
-  subBraceWood,
+  braceWoodEstimate,
   braceWoodIn3,
-  subBracingChoice,
-  paInner,
 } from "./calc";
 import type {
-  BoxBracing,
   BraceStyleId,
   MidSystemConfig,
   CrossoverOrder,
@@ -46,13 +43,11 @@ import type {
 import { subTubeEndCorrection, subTubeSpan, type TubeDriver } from "./tubes";
 import { ELBOW_COUNTS, MAX_ELBOWS, ownSpans, type ElbowCount } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
-import { carriedWood } from "../bracing";
+import { defaultBraceStyleNear } from "../bracing";
 
 const RHO = 1.18,
   C = 343,
   IN3_TO_L = 16.387 / 1000;
-/** How many times solveShape takes up the bracing rule's own choice at the size it settles on before giving up. */
-const MAX_REPLANS = 4;
 
 // the frequency grid boxModel runs on when the planner evaluates a design (no run-on past 300 Hz)
 const N = 420,
@@ -263,8 +258,8 @@ export const musicAt = (
   20 * Math.log10(linkwitzRileyLowpass(fAtXo, xoLo, order)) +
   20 * Math.log10(lim.V / volts);
 
-/** What the mid's bracing reads beyond the box (midBoxBracing): the layout and the style. */
-export type MidBrace = Pick<MidSystemConfig, "layout" | "braceStyle">;
+/** What the mid's braces' estimate reads beyond the box (midBraceEstimate): the layout and the style. */
+export type MidBrace = Pick<MidSystemConfig, "layout"> & { braceStyle: BraceStyleId };
 /** The mid in a sealed box, as midSystem and closedBox set it up: the driver's and the box's acoustic parts, and the system's resonance. */
 function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: MidBrace) {
   const ts = mid.ts;
@@ -273,7 +268,7 @@ function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: 
     midNetLiters(
       boxInternalLiters(box.w, box.h, box.d, t, inset),
       disp,
-      midBraceWood(box, t, inset, mid, brace.layout, brace.braceStyle),
+      midBraceEstimate(box, t, inset, brace.layout, brace.braceStyle),
     ) * STUFFING_VOLUME_GAIN;
   const Sd = ts.Sd / 10000,
     Mms = ts.Mms / 1000,
@@ -450,32 +445,22 @@ export const effectiveLengthFor = (areaIn2: number, VbL: number, Fb: number) =>
 export const ductLengthFor = (vs: VentShape, Leff: number) => Leff / 0.0254 - vs.ec;
 
 /**
- * The sub box's internal wood (internalWoodLiters of cutParts' sub panels), in³: baffle cleats, window braces and ribs
- * (subBoxBracing) and the duct's own panels, in the same order.
+ * The sub box's internal wood as the searches count it, in³: cutParts' sub panels inside the box (internalWoodLiters)
+ * in the same order, baffle cleats, the braces' and ribs' estimated wood (braceWoodEstimate) and the duct's own panels.
  */
-export const subWoodIn3 = (
+export function subWoodIn3(
   style: PortStyle,
   box: Dims3,
   t: number,
   inset: number,
   v: VentSpec,
-  drv: TubeDriver,
   braceStyle: BraceStyleId | undefined,
-) =>
-  subWoodWithIn3(
-    style,
-    box,
-    t,
-    v,
-    braceWoodIn3(subBraceWood(box, t, inset, style, v, drv, braceStyle)),
-  );
-/** subWoodIn3 with the braces' and ribs' wood given (a solver's, holding their choice), in³. */
-function subWoodWithIn3(style: PortStyle, box: Dims3, t: number, v: VentSpec, braceIn3: number) {
+) {
   const iw = box.w - 2 * t,
     ih = box.h - 2 * t;
   const band = style === "slots" ? v.slotH + t : 0;
   let in3 = 0.75 * iw * 0.75 * 2 + 0.75 * (ih - band - 1.5) * 0.75 * 2;
-  in3 += braceIn3;
+  in3 += braceWoodIn3(braceWoodEstimate(box, t, inset, braceStyle ?? defaultBraceStyleNear(t)));
   if (style === "slots") {
     const folded = slotFolds(box, v, t);
     const len = folded ? foldedShelfIn(box, v.slotH, t) : v.len;
@@ -487,7 +472,7 @@ function subWoodWithIn3(style: PortStyle, box: Dims3, t: number, v: VentSpec, br
   }
   return in3;
 }
-/** subGeometry's net volume (L) for a box and vent, with the vent's area. */
+/** subGeometry's net volume (L) for a box and vent as the searches count it (braceEstimate), with the vent's area. */
 export const subNetLiters = (
   style: PortStyle,
   box: Dims3,
@@ -496,7 +481,6 @@ export const subNetLiters = (
   v: VentSpec,
   areaIn2: number,
   disp: number,
-  drv: TubeDriver,
   braceStyle: BraceStyleId | undefined,
 ) =>
   Math.max(
@@ -504,7 +488,7 @@ export const subNetLiters = (
     ((box.w - 2 * t) * (box.h - 2 * t) * (box.d - inset - 0.75 - t) * 16.387) / 1000 -
       disp -
       (areaIn2 * v.len * 16.387) / 1000 -
-      (subWoodIn3(style, box, t, inset, v, drv, braceStyle) * 16.387) / 1000,
+      (subWoodIn3(style, box, t, inset, v, braceStyle) * 16.387) / 1000,
   );
 
 /**
@@ -520,16 +504,13 @@ export interface ShapeTarget {
   disp: number;
   VbL: number;
   Fb: number;
-  /** absent: the plywood's default (`defaultBraceStyle`) */
-  braceStyle?: BraceStyleId;
+  braceStyle: BraceStyleId;
 }
 /** A solved box: its outside size, its duct length, and its vent's area (in²). */
 export interface SolvedShape {
   box: Dims3;
   len: number;
   area: number;
-  /** the braces' and ribs' wood in that box, in³ (subBraceWood's there) */
-  brace: Pick<BoxBracing, "windowIn3" | "ribIn3">;
 }
 /** The root of a rising `g` with g(a) <= 0 < g(b), by Illinois steps (regula falsi that halves a stale end). */
 function illinoisRoot(g: (x: number) => number, a: number, b: number) {
@@ -609,8 +590,6 @@ export function solveShape(
   const round = isRoundPort(style);
   let len = 0;
   let prev: { x: number; err: number } | null = null;
-  let ref: ReturnType<typeof subBracingChoice> | undefined,
-    replans = 0;
   for (let it = 0; it < 60; it++) {
     let unreached = false; // a bottom slot this size tunes neither straight nor folded
     // the duct length for the tuning at this size; where the end correction reads the gap behind the duct, the root of
@@ -674,24 +653,15 @@ export function solveShape(
       vs = ventShape(style, box, v, t, drv);
     }
     len = v.len;
-    // the braces the rule chose for the box on its grid, their wood carried to this size (carriedWood: smooth in the
-    // side, and what subBoxBracing gives here); settled in another grid box than the choice's, the steps go on with
-    // that box's choice (a few times: a volume only a change in the choice straddles has no box)
-    ref ??= subBracingChoice(box, t, inset, style, v, drv, target.braceStyle);
-    const brace = carriedWood(ref.b, ref.inner, paInner(box, t, inset), t);
+    // the braces' wood by the searches' estimate (smooth in the box's size)
     const net =
       ((box.w - 2 * t) * (box.h - 2 * t) * (box.d - inset - 0.75 - t) * 16.387) / 1000 -
       disp -
       (vs.area * len * 16.387) / 1000 -
-      subWoodWithIn3(style, box, t, v, brace.windowIn3 + brace.ribIn3) * IN3_TO_L;
+      subWoodIn3(style, box, t, inset, v, target.braceStyle) * IN3_TO_L;
     const err = VbL - net;
-    if (Math.abs(err) <= 1e-11 * VbL) {
-      const own = subBracingChoice(box, t, inset, style, v, drv, target.braceStyle, ref);
-      if (own.b === ref.b) return unreached ? null : { box: { ...box }, len, area: vs.area, brace };
-      if (++replans > MAX_REPLANS) return null;
-      ref = own;
-      prev = null;
-    }
+    if (Math.abs(err) <= 1e-11 * VbL)
+      return unreached ? null : { box: { ...box }, len, area: vs.area };
     // the net volume's slope along the free side: the gross volume's at first (the wood and duct move far less), then
     // the secant through the last two sizes
     const secant = prev && (prev.err - err) / (box[free] - prev.x);

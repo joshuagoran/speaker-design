@@ -5,6 +5,7 @@ import {
   evaluateDesign,
   designProblems,
   paSearchDesign,
+  paSearchBraceStyle,
   rangeOf,
   roomRequiredSpl,
   bandOutputDb,
@@ -48,6 +49,7 @@ import { ductFit, ductFits, subBaffleFits } from "../src/lib/pa/chips";
 import { goalKeeps } from "../src/lib/optimizer/goalKeeps";
 import { PA_SLIDERS, PA_THROAT_MAX_VSLOT1 } from "../src/constants/paSliders";
 import { vent, DRV18 } from "./helpers";
+import { defaultBraceStyleNear } from "../src/lib/bracing";
 import { modelTubeElbows } from "../src/lib/pa/tubes";
 import { LIMIT_CHIP_IDS } from "../src/constants/chipIds";
 import { CD_OPTIONS, HORN_OPTIONS, MID_BOXES, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
@@ -118,13 +120,15 @@ test("exact PA search: one shared curve per volume and tuning gives the planner'
       portStyle: style,
       cVent,
       layout: "stack" as const,
+      // as the searches count the braces
+      braceEstimate: true,
     };
     // the geometry: net volume, vent area and end correction
     const g = subGeometry(sub, mid, cfg);
     const vs = ventShape(style, box, cVent, t, sub);
     assert.ok(Math.abs(vs.area - g.port.area) < 1e-12, "vent area");
     assert.ok(Math.abs(vs.ec - g.port.ec) < 1e-12, `${style} end correction`);
-    const net = subNetLiters(style, box, t, 0.75, cVent, vs.area, sub.ts.disp, sub, undefined);
+    const net = subNetLiters(style, box, t, 0.75, cVent, vs.area, sub.ts.disp, undefined);
     assert.ok(Math.abs(net - g.netL) < 1e-12 * g.netL, `${style} net volume`);
     // the model: F3, clean output, limit, and the level at a crossover, from a curve that never saw the vent
     const s = subSystem(sub, mid, { ...cfg, hpf, hpType: "BW24", ampW: 3000, portMax: 23.5 });
@@ -171,7 +175,17 @@ test("exact PA search: a box solved for a volume and tuning gives them back in t
       Fb = 24 + rnd() * 20;
     const fixed = { w: 20 + Math.floor(rnd() * 15), h: 22 + Math.floor(rnd() * 15), d: 0 };
     const sol = solveShape(
-      { style, drv: sub, vent, t, inset: 0.75, disp: sub.ts.disp, VbL, Fb },
+      {
+        style,
+        drv: sub,
+        vent,
+        t,
+        inset: 0.75,
+        disp: sub.ts.disp,
+        VbL,
+        Fb,
+        braceStyle: defaultBraceStyleNear(t),
+      },
       fixed,
       "d",
       20,
@@ -186,6 +200,7 @@ test("exact PA search: a box solved for a volume and tuning gives them back in t
       portStyle: style,
       cVent: { ...vent, len: sol.len },
       layout: "stack",
+      braceEstimate: true,
     });
     assert.ok(Math.abs(g.netL / VbL - 1) < 1e-9, `${style} net volume`);
     assert.ok(Math.abs(g.Fb / Fb - 1) < 1e-9, `${style} tuning`);
@@ -270,13 +285,13 @@ test("exact PA search: the tower mid's Qtc is midSystem's, and falls as the box 
     const ms = midSystem(mid, { ...cfg, midDims: box, layout: "tower" });
     assert.ok(ms.mdl, mid.id);
     assert.strictEqual(
-      sealedQtc(mid, box, t, 0.75, { layout: "tower" }),
+      sealedQtc(mid, box, t, 0.75, { layout: "tower", braceStyle: "window" }),
       ms.mdl.Qtc,
       `${mid.id} Qtc`,
     );
     const bigger = { ...box, w: box.w + 1, d: box.d + rnd() };
     assert.ok(
-      sealedQtc(mid, bigger, t, 0.75, { layout: "tower" }) <= ms.mdl.Qtc,
+      sealedQtc(mid, bigger, t, 0.75, { layout: "tower", braceStyle: "window" }) <= ms.mdl.Qtc,
       `${mid.id} falls`,
     );
   }
@@ -303,9 +318,12 @@ test("exact PA search: the mid read at single points gives midSystem's checks an
       xoLoOrder,
       xoHiOrder,
       mAmpW,
+      braceEstimate: true,
     });
     assert.ok(ms.mdl && ms.max, mid.id);
-    const mm = sealedMid(mid, box, t, 0.75, mAmpW, xoLo, {});
+    const mm = sealedMid(mid, box, t, 0.75, mAmpW, xoLo, {
+      braceStyle: defaultBraceStyleNear(t),
+    });
     assert.strictEqual(mm.Qtc, ms.mdl.Qtc, "Qtc");
     // the F3 where it is at or under the crossover, else past it
     if (ms.mdl.f3 <= xoLo) {
@@ -385,7 +403,17 @@ function gridDesigns(input: PaOptimizerInput, grid: PaExactGrid): PaDesignConfig
           for (const h of steps(sr.h)) {
             const vent = { ...cur.cVent, ...size, len: 0 };
             const sol = solveShape(
-              { style, drv: sub, vent, t, inset: cur.inset, disp: sub.ts.disp, VbL: V, Fb: fb },
+              {
+                style,
+                drv: sub,
+                vent,
+                t,
+                inset: cur.inset,
+                disp: sub.ts.disp,
+                VbL: V,
+                Fb: fb,
+                braceStyle: paSearchBraceStyle(cur),
+              },
               { w, h, d: 0 },
               "d",
               (sr.d[0] + sr.d[1]) / 2,
@@ -436,13 +464,14 @@ const beats: Record<PaGoal, (m: PaEvaluation, c: PaEvaluation) => boolean> = {
 
 // The first card is at least as good as every design on the grid (it can be better: Improve's designs, off the grid,
 // join the pool too).
-test("exact PA search: no design on its grid beats the first card, checked one by one with the planner's model", () => {
+test("exact PA search: no design on its grid beats the first card, checked one by one with the search's model", () => {
   const input = fixture();
   const cur = paSearchDesign(input);
   const curM = evaluateDesign(cur);
   assert.ok(curM && designProblems(curM, input).length === 0, "your design passes");
   const designs = gridDesigns(input, smallGrid)
-    .map((c) => ({ c, m: evaluateDesign(c) }))
+    // the search's model: the braces by estimate
+    .map((c) => ({ c, m: evaluateDesign(c, true) }))
     .filter(
       (d): d is { c: PaDesignConfig; m: PaEvaluation } =>
         d.m !== null && designProblems(d.m, input).length === 0,
@@ -462,7 +491,7 @@ test("exact PA search: no design on its grid beats the first card, checked one b
     const best = Math.min(...ok.map(({ c, m }) => objective[goal](m, changes(c, cur))));
     const k = out.cards[0];
     assert.ok(k && !out.goalMissing, `${goal}: a card`);
-    const m = evaluateDesign(k.config);
+    const m = evaluateDesign(k.config, true);
     assert.ok(m, `${goal}: the card is modelled`);
     const got = objective[goal](m, changes(k.config, cur));
     if (process.env.EXACT_DEBUG)

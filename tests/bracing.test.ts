@@ -32,6 +32,8 @@ import {
   paPanelStock,
   subBoxBracing,
   subKeepOut,
+  braceWoodEstimate,
+  braceWoodIn3,
 } from "../src/lib/pa/calc";
 import { subDriverDepthIn } from "../src/lib/pa/tubes";
 import { subWoodIn3 } from "../src/lib/pa/exactSub";
@@ -338,30 +340,34 @@ test("the vent's parts count as supports: a slot's shelf lifts the sides, its fi
   );
 });
 
-test("the fast wood volume matches the cutlist's for every style and vent", (t) => {
+test("the searches' wood volume matches the cutlist's, its braces by estimate, for every style and vent", (t) => {
   for (const wall of [0.75, 0.5])
     for (const style of STYLES)
       for (const portStyle of ["slots", "vslots", "vslot1", "round2"] as const) {
         const box = { w: 22, h: 34, d: 22 },
           cVent = vent({ slotH: 3, len: 16, nt: 2, dia: 4, throat: 2 }),
           sub = SUB_OPTIONS[0];
-        const parts = cutParts({
-          sub,
-          mid: MID_OPTIONS[0],
-          subBox: box,
-          midDims: { w: 15, h: 15, d: 15 },
-          wall,
-          inset: 0.75,
-          joint: "butt",
-          portStyle,
-          cVent,
-          layout: "stack",
-          braceStyle: style,
-        }).parts;
+        const cut = (noBraces: boolean) =>
+          cutParts({
+            sub,
+            mid: MID_OPTIONS[0],
+            subBox: box,
+            midDims: { w: 15, h: 15, d: 15 },
+            wall,
+            inset: 0.75,
+            joint: "butt",
+            portStyle,
+            cVent,
+            layout: "stack",
+            braceStyle: style,
+            noBraces,
+          }).parts;
+        const parts = cut(false);
         close(
           t,
-          subWoodIn3(portStyle, box, wall, 0.75, cVent, sub, style) * IN3_L,
-          internalWoodLiters(parts, "sub"),
+          subWoodIn3(portStyle, box, wall, 0.75, cVent, style) * IN3_L,
+          internalWoodLiters(cut(true), "sub") +
+            braceWoodIn3(braceWoodEstimate(box, wall, 0.75, style)) * IN3_L,
           1e-12,
         );
         const b = subBoxBracing(box, wall, 0.75, portStyle, cVent, sub, style);

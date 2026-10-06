@@ -17,7 +17,10 @@ import {
   ductDividerIn,
   subGeometry,
   ventTuning,
+  braceWoodEstimate,
+  braceWoodIn3,
 } from "../src/lib/pa/calc";
+import { defaultBraceStyleNear } from "../src/lib/bracing";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { ductFit } from "../src/lib/pa/chips";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
@@ -109,7 +112,7 @@ test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => 
   const duct = iw * len * t0 + 2 * 3 * len * t0;
   close(t, internalWoodLiters(parts, "sub"), (cleats + braces + duct) * IN3_L, 1e-9);
 });
-test("folded slot: the rear wall makes the centreline the set length, and the fast wood volume matches the cutlist", (t) => {
+test("folded slot: the rear wall makes the centreline the set length, and the searches' wood volume matches the cutlist", (t) => {
   const box = { w: 22, h: 30, d: 20 },
     t0 = 0.75,
     cVent = vent({ slotH: 3, len: 26 });
@@ -132,10 +135,25 @@ test("folded slot: the rear wall makes the centreline the set length, and the fa
   // centreline: the floor run to the channel's middle (20 - 0.75 - 1.5 = 17.75), then 1.5 up to the roof and the wall
   // above it, so the wall is 26 - 17.75 - 1.5 = 6.75
   close(t, part("ductRearWall")?.b ?? NaN, 6.75, 1e-12);
+  // the searches count the braces by estimate: the cutlist's other wood, and that
+  const bare = cutParts({
+    sub: SUB_OPTIONS[0],
+    mid: MID_OPTIONS[0],
+    subBox: box,
+    midDims: { w: 15, h: 15, d: 15 },
+    wall: t0,
+    inset: 0.75,
+    joint: "butt",
+    portStyle: "slots",
+    cVent,
+    layout: "stack",
+    noBraces: true,
+  }).parts;
+  const est = braceWoodIn3(braceWoodEstimate(box, t0, 0.75, defaultBraceStyleNear(t0)));
   close(
     t,
-    subWoodIn3("slots", box, t0, 0.75, cVent, SUB_OPTIONS[0], undefined) * IN3_L,
-    internalWoodLiters(parts, "sub"),
+    subWoodIn3("slots", box, t0, 0.75, cVent, undefined) * IN3_L,
+    internalWoodLiters(bare, "sub") + est * IN3_L,
     1e-12,
   );
 });
@@ -264,8 +282,8 @@ test("duct dividers: a thicker divider comes out of the side ducts' open area, n
   close(t, ventShape("vslots", box, cVent(0.75), wall, DRV18).area, threeQ.port.area, 1e-9);
   close(
     t,
-    subWoodIn3("vslots", box, wall, inset, cVent(0.75), DEFAULT_PA.sub, undefined) -
-      subWoodIn3("vslots", box, wall, inset, cVent(), DEFAULT_PA.sub, undefined),
+    subWoodIn3("vslots", box, wall, inset, cVent(0.75), undefined) -
+      subWoodIn3("vslots", box, wall, inset, cVent(), undefined),
     n * 2 * throat * len * grow,
     1e-9,
   );

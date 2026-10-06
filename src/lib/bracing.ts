@@ -42,7 +42,6 @@ import type {
   PlateStock,
 } from "../types";
 import { panelNominalNear } from "./panel";
-import { keysOf } from "./records";
 
 const IN_M = 0.0254;
 /** lb/ft² to kg/m² */
@@ -219,7 +218,7 @@ export function windowRails(
  * under half a litre, is left in, so the box reads a little small).
  */
 export const windowWoodIn3 = (inner: Record<BoxAxis, number>, axis: BoxAxis, t: number) => {
-  // the two spans across the axis (written out: solvers call this at every step)
+  // the two spans across the axis (written out: the optimizers' brace estimate reads this at every step)
   const P = axis === "x" ? inner.y : inner.x,
     Q = axis === "z" ? inner.y : inner.z;
   const R = WINDOW_RAIL_IN;
@@ -340,102 +339,6 @@ const nearestIn = (spans: readonly Span[], p: number) => {
 };
 
 /**
- * A bracing's wood in a box of a slightly different inside, its choice the same, in³: each window brace's frame at the
- * new spans, and each run of ribs longer or shorter by its span's change where it runs to the far wall (or to a stop
- * near it, which moves with that wall). braceBox places the braces exactly; this is their wood for a solver's steps,
- * exact at the box they were placed in.
- */
-export function carriedWood(
-  ref: Pick<BoxBracing, "plan" | "ribs">,
-  refInner: Record<BoxAxis, number>,
-  inner: Record<BoxAxis, number>,
-  t: number,
-) {
-  const windowIn3 = BOX_AXES.reduce(
-    (a, ax) => a + ref.plan.windows[ax] * windowWoodIn3(inner, ax, t),
-    0,
-  );
-  let ribIn3 = 0;
-  for (const r of ref.ribs)
-    ribIn3 += t * RIB_DEPTH_IN * (r.len + ribGrow(r, refInner, inner)) * r.at.length;
-  return { windowIn3, ribIn3 };
-}
-/** carriedWood's total, in³. */
-export const planWoodIn3 = (
-  ref: Pick<BoxBracing, "plan" | "ribs">,
-  refInner: Record<BoxAxis, number>,
-  inner: Record<BoxAxis, number>,
-  t: number,
-) => {
-  const w = carriedWood(ref, refInner, inner, t);
-  return w.windowIn3 + w.ribIn3;
-};
-/** How much longer a run of ribs gets carried from one box to another: its span's change where it runs to the far end. */
-const ribGrow = (
-  r: Pick<PanelRibs, "panel" | "across" | "from" | "len">,
-  refInner: Record<BoxAxis, number>,
-  inner: Record<BoxAxis, number>,
-) => {
-  const run = ribRunAxis(r.panel, r.across);
-  return r.from + r.len > refInner[run] / 2 ? inner[run] - refInner[run] : 0;
-};
-/** Whether two plans are the same choice: the same window braces on each axis and the same ribs on each panel. */
-const samePlan = (a: BracePlan, b: BracePlan) =>
-  BOX_AXES.every((k) => a.windows[k] === b.windows[k]) &&
-  keysOf(PANEL_NORMAL).every((id) => {
-    const p = a.ribs[id],
-      q = b.ribs[id];
-    return p === q || (!!p && !!q && p.across === q.across && p.n === q.n);
-  });
-/**
- * A bracing the rule chose for one box (`chosen`, its inside `refInner`), carried to a box a little different (inside
- * `inner`): where the same choice placed there (`placed`) fits, its braces and ribs stand where it put them, else where
- * the choice had them; each rib keeps its run from the choice, longer or shorter by its span's change at the far end,
- * and the wood is carriedWood's. So the box's volume and weight move smoothly with its size, as a solver needs.
- */
-export function carryBracing(
-  chosen: BoxBracing,
-  refInner: Record<BoxAxis, number>,
-  placed: BoxBracing,
-  inner: Record<BoxAxis, number>,
-  t: number,
-): BoxBracing {
-  const fits = samePlan(placed.plan, chosen.plan);
-  const src = fits ? placed : chosen;
-  // each panel's ribs in order across it: where they stand (from `src`), the run each keeps (from the choice)
-  const ats = (list: readonly PanelRibs[], id: BracePanelId) =>
-    list
-      .filter((r) => r.panel === id)
-      .flatMap((r) => r.at)
-      .sort((a, b) => a - b);
-  const groups = new Map<string, PanelRibs>();
-  for (const id of new Set(chosen.ribs.map((r) => r.panel))) {
-    const runs = chosen.ribs
-      .filter((r) => r.panel === id)
-      .flatMap((r) => r.at.map((at) => ({ at, r })))
-      .sort((a, b) => a.at - b.at);
-    const where = ats(src.ribs, id);
-    runs.forEach(({ at, r }, i) => {
-      const len = r.len + ribGrow(r, refInner, inner),
-        k = `${r.across}|${r.from}|${len}`;
-      const g = groups.get(id + k);
-      const x = where[i] ?? at;
-      if (g) g.at.push(x);
-      else groups.set(id + k, { panel: id, across: r.across, at: [x], from: r.from, len });
-    });
-  }
-  const wood = carriedWood(chosen, refInner, inner, t);
-  return {
-    ...src,
-    plan: chosen.plan,
-    style: chosen.style,
-    ribs: [...groups.values()],
-    windowIn3: wood.windowIn3,
-    ribIn3: wood.ribIn3,
-  };
-}
-
-/**
  * Where a box's bracing departs from its style, panel by panel (the UI names the box and words them):
  * - "windows": under Ribs, the baffle held by window braces, since a rib can't cross the driver (under Ribs the rule
  *   adds a window brace only for the baffle, and never one whose frame opens round the driver, which doesn't hold it);
@@ -466,8 +369,6 @@ export interface BraceBoxInput {
   style: BraceStyleId;
   braceStock: PlateStock;
   keepOut: BoxKeepOut;
-  /** a plan to place as it is (a solver holding the choice fixed), where it fits the box; else the rule chooses */
-  plan?: BracePlan;
 }
 type RibState = BracePlan["ribs"];
 type Counts = BracePlan["windows"];
@@ -510,7 +411,6 @@ export function braceBox({
   style,
   braceStock,
   keepOut,
-  plan,
 }: BraceBoxInput): BoxBracing {
   const t = braceStock.t;
   const keep = [...keepOut.driver, ...keepOut.vent];
@@ -815,15 +715,7 @@ export function braceBox({
     }
   };
   const under = () => panels.filter((p) => evalPanel(p, windows, ribs) < targetHz - 1e-9);
-  // a plan given (a solver holding the choice while it moves the box) is placed as it is, where it still fits
-  const held =
-    plan &&
-    BOX_AXES.every((a) => winAt(a, plan.windows[a]) !== null) &&
-    ribsFit(plan.windows, plan.ribs);
-  if (plan && held) {
-    Object.assign(windows, plan.windows);
-    Object.assign(ribs, plan.ribs);
-  } else if (style === "window") {
+  if (style === "window") {
     phase(() => windowMoves(panels), panels);
     // the panels the window braces can't lift (the driver or the vent in the way) take ribs
     const left = under();
@@ -848,7 +740,6 @@ export function braceBox({
   };
   const notchAt = win.x.filter((x) => notched("x", x));
   return {
-    plan: { windows: { ...windows }, ribs: { ...ribs } },
     style,
     targetHz,
     windows: win,
