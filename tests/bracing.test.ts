@@ -638,3 +638,31 @@ test("the starting sub under Ribs takes ribs: on the back at ¾″, and on the s
     assert.ok(hz(thin, id) >= thin.targetHz, `${id}: over the target`);
   }
 });
+
+test("the optimizers' brace estimate stays near the rule over the golden boxes, in the optimizers' ¾″ ply", () => {
+  for (const style of STYLES) {
+    const err: number[] = [];
+    for (const c of configs) {
+      const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
+      const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
+      const mDim = c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box;
+      const inset = c.inset ?? 0.75;
+      const ruled = subBoxBracing(c.cDim, 0.75, inset, c.portStyle, c.cVent, sub, style);
+      err.push(
+        (braceWoodIn3(braceWoodEstimate(c.cDim, 0.75, inset, style)) - braceWoodIn3(ruled)) * IN3_L,
+      );
+      const mb = midBoxBracing(mDim, 0.75, inset, mid, c.layout ?? "stack", style);
+      if (mb)
+        err.push(
+          (braceWoodIn3(braceWoodEstimate(mDim, 0.75, inset, style)) - braceWoodIn3(mb)) * IN3_L,
+        );
+    }
+    // litres of wood: well under a litre on the whole, a couple of litres at worst (a sub box holds 60 to 200)
+    const rms = Math.sqrt(err.reduce((a, e) => a + e * e, 0) / err.length);
+    assert.ok(rms < 0.6, `${style}: ${rms.toFixed(3)} L rms`);
+    assert.ok(
+      Math.max(...err.map(Math.abs)) < 2.2,
+      `${style}: ${err.map((e) => e.toFixed(2)).join(" ")}`,
+    );
+  }
+});
