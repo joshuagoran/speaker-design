@@ -5,6 +5,7 @@ import {
   LEGACY_LEVEL_MODE,
 } from "../../constants/coverageLevel";
 import { useStoredStateFrom } from "../../hooks/useStoredState";
+import { COVERAGE_LAYOUT_KEY } from "../../constants/coverageTestIds";
 import { LISTENER_TARGET_DB } from "../../lib/pa/optimize";
 import type {
   CoverageBand,
@@ -202,7 +203,7 @@ export interface CoverageLayoutState {
  */
 export function useCoverageLayout(footprint: Footprint): CoverageLayoutState {
   const [layout, setLayout] = useStoredStateFrom<CoverageLayout, StoredCoverageLayout>(
-    "coverage.layout",
+    COVERAGE_LAYOUT_KEY,
     {},
     fromStored,
   );

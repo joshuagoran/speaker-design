@@ -2,11 +2,13 @@
 //   node tests/mobile-check.mjs [page]        default: dist/stack-planner.html
 // Env: PW_MODULE (path to playwright's index.mjs, default "playwright"), PW_CHROMIUM (browser binary).
 // Fails on: horizontal page scroll, touch targets under 40 px, chip text squeezed under 120 px, page errors, and any
-// request outside the page: everything is bundled in, so the page must work with the network blocked.
+// request outside the page: everything is bundled in, so the page must work with the network blocked. Also drags a
+// toe-in handle on the Coverage map (desktop, mid band) and fails if the map doesn't follow or the layout moves.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
 import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs.ts";
+import { COVERAGE_LAYOUT_KEY, COVERAGE_TEST_IDS } from "../src/constants/coverageTestIds.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const page = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -132,6 +134,75 @@ for (const size of sizes) {
     await check("#planner, optimizer results");
   }
   for (const e of errs) failures.push(`${size.name}: page error: ${e}`);
+  await ctx.close();
+}
+
+// Coverage map, desktop, mid band: dragging a toe-in handle updates the map while dragging and after release, at one
+// resolution throughout, and nothing above the map moves meanwhile.
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await ctx.addInitScript(
+    ([key]) => localStorage.setItem(key, JSON.stringify({ band: "mid" })),
+    [COVERAGE_LAYOUT_KEY],
+  );
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on("pageerror", (e) => errs.push(e.message));
+  await p.goto(page + "#coverage");
+  const map = p.getByTestId(COVERAGE_TEST_IDS.map);
+  const settled = () =>
+    p.waitForFunction(
+      (id) => {
+        const m = document.querySelector(`[data-testid="${id}"]`);
+        return m && m.getAttribute("aria-busy") === "false" && m.querySelector("image");
+      },
+      COVERAGE_TEST_IDS.map,
+      { timeout: 30000 },
+    );
+  const image = () => map.locator("image").getAttribute("href");
+  const top = async () => (await map.boundingBox())?.y;
+  // the grid's size: the map draws it as an image of one pixel a cell
+  const cells = (href) =>
+    p.evaluate(
+      (src) =>
+        new Promise((done) => {
+          const im = new Image();
+          im.onload = () => done(`${im.naturalWidth}x${im.naturalHeight}`);
+          im.onerror = () => done("unreadable");
+          im.src = src;
+        }),
+      href,
+    );
+  await settled();
+  const before = await image(),
+    topBefore = await top();
+  const h = await p.getByTestId(COVERAGE_TEST_IDS.aimHandle).first().boundingBox();
+  if (!h) failures.push("coverage: no toe-in handle on the map");
+  else {
+    const x = h.x + h.width / 2,
+      y = h.y + h.height / 2;
+    await p.mouse.move(x, y);
+    await p.mouse.down();
+    const live = new Set();
+    for (let i = 1; i <= 8; i++) {
+      await p.mouse.move(x + i * 8, y + i * 2);
+      await p.waitForTimeout(150);
+      live.add(await image());
+    }
+    if ((await top()) !== topBefore) failures.push("coverage: the map moved during a drag");
+    await p.mouse.up();
+    await settled();
+    const after = await image();
+    live.delete(before);
+    if (live.size < 2)
+      failures.push(`coverage: the map changed ${live.size} time(s) during a toe-in drag`);
+    if (after === before) failures.push("coverage: the settled map ignored a toe-in drag");
+    const sizes = new Set(await Promise.all([before, after, ...live].map(cells)));
+    if (sizes.size !== 1)
+      failures.push(`coverage: the grid changed size during a drag (${[...sizes].join(", ")})`);
+    if ((await top()) !== topBefore) failures.push("coverage: the map moved after a drag");
+  }
+  for (const e of errs) failures.push(`coverage drag: page error: ${e}`);
   await ctx.close();
 }
 await browser.close();

@@ -12,6 +12,7 @@ import {
   coverageResponse,
   coverageScene,
   coverageStats,
+  COVERAGE_GRID_COLS,
   oneMeterSpot,
   withOwnPhase,
 } from "../../lib/pa/coverage";
@@ -32,10 +33,6 @@ import type {
   MusicBalance,
   SubPlacement,
 } from "../../types";
-
-/** Grid columns across the room: coarse while something is being dragged, fine once it settles. */
-const COARSE_COLS = 20,
-  FINE_COLS = 40;
 
 /** A grid to compute: the worker's request, and the music balance its target follows. */
 interface CoverageJob {
@@ -76,8 +73,8 @@ export interface CoverageMap {
   subs: SubPlacement;
   /** the grid on show (null until the first one arrives), with the room and target it was computed for */
   view: CoverageGridView | null;
-  /** whether the grid shown is from an older layout or still coarse (false once its update has failed) */
-  isRefining: boolean;
+  /** whether the grid shown is from an older layout (false once its update has failed) */
+  isPending: boolean;
   error: string;
   stats: CoverageStats | null;
   /** the listener's level in the band, and the response there, at the system's level (the gain applied) */
@@ -123,14 +120,10 @@ function pointRefAtLimit(
 }
 
 /**
- * Builds the coverage model from the planner's design and the floor layout. The grid runs in a worker, newest
- * request first: coarse while `dragging`, then a fine pass once it settles.
+ * Builds the coverage model from the planner's design and the floor layout. The grid runs in a worker at one
+ * resolution, the newest request only: while a drag computes, older aims are dropped.
  */
-export function useCoverageMap(
-  planner: CoverageInputs,
-  layout: CoverageLayout,
-  dragging: boolean,
-): CoverageMap {
+export function useCoverageMap(planner: CoverageInputs, layout: CoverageLayout): CoverageMap {
   const {
     stackGeometry,
     subBox,
@@ -232,57 +225,36 @@ export function useCoverageMap(
   );
 
   // the worker queue: one job at a time, and only the newest waiting job is kept
-  const [shown, setShown] = useState<{ grid: CoverageGrid; job: CoverageJob; cols: number } | null>(
-    null,
-  );
+  const [shown, setShown] = useState<{ grid: CoverageGrid; job: CoverageJob } | null>(null);
   // the last job that failed, and why; cleared when a grid arrives
   const [failed, setFailed] = useState<{ job: CoverageJob; message: string } | null>(null);
   const busy = useRef(false);
-  const want = useRef<{ job: CoverageJob; cols: number } | null>(null);
-  const current = useRef(job);
-  const isDragging = useRef(dragging);
+  // only the newest job waits: one queued while another computes replaces it, so a drag never works through old aims
+  const want = useRef<CoverageJob | null>(null);
   const pump = () => {
     if (busy.current || !want.current) return;
     const next = want.current;
     want.current = null;
     busy.current = true;
-    let ok = false;
-    runCoverageGrid({ ...next.job.req, cols: next.cols })
+    runCoverageGrid({ ...next.req, cols: COVERAGE_GRID_COLS })
       .then(
         (grid) => {
-          ok = true;
-          setShown({ grid, job: next.job, cols: next.cols });
+          setShown({ grid, job: next });
           setFailed(null);
         },
         (e: unknown) =>
-          setFailed({ job: next.job, message: e instanceof Error ? e.message : String(e) }),
+          setFailed({ job: next, message: e instanceof Error ? e.message : String(e) }),
       )
       .finally(() => {
         busy.current = false;
-        if (
-          ok &&
-          !want.current &&
-          next.job === current.current &&
-          next.cols < FINE_COLS &&
-          !isDragging.current
-        )
-          want.current = { job: next.job, cols: FINE_COLS };
         pump();
       });
   };
   useEffect(() => {
-    current.current = job;
     if (!job) return;
-    want.current = { job, cols: COARSE_COLS };
+    want.current = job;
     pump();
   }, [job]);
-  useEffect(() => {
-    isDragging.current = dragging;
-    if (!dragging && shown && shown.job === current.current && shown.cols < FINE_COLS) {
-      want.current = { job: shown.job, cols: FINE_COLS };
-      pump();
-    }
-  }, [dragging]);
 
   const scene = useMemo(
     () => (stack ? coverageScene(stack, { room, stacks, subs, cluster }) : null),
@@ -351,7 +323,7 @@ export function useCoverageMap(
     boxes,
     subs,
     view,
-    isRefining: !!job && !jobFailed && (!shown || shown.job !== job || shown.cols < FINE_COLS),
+    isPending: !!job && !jobFailed && (!shown || shown.job !== job),
     error: failed ? failed.message : "",
     stats,
     listenerDb: listenerAtLimit != null ? listenerAtLimit + gain : null,

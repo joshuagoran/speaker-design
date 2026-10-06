@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ON_DATA } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
@@ -16,6 +16,7 @@ import type {
 import type { CoverageLayoutState } from "../../pages/coverage/useCoverageLayout";
 import { SVG_FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
+import { COVERAGE_TEST_IDS } from "../../constants/coverageTestIds";
 import { CONTOUR_STEP_DB, COVERAGE_MAP_DB } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB } from "../../constants/coverageLevel";
 import {
@@ -48,10 +49,10 @@ interface Props {
   actions: Pick<CoverageLayoutState, "moveStack" | "aimStack" | "moveCluster" | "moveListener">;
   boxes: readonly CoverageBox[];
   stack: Pick<CoverageStack, "horn" | "footprint">;
-  /** tells the page when a drag starts and ends, so it can trade detail for speed meanwhile */
-  onDragChange: (dragging: boolean) => void;
   /** the most height the map may take, px */
   maxHeight: number;
+  /** whether a finer or newer grid is on its way: aria-busy only, no badge (the fine pass is quick) */
+  busy: boolean;
 }
 
 /**
@@ -59,15 +60,7 @@ interface Props {
  * coverage edge and every 3 dB step. Drag a stack to move it, its dot to turn it, the center subs, or the listener (or tap
  * the floor to put the listener there).
  */
-export function CoverageMap({
-  view,
-  layout,
-  actions,
-  boxes,
-  stack,
-  onDragChange,
-  maxHeight,
-}: Props) {
+export function CoverageMap({ view, layout, actions, boxes, stack, maxHeight, busy }: Props) {
   const pal = usePalette();
   const { room, listener } = layout;
   const [box, cw] = useElementWidth(560);
@@ -137,8 +130,6 @@ export function CoverageMap({
 
   const [drag, setDrag] = useState<Drag | null>(null);
   const [hover, setHover] = useState<FloorPoint | null>(null);
-  const dragging = drag !== null;
-  useEffect(() => onDragChange(dragging), [dragging]);
   const at = (e: React.PointerEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     return { X: ((e.clientX - r.left) / r.width) * W, Y: ((e.clientY - r.top) / r.height) * H };
@@ -252,6 +243,8 @@ export function CoverageMap({
         style={{ touchAction: "none", cursor: drag ? "grabbing" : "crosshair" }}
         tabIndex={0}
         role="img"
+        aria-busy={busy}
+        data-testid={COVERAGE_TEST_IDS.map}
         aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room. Arrow keys move the listener.`}
         onPointerDown={down}
         onPointerMove={move}
@@ -360,6 +353,7 @@ export function CoverageMap({
                     strokeWidth="1.5"
                   />
                   <circle
+                    data-testid={COVERAGE_TEST_IDS.aimHandle}
                     cx={hp.x}
                     cy={hp.y}
                     r="7"

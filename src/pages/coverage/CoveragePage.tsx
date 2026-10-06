@@ -89,8 +89,7 @@ export function CoveragePage({ planner }: Props) {
   const state = useCoverageLayout(planner.subBox);
   const { layout } = state;
   const { room } = layout;
-  const [dragging, setDragging] = useState(false);
-  const map = useCoverageMap(planner, layout, dragging);
+  const map = useCoverageMap(planner, layout);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tab, setTab] = useState<CoverageTab>("band");
   const tabClass = (t: CoverageTab) => (tab === t ? "" : "max-md:hidden");
@@ -134,16 +133,8 @@ export function CoveragePage({ planner }: Props) {
             <SectionHeading className="mb-1">Audience coverage</SectionHeading>
             <p className="text-sm text-stone-500 mb-3">
               {bandName}, {map.target.toFixed(0)} dB target at{" "}
-              {COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}
-              {map.isRefining && (
-                <>
-                  {" "}
-                  · updating
-                  <Ellipsis />
-                </>
-              )}
-              . Drag a stack to move it, its dot to toe it in, or the listener (tap the floor to put
-              them there).
+              {COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}. Drag a stack to move it, its dot to toe
+              it in, or the listener (tap the floor to put them there).
             </p>
             {map.stack && map.levels ? (
               <CoverageMap
@@ -152,7 +143,7 @@ export function CoveragePage({ planner }: Props) {
                 actions={state}
                 boxes={map.boxes}
                 stack={map.stack}
-                onDragChange={setDragging}
+                busy={map.isPending}
                 maxHeight={maxHeight}
               />
             ) : (

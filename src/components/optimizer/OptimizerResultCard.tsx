@@ -60,7 +60,10 @@ export function OptimizerResultCard({
         .map((x) => `${exact ? "" : "~"}${x.n} sheet${x.n > 1 ? "s" : ""} ${formatThickness(x.t)}`)
         .join(" + ")}
       {stacks > 1 && ` for ${stacks} stacks`}
-      {!exact && <Ellipsis />}
+      {/* always there, hidden once exact, so the line keeps its width */}
+      <span className={exact ? "invisible" : undefined}>
+        <Ellipsis />
+      </span>
     </span>
   );
   return (
