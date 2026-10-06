@@ -20,7 +20,6 @@ import type {
   MidSystem,
   MidSystemConfig,
   PaMaxPoint,
-  PanelThickness,
   PhasedPoint,
   PortStyle,
   SealedBoxModel,
@@ -38,7 +37,8 @@ import type {
   VentSpec,
 } from "../../types";
 import { DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
-import { PLYWOOD_LB_PER_SQ_FT } from "../../data/catalog/plywood";
+import { isThinPanel, panelLbPerSqFt } from "../panel";
+import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../../data/acoustics/slot-inner-end";
 import { modelTubeElbows, subTubeEndCorrection, subTubeKit, type TubeDriver } from "./tubes";
@@ -445,13 +445,8 @@ export function closedBox(
 // Internal litres with walls of thickness t and a 3/4″ baffle recessed `inset` into the frame.
 export const boxInternalLiters = (w: number, h: number, d: number, t: number, inset = 0.75) =>
   ((w - 2 * t) * (h - 2 * t) * (d - inset - 0.75 - t) * 16.387) / 1000;
-export { PLYWOOD_LB_PER_SQ_FT };
-/** Whether a wall thickness is one the catalogue lists panel weights for. */
-export const isPanelThickness = (t: number): t is PanelThickness =>
-  Object.hasOwn(PLYWOOD_LB_PER_SQ_FT, t);
-// Plywood weight, lb/ft². The wall comes from user input or a saved config, so it can be any number: a thickness the
-// catalogue doesn't list is weighed as 3/4″ (deliberate fallback, not a missing entry).
-export const plywoodLbPerSqFt = (t: number) => PLYWOOD_LB_PER_SQ_FT[isPanelThickness(t) ? t : 0.75];
+// Plywood weight, lb/ft², at the wall's exact thickness (lib/panel).
+export const plywoodLbPerSqFt = (t: number) => panelLbPerSqFt(t, PLYWOOD_MATERIAL);
 
 // ---------------------------------------------------------------
 // Cutlist: panels for the sub and mid boxes from the planner's current
@@ -473,7 +468,7 @@ export const formatInches = (x: number) => {
   }
   return whole ? `${whole} ${a}/${b}` : `${a}/${b}`;
 };
-export const formatThickness = (t: number) => (t === 0.75 ? "3/4″" : t === 0.5 ? "1/2″" : `${t}″`);
+export { formatThickness } from "../panel";
 
 export function boxParts(
   label: CutBoxId,
@@ -573,7 +568,7 @@ export function cutParts({
   // round tubes: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes)
   const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, sub) : null;
   const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
-    braces: wall === 0.5 ? 3 : 2,
+    braces: isThinPanel(wall) ? 3 : 2,
     band: portStyle === "slots" ? cVent.slotH + t : 0,
     cutNote:
       cutoutNote(DRIVER_CUTOUT_IN[sub.size]) +
@@ -646,7 +641,7 @@ export function cutParts({
   }
   if (layout !== "tower") {
     const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
-      braces: wall === 0.5 ? 2 : 1,
+      braces: isThinPanel(wall) ? 2 : 1,
       cutNote: cutoutNote(DRIVER_CUTOUT_IN[mid.size]),
     });
     all.push(...m.P);
@@ -1001,14 +996,14 @@ export const hornBeamWidthDeg = (covDeg: number, fK: number, f: number) =>
 // Brace counts match the Cutlist: sub 2 (3 with 1/2″ walls), mid 1 (2 with 1/2″ walls).
 export const subWeightLb = (b: Dims3, wall: number, drvLb: number) =>
   (b.w * b.h * 2.3 +
-    (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d + (wall === 0.5 ? 3 : 2) * b.w * b.d) *
+    (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d + (isThinPanel(wall) ? 3 : 2) * b.w * b.d) *
       plywoodLbPerSqFt(wall)) /
     144 +
   (drvLb || 0) +
   6;
 export const midWeightLb = (b: Dims3, wall: number) =>
   (b.w * b.h * 2.3 +
-    (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d + (wall === 0.5 ? 2 : 1) * b.w * b.d) *
+    (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d + (isThinPanel(wall) ? 2 : 1) * b.w * b.d) *
       plywoodLbPerSqFt(wall)) /
     144 +
   2;

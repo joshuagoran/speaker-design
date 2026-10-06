@@ -104,6 +104,8 @@ import { ampForGain, onSlider, type AmpSteps } from "../optimizer/ampSteps";
 import { throttledProgress } from "../optimizer/progress";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { UI_TEXT } from "../../constants/uiText";
+import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
+import { panelChoicesIn, savedPanelExactIn } from "../panel";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -527,8 +529,9 @@ export const SAME_VOLUME = 0.15;
 /** The crossovers the search tries when they aren't locked, Hz. */
 export const XO_LO_OPTIONS = [90, 100, 110, 120, 140];
 export const XO_HI_OPTIONS = [800, 900, 1000, 1200, 1500];
-/** The plywoods the search tries when the plywood isn't locked, in. */
-export const WALL_OPTIONS = [0.75, 0.5];
+/** The plywoods the search tries when the plywood isn't locked: each nominal size at your design's measured thickness, in. */
+export const wallOptions = (cur: Pick<PaDesignConfig, "exactIn">) =>
+  panelChoicesIn(PLYWOOD_MATERIAL, savedPanelExactIn(cur.exactIn));
 /** The highpasses the search tries for a tuning when the highpass isn't locked: 0.85× and 1× the tuning, 20 Hz at least. */
 export const highpassOptions = (fb: number) => [
   Math.max(20, Math.round(fb * 0.85)),
@@ -638,7 +641,7 @@ export function optimizePaStack(
       ? [curSub]
       : []
     : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
-  const walls = locks.wall ? [cur.wall] : WALL_OPTIONS;
+  const walls = locks.wall ? [cur.wall] : wallOptions(cur);
   const styles: PortStyle[] = locks.vent ? [cur.portStyle] : ["slots", "vslots", "round2"];
   const xoLos = locks.xoLo ? [cur.xoLo] : XO_LO_OPTIONS;
   const xoHis = locks.xoHi ? [cur.xoHi] : XO_HI_OPTIONS;

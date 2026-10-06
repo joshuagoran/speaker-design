@@ -37,6 +37,7 @@ import type {
 import { subTubeEndCorrection, subTubeSpan, type TubeDriver } from "./tubes";
 import { ELBOW_COUNTS, MAX_ELBOWS, ownSpans, type ElbowCount } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
+import { isThinPanel } from "../panel";
 
 const RHO = 1.18,
   C = 343,
@@ -449,7 +450,7 @@ export function subWoodIn3(
   in3 +=
     Math.max(0, 2 * 2 * (Math.min(iw, inD) + Math.max(iw, inD)) - 4 * 2 * 2) *
     t *
-    (t === 0.5 ? 3 : 2);
+    (isThinPanel(t) ? 3 : 2);
   if (style === "slots") {
     const folded = slotFolds(box, v, t);
     const len = folded ? foldedShelfIn(box, v.slotH, t) : v.len;

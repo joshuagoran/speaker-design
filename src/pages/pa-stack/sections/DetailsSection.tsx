@@ -2,6 +2,7 @@ import { DetailsDropdown } from "../../../components/ui/DetailsDropdown";
 import { UI_TEXT } from "../../../constants/uiText";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
+import { panelThicknessName } from "../../../lib/panel";
 
 interface Props {
   planner: Pick<
@@ -13,6 +14,7 @@ interface Props {
     | "subMidCrossoverHz"
     | "midHornCrossoverHz"
     | "wallThicknessIn"
+    | "wallPanel"
     | "baffleInsetIn"
     | "effectiveMidBoxDims"
     | "subBox"
@@ -35,6 +37,7 @@ export function DetailsSection({ planner }: Props) {
     subMidCrossoverHz,
     midHornCrossoverHz,
     wallThicknessIn,
+    wallPanel,
     baffleInsetIn,
     effectiveMidBoxDims,
     subBox,
@@ -52,8 +55,8 @@ export function DetailsSection({ planner }: Props) {
           <span className="font-medium text-stone-900">Sub.</span> {subDriver.name} in a {subBox.w}×
           {subBox.h}×{subBox.d} in cabinet, {subGrossLiters.toFixed(0)} L gross,{" "}
           {subNetLiters.toFixed(0)} L net. Vent: {port.desc}. 3/4″ baffle set {baffleInsetIn}″
-          behind the frame, {wallThicknessIn === 0.5 ? "1/2″" : "3/4″"} birch walls, 1/4″ roundovers
-          on the front edges.
+          behind the frame, {panelThicknessName(wallPanel, wallThicknessIn)} birch walls, 1/4″
+          roundovers on the front edges.
         </div>
         <div>
           <span className="font-medium text-stone-900">{UI_TEXT.midBass} cube.</span>{" "}

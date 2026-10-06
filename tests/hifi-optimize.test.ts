@@ -458,8 +458,11 @@ test("hi-fi optimizer: your box is searched on the other plywood even when your 
   const yours = space.grid.filter((e) => e.w.id === cur.woofer);
   assert.deepEqual(
     yours.map((e) => [e.wall, e.dim]),
-    [[0.5, cur.dim]],
-    "your box on 1/2 in ply only (your woofer itself is filtered out)",
+    [
+      [0.625, cur.dim],
+      [0.5, cur.dim],
+    ],
+    "your box on the other plywoods only (your woofer itself is filtered out)",
   );
 });
 

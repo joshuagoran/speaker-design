@@ -3,6 +3,7 @@ import { optimizePaStack } from "../src/lib/pa/optimize";
 import { optimizeHifiSpeaker } from "../src/lib/hifi/optimize";
 import { HIFI_PASSIVES, HIFI_TWEETERS, HIFI_WOOFERS, MID_BOXES } from "../src/lib/data";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
+import { panelIn } from "../src/lib/panel";
 import type { HifiOptimizerInput, PaGoal, PaOptimizerCurrent } from "../src/types";
 import type { DumpKind, Json } from "./optimizer-dump-merge";
 
@@ -41,7 +42,7 @@ const hifiDefault: HifiOptimizerInput["cur"] = {
   tweeter: DEFAULT_HIFI.tweeter.id,
   box: DEFAULT_HIFI.boxType,
   dim: DEFAULT_HIFI.boxDims,
-  wall: DEFAULT_HIFI.wallThicknessIn,
+  wall: panelIn(DEFAULT_HIFI.wallPanel, DEFAULT_HIFI.panelMaterial),
   port: DEFAULT_HIFI.portSpec,
   xo: DEFAULT_HIFI.crossoverHz,
   order: DEFAULT_HIFI.crossoverOrder,

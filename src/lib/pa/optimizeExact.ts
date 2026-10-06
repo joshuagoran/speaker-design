@@ -29,7 +29,7 @@ import {
   VENT_STYLES,
   XO_HI_OPTIONS,
   XO_LO_OPTIONS,
-  WALL_OPTIONS,
+  wallOptions,
   highpassOptions,
   designProblems,
   evaluateDesign,
@@ -85,6 +85,7 @@ import {
 } from "./exactSub";
 import { MAX_ELBOWS } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
+import { isThinPanel } from "../panel";
 import { MID_OPTIONS, SUB_OPTIONS } from "../data";
 import { byId } from "../tables";
 import { keepGap } from "../optimizer/shortfall";
@@ -239,7 +240,7 @@ function exactSpace(input: PaOptimizerInput, grid: PaExactGrid): ExactSpace {
   const fixed = (["w", "h", "d"] as const)
     .filter((k) => k !== free)
     .map((k): [keyof Dims3, number[]] => [k, inchSteps(sr[k])]);
-  const walls = locks.wall ? [cur.wall] : WALL_OPTIONS;
+  const walls = locks.wall ? [cur.wall] : wallOptions(cur);
   const top = boxInternalLiters(sr.w[1], sr.h[1], sr.d[1], Math.min(...walls), cur.inset);
   const rungs: number[] = [];
   if (free) for (let v = grid.minNetL; v <= top; v *= 1 + grid.volumeStep) rungs.push(v);
@@ -312,7 +313,7 @@ function bareFree(
     const iw = b.w - 2 * t,
       inD = b.d - s.cur.inset - 0.75 - t;
     const gross = ((b.w - 2 * t) * (b.h - 2 * t) * inD * 16.387) / 1000;
-    const braces = Math.max(0, 4 * (iw + inD) - 16) * t * (t === 0.5 ? 3 : 2);
+    const braces = Math.max(0, 4 * (iw + inD) - 16) * t * (isThinPanel(t) ? 3 : 2);
     return gross - disp - (braces * 16.387) / 1000;
   };
   const [lo, hi] = s.sr[free];

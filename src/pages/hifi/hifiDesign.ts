@@ -14,6 +14,7 @@ import {
   needsWaveguide,
 } from "../../lib/hifi/hifi";
 import { rippleDb } from "../../lib/hifi/diffraction";
+import { panelIn } from "../../lib/panel";
 import type { HifiDesign, HifiDesignState, HifiSpeakerModel } from "../../types";
 
 /** The frequencies every Hi-fi response is worked out at: the charts' 15 Hz to 20 kHz axis. */
@@ -27,7 +28,8 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     selectedWaveguide,
     boxType,
     boxDims,
-    wallThicknessIn,
+    wallPanel,
+    panelExactIn,
     panelMaterial,
     portSpec,
     radiatorSelection,
@@ -61,6 +63,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     n: radiatorSelection.n,
     addG: Math.min(radiatorSelection.addG, passiveRadiatorMassMax(radiatorDriver)),
   };
+  const wallThicknessIn = panelIn(wallPanel, panelMaterial, panelExactIn);
   const speakerConfig = {
     box: boxType,
     dim: boxDims,
@@ -158,6 +161,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     };
   }
   return {
+    wallThicknessIn,
     compressionWaveguide,
     waveguideSpec,
     radiatorDriver,

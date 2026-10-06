@@ -174,10 +174,15 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
     );
   }
 });
-test("plyLb: known thicknesses and a safe fallback", (t) => {
+test("plyLb: the catalogue's sizes, and measured thicknesses between and beyond them", (t) => {
   assert.equal(plywoodLbPerSqFt(0.75), 2.3);
+  assert.equal(plywoodLbPerSqFt(0.625), 1.95);
   assert.equal(plywoodLbPerSqFt(0.5), 1.6);
-  assert.equal(plywoodLbPerSqFt(0.625), 2.3);
+  // 18 mm birch measured at 0.689″: between the 5/8″ and 3/4″ weights
+  close(t, plywoodLbPerSqFt(0.689), 1.95 + (0.35 * (0.689 - 0.625)) / 0.125, 1e-9);
+  // beyond the thinnest and thickest sizes: in proportion to the nearest
+  close(t, plywoodLbPerSqFt(0.45), (1.6 * 0.45) / 0.5, 1e-9);
+  close(t, plywoodLbPerSqFt(0.8), (2.3 * 0.8) / 0.75, 1e-9);
 });
 test("midWeight: 15 in cube in 3/4 birch", (t) => {
   close(

@@ -75,6 +75,8 @@ import type {
 } from "../../types";
 import { keysOf } from "../records";
 import { byId } from "../tables";
+import { panelChoicesIn } from "../panel";
+import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { selectCards } from "../optimizer/selectCards";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
 import { goalKeeps } from "../optimizer/goalKeeps";
@@ -397,7 +399,9 @@ export function hifiSearchSpace(
     : passives.length
       ? ["sealed", "vented", "radiator"]
       : ["sealed", "vented"];
-  const walls = locks.wall ? [cur.wall] : [0.75, 0.5];
+  const walls = locks.wall
+    ? [cur.wall]
+    : (input.walls ?? panelChoicesIn(cur.mat ?? PLYWOOD_MATERIAL));
   const tList: HifiTweeter[] = locks.tweeter
     ? [T0]
     : tweeters.filter((t) => t.hf && t.hf.sens != null && (!needsWaveguide(t) || guide));

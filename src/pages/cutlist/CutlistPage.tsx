@@ -10,9 +10,12 @@ import type {
   GrainPreset,
   OffcutShape,
   PanelMaterial,
+  PanelNominal,
 } from "../../types";
 import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
 import { Tooltip } from "../../components/ui/Tooltip";
+import { Button } from "../../components/ui/Button";
+import { NumberField } from "../../components/ui/NumberField";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
@@ -25,7 +28,14 @@ import {
 } from "../../components/ui/SettingsSheetTabs";
 import { StatTileGrid } from "../../components/stats/StatTileGrid";
 import { SheetDrawing } from "../../components/drawings/SheetDrawing";
-import { PLYWOOD_SHEETS, formatInches, formatThickness } from "../../lib/pa/calc";
+import { PLYWOOD_SHEETS, formatInches } from "../../lib/pa/calc";
+import {
+  defaultPanelIn,
+  formatThickness,
+  panelExactRange,
+  panelThicknessName,
+} from "../../lib/panel";
+import { PANEL_NOMINAL_NAMES } from "../../constants/panelSizes";
 import { settingsForMaterial } from "../../lib/hifi/cutlist";
 import {
   FROM_OFFCUT,
@@ -71,8 +81,9 @@ interface Props {
   parts: CutPart[];
   /** bought parts and other lines that aren't cut, shown under the list */
   also: string[];
-  /** the wall thickness and material, inches */
+  /** the walls' exact thickness (inches), nominal size and material */
   wall: number;
+  panel: PanelNominal;
   material: PanelMaterial;
 }
 
@@ -125,7 +136,7 @@ const trimName = (v: number) => (v ? `${formatInches(v)}″` : "None");
  * Cutlist page, for either project: the settings beside the panels of each box and how they pack onto sheets. The
  * project's own page (`PaCutlistPage`, `HifiCutlistPage`) works out its parts and passes its choices.
  */
-export function CutlistPage({ project, options, parts, also, wall, material }: Props) {
+export function CutlistPage({ project, options, parts, also, wall, panel, material }: Props) {
   const pal = usePalette();
   const {
     cornerJoint,
@@ -146,6 +157,7 @@ export function CutlistPage({ project, options, parts, also, wall, material }: P
     setOffcutShape,
     cutStyle,
     setCutStyle,
+    setPanelExactIn,
   } = options;
   const proj = CUTLIST_PROJECTS[project];
   const mat = PANEL_MATERIAL_NAMES[material];
@@ -182,6 +194,18 @@ export function CutlistPage({ project, options, parts, also, wall, material }: P
   const sheetSize = PLYWOOD_SHEETS[plywoodSheetKind];
   const preset = grainPresetOf(grain);
   const kerfName = KERF_OPTIONS.find((k) => k.v === kerfIn)?.label ?? `${formatInches(kerfIn)}″`;
+  // the walls' nominal size with its measured thickness beside it, and the range a measurement may take
+  const wallName = panelThicknessName(panel, wall);
+  const wallRange = panelExactRange(panel);
+  const wallDefault = defaultPanelIn(panel, material);
+  /** a thickness as the page names it: the walls' with their nominal size, any other (the PA baffle) on its own */
+  const thicknessName = (t: number) => (t === wall ? wallName : formatThickness(t));
+  /** sets the walls' measured thickness; the default is kept as no measurement, so it follows the material */
+  const setWallExact = (t: number | null) =>
+    setPanelExactIn((prev) => {
+      const { [panel]: _old, ...rest } = prev;
+      return t === null || t === wallDefault ? rest : { ...rest, [panel]: t };
+    });
 
   // each row's tag (S1, S2 … M1 … H1 …); its pieces on the sheets carry the same tag
   const allRows = cutRows(cut.parts);
@@ -207,7 +231,7 @@ export function CutlistPage({ project, options, parts, also, wall, material }: P
 
   const summaries: Record<CutlistSettingsSection, string> = {
     boxes: `${JOINT_NAMES[cornerJoint]} joints, ${plural(boxSetCount, proj.set)}`,
-    sheets: `${sheetSize.name}, ${kerfName} kerf, ${edgeTrimIn ? `${trimName(edgeTrimIn)} trim` : "no trim"}`,
+    sheets: `${wallName}, ${sheetSize.name}, ${kerfName} kerf, ${edgeTrimIn ? `${trimName(edgeTrimIn)} trim` : "no trim"}`,
     grain: grainless
       ? `${mat.word}: no grain`
       : `${preset ? PRESET_NAMES[preset] : "Custom"}${waterfall ? ", waterfall" : ""}`,
@@ -354,7 +378,7 @@ export function CutlistPage({ project, options, parts, also, wall, material }: P
         return (
           <div key={g.t} className="mb-6">
             <h4 className="text-base font-semibold">
-              {formatThickness(g.t)} {mat.short}: {plural(g.sheets.length, "sheet")} of{" "}
+              {thicknessName(g.t)} {mat.short}: {plural(g.sheets.length, "sheet")} of{" "}
               {sheetSize.name}
             </h4>
             <p className="text-sm text-stone-500 mb-3">
@@ -411,7 +435,7 @@ export function CutlistPage({ project, options, parts, also, wall, material }: P
           <div>
             <SectionHeading className="mb-1">Cutlist</SectionHeading>
             <p className="text-sm text-stone-500">
-              The {mat.word} parts of {proj.source}, {formatThickness(wall)} walls, for{" "}
+              The {mat.word} parts of {proj.source}, {wallName} walls, for{" "}
               {plural(boxSetCount, proj.set)}, packed onto {sheetSize.name} sheets.
             </p>
           </div>
@@ -481,6 +505,30 @@ export function CutlistPage({ project, options, parts, also, wall, material }: P
           {section(
             "sheets",
             <>
+              <NumberField
+                label={
+                  <Tooltip tip="Sheets are rarely their nominal size: 18 mm Baltic birch often measures 0.689″ and US ¾″ plywood 23/32″. Measure yours; the box volume, the panel sizes and joints, the 3D view and the weights all use it.">
+                    {`Measured ${PANEL_NOMINAL_NAMES[panel].name}`}
+                  </Tooltip>
+                }
+                value={wall}
+                min={wallRange.min}
+                max={wallRange.max}
+                step={0.001}
+                onChange={(t) => {
+                  if (t >= wallRange.min && t <= wallRange.max) setWallExact(t);
+                }}
+                unit={
+                  <>
+                    <span className="text-stone-500">″ = {(wall * 25.4).toFixed(1)} mm</span>
+                    {wall !== wallDefault && (
+                      <Button onClick={() => setWallExact(null)}>
+                        {`Reset to ${formatThickness(wallDefault)}`}
+                      </Button>
+                    )}
+                  </>
+                }
+              />
               <ToggleGroup
                 label="Sheet"
                 value={plywoodSheetKind}

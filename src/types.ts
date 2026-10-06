@@ -11,6 +11,7 @@ import type { AMP_SERIES } from "./data/catalog/amps";
 import type { DSP_UNITS } from "./data/catalog/dsp-units";
 import type { Keep } from "./lib/optimizer/shortfall";
 import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
+import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
 import type { SelectedCard } from "./lib/optimizer/selectCards";
 
 // Shapes of the parts catalogue tables in data/catalog/ (lib/data.ts derives the app's view of them).
@@ -780,6 +781,8 @@ export interface HifiOptimizerInput {
   seatM?: number;
   /** the price of a waveguide, for one speaker */
   guidePrice?: number;
+  /** the walls the search tries when the wall isn't locked: each nominal size's exact thickness, inches */
+  walls?: readonly number[];
 }
 
 /** What a design is scored on: price for the pair in dollars, weight in lb, in-room F3 in Hz and clean level at the seat in dB. */
@@ -798,7 +801,10 @@ export interface HifiDesignState {
   selectedWaveguide: HifiWaveguide;
   boxType: HifiBoxKind;
   boxDims: Dims3;
-  wallThicknessIn: number;
+  /** the walls' nominal size */
+  wallPanel: PanelNominal;
+  /** the Cutlist page's measured thickness of each nominal size */
+  panelExactIn: PanelExactIn;
   panelMaterial: PanelMaterial;
   portSpec: HifiPort;
   radiatorSelection: RadiatorSelection;
@@ -840,6 +846,8 @@ export interface HifiSpeakerModel {
 
 /** The Hi-fi design as the models read it, worked out from the planner's state. */
 export interface HifiDesign {
+  /** the walls' exact thickness, inches (lib/panel): what the model, cutlist and weight are worked out at */
+  wallThicknessIn: number;
   /** the waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded) */
   compressionWaveguide: WaveguideSpec;
   /** the waveguide in use: the tweeter's own, the picked one for a tweeter that needs one, else none */
@@ -908,6 +916,8 @@ export type HifiOptimizedFields = Pick<HifiCardConfig, HifiOptimizedField>;
  */
 export interface SavedHifiConfig extends Omit<HifiCardConfig, "pr"> {
   pr?: RadiatorSelection;
+  /** the walls' nominal size; absent in configs saved before the sizes (their `wall` names it) */
+  panel?: PanelNominal;
   guide: string;
   mat: PanelMaterial;
   order: CrossoverOrder;
@@ -992,8 +1002,20 @@ export interface PlywoodSheet {
   name: string;
 }
 
-/** The panel thicknesses, inches, the catalogue lists a weight for (plywood and MDF). */
-export type PanelThickness = 0.75 | 0.5;
+/** A nominal panel size, by id (`PANEL_NOMINAL_NAMES`): what the design pages pick. */
+export type PanelNominal = keyof typeof PANEL_NOMINAL_NAMES;
+
+/** The measured thickness of each nominal size, inches, as the Cutlist page keeps it; a size absent here is at its default. */
+export type PanelExactIn = Partial<Record<PanelNominal, number>>;
+
+/** One material at a nominal size: its default exact thickness and its weight at that thickness (lb/ft²). */
+export interface PanelStockMaterial {
+  t: number;
+  lb: number;
+}
+
+/** A nominal panel size in the catalogue: its imperial and metric sizes, and each material's default thickness and weight. */
+export type PanelStock = { in: number; mm: number } & Record<PanelMaterial, PanelStockMaterial>;
 
 /**
  * The sub's vent, in inches: the planner keeps every field, whichever layout uses it (`slotH` the slots, `throat` the
@@ -1057,8 +1079,10 @@ export interface PaDesignConfig {
   portMax: number;
   /** the mid box's outside size */
   mDim: Dims3;
-  /** side, top, bottom and back plywood, inches */
+  /** side, top, bottom and back plywood, inches: the exact thickness of `panel` (lib/panel) */
   wall: number;
+  /** the walls' nominal size; absent in designs saved before the sizes (their `wall` names it) */
+  panel?: PanelNominal;
   /** how far the baffles sit behind the frame front, inches */
   inset: number;
   /** sub to mid and mid to horn crossovers, Hz */
@@ -1088,6 +1112,8 @@ export interface PaDesignConfig {
   waterfall?: boolean;
   offcut?: OffcutShape;
   cuts?: CutStyle;
+  /** the Cutlist page's measured thickness of each nominal size */
+  exactIn?: PanelExactIn;
   summary?: string;
 }
 
