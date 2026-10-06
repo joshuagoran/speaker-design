@@ -1,7 +1,9 @@
 // The PA boxes' hardware from presets: two recessed handles at the box's centre of gravity (one each side, moved by the
 // offsets), the input dish with its two Speakons low on the back, centred, and on the mid (top) box the horn's binding
 // posts on the lid. Each part's recess takes room inside the box (its litres come off the net volume) and must stay
-// clear of the braces and ribs, the driver, the vent, the other parts and the panels' edges and joints.
+// clear of the driver, the vent, the other parts and the panels' edges and joints. The parts are placed first and the
+// braces and ribs after them, round their recesses (lib/bracing keeps out of hardwareKeepOut), so a brace or rib in a
+// part's way is a fault the check still reports, not a reason to move the part.
 import type {
   BoxBracing,
   BoxHandles,
@@ -321,15 +323,19 @@ function hitsOf(
   obs: Obstacles,
   placed: readonly PlacedHardware[],
 ): HardwareObstacle[] {
-  // the horn posts' cup has no listed depth: the fit check takes HORN_POSTS_FIT_DEPTH_IN
-  const fitDepth = d.part.depthIn ?? (d.kind === "posts" ? HORN_POSTS_FIT_DEPTH_IN : 0);
-  const r = fitRegion(recessOf(d, inner, t, fitDepth), d.panel, inner);
+  const r = fitOf(d, inner, t);
   const hits: HardwareObstacle[] = [];
   if (!clearOfEdges(d, box, inner, t, inset)) hits.push("edge");
   for (const k of ["window", "rib", "driver", "vent"] as const)
     if (obs[k].some((o) => overlaps(r, o))) hits.push(k);
-  if (placed.some((p) => overlaps(r, fitRegion(p.recess, p.panel, inner)))) hits.push("part");
+  if (placed.some((p) => overlaps(r, p.fit))) hits.push("part");
   return hits;
+}
+/** The room a part's fit check takes: its recess at least FIT_MIN_DEPTH_IN deep (the posts' cup HORN_POSTS_FIT_DEPTH_IN). */
+function fitOf(d: Draft, inner: Record<"x" | "y" | "z", number>, t: number) {
+  // the horn posts' cup has no listed depth: the fit check takes HORN_POSTS_FIT_DEPTH_IN
+  const fitDepth = d.part.depthIn ?? (d.kind === "posts" ? HORN_POSTS_FIT_DEPTH_IN : 0);
+  return fitRegion(recessOf(d, inner, t, fitDepth), d.panel, inner);
 }
 
 /** A part placed at its draft: its face position (outside), recess, litres and hits. */
@@ -354,6 +360,7 @@ function place(
     panel: d.panel,
     ...uv,
     recess: recessOf(d, inner, t),
+    fit: fitOf(d, inner, t),
     litres: partRecessLitres(d.part, t),
     hits,
   };
@@ -456,7 +463,8 @@ export function planBoxHardware({
   ventMasses = [],
 }: BoxHardwareInput): BoxHardwarePlan {
   const inner = insideOf(dims, t, inset);
-  const obs = obstaclesOf(bracing, keepOut, inner, t);
+  // the parts go where the driver, the vent, the edges and each other leave room; the braces go round them after
+  const obs = obstaclesOf(null, keepOut, inner, t);
   const placed: PlacedHardware[] = [];
   const handle = handlePart(handles.model);
   if (handle) {
@@ -508,16 +516,44 @@ export function planBoxHardware({
       ),
     );
   }
+  // then each part checked against the braces and ribs as well (they keep out of the recesses, so this finds none unless
+  // the bracing was planned without them)
+  const full = obstaclesOf(bracing, keepOut, inner, t);
+  const parts = placed.map((p, i) => {
+    const d: Draft = { kind: p.kind, part: p.part, panel: p.panel, at: atOf(p, inner, t, inset) };
+    return { ...p, hits: hitsOf(d, dims, inner, t, inset, full, placed.slice(0, i)) };
+  });
   const bought = boughtWith(box, handle);
   return {
     box,
-    parts: placed,
-    litres: placed.reduce((a, p) => a + p.litres, 0),
+    parts,
+    litres: parts.reduce((a, p) => a + p.litres, 0),
     lb: bought.reduce((a, b) => a + b.qty * (b.part.lb ?? 0), 0),
     price: bought.reduce((a, b) => a + b.qty * b.part.price, 0),
     bought,
   };
 }
+
+/** A placed part's cutout centre back on the box axes (the panel's own axis at its inside face), as its draft had it. */
+function atOf(p: PlacedHardware, inner: Record<"x" | "y" | "z", number>, t: number, inset: number) {
+  const front = inset + BAFFLE_IN;
+  switch (p.panel) {
+    case "sideL":
+      return { x: 0, y: p.v - t, z: p.u - front };
+    case "sideR":
+      return { x: inner.x, y: p.v - t, z: p.u - front };
+    case "back":
+      return { x: p.u - t, y: p.v - t, z: inner.z };
+    case "top":
+      return { x: p.u - t, y: inner.y, z: p.v - front };
+  }
+}
+/**
+ * What no brace or rib may enter for a box's hardware (BoxKeepOut's `hardware`): each part's fit region, its recess at
+ * least a hole's depth, so a rib never covers a cutout and a frame never crosses one.
+ */
+export const hardwareKeepOut = (plan: Pick<BoxHardwarePlan, "parts">): BoxRegion[] =>
+  plan.parts.map((p) => p.fit);
 
 /** Whether every part of a plan fits. */
 export const hardwareFits = (plan: BoxHardwarePlan) => plan.parts.every((p) => !p.hits.length);

@@ -89,7 +89,7 @@ import {
   paBoxPanels,
   type PaBoxSupports,
 } from "./bracing";
-import { hardwareLitres, mountedCutout, planBoxHardware } from "./hardware";
+import { hardwareKeepOut, hardwareLitres, mountedCutout, planBoxHardware } from "./hardware";
 import { INPUT_JACK } from "../../data/catalog/cabinet-hardware";
 import { HARDWARE_KIND_NAMES } from "../../constants/hardware";
 
@@ -771,9 +771,14 @@ function paBracing(
     }),
   );
 }
+/** The hardware's recesses as a keep-out key (the bracing memo's). */
+const regionsKey = (rs: readonly BoxRegion[]) =>
+  rs.map((r) => `${r.x.join()},${r.y.join()},${r.z.join()}`).join(";");
 /**
  * The sub box's braces and ribs by rule, and its panels' resonances: its vent's parts as supports, and its driver and
- * vent kept clear (subKeepOut). The planner's and the cards' (the optimizers' searches estimate it: braceWoodEstimate).
+ * vent kept clear (subKeepOut), and with `handles` (the planner's: the box has its hardware) the recesses of its handles
+ * and input dish as well, placed first (subHardwarePlacement). The planner's and the cards' (the optimizers leave the
+ * hardware out, and their searches estimate the bracing: braceWoodEstimate).
  */
 export function subBoxBracing(
   box: Dims3,
@@ -781,18 +786,23 @@ export function subBoxBracing(
   inset: number,
   style: PortStyle,
   v: BraceVent,
-  drv: TubeDriver,
+  drv: TubeDriver & Partial<Pick<SubDriver, "lb">>,
   braceStyle: BraceStyleId | undefined,
+  handles?: BoxHandles,
 ): BoxBracing {
   const bs = braceStyle ?? defaultBraceStyleNear(t);
   // the duct's length counts only where it changes the bracing (its flags)
   const flags = ductFlagsOf(box, t, inset, style, v, drv);
-  const key = `${bs}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}`;
+  const recesses = handles
+    ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
+    : [];
+  const hwKey = regionsKey(recesses);
+  const key = `${bs}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
-  const keepOut = subKeepOut(box, t, inset, style, v, drv, flags);
+  const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };
   // the keep-out from its inputs other than the length, and the spans the length sets
-  const keepKey = `${style}|${v.slotH}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${keepOut.vent.map((r) => `${r.y.join()},${r.z.join()}`).join(";")}`;
+  const keepKey = `${style}|${v.slotH}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${keepOut.vent.map((r) => `${r.y.join()},${r.z.join()}`).join(";")}|${hwKey}`;
   return remember(
     INPUT_MEMO,
     key,
@@ -810,18 +820,21 @@ export function subBoxBracing(
   );
 }
 /**
- * The mid box's braces and ribs by rule, its driver kept clear (midKeepOut); null in the tower, whose mid chamber is
- * part of the sub's cabinet.
+ * The mid box's braces and ribs by rule, its driver kept clear (midKeepOut), and with `handles` its hardware's recesses
+ * as well (midHardwarePlacement); null in the tower, whose mid chamber is part of the sub's cabinet.
  */
 export function midBoxBracing(
   box: Dims3,
   t: number,
   inset: number,
-  mid: Pick<MidDriver, "size" | "depthIn">,
+  mid: Pick<MidDriver, "size" | "depthIn"> & Partial<Pick<MidDriver, "lb">>,
   layout: PaLayout | undefined,
   braceStyle: BraceStyleId | undefined,
+  handles?: BoxHandles,
 ): BoxBracing | null {
   if (layout === "tower") return null;
+  const placed = handles && midHardwarePlacement(box, t, inset, mid, layout, handles);
+  const recesses = placed ? hardwareKeepOut(placed) : [];
   return paBracing(
     box,
     t,
@@ -829,8 +842,8 @@ export function midBoxBracing(
     0,
     NO_SUPPORTS,
     NO_SUPPORTS,
-    midKeepOut(box, t, mid),
-    `${mid.size}|${mid.depthIn}`,
+    { ...midKeepOut(box, t, mid), hardware: recesses },
+    `${mid.size}|${mid.depthIn}|${regionsKey(recesses)}`,
     braceStyle ?? defaultBraceStyleNear(t),
   );
 }
@@ -1108,19 +1121,19 @@ export function subVentMasses(box: Dims3, t: number, style: PortStyle, v: BraceV
 }
 
 /**
- * The sub box's hardware from its presets (lib/pa/hardware planBoxHardware): its driver where the 3D view puts it, its
- * braces by rule and its keep-out, so the parts are checked against what is really inside, and its vent's panels in
- * the centre of gravity.
+ * The sub box's hardware from its presets (lib/pa/hardware planBoxHardware), placed before the braces: its driver where
+ * the 3D view puts it, its keep-out, and its vent's panels in the centre of gravity. `bracing` (absent: none) only
+ * checks the parts; it doesn't move them.
  */
-export function subHardwarePlan(
+function subHardwarePlacement(
   box: Dims3,
   t: number,
   inset: number,
   style: PortStyle,
   v: BraceVent,
-  drv: TubeDriver & Pick<SubDriver, "lb">,
-  braceStyle: BraceStyleId | undefined,
+  drv: TubeDriver & Partial<Pick<SubDriver, "lb">>,
   handles: BoxHandles,
+  bracing: BoxBracing | null = null,
 ): BoxHardwarePlan {
   return planBoxHardware({
     box: "sub",
@@ -1133,20 +1146,37 @@ export function subHardwarePlan(
       lb: drv.lb || 0,
       depthIn: subDriverDepthIn(drv),
     },
-    bracing: subBoxBracing(box, t, inset, style, v, drv, braceStyle),
+    bracing,
     keepOut: subKeepOut(box, t, inset, style, v, drv),
     ventMasses: subVentMasses(box, t, style, v),
   });
 }
-/** The mid box's hardware from its presets; null in the tower, whose mid chamber is part of the sub's cabinet. */
-export function midHardwarePlan(
+/**
+ * The sub box's hardware (subHardwarePlacement), checked against its braces and ribs by rule, which were planned round
+ * its recesses (subBoxBracing with the handles).
+ */
+export function subHardwarePlan(
   box: Dims3,
   t: number,
   inset: number,
-  mid: Pick<MidDriver, "size" | "depthIn" | "lb">,
-  layout: PaLayout | undefined,
+  style: PortStyle,
+  v: BraceVent,
+  drv: TubeDriver & Pick<SubDriver, "lb">,
   braceStyle: BraceStyleId | undefined,
   handles: BoxHandles,
+): BoxHardwarePlan {
+  const bracing = subBoxBracing(box, t, inset, style, v, drv, braceStyle, handles);
+  return subHardwarePlacement(box, t, inset, style, v, drv, handles, bracing);
+}
+/** The mid box's hardware placed before its braces (as subHardwarePlacement); null in the tower. */
+function midHardwarePlacement(
+  box: Dims3,
+  t: number,
+  inset: number,
+  mid: Pick<MidDriver, "size" | "depthIn"> & Partial<Pick<MidDriver, "lb">>,
+  layout: PaLayout | undefined,
+  handles: BoxHandles,
+  bracing: BoxBracing | null = null,
 ): BoxHardwarePlan | null {
   if (layout === "tower") return null;
   const { iw, ih } = paInside(box, t, 0);
@@ -1161,9 +1191,25 @@ export function midHardwarePlan(
       lb: mid.lb || 0,
       depthIn: mid.depthIn ?? MID_DEPTH_FALLBACK_IN[mid.size],
     },
-    bracing: midBoxBracing(box, t, inset, mid, layout, braceStyle),
+    bracing,
     keepOut: midKeepOut(box, t, mid),
   });
+}
+/**
+ * The mid box's hardware from its presets, checked against its braces and ribs (planned round its recesses); null in
+ * the tower, whose mid chamber is part of the sub's cabinet.
+ */
+export function midHardwarePlan(
+  box: Dims3,
+  t: number,
+  inset: number,
+  mid: Pick<MidDriver, "size" | "depthIn" | "lb">,
+  layout: PaLayout | undefined,
+  braceStyle: BraceStyleId | undefined,
+  handles: BoxHandles,
+): BoxHardwarePlan | null {
+  const bracing = midBoxBracing(box, t, inset, mid, layout, braceStyle, handles);
+  return midHardwarePlacement(box, t, inset, mid, layout, handles, bracing);
 }
 
 export function cutParts({
@@ -1188,7 +1234,9 @@ export function cutParts({
   // round tubes: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes)
   const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, sub) : null;
   const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
-    bracing: noBraces ? null : subBoxBracing(subBox, t, inset, portStyle, cVent, sub, braceStyle),
+    bracing: noBraces
+      ? null
+      : subBoxBracing(subBox, t, inset, portStyle, cVent, sub, braceStyle, hardware?.sub),
     hardware: hardware
       ? hardwareCutNotes(
           subHardwarePlan(subBox, t, inset, portStyle, cVent, sub, braceStyle, hardware.sub),
@@ -1270,7 +1318,7 @@ export function cutParts({
     const midPlan =
       hardware && midHardwarePlan(midDims, t, inset, mid, layout, braceStyle, hardware.mid);
     const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
-      bracing: midBoxBracing(midDims, t, inset, mid, layout, braceStyle),
+      bracing: midBoxBracing(midDims, t, inset, mid, layout, braceStyle, hardware?.mid),
       hardware: midPlan ? hardwareCutNotes(midPlan, midDims, t) : undefined,
       cutNote: cutoutNote(DRIVER_CUTOUT_IN[mid.size]),
     });
@@ -1684,6 +1732,8 @@ export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConf
       braceStyle: cfg.braceStyle,
       subOnly: true,
       noBraces: cfg.braceEstimate,
+      // the ribs keep out of the recesses (subBoxBracing)
+      hardware: cfg.hardware,
     }).parts,
     "sub",
   );
@@ -1794,7 +1844,15 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
           cfg.layout,
           cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
         )
-      : midBoxBracing(cfg.midDims, cfg.wall, cfg.inset, mid, cfg.layout, cfg.braceStyle),
+      : midBoxBracing(
+          cfg.midDims,
+          cfg.wall,
+          cfg.inset,
+          mid,
+          cfg.layout,
+          cfg.braceStyle,
+          cfg.hardware?.mid,
+        ),
     recessL,
   );
   const effL = netL * STUFFING_VOLUME_GAIN;

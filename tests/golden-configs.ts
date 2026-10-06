@@ -71,7 +71,11 @@ const synth = (
 export const configs = [...seeds, ...synth];
 
 const r2 = (x: number | null | undefined) => (x == null ? null : Math.round(x * 100) / 100);
-export function evaluate(c: GoldenConfig): GoldenValues {
+/**
+ * A design's planner numbers; `withHardware` false leaves the handles, dish and posts out altogether (no recesses, no
+ * weight, and the bracing planned without them), as the optimizers evaluate a design.
+ */
+export function evaluate(c: GoldenConfig, withHardware = true): GoldenValues {
   const sub = SUB_OPTIONS.find((o) => o.id === c.sub)!,
     mid = MID_OPTIONS.find((o) => o.id === c.mid) || MID_OPTIONS[0];
   const mDim = c.mDim || (MID_BOXES.find((b) => b.id === c.midBox) || MID_BOXES[0]).box;
@@ -89,11 +93,19 @@ export function evaluate(c: GoldenConfig): GoldenValues {
     layout: c.layout || "stack",
     braceStyle: c.braceStyle,
     // the design's handles and plates; the seeds predate them, so the defaults, as the planner loads them
-    hardware: savedHardware(c.hardware),
+    hardware: withHardware ? savedHardware(c.hardware) : undefined,
   };
   const s = subSystem(sub, mid, cfg);
   const xoLo = c.xoLo || 120;
-  const midBracing = midBoxBracing(mDim, cfg.wall, cfg.inset, mid, cfg.layout, c.braceStyle);
+  const midBracing = midBoxBracing(
+    mDim,
+    cfg.wall,
+    cfg.inset,
+    mid,
+    cfg.layout,
+    c.braceStyle,
+    cfg.hardware?.mid,
+  );
   const ms = midSystem(mid, {
     layout: cfg.layout,
     braceStyle: c.braceStyle,
@@ -136,7 +148,16 @@ export function evaluate(c: GoldenConfig): GoldenValues {
         cfg.subBox,
         cfg.wall,
         sub.lb,
-        subBoxBracing(cfg.subBox, cfg.wall, cfg.inset, cfg.portStyle, cfg.cVent, sub, c.braceStyle),
+        subBoxBracing(
+          cfg.subBox,
+          cfg.wall,
+          cfg.inset,
+          cfg.portStyle,
+          cfg.cVent,
+          sub,
+          c.braceStyle,
+          cfg.hardware?.sub,
+        ),
         hardwareLb(cfg.hardware, "sub", cfg.layout),
       ),
     ),

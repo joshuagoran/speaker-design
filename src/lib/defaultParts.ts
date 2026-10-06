@@ -42,7 +42,16 @@ export const DEFAULT_WALL = PANEL_NOMINAL_NAMES[d.panel].short;
  */
 export const DEFAULT_SUB_WEIGHTS = PANEL_NOMINALS.map((n) => {
   const t = panelIn(n, PLYWOOD_MATERIAL);
-  const b = subBoxBracing(d.cDim, t, d.inset, d.portStyle, d.cVent, d.sub, undefined);
+  const b = subBoxBracing(
+    d.cDim,
+    t,
+    d.inset,
+    d.portStyle,
+    d.cVent,
+    d.sub,
+    undefined,
+    d.hardware.sub,
+  );
   return {
     t: PANEL_NOMINAL_NAMES[n].short,
     lb: Math.round(subWeightLb(d.cDim, t, d.sub.lb, b, hardwareLb(d.hardware, "sub", d.layout))),

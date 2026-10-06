@@ -1512,12 +1512,14 @@ export interface PanelRibs {
 export type BoxRegion = Record<BoxAxis, readonly [number, number]>;
 /**
  * What no brace or rib may enter: the driver's basket and magnet behind the baffle (with its clearance), and the
- * vent's own parts and the air they enclose (ducts, tubes).
+ * vent's own parts and the air they enclose (ducts, tubes), and the hardware's recesses where the box has them.
  */
 export interface BoxKeepOut {
   /** the driver's basket and magnet, as boxes stepping in from the cutout to the motor */
   driver: readonly BoxRegion[];
   vent: readonly BoxRegion[];
+  /** the hardware's recesses (handles, input dish, horn posts), each as its fit check takes it (PlacedHardware fit) */
+  hardware?: readonly BoxRegion[];
 }
 
 /** A panel's first plate resonance with its own parts only, and with the braces and ribs, Hz. */
@@ -1621,6 +1623,8 @@ export interface PlacedHardware {
   u: number;
   v: number;
   recess: BoxRegion;
+  /** the room the fit check takes behind the panel: the recess, at least a hole's depth (and the posts' assumed cup) */
+  fit: BoxRegion;
   litres: number;
   /** what it runs into; empty when it fits */
   hits: HardwareObstacle[];

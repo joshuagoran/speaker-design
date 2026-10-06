@@ -187,6 +187,7 @@ export function derivePaDesign({
     subVentSpec,
     subDriver,
     braceStyle,
+    hardware.sub,
   );
   const midBracing = midBoxBracing(
     effectiveMidBoxDims,
@@ -195,6 +196,7 @@ export function derivePaDesign({
     midDriver,
     layout,
     braceStyle,
+    hardware.mid,
   );
   const subKeepOut = subBoxKeepOut(
     subBox,

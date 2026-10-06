@@ -25,7 +25,6 @@ import type {
   Dims3,
   PaDesignConfig,
   PaGoal,
-  PaHardware,
   PaMetricsSummary,
   PaOptimizerCurrent,
   PaOptimizerInput,
@@ -35,8 +34,6 @@ import type {
 import { close } from "./helpers";
 import { SEED_NAMES } from "./seeds";
 import { evaluate as evaluateGolden } from "./golden-configs";
-import { DEFAULT_HARDWARE } from "../src/lib/pa/hardware";
-import { NO_HANDLES } from "../src/constants/hardware";
 
 // boundary: the seed file is saved configurations (older ones lack mDim; all carry ampW)
 const seeds = JSON.parse(
@@ -80,16 +77,12 @@ const failsOn = (
 const cur = pick(SEED_NAMES.lilBlockOptimized);
 const base: PaOptimizerInput = { cur, room: 1000, maxLb: 125, budget: 1100, locks: {} };
 
-test("evaluate() gives the planner's numbers (golden's evaluation, without the handles)", (t) => {
-  // the optimizers disregard the handles and plates; the planner without handles has no recess (the dish takes none)
-  const noHandles: PaHardware = {
-    sub: { ...DEFAULT_HARDWARE.sub, model: NO_HANDLES },
-    mid: { ...DEFAULT_HARDWARE.mid, model: NO_HANDLES },
-  };
+test("evaluate() gives the planner's numbers (golden's evaluation, without the hardware)", (t) => {
+  // the optimizers disregard the handles and plates: no recesses, and the bracing planned without them
   for (const name of [SEED_NAMES.lilBlockOptimized, SEED_NAMES.blocky, SEED_NAMES.lilTower]) {
     // the seeds carry the crossovers and amps now; the type keeps them optional, as older saves lack them
     const m = evaluateDesign(pick(name) as PaDesignConfig)!,
-      g = evaluateGolden({ ...pick(name), hardware: noHandles });
+      g = evaluateGolden(pick(name), false);
     assert.ok(typeof g.Fb === "number" && typeof g.f3 === "number" && typeof g.spl45 === "number");
     close(t, m.Fb, g.Fb, 0.02, `${name} Fb`);
     close(t, m.f3, g.f3, 0.02, `${name} f3`);

@@ -144,20 +144,24 @@ test("a handle that runs into the vent, an edge, a rib or the driver says so", (
     bracing: ribbed,
     keepOut: { driver: [], vent: [] },
   });
-  // the preset steps the handles front or back until they clear the rib
-  assert.ok(hardwareFits(withRibs), hitsOf(withRibs));
-  const offset = planBoxHardware({
-    box: "sub",
-    dims: d.cDim,
-    t,
-    inset: d.inset,
-    // and an offset that puts them back on it is caught
-    handles: { ...DEFAULT_HARDWARE.sub, backIn: z - (withRibs.parts[0].u - d.inset - 0.75) },
-    driver: { centre: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
-    bracing: ribbed,
-    keepOut: { driver: [], vent: [] },
-  });
-  assert.ok(offset.parts[0].hits.includes("rib"), hitsOf(offset));
+  // the parts go first and the bracing round them: a rib laid without the recesses is caught, not dodged
+  assert.ok(
+    withRibs.parts.filter((p) => p.kind === "handle").every((p) => p.hits.includes("rib")),
+    hitsOf(withRibs),
+  );
+  assert.deepStrictEqual(
+    withRibs.parts.map((p) => [p.u, p.v]),
+    planBoxHardware({
+      box: "sub",
+      dims: d.cDim,
+      t,
+      inset: d.inset,
+      handles: DEFAULT_HARDWARE.sub,
+      driver: { centre: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
+      bracing: null,
+      keepOut: { driver: [], vent: [] },
+    }).parts.map((p) => [p.u, p.v]),
+  );
   // a driver body filling the box: no place for the handles clears it, and they say so
   const full = { x: [0, inner.x], y: [0, inner.y], z: [0, inner.z] } as const;
   const crowded = planBoxHardware({
