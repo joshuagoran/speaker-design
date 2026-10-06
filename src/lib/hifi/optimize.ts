@@ -851,7 +851,7 @@ export function optimizeHifiSpeaker(
         first: { label, why: HIFI_OPTIMIZER_GOALS[goal].why },
         fix: {
           label: CARD_LABELS.fix,
-          why: "Your design fails a check; this is the best that passes.",
+          why: "Your design fails a check. This is the best design that passes.",
         },
         // nothing that passes keeps what the goals keep: the one that comes closest (the notice says what it misses)
         closest: {
