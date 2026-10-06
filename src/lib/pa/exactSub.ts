@@ -31,6 +31,7 @@ import {
   paInner,
 } from "./calc";
 import type {
+  BoxBracing,
   BraceStyleId,
   MidSystemConfig,
   CrossoverOrder,
@@ -45,7 +46,7 @@ import type {
 import { subTubeEndCorrection, subTubeSpan, type TubeDriver } from "./tubes";
 import { ELBOW_COUNTS, MAX_ELBOWS, ownSpans, type ElbowCount } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
-import { planWoodIn3 } from "../bracing";
+import { carriedWood } from "../bracing";
 
 const RHO = 1.18,
   C = 343,
@@ -527,6 +528,8 @@ export interface SolvedShape {
   box: Dims3;
   len: number;
   area: number;
+  /** the braces' and ribs' wood in that box, in³ (subBraceWood's there) */
+  brace: Pick<BoxBracing, "windowIn3" | "ribIn3">;
 }
 /** The root of a rising `g` with g(a) <= 0 < g(b), by Illinois steps (regula falsi that halves a stale end). */
 function illinoisRoot(g: (x: number) => number, a: number, b: number) {
@@ -671,20 +674,20 @@ export function solveShape(
       vs = ventShape(style, box, v, t, drv);
     }
     len = v.len;
-    // the braces the rule chose for the box on its grid, their wood carried to this size (planWoodIn3: smooth in the
+    // the braces the rule chose for the box on its grid, their wood carried to this size (carriedWood: smooth in the
     // side, and what subBoxBracing gives here); settled in another grid box than the choice's, the steps go on with
     // that box's choice (a few times: a volume only a change in the choice straddles has no box)
     ref ??= subBracingChoice(box, t, inset, style, v, drv, target.braceStyle);
+    const brace = carriedWood(ref.b, ref.inner, paInner(box, t, inset), t);
     const net =
       ((box.w - 2 * t) * (box.h - 2 * t) * (box.d - inset - 0.75 - t) * 16.387) / 1000 -
       disp -
       (vs.area * len * 16.387) / 1000 -
-      subWoodWithIn3(style, box, t, v, planWoodIn3(ref.b, ref.inner, paInner(box, t, inset), t)) *
-        IN3_TO_L;
+      subWoodWithIn3(style, box, t, v, brace.windowIn3 + brace.ribIn3) * IN3_TO_L;
     const err = VbL - net;
     if (Math.abs(err) <= 1e-11 * VbL) {
       const own = subBracingChoice(box, t, inset, style, v, drv, target.braceStyle);
-      if (own.b === ref.b) return unreached ? null : { box: { ...box }, len, area: vs.area };
+      if (own.b === ref.b) return unreached ? null : { box: { ...box }, len, area: vs.area, brace };
       if (++replans > MAX_REPLANS) return null;
       ref = own;
       prev = null;

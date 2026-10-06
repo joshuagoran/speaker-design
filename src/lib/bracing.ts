@@ -219,7 +219,9 @@ export function windowRails(
  * under half a litre, is left in, so the box reads a little small).
  */
 export const windowWoodIn3 = (inner: Record<BoxAxis, number>, axis: BoxAxis, t: number) => {
-  const [P, Q] = BOX_AXES.filter((b) => b !== axis).map((b) => inner[b]);
+  // the two spans across the axis (written out: solvers call this at every step)
+  const P = axis === "x" ? inner.y : inner.x,
+    Q = axis === "z" ? inner.y : inner.z;
   const R = WINDOW_RAIL_IN;
   return (P * Q - Math.max(0, P - 2 * R) * Math.max(0, Q - 2 * R)) * t;
 };

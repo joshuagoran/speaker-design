@@ -765,12 +765,7 @@ function exactHook(
       )
         continue;
       if (!subBaffleFits(sol.box, style, v, t, sub)) continue;
-      const lb = subWeightLb(
-        sol.box,
-        t,
-        sub.lb,
-        subBraceWood(sol.box, t, s.cur.inset, style, v, sub, s.braceStyle),
-      );
+      const lb = subWeightLb(sol.box, t, sub.lb, sol.brace);
       if (lb > s.cap + 1e-9) continue;
       if (!b || lb < b.lb) {
         g.best.set(ck, { lb, area: sol.area, box: sol.box, len: sol.len, done: false });
