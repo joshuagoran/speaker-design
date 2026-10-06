@@ -386,7 +386,7 @@ export function NotesPage() {
               ],
               [
                 "Handles and input plates",
-                `From presets under ${PA_SETTINGS_TABS.build}: ${HANDLES.map((h) => h.name).join(" or ")} handles (or none) on each box's sides at its centre of gravity, the ${INPUT_PLATE.name} dish with 2 \u00d7 ${INPUT_JACK.name} low on each back, and the ${HORN_POSTS.name} on the ${PA_SETTINGS_TABS.mid.toLowerCase()} box's lid for the horn, all from Parts Express. Still open: the screw patterns (not listed), and whether the ${HANDLES[0].name} takes its backplate and gasket.`,
+                `From presets under ${PA_SETTINGS_TABS.build}: ${HANDLES.map((h) => h.name).join(" or ")} handles (or none) on each box's sides at its centre of gravity, the ${INPUT_PLATE.name} dish with 2 \u00d7 ${INPUT_JACK.name} low on each back, and the ${HORN_POSTS.name} on the ${PA_SETTINGS_TABS.mid.toLowerCase()} box's lid for the horn, all from Parts Express. The planner takes their recesses off the volumes and their weight onto the boxes; the optimizers leave them out, so a card reads slightly roomier and lighter than the same design in the planner. Still open: the screw patterns (not listed), and whether the ${HANDLES[0].name} takes its backplate and gasket.`,
               ],
               [
                 "Port edge finish",

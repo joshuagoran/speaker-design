@@ -15,6 +15,7 @@ import type {
   CutPartsConfig,
   BoxHandles,
   BoxHardwarePlan,
+  CogMass,
   Dims3,
   FillDriver,
   FillSystem,
@@ -1061,8 +1062,49 @@ export function hardwareCutNotes(plan: BoxHardwarePlan, box: Dims3, t: number): 
 }
 
 /**
+ * The sub's vent panels as weights for its centre of gravity (lib/pa/hardware boxCentreOfGravity), each at its middle
+ * (`y` up from the box's bottom, `z` back from its front), cut and placed as the cutlist and the 3D view take them: a
+ * bottom slot's shelf and two fins from the front, and a folded slot's rear channel wall; a side duct's wall and its two
+ * dividers from the front, at the design's divider thickness. Round tubes count none.
+ */
+export function subVentMasses(box: Dims3, t: number, style: PortStyle, v: BraceVent): CogMass[] {
+  const { iw, ih } = paInside(box, t, 0);
+  const ply = (a: number, b: number, th: number) => (a * b * plywoodLbPerSqFt(th)) / 144;
+  if (style === "slots") {
+    const folded = slotFolds(box, v, t);
+    const len = folded
+      ? foldedShelfIn(box, v.slotH, t)
+      : Math.min(v.len, maxStraightSlotIn(box, v.slotH, t));
+    const out: CogMass[] = [
+      { lb: ply(iw, len, t), y: t + v.slotH + t / 2, z: len / 2 },
+      { lb: 2 * ply(v.slotH, len, t), y: t + v.slotH / 2, z: len / 2 },
+    ];
+    if (folded) {
+      const wallH = foldedRearWallIn(box, v, t);
+      out.push({
+        lb: ply(iw, wallH, t),
+        y: t + v.slotH + wallH / 2,
+        z: box.d - t - v.slotH - t / 2,
+      });
+    }
+    return out;
+  }
+  if (style === "vslots" || style === "vslot1") {
+    const n = style === "vslot1" ? 1 : 2;
+    // the duct runs back from the mouth, leaving at least a throat's gap to the back panel
+    const len = Math.min(v.len, box.d - t - v.throat);
+    return [
+      { lb: n * ply(ih, len, t), y: box.h / 2, z: len / 2 },
+      { lb: 2 * n * ply(v.throat, len, ductDividerIn(v)), y: box.h / 2, z: len / 2 },
+    ];
+  }
+  return [];
+}
+
+/**
  * The sub box's hardware from its presets (lib/pa/hardware planBoxHardware): its driver where the 3D view puts it, its
- * braces by rule and its keep-out, so the parts are checked against what is really inside.
+ * braces by rule and its keep-out, so the parts are checked against what is really inside, and its vent's panels in
+ * the centre of gravity.
  */
 export function subHardwarePlan(
   box: Dims3,
@@ -1087,6 +1129,7 @@ export function subHardwarePlan(
     },
     bracing: subBoxBracing(box, t, inset, style, v, drv, braceStyle),
     keepOut: subKeepOut(box, t, inset, style, v, drv),
+    ventMasses: subVentMasses(box, t, style, v),
   });
 }
 /** The mid box's hardware from its presets; null in the tower, whose mid chamber is part of the sub's cabinet. */
@@ -1581,6 +1624,13 @@ export const hornBeamWidthDeg = (covDeg: number, fK: number, f: number) =>
 
 // ---- weights (lb): 3/4″ baffle, other panels at the wall ply, and the braces and ribs (subBoxBracing,
 // midBoxBracing) by their wood. Without the bracing: the bare box, a floor for any bracing ----
+/**
+ * What each box weighs besides its panels, braces, driver and the catalogue's hardware (lib/pa/hardware hardwareLb), lb:
+ * the screws, glue, wiring and damping. The handles, the input dish and its jacks, and the horn posts are counted by
+ * part, so these are only the remainder.
+ */
+export const SUB_FIXINGS_LB = 3.5;
+export const MID_FIXINGS_LB = 0.5;
 export const subWeightLb = (
   b: Dims3,
   wall: number,
@@ -1593,7 +1643,7 @@ export const subWeightLb = (
   braceLb(bracing, wall) +
   (drvLb || 0) +
   hardwareLb +
-  6;
+  SUB_FIXINGS_LB;
 export const midWeightLb = (
   b: Dims3,
   wall: number,
@@ -1604,7 +1654,7 @@ export const midWeightLb = (
   (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
   braceLb(bracing, wall) +
   hardwareLb +
-  2;
+  MID_FIXINGS_LB;
 
 // ---- the sub as the planner computes it ----
 // cfg: { subBox, midDims, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout }

@@ -8,14 +8,22 @@ import {
   formatInches,
   midHardwarePlan,
   midSystem,
+  subBoxBracing,
+  subDriverCentre,
   subGeometry,
   subHardwarePlan,
+  subKeepOut,
+  subVentMasses,
 } from "../src/lib/pa/calc";
+import { subDriverDepthIn } from "../src/lib/pa/tubes";
 import {
+  boxCentreOfGravity,
   DEFAULT_HARDWARE,
   hardwareFits,
   hardwareLb,
   hardwareLitres,
+  handlePart,
+  HORN_POSTS_FIT_DEPTH_IN,
   partRecessLitres,
   planBoxHardware,
   savedHardware,
@@ -78,8 +86,19 @@ test("handles sit at the centre-of-gravity height and move with the offsets", ()
   const up = subPlan({ ...DEFAULT_HARDWARE.sub, upIn: 2, backIn: 1 });
   close(null, up.parts[0].v, base.parts[0].v + 2, 1e-9);
   close(null, up.parts[0].u, base.parts[0].u + 1, 1e-9);
-  // the 18″ driver sits above the bottom slot, so the sub's centre of gravity is over half its height
-  assert.ok(base.parts[0].v > d.cDim.h / 2, `${base.parts[0].v}`);
+  // at the centre of gravity's height: the walls, baffle, driver (above the bottom slot) and the slot's own panels
+  const cog = boxCentreOfGravity(
+    d.cDim,
+    t,
+    d.inset,
+    {
+      centre: subDriverCentre(d.cDim, t, d.portStyle, vent, d.sub.size),
+      lb: d.sub.lb,
+      depthIn: subDriverDepthIn(d.sub),
+    },
+    subVentMasses(d.cDim, t, d.portStyle, vent),
+  );
+  close(null, base.parts[0].v, cog.y, 1e-9);
 });
 
 test("a handle that runs into the vent, an edge, a rib or the driver says so", () => {
@@ -174,7 +193,9 @@ test("each recess's litres come off the box's net volume, and the tuning follows
   const bare = subGeometry(d.sub, d.mid, cfg),
     fitted = subGeometry(d.sub, d.mid, { ...cfg, hardware: DEFAULT_HARDWARE });
   const litres = hardwareLitres(DEFAULT_HARDWARE, "sub", t, d.layout);
-  close(null, litres, 2 * partRecessLitres(h1105, t), 1e-12);
+  const handle = handlePart(DEFAULT_HARDWARE.sub.model);
+  assert.ok(handle);
+  close(null, litres, 2 * partRecessLitres(handle, t), 1e-12);
   close(null, fitted.recessL, litres, 1e-12);
   close(null, bare.netL - fitted.netL, litres, 1e-9);
   assert.ok(fitted.Fb > bare.Fb, "a smaller box tunes higher on the same vent");
@@ -235,10 +256,12 @@ test("the cutlist notes each cutout on its panel, from a named edge", () => {
     m = midPlan();
   assert.ok(m);
   const side = row(fitted, "sub", "side");
+  const handle = handlePart(DEFAULT_HARDWARE.sub.model);
+  assert.ok(handle?.cutout);
   assert.ok(side.startsWith(row(plain, "sub", "side")), "the joint's note stays first");
   assert.ok(
     side.includes(
-      `6 3/4 × 4 1/4″ cutout for the Penn Elcom H1105 handle, both sides, centred ${formatInches(s.parts[0].u)}″ back from the front edge and ${formatInches(s.parts[0].v)}″ up from the bottom edge`,
+      `${formatInches(handle.cutout.w)} × ${formatInches(handle.cutout.h)}″ cutout for the ${handle.name} handle, both sides, centred ${formatInches(s.parts[0].u)}″ back from the front edge and ${formatInches(s.parts[0].v)}″ up from the bottom edge`,
     ),
     side,
   );
@@ -258,6 +281,67 @@ test("the cutlist notes each cutout on its panel, from a named edge", () => {
     ),
     top,
   );
+});
+
+test("a bottom slot's shelf, fins and folded rear wall pull the sub's handles down", () => {
+  const plan = (masses: boolean, v: VentSpec) =>
+    planBoxHardware({
+      box: "sub",
+      dims: d.cDim,
+      t,
+      inset: d.inset,
+      handles: DEFAULT_HARDWARE.sub,
+      driver: {
+        centre: subDriverCentre(d.cDim, t, "slots", v, d.sub.size),
+        lb: d.sub.lb,
+        depthIn: subDriverDepthIn(d.sub),
+      },
+      bracing: subBoxBracing(d.cDim, t, d.inset, "slots", v, d.sub, undefined),
+      keepOut: subKeepOut(d.cDim, t, d.inset, "slots", v, d.sub),
+      ventMasses: masses ? subVentMasses(d.cDim, t, "slots", v) : [],
+    });
+  const slot = { ...vent, len: 12 };
+  // the planner's plan counts the vent: the same as the plan given its panels
+  assert.deepStrictEqual(subPlan(DEFAULT_HARDWARE.sub, "slots", slot), plan(true, slot));
+  assert.ok(
+    plan(true, slot).parts[0].v < plan(false, slot).parts[0].v,
+    "lower with the shelf and fins",
+  );
+  // a folded slot adds its rear wall: three panels, and the handles still sit lower than without the vent
+  const folded = { ...vent, len: d.cDim.d + 4 };
+  assert.equal(subVentMasses(d.cDim, t, "slots", folded).length, 3);
+  assert.ok(plan(true, folded).parts[0].v < plan(false, folded).parts[0].v);
+  // a side duct's wall and dividers sit at mid-height; round tubes count none
+  assert.equal(subVentMasses(d.cDim, t, "vslots", vent).length, 2);
+  assert.deepStrictEqual(subVentMasses(d.cDim, t, "round2", vent), []);
+});
+
+test("the horn posts' fit check takes an assumed depth, their volume none", () => {
+  assert.equal(HORN_POSTS.depthIn, null);
+  const m = midPlan();
+  assert.ok(m);
+  const posts = m.parts[3];
+  assert.equal(posts.litres, 0);
+  // a window brace an inch under the lid, under the posts: the posts reach it only with the assumed depth
+  const inner = { x: d.mDim.w - 2 * t, y: d.mDim.h - 2 * t, z: d.mDim.d - d.inset - 0.75 - t };
+  const under = HORN_POSTS_FIT_DEPTH_IN - t;
+  const block = {
+    x: [0, inner.x],
+    y: [inner.y - under + 0.05, inner.y - 0.11],
+    z: [0, inner.z],
+  } as const;
+  const withBlock = planBoxHardware({
+    box: "mid",
+    dims: d.mDim,
+    t,
+    inset: d.inset,
+    handles: { ...DEFAULT_HARDWARE.mid, model: NO_HANDLES },
+    driver: { centre: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
+    bracing: null,
+    keepOut: { driver: [block], vent: [] },
+  });
+  const p = withBlock.parts.find((x) => x.kind === "posts");
+  assert.ok(p?.hits.includes("driver"), hitsOf(withBlock));
 });
 
 test("a design saved before the hardware loads with the default handles, and reads as the planner has it", () => {
@@ -281,7 +365,7 @@ test("a design saved before the hardware loads with the default handles, and rea
   });
   // the defaults are what the planner starts on
   assert.deepStrictEqual(DEFAULT_PA.hardware, DEFAULT_HARDWARE);
-  // an old save (no hardware) evaluates as the same design with the default hardware
+  // the optimizers disregard the hardware: an old save, the defaults and no handles all evaluate alike
   const { hardware: _drop, ...old } = DEFAULT_PA;
   void _drop;
   const c: PaDesignConfig = {
@@ -303,7 +387,5 @@ test("a design saved before the hardware loads with the default handles, and rea
     });
   assert.ok(a && b && none);
   assert.deepStrictEqual(a, b);
-  // without the sub's handles its box is bigger inside (lower tuning) and lighter
-  assert.ok(none.netL > a.netL && none.Fb < a.Fb, `${none.netL} ${a.netL}`);
-  assert.ok(none.subLb < a.subLb);
+  assert.deepStrictEqual(a, none);
 });

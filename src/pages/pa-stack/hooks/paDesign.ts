@@ -308,7 +308,7 @@ export function derivePaDesign({
         maxCurveOf(midModelled.mdl.curve, { ...midDriver.ts, Xmax }, midVoltage, Infinity),
       )
     : null;
-  /** 3/4" baffle at 2.3 lb/ft\u00b2, other panels, braces and ribs at the chosen ply, plus 2 lb of hardware */
+  /** 3/4" baffle at 2.3 lb/ft\u00b2, other panels, braces and ribs at the chosen ply, the catalogue's hardware (handles, dish, jacks, horn posts) and MID_FIXINGS_LB of screws, glue, wiring and damping */
   const midCabinetLb = midWeightLb(
     effectiveMidBoxDims,
     wallThicknessIn,

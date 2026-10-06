@@ -1619,6 +1619,12 @@ export interface PlacedHardware {
   /** what it runs into; empty when it fits */
   hits: HardwareObstacle[];
 }
+/** A weight inside a box for its centre of gravity (lb), at `y` up from its bottom and `z` back from its front (in). */
+export interface CogMass {
+  lb: number;
+  y: number;
+  z: number;
+}
 /** A box's hardware as placed: each part, their recesses' litres, weight (lb) and price ($), every part bought. */
 export interface BoxHardwarePlan {
   box: HardwareBoxId;

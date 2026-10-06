@@ -25,6 +25,7 @@ import type {
   Dims3,
   PaDesignConfig,
   PaGoal,
+  PaHardware,
   PaMetricsSummary,
   PaOptimizerCurrent,
   PaOptimizerInput,
@@ -33,14 +34,14 @@ import type {
 } from "../src/types";
 import { close } from "./helpers";
 import { SEED_NAMES } from "./seeds";
+import { evaluate as evaluateGolden } from "./golden-configs";
+import { DEFAULT_HARDWARE } from "../src/lib/pa/hardware";
+import { NO_HANDLES } from "../src/constants/hardware";
 
-// boundary: the seed file is saved configurations (older ones lack mDim; all carry ampW), and golden.json holds the numbers checked below
+// boundary: the seed file is saved configurations (older ones lack mDim; all carry ampW)
 const seeds = JSON.parse(
   fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url), "utf8"),
 ) as (Omit<PaOptimizerCurrent, "mDim" | "ampW"> & { mDim?: Dims3; ampW: number; name: string })[];
-const golden = JSON.parse(
-  fs.readFileSync(new URL("./golden.json", import.meta.url), "utf8"),
-) as Record<string, { Fb: number; f3: number; spl45: number }>;
 // a saved design with the fields older saves lack filled in (every seed carries `ampW`; the crossovers and amps stay optional)
 type Picked = PaOptimizerCurrent &
   Required<
@@ -79,11 +80,17 @@ const failsOn = (
 const cur = pick(SEED_NAMES.lilBlockOptimized);
 const base: PaOptimizerInput = { cur, room: 1000, maxLb: 125, budget: 1100, locks: {} };
 
-test("evaluate() gives the planner's numbers (golden snapshot)", (t) => {
+test("evaluate() gives the planner's numbers (golden's evaluation, without the handles)", (t) => {
+  // the optimizers disregard the handles and plates; the planner without handles has no recess (the dish takes none)
+  const noHandles: PaHardware = {
+    sub: { ...DEFAULT_HARDWARE.sub, model: NO_HANDLES },
+    mid: { ...DEFAULT_HARDWARE.mid, model: NO_HANDLES },
+  };
   for (const name of [SEED_NAMES.lilBlockOptimized, SEED_NAMES.blocky, SEED_NAMES.lilTower]) {
     // the seeds carry the crossovers and amps now; the type keeps them optional, as older saves lack them
     const m = evaluateDesign(pick(name) as PaDesignConfig)!,
-      g = golden[name];
+      g = evaluateGolden({ ...pick(name), hardware: noHandles });
+    assert.ok(typeof g.Fb === "number" && typeof g.f3 === "number" && typeof g.spl45 === "number");
     close(t, m.Fb, g.Fb, 0.02, `${name} Fb`);
     close(t, m.f3, g.f3, 0.02, `${name} f3`);
     close(t, m.spl45, g.spl45, 0.02, `${name} spl45`);
@@ -341,10 +348,9 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
   const k = out.cards[0];
   assert.ok(k.config.ampW > c.ampW, `amp ${k.config.ampW} W`);
   assert.ok(k.metrics.out >= evaluateDesign(c)!.out + 1, "louder than the design at 200 W");
-  // and no more power than it uses: 50 W less loses output, in the search's own model (its braces by estimate; the
-  // card's numbers are the rule's, a few hundredths of a dB apart where the cone, not the amp, sets the limit)
-  const at = (ampW: number) => evaluateDesign({ ...k.config, ampW }, true)!.out;
-  assert.ok(at(k.config.ampW - 50) < at(k.config.ampW) - 0.01 || k.config.ampW - 50 < 200);
+  // and no more power than it uses: 50 W less loses output
+  const less = evaluateDesign({ ...k.config, ampW: k.config.ampW - 50 })!;
+  assert.ok(less.out < k.metrics.out - 0.01 || k.config.ampW - 50 < 200);
 });
 
 test("vent locked on a round1 or round4 style searches that style's tubes instead of throwing", (t) => {
@@ -465,13 +471,13 @@ test("a failing design with nothing in reach: the closest design that passes, an
 });
 
 test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
-  // "blocky" under an $820 budget and 100 lb (its handles and plates weigh in too), with the vent kept to its
-  // bottom slot, nothing that passes keeps the output; $902 does
+  // "blocky" under an $800 budget and 95 lb, with the vent kept to its bottom slot, nothing that passes keeps the
+  // output; $880 does
   const out = optimizePaStack({
     ...base,
     cur: pick(SEED_NAMES.blocky),
-    maxLb: 100,
-    budget: 820,
+    maxLb: 95,
+    budget: 800,
     goal: "cheaper",
     locks: { vent: true },
   });
@@ -479,7 +485,7 @@ test("with only a closest card, the near miss still offers the looser limit that
   assert.ok(out.cards.length > 0);
   const opts = out.nearMiss ? out.nearMiss.options : [];
   assert.ok(
-    opts.some((o) => o.set.budget === 902),
+    opts.some((o) => o.set.budget === 880),
     JSON.stringify(opts.map((o) => o.text)),
   );
 });

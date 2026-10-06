@@ -9,6 +9,7 @@ import type {
   BoxKeepOut,
   BoxRegion,
   CabinetPart,
+  CogMass,
   Dims3,
   HandleChoice,
   HardwareBoxId,
@@ -43,15 +44,21 @@ export const HARDWARE_FLANGE_EDGE_IN = 0.25;
  * over it blocks it even where the recess is shallower than the wall.
  */
 const FIT_MIN_DEPTH_IN = 0.1;
+/**
+ * The depth the fit check takes for the horn's binding-post cup, in from the lid's outside face: Parts Express doesn't
+ * list it (the catalogue keeps it null, so its recess counts no volume), and a cup reaching an inch down is the
+ * conservative guess that still lets a brace or the mid's magnet under the lid show up as a clash.
+ */
+export const HORN_POSTS_FIT_DEPTH_IN = 1;
 /** The step the presets move a part by while they look for a clear place, in. */
 const SCAN_STEP_IN = 0.25;
 /** Share of a driver's mounting depth behind the baffle's front where its weight sits (the magnet is at the back). */
 const DRIVER_MASS_DEPTH_SHARE = 0.5;
 
-/** Each box's handles on first load and in saves from before the setting: the H1105 at the centre of gravity. */
+/** Each box's handles on first load and in saves from before the setting: the 30769 at the centre of gravity. */
 export const DEFAULT_HARDWARE: PaHardware = {
-  sub: { model: "H1105", upIn: 0, backIn: 0 },
-  mid: { model: "H1105", upIn: 0, backIn: 0 },
+  sub: { model: "30769", upIn: 0, backIn: 0 },
+  mid: { model: "30769", upIn: 0, backIn: 0 },
 };
 
 /** The handle choices in the settings' order: none, then the catalogue's. */
@@ -147,10 +154,16 @@ const insideOf = (box: Dims3, t: number, inset: number) => ({
 
 /**
  * A box's centre of gravity, in from its outside: `y` up from the bottom, `z` back from the front. The walls (each at
- * its middle), the baffle and the driver (its weight at half its mounting depth) count; the braces and the vent's parts
- * spread through the box and are left out.
+ * its middle), the baffle, the driver (its weight at half its mounting depth) and `more` (the vent's panels, where
+ * they sit: lib/pa/calc subVentMasses) count; the braces spread through the box and are left out.
  */
-export function boxCentreOfGravity(box: Dims3, t: number, inset: number, drv: HardwareDriver) {
+export function boxCentreOfGravity(
+  box: Dims3,
+  t: number,
+  inset: number,
+  drv: HardwareDriver,
+  more: readonly CogMass[] = [],
+) {
   const { w, h, d } = box;
   const wallLb = panelLbPerSqFt(t, PLYWOOD_MATERIAL) / 144;
   const sides = 2 * d * h * wallLb,
@@ -162,6 +175,7 @@ export function boxCentreOfGravity(box: Dims3, t: number, inset: number, drv: Ha
     [back, h / 2, d - t / 2],
     [baffle, h / 2, inset + BAFFLE_IN / 2],
     [drv.lb, t + drv.centre.y, inset + DRIVER_MASS_DEPTH_SHARE * drv.depthIn],
+    ...more.map((m): [number, number, number] => [m.lb, m.y, m.z]),
   ];
   const total = masses.reduce((a, [m]) => a + m, 0);
   return {
@@ -234,10 +248,15 @@ function cutoutSpan(d: Draft) {
       ? { x: c.w, y: c.h, z: 0, fx: f.w, fy: f.h, fz: 0 }
       : { x: c.w, z: c.h, y: 0, fx: f.w, fz: f.h, fy: 0 };
 }
-/** The room a part's recess takes inside, box axes. */
-function recessOf(d: Draft, inner: Record<"x" | "y" | "z", number>, t: number): BoxRegion {
+/** The room a part's recess takes inside, box axes, reaching `depthIn` from the panel's outside face (its listed depth). */
+function recessOf(
+  d: Draft,
+  inner: Record<"x" | "y" | "z", number>,
+  t: number,
+  depthIn = d.part.depthIn ?? 0,
+): BoxRegion {
   const s = cutoutSpan(d);
-  const p = Math.max(0, (d.part.depthIn ?? 0) - t);
+  const p = Math.max(0, depthIn - t);
   const span = (k: "x" | "y" | "z", w: number) => [d.at[k] - w / 2, d.at[k] + w / 2] as const;
   switch (d.panel) {
     case "sideL":
@@ -289,7 +308,9 @@ function hitsOf(
   obs: Obstacles,
   placed: readonly PlacedHardware[],
 ): HardwareObstacle[] {
-  const r = fitRegion(recessOf(d, inner, t), d.panel, inner);
+  // the horn posts' cup has no listed depth: the fit check takes HORN_POSTS_FIT_DEPTH_IN
+  const fitDepth = d.part.depthIn ?? (d.kind === "posts" ? HORN_POSTS_FIT_DEPTH_IN : 0);
+  const r = fitRegion(recessOf(d, inner, t, fitDepth), d.panel, inner);
   const hits: HardwareObstacle[] = [];
   if (!clearOfEdges(d, box, inner, t, inset)) hits.push("edge");
   for (const k of ["window", "rib", "driver", "vent"] as const)
@@ -362,10 +383,11 @@ function handlePreset(
   inset: number,
   handle: CabinetPart,
   driver: HardwareDriver,
+  more: readonly CogMass[],
   obs: Obstacles,
   inner: Record<"x" | "y" | "z", number>,
 ) {
-  const cog = boxCentreOfGravity(dims, t, inset, driver);
+  const cog = boxCentreOfGravity(dims, t, inset, driver, more);
   const y = cog.y - t,
     z0 = cog.z - inset - BAFFLE_IN;
   const clearAt = (z: number) =>
@@ -388,7 +410,10 @@ function handlePreset(
   return { y, z: z0 };
 }
 
-/** What `planBoxHardware` reads: the box, its walls and inset, its handles, driver, braces and keep-out. */
+/**
+ * What `planBoxHardware` reads: the box, its walls and inset, its handles, driver, braces and keep-out, and the vent's
+ * panels for the centre of gravity (none in the mid box).
+ */
 export interface BoxHardwareInput {
   box: HardwareBoxId;
   dims: Dims3;
@@ -398,6 +423,7 @@ export interface BoxHardwareInput {
   driver: HardwareDriver;
   bracing: BoxBracing | null;
   keepOut: BoxKeepOut;
+  ventMasses?: readonly CogMass[];
 }
 
 /**
@@ -414,13 +440,14 @@ export function planBoxHardware({
   driver,
   bracing,
   keepOut,
+  ventMasses = [],
 }: BoxHardwareInput): BoxHardwarePlan {
   const inner = insideOf(dims, t, inset);
   const obs = obstaclesOf(bracing, keepOut, inner, t);
   const placed: PlacedHardware[] = [];
   const handle = handlePart(handles.model);
   if (handle) {
-    const at = { ...handlePreset(dims, t, inset, handle, driver, obs, inner), x: 0 };
+    const at = { ...handlePreset(dims, t, inset, handle, driver, ventMasses, obs, inner), x: 0 };
     at.y += handles.upIn;
     at.z += handles.backIn;
     for (const panel of ["sideL", "sideR"] as const) {
