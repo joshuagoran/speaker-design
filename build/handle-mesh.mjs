@@ -15,7 +15,7 @@ const STEP = new URL("./assets/penn-elcom-h1105.step", import.meta.url);
 const OUT = new URL("../src/data/meshes/h1105.ts", import.meta.url);
 /** Largest gap between the mesh and the true surface, mm. */
 const LINEAR_DEFLECTION_MM = Number(process.env.LIN ?? 2);
-/** Largest angle between neighbouring facets on a curve, radians. */
+/** Largest angle between neighboring facets on a curve, radians. */
 const ANGULAR_DEFLECTION = Number(process.env.ANG ?? 0.8);
 /** The weld grid and the stored unit, mm. */
 const QUANT_MM = 0.5;

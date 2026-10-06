@@ -12,7 +12,7 @@ export const HARDWARE_MESH_NAME = "hardware";
 const FLANGE_T_IN = 0.08;
 /** How far the opening, grip, jacks and posts stand off the flange, in. */
 const PROUD_IN = 0.02;
-/** Millimetres to the scene's inches. */
+/** Millimeters to the scene's inches. */
 const MM_IN = 1 / 25.4;
 /** How far the hole's mask stands off the face, in (proud of it, inside the flange's 5 mm). */
 const MASK_PROUD_IN = 0.02;
@@ -72,7 +72,7 @@ function faceFrame(p: PlacedHardware, face: ReturnType<typeof faceOf>, at: THREE
   return new THREE.Matrix4().makeBasis(across, up, face.n).setPosition(at);
 }
 
-// each mesh's geometry built once, in inches, its flange centred on the origin and the panel's face at z = 0
+// each mesh's geometry built once, in inches, its flange centered on the origin and the panel's face at z = 0
 const MESH_GEOMETRY = new Map<HardwareMesh, THREE.BufferGeometry>();
 function meshGeometry(m: HardwareMesh) {
   const hit = MESH_GEOMETRY.get(m);
@@ -112,7 +112,7 @@ function modelPart(
   part.applyMatrix4(faceFrame(p, face, face.at));
   part.name = HARDWARE_MESH_NAME;
   part.renderOrder = MODEL_RENDER_ORDER;
-  // the hole: the recess body's outline, placed on the flange's centre as the geometry is
+  // the hole: the recess body's outline, placed on the flange's center as the geometry is
   const [w, h] = [0, 1].map((k) => (m.hole.max[k] - m.hole.min[k] - 2 * HOLE_INSET_MM) * MM_IN);
   const off = [0, 1].map(
     (k) => ((m.hole.min[k] + m.hole.max[k]) / 2 - (m.min[k] + m.max[k]) / 2) * MM_IN,

@@ -387,7 +387,7 @@ export function NotesPage() {
             {[
               [
                 "Bracing",
-                `By rule: ribs, window braces or both (one setting for the stack, under ${PA_SETTINGS_TABS.build} in the planner) go in, clear of the drivers and the vent, until every panel's first resonance clears ${formatHz(PA_PANEL_TARGET_HZ)}; they are in the cutlist, the volume, the weight and the cutaway, where the drivers show too. They go round the recesses of the handles, input dishes and horn posts, which are placed first; a warning under ${PA_SETTINGS_TABS.build} says where a part doesn't fit.`,
+                `By rule: ribs, window braces or both (one setting for the stack, under ${PA_SETTINGS_TABS.build} in the planner) go in, clear of the drivers and the vent, until every panel's first resonance clears ${formatHz(PA_PANEL_TARGET_HZ)}; they are in the cutlist, the volume, the weight and the cutaway, where the drivers show too. They go around the recesses of the handles, input dishes and horn posts, which are placed first; a warning under ${PA_SETTINGS_TABS.build} says where a part doesn't fit.`,
               ],
               [
                 HARDWARE_SECTION_TITLE,

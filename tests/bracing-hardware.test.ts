@@ -1,4 +1,4 @@
-// The bracing round the hardware (no rib or window brace over a handle's, the dish's or the posts' recess, so a panel
+// The bracing around the hardware (no rib or window brace over a handle's, the dish's or the posts' recess, so a panel
 // with a handle still takes its ribs beside it), and each bracing style giving its own braces, as the 3D view draws them.
 import { test } from "vite-plus/test";
 import assert from "node:assert";

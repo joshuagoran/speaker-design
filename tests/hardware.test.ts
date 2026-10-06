@@ -146,7 +146,7 @@ test("a handle that runs into the vent, an edge, a rib or the driver says so", (
     bracing: ribbed,
     keepOut: { driver: [], vent: [] },
   });
-  // the parts go first and the bracing round them: a rib laid without the recesses is caught, not dodged
+  // the parts go first and the bracing around them: a rib laid without the recesses is caught, not dodged
   assert.ok(
     withRibs.parts.filter((p) => p.kind === "handle").every((p) => p.hits.includes("rib")),
     hitsOf(withRibs),
@@ -273,14 +273,14 @@ test("the cutlist notes each cutout on its panel, from a named edge", () => {
   assert.ok(side.startsWith(row(plain, "sub", "side")), "the joint's note stays first");
   assert.ok(
     side.includes(
-      `${formatInches(handle.cutout.w)}″ wide × ${formatInches(handle.cutout.h)}″ high cutout for the ${handle.name} handle, both sides, centre ${formatInches(s.parts[0].u)}″ from the front edge and ${formatInches(s.parts[0].v)}″ from the bottom edge`,
+      `${formatInches(handle.cutout.w)}″ wide × ${formatInches(handle.cutout.h)}″ high cutout for the ${handle.name} handle, both sides, center ${formatInches(s.parts[0].u)}″ from the front edge and ${formatInches(s.parts[0].v)}″ from the bottom edge`,
     ),
     side,
   );
   const back = row(fitted, "sub", "back");
   assert.ok(
     back.includes(
-      `4″ wide × 2 1/2″ high cutout for the ${INPUT_PLATE.name} input dish, back, centred side to side, centre ${formatInches(s.parts[2].v - t / 2)}″ from the bottom edge; 2 × ${INPUT_JACK.name}`,
+      `4″ wide × 2 1/2″ high cutout for the ${INPUT_PLATE.name} input dish, back, centered side to side, center ${formatInches(s.parts[2].v - t / 2)}″ from the bottom edge; 2 × ${INPUT_JACK.name}`,
     ),
     back,
   );
@@ -289,7 +289,7 @@ test("the cutlist notes each cutout on its panel, from a named edge", () => {
   const top = row(fitted, "mid", "topBottom");
   assert.ok(
     top.includes(
-      `2 7/8″ wide × 2 1/8″ front to back cutout for the ${HORN_POSTS.name} horn binding posts, top only, centred side to side, centre ${formatInches(d.mDim.d - m.parts[3].v)}″ from the rear edge`,
+      `2 7/8″ wide × 2 1/8″ front to back cutout for the ${HORN_POSTS.name} horn binding posts, top only, centered side to side, center ${formatInches(d.mDim.d - m.parts[3].v)}″ from the rear edge`,
     ),
     top,
   );

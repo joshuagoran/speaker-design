@@ -6,7 +6,7 @@
 import type { CabinetPart } from "../../types";
 
 const PE = "https://www.parts-express.com/";
-/** Millimetres to inches, for the parts dimensioned in mm. */
+/** Millimeters to inches, for the parts dimensioned in mm. */
 const MM = 1 / 25.4;
 
 /** The recessed handles a box can take, two per box (one each side). */
@@ -32,7 +32,7 @@ export const HANDLES = [
     depthIn: 58 * MM,
     lb: 1,
     screws: "5.5 mm holes in the flange (the drawing doesn't dimension their pattern)",
-    note: "All steel, black. Parts Express's drawing gives the flange (220 × 162 mm), the cutout (175 × 115 mm), the depth (63 mm over the 5 mm flange, so the recess goes 58 mm into the panel) and 5.5 mm screw holes. Its cutout's 115 mm across is narrower than the 122 mm recess body in Penn Elcom's CAD model: check the part before cutting. Takes the H1105/BP backplate and the H1105G airtight gasket (not in the catalogue).",
+    note: "All steel, black. Parts Express's drawing gives the flange (220 × 162 mm), the cutout (175 × 115 mm), the depth (63 mm over the 5 mm flange, so the recess goes 58 mm into the panel) and 5.5 mm screw holes. Its cutout's 115 mm across is narrower than the 122 mm recess body in Penn Elcom's CAD model: check the part before cutting. Takes the H1105/BP backplate and the H1105G airtight gasket (not in the catalog).",
   },
   {
     id: "30769",

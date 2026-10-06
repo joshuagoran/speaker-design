@@ -1,4 +1,4 @@
-// The parts drawn from their makers' CAD models in the 3D view, by catalogue id (data/catalog); every other part is
+// The parts drawn from their makers' CAD models in the 3D view, by catalog id (data/catalog); every other part is
 // drawn from its listed sizes. Adding one: put its STEP file in build/assets, mesh it (build/handle-mesh.mjs) and list
 // the generated mesh here.
 import type { CabinetPart, HardwareMesh } from "../../types";

@@ -49,8 +49,8 @@ const HANDLE_AXIS_SIGNS: Record<HandleAxis, readonly [string, string]> = {
 };
 /** Where the preset puts the handles on each axis (the offsets move them from there). */
 const HANDLE_PRESET_WORDS: Record<HandleAxis, string> = {
-  upIn: "the centre-of-gravity height",
-  backIn: "the nearest place to the centre of gravity clear of the driver and the vent",
+  upIn: "the center-of-gravity height",
+  backIn: "the nearest place to the center of gravity clear of the driver and the vent",
 };
 /** A placement message: the axis, then where along it ("Height: from the preset"). */
 export const placementLabel = (axis: HandleAxis, source: string) =>
@@ -64,26 +64,26 @@ export const handleOffsetTip = (axis: HandleAxis) =>
 /** Where each kind of part goes on its box, as the cutlist, Details and the presets say it. */
 export const HARDWARE_PLACE_WORDS = {
   handle: "both sides",
-  plate: "back, centred side to side",
+  plate: "back, centered side to side",
   // the cutlist row is the top and bottom pair: the posts go in the top only
-  posts: "top only, centred side to side",
+  posts: "top only, centered side to side",
 } as const;
 /** Where the presets put each kind of part, in the same words. */
 export const HARDWARE_PRESET_WORDS = {
-  handle: `${HARDWARE_PLACE_WORDS.handle}, at the centre of gravity`,
+  handle: `${HARDWARE_PLACE_WORDS.handle}, at the center of gravity`,
   plate: `${HARDWARE_PLACE_WORDS.plate}, as low as is clear`,
   posts: `${HARDWARE_PLACE_WORDS.posts}, as far back as is clear`,
 } as const;
 /**
- * A placed part's position, one pattern for every part: where it goes, then its centre from each named edge of that
- * panel (`offsets`: the inches, already formatted, and the edge), e.g. "both sides, centre 8″ from the front edge and
+ * A placed part's position, one pattern for every part: where it goes, then its center from each named edge of that
+ * panel (`offsets`: the inches, already formatted, and the edge), e.g. "both sides, center 8″ from the front edge and
  * 15 1/2″ from the bottom edge".
  */
 export const hardwarePlaceWords = (
   kind: keyof typeof HARDWARE_PLACE_WORDS,
   offsets: readonly (readonly [string, string])[],
 ) =>
-  `${HARDWARE_PLACE_WORDS[kind]}, centre ${offsets.map(([inches, edge]) => `${inches}″ from the ${edge} edge`).join(" and ")}`;
+  `${HARDWARE_PLACE_WORDS[kind]}, center ${offsets.map(([inches, edge]) => `${inches}″ from the ${edge} edge`).join(" and ")}`;
 /** What a part that doesn't fit runs into, and what to do: one pattern for every part. */
 export const hardwareClashLine = (who: string, both: boolean, into: string, advice: string) =>
   `${who} ${both ? "run" : "runs"} into ${into}: ${advice}.`;

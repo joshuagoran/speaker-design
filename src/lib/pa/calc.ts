@@ -1077,7 +1077,7 @@ export const hardwareCutoutNote = (
   return `${formatInches(c.across)}″ wide × ${formatInches(c.up)}″ ${up} cutout for the ${part.part.name} ${HARDWARE_KIND_NAMES[part.kind]}, ${where}`;
 };
 /**
- * Where a placed part's cutout centre sits, from named edges of its panel (hardwarePlaceWords): the handles on both
+ * Where a placed part's cutout center sits, from named edges of its panel (hardwarePlaceWords): the handles on both
  * sides from the front and bottom edges, the dish on the back from its bottom edge (which sits in the rabbet, t/2 up),
  * the horn's posts on the top from its rear edge. The cutlist and Details both say it this way.
  */
@@ -1152,7 +1152,7 @@ export function subVentMasses(box: Dims3, t: number, style: PortStyle, v: BraceV
 
 /**
  * The sub box's hardware from its presets (lib/pa/hardware planBoxHardware), placed before the braces: its driver where
- * the 3D view puts it, its keep-out, and its vent's panels in the centre of gravity. `bracing` (absent: none) only
+ * the 3D view puts it, its keep-out, and its vent's panels in the center of gravity. `bracing` (absent: none) only
  * checks the parts; it doesn't move them.
  */
 function subHardwarePlacement(
@@ -1226,7 +1226,7 @@ function midHardwarePlacement(
   });
 }
 /**
- * The mid box's hardware from its presets, checked against its braces and ribs (planned round its recesses); null in
+ * The mid box's hardware from its presets, checked against its braces and ribs (planned around its recesses); null in
  * the tower, whose mid chamber is part of the sub's cabinet.
  */
 export function midHardwarePlan(

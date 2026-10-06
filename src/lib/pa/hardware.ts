@@ -2,7 +2,7 @@
 // offsets), the input dish with its two Speakons low on the back, centred, and on the mid (top) box the horn's binding
 // posts on the lid. Each part's recess takes room inside the box (its litres come off the net volume) and must stay
 // clear of the driver, the vent, the other parts and the panels' edges and joints. The parts are placed first and the
-// braces and ribs after them, round their recesses (lib/bracing keeps out of hardwareKeepOut), so a brace or rib in a
+// braces and ribs after them, around their recesses (lib/bracing keeps out of hardwareKeepOut), so a brace or rib in a
 // part's way is a fault the check still reports, not a reason to move the part.
 import type {
   BoxBracing,
@@ -463,7 +463,7 @@ export function planBoxHardware({
   ventMasses = [],
 }: BoxHardwareInput): BoxHardwarePlan {
   const inner = insideOf(dims, t, inset);
-  // the parts go where the driver, the vent, the edges and each other leave room; the braces go round them after
+  // the parts go where the driver, the vent, the edges and each other leave room; the braces go around them after
   const obs = obstaclesOf(null, keepOut, inner, t);
   const placed: PlacedHardware[] = [];
   const handle = handlePart(handles.model);
@@ -534,7 +534,7 @@ export function planBoxHardware({
   };
 }
 
-/** A placed part's cutout centre back on the box axes (the panel's own axis at its inside face), as its draft had it. */
+/** A placed part's cutout center back on the box axes (the panel's own axis at its inside face), as its draft had it. */
 function atOf(p: PlacedHardware, inner: Record<"x" | "y" | "z", number>, t: number, inset: number) {
   const front = inset + BAFFLE_IN;
   switch (p.panel) {
