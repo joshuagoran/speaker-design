@@ -164,6 +164,8 @@ export interface MidDriver {
   price: number | null;
   src: string;
   ts: ThieleSmall;
+  /** mounting depth in inches, from the maker's datasheet; absent where not entered (MID_DEPTH_FALLBACK_IN stands in) */
+  depthIn?: number;
   note: string;
 }
 
@@ -1091,8 +1093,10 @@ export interface PaDesignConfig {
   divider?: PanelNominal;
   /** how far the baffles sit behind the frame front, inches */
   inset: number;
-  /** how the boxes are braced; absent: the default for the plywood (`defaultBraceStyle`) */
-  braceStyle?: BraceStyleId;
+  /** how the sub box is braced; absent: the default for the plywood (`defaultBraceStyle`) */
+  subBraceStyle?: BraceStyleId;
+  /** how the mid box is braced; absent: the default for the plywood (`defaultBraceStyle`) */
+  midBraceStyle?: BraceStyleId;
   /** sub to mid and mid to horn crossovers, Hz */
   xoLo: number;
   xoHi: number;
@@ -1236,7 +1240,7 @@ export interface SubGeometryConfig {
   cVent: VentSpec;
   layout: PaLayout;
   /** absent: the plywood's default (`defaultBraceStyle`) */
-  braceStyle?: BraceStyleId;
+  subBraceStyle?: BraceStyleId;
 }
 
 /** `subSystem` adds the highpass, the amp and the port air speed limit. */
@@ -1288,7 +1292,7 @@ export type SubSystem = SubSystemUnmodelled | SubSystemModelled;
 
 export interface MidSystemConfig extends Pick<
   PaDesignConfig,
-  "xoLoOrder" | "xoHiOrder" | "braceStyle"
+  "xoLoOrder" | "xoHiOrder" | "midBraceStyle"
 > {
   /** the tower's mid chamber is part of the sub's cabinet and takes no braces of its own; absent: a box of its own */
   layout?: PaLayout;
@@ -1455,14 +1459,36 @@ export interface BracePanel {
   /** the box's own parts that already hold it in a line across each axis (the vent shelf, duct walls), in from its edge */
   fixedU: number[];
   fixedV: number[];
+  /**
+   * the lines a rib may stop on to clear the vent (its duct parts, however short), across each axis, in from its edge;
+   * the supports among them are in `fixedU` / `fixedV` too
+   */
+  stopU: number[];
+  stopV: number[];
 }
 
-/** Ribs on one panel: they divide its `across` axis, sit at `at` (in from its edge) and are `len` long. */
+/**
+ * Ribs on one panel: they divide its `across` axis and sit at `at` (in from its edge); each runs along the panel's other
+ * axis from `from` (in from that edge) for `len`. A panel's ribs of different lengths are separate entries.
+ */
 export interface PanelRibs {
   panel: BracePanelId;
   across: BoxAxis;
   at: number[];
+  from: number;
   len: number;
+}
+
+/** A box-shaped region inside a box, in from its inside corner on each axis (x across, y up, z back from the baffle). */
+export type BoxRegion = Record<BoxAxis, readonly [number, number]>;
+/**
+ * What no brace or rib may enter: the driver's basket and magnet behind the baffle (with its clearance), and the
+ * vent's own parts and the air they enclose (ducts, tubes).
+ */
+export interface BoxKeepOut {
+  /** the driver's basket and magnet, as boxes stepping in from the cutout to the motor */
+  driver: readonly BoxRegion[];
+  vent: readonly BoxRegion[];
 }
 
 /** A panel's first plate resonance with its own parts only, and with the braces and ribs, Hz. */
@@ -1472,12 +1498,29 @@ export interface PanelResonance {
   hz: number;
 }
 
+/**
+ * The bracing rule's choice in counts: the window braces across each axis and the ribs on each panel. The same plan
+ * placed in a slightly different box moves with it (lib/bracing places it there), so a solver can hold it fixed.
+ */
+export interface BracePlan {
+  windows: Record<BoxAxis, number>;
+  ribs: Partial<Record<BracePanelId, { across: BoxAxis; n: number }>>;
+}
+
 /** What the bracing rule picked for a box: the window braces on each axis, the ribs, the resonances and the wood. */
 export interface BoxBracing {
+  /** the choice as counts, to place again in a box a solver moves */
+  plan: BracePlan;
   style: BraceStyleId;
   targetHz: number;
   /** each axis' window braces, in from the box's inside corner along it */
   windows: Record<BoxAxis, number[]>;
+  /**
+   * The window braces across x whose plane crosses the driver (`at`, as in `windows.x`): their front rail is left out
+   * over `y` (up from the bottom), so the frame opens to the baffle round the basket and magnet. They hold the top,
+   * bottom and back, not the baffle. Null when none does.
+   */
+  notch: { at: number[]; y: readonly [number, number] } | null;
   ribs: PanelRibs[];
   panels: PanelResonance[];
   /** the braces' and ribs' wood, in³ (window braces count their rails only) */
@@ -1535,7 +1578,10 @@ export interface CutPartsConfig {
   cVent: VentSpec;
   layout: PaLayout;
   /** absent: the plywood's default (`defaultBraceStyle`) */
-  braceStyle?: BraceStyleId;
+  subBraceStyle?: BraceStyleId;
+  midBraceStyle?: BraceStyleId;
+  /** the sub box's parts only (its volume reads no more): the mid box is left out */
+  subOnly?: boolean;
 }
 
 /** The panel a Hi-fi box's passive radiators are cut into. */

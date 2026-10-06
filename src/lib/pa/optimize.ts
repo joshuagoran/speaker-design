@@ -339,11 +339,11 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
     ampW: c.ampW,
     portMax: c.portMax,
     layout: c.layout,
-    braceStyle: c.braceStyle,
+    subBraceStyle: c.subBraceStyle,
   });
   const ms = midSystem(mid, {
     layout: c.layout,
-    braceStyle: c.braceStyle,
+    midBraceStyle: c.midBraceStyle,
     midDims,
     wall: c.wall,
     inset: c.inset,
@@ -357,13 +357,13 @@ export function evaluateDesign(c: PaDesignConfig): PaEvaluation | null {
       c.cDim,
       c.wall,
       sub.lb,
-      subBoxBracing(c.cDim, c.wall, c.inset, c.portStyle, c.cVent, c.braceStyle),
+      subBoxBracing(c.cDim, c.wall, c.inset, c.portStyle, c.cVent, sub, c.subBraceStyle),
     ),
     midLb =
       midWeightLb(
         midDims,
         c.wall,
-        midBoxBracing(midDims, c.wall, c.inset, c.layout, c.braceStyle),
+        midBoxBracing(midDims, c.wall, c.inset, mid, c.layout, c.midBraceStyle),
       ) + (mid.lb || 0);
   if (!s.mdl || !ms.mdl) return null; // a vent or box with no geometry has no model to evaluate
   const subMusic = subMusicOutputAt(s.mdl, s.lim, s.AMP_V, c.xoLo, xoLoOrder);
@@ -830,7 +830,7 @@ export function optimizePaStack(
               portStyle: style,
               cVent,
               layout: cur.layout,
-              braceStyle: cur.braceStyle,
+              subBraceStyle: cur.subBraceStyle,
             });
           let pushed = false,
             fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystemModelled } | null = null;
@@ -895,7 +895,7 @@ export function optimizePaStack(
               ampW: amps.ampW,
               portMax: cur.portMax,
               layout: cur.layout,
-              braceStyle: cur.braceStyle,
+              subBraceStyle: cur.subBraceStyle,
             });
             evals++;
             if (!s.mdl) continue;
@@ -913,7 +913,7 @@ export function optimizePaStack(
                 box,
                 t,
                 sd.sub.lb,
-                subBoxBracing(box, t, cur.inset, style, cVent, cur.braceStyle),
+                subBoxBracing(box, t, cur.inset, style, cVent, sd.sub, cur.subBraceStyle),
               ),
               out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
             });
@@ -944,7 +944,7 @@ export function optimizePaStack(
                 ampW,
                 portMax: cur.portMax,
                 layout: cur.layout,
-                braceStyle: cur.braceStyle,
+                subBraceStyle: cur.subBraceStyle,
               });
               evals++;
               if (s.mdl && s.lim.who !== "port")
@@ -956,7 +956,15 @@ export function optimizePaStack(
                     box,
                     t,
                     sd.sub.lb,
-                    subBoxBracing(box, t, cur.inset, style, fallback.cVent, cur.braceStyle),
+                    subBoxBracing(
+                      box,
+                      t,
+                      cur.inset,
+                      style,
+                      fallback.cVent,
+                      sd.sub,
+                      cur.subBraceStyle,
+                    ),
                   ),
                   out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
                 });
@@ -1003,7 +1011,11 @@ export function optimizePaStack(
             d = r2(D + cur.inset + 0.75 + t, 0.5);
           if (d < mr.d[0] || d > mr.d[1] || d < 6) continue;
           const bx = { w, h, d },
-            lb = midWeightLb(bx, t, midBoxBracing(bx, t, cur.inset, cur.layout, cur.braceStyle));
+            lb = midWeightLb(
+              bx,
+              t,
+              midBoxBracing(bx, t, cur.inset, m, cur.layout, cur.midBraceStyle),
+            );
           if (!best || lb < best.lb) best = { bx, lb };
         }
       if (best && !out.some((o) => o.w === best.bx.w && o.h === best.bx.h && o.d === best.bx.d))
@@ -1077,7 +1089,7 @@ export function optimizePaStack(
         stepAt("mids", mi * walls.length + ti, mids.length * walls.length);
         if (!bx) continue;
         const disp = m.ts.disp != null ? m.ts.disp : m.size === 15 ? 4 : 2.5;
-        const bracing = midBoxBracing(bx, t, cur.inset, cur.layout, cur.braceStyle);
+        const bracing = midBoxBracing(bx, t, cur.inset, m, cur.layout, cur.midBraceStyle);
         const eff =
           midNetLiters(boxInternalLiters(bx.w, bx.h, bx.d, t, cur.inset), disp, bracing) *
           STUFFING_VOLUME_GAIN;
@@ -1739,7 +1751,8 @@ function card(
     portStyle: c.portStyle,
     cVent: c.cVent,
     layout: c.layout,
-    braceStyle: c.braceStyle,
+    subBraceStyle: c.subBraceStyle,
+    midBraceStyle: c.midBraceStyle,
   });
   // the quick packing only: the card asks the worker for the exact count afterwards (build.parts and build.cutlist)
   const sheets = layoutCutlist(parts, cl, { countsOnly: true }).groups.map((g) => ({

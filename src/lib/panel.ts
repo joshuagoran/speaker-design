@@ -69,6 +69,15 @@ export function panelLbPerSqFt(t: number, mat: PanelMaterial): number {
   return a.lb + ((b.lb - a.lb) * (t - a.t)) / (b.t - a.t);
 }
 
+/**
+ * The nominal size a wall thickness stands for, without the Cutlist page's measurements: the size nearest it (a measured
+ * sheet stays within a tenth of its own size, `panelExactRange`; on the exact midpoint, the thicker size).
+ */
+export const panelNominalNear = (t: number): PanelNominal =>
+  PANEL_NOMINALS.reduce((a, n) =>
+    Math.abs(PANEL_STOCK[n].in - t) < Math.abs(PANEL_STOCK[a].in - t) ? n : a,
+  );
+
 /** Walls thinner than this (inches, halfway from ½″ to ⅝″) are ½″-class stock, which the boxes brace once more. */
 const THIN_PANEL_IN = (PANEL_STOCK["1/2"].in + PANEL_STOCK["5/8"].in) / 2;
 /** Whether a wall is ½″-class stock, which takes an extra brace. */

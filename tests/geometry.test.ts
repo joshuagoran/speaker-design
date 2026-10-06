@@ -98,9 +98,13 @@ test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => 
     (a, p) => a + (p.part === "rib" ? p.a * p.b : p.a * p.b - (p.a - 4) * (p.b - 4)) * p.t * p.qty,
     0,
   );
+  // each frame spans two of the inside's sides
+  const spans = [iw, ih, inD];
   assert.ok(
-    braceRows.every((p) => p.part === "rib" || (p.a === iw && p.b === inD)),
-    "level frames",
+    braceRows.every(
+      (p) => p.part === "rib" || (spans.includes(p.a) && spans.includes(p.b) && p.a !== p.b),
+    ),
+    "frames across the inside",
   );
   const duct = iw * len * t0 + 2 * 3 * len * t0;
   close(t, internalWoodLiters(parts, "sub"), (cleats + braces + duct) * IN3_L, 1e-9);
@@ -130,7 +134,7 @@ test("folded slot: the rear wall makes the centreline the set length, and the fa
   close(t, part("ductRearWall")?.b ?? NaN, 6.75, 1e-12);
   close(
     t,
-    subWoodIn3("slots", box, t0, 0.75, cVent, undefined) * IN3_L,
+    subWoodIn3("slots", box, t0, 0.75, cVent, SUB_OPTIONS[0], undefined) * IN3_L,
     internalWoodLiters(parts, "sub"),
     1e-12,
   );
@@ -189,7 +193,15 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
       box,
       wall,
       0,
-      subBoxBracing(box, wall, 0.75, "round2", vent({ nt: 2, dia: 4, len: 12 }), undefined),
+      subBoxBracing(
+        box,
+        wall,
+        0.75,
+        "round2",
+        vent({ nt: 2, dia: 4, len: 12 }),
+        SUB_OPTIONS[0],
+        undefined,
+      ),
     );
     assert.ok(
       w >= lb * 0.98 && w <= lb * 1.12,
@@ -213,7 +225,7 @@ test("midWeight: 15 in cube in 3/4 birch", (t) => {
     midWeightLb(
       { w: 15, h: 15, d: 15 },
       0.75,
-      midBoxBracing({ w: 15, h: 15, d: 15 }, 0.75, 0.75, "stack", undefined),
+      midBoxBracing({ w: 15, h: 15, d: 15 }, 0.75, 0.75, MID_OPTIONS[0], "stack", undefined),
     ),
     // a 15″ cube in 3/4″ ply needs no braces: every panel clears the target as it is
     (225 * 2.3 + (225 + 450 + 450) * 2.3) / 144 + 2,
@@ -252,8 +264,8 @@ test("duct dividers: a thicker divider comes out of the side ducts' open area, n
   close(t, ventShape("vslots", box, cVent(0.75), wall, DRV18).area, threeQ.port.area, 1e-9);
   close(
     t,
-    subWoodIn3("vslots", box, wall, inset, cVent(0.75), undefined) -
-      subWoodIn3("vslots", box, wall, inset, cVent(), undefined),
+    subWoodIn3("vslots", box, wall, inset, cVent(0.75), DEFAULT_PA.sub, undefined) -
+      subWoodIn3("vslots", box, wall, inset, cVent(), DEFAULT_PA.sub, undefined),
     n * 2 * throat * len * grow,
     1e-9,
   );

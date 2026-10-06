@@ -129,8 +129,10 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     format,
     wallPanel,
     setWallPanel,
-    braceStyle,
-    setBraceStyle,
+    subBraceStyle,
+    setSubBraceStyle,
+    midBraceStyle,
+    setMidBraceStyle,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,
@@ -217,7 +219,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
         plinthHeightIn,
         layout,
         wallThicknessIn,
-        braceStyle,
+        subBraceStyle,
+        midBraceStyle,
         baffleInsetIn,
         spacerHeightIn,
         dispersionPlane,
@@ -244,7 +247,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
       plinthHeightIn,
       layout,
       wallThicknessIn,
-      braceStyle,
+      subBraceStyle,
+      midBraceStyle,
       baffleInsetIn,
       spacerHeightIn,
       dispersionPlane,
@@ -273,7 +277,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     panel: wallPanel,
     divider: ductDividerPanel,
     inset: baffleInsetIn,
-    ...(braceStyle ? { braceStyle } : {}),
+    ...(subBraceStyle ? { subBraceStyle } : {}),
+    ...(midBraceStyle ? { midBraceStyle } : {}),
     xoLo: subMidCrossoverHz,
     xoHi: midHornCrossoverHz,
     xoLoOrder: subMidCrossoverOrder,
@@ -303,7 +308,9 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setPanelExactIn(exactIn);
     setWallPanel(panelFor(c, PLYWOOD_MATERIAL, exactIn) ?? DEFAULT_PA.panel);
     setBaffleInsetIn(typeof c.inset === "number" ? c.inset : DEFAULT_PA.inset);
-    setBraceStyle(savedBraceStyle(c.braceStyle));
+    // each box's style; a save without one (older ones, or the plywood's default) follows the plywood
+    setSubBraceStyle(savedBraceStyle(c.subBraceStyle));
+    setMidBraceStyle(savedBraceStyle(c.midBraceStyle));
     if (c.sub) setSubDriver(byId(SUB_OPTIONS, c.sub) ?? subDriver);
     if (c.mid) {
       const m = byId(MID_OPTIONS, c.mid) ?? midDriver;
@@ -407,8 +414,10 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     wallPanel,
     setWallPanel,
     wallThicknessIn,
-    braceStyle,
-    setBraceStyle,
+    subBraceStyle,
+    setSubBraceStyle,
+    midBraceStyle,
+    setMidBraceStyle,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,

@@ -124,7 +124,7 @@ test("exact PA search: one shared curve per volume and tuning gives the planner'
     const vs = ventShape(style, box, cVent, t, sub);
     assert.ok(Math.abs(vs.area - g.port.area) < 1e-12, "vent area");
     assert.ok(Math.abs(vs.ec - g.port.ec) < 1e-12, `${style} end correction`);
-    const net = subNetLiters(style, box, t, 0.75, cVent, vs.area, sub.ts.disp, undefined);
+    const net = subNetLiters(style, box, t, 0.75, cVent, vs.area, sub.ts.disp, sub, undefined);
     assert.ok(Math.abs(net - g.netL) < 1e-12 * g.netL, `${style} net volume`);
     // the model: F3, clean output, limit, and the level at a crossover, from a curve that never saw the vent
     const s = subSystem(sub, mid, { ...cfg, hpf, hpType: "BW24", ampW: 3000, portMax: 23.5 });
@@ -266,11 +266,19 @@ test("exact PA search: the tower mid's Qtc is midSystem's, and falls as the box 
       xoHiOrder: 4,
       mAmpW: 400,
     } as const;
-    const ms = midSystem(mid, { ...cfg, midDims: box });
+    // the tower's mid chamber is part of the sub's cabinet and takes no braces of its own (midBoxBracing)
+    const ms = midSystem(mid, { ...cfg, midDims: box, layout: "tower" });
     assert.ok(ms.mdl, mid.id);
-    assert.strictEqual(sealedQtc(mid, box, t, 0.75, {}), ms.mdl.Qtc, `${mid.id} Qtc`);
+    assert.strictEqual(
+      sealedQtc(mid, box, t, 0.75, { layout: "tower" }),
+      ms.mdl.Qtc,
+      `${mid.id} Qtc`,
+    );
     const bigger = { ...box, w: box.w + 1, d: box.d + rnd() };
-    assert.ok(sealedQtc(mid, bigger, t, 0.75, {}) <= ms.mdl.Qtc, `${mid.id} falls`);
+    assert.ok(
+      sealedQtc(mid, bigger, t, 0.75, { layout: "tower" }) <= ms.mdl.Qtc,
+      `${mid.id} falls`,
+    );
   }
 });
 

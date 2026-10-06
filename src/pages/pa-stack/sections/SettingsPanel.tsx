@@ -34,7 +34,12 @@ import { PA_SETTINGS_TABS } from "../../../constants/paSettingsTabs";
 import type { PaSettingsSection } from "../../../constants/settingsSections";
 import { SLOT_LAYOUT_NAMES } from "../../../constants/portStyles";
 import { UI_TEXT } from "../../../constants/uiText";
-import { BRACE_STYLE_NAMES, BRACE_STYLE_TIPS } from "../../../constants/bracing";
+import {
+  BRACE_STYLE_NAMES,
+  BRACE_STYLE_SUMMARY,
+  BRACE_STYLE_TIPS,
+} from "../../../constants/bracing";
+import type { BraceStyleId, Setter } from "../../../types";
 import { defaultBraceStyle } from "../../../lib/bracing";
 import { PANEL_NOMINAL_NAMES } from "../../../constants/panelSizes";
 import { PANEL_NOMINAL_OPTIONS } from "../../../lib/panel";
@@ -97,8 +102,10 @@ interface Props {
     | "setLayout"
     | "wallThicknessIn"
     | "wallPanel"
-    | "braceStyle"
-    | "setBraceStyle"
+    | "subBraceStyle"
+    | "setSubBraceStyle"
+    | "midBraceStyle"
+    | "setMidBraceStyle"
     | "setWallPanel"
     | "baffleInsetIn"
     | "setBaffleInsetIn"
@@ -180,8 +187,10 @@ export function SettingsPanel({ planner }: Props) {
     setLayout,
     wallThicknessIn,
     wallPanel,
-    braceStyle,
-    setBraceStyle,
+    subBraceStyle,
+    setSubBraceStyle,
+    midBraceStyle,
+    setMidBraceStyle,
     setWallPanel,
     baffleInsetIn,
     setBaffleInsetIn,
@@ -205,18 +214,38 @@ export function SettingsPanel({ planner }: Props) {
   // or two elbows (the lengths between fit neither way, and the slider skips them)
   const ductLens = ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn, subDriver);
   const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
-  // the style the boxes are braced with: the one chosen, else the plywood's default
-  const shownBraceStyle = braceStyle ?? defaultBraceStyle(wallThicknessIn);
+  // the style a box is braced with: the one chosen, else the plywood's default (stored as no choice, so it follows
+  // the plywood)
+  const shownBrace = (s: BraceStyleId | undefined) => s ?? defaultBraceStyle(wallThicknessIn);
+  const braceToggle = (s: BraceStyleId | undefined, set: Setter<BraceStyleId | undefined>) => (
+    <ToggleGroup
+      className="mb-5"
+      label="Bracing"
+      value={shownBrace(s)}
+      onChange={(v) => set(v === defaultBraceStyle(wallThicknessIn) ? undefined : v)}
+      options={keysOf(BRACE_STYLE_NAMES).map(
+        (id) => [id, BRACE_STYLE_NAMES[id], BRACE_STYLE_TIPS[id]] as const,
+      )}
+    />
+  );
+  const braceSummary = (s: BraceStyleId | undefined) =>
+    `braced with ${BRACE_STYLE_SUMMARY[shownBrace(s)]}`;
   const summaries: Record<PaSettingsSection, string> = {
     sub: [
       subDriver.name,
       formatDims(subBoxDims),
       subModelled && `tuned to ${subModelled.mdl.Fb.toFixed(0)} Hz`,
       port.desc,
+      braceSummary(subBraceStyle),
     ]
       .filter(Boolean)
       .join(", "),
-    mid: `${midDriver.name}, ${formatDims(effectiveMidBoxDims)} sealed`,
+    mid: [
+      `${midDriver.name}, ${formatDims(effectiveMidBoxDims)} sealed`,
+      layout !== "tower" && braceSummary(midBraceStyle),
+    ]
+      .filter(Boolean)
+      .join(", "),
     horn: `${compressionDriver.name} on ${hornOption.name}`,
     xo: [
       `${formatHz(subMidCrossoverHz)} ${crossoverSlopeName(subMidCrossoverOrder)}`,
@@ -428,6 +457,7 @@ export function SettingsPanel({ planner }: Props) {
               </div>
             </Card>
           </div>
+          {braceToggle(subBraceStyle, setSubBraceStyle)}
         </div>,
       )}
       {section(
@@ -492,6 +522,8 @@ export function SettingsPanel({ planner }: Props) {
               )}
             </Card>
           </div>
+          {/* the tower's mid chamber is part of the sub's cabinet, braced with it */}
+          {layout !== "tower" && braceToggle(midBraceStyle, setMidBraceStyle)}
         </div>,
       )}
       {section(
@@ -672,18 +704,6 @@ export function SettingsPanel({ planner }: Props) {
               value={wallPanel}
               onChange={setWallPanel}
               options={PANEL_NOMINAL_OPTIONS}
-            />
-            <ToggleGroup
-              className="mt-3"
-              label="Bracing"
-              value={shownBraceStyle}
-              // the plywood's default is stored as no choice, so it follows the plywood
-              onChange={(s) =>
-                setBraceStyle(s === defaultBraceStyle(wallThicknessIn) ? undefined : s)
-              }
-              options={keysOf(BRACE_STYLE_NAMES).map(
-                (id) => [id, BRACE_STYLE_NAMES[id], BRACE_STYLE_TIPS[id]] as const,
-              )}
             />
             <div className="mt-3">
               <Slider

@@ -11,6 +11,8 @@ import {
   midSystem,
   subBoxBracing,
   midBoxBracing,
+  subKeepOut as subBoxKeepOut,
+  midKeepOut as midBoxKeepOut,
   subThroughLowpass,
   subMusicOutputAt,
   phasedCurve,
@@ -20,6 +22,7 @@ import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion";
 import type {
   BandCurves,
   BoxBracing,
+  BoxKeepOut,
   Dims3,
   DispersionPlane,
   FrequencyPoint,
@@ -64,7 +67,12 @@ type PaDesignInputs = Pick<
   > &
   Pick<
     CabinetStyle,
-    "plinthHeightIn" | "layout" | "baffleInsetIn" | "spacerHeightIn" | "braceStyle"
+    | "plinthHeightIn"
+    | "layout"
+    | "baffleInsetIn"
+    | "spacerHeightIn"
+    | "subBraceStyle"
+    | "midBraceStyle"
   > & {
     dispersionPlane: DispersionPlane;
     /** the walls' exact thickness, in (lib/panel) */
@@ -82,6 +90,9 @@ export interface PaDerivedDesign {
   subBracing: BoxBracing;
   /** the mid box's; null in the tower, whose mid chamber is part of the sub's cabinet */
   midBracing: BoxBracing | null;
+  /** what each box's braces keep clear of: its driver and the sub's vent (the 3D view draws the drivers in the cutaway) */
+  subKeepOut: BoxKeepOut;
+  midKeepOut: BoxKeepOut | null;
   subAmpVoltage: number;
   /**
    * the sub's model (with the box's phase, for the coverage map), music limit and curves; null when the driver has no
@@ -157,7 +168,8 @@ export function derivePaDesign({
   plinthHeightIn,
   layout,
   wallThicknessIn,
-  braceStyle,
+  subBraceStyle,
+  midBraceStyle,
   baffleInsetIn,
   spacerHeightIn,
   dispersionPlane,
@@ -172,15 +184,27 @@ export function derivePaDesign({
     baffleInsetIn,
     portStyle,
     subVentSpec,
-    braceStyle,
+    subDriver,
+    subBraceStyle,
   );
   const midBracing = midBoxBracing(
     effectiveMidBoxDims,
     wallThicknessIn,
     baffleInsetIn,
+    midDriver,
     layout,
-    braceStyle,
+    midBraceStyle,
   );
+  const subKeepOut = subBoxKeepOut(
+    subBox,
+    wallThicknessIn,
+    baffleInsetIn,
+    portStyle,
+    subVentSpec,
+    subDriver,
+  );
+  const midKeepOut =
+    layout === "tower" ? null : midBoxKeepOut(effectiveMidBoxDims, wallThicknessIn, midDriver);
   const subSys = subSystem(subDriver, midDriver, {
     subBox,
     midDims: midBoxDims,
@@ -193,7 +217,7 @@ export function derivePaDesign({
     ampW: subAmpWatts,
     portMax: maxPortAirSpeedMs,
     layout,
-    braceStyle,
+    subBraceStyle,
     xoLo: subMidCrossoverHz, // the system chart draws the lowpass skirt
     phase: true, // for the coverage map
   });
@@ -235,7 +259,7 @@ export function derivePaDesign({
   // ---- mid-bass: sealed box ----
   const midSys = midSystem(midDriver, {
     layout,
-    braceStyle,
+    midBraceStyle,
     midDims: effectiveMidBoxDims,
     wall: wallThicknessIn,
     inset: baffleInsetIn,
@@ -378,6 +402,8 @@ export function derivePaDesign({
     subNetLiters,
     subBracing,
     midBracing,
+    subKeepOut,
+    midKeepOut,
     subAmpVoltage,
     subModelled,
     midVoltage,

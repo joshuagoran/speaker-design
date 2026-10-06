@@ -40,3 +40,26 @@ export const SUB_FRAME_DIA_IN: Record<SubSize, number> = {
   18: 18.5,
   15: 15.5,
 };
+
+/**
+ * A mid-bass driver's mounting depth (baffle front to the back of its magnet) per size class, inches, where its entry
+ * gives none: about the deepest of the class's published depths (PA mid-bass datasheets run about 4.5″ for a 10″,
+ * 5.5″ for a 12″ and 6.5″ for a 15″), rounded up, so the braces kept clear of it clear the real one.
+ */
+export const MID_DEPTH_FALLBACK_IN: Record<MidSize, number> = {
+  15: 7,
+  12: 6,
+  10: 5,
+};
+
+/**
+ * A PA driver's motor (magnet and plates) diameter per size class, inches: about the largest ferrite motor of the
+ * class (an 18″ sub's runs to 250 mm, a 15″'s to 220 mm, a 12″'s to 180 mm, a 10″'s to 150 mm); neodymium motors are
+ * smaller. The braces keep clear of the basket narrowing to it.
+ */
+export const DRIVER_MOTOR_DIA_IN: Record<SubSize | MidSize, number> = {
+  18: 10,
+  15: 8.75,
+  12: 7.25,
+  10: 6,
+};

@@ -16,8 +16,17 @@ import {
 } from "../../lib/pa/calc";
 import type { SceneContext } from "./sceneContext";
 import type { Props } from "./buildStackScene";
-import type { BoxBracing, Dims3, Horn, MidDriver, PortStyle, SubDriver } from "../../types";
-import { buildBraces } from "./buildBraces";
+import type {
+  BoxBracing,
+  BoxKeepOut,
+  Dims3,
+  Horn,
+  MidDriver,
+  PortStyle,
+  SubDriver,
+} from "../../types";
+import { buildBraces, buildDriverBody, VENT_MESH_NAME } from "./buildBraces";
+import { DRIVER_CLEARANCE_IN } from "../../lib/pa/bracing";
 
 /**
  * The sub column: the plinth, the cabinet with its driver and vent cutouts, and the ducts or port tubes behind the baffle.
@@ -34,11 +43,14 @@ export function buildSubwoofer(
     plinth,
     tower,
     bracing,
+    keepOut,
   }: {
     sub: Pick<SubDriver, "size" | "depthIn">;
     box: Dims3;
     /** the sub box's braces and ribs (lib/bracing), drawn inside it */
     bracing?: BoxBracing;
+    /** what the braces keep clear of (lib/pa/calc subKeepOut): its driver is drawn in the cutaway */
+    keepOut?: BoxKeepOut;
     portStyle: PortStyle;
     portGeom?: Props["portGeom"];
     plinth: number;
@@ -124,6 +136,14 @@ export function buildSubwoofer(
   }).baffleZ;
   if (tower) buildTowerPartitions(ctx, { box: s, plinth: pl, parent: subGroup });
   if (bracing) buildBraces(ctx, { bracing, box: s, y: pl, parent: subGroup });
+  if (keepOut)
+    buildDriverBody(ctx, {
+      keepOut,
+      box: s,
+      y: pl,
+      parent: subGroup,
+      clearance: DRIVER_CLEARANCE_IN,
+    });
   if (vSlot) {
     // Full-height duct against each side wall. The inner wall is a constant
     // thickness panel chamfered 20 deg at both ends, so the duct runs a
@@ -162,12 +182,14 @@ export function buildSubwoofer(
       );
       wall.rotation.x = -Math.PI / 2;
       wall.position.set(0, yc - slotH / 2, 0);
+      wall.name = VENT_MESH_NAME;
       subGroup.add(wall);
 
       // two dividers per duct, bracing the inner wall to the side wall, at the design's divider thickness
       [-1, 1].forEach((f) => {
         const div = new THREE.Mesh(new THREE.BoxGeometry(throat, divT, sideLen), plyIn);
         div.position.set(k * (innerW / 2 - throat / 2), yc + (f * slotH) / 6, zr + sideLen / 2);
+        div.name = VENT_MESH_NAME;
         subGroup.add(div);
       });
     });
@@ -204,6 +226,7 @@ export function buildSubwoofer(
       const m = new THREE.Mesh(new THREE.CylinderGeometry(portR, portR, len, 32, 1, true), portMat);
       m.position.copy(a).add(b).multiplyScalar(0.5);
       m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+      m.name = VENT_MESH_NAME;
       subGroup.add(m);
     };
     // a quarter-torus elbow about `c`, its arc from local +X to +Y laid on the world axes `ax`, `ay`
@@ -211,6 +234,7 @@ export function buildSubwoofer(
       const m = new THREE.Mesh(new THREE.TorusGeometry(bend, portR, 16, 12, Math.PI / 2), portMat);
       m.setRotationFromMatrix(new THREE.Matrix4().makeBasis(ax, ay, ax.clone().cross(ay)));
       m.position.copy(c);
+      m.name = VENT_MESH_NAME;
       subGroup.add(m);
     };
     // a quarter-round flare at a mouth, opening along `dir`
@@ -218,6 +242,7 @@ export function buildSubwoofer(
       const m = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), portMat);
       m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
       m.position.copy(at);
+      m.name = VENT_MESH_NAME;
       subGroup.add(m);
     };
     const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
@@ -259,10 +284,12 @@ export function buildSubwoofer(
     const roofZ = s.d / 2 - roofLen / 2;
     const roof = new THREE.Mesh(new THREE.BoxGeometry(innerW, T, roofLen), plyIn);
     roof.position.set(0, pl + T + ductH + T / 2, roofZ);
+    roof.name = VENT_MESH_NAME;
     subGroup.add(roof);
     [-1, 1].forEach((k) => {
       const fin = new THREE.Mesh(new THREE.BoxGeometry(T, ductH, roofLen), plyIn);
       fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, roofZ);
+      fin.name = VENT_MESH_NAME;
       subGroup.add(fin);
     });
     // the rear channel rises until the centerline adds up to the set duct length (the cutlist's rear wall), never
@@ -272,15 +299,18 @@ export function buildSubwoofer(
     const wallH = foldedRearWallIn(s, { slotH: ductH, len: wantLen }, T);
     const rw = new THREE.Mesh(new THREE.BoxGeometry(innerW, wallH, T), plyIn);
     rw.position.set(0, wallBot + wallH / 2, wallZ);
+    rw.name = VENT_MESH_NAME;
     subGroup.add(rw);
   } else if (portStyle === "slots") {
     const ductZ = s.d / 2 - ductLen / 2;
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(innerW, T, ductLen), plyIn);
     shelf.position.set(0, pl + T + ductH + T / 2, ductZ);
+    shelf.name = VENT_MESH_NAME;
     subGroup.add(shelf);
     [-1, 1].forEach((k) => {
       const fin = new THREE.Mesh(new THREE.BoxGeometry(T, ductH, ductLen), plyIn);
       fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, ductZ);
+      fin.name = VENT_MESH_NAME;
       subGroup.add(fin);
     });
   }

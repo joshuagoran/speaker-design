@@ -26,8 +26,13 @@ import {
   midBoxBracing,
   midNetLiters,
   subBoxBracing,
+  braceWoodIn3,
+  subBracingChoice,
+  paInner,
 } from "./calc";
 import type {
+  BoxAxis,
+  BoxBracing,
   BraceStyleId,
   MidSystemConfig,
   CrossoverOrder,
@@ -42,10 +47,13 @@ import type {
 import { subTubeEndCorrection, subTubeSpan, type TubeDriver } from "./tubes";
 import { ELBOW_COUNTS, MAX_ELBOWS, ownSpans, type ElbowCount } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
+import { planWoodIn3 } from "../bracing";
 
 const RHO = 1.18,
   C = 343,
   IN3_TO_L = 16.387 / 1000;
+/** How many times solveShape takes up the bracing rule's own choice at the size it settles on before giving up. */
+const MAX_REPLANS = 4;
 
 // the frequency grid boxModel runs on when the planner evaluates a design (no run-on past 300 Hz)
 const N = 420,
@@ -257,7 +265,7 @@ export const musicAt = (
   20 * Math.log10(lim.V / volts);
 
 /** What the mid's bracing reads beyond the box (midBoxBracing): the layout and the style. */
-export type MidBrace = Pick<MidSystemConfig, "layout" | "braceStyle">;
+export type MidBrace = Pick<MidSystemConfig, "layout" | "midBraceStyle">;
 /** The mid in a sealed box, as midSystem and closedBox set it up: the driver's and the box's acoustic parts, and the system's resonance. */
 function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: MidBrace) {
   const ts = mid.ts;
@@ -266,7 +274,7 @@ function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: 
     midNetLiters(
       boxInternalLiters(box.w, box.h, box.d, t, inset),
       disp,
-      midBoxBracing(box, t, inset, brace.layout, brace.braceStyle),
+      midBoxBracing(box, t, inset, mid, brace.layout, brace.midBraceStyle),
     ) * STUFFING_VOLUME_GAIN;
   const Sd = ts.Sd / 10000,
     Mms = ts.Mms / 1000,
@@ -446,20 +454,29 @@ export const ductLengthFor = (vs: VentShape, Leff: number) => Leff / 0.0254 - vs
  * The sub box's internal wood (internalWoodLiters of cutParts' sub panels), in³: baffle cleats, window braces and ribs
  * (subBoxBracing) and the duct's own panels, in the same order.
  */
-export function subWoodIn3(
+export const subWoodIn3 = (
   style: PortStyle,
   box: Dims3,
   t: number,
   inset: number,
   v: VentSpec,
+  drv: TubeDriver,
   braceStyle: BraceStyleId | undefined,
-): number {
+) =>
+  subWoodWithIn3(
+    style,
+    box,
+    t,
+    v,
+    braceWoodIn3(subBoxBracing(box, t, inset, style, v, drv, braceStyle)),
+  );
+/** subWoodIn3 with the braces' and ribs' wood given (a solver's, holding their choice), in³. */
+function subWoodWithIn3(style: PortStyle, box: Dims3, t: number, v: VentSpec, braceIn3: number) {
   const iw = box.w - 2 * t,
     ih = box.h - 2 * t;
   const band = style === "slots" ? v.slotH + t : 0;
   let in3 = 0.75 * iw * 0.75 * 2 + 0.75 * (ih - band - 1.5) * 0.75 * 2;
-  const b = subBoxBracing(box, t, inset, style, v, braceStyle);
-  in3 += b.windowIn3 + b.ribIn3;
+  in3 += braceIn3;
   if (style === "slots") {
     const folded = slotFolds(box, v, t);
     const len = folded ? foldedShelfIn(box, v.slotH, t) : v.len;
@@ -480,6 +497,7 @@ export const subNetLiters = (
   v: VentSpec,
   areaIn2: number,
   disp: number,
+  drv: TubeDriver,
   braceStyle: BraceStyleId | undefined,
 ) =>
   Math.max(
@@ -487,7 +505,7 @@ export const subNetLiters = (
     ((box.w - 2 * t) * (box.h - 2 * t) * (box.d - inset - 0.75 - t) * 16.387) / 1000 -
       disp -
       (areaIn2 * v.len * 16.387) / 1000 -
-      (subWoodIn3(style, box, t, inset, v, braceStyle) * 16.387) / 1000,
+      (subWoodIn3(style, box, t, inset, v, drv, braceStyle) * 16.387) / 1000,
   );
 
 /**
@@ -590,6 +608,8 @@ export function solveShape(
   const round = isRoundPort(style);
   let len = 0;
   let prev: { x: number; err: number } | null = null;
+  let ref: { b: BoxBracing; inner: Record<BoxAxis, number> } | undefined,
+    replans = 0;
   for (let it = 0; it < 60; it++) {
     let unreached = false; // a bottom slot this size tunes neither straight nor folded
     // the duct length for the tuning at this size; where the end correction reads the gap behind the duct, the root of
@@ -653,14 +673,26 @@ export function solveShape(
       vs = ventShape(style, box, v, t, drv);
     }
     len = v.len;
-    const net =
+    // the braces the rule chose (placed in the box it chose them for), their wood carried to this size (planWoodIn3:
+    // smooth in the side, exact where they were placed); once settled, the rule's own bracing here must give the same
+    // volume, or the steps go on from it (a few times: a volume only a change in the bracing's choice straddles has
+    // no box)
+    ref ??= subBracingChoice(box, t, inset, style, v, drv, target.braceStyle);
+    const netWith = (braceIn3: number) =>
       ((box.w - 2 * t) * (box.h - 2 * t) * (box.d - inset - 0.75 - t) * 16.387) / 1000 -
       disp -
       (vs.area * len * 16.387) / 1000 -
-      subWoodIn3(style, box, t, inset, v, target.braceStyle) * IN3_TO_L;
-    const err = VbL - net;
-    if (Math.abs(err) <= 1e-11 * VbL)
-      return unreached ? null : { box: { ...box }, len, area: vs.area };
+      subWoodWithIn3(style, box, t, v, braceIn3) * IN3_TO_L;
+    let err = VbL - netWith(planWoodIn3(ref.b, ref.inner, paInner(box, t, inset), t));
+    if (Math.abs(err) <= 1e-11 * VbL) {
+      const own = subBoxBracing(box, t, inset, style, v, drv, target.braceStyle);
+      err = VbL - netWith(braceWoodIn3(own));
+      if (Math.abs(err) <= 1e-11 * VbL)
+        return unreached ? null : { box: { ...box }, len, area: vs.area };
+      if (++replans > MAX_REPLANS) return null;
+      ref = { b: own, inner: paInner(box, t, inset) };
+      prev = null;
+    }
     // the net volume's slope along the free side: the gross volume's at first (the wood and duct move far less), then
     // the secant through the last two sizes
     const secant = prev && (prev.err - err) / (box[free] - prev.x);

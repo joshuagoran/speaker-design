@@ -16,6 +16,17 @@ export const PA_PANEL_TARGET_HZ = PANEL_TARGET_CROSSOVER_MULTIPLE * PA_BRACING_C
  * sides, the side-duct walls and their dividers); a shorter one is left out, on the safe side.
  */
 export const DUCT_SUPPORT_MIN_SHARE = 2 / 3;
+/** How far every brace and rib stays from the driver's basket, magnet and cutout, inches. */
+export const DRIVER_CLEARANCE_IN = 0.5;
+/**
+ * A driver's shape behind the baffle as the braces keep clear of it, as shares of its depth there: the cutout's full
+ * width (the frame's ring, the surround and the basket's widest) for the first BASKET_RING_SHARE, the basket narrowing
+ * straight to the motor's width by MOTOR_START_SHARE (taken in BASKET_TAPER_STEPS boxes, each as wide as the basket at
+ * its front, so they hold it), and the motor's width to the back.
+ */
+export const BASKET_RING_SHARE = 0.2;
+export const MOTOR_START_SHARE = 0.6;
+export const BASKET_TAPER_STEPS = 3;
 
 /** A PA box's inside: width, height and depth behind the baffle (in), and the band a bottom slot takes under the baffle. */
 export interface PaBoxInside {
@@ -44,8 +55,9 @@ export function paBoxPanels(
   wall: PlateStock,
   baffle: PlateStock,
   sup: PaBoxSupports,
+  stops: PaBoxSupports = sup,
 ): BracePanel[] {
-  const base = { offU: 0, offV: 0, fixedU: [], fixedV: [] };
+  const base = { offU: 0, offV: 0, fixedU: [], fixedV: [], stopU: [], stopV: [] };
   return [
     {
       ...base,
@@ -57,6 +69,7 @@ export function paBoxPanels(
       stock: wall,
       ribs: true,
       fixedV: sup.sideL,
+      stopV: stops.sideL,
     },
     {
       ...base,
@@ -68,6 +81,7 @@ export function paBoxPanels(
       stock: wall,
       ribs: true,
       fixedV: sup.sideR,
+      stopV: stops.sideR,
     },
     {
       ...base,
@@ -79,6 +93,7 @@ export function paBoxPanels(
       stock: wall,
       ribs: true,
       fixedU: sup.top,
+      stopU: stops.top,
     },
     {
       ...base,
@@ -90,6 +105,7 @@ export function paBoxPanels(
       stock: wall,
       ribs: true,
       fixedU: sup.bottom,
+      stopU: stops.bottom,
     },
     { ...base, id: "back", u: "x", v: "y", spanU: iw, spanV: ih, stock: wall, ribs: true },
     {

@@ -732,7 +732,7 @@ function exactHook(
       disp: sub.ts.disp,
       VbL: V,
       Fb: s.fbs[fi],
-      braceStyle: s.cur.braceStyle,
+      braceStyle: s.cur.subBraceStyle,
     };
     const [lo, hi] = s.sr[free];
     while (g.next < pairCount(g.pairs)) {
@@ -764,7 +764,7 @@ function exactHook(
         sol.box,
         t,
         sub.lb,
-        subBoxBracing(sol.box, t, s.cur.inset, style, v, s.cur.braceStyle),
+        subBoxBracing(sol.box, t, s.cur.inset, style, v, sub, s.cur.subBraceStyle),
       );
       if (lb > s.cap + 1e-9) continue;
       if (!b || lb < b.lb) {
@@ -1016,7 +1016,7 @@ function exactHook(
           const lo = at(xoLo),
             hi = at(xoHi);
           const midLb =
-            midWeightLb(bx, t, midBoxBracing(bx, t, cur.inset, cur.layout, cur.braceStyle)) +
+            midWeightLb(bx, t, midBoxBracing(bx, t, cur.inset, m, cur.layout, cur.midBraceStyle)) +
             (m.lb || 0);
           for (const hp of c.hornTable[xoHi]) {
             const room = hp.at + cur.hfTilt + KEEP_UP_SLACK_DB;
@@ -1514,7 +1514,7 @@ function exactHook(
         portStyle: style,
         cVent: vent,
         layout: cur.layout,
-        braceStyle: cur.braceStyle,
+        subBraceStyle: cur.subBraceStyle,
       });
       if (!(vent.len > 0) || !ductFits(ductFit(box, style, vent, t, sub).spans, vent.len)) return;
       if (!subBaffleFits(box, style, vent, t, sub)) return;
@@ -1522,7 +1522,7 @@ function exactHook(
         box,
         t,
         sub.lb,
-        subBoxBracing(box, t, cur.inset, style, vent, cur.braceStyle),
+        subBoxBracing(box, t, cur.inset, style, vent, sub, cur.subBraceStyle),
       );
       if (lb > s.cap + 1e-9) return;
       const [cs] = ventedCurves(
@@ -1578,7 +1578,17 @@ function exactHook(
     const tune = (len: number) => {
       const v = { ...vent, len };
       const vs = ventShape(style, box, v, t, sub);
-      const V = subNetLiters(style, box, t, s.cur.inset, v, vs.area, sub.ts.disp, s.cur.braceStyle);
+      const V = subNetLiters(
+        style,
+        box,
+        t,
+        s.cur.inset,
+        v,
+        vs.area,
+        sub.ts.disp,
+        sub,
+        s.cur.subBraceStyle,
+      );
 
       const Leff = (len + vs.ec) * 0.0254;
       return (343 / (2 * Math.PI)) * Math.sqrt((vs.area * 0.00064516) / ((V / 1000) * Leff));
