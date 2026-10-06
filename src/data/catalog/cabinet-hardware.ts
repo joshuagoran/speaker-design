@@ -6,6 +6,8 @@
 import type { CabinetPart } from "../../types";
 
 const PE = "https://www.parts-express.com/";
+/** Millimetres to inches, for the parts dimensioned in mm. */
+const MM = 1 / 25.4;
 
 /** The recessed handles a box can take, two per box (one each side). */
 export const HANDLES = [
@@ -16,14 +18,18 @@ export const HANDLES = [
     price: 8.71,
     src: "Parts Express 260-705, Oct 2026",
     url: `${PE}Penn-Elcom-H1105-Recessed-Steel-PA-Cabinet-Handle-260-705`,
-    cutout: { w: 6.75, h: 4.25 },
-    flange: { w: 8.625, h: 6.375 },
-    // mounted tall: the 6 3/4″ side runs up the panel and the grip bar across it (Parts Express's photos)
+    // sizes from Parts Express's dimensioned drawing for 260-705 (in mm, which govern):
+    // https://www.parts-express.com/SSP%20Applications/PartsExpress@SuiteCentric/SCA%202019.1/img/260-705_ALT_1.jpg
+    // cutout 175 × 115 mm, flange 220 × 162 mm, recess 63 mm deep, 5.5 mm screw holes. The listing's text (cutout
+    // 6 3/4 × 4 1/4″) is smaller than the drawing and than the STEP model's recess body (122 × 168 mm).
+    cutout: { w: 175 * MM, h: 115 * MM },
+    flange: { w: 220 * MM, h: 162 * MM },
+    // mounted tall: the 175 mm side runs up the panel and the grip bar across it (Parts Express's photos)
     upright: "w",
-    depthIn: 2.5,
+    depthIn: 63 * MM,
     lb: 1,
-    screws: null,
-    note: "All steel, black. Parts Express lists the outside size (8 5/8 × 6 3/8 × 2 1/2″) and the cutout (6 3/4 × 4 1/4″); the screw pattern is not listed. Takes the H1105/BP backplate and the H1105G airtight gasket (not in the catalogue).",
+    screws: "5.5 mm holes in the flange (the drawing doesn't dimension their pattern)",
+    note: "All steel, black. Parts Express's drawing gives the flange (220 × 162 mm), the cutout (175 × 115 mm), the recess depth (63 mm) and 5.5 mm screw holes. Takes the H1105/BP backplate and the H1105G airtight gasket (not in the catalogue).",
   },
   {
     id: "30769",

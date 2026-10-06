@@ -69,7 +69,7 @@ test("the H1105's mesh: the STEP model's flange (220 × 162 × 5 mm) and recess 
   assert.ok(Math.abs(z0 + 58) <= 0.5 && Math.abs(z1 - 5) <= 0.5, `z ${z0} .. ${z1}`);
   assert.equal(H1105_MESH.indices.length % 3, 0);
   assert.ok(H1105_MESH.indices.every((i) => i >= 0 && i < H1105_MESH.positions.length / 3));
-  // the catalogue's flange is the same part: 8 5/8 × 6 3/8″
+  // the catalogue's flange is the same part: 220 × 162 mm on Parts Express's drawing
   const part = HANDLES.find((p) => p.id === "H1105");
   assert.ok(part && HARDWARE_MESHES[part.id] === H1105_MESH);
   const f = mountedFlange(part);

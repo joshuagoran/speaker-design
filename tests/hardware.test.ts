@@ -182,7 +182,13 @@ test("a handle that runs into the vent, an edge, a rib or the driver says so", (
 test("each recess's litres come off the box's net volume, and the tuning follows", () => {
   const h1105 = HANDLES.find((h) => h.id === "H1105");
   assert.ok(h1105);
-  close(null, partRecessLitres(h1105, t), 6.75 * 4.25 * (2.5 - t) * IN3_TO_L, 1e-12);
+  // Parts Express's drawing: a 175 × 115 mm cutout, 63 mm deep
+  close(
+    null,
+    partRecessLitres(h1105, t),
+    ((175 * 115) / 25.4 ** 2) * (63 / 25.4 - t) * IN3_TO_L,
+    1e-12,
+  );
   // the dish is shallower than the wall, and the posts' depth isn't listed: neither takes room
   assert.equal(partRecessLitres(INPUT_PLATE, t), 0);
   assert.equal(partRecessLitres(HORN_POSTS, t), 0);
@@ -292,7 +298,7 @@ test("the cutlist notes each cutout on its panel, from a named edge", () => {
 test("each handle is mounted as its catalogue entry says: the H1105 tall, the 30769 wide", () => {
   const h1105 = HANDLES.find((h) => h.id === "H1105");
   assert.ok(h1105);
-  // the default sub is deep enough for the H1105's 8 5/8″ flange lying either way; it stands tall now
+  // the default sub is deep enough for the H1105's 220 mm flange lying either way; it stands tall now
   const plan = subPlan({ ...DEFAULT_HARDWARE.sub, model: "H1105" });
   const side = plan.parts[0];
   const tall = side.recess.y[1] - side.recess.y[0],
@@ -315,7 +321,8 @@ test("each handle is mounted as its catalogue entry says: the H1105 tall, the 30
     hardware: { ...DEFAULT_HARDWARE, sub: { ...DEFAULT_HARDWARE.sub, model: "H1105" } },
   }).parts;
   const note = fitted.find((p) => p.box === "sub" && p.part === "side")?.note ?? "";
-  assert.ok(note.includes(`4 1/4″ wide × 6 3/4″ high cutout for the ${h1105.name}`), note);
+  // 115 × 175 mm, to the nearest 1/16″
+  assert.ok(note.includes(`4 1/2″ wide × 6 7/8″ high cutout for the ${h1105.name}`), note);
   // the 30769 lies wide: its 5 1/4″ side runs front to back
   const compact = subPlan().parts[0];
   assert.ok(compact.recess.z[1] - compact.recess.z[0] > compact.recess.y[1] - compact.recess.y[0]);
