@@ -30,8 +30,9 @@ function insideToScene(ctx: SceneContext, box: Dims3, y: number, x: number) {
 }
 
 /**
- * A box's window braces and ribs (lib/bracing) inside the cabinet `box` whose bottom is at `y` and centre at `x`, in the
- * finish's inner shade like the duct parts, so they show in the cutaway: each rail and rib as lib/bracing places it.
+ * A box's window braces and ribs (lib/bracing) inside the cabinet `box` whose bottom is at `y` and centre at `x`, in
+ * bare ply (PARTS_3D.brace) on every finish, so they show in the cutaway beside the vent's parts and the drivers: each
+ * rail and rib as lib/bracing places it.
  */
 export function buildBraces(
   ctx: SceneContext,
@@ -53,7 +54,7 @@ export function buildBraces(
   for (const r of bracingRegions(bracing, inner, T)) {
     const { size, at } = place(r);
     if (size.some((s) => s <= 0)) continue;
-    const m = new THREE.Mesh(new THREE.BoxGeometry(...size), ctx.materials.inner);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(...size), ctx.materials.brace);
     m.name = BRACE_MESH_NAME;
     m.position.copy(at);
     parent.add(m);
