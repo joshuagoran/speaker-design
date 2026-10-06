@@ -1042,6 +1042,10 @@ export function braceParts(
         `${WINDOW_PLANE[axis]}, ${atList(open)} ${AXIS_FROM[axis]}; ${rails}, and leave the front rail out from ${formatInches(b.notch.y[0])}″ to ${formatInches(b.notch.y[1])}″ ${AXIS_FROM.y}, clear of the driver`,
       );
   }
+  // only a box with window braces has one for a rib to cross (Ribs has none)
+  const lap = BOX_AXES.some((a) => b.windows[a].length)
+    ? "; half-lap it where it crosses a window brace"
+    : "";
   for (const r of b.ribs) {
     const run = ribRunAxis(r.panel, r.across);
     const from = r.from > 1e-6 ? `, starting ${formatInches(r.from)}″ ${AXIS_FROM[run]}` : "";
@@ -1052,7 +1056,7 @@ export function braceParts(
       a: RIB_DEPTH_IN,
       b: r.len,
       t,
-      note: `${BRACE_PANEL_NAMES[r.panel]}, on edge, running ${BOX_AXIS_NAMES[run]}, ${atList(r.at)} ${AXIS_FROM[r.across]}${from}; half-lap it where it crosses a window brace`,
+      note: `${BRACE_PANEL_NAMES[r.panel]}, on edge, running ${BOX_AXIS_NAMES[run]}, ${atList(r.at)} ${AXIS_FROM[r.across]}${from}${lap}`,
     });
   }
   return out;

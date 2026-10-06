@@ -609,6 +609,25 @@ test("the strict styles give the starting sub three different plans, each of its
     const key = (b: BoxBracing) => JSON.stringify([b.windows, b.ribs]);
     assert.strictEqual(new Set([ribs, win, both].map(key)).size, 3, tag);
   }
+  // the cutlist's rib rows say to half-lap a window brace only where the box has one
+  const ribRows = (style: BraceStyleId) =>
+    cutParts({
+      sub: d.sub,
+      mid: d.mid,
+      subBox: d.cDim,
+      midDims: d.mDim,
+      wall: d.wall,
+      inset: d.inset,
+      joint: "butt",
+      portStyle: d.portStyle,
+      cVent: d.cVent,
+      layout: "stack",
+      braceStyle: style,
+    }).parts.filter((p) => p.box === "sub" && p.part === "rib");
+  const lapped = (style: BraceStyleId) =>
+    ribRows(style).map((p) => (p.note ?? "").includes("window brace"));
+  assert.ok(lapped("ribs").length > 0 && lapped("ribs").every((x) => !x));
+  assert.ok(lapped("both").length > 0 && lapped("both").every((x) => x));
 });
 
 test("rib: the T section's EI and first mode against a hand calculation (a ¾″ rib 2½″ deep over 22½″, a 9.2″ bay)", (t) => {
