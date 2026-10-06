@@ -92,6 +92,7 @@ import { selectCards, type SelectedCard } from "../optimizer/selectCards";
 import { byId, byIdOrThrow } from "../tables";
 import { DEFAULT_PA } from "../defaults";
 import { layoutCutlist, savedCutlist } from "./cutlist";
+import { hardwareLb, hardwareLitres, savedHardware } from "./hardware";
 import { savedCrossoverOrder } from "../../constants/crossovers";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
 import { goalKeeps, PA_UNMODELLED_F3_HZ } from "../optimizer/goalKeeps";
@@ -333,6 +334,8 @@ export function evaluateDesign(
     horn = byId(HORN_OPTIONS, c.horn);
   if (!sub || !sub.ts || !mid || !mid.ts || !cd || !horn) return null;
   const braceStyle = paBraceStyle(c);
+  // the handles and plates are the design's own (a save from before them: the defaults); no search changes them
+  const hardware = savedHardware(c.hardware);
   const midDims = c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim;
   // boundary: a save from before the slope setting has no orders, and reads as LR24
   const xoLoOrder = savedCrossoverOrder(c.xoLoOrder),
@@ -351,11 +354,13 @@ export function evaluateDesign(
     layout: c.layout,
     braceStyle,
     braceEstimate,
+    hardware,
   });
   const ms = midSystem(mid, {
     layout: c.layout,
     braceStyle,
     braceEstimate,
+    hardware,
     midDims,
     wall: c.wall,
     inset: c.inset,
@@ -372,6 +377,7 @@ export function evaluateDesign(
       braceEstimate
         ? braceWoodEstimate(c.cDim, c.wall, c.inset, braceStyle)
         : subBoxBracing(c.cDim, c.wall, c.inset, c.portStyle, c.cVent, sub, braceStyle),
+      hardwareLb(hardware, "sub", c.layout),
     ),
     midLb =
       midWeightLb(
@@ -380,6 +386,7 @@ export function evaluateDesign(
         braceEstimate
           ? midBraceEstimate(midDims, c.wall, c.inset, c.layout, braceStyle)
           : midBoxBracing(midDims, c.wall, c.inset, mid, c.layout, braceStyle),
+        hardwareLb(hardware, "mid", c.layout),
       ) + (mid.lb || 0);
   if (!s.mdl || !ms.mdl) return null; // a vent or box with no geometry has no model to evaluate
   const subMusic = subMusicOutputAt(s.mdl, s.lim, s.AMP_V, c.xoLo, xoLoOrder);
@@ -694,6 +701,10 @@ export function optimizePaStack(
     : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
   const walls = paOptimizerWalls(cur);
   const braceStyle = paSearchBraceStyle(cur);
+  // your handles and plates: every candidate keeps them, their recesses off its volumes and their weight on its boxes
+  const hw = savedHardware(cur.hardware);
+  const subHwLb = hardwareLb(hw, "sub", cur.layout),
+    midHwLb = hardwareLb(hw, "mid", cur.layout);
   const styles: PortStyle[] = locks.vent ? [cur.portStyle] : ["slots", "vslots", "round2"];
   const xoLos = locks.xoLo ? [cur.xoLo] : XO_LO_OPTIONS;
   const xoHis = locks.xoHi ? [cur.xoHi] : XO_HI_OPTIONS;
@@ -844,7 +855,8 @@ export function optimizePaStack(
   for (const sd of seedSet) {
     stepAt("boxes", seedNo++, seedSet.size);
     for (const t of walls) {
-      const G = sd.V + (sd.sub.ts.disp || 10) + 0.08 * sd.V + 3;
+      const G =
+        sd.V + (sd.sub.ts.disp || 10) + hardwareLitres(hw, "sub", t, cur.layout) + 0.08 * sd.V + 3;
       for (const { box } of shapes(G, t, sd.sub.lb, sd.sub.size)) {
         for (const style of styles) {
           const mk = (size: Partial<VentSpec>, len: number): VentSpec => ({
@@ -863,6 +875,7 @@ export function optimizePaStack(
               layout: cur.layout,
               braceStyle,
               braceEstimate: true,
+              hardware: hw,
             });
           let pushed = false,
             fallback: { c: PaDesignConfig; cVent: VentSpec; s: SubSystemModelled } | null = null;
@@ -929,6 +942,7 @@ export function optimizePaStack(
               layout: cur.layout,
               braceStyle,
               braceEstimate: true,
+              hardware: hw,
             });
             evals++;
             if (!s.mdl) continue;
@@ -942,7 +956,13 @@ export function optimizePaStack(
               c,
               s,
               sub: sd.sub,
-              lb: subWeightLb(box, t, sd.sub.lb, braceWoodEstimate(box, t, cur.inset, braceStyle)),
+              lb: subWeightLb(
+                box,
+                t,
+                sd.sub.lb,
+                braceWoodEstimate(box, t, cur.inset, braceStyle),
+                subHwLb,
+              ),
               out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
             });
             pushed = true;
@@ -974,6 +994,7 @@ export function optimizePaStack(
                 layout: cur.layout,
                 braceStyle,
                 braceEstimate: true,
+                hardware: hw,
               });
               evals++;
               if (s.mdl && s.lim.who !== "port")
@@ -986,6 +1007,7 @@ export function optimizePaStack(
                     t,
                     sd.sub.lb,
                     braceWoodEstimate(box, t, cur.inset, braceStyle),
+                    subHwLb,
                   ),
                   out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
                 });
@@ -1024,7 +1046,7 @@ export function optimizePaStack(
     for (const q of [0.55, 0.62, 0.7, 0.77]) {
       const r = (q / Qts) ** 2 - 1;
       if (r <= 0) continue;
-      const G = Vas / r / STUFFING_VOLUME_GAIN + disp;
+      const G = Vas / r / STUFFING_VOLUME_GAIN + disp + hardwareLitres(hw, "mid", t, cur.layout);
       let best: { bx: Dims3; lb: number } | null = null;
       for (let w = Math.max(mr.w[0], Math.ceil(need)); w <= mr.w[1]; w++)
         for (let h = Math.max(mr.h[0], Math.ceil(need)); h <= mr.h[1]; h++) {
@@ -1032,7 +1054,12 @@ export function optimizePaStack(
             d = r2(D + cur.inset + 0.75 + t, 0.5);
           if (d < mr.d[0] || d > mr.d[1] || d < 6) continue;
           const bx = { w, h, d },
-            lb = midWeightLb(bx, t, midBraceEstimate(bx, t, cur.inset, cur.layout, braceStyle));
+            lb = midWeightLb(
+              bx,
+              t,
+              midBraceEstimate(bx, t, cur.inset, cur.layout, braceStyle),
+              midHwLb,
+            );
           if (!best || lb < best.lb) best = { bx, lb };
         }
       if (best && !out.some((o) => o.w === best.bx.w && o.h === best.bx.h && o.d === best.bx.d))
@@ -1108,8 +1135,12 @@ export function optimizePaStack(
         const disp = m.ts.disp != null ? m.ts.disp : m.size === 15 ? 4 : 2.5;
         const bracing = midBraceEstimate(bx, t, cur.inset, cur.layout, braceStyle);
         const eff =
-          midNetLiters(boxInternalLiters(bx.w, bx.h, bx.d, t, cur.inset), disp, bracing) *
-          STUFFING_VOLUME_GAIN;
+          midNetLiters(
+            boxInternalLiters(bx.w, bx.h, bx.d, t, cur.inset),
+            disp,
+            bracing,
+            hardwareLitres(hw, "mid", t, cur.layout),
+          ) * STUFFING_VOLUME_GAIN;
         for (const xoLo of xoLos) {
           const V = ampVoltage(amps.mAmpW),
             mdl = closedBox(m.ts, eff, xoLo, null, V, {
@@ -1139,7 +1170,7 @@ export function optimizePaStack(
               xoHis.map((f) => [f, Math.max(...pairs[f].map((p) => p.lo))]),
             ),
             qtc: mdl.Qtc,
-            lb: midWeightLb(bx, t, bracing) + (m.lb || 0),
+            lb: midWeightLb(bx, t, bracing, midHwLb) + (m.lb || 0),
           });
         }
       }

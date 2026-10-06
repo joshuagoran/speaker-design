@@ -19,6 +19,12 @@ import type { Keep } from "./lib/optimizer/shortfall";
 import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
 import type { SelectedCard } from "./lib/optimizer/selectCards";
+import type { HANDLES } from "./data/catalog/cabinet-hardware";
+import type {
+  HARDWARE_KIND_NAMES,
+  HARDWARE_OBSTACLE_NAMES,
+  NO_HANDLES,
+} from "./constants/hardware";
 
 // Shapes of the parts catalogue tables in data/catalog/ (lib/data.ts derives the app's view of them).
 //
@@ -1113,6 +1119,8 @@ export interface PaDesignConfig {
   /** how much less the horn band needs than the mid band, dB */
   hfTilt: number;
   layout: PaLayout;
+  /** each box's handles and their offsets (lib/pa/hardware); absent in older saves: the defaults (`DEFAULT_PA`) */
+  hardware?: PaHardware;
   cutaway?: boolean;
   baffleColor?: string;
   /** a `FinishId`, or a paint colour as a hex string (`SwatchPicker` offers both) */
@@ -1246,6 +1254,8 @@ export interface SubGeometryConfig {
   braceStyle?: BraceStyleId;
   /** an optimizer's search: the braces' wood by its cursory estimate (braceWoodEstimate), not the rule */
   braceEstimate?: boolean;
+  /** the boxes' handles and plates, whose recesses take volume (lib/pa/hardware); absent: none */
+  hardware?: PaHardware;
 }
 
 /** `subSystem` adds the highpass, the amp and the port air speed limit. */
@@ -1266,6 +1276,8 @@ export interface SubGeometry {
   grossL: number;
   ductL: number;
   woodL: number;
+  /** the litres the hardware's recesses take (lib/pa/hardware) */
+  recessL: number;
   netL: number;
   Fb: number;
 }
@@ -1276,6 +1288,8 @@ export interface SubSystemBase {
   grossL: number;
   ductL: number;
   woodL: number;
+  /** the litres the hardware's recesses take (lib/pa/hardware) */
+  recessL: number;
   netL: number;
   AMP_V: number;
 }
@@ -1297,7 +1311,7 @@ export type SubSystem = SubSystemUnmodelled | SubSystemModelled;
 
 export interface MidSystemConfig
   extends
-    Pick<SubGeometryConfig, "braceEstimate">,
+    Pick<SubGeometryConfig, "braceEstimate" | "hardware">,
     Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder" | "braceStyle"> {
   /** the tower's mid chamber is part of the sub's cabinet and takes no braces of its own; absent: a box of its own */
   layout?: PaLayout;
@@ -1316,6 +1330,8 @@ export interface MidSystemBase {
   V: number;
   grossL: number;
   disp: number;
+  /** the litres the hardware's recesses take (lib/pa/hardware) */
+  recessL: number;
   netL: number;
   effL: number;
   vTherm: number;
@@ -1538,6 +1554,82 @@ export interface BoxBracing {
   meets: boolean;
 }
 
+// ---- Cabinet hardware ----
+
+/**
+ * A part bought for a PA box (data/catalog/cabinet-hardware): its Parts Express price and listing, the hole it takes
+ * through the panel and the flange round it (w along the panel, h across, as it is mounted; in), how deep its recess
+ * reaches from the panel's face (in) and its weight (lb). A figure the listing doesn't give is null; `note` names it.
+ */
+export interface CabinetPart {
+  id: string;
+  name: string;
+  /** the Parts Express part number */
+  sku: string;
+  /** US dollars, each */
+  price: number;
+  /** the vendor, part number and month the price was seen */
+  src: string;
+  url: string;
+  /** null: it mounts in another part (a jack in the dish) */
+  cutout: { w: number; h: number } | null;
+  flange: { w: number; h: number } | null;
+  depthIn: number | null;
+  lb: number | null;
+  /** the screw pattern, where listed */
+  screws: string | null;
+  note: string;
+}
+/** A handle model's id (data/catalog/cabinet-hardware HANDLES). */
+export type HandleId = (typeof HANDLES)[number]["id"];
+/** What a box's handle setting holds: a handle model, or none. */
+export type HandleChoice = HandleId | typeof NO_HANDLES;
+/** The boxes that take hardware: the sub and the mid (top) box. */
+export type HardwareBoxId = Extract<CutBoxId, "sub" | "mid">;
+/**
+ * A box's handles: the model (two, one each side) and how far they sit from the preset, the box's centre of gravity:
+ * up (in) and back toward the rear (in).
+ */
+export interface BoxHandles {
+  model: HandleChoice;
+  upIn: number;
+  backIn: number;
+}
+/** Each box's handles; the input dish and the horn's posts have fixed places (lib/pa/hardware). */
+export type PaHardware = Record<HardwareBoxId, BoxHandles>;
+/** What a placed part is (`HARDWARE_KIND_NAMES` words each). */
+export type HardwareKind = keyof typeof HARDWARE_KIND_NAMES;
+/** What a part can run into (`HARDWARE_OBSTACLE_NAMES` words each). */
+export type HardwareObstacle = keyof typeof HARDWARE_OBSTACLE_NAMES;
+/** The panels a part goes on. */
+export type HardwarePanel = Extract<BracePanelId, "sideL" | "sideR" | "back" | "top">;
+/**
+ * A part on a box: its panel, its cutout's centre on the panel's outside face (`u` along it, `v` up it, in from the
+ * box's outside edges: sides back from the front and up from the bottom, the back across from the left and up, the top
+ * across from the left and back from the front), the room its recess takes inside (box axes, as BoxRegion) and its litres.
+ */
+export interface PlacedHardware {
+  kind: HardwareKind;
+  part: CabinetPart;
+  panel: HardwarePanel;
+  u: number;
+  v: number;
+  recess: BoxRegion;
+  litres: number;
+  /** what it runs into; empty when it fits */
+  hits: HardwareObstacle[];
+}
+/** A box's hardware as placed: each part, their recesses' litres, weight (lb) and price ($), every part bought. */
+export interface BoxHardwarePlan {
+  box: HardwareBoxId;
+  parts: PlacedHardware[];
+  litres: number;
+  lb: number;
+  price: number;
+  /** each part bought, with its count, for the totals */
+  bought: { part: CabinetPart; qty: number }[];
+}
+
 // ---- Cutlist ----
 
 /** A cutlist part's stable id (`CUT_PART_NAMES` holds the name it shows). */
@@ -1591,6 +1683,8 @@ export interface CutPartsConfig {
   subOnly?: boolean;
   /** the sub's braces and ribs left out (an optimizer's search counts their wood by estimate instead) */
   noBraces?: boolean;
+  /** each box's handles and plates, for the panels' cutout notes; absent: none */
+  hardware?: PaHardware;
 }
 
 /** The panel a Hi-fi box's passive radiators are cut into. */

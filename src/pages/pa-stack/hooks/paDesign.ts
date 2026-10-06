@@ -13,6 +13,8 @@ import {
   midBoxBracing,
   subKeepOut as subBoxKeepOut,
   midKeepOut as midBoxKeepOut,
+  subHardwarePlan,
+  midHardwarePlan,
   subThroughLowpass,
   subMusicOutputAt,
   phasedCurve,
@@ -22,6 +24,7 @@ import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion";
 import type {
   BandCurves,
   BoxBracing,
+  BoxHardwarePlan,
   BoxKeepOut,
   Dims3,
   DispersionPlane,
@@ -67,7 +70,7 @@ type PaDesignInputs = Pick<
   > &
   Pick<
     CabinetStyle,
-    "plinthHeightIn" | "layout" | "baffleInsetIn" | "spacerHeightIn" | "braceStyle"
+    "plinthHeightIn" | "layout" | "baffleInsetIn" | "spacerHeightIn" | "braceStyle" | "hardware"
   > & {
     dispersionPlane: DispersionPlane;
     /** the walls' exact thickness, in (lib/panel) */
@@ -88,6 +91,9 @@ export interface PaDerivedDesign {
   /** what each box's braces keep clear of: its driver and the sub's vent (the 3D view draws the drivers in the cutaway) */
   subKeepOut: BoxKeepOut;
   midKeepOut: BoxKeepOut | null;
+  /** each box's handles, input dish and (the mid's) horn posts as placed, with what each runs into; null in the tower's mid */
+  subHardware: BoxHardwarePlan;
+  midHardware: BoxHardwarePlan | null;
   subAmpVoltage: number;
   /**
    * the sub's model (with the box's phase, for the coverage map), music limit and curves; null when the driver has no
@@ -166,6 +172,7 @@ export function derivePaDesign({
   braceStyle,
   baffleInsetIn,
   spacerHeightIn,
+  hardware,
   dispersionPlane,
 }: PaDesignInputs): PaDerivedDesign {
   const subBox = subBoxDims;
@@ -199,6 +206,25 @@ export function derivePaDesign({
   );
   const midKeepOut =
     layout === "tower" ? null : midBoxKeepOut(effectiveMidBoxDims, wallThicknessIn, midDriver);
+  const subHardware = subHardwarePlan(
+    subBox,
+    wallThicknessIn,
+    baffleInsetIn,
+    portStyle,
+    subVentSpec,
+    subDriver,
+    braceStyle,
+    hardware.sub,
+  );
+  const midHardware = midHardwarePlan(
+    effectiveMidBoxDims,
+    wallThicknessIn,
+    baffleInsetIn,
+    midDriver,
+    layout,
+    braceStyle,
+    hardware.mid,
+  );
   const subSys = subSystem(subDriver, midDriver, {
     subBox,
     midDims: midBoxDims,
@@ -212,6 +238,7 @@ export function derivePaDesign({
     portMax: maxPortAirSpeedMs,
     layout,
     braceStyle,
+    hardware,
     xoLo: subMidCrossoverHz, // the system chart draws the lowpass skirt
     phase: true, // for the coverage map
   });
@@ -254,6 +281,7 @@ export function derivePaDesign({
   const midSys = midSystem(midDriver, {
     layout,
     braceStyle,
+    hardware,
     midDims: effectiveMidBoxDims,
     wall: wallThicknessIn,
     inset: baffleInsetIn,
@@ -281,7 +309,12 @@ export function derivePaDesign({
       )
     : null;
   /** 3/4" baffle at 2.3 lb/ft\u00b2, other panels, braces and ribs at the chosen ply, plus 2 lb of hardware */
-  const midCabinetLb = midWeightLb(effectiveMidBoxDims, wallThicknessIn, midBracing);
+  const midCabinetLb = midWeightLb(
+    effectiveMidBoxDims,
+    wallThicknessIn,
+    midBracing,
+    midHardware?.lb ?? 0,
+  );
   const midWeightLoadedLb = midCabinetLb + (midDriver.lb || 0);
   // ---- horn + compression driver ----
   /**
@@ -343,7 +376,13 @@ export function derivePaDesign({
     divider: ductDividerIn(subVentSpec),
   };
 
-  const subWeightLoadedLb = subWeightLb(subBox, wallThicknessIn, subDriver.lb, subBracing);
+  const subWeightLoadedLb = subWeightLb(
+    subBox,
+    wallThicknessIn,
+    subDriver.lb,
+    subBracing,
+    subHardware.lb,
+  );
 
   const midBoxLiters = midGrossL;
   const isTower = layout === "tower";
@@ -398,6 +437,8 @@ export function derivePaDesign({
     midBracing,
     subKeepOut,
     midKeepOut,
+    subHardware,
+    midHardware,
     subAmpVoltage,
     subModelled,
     midVoltage,

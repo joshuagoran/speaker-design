@@ -20,6 +20,7 @@ import { savedCutlist } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
 import { savedPortStyle } from "../../../constants/portStyles";
 import { savedStackBraceStyle } from "../../../constants/bracing";
+import { savedHardware } from "../../../lib/pa/hardware";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../../constants/panelSizes";
 import { isPanelNominal, panelFor, panelIn, savedPanelExactIn } from "../../../lib/panel";
 import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
@@ -140,6 +141,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setCabinetFinish,
     spacerHeightIn,
     setSpacerHeightIn,
+    hardware,
+    setHardware,
   } = useCabinetStyle();
   const {
     cornerJoint,
@@ -221,6 +224,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
         braceStyle: effectiveBraceStyle,
         baffleInsetIn,
         spacerHeightIn,
+        hardware,
         dispersionPlane,
       }),
     [
@@ -248,6 +252,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
       effectiveBraceStyle,
       baffleInsetIn,
       spacerHeightIn,
+      hardware,
       dispersionPlane,
     ],
   );
@@ -284,6 +289,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     hfAmpW: hornAmpWatts,
     hfTilt: hornBandTiltDb,
     layout,
+    hardware,
     cutaway,
     baffleColor,
     cabFinish: cabinetFinish,
@@ -336,6 +342,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     if (typeof c.hfTilt === "number") setHornBandTiltDb(c.hfTilt);
     if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
     if (c.layout) setLayout(c.layout);
+    // each box's handles; a save from before them: the defaults
+    setHardware(savedHardware(c.hardware));
     if (c.baffleColor) setBaffleColor(c.baffleColor);
     setCabinetFinish(c.cabFinish || DEFAULT_PA.cabFinish);
     setSpacerHeightIn(typeof c.spacerH === "number" ? c.spacerH : DEFAULT_PA.spacerH);
@@ -420,6 +428,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setCabinetFinish,
     spacerHeightIn,
     setSpacerHeightIn,
+    hardware,
+    setHardware,
     cornerJoint,
     setCornerJoint,
     plywoodSheetKind,

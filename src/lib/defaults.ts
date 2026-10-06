@@ -16,6 +16,7 @@ import {
 } from "./data";
 import { byIdOrThrow } from "./tables";
 import { CUTLIST_DEFAULTS } from "./pa/cutlist";
+import { DEFAULT_HARDWARE } from "./pa/hardware";
 import type {
   Cabinet,
   CompressionDriver,
@@ -85,6 +86,7 @@ export const DEFAULT_PA = {
   hfAmpW: 100,
   hfTilt: 3,
   layout: "stack",
+  hardware: DEFAULT_HARDWARE,
   cutaway: false,
   baffleColor: "#4a5d4e",
   cabFinish: "birch",

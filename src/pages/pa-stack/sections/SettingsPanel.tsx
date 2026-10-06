@@ -43,6 +43,9 @@ import { defaultBraceStyle } from "../../../lib/bracing";
 import { braceNoteLines } from "../../../lib/bracingNotes";
 import { PANEL_NOMINAL_NAMES } from "../../../constants/panelSizes";
 import { PANEL_NOMINAL_OPTIONS } from "../../../lib/panel";
+import { HardwareSettings } from "./HardwareSettings";
+import { boxTakesHardware, handlePart } from "../../../lib/pa/hardware";
+import { NO_HANDLES_LABEL } from "../../../constants/hardware";
 
 interface Props {
   planner: Pick<
@@ -106,6 +109,10 @@ interface Props {
     | "setBraceStyle"
     | "subBracing"
     | "midBracing"
+    | "hardware"
+    | "setHardware"
+    | "subHardware"
+    | "midHardware"
     | "setWallPanel"
     | "baffleInsetIn"
     | "setBaffleInsetIn"
@@ -191,6 +198,7 @@ export function SettingsPanel({ planner }: Props) {
     setBraceStyle,
     subBracing,
     midBracing,
+    hardware,
     setWallPanel,
     baffleInsetIn,
     setBaffleInsetIn,
@@ -240,7 +248,15 @@ export function SettingsPanel({ planner }: Props) {
       `highpass ${subHighpassHz} Hz`,
       `amps ${subAmpWatts} / ${midAmpWatts} / ${hornAmpWatts} W`,
     ].join(" · "),
-    build: `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${PANEL_NOMINAL_NAMES[wallPanel].short} ply, braced with ${BRACE_STYLE_SUMMARY[effectiveBraceStyle]}`,
+    build: [
+      `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${PANEL_NOMINAL_NAMES[wallPanel].short} ply, braced with ${BRACE_STYLE_SUMMARY[effectiveBraceStyle]}`,
+      ...keysOf(hardware)
+        .filter((b) => boxTakesHardware(b, layout))
+        .map(
+          (b) =>
+            `${PA_SETTINGS_TABS[b]}: ${handlePart(hardware[b].model)?.name ?? NO_HANDLES_LABEL.toLowerCase()}`,
+        ),
+    ].join(", "),
   };
   const section = (id: PaSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -715,6 +731,7 @@ export function SettingsPanel({ planner }: Props) {
                 onChange={setBaffleInsetIn}
               />
             </div>
+            <HardwareSettings planner={planner} />
           </div>
           <SwatchPicker
             label="Cabinet finish"

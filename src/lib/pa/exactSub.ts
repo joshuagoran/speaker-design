@@ -44,6 +44,7 @@ import { subTubeEndCorrection, subTubeSpan, type TubeDriver } from "./tubes";
 import { ELBOW_COUNTS, MAX_ELBOWS, ownSpans, type ElbowCount } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import { defaultBraceStyleNear } from "../bracing";
+import { hardwareLitres } from "./hardware";
 
 const RHO = 1.18,
   C = 343,
@@ -259,7 +260,7 @@ export const musicAt = (
   20 * Math.log10(lim.V / volts);
 
 /** What the mid's braces' estimate reads beyond the box (midBraceEstimate): the layout and the style. */
-export type MidBrace = Pick<MidSystemConfig, "layout"> & { braceStyle: BraceStyleId };
+export type MidBrace = Pick<MidSystemConfig, "layout" | "hardware"> & { braceStyle: BraceStyleId };
 /** The mid in a sealed box, as midSystem and closedBox set it up: the driver's and the box's acoustic parts, and the system's resonance. */
 function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: MidBrace) {
   const ts = mid.ts;
@@ -269,6 +270,7 @@ function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: 
       boxInternalLiters(box.w, box.h, box.d, t, inset),
       disp,
       midBraceEstimate(box, t, inset, brace.layout, brace.braceStyle),
+      hardwareLitres(brace.hardware, "mid", t, brace.layout),
     ) * STUFFING_VOLUME_GAIN;
   const Sd = ts.Sd / 10000,
     Mms = ts.Mms / 1000,

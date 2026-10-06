@@ -15,6 +15,7 @@ import {
 } from "../src/lib/pa/calc";
 import { FILL_OPTIONS } from "../src/lib/data";
 import { SEED_NAMES } from "./seeds";
+import { hardwareLb, savedHardware } from "../src/lib/pa/hardware";
 import type {
   Dims3,
   FillBoxType,
@@ -87,6 +88,8 @@ export function evaluate(c: GoldenConfig): GoldenValues {
     portMax: c.portMax || 20,
     layout: c.layout || "stack",
     braceStyle: c.braceStyle,
+    // the design's handles and plates; the seeds predate them, so the defaults, as the planner loads them
+    hardware: savedHardware(c.hardware),
   };
   const s = subSystem(sub, mid, cfg);
   const xoLo = c.xoLo || 120;
@@ -94,6 +97,7 @@ export function evaluate(c: GoldenConfig): GoldenValues {
   const ms = midSystem(mid, {
     layout: cfg.layout,
     braceStyle: c.braceStyle,
+    hardware: cfg.hardware,
     midDims: mDim,
     wall: cfg.wall,
     inset: cfg.inset,
@@ -133,9 +137,10 @@ export function evaluate(c: GoldenConfig): GoldenValues {
         cfg.wall,
         sub.lb,
         subBoxBracing(cfg.subBox, cfg.wall, cfg.inset, cfg.portStyle, cfg.cVent, sub, c.braceStyle),
+        hardwareLb(cfg.hardware, "sub", cfg.layout),
       ),
     ),
-    midLb: r2(midWeightLb(mDim, cfg.wall, midBracing)),
+    midLb: r2(midWeightLb(mDim, cfg.wall, midBracing, hardwareLb(cfg.hardware, "mid", cfg.layout))),
   };
 }
 

@@ -341,9 +341,10 @@ test("louder with the sub amp unlocked turns it up when the amp is what limits t
   const k = out.cards[0];
   assert.ok(k.config.ampW > c.ampW, `amp ${k.config.ampW} W`);
   assert.ok(k.metrics.out >= evaluateDesign(c)!.out + 1, "louder than the design at 200 W");
-  // and no more power than it uses: 50 W less loses output
-  const less = evaluateDesign({ ...k.config, ampW: k.config.ampW - 50 })!;
-  assert.ok(less.out < k.metrics.out - 0.01 || k.config.ampW - 50 < 200);
+  // and no more power than it uses: 50 W less loses output, in the search's own model (its braces by estimate; the
+  // card's numbers are the rule's, a few hundredths of a dB apart where the cone, not the amp, sets the limit)
+  const at = (ampW: number) => evaluateDesign({ ...k.config, ampW }, true)!.out;
+  assert.ok(at(k.config.ampW - 50) < at(k.config.ampW) - 0.01 || k.config.ampW - 50 < 200);
 });
 
 test("vent locked on a round1 or round4 style searches that style's tubes instead of throwing", (t) => {
@@ -464,13 +465,13 @@ test("a failing design with nothing in reach: the closest design that passes, an
 });
 
 test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
-  // "blocky" under an $800 budget and 95 lb, with the vent kept to its bottom slot, nothing that passes keeps the
-  // output; $880 does
+  // "blocky" under an $820 budget and 100 lb (its handles and plates weigh in too), with the vent kept to its
+  // bottom slot, nothing that passes keeps the output; $902 does
   const out = optimizePaStack({
     ...base,
     cur: pick(SEED_NAMES.blocky),
-    maxLb: 95,
-    budget: 800,
+    maxLb: 100,
+    budget: 820,
     goal: "cheaper",
     locks: { vent: true },
   });
@@ -478,7 +479,7 @@ test("with only a closest card, the near miss still offers the looser limit that
   assert.ok(out.cards.length > 0);
   const opts = out.nearMiss ? out.nearMiss.options : [];
   assert.ok(
-    opts.some((o) => o.set.budget === 880),
+    opts.some((o) => o.set.budget === 902),
     JSON.stringify(opts.map((o) => o.text)),
   );
 });

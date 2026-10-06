@@ -13,6 +13,8 @@ import type {
   CutPart,
   CutPartId,
   CutPartsConfig,
+  BoxHandles,
+  BoxHardwarePlan,
   Dims3,
   FillDriver,
   FillSystem,
@@ -86,6 +88,9 @@ import {
   paBoxPanels,
   type PaBoxSupports,
 } from "./bracing";
+import { hardwareLitres, planBoxHardware } from "./hardware";
+import { INPUT_JACK } from "../../data/catalog/cabinet-hardware";
+import { HARDWARE_KIND_NAMES } from "../../constants/hardware";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
 const ROUND_PORT: Record<PortStyle, boolean> = {
@@ -889,7 +894,13 @@ export function boxParts(
   t: number,
   inset: number,
   joint: CornerJoint,
-  extra: { band?: number; cutNote?: string; bracing?: BoxBracing | null } = {},
+  extra: {
+    band?: number;
+    cutNote?: string;
+    bracing?: BoxBracing | null;
+    /** the hardware's cutout notes, by panel (hardwareCutNotes) */
+    hardware?: HardwareCutNotes;
+  } = {},
 ) {
   const BT = 0.75,
     P: CutPart[] = [];
@@ -902,8 +913,18 @@ export function boxParts(
         ? `45° on top and bottom edges; ${rearNote}`
         : rearNote;
   const topNote = joint === "miter" ? `45° on both ends; ${rearNote}` : rearNote;
-  P.push({ box: label, part: "side", qty: 2, a: D, b: H, t, note: sideNote });
-  P.push({ box: label, part: "topBottom", qty: 2, a: D, b: topW, t, note: topNote });
+  const hw = extra.hardware ?? {};
+  const withNote = (note: string, more: string | undefined) => (more ? `${note}; ${more}` : note);
+  P.push({ box: label, part: "side", qty: 2, a: D, b: H, t, note: withNote(sideNote, hw.side) });
+  P.push({
+    box: label,
+    part: "topBottom",
+    qty: 2,
+    a: D,
+    b: topW,
+    t,
+    note: withNote(topNote, hw.top),
+  });
   P.push({
     box: label,
     part: "back",
@@ -911,7 +932,7 @@ export function boxParts(
     a: W - t,
     b: H - t,
     t,
-    note: "sits in the rear rabbet",
+    note: withNote("sits in the rear rabbet", hw.back),
   });
   const iw = W - 2 * t,
     ih = H - 2 * t,
@@ -1004,6 +1025,98 @@ export function braceParts(
 export const cutoutNote = (inches: number) =>
   `${formatInches(inches)}″ driver cutout (typical; use the datasheet's)`;
 
+/** A box's hardware cutout notes, by the cutlist row they go on: the sides (both), the top, the back. */
+export type HardwareCutNotes = Partial<Record<"side" | "top" | "back", string>>;
+/** A part's cutout note, as cutoutNote words a driver's: its size, the part, and where it goes (`where`). */
+export const hardwareCutoutNote = (
+  part: Pick<BoxHardwarePlan["parts"][number], "part" | "kind">,
+  where: string,
+) =>
+  `${formatInches(part.part.cutout?.w ?? 0)} × ${formatInches(part.part.cutout?.h ?? 0)}″ cutout for the ${part.part.name} ${HARDWARE_KIND_NAMES[part.kind]}, ${where}`;
+/**
+ * A box's hardware as cutout notes on its panels, each centre from a named edge of that panel: the handles on both
+ * sides (from the front and bottom edges), the dish on the back (its bottom edge sits in the rabbet, t/2 up), the
+ * horn's posts on the top only (from its rear edge).
+ */
+export function hardwareCutNotes(plan: BoxHardwarePlan, box: Dims3, t: number): HardwareCutNotes {
+  const out: HardwareCutNotes = {};
+  for (const p of plan.parts) {
+    if (p.kind === "handle" && p.panel === "sideL")
+      out.side = hardwareCutoutNote(
+        p,
+        `both sides, centred ${formatInches(p.u)}″ back from the front edge and ${formatInches(p.v)}″ up from the bottom edge`,
+      );
+    else if (p.kind === "plate")
+      out.back = hardwareCutoutNote(
+        p,
+        `centred side to side, its centre ${formatInches(p.v - t / 2)}″ up from the bottom edge; 2 × ${INPUT_JACK.name} in it (in, link)`,
+      );
+    else if (p.kind === "posts")
+      out.top = hardwareCutoutNote(
+        p,
+        `top only, centred side to side, its centre ${formatInches(box.d - p.v)}″ from the rear edge`,
+      );
+  }
+  return out;
+}
+
+/**
+ * The sub box's hardware from its presets (lib/pa/hardware planBoxHardware): its driver where the 3D view puts it, its
+ * braces by rule and its keep-out, so the parts are checked against what is really inside.
+ */
+export function subHardwarePlan(
+  box: Dims3,
+  t: number,
+  inset: number,
+  style: PortStyle,
+  v: BraceVent,
+  drv: TubeDriver & Pick<SubDriver, "lb">,
+  braceStyle: BraceStyleId | undefined,
+  handles: BoxHandles,
+): BoxHardwarePlan {
+  return planBoxHardware({
+    box: "sub",
+    dims: box,
+    t,
+    inset,
+    handles,
+    driver: {
+      centre: subDriverCentre(box, t, style, v, drv.size),
+      lb: drv.lb || 0,
+      depthIn: subDriverDepthIn(drv),
+    },
+    bracing: subBoxBracing(box, t, inset, style, v, drv, braceStyle),
+    keepOut: subKeepOut(box, t, inset, style, v, drv),
+  });
+}
+/** The mid box's hardware from its presets; null in the tower, whose mid chamber is part of the sub's cabinet. */
+export function midHardwarePlan(
+  box: Dims3,
+  t: number,
+  inset: number,
+  mid: Pick<MidDriver, "size" | "depthIn" | "lb">,
+  layout: PaLayout | undefined,
+  braceStyle: BraceStyleId | undefined,
+  handles: BoxHandles,
+): BoxHardwarePlan | null {
+  if (layout === "tower") return null;
+  const { iw, ih } = paInside(box, t, 0);
+  return planBoxHardware({
+    box: "mid",
+    dims: box,
+    t,
+    inset,
+    handles,
+    driver: {
+      centre: { x: iw / 2, y: ih / 2 },
+      lb: mid.lb || 0,
+      depthIn: mid.depthIn ?? MID_DEPTH_FALLBACK_IN[mid.size],
+    },
+    bracing: midBoxBracing(box, t, inset, mid, layout, braceStyle),
+    keepOut: midKeepOut(box, t, mid),
+  });
+}
+
 export function cutParts({
   sub,
   mid,
@@ -1018,6 +1131,7 @@ export function cutParts({
   braceStyle,
   subOnly,
   noBraces,
+  hardware,
 }: CutPartsConfig): { parts: CutPart[]; vent: string[] } {
   const t = wall,
     all: CutPart[] = [];
@@ -1026,6 +1140,13 @@ export function cutParts({
   const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, sub) : null;
   const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
     bracing: noBraces ? null : subBoxBracing(subBox, t, inset, portStyle, cVent, sub, braceStyle),
+    hardware: hardware
+      ? hardwareCutNotes(
+          subHardwarePlan(subBox, t, inset, portStyle, cVent, sub, braceStyle, hardware.sub),
+          subBox,
+          t,
+        )
+      : undefined,
     band: portStyle === "slots" ? cVent.slotH + t : 0,
     cutNote:
       cutoutNote(DRIVER_CUTOUT_IN[sub.size]) +
@@ -1097,8 +1218,11 @@ export function cutParts({
     );
   }
   if (layout !== "tower" && !subOnly) {
+    const midPlan =
+      hardware && midHardwarePlan(midDims, t, inset, mid, layout, braceStyle, hardware.mid);
     const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
       bracing: midBoxBracing(midDims, t, inset, mid, layout, braceStyle),
+      hardware: midPlan ? hardwareCutNotes(midPlan, midDims, t) : undefined,
       cutNote: cutoutNote(DRIVER_CUTOUT_IN[mid.size]),
     });
     all.push(...m.P);
@@ -1462,18 +1586,24 @@ export const subWeightLb = (
   wall: number,
   drvLb: number,
   bracing?: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
+  /** the handles, dish, jacks and posts (lib/pa/hardware hardwareLb) */
+  hardwareLb = 0,
 ) =>
   (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
   braceLb(bracing, wall) +
   (drvLb || 0) +
+  hardwareLb +
   6;
 export const midWeightLb = (
   b: Dims3,
   wall: number,
   bracing?: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
+  /** the handles, dish, jacks and posts (lib/pa/hardware hardwareLb) */
+  hardwareLb = 0,
 ) =>
   (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
   braceLb(bracing, wall) +
+  hardwareLb +
   2;
 
 // ---- the sub as the planner computes it ----
@@ -1515,18 +1645,20 @@ export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConf
       1000
     : 0;
   const woodL = partsL + estL;
-  const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - woodL);
+  const recessL = hardwareLitres(cfg.hardware, "sub", cfg.wall, cfg.layout);
+  const netL = Math.max(20, grossL - (sub.ts ? sub.ts.disp : 10.5) - ductL - woodL - recessL);
   return {
     port,
     grossL,
     ductL,
     woodL,
+    recessL,
     netL,
     Fb: ventTuning(netL, port.area, port.len, port.n, port.ec).Fb,
   };
 }
 export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig): SubSystem {
-  const { port, grossL, ductL, woodL, netL } = subGeometry(sub, mid, cfg);
+  const { port, grossL, ductL, woodL, recessL, netL } = subGeometry(sub, mid, cfg);
   const AMP_V = ampVoltage(cfg.ampW);
   const mdl = sub.ts
     ? boxModel(sub.ts, netL, port.area, port.len, cfg.hpf, AMP_V, cfg.hpType, {
@@ -1536,12 +1668,14 @@ export function subSystem(sub: SubDriver, mid: MidDriver, cfg: SubSystemConfig):
         phase: cfg.phase,
       })
     : null;
-  if (!sub.ts || !mdl) return { port, grossL, ductL, woodL, netL, AMP_V, mdl: null, lim: null };
+  if (!sub.ts || !mdl)
+    return { port, grossL, ductL, woodL, recessL, netL, AMP_V, mdl: null, lim: null };
   return {
     port,
     grossL,
     ductL,
     woodL,
+    recessL,
     netL,
     AMP_V,
     mdl,
@@ -1572,12 +1706,16 @@ export function subThroughLowpass(
 // ---- the mid-bass as the planner computes it: sealed, always lightly stuffed ----
 // cfg: { midDims, wall, inset, xoLo, xoHi, xoLoOrder, xoHiOrder, mAmpW }
 export const STUFFING_VOLUME_GAIN = 1.15; // ~15% more effective volume from light stuffing
-/** The mid's net volume, L: the gross less the driver and the braces' and ribs' wood (midBoxBracing). */
+/**
+ * The mid's net volume, L: the gross less the driver, the braces' and ribs' wood (midBoxBracing) and the hardware's
+ * recesses (lib/pa/hardware hardwareLitres).
+ */
 export const midNetLiters = (
   grossL: number,
   disp: number,
   bracing: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
-) => Math.max(5, grossL - disp - (braceWoodIn3(bracing) * 16.387) / 1000);
+  recessL = 0,
+) => Math.max(5, grossL - disp - (braceWoodIn3(bracing) * 16.387) / 1000 - recessL);
 export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const V = ampVoltage(cfg.mAmpW);
   const grossL = boxInternalLiters(
@@ -1588,6 +1726,7 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
     cfg.inset,
   );
   const disp = mid.ts && mid.ts.disp != null ? mid.ts.disp : mid.size === 15 ? 4 : 2.5; // assumed where not published
+  const recessL = hardwareLitres(cfg.hardware, "mid", cfg.wall, cfg.layout);
   const netL = midNetLiters(
     grossL,
     disp,
@@ -1600,6 +1739,7 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
           cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
         )
       : midBoxBracing(cfg.midDims, cfg.wall, cfg.inset, mid, cfg.layout, cfg.braceStyle),
+    recessL,
   );
   const effL = netL * STUFFING_VOLUME_GAIN;
   // the curve runs on past 2 kHz when the lowpass sits above 800 Hz, so its skirt shows on the system chart
@@ -1613,9 +1753,10 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
     : null;
   const vTherm = mid.ts ? thermalVoltageLimit(mid.ts.aes) : 0;
   const useV = Math.min(vTherm, V);
-  if (!mid.ts || !mdl) return { V, grossL, disp, netL, effL, vTherm, useV, mdl: null, max: null };
+  if (!mid.ts || !mdl)
+    return { V, grossL, disp, recessL, netL, effL, vTherm, useV, mdl: null, max: null };
   const max = maxOutputCurve(mdl.curve, mid.ts, V, Infinity); // no port: Xmax, thermal, amp
-  return { V, grossL, disp, netL, effL, vTherm, useV, mdl, max };
+  return { V, grossL, disp, recessL, netL, effL, vTherm, useV, mdl, max };
 }
 
 // ---- passive coaxial fills ----
