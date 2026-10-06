@@ -32,6 +32,18 @@ const braceCount = (b: BoxBracing) => {
   return words.length ? words.join(", ") : "none needed";
 };
 
+/**
+ * What to try for the panels a box leaves under the target: Both, unless it is set, and thicker walls, unless only the
+ * baffle is short (it stays ¾″ whatever the walls); empty when neither helps.
+ */
+const shortfallTry = (b: Pick<BoxBracing, "style" | "panels" | "targetHz">) => {
+  const tries = [
+    b.style !== "both" && BRACE_STYLE_NAMES.both.toLowerCase(),
+    braceShortfalls(b).some((p) => p.id !== "baffle") && "thicker walls",
+  ].filter(Boolean);
+  return tries.length ? ` Try ${tries.join(" or ")}.` : "";
+};
+
 /** A box's hardware in words: each part with its place (as the cutlist says it) and its recess, then the totals. */
 function hardwareWords(plan: BoxHardwarePlan, box: Dims3, t: number) {
   const parts = plan.parts
@@ -149,9 +161,8 @@ export function DetailsSection({ planner }: Props) {
                       {braceShortfalls(b)
                         .map((p) => BRACE_PANEL_NAMES[p.id].toLowerCase())
                         .join(", ")}
-                      . No more {BRACE_STYLE_SUMMARY[b.style]} fit or help. Try{" "}
-                      {b.style === "both" ? "" : `${BRACE_STYLE_NAMES.both.toLowerCase()} or `}
-                      thicker walls.
+                      . No more {BRACE_STYLE_SUMMARY[b.style]} fit or help.
+                      {shortfallTry(b)}
                     </div>
                   )}
                 </div>
