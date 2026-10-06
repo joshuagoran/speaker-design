@@ -1,5 +1,6 @@
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../../lib/data";
 import { toggled } from "../../lib/lists";
+import { pickDefined } from "../../lib/records";
 import { HIFI_LOCK_KEYS } from "../../lib/hifi/optimize";
 import { runHifiOptimizer } from "../../lib/hifi/runOptimizer";
 import { useDesignPreview } from "../../hooks/useDesignPreview";
@@ -33,7 +34,7 @@ interface Props {
   seatDistanceM: HifiDesign["seatDistanceM"];
   /** what the picked waveguide costs, $ */
   guidePrice: number;
-  /** the Cutlist page's measured panel thicknesses: the walls the search tries */
+  /** the Cutlist page's measured panel thicknesses: the search's one size (HIFI_OPTIMIZER_PANEL) at its measurement */
   panelExactIn: PanelExactIn;
 }
 
@@ -75,13 +76,6 @@ const ALL_LOCKED: HifiPlannerLocks = {
   dim: { w: "exact", h: "exact", d: "exact" },
 };
 
-/** Stored locks without any an older version had that no longer exists (the plywood's). */
-function knownHifiLocks(l: HifiOptimizerLocks): HifiOptimizerLocks {
-  const out: HifiOptimizerLocks = {};
-  for (const k of HIFI_LOCK_KEYS) if (l[k] !== undefined) out[k] = l[k];
-  return out;
-}
-
 /** The Hi-fi optimizer: switch, goals, budget, locks, search, previewing, loading and undo. Switch, budget and locks are remembered per viewer. */
 export function useHifiOptimizer({
   snapshot,
@@ -103,7 +97,8 @@ export function useHifiOptimizer({
   >({
     key: "hifi.locks",
     empty: {},
-    fromStored: (l) => ({ ...knownHifiLocks(l), dim: { ...l.dim } }),
+    // without any lock an older version stored that no longer exists (the plywood's)
+    fromStored: (l) => ({ ...pickDefined(l, HIFI_LOCK_KEYS), dim: { ...l.dim } }),
     allLocked: ALL_LOCKED,
     none: { dim: {} },
     enabled: isOptimizerOn,

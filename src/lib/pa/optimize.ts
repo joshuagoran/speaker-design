@@ -112,6 +112,7 @@ import { UI_TEXT } from "../../constants/uiText";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { panelFor, panelIn, panelNominalNear, savedPanelExactIn } from "../panel";
 import { defaultBraceStyle } from "../bracing";
+import { savedStackBraceStyle } from "../../constants/bracing";
 import { PA_OPTIMIZER_PANEL } from "../../constants/optimizerPanels";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
@@ -568,19 +569,20 @@ export const paOptimizerWalls = (cur: Pick<PaDesignConfig, "exactIn">) => [
   panelIn(PA_OPTIMIZER_PANEL, PLYWOOD_MATERIAL, savedPanelExactIn(cur.exactIn)),
 ];
 /**
- * A design's bracing style: its own, else the default for its nominal plywood size (the size it names at its
- * thickness, else the one measured or nominally at it, else the nearest), as the planner has it.
+ * A design's bracing style: its own (or, saved by an earlier build, its sub's: savedStackBraceStyle), else the default
+ * for its nominal plywood size (the size it names at its thickness, else the one measured or nominally at it, else the
+ * nearest), as the planner has it.
  */
 export const paBraceStyle = (
   c: Pick<PaDesignConfig, "braceStyle" | "wall" | "panel" | "exactIn">,
 ) =>
-  c.braceStyle ??
+  savedStackBraceStyle(c) ??
   defaultBraceStyle(
     panelFor(c, PLYWOOD_MATERIAL, savedPanelExactIn(c.exactIn)) ?? panelNominalNear(c.wall),
   );
 /** The bracing style the searches design with: yours, else the default for their plywood (PA_OPTIMIZER_PANEL). */
 export const paSearchBraceStyle = (cur: Pick<PaDesignConfig, "braceStyle">) =>
-  cur.braceStyle ?? defaultBraceStyle(PA_OPTIMIZER_PANEL);
+  savedStackBraceStyle(cur) ?? defaultBraceStyle(PA_OPTIMIZER_PANEL);
 /** The highpasses the search tries for a tuning when the highpass isn't locked: 0.85× and 1× the tuning, 20 Hz at least. */
 export const highpassOptions = (fb: number) => [
   Math.max(20, Math.round(fb * 0.85)),

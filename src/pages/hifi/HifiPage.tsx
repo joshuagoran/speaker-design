@@ -608,21 +608,19 @@ export function HifiPage({ hifi }: Props) {
           {section(
             "box",
             <>
-              <div className="grid grid-cols-[5.5rem_1fr_auto] items-center gap-x-2 gap-y-2 mb-3 text-sm">
+              <div className="grid grid-cols-[5.5rem_1fr] items-center gap-x-2 gap-y-2 mb-3 text-sm">
                 <span className="text-stone-500">Material</span>
                 <ToggleGroup
                   value={panelMaterial}
                   onChange={setPanelMaterial}
                   options={MATERIAL_CHOICES}
                 />
-                <span />
                 <span className="text-stone-500">Thickness</span>
                 <ToggleGroup
                   value={wallPanel}
                   onChange={setWallPanel}
                   options={PANEL_NOMINAL_OPTIONS}
                 />
-                <span />
               </div>
               <Card className="mb-4">
                 <Slider

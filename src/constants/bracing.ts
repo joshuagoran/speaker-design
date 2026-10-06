@@ -64,6 +64,9 @@ export const LEGACY_SUB_BRACE_STYLE_KEY = "subBraceStyle";
 /** A saved design's brace style: one of the ids, else absent (the plywood's default). */
 export const savedBraceStyle = (s: unknown) => keysOf(BRACE_STYLE_NAMES).find((k) => k === s);
 
-/** A saved design's style for the stack: its own, else (a save from earlier builds, one style per box) the sub's. */
+/**
+ * A saved design's style for the stack: its own, else (a save from earlier builds, one style per box) the sub's; each
+ * taken only when it is a style, so a stale value under the new key doesn't hide a good one under the old.
+ */
 export const savedStackBraceStyle = (c: { braceStyle?: unknown }) =>
-  savedBraceStyle(c.braceStyle ?? Reflect.get(c, LEGACY_SUB_BRACE_STYLE_KEY));
+  savedBraceStyle(c.braceStyle) ?? savedBraceStyle(Reflect.get(c, LEGACY_SUB_BRACE_STYLE_KEY));

@@ -124,6 +124,12 @@ test("one style for the stack: an older save's per-cabinet styles read the sub's
     midOnly = { braceStyle: undefined, midBraceStyle: "window" };
   assert.strictEqual(savedStackBraceStyle(older), "ribs");
   assert.strictEqual(savedStackBraceStyle(midOnly), undefined);
+  // a stale value under the new key doesn't hide a style under the old one
+  const stale = { ...older, braceStyle: "tbeam" };
+  assert.strictEqual(savedStackBraceStyle(stale), "ribs");
+  // the optimizers and cards read an older save's style as the planner does, not the plywood's default
+  assert.strictEqual(paBraceStyle({ wall: 0.75, ...older }), "ribs");
+  assert.strictEqual(paSearchBraceStyle(older), "ribs");
   // ¾″ measured at 0.68″ sits nearer ⅝″, but it is ¾″ stock: window braces, as the planner shows
   const wall = { wall: 0.68, panel: "3/4", exactIn: { "3/4": 0.68 } } as const;
   assert.strictEqual(defaultBraceStyleNear(0.68), "ribs");

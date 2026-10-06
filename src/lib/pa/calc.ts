@@ -563,8 +563,8 @@ const ductHolds = (
   return len - inset - BAFFLE_PLY_IN >= DUCT_SUPPORT_MIN_SHARE * inD;
 };
 /**
- * The lines the sub's vent parts run along on its panels, however short the vent (subVentSupports takes them as
- * supports only past DUCT_SUPPORT_MIN_SHARE): a rib may always stop on them to clear the vent.
+ * The lines the sub's vent parts run along on its panels, however short the vent (subBoxBracing takes them as
+ * supports only past DUCT_SUPPORT_MIN_SHARE, its duct flags' `holds`): a rib may always stop on them to clear the vent.
  */
 export function subVentLines(
   box: Dims3,

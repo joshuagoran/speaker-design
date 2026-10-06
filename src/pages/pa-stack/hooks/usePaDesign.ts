@@ -304,7 +304,6 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setPanelExactIn(exactIn);
     setWallPanel(panelFor(c, PLYWOOD_MATERIAL, exactIn) ?? DEFAULT_PA.panel);
     setBaffleInsetIn(typeof c.inset === "number" ? c.inset : DEFAULT_PA.inset);
-    // each box's style; a save without one (older ones, or the plywood's default) follows the plywood
     // the stack's style; a save from earlier builds names the sub's instead; neither: the plywood's default
     setBraceStyle(savedStackBraceStyle(c));
     if (c.sub) setSubDriver(byId(SUB_OPTIONS, c.sub) ?? subDriver);
