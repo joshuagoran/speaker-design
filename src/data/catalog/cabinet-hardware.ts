@@ -20,16 +20,19 @@ export const HANDLES = [
     url: `${PE}Penn-Elcom-H1105-Recessed-Steel-PA-Cabinet-Handle-260-705`,
     // sizes from Parts Express's dimensioned drawing for 260-705 (in mm, which govern):
     // https://www.parts-express.com/SSP%20Applications/PartsExpress@SuiteCentric/SCA%202019.1/img/260-705_ALT_1.jpg
-    // cutout 175 × 115 mm, flange 220 × 162 mm, recess 63 mm deep, 5.5 mm screw holes. The listing's text (cutout
-    // 6 3/4 × 4 1/4″) is smaller than the drawing and than the STEP model's recess body (122 × 168 mm).
+    // cutout 175 × 115 mm, flange 220 × 162 mm, recess 63 mm, 5.5 mm screw holes. The listing's text (cutout
+    // 6 3/4 × 4 1/4″) is smaller again. Penn Elcom's STEP model (build/assets) has a recess body 168 mm up but 122 mm
+    // across, wider than the drawing's 115 mm cutout: the gap is open, so check the part before cutting.
     cutout: { w: 175 * MM, h: 115 * MM },
     flange: { w: 220 * MM, h: 162 * MM },
     // mounted tall: the 175 mm side runs up the panel and the grip bar across it (Parts Express's photos)
     upright: "w",
-    depthIn: 63 * MM,
+    // the drawing's 63 mm runs from the flange's face: the STEP model's 5 mm flange on the panel and its recess 58 mm
+    // into it (depthIn is from the panel's face)
+    depthIn: 58 * MM,
     lb: 1,
     screws: "5.5 mm holes in the flange (the drawing doesn't dimension their pattern)",
-    note: "All steel, black. Parts Express's drawing gives the flange (220 × 162 mm), the cutout (175 × 115 mm), the recess depth (63 mm) and 5.5 mm screw holes. Takes the H1105/BP backplate and the H1105G airtight gasket (not in the catalogue).",
+    note: "All steel, black. Parts Express's drawing gives the flange (220 × 162 mm), the cutout (175 × 115 mm), the depth (63 mm over the 5 mm flange, so the recess goes 58 mm into the panel) and 5.5 mm screw holes. Its cutout's 115 mm across is narrower than the 122 mm recess body in Penn Elcom's CAD model: check the part before cutting. Takes the H1105/BP backplate and the H1105G airtight gasket (not in the catalogue).",
   },
   {
     id: "30769",

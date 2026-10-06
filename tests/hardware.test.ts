@@ -182,11 +182,11 @@ test("a handle that runs into the vent, an edge, a rib or the driver says so", (
 test("each recess's litres come off the box's net volume, and the tuning follows", () => {
   const h1105 = HANDLES.find((h) => h.id === "H1105");
   assert.ok(h1105);
-  // Parts Express's drawing: a 175 × 115 mm cutout, 63 mm deep
+  // Parts Express's drawing: a 175 × 115 mm cutout, 63 mm deep over the 5 mm flange (58 mm from the panel's face)
   close(
     null,
     partRecessLitres(h1105, t),
-    ((175 * 115) / 25.4 ** 2) * (63 / 25.4 - t) * IN3_TO_L,
+    ((175 * 115) / 25.4 ** 2) * (58 / 25.4 - t) * IN3_TO_L,
     1e-12,
   );
   // the dish is shallower than the wall, and the posts' depth isn't listed: neither takes room
