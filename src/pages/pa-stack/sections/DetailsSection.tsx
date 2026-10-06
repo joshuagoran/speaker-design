@@ -2,6 +2,22 @@ import { DetailsDropdown } from "../../../components/ui/DetailsDropdown";
 import { UI_TEXT } from "../../../constants/uiText";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
+import { PanelResonanceTable } from "../../../components/stats/PanelResonanceTable";
+import { BRACE_STYLE_NAMES } from "../../../constants/bracing";
+import { PA_BRACING_CROSSOVER_HZ, PANEL_TARGET_CROSSOVER_MULTIPLE } from "../../../lib/pa/bracing";
+import { formatHz } from "../../../lib/format";
+import type { BoxBracing } from "../../../types";
+
+/** A box's braces and ribs in words: "1 window brace, 6 ribs", or none. */
+const braceCount = (b: BoxBracing) => {
+  const w = b.windows.x.length + b.windows.y.length + b.windows.z.length,
+    r = b.ribs.reduce((a, x) => a + x.at.length, 0);
+  const words = [
+    w && `${w} window brace${w > 1 ? "s" : ""}`,
+    r && `${r} rib${r > 1 ? "s" : ""}`,
+  ].filter(Boolean);
+  return words.length ? words.join(", ") : "none needed";
+};
 
 interface Props {
   planner: Pick<
@@ -22,6 +38,8 @@ interface Props {
     | "midBoxLiters"
     | "stackHeightIn"
     | "hornCenterHeightIn"
+    | "subBracing"
+    | "midBracing"
   >;
 }
 
@@ -44,6 +62,8 @@ export function DetailsSection({ planner }: Props) {
     midBoxLiters,
     stackHeightIn,
     hornCenterHeightIn,
+    subBracing,
+    midBracing,
   } = planner;
   return (
     <div className="min-w-0" style={{ fontFamily: FONT }}>
@@ -67,6 +87,36 @@ export function DetailsSection({ planner }: Props) {
           {compressionDriver.name}, crossed at {midHornCrossoverHz} Hz (maker suggests{" "}
           {hornOption.xo}). Sits on a short block so the mouth clears the cube. Total stack height
           about {stackHeightIn.toFixed(0)} in, horn center at {hornCenterHeightIn.toFixed(0)} in.
+        </div>
+        <div>
+          <span className="font-medium text-stone-900">Bracing.</span>{" "}
+          {BRACE_STYLE_NAMES[subBracing.style]}, by rule: braces and ribs go in, the one that lifts
+          the panels most for its wood first, until every panel&rsquo;s first resonance clears{" "}
+          {formatHz(subBracing.targetHz)} ({PANEL_TARGET_CROSSOVER_MULTIPLE} ×{" "}
+          {PA_BRACING_CROSSOVER_HZ} Hz, the highest sub-to-mid crossover the optimizers pick). Sub:{" "}
+          {braceCount(subBracing)}
+          {midBracing ? `; ${UI_TEXT.midBass.toLowerCase()} cube: ${braceCount(midBracing)}` : ""}.
+          Each panel and each bay between supports is a thin plate simply supported at its edges
+          (glued edges are stiffer, so this reads low); the vent shelf, its fins and the side-duct
+          walls count as supports. The Cutlist has where each one goes.
+          <PanelResonanceTable
+            caption="Sub panels, first resonance"
+            panels={subBracing.panels}
+            targetHz={subBracing.targetHz}
+          />
+          {!subBracing.meets && (
+            <div className="text-red-700">
+              Some sub panels stay under the target: nothing more fits, or this style can&rsquo;t
+              reach them. Try Both, or thicker plywood.
+            </div>
+          )}
+          {midBracing && (
+            <PanelResonanceTable
+              caption={`${UI_TEXT.midBass} cube panels, first resonance`}
+              panels={midBracing.panels}
+              targetHz={midBracing.targetHz}
+            />
+          )}
         </div>
         {[midDriver, compressionDriver, hornOption].map(
           (part) =>

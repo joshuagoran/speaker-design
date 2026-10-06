@@ -605,7 +605,7 @@ test("a mid that keeps up only below full sub power turns the sub down instead o
 
 test("a band is turned down only as far as the keep-up check needs, not level with the band above", () => {
   // the sub outruns this mid at full power; it comes down until the mid is within the check's slack, which leaves it
-  // ~0.4 dB more output than turning it down until the mid is exactly level (124.8 dB)
+  // ~0.4 dB more output than turning it down until the mid is exactly level (about 123.0 dB)
   const lim = { maxLb: base.maxLb, budget: base.budget };
   const out = optimizePaStack({ ...base, cur: pick("idk tweaked"), goals: ["lighter", "lower"] });
   const k = out.cards[0];
@@ -613,7 +613,7 @@ test("a band is turned down only as far as the keep-up check needs, not level wi
   const m = evaluateDesign(k.config)!;
   assert.deepEqual(designProblems(m, lim), [], "the card passes as it is");
   assert.ok(m.midGap < 0 && m.midGap >= -KEEP_UP_SLACK_DB, `mid gap ${m.midGap.toFixed(2)} dB`);
-  assert.ok(k.metrics.out > 125, `${k.metrics.out.toFixed(2)} dB`);
+  assert.ok(k.metrics.out > 123.2, `${k.metrics.out.toFixed(2)} dB`);
 });
 
 test("the mids are chosen with the horn in view: a dearer mid the horn keeps up with is tried", () => {

@@ -19,6 +19,7 @@ import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
 import { savedCutlist } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
 import { savedPortStyle } from "../../../constants/portStyles";
+import { savedBraceStyle } from "../../../constants/bracing";
 import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
 import { derivePaDesign } from "./paDesign";
 import type { PaDerivedDesign } from "./paDesign";
@@ -122,6 +123,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     format,
     wallThicknessIn,
     setWallThicknessIn,
+    braceStyle,
+    setBraceStyle,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,
@@ -199,6 +202,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
         plinthHeightIn,
         layout,
         wallThicknessIn,
+        braceStyle,
         baffleInsetIn,
         spacerHeightIn,
         dispersionPlane,
@@ -225,6 +229,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
       plinthHeightIn,
       layout,
       wallThicknessIn,
+      braceStyle,
       baffleInsetIn,
       spacerHeightIn,
       dispersionPlane,
@@ -251,6 +256,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     mDim: midBoxDims,
     wall: wallThicknessIn,
     inset: baffleInsetIn,
+    ...(braceStyle ? { braceStyle } : {}),
     xoLo: subMidCrossoverHz,
     xoHi: midHornCrossoverHz,
     xoLoOrder: subMidCrossoverOrder,
@@ -277,6 +283,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     if (c.wall === 0.5 || c.wall === 0.75) setWallThicknessIn(c.wall);
     else setWallThicknessIn(DEFAULT_PA.wall);
     setBaffleInsetIn(typeof c.inset === "number" ? c.inset : DEFAULT_PA.inset);
+    setBraceStyle(savedBraceStyle(c.braceStyle));
     if (c.sub) setSubDriver(byId(SUB_OPTIONS, c.sub) ?? subDriver);
     if (c.mid) {
       const m = byId(MID_OPTIONS, c.mid) ?? midDriver;
@@ -376,6 +383,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     format,
     wallThicknessIn,
     setWallThicknessIn,
+    braceStyle,
+    setBraceStyle,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,

@@ -1,6 +1,10 @@
 // Calculation functions for the planner. Pure TS, no React, window or THREE.
 import type {
+  BoxAxis,
+  BoxBracing,
   BoxModelTS,
+  BracePanelId,
+  BraceStyleId,
   CompressionHf,
   CornerJoint,
   CrossoverOrder,
@@ -19,7 +23,9 @@ import type {
   MidDriver,
   MidSystem,
   MidSystemConfig,
+  PaLayout,
   PaMaxPoint,
+  PanelStock,
   PanelThickness,
   PhasedPoint,
   PortStyle,
@@ -44,6 +50,21 @@ import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../../data/acoustics/slot
 import { modelTubeElbows, subTubeEndCorrection, subTubeKit, type TubeDriver } from "./tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import { ELBOW_WORDS } from "../../constants/portStyles";
+import { BOX_AXIS_NAMES, BRACE_PANEL_NAMES } from "../../constants/bracing";
+import {
+  BIRCH_PLY_STIFFNESS,
+  braceBox,
+  defaultBraceStyle,
+  RIB_DEPTH_IN,
+  WINDOW_RAIL_IN,
+} from "../bracing";
+import {
+  DUCT_SUPPORT_MIN_SHARE,
+  NO_SUPPORTS,
+  PA_PANEL_TARGET_HZ,
+  paBoxPanels,
+  type PaBoxSupports,
+} from "./bracing";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
 const ROUND_PORT: Record<PortStyle, boolean> = {
@@ -454,6 +475,120 @@ export const isPanelThickness = (t: number): t is PanelThickness =>
 export const plywoodLbPerSqFt = (t: number) => PLYWOOD_LB_PER_SQ_FT[isPanelThickness(t) ? t : 0.75];
 
 // ---------------------------------------------------------------
+// Bracing by rule (lib/bracing): each panel's first plate resonance, and the window braces or ribs that lift every
+// panel over PA_PANEL_TARGET_HZ. The cutlist, the volumes, the weights and the 3D view all read these.
+// ---------------------------------------------------------------
+/** The baffle's ply, in: 3/4″ whatever the walls. */
+const BAFFLE_PLY_IN = 0.75;
+/**
+ * A PA panel's stock for the plate model, from its thickness: the one place bracing reads the panel thickness and its
+ * weight, with birch ply's moduli.
+ */
+export const paPanelStock = (t: number): PanelStock => ({
+  t,
+  lbPerSqFt: plywoodLbPerSqFt(t),
+  ...BIRCH_PLY_STIFFNESS,
+});
+/** A PA box's inside as boxParts cuts it: behind a 3/4″ baffle set `inset` back, `band` of a bottom slot under it. */
+const paInside = (box: Dims3, t: number, inset: number, band = 0) => ({
+  iw: box.w - 2 * t,
+  ih: box.h - 2 * t,
+  inD: box.d - inset - BAFFLE_PLY_IN - t,
+  band,
+});
+/**
+ * The lines the sub's vent parts already hold its panels on (lib/pa/bracing), when they run along enough of the box
+ * (DUCT_SUPPORT_MIN_SHARE of the depth behind the baffle): a bottom slot's shelf across both sides and its two fins
+ * along the bottom; a side duct's wall along the top and bottom and its two dividers across its side.
+ */
+export function subVentSupports(
+  box: Dims3,
+  t: number,
+  inset: number,
+  style: PortStyle,
+  v: Pick<VentSpec, "slotH" | "len" | "throat">,
+): PaBoxSupports {
+  const { iw, ih, inD } = paInside(box, t, inset);
+  const behind = (len: number) => len - inset - BAFFLE_PLY_IN >= DUCT_SUPPORT_MIN_SHARE * inD;
+  if (style === "slots") {
+    const len = slotFolds(box, v, t) ? foldedShelfIn(box, v.slotH, t) : v.len;
+    if (!behind(len)) return NO_SUPPORTS;
+    const shelf = v.slotH + t / 2,
+      fin = ((iw - 2 * t) / 3 + t) / 2; // the fins' centres either side of the middle (the 3D view's)
+    return { sideL: [shelf], sideR: [shelf], top: [], bottom: [iw / 2 - fin, iw / 2 + fin] };
+  }
+  if (style === "vslots" || style === "vslot1") {
+    if (!behind(v.len)) return NO_SUPPORTS;
+    const dividers = [ih / 3, (2 * ih) / 3],
+      wall = v.throat + t / 2,
+      both = style === "vslots"; // a single duct goes on the right side
+    const across = [...(both ? [wall] : []), iw - wall];
+    return { sideL: both ? dividers : [], sideR: dividers, top: across, bottom: across };
+  }
+  return NO_SUPPORTS;
+}
+// boxes repeat thousands of times in the optimizers' searches: the rule runs once per box
+const BRACING_MEMO = new Map<string, BoxBracing>();
+const BRACING_MEMO_MAX = 20000;
+function paBracing(
+  box: Dims3,
+  t: number,
+  inset: number,
+  band: number,
+  sup: PaBoxSupports,
+  braceStyle: BraceStyleId | undefined,
+): BoxBracing {
+  const style = braceStyle ?? defaultBraceStyle(t);
+  const key = `${style}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${sup.sideL.join()}|${sup.sideR.join()}|${sup.top.join()}|${sup.bottom.join()}`;
+  let b = BRACING_MEMO.get(key);
+  if (!b) {
+    const inside = paInside(box, t, inset, band);
+    const wall = paPanelStock(t);
+    b = braceBox({
+      inner: { x: inside.iw, y: inside.ih, z: inside.inD },
+      panels: paBoxPanels(inside, wall, paPanelStock(BAFFLE_PLY_IN), sup),
+      targetHz: PA_PANEL_TARGET_HZ,
+      style,
+      braceStock: wall,
+    });
+    if (BRACING_MEMO.size >= BRACING_MEMO_MAX) BRACING_MEMO.clear();
+    BRACING_MEMO.set(key, b);
+  }
+  return b;
+}
+/** The sub box's braces and ribs by rule, and its panels' resonances, with its vent's parts as supports. */
+export const subBoxBracing = (
+  box: Dims3,
+  t: number,
+  inset: number,
+  style: PortStyle,
+  v: Pick<VentSpec, "slotH" | "len" | "throat">,
+  braceStyle: BraceStyleId | undefined,
+) =>
+  paBracing(
+    box,
+    t,
+    inset,
+    style === "slots" ? v.slotH + t : 0,
+    subVentSupports(box, t, inset, style, v),
+    braceStyle,
+  );
+/** The mid box's braces and ribs by rule; null in the tower, whose mid chamber is part of the sub's cabinet. */
+export const midBoxBracing = (
+  box: Dims3,
+  t: number,
+  inset: number,
+  layout: PaLayout | undefined,
+  braceStyle: BraceStyleId | undefined,
+) => (layout === "tower" ? null : paBracing(box, t, inset, 0, NO_SUPPORTS, braceStyle));
+/** A box's braces' and ribs' wood, in³. */
+export const braceWoodIn3 = (b: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null | undefined) =>
+  b ? b.windowIn3 + b.ribIn3 : 0;
+/** Their weight at the wall ply, lb. */
+const braceLb = (b: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null | undefined, wall: number) =>
+  (braceWoodIn3(b) * plywoodLbPerSqFt(wall)) / 144 / wall;
+
+// ---------------------------------------------------------------
 // Cutlist: panels for the sub and mid boxes from the planner's current
 // dimensions (cutlist.ts lays them out on 4x8 or 5x5 sheets).
 // ---------------------------------------------------------------
@@ -483,7 +618,7 @@ export function boxParts(
   t: number,
   inset: number,
   joint: CornerJoint,
-  extra: { band?: number; cutNote?: string; braces?: number } = {},
+  extra: { band?: number; cutNote?: string; bracing?: BoxBracing | null } = {},
 ) {
   const BT = 0.75,
     P: CutPart[] = [];
@@ -538,17 +673,66 @@ export function boxParts(
     note: "",
   });
   const inD = D - inset - BT - t;
-  if (extra.braces)
-    P.push({
-      box: label,
-      part: "windowBrace",
-      qty: extra.braces,
-      a: iw,
-      b: inD,
-      t,
-      note: "cut out the center, leave ~2″ rails",
-    });
+  if (extra.bracing) P.push(...braceParts(label, extra.bracing, { x: iw, y: ih, z: inD }, t));
   return { P, iw, ih, inD };
+}
+
+// where a window brace across each axis lies, and where positions along each axis are measured from
+const WINDOW_PLANE: Record<BoxAxis, string> = {
+  x: "upright, front to back",
+  y: "level",
+  z: "upright, parallel to the baffle",
+};
+const AXIS_FROM: Record<BoxAxis, string> = {
+  x: "from the left side",
+  y: "up from the bottom",
+  z: "back from the baffle",
+};
+// the axis a rib runs along on each panel: the panel's other axis than the one it divides
+const PANEL_AXES: Record<BracePanelId, readonly [BoxAxis, BoxAxis]> = {
+  sideL: ["z", "y"],
+  sideR: ["z", "y"],
+  top: ["x", "z"],
+  bottom: ["x", "z"],
+  back: ["x", "y"],
+  baffle: ["x", "y"],
+};
+const atList = (at: number[]) => at.map((x) => `${formatInches(x)}″`).join(", ");
+/** A box's window braces and ribs as cutlist rows: each axis' window braces, then each panel's ribs. */
+export function braceParts(
+  box: CutBoxId,
+  b: BoxBracing,
+  inner: Record<BoxAxis, number>,
+  t: number,
+): CutPart[] {
+  const out: CutPart[] = [];
+  for (const axis of ["y", "x", "z"] as const) {
+    const at = b.windows[axis];
+    if (!at.length) continue;
+    const [pa, pb] = (["x", "y", "z"] as const).filter((o) => o !== axis).map((o) => inner[o]);
+    out.push({
+      box,
+      part: "windowBrace",
+      qty: at.length,
+      a: pa,
+      b: pb,
+      t,
+      note: `${WINDOW_PLANE[axis]}, ${atList(at)} ${AXIS_FROM[axis]}; cut out the centre, leave ${formatInches(WINDOW_RAIL_IN)}″ rails`,
+    });
+  }
+  for (const r of b.ribs) {
+    const run = PANEL_AXES[r.panel].find((a) => a !== r.across) ?? r.across;
+    out.push({
+      box,
+      part: "rib",
+      qty: r.at.length,
+      a: RIB_DEPTH_IN,
+      b: r.len,
+      t,
+      note: `${BRACE_PANEL_NAMES[r.panel]}, on edge, running ${BOX_AXIS_NAMES[run]}, ${atList(r.at)} ${AXIS_FROM[r.across]}; notch over any duct part it crosses and butt into the next panel's ribs`,
+    });
+  }
+  return out;
 }
 
 /** A baffle row's cutout note: the cutout is a typical size, and the driver's datasheet has the real one. */
@@ -566,6 +750,7 @@ export function cutParts({
   portStyle,
   cVent,
   layout,
+  braceStyle,
 }: CutPartsConfig): { parts: CutPart[]; vent: string[] } {
   const t = wall,
     all: CutPart[] = [];
@@ -573,7 +758,7 @@ export function cutParts({
   // round tubes: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes)
   const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, sub) : null;
   const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
-    braces: wall === 0.5 ? 3 : 2,
+    bracing: subBoxBracing(subBox, t, inset, portStyle, cVent, braceStyle),
     band: portStyle === "slots" ? cVent.slotH + t : 0,
     cutNote:
       cutoutNote(DRIVER_CUTOUT_IN[sub.size]) +
@@ -646,7 +831,7 @@ export function cutParts({
   }
   if (layout !== "tower") {
     const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
-      braces: wall === 0.5 ? 2 : 1,
+      bracing: midBoxBracing(midDims, t, inset, layout, braceStyle),
       cutNote: cutoutNote(DRIVER_CUTOUT_IN[mid.size]),
     });
     all.push(...m.P);
@@ -849,7 +1034,9 @@ export function internalWoodLiters(parts: CutPart[], box: CutBoxId) {
     if (p.box !== box || SHELL.has(p.part)) continue;
     const a = Math.min(p.a, p.b),
       b = Math.max(p.a, p.b);
-    const area = p.part === "windowBrace" ? Math.max(0, 2 * 2 * (a + b) - 4 * 2 * 2) : a * b;
+    const R = WINDOW_RAIL_IN;
+    const area =
+      p.part === "windowBrace" ? a * b - Math.max(0, a - 2 * R) * Math.max(0, b - 2 * R) : a * b;
     in3 += area * p.t * p.qty;
   }
   return (in3 * 16.387) / 1000;
@@ -997,20 +1184,25 @@ export const keeleFrequency = (covDeg: number, mouthIn: number) =>
 export const hornBeamWidthDeg = (covDeg: number, fK: number, f: number) =>
   Math.min(180, f >= fK ? covDeg : (covDeg * fK) / f);
 
-// ---- weights (lb): 3/4″ baffle, other panels and full-size braces at the wall ply ----
-// Brace counts match the Cutlist: sub 2 (3 with 1/2″ walls), mid 1 (2 with 1/2″ walls).
-export const subWeightLb = (b: Dims3, wall: number, drvLb: number) =>
-  (b.w * b.h * 2.3 +
-    (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d + (wall === 0.5 ? 3 : 2) * b.w * b.d) *
-      plywoodLbPerSqFt(wall)) /
-    144 +
+// ---- weights (lb): 3/4″ baffle, other panels at the wall ply, and the braces and ribs (subBoxBracing,
+// midBoxBracing) by their wood. Without the bracing: the bare box, a floor for any bracing ----
+export const subWeightLb = (
+  b: Dims3,
+  wall: number,
+  drvLb: number,
+  bracing?: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
+) =>
+  (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
+  braceLb(bracing, wall) +
   (drvLb || 0) +
   6;
-export const midWeightLb = (b: Dims3, wall: number) =>
-  (b.w * b.h * 2.3 +
-    (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d + (wall === 0.5 ? 2 : 1) * b.w * b.d) *
-      plywoodLbPerSqFt(wall)) /
-    144 +
+export const midWeightLb = (
+  b: Dims3,
+  wall: number,
+  bracing?: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
+) =>
+  (b.w * b.h * 2.3 + (b.w * b.h + 2 * b.w * b.d + 2 * b.h * b.d) * plywoodLbPerSqFt(wall)) / 144 +
+  braceLb(bracing, wall) +
   2;
 
 // ---- the sub as the planner computes it ----
@@ -1032,6 +1224,7 @@ export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConf
       portStyle: cfg.portStyle,
       cVent: cfg.cVent,
       layout: cfg.layout,
+      braceStyle: cfg.braceStyle,
     }).parts,
     "sub",
   );
@@ -1092,6 +1285,12 @@ export function subThroughLowpass(
 // ---- the mid-bass as the planner computes it: sealed, always lightly stuffed ----
 // cfg: { midDims, wall, inset, xoLo, xoHi, xoLoOrder, xoHiOrder, mAmpW }
 export const STUFFING_VOLUME_GAIN = 1.15; // ~15% more effective volume from light stuffing
+/** The mid's net volume, L: the gross less the driver and the braces' and ribs' wood (midBoxBracing). */
+export const midNetLiters = (
+  grossL: number,
+  disp: number,
+  bracing: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
+) => Math.max(5, grossL - disp - (braceWoodIn3(bracing) * 16.387) / 1000);
 export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const V = ampVoltage(cfg.mAmpW);
   const grossL = boxInternalLiters(
@@ -1102,7 +1301,11 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
     cfg.inset,
   );
   const disp = mid.ts && mid.ts.disp != null ? mid.ts.disp : mid.size === 15 ? 4 : 2.5; // assumed where not published
-  const netL = Math.max(5, grossL - disp);
+  const netL = midNetLiters(
+    grossL,
+    disp,
+    midBoxBracing(cfg.midDims, cfg.wall, cfg.inset, cfg.layout, cfg.braceStyle),
+  );
   const effL = netL * STUFFING_VOLUME_GAIN;
   // the curve runs on past 2 kHz when the lowpass sits above 800 Hz, so its skirt shows on the system chart
   const mdl = mid.ts

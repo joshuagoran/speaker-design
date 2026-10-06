@@ -10,6 +10,8 @@ import {
   nearestPoint,
   midWeightLb,
   subWeightLb,
+  midBoxBracing,
+  subBoxBracing,
 } from "../src/lib/pa/calc";
 import { FILL_OPTIONS } from "../src/lib/data";
 import { SEED_NAMES } from "./seeds";
@@ -84,10 +86,14 @@ export function evaluate(c: GoldenConfig): GoldenValues {
     ampW: c.ampW || 800,
     portMax: c.portMax || 20,
     layout: c.layout || "stack",
+    braceStyle: c.braceStyle,
   };
   const s = subSystem(sub, mid, cfg);
   const xoLo = c.xoLo || 120;
+  const midBracing = midBoxBracing(mDim, cfg.wall, cfg.inset, cfg.layout, c.braceStyle);
   const ms = midSystem(mid, {
+    layout: cfg.layout,
+    braceStyle: c.braceStyle,
     midDims: mDim,
     wall: cfg.wall,
     inset: cfg.inset,
@@ -121,8 +127,15 @@ export function evaluate(c: GoldenConfig): GoldenValues {
     midMax300: r2(mm && nearestPoint(ms.max!, 300).spl),
     subAtXo: r2(sxo),
     hornFlat: r2(h && h.flat),
-    subLb: r2(subWeightLb(cfg.subBox, cfg.wall, sub.lb)),
-    midLb: r2(midWeightLb(mDim, cfg.wall)),
+    subLb: r2(
+      subWeightLb(
+        cfg.subBox,
+        cfg.wall,
+        sub.lb,
+        subBoxBracing(cfg.subBox, cfg.wall, cfg.inset, cfg.portStyle, cfg.cVent, c.braceStyle),
+      ),
+    ),
+    midLb: r2(midWeightLb(mDim, cfg.wall, midBracing)),
   };
 }
 

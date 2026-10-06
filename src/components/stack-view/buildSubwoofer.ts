@@ -15,7 +15,8 @@ import {
 } from "../../lib/pa/calc";
 import type { SceneContext } from "./sceneContext";
 import type { Props } from "./buildStackScene";
-import type { Dims3, Horn, MidDriver, PortStyle, SubDriver } from "../../types";
+import type { BoxBracing, Dims3, Horn, MidDriver, PortStyle, SubDriver } from "../../types";
+import { buildBraces } from "./buildBraces";
 
 /**
  * The sub column: the plinth, the cabinet with its driver and vent cutouts, and the ducts or port tubes behind the baffle.
@@ -31,9 +32,12 @@ export function buildSubwoofer(
     portGeom,
     plinth,
     tower,
+    bracing,
   }: {
     sub: Pick<SubDriver, "size" | "depthIn">;
     box: Dims3;
+    /** the sub box's braces and ribs (lib/bracing), drawn inside it */
+    bracing?: BoxBracing;
     portStyle: PortStyle;
     portGeom?: Props["portGeom"];
     plinth: number;
@@ -118,6 +122,7 @@ export function buildSubwoofer(
     parent: subGroup,
   }).baffleZ;
   if (tower) buildTowerPartitions(ctx, { box: s, plinth: pl, parent: subGroup });
+  if (bracing) buildBraces(ctx, { bracing, box: s, y: pl, parent: subGroup });
   if (vSlot) {
     // Full-height duct against each side wall. The inner wall is a constant
     // thickness panel chamfered 20 deg at both ends, so the duct runs a

@@ -1,4 +1,6 @@
 import { Fragment } from "react";
+import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
+import { formatHz } from "../../lib/format";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { SignalPath } from "../../components/drawings/SignalPath";
@@ -371,7 +373,7 @@ export function NotesPage() {
               ],
               [
                 "Bracing",
-                "Not drawn. Volume and weight allow for two braces. Center ribs, slat ladder or windowed shelves — decide once handle recesses are placed, since they compete for the same panel area.",
+                `By rule: ribs, window braces or both (under Look in the planner) go in until every panel's first resonance clears ${formatHz(PA_PANEL_TARGET_HZ)}; they are in the cutlist, the volume, the weight and the cutaway. Where they sit still competes with handle recesses for the same panel area.`,
               ],
               ["Handles", "Recess type, depth and position on the sub. Interacts with bracing."],
               [

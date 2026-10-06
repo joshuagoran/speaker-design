@@ -23,8 +23,13 @@ import {
   sideDuctEndCorrection,
   SIDE_DUCT_DIVIDER_IN,
   STUFFING_VOLUME_GAIN,
+  midBoxBracing,
+  midNetLiters,
+  subBoxBracing,
 } from "./calc";
 import type {
+  BraceStyleId,
+  MidSystemConfig,
   CrossoverOrder,
   Dims3,
   HighpassType,
@@ -251,12 +256,18 @@ export const musicAt = (
   20 * Math.log10(linkwitzRileyLowpass(fAtXo, xoLo, order)) +
   20 * Math.log10(lim.V / volts);
 
+/** What the mid's bracing reads beyond the box (midBoxBracing): the layout and the style. */
+export type MidBrace = Pick<MidSystemConfig, "layout" | "braceStyle">;
 /** The mid in a sealed box, as midSystem and closedBox set it up: the driver's and the box's acoustic parts, and the system's resonance. */
-function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number) {
+function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: MidBrace) {
   const ts = mid.ts;
   const disp = ts.disp != null ? ts.disp : mid.size === 15 ? 4 : 2.5;
   const effL =
-    Math.max(5, boxInternalLiters(box.w, box.h, box.d, t, inset) - disp) * STUFFING_VOLUME_GAIN;
+    midNetLiters(
+      boxInternalLiters(box.w, box.h, box.d, t, inset),
+      disp,
+      midBoxBracing(box, t, inset, brace.layout, brace.braceStyle),
+    ) * STUFFING_VOLUME_GAIN;
   const Sd = ts.Sd / 10000,
     Mms = ts.Mms / 1000,
     Vb = effL / 1000;
@@ -275,8 +286,8 @@ function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number) {
  * The mid's Qtc in a box, as midSystem and closedBox compute it (the same arithmetic). It falls as the box grows: the
  * box's compliance rises with its volume, so the resonance and with it the Qtc come down.
  */
-export function sealedQtc(mid: MidDriver, box: Dims3, t: number, inset: number) {
-  const { Fc, Qts } = sealedBox(mid, box, t, inset);
+export function sealedQtc(mid: MidDriver, box: Dims3, t: number, inset: number, brace: MidBrace) {
+  const { Fc, Qts } = sealedBox(mid, box, t, inset, brace);
   return Qts * (Fc / mid.ts.Fs);
 }
 
@@ -327,10 +338,11 @@ export function sealedMid(
   inset: number,
   mAmpW: number,
   f3Top: number,
+  brace: MidBrace,
 ): SealedMid {
   const ts = mid.ts;
   const volts = Math.sqrt(mAmpW * 8);
-  const { Sd, Mms, Mas, Cas, Cab, Fc, Qts } = sealedBox(mid, box, t, inset);
+  const { Sd, Mms, Mas, Cas, Cab, Fc, Qts } = sealedBox(mid, box, t, inset, brace);
   const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
   const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
   const Pg = (volts * ts.Bl) / (ts.Re * Sd);
@@ -431,8 +443,8 @@ export const effectiveLengthFor = (areaIn2: number, VbL: number, Fb: number) =>
 export const ductLengthFor = (vs: VentShape, Leff: number) => Leff / 0.0254 - vs.ec;
 
 /**
- * The sub box's internal wood (internalWoodLiters of cutParts' sub panels), in³: baffle cleats, window braces and the
- * duct's own panels, in the same order.
+ * The sub box's internal wood (internalWoodLiters of cutParts' sub panels), in³: baffle cleats, window braces and ribs
+ * (subBoxBracing) and the duct's own panels, in the same order.
  */
 export function subWoodIn3(
   style: PortStyle,
@@ -440,16 +452,14 @@ export function subWoodIn3(
   t: number,
   inset: number,
   v: VentSpec,
+  braceStyle: BraceStyleId | undefined,
 ): number {
   const iw = box.w - 2 * t,
-    ih = box.h - 2 * t,
-    inD = box.d - inset - 0.75 - t;
+    ih = box.h - 2 * t;
   const band = style === "slots" ? v.slotH + t : 0;
   let in3 = 0.75 * iw * 0.75 * 2 + 0.75 * (ih - band - 1.5) * 0.75 * 2;
-  in3 +=
-    Math.max(0, 2 * 2 * (Math.min(iw, inD) + Math.max(iw, inD)) - 4 * 2 * 2) *
-    t *
-    (t === 0.5 ? 3 : 2);
+  const b = subBoxBracing(box, t, inset, style, v, braceStyle);
+  in3 += b.windowIn3 + b.ribIn3;
   if (style === "slots") {
     const folded = slotFolds(box, v, t);
     const len = folded ? foldedShelfIn(box, v.slotH, t) : v.len;
@@ -470,13 +480,14 @@ export const subNetLiters = (
   v: VentSpec,
   areaIn2: number,
   disp: number,
+  braceStyle: BraceStyleId | undefined,
 ) =>
   Math.max(
     20,
     ((box.w - 2 * t) * (box.h - 2 * t) * (box.d - inset - 0.75 - t) * 16.387) / 1000 -
       disp -
       (areaIn2 * v.len * 16.387) / 1000 -
-      (subWoodIn3(style, box, t, inset, v) * 16.387) / 1000,
+      (subWoodIn3(style, box, t, inset, v, braceStyle) * 16.387) / 1000,
   );
 
 /**
@@ -492,6 +503,8 @@ export interface ShapeTarget {
   disp: number;
   VbL: number;
   Fb: number;
+  /** absent: the plywood's default (`defaultBraceStyle`) */
+  braceStyle?: BraceStyleId;
 }
 /** A solved box: its outside size, its duct length, and its vent's area (in²). */
 export interface SolvedShape {
@@ -644,7 +657,7 @@ export function solveShape(
       ((box.w - 2 * t) * (box.h - 2 * t) * (box.d - inset - 0.75 - t) * 16.387) / 1000 -
       disp -
       (vs.area * len * 16.387) / 1000 -
-      subWoodIn3(style, box, t, inset, v) * IN3_TO_L;
+      subWoodIn3(style, box, t, inset, v, target.braceStyle) * IN3_TO_L;
     const err = VbL - net;
     if (Math.abs(err) <= 1e-11 * VbL)
       return unreached ? null : { box: { ...box }, len, area: vs.area };

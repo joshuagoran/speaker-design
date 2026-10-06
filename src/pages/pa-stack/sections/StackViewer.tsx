@@ -19,6 +19,8 @@ interface Props {
     | "midWithBox"
     | "subWithBox"
     | "portGeom"
+    | "subBracing"
+    | "midBracing"
   >;
   /** the view's size and position while it isn't full screen (default: a fixed height for one column) */
   boxClassName?: string;
@@ -45,6 +47,8 @@ export function StackViewer({
     midWithBox,
     subWithBox,
     portGeom,
+    subBracing,
+    midBracing,
   } = planner;
   const fullScreenLabel = isFull3d ? "Close full screen" : "Full screen";
   return (
@@ -94,6 +98,8 @@ export function StackViewer({
           inset={baffleInsetIn}
           cabFinish={cabinetFinish}
           spacerH={spacerHeightIn}
+          subBracing={subBracing}
+          midBracing={midBracing}
         />
       </section>
     </>

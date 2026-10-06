@@ -19,6 +19,8 @@ export function StackView3D({
   inset = 0.75,
   cabFinish = "birch",
   spacerH = 20,
+  subBracing,
+  midBracing,
 }: Props) {
   const mount = useRef<HTMLDivElement>(null);
   // the stage (floor, grid, lights) follows the theme; the scene is rebuilt when it changes
@@ -47,6 +49,8 @@ export function StackView3D({
     inset,
     cabFinish,
     spacerH,
+    subBracing,
+    midBracing,
   ]);
   const [builtKey, setBuiltKey] = useState(geoKey);
   const lastBuild = useRef(0);
@@ -92,6 +96,8 @@ export function StackView3D({
       inset,
       cabFinish,
       spacerH,
+      subBracing,
+      midBracing,
     });
     scene.add(group);
 

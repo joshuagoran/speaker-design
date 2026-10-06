@@ -8,6 +8,7 @@ import { buildPoleSpacer, buildSatelliteColumns, SATELLITE_COLUMN_D_IN } from ".
 import { MID_GAP_IN, SATELLITE_COLUMN_H_IN } from "./stackHeights";
 import { createScaleFigure } from "./geometry";
 import type {
+  BoxBracing,
   Dims3,
   Horn,
   MidDriver,
@@ -33,6 +34,9 @@ export interface Props {
   /** a `FinishId` or a paint colour (hex) */
   cabFinish?: string;
   spacerH?: number;
+  /** the boxes' braces and ribs (lib/bracing), drawn inside them (they show in the cutaway) */
+  subBracing?: BoxBracing;
+  midBracing?: BoxBracing | null;
 }
 
 /** Builds the PA stack as a Group (no DOM or WebGL needed); the units are the props' inches. */
@@ -50,12 +54,14 @@ export function buildStackScene({
   inset = 0.75,
   cabFinish = "birch",
   spacerH = 20,
+  subBracing,
+  midBracing,
 }: Props): THREE.Group {
   const ctx = createSceneContext({ wall, inset, cabFinish, baffleColor, cutaway });
   const { group } = ctx;
   const s = sub.box;
   if (layout === "tower") {
-    buildTower(ctx, { sub, mid, horn, plinth, portStyle, portGeom });
+    buildTower(ctx, { sub, mid, horn, plinth, portStyle, portGeom, subBracing });
   } else {
     const { top: subTop, group: subGroup } = buildSubwoofer(ctx, {
       sub,
@@ -63,6 +69,7 @@ export function buildStackScene({
       portStyle,
       portGeom,
       plinth,
+      bracing: subBracing,
     });
     // the mid cube: on the sub, on a spacer above it, or on round columns either side of it
     const satX = s.w / 2 + SATELLITE_COLUMN_D_IN / 2 + 6; // columns clear of the sub
@@ -75,7 +82,13 @@ export function buildStackScene({
     const xs = layout === "satellite" ? [-satX, satX] : [0];
     if (layout === "pole") buildPoleSpacer(ctx, { y: subTop, rise: spacerH, parent: subGroup });
     if (layout === "satellite") buildSatelliteColumns(ctx, { xs });
-    const { top: hornY } = buildMid(ctx, { mid, box: mid.box, y: midBaseY, xs });
+    const { top: hornY } = buildMid(ctx, {
+      mid,
+      box: mid.box,
+      y: midBaseY,
+      xs,
+      bracing: midBracing,
+    });
     buildHorn(ctx, { horn, y: hornY, xs, mount: mid.box });
   }
 

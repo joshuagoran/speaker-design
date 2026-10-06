@@ -40,9 +40,11 @@ import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
 import { passiveRadiatorMassMax } from "../../lib/data";
 import {
   SPEAKER_PLACEMENTS as HIFI_PLACES,
+  hifiPanelResonances,
   tweeterOffset,
   tweeterOffsetMax,
 } from "../../lib/hifi/hifi";
+import { PanelResonanceTable } from "../../components/stats/PanelResonanceTable";
 import { roundoverOnsetHz } from "../../lib/hifi/diffraction";
 import { formatDims, formatHz, formatInches } from "../../lib/format";
 import { crossoverSlopeName } from "../../constants/crossovers";
@@ -552,6 +554,17 @@ export function HifiPage({ hifi }: Props) {
                   </Tooltip>
                 </div>
               )}
+              <div>
+                <span className="font-medium text-stone-900">Panels.</span> Each panel&rsquo;s first
+                resonance as a thin plate simply supported at its edges (glued edges are stiffer, so
+                this reads low). The woofer plays through these up to the crossover, so there is no
+                bracing rule here as on the PA boxes; a brace across the largest panels lifts them.
+                <PanelResonanceTable
+                  caption="First resonance, unbraced"
+                  panels={hifiPanelResonances(boxDims, wallThicknessIn, panelMaterial)}
+                  braced={false}
+                />
+              </div>
             </DetailsDropdown>
           </div>
         </>

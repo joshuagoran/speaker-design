@@ -36,7 +36,7 @@ import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
 /** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
 export type PaDefaults = Omit<
   Required<PaDesignConfig>,
-  "format" | "cabinet" | "summary" | "sub" | "mid" | "midBox" | "cd" | "horn"
+  "format" | "cabinet" | "summary" | "sub" | "mid" | "midBox" | "cd" | "horn" | "braceStyle"
 > & {
   format: Format;
   cabinet: Cabinet;

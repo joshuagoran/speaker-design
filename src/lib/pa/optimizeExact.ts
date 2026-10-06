@@ -45,8 +45,10 @@ import {
   isRoundPort,
   linkwitzRileyLowpass,
   keeleFrequency,
+  midBoxBracing,
   midWeightLb,
   pistonBeamWidthDeg,
+  subBoxBracing,
   subGeometry,
   subWeightLb,
   ventSpeedLimit,
@@ -296,8 +298,8 @@ export function paExactGridText(input: PaOptimizerInput, grid = PA_EXACT_GRID): 
 }
 const DIM_WORDS: Record<keyof Dims3, string> = { w: "width", h: "height", d: "depth" };
 
-// the bare box for a volume: gross less the driver and the window braces only (no duct, no cleats), so any real box
-// holding that net volume is at least this big; it is linear in the free side
+// the bare box for a volume: gross less the driver only (no braces, duct or cleats), so any real box holding that net
+// volume is at least this big; it is linear in the free side
 function bareFree(
   s: ExactSpace,
   fixedDims: Dims3,
@@ -309,11 +311,9 @@ function bareFree(
   if (!free) return null;
   const at = (x: number) => {
     const b = { ...fixedDims, [free]: x };
-    const iw = b.w - 2 * t,
-      inD = b.d - s.cur.inset - 0.75 - t;
+    const inD = b.d - s.cur.inset - 0.75 - t;
     const gross = ((b.w - 2 * t) * (b.h - 2 * t) * inD * 16.387) / 1000;
-    const braces = Math.max(0, 4 * (iw + inD) - 16) * t * (t === 0.5 ? 3 : 2);
-    return gross - disp - (braces * 16.387) / 1000;
+    return gross - disp;
   };
   const [lo, hi] = s.sr[free];
   const a = at(lo),
@@ -352,7 +352,11 @@ const towerMidFails = (s: ExactSpace, box: Dims3, t: number) => {
   if (!s.tower) return false;
   const m = s.tower.mid;
   const mb = { w: box.w, h: TOWER_MID_H, d: box.d };
-  return !m || Math.min(mb.w, mb.h) < m.size + 1.2 || sealedQtc(m, mb, t, s.cur.inset) < 0.5 - 1e-9;
+  return (
+    !m ||
+    Math.min(mb.w, mb.h) < m.size + 1.2 ||
+    sealedQtc(m, mb, t, s.cur.inset, s.cur) < 0.5 - 1e-9
+  );
 };
 // per sub, plywood and rung: every whole-inch pair that can hold the volume under the weight cap, lightest first
 function barePairs(s: ExactSpace, sub: SubDriver, t: number, V: number): Pairs {
@@ -728,6 +732,7 @@ function exactHook(
       disp: sub.ts.disp,
       VbL: V,
       Fb: s.fbs[fi],
+      braceStyle: s.cur.braceStyle,
     };
     const [lo, hi] = s.sr[free];
     while (g.next < pairCount(g.pairs)) {
@@ -755,7 +760,12 @@ function exactHook(
       )
         continue;
       if (!subBaffleFits(sol.box, style, v, t, sub)) continue;
-      const lb = subWeightLb(sol.box, t, sub.lb);
+      const lb = subWeightLb(
+        sol.box,
+        t,
+        sub.lb,
+        subBoxBracing(sol.box, t, s.cur.inset, style, v, s.cur.braceStyle),
+      );
       if (lb > s.cap + 1e-9) continue;
       if (!b || lb < b.lb) {
         g.best.set(ck, { lb, area: sol.area, box: sol.box, len: sol.len, done: false });
@@ -997,7 +1007,7 @@ function exactHook(
     for (const m of mids)
       for (const { bx, mDim } of boxes(m)) {
         // midSystem's checks and levels, read where the search looks (lib/pa/exactSub)
-        const mm = sealedMid(m, bx, t, cur.inset, amps.mAmpW, xoLo);
+        const mm = sealedMid(m, bx, t, cur.inset, amps.mAmpW, xoLo, cur);
         if (mm.Qtc < 0.5 || mm.Qtc > 0.8 || mm.f3 > xoLo || Math.min(bx.w, bx.h) < m.size + 1.2)
           continue;
         for (const xoHi of c.xoHis) {
@@ -1005,7 +1015,9 @@ function exactHook(
             mm.at(midGridIndexNear(f, xoHi), xoLo, xoHi, cur.xoLoOrder, cur.xoHiOrder);
           const lo = at(xoLo),
             hi = at(xoHi);
-          const midLb = midWeightLb(bx, t) + (m.lb || 0);
+          const midLb =
+            midWeightLb(bx, t, midBoxBracing(bx, t, cur.inset, cur.layout, cur.braceStyle)) +
+            (m.lb || 0);
           for (const hp of c.hornTable[xoHi]) {
             const room = hp.at + cur.hfTilt + KEEP_UP_SLACK_DB;
             const mAmpW =
@@ -1502,10 +1514,16 @@ function exactHook(
         portStyle: style,
         cVent: vent,
         layout: cur.layout,
+        braceStyle: cur.braceStyle,
       });
       if (!(vent.len > 0) || !ductFits(ductFit(box, style, vent, t, sub).spans, vent.len)) return;
       if (!subBaffleFits(box, style, vent, t, sub)) return;
-      const lb = subWeightLb(box, t, sub.lb);
+      const lb = subWeightLb(
+        box,
+        t,
+        sub.lb,
+        subBoxBracing(box, t, cur.inset, style, vent, cur.braceStyle),
+      );
       if (lb > s.cap + 1e-9) return;
       const [cs] = ventedCurves(
         circuitOf(si),
@@ -1560,7 +1578,8 @@ function exactHook(
     const tune = (len: number) => {
       const v = { ...vent, len };
       const vs = ventShape(style, box, v, t, sub);
-      const V = subNetLiters(style, box, t, s.cur.inset, v, vs.area, sub.ts.disp);
+      const V = subNetLiters(style, box, t, s.cur.inset, v, vs.area, sub.ts.disp, s.cur.braceStyle);
+
       const Leff = (len + vs.ec) * 0.0254;
       return (343 / (2 * Math.PI)) * Math.sqrt((vs.area * 0.00064516) / ((V / 1000) * Leff));
     };

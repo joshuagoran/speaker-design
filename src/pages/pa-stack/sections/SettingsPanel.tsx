@@ -34,6 +34,8 @@ import { PA_SETTINGS_TABS } from "../../../constants/paSettingsTabs";
 import type { PaSettingsSection } from "../../../constants/settingsSections";
 import { SLOT_LAYOUT_NAMES } from "../../../constants/portStyles";
 import { UI_TEXT } from "../../../constants/uiText";
+import { BRACE_STYLE_NAMES, BRACE_STYLE_TIPS } from "../../../constants/bracing";
+import { defaultBraceStyle } from "../../../lib/bracing";
 
 interface Props {
   planner: Pick<
@@ -91,6 +93,8 @@ interface Props {
     | "setLayout"
     | "wallThicknessIn"
     | "setWallThicknessIn"
+    | "braceStyle"
+    | "setBraceStyle"
     | "baffleInsetIn"
     | "setBaffleInsetIn"
     | "baffleColor"
@@ -169,6 +173,8 @@ export function SettingsPanel({ planner }: Props) {
     setLayout,
     wallThicknessIn,
     setWallThicknessIn,
+    braceStyle,
+    setBraceStyle,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,
@@ -191,6 +197,8 @@ export function SettingsPanel({ planner }: Props) {
   // or two elbows (the lengths between fit neither way, and the slider skips them)
   const ductLens = ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn, subDriver);
   const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
+  // the style the boxes are braced with: the one chosen, else the plywood's default
+  const shownBraceStyle = braceStyle ?? defaultBraceStyle(wallThicknessIn);
   const summaries: Record<PaSettingsSection, string> = {
     sub: [
       subDriver.name,
@@ -208,7 +216,7 @@ export function SettingsPanel({ planner }: Props) {
       `highpass ${subHighpassHz} Hz`,
       `amps ${subAmpWatts} / ${midAmpWatts} / ${hornAmpWatts} W`,
     ].join(" · "),
-    look: `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${formatInches(wallThicknessIn)} ply`,
+    look: `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${formatInches(wallThicknessIn)} ply, ${BRACE_STYLE_NAMES[shownBraceStyle].toLowerCase()}`,
   };
   const section = (id: PaSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -648,6 +656,18 @@ export function SettingsPanel({ planner }: Props) {
                 ] as const
               }
               wrap={false}
+            />
+            <ToggleGroup
+              className="mt-3"
+              label="Bracing"
+              value={shownBraceStyle}
+              // the plywood's default is stored as no choice, so it follows the plywood
+              onChange={(s) =>
+                setBraceStyle(s === defaultBraceStyle(wallThicknessIn) ? undefined : s)
+              }
+              options={keysOf(BRACE_STYLE_NAMES).map(
+                (id) => [id, BRACE_STYLE_NAMES[id], BRACE_STYLE_TIPS[id]] as const,
+              )}
             />
             <div className="mt-3">
               <Slider
