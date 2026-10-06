@@ -160,8 +160,8 @@ export function OptimizerPanel({
           <KeepDetails
             lines={keepLines(goals, OPTIMIZER_GOALS, PA_KEEP_WORDS, curOut != null)}
             more={[
-              `${PA_RUN_LABELS.improve}: a quick search around your design (about a second).`,
-              `${PA_RUN_LABELS.full}: ${PA_RUN_LABELS.improve}'s designs and every design on the grid below, so its first card is never behind ${PA_RUN_LABELS.improve}'s and nothing on the grid beats it (up to a minute or so). Both round each card's box and duct to the settings' steps and check it again.`,
+              `${PA_RUN_LABELS.improve}: a quick search near your design (about a second).`,
+              `${PA_RUN_LABELS.full}: ${PA_RUN_LABELS.improve}'s designs plus every design on the grid below (up to about a minute). Its first card is always as good as ${PA_RUN_LABELS.improve}'s, and no grid design is better. Both searches round each box and duct to the settings' steps, then check the design again.`,
               `${PA_RUN_LABELS.full}'s grid:`,
               ...fullGridLines.map((line) => `· ${line}`),
             ]}
@@ -185,11 +185,7 @@ export function OptimizerPanel({
           onCancel={onCancel}
           progress={progress}
           stats={res && res.stats}
-          note={
-            res && res.cards.length
-              ? " · every design shown passes the planner's build checks (warnings are listed on the card)"
-              : ""
-          }
+          note={res && res.cards.length ? OPTIMIZER_PANEL_TEXT.cardsPass : ""}
         >
           {err && <span className="text-xs text-red-700">{err}</span>}
         </RunRow>
@@ -235,7 +231,7 @@ export function OptimizerPanel({
         {res && !busy && !res.cards.length && res.nearMiss && (
           <div className="mt-4 rounded-lg border border-orange-300 bg-orange-50 px-3 py-3">
             <h3 className="text-base" style={{ fontFamily: FONT, fontWeight: 700 }}>
-              Nothing fits all your limits
+              {OPTIMIZER_PANEL_TEXT.noFit}
             </h3>
             <div className="text-xs text-orange-900 mt-1">
               {res.nearMiss.closest

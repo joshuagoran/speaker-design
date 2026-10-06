@@ -35,7 +35,7 @@ export const CARD_LABELS = {
 
 /** The sentence under a card both optimizers word the same way. */
 export const CARD_WHY = {
-  closest: "Passes the checks and comes closest to your goal.",
+  closest: "Passes the checks and is closest to your goal.",
   smallest: "Changes one thing from your design.",
   altLower: "Goes lower than your design.",
 } as const;
@@ -44,6 +44,10 @@ export const CARD_WHY = {
 export const OPTIMIZER_PANEL_TEXT = {
   heading: "Find a better design",
   limitedBy: "Limited by:",
+  /** after the run stats when there are cards (PA and Hi-fi) */
+  cardsPass: " · every design passes the checks (each card lists its warnings)",
+  /** the notice when no design fits */
+  noFit: "No design fits all your limits",
 } as const;
 
 /** The driver comparison's part buttons, by part. */

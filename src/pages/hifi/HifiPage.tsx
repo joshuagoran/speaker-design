@@ -321,11 +321,7 @@ export function HifiPage({ hifi }: Props) {
         onCancel={cancelOptimizerSearch}
         progress={optimizerProgress}
         stats={optimizerResult && optimizerResult.stats}
-        note={
-          optimizerResult && optimizerResult.cards.length
-            ? "  · every design passes the checks (each card lists its warnings)"
-            : ""
-        }
+        note={optimizerResult && optimizerResult.cards.length ? OPTIMIZER_PANEL_TEXT.cardsPass : ""}
       >
         {undoSnapshot && !designPreview && (
           <Button size="md" onClick={undoOptimizerLoad}>
@@ -365,7 +361,7 @@ export function HifiPage({ hifi }: Props) {
         !optimizerResult.cards.length &&
         !optimizerResult.goalMissing && (
           <div className="mt-3 text-sm text-orange-900">
-            No design fits all your limits. Increase the budget or remove some locks.
+            {OPTIMIZER_PANEL_TEXT.noFit}. Increase the budget or remove some locks.
           </div>
         )}
     </Card>

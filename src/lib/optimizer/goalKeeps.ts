@@ -35,9 +35,9 @@ export interface KeepWords {
 /** Hi-fi keeps your design's own clean level at the seat. */
 export const HIFI_KEEP_WORDS: KeepWords = {
   level: (db) => `your level drops at most ${db}`,
-  note: "Level is the clean level at the seat; F3 is measured in the room.",
+  note: "Level is the clean level at the seat. F3 is in the room.",
   unmodeled:
-    "Your design can't be modeled, so the goals keep nothing from it: a card only has to pass the checks and fit the budget.",
+    "The planner cannot model your design, so the goals keep nothing from it. A card must only pass the checks and fit the budget.",
 };
 
 /** The F3 the PA goals measure from when your design can't be modeled, Hz. */
@@ -47,7 +47,7 @@ export const PA_UNMODELED_F3_HZ = 40;
 export const PA_KEEP_WORDS: KeepWords = {
   level: (db) => `output stays at most ${db} under the target`,
   note: "The target is your output or the room's need, whichever is higher.",
-  unmodeled: `Your design can't be modeled, so the goals measure from the room's need and a ${PA_UNMODELED_F3_HZ} Hz F3 in place of your output and F3.`,
+  unmodeled: `The planner cannot model your design. The goals use the room's need and a ${PA_UNMODELED_F3_HZ} Hz F3 instead of your output and F3.`,
 };
 
 /** One line per goal: what it may give up, e.g. "Cheaper: your level drops at most 0.5 dB, your F3 rises at most 2 Hz." */

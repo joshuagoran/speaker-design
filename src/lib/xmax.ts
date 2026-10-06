@@ -157,7 +157,7 @@ export function publishedText(p: PublishedExcursion): string {
 /** Why a value is an estimate, for its tooltip. */
 const estimateWhy = (formula: XmaxFormula, Hg: number | undefined) =>
   formula === "overhang-or-x10"
-    ? "Eminence publishes the greater of the plain overhang and the 10 % distortion point, and the gap height but no coil height, so the value lies between its figure and the figure + Hg/4."
+    ? "Eminence publishes the larger of the overhang and the 10 % distortion point, and the gap height but no coil height. The value is between its figure and the figure + Hg/4."
     : Hg != null
       ? "The maker publishes the gap height but no coil height and no method."
       : "The maker publishes no coil or gap height and no method.";
@@ -193,7 +193,7 @@ export function xmaxRows(
       "Xmax (comparable)",
       `${est ? "≈" : ""}${ts.Xmax.toFixed(1)} mm`,
       how,
-      `One scale for every driver: (Hvc − Hg)/2 + Hg/4, which B&C, Lavoce and Ciare publish and most makers' figures sit near. The models use this value.${est ? ` ${estimateWhy(pub.formula, Hg)} The value is the middle of the band; the max-SPL chart shades it.` : ""}`,
+      `One scale for all drivers: (Hvc − Hg)/2 + Hg/4. B&C, Lavoce and Ciare publish it, and most makers' figures are near it. The models use this value.${est ? ` ${estimateWhy(pub.formula, Hg)} The value is the middle of the band; the max-SPL chart shades it.` : ""}`,
     ],
     [
       "Xmax (maker)",
