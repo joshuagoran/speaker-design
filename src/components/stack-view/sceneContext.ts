@@ -26,7 +26,8 @@ export interface SceneContext {
     /** handles, input dishes and horn posts */
     hardware: THREE.MeshStandardMaterial;
     /**
-     * a part's hole in its panel (buildHardware): draws nothing, marks the stencil where the shell then isn't drawn
+     * a part's hole in its panel (buildHardware): draws no color, only depth, just proud of the face, so the panel
+     * behind it isn't drawn there
      */
     holeMask: THREE.MeshBasicMaterial;
   };
@@ -36,9 +37,6 @@ export interface SceneContext {
   inset: number;
   cutaway: boolean;
 }
-
-/** The stencil value a part's hole mask writes and the shell is not drawn over. */
-const HOLE_STENCIL = 1;
 
 export function createSceneContext({
   wall,
@@ -97,19 +95,14 @@ export function createSceneContext({
     roughness: 0.55,
     side: THREE.DoubleSide,
   });
-  // the cabinet shell gives way where a part's hole mask marked the stencil (HOLE_STENCIL), so the panel opens onto the
-  // part's recess; every other material ignores the stencil
-  const shell = cutaway ? ghost : wood;
-  shell.stencilWrite = true;
-  shell.stencilRef = HOLE_STENCIL;
-  shell.stencilFunc = THREE.NotEqualStencilFunc;
+  // a part's hole: drawn after the part and before everything else (buildHardware's render orders), it writes only
+  // depth, pulled toward the camera, so the panel behind it fails the depth test and the part's recess shows. A
+  // cabinet in front of it is nearer, so it still draws (a stencil mask, drawn first, also cut holes in a nearer box).
   const holeMask = new THREE.MeshBasicMaterial({
     colorWrite: false,
-    depthWrite: false,
-    stencilWrite: true,
-    stencilRef: HOLE_STENCIL,
-    stencilFunc: THREE.AlwaysStencilFunc,
-    stencilZPass: THREE.ReplaceStencilOp,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -4,
   });
   return {
     group: new THREE.Group(),
@@ -117,7 +110,7 @@ export function createSceneContext({
       wood,
       black,
       cream,
-      shell,
+      shell: cutaway ? ghost : wood,
       baffle,
       inner,
       port,

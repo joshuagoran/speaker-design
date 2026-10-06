@@ -1,6 +1,6 @@
 // The render check's page (tests/render-hardware.mjs bundles it): the default PA stack with its hardware, built as the
 // planner builds it, seen from the camera the URL asks for, so the handles, dishes and posts can be looked at close up.
-//   ?handle=H1105|30769|none &cutaway=1 &layout=stack|tower &az=deg &el=deg &dist=in &tx= &ty= &tz= (look-at, in)
+//   ?handle=H1105|30769|none &cutaway=1 &layout=stack|tower|pole|satellite &az=deg &el=deg &dist=in &tx= &ty= &tz= (look-at, in)
 import * as THREE from "three";
 import { buildStackScene } from "../../src/components/stack-view/buildStackScene";
 import { DEFAULT_PA } from "../../src/lib/defaults";
@@ -15,11 +15,13 @@ import {
 import { STAGE } from "../../src/styles/palette";
 import { HANDLE_CHOICES } from "../../src/lib/pa/hardware";
 import type { BoxHandles, PaLayout } from "../../src/types";
+import { PA_LAYOUT_NAMES } from "../../src/constants/paLayouts";
+import { keysOf } from "../../src/lib/records";
 
 const q = new URLSearchParams(location.search);
 const num = (k: string, d: number) => (q.has(k) ? Number(q.get(k)) : d);
 const model = HANDLE_CHOICES.find((c) => c === q.get("handle")) ?? DEFAULT_PA.hardware.sub.model;
-const layout: PaLayout = q.get("layout") === "tower" ? "tower" : "stack";
+const layout: PaLayout = keysOf(PA_LAYOUT_NAMES).find((k) => k === q.get("layout")) ?? "stack";
 const cutaway = q.get("cutaway") === "1";
 const d = DEFAULT_PA;
 const handles: BoxHandles = { model, upIn: 0, backIn: 0 };

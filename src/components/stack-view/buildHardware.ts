@@ -14,8 +14,11 @@ const FLANGE_T_IN = 0.08;
 const PROUD_IN = 0.02;
 /** Millimetres to the scene's inches. */
 const MM_IN = 1 / 25.4;
-/** How far the hole's mask stands off the face, in (just proud of it, under the flange). */
-const MASK_PROUD_IN = 0.005;
+/** How far the hole's mask stands off the face, in (proud of it, inside the flange's 5 mm). */
+const MASK_PROUD_IN = 0.02;
+/** The model part draws first, then its hole's mask, then the rest of the scene (three sorts opaque meshes by these). */
+const MODEL_RENDER_ORDER = -2;
+const MASK_RENDER_ORDER = -1;
 /** How far the hole stays inside the recess body's outline, mm: its walls slope in, so the edge pixels stay covered. */
 const HOLE_INSET_MM = 1.5;
 /** A Speakon jack's face and a binding post's diameter, in. */
@@ -93,9 +96,10 @@ function meshGeometry(m: HardwareMesh) {
 
 /**
  * A part drawn from its CAD model (data/meshes) on its face, and the hole it sits in: the cabinet's panels are solid,
- * so a mask the size of the recess's outline, drawn first, marks the stencil there and the shell (sceneContext) isn't drawn over
- * it, which opens the panel onto the part's recess. The mask faces out only, so it opens the panel only where that face
- * is seen.
+ * so after the part a depth-only mask the size of the recess's outline (sceneContext's holeMask) goes on the face, and
+ * the panel behind it fails the depth test, which opens the panel onto the part's recess. Anything nearer the camera,
+ * such as another cabinet, still draws over it. The mask faces out only, so it opens the panel only where that face is
+ * seen.
  */
 function modelPart(
   p: PlacedHardware,
@@ -107,6 +111,7 @@ function modelPart(
   const part = new THREE.Mesh(meshGeometry(m), mat);
   part.applyMatrix4(faceFrame(p, face, face.at));
   part.name = HARDWARE_MESH_NAME;
+  part.renderOrder = MODEL_RENDER_ORDER;
   // the hole: the recess body's outline, placed on the flange's centre as the geometry is
   const [w, h] = [0, 1].map((k) => (m.hole.max[k] - m.hole.min[k] - 2 * HOLE_INSET_MM) * MM_IN);
   const off = [0, 1].map(
@@ -115,7 +120,7 @@ function modelPart(
   const plane = new THREE.PlaneGeometry(w, h).translate(off[0], off[1], 0);
   const hole = new THREE.Mesh(plane, mask);
   hole.applyMatrix4(faceFrame(p, face, face.at.clone().addScaledVector(face.n, MASK_PROUD_IN)));
-  hole.renderOrder = -1;
+  hole.renderOrder = MASK_RENDER_ORDER;
   hole.name = HARDWARE_MESH_NAME;
   return [part, hole];
 }
