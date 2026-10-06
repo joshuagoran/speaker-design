@@ -1,4 +1,5 @@
 import { StatRow, statLabel, type StatName } from "../optimizer/StatRow";
+import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 /** One detail row: name, value, optional note and optional tooltip text. */
 export type StatRowItem = [
@@ -18,7 +19,7 @@ interface Props {
  */
 export function StatRowGrid({ rows }: Props) {
   return (
-    <div className="[container-type:inline-size]">
+    <div className={`${RESULT_MAX_WIDTH} [container-type:inline-size]`}>
       <div className="grid grid-cols-1 sm:[@container(min-width:480px)]:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
         {rows.map(([k, v, note, tip]) => (
           <StatRow key={statLabel(k)} k={k} v={v} note={note} tip={tip} />

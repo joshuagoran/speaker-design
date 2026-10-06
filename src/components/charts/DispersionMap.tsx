@@ -19,6 +19,7 @@ import {
 import { useElementWidth } from "../../hooks/useElementWidth";
 import { SVG_FONT } from "../../styles/fonts";
 import { useMemo, useState } from "react";
+import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
 interface Props {
   map: HifiDispersionMap;
@@ -168,7 +169,7 @@ export function DispersionMap({ map, title }: Props) {
   );
   const gridStroke = alpha(ON_DATA.ink, 0.18);
   return (
-    <div ref={box}>
+    <div ref={box} className={RESULT_MAX_WIDTH}>
       <div className="flex justify-between items-baseline gap-2 text-xs text-stone-500 mb-1">
         <span>{title}</span>
         <span className="tabular-nums text-stone-900 shrink-0">

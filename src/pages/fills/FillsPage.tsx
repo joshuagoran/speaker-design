@@ -17,7 +17,7 @@ import { fillSystem, nearestPoint } from "../../lib/pa/calc";
 import type { FillsPlanner } from "./useFillsPlanner";
 import { xmaxBandCurves, xmaxRows } from "../../lib/xmax";
 import { LIMIT_NAMES } from "../../constants/limits";
-import { PAGE_WIDTH } from "../../styles/layout";
+import { PAGE_WIDTH, RESULT_MAX_WIDTH } from "../../styles/layout";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { GXD4 } from "../../data/catalog/amps";
 import { UI_TEXT } from "../../constants/uiText";
@@ -123,7 +123,9 @@ export function FillsPage({ fills }: Props) {
               Passive fills
             </Tooltip>
           </p>
-          <div className="grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+          <div
+            className={`${RESULT_MAX_WIDTH} grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1`}
+          >
             {tile(STATS.netVolume, netLiters.toFixed(0), "L")}
             {ventedModel
               ? tile(STATS.tuningFb, ventedModel.Fb.toFixed(0), "Hz")

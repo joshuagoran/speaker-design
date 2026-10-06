@@ -63,7 +63,7 @@ import type { HifiPlanner } from "./useHifiPlanner";
 import type { Dims3 } from "../../types";
 import { entriesOf, keysOf } from "../../lib/records";
 import { xmaxRows } from "../../lib/xmax";
-import { PAGE_WIDTH } from "../../styles/layout";
+import { PAGE_WIDTH, RESULT_MAX_WIDTH } from "../../styles/layout";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { UI_TEXT } from "../../constants/uiText";
 
@@ -383,7 +383,7 @@ export function HifiPage({ hifi }: Props) {
             )}
           </div>
           <div className="min-w-0 flex flex-col gap-4">
-            <div className="flex gap-4 items-center">
+            <div className={`${RESULT_MAX_WIDTH} flex gap-4 items-center`}>
               <div className="shrink-0">
                 <HifiFront
                   dim={boxDims}
@@ -460,7 +460,9 @@ export function HifiPage({ hifi }: Props) {
               marks={[{ f: crossoverHz, label: "XO" }]}
             />
             <WarningChips chips={warningChips} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+            <div
+              className={`${RESULT_MAX_WIDTH} grid grid-cols-1 sm:grid-cols-2 gap-4 items-start`}
+            >
               <RoomView
                 spacing={speakerSpacingFt}
                 toe={toeInDeg}
