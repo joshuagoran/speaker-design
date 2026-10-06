@@ -360,7 +360,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
     F.push([
       "warn",
       "Below the driver's minimum crossover",
-      `${xoHi} Hz, below the ${hf.minXo} Hz minimum. Power is derated and distortion increases. Measure before you use it.`,
+      `${xoHi} Hz, below the recommended ${hf.minXo} Hz minimum. Power is derated and distortion increases. Measure before you use it.`,
       "hornDriverMinXo",
     ]);
   if (hz.minXo && xoHi < hz.minXo)

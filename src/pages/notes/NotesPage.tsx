@@ -118,7 +118,7 @@ export function NotesPage() {
           </div>
           <p className="text-sm text-stone-900 max-w-3xl mt-3">
             <Tooltip
-              tip={`The ${DSP} does input EQ and master level, then crossovers, delay and driver EQ on each output. Each output feeds one full-range amp channel. Set each amp limiter from the driver's power and impedance, so it uses the real output voltage. A safety highpass at about ${HORN_AMP_SAFETY_HPF_HZ} Hz in the horn amp stops a wrong preset. A level limiter cannot do this.`}
+              tip={`The ${DSP} does input EQ and master level, then crossovers, delay and driver EQ on each output. Each output feeds one full-range amp channel. Set each amp limiter from the driver's power and impedance, so it uses the real output voltage. A safety highpass at about ${HORN_AMP_SAFETY_HPF_HZ} Hz in the horn amp protects the horn from a wrong preset. A level limiter cannot do this.`}
             >
               How the DSP work is split
             </Tooltip>
@@ -177,7 +177,7 @@ export function NotesPage() {
               ],
               [
                 "Horns",
-                `A ${GXD4.model} puts ${GXD4.w8} W on a ${DEFAULT_CD.aes} W AES driver like the ${DEFAULT_CD.name}. Its limiter, set to the driver's rating, gives the protection. Set the planner's HF amp slider to the same power.`,
+                `A ${GXD4.model} puts ${GXD4.w8} W on a ${DEFAULT_CD.aes} W AES driver like the ${DEFAULT_CD.name}. Its limiter, set to the driver's rating, gives the protection. Set the planner's HF amp slider to the same power, so its values match.`,
               ],
             ].map(([t, d]) => (
               <li key={t} className="flex gap-3">

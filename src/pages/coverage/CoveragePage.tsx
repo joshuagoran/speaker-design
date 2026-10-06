@@ -310,7 +310,7 @@ export function CoveragePage({ planner }: Props) {
                   <Ellipsis />
                 </>
               ) : map.refDb < map.refTarget - 0.05 ? (
-                `It cannot reach ${map.refTarget.toFixed(0)} dB at ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}. At its limit it gives ${map.refDb.toFixed(1)} dB there.`
+                `It cannot reach ${map.refTarget.toFixed(0)} dB at ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]}. At its limit it gives ${map.refDb.toFixed(1)} dB there, and it never plays past its limit.`
               ) : (
                 `Turned down ${Math.abs(map.gain).toFixed(1)} dB so ${COVERAGE_LEVEL_REF_PLACE[layout.levelRef]} gets ${map.refTarget.toFixed(0)} dB in this band.`
               )}

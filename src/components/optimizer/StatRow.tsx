@@ -18,7 +18,7 @@ export const STATS = {
   },
   portArea: {
     label: "Port area",
-    tip: "Total port area, against the cone area. A small port is fast and noisy.",
+    tip: "Total port area, against the cone area. In a small port, the air is fast and noisy.",
   },
   hydraulicDiameter: {
     label: "Hydraulic diameter",

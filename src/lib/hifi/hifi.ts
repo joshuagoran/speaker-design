@@ -1203,7 +1203,7 @@ export function hifiChips(
     F.push([
       "warn",
       "Below the tweeter's minimum crossover",
-      `${xo} Hz, below the ${hf.minXo} Hz minimum.`,
+      `${xo} Hz, below the recommended ${hf.minXo} Hz minimum.`,
       "hifiTweeterMinXo",
     ]);
   if (nearTweeterResonance(t, xo))
@@ -1242,7 +1242,7 @@ export function hifiChips(
     F.push([
       "bad",
       "Slot too long",
-      `${cfg.port.len.toFixed(1)}″ does not fit. This box holds about ${portMaxLength(cfg.dim, cfg.wall || 0.75, cfg.port).toFixed(1)}″, with the slot's height clear behind it. Use a shorter, lower slot or a deeper box.`,
+      `${cfg.port.len.toFixed(1)}″ does not fit. This box holds about ${portMaxLength(cfg.dim, cfg.wall || 0.75, cfg.port).toFixed(1)}″, with the slot's height clear behind it. A lower slot gets the same tuning in less length, but with higher air speed. A deeper box also works.`,
       "hifiSlotFit",
     ]);
   } else if (sys.kind === "vented" && !sys.portFits) {

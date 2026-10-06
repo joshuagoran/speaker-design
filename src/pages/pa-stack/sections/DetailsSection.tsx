@@ -131,8 +131,9 @@ export function DetailsSection({ planner }: Props) {
                         .filter((p) => p.hz < b.targetHz - 1e-9)
                         .map((p) => BRACE_PANEL_NAMES[p.id].toLowerCase())
                         .join(", ")}
-                      . With this style, no more braces or ribs fit clear of the driver and the
-                      vent. Try {BRACE_STYLE_NAMES.both.toLowerCase()}, or thicker walls.
+                      . With this style, no other brace or rib position clear of the driver and the
+                      vent raises their resonance. Try {BRACE_STYLE_NAMES.both.toLowerCase()}, or
+                      thicker walls.
                     </div>
                   )}
                 </div>
