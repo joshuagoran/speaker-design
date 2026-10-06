@@ -52,7 +52,7 @@ export function RunRow({
             {alt.label}
           </Button>
         )}
-        {!hasGoal && !busy && <span className="text-xs text-stone-500">Pick a goal first</span>}
+        {!hasGoal && !busy && <span className="text-xs text-stone-500">Select a goal first</span>}
         {busy && onCancel && (
           <Button onClick={onCancel} className="min-h-10 min-w-10">
             Cancel
