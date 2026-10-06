@@ -18,7 +18,7 @@ interface Props {
       | "portStyle"
       | "subVentSpec"
       | "layout"
-      | "braceStyle"
+      | "effectiveBraceStyle"
     >;
 }
 
@@ -35,7 +35,7 @@ export function PaCutlistPage({ planner }: Props) {
     portStyle: planner.portStyle,
     cVent: planner.subVentSpec,
     layout: planner.layout,
-    braceStyle: planner.braceStyle,
+    braceStyle: planner.effectiveBraceStyle,
   });
   return (
     <CutlistPage

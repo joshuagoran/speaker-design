@@ -89,8 +89,13 @@ const RIB_BATCH_MAX = 8;
 export const RIB_DEFAULT_NOMINALS: readonly PanelNominal[] = ["5/8", "1/2"];
 
 /** The style a wall takes when none is chosen, by its nominal size (`RIB_DEFAULT_NOMINALS`). */
-export const defaultBraceStyle = (t: number): BraceStyleId =>
-  RIB_DEFAULT_NOMINALS.includes(panelNominalNear(t)) ? "ribs" : "window";
+export const defaultBraceStyle = (n: PanelNominal): BraceStyleId =>
+  RIB_DEFAULT_NOMINALS.includes(n) ? "ribs" : "window";
+/**
+ * The default for a wall known only by its thickness: the nominal size nearest it. Where the size is known (the page,
+ * a saved design, an optimizer's plywood), defaultBraceStyle takes it: a measured ¾″ sheet can sit nearer ⅝″.
+ */
+export const defaultBraceStyleNear = (t: number) => defaultBraceStyle(panelNominalNear(t));
 
 /** The first mode of a simply supported thin plate `a` × `b` inches, Hz (the header's formula). */
 export function plateFirstModeHz(a: number, b: number, s: PlateStock): number {

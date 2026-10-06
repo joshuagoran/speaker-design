@@ -6,6 +6,7 @@ import {
   MDF_STIFFNESS,
   bracingRegions,
   defaultBraceStyle,
+  defaultBraceStyleNear,
   plateFirstModeHz,
   regionsOverlap,
   braceFallbacks,
@@ -19,7 +20,8 @@ import {
   PA_BRACING_CROSSOVER_HZ,
   PA_PANEL_TARGET_HZ,
 } from "../src/lib/pa/bracing";
-import { XO_LO_OPTIONS } from "../src/lib/pa/optimize";
+import { XO_LO_OPTIONS, paBraceStyle, paSearchBraceStyle } from "../src/lib/pa/optimize";
+import { PA_OPTIMIZER_PANEL } from "../src/constants/optimizerPanels";
 import {
   DRIVER_CUTOUT_IN,
   cutParts,
@@ -33,7 +35,13 @@ import {
 } from "../src/lib/pa/calc";
 import { subDriverDepthIn } from "../src/lib/pa/tubes";
 import { subWoodIn3 } from "../src/lib/pa/exactSub";
-import { BRACE_FALLBACK_NOTES, bracePanelName, savedBraceStyle } from "../src/constants/bracing";
+import {
+  BRACE_FALLBACK_NOTES,
+  LEGACY_SUB_BRACE_STYLE_KEY,
+  bracePanelName,
+  savedBraceStyle,
+  savedStackBraceStyle,
+} from "../src/constants/bracing";
 import { braceNoteLines } from "../src/lib/bracingNotes";
 import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs";
 import { formatHz } from "../src/lib/format";
@@ -88,14 +96,39 @@ test("the PA target is twice the highest sub-to-mid crossover the optimizers try
 });
 
 test("default style, by nominal size: ribs for ⅝″ / 15 mm and ½″ / 12 mm, window braces for ¾″ / 18 mm", () => {
+  assert.strictEqual(defaultBraceStyle("5/8"), "ribs");
+  assert.strictEqual(defaultBraceStyle("1/2"), "ribs");
+  assert.strictEqual(defaultBraceStyle("3/4"), "window");
+  // a wall known only by its thickness reads as the nominal size nearest it
   for (const t of [0.5, 15 / 32, 0.625, 0.59])
-    assert.strictEqual(defaultBraceStyle(t), "ribs", `${t}`);
+    assert.strictEqual(defaultBraceStyleNear(t), "ribs", `${t}`);
   for (const t of [0.75, 0.689, 23 / 32])
-    assert.strictEqual(defaultBraceStyle(t), "window", `${t}`);
+    assert.strictEqual(defaultBraceStyleNear(t), "window", `${t}`);
   assert.strictEqual(savedBraceStyle("both"), "both");
   assert.strictEqual(savedBraceStyle("rib"), undefined);
   // a save without a style (older saves, or the plywood's default) follows the plywood
   assert.strictEqual(savedBraceStyle(undefined), undefined);
+});
+
+test("one style for the stack: an older save's per-cabinet styles read the sub's; the default is the nominal size's", () => {
+  assert.strictEqual(savedStackBraceStyle({ braceStyle: "both" }), "both");
+  // saves from earlier builds, one style per cabinet
+  const older = {
+      braceStyle: undefined,
+      [LEGACY_SUB_BRACE_STYLE_KEY]: "ribs",
+      midBraceStyle: "window",
+    },
+    midOnly = { braceStyle: undefined, midBraceStyle: "window" };
+  assert.strictEqual(savedStackBraceStyle(older), "ribs");
+  assert.strictEqual(savedStackBraceStyle(midOnly), undefined);
+  // ¾″ measured at 0.68″ sits nearer ⅝″, but it is ¾″ stock: window braces, as the planner shows
+  const wall = { wall: 0.68, panel: "3/4", exactIn: { "3/4": 0.68 } } as const;
+  assert.strictEqual(defaultBraceStyleNear(0.68), "ribs");
+  assert.strictEqual(paBraceStyle(wall), "window");
+  assert.strictEqual(paBraceStyle({ ...wall, braceStyle: "both" }), "both");
+  assert.strictEqual(paBraceStyle({ wall: 0.5 }), "ribs");
+  // the optimizers design in their own plywood, so with no style chosen they brace as it does
+  assert.strictEqual(paSearchBraceStyle({}), defaultBraceStyle(PA_OPTIMIZER_PANEL));
 });
 
 /** Each golden design's two boxes, as the planner braces them: the inside, the keep-out and the bracing. */

@@ -102,7 +102,7 @@ interface Props {
     | "setLayout"
     | "wallThicknessIn"
     | "wallPanel"
-    | "braceStyle"
+    | "effectiveBraceStyle"
     | "setBraceStyle"
     | "subBracing"
     | "midBracing"
@@ -187,7 +187,7 @@ export function SettingsPanel({ planner }: Props) {
     setLayout,
     wallThicknessIn,
     wallPanel,
-    braceStyle,
+    effectiveBraceStyle,
     setBraceStyle,
     subBracing,
     midBracing,
@@ -218,9 +218,7 @@ export function SettingsPanel({ planner }: Props) {
   // or two elbows (the lengths between fit neither way, and the slider skips them)
   const ductLens = ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn, subDriver);
   const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
-  // the style both boxes are braced with: the one chosen, else the plywood's default (stored as no choice, so it
-  // follows the plywood); a note under it wherever a box's bracing departs from it (braceNoteLines), naming the box
-  const shownBrace = braceStyle ?? defaultBraceStyle(wallThicknessIn);
+  // a note under the Bracing setting wherever a box's bracing departs from the style, naming the box and the panel
   const braceNotes = [
     ...braceNoteLines(PA_SETTINGS_TABS.sub, subBracing),
     ...(midBracing ? braceNoteLines(PA_SETTINGS_TABS.mid, midBracing) : []),
@@ -242,7 +240,7 @@ export function SettingsPanel({ planner }: Props) {
       `highpass ${subHighpassHz} Hz`,
       `amps ${subAmpWatts} / ${midAmpWatts} / ${hornAmpWatts} W`,
     ].join(" · "),
-    build: `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${PANEL_NOMINAL_NAMES[wallPanel].short} ply, braced with ${BRACE_STYLE_SUMMARY[shownBrace]}`,
+    build: `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${PANEL_NOMINAL_NAMES[wallPanel].short} ply, braced with ${BRACE_STYLE_SUMMARY[effectiveBraceStyle]}`,
   };
   const section = (id: PaSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -693,10 +691,9 @@ export function SettingsPanel({ planner }: Props) {
             <div className="mt-3">
               <ToggleGroup
                 label="Bracing"
-                value={shownBrace}
-                onChange={(v) =>
-                  setBraceStyle(v === defaultBraceStyle(wallThicknessIn) ? undefined : v)
-                }
+                value={effectiveBraceStyle}
+                // the plywood's own default is stored as no choice, so it follows the plywood
+                onChange={(v) => setBraceStyle(v === defaultBraceStyle(wallPanel) ? undefined : v)}
                 options={keysOf(BRACE_STYLE_NAMES).map(
                   (id) => [id, BRACE_STYLE_NAMES[id], BRACE_STYLE_TIPS[id]] as const,
                 )}

@@ -1,6 +1,7 @@
 import { DEFAULT_PA } from "../../../lib/defaults";
 import type { BraceStyleId, Cabinet, Format, PaLayout, PanelNominal, Setter } from "../../../types";
 import { useState } from "react";
+import { defaultBraceStyle } from "../../../lib/bracing";
 
 export interface CabinetStyle {
   plinthHeightIn: number;
@@ -16,6 +17,8 @@ export interface CabinetStyle {
   /** the boxes' bracing style as chosen (one for the stack); absent: the plywood's default (`defaultBraceStyle`) */
   braceStyle: BraceStyleId | undefined;
   setBraceStyle: Setter<BraceStyleId | undefined>;
+  /** the style both boxes are braced with: the one chosen, else the nominal plywood size's default */
+  effectiveBraceStyle: BraceStyleId;
   baffleInsetIn: number;
   setBaffleInsetIn: Setter<number>;
   baffleColor: string;
@@ -50,6 +53,7 @@ export function useCabinetStyle(): CabinetStyle {
     setWallPanel,
     braceStyle,
     setBraceStyle,
+    effectiveBraceStyle: braceStyle ?? defaultBraceStyle(wallPanel),
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,

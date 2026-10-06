@@ -71,7 +71,7 @@ import {
   braceBox,
   carriedWood,
   carryBracing,
-  defaultBraceStyle,
+  defaultBraceStyleNear,
   RIB_DEPTH_IN,
   ribRunAxis,
   WINDOW_RAIL_IN,
@@ -858,7 +858,7 @@ function subBracingAt(
   braceStyle: BraceStyleId | undefined,
   plan: BracePlan | undefined,
 ): BoxBracing {
-  const bs = braceStyle ?? defaultBraceStyle(t);
+  const bs = braceStyle ?? defaultBraceStyleNear(t);
   // the duct's length counts only where it changes the bracing
   const lenKey = ductFlags(box, t, inset, style, v, drv);
   const key = `${bs}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${lenKey}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${plan ? JSON.stringify(plan) : ""}`;
@@ -907,7 +907,7 @@ export function midBoxBracing(
       NO_SUPPORTS,
       midKeepOut(b, t, mid),
       `${mid.size}|${mid.depthIn}`,
-      braceStyle ?? defaultBraceStyle(t),
+      braceStyle ?? defaultBraceStyleNear(t),
       plan,
     );
   // chosen on the grid and carried to the box itself, as the sub's (subBoxBracing)
@@ -937,7 +937,7 @@ export function midBraceWood(
     NO_SUPPORTS,
     midKeepOut(g, t, mid),
     `${mid.size}|${mid.depthIn}`,
-    braceStyle ?? defaultBraceStyle(t),
+    braceStyle ?? defaultBraceStyleNear(t),
     undefined,
   );
   return carriedWood(chosen, paInner(g, t, inset), paInner(box, t, inset), t);
