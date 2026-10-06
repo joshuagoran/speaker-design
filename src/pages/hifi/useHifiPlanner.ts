@@ -273,6 +273,7 @@ export function useHifiPlanner(): HifiPlanner {
     seatDistanceM: design.seatDistanceM,
     guidePrice: selectedWaveguide.price || 0,
     panelExactIn,
+    wallPanel,
   });
   const restoreSavedConfig = (c: Partial<SavedHifiConfig>) => {
     const pick = <T extends { id: string }>(list: readonly T[], id: string | undefined) =>

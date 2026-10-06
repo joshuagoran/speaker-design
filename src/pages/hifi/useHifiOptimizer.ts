@@ -17,9 +17,10 @@ import type {
   HifiPlannerLocks,
   OptimizerProgress,
   PanelExactIn,
+  PanelNominal,
 } from "../../types";
 import { useState } from "react";
-import { panelChoicesIn } from "../../lib/panel";
+import { hifiWallChoicesIn } from "../../lib/panel";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 
 interface Props {
@@ -34,6 +35,8 @@ interface Props {
   guidePrice: number;
   /** the Cutlist page's measured panel thicknesses: the walls the search tries */
   panelExactIn: PanelExactIn;
+  /** the walls' nominal size: the search adds it to ¾″ and ½″ when it is another */
+  wallPanel: PanelNominal;
 }
 
 export interface HifiOptimizer
@@ -83,6 +86,7 @@ export function useHifiOptimizer({
   seatDistanceM,
   guidePrice,
   panelExactIn,
+  wallPanel,
 }: Props): HifiOptimizer {
   const [isOptimizerOn, setIsOptimizerOn] = useStoredState("hifi.opt", false);
   const [optimizerBudget, setOptimizerBudget] = useStoredState("hifi.budget", 800);
@@ -127,7 +131,10 @@ export function useHifiOptimizer({
           budget: optimizerBudget,
           seatM: seatDistanceM,
           guidePrice,
-          walls: panelChoicesIn(speakerConfig.mat ?? PLYWOOD_MATERIAL, panelExactIn),
+          walls: hifiWallChoicesIn(speakerConfig.mat ?? PLYWOOD_MATERIAL, panelExactIn, {
+            wall: speakerConfig.wall,
+            panel: wallPanel,
+          }),
         },
         options,
       ),
