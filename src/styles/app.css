@@ -15,7 +15,7 @@
 /* Page styles. They come before Tailwind's layers, as they did when the Play CDN appended its styles after the page's
    own <style>, so utilities still win over these. */
 /* CMYK brand palette: cyan (horn/tweeter series), magenta (mid-bass/woofer), yellow (accents), black (actions, focus), white and two
-     grays. Status uses its own green / orange / red. Tailwind's colour names are remapped in tailwind.config.js, so class names stay as they were. */
+     grays. Status uses its own green / orange / red. Tailwind's color names are remapped in tailwind.config.js, so class names stay as they were. */
 :root {
   --font: "Inconsolata", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }

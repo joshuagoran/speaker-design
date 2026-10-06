@@ -24,30 +24,29 @@ export const goalKeeps = (db: number, f3: number): Record<KeepGoal, Keep> =>
 
 /**
  * How an optimizer words the level a goal may give up, given the allowance ("0.5 dB"), plus an optional footnote, and
- * what its goals hold to when your design can't be modelled (there is nothing of it to keep).
+ * what its goals hold to when your design can't be modeled (there is nothing of it to keep).
  */
 export interface KeepWords {
   level: (db: string) => string;
   note?: string;
-  unmodelled: string;
+  unmodeled: string;
 }
 
 /** Hi-fi keeps your design's own clean level at the seat. */
 export const HIFI_KEEP_WORDS: KeepWords = {
   level: (db) => `your level drops at most ${db}`,
-  note: "Level is the clean level at the seat; F3 is measured in the room.",
-  unmodelled:
-    "Your design can't be modelled, so the goals keep nothing from it: a card only has to pass the checks and fit the budget.",
+  note: "Level: clean, at the seat. F3: in the room.",
+  unmodeled: "Cannot model your design, so cards need only pass the checks and fit the budget.",
 };
 
-/** The F3 the PA goals measure from when your design can't be modelled, Hz. */
-export const PA_UNMODELLED_F3_HZ = 40;
+/** The F3 the PA goals measure from when your design can't be modeled, Hz. */
+export const PA_UNMODELED_F3_HZ = 40;
 
 /** PA keeps the target output: your output or the room's need, whichever is higher. */
 export const PA_KEEP_WORDS: KeepWords = {
   level: (db) => `output stays at most ${db} under the target`,
   note: "The target is your output or the room's need, whichever is higher.",
-  unmodelled: `Your design can't be modelled, so the goals measure from the room's need and a ${PA_UNMODELLED_F3_HZ} Hz F3 in place of your output and F3.`,
+  unmodeled: `Cannot model your design: the goals use the room's need and a ${PA_UNMODELED_F3_HZ} Hz F3.`,
 };
 
 /** One line per goal: what it may give up, e.g. "Cheaper: your level drops at most 0.5 dB, your F3 rises at most 2 Hz." */
@@ -62,16 +61,16 @@ export function keepText(goal: KeepGoal, name: string, words: KeepWords): string
 
 /**
  * The Details lines for the picked goals: what each keeps from your design (named by `defs`), then the footnote; when
- * your design can't be modelled, the one line saying what the goals hold to instead.
+ * your design can't be modeled, the one line saying what the goals hold to instead.
  */
 export function keepLines(
   goals: readonly KeepGoal[],
   defs: Record<KeepGoal, { short: string }>,
   words: KeepWords,
-  modelled: boolean,
+  modeled: boolean,
 ): string[] {
   if (!goals.length) return [];
-  if (!modelled) return [words.unmodelled];
+  if (!modeled) return [words.unmodeled];
   const lines = goals.map((g) => keepText(g, defs[g].short, words));
   return words.note ? [...lines, words.note] : lines;
 }

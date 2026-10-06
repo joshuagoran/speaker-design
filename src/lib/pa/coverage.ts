@@ -100,7 +100,7 @@ export const STATS_CLEARANCE_FT = 4;
 export const RESPONSE_FREQS = logSpacedFrequencies(15, 20000, 120);
 /** A band this far (pressure) under the loudest at a frequency is left out of its sum: −80 dB. */
 const SILENT = 1e-4;
-/** pressure → nepers per metre from dB per metre */
+/** pressure → nepers per meter from dB per meter */
 const NEPER_PER_DB = Math.LN10 / 20;
 
 /**
@@ -110,7 +110,7 @@ const NEPER_PER_DB = Math.LN10 / 20;
 const reflIndex = (surface: number, floor: boolean) => 2 * surface + (floor ? 1 : 0);
 const REFL_KINDS = 2 * (ROOM_SURFACES.length + 1);
 
-/** One radiator in the sum: a box's driver, or its image in the floor, a side or the ceiling. Metres and radians. */
+/** One radiator in the sum: a box's driver, or its image in the floor, a side or the ceiling. Meters and radians. */
 interface SceneSource {
   /** the path it belongs to: one box, or one image of it */
   path: number;
@@ -153,7 +153,7 @@ export interface CoverageSlot {
   shadow: number;
   /** pressure each kind of path keeps after its reflections, by SceneSource.refl */
   refl: Float64Array;
-  /** air absorption, nepers per metre (pressure) */
+  /** air absorption, nepers per meter (pressure) */
   air: number;
   /** the reverberant field's mean square, the same everywhere: 0 outdoors */
   diffuse: number;
@@ -635,7 +635,7 @@ let geo = new Float64Array(0),
   pim = new Float64Array(0);
 
 /**
- * Mean-square level at a point (metres, z above the floor) over the slots, dB SPL: at each slot the modal sum, or the
+ * Mean-square level at a point (meters, z above the floor) over the slots, dB SPL: at each slot the modal sum, or the
  * image sources and the diffuse field, or both in their crossfade (by power).
  */
 export function levelAtPoint(
@@ -852,19 +852,19 @@ export function audienceAverage(
 }
 
 /** How far out from a stack's front its "1 m" level is read, ft. */
-export const ONE_METRE_FT = 1 / FT;
+export const ONE_METER_FT = 1 / FT;
 
 /**
  * Where a stack's 1 m level is read: 1 m out from the middle of its front along its aim, kept just inside the room.
  * Feet.
  */
-export function oneMetreSpot(
+export function oneMeterSpot(
   box: FloorPlacement,
   footprint: CoverageStack["footprint"],
   room: Pick<CoverageRoom, "widthFt" | "lengthFt">,
 ): FloorPoint {
   const a = (box.aim * Math.PI) / 180,
-    r = footprint.d / 24 + ONE_METRE_FT,
+    r = footprint.d / 24 + ONE_METER_FT,
     edge = 0.25;
   return {
     x: Math.max(

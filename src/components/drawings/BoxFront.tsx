@@ -100,7 +100,7 @@ export function BoxFront({ g, cur }: Props) {
     vent.push(<circle key={i} {...onBaffle(p)} r={(v.dia * k) / 2} fill={pal.ink} />),
   );
   // what the driver clears below it: the slot and its shelf, or the tube row's flares (the tower's sub section draws its
-  // driver centred above them; the stacks place it where the layout does)
+  // driver centered above them; the stacks place it where the layout does)
   const rowTop = tubes?.tubes.length
     ? Math.max(...tubes.tubes.map((p) => p.y)) + v.dia / 2 + TUBE_FLARE_RADIUS_IN
     : 0;

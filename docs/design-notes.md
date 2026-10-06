@@ -1,6 +1,6 @@
 # Design notes
 
-Findings that drove the current configuration. Everything modelled with
+Findings that drove the current configuration. Everything modeled with
 the planner's model (`tools/calc.js`; earlier notes used `model/vented-box.js`, now removed) unless a source is cited.
 
 ## Current configuration
@@ -50,7 +50,7 @@ costs 1.6 dB at 30.
 
 ## Crossover geometry
 
-Acoustic centres: sub 16", mid 39", horn 55" above the floor.
+Acoustic centers: sub 16", mid 39", horn 55" above the floor.
 
 | transition          | spacing | d/λ  | verdict                        |
 | ------------------- | ------- | ---- | ------------------------------ |
@@ -75,7 +75,7 @@ out the sides. JBL documented the same topology in the 1960s: the **4560A**
 loading above 200 Hz", and adds 6 dB above 200 Hz. Also patented twice —
 US5898138 (Delgado / Klipsch) and US8627920 (Moore).
 
-Modelled against our reflex box, a 4560-scaled bin **loses 9.8 dB at 35 Hz** and
+Modeled against our reflex box, a 4560-scaled bin **loses 9.8 dB at 35 Hz** and
 gains 4–5 dB from 100–200 Hz. Wrong side of our 120 Hz crossover. A horn-loaded
 _mid_ gains ~5 dB at 150 Hz tapering to nothing by 500 Hz, which EQs back out.
 Horn loading only pays here as part of a 4-way with much more mouth area.
@@ -86,7 +86,7 @@ Boundary gain survives elevation: half-space loading holds while the sub is well
 inside λ/4 of the floor, which is 84" at 40 Hz. What bites is the floor-bounce
 notch, and it is a top-of-band problem:
 
-| sub acoustic centre  | notch at 3 m | at 10 m |
+| sub acoustic center  | notch at 3 m | at 10 m |
 | -------------------- | ------------ | ------- |
 | 0.4 m (16", current) | 437 Hz       | 1280 Hz |
 | 1.2 m (47")          | 152 Hz       | 429 Hz  |
@@ -105,7 +105,7 @@ points in a "Start from" list and as seeded saved configurations; they are no
 longer a separate mode.
 
 Saved configurations are the way back to a setup. Each one is a whole-system
-snapshot — sub box and vent, mid, horn, compression driver, crossover, colours,
+snapshot — sub box and vent, mid, horn, compression driver, crossover, colors,
 layout, bracing — kept in the artifact's document store, so they persist across
 republishes and can be read back later.
 

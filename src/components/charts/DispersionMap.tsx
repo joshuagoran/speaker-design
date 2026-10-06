@@ -2,7 +2,7 @@ import type { HifiDispersionMap } from "../../types";
 import { formatHz } from "../../lib/format";
 import {
   DISPERSION_SCALE,
-  dispersionColour,
+  dispersionColor,
   dispersionRgb,
   alpha,
   ON_DATA,
@@ -51,7 +51,7 @@ function bracket(xs: readonly number[], x: number): [number, number] {
 
 /**
  * The map as an image `pw` × `ph` px on the fixed axes (+90° at the top, 50 Hz-20 kHz across): each pixel's level
- * interpolated from the grid, coloured on the dispersion scale, darker where it crosses a contour. Null without a canvas.
+ * interpolated from the grid, colored on the dispersion scale, darker where it crosses a contour. Null without a canvas.
  */
 function mapImage(map: HifiDispersionMap, pw: number, ph: number): string | null {
   if (typeof document === "undefined") return null;
@@ -94,7 +94,7 @@ function mapImage(map: HifiDispersionMap, pw: number, ph: number): string | null
   return cv.toDataURL();
 }
 
-/** The colour key every dispersion map shares: the scale as a bar, ticked every 6 dB. */
+/** The color key every dispersion map shares: the scale as a bar, ticked every 6 dB. */
 export function DispersionKey() {
   const span = topDb - botDb;
   const gradient = stops
@@ -104,7 +104,7 @@ export function DispersionKey() {
   return (
     <div
       className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-500 mt-1"
-      aria-label={`Colour key: ${signed(topDb)} to ${signed(botDb)} dB relative to on-axis`}
+      aria-label={`Color key: ${signed(topDb)} to ${signed(botDb)} dB relative to on-axis`}
     >
       <span>dB re on-axis</span>
       <div className="flex flex-col gap-0.5 w-full max-w-[420px]">
@@ -124,7 +124,7 @@ export function DispersionKey() {
 
 /**
  * Level vs angle and frequency, relative to on-axis, on the axes every dispersion map shares (−90° to +90°,
- * 50 Hz-20 kHz) and the one colour scale (+6 to −36 dB, a contour every 3 dB). Hover or drag to read a point.
+ * 50 Hz-20 kHz) and the one color scale (+6 to −36 dB, a contour every 3 dB). Hover or drag to read a point.
  */
 export function DispersionMap({ map, title }: Props) {
   const pal = usePalette();
@@ -195,7 +195,7 @@ export function DispersionMap({ map, title }: Props) {
         {href ? (
           <image href={href} x={L} y={T} width={pw} height={ph} preserveAspectRatio="none" />
         ) : (
-          <rect x={L} y={T} width={pw} height={ph} fill={dispersionColour(0)} />
+          <rect x={L} y={T} width={pw} height={ph} fill={dispersionColor(0)} />
         )}
         {gridA.map((deg) => (
           <g key={deg}>
@@ -234,8 +234,8 @@ export function DispersionMap({ map, title }: Props) {
           fill="none"
           stroke={ON_DATA.ink}
         />
-        {/* the frame, grid and marks sit on the map, so they keep its fixed colours (ON_DATA) in both themes */}
-        {/* crossovers: a white line with a dark outline and an outlined label, legible on any colour of the scale */}
+        {/* the frame, grid and marks sit on the map, so they keep its fixed colors (ON_DATA) in both themes */}
+        {/* crossovers: a white line with a dark outline and an outlined label, legible on any color of the scale */}
         {crossovers.map((f, k) => {
           const x = fx(f),
             right = x > L + pw - 60;

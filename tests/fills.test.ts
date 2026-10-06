@@ -91,7 +91,7 @@ test("fills HF: limit through the pad = 2 x AES x (Z/8) x 10^(pad/10); pad from 
   const v = fillSystem(drv, base);
   close(t, v.pad, drv.hf!.sens - drv.lfSens, 1e-12);
   close(t, v.hfLimW!, 2 * drv.hf!.aes * (drv.hf!.imp / 8) * 10 ** (v.pad / 10), 1e-9);
-  // behaviour: at that amp power the HF sees exactly its program rating
+  // behavior: at that amp power the HF sees exactly its program rating
   const hfW = ((v.hfLimW! * 8) / drv.hf!.imp) * 10 ** (-v.pad / 10);
   close(t, hfW, 2 * drv.hf!.aes, 1e-9);
 });

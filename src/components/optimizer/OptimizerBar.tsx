@@ -41,7 +41,7 @@ export function OptimizerBar({
             onClick={onLockAll}
             disabled={nLocks >= lockMax}
             aria-label="Lock everything"
-            title="Lock everything, then unlock what the optimizer may change"
+            title="Lock all, then unlock what the optimizer can change"
             className="inline-flex items-center gap-1"
           >
             <LockIcon locked={true} />

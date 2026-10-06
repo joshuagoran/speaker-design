@@ -35,7 +35,7 @@ export const CARD_LABELS = {
 
 /** The sentence under a card both optimizers word the same way. */
 export const CARD_WHY = {
-  closest: "Passes the checks and comes closest to your goal.",
+  closest: "Passes the checks; closest to your goal.",
   smallest: "Changes one thing from your design.",
   altLower: "Goes lower than your design.",
 } as const;
@@ -44,6 +44,10 @@ export const CARD_WHY = {
 export const OPTIMIZER_PANEL_TEXT = {
   heading: "Find a better design",
   limitedBy: "Limited by:",
+  /** after the run stats when there are cards (PA and Hi-fi) */
+  cardsPass: " · all pass the checks (warnings on each card)",
+  /** the notice when no design fits */
+  noFit: "No design fits your limits",
 } as const;
 
 /** The driver comparison's part buttons, by part. */
@@ -89,7 +93,7 @@ export const OUT_OF_REACH_LEAD = "Out of reach within the checks";
 
 /** What fails in a design that isn't a check's title: the optimizers' problem lines. */
 export const DESIGN_PROBLEM_TEXT = {
-  unmodelled: "can't be modelled",
+  unmodeled: "can't be modeled",
   exitMismatch: "horn and driver exits differ",
   missingWoofer: "woofer isn't in the driver tables",
   missingTweeter: "tweeter isn't in the driver tables",

@@ -1,4 +1,4 @@
-// The parts catalogue as the app reads it. The tables themselves live in src/data/catalog/ (pure data, one module
+// The parts catalog as the app reads it. The tables themselves live in src/data/catalog/ (pure data, one module
 // per kind); this module only derives from them: the comparable Xmax, tweeter faceplates, picker sort order and the
 // starting parts. Plain data, no React. Dimensions in inches (outer). Verify every driver spec and price against the
 // vendor before ordering.
@@ -78,12 +78,12 @@ export const subDriversOfSize = (size: SubSize) => SUB_OPTIONS.filter((o) => o.s
 /** The mid drivers for a mid size class (10, 12 or 15 in). */
 export const midDriversOfSize = (size: MidSize) => MID_OPTIONS.filter((o) => o.size === size);
 
-// Copies, so the sort below leaves the catalogue tables as written.
+// Copies, so the sort below leaves the catalog tables as written.
 export const CD_OPTIONS: CompressionDriver[] = [...CD_RAW];
 export const HORN_OPTIONS: Horn[] = [...HORN_RAW];
 
 const isFinishId = (value: string): value is FinishId => Object.hasOwn(CABINET_FINISHES, value);
-/** The named finish for a cabinet's `cabFinish`, or undefined when it is a paint colour (a hex string). */
+/** The named finish for a cabinet's `cabFinish`, or undefined when it is a paint color (a hex string). */
 export function cabinetFinishOf(value: string): CabinetFinish | undefined {
   return isFinishId(value) ? CABINET_FINISHES[value] : undefined;
 }
@@ -137,7 +137,7 @@ export const ownGuideCfg = (
 export const passiveRadiatorMassMax = (p: PassiveRadiator): number =>
   Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
 
-// ---- Racks: a line that names a catalogue part takes that part's name (and, for an amp, its rating and price) ----
+// ---- Racks: a line that names a catalog part takes that part's name (and, for an amp, its rating and price) ----
 
 /** An amp by id, with its series (for the brand). */
 export function ampById(id: AmpId): { series: AmpSeries; model: AmpModel } {
@@ -165,7 +165,7 @@ function rackLine(item: RackItem): RackView["items"][number] {
   }
   if ("dsp" in item) {
     const unit = dspUnitById(item.dsp);
-    // the id's type admits only priced units; this guards a catalogue edit that drops the price
+    // the id's type admits only priced units; this guards a catalog edit that drops the price
     if (!unit.usedPrice)
       throw new Error(`${CATALOG_TABLE_NAMES.dspUnits}: ${item.dsp} has no used price`);
     return { label: `${unit.row.unit} (used) — ${item.note}`, price: unit.usedPrice };

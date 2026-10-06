@@ -58,7 +58,7 @@ export const CABINETS: readonly Cabinet[] = [
     name: "18Sound reflex (app note)",
     vents: ["slots"],
     dims: { 18: { w: 23.25, h: 35.5, d: 19.75 }, 15: { w: 23.25, h: 35.5, d: 19.75 } },
-    note: "18Sound's published 905 H \u00d7 590 W \u00d7 500 D mm reflex box, 15 mm birch, ~230 L gross, 28 Hz HPF. Their vent isn't modelled; a bottom slot is loaded instead.",
+    note: "18Sound's published 905 H \u00d7 590 W \u00d7 500 D mm reflex box, 15 mm birch, ~230 L gross, 28 Hz HPF. Their vent isn't modeled; a bottom slot is loaded instead.",
   },
   // internal 22.5 x 28.5 x 20.875 in; external adds two 3/4" walls and the 3/4" baffle recess
   {

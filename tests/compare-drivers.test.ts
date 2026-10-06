@@ -19,7 +19,7 @@ test("compare drivers: every option once, yours as the planner models it, the on
     const yours = rows.filter((r) => r.yours);
     assert.strictEqual(yours.length, 1, `${part}: one row is yours`);
     const m = evaluateDesign(cur);
-    assert.ok(m && yours[0].m, `${part}: yours is modelled`);
+    assert.ok(m && yours[0].m, `${part}: yours is modeled`);
     assert.strictEqual(yours[0].m.out, m.out);
     // the weight the part brings: its box for the sub and mid, the part itself for the driver and horn
     const own = { sub: m.subLb, mid: m.midLb, cd: null, horn: null }[part];

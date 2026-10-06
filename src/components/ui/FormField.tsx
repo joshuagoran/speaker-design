@@ -6,7 +6,7 @@ interface Props {
   children: React.ReactNode;
 }
 
-/** Labelled form row: the label is a real <label> tied to its control, so screen readers name the control */
+/** Labeled form row: the label is a real <label> tied to its control, so screen readers name the control */
 export function FormField({ label, htmlFor, extra, className = "mb-4", children }: Props) {
   return (
     <div className={className}>

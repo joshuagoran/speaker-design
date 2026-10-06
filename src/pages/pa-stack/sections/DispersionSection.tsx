@@ -31,7 +31,7 @@ export function DispersionSection({ planner }: Props) {
     midHornGapIn,
     midHornNullAngleDeg,
   } = planner;
-  // as when it sat in the horn results: only while the horn can be modelled
+  // as when it sat in the horn results: only while the horn can be modeled
   if (!hornModel || !paDispersion) return null;
   return (
     <section className={`${RESULT_MAX_WIDTH} min-w-0`} style={{ fontFamily: FONT }}>
@@ -48,7 +48,7 @@ export function DispersionSection({ planner }: Props) {
         Mid and horn centers {midHornGapIn.toFixed(1)}″ apart:{" "}
         {midHornNullAngleDeg
           ? `the first null at the ${midHornCrossoverHz} Hz crossover is about ${midHornNullAngleDeg.toFixed(0)}° above and below the horn axis.`
-          : `under half a wavelength at ${midHornCrossoverHz} Hz, so no null at the crossover.`}
+          : `under half a wavelength at ${midHornCrossoverHz} Hz: no null at the crossover.`}
       </div>
     </section>
   );

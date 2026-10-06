@@ -245,7 +245,7 @@ test("the driver's keep-out covers its cutout at the baffle and reaches its magn
   assert.strictEqual(front.z[0], 0, "from the baffle");
   const back = Math.max(...k.driver.map((o) => o.z[1]));
   close({ name: "depth" }, back, subDriverDepthIn(sub) - 0.75 + DRIVER_CLEARANCE_IN, 1e-9);
-  // it narrows towards the magnet, never widens
+  // it narrows toward the magnet, never widens
   k.driver.forEach((o, i) =>
     assert.ok(i === 0 || o.x[1] - o.x[0] <= k.driver[i - 1].x[1] - k.driver[i - 1].x[0] + 1e-9),
   );
@@ -663,7 +663,7 @@ test("the optimizers' brace estimate stays near the rule over the golden boxes, 
           (braceWoodIn3(braceWoodEstimate(mDim, 0.75, inset, style)) - braceWoodIn3(mb)) * IN3_L,
         );
     }
-    // litres of wood: well under a litre on the whole, a couple of litres at worst (a sub box holds 60 to 200)
+    // liters of wood: well under a liter on the whole, a couple of liters at worst (a sub box holds 60 to 200)
     const rms = Math.sqrt(err.reduce((a, e) => a + e * e, 0) / err.length);
     assert.ok(rms < 0.6, `${style}: ${rms.toFixed(3)} L rms`);
     assert.ok(

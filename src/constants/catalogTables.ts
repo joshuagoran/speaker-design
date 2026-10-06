@@ -1,4 +1,4 @@
-/** Each catalogue table's name, as a lookup's error message names it (`byIdOrThrow`'s `what`). */
+/** Each catalog table's name, as a lookup's error message names it (`byIdOrThrow`'s `what`). */
 export const CATALOG_TABLE_NAMES = {
   subs: "subwoofers",
   mids: "mid drivers",

@@ -11,11 +11,11 @@
 //     f₁₁ = (π/2) (√D₁/a² + √D₂/b²) / √(ρh),    Dᵢ = Eᵢh³ / (12(1 − ν²)).
 // An isotropic panel (MDF, E₁ = E₂) gives the familiar f₁₁ = (π/2) √(D/ρh) (1/a² + 1/b²). The weaker modulus is taken
 // across the shorter span (the span that sets the mode), so the face grain's direction on the box never reads high.
-// ρh is the panel's weight per area from the catalogue (lib/panel), the same number the box weights use.
+// ρh is the panel's weight per area from the catalog (lib/panel), the same number the box weights use.
 // Holes (the driver's cutout), the duct's own stiffness and the air load are left out. No finite elements.
 //
 // A window brace or a rib holds the panel in a line: a support like an edge. A window brace (a frame across the box
-// with its centre cut out, rails WINDOW_RAIL_IN wide) is stiff in its plane and holds the four walls it touches. A rib
+// with its center cut out, rails WINDOW_RAIL_IN wide) is stiff in its plane and holds the four walls it touches. A rib
 // (a strip of the panel's stock glued on edge, RIB_DEPTH_IN deep) is a beam: its own first mode, simply supported over
 // the bay it bridges and carrying its share of the panel, f = (π/2) √(EI/μ) / L², is checked against the target too,
 // and the panel reads the lower of the two. The glued panel beside the rib works with it as a flange, so EI is the
@@ -71,7 +71,7 @@ export const MDF_STIFFNESS: Pick<PlateStock, "eStrong" | "eWeak" | "nu"> = {
   nu: 0.25,
 };
 
-/** A window brace's rails, inches: the frame left round the cut-out centre. */
+/** A window brace's rails, inches: the frame left round the cut-out center. */
 export const WINDOW_RAIL_IN = 2;
 /** A rib's depth off the panel, inches; its width is the panel's stock. */
 export const RIB_DEPTH_IN = 2.5;
@@ -183,7 +183,7 @@ export function regionOf(
 }
 
 /**
- * A window brace's rails across `axis` at `at`, `t` thick: one along each wall it touches, the frame's centre cut out.
+ * A window brace's rails across `axis` at `at`, `t` thick: one along each wall it touches, the frame's center cut out.
  * With `notch` (across x only) the front rail, on the baffle, is left out over that span of y.
  */
 export function windowRails(
@@ -215,7 +215,7 @@ export function windowRails(
 }
 /**
  * A window brace's wood across `axis`, in³: the full frame (a notched brace's front rail is counted whole; its gap,
- * under half a litre, is left in, so the box reads a little small).
+ * under half a liter, is left in, so the box reads a little small).
  */
 export const windowWoodIn3 = (inner: Record<BoxAxis, number>, axis: BoxAxis, t: number) => {
   // the two spans across the axis (written out: the optimizers' brace estimate reads this at every step)

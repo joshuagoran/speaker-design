@@ -14,7 +14,7 @@ export function SignalPath() {
   const ink = pal.ink,
     mute = pal.muted,
     line = pal.muted;
-  const col = { pa2: pal.muted, sub: pal.cyan, mid: pal.magenta, hf: pal.magenta, grey: pal.muted };
+  const col = { pa2: pal.muted, sub: pal.cyan, mid: pal.magenta, hf: pal.magenta, gray: pal.muted };
   const Box = ({
     x,
     y,
@@ -94,7 +94,7 @@ export function SignalPath() {
       <T x={600} y={22} c={mute} b="Rear panel" />
       <T x={770} y={22} c={mute} b="Stacks" />
 
-      <Box x={15} y={190} w={90} h={52} c={col.grey}>
+      <Box x={15} y={190} w={90} h={52} c={col.gray}>
         <T x={60} y={212} b="DJ mixer" />
         <T x={60} y={230} s={10} c={mute} b="master L/R" />
       </Box>
@@ -127,7 +127,7 @@ export function SignalPath() {
       <A d="M280 266 L350 283" c={col.mid} />
       <A d="M280 306 L350 340" c={col.hf} />
 
-      <Box x={555} y={150} w={90} h={230} c={col.grey}>
+      <Box x={555} y={150} w={90} h={230} c={col.gray}>
         <T x={600} y={170} b="Speakon" />
         <T x={600} y={184} s={10} c={mute} b="4× NL4MP" />
       </Box>
@@ -176,7 +176,7 @@ export function SignalPath() {
         s={10}
         a="start"
         c={mute}
-        b={`Crossovers in the PA2: ${DEFAULT_CROSSOVERS}. Amps run full-range; limiters set per driver in each amp.`}
+        b={`Crossovers in the PA2: ${DEFAULT_CROSSOVERS}. Full-range amps, limiters set per driver.`}
       />
     </svg>
   );

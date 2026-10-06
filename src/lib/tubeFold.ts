@@ -1,13 +1,13 @@
 // How a round port tube fits a box: straight off the baffle while it fits, then one elbow up the back wall, then a
 // second that turns it forward again. One rule for the PA sub's tubes and the Hi-fi port (each passes its own room).
-// Lengths are the tube's centreline in inches, measured from the baffle front to the mouth, with each elbow taken as a
-// sharp corner (the bend correction, SHARP_BEND_CORRECTION, is against that same centreline).
+// Lengths are the tube's centerline in inches, measured from the baffle front to the mouth, with each elbow taken as a
+// sharp corner (the bend correction, SHARP_BEND_CORRECTION, is against that same centerline).
 import type { ElbowCount } from "../types";
 
 export type { ElbowCount };
 
 /**
- * The room a tube's centreline has in a box, inches: `run` from the baffle front to the back wall, `rise` from the
+ * The room a tube's centerline has in a box, inches: `run` from the baffle front to the back wall, `rise` from the
  * tube's axis to the wall the riser heads for (a PA sub's lid), and `stop`, how far behind the baffle front anything
  * stands that the riser must stay behind and the return leg's mouth must keep clear of (a PA sub's driver; 0 for none).
  */
@@ -23,7 +23,7 @@ export const MAX_ELBOWS = 2;
 export const ELBOW_COUNTS = [0, 1, 2] as const satisfies readonly ElbowCount[];
 
 /**
- * The legs a tube's centreline takes, inches: `run` straight back from the baffle front, `rise` up past the first
+ * The legs a tube's centerline takes, inches: `run` straight back from the baffle front, `rise` up past the first
  * elbow, `back` forward again past the second; and `gap`, what the mouth faces: the wall, lid or stop it opens toward.
  */
 export interface TubeLegs {
@@ -34,7 +34,7 @@ export interface TubeLegs {
 }
 
 // Every mouth keeps a diameter of open air in front of it (to the wall, the lid or the stop), and every leg past an
-// elbow is at least a diameter long (about a fitting's centre-to-end), so a fitting always has pipe to grip.
+// elbow is at least a diameter long (about a fitting's center-to-end), so a fitting always has pipe to grip.
 const mouthGap = (dia: number) => dia;
 const legMin = (dia: number) => dia;
 

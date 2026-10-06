@@ -213,13 +213,13 @@ export function buildSubwoofer(
     const legs = subTubeLegs(s, portStyle, tubeVent, T, sub, e);
     const RB = TUBE_FLARE_RADIUS_IN,
       seg = 10,
-      bend = Math.min(portR * 1.5, legs.run / 2, legs.rise / 2); // the elbows' centreline radius
+      bend = Math.min(portR * 1.5, legs.run / 2, legs.rise / 2); // the elbows' centerline radius
     const prof: THREE.Vector2[] = [];
     for (let i = 0; i <= seg; i++) {
       const t = (i / seg) * (Math.PI / 2);
       prof.push(new THREE.Vector2(portR + RB * (1 - Math.cos(t)), RB * Math.sin(t)));
     }
-    // a straight length of tube from a to b (centreline points)
+    // a straight length of tube from a to b (centerline points)
     const pipe = (a: THREE.Vector3, b: THREE.Vector3) => {
       const len = a.distanceTo(b);
       if (len < 1e-3) return;

@@ -15,7 +15,7 @@ Shared today: `Pick` 687, `Slider` 810, `FoldHead` 800, `LockBtn`/`DimLock` 1554
 | Section header                   | 15 `<h2>` with inline fontFamily                                                        | Redundant inline style; h3 sizes vary                                                                                                                                                         |
 | Run/Search CTA + optimizer panel | 1054-1070 vs 1732-1760                                                                  | Near-copies                                                                                                                                                                                   |
 | Lock-all / clear-locks bar       | 1041-1051 vs 2199-2215                                                                  | Near-copies; two lock-state shapes                                                                                                                                                            |
-| Colour swatch picker             | 2440-2455 vs 2459-2477                                                                  | Copy-pasted; no aria-label                                                                                                                                                                    |
+| Color swatch picker              | 2440-2455 vs 2459-2477                                                                  | Copy-pasted; no aria-label                                                                                                                                                                    |
 | Button sizes                     | 1043, 2161, 2183, 2231, 2245                                                            | No scale; secondary bg `stone-50` vs `white`                                                                                                                                                  |
 | Slider units                     | ~50                                                                                     | Units passed as `"&#8243;"`, `" Hz"`, `"°"`; step 0.5 shows 2 decimals                                                                                                                        |
 
@@ -23,7 +23,7 @@ Proposed components: `Seg`, `ToggleBtn`, `Button`, `Card`, `Field`, `NumberField
 
 ## 2. Excess text -> tooltips
 
-No tooltip component exists; the 20 tooltips are native `title=` (invisible on touch). Candidates: 1123-1128 "At the seat", 1213 option notes, 1227-1233 DSP "Division of labour", 1264/1272/1293 "Ruled out", 1298/1314/1319/1335, 1411, 1444, 1517/1539 cut-list intro, 2292/2361/2401/2646-2655 driver/mid/horn notes, 939/1707 "Limited by", 1115/1438/2301/2353/2393 status chip bodies, 1713, 1160-1170 box-type `tip`.
+No tooltip component exists; the 20 tooltips are native `title=` (invisible on touch). Candidates: 1123-1128 "At the seat", 1213 option notes, 1227-1233 DSP "Division of labor", 1264/1272/1293 "Ruled out", 1298/1314/1319/1335, 1411, 1444, 1517/1539 cut-list intro, 2292/2361/2401/2646-2655 driver/mid/horn notes, 939/1707 "Limited by", 1115/1438/2301/2353/2393 status chip bodies, 1713, 1160-1170 box-type `tip`.
 
 Proposed: one `<Tip text>` (button, not hover-only; `aria-describedby`; tap toggle; Esc/blur dismiss).
 
@@ -57,8 +57,8 @@ Proposed: muted text #595959; darker accent (~#006ba6); min caption 13px, body 1
 1. `Seg` + `ToggleBtn` + `Button`
 2. `Field` + label wiring (Pick, Slider, NumberField)
 3. `Tip`
-4. Colour/type tokens
+4. Color/type tokens
 5. `Card`, `SectionHead`
-6. `fmt` helper, inch-symbol normalisation
+6. `fmt` helper, inch-symbol normalization
 7. Merge `OptimizerPanel`s, `SwatchPicker`
 8. Remove `focus:outline-none` from select/text input

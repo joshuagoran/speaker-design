@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { SceneContext } from "./sceneContext";
 
-/** A driver cone of radius `r` centred at (x, y) just behind the baffle face at `z`; nothing in the cutaway. */
+/** A driver cone of radius `r` centered at (x, y) just behind the baffle face at `z`; nothing in the cutaway. */
 export function buildCone(
   ctx: SceneContext,
   {

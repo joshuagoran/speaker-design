@@ -37,7 +37,7 @@ export const DISPERSION_FREQ_MAX_HZ = 20000;
 export const DISPERSION_FREQ_POINTS = 78;
 
 /**
- * The coverage map's colour scale, dB against the target: fixed, so layouts compare by eye. A room spans about 15 dB, so
+ * The coverage map's color scale, dB against the target: fixed, so layouts compare by eye. A room spans about 15 dB, so
  * the scale covers only that: white at −12 dB (no coverage), magenta at the target, dark magenta at +6 dB (too loud).
  */
 export const COVERAGE_MAP_DB: [lo: number, hi: number] = [-12, 6];

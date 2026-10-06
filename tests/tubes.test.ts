@@ -85,7 +85,7 @@ test("tube layout: one row along the bottom under the driver, spread wall to wal
   assert.ok(!tubeLayout({ w: 20, h: 21 }, "round2", { nt: 2, dia: 4 }, 0.75, 18).fits);
 });
 
-test("tube end correction: flanged and free ends less the flares, the wall, the neighbours and each bend", () => {
+test("tube end correction: flanged and free ends less the flares, the wall, the neighbors and each bend", () => {
   const box = { w: 24, h: 34, d: 21 };
   const one = vent({ nt: 1, dia: 4, len: 10 });
   const r = 2,
@@ -136,7 +136,7 @@ test("flared tubes run faster than sharp-edged vents", () => {
   assert.ok(FLARED_PORT_SPEED_RATIO > 1);
 });
 
-test("port tube catalogue: every tube set has its pipe and an elbow entry, by area, and the sliders hold them", () => {
+test("port tube catalog: every tube set has its pipe and an elbow entry, by area, and the sliders hold them", () => {
   const area = (t: (typeof PORT_TUBES)[number]) => t.nt * t.dia ** 2;
   PORT_TUBES.forEach((t, i) => {
     assert.ok(

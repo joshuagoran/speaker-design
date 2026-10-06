@@ -1,6 +1,6 @@
 // Fills / booth monitors: 8-12 in passive coaxials. src/lib/data.ts adds the comparable Xmax and sorts FILL_OPTIONS.
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
-// a misspelt, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
+// a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
 // class, tweeter type) is an error.
 // Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
@@ -310,7 +310,7 @@ export const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     },
     hf: null,
     lfSens: 92,
-    note: "[maker: eminence.com] Budget coax; Eminence lists no HF section specs, so only the woofer is modelled. Short 3.2 mm Xmax. usspeaker's page differs on Fs, Qms, Vas, Sd and Re; Eminence's values are used. Eminence PXB2:2K5CX network ($64.99, 250 W, switchable −3 dB HF). Displacement 0.79 L (Eminence page).",
+    note: "[maker: eminence.com] Budget coax; Eminence lists no HF section specs, so only the woofer is modeled. Short 3.2 mm Xmax. usspeaker's page differs on Fs, Qms, Vas, Sd and Re; Eminence's values are used. Eminence PXB2:2K5CX network ($64.99, 250 W, switchable −3 dB HF). Displacement 0.79 L (Eminence page).",
   },
   {
     id: "celftx0820",
@@ -533,7 +533,7 @@ export const FILL_RAW: readonly RawDriver<FillDriver>[] = [
     },
     hf: null,
     lfSens: 93.3,
-    note: "[maker: eminence.com] Budget coax; Eminence lists no HF section specs, so only the woofer is modelled. usspeaker's page differs on Qes, Qms, Vas and Re; Eminence's values are used. Eminence PXB2:2K5CX network ($64.99, 250 W, switchable −3 dB HF). Displacement 1.17 L (Eminence page).",
+    note: "[maker: eminence.com] Budget coax; Eminence lists no HF section specs, so only the woofer is modeled. usspeaker's page differs on Qes, Qms, Vas and Re; Eminence's values are used. Eminence PXB2:2K5CX network ($64.99, 250 W, switchable −3 dB HF). Displacement 1.17 L (Eminence page).",
   },
   {
     id: "celftx1025",

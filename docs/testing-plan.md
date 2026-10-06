@@ -22,7 +22,7 @@ Move it into a plain module that both the page and the tests import.
 - Build: add `--bundle` to the esbuild call in `tools/build.sh` so the page imports
   `calc.js` (React/three stay globals). Output stays one HTML file.
 - Driver/horn/cabinet tables move to `tools/data.js` so tests can iterate them.
-- No behaviour change in this step: the page must render the same numbers.
+- No behavior change in this step: the page must render the same numbers.
   Check by loading each config in `data/configs-seed.json` before and after and
   diffing the rendered stat rows (Playwright script, run once).
 
@@ -76,10 +76,10 @@ Findings are in `docs/calc-audit.md`. Changes to this plan:
 - **Drop** the cross-implementation test (it's a copy); make `model/vented-box.js` re-export calc.js and point the bench at it.
 - **Constants:** midband reference is 112.07 dB (ρ 1.18, c 343); compute η0 from Bl, Sd, Mms, Re, not table Vas/Qes. Sealed checks use Vas from the model's Cms, and test the curve: −3 dB on the unfiltered response vs closed-form F3(Qtc).
 - **Alignments:** add optional `QL` and `Rp` to boxModel (defaults unchanged); assert lossless B4 (Qts 0.383, α 1.414, h 1 → F3/Fs 1.00 ±2 %) and fL·fH ≈ Fs·Fb from the impedance peaks.
-- **Tighter behaviour tests:** excursion minimum and velocity peak within ±3 % of Fb; tiny-port convergence against the unfiltered curve.
+- **Tighter behavior tests:** excursion minimum and velocity peak within ±3 % of Fb; tiny-port convergence against the unfiltered curve.
 - **Published designs:** only drivers in the tables, ±2 Hz, prefer measured impedance minima.
 - **Weights and net volume** checked against the cutlist parts (independent), not a hand copy of the formula.
-- **Formula-restating tests** (filters, thermal V, horn P, hfLimW) stay as guards but don't count as double-checks; add behavioural ones (e.g. horn max SPL vs the maker's max-SPL spec).
+- **Formula-restating tests** (filters, thermal V, horn P, hfLimW) stay as guards but don't count as double-checks; add behavioral ones (e.g. horn max SPL vs the maker's max-SPL spec).
 - **Warnings:** extract pure `chips(state)` per section and test every threshold on both sides. — done: `tools/chips.js`, `tests/chips.test.js`.
 - **Coverage gaps to add:** port geometry per live style incl. `dh`; clamps and fudge factors; `subSys`; nearest-grid lookups; f3 fallback when the curve never drops 3 dB; `PLY_LB` guard.
 - **Golden configs:** add synthetic configs for 1/2″ walls, insets, LR/BW48 highpass, every vent style, 15″ mids, Fills and Cutlist. Before/after refactor diff uses the full page text of all four views.

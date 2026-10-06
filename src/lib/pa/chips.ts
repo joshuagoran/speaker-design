@@ -22,7 +22,7 @@ import { crossoverSlopeName } from "../../constants/crossovers";
 // while it fits (maxStraight) and folds up the back wall past that, so it holds the longer of the two; a fold is never
 // shorter than its floor run plus the least rise (minFold), so the lengths between the two fit neither way, nor longer
 // than leaves a slot height under the lid (maxFold). Round tubes run straight, then take one elbow up the back wall and
-// a second forward under the lid (lib/pa/tubes), each count with its own lengths (`ways`, labelled for the chip).
+// a second forward under the lid (lib/pa/tubes), each count with its own lengths (`ways`, labeled for the chip).
 // `spans` lists the lengths that fit, shortest first.
 export function ductFit(
   subBox: Dims3,
@@ -165,7 +165,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
     F.push([
       "bad",
       DRIVER_WONT_FIT,
-      `The baffle needs about ${need.toFixed(1)}″ clear; after the vents it has ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`,
+      `Needs ${need.toFixed(1)}″ of clear baffle. The vents leave ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`,
       "subDriverFit",
     ]);
   const { fit, spans, ways } = ductFit(subBox, portStyle, cVent, PT, sub);
@@ -173,7 +173,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
     F.push([
       "bad",
       DUCT_TOO_LONG,
-      `${cVent.len.toFixed(1)}″ won't fit; this layout holds about ${fit.toFixed(1)}″` +
+      `${cVent.len.toFixed(1)}″ does not fit. This layout holds ${fit.toFixed(1)}″` +
         (portStyle === "slots"
           ? ", folded up the back wall."
           : isRoundPort(portStyle) && ways.length > 1
@@ -189,7 +189,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       "bad",
       DUCT_TOO_LONG,
       `${cVent.len.toFixed(1)}″ is past the ${(below?.span[1] ?? 0).toFixed(1)}″ ${below?.what ?? "the duct"} holds ` +
-        `but short of the ${(above?.span[0] ?? fit).toFixed(1)}″ ${above?.what ?? "the duct"} needs; shorten it or lengthen it.`,
+        `but short of the ${(above?.span[0] ?? fit).toFixed(1)}″ ${above?.what ?? "the duct"} needs.`,
       "subDuctFit",
     ]);
   }
@@ -197,7 +197,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
     F.push([
       "bad",
       TUBES_WONT_FIT,
-      `${cVent.nt} × ${cVent.dia}″ tubes with their flares don't fit the baffle beside the driver; fewer or narrower tubes, or a wider box.`,
+      `${cVent.nt} × ${cVent.dia}″ flared tubes do not fit beside the driver. Use fewer or narrower tubes.`,
       "subTubeFit",
     ]);
   F.push(
@@ -205,7 +205,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       ? [
           "warn",
           "Over 125 lb",
-          `${subLbLoaded.toFixed(0)} lb loaded. Past the one-person lift limit.`,
+          `${subLbLoaded.toFixed(0)} lb loaded: too heavy for one person.`,
           "subWeight",
         ]
       : ["ok", "Inside 125 lb", `${subLbLoaded.toFixed(0)} lb loaded.`, "subWeight"],
@@ -215,27 +215,27 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       ? [
           "warn",
           "Port-limited",
-          `The vent chokes at ${Math.round(lim.W)} W, below the driver's ${2 * aes} W program rating. Open the port up or lengthen it.`,
+          `The vent chokes at ${Math.round(lim.W)} W, below the driver's ${2 * aes} W program rating. Use a larger port.`,
           "subPortLimited",
         ]
       : lim.who === "Xmax"
         ? [
             "warn",
             "Excursion-limited",
-            `The cone reaches Xmax at ${Math.round(lim.W)} W (first at ${peakXF.toFixed(0)} Hz), below the ${2 * aes} W program rating. A bigger box or higher tuning helps; a bigger port does not.`,
+            `The cone reaches Xmax at ${Math.round(lim.W)} W (first at ${peakXF.toFixed(0)} Hz), below the ${2 * aes} W program rating. Use a bigger box or higher tuning.`,
             "subExcursionLimited",
           ]
         : lim.who === "amp"
           ? [
               "warn",
               "Amp-limited",
-              `The ${ampW} W amp runs out before the port, the cone or the driver's ${2 * aes} W program rating (2 × ${aes} W AES).`,
+              `The ${ampW} W amp limits before the port, cone or ${2 * aes} W rating (2 × ${aes} W AES).`,
               "subAmpLimited",
             ]
           : [
               "ok",
               THERMALLY_LIMITED,
-              `Reaches its ${2 * aes} W program rating (2 × ${aes} W AES) before the port or the cone gives out.`,
+              `Reaches its ${2 * aes} W program rating (2 × ${aes} W AES) before the port or cone limits.`,
               "subThermalLimited",
             ],
   );
@@ -272,26 +272,16 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
     ]);
   F.push(
     Qtc > 0.8
-      ? [
-          "warn",
-          `Qtc ${Qtc.toFixed(2)}`,
-          "Peaky and loose; the box is small for this driver.",
-          "midQtc",
-        ]
+      ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky and loose: box too small.", "midQtc"]
       : Qtc < 0.5
-        ? [
-            "warn",
-            `Qtc ${Qtc.toFixed(2)}`,
-            "Very damped. Fine above the crossover, but the box could be smaller.",
-            "midQtc",
-          ]
+        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Very damped. A smaller box works.", "midQtc"]
         : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped.", "midQtc"],
   );
   if (f3 > xoLo)
     F.push([
       "warn",
       "Rolls off above the crossover",
-      `The box is 3 dB down at ${f3.toFixed(0)} Hz, above the ${xoLo} Hz crossover. Raise the crossover or use more volume.`,
+      `−3 dB at ${f3.toFixed(0)} Hz, above the ${xoLo} Hz crossover. Raise the crossover.`,
       "midRollOff",
     ]);
   const xPct = ((peakX * useV) / V / ts.Xmax) * 100;
@@ -300,20 +290,20 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
       ? [
           "warn",
           "Excursion-limited",
-          `The cone reaches Xmax at ${Math.round(Math.pow((V * 100) / ((peakX / ts.Xmax) * 100), 2) / 8)} W, below ${vTherm < V ? `its ${2 * ts.aes} W program rating` : `the ${mAmpW} W amp`}. A higher crossover helps.`,
+          `The cone reaches Xmax at ${Math.round(Math.pow((V * 100) / ((peakX / ts.Xmax) * 100), 2) / 8)} W, below ${vTherm < V ? `its ${2 * ts.aes} W program rating` : `the ${mAmpW} W amp`}. Raise the crossover.`,
           "midExcursionLimited",
         ]
       : vTherm < V
         ? [
             "ok",
             THERMALLY_LIMITED,
-            `Reaches its ${2 * ts.aes} W program rating (2 × ${ts.aes} W AES) before Xmax; the ${mAmpW} W amp has more than it can use.`,
+            `Reaches its ${2 * ts.aes} W program rating (2 × ${ts.aes} W AES) before Xmax. The ${mAmpW} W amp has spare power.`,
             "midThermalLimited",
           ]
         : [
             "ok",
             "Amp-limited",
-            `The ${mAmpW} W amp runs out before Xmax or the ${2 * ts.aes} W program rating.`,
+            `The ${mAmpW} W amp limits before Xmax or the ${2 * ts.aes} W rating.`,
             "midAmpLimited",
           ],
   );
@@ -327,15 +317,15 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
       gap < -KEEP_UP_SLACK_DB
         ? [
             "warn",
-            "Mid runs out first",
+            "Mid limits first",
             `${(-gap).toFixed(1)} dB short at ${xoLo} Hz of the sub at its music limit, less ${tilt} dB for the mid band. ` +
               (m.who === "amp"
                 ? wNeed <= 2 * ts.aes
-                  ? `About ${Math.ceil(wNeed / 25) * 25} W per mid channel would cover it.`
-                  : "More amp won't get there: it passes the driver's program rating first."
+                  ? `About ${Math.ceil(wNeed / 25) * 25} W per mid channel is enough.`
+                  : "More amp does not help: the driver reaches its rating first."
                 : m.who === "thermal"
-                  ? "A driver with more power handling, or a higher crossover."
-                  : "A higher crossover or a driver with more excursion."),
+                  ? "Raise the crossover."
+                  : "Use a driver with more excursion."),
             "midKeepsUp",
           ]
         : [
@@ -343,7 +333,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
             "Keeps up with the sub",
             `${gap.toFixed(1)} dB to spare at ${xoLo} Hz against the sub at its music limit, less ${tilt} dB for the mid band.` +
               (m.who === "amp" && gap > 1
-                ? ` About ${Math.max(25, Math.ceil(wNeed / 25) * 25)} W per mid channel would still cover it.`
+                ? ` About ${Math.max(25, Math.ceil(wNeed / 25) * 25)} W per mid channel is still enough.`
                 : ""),
             "midKeepsUp",
           ],
@@ -360,7 +350,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
     F.push([
       "warn",
       "Below the driver's minimum crossover",
-      `${xoHi} Hz against ${hf.minXo} Hz recommended. Power is derated here and distortion rises; check measurements before relying on it.`,
+      `${xoHi} Hz, below the recommended ${hf.minXo} Hz. Power is derated; measure the distortion.`,
       "hornDriverMinXo",
     ]);
   if (hz.minXo && xoHi < hz.minXo)
@@ -374,7 +364,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
     F.push([
       "warn",
       "Horn stops loading near the crossover",
-      `Loading falls away below about ${hz.lowHz} Hz, so the driver works harder right where it's crossed.`,
+      `Loading drops below ${hz.lowHz} Hz.`,
       "hornLoading",
     ]);
   F.push(
@@ -400,11 +390,11 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
       gap < -KEEP_UP_SLACK_DB
         ? [
             "warn",
-            "Horn runs out first",
+            "Horn limits first",
             `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hfTilt} dB for the HF band. ` +
               (hornModel.who === "amp" && (wNeed * 8) / hornModel.imp <= hornModel.pProg
-                ? `About ${Math.ceil(wNeed / 25) * 25} W per HF channel would cover it.`
-                : "The driver's rating is the limit: raise the crossover or pick a more sensitive driver."),
+                ? `About ${Math.ceil(wNeed / 25) * 25} W per HF channel is enough.`
+                : "The driver's rating is the limit. Raise the crossover."),
             "hornKeepsUp",
           ]
         : [
@@ -419,7 +409,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
     F.push([
       "warn",
       "Mid narrower than the horn at the crossover",
-      `About ${Math.round(midBeam)}° against the horn's ${hz.covH}°: the mid is already beaming, so off-axis sound dips just below the crossover. A lower crossover or a smaller mid meets the horn.`,
+      `About ${Math.round(midBeam)}° against the horn's ${hz.covH}°: an off-axis dip below the crossover. Use a lower crossover.`,
       "hornMidNarrower",
     ]);
   if (fK && xoHi < fK * 0.85)
@@ -433,7 +423,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
     F.push([
       "warn",
       "Mid much wider than the horn at the crossover",
-      `About ${Math.round(midBeam)}° against the horn's ${hz.covH}°: off-axis energy steps down through the crossover. A higher crossover narrows the mid, a wider horn meets it; a 12″ at this frequency is still close to omnidirectional.`,
+      `About ${Math.round(midBeam)}° against the horn's ${hz.covH}°: an off-axis step at the crossover. Use a higher crossover.`,
       "hornMidWider",
     ]);
   return F;
@@ -456,7 +446,7 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
         ? [
             "warn",
             `Tuned low (${Fb.toFixed(0)} Hz)`,
-            "Well below the highpass: the port does little. A shorter or wider port tunes higher.",
+            "Well below the highpass. A shorter or wider port tunes higher.",
             "fillTuning",
           ]
         : [
@@ -470,20 +460,15 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
       F.push([
         "warn",
         "Port-limited",
-        `Port air speed reaches ${portMax} m/s somewhere below 300 Hz; a wider port helps.`,
+        `Port air speed reaches ${portMax} m/s somewhere below 300 Hz. Use a wider port.`,
         "fillPortLimited",
       ]);
   } else if (Qtc != null) {
     F.push(
       Qtc > 0.8
-        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky; a bigger box or a vent.", "fillQtc"]
+        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky. Use a bigger box.", "fillQtc"]
         : Qtc < 0.5
-          ? [
-              "warn",
-              `Qtc ${Qtc.toFixed(2)}`,
-              "Very damped: rolls off early. Good driver for a vented box.",
-              "fillQtc",
-            ]
+          ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Rolls off early. Suits a vented box.", "fillQtc"]
           : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped.", "fillQtc"],
     );
   }
@@ -492,15 +477,10 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
       ? [
           "ok",
           "Some kick",
-          `${f3.toFixed(0)} Hz −3 dB with the highpass; the kick fundamental (50–70 Hz) is partly there and the subs fill the rest.`,
+          `${f3.toFixed(0)} Hz −3 dB with the highpass: part of the kick fundamental (50–70 Hz).`,
           "fillKick",
         ]
-      : [
-          "warn",
-          "Little kick",
-          `${f3.toFixed(0)} Hz −3 dB; the kick's attack comes through but its body is all subs.`,
-          "fillKick",
-        ],
+      : ["warn", "Little kick", `${f3.toFixed(0)} Hz −3 dB: the kick's attack only.`, "fillKick"],
   );
   if (hf && hfLimW != null)
     F.push(
@@ -508,22 +488,16 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
         ? [
             "warn",
             "HF limits first",
-            `Through a ${pad.toFixed(0)} dB pad the HF reaches its ${2 * hf.aes} W program rating at about ${Math.round(hfLimW)} W of amp, under the ${ampW} W you've set.`,
+            `With a ${pad.toFixed(0)} dB pad, the HF reaches its ${2 * hf.aes} W rating at ${Math.round(hfLimW)} W of the ${ampW} W amp.`,
             "fillHfHeadroom",
           ]
         : [
             "ok",
             "HF has headroom",
-            `Through a ${pad.toFixed(0)} dB pad the HF only reaches its program rating at about ${Math.round(hfLimW)} W of amp.`,
+            `With a ${pad.toFixed(0)} dB pad, the HF reaches its rating at ${Math.round(hfLimW)} W of amp.`,
             "fillHfHeadroom",
           ],
     );
-  else
-    F.push([
-      "warn",
-      "HF not modelled",
-      "The HF section's specs aren't published on usspeaker.",
-      "fillHfUnmodelled",
-    ]);
+  else F.push(["warn", "HF not modeled", "No published HF specs.", "fillHfUnmodeled"]);
   return F;
 }

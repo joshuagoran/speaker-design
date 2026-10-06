@@ -1,10 +1,10 @@
-// The coverage map's colour scale (dB against the target) and its contour lines.
+// The coverage map's color scale (dB against the target) and its contour lines.
 import { assert, test } from "vite-plus/test";
 import {
   COVERAGE_CONTOURS,
   COVERAGE_GRADIENT,
   COVERAGE_LINES,
-  coverageColour,
+  coverageColor,
   coverageScalePos,
 } from "../src/styles/coverageScale";
 import { ON_DATA } from "../src/styles/palette";
@@ -19,12 +19,12 @@ const hexRgb = (hex: string): Rgb => {
 };
 
 test("coverage scale: white at the quiet end, magenta at the target, clamped at both ends", () => {
-  assert.deepEqual(coverageColour(LO_DB), hexRgb(ON_DATA.white));
-  assert.deepEqual(coverageColour(0), hexRgb(ON_DATA.magenta));
-  assert.deepEqual(coverageColour(LO_DB - 20), coverageColour(LO_DB), "clamped below");
-  assert.deepEqual(coverageColour(HI_DB + 20), coverageColour(HI_DB), "clamped above");
+  assert.deepEqual(coverageColor(LO_DB), hexRgb(ON_DATA.white));
+  assert.deepEqual(coverageColor(0), hexRgb(ON_DATA.magenta));
+  assert.deepEqual(coverageColor(LO_DB - 20), coverageColor(LO_DB), "clamped below");
+  assert.deepEqual(coverageColor(HI_DB + 20), coverageColor(HI_DB), "clamped above");
   // louder is darker all the way along the scale
-  const sum = (db: number) => coverageColour(db).reduce((a, b) => a + b, 0);
+  const sum = (db: number) => coverageColor(db).reduce((a, b) => a + b, 0);
   for (let db = LO_DB; db < HI_DB; db += 1) assert.isAbove(sum(db), sum(db + 1), `${db} dB`);
 });
 

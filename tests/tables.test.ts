@@ -13,7 +13,7 @@ describe("table helpers", () => {
   });
 });
 
-describe("tweeter normalisation", () => {
+describe("tweeter normalization", () => {
   it("every tweeter has a faceplate size and a radiating diameter", () => {
     for (const t of HIFI_TWEETERS) {
       expect(t.faceplate.w, t.id).toBeGreaterThan(0);

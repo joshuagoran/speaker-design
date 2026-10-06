@@ -1,10 +1,10 @@
-// Tailwind, compiled at build time (it used to run in the browser from the Play CDN). The colour names are mapped onto the
+// Tailwind, compiled at build time (it used to run in the browser from the Play CDN). The color names are mapped onto the
 // palette: stone = the grays; panel = cards and inputs; green / orange (amber) / red = status; cmy-* = brand (cmy-a = actions
-// and focus, ink today; cmy-y = yellow accents, cmy-m = magenta (goal rank badges); chart colours are read from the palette
+// and focus, ink today; cmy-y = yellow accents, cmy-m = magenta (goal rank badges); chart colors are read from the palette
 // in the app code, usePalette()); 4 px corners, 6 px for large ones.
 //
-// Every palette colour is a CSS variable holding "r g b": the light theme on :root, the dark one when the device asks for
-// it (unless a light theme is pinned) or when it is pinned with <html data-theme="dark">. The colour names read the
+// Every palette color is a CSS variable holding "r g b": the light theme on :root, the dark one when the device asks for
+// it (unless a light theme is pinned) or when it is pinned with <html data-theme="dark">. The color names read the
 // variables, so every class follows the theme with no `dark:` variants, and opacity modifiers (bg-panel/90) still work.
 import plugin from "tailwindcss/plugin";
 import { PALETTES } from "./src/styles/palette.ts";
@@ -27,7 +27,7 @@ const vars = (p) =>
   );
 const v = (name, a) =>
   a == null ? `rgb(var(--${name}) / <alpha-value>)` : `rgb(var(--${name}) / ${a})`;
-// a: tint (backgrounds), e: soft edge (borders of tinted notes), b: the colour, c: its dark text shade
+// a: tint (backgrounds), e: soft edge (borders of tinted notes), b: the color, c: its dark text shade
 const scale = (s) => ({
   50: v(`${s}-tint`),
   200: v(`${s}-edge`),
@@ -49,7 +49,7 @@ export default {
         // Tailwind's own white and black follow the theme too: the page and the ink
         white: v("white"),
         black: v("ink"),
-        // status colours stay conventional and separate from the brand colours: green ok, orange warning, red problem
+        // status colors stay conventional and separate from the brand colors: green ok, orange warning, red problem
         green: scale("green"),
         red: scale("red"),
         orange: scale("orange"),

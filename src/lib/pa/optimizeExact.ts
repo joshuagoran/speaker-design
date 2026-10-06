@@ -1439,7 +1439,7 @@ function exactHook(
   const bestText = (g: PaGoal, m: PaMetric) => BEST_WORDS[g](m);
 
   // ---- the design a card would carry, checked with the planner's own model ----
-  const materialise = (c: PaSearchContext, f: Found): PaPoolEntry | null => {
+  const materialize = (c: PaSearchContext, f: Found): PaPoolEntry | null => {
     const { sd, u } = f;
     const sub = s.subs[sd.si];
     const cfg: PaDesignConfig = {
@@ -1629,7 +1629,7 @@ function exactHook(
           // the near miss shows the pool's closest design (fewest problems, then the goal): the grid's must be in it
           closestAdded = true;
           const f = search(c, problemsQuery(c), [Infinity, Infinity]);
-          const p = f && materialise(c, f);
+          const p = f && materialize(c, f);
           if (p) c.pool.push(p);
           continue;
         }
@@ -1637,7 +1637,7 @@ function exactHook(
           report(true);
           return r;
         }
-        const p = materialise(c, add);
+        const p = materialize(c, add);
         if (p) c.pool.push(p);
       }
       return choose(L, tgt);

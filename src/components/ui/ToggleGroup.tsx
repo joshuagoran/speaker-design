@@ -19,7 +19,7 @@ interface Props<T extends string | number | boolean> {
   className?: string;
 }
 
-/** A labelled row of toggle buttons, one pressed: the value's choices. */
+/** A labeled row of toggle buttons, one pressed: the value's choices. */
 export function ToggleGroup<T extends string | number | boolean>({
   label,
   value,

@@ -64,7 +64,7 @@ export function TotalsSection({ planner }: Props) {
               ["Compression driver", compressionDriver.price, compressionDriver.lb || 0, 0, 0],
               ["Horn", hornOption.price, (hornOption.lb || 0) + 1, 0, hornOption.size.h + 1],
             ];
-            // round tubes: the pipe and elbows from the catalogue (no price where a part has no US vendor)
+            // round tubes: the pipe and elbows from the catalog (no price where a part has no US vendor)
             if (isRoundPort(portStyle))
               rows.push([
                 "Port tubes and elbows",

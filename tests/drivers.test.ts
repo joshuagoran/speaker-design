@@ -91,7 +91,7 @@ test("published Xmax fits its formula from Hvc and Hg (±0.5 mm) or a listed exc
   );
 });
 
-test("every driver's comparable Xmax: derived from heights where both are given, centred in its band", (t) => {
+test("every driver's comparable Xmax: derived from heights where both are given, centered in its band", (t) => {
   for (const o of woofers) {
     const { Xmax, xmax, Hvc, Hg } = o.ts;
     assert.ok(xmax.lo > 0 && xmax.lo <= Xmax && Xmax <= xmax.hi, o.id);

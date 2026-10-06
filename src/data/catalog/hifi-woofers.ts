@@ -1,6 +1,6 @@
 // Hi-fi woofers. src/lib/data.ts adds the comparable Xmax (HIFI_WOOFERS keeps this order).
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
-// a misspelt, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
+// a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
 // class, tweeter type) is an error.
 // Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
@@ -809,7 +809,7 @@ export const HIFI_WOOFERS_RAW: readonly RawDriver<HifiWoofer>[] = [
       imp: 8,
     },
     fmax: 5000,
-    note: "[maker] faitalpro.com. aes = AES 100 W (200 W max). sens 1W/1m. Aluminum demodulation ring. usspeaker lists Sd 143 cm². Qts 0.55 favours sealed; low price. Range 63–5000 Hz. The 6FE125 is almost the same (Vas 15.1 L, Qts 0.55) at the same price.",
+    note: "[maker] faitalpro.com. aes = AES 100 W (200 W max). sens 1W/1m. Aluminum demodulation ring. usspeaker lists Sd 143 cm². Qts 0.55 favors sealed; low price. Range 63–5000 Hz. The 6FE125 is almost the same (Vas 15.1 L, Qts 0.55) at the same price.",
   },
   {
     id: "faital_8fe300",

@@ -227,7 +227,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
   const totalSheets = cut.groups.reduce((a, g) => a + g.sheets.length, 0);
   const rips = cut.groups.reduce((a, g) => a + g.cuts.rips, 0);
   const crosscuts = cut.groups.reduce((a, g) => a + g.cuts.crosscuts, 0);
-  const boxColour = (box: CutBoxId) => pal[CUT_BOX_TINTS[box]];
+  const boxColor = (box: CutBoxId) => pal[CUT_BOX_TINTS[box]];
 
   const summaries: Record<CutlistSettingsSection, string> = {
     boxes: `${JOINT_NAMES[cornerJoint]} joints, ${plural(boxSetCount, proj.set)}`,
@@ -317,10 +317,10 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                     className={`border-b border-stone-300 focus-visible:-outline-offset-2 ${isHot ? "bg-stone-300" : ""}`}
                   >
                     <td className={`${td} pr-2`}>
-                      {/* the box's colour on the sheets, so the tag reads the same in both places */}
+                      {/* the box's color on the sheets, so the tag reads the same in both places */}
                       <span
                         className="inline-block min-w-[2.5rem] px-1 rounded border border-stone-500 text-center font-bold"
-                        style={{ background: boxColour(p.box) }}
+                        style={{ background: boxColor(p.box) }}
                       >
                         {tagOf(p)}
                       </span>
@@ -390,12 +390,12 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                 `; keeps a ${formatInches(g.offcut.w)} × ${formatInches(g.offcut.h)}″ offcut on sheet ${g.offcut.sheet + 1}`}
               {g.fewestSheets !== null &&
                 g.fewestSheets < g.sheets.length &&
-                `. Rip first costs ${plural(g.sheets.length - g.fewestSheets, "sheet")} more than the fewest-sheets layout`}
+                `. Rip first uses ${plural(g.sheets.length - g.fewestSheets, "sheet")} more`}
               .
             </p>
             {g.tooBig.length > 0 && (
               <p className="text-sm text-red-700 mb-2">
-                Doesn't fit on one {sheetSize.name} sheet: {g.tooBig.map(partName).join(", ")}.
+                Too large for one {sheetSize.name} sheet: {g.tooBig.map(partName).join(", ")}.
               </p>
             )}
             {crossed.length > 0 && (
@@ -488,7 +488,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                 label="Corner joints"
                 value={cornerJoint}
                 onChange={(k) => {
-                  // mitred boxes get waterfall strips by default; other changes keep your choice
+                  // mitered boxes get waterfall strips by default; other changes keep your choice
                   if ((k === "miter") !== (cornerJoint === "miter")) setWaterfall(k === "miter");
                   setCornerJoint(k);
                 }}
@@ -507,7 +507,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
             <>
               <NumberField
                 label={
-                  <Tooltip tip="Sheets are rarely their nominal size: 18 mm Baltic birch often measures 0.689″ and US ¾″ plywood 23/32″. Measure yours; the box volume, the panel sizes and joints, the 3D view and the weights all use it.">
+                  <Tooltip tip="18 mm birch is often 0.689″; ¾″ plywood, 23/32″. Measure yours.">
                     {`Measured ${PANEL_NOMINAL_NAMES[panel].name}`}
                   </Tooltip>
                 }
@@ -545,7 +545,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
               />
               <ToggleGroup
                 label={
-                  <Tooltip tip="Squares off each factory edge before the parts are cut: factory edges are often dinged or slightly out of square.">
+                  <Tooltip tip="Trims each factory edge square. They are often damaged.">
                     Edge trim
                   </Tooltip>
                 }
@@ -567,7 +567,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                 <div>
                   <ToggleGroup
                     label={
-                      <Tooltip tip="Which way the face grain runs on each panel. A locked panel lies along the sheet's length; Any lets the layout turn it to save ply.">
+                      <Tooltip tip="Locked: along the sheet's length. Any: the layout can turn it.">
                         Grain
                       </Tooltip>
                     }
@@ -592,7 +592,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                 </div>
                 <ToggleGroup
                   label={
-                    <Tooltip tip="Cuts each box's side, top and side in order from one strip, so the grain runs unbroken over both top corners. On by default with mitre joints.">
+                    <Tooltip tip="Side, top and side from one strip, for continuous grain over the corners.">
                       Waterfall
                     </Tooltip>
                   }
@@ -613,7 +613,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
             <>
               <ToggleGroup
                 label={
-                  <Tooltip tip="Rip first: every sheet is ripped into full-length strips before any crosscut, so you never crosscut a whole sheet on the table saw. It can cost a sheet; the layout says how many.">
+                  <Tooltip tip="Rip first: full-length strips before any crosscut. Can use more sheets.">
                     Cut style
                   </Tooltip>
                 }
@@ -623,7 +623,7 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
               />
               <ToggleGroup
                 label={
-                  <Tooltip tip="The least-full sheet is laid out again to leave one big usable piece: a strip the full length of the sheet, or a panel its full width. It never costs a sheet.">
+                  <Tooltip tip="Keeps one large offcut on the least-full sheet. Never adds a sheet.">
                     Keep offcut
                   </Tooltip>
                 }

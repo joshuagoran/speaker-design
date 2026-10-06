@@ -1,7 +1,7 @@
 /**
  * Every driver maker, by id, and its name. Driver rows carry the id (`maker`), so code decides on the maker by id and
  * never by the start of a driver's name ("SB Audience" is pro, "SB Acoustics" hi-fi). A part from a new maker needs its
- * id and name added here first, and its segment in MAKER_SEGMENT; the catalogue tables' `maker` fields only accept these ids.
+ * id and name added here first, and its segment in MAKER_SEGMENT; the catalog tables' `maker` fields only accept these ids.
  */
 export const MAKER_NAMES = {
   bc: "B&C",

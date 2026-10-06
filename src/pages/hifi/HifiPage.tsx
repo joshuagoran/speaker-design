@@ -204,7 +204,7 @@ export function HifiPage({ hifi }: Props) {
   if (!speakerModel)
     return (
       <main className={`${PAGE_WIDTH} pb-16 text-sm`}>
-        This woofer can't be modelled (its parameters aren't published).
+        Cannot model this woofer: no published parameters.
       </main>
     );
   const {
@@ -272,7 +272,7 @@ export function HifiPage({ hifi }: Props) {
     <OptimizerBar
       on={isOptimizerOn}
       onToggle={() => setIsOptimizerOn(!isOptimizerOn)}
-      hint="Find cheaper, lighter, deeper or louder designs inside your limits."
+      hint="Find cheaper, lighter, deeper or louder designs."
       note={wallPanel !== HIFI_OPTIMIZER_PANEL && optimizerPanelNote(HIFI_OPTIMIZER_PANEL)}
       {...lockBar}
     />
@@ -321,11 +321,7 @@ export function HifiPage({ hifi }: Props) {
         onCancel={cancelOptimizerSearch}
         progress={optimizerProgress}
         stats={optimizerResult && optimizerResult.stats}
-        note={
-          optimizerResult && optimizerResult.cards.length
-            ? " · every design shown passes the checks (warnings are listed on the card)"
-            : ""
-        }
+        note={optimizerResult && optimizerResult.cards.length ? OPTIMIZER_PANEL_TEXT.cardsPass : ""}
       >
         {undoSnapshot && !designPreview && (
           <Button size="md" onClick={undoOptimizerLoad}>
@@ -365,7 +361,7 @@ export function HifiPage({ hifi }: Props) {
         !optimizerResult.cards.length &&
         !optimizerResult.goalMissing && (
           <div className="mt-3 text-sm text-orange-900">
-            Nothing fits all your limits. A bigger budget or fewer locks would open it up.
+            {OPTIMIZER_PANEL_TEXT.noFit}. Raise the budget or remove locks.
           </div>
         )}
     </Card>
@@ -573,14 +569,12 @@ export function HifiPage({ hifi }: Props) {
                 {baffleStepCompensationDb ? `, ${baffleStepCompensationDb} dB boost` : ""}.
               </div>
               <div>
-                Edge diffraction: the baffle edges re-radiate each driver's sound a little later,
-                for about ±{edgeRippleDb.toFixed(1)} dB of ripple from 1 to 5 kHz on axis (
+                Edge diffraction: ±{edgeRippleDb.toFixed(1)} dB of ripple from 1 to 5 kHz on axis (
                 {edgesText}, tweeter{" "}
                 {tweeterOffsetUsed
-                  ? `${formatInches(Math.abs(tweeterOffsetUsed))} ${tweeterOffsetUsed > 0 ? "inward" : "outward"} of centre`
-                  : "centred"}
-                ). The ripple and the tweeter's position are in the responses and the dispersion
-                map; the ripple shifts with angle.
+                  ? `${formatInches(Math.abs(tweeterOffsetUsed))} ${tweeterOffsetUsed > 0 ? "inward" : "outward"} of center`
+                  : "centered"}
+                ), in the responses and the dispersion map.
               </div>
               <div>
                 <Tooltip tip={woofer.note}>
@@ -791,7 +785,7 @@ export function HifiPage({ hifi }: Props) {
                   {speakerSystem.kind === "vented"
                     ? `, ${speakerSystem.pArea.toFixed(1)} in² of ${speakerSystem.slotW != null ? "slot" : "port"}`
                     : speakerSystem.kind === "radiator"
-                      ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their own resonance)${radiatorDriver.pub.Xmax == null ? `. Its travel limit is the mechanical one (${radiatorDriver.Xmax} mm); no linear figure is published, so expect some noise near it` : ""}`
+                      ? `; radiators on the back tune it to ${speakerSystem.Fb.toFixed(0)} Hz, with a notch at ${speakerSystem.Fp.toFixed(0)} Hz (their resonance)${radiatorDriver.pub.Xmax == null ? `. Travel limit: the ${radiatorDriver.Xmax} mm mechanical one (no linear value published)` : ""}`
                       : ", lightly stuffed"}
                   .
                 </div>
@@ -828,20 +822,19 @@ export function HifiPage({ hifi }: Props) {
                 <div className="text-xs text-stone-500 leading-relaxed">
                   Edges ripple the response ±{edgeRippleDb.toFixed(1)} dB from 1 to 5 kHz on axis.{" "}
                   {roundoverIn
-                    ? `The roundover cuts edge re-radiation above about ${(roundoverOnset / 1000).toFixed(1)} kHz (wavelengths under 4× its radius)`
-                    : "A roundover cuts it where the wavelength is under 4× its radius (1½″ works above about 2 kHz)"}
-                  ; it barely moves the baffle step itself. An off-centre tweeter spreads the ripple
-                  so it partly cancels; the pair is mirror-imaged
+                    ? `The roundover reduces it above ${(roundoverOnset / 1000).toFixed(1)} kHz`
+                    : "A roundover reduces it (1½″ works above 2 kHz)"}
+                  . An off-center tweeter spreads the ripple. The pair is mirror-imaged
                   {speakerSystem.lay.onTop
-                    ? " (the waveguide on top stays centred)"
+                    ? " (the waveguide on top stays centered)"
                     : `, at most ${tweeterOffsetMax(speakerConfig, tweeterWithWaveguide).toFixed(2)}″ either way on this baffle`}
                   .
                   {roundoverTooDeep && (
                     <span className="text-orange-900">
                       {" "}
                       {formatInches(roundoverIn)} is more than the{" "}
-                      {formatThickness(wallThicknessIn)} panel takes: double the baffle or add
-                      hardwood edge strips.
+                      {formatThickness(wallThicknessIn)} panel. Double the baffle or add hardwood
+                      edge strips.
                     </span>
                   )}
                 </div>

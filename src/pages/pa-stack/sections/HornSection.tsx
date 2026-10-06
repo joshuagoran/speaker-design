@@ -21,7 +21,7 @@ interface Props {
     | "hornAmpWatts"
     | "hornBandTiltDb"
     | "midHornCrossoverHz"
-    | "midModelled"
+    | "midModeled"
     | "hornSpec"
     | "hornModel"
     | "midBeamWidthDeg"
@@ -41,7 +41,7 @@ export function HornSection({ planner }: Props) {
     hornAmpWatts,
     hornBandTiltDb,
     midHornCrossoverHz,
-    midModelled,
+    midModeled,
     hornSpec,
     hornModel,
     midBeamWidthDeg,
@@ -125,8 +125,8 @@ export function HornSection({ planner }: Props) {
                   xoHi: midHornCrossoverHz,
                   hornModel,
                   hfAmpW: hornAmpWatts,
-                  midAtXoHi: midModelled
-                    ? nearestPoint(midModelled.max, midHornCrossoverHz).spl
+                  midAtXoHi: midModeled
+                    ? nearestPoint(midModeled.max, midHornCrossoverHz).spl
                     : null,
                   hfTilt: hornBandTiltDb,
                   hornAtXo: nearestPoint(hornModel.curve, midHornCrossoverHz).spl,
@@ -137,7 +137,7 @@ export function HornSection({ planner }: Props) {
             </>
           ) : (
             <p className="text-sm text-stone-500">
-              {compressionDriver.name} can't be modelled yet: sensitivity or power rating missing.
+              {compressionDriver.name} can't be modeled yet: sensitivity or power rating missing.
             </p>
           )}
         </FoldBody>

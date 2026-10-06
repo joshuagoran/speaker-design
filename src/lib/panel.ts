@@ -46,7 +46,7 @@ const WEIGHT_POINTS: Record<PanelMaterial, PanelStockMaterial[]> = {
 };
 
 /**
- * A panel's weight at a thickness, lb/ft²: the catalogue's weight at a size's default thickness, linear between two
+ * A panel's weight at a thickness, lb/ft²: the catalog's weight at a size's default thickness, linear between two
  * sizes, and in proportion to the nearest size beyond the thinnest or thickest. A measured 18 mm sheet (0.689″) weighs
  * between the ⅝″ and ¾″ entries.
  */

@@ -1,4 +1,4 @@
-// The figures the Notes page quotes about the PA stack's starting design, read from the defaults and the catalogue so
+// The figures the Notes page quotes about the PA stack's starting design, read from the defaults and the catalog so
 // a change of default part, price or rating shows up in the prose. Nothing here names a part itself.
 import { DEFAULT_PA } from "./defaults";
 import { PANEL_NOMINAL_NAMES, PLYWOOD_MATERIAL } from "../constants/panelSizes";
@@ -65,7 +65,7 @@ function subTsSensitivity(): number {
     layout: d.layout,
     xoLo: d.xoLo,
   });
-  if (!sys.mdl) throw new Error(`${d.sub.name}: the default sub can't be modelled`);
+  if (!sys.mdl) throw new Error(`${d.sub.name}: the default sub can't be modeled`);
   return sys.mdl.ref - 20 * Math.log10(sys.AMP_V / 2.83);
 }
 
