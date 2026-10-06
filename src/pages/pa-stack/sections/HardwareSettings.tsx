@@ -46,9 +46,7 @@ export function HardwareSettings({ planner }: Props) {
                 return [
                   id,
                   id === NO_HANDLES || !part ? NO_HANDLES_LABEL : part.name,
-                  part
-                    ? `Two, one each side; $${part.price.toFixed(2)} each (${part.src})`
-                    : undefined,
+                  part ? `One each side, $${part.price.toFixed(2)} each (${part.src})` : undefined,
                 ] as const;
               })}
             />

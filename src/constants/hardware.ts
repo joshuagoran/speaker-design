@@ -50,16 +50,16 @@ const HANDLE_AXIS_SIGNS: Record<HandleAxis, readonly [string, string]> = {
 /** Where the preset puts the handles on each axis (the offsets move them from there). */
 const HANDLE_PRESET_WORDS: Record<HandleAxis, string> = {
   upIn: "the center-of-gravity height",
-  backIn: "the nearest place to the center of gravity clear of the driver and the vent",
+  backIn: "the clear spot nearest the center of gravity",
 };
 /** A placement message: the axis, then where along it ("Height: from the preset"). */
 export const placementLabel = (axis: HandleAxis, source: string) =>
   `${HANDLE_AXIS_NAMES[axis]}: ${source}`;
 /** A handle offset slider's label, the same for both axes but the axis word. */
 export const handleOffsetLabel = (axis: HandleAxis) => placementLabel(axis, "from the preset");
-/** A handle offset slider's tooltip, one line. */
+/** A handle offset slider's tooltip, one short line. */
 export const handleOffsetTip = (axis: HandleAxis) =>
-  `${HANDLE_AXIS_SIGNS[axis][0]} (+) or ${HANDLE_AXIS_SIGNS[axis][1]} (−) from the preset, ${HANDLE_PRESET_WORDS[axis]}.`;
+  `${HANDLE_AXIS_SIGNS[axis][0]} (+) or ${HANDLE_AXIS_SIGNS[axis][1]} (−) from ${HANDLE_PRESET_WORDS[axis]}.`;
 
 /** Where each kind of part goes on its box, as the cutlist, Details and the presets say it. */
 export const HARDWARE_PLACE_WORDS = {
@@ -89,9 +89,9 @@ export const hardwareClashLine = (who: string, both: boolean, into: string, advi
   `${who} ${both ? "run" : "runs"} into ${into}: ${advice}.`;
 /** What to do about each kind of part that doesn't fit. */
 export const HARDWARE_ADVICE = {
-  handle: `move them with the ${HANDLE_AXIS_NAMES.upIn.toLowerCase()} and ${HANDLE_AXIS_NAMES.backIn.toLowerCase()} offsets, or pick the other handle or none`,
-  plate: "no place low on the back is clear",
-  posts: "no place on the lid is clear",
+  handle: "move them with the offsets, or change the handle",
+  plate: "no clear place low on the back",
+  posts: "no clear place on the lid",
 } as const;
 
 /** The handle offset sliders' range and step, in: either way from the preset. */
@@ -99,7 +99,7 @@ export const HANDLE_OFFSET_SLIDER = { min: -8, max: 8, step: 0.25 } as const;
 
 /** The fit chip's line when every part fits, with the liters the recesses take (already formatted). */
 export const hardwareFitsLine = (liters: string) =>
-  `Clear of the driver, the vent, the braces and ribs, the panel edges and each other; the recesses take ${liters} L.`;
+  `Clear of the driver, vent, braces, edges and other parts. Recesses take ${liters} L.`;
 
 /** The fit chip's titles. */
 export const HARDWARE_FIT_TITLES = {

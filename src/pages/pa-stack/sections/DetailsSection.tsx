@@ -161,9 +161,8 @@ export function DetailsSection({ planner }: Props) {
           ]
             .filter(Boolean)
             .join(" ")}{" "}
-          Each recess takes its cutout times its depth past the wall out of the box (a part whose
-          depth isn&rsquo;t listed counts none); the net volumes and the tuning follow, and the
-          parts&rsquo; weight is in the boxes&rsquo;.
+          Each recess (cutout × depth past the wall) comes off the net volume. A part with no listed
+          depth takes none. The weights are in the boxes.
         </div>
         {[midDriver, compressionDriver, hornOption].map(
           (part) =>
