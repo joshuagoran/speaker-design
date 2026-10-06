@@ -16,6 +16,7 @@ import type {
 import type { CoverageLayoutState } from "../../pages/coverage/useCoverageLayout";
 import { SVG_FONT } from "../../styles/fonts";
 import { UI_TEXT } from "../../constants/uiText";
+import { COVERAGE_TEST_IDS } from "../../constants/coverageTestIds";
 import { CONTOUR_STEP_DB, COVERAGE_MAP_DB } from "../../constants/chartScales";
 import { COVERAGE_EDGE_DB } from "../../constants/coverageLevel";
 import {
@@ -256,6 +257,7 @@ export function CoverageMap({
         tabIndex={0}
         role="img"
         aria-busy={busy}
+        data-testid={COVERAGE_TEST_IDS.map}
         aria-label={`Floor map seen from above, level in ${SCALE_UNIT}, with the target marked. The listener is ${listener.x.toFixed(0)} ft across and ${listener.y.toFixed(0)} ft down the room. Arrow keys move the listener.`}
         onPointerDown={down}
         onPointerMove={move}
@@ -364,6 +366,7 @@ export function CoverageMap({
                     strokeWidth="1.5"
                   />
                   <circle
+                    data-testid={COVERAGE_TEST_IDS.aimHandle}
                     cx={hp.x}
                     cy={hp.y}
                     r="7"

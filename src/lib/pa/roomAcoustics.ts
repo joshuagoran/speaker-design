@@ -135,6 +135,11 @@ export function modalCrossoverHz(
 /** The highest frequency the modal sum is evaluated at for a crossover: the top of the fade. */
 export const modalTopHz = (crossoverHz: number) => crossoverHz * Math.pow(2, MODAL_FADE_OCT / 2);
 
+/** The lowest frequency the image sources reach for a crossover: the bottom of the fade. Below it only the modal sum
+ * counts, and it doesn't depend on which way a box faces. */
+export const modalBottomHz = (crossoverHz: number) =>
+  crossoverHz * Math.pow(2, -MODAL_FADE_OCT / 2);
+
 /** The modal sum's share of the level (power) at `f`: 1 below the fade, 0 above it, a raised cosine in log f across it. */
 export function modalWeight(f: number, crossoverHz: number): number {
   const t = Math.log2(f / crossoverHz) / MODAL_FADE_OCT + 0.5;

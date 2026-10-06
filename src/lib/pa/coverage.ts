@@ -79,6 +79,8 @@ export const COVERAGE_BANDS: Record<
   mid: { name: "Mid", lo: 160, hi: 2000 },
   high: { name: "High", lo: 2000, hi: 16000 },
 };
+/** Grid columns across the room: coarse while something is dragged, fine once it settles. The same model at both. */
+export const COVERAGE_GRID_COLS = { coarse: 20, fine: 40 } as const;
 /** frequencies averaged per band */
 export const BAND_POINTS = 10;
 /** Below this the paths sum with phase in a band average; a single frequency always does. */

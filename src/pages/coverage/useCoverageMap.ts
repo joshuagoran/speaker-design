@@ -12,6 +12,7 @@ import {
   coverageResponse,
   coverageScene,
   coverageStats,
+  COVERAGE_GRID_COLS,
   oneMeterSpot,
   withOwnPhase,
 } from "../../lib/pa/coverage";
@@ -33,9 +34,7 @@ import type {
   SubPlacement,
 } from "../../types";
 
-/** Grid columns across the room: coarse while something is being dragged, fine once it settles. */
-const COARSE_COLS = 20,
-  FINE_COLS = 40;
+const { coarse: COARSE_COLS, fine: FINE_COLS } = COVERAGE_GRID_COLS;
 
 /** A grid to compute: the worker's request, and the music balance its target follows. */
 interface CoverageJob {

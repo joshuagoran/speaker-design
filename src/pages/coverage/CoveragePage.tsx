@@ -11,7 +11,7 @@ import { ToggleButton } from "../../components/ui/ToggleButton";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { formatSigned as signed } from "../../lib/format";
 import { COVERAGE_BANDS, SINGLE_FREQ_RANGE } from "../../lib/pa/coverage";
-import { ROOM_MATERIAL_OPTIONS } from "../../lib/pa/roomAcoustics";
+import { ROOM_MATERIAL_OPTIONS, modalBottomHz, modalCrossoverHz } from "../../lib/pa/roomAcoustics";
 import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import type { RoomSurface, SubPlacement } from "../../types";
@@ -110,6 +110,9 @@ export function CoveragePage({ planner }: Props) {
     layout.band === "one"
       ? `${formatHz(layout.freqHz)}, one frequency`
       : `${COVERAGE_BANDS[layout.band].name} band, ${formatHz(COVERAGE_BANDS[layout.band].lo)}–${formatHz(COVERAGE_BANDS[layout.band].hi)}`;
+  // indoors, below the modal fade only the room modes count, and they ignore which way a box faces
+  const modalOnlyHz = room.outdoors ? null : modalBottomHz(modalCrossoverHz(room));
+  const bandTopHz = layout.band === "one" ? layout.freqHz : COVERAGE_BANDS[layout.band].hi;
   const [left, right] = layout.stacks;
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   const logPos = (f: number) =>
@@ -150,6 +153,12 @@ export function CoveragePage({ planner }: Props) {
               />
             ) : (
               <Notice>Needs a mid with T/S parameters and a horn with coverage angles.</Notice>
+            )}
+            {map.stack && map.levels && modalOnlyHz != null && bandTopHz <= modalOnlyHz && (
+              <p className="text-xs text-stone-500 mt-2">
+                Toe-in has no effect below about {formatHz(modalOnlyHz)}, where room modes set the
+                level.
+              </p>
             )}
             {map.error && <Notice>Map failed: {map.error}</Notice>}
             {map.stack && !planner.hornModel && (
