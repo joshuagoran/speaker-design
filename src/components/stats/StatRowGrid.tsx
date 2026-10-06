@@ -12,13 +12,18 @@ interface Props {
   rows: StatRowItem[];
 }
 
-/** Two-column list of detail rows, each `[name, value, note, tooltip]`. */
+/**
+ * List of detail rows, each `[name, value, note, tooltip]`: two columns from `sm` up while its own box is wide enough
+ * for a value's note to fit beside the name (one column in a narrow results column, e.g. PA Design's two-column grid).
+ */
 export function StatRowGrid({ rows }: Props) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
-      {rows.map(([k, v, note, tip]) => (
-        <StatRow key={statLabel(k)} k={k} v={v} note={note} tip={tip} />
-      ))}
+    <div className="[container-type:inline-size]">
+      <div className="grid grid-cols-1 sm:[@container(min-width:480px)]:grid-cols-2 gap-x-8 gap-y-0.5 text-sm">
+        {rows.map(([k, v, note, tip]) => (
+          <StatRow key={statLabel(k)} k={k} v={v} note={note} tip={tip} />
+        ))}
+      </div>
     </div>
   );
 }

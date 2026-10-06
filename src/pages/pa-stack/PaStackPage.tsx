@@ -13,7 +13,7 @@ import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { settingsSheetRoomClass } from "../../components/ui/SettingsSheetTabs";
 import { useWidthAtLeast } from "../../hooks/useElementWidth";
-import { PA_TWO_COLUMN_PX } from "../../styles/layout";
+import { RESULTS_TWO_COLUMN_PX } from "../../styles/layout";
 import type { PaPlanner } from "./hooks/usePaPlanner";
 
 interface Props {
@@ -29,7 +29,7 @@ interface Props {
 export function PaStackPage({ planner }: Props) {
   const { isSettingsSheetOpen, store, fbUser, importSeed, snapshot, restore } = planner;
   // measured on the results, not the viewport: the settings column's width is draggable
-  const [results, wide] = useWidthAtLeast(PA_TWO_COLUMN_PX);
+  const [results, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
   // the summary sits beside the 3D view only when there is one; in one column it opens the Sub fold
   const besideView = wide && !!planner.subModelled;
   /** a cell's classes: `place` (its row and column) applies in two columns only */

@@ -11,8 +11,9 @@ export const READING_WIDTH = "max-w-6xl";
 export const MD_UP = "(min-width: 768px)";
 
 /**
- * The PA Design page's results pane width, px, from which its results take two columns (the 3D view beside the summary,
- * Sub beside Mid-bass, Dispersion and Totals beside Horn). Measured on the pane, not the viewport: the settings column's
- * width is draggable.
+ * The results pane width, px, from which a page's results take two columns: PA Design (the 3D view beside the summary,
+ * Sub beside Mid-bass, Dispersion and Totals beside Horn) and Cutlist (the parts list beside the sheet layout). Measured
+ * on the pane, not the viewport, so dragging the settings divider switches every page alike; at the default settings
+ * width it switches at a 1400 px viewport.
  */
-export const PA_TWO_COLUMN_PX = 1200;
+export const RESULTS_TWO_COLUMN_PX = 858;
