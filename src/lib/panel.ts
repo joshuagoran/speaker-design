@@ -2,7 +2,7 @@
 // size (PANEL_NOMINAL_NAMES); the Cutlist page keeps the measured thickness of each (PanelExactIn), and everything that
 // depends on the walls (box volume, cutlist sizes and joints, the 3D view, weights) is worked out at `panelIn`.
 import { PANEL_STOCK } from "../data/catalog/plywood";
-import { HIFI_SEARCH_PANELS, PANEL_NOMINAL_NAMES } from "../constants/panelSizes";
+import { PANEL_NOMINAL_NAMES } from "../constants/panelSizes";
 import type {
   PaDesignConfig,
   PanelExactIn,
@@ -29,30 +29,10 @@ export const defaultPanelIn = (n: PanelNominal, mat: PanelMaterial) => PANEL_STO
 export const panelIn = (n: PanelNominal, mat: PanelMaterial, exact: PanelExactIn = {}) =>
   exact[n] ?? defaultPanelIn(n, mat);
 
-/**
- * Each nominal size's thickness (or each of `sizes`), thickest size first and each thickness once: the walls the
- * optimizers try.
- */
-export const panelChoicesIn = (
-  mat: PanelMaterial,
-  exact: PanelExactIn = {},
-  sizes: readonly PanelNominal[] = PANEL_NOMINALS,
-) => [
-  ...new Set(PANEL_NOMINALS.filter((n) => sizes.includes(n)).map((n) => panelIn(n, mat, exact))),
+/** Each nominal size's thickness, thickest size first and each thickness once: the walls the optimizers try. */
+export const panelChoicesIn = (mat: PanelMaterial, exact: PanelExactIn = {}) => [
+  ...new Set(PANEL_NOMINALS.map((n) => panelIn(n, mat, exact))),
 ];
-
-/**
- * The walls the Hi-fi optimizer tries when the wall isn't locked: ¾″ and ½″ (HIFI_SEARCH_PANELS), and the design's own
- * size (`wall` at `exact`, as `panelFor` finds it) when that is another, at their exact thicknesses.
- */
-export function hifiWallChoicesIn(
-  mat: PanelMaterial,
-  exact: PanelExactIn,
-  cur: Partial<Pick<PaDesignConfig, "wall" | "panel">>,
-) {
-  const own = panelFor(cur, mat, exact);
-  return panelChoicesIn(mat, exact, own ? [...HIFI_SEARCH_PANELS, own] : HIFI_SEARCH_PANELS);
-}
 
 /**
  * The thickness a measurement may set for a nominal size, inches: within a tenth of the size. That takes in the usual

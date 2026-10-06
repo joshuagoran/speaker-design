@@ -12,7 +12,6 @@ import {
 import { hifiBox, hifiGridTop, hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
 import { chipOf } from "./helpers";
-import { hifiWallChoicesIn } from "../src/lib/panel";
 import { DESIGN_PROBLEM_TEXT } from "../src/constants/optimizerText";
 import type {
   HifiGoal,
@@ -459,32 +458,11 @@ test("hi-fi optimizer: your box is searched on the other plywood even when your 
   const yours = space.grid.filter((e) => e.w.id === cur.woofer);
   assert.deepEqual(
     yours.map((e) => [e.wall, e.dim]),
-    [[0.5, cur.dim]],
-    "your box on 1/2 in ply only (your woofer itself is filtered out)",
-  );
-});
-
-test("hi-fi optimizer: ⅝″ walls are searched only when they are the design's own or locked", () => {
-  const wallsOf = (c: HifiOptimizerCurrent, locks: HifiOptimizerLocks = {}, walls?: number[]) => {
-    const { space } = hifiSearchSpace({ ...base, cur: c, locks, walls, goals: ["lighter"] });
-    assert.ok(space, "a search");
-    return [...new Set(space.grid.map((e) => e.wall))].sort((a, b) => b - a);
-  };
-  // a ¾″ design: ¾″ and ½″, as before the ⅝″ size
-  assert.deepEqual(wallsOf(cur), [0.75, 0.5]);
-  assert.deepEqual(wallsOf({ ...cur, wall: 0.5 }), [0.75, 0.5]);
-  // a ⅝″ design adds its own size
-  assert.deepEqual(wallsOf({ ...cur, wall: 0.625 }), [0.75, 0.625, 0.5]);
-  // locked on ⅝″: that alone
-  assert.deepEqual(wallsOf({ ...cur, wall: 0.625 }, { wall: true }), [0.625]);
-  // the page's walls: the measured thicknesses, ⅝″ only when it is the design's size
-  assert.deepEqual(
-    hifiWallChoicesIn("ply", { "3/4": 0.689 }, { wall: 0.689, panel: "3/4" }),
-    [0.689, 0.5],
-  );
-  assert.deepEqual(
-    hifiWallChoicesIn("ply", { "5/8": 0.59 }, { wall: 0.59, panel: "5/8" }),
-    [0.75, 0.59, 0.5],
+    [
+      [0.625, cur.dim],
+      [0.5, cur.dim],
+    ],
+    "your box on the other plywoods only (your woofer itself is filtered out)",
   );
 });
 

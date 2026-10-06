@@ -781,7 +781,7 @@ export interface HifiOptimizerInput {
   seatM?: number;
   /** the price of a waveguide, for one speaker */
   guidePrice?: number;
-  /** the walls the search tries when the wall isn't locked, inches: ¾″ and ½″ and the design's own size, at their exact thicknesses (hifiWallChoicesIn) */
+  /** the walls the search tries when the wall isn't locked: each nominal size's exact thickness, inches */
   walls?: readonly number[];
 }
 

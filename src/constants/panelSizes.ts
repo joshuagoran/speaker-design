@@ -20,9 +20,3 @@ export const PLYWOOD_MATERIAL = "ply" satisfies PanelMaterial;
  * at: two per duct, bracing its inner wall to the side wall across the throat.
  */
 export const DUCT_DIVIDER_DEFAULT = "1/2" satisfies PanelNominal;
-
-/**
- * The nominal sizes the Hi-fi optimizer tries when the wall isn't locked; it adds the design's own size when that is
- * another (⅝″), so a default search costs no more than two sizes do.
- */
-export const HIFI_SEARCH_PANELS = ["3/4", "1/2"] as const satisfies readonly PanelNominal[];
