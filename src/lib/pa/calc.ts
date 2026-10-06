@@ -800,7 +800,9 @@ export function subBraceWood(
 }
 /**
  * The bracing the rule chooses for a sub box, as placed in the box on its grid (BRACE_CHOICE_GRID_IN) that it chose
- * for: a solver carries its wood to nearby sizes (planWoodIn3) without placing it each time.
+ * for: a solver carries its wood to nearby sizes (planWoodIn3) without placing it each time. On the grid the duct keeps
+ * its distance from the back; where that box's duct would hold, fold or take elbows otherwise than this one's, the rule
+ * chooses for the box itself, so the choice always sees the duct the box has.
  */
 export function subBracingChoice(
   box: Dims3,
@@ -811,18 +813,36 @@ export function subBracingChoice(
   drv: TubeDriver,
   braceStyle: BraceStyleId | undefined,
 ) {
-  const g = onBraceGrid(box);
+  const grid = onBraceGrid(box);
+  const gv = { ...v, len: v.len + grid.d - box.d };
+  const [g, gVent] =
+    ductFlags(grid, t, inset, style, gv, drv) === ductFlags(box, t, inset, style, v, drv)
+      ? [grid, gv]
+      : [box, v];
   return {
     box: g,
     inner: paInner(g, t, inset),
-    b: subBracingAt(g, t, inset, style, v, drv, braceStyle, undefined),
+    b: subBracingAt(g, t, inset, style, gVent, drv, braceStyle, undefined),
   };
 }
+/**
+ * Where the duct's length changes the sub's bracing: whether the duct holds the panels, a slot folds or the tubes take
+ * elbows (subVentSupports, subKeepOut).
+ */
+const ductFlags = (
+  box: Dims3,
+  t: number,
+  inset: number,
+  style: PortStyle,
+  v: BraceVent,
+  drv: TubeDriver,
+) =>
+  `${ductHolds(box, t, inset, style, v)}|${style === "slots" && slotFolds(box, v, t)}|${isRoundPort(style) && modelTubeElbows(box, style, { nt: v.nt, dia: v.dia, len: v.len }, t, drv) > 0}`;
 /**
  * The grid the rule chooses on, in: it picks the braces for the box rounded to it and places them in the box itself,
  * so the choice holds while a solver moves a side by a hair (and their wood moves smoothly with it).
  */
-const BRACE_CHOICE_GRID_IN = 0.25;
+const BRACE_CHOICE_GRID_IN = 1;
 const onBraceGrid = (b: Dims3): Dims3 => {
   const r = (x: number) => Math.round(x / BRACE_CHOICE_GRID_IN) * BRACE_CHOICE_GRID_IN;
   return { w: r(b.w), h: r(b.h), d: r(b.d) };
@@ -839,9 +859,8 @@ function subBracingAt(
   plan: BracePlan | undefined,
 ): BoxBracing {
   const bs = braceStyle ?? defaultBraceStyle(t);
-  // the duct's length counts only where it changes the bracing: whether the duct holds the panels, a slot folds or
-  // the tubes take elbows (subVentSupports, subKeepOut)
-  const lenKey = `${ductHolds(box, t, inset, style, v)}|${style === "slots" && slotFolds(box, v, t)}|${isRoundPort(style) && modelTubeElbows(box, style, { nt: v.nt, dia: v.dia, len: v.len }, t, drv) > 0}`;
+  // the duct's length counts only where it changes the bracing
+  const lenKey = ductFlags(box, t, inset, style, v, drv);
   const key = `${bs}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${lenKey}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${plan ? JSON.stringify(plan) : ""}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;

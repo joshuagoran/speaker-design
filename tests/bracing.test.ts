@@ -8,7 +8,10 @@ import {
   defaultBraceStyle,
   plateFirstModeHz,
   regionsOverlap,
+  braceNotes,
   ribFirstModeHz,
+  ribFlangeIn,
+  teeSecondMoment,
   WINDOW_RAIL_IN,
 } from "../src/lib/bracing";
 import {
@@ -30,7 +33,8 @@ import {
 } from "../src/lib/pa/calc";
 import { subDriverDepthIn } from "../src/lib/pa/tubes";
 import { subWoodIn3 } from "../src/lib/pa/exactSub";
-import { savedBraceStyle } from "../src/constants/bracing";
+import { BRACE_NOTES, BRACE_PANEL_NAMES, savedBraceStyle } from "../src/constants/bracing";
+import { formatHz } from "../src/lib/format";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { buildStackScene } from "../src/components/stack-view/buildStackScene";
 import {
@@ -430,4 +434,48 @@ test("the 3D view draws the braces and ribs, and the drivers only in the cutaway
   assert.strictEqual(count(true, BRACE_MESH_NAME), regions.length);
   assert.ok(count(true, DRIVER_BODY_MESH_NAME) > 0);
   assert.strictEqual(count(false, DRIVER_BODY_MESH_NAME), 0, "the closed cabinet hides them");
+});
+
+test("rib: the panel beside it is a flange (Eurocode 5's effective width), so the T rings higher than the rib alone", (t) => {
+  const s = paPanelStock(0.75);
+  // the flange: the rib's width and the panel each side, at most a tenth of the span, 20 panel thicknesses or the bay
+  close(t, ribFlangeIn(24, 30, 0.75), 0.75 + 2.4, 1e-12);
+  close(t, ribFlangeIn(200, 30, 0.75), 0.75 + 15, 1e-12);
+  close(t, ribFlangeIn(200, 6, 0.75), 6, 1e-12);
+  // the parallel-axis theorem by hand: a 4 × 1 flange (at 0.5) on a 1 × 3 web (at 2.5), centroid 9.5 / 7 up
+  const y = 9.5 / 7;
+  close(
+    t,
+    teeSecondMoment(4, 1, 1, 3),
+    4 / 12 + 4 * (y - 0.5) ** 2 + 27 / 12 + 3 * (2.5 - y) ** 2,
+    1e-12,
+  );
+  // no flange beyond the rib: one rectangle t × (t + depth)
+  close(t, teeSecondMoment(1, 1, 1, 3), 4 ** 3 / 12, 1e-12);
+  // the T is well stiffer than the rib alone carrying the same panel
+  const alone = (span: number, trib: number) => {
+    const w = 0.75 * 0.0254,
+      d = 2.5 * 0.0254,
+      L = span * 0.0254,
+      kg = (s.lbPerSqFt * 0.45359237) / 0.09290304;
+    const mu = kg * d + kg * trib * 0.0254;
+    return ((Math.PI / 2) * Math.sqrt((s.eWeak * w * d ** 3) / 12 / mu)) / L ** 2;
+  };
+  assert.ok(ribFirstModeHz(24, 6, s) > 1.5 * alone(24, 6));
+});
+
+test("the notes beside the Bracing setting name the box and say where the style gave way", () => {
+  const d = DEFAULT_PA;
+  const b = subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, "ribs");
+  const notes = braceNotes(b, "Sub");
+  // the starting sub under Ribs: its baffle takes window braces, which ribs can't do across the driver
+  assert.ok(b.windows.y.length > 0);
+  assert.ok(notes.includes(BRACE_NOTES.windowsFor("Sub baffle")), notes.join("; "));
+  for (const p of b.panels)
+    if (p.hz < b.targetHz) {
+      const name = `Sub ${BRACE_PANEL_NAMES[p.id].toLowerCase()}`;
+      assert.ok(notes.includes(BRACE_NOTES.under(name, formatHz(p.hz), formatHz(b.targetHz))));
+    }
+  // and it does put ribs in, on the back
+  assert.ok(b.ribs.some((r) => r.panel === "back"));
 });
