@@ -27,14 +27,19 @@ export const BRACE_STYLE_SUMMARY = {
 } as const satisfies Record<keyof typeof BRACE_STYLE_NAMES, string>;
 
 /**
- * The notes beside a box's Bracing setting where the rule couldn't do as the style says: a panel braced the other way,
- * or left under the target. Each takes the panel's name (and the frequencies, already in words).
+ * The notes under the Bracing setting where the rule couldn't do as the style says, by kind (`BraceFallback`): a panel
+ * braced the other way, or left under the target. Each takes the panel's name with its cabinet ("Sub baffle") and, for
+ * "under", the panel's first mode and the target, already in words.
  */
-export const BRACE_NOTES = {
-  windowsFor: (panel: string) => `${panel}: window braces (ribs can't cross the driver)`,
-  ribsFor: (panel: string) => `${panel}: ribs (no window brace clears the driver or the vent)`,
+export const BRACE_FALLBACK_NOTES = {
+  windows: (panel: string) => `${panel}: window braces (ribs can't cross the driver)`,
+  ribs: (panel: string) => `${panel}: ribs (no window brace clears the driver or the vent)`,
   under: (panel: string, hz: string, target: string) => `${panel}: ${hz}, under ${target}`,
 } as const;
+
+/** A panel's name with its cabinet's, as the bracing notes start ("Sub baffle", "Mid left side"). */
+export const bracePanelName = (cabinet: string, panel: keyof typeof BRACE_PANEL_NAMES) =>
+  `${cabinet} ${BRACE_PANEL_NAMES[panel].toLowerCase()}`;
 
 /** A box's panels, as the bracing readout names them (left and right as you face the baffle). */
 export const BRACE_PANEL_NAMES = {

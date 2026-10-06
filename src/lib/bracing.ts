@@ -31,6 +31,7 @@ import type {
   BoxBracing,
   BoxKeepOut,
   BoxRegion,
+  BraceFallback,
   BracePanel,
   BracePanelId,
   BracePlan,
@@ -41,9 +42,7 @@ import type {
   PlateStock,
 } from "../types";
 import { panelNominalNear } from "./panel";
-import { formatHz } from "./format";
 import { keysOf } from "./records";
-import { BRACE_NOTES, BRACE_PANEL_NAMES } from "../constants/bracing";
 
 const IN_M = 0.0254;
 /** lb/ft² to kg/m² */
@@ -423,23 +422,20 @@ export function carryBracing(
 }
 
 /**
- * Where a box's bracing departs from its style, as the notes beside the Bracing setting (BRACE_NOTES), each panel named
- * with its box (`box`: "Sub baffle"): the baffle held by window braces under Ribs, the panels that took ribs under
- * Window braces, and each panel left under the target.
+ * Where a box's bracing departs from its style, panel by panel (the pages word them): a panel held by window braces
+ * under Ribs ("windows": ribs can't cross the driver), one that took ribs under Window braces ("ribs": no window brace
+ * clears the driver or the vent), and each panel left under the target ("under", with its first mode).
  */
-export function braceNotes(
+export function braceFallbacks(
   b: Pick<BoxBracing, "style" | "windows" | "ribs" | "panels" | "targetHz">,
-  box: string,
-): string[] {
-  const name = (id: BracePanelId) => `${box} ${BRACE_PANEL_NAMES[id].toLowerCase()}`;
-  const windows = BOX_AXES.some((a) => b.windows[a].length > 0);
-  const out: string[] = [];
-  if (b.style === "ribs" && windows) out.push(BRACE_NOTES.windowsFor(name("baffle")));
+): BraceFallback[] {
+  const out: BraceFallback[] = [];
+  if (b.style === "ribs" && BOX_AXES.some((a) => b.windows[a].length > 0))
+    out.push({ panel: "baffle", kind: "windows" });
   if (b.style === "window")
-    for (const id of new Set(b.ribs.map((r) => r.panel))) out.push(BRACE_NOTES.ribsFor(name(id)));
+    for (const panel of new Set(b.ribs.map((r) => r.panel))) out.push({ panel, kind: "ribs" });
   for (const p of b.panels)
-    if (p.hz < b.targetHz - 1e-9)
-      out.push(BRACE_NOTES.under(name(p.id), formatHz(p.hz), formatHz(b.targetHz)));
+    if (p.hz < b.targetHz - 1e-9) out.push({ panel: p.id, kind: "under", hz: p.hz });
   return out;
 }
 

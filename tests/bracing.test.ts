@@ -8,7 +8,7 @@ import {
   defaultBraceStyle,
   plateFirstModeHz,
   regionsOverlap,
-  braceNotes,
+  braceFallbacks,
   ribFirstModeHz,
   ribFlangeIn,
   teeSecondMoment,
@@ -33,7 +33,9 @@ import {
 } from "../src/lib/pa/calc";
 import { subDriverDepthIn } from "../src/lib/pa/tubes";
 import { subWoodIn3 } from "../src/lib/pa/exactSub";
-import { BRACE_NOTES, BRACE_PANEL_NAMES, savedBraceStyle } from "../src/constants/bracing";
+import { BRACE_FALLBACK_NOTES, bracePanelName, savedBraceStyle } from "../src/constants/bracing";
+import { braceNoteLines } from "../src/lib/bracingNotes";
+import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs";
 import { formatHz } from "../src/lib/format";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { buildStackScene } from "../src/components/stack-view/buildStackScene";
@@ -464,17 +466,22 @@ test("rib: the panel beside it is a flange (Eurocode 5's effective width), so th
   assert.ok(ribFirstModeHz(24, 6, s) > 1.5 * alone(24, 6));
 });
 
-test("the notes beside the Bracing setting name the box and say where the style gave way", () => {
+test("the notes under the Bracing setting name the cabinet and the panel, and say where the style gave way", () => {
   const d = DEFAULT_PA;
   const b = subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, "ribs");
-  const notes = braceNotes(b, "Sub");
+  const fallbacks = braceFallbacks(b);
+  const notes = braceNoteLines(PA_SETTINGS_TABS.sub, b);
+  assert.strictEqual(notes.length, fallbacks.length);
   // the starting sub under Ribs: its baffle takes window braces, which ribs can't do across the driver
   assert.ok(b.windows.y.length > 0);
-  assert.ok(notes.includes(BRACE_NOTES.windowsFor("Sub baffle")), notes.join("; "));
+  assert.ok(fallbacks.some((f) => f.panel === "baffle" && f.kind === "windows"));
+  assert.ok(notes.includes(BRACE_FALLBACK_NOTES.windows("Sub baffle")), notes.join("; "));
   for (const p of b.panels)
     if (p.hz < b.targetHz) {
-      const name = `Sub ${BRACE_PANEL_NAMES[p.id].toLowerCase()}`;
-      assert.ok(notes.includes(BRACE_NOTES.under(name, formatHz(p.hz), formatHz(b.targetHz))));
+      const name = bracePanelName(PA_SETTINGS_TABS.sub, p.id);
+      assert.ok(
+        notes.includes(BRACE_FALLBACK_NOTES.under(name, formatHz(p.hz), formatHz(b.targetHz))),
+      );
     }
   // and it does put ribs in, on the back
   assert.ok(b.ribs.some((r) => r.panel === "back"));

@@ -2,7 +2,12 @@ import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
-import type { BOX_AXIS_NAMES, BRACE_PANEL_NAMES, BRACE_STYLE_NAMES } from "./constants/bracing";
+import type {
+  BOX_AXIS_NAMES,
+  BRACE_FALLBACK_NOTES,
+  BRACE_PANEL_NAMES,
+  BRACE_STYLE_NAMES,
+} from "./constants/bracing";
 import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
@@ -1428,6 +1433,14 @@ export type BraceStyleId = keyof typeof BRACE_STYLE_NAMES;
 export type BracePanelId = keyof typeof BRACE_PANEL_NAMES;
 /** A box axis, from the inside corner: x across, y up, z back from the baffle. */
 export type BoxAxis = keyof typeof BOX_AXIS_NAMES;
+/** How a panel's bracing departs from the box's style (`BRACE_FALLBACK_NOTES` words each). */
+export type BraceFallbackKind = keyof typeof BRACE_FALLBACK_NOTES;
+/** A panel whose bracing departs from the box's style (`braceFallbacks`); `hz`: its first mode, for "under" alone. */
+export interface BraceFallback {
+  panel: BracePanelId;
+  kind: BraceFallbackKind;
+  hz?: number;
+}
 
 /** A panel's stock as the plate model reads it: thickness (in), weight (lb/ft²) and bending moduli (Pa). */
 export interface PlateStock {
