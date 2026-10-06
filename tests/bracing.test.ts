@@ -9,6 +9,7 @@ import {
   plateFirstModeHz,
   regionsOverlap,
   braceNotes,
+  braceFallbacks,
   ribFirstModeHz,
   ribFlangeIn,
   teeSecondMoment,
@@ -481,6 +482,37 @@ test("the notes beside the Bracing setting name the box and say where the style 
   assert.ok(b.ribs.some((r) => r.panel === "back"));
 });
 
+test("braceFallbacks: the panels braced the other way, and those under the target with their first mode", () => {
+  const d = DEFAULT_PA;
+  const sub = (style: BraceStyleId) =>
+    subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, style);
+  // Ribs: the baffle takes window braces (a rib can't cross the driver) and stays under the target
+  const ribs = sub("ribs");
+  const baffleHz = ribs.panels.find((p) => p.id === "baffle")?.hz ?? NaN;
+  assert.ok(baffleHz < ribs.targetHz);
+  assert.deepStrictEqual(braceFallbacks(ribs), [
+    { panel: "baffle", kind: "windows" },
+    { panel: "baffle", kind: "under", hz: baffleHz },
+  ]);
+  // Window braces: each panel that took ribs (here the back)
+  const win = sub("window");
+  const ribbed = [...new Set(win.ribs.map((r) => r.panel))];
+  assert.ok(ribbed.includes("back"));
+  assert.deepStrictEqual(
+    braceFallbacks(win)
+      .filter((f) => f.kind === "ribs")
+      .map((f) => f.panel),
+    ribbed,
+  );
+  // Both: only "under", never a fallback
+  assert.ok(braceFallbacks(sub("both")).every((f) => f.kind === "under"));
+  // a box that needs nothing has none
+  const mid = midBoxBracing(d.mDim, 0.75, d.inset, d.mid, "stack", "ribs");
+  assert.ok(mid);
+  assert.deepStrictEqual(braceFallbacks(mid), []);
+  // "under" carries hz, the others don't
+  for (const f of braceFallbacks(ribs)) assert.strictEqual(f.hz === undefined, f.kind !== "under");
+});
 test("rib: the T section's EI and first mode against a hand calculation (a ¾″ rib 2½″ deep over 22½″, a 9.2″ bay)", (t) => {
   const s = paPanelStock(0.75);
   // the flange: 0.75 + min(0.1 × 22.5, 20 × 0.75, 9.2 − 0.75) = 0.75 + 2.25 = 3.0″

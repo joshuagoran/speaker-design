@@ -29,6 +29,7 @@
 import type {
   BoxAxis,
   BoxBracing,
+  BraceFallback,
   BoxKeepOut,
   BoxRegion,
   BracePanel,
@@ -430,25 +431,40 @@ export function carryBracing(
 }
 
 /**
- * Where a box's bracing departs from its style, as the notes beside the Bracing setting (BRACE_NOTES), each panel named
- * with its box (`box`: "Sub baffle"): the baffle held by window braces under Ribs, the panels that took ribs under
- * Window braces, and each panel left under the target.
+ * Where a box's bracing departs from its style, panel by panel (the UI names the box and words them):
+ * - "windows": under Ribs, the baffle held by window braces, since a rib can't cross the driver (under Ribs the rule
+ *   adds a window brace only for the baffle, and never one whose frame opens round the driver, which doesn't hold it);
+ * - "ribs": under Window braces, each panel that took ribs, since no window brace clears the driver or the vent there;
+ * - "under": each panel left under the target, with its first mode `hz`.
+ * None of the first two under Both. A panel can have a fallback and be under the target.
  */
-export function braceNotes(
+export function braceFallbacks(
   b: Pick<BoxBracing, "style" | "windows" | "ribs" | "panels" | "targetHz">,
-  box: string,
-): string[] {
-  const name = (id: BracePanelId) => `${box} ${BRACE_PANEL_NAMES[id].toLowerCase()}`;
-  const windows = BOX_AXES.some((a) => b.windows[a].length > 0);
-  const out: string[] = [];
-  if (b.style === "ribs" && windows) out.push(BRACE_NOTES.windowsFor(name("baffle")));
+): BraceFallback[] {
+  const out: BraceFallback[] = [];
+  if (b.style === "ribs" && b.windows.x.length + b.windows.y.length > 0)
+    out.push({ panel: "baffle", kind: "windows" });
   if (b.style === "window")
-    for (const id of new Set(b.ribs.map((r) => r.panel))) out.push(BRACE_NOTES.ribsFor(name(id)));
+    for (const panel of new Set(b.ribs.map((r) => r.panel))) out.push({ panel, kind: "ribs" });
   for (const p of b.panels)
-    if (p.hz < b.targetHz - 1e-9)
-      out.push(BRACE_NOTES.under(name(p.id), formatHz(p.hz), formatHz(b.targetHz)));
+    if (p.hz < b.targetHz - 1e-9) out.push({ panel: p.id, kind: "under", hz: p.hz });
   return out;
 }
+
+/**
+ * Where a box's bracing departs from its style, as the notes beside the Bracing setting in words (BRACE_NOTES), each
+ * panel named with its box (`box`: "Sub baffle"): braceFallbacks's, in its order.
+ */
+export const braceNotes = (
+  b: Pick<BoxBracing, "style" | "windows" | "ribs" | "panels" | "targetHz">,
+  box: string,
+): string[] =>
+  braceFallbacks(b).map((f) => {
+    const name = `${box} ${BRACE_PANEL_NAMES[f.panel].toLowerCase()}`;
+    if (f.kind === "windows") return BRACE_NOTES.windowsFor(name);
+    if (f.kind === "ribs") return BRACE_NOTES.ribsFor(name);
+    return BRACE_NOTES.under(name, formatHz(f.hz ?? NaN), formatHz(b.targetHz));
+  });
 
 // ---- the rule ----
 

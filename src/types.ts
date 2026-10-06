@@ -1428,6 +1428,14 @@ export type BraceStyleId = keyof typeof BRACE_STYLE_NAMES;
 export type BracePanelId = keyof typeof BRACE_PANEL_NAMES;
 /** A box axis, from the inside corner: x across, y up, z back from the baffle. */
 export type BoxAxis = keyof typeof BOX_AXIS_NAMES;
+/** Why a panel's bracing departs from its box's style (lib/bracing's braceFallbacks). */
+export type BraceFallbackKind = "windows" | "ribs" | "under";
+/** One panel where the bracing departs from its style; `hz` only for "under": its first mode, below `targetHz`. */
+export interface BraceFallback {
+  panel: BracePanelId;
+  kind: BraceFallbackKind;
+  hz?: number;
+}
 
 /** A panel's stock as the plate model reads it: thickness (in), weight (lb/ft²) and bending moduli (Pa). */
 export interface PlateStock {
