@@ -456,7 +456,7 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
         ? [
             "warn",
             `Tuned low (${Fb.toFixed(0)} Hz)`,
-            "Well below the highpass: the port does little. A shorter or wider port tunes higher.",
+            "Tuned well below the highpass, so the port does little. A shorter or wider port tunes higher.",
             "fillTuning",
           ]
         : [
@@ -470,18 +470,18 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
       F.push([
         "warn",
         "Port-limited",
-        `Port air speed reaches ${portMax} m/s somewhere below 300 Hz; a wider port helps.`,
+        `Port air speed reaches ${portMax} m/s somewhere below 300 Hz. Use a wider port.`,
         "fillPortLimited",
       ]);
   } else if (Qtc != null) {
     F.push(
       Qtc > 0.8
-        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky; a bigger box or a vent.", "fillQtc"]
+        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky. Use a bigger box or a vent.", "fillQtc"]
         : Qtc < 0.5
           ? [
               "warn",
               `Qtc ${Qtc.toFixed(2)}`,
-              "Very damped: rolls off early. Good driver for a vented box.",
+              "Very damped, so it rolls off early. This driver suits a vented box.",
               "fillQtc",
             ]
           : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped.", "fillQtc"],
@@ -492,13 +492,13 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
       ? [
           "ok",
           "Some kick",
-          `${f3.toFixed(0)} Hz −3 dB with the highpass; the kick fundamental (50–70 Hz) is partly there and the subs fill the rest.`,
+          `${f3.toFixed(0)} Hz −3 dB with the highpass. The fill gives part of the kick fundamental (50–70 Hz); the subs give the rest.`,
           "fillKick",
         ]
       : [
           "warn",
           "Little kick",
-          `${f3.toFixed(0)} Hz −3 dB; the kick's attack comes through but its body is all subs.`,
+          `${f3.toFixed(0)} Hz −3 dB. The fill gives the kick's attack; the subs give its body.`,
           "fillKick",
         ],
   );
@@ -522,7 +522,7 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
     F.push([
       "warn",
       "HF not modeled",
-      "The HF section's specs aren't published on usspeaker.",
+      "usspeaker does not publish the HF section's specs.",
       "fillHfUnmodeled",
     ]);
   return F;
