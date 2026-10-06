@@ -446,7 +446,7 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
         ? [
             "warn",
             `Tuned low (${Fb.toFixed(0)} Hz)`,
-            "Tuned well below the highpass, so the port does little. A shorter or wider port tunes higher.",
+            "Well below the highpass. A shorter or wider port tunes higher.",
             "fillTuning",
           ]
         : [
@@ -466,14 +466,9 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
   } else if (Qtc != null) {
     F.push(
       Qtc > 0.8
-        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky. Use a bigger box or a vent.", "fillQtc"]
+        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky. Use a bigger box.", "fillQtc"]
         : Qtc < 0.5
-          ? [
-              "warn",
-              `Qtc ${Qtc.toFixed(2)}`,
-              "Very damped, so it rolls off early. This driver suits a vented box.",
-              "fillQtc",
-            ]
+          ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Rolls off early. Suits a vented box.", "fillQtc"]
           : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped.", "fillQtc"],
     );
   }
@@ -482,15 +477,10 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
       ? [
           "ok",
           "Some kick",
-          `${f3.toFixed(0)} Hz −3 dB with the highpass. The fill gives part of the kick fundamental (50–70 Hz); the subs give the rest.`,
+          `${f3.toFixed(0)} Hz −3 dB with the highpass: part of the kick fundamental (50–70 Hz).`,
           "fillKick",
         ]
-      : [
-          "warn",
-          "Little kick",
-          `${f3.toFixed(0)} Hz −3 dB. The fill gives the kick's attack; the subs give its body.`,
-          "fillKick",
-        ],
+      : ["warn", "Little kick", `${f3.toFixed(0)} Hz −3 dB: the kick's attack only.`, "fillKick"],
   );
   if (hf && hfLimW != null)
     F.push(
@@ -498,22 +488,16 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
         ? [
             "warn",
             "HF limits first",
-            `With a ${pad.toFixed(0)} dB pad, the HF reaches its ${2 * hf.aes} W program rating at about ${Math.round(hfLimW)} W of amp. That is less than the ${ampW} W amp setting.`,
+            `With a ${pad.toFixed(0)} dB pad, the HF reaches its ${2 * hf.aes} W rating at ${Math.round(hfLimW)} W of the ${ampW} W amp.`,
             "fillHfHeadroom",
           ]
         : [
             "ok",
             "HF has headroom",
-            `With a ${pad.toFixed(0)} dB pad, the HF only reaches its program rating at about ${Math.round(hfLimW)} W of amp.`,
+            `With a ${pad.toFixed(0)} dB pad, the HF reaches its rating at ${Math.round(hfLimW)} W of amp.`,
             "fillHfHeadroom",
           ],
     );
-  else
-    F.push([
-      "warn",
-      "HF not modeled",
-      "usspeaker does not publish the HF section's specs.",
-      "fillHfUnmodeled",
-    ]);
+  else F.push(["warn", "HF not modeled", "No published HF specs.", "fillHfUnmodeled"]);
   return F;
 }
