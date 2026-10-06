@@ -31,7 +31,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { useHifiCutlistOptions } from "../cutlist/useHifiCutlistOptions";
 import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
-import { panelFor, panelIn } from "../../lib/panel";
+import { panelFor, panelIn, restoredPanel } from "../../lib/panel";
 
 /** Everything the Hi-fi page reads: the design state and its setters, the model derived from it, the optimizer, and saving. */
 export interface HifiPlanner extends HifiDesignState, HifiDesign, HifiOptimizer {
@@ -171,8 +171,11 @@ export function useHifiPlanner(): HifiPlanner {
     setBoxDims(c.dim);
     if (c.port) setPortSpec(c.port);
     if (c.pr) setRadiatorSelection(c.pr);
-    // a card or snapshot names its walls by thickness: the size measured (or nominally) at it
-    setWallPanel(panelFor({ wall: c.wall }, panelMaterial, panelExactIn) ?? wallPanel);
+    // a card or snapshot names its walls by thickness: the current size while it is at that thickness (two sizes can
+    // be measured alike), else the size measured (or nominally) at it
+    setWallPanel(
+      panelFor({ wall: c.wall, panel: wallPanel }, panelMaterial, panelExactIn) ?? wallPanel,
+    );
     setCrossoverHz(c.xo);
     setWooferAmpWatts(c.wAmpW);
     setTweeterAmpWatts(c.tAmpW);
@@ -285,7 +288,12 @@ export function useHifiPlanner(): HifiPlanner {
     ok(setBoxDims, c.dim);
     ok(setPortSpec, c.port);
     ok(setRadiatorSelection, c.pr);
-    ok(setWallPanel, panelFor(c, c.mat ?? panelMaterial, panelExactIn));
+    // the size the save names, measured at the thickness it was saved at (the measurements live in this browser)
+    const walls = restoredPanel(c, c.mat ?? panelMaterial, panelExactIn);
+    if (walls) {
+      setWallPanel(walls.panel);
+      cutlist.setPanelExactIn(walls.exactIn);
+    }
     ok(setPanelMaterial, c.mat);
     ok(setCrossoverHz, c.xo);
     ok(setCrossoverOrder, c.order);

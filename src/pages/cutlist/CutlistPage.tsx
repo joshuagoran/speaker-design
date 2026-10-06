@@ -520,7 +520,9 @@ export function CutlistPage({ project, options, parts, also, wall, panel, materi
                 }}
                 unit={
                   <>
-                    <span className="text-stone-500">″ = {(wall * 25.4).toFixed(1)} mm</span>
+                    <span className="text-stone-500">
+                      ″ = {(wall * 25.4).toFixed(1)} mm ({wallRange.min}–{wallRange.max}″)
+                    </span>
                     {wall !== wallDefault && (
                       <Button onClick={() => setWallExact(null)}>
                         {`Reset to ${formatThickness(wallDefault)}`}

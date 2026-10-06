@@ -2,7 +2,7 @@
 // a change of default part, price or rating shows up in the prose. Nothing here names a part itself.
 import { DEFAULT_PA } from "./defaults";
 import { PANEL_NOMINAL_NAMES, PLYWOOD_MATERIAL } from "../constants/panelSizes";
-import { PANEL_NOMINALS, panelIn } from "./panel";
+import { PANEL_NOMINALS, isThinPanel, panelIn } from "./panel";
 import { MAKER_NAMES } from "../data/catalog/makers";
 import { subSystem, subWeightLb } from "./pa/calc";
 import { formatDollars, formatHz } from "./format";
@@ -34,10 +34,11 @@ export const DEFAULT_CROSSOVERS = `sub HPF ~${d.hpf} Hz ${d.hpType} · sub/mid $
 /** The default wall's nominal size in words (¾″). */
 export const DEFAULT_WALL = PANEL_NOMINAL_NAMES[d.panel].short;
 
-/** The default sub box's loaded weight on each nominal plywood size the planner offers, thickest first. */
+/** The default sub box's loaded weight on each nominal plywood size the planner offers, thickest first, and whether that size takes the extra brace. */
 export const DEFAULT_SUB_WEIGHTS = PANEL_NOMINALS.map((n) => ({
   t: PANEL_NOMINAL_NAMES[n].short,
   lb: Math.round(subWeightLb(d.cDim, panelIn(n, PLYWOOD_MATERIAL), d.sub.lb)),
+  braced: isThinPanel(panelIn(n, PLYWOOD_MATERIAL)),
 }));
 
 /** The default sub's 2.83 V sensitivity from its T/S in the default box, as the PA page's sub section shows it. */
