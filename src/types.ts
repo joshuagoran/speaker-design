@@ -1558,8 +1558,9 @@ export interface BoxBracing {
 
 /**
  * A part bought for a PA box (data/catalog/cabinet-hardware): its Parts Express price and listing, the hole it takes
- * through the panel and the flange round it (w along the panel, h across, as it is mounted; in), how deep its recess
- * reaches from the panel's face (in) and its weight (lb). A figure the listing doesn't give is null; `note` names it.
+ * through the panel and the flange round it (w × h as the listing gives them; in), which of the two runs up the panel
+ * as it is mounted (`upright`), how deep its recess reaches from the panel's face (in) and its weight (lb). A figure the
+ * listing doesn't give is null; `note` names it.
  */
 export interface CabinetPart {
   id: string;
@@ -1574,6 +1575,11 @@ export interface CabinetPart {
   /** null: it mounts in another part (a jack in the dish) */
   cutout: { w: number; h: number } | null;
   flange: { w: number; h: number } | null;
+  /**
+   * which listed dimension, cutout's and flange's alike, runs up the panel as mounted: vertical on a side or the back,
+   * front to back on the lid; the other runs across (lib/pa/hardware mountedSize)
+   */
+  upright: "w" | "h";
   depthIn: number | null;
   lb: number | null;
   /** the screw pattern, where listed */

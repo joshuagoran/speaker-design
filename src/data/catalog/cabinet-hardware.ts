@@ -1,5 +1,6 @@
 // Cabinet hardware for the PA boxes: recessed handles, the input dish and its Speakon jacks, and the horn's binding-post
-// cup, all from Parts Express (US dollars, the price and month in `src`, the product page in `url`). Sizes in inches,
+// cup, all from Parts Express (US dollars, the price and month in `src`, the product page in `url`). Sizes in inches
+// as the listing gives them (W × H), `upright` naming the one that runs up the panel as mounted,
 // weights in lb (Parts Express's listed weight). A figure the listing doesn't give is null and named in `note`; the
 // part is kept. The compiler checks the shape (CabinetPart in src/types.ts); lib/pa/hardware places them on the boxes.
 import type { CabinetPart } from "../../types";
@@ -17,6 +18,8 @@ export const HANDLES = [
     url: `${PE}Penn-Elcom-H1105-Recessed-Steel-PA-Cabinet-Handle-260-705`,
     cutout: { w: 6.75, h: 4.25 },
     flange: { w: 8.625, h: 6.375 },
+    // mounted tall: the 6 3/4″ side runs up the panel and the grip bar across it (Parts Express's photos)
+    upright: "w",
     depthIn: 2.5,
     lb: 1,
     screws: null,
@@ -31,6 +34,8 @@ export const HANDLES = [
     url: `${PE}Penn-Elcom-30769-Compact-PA-Cabinet-Handle-6-x-7-262-319`,
     cutout: { w: 5.25, h: 4.25 },
     flange: { w: 6.75, h: 5.875 },
+    // mounted wide: the 5 1/4″ side and the grip bar run across, 4 1/4″ up (Parts Express's drawing)
+    upright: "h",
     depthIn: 2,
     lb: 0.369,
     screws: null,
@@ -51,6 +56,8 @@ export const INPUT_PLATE = {
   url: `${PE}Penn-Elcom-D0604K-Dish-Two-Neutrik-D-Black-3-1-2-x-5-1-8-262-334`,
   cutout: { w: 4, h: 2.5 },
   flange: { w: 5.125, h: 3.5 },
+  // the two connectors side by side: 4″ across, 2 1/2″ up (the listing's W × H)
+  upright: "h",
   depthIn: 33 / 64,
   lb: 0.28,
   screws: null,
@@ -67,6 +74,7 @@ export const INPUT_JACK = {
   url: `${PE}Neutrik-NL4MP-Speakon-4-Pole-Panel-Mount-092-052`,
   cutout: null,
   flange: null,
+  upright: "h",
   depthIn: null,
   lb: 0.05,
   screws: null,
@@ -86,6 +94,8 @@ export const HORN_POSTS = {
   url: `${PE}Recessed-Speaker-Terminal-Banana-5-Way-Binding-Posts-260-303`,
   cutout: { w: 2.875, h: 2.125 },
   flange: { w: 3.625, h: 3.125 },
+  // on the lid: 2 7/8″ across, 2 1/8″ front to back
+  upright: "h",
   depthIn: null,
   lb: 0.152,
   screws: null,

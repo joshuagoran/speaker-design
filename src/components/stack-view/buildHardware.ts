@@ -3,6 +3,7 @@ import { insideToScene } from "./buildBraces";
 import { ROUNDOVER_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import type { BoxHardwarePlan, Dims3, PlacedHardware } from "../../types";
+import { mountedCutout, mountedFlange } from "../../lib/pa/hardware";
 
 /** The name the handles, dishes and posts carry, so a check can find them in the scene. */
 export const HARDWARE_MESH_NAME = "hardware";
@@ -44,7 +45,7 @@ function faceOf(p: PlacedHardware, box: Dims3, y: number, x: number) {
   }
 }
 
-/** A flat box on a face: `w` along the part's width, `h` along its height, `t` off the face, at `off` out from it. */
+/** A flat box on a face: `w` across the panel, `h` up it (front to back on the lid), `t` off the face, at `off` out from it. */
 function plate(
   p: PlacedHardware,
   face: ReturnType<typeof faceOf>,
@@ -107,19 +108,22 @@ export function buildHardware(
   const { hardware: steel, black } = ctx.materials;
   const place = insideToScene(ctx, box, y, x);
   for (const p of plan.parts) {
-    const c = p.part.cutout;
+    // each size as mounted (the catalogue's `upright`): across the panel and up it
+    const c = mountedCutout(p.part);
     if (!c) continue;
-    const f = p.part.flange ?? c;
+    const f = mountedFlange(p.part) ?? c;
     const face = faceOf(p, box, y, x);
-    parent.add(plate(p, face, f.w, f.h, FLANGE_T_IN, 0, steel));
-    parent.add(plate(p, face, c.w, c.h, PROUD_IN, FLANGE_T_IN, black));
+    parent.add(plate(p, face, f.across, f.up, FLANGE_T_IN, 0, steel));
+    parent.add(plate(p, face, c.across, c.up, PROUD_IN, FLANGE_T_IN, black));
     const top = FLANGE_T_IN + PROUD_IN;
-    if (p.kind === "handle") parent.add(plate(p, face, c.w * 0.8, c.h * 0.18, 0.15, top, steel));
+    // the grip bar runs across the opening
+    if (p.kind === "handle")
+      parent.add(plate(p, face, c.across * 0.8, c.up * 0.18, 0.15, top, steel));
     else if (p.kind === "plate")
-      for (const du of [-c.w / 4, c.w / 4])
+      for (const du of [-c.across / 4, c.across / 4])
         parent.add(stud(p, face, JACK_DIA_IN, 0.2, top, du, steel));
     else
-      for (const du of [-c.w / 5, c.w / 5])
+      for (const du of [-c.across / 5, c.across / 5])
         parent.add(stud(p, face, POST_DIA_IN, 0.4, top, du, steel));
     // the pocket behind the panel, where the recess takes room (it shows in the cutaway)
     if (ctx.cutaway && p.litres > 0) {

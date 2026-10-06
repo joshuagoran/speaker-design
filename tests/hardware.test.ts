@@ -261,14 +261,14 @@ test("the cutlist notes each cutout on its panel, from a named edge", () => {
   assert.ok(side.startsWith(row(plain, "sub", "side")), "the joint's note stays first");
   assert.ok(
     side.includes(
-      `${formatInches(handle.cutout.w)} × ${formatInches(handle.cutout.h)}″ cutout for the ${handle.name} handle, both sides, centred ${formatInches(s.parts[0].u)}″ back from the front edge and ${formatInches(s.parts[0].v)}″ up from the bottom edge`,
+      `${formatInches(handle.cutout.w)}″ wide × ${formatInches(handle.cutout.h)}″ high cutout for the ${handle.name} handle, both sides, centred ${formatInches(s.parts[0].u)}″ back from the front edge and ${formatInches(s.parts[0].v)}″ up from the bottom edge`,
     ),
     side,
   );
   const back = row(fitted, "sub", "back");
   assert.ok(
     back.includes(
-      `4 × 2 1/2″ cutout for the ${INPUT_PLATE.name} input dish, centred side to side, its centre ${formatInches(s.parts[2].v - t / 2)}″ up from the bottom edge; 2 × ${INPUT_JACK.name}`,
+      `4″ wide × 2 1/2″ high cutout for the ${INPUT_PLATE.name} input dish, centred side to side, its centre ${formatInches(s.parts[2].v - t / 2)}″ up from the bottom edge; 2 × ${INPUT_JACK.name}`,
     ),
     back,
   );
@@ -277,10 +277,49 @@ test("the cutlist notes each cutout on its panel, from a named edge", () => {
   const top = row(fitted, "mid", "topBottom");
   assert.ok(
     top.includes(
-      `2 7/8 × 2 1/8″ cutout for the ${HORN_POSTS.name} horn binding posts, top only, centred side to side, its centre ${formatInches(d.mDim.d - m.parts[3].v)}″ from the rear edge`,
+      `2 7/8″ wide × 2 1/8″ front to back cutout for the ${HORN_POSTS.name} horn binding posts, top only, centred side to side, its centre ${formatInches(d.mDim.d - m.parts[3].v)}″ from the rear edge`,
     ),
     top,
   );
+});
+
+test("each handle is mounted as its catalogue entry says: the H1105 tall, the 30769 wide", () => {
+  const h1105 = HANDLES.find((h) => h.id === "H1105");
+  assert.ok(h1105);
+  // the default sub is deep enough for the H1105's 8 5/8″ flange lying either way; it stands tall now
+  const plan = subPlan({ ...DEFAULT_HARDWARE.sub, model: "H1105" });
+  const side = plan.parts[0];
+  const tall = side.recess.y[1] - side.recess.y[0],
+    wide = side.recess.z[1] - side.recess.z[0];
+  assert.ok(tall > wide, `${tall} × ${wide}`);
+  close(null, tall, h1105.cutout.w, 1e-9);
+  close(null, wide, h1105.cutout.h, 1e-9);
+  // the cutlist note gives it the same way round
+  const fitted = cutParts({
+    sub: d.sub,
+    mid: d.mid,
+    subBox: d.cDim,
+    midDims: d.mDim,
+    wall: t,
+    inset: d.inset,
+    joint: d.joint,
+    portStyle: d.portStyle,
+    cVent: vent,
+    layout: d.layout,
+    hardware: { ...DEFAULT_HARDWARE, sub: { ...DEFAULT_HARDWARE.sub, model: "H1105" } },
+  }).parts;
+  const note = fitted.find((p) => p.box === "sub" && p.part === "side")?.note ?? "";
+  assert.ok(note.includes(`4 1/4″ wide × 6 3/4″ high cutout for the ${h1105.name}`), note);
+  // the 30769 lies wide: its 5 1/4″ side runs front to back
+  const compact = subPlan().parts[0];
+  assert.ok(compact.recess.z[1] - compact.recess.z[0] > compact.recess.y[1] - compact.recess.y[0]);
+  // on a box only 9″ deep the tall H1105 still fits the depth, where lying wide it couldn't
+  const shallow = { ...d.cDim, d: 9 };
+  const inShallow = subHardwarePlan(shallow, t, d.inset, "round2", vent, d.sub, undefined, {
+    ...DEFAULT_HARDWARE.sub,
+    model: "H1105",
+  });
+  assert.ok(!inShallow.parts[0].hits.includes("edge"), hitsOf(inShallow));
 });
 
 test("a bottom slot's shelf, fins and folded rear wall pull the sub's handles down", () => {

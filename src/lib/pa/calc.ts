@@ -89,7 +89,7 @@ import {
   paBoxPanels,
   type PaBoxSupports,
 } from "./bracing";
-import { hardwareLitres, planBoxHardware } from "./hardware";
+import { hardwareLitres, mountedCutout, planBoxHardware } from "./hardware";
 import { INPUT_JACK } from "../../data/catalog/cabinet-hardware";
 import { HARDWARE_KIND_NAMES } from "../../constants/hardware";
 
@@ -1028,12 +1028,18 @@ export const cutoutNote = (inches: number) =>
 
 /** A box's hardware cutout notes, by the cutlist row they go on: the sides (both), the top, the back. */
 export type HardwareCutNotes = Partial<Record<"side" | "top" | "back", string>>;
-/** A part's cutout note, as cutoutNote words a driver's: its size, the part, and where it goes (`where`). */
+/**
+ * A part's cutout note, as cutoutNote words a driver's: its size as mounted (across the panel by up it, or front to back
+ * on the lid), the part, and where it goes (`where`).
+ */
 export const hardwareCutoutNote = (
-  part: Pick<BoxHardwarePlan["parts"][number], "part" | "kind">,
+  part: Pick<BoxHardwarePlan["parts"][number], "part" | "kind" | "panel">,
   where: string,
-) =>
-  `${formatInches(part.part.cutout?.w ?? 0)} × ${formatInches(part.part.cutout?.h ?? 0)}″ cutout for the ${part.part.name} ${HARDWARE_KIND_NAMES[part.kind]}, ${where}`;
+) => {
+  const c = mountedCutout(part.part) ?? { across: 0, up: 0 };
+  const up = part.panel === "top" ? "front to back" : "high";
+  return `${formatInches(c.across)}″ wide × ${formatInches(c.up)}″ ${up} cutout for the ${part.part.name} ${HARDWARE_KIND_NAMES[part.kind]}, ${where}`;
+};
 /**
  * A box's hardware as cutout notes on its panels, each centre from a named edge of that panel: the handles on both
  * sides (from the front and bottom edges), the dish on the back (its bottom edge sits in the rabbet, t/2 up), the

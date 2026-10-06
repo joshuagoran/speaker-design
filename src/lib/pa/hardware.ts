@@ -93,6 +93,19 @@ export function savedHardware(x: unknown): PaHardware {
 export const boxTakesHardware = (box: HardwareBoxId, layout: PaLayout | undefined) =>
   box === "sub" || layout !== "tower";
 
+/**
+ * A listed size (a part's cutout or flange) as it is mounted: `across` the panel (front to back on a side, left to right
+ * on the back and the lid) and `up` it (front to back on the lid), by the part's `upright`.
+ */
+export const mountedSize = (s: { w: number; h: number }, part: Pick<CabinetPart, "upright">) =>
+  part.upright === "w" ? { across: s.h, up: s.w } : { across: s.w, up: s.h };
+/** A part's cutout as mounted (mountedSize); none for a part that mounts in another. */
+export const mountedCutout = (part: CabinetPart) =>
+  part.cutout ? mountedSize(part.cutout, part) : null;
+/** A part's flange as mounted; its cutout where no flange is listed. */
+export const mountedFlange = (part: CabinetPart) =>
+  part.flange ? mountedSize(part.flange, part) : mountedCutout(part);
+
 /** The litres a part's recess takes inside a box with walls `t` thick: its cutout over the depth past the wall. */
 export const partRecessLitres = (part: CabinetPart, t: number) =>
   part.cutout && part.depthIn !== null
@@ -238,15 +251,15 @@ interface Draft {
   /** the cutout's centre in the panel's plane, box axes (the panel's own axis is ignored) */
   at: { x: number; y: number; z: number };
 }
-/** The cutout's size on the box axes: a side's along z (front to back) by y, the back's x by y, the lid's x by z. */
+/** The cutout's size on the box axes as mounted: a side's across along z (front to back) by up along y, the back's x by y, the lid's x by z. */
 function cutoutSpan(d: Draft) {
-  const c = d.part.cutout ?? { w: 0, h: 0 };
-  const f = d.part.flange ?? c;
+  const c = mountedCutout(d.part) ?? { across: 0, up: 0 };
+  const f = mountedFlange(d.part) ?? c;
   return d.panel === "sideL" || d.panel === "sideR"
-    ? { z: c.w, y: c.h, x: 0, fz: f.w, fy: f.h, fx: 0 }
+    ? { z: c.across, y: c.up, x: 0, fz: f.across, fy: f.up, fx: 0 }
     : d.panel === "back"
-      ? { x: c.w, y: c.h, z: 0, fx: f.w, fy: f.h, fz: 0 }
-      : { x: c.w, z: c.h, y: 0, fx: f.w, fz: f.h, fy: 0 };
+      ? { x: c.across, y: c.up, z: 0, fx: f.across, fy: f.up, fz: 0 }
+      : { x: c.across, z: c.up, y: 0, fx: f.across, fz: f.up, fy: 0 };
 }
 /** The room a part's recess takes inside, box axes, reaching `depthIn` from the panel's outside face (its listed depth). */
 function recessOf(
@@ -455,7 +468,7 @@ export function planBoxHardware({
       placed.push(place(d, dims, inner, t, inset, hitsOf(d, dims, inner, t, inset, obs, placed)));
     }
   }
-  const plateH = INPUT_PLATE.cutout.h / 2 + HARDWARE_EDGE_CLEAR_IN;
+  const plateH = mountedSize(INPUT_PLATE.cutout, INPUT_PLATE).up / 2 + HARDWARE_EDGE_CLEAR_IN;
   placed.push(
     firstClear(
       (y) => ({
@@ -475,7 +488,7 @@ export function planBoxHardware({
     ),
   );
   if (box === "mid") {
-    const postsH = HORN_POSTS.cutout.h / 2 + HARDWARE_EDGE_CLEAR_IN;
+    const postsH = mountedSize(HORN_POSTS.cutout, HORN_POSTS).up / 2 + HARDWARE_EDGE_CLEAR_IN;
     placed.push(
       firstClear(
         (z) => ({
