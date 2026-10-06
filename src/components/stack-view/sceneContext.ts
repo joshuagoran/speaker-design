@@ -25,6 +25,10 @@ export interface SceneContext {
     hornShell: THREE.MeshStandardMaterial;
     /** handles, input dishes and horn posts */
     hardware: THREE.MeshStandardMaterial;
+    /**
+     * a part's hole in its panel (buildHardware): draws nothing, marks the stencil where the shell then isn't drawn
+     */
+    holeMask: THREE.MeshBasicMaterial;
   };
   /** side, top, bottom and back plywood, inches */
   wall: number;
@@ -32,6 +36,9 @@ export interface SceneContext {
   inset: number;
   cutaway: boolean;
 }
+
+/** The stencil value a part's hole mask writes and the shell is not drawn over. */
+const HOLE_STENCIL = 1;
 
 export function createSceneContext({
   wall,
@@ -90,19 +97,34 @@ export function createSceneContext({
     roughness: 0.55,
     side: THREE.DoubleSide,
   });
+  // the cabinet shell gives way where a part's hole mask marked the stencil (HOLE_STENCIL), so the panel opens onto the
+  // part's recess; every other material ignores the stencil
+  const shell = cutaway ? ghost : wood;
+  shell.stencilWrite = true;
+  shell.stencilRef = HOLE_STENCIL;
+  shell.stencilFunc = THREE.NotEqualStencilFunc;
+  const holeMask = new THREE.MeshBasicMaterial({
+    colorWrite: false,
+    depthWrite: false,
+    stencilWrite: true,
+    stencilRef: HOLE_STENCIL,
+    stencilFunc: THREE.AlwaysStencilFunc,
+    stencilZPass: THREE.ReplaceStencilOp,
+  });
   return {
     group: new THREE.Group(),
     materials: {
       wood,
       black,
       cream,
-      shell: cutaway ? ghost : wood,
+      shell,
       baffle,
       inner,
       port,
       brace,
       hornShell,
       hardware,
+      holeMask,
     },
     wall,
     inset,
