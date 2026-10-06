@@ -4,9 +4,18 @@ import fs from "node:fs";
 import { CHIP_IDS, LIMIT_CHIP_IDS } from "../src/constants/chipIds";
 import { designProblems, evaluateDesign } from "../src/lib/pa/optimize";
 import { hifiDesignProblems } from "../src/lib/hifi/optimize";
-import { fillChips } from "../src/lib/pa/chips";
+import { fillChips, hardwareChip } from "../src/lib/pa/chips";
+import { midHardwarePlan, subHardwarePlan } from "../src/lib/pa/calc";
+import { DEFAULT_HARDWARE } from "../src/lib/pa/hardware";
 import { hifiChips, hifiSystem } from "../src/lib/hifi/hifi";
-import { HIFI_PASSIVES, HIFI_TWEETERS, HIFI_WOOFERS, MID_BOXES } from "../src/lib/data";
+import {
+  HIFI_PASSIVES,
+  HIFI_TWEETERS,
+  HIFI_WOOFERS,
+  MID_BOXES,
+  MID_OPTIONS,
+  SUB_OPTIONS,
+} from "../src/lib/data";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { keysOf } from "../src/lib/records";
 import type {
@@ -113,12 +122,40 @@ const fillLists = [
   fillChips({ ...fillBase, Fb: null, Qtc: 0.9, hf: null }),
 ];
 
+// each box's hardware fit chip, on the seeds' boxes with the default handles (some clash, most fit)
+const hardwareLists = paDesigns.slice(0, 10).flatMap((c) => {
+  const sub = SUB_OPTIONS.find((o) => o.id === c.sub),
+    mid = MID_OPTIONS.find((o) => o.id === c.mid);
+  if (!sub || !mid) return [];
+  const s = subHardwarePlan(
+    c.cDim,
+    c.wall,
+    c.inset,
+    c.portStyle,
+    c.cVent,
+    sub,
+    c.braceStyle,
+    DEFAULT_HARDWARE.sub,
+  );
+  const m = midHardwarePlan(
+    c.mDim,
+    c.wall,
+    c.inset,
+    mid,
+    c.layout,
+    c.braceStyle,
+    DEFAULT_HARDWARE.mid,
+  );
+  return [[hardwareChip(s), ...(m ? [hardwareChip(m)] : [])]];
+});
+
 const lists: [ChipSection, Chip[][]][] = [
   ["sub", paEvals.map((m) => m.chips.sub)],
   ["mid", paEvals.map((m) => m.chips.mid)],
   ["horn", paEvals.map((m) => m.chips.horn)],
   ["fill", fillLists],
   ["hifi", hifiLists],
+  ["hardware", hardwareLists],
 ];
 
 test("every chip carries an id of its own section, and a list has one chip per check", () => {

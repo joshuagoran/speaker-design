@@ -1,0 +1,309 @@
+// Handles and input plates (lib/pa/hardware): the presets' fit checks, the litres their recesses take off the boxes,
+// the cutlist's cutout notes and the defaults older saves load with.
+import { test } from "vite-plus/test";
+import assert from "node:assert";
+import { DEFAULT_PA } from "../src/lib/defaults";
+import {
+  cutParts,
+  formatInches,
+  midHardwarePlan,
+  midSystem,
+  subGeometry,
+  subHardwarePlan,
+} from "../src/lib/pa/calc";
+import {
+  DEFAULT_HARDWARE,
+  hardwareFits,
+  hardwareLb,
+  hardwareLitres,
+  partRecessLitres,
+  planBoxHardware,
+  savedHardware,
+} from "../src/lib/pa/hardware";
+import { HANDLES, HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../src/data/catalog/cabinet-hardware";
+import { hardwareChip } from "../src/lib/pa/chips";
+import { evaluateDesign } from "../src/lib/pa/optimize";
+import { NO_HANDLES } from "../src/constants/hardware";
+import type {
+  BoxBracing,
+  BoxHandles,
+  PaDesignConfig,
+  PaHardware,
+  PortStyle,
+  VentSpec,
+} from "../src/types";
+import { close } from "./helpers";
+
+const d = DEFAULT_PA;
+const t = d.wall;
+const vent: VentSpec = { ...d.cVent, div: 0.5 };
+const IN3_TO_L = 16.387 / 1000;
+const subPlan = (
+  handles: BoxHandles = DEFAULT_HARDWARE.sub,
+  style: PortStyle = d.portStyle,
+  v = vent,
+) => subHardwarePlan(d.cDim, t, d.inset, style, v, d.sub, undefined, handles);
+const midPlan = (handles: BoxHandles = DEFAULT_HARDWARE.mid) =>
+  midHardwarePlan(d.mDim, t, d.inset, d.mid, d.layout, undefined, handles);
+const hitsOf = (plan: ReturnType<typeof subPlan>) =>
+  plan.parts.map((p) => `${p.panel} ${p.kind}: ${p.hits.join(", ")}`).join(" | ");
+
+test("the default boxes take their handles, dish and posts with nothing in the way", () => {
+  const s = subPlan();
+  const m = midPlan();
+  assert.ok(m, "the stack's mid box has hardware");
+  assert.ok(hardwareFits(s), hitsOf(s));
+  assert.ok(hardwareFits(m), hitsOf(m));
+  // two handles, one each side at the same place, then the dish on the back (and the mid's posts on the lid)
+  assert.deepStrictEqual(
+    s.parts.map((p) => `${p.panel} ${p.kind}`),
+    ["sideL handle", "sideR handle", "back plate"],
+  );
+  assert.deepStrictEqual(
+    m.parts.map((p) => `${p.panel} ${p.kind}`),
+    ["sideL handle", "sideR handle", "back plate", "top posts"],
+  );
+  assert.equal(s.parts[0].u, s.parts[1].u);
+  assert.equal(s.parts[0].v, s.parts[1].v);
+  // the dish sits low on the back: just over the sub's bottom slot, at the mid's bottom edge clearance
+  const band = vent.slotH + t;
+  const plate = s.parts[2];
+  close(null, plate.v - t, band + INPUT_PLATE.cutout.h / 2, 0.26);
+  close(null, plate.u, d.cDim.w / 2, 1e-9);
+  assert.equal(hardwareChip(s)[0], "ok");
+});
+
+test("handles sit at the centre-of-gravity height and move with the offsets", () => {
+  const base = subPlan();
+  const up = subPlan({ ...DEFAULT_HARDWARE.sub, upIn: 2, backIn: 1 });
+  close(null, up.parts[0].v, base.parts[0].v + 2, 1e-9);
+  close(null, up.parts[0].u, base.parts[0].u + 1, 1e-9);
+  // the 18″ driver sits above the bottom slot, so the sub's centre of gravity is over half its height
+  assert.ok(base.parts[0].v > d.cDim.h / 2, `${base.parts[0].v}`);
+});
+
+test("a handle that runs into the vent, an edge, a rib or the driver says so", () => {
+  // side ducts run up both side walls: the handles' recesses land in them
+  const side = subPlan(DEFAULT_HARDWARE.sub, "vslots", { ...vent, throat: 2 });
+  assert.ok(
+    side.parts.filter((p) => p.kind === "handle").every((p) => p.hits.includes("vent")),
+    hitsOf(side),
+  );
+  const chip = hardwareChip(side);
+  assert.equal(chip[0], "warn");
+  assert.ok(chip[2].includes("the vent"), chip[2]);
+  // pushed up past the lid: the panel's edge and joint
+  const high = subPlan({ ...DEFAULT_HARDWARE.sub, upIn: 8 + d.cDim.h / 2 });
+  assert.ok(high.parts[0].hits.includes("edge"), hitsOf(high));
+  // a rib on each side across the handles' place
+  const inner = { x: d.cDim.w - 2 * t, y: d.cDim.h - 2 * t, z: d.cDim.d - d.inset - 0.75 - t };
+  const z = subPlan().parts[0].u - d.inset - 0.75;
+  const ribbed: BoxBracing = {
+    style: "ribs",
+    targetHz: 280,
+    windows: { x: [], y: [], z: [] },
+    notch: null,
+    ribs: (["sideL", "sideR"] as const).map((panel) => ({
+      panel,
+      across: "z",
+      at: [z],
+      from: 0,
+      len: inner.y,
+    })),
+    panels: [],
+    windowIn3: 0,
+    ribIn3: 0,
+    meets: true,
+  };
+  const withRibs = planBoxHardware({
+    box: "sub",
+    dims: d.cDim,
+    t,
+    inset: d.inset,
+    handles: DEFAULT_HARDWARE.sub,
+    driver: { centre: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
+    bracing: ribbed,
+    keepOut: { driver: [], vent: [] },
+  });
+  // the preset steps the handles front or back until they clear the rib
+  assert.ok(hardwareFits(withRibs), hitsOf(withRibs));
+  const offset = planBoxHardware({
+    box: "sub",
+    dims: d.cDim,
+    t,
+    inset: d.inset,
+    // and an offset that puts them back on it is caught
+    handles: { ...DEFAULT_HARDWARE.sub, backIn: z - (withRibs.parts[0].u - d.inset - 0.75) },
+    driver: { centre: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
+    bracing: ribbed,
+    keepOut: { driver: [], vent: [] },
+  });
+  assert.ok(offset.parts[0].hits.includes("rib"), hitsOf(offset));
+  // a driver body filling the box: no place for the handles clears it, and they say so
+  const full = { x: [0, inner.x], y: [0, inner.y], z: [0, inner.z] } as const;
+  const crowded = planBoxHardware({
+    box: "mid",
+    dims: d.cDim,
+    t,
+    inset: d.inset,
+    handles: DEFAULT_HARDWARE.mid,
+    driver: { centre: { x: inner.x / 2, y: inner.y / 2 }, lb: 0, depthIn: 0 },
+    bracing: null,
+    keepOut: { driver: [full], vent: [] },
+  });
+  assert.ok(crowded.parts[0].hits.includes("driver"), hitsOf(crowded));
+});
+
+test("each recess's litres come off the box's net volume, and the tuning follows", () => {
+  const h1105 = HANDLES.find((h) => h.id === "H1105");
+  assert.ok(h1105);
+  close(null, partRecessLitres(h1105, t), 6.75 * 4.25 * (2.5 - t) * IN3_TO_L, 1e-12);
+  // the dish is shallower than the wall, and the posts' depth isn't listed: neither takes room
+  assert.equal(partRecessLitres(INPUT_PLATE, t), 0);
+  assert.equal(partRecessLitres(HORN_POSTS, t), 0);
+  assert.equal(partRecessLitres(INPUT_JACK, t), 0);
+  const cfg = {
+    subBox: d.cDim,
+    midDims: d.mDim,
+    wall: t,
+    inset: d.inset,
+    portStyle: d.portStyle,
+    cVent: vent,
+    layout: d.layout,
+  };
+  const bare = subGeometry(d.sub, d.mid, cfg),
+    fitted = subGeometry(d.sub, d.mid, { ...cfg, hardware: DEFAULT_HARDWARE });
+  const litres = hardwareLitres(DEFAULT_HARDWARE, "sub", t, d.layout);
+  close(null, litres, 2 * partRecessLitres(h1105, t), 1e-12);
+  close(null, fitted.recessL, litres, 1e-12);
+  close(null, bare.netL - fitted.netL, litres, 1e-9);
+  assert.ok(fitted.Fb > bare.Fb, "a smaller box tunes higher on the same vent");
+  // the planner's plan counts the same litres
+  close(null, subPlan().litres, litres, 1e-12);
+  const mcfg = {
+    midDims: d.mDim,
+    wall: t,
+    inset: d.inset,
+    xoLo: d.xoLo,
+    xoHi: d.xoHi,
+    xoLoOrder: d.xoLoOrder,
+    xoHiOrder: d.xoHiOrder,
+    mAmpW: d.mAmpW,
+    layout: d.layout,
+  };
+  const m0 = midSystem(d.mid, mcfg),
+    m1 = midSystem(d.mid, { ...mcfg, hardware: DEFAULT_HARDWARE });
+  close(null, m0.netL - m1.netL, hardwareLitres(DEFAULT_HARDWARE, "mid", t, d.layout), 1e-9);
+  // no handles: only the dish, which takes none; the tower's mid chamber has no hardware of its own
+  const none: PaHardware = {
+    ...DEFAULT_HARDWARE,
+    sub: { ...DEFAULT_HARDWARE.sub, model: NO_HANDLES },
+  };
+  assert.equal(hardwareLitres(none, "sub", t, d.layout), 0);
+  assert.equal(hardwareLitres(DEFAULT_HARDWARE, "mid", t, "tower"), 0);
+  assert.equal(hardwareLb(DEFAULT_HARDWARE, "mid", "tower"), 0);
+  close(null, hardwareLb(none, "sub", d.layout), INPUT_PLATE.lb + 2 * INPUT_JACK.lb, 1e-12);
+});
+
+test("the cutlist notes each cutout on its panel, from a named edge", () => {
+  const cfg = {
+    sub: d.sub,
+    mid: d.mid,
+    subBox: d.cDim,
+    midDims: d.mDim,
+    wall: t,
+    inset: d.inset,
+    joint: d.joint,
+    portStyle: d.portStyle,
+    cVent: vent,
+    layout: d.layout,
+  };
+  const row = (parts: ReturnType<typeof cutParts>["parts"], box: string, part: string) => {
+    const r = parts.find((p) => p.box === box && p.part === part);
+    assert.ok(r, `${box} ${part}`);
+    return r.note;
+  };
+  const plain = cutParts(cfg).parts;
+  const fitted = cutParts({ ...cfg, hardware: DEFAULT_HARDWARE }).parts;
+  for (const box of ["sub", "mid"])
+    for (const part of ["side", "topBottom", "back"])
+      assert.ok(
+        !row(plain, box, part).includes("cutout for"),
+        `${box} ${part}: no hardware, no note`,
+      );
+  const s = subPlan(),
+    m = midPlan();
+  assert.ok(m);
+  const side = row(fitted, "sub", "side");
+  assert.ok(side.startsWith(row(plain, "sub", "side")), "the joint's note stays first");
+  assert.ok(
+    side.includes(
+      `6 3/4 × 4 1/4″ cutout for the Penn Elcom H1105 handle, both sides, centred ${formatInches(s.parts[0].u)}″ back from the front edge and ${formatInches(s.parts[0].v)}″ up from the bottom edge`,
+    ),
+    side,
+  );
+  const back = row(fitted, "sub", "back");
+  assert.ok(
+    back.includes(
+      `4 × 2 1/2″ cutout for the ${INPUT_PLATE.name} input dish, centred side to side, its centre ${formatInches(s.parts[2].v - t / 2)}″ up from the bottom edge; 2 × ${INPUT_JACK.name}`,
+    ),
+    back,
+  );
+  // the horn's posts on the mid's top only; the sub's top takes none
+  assert.ok(!row(fitted, "sub", "topBottom").includes("cutout for"));
+  const top = row(fitted, "mid", "topBottom");
+  assert.ok(
+    top.includes(
+      `2 7/8 × 2 1/8″ cutout for the ${HORN_POSTS.name} horn binding posts, top only, centred side to side, its centre ${formatInches(d.mDim.d - m.parts[3].v)}″ from the rear edge`,
+    ),
+    top,
+  );
+});
+
+test("a design saved before the hardware loads with the default handles, and reads as the planner has it", () => {
+  assert.deepStrictEqual(savedHardware(undefined), DEFAULT_HARDWARE);
+  assert.deepStrictEqual(savedHardware(null), DEFAULT_HARDWARE);
+  assert.deepStrictEqual(savedHardware("H1105"), DEFAULT_HARDWARE);
+  // a box missing, a stale model, or an offset that isn't a number: each falls back alone
+  assert.deepStrictEqual(
+    savedHardware({
+      sub: { model: "30769", upIn: 1.5, backIn: -2 },
+      mid: { model: "gone", upIn: "x" },
+    }),
+    {
+      sub: { model: "30769", upIn: 1.5, backIn: -2 },
+      mid: { model: DEFAULT_HARDWARE.mid.model, upIn: 0, backIn: 0 },
+    },
+  );
+  assert.deepStrictEqual(savedHardware({ sub: { model: NO_HANDLES } }), {
+    sub: { model: NO_HANDLES, upIn: 0, backIn: 0 },
+    mid: DEFAULT_HARDWARE.mid,
+  });
+  // the defaults are what the planner starts on
+  assert.deepStrictEqual(DEFAULT_PA.hardware, DEFAULT_HARDWARE);
+  // an old save (no hardware) evaluates as the same design with the default hardware
+  const { hardware: _drop, ...old } = DEFAULT_PA;
+  void _drop;
+  const c: PaDesignConfig = {
+    ...old,
+    sub: d.sub.id,
+    mid: d.mid.id,
+    cd: d.cd.id,
+    horn: d.horn.id,
+    format: d.format.id,
+    cabinet: d.cabinet.id,
+    midBox: d.midBox.id,
+    cVent: vent,
+  };
+  const a = evaluateDesign(c),
+    b = evaluateDesign({ ...c, hardware: DEFAULT_HARDWARE }),
+    none = evaluateDesign({
+      ...c,
+      hardware: { sub: { ...DEFAULT_HARDWARE.sub, model: NO_HANDLES }, mid: DEFAULT_HARDWARE.mid },
+    });
+  assert.ok(a && b && none);
+  assert.deepStrictEqual(a, b);
+  // without the sub's handles its box is bigger inside (lower tuning) and lighter
+  assert.ok(none.netL > a.netL && none.Fb < a.Fb, `${none.netL} ${a.netL}`);
+  assert.ok(none.subLb < a.subLb);
+});
