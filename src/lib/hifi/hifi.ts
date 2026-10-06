@@ -8,8 +8,6 @@ import {
   ampVoltage,
   thermalVoltageLimit,
   keeleFrequency,
-  isPanelThickness,
-  plywoodLbPerSqFt,
   highpassGain,
   rectangleEndCorrection,
   slotMouthCorrection,
@@ -17,7 +15,8 @@ import {
 } from "../pa/calc";
 import { MAX_ELBOWS, tubeElbows, tubeMaxLength, type TubeRoom } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
-import { MDF_LB_PER_SQ_FT } from "../../data/catalog/plywood";
+import { panelLbPerSqFt } from "../panel";
+import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { BIRCH_PLY_STIFFNESS, MDF_STIFFNESS, plateFirstModeHz } from "../bracing";
 import type {
   BracePanelId,
@@ -259,9 +258,9 @@ export function hifiSlotEndCorrection(
 }
 export const slotMaxLength = (dim: Dims3, wall: number, port: Pick<SlotPort, "h">) =>
   dim.d - 2 * wall - Math.max(port.h, 1); // leave the mouth's height behind it
-// lb/ft²; like plywoodLbPerSqFt, a wall thickness the catalogue doesn't list (user input) is weighed as 3/4″
+// lb/ft² at the wall's exact thickness (lib/panel); plywood when the material is absent
 export const panelWeightLb = (t: number, mat: PanelMaterial | undefined) =>
-  mat === "mdf" ? MDF_LB_PER_SQ_FT[isPanelThickness(t) ? t : 0.75] : plywoodLbPerSqFt(t);
+  panelLbPerSqFt(t, mat ?? PLYWOOD_MATERIAL);
 /**
  * The box's panels' first plate resonances (lib/bracing, the PA boxes' plate model), at the material's stiffness and
  * weight, unbraced. The Hi-fi box has no bracing rule: its woofer plays through every panel mode up to the tweeter

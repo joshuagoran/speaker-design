@@ -1,5 +1,5 @@
 // The PA boxes' panels for the bracing rule (lib/bracing): their spans, stock and the supports the vent's own parts give.
-import type { BracePanel, PanelStock } from "../../types";
+import type { BracePanel, PlateStock } from "../../types";
 
 /** The sub-to-mid crossover the PA boxes are braced for, Hz: the top of the optimizers' range (XO_LO_OPTIONS, tested). */
 export const PA_BRACING_CROSSOVER_HZ = 140;
@@ -41,8 +41,8 @@ export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], botto
  */
 export function paBoxPanels(
   { iw, ih, inD, band }: PaBoxInside,
-  wall: PanelStock,
-  baffle: PanelStock,
+  wall: PlateStock,
+  baffle: PlateStock,
   sup: PaBoxSupports,
 ): BracePanel[] {
   const base = { offU: 0, offV: 0, fixedU: [], fixedV: [] };

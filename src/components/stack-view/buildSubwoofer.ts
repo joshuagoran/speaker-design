@@ -7,6 +7,7 @@ import { towerSpec } from "./stackHeights";
 import { modelTubeElbows, subTubeLegs, tubeLayout } from "../../lib/pa/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import {
+  ductDividerIn,
   foldedRearWallIn,
   foldedShelfIn,
   isRoundPort,
@@ -138,6 +139,7 @@ export function buildSubwoofer(
     // throat-width gap to the back panel
     const zr = Math.max(zb + throat, zf - (pg.tubeLen != null ? pg.tubeLen : zf - zb));
     const sideLen = zf - zr;
+    const divT = ductDividerIn({ div: pg.divider });
 
     sides.forEach((k) => {
       const xo = k * (innerW / 2); // inside face of the side wall
@@ -162,9 +164,9 @@ export function buildSubwoofer(
       wall.position.set(0, yc - slotH / 2, 0);
       subGroup.add(wall);
 
-      // two 1/2 in dividers per duct, bracing the inner wall to the side wall
+      // two dividers per duct, bracing the inner wall to the side wall, at the design's divider thickness
       [-1, 1].forEach((f) => {
-        const div = new THREE.Mesh(new THREE.BoxGeometry(throat, 0.5, sideLen), plyIn);
+        const div = new THREE.Mesh(new THREE.BoxGeometry(throat, divT, sideLen), plyIn);
         div.position.set(k * (innerW / 2 - throat / 2), yc + (f * slotH) / 6, zr + sideLen / 2);
         subGroup.add(div);
       });

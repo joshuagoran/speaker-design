@@ -12,6 +12,7 @@ import type { AMP_SERIES } from "./data/catalog/amps";
 import type { DSP_UNITS } from "./data/catalog/dsp-units";
 import type { Keep } from "./lib/optimizer/shortfall";
 import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
+import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
 import type { SelectedCard } from "./lib/optimizer/selectCards";
 
 // Shapes of the parts catalogue tables in data/catalog/ (lib/data.ts derives the app's view of them).
@@ -781,6 +782,8 @@ export interface HifiOptimizerInput {
   seatM?: number;
   /** the price of a waveguide, for one speaker */
   guidePrice?: number;
+  /** the walls the search tries when the wall isn't locked: each nominal size's exact thickness, inches */
+  walls?: readonly number[];
 }
 
 /** What a design is scored on: price for the pair in dollars, weight in lb, in-room F3 in Hz and clean level at the seat in dB. */
@@ -799,7 +802,10 @@ export interface HifiDesignState {
   selectedWaveguide: HifiWaveguide;
   boxType: HifiBoxKind;
   boxDims: Dims3;
-  wallThicknessIn: number;
+  /** the walls' nominal size */
+  wallPanel: PanelNominal;
+  /** the Cutlist page's measured thickness of each nominal size */
+  panelExactIn: PanelExactIn;
   panelMaterial: PanelMaterial;
   portSpec: HifiPort;
   radiatorSelection: RadiatorSelection;
@@ -841,6 +847,8 @@ export interface HifiSpeakerModel {
 
 /** The Hi-fi design as the models read it, worked out from the planner's state. */
 export interface HifiDesign {
+  /** the walls' exact thickness, inches (lib/panel): what the model, cutlist and weight are worked out at */
+  wallThicknessIn: number;
   /** the waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded) */
   compressionWaveguide: WaveguideSpec;
   /** the waveguide in use: the tweeter's own, the picked one for a tweeter that needs one, else none */
@@ -909,6 +917,8 @@ export type HifiOptimizedFields = Pick<HifiCardConfig, HifiOptimizedField>;
  */
 export interface SavedHifiConfig extends Omit<HifiCardConfig, "pr"> {
   pr?: RadiatorSelection;
+  /** the walls' nominal size; absent in configs saved before the sizes (their `wall` names it) */
+  panel?: PanelNominal;
   guide: string;
   mat: PanelMaterial;
   order: CrossoverOrder;
@@ -993,12 +1003,26 @@ export interface PlywoodSheet {
   name: string;
 }
 
-/** The panel thicknesses, inches, the catalogue lists a weight for (plywood and MDF). */
-export type PanelThickness = 0.75 | 0.5;
+/** A nominal panel size, by id (`PANEL_NOMINAL_NAMES`): what the design pages pick. */
+export type PanelNominal = keyof typeof PANEL_NOMINAL_NAMES;
+
+/** The measured thickness of each nominal size, inches, as the Cutlist page keeps it; a size absent here is at its default. */
+export type PanelExactIn = Partial<Record<PanelNominal, number>>;
+
+/** One material at a nominal size: its default exact thickness and its weight at that thickness (lb/ft²). */
+export interface PanelStockMaterial {
+  t: number;
+  lb: number;
+}
+
+/** A nominal panel size in the catalogue: its imperial and metric sizes, and each material's default thickness and weight. */
+export type PanelStock = { in: number; mm: number } & Record<PanelMaterial, PanelStockMaterial>;
 
 /**
  * The sub's vent, in inches: the planner keeps every field, whichever layout uses it (`slotH` the slots, `throat` the
- * side ducts, `nt` and `dia` the tubes), and `len` is the duct length in all of them.
+ * side ducts, `nt` and `dia` the tubes), and `len` is the duct length in all of them. `div` is the side ducts'
+ * dividers' exact thickness (the design's divider size at the Cutlist page's measured thickness, lib/panel); absent,
+ * as in saves from before the choice, they are ½″ (`ductDividerIn`).
  */
 export interface VentSpec {
   slotH: number;
@@ -1006,6 +1030,7 @@ export interface VentSpec {
   dia: number;
   throat: number;
   len: number;
+  div?: number;
 }
 
 /** A set of round port tubes from stock pipe: how many, and each one's inside diameter in inches. */
@@ -1058,8 +1083,12 @@ export interface PaDesignConfig {
   portMax: number;
   /** the mid box's outside size */
   mDim: Dims3;
-  /** side, top, bottom and back plywood, inches */
+  /** side, top, bottom and back plywood, inches: the exact thickness of `panel` (lib/panel) */
   wall: number;
+  /** the walls' nominal size; absent in designs saved before the sizes (their `wall` names it) */
+  panel?: PanelNominal;
+  /** the side ducts' dividers' nominal size (their exact thickness is `cVent.div`); absent in older saves: ½″ */
+  divider?: PanelNominal;
   /** how far the baffles sit behind the frame front, inches */
   inset: number;
   /** how the boxes are braced; absent: the default for the plywood (`defaultBraceStyle`) */
@@ -1091,6 +1120,8 @@ export interface PaDesignConfig {
   waterfall?: boolean;
   offcut?: OffcutShape;
   cuts?: CutStyle;
+  /** the Cutlist page's measured thickness of each nominal size */
+  exactIn?: PanelExactIn;
   summary?: string;
 }
 
@@ -1185,13 +1216,14 @@ export interface VentGeometry {
   desc: string;
 }
 
-/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length and throat (all inches). */
+/** The sub's vent as the 3D view draws it, from the design's vent spec: duct height, tube count, tube radius, tube length, throat and the side ducts' dividers' thickness (all inches). */
 export interface PaPortGeometry {
   ductH: number;
   nPorts: number;
   portR: number;
   tubeLen: number;
   throat: number;
+  divider: number;
 }
 
 /** What `subGeometry` needs: boxes, plywood, vent and layout. */
@@ -1396,7 +1428,7 @@ export type BracePanelId = keyof typeof BRACE_PANEL_NAMES;
 export type BoxAxis = keyof typeof BOX_AXIS_NAMES;
 
 /** A panel's stock as the plate model reads it: thickness (in), weight (lb/ft²) and bending moduli (Pa). */
-export interface PanelStock {
+export interface PlateStock {
   t: number;
   lbPerSqFt: number;
   /** bending modulus along the face grain (the stiffer way), Pa */
@@ -1417,7 +1449,7 @@ export interface BracePanel {
   /** where the panel's own edge sits on the box axes (the baffle starts above a bottom slot), in */
   offU: number;
   offV: number;
-  stock: PanelStock;
+  stock: PlateStock;
   /** whether ribs can go on it (not the baffle: a rib can't cross the driver) */
   ribs: boolean;
   /** the box's own parts that already hold it in a line across each axis (the vent shelf, duct walls), in from its edge */

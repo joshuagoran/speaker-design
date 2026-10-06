@@ -29,7 +29,7 @@ import {
   VENT_STYLES,
   XO_HI_OPTIONS,
   XO_LO_OPTIONS,
-  WALL_OPTIONS,
+  paSearchWalls,
   highpassOptions,
   designProblems,
   evaluateDesign,
@@ -241,7 +241,7 @@ function exactSpace(input: PaOptimizerInput, grid: PaExactGrid): ExactSpace {
   const fixed = (["w", "h", "d"] as const)
     .filter((k) => k !== free)
     .map((k): [keyof Dims3, number[]] => [k, inchSteps(sr[k])]);
-  const walls = locks.wall ? [cur.wall] : WALL_OPTIONS;
+  const walls = paSearchWalls(cur, locks);
   const top = boxInternalLiters(sr.w[1], sr.h[1], sr.d[1], Math.min(...walls), cur.inset);
   const rungs: number[] = [];
   if (free) for (let v = grid.minNetL; v <= top; v *= 1 + grid.volumeStep) rungs.push(v);

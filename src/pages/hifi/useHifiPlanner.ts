@@ -21,6 +21,7 @@ import type {
   CrossoverOrder,
   ListeningSeat,
   PanelMaterial,
+  PanelNominal,
   PortMemory,
   RadiatorSelection,
   SavedHifiConfig,
@@ -28,6 +29,9 @@ import type {
 } from "../../types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
+import { useHifiCutlistOptions } from "../cutlist/useHifiCutlistOptions";
+import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
+import { panelFor, panelIn, restoredPanel } from "../../lib/panel";
 
 /** Everything the Hi-fi page reads: the design state and its setters, the model derived from it, the optimizer, and saving. */
 export interface HifiPlanner extends HifiDesignState, HifiDesign, HifiOptimizer {
@@ -36,7 +40,7 @@ export interface HifiPlanner extends HifiDesignState, HifiDesign, HifiOptimizer 
   setSelectedWaveguide: Setter<HifiWaveguide>;
   setBoxType: Setter<HifiBoxKind>;
   setBoxDims: Setter<Dims3>;
-  setWallThicknessIn: Setter<number>;
+  setWallPanel: Setter<PanelNominal>;
   setPanelMaterial: Setter<PanelMaterial>;
   setPortSpec: Setter<HifiPort>;
   /** The port after the "1 port / 2 ports / Slot" toggle, keeping the size each shape last had. */
@@ -59,6 +63,8 @@ export interface HifiPlanner extends HifiDesignState, HifiDesign, HifiOptimizer 
   setTweeterOffsetIn: Setter<number>;
   waveguideChoices: HifiWaveguide[];
   store: ConfigStore;
+  /** the Hi-fi Cutlist page's choices, remembered in this browser; its measured panel thicknesses size the box */
+  cutlist: CutlistOptions;
   /** The fields of the design a card applies: what the optimizer starts from, and what undo and preview go back to. */
   snapshot: () => HifiCardConfig;
   /** Sets those fields from a card or a snapshot. */
@@ -82,8 +88,12 @@ export function useHifiPlanner(): HifiPlanner {
   );
   const [boxType, setBoxType] = useState<HifiBoxKind>(DEFAULT_HIFI.boxType);
   const [boxDims, setBoxDims] = useState<Dims3>(DEFAULT_HIFI.boxDims);
-  const [wallThicknessIn, setWallThicknessIn] = useState(DEFAULT_HIFI.wallThicknessIn);
+  const [wallPanel, setWallPanel] = useState<PanelNominal>(DEFAULT_HIFI.wallPanel);
   const [panelMaterial, setPanelMaterial] = useState<PanelMaterial>(DEFAULT_HIFI.panelMaterial);
+  const cutlist = useHifiCutlistOptions();
+  const { panelExactIn } = cutlist;
+  // the walls' exact thickness: the nominal size at the Cutlist page's measured thickness (lib/panel)
+  const wallThicknessIn = panelIn(wallPanel, panelMaterial, panelExactIn);
   const [portSpec, setPortSpec] = useState<HifiPort>(DEFAULT_HIFI.portSpec);
   // the last round diameter and slot height, so toggling the port shape and back keeps what the user had
   // (not persisted, like portSpec itself)
@@ -136,6 +146,7 @@ export function useHifiPlanner(): HifiPlanner {
     JSON.parse(
       JSON.stringify({
         ...snapshot(),
+        panel: wallPanel,
         guide: selectedWaveguide.id,
         mat: panelMaterial,
         order: crossoverOrder,
@@ -160,7 +171,11 @@ export function useHifiPlanner(): HifiPlanner {
     setBoxDims(c.dim);
     if (c.port) setPortSpec(c.port);
     if (c.pr) setRadiatorSelection(c.pr);
-    setWallThicknessIn(c.wall);
+    // a card or snapshot names its walls by thickness: the current size while it is at that thickness (two sizes can
+    // be measured alike), else the size measured (or nominally) at it
+    setWallPanel(
+      panelFor({ wall: c.wall, panel: wallPanel }, panelMaterial, panelExactIn) ?? wallPanel,
+    );
     setCrossoverHz(c.xo);
     setWooferAmpWatts(c.wAmpW);
     setTweeterAmpWatts(c.tAmpW);
@@ -171,7 +186,8 @@ export function useHifiPlanner(): HifiPlanner {
     selectedWaveguide,
     boxType,
     boxDims,
-    wallThicknessIn,
+    wallPanel,
+    panelExactIn,
     panelMaterial,
     portSpec,
     radiatorSelection,
@@ -200,7 +216,8 @@ export function useHifiPlanner(): HifiPlanner {
         selectedWaveguide,
         boxType,
         boxDims,
-        wallThicknessIn,
+        wallPanel,
+        panelExactIn,
         panelMaterial,
         portSpec,
         radiatorSelection,
@@ -226,7 +243,8 @@ export function useHifiPlanner(): HifiPlanner {
       selectedWaveguide,
       boxType,
       boxDims,
-      wallThicknessIn,
+      wallPanel,
+      panelExactIn,
       panelMaterial,
       portSpec,
       radiatorSelection,
@@ -254,6 +272,7 @@ export function useHifiPlanner(): HifiPlanner {
     compressionWaveguide: design.compressionWaveguide,
     seatDistanceM: design.seatDistanceM,
     guidePrice: selectedWaveguide.price || 0,
+    panelExactIn,
   });
   const restoreSavedConfig = (c: Partial<SavedHifiConfig>) => {
     const pick = <T extends { id: string }>(list: readonly T[], id: string | undefined) =>
@@ -269,7 +288,12 @@ export function useHifiPlanner(): HifiPlanner {
     ok(setBoxDims, c.dim);
     ok(setPortSpec, c.port);
     ok(setRadiatorSelection, c.pr);
-    ok(setWallThicknessIn, c.wall);
+    // the size the save names, measured at the thickness it was saved at (the measurements live in this browser)
+    const walls = restoredPanel(c, c.mat ?? panelMaterial, panelExactIn);
+    if (walls) {
+      setWallPanel(walls.panel);
+      cutlist.setPanelExactIn(walls.exactIn);
+    }
     ok(setPanelMaterial, c.mat);
     ok(setCrossoverHz, c.xo);
     ok(setCrossoverOrder, c.order);
@@ -297,7 +321,7 @@ export function useHifiPlanner(): HifiPlanner {
     setSelectedWaveguide,
     setBoxType,
     setBoxDims,
-    setWallThicknessIn,
+    setWallPanel,
     setPanelMaterial,
     setPortSpec,
     togglePort,
@@ -319,6 +343,7 @@ export function useHifiPlanner(): HifiPlanner {
     setTweeterOffsetIn,
     waveguideChoices,
     store,
+    cutlist,
     snapshot,
     applyDesign,
     savedConfigSnapshot,

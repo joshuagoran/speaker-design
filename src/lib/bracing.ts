@@ -26,7 +26,7 @@ import type {
   BraceStyleId,
   PanelResonance,
   PanelRibs,
-  PanelStock,
+  PlateStock,
 } from "../types";
 
 const IN_M = 0.0254;
@@ -39,7 +39,7 @@ const LB_FT2_KG_M2 = 0.45359237 / 0.09290304;
  * birch ply is a little stiffer along the grain and a little softer across it; the same pair stands for both. Poisson's
  * ratio is left out: the two cross-ply ratios' product is well under 0.01.
  */
-export const BIRCH_PLY_STIFFNESS: Pick<PanelStock, "eStrong" | "eWeak" | "nu"> = {
+export const BIRCH_PLY_STIFFNESS: Pick<PlateStock, "eStrong" | "eWeak" | "nu"> = {
   eStrong: 10.048e9,
   eWeak: 7.452e9,
   nu: 0,
@@ -48,7 +48,7 @@ export const BIRCH_PLY_STIFFNESS: Pick<PanelStock, "eStrong" | "eWeak" | "nu"> =
  * MDF's bending modulus, Pa: EN 622-5's least for general-purpose MDF 12–19 mm thick (2 200 N/mm², tested to EN 310);
  * boards on sale are often stiffer, so this reads low. No grain: the same both ways. Poisson's ratio 0.25.
  */
-export const MDF_STIFFNESS: Pick<PanelStock, "eStrong" | "eWeak" | "nu"> = {
+export const MDF_STIFFNESS: Pick<PlateStock, "eStrong" | "eWeak" | "nu"> = {
   eStrong: 2.2e9,
   eWeak: 2.2e9,
   nu: 0.25,
@@ -70,7 +70,7 @@ export const defaultBraceStyle = (t: number): BraceStyleId =>
   t <= RIB_DEFAULT_MAX_IN + 1e-9 ? "ribs" : "window";
 
 /** The first mode of a simply supported thin plate `a` × `b` inches, Hz (the header's formula). */
-export function plateFirstModeHz(a: number, b: number, s: PanelStock): number {
+export function plateFirstModeHz(a: number, b: number, s: PlateStock): number {
   const long = Math.max(a, b) * IN_M,
     short = Math.min(a, b) * IN_M,
     h = s.t * IN_M;
@@ -86,7 +86,7 @@ export function plateFirstModeHz(a: number, b: number, s: PanelStock): number {
  * A rib's first mode as a beam simply supported over `span` inches, carrying `tributary` inches of the panel beside it,
  * Hz: the rib alone (no help from the panel as a flange, so it reads low), at the stock's weaker modulus.
  */
-export function ribFirstModeHz(span: number, tributary: number, s: PanelStock): number {
+export function ribFirstModeHz(span: number, tributary: number, s: PlateStock): number {
   const w = s.t * IN_M,
     d = RIB_DEPTH_IN * IN_M,
     L = span * IN_M;
@@ -139,7 +139,7 @@ export interface BraceBoxInput {
   panels: readonly BracePanel[];
   targetHz: number;
   style: BraceStyleId;
-  braceStock: PanelStock;
+  braceStock: PlateStock;
 }
 type RibState = Partial<Record<BracePanelId, { across: BoxAxis; n: number }>>;
 const AXES: readonly BoxAxis[] = ["x", "y", "z"];

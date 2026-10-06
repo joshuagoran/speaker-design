@@ -14,6 +14,7 @@ import {
   subThroughLowpass,
   subMusicOutputAt,
   phasedCurve,
+  ductDividerIn,
 } from "../../../lib/pa/calc";
 import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion";
 import type {
@@ -63,13 +64,12 @@ type PaDesignInputs = Pick<
   > &
   Pick<
     CabinetStyle,
-    | "plinthHeightIn"
-    | "layout"
-    | "wallThicknessIn"
-    | "braceStyle"
-    | "baffleInsetIn"
-    | "spacerHeightIn"
-  > & { dispersionPlane: DispersionPlane };
+    "plinthHeightIn" | "layout" | "baffleInsetIn" | "spacerHeightIn" | "braceStyle"
+  > & {
+    dispersionPlane: DispersionPlane;
+    /** the walls' exact thickness, in (lib/panel) */
+    wallThicknessIn: number;
+  };
 
 /** What the PA models and sizes work out from the design state. */
 export interface PaDerivedDesign {
@@ -322,6 +322,7 @@ export function derivePaDesign({
     portR: subVentSpec.dia / 2,
     tubeLen: subVentSpec.len,
     throat: subVentSpec.throat,
+    divider: ductDividerIn(subVentSpec),
   };
 
   const subWeightLoadedLb = subWeightLb(subBox, wallThicknessIn, subDriver.lb, subBracing);

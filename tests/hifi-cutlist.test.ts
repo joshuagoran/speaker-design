@@ -25,10 +25,14 @@ import type {
   RadiatorPanel,
 } from "../src/types";
 import { close } from "./helpers";
+import { panelIn } from "../src/lib/panel";
 import { checkSheet } from "./guillotine";
 
 const JOINTS: CornerJoint[] = ["butt", "rabbet", "miter"];
 const PANELS: RadiatorPanel[] = ["baffle", "back", "side"];
+
+/** The default Hi-fi walls' thickness, inches. */
+const T0 = panelIn(DEFAULT_HIFI.wallPanel, DEFAULT_HIFI.panelMaterial);
 
 /** The Hi-fi state with some fields changed, as the cutlist sees it. */
 const design = (o: Partial<HifiDesignState> = {}) => deriveHifiDesign({ ...DEFAULT_HIFI, ...o });
@@ -68,7 +72,8 @@ const settings = (o: Partial<CutlistSettings> = {}): CutlistSettings => ({
 /** The box designs the tests run over: each port and radiator kind, both wall thicknesses and materials. */
 const DESIGNS: [string, Partial<HifiDesignState>][] = [
   ["round port", {}],
-  ["sealed, 1/2″ MDF", { boxType: "sealed", wallThicknessIn: 0.5, panelMaterial: "mdf" }],
+  ["sealed, 1/2″ MDF", { boxType: "sealed", wallPanel: "1/2", panelMaterial: "mdf" }],
+  ["18 mm birch measured at 0.689″", { panelExactIn: { "3/4": 0.689 } }],
   ["slot", { portSpec: { shape: "slot", n: 1, h: 1.5, len: 7 } }],
   ["2 radiators", { boxType: "radiator" }],
   ["oval radiator", { boxType: "radiator", radiatorSelection: { id: "sb15sfcr", n: 1, addG: 0 } }],
@@ -79,7 +84,9 @@ describe("Hi-fi panels", () => {
   for (const joint of JOINTS)
     for (const [name, o] of DESIGNS)
       test(`${joint}, ${name}: the panels add up to the box's outside size`, () => {
-        const { boxDims: B, wallThicknessIn: t } = { ...DEFAULT_HIFI, ...o };
+        const s = { ...DEFAULT_HIFI, ...o };
+        const B = s.boxDims,
+          t = panelIn(s.wallPanel, s.panelMaterial, s.panelExactIn);
         const { parts } = partsOf(o, joint);
         const side = get(parts, "side"),
           top = get(parts, "topBottom"),
@@ -113,7 +120,7 @@ describe("Hi-fi panels", () => {
   test("the slot gets its shelf, a round port its bought tube; a sealed box neither", () => {
     const slot = partsOf({ portSpec: { shape: "slot", n: 1, h: 1.5, len: 7 } });
     const shelf = get(slot.parts, "slotShelf");
-    close(null, shelf.a, DEFAULT_HIFI.boxDims.w - 2 * DEFAULT_HIFI.wallThicknessIn, 1e-9);
+    close(null, shelf.a, DEFAULT_HIFI.boxDims.w - 2 * T0, 1e-9);
     close(null, shelf.b, 7, 1e-9);
     assert.match(get(slot.parts, "baffle").note, /slot: .*opening/);
     assert.equal(slot.also.length, 0);
@@ -174,7 +181,7 @@ describe("Hi-fi panels", () => {
     test(`${joint}: cutout heights are from the baffle's own bottom edge`, () => {
       const o = { portSpec: { shape: "slot", n: 1, h: 1.5, len: 7 } } as const;
       const d = design(o);
-      const t = DEFAULT_HIFI.wallThicknessIn;
+      const t = T0;
       const lay = driverLayout(
         DEFAULT_HIFI.woofer,
         d.tweeterWithWaveguide,

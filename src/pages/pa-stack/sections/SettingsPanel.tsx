@@ -26,7 +26,7 @@ import {
   settingsSheetBodyClass,
 } from "../../../components/ui/SettingsSheetTabs";
 import { useFolds } from "../../../hooks/useFolds";
-import { formatDims, formatHz, formatInches } from "../../../lib/format";
+import { formatDims, formatHz } from "../../../lib/format";
 import { crossoverSlopeName } from "../../../constants/crossovers";
 import { PA_LAYOUT_NAMES } from "../../../constants/paLayouts";
 import { PA_SETTINGS_SECTIONS } from "../../../constants/settingsSections";
@@ -36,6 +36,8 @@ import { SLOT_LAYOUT_NAMES } from "../../../constants/portStyles";
 import { UI_TEXT } from "../../../constants/uiText";
 import { BRACE_STYLE_NAMES, BRACE_STYLE_TIPS } from "../../../constants/bracing";
 import { defaultBraceStyle } from "../../../lib/bracing";
+import { PANEL_NOMINAL_NAMES } from "../../../constants/panelSizes";
+import { PANEL_NOMINAL_OPTIONS } from "../../../lib/panel";
 
 interface Props {
   planner: Pick<
@@ -51,6 +53,8 @@ interface Props {
     | "setPortStyle"
     | "subBoxDims"
     | "subVentSpec"
+    | "ductDividerPanel"
+    | "setDuctDividerPanel"
     | "subHighpassHz"
     | "setSubHighpassHz"
     | "subHighpassType"
@@ -92,9 +96,10 @@ interface Props {
     | "layout"
     | "setLayout"
     | "wallThicknessIn"
-    | "setWallThicknessIn"
+    | "wallPanel"
     | "braceStyle"
     | "setBraceStyle"
+    | "setWallPanel"
     | "baffleInsetIn"
     | "setBaffleInsetIn"
     | "baffleColor"
@@ -131,6 +136,8 @@ export function SettingsPanel({ planner }: Props) {
     setPortStyle,
     subBoxDims,
     subVentSpec,
+    ductDividerPanel,
+    setDuctDividerPanel,
     subHighpassHz,
     setSubHighpassHz,
     subHighpassType,
@@ -172,9 +179,10 @@ export function SettingsPanel({ planner }: Props) {
     layout,
     setLayout,
     wallThicknessIn,
-    setWallThicknessIn,
+    wallPanel,
     braceStyle,
     setBraceStyle,
+    setWallPanel,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,
@@ -216,7 +224,7 @@ export function SettingsPanel({ planner }: Props) {
       `highpass ${subHighpassHz} Hz`,
       `amps ${subAmpWatts} / ${midAmpWatts} / ${hornAmpWatts} W`,
     ].join(" · "),
-    look: `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${formatInches(wallThicknessIn)} ply, ${BRACE_STYLE_NAMES[shownBraceStyle].toLowerCase()}`,
+    look: `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${PANEL_NOMINAL_NAMES[wallPanel].short} ply`,
   };
   const section = (id: PaSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -341,15 +349,27 @@ export function SettingsPanel({ planner }: Props) {
                 />
               )}
               {(portStyle === "vslots" || portStyle === "vslot1") && (
-                <Slider
-                  label="Duct throat"
-                  value={subVentSpec.throat}
-                  min={PA_SLIDERS.throat.min}
-                  max={portStyle === "vslot1" ? PA_THROAT_MAX_VSLOT1 : PA_SLIDERS.throat.max}
-                  step={PA_SLIDERS.throat.step}
-                  unit="″"
-                  onChange={(v) => setSubVentField("throat", v)}
-                />
+                <>
+                  <Slider
+                    label="Duct throat"
+                    value={subVentSpec.throat}
+                    min={PA_SLIDERS.throat.min}
+                    max={portStyle === "vslot1" ? PA_THROAT_MAX_VSLOT1 : PA_SLIDERS.throat.max}
+                    step={PA_SLIDERS.throat.step}
+                    unit="″"
+                    onChange={(v) => setSubVentField("throat", v)}
+                  />
+                  <ToggleGroup
+                    label={
+                      <Tooltip tip="Two plywood dividers per duct brace its inner wall to the side wall across the throat. Thicker ones take more of the duct's height, so the vent is smaller and tunes lower. The Cutlist page takes the sheet's measured thickness.">
+                        Dividers
+                      </Tooltip>
+                    }
+                    value={ductDividerPanel}
+                    onChange={setDuctDividerPanel}
+                    options={PANEL_NOMINAL_OPTIONS}
+                  />
+                </>
               )}
               {isRoundPort(portStyle) && (
                 <>
@@ -643,19 +663,15 @@ export function SettingsPanel({ planner }: Props) {
             <ToggleGroup
               label={
                 <span className="flex items-center justify-between gap-2">
-                  <span>Plywood (baffles stay 3/4″)</span>
+                  <Tooltip tip="Birch plywood for the sides, top, bottom and back; thinner walls are braced more. The Cutlist page takes the sheet's measured thickness.">
+                    Plywood (baffles stay ¾″)
+                  </Tooltip>
                   {renderLockButton("wall", "the plywood")}
                 </span>
               }
-              value={wallThicknessIn}
-              onChange={setWallThicknessIn}
-              options={
-                [
-                  [0.75, "3/4″ birch"],
-                  [0.5, "1/2″ birch, braced"],
-                ] as const
-              }
-              wrap={false}
+              value={wallPanel}
+              onChange={setWallPanel}
+              options={PANEL_NOMINAL_OPTIONS}
             />
             <ToggleGroup
               className="mt-3"

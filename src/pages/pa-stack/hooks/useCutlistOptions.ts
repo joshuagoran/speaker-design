@@ -4,6 +4,7 @@ import type {
   CutStyle,
   GrainSettings,
   OffcutShape,
+  PanelExactIn,
   PlywoodSheetKind,
   Setter,
 } from "../../../types";
@@ -28,9 +29,12 @@ export interface CutlistOptions {
   setOffcutShape: Setter<OffcutShape>;
   cutStyle: CutStyle;
   setCutStyle: Setter<CutStyle>;
+  /** the measured thickness of each nominal panel size (lib/panel) */
+  panelExactIn: PanelExactIn;
+  setPanelExactIn: Setter<PanelExactIn>;
 }
 
-/** Cutlist choices: corner joint, plywood sheet size, how many sets of boxes to cut, kerf, edge trim, grain, waterfall, offcut and cut style. */
+/** Cutlist choices: corner joint, plywood sheet size, how many sets of boxes to cut, kerf, edge trim, grain, waterfall, offcut, cut style and measured panel thicknesses. */
 export function useCutlistOptions(): CutlistOptions {
   const [cornerJoint, setCornerJoint] = useState<CornerJoint>(DEFAULT_PA.joint); // cutlist corner joints
   const [plywoodSheetKind, setPlywoodSheetKind] = useState<PlywoodSheetKind>(
@@ -43,6 +47,7 @@ export function useCutlistOptions(): CutlistOptions {
   const [waterfall, setWaterfall] = useState<boolean>(DEFAULT_PA.waterfall);
   const [offcutShape, setOffcutShape] = useState<OffcutShape>(DEFAULT_PA.offcut);
   const [cutStyle, setCutStyle] = useState<CutStyle>(DEFAULT_PA.cuts);
+  const [panelExactIn, setPanelExactIn] = useState<PanelExactIn>(DEFAULT_PA.exactIn);
   return {
     cornerJoint,
     setCornerJoint,
@@ -62,5 +67,7 @@ export function useCutlistOptions(): CutlistOptions {
     setOffcutShape,
     cutStyle,
     setCutStyle,
+    panelExactIn,
+    setPanelExactIn,
   };
 }

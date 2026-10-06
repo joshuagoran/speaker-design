@@ -12,6 +12,7 @@ import {
 import { hifiBox, hifiGridTop, hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
 import { chipOf } from "./helpers";
+import { defaultLocks } from "../src/constants/lockKeys";
 import { DESIGN_PROBLEM_TEXT } from "../src/constants/optimizerText";
 import type {
   HifiGoal,
@@ -61,7 +62,7 @@ function cpuMs<T>(step: () => T): { value: T; ms: number } {
     { user, system } = process.cpuUsage(c0);
   return { value, ms: (user + system) / 1000 };
 }
-// The full search (every woofer and tweeter, nothing locked), run once per goal for every test that asks for it. Its box
+// The full search (every woofer and tweeter, nothing locked, so every plywood size), run once per goal for every test that asks for it. Its box
 // step reads no goal, so the goals share one box step; a goal's search time is that step's time plus its own selection,
 // as a run of `optimizeHifiSpeaker` alone would take (the split-run tests below check that handing the step over gives
 // exactly what one run gives).
@@ -78,10 +79,27 @@ function fullSearch(goal: HifiGoal) {
   return run;
 }
 
+// CPU budgets, ms. A viewer starts with the plywood size locked (LOCKS_ON_BY_DEFAULT), and that search keeps the 10 s
+// budget. Unlocked, the search tries all three sizes (¾″, ⅝″, ½″) rather than one, and its box step grows with them: CI
+// measured 12.2 to 13.9 s for this search with the third size (about 9 s with two), so it has its own budget with room
+// over that.
+const LOCKED_WALL_BUDGET_MS = 10000,
+  UNLOCKED_WALL_BUDGET_MS = 18000;
+
+test("hi-fi optimizer: with the plywood locked (the default), the full search stays in its budget on your size", () => {
+  const input = { ...base, locks: { wall: true }, goals: ["cheaper" as const] },
+    boxes = cpuMs(() => hifiScoreBoxes(input)),
+    select = cpuMs(() => optimizeHifiSpeaker(input, [boxes.value])),
+    ms = boxes.ms + select.ms;
+  assert.ok(ms < LOCKED_WALL_BUDGET_MS, `${Math.round(ms)} ms of CPU time`);
+  assert.ok(select.value.cards.length >= 1 || select.value.goalMissing, "cards or a message");
+  for (const k of select.value.cards) assert.equal(k.config.wall, cur.wall, k.label);
+});
+
 for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
   test(`hi-fi optimizer (${goal}): cards pass the checks, stay in budget, and their labels are true`, (t) => {
     const { out, ms } = fullSearch(goal);
-    assert.ok(ms < 10000, `${Math.round(ms)} ms of CPU time`);
+    assert.ok(ms < UNLOCKED_WALL_BUDGET_MS, `${Math.round(ms)} ms of CPU time`);
     assert.ok(out.cards.length >= 1 || out.goalMissing, "cards or a message");
     for (const k of out.cards) {
       const w = HIFI_WOOFERS.find((o) => o.id === k.woofer)!,
@@ -458,9 +476,27 @@ test("hi-fi optimizer: your box is searched on the other plywood even when your 
   const yours = space.grid.filter((e) => e.w.id === cur.woofer);
   assert.deepEqual(
     yours.map((e) => [e.wall, e.dim]),
-    [[0.5, cur.dim]],
-    "your box on 1/2 in ply only (your woofer itself is filtered out)",
+    [
+      [0.625, cur.dim],
+      [0.5, cur.dim],
+    ],
+    "your box on the other plywoods only (your woofer itself is filtered out)",
   );
+});
+
+test("hi-fi optimizer: a locked plywood searches your size alone, at its measured thickness; unlocked, every size", () => {
+  const wallsOf = (c: HifiOptimizerCurrent, locks: HifiOptimizerLocks, walls?: number[]) => {
+    const { space } = hifiSearchSpace({ ...base, cur: c, locks, walls, goals: ["lighter"] });
+    assert.ok(space, "a search");
+    return [...new Set(space.grid.map((e) => e.wall))].sort((a, b) => b - a);
+  };
+  assert.deepEqual(wallsOf(cur, { wall: true }), [0.75]);
+  assert.deepEqual(wallsOf({ ...cur, wall: 0.689 }, { wall: true }, [0.689, 0.625, 0.5]), [0.689]);
+  assert.deepEqual(wallsOf(cur, {}), [0.75, 0.625, 0.5]);
+  assert.deepEqual(wallsOf({ ...cur, wall: 0.689 }, {}, [0.689, 0.625, 0.5]), [0.689, 0.625, 0.5]);
+  // a viewer starts with it locked, and the optimizer bar's Clear unlocks it
+  assert.deepEqual(defaultLocks(true), { wall: true });
+  assert.deepEqual(defaultLocks(false), { wall: false });
 });
 
 test("hi-fi optimizer: the first worker's kept share (or, if lost, its share scored again) gives what one run gives", () => {

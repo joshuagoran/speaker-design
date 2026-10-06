@@ -25,6 +25,7 @@ import { DESIGN_PROBLEM_TEXT } from "../src/constants/optimizerText";
 import { hornResponse } from "../src/lib/pa/calc";
 import { fillSystem } from "../src/lib/pa/calc";
 import { hifiSystem } from "../src/lib/hifi/hifi";
+import { panelIn } from "../src/lib/panel";
 import type { PaDesignConfig } from "../src/types";
 
 /** What `usePaDesign().snapshot()` makes of a design: the drivers, box and horn as ids. */
@@ -75,7 +76,7 @@ describe("default designs", () => {
     const sys = hifiSystem(d.woofer, d.tweeter, {
       box: d.boxType,
       dim: d.boxDims,
-      wall: d.wallThicknessIn,
+      wall: panelIn(d.wallPanel, d.panelMaterial),
       mat: d.panelMaterial,
       port: d.portSpec,
       xo: d.crossoverHz,

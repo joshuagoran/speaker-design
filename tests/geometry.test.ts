@@ -14,11 +14,15 @@ import {
   maxFoldedSlotIn,
   foldedRearWallIn,
   foldedLidGapIn,
+  ductDividerIn,
+  subGeometry,
+  ventTuning,
 } from "../src/lib/pa/calc";
+import { DEFAULT_PA } from "../src/lib/defaults";
 import { ductFit } from "../src/lib/pa/chips";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import { close, vent, DRV18 } from "./helpers";
-import { subWoodIn3 } from "../src/lib/pa/exactSub";
+import { subWoodIn3, ventShape } from "../src/lib/pa/exactSub";
 import type { CutPart, CutPartId } from "../src/types";
 
 const IN3_L = 16.387 / 1000;
@@ -193,10 +197,15 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
     );
   }
 });
-test("plyLb: known thicknesses and a safe fallback", (t) => {
+test("plyLb: the catalogue's sizes, and measured thicknesses between and beyond them", (t) => {
   assert.equal(plywoodLbPerSqFt(0.75), 2.3);
+  assert.equal(plywoodLbPerSqFt(0.625), 1.95);
   assert.equal(plywoodLbPerSqFt(0.5), 1.6);
-  assert.equal(plywoodLbPerSqFt(0.625), 2.3);
+  // 18 mm birch measured at 0.689″: between the 5/8″ and 3/4″ weights
+  close(t, plywoodLbPerSqFt(0.689), 1.95 + (0.35 * (0.689 - 0.625)) / 0.125, 1e-9);
+  // beyond the thinnest and thickest sizes: in proportion to the nearest
+  close(t, plywoodLbPerSqFt(0.45), (1.6 * 0.45) / 0.5, 1e-9);
+  close(t, plywoodLbPerSqFt(0.8), (2.3 * 0.8) / 0.75, 1e-9);
 });
 test("midWeight: 15 in cube in 3/4 birch", (t) => {
   close(
@@ -210,4 +219,64 @@ test("midWeight: 15 in cube in 3/4 birch", (t) => {
     (225 * 2.3 + (225 + 450 + 450) * 2.3) / 144 + 2,
     1e-9,
   );
+});
+test("duct dividers: a thicker divider comes out of the side ducts' open area, not the net volume", (t) => {
+  const box = { w: 22, h: 30, d: 20 },
+    n = 2,
+    throat = 2,
+    len = 16,
+    wall = 0.75,
+    inset = 0.75,
+    grow = 0.25; // ½″ to ¾″
+  const cVent = (div?: number) => vent(div === undefined ? { throat, len } : { throat, len, div });
+  const geometry = (div?: number) =>
+    subGeometry(DEFAULT_PA.sub, DEFAULT_PA.mid, {
+      subBox: box,
+      midDims: DEFAULT_PA.mDim,
+      wall,
+      inset,
+      portStyle: "vslots",
+      cVent: cVent(div),
+      layout: DEFAULT_PA.layout,
+    });
+  const half = geometry(),
+    threeQ = geometry(0.75);
+  // two dividers per duct, each a quarter inch thicker: each duct's open height loses half an inch
+  close(t, half.port.area - threeQ.port.area, n * throat * 2 * grow, 1e-9);
+  // the dividers sit inside the duct, so the wood they add is the air the duct loses: the net volume holds
+  const moved = n * 2 * throat * len * grow * IN3_L;
+  close(t, threeQ.woodL - half.woodL, moved, 1e-9);
+  close(t, half.ductL - threeQ.ductL, moved, 1e-9);
+  close(t, threeQ.netL, half.netL, 1e-9);
+  // the exact sub model agrees: the same area and the same extra wood
+  close(t, ventShape("vslots", box, cVent(0.75), wall, DRV18).area, threeQ.port.area, 1e-9);
+  close(
+    t,
+    subWoodIn3("vslots", box, wall, inset, cVent(0.75), undefined) -
+      subWoodIn3("vslots", box, wall, inset, cVent(), undefined),
+    n * 2 * throat * len * grow,
+    1e-9,
+  );
+  // the smaller vent tunes lower in the same box
+  const fb = (g: typeof half) => ventTuning(g.netL, g.port.area, len, n, g.port.ec).Fb;
+  assert.ok(fb(threeQ) < fb(half));
+  // the cutlist cuts them at that thickness
+  const { parts } = cutParts({
+    sub: DEFAULT_PA.sub,
+    mid: DEFAULT_PA.mid,
+    subBox: box,
+    midDims: DEFAULT_PA.mDim,
+    wall,
+    inset,
+    joint: "butt",
+    portStyle: "vslots",
+    cVent: cVent(0.75),
+    layout: DEFAULT_PA.layout,
+  });
+  assert.deepEqual(
+    parts.filter((p) => p.part === "ductDivider").map((p) => [p.qty, p.t]),
+    [[2 * n, 0.75]],
+  );
+  // a vent without a divider thickness (saves from before the choice) is at ½″
+  assert.equal(ductDividerIn({}), 0.5);
 });

@@ -21,7 +21,7 @@ import {
   logGridCount,
   LOWPASS_SKIRT_SPAN,
   sideDuctEndCorrection,
-  SIDE_DUCT_DIVIDER_IN,
+  ductDividerIn,
   STUFFING_VOLUME_GAIN,
   midBoxBracing,
   midNetLiters,
@@ -414,7 +414,7 @@ export function ventShape(
     const n = style === "vslot1" ? 1 : 2;
     return {
       n,
-      area: n * v.throat * (ih - 2 * SIDE_DUCT_DIVIDER_IN),
+      area: n * v.throat * (ih - 2 * ductDividerIn(v)),
       ec: sideDuctEndCorrection(box, v, t, n, most),
     };
   }
@@ -467,7 +467,7 @@ export function subWoodIn3(
     if (folded) in3 += iw * foldedRearWallIn(box, v, t) * t;
   } else if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;
-    in3 += ih * v.len * t * n + v.throat * v.len * SIDE_DUCT_DIVIDER_IN * 2 * n;
+    in3 += ih * v.len * t * n + v.throat * v.len * ductDividerIn(v) * 2 * n;
   }
   return in3;
 }

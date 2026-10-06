@@ -2,6 +2,7 @@ import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
 import { cutParts } from "../../lib/pa/calc";
 import { CutlistPage } from "./CutlistPage";
+import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 
 interface Props {
   planner: CutlistOptions &
@@ -12,6 +13,7 @@ interface Props {
       | "subBox"
       | "effectiveMidBoxDims"
       | "wallThicknessIn"
+      | "wallPanel"
       | "baffleInsetIn"
       | "portStyle"
       | "subVentSpec"
@@ -42,7 +44,8 @@ export function PaCutlistPage({ planner }: Props) {
       parts={parts}
       also={vent}
       wall={planner.wallThicknessIn}
-      material="ply"
+      panel={planner.wallPanel}
+      material={PLYWOOD_MATERIAL}
     />
   );
 }
