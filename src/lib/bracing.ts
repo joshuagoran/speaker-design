@@ -21,8 +21,10 @@
 // and the panel reads the lower of the two. The glued panel beside the rib works with it as a flange, so EI is the
 // T section's (Eurocode 5's effective flange width, the parallel-axis theorem: ribFirstModeHz).
 //
-// No brace or rib goes through the driver or the vent: the box's keep-out (BoxKeepOut) holds the driver's basket and
-// magnet with a clearance, and the vent's parts and air. A window brace goes where its frame clears them all, nearest
+// No brace or rib goes through the driver, the vent or the hardware: the box's keep-out (BoxKeepOut) holds the
+// driver's basket and magnet with a clearance, the vent's parts and air, and the recesses of the handles, the input
+// dish and the horn posts (a rib glued over a handle's hole would block it), so ribs move off a recess as they move
+// off the driver, either way across the panel. A window brace goes where its frame clears them all, nearest
 // the even spacing; one across x whose plane crosses the driver leaves its front rail out round it (the frame opens to
 // the baffle), so it holds the top, bottom and back but not the baffle. A rib must clear them over its whole run, or
 // stop at a duct part that holds the panel (a slot's shelf). A panel nothing can reach is reported under the target.
@@ -31,7 +33,6 @@ import type {
   BoxBracing,
   BoxKeepOut,
   BoxRegion,
-  BraceFallback,
   BracePanel,
   BracePanelId,
   BracePlan,
@@ -338,26 +339,9 @@ const nearestIn = (spans: readonly Span[], p: number) => {
   return best;
 };
 
-/**
- * Where a box's bracing departs from its style, panel by panel (the UI names the box and words them):
- * - "windows": under Ribs, the baffle held by window braces, since a rib can't cross the driver (under Ribs the rule
- *   adds a window brace only for the baffle, and never one whose frame opens round the driver, which doesn't hold it);
- * - "ribs": under Window braces, each panel that took ribs, since no window brace clears the driver or the vent there;
- * - "under": each panel left under the target, with its first mode `hz`.
- * None of the first two under Both. A panel can have a fallback and be under the target.
- */
-export function braceFallbacks(
-  b: Pick<BoxBracing, "style" | "windows" | "ribs" | "panels" | "targetHz">,
-): BraceFallback[] {
-  const out: BraceFallback[] = [];
-  if (b.style === "ribs" && b.windows.x.length + b.windows.y.length > 0)
-    out.push({ panel: "baffle", kind: "windows" });
-  if (b.style === "window")
-    for (const panel of new Set(b.ribs.map((r) => r.panel))) out.push({ panel, kind: "ribs" });
-  for (const p of b.panels)
-    if (p.hz < b.targetHz - 1e-9) out.push({ panel: p.id, kind: "under", hz: p.hz });
-  return out;
-}
+/** The panels a box's bracing leaves under its target, each with its first mode (the UI names the box and words them). */
+export const braceShortfalls = (b: Pick<BoxBracing, "panels" | "targetHz">): PanelResonance[] =>
+  b.panels.filter((p) => p.hz < b.targetHz - 1e-9);
 
 // ---- the rule ----
 
@@ -396,11 +380,12 @@ const END_PANEL: Record<BoxAxis, readonly [BracePanelId, BracePanelId]> = {
 /**
  * The braces a box takes by rule, one move at a time, until every panel's first resonance clears `targetHz` (or
  * nothing more fits or helps). Each move adds the window brace, or the ribs on one panel, that most cuts the panels'
- * summed shortfall under the target per inch³ of wood. By style:
- * - window: window braces, then ribs on any panel they leave under the target (one the driver or the vent keeps them
- *   off);
- * - ribs: ribs on the panels that take them, after the window braces the baffle needs (a rib can't cross the driver);
- * - both: window braces and ribs side by side, whichever does more for the wood.
+ * summed shortfall under the target per inch³ of wood. Window braces and Ribs keep to their own kind; a panel that
+ * kind can't lift stays under the target (braceShortfalls lists it). By style:
+ * - window: window braces only (none lifts a panel the driver or the vent keeps every frame off);
+ * - ribs: ribs only, on the panels that take them (not the baffle: no rib can cross the driver);
+ * - both: the window braces the baffle needs first (no rib can hold it, and once ribs stand where a frame would go no
+ *   frame fits), then window braces and ribs side by side, whichever does more for the wood.
  * Window braces go where their frames clear the keep-out, nearest the even spacing; ribs fill a panel's widest bays
  * between the supports it already has (the box's own duct parts, `fixedU` / `fixedV`, and the window braces).
  */
@@ -413,7 +398,8 @@ export function braceBox({
   keepOut,
 }: BraceBoxInput): BoxBracing {
   const t = braceStock.t;
-  const keep = [...keepOut.driver, ...keepOut.vent];
+  const hardware = keepOut.hardware ?? [];
+  const keep = [...keepOut.driver, ...keepOut.vent, ...hardware];
 
   // where window braces can go on each axis: the walls' bays less where their frames would meet the keep-out
   const room = (a: BoxAxis) => {
@@ -426,7 +412,7 @@ export function braceBox({
     const blocked: Span[] = [];
     const full = probe(null);
     const block = (o: BoxRegion) => blocked.push([o[a][0] - t / 2, o[a][1] + t / 2]);
-    for (const o of keepOut.vent) if (meets(full, o)) block(o);
+    for (const o of [...keepOut.vent, ...hardware]) if (meets(full, o)) block(o);
     let notch: { x: Span; y: Span } | null = null;
     const hit = keepOut.driver.filter((o) => meets(full, o));
     if (hit.length) {
@@ -714,17 +700,14 @@ export function braceBox({
       apply(best, windows, ribs);
     }
   };
-  const under = () => panels.filter((p) => evalPanel(p, windows, ribs) < targetHz - 1e-9);
-  if (style === "window") {
-    phase(() => windowMoves(panels), panels);
-    // the panels the window braces can't lift (the driver or the vent in the way) take ribs
-    const left = under();
-    if (left.length) phase(() => ribMoves(left), panels);
-  } else if (style === "ribs") {
+  if (style === "window") phase(() => windowMoves(panels), panels);
+  else if (style === "ribs") phase(() => ribMoves(panels), panels);
+  else {
+    // a frame can't go where ribs already stand (ribsFit), so the panels only frames hold get theirs before any rib
     const unribbed = panels.filter((p) => !p.ribs);
     phase(() => windowMoves(unribbed), unribbed);
-    phase(() => ribMoves(panels), panels);
-  } else phase(() => [...windowMoves(panels), ...ribMoves(panels)], panels);
+    phase(() => [...windowMoves(panels), ...ribMoves(panels)], panels);
+  }
 
   const none: Counts = { x: 0, y: 0, z: 0 };
   const res: PanelResonance[] = panels.map((p) => ({

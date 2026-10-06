@@ -132,6 +132,8 @@ export const PARTS_3D = {
    * (on a dark paint the finish's inner shade would hide them against the driver)
    */
   brace: 0xb98f5a,
+  /** the handles' and input dishes' steel, and the horn posts' cup: a dark grey that reads on birch and on paint */
+  hardware: 0x55585c,
   /** the scale figure beside the stack, drawn semi-transparent */
   figure: 0x8b847d,
 } as const;

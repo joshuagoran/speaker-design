@@ -9,6 +9,7 @@ import { MID_GAP_IN, SATELLITE_COLUMN_H_IN } from "./stackHeights";
 import { createScaleFigure } from "./geometry";
 import type {
   BoxBracing,
+  BoxHardwarePlan,
   BoxKeepOut,
   Dims3,
   Horn,
@@ -41,6 +42,9 @@ export interface Props {
   /** what each box's braces keep clear of (lib/pa/calc): their drivers are drawn in the cutaway */
   subKeepOut?: BoxKeepOut;
   midKeepOut?: BoxKeepOut | null;
+  /** each box's handles, input dish and horn posts (lib/pa/hardware), drawn on its faces */
+  subHardware?: BoxHardwarePlan;
+  midHardware?: BoxHardwarePlan | null;
 }
 
 /** Builds the PA stack as a Group (no DOM or WebGL needed); the units are the props' inches. */
@@ -62,12 +66,24 @@ export function buildStackScene({
   midBracing,
   subKeepOut,
   midKeepOut,
+  subHardware,
+  midHardware,
 }: Props): THREE.Group {
   const ctx = createSceneContext({ wall, inset, cabFinish, baffleColor, cutaway });
   const { group } = ctx;
   const s = sub.box;
   if (layout === "tower") {
-    buildTower(ctx, { sub, mid, horn, plinth, portStyle, portGeom, subBracing, subKeepOut });
+    buildTower(ctx, {
+      sub,
+      mid,
+      horn,
+      plinth,
+      portStyle,
+      portGeom,
+      subBracing,
+      subKeepOut,
+      subHardware,
+    });
   } else {
     const { top: subTop, group: subGroup } = buildSubwoofer(ctx, {
       sub,
@@ -77,6 +93,7 @@ export function buildStackScene({
       plinth,
       bracing: subBracing,
       keepOut: subKeepOut,
+      hardware: subHardware,
     });
     // the mid cube: on the sub, on a spacer above it, or on round columns either side of it
     const satX = s.w / 2 + SATELLITE_COLUMN_D_IN / 2 + 6; // columns clear of the sub
@@ -96,6 +113,7 @@ export function buildStackScene({
       xs,
       bracing: midBracing,
       keepOut: midKeepOut,
+      hardware: midHardware,
     });
     buildHorn(ctx, { horn, y: hornY, xs, mount: mid.box });
   }

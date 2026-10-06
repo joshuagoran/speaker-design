@@ -318,12 +318,11 @@ describe("PA cutlist unchanged", () => {
         ["S4", "baffle", 1, 22.5, 26.75],
         ["S5", "baffleCleat", 2, 0.75, 22.5],
         ["S6", "baffleCleat", 2, 0.75, 25.25],
-        // two level window braces by rule, below and above the driver, clear of it (ribs can't cross the baffle's
-        // driver; the slot shelf already holds the sides low), and one rib across the back
+        // two level window braces by rule (¾″ walls default to Window braces, frames only), below and above the
+        // driver, clear of it; the slot shelf already holds the sides low
         ["S7", "windowBrace", 2, 15.75, 22.5],
-        ["S8", "rib", 1, 2.5, 22.5],
-        ["S9", "ductShelf", 1, 14, 22.5],
-        ["S10", "ductFin", 2, 3, 14],
+        ["S8", "ductShelf", 1, 14, 22.5],
+        ["S9", "ductFin", 2, 3, 14],
         ["M1", "side", 2, 15, 15],
         ["M2", "topBottom", 2, 13.5, 15],
         ["M3", "back", 1, 14.25, 14.25],

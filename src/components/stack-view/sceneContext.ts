@@ -23,6 +23,13 @@ export interface SceneContext {
     brace: THREE.MeshStandardMaterial;
     /** horn bodies */
     hornShell: THREE.MeshStandardMaterial;
+    /** handles, input dishes and horn posts */
+    hardware: THREE.MeshStandardMaterial;
+    /**
+     * a part's hole in its panel (buildHardware): draws no color, only depth, just proud of the face, so the panel
+     * behind it isn't drawn there
+     */
+    holeMask: THREE.MeshBasicMaterial;
   };
   /** side, top, bottom and back plywood, inches */
   wall: number;
@@ -68,6 +75,11 @@ export function createSceneContext({
     side: THREE.DoubleSide,
   });
   const brace = new THREE.MeshStandardMaterial({ color: PARTS_3D.brace, roughness: 0.9 });
+  const hardware = new THREE.MeshStandardMaterial({
+    color: PARTS_3D.hardware,
+    roughness: 0.5,
+    metalness: 0.3,
+  });
   const baffle = cutaway
     ? new THREE.MeshStandardMaterial({
         color: new THREE.Color(baffleColor),
@@ -83,6 +95,15 @@ export function createSceneContext({
     roughness: 0.55,
     side: THREE.DoubleSide,
   });
+  // a part's hole: drawn after the part and before everything else (buildHardware's render orders), it writes only
+  // depth, pulled toward the camera, so the panel behind it fails the depth test and the part's recess shows. A
+  // cabinet in front of it is nearer, so it still draws (a stencil mask, drawn first, also cut holes in a nearer box).
+  const holeMask = new THREE.MeshBasicMaterial({
+    colorWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -4,
+  });
   return {
     group: new THREE.Group(),
     materials: {
@@ -95,6 +116,8 @@ export function createSceneContext({
       port,
       brace,
       hornShell,
+      hardware,
+      holeMask,
     },
     wall,
     inset,

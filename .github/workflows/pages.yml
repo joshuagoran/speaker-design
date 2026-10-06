@@ -31,6 +31,9 @@ jobs:
         timeout-minutes: 5
       - run: node tests/mobile-check.mjs dist/stack-planner.html
         timeout-minutes: 5
+      # the 3D view's GPU memory stays flat over rebuilds (tests/three-memory-check.mjs)
+      - run: node tests/three-memory-check.mjs dist/stack-planner.html
+        timeout-minutes: 5
   deploy:
     needs: test
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

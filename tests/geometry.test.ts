@@ -19,6 +19,8 @@ import {
   ventTuning,
   braceWoodEstimate,
   braceWoodIn3,
+  SUB_FIXINGS_LB,
+  MID_FIXINGS_LB,
 } from "../src/lib/pa/calc";
 import { defaultBraceStyleNear } from "../src/lib/bracing";
 import { DEFAULT_PA } from "../src/lib/defaults";
@@ -206,7 +208,9 @@ test("weights: shell from panel areas at the ply density matches the cutlist par
     // a window brace weighs its rails only (its center is cut out)
     const area = (p: CutPart) =>
       p.part === "windowBrace" ? p.a * p.b - (p.a - 4) * (p.b - 4) : p.a * p.b;
-    const lb = parts.reduce((a, p) => a + ((area(p) * p.qty) / 144) * plywoodLbPerSqFt(p.t), 0) + 6;
+    const lb =
+      parts.reduce((a, p) => a + ((area(p) * p.qty) / 144) * plywoodLbPerSqFt(p.t), 0) +
+      SUB_FIXINGS_LB;
     const w = subWeightLb(
       box,
       wall,
@@ -246,7 +250,7 @@ test("midWeight: 15 in cube in 3/4 birch", (t) => {
       midBoxBracing({ w: 15, h: 15, d: 15 }, 0.75, 0.75, MID_OPTIONS[0], "stack", undefined),
     ),
     // a 15″ cube in 3/4″ ply needs no braces: every panel clears the target as it is
-    (225 * 2.3 + (225 + 450 + 450) * 2.3) / 144 + 2,
+    (225 * 2.3 + (225 + 450 + 450) * 2.3) / 144 + MID_FIXINGS_LB,
     1e-9,
   );
 });

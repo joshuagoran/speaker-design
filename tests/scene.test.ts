@@ -66,6 +66,7 @@ function derivedHeights(p: Props) {
     braceStyle: undefined,
     baffleInsetIn: p.inset ?? 0.75,
     spacerHeightIn: p.spacerH ?? 20,
+    hardware: DEFAULT_PA.hardware,
     dispersionPlane: "h",
   });
 }

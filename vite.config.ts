@@ -56,10 +56,11 @@ export default defineConfig({
     testTimeout: 30_000,
   },
   fmt: {
-    // golden.json, optimizer-dump.json, optimizer-snapshot.json and the slot inner-end table are generated
+    // golden.json, optimizer-dump.json, optimizer-snapshot.json, the slot inner-end table and the meshes are generated
     ignorePatterns: [
       "dist/**",
       "src/data/acoustics/slot-inner-end.ts",
+      "src/data/meshes/h1105.ts",
       "tests/golden.json",
       "tests/optimizer-dump.json",
       "tests/optimizer-snapshot.json",

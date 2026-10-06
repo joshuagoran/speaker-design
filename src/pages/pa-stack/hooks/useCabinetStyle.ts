@@ -1,5 +1,13 @@
 import { DEFAULT_PA } from "../../../lib/defaults";
-import type { BraceStyleId, Cabinet, Format, PaLayout, PanelNominal, Setter } from "../../../types";
+import type {
+  BraceStyleId,
+  Cabinet,
+  Format,
+  PaHardware,
+  PaLayout,
+  PanelNominal,
+  Setter,
+} from "../../../types";
 import { useState } from "react";
 import { defaultBraceStyle } from "../../../lib/bracing";
 
@@ -28,6 +36,9 @@ export interface CabinetStyle {
   setCabinetFinish: Setter<string>;
   spacerHeightIn: number;
   setSpacerHeightIn: Setter<number>;
+  /** each box's handles and their offsets (lib/pa/hardware) */
+  hardware: PaHardware;
+  setHardware: Setter<PaHardware>;
 }
 
 /** Cabinet construction and look: plywood, baffle inset, finish, layout and the fixed plinth. */
@@ -41,6 +52,7 @@ export function useCabinetStyle(): CabinetStyle {
   const [baffleColor, setBaffleColor] = useState(DEFAULT_PA.baffleColor);
   const [cabinetFinish, setCabinetFinish] = useState(DEFAULT_PA.cabFinish);
   const [spacerHeightIn, setSpacerHeightIn] = useState(DEFAULT_PA.spacerH);
+  const [hardware, setHardware] = useState<PaHardware>(DEFAULT_PA.hardware);
   return {
     plinthHeightIn,
     cutaway,
@@ -62,5 +74,7 @@ export function useCabinetStyle(): CabinetStyle {
     setCabinetFinish,
     spacerHeightIn,
     setSpacerHeightIn,
+    hardware,
+    setHardware,
   };
 }

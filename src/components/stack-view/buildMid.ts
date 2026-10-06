@@ -2,7 +2,8 @@ import { circlePath } from "./geometry";
 import { buildCabinet } from "./buildCabinet";
 import { buildCone } from "./buildCone";
 import type { SceneContext } from "./sceneContext";
-import type { BoxBracing, BoxKeepOut, Dims3, MidDriver } from "../../types";
+import type { BoxBracing, BoxHardwarePlan, BoxKeepOut, Dims3, MidDriver } from "../../types";
+import { buildHardware } from "./buildHardware";
 import { buildBraces, buildDriverBody } from "./buildBraces";
 import { DRIVER_CLEARANCE_IN } from "../../lib/pa/bracing";
 
@@ -20,6 +21,7 @@ export function buildMid(
     baffleZ,
     bracing,
     keepOut,
+    hardware,
   }: {
     mid: Pick<MidDriver, "size">;
     box: Dims3;
@@ -30,6 +32,8 @@ export function buildMid(
     bracing?: BoxBracing | null;
     /** what the braces keep clear of (lib/pa/calc midKeepOut): its driver is drawn in the cutaway */
     keepOut?: BoxKeepOut | null;
+    /** the box's handles, input dish and horn posts (lib/pa/hardware), on each box's faces */
+    hardware?: BoxHardwarePlan | null;
   },
 ): { top: number } {
   const r = mid.size / 2 - 0.9;
@@ -38,6 +42,8 @@ export function buildMid(
       baffleZ ?? buildCabinet(ctx, { dims: box, baffleHoles: [circlePath(0, 0, r)], y, x }).baffleZ;
     if (bracing && baffleZ === undefined)
       buildBraces(ctx, { bracing, box, y, x, parent: ctx.group });
+    if (hardware && baffleZ === undefined)
+      buildHardware(ctx, { plan: hardware, box, y, x, parent: ctx.group });
     if (keepOut && baffleZ === undefined)
       buildDriverBody(ctx, {
         keepOut,

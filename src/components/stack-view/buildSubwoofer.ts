@@ -18,6 +18,7 @@ import type { SceneContext } from "./sceneContext";
 import type { Props } from "./buildStackScene";
 import type {
   BoxBracing,
+  BoxHardwarePlan,
   BoxKeepOut,
   Dims3,
   Horn,
@@ -26,6 +27,7 @@ import type {
   SubDriver,
 } from "../../types";
 import { buildBraces, buildDriverBody, VENT_MESH_NAME } from "./buildBraces";
+import { buildHardware } from "./buildHardware";
 import { DRIVER_CLEARANCE_IN } from "../../lib/pa/bracing";
 
 /**
@@ -44,8 +46,11 @@ export function buildSubwoofer(
     tower,
     bracing,
     keepOut,
+    hardware,
   }: {
     sub: Pick<SubDriver, "size" | "depthIn">;
+    /** the box's handles and input dish (lib/pa/hardware), on its faces */
+    hardware?: BoxHardwarePlan;
     box: Dims3;
     /** the sub box's braces and ribs (lib/bracing), drawn inside it */
     bracing?: BoxBracing;
@@ -136,6 +141,7 @@ export function buildSubwoofer(
   }).baffleZ;
   if (tower) buildTowerPartitions(ctx, { box: s, plinth: pl, parent: subGroup });
   if (bracing) buildBraces(ctx, { bracing, box: s, y: pl, parent: subGroup });
+  if (hardware) buildHardware(ctx, { plan: hardware, box: s, y: pl, parent: subGroup });
   if (keepOut)
     buildDriverBody(ctx, {
       keepOut,

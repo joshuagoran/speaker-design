@@ -4,6 +4,9 @@ import { FONT } from "../../../styles/fonts";
 import { isRoundPort } from "../../../lib/pa/calc";
 import { subTubeKit } from "../../../lib/pa/tubes";
 
+/** The totals row for the boxes' hardware. */
+const HARDWARE_ROW = "Handles, input dishes, jacks and horn posts (weight in the boxes)";
+
 interface Props {
   planner: Pick<
     PaPlanner,
@@ -22,6 +25,8 @@ interface Props {
     | "portStyle"
     | "subVentSpec"
     | "wallThicknessIn"
+    | "subHardware"
+    | "midHardware"
   >;
 }
 
@@ -43,6 +48,8 @@ export function TotalsSection({ planner }: Props) {
     portStyle,
     subVentSpec,
     wallThicknessIn,
+    subHardware,
+    midHardware,
   } = planner;
   return (
     <>
@@ -73,6 +80,8 @@ export function TotalsSection({ planner }: Props) {
                 0,
                 0,
               ]);
+            // the handles, input dishes, jacks and horn posts (their weight is in the boxes' rows)
+            rows.push([HARDWARE_ROW, subHardware.price + (midHardware?.price ?? 0), 0, 0, 0]);
             const sum = (i: 1 | 2 | 3) => rows.reduce((a, r) => a + (r[i] || 0), 0);
             const stackLb = sum(2) + sum(3) + (plinthHeightIn ? 6 : 0);
             return (

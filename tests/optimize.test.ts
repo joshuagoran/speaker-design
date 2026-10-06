@@ -33,14 +33,12 @@ import type {
 } from "../src/types";
 import { close } from "./helpers";
 import { SEED_NAMES } from "./seeds";
+import { evaluate as evaluateGolden } from "./golden-configs";
 
-// boundary: the seed file is saved configurations (older ones lack mDim; all carry ampW), and golden.json holds the numbers checked below
+// boundary: the seed file is saved configurations (older ones lack mDim; all carry ampW)
 const seeds = JSON.parse(
   fs.readFileSync(new URL("../data/configs-seed.json", import.meta.url), "utf8"),
 ) as (Omit<PaOptimizerCurrent, "mDim" | "ampW"> & { mDim?: Dims3; ampW: number; name: string })[];
-const golden = JSON.parse(
-  fs.readFileSync(new URL("./golden.json", import.meta.url), "utf8"),
-) as Record<string, { Fb: number; f3: number; spl45: number }>;
 // a saved design with the fields older saves lack filled in (every seed carries `ampW`; the crossovers and amps stay optional)
 type Picked = PaOptimizerCurrent &
   Required<
@@ -79,11 +77,13 @@ const failsOn = (
 const cur = pick(SEED_NAMES.lilBlockOptimized);
 const base: PaOptimizerInput = { cur, room: 1000, maxLb: 125, budget: 1100, locks: {} };
 
-test("evaluate() gives the planner's numbers (golden snapshot)", (t) => {
+test("evaluate() gives the planner's numbers (golden's evaluation, without the hardware)", (t) => {
+  // the optimizers disregard the handles and plates: no recesses, and the bracing planned without them
   for (const name of [SEED_NAMES.lilBlockOptimized, SEED_NAMES.blocky, SEED_NAMES.lilTower]) {
     // the seeds carry the crossovers and amps now; the type keeps them optional, as older saves lack them
     const m = evaluateDesign(pick(name) as PaDesignConfig)!,
-      g = golden[name];
+      g = evaluateGolden(pick(name), false);
+    assert.ok(typeof g.Fb === "number" && typeof g.f3 === "number" && typeof g.spl45 === "number");
     close(t, m.Fb, g.Fb, 0.02, `${name} Fb`);
     close(t, m.f3, g.f3, 0.02, `${name} f3`);
     close(t, m.spl45, g.spl45, 0.02, `${name} spl45`);

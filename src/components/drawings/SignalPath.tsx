@@ -4,6 +4,7 @@ import { HORN_AMP_SAFETY_HPF_HZ, mainsDsp } from "../../lib/data";
 import { DEFAULT_CROSSOVERS } from "../../lib/defaultParts";
 import type { AmpModel } from "../../types";
 import { SVG_FONT } from "../../styles/fonts";
+import { INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
 
 /** What each top box's Speakon carries. */
 const TOP_PINS = "1± mid · 2± horn";
@@ -163,6 +164,8 @@ export function SignalPath() {
         <T x={745} y={348} s={10} b="Mid box R" />
         <T x={745} y={363} s={9} c={mute} b="posts → horn R" />
       </Box>
+      <T x={745} y={268} s={9} c={mute} b={`each box: in + link, 2 × ${INPUT_JACK.id}`} />
+      <T x={745} y={280} s={9} c={mute} b={`in a ${INPUT_PLATE.name} dish`} />
       <A d="M645 211 L690 209" />
       <A d="M645 239 L690 239" />
       <T x={667} y={202} s={9} c={mute} b="NL2" />

@@ -23,6 +23,8 @@ export function StackView3D({
   midBracing,
   subKeepOut,
   midKeepOut,
+  subHardware,
+  midHardware,
 }: Props) {
   const mount = useRef<HTMLDivElement>(null);
   // the stage (floor, grid, lights) follows the theme; the scene is rebuilt when it changes
@@ -55,6 +57,8 @@ export function StackView3D({
     midBracing,
     subKeepOut,
     midKeepOut,
+    subHardware,
+    midHardware,
   ]);
   const [builtKey, setBuiltKey] = useState(geoKey);
   const lastBuild = useRef(0);
@@ -68,73 +72,43 @@ export function StackView3D({
     return () => clearTimeout(pending);
   }, [geoKey, builtKey]);
 
+  // One renderer, camera and render loop for the component's life (a browser keeps only a few WebGL contexts, and each
+  // renderer takes one); each rebuild swaps the scene in `view` and frees the old scene's GPU resources.
+  const view = useRef<ViewState | null>(null);
   useEffect(() => {
     const el = mount.current;
     if (!el) return;
     const W = el.clientWidth || 640,
       H = el.clientHeight || 560;
-    const scene = new THREE.Scene();
     const cam = new THREE.PerspectiveCamera(32, W / H, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(W, H);
     el.appendChild(renderer.domElement);
-
-    const stage = STAGE[theme];
-    scene.add(new THREE.HemisphereLight(stage.sky, stage.ground, stage.hemi));
-    const key = new THREE.DirectionalLight(stage.sky, stage.key);
-    key.position.set(40, 80, 30);
-    scene.add(key);
-
-    const group = buildStackScene({
-      sub,
-      mid,
-      horn,
-      plinth,
-      cutaway,
-      portStyle,
-      layout,
-      baffleColor,
-      portGeom,
-      wall,
-      inset,
-      cabFinish,
-      spacerH,
-      subBracing,
-      midBracing,
-      subKeepOut,
-      midKeepOut,
-    });
-    scene.add(group);
-
-    // floor
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(200, 200),
-      new THREE.MeshStandardMaterial({ color: stage.floor, roughness: 1 }),
-    );
-    floor.rotation.x = -Math.PI / 2;
-    scene.add(floor);
-    scene.add(new THREE.GridHelper(120, 10, stage.gridMajor, stage.gridMinor));
-
-    group.position.y = 0;
-
-    // Frame from the real bounding box so nothing is cropped at any aspect
-    // ratio. The horizontal radius is taken as the diagonal of the footprint
-    // so the fit holds through a full rotation rather than only head-on.
-    const bbox = new THREE.Box3().setFromObject(group);
-    const bc = bbox.getCenter(new THREE.Vector3());
-    const bs = bbox.getSize(new THREE.Vector3());
-    const target = new THREE.Vector3(bc.x, bc.y, bc.z);
-    const halfH = bs.y / 2;
-    const halfW = Math.sqrt(bs.x * bs.x + bs.z * bs.z) / 2;
-    const tanV = Math.tan((cam.fov * Math.PI) / 360);
-    let baseDist = halfH / tanV;
-    const fit = (aspect: number) => {
-      baseDist = Math.max(halfH / tanV, halfW / (aspect * tanV)) * 1.18;
-    };
-    fit(W / H);
-
     const st = state.current;
+    const v: ViewState = {
+      renderer,
+      scene: null,
+      frame: null,
+      figure: null,
+      fit: () => {},
+      // aims the camera at the scene from the view's rotation and zoom, and draws it
+      draw: () => {
+        const { scene, frame } = v;
+        if (!scene || !frame) return;
+        const { target, baseDist } = frame;
+        const dist = baseDist * st.zoom;
+        cam.position.set(
+          target.x + dist * Math.sin(st.rotY) * Math.cos(st.rotX),
+          target.y + dist * Math.sin(st.rotX),
+          target.z + dist * Math.cos(st.rotY) * Math.cos(st.rotX),
+        );
+        cam.lookAt(target);
+        v.figure?.quaternion.copy(cam.quaternion);
+        renderer.render(scene, cam);
+      },
+    };
+    view.current = v;
 
     // Pointer handling. touch-action on the canvas is pan-y, so a mostly
     // vertical swipe scrolls the page and anything else reaches us here.
@@ -210,24 +184,15 @@ export function StackView3D({
       renderer.setSize(w, h);
       cam.aspect = w / h;
       cam.updateProjectionMatrix();
-      fit(w / h);
+      v.fit(w / h);
     };
     const ro = new ResizeObserver(resize);
     ro.observe(el);
     window.addEventListener("orientationchange", resize);
 
-    const figure = group.getObjectByName("scale-figure");
     let raf: number;
     const tick = () => {
-      const dist = baseDist * st.zoom;
-      cam.position.set(
-        target.x + dist * Math.sin(st.rotY) * Math.cos(st.rotX),
-        target.y + dist * Math.sin(st.rotX),
-        target.z + dist * Math.cos(st.rotY) * Math.cos(st.rotX),
-      );
-      cam.lookAt(target);
-      if (figure) figure.quaternion.copy(cam.quaternion);
-      renderer.render(scene, cam);
+      v.draw();
       raf = requestAnimationFrame(tick);
     };
     tick();
@@ -241,10 +206,123 @@ export function StackView3D({
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
       el.removeEventListener("wheel", onWheel);
+      if (v.scene) disposeScene(v.scene);
+      v.scene = v.frame = v.figure = null;
+      view.current = null;
       renderer.dispose();
+      renderer.forceContextLoss();
       el.removeChild(renderer.domElement);
     };
+  }, []);
+
+  // Each rebuild: the old scene's geometries, materials and textures freed, then the new scene built and framed.
+  useEffect(() => {
+    const v = view.current;
+    const el = mount.current;
+    if (!v || !el) return;
+    if (v.scene) disposeScene(v.scene);
+    const scene = new THREE.Scene();
+    const stage = STAGE[theme];
+    scene.add(new THREE.HemisphereLight(stage.sky, stage.ground, stage.hemi));
+    const key = new THREE.DirectionalLight(stage.sky, stage.key);
+    key.position.set(40, 80, 30);
+    scene.add(key);
+
+    const group = buildStackScene({
+      sub,
+      mid,
+      horn,
+      plinth,
+      cutaway,
+      portStyle,
+      layout,
+      baffleColor,
+      portGeom,
+      wall,
+      inset,
+      cabFinish,
+      spacerH,
+      subBracing,
+      midBracing,
+      subKeepOut,
+      midKeepOut,
+      subHardware,
+      midHardware,
+    });
+    scene.add(group);
+
+    // floor
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 200),
+      new THREE.MeshStandardMaterial({ color: stage.floor, roughness: 1 }),
+    );
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+    scene.add(new THREE.GridHelper(120, 10, stage.gridMajor, stage.gridMinor));
+
+    group.position.y = 0;
+
+    // Frame from the real bounding box so nothing is cropped at any aspect
+    // ratio. The horizontal radius is taken as the diagonal of the footprint
+    // so the fit holds through a full rotation rather than only head-on.
+    const bbox = new THREE.Box3().setFromObject(group);
+    const bc = bbox.getCenter(new THREE.Vector3());
+    const bs = bbox.getSize(new THREE.Vector3());
+    const halfH = bs.y / 2;
+    const halfW = Math.sqrt(bs.x * bs.x + bs.z * bs.z) / 2;
+    const tanV = Math.tan((32 * Math.PI) / 360);
+    const frame: SceneFrame = { target: bc, baseDist: halfH / tanV };
+    v.fit = (aspect: number) => {
+      frame.baseDist = Math.max(halfH / tanV, halfW / (aspect * tanV)) * 1.18;
+    };
+    v.fit((el.clientWidth || 640) / (el.clientHeight || 560));
+    v.scene = scene;
+    v.frame = frame;
+    v.figure = group.getObjectByName("scale-figure") ?? null;
+    // the GPU's live geometries and textures once this rebuild is drawn, and the rebuilds so far, for the memory check
+    // (tests/three-memory-check.mjs)
+    v.draw();
+    const { geometries, textures } = v.renderer.info.memory;
+    el.dataset.geometries = String(geometries);
+    el.dataset.textures = String(textures);
+    el.dataset.rebuilds = String(Number(el.dataset.rebuilds ?? 0) + 1);
   }, [builtKey, theme]);
 
   return <div ref={mount} className="w-full h-full cursor-grab" />;
+}
+
+/** The view's renderer and camera, kept for the component's life, and the scene it shows now. */
+interface ViewState {
+  renderer: THREE.WebGLRenderer;
+  scene: THREE.Scene | null;
+  frame: SceneFrame | null;
+  /** the scale figure, turned to face the camera every frame */
+  figure: THREE.Object3D | null;
+  /** fits the camera's distance to the scene at an aspect ratio */
+  fit: (aspect: number) => void;
+  /** aims the camera and draws the scene */
+  draw: () => void;
+}
+
+/** Where the render loop aims the camera for a scene, and how far back it sits at zoom 1 (kept in its userData). */
+interface SceneFrame {
+  target: THREE.Vector3;
+  baseDist: number;
+}
+
+/** Frees a scene's geometries, materials and the textures they hold on the GPU (shared ones once each). */
+function disposeScene(scene: THREE.Object3D) {
+  const geometries = new Set<THREE.BufferGeometry>();
+  const materials = new Set<THREE.Material>();
+  scene.traverse((o) => {
+    if (o instanceof THREE.Mesh || o instanceof THREE.Line || o instanceof THREE.Points) {
+      geometries.add(o.geometry);
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m);
+    }
+  });
+  geometries.forEach((g) => g.dispose());
+  materials.forEach((m) => {
+    for (const value of Object.values(m)) if (value instanceof THREE.Texture) value.dispose();
+    m.dispose();
+  });
 }

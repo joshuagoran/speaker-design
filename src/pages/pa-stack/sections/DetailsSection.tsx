@@ -3,7 +3,11 @@ import { UI_TEXT } from "../../../constants/uiText";
 import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
 import { PanelResonanceTable } from "../../../components/stats/PanelResonanceTable";
-import { BRACE_PANEL_NAMES, BRACE_STYLE_NAMES } from "../../../constants/bracing";
+import {
+  BRACE_PANEL_NAMES,
+  BRACE_STYLE_NAMES,
+  BRACE_STYLE_SUMMARY,
+} from "../../../constants/bracing";
 import {
   DRIVER_CLEARANCE_IN,
   PA_BRACING_CROSSOVER_HZ,
@@ -11,7 +15,11 @@ import {
 } from "../../../lib/pa/bracing";
 import { formatHz, formatInches } from "../../../lib/format";
 import { panelThicknessName } from "../../../lib/panel";
-import type { BoxBracing } from "../../../types";
+import { braceShortfalls } from "../../../lib/bracing";
+import type { BoxBracing, BoxHardwarePlan, Dims3 } from "../../../types";
+import { HARDWARE_KIND_NAMES, HARDWARE_SECTION_TITLE } from "../../../constants/hardware";
+import { hardwarePlace } from "../../../lib/pa/calc";
+import { CUT_BOX_NAMES } from "../../../constants/cutParts";
 
 /** A box's braces and ribs in words: "1 window brace, 6 ribs", or none. */
 const braceCount = (b: BoxBracing) => {
@@ -23,6 +31,29 @@ const braceCount = (b: BoxBracing) => {
   ].filter(Boolean);
   return words.length ? words.join(", ") : "none needed";
 };
+
+/**
+ * What to try for the panels a box leaves under the target: Both, unless it is set, and thicker walls, unless only the
+ * baffle is short (it stays ¾″ whatever the walls); empty when neither helps.
+ */
+const shortfallTry = (b: Pick<BoxBracing, "style" | "panels" | "targetHz">) => {
+  const tries = [
+    b.style !== "both" && BRACE_STYLE_NAMES.both.toLowerCase(),
+    braceShortfalls(b).some((p) => p.id !== "baffle") && "thicker walls",
+  ].filter(Boolean);
+  return tries.length ? ` Try ${tries.join(" or ")}.` : "";
+};
+
+/** A box's hardware in words: each part with its place (as the cutlist says it) and its recess, then the totals. */
+function hardwareWords(plan: BoxHardwarePlan, box: Dims3, t: number) {
+  const parts = plan.parts
+    .filter((p) => p.panel !== "sideR")
+    .map((p) => {
+      const n = p.kind === "handle" ? "2 × " : "";
+      return `${n}${p.part.name} ${HARDWARE_KIND_NAMES[p.kind]} (${hardwarePlace(p, box, t)}; ${p.liters.toFixed(2)} L${n ? " each" : ""})`;
+    });
+  return `${CUT_BOX_NAMES[plan.box]}: ${parts.join(", ")}; ${plan.liters.toFixed(2)} L in all, ${plan.lb.toFixed(1)} lb, $${plan.price.toFixed(2)}.`;
+}
 
 interface Props {
   planner: Pick<
@@ -46,6 +77,8 @@ interface Props {
     | "hornCenterHeightIn"
     | "subBracing"
     | "midBracing"
+    | "subHardware"
+    | "midHardware"
   >;
 }
 
@@ -71,6 +104,8 @@ export function DetailsSection({ planner }: Props) {
     hornCenterHeightIn,
     subBracing,
     midBracing,
+    subHardware,
+    midHardware,
   } = planner;
   return (
     <div className="min-w-0" style={{ fontFamily: FONT }}>
@@ -96,9 +131,9 @@ export function DetailsSection({ planner }: Props) {
           {stackHeightIn.toFixed(0)} in, horn center at {hornCenterHeightIn.toFixed(0)} in.
         </div>
         <div>
-          <span className="font-medium text-stone-900">Bracing.</span> Braces and ribs, best gain
-          per wood first, until each panel&rsquo;s first resonance is above{" "}
-          {formatHz(subBracing.targetHz)} ({PANEL_TARGET_CROSSOVER_MULTIPLE} ×{" "}
+          <span className="font-medium text-stone-900">Bracing.</span> Window braces, ribs or both,
+          as the Bracing setting says, best gain per wood first, until each panel&rsquo;s first
+          resonance is above {formatHz(subBracing.targetHz)} ({PANEL_TARGET_CROSSOVER_MULTIPLE} ×{" "}
           {PA_BRACING_CROSSOVER_HZ} Hz, the highest sub-to-mid crossover the optimizers pick). Sub,{" "}
           {BRACE_STYLE_NAMES[subBracing.style].toLowerCase()}: {braceCount(subBracing)}
           {midBracing
@@ -123,17 +158,27 @@ export function DetailsSection({ planner }: Props) {
                   {!b.meets && (
                     <div className="text-red-700">
                       Under the target:{" "}
-                      {b.panels
-                        .filter((p) => p.hz < b.targetHz - 1e-9)
+                      {braceShortfalls(b)
                         .map((p) => BRACE_PANEL_NAMES[p.id].toLowerCase())
                         .join(", ")}
-                      . No other clear brace position raises them. Try{" "}
-                      {BRACE_STYLE_NAMES.both.toLowerCase()} or thicker walls.
+                      . No more {BRACE_STYLE_SUMMARY[b.style]} fit or help.
+                      {shortfallTry(b)}
                     </div>
                   )}
                 </div>
               ),
           )}
+        </div>
+        <div>
+          <span className="font-medium text-stone-900">{HARDWARE_SECTION_TITLE}.</span>{" "}
+          {[
+            subHardware && hardwareWords(subHardware, subBox, wallThicknessIn),
+            midHardware && hardwareWords(midHardware, effectiveMidBoxDims, wallThicknessIn),
+          ]
+            .filter(Boolean)
+            .join(" ")}{" "}
+          Each recess (cutout × depth past the wall) comes off the net volume. A part with no listed
+          depth takes none. The weights are in the boxes.
         </div>
         {[midDriver, compressionDriver, hornOption].map(
           (part) =>

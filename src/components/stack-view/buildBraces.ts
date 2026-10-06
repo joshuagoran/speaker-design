@@ -15,7 +15,7 @@ export const VENT_MESH_NAME = "vent";
  * Inside coordinates to the scene's, for the cabinet `box` whose bottom is at `y` and center at `x`: x from the left
  * wall, y up from the bottom, z back from the baffle's rear face (the scene's -z).
  */
-function insideToScene(ctx: SceneContext, box: Dims3, y: number, x: number) {
+export function insideToScene(ctx: SceneContext, box: Dims3, y: number, x: number) {
   const T = ctx.wall;
   const iw = box.w - 2 * T,
     zFront = box.d / 2 - ctx.inset - BAFFLE_THICKNESS_IN;

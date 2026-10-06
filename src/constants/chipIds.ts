@@ -65,6 +65,7 @@ export const CHIP_IDS = {
     "hifiTweeterLevel",
     "hifiWooferLimit",
   ],
+  hardware: ["subHardwareFit", "midHardwareFit"],
 } as const;
 
 /** The checks that name what sets a section's level; a result card says that in its "Limited by" line instead. */

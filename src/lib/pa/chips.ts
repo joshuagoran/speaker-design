@@ -2,6 +2,7 @@
 // Each returns [kind, head, body, id][] with kind "ok" | "warn" | "bad" and id the check's (CHIP_IDS). Tested in tests/chips.test.ts.
 
 import type {
+  BoxHardwarePlan,
   Chip,
   ChipId,
   Dims3,
@@ -17,6 +18,16 @@ import { subTubeSpan, tubeLayout, type TubeDriver } from "./tubes";
 import { ELBOW_COUNTS, mergeSpans, ownSpans, type ElbowCount } from "../tubeFold";
 import { PA_SLIDERS } from "../../constants/paSliders";
 import { crossoverSlopeName } from "../../constants/crossovers";
+import { PA_SETTINGS_TABS } from "../../constants/paSettingsTabs";
+import {
+  HARDWARE_ADVICE,
+  HARDWARE_FIT_TITLES,
+  HARDWARE_KIND_NAMES,
+  hardwareClashLine,
+  hardwareFitsLine,
+  HARDWARE_OBSTACLE_NAMES,
+  HARDWARE_PANEL_WORDS,
+} from "../../constants/hardware";
 
 // Longest duct each layout can hold, leaving an opening at least as wide as the duct. A bottom slot runs straight
 // while it fits (maxStraight) and folds up the back wall past that, so it holds the longer of the two; a fold is never
@@ -500,4 +511,36 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
     );
   else F.push(["warn", "HF not modeled", "No published HF specs.", "fillHfUnmodeled"]);
   return F;
+}
+
+/**
+ * The fit chip for a box's hardware (lib/pa/hardware): ok when every part is clear, else a warning naming each part and
+ * what it runs into (the braces and ribs, the driver, the vent, the panel's edges and joints, another part).
+ */
+export function hardwareChip(plan: BoxHardwarePlan): Chip<ChipId<"hardware">> {
+  const box = PA_SETTINGS_TABS[plan.box];
+  const id = plan.box === "sub" ? "subHardwareFit" : "midHardwareFit";
+  // the two handles mirror each other: one line for both when they hit the same things
+  const lines: string[] = [];
+  for (const p of plan.parts) {
+    if (!p.hits.length) continue;
+    const both =
+      p.kind === "handle" &&
+      plan.parts.filter((o) => o.kind === "handle" && o.hits.join() === p.hits.join()).length === 2;
+    if (both && p.panel === "sideR") continue;
+    const where = both
+      ? `${HARDWARE_KIND_NAMES.handle}s`
+      : `${HARDWARE_PANEL_WORDS[p.panel]} ${HARDWARE_KIND_NAMES[p.kind]}`;
+    lines.push(
+      hardwareClashLine(
+        `${box} ${where} (${p.part.name})`,
+        both,
+        p.hits.map((h) => HARDWARE_OBSTACLE_NAMES[h]).join(", "),
+        HARDWARE_ADVICE[p.kind],
+      ),
+    );
+  }
+  return lines.length
+    ? ["warn", `${box}: ${HARDWARE_FIT_TITLES.clash}`, lines.join(" "), id]
+    : ["ok", `${box}: ${HARDWARE_FIT_TITLES.fits}`, hardwareFitsLine(plan.liters.toFixed(2)), id];
 }

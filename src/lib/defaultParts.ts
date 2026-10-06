@@ -5,6 +5,7 @@ import { PANEL_NOMINAL_NAMES, PLYWOOD_MATERIAL } from "../constants/panelSizes";
 import { PANEL_NOMINALS, panelIn } from "./panel";
 import { MAKER_NAMES } from "../data/catalog/makers";
 import { subBoxBracing, subSystem, subWeightLb } from "./pa/calc";
+import { hardwareLb } from "./pa/hardware";
 import { formatDollars, formatHz } from "./format";
 import { crossoverSlopeName } from "../constants/crossovers";
 
@@ -36,14 +37,24 @@ export const DEFAULT_WALL = PANEL_NOMINAL_NAMES[d.panel].short;
 
 /**
  * The default sub box's loaded weight on each nominal plywood size the planner offers, thickest first, with the braces
- * and ribs the rule puts in at that size (its default style), as the planner weighs it; and how many of each.
+ * and ribs the rule puts in at that size (its default style) and its default handles, dish and jacks, as the planner
+ * weighs it; and how many of each.
  */
 export const DEFAULT_SUB_WEIGHTS = PANEL_NOMINALS.map((n) => {
   const t = panelIn(n, PLYWOOD_MATERIAL);
-  const b = subBoxBracing(d.cDim, t, d.inset, d.portStyle, d.cVent, d.sub, undefined);
+  const b = subBoxBracing(
+    d.cDim,
+    t,
+    d.inset,
+    d.portStyle,
+    d.cVent,
+    d.sub,
+    undefined,
+    d.hardware.sub,
+  );
   return {
     t: PANEL_NOMINAL_NAMES[n].short,
-    lb: Math.round(subWeightLb(d.cDim, t, d.sub.lb, b)),
+    lb: Math.round(subWeightLb(d.cDim, t, d.sub.lb, b, hardwareLb(d.hardware, "sub", d.layout))),
     windows: b.windows.x.length + b.windows.y.length + b.windows.z.length,
     ribs: b.ribs.reduce((a, r) => a + r.at.length, 0),
   };
@@ -63,6 +74,7 @@ function subTsSensitivity(): number {
     ampW: d.ampW,
     portMax: d.portMax,
     layout: d.layout,
+    hardware: d.hardware,
     xoLo: d.xoLo,
   });
   if (!sys.mdl) throw new Error(`${d.sub.name}: the default sub can't be modeled`);

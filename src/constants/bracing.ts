@@ -13,9 +13,9 @@ export const BRACE_STYLE_NAMES = {
 
 /** What each style does, for its button's tooltip. */
 export const BRACE_STYLE_TIPS = {
-  ribs: "Edge strips in rings on the walls; window braces on the baffle.",
-  window: "Plywood frames across the box; ribs where no frame reaches.",
-  both: "Ribs or window braces, best gain per wood first",
+  ribs: "Edge strips on the walls only. No rib can cross the driver.",
+  window: "Plywood frames across the box only. No ribs.",
+  both: "Frames and ribs, whichever adds more stiffness per wood.",
 } as const satisfies Record<keyof typeof BRACE_STYLE_NAMES, string>;
 
 /** Each style in a folded settings section's summary line ("braced with …"). */
@@ -26,15 +26,14 @@ export const BRACE_STYLE_SUMMARY = {
 } as const satisfies Record<keyof typeof BRACE_STYLE_NAMES, string>;
 
 /**
- * The notes under the Bracing setting where the rule couldn't do as the style says, by kind (`BraceFallback`): a panel
- * braced the other way, or left under the target. Each takes the panel's name with its cabinet ("Sub baffle") and, for
- * "under", the panel's first mode and the target, already in words.
+ * The note under the Bracing setting for each panel left under the target: the panel's name with its cabinet
+ * ("Sub baffle"), its first mode and the target, already in words.
  */
-export const BRACE_FALLBACK_NOTES = {
-  windows: (panel: string) => `${panel}: window braces (ribs can't cross the driver)`,
-  ribs: (panel: string) => `${panel}: ribs (no window brace clears the driver or the vent)`,
-  under: (panel: string, hz: string, target: string) => `${panel}: ${hz}, under ${target}`,
-} as const;
+export const braceUnderNote = (panel: string, hz: string, target: string) =>
+  `${panel}: ${hz}, under the ${target} target`;
+
+/** The end of a cutlist rib row whose rib crosses a window brace. */
+export const RIB_HALF_LAP_NOTE = "; half-lap it where it crosses a window brace";
 
 /** A panel's name with its cabinet's, as the bracing notes start ("Sub baffle", "Mid left side"). */
 export const bracePanelName = (cabinet: string, panel: keyof typeof BRACE_PANEL_NAMES) =>

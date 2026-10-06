@@ -20,9 +20,18 @@ export function buildTower(
     portGeom,
     subBracing,
     subKeepOut,
+    subHardware,
   }: Pick<
     Props,
-    "sub" | "mid" | "horn" | "plinth" | "portStyle" | "portGeom" | "subBracing" | "subKeepOut"
+    | "sub"
+    | "mid"
+    | "horn"
+    | "plinth"
+    | "portStyle"
+    | "portGeom"
+    | "subBracing"
+    | "subKeepOut"
+    | "subHardware"
   >,
 ): { top: number } {
   const s = sub.box;
@@ -36,6 +45,7 @@ export function buildTower(
     tower: { mid, horn },
     bracing: subBracing,
     keepOut: subKeepOut,
+    hardware: subHardware,
   });
   const { top: hornY } = buildMid(ctx, {
     mid,

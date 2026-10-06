@@ -5,6 +5,8 @@ import { formatHz } from "../../lib/format";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { SignalPath } from "../../components/drawings/SignalPath";
+import { HANDLES, HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
+import { HARDWARE_KIND_NAMES, HARDWARE_SECTION_TITLE } from "../../constants/hardware";
 import {
   DSP_UNITS,
   HORN_AMP_SAFETY_HPF_HZ,
@@ -371,9 +373,12 @@ export function NotesPage() {
             {[
               [
                 "Bracing",
-                `Ribs, window braces or both (one setting, under ${PA_SETTINGS_TABS.build}) until each panel's first resonance is above ${formatHz(PA_PANEL_TARGET_HZ)}. Handle recesses compete for the same area.`,
+                `Ribs, window braces or both (one setting, under ${PA_SETTINGS_TABS.build}) until each panel's first resonance is above ${formatHz(PA_PANEL_TARGET_HZ)}. They go around the hardware recesses.`,
               ],
-              ["Handles", "Recess type, depth and position on the sub; affects bracing."],
+              [
+                HARDWARE_SECTION_TITLE,
+                `${HANDLES.map((h) => h.name).join(" or ")} ${HARDWARE_KIND_NAMES.handle}s (or none), the ${INPUT_PLATE.name} ${HARDWARE_KIND_NAMES.plate} with 2 × ${INPUT_JACK.name}, and the ${HORN_POSTS.name} on the ${PA_SETTINGS_TABS.mid.toLowerCase()} box. Presets under ${PA_SETTINGS_TABS.build} place them before the braces. The optimizers leave them out.`,
+              ],
               [
                 "Port edge finish",
                 "Paint the slot ducts or mask the plywood edge. Seal the end grain in the mouth.",
