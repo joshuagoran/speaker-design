@@ -43,11 +43,12 @@ import {
   VENT_MESH_NAME,
 } from "../src/components/stack-view/buildBraces";
 import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES } from "../src/lib/data";
-import { close, vent } from "./helpers";
+import { close, rel, vent } from "./helpers";
 import { configs } from "./golden-configs";
 import { scenePropsOf } from "./scene-cases";
 import type {
   BoxBracing,
+  BracePanelId,
   BoxKeepOut,
   BoxRegion,
   BraceStyleId,
@@ -478,4 +479,45 @@ test("the notes beside the Bracing setting name the box and say where the style 
     }
   // and it does put ribs in, on the back
   assert.ok(b.ribs.some((r) => r.panel === "back"));
+});
+
+test("rib: the T section's EI and first mode against a hand calculation (a ¾″ rib 2½″ deep over 22½″, a 9.2″ bay)", (t) => {
+  const s = paPanelStock(0.75);
+  // the flange: 0.75 + min(0.1 × 22.5, 20 × 0.75, 9.2 − 0.75) = 0.75 + 2.25 = 3.0″
+  close(t, ribFlangeIn(22.5, 9.2, 0.75), 3, 1e-12);
+  // the flange 3 × 0.75 (area 2.25 at 0.375 up), the rib 0.75 × 2.5 (area 1.875 at 2.0 up): the centroid
+  // (2.25 × 0.375 + 1.875 × 2.0) / 4.125 = 1.113636″, and by the parallel-axis theorem
+  // I = 3 × 0.75³/12 + 2.25 × 0.738636² + 0.75 × 2.5³/12 + 1.875 × 0.886364² = 3.782670 in⁴
+  close(t, teeSecondMoment(3, 0.75, 0.75, 2.5), 3.78267, 1e-5);
+  // 3.87 × the rib alone's 0.75 × 2.5³ / 12 = 0.976563 in⁴
+  close(t, teeSecondMoment(3, 0.75, 0.75, 2.5) / 0.976563, 3.8734, 1e-4);
+  // EI at WISA birch's weaker modulus, 7 452 N/mm²; μ the rib and the 9.2″ of panel it carries
+  const EI = 7.452e9 * 3.78267 * 0.0254 ** 4;
+  const mu = ((s.lbPerSqFt * 0.45359237) / 0.09290304) * (2.5 + 9.2) * 0.0254;
+  rel(
+    t,
+    ribFirstModeHz(22.5, 9.2, s),
+    ((Math.PI / 2) * Math.sqrt(EI / mu)) / (22.5 * 0.0254) ** 2,
+    1e-6,
+  );
+});
+
+test("the starting sub under Ribs takes ribs: on the back at ¾″, and on the sides, top and back at ½″", () => {
+  const d = DEFAULT_PA;
+  const braced = (wall: number) =>
+    subBoxBracing(d.cDim, wall, d.inset, d.portStyle, d.cVent, d.sub, "ribs");
+  const on = (b: BoxBracing, id: BracePanelId) =>
+    b.ribs.filter((r) => r.panel === id).reduce((a, r) => a + r.at.length, 0);
+  const hz = (b: BoxBracing, id: BracePanelId) => b.panels.find((p) => p.id === id)?.hz ?? NaN;
+  // ¾″: the baffle's two level window braces already lift the sides past the target; the back takes a rib and clears it
+  const thick = braced(0.75);
+  assert.ok(on(thick, "back") >= 1);
+  assert.ok(hz(thick, "back") >= thick.targetHz);
+  for (const id of ["sideL", "sideR"] as const) assert.ok(hz(thick, id) >= thick.targetHz, id);
+  // ½″: ribs on both sides, the top and the back, each then over the target
+  const thin = braced(0.5);
+  for (const id of ["sideL", "sideR", "top", "back"] as const) {
+    assert.ok(on(thin, id) >= 1, `${id}: ribbed`);
+    assert.ok(hz(thin, id) >= thin.targetHz, `${id}: over the target`);
+  }
 });

@@ -108,9 +108,14 @@ export function plateFirstModeHz(a: number, b: number, s: PlateStock): number {
 
 /**
  * The panel either side of a rib that works with it as a flange, as shares of the rib's span and of the panel's
- * thickness: EN 1995-1-1:2004 (Eurocode 5) §9.1.2, Table 9.1, the effective flange width of glued thin-flanged beams
- * for plywood with its face grain along the webs (shear lag 0.1 l, plate buckling 20 hf), never more than the clear
- * bay beside the rib.
+ * thickness: EN 1995-1-1:2004 (Eurocode 5) §9.1.2, the effective flange width of glued thin-flanged beams, whose
+ * flanges are plywood glued to the webs as a panel is to its rib. For a flange both sides of the web (an I or a T),
+ * b_ef = b_w + b_ef,c, with b_ef,c (both sides together) no more than Table 9.1's values for plywood with its face grain
+ * along the webs: 0.1 l for shear lag (l the span) and 20 h_f for plate buckling (h_f the flange's thickness, the panel's
+ * measured one). Never more than the clear bay beside the rib either. The "12 to 16 thicknesses" rules of thumb come
+ * from concrete and steel (ACI 318-19 §6.3.2.1's 8 h each side, EN 1993-1-5 §9.1's 15 εt each side), stiffer in shear
+ * against their bending modulus than plywood; plywood's low in-plane shear modulus is what holds Table 9.1's shear-lag
+ * share down to a tenth of the span, which sets the flange on a box's short ribs.
  */
 export const RIB_FLANGE_SPAN_SHARE = 0.1;
 export const RIB_FLANGE_THICKNESSES = 20;
@@ -134,8 +139,10 @@ export function teeSecondMoment(b: number, h: number, w: number, d: number) {
 
 /**
  * A rib's first mode as a beam simply supported over `span` inches, carrying `tributary` inches of the panel beside it,
- * Hz: the rib and its effective flange of panel (ribFlangeIn) as one T section, at the stock's weaker modulus for both
- * (plywood's in-plane stiffness either way of the grain is at least that).
+ * Hz: f = (π/2) √(EI/μ) / L², the rib and its effective flange of panel (ribFlangeIn) as one T section
+ * (teeSecondMoment), at the stock's weaker modulus for both (plywood's in-plane stiffness either way of the grain is at
+ * least that); μ is the rib's own mass and the whole strip of panel it carries, per length. The rib alone (no flange,
+ * I = t·d³/12) reads about half the frequency for a box's ribs: a ¾″ rib 2½″ deep with a 3″ flange is 3.9 × as stiff.
  */
 export function ribFirstModeHz(span: number, tributary: number, s: PlateStock): number {
   const w = s.t * IN_M,
