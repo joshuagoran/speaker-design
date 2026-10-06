@@ -375,43 +375,82 @@ function trianglesOf(m: THREE.Mesh) {
   return out;
 }
 
-test("in the cutaway, no brace or rib meets a driver or the vent's parts as drawn", () => {
-  for (const c of configs) {
-    const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
-    const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
-    const mDim = c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box;
-    const wall = c.wall ?? 0.75,
-      inset = c.inset ?? 0.75,
-      layout = c.layout ?? "stack";
-    const g = buildStackScene({
-      ...scenePropsOf({ ...c, cutaway: true }),
-      subBracing: subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, undefined),
-      midBracing: midBoxBracing(mDim, wall, inset, mid, layout, undefined),
-      subKeepOut: subKeepOut(c.cDim, wall, inset, c.portStyle, c.cVent, sub),
-      midKeepOut: layout === "tower" ? null : midKeepOut(mDim, wall, mid),
+/** A design as the scene tests take it, with the bracing style the planner would pass. */
+type CutawayCase = Parameters<typeof scenePropsOf>[0] & { name: string };
+/**
+ * The cutaway of design `c` under `style`: no brace or rib meets a driver or the vent's parts as drawn, and every brace
+ * and rib is drawn. Returns how many rib and brace meshes it drew.
+ */
+function checkCutaway(c: CutawayCase, style: BraceStyleId | undefined) {
+  const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
+  const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
+  const mDim = c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box;
+  const wall = c.wall ?? 0.75,
+    inset = c.inset ?? 0.75,
+    layout = c.layout ?? "stack";
+  const subBracing = subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, style);
+  const midBracing = midBoxBracing(mDim, wall, inset, mid, layout, style);
+  const g = buildStackScene({
+    ...scenePropsOf({ ...c, cutaway: true }),
+    subBracing,
+    midBracing,
+    subKeepOut: subKeepOut(c.cDim, wall, inset, c.portStyle, c.cVent, sub),
+    midKeepOut: layout === "tower" ? null : midKeepOut(mDim, wall, mid),
+  });
+  g.updateMatrixWorld(true);
+  const named = (n: string) => {
+    const out: THREE.Mesh[] = [];
+    g.traverse((o) => {
+      if (o instanceof THREE.Mesh && o.name === n) out.push(o);
     });
-    g.updateMatrixWorld(true);
-    const named = (n: string) => {
-      const out: THREE.Mesh[] = [];
-      g.traverse((o) => {
-        if (o instanceof THREE.Mesh && o.name === n) out.push(o);
-      });
-      return out;
-    };
-    const braces = named(BRACE_MESH_NAME).map((m) => new THREE.Box3().setFromObject(m));
-    const others = [...named(DRIVER_BODY_MESH_NAME), ...named(VENT_MESH_NAME)];
-    assert.ok(
-      named(DRIVER_BODY_MESH_NAME).length > 0,
-      `${c.name}: the drivers show in the cutaway`,
-    );
-    for (const m of others) {
-      const near = braces.filter((b) => b.intersectsBox(new THREE.Box3().setFromObject(m)));
-      if (!near.length) continue;
-      for (const tri of trianglesOf(m))
-        for (const b of near)
-          assert.ok(!triangleMeetsBox(tri, b), `${c.name}: a brace meets the ${m.name}`);
-    }
+    return out;
+  };
+  const tag = `${c.name} ${style ?? "default"}`;
+  const braceMeshes = named(BRACE_MESH_NAME);
+  const regions = [
+    ...bracingRegions(subBracing, paInner(c.cDim, wall, inset), wall),
+    ...(midBracing ? bracingRegions(midBracing, paInner(mDim, wall, inset), wall) : []),
+  ];
+  assert.strictEqual(braceMeshes.length, regions.length, `${tag}: every brace and rib drawn`);
+  const braces = braceMeshes.map((m) => new THREE.Box3().setFromObject(m));
+  const others = [...named(DRIVER_BODY_MESH_NAME), ...named(VENT_MESH_NAME)];
+  assert.ok(named(DRIVER_BODY_MESH_NAME).length > 0, `${tag}: the drivers show in the cutaway`);
+  for (const m of others) {
+    const near = braces.filter((b) => b.intersectsBox(new THREE.Box3().setFromObject(m)));
+    if (!near.length) continue;
+    for (const tri of trianglesOf(m))
+      for (const b of near)
+        assert.ok(!triangleMeetsBox(tri, b), `${tag}: a brace meets the ${m.name}`);
   }
+  return braceMeshes.length;
+}
+
+test("in the cutaway, no brace or rib meets a driver or the vent's parts as drawn", () => {
+  for (const c of configs) checkCutaway(c, undefined);
+});
+
+test("the starting sub's cutaway under each style: ribs, window braces and both drawn clear of the driver and vent", () => {
+  const d = DEFAULT_PA;
+  for (const wall of [0.75, 0.5])
+    for (const style of STYLES) {
+      const c: CutawayCase = {
+        name: `default PA ${wall}`,
+        sub: d.sub.id,
+        mid: d.mid.id,
+        horn: d.horn.id,
+        midBox: d.midBox.id,
+        mDim: d.mDim,
+        portStyle: d.portStyle,
+        cDim: d.cDim,
+        cVent: d.cVent,
+        wall,
+        inset: d.inset,
+      };
+      const b = subBoxBracing(d.cDim, wall, d.inset, d.portStyle, d.cVent, d.sub, style);
+      // every style puts ribs in the starting sub (on the back at least)
+      assert.ok(b.ribs.length > 0, `${wall} ${style}: ribs`);
+      assert.ok(checkCutaway(c, style) > 0);
+    }
 });
 
 test("the 3D view draws the braces and ribs, and the drivers only in the cutaway", () => {
@@ -513,6 +552,7 @@ test("braceFallbacks: the panels braced the other way, and those under the targe
   // "under" carries hz, the others don't
   for (const f of braceFallbacks(ribs)) assert.strictEqual(f.hz === undefined, f.kind !== "under");
 });
+
 test("rib: the T section's EI and first mode against a hand calculation (a ¾″ rib 2½″ deep over 22½″, a 9.2″ bay)", (t) => {
   const s = paPanelStock(0.75);
   // the flange: 0.75 + min(0.1 × 22.5, 20 × 0.75, 9.2 − 0.75) = 0.75 + 2.25 = 3.0″
