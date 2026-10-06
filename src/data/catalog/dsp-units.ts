@@ -66,7 +66,7 @@ export const DSP_UNITS = [
       peqPerOutput: "PEQ blocks (count unconfirmed)",
       priceUs: "$999 new (Sweetwater, Full Compass, B&H), ~$800 used",
       notes:
-        "Current. Meets every requirement; 2 spare outputs. Control is browser-only over Ethernet (no front-panel editing), so bring a phone or tablet on the rack's network.",
+        "Meets every requirement; 2 spare outputs. Control is browser-only over Ethernet (no front-panel editing), so bring a phone or tablet on the rack's network.",
     },
   },
   {
