@@ -13,7 +13,7 @@ export const LIMIT_NAMES = {
   amp: "amp",
 } as const;
 
-/** What stops the sub's music level, as the sub section's "First limit" row says it. */
+/** What stops the sub's music level, as the sub section's "First limit" row and the Coverage amp power table say it. */
 export const SUB_LIMIT_NAMES: Record<SubLimitWho, string> = {
   port: "port air speed",
   Xmax: "cone travel (Xmax)",
@@ -27,14 +27,6 @@ export const SUB_LIMITED_BY: Record<SubLimitWho, string> = {
   Xmax: "cone travel",
   thermal: "the driver's program rating",
   amp: "amplifier power",
-};
-
-/** What sets a PA driver's max level, as the Coverage page's amp power table says it. */
-export const AMP_LIMIT_NAMES: Record<SubLimitWho, string> = {
-  amp: "Amp",
-  thermal: "Heat",
-  Xmax: "Excursion (Xmax)",
-  port: "Port air speed",
 };
 
 /** What stops a Hi-fi woofer's level, as a Hi-fi optimizer card's "Limited by" line says it. */

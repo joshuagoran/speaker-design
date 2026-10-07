@@ -11,7 +11,6 @@ import {
 } from "../src/lib/pa/ampPower";
 import { ampVoltage } from "../src/lib/pa/calc";
 import { AMP_POWER_TEXT, MUSIC_CREST_DB, SINE_CREST_DB } from "../src/constants/ampPower";
-import { AMP_LIMIT_NAMES } from "../src/constants/limits";
 import type { PaMaxPoint } from "../src/types";
 import { close } from "./helpers";
 
@@ -71,13 +70,4 @@ test("the mid: the lowest drive between the crossovers sets its max, and names t
   close(t, m.ampW, 1000, 1e-9);
   close(t, m.wAtMax, 1000 * 10 ** -0.6, 1e-9);
   assert.equal(midMax(max, curve, V, [2000, 3000]), null);
-});
-
-test("limit labels: amp, heat, excursion, port air speed", () => {
-  assert.deepEqual(AMP_LIMIT_NAMES, {
-    amp: "Amp",
-    thermal: "Heat",
-    Xmax: "Excursion (Xmax)",
-    port: "Port air speed",
-  });
 });

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { AMP_POWER_TEXT } from "../../constants/ampPower";
-import { AMP_LIMIT_NAMES } from "../../constants/limits";
+import { SUB_LIMIT_NAMES } from "../../constants/limits";
+import { SectionHeading } from "../../components/ui/SectionHeading";
 import { DRIVER_PART_NAMES } from "../../constants/optimizerText";
 import { UI_TEXT } from "../../constants/uiText";
 import { formatWatts } from "../../lib/format";
@@ -85,25 +86,23 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
   const notAmp = rows.filter((r) => r.who !== "amp").map((r) => CHANNEL_NAMES[r.channel]);
   return (
     <div>
+      <SectionHeading className="mb-1">{AMP_POWER_TEXT.heading}</SectionHeading>
       <div className="overflow-x-auto">
-        <table className="text-sm w-full min-w-[620px] table-fixed border-collapse tabular-nums">
-          <caption className="text-left text-stone-900 font-medium pb-1">
-            {AMP_POWER_TEXT.heading}
-          </caption>
+        <table className="text-sm w-full min-w-[600px] table-fixed border-collapse tabular-nums">
           <colgroup>
-            <col className="w-[18%]" />
-            <col className="w-[13%]" />
-            <col className="w-[15%]" />
-            <col className="w-[22%]" />
-            <col className="w-[12%]" />
             <col className="w-[20%]" />
+            <col className="w-[12%]" />
+            <col className="w-[16%]" />
+            <col className="w-[12%]" />
+            <col className="w-[12%]" />
+            <col className="w-[28%]" />
           </colgroup>
           <thead>
             <tr className="text-stone-500 text-left border-b border-stone-300">
               <th className={th}>{AMP_POWER_TEXT.driver}</th>
               <th className={`${th} text-right`}>{AMP_POWER_TEXT.avg}</th>
               <th className={`${th} text-right`}>{AMP_POWER_TEXT.peak}</th>
-              <th className={th}>{AMP_POWER_TEXT.amp}</th>
+              <th className={`${th} text-right`}>{AMP_POWER_TEXT.amp}</th>
               <th className={`${th} text-right`}>{AMP_POWER_TEXT.headroom}</th>
               <th className={th}>{AMP_POWER_TEXT.limit}</th>
             </tr>
@@ -125,11 +124,12 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
                     {AMP_POWER_TEXT.clips}
                   </div>
                 </td>
-                <td className={`${td} text-stone-500`}>
-                  {formatWatts(r.avgW)} avg / {formatWatts(r.peakW)} peak of {formatWatts(r.ampW)}
-                </td>
+                <td className={`${td} text-right`}>{formatWatts(r.ampW)}</td>
                 <td className={`${td} text-right`}>{r.headroomDb.toFixed(1)} dB</td>
-                <td className={td}>{AMP_LIMIT_NAMES[r.who]}</td>
+                {/* the sub section's "First limit" words, with a capital; on one line, so the row keeps its height */}
+                <td className={`${td} whitespace-nowrap first-letter:uppercase`}>
+                  {SUB_LIMIT_NAMES[r.who]}
+                </td>
               </tr>
             ))}
           </tbody>

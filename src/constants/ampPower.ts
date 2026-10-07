@@ -11,9 +11,9 @@ export const SINE_CREST_DB = 10 * Math.log10(2);
 export const AMP_POWER_TEXT = {
   heading: "Amp power at the target",
   driver: "Driver",
-  avg: "Average W",
-  peak: "Peak W",
-  amp: "Amp",
+  avg: "Average",
+  peak: "Peak",
+  amp: "Amp rating",
   headroom: "Headroom",
   limit: "Limit",
   clips: "Clips on peaks",
