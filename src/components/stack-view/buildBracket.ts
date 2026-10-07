@@ -25,6 +25,8 @@ export const BRACKET = {
   /** where the foot's screws sit: across from the center, and back from the upright as a share of the foot */
   screwX: 1.1,
   screwAt: 0.6,
+  /** clamped between the throat and the driver: the upright's margin past the driver's bolts */
+  clampEdge: 0.35,
 } as const;
 
 /** Whether a horn's adapter has a front flange and a neck behind it for the bracket to bolt to. */
@@ -59,54 +61,39 @@ export function buildBracket(
 }
 
 /**
- * For a horn the driver bolts straight to (no adapter), for illustration only: a 1/8 in aluminum plate between the
- * horn's throat and the driver, held by the driver's 4 bolts. It is a disc as wide as the driver with a tab below it,
- * and the bracket's upright bolts to the back of the tab, below the driver. 3D only: the planner's model and parts list
- * leave it out. Returns the z of the plate's back face, where the driver's front face sits.
+ * For a horn the driver bolts straight to (no adapter): the brackets are custom, so the upright itself is clamped
+ * between the horn's throat flange and the driver by the driver's bolts, with a hole for the throat. It is as wide as
+ * the bolt circle needs and reaches just past the upper bolts. The driver moves back by the bracket's thickness. 3D
+ * only: the planner's model and parts list leave it out. Returns the z of the upright's back face, where the driver's
+ * front face sits.
  */
-export function buildPlateBracket(
+export function buildClampedBracket(
   ctx: SceneContext,
-  cd: Pick<CompressionDriver, "body">,
+  cd: Pick<CompressionDriver, "body" | "exit">,
   at: HornAxis,
   lidY: number,
 ): number {
-  const t = BRACKET.thickness;
-  const cdR = cd.body.dia / 2;
-  const bolt = { x: CD_PLATE.boltX, y: -(cdR + CD_PLATE.boltsBelowCd) };
-  const tabBottom = bolt.y - CD_PLATE.belowBolts;
-  const add = (geometry: THREE.BufferGeometry, y: number) => {
-    const m = new THREE.Mesh(geometry, ctx.materials.aluminum);
-    m.position.set(at.x, at.y + y, at.throatZ - t / 2);
-    m.name = CD_PLATE_MESH_NAME;
-    ctx.group.add(m);
-    return m;
-  };
-  add(new THREE.CylinderGeometry(cdR, cdR, t, 48), 0).rotation.x = Math.PI / 2;
-  add(new THREE.BoxGeometry(BRACKET.width, -tabBottom, t), tabBottom / 2);
+  const boltOff = (cd.body.bolts.circle / 2) * Math.SQRT1_2; // the bolts at 45°, 135°, 225° and 315°
   addBracket(
     ctx,
     at,
-    { zFace: at.throatZ - t, bolt, top: -(cdR + CD_PLATE.uprightBelowCd), notchR: null },
+    {
+      zFace: at.throatZ, // against the throat flange
+      bolt: null, // the driver's own bolts clamp it
+      top: boltOff + BRACKET.aboveBolts,
+      notchR: null,
+      holeR: cd.exit / 2,
+      width: Math.max(BRACKET.width, 2 * (boltOff + BRACKET.clampEdge)),
+    },
     lidY,
   );
-  return at.throatZ - t;
+  return at.throatZ - BRACKET.thickness;
 }
 
-/** The plate for a horn without an adapter (`buildPlateBracket`). */
-export const CD_PLATE_MESH_NAME = "cdPlate";
-export const CD_PLATE = {
-  /** the upright's two bolts: across from the axis, and below the driver's edge */
-  boltX: 1.1,
-  boltsBelowCd: 0.65,
-  /** how far the tab runs below the bolts */
-  belowBolts: 0.4,
-  /** how far the upright's top stays below the driver */
-  uprightBelowCd: 0.2,
-} as const;
-
 /**
- * The bracket's upright and foot, in the horn axis' frame: the upright's front face against `zFace`, bolted at ±`bolt`,
- * reaching up to `top`, notched round the adapter's neck when `notchR` is given.
+ * The bracket's upright and foot, in the horn axis' frame: the upright's front face against `zFace`, reaching up to
+ * `top`, `width` wide (default `BRACKET.width`). It is bolted with M6 at ±`bolt` (none drawn when the driver's own bolts
+ * clamp it), notched round the adapter's neck when `notchR` is given, and pierced for the throat when `holeR` is.
  */
 function addBracket(
   ctx: SceneContext,
@@ -116,12 +103,21 @@ function addBracket(
     bolt,
     top,
     notchR,
-  }: { zFace: number; bolt: { x: number; y: number }; top: number; notchR: number | null },
+    holeR = null,
+    width = BRACKET.width,
+  }: {
+    zFace: number;
+    bolt: { x: number; y: number } | null;
+    top: number;
+    notchR: number | null;
+    holeR?: number | null;
+    width?: number;
+  },
   lidY: number,
 ) {
   const { aluminum, hardware } = ctx.materials;
   const t = BRACKET.thickness;
-  const w = BRACKET.width / 2;
+  const w = width / 2;
   const footY = lidY + ROUNDOVER_IN;
   const bottom = footY - at.y;
   const shape = new THREE.Shape();
@@ -136,6 +132,7 @@ function addBracket(
   }
   shape.lineTo(-w, top);
   shape.lineTo(-w, bottom);
+  if (holeR !== null) shape.holes.push(new THREE.Path().absarc(0, 0, holeR, 0, Math.PI * 2, true));
   const upright = new THREE.Mesh(
     new THREE.ExtrudeGeometry(shape, { depth: t, bevelEnabled: false, curveSegments: 24 }),
     aluminum,
@@ -143,7 +140,7 @@ function addBracket(
   upright.position.set(at.x, at.y, zUp - t);
   upright.name = BRACKET_MESH_NAME;
   ctx.group.add(upright);
-  const foot = new THREE.Mesh(new THREE.BoxGeometry(BRACKET.width, t, BRACKET.foot), aluminum);
+  const foot = new THREE.Mesh(new THREE.BoxGeometry(width, t, BRACKET.foot), aluminum);
   foot.position.set(at.x, footY + t / 2, zUp - BRACKET.foot / 2);
   foot.name = BRACKET_MESH_NAME;
   ctx.group.add(foot);
@@ -161,21 +158,23 @@ function addBracket(
     ctx.group.add(m);
   };
   for (const sx of [-1, 1]) {
-    // M6 hex head and washer behind the upright, and a wood screw in the foot
-    part(
-      new THREE.CylinderGeometry(0.19, 0.19, 0.16, 6),
-      at.x + sx * bolt.x,
-      at.y + bolt.y,
-      zUp - t - 0.03 - 0.08,
-      true,
-    );
-    part(
-      new THREE.CylinderGeometry(0.26, 0.26, 0.03, 24),
-      at.x + sx * bolt.x,
-      at.y + bolt.y,
-      zUp - t - 0.015,
-      true,
-    );
+    if (bolt) {
+      // M6 hex head and washer behind the upright (when bolted), and a wood screw in the foot
+      part(
+        new THREE.CylinderGeometry(0.19, 0.19, 0.16, 6),
+        at.x + sx * bolt.x,
+        at.y + bolt.y,
+        zUp - t - 0.03 - 0.08,
+        true,
+      );
+      part(
+        new THREE.CylinderGeometry(0.26, 0.26, 0.03, 24),
+        at.x + sx * bolt.x,
+        at.y + bolt.y,
+        zUp - t - 0.015,
+        true,
+      );
+    }
     part(
       new THREE.CylinderGeometry(0.17, 0.17, 0.07, 20),
       at.x + sx * BRACKET.screwX,

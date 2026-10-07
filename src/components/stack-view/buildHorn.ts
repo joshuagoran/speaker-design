@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { rectangularHornGeometry } from "./geometry";
 import { HORN_LIFT_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
-import { buildBracket, buildPlateBracket, takesBracket } from "./buildBracket";
+import { buildBracket, buildClampedBracket, takesBracket } from "./buildBracket";
 import { cdBodySteps } from "../../lib/data";
 import type { BodyStep, CompressionDriver, Dims3, Horn } from "../../types";
 
@@ -49,13 +49,13 @@ export interface HornAxis {
 /**
  * The horn's throat adapter, when it has one, and the compression driver behind it: the adapter's front face on the
  * throat, the driver's front face on the adapter's back face (or on the throat). On a lid (`lidY`; the tower has none
- * under the driver) the L-bracket holds it: from the adapter's flange, or, without an adapter, from a plate between
+ * under the driver) the L-bracket holds it: from the adapter's flange, or, without an adapter, clamped between
  * the throat and the driver.
  */
 function addThroatParts(
   ctx: SceneContext,
   horn: Pick<Horn, "adapter">,
-  cd: Pick<CompressionDriver, "body">,
+  cd: Pick<CompressionDriver, "body" | "exit">,
   at: HornAxis,
   lidY: number | null,
 ) {
@@ -69,7 +69,7 @@ function addThroatParts(
       ADAPTER_MESH_NAME,
     );
     if (lidY !== null && takesBracket(horn.adapter)) buildBracket(ctx, horn.adapter, at, lidY);
-  } else if (lidY !== null) cdFront = buildPlateBracket(ctx, cd, at, lidY);
+  } else if (lidY !== null) cdFront = buildClampedBracket(ctx, cd, at, lidY);
   addSteps(
     ctx,
     cdBodySteps(cd.body),
@@ -98,7 +98,7 @@ export function buildHorn(
     tower,
   }: {
     horn: Horn;
-    cd: Pick<CompressionDriver, "body">;
+    cd: Pick<CompressionDriver, "body" | "exit">;
     y: number;
     xs?: number[];
     mount: Pick<Dims3, "w" | "d">;
