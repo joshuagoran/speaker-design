@@ -10,6 +10,7 @@ import {
   ductDividerIn,
   foldedRearWallIn,
   foldedShelfIn,
+  slotFinIn,
   isRoundPort,
   maxStraightSlotIn,
   slotFolds,
@@ -313,9 +314,11 @@ export function buildSubwoofer(
     shelf.position.set(0, pl + T + ductH + T / 2, ductZ);
     shelf.name = VENT_MESH_NAME;
     subGroup.add(shelf);
+    // the fins run on to the back panel past the shelf, as the cutlist's
+    const finLen = slotFinIn(s, T);
     [-1, 1].forEach((k) => {
-      const fin = new THREE.Mesh(new THREE.BoxGeometry(T, ductH, ductLen), plyIn);
-      fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, ductZ);
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(T, ductH, finLen), plyIn);
+      fin.position.set((k * (ductW + T)) / 2, pl + T + ductH / 2, s.d / 2 - finLen / 2);
       fin.name = VENT_MESH_NAME;
       subGroup.add(fin);
     });

@@ -68,6 +68,8 @@ export interface PaBoxSupports {
    * floor rib there runs front to back from it, and none runs across the air leaving the duct.
    */
   bottomZ?: number[];
+  /** a bottom slot's fins' height where they run the whole depth: the `bottom` lines are those fins */
+  finIn?: number;
 }
 export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], bottom: [] };
 
@@ -160,6 +162,7 @@ export function paBoxPanels(
       stopU: stops.bottom,
       stopV: stops.bottomZ ?? [],
       ...(stops.bottomZ?.length ? { ribAcross: ["x"] as const } : {}),
+      ...(sup.finIn ? { fins: { across: "x" as const, at: sup.bottom, height: sup.finIn } } : {}),
       edges: {
         u0: held(wall, ih),
         u1: held(wall, ih),

@@ -16,6 +16,7 @@ import {
   slotFolds,
   foldedRearWallIn,
   foldedShelfIn,
+  slotFinIn,
   slotInnerEndCorrection,
   boxInternalLiters,
   logGridCount,
@@ -464,7 +465,8 @@ export function subWoodIn3(
   if (style === "slots") {
     const folded = slotFolds(box, v, t);
     const len = folded ? foldedShelfIn(box, v.slotH, t) : v.len;
-    in3 += iw * len * t + v.slotH * len * t * 2;
+    // a straight slot's fins run on to the back (slotFinIn)
+    in3 += iw * len * t + v.slotH * (folded ? len : slotFinIn(box, t)) * t * 2;
     if (folded) in3 += iw * foldedRearWallIn(box, v, t) * t;
   } else if (style === "vslots" || style === "vslot1") {
     const n = style === "vslot1" ? 1 : 2;

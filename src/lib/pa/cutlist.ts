@@ -439,7 +439,18 @@ export function packSheets<R extends PackRect>(
   }
   // boundary cast: TypeScript can't see the assignment inside the tryRun closure, so it narrows `best` to null
   const won = best as Run<R> | null;
-  return { sheets: won ? won.sheets.map((s) => ({ items: s.items })) : [], tooBig };
+  const out = { sheets: won ? won.sheets.map((s) => ({ items: s.items })) : [], tooBig };
+  // a rip-first layout is a layout too, and its strips sometimes pack tighter: while over the bound, the free search
+  // takes the rip-first search's when it needs fewer sheets
+  if (ripFirst || out.sheets.length <= bound) return out;
+  const rip = packSheets(rects, sheet, kerf, {
+    trim,
+    runs: maxRuns,
+    capMs: capMs - (now() - t0),
+    seed,
+    ripFirst: true,
+  });
+  return rip.sheets.length < out.sheets.length ? rip : out;
 }
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 

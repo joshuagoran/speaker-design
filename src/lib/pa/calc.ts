@@ -132,6 +132,11 @@ export const slotFolds = (box: Pick<Dims3, "d">, v: Pick<VentSpec, "slotH" | "le
  */
 export const foldedShelfIn = (box: Pick<Dims3, "d">, slotH: number, t: number) =>
   maxStraightSlotIn(box, slotH, t) - t;
+/**
+ * A straight slot's fins' length, from the box's front to the back panel: they run on past the shelf as floor ribs
+ * (with the air), so the floor is held whatever the slot's length, and the back's and top's ribs line up on them.
+ */
+export const slotFinIn = (box: Pick<Dims3, "d">, t: number) => box.d - t;
 // The least the rear channel's wall rises from the floor leg's roof's underside, so the folded duct has a mouth to open
 // into.
 const FOLD_MIN_WALL_IN = 1;
@@ -545,7 +550,7 @@ export type BraceVent = Pick<VentSpec, "slotH" | "len" | "throat" | "div" | "nt"
 /**
  * Where the duct's length changes the sub's bracing: whether the duct runs far enough back to hold the panels it runs
  * along (ductHolds: then its parts' lines, subVentLines, are supports: a bottom slot's shelf across both sides and its
- * two fins along the bottom, a side duct's wall along the top and bottom and its dividers across its side), whether a
+ * two fins along the bottom (a straight slot's fins run on to the back, so they hold the floor at any length), a side duct's wall along the top and bottom and its dividers across its side), whether a
  * bottom slot folds up the back (and whether its rear channel wall rises far enough, DUCT_SUPPORT_MIN_SHARE of the
  * inside height, to hold the sides: `wallHolds`) and whether the tubes take elbows (subKeepOut).
  */
@@ -775,7 +780,7 @@ const BRACING_MEMO = new Map<string, BoxBracing>();
 const INPUT_MEMO = new Map<string, BoxBracing>();
 const BRACING_MEMO_MAX = 20000;
 const linesKey = (s: PaBoxSupports) =>
-  `${s.sideL.join()};${s.sideR.join()};${s.top.join()};${s.bottom.join()};${s.sideZ?.join() ?? ""};${s.bottomZ?.join() ?? ""}`;
+  `${s.sideL.join()};${s.sideR.join()};${s.top.join()};${s.bottom.join()};${s.sideZ?.join() ?? ""};${s.bottomZ?.join() ?? ""};${s.finIn ?? ""}`;
 /**
  * A folded slot's rear channel wall as a line on both sides, back from the baffle (inside): the channel's front wall,
  * a slot height and a wall in from the back, `t` thick, glued between the sides. Where it rises DUCT_SUPPORT_MIN_SHARE
@@ -885,6 +890,10 @@ export function subBoxBracing(
       style === "slots" ? v.slotH + t : 0,
       {
         ...(flags.holds ? subVentLines(box, t, style, v) : NO_SUPPORTS),
+        // a straight slot's fins run the whole depth, however short its shelf: they hold the floor
+        ...(style === "slots" && !flags.folds
+          ? { bottom: subVentLines(box, t, style, v).bottom, finIn: v.slotH }
+          : {}),
         // a folded slot's rear channel wall holds both sides where it rises far enough
         sideZ: flags.wallHolds ? [foldWallLine(box, t, inset, v)] : [],
       },
@@ -1204,7 +1213,14 @@ export function subVentMasses(box: Dims3, t: number, style: PortStyle, v: BraceV
       : Math.min(v.len, maxStraightSlotIn(box, v.slotH, t));
     const out: CogMass[] = [
       { lb: ply(iw, len, t), y: t + v.slotH + t / 2, z: len / 2 },
-      { lb: 2 * ply(v.slotH, len, t), y: t + v.slotH / 2, z: len / 2 },
+      // a straight slot's fins run on to the back
+      folded
+        ? { lb: 2 * ply(v.slotH, len, t), y: t + v.slotH / 2, z: len / 2 }
+        : {
+            lb: 2 * ply(v.slotH, slotFinIn(box, t), t),
+            y: t + v.slotH / 2,
+            z: slotFinIn(box, t) / 2,
+          },
     ];
     if (folded) {
       const wallH = foldedRearWallIn(box, v, t);
@@ -1400,9 +1416,11 @@ export function cutParts({
       part: "ductFin",
       qty: 2,
       a: cVent.slotH,
-      b: len,
+      b: folded ? len : slotFinIn(subBox, t),
       t,
-      note: "splits the slot in three",
+      note: folded
+        ? "splits the slot in three"
+        : "splits the slot in three; runs on to the back panel, a floor rib past the shelf",
     });
     if (folded)
       all.push({

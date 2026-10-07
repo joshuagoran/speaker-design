@@ -719,8 +719,16 @@ export function braceBox({
     ribRoom.set(k, out);
     return out;
   };
-  // a panel's `n` ribs across `across` with the window braces `w`: each nearest its spot in the panel's widest bays
-  // (fillGaps) where it can stand, every bay still MIN_BAY_IN or more; where they go and run, or null if they can't
+  // the fins' lines (BracePanel fins) in box coordinates, by the axis they divide
+  const finLines: Partial<Record<BoxAxis, number[]>> = {};
+  for (const p of panels)
+    if (p.fins) {
+      const off = p.fins.across === p.u ? p.offU : p.offV;
+      finLines[p.fins.across] = p.fins.at.map((x) => x + off);
+    }
+  // a panel's `n` ribs across `across` with the window braces `w`: in line with the fins when there are as many (C
+  // braces) and they can stand there, else each nearest its spot in the panel's widest bays (fillGaps) where it can
+  // stand; every bay still MIN_BAY_IN or more. Where they go and run, or null if they can't
   const ribMemo = new Map<string, PlacedRibs | null>();
   const ribsAt = (
     p: BracePanel,
@@ -735,29 +743,39 @@ export function braceBox({
     const span = across === p.u ? p.spanU : p.spanV;
     const sup = supportsAcross(p, across, w);
     const clear = ribClear(p, across, depth);
-    const at = clear.length
-      ? fillGaps(span, sup, n)
-          .at.map((x) => nearestIn(clear, x))
-          .sort((a, b) => a - b)
-      : [];
     const lines = [0, span, ...sup.filter((s) => s > EPS && s < span - EPS)];
-    const spaced =
-      at.length === n &&
-      at.every(
-        (x, i) =>
-          (i === 0 || x - at[i - 1] >= MIN_BAY_IN - EPS) &&
-          lines.every((s) => Math.abs(x - s) >= MIN_BAY_IN - EPS),
-      );
-    const runs: Span[] = [];
-    let out: PlacedRibs | null = spaced ? { at, runs } : null;
-    for (const x of spaced ? at : []) {
-      const r = ribRun(p, across, x, depth);
-      if (!r || r[1] - r[0] < RIB_MIN_RUN_SHARE * ribBand(p, across, depth).L - EPS) {
-        out = null;
-        break;
+    const place = (at: number[]): PlacedRibs | null => {
+      const spaced =
+        at.length === n &&
+        at.every(
+          (x, i) =>
+            (i === 0 || x - at[i - 1] >= MIN_BAY_IN - EPS) &&
+            lines.every((s) => Math.abs(x - s) >= MIN_BAY_IN - EPS),
+        );
+      if (!spaced) return null;
+      const runs: Span[] = [];
+      for (const x of at) {
+        const r = ribRun(p, across, x, depth);
+        if (!r || r[1] - r[0] < RIB_MIN_RUN_SHARE * ribBand(p, across, depth).L - EPS) return null;
+        runs.push(r);
       }
-      runs.push(r);
-    }
+      return { at, runs };
+    };
+    const off = across === p.u ? p.offU : p.offV;
+    const fins = p.fins ? undefined : finLines[across]?.map((x) => x - off);
+    const onFins =
+      fins?.length === n && fins.every((x) => clear.some(([a, b]) => x >= a - EPS && x <= b + EPS))
+        ? place(fins)
+        : null;
+    const out =
+      onFins ??
+      (clear.length
+        ? place(
+            fillGaps(span, sup, n)
+              .at.map((x) => nearestIn(clear, x))
+              .sort((a, b) => a - b),
+          )
+        : null);
     ribMemo.set(k, out);
     return out;
   };
@@ -811,6 +829,18 @@ export function braceBox({
     // the joint there must be glued for the two ribs to be (a screwed back's isn't)
     if (p.edges && p.edges[RUN_EDGE[o === p.u ? "u" : "v"][end]] === null) return 0;
     const q = panelById.get(END_PANEL[R][end]);
+    // a fin on the next panel on this line, running to this panel's wall: the rib butts onto it (a C brace)
+    if (
+      q?.fins &&
+      q.fins.across === a &&
+      ribRunAxis(q.id, a) === PANEL_NORMAL[p.id].axis &&
+      q.fins.at.some((y) => Math.abs(offAcross(q, a) + y - (offAcross(p, a) + x)) < t - EPS)
+    ) {
+      const span = spanAcross(q, otherAxis(q, a));
+      const trib = widestGap(spanAcross(q, a), supportsAcross(q, a, w));
+      const { EI } = teeBeam(span, trib, q.stock, q.stock, q.fins.height);
+      return (RING_FIXITY * EI) / (span * IN_M);
+    }
     const s = q && r[q.id];
     if (!q || !s || s.across !== a) return 0;
     const placed = ribsAt(q, a, s.n, w, s.depth);
@@ -1002,8 +1032,13 @@ export function braceBox({
   const ringMemo = new Map<string, Move[]>();
   const ringMoves = (scope: readonly BracePanel[]): Move[] =>
     BOX_AXES.flatMap((a) => {
+      // a panel with fins across the axis has them in the ring's place (a C brace)
       const on = panels.filter(
-        (p) => p.ribs && (p.u === a || p.v === a) && (!p.ribAcross || p.ribAcross.includes(a)),
+        (p) =>
+          p.ribs &&
+          (p.u === a || p.v === a) &&
+          (!p.ribAcross || p.ribAcross.includes(a)) &&
+          p.fins?.across !== a,
       );
       if (
         on.length < 2 ||
@@ -1130,8 +1165,8 @@ export function braceBox({
 
 /**
  * The ribs as built: each panel's, in box coordinates, with a rib that meets another panel's in a corner (the same
- * line round the box) stopping RIB_DEPTH_IN short there, butting into it (RING_RANK says which gives way); a panel's
- * ribs grouped by their run.
+ * line round the box) stopping its depth short there, butting into it (RING_RANK says which gives way), or a fin's
+ * height short, standing on it; a panel's ribs grouped by their run.
  */
 function layRibs(
   inner: Record<BoxAxis, number>,
@@ -1159,6 +1194,22 @@ function layRibs(
       }),
     );
   }
+  // the fins (BracePanel fins) a rib may butt onto as onto another rib: their whole run, as tall as they are
+  const fins: One[] = panels.flatMap((p) => {
+    const f = p.fins;
+    if (!f) return [];
+    const offA = f.across === p.u ? p.offU : p.offV,
+      offR = f.across === p.u ? p.offV : p.offU,
+      L = f.across === p.u ? p.spanV : p.spanU;
+    return f.at.map((x) => ({
+      panel: p.id,
+      across: f.across,
+      at: offA + x,
+      from: offR,
+      to: offR + L,
+      depth: f.height,
+    }));
+  });
   const reaches = (o: One, axis: BoxAxis, far: boolean) =>
     far ? o.to >= inner[axis] - EPS : o.from <= EPS;
   const laid = all.map((o) => {
@@ -1168,7 +1219,7 @@ function layRibs(
       if (!reaches(o, run, far)) return;
       const q = END_PANEL[run][end];
       const n = PANEL_NORMAL[o.panel];
-      const meets = all.find(
+      const meets = [...all, ...fins].find(
         (m) =>
           m.panel === q &&
           m.across === o.across &&

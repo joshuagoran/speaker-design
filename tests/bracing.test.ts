@@ -34,6 +34,7 @@ import { PA_OPTIMIZER_PANEL } from "../src/constants/optimizerPanels";
 import {
   DRIVER_CUTOUT_IN,
   cutParts,
+  subVentLines,
   internalWoodLiters,
   midBoxBracing,
   midKeepOut,
@@ -880,7 +881,7 @@ test("rib rings: with a glued back, the back's rib lines up with the sides' and 
     assert.ok((b.panels.find((p) => p.id === id)?.hz ?? 0) >= b.targetHz, id);
 });
 
-test("short ribs and a short slot: the basket no longer keeps ribs off the sides; the floor behind the slot stays clear", () => {
+test("short ribs and a short slot: the basket no longer keeps ribs off the sides; the fins hold the floor behind it", () => {
   // ½″ walls, 22 × 32 × 18: the basket ring comes within 2″ of the sides at the baffle, the slot runs 4″ back
   const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
   assert.ok(sub);
@@ -914,11 +915,10 @@ test("short ribs and a short slot: the basket no longer keeps ribs off the sides
     ),
     JSON.stringify(side),
   );
-  // behind the slot the floor is clear for two slot heights; a rib there would run with the air but cover under 2/3 of
-  // the floor, so it takes none and stays under the target, as every other panel but the baffle clears it
+  // the slot's fins run on to the back past its 4″ shelf: they hold the floor, which takes no rib and clears the
+  // target, as every other panel but the baffle does
   assert.ok(!b.ribs.some((r) => r.panel === "bottom"));
-  for (const p of b.panels)
-    if (p.id !== "baffle" && p.id !== "bottom") assert.ok(p.hz >= b.targetHz, `${p.id} ${p.hz}`);
+  for (const p of b.panels) if (p.id !== "baffle") assert.ok(p.hz >= b.targetHz, `${p.id} ${p.hz}`);
   // the slot's room ends two slot heights behind the duct, not at the back
   const slot = keep.vent[0];
   assert.ok(slot.z[1] < paInner(box, 0.5, DEFAULT_PA.inset).z - 1);
@@ -1000,4 +1000,44 @@ test("a rib counts only where it runs most of the panel: none shorter than RIB_M
         );
       }
     }
+});
+
+test("a straight slot's fins run to the back, and the back's and top's ribs line up on them (C braces)", () => {
+  const sub = SUB_OPTIONS.find((s) => s.id === "es18lw2420");
+  assert.ok(sub);
+  const t = 0.5,
+    cVent = { ...DEFAULT_PA.cVent, len: 8 };
+  // the fins' lines, in from the left side (subVentLines' bottom)
+  const fins = (box: { w: number; h: number; d: number }) =>
+    subVentLines(box, t, "slots", cVent).bottom;
+  const near = (xs: number[], ys: number[]) =>
+    xs.length === ys.length && xs.every((x, i) => Math.abs(x - ys[i]) < 1e-9);
+  // 30 × 24 × 22: the back's two ribs stand on the fins, up from them
+  const wide = { w: 30, h: 24, d: 22 };
+  const b = subBoxBracing(wide, t, DEFAULT_PA.inset, "slots", cVent, sub, "ribs");
+  const back = b.ribs.filter((r) => r.panel === "back");
+  assert.ok(back.length === 1 && back[0].across === "x", JSON.stringify(back));
+  assert.ok(near(back[0].at, fins(wide)), JSON.stringify(back[0].at));
+  assert.ok(Math.abs(back[0].from - cVent.slotH) < 1e-9, `starts ${back[0].from}″ up`);
+  // 30 × 34 × 22: the top's two ribs run front to back over the fins
+  const tall = { w: 30, h: 34, d: 22 };
+  const top = subBoxBracing(tall, t, DEFAULT_PA.inset, "slots", cVent, sub, "ribs").ribs.filter(
+    (r) => r.panel === "top",
+  );
+  assert.ok(top.length === 1 && top[0].across === "x", JSON.stringify(top));
+  assert.ok(near(top[0].at, fins(tall)), JSON.stringify(top[0].at));
+  // and the cutlist's fins run from the front to the back panel
+  const fin = cutParts({
+    sub,
+    mid: DEFAULT_PA.mid,
+    subBox: wide,
+    midDims: DEFAULT_PA.mDim,
+    wall: t,
+    inset: DEFAULT_PA.inset,
+    joint: "butt",
+    portStyle: "slots",
+    cVent,
+    layout: DEFAULT_PA.layout,
+  }).parts.find((p) => p.part === "ductFin");
+  assert.equal(fin?.b, wide.d - t);
 });

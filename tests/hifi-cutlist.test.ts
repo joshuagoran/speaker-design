@@ -321,7 +321,7 @@ describe("PA cutlist unchanged", () => {
         // no window brace: ¾″ walls default to Window braces (frames only), and the one panel under the target is
         // the back, which a frame can't hold while it is screwed on (the default)
         ["S7", "ductShelf", 1, 14, 22.5],
-        ["S8", "ductFin", 2, 3, 14],
+        ["S8", "ductFin", 2, 3, 17.25],
         ["M1", "side", 2, 15, 15],
         ["M2", "topBottom", 2, 13.5, 15],
         ["M3", "back", 1, 14.25, 14.25],

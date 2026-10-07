@@ -1515,6 +1515,12 @@ export interface BracePanel {
   loose?: boolean;
   /** the driver's cutout, in panel coordinates (the baffle) */
   hole?: PlateHole;
+  /**
+   * the duct's fins glued along it over its whole run (a bottom slot's), in from its edge across `across`, `height` tall:
+   * supports (in `fixedU` / `fixedV` too) that also hold the end of a rib meeting one in a corner; the other panels'
+   * ribs across that axis line up on them where they are as many (C braces)
+   */
+  fins?: { across: BoxAxis; at: number[]; height: number };
 }
 
 /**
