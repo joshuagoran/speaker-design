@@ -19,6 +19,8 @@ import {
   RIB_FREE_END_IN,
   RIB_DEPTH_IN,
   RIB_DEPTHS_IN,
+  RIB_MIN_RUN_SHARE,
+  ribRunAxis,
 } from "../src/lib/bracing";
 import {
   NO_SUPPORTS,
@@ -878,7 +880,7 @@ test("rib rings: with a glued back, the back's rib lines up with the sides' and 
     assert.ok((b.panels.find((p) => p.id === id)?.hz ?? 0) >= b.targetHz, id);
 });
 
-test("short ribs and a short slot: an 18″ driver's basket and a 4″ slot no longer keep ribs off the sides and bottom", () => {
+test("short ribs and a short slot: the basket no longer keeps ribs off the sides; the floor behind the slot stays clear", () => {
   // ½″ walls, 22 × 32 × 18: the basket ring comes within 2″ of the sides at the baffle, the slot runs 4″ back
   const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
   assert.ok(sub);
@@ -912,15 +914,11 @@ test("short ribs and a short slot: an 18″ driver's basket and a 4″ slot no l
     ),
     JSON.stringify(side),
   );
-  // the floor behind the slot takes ribs that run front to back, with the air, from the end of its clear floor
-  const floor = b.ribs.filter((r) => r.panel === "bottom");
-  assert.ok(floor.length > 0);
-  for (const r of floor) {
-    assert.equal(r.across, "x");
-    assert.ok(r.from >= keep.vent[0].z[1] - 1e-9, `${r.from} vs ${keep.vent[0].z[1]}`);
-  }
-  // every panel but the baffle clears the target
-  for (const p of b.panels) if (p.id !== "baffle") assert.ok(p.hz >= b.targetHz, `${p.id} ${p.hz}`);
+  // behind the slot the floor is clear for two slot heights; a rib there would run with the air but cover under 2/3 of
+  // the floor, so it takes none and stays under the target, as every other panel but the baffle clears it
+  assert.ok(!b.ribs.some((r) => r.panel === "bottom"));
+  for (const p of b.panels)
+    if (p.id !== "baffle" && p.id !== "bottom") assert.ok(p.hz >= b.targetHz, `${p.id} ${p.hz}`);
   // the slot's room ends two slot heights behind the duct, not at the back
   const slot = keep.vent[0];
   assert.ok(slot.z[1] < paInner(box, 0.5, DEFAULT_PA.inset).z - 1);
@@ -975,4 +973,31 @@ test("rib depths: a long span takes deeper ribs where they lift it more for the 
   assert.ok((b.panels.find((p) => p.id === "back")?.hz ?? 0) >= b.targetHz);
   // every rib takes one of the offered depths, and the cutlist cuts each to its own
   for (const r of b.ribs) assert.ok(RIB_DEPTHS_IN.some((d) => d === r.depth));
+});
+
+test("a rib counts only where it runs most of the panel: none shorter than RIB_MIN_RUN_SHARE of it", () => {
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  assert.ok(sub);
+  for (const len of [4, 10, 14])
+    for (const t of [0.5, 0.625]) {
+      const box = { w: 22, h: 32, d: 18 };
+      const b = subBoxBracing(
+        box,
+        t,
+        DEFAULT_PA.inset,
+        "slots",
+        { ...DEFAULT_PA.cVent, len },
+        sub,
+        "ribs",
+      );
+      const inner = paInner(box, t, DEFAULT_PA.inset);
+      for (const r of b.ribs) {
+        const run = ribRunAxis(r.panel, r.across);
+        // a rib butting into another in a corner gives up that one's depth there
+        assert.ok(
+          r.len + 2 * RIB_DEPTHS_IN[2] >= RIB_MIN_RUN_SHARE * inner[run],
+          `${len} ${t} ${JSON.stringify(r)}`,
+        );
+      }
+    }
 });

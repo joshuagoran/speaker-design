@@ -38,8 +38,8 @@
 // the baffle), so it holds the top, bottom and back but not the baffle. A rib must clear them over its whole run, or
 // stop at a duct part that holds the panel (a slot's shelf), or stop short of one, at most RIB_FREE_END_IN short of
 // the edge or part it would reach (behind the driver's basket ring); a rib that stops short still counts as a line
-// across the whole panel, a little high for the bays at its free end. A panel nothing can reach is reported under the
-// target.
+// across the whole panel, a little high for the bays at its free end, so it must run RIB_MIN_RUN_SHARE of it at
+// least. A panel nothing can reach is reported under the target.
 import type {
   BoxAxis,
   BoxBracing,
@@ -104,6 +104,11 @@ export const RIB_DEPTHS_IN = [RIB_DEPTH_IN, 4, 5.5] as const;
  * basket ring beside a side), inches; its end there is free.
  */
 export const RIB_FREE_END_IN = 4;
+/**
+ * The least share of a panel a rib must run along to count: a rib counts as a line across the whole panel, so a short
+ * one would read far too high (the same share lib/pa/bracing asks of a duct part, DUCT_SUPPORT_MIN_SHARE).
+ */
+export const RIB_MIN_RUN_SHARE = 2 / 3;
 /** The narrowest bay a window brace or rib may leave, inches (room to glue and clamp it). */
 export const MIN_BAY_IN = 4;
 /** The most moves the rule makes on one box. */
@@ -747,7 +752,7 @@ export function braceBox({
     let out: PlacedRibs | null = spaced ? { at, runs } : null;
     for (const x of spaced ? at : []) {
       const r = ribRun(p, across, x, depth);
-      if (!r) {
+      if (!r || r[1] - r[0] < RIB_MIN_RUN_SHARE * ribBand(p, across, depth).L - EPS) {
         out = null;
         break;
       }
