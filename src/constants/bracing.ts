@@ -32,6 +32,18 @@ export const BRACE_STYLE_SUMMARY = {
 export const braceUnderNote = (panel: string, hz: string, target: string) =>
   `${panel}: ${hz}, under the ${target} target`;
 
+/** The strength checks' loads, as the notes name them (lib/strength). */
+export const STRENGTH_LOAD_NAMES = {
+  pressure: "the driver's pressure",
+  lid: "a load on the lid",
+} as const;
+/**
+ * The note under the Bracing setting for a panel over a strength limit: the panel's name with its cabinet, its stress,
+ * the limit and the load, already in words.
+ */
+export const strengthNote = (panel: string, stress: string, limit: string, load: string) =>
+  `${panel}: ${stress} under ${load}, over its ${limit} limit`;
+
 /** The end of a cutlist rib row whose rib crosses a window brace. */
 export const RIB_HALF_LAP_NOTE = "; half-lap it where it crosses a window brace";
 

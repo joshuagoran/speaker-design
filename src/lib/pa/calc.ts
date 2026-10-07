@@ -1,4 +1,10 @@
 // Calculation functions for the planner. Pure TS, no React, window or THREE.
+import {
+  driverPressurePa,
+  LID_STRESS_LIMIT_PA,
+  PRESSURE_STRESS_LIMIT_PA,
+  STACK_LOAD_N,
+} from "../strength";
 import type {
   BoxAxis,
   BoxBracing,
@@ -784,6 +790,8 @@ const remember = (memo: Map<string, BoxBracing>, key: string, b: BoxBracing) => 
   memo.set(key, b);
   return b;
 };
+/** in² to m² */
+const IN2_M2 = 0.0254 ** 2;
 /** A driver's cutout on the baffle: its center (in from the box's inside corner) less a slot's band below it. */
 const baffleCutout = (
   center: { x: number; y: number },
@@ -804,12 +812,17 @@ function paBracing(
   back: BackJointId,
   /** the driver's cutout on the baffle, in from the baffle's corner */
   hole: PlateHole,
+  /** the driver's figures for the pressure it puts in the box (lib/strength); absent: no pressure checked */
+  ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp"> | undefined,
 ): BoxBracing {
-  const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}|${hole.cx},${hole.cy},${hole.r}`;
+  const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}|${hole.cx},${hole.cy},${hole.r}|${ts ? `${ts.Sd},${ts.Xmax},${ts.disp}` : ""}`;
   const hit = BRACING_MEMO.get(key);
   if (hit) return hit;
   const inside = paInside(box, t, inset, band);
   const wall = paPanelStock(t);
+  // the strength checks' loads: the driver's pressure in the box's air, a lid's load spread over the lid
+  const insideL = (inside.iw * inside.ih * inside.inD * 16.387) / 1000;
+  const lidM2 = inside.iw * inside.inD * IN2_M2;
   return remember(
     BRACING_MEMO,
     key,
@@ -820,6 +833,12 @@ function paBracing(
       style,
       braceStock: wall,
       keepOut,
+      loads: {
+        pressurePa: ts ? driverPressurePa(ts.Sd, ts.Xmax, insideL - (ts.disp ?? 0)) : 0,
+        pressureLimitPa: PRESSURE_STRESS_LIMIT_PA,
+        lidPa: STACK_LOAD_N / lidM2,
+        lidLimitPa: LID_STRESS_LIMIT_PA,
+      },
     }),
   );
 }
@@ -838,7 +857,7 @@ export function subBoxBracing(
   inset: number,
   style: PortStyle,
   v: BraceVent,
-  drv: TubeDriver & Partial<Pick<SubDriver, "lb">>,
+  drv: TubeDriver & Partial<Pick<SubDriver, "lb" | "ts">>,
   braceStyle: BraceStyleId | undefined,
   handles?: BoxHandles,
   back: BackJointId = DEFAULT_BACK_JOINT,
@@ -850,7 +869,7 @@ export function subBoxBracing(
     ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
     : [];
   const hwKey = regionsKey(recesses);
-  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
+  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${drv.ts ? `${drv.ts.Sd},${drv.ts.Xmax},${drv.ts.disp}` : ""}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };
@@ -888,6 +907,7 @@ export function subBoxBracing(
         style === "slots" ? v.slotH + t : 0,
         drv.size,
       ),
+      drv.ts,
     ),
   );
 }
@@ -899,7 +919,7 @@ export function midBoxBracing(
   box: Dims3,
   t: number,
   inset: number,
-  mid: Pick<MidDriver, "size" | "depthIn"> & Partial<Pick<MidDriver, "lb">>,
+  mid: Pick<MidDriver, "size" | "depthIn"> & Partial<Pick<MidDriver, "lb" | "ts">>,
   layout: PaLayout | undefined,
   braceStyle: BraceStyleId | undefined,
   handles?: BoxHandles,
@@ -921,6 +941,7 @@ export function midBoxBracing(
     braceStyle ?? defaultBraceStyleNear(t),
     back,
     baffleCutout({ x: iw / 2, y: ih / 2 }, 0, mid.size),
+    mid.ts,
   );
 }
 /**
@@ -1248,7 +1269,7 @@ export function subHardwarePlan(
   inset: number,
   style: PortStyle,
   v: BraceVent,
-  drv: TubeDriver & Pick<SubDriver, "lb">,
+  drv: TubeDriver & Pick<SubDriver, "lb"> & Partial<Pick<SubDriver, "ts">>,
   braceStyle: BraceStyleId | undefined,
   handles: BoxHandles,
   back: BackJointId = DEFAULT_BACK_JOINT,
@@ -1291,7 +1312,7 @@ export function midHardwarePlan(
   box: Dims3,
   t: number,
   inset: number,
-  mid: Pick<MidDriver, "size" | "depthIn" | "lb">,
+  mid: Pick<MidDriver, "size" | "depthIn" | "lb"> & Partial<Pick<MidDriver, "ts">>,
   layout: PaLayout | undefined,
   braceStyle: BraceStyleId | undefined,
   handles: BoxHandles,

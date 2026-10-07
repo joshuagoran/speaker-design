@@ -7,6 +7,7 @@ import type {
   BOX_AXIS_NAMES,
   BRACE_PANEL_NAMES,
   BRACE_STYLE_NAMES,
+  STRENGTH_LOAD_NAMES,
 } from "./constants/bracing";
 import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
@@ -1544,11 +1545,23 @@ export interface BoxKeepOut {
   hardware?: readonly BoxRegion[];
 }
 
-/** A panel's first plate resonance with its own parts only, and with the braces and ribs, Hz. */
+/** A strength check's load (`STRENGTH_LOAD_NAMES` holds the words for it). */
+export type StrengthLoadId = keyof typeof STRENGTH_LOAD_NAMES;
+/** A panel's worst bending stress with its braces and ribs, under the load nearest its limit, Pa (lib/strength). */
+export interface PanelStrength {
+  load: StrengthLoadId;
+  stressPa: number;
+  limitPa: number;
+}
+/**
+ * A panel's first plate resonance with its own parts only, and with the braces and ribs, Hz; and its strength where the
+ * rule checks it (the PA boxes).
+ */
 export interface PanelResonance {
   id: BracePanelId;
   bareHz: number;
   hz: number;
+  strength?: PanelStrength;
 }
 
 /** The bracing rule's choice in counts, as it works: the window braces across each axis and the ribs on each panel. */

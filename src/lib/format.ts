@@ -21,3 +21,6 @@ export const formatHz = (f: number): string => `${Math.round(f)} Hz`;
 /** Formats a box's outside size, width × height × depth, e.g. 22 × 30 × 20″. */
 export const formatDims = ({ w, h, d }: Dims3): string =>
   `${+w.toFixed(2)} × ${+h.toFixed(2)} × ${+d.toFixed(2)}″`;
+
+/** A stress in Pa as N/mm², to a tenth (the strength notes). */
+export const formatStress = (pa: number) => `${(pa / 1e6).toFixed(1)} N/mm²`;
