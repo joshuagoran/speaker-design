@@ -11,7 +11,7 @@
 // minXo Hz (the maker's lowest crossover, null if none), lowHz (pattern-control limit, Hz). Optional: profile
 // ([radius, depth] points, in; the 3-D view stretches it to `size`), adapter (the throat adapter: name, steps
 // [diameter, length] front to back, body and driver bolt circles, in), rect for the full-width rectangular concept,
-// finish ("black" for a horn that ships painted, as cast Lavoce, B&C and RCF horns do; omit it for a printed horn).
+// finish ("black" for a horn that ships painted, as cast Lavoce, B&C, RCF and Beyma horns do; omit it for a printed horn).
 // A horn without a profile is drawn as a rectangular flare at its mouth and depth.
 import type { HifiWaveguide, Horn, HornAdapter, HornProfilePoint } from "../../types";
 
@@ -201,6 +201,34 @@ export const HORN_RAW: readonly Horn[] = [
     note: 'Cast aluminum, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt. Cutoff 900 Hz, so cross about 1.2\u20131.3 kHz; the 10.6" mouth holds its pattern to about 1.2\u20131.4 kHz. [bcspeakers.com, Oct 2026] 270 × 270 × 138 mm, 1.45 kg. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   {
+    id: "me45",
+    lb: 1.9,
+    name: "B&C ME45",
+    hf: { covH: 90, covV: 40, minXo: null, lowHz: 1000 },
+    exit: 1,
+    finish: "black",
+    price: 77.28,
+    src: "Parts Express, Oct 2026",
+    size: { w: 310 / 25.4, h: 140 / 25.4, d: 124 / 25.4 },
+    driver: '1" exit, 2-bolt on a 76 mm circle (fits the DE250, DE550 and HF10AK)',
+    xo: "1.4–1.5 kHz (1 kHz cutoff)",
+    note: '[bcspeakers.com datasheet, Oct 2026] Cast aluminum exponential horn (not constant directivity), 90° × 40° nominal, 1" (25 mm) throat, cutoff 1 kHz ("excellent loading down to 1 kHz"). 310 × 140 × 124 mm (12.2 × 5.6 × 4.9 in; the drawing shows the flange 143 mm tall), cutout 260 mm wide (the drawing gives the opening as 260 × 110 mm), 0.86 kg (1.9 lb). Driver bolts straight on with 2 × 6.5 mm holes on a 76 mm circle (⌀90 mm throat flange). B&C publishes no recommended crossover; about 1.4–1.5 kHz is assumed from the cutoff. Parts Express #294-622. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "me75",
+    lb: 5.9,
+    name: "B&C ME75",
+    hf: { covH: 90, covV: 40, minXo: null, lowHz: 500 },
+    exit: 2,
+    finish: "black",
+    price: 181.38,
+    src: "Parts Express, Oct 2026",
+    size: { w: 435 / 25.4, h: 268 / 25.4, d: 230 / 25.4 },
+    driver: '2" exit, 4-bolt on a 102 mm circle (fits the N320T)',
+    xo: "from about 800 Hz (500 Hz cutoff)",
+    note: '[bcspeakers.com datasheet, Oct 2026] Cast aluminum constant-directivity horn, 90° × 40° nominal, 2" (50 mm) throat, cutoff 500 Hz. 435 × 268 × 230 mm (17.2 × 10.5 × 9 in), 2.7 kg (5.9 lb). Driver bolts straight on with 4 × 6.5 mm holes on a 102 mm circle; the front flange has 6 × 6.5 mm holes. B&C publishes no recommended crossover or baffle cutout; from about 800 Hz is assumed from the cutoff and the 2" drivers\' 800 Hz minimum. Parts Express #294-6182. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
     id: "hf950",
     lb: 2.6,
     name: "RCF HF950",
@@ -241,6 +269,20 @@ export const HORN_RAW: readonly Horn[] = [
     driver: '1.4" exit, e.g. Eminence N314T',
     xo: "1.2\u20131.3 kHz (900 Hz cutoff)",
     note: 'Cast aluminum constant-directivity horn, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt, cutoff 900 Hz. 10.6" H \u00d7 11" W \u00d7 4.5" D; cutout 8.8" \u00d7 9.5". Weight not published; 3 lb assumed. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "td385",
+    lb: 2.64,
+    name: "Beyma TD-385",
+    hf: { covH: 80, covV: 50, minXo: null, lowHz: 800 },
+    exit: 1.4,
+    finish: "black",
+    price: 70.5,
+    src: "Parts Express, Oct 2026",
+    size: { w: 235 / 25.4, h: 235 / 25.4, d: 120 / 25.4 },
+    driver: '1.4" exit, 4-bolt on a 101.6 mm circle (fits the N314T and CD-2514Fe/Ti)',
+    xo: "1.1–1.2 kHz (800 Hz cutoff)",
+    note: '[Beyma TD385 datasheet, Oct 2026] Cast aluminum constant-directivity horn, 80° × 50° (−6 dB; horizontal held 1–20 kHz, vertical 1.6–20 kHz), 1.4" (36 mm) throat, cutoff 800 Hz, Q 12.4 / DI 10.5 dB. 235 × 235 × 120 mm (9.25 × 9.25 × 4.72 in), cutout 204 × 202 mm, 1.2 kg (2.64 lb). Driver bolts straight on with 4 screws on a 101.6 mm circle. Beyma publishes no recommended crossover; about 1.1–1.2 kHz is assumed from the cutoff, and vertical control weakens below 1.6 kHz. Parts Express #253-175. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   ST260,
   {

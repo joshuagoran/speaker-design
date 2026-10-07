@@ -203,7 +203,13 @@ describe("the driver's L-bracket", () => {
     test(`${layout}: it bolts to the adapter's flange or is clamped behind the throat, stands on the lid, and clears the horn, driver, posts and dish`, () => {
       for (const horn of HORN_OPTIONS) {
         const at = `${horn.id} ${layout}`;
-        const g = buildStackScene({ ...base, horn, layout });
+        // a driver that fits the throat (the planner flags a mismatched pair, and a 1.4" driver is taller than the
+        // ME45's 5.5" mouth)
+        const cd =
+          horn.exit === base.cd.exit
+            ? base.cd
+            : (CD_OPTIONS.find((c) => c.exit === horn.exit) ?? base.cd);
+        const g = buildStackScene({ ...base, horn, cd, layout });
         const plates = meshesNamed(g, BRACKET_MESH_NAME);
         const hornCount = layout === "satellite" ? 2 : 1;
         expect(plates, at).toHaveLength(2 * hornCount); // an upright and a foot per horn
@@ -306,10 +312,10 @@ function hornColors(group: THREE.Group) {
 }
 
 describe("horn finish", () => {
-  const COMMERCIAL = ["Lavoce", "B&C", "RCF"];
+  const COMMERCIAL = ["Lavoce", "B&C", "RCF", "Beyma"];
   const isCommercial = (name: string) => COMMERCIAL.some((maker) => name.startsWith(`${maker} `));
 
-  test("Lavoce, B&C and RCF horns are drawn factory black; printed horns stay cream", () => {
+  test("Lavoce, B&C, RCF and Beyma horns are drawn factory black; printed horns stay cream", () => {
     for (const maker of COMMERCIAL) {
       expect(HORN_OPTIONS.some((h) => h.name.startsWith(`${maker} `))).toBe(true);
     }
