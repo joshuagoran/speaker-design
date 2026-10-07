@@ -6,6 +6,7 @@ import type {
   AmpId,
   AmpModel,
   AmpSeries,
+  BodyStep,
   DspUnit,
   DspUnitId,
   RackItem,
@@ -81,6 +82,15 @@ export const midDriversOfSize = (size: MidSize) => MID_OPTIONS.filter((o) => o.s
 // Copies, so the sort below leaves the catalog tables as written.
 export const CD_OPTIONS: CompressionDriver[] = [...CD_RAW];
 export const HORN_OPTIONS: Horn[] = [...HORN_RAW];
+
+/** A turned part's length (its steps end to end), in. */
+export const stepsLength = (steps: readonly BodyStep[]) =>
+  steps.reduce((sum, [, len]) => sum + len, 0);
+/** A turned part's largest diameter, in. */
+export const stepsDia = (steps: readonly BodyStep[]) => Math.max(...steps.map(([dia]) => dia));
+/** How far a horn reaches behind its mouth: the body and its throat adapter, in. */
+export const hornDepth = ({ size, adapter }: Pick<Horn, "size" | "adapter">) =>
+  size.d + (adapter ? stepsLength(adapter.steps) : 0);
 
 const isFinishId = (value: string): value is FinishId => Object.hasOwn(CABINET_FINISHES, value);
 /** The named finish for a cabinet's `cabFinish`, or undefined when it is a paint color (a hex string). */

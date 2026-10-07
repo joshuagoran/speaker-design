@@ -201,6 +201,18 @@ export interface CompressionDriver {
 /** One point of a horn's flare, [radius, depth] in inches. */
 export type HornProfilePoint = readonly [radius: number, depth: number];
 
+/** One step of a turned part (a throat adapter, a driver body), front to back: [diameter, length] in inches. */
+export type BodyStep = readonly [dia: number, len: number];
+
+/** A throat adapter between a horn's throat and the compression driver. */
+export interface HornAdapter {
+  name: string;
+  /** the outline, front (horn side) to back (driver side); the lengths add up to the adapter's length */
+  steps: readonly BodyStep[];
+  /** the bolt circle on both faces, in */
+  boltCircle: number;
+}
+
 export interface HornHf {
   covH: number;
   covV: number | null;
@@ -215,16 +227,17 @@ export interface Horn {
   hf?: HornHf;
   /** throat exit in inches */
   exit: number;
-  /** the flare drawn in the 3-D view; a horn without one is drawn as a generic flare */
+  /**
+   * the flare drawn in the 3-D view, stretched to fit `size`; a horn without one is drawn as a generic flare
+   */
   profile?: readonly HornProfilePoint[];
-  scale?: number;
-  scaleX?: number;
-  scaleY?: number;
-  scaleZ?: number;
+  /** the throat adapter the driver bolts to, when the horn takes one; it adds its length behind the body */
+  adapter?: HornAdapter;
   /** a rectangular mouth */
   rect?: boolean;
   price: number;
   src: string;
+  /** the mouth's width and height and the body's depth (without the adapter), in */
   size: Dims3;
   driver: string;
   xo: string;

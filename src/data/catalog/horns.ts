@@ -9,7 +9,8 @@
 // Fields: id, name, lb, exit (throat, in), price $, src, size {w, h, d} in (mouth and depth), driver (suggested
 // drivers), xo (suggested crossover, text), note; `hf` (omit when nothing is published): covH / covV degrees,
 // minXo Hz (the maker's lowest crossover, null if none), lowHz (pattern-control limit, Hz). Optional: profile
-// ([radius, depth] in points, in) with scale / scaleX / scaleY / scaleZ for the 3-D view, rect for a rectangular mouth.
+// ([radius, depth] points, in; the 3-D view stretches it to `size`), adapter (the throat adapter: name, steps
+// [diameter, length] front to back, bolt circle, in), rect for a rectangular mouth.
 import type { HifiWaveguide, Horn, HornProfilePoint } from "../../types";
 
 export const ST260_PROFILE: readonly HornProfilePoint[] = [
@@ -137,13 +138,22 @@ export const A460G2_14: Horn = {
   hf: { covH: 100, covV: 100, minXo: null, lowHz: 580 },
   exit: 1.4,
   profile: ST260_PROFILE,
-  scale: 460 / 260,
+  adapter: {
+    name: "T520-36-STD-1",
+    // 41 mm long overall (at-horns.eu). GUESS: the front flange, neck and rear flange diameters and the split of the length.
+    steps: [
+      [5.6, 0.35],
+      [3.4, 0.6],
+      [5.0, 41 / 25.4 - 0.95],
+    ],
+    boltCircle: 102 / 25.4,
+  },
   price: 80,
   src: "free STL from at-horns.eu; ~$80 filament, more via service",
-  size: { w: 18.1, h: 18.1, d: 5.8 },
+  size: { w: 18.1, h: 18.1, d: 160 / 25.4 },
   driver: "Eminence N314T-8 / SB Rosso-65CD-T / 18Sound ND3T",
   xo: "900\u20131000 Hz",
-  note: "Same print as the A460G2 with a 36 mm throat adapter. 18.1 in mouth controls pattern to about 750 Hz, so it supports a 900 Hz\u20131 kHz crossover. Adapter must match the driver's exit angle (7.3\u00b0 for the N314T-8); Bat\u00edk publishes them per driver.",
+  note: "Same print as the A460G2 with the T520-36-STD-1 throat adapter (36 mm in, 41 mm long, 4\u00d7M6 to the driver and 8\u00d7M6 to the body on a 102 mm circle; at-horns.eu). Body \u2300460 \u00d7 160 mm, so about 7.9 in deep with the adapter. 18.1 in mouth controls pattern to about 750 Hz, so it supports a 900 Hz\u20131 kHz crossover. Adapter must match the driver's exit angle (7.3\u00b0 for the N314T-8); Bat\u00edk publishes them per driver.",
 };
 
 export const HORN_RAW: readonly Horn[] = [
@@ -220,7 +230,6 @@ export const HORN_RAW: readonly Horn[] = [
     hf: { covH: 100, covV: 100, minXo: null, lowHz: 670 },
     exit: 1,
     profile: ST260_PROFILE,
-    scale: 400 / 260,
     price: 60,
     src: "free STL from at-horns.eu; ~$60 filament, more via service",
     size: { w: 15.75, h: 15.75, d: 5.1 },
@@ -236,10 +245,9 @@ export const HORN_RAW: readonly Horn[] = [
     hf: { covH: 100, covV: 100, minXo: null, lowHz: 670 },
     exit: 1,
     profile: ST260_PROFILE,
-    scale: 460 / 260,
     price: 80,
     src: "free STL from at-horns.eu; ~$80 filament, more via service",
-    size: { w: 18.1, h: 18.1, d: 5.8 },
+    size: { w: 18.1, h: 18.1, d: 160 / 25.4 },
     driver: '1" or 1.4" via adapter; measured pairings on at-horns.eu',
     xo: "600–800 Hz",
     note: 'Shown as the ST260 profile scaled 1.77×; the real Gen2 profile is deeper. 18.1" round mouth, Marcel\'s pick for 1" drivers.',
@@ -263,9 +271,6 @@ export const HORN_RAW: readonly Horn[] = [
     name: "Iwata 600 (printed, approx.)",
     exit: 1,
     profile: ST260_PROFILE,
-    scaleX: 290 / 260,
-    scaleY: 185 / 260,
-    scaleZ: 245 / 83,
     price: 50,
     src: "STL on Cults3D; ~$50 filament",
     size: { w: 11.4, h: 7.3, d: 9.6 },

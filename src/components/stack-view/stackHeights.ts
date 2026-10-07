@@ -21,7 +21,8 @@ export const PLAIN_HORN_BEVEL_IN = 1.6;
  * divided internally. `archTop` puts a semicircular top on it when the round horn is narrower than the cabinet.
  */
 export function towerSpec(box: Dims3, wall: number, horn: Horn) {
-  const archTop = !!horn.profile && !horn.scaleX && box.w / 2 - wall > horn.size.w / 2;
+  const archTop =
+    !!horn.profile && horn.size.w === horn.size.h && box.w / 2 - wall > horn.size.w / 2;
   // arched: horn centered on the arch, equal margin below and around it
   const hornSectionH = archTop ? box.w / 2 - wall + box.w / 2 : horn.size.h + 2;
   return { archTop, hornSectionH, extH: TOWER_MID_HEIGHT_IN + hornSectionH };

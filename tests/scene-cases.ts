@@ -57,7 +57,7 @@ const defaultConfig = {
 } satisfies Parameters<typeof scenePropsOf>[0];
 
 /** A horn drawn as a lathe profile and narrow enough for the tower's arched top. */
-const archedHorn = HORN_OPTIONS.find((h) => h.profile && !h.scaleX && h.size.w < 20);
+const archedHorn = HORN_OPTIONS.find((h) => h.profile && h.size.w === h.size.h && h.size.w < 20);
 
 /** The cases the scene tests pick by name. */
 export const SCENE_CASE_NAMES = {
