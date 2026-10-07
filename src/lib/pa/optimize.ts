@@ -410,6 +410,7 @@ export function evaluateDesign(
       f3: mm.f3,
       peakX: mm.peakX,
       xoLo: c.xoLo,
+      smallerBoxNetL: ms.smallerBoxNetL,
       ts: mid.ts,
       V: ms.V,
       useV: ms.useV,

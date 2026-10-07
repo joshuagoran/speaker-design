@@ -12,6 +12,8 @@ import {
   LOWPASS_SKIRT_SPAN,
   STUFFING_VOLUME_GAIN,
   nearestPoint,
+  sealedLitersForQtc,
+  SEALED_QTC_MIN,
 } from "../src/lib/pa/calc";
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import type { MidSystemConfig, SubSystemConfig } from "../src/types";
@@ -36,6 +38,38 @@ test("midSystem volume: gross from boxL, less displacement, stuffed x1.15", (t) 
   close(t, m.netL, m.grossL - disp, 1e-9);
   close(t, m.effL, m.netL * STUFFING_VOLUME_GAIN, 1e-9);
   close(t, m.V, Math.sqrt(400 * 8), 1e-9);
+});
+test("sealedLitersForQtc: closedBox reads Qtc 0.5 in that volume (Qts sqrt(1 + Vas/Vb))", (t) => {
+  for (const m of MID_OPTIONS) {
+    const L = sealedLitersForQtc(m.ts, SEALED_QTC_MIN);
+    if (L == null) continue;
+    const mdl = closedBox(m.ts, L, null, null, 2.83, LR24_ORDERS);
+    assert.ok(mdl);
+    close(t, mdl.Qtc, SEALED_QTC_MIN, 1e-9, m.id);
+  }
+  // B&C 12CL76 (Qts 0.21, Vas 59 L): about 12.6 L after the stuffing, 11 L net
+  const cl76 = MID_OPTIONS.find((o) => o.id === "bc12cl76");
+  assert.ok(cl76);
+  close(t, sealedLitersForQtc(cl76.ts, SEALED_QTC_MIN) ?? 0, 12.6, 0.1);
+});
+test("smallerBoxNetL: null when no box the driver fits reaches Qtc 0.5", (t) => {
+  // the B&C 12CL76 in the smallest box the sliders give it (13.5 x 13.5 face, 8.5 deep): still under 0.5
+  const cl76 = MID_OPTIONS.find((o) => o.id === "bc12cl76");
+  assert.ok(cl76);
+  const small = midSystem(cl76, { ...cfg, midDims: { w: 13.5, h: 13.5, d: 8.5 } });
+  assert.ok(small.mdl && small.mdl.Qtc < SEALED_QTC_MIN, `Qtc ${small.mdl?.Qtc}`);
+  assert.equal(small.smallerBoxNetL, null);
+  // a driver with a higher Qts in a big box: the volume it names gives Qtc 0.5
+  const pr300 = MID_OPTIONS.find((o) => o.id === "f12pr300");
+  assert.ok(pr300);
+  const big = midSystem(pr300, { ...cfg, midDims: { w: 22, h: 22, d: 22 } });
+  assert.ok(big.mdl && big.mdl.Qtc < SEALED_QTC_MIN && big.smallerBoxNetL != null);
+  close(
+    t,
+    big.smallerBoxNetL * STUFFING_VOLUME_GAIN,
+    sealedLitersForQtc(pr300.ts, SEALED_QTC_MIN) ?? 0,
+    1e-9,
+  );
 });
 test("midSystem: displacement assumed 2.5 L (12 in) / 4 L (15 in) when unpublished", (t) => {
   const ts = { ...mid.ts, disp: null };

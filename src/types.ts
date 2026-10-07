@@ -1331,6 +1331,8 @@ export interface MidSystemBase {
   effL: number;
   vTherm: number;
   useV: number;
+  /** the net volume, L, that gives Qtc 0.5, when a box the driver fits can be that small (midSmallerBoxNetL); else null */
+  smallerBoxNetL: number | null;
 }
 
 /** A mid with no model (the driver has no T/S): no response and no limit curve. */
@@ -1853,6 +1855,7 @@ export interface MidChipsInput {
   f3: number;
   peakX: number;
   xoLo: number;
+  smallerBoxNetL: MidSystemBase["smallerBoxNetL"];
   ts: Pick<ThieleSmall, "Xmax" | "aes">;
   /** amp volts, the volts the driver can use, and the thermal limit in volts */
   V: number;

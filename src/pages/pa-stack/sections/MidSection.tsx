@@ -128,6 +128,7 @@ export function MidSection({ planner }: Props) {
                   f3: midModeled.mdl.f3,
                   peakX: midModeled.mdl.peakX,
                   xoLo: subMidCrossoverHz,
+                  smallerBoxNetL: midModeled.smallerBoxNetL,
                   ts: midDriver.ts,
                   V: midVoltage,
                   useV: midUsedVoltage,

@@ -4,6 +4,7 @@ import type {
   BoxBracing,
   BoxKeepOut,
   BoxModelTS,
+  SliderSpec,
   BoxRegion,
   BraceStyleId,
   CompressionHf,
@@ -54,6 +55,7 @@ import {
 import { defaultPanelIn, panelLbPerSqFt } from "../panel";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { crossoverSlopeName } from "../../constants/crossovers";
+import { PA_SLIDERS } from "../../constants/paSliders";
 import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../../data/acoustics/slot-inner-end";
 import {
   modelTubeElbows,
@@ -1856,6 +1858,58 @@ export const midNetLiters = (
   bracing: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
   recessL = 0,
 ) => Math.max(5, grossL - disp - (braceWoodIn3(bracing) * 16.387) / 1000 - recessL);
+/** The Qtc under which the checks call a sealed box overdamped. */
+export const SEALED_QTC_MIN = 0.5;
+/**
+ * The volume, L, that gives a sealed box Qtc `qtc`, as closedBox reads it (after the stuffing's gain): its own T/S
+ * arithmetic solved for the box, Qtc = Qts √(1 + Vas/Vb). Null when the driver's Qts is at or above `qtc` (no box gives it).
+ */
+export function sealedLitersForQtc(ts: BoxModelTS, qtc: number): number | null {
+  const Mms = ts.Mms / 1000,
+    Sd = ts.Sd / 10000;
+  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
+  const VasL = 1.18 * 343 * 343 * Cms * Sd * Sd * 1000;
+  const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl);
+  const Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
+  return Qts >= qtc ? null : VasL / (Math.pow(qtc / Qts, 2) - 1);
+}
+/** The baffle face a mid needs, in: the driver and a rim round it. */
+export const midBaffleNeedIn = (size: MidDriver["size"]) => size + 1.2;
+/** A size rounded up to its slider's step, in. */
+const upToStep = (x: number, s: Pick<SliderSpec, "min" | "step">) =>
+  Math.max(s.min, Math.ceil(x / s.step - 1e-9) * s.step);
+/**
+ * The net volume, L, that gives the mid Qtc 0.5, when a box it fits can be that small; else null. The smallest box it
+ * fits has the face it needs (midBaffleNeedIn) and its mounting depth inside, each up to the planner's slider step,
+ * with the same displacement and hardware.
+ */
+export function midSmallerBoxNetL(
+  mid: MidDriver,
+  cfg: Pick<MidSystemConfig, "wall" | "inset">,
+  disp: number,
+  recessL: number,
+): number | null {
+  const effL = sealedLitersForQtc(mid.ts, SEALED_QTC_MIN);
+  if (effL == null) return null;
+  const need = midBaffleNeedIn(mid.size);
+  const fitNetL = midNetLiters(
+    boxInternalLiters(
+      upToStep(need, PA_SLIDERS.midW),
+      upToStep(need, PA_SLIDERS.midH),
+      upToStep(
+        (mid.depthIn ?? MID_DEPTH_FALLBACK_IN[mid.size]) + cfg.inset + 0.75 + cfg.wall,
+        PA_SLIDERS.midD,
+      ),
+      cfg.wall,
+      cfg.inset,
+    ),
+    disp,
+    null,
+    recessL,
+  );
+  const netL = effL / STUFFING_VOLUME_GAIN;
+  return netL >= fitNetL ? netL : null;
+}
 export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const V = ampVoltage(cfg.mAmpW);
   const grossL = boxInternalLiters(
@@ -1902,9 +1956,22 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const vTherm = mid.ts ? thermalVoltageLimit(mid.ts.aes) : 0;
   const useV = Math.min(vTherm, V);
   if (!mid.ts || !mdl)
-    return { V, grossL, disp, recessL, netL, effL, vTherm, useV, mdl: null, max: null };
+    return {
+      V,
+      grossL,
+      disp,
+      recessL,
+      netL,
+      effL,
+      vTherm,
+      useV,
+      smallerBoxNetL: null,
+      mdl: null,
+      max: null,
+    };
   const max = maxOutputCurve(mdl.curve, mid.ts, V, Infinity); // no port: Xmax, thermal, amp
-  return { V, grossL, disp, recessL, netL, effL, vTherm, useV, mdl, max };
+  const smallerBoxNetL = midSmallerBoxNetL(mid, cfg, disp, recessL);
+  return { V, grossL, disp, recessL, netL, effL, vTherm, useV, smallerBoxNetL, mdl, max };
 }
 
 // ---- passive coaxial fills ----
