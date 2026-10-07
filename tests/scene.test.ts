@@ -138,9 +138,15 @@ describe("stack scene", () => {
     });
 
     test("round1 has one tube with two bells, turned up the back wall when it's too long to run straight", () => {
-      // the default 8″ tube, 11″ long, in an 18″ deep box: 16.5″ from the baffle front to the back wall holds 8.5″
-      // straight, so it takes an elbow: a run back, a quarter-torus and a riser
-      const g = withPort("round1");
+      // the default 8″ tube, 11″ long, in a 19″ deep box: 17.5″ from the baffle front to the back wall holds 9.5″
+      // straight, so it takes an elbow: a run back, a quarter-torus and a riser (behind the driver, and with its
+      // flare clear of the back wall; an 18″ deep box has no room for that riser)
+      const g = buildStackScene({
+        ...base,
+        sub: { ...base.sub, box: { ...base.sub.box, d: 19 } },
+        portStyle: "round1",
+        portGeom: undefined,
+      });
       expect(tubes(g)).toBe(2);
       expect(portMeshes(g, "TorusGeometry")).toBe(1);
       expect(bells(g)).toBe(2);
@@ -153,40 +159,52 @@ describe("stack scene", () => {
     });
 
     test("the tubes and their flares stay inside the length the model takes, at every baffle inset", () => {
-      // round1 and round2, straight and with one elbow (each at its longest: the straight mouth a diameter from the
-      // back wall, the riser against it): the outer flare's lip is flush with the baffle front and the inner mouth
-      // keeps the model's gap to the back wall or the lid
-      const box = DEFAULT_PA.cDim,
-        wall = 0.75,
+      // round1 and round2, straight and with one elbow in the default box, and round2 with two in a deeper one, each at
+      // its longest (the straight mouth a diameter from the back wall, the riser and the return leg a flare's reach
+      // off the back wall and the lid): the outer flare's lip is flush with the baffle front, the inner mouth keeps
+      // the model's gap to the back wall or the lid, and nothing goes into a panel
+      const wall = 0.75,
         drv = DEFAULT_PA.sub;
-      const front = box.d / 2,
-        backFace = -box.d / 2 + wall,
-        lidFace = base.plinth + box.h - wall;
+      const cases = [
+        ["round1", 1, 6, 0],
+        ["round1", 1, 6, 1],
+        ["round2", 2, 4.25, 0],
+        ["round2", 2, 4.25, 1],
+        ["round2", 2, 4.25, 2],
+      ] as const;
       for (const inset of [0, 0.75, 1.5])
-        for (const [style, nt, dia] of [
-          ["round1", 1, 6],
-          ["round2", 2, 4.25],
-        ] as const)
-          for (const e of [0, 1] as const) {
-            const at = `${style} ${e} elbow inset ${inset}`;
-            const span = subTubeSpan(box, style, { nt, dia }, wall, inset, drv, e);
-            expect(span, at).not.toBeNull();
-            const v = { nt, dia, len: span?.[1] ?? 0 };
-            expect(modelTubeElbows(box, style, v, wall, inset, drv), at).toBe(e);
-            const legs = subTubeLegs(box, style, v, wall, inset, drv, e);
-            const g = buildStackScene({
-              ...base,
-              wall,
-              inset,
-              portStyle: style,
-              portGeom: { nPorts: nt, portR: dia / 2, tubeLen: v.len },
-            });
-            const b = new THREE.Box3();
-            g.traverse((o) => o.name === VENT_MESH_NAME && b.expandByObject(o));
-            expect(b.max.z, at).toBeCloseTo(front - inset, 9);
-            if (e === 0) expect(b.min.z, at).toBeCloseTo(backFace + legs.gap, 9);
-            else expect(b.max.y, at).toBeCloseTo(lidFace - legs.gap, 9);
-          }
+        for (const [style, nt, dia, e] of cases) {
+          const at = `${style} ${e} elbow inset ${inset}`;
+          const box = e === 2 ? { ...DEFAULT_PA.cDim, d: 24 } : DEFAULT_PA.cDim;
+          const front = box.d / 2,
+            backFace = -box.d / 2 + wall,
+            lidFace = base.plinth + box.h - wall;
+          const span = subTubeSpan(box, style, { nt, dia }, wall, inset, drv, e);
+          if (!span) throw new Error(`${at}: no span`);
+          const v = { nt, dia, len: span[1] };
+          expect(modelTubeElbows(box, style, v, wall, inset, drv), at).toBe(e);
+          const legs = subTubeLegs(box, style, v, wall, inset, drv, e);
+          const g = buildStackScene({
+            ...base,
+            sub: { ...base.sub, box },
+            wall,
+            inset,
+            portStyle: style,
+            portGeom: { nPorts: nt, portR: dia / 2, tubeLen: v.len },
+          });
+          const b = new THREE.Box3();
+          g.traverse((o) => o.name === VENT_MESH_NAME && b.expandByObject(o));
+          expect(b.max.z, at).toBeCloseTo(front - inset, 9);
+          expect(b.min.z, at).toBeGreaterThanOrEqual(backFace - 1e-9);
+          expect(b.max.y, at).toBeLessThanOrEqual(lidFace + 1e-9);
+          // straight: the inner flare's lip the model's gap from the back wall
+          if (e === 0) expect(b.min.z, at).toBeCloseTo(backFace + legs.gap, 9);
+          // one elbow: the riser's flare just clears the back wall, its lip the model's gap under the lid
+          if (e === 1) expect(b.min.z, at).toBeCloseTo(backFace, 9);
+          if (e === 1) expect(b.max.y, at).toBeCloseTo(lidFace - legs.gap, 9);
+          // two: the return leg's flare just clears the lid
+          if (e === 2) expect(b.max.y, at).toBeCloseTo(lidFace, 9);
+        }
     });
 
     test("the cutaway drops the cones", () => {

@@ -29,6 +29,7 @@ import { defaultBraceStyleNear } from "../src/lib/bracing";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { ductFit } from "../src/lib/pa/chips";
 import { subTubeLegs, subTubeSpan } from "../src/lib/pa/tubes";
+import { TUBE_FLARE_RADIUS_IN } from "../src/data/acoustics/tube-ends";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import { close, vent, DRV18 } from "./helpers";
 import { subWoodIn3, ventShape } from "../src/lib/pa/exactSub";
@@ -340,11 +341,11 @@ test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap
       close(t, back - (inset + straight), v.dia, 1e-12, `${style} ${at}`);
       close(t, legs.gap, v.dia, 1e-12, `${style} ${at}`);
       if (style === "round4") continue;
-      // an elbowed tube's riser stands against the back wall
+      // an elbowed tube's riser stands against the back wall, a flare's reach off it
       const span = subTubeSpan(box, style, v, wall, inset, DRV18, 1);
       assert.ok(span, `${style} ${at}: one elbow fits`);
       const up = subTubeLegs(box, style, { ...v, len: span[1] }, wall, inset, DRV18, 1);
-      close(t, inset + up.run + v.dia / 2, back, 1e-12, `${style} ${at}`);
+      close(t, inset + up.run + v.dia / 2 + TUBE_FLARE_RADIUS_IN, back, 1e-12, `${style} ${at}`);
     }
     const inD = back - inset - baffle; // the box's inside depth, behind the baffle
     // a straight bottom slot's mouth is a slot height from the back wall; its shelf runs the rest of the inside depth

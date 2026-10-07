@@ -15,6 +15,12 @@ export interface TubeRoom {
   run: number;
   rise: number;
   stop: number;
+  /**
+   * How far a flared mouth reaches past the pipe beside it (a PA sub's tubes: TUBE_FLARE_RADIUS_IN): the riser stands
+   * and the return leg runs this much further off the back wall and the lid, so the flare at the mouth clears them.
+   * Absent: 0, the pipe against the wall.
+   */
+  flare?: number;
 }
 
 /** The most elbows a tube takes. */
@@ -40,15 +46,15 @@ const legMin = (dia: number) => dia;
 
 /**
  * The lengths a tube of diameter `dia` fits with `e` elbows, [shortest, longest], or null when it can't take that many.
- * Straight: up to a diameter short of the back wall. One elbow: the riser stands against the back wall (or further
+ * Straight: up to a diameter short of the back wall. One elbow: the riser stands against the back wall (a flare's reach off it, or further
  * forward for a shorter tube, never in front of the stop) and rises to a diameter under the lid. Two: the riser runs
- * all the way up and the return leg runs forward under the lid, its mouth a diameter behind the stop.
+ * all the way up and the return leg runs forward under the lid (a flare's reach under it), its mouth a diameter behind the stop.
  */
 export function tubeSpan(room: TubeRoom, dia: number, e: ElbowCount): [number, number] | null {
   const g = mouthGap(dia),
     m = legMin(dia),
     r = dia / 2;
-  const back = room.run - r; // the riser's axis against the back wall
+  const back = room.run - r - (room.flare ?? 0); // the riser's axis against the back wall
   const span = (a: number, b: number): [number, number] | null => (b >= a ? [a, b] : null);
   if (e === 0) return span(0, room.run - g);
   // one elbow: a riser at least a leg long under the lid's gap, standing behind the stop and in front of the back wall
@@ -57,7 +63,7 @@ export function tubeSpan(room: TubeRoom, dia: number, e: ElbowCount): [number, n
       ? null
       : span(room.stop + r + m, back + room.rise - g);
   // two elbows: the riser's whole height, the return leg forward from the riser's axis to its mouth
-  const rise = room.rise - r;
+  const rise = room.rise - r - (room.flare ?? 0);
   if (rise < m) return null;
   return span(room.stop + g + 2 * m + rise, back + rise + (back - room.stop - g));
 }
@@ -90,14 +96,14 @@ export const tubeMaxLength = (room: TubeRoom, dia: number, e: ElbowCount = MAX_E
 export function tubeLegs(room: TubeRoom, dia: number, len: number, e: ElbowCount): TubeLegs {
   const r = dia / 2,
     m = legMin(dia);
-  const back = room.run - r;
+  const back = room.run - r - (room.flare ?? 0);
   if (e === 0) return { run: len, rise: 0, back: 0, gap: room.run - len };
   if (e === 1) {
     const run = Math.max(room.stop + r, Math.min(back, len - m));
     const rise = len - run;
     return { run, rise, back: 0, gap: room.rise - rise };
   }
-  const rise = room.rise - r;
+  const rise = room.rise - r - (room.flare ?? 0);
   const run = Math.max(room.stop + mouthGap(dia) + m, Math.min(back, len - rise - m));
   const ret = len - run - rise;
   return { run, rise, back: ret, gap: run - ret - room.stop };

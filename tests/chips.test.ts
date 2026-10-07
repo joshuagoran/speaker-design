@@ -77,17 +77,19 @@ test("sub: duct fit per layout; a bottom slot folds past the straight run", (t) 
 test("sub: round tubes run straight, then take an elbow up the back wall, then one under the lid", (t) => {
   // 2 × 4″ in 24 × 30 × 22 behind an 18″ with no published depth (9.5″): from the baffle front (3/4″ in) to the back
   // wall is 22 - 0.75 - 0.75 = 20.5. Straight: a diameter short of it, 16.5. One elbow: the riser behind the driver
-  // (9.5 + r + a diameter = 15.5 at the shortest), up to a diameter under the lid: the row's axis sits a flare and a
-  // quarter inch up (2 + 0.75 + 0.25 = 3), so 20.5 - 2 + (28.5 - 3) - 4 = 40. Two elbows: the riser to the lid and the
-  // return leg's mouth a diameter behind the driver: 9.5 + 4 + 2 × 4 + (25.5 - 2) = 45 to 2 × 18.5 + 23.5 - 9.5 - 4 = 47.
+  // (9.5 + r + a diameter = 15.5 at the shortest), its axis a radius and a flare (2 + 0.75) off the back wall, up to a
+  // diameter under the lid: the row's axis sits a flare and a quarter inch up (2 + 0.75 + 0.25 = 3), so
+  // 20.5 - 2.75 + (28.5 - 3) - 4 = 39.25. Two elbows: the riser to a radius and a flare under the lid (22.75) and the
+  // return leg's mouth a diameter behind the driver: 9.5 + 4 + 2 × 4 + 22.75 = 44.25 to
+  // 2 × 17.75 + 22.75 - 9.5 - 4 = 44.75.
   const tube = (len: number) => sub({ portStyle: "round2", cVent: { len } });
   has(t, tube(16.5), "subDuctFit", false);
-  has(t, tube(40), "subDuctFit", false);
+  has(t, tube(39.25), "subDuctFit", false);
   has(t, tube(42), "subDuctFit", true, "bad");
-  assert.ok(chipOf(tube(42), "subDuctFit")[2].includes("short of the 45.0″"), chipList(tube(42)));
-  has(t, tube(46), "subDuctFit", false);
-  has(t, tube(47.5), "subDuctFit", true, "bad");
-  assert.ok(chipOf(tube(47.5), "subDuctFit")[2].includes("two elbows"));
+  assert.ok(chipOf(tube(42), "subDuctFit")[2].includes("short of the 44.3″"), chipList(tube(42)));
+  has(t, tube(44.5), "subDuctFit", false);
+  has(t, tube(45), "subDuctFit", true, "bad");
+  assert.ok(chipOf(tube(45), "subDuctFit")[2].includes("two elbows"));
   // the tubes' flares fit the baffle beside the driver, or the chip says they don't
   has(t, tube(20), "subTubeFit", false);
   has(

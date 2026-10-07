@@ -205,6 +205,7 @@ function tubeSetup(
     run: box.d - inset - t,
     rise: box.h - 2 * t - tubeAxisTopY(box, style, v, t),
     stop: subDriverDepthIn(drv),
+    flare: TUBE_FLARE_RADIUS_IN, // the inner mouth's flare clears the back wall and the lid
   };
   const spans = ELBOW_COUNTS.map((e) =>
     style === "round4" && e > 0 ? null : tubeSpan(room, v.dia, e),
