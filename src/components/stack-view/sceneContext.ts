@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { cabinetFinishOf } from "../../lib/data";
+import { hornBodyColor } from "../../lib/pa/hornColor";
 import { PARTS_3D } from "../../styles/palette";
 import type { Props } from "./buildStackScene";
 
@@ -25,6 +26,10 @@ export interface SceneContext {
     hornShell: THREE.MeshStandardMaterial;
     /** handles, input dishes and horn posts */
     hardware: THREE.MeshStandardMaterial;
+    /** printed throat adapters */
+    adapter: THREE.MeshStandardMaterial;
+    /** the horn bracket */
+    aluminum: THREE.MeshStandardMaterial;
     /**
      * a part's hole in its panel (buildHardware): draws no color, only depth, just proud of the face, so the panel
      * behind it isn't drawn there
@@ -44,7 +49,9 @@ export function createSceneContext({
   cabFinish,
   baffleColor,
   cutaway,
-}: Pick<Props, "baffleColor" | "cutaway"> &
+  horn,
+  hornColor,
+}: Pick<Props, "baffleColor" | "cutaway" | "horn" | "hornColor"> &
   Required<Pick<Props, "wall" | "inset" | "cabFinish">>): SceneContext {
   const finish = cabinetFinishOf(cabFinish);
   const wood = new THREE.MeshStandardMaterial({
@@ -91,7 +98,7 @@ export function createSceneContext({
       })
     : painted;
   const hornShell = new THREE.MeshStandardMaterial({
-    color: PARTS_3D.cream,
+    color: hornBodyColor(horn, hornColor),
     roughness: 0.55,
     side: THREE.DoubleSide,
   });
@@ -117,6 +124,12 @@ export function createSceneContext({
       brace,
       hornShell,
       hardware,
+      adapter: new THREE.MeshStandardMaterial({ color: PARTS_3D.adapter, roughness: 0.6 }),
+      aluminum: new THREE.MeshStandardMaterial({
+        color: PARTS_3D.aluminum,
+        roughness: 0.35,
+        metalness: 0.25,
+      }),
       holeMask,
     },
     wall,

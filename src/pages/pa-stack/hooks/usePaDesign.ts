@@ -21,6 +21,8 @@ import { savedCrossoverOrder } from "../../../constants/crossovers";
 import { savedPortStyle } from "../../../constants/portStyles";
 import { savedStackBraceStyle } from "../../../constants/bracing";
 import { savedHardware } from "../../../lib/pa/hardware";
+import { savedHornColor } from "../../../lib/pa/hornColor";
+import { musicBalanceToSave, savedMusicBalance } from "../../../lib/pa/musicBalance";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../../constants/panelSizes";
 import { isPanelNominal, panelFor, panelIn, savedPanelExactIn } from "../../../lib/panel";
 import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
@@ -94,8 +96,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setMidBoxDims,
     midAmpWatts,
     setMidAmpWatts,
-    midBandTiltDb,
-    setMidBandTiltDb,
+    midBelowSubDb,
+    setMidBelowSubDb,
     setMidBoxDim,
     midSize,
     setMidSize,
@@ -107,8 +109,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setCompressionDriver,
     hornAmpWatts,
     setHornAmpWatts,
-    hornBandTiltDb,
-    setHornBandTiltDb,
+    hornBelowMidDb,
+    setHornBelowMidDb,
   } = useHornDesign();
   const {
     subMidCrossoverHz,
@@ -137,6 +139,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setBaffleInsetIn,
     baffleColor,
     setBaffleColor,
+    hornColor,
+    setHornColor,
     cabinetFinish,
     setCabinetFinish,
     spacerHeightIn,
@@ -285,13 +289,13 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     xoLoOrder: subMidCrossoverOrder,
     xoHiOrder: midHornCrossoverOrder,
     mAmpW: midAmpWatts,
-    tilt: midBandTiltDb,
+    ...musicBalanceToSave(midBelowSubDb, hornBelowMidDb),
     hfAmpW: hornAmpWatts,
-    hfTilt: hornBandTiltDb,
     layout,
     hardware,
     cutaway,
     baffleColor,
+    ...(hornColor ? { hornColor } : {}),
     cabFinish: cabinetFinish,
     spacerH: spacerHeightIn,
     joint: cornerJoint,
@@ -337,14 +341,17 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setSubMidCrossoverOrder(savedCrossoverOrder(c.xoLoOrder));
     setMidHornCrossoverOrder(savedCrossoverOrder(c.xoHiOrder));
     if (typeof c.mAmpW === "number") setMidAmpWatts(c.mAmpW);
-    if (typeof c.tilt === "number") setMidBandTiltDb(c.tilt);
+    const balance = savedMusicBalance(c);
+    if (balance.midBelowSubDb !== null) setMidBelowSubDb(balance.midBelowSubDb);
     if (typeof c.hfAmpW === "number") setHornAmpWatts(c.hfAmpW);
-    if (typeof c.hfTilt === "number") setHornBandTiltDb(c.hfTilt);
+    if (balance.hornBelowMidDb !== null) setHornBelowMidDb(balance.hornBelowMidDb);
     if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
     if (c.layout) setLayout(c.layout);
     // each box's handles; a save from before them: the defaults
     setHardware(savedHardware(c.hardware));
     if (c.baffleColor) setBaffleColor(c.baffleColor);
+    // a save from before the horn color: the horn's catalog finish
+    setHornColor(savedHornColor(c));
     setCabinetFinish(c.cabFinish || DEFAULT_PA.cabFinish);
     setSpacerHeightIn(typeof c.spacerH === "number" ? c.spacerH : DEFAULT_PA.spacerH);
     if (c.joint) setCornerJoint(c.joint);
@@ -386,8 +393,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setMidBoxDims,
     midAmpWatts,
     setMidAmpWatts,
-    midBandTiltDb,
-    setMidBandTiltDb,
+    midBelowSubDb,
+    setMidBelowSubDb,
     setMidBoxDim,
     midSize,
     setMidSize,
@@ -397,8 +404,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setCompressionDriver,
     hornAmpWatts,
     setHornAmpWatts,
-    hornBandTiltDb,
-    setHornBandTiltDb,
+    hornBelowMidDb,
+    setHornBelowMidDb,
     subMidCrossoverHz,
     setSubMidCrossoverHz,
     midHornCrossoverHz,
@@ -424,6 +431,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setBaffleInsetIn,
     baffleColor,
     setBaffleColor,
+    hornColor,
+    setHornColor,
     cabinetFinish,
     setCabinetFinish,
     spacerHeightIn,

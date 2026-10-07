@@ -9,8 +9,11 @@
 // Fields: id, name, lb, exit (throat, in), price $, src, size {w, h, d} in (mouth and depth), driver (suggested
 // drivers), xo (suggested crossover, text), note; `hf` (omit when nothing is published): covH / covV degrees,
 // minXo Hz (the maker's lowest crossover, null if none), lowHz (pattern-control limit, Hz). Optional: profile
-// ([radius, depth] in points, in) with scale / scaleX / scaleY / scaleZ for the 3-D view, rect for a rectangular mouth.
-import type { HifiWaveguide, Horn, HornProfilePoint } from "../../types";
+// ([radius, depth] points, in; the 3-D view stretches it to `size`), adapter (the throat adapter: name, steps
+// [diameter, length] front to back, body and driver bolt circles, in), rect for the full-width rectangular concept,
+// finish ("black" for a horn that ships painted, as cast Lavoce, B&C and RCF horns do; omit it for a printed horn).
+// A horn without a profile is drawn as a rectangular flare at its mouth and depth.
+import type { HifiWaveguide, Horn, HornAdapter, HornProfilePoint } from "../../types";
 
 export const ST260_PROFILE: readonly HornProfilePoint[] = [
   [1.89, 0.0],
@@ -126,7 +129,20 @@ export const ST260: HifiWaveguide = {
   size: { w: 10.25, h: 10.25, d: 3.3 },
   driver: "Lavoce DF10.171K / Faital HF108",
   xo: "1200–1500 Hz",
-  note: "Round free-standing waveguide, ~110° coverage. No cabinet-width constraint.",
+  note: "Round free-standing waveguide, ~110° coverage. No cabinet-width constraint. Drawn from the ST260-19.stl cross-section (260 mm mouth).",
+};
+
+/** The 1 in Gen2 throat adapter: 25.4 mm in, 61 mm long (at-horns.eu). */
+const T520_25_STD_1: HornAdapter = {
+  name: "T520-25-STD-1",
+  // GUESS: the front flange, neck and rear flange diameters and the split of the length.
+  steps: [
+    [5.6, 0.35],
+    [2.6, 61 / 25.4 - 0.85],
+    [4.0, 0.5],
+  ],
+  bodyBoltCircle: 102 / 25.4,
+  driverBoltCircle: 76 / 25.4,
 };
 
 /** The horn the PA planner starts on. */
@@ -137,13 +153,23 @@ export const A460G2_14: Horn = {
   hf: { covH: 100, covV: 100, minXo: null, lowHz: 580 },
   exit: 1.4,
   profile: ST260_PROFILE,
-  scale: 460 / 260,
+  adapter: {
+    name: "T520-36-STD-1",
+    // 41 mm long overall (at-horns.eu). GUESS: the front flange, neck and rear flange diameters and the split of the length.
+    steps: [
+      [5.6, 0.35],
+      [3.4, 0.6],
+      [5.0, 41 / 25.4 - 0.95],
+    ],
+    bodyBoltCircle: 102 / 25.4,
+    driverBoltCircle: 102 / 25.4,
+  },
   price: 80,
   src: "free STL from at-horns.eu; ~$80 filament, more via service",
-  size: { w: 18.1, h: 18.1, d: 5.8 },
+  size: { w: 18.1, h: 18.1, d: 160 / 25.4 },
   driver: "Eminence N314T-8 / SB Rosso-65CD-T / 18Sound ND3T",
   xo: "900\u20131000 Hz",
-  note: "Same print as the A460G2 with a 36 mm throat adapter. 18.1 in mouth controls pattern to about 750 Hz, so it supports a 900 Hz\u20131 kHz crossover. Adapter must match the driver's exit angle (7.3\u00b0 for the N314T-8); Bat\u00edk publishes them per driver.",
+  note: "Same print as the A460G2 with the T520-36-STD-1 throat adapter (36 mm in, 41 mm long, 4\u00d7M6 to the driver and 8\u00d7M6 to the body on a 102 mm circle; at-horns.eu). Body \u2300460 \u00d7 160 mm, so about 7.9 in deep with the adapter. Approx.: no Gen2 profile is published, so it is drawn as the ST260 profile stretched to that size. 18.1 in mouth controls pattern to about 750 Hz, so it supports a 900 Hz\u20131 kHz crossover. Adapter must match the driver's exit angle (7.3\u00b0 for the N314T-8); Bat\u00edk publishes them per driver.",
 };
 
 export const HORN_RAW: readonly Horn[] = [
@@ -158,7 +184,7 @@ export const HORN_RAW: readonly Horn[] = [
     size: { w: 13.3, h: 9.1, d: 6 },
     driver: "18Sound ND1TP-16 / 1095N / 1090",
     xo: "1100–1200 Hz",
-    note: 'Free-standing 1" horn for 10/12" woofers. Supporting cabinet must be ~34 cm (13.4") wide with a 4 mm roundover.',
+    note: 'Free-standing 1" horn for 10/12" woofers. Supporting cabinet must be ~34 cm (13.4") wide with a 4 mm roundover. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   {
     id: "me90",
@@ -166,12 +192,13 @@ export const HORN_RAW: readonly Horn[] = [
     name: "B&C ME90",
     hf: { covH: 80, covV: 60, minXo: null, lowHz: 900 },
     exit: 1.4,
+    finish: "black",
     price: 114.48,
     src: "usspeaker.com, Sep 2026",
-    size: { w: 10.6, h: 10.6, d: 5.5 },
+    size: { w: 10.6, h: 10.6, d: 138 / 25.4 },
     driver: '1.4" exit, e.g. Eminence N314T',
     xo: "1.2\u20131.3 kHz (900 Hz cutoff)",
-    note: 'Cast aluminum, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt. Cutoff 900 Hz, so cross about 1.2\u20131.3 kHz; the 10.6" mouth holds its pattern to about 1.2\u20131.4 kHz.',
+    note: 'Cast aluminum, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt. Cutoff 900 Hz, so cross about 1.2\u20131.3 kHz; the 10.6" mouth holds its pattern to about 1.2\u20131.4 kHz. [bcspeakers.com, Oct 2026] 270 × 270 × 138 mm, 1.45 kg. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   {
     id: "hf950",
@@ -179,12 +206,13 @@ export const HORN_RAW: readonly Horn[] = [
     name: "RCF HF950",
     hf: { covH: 90, covV: 50, minXo: null, lowHz: 400 },
     exit: 1.4,
+    finish: "black",
     price: 169,
     src: "usspeaker.com, Sep 2026",
     size: { w: 11.8, h: 11.8, d: 8.2 },
     driver: '1.4" exit, 4-bolt on a 4" circle (fits the N314T)',
     xo: "from about 800 Hz (loads to 400 Hz)",
-    note: '[rcf.it, usspeaker.com, Sep 2026] 90\u00b0 \u00d7 50\u00b0 constant directivity, 1.4" throat (1" adaptor available), 400 Hz cutoff, 11.8" square, 8.2" deep, 2.6 lb. Loads well below an 800 Hz crossover; the off-the-shelf alternative to printing an ATH horn.',
+    note: '[rcf.it, usspeaker.com, Sep 2026] 90\u00b0 \u00d7 50\u00b0 constant directivity, 1.4" throat (1" adaptor available), 400 Hz cutoff, 11.8" square, 8.2" deep, 2.6 lb. Loads well below an 800 Hz crossover; the off-the-shelf alternative to printing an ATH horn. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   {
     id: "hf94",
@@ -192,12 +220,13 @@ export const HORN_RAW: readonly Horn[] = [
     name: "RCF HF94",
     hf: { covH: 90, covV: 40, minXo: null, lowHz: 500 },
     exit: 1.4,
+    finish: "black",
     price: 159,
     src: "usspeaker.com, Sep 2026",
     size: { w: 9.84, h: 9.84, d: 5.6 },
     driver: '1.4" exit, 4-bolt on a 4" circle (fits the N314T)',
     xo: "from about 900 Hz (loads to 500 Hz)",
-    note: '[rcf.it, usspeaker.com, Sep 2026] 90\u00b0 \u00d7 40\u00b0, 1.4" throat with a removable 1" adaptor, 500 Hz cutoff, 9.84" square. Depth 5.3\u20135.9" and weight 2.5\u20132.9 lb depending on the source. Smaller than the HF950; vertical control weakens near 800 Hz.',
+    note: '[rcf.it, usspeaker.com, Sep 2026] 90\u00b0 \u00d7 40\u00b0, 1.4" throat with a removable 1" adaptor, 500 Hz cutoff, 9.84" square. Depth 5.3\u20135.9" and weight 2.5\u20132.9 lb depending on the source. Smaller than the HF950; vertical control weakens near 800 Hz. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   {
     id: "hd1403",
@@ -205,12 +234,13 @@ export const HORN_RAW: readonly Horn[] = [
     name: "Lavoce HD1403",
     hf: { covH: 80, covV: 60, minXo: null, lowHz: 900 },
     exit: 1.4,
+    finish: "black",
     price: 69,
     src: "parts-express.com, Sep 2026",
     size: { w: 11, h: 10.6, d: 4.5 },
     driver: '1.4" exit, e.g. Eminence N314T',
     xo: "1.2\u20131.3 kHz (900 Hz cutoff)",
-    note: 'Cast aluminum constant-directivity horn, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt, cutoff 900 Hz. 10.6" H \u00d7 11" W \u00d7 4.5" D; cutout 8.8" \u00d7 9.5". Weight not published; 3 lb assumed.',
+    note: 'Cast aluminum constant-directivity horn, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt, cutoff 900 Hz. 10.6" H \u00d7 11" W \u00d7 4.5" D; cutout 8.8" \u00d7 9.5". Weight not published; 3 lb assumed. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   ST260,
   {
@@ -220,13 +250,13 @@ export const HORN_RAW: readonly Horn[] = [
     hf: { covH: 100, covV: 100, minXo: null, lowHz: 670 },
     exit: 1,
     profile: ST260_PROFILE,
-    scale: 400 / 260,
     price: 60,
     src: "free STL from at-horns.eu; ~$60 filament, more via service",
-    size: { w: 15.75, h: 15.75, d: 5.1 },
+    adapter: T520_25_STD_1,
+    size: { w: 15.75, h: 15.75, d: 130 / 25.4 },
     driver: "Faital HF108 / B&C DE360 / Lavoce DF10.171K",
     xo: "800–1000 Hz",
-    note: 'Shown as the ST260 profile scaled 1.54×; the real Gen2 profile is deeper. 15.7" round mouth.',
+    note: "Body ⌀400 × 130 mm (at-horns.eu Gen2). Approx.: no Gen2 profile is published, so it is drawn as the ST260 profile stretched to that size. Shown with the T520-25-STD-1 throat adapter (25.4 mm in, 61 mm long, 4×M6 on 76 mm and 3×M6 on 57 mm to the driver, 8×M6 on 102 mm to the body; STD-2 and STD-3 are 46 and 52 mm).",
   },
   A460G2_14,
   {
@@ -236,13 +266,13 @@ export const HORN_RAW: readonly Horn[] = [
     hf: { covH: 100, covV: 100, minXo: null, lowHz: 670 },
     exit: 1,
     profile: ST260_PROFILE,
-    scale: 460 / 260,
     price: 80,
     src: "free STL from at-horns.eu; ~$80 filament, more via service",
-    size: { w: 18.1, h: 18.1, d: 5.8 },
+    adapter: T520_25_STD_1,
+    size: { w: 18.1, h: 18.1, d: 160 / 25.4 },
     driver: '1" or 1.4" via adapter; measured pairings on at-horns.eu',
     xo: "600–800 Hz",
-    note: 'Shown as the ST260 profile scaled 1.77×; the real Gen2 profile is deeper. 18.1" round mouth, Marcel\'s pick for 1" drivers.',
+    note: "Body ⌀460 × 160 mm (at-horns.eu Gen2), Marcel's pick for 1\" drivers. Approx.: no Gen2 profile is published, so it is drawn as the ST260 profile stretched to that size. Shown with the T520-25-STD-1 throat adapter (25.4 mm in, 61 mm long, 4×M6 on 76 mm and 3×M6 on 57 mm to the driver; STD-2 and STD-3 are 46 and 52 mm).",
   },
   {
     id: "athRect",
@@ -263,14 +293,11 @@ export const HORN_RAW: readonly Horn[] = [
     name: "Iwata 600 (printed, approx.)",
     exit: 1,
     profile: ST260_PROFILE,
-    scaleX: 290 / 260,
-    scaleY: 185 / 260,
-    scaleZ: 245 / 83,
     price: 50,
     src: "STL on Cults3D; ~$50 filament",
     size: { w: 11.4, h: 7.3, d: 9.6 },
     driver: "B&C DE250 / Faital HF10AK",
     xo: "1200–1500 Hz",
-    note: 'Shown as the ST260 profile stretched to 290 × 185 × 245 mm deep; flare shape approximate. Elliptical 600 Hz horn, 1" throat.',
+    note: 'Approx.: drawn as the ST260 profile stretched to 290 × 185 × 245 mm deep (Cults3D listing); no profile published. Elliptical 600 Hz horn, 1" throat.',
   },
 ];

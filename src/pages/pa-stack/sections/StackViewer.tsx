@@ -8,12 +8,14 @@ interface Props {
     | "setIsFull3d"
     | "portStyle"
     | "hornOption"
+    | "compressionDriver"
     | "plinthHeightIn"
     | "cutaway"
     | "layout"
     | "wallThicknessIn"
     | "baffleInsetIn"
     | "baffleColor"
+    | "hornColor"
     | "cabinetFinish"
     | "spacerHeightIn"
     | "midWithBox"
@@ -40,12 +42,14 @@ export function StackViewer({
     setIsFull3d,
     portStyle,
     hornOption,
+    compressionDriver,
     plinthHeightIn,
     cutaway,
     layout,
     wallThicknessIn,
     baffleInsetIn,
     baffleColor,
+    hornColor,
     cabinetFinish,
     spacerHeightIn,
     midWithBox,
@@ -96,11 +100,13 @@ export function StackViewer({
           sub={subWithBox}
           mid={midWithBox}
           horn={hornOption}
+          cd={compressionDriver}
           plinth={plinthHeightIn}
           cutaway={cutaway}
           portStyle={portStyle}
           layout={layout}
           baffleColor={baffleColor}
+          hornColor={hornColor}
           portGeom={portGeom}
           wall={wallThicknessIn}
           inset={baffleInsetIn}

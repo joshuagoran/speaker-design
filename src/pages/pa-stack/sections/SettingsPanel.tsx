@@ -46,6 +46,13 @@ import { PANEL_NOMINAL_OPTIONS } from "../../../lib/panel";
 import { HardwareSettings } from "./HardwareSettings";
 import { boxTakesHardware, handlePart } from "../../../lib/pa/hardware";
 import { NO_HANDLES_LABEL } from "../../../constants/hardware";
+import {
+  HORN_COLOR_CATALOG,
+  HORN_COLOR_CATALOG_LABEL,
+  HORN_FINISH_NAMES,
+} from "../../../constants/hornColor";
+import { cssHex, hornBodyColor, pickedHornColor } from "../../../lib/pa/hornColor";
+import { ON_DATA } from "../../../styles/palette";
 
 interface Props {
   planner: Pick<
@@ -78,8 +85,8 @@ interface Props {
     | "midBoxDims"
     | "midAmpWatts"
     | "setMidAmpWatts"
-    | "midBandTiltDb"
-    | "setMidBandTiltDb"
+    | "midBelowSubDb"
+    | "setMidBelowSubDb"
     | "setMidBoxDim"
     | "midSize"
     | "setMidSize"
@@ -89,8 +96,8 @@ interface Props {
     | "setCompressionDriver"
     | "hornAmpWatts"
     | "setHornAmpWatts"
-    | "hornBandTiltDb"
-    | "setHornBandTiltDb"
+    | "hornBelowMidDb"
+    | "setHornBelowMidDb"
     | "subMidCrossoverHz"
     | "setSubMidCrossoverHz"
     | "midHornCrossoverHz"
@@ -118,6 +125,8 @@ interface Props {
     | "setBaffleInsetIn"
     | "baffleColor"
     | "setBaffleColor"
+    | "hornColor"
+    | "setHornColor"
     | "cabinetFinish"
     | "setCabinetFinish"
     | "spacerHeightIn"
@@ -167,8 +176,8 @@ export function SettingsPanel({ planner }: Props) {
     midBoxDims,
     midAmpWatts,
     setMidAmpWatts,
-    midBandTiltDb,
-    setMidBandTiltDb,
+    midBelowSubDb,
+    setMidBelowSubDb,
     setMidBoxDim,
     midSize,
     setMidSize,
@@ -178,8 +187,8 @@ export function SettingsPanel({ planner }: Props) {
     setCompressionDriver,
     hornAmpWatts,
     setHornAmpWatts,
-    hornBandTiltDb,
-    setHornBandTiltDb,
+    hornBelowMidDb,
+    setHornBelowMidDb,
     subMidCrossoverHz,
     setSubMidCrossoverHz,
     midHornCrossoverHz,
@@ -204,6 +213,8 @@ export function SettingsPanel({ planner }: Props) {
     setBaffleInsetIn,
     baffleColor,
     setBaffleColor,
+    hornColor,
+    setHornColor,
     cabinetFinish,
     setCabinetFinish,
     spacerHeightIn,
@@ -233,6 +244,15 @@ export function SettingsPanel({ planner }: Props) {
     subDriver,
   );
   const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
+  // the horn color picker: the horn's catalog finish as a preset that clears the picked color
+  const hornFinish = hornOption.finish ?? "printed";
+  const hornColorPresets = {
+    [HORN_COLOR_CATALOG]: {
+      name: HORN_COLOR_CATALOG_LABEL,
+      swatch: cssHex(hornBodyColor(hornOption)),
+      ink: hornOption.finish ? ON_DATA.white : ON_DATA.ink,
+    },
+  };
   // a note under the Bracing setting for each panel a box's bracing leaves under the target, naming the box and the panel
   const braceNotes = [
     ...braceNoteLines(PA_SETTINGS_TABS.sub, subBracing),
@@ -655,15 +675,15 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label={
                     <Tooltip tip="Bass-heavy music has 6–10 dB less at 200 Hz–1 kHz than 40–60 Hz.">
-                      Music balance: mid band needs less by
+                      Music balance: mid level below the sub
                     </Tooltip>
                   }
-                  value={midBandTiltDb}
+                  value={midBelowSubDb}
                   min={0}
                   max={12}
                   step={1}
                   unit=" dB"
-                  onChange={setMidBandTiltDb}
+                  onChange={setMidBelowSubDb}
                 />
               </Card>
             </div>
@@ -683,13 +703,13 @@ export function SettingsPanel({ planner }: Props) {
                   extra={renderLockButton("hfAmpW", "the HF amp power")}
                 />
                 <Slider
-                  label="Music balance: HF band needs less by"
-                  value={hornBandTiltDb}
+                  label="Music balance: horn level below the mid"
+                  value={hornBelowMidDb}
                   min={0}
                   max={12}
                   step={1}
                   unit=" dB"
-                  onChange={setHornBandTiltDb}
+                  onChange={setHornBelowMidDb}
                 />
               </Card>
             </div>
@@ -756,6 +776,15 @@ export function SettingsPanel({ planner }: Props) {
             onChange={setBaffleColor}
             swatches={PAINT_SWATCHES}
             note={baffleColor}
+          />
+          <SwatchPicker
+            label="Horn color"
+            value={hornColor ?? HORN_COLOR_CATALOG}
+            onChange={(v) => setHornColor(pickedHornColor(v))}
+            swatches={PAINT_SWATCHES}
+            presets={hornColorPresets}
+            titlePrefix="Painted: "
+            note={hornColor ?? `${HORN_COLOR_CATALOG_LABEL}: ${HORN_FINISH_NAMES[hornFinish]}`}
           />
           <ToggleGroup
             label="View"

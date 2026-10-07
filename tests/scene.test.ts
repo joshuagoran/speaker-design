@@ -266,13 +266,11 @@ describe("stack scene", () => {
     const base = byName(SCENE_CASE_NAMES.defaultPa);
     const horns = [...new Set(sceneCases.map((c) => c.props.horn))].flatMap((horn) => [
       horn,
-      { ...horn, profile: undefined, rect: undefined }, // the plain flared block
-      { ...horn, profile: undefined, rect: true }, // a rectangular horn
+      { ...horn, profile: undefined, rect: undefined }, // no profile: a rectangular flare at its own mouth
+      { ...horn, profile: undefined, rect: true }, // the full-width rectangular concept
     ]);
     for (const layout of ["stack", "pole", "satellite", "tower"] as const) {
       for (const horn of horns) {
-        // a plain block in the tower pokes out of the shell by its bevel; no horn in the data is one
-        if (layout === "tower" && !horn.profile && !horn.rect) continue;
         const p = { ...base, horn, layout };
         const top = stackBox(buildStackScene(p)).max.y;
         const planned = derivedHeights(p).stackHeightIn;

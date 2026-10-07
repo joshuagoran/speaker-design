@@ -193,13 +193,39 @@ export interface CompressionDriver {
   hf?: CompressionHf;
   /** throat exit in inches */
   exit: number;
+  /** the body as the 3-D view draws it */
+  body: CompressionDriverBody;
   price: number | null;
   src: string;
   note: string;
 }
 
+/** One step of a turned part (a throat adapter, a driver body), front to back: [diameter, length] in inches. */
+export type BodyStep = readonly [dia: number, len: number];
+
+/** A compression driver's body: its outside size and the bolts on its front face, in. */
+export interface CompressionDriverBody {
+  /** overall diameter and depth */
+  dia: number;
+  depth: number;
+  /** the tapped holes on the front face: how many, the thread, and the bolt circle */
+  bolts: { n: number; thread: string; circle: number };
+  /** the outline front to back, when a photo shows its steps; without it the view draws a generic stepped body */
+  steps?: readonly BodyStep[];
+}
+
 /** One point of a horn's flare, [radius, depth] in inches. */
 export type HornProfilePoint = readonly [radius: number, depth: number];
+
+/** A throat adapter between a horn's throat and the compression driver. */
+export interface HornAdapter {
+  name: string;
+  /** the outline, front (horn side) to back (driver side); the lengths add up to the adapter's length */
+  steps: readonly BodyStep[];
+  /** the bolt circles on its front flange (to the horn body) and on its back face (to the driver), in */
+  bodyBoltCircle: number;
+  driverBoltCircle: number;
+}
 
 export interface HornHf {
   covH: number;
@@ -208,6 +234,9 @@ export interface HornHf {
   lowHz: number;
 }
 
+/** A horn's factory finish in the 3-D view (`HORN_FINISH_COLORS`). */
+export type HornFinish = "black";
+
 export interface Horn {
   id: string;
   lb: number;
@@ -215,16 +244,19 @@ export interface Horn {
   hf?: HornHf;
   /** throat exit in inches */
   exit: number;
-  /** the flare drawn in the 3-D view; a horn without one is drawn as a generic flare */
+  /**
+   * the flare drawn in the 3-D view, stretched to fit `size`; a horn without one is drawn as a generic flare
+   */
   profile?: readonly HornProfilePoint[];
-  scale?: number;
-  scaleX?: number;
-  scaleY?: number;
-  scaleZ?: number;
+  /** the throat adapter the driver bolts to, when the horn takes one; it adds its length behind the body */
+  adapter?: HornAdapter;
   /** a rectangular mouth */
   rect?: boolean;
+  /** the factory finish of a horn that ships painted; absent: drawn in the printed cream */
+  finish?: HornFinish;
   price: number;
   src: string;
+  /** the mouth's width and height and the body's depth (without the adapter), in */
   size: Dims3;
   driver: string;
   xo: string;
@@ -1108,16 +1140,18 @@ export interface PaDesignConfig {
   xoLoOrder: CrossoverOrder;
   xoHiOrder: CrossoverOrder;
   mAmpW: number;
-  /** how much less the mid band needs than the sub band, dB */
+  /** the music balance: how far the mid band's level sits below the sub's, dB (a level, not an angle; the saved key keeps its old name) */
   tilt: number;
   hfAmpW: number;
-  /** how much less the horn band needs than the mid band, dB */
+  /** the music balance: how far the horn band's level sits below the mid's, dB (a level, not an angle; the saved key keeps its old name) */
   hfTilt: number;
   layout: PaLayout;
   /** each box's handles and their offsets (lib/pa/hardware); absent in older saves: the defaults (`DEFAULT_PA`) */
   hardware?: PaHardware;
   cutaway?: boolean;
   baffleColor?: string;
+  /** a paint color (hex) for the horn body over its catalog finish; absent: the finish (older saves have none) */
+  hornColor?: string;
   /** a `FinishId`, or a paint color as a hex string (`SwatchPicker` offers both) */
   cabFinish?: string;
   spacerH?: number;
@@ -1867,7 +1901,8 @@ export interface MidChipsInput {
   mAmpW: number;
   /** the sub at its music limit at the crossover, dB; null where the sub has no model */
   subMusicAtXo: number | null;
-  tilt: number;
+  /** how far the mid band's level sits below the sub's (the music balance), dB */
+  midBelowSubDb: number;
   /** the mid's own limit at the crossover; null when `subMusicAtXo` is */
   midAtXo: Pick<PaMaxPoint, "spl" | "who"> | null;
 }
@@ -1881,7 +1916,8 @@ export interface HornChipsInput {
   hfAmpW: number;
   /** the mid at its limit at the horn crossover, dB; null where the mid has no model */
   midAtXoHi: number | null;
-  hfTilt: number;
+  /** how far the horn band's level sits below the mid's (the music balance), dB */
+  hornBelowMidDb: number;
   /** the horn's level at the crossover, dB; null where the horn has no model */
   hornAtXo: number | null;
   /** the mid's beamwidth at the crossover in degrees, null where it has no model */

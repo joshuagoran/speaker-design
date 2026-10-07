@@ -56,8 +56,8 @@ export type CoverageInputs = Pick<
   | "midModeled"
   | "hornModel"
   | "midHornCrossoverHz"
-  | "midBandTiltDb"
-  | "hornBandTiltDb"
+  | "midBelowSubDb"
+  | "hornBelowMidDb"
 >;
 
 /** The map's results: the floor grid (null until the first one arrives), the boxes, the listener's level and response. */
@@ -136,17 +136,17 @@ export function useCoverageMap(planner: CoverageInputs, layout: CoverageLayout):
     midModeled,
     hornModel,
     midHornCrossoverHz,
-    midBandTiltDb,
-    hornBandTiltDb,
+    midBelowSubDb,
+    hornBelowMidDb,
   } = planner;
   const balance = useMemo(
     () => ({
       xoLo: subMidCrossoverHz,
       xoHi: midHornCrossoverHz,
-      tilt: midBandTiltDb,
-      hfTilt: hornBandTiltDb,
+      tilt: midBelowSubDb,
+      hfTilt: hornBelowMidDb,
     }),
-    [subMidCrossoverHz, midHornCrossoverHz, midBandTiltDb, hornBandTiltDb],
+    [subMidCrossoverHz, midHornCrossoverHz, midBelowSubDb, hornBelowMidDb],
   );
   const geometry = useMemo<Omit<CoverageStack, "subDelayMs"> | null>(
     () =>

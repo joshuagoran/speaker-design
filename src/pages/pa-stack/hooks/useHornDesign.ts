@@ -9,8 +9,8 @@ export interface HornDesign {
   setCompressionDriver: Setter<CompressionDriver>;
   hornAmpWatts: number;
   setHornAmpWatts: Setter<number>;
-  hornBandTiltDb: number;
-  setHornBandTiltDb: Setter<number>;
+  hornBelowMidDb: number;
+  setHornBelowMidDb: Setter<number>;
 }
 
 /** State for the horn and compression driver: parts, HF amp power and music balance. */
@@ -18,7 +18,7 @@ export function useHornDesign(): HornDesign {
   const [hornOption, setHornOption] = useState(DEFAULT_PA.horn);
   const [compressionDriver, setCompressionDriver] = useState(DEFAULT_PA.cd);
   const [hornAmpWatts, setHornAmpWatts] = useState(DEFAULT_PA.hfAmpW); // amp power per HF channel, rated into 8 Ω
-  const [hornBandTiltDb, setHornBandTiltDb] = useState(DEFAULT_PA.hfTilt); // how much less the horn band needs than the mid band, dB
+  const [hornBelowMidDb, setHornBelowMidDb] = useState(DEFAULT_PA.hfTilt); // the music balance: the horn band level below the mid, dB
   return {
     hornOption,
     setHornOption,
@@ -26,7 +26,7 @@ export function useHornDesign(): HornDesign {
     setCompressionDriver,
     hornAmpWatts,
     setHornAmpWatts,
-    hornBandTiltDb,
-    setHornBandTiltDb,
+    hornBelowMidDb,
+    setHornBelowMidDb,
   };
 }

@@ -38,7 +38,17 @@ import { DUCT_DIVIDER_DEFAULT } from "../constants/panelSizes";
 /** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
 export type PaDefaults = Omit<
   Required<PaDesignConfig>,
-  "format" | "cabinet" | "summary" | "sub" | "mid" | "midBox" | "cd" | "horn" | "braceStyle"
+  // braceStyle and hornColor have no default: the plywood's style and the horn's catalog finish
+  | "format"
+  | "cabinet"
+  | "summary"
+  | "sub"
+  | "mid"
+  | "midBox"
+  | "cd"
+  | "horn"
+  | "braceStyle"
+  | "hornColor"
 > & {
   format: Format;
   cabinet: Cabinet;

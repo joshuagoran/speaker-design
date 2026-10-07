@@ -19,7 +19,7 @@ interface Props {
     | "hornOption"
     | "compressionDriver"
     | "hornAmpWatts"
-    | "hornBandTiltDb"
+    | "hornBelowMidDb"
     | "midHornCrossoverHz"
     | "midModeled"
     | "hornSpec"
@@ -39,7 +39,7 @@ export function HornSection({ planner }: Props) {
     hornOption,
     compressionDriver,
     hornAmpWatts,
-    hornBandTiltDb,
+    hornBelowMidDb,
     midHornCrossoverHz,
     midModeled,
     hornSpec,
@@ -128,7 +128,7 @@ export function HornSection({ planner }: Props) {
                   midAtXoHi: midModeled
                     ? nearestPoint(midModeled.max, midHornCrossoverHz).spl
                     : null,
-                  hfTilt: hornBandTiltDb,
+                  hornBelowMidDb,
                   hornAtXo: nearestPoint(hornModel.curve, midHornCrossoverHz).spl,
                   midBeam: midBeamWidthDeg,
                   fK: beamCurves.fK,

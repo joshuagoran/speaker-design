@@ -11,6 +11,7 @@ import type {
   BoxBracing,
   BoxHardwarePlan,
   BoxKeepOut,
+  CompressionDriver,
   Dims3,
   Horn,
   MidDriver,
@@ -24,11 +25,15 @@ export interface Props {
   sub: SubDriver & { box: Dims3 };
   mid: MidDriver & { box: Dims3 };
   horn: Horn;
+  /** the compression driver behind the horn */
+  cd: Pick<CompressionDriver, "body" | "exit">;
   plinth: number;
   cutaway: boolean;
   portStyle: PortStyle;
   layout: PaLayout;
   baffleColor: string;
+  /** a paint color (hex) for the horn body; absent or empty: the horn's catalog finish */
+  hornColor?: string;
   /** explicit vent geometry when the cabinet is custom */
   portGeom?: Partial<PaPortGeometry>;
   wall?: number;
@@ -52,11 +57,13 @@ export function buildStackScene({
   sub,
   mid,
   horn,
+  cd,
   plinth,
   cutaway,
   portStyle,
   layout,
   baffleColor,
+  hornColor,
   portGeom,
   wall = 0.75,
   inset = 0.75,
@@ -69,7 +76,15 @@ export function buildStackScene({
   subHardware,
   midHardware,
 }: Props): THREE.Group {
-  const ctx = createSceneContext({ wall, inset, cabFinish, baffleColor, cutaway });
+  const ctx = createSceneContext({
+    wall,
+    inset,
+    cabFinish,
+    baffleColor,
+    cutaway,
+    horn,
+    hornColor,
+  });
   const { group } = ctx;
   const s = sub.box;
   if (layout === "tower") {
@@ -77,6 +92,7 @@ export function buildStackScene({
       sub,
       mid,
       horn,
+      cd,
       plinth,
       portStyle,
       portGeom,
@@ -115,7 +131,7 @@ export function buildStackScene({
       keepOut: midKeepOut,
       hardware: midHardware,
     });
-    buildHorn(ctx, { horn, y: hornY, xs, mount: mid.box });
+    buildHorn(ctx, { horn, cd, y: hornY, xs, mount: mid.box });
   }
 
   // 5 ft 9 in scale figure, billboarded

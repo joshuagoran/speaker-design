@@ -1,5 +1,5 @@
 // Props for the 3D scene tests: every golden config, the default PA and the other layouts.
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, HORN_OPTIONS } from "../src/lib/data";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, HORN_OPTIONS, CD_OPTIONS } from "../src/lib/data";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import type { Props } from "../src/components/stack-view/buildStackScene";
 import type { PaDesignConfig } from "../src/types";
@@ -20,11 +20,13 @@ export function scenePropsOf(
     sub: { ...sub, box: c.cDim },
     mid: { ...mid, box: midBox },
     horn,
+    cd: CD_OPTIONS.find((o) => o.id === c.cd) ?? DEFAULT_PA.cd,
     plinth: PLINTH_IN,
     cutaway: c.cutaway ?? false,
     portStyle: c.portStyle,
     layout: c.layout ?? "stack",
     baffleColor: c.baffleColor ?? DEFAULT_PA.baffleColor,
+    hornColor: c.hornColor,
     portGeom: {
       ductH: c.cVent.slotH,
       nPorts: c.cVent.nt,
@@ -39,7 +41,8 @@ export function scenePropsOf(
   };
 }
 
-const defaultConfig = {
+/** The default PA as a save from before the horn color (no `hornColor` key). */
+export const defaultConfig = {
   sub: DEFAULT_PA.sub.id,
   mid: DEFAULT_PA.mid.id,
   horn: DEFAULT_PA.horn.id,
@@ -57,7 +60,7 @@ const defaultConfig = {
 } satisfies Parameters<typeof scenePropsOf>[0];
 
 /** A horn drawn as a lathe profile and narrow enough for the tower's arched top. */
-const archedHorn = HORN_OPTIONS.find((h) => h.profile && !h.scaleX && h.size.w < 20);
+const archedHorn = HORN_OPTIONS.find((h) => h.profile && h.size.w === h.size.h && h.size.w < 20);
 
 /** The cases the scene tests pick by name. */
 export const SCENE_CASE_NAMES = {

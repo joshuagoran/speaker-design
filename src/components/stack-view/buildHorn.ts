@@ -1,104 +1,136 @@
 import * as THREE from "three";
 import { rectangularHornGeometry } from "./geometry";
-import { HORN_LIFT_IN, PLAIN_HORN_LIFT_IN, PLAIN_HORN_BEVEL_IN } from "./stackHeights";
+import { HORN_LIFT_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
-import type { Dims3, Horn } from "../../types";
+import { buildBracket, buildClampedBracket, takesBracket } from "./buildBracket";
+import { cdBodySteps } from "../../lib/data";
+import type { BodyStep, CompressionDriver, Dims3, Horn } from "../../types";
+
+/** The horn body's mesh. */
+export const HORN_MESH_NAME = "horn";
+/** The throat adapter's meshes. */
+export const ADAPTER_MESH_NAME = "hornAdapter";
+/** The compression driver's meshes. */
+export const CD_MESH_NAME = "compressionDriver";
 
 /**
- * The horn and its compression-driver throat, one per x: a rectangular horn, a lathe profile, or the plain flared block.
- * `y` is the base of the horn (the top of the box below) and `mount` the footprint it sits on. In the tower the horn sits on
- * the shared shell instead: `tower` gives its center height, the z of its throat, the mouth width and the section height.
- * Returns the y of the horn envelope's top.
+ * Turned steps along the z axis, front face at `z0`, drawn backward (toward −z) and centered on (x, y). Returns the z
+ * of the last step's back face.
+ */
+function addSteps(
+  ctx: SceneContext,
+  steps: readonly BodyStep[],
+  at: { x: number; y: number; z0: number },
+  material: THREE.Material,
+  name: string,
+): number {
+  let z = at.z0;
+  for (const [dia, len] of steps) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(dia / 2, dia / 2, len, 48), material);
+    m.rotation.x = Math.PI / 2;
+    m.position.set(at.x, at.y, z - len / 2);
+    m.name = name;
+    ctx.group.add(m);
+    z -= len;
+  }
+  return z;
+}
+
+/** Where a horn and the parts behind it sit: the axis (x, y) and the z of the horn body's throat. */
+export interface HornAxis {
+  x: number;
+  y: number;
+  throatZ: number;
+}
+
+/**
+ * The horn's throat adapter, when it has one, and the compression driver behind it: the adapter's front face on the
+ * throat, the driver's front face on the adapter's back face (or on the throat). On a lid (`lidY`; the tower has none
+ * under the driver) the L-bracket holds it: from the adapter's flange, or, without an adapter, clamped between
+ * the throat and the driver.
+ */
+function addThroatParts(
+  ctx: SceneContext,
+  horn: Pick<Horn, "adapter">,
+  cd: Pick<CompressionDriver, "body" | "exit">,
+  at: HornAxis,
+  lidY: number | null,
+) {
+  let cdFront = at.throatZ;
+  if (horn.adapter) {
+    cdFront = addSteps(
+      ctx,
+      horn.adapter.steps,
+      { x: at.x, y: at.y, z0: at.throatZ },
+      ctx.materials.adapter,
+      ADAPTER_MESH_NAME,
+    );
+    if (lidY !== null && takesBracket(horn.adapter)) buildBracket(ctx, horn.adapter, at, lidY);
+  } else if (lidY !== null) cdFront = buildClampedBracket(ctx, cd, at, lidY);
+  addSteps(
+    ctx,
+    cdBodySteps(cd.body),
+    { x: at.x, y: at.y, z0: cdFront },
+    ctx.materials.black,
+    CD_MESH_NAME,
+  );
+}
+
+/**
+ * The horn, its throat adapter and its compression driver, one set per x. A horn with a profile is that profile turned
+ * and stretched to its mouth and depth; the full-width concept (`rect`) is a rectangular flare as wide as the box; any
+ * other horn is a rectangular flare at its own mouth and depth. `y` is the base of the horn (the top of the box below)
+ * and `mount` the footprint it sits on (the mid box, or the tower's shell); the mouth plane is on its front plane. In
+ * the tower the horn sits in the shared shell instead: `tower` gives its center height, the mouth width and the section
+ * height. Returns the y of the horn envelope's top and each horn's axis.
  */
 export function buildHorn(
   ctx: SceneContext,
   {
     horn,
+    cd,
     y: hornY,
     xs = [0],
     mount,
     tower,
   }: {
     horn: Horn;
+    cd: Pick<CompressionDriver, "body" | "exit">;
     y: number;
     xs?: number[];
     mount: Pick<Dims3, "w" | "d">;
-    tower?: { cy: number; z: number; width: number; sectionH: number };
+    tower?: { cy: number; width: number; sectionH: number };
   },
-): { top: number } {
-  const { black, cream, hornShell } = ctx.materials;
+): { top: number; axes: HornAxis[] } {
+  const { hornShell } = ctx.materials;
   const hz = horn.size;
-  if (!horn.profile && !horn.rect && !tower) {
-    const stand = new THREE.Mesh(new THREE.BoxGeometry(hz.w * 0.5, 1.2, hz.d * 0.5), black);
-    stand.position.set(xs[0], hornY + 0.6, 0);
-    ctx.group.add(stand);
-  }
-  xs.forEach((hx) => {
-    if (horn.rect) {
-      const mw = tower ? tower.width : mount.w;
-      const rm = new THREE.Mesh(rectangularHornGeometry(mw, hz.h, hz.d), hornShell);
-      rm.position.set(
-        hx,
-        tower ? tower.cy : hornY + hz.h / 2 + HORN_LIFT_IN,
-        tower ? tower.z : mount.d / 2 - hz.d + 1,
+  // every horn's mouth plane on the box's front plane (the frame front, `mount.d / 2`), the throat `hz.d` behind it
+  const throatZ = mount.d / 2 - hz.d;
+  const cy = tower ? tower.cy : hornY + HORN_LIFT_IN + hz.h / 2;
+  const axes = xs.map((x) => ({ x, y: cy, throatZ }));
+  for (const at of axes) {
+    let body: THREE.Mesh;
+    if (horn.profile) {
+      // the profile stretched to the mouth's width and height and the body's depth
+      const maxR = Math.max(...horn.profile.map(([r]) => r));
+      const maxX = Math.max(...horn.profile.map(([, x]) => x));
+      body = new THREE.Mesh(
+        new THREE.LatheGeometry(
+          horn.profile.map(([r, x]) => new THREE.Vector2(r, x)),
+          96,
+        ),
+        hornShell,
       );
-      ctx.group.add(rm);
-      const th = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
-      th.rotation.x = Math.PI / 2;
-      th.position.set(hx, rm.position.y, rm.position.z - 2);
-      ctx.group.add(th);
-    } else if (horn.profile) {
-      const sc = horn.scale || 1;
-      const pts = horn.profile.map(([r, x]) => new THREE.Vector2(r * sc, x * sc));
-      const lathe = new THREE.LatheGeometry(pts, 96);
-      const lm = new THREE.Mesh(lathe, hornShell);
-      lm.rotation.x = Math.PI / 2; // lathe axis (y) -> z, mouth toward +z
-      if (horn.scaleX || horn.scaleY || horn.scaleZ)
-        lm.scale.set(horn.scaleX || 1, horn.scaleZ || 1, horn.scaleY || 1); // local x=width, y=depth, z=height
-      lm.position.set(
-        hx,
-        tower ? tower.cy : hornY + hz.h / 2 + HORN_LIFT_IN,
-        tower ? tower.z : mount.d / 2 - hz.d + 1,
-      );
-      ctx.group.add(lm);
-      const th = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
-      th.rotation.x = Math.PI / 2;
-      th.position.set(hx, lm.position.y, tower ? tower.z - 2 : -2.2);
-      ctx.group.add(th);
+      body.rotation.x = Math.PI / 2; // lathe axis (y) -> z, mouth toward +z
+      body.scale.set(hz.w / 2 / maxR, hz.d / maxX, hz.h / 2 / maxR); // local x = width, y = depth, z = height
     } else {
-      const hornShape = new THREE.Shape();
-      const rw = hz.w / 2,
-        rh = hz.h / 2,
-        r = Math.min(rw, rh) * 0.5;
-      hornShape.moveTo(-rw + r, -rh);
-      hornShape.lineTo(rw - r, -rh);
-      hornShape.quadraticCurveTo(rw, -rh, rw, -rh + r);
-      hornShape.lineTo(rw, rh - r);
-      hornShape.quadraticCurveTo(rw, rh, rw - r, rh);
-      hornShape.lineTo(-rw + r, rh);
-      hornShape.quadraticCurveTo(-rw, rh, -rw, rh - r);
-      hornShape.lineTo(-rw, -rh + r);
-      hornShape.quadraticCurveTo(-rw, -rh, -rw + r, -rh);
-      const hornGeo = new THREE.ExtrudeGeometry(hornShape, {
-        depth: hz.d,
-        bevelEnabled: true,
-        bevelSize: PLAIN_HORN_BEVEL_IN,
-        bevelThickness: 1.2,
-        bevelSegments: 6,
-      });
-      const hornMesh = new THREE.Mesh(hornGeo, cream);
-      hornMesh.position.set(
-        hx,
-        tower ? tower.cy : hornY + PLAIN_HORN_LIFT_IN + rh,
-        tower ? tower.z : -hz.d / 2 + 2,
-      );
-      ctx.group.add(hornMesh);
-      const throat = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 4, 32), black);
-      throat.rotation.x = Math.PI / 2;
-      throat.position.set(hx, hornMesh.position.y, tower ? tower.z - 2.5 : -hz.d / 2 - 0.5);
-      ctx.group.add(throat);
+      const mouthW = horn.rect ? (tower ? tower.width : mount.w) : hz.w;
+      body = new THREE.Mesh(rectangularHornGeometry(mouthW, hz.h, hz.d, horn.exit / 2), hornShell);
     }
-  });
-  const lift = horn.rect || horn.profile ? HORN_LIFT_IN : PLAIN_HORN_LIFT_IN + PLAIN_HORN_BEVEL_IN;
-  return { top: hornY + (tower ? tower.sectionH : lift + hz.h) };
+    body.position.set(at.x, at.y, at.throatZ);
+    body.name = HORN_MESH_NAME;
+    ctx.group.add(body);
+    addThroatParts(ctx, horn, cd, at, tower ? null : hornY);
+  }
+  return { top: hornY + (tower ? tower.sectionH : HORN_LIFT_IN + hz.h), axes };
 }

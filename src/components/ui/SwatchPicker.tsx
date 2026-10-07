@@ -7,8 +7,8 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   swatches: readonly PaintSwatch[];
-  /** named presets, by key (the cabinet finishes) */
-  presets?: Record<string, { name: string; swatch: string }>;
+  /** named presets, by key (the cabinet finishes, the horn's catalog finish); `ink` sets the label's color on the swatch */
+  presets?: Record<string, { name: string; swatch: string; ink?: string }>;
   titlePrefix?: string;
   note?: React.ReactNode;
 }
@@ -41,7 +41,10 @@ export function SwatchPicker({
               aria-pressed={value === k}
               onClick={() => onChange(k)}
               className={`px-2.5 h-7 rounded-full border-2 text-xs ${ring(value === k)}`}
-              style={{ background: f.swatch, color: k === "walnut" ? ON_DATA.white : ON_DATA.ink }}
+              style={{
+                background: f.swatch,
+                color: f.ink ?? (k === "walnut" ? ON_DATA.white : ON_DATA.ink),
+              }}
             >
               {f.name}
             </button>
