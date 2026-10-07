@@ -8,6 +8,8 @@ import {
   defaultBraceStyle,
   defaultBraceStyleNear,
   plateFirstModeHz,
+  baysHz,
+  braceBox,
   regionsOverlap,
   braceShortfalls,
   ribFirstModeHz,
@@ -16,6 +18,8 @@ import {
   WINDOW_RAIL_IN,
 } from "../src/lib/bracing";
 import {
+  NO_SUPPORTS,
+  paBoxPanels,
   DRIVER_CLEARANCE_IN,
   PA_BRACING_CROSSOVER_HZ,
   PA_PANEL_TARGET_HZ,
@@ -770,4 +774,53 @@ test("glued edges: the joints hold a panel's edges, so it rings over the hinged 
   // the back: hinged when screwed (the plate model's own number), held when glued
   assert.ok(Math.abs(bare(screwed, "back") - plateFirstModeHz(inner.x, inner.y, stock)) < 0.5);
   assert.ok(bare(glued, "back") > bare(screwed, "back") * 1.2);
+});
+
+test("window rails are beams: a frame's rail along a tall wall holds less than a rigid line would", () => {
+  // a deep, tall box where only frames across its depth fit (a part along the left side and across the floor keeps the
+  // others off): their rails run up the 31″ sides
+  const stock = paPanelStock(0.5);
+  const panels = paBoxPanels({ iw: 21, ih: 31, inD: 30, band: 0 }, stock, stock, NO_SUPPORTS);
+  const b = braceBox({
+    inner: { x: 21, y: 31, z: 30 },
+    panels,
+    targetHz: 280,
+    style: "window",
+    braceStock: stock,
+    keepOut: {
+      driver: [],
+      vent: [
+        { x: [0, 2], y: [0, 31], z: [10, 12] },
+        { x: [0, 21], y: [0, 2], z: [10, 12] },
+      ],
+    },
+  });
+  assert.ok(
+    b.windows.z.length >= 1 && !b.windows.x.length && !b.windows.y.length,
+    JSON.stringify(b.windows),
+  );
+  const side = panels.find((p) => p.id === "sideL");
+  assert.ok(side);
+  const hz = b.panels.find((p) => p.id === "sideL")?.hz ?? NaN;
+  const bays = baysHz(side, b.windows.z, b.windows.y);
+  assert.ok(hz < bays * 0.8, `side ${hz.toFixed(0)} Hz, its bays ${bays.toFixed(0)} Hz`);
+});
+
+test("rib rings: on a wide box in ½″ the back's ribs line up with the sides' and the back clears the target", () => {
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  assert.ok(sub);
+  const b = subBoxBracing(
+    { w: 30, h: 32, d: 18 },
+    0.5,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 4 },
+    sub,
+    "ribs",
+  );
+  const at = (id: BracePanelId) => b.ribs.filter((r) => r.panel === id).flatMap((r) => r.at);
+  assert.ok(at("back").length >= 2);
+  assert.deepEqual(at("back"), at("sideL"));
+  assert.deepEqual(at("back"), at("sideR"));
+  assert.ok((b.panels.find((p) => p.id === "back")?.hz ?? 0) >= b.targetHz);
 });
