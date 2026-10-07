@@ -35,6 +35,9 @@ import {
   maxOutputCurve,
   subBassLevel,
   STUFFING_VOLUME_GAIN,
+  midBaffleNeedIn,
+  sealedLitersForQtc,
+  SEALED_QTC_MIN,
 } from "./calc";
 import {
   subChips,
@@ -410,6 +413,8 @@ export function evaluateDesign(
       f3: mm.f3,
       peakX: mm.peakX,
       xoLo: c.xoLo,
+      smallerBoxNetL: ms.smallerBoxNetL,
+      isTower: c.layout === "tower",
       ts: mid.ts,
       V: ms.V,
       useV: ms.useV,
@@ -1009,22 +1014,16 @@ export function optimizePaStack(
   };
   const midBoxes = (m: MidDriver, t: number): (Dims3 | null)[] => {
     if (cur.layout === "tower") return [null]; // follows the sub's footprint
-    const ts = m.ts,
-      Sd = ts.Sd / 1e4,
-      Mms = ts.Mms / 1e3,
-      Cms = 1 / ((2 * Math.PI * ts.Fs) ** 2 * Mms);
-    const Vas = 1.18 * 343 * 343 * Sd * Sd * Cms * 1000,
-      Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl),
-      Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
+    const ts = m.ts;
     const disp = ts.disp != null ? ts.disp : m.size === 15 ? 4 : 2.5,
-      need = m.size + 1.2;
+      need = midBaffleNeedIn(m.size);
     const out: Dims3[] = [];
     const exact = mr.w[0] === mr.w[1] && mr.h[0] === mr.h[1] && mr.d[0] === mr.d[1];
     if (exact) return [{ w: mr.w[0], h: mr.h[0], d: mr.d[0] }];
     for (const q of [0.55, 0.62, 0.7, 0.77]) {
-      const r = (q / Qts) ** 2 - 1;
-      if (r <= 0) continue;
-      const G = Vas / r / STUFFING_VOLUME_GAIN + disp;
+      const effL = sealedLitersForQtc(ts, q);
+      if (effL == null) continue;
+      const G = effL / STUFFING_VOLUME_GAIN + disp;
       let best: { bx: Dims3; lb: number } | null = null;
       for (let w = Math.max(mr.w[0], Math.ceil(need)); w <= mr.w[1]; w++)
         for (let h = Math.max(mr.h[0], Math.ceil(need)); h <= mr.h[1]; h++) {
@@ -1118,7 +1117,7 @@ export function optimizePaStack(
               lpOrder: cur.xoHiOrder, // no lowpass here: it is applied at each xoHi below
             });
           evals++;
-          if (!mdl || mdl.Qtc < 0.5 || mdl.Qtc > 0.8 || mdl.f3 > xoLo) continue;
+          if (!mdl || mdl.Qtc < SEALED_QTC_MIN || mdl.Qtc > 0.8 || mdl.f3 > xoLo) continue;
           const max = maxOutputCurve(mdl.curve, m.ts, V, Infinity);
           const levelAt = (f: number, lp = 0): MidLevel => ({
             max: nearestPoint(max, f).spl + lp,

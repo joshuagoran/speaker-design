@@ -4,6 +4,7 @@ import type {
   BoxBracing,
   BoxKeepOut,
   BoxModelTS,
+  SliderSpec,
   BoxRegion,
   BraceStyleId,
   CompressionHf,
@@ -54,6 +55,7 @@ import {
 import { defaultPanelIn, panelLbPerSqFt } from "../panel";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { crossoverSlopeName } from "../../constants/crossovers";
+import { PA_SLIDERS } from "../../constants/paSliders";
 import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../../data/acoustics/slot-inner-end";
 import {
   modelTubeElbows,
@@ -1856,6 +1858,74 @@ export const midNetLiters = (
   bracing: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
   recessL = 0,
 ) => Math.max(5, grossL - disp - (braceWoodIn3(bracing) * 16.387) / 1000 - recessL);
+/** The Qtc under which the checks call a sealed box overdamped. */
+export const SEALED_QTC_MIN = 0.5;
+/**
+ * The volume, L, that gives a sealed box Qtc `qtc`, as closedBox reads it (after the stuffing's gain): its own T/S
+ * arithmetic solved for the box, Qtc = Qts √(1 + Vas/Vb). Null when the driver's Qts is at or above `qtc` (no box gives it).
+ */
+export function sealedLitersForQtc(ts: BoxModelTS, qtc: number): number | null {
+  const Mms = ts.Mms / 1000,
+    Sd = ts.Sd / 10000;
+  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
+  const VasL = 1.18 * 343 * 343 * Cms * Sd * Sd * 1000;
+  const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl);
+  const Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
+  return Qts >= qtc ? null : VasL / (Math.pow(qtc / Qts, 2) - 1);
+}
+/** The baffle face a mid needs, in: the driver and a rim round it. */
+export const midBaffleNeedIn = (size: MidDriver["size"]) => size + 1.2;
+/** A size rounded up to its slider's step, in. */
+const upToStep = (x: number, s: Pick<SliderSpec, "min" | "step">) =>
+  Math.max(s.min, Math.ceil(x / s.step - 1e-9) * s.step);
+/** What sizes a mid box's volume besides its dimensions. */
+type MidBoxConfig = Pick<
+  MidSystemConfig,
+  "wall" | "inset" | "layout" | "braceStyle" | "braceEstimate" | "hardware"
+>;
+/** The mid box's braces and ribs as midSystem deducts them: the estimate, or the rule's own. */
+const midBracingOf = (mid: MidDriver, cfg: MidBoxConfig, dims: Dims3) =>
+  cfg.braceEstimate
+    ? midBraceEstimate(
+        dims,
+        cfg.wall,
+        cfg.inset,
+        cfg.layout,
+        cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
+      )
+    : midBoxBracing(dims, cfg.wall, cfg.inset, mid, cfg.layout, cfg.braceStyle, cfg.hardware?.mid);
+/**
+ * The net volume, L, that gives the mid Qtc 0.5, when a box it fits can be that small; else null. The smallest box it
+ * fits has the face it needs (midBaffleNeedIn) and room behind for its mounting depth (from the baffle's front) with
+ * DRIVER_CLEARANCE_IN to spare, each up to the planner's slider step, with the same displacement, braces and hardware.
+ * Null in the tower: the sub's footprint sets the mid's chamber.
+ */
+export function midSmallerBoxNetL(
+  mid: MidDriver,
+  cfg: MidBoxConfig,
+  disp: number,
+  recessL: number,
+): number | null {
+  const effL = sealedLitersForQtc(mid.ts, SEALED_QTC_MIN);
+  if (effL == null || cfg.layout === "tower") return null;
+  const need = midBaffleNeedIn(mid.size);
+  const dims = {
+    w: upToStep(need, PA_SLIDERS.midW),
+    h: upToStep(need, PA_SLIDERS.midH),
+    d: upToStep(
+      (mid.depthIn ?? MID_DEPTH_FALLBACK_IN[mid.size]) + DRIVER_CLEARANCE_IN + cfg.inset + cfg.wall,
+      PA_SLIDERS.midD,
+    ),
+  };
+  const fitNetL = midNetLiters(
+    boxInternalLiters(dims.w, dims.h, dims.d, cfg.wall, cfg.inset),
+    disp,
+    midBracingOf(mid, cfg, dims),
+    recessL,
+  );
+  const netL = effL / STUFFING_VOLUME_GAIN;
+  return netL >= fitNetL ? netL : null;
+}
 export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const V = ampVoltage(cfg.mAmpW);
   const grossL = boxInternalLiters(
@@ -1867,28 +1937,7 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   );
   const disp = mid.ts && mid.ts.disp != null ? mid.ts.disp : mid.size === 15 ? 4 : 2.5; // assumed where not published
   const recessL = hardwareLiters(cfg.hardware, "mid", cfg.wall, cfg.layout);
-  const netL = midNetLiters(
-    grossL,
-    disp,
-    cfg.braceEstimate
-      ? midBraceEstimate(
-          cfg.midDims,
-          cfg.wall,
-          cfg.inset,
-          cfg.layout,
-          cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
-        )
-      : midBoxBracing(
-          cfg.midDims,
-          cfg.wall,
-          cfg.inset,
-          mid,
-          cfg.layout,
-          cfg.braceStyle,
-          cfg.hardware?.mid,
-        ),
-    recessL,
-  );
+  const netL = midNetLiters(grossL, disp, midBracingOf(mid, cfg, cfg.midDims), recessL);
   const effL = netL * STUFFING_VOLUME_GAIN;
   // the curve runs on past 2 kHz when the lowpass sits above 800 Hz, so its skirt shows on the system chart
   const mdl = mid.ts
@@ -1902,9 +1951,23 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const vTherm = mid.ts ? thermalVoltageLimit(mid.ts.aes) : 0;
   const useV = Math.min(vTherm, V);
   if (!mid.ts || !mdl)
-    return { V, grossL, disp, recessL, netL, effL, vTherm, useV, mdl: null, max: null };
+    return {
+      V,
+      grossL,
+      disp,
+      recessL,
+      netL,
+      effL,
+      vTherm,
+      useV,
+      smallerBoxNetL: null,
+      mdl: null,
+      max: null,
+    };
   const max = maxOutputCurve(mdl.curve, mid.ts, V, Infinity); // no port: Xmax, thermal, amp
-  return { V, grossL, disp, recessL, netL, effL, vTherm, useV, mdl, max };
+  const smallerBoxNetL =
+    mdl.Qtc < SEALED_QTC_MIN ? midSmallerBoxNetL(mid, cfg, disp, recessL) : null;
+  return { V, grossL, disp, recessL, netL, effL, vTherm, useV, smallerBoxNetL, mdl, max };
 }
 
 // ---- passive coaxial fills ----

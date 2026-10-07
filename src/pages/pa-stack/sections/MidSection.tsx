@@ -20,6 +20,7 @@ interface Props {
     | "midAmpWatts"
     | "midBandTiltDb"
     | "midSize"
+    | "isTower"
     | "subMidCrossoverHz"
     | "effectiveMidBoxDims"
     | "midVoltage"
@@ -43,6 +44,7 @@ export function MidSection({ planner }: Props) {
     midAmpWatts,
     midBandTiltDb,
     midSize,
+    isTower,
     subMidCrossoverHz,
     effectiveMidBoxDims,
     midVoltage,
@@ -128,6 +130,8 @@ export function MidSection({ planner }: Props) {
                   f3: midModeled.mdl.f3,
                   peakX: midModeled.mdl.peakX,
                   xoLo: subMidCrossoverHz,
+                  smallerBoxNetL: midModeled.smallerBoxNetL,
+                  isTower,
                   ts: midDriver.ts,
                   V: midVoltage,
                   useV: midUsedVoltage,

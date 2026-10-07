@@ -13,7 +13,15 @@ import type {
   SubChipsInput,
   VentSpec,
 } from "../../types";
-import { isRoundPort, maxFoldedSlotIn, maxStraightSlotIn, minFoldedSlotIn } from "./calc";
+import {
+  isRoundPort,
+  maxFoldedSlotIn,
+  maxStraightSlotIn,
+  midBaffleNeedIn,
+  minFoldedSlotIn,
+  SEALED_QTC_MIN,
+} from "./calc";
+import { qtcFloorAt } from "../../constants/qtcText";
 import { subTubeSpan, tubeLayout, type TubeDriver } from "./tubes";
 import { ELBOW_COUNTS, mergeSpans, ownSpans, type ElbowCount } from "../tubeFold";
 import { PA_SLIDERS } from "../../constants/paSliders";
@@ -263,6 +271,8 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
     f3,
     peakX,
     xoLo,
+    smallerBoxNetL,
+    isTower,
     ts,
     V,
     useV,
@@ -273,7 +283,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
     midAtXo,
   } = s;
   const F: Chip<ChipId<"mid">>[] = [];
-  const need = midSize + 1.2;
+  const need = midBaffleNeedIn(midSize);
   if (Math.min(midDims.w, midDims.h) < need)
     F.push([
       "bad",
@@ -281,12 +291,26 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
       `A ${midSize}″ driver needs about ${need.toFixed(1)}″ of baffle; the smallest face is ${Math.min(midDims.w, midDims.h)}″.`,
       "midDriverFit",
     ]);
+  // a low Qtc does no harm while the box is flat to the crossover: the highpass sets the low end there. Else it says
+  // what box fixes it, only where a box the driver fits gets there (in the tower, the sub sets the box).
+  const qtcHead = `Qtc ${Qtc.toFixed(2)}`;
   F.push(
     Qtc > 0.8
-      ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky and loose: box too small.", "midQtc"]
-      : Qtc < 0.5
-        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Very damped. A smaller box works.", "midQtc"]
-        : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped.", "midQtc"],
+      ? ["warn", qtcHead, "Peaky and loose: box too small.", "midQtc"]
+      : Qtc >= SEALED_QTC_MIN
+        ? ["ok", qtcHead, "Well damped.", "midQtc"]
+        : f3 <= xoLo
+          ? ["ok", qtcHead, `Low Qtc. Fine above the ${xoLo} Hz crossover.`, "midQtc"]
+          : isTower
+            ? ["warn", qtcHead, "Very damped. The sub's footprint sets this box.", "midQtc"]
+            : smallerBoxNetL != null
+              ? [
+                  "warn",
+                  qtcHead,
+                  `Very damped. A smaller box works: ${qtcFloorAt(smallerBoxNetL)}`,
+                  "midQtc",
+                ]
+              : ["warn", qtcHead, "Very damped, even in the smallest box that fits.", "midQtc"],
   );
   if (f3 > xoLo)
     F.push([
@@ -478,7 +502,7 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
     F.push(
       Qtc > 0.8
         ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky. Use a bigger box.", "fillQtc"]
-        : Qtc < 0.5
+        : Qtc < SEALED_QTC_MIN
           ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Rolls off early. Suits a vented box.", "fillQtc"]
           : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped.", "fillQtc"],
     );
