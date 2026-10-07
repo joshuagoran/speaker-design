@@ -665,7 +665,7 @@ export function braceBox({
   const short = (hz: number) => Math.max(0, 1 - hz / targetHz);
   const touches = (m: Move, p: BracePanel) =>
     m.kind === "window" ? p.u === m.axis || p.v === m.axis : m.p === p;
-  const ribWood = (p: BracePanel, s: { across: BoxAxis; n: number } | undefined) =>
+  const ribWood = (p: BracePanel, s: RibState[BracePanelId]) =>
     s ? s.n * p.stock.t * RIB_DEPTH_IN * ribLen(p, s.across) : 0;
   // the wood a move adds; a switch that saves wood counts as almost none, so any gain from it wins
   const wood = (m: Move) =>
