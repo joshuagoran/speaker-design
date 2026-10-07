@@ -141,14 +141,15 @@ test("each bracing style gives only its own braces: ribs under Ribs, frames unde
   }
 });
 
-test("Both keeps the baffle's window braces (the rectangle sub: ribs everywhere left the baffle at 155 Hz)", () => {
+test("the cutout lifts a baffle: the rectangle sub's clears the target without a frame (155 Hz read whole)", () => {
   const c = configs.find((x) => x.name === "rectangle sub");
   assert.ok(c, "the seed is there");
   const { sub, wall, inset } = partsOf(c);
-  const both = subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, "both");
-  assert.ok(windowsOf(both) > 0);
-  const baffle = both.panels.find((p) => p.id === "baffle");
-  assert.ok(baffle && baffle.hz > 250, `baffle at ${baffle?.hz.toFixed(0)} Hz`);
+  for (const style of STYLES) {
+    const b = subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, style);
+    const baffle = b.panels.find((p) => p.id === "baffle");
+    assert.ok(baffle && baffle.hz >= b.targetHz, `${style}: baffle at ${baffle?.hz.toFixed(0)} Hz`);
+  }
 });
 
 test("the 3D view draws the plan of the style chosen, every brace and rib of it", () => {

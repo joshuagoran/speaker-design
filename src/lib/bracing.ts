@@ -403,6 +403,8 @@ export function baysHz(
   p: Pick<BracePanel, "spanU" | "spanV" | "stock" | "edges" | "hole">,
   acrossU: readonly number[],
   acrossV: readonly number[],
+  /** a weight (kg) on the cutout's edge: the driver's (0 for the plate alone) */
+  ringKg = 0,
 ): number {
   const k = {
     u0: edgeSpring(p.edges?.u0),
@@ -435,11 +437,14 @@ export function baysHz(
       hz = Math.min(
         hz,
         h && h.cx > a.from && h.cx < a.from + a.len && h.cy > b.from && h.cy < b.from + b.len
-          ? holedPlateHz(a.len, b.len, p.stock, springs, {
-              ...h,
-              cx: h.cx - a.from,
-              cy: h.cy - b.from,
-            })
+          ? holedPlateHz(
+              a.len,
+              b.len,
+              p.stock,
+              springs,
+              { ...h, cx: h.cx - a.from, cy: h.cy - b.from },
+              ringKg,
+            )
           : restrainedPlateHz(a.len, b.len, p.stock, springs),
       );
     }
@@ -460,6 +465,8 @@ export interface BraceBoxInput {
   style: BraceStyleId;
   braceStock: PlateStock;
   keepOut: BoxKeepOut;
+  /** the driver's weight on the baffle's cutout, kg (driverOnBaffleHz); absent: none worked out */
+  driverKg?: number;
 }
 type RibState = BracePlan["ribs"];
 type Counts = BracePlan["windows"];
@@ -504,6 +511,7 @@ export function braceBox({
   style,
   braceStock,
   keepOut,
+  driverKg,
 }: BraceBoxInput): BoxBracing {
   const t = braceStock.t;
   const hardware = keepOut.hardware ?? [];
@@ -976,6 +984,16 @@ export function braceBox({
     z: winOrNone("z", windows.z),
   };
   const notchAt = win.x.filter((x) => notched("x", x));
+  const baffle = panels.find((p) => p.hole);
+  const driverOnBaffleHz =
+    baffle && driverKg
+      ? baysHz(
+          baffle,
+          supportsAcross(baffle, baffle.u, windows),
+          supportsAcross(baffle, baffle.v, windows),
+          driverKg,
+        )
+      : null;
   return {
     style,
     targetHz,
@@ -989,6 +1007,7 @@ export function braceBox({
       return a + (p ? p.stock.t * RIB_DEPTH_IN * r.len * r.at.length : 0);
     }, 0),
     meets: res.every((p) => p.hz >= targetHz - 1e-9),
+    driverOnBaffleHz,
   };
 }
 

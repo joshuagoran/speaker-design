@@ -135,6 +135,7 @@ test("a handle that runs into the vent, an edge, a rib or the driver says so", (
     windowIn3: 0,
     ribIn3: 0,
     meets: true,
+    driverOnBaffleHz: null,
   };
   const withRibs = planBoxHardware({
     box: "sub",

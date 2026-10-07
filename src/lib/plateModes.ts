@@ -15,7 +15,8 @@
 //     ω² ρh = Dₓ Λₓ / a⁴ + D_y Λ_y / b⁴ + 2H ηₓ η_y / (a² b²),
 // Λ the beam's frequency parameter (ω² μ L⁴ / EI, its springs as ψ = kL / EI), η = ∫X′² / ∫X² on a unit span, and H
 // Huber's √(Dₓ D_y) as in lib/bracing's header. Hinged on all four edges it is exactly lib/bracing's plateFirstModeHz.
-// A plate with a round hole (the driver's cutout) takes the full Ritz series over the plate less the hole, by a grid.
+// A plate with a round hole (the driver's cutout) takes the full Ritz series: the whole plate's integrals exactly (by
+// Gauss's rule along each span), less the hole's (by Gauss's rule along its radius and evenly round it).
 import type { PlateHole, PlateStock } from "../types";
 
 const IN_M = 0.0254;
@@ -25,9 +26,10 @@ const LB_FT2_KG_M2 = 0.45359237 / 0.09290304;
 const PSI_FIXED = 1e7;
 /** Terms per span in the series: the beams' and the holed plate's (each holed plate solves BASIS_HOLE² of them). */
 const BASIS_BEAM = 8;
-const BASIS_HOLE = 7;
-/** The holed plate's integration grid, points per span. */
-const HOLE_GRID = 72;
+const BASIS_HOLE = 8;
+/** The hole's integration points: along its radius and round it. */
+const HOLE_RADIAL = 12;
+const HOLE_ROUND = 48;
 
 type Matrix = number[][];
 const zeros = (n: number): Matrix =>
@@ -215,9 +217,12 @@ export function restrainedPlateHz(a: number, b: number, s: PlateStock, k: EdgeSp
 
 const holeMemo = new Map<string, number>();
 const HOLE_MEMO_MAX = 5000;
+const SPAN_HOLE = spanMatrices(BASIS_HOLE);
+const HOLE_GAUSS = gaussLegendre(HOLE_RADIAL);
 /**
  * The first mode of an `a` × `b` in plate with a round hole, its edges held by `k`, Hz: the Ritz series over the
  * plate less the hole (header), with `ringKg` spread round the hole's edge (a driver's frame and motor; 0 for none).
+ * The hole's part outside the plate, if any, is left out.
  */
 export function holedPlateHz(
   a: number,
@@ -250,65 +255,72 @@ export function holedPlateHz(
   const { Dx, Dy, H, rhoH } = plateStiffness(a, b, s);
   const n = BASIS_HOLE,
     nb = n * n,
-    G = HOLE_GRID;
+    S = SPAN_HOLE;
   const A = a * IN_M,
     B = b * IN_M;
   const K = zeros(nb),
     M = zeros(nb);
-  const bx = Array.from({ length: G }, (_, i) => basisAt(n, (i + 0.5) / G));
-  const dA = (A / G) * (B / G);
+  // the whole plate: each integral a product of the spans' (x = Aξ, y = Bη)
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++)
+      for (let p = 0; p < n; p++)
+        for (let q = 0; q < n; q++) {
+          const r = i * n + j,
+            c = p * n + q;
+          K[r][c] =
+            ((Dx * B) / A ** 3) * S.A2[i][p] * S.A0[j][q] +
+            ((Dy * A) / B ** 3) * S.A0[i][p] * S.A2[j][q] +
+            ((2 * H) / (A * B)) * S.A1[i][p] * S.A1[j][q] +
+            ((k.x0 * S.s0[i] * S.s0[p] + k.x1 * S.s1[i] * S.s1[p]) * B * S.A0[j][q]) / (A * A) +
+            ((k.y0 * S.s0[j] * S.s0[q] + k.y1 * S.s1[j] * S.s1[q]) * A * S.A0[i][p]) / (B * B);
+          M[r][c] = rhoH * A * B * S.A0[i][p] * S.A0[j][q];
+        }
+  // less the hole: Gauss along the radius, evenly round (exact for the angle's harmonics)
   const w = new Float64Array(nb),
     wxx = new Float64Array(nb),
     wyy = new Float64Array(nb),
     wxy = new Float64Array(nb);
-  for (let gi = 0; gi < G; gi++)
-    for (let gj = 0; gj < G; gj++) {
-      const x = ((gi + 0.5) * a) / G,
-        y = ((gj + 0.5) * b) / G;
-      if ((x - hole.cx) ** 2 + (y - hole.cy) ** 2 < hole.r ** 2) continue;
-      const X = bx[gi],
-        Y = bx[gj];
+  for (let ir = 0; ir < HOLE_RADIAL; ir++) {
+    const rho = ((HOLE_GAUSS.x[ir] + 1) / 2) * hole.r,
+      wr = (HOLE_GAUSS.w[ir] / 2) * hole.r;
+    for (let it = 0; it < HOLE_ROUND; it++) {
+      const th = (2 * Math.PI * (it + 0.5)) / HOLE_ROUND;
+      const x = hole.cx + rho * Math.cos(th),
+        y = hole.cy + rho * Math.sin(th);
+      if (x <= 0 || x >= a || y <= 0 || y >= b) continue;
+      const dA = wr * rho * ((2 * Math.PI) / HOLE_ROUND) * IN_M * IN_M;
+      const X = basisAt(n, x / a),
+        Y = basisAt(n, y / b);
       for (let i = 0; i < n; i++)
         for (let j = 0; j < n; j++) {
-          const q = i * n + j;
-          w[q] = X.f[i] * Y.f[j];
-          wxx[q] = (X.f2[i] * Y.f[j]) / (A * A);
-          wyy[q] = (X.f[i] * Y.f2[j]) / (B * B);
-          wxy[q] = (X.f1[i] * Y.f1[j]) / (A * B);
+          const r = i * n + j;
+          w[r] = X.f[i] * Y.f[j];
+          wxx[r] = (X.f2[i] * Y.f[j]) / (A * A);
+          wyy[r] = (X.f[i] * Y.f2[j]) / (B * B);
+          wxy[r] = (X.f1[i] * Y.f1[j]) / (A * B);
         }
-      for (let p = 0; p < nb; p++)
-        for (let q = p; q < nb; q++) {
-          K[p][q] += dA * (Dx * wxx[p] * wxx[q] + Dy * wyy[p] * wyy[q] + 2 * H * wxy[p] * wxy[q]);
-          M[p][q] += dA * rhoH * w[p] * w[q];
+      // the upper triangle (mirrored below)
+      for (let r = 0; r < nb; r++)
+        for (let c = r; c < nb; c++) {
+          K[r][c] -= dA * (Dx * wxx[r] * wxx[c] + Dy * wyy[r] * wyy[c] + 2 * H * wxy[r] * wxy[c]);
+          M[r][c] -= dA * rhoH * w[r] * w[c];
         }
     }
-  // the edges' springs: ½ k ∫ (∂w/∂n)² along each edge, from the span matrices
-  const S = spanMatrices(n);
-  const edge = (i: number, j: number, p: number, q: number) =>
-    ((k.x0 * S.s0[i] * S.s0[p] + k.x1 * S.s1[i] * S.s1[p]) * (S.A0[j][q] * B)) / (A * A) +
-    ((k.y0 * S.s0[j] * S.s0[q] + k.y1 * S.s1[j] * S.s1[q]) * (S.A0[i][p] * A)) / (B * B);
-  if (ringKg > 0) {
-    const P = 72;
-    for (let t = 0; t < P; t++) {
-      const th = (2 * Math.PI * t) / P;
+  }
+  if (ringKg > 0)
+    for (let it = 0; it < HOLE_ROUND; it++) {
+      const th = (2 * Math.PI * (it + 0.5)) / HOLE_ROUND;
       const X = basisAt(n, (hole.cx + hole.r * Math.cos(th)) / a),
         Y = basisAt(n, (hole.cy + hole.r * Math.sin(th)) / b);
       for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) w[i * n + j] = X.f[i] * Y.f[j];
-      for (let p = 0; p < nb; p++)
-        for (let q = p; q < nb; q++) M[p][q] += (ringKg / P) * w[p] * w[q];
+      for (let r = 0; r < nb; r++)
+        for (let c = r; c < nb; c++) M[r][c] += (ringKg / HOLE_ROUND) * w[r] * w[c];
     }
-  }
-  for (let p = 0; p < nb; p++)
-    for (let q = 0; q < nb; q++) {
-      if (q < p) {
-        K[p][q] = K[q][p];
-        M[p][q] = M[q][p];
-      }
+  for (let r = 0; r < nb; r++)
+    for (let c = 0; c < r; c++) {
+      K[r][c] = K[c][r];
+      M[r][c] = M[c][r];
     }
-  for (let i = 0; i < n; i++)
-    for (let j = 0; j < n; j++)
-      for (let p = 0; p < n; p++)
-        for (let q = 0; q < n; q++) K[i * n + j][p * n + q] += edge(i, j, p, q);
   const hz = Math.sqrt(lowestMode(K, M).lam) / (2 * Math.PI);
   if (holeMemo.size >= HOLE_MEMO_MAX) holeMemo.clear();
   holeMemo.set(key, hz);

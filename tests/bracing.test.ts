@@ -46,6 +46,7 @@ import { subWoodIn3 } from "../src/lib/pa/exactSub";
 import {
   RIB_HALF_LAP_NOTE,
   braceUnderNote,
+  driverOnBaffleNote,
   LEGACY_SUB_BRACE_STYLE_KEY,
   bracePanelName,
   savedBraceStyle,
@@ -501,10 +502,12 @@ test("the starting sub's cutaway under each style: ribs, window braces and both 
         inset: d.inset,
       };
       const b = subBoxBracing(d.cDim, wall, d.inset, d.portStyle, d.cVent, d.sub, style);
-      // each style puts in its own kind: ribs under Ribs and Both, frames under Window braces and Both
+      // each style puts in its own kind: ribs only under Ribs, frames only under Window braces, under Both whichever
+      // does more for the wood (here ribs alone: the cutout lifts the baffle over the target without a frame)
       const frames = b.windows.x.length + b.windows.y.length + b.windows.z.length;
-      assert.strictEqual(b.ribs.length > 0, style !== "window", `${wall} ${style}: ribs`);
-      assert.strictEqual(frames > 0, style !== "ribs", `${wall} ${style}: window braces`);
+      if (style === "ribs") assert.strictEqual(frames, 0, `${wall} ${style}: window braces`);
+      if (style === "window") assert.strictEqual(b.ribs.length, 0, `${wall} ${style}: ribs`);
+      assert.ok(frames + b.ribs.length > 0, `${wall} ${style}: braced`);
       assert.ok(checkCutaway(c, style) > 0);
     }
 });
@@ -562,25 +565,37 @@ test("rib: the panel beside it is a flange (Eurocode 5's effective width), so th
 });
 
 test("the notes under the Bracing setting name the cabinet and each panel left under the target", () => {
-  const d = DEFAULT_PA;
-  const b = subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, "ribs");
+  // a 30″-wide box under Ribs: no rib can cross the driver, so its wide baffle stays bare and under the target
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  assert.ok(sub);
+  const b = subBoxBracing(
+    { w: 30, h: 32, d: 18 },
+    0.5,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 4 },
+    sub,
+    "ribs",
+  );
   const notes = braceNoteLines(PA_SETTINGS_TABS.sub, b);
   const under = braceShortfalls(b);
-  // the starting sub under Ribs: no rib crosses the driver, so the baffle stays bare and under the target
   assert.ok(under.some((p) => p.id === "baffle"));
-  assert.deepStrictEqual(
-    notes,
-    under.map((p) =>
+  // each panel under the target, then the driver on the baffle (its weight rocks the panel well under the target)
+  assert.ok(b.driverOnBaffleHz !== null && b.driverOnBaffleHz < b.targetHz);
+  assert.deepStrictEqual(notes, [
+    ...under.map((p) =>
       braceUnderNote(
         bracePanelName(PA_SETTINGS_TABS.sub, p.id),
         formatHz(p.hz),
         formatHz(b.targetHz),
       ),
     ),
-  );
-  // a box that needs nothing has no note
+    driverOnBaffleNote(PA_SETTINGS_TABS.sub, formatHz(b.driverOnBaffleHz)),
+  ]);
+  // a box that needs nothing, its driver light on the baffle, has no note
+  const d = DEFAULT_PA;
   const mid = midBoxBracing(d.mDim, 0.75, d.inset, d.mid, "stack", "ribs");
-  assert.ok(mid);
+  assert.ok(mid && mid.driverOnBaffleHz !== null && mid.driverOnBaffleHz >= mid.targetHz);
   assert.deepStrictEqual(braceNoteLines(PA_SETTINGS_TABS.mid, mid), []);
 });
 
@@ -597,25 +612,29 @@ test("braceShortfalls: exactly the panels under the target, with their first mod
   }
 });
 
-test("the strict styles give the starting sub three different plans, each of its own kind", () => {
+test("the strict styles keep a ½″ sub to their own kind, and Both takes either", () => {
   const d = DEFAULT_PA;
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  if (!sub) throw new Error("the B&C 18NW100 is in the catalog");
+  const box = { w: 22, h: 32, d: 18 },
+    slot = { ...d.cVent, len: 4 };
   for (const handles of [undefined, d.hardware.sub]) {
-    const plan = (style: BraceStyleId) =>
-      subBoxBracing(d.cDim, d.wall, d.inset, d.portStyle, d.cVent, d.sub, style, handles);
+    const plan = (style: BraceStyleId): BoxBracing =>
+      subBoxBracing(box, 0.5, d.inset, d.portStyle, slot, sub, style, handles);
     const ribs = plan("ribs"),
       win = plan("window"),
       both = plan("both");
     const frames = (b: BoxBracing) => b.windows.x.length + b.windows.y.length + b.windows.z.length;
     const tag = handles ? "with hardware" : "bare";
-    // Ribs: ribs only; Window braces: frames only; Both: the two together
+    // Ribs: ribs only; Window braces: frames only; Both: whichever does more for the wood
     assert.strictEqual(frames(ribs), 0, tag);
     assert.ok(ribs.ribs.length > 0, tag);
     assert.ok(frames(win) > 0, tag);
     assert.deepStrictEqual(win.ribs, [], tag);
-    assert.ok(frames(both) > 0 && both.ribs.length > 0, tag);
-    // and no two alike
+    assert.ok(frames(both) + both.ribs.length > 0, tag);
+    // the strict plans differ
     const key = (b: BoxBracing) => JSON.stringify([b.windows, b.ribs]);
-    assert.strictEqual(new Set([ribs, win, both].map(key)).size, 3, tag);
+    assert.notStrictEqual(key(ribs), key(win), tag);
   }
   // the cutlist's rib rows say to half-lap a rib only where it crosses a window brace
   const lapped = (style: BraceStyleId) =>
@@ -634,7 +653,7 @@ test("the strict styles give the starting sub three different plans, each of its
     })
       .parts.filter((p) => p.box === "sub" && p.part === "rib")
       .map((p) => (p.note ?? "").endsWith(RIB_HALF_LAP_NOTE));
-  // Ribs has no window brace; under Both the back's rib runs across, level like the two level frames, so it crosses none
+  // Ribs has no window brace, and under Both the starting sub takes ribs alone, so no rib crosses one
   for (const style of ["ribs", "both"] as const) {
     assert.ok(lapped(style).length > 0, style);
     assert.ok(

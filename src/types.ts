@@ -1566,6 +1566,12 @@ export interface BoxBracing {
   ribIn3: number;
   /** whether every panel clears the target */
   meets: boolean;
+  /**
+   * The baffle's first mode with the driver's weight on its cutout's edge (the driver and baffle rocking together on
+   * the panel), Hz; null where the box has no driver weight to go on. A note, apart from the target: the frame's
+   * stiffness round the cutout is left out, so it reads low.
+   */
+  driverOnBaffleHz: number | null;
 }
 
 // ---- Cabinet hardware ----

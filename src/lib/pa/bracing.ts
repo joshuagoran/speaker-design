@@ -1,5 +1,12 @@
 // The PA boxes' panels for the bracing rule (lib/bracing): their spans, stock and the supports the vent's own parts give.
-import type { BackJointId, BracePanel, BraceStyleId, EdgeHold, PlateStock } from "../../types";
+import type {
+  BackJointId,
+  BracePanel,
+  BraceStyleId,
+  EdgeHold,
+  PlateHole,
+  PlateStock,
+} from "../../types";
 import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
 
 /** The sub-to-mid crossover the PA boxes are braced for, Hz: the top of the optimizers' range (XO_LO_OPTIONS, tested). */
@@ -73,6 +80,8 @@ export function paBoxPanels(
   sup: PaBoxSupports,
   stops: PaBoxSupports = sup,
   back: BackJointId = DEFAULT_BACK_JOINT,
+  /** the driver's cutout on the baffle, in from the baffle's own corner (above a slot's band) */
+  hole?: PlateHole,
 ): BracePanel[] {
   const base = { offU: 0, offV: 0, fixedU: [], fixedV: [], stopU: [], stopV: [] };
   const held = (stock: PlateStock, span: number): EdgeHold => ({ stock, span });
@@ -171,6 +180,7 @@ export function paBoxPanels(
       offV: band,
       stock: baffle,
       ribs: false,
+      ...(hole ? { hole } : {}),
       edges: {
         u0: held(wall, inD),
         u1: held(wall, inD),

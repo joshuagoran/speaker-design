@@ -26,6 +26,7 @@ import type {
   HornHf,
   HornResponse,
   MidDriver,
+  PlateHole,
   MidSystem,
   MidSystemConfig,
   PaLayout,
@@ -769,6 +770,14 @@ const remember = (memo: Map<string, BoxBracing>, key: string, b: BoxBracing) => 
   memo.set(key, b);
   return b;
 };
+/** kg per lb */
+const LB_KG = 0.45359237;
+/** A driver's cutout on the baffle: its center (in from the box's inside corner) less a slot's band below it. */
+const baffleCutout = (
+  center: { x: number; y: number },
+  band: number,
+  size: SubDriver["size"] | MidDriver["size"],
+): PlateHole => ({ cx: center.x, cy: center.y - band, r: DRIVER_CUTOUT_IN[size] / 2 });
 function paBracing(
   box: Dims3,
   t: number,
@@ -781,8 +790,11 @@ function paBracing(
   keepKey: string,
   style: BraceStyleId,
   back: BackJointId,
+  /** the driver's cutout on the baffle (in from the baffle's corner) and its weight (lb) */
+  driver: { hole: PlateHole; lb: number },
 ): BoxBracing {
-  const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}`;
+  const { hole } = driver;
+  const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}|${hole.cx},${hole.cy},${hole.r},${driver.lb}`;
   const hit = BRACING_MEMO.get(key);
   if (hit) return hit;
   const inside = paInside(box, t, inset, band);
@@ -792,11 +804,12 @@ function paBracing(
     key,
     braceBox({
       inner: { x: inside.iw, y: inside.ih, z: inside.inD },
-      panels: paBoxPanels(inside, wall, paPanelStock(BAFFLE_PLY_IN), sup, stops, back),
+      panels: paBoxPanels(inside, wall, paPanelStock(BAFFLE_PLY_IN), sup, stops, back, hole),
       targetHz: PA_PANEL_TARGET_HZ,
       style,
       braceStock: wall,
       keepOut,
+      driverKg: driver.lb * LB_KG,
     }),
   );
 }
@@ -855,6 +868,14 @@ export function subBoxBracing(
       keepKey,
       bs,
       back,
+      {
+        hole: baffleCutout(
+          subDriverCenter(box, t, style, v, drv.size),
+          style === "slots" ? v.slotH + t : 0,
+          drv.size,
+        ),
+        lb: drv.lb ?? 0,
+      },
     ),
   );
 }
@@ -875,6 +896,7 @@ export function midBoxBracing(
   if (layout === "tower") return null;
   const placed = handles && midHardwarePlacement(box, t, inset, mid, layout, handles);
   const recesses = placed ? hardwareKeepOut(placed) : [];
+  const { iw, ih } = paInside(box, t, 0);
   return paBracing(
     box,
     t,
@@ -886,6 +908,7 @@ export function midBoxBracing(
     `${mid.size}|${mid.depthIn}|${regionsKey(recesses)}`,
     braceStyle ?? defaultBraceStyleNear(t),
     back,
+    { hole: baffleCutout({ x: iw / 2, y: ih / 2 }, 0, mid.size), lb: mid.lb ?? 0 },
   );
 }
 /**
