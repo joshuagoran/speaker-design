@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { ROUNDOVER_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import type { HornAxis } from "./buildHorn";
-import type { HornAdapter } from "../../types";
+import type { CompressionDriver, HornAdapter } from "../../types";
 
 /** The bracket's plate (upright and foot). */
 export const BRACKET_MESH_NAME = "cdBracket";
@@ -32,30 +32,103 @@ export const takesBracket = (adapter: HornAdapter | undefined): adapter is HornA
   !!adapter && adapter.steps.length >= 2 && adapter.steps[1][0] < adapter.steps[0][0];
 
 /**
- * The bracket for one horn: `at` is the horn's axis and throat, `lidY` the top of the box under it (the frame's
- * roundover stands `ROUNDOVER_IN` above that, and the foot sits on it).
+ * The bracket for one horn with a flanged adapter: `at` is the horn's axis and throat, `lidY` the top of the box under
+ * it (the frame's roundover stands `ROUNDOVER_IN` above that, and the foot sits on it).
  */
 export function buildBracket(ctx: SceneContext, adapter: HornAdapter, at: HornAxis, lidY: number) {
-  const { aluminum, hardware } = ctx.materials;
   const [[, flangeLen], [neckDia]] = adapter.steps;
-  const t = BRACKET.thickness;
-  const w = BRACKET.width / 2;
   const bcR = adapter.bodyBoltCircle / 2;
   // the two lower holes, at 225° and 315°, relative to the axis
   const bolt = { x: bcR * Math.SQRT1_2, y: -bcR * Math.SQRT1_2 };
-  const notchR = neckDia / 2 + BRACKET.notchGap;
-  const top = bolt.y + BRACKET.aboveBolts;
-  const zUp = at.throatZ - flangeLen; // the front flange's back face
+  addBracket(
+    ctx,
+    at,
+    {
+      zFace: at.throatZ - flangeLen, // the front flange's back face
+      bolt,
+      top: bolt.y + BRACKET.aboveBolts,
+      notchR: neckDia / 2 + BRACKET.notchGap,
+    },
+    lidY,
+  );
+}
+
+/**
+ * For a horn the driver bolts straight to (no adapter), for illustration only: a 1/8 in aluminum plate between the
+ * horn's throat and the driver, held by the driver's 4 bolts. It is a disc as wide as the driver with a tab below it,
+ * and the bracket's upright bolts to the back of the tab, below the driver. 3D only: the planner's model and parts list
+ * leave it out. Returns the z of the plate's back face, where the driver's front face sits.
+ */
+export function buildPlateBracket(
+  ctx: SceneContext,
+  cd: Pick<CompressionDriver, "body">,
+  at: HornAxis,
+  lidY: number,
+): number {
+  const t = BRACKET.thickness;
+  const cdR = cd.body.dia / 2;
+  const bolt = { x: CD_PLATE.boltX, y: -(cdR + CD_PLATE.boltsBelowCd) };
+  const tabBottom = bolt.y - CD_PLATE.belowBolts;
+  const add = (geometry: THREE.BufferGeometry, y: number) => {
+    const m = new THREE.Mesh(geometry, ctx.materials.aluminum);
+    m.position.set(at.x, at.y + y, at.throatZ - t / 2);
+    m.name = CD_PLATE_MESH_NAME;
+    ctx.group.add(m);
+    return m;
+  };
+  add(new THREE.CylinderGeometry(cdR, cdR, t, 48), 0).rotation.x = Math.PI / 2;
+  add(new THREE.BoxGeometry(BRACKET.width, -tabBottom, t), tabBottom / 2);
+  addBracket(
+    ctx,
+    at,
+    { zFace: at.throatZ - t, bolt, top: -(cdR + CD_PLATE.uprightBelowCd), notchR: null },
+    lidY,
+  );
+  return at.throatZ - t;
+}
+
+/** The plate for a horn without an adapter (`buildPlateBracket`). */
+export const CD_PLATE_MESH_NAME = "cdPlate";
+export const CD_PLATE = {
+  /** the upright's two bolts: across from the axis, and below the driver's edge */
+  boltX: 1.1,
+  boltsBelowCd: 0.65,
+  /** how far the tab runs below the bolts */
+  belowBolts: 0.4,
+  /** how far the upright's top stays below the driver */
+  uprightBelowCd: 0.2,
+} as const;
+
+/**
+ * The bracket's upright and foot, in the horn axis' frame: the upright's front face against `zFace`, bolted at ±`bolt`,
+ * reaching up to `top`, notched round the adapter's neck when `notchR` is given.
+ */
+function addBracket(
+  ctx: SceneContext,
+  at: HornAxis,
+  {
+    zFace: zUp,
+    bolt,
+    top,
+    notchR,
+  }: { zFace: number; bolt: { x: number; y: number }; top: number; notchR: number | null },
+  lidY: number,
+) {
+  const { aluminum, hardware } = ctx.materials;
+  const t = BRACKET.thickness;
+  const w = BRACKET.width / 2;
   const footY = lidY + ROUNDOVER_IN;
   const bottom = footY - at.y;
-  // the upright, in the axis' frame: a plate with a round notch in its top edge for the neck
-  const xn = Math.sqrt(Math.max(0, notchR * notchR - top * top));
   const shape = new THREE.Shape();
   shape.moveTo(-w, bottom);
   shape.lineTo(w, bottom);
   shape.lineTo(w, top);
-  shape.lineTo(xn, top);
-  shape.absarc(0, 0, notchR, Math.atan2(top, xn), Math.atan2(top, -xn), true);
+  if (notchR !== null) {
+    // a round notch in the top edge for the neck
+    const xn = Math.sqrt(Math.max(0, notchR * notchR - top * top));
+    shape.lineTo(xn, top);
+    shape.absarc(0, 0, notchR, Math.atan2(top, xn), Math.atan2(top, -xn), true);
+  }
   shape.lineTo(-w, top);
   shape.lineTo(-w, bottom);
   const upright = new THREE.Mesh(

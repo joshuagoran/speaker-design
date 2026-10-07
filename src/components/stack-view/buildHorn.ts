@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { rectangularHornGeometry } from "./geometry";
 import { HORN_LIFT_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
-import { buildBracket, takesBracket } from "./buildBracket";
+import { buildBracket, buildPlateBracket, takesBracket } from "./buildBracket";
 import { cdBodySteps } from "../../lib/data";
 import type { BodyStep, CompressionDriver, Dims3, Horn } from "../../types";
 
@@ -48,18 +48,28 @@ export interface HornAxis {
 
 /**
  * The horn's throat adapter, when it has one, and the compression driver behind it: the adapter's front face on the
- * throat, the driver's front face on the adapter's back face (or on the throat).
+ * throat, the driver's front face on the adapter's back face (or on the throat). On a lid (`lidY`; the tower has none
+ * under the driver) the L-bracket holds it: from the adapter's flange, or, without an adapter, from a plate between
+ * the throat and the driver.
  */
-function addThroatParts(ctx: SceneContext, horn: Horn, cd: CompressionDriver, at: HornAxis) {
-  const cdFront = horn.adapter
-    ? addSteps(
-        ctx,
-        horn.adapter.steps,
-        { x: at.x, y: at.y, z0: at.throatZ },
-        ctx.materials.adapter,
-        ADAPTER_MESH_NAME,
-      )
-    : at.throatZ;
+function addThroatParts(
+  ctx: SceneContext,
+  horn: Horn,
+  cd: CompressionDriver,
+  at: HornAxis,
+  lidY: number | null,
+) {
+  let cdFront = at.throatZ;
+  if (horn.adapter) {
+    cdFront = addSteps(
+      ctx,
+      horn.adapter.steps,
+      { x: at.x, y: at.y, z0: at.throatZ },
+      ctx.materials.adapter,
+      ADAPTER_MESH_NAME,
+    );
+    if (lidY !== null && takesBracket(horn.adapter)) buildBracket(ctx, horn.adapter, at, lidY);
+  } else if (lidY !== null) cdFront = buildPlateBracket(ctx, cd, at, lidY);
   addSteps(
     ctx,
     cdBodySteps(cd.body),
@@ -123,9 +133,7 @@ export function buildHorn(
     body.position.set(at.x, at.y, at.throatZ);
     body.name = HORN_MESH_NAME;
     ctx.group.add(body);
-    addThroatParts(ctx, horn, cd, at);
-    // the bracket stands on the mid box's lid; the tower has no lid under the driver
-    if (!tower && takesBracket(horn.adapter)) buildBracket(ctx, horn.adapter, at, hornY);
+    addThroatParts(ctx, horn, cd, at, tower ? null : hornY);
   }
   return { top: hornY + (tower ? tower.sectionH : HORN_LIFT_IN + hz.h), axes };
 }

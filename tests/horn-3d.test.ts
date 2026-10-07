@@ -10,6 +10,7 @@ import {
   BRACKET,
   BRACKET_BOLT_MESH_NAME,
   BRACKET_MESH_NAME,
+  CD_PLATE_MESH_NAME,
   takesBracket,
 } from "../src/components/stack-view/buildBracket";
 import { HARDWARE_MESH_NAME } from "../src/components/stack-view/buildHardware";
@@ -118,9 +119,25 @@ describe("horn, throat adapter and compression driver", () => {
           ).toBeLessThan(CONTACT_IN);
         } else {
           expect(adapter, at).toBeNull();
-          expect(Math.abs(cdBox.max.z - throatZ), `${at}: driver on the throat`).toBeLessThan(
-            CONTACT_IN,
-          );
+          const plate = boxOf(g, CD_PLATE_MESH_NAME);
+          if (layout === "tower") {
+            // no lid under the driver, so no bracket and no plate: the driver on the throat
+            expect(plate, at).toBeNull();
+            expect(Math.abs(cdBox.max.z - throatZ), `${at}: driver on the throat`).toBeLessThan(
+              CONTACT_IN,
+            );
+          } else {
+            // the bracket's plate between the throat flange and the driver, 1/8 in thick
+            expect(plate, at).not.toBeNull();
+            if (!plate) continue;
+            expect(Math.abs(plate.max.z - throatZ), `${at}: plate on the throat`).toBeLessThan(
+              CONTACT_IN,
+            );
+            expect(plate.max.z - plate.min.z, at).toBeCloseTo(BRACKET.thickness, 6);
+            expect(Math.abs(cdBox.max.z - plate.min.z), `${at}: driver on the plate`).toBeLessThan(
+              CONTACT_IN,
+            );
+          }
         }
         // the driver's body: its catalog depth and diameter
         expect(cdBox.max.z - cdBox.min.z, at).toBeCloseTo(base.cd.body.depth, 6);
@@ -143,20 +160,19 @@ describe("horn, throat adapter and compression driver", () => {
 });
 
 describe("the driver's L-bracket", () => {
-  const bracketHorns = HORN_OPTIONS.filter((h) => takesBracket(h.adapter));
-
-  test("the default horn takes one, and the tower has none", () => {
+  test("the default horn takes one on its adapter, every horn has one, and the tower has none", () => {
     expect(takesBracket(base.horn.adapter)).toBe(true);
     for (const horn of HORN_OPTIONS) {
+      if (horn.adapter) expect(takesBracket(horn.adapter), horn.id).toBe(true);
       const g = buildStackScene({ ...base, horn, layout: "tower" });
       expect(meshesNamed(g, BRACKET_MESH_NAME), horn.id).toHaveLength(0);
+      expect(meshesNamed(g, CD_PLATE_MESH_NAME), horn.id).toHaveLength(0);
     }
   });
 
   for (const layout of LAYOUTS.filter((l) => l !== "tower"))
-    test(`${layout}: it bolts to the adapter's flange, stands on the lid, and clears the horn, driver, posts and dish`, () => {
-      for (const horn of bracketHorns) {
-        if (!horn.adapter) continue;
+    test(`${layout}: it bolts to the adapter's flange or the plate, stands on the lid, and clears the horn, driver, posts and dish`, () => {
+      for (const horn of HORN_OPTIONS) {
         const at = `${horn.id} ${layout}`;
         const g = buildStackScene({ ...base, horn, layout });
         const plates = meshesNamed(g, BRACKET_MESH_NAME);
@@ -164,11 +180,23 @@ describe("the driver's L-bracket", () => {
         expect(plates, at).toHaveLength(2 * hornCount); // an upright and a foot per horn
         const hornBox = boxOf(g, HORN_MESH_NAME);
         if (!hornBox) throw new Error(`${at}: no horn`);
-        const flangeBack = hornBox.min.z - horn.adapter.steps[0][1];
-        const neckR = horn.adapter.steps[1][0] / 2;
+        // the face the upright bolts to: the back of the adapter's front flange, or of the plate
+        const cdPlate = boxOf(g, CD_PLATE_MESH_NAME);
+        const face = horn.adapter ? hornBox.min.z - horn.adapter.steps[0][1] : cdPlate?.min.z;
+        expect(face, at).toBeDefined();
+        const neckR = horn.adapter ? horn.adapter.steps[1][0] / 2 : 0;
         const others = [HORN_MESH_NAME, CD_MESH_NAME, HARDWARE_MESH_NAME].flatMap((n) =>
           meshesNamed(g, n),
         );
+        // the plate's tab clears the lid's posts and dish too
+        for (const p of meshesNamed(g, CD_PLATE_MESH_NAME)) {
+          const pb = new THREE.Box3().setFromObject(p);
+          for (const o of meshesNamed(g, HARDWARE_MESH_NAME))
+            expect(
+              overlaps(pb, new THREE.Box3().setFromObject(o)),
+              `${at}: plate clear of the hardware`,
+            ).toBe(false);
+        }
         const notBracket = (o: THREE.Object3D) =>
           o.name !== BRACKET_MESH_NAME && o.name !== BRACKET_BOLT_MESH_NAME;
         const all: THREE.Object3D[] = [];
@@ -183,10 +211,11 @@ describe("the driver's L-bracket", () => {
           const box = new THREE.Box3().setFromObject(plate);
           const isUpright = box.max.y - box.min.y > BRACKET.thickness + 1e-6;
           if (isUpright) {
-            // its front face against the back of the adapter's front flange
-            expect(Math.abs(box.max.z - flangeBack), `${at}: upright on the flange`).toBeLessThan(
-              CONTACT_IN,
-            );
+            // its front face against the back of the adapter's front flange, or of the plate
+            expect(
+              Math.abs(box.max.z - (face ?? Infinity)),
+              `${at}: upright on the flange or plate`,
+            ).toBeLessThan(CONTACT_IN);
             // the notch keeps it off the neck: every point of its outline is outside the neck
             const pos = plate.geometry.getAttribute("position");
             const v = new THREE.Vector3();
