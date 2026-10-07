@@ -12,7 +12,10 @@ import {
   rectangleEndCorrection,
   slotMouthCorrection,
   logGridCount,
+  SEALED_QTC_MIN,
+  sealedLitersForQtc,
 } from "../pa/calc";
+import { qtcFloorAt } from "../../constants/qtcText";
 import { MAX_ELBOWS, tubeElbows, tubeMaxLength, type TubeRoom } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import { panelLbPerSqFt } from "../panel";
@@ -470,6 +473,8 @@ export const hifiVentPort = (
     : cfg.port.shape === "slot"
       ? { ...cfg.port, n: 1, w: slotWidth(cfg.dim, cfg.wall || 0.75) }
       : cfg.port;
+/** A sealed box's effective volume over its net: light stuffing. */
+const HIFI_STUFFING_GAIN = 1.1;
 /** The box alone, its curve run to fTop (Hz): xo-independent, so one box serves every crossover. */
 export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBox | null {
   const ts = w.ts,
@@ -517,7 +522,11 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
   const sM =
     ventPort || pr
       ? null
-      : closedBox(ts, net * 1.1, hpf || null, null, V, { ...opts, hpOrder: 4, lpOrder: 4 });
+      : closedBox(ts, net * HIFI_STUFFING_GAIN, hpf || null, null, V, {
+          ...opts,
+          hpOrder: 4,
+          lpOrder: 4,
+        });
   const m: BoxModel | null = vM || rM || sM;
   if (!m) return null;
   return { gross, net, disp, pVol, pA, ventPort, pr, V, hpf, N, vM, rM, sM, m };
@@ -590,7 +599,7 @@ export const wooferFitsBaffle = (w: HifiWoofer, dim: Dims3) => dim.w >= w.size +
 /** The crossover sits above the woofer's usable range. */
 export const wooferPastRange = (w: HifiWoofer, xo: number) => !!(w.fmax && xo > w.fmax);
 /** A sealed box's Qtc between overdamped and peaky. */
-export const qtcInRange = (Qtc: number) => Qtc >= 0.5 && Qtc <= 0.8;
+export const qtcInRange = (Qtc: number) => Qtc >= SEALED_QTC_MIN && Qtc <= 0.8;
 
 /**
  * What the woofer's response reads per point without the crossover: the baffle step, placement and EQ (e, and the
@@ -1220,13 +1229,23 @@ export function hifiChips(
       `${w.name} is rated to about ${w.fmax} Hz.`,
       "hifiWooferRange",
     ]);
+  // an overdamped box names the net volume that gives Qtc 0.5 (the woofers carry no mounting depth, so the check
+  // does not say a box that small fits)
+  const floorL = sealedLitersForQtc(w.ts, SEALED_QTC_MIN);
   if (sys.kind === "sealed")
     F.push(
       qtcInRange(sys.Qtc)
         ? ["ok", `Qtc ${sys.Qtc.toFixed(2)}`, "Well damped.", "hifiQtc"]
         : sys.Qtc > 0.8
           ? ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Peaky: box too small.", "hifiQtc"]
-          : ["warn", `Qtc ${sys.Qtc.toFixed(2)}`, "Overdamped. A smaller box works.", "hifiQtc"],
+          : [
+              "warn",
+              `Qtc ${sys.Qtc.toFixed(2)}`,
+              floorL == null
+                ? "Overdamped."
+                : `Overdamped. ${qtcFloorAt(floorL / HIFI_STUFFING_GAIN)}`,
+              "hifiQtc",
+            ],
     );
   if (sys.kind === "vented" && sys.slotW != null && !sys.portFits) {
     F.push([

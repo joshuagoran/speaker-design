@@ -168,6 +168,22 @@ test("the speaker: volume, tuning, levels and checks", (t) => {
   assert.ok(b.wLevel <= s.wLevel + 1e-9, "boost never adds clean output");
 });
 
+test("an overdamped sealed box names the net volume that gives Qtc 0.5", (t) => {
+  const big: HifiConfig = { ...cfg, box: "sealed", dim: { w: 16, h: 30, d: 20 } };
+  const s = hifiSystem(W, T, big);
+  assert.ok(s && s.kind === "sealed" && s.Qtc < 0.5, `Qtc ${s?.Qtc}`);
+  const text = chipOf(hifiChips(s, W, T, big), "hifiQtc", "warn")[2];
+  const m = /Qtc 0\.5 at ([\d.]+) L net/.exec(text);
+  assert.ok(m, text);
+  // a box of that net volume (the same face, less depth) reads Qtc 0.5
+  const netL = Number(m[1]),
+    faceIn2 = (big.dim.w - 1.5) * (big.dim.h - 1.5);
+  const d = (netL + s.disp) / 0.97 / 0.016387 / faceIn2 + 1.5;
+  const fit = hifiSystem(W, T, { ...big, dim: { ...big.dim, d } });
+  assert.ok(fit && fit.kind === "sealed");
+  close(t, fit.Qtc, 0.5, 0.01);
+});
+
 test("response at the seat: on axis matches the design axis; off axis and above the lobe lose level", (t) => {
   const s = hifiSystem(W, T, cfg)!,
     freqs = [500, 2200, 8000];
