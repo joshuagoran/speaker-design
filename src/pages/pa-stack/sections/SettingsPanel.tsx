@@ -78,8 +78,8 @@ interface Props {
     | "midBoxDims"
     | "midAmpWatts"
     | "setMidAmpWatts"
-    | "midBandTiltDb"
-    | "setMidBandTiltDb"
+    | "midBelowSubDb"
+    | "setMidBelowSubDb"
     | "setMidBoxDim"
     | "midSize"
     | "setMidSize"
@@ -89,8 +89,8 @@ interface Props {
     | "setCompressionDriver"
     | "hornAmpWatts"
     | "setHornAmpWatts"
-    | "hornBandTiltDb"
-    | "setHornBandTiltDb"
+    | "hornBelowMidDb"
+    | "setHornBelowMidDb"
     | "subMidCrossoverHz"
     | "setSubMidCrossoverHz"
     | "midHornCrossoverHz"
@@ -167,8 +167,8 @@ export function SettingsPanel({ planner }: Props) {
     midBoxDims,
     midAmpWatts,
     setMidAmpWatts,
-    midBandTiltDb,
-    setMidBandTiltDb,
+    midBelowSubDb,
+    setMidBelowSubDb,
     setMidBoxDim,
     midSize,
     setMidSize,
@@ -178,8 +178,8 @@ export function SettingsPanel({ planner }: Props) {
     setCompressionDriver,
     hornAmpWatts,
     setHornAmpWatts,
-    hornBandTiltDb,
-    setHornBandTiltDb,
+    hornBelowMidDb,
+    setHornBelowMidDb,
     subMidCrossoverHz,
     setSubMidCrossoverHz,
     midHornCrossoverHz,
@@ -655,15 +655,15 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label={
                     <Tooltip tip="Bass-heavy music has 6–10 dB less at 200 Hz–1 kHz than 40–60 Hz.">
-                      Music balance: mid band needs less by
+                      Music balance: mid level below the sub
                     </Tooltip>
                   }
-                  value={midBandTiltDb}
+                  value={midBelowSubDb}
                   min={0}
                   max={12}
                   step={1}
                   unit=" dB"
-                  onChange={setMidBandTiltDb}
+                  onChange={setMidBelowSubDb}
                 />
               </Card>
             </div>
@@ -683,13 +683,13 @@ export function SettingsPanel({ planner }: Props) {
                   extra={renderLockButton("hfAmpW", "the HF amp power")}
                 />
                 <Slider
-                  label="Music balance: HF band needs less by"
-                  value={hornBandTiltDb}
+                  label="Music balance: horn level below the mid"
+                  value={hornBelowMidDb}
                   min={0}
                   max={12}
                   step={1}
                   unit=" dB"
-                  onChange={setHornBandTiltDb}
+                  onChange={setHornBelowMidDb}
                 />
               </Card>
             </div>

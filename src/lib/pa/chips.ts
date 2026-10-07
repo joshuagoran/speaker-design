@@ -278,7 +278,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
 }
 
 // s: { midSize, midDims, Qtc, f3, peakX, xoLo, ts (Xmax, aes), V (amp volts), useV, vTherm, mAmpW,
-//      subMusicAtXo (dB or null), tilt, midAtXo ({spl, who} of the mid max curve at xoLo) }
+//      subMusicAtXo (dB or null), midBelowSubDb, midAtXo ({spl, who} of the mid max curve at xoLo) }
 export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
   const {
     midSize,
@@ -295,7 +295,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
     vTherm,
     mAmpW,
     subMusicAtXo,
-    tilt,
+    midBelowSubDb,
     midAtXo,
   } = s;
   const F: Chip<ChipId<"mid">>[] = [];
@@ -359,7 +359,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
           ],
   );
   if (subMusicAtXo != null && midAtXo) {
-    const needDb = subMusicAtXo - tilt,
+    const needDb = subMusicAtXo - midBelowSubDb,
       m = midAtXo,
       gap = m.spl - needDb;
     // amp power that would close the gap, if the amp is what's short
@@ -369,7 +369,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
         ? [
             "warn",
             "Mid limits first",
-            `${(-gap).toFixed(1)} dB short at ${xoLo} Hz of the sub at its music limit, less ${tilt} dB for the mid band. ` +
+            `${(-gap).toFixed(1)} dB short at ${xoLo} Hz of the sub at its music limit, less ${midBelowSubDb} dB for the mid band. ` +
               (m.who === "amp"
                 ? wNeed <= 2 * ts.aes
                   ? `About ${Math.ceil(wNeed / 25) * 25} W per mid channel is enough.`
@@ -382,7 +382,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
         : [
             "ok",
             "Keeps up with the sub",
-            `${gap.toFixed(1)} dB to spare at ${xoLo} Hz against the sub at its music limit, less ${tilt} dB for the mid band.` +
+            `${gap.toFixed(1)} dB to spare at ${xoLo} Hz against the sub at its music limit, less ${midBelowSubDb} dB for the mid band.` +
               (m.who === "amp" && gap > 1
                 ? ` About ${Math.max(25, Math.ceil(wNeed / 25) * 25)} W per mid channel is still enough.`
                 : ""),
@@ -393,9 +393,21 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
   return F;
 }
 
-// s: { hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi (dB or null), hfTilt, hornAtXo (dB), midBeam (deg or null), fK (Hz or null) }
+// s: { hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi (dB or null), hornBelowMidDb, hornAtXo (dB), midBeam (deg or null), fK (Hz or null) }
 export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
-  const { hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi, hfTilt, hornAtXo, midBeam, fK } = s;
+  const {
+    hf,
+    hz,
+    horn,
+    xoHi,
+    hornModel,
+    hfAmpW,
+    midAtXoHi,
+    hornBelowMidDb,
+    hornAtXo,
+    midBeam,
+    fK,
+  } = s;
   const F: Chip<ChipId<"horn">>[] = [];
   if (hf.minXo && xoHi < hf.minXo)
     F.push([
@@ -434,7 +446,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
         ],
   );
   if (midAtXoHi != null && hornAtXo != null) {
-    const need = midAtXoHi - hfTilt,
+    const need = midAtXoHi - hornBelowMidDb,
       gap = hornAtXo - need;
     const wNeed = hfAmpW * Math.pow(10, -gap / 10);
     F.push(
@@ -442,7 +454,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
         ? [
             "warn",
             "Horn limits first",
-            `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hfTilt} dB for the HF band. ` +
+            `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hornBelowMidDb} dB for the HF band. ` +
               (hornModel.who === "amp" && (wNeed * 8) / hornModel.imp <= hornModel.pProg
                 ? `About ${Math.ceil(wNeed / 25) * 25} W per HF channel is enough.`
                 : "The driver's rating is the limit. Raise the crossover."),
@@ -451,7 +463,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
         : [
             "ok",
             "Keeps up with the mid",
-            `${gap.toFixed(1)} dB to spare at ${xoHi} Hz against the mid, less ${hfTilt} dB for the HF band.`,
+            `${gap.toFixed(1)} dB to spare at ${xoHi} Hz against the mid, less ${hornBelowMidDb} dB for the HF band.`,
             "hornKeepsUp",
           ],
     );

@@ -124,7 +124,7 @@ const midBase: MidChipsInput = {
   vTherm: Math.sqrt(800 * 8),
   mAmpW: 400,
   subMusicAtXo: 120,
-  tilt: 6,
+  midBelowSubDb: 6,
   midAtXo: { spl: 115, who: "amp" },
 };
 const mid = (o: Partial<MidChipsInput>) => midChips({ ...midBase, ...o });
@@ -191,7 +191,7 @@ const hornBase: HornChipsInput = {
   hornModel: { who: "amp", pAmp: 50, imp: 8, pProg: 100, derate: 1 },
   hfAmpW: 50,
   midAtXoHi: 118,
-  hfTilt: 6,
+  hornBelowMidDb: 6,
   hornAtXo: 115,
   midBeam: 90,
   fK: 1000,

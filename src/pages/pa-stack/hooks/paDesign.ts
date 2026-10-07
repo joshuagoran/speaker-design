@@ -50,7 +50,7 @@ import type { MidDesign } from "./useMidDesign";
 import type { SubwooferDesign } from "./useSubwooferDesign";
 import { xmaxBandCurves } from "../../../lib/xmax";
 
-/** The design state the PA models read; the music-balance tilts, finish, colors and cutlist options don't enter them. */
+/** The design state the PA models read; the music balance, finish, colors and cutlist options don't enter them. */
 type PaDesignInputs = Pick<
   SubwooferDesign,
   | "subDriver"

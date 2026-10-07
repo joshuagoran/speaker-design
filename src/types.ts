@@ -1121,10 +1121,10 @@ export interface PaDesignConfig {
   xoLoOrder: CrossoverOrder;
   xoHiOrder: CrossoverOrder;
   mAmpW: number;
-  /** how much less the mid band needs than the sub band, dB */
+  /** the music balance: how far the mid band's level sits below the sub's, dB (a level, not an angle; the saved key keeps its old name) */
   tilt: number;
   hfAmpW: number;
-  /** how much less the horn band needs than the mid band, dB */
+  /** the music balance: how far the horn band's level sits below the mid's, dB (a level, not an angle; the saved key keeps its old name) */
   hfTilt: number;
   layout: PaLayout;
   /** each box's handles and their offsets (lib/pa/hardware); absent in older saves: the defaults (`DEFAULT_PA`) */
@@ -1880,7 +1880,8 @@ export interface MidChipsInput {
   mAmpW: number;
   /** the sub at its music limit at the crossover, dB; null where the sub has no model */
   subMusicAtXo: number | null;
-  tilt: number;
+  /** how far the mid band's level sits below the sub's (the music balance), dB */
+  midBelowSubDb: number;
   /** the mid's own limit at the crossover; null when `subMusicAtXo` is */
   midAtXo: Pick<PaMaxPoint, "spl" | "who"> | null;
 }
@@ -1894,7 +1895,8 @@ export interface HornChipsInput {
   hfAmpW: number;
   /** the mid at its limit at the horn crossover, dB; null where the mid has no model */
   midAtXoHi: number | null;
-  hfTilt: number;
+  /** how far the horn band's level sits below the mid's (the music balance), dB */
+  hornBelowMidDb: number;
   /** the horn's level at the crossover, dB; null where the horn has no model */
   hornAtXo: number | null;
   /** the mid's beamwidth at the crossover in degrees, null where it has no model */

@@ -1000,7 +1000,7 @@ function exactHook(
           hornModel: hm,
           hfAmpW: c.amps.hfAmpW,
           midAtXoHi: null,
-          hfTilt: c.cur.hfTilt,
+          hornBelowMidDb: c.cur.hfTilt,
           hornAtXo: null,
           midBeam: pistonBeamWidthDeg(m.ts.Sd, xoHi),
           fK: hz.covH && hp.h.size ? keeleFrequency(hz.covH, hp.h.size.w) : null,

@@ -422,7 +422,7 @@ export function evaluateDesign(
       vTherm: ms.vTherm,
       mAmpW: c.mAmpW,
       subMusicAtXo: subMusic,
-      tilt: c.tilt,
+      midBelowSubDb: c.tilt,
       midAtXo,
     }),
     horn: hornModel
@@ -434,7 +434,7 @@ export function evaluateDesign(
           hornModel,
           hfAmpW: c.hfAmpW,
           midAtXoHi: midAtHi,
-          hfTilt: c.hfTilt,
+          hornBelowMidDb: c.hfTilt,
           hornAtXo,
           midBeam: pistonBeamWidthDeg(mid.ts.Sd, c.xoHi),
           fK: hz.covH && horn.size ? keeleFrequency(hz.covH, horn.size.w) : null,

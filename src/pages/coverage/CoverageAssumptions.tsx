@@ -27,7 +27,7 @@ interface Props {
   /** the planner's crossover slopes and music balance */
   planner: Pick<
     CoverageInputs,
-    "subMidCrossoverOrder" | "midHornCrossoverOrder" | "midBandTiltDb" | "hornBandTiltDb"
+    "subMidCrossoverOrder" | "midHornCrossoverOrder" | "midBelowSubDb" | "hornBelowMidDb"
   >;
   /** the target in the band on show, dB */
   target: number;
@@ -54,9 +54,9 @@ export function CoverageAssumptions({ room, planner, target, level }: Props) {
     [
       "Levels",
       [
-        `Target: ${level.targetDb} dB SPL in the sub band at ${COVERAGE_LEVEL_REF_PLACE[level.levelRef]}, less the music-balance tilts (planner: ${LISTENER_TARGET_DB} dB, ${target} dB in this band), never past the limit.`,
+        `Target: ${level.targetDb} dB SPL in the sub band at ${COVERAGE_LEVEL_REF_PLACE[level.levelRef]}, less the music-balance levels (planner: ${LISTENER_TARGET_DB} dB, ${target} dB in this band), never past the limit.`,
         `Audience average: the mean dB over the counted floor. "1 m from the stacks": ear height, on each stack's aim, averaged.`,
-        `Design-page balance: mid ${planner.midBandTiltDb} dB below the sub, horn ${planner.hornBandTiltDb} dB below the mid. The weakest band sets the level.`,
+        `Design-page balance: mid ${planner.midBelowSubDb} dB below the sub, horn ${planner.hornBelowMidDb} dB below the mid. The weakest band sets the level.`,
         "Past their ends, curves follow the crossover slope with their end phase.",
         "Sub and mid curves: boxes on the floor; below the baffle step, a reflection from each box's height. Horn sensitivity: free field.",
       ],

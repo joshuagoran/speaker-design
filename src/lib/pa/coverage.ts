@@ -371,7 +371,7 @@ export function bandSkirts(
 }
 
 /**
- * The bands as a balanced system plays them at its limit: the mid `tilt` dB under the sub at the low crossover, the
+ * The bands as a balanced system plays them at its limit: the mid `tilt` dB under the sub (levels, not angles) at the low crossover, the
  * horn `hfTilt` dB under the mid at the high one (the planner's music balance). The band with the least to spare sets
  * the level; the others are turned down to match. Each curve is read past its ends along its crossover's skirt, as
  * the map plays it; a band without a curve is left out of the balance.
@@ -407,7 +407,7 @@ export function balanceLevels(
   };
 }
 
-/** The target at a frequency under the same music balance: the full target in the sub's band, less the tilts above. */
+/** The target at a frequency under the same music balance: the full target in the sub's band, less the music balance above. */
 export const balancedTarget = (target: number, f: number, b: MusicBalance) =>
   f < b.xoLo ? target : f < b.xoHi ? target - b.tilt : target - b.tilt - b.hfTilt;
 
