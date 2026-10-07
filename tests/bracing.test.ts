@@ -50,6 +50,7 @@ import {
   braceUnderNote,
   driverOnBaffleNote,
   savedBackJoint,
+  BACK_RAIL_SCREW_NOTE,
   GLUED_BACK,
   DEFAULT_BACK_JOINT,
   LEGACY_SUB_BRACE_STYLE_KEY,
@@ -935,17 +936,39 @@ test("the back panel setting: a saved choice reads back, anything else is screwe
   assert.ok(backHz(plan(GLUED_BACK)) > backHz(plan(DEFAULT_BACK_JOINT)));
 });
 
-test("a screwed back: the window braces' rails don't hold it, and no rib ring is glued to it", () => {
+test("a screwed back: screwed to the frames' rails, held in a line but no flange to them; its cutlist row says so", () => {
   const d = DEFAULT_PA;
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  if (!sub) throw new Error("the B&C 18NW100 is in the catalog");
+  const box = { w: 22, h: 32, d: 18 },
+    slot = { ...d.cVent, len: 4 };
   const plan = (back: BackJointId) =>
-    subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, "window", undefined, back);
-  const back = (b: BoxBracing) => b.panels.find((p) => p.id === "back");
-  const screwed = back(plan(DEFAULT_BACK_JOINT)),
-    glued = back(plan(GLUED_BACK));
+    subBoxBracing(box, 0.5, d.inset, d.portStyle, slot, sub, "window", undefined, back);
+  const backOf = (b: BoxBracing) => b.panels.find((p) => p.id === "back");
+  const screwed = backOf(plan(DEFAULT_BACK_JOINT)),
+    glued = backOf(plan(GLUED_BACK));
   assert.ok(screwed && glued);
-  // the frames stand in the box either way, but only a glued back is held by them
-  assert.ok(Math.abs(screwed.hz - screwed.bareHz) < 1e-9, `${screwed.hz} vs ${screwed.bareHz}`);
-  assert.ok(glued.hz > glued.bareHz);
+  // never under the bare plate, never over the glued back (its edges hinged, the rails alone in bending)
+  assert.ok(screwed.hz >= screwed.bareHz - 1e-9 && screwed.hz <= glued.hz + 1e-9);
+  // the frames across the height have a rail along the back: their cutlist row says to screw the back to it
+  const rows = (back: BackJointId) =>
+    cutParts({
+      sub,
+      mid: d.mid,
+      subBox: box,
+      midDims: d.mDim,
+      wall: 0.5,
+      inset: d.inset,
+      joint: "butt",
+      portStyle: d.portStyle,
+      cVent: slot,
+      layout: "stack",
+      braceStyle: "window",
+      backJoint: back,
+    }).parts.filter((p) => p.box === "sub" && p.part === "windowBrace");
+  assert.ok(rows(DEFAULT_BACK_JOINT).length > 0);
+  assert.ok(rows(DEFAULT_BACK_JOINT).every((p) => (p.note ?? "").endsWith(BACK_RAIL_SCREW_NOTE)));
+  assert.ok(rows(GLUED_BACK).every((p) => !(p.note ?? "").includes(BACK_RAIL_SCREW_NOTE)));
 });
 
 test("the driver on the baffle reads the bay round the cutout only", () => {

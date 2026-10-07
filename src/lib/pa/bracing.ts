@@ -70,8 +70,9 @@ export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], botto
  * A PA box's six panels on the box axes (x across from the left, y up from the bottom, z back from the baffle): the
  * sides, top, bottom and back at the wall stock, the baffle at its own (it starts above a bottom slot's band). Each edge
  * is held by the panel glued to it there (EdgeHold: its stock and its span away from the joint), except where nothing
- * is: a screwed back's joints (`back`; the window braces don't hold it either: `loose`), the bottom's front edge over a
- * slot's mouth and the baffle's lower edge on the slot's shelf (left hinged, on the safe side).
+ * is: a screwed back's joints (`back`; it is `loose`: screwed to the window braces' rails, held in a line but no
+ * flange to them), the bottom's front edge over a slot's mouth and the baffle's lower edge on the slot's shelf (left
+ * hinged, on the safe side).
  */
 export function paBoxPanels(
   { iw, ih, inD, band }: PaBoxInside,

@@ -39,6 +39,12 @@ export const braceUnderNote = (panel: string, hz: string, target: string) =>
 export const driverOnBaffleNote = (cabinet: string, hz: string) =>
   `${cabinet} driver on the baffle: ${hz} with its weight on the cutout; a brace from the magnet to the back holds it`;
 
+/**
+ * The end of a cutlist window-brace row with a rail along a screwed back: the back is screwed to that rail, so the
+ * frame holds it there (lib/bracing counts a screwed back held in a line by the rails).
+ */
+export const BACK_RAIL_SCREW_NOTE = "; screw the back to its back rail every 5″, into T-nuts";
+
 /** The end of a cutlist rib row whose rib crosses a window brace. */
 export const RIB_HALF_LAP_NOTE = "; half-lap it where it crosses a window brace";
 
@@ -66,12 +72,13 @@ export const BACK_JOINT_NAMES = {
 } as const;
 /** What each choice does, for its button's tooltip. */
 export const BACK_JOINT_TIPS = {
-  screwed: "Removable back: its edges count as hinged, so it takes more bracing.",
+  screwed:
+    "Removable back, screwed to its edges and to the window braces: its edges count as hinged.",
   glued: "Glued like the other panels: the joints hold its edges.",
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /** The back joint a design takes when none is chosen: screwed, the safe side. */
 export const DEFAULT_BACK_JOINT = "screwed" satisfies keyof typeof BACK_JOINT_NAMES;
-/** A glued back: its joints hold its edges, and the window braces hold it. */
+/** A glued back: its joints hold its edges, and the window braces' rails work with it. */
 export const GLUED_BACK = "glued" satisfies keyof typeof BACK_JOINT_NAMES;
 /** Each choice in the Build fold's summary line. */
 export const BACK_JOINT_SUMMARY = {

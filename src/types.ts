@@ -1508,7 +1508,10 @@ export interface BracePanel {
   stopV: number[];
   /** what holds each edge against turning; absent: every edge hinged */
   edges?: Record<PanelEdge, EdgeHold>;
-  /** screwed on (a removable back): the window braces' rails touch it unglued, so they hold it nowhere */
+  /**
+   * screwed on (a removable back): screwed to the window braces' rails, which hold it in a line but don't work with it
+   * as a flange; no rib on the next panel is glued to its ribs
+   */
   loose?: boolean;
   /** the driver's cutout, in panel coordinates (the baffle) */
   hole?: PlateHole;

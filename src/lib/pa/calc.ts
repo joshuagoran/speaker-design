@@ -71,7 +71,9 @@ import { ELBOW_WORDS } from "../../constants/portStyles";
 import {
   BOX_AXIS_NAMES,
   BRACE_PANEL_NAMES,
+  BACK_RAIL_SCREW_NOTE,
   DEFAULT_BACK_JOINT,
+  GLUED_BACK,
   RIB_HALF_LAP_NOTE,
 } from "../../constants/bracing";
 import {
@@ -985,6 +987,8 @@ export function boxParts(
     bracing?: BoxBracing | null;
     /** the hardware's cutout notes, by panel (hardwareCutNotes) */
     hardware?: HardwareCutNotes;
+    /** how the back is fixed: a screwed back is screwed to the window braces' back rails too */
+    back?: BackJointId;
   } = {},
 ) {
   const BT = 0.75,
@@ -1050,7 +1054,8 @@ export function boxParts(
     note: "",
   });
   const inD = D - inset - BT - t;
-  if (extra.bracing) P.push(...braceParts(label, extra.bracing, { x: iw, y: ih, z: inD }, t));
+  if (extra.bracing)
+    P.push(...braceParts(label, extra.bracing, { x: iw, y: ih, z: inD }, t, extra.back));
   return { P, iw, ih, inD };
 }
 
@@ -1072,9 +1077,13 @@ export function braceParts(
   b: BoxBracing,
   inner: Record<BoxAxis, number>,
   t: number,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): CutPart[] {
   const out: CutPart[] = [];
   const rails = `cut out the center, leave ${formatInches(WINDOW_RAIL_IN)}″ rails`;
+  // a frame across x or y has a rail along the back: a screwed back is screwed to it (the rule counts it held there)
+  const screw = (axis: BoxAxis) =>
+    back !== GLUED_BACK && axis !== "z" ? BACK_RAIL_SCREW_NOTE : "";
   for (const axis of ["y", "x", "z"] as const) {
     // across x, the braces that cross the driver open their frame to the baffle round it
     const open = axis === "x" && b.notch ? b.notch.at : [];
@@ -1083,11 +1092,14 @@ export function braceParts(
     const row = (at: number[], note: string) => {
       if (at.length) out.push({ box, part: "windowBrace", qty: at.length, a: pa, b: pb, t, note });
     };
-    row(closed, `${WINDOW_PLANE[axis]}, ${atList(closed)} ${AXIS_FROM[axis]}; ${rails}`);
+    row(
+      closed,
+      `${WINDOW_PLANE[axis]}, ${atList(closed)} ${AXIS_FROM[axis]}; ${rails}${screw(axis)}`,
+    );
     if (b.notch)
       row(
         open,
-        `${WINDOW_PLANE[axis]}, ${atList(open)} ${AXIS_FROM[axis]}; ${rails}, and leave the front rail out from ${formatInches(b.notch.y[0])}″ to ${formatInches(b.notch.y[1])}″ ${AXIS_FROM.y}, clear of the driver`,
+        `${WINDOW_PLANE[axis]}, ${atList(open)} ${AXIS_FROM[axis]}; ${rails}, and leave the front rail out from ${formatInches(b.notch.y[0])}″ to ${formatInches(b.notch.y[1])}″ ${AXIS_FROM.y}, clear of the driver${screw(axis)}`,
       );
   }
   for (const r of b.ribs) {
@@ -1332,6 +1344,7 @@ export function cutParts({
           hardware?.sub,
           backJoint,
         ),
+    back: backJoint,
     hardware: hardware
       ? hardwareCutNotes(
           subHardwarePlan(
@@ -1425,6 +1438,7 @@ export function cutParts({
       midHardwarePlan(midDims, t, inset, mid, layout, braceStyle, hardware.mid, backJoint);
     const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
       bracing: midBoxBracing(midDims, t, inset, mid, layout, braceStyle, hardware?.mid, backJoint),
+      back: backJoint,
       hardware: midPlan ? hardwareCutNotes(midPlan, midDims, t) : undefined,
       cutNote: cutoutNote(DRIVER_CUTOUT_IN[mid.size]),
     });

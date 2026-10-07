@@ -597,7 +597,7 @@ export function braceBox({
   const winOrNone = (a: BoxAxis, n: number) => winAt(a, n) ?? [];
   // the window braces' lines on a panel, in from its edge (a notched brace doesn't hold the baffle)
   const onPanel = (p: BracePanel, axis: BoxAxis, n: number, off: number, span: number) =>
-    (p.loose ? [] : winOrNone(axis, n))
+    winOrNone(axis, n)
       .filter((x) => p.id !== "baffle" || !notched(axis, x))
       .map((x) => x - off)
       .filter((x) => x > EPS && x < span - EPS);
@@ -804,7 +804,7 @@ export function braceBox({
   // a window brace's rail on `q` across `a`: its EI over its span, for the corner spring it gives the next rail
   const railStiffness = (q: BracePanel, a: BoxAxis, w: Counts) => {
     const span = spanAcross(q, otherAxis(q, a));
-    // along a loose panel the rail stands alone, no flange glued to it
+    // along a loose panel (screwed to it, not glued) the rail stands alone, no flange working with it
     if (q.loose)
       return (
         (RING_FIXITY * braceStock.eWeak * (braceStock.t * IN_M) * (WINDOW_RAIL_IN * IN_M) ** 3) /
@@ -868,7 +868,12 @@ export function braceBox({
       if (!rails.length) continue;
       const o = otherAxis(p, a);
       const sp = stripSpan(spanAcross(p, o), supportsAcross(p, o, w));
-      const { EI, mu } = teeBeam(sp.len, gap(a), p.stock, braceStock, WINDOW_RAIL_IN);
+      const tee = teeBeam(sp.len, gap(a), p.stock, braceStock, WINDOW_RAIL_IN);
+      // a loose panel is screwed to the rail: the rail carries it but stands alone in bending, no flange
+      const EI = p.loose
+          ? (braceStock.eWeak * (braceStock.t * IN_M) * (WINDOW_RAIL_IN * IN_M) ** 3) / 12
+          : tee.EI,
+        mu = tee.mu;
       // the frame's rail on the panel at each end of this one's run (none on the baffle where a notched frame opens)
       const ends = END_PANEL[o].map((id) => panelById.get(id));
       for (const x of rails) {
