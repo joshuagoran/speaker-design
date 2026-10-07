@@ -5,6 +5,7 @@ import type {
   BoxKeepOut,
   BoxModelTS,
   BoxRegion,
+  BackJointId,
   BraceStyleId,
   CompressionHf,
   CornerJoint,
@@ -66,7 +67,12 @@ import {
 } from "./tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import { ELBOW_WORDS } from "../../constants/portStyles";
-import { BOX_AXIS_NAMES, BRACE_PANEL_NAMES, RIB_HALF_LAP_NOTE } from "../../constants/bracing";
+import {
+  BOX_AXIS_NAMES,
+  BRACE_PANEL_NAMES,
+  DEFAULT_BACK_JOINT,
+  RIB_HALF_LAP_NOTE,
+} from "../../constants/bracing";
 import {
   BIRCH_PLY_STIFFNESS,
   BOX_AXES,
@@ -767,8 +773,9 @@ function paBracing(
   /** what sets the keep-out besides the box and the plywood (the caller's inputs to it and its spans) */
   keepKey: string,
   style: BraceStyleId,
+  back: BackJointId,
 ): BoxBracing {
-  const key = `${style}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}`;
+  const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}`;
   const hit = BRACING_MEMO.get(key);
   if (hit) return hit;
   const inside = paInside(box, t, inset, band);
@@ -778,7 +785,7 @@ function paBracing(
     key,
     braceBox({
       inner: { x: inside.iw, y: inside.ih, z: inside.inD },
-      panels: paBoxPanels(inside, wall, paPanelStock(BAFFLE_PLY_IN), sup, stops),
+      panels: paBoxPanels(inside, wall, paPanelStock(BAFFLE_PLY_IN), sup, stops, back),
       targetHz: PA_PANEL_TARGET_HZ,
       style,
       braceStock: wall,
@@ -804,6 +811,7 @@ export function subBoxBracing(
   drv: TubeDriver & Partial<Pick<SubDriver, "lb">>,
   braceStyle: BraceStyleId | undefined,
   handles?: BoxHandles,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): BoxBracing {
   const bs = braceStyle ?? defaultBraceStyleNear(t);
   // the duct's length counts only where it changes the bracing (its flags)
@@ -812,7 +820,7 @@ export function subBoxBracing(
     ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
     : [];
   const hwKey = regionsKey(recesses);
-  const key = `${bs}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
+  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };
@@ -839,6 +847,7 @@ export function subBoxBracing(
       keepOut,
       keepKey,
       bs,
+      back,
     ),
   );
 }
@@ -854,6 +863,7 @@ export function midBoxBracing(
   layout: PaLayout | undefined,
   braceStyle: BraceStyleId | undefined,
   handles?: BoxHandles,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): BoxBracing | null {
   if (layout === "tower") return null;
   const placed = handles && midHardwarePlacement(box, t, inset, mid, layout, handles);
@@ -868,6 +878,7 @@ export function midBoxBracing(
     { ...midKeepOut(box, t, mid), hardware: recesses },
     `${mid.size}|${mid.depthIn}|${regionsKey(recesses)}`,
     braceStyle ?? defaultBraceStyleNear(t),
+    back,
   );
 }
 /**

@@ -1,5 +1,6 @@
 // The PA boxes' panels for the bracing rule (lib/bracing): their spans, stock and the supports the vent's own parts give.
-import type { BracePanel, BraceStyleId, PlateStock } from "../../types";
+import type { BackJointId, BracePanel, BraceStyleId, EdgeHold, PlateStock } from "../../types";
+import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
 
 /** The sub-to-mid crossover the PA boxes are braced for, Hz: the top of the optimizers' range (XO_LO_OPTIONS, tested). */
 export const PA_BRACING_CROSSOVER_HZ = 140;
@@ -60,7 +61,10 @@ export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], botto
 
 /**
  * A PA box's six panels on the box axes (x across from the left, y up from the bottom, z back from the baffle): the
- * sides, top, bottom and back at the wall stock, the baffle at its own (it starts above a bottom slot's band).
+ * sides, top, bottom and back at the wall stock, the baffle at its own (it starts above a bottom slot's band). Each edge
+ * is held by the panel glued to it there (EdgeHold: its stock and its span away from the joint), except where nothing
+ * is: a screwed back's joints (`back`), the bottom's front edge over a slot's mouth and the baffle's lower edge on the
+ * slot's shelf (left hinged, on the safe side).
  */
 export function paBoxPanels(
   { iw, ih, inD, band }: PaBoxInside,
@@ -68,8 +72,17 @@ export function paBoxPanels(
   baffle: PlateStock,
   sup: PaBoxSupports,
   stops: PaBoxSupports = sup,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): BracePanel[] {
   const base = { offU: 0, offV: 0, fixedU: [], fixedV: [], stopU: [], stopV: [] };
+  const held = (stock: PlateStock, span: number): EdgeHold => ({ stock, span });
+  const backHold = (span: number) => (back === "glued" ? held(wall, span) : null);
+  const sideEdges = {
+    u0: held(baffle, iw),
+    u1: backHold(iw),
+    v0: held(wall, iw),
+    v1: held(wall, iw),
+  };
   return [
     {
       ...base,
@@ -84,6 +97,7 @@ export function paBoxPanels(
       fixedV: sup.sideL,
       stopU: stops.sideZ ?? [],
       stopV: stops.sideL,
+      edges: sideEdges,
     },
     {
       ...base,
@@ -98,6 +112,7 @@ export function paBoxPanels(
       fixedV: sup.sideR,
       stopU: stops.sideZ ?? [],
       stopV: stops.sideR,
+      edges: sideEdges,
     },
     {
       ...base,
@@ -110,6 +125,12 @@ export function paBoxPanels(
       ribs: true,
       fixedU: sup.top,
       stopU: stops.top,
+      edges: {
+        u0: held(wall, ih),
+        u1: held(wall, ih),
+        v0: held(baffle, ih - band),
+        v1: backHold(ih),
+      },
     },
     {
       ...base,
@@ -122,8 +143,24 @@ export function paBoxPanels(
       ribs: true,
       fixedU: sup.bottom,
       stopU: stops.bottom,
+      edges: {
+        u0: held(wall, ih),
+        u1: held(wall, ih),
+        v0: band > 0 ? null : held(baffle, ih),
+        v1: backHold(ih),
+      },
     },
-    { ...base, id: "back", u: "x", v: "y", spanU: iw, spanV: ih, stock: wall, ribs: true },
+    {
+      ...base,
+      id: "back",
+      u: "x",
+      v: "y",
+      spanU: iw,
+      spanV: ih,
+      stock: wall,
+      ribs: true,
+      edges: { u0: backHold(inD), u1: backHold(inD), v0: backHold(inD), v1: backHold(inD) },
+    },
     {
       ...base,
       id: "baffle",
@@ -134,6 +171,12 @@ export function paBoxPanels(
       offV: band,
       stock: baffle,
       ribs: false,
+      edges: {
+        u0: held(wall, inD),
+        u1: held(wall, inD),
+        v0: band > 0 ? null : held(wall, inD),
+        v1: held(wall, inD),
+      },
     },
   ];
 }

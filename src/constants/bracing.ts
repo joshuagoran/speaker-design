@@ -49,6 +49,24 @@ export const BRACE_PANEL_NAMES = {
   baffle: "Baffle",
 } as const;
 
+/**
+ * How the back panel is fixed: glued, its edges held by the panels round it like the others', or screwed on (to take
+ * it off for the wiring), its edges hinged.
+ */
+export const BACK_JOINT_NAMES = {
+  screwed: "Screwed",
+  glued: "Glued",
+} as const;
+/** What each choice does, for its button's tooltip. */
+export const BACK_JOINT_TIPS = {
+  screwed: "Removable back: its edges count as hinged, so it takes more bracing.",
+  glued: "Glued like the other panels: the joints hold its edges.",
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
+/** The back joint a design takes when none is chosen: screwed, the safe side. */
+export const DEFAULT_BACK_JOINT = "screwed" satisfies keyof typeof BACK_JOINT_NAMES;
+/** A saved design's back joint: one of the ids, else absent (the default). */
+export const savedBackJoint = (s: unknown) => keysOf(BACK_JOINT_NAMES).find((k) => k === s);
+
 /** The axes of a box, inches from its inside corner: across the width, up the height, back from the baffle. */
 export const BOX_AXIS_NAMES = {
   x: "across",

@@ -1,9 +1,7 @@
 // Bracing by rule, for any box (lib/pa/bracing lays out the PA boxes' panels; the Hi-fi page reads the plate model).
 //
-// The plate: each panel, and each bay of it between supports, is a thin (Kirchhoff) plate SIMPLY SUPPORTED on all four
-// edges. Glued edges sit between simply supported and clamped (a clamped square's first mode is 1.82 × the simply
-// supported one's, 36 against 19.74 in Leissa's tables), so this reads low: the safe side for a rule that adds braces.
-// Its first mode (m = n = 1) is the orthotropic rectangular plate's,
+// The plate: each panel, and each bay of it between supports, is a thin (Kirchhoff) plate. Hinged (simply supported)
+// on all four edges, its first mode (m = n = 1) is the orthotropic rectangular plate's,
 //     ω² ρh = π⁴ [D₁/a⁴ + 2H/(a²b²) + D₂/b⁴]
 // (A. W. Leissa, "Vibration of Plates", NASA SP-160, 1969, the chapter on anisotropic plates), with Huber's
 // approximation H = √(D₁D₂) for plywood (M. T. Huber, 1923; as in S. G. Lekhnitskii, "Anisotropic Plates", 1968),
@@ -12,7 +10,12 @@
 // An isotropic panel (MDF, E₁ = E₂) gives the familiar f₁₁ = (π/2) √(D/ρh) (1/a² + 1/b²). The weaker modulus is taken
 // across the shorter span (the span that sets the mode), so the face grain's direction on the box never reads high.
 // ρh is the panel's weight per area from the catalog (lib/panel), the same number the box weights use.
-// Holes (the driver's cutout), the duct's own stiffness and the air load are left out. No finite elements.
+// A glued edge sits between hinged and clamped (a clamped square's first mode is 1.82 × the hinged one's, 36 against
+// 19.74 in Leissa's tables): the panel glued on across the joint bends with the edge and holds it as a rotational
+// spring (EDGE_FIXITY, a low estimate), so each bay's edges on the box's joints take their neighbors' springs, and its
+// edges on a rib, a brace or a duct part stay hinged (baysHz; lib/plateModes works the modes out). A screwed back's
+// joints hold nothing. The driver's cutout is cut out of the baffle's bay round it; the duct's own stiffness and the
+// air load are left out. No finite elements.
 //
 // A window brace or a rib holds the panel in a line: a support like an edge. A window brace (a frame across the box
 // with its center cut out, rails WINDOW_RAIL_IN wide) is stiff in its plane and holds the four walls it touches. A rib
@@ -37,12 +40,14 @@ import type {
   BracePanelId,
   BracePlan,
   BraceStyleId,
+  EdgeHold,
   PanelNominal,
   PanelResonance,
   PanelRibs,
   PlateStock,
 } from "../types";
 import { panelNominalNear } from "./panel";
+import { holedPlateHz, restrainedPlateHz } from "./plateModes";
 
 const IN_M = 0.0254;
 /** lb/ft² to kg/m² */
@@ -339,6 +344,77 @@ const nearestIn = (spans: readonly Span[], p: number) => {
   return best;
 };
 
+/**
+ * How far a glued joint holds a panel's edge against turning: a strip of the panel across the joint, its far edge
+ * hinged, resists with 3D/L per unit length (D its bending stiffness at the weaker modulus, L its span away from the
+ * joint): the lower of the beam's two textbook end cases (3EI/L far end hinged, 4EI/L fixed), so the spring reads
+ * low. The panels' own ribs and braces are left out of that strip, on the same side.
+ */
+export const EDGE_FIXITY = 3;
+/** The spring a glued neighbor gives a panel's edge, N·m/rad per m of edge; 0 where nothing holds it. */
+export const edgeSpring = (hold: EdgeHold | undefined) =>
+  hold
+    ? (EDGE_FIXITY * hold.stock.eWeak * (hold.stock.t * IN_M) ** 3) / 12 / (hold.span * IN_M)
+    : 0;
+/** The lines dividing a span: its ends and the supports inside it, in order. */
+const spanLines = (span: number, pts: readonly number[]) => [
+  0,
+  ...pts.filter((p) => p > EPS && p < span - EPS).sort((a, b) => a - b),
+  span,
+];
+/**
+ * A panel's plate resonance between its supports (`acrossU`, `acrossV`: ribs, braces and duct parts), Hz: the lowest
+ * of its bays, each a plate whose edges on the panel's own edges take the glued neighbors' springs (`edges`) and whose
+ * edges on a rib, brace or duct part are hinged (bays either side of a support move in turn about it, as a plate
+ * continuous over hinged lines does), the bay with the driver's cutout read with it (lib/plateModes).
+ */
+export function baysHz(
+  p: Pick<BracePanel, "spanU" | "spanV" | "stock" | "edges" | "hole">,
+  acrossU: readonly number[],
+  acrossV: readonly number[],
+): number {
+  const k = {
+    u0: edgeSpring(p.edges?.u0),
+    u1: edgeSpring(p.edges?.u1),
+    v0: edgeSpring(p.edges?.v0),
+    v1: edgeSpring(p.edges?.v1),
+  };
+  const bays = (lines: number[], k0: number, k1: number) => {
+    const seen = new Map<string, { from: number; len: number; k0: number; k1: number }>();
+    for (let i = 1; i < lines.length; i++) {
+      const b = {
+        from: lines[i - 1],
+        len: lines[i] - lines[i - 1],
+        k0: i === 1 ? k0 : 0,
+        k1: i === lines.length - 1 ? k1 : 0,
+      };
+      // bays alike ring alike: one of each (the hole's bay is told apart by where it starts)
+      const key = `${b.len.toFixed(6)}|${b.k0}|${b.k1}${p.hole ? `|${b.from}` : ""}`;
+      if (b.len > EPS && !seen.has(key)) seen.set(key, b);
+    }
+    return [...seen.values()];
+  };
+  const bu = bays(spanLines(p.spanU, acrossU), k.u0, k.u1),
+    bv = bays(spanLines(p.spanV, acrossV), k.v0, k.v1);
+  let hz = Infinity;
+  for (const a of bu)
+    for (const b of bv) {
+      const springs = { x0: a.k0, x1: a.k1, y0: b.k0, y1: b.k1 };
+      const h = p.hole;
+      hz = Math.min(
+        hz,
+        h && h.cx > a.from && h.cx < a.from + a.len && h.cy > b.from && h.cy < b.from + b.len
+          ? holedPlateHz(a.len, b.len, p.stock, springs, {
+              ...h,
+              cx: h.cx - a.from,
+              cy: h.cy - b.from,
+            })
+          : restrainedPlateHz(a.len, b.len, p.stock, springs),
+      );
+    }
+  return hz;
+}
+
 /** The panels a box's bracing leaves under its target, each with its first mode (the UI names the box and words them). */
 export const braceShortfalls = (b: Pick<BoxBracing, "panels" | "targetHz">): PanelResonance[] =>
   b.panels.filter((p) => p.hz < b.targetHz - 1e-9);
@@ -613,7 +689,7 @@ export function braceBox({
       ribV = rib && placed && rib.across === p.v ? placed.at : [];
     const gu = widestGap(p.spanU, [...supU, ...ribU]),
       gv = widestGap(p.spanV, [...supV, ...ribV]);
-    let hz = plateFirstModeHz(gu, gv, p.stock);
+    let hz = baysHz(p, [...supU, ...ribU], [...supV, ...ribV]);
     // a rib bridges the widest bay of the supports that cross it, carrying the widest bay of panel beside it
     if (ribU.length) hz = Math.min(hz, ribFirstModeHz(widestGap(p.spanV, supV), gu, p.stock));
     if (ribV.length) hz = Math.min(hz, ribFirstModeHz(widestGap(p.spanU, supU), gv, p.stock));

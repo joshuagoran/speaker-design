@@ -2,7 +2,12 @@ import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
-import type { BOX_AXIS_NAMES, BRACE_PANEL_NAMES, BRACE_STYLE_NAMES } from "./constants/bracing";
+import type {
+  BACK_JOINT_NAMES,
+  BOX_AXIS_NAMES,
+  BRACE_PANEL_NAMES,
+  BRACE_STYLE_NAMES,
+} from "./constants/bracing";
 import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
@@ -1459,6 +1464,22 @@ export interface PlateStock {
   nu: number;
 }
 
+/** How a box's back panel is fixed: glued like the other panels, or screwed on (`BACK_JOINT_NAMES` holds the names). */
+export type BackJointId = keyof typeof BACK_JOINT_NAMES;
+/** A panel's edge: across its u or v axis, at its start (0) or its end (1). */
+export type PanelEdge = "u0" | "u1" | "v0" | "v1";
+/**
+ * What holds a panel's edge against turning: the panel glued to it there (its stock, and its span away from the joint,
+ * in), or null where nothing does (a screwed joint, an open slot mouth): the edge is then hinged.
+ */
+export type EdgeHold = { stock: PlateStock; span: number } | null;
+/** A round hole through a panel (a driver's cutout): its center and radius, in from the panel's corner (in). */
+export interface PlateHole {
+  cx: number;
+  cy: number;
+  r: number;
+}
+
 /** One panel for the bracing rule: its two in-plane axes and spans (in), its stock, and the supports it already has. */
 export interface BracePanel {
   id: BracePanelId;
@@ -1481,6 +1502,10 @@ export interface BracePanel {
    */
   stopU: number[];
   stopV: number[];
+  /** what holds each edge against turning; absent: every edge hinged */
+  edges?: Record<PanelEdge, EdgeHold>;
+  /** the driver's cutout, in panel coordinates (the baffle) */
+  hole?: PlateHole;
 }
 
 /**

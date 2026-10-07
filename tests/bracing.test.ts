@@ -68,6 +68,7 @@ import type {
   BraceStyleId,
   CornerJoint,
   Dims3,
+  PanelResonance,
   PortStyle,
 } from "../src/types";
 
@@ -730,16 +731,16 @@ test("the optimizers' brace estimate stays near the rule over the golden boxes, 
 });
 
 test("ribs: a first pick one way doesn't lock a panel out of the other way when that lifts it more", () => {
-  // ⅝″ walls, a 15″ sub: one rib across the height leaves the sides at 278 Hz and the driver's basket keeps a second
-  // off them; two ribs up the sides (across the depth) clear the target
-  const sub = SUB_OPTIONS.find((s) => s.id === "sbnero15");
+  // ½″ walls, the starting 18″ sub in a short box: one rib across the height leaves the sides at 258 Hz and the
+  // driver's basket keeps a second off them; two ribs up the sides (across the depth) clear the target
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nbx");
   assert.ok(sub);
   const b = subBoxBracing(
-    { w: 17, h: 28, d: 18 },
-    0.625,
+    { w: 20, h: 24, d: 18 },
+    0.5,
     DEFAULT_PA.inset,
     "slots",
-    { ...DEFAULT_PA.cVent, len: 14 },
+    { ...DEFAULT_PA.cVent, len: 4 },
     sub,
     "ribs",
   );
@@ -751,4 +752,22 @@ test("ribs: a first pick one way doesn't lock a panel out of the other way when 
       `${id}: ribs up the side`,
     );
   }
+});
+
+test("glued edges: the joints hold a panel's edges, so it rings over the hinged plate; a screwed back's don't", () => {
+  const d = DEFAULT_PA;
+  const panels = (back: "screwed" | "glued") =>
+    subBoxBracing(d.cDim, 0.5, d.inset, d.portStyle, d.cVent, d.sub, "ribs", undefined, back)
+      .panels;
+  const bare = (ps: PanelResonance[], id: BracePanelId) =>
+    ps.find((p) => p.id === id)?.bareHz ?? NaN;
+  const screwed = panels("screwed"),
+    glued = panels("glued");
+  const stock = paPanelStock(0.5);
+  const inner = paInner(d.cDim, 0.5, d.inset);
+  // the top: glued on all four edges but the back's
+  assert.ok(bare(screwed, "top") > plateFirstModeHz(inner.x, inner.z, stock) * 1.1);
+  // the back: hinged when screwed (the plate model's own number), held when glued
+  assert.ok(Math.abs(bare(screwed, "back") - plateFirstModeHz(inner.x, inner.y, stock)) < 0.5);
+  assert.ok(bare(glued, "back") > bare(screwed, "back") * 1.2);
 });
