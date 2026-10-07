@@ -26,6 +26,7 @@ export function scenePropsOf(
     portStyle: c.portStyle,
     layout: c.layout ?? "stack",
     baffleColor: c.baffleColor ?? DEFAULT_PA.baffleColor,
+    hornColor: c.hornColor,
     portGeom: {
       ductH: c.cVent.slotH,
       nPorts: c.cVent.nt,
@@ -40,7 +41,8 @@ export function scenePropsOf(
   };
 }
 
-const defaultConfig = {
+/** The default PA as a save from before the horn color (no `hornColor` key). */
+export const defaultConfig = {
   sub: DEFAULT_PA.sub.id,
   mid: DEFAULT_PA.mid.id,
   horn: DEFAULT_PA.horn.id,

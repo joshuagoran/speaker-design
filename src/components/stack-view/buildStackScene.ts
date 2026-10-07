@@ -32,6 +32,8 @@ export interface Props {
   portStyle: PortStyle;
   layout: PaLayout;
   baffleColor: string;
+  /** a paint color (hex) for the horn body; absent or empty: the horn's catalog finish */
+  hornColor?: string;
   /** explicit vent geometry when the cabinet is custom */
   portGeom?: Partial<PaPortGeometry>;
   wall?: number;
@@ -61,6 +63,7 @@ export function buildStackScene({
   portStyle,
   layout,
   baffleColor,
+  hornColor,
   portGeom,
   wall = 0.75,
   inset = 0.75,
@@ -73,7 +76,15 @@ export function buildStackScene({
   subHardware,
   midHardware,
 }: Props): THREE.Group {
-  const ctx = createSceneContext({ wall, inset, cabFinish, baffleColor, cutaway, horn });
+  const ctx = createSceneContext({
+    wall,
+    inset,
+    cabFinish,
+    baffleColor,
+    cutaway,
+    horn,
+    hornColor,
+  });
   const { group } = ctx;
   const s = sub.box;
   if (layout === "tower") {

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { cabinetFinishOf } from "../../lib/data";
-import { HORN_FINISH_COLORS, PARTS_3D } from "../../styles/palette";
-import type { Horn } from "../../types";
+import { hornBodyColor } from "../../lib/pa/hornColor";
+import { PARTS_3D } from "../../styles/palette";
 import type { Props } from "./buildStackScene";
 
 /** What the builders share: the group they add to, the materials, and the cabinet construction. */
@@ -43,11 +43,6 @@ export interface SceneContext {
   cutaway: boolean;
 }
 
-/** A horn body's color: its factory finish, else the printed cream. */
-export function hornBodyColor(horn: Pick<Horn, "finish">): number {
-  return horn.finish ? HORN_FINISH_COLORS[horn.finish] : PARTS_3D.cream;
-}
-
 export function createSceneContext({
   wall,
   inset,
@@ -55,7 +50,8 @@ export function createSceneContext({
   baffleColor,
   cutaway,
   horn,
-}: Pick<Props, "baffleColor" | "cutaway" | "horn"> &
+  hornColor,
+}: Pick<Props, "baffleColor" | "cutaway" | "horn" | "hornColor"> &
   Required<Pick<Props, "wall" | "inset" | "cabFinish">>): SceneContext {
   const finish = cabinetFinishOf(cabFinish);
   const wood = new THREE.MeshStandardMaterial({
@@ -102,7 +98,7 @@ export function createSceneContext({
       })
     : painted;
   const hornShell = new THREE.MeshStandardMaterial({
-    color: hornBodyColor(horn),
+    color: hornBodyColor(horn, hornColor),
     roughness: 0.55,
     side: THREE.DoubleSide,
   });

@@ -1150,6 +1150,8 @@ export interface PaDesignConfig {
   hardware?: PaHardware;
   cutaway?: boolean;
   baffleColor?: string;
+  /** a paint color (hex) for the horn body over its catalog finish; absent: the finish (older saves have none) */
+  hornColor?: string;
   /** a `FinishId`, or a paint color as a hex string (`SwatchPicker` offers both) */
   cabFinish?: string;
   spacerH?: number;

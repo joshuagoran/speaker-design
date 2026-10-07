@@ -21,6 +21,7 @@ import { savedCrossoverOrder } from "../../../constants/crossovers";
 import { savedPortStyle } from "../../../constants/portStyles";
 import { savedStackBraceStyle } from "../../../constants/bracing";
 import { savedHardware } from "../../../lib/pa/hardware";
+import { savedHornColor } from "../../../lib/pa/hornColor";
 import { musicBalanceToSave, savedMusicBalance } from "../../../lib/pa/musicBalance";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../../constants/panelSizes";
 import { isPanelNominal, panelFor, panelIn, savedPanelExactIn } from "../../../lib/panel";
@@ -138,6 +139,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setBaffleInsetIn,
     baffleColor,
     setBaffleColor,
+    hornColor,
+    setHornColor,
     cabinetFinish,
     setCabinetFinish,
     spacerHeightIn,
@@ -292,6 +295,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     hardware,
     cutaway,
     baffleColor,
+    ...(hornColor ? { hornColor } : {}),
     cabFinish: cabinetFinish,
     spacerH: spacerHeightIn,
     joint: cornerJoint,
@@ -346,6 +350,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     // each box's handles; a save from before them: the defaults
     setHardware(savedHardware(c.hardware));
     if (c.baffleColor) setBaffleColor(c.baffleColor);
+    // a save from before the horn color: the horn's catalog finish
+    setHornColor(savedHornColor(c));
     setCabinetFinish(c.cabFinish || DEFAULT_PA.cabFinish);
     setSpacerHeightIn(typeof c.spacerH === "number" ? c.spacerH : DEFAULT_PA.spacerH);
     if (c.joint) setCornerJoint(c.joint);
@@ -425,6 +431,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setBaffleInsetIn,
     baffleColor,
     setBaffleColor,
+    hornColor,
+    setHornColor,
     cabinetFinish,
     setCabinetFinish,
     spacerHeightIn,

@@ -15,6 +15,7 @@ interface Props {
     | "wallThicknessIn"
     | "baffleInsetIn"
     | "baffleColor"
+    | "hornColor"
     | "cabinetFinish"
     | "spacerHeightIn"
     | "midWithBox"
@@ -48,6 +49,7 @@ export function StackViewer({
     wallThicknessIn,
     baffleInsetIn,
     baffleColor,
+    hornColor,
     cabinetFinish,
     spacerHeightIn,
     midWithBox,
@@ -104,6 +106,7 @@ export function StackViewer({
           portStyle={portStyle}
           layout={layout}
           baffleColor={baffleColor}
+          hornColor={hornColor}
           portGeom={portGeom}
           wall={wallThicknessIn}
           inset={baffleInsetIn}

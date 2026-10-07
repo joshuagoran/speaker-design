@@ -22,7 +22,9 @@ import {
   stepsDia,
   stepsLength,
 } from "../src/lib/data";
-import { SCENE_CASE_NAMES, sceneCases } from "./scene-cases";
+import { SCENE_CASE_NAMES, defaultConfig, sceneCases, scenePropsOf } from "./scene-cases";
+import { HORN_COLOR_CATALOG } from "../src/constants/hornColor";
+import { pickedHornColor, savedHornColor } from "../src/lib/pa/hornColor";
 import type { PaLayout } from "../src/types";
 
 /** How close two faces count as touching, in (meshes are faceted, so a contact is never exact). */
@@ -302,6 +304,45 @@ describe("horn finish", () => {
       const colors = hornColors(buildStackScene({ ...base, horn, layout: "stack" }));
       expect(colors.length, horn.id).toBeGreaterThan(0);
       for (const c of colors) expect(c, horn.id).toBe(want);
+    }
+  });
+
+  const black = HORN_OPTIONS.find((h) => h.finish === "black");
+  if (!black) throw new Error("no factory-black horn");
+  const PICKED = "#b23a2f";
+
+  test("a picked horn color overrides the catalog finish", () => {
+    for (const horn of [black, base.horn]) {
+      const colors = hornColors(buildStackScene({ ...base, horn, hornColor: PICKED }));
+      for (const c of colors) expect(c, horn.id).toBe(0xb23a2f);
+    }
+  });
+
+  test("clearing the picked color returns to the catalog finish", () => {
+    for (const cleared of [undefined, "", HORN_COLOR_CATALOG]) {
+      const hornColor = pickedHornColor(cleared);
+      expect(hornColor).toBeUndefined();
+      const colors = hornColors(buildStackScene({ ...base, horn: black, hornColor }));
+      for (const c of colors) expect(c).toBe(PARTS_3D.hornBlack);
+    }
+    // the picker's reset preset, passed straight to the scene, also draws the finish
+    const colors = hornColors(
+      buildStackScene({ ...base, horn: black, hornColor: HORN_COLOR_CATALOG }),
+    );
+    for (const c of colors) expect(c).toBe(PARTS_3D.hornBlack);
+  });
+
+  test("a save from before the horn color loads with the catalog finish", () => {
+    const old = { ...defaultConfig, horn: black.id };
+    expect("hornColor" in old).toBe(false);
+    expect(savedHornColor(old)).toBeUndefined();
+    const colors = hornColors(buildStackScene(scenePropsOf(old)));
+    expect(colors.length).toBeGreaterThan(0);
+    for (const c of colors) expect(c).toBe(PARTS_3D.hornBlack);
+    // a saved color comes back as saved
+    expect(savedHornColor({ hornColor: PICKED })).toBe(PICKED);
+    for (const c of hornColors(buildStackScene(scenePropsOf({ ...old, hornColor: PICKED })))) {
+      expect(c).toBe(0xb23a2f);
     }
   });
 });
