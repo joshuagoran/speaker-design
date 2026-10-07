@@ -90,15 +90,16 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
     <div>
       <SectionHeading className="mb-1">{AMP_POWER_TEXT.heading}</SectionHeading>
       <div className="overflow-x-auto">
-        <table className="text-sm w-full min-w-[740px] table-fixed border-collapse tabular-nums">
+        <table className="text-sm w-full min-w-[760px] table-fixed border-collapse tabular-nums">
           {/* wide enough at the least width that no cell wraps */}
           <colgroup>
             <col className="w-[19%]" />
             <col className="w-[10%]" />
             <col className="w-[10%]" />
             <col className="w-[11%]" />
-            <col className="w-[15%]" />
-            <col className="w-[35%]" />
+            <col className="w-[11%]" />
+            <col className="w-[14%]" />
+            <col className="w-[25%]" />
           </colgroup>
           <thead>
             <tr className="text-stone-500 text-left border-b border-stone-300">
@@ -106,6 +107,7 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
               <th className={`${th} text-right`}>{AMP_POWER_TEXT.avg}</th>
               <th className={`${th} text-right`}>{AMP_POWER_TEXT.peak}</th>
               <th className={`${th} text-right`}>{AMP_POWER_TEXT.maxPeak}</th>
+              <th className={`${th} text-right`}>{AMP_POWER_TEXT.amp}</th>
               <th className={`${th} text-right`}>{AMP_POWER_TEXT.headroom}</th>
               <th className={th}>{AMP_POWER_TEXT.limit}</th>
             </tr>
@@ -117,16 +119,15 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
                 <td className={`${td} text-right`}>{formatWatts(r.avgW)}</td>
                 <td className={`${td} text-right ${tone(r)}`}>{formatWatts(r.peakW)}</td>
                 <td className={`${td} text-right`}>{formatWatts(r.maxPeakW)}</td>
+                {/* the CD's is into its own impedance (`HornResponse.pAmp`) */}
+                <td className={`${td} text-right`}>{formatWatts(r.ampW)}</td>
                 {/* rounded first, so a value just under 0 reads 0.0, never −0.0 */}
                 <td className={`${td} text-right ${tone(r)}`}>
                   {formatSigned(Math.round(r.peakHeadroomDb * 10) / 10)} dB
                 </td>
-                {/* the sub section's "First limit" words, with a capital; the amp's rating where it isn't the limit */}
+                {/* the sub section's "First limit" words, with a capital */}
                 <td className={td}>
-                  <div className="first-letter:uppercase">
-                    {SUB_LIMIT_NAMES[r.who]}
-                    {r.who !== "amp" && `, ${AMP_POWER_TEXT.amp} ${formatWatts(r.ampW)}`}
-                  </div>
+                  <div className="first-letter:uppercase">{SUB_LIMIT_NAMES[r.who]}</div>
                   {/* always there, hidden while the peaks fit, so the rows keep their height */}
                   <div
                     className={`text-xs text-red-700 ${r.pastLimit ? "" : "invisible"}`}

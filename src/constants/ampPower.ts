@@ -24,9 +24,8 @@ export const AMP_POWER_TEXT = {
   avg: "Average",
   peak: "Peak",
   maxPeak: "Max peak",
+  amp: "Amp rating",
   headroom: "Peak headroom",
   limit: "Limit",
-  /** before the amp's rating in a Limit cell the amp doesn't set, e.g. "Cone travel (Xmax), amp 800 W" */
-  amp: "amp",
   crestNote: `Peaks assume club music, ${MUSIC_CREST_DB} dB above average. Max peak is the power at the first limit.`,
 } as const;

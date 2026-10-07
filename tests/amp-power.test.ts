@@ -9,7 +9,7 @@ import {
   powerAtTarget,
   subMax,
 } from "../src/lib/pa/ampPower";
-import { ampVoltage } from "../src/lib/pa/calc";
+import { ampVoltage, hornResponse } from "../src/lib/pa/calc";
 import {
   AMP_POWER_TEXT,
   MUSIC_CREST_DB,
@@ -113,6 +113,17 @@ test("every limit has its own flag", () => {
 test("the horn: its model's power and the amp's power into its impedance", () => {
   const m = hornMax({ P: 120, pAmp: 200, who: "thermal" });
   assert.deepEqual(m, { wAtMax: 120, ampW: 200, who: "thermal" });
+});
+
+test("the amp rating column: a 16 ohm CD on a 100 W (8 ohm) amp gets 50 W", (t) => {
+  const hf = { sens: 108, sensRef: "", aes: 80, aesXo: 1000, minXo: 1000, imp: 16 };
+  const h = hornResponse(hf, {}, 1200, 100, 4);
+  assert.ok(h);
+  const r = channelPower("horn", hornMax(h), 10);
+  close(t, r.ampW, 50, 1e-9);
+  // amp-limited: the max peak is twice the amp's watts into the CD
+  assert.equal(r.who, "amp");
+  close(t, r.maxPeakW, 100, 1e-9);
 });
 
 test("the mid: the lowest drive between the crossovers sets its max, and names the limit", (t) => {
