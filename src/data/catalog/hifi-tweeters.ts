@@ -217,7 +217,7 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
   },
   {
     id: "psd2002",
-    lb: 5.9,
+    lb: 4.7,
     name: "Eminence PSD:2002-8",
     price: 87.99,
     src: "parts-express.com, Sep 2026 (backorder)",
@@ -226,6 +226,6 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     exit: 1,
     faceplate: { diameter: 5.25 },
     needsWaveguide: true,
-    note: '[vendor: PE page, Eminence spec text] US brand. Titanium diaphragm, 2" voice coil, 1" exit. sens is 105 dB 1 W/1 m on an unnamed horn. aes is 80 W EIA-426B with a 1.6 kHz 18 dB high-pass. Crossover: 1.2 kHz at 18 dB/oct or 1.8 kHz at 12 dB/oct. Titanium can sound bright; plan on DSP EQ. lb is the PE shipping weight. Also sold in a screw-on version (PSD:2002S).',
+    note: '[vendor: PE page, Eminence spec text; weight: Eminence datasheet] US brand. Titanium diaphragm, 2" voice coil, 1" exit. sens is 105 dB 1 W/1 m on an unnamed horn. aes is 80 W EIA-426B with a 1.6 kHz 18 dB high-pass. Crossover: 1.2 kHz at 18 dB/oct or 1.8 kHz at 12 dB/oct. Titanium can sound bright; plan on DSP EQ. lb is the 4.7 lb net weight from the Eminence datasheet (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/PSD2002.pdf; 5.0 lb shipping; PE listed 5.9 lb shipping). Also sold in a screw-on version (PSD:2002S).',
   },
 ];

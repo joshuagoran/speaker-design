@@ -13,7 +13,7 @@ import type { CompressionDriver } from "../../types";
 /** The compression driver the planner starts on. */
 export const N314T: CompressionDriver = {
   id: "n314t",
-  lb: 4.8,
+  lb: 5.1,
   name: 'Eminence N314T-8 (1.4")',
   hf: {
     sens: 110.9,
@@ -26,7 +26,7 @@ export const N314T: CompressionDriver = {
   exit: 1.4,
   price: 234.99,
   src: "usspeaker.com, Sep 2026 (Parts Express $249.99)",
-  note: "3 in titanium diaphragm, D3 surround. Minimum crossover 800 Hz at 12 dB/oct, 110 dB, 100 W AES, 4.8 lb. Exit is a 7.3\u00b0 included conical flare, so an ATH throat adapter has to be generated for it \u2014 none published yet. Rated below 1 kHz, like the FaitalPRO HF1440.",
+  note: "3 in titanium diaphragm, D3 surround. Minimum crossover 800 Hz at 12 dB/oct, 110 dB, 100 W AES, 5.1 lb net (5.4 lb shipping) per Eminence's datasheet (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/N314T8.pdf); some retailers list 4.8 lb. Exit is a 7.3\u00b0 included conical flare, so an ATH throat adapter has to be generated for it \u2014 none published yet. Rated below 1 kHz, like the FaitalPRO HF1440.",
 };
 
 export const CD_RAW: readonly CompressionDriver[] = [
@@ -232,7 +232,7 @@ export const CD_RAW: readonly CompressionDriver[] = [
   },
   {
     id: "n151m",
-    lb: 1,
+    lb: 1.7,
     name: 'Eminence N151M (1")',
     hf: {
       sens: 111.5,
@@ -245,6 +245,6 @@ export const CD_RAW: readonly CompressionDriver[] = [
     exit: 1,
     price: 94.99,
     src: "usspeaker.com, Sep 2026",
-    note: 'Ring radiator, 1.8 kHz rec. crossover, 45 W. Too high a crossover for a 12"; listed for price reference only.',
+    note: 'Ring radiator, 1.8 kHz rec. crossover, 45 W, 1.7 lb net per the Eminence datasheet (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/N151M-8.pdf). Too high a crossover for a 12"; listed for price reference only.',
   },
 ];

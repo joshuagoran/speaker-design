@@ -526,10 +526,16 @@ test("a horn that keeps up only below full mid power turns the mid down instead 
 
 test("a mid that keeps up only below full sub power turns the sub down instead of ruling the design out", () => {
   // a 150 W mid amp, locked, asked to match the sub flat out: the subs that go lowest outrun it at full power (the
-  // search used to stop at 41.7 Hz; turned down to where the mid keeps up, a 4018 reaches 36 Hz)
-  const c = { ...pick(SEED_NAMES.lightBlock), tilt: 0, mAmpW: 150 },
+  // search used to stop at 41.7 Hz; turned down to where the mid keeps up, a 4018 reaches 36 Hz). The sub is locked to
+  // the 4018: a low-sensitivity sub such as the Omega Pro-18A reaches as low without outrunning the mid at all.
+  const c = { ...pick(SEED_NAMES.lightBlock), sub: "em4018", tilt: 0, mAmpW: 150 },
     lim = { maxLb: base.maxLb, budget: base.budget };
-  const out = optimizePaStack({ ...base, cur: c, goals: ["lower"], locks: { mAmpW: true } });
+  const out = optimizePaStack({
+    ...base,
+    cur: c,
+    goals: ["lower"],
+    locks: { mAmpW: true, sub: true },
+  });
   const k = out.cards[0];
   assert.ok(k && k.slot.kind === "first", out.goalMissing ?? "no card");
   assert.deepEqual(designProblems(evaluateDesign(k.config), lim), [], "the card passes as it is");
