@@ -379,9 +379,10 @@ const END_PANEL: Record<BoxAxis, readonly [BracePanelId, BracePanelId]> = {
 
 /**
  * The braces a box takes by rule, one move at a time, until every panel's first resonance clears `targetHz` (or
- * nothing more fits or helps). Each move adds the window brace, or the ribs on one panel, that most cuts the panels'
- * summed shortfall under the target per inch³ of wood. Window braces and Ribs keep to their own kind; a panel that
- * kind can't lift stays under the target (braceShortfalls lists it). By style:
+ * nothing more fits or helps). Each move adds the window brace, or sets the ribs on one panel (more of the same, or
+ * ribs the other way in their place), that most cuts the panels' summed shortfall under the target per inch³ of wood.
+ * Window braces and Ribs keep to their own kind; a panel that kind can't lift stays under the target (braceShortfalls
+ * lists it). By style:
  * - window: window braces only (none lifts a panel the driver or the vent keeps every frame off);
  * - ribs: ribs only, on the panels that take them (not the baffle: no rib can cross the driver);
  * - both: the window braces the baffle needs first (no rib can hold it, and once ribs stand where a frame would go no
@@ -625,7 +626,7 @@ export function braceBox({
 
   type Move =
     | { kind: "window"; axis: BoxAxis }
-    | { kind: "rib"; p: BracePanel; across: BoxAxis; k: number };
+    | { kind: "rib"; p: BracePanel; across: BoxAxis; n: number };
   const windowMoves = (scope: readonly BracePanel[]): Move[] =>
     BOX_AXES.filter((a) => {
       if (!scope.some((p) => p.u === a || p.v === a) || !winAt(a, windows[a] + 1)) return false;
@@ -633,24 +634,25 @@ export function braceBox({
     }).map((axis) => ({ kind: "window", axis }));
   // a panel's rib moves depend on its own ribs and the window braces across the axis they divide: listed once each
   const movesMemo = new Map<string, Move[]>();
-  // (only on panels under the target: ribs on one already over it gain nothing)
+  // (only on panels under the target: ribs on one already over it gain nothing). A move sets the panel's ribs: more of
+  // those it has, or ribs the other way in their place, so a first pick the other way never locks a panel out of the
+  // way that lifts it more.
   const ribMoves = (on: readonly BracePanel[]): Move[] =>
     on.flatMap((p) =>
       !p.ribs || evalPanel(p, windows, ribs) >= targetHz - 1e-9
         ? []
         : [p.u, p.v].flatMap((across): Move[] => {
             const cur = ribs[p.id];
-            if (cur && cur.across !== across) return [];
-            const key = `${p.id}${across}${cur?.n ?? 0}|${windows[across]}`;
+            const from = cur && cur.across === across ? cur.n : 0;
+            const key = `${p.id}${across}${from}|${windows[across]}`;
             const hit = movesMemo.get(key);
             if (hit) return hit;
             const span = across === p.u ? p.spanU : p.spanV;
             const fixed = supportsAcross(p, across, windows);
             const out: Move[] = [];
-            for (let k = 1; k <= RIB_BATCH_MAX; k++) {
-              const n = (cur?.n ?? 0) + k;
+            for (let n = from + 1; n <= from + RIB_BATCH_MAX; n++) {
               if (fillGaps(span, fixed, n).narrowest < MIN_BAY_IN - EPS) break;
-              if (ribsAt(p, across, n, windows)) out.push({ kind: "rib", p, across, k });
+              if (ribsAt(p, across, n, windows)) out.push({ kind: "rib", p, across, n });
             }
             movesMemo.set(key, out);
             return out;
@@ -658,15 +660,18 @@ export function braceBox({
     );
   const apply = (m: Move, w: Counts, r: RibState) => {
     if (m.kind === "window") w[m.axis]++;
-    else r[m.p.id] = { across: m.across, n: (r[m.p.id]?.n ?? 0) + m.k };
+    else r[m.p.id] = { across: m.across, n: m.n };
   };
   const short = (hz: number) => Math.max(0, 1 - hz / targetHz);
   const touches = (m: Move, p: BracePanel) =>
     m.kind === "window" ? p.u === m.axis || p.v === m.axis : m.p === p;
+  const ribWood = (p: BracePanel, s: { across: BoxAxis; n: number } | undefined) =>
+    s ? s.n * p.stock.t * RIB_DEPTH_IN * ribLen(p, s.across) : 0;
+  // the wood a move adds; a switch that saves wood counts as almost none, so any gain from it wins
   const wood = (m: Move) =>
     m.kind === "window"
       ? windowWoodIn3(inner, m.axis, t)
-      : m.k * m.p.stock.t * RIB_DEPTH_IN * ribLen(m.p, m.across);
+      : Math.max(EPS, ribWood(m.p, m) - ribWood(m.p, ribs[m.p.id]));
   const phase = (moves: () => Move[], scope: readonly BracePanel[]) => {
     for (let step = 0; step < MAX_BRACE_STEPS; step++) {
       // each panel's resonance now; a move changes only the panels it touches
@@ -679,11 +684,10 @@ export function braceBox({
         if (m.kind === "rib") {
           // only its own panel changes
           const i = scope.indexOf(m.p);
-          if (i >= 0) {
-            const n = (ribs[m.p.id]?.n ?? 0) + m.k;
+          if (i >= 0)
             gain =
-              short(now[i]) - short(evalPanel(m.p, windows, { [m.p.id]: { across: m.across, n } }));
-          }
+              short(now[i]) -
+              short(evalPanel(m.p, windows, { [m.p.id]: { across: m.across, n: m.n } }));
         } else {
           const w = { ...windows, [m.axis]: windows[m.axis] + 1 };
           scope.forEach((p, i) => {

@@ -728,3 +728,27 @@ test("the optimizers' brace estimate stays near the rule over the golden boxes, 
     );
   }
 });
+
+test("ribs: a first pick one way doesn't lock a panel out of the other way when that lifts it more", () => {
+  // ⅝″ walls, a 15″ sub: one rib across the height leaves the sides at 278 Hz and the driver's basket keeps a second
+  // off them; two ribs up the sides (across the depth) clear the target
+  const sub = SUB_OPTIONS.find((s) => s.id === "sbnero15");
+  assert.ok(sub);
+  const b = subBoxBracing(
+    { w: 17, h: 28, d: 18 },
+    0.625,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 14 },
+    sub,
+    "ribs",
+  );
+  for (const id of ["sideL", "sideR"] as const) {
+    assert.ok((b.panels.find((p) => p.id === id)?.hz ?? 0) >= b.targetHz, `${id}: over the target`);
+    assert.deepEqual(
+      b.ribs.filter((r) => r.panel === id).map((r) => r.across),
+      ["z"],
+      `${id}: ribs up the side`,
+    );
+  }
+});
