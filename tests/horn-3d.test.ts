@@ -175,6 +175,20 @@ describe("horn, throat adapter and compression driver", () => {
   });
 });
 
+describe("horn placement", () => {
+  test("every horn's mouth plane is on the box's front plane, in every layout", () => {
+    for (const layout of LAYOUTS) {
+      // the box the horn sits on: the tower's shared shell, else the mid box (both centered on z = 0)
+      const front = (layout === "tower" ? base.sub.box : base.mid.box).d / 2;
+      for (const horn of HORN_OPTIONS) {
+        const hornBox = boxOf(buildStackScene({ ...base, horn, layout }), HORN_MESH_NAME);
+        if (!hornBox) throw new Error(`no horn: ${horn.id}, ${layout}`);
+        expect(Math.abs(hornBox.max.z - front), `${horn.id}, ${layout}`).toBeLessThan(CONTACT_IN);
+      }
+    }
+  });
+});
+
 describe("the driver's L-bracket", () => {
   test("the default horn takes one on its adapter, every horn has one, and the tower has none", () => {
     expect(takesBracket(base.horn.adapter)).toBe(true);

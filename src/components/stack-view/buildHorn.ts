@@ -13,9 +13,6 @@ export const ADAPTER_MESH_NAME = "hornAdapter";
 /** The compression driver's meshes. */
 export const CD_MESH_NAME = "compressionDriver";
 
-/** Outside the tower, the horn's mouth stands this far in front of the mid box's front face. */
-const MOUTH_PROUD_IN = 1;
-
 /**
  * Turned steps along the z axis, front face at `z0`, drawn backward (toward −z) and centered on (x, y). Returns the z
  * of the last step's back face.
@@ -83,9 +80,9 @@ function addThroatParts(
  * The horn, its throat adapter and its compression driver, one set per x. A horn with a profile is that profile turned
  * and stretched to its mouth and depth; the full-width concept (`rect`) is a rectangular flare as wide as the box; any
  * other horn is a rectangular flare at its own mouth and depth. `y` is the base of the horn (the top of the box below)
- * and `mount` the footprint it sits on. In the tower the horn sits on the shared shell instead: `tower` gives its center
- * height, the z of its throat, the mouth width and the section height. Returns the y of the horn envelope's top and
- * each horn's axis.
+ * and `mount` the footprint it sits on (the mid box, or the tower's shell); the mouth plane is on its front plane. In
+ * the tower the horn sits in the shared shell instead: `tower` gives its center height, the mouth width and the section
+ * height. Returns the y of the horn envelope's top and each horn's axis.
  */
 export function buildHorn(
   ctx: SceneContext,
@@ -102,13 +99,13 @@ export function buildHorn(
     y: number;
     xs?: number[];
     mount: Pick<Dims3, "w" | "d">;
-    tower?: { cy: number; z: number; width: number; sectionH: number };
+    tower?: { cy: number; width: number; sectionH: number };
   },
 ): { top: number; axes: HornAxis[] } {
   const { hornShell } = ctx.materials;
   const hz = horn.size;
-  // the throat (the body's back), the mouth `hz.d` in front of it
-  const throatZ = tower ? tower.z : mount.d / 2 + MOUTH_PROUD_IN - hz.d;
+  // every horn's mouth plane on the box's front plane (the frame front, `mount.d / 2`), the throat `hz.d` behind it
+  const throatZ = mount.d / 2 - hz.d;
   const cy = tower ? tower.cy : hornY + HORN_LIFT_IN + hz.h / 2;
   const axes = xs.map((x) => ({ x, y: cy, throatZ }));
   for (const at of axes) {
