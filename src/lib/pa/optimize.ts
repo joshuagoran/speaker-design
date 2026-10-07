@@ -112,7 +112,7 @@ import { UI_TEXT } from "../../constants/uiText";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { panelFor, panelIn, panelNominalNear, savedPanelExactIn } from "../panel";
 import { defaultBraceStyle } from "../bracing";
-import { savedStackBraceStyle } from "../../constants/bracing";
+import { savedBackJoint, savedStackBraceStyle } from "../../constants/bracing";
 import { PA_OPTIMIZER_PANEL } from "../../constants/optimizerPanels";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
@@ -333,6 +333,7 @@ export function evaluateDesign(
     horn = byId(HORN_OPTIONS, c.horn);
   if (!sub || !sub.ts || !mid || !mid.ts || !cd || !horn) return null;
   const braceStyle = paBraceStyle(c);
+  const backJoint = savedBackJoint(c.backJoint);
   const midDims = c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim;
   // boundary: a save from before the slope setting has no orders, and reads as LR24
   const xoLoOrder = savedCrossoverOrder(c.xoLoOrder),
@@ -350,11 +351,13 @@ export function evaluateDesign(
     portMax: c.portMax,
     layout: c.layout,
     braceStyle,
+    backJoint,
     braceEstimate,
   });
   const ms = midSystem(mid, {
     layout: c.layout,
     braceStyle,
+    backJoint,
     braceEstimate,
     midDims,
     wall: c.wall,
@@ -371,7 +374,17 @@ export function evaluateDesign(
       sub.lb,
       braceEstimate
         ? braceWoodEstimate(c.cDim, c.wall, c.inset, braceStyle)
-        : subBoxBracing(c.cDim, c.wall, c.inset, c.portStyle, c.cVent, sub, braceStyle),
+        : subBoxBracing(
+            c.cDim,
+            c.wall,
+            c.inset,
+            c.portStyle,
+            c.cVent,
+            sub,
+            braceStyle,
+            undefined,
+            backJoint,
+          ),
     ),
     midLb =
       midWeightLb(
@@ -379,7 +392,16 @@ export function evaluateDesign(
         c.wall,
         braceEstimate
           ? midBraceEstimate(midDims, c.wall, c.inset, c.layout, braceStyle)
-          : midBoxBracing(midDims, c.wall, c.inset, mid, c.layout, braceStyle),
+          : midBoxBracing(
+              midDims,
+              c.wall,
+              c.inset,
+              mid,
+              c.layout,
+              braceStyle,
+              undefined,
+              backJoint,
+            ),
       ) + (mid.lb || 0);
   if (!s.mdl || !ms.mdl) return null; // a vent or box with no geometry has no model to evaluate
   const subMusic = subMusicOutputAt(s.mdl, s.lim, s.AMP_V, c.xoLo, xoLoOrder);
@@ -1775,6 +1797,7 @@ function card(
     cVent: c.cVent,
     layout: c.layout,
     braceStyle: paBraceStyle(c),
+    backJoint: savedBackJoint(c.backJoint),
   });
   // the quick packing only: the card asks the worker for the exact count afterwards (build.parts and build.cutlist)
   const sheets = layoutCutlist(parts, cl, { countsOnly: true }).groups.map((g) => ({

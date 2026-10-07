@@ -1239,8 +1239,9 @@ export function subHardwarePlan(
   drv: TubeDriver & Pick<SubDriver, "lb">,
   braceStyle: BraceStyleId | undefined,
   handles: BoxHandles,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): BoxHardwarePlan {
-  const bracing = subBoxBracing(box, t, inset, style, v, drv, braceStyle, handles);
+  const bracing = subBoxBracing(box, t, inset, style, v, drv, braceStyle, handles, back);
   return subHardwarePlacement(box, t, inset, style, v, drv, handles, bracing);
 }
 /** The mid box's hardware placed before its braces (as subHardwarePlacement); null in the tower. */
@@ -1282,8 +1283,9 @@ export function midHardwarePlan(
   layout: PaLayout | undefined,
   braceStyle: BraceStyleId | undefined,
   handles: BoxHandles,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): BoxHardwarePlan | null {
-  const bracing = midBoxBracing(box, t, inset, mid, layout, braceStyle, handles);
+  const bracing = midBoxBracing(box, t, inset, mid, layout, braceStyle, handles, back);
   return midHardwarePlacement(box, t, inset, mid, layout, handles, bracing);
 }
 
@@ -1299,6 +1301,7 @@ export function cutParts({
   cVent,
   layout,
   braceStyle,
+  backJoint,
   subOnly,
   noBraces,
   hardware,
@@ -1311,10 +1314,30 @@ export function cutParts({
   const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
     bracing: noBraces
       ? null
-      : subBoxBracing(subBox, t, inset, portStyle, cVent, sub, braceStyle, hardware?.sub),
+      : subBoxBracing(
+          subBox,
+          t,
+          inset,
+          portStyle,
+          cVent,
+          sub,
+          braceStyle,
+          hardware?.sub,
+          backJoint,
+        ),
     hardware: hardware
       ? hardwareCutNotes(
-          subHardwarePlan(subBox, t, inset, portStyle, cVent, sub, braceStyle, hardware.sub),
+          subHardwarePlan(
+            subBox,
+            t,
+            inset,
+            portStyle,
+            cVent,
+            sub,
+            braceStyle,
+            hardware.sub,
+            backJoint,
+          ),
           subBox,
           t,
         )
@@ -1391,9 +1414,10 @@ export function cutParts({
   }
   if (layout !== "tower" && !subOnly) {
     const midPlan =
-      hardware && midHardwarePlan(midDims, t, inset, mid, layout, braceStyle, hardware.mid);
+      hardware &&
+      midHardwarePlan(midDims, t, inset, mid, layout, braceStyle, hardware.mid, backJoint);
     const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
-      bracing: midBoxBracing(midDims, t, inset, mid, layout, braceStyle, hardware?.mid),
+      bracing: midBoxBracing(midDims, t, inset, mid, layout, braceStyle, hardware?.mid, backJoint),
       hardware: midPlan ? hardwareCutNotes(midPlan, midDims, t) : undefined,
       cutNote: cutoutNote(DRIVER_CUTOUT_IN[mid.size]),
     });
@@ -1805,6 +1829,7 @@ export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConf
       cVent: cfg.cVent,
       layout: cfg.layout,
       braceStyle: cfg.braceStyle,
+      backJoint: cfg.backJoint,
       subOnly: true,
       noBraces: cfg.braceEstimate,
       // the ribs keep out of the recesses (subBoxBracing)
@@ -1927,6 +1952,7 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
           cfg.layout,
           cfg.braceStyle,
           cfg.hardware?.mid,
+          cfg.backJoint,
         ),
     recessL,
   );

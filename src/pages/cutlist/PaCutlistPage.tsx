@@ -20,6 +20,7 @@ interface Props {
       | "subVentSpec"
       | "layout"
       | "effectiveBraceStyle"
+      | "backJoint"
       | "hardware"
       | "subHardware"
       | "midHardware"
@@ -40,6 +41,7 @@ export function PaCutlistPage({ planner }: Props) {
     cVent: planner.subVentSpec,
     layout: planner.layout,
     braceStyle: planner.effectiveBraceStyle,
+    backJoint: planner.backJoint,
     hardware: planner.hardware,
   });
   // the parts each box is fitted with, from the catalog (the panels' rows carry their cutouts)

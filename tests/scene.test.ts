@@ -64,6 +64,7 @@ function derivedHeights(p: Props) {
     layout: p.layout,
     wallThicknessIn: p.wall ?? 0.75,
     braceStyle: undefined,
+    backJoint: DEFAULT_PA.backJoint,
     baffleInsetIn: p.inset ?? 0.75,
     spacerHeightIn: p.spacerH ?? 20,
     hardware: DEFAULT_PA.hardware,

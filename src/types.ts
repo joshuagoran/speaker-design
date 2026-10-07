@@ -1106,6 +1106,8 @@ export interface PaDesignConfig {
   inset: number;
   /** how both boxes are braced; absent: the default for the plywood (`defaultBraceStyle`) */
   braceStyle?: BraceStyleId;
+  /** how both boxes' backs are fixed; absent: screwed (`DEFAULT_BACK_JOINT`) */
+  backJoint?: BackJointId;
   /** sub to mid and mid to horn crossovers, Hz */
   xoLo: number;
   xoHi: number;
@@ -1252,6 +1254,8 @@ export interface SubGeometryConfig {
   layout: PaLayout;
   /** absent: the plywood's default (`defaultBraceStyle`) */
   braceStyle?: BraceStyleId;
+  /** absent: screwed (`DEFAULT_BACK_JOINT`) */
+  backJoint?: BackJointId;
   /** an optimizer's search: the braces' wood by its cursory estimate (braceWoodEstimate), not the rule */
   braceEstimate?: boolean;
   /** the boxes' handles and plates, whose recesses take volume (lib/pa/hardware); absent: none */
@@ -1312,7 +1316,7 @@ export type SubSystem = SubSystemUnmodeled | SubSystemModeled;
 export interface MidSystemConfig
   extends
     Pick<SubGeometryConfig, "braceEstimate" | "hardware">,
-    Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder" | "braceStyle"> {
+    Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder" | "braceStyle" | "backJoint"> {
   /** the tower's mid chamber is part of the sub's cabinet and takes no braces of its own; absent: a box of its own */
   layout?: PaLayout;
   midDims: Dims3;
@@ -1728,6 +1732,8 @@ export interface CutPartsConfig {
   layout: PaLayout;
   /** absent: the plywood's default (`defaultBraceStyle`) */
   braceStyle?: BraceStyleId;
+  /** absent: screwed (`DEFAULT_BACK_JOINT`) */
+  backJoint?: BackJointId;
   /** the sub box's parts only (its volume reads no more): the mid box is left out */
   subOnly?: boolean;
   /** the sub's braces and ribs left out (an optimizer's search counts their wood by estimate instead) */

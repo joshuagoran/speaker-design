@@ -47,6 +47,7 @@ import {
   RIB_HALF_LAP_NOTE,
   braceUnderNote,
   driverOnBaffleNote,
+  savedBackJoint,
   LEGACY_SUB_BRACE_STYLE_KEY,
   bracePanelName,
   savedBraceStyle,
@@ -885,4 +886,17 @@ test("short ribs and a short slot: an 18″ driver's basket and a 4″ slot no l
   // the slot's room ends a slot height behind the duct, not at the back
   const slot = keep.vent[0];
   assert.ok(slot.z[1] < paInner(box, 0.5, DEFAULT_PA.inset).z - 1);
+});
+
+test("the back panel setting: a saved choice reads back, anything else is screwed; glued never takes more", () => {
+  assert.equal(savedBackJoint("glued"), "glued");
+  assert.equal(savedBackJoint("screwed"), "screwed");
+  assert.equal(savedBackJoint("nailed"), undefined);
+  assert.equal(DEFAULT_PA.backJoint, "screwed");
+  const d = DEFAULT_PA;
+  const plan = (back: "screwed" | "glued") =>
+    subBoxBracing(d.cDim, 0.5, d.inset, d.portStyle, d.cVent, d.sub, "ribs", undefined, back);
+  const backHz = (b: BoxBracing) => b.panels.find((p) => p.id === "back")?.bareHz ?? NaN;
+  assert.ok(braceWoodIn3(plan("glued")) <= braceWoodIn3(plan("screwed")));
+  assert.ok(backHz(plan("glued")) > backHz(plan("screwed")));
 });

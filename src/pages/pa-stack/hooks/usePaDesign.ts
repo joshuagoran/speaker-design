@@ -19,7 +19,7 @@ import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
 import { savedCutlist } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
 import { savedPortStyle } from "../../../constants/portStyles";
-import { savedStackBraceStyle } from "../../../constants/bracing";
+import { savedBackJoint, savedStackBraceStyle } from "../../../constants/bracing";
 import { savedHardware } from "../../../lib/pa/hardware";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../../constants/panelSizes";
 import { isPanelNominal, panelFor, panelIn, savedPanelExactIn } from "../../../lib/panel";
@@ -133,6 +133,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     braceStyle,
     setBraceStyle,
     effectiveBraceStyle,
+    backJoint,
+    setBackJoint,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,
@@ -222,6 +224,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
         layout,
         wallThicknessIn,
         braceStyle: effectiveBraceStyle,
+        backJoint,
         baffleInsetIn,
         spacerHeightIn,
         hardware,
@@ -250,6 +253,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
       layout,
       wallThicknessIn,
       effectiveBraceStyle,
+      backJoint,
       baffleInsetIn,
       spacerHeightIn,
       hardware,
@@ -280,6 +284,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     divider: ductDividerPanel,
     inset: baffleInsetIn,
     ...(braceStyle ? { braceStyle } : {}),
+    backJoint,
     xoLo: subMidCrossoverHz,
     xoHi: midHornCrossoverHz,
     xoLoOrder: subMidCrossoverOrder,
@@ -312,6 +317,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setBaffleInsetIn(typeof c.inset === "number" ? c.inset : DEFAULT_PA.inset);
     // the stack's style; a save from earlier builds names the sub's instead; neither: the plywood's default
     setBraceStyle(savedStackBraceStyle(c));
+    setBackJoint(savedBackJoint(c.backJoint) ?? DEFAULT_PA.backJoint);
     if (c.sub) setSubDriver(byId(SUB_OPTIONS, c.sub) ?? subDriver);
     if (c.mid) {
       const m = byId(MID_OPTIONS, c.mid) ?? midDriver;
@@ -420,6 +426,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     braceStyle,
     setBraceStyle,
     effectiveBraceStyle,
+    backJoint,
+    setBackJoint,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,
