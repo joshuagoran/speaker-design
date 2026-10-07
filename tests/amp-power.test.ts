@@ -67,6 +67,37 @@ test("the owner's screenshot: an Xmax-limited sub at 7.0 dB, peaks right at Xmax
   assert.equal(PAST_LIMIT_ON_PEAKS[at5.who], "Past Xmax on peaks");
 });
 
+test("max peak: twice the amp's rating amp-limited, twice the model's watts at another limit", (t) => {
+  close(
+    t,
+    channelPower("sub", subMax({ W: 800, who: "amp" }, ampVoltage(800)), 9).maxPeakW,
+    1600,
+    1e-9,
+  );
+  const xmax = channelPower("sub", subMax({ W: 642, who: "Xmax" }, ampVoltage(800)), 9);
+  close(t, xmax.maxPeakW, 1284, 1e-9);
+  close(t, xmax.ampW, 800, 1e-9);
+  close(
+    t,
+    channelPower("horn", hornMax({ P: 70, pAmp: 50, who: "thermal" }), 9).maxPeakW,
+    140,
+    1e-9,
+  );
+});
+
+test("peak headroom reads off the two peak columns, and equals the headroom less about 7 dB", (t) => {
+  // the owner's case: an Xmax-limited sub at 114 W average, 1,140 W peak
+  const max = subMax({ W: 642, who: "Xmax" }, ampVoltage(800));
+  for (const h of [0, 4.5, 7.5, 12]) {
+    const r = channelPower("sub", max, h);
+    close(t, r.peakHeadroomDb, 10 * Math.log10(r.maxPeakW / r.peakW), 1e-9);
+    close(t, r.peakHeadroomDb, h - (MUSIC_CREST_DB - SINE_CREST_DB), 1e-9);
+  }
+  const owner = channelPower("sub", max, 10 * Math.log10(642 / 114));
+  close(t, owner.peakW, 1140, 1e-6);
+  close(t, owner.peakHeadroomDb, 0.5, 0.05);
+});
+
 test("past the limit only once the peak headroom reads below 0.0 dB", () => {
   const max = subMax({ W: 800, who: "amp" }, ampVoltage(800));
   const edge = MUSIC_CREST_DB - SINE_CREST_DB;

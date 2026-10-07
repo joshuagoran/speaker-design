@@ -23,10 +23,10 @@ export const AMP_POWER_TEXT = {
   driver: "Driver",
   avg: "Average",
   peak: "Peak",
-  amp: "Amp rating",
+  maxPeak: "Max peak",
   headroom: "Peak headroom",
   limit: "Limit",
-  crestNote: `Peaks assume club music, ${MUSIC_CREST_DB} dB above average. A rating or a limit is a sine's average: its peaks are twice that. Peak headroom is the dB from the peaks to the limit.`,
-  allAmp: "The amp sets every max: more amp power raises it.",
-  notAmp: "More amp power won't raise the max of:",
+  /** before the amp's rating in a Limit cell the amp doesn't set, e.g. "Cone travel (Xmax), amp 800 W" */
+  amp: "amp",
+  crestNote: `Peaks assume club music, ${MUSIC_CREST_DB} dB above average. Max peak is the power at the first limit.`,
 } as const;
