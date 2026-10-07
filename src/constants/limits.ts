@@ -13,7 +13,7 @@ export const LIMIT_NAMES = {
   amp: "amp",
 } as const;
 
-/** What stops the sub's music level, as the sub section's "First limit" row says it. */
+/** What stops the sub's music level, as the sub section's "First limit" row and the Coverage amp power table say it. */
 export const SUB_LIMIT_NAMES: Record<SubLimitWho, string> = {
   port: "port air speed",
   Xmax: "cone travel (Xmax)",
