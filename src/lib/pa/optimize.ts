@@ -411,6 +411,7 @@ export function evaluateDesign(
       peakX: mm.peakX,
       xoLo: c.xoLo,
       smallerBoxNetL: ms.smallerBoxNetL,
+      isTower: c.layout === "tower",
       ts: mid.ts,
       V: ms.V,
       useV: ms.useV,

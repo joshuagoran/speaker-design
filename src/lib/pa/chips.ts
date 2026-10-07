@@ -272,6 +272,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
     peakX,
     xoLo,
     smallerBoxNetL,
+    isTower,
     ts,
     V,
     useV,
@@ -291,7 +292,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
       "midDriverFit",
     ]);
   // a low Qtc does no harm while the box is flat to the crossover: the highpass sets the low end there. Else it says
-  // what box fixes it, only where a box the driver fits gets there.
+  // what box fixes it, only where a box the driver fits gets there (in the tower, the sub sets the box).
   const qtcHead = `Qtc ${Qtc.toFixed(2)}`;
   F.push(
     Qtc > 0.8
@@ -300,14 +301,16 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
         ? ["ok", qtcHead, "Well damped.", "midQtc"]
         : f3 <= xoLo
           ? ["ok", qtcHead, `Low Qtc. Fine above the ${xoLo} Hz crossover.`, "midQtc"]
-          : smallerBoxNetL != null
-            ? [
-                "warn",
-                qtcHead,
-                `Very damped. A smaller box works: ${qtcFloorAt(smallerBoxNetL)}`,
-                "midQtc",
-              ]
-            : ["warn", qtcHead, "Very damped, even in the smallest box that fits.", "midQtc"],
+          : isTower
+            ? ["warn", qtcHead, "Very damped. The sub's footprint sets this box.", "midQtc"]
+            : smallerBoxNetL != null
+              ? [
+                  "warn",
+                  qtcHead,
+                  `Very damped. A smaller box works: ${qtcFloorAt(smallerBoxNetL)}`,
+                  "midQtc",
+                ]
+              : ["warn", qtcHead, "Very damped, even in the smallest box that fits.", "midQtc"],
   );
   if (f3 > xoLo)
     F.push([

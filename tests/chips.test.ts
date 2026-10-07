@@ -14,6 +14,7 @@ import type {
 } from "../src/types";
 import { chipList, chipOf, findChip } from "./helpers";
 import { crossoverSlopeName } from "../src/constants/crossovers";
+import { qtcFloorAt } from "../src/constants/qtcText";
 
 const kindOf = <I extends ChipId>(F: Chip<I>[], id: NoInfer<I>) => findChip(F, id)?.[0];
 /** whether the check's chip shows, at `kind` when one is given */
@@ -113,6 +114,7 @@ const midBase: MidChipsInput = {
   peakX: 4,
   xoLo: 120,
   smallerBoxNetL: null,
+  isTower: false,
   ts,
   V: Math.sqrt(400 * 8),
   useV: Math.sqrt(400 * 8),
@@ -140,10 +142,14 @@ test("mid: a low Qtc is ok while the box is flat to the crossover", (t) => {
   // rolls off above it: a smaller box only where one the driver fits reaches Qtc 0.5
   const fits = mid({ Qtc: 0.3, f3: 200, smallerBoxNetL: 11 });
   assert.equal(kindOf(fits, "midQtc"), "warn");
-  assert.match(chipOf(fits, "midQtc")[2], /A smaller box works: Qtc 0.5 at 11 L net/);
+  assert.ok(chipOf(fits, "midQtc")[2].endsWith(qtcFloorAt(11)));
   const none = mid({ Qtc: 0.3, f3: 200, smallerBoxNetL: null });
   assert.equal(kindOf(none, "midQtc"), "warn");
   assert.doesNotMatch(chipOf(none, "midQtc")[2], /smaller box works/);
+  // the tower's chamber follows the sub: no smaller box to name
+  const tower = mid({ Qtc: 0.3, f3: 200, smallerBoxNetL: null, isTower: true });
+  assert.equal(kindOf(tower, "midQtc"), "warn");
+  assert.match(chipOf(tower, "midQtc")[2], /sub's footprint/);
 });
 test("mid: driver fit needs size + 1.2 in", (t) => {
   has(t, mid({ midDims: { w: 13.2, h: 15, d: 15 } }), "midDriverFit", false);
