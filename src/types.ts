@@ -234,6 +234,9 @@ export interface HornHf {
   lowHz: number;
 }
 
+/** A horn's factory finish in the 3-D view (`HORN_FINISH_COLORS`). */
+export type HornFinish = "black";
+
 export interface Horn {
   id: string;
   lb: number;
@@ -249,6 +252,8 @@ export interface Horn {
   adapter?: HornAdapter;
   /** a rectangular mouth */
   rect?: boolean;
+  /** the factory finish of a horn that ships painted; absent: drawn in the printed cream */
+  finish?: HornFinish;
   price: number;
   src: string;
   /** the mouth's width and height and the body's depth (without the adapter), in */

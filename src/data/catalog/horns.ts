@@ -10,7 +10,8 @@
 // drivers), xo (suggested crossover, text), note; `hf` (omit when nothing is published): covH / covV degrees,
 // minXo Hz (the maker's lowest crossover, null if none), lowHz (pattern-control limit, Hz). Optional: profile
 // ([radius, depth] points, in; the 3-D view stretches it to `size`), adapter (the throat adapter: name, steps
-// [diameter, length] front to back, body and driver bolt circles, in), rect for the full-width rectangular concept.
+// [diameter, length] front to back, body and driver bolt circles, in), rect for the full-width rectangular concept,
+// finish ("black" for a horn that ships painted, as cast Lavoce, B&C and RCF horns do; omit it for a printed horn).
 // A horn without a profile is drawn as a rectangular flare at its mouth and depth.
 import type { HifiWaveguide, Horn, HornAdapter, HornProfilePoint } from "../../types";
 
@@ -191,6 +192,7 @@ export const HORN_RAW: readonly Horn[] = [
     name: "B&C ME90",
     hf: { covH: 80, covV: 60, minXo: null, lowHz: 900 },
     exit: 1.4,
+    finish: "black",
     price: 114.48,
     src: "usspeaker.com, Sep 2026",
     size: { w: 10.6, h: 10.6, d: 138 / 25.4 },
@@ -204,6 +206,7 @@ export const HORN_RAW: readonly Horn[] = [
     name: "RCF HF950",
     hf: { covH: 90, covV: 50, minXo: null, lowHz: 400 },
     exit: 1.4,
+    finish: "black",
     price: 169,
     src: "usspeaker.com, Sep 2026",
     size: { w: 11.8, h: 11.8, d: 8.2 },
@@ -217,6 +220,7 @@ export const HORN_RAW: readonly Horn[] = [
     name: "RCF HF94",
     hf: { covH: 90, covV: 40, minXo: null, lowHz: 500 },
     exit: 1.4,
+    finish: "black",
     price: 159,
     src: "usspeaker.com, Sep 2026",
     size: { w: 9.84, h: 9.84, d: 5.6 },
@@ -230,6 +234,7 @@ export const HORN_RAW: readonly Horn[] = [
     name: "Lavoce HD1403",
     hf: { covH: 80, covV: 60, minXo: null, lowHz: 900 },
     exit: 1.4,
+    finish: "black",
     price: 69,
     src: "parts-express.com, Sep 2026",
     size: { w: 11, h: 10.6, d: 4.5 },

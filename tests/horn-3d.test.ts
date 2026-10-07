@@ -13,6 +13,7 @@ import {
   takesBracket,
 } from "../src/components/stack-view/buildBracket";
 import { HARDWARE_MESH_NAME } from "../src/components/stack-view/buildHardware";
+import { PARTS_3D } from "../src/styles/palette";
 import {
   CD_OPTIONS,
   HORN_OPTIONS,
@@ -278,4 +279,29 @@ test("an adapter neck below the upright's top edge leaves the upright un-notched
     ...meshesNamed(g, BRACKET_MESH_NAME).map((m) => new THREE.Box3().setFromObject(m).max.y),
   );
   expect(tallest).toBeCloseTo(axisY + top, 6);
+});
+
+/** The body color of the scene's horn meshes, as hex. */
+function hornColors(group: THREE.Group) {
+  return meshesNamed(group, HORN_MESH_NAME).map((m) => {
+    if (!(m.material instanceof THREE.MeshStandardMaterial)) throw new Error("horn material");
+    return m.material.color.getHex();
+  });
+}
+
+describe("horn finish", () => {
+  const COMMERCIAL = ["Lavoce", "B&C", "RCF"];
+  const isCommercial = (name: string) => COMMERCIAL.some((maker) => name.startsWith(`${maker} `));
+
+  test("Lavoce, B&C and RCF horns are drawn factory black; printed horns stay cream", () => {
+    for (const maker of COMMERCIAL) {
+      expect(HORN_OPTIONS.some((h) => h.name.startsWith(`${maker} `))).toBe(true);
+    }
+    for (const horn of HORN_OPTIONS) {
+      const want = isCommercial(horn.name) ? PARTS_3D.hornBlack : PARTS_3D.cream;
+      const colors = hornColors(buildStackScene({ ...base, horn, layout: "stack" }));
+      expect(colors.length, horn.id).toBeGreaterThan(0);
+      for (const c of colors) expect(c, horn.id).toBe(want);
+    }
+  });
 });

@@ -73,7 +73,7 @@ export function buildStackScene({
   subHardware,
   midHardware,
 }: Props): THREE.Group {
-  const ctx = createSceneContext({ wall, inset, cabFinish, baffleColor, cutaway });
+  const ctx = createSceneContext({ wall, inset, cabFinish, baffleColor, cutaway, horn });
   const { group } = ctx;
   const s = sub.box;
   if (layout === "tower") {

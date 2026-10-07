@@ -3,7 +3,7 @@
 // the active theme's palette with usePalette() (src/hooks/useTheme.ts). Nothing else in the project writes a color literal,
 // except three that show real things, the same in both themes: the favicon (index.html), the custom color picker's
 // rainbow ring (SwatchPicker) and the cabinet finish data (src/data/catalog/finishes.ts, the default baffle paint).
-import type { ThemeName } from "../types";
+import type { HornFinish, ThemeName } from "../types";
 
 export interface StatusColor {
   tint: string;
@@ -121,8 +121,13 @@ export const STAGE: Record<
 export const PARTS_3D = {
   /** cones, surrounds, throats, stands and rods */
   black: 0x1c1c1c,
-  /** horn bodies */
+  /** printed horn bodies */
   cream: 0xece4c8,
+  /**
+   * factory-black horn bodies (cast, painted): near black, but lighter than the dark stage's floor so the flare still
+   * reads against it
+   */
+  hornBlack: 0x3a3c40,
   /** the cabinet shell in the cutaway, a ghost of clear birch */
   ghost: 0xd7b98a,
   /** port tubes */
@@ -141,6 +146,9 @@ export const PARTS_3D = {
   /** the scale figure beside the stack, drawn semi-transparent */
   figure: 0x8b847d,
 } as const;
+
+/** Each horn finish's body color in the 3-D view, the same in both themes. */
+export const HORN_FINISH_COLORS: Record<HornFinish, number> = { black: PARTS_3D.hornBlack };
 
 /** A color with transparency, for chart tints and shadows. */
 export const alpha = (hex: string, a: number) => {
