@@ -12,7 +12,7 @@
 // ([radius, depth] points, in; the 3-D view stretches it to `size`), adapter (the throat adapter: name, steps
 // [diameter, length] front to back, body and driver bolt circles, in), rect for the full-width rectangular concept.
 // A horn without a profile is drawn as a rectangular flare at its mouth and depth.
-import type { HifiWaveguide, Horn, HornProfilePoint } from "../../types";
+import type { HifiWaveguide, Horn, HornAdapter, HornProfilePoint } from "../../types";
 
 export const ST260_PROFILE: readonly HornProfilePoint[] = [
   [1.89, 0.0],
@@ -131,6 +131,19 @@ export const ST260: HifiWaveguide = {
   note: "Round free-standing waveguide, ~110° coverage. No cabinet-width constraint. Drawn from the ST260-19.stl cross-section (260 mm mouth).",
 };
 
+/** The 1 in Gen2 throat adapter: 25.4 mm in, 61 mm long (at-horns.eu). */
+const T520_25_STD_1: HornAdapter = {
+  name: "T520-25-STD-1",
+  // GUESS: the front flange, neck and rear flange diameters and the split of the length.
+  steps: [
+    [5.6, 0.35],
+    [2.6, 61 / 25.4 - 0.85],
+    [4.0, 0.5],
+  ],
+  bodyBoltCircle: 102 / 25.4,
+  driverBoltCircle: 76 / 25.4,
+};
+
 /** The horn the PA planner starts on. */
 export const A460G2_14: Horn = {
   id: "a460g2_14",
@@ -234,17 +247,7 @@ export const HORN_RAW: readonly Horn[] = [
     profile: ST260_PROFILE,
     price: 60,
     src: "free STL from at-horns.eu; ~$60 filament, more via service",
-    adapter: {
-      name: "T520-25-STD-1",
-      // 25.4 mm in, 61 mm long (at-horns.eu). GUESS: the front flange, neck and rear flange diameters and the split of the length.
-      steps: [
-        [5.6, 0.35],
-        [2.6, 61 / 25.4 - 0.85],
-        [4.0, 0.5],
-      ],
-      bodyBoltCircle: 102 / 25.4,
-      driverBoltCircle: 76 / 25.4,
-    },
+    adapter: T520_25_STD_1,
     size: { w: 15.75, h: 15.75, d: 130 / 25.4 },
     driver: "Faital HF108 / B&C DE360 / Lavoce DF10.171K",
     xo: "800–1000 Hz",
@@ -260,17 +263,7 @@ export const HORN_RAW: readonly Horn[] = [
     profile: ST260_PROFILE,
     price: 80,
     src: "free STL from at-horns.eu; ~$80 filament, more via service",
-    adapter: {
-      name: "T520-25-STD-1",
-      // 25.4 mm in, 61 mm long (at-horns.eu). GUESS: the front flange, neck and rear flange diameters and the split of the length.
-      steps: [
-        [5.6, 0.35],
-        [2.6, 61 / 25.4 - 0.85],
-        [4.0, 0.5],
-      ],
-      bodyBoltCircle: 102 / 25.4,
-      driverBoltCircle: 76 / 25.4,
-    },
+    adapter: T520_25_STD_1,
     size: { w: 18.1, h: 18.1, d: 160 / 25.4 },
     driver: '1" or 1.4" via adapter; measured pairings on at-horns.eu',
     xo: "600–800 Hz",
