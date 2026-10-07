@@ -329,4 +329,26 @@ export const CD_RAW: readonly CompressionDriver[] = [
     src: "usspeaker.com, Sep 2026",
     note: 'Ring radiator, 1.8 kHz rec. crossover, 45 W, 1.7 lb net per the Eminence datasheet (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/N151M-8.pdf). Too high a crossover for a 12"; listed for price reference only. Body: ⌀3.6 × 1.45 in, 2× 1/4-20 on a 3.0 in circle (eminence.com).',
   },
+  {
+    id: "n320t",
+    lb: 5.5,
+    name: 'Eminence N320T-8 (2")',
+    hf: {
+      sens: 110.4,
+      sensRef: "Eminence's averaged 1 W/1 m figure (no horn named)",
+      aes: 100,
+      aesXo: 800,
+      minXo: 800,
+      imp: 8,
+    },
+    exit: 2,
+    body: {
+      dia: 5.72,
+      depth: 3.1,
+      bolts: { n: 4, thread: "1/4-20", circle: 4 },
+    },
+    price: 252.99,
+    src: "Parts Express, Oct 2026",
+    note: "[Eminence datasheet, Oct 2026] (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/N320T8.pdf) The 2\u2033-exit sibling of the N314T: the same 3 in titanium diaphragm with D3, neodymium, copper shorting ring, 100 W AES at 800 Hz 12 dB/oct, recommended crossover 800 Hz / 12 dB, 800 Hz\u201320 kHz, 110.4 dB, 521 Hz resonance, 5.5 lb net (5.8 lb shipping). Eminence doesn't call it a 2\u2033 N314T; the shared specs and body say so. The sensitivity's horn or averaging band is not stated on the datasheet page. Exit flare angle not published. Pairs only with 2\u2033 horns (the B&C ME75 here). Body: \u23005.72 \u00d7 3.10 in, 2 in exit, 4\u00d7 1/4-20 on a 4.00 in circle (Eminence datasheet), the N314T's pattern; no photo-derived steps, so it is drawn as the generic stepped body.",
+  },
 ];
