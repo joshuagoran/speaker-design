@@ -567,14 +567,17 @@ test("the mids are chosen with the horn in view: a dearer mid the horn keeps up 
   assert.ok(k.metrics.out >= out.target - 0.5, "and keeps the target");
   assert.ok(out.curM, "the design evaluates");
   // lighter by the label's 3 lb as the search counts the braces (an estimate); the card's own braces, by the rule, can
-  // weigh a fraction of a pound more
+  // weigh up to BRACE_ESTIMATE_SLACK_LB more
   assert.ok(
     k.metrics.heaviest <= out.curM.heaviest - 3 + BRACE_ESTIMATE_SLACK_LB,
     `${k.metrics.heaviest.toFixed(2)} lb, the design ${out.curM.heaviest.toFixed(2)} lb`,
   );
 });
-/** How far a card's weight with its braces by the rule may sit from the search's, with them by estimate, lb. */
-const BRACE_ESTIMATE_SLACK_LB = 0.5;
+/**
+ * How far a card's weight with its braces by the rule may sit from the search's, with them by estimate, lb: the
+ * estimate's largest error over the golden boxes in ¾″ ply (1.4 L of wood, tests/bracing.test.ts), at ¾″ birch.
+ */
+const BRACE_ESTIMATE_SLACK_LB = 1.7;
 
 test("the PA optimizers design in their one plywood size, at its measured thickness, whatever your design's", () => {
   // your design in ½″, with ¾″ measured at 18 mm: every card, quick and exact, comes back in ¾″ at that thickness
