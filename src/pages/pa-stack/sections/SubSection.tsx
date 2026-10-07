@@ -22,6 +22,7 @@ interface Props {
     | "format"
     | "subBox"
     | "PT"
+    | "baffleInsetIn"
     | "port"
     | "subGrossLiters"
     | "subAmpVoltage"
@@ -44,6 +45,7 @@ export function SubSection({ planner, summary }: Props) {
     format,
     subBox,
     PT,
+    baffleInsetIn,
     port,
     subGrossLiters,
     subAmpVoltage,
@@ -123,6 +125,7 @@ export function SubSection({ planner, summary }: Props) {
                 portStyle,
                 cVent: subVentSpec,
                 PT,
+                inset: baffleInsetIn,
                 subLbLoaded: subWeightLoadedLb,
                 lim: subModeled.lim,
                 peakXF: subModeled.mdl.peakXF,

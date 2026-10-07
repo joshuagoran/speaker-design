@@ -21,10 +21,15 @@ import {
   braceWoodIn3,
   SUB_FIXINGS_LB,
   MID_FIXINGS_LB,
+  rectangleEndCorrection,
+  sideDuctEndCorrection,
+  slotMouthCorrection,
 } from "../src/lib/pa/calc";
 import { defaultBraceStyleNear } from "../src/lib/bracing";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { ductFit } from "../src/lib/pa/chips";
+import { subTubeLegs, subTubeSpan } from "../src/lib/pa/tubes";
+import { TUBE_FLARE_RADIUS_IN } from "../src/data/acoustics/tube-ends";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";
 import { close, vent, DRV18 } from "./helpers";
 import { subWoodIn3, ventShape } from "../src/lib/pa/exactSub";
@@ -42,6 +47,7 @@ test("ventGeom: letterbox area = slot height x inner width less two fins", (t) =
     { w: 22, h: 30, d: 20 },
     vent({ slotH: 3, len: 14 }),
     0.75,
+    0.75,
     DRV18,
   );
   close(t, g.area, 3 * (22 - 1.5 - 1.5), 1e-9);
@@ -53,12 +59,14 @@ test("ventGeom: side ducts = throat x inner height less dividers, one opening ea
     { w: 22, h: 30, d: 20 },
     vent({ throat: 2, len: 16 }),
     0.75,
+    0.75,
     DRV18,
   );
   close(t, g2.area, 2 * 2 * (28.5 - 1), 1e-9);
   assert.equal(g2.n, 2);
   assert.equal(
-    ventGeometry("vslot1", { w: 22, h: 30, d: 20 }, vent({ throat: 2, len: 16 }), 0.75, DRV18).n,
+    ventGeometry("vslot1", { w: 22, h: 30, d: 20 }, vent({ throat: 2, len: 16 }), 0.75, 0.75, DRV18)
+      .n,
     1,
   );
 });
@@ -67,6 +75,7 @@ test("ventGeom: round tubes = n circles, n openings", (t) => {
     "round2",
     { w: 20, h: 24, d: 16 },
     vent({ nt: 2, dia: 3.5, len: 14 }),
+    0.75,
     0.75,
     DRV18,
   );
@@ -168,7 +177,7 @@ test("folded slot: the longest fold leaves a slot height under the lid, in the f
   close(t, maxFoldedRearWallIn(box, slotH, t0), 22.5, 1e-12);
   const longest = maxFoldedSlotIn(box, slotH, t0);
   close(t, longest, 20 - 0.75 + 22.5, 1e-12);
-  close(t, ductFit(box, "slots", vent({ slotH, len: 0 }), t0, DRV18).maxFold, longest, 1e-12);
+  close(t, ductFit(box, "slots", vent({ slotH, len: 0 }), t0, 0.75, DRV18).maxFold, longest, 1e-12);
   for (const len of [longest, longest + 5]) {
     const v = vent({ slotH, len });
     close(t, foldedRearWallIn(box, v, t0), 22.5, 1e-12);
@@ -283,7 +292,7 @@ test("duct dividers: a thicker divider comes out of the side ducts' open area, n
   close(t, half.ductL - threeQ.ductL, moved, 1e-9);
   close(t, threeQ.netL, half.netL, 1e-9);
   // the exact sub model agrees: the same area and the same extra wood
-  close(t, ventShape("vslots", box, cVent(0.75), wall, DRV18).area, threeQ.port.area, 1e-9);
+  close(t, ventShape("vslots", box, cVent(0.75), wall, 0.75, DRV18).area, threeQ.port.area, 1e-9);
   close(
     t,
     subWoodIn3("vslots", box, wall, inset, cVent(0.75), undefined) -
@@ -313,4 +322,81 @@ test("duct dividers: a thicker divider comes out of the side ducts' open area, n
   );
   // a vent without a divider thickness (saves from before the choice) is at ½″
   assert.equal(ductDividerIn({}), 0.5);
+});
+test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap from the back wall", (t) => {
+  // tubes run from the baffle front (`inset` behind the frame front); bottom slots and side ducts run from the frame
+  // front, and their shelves run into the box's air behind the 3/4″ baffle: that run and the mouth's gap add up to the
+  // box's inside depth
+  const box = { w: 24, h: 32, d: 20 },
+    wall = 0.75,
+    baffle = 0.75,
+    back = box.d - wall; // the back wall's inside face, from the frame front
+  for (const inset of [0, 0.75, 1.5]) {
+    const at = `inset ${inset}`;
+    for (const style of ["round1", "round2", "round4"] as const) {
+      const v = vent({ nt: style === "round1" ? 1 : style === "round2" ? 2 : 4, dia: 4, len: 0 });
+      const straight = ductFit(box, style, v, wall, inset, DRV18).ways[0].span[1];
+      const legs = subTubeLegs(box, style, { ...v, len: straight }, wall, inset, DRV18, 0);
+      // a straight tube's mouth is a diameter from the back wall, and the model's gap is that one
+      close(t, back - (inset + straight), v.dia, 1e-12, `${style} ${at}`);
+      close(t, legs.gap, v.dia, 1e-12, `${style} ${at}`);
+      if (style === "round4") continue;
+      // an elbowed tube's riser stands against the back wall, a flare's reach off it
+      const span = subTubeSpan(box, style, v, wall, inset, DRV18, 1);
+      assert.ok(span, `${style} ${at}: one elbow fits`);
+      const up = subTubeLegs(box, style, { ...v, len: span[1] }, wall, inset, DRV18, 1);
+      close(t, inset + up.run + v.dia / 2 + TUBE_FLARE_RADIUS_IN, back, 1e-12, `${style} ${at}`);
+      // with two elbows (in a deeper box) the riser has no mouth, so it stands a radius off the back wall, and the
+      // return leg runs a radius and a flare under the lid
+      const deep = { ...box, d: 24 };
+      const span2 = subTubeSpan(deep, style, v, wall, inset, DRV18, 2);
+      assert.ok(span2, `${style} ${at}: two elbows fit`);
+      const two = subTubeLegs(deep, style, { ...v, len: span2[1] }, wall, inset, DRV18, 2);
+      close(t, inset + two.run + v.dia / 2, deep.d - wall, 1e-12, `${style} ${at}`);
+      close(
+        t,
+        2 * wall +
+          v.dia / 2 +
+          TUBE_FLARE_RADIUS_IN +
+          0.25 +
+          two.rise +
+          v.dia / 2 +
+          TUBE_FLARE_RADIUS_IN,
+        box.h,
+        1e-12,
+        `${style} ${at}`,
+      );
+    }
+    const inD = back - inset - baffle; // the box's inside depth, behind the baffle
+    // a straight bottom slot's mouth is a slot height from the back wall; its shelf runs the rest of the inside depth
+    const slot = vent({ slotH: 3, len: 0 });
+    const slotLen = ductFit(box, "slots", slot, wall, inset, DRV18).maxStraight;
+    close(t, back - slotLen, slot.slotH, 1e-12, `slots ${at}`);
+    close(
+      t,
+      ventGeometry("slots", box, { ...slot, len: slotLen }, wall, inset, DRV18).ec,
+      rectangleEndCorrection(2 * slot.slotH, box.w - 4 * wall) +
+        slotMouthCorrection(slot.slotH, box.h - 2 * wall, slot.slotH, wall, inD - slot.slotH),
+      1e-12,
+      `slots ${at}`,
+    );
+    // a side duct's mouth is a throat from the back wall; its inner wall runs the rest of the inside depth
+    const duct = vent({ throat: 2.5, len: 0 });
+    const ductLen = ductFit(box, "vslots", duct, wall, inset, DRV18).maxSide;
+    close(t, back - ductLen, duct.throat, 1e-12, `vslots ${at}`);
+    close(
+      t,
+      sideDuctEndCorrection(box, { ...duct, len: ductLen }, wall, inset, 2),
+      rectangleEndCorrection(duct.throat, 2 * (box.h - 2 * wall - 2 * ductDividerIn(duct))) +
+        slotMouthCorrection(
+          duct.throat,
+          (box.w - 2 * wall) / 2,
+          duct.throat,
+          wall,
+          inD - duct.throat,
+        ),
+      1e-12,
+      `vslots ${at}`,
+    );
+  }
 });

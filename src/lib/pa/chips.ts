@@ -41,13 +41,15 @@ import {
 // while it fits (maxStraight) and folds up the back wall past that, so it holds the longer of the two; a fold is never
 // shorter than its floor run plus the least rise (minFold), so the lengths between the two fit neither way, nor longer
 // than leaves a slot height under the lid (maxFold). Round tubes run straight, then take one elbow up the back wall and
-// a second forward under the lid (lib/pa/tubes), each count with its own lengths (`ways`, labeled for the chip).
+// a second forward under the lid (lib/pa/tubes), each count with its own lengths (`ways`, labeled for the chip); they run
+// from the baffle front, `inset` behind the frame front, where the slots and side ducts run from the frame front.
 // `spans` lists the lengths that fit, shortest first.
 export function ductFit(
   subBox: Dims3,
   portStyle: PortStyle,
   cVent: VentSpec,
   PT: number,
+  inset: number,
   drv: TubeDriver,
 ) {
   const inD = subBox.d - PT,
@@ -64,7 +66,7 @@ export function ductFit(
         ].filter(({ span: [a, b] }) => b >= a)
       : isRoundPort(portStyle)
         ? ELBOW_COUNTS.flatMap((e) => {
-            const span = subTubeSpan(subBox, portStyle, cVent, PT, drv, e);
+            const span = subTubeSpan(subBox, portStyle, cVent, PT, inset, drv, e);
             return span ? [{ span, what: TUBE_WAYS[e] }] : [];
           })
         : [{ span: [0, maxSide] as const, what: "a side duct" }];
@@ -74,7 +76,7 @@ export function ductFit(
   // a tube's counts are cut to where each is the fewest that fit (the model's count), a slider step past the fewer
   const tune: (readonly [number, number])[] = isRoundPort(portStyle)
     ? ownSpans(
-        ELBOW_COUNTS.map((e) => subTubeSpan(subBox, portStyle, cVent, PT, drv, e)),
+        ELBOW_COUNTS.map((e) => subTubeSpan(subBox, portStyle, cVent, PT, inset, drv, e)),
         PA_SLIDERS.ductLen.step,
       ).map((w) => w.span)
     : ways.map((w) => w.span);
@@ -89,6 +91,7 @@ export function ductFitMax(
   portStyle: PortStyle,
   cVent: VentSpec,
   PT: number,
+  inset: number,
   drv: TubeDriver,
 ) {
   if (portStyle === "slots") {
@@ -102,7 +105,7 @@ export function ductFitMax(
   if (!isRoundPort(portStyle)) return Math.max(0, subBox.d - PT - cVent.throat);
   let fit = 0;
   for (const e of ELBOW_COUNTS) {
-    const span = subTubeSpan(subBox, portStyle, cVent, PT, drv, e);
+    const span = subTubeSpan(subBox, portStyle, cVent, PT, inset, drv, e);
     if (span) fit = Math.max(fit, span[1]);
   }
   return fit;
@@ -122,12 +125,13 @@ export const ductLenSliderMax = (
   portStyle: PortStyle,
   cVent: VentSpec,
   PT: number,
+  inset: number,
   drv: TubeDriver,
 ) =>
   portStyle === "slots"
     ? Math.max(PA_SLIDERS.ductLen.max, maxFoldedSlotIn(subBox, cVent.slotH, PT))
     : isRoundPort(portStyle)
-      ? Math.max(PA_SLIDERS.ductLen.max, ductFit(subBox, portStyle, cVent, PT, drv).fit)
+      ? Math.max(PA_SLIDERS.ductLen.max, ductFit(subBox, portStyle, cVent, PT, inset, drv).fit)
       : PA_SLIDERS.ductLen.max;
 /** Whether a duct `len` long fits the layout: inside one of ductFit's spans. */
 export const ductFits = (spans: ReturnType<typeof ductFit>["spans"], len: number) =>
@@ -174,8 +178,20 @@ const THERMALLY_LIMITED = "Thermally limited";
 
 // s: { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW }
 export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
-  const { subSize, subDepthIn, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW } =
-    s;
+  const {
+    subSize,
+    subDepthIn,
+    subBox,
+    portStyle,
+    cVent,
+    PT,
+    inset,
+    subLbLoaded,
+    lim,
+    peakXF,
+    aes,
+    ampW,
+  } = s;
   const sub = { size: subSize, depthIn: subDepthIn };
   const F: Chip<ChipId<"sub">>[] = [];
   const need = subDriverClearanceNeededIn(subSize);
@@ -187,7 +203,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       `Needs ${need.toFixed(1)}″ of clear baffle. The vents leave ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`,
       "subDriverFit",
     ]);
-  const { fit, spans, ways } = ductFit(subBox, portStyle, cVent, PT, sub);
+  const { fit, spans, ways } = ductFit(subBox, portStyle, cVent, PT, inset, sub);
   if (cVent.len > fit)
     F.push([
       "bad",

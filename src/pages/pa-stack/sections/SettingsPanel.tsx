@@ -224,7 +224,14 @@ export function SettingsPanel({ planner }: Props) {
   );
   // the duct lengths that fit: a bottom slot straight, then folded up the back wall; round tubes straight, then with one
   // or two elbows (the lengths between fit neither way, and the slider skips them)
-  const ductLens = ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn, subDriver);
+  const ductLens = ductFit(
+    subBoxDims,
+    portStyle,
+    subVentSpec,
+    wallThicknessIn,
+    baffleInsetIn,
+    subDriver,
+  );
   const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
   // a note under the Bracing setting for each panel a box's bracing leaves under the target, naming the box and the panel
   const braceNotes = [
@@ -434,6 +441,7 @@ export function SettingsPanel({ planner }: Props) {
                   portStyle,
                   subVentSpec,
                   wallThicknessIn,
+                  baffleInsetIn,
                   subDriver,
                 )}
                 step={PA_SLIDERS.ductLen.step}

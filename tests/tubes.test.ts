@@ -90,7 +90,7 @@ test("tube end correction: flanged and free ends less the flares, the wall, the 
   const one = vent({ nt: 1, dia: 4, len: 10 });
   const r = 2,
     R = r + TUBE_FLARE_RADIUS_IN;
-  const straight = subTubeEndCorrection(box, "round1", one, 0.75, DRV18, 0);
+  const straight = subTubeEndCorrection(box, "round1", one, 0.75, 0.75, DRV18, 0);
   // a lone straight tube: 0.85 r and 0.61 r at the flared mouths' size, the flares' own shortfall, the back wall
   const gap = 21 - 0.75 - 0.75 - 10;
   const ends = (0.85 + 0.61) * r * (r / R) + tubeWallEndCorrection(r, gap);
@@ -103,15 +103,15 @@ test("tube end correction: flanged and free ends less the flares, the wall, the 
   close(null, tubeWallEndCorrection(1, TUBE_WALL_END.gapOverR[1]), TUBE_WALL_END.ecOverR[1], 1e-12);
   // each elbow takes the sharp bend's correction (its mouth's gap changes too, so compare at one length and gap)
   const elbowed = vent({ nt: 1, dia: 4, len: 30 });
-  const e1 = subTubeEndCorrection(box, "round1", elbowed, 0.75, DRV18, 1);
-  const e0 = subTubeEndCorrection(box, "round1", { ...elbowed, len: 10 }, 0.75, DRV18, 0);
+  const e1 = subTubeEndCorrection(box, "round1", elbowed, 0.75, 0.75, DRV18, 1);
+  const e0 = subTubeEndCorrection(box, "round1", { ...elbowed, len: 10 }, 0.75, 0.75, DRV18, 0);
   assert.ok(e1 - e0 < SHARP_BEND_CORRECTION * 4 + 0.2, `${e1} vs ${e0}`);
   // a second tube beside it adds the mutual mass of the two mouths
-  const two = subTubeEndCorrection(box, "round2", { ...one, nt: 2 }, 0.75, DRV18, 0);
+  const two = subTubeEndCorrection(box, "round2", { ...one, nt: 2 }, 0.75, 0.75, DRV18, 0);
   assert.ok(two > straight);
   // the planner's vent carries it, and the fewest elbows that fit
-  const g = ventGeometry("round1", box, elbowed, 0.75, DRV18);
-  assert.equal(g.elbows, modelTubeElbows(box, "round1", elbowed, 0.75, DRV18));
+  const g = ventGeometry("round1", box, elbowed, 0.75, 0.75, DRV18);
+  assert.equal(g.elbows, modelTubeElbows(box, "round1", elbowed, 0.75, 0.75, DRV18));
   assert.equal(g.elbows, 1);
   close(null, g.ec, e1, 1e-12);
 });
@@ -119,11 +119,11 @@ test("tube end correction: flanged and free ends less the flares, the wall, the 
 test("exact solver: the shortest tube that tunes, over the elbow counts", () => {
   const box = { w: 24, h: 34, d: 21 };
   const v = vent({ nt: 2, dia: 4, len: 0, slotH: 3, throat: 2 });
-  const vs = ventShape("round2", box, v, 0.75, DRV18);
+  const vs = ventShape("round2", box, v, 0.75, 0.75, DRV18);
   for (const Leff of [0.2, 0.5, 0.8]) {
-    const { len, reached } = tubeLengthFor("round2", box, v, 0.75, DRV18, Leff);
+    const { len, reached } = tubeLengthFor("round2", box, v, 0.75, 0.75, DRV18, Leff);
     if (!reached) continue;
-    const at = ventShape("round2", box, { ...v, len }, 0.75, DRV18);
+    const at = ventShape("round2", box, { ...v, len }, 0.75, 0.75, DRV18);
     close(null, ductLengthFor(at, Leff), len, 1e-9, `Leff ${Leff}`);
   }
   assert.ok(vs.area > 0);
@@ -157,7 +157,7 @@ test("port tube catalog: every tube set has its pipe and an elbow entry, by area
 
 test("tube kit: pipe sticks and elbows priced, and no price where an elbow has no US vendor", () => {
   const box = { w: 24, h: 34, d: 21 };
-  const kit = subTubeKit(box, "round2", vent({ nt: 2, dia: 4, len: 30 }), 0.75, DRV18);
+  const kit = subTubeKit(box, "round2", vent({ nt: 2, dia: 4, len: 30 }), 0.75, 0.75, DRV18);
   const pipe = PORT_PIPES.find((p) => p.dia === 4)!,
     elbow = PORT_ELBOWS.find((p) => p.dia === 4)!;
   assert.equal(kit.elbows, 1);
@@ -165,10 +165,12 @@ test("tube kit: pipe sticks and elbows priced, and no price where an elbow has n
   close(null, kit.price!, pipe.price + 2 * elbow.price!, 1e-9);
   // 3-1/2″: the pipe is sold, the elbow isn't, so a bent tube has no price; a straight one does
   assert.equal(
-    subTubeKit(box, "round2", vent({ nt: 2, dia: 3.5, len: 30 }), 0.75, DRV18).price,
+    subTubeKit(box, "round2", vent({ nt: 2, dia: 3.5, len: 30 }), 0.75, 0.75, DRV18).price,
     null,
   );
-  assert.ok(subTubeKit(box, "round2", vent({ nt: 2, dia: 3.5, len: 10 }), 0.75, DRV18).price! > 0);
+  assert.ok(
+    subTubeKit(box, "round2", vent({ nt: 2, dia: 3.5, len: 10 }), 0.75, 0.75, DRV18).price! > 0,
+  );
 });
 
 test("hi-fi: the same fold rule, and each elbow tunes the port higher", () => {
@@ -245,8 +247,8 @@ test("ductFitMax is ductFit's fit, and the tubes' room reads the layout's highes
         const at = `${style} ${JSON.stringify(box)} ${JSON.stringify(v)}`;
         close(
           null,
-          ductFitMax(box, style, v, 0.75, DRV18),
-          ductFit(box, style, v, 0.75, DRV18).fit,
+          ductFitMax(box, style, v, 0.75, 0.75, DRV18),
+          ductFit(box, style, v, 0.75, 0.75, DRV18).fit,
           1e-12,
           at,
         );
@@ -254,7 +256,7 @@ test("ductFitMax is ductFit's fit, and the tubes' room reads the layout's highes
         if (tubes.length)
           close(
             null,
-            tubeRoom(box, style, v, 0.75, DRV18).rise,
+            tubeRoom(box, style, v, 0.75, 0.75, DRV18).rise,
             box.h - 1.5 - Math.max(...tubes.map((p) => p.y)),
             1e-12,
             at,

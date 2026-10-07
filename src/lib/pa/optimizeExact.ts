@@ -768,8 +768,8 @@ function exactHook(
       const v = { ...vent, len: sol.len };
       if (
         sol.len < s.grid.minDuctIn ||
-        sol.len > ductLenSliderMax(sol.box, style, v, t, sub) ||
-        !ductFits(ductFit(sol.box, style, v, t, sub).spans, sol.len)
+        sol.len > ductLenSliderMax(sol.box, style, v, t, s.cur.inset, sub) ||
+        !ductFits(ductFit(sol.box, style, v, t, s.cur.inset, sub).spans, sol.len)
       )
         continue;
       if (!subBaffleFits(sol.box, style, v, t, sub)) continue;
@@ -813,7 +813,10 @@ function exactHook(
       if (deepShapes.size >= 200_000) deepShapes.clear();
       // the end correction at the most it can be in this box, whatever the duct's length (straight or folded, for a
       // bottom slot; straight, its mouth nearest the back wall, for round tubes)
-      v = ventShape(style, dims, vent, s.walls[ti], sub, { folded: false, most: true });
+      v = ventShape(style, dims, vent, s.walls[ti], s.cur.inset, sub, {
+        folded: false,
+        most: true,
+      });
       deepShapes.set(k, v);
     }
     return v;
@@ -844,7 +847,7 @@ function exactHook(
       const lenHi = Leff / 0.0254 + bends;
       const lenLo = ductLengthFor(vs, Leff);
       if (lenHi < s.grid.minDuctIn) continue;
-      if (lenLo > ductFitMax(deepest, style, vent, t, sub)) continue;
+      if (lenLo > ductFitMax(deepest, style, vent, t, s.cur.inset, sub)) continue;
       const x = bareFree(
         s,
         dims,
@@ -1538,7 +1541,11 @@ function exactHook(
         braceStyle: s.braceStyle,
         braceEstimate: true,
       });
-      if (!(vent.len > 0) || !ductFits(ductFit(box, style, vent, t, sub).spans, vent.len)) return;
+      if (
+        !(vent.len > 0) ||
+        !ductFits(ductFit(box, style, vent, t, cur.inset, sub).spans, vent.len)
+      )
+        return;
       if (!subBaffleFits(box, style, vent, t, sub)) return;
       const lb = subWeightLb(box, t, sub.lb, braceWoodEstimate(box, t, cur.inset, s.braceStyle));
       if (lb > s.cap + 1e-9) return;
@@ -1594,7 +1601,7 @@ function exactHook(
     const box = s.cur.cDim;
     const tune = (len: number) => {
       const v = { ...vent, len };
-      const vs = ventShape(style, box, v, t, sub);
+      const vs = ventShape(style, box, v, t, s.cur.inset, sub);
       const V = subNetLiters(style, box, t, s.cur.inset, v, vs.area, sub.ts.disp, s.braceStyle);
 
       const Leff = (len + vs.ec) * 0.0254;
@@ -1603,12 +1610,12 @@ function exactHook(
     // the lengths that fit, one way at a time (a bottom slot straight, then folded, with the lengths that fit neither way
     // between; round tubes each elbow count apart, as each elbow steps the tuning), so the search takes the shortest
     // span that reaches the tuning, at the last way's shortest when even that tunes lower
-    const spans = ductFit(box, style, { ...vent, len: 0 }, t, sub)
+    const spans = ductFit(box, style, { ...vent, len: 0 }, t, s.cur.inset, sub)
       .tune.map(
         ([lo, hi]) =>
           [
             Math.max(lo, s.grid.minDuctIn),
-            Math.min(hi, ductLenSliderMax(box, style, vent, t, sub)),
+            Math.min(hi, ductLenSliderMax(box, style, vent, t, s.cur.inset, sub)),
           ] as const,
       )
       .filter(([lo, hi]) => hi >= lo);

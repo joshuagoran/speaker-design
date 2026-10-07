@@ -28,7 +28,7 @@ const fields = (c: PaDesignConfig): [string, number, SliderSpec][] => [
     c.cVent.len,
     {
       ...PA_SLIDERS.ductLen,
-      max: ductLenSliderMax(c.cDim, c.portStyle, c.cVent, c.wall, subOf(c)),
+      max: ductLenSliderMax(c.cDim, c.portStyle, c.cVent, c.wall, c.inset, subOf(c)),
     },
   ],
   ["slot height", c.cVent.slotH, PA_SLIDERS.slotH],
@@ -58,7 +58,10 @@ function checkResult(what: string, r: PaOptimizerResult, cur?: PaDesignConfig) {
     // and a duct the layout can build (a bottom slot never in the lengths that fit neither straight nor folded)
     if (own.get("duct length") !== c.cVent.len)
       assert.ok(
-        ductFits(ductFit(c.cDim, c.portStyle, c.cVent, c.wall, subOf(c)).spans, c.cVent.len),
+        ductFits(
+          ductFit(c.cDim, c.portStyle, c.cVent, c.wall, c.inset, subOf(c)).spans,
+          c.cVent.len,
+        ),
         `${what}, ${label}: duct length ${c.cVent.len} doesn't fit the box`,
       );
     for (const [name, x, s] of fields(c)) {
