@@ -324,9 +324,11 @@ test("duct dividers: a thicker divider comes out of the side ducts' open area, n
 });
 test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap from the back wall", (t) => {
   // tubes run from the baffle front (`inset` behind the frame front); bottom slots and side ducts run from the frame
-  // front and read the same inset for their run behind the baffle
+  // front, and their shelves run into the box's air behind the 3/4″ baffle: that run and the mouth's gap add up to the
+  // box's inside depth
   const box = { w: 24, h: 32, d: 20 },
     wall = 0.75,
+    baffle = 0.75,
     back = box.d - wall; // the back wall's inside face, from the frame front
   for (const inset of [0, 0.75, 1.5]) {
     const at = `inset ${inset}`;
@@ -344,7 +346,8 @@ test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap
       const up = subTubeLegs(box, style, { ...v, len: span[1] }, wall, inset, DRV18, 1);
       close(t, inset + up.run + v.dia / 2, back, 1e-12, `${style} ${at}`);
     }
-    // a straight bottom slot's mouth is a slot height from the back wall; its shelf runs `len - inset` behind the baffle
+    const inD = back - inset - baffle; // the box's inside depth, behind the baffle
+    // a straight bottom slot's mouth is a slot height from the back wall; its shelf runs the rest of the inside depth
     const slot = vent({ slotH: 3, len: 0 });
     const slotLen = ductFit(box, "slots", slot, wall, inset, DRV18).maxStraight;
     close(t, back - slotLen, slot.slotH, 1e-12, `slots ${at}`);
@@ -352,11 +355,11 @@ test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap
       t,
       ventGeometry("slots", box, { ...slot, len: slotLen }, wall, inset, DRV18).ec,
       rectangleEndCorrection(2 * slot.slotH, box.w - 4 * wall) +
-        slotMouthCorrection(slot.slotH, box.h - 2 * wall, slot.slotH, wall, slotLen - inset),
+        slotMouthCorrection(slot.slotH, box.h - 2 * wall, slot.slotH, wall, inD - slot.slotH),
       1e-12,
       `slots ${at}`,
     );
-    // a side duct's mouth is a throat from the back wall, its inner wall `len - inset` behind the baffle
+    // a side duct's mouth is a throat from the back wall; its inner wall runs the rest of the inside depth
     const duct = vent({ throat: 2.5, len: 0 });
     const ductLen = ductFit(box, "vslots", duct, wall, inset, DRV18).maxSide;
     close(t, back - ductLen, duct.throat, 1e-12, `vslots ${at}`);
@@ -369,7 +372,7 @@ test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap
           (box.w - 2 * wall) / 2,
           duct.throat,
           wall,
-          ductLen - inset,
+          inD - duct.throat,
         ),
       1e-12,
       `vslots ${at}`,

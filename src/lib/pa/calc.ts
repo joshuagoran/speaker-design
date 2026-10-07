@@ -525,6 +525,12 @@ const paInside = (box: Dims3, t: number, inset: number, band = 0) => ({
   inD: box.d - inset - BAFFLE_PLY_IN - t,
   band,
 });
+/**
+ * The run (in) of a slot or side duct's shelf in the box's air, `len` from the frame front: behind the baffle (`inset`
+ * back, BAFFLE_PLY_IN thick), where the box's air starts, so the run and the gap behind the mouth add up to the box's
+ * inside depth (paInside), as SLOT_INNER_END's box takes them.
+ */
+const slotRunIn = (v: Pick<VentSpec, "len">, inset: number) => v.len - inset - BAFFLE_PLY_IN;
 /** A PA box's inside spans on the bracing's axes. */
 export const paInner = (box: Dims3, t: number, inset: number): Record<BoxAxis, number> => {
   const { iw, ih, inD } = paInside(box, t, inset);
@@ -574,7 +580,7 @@ const ductHolds = (
 ) => {
   const { inD } = paInside(box, t, inset);
   const len = style === "slots" && slotFolds(box, v, t) ? foldedShelfIn(box, v.slotH, t) : v.len;
-  return len - inset - BAFFLE_PLY_IN >= DUCT_SUPPORT_MIN_SHARE * inD;
+  return slotRunIn({ len }, inset) >= DUCT_SUPPORT_MIN_SHARE * inD;
 };
 /**
  * The lines the sub's vent parts run along on its panels, however short the vent (subBoxBracing takes them as
@@ -1433,8 +1439,8 @@ export function slotMouthCorrectionMost(h: number, span: number, t: number) {
 export const ductDividerIn = (v: Pick<VentSpec, "div">) =>
   v.div ?? defaultPanelIn(DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL);
 /**
- * A bottom slot's inner end correction (in), `inset` the baffle front behind the frame front. Straight: its mouth on the floor, the back wall behind it, the box's inside
- * height across it. Folded up the back wall: the floor leg turns a sharp 90° into the rear channel (SHARP_BEND_CORRECTION
+ * A bottom slot's inner end correction (in), `inset` the baffle front behind the frame front. Straight: its mouth on the
+ * floor, the back wall behind it, the box's inside height across it. Folded up the back wall: the floor leg turns a sharp 90° into the rear channel (SHARP_BEND_CORRECTION
  * against the centerline the length is measured on), and the channel's mouth, under the lid, is the same kind of mouth
  * turned on its side: along the back panel, the rear wall its shelf (rising from the floor leg's roof), the lid the
  * facing wall, the box's inside depth across it. `most`: the most it can be in this box, straight or folded, whatever
@@ -1452,13 +1458,14 @@ export function slotInnerEndCorrection(
   if (most)
     return Math.max(
       slotMouthCorrectionMost(h, box.h - 2 * t, t),
-      SHARP_BEND_CORRECTION * h + slotMouthCorrectionMost(h, box.d - inset - t, t),
+      SHARP_BEND_CORRECTION * h + slotMouthCorrectionMost(h, paInside(box, t, inset).inD, t),
     );
   // the slot runs from the frame front under the baffle (as maxStraightSlotIn, the 3D view and the cutlist take it), so
-  // its mouth is `d - t - len` from the back panel: a slot height at the longest straight run; its shelf runs
-  // `len - inset` behind the baffle front
-  if (!folded) return slotMouthCorrection(h, box.h - 2 * t, box.d - t - v.len, t, v.len - inset);
-  const depth = box.d - inset - t; // across the rear channel's mouth, the box's depth behind the baffle front
+  // its mouth is `d - t - len` from the back panel: a slot height at the longest straight run; its shelf runs into the
+  // box's air from behind the baffle (slotRunIn)
+  if (!folded)
+    return slotMouthCorrection(h, box.h - 2 * t, box.d - t - v.len, t, slotRunIn(v, inset));
+  const depth = paInside(box, t, inset).inD; // across the rear channel's mouth, the box's depth behind the baffle
   return (
     SHARP_BEND_CORRECTION * h +
     slotMouthCorrection(h, depth, foldedLidGapIn(box, v, t), t, foldedRearWallIn(box, v, t) - t)
@@ -1468,8 +1475,8 @@ export function slotInnerEndCorrection(
  * A side duct's end corrections (in), each duct's (`n` of them, one against each side wall for a pair). Outside, the
  * ground mirrors the bottom of its mouth (throat × open height). Inside, the same mouth as a bottom slot's, turned on its
  * side: the side wall its floor, the duct's inner wall (`t`, from the frame front as the cutlist and the 3D view take it)
- * its shelf (`len - inset` of it behind the baffle front), the back wall `d - t - len` behind the mouth, and across it the box's inside width (half of it for a pair:
- * the center line is a plane of symmetry). `most`: the most it can be in this box, whatever the length
+ * its shelf (its run in the box's air: slotRunIn), the back wall `d - t - len` behind the mouth, and across it the box's
+ * inside width (half of it for a pair: the center line is a plane of symmetry). `most`: the most it can be in this box, whatever the length
  * (slotMouthCorrectionMost).
  */
 export function sideDuctEndCorrection(
@@ -1487,7 +1494,7 @@ export function sideDuctEndCorrection(
     rectangleEndCorrection(th, 2 * open) +
     (most
       ? slotMouthCorrectionMost(th, span, t)
-      : slotMouthCorrection(th, span, box.d - t - v.len, t, v.len - inset))
+      : slotMouthCorrection(th, span, box.d - t - v.len, t, slotRunIn(v, inset)))
   );
 }
 

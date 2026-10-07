@@ -61,12 +61,13 @@ test("letterbox Fb = Helmholtz with the slot end correction", (t) => {
   const box = { w: 22, h: 30, d: 20 },
     g = ventGeometry("slots", box, vent({ slotH: 3, len: 14 }), 0.75, 0.75, DRV18);
   const W = box.w - 1.5 - 1.5;
-  // outside, the floor mirrors the mouth (a slot twice as tall); inside, its mouth on the floor, the back wall behind
+  // outside, the floor mirrors the mouth (a slot twice as tall); inside, its mouth on the floor, the back wall behind,
+  // its shelf running into the box's air from behind the baffle (set 0.75 back, 0.75 thick)
   close(
     t,
     g.ec!,
     rectangleEndCorrection(6, W) +
-      slotMouthCorrection(3, 30 - 1.5, 20 - 0.75 - 14, 0.75, 14 - 0.75),
+      slotMouthCorrection(3, 30 - 1.5, 20 - 0.75 - 14, 0.75, 14 - 0.75 - 0.75),
     1e-12,
   );
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
@@ -80,12 +81,18 @@ test("side ducts: each opening's correction, outside its throat x open height, i
   for (const st of ["vslots", "vslot1"] as const) {
     const g = ventGeometry(st, box, vent({ throat: 2, len: 12 }), 0.75, 0.75, DRV18);
     // outside, the ground mirrors the mouth's bottom (2 x 27.5 open, under two 1/2" dividers); inside, the side wall its
-    // floor, the duct's inner wall its shelf from the baffle, the back wall behind it, the box's width (or half) across
+    // floor, the duct's inner wall its shelf from behind the baffle, the back wall behind it, the box's width (or half) across
     close(
       t,
       g.ec ?? NaN,
       rectangleEndCorrection(2, 2 * 27.5) +
-        slotMouthCorrection(2, st === "vslots" ? 20.5 / 2 : 20.5, 20 - 0.75 - 12, 0.75, 12 - 0.75),
+        slotMouthCorrection(
+          2,
+          st === "vslots" ? 20.5 / 2 : 20.5,
+          20 - 0.75 - 12,
+          0.75,
+          12 - 0.75 - 0.75,
+        ),
       1e-12,
       st,
     );
@@ -136,7 +143,7 @@ test("side duct: the mouth's gap to the back wall is the one the cutlist and the
     t,
     sideDuctEndCorrection(box, v, wall, 0.75, 2),
     rectangleEndCorrection(2.5, 2 * 27.5) +
-      slotMouthCorrection(2.5, (24 - 1.5) / 2, 2.5, wall, v.len - 0.75),
+      slotMouthCorrection(2.5, (24 - 1.5) / 2, 2.5, wall, v.len - 0.75 - 0.75),
     1e-12,
   );
   const { parts } = cutParts({
@@ -169,15 +176,16 @@ test("bottom slot: straight while it fits, folded past that (a sharp bend, and i
     outer = rectangleEndCorrection(6, 19);
   // the straight run holds d - t - slotH = 16.25 (from the frame front); its mouth is a slot height from the back wall
   const straight = ventGeometry("slots", box, vent({ slotH: 3, len: 16.25 }), 0.75, 0.75, DRV18);
-  close(t, straight.ec ?? NaN, outer + slotMouthCorrection(3, 28.5, 3, 0.75, 16.25 - 0.75), 1e-12);
+  close(t, straight.ec ?? NaN, outer + slotMouthCorrection(3, 28.5, 3, 0.75, 16.25 - 1.5), 1e-12);
   assert.ok(!straight.desc.includes("folded"));
   // folded 20 long: the rear wall would rise 20 - 19.25 = 0.75, held at the least 1 (0.25 over the roof), so the mouth
-  // is 28.5 - 3 - 1 under the lid, the box's inside depth (20 - 0.75 - 0.75) across it
+  // is 28.5 - 3 - 1 under the lid, the box's inside depth (20 less the 0.75 inset, the 0.75 baffle and the
+  // 0.75 back) across it
   const folded = ventGeometry("slots", box, vent({ slotH: 3, len: 20 }), 0.75, 0.75, DRV18);
   close(
     t,
     folded.ec ?? NaN,
-    outer + SHARP_BEND_CORRECTION * 3 + slotMouthCorrection(3, 18.5, 24.5, 0.75, 0.25),
+    outer + SHARP_BEND_CORRECTION * 3 + slotMouthCorrection(3, 17.75, 24.5, 0.75, 0.25),
     1e-12,
   );
   assert.ok(folded.desc.includes("folded"));
@@ -186,7 +194,7 @@ test("bottom slot: straight while it fits, folded past that (a sharp bend, and i
   close(
     t,
     top.ec ?? NaN,
-    outer + SHARP_BEND_CORRECTION * 3 + slotMouthCorrection(3, 18.5, 3, 0.75, 22.5 - 0.75),
+    outer + SHARP_BEND_CORRECTION * 3 + slotMouthCorrection(3, 17.75, 3, 0.75, 22.5 - 0.75),
     1e-12,
   );
 });
