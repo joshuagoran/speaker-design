@@ -10,7 +10,12 @@ import {
   subMax,
 } from "../src/lib/pa/ampPower";
 import { ampVoltage } from "../src/lib/pa/calc";
-import { AMP_POWER_TEXT, MUSIC_CREST_DB, SINE_CREST_DB } from "../src/constants/ampPower";
+import {
+  AMP_POWER_TEXT,
+  MUSIC_CREST_DB,
+  PAST_LIMIT_ON_PEAKS,
+  SINE_CREST_DB,
+} from "../src/constants/ampPower";
 import type { PaMaxPoint } from "../src/types";
 import { close } from "./helpers";
 
@@ -38,16 +43,40 @@ test("a channel at the target: 13 dB headroom under an amp-limited 800 W sub", (
   close(t, r.ampW, 800, 1e-9);
   close(t, r.avgW, 800 * 10 ** -1.3, 1e-9);
   close(t, r.peakW, 800 * 10 ** -0.3, 1e-9);
-  assert.equal(r.clips, false);
+  close(t, r.peakHeadroomDb, 13 - (MUSIC_CREST_DB - SINE_CREST_DB), 1e-9);
+  assert.equal(r.pastLimit, false);
 });
 
-test("clips on peaks once the music's peaks pass the amp's (twice its sine rating)", (t) => {
+test("peak headroom: the headroom less the crest's lead over a sine's (about 7 dB)", (t) => {
+  close(t, MUSIC_CREST_DB - SINE_CREST_DB, 6.99, 0.01);
   const max = subMax({ W: 800, who: "amp" }, ampVoltage(800));
-  close(t, channelPower("sub", max, 10).ampPeakW, 1600, 1e-9);
-  // amp-limited: the peaks reach the amp's at MUSIC_CREST_DB − SINE_CREST_DB (about 7 dB) of headroom
-  assert.equal(channelPower("sub", max, 6).clips, true);
-  assert.equal(channelPower("sub", max, MUSIC_CREST_DB - SINE_CREST_DB).clips, false);
-  assert.equal(channelPower("sub", max, 8).clips, false);
+  close(t, channelPower("sub", max, 10).peakHeadroomDb, SINE_CREST_DB, 1e-9);
+  close(t, channelPower("sub", max, 4).peakHeadroomDb, 4 - 10 + SINE_CREST_DB, 1e-9);
+});
+
+test("the owner's screenshot: an Xmax-limited sub at 7.0 dB, peaks right at Xmax", (t) => {
+  // 644 W sine at Xmax: the peaks (1,288 W) reach Xmax's peaks (twice 644 W) at 7.0 dB, and pass them below
+  const max = subMax({ W: 644, who: "Xmax" }, ampVoltage(800));
+  const at7 = channelPower("sub", max, 7);
+  close(t, at7.peakHeadroomDb, 0, 0.05);
+  assert.equal(at7.pastLimit, false);
+  const at5 = channelPower("sub", max, 5);
+  close(t, at5.peakHeadroomDb, -2, 0.02);
+  assert.equal(at5.pastLimit, true);
+  assert.equal(at5.who, "Xmax");
+  assert.equal(PAST_LIMIT_ON_PEAKS[at5.who], "Past Xmax on peaks");
+});
+
+test("past the limit only once the peak headroom reads below 0.0 dB", () => {
+  const max = subMax({ W: 800, who: "amp" }, ampVoltage(800));
+  const edge = MUSIC_CREST_DB - SINE_CREST_DB;
+  assert.equal(channelPower("sub", max, edge).pastLimit, false);
+  assert.equal(channelPower("sub", max, edge - 0.04).pastLimit, false);
+  assert.equal(channelPower("sub", max, edge - 0.06).pastLimit, true);
+});
+
+test("every limit has its own flag", () => {
+  assert.equal(new Set(Object.values(PAST_LIMIT_ON_PEAKS)).size, 4);
 });
 
 test("the horn: its model's power and the amp's power into its impedance", () => {

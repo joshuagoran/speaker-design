@@ -26,10 +26,13 @@ export interface ChannelPower extends ChannelMax {
   avgW: number;
   /** the power on music peaks, `MUSIC_CREST_DB` above the average */
   peakW: number;
-  /** the amp's peak power, W: its rating is a sine's average, so its peaks are `SINE_CREST_DB` higher */
-  ampPeakW: number;
-  /** whether the music's peaks ask for more than the amp's peaks */
-  clips: boolean;
+  /**
+   * dB from the music's peaks up to the limit's (`who`): the headroom less the crest's lead over a sine's, since the
+   * max is a sine whose peaks reach the limit. Below 0 the peaks pass it.
+   */
+  peakHeadroomDb: number;
+  /** whether the peaks pass the limit */
+  pastLimit: boolean;
 }
 
 /** The power at a level `headroomDb` under the max, W: power follows level, 10 dB per decade. */
@@ -91,12 +94,18 @@ export const hornMax = (h: Pick<HornResponse, "P" | "pAmp" | "who">): ChannelMax
   who: h.who,
 });
 
+/**
+ * How far past the limit the peaks go before they count as past it, dB: half the table's 0.1 dB step, so a flag
+ * always shows with a peak headroom that reads below 0.
+ */
+const PEAK_MARGIN_DB = 0.05;
+
 /** A channel at the target, `headroom` dB under its max. */
 export function channelPower(channel: AmpChannel, max: ChannelMax, headroom: number): ChannelPower {
   const avgW = powerAtTarget(max.wAtMax, headroom),
     peakW = peakPower(avgW),
-    ampPeakW = peakPower(max.ampW, SINE_CREST_DB);
-  // a small margin, so peaks that just reach the amp's peaks don't read as clipping
-  const clips = peakW > ampPeakW * 1.001;
-  return { channel, ...max, headroomDb: headroom, avgW, peakW, ampPeakW, clips };
+    peakHeadroomDb = headroom - (MUSIC_CREST_DB - SINE_CREST_DB);
+  // a small margin, so peaks that just reach the limit (as rounded) don't read as past it
+  const pastLimit = peakHeadroomDb < -PEAK_MARGIN_DB;
+  return { channel, ...max, headroomDb: headroom, avgW, peakW, peakHeadroomDb, pastLimit };
 }

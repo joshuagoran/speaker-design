@@ -1,3 +1,5 @@
+import type { SubLimitWho } from "../types";
+
 /** Club music (house, techno): how far its peaks rise above its average, dB. The amp power table's peak watts use it. */
 export const MUSIC_CREST_DB = 10;
 
@@ -7,6 +9,14 @@ export const MUSIC_CREST_DB = 10;
  */
 export const SINE_CREST_DB = 10 * Math.log10(2);
 
+/** The amp power table's flag when a driver's peaks pass its limit, by the limit (`ChannelPower.who`). */
+export const PAST_LIMIT_ON_PEAKS: Record<SubLimitWho, string> = {
+  amp: "Clips on peaks",
+  Xmax: "Past Xmax on peaks",
+  thermal: "Past rating on peaks",
+  port: "Port past limit on peaks",
+};
+
 /** The Coverage page's amp power table: its heading, column names and notes. */
 export const AMP_POWER_TEXT = {
   heading: "Amp power at the target",
@@ -14,10 +24,9 @@ export const AMP_POWER_TEXT = {
   avg: "Average",
   peak: "Peak",
   amp: "Amp rating",
-  headroom: "Headroom",
+  headroom: "Peak headroom",
   limit: "Limit",
-  clips: "Clips on peaks",
-  crestNote: `Peaks assume club music, ${MUSIC_CREST_DB} dB above average. An amp clips when the peaks pass twice its rating.`,
+  crestNote: `Peaks assume club music, ${MUSIC_CREST_DB} dB above average. A rating or a limit is a sine's average: its peaks are twice that. Peak headroom is the dB from the peaks to the limit.`,
   allAmp: "The amp sets every max: more amp power raises it.",
   notAmp: "More amp power won't raise the max of:",
 } as const;

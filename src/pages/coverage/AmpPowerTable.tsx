@@ -1,10 +1,10 @@
 import { useMemo } from "react";
-import { AMP_POWER_TEXT } from "../../constants/ampPower";
+import { AMP_POWER_TEXT, PAST_LIMIT_ON_PEAKS } from "../../constants/ampPower";
 import { SUB_LIMIT_NAMES } from "../../constants/limits";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { DRIVER_PART_NAMES } from "../../constants/optimizerText";
 import { UI_TEXT } from "../../constants/uiText";
-import { formatWatts } from "../../lib/format";
+import { formatSigned, formatWatts } from "../../lib/format";
 import {
   channelPower,
   headroomDb,
@@ -41,12 +41,15 @@ interface Props {
   gain: number;
 }
 
-const th = "py-1 pr-3 font-normal";
-const td = "py-1 pr-3 align-top";
+const th = "py-1 pr-3 font-normal whitespace-nowrap";
+const td = "py-1 pr-3 align-top whitespace-nowrap";
+/** A peak figure's color: the status red once the peaks pass the limit. */
+const tone = (r: Pick<ChannelPower, "pastLimit">) =>
+  r.pastLimit ? "text-red-700" : "text-stone-900";
 
 /**
  * Amp power per driver at the target: the model's power at each driver's max, brought down by the headroom to it, and
- * the peaks on club music. A row whose peaks ask for more than its amp has is flagged.
+ * the peaks on club music. A row whose peaks pass its limit (amp, Xmax, rating or port) is flagged.
  */
 export function AmpPowerTable({ planner, pads, gain }: Props) {
   const {
@@ -88,13 +91,14 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
     <div>
       <SectionHeading className="mb-1">{AMP_POWER_TEXT.heading}</SectionHeading>
       <div className="overflow-x-auto">
-        <table className="text-sm w-full min-w-[600px] table-fixed border-collapse tabular-nums">
+        <table className="text-sm w-full min-w-[660px] table-fixed border-collapse tabular-nums">
+          {/* wide enough at the least width that no cell wraps */}
           <colgroup>
-            <col className="w-[20%]" />
-            <col className="w-[12%]" />
+            <col className="w-[21%]" />
+            <col className="w-[11%]" />
+            <col className="w-[11%]" />
+            <col className="w-[13%]" />
             <col className="w-[16%]" />
-            <col className="w-[12%]" />
-            <col className="w-[12%]" />
             <col className="w-[28%]" />
           </colgroup>
           <thead>
@@ -112,23 +116,22 @@ export function AmpPowerTable({ planner, pads, gain }: Props) {
               <tr key={r.channel} className="border-b border-stone-300">
                 <td className={td}>{CHANNEL_NAMES[r.channel]}</td>
                 <td className={`${td} text-right`}>{formatWatts(r.avgW)}</td>
-                <td className={`${td} text-right`}>
-                  <div className={r.clips ? "text-red-700" : "text-stone-900"}>
-                    {formatWatts(r.peakW)}
-                  </div>
-                  {/* always there, hidden when the peaks fit, so the rows keep their height */}
-                  <div
-                    className={`text-xs text-red-700 ${r.clips ? "" : "invisible"}`}
-                    aria-hidden={!r.clips}
-                  >
-                    {AMP_POWER_TEXT.clips}
-                  </div>
-                </td>
+                <td className={`${td} text-right ${tone(r)}`}>{formatWatts(r.peakW)}</td>
                 <td className={`${td} text-right`}>{formatWatts(r.ampW)}</td>
-                <td className={`${td} text-right`}>{r.headroomDb.toFixed(1)} dB</td>
-                {/* the sub section's "First limit" words, with a capital; on one line, so the row keeps its height */}
-                <td className={`${td} whitespace-nowrap first-letter:uppercase`}>
-                  {SUB_LIMIT_NAMES[r.who]}
+                {/* rounded first, so a value just under 0 reads 0.0, never −0.0 */}
+                <td className={`${td} text-right ${tone(r)}`}>
+                  {formatSigned(Math.round(r.peakHeadroomDb * 10) / 10)} dB
+                </td>
+                {/* the sub section's "First limit" words, with a capital */}
+                <td className={td}>
+                  <div className="first-letter:uppercase">{SUB_LIMIT_NAMES[r.who]}</div>
+                  {/* always there, hidden while the peaks fit, so the rows keep their height */}
+                  <div
+                    className={`text-xs text-red-700 ${r.pastLimit ? "" : "invisible"}`}
+                    aria-hidden={!r.pastLimit}
+                  >
+                    {PAST_LIMIT_ON_PEAKS[r.who]}
+                  </div>
                 </td>
               </tr>
             ))}
