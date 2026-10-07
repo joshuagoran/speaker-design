@@ -22,6 +22,8 @@ import {
   useCoverageLayout,
 } from "./useCoverageLayout";
 import { CoverageAssumptions } from "./CoverageAssumptions";
+import { AmpPowerTable } from "./AmpPowerTable";
+import { COVERAGE_TEST_IDS } from "../../constants/coverageTestIds";
 import { useCoverageMap, type CoverageInputs } from "./useCoverageMap";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { formatHz } from "../../lib/format";
@@ -172,6 +174,11 @@ export function CoveragePage({ planner }: Props) {
               </div>
             )}
           </section>
+          {map.pads && (
+            <section className="max-w-3xl" data-testid={COVERAGE_TEST_IDS.ampPower}>
+              <AmpPowerTable planner={planner} pads={map.pads} gain={map.gain} />
+            </section>
+          )}
           <section className="max-w-prose">
             <CoverageAssumptions room={room} planner={planner} target={map.target} level={layout} />
           </section>

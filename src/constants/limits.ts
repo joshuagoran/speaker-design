@@ -29,6 +29,14 @@ export const SUB_LIMITED_BY: Record<SubLimitWho, string> = {
   amp: "amplifier power",
 };
 
+/** What sets a PA driver's max level, as the Coverage page's amp power table says it. */
+export const AMP_LIMIT_NAMES: Record<SubLimitWho, string> = {
+  amp: "Amp",
+  thermal: "Heat",
+  Xmax: "Excursion (Xmax)",
+  port: "Port air speed",
+};
+
 /** What stops a Hi-fi woofer's level, as a Hi-fi optimizer card's "Limited by" line says it. */
 export const WOOFER_LIMITED_BY: Record<WooferLimit, string> = {
   Xmax: "cone travel",

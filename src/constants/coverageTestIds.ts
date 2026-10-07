@@ -6,6 +6,8 @@ export const COVERAGE_TEST_IDS = {
   map: "coverage-map",
   /** a stack's toe-in handle on the map */
   aimHandle: "coverage-aim-handle",
+  /** the amp power table */
+  ampPower: "coverage-amp-power",
 } as const;
 
 /** Where the floor layout is stored (per viewer), so the check can start the page in a given band. */
