@@ -25,6 +25,10 @@ export interface SceneContext {
     hornShell: THREE.MeshStandardMaterial;
     /** handles, input dishes and horn posts */
     hardware: THREE.MeshStandardMaterial;
+    /** printed throat adapters */
+    adapter: THREE.MeshStandardMaterial;
+    /** the horn bracket */
+    aluminum: THREE.MeshStandardMaterial;
     /**
      * a part's hole in its panel (buildHardware): draws no color, only depth, just proud of the face, so the panel
      * behind it isn't drawn there
@@ -117,6 +121,12 @@ export function createSceneContext({
       brace,
       hornShell,
       hardware,
+      adapter: new THREE.MeshStandardMaterial({ color: PARTS_3D.adapter, roughness: 0.6 }),
+      aluminum: new THREE.MeshStandardMaterial({
+        color: PARTS_3D.aluminum,
+        roughness: 0.35,
+        metalness: 0.25,
+      }),
       holeMask,
     },
     wall,

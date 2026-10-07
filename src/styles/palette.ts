@@ -134,6 +134,10 @@ export const PARTS_3D = {
   brace: 0xb98f5a,
   /** the handles' and input dishes' steel, and the horn posts' cup: a dark grey that reads on birch and on paint */
   hardware: 0x55585c,
+  /** printed throat adapters, a shade darker than the horn body */
+  adapter: 0xd8cfae,
+  /** the horn bracket's bare aluminum */
+  aluminum: 0xdfe3e8,
   /** the scale figure beside the stack, drawn semi-transparent */
   figure: 0x8b847d,
 } as const;

@@ -30,6 +30,7 @@ const group = buildStackScene({
   sub: { ...d.sub, box: d.cDim },
   mid: { ...d.mid, box: d.mDim },
   horn: d.horn,
+  cd: d.cd,
   plinth: 3,
   cutaway,
   portStyle: d.portStyle,

@@ -7,7 +7,8 @@
 // Pure data: no logic, no derived fields (src/lib/data.ts derives and sorts).
 // Fields: id, name, lb, exit (throat exit, in), price $ (null if no US price), src, note, and `hf` (omit when
 // nothing is published): sens dB at 1 W/1 m on `sensRef` (the horn it was measured on), aes W above aesXo Hz,
-// minXo Hz (the maker's lowest crossover), imp Ω.
+// minXo Hz (the maker's lowest crossover), imp Ω. `body` (the 3-D view): dia and depth (in), the front-face bolts
+// {n, thread, circle in}, and steps [diameter, length] front to back only where a photo shows them. Mark guesses in note.
 import type { CompressionDriver } from "../../types";
 
 /** The compression driver the planner starts on. */
@@ -24,9 +25,20 @@ export const N314T: CompressionDriver = {
     imp: 8,
   },
   exit: 1.4,
+  body: {
+    dia: 5.72,
+    depth: 2.53,
+    bolts: { n: 4, thread: "1/4-20", circle: 4 },
+    steps: [
+      [5.72, 0.3],
+      [5.6, 0.12],
+      [5.5, 1.55],
+      [4.2, 0.56],
+    ],
+  },
   price: 234.99,
   src: "usspeaker.com, Sep 2026 (Parts Express $249.99)",
-  note: "3 in titanium diaphragm, D3 surround. Minimum crossover 800 Hz at 12 dB/oct, 110 dB, 100 W AES, 5.1 lb net (5.4 lb shipping) per Eminence's datasheet (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/N314T8.pdf); some retailers list 4.8 lb. Exit is a 7.3\u00b0 included conical flare, so an ATH throat adapter has to be generated for it \u2014 none published yet. Rated below 1 kHz, like the FaitalPRO HF1440.",
+  note: "3 in titanium diaphragm, D3 surround. Minimum crossover 800 Hz at 12 dB/oct, 110 dB, 100 W AES, 5.1 lb net (5.4 lb shipping) per Eminence's datasheet (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/N314T8.pdf); some retailers list 4.8 lb. Exit is a 7.3\u00b0 included conical flare, so an ATH throat adapter has to be generated for it \u2014 none published yet. Rated below 1 kHz, like the FaitalPRO HF1440. Body: ⌀5.72 × 2.53 in, 1.4 in exit, 4× 1/4-20 on a 4.00 in circle (Eminence datasheet). GUESS from the photo: the steps (front plate, clamp ring, finned magnet, rear cap).",
 };
 
 export const CD_RAW: readonly CompressionDriver[] = [
@@ -43,9 +55,14 @@ export const CD_RAW: readonly CompressionDriver[] = [
       imp: 8,
     },
     exit: 1,
+    body: {
+      dia: 102 / 25.4,
+      depth: 54 / 25.4,
+      bolts: { n: 2, thread: "M6", circle: 76 / 25.4 },
+    },
     price: 281.95,
     src: "usspeaker.com, Sep 2026",
-    note: "Ketone polymer, 110 dB, 60 W AES, 1.3 kHz rec. crossover. Smooth; pair with RX-Shape 28.",
+    note: "Ketone polymer, 110 dB, 60 W AES, 1.3 kHz rec. crossover. Smooth; pair with RX-Shape 28. Body: ⌀102 × 54 mm, 2×M6 on a 76 mm circle (also 3×M6 on 57 mm) (FaitalPRO datasheet).",
   },
   {
     id: "de250",
@@ -53,9 +70,14 @@ export const CD_RAW: readonly CompressionDriver[] = [
     name: 'B&C DE250 (1")',
     hf: { sens: 108.5, sensRef: "the B&C ME45 horn", aes: 60, aesXo: 1600, minXo: 1600, imp: 8 },
     exit: 1,
+    body: {
+      dia: 120 / 25.4,
+      depth: 62 / 25.4,
+      bolts: { n: 2, thread: "M6", circle: 76 / 25.4 },
+    },
     price: 137.46,
     src: "usspeaker.com, Sep 2026",
-    note: "Ferrite, 108.5 dB, 60 W AES, 1.6 kHz rec. crossover. The DIY standard; a bit high for the RX-28's 1.2 kHz.",
+    note: "Ferrite, 108.5 dB, 60 W AES, 1.6 kHz rec. crossover. The DIY standard; a bit high for the RX-28's 1.2 kHz. Body: ⌀120 × 62 mm, 2×M6 on a 76 mm circle (also 3×M6 on 57 mm) (bcspeakers.com).",
   },
   {
     id: "nd1tp",
@@ -70,9 +92,14 @@ export const CD_RAW: readonly CompressionDriver[] = [
       imp: 16,
     },
     exit: 1,
+    body: {
+      dia: 85 / 25.4,
+      depth: 46 / 25.4,
+      bolts: { n: 2, thread: "M6", circle: 76 / 25.4 },
+    },
     price: null,
     src: "EU order, price TBD",
-    note: "AudioHorn's budget pick for the RX-28. 16 Ω version as specified; ships from Europe.",
+    note: "AudioHorn's budget pick for the RX-28. 16 Ω version as specified; ships from Europe. Body: ⌀85 × 46 mm (toutlehautparleur.com; no 18Sound drawing found). GUESS: 2×M6 on a 76 mm circle, the usual 1 in pattern.",
   },
   {
     id: "nd1090",
@@ -87,9 +114,14 @@ export const CD_RAW: readonly CompressionDriver[] = [
       imp: 16,
     },
     exit: 1,
+    body: {
+      dia: 85 / 25.4,
+      depth: 46 / 25.4,
+      bolts: { n: 2, thread: "M6", circle: 76 / 25.4 },
+    },
     price: null,
     src: "EU order, price TBD",
-    note: "AudioHorn's measured driver on the RX-28. Also NSD1095N as the premium option.",
+    note: "AudioHorn's measured driver on the RX-28. Also NSD1095N as the premium option. Body: GUESS. No published size found; drawn at the ND1TP's ⌀85 × 46 mm with 2×M6 on a 76 mm circle.",
   },
   {
     id: "hf108",
@@ -104,9 +136,14 @@ export const CD_RAW: readonly CompressionDriver[] = [
       imp: 8,
     },
     exit: 1,
+    body: {
+      dia: 87 / 25.4,
+      depth: 41 / 25.4,
+      bolts: { n: 2, thread: "M5", circle: 76 / 25.4 },
+    },
     price: 220.95,
     src: "usspeaker.com, Sep 2026 (Parts Express $259)",
-    note: "Marcel Batík's standard 1\" pairing for the A400G2/A460G2; measured polars on at-horns.eu.",
+    note: "Marcel Batík's standard 1\" pairing for the A400G2/A460G2; measured polars on at-horns.eu. Body: ⌀87 × 41 mm, 2×M5 on a 76 mm circle (FaitalPRO datasheet; its drawing says M6).",
   },
   N314T,
   {
@@ -122,9 +159,14 @@ export const CD_RAW: readonly CompressionDriver[] = [
       imp: 8,
     },
     exit: 1.4,
+    body: {
+      dia: 5.72,
+      depth: 2.53,
+      bolts: { n: 4, thread: "M6", circle: 102 / 25.4 },
+    },
     price: 160,
     src: "hoqs.org, Sep 2026 (in stock, ships from the US, per Josh)",
-    note: "[hoqs.org spec table, Sep 2026; no datasheet] 3 in edge-wound aluminum coil, titanium diaphragm, neo, copper ring, 1.9 T. 80 W nominal / 160 W program (the planner treats 80 W as the AES-style rating, so program = 2 \u00d7 80 W), 110 dB, recommended crossover 800 Hz with BW24, 500 Hz\u201318 kHz, 8 \u03a9. 4 \u00d7 M6 on a 102 mm circle (same as the N314T), 4.4 lb.",
+    note: "[hoqs.org spec table, Sep 2026; no datasheet] 3 in edge-wound aluminum coil, titanium diaphragm, neo, copper ring, 1.9 T. 80 W nominal / 160 W program (the planner treats 80 W as the AES-style rating, so program = 2 \u00d7 80 W), 110 dB, recommended crossover 800 Hz with BW24, 500 Hz\u201318 kHz, 8 \u03a9. 4 \u00d7 M6 on a 102 mm circle (same as the N314T), 4.4 lb. Body: 4×M6 on a 102 mm circle (hoqs.org). GUESS: no published size; drawn at the N314T's ⌀5.72 × 2.53 in.",
   },
   {
     id: "hf1440",
@@ -139,9 +181,14 @@ export const CD_RAW: readonly CompressionDriver[] = [
       imp: 8,
     },
     exit: 1.4,
+    body: {
+      dia: 124 / 25.4,
+      depth: 75 / 25.4,
+      bolts: { n: 4, thread: "M6", circle: 102 / 25.4 },
+    },
     price: 526.95,
     src: "usspeaker.com, Sep 2026",
-    note: "[datasheet, faitalpro.com, Sep 2026] 3.4 in coil, 109 dB on the LTH142, 120 W AES above 900 Hz (240 W max), minimum crossover 700 Hz, 4.5 lb. The lowest-crossing driver here.",
+    note: "[datasheet, faitalpro.com, Sep 2026] 3.4 in coil, 109 dB on the LTH142, 120 W AES above 900 Hz (240 W max), minimum crossover 700 Hz, 4.5 lb. The lowest-crossing driver here. Body: ⌀124 × 75 mm, 4×M6 on a 102 mm circle (FaitalPRO datasheet).",
   },
   {
     id: "cdx143055",
@@ -156,9 +203,14 @@ export const CD_RAW: readonly CompressionDriver[] = [
       imp: 8,
     },
     exit: 1.4,
+    body: {
+      dia: 120 / 25.4,
+      depth: 55 / 25.4,
+      bolts: { n: 4, thread: "M6", circle: 102 / 25.4 },
+    },
     price: 259,
     src: "Parts Express, Oct 2026 (out of stock)",
-    note: "[datasheet, celestion.com, Oct 2026] Neo, 3 in edgewound CCAW coil, titanium diaphragm, polyimide surround. 120 W AES / 240 W continuous, 108 dB 1 W/1 m, minimum crossover 800 Hz at 12 dB/oct, 500 Hz\u201320 kHz, 3.7 lb. 4 \u00d7 M6 on a 102 mm circle, the N314T's pattern, so it bolts to the 1.4\u2033 horns here. The power test's high-pass is not published; the 800 Hz minimum crossover is assumed. Exit flare angle not published, which an ATH throat adapter needs.",
+    note: "[datasheet, celestion.com, Oct 2026] Neo, 3 in edgewound CCAW coil, titanium diaphragm, polyimide surround. 120 W AES / 240 W continuous, 108 dB 1 W/1 m, minimum crossover 800 Hz at 12 dB/oct, 500 Hz\u201320 kHz, 3.7 lb. 4 \u00d7 M6 on a 102 mm circle, the N314T's pattern, so it bolts to the 1.4\u2033 horns here. The power test's high-pass is not published; the 800 Hz minimum crossover is assumed. Exit flare angle not published, which an ATH throat adapter needs. Body: ⌀120 × 55 mm (toutlehautparleur.com), 4×M6 on a 102 mm circle (Celestion datasheet).",
   },
   {
     id: "cdx143045",
@@ -173,9 +225,14 @@ export const CD_RAW: readonly CompressionDriver[] = [
       imp: 8,
     },
     exit: 1.4,
+    body: {
+      dia: 117 / 25.4,
+      depth: 2.3,
+      bolts: { n: 4, thread: "M6", circle: 102 / 25.4 },
+    },
     price: 249,
     src: "Loudspeakers Plus, Oct 2026 (Pro Audio Star $259)",
-    note: "[datasheet, celestion.com, Oct 2026] Neo, 3 in edgewound CCAW coil, single-piece titanium diaphragm and surround, polymer clamp ring. 120 W AES / 240 W continuous, 108 dB 1 W/1 m, minimum crossover 800 Hz at 12 dB/oct, 500 Hz–20 kHz, 2.3 in deep, 4.4 lb (Loudspeakers Plus lists 4 lb). 4 × M6 on a 102 mm circle, the N314T's and CDX14-3055's pattern, so it bolts to the 1.4″ horns here (Loudspeakers Plus misprints the circle as 120 mm and the crossover as 1 kHz). Also sold in 16 Ω. The power test's high-pass is not published; the 800 Hz minimum crossover is assumed. Exit flare angle not published, which an ATH throat adapter needs.",
+    note: "[datasheet, celestion.com, Oct 2026] Neo, 3 in edgewound CCAW coil, single-piece titanium diaphragm and surround, polymer clamp ring. 120 W AES / 240 W continuous, 108 dB 1 W/1 m, minimum crossover 800 Hz at 12 dB/oct, 500 Hz–20 kHz, 2.3 in deep, 4.4 lb (Loudspeakers Plus lists 4 lb). 4 × M6 on a 102 mm circle, the N314T's and CDX14-3055's pattern, so it bolts to the 1.4″ horns here (Loudspeakers Plus misprints the circle as 120 mm and the crossover as 1 kHz). Also sold in 16 Ω. The power test's high-pass is not published; the 800 Hz minimum crossover is assumed. Exit flare angle not published, which an ATH throat adapter needs. Body: ⌀117 mm (toutlehautparleur.com), 2.3 in deep and 4×M6 on a 102 mm circle (Celestion datasheet).",
   },
   {
     id: "cd2514",
@@ -190,9 +247,14 @@ export const CD_RAW: readonly CompressionDriver[] = [
       imp: 8,
     },
     exit: 1.4,
+    body: {
+      dia: 5.71,
+      depth: 2.47,
+      bolts: { n: 4, thread: "M6", circle: 101.6 / 25.4 },
+    },
     price: 192.58,
     src: "Parts Express, Oct 2026",
-    note: "[preliminary datasheet, beyma.com, 01/23] Ferrite, 2.5 in CCAW coil on Nomex, titanium dome and surround, copper shorting cap. 80 W AES above 800 Hz / 100 W AES above 1.2 kHz (160 W / 200 W program), 108 dB 1 W/1 m averaged 1\u20137 kHz on the TD-385, 600 Hz\u201320 kHz, 7.7 lb (PE lists 7.95 lb). Beyma's minimum crossover is 800 Hz at 12 dB/oct, but the diaphragm resonance (impedance peak) sits near 1.1 kHz, so the catalog uses 1.2 kHz as the reliable minimum, with the 100 W rating. 4 \u00d7 M6 on a 101.6 mm circle, the N314T's pattern, so it bolts to the 1.4\u2033 horns here. 5.71 in across, 2.47 in deep. Exit flare angle not published, which an ATH throat adapter needs.",
+    note: "[preliminary datasheet, beyma.com, 01/23] Ferrite, 2.5 in CCAW coil on Nomex, titanium dome and surround, copper shorting cap. 80 W AES above 800 Hz / 100 W AES above 1.2 kHz (160 W / 200 W program), 108 dB 1 W/1 m averaged 1\u20137 kHz on the TD-385, 600 Hz\u201320 kHz, 7.7 lb (PE lists 7.95 lb). Beyma's minimum crossover is 800 Hz at 12 dB/oct, but the diaphragm resonance (impedance peak) sits near 1.1 kHz, so the catalog uses 1.2 kHz as the reliable minimum, with the 100 W rating. 4 \u00d7 M6 on a 101.6 mm circle, the N314T's pattern, so it bolts to the 1.4\u2033 horns here. 5.71 in across, 2.47 in deep. Exit flare angle not published, which an ATH throat adapter needs. Body: ⌀5.71 × 2.47 in, 4×M6 on a 101.6 mm circle (Beyma datasheet).",
   },
   {
     id: "de360",
@@ -200,9 +262,14 @@ export const CD_RAW: readonly CompressionDriver[] = [
     name: 'B&C DE360 (1")',
     hf: { sens: 110, sensRef: "the B&C ME45 horn", aes: 35, aesXo: 1800, minXo: 1800, imp: 8 },
     exit: 1,
+    body: {
+      dia: 71 / 25.4,
+      depth: 37 / 25.4,
+      bolts: { n: 2, thread: "M6", circle: 57 / 25.4 },
+    },
     price: 117.36,
     src: "Parts Express, Sep 2026",
-    note: 'Ketone polymer 1" measured on the ATH Gen2 waveguides. Sheet says 1.8 kHz min; ~1.1–1.3 kHz LR4 works on the A400G2, verify with a distortion sweep.',
+    note: 'Ketone polymer 1" measured on the ATH Gen2 waveguides. Sheet says 1.8 kHz min; ~1.1–1.3 kHz LR4 works on the A400G2, verify with a distortion sweep. Body: ⌀71 × 37 mm, 2× or 3×M6 on a 57 mm circle (bcspeakers.com).',
   },
   {
     id: "de550",
@@ -217,18 +284,28 @@ export const CD_RAW: readonly CompressionDriver[] = [
       imp: 8,
     },
     exit: 1,
+    body: {
+      dia: 92 / 25.4,
+      depth: 49 / 25.4,
+      bolts: { n: 2, thread: "M6", circle: 76 / 25.4 },
+    },
     price: 229.08,
     src: "Parts Express, Oct 2026",
-    note: "[bcspeakers.com spec page, Oct 2026; no datasheet PDF published] Neo, 2 in aluminum coil, HT polymer diaphragm. 70 W nominal / 140 W continuous program (B&C's 2-hour pink-noise test from the 1.2 kHz recommended crossover up, so the planner treats 70 W as the AES-style rating), 108 dB, 1\u201317 kHz, recommended crossover 1.2 kHz at 12 dB/oct or steeper, 2.58 lb. 2 \u00d7 M6 on a 76 mm circle, 3.62 in across, 1.93 in deep: a 2-bolt flange, so check the 1\u2033 horn's bolt pattern. Exit flare angle not published, which an ATH throat adapter needs.",
+    note: "[bcspeakers.com spec page, Oct 2026; no datasheet PDF published] Neo, 2 in aluminum coil, HT polymer diaphragm. 70 W nominal / 140 W continuous program (B&C's 2-hour pink-noise test from the 1.2 kHz recommended crossover up, so the planner treats 70 W as the AES-style rating), 108 dB, 1\u201317 kHz, recommended crossover 1.2 kHz at 12 dB/oct or steeper, 2.58 lb. 2 \u00d7 M6 on a 76 mm circle, 3.62 in across, 1.93 in deep: a 2-bolt flange, so check the 1\u2033 horn's bolt pattern. Exit flare angle not published, which an ATH throat adapter needs. Body: ⌀92 × 49 mm, 2×M6 on a 76 mm circle (bcspeakers.com).",
   },
   {
     id: "lavoce171",
     lb: 1.5,
     name: 'Lavoce DF10.171K (1")',
     exit: 1,
+    body: {
+      dia: 114 / 25.4,
+      depth: 50 / 25.4,
+      bolts: { n: 4, thread: "M6", circle: 76 / 25.4 },
+    },
     price: 109,
     src: "Parts Express",
-    note: 'Budget 1" measured by Marcel Batík on ATH waveguides. Pair with the ST260 print.',
+    note: "Budget 1\" measured by Marcel Batík on ATH waveguides. Pair with the ST260 print. Body: 4×M6 on a 76 mm circle (at-horns.eu, its T520-DF10-171K adapter). GUESS: no published size; drawn at the DF10.172K's ⌀114 × 50 mm (toutlehautparleur.com).",
   },
   {
     id: "n151m",
@@ -243,8 +320,13 @@ export const CD_RAW: readonly CompressionDriver[] = [
       imp: 8,
     },
     exit: 1,
+    body: {
+      dia: 3.6,
+      depth: 1.45,
+      bolts: { n: 2, thread: "1/4-20", circle: 3 },
+    },
     price: 94.99,
     src: "usspeaker.com, Sep 2026",
-    note: 'Ring radiator, 1.8 kHz rec. crossover, 45 W, 1.7 lb net per the Eminence datasheet (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/N151M-8.pdf). Too high a crossover for a 12"; listed for price reference only.',
+    note: 'Ring radiator, 1.8 kHz rec. crossover, 45 W, 1.7 lb net per the Eminence datasheet (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/N151M-8.pdf). Too high a crossover for a 12"; listed for price reference only. Body: ⌀3.6 × 1.45 in, 2× 1/4-20 on a 3.0 in circle (eminence.com).',
   },
 ];

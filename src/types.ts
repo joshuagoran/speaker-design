@@ -193,24 +193,38 @@ export interface CompressionDriver {
   hf?: CompressionHf;
   /** throat exit in inches */
   exit: number;
+  /** the body as the 3-D view draws it */
+  body: CompressionDriverBody;
   price: number | null;
   src: string;
   note: string;
 }
 
-/** One point of a horn's flare, [radius, depth] in inches. */
-export type HornProfilePoint = readonly [radius: number, depth: number];
-
 /** One step of a turned part (a throat adapter, a driver body), front to back: [diameter, length] in inches. */
 export type BodyStep = readonly [dia: number, len: number];
+
+/** A compression driver's body: its outside size and the bolts on its front face, in. */
+export interface CompressionDriverBody {
+  /** overall diameter and depth */
+  dia: number;
+  depth: number;
+  /** the tapped holes on the front face: how many, the thread, and the bolt circle */
+  bolts: { n: number; thread: string; circle: number };
+  /** the outline front to back, when a photo shows its steps; without it the view draws a generic stepped body */
+  steps?: readonly BodyStep[];
+}
+
+/** One point of a horn's flare, [radius, depth] in inches. */
+export type HornProfilePoint = readonly [radius: number, depth: number];
 
 /** A throat adapter between a horn's throat and the compression driver. */
 export interface HornAdapter {
   name: string;
   /** the outline, front (horn side) to back (driver side); the lengths add up to the adapter's length */
   steps: readonly BodyStep[];
-  /** the bolt circle on both faces, in */
-  boltCircle: number;
+  /** the bolt circles on its front flange (to the horn body) and on its back face (to the driver), in */
+  bodyBoltCircle: number;
+  driverBoltCircle: number;
 }
 
 export interface HornHf {

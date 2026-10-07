@@ -10,11 +10,8 @@ export const MID_GAP_IN = 0.4;
 export const SATELLITE_COLUMN_H_IN = 34;
 /** Height of the tower's mid chamber. */
 export const TOWER_MID_HEIGHT_IN = 15.5;
-/** A rect or lathe horn sits this far above the mid box (center = this + half its height). */
+/** The horn sits this far above the mid box (center = this + half its height). */
 export const HORN_LIFT_IN = 0.3;
-/** The plain flared block sits this far above the mid box, and its bevel adds `PLAIN_HORN_BEVEL_IN` on top. */
-export const PLAIN_HORN_LIFT_IN = 2.2;
-export const PLAIN_HORN_BEVEL_IN = 1.6;
 
 /**
  * The tower is one shell and one continuous baffle over the sub's footprint: sub, mid chamber and horn section stacked and
@@ -58,7 +55,6 @@ export function stackHeights({
           ? subTop
           : subTop + MID_GAP_IN;
   const { archTop, hornSectionH } = towerSpec(subBox, wall, horn);
-  const hornLift = horn.rect || horn.profile ? HORN_LIFT_IN : PLAIN_HORN_LIFT_IN;
   return {
     subTop,
     /** where the mid box starts */
@@ -66,13 +62,10 @@ export function stackHeights({
     hasArchedTop: isTower && archTop,
     stack: isTower
       ? base + TOWER_MID_HEIGHT_IN + hornSectionH + ROUNDOVER_IN
-      : base +
-        midBox.h +
-        (horn.rect || horn.profile ? HORN_LIFT_IN : PLAIN_HORN_LIFT_IN + PLAIN_HORN_BEVEL_IN) +
-        horn.size.h,
+      : base + midBox.h + HORN_LIFT_IN + horn.size.h,
     hornCenter: isTower
       ? base + TOWER_MID_HEIGHT_IN + (archTop ? subBox.w / 2 - wall : (horn.size.h + 2) / 2)
-      : base + midBox.h + hornLift + horn.size.h / 2,
+      : base + midBox.h + HORN_LIFT_IN + horn.size.h / 2,
     midCenter: isTower ? base + TOWER_MID_HEIGHT_IN / 2 : base + midBox.h / 2,
   };
 }

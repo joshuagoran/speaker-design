@@ -15,6 +15,7 @@ export function buildTower(
     sub,
     mid,
     horn,
+    cd,
     plinth,
     portStyle,
     portGeom,
@@ -26,6 +27,7 @@ export function buildTower(
     | "sub"
     | "mid"
     | "horn"
+    | "cd"
     | "plinth"
     | "portStyle"
     | "portGeom"
@@ -56,6 +58,7 @@ export function buildTower(
   // the horn sits on the sub's footprint: center height, and the mouth flush with the shared baffle face
   return buildHorn(ctx, {
     horn,
+    cd,
     y: hornY,
     mount: s,
     tower: {
