@@ -4,6 +4,8 @@ import { buildStackScene, type Props } from "../src/components/stack-view/buildS
 import { derivePaDesign } from "../src/pages/pa-stack/hooks/paDesign";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { SCENE_CASE_NAMES, sceneCases, scenePropsOf } from "./scene-cases";
+import { VENT_MESH_NAME } from "../src/components/stack-view/buildBraces";
+import { modelTubeElbows, subTubeLegs, subTubeSpan } from "../src/lib/pa/tubes";
 
 const byName = (name: string) => {
   const c = sceneCases.find((x) => x.name === name);
@@ -148,6 +150,43 @@ describe("stack scene", () => {
       const g = withPort("round4");
       expect(tubes(g)).toBe(4);
       expect(bells(g)).toBe(8);
+    });
+
+    test("the tubes and their flares stay inside the length the model takes, at every baffle inset", () => {
+      // round1 and round2, straight and with one elbow (each at its longest: the straight mouth a diameter from the
+      // back wall, the riser against it): the outer flare's lip is flush with the baffle front and the inner mouth
+      // keeps the model's gap to the back wall or the lid
+      const box = DEFAULT_PA.cDim,
+        wall = 0.75,
+        drv = DEFAULT_PA.sub;
+      const front = box.d / 2,
+        backFace = -box.d / 2 + wall,
+        lidFace = base.plinth + box.h - wall;
+      for (const inset of [0, 0.75, 1.5])
+        for (const [style, nt, dia] of [
+          ["round1", 1, 6],
+          ["round2", 2, 4.25],
+        ] as const)
+          for (const e of [0, 1] as const) {
+            const at = `${style} ${e} elbow inset ${inset}`;
+            const span = subTubeSpan(box, style, { nt, dia }, wall, inset, drv, e);
+            expect(span, at).not.toBeNull();
+            const v = { nt, dia, len: span?.[1] ?? 0 };
+            expect(modelTubeElbows(box, style, v, wall, inset, drv), at).toBe(e);
+            const legs = subTubeLegs(box, style, v, wall, inset, drv, e);
+            const g = buildStackScene({
+              ...base,
+              wall,
+              inset,
+              portStyle: style,
+              portGeom: { nPorts: nt, portR: dia / 2, tubeLen: v.len },
+            });
+            const b = new THREE.Box3();
+            g.traverse((o) => o.name === VENT_MESH_NAME && b.expandByObject(o));
+            expect(b.max.z, at).toBeCloseTo(front - inset, 9);
+            if (e === 0) expect(b.min.z, at).toBeCloseTo(backFace + legs.gap, 9);
+            else expect(b.max.y, at).toBeCloseTo(lidFace - legs.gap, 9);
+          }
     });
 
     test("the cutaway drops the cones", () => {

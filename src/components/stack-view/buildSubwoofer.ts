@@ -243,11 +243,12 @@ export function buildSubwoofer(
       m.name = VENT_MESH_NAME;
       subGroup.add(m);
     };
-    // a quarter-round flare at a mouth, opening along `dir`
+    // a quarter-round flare whose lip is the mouth `at`, opening along `dir`: inside the tube's length, as the model
+    // counts it (its run is part of the centerline, lib/pa/tubes flareShortfall)
     const bell = (at: THREE.Vector3, dir: THREE.Vector3) => {
       const m = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), portMat);
       m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-      m.position.copy(at);
+      m.position.copy(at).addScaledVector(dir, -RB);
       m.name = VENT_MESH_NAME;
       subGroup.add(m);
     };
@@ -256,23 +257,23 @@ export function buildSubwoofer(
       const x = p.x,
         y = pl + T + p.y,
         zc = subZ - legs.run; // the first corner, behind the baffle face
-      bell(V(x, y, subZ), V(0, 0, 1));
+      bell(V(x, y, subZ), V(0, 0, 1)); // its lip flush with the baffle front
       if (e === 0) {
-        pipe(V(x, y, subZ), V(x, y, zc));
+        pipe(V(x, y, subZ - RB), V(x, y, zc + RB));
         bell(V(x, y, zc), V(0, 0, -1));
         return;
       }
-      pipe(V(x, y, subZ), V(x, y, zc + bend));
+      pipe(V(x, y, subZ - RB), V(x, y, zc + bend));
       elbow(V(x, y + bend, zc + bend), V(0, -1, 0), V(0, 0, -1));
       const top = y + legs.rise;
       if (e === 1) {
-        pipe(V(x, y + bend, zc), V(x, top, zc));
+        pipe(V(x, y + bend, zc), V(x, top - RB, zc));
         bell(V(x, top, zc), V(0, 1, 0));
         return;
       }
       pipe(V(x, y + bend, zc), V(x, top - bend, zc));
       elbow(V(x, top - bend, zc + bend), V(0, 0, -1), V(0, 1, 0));
-      pipe(V(x, top, zc + bend), V(x, top, zc + legs.back));
+      pipe(V(x, top, zc + bend), V(x, top, zc + legs.back - RB));
       bell(V(x, top, zc + legs.back), V(0, 0, 1));
     });
   }
