@@ -680,11 +680,12 @@ export function subDriverCenter(
   return { x: iw / 2, y: band + (ih - band) / 2 };
 }
 /**
- * What no brace or rib in the sub may enter: its driver (driverKeepOut), and its vent's parts and the air they hold,
- * over the whole depth whatever the duct's length (so the bracing, and with it the volume, holds while the duct's
- * length changes): a bottom slot under its shelf (folded, the rear channel up the back to the lid as well), a side duct
- * between its wall and the side (its flared ends a flare wider), and each round tube's run along the floor, up to the
- * lid where it takes elbows.
+ * What no brace or rib in the sub may enter: its driver (driverKeepOut), and its vent's parts and the air they hold: a
+ * bottom slot under its shelf as far back as the duct runs and a slot height more (room for the air at its inner end;
+ * folded, the whole floor and the rear channel up the back to the lid as well), a side duct between its wall and the
+ * side (its flared ends a flare wider) and each round tube's run along the floor (up to the lid where it takes
+ * elbows), these two over the whole depth. The optimizers' searches don't run the rule (braceWoodEstimate), so the
+ * slot's room may follow its length; the planner's volume moves with the ribs it lets in behind a short slot.
  */
 export function subKeepOut(
   box: Dims3,
@@ -695,6 +696,8 @@ export function subKeepOut(
   drv: TubeDriver,
   /** whether the slot folds and the tubes take elbows; absent: at the vent's length in this box */
   bends: Pick<DuctFlags, "folds" | "elbows"> = ductFlagsOf(box, t, inset, style, v, drv),
+  /** a bottom slot's room over the whole floor, whatever its length (the hardware's placement keeps to that) */
+  wholeFloor = false,
 ): BoxKeepOut {
   const { iw, ih, inD } = paInside(box, t, inset);
   const driver = driverKeepOut(
@@ -706,7 +709,11 @@ export function subKeepOut(
   const z: readonly [number, number] = [0, inD];
   if (style === "slots") {
     const band = v.slotH + t;
-    vent.push({ x: [0, iw], y: [0, band], z });
+    const slotEnd =
+      bends.folds || wholeFloor
+        ? inD
+        : Math.min(inD, Math.max(0, v.len - inset - BAFFLE_PLY_IN) + v.slotH);
+    vent.push({ x: [0, iw], y: [0, band], z: [0, slotEnd] });
     if (bends.folds) vent.push({ x: [0, iw], y: [0, ih], z: [inD - band, inD] });
   } else if (style === "vslots" || style === "vslot1") {
     // the duct to its flared ends' outer face
@@ -820,7 +827,7 @@ export function subBoxBracing(
     ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
     : [];
   const hwKey = regionsKey(recesses);
-  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
+  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? v.len : ""}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };
@@ -1192,7 +1199,7 @@ function subHardwarePlacement(
       depthIn: subDriverDepthIn(drv),
     },
     bracing,
-    keepOut: subKeepOut(box, t, inset, style, v, drv),
+    keepOut: subKeepOut(box, t, inset, style, v, drv, undefined, true),
     ventMasses: subVentMasses(box, t, style, v),
   });
 }

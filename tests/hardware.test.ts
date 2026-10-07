@@ -349,7 +349,7 @@ test("a bottom slot's shelf, fins and folded rear wall pull the sub's handles do
         depthIn: subDriverDepthIn(d.sub),
       },
       bracing: subBoxBracing(d.cDim, t, d.inset, "slots", v, d.sub, undefined),
-      keepOut: subKeepOut(d.cDim, t, d.inset, "slots", v, d.sub),
+      keepOut: subKeepOut(d.cDim, t, d.inset, "slots", v, d.sub, undefined, true),
       ventMasses: masses ? subVentMasses(d.cDim, t, "slots", v) : [],
     });
   const slot = { ...vent, len: 12 };

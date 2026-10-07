@@ -16,6 +16,7 @@ import {
   ribFlangeIn,
   teeSecondMoment,
   WINDOW_RAIL_IN,
+  RIB_FREE_END_IN,
 } from "../src/lib/bracing";
 import {
   NO_SUPPORTS,
@@ -823,4 +824,46 @@ test("rib rings: on a wide box in ½″ the back's ribs line up with the sides' 
   assert.deepEqual(at("back"), at("sideL"));
   assert.deepEqual(at("back"), at("sideR"));
   assert.ok((b.panels.find((p) => p.id === "back")?.hz ?? 0) >= b.targetHz);
+});
+
+test("short ribs and a short slot: an 18″ driver's basket and a 4″ slot no longer keep ribs off the sides and bottom", () => {
+  // ½″ walls, 22 × 32 × 18: the basket ring comes within 2″ of the sides at the baffle, the slot runs 4″ back
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  assert.ok(sub);
+  const box = { w: 22, h: 32, d: 18 };
+  const b = subBoxBracing(
+    box,
+    0.5,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 4 },
+    sub,
+    "ribs",
+  );
+  const keep = subKeepOut(
+    box,
+    0.5,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 4 },
+    sub,
+  );
+  const ring = keep.driver[0];
+  // a side rib at the driver's height starts behind the basket's ring, at most RIB_FREE_END_IN off the baffle
+  const side = b.ribs.filter((r) => r.panel === "sideL");
+  assert.ok(
+    side.some(
+      (r) =>
+        r.at.some((y) => y > ring.y[0] && y < ring.y[1]) &&
+        r.from >= ring.z[1] - 1e-9 &&
+        r.from <= RIB_FREE_END_IN,
+    ),
+    JSON.stringify(side),
+  );
+  // the floor behind the slot takes a rib, and every panel but the baffle clears the target
+  assert.ok(b.ribs.some((r) => r.panel === "bottom"));
+  for (const p of b.panels) if (p.id !== "baffle") assert.ok(p.hz >= b.targetHz, `${p.id} ${p.hz}`);
+  // the slot's room ends a slot height behind the duct, not at the back
+  const slot = keep.vent[0];
+  assert.ok(slot.z[1] < paInner(box, 0.5, DEFAULT_PA.inset).z - 1);
 });

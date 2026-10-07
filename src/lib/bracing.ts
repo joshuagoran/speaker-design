@@ -32,7 +32,10 @@
 // off the driver, either way across the panel. A window brace goes where its frame clears them all, nearest
 // the even spacing; one across x whose plane crosses the driver leaves its front rail out round it (the frame opens to
 // the baffle), so it holds the top, bottom and back but not the baffle. A rib must clear them over its whole run, or
-// stop at a duct part that holds the panel (a slot's shelf). A panel nothing can reach is reported under the target.
+// stop at a duct part that holds the panel (a slot's shelf), or stop short of one, at most RIB_FREE_END_IN short of
+// the edge or part it would reach (behind the driver's basket ring); a rib that stops short still counts as a line
+// across the whole panel, a little high for the bays at its free end. A panel nothing can reach is reported under the
+// target.
 import type {
   BoxAxis,
   BoxBracing,
@@ -83,6 +86,11 @@ export const MDF_STIFFNESS: Pick<PlateStock, "eStrong" | "eWeak" | "nu"> = {
 export const WINDOW_RAIL_IN = 2;
 /** A rib's depth off the panel, inches; its width is the panel's stock. */
 export const RIB_DEPTH_IN = 2.5;
+/**
+ * The farthest a rib may stop short of the edge or duct part its run would reach, to clear the keep-out (the driver's
+ * basket ring beside a side), inches; its end there is free.
+ */
+export const RIB_FREE_END_IN = 4;
 /** The narrowest bay a window brace or rib may leave, inches (room to glue and clamp it). */
 export const MIN_BAY_IN = 4;
 /** The most moves the rule makes on one box. */
@@ -595,11 +603,16 @@ export function braceBox({
         run: [o[runAxis][0] - offR, o[runAxis][1] - offR] as const,
       }));
     const sup = alongU ? [...p.fixedV, ...p.stopV] : [...p.fixedU, ...p.stopU];
+    const starts = [0, ...sup.map((s) => s + t / 2)],
+      ends = [L, ...sup.map((s) => s - t / 2)];
+    // or just past a keep-out box, RIB_FREE_END_IN at most from where the rib would have started or ended
+    const near = (xs: number[], x: number) =>
+      x > EPS && x < L - EPS && xs.some((y) => Math.abs(y - x) <= RIB_FREE_END_IN + EPS);
     const out = {
       L,
       boxes,
-      starts: [0, ...sup.map((s) => s + t / 2)],
-      ends: [L, ...sup.map((s) => s - t / 2)],
+      starts: [...starts, ...boxes.map((o) => o.run[1]).filter((x) => near(starts, x))],
+      ends: [...ends, ...boxes.map((o) => o.run[0]).filter((x) => near(ends, x))],
     };
     bandMemo.set(k, out);
     return out;
