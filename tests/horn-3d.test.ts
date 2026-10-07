@@ -253,3 +253,29 @@ describe("the driver's L-bracket", () => {
       }
     });
 });
+
+test("an adapter neck below the upright's top edge leaves the upright un-notched", () => {
+  const { adapter } = base.horn;
+  if (!adapter) throw new Error("the default horn has no adapter");
+  // a thin neck: its radius stays under the upright's top edge, so the notch has nothing to cut
+  const horn = {
+    ...base.horn,
+    adapter: {
+      ...adapter,
+      steps: [
+        [5.6, 0.35],
+        [1, 0.6],
+        [5, 0.66],
+      ] as const,
+    },
+  };
+  const g = buildStackScene({ ...base, horn, layout: "stack" });
+  const hornBox = boxOf(g, HORN_MESH_NAME);
+  if (!hornBox) throw new Error("no horn");
+  const axisY = hornBox.getCenter(new THREE.Vector3()).y;
+  const top = -(adapter.bodyBoltCircle / 2) * Math.SQRT1_2 + BRACKET.aboveBolts;
+  const tallest = Math.max(
+    ...meshesNamed(g, BRACKET_MESH_NAME).map((m) => new THREE.Box3().setFromObject(m).max.y),
+  );
+  expect(tallest).toBeCloseTo(axisY + top, 6);
+});

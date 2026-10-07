@@ -128,8 +128,8 @@ function addBracket(
   shape.moveTo(-w, bottom);
   shape.lineTo(w, bottom);
   shape.lineTo(w, top);
-  if (notchR !== null) {
-    // a round notch in the top edge for the neck
+  if (notchR !== null && notchR > -top) {
+    // a round notch in the top edge for the neck (none when the neck clears the top edge)
     const xn = Math.sqrt(Math.max(0, notchR * notchR - top * top));
     shape.lineTo(xn, top);
     shape.absarc(0, 0, notchR, Math.atan2(top, xn), Math.atan2(top, -xn), true);
