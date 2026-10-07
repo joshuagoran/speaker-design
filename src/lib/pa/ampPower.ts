@@ -1,4 +1,4 @@
-import { MUSIC_CREST_DB } from "../../constants/ampPower";
+import { MUSIC_CREST_DB, SINE_CREST_DB } from "../../constants/ampPower";
 import type {
   BalancedLevels,
   FrequencyPoint,
@@ -26,7 +26,9 @@ export interface ChannelPower extends ChannelMax {
   avgW: number;
   /** the power on music peaks, `MUSIC_CREST_DB` above the average */
   peakW: number;
-  /** whether the peaks ask for more than the amp has */
+  /** the amp's peak power, W: its rating is a sine's average, so its peaks are `SINE_CREST_DB` higher */
+  ampPeakW: number;
+  /** whether the music's peaks ask for more than the amp's peaks */
   clips: boolean;
 }
 
@@ -43,7 +45,10 @@ export const peakPower = (avgW: number, crestDb: number = MUSIC_CREST_DB) =>
  */
 export const headroomDb = (gain: number, pad: number) => Math.max(0, -(gain + pad));
 
-/** Watts into 8 ohm for an amp voltage, as `ampVoltage` rates the amp. */
+/**
+ * Watts into 8 ohm for a voltage. The model takes the sub and mid at 8 ohm nominal (`ampVoltage`,
+ * `thermalVoltageLimit`, `SubLimits.W`; the catalog lists only their Re), so their watts and the amp's agree.
+ */
 const wattsInto8 = (v: number) => (v * v) / 8;
 
 /** The sub at its music limit: the drive and limit `subwooferLimits` found, against the amp's voltage. */
@@ -89,6 +94,9 @@ export const hornMax = (h: Pick<HornResponse, "P" | "pAmp" | "who">): ChannelMax
 /** A channel at the target, `headroom` dB under its max. */
 export function channelPower(channel: AmpChannel, max: ChannelMax, headroom: number): ChannelPower {
   const avgW = powerAtTarget(max.wAtMax, headroom),
-    peakW = peakPower(avgW);
-  return { channel, ...max, headroomDb: headroom, avgW, peakW, clips: peakW > max.ampW * 1.001 };
+    peakW = peakPower(avgW),
+    ampPeakW = peakPower(max.ampW, SINE_CREST_DB);
+  // a small margin, so peaks that just reach the amp's peaks don't read as clipping
+  const clips = peakW > ampPeakW * 1.001;
+  return { channel, ...max, headroomDb: headroom, avgW, peakW, ampPeakW, clips };
 }

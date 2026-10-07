@@ -10,7 +10,7 @@ import {
   subMax,
 } from "../src/lib/pa/ampPower";
 import { ampVoltage } from "../src/lib/pa/calc";
-import { AMP_POWER_TEXT, MUSIC_CREST_DB } from "../src/constants/ampPower";
+import { AMP_POWER_TEXT, MUSIC_CREST_DB, SINE_CREST_DB } from "../src/constants/ampPower";
 import { AMP_LIMIT_NAMES } from "../src/constants/limits";
 import type { PaMaxPoint } from "../src/types";
 import { close } from "./helpers";
@@ -42,10 +42,13 @@ test("a channel at the target: 13 dB headroom under an amp-limited 800 W sub", (
   assert.equal(r.clips, false);
 });
 
-test("clips on peaks once the peaks need more than the amp", () => {
+test("clips on peaks once the music's peaks pass the amp's (twice its sine rating)", (t) => {
   const max = subMax({ W: 800, who: "amp" }, ampVoltage(800));
+  close(t, channelPower("sub", max, 10).ampPeakW, 1600, 1e-9);
+  // amp-limited: the peaks reach the amp's at MUSIC_CREST_DB − SINE_CREST_DB (about 7 dB) of headroom
   assert.equal(channelPower("sub", max, 6).clips, true);
-  assert.equal(channelPower("sub", max, 10).clips, false);
+  assert.equal(channelPower("sub", max, MUSIC_CREST_DB - SINE_CREST_DB).clips, false);
+  assert.equal(channelPower("sub", max, 8).clips, false);
 });
 
 test("the horn: its model's power and the amp's power into its impedance", () => {
