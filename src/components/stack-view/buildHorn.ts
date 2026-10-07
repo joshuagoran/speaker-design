@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { rectangularHornGeometry } from "./geometry";
 import { HORN_LIFT_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
+import { buildBracket, takesBracket } from "./buildBracket";
 import { cdBodySteps } from "../../lib/data";
 import type { BodyStep, CompressionDriver, Dims3, Horn } from "../../types";
 
@@ -123,6 +124,8 @@ export function buildHorn(
     body.name = HORN_MESH_NAME;
     ctx.group.add(body);
     addThroatParts(ctx, horn, cd, at);
+    // the bracket stands on the mid box's lid; the tower has no lid under the driver
+    if (!tower && takesBracket(horn.adapter)) buildBracket(ctx, horn.adapter, at, hornY);
   }
   return { top: hornY + (tower ? tower.sectionH : HORN_LIFT_IN + hz.h), axes };
 }

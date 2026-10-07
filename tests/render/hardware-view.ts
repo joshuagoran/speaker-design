@@ -1,6 +1,6 @@
 // The render check's page (tests/render-hardware.mjs bundles it): the default PA stack with its hardware, built as the
 // planner builds it, seen from the camera the URL asks for, so the handles, dishes and posts can be looked at close up.
-//   ?handle=H1105|30769|none &cutaway=1 &layout=stack|tower|pole|satellite &az=deg &el=deg &dist=in &tx= &ty= &tz= (look-at, in)
+//   ?horn=<id> &cd=<id> &handle=H1105|30769|none &cutaway=1 &layout=stack|tower|pole|satellite &az=deg &el=deg &dist=in &tx= &ty= &tz= (look-at, in)
 import * as THREE from "three";
 import { buildStackScene } from "../../src/components/stack-view/buildStackScene";
 import { DEFAULT_PA } from "../../src/lib/defaults";
@@ -17,6 +17,7 @@ import { HANDLE_CHOICES } from "../../src/lib/pa/hardware";
 import type { BoxHandles, PaLayout } from "../../src/types";
 import { PA_LAYOUT_NAMES } from "../../src/constants/paLayouts";
 import { keysOf } from "../../src/lib/records";
+import { CD_OPTIONS, HORN_OPTIONS } from "../../src/lib/data";
 
 const q = new URLSearchParams(location.search);
 const num = (k: string, d: number) => (q.has(k) ? Number(q.get(k)) : d);
@@ -29,8 +30,8 @@ const mDim = layout === "tower" ? { w: d.cDim.w, h: 15.5, d: d.cDim.d } : d.mDim
 const group = buildStackScene({
   sub: { ...d.sub, box: d.cDim },
   mid: { ...d.mid, box: d.mDim },
-  horn: d.horn,
-  cd: d.cd,
+  horn: HORN_OPTIONS.find((h) => h.id === q.get("horn")) ?? d.horn,
+  cd: CD_OPTIONS.find((c) => c.id === q.get("cd")) ?? d.cd,
   plinth: 3,
   cutaway,
   portStyle: d.portStyle,
