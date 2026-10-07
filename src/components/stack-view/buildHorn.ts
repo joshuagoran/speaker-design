@@ -54,8 +54,8 @@ export interface HornAxis {
  */
 function addThroatParts(
   ctx: SceneContext,
-  horn: Horn,
-  cd: CompressionDriver,
+  horn: Pick<Horn, "adapter">,
+  cd: Pick<CompressionDriver, "body">,
   at: HornAxis,
   lidY: number | null,
 ) {
@@ -98,7 +98,7 @@ export function buildHorn(
     tower,
   }: {
     horn: Horn;
-    cd: CompressionDriver;
+    cd: Pick<CompressionDriver, "body">;
     y: number;
     xs?: number[];
     mount: Pick<Dims3, "w" | "d">;

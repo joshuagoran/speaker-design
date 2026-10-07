@@ -28,14 +28,19 @@ export const BRACKET = {
 } as const;
 
 /** Whether a horn's adapter has a front flange and a neck behind it for the bracket to bolt to. */
-export const takesBracket = (adapter: HornAdapter | undefined): adapter is HornAdapter =>
+export const takesBracket = (adapter: Pick<HornAdapter, "steps"> | undefined) =>
   !!adapter && adapter.steps.length >= 2 && adapter.steps[1][0] < adapter.steps[0][0];
 
 /**
  * The bracket for one horn with a flanged adapter: `at` is the horn's axis and throat, `lidY` the top of the box under
  * it (the frame's roundover stands `ROUNDOVER_IN` above that, and the foot sits on it).
  */
-export function buildBracket(ctx: SceneContext, adapter: HornAdapter, at: HornAxis, lidY: number) {
+export function buildBracket(
+  ctx: SceneContext,
+  adapter: Pick<HornAdapter, "steps" | "bodyBoltCircle">,
+  at: HornAxis,
+  lidY: number,
+) {
   const [[, flangeLen], [neckDia]] = adapter.steps;
   const bcR = adapter.bodyBoltCircle / 2;
   // the two lower holes, at 225° and 315°, relative to the axis

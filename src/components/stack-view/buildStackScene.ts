@@ -26,7 +26,7 @@ export interface Props {
   mid: MidDriver & { box: Dims3 };
   horn: Horn;
   /** the compression driver behind the horn */
-  cd: CompressionDriver;
+  cd: Pick<CompressionDriver, "body">;
   plinth: number;
   cutaway: boolean;
   portStyle: PortStyle;
