@@ -32,13 +32,6 @@ export const BRACE_STYLE_SUMMARY = {
 export const braceUnderNote = (panel: string, hz: string, target: string) =>
   `${panel}: ${hz}, under the ${target} target`;
 
-/**
- * The note under the Bracing setting when the driver's weight rocks the baffle under the target (BoxBracing's
- * driverOnBaffleHz): the cabinet ("Sub") and that mode, already in words.
- */
-export const driverOnBaffleNote = (cabinet: string, hz: string) =>
-  `${cabinet} driver on the baffle: ${hz} with its weight on the cutout; a brace from the magnet to the back holds it`;
-
 /** The end of a cutlist rib row whose rib crosses a window brace. */
 export const RIB_HALF_LAP_NOTE = "; half-lap it where it crosses a window brace";
 

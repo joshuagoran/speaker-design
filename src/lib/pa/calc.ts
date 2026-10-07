@@ -777,8 +777,6 @@ const remember = (memo: Map<string, BoxBracing>, key: string, b: BoxBracing) => 
   memo.set(key, b);
   return b;
 };
-/** kg per lb */
-const LB_KG = 0.45359237;
 /** A driver's cutout on the baffle: its center (in from the box's inside corner) less a slot's band below it. */
 const baffleCutout = (
   center: { x: number; y: number },
@@ -797,11 +795,10 @@ function paBracing(
   keepKey: string,
   style: BraceStyleId,
   back: BackJointId,
-  /** the driver's cutout on the baffle (in from the baffle's corner) and its weight (lb) */
-  driver: { hole: PlateHole; lb: number },
+  /** the driver's cutout on the baffle, in from the baffle's corner */
+  hole: PlateHole,
 ): BoxBracing {
-  const { hole } = driver;
-  const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}|${hole.cx},${hole.cy},${hole.r},${driver.lb}`;
+  const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}|${hole.cx},${hole.cy},${hole.r}`;
   const hit = BRACING_MEMO.get(key);
   if (hit) return hit;
   const inside = paInside(box, t, inset, band);
@@ -816,7 +813,6 @@ function paBracing(
       style,
       braceStock: wall,
       keepOut,
-      driverKg: driver.lb * LB_KG,
     }),
   );
 }
@@ -847,7 +843,7 @@ export function subBoxBracing(
     ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
     : [];
   const hwKey = regionsKey(recesses);
-  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${drv.lb ?? 0}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
+  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };
@@ -875,14 +871,11 @@ export function subBoxBracing(
       keepKey,
       bs,
       back,
-      {
-        hole: baffleCutout(
-          subDriverCenter(box, t, style, v, drv.size),
-          style === "slots" ? v.slotH + t : 0,
-          drv.size,
-        ),
-        lb: drv.lb ?? 0,
-      },
+      baffleCutout(
+        subDriverCenter(box, t, style, v, drv.size),
+        style === "slots" ? v.slotH + t : 0,
+        drv.size,
+      ),
     ),
   );
 }
@@ -915,7 +908,7 @@ export function midBoxBracing(
     `${mid.size}|${mid.depthIn}|${regionsKey(recesses)}`,
     braceStyle ?? defaultBraceStyleNear(t),
     back,
-    { hole: baffleCutout({ x: iw / 2, y: ih / 2 }, 0, mid.size), lb: mid.lb ?? 0 },
+    baffleCutout({ x: iw / 2, y: ih / 2 }, 0, mid.size),
   );
 }
 /**

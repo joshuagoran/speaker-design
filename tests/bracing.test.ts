@@ -9,7 +9,6 @@ import {
   defaultBraceStyleNear,
   plateFirstModeHz,
   baysHz,
-  holeBayHz,
   braceBox,
   regionsOverlap,
   braceShortfalls,
@@ -43,12 +42,10 @@ import {
   braceParts,
 } from "../src/lib/pa/calc";
 import { subDriverDepthIn } from "../src/lib/pa/tubes";
-import { HINGED_EDGES, holedPlateHz } from "../src/lib/plateModes";
 import { subWoodIn3 } from "../src/lib/pa/exactSub";
 import {
   RIB_HALF_LAP_NOTE,
   braceUnderNote,
-  driverOnBaffleNote,
   savedBackJoint,
   GLUED_BACK,
   DEFAULT_BACK_JOINT,
@@ -613,22 +610,20 @@ test("the notes under the Bracing setting name the cabinet and each panel left u
   const notes = braceNoteLines(PA_SETTINGS_TABS.sub, b);
   const under = braceShortfalls(b);
   assert.ok(under.some((p) => p.id === "baffle"));
-  // each panel under the target, then the driver on the baffle (its weight rocks the panel well under the target)
-  assert.ok(b.driverOnBaffleHz !== null && b.driverOnBaffleHz < b.targetHz);
-  assert.deepStrictEqual(notes, [
-    ...under.map((p) =>
+  assert.deepStrictEqual(
+    notes,
+    under.map((p) =>
       braceUnderNote(
         bracePanelName(PA_SETTINGS_TABS.sub, p.id),
         formatHz(p.hz),
         formatHz(b.targetHz),
       ),
     ),
-    driverOnBaffleNote(PA_SETTINGS_TABS.sub, formatHz(b.driverOnBaffleHz)),
-  ]);
-  // a box that needs nothing, its driver light on the baffle, has no note
+  );
+  // a box that needs nothing has no note
   const d = DEFAULT_PA;
   const mid = midBoxBracing(d.mDim, 0.75, d.inset, d.mid, "stack", "ribs");
-  assert.ok(mid && mid.driverOnBaffleHz !== null && mid.driverOnBaffleHz >= mid.targetHz);
+  assert.ok(mid);
   assert.deepStrictEqual(braceNoteLines(PA_SETTINGS_TABS.mid, mid), []);
 });
 
@@ -946,15 +941,4 @@ test("a screwed back: the window braces' rails don't hold it, and no rib ring is
   // the frames stand in the box either way, but only a glued back is held by them
   assert.ok(Math.abs(screwed.hz - screwed.bareHz) < 1e-9, `${screwed.hz} vs ${screwed.bareHz}`);
   assert.ok(glued.hz > glued.bareHz);
-});
-
-test("the driver on the baffle reads the bay round the cutout only", () => {
-  const stock = paPanelStock(0.75);
-  const p = { spanU: 30, spanV: 20, stock, hole: { cx: 8, cy: 10, r: 5 } };
-  // a line at 18″ splits the panel: the cutout's bay 18 × 20, a plain bay 12 × 20
-  const bay = holeBayHz(p, [18], [], 0);
-  assert.ok(bay !== null);
-  assert.ok(Math.abs(bay - holedPlateHz(18, 20, stock, HINGED_EDGES, p.hole)) < 1e-9);
-  assert.ok(Math.abs(baysHz(p, [18], []) - Math.min(bay, plateFirstModeHz(12, 20, stock))) < 1e-9);
-  assert.equal(holeBayHz({ ...p, hole: undefined }, [18], [], 5), null);
 });

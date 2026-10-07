@@ -406,20 +406,7 @@ export function baysHz(
   acrossU: readonly number[],
   acrossV: readonly number[],
 ): number {
-  return Math.min(...panelBays(p, acrossU, acrossV).map((bay) => bayHz(p, bay, 0)));
-}
-/**
- * The bay round the driver's cutout read with the driver's weight on the cutout's edge (`ringKg`), Hz: the driver and
- * that bay rocking together (BoxBracing's driverOnBaffleHz); null where the panel has no cutout.
- */
-export function holeBayHz(
-  p: Pick<BracePanel, "spanU" | "spanV" | "stock" | "edges" | "hole">,
-  acrossU: readonly number[],
-  acrossV: readonly number[],
-  ringKg: number,
-): number | null {
-  const bay = panelBays(p, acrossU, acrossV).find((x) => x.hole);
-  return bay ? bayHz(p, bay, ringKg) : null;
+  return Math.min(...panelBays(p, acrossU, acrossV).map((bay) => bayHz(p, bay)));
 }
 interface Bay {
   u: { from: number; len: number };
@@ -428,9 +415,9 @@ interface Bay {
   /** the cutout in the bay's own coordinates, where it lies in this bay */
   hole: PlateHole | null;
 }
-const bayHz = (p: Pick<BracePanel, "stock">, bay: Bay, ringKg: number) =>
+const bayHz = (p: Pick<BracePanel, "stock">, bay: Bay) =>
   bay.hole
-    ? holedPlateHz(bay.u.len, bay.v.len, p.stock, bay.springs, bay.hole, ringKg)
+    ? holedPlateHz(bay.u.len, bay.v.len, p.stock, bay.springs, bay.hole)
     : restrainedPlateHz(bay.u.len, bay.v.len, p.stock, bay.springs);
 /** A panel's bays between its supports, each with its edges' springs; bays alike are listed once (baysHz). */
 function panelBays(
@@ -487,8 +474,6 @@ export interface BraceBoxInput {
   style: BraceStyleId;
   braceStock: PlateStock;
   keepOut: BoxKeepOut;
-  /** the driver's weight on the baffle's cutout, kg (driverOnBaffleHz); absent: none worked out */
-  driverKg?: number;
 }
 type RibState = BracePlan["ribs"];
 type Counts = BracePlan["windows"];
@@ -538,7 +523,6 @@ export function braceBox({
   style,
   braceStock,
   keepOut,
-  driverKg,
 }: BraceBoxInput): BoxBracing {
   const t = braceStock.t;
   const hardware = keepOut.hardware ?? [];
@@ -1021,16 +1005,6 @@ export function braceBox({
     z: winOrNone("z", windows.z),
   };
   const notchAt = win.x.filter((x) => notched("x", x));
-  const baffle = panels.find((p) => p.hole);
-  const driverOnBaffleHz =
-    baffle && driverKg
-      ? holeBayHz(
-          baffle,
-          supportsAcross(baffle, baffle.u, windows),
-          supportsAcross(baffle, baffle.v, windows),
-          driverKg,
-        )
-      : null;
   return {
     style,
     targetHz,
@@ -1044,7 +1018,6 @@ export function braceBox({
       return a + (p ? p.stock.t * RIB_DEPTH_IN * r.len * r.at.length : 0);
     }, 0),
     meets: res.every((p) => p.hz >= targetHz - 1e-9),
-    driverOnBaffleHz,
   };
 }
 
