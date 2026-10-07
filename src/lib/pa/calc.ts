@@ -681,6 +681,16 @@ export function subDriverCenter(
   return { x: iw / 2, y: band + (ih - band) / 2 };
 }
 /**
+ * How far back a bottom slot's room runs, in from the baffle: the duct and a slot height more, up to the next whole
+ * inch (so duct lengths a hair apart share their bracing), or the whole depth when it folds.
+ */
+const slotRoomIn = (
+  inD: number,
+  inset: number,
+  v: Pick<VentSpec, "len" | "slotH">,
+  folds: boolean,
+) => (folds ? inD : Math.min(inD, Math.ceil(Math.max(0, v.len - inset - BAFFLE_PLY_IN) + v.slotH)));
+/**
  * What no brace or rib in the sub may enter: its driver (driverKeepOut), and its vent's parts and the air they hold: a
  * bottom slot under its shelf as far back as the duct runs and a slot height more (room for the air at its inner end;
  * folded, the whole floor and the rear channel up the back to the lid as well), a side duct between its wall and the
@@ -710,10 +720,7 @@ export function subKeepOut(
   const z: readonly [number, number] = [0, inD];
   if (style === "slots") {
     const band = v.slotH + t;
-    const slotEnd =
-      bends.folds || wholeFloor
-        ? inD
-        : Math.min(inD, Math.max(0, v.len - inset - BAFFLE_PLY_IN) + v.slotH);
+    const slotEnd = wholeFloor ? inD : slotRoomIn(inD, inset, v, bends.folds);
     vent.push({ x: [0, iw], y: [0, band], z: [0, slotEnd] });
     if (bends.folds) vent.push({ x: [0, iw], y: [0, ih], z: [inD - band, inD] });
   } else if (style === "vslots" || style === "vslot1") {
@@ -840,7 +847,7 @@ export function subBoxBracing(
     ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
     : [];
   const hwKey = regionsKey(recesses);
-  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? v.len : ""}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
+  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${drv.lb ?? 0}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };

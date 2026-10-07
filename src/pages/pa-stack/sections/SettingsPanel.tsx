@@ -36,6 +36,7 @@ import { SLOT_LAYOUT_NAMES } from "../../../constants/portStyles";
 import { UI_TEXT } from "../../../constants/uiText";
 import {
   BACK_JOINT_NAMES,
+  BACK_JOINT_SUMMARY,
   BACK_JOINT_TIPS,
   BRACE_STYLE_NAMES,
   BRACE_STYLE_SUMMARY,
@@ -255,7 +256,7 @@ export function SettingsPanel({ planner }: Props) {
       `amps ${subAmpWatts} / ${midAmpWatts} / ${hornAmpWatts} W`,
     ].join(" · "),
     build: [
-      `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${PANEL_NOMINAL_NAMES[wallPanel].short} ply, braced with ${BRACE_STYLE_SUMMARY[effectiveBraceStyle]}`,
+      `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${PANEL_NOMINAL_NAMES[wallPanel].short} ply, braced with ${BRACE_STYLE_SUMMARY[effectiveBraceStyle]}, ${BACK_JOINT_SUMMARY[backJoint]}`,
       ...keysOf(hardware)
         .filter((b) => boxTakesHardware(b, layout))
         .map(

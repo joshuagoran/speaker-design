@@ -1,6 +1,7 @@
 // The bracing around the hardware (no rib or window brace over a handle's, the dish's or the posts' recess, so a panel
 // with a handle still takes its ribs beside it), and each bracing style giving its own braces, as the 3D view draws them.
 import { test } from "vite-plus/test";
+import { GLUED_BACK } from "../src/constants/bracing";
 import assert from "node:assert";
 import * as THREE from "three";
 import { bracingRegions, regionsOverlap } from "../src/lib/bracing";
@@ -166,8 +167,9 @@ test("the 3D view draws the plan of the style chosen, every brace and rib of it"
         sub,
         style,
         handles,
+        GLUED_BACK,
       );
-      const midBracing = midBoxBracing(mDim, wall, inset, mid, layout, style, handles);
+      const midBracing = midBoxBracing(mDim, wall, inset, mid, layout, style, handles, GLUED_BACK);
       let n = 0;
       buildStackScene({
         ...scenePropsOf({ ...c, cutaway: true }),

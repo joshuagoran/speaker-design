@@ -200,7 +200,11 @@ function plateStiffness(a: number, b: number, s: PlateStock) {
     k = h ** 3 / (12 * (1 - s.nu * s.nu));
   const Dx = (a <= b ? s.eWeak : s.eStrong) * k,
     Dy = (a <= b ? s.eStrong : s.eWeak) * k;
-  return { Dx, Dy, H: Math.sqrt(Dx * Dy), rhoH: s.lbPerSqFt * LB_FT2_KG_M2 };
+  const H = Math.sqrt(Dx * Dy),
+    D12 = s.nu * H;
+  // H = D12 + 2 D66 (Huber); over the whole plate the D12 and D66 terms integrate to 2H ∫w_xy² (w = 0 on its edges),
+  // over a part of it (the hole) they don't
+  return { Dx, Dy, H, D12, D66: (H - D12) / 2, rhoH: s.lbPerSqFt * LB_FT2_KG_M2 };
 }
 
 /** The first mode of an `a` × `b` in plate, its edges held by `k` (header: Warburton's shape), Hz. */
@@ -252,7 +256,7 @@ export function holedPlateHz(
     .join("|");
   const hit = holeMemo.get(key);
   if (hit !== undefined) return hit;
-  const { Dx, Dy, H, rhoH } = plateStiffness(a, b, s);
+  const { Dx, Dy, H, D12, D66, rhoH } = plateStiffness(a, b, s);
   const n = BASIS_HOLE,
     nb = n * n,
     S = SPAN_HOLE;
@@ -302,7 +306,12 @@ export function holedPlateHz(
       // the upper triangle (mirrored below)
       for (let r = 0; r < nb; r++)
         for (let c = r; c < nb; c++) {
-          K[r][c] -= dA * (Dx * wxx[r] * wxx[c] + Dy * wyy[r] * wyy[c] + 2 * H * wxy[r] * wxy[c]);
+          K[r][c] -=
+            dA *
+            (Dx * wxx[r] * wxx[c] +
+              Dy * wyy[r] * wyy[c] +
+              D12 * (wxx[r] * wyy[c] + wyy[r] * wxx[c]) +
+              4 * D66 * wxy[r] * wxy[c]);
           M[r][c] -= dA * rhoH * w[r] * w[c];
         }
     }
@@ -310,8 +319,12 @@ export function holedPlateHz(
   if (ringKg > 0)
     for (let it = 0; it < HOLE_ROUND; it++) {
       const th = (2 * Math.PI * (it + 0.5)) / HOLE_ROUND;
-      const X = basisAt(n, (hole.cx + hole.r * Math.cos(th)) / a),
-        Y = basisAt(n, (hole.cy + hole.r * Math.sin(th)) / b);
+      const x = hole.cx + hole.r * Math.cos(th),
+        y = hole.cy + hole.r * Math.sin(th);
+      // the weight sits only where the cutout's edge is on this plate
+      if (x <= 0 || x >= a || y <= 0 || y >= b) continue;
+      const X = basisAt(n, x / a),
+        Y = basisAt(n, y / b);
       for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) w[i * n + j] = X.f[i] * Y.f[j];
       for (let r = 0; r < nb; r++)
         for (let c = r; c < nb; c++) M[r][c] += (ringKg / HOLE_ROUND) * w[r] * w[c];

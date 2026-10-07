@@ -46,7 +46,9 @@ import type {
   BracePlan,
   BraceStyleId,
   EdgeHold,
+  PanelEdge,
   PanelNominal,
+  PlateHole,
   PanelResonance,
   PanelRibs,
   PlateStock,
@@ -403,16 +405,46 @@ export function baysHz(
   p: Pick<BracePanel, "spanU" | "spanV" | "stock" | "edges" | "hole">,
   acrossU: readonly number[],
   acrossV: readonly number[],
-  /** a weight (kg) on the cutout's edge: the driver's (0 for the plate alone) */
-  ringKg = 0,
 ): number {
+  return Math.min(...panelBays(p, acrossU, acrossV).map((bay) => bayHz(p, bay, 0)));
+}
+/**
+ * The bay round the driver's cutout read with the driver's weight on the cutout's edge (`ringKg`), Hz: the driver and
+ * that bay rocking together (BoxBracing's driverOnBaffleHz); null where the panel has no cutout.
+ */
+export function holeBayHz(
+  p: Pick<BracePanel, "spanU" | "spanV" | "stock" | "edges" | "hole">,
+  acrossU: readonly number[],
+  acrossV: readonly number[],
+  ringKg: number,
+): number | null {
+  const bay = panelBays(p, acrossU, acrossV).find((x) => x.hole);
+  return bay ? bayHz(p, bay, ringKg) : null;
+}
+interface Bay {
+  u: { from: number; len: number };
+  v: { from: number; len: number };
+  springs: { x0: number; x1: number; y0: number; y1: number };
+  /** the cutout in the bay's own coordinates, where it lies in this bay */
+  hole: PlateHole | null;
+}
+const bayHz = (p: Pick<BracePanel, "stock">, bay: Bay, ringKg: number) =>
+  bay.hole
+    ? holedPlateHz(bay.u.len, bay.v.len, p.stock, bay.springs, bay.hole, ringKg)
+    : restrainedPlateHz(bay.u.len, bay.v.len, p.stock, bay.springs);
+/** A panel's bays between its supports, each with its edges' springs; bays alike are listed once (baysHz). */
+function panelBays(
+  p: Pick<BracePanel, "spanU" | "spanV" | "edges" | "hole">,
+  acrossU: readonly number[],
+  acrossV: readonly number[],
+): Bay[] {
   const k = {
     u0: edgeSpring(p.edges?.u0),
     u1: edgeSpring(p.edges?.u1),
     v0: edgeSpring(p.edges?.v0),
     v1: edgeSpring(p.edges?.v1),
   };
-  const bays = (lines: number[], k0: number, k1: number) => {
+  const spans = (lines: number[], k0: number, k1: number) => {
     const seen = new Map<string, { from: number; len: number; k0: number; k1: number }>();
     for (let i = 1; i < lines.length; i++) {
       const b = {
@@ -427,28 +459,18 @@ export function baysHz(
     }
     return [...seen.values()];
   };
-  const bu = bays(spanLines(p.spanU, acrossU), k.u0, k.u1),
-    bv = bays(spanLines(p.spanV, acrossV), k.v0, k.v1);
-  let hz = Infinity;
-  for (const a of bu)
-    for (const b of bv) {
-      const springs = { x0: a.k0, x1: a.k1, y0: b.k0, y1: b.k1 };
-      const h = p.hole;
-      hz = Math.min(
-        hz,
+  const h = p.hole;
+  return spans(spanLines(p.spanU, acrossU), k.u0, k.u1).flatMap((a) =>
+    spans(spanLines(p.spanV, acrossV), k.v0, k.v1).map((b) => ({
+      u: a,
+      v: b,
+      springs: { x0: a.k0, x1: a.k1, y0: b.k0, y1: b.k1 },
+      hole:
         h && h.cx > a.from && h.cx < a.from + a.len && h.cy > b.from && h.cy < b.from + b.len
-          ? holedPlateHz(
-              a.len,
-              b.len,
-              p.stock,
-              springs,
-              { ...h, cx: h.cx - a.from, cy: h.cy - b.from },
-              ringKg,
-            )
-          : restrainedPlateHz(a.len, b.len, p.stock, springs),
-      );
-    }
-  return hz;
+          ? { ...h, cx: h.cx - a.from, cy: h.cy - b.from }
+          : null,
+    })),
+  );
 }
 
 /** The panels a box's bracing leaves under its target, each with its first mode (the UI names the box and words them). */
@@ -483,6 +505,11 @@ const RING_RANK: Record<BracePanelId, number> = {
   bottom: 2,
   back: 1,
   baffle: 0,
+};
+/** A panel's edges at the start and end of a run along its u or v axis. */
+const RUN_EDGE: Record<"u" | "v", readonly [PanelEdge, PanelEdge]> = {
+  u: ["u0", "u1"],
+  v: ["v0", "v1"],
 };
 /** The panel at each end of a run along an axis. */
 const END_PANEL: Record<BoxAxis, readonly [BracePanelId, BracePanelId]> = {
@@ -570,7 +597,7 @@ export function braceBox({
   const winOrNone = (a: BoxAxis, n: number) => winAt(a, n) ?? [];
   // the window braces' lines on a panel, in from its edge (a notched brace doesn't hold the baffle)
   const onPanel = (p: BracePanel, axis: BoxAxis, n: number, off: number, span: number) =>
-    winOrNone(axis, n)
+    (p.loose ? [] : winOrNone(axis, n))
       .filter((x) => p.id !== "baffle" || !notched(axis, x))
       .map((x) => x - off)
       .filter((x) => x > EPS && x < span - EPS);
@@ -751,8 +778,11 @@ export function braceBox({
     r: RibState,
   ) => {
     const R = ribRunAxis(p.id, a);
-    const L = spanAcross(p, otherAxis(p, a));
+    const o = otherAxis(p, a);
+    const L = spanAcross(p, o);
     if (end === 0 ? run[0] > EPS : run[1] < L - EPS) return 0;
+    // the joint there must be glued for the two ribs to be (a screwed back's isn't)
+    if (p.edges && p.edges[RUN_EDGE[o === p.u ? "u" : "v"][end]] === null) return 0;
     const q = panelById.get(END_PANEL[R][end]);
     const s = q && r[q.id];
     if (!q || !s || s.across !== a) return 0;
@@ -774,6 +804,13 @@ export function braceBox({
   // a window brace's rail on `q` across `a`: its EI over its span, for the corner spring it gives the next rail
   const railStiffness = (q: BracePanel, a: BoxAxis, w: Counts) => {
     const span = spanAcross(q, otherAxis(q, a));
+    // along a loose panel the rail stands alone, no flange glued to it
+    if (q.loose)
+      return (
+        (RING_FIXITY * braceStock.eWeak * (braceStock.t * IN_M) * (WINDOW_RAIL_IN * IN_M) ** 3) /
+        12 /
+        (span * IN_M)
+      );
     const trib = widestGap(spanAcross(q, a), supportsAcross(q, a, w));
     const { EI } = teeBeam(span, trib, q.stock, braceStock, WINDOW_RAIL_IN);
     return (RING_FIXITY * EI) / (span * IN_M);
@@ -987,7 +1024,7 @@ export function braceBox({
   const baffle = panels.find((p) => p.hole);
   const driverOnBaffleHz =
     baffle && driverKg
-      ? baysHz(
+      ? holeBayHz(
           baffle,
           supportsAcross(baffle, baffle.u, windows),
           supportsAcross(baffle, baffle.v, windows),

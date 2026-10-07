@@ -7,7 +7,7 @@ import type {
   PlateHole,
   PlateStock,
 } from "../../types";
-import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
+import { DEFAULT_BACK_JOINT, GLUED_BACK } from "../../constants/bracing";
 
 /** The sub-to-mid crossover the PA boxes are braced for, Hz: the top of the optimizers' range (XO_LO_OPTIONS, tested). */
 export const PA_BRACING_CROSSOVER_HZ = 140;
@@ -32,9 +32,9 @@ export const DRIVER_CLEARANCE_IN = 0.5;
  * golden sub boxes in ¾″ ply (their mid boxes need none, and neither does the estimate under `span`).
  */
 export const BRACE_ESTIMATE = {
-  window: { span: 18.5, scale: 1.275 },
-  ribs: { span: 20.5, scale: 2.94 },
-  both: { span: 20.5, scale: 2.94 },
+  window: { span: 25.5, scale: 3.921 },
+  ribs: { span: 20.5, scale: 3.074 },
+  both: { span: 20.5, scale: 3.074 },
 } as const satisfies Record<BraceStyleId, { span: number; scale: number }>;
 /**
  * A driver's shape behind the baffle as the braces keep clear of it, as shares of its depth there: the cutout's full
@@ -70,8 +70,8 @@ export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], botto
  * A PA box's six panels on the box axes (x across from the left, y up from the bottom, z back from the baffle): the
  * sides, top, bottom and back at the wall stock, the baffle at its own (it starts above a bottom slot's band). Each edge
  * is held by the panel glued to it there (EdgeHold: its stock and its span away from the joint), except where nothing
- * is: a screwed back's joints (`back`), the bottom's front edge over a slot's mouth and the baffle's lower edge on the
- * slot's shelf (left hinged, on the safe side).
+ * is: a screwed back's joints (`back`; the window braces don't hold it either: `loose`), the bottom's front edge over a
+ * slot's mouth and the baffle's lower edge on the slot's shelf (left hinged, on the safe side).
  */
 export function paBoxPanels(
   { iw, ih, inD, band }: PaBoxInside,
@@ -85,7 +85,8 @@ export function paBoxPanels(
 ): BracePanel[] {
   const base = { offU: 0, offV: 0, fixedU: [], fixedV: [], stopU: [], stopV: [] };
   const held = (stock: PlateStock, span: number): EdgeHold => ({ stock, span });
-  const backHold = (span: number) => (back === "glued" ? held(wall, span) : null);
+  const glued = back === GLUED_BACK;
+  const backHold = (span: number) => (glued ? held(wall, span) : null);
   const sideEdges = {
     u0: held(baffle, iw),
     u1: backHold(iw),
@@ -169,6 +170,7 @@ export function paBoxPanels(
       stock: wall,
       ribs: true,
       edges: { u0: backHold(inD), u1: backHold(inD), v0: backHold(inD), v1: backHold(inD) },
+      ...(glued ? {} : { loose: true }),
     },
     {
       ...base,

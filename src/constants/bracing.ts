@@ -71,6 +71,13 @@ export const BACK_JOINT_TIPS = {
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /** The back joint a design takes when none is chosen: screwed, the safe side. */
 export const DEFAULT_BACK_JOINT = "screwed" satisfies keyof typeof BACK_JOINT_NAMES;
+/** A glued back: its joints hold its edges, and the window braces hold it. */
+export const GLUED_BACK = "glued" satisfies keyof typeof BACK_JOINT_NAMES;
+/** Each choice in the Build fold's summary line. */
+export const BACK_JOINT_SUMMARY = {
+  screwed: "screwed back",
+  glued: "glued back",
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /** A saved design's back joint: one of the ids, else absent (the default). */
 export const savedBackJoint = (s: unknown) => keysOf(BACK_JOINT_NAMES).find((k) => k === s);
 
