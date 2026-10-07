@@ -502,7 +502,7 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
     F.push(
       Qtc > 0.8
         ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky. Use a bigger box.", "fillQtc"]
-        : Qtc < 0.5
+        : Qtc < SEALED_QTC_MIN
           ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Rolls off early. Suits a vented box.", "fillQtc"]
           : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped.", "fillQtc"],
     );

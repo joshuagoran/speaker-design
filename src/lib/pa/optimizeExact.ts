@@ -54,6 +54,8 @@ import {
   subGeometry,
   subWeightLb,
   ventSpeedLimit,
+  midBaffleNeedIn,
+  SEALED_QTC_MIN,
 } from "./calc";
 import {
   ductFit,
@@ -364,9 +366,9 @@ const towerMidFails = (s: ExactSpace, box: Dims3, t: number) => {
   const mb = { w: box.w, h: TOWER_MID_H, d: box.d };
   return (
     !m ||
-    Math.min(mb.w, mb.h) < m.size + 1.2 ||
+    Math.min(mb.w, mb.h) < midBaffleNeedIn(m.size) ||
     sealedQtc(m, mb, t, s.cur.inset, { layout: s.cur.layout, braceStyle: s.braceStyle }) <
-      0.5 - 1e-9
+      SEALED_QTC_MIN - 1e-9
   );
 };
 // per sub, plywood and rung: every whole-inch pair that can hold the volume under the weight cap, lightest first
@@ -1022,7 +1024,12 @@ function exactHook(
           layout: cur.layout,
           braceStyle: s.braceStyle,
         });
-        if (mm.Qtc < 0.5 || mm.Qtc > 0.8 || mm.f3 > xoLo || Math.min(bx.w, bx.h) < m.size + 1.2)
+        if (
+          mm.Qtc < SEALED_QTC_MIN ||
+          mm.Qtc > 0.8 ||
+          mm.f3 > xoLo ||
+          Math.min(bx.w, bx.h) < midBaffleNeedIn(m.size)
+        )
           continue;
         for (const xoHi of c.xoHis) {
           const at = (f: number) =>
