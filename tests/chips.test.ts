@@ -79,17 +79,17 @@ test("sub: round tubes run straight, then take an elbow up the back wall, then o
   // wall is 22 - 0.75 - 0.75 = 20.5. Straight: a diameter short of it, 16.5. One elbow: the riser behind the driver
   // (9.5 + r + a diameter = 15.5 at the shortest), its axis a radius and a flare (2 + 0.75) off the back wall, up to a
   // diameter under the lid: the row's axis sits a flare and a quarter inch up (2 + 0.75 + 0.25 = 3), so
-  // 20.5 - 2.75 + (28.5 - 3) - 4 = 39.25. Two elbows: the riser to a radius and a flare under the lid (22.75) and the
-  // return leg's mouth a diameter behind the driver: 9.5 + 4 + 2 × 4 + 22.75 = 44.25 to
-  // 2 × 17.75 + 22.75 - 9.5 - 4 = 44.75.
+  // 20.5 - 2.75 + (28.5 - 3) - 4 = 39.25. Two elbows: the riser (a radius off the back wall, 18.5; no mouth on it)
+  // up to the return leg a radius and a flare under the lid (22.75), the return leg's mouth a diameter behind the
+  // driver: 9.5 + 4 + 2 × 4 + 22.75 = 44.25 to 2 × 18.5 + 22.75 - 9.5 - 4 = 46.25.
   const tube = (len: number) => sub({ portStyle: "round2", cVent: { len } });
   has(t, tube(16.5), "subDuctFit", false);
   has(t, tube(39.25), "subDuctFit", false);
   has(t, tube(42), "subDuctFit", true, "bad");
   assert.ok(chipOf(tube(42), "subDuctFit")[2].includes("short of the 44.3″"), chipList(tube(42)));
-  has(t, tube(44.5), "subDuctFit", false);
-  has(t, tube(45), "subDuctFit", true, "bad");
-  assert.ok(chipOf(tube(45), "subDuctFit")[2].includes("two elbows"));
+  has(t, tube(46.25), "subDuctFit", false);
+  has(t, tube(46.5), "subDuctFit", true, "bad");
+  assert.ok(chipOf(tube(46.5), "subDuctFit")[2].includes("two elbows"));
   // the tubes' flares fit the baffle beside the driver, or the chip says they don't
   has(t, tube(20), "subTubeFit", false);
   has(

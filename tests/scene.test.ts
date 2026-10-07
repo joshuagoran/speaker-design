@@ -160,8 +160,8 @@ describe("stack scene", () => {
 
     test("the tubes and their flares stay inside the length the model takes, at every baffle inset", () => {
       // round1 and round2, straight and with one elbow in the default box, and round2 with two in a deeper one, each at
-      // its longest (the straight mouth a diameter from the back wall, the riser and the return leg a flare's reach
-      // off the back wall and the lid): the outer flare's lip is flush with the baffle front, the inner mouth keeps
+      // its longest (the straight mouth a diameter from the back wall, the riser that ends in the mouth a flare's
+      // reach off the back wall, the return leg a flare's reach under the lid): the outer flare's lip is flush with the baffle front, the inner mouth keeps
       // the model's gap to the back wall or the lid, and nothing goes into a panel
       const wall = 0.75,
         drv = DEFAULT_PA.sub;
@@ -202,7 +202,8 @@ describe("stack scene", () => {
           // one elbow: the riser's flare just clears the back wall, its lip the model's gap under the lid
           if (e === 1) expect(b.min.z, at).toBeCloseTo(backFace, 9);
           if (e === 1) expect(b.max.y, at).toBeCloseTo(lidFace - legs.gap, 9);
-          // two: the return leg's flare just clears the lid
+          // two: the riser (no mouth) against the back wall, the return leg's flare just clearing the lid
+          if (e === 2) expect(b.min.z, at).toBeCloseTo(backFace, 9);
           if (e === 2) expect(b.max.y, at).toBeCloseTo(lidFace, 9);
         }
     });

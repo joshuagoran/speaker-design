@@ -346,6 +346,26 @@ test("vent mouths: at every baffle inset, each vent's mouth keeps its stated gap
       assert.ok(span, `${style} ${at}: one elbow fits`);
       const up = subTubeLegs(box, style, { ...v, len: span[1] }, wall, inset, DRV18, 1);
       close(t, inset + up.run + v.dia / 2 + TUBE_FLARE_RADIUS_IN, back, 1e-12, `${style} ${at}`);
+      // with two elbows (in a deeper box) the riser has no mouth, so it stands a radius off the back wall, and the
+      // return leg runs a radius and a flare under the lid
+      const deep = { ...box, d: 24 };
+      const span2 = subTubeSpan(deep, style, v, wall, inset, DRV18, 2);
+      assert.ok(span2, `${style} ${at}: two elbows fit`);
+      const two = subTubeLegs(deep, style, { ...v, len: span2[1] }, wall, inset, DRV18, 2);
+      close(t, inset + two.run + v.dia / 2, deep.d - wall, 1e-12, `${style} ${at}`);
+      close(
+        t,
+        2 * wall +
+          v.dia / 2 +
+          TUBE_FLARE_RADIUS_IN +
+          0.25 +
+          two.rise +
+          v.dia / 2 +
+          TUBE_FLARE_RADIUS_IN,
+        box.h,
+        1e-12,
+        `${style} ${at}`,
+      );
     }
     const inD = back - inset - baffle; // the box's inside depth, behind the baffle
     // a straight bottom slot's mouth is a slot height from the back wall; its shelf runs the rest of the inside depth
