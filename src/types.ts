@@ -1497,6 +1497,8 @@ export interface BracePanel {
   stock: PlateStock;
   /** whether ribs can go on it (not the baffle: a rib can't cross the driver) */
   ribs: boolean;
+  /** the axes its ribs may divide (behind a bottom slot only those running with the air); absent: both */
+  ribAcross?: readonly BoxAxis[];
   /** the box's own parts that already hold it in a line across each axis (the vent shelf, duct walls), in from its edge */
   fixedU: number[];
   fixedV: number[];

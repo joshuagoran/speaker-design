@@ -63,6 +63,11 @@ export interface PaBoxSupports {
   bottom: number[];
   /** back from the baffle on both sides (z): a folded slot's rear channel wall, glued between them */
   sideZ?: number[];
+  /**
+   * back from the baffle on the bottom (z), as stops only: where the clear floor behind a short bottom slot ends. A
+   * floor rib there runs front to back from it, and none runs across the air leaving the duct.
+   */
+  bottomZ?: number[];
 }
 export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], bottom: [] };
 
@@ -153,6 +158,8 @@ export function paBoxPanels(
       ribs: true,
       fixedU: sup.bottom,
       stopU: stops.bottom,
+      stopV: stops.bottomZ ?? [],
+      ...(stops.bottomZ?.length ? { ribAcross: ["x"] as const } : {}),
       edges: {
         u0: held(wall, ih),
         u1: held(wall, ih),

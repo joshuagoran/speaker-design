@@ -680,19 +680,27 @@ export function subDriverCenter(
   const band = v.slotH + t;
   return { x: iw / 2, y: band + (ih - band) / 2 };
 }
+/** The clear floor behind a bottom slot's inner end, in slot heights: room for the air to leave the duct. */
+const SLOT_CLEAR_HEIGHTS = 2;
 /**
- * How far back a bottom slot's room runs, in from the baffle: the duct and a slot height more, up to the next whole
- * inch (so duct lengths a hair apart share their bracing), or the whole depth when it folds.
+ * How far back a bottom slot's room runs, in from the baffle: the duct and SLOT_CLEAR_HEIGHTS slot heights more, up to
+ * the next whole inch (so duct lengths a hair apart share their bracing), or the whole depth when it folds.
  */
 const slotRoomIn = (
   inD: number,
   inset: number,
   v: Pick<VentSpec, "len" | "slotH">,
   folds: boolean,
-) => (folds ? inD : Math.min(inD, Math.ceil(Math.max(0, v.len - inset - BAFFLE_PLY_IN) + v.slotH)));
+) =>
+  folds
+    ? inD
+    : Math.min(
+        inD,
+        Math.ceil(Math.max(0, v.len - inset - BAFFLE_PLY_IN) + SLOT_CLEAR_HEIGHTS * v.slotH),
+      );
 /**
  * What no brace or rib in the sub may enter: its driver (driverKeepOut), and its vent's parts and the air they hold: a
- * bottom slot under its shelf as far back as the duct runs and a slot height more (room for the air at its inner end;
+ * bottom slot under its shelf as far back as the duct runs and two slot heights more (room for the air at its inner end;
  * folded, the whole floor and the rear channel up the back to the lid as well), a side duct between its wall and the
  * side (its flared ends a flare wider) and each round tube's run along the floor (up to the lid where it takes
  * elbows), these two over the whole depth. The optimizers' searches don't run the rule (braceWoodEstimate), so the
@@ -762,7 +770,7 @@ const BRACING_MEMO = new Map<string, BoxBracing>();
 const INPUT_MEMO = new Map<string, BoxBracing>();
 const BRACING_MEMO_MAX = 20000;
 const linesKey = (s: PaBoxSupports) =>
-  `${s.sideL.join()};${s.sideR.join()};${s.top.join()};${s.bottom.join()};${s.sideZ?.join() ?? ""}`;
+  `${s.sideL.join()};${s.sideR.join()};${s.top.join()};${s.bottom.join()};${s.sideZ?.join() ?? ""};${s.bottomZ?.join() ?? ""}`;
 /**
  * A folded slot's rear channel wall as a line on both sides, back from the baffle (inside): the channel's front wall,
  * a slot height and a wall in from the back, `t` thick, glued between the sides. Where it rises DUCT_SUPPORT_MIN_SHARE
@@ -862,10 +870,15 @@ export function subBoxBracing(
         // a folded slot's rear channel wall holds both sides where it rises far enough
         sideZ: flags.wallHolds ? [foldWallLine(box, t, inset, v)] : [],
       },
-      // and a side rib running back may stop on it there; on a lower wall it would end in the air over the channel
+      // and a side rib running back may stop on it there; on a lower wall it would end in the air over the channel; a
+      // floor rib behind a short slot starts where its clear floor ends
       {
         ...subVentStops(box, t, style, v),
         sideZ: flags.wallHolds ? [foldWallLine(box, t, inset, v)] : [],
+        bottomZ:
+          style === "slots" && !flags.folds
+            ? [slotRoomIn(paInside(box, t, inset).inD, inset, v, false)]
+            : [],
       },
       keepOut,
       keepKey,

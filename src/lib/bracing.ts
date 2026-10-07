@@ -890,22 +890,24 @@ export function braceBox({
     ...on.flatMap((p) =>
       !p.ribs || evalPanel(p, windows, ribs) >= targetHz - 1e-9
         ? []
-        : [p.u, p.v].flatMap((across): Move[] => {
-            const cur = ribs[p.id];
-            const from = cur && cur.across === across ? cur.n : 0;
-            const key = `${p.id}${across}${from}|${windows[across]}`;
-            const hit = movesMemo.get(key);
-            if (hit) return hit;
-            const span = across === p.u ? p.spanU : p.spanV;
-            const fixed = supportsAcross(p, across, windows);
-            const out: Move[] = [];
-            for (let n = from + 1; n <= from + RIB_BATCH_MAX; n++) {
-              if (fillGaps(span, fixed, n).narrowest < MIN_BAY_IN - EPS) break;
-              if (ribsAt(p, across, n, windows)) out.push({ kind: "rib", p, across, n });
-            }
-            movesMemo.set(key, out);
-            return out;
-          }),
+        : [p.u, p.v]
+            .filter((a) => !p.ribAcross || p.ribAcross.includes(a))
+            .flatMap((across): Move[] => {
+              const cur = ribs[p.id];
+              const from = cur && cur.across === across ? cur.n : 0;
+              const key = `${p.id}${across}${from}|${windows[across]}`;
+              const hit = movesMemo.get(key);
+              if (hit) return hit;
+              const span = across === p.u ? p.spanU : p.spanV;
+              const fixed = supportsAcross(p, across, windows);
+              const out: Move[] = [];
+              for (let n = from + 1; n <= from + RIB_BATCH_MAX; n++) {
+                if (fillGaps(span, fixed, n).narrowest < MIN_BAY_IN - EPS) break;
+                if (ribsAt(p, across, n, windows)) out.push({ kind: "rib", p, across, n });
+              }
+              movesMemo.set(key, out);
+              return out;
+            }),
     ),
     ...ringMoves(on),
   ];
@@ -917,7 +919,9 @@ export function braceBox({
   const ringMemo = new Map<string, Move[]>();
   const ringMoves = (scope: readonly BracePanel[]): Move[] =>
     BOX_AXES.flatMap((a) => {
-      const on = panels.filter((p) => p.ribs && (p.u === a || p.v === a));
+      const on = panels.filter(
+        (p) => p.ribs && (p.u === a || p.v === a) && (!p.ribAcross || p.ribAcross.includes(a)),
+      );
       if (
         on.length < 2 ||
         !on.some((p) => scope.includes(p) && evalPanel(p, windows, ribs) < targetHz - 1e-9)

@@ -909,10 +909,16 @@ test("short ribs and a short slot: an 18″ driver's basket and a 4″ slot no l
     ),
     JSON.stringify(side),
   );
-  // the floor behind the slot takes a rib, and every panel but the baffle clears the target
-  assert.ok(b.ribs.some((r) => r.panel === "bottom"));
+  // the floor behind the slot takes ribs that run front to back, with the air, from the end of its clear floor
+  const floor = b.ribs.filter((r) => r.panel === "bottom");
+  assert.ok(floor.length > 0);
+  for (const r of floor) {
+    assert.equal(r.across, "x");
+    assert.ok(r.from >= keep.vent[0].z[1] - 1e-9, `${r.from} vs ${keep.vent[0].z[1]}`);
+  }
+  // every panel but the baffle clears the target
   for (const p of b.panels) if (p.id !== "baffle") assert.ok(p.hz >= b.targetHz, `${p.id} ${p.hz}`);
-  // the slot's room ends a slot height behind the duct, not at the back
+  // the slot's room ends two slot heights behind the duct, not at the back
   const slot = keep.vent[0];
   assert.ok(slot.z[1] < paInner(box, 0.5, DEFAULT_PA.inset).z - 1);
 });
