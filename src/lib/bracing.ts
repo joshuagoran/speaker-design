@@ -86,8 +86,13 @@ export const MDF_STIFFNESS: Pick<PlateStock, "eStrong" | "eWeak" | "nu"> = {
 
 /** A window brace's rails, inches: the frame left round the cut-out center. */
 export const WINDOW_RAIL_IN = 2;
-/** A rib's depth off the panel, inches; its width is the panel's stock. */
+/** A rib's depth off the panel, inches, the shallowest the rule offers; its width is the panel's stock. */
 export const RIB_DEPTH_IN = 2.5;
+/**
+ * The depths the rule offers a panel's ribs, inches (a 1×3, 1×4 and 1×6's width): a long rib needs depth more than a
+ * short one, so each panel takes the one that lifts it most for the wood.
+ */
+export const RIB_DEPTHS_IN = [RIB_DEPTH_IN, 4, 5.5] as const;
 /**
  * The farthest a rib may stop short of the edge or duct part its run would reach, to clear the keep-out (the driver's
  * basket ring beside a side), inches; its end there is free.
@@ -279,12 +284,12 @@ export const ribRunAxis = (panel: BracePanelId, across: BoxAxis): BoxAxis =>
 /** One rib's region: on `panel`, across `across` at `at`, from `from` along its run for `len`, `t` thick. */
 export function ribRegion(
   inner: Record<BoxAxis, number>,
-  r: Pick<PanelRibs, "panel" | "across" | "from" | "len">,
+  r: Pick<PanelRibs, "panel" | "across" | "from" | "len" | "depth">,
   at: number,
   t: number,
 ): BoxRegion {
   const n = PANEL_NORMAL[r.panel];
-  const off: Span = n.far ? [inner[n.axis] - RIB_DEPTH_IN, inner[n.axis]] : [0, RIB_DEPTH_IN];
+  const off: Span = n.far ? [inner[n.axis] - r.depth, inner[n.axis]] : [0, r.depth];
   return regionOf(n.axis, off, r.across, [at - t / 2, at + t / 2], ribRunAxis(r.panel, r.across), [
     r.from,
     r.from + r.len,
@@ -598,8 +603,8 @@ export function braceBox({
     string,
     { L: number; boxes: { across: Span; run: Span }[]; starts: number[]; ends: number[] }
   >();
-  const ribBand = (p: BracePanel, across: BoxAxis) => {
-    const k = p.id + across;
+  const ribBand = (p: BracePanel, across: BoxAxis, depth: number) => {
+    const k = p.id + across + depth;
     const hit = bandMemo.get(k);
     if (hit) return hit;
     const alongU = across === p.u;
@@ -608,7 +613,7 @@ export function braceBox({
       offR = alongU ? p.offV : p.offU;
     const runAxis = ribRunAxis(p.id, across);
     const n = PANEL_NORMAL[p.id];
-    const band: Span = n.far ? [inner[n.axis] - RIB_DEPTH_IN, inner[n.axis]] : [0, RIB_DEPTH_IN];
+    const band: Span = n.far ? [inner[n.axis] - depth, inner[n.axis]] : [0, depth];
     const boxes = keep
       .filter(
         (o) =>
@@ -636,8 +641,8 @@ export function braceBox({
     bandMemo.set(k, out);
     return out;
   };
-  const ribRun = (p: BracePanel, across: BoxAxis, at: number): Span | null => {
-    const { L, boxes, starts, ends } = ribBand(p, across);
+  const ribRun = (p: BracePanel, across: BoxAxis, at: number, depth: number): Span | null => {
+    const { L, boxes, starts, ends } = ribBand(p, across, depth);
     const blocked = boxes
       .filter((o) => o.across[0] < at + t / 2 - EPS && at - t / 2 < o.across[1] - EPS)
       .map((o) => o.run);
@@ -656,15 +661,15 @@ export function braceBox({
   // where on `p` a rib across `across` can stand (ribRun finds it a run): the spans between the keep-out's edges whose
   // middle it can, so ribs move off the driver and the vent as window braces do
   const ribRoom = new Map<string, Span[]>();
-  const ribClear = (p: BracePanel, across: BoxAxis): Span[] => {
-    const k = p.id + across;
+  const ribClear = (p: BracePanel, across: BoxAxis, depth: number): Span[] => {
+    const k = p.id + across + depth;
     const hit = ribRoom.get(k);
     if (hit) return hit;
     const alongU = across === p.u;
     const span = alongU ? p.spanU : p.spanV,
       offA = alongU ? p.offU : p.offV;
     const n = PANEL_NORMAL[p.id];
-    const band: Span = n.far ? [inner[n.axis] - RIB_DEPTH_IN, inner[n.axis]] : [0, RIB_DEPTH_IN];
+    const band: Span = n.far ? [inner[n.axis] - depth, inner[n.axis]] : [0, depth];
     const cuts = keep
       .filter((o) => o[n.axis][0] < band[1] - EPS && band[0] < o[n.axis][1] - EPS)
       .flatMap((o) => [o[across][0] - offA - t / 2, o[across][1] - offA + t / 2])
@@ -673,7 +678,7 @@ export function braceBox({
     const out: Span[] = [];
     for (let i = 1; i < edges.length; i++) {
       const [a, b] = [edges[i - 1], edges[i]];
-      if (b - a > EPS && ribRun(p, across, (a + b) / 2)) {
+      if (b - a > EPS && ribRun(p, across, (a + b) / 2, depth)) {
         const last = out[out.length - 1];
         if (last && Math.abs(last[1] - a) < EPS) out[out.length - 1] = [last[0], b];
         else out.push([a, b]);
@@ -685,13 +690,19 @@ export function braceBox({
   // a panel's `n` ribs across `across` with the window braces `w`: each nearest its spot in the panel's widest bays
   // (fillGaps) where it can stand, every bay still MIN_BAY_IN or more; where they go and run, or null if they can't
   const ribMemo = new Map<string, PlacedRibs | null>();
-  const ribsAt = (p: BracePanel, across: BoxAxis, n: number, w: Counts): PlacedRibs | null => {
-    const k = `${p.id}${across}${n}|${w[across]}`;
+  const ribsAt = (
+    p: BracePanel,
+    across: BoxAxis,
+    n: number,
+    w: Counts,
+    depth: number,
+  ): PlacedRibs | null => {
+    const k = `${p.id}${across}${n}|${w[across]}|${depth}`;
     const hit = ribMemo.get(k);
     if (hit !== undefined) return hit;
     const span = across === p.u ? p.spanU : p.spanV;
     const sup = supportsAcross(p, across, w);
-    const clear = ribClear(p, across);
+    const clear = ribClear(p, across, depth);
     const at = clear.length
       ? fillGaps(span, sup, n)
           .at.map((x) => nearestIn(clear, x))
@@ -708,7 +719,7 @@ export function braceBox({
     const runs: Span[] = [];
     let out: PlacedRibs | null = spaced ? { at, runs } : null;
     for (const x of spaced ? at : []) {
-      const r = ribRun(p, across, x);
+      const r = ribRun(p, across, x, depth);
       if (!r) {
         out = null;
         break;
@@ -721,7 +732,7 @@ export function braceBox({
   const ribsFit = (w: Counts, r: RibState) =>
     panels.every((p) => {
       const s = r[p.id];
-      return !s || ribsAt(p, s.across, s.n, w) !== null;
+      return !s || ribsAt(p, s.across, s.n, w, s.depth) !== null;
     });
 
   const panelById = new Map(panels.map((p) => [p.id, p]));
@@ -740,15 +751,15 @@ export function braceBox({
     return { len: lines[i] - lines[i - 1], start: i === 1, end: i === lines.length - 1 };
   };
   // a rib's T on `q` across `a` with the braces `w` and its ribs `n`: its EI over its span, for the corner spring it gives
-  const ribStiffness = (q: BracePanel, a: BoxAxis, n: number, w: Counts) => {
-    const placed = ribsAt(q, a, n, w);
+  const ribStiffness = (q: BracePanel, a: BoxAxis, n: number, w: Counts, depth: number) => {
+    const placed = ribsAt(q, a, n, w, depth);
     if (!placed) return 0;
     const span = stripSpan(
       spanAcross(q, otherAxis(q, a)),
       supportsAcross(q, otherAxis(q, a), w),
     ).len;
     const trib = widestGap(spanAcross(q, a), [...supportsAcross(q, a, w), ...placed.at]);
-    return (RING_FIXITY * teeBeam(span, trib, q.stock, q.stock, RIB_DEPTH_IN).EI) / (span * IN_M);
+    return (RING_FIXITY * teeBeam(span, trib, q.stock, q.stock, depth).EI) / (span * IN_M);
   };
   // the spring at one end of `p`'s rib at `x` (panel coordinates) running from `run`: the next panel's rib on the same
   // line, glued to it in the corner (layRibs butts one into the other), else none
@@ -770,7 +781,7 @@ export function braceBox({
     const q = panelById.get(END_PANEL[R][end]);
     const s = q && r[q.id];
     if (!q || !s || s.across !== a) return 0;
-    const placed = ribsAt(q, a, s.n, w);
+    const placed = ribsAt(q, a, s.n, w, s.depth);
     const n = PANEL_NORMAL[p.id];
     const at = offAcross(p, a) + x;
     const meets = placed?.at.some((y, i) => {
@@ -783,7 +794,7 @@ export function braceBox({
         Math.abs(offAcross(q, a) + y - at) < t - EPS && reaches && qr[1] - qr[0] > EPS && qL > EPS
       );
     });
-    return meets ? ribStiffness(q, a, s.n, w) : 0;
+    return meets ? ribStiffness(q, a, s.n, w, s.depth) : 0;
   };
   // a window brace's rail on `q` across `a`: its EI over its span, for the corner spring it gives the next rail
   const railStiffness = (q: BracePanel, a: BoxAxis, w: Counts) => {
@@ -805,7 +816,7 @@ export function braceBox({
   const evalMemo = new Map<string, number>();
   const ribTag = (r: RibState, id: BracePanelId) => {
     const s = r[id];
-    return s ? s.across + s.n : "";
+    return s ? `${s.across}${s.n}d${s.depth}` : "";
   };
   const evalPanel = (p: BracePanel, w: Counts, r: RibState) => {
     const rib = r[p.id];
@@ -829,7 +840,7 @@ export function braceBox({
     const supU = supportsAcross(p, p.u, w),
       supV = supportsAcross(p, p.v, w);
     const rib = r[p.id];
-    const placed = rib ? ribsAt(p, rib.across, rib.n, w) : null;
+    const placed = rib ? ribsAt(p, rib.across, rib.n, w, rib.depth) : null;
     const ribU = rib && placed && rib.across === p.u ? placed.at : [],
       ribV = rib && placed && rib.across === p.v ? placed.at : [];
     let hz = baysHz(p, [...supU, ...ribU], [...supV, ...ribV]);
@@ -840,7 +851,7 @@ export function braceBox({
         o = otherAxis(p, a);
       const sp = stripSpan(spanAcross(p, o), supportsAcross(p, o, w));
       const trib = gap(a);
-      const { EI, mu } = teeBeam(sp.len, trib, p.stock, p.stock, RIB_DEPTH_IN);
+      const { EI, mu } = teeBeam(sp.len, trib, p.stock, p.stock, rib.depth);
       placed.at.forEach((x, i) => {
         const k0 = sp.start ? ringSpring(p, a, x, placed.runs[i], 0, w, r) : 0,
           k1 = sp.end ? ringSpring(p, a, x, placed.runs[i], 1, w, r) : 0;
@@ -874,8 +885,8 @@ export function braceBox({
 
   type Move =
     | { kind: "window"; axis: BoxAxis }
-    | { kind: "rib"; p: BracePanel; across: BoxAxis; n: number }
-    | { kind: "ring"; axis: BoxAxis; n: number; on: readonly BracePanel[] };
+    | { kind: "rib"; p: BracePanel; across: BoxAxis; n: number; depth: number }
+    | { kind: "ring"; axis: BoxAxis; n: number; depth: number; on: readonly BracePanel[] };
   const windowMoves = (scope: readonly BracePanel[]): Move[] =>
     BOX_AXES.filter((a) => {
       if (!scope.some((p) => p.u === a || p.v === a) || !winAt(a, windows[a] + 1)) return false;
@@ -884,18 +895,19 @@ export function braceBox({
   // a panel's rib moves depend on its own ribs and the window braces across the axis they divide: listed once each
   const movesMemo = new Map<string, Move[]>();
   // (only on panels under the target: ribs on one already over it gain nothing). A move sets the panel's ribs: more of
-  // those it has, or ribs the other way in their place, so a first pick the other way never locks a panel out of the
-  // way that lifts it more.
+  // those it has, or ribs the other way or of another depth (RIB_DEPTHS_IN) in their place, so a first pick never locks
+  // a panel out of the ribs that lift it more.
   const ribMoves = (on: readonly BracePanel[]): Move[] => [
     ...on.flatMap((p) =>
       !p.ribs || evalPanel(p, windows, ribs) >= targetHz - 1e-9
         ? []
         : [p.u, p.v]
             .filter((a) => !p.ribAcross || p.ribAcross.includes(a))
-            .flatMap((across): Move[] => {
+            .flatMap((across) => RIB_DEPTHS_IN.map((depth) => ({ across, depth })))
+            .flatMap(({ across, depth }): Move[] => {
               const cur = ribs[p.id];
-              const from = cur && cur.across === across ? cur.n : 0;
-              const key = `${p.id}${across}${from}|${windows[across]}`;
+              const from = cur && cur.across === across && cur.depth === depth ? cur.n : 0;
+              const key = `${p.id}${across}${depth}|${from}|${windows[across]}`;
               const hit = movesMemo.get(key);
               if (hit) return hit;
               const span = across === p.u ? p.spanU : p.spanV;
@@ -903,7 +915,8 @@ export function braceBox({
               const out: Move[] = [];
               for (let n = from + 1; n <= from + RIB_BATCH_MAX; n++) {
                 if (fillGaps(span, fixed, n).narrowest < MIN_BAY_IN - EPS) break;
-                if (ribsAt(p, across, n, windows)) out.push({ kind: "rib", p, across, n });
+                if (ribsAt(p, across, n, windows, depth))
+                  out.push({ kind: "rib", p, across, n, depth });
               }
               movesMemo.set(key, out);
               return out;
@@ -931,24 +944,25 @@ export function braceBox({
       const hit = ringMemo.get(key);
       if (hit) return hit;
       const out: Move[] = [];
-      for (let n = 1; n <= RIB_BATCH_MAX; n++) {
-        const placed = on.map((p) => ribsAt(p, a, n, windows));
-        if (placed.some((pl) => !pl)) continue;
-        const ats = placed.map((pl, i) => (pl?.at ?? []).map((x) => x + offAcross(on[i], a)));
-        if (ats.every((xs) => xs.every((x, j) => Math.abs(x - ats[0][j]) < t - EPS)))
-          out.push({ kind: "ring", axis: a, n, on });
-      }
+      for (const depth of RIB_DEPTHS_IN)
+        for (let n = 1; n <= RIB_BATCH_MAX; n++) {
+          const placed = on.map((p) => ribsAt(p, a, n, windows, depth));
+          if (placed.some((pl) => !pl)) continue;
+          const ats = placed.map((pl, i) => (pl?.at ?? []).map((x) => x + offAcross(on[i], a)));
+          if (ats.every((xs) => xs.every((x, j) => Math.abs(x - ats[0][j]) < t - EPS)))
+            out.push({ kind: "ring", axis: a, n, depth, on });
+        }
       ringMemo.set(key, out);
       return out;
     });
   const apply = (m: Move, w: Counts, r: RibState) => {
     if (m.kind === "window") w[m.axis]++;
-    else if (m.kind === "rib") r[m.p.id] = { across: m.across, n: m.n };
-    else for (const p of m.on) r[p.id] = { across: m.axis, n: m.n };
+    else if (m.kind === "rib") r[m.p.id] = { across: m.across, n: m.n, depth: m.depth };
+    else for (const p of m.on) r[p.id] = { across: m.axis, n: m.n, depth: m.depth };
   };
   const short = (hz: number) => Math.max(0, 1 - hz / targetHz);
   const ribWood = (p: BracePanel, s: RibState[BracePanelId]) =>
-    s ? s.n * p.stock.t * RIB_DEPTH_IN * ribLen(p, s.across) : 0;
+    s ? s.n * p.stock.t * s.depth * ribLen(p, s.across) : 0;
   // the wood a move adds; a switch that saves wood counts as almost none, so any gain from it wins
   const wood = (m: Move) =>
     m.kind === "window"
@@ -958,7 +972,10 @@ export function braceBox({
         : Math.max(
             EPS,
             m.on.reduce(
-              (sum, p) => sum + ribWood(p, { across: m.axis, n: m.n }) - ribWood(p, ribs[p.id]),
+              (sum, p) =>
+                sum +
+                ribWood(p, { across: m.axis, n: m.n, depth: m.depth }) -
+                ribWood(p, ribs[p.id]),
               0,
             ),
           );
@@ -1002,7 +1019,13 @@ export function braceBox({
     bareHz: evalPanel(p, none, {}),
     hz: evalPanel(p, windows, ribs),
   }));
-  const ribList = layRibs(inner, panels, ribs, (p, s) => ribsAt(p, s.across, s.n, windows), t);
+  const ribList = layRibs(
+    inner,
+    panels,
+    ribs,
+    (p, s) => ribsAt(p, s.across, s.n, windows, s.depth),
+    t,
+  );
   const win = {
     x: winOrNone("x", windows.x),
     y: winOrNone("y", windows.y),
@@ -1019,7 +1042,7 @@ export function braceBox({
     windowIn3: BOX_AXES.reduce((a, ax) => a + windows[ax] * windowWoodIn3(inner, ax, t), 0),
     ribIn3: ribList.reduce((a, r) => {
       const p = panels.find((q) => q.id === r.panel);
-      return a + (p ? p.stock.t * RIB_DEPTH_IN * r.len * r.at.length : 0);
+      return a + (p ? p.stock.t * r.depth * r.len * r.at.length : 0);
     }, 0),
     meets: res.every((p) => p.hz >= targetHz - 1e-9),
   };
@@ -1034,10 +1057,10 @@ function layRibs(
   inner: Record<BoxAxis, number>,
   panels: readonly BracePanel[],
   ribs: RibState,
-  placed: (p: BracePanel, s: { across: BoxAxis; n: number }) => PlacedRibs | null,
+  placed: (p: BracePanel, s: NonNullable<RibState[BracePanelId]>) => PlacedRibs | null,
   t: number,
 ): PanelRibs[] {
-  type One = { panel: BracePanelId; across: BoxAxis; at: number; from: number; to: number };
+  type One = Omit<PanelRibs, "at" | "len"> & { at: number; to: number };
   const all: One[] = [];
   for (const p of panels) {
     const s = ribs[p.id];
@@ -1052,6 +1075,7 @@ function layRibs(
         at: offA + x,
         from: offR + pl.runs[i][0],
         to: offR + pl.runs[i][1],
+        depth: s.depth,
       }),
     );
   }
@@ -1064,7 +1088,7 @@ function layRibs(
       if (!reaches(o, run, far)) return;
       const q = END_PANEL[run][end];
       const n = PANEL_NORMAL[o.panel];
-      const meets = all.some(
+      const meets = all.find(
         (m) =>
           m.panel === q &&
           m.across === o.across &&
@@ -1072,16 +1096,17 @@ function layRibs(
           RING_RANK[q] > RING_RANK[o.panel] &&
           reaches(m, n.axis, n.far),
       );
+      // it stops short by the depth of the rib it butts into
       if (meets) {
-        if (far) to -= RIB_DEPTH_IN;
-        else from += RIB_DEPTH_IN;
+        if (far) to -= meets.depth;
+        else from += meets.depth;
       }
     });
     return { ...o, from, to };
   });
   const groups = new Map<string, PanelRibs>();
   for (const o of laid) {
-    const k = `${o.panel}|${o.across}|${o.from}|${o.to}`;
+    const k = `${o.panel}|${o.across}|${o.from}|${o.to}|${o.depth}`;
     const g = groups.get(k);
     if (g) g.at.push(o.at);
     else
@@ -1091,6 +1116,7 @@ function layRibs(
         at: [o.at],
         from: o.from,
         len: o.to - o.from,
+        depth: o.depth,
       });
   }
   return [...groups.values()];

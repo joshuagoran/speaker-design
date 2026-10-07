@@ -216,8 +216,8 @@ test("a folded slot's rear channel wall holds the sides where it rises far enoug
     assert.ok(hz >= PA_PANEL_TARGET_HZ - 1e-9, `${side} at ${hz.toFixed(0)} Hz`);
   }
   assert.deepStrictEqual(clashes(b, plan, box, t, inset), []);
-  // the low wall neither holds the sides nor takes a rib's end: the sides read lower
+  // the low wall neither holds the sides nor takes a rib's end: the sides read lower before any rib
   const lowB = subBoxBracing(box, t, inset, "slots", low, sub, "ribs", handles);
-  const side = (x: BoxBracing) => x.panels.find((p) => p.id === "sideL")?.hz ?? 0;
+  const side = (x: BoxBracing) => x.panels.find((p) => p.id === "sideL")?.bareHz ?? 0;
   assert.ok(side(lowB) < side(b), `${side(lowB).toFixed(0)} vs ${side(b).toFixed(0)} Hz`);
 });

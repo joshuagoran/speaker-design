@@ -1,6 +1,7 @@
 // Handles and input plates (lib/pa/hardware): the presets' fit checks, the liters their recesses take off the boxes,
 // the cutlist's cutout notes and the defaults older saves load with.
 import { test } from "vite-plus/test";
+import { RIB_DEPTH_IN } from "../src/lib/bracing";
 import assert from "node:assert";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import {
@@ -130,6 +131,7 @@ test("a handle that runs into the vent, an edge, a rib or the driver says so", (
       at: [z],
       from: 0,
       len: inner.y,
+      depth: RIB_DEPTH_IN,
     })),
     panels: [],
     windowIn3: 0,

@@ -1526,6 +1526,8 @@ export interface PanelRibs {
   at: number[];
   from: number;
   len: number;
+  /** how far they stand off the panel, in (RIB_DEPTHS_IN) */
+  depth: number;
 }
 
 /** A box-shaped region inside a box, in from its inside corner on each axis (x across, y up, z back from the baffle). */
@@ -1552,7 +1554,7 @@ export interface PanelResonance {
 /** The bracing rule's choice in counts, as it works: the window braces across each axis and the ribs on each panel. */
 export interface BracePlan {
   windows: Record<BoxAxis, number>;
-  ribs: Partial<Record<BracePanelId, { across: BoxAxis; n: number }>>;
+  ribs: Partial<Record<BracePanelId, { across: BoxAxis; n: number; depth: number }>>;
 }
 
 /** What the bracing rule picked for a box: the window braces on each axis, the ribs, the resonances and the wood. */

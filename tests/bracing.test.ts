@@ -17,6 +17,8 @@ import {
   teeSecondMoment,
   WINDOW_RAIL_IN,
   RIB_FREE_END_IN,
+  RIB_DEPTH_IN,
+  RIB_DEPTHS_IN,
 } from "../src/lib/bracing";
 import {
   NO_SUPPORTS,
@@ -701,9 +703,9 @@ test("cutlist: a rib row says to half-lap only where its rib crosses a window br
     windows: { x: [10], y: [], z: [] },
     notch: null,
     ribs: [
-      { panel: "top", across: "z", at: [8], from: 0, len: 20 },
-      { panel: "top", across: "z", at: [16], from: 12, len: 8 },
-      { panel: "back", across: "x", at: [10], from: 0, len: 20 },
+      { panel: "top", across: "z", at: [8], from: 0, len: 20, depth: RIB_DEPTH_IN },
+      { panel: "top", across: "z", at: [16], from: 12, len: 8, depth: RIB_DEPTH_IN },
+      { panel: "back", across: "x", at: [10], from: 0, len: 20, depth: RIB_DEPTH_IN },
     ],
   };
   const notes = braceParts("sub", b, { x: 20, y: 20, z: 20 }, d.wall)
@@ -854,11 +856,11 @@ test("window rails are beams: a frame's rail along a tall wall holds less than a
   assert.ok(hz < bays * 0.8, `side ${hz.toFixed(0)} Hz, its bays ${bays.toFixed(0)} Hz`);
 });
 
-test("rib rings: on a wide box in ½″ with a glued back, its ribs line up with the sides' and it clears the target", () => {
-  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+test("rib rings: with a glued back, the back's rib lines up with the sides' and each clears the target", () => {
+  const sub = SUB_OPTIONS.find((s) => s.id === "es18lw2420");
   assert.ok(sub);
   const b = subBoxBracing(
-    { w: 30, h: 32, d: 18 },
+    { w: 22, h: 24, d: 22 },
     0.5,
     DEFAULT_PA.inset,
     "slots",
@@ -869,10 +871,11 @@ test("rib rings: on a wide box in ½″ with a glued back, its ribs line up with
     GLUED_BACK,
   );
   const at = (id: BracePanelId) => b.ribs.filter((r) => r.panel === id).flatMap((r) => r.at);
-  assert.ok(at("back").length >= 2);
+  assert.ok(at("back").length >= 1);
   assert.deepEqual(at("back"), at("sideL"));
   assert.deepEqual(at("back"), at("sideR"));
-  assert.ok((b.panels.find((p) => p.id === "back")?.hz ?? 0) >= b.targetHz);
+  for (const id of ["back", "sideL", "sideR"] as const)
+    assert.ok((b.panels.find((p) => p.id === id)?.hz ?? 0) >= b.targetHz, id);
 });
 
 test("short ribs and a short slot: an 18″ driver's basket and a 4″ slot no longer keep ribs off the sides and bottom", () => {
@@ -947,4 +950,29 @@ test("a screwed back: the window braces' rails don't hold it, and no rib ring is
   // the frames stand in the box either way, but only a glued back is held by them
   assert.ok(Math.abs(screwed.hz - screwed.bareHz) < 1e-9, `${screwed.hz} vs ${screwed.bareHz}`);
   assert.ok(glued.hz > glued.bareHz);
+});
+
+test("rib depths: a long span takes deeper ribs where they lift it more for the wood", () => {
+  // a 30″-wide box in ½″: two 5½″ ribs hold its back, where 2½″ ones need a ring with the sides and more wood
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  assert.ok(sub);
+  const b = subBoxBracing(
+    { w: 30, h: 32, d: 18 },
+    0.5,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 4 },
+    sub,
+    "ribs",
+    undefined,
+    GLUED_BACK,
+  );
+  const back = b.ribs.filter((r) => r.panel === "back");
+  assert.ok(
+    back.length > 0 && back.every((r) => r.depth === RIB_DEPTHS_IN[2]),
+    JSON.stringify(back),
+  );
+  assert.ok((b.panels.find((p) => p.id === "back")?.hz ?? 0) >= b.targetHz);
+  // every rib takes one of the offered depths, and the cutlist cuts each to its own
+  for (const r of b.ribs) assert.ok(RIB_DEPTHS_IN.some((d) => d === r.depth));
 });
