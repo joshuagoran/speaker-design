@@ -34,6 +34,7 @@ const subBase: SubChipsInput = {
   portStyle: "slots",
   cVent: { slotH: 3, nt: 2, len: 14, throat: 2, dia: 4 }, // nt: subChips ignores it
   PT: 0.75,
+  inset: 0.75,
   subLbLoaded: 110,
   lim: { who: "amp", W: 800 },
   peakXF: 40,

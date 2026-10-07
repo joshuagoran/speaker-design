@@ -215,8 +215,8 @@ export function buildSubwoofer(
   } else if (tubes) {
     // flared tubes behind the baffle: bell, straight run back, then (as the model folds them) an elbow up the back
     // wall and a second forward under the lid, and the inner bell at the mouth
-    const e = modelTubeElbows(s, portStyle, tubeVent, T, sub);
-    const legs = subTubeLegs(s, portStyle, tubeVent, T, sub, e);
+    const e = modelTubeElbows(s, portStyle, tubeVent, T, REVEAL, sub);
+    const legs = subTubeLegs(s, portStyle, tubeVent, T, REVEAL, sub, e);
     const RB = TUBE_FLARE_RADIUS_IN,
       seg = 10,
       bend = Math.min(portR * 1.5, legs.run / 2, legs.rise / 2); // the elbows' centerline radius

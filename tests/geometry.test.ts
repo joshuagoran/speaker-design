@@ -42,6 +42,7 @@ test("ventGeom: letterbox area = slot height x inner width less two fins", (t) =
     { w: 22, h: 30, d: 20 },
     vent({ slotH: 3, len: 14 }),
     0.75,
+    0.75,
     DRV18,
   );
   close(t, g.area, 3 * (22 - 1.5 - 1.5), 1e-9);
@@ -53,12 +54,14 @@ test("ventGeom: side ducts = throat x inner height less dividers, one opening ea
     { w: 22, h: 30, d: 20 },
     vent({ throat: 2, len: 16 }),
     0.75,
+    0.75,
     DRV18,
   );
   close(t, g2.area, 2 * 2 * (28.5 - 1), 1e-9);
   assert.equal(g2.n, 2);
   assert.equal(
-    ventGeometry("vslot1", { w: 22, h: 30, d: 20 }, vent({ throat: 2, len: 16 }), 0.75, DRV18).n,
+    ventGeometry("vslot1", { w: 22, h: 30, d: 20 }, vent({ throat: 2, len: 16 }), 0.75, 0.75, DRV18)
+      .n,
     1,
   );
 });
@@ -67,6 +70,7 @@ test("ventGeom: round tubes = n circles, n openings", (t) => {
     "round2",
     { w: 20, h: 24, d: 16 },
     vent({ nt: 2, dia: 3.5, len: 14 }),
+    0.75,
     0.75,
     DRV18,
   );
@@ -168,7 +172,7 @@ test("folded slot: the longest fold leaves a slot height under the lid, in the f
   close(t, maxFoldedRearWallIn(box, slotH, t0), 22.5, 1e-12);
   const longest = maxFoldedSlotIn(box, slotH, t0);
   close(t, longest, 20 - 0.75 + 22.5, 1e-12);
-  close(t, ductFit(box, "slots", vent({ slotH, len: 0 }), t0, DRV18).maxFold, longest, 1e-12);
+  close(t, ductFit(box, "slots", vent({ slotH, len: 0 }), t0, 0.75, DRV18).maxFold, longest, 1e-12);
   for (const len of [longest, longest + 5]) {
     const v = vent({ slotH, len });
     close(t, foldedRearWallIn(box, v, t0), 22.5, 1e-12);
@@ -283,7 +287,7 @@ test("duct dividers: a thicker divider comes out of the side ducts' open area, n
   close(t, half.ductL - threeQ.ductL, moved, 1e-9);
   close(t, threeQ.netL, half.netL, 1e-9);
   // the exact sub model agrees: the same area and the same extra wood
-  close(t, ventShape("vslots", box, cVent(0.75), wall, DRV18).area, threeQ.port.area, 1e-9);
+  close(t, ventShape("vslots", box, cVent(0.75), wall, 0.75, DRV18).area, threeQ.port.area, 1e-9);
   close(
     t,
     subWoodIn3("vslots", box, wall, inset, cVent(0.75), undefined) -

@@ -25,6 +25,7 @@ interface Props {
     | "portStyle"
     | "subVentSpec"
     | "wallThicknessIn"
+    | "baffleInsetIn"
     | "subHardware"
     | "midHardware"
   >;
@@ -48,6 +49,7 @@ export function TotalsSection({ planner }: Props) {
     portStyle,
     subVentSpec,
     wallThicknessIn,
+    baffleInsetIn,
     subHardware,
     midHardware,
   } = planner;
@@ -75,7 +77,14 @@ export function TotalsSection({ planner }: Props) {
             if (isRoundPort(portStyle))
               rows.push([
                 "Port tubes and elbows",
-                subTubeKit(subBox, portStyle, subVentSpec, wallThicknessIn, subDriver).price,
+                subTubeKit(
+                  subBox,
+                  portStyle,
+                  subVentSpec,
+                  wallThicknessIn,
+                  baffleInsetIn,
+                  subDriver,
+                ).price,
                 0,
                 0,
                 0,

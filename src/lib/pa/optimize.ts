@@ -400,6 +400,7 @@ export function evaluateDesign(
       portStyle: c.portStyle,
       cVent: c.cVent,
       PT: c.wall,
+      inset: c.inset,
       subLbLoaded: subLb,
       lim: s.lim,
       peakXF: s.mdl.peakXF,
@@ -875,12 +876,12 @@ export function optimizePaStack(
             // the lengths that fit, inside the duct-length slider, one way at a time: a bottom slot runs straight, then
             // (past the lengths that fit neither way) folds up the back wall; round tubes take each elbow count apart,
             // since each elbow steps the tuning
-            const spans = ductFit(box, style, mk(size, 0), t, sd.sub)
+            const spans = ductFit(box, style, mk(size, 0), t, cur.inset, sd.sub)
               .tune.map(
                 ([a, b]) =>
                   [
                     Math.max(a, PA_SLIDERS.ductLen.min),
-                    Math.min(b, ductLenSliderMax(box, style, mk(size, 0), t, sd.sub)),
+                    Math.min(b, ductLenSliderMax(box, style, mk(size, 0), t, cur.inset, sd.sub)),
                   ] as const,
               )
               .filter(([a, b]) => b >= a + 0.25);
@@ -1561,6 +1562,7 @@ export function optimizePaStack(
       p.c.portStyle,
       p.c.cVent,
       p.c.wall,
+      p.c.inset,
       byIdOrThrow(SUB_OPTIONS, p.c.sub, CATALOG_TABLE_NAMES.subs),
     );
     const lens = nearSteps(

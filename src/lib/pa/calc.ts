@@ -562,7 +562,7 @@ export const ductFlagsOf = (
     foldedRearWallIn(box, v, t) >= DUCT_SUPPORT_MIN_SHARE * paInside(box, t, inset).ih,
   elbows:
     isRoundPort(style) &&
-    modelTubeElbows(box, style, { nt: v.nt, dia: v.dia, len: v.len }, t, drv) > 0,
+    modelTubeElbows(box, style, { nt: v.nt, dia: v.dia, len: v.len }, t, inset, drv) > 0,
 });
 /** Whether the sub's duct runs far enough back (DUCT_SUPPORT_MIN_SHARE of the depth) to hold the panels it runs along. */
 const ductHolds = (
@@ -1268,7 +1268,7 @@ export function cutParts({
     all: CutPart[] = [];
   const vent: string[] = [];
   // round tubes: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes)
-  const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, sub) : null;
+  const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, inset, sub) : null;
   const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
     bracing: noBraces
       ? null
@@ -1432,11 +1432,8 @@ export function slotMouthCorrectionMost(h: number, span: number, t: number) {
  */
 export const ductDividerIn = (v: Pick<VentSpec, "div">) =>
   v.div ?? defaultPanelIn(DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL);
-// A sub's baffle, in: the box's air starts behind it, so a duct from the frame front runs this much less beside it (the
-// reveal's fraction of an inch more is left out: it moves the correction well under 1 %).
-const SUB_BAFFLE_IN = 0.75;
 /**
- * A bottom slot's inner end correction (in). Straight: its mouth on the floor, the back wall behind it, the box's inside
+ * A bottom slot's inner end correction (in), `inset` the baffle front behind the frame front. Straight: its mouth on the floor, the back wall behind it, the box's inside
  * height across it. Folded up the back wall: the floor leg turns a sharp 90° into the rear channel (SHARP_BEND_CORRECTION
  * against the centerline the length is measured on), and the channel's mouth, under the lid, is the same kind of mouth
  * turned on its side: along the back panel, the rear wall its shelf (rising from the floor leg's roof), the lid the
@@ -1447,6 +1444,7 @@ export function slotInnerEndCorrection(
   box: Dims3,
   v: Pick<VentSpec, "slotH" | "len">,
   t: number,
+  inset: number,
   folded: boolean,
   most = false,
 ) {
@@ -1454,13 +1452,13 @@ export function slotInnerEndCorrection(
   if (most)
     return Math.max(
       slotMouthCorrectionMost(h, box.h - 2 * t, t),
-      SHARP_BEND_CORRECTION * h + slotMouthCorrectionMost(h, box.d - SUB_BAFFLE_IN - t, t),
+      SHARP_BEND_CORRECTION * h + slotMouthCorrectionMost(h, box.d - inset - t, t),
     );
   // the slot runs from the frame front under the baffle (as maxStraightSlotIn, the 3D view and the cutlist take it), so
-  // its mouth is `d - t - len` from the back panel: a slot height at the longest straight run
-  if (!folded)
-    return slotMouthCorrection(h, box.h - 2 * t, box.d - t - v.len, t, v.len - SUB_BAFFLE_IN);
-  const depth = box.d - SUB_BAFFLE_IN - t; // across the rear channel's mouth, the box's depth behind the baffle
+  // its mouth is `d - t - len` from the back panel: a slot height at the longest straight run; its shelf runs
+  // `len - inset` behind the baffle front
+  if (!folded) return slotMouthCorrection(h, box.h - 2 * t, box.d - t - v.len, t, v.len - inset);
+  const depth = box.d - inset - t; // across the rear channel's mouth, the box's depth behind the baffle front
   return (
     SHARP_BEND_CORRECTION * h +
     slotMouthCorrection(h, depth, foldedLidGapIn(box, v, t), t, foldedRearWallIn(box, v, t) - t)
@@ -1470,7 +1468,7 @@ export function slotInnerEndCorrection(
  * A side duct's end corrections (in), each duct's (`n` of them, one against each side wall for a pair). Outside, the
  * ground mirrors the bottom of its mouth (throat × open height). Inside, the same mouth as a bottom slot's, turned on its
  * side: the side wall its floor, the duct's inner wall (`t`, from the frame front as the cutlist and the 3D view take it)
- * its shelf, the back wall `d - t - len` behind the mouth, and across it the box's inside width (half of it for a pair:
+ * its shelf (`len - inset` of it behind the baffle front), the back wall `d - t - len` behind the mouth, and across it the box's inside width (half of it for a pair:
  * the center line is a plane of symmetry). `most`: the most it can be in this box, whatever the length
  * (slotMouthCorrectionMost).
  */
@@ -1478,6 +1476,7 @@ export function sideDuctEndCorrection(
   box: Dims3,
   v: Pick<VentSpec, "throat" | "len" | "div">,
   t: number,
+  inset: number,
   n: 1 | 2,
   most = false,
 ) {
@@ -1488,17 +1487,19 @@ export function sideDuctEndCorrection(
     rectangleEndCorrection(th, 2 * open) +
     (most
       ? slotMouthCorrectionMost(th, span, t)
-      : slotMouthCorrection(th, span, box.d - t - v.len, t, v.len - SUB_BAFFLE_IN))
+      : slotMouthCorrection(th, span, box.d - t - v.len, t, v.len - inset))
   );
 }
 
-// Vent geometry for the sub. t is the wall (and fin) ply. n is the number of separate openings,
-// which sets the end correction in boxModel.
+// Vent geometry for the sub. t is the wall (and fin) ply, inset the baffle front behind the frame front (the tubes run
+// from it; the slots and side ducts, from the frame front, read it for their run behind it). n is the number of separate
+// openings, which sets the end correction in boxModel.
 export function ventGeometry(
   portStyle: PortStyle,
   box: Dims3,
   cVent: VentSpec,
   t: number,
+  inset: number,
   drv: TubeDriver,
 ): VentGeometry {
   const iw = box.w - 2 * t,
@@ -1513,7 +1514,7 @@ export function ventGeometry(
       n,
       area,
       len: cVent.len,
-      ec: sideDuctEndCorrection(box, cVent, t, n),
+      ec: sideDuctEndCorrection(box, cVent, t, inset, n),
       dh: (4 * (th * seg)) / (2 * (th + seg)),
       desc: `${n === 1 ? "one side duct" : "two side ducts"}, ${th.toFixed(2)}\u2033 throat \u00d7 ${ih.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long`,
     };
@@ -1530,7 +1531,9 @@ export function ventGeometry(
       n: 1,
       area,
       len: cVent.len,
-      ec: rectangleEndCorrection(2 * h, iw - 2 * t) + slotInnerEndCorrection(box, cVent, t, folded),
+      ec:
+        rectangleEndCorrection(2 * h, iw - 2 * t) +
+        slotInnerEndCorrection(box, cVent, t, inset, folded),
       dh: (4 * (h * seg)) / (2 * (h + seg)),
       desc:
         `letterbox, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` +
@@ -1539,12 +1542,12 @@ export function ventGeometry(
   }
   // round tubes: straight while they fit, then up the back wall and forward under the lid (lib/pa/tubes)
   const r = cVent.dia / 2;
-  const elbows = modelTubeElbows(box, portStyle, cVent, t, drv);
+  const elbows = modelTubeElbows(box, portStyle, cVent, t, inset, drv);
   return {
     n: cVent.nt,
     area: cVent.nt * Math.PI * r * r,
     len: cVent.len,
-    ec: subTubeEndCorrection(box, portStyle, cVent, t, drv, elbows),
+    ec: subTubeEndCorrection(box, portStyle, cVent, t, inset, drv, elbows),
     dh: cVent.dia,
     elbows,
     desc:
@@ -1750,7 +1753,7 @@ export const midWeightLb = (
 // cfg: { subBox, midDims, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout }
 // Vent and volumes only (no model): what the optimizer's vent solver iterates on.
 export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConfig): SubGeometry {
-  const port = ventGeometry(cfg.portStyle, cfg.subBox, cfg.cVent, cfg.wall, sub);
+  const port = ventGeometry(cfg.portStyle, cfg.subBox, cfg.cVent, cfg.wall, cfg.inset, sub);
   const grossL = boxInternalLiters(cfg.subBox.w, cfg.subBox.h, cfg.subBox.d, cfg.wall, cfg.inset);
   const ductL = (port.area * port.len * 16.387) / 1000;
   const partsL = internalWoodLiters(

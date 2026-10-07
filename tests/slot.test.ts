@@ -59,7 +59,7 @@ test("long thin slot: end correction grows only as log of the width", (t) => {
 });
 test("letterbox Fb = Helmholtz with the slot end correction", (t) => {
   const box = { w: 22, h: 30, d: 20 },
-    g = ventGeometry("slots", box, vent({ slotH: 3, len: 14 }), 0.75, DRV18);
+    g = ventGeometry("slots", box, vent({ slotH: 3, len: 14 }), 0.75, 0.75, DRV18);
   const W = box.w - 1.5 - 1.5;
   // outside, the floor mirrors the mouth (a slot twice as tall); inside, its mouth on the floor, the back wall behind
   close(
@@ -78,7 +78,7 @@ test("letterbox Fb = Helmholtz with the slot end correction", (t) => {
 test("side ducts: each opening's correction, outside its throat x open height, inside a slot mouth on its side", (t) => {
   const box = { w: 22, h: 30, d: 20 };
   for (const st of ["vslots", "vslot1"] as const) {
-    const g = ventGeometry(st, box, vent({ throat: 2, len: 12 }), 0.75, DRV18);
+    const g = ventGeometry(st, box, vent({ throat: 2, len: 12 }), 0.75, 0.75, DRV18);
     // outside, the ground mirrors the mouth's bottom (2 x 27.5 open, under two 1/2" dividers); inside, the side wall its
     // floor, the duct's inner wall its shelf from the baffle, the back wall behind it, the box's width (or half) across
     close(
@@ -94,8 +94,8 @@ test("side ducts: each opening's correction, outside its throat x open height, i
   const ts = SUB_OPTIONS.find((o) => o.id === "f18fh500")!.ts;
   // the mirror image of one half: half the inner width, half the volume
   const half = { ...box, w: (box.w - 1.5) / 2 + 1.5 };
-  const two = ventGeometry("vslots", box, vent({ throat: 2, len: 12 }), 0.75, DRV18),
-    one = ventGeometry("vslot1", half, vent({ throat: 2, len: 12 }), 0.75, DRV18);
+  const two = ventGeometry("vslots", box, vent({ throat: 2, len: 12 }), 0.75, 0.75, DRV18),
+    one = ventGeometry("vslot1", half, vent({ throat: 2, len: 12 }), 0.75, 0.75, DRV18);
   const a = boxModel(ts, 120, two.area, 12, 25, 20, "BW24", { nPorts: 2, ecIn: two.ec })!;
   const b = boxModel(ts, 60, one.area, 12, 25, 20, "BW24", { nPorts: 1, ecIn: one.ec })!;
   rel(t, a.Fb, b.Fb, 1e-9);
@@ -129,12 +129,12 @@ test("side duct: the mouth's gap to the back wall is the one the cutlist and the
     wall = 0.75;
   const v = vent({
     throat: 2.5,
-    len: ductFit(box, "vslots", vent({ throat: 2.5 }), wall, DRV18).maxSide,
+    len: ductFit(box, "vslots", vent({ throat: 2.5 }), wall, 0.75, DRV18).maxSide,
   });
   close(t, v.len, 20 - wall - 2.5, 1e-12);
   close(
     t,
-    sideDuctEndCorrection(box, v, wall, 2),
+    sideDuctEndCorrection(box, v, wall, 0.75, 2),
     rectangleEndCorrection(2.5, 2 * 27.5) +
       slotMouthCorrection(2.5, (24 - 1.5) / 2, 2.5, wall, v.len - 0.75),
     1e-12,
@@ -159,7 +159,7 @@ test("side duct: a longer duct, its mouth nearer the back wall, takes a larger i
   const box = { w: 24, h: 30, d: 20 };
   let prev = 0;
   for (const len of [6, 9, 12, 14, 15.5, 16.75]) {
-    const ec = sideDuctEndCorrection(box, vent({ throat: 2.5, len }), 0.75, 2);
+    const ec = sideDuctEndCorrection(box, vent({ throat: 2.5, len }), 0.75, 0.75, 2);
     assert.ok(ec > prev, `${len}: ${ec}`);
     prev = ec;
   }
@@ -168,12 +168,12 @@ test("bottom slot: straight while it fits, folded past that (a sharp bend, and i
   const box = { w: 22, h: 30, d: 20 },
     outer = rectangleEndCorrection(6, 19);
   // the straight run holds d - t - slotH = 16.25 (from the frame front); its mouth is a slot height from the back wall
-  const straight = ventGeometry("slots", box, vent({ slotH: 3, len: 16.25 }), 0.75, DRV18);
+  const straight = ventGeometry("slots", box, vent({ slotH: 3, len: 16.25 }), 0.75, 0.75, DRV18);
   close(t, straight.ec ?? NaN, outer + slotMouthCorrection(3, 28.5, 3, 0.75, 16.25 - 0.75), 1e-12);
   assert.ok(!straight.desc.includes("folded"));
   // folded 20 long: the rear wall would rise 20 - 19.25 = 0.75, held at the least 1 (0.25 over the roof), so the mouth
   // is 28.5 - 3 - 1 under the lid, the box's inside depth (20 - 0.75 - 0.75) across it
-  const folded = ventGeometry("slots", box, vent({ slotH: 3, len: 20 }), 0.75, DRV18);
+  const folded = ventGeometry("slots", box, vent({ slotH: 3, len: 20 }), 0.75, 0.75, DRV18);
   close(
     t,
     folded.ec ?? NaN,
@@ -182,7 +182,7 @@ test("bottom slot: straight while it fits, folded past that (a sharp bend, and i
   );
   assert.ok(folded.desc.includes("folded"));
   // folded as far as it goes: the mouth a slot height under the lid, the rear wall 28.5 - 6 up
-  const top = ventGeometry("slots", box, vent({ slotH: 3, len: 50 }), 0.75, DRV18);
+  const top = ventGeometry("slots", box, vent({ slotH: 3, len: 50 }), 0.75, 0.75, DRV18);
   close(
     t,
     top.ec ?? NaN,

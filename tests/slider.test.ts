@@ -78,6 +78,7 @@ test("slider ranges: a bottom slot's duct lengths skip the ones that fit neither
     "slots",
     vent({ slotH: 3, len: 14 }),
     0.75,
+    0.75,
     DRV18,
   );
   const r = rangesOnSteps(spans, 3, 50, 0.5);

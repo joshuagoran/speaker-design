@@ -125,7 +125,7 @@ test("exact PA search: one shared curve per volume and tuning gives the planner'
     };
     // the geometry: net volume, vent area and end correction
     const g = subGeometry(sub, mid, cfg);
-    const vs = ventShape(style, box, cVent, t, sub);
+    const vs = ventShape(style, box, cVent, t, 0.75, sub);
     assert.ok(Math.abs(vs.area - g.port.area) < 1e-12, "vent area");
     assert.ok(Math.abs(vs.ec - g.port.ec) < 1e-12, `${style} end correction`);
     const net = subNetLiters(style, box, t, 0.75, cVent, vs.area, sub.ts.disp, undefined);
@@ -237,7 +237,7 @@ test("exact PA search: the vent's most end correction bounds every duct length, 
                     : style === "round2"
                       ? { nt: 2, dia: size }
                       : { throat: size };
-              const most = ventShape(style, box, vent(base), t, DRV18, {
+              const most = ventShape(style, box, vent(base), t, 0.75, DRV18, {
                 folded: false,
                 most: true,
               }).ec;
@@ -251,9 +251,9 @@ test("exact PA search: the vent's most end correction bounds every duct length, 
                     style === "slots"
                       ? Number(slotFolds(box, v, t))
                       : style === "round2"
-                        ? modelTubeElbows(box, style, v, t, DRV18)
+                        ? modelTubeElbows(box, style, v, t, 0.75, DRV18)
                         : 0,
-                  ec = ventShape(style, box, v, t, DRV18).ec,
+                  ec = ventShape(style, box, v, t, 0.75, DRV18).ec,
                   at = `${style} ${size} ${t} ${w}x${h}x${d} ${len}`;
                 assert.ok(Number.isFinite(ec) && ec <= most, at);
                 if (prevFolded === folded) assert.ok(len + ec > prevLeff, at);
@@ -422,7 +422,7 @@ function gridDesigns(input: PaOptimizerInput, grid: PaExactGrid): PaDesignConfig
             const v = { ...vent, len: sol.len };
             if (
               sol.len < grid.minDuctIn ||
-              !ductFits(ductFit(sol.box, style, v, t, sub).spans, sol.len)
+              !ductFits(ductFit(sol.box, style, v, t, cur.inset, sub).spans, sol.len)
             )
               continue;
             if (!subBaffleFits(sol.box, style, v, t, sub)) continue;

@@ -1840,6 +1840,7 @@ export interface SubChipsInput {
   cVent: VentSpec;
   /** plywood thickness */
   PT: number;
+  inset: PaDesignConfig["inset"];
   subLbLoaded: number;
   lim: Pick<SubLimits, "who" | "W">;
   /** frequency of the peak excursion, Hz */
