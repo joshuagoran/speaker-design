@@ -194,3 +194,41 @@ export function partMeshGeometry(m: PartMesh, { shading, place }: PartMeshDrawin
   built.set(key, g);
   return g;
 }
+
+/**
+ * A horn mesh's mouth outline, in inches round the model's origin (its axis): the convex hull of the vertices on the
+ * mouth plane (z = max), the outside edge of the mouth's rim. Every point inside it is on the rim or in the mouth.
+ * Counterclockwise.
+ */
+export function partMeshMouth(m: PartMesh): THREE.Vector2[] {
+  const zMouth = Math.round(m.max[2] / m.unitMm);
+  const k = m.unitMm * MM_IN;
+  const pts: THREE.Vector2[] = [];
+  for (let i = 0; i < m.positions.length; i += 3)
+    if (m.positions[i + 2] === zMouth)
+      pts.push(new THREE.Vector2(m.positions[i] * k, m.positions[i + 1] * k));
+  // Andrew's monotone chain
+  pts.sort((a, b) => a.x - b.x || a.y - b.y);
+  const cross = (o: THREE.Vector2, a: THREE.Vector2, b: THREE.Vector2) =>
+    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const half = (list: THREE.Vector2[]) => {
+    const out: THREE.Vector2[] = [];
+    for (const p of list) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], p) <= 0) out.pop();
+      out.push(p);
+    }
+    out.pop();
+    return out;
+  };
+  return [...half(pts), ...half([...pts].reverse())];
+}
+
+/** A closed polygon through `points`, offset to (centerX, centerY), as a THREE.Path. */
+export function polygonPath(centerX: number, centerY: number, points: readonly THREE.Vector2[]) {
+  const path = new THREE.Path();
+  points.forEach((p, i) =>
+    i ? path.lineTo(centerX + p.x, centerY + p.y) : path.moveTo(centerX + p.x, centerY + p.y),
+  );
+  path.closePath();
+  return path;
+}

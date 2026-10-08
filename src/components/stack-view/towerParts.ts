@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { roundedRectPath, circlePath } from "./geometry";
+import { roundedRectPath, circlePath, partMeshMouth, polygonPath } from "./geometry";
+import { HORN_MESHES } from "../../data/meshes";
 import { towerSpec, TOWER_MID_HEIGHT_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import type { Dims3, Horn, MidDriver } from "../../types";
@@ -21,13 +22,17 @@ export function towerBaffleHoles(
     (archTop
       ? plinth + box.h + TOWER_MID_HEIGHT_IN + (box.w / 2 - ctx.wall)
       : plinth + box.h + TOWER_MID_HEIGHT_IN + hornSectionH / 2) - baffleCy;
+  // a horn drawn from its mesh: the hole follows its mouth's outline round its axis
+  const model = HORN_MESHES[horn.id];
   return [
     circlePath(0, plinth + box.h + TOWER_MID_HEIGHT_IN / 2 - baffleCy, mid.size / 2 - 0.9),
-    horn.rect
-      ? roundedRectPath(0, hy, innerW - 1, horn.size.h, 1.2)
-      : horn.profile
-        ? circlePath(0, hy, Math.min(horn.size.w, horn.size.h) / 2 - 0.2)
-        : roundedRectPath(0, hy, horn.size.w, horn.size.h, 1),
+    model
+      ? polygonPath(0, hy, partMeshMouth(model))
+      : horn.rect
+        ? roundedRectPath(0, hy, innerW - 1, horn.size.h, 1.2)
+        : horn.profile
+          ? circlePath(0, hy, Math.min(horn.size.w, horn.size.h) / 2 - 0.2)
+          : roundedRectPath(0, hy, horn.size.w, horn.size.h, 1),
   ];
 }
 
