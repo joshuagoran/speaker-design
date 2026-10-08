@@ -61,6 +61,7 @@ export default defineConfig({
       "dist/**",
       "src/data/acoustics/slot-inner-end.ts",
       "src/data/meshes/diy_os90x50.ts",
+      "src/data/meshes/diy_os90x70.ts",
       "src/data/meshes/diy_rosse110x50.ts",
       "src/data/meshes/h1105.ts",
       "tests/golden.json",

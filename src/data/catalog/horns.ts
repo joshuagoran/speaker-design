@@ -216,6 +216,28 @@ export const DIY_ROSSE110X50: Horn = {
   note: "[hornlab.io design and BEM, 30 points, Oct 2026] The owner's preferred waveguide, an R-OSSE: 110° × 50° target, R 250 / R_V 160 mm, a 55° / a_V 25°, 36 mm (1.4\") spherical throat at 3.7°, k 2.5, q 3.5, superellipse n 2.75, 7 mm walls, rolled-back lip. Mouth 500 × 320 mm (the rollback is its outside), 176 mm deep including the throat flange; hornlab cutoff 805 Hz. Flange ⌀130 × 12 mm with 4 × ⌀6.6 mm holes (M6 or 1/4-20) on a 101.6 mm (4 in) circle at 45°, so the N314T bolts straight on (no adapter). Not constant directivity: the coverage narrows smoothly with frequency, with no bump. −6 dB beamwidth H/V: 108/132° at 0.9 kHz, 104/120° at 1 kHz, 92/96° at 1.45 kHz, 84–88/68–72° at 1.8–2.6 kHz, about 80/64° at 3–5 kHz, 60/48° at 10 kHz (DI 4.9 to 11 dB). The planner takes the coverage as a constant 110° × 50°, so expect about 80° at 3–5 kHz and 60° at 10 kHz. At a 900 Hz–1 kHz crossover its 104–108° matches a 12\" mid's width (the OS 90×50 gives 84°). Loading is flat above 1.4 kHz, −3 dB at about 970 Hz and −6 dB at about 740 Hz, so cross from 950 Hz (LR24). Weight not measured: about 4.1 lb printed solid in PLA. Drawn from its STEP model.",
 };
 
+/**
+ * The owner's own OS waveguide for a 1 in driver, for the Hi-fi page (and the PA horns), designed in hornlab.io and
+ * printed; drawn from its STEP model.
+ */
+export const DIY_OS90X70: HifiWaveguide = {
+  id: "diy_os90x70",
+  // GUESS: 410 cm³ of solid ASA from the STEP model, about 440 g; gyroid infill makes it about 300 g
+  lb: 1,
+  name: "DIY OS 90×70 (hornlab, 248 mm, printed)",
+  // lowest crossover 2.1 kHz (LR24) from the BEM's loading, −3 dB there; loading −6 dB at 1450 Hz (hornlab cutoff 1528 Hz)
+  hf: { covH: 90, covV: 70, minXo: 2100, lowHz: 1450 },
+  exit: 1,
+  // the owner's estimate, not a vendor price
+  price: 40,
+  src: "Estimate: same as the ATH ST260 printed waveguide ($40; similar size and material); not a vendor price.",
+  size: { w: 255 / 25.4, h: 207 / 25.4, d: 83 / 25.4 },
+  driver:
+    '1" exit, 2 × M6 on a 76 mm circle, level (the B&C DE250 and DE550, FaitalPRO HF10AK and 18Sound ND1TP bolt straight on)',
+  xo: "2.3–2.4 kHz with a 6.5″ woofer (LR24); from 2.1 kHz",
+  note: "[hornlab.io design and BEM, 30 points, Oct 2026] The owner's oblate-spheroidal waveguide for 1″ drivers: 90° × 70°, 25.4 mm (1″) throat at 7.3° (half-angle, to match the DE250's 14.6° exit), superellipse n 2.5, 6 mm walls, flat mouth lip. Mouth 248 × 200 mm inside (255 × 207 outside), 83 mm deep including the throat flange; hornlab cutoff 1528 Hz. Flange ⌀120 × 10 mm with 2 × ⌀6.6 mm holes (M6) on a 76 mm circle, level, so the 2-bolt 1″ drivers (DE250, DE550, HF10AK, ND1TP) bolt straight on (no adapter). −6 dB beamwidth H/V: 92/104° at 1.45 kHz, a horizontal waist of 76–84° from 1.8 to 2.3 kHz, then 84–100° H and 68–88° V from 2.6 to 10 kHz. The planner takes the coverage as a constant 90° × 70°. Loading is flat above 3 kHz, −3 dB at about 2.1 kHz and −6 dB at about 1.45 kHz, so cross no lower than 2.1 kHz (LR24). With a 6.5″ woofer cross at 2.3–2.4 kHz: lower, the woofer is more than 1.4× as wide as the waist. Prints in one piece, throat down, on a 256 mm bed. Weight not measured: about 1 lb printed solid in ASA (410 cm³), about 0.7 lb with gyroid infill. Drawn from its STEP model.",
+};
+
 export const HORN_RAW: readonly Horn[] = [
   {
     id: "rx28",
@@ -347,6 +369,7 @@ export const HORN_RAW: readonly Horn[] = [
   A460G2_14,
   DIY_OS90X50,
   DIY_ROSSE110X50,
+  DIY_OS90X70,
   {
     id: "a460g2",
     lb: 3.5,
