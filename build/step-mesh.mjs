@@ -60,10 +60,13 @@ export async function tessellateStep(
 }
 
 /**
- * Splits the vertices of a welded mesh along its sharp edges. Round each vertex, the triangles that meet it join one
- * group when they share an edge through it and their normals differ by at most `creaseDeg`; the first group keeps the
- * vertex and every other group gets its own copy. Smooth normals averaged per vertex then stay smooth across a curved
- * surface (and across the seams between its B-rep faces) and turn sharply at a flange's edges.
+ * Splits the vertices of a welded mesh along its sharp edges. Round each vertex, the triangles that meet it form
+ * groups: a group starts from a seed triangle and takes in a neighbor across an edge through the vertex when the
+ * neighbor's normal is within `creaseDeg` of every triangle already in the group. So no two triangles averaged into
+ * one vertex normal differ by more than `creaseDeg`, and a group can't chain round a sharp rim through a run of
+ * smooth edges. The first group keeps the vertex and every
+ * other group gets its own copy. Smooth normals averaged per vertex then stay smooth across a curved surface (and
+ * across the seams between its B-rep faces) and turn sharply at a flange's edges and a mouth's rim.
  */
 export function splitCreases(pos, idx, creaseDeg) {
   const cosCrease = Math.cos((creaseDeg * Math.PI) / 180);
@@ -80,43 +83,59 @@ export function splitCreases(pos, idx, creaseDeg) {
     const len = Math.hypot(...n) || 1;
     normal.push(n.map((x) => x / len));
   }
-  // the triangles on each edge
+  const smooth = (s, t) => normal[s].reduce((sum, x, k) => sum + x * normal[t][k], 0) >= cosCrease;
+  // the triangles on each edge, and the triangles round each vertex
   const edges = new Map();
+  const round = new Map();
   for (let t = 0; t < nTri; t++)
     for (let k = 0; k < 3; k++) {
       const [a, b] = [idx[3 * t + k], idx[3 * t + ((k + 1) % 3)]];
       const e = a < b ? `${a},${b}` : `${b},${a}`;
       edges.set(e, [...(edges.get(e) ?? []), t]);
+      round.set(a, [...(round.get(a) ?? []), t]);
     }
-  // union-find over (vertex, triangle) corners: join the two triangles on a smooth edge at both of its ends
-  const parent = new Map();
-  const find = (c) => {
-    while (parent.has(c) && parent.get(c) !== c) c = parent.get(c);
-    return c;
-  };
-  const join = (c, d) => {
-    const [rc, rd] = [find(c), find(d)];
-    if (rc !== rd) parent.set(rd, rc);
-  };
-  for (const [e, tris] of edges) {
-    if (tris.length !== 2) continue;
-    const [s, t] = tris;
-    const cos = normal[s].reduce((sum, x, k) => sum + x * normal[t][k], 0);
-    if (cos < cosCrease) continue;
-    for (const v of e.split(",")) join(`${v}:${s}`, `${v}:${t}`);
+  // each vertex's groups: triangle -> group number
+  const groupOf = new Map();
+  for (const [v, tris] of round) {
+    const group = new Map();
+    for (const seed of tris) {
+      if (group.has(seed)) continue;
+      const g = new Set(group.values()).size;
+      group.set(seed, g);
+      const members = [seed];
+      const todo = [seed];
+      while (todo.length) {
+        const t = todo.pop();
+        // the triangle's two edges through v, and the triangle across each
+        for (let k = 0; k < 3; k++) {
+          const w = idx[3 * t + k];
+          if (w === v) continue;
+          const e = v < w ? `${v},${w}` : `${w},${v}`;
+          const across = edges.get(e);
+          if (across.length !== 2) continue;
+          const n = across[0] === t ? across[1] : across[0];
+          if (!group.has(n) && members.every((m) => smooth(m, n))) {
+            group.set(n, g);
+            members.push(n);
+            todo.push(n);
+          }
+        }
+      }
+    }
+    groupOf.set(v, group);
   }
   // each vertex's first group keeps it; every other group takes a copy
   const out = [...pos];
   const copies = new Map();
   const outIdx = idx.map((v, i) => {
-    const group = find(`${v}:${Math.floor(i / 3)}`);
+    const g = groupOf.get(v).get(Math.floor(i / 3));
     const seen = copies.get(v) ?? new Map();
     copies.set(v, seen);
-    let id = seen.get(group);
+    let id = seen.get(g);
     if (id === undefined) {
       id = seen.size ? out.length / 3 : v;
       if (seen.size) out.push(pos[3 * v], pos[3 * v + 1], pos[3 * v + 2]);
-      seen.set(group, id);
+      seen.set(g, id);
     }
     return id;
   });
