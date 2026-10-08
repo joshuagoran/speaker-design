@@ -42,7 +42,8 @@ OPTS = [
     ("rib_h_end", 5.0, float, None, "rib height at the mouth end (with --rib-taper)"),
     ("rib_taper", True, bool, None, "taper the ribs from --rib-h to --rib-h-end"),
     ("rib_ramp", 15.0, float, None, "length of the ramp at the rear end of each rib"),
-    ("rib_angles", "60,120,240,300", str, None, "rib planes, degrees from +x"),
+    ("rib_angles", "none", str, None, "rib planes in degrees from +x, e.g. 60,120,240,300; none (or empty) for "
+                                     "no ribs"),
     ("seam_t", 3.0, float, None, "seam flange and throat fin thickness on each side of a seam"),
     ("seam_h", 15.0, float, None, "seam flange and throat fin height above the wall"),
     ("bolt_d", 4.5, float, None, "seam bolt hole diameter (M4 clearance)"),
@@ -54,8 +55,8 @@ OPTS = [
     ("joint_l", 12.0, float, None, "lap length; the inner seam is at split-z + joint-l"),
     ("joint_rad_clr", 0.10, float, None, "lap joint radial clearance"),
     ("joint_ax_clr", 0.20, float, None, "lap joint axial clearance at the outer shoulder"),
-    ("feet", None, str, ("center", "pair", "none"), "mounting foot; default center, or none for a horn with a "
-                                                    "mouth flange"),
+    ("feet", "none", str, ("center", "pair", "none"), "mounting foot under the mouth; none by default, since the "
+                                                      "plywood throat mount carries the horn"),
     ("foot_x", 120.0, float, None, "pair: feet at plus and minus this x"),
     ("foot_w", None, float, None, "foot width; default 120 (center) or 50 (pair)"),
     ("foot_depth", 45.0, float, None, "foot depth along the axis"),
@@ -70,15 +71,22 @@ STAGES = ("wall", "body", "split", "quarter", "export", "check", "render", "read
 BODY_STEP_NAMES = ("lip", "seams", "ribs", "feet", "holes")
 STAGE_ARGS = {"body": BODY_STEP_NAMES, "split": ("T", "Qall"), "quarter": ("1", "2", "3", "4")}
 RHO = {"PETG": 1.27, "ASA": 1.07}
+EST_WALLS, EST_LINE, EST_INFILL = 4, 0.45, 0.40   # print estimate: 4 wall loops of 0.45 mm, 40 % gyroid core
 SCREW_D, SCREW_CSK = 4.5, 9.0       # #8 wood screw, 90 deg countersink
 M6_D, M6_CB, M6_FLOOR = 6.6, 13.0, 3.0
 MIN_WALL = 3.0
 TOP_SMOOTH = 3.0               # Gaussian smoothing (mm) of the seam spine top line, so the round can follow it
 ROUND_EPS = 0.01               # OCC cannot fillet both top edges at exactly half the thickness
-FIN_HOLE_WALL = 1.0            # least material between a throat fin and a driver bolt hole
+FIN_HOLE_WALL = 1.0            # least material between a throat fin and a driver bolt hole under the ply
+WASHER_PAST = 6.0              # a 1/4 in washer reaches about this far past the driver bolt hole's edge
+M4_WASHER_R = 4.5              # M4 washer radius: seam bolts sit this far plus the top round below the top
+FOOT_WEB_T = 12.0              # center foot web thickness
 PLY_T = 12.0                   # throat mount: 1/2 in birch ply
 PLY_CLR = 1.0                  # throat mount clearances (top edge under the side fins, slot past the fin)
 PLY_GAP = 3.0                  # throat mount gusset clearance below the horn
+SADDLE_CLR = 1.5               # throat mount saddle radius past the neck
+FOOT_CLR = 5.0                 # throat mount base and gusset stop this far short of a foot
+GUSSET_MIN = 20.0              # shortest useful gusset leg
 IN = 25.4
 PARTS = ["T", "Q1", "Q2", "Q3", "Q4"]
 QUAD = {1: (1, 1), 2: (-1, 1), 3: (-1, -1), 4: (1, -1)}
@@ -101,6 +109,11 @@ def fail(msg):
 
 def flist(s):
     return tuple(float(v) for v in str(s).split(","))
+
+
+def angle_list(s):
+    """Comma-separated angles, or () for 'none' or an empty string."""
+    return () if str(s).strip().lower() in ("", "none") else flist(s)
 
 
 class HelpFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
@@ -132,7 +145,7 @@ def parse(argv):
             p.error("--wall must be a number or 'step'")
     for k in ("rib_angles", "bolt_f", "dowel_f", "build_vol"):
         try:
-            flist(getattr(a, k))
+            (angle_list if k == "rib_angles" else flist)(getattr(a, k))
         except ValueError:
             p.error(f"--{k.replace('_', '-')} must be comma-separated numbers")
     for k in ("seam_t", "seam_h", "fin_root_r"):
@@ -141,10 +154,8 @@ def parse(argv):
     return a
 
 
-def resolve_defaults(mouth_flange):
-    """Defaults that depend on the design: feet, foot size and fastener."""
-    if A.feet is None:
-        A.feet = "none" if mouth_flange else "center"
+def resolve_defaults():
+    """Defaults that depend on the foot: foot size and fastener."""
     if A.foot_w is None:
         A.foot_w = 120.0 if A.feet == "center" else 50.0
     if A.foot_fastener is None:
@@ -407,8 +418,9 @@ def resample(p, step=1.0):
 
 
 def smooth_line(p, sigma=TOP_SMOOTH):
-    """Gaussian smoothing along a polyline (resampled every 1 mm). Odd reflection at both ends keeps the end
-    points and straight runs in place; kinks (where an offset is capped at a tight bend) become rounds."""
+    """Gaussian smoothing along a whole polyline (resampled every 1 mm). Odd reflection at both ends keeps the
+    end points in place. Straight and gently curved runs barely move (well under 0.1 mm); kinks, where an offset
+    is capped at a tight bend (near a roll), become rounds."""
     p = resample(p)
     w = min(int(3 * sigma), len(p) - 2)
     k = np.exp(-0.5 * (np.arange(-w, w + 1) / sigma) ** 2)
@@ -480,19 +492,49 @@ def round_top(tool, th, c, d_in):
     return tool, "square"
 
 
-def flange_holes_clear(foot_u, fin_angles, tf):
-    """Least distance (mm) from any driver bolt hole edge to a throat fin's footprint on the flange face."""
+def spine_half():
+    """Half-width of what sits on a seam plane at the throat: the fin, or a strip rib (thicker wall) if wider."""
+    return max(A.seam_t, A.seam_trim + 1.0)
+
+
+def driver_holes(tf):
+    """Driver bolt holes and where each bolt head sits: 'ply' (the washer on the throat mount, wholly below its
+    top edge) or 'flange' (the washer on the horn flange face, wholly above it). Stops if a washer would
+    straddle the top edge. Returns (holes, top edge y, hole radius)."""
     n_b, rb, hr = int(tf.get("holeCount", 4)), float(tf.get("boltCircle", 0)) / 2, float(tf.get("holeDiameter", 0)) / 2
-    worst = (math.inf, None, None)
+    top_y, wr = -(spine_half() + PLY_CLR), hr + WASHER_PAST
+    out = []
+    for k in range(n_b):
+        ha = (float(tf.get("holeAngle", 45)) + k * 360 / n_b) % 360
+        x, y = rb * math.cos(math.radians(ha)), rb * math.sin(math.radians(ha))
+        if y + wr <= top_y:
+            seat = "ply"
+        elif y - wr >= top_y:
+            seat = "flange"
+        else:
+            fail(f"the driver bolt hole at {ha:g} deg (y = {y:.1f}) straddles the throat mount's top edge "
+                 f"(y = {top_y:g}): a 1/4 in washer (r = {wr:.1f}) would sit half on the ply")
+        out.append({"angle": ha, "x": x, "y": y, "seat": seat, "washer_r": wr})
+    return out, top_y, hr
+
+
+def flange_holes_clear(foot_u, fin_angles, holes, hr):
+    """Clearance (mm) between the driver bolts and the throat fins' footprints on the flange face: a washer on
+    the flange face needs its full radius clear of a fin; a hole under the ply needs FIN_HOLE_WALL of material.
+    Returns (worst margin, fin angle, hole angle, least washer clearance of the flange-face bolts)."""
+    worst, washer = (math.inf, None, None), math.inf
     for th in fin_angles:
-        for k in range(n_b):
-            ha = float(tf.get("holeAngle", 45)) + k * 360 / n_b
-            u, w = rb * math.cos(math.radians(ha - th)), abs(rb * math.sin(math.radians(ha - th)))
-            du = max(0.0, u - foot_u[th], -u)
-            dist = math.hypot(du, max(0.0, w - A.seam_t)) - hr
-            if dist < worst[0]:
-                worst = (dist, th, ha % 360)
-    return worst
+        for h in holes:
+            d = math.radians(h["angle"] - th)
+            rb = math.hypot(h["x"], h["y"])
+            u, w = rb * math.cos(d), abs(rb * math.sin(d))
+            dist = math.hypot(max(0.0, u - foot_u[th], -u), max(0.0, w - A.seam_t))   # center to footprint
+            need = h["washer_r"] if h["seat"] == "flange" else hr + FIN_HOLE_WALL
+            if h["seat"] == "flange":
+                washer = min(washer, dist - h["washer_r"])
+            if dist - need < worst[0]:
+                worst = (dist - need, th, h["angle"])
+    return worst + (washer,)
 
 
 # ---------------------------------------------------------------- stage: wall
@@ -620,7 +662,7 @@ def build_features(inner, lipf):
         out.update(lip_roll_extent=ext, lip_roll_crest=crest, lip_outer=[lb.size.X, lb.size.Y])
     out["y_lid"] = y_lid
 
-    rib_angles = flist(A.rib_angles)
+    rib_angles = angle_list(A.rib_angles)
     seams = (0.0, 90.0, 180.0, 270.0)
     curves = {th: section_curve(inner, theta=th) for th in sorted(set(seams) | set(rib_angles))}
     # strip ribs on T where the outer layer leaves the seam planes bare
@@ -657,12 +699,13 @@ def build_features(inner, lipf):
     if max(fin["foot_u"].values()) > fr - 1:
         fail(f"a throat fin's root round reaches r = {max(fin['foot_u'].values()):.1f}, past the driver flange "
              f"(r = {fr:g}); use a smaller --fin-root-r or --seam-h")
-    clear, cth, cha = flange_holes_clear(fin["foot_u"], seams, tf)
-    if clear < FIN_HOLE_WALL:
-        fail(f"the throat fin at {cth:g} deg would hit the driver bolt hole at {cha:g} deg "
-             f"({clear:.1f} mm apart; at least {FIN_HOLE_WALL:g} mm is needed): use a thinner --seam-t or a "
-             "smaller --fin-root-r")
-    fin["hole_clear"] = clear
+    dholes, _, hr = driver_holes(tf)
+    margin, cth, cha, washer = flange_holes_clear(fin["foot_u"], seams, dholes, hr)
+    if margin < 0:
+        fail(f"the throat fin at {cth:g} deg would hit the driver bolt at {cha:g} deg (its hole or washer; "
+             f"{-margin:.1f} mm short): use a smaller --fin-root-r or --seam-h")
+    fin["hole_margin"] = margin
+    fin["washer_clear"] = None if washer == math.inf else washer
     for th in rib_angles:
         c = curves[th]
         n = normals(c)
@@ -698,11 +741,11 @@ def build_features(inner, lipf):
         pts += [[u, z] for u, z in zip(u_edge, zs)]
         pts = np.array(pts)
         g["feet"].append(solid_from_poly([np.array([pts[i], pts[(i + 1) % len(pts)]]) for i in range(len(pts))],
-                                         2 * A.seam_t, x0=0.0, side=-1))
+                                         FOOT_WEB_T, x0=0.0, side=-1))
         bolt_u, bolt_z = u_top - 7.0, (web_z0 + front) / 2
-        holes.append(("bolt", Solid.make_cylinder(A.bolt_d / 2, 2 * A.seam_t + 4,
-                                                  Plane(origin=(-(A.seam_t + 2), -bolt_u, bolt_z), z_dir=(1, 0, 0)))))
-        foot.update(width=A.foot_w, depth=A.foot_depth, thick=A.foot_t, web_h=A.foot_web_h, web_t=2 * A.seam_t,
+        holes.append(("bolt", Solid.make_cylinder(A.bolt_d / 2, FOOT_WEB_T + 4,
+                                                  Plane(origin=(-(FOOT_WEB_T / 2 + 2), -bolt_u, bolt_z), z_dir=(1, 0, 0)))))
+        foot.update(width=A.foot_w, depth=A.foot_depth, thick=A.foot_t, web_h=A.foot_web_h, web_t=FOOT_WEB_T,
                     web_z=[web_z0, front], seam_bolt_z=bolt_z, hole_z=hole_z)
         if A.foot_fastener == "m6":
             cb = A.foot_t - M6_FLOOR
@@ -738,7 +781,7 @@ def build_features(inner, lipf):
         pl, _, _ = plane_for(theta=th)
         s = np.r_[0, np.cumsum(np.hypot(*np.diff(cc, axis=0).T))]
         hole_off = wt + A.seam_h / 2
-        ok = dd >= hole_off + 6.0                      # flange tall enough for a head / nut here
+        ok = dd >= hole_off + M4_WASHER_R + A.seam_t   # washer clear of the top round here
         placed = []
         for kind, fr, dia in [("bolt", f, A.bolt_d) for f in flist(A.bolt_f)] + [("dowel", f, A.dowel_d) for f in flist(A.dowel_f)]:
             free = ok & np.all([abs(s - q) >= 14.0 for q in placed] or [np.ones(len(s), bool)], axis=0)
@@ -929,6 +972,7 @@ def stage_check():
             "fit": None if fit is None else {"up": fit[0], "rot_deg": fit[1], "footprint": [round(fit[2], 1), round(fit[3], 1)], "height": round(fit[4], 1)},
             "volume_cm3": round(v, 1), "mass_g": {k: round(v * r) for k, r in RHO.items()},
             "stl_watertight": bool(m.is_watertight), "stl_faces": len(m.faces), "stl_volume_cm3": round(float(m.volume) / 1000, 1),
+            "area_cm2": round(float(m.area) / 100, 1),
         }
         log(p, res["parts"][p])
     m = trimesh.load(f"{A.out}/part_Q1.stl")
@@ -1068,7 +1112,8 @@ def stage_render():
     draw(ax, False, 8, 4, "side view, mouth to the right")
     ax.set_xlim(-280, 280); ax.set_zlim(-200, 200); ax.set_box_aspect((560, 240, 400))
     ax2 = fig.add_subplot(1, 2, 2)
-    th = flist(A.rib_angles)[0]
+    ribs = angle_list(A.rib_angles)
+    th = ribs[0] if ribs else 45.0
     pl, _, _ = plane_for(theta=th)
     for p in PARTS:
         sec = import_brep(f"{WORK}/{p}.brep").intersect(Face.make_rect(4000, 4000, pl))
@@ -1081,7 +1126,8 @@ def stage_render():
     ax2.set_xlabel("z (mm)")
     ax2.set_ylabel("distance from the axis (mm)")
     ax2.set_title(f"section through a rib (plane at {th:.0f} deg): rib height "
-                  + (f"{A.rib_h:.0f} -> {A.rib_h_end:.0f} mm" if A.rib_taper else f"{A.rib_h:.0f} mm"))
+                  + (f"{A.rib_h:.0f} -> {A.rib_h_end:.0f} mm" if A.rib_taper else f"{A.rib_h:.0f} mm") if ribs else
+                  f"section halfway between the seams (plane at {th:.0f} deg; no ribs)")
     plt.tight_layout()
     plt.savefig(f"{A.out}/preview_side.png")
     plt.close(fig)
@@ -1118,17 +1164,17 @@ def throat_mount(si, bi, inner):
     tf, fb, wt, fin = si["throat_flange"], si["flange_back"], si["wall_t"], bi["fins"]
     neck = max(math.hypot(x, y) for z in np.linspace(fb, fb + PLY_T, 5) for x, y in contour_points(inner, float(z), wt))
     reach = fin["reach_ply"]["270.0"]
-    m = {"neck_r": neck, "saddle_r": math.ceil(neck + PLY_CLR), "reach": reach, "top_y": -(A.seam_t + PLY_CLR),
-         "slot_w": 2 * A.seam_t + PLY_CLR, "slot_r": math.ceil(2 * (reach + PLY_CLR)) / 2,
-         "axis_h": -bi["y_lid"], "width": float(tf.get("diameter", 0))}
-    n_b, rb, hd = int(tf.get("holeCount", 4)), float(tf.get("boltCircle", 0)) / 2, float(tf.get("holeDiameter", 0))
-    m["holes"] = []
-    for k in range(n_b):
-        ha = (float(tf.get("holeAngle", 45)) + k * 360 / n_b) % 360
-        x, y = rb * math.cos(math.radians(ha)), rb * math.sin(math.radians(ha))
-        m["holes"].append({"angle": ha, "x": x, "y": y, "in_ply": y < m["top_y"] - hd})
+    holes, top_y, _ = driver_holes(tf)
+    m = {"neck_r": neck, "saddle_r": math.ceil(neck + SADDLE_CLR), "reach": reach, "top_y": top_y,
+         "spine_half": spine_half(), "slot_w": 2 * spine_half() + PLY_CLR, "slot_r": math.ceil(2 * (reach + PLY_CLR)) / 2,
+         "axis_h": -bi["y_lid"], "width": float(tf.get("diameter", 0)), "holes": holes}
     line = np.array(fin["bottom_top_line"])          # bottom spine top line: (distance below the axis, z)
     z_face = fb + PLY_T
+    ft = bi["foot"]                                  # a foot caps the base and the gusset
+    base_cap = gus_cap = math.inf
+    if ft["mode"] != "none":
+        base_cap = ft["z0"] - FOOT_CLR
+        gus_cap = min(base_cap, (ft["web_z"][0] if "web_z" in ft else ft["z0"]) - FOOT_CLR)
 
     def clear_h(z):                                   # height of the bottom spine above the lid at z
         near = line[np.abs(line[:, 1] - z) <= 0.75]
@@ -1137,11 +1183,13 @@ def throat_mount(si, bi, inner):
     top_max = m["axis_h"] - m["slot_r"] - PLY_GAP
     leg = 0
     for L in range(1, 400):
-        if PLY_T + L > top_max or any(PLY_T + L - s > clear_h(z_face + s) - PLY_GAP for s in range(L + 1)):
+        if (PLY_T + L > top_max or z_face + L > gus_cap
+                or any(PLY_T + L - s > clear_h(z_face + s) - PLY_GAP for s in range(L + 1))):
             break
         leg = L
-    m["gusset_leg"] = 5 * (leg // 5)
-    m["base_l"] = PLY_T + m["gusset_leg"]
+    leg = 5 * (leg // 5)
+    m["gusset_leg"] = leg if leg >= GUSSET_MIN else 0
+    m["base_l"] = min(PLY_T + max(m["gusset_leg"], GUSSET_MIN), base_cap - fb)
     m["upright_h"] = m["axis_h"] + m["top_y"] - PLY_T
     return m
 
@@ -1153,7 +1201,14 @@ def stage_readme():
     P = ck["parts"]
     wt = si["wall_t"]
     vol = flist(A.build_vol)
-    rows, tot = [], {"v": 0.0, "PETG": 0, "ASA": 0}
+    rows, tot = [], {"v": 0.0, "PETG": 0, "ASA": 0, "est": 0}
+    shell_t = EST_WALLS * EST_LINE
+
+    def est_g(d):          # shell (area x wall loops) solid, the rest of the volume at the infill density, in ASA
+        v = d["volume_cm3"]
+        shell = min(v, d["area_cm2"] * shell_t / 10)
+        return round((shell + EST_INFILL * (v - shell)) * RHO["ASA"])
+
     names = {"T": f"Throat: flange + flare to z = {A.split_z + A.joint_l:.0f}", "Q1": "Quarter +x/+y (top)",
              "Q2": "Quarter -x/+y (top)", "Q3": "Quarter -x/-y (bottom)", "Q4": "Quarter +x/-y (bottom)"}
     for p in PARTS:
@@ -1170,11 +1225,12 @@ def stage_readme():
             fit = f"{how}; {rot}, footprint {f['footprint'][0]:.1f} x {f['footprint'][1]:.1f}, {f['height']:.1f} high"
         bx = d["bbox_xyz"]
         rows.append(f"| {p} | {names[p]} | {bx[0]:.1f} x {bx[1]:.1f} x {bx[2]:.1f} | {fit} | {d['volume_cm3']:.0f} | "
-                    f"{d['mass_g']['PETG']} | {d['mass_g']['ASA']} |")
+                    f"{d['mass_g']['PETG']} | {d['mass_g']['ASA']} | {est_g(d)} |")
         tot["v"] += d["volume_cm3"]
         tot["PETG"] += d["mass_g"]["PETG"]
         tot["ASA"] += d["mass_g"]["ASA"]
-    rows.append(f"| all | | | | {tot['v']:.0f} | {tot['PETG']} | {tot['ASA']} |")
+        tot["est"] += est_g(d)
+    rows.append(f"| all | | | | {tot['v']:.0f} | {tot['PETG']} | {tot['ASA']} | {tot['est']} |")
     ft = bi["foot"]
     cnt = bi["counts"]
     zm = si["z_mouth"]
@@ -1182,27 +1238,36 @@ def stage_readme():
     _, dz, _, _ = design()
     throat = (dz.get("parameters") or {}).get("throatDiam")
     n_b, n_d = len(flist(A.bolt_f)), len(flist(A.dowel_f))
-    ribs = flist(A.rib_angles)
+    ribs = angle_list(A.rib_angles)
     n_up = sum(1 for th in ribs if 0 < th % 360 < 180)
     fin = bi["fins"]
     fl_t = float(tf.get("thickness", 0))
     fb = si["flange_back"]
-    kinds = set(fin["round"].values())
-    top_txt = (f"full-round top (R{A.seam_t - ROUND_EPS:.2f}, half the thickness)" if kinds == {"round"} else
-               f"{A.seam_t / 2:g} mm chamfer on the top edges (the full round did not build in OCC)" if "square" not in kinds
-               else "square top (neither the full round nor a chamfer built in OCC)")
+    by_kind = {}
+    for k, v in fin["round"].items():
+        by_kind.setdefault(v, []).append(f"{float(k):g}")
+    kind_txt = {"round": f"full-round top (R{A.seam_t - ROUND_EPS:.2f}, half the thickness)",
+                "chamfer": f"{A.seam_t / 2:g} mm chamfered top (the full round did not build in OCC)",
+                "square": "square top (neither the full round nor a chamfer built in OCC)"}
+    top_txt = (kind_txt[next(iter(by_kind))] if len(by_kind) == 1 else
+               "; ".join(f"{kind_txt[k]} at {'/'.join(v)} deg" for k, v in by_kind.items()))
+    wc = fin.get("washer_clear")
     reach = {k: fin["foot_u"][f"{float(a)}"] for k, a in (("side", 0), ("tb", 90))}
     lip_txt = (("none added: the profile rolls back, and the outside of the roll is part of the acoustic surface. "
-                "The roll is the stiff edge; the ribs and seam flanges follow the wall around under the roll to its end.")
+                f"The roll is the stiff edge; the {'ribs and ' if ribs else ''}seam flanges follow the wall around under the roll "
+                "to its end.")
                if bi["lip"] == "none" and si["rollback"] else
                "none added: the horn has a mouth flange, kept as designed." if bi["lip"] == "none" and si["mouth_flange"]
                else "none (--lip none)." if bi["lip"] == "none" else
                f"{A.lip_out:.0f} mm outward from the outer wall, {A.lip_depth:.0f} mm deep, front face on the mouth plane; "
                f"outside {bi['lip_outer'][0]:.1f} x {bi['lip_outer'][1]:.1f} mm. The inner edge keeps the STEP's lip roll "
                f"(tangent to the flare; crest {bi['lip_roll_crest'] - zm:.3f} mm proud of the lip face).")
-    rib_txt = (f"{A.rib_t:.0f} mm thick, {A.rib_h:.0f} mm tall at the rear easing to {A.rib_h_end:.0f} mm at the "
+    rib_txt = (f"{A.rib_t:g} mm thick, {A.rib_h:.0f} mm tall at the rear easing to {A.rib_h_end:.0f} mm at the "
                f"{'roll end' if si['rollback'] else 'lip'} (cosine taper, 45 deg ramp at the rear end)" if A.rib_taper
-               else f"{A.rib_t:.0f} mm thick, {A.rib_h:.0f} mm tall")
+               else f"{A.rib_t:g} mm thick, {A.rib_h:g} mm tall")
+    rib_line = (f"{len(ribs)} radial ribs at {A.rib_angles} deg ({n_up} on the top wall, {len(ribs) - n_up} on the "
+                f"bottom), {rib_txt}, from z = {A.split_z + A.joint_ax_clr:.1f}." if ribs else
+                "none (`--rib-angles none`). The seam flanges stiffen the walls.")
     if ft["mode"] == "center":
         fast = ("one 6.6 mm hole for an M6 bolt at x = 0 with a 13 mm counterbore "
                 f"{ft.get('counterbore_depth', 0):.0f} mm deep (3 mm floor), split on the Q3/Q4 seam"
@@ -1220,16 +1285,46 @@ def stage_readme():
                     f"front at z = {ft['front_z']:.1f}, each with a {A.rib_t:.0f} mm web up to the bottom wall and 2 countersunk #8 holes.")
     else:
         foot_txt = "none."
-    m4 = next(L for L in (12, 16, 20, 25, 30, 35, 40, 50) if L >= 2 * A.seam_t + 5.6)   # flanges + 2 washers + nut
-    n_ply = sum(1 for h in mt["holes"] if h["in_ply"])
-    n_top = len(mt["holes"]) - n_ply
-    hw = [f"- {cnt['bolt']} x M4 x {m4} bolts, {cnt['bolt']} x M4 nuts, {2 * cnt['bolt']} x M4 washers (seam flanges"
-          f"{', incl. 1 through the foot web' if ft['mode'] == 'center' else ''}). They clamp the glued seams.",
-          f"- {cnt['dowel']} x dowel pins 4 x 12 mm (holes printed at 4.0 mm; drill or ream to a press fit).",
-          "- ASA slurry for the seams: ASA scraps dissolved in acetone, in a glass jar with a tight lid.",
-          f"- Driver: {n_ply} x 1/4-20 x 1-1/4 in bolts through the ply mount and the horn flange, and {n_top} x 1/4-20 x 3/4 in "
-          f"through the horn flange only, all with washers, into the driver's tapped holes (see the throat mount).",
-          "- Throat mount: 1/2 in birch ply for the upright, the base and the gusset; wood glue; #8 wood screws."]
+    def m4_len(grip):                                  # grip + 2 washers + nut
+        return next(L for L in (12, 16, 20, 25, 30, 35, 40, 50) if L >= grip + 5.6)
+
+    n_web = 1 if ft["mode"] == "center" else 0
+    n_seam = cnt["bolt"] - n_web
+    ply_h = [h for h in mt["holes"] if h["seat"] == "ply"]
+    fl_h = [h for h in mt["holes"] if h["seat"] == "flange"]
+    drv = [f"{len(ply_h)} x 1/4-20 x 1-1/4 in through the ply mount and the horn flange"] if ply_h else []
+    drv += [f"{len(fl_h)} x 1/4-20 x 3/4 in through the horn flange only"] if fl_h else []
+    hw = [f"- {n_seam} x M4 x {m4_len(2 * A.seam_t)} bolts, {n_seam} x M4 nuts, {2 * n_seam} x M4 washers (seam flanges). "
+          "They clamp the glued seams."]
+    if n_web:
+        hw.append(f"- 1 x M4 x {m4_len(FOOT_WEB_T)} bolt, 1 x M4 nut, 2 x M4 washers (through the foot web).")
+    hw += [f"- {cnt['dowel']} x dowel pins {A.dowel_d:g} x {2 * A.seam_t:g} mm (holes printed at {A.dowel_d:g} mm; drill or "
+           "ream to a press fit).",
+           "- ASA slurry for the seams: ASA scraps dissolved in acetone, in a glass jar with a tight lid.",
+           f"- Driver: {', and '.join(drv)}, all with washers, into the driver's tapped holes (see the throat mount).",
+           "- Throat mount: 1/2 in birch ply for the upright, the base and the gusset; wood glue; #8 wood screws."]
+    if ply_h:
+        ys = {round(h["y"], 1) for h in ply_h}
+        holes_txt = (f"drill only the {len(ply_h)} holes of the {tf.get('boltCircle', 0):g} mm / {tf.get('holeAngle', 0):g} deg "
+                     "pattern below the top edge, " + (
+                         "at x = " + " and ".join(f"{h['x']:+.1f}" for h in ply_h) + f" mm, {-ply_h[0]['y']:.1f} mm below the axis"
+                         if len(ply_h) <= 2 and len(ys) == 1 else
+                         "at " + ", ".join(f"(x {h['x']:+.1f}, y {h['y']:+.1f})" for h in ply_h) + " mm")
+                     + ". Drill 9/32 in (7 mm).")
+    else:
+        holes_txt = "none. No driver hole sits below the top edge, so no bolt passes through the ply; clamp the flange to it."
+    bolt_txt = " ".join(([f"under the ply, 1/4-20 x 1-1/4 in through the ply and the horn flange into the driver's "
+                          f"tapped holes (about {1.25 * IN - PLY_T - fl_t:.1f} mm of thread in the driver)."]
+                         if ply_h else [])
+                        + ([f"{'Above' if ply_h else 'above'} the ply, 1/4-20 x 3/4 in through the horn flange only (about "
+                            f"{0.75 * IN - fl_t:.1f} mm of thread); their washers sit on the flange face, clear of the "
+                            f"ply's top edge."] if fl_h else []))
+    foot_cap = f" It stops {FOOT_CLR:g} mm short of the foot." if ft["mode"] != "none" else ""
+    gusset_txt = (f"one 45 deg ply triangle with {mt['gusset_leg']:g} mm legs, at x = 0 on the mouth side. Glue and screw it "
+                  f"to the upright and the base. It stays at least {PLY_GAP:g} mm below the bottom fin and the bottom seam "
+                  f"flange{', and ' + format(FOOT_CLR, 'g') + ' mm short of the foot web' if n_web else ''}."
+                  if mt["gusset_leg"] else
+                  f"none. The foot leaves room for less than {GUSSET_MIN:g} mm of gusset; brace the upright another way.")
     if ft["mode"] == "center" and ft["fastener"] == "m6":
         hw.append("- Foot: 1 x M6 button head bolt (ISO 7380, low head so it sits flush), length to suit, about 20-25 mm "
                   "into the lid; 1 x M6 washer; 1 x M6 threaded insert or T-nut in the box lid.")
@@ -1238,8 +1333,8 @@ def stage_readme():
         hw.append(f"- Foot: {n} x #8 countersunk wood screws, 3/4 to 1 in.")
     notes = "".join(f"- {n}\n" for n in bi["notes"])
     has_foot = ft["mode"] != "none"
-    sup = ["the outer wall", "the underside of the roll" if si["rollback"] else "the lip", "the ribs"] + \
-          (["the foot"] if has_foot else [])
+    sup = ["the outer wall", "the underside of the roll" if si["rollback"] else "the lip"] + \
+          (["the ribs"] if ribs else []) + (["the foot"] if has_foot else [])
     support = ", ".join(sup[:-1]) + " and " + sup[-1]
     roll_note = ("- Some seam bolts sit under the roll: reach them from behind, through the gap between the roll end "
                  "and the wall." + (" The foot cannot be flush with the mouth plane: the space below the roll belongs "
@@ -1253,11 +1348,15 @@ Coordinates: z along the axis (throat z = 0, mouth plane z = {zm:.2f}), x wide, 
 
 ## Parts
 
-| Part | What | Bounding box x y z (mm) | Print orientation (fits {vol[0]:.0f} x {vol[1]:.0f} x {vol[2]:.0f}) | Volume (cm3) | PETG (g) | ASA (g) |
-|---|---|---|---|---|---|---|
+| Part | What | Bounding box x y z (mm) | Print orientation (fits {vol[0]:.0f} x {vol[1]:.0f} x {vol[2]:.0f}) | Volume (cm3) | PETG (g) | ASA (g) | ASA, gyroid (g, est.) |
+|---|---|---|---|---|---|---|---|
 """ + "\n".join(rows) + f"""
 
-Masses are for solid parts (100 % infill; PETG 1.27, ASA 1.07 g/cm3). Prints with partial infill weigh less.
+PETG and ASA masses are for solid parts (100 % infill; PETG 1.27, ASA 1.07 g/cm3). The last column is a rough
+estimate in ASA for the print settings below ({EST_WALLS} wall loops, {EST_INFILL * 100:.0f} % gyroid). It counts a solid shell of
+{EST_WALLS} x {EST_LINE} mm = {shell_t:.1f} mm under every surface of the STL (surface area x {shell_t:.1f} mm, capped at the part's
+volume) and fills the rest of the volume at {EST_INFILL * 100:.0f} %. It ignores the thicker top and bottom shells and the overlap
+where shells meet in thin features, so expect the real print to differ by 10 % or so.
 
 Files: `horn_assembled.step` (one solid), `horn_parts_assembly.step` (the five parts in place), `part_<P>.step`,
 `part_<P>.stl` (chord tolerance {A.stl_tol} mm), `preview_*.png`, and `_work/`: `wall.brep`, `b1`-`b4.brep`, `body.brep`,
@@ -1270,17 +1369,17 @@ Files: `horn_assembled.step` (one solid), `horn_parts_assembly.step` (the five p
   shell {si['step_wall']:.2f} mm{'; the profile rolls back (inner surface ends at z = %.1f)' % si['z_end'] if si['rollback'] else ''}.
 - Wall: {wt:.2f} mm{' (STEP shell plus a %.2f mm outer layer)' % si['added'] if si['added'] > 0.01 else ' (the STEP shell as designed)'}.
 - Lip: {lip_txt}
-- Ribs: {len(ribs)} radial ribs at {A.rib_angles} deg ({n_up} on the top wall, {len(ribs) - n_up} on the bottom), {rib_txt},
-  from z = {A.split_z + A.joint_ax_clr:.1f}.
+- Ribs: {rib_line}
 - Seam flanges: on the 4 quarter seams, {2 * A.seam_t:g} mm thick ({A.seam_t:g} per quarter), {A.seam_h:g} mm tall, {top_txt}.
   They stay full height for the M4 heads and nuts, and drop only where the wall bends tighter than the flange
-  height; the top line is smoothed there. They act as the center rib of each wide wall and the rib of each side wall.
+  height. The whole top line is smoothed ({TOP_SMOOTH:g} mm Gaussian); that only shows near the roll, where the
+  wall bends tight. They act as the center rib of each wide wall and the rib of each side wall.
   {n_b} bolt holes ({A.bolt_d} mm, M4) and {n_d} dowel holes ({A.dowel_d} mm) per seam.
 - Throat fins: on T at 0/90/180/270 deg, from the driver flange face (z = {fb:g}) to the split (z = {A.split_z:g}).
-  Each fin is {fin['thick']:g} mm thick, with the seam flange's top line and {top_txt.split(' (')[0]}, so fin and seam flange read as
+  Each fin is {fin['thick']:g} mm thick, with its seam flange's top line and top edges, so fin and seam flange read as
   one spine (with a {A.joint_ax_clr:g} mm gap at the split). An R{fin['root_r']:g} round joins each fin to the flange face; it reaches
-  r = {reach['side']:.1f} mm on the side fins and {reach['tb']:.1f} mm on the top and bottom fins. The nearest driver bolt hole
-  is {fin['hole_clear']:.1f} mm from a fin.
+  r = {reach['side']:.1f} mm on the side fins and {reach['tb']:.1f} mm on the top and bottom fins.""" + (f"""
+  The 1/4 in washers on the flange-face driver bolts clear the fins by {wc:.1f} mm.""" if wc is not None else "") + f"""
 - Driver flange: from the STEP ({tf.get('diameter', 0):g} mm round, {fl_t:g} mm thick, {throat:g} mm throat,
   {int(tf.get('holeCount', 4))} x {tf.get('holeDiameter', 0):g} mm holes on {tf.get('boltCircle', 0):g} mm at {tf.get('holeAngle', 0):g} deg).
 - T / quarter joint: lap joint. T keeps the inner {wt / 2:.1f} mm of the wall up to z = {A.split_z + A.joint_l:.0f}, the quarters
@@ -1308,28 +1407,27 @@ from z = {fb:g} to {fb + PLY_T:g}. The sizes below come from this model. They ar
 holes, such as the N314T.
 
 - Upright: {mt['width']:g} mm wide (the flange diameter). Its top edge sits {-mt['top_y']:g} mm below the horn axis, which
-  clears the side fins ({fin['thick']:g} mm thick, centered on the axis) by {PLY_CLR:g} mm.
+  clears the side fins ({2 * mt['spine_half']:g} mm thick at the throat, centered on the axis) by {PLY_CLR:g} mm.
 - Saddle: cut an R{mt['saddle_r']:g} half circle, centered on the axis, for the neck. The neck's outer wall reaches
   r = {mt['neck_r']:.1f} mm between z = {fb:g} and {fb + PLY_T:g}.
 - Slot: cut a {mt['slot_w']:g} mm slot at x = 0 from the saddle down to r = {mt['slot_r']:g} mm for the bottom fin. The fin
   reaches r = {mt['reach']:.1f} mm between z = {fb:g} and {fb + PLY_T:g}.
-- Holes: drill only the {n_ply} bottom holes of the {tf.get('boltCircle', 0):g} mm / {tf.get('holeAngle', 0):g} deg pattern,
-  at x = """ + " and ".join(f"{h['x']:+.1f}" for h in mt["holes"] if h["in_ply"]) + f""" mm, {-max(h['y'] for h in mt['holes'] if h['in_ply']):.1f} mm below the axis.
-  Drill 9/32 in (7 mm).
-- Bolts: the bottom bolts are 1/4-20 x 1-1/4 in. They pass through the ply and the horn flange into the driver's tapped
-  holes, with about {1.25 * IN - PLY_T - fl_t:.1f} mm of thread in the driver. The top bolts are 1/4-20 x 3/4 in through the
-  horn flange only, with about {0.75 * IN - fl_t:.1f} mm of thread.
+- Holes: {holes_txt}
+- Bolts: {bolt_txt}
 - Height: with the horn's lowest point on the lid, the axis sits {mt['axis_h']:.1f} mm above the lid. Stand a
   {mt['upright_h']:.0f} mm upright on the base, so its top edge is {mt['axis_h'] + mt['top_y']:.0f} mm above the lid.
 - Base: 1/2 in ply, {mt['width']:g} mm wide and {mt['base_l']:g} mm long (z = {fb:g} to {fb + mt['base_l']:g}). Screw it to the lid.
-  Glue and screw the upright to the base.
-- Gusset: one 45 deg ply triangle with {mt['gusset_leg']:g} mm legs, at x = 0 on the mouth side. Glue and screw it to the
-  upright and the base. It stays at least {PLY_GAP:g} mm below the bottom fin and the bottom seam flange.
+  Glue and screw the upright to the base.{foot_cap}
+- Gusset: {gusset_txt}
 
 ## Print notes
 
 - ASA in an enclosed printer; otherwise PETG. Not PLA.
-- 4+ perimeters. T at 100 % infill; quarters 40-50 % gyroid (100 % near the joint{' and the foot' if has_foot else ''}).
+- Bambu Studio, Process > Strength: sparse infill pattern Gyroid, sparse infill density about {EST_INFILL * 100:.0f} %,
+  {EST_WALLS} wall loops, and 5 or more top and bottom shell layers. Some of these show only in Advanced mode. To set
+  them for one part, right-click it > Add settings.
+- Use these on every part. T carries the driver; print it at 100 % infill if you want it stiffer (solid mass in
+  the table).
 - T: flange down, no supports. Quarters: throat end down; the inner surface faces up or sideways and needs no
   support. Support {support} from the build plate
   only (tree supports), never on the inner surface. Use a brim.
@@ -1373,8 +1471,8 @@ def main(argv):
     st = A.stage
     if st == "all":
         return stage_all(argv)
-    _, _, _, mf = design()
-    resolve_defaults(bool(mf.get("enabled")))
+    design()
+    resolve_defaults()
     os.makedirs(WORK, exist_ok=True)
     {"wall": stage_wall, "export": stage_export, "check": stage_check, "render": stage_render,
      "readme": stage_readme}.get(st, lambda: None)()
