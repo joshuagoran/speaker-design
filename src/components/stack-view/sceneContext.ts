@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { cabinetFinishOf } from "../../lib/data";
+import { CABINET_FINISHES, cabinetFinishOf } from "../../lib/data";
 import { hornBodyColor } from "../../lib/pa/hornColor";
 import { PARTS_3D } from "../../styles/palette";
 import type { Props } from "./buildStackScene";
@@ -30,6 +30,8 @@ export interface SceneContext {
     adapter: THREE.MeshStandardMaterial;
     /** the horn bracket */
     aluminum: THREE.MeshStandardMaterial;
+    /** the horn's plywood mount: clear birch, whatever the cabinet's finish */
+    plywood: THREE.MeshStandardMaterial;
     /**
      * a part's hole in its panel (buildHardware): draws no color, only depth, just proud of the face, so the panel
      * behind it isn't drawn there
@@ -129,6 +131,10 @@ export function createSceneContext({
         color: PARTS_3D.aluminum,
         roughness: 0.35,
         metalness: 0.25,
+      }),
+      plywood: new THREE.MeshStandardMaterial({
+        color: CABINET_FINISHES.birch.color,
+        roughness: CABINET_FINISHES.birch.rough,
       }),
       holeMask,
     },

@@ -3,6 +3,7 @@ import type {
   BraceStyleId,
   Cabinet,
   Format,
+  HornMountId,
   PaHardware,
   PaDesignConfig,
   PaLayout,
@@ -35,6 +36,9 @@ export interface CabinetStyle {
   /** the horn body's picked color; undefined: the horn's catalog finish */
   hornColor: PaDesignConfig["hornColor"];
   setHornColor: Setter<PaDesignConfig["hornColor"]>;
+  /** what holds a driver bolted straight to its horn on the lid (lib/pa/hornMount `takesHornMount`) */
+  hornMount: HornMountId;
+  setHornMount: Setter<HornMountId>;
   /** a `FinishId` or a paint color (hex) */
   cabinetFinish: string;
   setCabinetFinish: Setter<string>;
@@ -55,6 +59,7 @@ export function useCabinetStyle(): CabinetStyle {
   const [baffleInsetIn, setBaffleInsetIn] = useState(DEFAULT_PA.inset); // how far the baffles sit back from the frame front, in
   const [baffleColor, setBaffleColor] = useState(DEFAULT_PA.baffleColor);
   const [hornColor, setHornColor] = useState<PaDesignConfig["hornColor"]>(undefined);
+  const [hornMount, setHornMount] = useState<HornMountId>(DEFAULT_PA.hornMount);
   const [cabinetFinish, setCabinetFinish] = useState(DEFAULT_PA.cabFinish);
   const [spacerHeightIn, setSpacerHeightIn] = useState(DEFAULT_PA.spacerH);
   const [hardware, setHardware] = useState<PaHardware>(DEFAULT_PA.hardware);
@@ -77,6 +82,8 @@ export function useCabinetStyle(): CabinetStyle {
     setBaffleColor,
     hornColor,
     setHornColor,
+    hornMount,
+    setHornMount,
     cabinetFinish,
     setCabinetFinish,
     spacerHeightIn,

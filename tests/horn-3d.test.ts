@@ -14,6 +14,7 @@ import {
   takesBracket,
 } from "../src/components/stack-view/buildBracket";
 import { HARDWARE_MESH_NAME } from "../src/components/stack-view/buildHardware";
+import { plateFit } from "../src/components/stack-view/buildPlate";
 import { PARTS_3D } from "../src/styles/palette";
 import {
   CD_OPTIONS,
@@ -158,14 +159,16 @@ describe("horn, throat adapter and compression driver", () => {
         } else {
           expect(adapter, at).toBeNull();
           const upright = uprightBox(g);
-          if (layout === "tower") {
-            // no lid under the driver, so no bracket: the driver on the throat
+          if (layout === "tower" || plateFit(horn, base.cd, base.mid.box.w)) {
+            // no lid under the driver (no mount), or the aluminum plate in front of the flange
+            // (tests/horn-plate.test.ts): the driver on the throat
             expect(upright, at).toBeNull();
             expect(Math.abs(cdBox.max.z - throatZ), `${at}: driver on the throat`).toBeLessThan(
               CONTACT_IN,
             );
           } else {
-            // the bracket's upright clamped between the throat flange and the driver, 1/8 in thick
+            // where no driver bolt can pass through the plate: the bracket's upright clamped between the throat flange
+            // and the driver, 1/8 in thick
             expect(upright, at).not.toBeNull();
             if (!upright) continue;
             expect(
@@ -341,9 +344,13 @@ describe("horns drawn from their CAD mesh", () => {
           const { hornBox, rim, throat } = flangeOf(g, with_);
           const cdBox = boxOf(g, CD_MESH_NAME);
           if (!cdBox) throw new Error(`${with_}: no driver`);
-          // the driver's front face on the flange, or on the bracket's upright clamped against it
+          // the driver's front face on the flange (with no mount in the tower, or the aluminum plate in front of the
+          // flange), or on the clamped bracket's upright where the plate can't hold the driver
           const upright = uprightBox(g);
-          const onto = layout === "tower" ? hornBox.min.z : upright?.min.z;
+          const onto =
+            layout === "tower" || plateFit(horn, cd, base.mid.box.w)
+              ? hornBox.min.z
+              : upright?.min.z;
           expect(onto, `${with_}: upright`).toBeDefined();
           expect(
             Math.abs(cdBox.max.z - (onto ?? Infinity)),
@@ -530,15 +537,20 @@ describe("the driver's L-bracket", () => {
   });
 
   for (const layout of LAYOUTS.filter((l) => l !== "tower"))
-    test(`${layout}: it bolts to the adapter's flange or is clamped behind the throat, stands on the lid, and clears the horn, driver, posts and dish`, () => {
+    test(`${layout}: it bolts to the adapter's flange or, where the plate can't hold the driver, is clamped behind the throat, stands on the lid, and clears the horn, driver, posts and dish`, () => {
+      let clamped = 0;
       for (const horn of HORN_OPTIONS) {
         const at = `${horn.id} ${layout}`;
         // a driver that fits the throat (the planner flags a mismatched pair, and a 1.4" driver is taller than the
-        // ME45's 5.5" mouth)
-        const cd =
-          horn.exit === base.cd.exit
+        // ME45's 5.5" mouth); without an adapter, one the aluminum plate can't hold, the only case the clamped bracket
+        // still draws (tests/horn-plate.test.ts covers the plate)
+        const cd = horn.adapter
+          ? horn.exit === base.cd.exit
             ? base.cd
-            : (CD_OPTIONS.find((c) => c.exit === horn.exit) ?? base.cd);
+            : (CD_OPTIONS.find((c) => c.exit === horn.exit) ?? base.cd)
+          : CD_OPTIONS.find((c) => c.exit === horn.exit && !plateFit(horn, c, base.mid.box.w));
+        if (!cd) continue;
+        if (!horn.adapter) clamped++;
         const g = buildStackScene({ ...base, horn, cd, layout });
         const plates = meshesNamed(g, BRACKET_MESH_NAME);
         const hornCount = layout === "satellite" ? 2 : 1;
@@ -604,6 +616,7 @@ describe("the driver's L-bracket", () => {
           }
         }
       }
+      expect(clamped, "a horn and driver the plate can't hold").toBeGreaterThan(0);
     });
 });
 

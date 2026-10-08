@@ -1,11 +1,13 @@
 import * as THREE from "three";
-import { partMeshGeometry, rectangularHornGeometry, type PartMeshDrawing } from "./geometry";
-import { HORN_MESHES } from "../../data/meshes";
-import { HORN_LIFT_IN, hornAxisUp } from "./stackHeights";
+import { HORN_LIFT_IN, ROUNDOVER_IN, hornAxisUp } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import { buildBracket, buildClampedBracket, takesBracket } from "./buildBracket";
+import { buildPlyMount, plyMountFit } from "./buildPlyMount";
+import { buildPlate, plateFit } from "./buildPlate";
+import { HORN_MOUNT_PLY } from "../../constants/hornMount";
+import { hornBody } from "./hornBody";
 import { cdBodySteps } from "../../lib/data";
-import type { BodyStep, CompressionDriver, Dims3, Horn } from "../../types";
+import type { BodyStep, CompressionDriver, Dims3, Horn, HornMountId } from "../../types";
 
 /** The horn body's mesh. */
 export const HORN_MESH_NAME = "horn";
@@ -13,8 +15,7 @@ export const HORN_MESH_NAME = "horn";
 export const ADAPTER_MESH_NAME = "hornAdapter";
 /** The compression driver's meshes. */
 export const CD_MESH_NAME = "compressionDriver";
-/** A horn's CAD mesh: shaded smooth, and placed by its origin, which build/horn-mesh.mjs puts on the driver's axis. */
-export const HORN_MESH_DRAWING: PartMeshDrawing = { shading: "smooth", place: "origin" };
+export { HORN_MESH_DRAWING } from "./hornBody";
 
 /**
  * Turned steps along the z axis, front face at `z0`, drawn backward (toward −z) and centered on (x, y). Returns the z
@@ -49,15 +50,20 @@ export interface HornAxis {
 /**
  * The horn's throat adapter, when it has one, and the compression driver behind it: the adapter's front face on the
  * throat, the driver's front face on the adapter's back face (or on the throat). On a lid (`lidY`; the tower has none
- * under the driver) the L-bracket holds it: from the adapter's flange, or, without an adapter, clamped between
- * the throat and the driver.
+ * under the driver) a mount holds it. With an adapter, the L-bracket bolted to the adapter's flange. Without one, the
+ * driver on the throat flange and, in front of the flange, the plywood mount when `hornMount` is "ply" and the
+ * driver's bolts fit it (`plyMountFit`), else the aluminum plate when they fit that (`plateFit`), else the L-bracket
+ * clamped between the throat and the driver. `mount` is the box under the horn: its width draws the full-width
+ * concept, and a mount's foot or base stays on its lid.
  */
 function addThroatParts(
   ctx: SceneContext,
-  horn: Pick<Horn, "adapter">,
+  horn: Horn,
   cd: Pick<CompressionDriver, "body" | "exit">,
   at: HornAxis,
   lidY: number | null,
+  mount: Pick<Dims3, "w" | "d">,
+  hornMount: HornMountId | undefined,
 ) {
   let cdFront = at.throatZ;
   if (horn.adapter) {
@@ -69,7 +75,15 @@ function addThroatParts(
       ADAPTER_MESH_NAME,
     );
     if (lidY !== null && takesBracket(horn.adapter)) buildBracket(ctx, horn.adapter, at, lidY);
-  } else if (lidY !== null) cdFront = buildClampedBracket(ctx, cd, at, lidY);
+  } else if (lidY !== null) {
+    // the lid's flat top ends at the roundover on its back edge (boxes are centered on z = 0)
+    const lidBackZ = -mount.d / 2 + ROUNDOVER_IN;
+    const ply = hornMount === HORN_MOUNT_PLY ? plyMountFit(horn, cd, mount.w) : null;
+    const plate = ply ? null : plateFit(horn, cd, mount.w);
+    if (ply) buildPlyMount(ctx, ply, { cd, at, lidY, lidBackZ });
+    else if (plate) buildPlate(ctx, plate, { at, lidY, lidBackZ });
+    else cdFront = buildClampedBracket(ctx, cd, at, lidY);
+  }
   addSteps(
     ctx,
     cdBodySteps(cd.body),
@@ -97,6 +111,7 @@ export function buildHorn(
     xs = [0],
     mount,
     tower,
+    hornMount,
   }: {
     horn: Horn;
     cd: Pick<CompressionDriver, "body" | "exit">;
@@ -104,42 +119,22 @@ export function buildHorn(
     xs?: number[];
     mount: Pick<Dims3, "w" | "d">;
     tower?: { cy: number; width: number; sectionH: number };
+    /** what holds a driver bolted straight to the horn on the lid; absent: the aluminum plate */
+    hornMount?: HornMountId;
   },
 ): { top: number; axes: HornAxis[] } {
   const { hornShell } = ctx.materials;
   const hz = horn.size;
   // every horn's mouth plane on the box's front plane (the frame front, `mount.d / 2`), the throat `hz.d` behind it
   const throatZ = mount.d / 2 - hz.d;
-  const model = HORN_MESHES[horn.id];
   const cy = tower ? tower.cy : hornY + HORN_LIFT_IN + hornAxisUp(horn);
   const axes = xs.map((x) => ({ x, y: cy, throatZ }));
   for (const at of axes) {
-    let body: THREE.Mesh;
-    if (model) {
-      // its own mesh at its own size, its origin on the axis: the flange's back face on the throat plane, the mouth
-      // toward +z
-      body = new THREE.Mesh(partMeshGeometry(model, HORN_MESH_DRAWING), hornShell);
-    } else if (horn.profile) {
-      // the profile stretched to the mouth's width and height and the body's depth
-      const maxR = Math.max(...horn.profile.map(([r]) => r));
-      const maxX = Math.max(...horn.profile.map(([, x]) => x));
-      body = new THREE.Mesh(
-        new THREE.LatheGeometry(
-          horn.profile.map(([r, x]) => new THREE.Vector2(r, x)),
-          96,
-        ),
-        hornShell,
-      );
-      body.rotation.x = Math.PI / 2; // lathe axis (y) -> z, mouth toward +z
-      body.scale.set(hz.w / 2 / maxR, hz.d / maxX, hz.h / 2 / maxR); // local x = width, y = depth, z = height
-    } else {
-      const mouthW = horn.rect ? (tower ? tower.width : mount.w) : hz.w;
-      body = new THREE.Mesh(rectangularHornGeometry(mouthW, hz.h, hz.d, horn.exit / 2), hornShell);
-    }
+    const { body } = hornBody(horn, horn.rect ? (tower ? tower.width : mount.w) : hz.w, hornShell);
     body.position.set(at.x, at.y, at.throatZ);
     body.name = HORN_MESH_NAME;
     ctx.group.add(body);
-    addThroatParts(ctx, horn, cd, at, tower ? null : hornY);
+    addThroatParts(ctx, horn, cd, at, tower ? null : hornY, mount, hornMount);
   }
   return { top: hornY + (tower ? tower.sectionH : HORN_LIFT_IN + hz.h), axes };
 }

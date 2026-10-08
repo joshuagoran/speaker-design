@@ -13,6 +13,7 @@ import type { DSP_UNITS } from "./data/catalog/dsp-units";
 import type { Keep } from "./lib/optimizer/shortfall";
 import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
+import type { HORN_MOUNT_NAMES } from "./constants/hornMount";
 import type { SelectedCard } from "./lib/optimizer/selectCards";
 import type { HANDLES } from "./data/catalog/cabinet-hardware";
 import type {
@@ -1155,6 +1156,8 @@ export interface PaDesignConfig {
   baffleColor?: string;
   /** a paint color (hex) for the horn body over its catalog finish; absent: the finish (older saves have none) */
   hornColor?: string;
+  /** what holds a driver bolted straight to its horn on the mid box's lid; absent in older saves: the aluminum plate */
+  hornMount?: HornMountId;
   /** a `FinishId`, or a paint color as a hex string (`SwatchPicker` offers both) */
   cabFinish?: string;
   spacerH?: number;
@@ -1479,6 +1482,8 @@ export type FillSystem = FillSystemVented | FillSystemSealed;
 
 // ---- Bracing ----
 
+/** A horn mount's id (`HORN_MOUNT_NAMES` holds the name it shows). */
+export type HornMountId = keyof typeof HORN_MOUNT_NAMES;
 /** A bracing style's id (`BRACE_STYLE_NAMES` holds the name it shows). */
 export type BraceStyleId = keyof typeof BRACE_STYLE_NAMES;
 /** A box panel the bracing rule reads, by id (`BRACE_PANEL_NAMES` holds the name it shows). */
