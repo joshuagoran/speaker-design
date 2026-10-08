@@ -27,7 +27,7 @@ import { HORN_COLOR_CATALOG } from "../src/constants/hornColor";
 import { pickedHornColor, savedHornColor } from "../src/lib/pa/hornColor";
 import { HORN_MESHES } from "../src/data/meshes";
 import { DIY_OS90X50 } from "../src/data/catalog/horns";
-import { MM_IN } from "../src/components/stack-view/geometry";
+import { MM_IN, partMeshGeometry } from "../src/components/stack-view/geometry";
 import type { PaLayout } from "../src/types";
 
 /** How close two faces count as touching, in (meshes are faceted, so a contact is never exact). */
@@ -187,6 +187,17 @@ describe("horns drawn from their CAD mesh", () => {
 
   test("the DIY OS horn has one", () => {
     expect(meshed.map((m) => m.horn.id)).toContain(DIY_OS90X50.id);
+  });
+
+  test("a mesh's flat and smooth geometries are built and kept apart", () => {
+    for (const { horn, mesh } of meshed) {
+      const smooth = partMeshGeometry(mesh, "smooth");
+      const flat = partMeshGeometry(mesh, "flat");
+      expect(flat, horn.id).not.toBe(smooth);
+      expect(flat.index, horn.id).toBeNull();
+      expect(smooth.index?.count, horn.id).toBe(mesh.indices.length);
+      expect(partMeshGeometry(mesh, "smooth"), horn.id).toBe(smooth);
+    }
   });
 
   test("each mesh's size is the horn's catalog size, from the flange's back face at z = 0", () => {

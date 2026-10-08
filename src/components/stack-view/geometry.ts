@@ -156,16 +156,20 @@ export function createScaleFigure(heightIn: number) {
 /** Millimeters to the scene's inches. */
 export const MM_IN = 1 / 25.4;
 
-// each mesh's geometry built once
-const PART_MESH_GEOMETRY = new Map<PartMesh, THREE.BufferGeometry>();
+// each mesh's geometry built once per shading
+const PART_MESH_GEOMETRY = new Map<PartMesh, Map<PartMeshShading, THREE.BufferGeometry>>();
+/** How a part's mesh is shaded (partMeshGeometry). */
+type PartMeshShading = "flat" | "smooth";
 /**
  * A part's CAD mesh (data/meshes) as geometry, in inches on the model's axes, centered on the origin in x and y, the
  * model's z = 0 at z = 0. Flat: every triangle its own vertices, so a part's edges and corners stay crisp. Smooth:
  * the vertices shared, so a curved face shades smooth; a mesh split at its sharp edges (build/horn-mesh.mjs) still
  * keeps those edges crisp.
  */
-export function partMeshGeometry(m: PartMesh, shading: "flat" | "smooth") {
-  const hit = PART_MESH_GEOMETRY.get(m);
+export function partMeshGeometry(m: PartMesh, shading: PartMeshShading) {
+  const built = PART_MESH_GEOMETRY.get(m) ?? new Map<PartMeshShading, THREE.BufferGeometry>();
+  PART_MESH_GEOMETRY.set(m, built);
+  const hit = built.get(shading);
   if (hit) return hit;
   const k = m.unitMm * MM_IN;
   const center = [(m.min[0] + m.max[0]) / 2, (m.min[1] + m.max[1]) / 2, 0].map((c) => c * MM_IN);
@@ -180,6 +184,6 @@ export function partMeshGeometry(m: PartMesh, shading: "flat" | "smooth") {
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   if (shading === "smooth") g.setIndex([...m.indices]);
   g.computeVertexNormals();
-  PART_MESH_GEOMETRY.set(m, g);
+  built.set(shading, g);
   return g;
 }
