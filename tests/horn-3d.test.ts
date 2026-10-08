@@ -4,6 +4,7 @@ import { buildStackScene } from "../src/components/stack-view/buildStackScene";
 import {
   ADAPTER_MESH_NAME,
   CD_MESH_NAME,
+  HORN_MESH_DRAWING,
   HORN_MESH_NAME,
 } from "../src/components/stack-view/buildHorn";
 import {
@@ -28,7 +29,7 @@ import { pickedHornColor, savedHornColor } from "../src/lib/pa/hornColor";
 import { HORN_MESHES } from "../src/data/meshes";
 import { DIY_OS90X50 } from "../src/data/catalog/horns";
 import { MM_IN, partMeshGeometry } from "../src/components/stack-view/geometry";
-import type { PaLayout } from "../src/types";
+import type { PaLayout, PartMesh } from "../src/types";
 
 /** How close two faces count as touching, in (meshes are faceted, so a contact is never exact). */
 const CONTACT_IN = 0.01;
@@ -189,14 +190,34 @@ describe("horns drawn from their CAD mesh", () => {
     expect(meshed.map((m) => m.horn.id)).toContain(DIY_OS90X50.id);
   });
 
-  test("a mesh's flat and smooth geometries are built and kept apart", () => {
+  test("a mesh's geometries are built once per drawing and kept apart", () => {
     for (const { horn, mesh } of meshed) {
-      const smooth = partMeshGeometry(mesh, "smooth");
-      const flat = partMeshGeometry(mesh, "flat");
+      const smooth = partMeshGeometry(mesh, HORN_MESH_DRAWING);
+      const flat = partMeshGeometry(mesh, { ...HORN_MESH_DRAWING, shading: "flat" });
       expect(flat, horn.id).not.toBe(smooth);
       expect(flat.index, horn.id).toBeNull();
       expect(smooth.index?.count, horn.id).toBe(mesh.indices.length);
-      expect(partMeshGeometry(mesh, "smooth"), horn.id).toBe(smooth);
+      expect(partMeshGeometry(mesh, HORN_MESH_DRAWING), horn.id).toBe(smooth);
+    }
+  });
+
+  test("a horn mesh is placed by its origin (the driver's axis), not by the center of its bounds", () => {
+    // an asymmetric horn: the real mesh with its mouth reaching 20 mm further up than down
+    const [{ mesh }] = meshed;
+    const up = 40; // grid steps
+    const lopsided: PartMesh = {
+      ...mesh,
+      max: [mesh.max[0], mesh.max[1] + up * mesh.unitMm, mesh.max[2]],
+      positions: mesh.positions.map((v, i) => (i % 3 === 1 && v > 0 ? v + up : v)),
+    };
+    for (const m of [mesh, lopsided]) {
+      const g = partMeshGeometry(m, HORN_MESH_DRAWING);
+      g.computeBoundingBox();
+      const box = g.boundingBox;
+      if (!box) throw new Error("no bounding box");
+      expect(box.min.y).toBeCloseTo(m.min[1] * MM_IN, 4);
+      expect(box.max.y).toBeCloseTo(m.max[1] * MM_IN, 4);
+      expect(box.min.z).toBeCloseTo(0, 4);
     }
   });
 

@@ -156,23 +156,30 @@ export function createScaleFigure(heightIn: number) {
 /** Millimeters to the scene's inches. */
 export const MM_IN = 1 / 25.4;
 
-// each mesh's geometry built once per shading
-const PART_MESH_GEOMETRY = new Map<PartMesh, Map<PartMeshShading, THREE.BufferGeometry>>();
-/** How a part's mesh is shaded (partMeshGeometry). */
-type PartMeshShading = "flat" | "smooth";
 /**
- * A part's CAD mesh (data/meshes) as geometry, in inches on the model's axes, centered on the origin in x and y, the
- * model's z = 0 at z = 0. Flat: every triangle its own vertices, so a part's edges and corners stay crisp. Smooth:
- * the vertices shared, so a curved face shades smooth; a mesh split at its sharp edges (build/horn-mesh.mjs) still
- * keeps those edges crisp.
+ * How a part's mesh is drawn (partMeshGeometry). Shading flat: every triangle its own vertices, so a part's edges and
+ * corners stay crisp; smooth: the vertices shared, so a curved face shades smooth (a mesh split at its sharp edges,
+ * as build/horn-mesh.mjs writes them, still keeps those edges crisp). Placed by its bounds: centered on the origin in
+ * x and y (a handle's flange); by its origin: the model's own origin at the origin (a horn's axis).
  */
-export function partMeshGeometry(m: PartMesh, shading: PartMeshShading) {
-  const built = PART_MESH_GEOMETRY.get(m) ?? new Map<PartMeshShading, THREE.BufferGeometry>();
+export interface PartMeshDrawing {
+  shading: "flat" | "smooth";
+  place: "bounds" | "origin";
+}
+// each mesh's geometry built once per drawing
+const PART_MESH_GEOMETRY = new Map<PartMesh, Map<string, THREE.BufferGeometry>>();
+/** A part's CAD mesh (data/meshes) as geometry, in inches on the model's axes, the model's z = 0 at z = 0. */
+export function partMeshGeometry(m: PartMesh, { shading, place }: PartMeshDrawing) {
+  const built = PART_MESH_GEOMETRY.get(m) ?? new Map<string, THREE.BufferGeometry>();
   PART_MESH_GEOMETRY.set(m, built);
-  const hit = built.get(shading);
+  const key = `${shading} ${place}`;
+  const hit = built.get(key);
   if (hit) return hit;
   const k = m.unitMm * MM_IN;
-  const center = [(m.min[0] + m.max[0]) / 2, (m.min[1] + m.max[1]) / 2, 0].map((c) => c * MM_IN);
+  const center =
+    place === "bounds"
+      ? [(m.min[0] + m.max[0]) / 2, (m.min[1] + m.max[1]) / 2, 0].map((c) => c * MM_IN)
+      : [0, 0, 0];
   const at = (v: number, axis: number) => m.positions[3 * v + axis] * k - center[axis];
   const g = new THREE.BufferGeometry();
   // smooth: one vertex per position and the triangles as indices; flat: three vertices per triangle
@@ -184,6 +191,6 @@ export function partMeshGeometry(m: PartMesh, shading: PartMeshShading) {
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   if (shading === "smooth") g.setIndex([...m.indices]);
   g.computeVertexNormals();
-  built.set(shading, g);
+  built.set(key, g);
   return g;
 }

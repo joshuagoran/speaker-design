@@ -85,7 +85,7 @@ function modelPart(
   mat: THREE.Material,
   mask: THREE.Material,
 ) {
-  const part = new THREE.Mesh(partMeshGeometry(m, "flat"), mat);
+  const part = new THREE.Mesh(partMeshGeometry(m, { shading: "flat", place: "bounds" }), mat);
   part.applyMatrix4(faceFrame(p, face, face.at));
   part.name = HARDWARE_MESH_NAME;
   part.renderOrder = MODEL_RENDER_ORDER;
