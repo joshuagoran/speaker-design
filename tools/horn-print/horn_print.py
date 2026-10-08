@@ -12,6 +12,9 @@ Steps (each one runs in its own process; `all` runs them in order):
   quarter 1 | 2 | 3 | 4                    the quarters
   export | check | render | readme
 
+--draft builds a quick look into <out>-draft: coarse STLs, no top round, a sparse inner-surface check (still fails
+on any material on the air side), one preview, and the body, split and quarter stages each in one process.
+
 Usage: python -I horn_print.py --step H.step --bem H.json --out DIR [options] <stage> [arg]
 Keep --out outside the repository.
 """
@@ -66,6 +69,8 @@ OPTS = [
     ("build_vol", "256,256,260", str, None, "printer build volume x,y,z in mm"),
     ("stl_tol", 0.05, float, None, "STL chord tolerance in mm"),
     ("stl_ang", 0.2, float, None, "STL angular tolerance in radians"),
+    ("draft", False, bool, None, "fast draft into <out>-draft: coarse STLs, no top round, sparse inner check, one "
+                                 "preview; not for printing"),
 ]
 STAGES = ("wall", "body", "split", "quarter", "export", "check", "render", "readme", "all")
 BODY_STEP_NAMES = ("lip", "seams", "ribs", "feet", "holes")
@@ -92,6 +97,8 @@ PARTS = ["T", "Q1", "Q2", "Q3", "Q4"]
 QUAD = {1: (1, 1), 2: (-1, 1), 3: (-1, -1), 4: (1, -1)}
 README_NAME = "PRINT_README.md"
 CHECK_STEP_DEG = 15.0          # radial planes for the STEP inner-surface check
+DRAFT = {"stl_tol": 0.3, "stl_ang": 0.5, "check_step_deg": 45.0, "bem_every": 3}
+DRAFT_TAG = "DRAFT, not for printing"
 # ----------------------------------------------------------------------------
 
 T0 = time.time()
@@ -477,6 +484,8 @@ def round_top(tool, th, c, d_in):
             continue
         if np.min(np.linalg.norm(c - [(p - o).dot(ax), p.Z], axis=1)) > d_in + 1:
             tops.append(e)
+    if A.draft:
+        return tool, "draft"
     r = A.seam_t - ROUND_EPS
     for kind, make in (("round", lambda: tool.fillet(r, tops)),
                        ("chamfer", lambda: tool.chamfer(A.seam_t / 2, None, tops))):
@@ -823,8 +832,10 @@ def stage_body(step):
     g, holes, out = build_features(inner, lipf)
     log("features", {k: len(v) for k, v in g.items()}, "holes", len(holes))
     json.dump(out, open(f"{WORK}/body_info.json", "w"), indent=1)
+    names = [n for n, *_ in BODY_STEPS]
+    run = names[names.index(step):] if A.draft else [step]    # a draft runs the rest in this process
     for name, src, dst in BODY_STEPS:
-        if name != step:
+        if name not in run:
             continue
         b = import_brep(f"{WORK}/{src}.brep")
         t = time.time()
@@ -891,6 +902,9 @@ def stage_split(which):
         out = out.solids()[0]
     log(which, "valid", out.is_valid, "solids", len(out.solids()), "vol", round(out.volume))
     export_brep(out, f"{WORK}/{which}.brep")
+    if A.draft and which == "Qall":
+        for k in QUAD:
+            stage_quarter(k)
 
 
 def stage_quarter(k):
@@ -1022,10 +1036,15 @@ def stage_check():
             else:
                 q = "Q1" if sgn > 0 else "Q4"
                 pl = Plane(origin=(1e-3, 0, 0), x_dir=(0, 1, 0), z_dir=(1, 0, 0))
-            dmax, nbad, intr = compare(prof[k], pl, sgn, ("T", q))
-            rows.append({"ref": f"BEM profile {plane} {'+' if sgn > 0 else '-'}", "points": len(prof[k]),
+            ref = prof[k][::DRAFT["bem_every"]] if A.draft else prof[k]
+            if A.draft and not np.array_equal(ref[-1], prof[k][-1]):
+                ref = np.vstack([ref, prof[k][-1]])
+            dmax, nbad, intr = compare(ref, pl, sgn, ("T", q))
+            rows.append({"ref": f"BEM profile {plane} {'+' if sgn > 0 else '-'}", "points": len(ref),
                          "max_mm": round(dmax, 4), "over_0.2": nbad, "air_side": intr})
-    for th in np.arange(CHECK_STEP_DEG, 360, CHECK_STEP_DEG):
+    step_deg = DRAFT["check_step_deg"] if A.draft else CHECK_STEP_DEG
+    res["check_step_deg"], res["draft"] = step_deg, bool(A.draft)
+    for th in np.arange(step_deg, 360, step_deg):
         if th % 90 == 0:
             continue                    # the symmetry planes are covered by the BEM profiles above
         ref = section_curve(inner, theta=float(th), fast=True)
@@ -1055,10 +1074,11 @@ def stage_check():
         problems.append(f"{res['air_intrusion_points']} cut points lie on the air side of the inner surface")
     res["problems"] = problems
     json.dump(res, open(f"{WORK}/check.json", "w"), indent=1)
+    tag = f" ({DRAFT_TAG}: sparse inner check, coarse STLs)" if A.draft else ""
     if problems:
-        print("CHECK FAIL: " + "; ".join(problems), flush=True)
+        print(f"CHECK FAIL{tag}: " + "; ".join(problems), flush=True)
         raise SystemExit(1)
-    print("CHECK PASS", flush=True)
+    print(f"CHECK PASS{tag}", flush=True)
 
 
 # ---------------------------------------------------------------- previews
@@ -1099,6 +1119,14 @@ def stage_render():
         ax.set_title(title, fontsize=10)
 
     key = "T red, Q1 blue, Q2 green, Q3 purple, Q4 orange"
+    if A.draft:
+        fig = plt.figure(figsize=(9, 6), dpi=70)
+        draw(fig.add_subplot(1, 1, 1, projection="3d"), False, 20, -60, f"{DRAFT_TAG} ({key})")
+        plt.tight_layout()
+        plt.savefig(f"{A.out}/preview_assembly.png")
+        plt.close(fig)
+        log("rendered draft preview")
+        return
     for name, ex, views in (("assembly", False, [(20, -60), (15, 120)]), ("exploded", True, [(22, -55), (18, 125)])):
         fig = plt.figure(figsize=(16, 8), dpi=110)
         for vi, (el, az) in enumerate(views):
@@ -1248,7 +1276,8 @@ def stage_readme():
         by_kind.setdefault(v, []).append(f"{float(k):g}")
     kind_txt = {"round": f"full-round top (R{A.seam_t - ROUND_EPS:.2f}, half the thickness)",
                 "chamfer": f"{A.seam_t / 2:g} mm chamfered top (the full round did not build in OCC)",
-                "square": "square top (neither the full round nor a chamfer built in OCC)"}
+                "square": "square top (neither the full round nor a chamfer built in OCC)",
+                "draft": "square top (draft: the round is skipped)"}
     top_txt = (kind_txt[next(iter(by_kind))] if len(by_kind) == 1 else
                "; ".join(f"{kind_txt[k]} at {'/'.join(v)} deg" for k, v in by_kind.items()))
     wc = fin.get("washer_clear")
@@ -1340,8 +1369,12 @@ def stage_readme():
                  "and the wall." + (" The foot cannot be flush with the mouth plane: the space below the roll belongs "
                                     "to the rollback, so the foot starts just behind the roll end." if has_foot else "")
                  + "\n" if si["rollback"] else "")
+    banner = (f"""
+> **{DRAFT_TAG}.** Built with `--draft`: coarse STLs ({A.stl_tol:g} mm chord), no top round on the spines, a sparse
+> inner-surface check and one preview. Rebuild without `--draft` for print files.
+""" if A.draft else "")
     txt = f"""# Printable horn: {os.path.basename(A.step)}
-
+{banner}
 Built by `horn_print.py` from `{os.path.basename(A.step)}` and `{os.path.basename(A.bem)}`.
 The inner (acoustic) surface is the STEP's own faces, untouched; all material is added outside it.
 Coordinates: z along the axis (throat z = 0, mouth plane z = {zm:.2f}), x wide, y tall, +y up, foot on -y.
@@ -1439,7 +1472,7 @@ holes, such as the N314T.
   centroids of part_Q1.stl lie within {ck['stl_centroid_dev_Q1_max_mm']:.3f} mm of the Q1 solid.
 - Inner surface ({ck['inner_points']} points{', including the rollback' if si['rollback'] else ''}): every BEM profile point in the
   horizontal and vertical symmetry planes (both sides), and the STEP's own inner surface every 1 mm in radial planes
-  every {CHECK_STEP_DEG:g} deg. Max distance {ck['inner_max_dev_mm']:.4f} mm; {ck['inner_failures']} points over 0.2 mm;
+  every {ck.get('check_step_deg', CHECK_STEP_DEG):g} deg{' (draft: sparse; BEM profiles every %d points)' % DRAFT['bem_every'] if ck.get('draft') else ''}. Max distance {ck['inner_max_dev_mm']:.4f} mm; {ck['inner_failures']} points over 0.2 mm;
   {ck['air_intrusion_points']} cut points more than 0.2 mm on the air side. Between those planes the surface is not sampled.
 - Build volume: """ + ("every part fits (see table)." if all(P[p]["fit"] for p in PARTS) else "SOME PARTS DO NOT FIT.") + "\n"
     open(f"{A.out}/{README_NAME}", "w").write(txt)
@@ -1448,8 +1481,12 @@ holes, such as the N314T.
 
 # ---------------------------------------------------------------- driver
 def stage_all(argv):
-    steps = [["wall"]] + [["body", s] for s, *_ in BODY_STEPS] + [["split", "T"], ["split", "Qall"]] + \
-            [["quarter", str(k)] for k in (1, 2, 3, 4)] + [["export"], ["check"], ["render"], ["readme"]]
+    if A.draft:       # body and quarters run in-process after their first stage
+        steps = [["wall"], ["body", BODY_STEPS[0][0]], ["split", "T"], ["split", "Qall"]]
+    else:
+        steps = [["wall"]] + [["body", s] for s, *_ in BODY_STEPS] + [["split", "T"], ["split", "Qall"]] + \
+                [["quarter", str(k)] for k in (1, 2, 3, 4)]
+    steps += [["export"], ["check"], ["render"], ["readme"]]
     opts = [a for a in argv if a != "all"]
     rc = 0
     for st in steps:
@@ -1458,8 +1495,11 @@ def stage_all(argv):
         if r.returncode and st != ["check"]:
             raise SystemExit(r.returncode)
         rc = rc or r.returncode
+    tag = f" ({DRAFT_TAG})" if A.draft else ""
     if rc:
-        print("CHECK FAIL: see _work/check.json", flush=True)
+        print(f"CHECK FAIL{tag}: see _work/check.json", flush=True)
+    elif A.draft:
+        print(f"{DRAFT_TAG}: draft written to {A.out}", flush=True)
     raise SystemExit(rc)
 
 
@@ -1467,6 +1507,10 @@ def main(argv):
     global A, WORK
     A = ARGS if ARGS is not None else parse(argv)
     A.out = os.path.abspath(A.out)
+    if A.draft:
+        if not A.out.endswith("-draft"):
+            A.out += "-draft"
+        A.stl_tol, A.stl_ang = max(A.stl_tol, DRAFT["stl_tol"]), max(A.stl_ang, DRAFT["stl_ang"])
     WORK = f"{A.out}/_work"
     st = A.stage
     if st == "all":

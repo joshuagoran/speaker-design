@@ -91,6 +91,22 @@ writes the previews and `PRINT_README.md`, then exits with status 1.
 | `--foot-w`, `--foot-depth`, `--foot-t` | 120 or 50, 45, 8               | Foot plate size                                               |
 | `--foot-fastener`                      | `m6` (center), `screws` (pair) | One M6 bolt with a counterbore, or #8 countersunk wood screws |
 | `--build-vol`                          | `256,256,260`                  | Printer build volume in mm                                    |
+| `--draft`                              | off                            | Fast draft into `<out>-draft`; not for printing (see below)   |
+
+## Draft builds
+
+Add `--draft` to try a change quickly. A draft of the R-OSSE takes about 1.5 minutes instead of 3.5. It writes to
+`<out>-draft`, so it never overwrites print files, and it says DRAFT at the top of `PRINT_README.md` and in the
+`CHECK` line. A draft:
+
+- writes coarse STLs (0.3 mm chord, 0.5 rad);
+- skips the top round on the fins and seam flanges (square tops);
+- checks the inner surface sparsely: every third BEM profile point and radial planes every 45 degrees. It still
+  fails on any material on the air side;
+- renders one low-resolution preview;
+- runs the body stages in one process, and the quarters with the quarter ring.
+
+It keeps the solid, watertight, bed-fit, seam and fin checks. Rebuild without `--draft` before you print.
 
 ## Outputs
 
