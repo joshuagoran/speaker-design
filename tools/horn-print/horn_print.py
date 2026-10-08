@@ -1,5 +1,6 @@
 """Turn a hornlab.io waveguide STEP into a 3D-printable horn: wall, lip, ribs, seam flanges, gussets,
-a mounting foot, a throat part T and four quarters Q1-Q4, with STEP/STL exports, checks, previews and a README.
+a mounting foot, a throat part T and four quarters Q1-Q4, with STEP/STL exports, checks, previews and a
+PRINT_README.md.
 
 The inner (acoustic) surface is the STEP's own faces; material is only added outside it. The BEM JSON export
 from hornlab.io gives the exact inner profiles used for the checks (and the mouth plane / rollback end).
@@ -11,7 +12,8 @@ Steps (each one runs in its own process; `all` runs them in order):
   quarter 1 | 2 | 3 | 4                    the quarters
   export | check | render | readme
 
-Usage: python -I horn_print.py --step H.step --bem H.json --out DIR [options] <step> [arg]
+Usage: python -I horn_print.py --step H.step --bem H.json --out DIR [options] <stage> [arg]
+Keep --out outside the repository.
 """
 import argparse
 import json
@@ -21,44 +23,64 @@ import subprocess
 import sys
 import time
 
-import numpy as np
-
 # ----------------------------------------------------------------------------
-# Defaults (all overridable on the command line)
+# Options: (name, default, type, choices, help). All can be set on the command line.
 # ----------------------------------------------------------------------------
-D = dict(
-    step="os-maybe-build.step", bem="bem-30pt.json", out="print",
-    wall="step",            # wall thickness (mm) or "step" to keep the STEP's shell
-    seam_trim=2.0,          # outer layer stops this far off the seam planes (strip ribs close it)
-    d_in=3.5,               # features start this deep inside the wall (in-plane)
-    lip="auto",             # auto (ring unless the profile rolls back) | ring | none
-    lip_out=5.0, lip_depth=6.0,
-    rib_t=6.0, rib_h=15.0, rib_h_end=5.0, rib_taper=True, rib_ramp=15.0,
-    rib_angles="60,120,240,300",
-    seam_t=6.0, seam_h=15.0,
-    bolt_d=4.5, dowel_d=4.0,
-    bolt_f="0.2,0.55,0.85", dowel_f="0.37,0.72",   # positions along each seam (fraction of its length)
-    gusset_t=6.0, gusset_r=60.0, gusset_h=35.0,
-    split_z=55.0, joint_l=12.0, joint_rad_clr=0.10, joint_ax_clr=0.20,
-    feet="center",          # center | pair | none
-    foot_x=120.0,           # pair: foot centres at +-foot_x
-    foot_w=None,            # default 120 (center) / 50 (pair)
-    foot_depth=45.0, foot_t=8.0, foot_web_h=16.0,
-    foot_fastener=None,     # m6 | screws (default m6 for center, screws for pair)
-    build_vol="256,256,260",
-    stl_tol=0.05, stl_ang=0.2,
-)
+OPTS = [
+    ("step", None, str, None, "hornlab.io STEP solid of the horn (required)"),
+    ("bem", None, str, None, "hornlab.io BEM JSON export of the same design (required)"),
+    ("out", "horn-print-out", str, None, "output folder (keep it outside the repository)"),
+    ("wall", "step", str, None, "wall thickness in mm, or 'step' to keep the STEP shell; it can only grow"),
+    ("seam_trim", 2.0, float, None, "a thicker wall's outer layer stops this far off the seam planes"),
+    ("d_in", 3.5, float, None, "features start this deep inside the wall (capped to half the wall)"),
+    ("lip", "auto", str, ("auto", "ring", "none"), "mouth lip: auto = ring unless the profile rolls back "
+                                                   "or the horn has a mouth flange"),
+    ("lip_out", 5.0, float, None, "lip ring width past the outer wall"),
+    ("lip_depth", 6.0, float, None, "lip ring depth along the axis"),
+    ("rib_t", 6.0, float, None, "rib thickness"),
+    ("rib_h", 15.0, float, None, "rib height above the wall at the rear end"),
+    ("rib_h_end", 5.0, float, None, "rib height at the mouth end (with --rib-taper)"),
+    ("rib_taper", True, bool, None, "taper the ribs from --rib-h to --rib-h-end"),
+    ("rib_ramp", 15.0, float, None, "length of the ramp at the rear end of each rib"),
+    ("rib_angles", "60,120,240,300", str, None, "rib planes, degrees from +x"),
+    ("seam_t", 6.0, float, None, "seam flange thickness on each side of a seam"),
+    ("seam_h", 15.0, float, None, "seam flange height above the wall"),
+    ("bolt_d", 4.5, float, None, "seam bolt hole diameter (M4 clearance)"),
+    ("dowel_d", 4.0, float, None, "seam dowel hole diameter"),
+    ("bolt_f", "0.2,0.55,0.85", str, None, "seam bolt positions, fractions of the seam flange length"),
+    ("dowel_f", "0.37,0.72", str, None, "seam dowel positions, fractions of the seam flange length"),
+    ("gusset_t", 6.0, float, None, "driver flange gusset thickness"),
+    ("gusset_r", 60.0, float, None, "gussets reach this radius on the driver flange"),
+    ("gusset_h", 35.0, float, None, "gusset height along the wall"),
+    ("split_z", 55.0, float, None, "T / quarter split: outer shoulder z"),
+    ("joint_l", 12.0, float, None, "lap length; the inner seam is at split-z + joint-l"),
+    ("joint_rad_clr", 0.10, float, None, "lap joint radial clearance"),
+    ("joint_ax_clr", 0.20, float, None, "lap joint axial clearance at the outer shoulder"),
+    ("feet", None, str, ("center", "pair", "none"), "mounting foot; default center, or none for a horn with a "
+                                                    "mouth flange"),
+    ("foot_x", 120.0, float, None, "pair: feet at plus and minus this x"),
+    ("foot_w", None, float, None, "foot width; default 120 (center) or 50 (pair)"),
+    ("foot_depth", 45.0, float, None, "foot depth along the axis"),
+    ("foot_t", 8.0, float, None, "foot plate thickness"),
+    ("foot_web_h", 16.0, float, None, "center foot web height"),
+    ("foot_fastener", None, str, ("m6", "screws"), "foot fastener; default m6 (center) or screws (pair)"),
+    ("build_vol", "256,256,260", str, None, "printer build volume x,y,z in mm"),
+    ("stl_tol", 0.05, float, None, "STL chord tolerance in mm"),
+    ("stl_ang", 0.2, float, None, "STL angular tolerance in radians"),
+]
+STAGES = ("wall", "body", "split", "quarter", "export", "check", "render", "readme", "all")
+BODY_STEP_NAMES = ("lip", "seams", "ribs", "feet", "holes")
+STAGE_ARGS = {"body": BODY_STEP_NAMES, "split": ("T", "Qall"), "quarter": ("1", "2", "3", "4")}
 RHO = {"PETG": 1.27, "ASA": 1.07}
 SCREW_D, SCREW_CSK = 4.5, 9.0       # #8 wood screw, 90 deg countersink
 M6_D, M6_CB, M6_FLOOR = 6.6, 13.0, 3.0
 GUSSET_EDGE = 3.0
+MIN_WALL = 3.0
 PARTS = ["T", "Q1", "Q2", "Q3", "Q4"]
 QUAD = {1: (1, 1), 2: (-1, 1), 3: (-1, -1), 4: (1, -1)}
+README_NAME = "PRINT_README.md"
+CHECK_STEP_DEG = 15.0          # radial planes for the STEP inner-surface check
 # ----------------------------------------------------------------------------
-
-from build123d import (Align, Box, Compound, Edge, Face, Location, Plane, Solid, Vector, Wire,  # noqa: E402
-                       export_brep, export_step, extrude, import_brep, import_step, loft, make_face,
-                       offset, thicken)
 
 T0 = time.time()
 A = None        # parsed options
@@ -69,36 +91,114 @@ def log(*a):
     print(f"[{time.time() - T0:6.1f}s]", *a, flush=True)
 
 
+def fail(msg):
+    raise SystemExit(f"horn_print: error: {msg}")
+
+
 def flist(s):
     return tuple(float(v) for v in str(s).split(","))
 
 
+class HelpFormatter(argparse.RawDescriptionHelpFormatter, argparse.ArgumentDefaultsHelpFormatter):
+    def _get_help_string(self, action):
+        return action.help if action.default is None else super()._get_help_string(action)
+
+
 def parse(argv):
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for k, v in D.items():
+    p = argparse.ArgumentParser(prog="horn_print.py", description=__doc__, formatter_class=HelpFormatter)
+    for k, v, typ, choices, hlp in OPTS:
         name = "--" + k.replace("_", "-")
-        if isinstance(v, bool):
-            p.add_argument(name, dest=k, action=argparse.BooleanOptionalAction, default=v)
-        elif isinstance(v, float):
-            p.add_argument(name, dest=k, type=float, default=v)
+        if typ is bool:
+            p.add_argument(name, dest=k, action=argparse.BooleanOptionalAction, default=v, help=hlp)
         else:
-            p.add_argument(name, dest=k, default=v)
-    p.add_argument("stage")
-    p.add_argument("arg", nargs="?")
+            p.add_argument(name, dest=k, type=typ, default=v, choices=choices, help=hlp,
+                           required=k in ("step", "bem"))
+    p.add_argument("stage", choices=STAGES, help="stage to run (all = every stage in order)")
+    p.add_argument("arg", nargs="?", help="body: " + "|".join(BODY_STEP_NAMES) + "; split: T|Qall; quarter: 1-4")
     a = p.parse_args(argv)
-    if a.foot_w is None:
-        a.foot_w = 120.0 if a.feet == "center" else 50.0
-    a.foot_w = float(a.foot_w)
-    if a.foot_fastener is None:
-        a.foot_fastener = "m6" if a.feet == "center" else "screws"
+    if a.stage in STAGE_ARGS:
+        if a.arg not in STAGE_ARGS[a.stage]:
+            p.error(f"stage {a.stage} needs one of: {', '.join(STAGE_ARGS[a.stage])}")
+    elif a.arg is not None:
+        p.error(f"stage {a.stage} takes no argument")
+    if a.wall != "step":
+        try:
+            float(a.wall)
+        except ValueError:
+            p.error("--wall must be a number or 'step'")
+    for k in ("rib_angles", "bolt_f", "dowel_f", "build_vol"):
+        try:
+            flist(getattr(a, k))
+        except ValueError:
+            p.error(f"--{k.replace('_', '-')} must be comma-separated numbers")
     return a
 
 
+def resolve_defaults(mouth_flange):
+    """Defaults that depend on the design: feet, foot size and fastener."""
+    if A.feet is None:
+        A.feet = "none" if mouth_flange else "center"
+    if A.foot_w is None:
+        A.foot_w = 120.0 if A.feet == "center" else 50.0
+    if A.foot_fastener is None:
+        A.foot_fastener = "m6" if A.feet == "center" else "screws"
+
+
+# Parse the options before the heavy imports, so --help and option errors work without the CAD install.
+ARGS = parse(sys.argv[1:]) if __name__ == "__main__" else None
+
+import numpy as np  # noqa: E402
+from build123d import (Align, Box, Compound, Edge, Face, Location, Plane, Solid, Vector, Wire,  # noqa: E402
+                       export_brep, export_step, extrude, import_brep, import_step, loft, make_face,
+                       thicken)
+
+
 # ---------------------------------------------------------------- inputs
+def design():
+    """BEM JSON: profiles (r, z) and the build settings, with clear errors for unsupported input."""
+    try:
+        d = json.load(open(A.bem))
+        dz = d["design"]
+    except (OSError, ValueError, KeyError) as e:
+        fail(f"cannot read the BEM JSON {A.bem}: {e}")
+    pr = dz.get("profile") or {}
+    if pr.get("units") != "mm":
+        fail(f"design.profile.units is {pr.get('units')!r}; only 'mm' is supported")
+    P = {}
+    for k in ("h", "v"):
+        pts = pr.get(k)
+        if not pts or len(pts) < 10:
+            fail(f"design.profile.{k} is missing or too short in {A.bem}")
+        P[k] = np.array([[q["r"], q["z"]] for q in pts])
+    build = (dz.get("parameters") or {}).get("build")
+    if not build:
+        fail("design.parameters.build is missing: re-export the BEM JSON from hornlab.io with the build settings")
+    tf, mf = build.get("throatFlange") or {}, build.get("mouthFlange") or {}
+    if not tf.get("enabled"):
+        fail("the design has no throat (driver) flange; this tool needs one for the gussets and part T")
+    return P, dz, tf, mf
+
+
+def profiles():
+    P, dz, tf, mf = design()
+    z_mouth = max(P["h"][:, 1].max(), P["v"][:, 1].max())
+    rollback = P["h"][-1, 1] < z_mouth - 0.5
+    z_end = min(P["h"][-1, 1], P["v"][-1, 1])
+    return P, z_mouth, rollback, z_end, dz
+
+
 def load_step():
-    s = import_step(A.step)
-    planes = [f for f in s.faces() if f.geom_type.name == "PLANE"]
-    flange_back = max(f.center().Z for f in planes)
+    """STEP faces sorted into inner (acoustic) B-spline faces, outer wall faces and lip / roll-end faces.
+    The throat flange back face comes from build.throatFlange.thickness; a mouth flange stays in the solid."""
+    P, dz, tf, mf = design()
+    try:
+        s = import_step(A.step)
+    except Exception as e:  # noqa: BLE001 (any reader error is fatal here)
+        fail(f"cannot read the STEP {A.step}: {e}")
+    fb = float(tf.get("thickness", 0))
+    if not any(f.geom_type.name == "PLANE" and abs(f.center().Z - fb) < 0.05 for f in s.faces()):
+        fail(f"no flange back face at z = {fb} (build.throatFlange.thickness) in the STEP")
+    z_mouth = max(P["h"][:, 1].max(), P["v"][:, 1].max())
     inner, outer, lipf = [], [], []
     for f in s.faces():
         if f.geom_type.name != "BSPLINE":
@@ -106,21 +206,17 @@ def load_step():
         bb = f.bounding_box()
         if bb.min.Z < 1:
             inner.append(f)
-        elif abs(bb.min.Z - flange_back) < 1:
+        elif abs(bb.min.Z - fb) < 1:
             outer.append(f)
         else:
             lipf.append(f)
-    return s, inner, outer, lipf, flange_back
-
-
-def profiles():
-    d = json.load(open(A.bem))
-    pr = d["design"]["profile"]
-    P = {k: np.array([[p["r"], p["z"]] for p in pr[k]]) for k in ("h", "v")}   # (r, z)
-    z_mouth = max(P["h"][:, 1].max(), P["v"][:, 1].max())
-    rollback = P["h"][-1, 1] < z_mouth - 0.5
-    z_end = min(P["h"][-1, 1], P["v"][-1, 1])
-    return P, z_mouth, rollback, z_end, d
+    if not inner or not outer:
+        fail(f"unexpected STEP layout: {len(inner)} inner and {len(outer)} outer B-spline faces")
+    ib = Compound(inner).bounding_box()
+    if ib.min.Z > 0.5 or abs(ib.max.Z - z_mouth) > 0.5:
+        fail(f"the inner faces span z {ib.min.Z:.2f}..{ib.max.Z:.2f}, but the BEM profile spans 0..{z_mouth:.2f}: "
+             "STEP and JSON do not match")
+    return s, inner, outer, lipf, fb
 
 
 def info(name):
@@ -132,6 +228,21 @@ def wall_t():
 
 
 # ---------------------------------------------------------------- 2D helpers
+def edge_points(e, n):
+    """n points along an edge, evenly spaced in its parameter (fast OCP evaluation), as an (n, 3) array."""
+    from OCP.BRepAdaptor import BRepAdaptor_Curve
+    c = BRepAdaptor_Curve(e.wrapped)
+    out = np.empty((n, 3))
+    for i, u in enumerate(np.linspace(c.FirstParameter(), c.LastParameter(), n)):
+        q = c.Value(float(u))
+        out[i] = (q.X(), q.Y(), q.Z())
+    return out
+
+
+def local_uv(xyz, o, a):
+    """(u, z) of 3D points in a feature plane with origin o and lateral axis a."""
+    return np.c_[(xyz - [o.X, o.Y, o.Z]) @ [a.X, a.Y, a.Z], xyz[:, 2]]
+
 def plane_for(theta=None, x0=None, side=None):
     """Feature plane. Radial at angle theta (deg, 0 = +x), or the plane x = x0 with lateral axis (0, side, 0)."""
     if theta is not None:
@@ -144,7 +255,7 @@ def plane_for(theta=None, x0=None, side=None):
     return Plane(origin=o, x_dir=a, z_dir=a.cross(Vector(0, 0, 1))), o, a
 
 
-def section_curve(inner, theta=None, x0=None, side=None):
+def section_curve(inner, theta=None, x0=None, side=None, fast=False):
     """Inner-surface curve in a feature plane, as (u, z) points ordered from the throat along the profile
     (handles profiles that roll back), resampled every ~1 mm."""
     pl, o, a = plane_for(theta, x0, side)
@@ -155,7 +266,10 @@ def section_curve(inner, theta=None, x0=None, side=None):
         if sec is None:
             continue
         for e in sec.edges():
-            pts = np.array([[(p - o).dot(a), p.Z] for p in (e.position_at(t) for t in np.linspace(0, 1, 300))])
+            if fast:      # parameter-even sampling (checks)
+                pts = local_uv(edge_points(e, 300), o, a)
+            else:         # length-even sampling (feature geometry)
+                pts = np.array([[(p - o).dot(a), p.Z] for p in (e.position_at(t) for t in np.linspace(0, 1, 300))])
             if pts[:, 0].mean() > 0.5:
                 segs.append(pts)
     uniq = []
@@ -202,7 +316,7 @@ def limit_offset(d1, c, n, frac=0.6, win=12):
 
 
 def bend_radius(c, n, step=6):
-    """Radius of curvature where the centre lies on the wall side (offsets toward it shrink); inf elsewhere."""
+    """Radius of curvature where the center lies on the wall side (offsets toward it shrink); inf elsewhere."""
     R = np.full(len(c), np.inf)
     for i in range(step, len(c) - step):
         p0, p1, p2 = c[i - step], c[i], c[i + step]
@@ -211,8 +325,8 @@ def bend_radius(c, n, step=6):
         if abs(cr) < 1e-9:
             continue
         r = a * b * cc / (2 * abs(cr))
-        centre_dir = (p0 + p2) / 2 - p1
-        if centre_dir @ n[i] > 0:
+        center_dir = (p0 + p2) / 2 - p1
+        if center_dir @ n[i] > 0:
             R[i] = r
     return R
 
@@ -298,10 +412,22 @@ def stage_wall():
                 ds.append(GeomAPI_ProjectPointOnSurf(gp_Pnt(p.X, p.Y, p.Z), srf).LowerDistance())
     step_wall = float(np.median(ds))
     wt = step_wall if A.wall == "step" else float(A.wall)
+    if wt < step_wall - 0.01:
+        fail(f"--wall {wt:g} is thinner than the STEP shell ({step_wall:.2f} mm); the tool only adds material "
+             "outside the inner surface. Use --wall step or a value of at least the STEP shell.")
+    if wt < MIN_WALL:
+        fail(f"the wall is {wt:.2f} mm; at least {MIN_WALL} mm is needed for the features and the lap joint")
     add = wt - step_wall
+    d_in = min(A.d_in, wt / 2)
+    if d_in < A.d_in:
+        log(f"--d-in {A.d_in} is more than half the wall; using {d_in:.2f}")
+    _, _, tf, mf = design()
     log(f"STEP wall {step_wall:.3f} (min {min(ds):.3f}, max {max(ds):.3f}); building {wt:.2f}")
     bb = s.bounding_box()
     json.dump({"step_wall": step_wall, "wall_min": min(ds), "wall_max": max(ds), "wall_t": wt, "added": add,
+               "d_in": d_in, "throat_flange": tf, "mouth_flange": bool(mf.get("enabled")),
+               "outer_ext": max(Compound(outer).bounding_box().max.X - Compound(inner).bounding_box().max.X,
+                                Compound(outer).bounding_box().max.Y - Compound(inner).bounding_box().max.Y),
                "flange_back": fb, "z_mouth": z_mouth, "rollback": bool(rollback), "z_end": z_end,
                "step_bbox": [bb.min.X, bb.min.Y, bb.min.Z, bb.max.X, bb.max.Y, bb.max.Z],
                "faces": {"inner": len(inner), "outer": len(outer), "lip_or_end": len(lipf),
@@ -361,11 +487,16 @@ def rib_heights(cc, h0, h1):
 def build_features(inner, lipf):
     si = info("step_info")
     wt, fb, z_mouth, rollback, z_end = si["wall_t"], si["flange_back"], si["z_mouth"], si["rollback"], si["z_end"]
+    d_in, mflange, tf = si["d_in"], si["mouth_flange"], si["throat_flange"]
     rib_z0 = A.split_z + A.joint_ax_clr
     g = {"lip": [], "seams": [], "ribs": [], "feet": []}
     out = {"notes": []}
-    lip = A.lip if A.lip != "auto" else ("none" if rollback else "ring")
+    if A.lip == "ring" and (rollback or mflange):
+        fail("--lip ring needs a plain mouth: this design " + ("rolls back" if rollback else "has a mouth flange"))
+    lip = A.lip if A.lip != "auto" else ("none" if rollback or mflange else "ring")
     out["lip"] = lip
+    if mflange:
+        out["notes"].append("The STEP's mouth flange is kept as designed; no lip is added.")
     y_lid = si["step_bbox"][1]
     if lip == "ring":
         bb_in = Compound(inner).bounding_box()
@@ -377,6 +508,7 @@ def build_features(inner, lipf):
             above = [abs(p.X) - bb_in.max.X for f in lipf for u in np.linspace(0, 1, 81) for v in np.linspace(0, 1, 81)
                      for p in [f.position_at(u, v)] if p.Z > z_mouth + 1e-4 and abs(p.Y) < 2]
             cross = max(above) if above else 0.0
+        ext = max(ext, si["outer_ext"] + si["added"])     # a thicker wall can reach past the lip roll
         P, n2 = mouth_points(inner, z_mouth)
         f_out = ring_face(P, n2, ext + A.lip_out, z_mouth)
         f_in = ring_face(P, n2, max(0.02, min(0.3, 0.5 * cross)), z_mouth)
@@ -388,20 +520,22 @@ def build_features(inner, lipf):
 
     rib_angles = flist(A.rib_angles)
     seams = (0.0, 90.0, 180.0, 270.0)
-    curves = {th: section_curve(inner, theta=th) for th in sorted(set(seams) | set(rib_angles))}
+    n_b = int(tf.get("holeCount", 4))
+    gussets = tuple(round((float(tf.get("holeAngle", 45)) + (k + 0.5) * 360 / n_b) % 360, 6) for k in range(n_b))
+    curves = {th: section_curve(inner, theta=th) for th in sorted(set(seams) | set(rib_angles) | set(gussets))}
     # strip ribs on T where the outer layer leaves the seam planes bare
     if si["added"] > 0.01:
         for th in seams:
-            sg, *_ = band(curves[th], A.d_in, wt + 1.5, fb - 0.5, zmax=A.split_z + 1.0)
+            sg, *_ = band(curves[th], d_in, wt + 1.5, fb - 0.5, zmax=A.split_z + 1.0)
             g["seams"].append(solid_from_poly(sg, 2 * A.seam_trim + 2.0, theta=th))
     seam_info = {}
     for th in seams:
         c = curves[th]
         n = normals(c)
         d1 = limit_offset(np.full(len(c), wt + A.seam_h), c, n)
-        sg, cc, nn, dd = band(c, A.d_in, d1, rib_z0)
+        sg, cc, nn, dd = band(c, d_in, d1, rib_z0)
         if segs_cross(sg[2], c):
-            raise SystemExit(f"seam flange {th} crosses the inner surface")
+            fail(f"seam flange at {th:g} deg would cross the inner surface")
         g["seams"].append(solid_from_poly(sg, 2 * A.seam_t, theta=th))
         seam_info[th] = (cc, nn, dd)
     for th in rib_angles:
@@ -411,13 +545,13 @@ def build_features(inner, lipf):
         d1_full = np.full(len(c), wt + A.rib_h)
         d1_full[k:] = wt + rib_heights(c[k:], A.rib_h, A.rib_h_end)
         d1 = limit_offset(d1_full, c, n)
-        sg, *_ = band(c, A.d_in, d1, rib_z0)
+        sg, *_ = band(c, d_in, d1, rib_z0)
         if segs_cross(sg[2], c):
-            raise SystemExit(f"rib {th} crosses the inner surface")
+            fail(f"rib at {th:g} deg would cross the inner surface")
         g["ribs"].append(solid_from_poly(sg, A.rib_t, theta=th))
-    for th in seams:   # gussets at 0/90/180/270; the driver bolts are on the diagonals
+    for th in gussets:   # gussets halfway between the driver bolts
         c = prefix_until(curves[th], fb + A.gusset_h)
-        a, _ = clip_start(c + A.d_in * normals(c), fb - 1)
+        a, _ = clip_start(c + d_in * normals(c), fb - 1)
         e1, e2 = [A.gusset_r, fb + GUSSET_EDGE], [A.gusset_r, fb - 1]
         g["ribs"].append(solid_from_poly([a, np.array([a[-1], e1]), np.array([e1, e2]), np.array([e2, a[0]])],
                                          A.gusset_t, theta=th))
@@ -435,9 +569,9 @@ def build_features(inner, lipf):
         hole_z = z0 + 14.0 if A.foot_fastener == "m6" else z0 + 7.0
         web_z0 = hole_z + (12.0 if A.foot_fastener == "m6" else 9.0)
         cin = section_curve(inner, theta=270.0)
-        cin = cin[: int(np.argmax(cin[:, 1])) + 1]                # main branch, bottom centre
+        cin = cin[: int(np.argmax(cin[:, 1])) + 1]                # main branch, bottom center
         zs = np.linspace(front, web_z0, 40)
-        u_edge = np.maximum(u_web, np.interp(zs, cin[:, 1], cin[:, 0]) + A.d_in)   # never into the air
+        u_edge = np.maximum(u_web, np.interp(zs, cin[:, 1], cin[:, 0]) + d_in)   # never into the air
         pts = [[u_mid, web_z0], [u_mid, front]]
         if rollback:          # step up into the seam flange behind the roll end, clear of the acoustic edge
             u_r = -y_lid - 10.0
@@ -468,7 +602,7 @@ def build_features(inner, lipf):
             c = c[: int(np.argmax(c[:, 1])) + 1]
             c = c[(c[:, 1] <= front)]
             if len(c) > 5 and c[:, 1].min() < front - 5:
-                a, _ = clip_start(c + A.d_in * normals(c), z0)
+                a, _ = clip_start(c + d_in * normals(c), z0)
                 p0, p1 = [-(y_lid + A.foot_t / 2), z0], [-(y_lid + A.foot_t / 2), front - 1.0]
                 g["feet"].append(solid_from_poly([np.array([p0, a[0]]), a, np.array([a[-1], p1]), np.array([p1, p0])],
                                                  A.rib_t, x0=fx, side=-1))
@@ -497,6 +631,7 @@ def build_features(inner, lipf):
             seam_holes.append({"seam": th, "kind": kind, "z": float(cc[i][1]), "u": float(uv[0])})
     out["seam_holes"] = seam_holes
     out["counts"] = {k: sum(1 for h in holes if h[0] == k) for k in ("bolt", "dowel", "foot")}
+    out["gussets"] = list(gussets)
     return g, [h[1] for h in holes], out
 
 
@@ -680,8 +815,12 @@ def stage_check():
     body = import_brep(f"{WORK}/body.brep")
     res["body_valid"] = bool(BRepCheck_Analyzer(body.wrapped).IsValid()) and len(body.solids()) == 1
 
-    # inner surface vs the BEM profiles: section just inside each symmetry half-plane
+    # inner surface: (1) every BEM profile point in the two symmetry planes, both sides;
+    # (2) the STEP's own inner surface in radial planes every CHECK_STEP_DEG degrees, sampled every 1 mm.
+    # Each part is cut just inside the plane; the reference must lie on the cut (<= 0.2 mm) and no cut point
+    # may lie more than 0.2 mm on the air side of the reference.
     prof, z_mouth, rollback, z_end, _ = profiles()
+    _, inner, *_ = load_step()
 
     def seg_dist(q, poly):
         a, b = poly[:-1], poly[1:]
@@ -689,37 +828,69 @@ def stage_check():
         t = np.clip(((q - a) * ab).sum(1) / np.maximum((ab * ab).sum(1), 1e-12), 0, 1)
         return float(np.min(np.linalg.norm(a + t[:, None] * ab - q, axis=1)))
 
-    rows, intr = [], 0
+    def compare(ref, pl, sgn, names):
+        """ref: (r, z) points. Returns (max distance, points over 0.2 mm, cut points on the air side)."""
+        polys = []
+        for pn in names:
+            sec = parts[pn].intersect(Face.make_rect(4000, 4000, pl))
+            for e in ([] if sec is None else sec.edges()):
+                pts = local_uv(edge_points(e, max(20, int(e.length / 0.1))), pl.origin, pl.x_dir) * [sgn, 1]
+                if pts[:, 0].max() > 0:
+                    polys.append(pts)
+        d = np.array([min(seg_dist(q, pp) for pp in polys) for q in ref])
+        e = ref[-1] + [0, 0.2]          # 0.2 mm allowance past the profile end (lip roll crest, lip face)
+        air = Path(np.vstack([[0, -1], ref, e, [e[0] + 5000, e[1]], [e[0] + 5000, 5000], [0, 5000]]))
+        allp = np.concatenate(polys)
+        cand = allp[(allp[:, 0] > 0) & air.contains_points(allp)]
+        intr = sum(1 for q in cand if seg_dist(q, ref) > 0.2)
+        return float(d.max()), int((d > 0.2).sum()), intr
+
+    rows = []
     for plane, k in (("H", "h"), ("V", "v")):
-        P = prof[k]                                     # (r, z)
-        e = P[-1] + [0, 0.2]           # 0.2 mm allowance past the profile end (lip roll crest, lip face)
-        air = Path(np.vstack([[0, -1], P, e, [e[0] + 5000, e[1]], [e[0] + 5000, 5000], [0, 5000]]))
         for sgn in (1, -1):
             if plane == "H":
-                qs = "Q1" if sgn > 0 else "Q2"
+                q = "Q1" if sgn > 0 else "Q2"
                 pl = Plane(origin=(0, 1e-3, 0), x_dir=(1, 0, 0), z_dir=(0, -1, 0))
             else:
-                qs = "Q1" if sgn > 0 else "Q4"
+                q = "Q1" if sgn > 0 else "Q4"
                 pl = Plane(origin=(1e-3, 0, 0), x_dir=(0, 1, 0), z_dir=(1, 0, 0))
-            polys = []
-            for pn in ("T", qs):
-                sec = parts[pn].intersect(Face.make_rect(4000, 4000, pl))
-                for e in ([] if sec is None else sec.edges()):
-                    ts = np.linspace(0, 1, max(50, int(e.length / 0.05)))
-                    polys.append(np.array([[sgn * e.position_at(t).dot(pl.x_dir), e.position_at(t).Z] for t in ts]))
-            allp = np.concatenate(polys)
-            cand = allp[(allp[:, 0] > 0) & air.contains_points(allp)]
-            intr += sum(1 for q in cand if seg_dist(q, P) > 0.2)
-            for i in list(range(1, len(P) - 1, 8)) + [len(P) - 2]:
-                d = min(seg_dist(P[i], pp) for pp in polys)
-                rows.append((plane, sgn, round(float(P[i, 1]), 3), round(float(P[i, 0]), 3), round(d, 4)))
+            dmax, nbad, intr = compare(prof[k], pl, sgn, ("T", q))
+            rows.append({"ref": f"BEM profile {plane} {'+' if sgn > 0 else '-'}", "points": len(prof[k]),
+                         "max_mm": round(dmax, 4), "over_0.2": nbad, "air_side": intr})
+    for th in np.arange(CHECK_STEP_DEG, 360, CHECK_STEP_DEG):
+        if th % 90 == 0:
+            continue                    # the symmetry planes are covered by the BEM profiles above
+        ref = section_curve(inner, theta=float(th), fast=True)
+        pl, _, _ = plane_for(theta=float(th))
+        q = "Q" + str(1 + int(th // 90))
+        dmax, nbad, intr = compare(ref, pl, 1, ("T", q))
+        rows.append({"ref": f"STEP surface at {th:g} deg", "points": len(ref), "max_mm": round(dmax, 4),
+                     "over_0.2": nbad, "air_side": intr})
     res["inner_check"] = rows
-    res["inner_max_dev_mm"] = max(r[4] for r in rows)
-    res["inner_points"] = len(rows)
-    res["inner_failures"] = sum(1 for r in rows if r[4] > 0.2)
-    res["air_intrusion_points"] = intr
-    log("inner surface max deviation", res["inner_max_dev_mm"], "of", len(rows), "points; air-side points", intr)
+    res["inner_max_dev_mm"] = max(r["max_mm"] for r in rows)
+    res["inner_points"] = sum(r["points"] for r in rows)
+    res["inner_failures"] = sum(r["over_0.2"] for r in rows)
+    res["air_intrusion_points"] = sum(r["air_side"] for r in rows)
+    log("inner surface: max", res["inner_max_dev_mm"], "mm over", res["inner_points"], "points;",
+        res["inner_failures"], "over 0.2 mm;", res["air_intrusion_points"], "cut points on the air side")
+
+    problems = [f"{p} is not a valid single solid" for p, v in res["parts"].items() if not v["valid"]]
+    problems += [f"part_{p}.stl is not watertight" for p, v in res["parts"].items() if not v["stl_watertight"]]
+    problems += [f"{p} does not fit the build volume" for p, v in res["parts"].items() if v["fit"] is None]
+    if not res["body_valid"]:
+        problems.append("the assembled horn is not a valid single solid")
+    if res["stl_centroid_dev_Q1_max_mm"] > A.stl_tol + 0.01:
+        problems.append("STL triangles are further from the solid than the chord tolerance")
+    if res["inner_failures"]:
+        problems.append(f"{res['inner_failures']} inner-surface points are more than 0.2 mm off")
+    if res["air_intrusion_points"]:
+        problems.append(f"{res['air_intrusion_points']} cut points lie on the air side of the inner surface")
+    res["problems"] = problems
     json.dump(res, open(f"{WORK}/check.json", "w"), indent=1)
+    if problems:
+        print("CHECK FAIL: " + "; ".join(problems), flush=True)
+        raise SystemExit(1)
+    print("CHECK PASS", flush=True)
 
 
 # ---------------------------------------------------------------- previews
@@ -827,10 +998,13 @@ def stage_readme():
     for p in PARTS:
         d = P[p]
         f = d["fit"]
-        how = "flange (z = 0) down" if p == "T" else f"throat end (z = {A.split_z + A.joint_ax_clr:.1f}) down, mouth up"
         if f is None:
             fit = "DOES NOT FIT"
         else:
+            if f["up"] == "z up":
+                how = "flange (z = 0) down" if p == "T" else f"throat end (z = {d['bbox_min'][2]:.1f}) down, mouth up"
+            else:
+                how = f"on its side ({f['up'].split()[0]} axis vertical)"
             rot = "axis-aligned" if f["rot_deg"] == 0 else f"turned {f['rot_deg']} deg on the bed"
             fit = f"{how}; {rot}, footprint {f['footprint'][0]:.1f} x {f['footprint'][1]:.1f}, {f['height']:.1f} high"
         bx = d["bbox_xyz"]
@@ -843,9 +1017,19 @@ def stage_readme():
     ft = bi["foot"]
     cnt = bi["counts"]
     zm = si["z_mouth"]
-    lip_txt = ("none added: the profile rolls back, and the outside of the roll is part of the acoustic surface. "
-               "The roll is the stiff edge; the ribs and seam flanges follow the wall around under the roll to its end."
-               if bi["lip"] == "none" else
+    tf = si["throat_flange"]
+    _, dz, _, _ = design()
+    throat = (dz.get("parameters") or {}).get("throatDiam")
+    n_b, n_d = len(flist(A.bolt_f)), len(flist(A.dowel_f))
+    ribs = flist(A.rib_angles)
+    n_up = sum(1 for th in ribs if 0 < th % 360 < 180)
+    gus = "/".join(f"{g:g}" for g in sorted(bi["gussets"]))
+    fl_t = float(tf.get("thickness", 0))
+    lip_txt = (("none added: the profile rolls back, and the outside of the roll is part of the acoustic surface. "
+                "The roll is the stiff edge; the ribs and seam flanges follow the wall around under the roll to its end.")
+               if bi["lip"] == "none" and si["rollback"] else
+               "none added: the horn has a mouth flange, kept as designed." if bi["lip"] == "none" and si["mouth_flange"]
+               else "none (--lip none)." if bi["lip"] == "none" else
                f"{A.lip_out:.0f} mm outward from the outer wall, {A.lip_depth:.0f} mm deep, front face on the mouth plane; "
                f"outside {bi['lip_outer'][0]:.1f} x {bi['lip_outer'][1]:.1f} mm. The inner edge keeps the STEP's lip roll "
                f"(tangent to the flare; crest {bi['lip_roll_crest'] - zm:.3f} mm proud of the lip face).")
@@ -869,10 +1053,12 @@ def stage_readme():
                     f"front at z = {ft['front_z']:.1f}, each with a {A.rib_t:.0f} mm web up to the bottom wall and 2 countersunk #8 holes.")
     else:
         foot_txt = "none."
-    hw = [f"- {cnt['bolt']} x M4 x 20 bolts, {cnt['bolt']} x M4 nuts, {2 * cnt['bolt']} x M4 washers (seam flanges"
+    m4 = next(L for L in (12, 16, 20, 25, 30, 35, 40, 50) if L >= 2 * A.seam_t + 5.6)   # flanges + 2 washers + nut
+    hw = [f"- {cnt['bolt']} x M4 x {m4} bolts, {cnt['bolt']} x M4 nuts, {2 * cnt['bolt']} x M4 washers (seam flanges"
           f"{', incl. 1 through the foot web' if ft['mode'] == 'center' else ''}).",
           f"- {cnt['dowel']} x dowel pins 4 x 12 mm (holes printed at 4.0 mm; drill or ream to a press fit).",
-          "- 4 x M6 bolts, nuts and washers for the driver (12 mm horn flange + driver flange + washer + nut; typically M6 x 30-35)."]
+          f"- {int(tf.get('holeCount', 4))} x driver bolts with nuts and washers for {tf.get('holeDiameter', 0):g} mm holes "
+          f"(length = {fl_t:g} mm horn flange + driver flange + washer + nut; M6 x 30-35 for a typical 1.4 in driver)."]
     if ft["mode"] == "center" and ft["fastener"] == "m6":
         hw.append("- Foot: 1 x M6 button head bolt (ISO 7380, low head so it sits flush), length to suit, about 20-25 mm "
                   "into the lid; 1 x M6 washer; 1 x M6 threaded insert or T-nut in the box lid.")
@@ -899,7 +1085,9 @@ Coordinates: z along the axis (throat z = 0, mouth plane z = {zm:.2f}), x wide, 
 Masses are for solid parts (100 % infill; PETG 1.27, ASA 1.07 g/cm3). Prints with partial infill weigh less.
 
 Files: `horn_assembled.step` (one solid), `horn_parts_assembly.step` (the five parts in place), `part_<P>.step`,
-`part_<P>.stl` (chord tolerance {A.stl_tol} mm), `preview_*.png`, `_work/` (intermediate BREPs and check data).
+`part_<P>.stl` (chord tolerance {A.stl_tol} mm), `preview_*.png`, and `_work/`: `wall.brep`, `b1`-`b4.brep`, `body.brep`,
+`T.brep`, `Qall.brep`, `Q1`-`Q4.brep`, `<P>_coarse.stl` (for the previews), `step_info.json`, `body_info.json`,
+`check.json`.
 
 ## Geometry
 
@@ -907,13 +1095,16 @@ Files: `horn_assembled.step` (one solid), `horn_parts_assembly.step` (the five p
   shell {si['step_wall']:.2f} mm{'; the profile rolls back (inner surface ends at z = %.1f)' % si['z_end'] if si['rollback'] else ''}.
 - Wall: {wt:.2f} mm{' (STEP shell plus a %.2f mm outer layer)' % si['added'] if si['added'] > 0.01 else ' (the STEP shell as designed)'}.
 - Lip: {lip_txt}
-- Ribs: radial at {A.rib_angles} deg (two per wide wall), {rib_txt}, from z = {A.split_z + A.joint_ax_clr:.1f}.
+- Ribs: {len(ribs)} radial ribs at {A.rib_angles} deg ({n_up} on the top wall, {len(ribs) - n_up} on the bottom), {rib_txt},
+  from z = {A.split_z + A.joint_ax_clr:.1f}.
 - Seam flanges: on the 4 quarter seams, {2 * A.seam_t:.0f} mm thick ({A.seam_t:.0f} per quarter), {A.seam_h:.0f} mm tall
   (kept straight so the M4 heads and nuts have room; lowered only where the wall bends tighter than the flange height).
-  They act as the centre rib of each wide wall and the rib of each side wall. 3 M4 holes ({A.bolt_d} mm) and 2 dowel
-  holes ({A.dowel_d} mm) per seam.
-- Driver flange: from the STEP (130 mm round, 12 mm, 36 mm throat, 4 x 6.6 mm on 101.6 mm at 45 deg). 4 gussets
-  ({A.gusset_t:.0f} mm, to r = {A.gusset_r:.0f}, {A.gusset_h:.0f} mm up the wall) at 0/90/180/270 deg, clear of the bolts and the M6 nuts.
+  They act as the center rib of each wide wall and the rib of each side wall. {n_b} bolt holes ({A.bolt_d} mm, M4)
+  and {n_d} dowel holes ({A.dowel_d} mm) per seam.
+- Driver flange: from the STEP ({tf.get('diameter', 0):g} mm round, {fl_t:g} mm thick, {throat:g} mm throat,
+  {int(tf.get('holeCount', 4))} x {tf.get('holeDiameter', 0):g} mm holes on {tf.get('boltCircle', 0):g} mm at {tf.get('holeAngle', 0):g} deg).
+  {len(bi['gussets'])} gussets ({A.gusset_t:.0f} mm, to r = {A.gusset_r:.0f}, {A.gusset_h:.0f} mm up the wall) at {gus} deg, halfway
+  between the bolts.
 - T / quarter joint: lap joint. T keeps the inner {wt / 2:.1f} mm of the wall up to z = {A.split_z + A.joint_l:.0f}, the quarters
   the outer part from z = {A.split_z:.0f}; {A.joint_rad_clr} mm radial and {A.joint_ax_clr} mm axial clearance on hidden faces,
   zero gap at the inner seam. Close the quarters around T's tongue; the flare taper then holds T.
@@ -934,13 +1125,15 @@ Files: `horn_assembled.step` (one solid), `horn_parts_assembly.step` (the five p
 ## Checks (`_work/check.json`)
 
 - Solids valid: """ + ", ".join(f"{p} {'yes' if P[p]['valid'] else 'NO'}" for p in PARTS) + f"""; assembled solid {'yes' if ck['body_valid'] else 'NO'}.
-- STL watertight: """ + ", ".join(f"{p} {'yes' if P[p]['stl_watertight'] else 'NO'}" for p in PARTS) + f"""; triangle centroids within
-  {ck['stl_centroid_dev_Q1_max_mm']:.3f} mm of the solid (Q1, 300 samples).
-- Inner surface vs the BEM profiles ({ck['inner_points']} points along both planes, both sides{', including the rollback' if si['rollback'] else ''}):
-  max distance {ck['inner_max_dev_mm']:.4f} mm; {ck['air_intrusion_points']} section points more than 0.2 mm on the air side.
+- STL watertight: """ + ", ".join(f"{p} {'yes' if P[p]['stl_watertight'] else 'NO'}" for p in PARTS) + f"""; 300 random triangle
+  centroids of part_Q1.stl lie within {ck['stl_centroid_dev_Q1_max_mm']:.3f} mm of the Q1 solid.
+- Inner surface ({ck['inner_points']} points{', including the rollback' if si['rollback'] else ''}): every BEM profile point in the
+  horizontal and vertical symmetry planes (both sides), and the STEP's own inner surface every 1 mm in radial planes
+  every {CHECK_STEP_DEG:g} deg. Max distance {ck['inner_max_dev_mm']:.4f} mm; {ck['inner_failures']} points over 0.2 mm;
+  {ck['air_intrusion_points']} cut points more than 0.2 mm on the air side. Between those planes the surface is not sampled.
 - Build volume: """ + ("every part fits (see table)." if all(P[p]["fit"] for p in PARTS) else "SOME PARTS DO NOT FIT.") + "\n"
-    open(f"{A.out}/README.md", "w").write(txt)
-    log("README written")
+    open(f"{A.out}/{README_NAME}", "w").write(txt)
+    log(README_NAME, "written")
 
 
 # ---------------------------------------------------------------- driver
@@ -948,20 +1141,29 @@ def stage_all(argv):
     steps = [["wall"]] + [["body", s] for s, *_ in BODY_STEPS] + [["split", "T"], ["split", "Qall"]] + \
             [["quarter", str(k)] for k in (1, 2, 3, 4)] + [["export"], ["check"], ["render"], ["readme"]]
     opts = [a for a in argv if a != "all"]
+    rc = 0
     for st in steps:
         log("==>", *st)
-        subprocess.run([sys.executable, "-I", os.path.abspath(__file__)] + opts + st, check=True)
+        r = subprocess.run([sys.executable, "-I", os.path.abspath(__file__)] + opts + st)
+        if r.returncode and st != ["check"]:
+            raise SystemExit(r.returncode)
+        rc = rc or r.returncode
+    if rc:
+        print("CHECK FAIL: see _work/check.json", flush=True)
+    raise SystemExit(rc)
 
 
 def main(argv):
     global A, WORK
-    A = parse(argv)
+    A = ARGS if ARGS is not None else parse(argv)
     A.out = os.path.abspath(A.out)
     WORK = f"{A.out}/_work"
-    os.makedirs(WORK, exist_ok=True)
     st = A.stage
     if st == "all":
         return stage_all(argv)
+    _, _, _, mf = design()
+    resolve_defaults(bool(mf.get("enabled")))
+    os.makedirs(WORK, exist_ok=True)
     {"wall": stage_wall, "export": stage_export, "check": stage_check, "render": stage_render,
      "readme": stage_readme}.get(st, lambda: None)()
     if st == "body":
