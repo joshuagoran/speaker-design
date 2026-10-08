@@ -18,7 +18,7 @@ import { HARDWARE_MESH_NAME } from "../src/components/stack-view/buildHardware";
 import { MM_IN } from "../src/components/stack-view/geometry";
 import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { N314T } from "../src/data/catalog/compression-drivers";
-import { DIY_ROSSE110X50 } from "../src/data/catalog/horns";
+import { DIY_OS90X70, DIY_ROSSE110X50 } from "../src/data/catalog/horns";
 import { takesHornMount } from "../src/lib/pa/hornMount";
 import {
   CLAMPED_BRACKET_NAME,
@@ -344,6 +344,26 @@ describe("the aluminum plate on every horn it applies to", () => {
 });
 
 describe("two-bolt drivers on the plate", () => {
+  test("on the DIY OS 90×70's two level holes, every pair on their circle goes through both arms, on the holes (the approved mock)", () => {
+    const horn = hornOf(DIY_OS90X70.id);
+    const pairs = CD_OPTIONS.filter((c) => c.exit === horn.exit && c.body.bolts.n === 2).filter(
+      (c) => fitOf(horn, c) !== null,
+    );
+    // the 76 mm pairs (M6, M5 and 1/4-20 alike); the DE360's 57 mm circle misses the holes
+    expect(pairs.map((c) => c.id)).not.toContain("de360");
+    expect(pairs.map((c) => c.id)).toContain("de250");
+    for (const cd of pairs) {
+      const fit = fitOf(horn, cd);
+      if (!fit) throw new Error(cd.id);
+      expect(fit.turn, cd.id).toBeCloseTo(BOLT_TURNS.across, 9);
+      expect(fit.through, cd.id).toHaveLength(2);
+      for (const b of fit.through) expect(Math.abs(b.y), cd.id).toBeLessThan(1e-9);
+      const g = scene({ horn, cd });
+      expect(meshesNamed(g, PLATE_MESH_NAMES.bolt), cd.id).toHaveLength(4);
+      expect(meshesNamed(g, BRACKET_MESH_NAME), cd.id).toHaveLength(0);
+    }
+  });
+
   test("the pair stands across the throat, both bolts through the plate's arms", () => {
     const rx28 = hornOf("rx28");
     const de250 = cdOf("de250");
@@ -404,10 +424,16 @@ describe("where no driver bolt can pass through the plate", () => {
     expect(HORN_MOUNT_PLATE_FALLBACK).not.toBe(HORN_MOUNT_TIPS.plate);
   });
 
-  test("that is the only horn and driver pair that falls back", () => {
+  test("those are the only horn and driver pairs that fall back", () => {
     const fallbacks = bolted.flatMap(({ horn, cds }) =>
       cds.filter((cd) => !fitOf(horn, cd)).map((cd) => `${horn.id} + ${cd.id}`),
     );
-    expect(fallbacks.sort()).toEqual(["st260 + de360"]);
+    // the ST260's neck leaves the DE360's 57 mm pair no room; on the DIY OS 90×70, the DE360's circle and the
+    // DF10.171K's four bolts miss its two holes
+    expect(fallbacks.sort()).toEqual([
+      "diy_os90x70 + de360",
+      "diy_os90x70 + lavoce171",
+      "st260 + de360",
+    ]);
   });
 });

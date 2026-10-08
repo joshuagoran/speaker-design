@@ -589,6 +589,8 @@ export interface WaveguideSpec {
   w: number;
   h: number;
   freestanding: boolean;
+  /** the waveguide's own lowest crossover, Hz (its loading); null or absent when it sets none */
+  minXo?: HornHf["minXo"];
 }
 
 /** The Hi-fi design the model works on (the Hi-fi page's state, with the units the lib uses: inches, Hz, watts, dB). */
