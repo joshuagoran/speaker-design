@@ -270,6 +270,11 @@ export const VENT_STYLES = keysOf(VENT_SIZES);
 
 // Clean output: the lowest music-limit level from 40 to 90 Hz, so a peak in the response can't win.
 export const SUB_BAND_HZ = [40, 90];
+/**
+ * The output the target compares, in words: the lowest music-limit level over SUB_BAND_HZ (one drive level for the
+ * band). Not the planner's sub-bass tile, which averages the sine maximum from 30 to 50 Hz.
+ */
+export const PA_OUTPUT_NAME = `music limit ${SUB_BAND_HZ[0]}–${SUB_BAND_HZ[1]} Hz`;
 export function bandOutputDb(
   mdl: Pick<VentedBoxModel, "curve">,
   lim: Pick<SubLimits, "V">,
@@ -1025,6 +1030,50 @@ export function optimizePaStack(
     }
   }
 
+  // your own sub box and vent, in each plywood the search designs in: the grid's vent styles and sizes may not hold
+  // it (a style an unlocked vent doesn't try, a side duct narrower than the grid's), and the search must never come
+  // out behind your design. At the search's sub amp, or at yours where the search's would make the port the limit.
+  if (curM && curSub && curSub.ts && subs.includes(curSub))
+    for (const t of walls) {
+      const at = (ampW: number) =>
+        subSystem(curSub, midForGeom, {
+          subBox: cur.cDim,
+          midDims: cur.mDim,
+          wall: t,
+          inset: cur.inset,
+          portStyle: cur.portStyle,
+          cVent: cur.cVent,
+          hpf: cur.hpf,
+          hpType: cur.hpType,
+          ampW,
+          portMax: cur.portMax,
+          layout: cur.layout,
+          braceStyle,
+          braceEstimate: true,
+        });
+      let s = at(amps.ampW),
+        ampW = amps.ampW;
+      evals++;
+      if (s.mdl && s.lim.who === "port" && ampW !== cur.ampW) {
+        s = at(cur.ampW);
+        ampW = cur.ampW;
+        evals++;
+      }
+      if (!s.mdl) continue;
+      subCands.push({
+        c: { ...base, ampW, wall: t },
+        s,
+        sub: curSub,
+        lb: subWeightLb(
+          cur.cDim,
+          t,
+          curSub.lb,
+          braceWoodEstimate(cur.cDim, t, cur.inset, braceStyle),
+        ),
+        out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
+      });
+    }
+
   // 3. mid designs: each driver at a few Qtc targets, boxes inside the limits, per crossover
   const mids = locks.mid
     ? curMid
@@ -1391,6 +1440,10 @@ export function optimizePaStack(
     evals++;
     if (m) pool.push({ c: x.c, m, ch: changes(x.c) });
   }
+  // your design itself, so nothing the search names (the near miss's closest design) is ever behind it
+  const curEval = curM && evaluateDesign(cur, true);
+  evals++;
+  if (curEval) pool.push({ c: cur, m: curEval, ch: 0 });
   // a one-change tweak of the current design, evaluated as it is: in the optimizer's plywood, if yours is another
   if (curM)
     for (const w of walls)
@@ -1667,8 +1720,12 @@ export function optimizePaStack(
       { db: m.out, f3: m.f3 },
       PA_REACH_WORDS,
     );
-  // no card, or only the closest: what loosening a limit would buy
-  if (!cards || (chosen && chosen.fixMisses)) {
+  // your design passes every check and keeps what the goals keep: with no card, nothing beats it, and that is the answer
+  // (the goal-missing notice), not "no design fits"
+  const curKeeps = !!curMet && !curFails && goals.every((g) => goalOk(g, curMet));
+  const nothingBeats = chosen ? chosen.goalMissing : curKeeps;
+  // no card (and your design doesn't keep the goals), or only the closest: what loosening a limit would buy
+  if ((!cards && !curKeeps) || (chosen && chosen.fixMisses)) {
     const tries = [
       {
         text: `Allow ${Math.ceil(input.maxLb * 1.1)} lb`,
@@ -1687,11 +1744,14 @@ export function optimizePaStack(
       const r = choose(x.L, x.t);
       return r && !r.fixMisses;
     });
+    // fewest problems, then the least short of the goals (your design is in the pool, so this is never behind it on the
+    // target's output), then the goal's own order
     const nearest = pool
       .slice()
       .sort(
         (a, b) =>
           designProblems(a.m, lim).length - designProblems(b.m, lim).length ||
+          gapSum(metric(a)) - gapSum(metric(b)) ||
           obj[goal](metric(a)) - obj[goal](metric(b)),
       )[0];
     const closest = nearest && ruled(onSliders(nearest, goal));
@@ -1716,7 +1776,7 @@ export function optimizePaStack(
         ? designProblems(closest.m, lim).length
           ? designProblems(closest.m, lim)
           : [
-              `the closest design reaches ${closest.m.out.toFixed(1)} dB, short of the ${target.toFixed(0)} dB target`,
+              `the closest design's ${PA_OUTPUT_NAME} is ${closest.m.out.toFixed(1)} dB, short of the ${target.toFixed(0)} dB target`,
             ]
         : (() => {
             const lightest = lightestLb();
@@ -1740,7 +1800,7 @@ export function optimizePaStack(
     goalMissing:
       chosen && chosen.fixMisses
         ? outOfReach(chosen.cards[0].p.m)
-        : chosen && chosen.goalMissing
+        : nothingBeats
           ? also.length
             ? `Nothing ${goals.map((g) => THAN[g]).join(" and ")} than your design passes the checks.`
             : GOAL_MISSING[goal]
