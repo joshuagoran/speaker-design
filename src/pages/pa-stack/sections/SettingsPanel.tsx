@@ -46,6 +46,8 @@ import { PANEL_NOMINAL_OPTIONS } from "../../../lib/panel";
 import { HardwareSettings } from "./HardwareSettings";
 import { boxTakesHardware, handlePart } from "../../../lib/pa/hardware";
 import { NO_HANDLES_LABEL } from "../../../constants/hardware";
+import { HORN_MOUNT_LABEL, HORN_MOUNT_NAMES, HORN_MOUNT_TIPS } from "../../../constants/hornMount";
+import { takesHornMount } from "../../../lib/pa/hornMount";
 import {
   HORN_COLOR_CATALOG,
   HORN_COLOR_CATALOG_LABEL,
@@ -127,6 +129,8 @@ interface Props {
     | "setBaffleColor"
     | "hornColor"
     | "setHornColor"
+    | "hornMount"
+    | "setHornMount"
     | "cabinetFinish"
     | "setCabinetFinish"
     | "spacerHeightIn"
@@ -215,6 +219,8 @@ export function SettingsPanel({ planner }: Props) {
     setBaffleColor,
     hornColor,
     setHornColor,
+    hornMount,
+    setHornMount,
     cabinetFinish,
     setCabinetFinish,
     spacerHeightIn,
@@ -283,6 +289,9 @@ export function SettingsPanel({ planner }: Props) {
           (b) =>
             `${PA_SETTINGS_TABS[b]}: ${handlePart(hardware[b].model)?.name ?? NO_HANDLES_LABEL.toLowerCase()}`,
         ),
+      ...(takesHornMount(hornOption, layout)
+        ? [`${HORN_MOUNT_LABEL}: ${HORN_MOUNT_NAMES[hornMount]}`]
+        : []),
     ].join(", "),
   };
   const section = (id: PaSettingsSection, children: React.ReactNode) => (
@@ -759,6 +768,17 @@ export function SettingsPanel({ planner }: Props) {
                 onChange={setBaffleInsetIn}
               />
             </div>
+            {takesHornMount(hornOption, layout) && (
+              <ToggleGroup
+                label={HORN_MOUNT_LABEL}
+                value={hornMount}
+                onChange={setHornMount}
+                options={keysOf(HORN_MOUNT_NAMES).map(
+                  (id) => [id, HORN_MOUNT_NAMES[id], HORN_MOUNT_TIPS[id]] as const,
+                )}
+                className="mt-3"
+              />
+            )}
             <HardwareSettings planner={planner} />
           </div>
           <SwatchPicker
