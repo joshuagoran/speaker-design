@@ -161,8 +161,8 @@ const PART_MESH_GEOMETRY = new Map<PartMesh, THREE.BufferGeometry>();
 /**
  * A part's CAD mesh (data/meshes) as geometry, in inches on the model's axes, centered on the origin in x and y, the
  * model's z = 0 at z = 0. Flat: every triangle its own vertices, so a part's edges and corners stay crisp. Smooth:
- * the vertices shared, so a curved face shades smooth; a mesh welded face by face (build/horn-mesh.mjs) still keeps
- * the edges between its faces crisp.
+ * the vertices shared, so a curved face shades smooth; a mesh split at its sharp edges (build/horn-mesh.mjs) still
+ * keeps those edges crisp.
  */
 export function partMeshGeometry(m: PartMesh, shading: "flat" | "smooth") {
   const hit = PART_MESH_GEOMETRY.get(m);
