@@ -12,8 +12,9 @@ Steps (each one runs in its own process; `all` runs them in order):
   quarter 1 | 2 | 3 | 4                    the quarters
   export | check | render | readme
 
---draft builds a quick look into <out>-draft: coarse STLs, no top round, a sparse inner-surface check (still fails
-on any material on the air side), one preview, and the body, split and quarter stages each in one process.
+--draft builds a quick look into <out>-draft: coarse STLs, no top round, a sparse inner-surface check (6 planes
+instead of 22, distances at every third BEM point; the air-side test still uses every point), one preview, and the
+body, split and quarter stages each in one process.
 
 Usage: python -I horn_print.py --step H.step --bem H.json --out DIR [options] <stage> [arg]
 Keep --out outside the repository.
@@ -51,8 +52,9 @@ OPTS = [
     ("seam_h", 15.0, float, None, "seam flange and throat fin height above the wall"),
     ("bolt_d", 4.5, float, None, "seam bolt hole diameter (M4 clearance)"),
     ("dowel_d", 4.0, float, None, "seam dowel hole diameter"),
-    ("bolt_f", "0.2,0.55,0.85", str, None, "seam bolt positions, fractions of the seam flange length"),
-    ("dowel_f", "0.37,0.72", str, None, "seam dowel positions, fractions of the seam flange length"),
+    ("bolt_f", "0.2,0.55,0.85", str, None, "seam bolt positions, fractions of the usable seam flange length (the "
+                                           "part tall enough for a bolt)"),
+    ("dowel_f", "0.37,0.72", str, None, "seam dowel positions, fractions of the usable seam flange length"),
     ("fin_root_r", 8.0, float, None, "radius of the round where a throat fin meets the driver flange face"),
     ("seam_end", "taper", str, ("round", "taper"), "seam flange mouth end: taper (a straight ramp with blended "
                                                     "ends) or round (a convex quarter curve)"),
@@ -89,7 +91,11 @@ TOP_SMOOTH = 3.0               # Gaussian smoothing (mm) of the seam spine top l
 ROUND_EPS = 0.01               # OCC cannot fillet both top edges at exactly half the thickness
 FIN_HOLE_WALL = 1.0            # least material between a throat fin and a driver bolt hole under the ply
 WASHER_PAST = 6.0              # a 1/4 in washer reaches about this far past the driver bolt hole's edge
-M4_WASHER_R = 4.5              # M4 washer radius: seam bolts sit this far plus the top round below the top
+M4_WASHER_R = 4.5              # M4 washer radius: a seam bolt needs 2 x this plus the top round of flange height
+HOLE_TOL = 0.05                # tolerance on that height
+HOLE_GAP = 14.0                # least spacing between seam holes along the flange
+HOLE_MOVE_NOTE = 10.0          # note a seam hole that moves further than this from its fraction
+DRAFT_MARK = "DRAFT"           # marker file in a draft's _work folder
 FOOT_WEB_T = 12.0              # center foot web thickness
 PLY_T = 12.0                   # throat mount: 1/2 in birch ply
 PLY_CLR = 1.0                  # throat mount clearances (top edge under the side fins, slot past the fin)
@@ -165,6 +171,9 @@ def parse(argv):
             p.error(f"--{k.replace('_', '-')} must be more than 0")
     if a.seam_end_l is not None and a.seam_end_l < 0:
         p.error("--seam-end-l must be 0 or more")
+    if a.seam_h < 2 * M4_WASHER_R + a.seam_t - HOLE_TOL:
+        p.error(f"--seam-h {a.seam_h:g} is too low for the seam bolts: it needs at least 2 x {M4_WASHER_R:g} (M4 washer) "
+                f"+ --seam-t (the top round) = {2 * M4_WASHER_R + a.seam_t:g} mm")
     return a
 
 
@@ -445,7 +454,7 @@ def smooth_line(p, sigma=TOP_SMOOTH):
     return np.c_[np.convolve(q[:, 0], k, "valid"), np.convolve(q[:, 1], k, "valid")]
 
 
-def ease_end(c, d1, wt):
+def ease_end(c, d1, wt, z0):
     """Mouth end of a seam flange: over the last --seam-end-l mm (along the inner surface) its height above the
     outer wall comes down to END_SINK inside the wall at the end. round: a convex quarter ellipse, tangent to the
     top line (a quarter circle when the length equals the flange height). taper: a straight ramp; the top-line
@@ -454,6 +463,10 @@ def ease_end(c, d1, wt):
     if L <= 0:
         return d1
     s = np.r_[0, np.cumsum(np.hypot(*np.diff(c, axis=0).T))]
+    flange = s[-1] - s[int(np.argmax(c[:, 1] >= z0))]
+    if L > flange / 2:
+        fail(f"--seam-end-l {L:g} is too long: a quarter's seam flange is {flange:.0f} mm, and the end may take at "
+             f"most half of it ({flange / 2:.0f} mm) so the seam bolts keep a full-height flange")
     t = (s - (s[-1] - L)) / L
     m = t > 0
     out = d1.copy()
@@ -712,7 +725,7 @@ def build_features(inner, lipf):
     for th in seams:
         c = curves[th]
         n = normals(c)
-        d1 = ease_end(c, limit_offset(np.full(len(c), wt + A.seam_h), c, n), wt)
+        d1 = ease_end(c, limit_offset(np.full(len(c), wt + A.seam_h), c, n), wt, rib_z0)
         top = smooth_line(c + d1[:, None] * n)
         sg, foot_pt, tan_pt = spine_profile(c, n, top, d_in, fb)
         if segs_cross(sg[2], c):
@@ -810,22 +823,46 @@ def build_features(inner, lipf):
         foot.update(width=A.foot_w, depth=A.foot_depth, thick=A.foot_t, x=A.foot_x)
     out["foot"] = foot
 
-    # seam holes: bolts and dowels by fraction of the seam flange length; move back if the flange is low there
+    # seam holes: bolts and dowels in order along the flange, by fraction of its usable length (from the quarter's
+    # end to the last spot tall enough for a bolt; the roll and the seam end can be too low). A hole sits midway
+    # between the outer wall and the start of the top round, where the local flange leaves room for an M4 washer
+    # (over the washer's width); otherwise it moves to the nearest spot that does, and the build stops if none is left.
     seam_holes = []
+    items = sorted([("bolt", f, A.bolt_d) for f in flist(A.bolt_f)] + [("dowel", f, A.dowel_d) for f in flist(A.dowel_f)],
+                   key=lambda it: it[1])
     for th, (cc, nn, dd) in seam_info.items():
         pl, _, _ = plane_for(theta=th)
         s = np.r_[0, np.cumsum(np.hypot(*np.diff(cc, axis=0).T))]
-        hole_off = wt + A.seam_h / 2
-        ok = dd >= hole_off + M4_WASHER_R + A.seam_t   # washer clear of the top round here
-        placed = []
-        for kind, fr, dia in [("bolt", f, A.bolt_d) for f in flist(A.bolt_f)] + [("dowel", f, A.dowel_d) for f in flist(A.dowel_f)]:
-            free = ok & np.all([abs(s - q) >= 14.0 for q in placed] or [np.ones(len(s), bool)], axis=0)
-            i = int(np.argmin(np.where(free, abs(s - fr * s[-1]), np.inf)))
-            placed.append(s[i])
-            uv = cc[i] + hole_off * nn[i]
+        h = np.array([dd[np.abs(s - si_) <= M4_WASHER_R].min() for si_ in s])      # least height over the washer
+        ok = (h - wt >= 2 * M4_WASHER_R + A.seam_t - HOLE_TOL) & (s >= M4_WASHER_R + 1) & (s <= s[-1] - M4_WASHER_R - 1)
+        if not ok.any():
+            fail(f"the seam flange at {th:g} deg is nowhere tall enough for a seam bolt "
+                 f"({2 * M4_WASHER_R + A.seam_t:g} mm above the wall): use a taller --seam-h or a shorter --seam-end-l")
+        span = s[np.flatnonzero(ok)[-1]]
+        last = -math.inf
+        for kind, fr, dia in items:
+            free = ok & (s >= last + HOLE_GAP)
+            if not free.any():
+                fail(f"no room for the {kind} at {fr:g} of the seam flange at {th:g} deg: the flange needs "
+                     f"{2 * M4_WASHER_R + A.seam_t:g} mm above the wall for an M4 washer clear of the top round, "
+                     f"{HOLE_GAP:g} mm from the previous hole. Use a taller --seam-h, fewer --bolt-f/--dowel-f, "
+                     "or a shorter --seam-end-l")
+            i = int(np.argmin(np.where(free, abs(s - fr * span), np.inf)))
+            last = s[i]
+            moved = s[i] - fr * span
+            if abs(moved) > HOLE_MOVE_NOTE:
+                msg = (f"The {kind} at {fr:g} of the {th:g} deg seam sits {abs(moved):.0f} mm "
+                       f"{'further out' if moved > 0 else 'further in'} than its fraction: the flange is too low or "
+                       "the holes are too close there.")
+                log(msg)
+                out["notes"].append(msg)
+            off = (wt + h[i] - A.seam_t) / 2                     # midway between the wall and the top round
+            uv = cc[i] + off * nn[i]
             ctr = pl.from_local_coords((float(uv[0]), float(uv[1])))
             holes.append((kind, Solid.make_cylinder(dia / 2, 2 * A.seam_t + 4, Plane(origin=ctr, z_dir=pl.z_dir).offset(-(A.seam_t + 2)))))
-            seam_holes.append({"seam": th, "kind": kind, "z": float(cc[i][1]), "u": float(uv[0])})
+            seam_holes.append({"seam": th, "kind": kind, "frac": fr, "s": float(s[i]), "span": float(span),
+                               "z": float(cc[i][1]),
+                               "u": float(uv[0]), "off": float(off)})
     out["seam_holes"] = seam_holes
     out["counts"] = {k: sum(1 for h in holes if h[0] == k) for k in ("bolt", "dowel", "foot")}
     out["fins"] = fin
@@ -1036,8 +1073,9 @@ def stage_check():
         t = np.clip(((q - a) * ab).sum(1) / np.maximum((ab * ab).sum(1), 1e-12), 0, 1)
         return float(np.min(np.linalg.norm(a + t[:, None] * ab - q, axis=1)))
 
-    def compare(ref, pl, sgn, names):
-        """ref: (r, z) points. Returns (max distance, points over 0.2 mm, cut points on the air side)."""
+    def compare(ref, pl, sgn, names, every=1):
+        """ref: (r, z) points. Returns (max distance, points over 0.2 mm, cut points on the air side). The distance
+        test uses every `every`-th point; the air-side test always uses all of them."""
         polys = []
         for pn in names:
             sec = parts[pn].intersect(Face.make_rect(4000, 4000, pl))
@@ -1045,7 +1083,7 @@ def stage_check():
                 pts = local_uv(edge_points(e, max(20, int(e.length / 0.1))), pl.origin, pl.x_dir) * [sgn, 1]
                 if pts[:, 0].max() > 0:
                     polys.append(pts)
-        d = np.array([min(seg_dist(q, pp) for pp in polys) for q in ref])
+        d = np.array([min(seg_dist(q, pp) for pp in polys) for q in ref[::every]])
         e = ref[-1] + [0, 0.2]          # 0.2 mm allowance past the profile end (lip roll crest, lip face)
         air = Path(np.vstack([[0, -1], ref, e, [e[0] + 5000, e[1]], [e[0] + 5000, 5000], [0, 5000]]))
         allp = np.concatenate(polys)
@@ -1062,11 +1100,9 @@ def stage_check():
             else:
                 q = "Q1" if sgn > 0 else "Q4"
                 pl = Plane(origin=(1e-3, 0, 0), x_dir=(0, 1, 0), z_dir=(1, 0, 0))
-            ref = prof[k][::DRAFT["bem_every"]] if A.draft else prof[k]
-            if A.draft and not np.array_equal(ref[-1], prof[k][-1]):
-                ref = np.vstack([ref, prof[k][-1]])
-            dmax, nbad, intr = compare(ref, pl, sgn, ("T", q))
-            rows.append({"ref": f"BEM profile {plane} {'+' if sgn > 0 else '-'}", "points": len(ref),
+            every = DRAFT["bem_every"] if A.draft else 1
+            dmax, nbad, intr = compare(prof[k], pl, sgn, ("T", q), every)
+            rows.append({"ref": f"BEM profile {plane} {'+' if sgn > 0 else '-'}", "points": len(prof[k][::every]),
                          "max_mm": round(dmax, 4), "over_0.2": nbad, "air_side": intr})
     step_deg = DRAFT["check_step_deg"] if A.draft else CHECK_STEP_DEG
     res["check_step_deg"], res["draft"] = step_deg, bool(A.draft)
@@ -1146,6 +1182,9 @@ def stage_render():
 
     key = "T red, Q1 blue, Q2 green, Q3 purple, Q4 orange"
     if A.draft:
+        for f in os.listdir(A.out):                  # no stale full-build previews next to the draft one
+            if f.startswith("preview_") and f.endswith(".png"):
+                os.remove(f"{A.out}/{f}")
         fig = plt.figure(figsize=(9, 6), dpi=70)
         draw(fig.add_subplot(1, 1, 1, projection="3d"), False, 20, -60, f"{DRAFT_TAG} ({key})")
         plt.tight_layout()
@@ -1307,10 +1346,11 @@ def stage_readme():
     top_txt = (kind_txt[next(iter(by_kind))] if len(by_kind) == 1 else
                "; ".join(f"{kind_txt[k]} at {'/'.join(v)} deg" for k, v in by_kind.items()))
     wc = fin.get("washer_clear")
-    end_txt = (f" At the {'roll end' if si['rollback'] else 'lip'} each flange comes down to the wall over its last "
-               f"{A.seam_end_l:g} mm ({'a convex quarter curve' if A.seam_end == 'round' else 'a straight ramp with blended ends'}"
-               f", under the same top edge), so it dies into the {'roll' if si['rollback'] else 'lip'}."
-               if A.seam_end_l > 0 else "")
+    edge = ("roll end", "roll") if si["rollback"] else ("lip", "lip") if bi["lip"] == "ring" else \
+        ("mouth flange", "mouth flange") if si["mouth_flange"] else ("mouth", "mouth edge")
+    end_txt = (f" At the {edge[0]} each flange comes down to the wall over its last {A.seam_end_l:g} mm "
+               f"({'a convex quarter curve' if A.seam_end == 'round' else 'a straight ramp with blended ends'}, under the "
+               f"same top edge), so it dies into the {edge[1]}." if A.seam_end_l > 0 else "")
     reach = {k: fin["foot_u"][f"{float(a)}"] for k, a in (("side", 0), ("tb", 90))}
     lip_txt = (("none added: the profile rolls back, and the outside of the roll is part of the acoustic surface. "
                 f"The roll is the stiff edge; the {'ribs and ' if ribs else ''}seam flanges follow the wall around under the roll "
@@ -1435,7 +1475,7 @@ Files: `horn_assembled.step` (one solid), `horn_parts_assembly.step` (the five p
 - Ribs: {rib_line}
 - Seam flanges: on the 4 quarter seams, {2 * A.seam_t:g} mm thick ({A.seam_t:g} per quarter), {A.seam_h:g} mm tall, {top_txt}.
   They stay full height for the M4 heads and nuts, and drop only where the wall bends tighter than the flange
-  height.{end_txt} The whole top line is smoothed ({TOP_SMOOTH:g} mm Gaussian); that only shows near the roll, where the
+  height.{end_txt} The whole top line is smoothed ({TOP_SMOOTH:g} mm Gaussian); that only shows {'near the roll, ' if si['rollback'] else ''}where the
   wall bends tight. They act as the center rib of each wide wall and the rib of each side wall.
   {n_b} bolt holes ({A.bolt_d} mm, M4) and {n_d} dowel holes ({A.dowel_d} mm) per seam.
 - Throat fins: on T at 0/90/180/270 deg, from the driver flange face (z = {fb:g}) to the split (z = {A.split_z:g}).
@@ -1502,7 +1542,7 @@ holes, such as the N314T.
   centroids of part_Q1.stl lie within {ck['stl_centroid_dev_Q1_max_mm']:.3f} mm of the Q1 solid.
 - Inner surface ({ck['inner_points']} points{', including the rollback' if si['rollback'] else ''}): every BEM profile point in the
   horizontal and vertical symmetry planes (both sides), and the STEP's own inner surface every 1 mm in radial planes
-  every {ck.get('check_step_deg', CHECK_STEP_DEG):g} deg{' (draft: sparse; BEM profiles every %d points)' % DRAFT['bem_every'] if ck.get('draft') else ''}. Max distance {ck['inner_max_dev_mm']:.4f} mm; {ck['inner_failures']} points over 0.2 mm;
+  every {ck.get('check_step_deg', CHECK_STEP_DEG):g} deg{' (draft: 6 planes; distances at every third BEM point, the air-side test at all of them)' if ck.get('draft') else ''}. Max distance {ck['inner_max_dev_mm']:.4f} mm; {ck['inner_failures']} points over 0.2 mm;
   {ck['air_intrusion_points']} cut points more than 0.2 mm on the air side. Between those planes the surface is not sampled.
 - Build volume: """ + ("every part fits (see table)." if all(P[p]["fit"] for p in PARTS) else "SOME PARTS DO NOT FIT.") + "\n"
     open(f"{A.out}/{README_NAME}", "w").write(txt)
@@ -1541,6 +1581,8 @@ def main(argv):
         if not A.out.endswith("-draft"):
             A.out += "-draft"
         A.stl_tol, A.stl_ang = max(A.stl_tol, DRAFT["stl_tol"]), max(A.stl_ang, DRAFT["stl_ang"])
+    elif A.out.endswith("-draft") or os.path.exists(f"{A.out}/_work/{DRAFT_MARK}"):
+        fail(f"{A.out} is a draft folder; write a full build to another --out")
     WORK = f"{A.out}/_work"
     st = A.stage
     if st == "all":
@@ -1548,6 +1590,8 @@ def main(argv):
     design()
     resolve_defaults()
     os.makedirs(WORK, exist_ok=True)
+    if A.draft:
+        open(f"{WORK}/{DRAFT_MARK}", "w").write("built with --draft; not for printing\n")
     {"wall": stage_wall, "export": stage_export, "check": stage_check, "render": stage_render,
      "readme": stage_readme}.get(st, lambda: None)()
     if st == "body":

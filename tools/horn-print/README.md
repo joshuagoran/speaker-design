@@ -20,7 +20,13 @@ This tool is separate from the web app. It is not part of the build, the tests o
   flange comes down to the wall instead of ending square, so it dies into the lip: along a straight 40 mm ramp
   with blended ends (`--seam-end taper`, the default), or a convex quarter curve over its last 15 mm
   (`--seam-end round`). `--seam-end-l` sets the length; 0 gives a square end. The bolt and dowel holes stay where the flange is full
-  height. The seams are meant to be glued (see below).
+  height: a seam bolt needs 2 x 4.5 mm (an M4 washer) plus `--seam-t` (the top round) of flange above the wall,
+  so `--seam-h` must be at least 12 mm at the default `--seam-t`. Each hole sits midway between the wall and the
+  start of the top round. The `--bolt-f` and `--dowel-f` fractions count along the usable part of the flange
+  (from the quarter's end to the last spot tall enough for a bolt; a tight roll caps the flange lower). Holes
+  stay in order along the seam; one that has to move more than 10 mm from its
+  fraction gets a note in `PRINT_README.md`, and the script stops if a hole finds no room. The end may take at most
+  half of a quarter's seam flange. The seams are meant to be glued (see below).
 - Throat fins on part T, on the seam planes. Each fin runs from the driver flange's front face to the T / quarter
   split. It has the seam flange's thickness and top line, so fin and flange read as one spine. An R8 round
   (`--fin-root-r`) joins each fin to the flange face. The script stops if a fin would hit a driver bolt hole.
@@ -89,7 +95,7 @@ writes the previews and `PRINT_README.md`, then exits with status 1.
 | `--seam-t`, `--seam-h`                 | 3, 15                          | Seam flange and fin thickness per quarter, and height         |
 | `--fin-root-r`                         | 8                              | Round where a throat fin meets the driver flange face         |
 | `--seam-end`, `--seam-end-l`           | `taper`, 40 (15 for `round`)   | Seam flange mouth end: `taper` or `round`, and its length     |
-| `--bolt-f`, `--dowel-f`                | `0.2,0.55,0.85`, `0.37,0.72`   | Hole positions as fractions of the seam length                |
+| `--bolt-f`, `--dowel-f`                | `0.2,0.55,0.85`, `0.37,0.72`   | Hole positions as fractions of the usable seam length         |
 | `--split-z`, `--joint-l`               | 55, 12                         | T to quarter split, and lap length                            |
 | `--feet`                               | `none`                         | `center`, `pair` or `none`                                    |
 | `--foot-x`                             | 120                            | Pair only: feet at plus and minus this x                      |
@@ -101,14 +107,16 @@ writes the previews and `PRINT_README.md`, then exits with status 1.
 ## Draft builds
 
 Add `--draft` to try a change quickly. A draft of the R-OSSE takes about 1.5 minutes instead of 3.5. It writes to
-`<out>-draft`, so it never overwrites print files, and it says DRAFT at the top of `PRINT_README.md` and in the
-`CHECK` line. A draft:
+`<out>-draft` and leaves a marker in its `_work` folder. A full build refuses an `--out` that ends in `-draft` or
+holds that marker, so draft and print files never share a folder. A draft says DRAFT at the top of
+`PRINT_README.md` and in the `CHECK` line. A draft:
 
 - writes coarse STLs (0.3 mm chord, 0.5 rad);
 - skips the top round on the fins and seam flanges (square tops);
-- checks the inner surface sparsely: every third BEM profile point and radial planes every 45 degrees. It still
-  fails on any material on the air side;
-- renders one low-resolution preview;
+- checks the inner surface in 6 planes instead of 22: the 2 symmetry planes and 4 radial planes at 45 degrees
+  between them. The distance test uses every third BEM profile point; the air-side test uses every point. The
+  surface between those planes is not sampled;
+- renders one low-resolution preview and deletes any other `preview_*.png` in its folder;
 - runs the body stages in one process, and the quarters with the quarter ring.
 
 It keeps the solid, watertight, bed-fit, seam and fin checks. Rebuild without `--draft` before you print.
