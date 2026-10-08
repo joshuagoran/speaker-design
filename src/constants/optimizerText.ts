@@ -33,6 +33,9 @@ export const CARD_LABELS = {
   nearMiss: "Closest",
 } as const;
 
+/** How the near miss names the closest design when it is your own design as it is ("Closest: your design (…)"). */
+export const NEAR_MISS_YOURS = "your design";
+
 /** The sentence under a card both optimizers word the same way. */
 export const CARD_WHY = {
   closest: "Passes the checks; closest to your goal.",

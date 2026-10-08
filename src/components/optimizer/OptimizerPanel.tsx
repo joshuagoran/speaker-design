@@ -3,7 +3,7 @@ import { Card } from "../ui/Card";
 import { SectionHeading } from "../ui/SectionHeading";
 import { NumberField } from "../ui/NumberField";
 import { Notice } from "../ui/Notice";
-import { formatDollars } from "../../lib/format";
+import { nearMissClosestText } from "../../lib/pa/nearMiss";
 import { toggled } from "../../lib/lists";
 import { OptimizerResultCard } from "./OptimizerResultCard";
 import { GoalPicker } from "./GoalPicker";
@@ -234,9 +234,7 @@ export function OptimizerPanel({
               {OPTIMIZER_PANEL_TEXT.noFit}
             </h3>
             <div className="text-xs text-orange-900 mt-1">
-              {res.nearMiss.closest
-                ? `Closest: ${res.nearMiss.closest.names.sub}, ${res.nearMiss.closest.metrics.heaviest.toFixed(0)} lb, ${formatDollars(res.nearMiss.closest.metrics.price)} per stack, ${res.nearMiss.closest.metrics.out.toFixed(1)} dB ${PA_OUTPUT_NAME}. `
-                : ""}
+              {nearMissClosestText(res.nearMiss)}
               Blocked by: {res.nearMiss.blocking.join("; ")}.
             </div>
             {res.nearMiss.options.length > 0 && (

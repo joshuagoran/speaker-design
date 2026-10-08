@@ -576,6 +576,16 @@ export const OPTIMIZED_FIELDS: readonly PaOptimizedField[] = [
 export const pickOptimizedFields = (c: PaDesignConfig) =>
   // boundary cast: Object.fromEntries types its result as an index signature; these are exactly the optimized fields
   Object.fromEntries(OPTIMIZED_FIELDS.map((k) => [k, c[k]])) as PaOptimizedFields;
+/** A field's value to compare: a box's or a vent's sizes in key order, so two built in another order still match. */
+const fieldKey = (x: unknown) =>
+  JSON.stringify(
+    x !== null && typeof x === "object"
+      ? Object.entries(x).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      : x,
+  );
+/** Whether a design is the other on every field the search sets (the rest a card never changes). */
+export const sameOptimizedFields = (a: PaDesignConfig, b: PaDesignConfig) =>
+  OPTIMIZED_FIELDS.every((k) => fieldKey(a[k]) === fieldKey(b[k]));
 
 // Progress: the screen's grid points one by one make the first half of the bar; the steps after it share the second half
 // by their rough share of the work (the boxes for the seeds, the mid designs, the combine step, the finalists).
@@ -1789,6 +1799,7 @@ export function optimizePaStack(
             cl,
           )
         : null,
+      closestIsYours: !!closest && sameOptimizedFields(closest.c, cur),
       blocking: closest
         ? designProblems(closest.m, lim).length
           ? designProblems(closest.m, lim)

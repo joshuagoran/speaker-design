@@ -9,9 +9,12 @@ import {
   optimizePaStack,
   roomRequiredSpl,
   PA_OUTPUT_NAME,
+  sameOptimizedFields,
   ventSizesFor,
 } from "../src/lib/pa/optimize";
 import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
+import { nearMissClosestText } from "../src/lib/pa/nearMiss";
+import { CARD_LABELS, NEAR_MISS_YOURS } from "../src/constants/optimizerText";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { derivePaDesign } from "../src/pages/pa-stack/hooks/paDesign";
 import { subBassLevel } from "../src/lib/pa/calc";
@@ -179,6 +182,27 @@ test("a design short of the room's need: the near miss names the metric and is n
     near.blocking.some((b) => b.includes(PA_OUTPUT_NAME)),
     `names the metric: ${near.blocking.join("; ")}`,
   );
+  // nothing that passes gets closer than your design itself: the banner names it as yours
+  assert.ok(near.closestIsYours, "the closest design is yours");
+  const line = nearMissClosestText(near);
+  assert.ok(
+    line.startsWith(`${CARD_LABELS.nearMiss}: ${NEAR_MISS_YOURS} (`),
+    `the banner says it is your design: ${line}`,
+  );
+  // another design is named by its parts only
+  const other = nearMissClosestText({ ...near, closestIsYours: false });
+  assert.ok(!other.includes(NEAR_MISS_YOURS), other);
+  assert.ok(other.startsWith(`${CARD_LABELS.nearMiss}: ${near.closest.names.sub}, `), other);
+});
+
+test("a near miss whose closest design differs from yours doesn't call it yours", () => {
+  // a weight limit your design fails: the closest is a lighter design
+  const out = optimizePaStack({ ...owner, maxLb: 60 });
+  const near = out.nearMiss;
+  assert.ok(near && near.closest, "a closest design");
+  assert.ok(!sameOptimizedFields(near.closest.config, fireplace), "another design");
+  assert.equal(near.closestIsYours, false);
+  assert.ok(!nearMissClosestText(near).includes(NEAR_MISS_YOURS));
 });
 
 test("a card's sub-bass 30–50 Hz is the planner's tile: at the vent's own air-speed limit (flared tubes)", () => {

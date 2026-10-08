@@ -2321,6 +2321,8 @@ export interface PaNearMissOption {
 export interface PaNearMiss {
   options: PaNearMissOption[];
   closest: PaOptimizerCard | null;
+  /** the closest design is your design as it is (the banner says so) */
+  closestIsYours: boolean;
   blocking: string[];
 }
 
