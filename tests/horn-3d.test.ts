@@ -28,7 +28,7 @@ import { HORN_COLOR_CATALOG } from "../src/constants/hornColor";
 import { pickedHornColor, savedHornColor } from "../src/lib/pa/hornColor";
 import { HORN_MESHES } from "../src/data/meshes";
 import { DIY_OS90X50 } from "../src/data/catalog/horns";
-import { MM_IN, partMeshGeometry, partMeshMouth } from "../src/components/stack-view/geometry";
+import { MM_IN, partMeshGeometry, partMeshSilhouette } from "../src/components/stack-view/geometry";
 import type { PaLayout, PartMesh } from "../src/types";
 
 /** How close two faces count as touching, in (meshes are faceted, so a contact is never exact). */
@@ -299,10 +299,9 @@ describe("horns drawn from their CAD mesh", () => {
       }
     });
 
-  test("tower: the baffle hole follows the mouth's outline, so nothing behind the horn shows round it", () => {
-    /** How far inside and outside the mouth's outline the hole's edge is checked, in. */
+  test("tower: the baffle hole follows the horn's silhouette, so nothing behind the horn shows round it", () => {
+    /** How far inside and outside the silhouette the hole's edge is checked, in. */
     const MARGIN_IN = 0.1;
-    const OUTSIDE_IN = 0.25;
     /** The grid the see-through check casts rays on, in. */
     const STEP_IN = 0.4;
     /** The tower's walls and how far its baffle sits behind the frame's front (where the mouth is), in. */
@@ -338,21 +337,16 @@ describe("horns drawn from their CAD mesh", () => {
             `${horn.id}: seen through at (${x}, ${y})`,
           ).toBeGreaterThan(hornBox.min.z - CONTACT_IN);
         }
-      // just inside the mouth's outline the ray meets the horn in front of the baffle (the rim, or the flare just behind
-      // it), so the baffle covers none of the mouth; a little outside it, the baffle (set back by the inset), past the
-      // horn's outer wall, which stands up to about 3 mm proud of the rim
-      for (const p of partMeshMouth(mesh)) {
+      // just inside the silhouette the ray meets the horn (its rim, a rolled-back lip or its outer wall), so the baffle
+      // covers none of it; just outside it, the baffle, set back by the inset
+      for (const p of partMeshSilhouette(mesh)) {
         const r = p.length();
         const inside = p.clone().multiplyScalar(1 - MARGIN_IN / r);
-        const rim = firstHit(inside.x, inside.y);
-        expect(rim?.object.name, `${horn.id}: inside at ${inside.x}, ${inside.y}`).toBe(
-          HORN_MESH_NAME,
-        );
         expect(
-          rim?.point.z ?? -Infinity,
-          `${horn.id}: rim at ${inside.x}, ${inside.y}`,
-        ).toBeGreaterThan(hornBox.max.z - INSET_IN);
-        const outside = p.clone().multiplyScalar(1 + OUTSIDE_IN / r);
+          firstHit(inside.x, inside.y)?.object.name,
+          `${horn.id}: inside at ${inside.x}, ${inside.y}`,
+        ).toBe(HORN_MESH_NAME);
+        const outside = p.clone().multiplyScalar(1 + MARGIN_IN / r);
         if (Math.abs(outside.x) > halfInside) continue;
         const hit = firstHit(outside.x, outside.y);
         expect(hit?.object.name, `${horn.id}: outside at ${outside.x}, ${outside.y}`).not.toBe(

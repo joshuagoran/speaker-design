@@ -195,32 +195,41 @@ export function partMeshGeometry(m: PartMesh, { shading, place }: PartMeshDrawin
   return g;
 }
 
+// each horn mesh's silhouette built once
+const SILHOUETTES = new Map<PartMesh, THREE.Vector2[]>();
+/** How many directions round the axis a silhouette samples. */
+const SILHOUETTE_RAYS = 180;
 /**
- * A horn mesh's mouth outline, in inches round the model's origin (its axis): the convex hull of the vertices on the
- * mouth plane (z = max), the outside edge of the mouth's rim. Every point inside it is on the rim or in the mouth.
- * Counterclockwise.
+ * A horn mesh's silhouette seen from the front, in inches round the model's origin (its axis): along each of
+ * SILHOUETTE_RAYS directions, the farthest the mesh's triangles reach from the axis (the outside of the mouth's rim,
+ * or of a rolled-back lip, or of a wall that stands proud of the rim). It is the outline of the hole the horn fits
+ * through; every point inside it is in front of some part of the horn. Counterclockwise.
  */
-export function partMeshMouth(m: PartMesh): THREE.Vector2[] {
-  const zMouth = Math.round(m.max[2] / m.unitMm);
+export function partMeshSilhouette(m: PartMesh): THREE.Vector2[] {
+  const hit = SILHOUETTES.get(m);
+  if (hit) return hit;
   const k = m.unitMm * MM_IN;
-  const pts: THREE.Vector2[] = [];
-  for (let i = 0; i < m.positions.length; i += 3)
-    if (m.positions[i + 2] === zMouth)
-      pts.push(new THREE.Vector2(m.positions[i] * k, m.positions[i + 1] * k));
-  // Andrew's monotone chain
-  pts.sort((a, b) => a.x - b.x || a.y - b.y);
-  const cross = (o: THREE.Vector2, a: THREE.Vector2, b: THREE.Vector2) =>
-    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-  const half = (list: THREE.Vector2[]) => {
-    const out: THREE.Vector2[] = [];
-    for (const p of list) {
-      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], p) <= 0) out.pop();
-      out.push(p);
-    }
-    out.pop();
-    return out;
-  };
-  return [...half(pts), ...half([...pts].reverse())];
+  const out: THREE.Vector2[] = [];
+  for (let i = 0; i < SILHOUETTE_RAYS; i++) {
+    const a = (2 * Math.PI * i) / SILHOUETTE_RAYS;
+    const [dx, dy] = [Math.cos(a), Math.sin(a)];
+    let far = 0;
+    // the ray t (dx, dy) against each triangle edge p + s (q - p) in the xy plane
+    for (let t = 0; t < m.indices.length; t += 3)
+      for (let e = 0; e < 3; e++) {
+        const [p, q] = [m.indices[t + e], m.indices[t + ((e + 1) % 3)]];
+        const [px, py] = [m.positions[3 * p] * k, m.positions[3 * p + 1] * k];
+        const [ex, ey] = [m.positions[3 * q] * k - px, m.positions[3 * q + 1] * k - py];
+        const den = dx * ey - dy * ex;
+        if (Math.abs(den) < 1e-12) continue;
+        const s = (px * dy - py * dx) / den;
+        const along = (px * ey - py * ex) / den;
+        if (s >= 0 && s <= 1 && along > far) far = along;
+      }
+    out.push(new THREE.Vector2(dx * far, dy * far));
+  }
+  SILHOUETTES.set(m, out);
+  return out;
 }
 
 /** A closed polygon through `points`, offset to (centerX, centerY), as a THREE.Path. */
