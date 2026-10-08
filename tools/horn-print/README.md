@@ -15,9 +15,14 @@ This tool is separate from the web app. It is not part of the build, the tests o
   the roll is acoustic surface) or when the design has a mouth flange (the flange is kept as designed).
 - Ribs: radial ribs on the wide walls. By default they taper from 15 mm at the rear to 5 mm at the mouth, with a
   ramp at the rear end.
-- Seam flanges on the four quarter seams, with M4 bolt holes and 4 mm dowel holes. They stay full height so the
-  bolt heads and nuts fit.
-- Gussets from the driver flange to the wall, halfway between the driver bolts.
+- Seam flanges on the four quarter seams, 3 mm per quarter (6 mm per seam), with M4 bolt holes and 4 mm dowel
+  holes. They stay full height so the bolt heads and nuts fit. The seams are meant to be glued (see below).
+- Throat fins on part T, on the seam planes. Each fin runs from the driver flange's front face to the T / quarter
+  split. It has the seam flange's thickness and top line, so fin and flange read as one spine. An R8 round
+  (`--fin-root-r`) joins each fin to the flange face. The script stops if a fin would hit a driver bolt hole.
+- A full round on the top edges of the fins and seam flanges (radius half the thickness). The top line is smoothed
+  where the wall bends tight, so the round can follow it. If OCC cannot build the round, the script uses a chamfer
+  and says so in `PRINT_README.md`. Nothing is rounded on the inner surface.
 - Throat part T and quarters Q1 to Q4. A lap joint joins T to the quarters with no gap or step on the inner surface.
 - A mounting foot on the bottom: one center foot (default) or two feet. A design with a mouth flange gets no foot
   unless you ask for one.
@@ -76,7 +81,8 @@ writes the previews and `PRINT_README.md`, then exits with status 1.
 | `--rib-angles`                         | `60,120,240,300`                | Rib planes in degrees from +x                                 |
 | `--rib-t`, `--rib-h`, `--rib-h-end`    | 6, 15, 5                        | Rib thickness, rear height, mouth height                      |
 | `--rib-taper` / `--no-rib-taper`       | on                              | Taper the ribs toward the mouth                               |
-| `--seam-t`, `--seam-h`                 | 6, 15                           | Seam flange thickness per quarter, and height                 |
+| `--seam-t`, `--seam-h`                 | 3, 15                           | Seam flange and fin thickness per quarter, and height         |
+| `--fin-root-r`                         | 8                               | Round where a throat fin meets the driver flange face         |
 | `--bolt-f`, `--dowel-f`                | `0.2,0.55,0.85`, `0.37,0.72`    | Hole positions as fractions of the seam length                |
 | `--split-z`, `--joint-l`               | 55, 12                          | T to quarter split, and lap length                            |
 | `--feet`                               | `center` (`none` with a flange) | `center`, `pair` or `none`                                    |
@@ -93,10 +99,35 @@ In the `--out` folder:
 - `horn_parts_assembly.step`: the five parts in place.
 - `part_T`, `part_Q1` to `part_Q4`: `.step` and `.stl` (0.05 mm chord tolerance).
 - `preview_assembly.png`, `preview_exploded.png`, `preview_side.png`, `preview_sections.png`.
-- `PRINT_README.md`: part list, sizes, print orientation, masses in PETG and ASA, hardware and print notes.
+- `PRINT_README.md`: part list, sizes, print orientation, masses in PETG and ASA, hardware, assembly, the plywood
+  throat mount and print notes.
 - `_work/`: `wall.brep`, `b1.brep` to `b4.brep` and `body.brep` (the horn after each body stage), `T.brep`,
   `Qall.brep`, `Q1.brep` to `Q4.brep`, `<part>_coarse.stl` (coarse meshes for the previews), `step_info.json`
   (what the STEP contains), `body_info.json` (lip, foot and hole data) and `check.json` (check results).
+
+## Gluing the seams
+
+The thin seam flanges are meant to be glued with ASA slurry: ASA scraps dissolved in acetone. Brush it on both faces
+of each seam, then bolt the seam. The M4 bolts clamp it while the slurry cures. Work outdoors or with strong
+ventilation. Slurry bonds ASA and ABS only; for PETG, rely on the bolts or use epoxy.
+
+## Plywood throat mount
+
+`PRINT_README.md` sizes a 1/2 in (12 mm) birch ply mount from the model. The upright sits against the driver
+flange's front face, on a ply base screwed to the lid, with one gusset. It is written for a driver with 1/4-20
+tapped holes, such as the N314T.
+
+- Width: the flange diameter (130 mm for the R-OSSE).
+- Top edge: `--seam-t` + 1 mm below the horn axis (4 mm), so it clears the side fins.
+- Saddle: a half circle for the neck. Its radius is the neck's largest outer radius across the ply (z = 12 to 24 for
+  the R-OSSE) plus 1 mm, rounded up (R31).
+- Slot: twice `--seam-t` + 1 mm wide (7 mm), from the saddle down to the bottom fin's reach across the ply plus
+  1 mm, rounded up to 0.5 mm (r = 52 mm).
+- Holes: only the driver holes below the top edge (the bottom 2 of a 4-hole pattern), for 1/4-20 x 1-1/4 in bolts
+  through the ply and the horn flange. The top bolts are 1/4-20 x 3/4 in through the horn flange only.
+- Height: from the axis height above the lid, with the horn's lowest point on the lid.
+- Gusset: a 45 deg triangle at x = 0 on the mouth side. Its legs are the longest (in 5 mm steps) that stay 3 mm
+  below the bottom fin and seam flange, and below the slot. The base runs from the flange face to the gusset's end.
 
 ## Checks
 
@@ -120,6 +151,6 @@ The `check` stage writes `_work/check.json` and fails when any of these fail:
 - With a rollback, the foot sits just behind the roll end. The space under the roll belongs to the acoustic surface.
 - The quarters need supports under the outer wall, the lip or roll, the ribs and the foot. The inner surface faces
   up and needs none.
-- Thickening a wall adds an outer layer that stops 2 mm short of each seam plane. Small strip ribs on T and the seam
-  flanges on the quarters close that gap.
+- Thickening a wall adds an outer layer that stops 2 mm short of each seam plane. Small strip ribs and the throat
+  fins on T, and the seam flanges on the quarters, close that gap.
 - Fusing the features into a thickened B-spline wall is slow (up to about a minute per stage).
