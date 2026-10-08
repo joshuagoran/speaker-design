@@ -30,6 +30,7 @@ import type {
   PaDesignConfig,
   PlywoodSheetKind,
   PortMemory,
+  SavedHifiConfig,
   SubDriver,
 } from "../types";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
@@ -98,7 +99,6 @@ export const DEFAULT_PA = {
   hfTilt: 3,
   layout: "stack",
   hardware: DEFAULT_HARDWARE,
-  cutaway: false,
   hornMount: HORN_MOUNT_DEFAULT,
   baffleColor: "#4a5d4e",
   cabFinish: "birch",
@@ -148,6 +148,15 @@ export const DEFAULT_HIFI = {
   roundoverIn: 0,
   tweeterOffsetIn: 0,
 } satisfies HifiDesignState;
+
+/**
+ * The Hi-fi speaker's look in the 3D view: the PA stack's cabinet finish and baffle paint (the two pages share the
+ * pickers and the finishes; each design keeps its own choice). Designs saved before the look load with these.
+ */
+export const DEFAULT_HIFI_LOOK = {
+  cabFinish: DEFAULT_PA.cabFinish,
+  baffleColor: DEFAULT_PA.baffleColor,
+} satisfies Required<Pick<SavedHifiConfig, "cabFinish" | "baffleColor">>;
 
 /** The Fills page's starting design. */
 export const DEFAULT_FILL = {

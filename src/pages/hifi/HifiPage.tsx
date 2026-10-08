@@ -13,6 +13,7 @@ import {
   HIFI_TWEETERS_BY_TYPE,
 } from "./hifiDriverLists";
 import { HifiResultCard } from "./HifiResultCard";
+import { hifiSceneProps } from "./hifiSceneProps";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { DispersionPlaneToggle } from "../../components/ui/DispersionPlaneToggle";
@@ -29,7 +30,9 @@ import { DetailsDropdown } from "../../components/ui/DetailsDropdown";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { DispersionMap } from "../../components/charts/DispersionMap";
 import { RoomView } from "../../components/drawings/RoomView";
-import { HifiFront } from "../../components/drawings/HifiFront";
+import { HifiView3D } from "../../components/stack-view/HifiView3D";
+import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
+import { BaffleColorPicker, CabinetFinishPicker } from "../../components/ui/FinishPickers";
 import { OptimizerBar } from "../../components/optimizer/OptimizerBar";
 import { HIFI_OPTIMIZER_PANEL, optimizerPanelNote } from "../../constants/optimizerPanels";
 import { GoalPicker } from "../../components/optimizer/GoalPicker";
@@ -38,7 +41,7 @@ import { RunRow } from "../../components/optimizer/RunRow";
 import { ResultCards } from "../../components/optimizer/ResultCards";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
-import { passiveRadiatorMassMax } from "../../lib/data";
+import { cabinetFinishName, passiveRadiatorMassMax } from "../../lib/data";
 import {
   SPEAKER_PLACEMENTS as HIFI_PLACES,
   hifiPanelResonances,
@@ -161,6 +164,10 @@ export function HifiPage({ hifi }: Props) {
     setRoundoverIn,
     tweeterOffsetIn,
     setTweeterOffsetIn,
+    cabinetFinish,
+    setCabinetFinish,
+    baffleColor,
+    setBaffleColor,
     speakerConfig,
     isOptimizerOn,
     optimizerGoals,
@@ -245,6 +252,7 @@ export function HifiPage({ hifi }: Props) {
       PORT_CHOICES.find(isPortChoiceOn)?.[3].toLowerCase(),
       `${PANEL_NOMINAL_NAMES[wallPanel].short} ${MATERIAL_CHOICES.find(([v]) => v === panelMaterial)?.[1]}`,
       edgesText,
+      cabinetFinishName(cabinetFinish),
     ]
       .filter(Boolean)
       .join(", "),
@@ -400,22 +408,21 @@ export function HifiPage({ hifi }: Props) {
           <div className="min-w-0 flex flex-col gap-8">
             <div ref={resultsGrid} className={resultsGridClass(wide)}>
               <div className={cell("col-start-1 row-start-1")}>
-                <div className={`${RESULT_MAX_WIDTH} flex gap-4 items-center`}>
-                  <div className="shrink-0">
-                    <HifiFront
-                      dim={boxDims}
-                      w={woofer}
-                      t={tweeterWithWaveguide}
-                      lay={speakerSystem.lay}
-                      vented={speakerSystem.kind === "vented"}
-                      port={portSpec}
-                      pr={speakerSystem.kind === "radiator" ? radiator : null}
-                      guide={waveguideSpec}
-                      roundoverIn={roundoverIn}
-                      tweeterOffsetIn={tweeterOffsetUsed}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+                <div className={`${RESULT_MAX_WIDTH} flex flex-col gap-4`}>
+                  <Viewer3DCard boxClassName="relative h-[280px] md:h-[clamp(300px,46vh,480px)]">
+                    {(cutaway) => (
+                      <HifiView3D
+                        {...hifiSceneProps(
+                          hifi,
+                          hifi,
+                          speakerSystem,
+                          { cabFinish: cabinetFinish, baffleColor },
+                          cutaway,
+                        )}
+                      />
+                    )}
+                  </Viewer3DCard>
+                  <div className="min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
                     {tile(STATS.netVolume, speakerSystem.net.toFixed(1), "L")}
                     {speakerSystem.kind === "sealed"
                       ? tile(STATS.qtc, speakerSystem.Qtc.toFixed(2), "")
@@ -839,6 +846,8 @@ export function HifiPage({ hifi }: Props) {
                   )}
                 </div>
               </Card>
+              <CabinetFinishPicker value={cabinetFinish} onChange={setCabinetFinish} />
+              <BaffleColorPicker value={baffleColor} onChange={setBaffleColor} />
             </>,
           )}
           {section(

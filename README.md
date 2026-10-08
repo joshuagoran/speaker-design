@@ -135,8 +135,7 @@ collection `configs`, one document per configuration:
   "tilt": 6, // dB less the mid band needs than the sub band (music balance)
   "hfAmpW": 100, // amp power per HF channel, rated into 8 Ω
   "hfTilt": 6, // dB less the HF band needs than the mid band
-  "layout": "stack",
-  "cutaway": false,
+  "layout": "stack", // older saves may also hold "cutaway": the 3D view's toggle now, not saved; it is ignored
   "baffleColor": "#e8b4a8",
   "summary": "Eminence NSW4018-8 · 28×32×24″ · 80 in² · 32.6 Hz",
 }
@@ -164,10 +163,12 @@ configurations and can be edited or deleted like any other.
   - `subSystem` (vent geometry, gross/net volume incl. internal wood from the cutlist parts, model, limits), `subLimits`, `maxCurve`, `hornResponse`, `pistonBeam`, `keeleF`, weights, cutlist (`boxParts`, `cutParts`, `packSheets`).
 - Horn — datasheet model, not T/S: `cd.hf` (sensitivity and its reference, AES power and the crossover it was rated at, minimum crossover, impedance) and `horn.hf` (coverage, minimum crossover, loading limit `lowHz`). Output is sensitivity + 10 log P through the crossover's highpass (LR24 or LR48) and a 12 dB/oct rolloff below `lowHz`; power is capped at 2 × AES, derated 6 dB per octave below the AES rating's crossover.
 - Tests (`tests/`) check each function against an independent reference; `tests/golden.json` snapshots the key outputs of the saved and synthetic configs (regenerate with `vp run golden` after an intentional change; `golden.test.ts` only reads it, and the writer, `tests/update-golden.ts`, is a separate run because rewriting `golden.json` inside the full suite would race `tests/optimize.test.ts`, which reads it in a parallel worker). CI runs them before every deploy, plus `tests/mobile-check.mjs` (Playwright: no sideways scroll, 40 px touch targets, chip text not squeezed, at phone and tablet widths). See `docs/testing-plan.md` and `docs/calc-audit.md`.
-- `StackView` — the three.js scene. Takes `sub` (whose `.box` carries the
-  dimensions) and `portGeom` (explicit vent geometry), so the drawn box always
-  matches the modeled one. Its `useEffect` rebuilds the whole scene; the
-  dependency array must include anything that changes the geometry.
+- `src/components/stack-view/` — the three.js scenes. `SceneView3D` is the viewer (renderer, camera, drag and pinch,
+  themed stage, framing); `StackView3D` shows the PA stack (`buildStackScene`) and `HifiView3D` one Hi-fi speaker
+  (`buildHifiScene`, from the numbers the Hi-fi model and its 2D drawing use, `lib/hifi/boxLayout`). Both sit in
+  `Viewer3DCard`, whose cutaway and full-screen buttons are view state, never saved. The PA scene takes `sub` (whose
+  `.box` carries the dimensions) and `portGeom` (explicit vent geometry), so the drawn box always matches the modeled
+  one; a scene rebuilds when the JSON of its props changes.
 - `ResponseChart` — max-SPL curves (sub through its lowpass, mid-bass through
   its crossovers), fixed 80–135 dB so configurations compare directly.
 - `StackPlanner` — state and layout. Every cabinet is custom: `cDim` and `cVent`

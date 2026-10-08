@@ -15,8 +15,6 @@ import { defaultBraceStyle } from "../../../lib/bracing";
 
 export interface CabinetStyle {
   plinthHeightIn: number;
-  cutaway: boolean;
-  setCutaway: Setter<boolean>;
   cabinet: Cabinet;
   layout: PaLayout;
   setLayout: Setter<PaLayout>;
@@ -52,7 +50,6 @@ export interface CabinetStyle {
 /** Cabinet construction and look: plywood, baffle inset, finish, layout and the fixed plinth. */
 export function useCabinetStyle(): CabinetStyle {
   const plinthHeightIn = 3; // fixed, matches the duct height
-  const [cutaway, setCutaway] = useState<boolean>(DEFAULT_PA.cutaway);
   const [layout, setLayout] = useState<PaLayout>(DEFAULT_PA.layout);
   const [wallPanel, setWallPanel] = useState<PanelNominal>(DEFAULT_PA.panel); // side/top/bottom/back ply
   const [braceStyle, setBraceStyle] = useState<BraceStyleId | undefined>(undefined);
@@ -65,8 +62,6 @@ export function useCabinetStyle(): CabinetStyle {
   const [hardware, setHardware] = useState<PaHardware>(DEFAULT_PA.hardware);
   return {
     plinthHeightIn,
-    cutaway,
-    setCutaway,
     cabinet: DEFAULT_PA.cabinet,
     layout,
     setLayout,

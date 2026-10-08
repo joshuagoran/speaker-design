@@ -64,6 +64,7 @@ function addThroatParts(
   lidY: number | null,
   mount: Pick<Dims3, "w" | "d">,
   hornMount: HornMountId | undefined,
+  backRoundover: number,
 ) {
   let cdFront = at.throatZ;
   if (horn.adapter) {
@@ -77,7 +78,7 @@ function addThroatParts(
     if (lidY !== null && takesBracket(horn.adapter)) buildBracket(ctx, horn.adapter, at, lidY);
   } else if (lidY !== null) {
     // the lid's flat top ends at the roundover on its back edge (boxes are centered on z = 0)
-    const lidBackZ = -mount.d / 2 + ROUNDOVER_IN;
+    const lidBackZ = -mount.d / 2 + backRoundover;
     const ply = hornMount === HORN_MOUNT_PLY ? plyMountFit(horn, cd, mount.w) : null;
     const plate = ply ? null : plateFit(horn, cd, mount.w);
     if (ply) buildPlyMount(ctx, ply, { cd, at, lidY, lidBackZ });
@@ -112,6 +113,7 @@ export function buildHorn(
     mount,
     tower,
     hornMount,
+    backRoundover = ROUNDOVER_IN,
   }: {
     horn: Horn;
     cd: Pick<CompressionDriver, "body" | "exit">;
@@ -121,6 +123,8 @@ export function buildHorn(
     tower?: { cy: number; width: number; sectionH: number };
     /** what holds a driver bolted straight to the horn on the lid; absent: the aluminum plate */
     hornMount?: HornMountId;
+    /** the roundover on the lid's back edge, where its flat top ends (default: the PA frame's `ROUNDOVER_IN`) */
+    backRoundover?: number;
   },
 ): { top: number; axes: HornAxis[] } {
   const { hornShell } = ctx.materials;
@@ -134,7 +138,7 @@ export function buildHorn(
     body.position.set(at.x, at.y, at.throatZ);
     body.name = HORN_MESH_NAME;
     ctx.group.add(body);
-    addThroatParts(ctx, horn, cd, at, tower ? null : hornY, mount, hornMount);
+    addThroatParts(ctx, horn, cd, at, tower ? null : hornY, mount, hornMount, backRoundover);
   }
   return { top: hornY + (tower ? tower.sectionH : HORN_LIFT_IN + hz.h), axes };
 }

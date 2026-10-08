@@ -959,7 +959,8 @@ export type HifiOptimizedFields = Pick<HifiCardConfig, HifiOptimizedField>;
  * What the Hi-fi page saves: the fields a card applies and the rest of the design and room. The JSON round trip drops
  * undefined fields, so `pr` is absent unless the box has radiators.
  */
-export interface SavedHifiConfig extends Omit<HifiCardConfig, "pr"> {
+export interface SavedHifiConfig
+  extends Omit<HifiCardConfig, "pr">, Pick<PaDesignConfig, "cabFinish" | "baffleColor"> {
   pr?: RadiatorSelection;
   /** the walls' nominal size; absent in configs saved before the sizes (their `wall` names it) */
   panel?: PanelNominal;
@@ -1152,7 +1153,6 @@ export interface PaDesignConfig {
   layout: PaLayout;
   /** each box's handles and their offsets (lib/pa/hardware); absent in older saves: the defaults (`DEFAULT_PA`) */
   hardware?: PaHardware;
-  cutaway?: boolean;
   baffleColor?: string;
   /** a paint color (hex) for the horn body over its catalog finish; absent: the finish (older saves have none) */
   hornColor?: string;

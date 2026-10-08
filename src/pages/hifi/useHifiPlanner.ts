@@ -1,5 +1,5 @@
 import { HIFI_TWEETERS, HIFI_WOOFERS, HORN_OPTIONS } from "../../lib/data";
-import { DEFAULT_HIFI, DEFAULT_PORT_SIZE } from "../../lib/defaults";
+import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PORT_SIZE } from "../../lib/defaults";
 import { portAfterToggle } from "../../lib/hifi/hifi";
 import { byId, byIdOrThrow } from "../../lib/tables";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
@@ -31,10 +31,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { useHifiCutlistOptions } from "../cutlist/useHifiCutlistOptions";
 import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
+import type { CabinetStyle } from "../pa-stack/hooks/useCabinetStyle";
 import { panelFor, panelIn, restoredPanel } from "../../lib/panel";
 
 /** Everything the Hi-fi page reads: the design state and its setters, the model derived from it, the optimizer, and saving. */
-export interface HifiPlanner extends HifiDesignState, HifiDesign, HifiOptimizer {
+export interface HifiPlanner
+  extends
+    HifiDesignState,
+    HifiDesign,
+    HifiOptimizer,
+    Pick<CabinetStyle, "cabinetFinish" | "setCabinetFinish" | "baffleColor" | "setBaffleColor"> {
   setWoofer: Setter<HifiWoofer>;
   setTweeter: Setter<HifiTweeter>;
   setSelectedWaveguide: Setter<HifiWaveguide>;
@@ -128,6 +134,9 @@ export function useHifiPlanner(): HifiPlanner {
   );
   const [roundoverIn, setRoundoverIn] = useState(DEFAULT_HIFI.roundoverIn);
   const [tweeterOffsetIn, setTweeterOffsetIn] = useState(DEFAULT_HIFI.tweeterOffsetIn);
+  // the 3D view's look (PA's pickers and finishes, this design's own choice); outside the model, so it isn't derived
+  const [cabinetFinish, setCabinetFinish] = useState<string>(DEFAULT_HIFI_LOOK.cabFinish);
+  const [baffleColor, setBaffleColor] = useState<string>(DEFAULT_HIFI_LOOK.baffleColor);
   const store = useConfigStore("hifiConfigs");
   const snapshot = (): HifiCardConfig => ({
     woofer: woofer.id,
@@ -160,6 +169,8 @@ export function useHifiPlanner(): HifiPlanner {
         standIn: standHeightIn,
         roundover: roundoverIn,
         tweeterOffset: tweeterOffsetIn,
+        cabFinish: cabinetFinish,
+        baffleColor,
         summary: `${woofer.name} + ${tweeter.name} · ${boxDims.w}×${boxDims.h}×${boxDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}`,
       }),
     );
@@ -310,6 +321,9 @@ export function useHifiPlanner(): HifiPlanner {
     // configs saved before these existed had sharp edges and a centered tweeter
     setRoundoverIn(c.roundover ?? DEFAULT_HIFI.roundoverIn);
     setTweeterOffsetIn(c.tweeterOffset ?? DEFAULT_HIFI.tweeterOffsetIn);
+    // and before the look: the defaults
+    setCabinetFinish(c.cabFinish || DEFAULT_HIFI_LOOK.cabFinish);
+    setBaffleColor(c.baffleColor || DEFAULT_HIFI_LOOK.baffleColor);
     optimizer.clearOptimizerResults();
   };
   return {
@@ -341,6 +355,10 @@ export function useHifiPlanner(): HifiPlanner {
     setDispersionPlane,
     setRoundoverIn,
     setTweeterOffsetIn,
+    cabinetFinish,
+    setCabinetFinish,
+    baffleColor,
+    setBaffleColor,
     waveguideChoices,
     store,
     cutlist,

@@ -3,6 +3,7 @@ import { CABINET_FINISHES, cabinetFinishOf } from "../../lib/data";
 import { hornBodyColor } from "../../lib/pa/hornColor";
 import { PARTS_3D } from "../../styles/palette";
 import type { Props } from "./buildStackScene";
+import type { Horn } from "../../types";
 
 /** What the builders share: the group they add to, the materials, and the cabinet construction. */
 export interface SceneContext {
@@ -53,8 +54,11 @@ export function createSceneContext({
   cutaway,
   horn,
   hornColor,
-}: Pick<Props, "baffleColor" | "cutaway" | "horn" | "hornColor"> &
-  Required<Pick<Props, "wall" | "inset" | "cabFinish">>): SceneContext {
+}: Pick<Props, "baffleColor" | "cutaway" | "hornColor"> &
+  Required<Pick<Props, "wall" | "inset" | "cabFinish">> & {
+    /** the horn whose body color the context holds: only its catalog finish is read */
+    horn: Pick<Horn, "finish">;
+  }): SceneContext {
   const finish = cabinetFinishOf(cabFinish);
   const wood = new THREE.MeshStandardMaterial({
     color: finish ? finish.color : new THREE.Color(cabFinish),

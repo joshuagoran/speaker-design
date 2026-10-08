@@ -341,7 +341,8 @@ export function passiveRadiatorTuning(drv: PassiveRadiator, n: number, addG: num
 }
 /**
  * The panel the radiators go on: the back, stacked, each needing its size plus a little frame margin. The fit check
- * below sizes them against it, the front view draws them dashed (behind), and the cutlist puts their cutouts on it.
+ * below sizes them against it, the front view draws them dashed (behind), the 3D view on it (lib/hifi/boxLayout places
+ * them for both), and the cutlist puts their cutouts on it.
  */
 export const RADIATOR_PANEL: RadiatorPanel = "back";
 export const passiveRadiatorShape = (drv: PassiveRadiator) =>

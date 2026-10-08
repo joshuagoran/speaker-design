@@ -125,8 +125,6 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
   } = useCrossovers();
   const {
     plinthHeightIn,
-    cutaway,
-    setCutaway,
     cabinet,
     layout,
     setLayout,
@@ -296,7 +294,6 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     hfAmpW: hornAmpWatts,
     layout,
     hardware,
-    cutaway,
     baffleColor,
     ...(hornColor ? { hornColor } : {}),
     hornMount,
@@ -349,7 +346,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     if (balance.midBelowSubDb !== null) setMidBelowSubDb(balance.midBelowSubDb);
     if (typeof c.hfAmpW === "number") setHornAmpWatts(c.hfAmpW);
     if (balance.hornBelowMidDb !== null) setHornBelowMidDb(balance.hornBelowMidDb);
-    if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
+    // a save from before the cutaway moved onto the 3D view holds `cutaway`: a view, not part of the design, so ignored
     if (c.layout) setLayout(c.layout);
     // each box's handles; a save from before them: the defaults
     setHardware(savedHardware(c.hardware));
@@ -421,8 +418,6 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     midHornCrossoverOrder,
     setMidHornCrossoverOrder,
     plinthHeightIn,
-    cutaway,
-    setCutaway,
     cabinet,
     layout,
     setLayout,

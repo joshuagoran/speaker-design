@@ -69,6 +69,7 @@ export function HifiResultCard({
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         <HifiFront
           dim={config.dim}
+          wall={config.wall}
           w={woofer}
           t={tweeter}
           lay={result.lay}

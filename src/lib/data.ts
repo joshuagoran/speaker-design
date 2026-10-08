@@ -113,6 +113,9 @@ const isFinishId = (value: string): value is FinishId => Object.hasOwn(CABINET_F
 export function cabinetFinishOf(value: string): CabinetFinish | undefined {
   return isFinishId(value) ? CABINET_FINISHES[value] : undefined;
 }
+/** A cabinet finish as the summaries name it: the named finish, or "painted" and the paint's hex color. */
+export const cabinetFinishName = (value: string) =>
+  cabinetFinishOf(value)?.name ?? `painted ${value}`;
 
 // Pickers list alphabetically.
 export const sortedByName = <T extends { name: string }>(arr: readonly T[]): T[] =>
