@@ -4,7 +4,7 @@
 // a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
 // class, tweeter type) is an error.
 // Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read, or says why
-// there is none (price null, as for a horn of your own design).
+// there is none (price null); an owner's estimate for a part no vendor sells says "Estimate" in `src`.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
 // Pure data: no logic, no derived fields (src/lib/data.ts derives and sorts).
 // Fields: id, name, lb, exit (throat, in), price $, src, size {w, h, d} in (mouth and depth), driver (suggested
@@ -183,8 +183,9 @@ export const DIY_OS90X50: Horn = {
   // lowest crossover 1 kHz (LR24) from the BEM's loading, −3 dB there; loading −6 dB at 790 Hz (hornlab cutoff 785 Hz)
   hf: { covH: 90, covV: 50, minXo: 1000, lowHz: 790 },
   exit: 1.4,
-  price: null,
-  src: "no vendor price: the owner's own design, self-printed",
+  // the owner's estimate: the 460 mm ATH print's price, not a vendor price
+  price: A460G2_14.price,
+  src: "Estimate: same as the 460 mm ATH printed horn (similar size and material); not a vendor price.",
   size: { w: 494 / 25.4, h: 319 / 25.4, d: 180 / 25.4 },
   driver:
     '1.4" exit, 4 × M6 or 1/4-20 on a 101.6 mm (4 in) circle at 45° (the Eminence N314T bolts straight on)',
