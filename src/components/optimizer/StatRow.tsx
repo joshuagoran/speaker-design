@@ -1,5 +1,6 @@
 import { Tooltip } from "../ui/Tooltip";
 import { SUB_BASS_BAND_HZ } from "../../lib/pa/calc";
+import { STAT_ROW_TEST_IDS } from "../../constants/statRowTestIds";
 
 /** A statistic with plain-language help: its label, and the tooltip shown on it. */
 export interface StatDef {
@@ -93,17 +94,25 @@ interface StatRowProps {
   tip?: string;
 }
 
-/** One statistic: name, value and note. */
+/**
+ * One statistic: name, value and note. The name keeps its width; the value and its note are right-aligned in the rest
+ * of the row, and a note too long for it wraps onto more lines there instead of running into the next column.
+ */
 export function StatRow({ k, v, note, tip }: StatRowProps) {
   return (
-    <div className="flex justify-between gap-4 border-b border-stone-300 py-1">
+    <div
+      className="flex justify-between gap-4 border-b border-stone-300 py-1"
+      data-testid={STAT_ROW_TEST_IDS.row}
+    >
       <span className="text-stone-500 shrink-0">
         <StatLabel k={k} extra={tip} />
       </span>
-      <span className="text-right min-w-0">
+      <span className="text-right min-w-0 break-words">
         <span className="font-medium tabular-nums">{v}</span>
         {note ? (
-          <span className="block text-xs text-stone-500 whitespace-nowrap">{note}</span>
+          <span className="block text-xs text-stone-500" data-testid={STAT_ROW_TEST_IDS.note}>
+            {note}
+          </span>
         ) : null}
       </span>
     </div>
