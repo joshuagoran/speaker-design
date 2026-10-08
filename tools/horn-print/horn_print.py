@@ -54,6 +54,10 @@ OPTS = [
     ("bolt_f", "0.2,0.55,0.85", str, None, "seam bolt positions, fractions of the seam flange length"),
     ("dowel_f", "0.37,0.72", str, None, "seam dowel positions, fractions of the seam flange length"),
     ("fin_root_r", 8.0, float, None, "radius of the round where a throat fin meets the driver flange face"),
+    ("seam_end", "taper", str, ("round", "taper"), "seam flange mouth end: taper (a straight ramp with blended "
+                                                    "ends) or round (a convex quarter curve)"),
+    ("seam_end_l", None, float, None, "length of the seam flange end along the wall; default 15 (round) or 40 "
+                                      "(taper); 0 for a square end"),
     ("split_z", 55.0, float, None, "T / quarter split: outer shoulder z"),
     ("joint_l", 12.0, float, None, "lap length; the inner seam is at split-z + joint-l"),
     ("joint_rad_clr", 0.10, float, None, "lap joint radial clearance"),
@@ -80,6 +84,7 @@ EST_WALLS, EST_LINE, EST_INFILL = 4, 0.45, 0.40   # print estimate: 4 wall loops
 SCREW_D, SCREW_CSK = 4.5, 9.0       # #8 wood screw, 90 deg countersink
 M6_D, M6_CB, M6_FLOOR = 6.6, 13.0, 3.0
 MIN_WALL = 3.0
+END_SINK = 0.5                 # a rounded seam flange end finishes this far inside the outer wall
 TOP_SMOOTH = 3.0               # Gaussian smoothing (mm) of the seam spine top line, so the round can follow it
 ROUND_EPS = 0.01               # OCC cannot fillet both top edges at exactly half the thickness
 FIN_HOLE_WALL = 1.0            # least material between a throat fin and a driver bolt hole under the ply
@@ -158,11 +163,15 @@ def parse(argv):
     for k in ("seam_t", "seam_h", "fin_root_r"):
         if getattr(a, k) <= 0:
             p.error(f"--{k.replace('_', '-')} must be more than 0")
+    if a.seam_end_l is not None and a.seam_end_l < 0:
+        p.error("--seam-end-l must be 0 or more")
     return a
 
 
 def resolve_defaults():
-    """Defaults that depend on the foot: foot size and fastener."""
+    """Defaults that depend on other options: seam end length, foot size and fastener."""
+    if A.seam_end_l is None:
+        A.seam_end_l = 15.0 if A.seam_end == "round" else 40.0
     if A.foot_w is None:
         A.foot_w = 120.0 if A.feet == "center" else 50.0
     if A.foot_fastener is None:
@@ -436,6 +445,23 @@ def smooth_line(p, sigma=TOP_SMOOTH):
     return np.c_[np.convolve(q[:, 0], k, "valid"), np.convolve(q[:, 1], k, "valid")]
 
 
+def ease_end(c, d1, wt):
+    """Mouth end of a seam flange: over the last --seam-end-l mm (along the inner surface) its height above the
+    outer wall comes down to END_SINK inside the wall at the end. round: a convex quarter ellipse, tangent to the
+    top line (a quarter circle when the length equals the flange height). taper: a straight ramp; the top-line
+    smoothing blends both of its ends."""
+    L = A.seam_end_l
+    if L <= 0:
+        return d1
+    s = np.r_[0, np.cumsum(np.hypot(*np.diff(c, axis=0).T))]
+    t = (s - (s[-1] - L)) / L
+    m = t > 0
+    out = d1.copy()
+    f = np.sqrt(np.clip(1 - t[m] ** 2, 0, 1)) if A.seam_end == "round" else 1 - t[m]
+    out[m] = wt - END_SINK + (d1[m] - wt + END_SINK) * f
+    return out
+
+
 def arc_pts(ctr, p0, p1, n=16):
     """Counterclockwise arc around ctr from p0 to p1, ending exactly on both points."""
     a0, a1 = math.atan2(p0[1] - ctr[1], p0[0] - ctr[0]), math.atan2(p1[1] - ctr[1], p1[0] - ctr[0])
@@ -686,7 +712,7 @@ def build_features(inner, lipf):
     for th in seams:
         c = curves[th]
         n = normals(c)
-        d1 = limit_offset(np.full(len(c), wt + A.seam_h), c, n)
+        d1 = ease_end(c, limit_offset(np.full(len(c), wt + A.seam_h), c, n), wt)
         top = smooth_line(c + d1[:, None] * n)
         sg, foot_pt, tan_pt = spine_profile(c, n, top, d_in, fb)
         if segs_cross(sg[2], c):
@@ -1281,6 +1307,10 @@ def stage_readme():
     top_txt = (kind_txt[next(iter(by_kind))] if len(by_kind) == 1 else
                "; ".join(f"{kind_txt[k]} at {'/'.join(v)} deg" for k, v in by_kind.items()))
     wc = fin.get("washer_clear")
+    end_txt = (f" At the {'roll end' if si['rollback'] else 'lip'} each flange comes down to the wall over its last "
+               f"{A.seam_end_l:g} mm ({'a convex quarter curve' if A.seam_end == 'round' else 'a straight ramp with blended ends'}"
+               f", under the same top edge), so it dies into the {'roll' if si['rollback'] else 'lip'}."
+               if A.seam_end_l > 0 else "")
     reach = {k: fin["foot_u"][f"{float(a)}"] for k, a in (("side", 0), ("tb", 90))}
     lip_txt = (("none added: the profile rolls back, and the outside of the roll is part of the acoustic surface. "
                 f"The roll is the stiff edge; the {'ribs and ' if ribs else ''}seam flanges follow the wall around under the roll "
@@ -1405,7 +1435,7 @@ Files: `horn_assembled.step` (one solid), `horn_parts_assembly.step` (the five p
 - Ribs: {rib_line}
 - Seam flanges: on the 4 quarter seams, {2 * A.seam_t:g} mm thick ({A.seam_t:g} per quarter), {A.seam_h:g} mm tall, {top_txt}.
   They stay full height for the M4 heads and nuts, and drop only where the wall bends tighter than the flange
-  height. The whole top line is smoothed ({TOP_SMOOTH:g} mm Gaussian); that only shows near the roll, where the
+  height.{end_txt} The whole top line is smoothed ({TOP_SMOOTH:g} mm Gaussian); that only shows near the roll, where the
   wall bends tight. They act as the center rib of each wide wall and the rib of each side wall.
   {n_b} bolt holes ({A.bolt_d} mm, M4) and {n_d} dowel holes ({A.dowel_d} mm) per seam.
 - Throat fins: on T at 0/90/180/270 deg, from the driver flange face (z = {fb:g}) to the split (z = {A.split_z:g}).

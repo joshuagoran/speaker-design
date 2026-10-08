@@ -16,7 +16,11 @@ This tool is separate from the web app. It is not part of the build, the tests o
 - Ribs: none by default; the seam flanges stiffen the walls. With `--rib-angles` (for example `60,120,240,300`)
   you get radial ribs that taper from 15 mm at the rear to 5 mm at the mouth, with a ramp at the rear end.
 - Seam flanges on the four quarter seams, 3 mm per quarter (6 mm per seam), with M4 bolt holes and 4 mm dowel
-  holes. They stay full height so the bolt heads and nuts fit. The seams are meant to be glued (see below).
+  holes. They stay full height so the bolt heads and nuts fit. At the mouth end (the lip, or the roll end) each
+  flange comes down to the wall instead of ending square, so it dies into the lip: along a straight 40 mm ramp
+  with blended ends (`--seam-end taper`, the default), or a convex quarter curve over its last 15 mm
+  (`--seam-end round`). `--seam-end-l` sets the length; 0 gives a square end. The bolt and dowel holes stay where the flange is full
+  height. The seams are meant to be glued (see below).
 - Throat fins on part T, on the seam planes. Each fin runs from the driver flange's front face to the T / quarter
   split. It has the seam flange's thickness and top line, so fin and flange read as one spine. An R8 round
   (`--fin-root-r`) joins each fin to the flange face. The script stops if a fin would hit a driver bolt hole.
@@ -84,6 +88,7 @@ writes the previews and `PRINT_README.md`, then exits with status 1.
 | `--rib-taper` / `--no-rib-taper`       | on                             | Taper the ribs toward the mouth                               |
 | `--seam-t`, `--seam-h`                 | 3, 15                          | Seam flange and fin thickness per quarter, and height         |
 | `--fin-root-r`                         | 8                              | Round where a throat fin meets the driver flange face         |
+| `--seam-end`, `--seam-end-l`           | `taper`, 40 (15 for `round`)   | Seam flange mouth end: `taper` or `round`, and its length     |
 | `--bolt-f`, `--dowel-f`                | `0.2,0.55,0.85`, `0.37,0.72`   | Hole positions as fractions of the seam length                |
 | `--split-z`, `--joint-l`               | 55, 12                         | T to quarter split, and lap length                            |
 | `--feet`                               | `none`                         | `center`, `pair` or `none`                                    |
