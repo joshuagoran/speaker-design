@@ -1,0 +1,60 @@
+name: No session links
+# CLAUDE.md, Commits and PRs: no claude.ai session links in PR bodies or commit messages.
+# .claude/settings.json turns them off in cloud sessions; this catches what still slips through.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions:
+  contents: read
+concurrency:
+  group: no-session-links-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  body:
+    # a fork's token can't edit the PR; the commit check below still runs
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}
+    steps:
+      # read the body fresh (a footer may land after the event); drop each line with a claude.ai/code link and a
+      # --- rule just before it. A clean body exits here, so the edit this makes doesn't loop.
+      - run: |
+          body=$(gh api "$PR" --jq '.body // ""')
+          case "$body" in *claude.ai/code*) ;; *) echo "No session links in the PR body."; exit 0 ;; esac
+          clean=$(printf '%s\n' "$body" | perl -ne '
+            if (m{claude\.ai/code}) {
+              my $i = $#out; $i-- while $i >= 0 && $out[$i] =~ /^\s*$/;
+              splice @out, $i if $i >= 0 && $out[$i] =~ /^\s*---\s*$/;
+              next;
+            }
+            push @out, $_;
+            END { pop @out while @out && $out[-1] =~ /^\s*$/; print @out }')
+          gh api -X PATCH "$PR" -f body="$clean" --silent
+          echo "Removed session links from the PR body."
+  commits:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}
+    steps:
+      # report, never rewrite: amend the listed commits by hand
+      - run: |
+          bad=$(gh api --paginate "$PR/commits" --jq '.[]
+            | select(.commit.message | test("Claude-Session:|claude\\.ai/code/session"))
+            | "\(.sha[0:7]) \(.commit.message | split("\n")[0])"')
+          if [ -n "$bad" ]; then
+            echo "::error::Commit messages carry a Claude session link; amend these commits:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "No session links in the commit messages."
