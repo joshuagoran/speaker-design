@@ -4,11 +4,14 @@
 // Fails on: horizontal page scroll, touch targets under 40 px, chip text squeezed under 120 px, page errors, and any
 // request outside the page: everything is bundled in, so the page must work with the network blocked. Also drags a
 // toe-in handle on the Coverage map (desktop, mid band) and fails if the map doesn't follow or the layout moves.
+// Detail rows (label / value / caption): a caption must stay inside its row, right of the label, at every width
+// checked here and on a desktop window.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
 import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs.ts";
 import { COVERAGE_LAYOUT_KEY, COVERAGE_TEST_IDS } from "../src/constants/coverageTestIds.ts";
+import { STAT_ROW_TEST_IDS } from "../src/constants/statRowTestIds.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const page = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -33,7 +36,7 @@ const views = ["", "#coverage", "#cutlist", "#fills", "#hifi", "#hifi-cutlist", 
 const failures = [];
 
 // Everything the check measures, evaluated in the page.
-const measure = () => {
+const measure = (ids) => {
   const vis = (e) => {
     const r = e.getBoundingClientRect();
     return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== "hidden";
@@ -56,7 +59,33 @@ const measure = () => {
       (e) =>
         `"${e.previousElementSibling.textContent.slice(0, 40)}" ${Math.round(e.getBoundingClientRect().width)}px`,
     );
-  return { sw: document.documentElement.scrollWidth, iw: innerWidth, small, squeezed };
+  // detail-row captions: the text itself (not its box, which an overflowing line runs past) must end inside the row
+  // and start right of the label
+  const notes = [...document.querySelectorAll(`[data-testid="${ids.note}"]`)].filter(vis);
+  const captions = notes
+    .map((e) => {
+      const row = e.closest(`[data-testid="${ids.row}"]`);
+      const label = row?.firstElementChild;
+      if (!row || !label) return `"${e.textContent.slice(0, 40)}" outside a detail row`;
+      const range = document.createRange();
+      range.selectNodeContents(e);
+      const text = range.getBoundingClientRect();
+      const cell = row.getBoundingClientRect();
+      if (text.right > cell.right + 0.5)
+        return `"${e.textContent.slice(0, 40)}" ends ${Math.round(text.right - cell.right)}px past its cell`;
+      if (text.left < label.getBoundingClientRect().right - 0.5)
+        return `"${e.textContent.slice(0, 40)}" overlaps its label`;
+      return null;
+    })
+    .filter(Boolean);
+  return {
+    sw: document.documentElement.scrollWidth,
+    iw: innerWidth,
+    small,
+    squeezed,
+    notes: notes.length,
+    captions,
+  };
 };
 
 for (const size of sizes) {
@@ -92,11 +121,13 @@ for (const size of sizes) {
     continue;
   }
   const check = async (label) => {
-    const m = await p.evaluate(measure);
+    const m = await p.evaluate(measure, STAT_ROW_TEST_IDS);
     if (m.sw > m.iw)
       failures.push(`${size.name} ${label}: page scrolls sideways (${m.sw} > ${m.iw} px)`);
     for (const s of m.small) failures.push(`${size.name} ${label}: small touch target ${s}`);
     for (const s of m.squeezed) failures.push(`${size.name} ${label}: chip text squeezed ${s}`);
+    for (const s of m.captions) failures.push(`${size.name} ${label}: detail caption ${s}`);
+    return m;
   };
   for (const v of views) {
     await p.evaluate((h) => {
@@ -114,7 +145,8 @@ for (const size of sizes) {
     const closed = p.locator("h2 button[aria-expanded=false]");
     for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().tap();
     await p.waitForTimeout(300);
-    await check("#planner, sections open");
+    const open = await check("#planner, sections open");
+    if (!open.notes) failures.push(`${size.name} #planner: no detail-row captions to check`);
     for (const tab of Object.values(PA_SETTINGS_TABS)) {
       await p.getByRole("tab", { name: tab }).tap();
       await p.waitForTimeout(300);
@@ -134,6 +166,31 @@ for (const size of sizes) {
     await check("#planner, optimizer results");
   }
   for (const e of errs) failures.push(`${size.name}: page error: ${e}`);
+  await ctx.close();
+}
+
+// Detail-row captions on desktop windows, every view (sections fold on phones only, so all are open here). At these
+// widths PA Design's results column puts its detail rows two to a line, so each row is at its narrowest.
+for (const width of [1024, 1600]) {
+  const name = `desktop ${width}`;
+  const ctx = await browser.newContext({ viewport: { width, height: 900 } });
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on("pageerror", (e) => errs.push(e.message));
+  await p.goto(page);
+  await p.waitForFunction(() => document.querySelector("nav a"), null, { timeout: 30000 });
+  let notes = 0;
+  for (const v of views) {
+    await p.evaluate((h) => {
+      location.hash = h;
+    }, v);
+    await p.waitForTimeout(600);
+    const m = await p.evaluate(measure, STAT_ROW_TEST_IDS);
+    notes += m.notes;
+    for (const s of m.captions) failures.push(`${name} ${v || "#planner"}: detail caption ${s}`);
+  }
+  if (!notes) failures.push(`${name}: no detail-row captions to check`);
+  for (const e of errs) failures.push(`${name}: page error: ${e}`);
   await ctx.close();
 }
 
@@ -211,4 +268,6 @@ if (failures.length) {
   console.error(`mobile check: ${failures.length} problem(s)\n  ` + failures.join("\n  "));
   process.exit(1);
 }
-console.log(`mobile check: ok (${sizes.map((s) => s.name).join(", ")}; ${views.length} views)`);
+console.log(
+  `mobile check: ok (${sizes.map((s) => s.name).join(", ")}, desktop 1024, desktop 1600; ${views.length} views)`,
+);
