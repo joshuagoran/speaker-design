@@ -24,7 +24,6 @@ import type {
   PaPlannerLocks,
   PaRunMode,
   PaSearchOverrides,
-  Setter,
 } from "../../../types";
 import { useState } from "react";
 import { UI_TEXT } from "../../../constants/uiText";
@@ -70,11 +69,15 @@ export interface PaOptimizer
   /** the grid Fully optimize searches for the design and locks as they are, one line per part; empty when the optimizer is off */
   fullGridLines: string[];
   toastMessage: string;
-  setToastMessage: Setter<string>;
+  /** closes the toast; its Undo goes with it, so the next load starts a new run of loads */
+  dismissToast: () => void;
   startOptimizerSearch: (over?: PaSearchOverrides, mode?: PaRunMode) => Promise<void>;
   /** runs again with these limits changed, in the mode that found the result shown (the near miss's options) */
   retryOptimizerSearch: (over: PaSearchOverrides) => Promise<void>;
-  /** loads a card; the design it replaces stays in memory for Undo and is never saved */
+  /**
+   * loads a card; the design from before the first of the cards loaded in a row stays in memory for Undo and is never
+   * saved
+   */
   loadOptimizerResult: (k: PaOptimizerCard) => void;
   saveOptimizerResult: (k: PaOptimizerCard) => Promise<void>;
   /** every option for a part in your design as it is (the rest unchanged), checked against the optimizer's limits */
@@ -169,13 +172,20 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     );
   };
   const retryOptimizerSearch = (over: PaSearchOverrides) => startOptimizerSearch(over, resultMode);
-  // the design it replaces isn't saved (it may not be worth keeping): Undo brings it back from memory
+  // the design it replaces isn't saved (it may not be worth keeping): Undo brings back, from memory, the design from
+  // before the first of the cards loaded in a row
   const loadOptimizerResult = (k: PaOptimizerCard) => {
     preview.loadOptimizerResult(k);
-    setToastMessage(`Loaded "${k.label}". Undo brings your previous design back.`);
+    setToastMessage(
+      `Loaded "${k.label}". Undo brings back your design from before the first load.`,
+    );
   };
   const undoOptimizerLoad = () => {
     preview.undoOptimizerLoad();
+    setToastMessage("");
+  };
+  const dismissToast = () => {
+    preview.forgetOptimizerUndo();
     setToastMessage("");
   };
   const saveOptimizerResult = async (k: PaOptimizerCard) => {
@@ -233,7 +243,7 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     designPreview: preview.designPreview,
     undoSnapshot: preview.undoSnapshot,
     toastMessage,
-    setToastMessage,
+    dismissToast,
     startOptimizerSearch,
     retryOptimizerSearch,
     previewOptimizerResult: preview.previewOptimizerResult,
