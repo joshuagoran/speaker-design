@@ -254,7 +254,8 @@ export interface Horn {
   rect?: boolean;
   /** the factory finish of a horn that ships painted; absent: drawn in the printed cream */
   finish?: HornFinish;
-  price: number;
+  /** US dollars; null when no vendor sells it (the optimizers then leave it out unless it is locked) */
+  price: number | null;
   src: string;
   /** the mouth's width and height and the body's depth (without the adapter), in */
   size: Dims3;
