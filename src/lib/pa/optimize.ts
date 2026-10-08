@@ -1444,10 +1444,9 @@ export function optimizePaStack(
     evals++;
     if (m) pool.push({ c: x.c, m, ch: changes(x.c) });
   }
-  // your design itself, so nothing the search names (the near miss's closest design) is ever behind it
-  const curEval = curM && evaluateDesign(cur, true);
-  evals++;
-  if (curEval) pool.push({ c: cur, m: curEval, ch: 0 });
+  // your design itself, for the near miss only (never a card: it can't beat itself), so the closest design it names is
+  // never behind yours
+  const own: PoolEntry[] = curM ? [{ c: cur, m: curM, ch: 0 }] : [];
   // a one-change tweak of the current design, evaluated as it is: in the optimizer's plywood, if yours is another
   if (curM)
     for (const w of walls)
@@ -1748,16 +1747,14 @@ export function optimizePaStack(
       const r = choose(x.L, x.t);
       return r && !r.fixMisses;
     });
-    // fewest problems, then the least short of the goals (your design is in the pool, so this is never behind it on the
+    // fewest problems, then the least short of the goals (your design is one of them, so this is never behind it on the
     // target's output), then the goal's own order
-    const nearest = pool
-      .slice()
-      .sort(
-        (a, b) =>
-          designProblems(a.m, lim).length - designProblems(b.m, lim).length ||
-          gapSum(metric(a)) - gapSum(metric(b)) ||
-          obj[goal](metric(a)) - obj[goal](metric(b)),
-      )[0];
+    const nearest = [...pool, ...own].sort(
+      (a, b) =>
+        designProblems(a.m, lim).length - designProblems(b.m, lim).length ||
+        gapSum(metric(a)) - gapSum(metric(b)) ||
+        obj[goal](metric(a)) - obj[goal](metric(b)),
+    )[0];
     const closest = nearest && ruled(onSliders(nearest, goal));
     // only when there is no closest design to name (the exact search's lightest box takes a long scan of the grid)
     const lightestLb = () =>
