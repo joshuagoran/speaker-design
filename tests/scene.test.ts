@@ -6,6 +6,11 @@ import { DEFAULT_PA } from "../src/lib/defaults";
 import { SCENE_CASE_NAMES, sceneCases, scenePropsOf } from "./scene-cases";
 import { VENT_MESH_NAME } from "../src/components/stack-view/buildBraces";
 import { modelTubeElbows, subTubeLegs, subTubeSpan } from "../src/lib/pa/tubes";
+import { HORN_MESHES } from "../src/data/meshes";
+import { HORN_OPTIONS } from "../src/lib/data";
+import { HORN_MESH_NAME } from "../src/components/stack-view/buildHorn";
+import { MM_IN } from "../src/components/stack-view/geometry";
+import type { PartMesh } from "../src/types";
 
 const byName = (name: string) => {
   const c = sceneCases.find((x) => x.name === name);
@@ -258,6 +263,42 @@ describe("stack scene", () => {
           derived.hornCenterHeightIn,
           6,
         );
+      }
+    }
+  });
+
+  test("a meshed horn's axis is where the planner says, even when its mesh is lopsided", () => {
+    const UP = 40; // grid steps the mouth reaches further up than down
+    for (const [id, mesh] of Object.entries(HORN_MESHES)) {
+      const horn = HORN_OPTIONS.find((h) => h.id === id);
+      if (!mesh || !horn) throw new Error(`no horn for the mesh ${id}`);
+      const lopsided: PartMesh = {
+        ...mesh,
+        max: [mesh.max[0], mesh.max[1] + UP * mesh.unitMm, mesh.max[2]],
+        positions: mesh.positions.map((v, i) => (i % 3 === 1 && v > 0 ? v + UP : v)),
+      };
+      const tall = { ...horn, size: { ...horn.size, h: horn.size.h + UP * mesh.unitMm * MM_IN } };
+      HORN_MESHES[id] = lopsided;
+      try {
+        for (const layout of ["stack", "pole", "satellite", "tower"] as const) {
+          const at = `${id} ${layout}`;
+          const p = { ...byName(SCENE_CASE_NAMES.defaultPa), horn: tall, layout };
+          const g = buildStackScene(p);
+          const derived = derivedHeights(p);
+          const [body] = g.children.filter(
+            (o): o is THREE.Mesh => o instanceof THREE.Mesh && o.name === HORN_MESH_NAME,
+          );
+          if (!body) throw new Error(`${at}: no horn`);
+          // the mesh's origin, the driver's axis, at the planner's horn center
+          expect(body.position.y, at).toBeCloseTo(derived.hornCenterHeightIn, 6);
+          if (layout === "tower") continue;
+          // and the horn's bottom on the lift above the mid box, its top the stack's top
+          const box = new THREE.Box3().setFromObject(body);
+          expect(box.max.y, at).toBeCloseTo(derived.stackHeightIn, 2);
+          expect(box.max.y - box.min.y, at).toBeCloseTo(tall.size.h, 2);
+        }
+      } finally {
+        HORN_MESHES[id] = mesh;
       }
     }
   });

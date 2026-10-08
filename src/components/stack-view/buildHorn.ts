@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { MM_IN, partMeshGeometry, rectangularHornGeometry, type PartMeshDrawing } from "./geometry";
+import { partMeshGeometry, rectangularHornGeometry, type PartMeshDrawing } from "./geometry";
 import { HORN_MESHES } from "../../data/meshes";
-import { HORN_LIFT_IN } from "./stackHeights";
+import { HORN_LIFT_IN, hornAxisUp } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import { buildBracket, buildClampedBracket, takesBracket } from "./buildBracket";
 import { cdBodySteps } from "../../lib/data";
@@ -111,9 +111,7 @@ export function buildHorn(
   // every horn's mouth plane on the box's front plane (the frame front, `mount.d / 2`), the throat `hz.d` behind it
   const throatZ = mount.d / 2 - hz.d;
   const model = HORN_MESHES[horn.id];
-  // the axis above the horn's bottom: half its height, or for a mesh how far its origin is above its lowest point
-  const axisUp = model ? -model.min[1] * MM_IN : hz.h / 2;
-  const cy = tower ? tower.cy : hornY + HORN_LIFT_IN + axisUp;
+  const cy = tower ? tower.cy : hornY + HORN_LIFT_IN + hornAxisUp(horn);
   const axes = xs.map((x) => ({ x, y: cy, throatZ }));
   for (const at of axes) {
     let body: THREE.Mesh;
