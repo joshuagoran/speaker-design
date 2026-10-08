@@ -18,6 +18,7 @@ import type {
   FinishId,
   HifiTweeter,
   HifiTweeterRaw,
+  HifiWaveguide,
   HifiWoofer,
   Horn,
   MidDriver,
@@ -29,6 +30,7 @@ import type {
   SubDriver,
   SubSize,
   ThieleSmall,
+  WaveguideSpec,
 } from "../types";
 import { CABINET_FINISHES } from "../data/catalog/finishes";
 import { CD_RAW } from "../data/catalog/compression-drivers";
@@ -158,6 +160,19 @@ export const ownGuideCfg = (
   t: HifiTweeter | null | undefined,
 ): (OwnGuide & { freestanding: boolean }) | null =>
   t && t.ownGuide ? { ...t.ownGuide, freestanding: false } : null;
+/**
+ * A picked waveguide (a horn with coverage specs) as the model's guide object: its coverage (V as H when unpublished),
+ * mouth, name and lowest crossover; a round one stands free on the box top, the full-width rectangle sits in the baffle.
+ */
+export const waveguideSpecOf = (h: HifiWaveguide): WaveguideSpec => ({
+  covH: h.hf.covH,
+  covV: h.hf.covV || h.hf.covH,
+  w: h.size.w,
+  h: h.size.h,
+  name: h.name,
+  freestanding: !h.rect,
+  minXo: h.hf.minXo,
+});
 export const passiveRadiatorMassMax = (p: PassiveRadiator): number =>
   Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
 

@@ -1,4 +1,9 @@
-import { HIFI_PASSIVES, passiveRadiatorMassMax, ownGuideCfg } from "../../lib/data";
+import {
+  HIFI_PASSIVES,
+  passiveRadiatorMassMax,
+  ownGuideCfg,
+  waveguideSpecOf,
+} from "../../lib/data";
 import { METERS_PER_FOOT } from "../../constants/units";
 import { byId } from "../../lib/tables";
 import {
@@ -44,14 +49,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     roundoverIn,
     tweeterOffsetIn,
   } = state;
-  const compressionWaveguide = {
-    covH: selectedWaveguide.hf.covH,
-    covV: selectedWaveguide.hf.covV || selectedWaveguide.hf.covH,
-    w: selectedWaveguide.size.w,
-    h: selectedWaveguide.size.h,
-    name: selectedWaveguide.name,
-    freestanding: !selectedWaveguide.rect,
-  };
+  const compressionWaveguide = waveguideSpecOf(selectedWaveguide);
   const waveguideSpec = tweeter.ownGuide
     ? ownGuideCfg(tweeter)
     : needsWaveguide(tweeter)

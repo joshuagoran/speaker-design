@@ -573,9 +573,33 @@ export const driversFitBaffle = (
 ) =>
   lay.wooferIn - w.size / 2 >=
   0.5 + (cfg.box === "vented" && cfg.port.shape === "slot" ? cfg.port.h + (cfg.wall || 0.75) : 0);
-/** The crossover sits below the tweeter's recommended minimum. */
-export const belowTweeterMinXo = (t: HifiTweeter, xo: number) =>
-  !!(t.hf && t.hf.minXo && xo < t.hf.minXo);
+/**
+ * The lowest crossover the tweeter may take on its waveguide: the higher of the tweeter's own minimum and the
+ * waveguide's (its loading), with the part that sets it; null when neither sets one.
+ */
+export function tweeterMinXo(
+  t: Pick<HifiTweeter, "name" | "hf">,
+  guide: HifiConfig["guide"],
+): { hz: number; part: "tweeter" | "waveguide"; name: string } | null {
+  const own = (t.hf && t.hf.minXo) || 0;
+  const guideHz = guide?.minXo || 0;
+  if (guide && guideHz > own) return { hz: guideHz, part: "waveguide", name: guide.name };
+  return own ? { hz: own, part: "tweeter", name: t.name } : null;
+}
+/** The minimum-crossover warning's title, by the part that sets the minimum. */
+export const MIN_XO_TITLE: Record<NonNullable<ReturnType<typeof tweeterMinXo>>["part"], string> = {
+  tweeter: "Below the tweeter's minimum crossover",
+  waveguide: "Below the waveguide's minimum crossover",
+};
+/** The crossover sits below the recommended minimum of the tweeter or of its waveguide. */
+export const belowTweeterMinXo = (
+  t: Pick<HifiTweeter, "name" | "hf">,
+  guide: HifiConfig["guide"],
+  xo: number,
+) => {
+  const min = tweeterMinXo(t, guide);
+  return !!min && xo < min.hz;
+};
 /** The crossover sits within an octave of the tweeter's resonance. */
 export const nearTweeterResonance = (t: HifiTweeter, xo: number) =>
   !!(t.hf && t.hf.fs && xo < 2 * t.hf.fs);
@@ -1208,11 +1232,12 @@ export function hifiChips(
       `The woofer is about ${Math.round(beam)}° wide at ${xo} Hz.`,
       "hifiDispersion",
     ]);
-  if (belowTweeterMinXo(t, xo))
+  const minXo = tweeterMinXo(t, cfg.guide);
+  if (minXo && xo < minXo.hz)
     F.push([
       "warn",
-      "Below the tweeter's minimum crossover",
-      `${xo} Hz, below the recommended ${hf.minXo} Hz.`,
+      MIN_XO_TITLE[minXo.part],
+      `${xo} Hz, below the ${minXo.hz} Hz recommended for the ${minXo.name}.`,
       "hifiTweeterMinXo",
     ]);
   if (nearTweeterResonance(t, xo))

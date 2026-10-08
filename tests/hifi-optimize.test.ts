@@ -10,7 +10,8 @@ import {
   slotFor,
 } from "../src/lib/hifi/optimize";
 import { hifiBox, hifiGridTop, hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
-import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
+import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, waveguideSpecOf } from "../src/lib/data";
+import { DIY_OS90X70 } from "../src/data/catalog/horns";
 import { chipOf } from "./helpers";
 import { HIFI_OPTIMIZER_PANEL } from "../src/constants/optimizerPanels";
 import { defaultPanelIn } from "../src/lib/panel";
@@ -115,6 +116,31 @@ for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
     }
   });
 }
+
+test("hi-fi optimizer: a compression driver on the DIY OS 90×70 never crosses below the waveguide's minimum", () => {
+  const minXo = DIY_OS90X70.hf.minXo;
+  if (minXo === null) throw new Error("the waveguide has no minimum crossover");
+  const de250 = HIFI_TWEETERS.find((o) => o.id === "de250");
+  if (!de250) throw new Error("no DE250");
+  const onGuide: HifiOptimizerCurrent = {
+    ...cur,
+    tweeter: de250.id,
+    xo: 2200,
+    guide: waveguideSpecOf(DIY_OS90X70),
+  };
+  for (const goal of ["cheaper", "louder", "lower"] satisfies HifiGoal[]) {
+    // the tweeter held, so every card is the DE250 on this waveguide
+    const out = optimizeHifiSpeaker({
+      ...base,
+      cur: onGuide,
+      goals: [goal],
+      locks: { tweeter: true },
+    });
+    assert.ok(out.cards.length >= 1, `${goal}: cards to check`);
+    for (const k of out.cards)
+      assert.ok(k.config.xo >= minXo, `${goal} ${k.label}: ${k.config.xo} Hz`);
+  }
+});
 
 test("hi-fi optimizer: locked woofer and exact box stay put", (t) => {
   const out = optimizeHifiSpeaker({
