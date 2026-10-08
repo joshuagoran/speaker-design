@@ -1352,9 +1352,10 @@ export function optimizePaStack(
           const topHf = Math.max(...fits.map((x) => x.out));
           const picks = new Set([
             fits.find((x) => x.out >= target - 0.5),
-            // and the cheapest with no warning of its own that keeps the target (a warning outweighs a price)
-            fits.find((x) => x.out >= target - 0.5 && x.hp.w === 0),
             fits.find((x) => x.out >= topHf - 1e-9),
+            // and of those, the cheapest with no warning of its own (a warning outweighs a price)
+            fits.find((x) => x.out >= target - 0.5 && x.hp.w === 0),
+            fits.find((x) => x.out >= topHf - 1e-9 && x.hp.w === 0),
             fits.find((x) => x.hp.same),
           ]);
           for (const x of picks) {
