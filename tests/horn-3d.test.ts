@@ -25,6 +25,9 @@ import {
 import { SCENE_CASE_NAMES, defaultConfig, sceneCases, scenePropsOf } from "./scene-cases";
 import { HORN_COLOR_CATALOG } from "../src/constants/hornColor";
 import { pickedHornColor, savedHornColor } from "../src/lib/pa/hornColor";
+import { HORN_MESHES } from "../src/data/meshes";
+import { DIY_OS90X50 } from "../src/data/catalog/horns";
+import { MM_IN } from "../src/components/stack-view/geometry";
 import type { PaLayout } from "../src/types";
 
 /** How close two faces count as touching, in (meshes are faceted, so a contact is never exact). */
@@ -173,6 +176,96 @@ describe("horn, throat adapter and compression driver", () => {
       expect(size.y, cd.id).toBeCloseTo(cd.body.dia, 2);
     }
   });
+});
+
+describe("horns drawn from their CAD mesh", () => {
+  const meshed = Object.entries(HORN_MESHES).flatMap(([id, mesh]) => {
+    const horn = HORN_OPTIONS.find((h) => h.id === id);
+    if (!horn) throw new Error(`a mesh for a horn not in the catalog: ${id}`);
+    return mesh ? [{ horn, mesh }] : [];
+  });
+
+  test("the DIY OS horn has one", () => {
+    expect(meshed.map((m) => m.horn.id)).toContain(DIY_OS90X50.id);
+  });
+
+  test("each mesh's size is the horn's catalog size, from the flange's back face at z = 0", () => {
+    for (const { horn, mesh } of meshed) {
+      const size = [0, 1, 2].map((k) => (mesh.max[k] - mesh.min[k]) * MM_IN);
+      expect(size[0], horn.id).toBeCloseTo(horn.size.w, 3);
+      expect(size[1], horn.id).toBeCloseTo(horn.size.h, 3);
+      expect(size[2], horn.id).toBeCloseTo(horn.size.d, 3);
+      expect(mesh.min[2], horn.id).toBe(0);
+      // the mesh takes the place of a profile and of a throat adapter
+      expect(horn.profile, horn.id).toBeUndefined();
+      expect(horn.adapter, horn.id).toBeUndefined();
+    }
+  });
+
+  for (const layout of LAYOUTS)
+    test(`${layout}: the driver bolts to the flange: its bolts line up with the flange's holes, its exit with the throat`, () => {
+      for (const { horn } of meshed) {
+        const at = `${horn.id} ${layout}`;
+        const cd = CD_OPTIONS.find((c) => c.exit === horn.exit && c.body.bolts.n === 4);
+        if (!cd) throw new Error(`${at}: no 4-bolt driver for the throat`);
+        const g = buildStackScene({ ...base, horn, cd, layout });
+        const [body] = meshesNamed(g, HORN_MESH_NAME);
+        const hornBox = boxOf(g, HORN_MESH_NAME);
+        const cdBox = boxOf(g, CD_MESH_NAME);
+        if (!body || !hornBox || !cdBox) throw new Error(`${at}: no horn or driver`);
+        // the driver's front face on the flange, or on the bracket's upright clamped against it
+        const upright = uprightBox(g);
+        const onto = layout === "tower" ? hornBox.min.z : upright?.min.z;
+        expect(onto, `${at}: upright`).toBeDefined();
+        expect(
+          Math.abs(cdBox.max.z - (onto ?? Infinity)),
+          `${at}: driver on the flange`,
+        ).toBeLessThan(CONTACT_IN);
+        // the flange's back face (the mesh's vertices at its back), round the horn's axis
+        const axis = body.getWorldPosition(new THREE.Vector3()); // the mesh is centered on its axis
+        const pos = body.geometry.getAttribute("position");
+        const v = new THREE.Vector3();
+        const face: { x: number; y: number; r: number }[] = [];
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos, i).applyMatrix4(body.matrixWorld);
+          if (v.z - hornBox.min.z < 1e-4)
+            face.push({
+              x: v.x - axis.x,
+              y: v.y - axis.y,
+              r: Math.hypot(v.x - axis.x, v.y - axis.y),
+            });
+        }
+        const rim = Math.max(...face.map((p) => p.r));
+        const throat = Math.min(...face.map((p) => p.r));
+        expect(throat, `${at}: throat the driver's exit`).toBeCloseTo(cd.exit / 2, 1);
+        expect(rim, `${at}: flange round the bolts`).toBeGreaterThan(
+          cd.body.bolts.circle / 2 + 0.25,
+        );
+        // the holes between the throat and the rim, one per quadrant: on the driver's bolts at 45°, 135°, 225°, 315°
+        const bolt = (cd.body.bolts.circle / 2) * Math.SQRT1_2;
+        for (const [sx, sy] of [
+          [1, 1],
+          [-1, 1],
+          [-1, -1],
+          [1, -1],
+        ]) {
+          const hole = face.filter(
+            (p) =>
+              p.r > throat + 0.1 &&
+              p.r < rim - 0.1 &&
+              Math.sign(p.x) === sx &&
+              Math.sign(p.y) === sy,
+          );
+          expect(hole.length, `${at}: a hole at (${sx}, ${sy})`).toBeGreaterThan(2);
+          const cx = hole.reduce((s, p) => s + p.x, 0) / hole.length;
+          const cy = hole.reduce((s, p) => s + p.y, 0) / hole.length;
+          expect(
+            Math.hypot(cx - sx * bolt, cy - sy * bolt),
+            `${at}: hole on the bolt`,
+          ).toBeLessThan(0.02);
+        }
+      }
+    });
 });
 
 describe("horn placement", () => {
