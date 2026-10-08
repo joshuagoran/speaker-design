@@ -22,12 +22,20 @@ export function towerBaffleHoles(
     (archTop
       ? plinth + box.h + TOWER_MID_HEIGHT_IN + (box.w / 2 - ctx.wall)
       : plinth + box.h + TOWER_MID_HEIGHT_IN + hornSectionH / 2) - baffleCy;
-  // a horn drawn from its mesh: the hole follows its silhouette round its axis
+  // a horn drawn from its mesh: the hole follows its silhouette round its axis, and like the full-width concept's it
+  // stops half an inch inside the side walls (a hole past the baffle's edge would leave the baffle untriangulated)
   const model = HORN_MESHES[horn.id];
+  const halfW = (innerW - 1) / 2;
   return [
     circlePath(0, plinth + box.h + TOWER_MID_HEIGHT_IN / 2 - baffleCy, mid.size / 2 - 0.9),
     model
-      ? polygonPath(0, hy, partMeshSilhouette(model))
+      ? polygonPath(
+          0,
+          hy,
+          partMeshSilhouette(model).map(
+            (p) => new THREE.Vector2(THREE.MathUtils.clamp(p.x, -halfW, halfW), p.y),
+          ),
+        )
       : horn.rect
         ? roundedRectPath(0, hy, innerW - 1, horn.size.h, 1.2)
         : horn.profile

@@ -308,19 +308,36 @@ describe("horns drawn from their CAD mesh", () => {
       }
     });
 
-  test("tower: the baffle hole follows the horn's silhouette, so nothing behind the horn shows round it", () => {
-    /** How far inside and outside the silhouette the hole's edge is checked, in. */
-    const MARGIN_IN = 0.1;
-    /** The grid the see-through check casts rays on, in. */
-    const STEP_IN = 0.4;
-    /** The tower's walls and how far its baffle sits behind the frame's front (where the mouth is), in. */
-    const WALL_IN = 0.75;
-    const INSET_IN = 0.75;
+  /** How far inside and outside the silhouette the hole's edge is checked, in. */
+  const MARGIN_IN = 0.1;
+  /** The grid the see-through check casts rays on, in. */
+  const STEP_IN = 0.4;
+  /** The tower's walls, how far its baffle sits behind the frame's front (where the mouth is), and its plywood, in. */
+  const WALL_IN = 0.75;
+  const INSET_IN = 0.75;
+  const BAFFLE_IN = 0.75;
+  /** How far behind a baffle face the horn's cross-section is taken, in. */
+  const BEHIND_IN = 0.05;
+
+  /**
+   * The tower's baffle hole for each meshed horn in a sub box `boxW` wide: nothing behind the horn shows round it, the
+   * hole follows the horn's silhouette (inside it the horn, outside it the baffle) up to half an inch inside the side
+   * walls, and the horn's cross-section at both baffle faces is inside the hole.
+   */
+  function checkTowerHole(boxW: number) {
     for (const { horn, mesh } of meshed) {
-      const g = buildStackScene({ ...base, horn, layout: "tower", wall: WALL_IN, inset: INSET_IN });
+      const at = `${horn.id} in a ${boxW} in box`;
+      const g = buildStackScene({
+        ...base,
+        sub: { ...base.sub, box: { ...base.sub.box, w: boxW } },
+        horn,
+        layout: "tower",
+        wall: WALL_IN,
+        inset: INSET_IN,
+      });
       const [body] = meshesNamed(g, HORN_MESH_NAME);
       const hornBox = boxOf(g, HORN_MESH_NAME);
-      if (!body || !hornBox) throw new Error(`${horn.id}: no horn`);
+      if (!body || !hornBox) throw new Error(`${at}: no horn`);
       const axis = body.getWorldPosition(new THREE.Vector3());
       const all: THREE.Object3D[] = [];
       g.traverse(
@@ -334,39 +351,100 @@ describe("horns drawn from their CAD mesh", () => {
         );
         return ray.intersectObjects(all, false)[0];
       };
-      const halfInside = base.sub.box.w / 2 - WALL_IN; // inside the tower's side walls
+      // the first thing a ray forward from just behind the baffle's back face at (x, y) meets
+      const fromBehind = (x: number, y: number) => {
+        const ray = new THREE.Raycaster(
+          new THREE.Vector3(
+            axis.x + x,
+            axis.y + y,
+            hornBox.max.z - INSET_IN - BAFFLE_IN - BEHIND_IN,
+          ),
+          new THREE.Vector3(0, 0, 1),
+        );
+        return ray.intersectObjects(all, false)[0];
+      };
+      const halfInside = boxW / 2 - WALL_IN; // inside the tower's side walls
+      const halfHole = halfInside - 0.5; // the hole stops half an inch inside them
       // over the mouth's whole rectangle: every ray stops on the baffle, the horn or the driver, never behind them
       for (let x = -horn.size.w / 2 + STEP_IN / 2; x < horn.size.w / 2; x += STEP_IN)
         for (let y = -horn.size.h / 2 + STEP_IN / 2; y < horn.size.h / 2; y += STEP_IN) {
           if (Math.abs(x) > halfInside) continue;
           const hit = firstHit(x, y);
-          expect(hit, `${horn.id}: a ray at (${x}, ${y})`).toBeDefined();
-          expect(
-            hit?.point.z ?? -Infinity,
-            `${horn.id}: seen through at (${x}, ${y})`,
-          ).toBeGreaterThan(hornBox.min.z - CONTACT_IN);
+          expect(hit, `${at}: a ray at (${x}, ${y})`).toBeDefined();
+          expect(hit?.point.z ?? -Infinity, `${at}: seen through at (${x}, ${y})`).toBeGreaterThan(
+            hornBox.min.z - CONTACT_IN,
+          );
         }
       // just inside the silhouette the ray meets the horn (its rim, a rolled-back lip or its outer wall), so the baffle
       // covers none of it; just outside it, the baffle, set back by the inset
       for (const p of partMeshSilhouette(mesh)) {
         const r = p.length();
         const inside = p.clone().multiplyScalar(1 - MARGIN_IN / r);
-        expect(
-          firstHit(inside.x, inside.y)?.object.name,
-          `${horn.id}: inside at ${inside.x}, ${inside.y}`,
-        ).toBe(HORN_MESH_NAME);
+        if (Math.abs(inside.x) < halfHole - MARGIN_IN) {
+          expect(
+            firstHit(inside.x, inside.y)?.object.name,
+            `${at}: inside at ${inside.x}, ${inside.y}`,
+          ).toBe(HORN_MESH_NAME);
+          // and from behind the baffle the hole is open there too: the ray meets the horn or nothing, not the baffle
+          // (a hole smaller than the silhouette fails here even where the horn's rim covers it from the front)
+          const back = fromBehind(inside.x, inside.y);
+          expect(
+            back?.object.name ?? HORN_MESH_NAME,
+            `${at}: open behind at ${inside.x}, ${inside.y}`,
+          ).toBe(HORN_MESH_NAME);
+        }
         const outside = p.clone().multiplyScalar(1 + MARGIN_IN / r);
-        if (Math.abs(outside.x) > halfInside) continue;
+        if (Math.abs(outside.x) > halfHole) continue;
         const hit = firstHit(outside.x, outside.y);
-        expect(hit?.object.name, `${horn.id}: outside at ${outside.x}, ${outside.y}`).not.toBe(
+        expect(hit?.object.name, `${at}: outside at ${outside.x}, ${outside.y}`).not.toBe(
           HORN_MESH_NAME,
         );
         expect(
           hit?.point.z ?? -Infinity,
-          `${horn.id}: baffle at ${outside.x}, ${outside.y}`,
+          `${at}: baffle at ${outside.x}, ${outside.y}`,
         ).toBeCloseTo(hornBox.max.z - INSET_IN, 3);
       }
+      // the horn's cross-section just behind each baffle face (where the horn's triangles cross that plane): a ray
+      // from the front at each point meets the horn, not the baffle, so the hole holds the horn where it passes through
+      const pos = body.geometry.getAttribute("position");
+      const index = body.geometry.getIndex();
+      if (!index) throw new Error(`${at}: the horn's geometry has no index`);
+      const corner = (i: number) =>
+        new THREE.Vector3().fromBufferAttribute(pos, index.getX(i)).applyMatrix4(body.matrixWorld);
+      for (const z of [hornBox.max.z - INSET_IN, hornBox.max.z - INSET_IN - BAFFLE_IN].map(
+        (face) => face - BEHIND_IN,
+      )) {
+        let crossings = 0;
+        for (let t = 0; t < index.count; t += 3)
+          for (let e = 0; e < 3; e++) {
+            const [a, b] = [corner(t + e), corner(t + ((e + 1) % 3))];
+            if ((a.z - z) * (b.z - z) >= 0) continue;
+            const c = a.clone().lerp(b, (z - a.z) / (b.z - a.z));
+            const [x, y] = [c.x - axis.x, c.y - axis.y];
+            if (Math.abs(x) > halfHole - MARGIN_IN) continue;
+            crossings++;
+            // a hair toward the axis, so the ray meets the wall's face rather than grazing its edge
+            const k = 1 - 0.01 / Math.max(Math.hypot(x, y), 0.01);
+            expect(
+              firstHit(x * k, y * k)?.object.name,
+              `${at}: cross-section at ${x}, ${y}, z ${z}`,
+            ).toBe(HORN_MESH_NAME);
+          }
+        expect(crossings, `${at}: a cross-section at z ${z}`).toBeGreaterThan(20);
+      }
     }
+  }
+
+  test("tower: the baffle hole follows the horn's silhouette and holds its cross-section, so nothing behind it shows", () => {
+    checkTowerHole(base.sub.box.w);
+  });
+
+  test("tower in a box narrower than the horn: the hole stops inside the side walls and the baffle still opens", () => {
+    // a 20 in box: the DIY horns' 19.4 and 19.7 in mouths are wider than its baffle
+    const NARROW_IN = 20;
+    for (const { horn } of meshed)
+      expect(horn.size.w, horn.id).toBeGreaterThan(NARROW_IN - 2 * WALL_IN - 1);
+    checkTowerHole(NARROW_IN);
   });
 });
 
