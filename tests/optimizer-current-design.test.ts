@@ -12,6 +12,11 @@ import {
 } from "../src/lib/pa/optimize";
 import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
 import { DEFAULT_PA } from "../src/lib/defaults";
+import { derivePaDesign } from "../src/pages/pa-stack/hooks/paDesign";
+import { subBassLevel } from "../src/lib/pa/calc";
+import { SUB_OPTIONS } from "../src/lib/data";
+import { byIdOrThrow } from "../src/lib/tables";
+import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import type {
   PaDesignConfig,
   PaGoal,
@@ -123,5 +128,51 @@ test("a design short of the room's need: the near miss names the metric and is n
   assert.ok(
     near.blocking.some((b) => b.includes(PA_OUTPUT_NAME)),
     `names the metric: ${near.blocking.join("; ")}`,
+  );
+});
+
+test("a card's sub-bass 30–50 Hz is the planner's tile: at the vent's own air-speed limit (flared tubes)", () => {
+  // the fireplace box with two flared round tubes, port-limited at the bottom of the band
+  const c: PaDesignConfig = {
+    ...fireplace,
+    portStyle: "round2",
+    cVent: { ...fireplace.cVent, nt: 2, dia: 3, len: 10.5 },
+  };
+  const m = evaluateDesign(c);
+  assert.ok(m);
+  const planner = derivePaDesign({
+    subDriver: byIdOrThrow(SUB_OPTIONS, c.sub, CATALOG_TABLE_NAMES.subs),
+    portStyle: c.portStyle,
+    subBoxDims: c.cDim,
+    subVentSpec: c.cVent,
+    subHighpassHz: c.hpf,
+    subHighpassType: c.hpType,
+    subAmpWatts: c.ampW,
+    maxPortAirSpeedMs: c.portMax,
+    midDriver: DEFAULT_PA.mid,
+    midBoxDims: c.mDim,
+    midAmpWatts: c.mAmpW,
+    hornOption: DEFAULT_PA.horn,
+    compressionDriver: DEFAULT_PA.cd,
+    hornAmpWatts: c.hfAmpW,
+    subMidCrossoverHz: c.xoLo,
+    midHornCrossoverHz: c.xoHi,
+    subMidCrossoverOrder: c.xoLoOrder,
+    midHornCrossoverOrder: c.xoHiOrder,
+    plinthHeightIn: 0,
+    layout: c.layout,
+    wallThicknessIn: c.wall,
+    braceStyle: undefined,
+    baffleInsetIn: c.inset,
+    spacerHeightIn: DEFAULT_PA.spacerH,
+    hardware: DEFAULT_PA.hardware,
+    dispersionPlane: "h",
+  });
+  assert.ok(planner.subModeled);
+  const tile = subBassLevel(planner.subModeled.maxCurve);
+  // the optimizers leave out the handles' recesses, a fraction of a liter: a few hundredths of a dB
+  assert.ok(
+    Math.abs(m.subBass - tile) < 0.1,
+    `card ${m.subBass.toFixed(2)} dB, tile ${tile.toFixed(2)} dB`,
   );
 });

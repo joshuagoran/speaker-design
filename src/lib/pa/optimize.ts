@@ -459,7 +459,10 @@ export function evaluateDesign(
     out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
     spl45: s.lim.spl45,
     spl35: s.lim.spl35,
-    subBass: subBassLevel(maxOutputCurve(s.mdl.curve, sub.ts, s.AMP_V, c.portMax)),
+    // as the planner's sub-bass tile reads it: at the vent's own air-speed limit (more for flared tubes)
+    subBass: subBassLevel(
+      maxOutputCurve(s.mdl.curve, sub.ts, s.AMP_V, ventSpeedLimit(c.portStyle, c.portMax)),
+    ),
     f3: s.mdl.f3,
     Fb: s.mdl.Fb,
     who: s.lim.who,
