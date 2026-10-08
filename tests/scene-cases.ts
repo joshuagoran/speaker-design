@@ -27,6 +27,7 @@ export function scenePropsOf(
     layout: c.layout ?? "stack",
     baffleColor: c.baffleColor ?? DEFAULT_PA.baffleColor,
     hornColor: c.hornColor,
+    hornMount: c.hornMount,
     portGeom: {
       ductH: c.cVent.slotH,
       nPorts: c.cVent.nt,

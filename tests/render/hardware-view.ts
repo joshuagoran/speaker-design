@@ -1,6 +1,6 @@
 // The render check's page (tests/render-hardware.mjs bundles it): the default PA stack with its hardware, built as the
 // planner builds it, seen from the camera the URL asks for, so the handles, dishes and posts can be looked at close up.
-//   ?horn=<id> &cd=<id> &handle=H1105|30769|none &cutaway=1 &layout=stack|tower|pole|satellite &az=deg &el=deg &dist=in &tx= &ty= &tz= (look-at, in)
+//   ?horn=<id> &cd=<id> &mount=bracket|ply &handle=H1105|30769|none &cutaway=1 &layout=stack|tower|pole|satellite &az=deg &el=deg &dist=in &tx= &ty= &tz= (look-at, in)
 import * as THREE from "three";
 import { buildStackScene } from "../../src/components/stack-view/buildStackScene";
 import { DEFAULT_PA } from "../../src/lib/defaults";
@@ -18,6 +18,7 @@ import type { BoxHandles, PaLayout } from "../../src/types";
 import { PA_LAYOUT_NAMES } from "../../src/constants/paLayouts";
 import { keysOf } from "../../src/lib/records";
 import { CD_OPTIONS, HORN_OPTIONS } from "../../src/lib/data";
+import { savedHornMount } from "../../src/lib/pa/hornMount";
 
 const q = new URLSearchParams(location.search);
 const num = (k: string, d: number) => (q.has(k) ? Number(q.get(k)) : d);
@@ -32,6 +33,7 @@ const group = buildStackScene({
   mid: { ...d.mid, box: d.mDim },
   horn: HORN_OPTIONS.find((h) => h.id === q.get("horn")) ?? d.horn,
   cd: CD_OPTIONS.find((c) => c.id === q.get("cd")) ?? d.cd,
+  hornMount: savedHornMount(q.get("mount")),
   plinth: 3,
   cutaway,
   portStyle: d.portStyle,

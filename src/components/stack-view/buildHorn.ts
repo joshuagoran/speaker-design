@@ -4,8 +4,9 @@ import { HORN_MESHES } from "../../data/meshes";
 import { HORN_LIFT_IN, hornAxisUp } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import { buildBracket, buildClampedBracket, takesBracket } from "./buildBracket";
+import { buildPlyMount } from "./buildPlyMount";
 import { cdBodySteps } from "../../lib/data";
-import type { BodyStep, CompressionDriver, Dims3, Horn } from "../../types";
+import type { BodyStep, CompressionDriver, Dims3, Horn, HornMountId } from "../../types";
 
 /** The horn body's mesh. */
 export const HORN_MESH_NAME = "horn";
@@ -50,7 +51,8 @@ export interface HornAxis {
  * The horn's throat adapter, when it has one, and the compression driver behind it: the adapter's front face on the
  * throat, the driver's front face on the adapter's back face (or on the throat). On a lid (`lidY`; the tower has none
  * under the driver) the L-bracket holds it: from the adapter's flange, or, without an adapter, clamped between
- * the throat and the driver.
+ * the throat and the driver; or, without an adapter and with `hornMount` "ply", the plywood mount in front of the
+ * horn's throat flange (`body`, the horn as drawn), the driver on the flange.
  */
 function addThroatParts(
   ctx: SceneContext,
@@ -58,6 +60,8 @@ function addThroatParts(
   cd: Pick<CompressionDriver, "body" | "exit">,
   at: HornAxis,
   lidY: number | null,
+  body: THREE.Mesh,
+  hornMount: HornMountId | undefined,
 ) {
   let cdFront = at.throatZ;
   if (horn.adapter) {
@@ -69,7 +73,10 @@ function addThroatParts(
       ADAPTER_MESH_NAME,
     );
     if (lidY !== null && takesBracket(horn.adapter)) buildBracket(ctx, horn.adapter, at, lidY);
-  } else if (lidY !== null) cdFront = buildClampedBracket(ctx, cd, at, lidY);
+  } else if (lidY !== null) {
+    if (hornMount === "ply") buildPlyMount(ctx, { body, cd, at, lidY });
+    else cdFront = buildClampedBracket(ctx, cd, at, lidY);
+  }
   addSteps(
     ctx,
     cdBodySteps(cd.body),
@@ -97,6 +104,7 @@ export function buildHorn(
     xs = [0],
     mount,
     tower,
+    hornMount,
   }: {
     horn: Horn;
     cd: Pick<CompressionDriver, "body" | "exit">;
@@ -104,6 +112,8 @@ export function buildHorn(
     xs?: number[];
     mount: Pick<Dims3, "w" | "d">;
     tower?: { cy: number; width: number; sectionH: number };
+    /** what holds a driver bolted straight to the horn on the lid; absent: the L-bracket */
+    hornMount?: HornMountId;
   },
 ): { top: number; axes: HornAxis[] } {
   const { hornShell } = ctx.materials;
@@ -139,7 +149,7 @@ export function buildHorn(
     body.position.set(at.x, at.y, at.throatZ);
     body.name = HORN_MESH_NAME;
     ctx.group.add(body);
-    addThroatParts(ctx, horn, cd, at, tower ? null : hornY);
+    addThroatParts(ctx, horn, cd, at, tower ? null : hornY, body, hornMount);
   }
   return { top: hornY + (tower ? tower.sectionH : HORN_LIFT_IN + hz.h), axes };
 }

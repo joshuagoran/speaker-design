@@ -144,43 +144,49 @@ function addBracket(
   foot.position.set(at.x, footY + t / 2, zUp - BRACKET.foot / 2);
   foot.name = BRACKET_MESH_NAME;
   ctx.group.add(foot);
-  const part = (
-    geometry: THREE.BufferGeometry,
-    x: number,
-    y: number,
-    z: number,
-    alongZ: boolean,
-  ) => {
-    const m = new THREE.Mesh(geometry, hardware);
-    if (alongZ) m.rotation.x = Math.PI / 2;
-    m.position.set(x, y, z);
-    m.name = BRACKET_BOLT_MESH_NAME;
-    ctx.group.add(m);
-  };
   for (const sx of [-1, 1]) {
-    if (bolt) {
-      // M6 hex head and washer behind the upright (when bolted), and a wood screw in the foot
-      part(
-        new THREE.CylinderGeometry(0.19, 0.19, 0.16, 6),
-        at.x + sx * bolt.x,
-        at.y + bolt.y,
-        zUp - t - 0.03 - 0.08,
-        true,
-      );
-      part(
-        new THREE.CylinderGeometry(0.26, 0.26, 0.03, 24),
-        at.x + sx * bolt.x,
-        at.y + bolt.y,
-        zUp - t - 0.015,
-        true,
-      );
-    }
-    part(
-      new THREE.CylinderGeometry(0.17, 0.17, 0.07, 20),
+    // M6 hex head and washer behind the upright (when bolted), and a wood screw in the foot
+    if (bolt)
+      addBoltHead(ctx, at.x + sx * bolt.x, at.y + bolt.y, zUp - t, -1, BRACKET_BOLT_MESH_NAME);
+    const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.07, 20), hardware);
+    screw.position.set(
       at.x + sx * BRACKET.screwX,
       footY + t + 0.035,
       zUp - BRACKET.foot * BRACKET.screwAt,
-      false,
     );
+    screw.name = BRACKET_BOLT_MESH_NAME;
+    ctx.group.add(screw);
   }
+}
+
+/** A bolt's hex head and washer (M6 or 1/4-20), in: the head's corner radius and length, the washer's radius and thickness. */
+export const BOLT_HEAD = { r: 0.19, len: 0.16, washerR: 0.26, washer: 0.03 } as const;
+
+/**
+ * A bolt's hex head and washer on a face square to the z axis at `zFace`, centered on (x, y): the washer against the
+ * face and the head beyond it, toward `dir` (+1 forward, −1 back).
+ */
+export function addBoltHead(
+  ctx: SceneContext,
+  x: number,
+  y: number,
+  zFace: number,
+  dir: 1 | -1,
+  name: string,
+) {
+  const add = (geometry: THREE.BufferGeometry, z: number) => {
+    const m = new THREE.Mesh(geometry, ctx.materials.hardware);
+    m.rotation.x = Math.PI / 2;
+    m.position.set(x, y, z);
+    m.name = name;
+    ctx.group.add(m);
+  };
+  add(
+    new THREE.CylinderGeometry(BOLT_HEAD.r, BOLT_HEAD.r, BOLT_HEAD.len, 6),
+    zFace + dir * BOLT_HEAD.washer + (dir * BOLT_HEAD.len) / 2,
+  );
+  add(
+    new THREE.CylinderGeometry(BOLT_HEAD.washerR, BOLT_HEAD.washerR, BOLT_HEAD.washer, 24),
+    zFace + (dir * BOLT_HEAD.washer) / 2,
+  );
 }
