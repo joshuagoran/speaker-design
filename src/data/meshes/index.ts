@@ -2,8 +2,9 @@
 // its listed sizes. Adding one: mesh its STEP file (build/handle-mesh.mjs for cabinet hardware, build/horn-mesh.mjs
 // for a horn; the STEP files stay out of the repo), commit the generated mesh and list it here.
 import type { CabinetPart, HardwareMesh, Horn, PartMesh } from "../../types";
-import { DIY_OS90X50 } from "../catalog/horns";
+import { DIY_OS90X50, DIY_ROSSE110X50 } from "../catalog/horns";
 import { DIY_OS90X50_MESH } from "./diy_os90x50";
+import { DIY_ROSSE110X50_MESH } from "./diy_rosse110x50";
 import { H1105_MESH } from "./h1105";
 
 export const HARDWARE_MESHES: Partial<Record<CabinetPart["id"], HardwareMesh>> = {
@@ -17,4 +18,5 @@ export const HARDWARE_MESHES: Partial<Record<CabinetPart["id"], HardwareMesh>> =
  */
 export const HORN_MESHES: Partial<Record<Horn["id"], PartMesh>> = {
   [DIY_OS90X50.id]: DIY_OS90X50_MESH,
+  [DIY_ROSSE110X50.id]: DIY_ROSSE110X50_MESH,
 };

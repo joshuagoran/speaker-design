@@ -193,6 +193,29 @@ export const DIY_OS90X50: Horn = {
   note: "[hornlab.io design and BEM, 30 points, Oct 2026] The owner's oblate-spheroidal waveguide: 90° × 50°, 36 mm (1.4\") throat at 3.7°, k 2.5, superellipse n 3, 7 mm walls. Mouth 486 × 311 mm inside (494 × 319 outside), 180 mm deep including the throat flange; hornlab cutoff 785 Hz. Flange ⌀130 × 12 mm with 4 × ⌀6.6 mm holes (M6 or 1/4-20) on a 101.6 mm (4 in) circle at 45°, so the N314T bolts straight on (no adapter). −6 dB beamwidth H/V: 84/104° at 1 kHz, 96/84° at 1.3 kHz, 108/108° at 1.8 kHz, 92/72° at 3 kHz, 80/58° at 5–6 kHz, 70/46° at 9–10 kHz. Loading is flat above 1.6 kHz, −3 dB at 1 kHz and −6 dB at 790 Hz, so cross from 1 kHz (LR24). Near 1.8 kHz both planes widen and the DI dips about 1 dB (mouth diffraction; the design has no rollback). Weight not measured: about 3.5 lb printed solid in PLA. Drawn from its STEP model.",
 };
 
+/**
+ * The owner's preferred DIY horn: an R-OSSE waveguide for a 1.4 in driver, designed in hornlab.io and printed; drawn
+ * from its STEP model.
+ */
+export const DIY_ROSSE110X50: Horn = {
+  id: "diy_rosse110x50",
+  // GUESS: 1510 cm³ of solid PLA from the mesh; infill makes it lighter
+  lb: 4.1,
+  name: "DIY R-OSSE 110×50 (hornlab, 500 mm, printed)",
+  // the design target; the BEM narrows from about 108° at 0.9 kHz to 60° at 10 kHz (see the note). Lowest crossover:
+  // the BEM's −3 dB loading point, about 970 Hz, to the nearest 50 Hz; loading −6 dB at about 740 Hz
+  hf: { covH: 110, covV: 50, minXo: 950, lowHz: 740 },
+  exit: 1.4,
+  // the owner's estimate: the 460 mm ATH print's price, not a vendor price
+  price: A460G2_14.price,
+  src: "Estimate: same as the 460 mm ATH printed horn (similar size and material); not a vendor price.",
+  size: { w: 500 / 25.4, h: 320 / 25.4, d: 176 / 25.4 },
+  driver:
+    '1.4" exit, 4 × M6 or 1/4-20 on a 101.6 mm (4 in) circle at 45° (the Eminence N314T bolts straight on)',
+  xo: "from 950 Hz (LR24)",
+  note: "[hornlab.io design and BEM, 30 points, Oct 2026] The owner's preferred waveguide, an R-OSSE: 110° × 50° target, R 250 / R_V 160 mm, a 55° / a_V 25°, 36 mm (1.4\") spherical throat at 3.7°, k 2.5, q 3.5, superellipse n 2.75, 7 mm walls, rolled-back lip. Mouth 500 × 320 mm (the rollback is its outside), 176 mm deep including the throat flange; hornlab cutoff 805 Hz. Flange ⌀130 × 12 mm with 4 × ⌀6.6 mm holes (M6 or 1/4-20) on a 101.6 mm (4 in) circle at 45°, so the N314T bolts straight on (no adapter). Not constant directivity: the coverage narrows smoothly with frequency, with no bump. −6 dB beamwidth H/V: 108/132° at 0.9 kHz, 104/120° at 1 kHz, 92/96° at 1.45 kHz, 84–88/68–72° at 1.8–2.6 kHz, about 80/64° at 3–5 kHz, 60/48° at 10 kHz (DI 4.9 to 11 dB). The planner takes the coverage as a constant 110° × 50°, so expect about 80° at 3–5 kHz and 60° at 10 kHz. At a 900 Hz–1 kHz crossover its 104–108° matches a 12\" mid's width (the OS 90×50 gives 84°). Loading is flat above 1.4 kHz, −3 dB at about 970 Hz and −6 dB at about 740 Hz, so cross from 950 Hz (LR24). Weight not measured: about 4.1 lb printed solid in PLA. Drawn from its STEP model.",
+};
+
 export const HORN_RAW: readonly Horn[] = [
   {
     id: "rx28",
@@ -323,6 +346,7 @@ export const HORN_RAW: readonly Horn[] = [
   },
   A460G2_14,
   DIY_OS90X50,
+  DIY_ROSSE110X50,
   {
     id: "a460g2",
     lb: 3.5,

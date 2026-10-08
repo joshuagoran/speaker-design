@@ -27,7 +27,7 @@ import { SCENE_CASE_NAMES, defaultConfig, sceneCases, scenePropsOf } from "./sce
 import { HORN_COLOR_CATALOG } from "../src/constants/hornColor";
 import { pickedHornColor, savedHornColor } from "../src/lib/pa/hornColor";
 import { HORN_MESHES } from "../src/data/meshes";
-import { DIY_OS90X50 } from "../src/data/catalog/horns";
+import { DIY_OS90X50, DIY_ROSSE110X50 } from "../src/data/catalog/horns";
 import { MM_IN, partMeshGeometry, partMeshSilhouette } from "../src/components/stack-view/geometry";
 import type { PaLayout, PartMesh } from "../src/types";
 
@@ -186,8 +186,10 @@ describe("horns drawn from their CAD mesh", () => {
     return mesh ? [{ horn, mesh }] : [];
   });
 
-  test("the DIY OS horn has one", () => {
-    expect(meshed.map((m) => m.horn.id)).toContain(DIY_OS90X50.id);
+  test("both DIY horns have one", () => {
+    const ids = meshed.map((m) => m.horn.id);
+    expect(ids).toContain(DIY_OS90X50.id);
+    expect(ids).toContain(DIY_ROSSE110X50.id);
   });
 
   test("a mesh's geometries are built once per drawing and kept apart", () => {
