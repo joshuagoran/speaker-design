@@ -12,6 +12,7 @@ import {
   ventSizesFor,
   PA_REACH_WORDS,
   paOptimizerWalls,
+  paSearchDesign,
 } from "../src/lib/pa/optimize";
 import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc";
 import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
@@ -259,6 +260,20 @@ test("a near-miss option, once applied, finds designs", (t) => {
   assert.ok(out.nearMiss!.blocking.length > 0 && out.nearMiss!.blocking.every((b) => b.length > 0));
 });
 
+// With the driver, horn and crossover free, the search keeps a pair with no warning: no card crosses below the
+// recommended crossover or near the horn's cutoff.
+test("with the driver, horn and crossover free, no card carries a crossover warning", () => {
+  const XO_WARNINGS: ChipId<"horn">[] = ["hornDriverMinXo", "hornMinXo", "hornLoading"];
+  for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
+    const out = runs[goal] || optimizePaStack({ ...base, goal });
+    for (const k of out.cards)
+      assert.ok(
+        !k.warnings.some(([, , , id]) => XO_WARNINGS.some((x) => x === id)),
+        `${goal}: ${k.label}`,
+      );
+  }
+});
+
 // A crossover below the recommended one (the driver's minXo, the horn's minXo, or near the horn's cutoff) is a warning on
 // the card, never a reason to drop a design: with the driver, horn and crossover locked there, the search still finds
 // cards, each carries the warning, and your design doesn't fail on it.
@@ -276,7 +291,7 @@ for (const { cd, horn, ids } of [
       goal: "cheaper",
       locks: { cd: true, horn: true, xoHi: true },
     });
-    const m = evaluateDesign(mine as PaDesignConfig);
+    const m = evaluateDesign(paSearchDesign({ cur: mine }));
     for (const id of ids) {
       assert.ok(
         m?.chips.horn.some(([kind, , , i]) => kind === "warn" && i === id),
