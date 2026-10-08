@@ -10,6 +10,7 @@ import {
   PLY_MOUNT,
   PLY_MOUNT_MESH_NAMES,
   driverBolts,
+  plyMountFit,
 } from "../src/components/stack-view/buildPlyMount";
 import { HARDWARE_MESH_NAME } from "../src/components/stack-view/buildHardware";
 import { ROUNDOVER_IN } from "../src/components/stack-view/stackHeights";
@@ -360,62 +361,92 @@ describe("the plywood horn mount on the DIY horns", () => {
     });
 });
 
-/** Every horn the driver bolts straight to, with a driver that fits its throat. */
+/** Every horn the driver bolts straight to, with every driver that fits its throat. */
 const bolted = HORN_OPTIONS.filter((h) => !h.adapter).map((horn) => ({
   horn,
-  cd:
-    horn.exit === base.cd.exit
-      ? base.cd
-      : (CD_OPTIONS.find((c) => c.exit === horn.exit) ?? base.cd),
+  cds: CD_OPTIONS.filter((c) => c.exit === horn.exit),
 }));
 
 /** Whether a point is inside a box shrunk by the clearance. */
 const inside = (box: THREE.Box3, p: THREE.Vector3) =>
   box.clone().expandByScalar(-CLEAR_IN).containsPoint(p);
 
+/**
+ * The mount on one horn and driver, where it fits: in place of the L-bracket, clear of the horn, the driver (the base
+ * and gusset at least `driverGap` under it) and the lid's posts and dish, and on the lid. Where it doesn't fit, the
+ * L-bracket.
+ */
+function checkMount(horn: Horn, cd: Props["cd"], layout: PaLayout) {
+  const at = `${horn.id} + ${JSON.stringify(cd.body.bolts)} ${layout}`;
+  const g = scene({ horn, cd, layout, hornMount: "ply" });
+  const parts = Object.values(PLY_MOUNT_MESH_NAMES).flatMap((n) => meshesNamed(g, n));
+  if (!plyMountFit(horn, cd, base.mid.box.w)) {
+    expect(parts, `${at}: no mount where it doesn't fit`).toHaveLength(0);
+    expect(meshesNamed(g, BRACKET_MESH_NAME).length, `${at}: the L-bracket`).toBeGreaterThan(0);
+    return;
+  }
+  expect(meshesNamed(g, BRACKET_MESH_NAME), at).toHaveLength(0);
+  const horns = hornsWithUprights(g);
+  const drivers = meshesNamed(g, CD_MESH_NAME);
+  const others = [...drivers, ...meshesNamed(g, HARDWARE_MESH_NAME)];
+  for (const part of parts) {
+    const pb = boxOf(part);
+    for (const o of others)
+      expect(overlaps(pb, boxOf(o)), `${at}: ${part.name} clear of ${o.name}`).toBe(false);
+  }
+  // the base and gusset: under the driver by the gap wherever they reach under it
+  for (const part of parts.filter((m) => m.name !== PLY_MOUNT_MESH_NAMES.upright)) {
+    const pb = boxOf(part);
+    for (const d of drivers) {
+      const db = boxOf(d);
+      const under =
+        pb.max.z > db.min.z + CLEAR_IN &&
+        pb.min.z < db.max.z - CLEAR_IN &&
+        pb.max.x > db.min.x &&
+        pb.min.x < db.max.x;
+      if (under)
+        expect(db.min.y - pb.max.y, `${at}: ${part.name} under the driver`).toBeGreaterThanOrEqual(
+          part.name === PLY_MOUNT_MESH_NAMES.base ? PLY_MOUNT.driverGap - 1e-6 : 0,
+        );
+    }
+  }
+  for (const { body, axis, upright } of horns) {
+    // the upright: no horn surface in the ply round the saddle
+    const u = uprightOutline(upright, axis);
+    expect(u.top, at).toBeLessThanOrEqual(-PLY_MOUNT.belowAxis + 1e-6);
+    const holes = driverBolts(cd, true).filter((b) => b.y < u.top);
+    for (const p of hornSamples(body, boxOf(upright))) {
+      const [x, y] = [p.x - axis.x, p.y - axis.y];
+      if (p.z <= u.zBack + CLEAR_IN || p.z >= u.zFront - CLEAR_IN) continue;
+      const inPly =
+        Math.abs(x) < u.w - CLEAR_IN &&
+        y < u.top - CLEAR_IN &&
+        y > u.bottom + CLEAR_IN &&
+        Math.hypot(x, y) > u.saddleR + CLEAR_IN &&
+        holes.every((b) => Math.hypot(x - b.x, y - b.y) > PLY_MOUNT.boltHole / 2 + CLEAR_IN);
+      expect(inPly, `${at}: horn inside the upright at ${x}, ${y}, ${p.z}`).toBe(false);
+    }
+    // the base, the gusset and the bolts on this horn's axis: no horn surface inside them
+    const own = parts.filter(
+      (m) => m !== upright && Math.abs(boxOf(m).getCenter(new THREE.Vector3()).x - axis.x) < 1.5,
+    );
+    for (const m of own) {
+      const mb = boxOf(m);
+      for (const p of hornSamples(body, mb))
+        expect(inside(mb, p), `${at}: horn inside ${m.name}`).toBe(false);
+    }
+  }
+}
+
 describe("the plywood horn mount on every horn it applies to", () => {
-  for (const layout of LID_LAYOUTS)
-    test(`${layout}: it replaces the L-bracket and clears the horn, the driver, and the lid's posts and dish`, () => {
-      for (const { horn, cd } of bolted) {
-        const at = `${horn.id} ${layout}`;
-        const g = scene({ horn, cd, layout, hornMount: "ply" });
-        expect(meshesNamed(g, BRACKET_MESH_NAME), at).toHaveLength(0);
-        const horns = hornsWithUprights(g);
-        const parts = Object.values(PLY_MOUNT_MESH_NAMES).flatMap((n) => meshesNamed(g, n));
-        const others = [CD_MESH_NAME, HARDWARE_MESH_NAME].flatMap((n) => meshesNamed(g, n));
-        for (const part of parts) {
-          const pb = boxOf(part);
-          for (const o of others)
-            expect(overlaps(pb, boxOf(o)), `${at}: ${part.name} clear of ${o.name}`).toBe(false);
-        }
-        for (const { body, axis, upright } of horns) {
-          // the upright: no horn surface in the ply round the saddle
-          const u = uprightOutline(upright, axis);
-          expect(u.top, at).toBeCloseTo(-PLY_MOUNT.belowAxis, 6);
-          const holes = driverBolts(cd).filter((b) => b.y < u.top);
-          for (const p of hornSamples(body, boxOf(upright))) {
-            const [x, y] = [p.x - axis.x, p.y - axis.y];
-            if (p.z <= u.zBack + CLEAR_IN || p.z >= u.zFront - CLEAR_IN) continue;
-            const inPly =
-              Math.abs(x) < u.w - CLEAR_IN &&
-              y < u.top - CLEAR_IN &&
-              y > u.bottom + CLEAR_IN &&
-              Math.hypot(x, y) > u.saddleR + CLEAR_IN &&
-              holes.every((b) => Math.hypot(x - b.x, y - b.y) > PLY_MOUNT.boltHole / 2 + CLEAR_IN);
-            expect(inPly, `${at}: horn inside the upright at ${x}, ${y}, ${p.z}`).toBe(false);
-          }
-          // the base, the gusset and the bolts on this horn's axis: no horn surface inside them
-          const own = parts.filter(
-            (m) =>
-              m !== upright && Math.abs(boxOf(m).getCenter(new THREE.Vector3()).x - axis.x) < 1.5,
-          );
-          for (const m of own) {
-            const mb = boxOf(m);
-            for (const p of hornSamples(body, mb))
-              expect(inside(mb, p), `${at}: horn inside ${m.name}`).toBe(false);
-          }
-        }
-      }
+  for (const { horn, cds } of bolted)
+    test(`stack, ${horn.id}: with every driver that fits it, the mount clears the horn, the driver and the lid's parts, or the L-bracket stays`, () => {
+      for (const cd of cds) checkMount(horn, cd, "stack");
+    });
+
+  for (const layout of LID_LAYOUTS.filter((l) => l !== "stack"))
+    test(`${layout}: the mount clears the horn, the driver and the lid's parts on every horn`, () => {
+      for (const { horn, cds } of bolted) checkMount(horn, cds[0] ?? base.cd, layout);
     });
 
   test("the tower has no mount, and a horn with a throat adapter keeps its bracket", () => {
@@ -430,42 +461,125 @@ describe("the plywood horn mount on every horn it applies to", () => {
       expect(meshesNamed(g, PLY_MOUNT_MESH_NAMES.upright), horn.id).toHaveLength(0);
     }
   });
+
+  test("a driver hanging close over the base: the base stops in front of it, or is left out", () => {
+    // the ME45 is short, so a large 1" driver hangs within the gap of the base's top
+    const me45 = HORN_OPTIONS.find((h) => h.id === "me45");
+    if (!me45) throw new Error("no ME45");
+    const low = CD_OPTIONS.filter((c) => c.exit === me45.exit).filter(
+      (c) => plyMountFit(me45, c, base.mid.box.w)?.baseClearsDriver === false,
+    );
+    expect(low.length).toBeGreaterThan(0);
+    for (const cd of low) {
+      const g = scene({ horn: me45, cd, hornMount: "ply" });
+      const cdBox = new THREE.Box3();
+      meshesNamed(g, CD_MESH_NAME).forEach((m) => cdBox.expandByObject(m));
+      for (const b of meshesNamed(g, PLY_MOUNT_MESH_NAMES.base))
+        expect(boxOf(b).min.z, cd.id).toBeGreaterThanOrEqual(
+          cdBox.max.z + PLY_MOUNT.driverGap - 1e-6,
+        );
+    }
+  });
+
+  test("a shallow box: the base stops at the lid's back edge", () => {
+    const d = DIY_ROSSE110X50.size.d + 1;
+    const g = buildStackScene({
+      ...base,
+      horn: DIY_ROSSE110X50,
+      hornMount: "ply",
+      mid: { ...base.mid, box: { ...base.mid.box, d } },
+    });
+    g.updateMatrixWorld(true);
+    const [b] = meshesNamed(g, PLY_MOUNT_MESH_NAMES.base);
+    if (!b) throw new Error("no base");
+    expect(boxOf(b).min.z).toBeCloseTo(-d / 2 + ROUNDOVER_IN, 6);
+    expect(boxOf(b).max.z - boxOf(b).min.z).toBeLessThan(PLY_MOUNT.baseDepth);
+  });
 });
 
-/** Every mesh of a scene: its name, geometry, place and material, in order. */
-function fingerprint(g: THREE.Group) {
-  const out: string[] = [];
-  g.traverse((o) => {
-    if (!(o instanceof THREE.Mesh)) return;
-    const pos = o.geometry.getAttribute("position");
-    const color =
-      o.material instanceof THREE.MeshStandardMaterial ? o.material.color.getHex() : null;
-    out.push(
-      JSON.stringify([
-        o.name,
-        o.geometry.type,
-        Array.from(pos.array),
-        o.matrixWorld.elements,
-        color,
-      ]),
-    );
+describe("two-bolt drivers on the plywood mount", () => {
+  const twoBolt = CD_OPTIONS.filter((c) => c.body.bolts.n === 2);
+  const rx28 = HORN_OPTIONS.find((h) => h.id === "rx28");
+  if (!rx28) throw new Error("no RX28");
+
+  test("their bolts stand upright: the bottom one goes through the ply, centered, and the top one holds the flange", () => {
+    expect(twoBolt.length).toBeGreaterThan(0);
+    for (const cd of twoBolt.filter((c) => c.exit === rx28.exit)) {
+      const [bottom, top] = [...driverBolts(cd, true)].sort((a, b) => a.y - b.y);
+      expect(bottom.x, cd.id).toBeCloseTo(0, 9);
+      expect(top.x, cd.id).toBeCloseTo(0, 9);
+      expect(bottom.y, cd.id).toBeCloseTo(-cd.body.bolts.circle / 2, 9);
+      const g = scene({ horn: rx28, cd, hornMount: "ply" });
+      const [{ axis, upright }] = hornsWithUprights(g);
+      const u = uprightOutline(upright, axis);
+      expect(top.y, `${cd.id}: top bolt above the ply`).toBeGreaterThan(u.top);
+      // one head and washer, on the bottom bolt
+      const bolts = meshesNamed(g, PLY_MOUNT_MESH_NAMES.bolt);
+      expect(bolts, cd.id).toHaveLength(2);
+      for (const m of bolts) {
+        const c = m.getWorldPosition(new THREE.Vector3());
+        expect(c.x - axis.x, cd.id).toBeCloseTo(0, 6);
+        expect(c.y - axis.y, cd.id).toBeCloseTo(bottom.y, 6);
+      }
+      // its washer on the ply: clear of the saddle and the edges
+      const washerR = PLY_MOUNT.boltHole / 2 + PLY_MOUNT.washerPast;
+      expect(Math.abs(bottom.y) - washerR, cd.id).toBeGreaterThanOrEqual(u.saddleR - 1e-6);
+      expect(bottom.y + washerR, cd.id).toBeLessThanOrEqual(u.top);
+    }
   });
-  return out;
-}
+
+  test("with a four-bolt driver the bolts stay at 45°, as the flange's holes are", () => {
+    for (const cd of CD_OPTIONS.filter((c) => c.body.bolts.n === 4))
+      expect(driverBolts(cd, true), cd.id).toEqual(driverBolts(cd));
+  });
+
+  test("where no bolt has room for its washer on the ply (the DE360's 57 mm circle on the ST260), the mount can't be picked", () => {
+    const de360 = CD_OPTIONS.find((c) => c.id === "de360");
+    const narrow = HORN_OPTIONS.filter((h) => h.id === "st260" || h.id === "iwata600");
+    if (!de360) throw new Error("no DE360");
+    expect(narrow).toHaveLength(2);
+    for (const horn of narrow) {
+      expect(takesHornMount(horn, "stack"), horn.id).toBe(true);
+      expect(plyMountFit(horn, de360, base.mid.box.w), horn.id).toBeNull();
+      const g = scene({ horn, cd: de360, hornMount: "ply" });
+      expect(meshesNamed(g, PLY_MOUNT_MESH_NAMES.upright), horn.id).toHaveLength(0);
+      expect(meshesNamed(g, BRACKET_MESH_NAME).length, horn.id).toBeGreaterThan(0);
+    }
+  });
+
+  test("a bolt whose washer would straddle the top edge: the edge drops below it", () => {
+    // a made-up six-bolt driver on a 100 mm circle: its bolt at 345° sits 12.9 mm under the axis
+    const cd = {
+      ...base.cd,
+      body: { ...base.cd.body, bolts: { n: 6, thread: "M6", circle: 100 * MM_IN } },
+    };
+    const fit = plyMountFit(rx28, cd, base.mid.box.w);
+    if (!fit) throw new Error("no fit");
+    const washerR = PLY_MOUNT.boltHole / 2 + PLY_MOUNT.washerPast;
+    expect(fit.top).toBeLessThan(-PLY_MOUNT.belowAxis);
+    for (const b of driverBolts(cd, true))
+      expect(
+        b.y + washerR <= fit.top + 1e-9 || b.y - washerR >= fit.top - 1e-9,
+        `${b.x}, ${b.y}`,
+      ).toBe(true);
+    const straddler = driverBolts(cd, true).find(
+      (b) => Math.abs(b.y + 50 * MM_IN * Math.sin(Math.PI / 12)) < 1e-9,
+    );
+    expect(straddler).toBeDefined();
+    expect(fit.top).toBeCloseTo((straddler?.y ?? 0) - washerR, 9);
+    expect(fit.through.length).toBeGreaterThan(0);
+  });
+});
 
 describe("with the L-bracket (the default)", () => {
-  const horns: readonly Horn[] = HORN_OPTIONS;
-  test("the scene is the same as with no setting at all, with no plywood mount", () => {
+  test("no plywood mount is drawn (tests/horn-mount-off.test.ts pins the scene to main's)", () => {
     expect(HORN_MOUNT_DEFAULT).toBe("bracket");
     expect(DEFAULT_PA.hornMount).toBe(HORN_MOUNT_DEFAULT);
     for (const layout of [...LID_LAYOUTS, "tower"] as const)
-      for (const horn of horns) {
-        const at = `${horn.id} ${layout}`;
-        const unset = scene({ horn, layout });
-        const bracket = scene({ horn, layout, hornMount: "bracket" });
-        expect(fingerprint(bracket), at).toEqual(fingerprint(unset));
+      for (const horn of HORN_OPTIONS) {
+        const g = scene({ horn, layout, hornMount: "bracket" });
         for (const name of Object.values(PLY_MOUNT_MESH_NAMES))
-          expect(meshesNamed(bracket, name), at).toHaveLength(0);
+          expect(meshesNamed(g, name), `${horn.id} ${layout}`).toHaveLength(0);
       }
   });
 

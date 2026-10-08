@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { ROUNDOVER_IN } from "./stackHeights";
+import { BRACKET_PLATE_IN } from "../../constants/hornMount";
 import type { SceneContext } from "./sceneContext";
 import type { HornAxis } from "./buildHorn";
 import type { CompressionDriver, HornAdapter } from "../../types";
@@ -16,7 +17,7 @@ export const BRACKET_BOLT_MESH_NAME = "cdBracketBolt";
  */
 export const BRACKET = {
   width: 3.5,
-  thickness: 0.125,
+  thickness: BRACKET_PLATE_IN,
   foot: 2,
   /** how far the upright reaches above the bolt holes */
   aboveBolts: 0.55,

@@ -46,8 +46,15 @@ import { PANEL_NOMINAL_OPTIONS } from "../../../lib/panel";
 import { HardwareSettings } from "./HardwareSettings";
 import { boxTakesHardware, handlePart } from "../../../lib/pa/hardware";
 import { NO_HANDLES_LABEL } from "../../../constants/hardware";
-import { HORN_MOUNT_LABEL, HORN_MOUNT_NAMES, HORN_MOUNT_TIPS } from "../../../constants/hornMount";
+import {
+  HORN_MOUNT_DEFAULT,
+  HORN_MOUNT_LABEL,
+  HORN_MOUNT_NAMES,
+  HORN_MOUNT_PLY_UNAVAILABLE,
+  HORN_MOUNT_TIPS,
+} from "../../../constants/hornMount";
 import { takesHornMount } from "../../../lib/pa/hornMount";
+import { plyMountFit } from "../../../components/stack-view/buildPlyMount";
 import {
   HORN_COLOR_CATALOG,
   HORN_COLOR_CATALOG_LABEL,
@@ -264,6 +271,12 @@ export function SettingsPanel({ planner }: Props) {
     ...braceNoteLines(PA_SETTINGS_TABS.sub, subBracing),
     ...(midBracing ? braceNoteLines(PA_SETTINGS_TABS.mid, midBracing) : []),
   ];
+  // the horn mount: offered where the clamped L-bracket was; the plywood mount only when the driver's bolts fit it (the
+  // 3D view falls back to the L-bracket otherwise, so the setting shows what it draws)
+  const hornMountShown = takesHornMount(hornOption, layout);
+  const plyMountFits =
+    hornMountShown && plyMountFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
+  const shownHornMount = plyMountFits ? hornMount : HORN_MOUNT_DEFAULT;
   const summaries: Record<PaSettingsSection, string> = {
     sub: [
       subDriver.name,
@@ -289,9 +302,7 @@ export function SettingsPanel({ planner }: Props) {
           (b) =>
             `${PA_SETTINGS_TABS[b]}: ${handlePart(hardware[b].model)?.name ?? NO_HANDLES_LABEL.toLowerCase()}`,
         ),
-      ...(takesHornMount(hornOption, layout)
-        ? [`${HORN_MOUNT_LABEL}: ${HORN_MOUNT_NAMES[hornMount]}`]
-        : []),
+      ...(hornMountShown ? [`${HORN_MOUNT_LABEL}: ${HORN_MOUNT_NAMES[shownHornMount]}`] : []),
     ].join(", "),
   };
   const section = (id: PaSettingsSection, children: React.ReactNode) => (
@@ -768,11 +779,14 @@ export function SettingsPanel({ planner }: Props) {
                 onChange={setBaffleInsetIn}
               />
             </div>
-            {takesHornMount(hornOption, layout) && (
+            {hornMountShown && (
               <ToggleGroup
                 label={HORN_MOUNT_LABEL}
-                value={hornMount}
+                value={shownHornMount}
                 onChange={setHornMount}
+                disabled={
+                  plyMountFits ? undefined : { values: ["ply"], why: HORN_MOUNT_PLY_UNAVAILABLE }
+                }
                 options={keysOf(HORN_MOUNT_NAMES).map(
                   (id) => [id, HORN_MOUNT_NAMES[id], HORN_MOUNT_TIPS[id]] as const,
                 )}
