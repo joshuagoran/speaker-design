@@ -46,19 +46,22 @@ test("loading a card sets the design and writes no saved configuration", () => {
   };
   const db: ConfigDb = { collection: () => collection };
   const restored: Partial<PaDesignConfig>[] = [];
-  let hook: PaOptimizer | null = null;
+  const hooks: PaOptimizer[] = [];
   function Probe() {
-    hook = usePaOptimizer({
-      snapshot: () => design,
-      restore: (c) => restored.push(c),
-      db,
-      cutlist: { sheet: DEFAULT_PA.plywoodSheetKind, stacks: 1 },
-    });
+    hooks.push(
+      usePaOptimizer({
+        snapshot: () => design,
+        restore: (c) => restored.push(c),
+        db,
+        cutlist: { sheet: DEFAULT_PA.plywoodSheetKind, stacks: 1 },
+      }),
+    );
     return null;
   }
   renderToString(createElement(Probe));
+  const [hook] = hooks;
   assert.ok(hook, "the hook ran");
-  (hook as PaOptimizer).loadOptimizerResult(card);
+  hook.loadOptimizerResult(card);
   assert.equal(restored.length, 1, "the card is applied");
   assert.equal(restored[0].sub, card.config.sub);
   assert.deepEqual(writes, [], "nothing is saved");

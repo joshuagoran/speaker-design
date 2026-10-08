@@ -32,13 +32,12 @@ export function useDesignPreview<Card extends { label: string }, Config>({
     if (designPreview) restore(designPreview.before);
     setDesignPreview(null);
   };
-  /** loads the card and returns the design it replaced */
+  /** loads the card; Undo puts back the design it replaced (kept in memory only) */
   const loadOptimizerResult = (card: Card) => {
     const before = baseDesign();
     applyCard(card);
     setDesignPreview(null);
     setUndoSnapshot(before);
-    return before;
   };
   const undoOptimizerLoad = () => {
     if (undoSnapshot) restore(undoSnapshot);
