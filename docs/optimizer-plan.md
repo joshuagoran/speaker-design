@@ -134,8 +134,9 @@ Two reviews: technical (search soundness, speed) and usability (inputs, results,
   weight, not only fit.
 - **Valid pruning only:** upper bound on SPL per driver (mass-line level at the thermal/amp cap), lower
   bounds on price and weight, driver-fit by max dimensions. Budget: 0.5–1 s laptop, stream on phones.
-- **Hard constraints added:** horn/driver exit match, mid "driver won't fit", minimum crossovers,
-  stack height and width; which "warn" chips are hard is listed explicitly.
+- **Hard constraints added:** horn/driver exit match, mid "driver won't fit", stack height and width;
+  which "warn" chips are hard is listed explicitly. The recommended crossovers (the driver's and the horn's
+  minimum, the horn's loading limit) are warnings on the card, never a reason to drop a design.
 - **Worker:** second esbuild entry, inlined as `<script type="text/plain">` (same `</script` guard), started
   from a Blob URL with a run id for cancellation; main-thread fallback where workers are blocked (test in
   the claude.ai artifact).

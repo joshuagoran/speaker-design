@@ -57,6 +57,8 @@ import type {
   Dims3,
   SliderSpec,
   DimensionLockMode,
+  Horn,
+  HornChipsInput,
   HornHf,
   MidDriver,
   PaBoxGeometry,
@@ -169,10 +171,9 @@ interface MidPair {
   mAmpW: number;
   lo: number;
 }
-/** A whole design the combine step offers for evaluation. */
-interface Combo extends Score {
+/** A whole design the combine step offers for evaluation, with its horn pair's own warnings (`w`). */
+interface Combo extends Metric {
   c: PaDesignConfig;
-  ch: number;
 }
 type PoolEntry = PaPoolEntry;
 /** A card as `choose` picks it: the design, its label and its why. */
@@ -489,6 +490,11 @@ const SOFT_OK = new Set<PaChipId>([
   "midThermalLimited",
   "midQtc",
   "hornAmpLimited",
+  // the recommended crossover: below the driver's or the horn's minimum, or near the horn's cutoff, is a warning on the
+  // card, never a reason to drop a design (the horn model derates the power and rolls off below the cutoff)
+  "hornDriverMinXo",
+  "hornMinXo",
+  "hornLoading",
   "hornWiderThanRated",
   "hornMidNarrower",
   "hornMidWider",
@@ -619,6 +625,33 @@ export function paSearchDesign(input: Pick<PaOptimizerInput, "cur">): PaDesignCo
     xoHiOrder: savedCrossoverOrder(input.cur.xoHiOrder),
   };
 }
+/**
+ * The warnings a compression driver on a horn carries at a crossover on its own (no mid in view): a crossover below the
+ * recommended one, near the horn's cutoff, or past its rated coverage. The limit chips don't count.
+ */
+export const hornOwnWarnings = (
+  hf: HornChipsInput["hf"],
+  hz: Partial<HornHf>,
+  horn: Horn,
+  xoHi: number,
+  hornModel: HornChipsInput["hornModel"],
+  hfAmpW: number,
+  hornBelowMidDb: number,
+) =>
+  hornChips({
+    hf,
+    hz,
+    horn,
+    xoHi,
+    hornModel,
+    hfAmpW,
+    midAtXoHi: null,
+    hornBelowMidDb,
+    hornAtXo: null,
+    midBeam: null,
+    fK: hz.covH && horn.size ? keeleFrequency(hz.covH, horn.size.w) : null,
+  }).filter(([kind, , , id]) => kind === "warn" && !LIMIT_CHIP_IDS.has(id)).length;
+
 /** The amps the search runs at: a locked amp as it is, an unlocked one at the top of its slider. */
 export const paSearchAmps = (cur: PaDesignConfig, locks: PaOptimizerLocks) => ({
   ampW: locks.ampW ? cur.ampW : AMP_WATTS_MAX.ampW,
@@ -670,16 +703,6 @@ export function optimizePaStack(
   const amps = paSearchAmps(cur, locks);
   const base = { ...cur, ...amps };
   const curM = evaluateDesign(cur);
-  // horn loading is fixable by the horn, the driver or the crossover; only when all three are locked and the
-  // current design already has the warning is it allowed through
-  const hornLoadOk = !!(
-    locks.horn &&
-    locks.cd &&
-    locks.xoHi &&
-    curM &&
-    curM.chips.horn.some(([, , , id]) => id === "hornLoading")
-  );
-  if (hornLoadOk) lim.allow.add("hornLoading");
   const need = roomRequiredSpl(room);
   const target = Math.max(curM ? curM.out : need, need);
   const curF3 = curM ? curM.f3 : PA_UNMODELED_F3_HZ;
@@ -1062,8 +1085,8 @@ export function optimizePaStack(
         if (h.exit !== cd.exit) continue;
         const hz: Partial<HornHf> = h.hf || {};
         if (!cd.hf) continue; // a locked driver with no published spec can't be modeled
-        if ((cd.hf.minXo && xoHi < cd.hf.minXo) || (hz.minXo && xoHi < hz.minXo)) continue;
-        if (hz.lowHz && hz.lowHz > xoHi * 0.8 && !hornLoadOk) continue; // horn stops loading near the crossover
+        // a crossover below the driver's or the horn's recommended one, or near the horn's cutoff, stays in: the model
+        // already derates the driver's power and rolls the horn off, and the card carries the warning
         const hm = hornResponse(cd.hf, hz, xoHi, amps.hfAmpW, cur.xoHiOrder);
         evals++;
         if (!hm) continue;
@@ -1074,6 +1097,7 @@ export function optimizePaStack(
           price: cd.price || 0,
           horn: h.price || 0,
           same: cd.id === cur.cd && h.id === cur.horn,
+          w: hornOwnWarnings(cd.hf, hz, h, xoHi, hm, amps.hfAmpW, cur.hfTilt),
         });
       }
     hornTable[xoHi].sort((a, b) => a.price - b.price || a.horn - b.horn);
@@ -1276,6 +1300,8 @@ export function optimizePaStack(
           const topHf = Math.max(...fits.map((x) => x.out));
           const picks = new Set([
             fits.find((x) => x.out >= target - 0.5),
+            // and the cheapest with no warning of its own that keeps the target (a warning outweighs a price)
+            fits.find((x) => x.out >= target - 0.5 && x.hp.w === 0),
             fits.find((x) => x.out >= topHf - 1e-9),
             fits.find((x) => x.hp.same),
           ]);
@@ -1295,7 +1321,15 @@ export function optimizePaStack(
             };
             const price = sc.sub.price + (e ? midPrice(e) : curMidPrice) + hp.price;
             const heaviest = Math.max(sc.lb, e ? e.lb : 0);
-            combos.push({ c, price, heaviest, out: x.out, f3: sc.s.mdl.f3, ch: changes(c) });
+            combos.push({
+              c,
+              price,
+              heaviest,
+              out: x.out,
+              f3: sc.s.mdl.f3,
+              ch: changes(c),
+              w: hp.w,
+            });
           }
         }
     }

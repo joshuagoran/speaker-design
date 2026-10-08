@@ -2410,6 +2410,8 @@ export interface PaHornEntry {
   price: number;
   horn: number;
   same: boolean;
+  /** the warnings the pair carries at the crossover on its own (no mid in view): `hornOwnWarnings` */
+  w: number;
 }
 /** An evaluated PA design. */
 export interface PaPoolEntry {
