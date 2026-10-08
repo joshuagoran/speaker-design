@@ -3,6 +3,7 @@ import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
 import { isRoundPort } from "../../../lib/pa/calc";
 import { subTubeKit } from "../../../lib/pa/tubes";
+import { priceTotal } from "../../../lib/pa/totals";
 
 /** The totals row for the boxes' hardware. */
 const HARDWARE_ROW = "Handles, input dishes, jacks and horn posts (weight in the boxes)";
@@ -91,7 +92,9 @@ export function TotalsSection({ planner }: Props) {
               ]);
             // the handles, input dishes, jacks and horn posts (their weight is in the boxes' rows)
             rows.push([HARDWARE_ROW, subHardware.price + (midHardware?.price ?? 0), 0, 0, 0]);
-            const sum = (i: 1 | 2 | 3) => rows.reduce((a, r) => a + (r[i] || 0), 0);
+            const sum = (i: 2 | 3) => rows.reduce((a, r) => a + (r[i] || 0), 0);
+            // a part with no price (null) leaves the totals short, and they carry the mark
+            const price = priceTotal(rows.map((r) => r[1]));
             const stackLb = sum(2) + sum(3) + (plinthHeightIn ? 6 : 0);
             return (
               <div className="overflow-x-auto max-w-3xl">
@@ -128,7 +131,8 @@ export function TotalsSection({ planner }: Props) {
                         One stack{plinthHeightIn ? ` + ${plinthHeightIn}" plinth` : ""}
                       </td>
                       <td className="py-1 pr-4 text-right tabular-nums">
-                        ${Math.round(sum(1)).toLocaleString()}
+                        ${Math.round(price.sum).toLocaleString()}
+                        {price.mark}
                       </td>
                       <td className="py-1 pr-4 text-right tabular-nums">{sum(2).toFixed(0)}</td>
                       <td className="py-1 pr-4 text-right tabular-nums">
@@ -140,7 +144,8 @@ export function TotalsSection({ planner }: Props) {
                     <tr className="font-medium text-stone-900">
                       <td className="py-1 pr-4">Pair</td>
                       <td className="py-1 pr-4 text-right tabular-nums">
-                        ${Math.round(2 * sum(1)).toLocaleString()}
+                        ${Math.round(2 * price.sum).toLocaleString()}
+                        {price.mark}
                       </td>
                       <td className="py-1 pr-4 text-right tabular-nums">
                         {(2 * sum(2)).toFixed(0)}
@@ -155,6 +160,11 @@ export function TotalsSection({ planner }: Props) {
                     </tr>
                   </tbody>
                 </table>
+                {price.mark && (
+                  <p className="text-xs text-stone-500 mt-1">
+                    {price.mark} Some parts have no price, so the real total is higher.
+                  </p>
+                )}
               </div>
             );
           })()}

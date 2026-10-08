@@ -5,6 +5,7 @@ import { ToggleButton } from "../ui/ToggleButton";
 import { formatDollars } from "../../lib/format";
 import { entriesOf } from "../../lib/records";
 import { DRIVER_PART_NAMES } from "../../constants/optimizerText";
+import { UI_TEXT } from "../../constants/uiText";
 import type { PaDriverCompareRow, PaDriverPart } from "../../types";
 
 type Metrics = NonNullable<PaDriverCompareRow["m"]>;
@@ -98,7 +99,9 @@ export function DriverCompare({ rows, onUse }: Props) {
                         {r.price == null ? "?" : formatDollars(r.price)}
                       </td>
                       <td className="py-1.5 pr-3 text-right whitespace-nowrap">
-                        {r.m ? `${formatDollars(r.m.price)}${r.m.priceKnown ? "" : "+"}` : "–"}
+                        {r.m
+                          ? `${formatDollars(r.m.price)}${r.m.priceKnown ? "" : UI_TEXT.partialPriceMark}`
+                          : "–"}
                       </td>
                       <td className="py-1.5 pr-3 text-right whitespace-nowrap">
                         {r.lb == null ? "–" : `${r.lb.toFixed(r.lb < 10 ? 1 : 0)} lb`}

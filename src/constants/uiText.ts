@@ -9,6 +9,8 @@ export const UI_TEXT = {
   expandAll: "Expand all",
   /** the settings drawer's close button, as screen readers hear it */
   closeSettings: "Close settings",
+  /** after a price total when some part has no price, so the real total is higher */
+  partialPriceMark: "+",
   /** the conditions a sensitivity figure is quoted at */
   splConditions: "2.83 V, half space, 1 m",
   /** the PA stack's sub, as its results section and the system response chart name it */

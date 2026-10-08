@@ -3,7 +3,8 @@
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
 // a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
 // class, tweeter type) is an error.
-// Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read.
+// Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read, or says why
+// there is none (price null); an owner's estimate for a part no vendor sells says "Estimate" in `src`.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
 // Pure data: no logic, no derived fields (src/lib/data.ts derives and sorts).
 // Fields: id, name, lb, exit (throat, in), price $, src, size {w, h, d} in (mouth and depth), driver (suggested
@@ -12,7 +13,8 @@
 // ([radius, depth] points, in; the 3-D view stretches it to `size`), adapter (the throat adapter: name, steps
 // [diameter, length] front to back, body and driver bolt circles, in), rect for the full-width rectangular concept,
 // finish ("black" for a horn that ships painted, as cast Lavoce, B&C, RCF and Beyma horns do; omit it for a printed horn).
-// A horn without a profile is drawn as a rectangular flare at its mouth and depth.
+// A horn with a CAD mesh (HORN_MESHES in src/data/meshes) is drawn from it, at the mesh's size, which `size` must
+// match; a horn with neither a mesh nor a profile is drawn as a rectangular flare at its mouth and depth.
 import type { HifiWaveguide, Horn, HornAdapter, HornProfilePoint } from "../../types";
 
 export const ST260_PROFILE: readonly HornProfilePoint[] = [
@@ -172,6 +174,48 @@ export const A460G2_14: Horn = {
   note: "Same print as the A460G2 with the T520-36-STD-1 throat adapter (36 mm in, 41 mm long, 4\u00d7M6 to the driver and 8\u00d7M6 to the body on a 102 mm circle; at-horns.eu). Body \u2300460 \u00d7 160 mm, so about 7.9 in deep with the adapter. Approx.: no Gen2 profile is published, so it is drawn as the ST260 profile stretched to that size. 18.1 in mouth controls pattern to about 750 Hz, so it supports a 900 Hz\u20131 kHz crossover. Adapter must match the driver's exit angle (7.3\u00b0 for the N314T-8); Bat\u00edk publishes them per driver.",
 };
 
+/** The owner's own OS waveguide for a 1.4 in driver, designed in hornlab.io and printed; drawn from its STEP model. */
+export const DIY_OS90X50: Horn = {
+  id: "diy_os90x50",
+  // GUESS: 1290 cm³ of solid PLA from the mesh; infill makes it lighter
+  lb: 3.5,
+  name: "DIY OS 90×50 (hornlab, 486 mm, printed)",
+  // lowest crossover 1 kHz (LR24) from the BEM's loading, −3 dB there; loading −6 dB at 790 Hz (hornlab cutoff 785 Hz)
+  hf: { covH: 90, covV: 50, minXo: 1000, lowHz: 790 },
+  exit: 1.4,
+  // the owner's estimate, not a vendor price
+  price: 80,
+  src: "Estimate: same as the 460 mm ATH printed horn ($80; similar size and material); not a vendor price.",
+  size: { w: 494 / 25.4, h: 319 / 25.4, d: 180 / 25.4 },
+  driver:
+    '1.4" exit, 4 × M6 or 1/4-20 on a 101.6 mm (4 in) circle at 45° (the Eminence N314T bolts straight on)',
+  xo: "from 1 kHz (LR24)",
+  note: "[hornlab.io design and BEM, 30 points, Oct 2026] The owner's oblate-spheroidal waveguide: 90° × 50°, 36 mm (1.4\") throat at 3.7°, k 2.5, superellipse n 3, 7 mm walls. Mouth 486 × 311 mm inside (494 × 319 outside), 180 mm deep including the throat flange; hornlab cutoff 785 Hz. Flange ⌀130 × 12 mm with 4 × ⌀6.6 mm holes (M6 or 1/4-20) on a 101.6 mm (4 in) circle at 45°, so the N314T bolts straight on (no adapter). −6 dB beamwidth H/V: 84/104° at 1 kHz, 96/84° at 1.3 kHz, 108/108° at 1.8 kHz, 92/72° at 3 kHz, 80/58° at 5–6 kHz, 70/46° at 9–10 kHz. Loading is flat above 1.6 kHz, −3 dB at 1 kHz and −6 dB at 790 Hz, so cross from 1 kHz (LR24). Near 1.8 kHz both planes widen and the DI dips about 1 dB (mouth diffraction; the design has no rollback). Weight not measured: about 3.5 lb printed solid in PLA. Drawn from its STEP model.",
+};
+
+/**
+ * The owner's preferred DIY horn: an R-OSSE waveguide for a 1.4 in driver, designed in hornlab.io and printed; drawn
+ * from its STEP model.
+ */
+export const DIY_ROSSE110X50: Horn = {
+  id: "diy_rosse110x50",
+  // GUESS: 1510 cm³ of solid PLA from the mesh; infill makes it lighter
+  lb: 4.1,
+  name: "DIY R-OSSE 110×50 (hornlab, 500 mm, printed)",
+  // the design target; the BEM narrows from about 108° at 0.9 kHz to 60° at 10 kHz (see the note). Lowest crossover:
+  // the BEM's −3 dB loading point, about 970 Hz, to the nearest 50 Hz; loading −6 dB at about 740 Hz
+  hf: { covH: 110, covV: 50, minXo: 950, lowHz: 740 },
+  exit: 1.4,
+  // the owner's estimate, not a vendor price
+  price: 80,
+  src: "Estimate: same as the 460 mm ATH printed horn ($80; similar size and material); not a vendor price.",
+  size: { w: 500 / 25.4, h: 320 / 25.4, d: 176 / 25.4 },
+  driver:
+    '1.4" exit, 4 × M6 or 1/4-20 on a 101.6 mm (4 in) circle at 45° (the Eminence N314T bolts straight on)',
+  xo: "from 950 Hz (LR24)",
+  note: "[hornlab.io design and BEM, 30 points, Oct 2026] The owner's preferred waveguide, an R-OSSE: 110° × 50° target, R 250 / R_V 160 mm, a 55° / a_V 25°, 36 mm (1.4\") spherical throat at 3.7°, k 2.5, q 3.5, superellipse n 2.75, 7 mm walls, rolled-back lip. Mouth 500 × 320 mm (the rollback is its outside), 176 mm deep including the throat flange; hornlab cutoff 805 Hz. Flange ⌀130 × 12 mm with 4 × ⌀6.6 mm holes (M6 or 1/4-20) on a 101.6 mm (4 in) circle at 45°, so the N314T bolts straight on (no adapter). Not constant directivity: the coverage narrows smoothly with frequency, with no bump. −6 dB beamwidth H/V: 108/132° at 0.9 kHz, 104/120° at 1 kHz, 92/96° at 1.45 kHz, 84–88/68–72° at 1.8–2.6 kHz, about 80/64° at 3–5 kHz, 60/48° at 10 kHz (DI 4.9 to 11 dB). The planner takes the coverage as a constant 110° × 50°, so expect about 80° at 3–5 kHz and 60° at 10 kHz. At a 900 Hz–1 kHz crossover its 104–108° matches a 12\" mid's width (the OS 90×50 gives 84°). Loading is flat above 1.4 kHz, −3 dB at about 970 Hz and −6 dB at about 740 Hz, so cross from 950 Hz (LR24). Weight not measured: about 4.1 lb printed solid in PLA. Drawn from its STEP model.",
+};
+
 export const HORN_RAW: readonly Horn[] = [
   {
     id: "rx28",
@@ -301,6 +345,8 @@ export const HORN_RAW: readonly Horn[] = [
     note: "Body ⌀400 × 130 mm (at-horns.eu Gen2). Approx.: no Gen2 profile is published, so it is drawn as the ST260 profile stretched to that size. Shown with the T520-25-STD-1 throat adapter (25.4 mm in, 61 mm long, 4×M6 on 76 mm and 3×M6 on 57 mm to the driver, 8×M6 on 102 mm to the body; STD-2 and STD-3 are 46 and 52 mm).",
   },
   A460G2_14,
+  DIY_OS90X50,
+  DIY_ROSSE110X50,
   {
     id: "a460g2",
     lb: 3.5,

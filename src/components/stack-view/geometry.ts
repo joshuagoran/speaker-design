@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { PARTS_3D } from "../../styles/palette";
+import type { PartMesh } from "../../types";
 /** Rounded rectangle outline centered on the origin, as a THREE.Shape. */
 export function roundedRectShape(width: number, height: number, radius: number) {
   const x = width / 2,
@@ -150,4 +151,96 @@ export function createScaleFigure(heightIn: number) {
   head.absarc(0, 92.5 * u, 6 * u, 0, Math.PI * 2, false);
   figure.add(new THREE.Mesh(new THREE.ShapeGeometry(head), material));
   return figure;
+}
+
+/** Millimeters to the scene's inches. */
+export const MM_IN = 1 / 25.4;
+
+/**
+ * How a part's mesh is drawn (partMeshGeometry). Shading flat: every triangle its own vertices, so a part's edges and
+ * corners stay crisp; smooth: the vertices shared, so a curved face shades smooth (a mesh split at its sharp edges,
+ * as build/horn-mesh.mjs writes them, still keeps those edges crisp). Placed by its bounds: centered on the origin in
+ * x and y (a handle's flange); by its origin: the model's own origin at the origin (a horn's axis).
+ */
+export interface PartMeshDrawing {
+  shading: "flat" | "smooth";
+  place: "bounds" | "origin";
+}
+// each mesh's geometry built once per drawing
+const PART_MESH_GEOMETRY = new Map<PartMesh, Map<string, THREE.BufferGeometry>>();
+/** A part's CAD mesh (data/meshes) as geometry, in inches on the model's axes, the model's z = 0 at z = 0. */
+export function partMeshGeometry(m: PartMesh, { shading, place }: PartMeshDrawing) {
+  const built = PART_MESH_GEOMETRY.get(m) ?? new Map<string, THREE.BufferGeometry>();
+  PART_MESH_GEOMETRY.set(m, built);
+  const key = `${shading} ${place}`;
+  const hit = built.get(key);
+  if (hit) return hit;
+  const k = m.unitMm * MM_IN;
+  const center =
+    place === "bounds"
+      ? [(m.min[0] + m.max[0]) / 2, (m.min[1] + m.max[1]) / 2, 0].map((c) => c * MM_IN)
+      : [0, 0, 0];
+  const at = (v: number, axis: number) => m.positions[3 * v + axis] * k - center[axis];
+  const g = new THREE.BufferGeometry();
+  // smooth: one vertex per position and the triangles as indices; flat: three vertices per triangle
+  const corners = shading === "smooth" ? m.positions.length / 3 : m.indices.length;
+  const vertex = (i: number) => (shading === "smooth" ? i : m.indices[i]);
+  const pos = new Float32Array(corners * 3);
+  for (let i = 0; i < corners; i++)
+    for (let axis = 0; axis < 3; axis++) pos[3 * i + axis] = at(vertex(i), axis);
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  if (shading === "smooth") g.setIndex([...m.indices]);
+  g.computeVertexNormals();
+  built.set(key, g);
+  return g;
+}
+
+// each horn mesh's silhouette built once
+const SILHOUETTES = new Map<PartMesh, THREE.Vector2[]>();
+/** How many directions round the axis a silhouette samples. */
+const SILHOUETTE_RAYS = 180;
+/**
+ * A horn mesh's outline seen from the front, in inches round the model's origin (its axis): along each of
+ * SILHOUETTE_RAYS directions, the farthest the mesh's triangles reach from the axis (the outside of the mouth's rim,
+ * or of a rolled-back lip, or of a wall that stands proud of the rim). The outline of the hole the horn fits through:
+ * no part of the horn reaches outside it (between the sampled directions, up to the chord's sag). It is star-shaped
+ * from the axis, so where the horn's real outline dents in at a place the axis can't see, the polygon spans the dent,
+ * and the points in it are not in front of the horn. The DIY horns' outlines are convex, so they have no such dents.
+ * Counterclockwise.
+ */
+export function partMeshSilhouette(m: PartMesh): THREE.Vector2[] {
+  const hit = SILHOUETTES.get(m);
+  if (hit) return hit;
+  const k = m.unitMm * MM_IN;
+  const out: THREE.Vector2[] = [];
+  for (let i = 0; i < SILHOUETTE_RAYS; i++) {
+    const a = (2 * Math.PI * i) / SILHOUETTE_RAYS;
+    const [dx, dy] = [Math.cos(a), Math.sin(a)];
+    let far = 0;
+    // the ray t (dx, dy) against each triangle edge p + s (q - p) in the xy plane
+    for (let t = 0; t < m.indices.length; t += 3)
+      for (let e = 0; e < 3; e++) {
+        const [p, q] = [m.indices[t + e], m.indices[t + ((e + 1) % 3)]];
+        const [px, py] = [m.positions[3 * p] * k, m.positions[3 * p + 1] * k];
+        const [ex, ey] = [m.positions[3 * q] * k - px, m.positions[3 * q + 1] * k - py];
+        const den = dx * ey - dy * ex;
+        if (Math.abs(den) < 1e-12) continue;
+        const s = (px * dy - py * dx) / den;
+        const along = (px * ey - py * ex) / den;
+        if (s >= 0 && s <= 1 && along > far) far = along;
+      }
+    out.push(new THREE.Vector2(dx * far, dy * far));
+  }
+  SILHOUETTES.set(m, out);
+  return out;
+}
+
+/** A closed polygon through `points`, offset to (centerX, centerY), as a THREE.Path. */
+export function polygonPath(centerX: number, centerY: number, points: readonly THREE.Vector2[]) {
+  const path = new THREE.Path();
+  points.forEach((p, i) =>
+    i ? path.lineTo(centerX + p.x, centerY + p.y) : path.moveTo(centerX + p.x, centerY + p.y),
+  );
+  path.closePath();
+  return path;
 }

@@ -4,6 +4,7 @@ import { buildStackScene } from "../src/components/stack-view/buildStackScene";
 import {
   ADAPTER_MESH_NAME,
   CD_MESH_NAME,
+  HORN_MESH_DRAWING,
   HORN_MESH_NAME,
 } from "../src/components/stack-view/buildHorn";
 import {
@@ -25,7 +26,10 @@ import {
 import { SCENE_CASE_NAMES, defaultConfig, sceneCases, scenePropsOf } from "./scene-cases";
 import { HORN_COLOR_CATALOG } from "../src/constants/hornColor";
 import { pickedHornColor, savedHornColor } from "../src/lib/pa/hornColor";
-import type { PaLayout } from "../src/types";
+import { HORN_MESHES } from "../src/data/meshes";
+import { A460G2_14, DIY_OS90X50, DIY_ROSSE110X50 } from "../src/data/catalog/horns";
+import { MM_IN, partMeshGeometry, partMeshSilhouette } from "../src/components/stack-view/geometry";
+import type { PaLayout, PartMesh } from "../src/types";
 
 /** How close two faces count as touching, in (meshes are faceted, so a contact is never exact). */
 const CONTACT_IN = 0.01;
@@ -88,6 +92,13 @@ describe("catalog sizes", () => {
     }
     const n314t = CD_OPTIONS.find((c) => c.id === "n314t");
     expect(n314t?.body).toMatchObject({ dia: 5.72, depth: 2.53, bolts: { n: 4, circle: 4 } });
+  });
+
+  test("the DIY horns' estimated price is the 460 mm ATH print's", () => {
+    for (const horn of [DIY_OS90X50, DIY_ROSSE110X50]) {
+      expect(horn.price, horn.id).toBe(A460G2_14.price);
+      expect(horn.src, horn.id).toMatch(/^Estimate/);
+    }
   });
 
   test("the A460G2 with its adapter is about 7.9 in deep", () => {
@@ -172,6 +183,268 @@ describe("horn, throat adapter and compression driver", () => {
       expect(size.x, cd.id).toBeCloseTo(cd.body.dia, 2);
       expect(size.y, cd.id).toBeCloseTo(cd.body.dia, 2);
     }
+  });
+});
+
+describe("horns drawn from their CAD mesh", () => {
+  const meshed = Object.entries(HORN_MESHES).flatMap(([id, mesh]) => {
+    const horn = HORN_OPTIONS.find((h) => h.id === id);
+    if (!horn) throw new Error(`a mesh for a horn not in the catalog: ${id}`);
+    return mesh ? [{ horn, mesh }] : [];
+  });
+
+  test("both DIY horns have one", () => {
+    const ids = meshed.map((m) => m.horn.id);
+    expect(ids).toContain(DIY_OS90X50.id);
+    expect(ids).toContain(DIY_ROSSE110X50.id);
+  });
+
+  test("a mesh's geometries are built once per drawing and kept apart", () => {
+    for (const { horn, mesh } of meshed) {
+      const smooth = partMeshGeometry(mesh, HORN_MESH_DRAWING);
+      const flat = partMeshGeometry(mesh, { ...HORN_MESH_DRAWING, shading: "flat" });
+      expect(flat, horn.id).not.toBe(smooth);
+      expect(flat.index, horn.id).toBeNull();
+      expect(smooth.index?.count, horn.id).toBe(mesh.indices.length);
+      expect(partMeshGeometry(mesh, HORN_MESH_DRAWING), horn.id).toBe(smooth);
+    }
+  });
+
+  test("a horn mesh is placed by its origin (the driver's axis), not by the center of its bounds", () => {
+    // an asymmetric horn: the real mesh with its mouth reaching 20 mm further up than down
+    const [{ mesh }] = meshed;
+    const up = 40; // grid steps
+    const lopsided: PartMesh = {
+      ...mesh,
+      max: [mesh.max[0], mesh.max[1] + up * mesh.unitMm, mesh.max[2]],
+      positions: mesh.positions.map((v, i) => (i % 3 === 1 && v > 0 ? v + up : v)),
+    };
+    for (const m of [mesh, lopsided]) {
+      const g = partMeshGeometry(m, HORN_MESH_DRAWING);
+      g.computeBoundingBox();
+      const box = g.boundingBox;
+      if (!box) throw new Error("no bounding box");
+      expect(box.min.y).toBeCloseTo(m.min[1] * MM_IN, 4);
+      expect(box.max.y).toBeCloseTo(m.max[1] * MM_IN, 4);
+      expect(box.min.z).toBeCloseTo(0, 4);
+    }
+  });
+
+  test("each mesh's size is the horn's catalog size, from the flange's back face at z = 0", () => {
+    for (const { horn, mesh } of meshed) {
+      const size = [0, 1, 2].map((k) => (mesh.max[k] - mesh.min[k]) * MM_IN);
+      expect(size[0], horn.id).toBeCloseTo(horn.size.w, 3);
+      expect(size[1], horn.id).toBeCloseTo(horn.size.h, 3);
+      expect(size[2], horn.id).toBeCloseTo(horn.size.d, 3);
+      expect(mesh.min[2], horn.id).toBe(0);
+      // the mesh takes the place of a profile and of a throat adapter
+      expect(horn.profile, horn.id).toBeUndefined();
+      expect(horn.adapter, horn.id).toBeUndefined();
+    }
+  });
+
+  for (const layout of LAYOUTS)
+    test(`${layout}: the driver bolts to the flange: its bolts line up with the flange's holes, its exit with the throat`, () => {
+      for (const { horn } of meshed) {
+        const at = `${horn.id} ${layout}`;
+        const cd = CD_OPTIONS.find((c) => c.exit === horn.exit && c.body.bolts.n === 4);
+        if (!cd) throw new Error(`${at}: no 4-bolt driver for the throat`);
+        const g = buildStackScene({ ...base, horn, cd, layout });
+        const [body] = meshesNamed(g, HORN_MESH_NAME);
+        const hornBox = boxOf(g, HORN_MESH_NAME);
+        const cdBox = boxOf(g, CD_MESH_NAME);
+        if (!body || !hornBox || !cdBox) throw new Error(`${at}: no horn or driver`);
+        // the driver's front face on the flange, or on the bracket's upright clamped against it
+        const upright = uprightBox(g);
+        const onto = layout === "tower" ? hornBox.min.z : upright?.min.z;
+        expect(onto, `${at}: upright`).toBeDefined();
+        expect(
+          Math.abs(cdBox.max.z - (onto ?? Infinity)),
+          `${at}: driver on the flange`,
+        ).toBeLessThan(CONTACT_IN);
+        // the flange's back face (the mesh's vertices at its back), round the horn's axis
+        const axis = body.getWorldPosition(new THREE.Vector3()); // the mesh is centered on its axis
+        const pos = body.geometry.getAttribute("position");
+        const v = new THREE.Vector3();
+        const face: { x: number; y: number; r: number }[] = [];
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos, i).applyMatrix4(body.matrixWorld);
+          if (v.z - hornBox.min.z < 1e-4)
+            face.push({
+              x: v.x - axis.x,
+              y: v.y - axis.y,
+              r: Math.hypot(v.x - axis.x, v.y - axis.y),
+            });
+        }
+        const rim = Math.max(...face.map((p) => p.r));
+        const throat = Math.min(...face.map((p) => p.r));
+        expect(throat, `${at}: throat the driver's exit`).toBeCloseTo(cd.exit / 2, 1);
+        expect(rim, `${at}: flange round the bolts`).toBeGreaterThan(
+          cd.body.bolts.circle / 2 + 0.25,
+        );
+        // the holes between the throat and the rim, one per quadrant: on the driver's bolts at 45°, 135°, 225°, 315°
+        const bolt = (cd.body.bolts.circle / 2) * Math.SQRT1_2;
+        for (const [sx, sy] of [
+          [1, 1],
+          [-1, 1],
+          [-1, -1],
+          [1, -1],
+        ]) {
+          const hole = face.filter(
+            (p) =>
+              p.r > throat + 0.1 &&
+              p.r < rim - 0.1 &&
+              Math.sign(p.x) === sx &&
+              Math.sign(p.y) === sy,
+          );
+          expect(hole.length, `${at}: a hole at (${sx}, ${sy})`).toBeGreaterThan(2);
+          const cx = hole.reduce((s, p) => s + p.x, 0) / hole.length;
+          const cy = hole.reduce((s, p) => s + p.y, 0) / hole.length;
+          expect(
+            Math.hypot(cx - sx * bolt, cy - sy * bolt),
+            `${at}: hole on the bolt`,
+          ).toBeLessThan(0.02);
+        }
+      }
+    });
+
+  /** How far inside and outside the silhouette the hole's edge is checked, in. */
+  const MARGIN_IN = 0.1;
+  /** The grid the see-through check casts rays on, in. */
+  const STEP_IN = 0.4;
+  /** The tower's walls, how far its baffle sits behind the frame's front (where the mouth is), and its plywood, in. */
+  const WALL_IN = 0.75;
+  const INSET_IN = 0.75;
+  const BAFFLE_IN = 0.75;
+  /** How far behind a baffle face the horn's cross-section is taken, in. */
+  const BEHIND_IN = 0.05;
+
+  /**
+   * The tower's baffle hole for each meshed horn in a sub box `boxW` wide: nothing behind the horn shows round it, the
+   * hole follows the horn's silhouette (inside it the horn, outside it the baffle) up to half an inch inside the side
+   * walls, and the horn's cross-section at both baffle faces is inside the hole.
+   */
+  function checkTowerHole(boxW: number) {
+    for (const { horn, mesh } of meshed) {
+      const at = `${horn.id} in a ${boxW} in box`;
+      const g = buildStackScene({
+        ...base,
+        sub: { ...base.sub, box: { ...base.sub.box, w: boxW } },
+        horn,
+        layout: "tower",
+        wall: WALL_IN,
+        inset: INSET_IN,
+      });
+      const [body] = meshesNamed(g, HORN_MESH_NAME);
+      const hornBox = boxOf(g, HORN_MESH_NAME);
+      if (!body || !hornBox) throw new Error(`${at}: no horn`);
+      const axis = body.getWorldPosition(new THREE.Vector3());
+      const all: THREE.Object3D[] = [];
+      g.traverse(
+        (o) => o instanceof THREE.Mesh && o.parent?.name !== "scale-figure" && all.push(o),
+      );
+      // the first thing a ray straight into the front at (x, y) from the axis meets
+      const firstHit = (x: number, y: number) => {
+        const ray = new THREE.Raycaster(
+          new THREE.Vector3(axis.x + x, axis.y + y, hornBox.max.z + 1),
+          new THREE.Vector3(0, 0, -1),
+        );
+        return ray.intersectObjects(all, false)[0];
+      };
+      // the first thing a ray forward from just behind the baffle's back face at (x, y) meets
+      const fromBehind = (x: number, y: number) => {
+        const ray = new THREE.Raycaster(
+          new THREE.Vector3(
+            axis.x + x,
+            axis.y + y,
+            hornBox.max.z - INSET_IN - BAFFLE_IN - BEHIND_IN,
+          ),
+          new THREE.Vector3(0, 0, 1),
+        );
+        return ray.intersectObjects(all, false)[0];
+      };
+      const halfInside = boxW / 2 - WALL_IN; // inside the tower's side walls
+      const halfHole = halfInside - 0.5; // the hole stops half an inch inside them
+      // over the mouth's whole rectangle: every ray stops on the baffle, the horn or the driver, never behind them
+      for (let x = -horn.size.w / 2 + STEP_IN / 2; x < horn.size.w / 2; x += STEP_IN)
+        for (let y = -horn.size.h / 2 + STEP_IN / 2; y < horn.size.h / 2; y += STEP_IN) {
+          if (Math.abs(x) > halfInside) continue;
+          const hit = firstHit(x, y);
+          expect(hit, `${at}: a ray at (${x}, ${y})`).toBeDefined();
+          expect(hit?.point.z ?? -Infinity, `${at}: seen through at (${x}, ${y})`).toBeGreaterThan(
+            hornBox.min.z - CONTACT_IN,
+          );
+        }
+      // just inside the silhouette the ray meets the horn (its rim, a rolled-back lip or its outer wall), so the baffle
+      // covers none of it; just outside it, the baffle, set back by the inset
+      for (const p of partMeshSilhouette(mesh)) {
+        const r = p.length();
+        const inside = p.clone().multiplyScalar(1 - MARGIN_IN / r);
+        if (Math.abs(inside.x) < halfHole - MARGIN_IN) {
+          expect(
+            firstHit(inside.x, inside.y)?.object.name,
+            `${at}: inside at ${inside.x}, ${inside.y}`,
+          ).toBe(HORN_MESH_NAME);
+          // and from behind the baffle the hole is open there too: the ray meets the horn or nothing, not the baffle
+          // (a hole smaller than the silhouette fails here even where the horn's rim covers it from the front)
+          const back = fromBehind(inside.x, inside.y);
+          expect(
+            back?.object.name ?? HORN_MESH_NAME,
+            `${at}: open behind at ${inside.x}, ${inside.y}`,
+          ).toBe(HORN_MESH_NAME);
+        }
+        const outside = p.clone().multiplyScalar(1 + MARGIN_IN / r);
+        if (Math.abs(outside.x) > halfHole) continue;
+        const hit = firstHit(outside.x, outside.y);
+        expect(hit?.object.name, `${at}: outside at ${outside.x}, ${outside.y}`).not.toBe(
+          HORN_MESH_NAME,
+        );
+        expect(
+          hit?.point.z ?? -Infinity,
+          `${at}: baffle at ${outside.x}, ${outside.y}`,
+        ).toBeCloseTo(hornBox.max.z - INSET_IN, 3);
+      }
+      // the horn's cross-section just behind each baffle face (where the horn's triangles cross that plane): a ray
+      // from the front at each point meets the horn, not the baffle, so the hole holds the horn where it passes through
+      const pos = body.geometry.getAttribute("position");
+      const index = body.geometry.getIndex();
+      if (!index) throw new Error(`${at}: the horn's geometry has no index`);
+      const corner = (i: number) =>
+        new THREE.Vector3().fromBufferAttribute(pos, index.getX(i)).applyMatrix4(body.matrixWorld);
+      for (const z of [hornBox.max.z - INSET_IN, hornBox.max.z - INSET_IN - BAFFLE_IN].map(
+        (face) => face - BEHIND_IN,
+      )) {
+        let crossings = 0;
+        for (let t = 0; t < index.count; t += 3)
+          for (let e = 0; e < 3; e++) {
+            const [a, b] = [corner(t + e), corner(t + ((e + 1) % 3))];
+            if ((a.z - z) * (b.z - z) >= 0) continue;
+            const c = a.clone().lerp(b, (z - a.z) / (b.z - a.z));
+            const [x, y] = [c.x - axis.x, c.y - axis.y];
+            if (Math.abs(x) > halfHole - MARGIN_IN) continue;
+            crossings++;
+            // a hair toward the axis, so the ray meets the wall's face rather than grazing its edge
+            const k = 1 - 0.01 / Math.max(Math.hypot(x, y), 0.01);
+            expect(
+              firstHit(x * k, y * k)?.object.name,
+              `${at}: cross-section at ${x}, ${y}, z ${z}`,
+            ).toBe(HORN_MESH_NAME);
+          }
+        expect(crossings, `${at}: a cross-section at z ${z}`).toBeGreaterThan(20);
+      }
+    }
+  }
+
+  test("tower: the baffle hole follows the horn's silhouette and holds its cross-section, so nothing behind it shows", () => {
+    checkTowerHole(base.sub.box.w);
+  });
+
+  test("tower in a box narrower than the horn: the hole stops inside the side walls and the baffle still opens", () => {
+    // a 20 in box: the DIY horns' 19.4 and 19.7 in mouths are wider than its baffle
+    const NARROW_IN = 20;
+    for (const { horn } of meshed)
+      expect(horn.size.w, horn.id).toBeGreaterThan(NARROW_IN - 2 * WALL_IN - 1);
+    checkTowerHole(NARROW_IN);
   });
 });
 
