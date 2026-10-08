@@ -11,8 +11,12 @@ export const HORN_MOUNT_NAMES = {
   ply: "Plywood mount",
 } as const;
 
+/** The two mounts' ids, as code compares them. */
+export const HORN_MOUNT_PLATE = "plate" satisfies HornMountId;
+export const HORN_MOUNT_PLY = "ply" satisfies HornMountId;
+
 /** The mount on first load, and for designs saved before the setting. */
-export const HORN_MOUNT_DEFAULT = "plate" satisfies HornMountId;
+export const HORN_MOUNT_DEFAULT = HORN_MOUNT_PLATE;
 
 /** The retired clamped L-bracket's id: designs saved with it load with the aluminum plate, which replaced it. */
 export const RETIRED_HORN_MOUNT_BRACKET = "bracket";

@@ -51,7 +51,9 @@ import {
   HORN_MOUNT_DEFAULT,
   HORN_MOUNT_LABEL,
   HORN_MOUNT_NAMES,
+  HORN_MOUNT_PLATE,
   HORN_MOUNT_PLATE_FALLBACK,
+  HORN_MOUNT_PLY,
   HORN_MOUNT_PLY_UNAVAILABLE,
   HORN_MOUNT_TIPS,
 } from "../../../constants/hornMount";
@@ -280,7 +282,8 @@ export function SettingsPanel({ planner }: Props) {
   const hornMountShown = takesHornMount(hornOption, layout);
   const plyMountFits =
     hornMountShown && plyMountFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
-  const plateFits = plateFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
+  const plateFits =
+    hornMountShown && plateFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
   const shownHornMount = plyMountFits ? hornMount : HORN_MOUNT_DEFAULT;
   const hornMountTips = {
     ...HORN_MOUNT_TIPS,
@@ -313,7 +316,7 @@ export function SettingsPanel({ planner }: Props) {
         ),
       ...(hornMountShown
         ? [
-            `${HORN_MOUNT_LABEL}: ${shownHornMount === "plate" && !plateFits ? CLAMPED_BRACKET_NAME : HORN_MOUNT_NAMES[shownHornMount]}`,
+            `${HORN_MOUNT_LABEL}: ${shownHornMount === HORN_MOUNT_PLATE && !plateFits ? CLAMPED_BRACKET_NAME : HORN_MOUNT_NAMES[shownHornMount]}`,
           ]
         : []),
     ].join(", "),
@@ -798,7 +801,9 @@ export function SettingsPanel({ planner }: Props) {
                 value={shownHornMount}
                 onChange={setHornMount}
                 disabled={
-                  plyMountFits ? undefined : { values: ["ply"], why: HORN_MOUNT_PLY_UNAVAILABLE }
+                  plyMountFits
+                    ? undefined
+                    : { values: [HORN_MOUNT_PLY], why: HORN_MOUNT_PLY_UNAVAILABLE }
                 }
                 options={keysOf(HORN_MOUNT_NAMES).map(
                   (id) => [id, HORN_MOUNT_NAMES[id], hornMountTips[id]] as const,

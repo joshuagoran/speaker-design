@@ -12,7 +12,7 @@ import {
   PLY_MOUNT_MESH_NAMES,
   plyMountFit,
 } from "../src/components/stack-view/buildPlyMount";
-import { driverBolts } from "../src/components/stack-view/throatFit";
+import { BOLT_TURNS, driverBolts } from "../src/components/stack-view/throatFit";
 import { PLATE_MESH_NAMES, plateFit } from "../src/components/stack-view/buildPlate";
 import { HARDWARE_MESH_NAME } from "../src/components/stack-view/buildHardware";
 import { ROUNDOVER_IN } from "../src/components/stack-view/stackHeights";
@@ -39,7 +39,7 @@ import {
   hornSamples,
   inside,
   meshFlange,
-  meshed,
+  meshedFor,
   meshesNamed,
   overlaps,
   scene,
@@ -90,7 +90,7 @@ describe("the plywood horn mount on the DIY horns", () => {
     const bolts = driverBolts(N314T);
     expect(bolts.filter((b) => b.y < 0)).toHaveLength(2);
     for (const b of bolts) expect(Math.abs(Math.abs(b.x) - Math.abs(b.y))).toBeLessThan(1e-9);
-    for (const { horn, mesh } of meshed) {
+    for (const { horn, mesh } of meshedFor(N314T)) {
       expect(takesHornMount(horn, "stack"), horn.id).toBe(true);
       expect(takesHornMount(horn, "tower"), horn.id).toBe(false);
       // the flange the mount is sized for: ⌀130 mm, 12 mm thick
@@ -102,7 +102,7 @@ describe("the plywood horn mount on the DIY horns", () => {
 
   for (const layout of LID_LAYOUTS)
     test(`${layout}: the upright stands in front of the flange and behind the flare, its top 4 mm under the axis, its saddle clear of the neck`, () => {
-      for (const { horn, mesh } of meshed) {
+      for (const { horn, mesh } of meshedFor(N314T)) {
         const at = `${horn.id} ${layout}`;
         const g = scene({ horn, layout, hornMount: "ply" });
         const flange = meshFlange(mesh);
@@ -166,7 +166,7 @@ describe("the plywood horn mount on the DIY horns", () => {
 
   for (const layout of LID_LAYOUTS)
     test(`${layout}: the upright's bolt holes and bolts line up with the driver's lower bolts, and the driver bolts to the flange`, () => {
-      for (const { horn } of meshed) {
+      for (const { horn } of meshedFor(N314T)) {
         const at = `${horn.id} ${layout}`;
         const g = scene({ horn, layout, hornMount: "ply" });
         const bolts = meshesNamed(g, PLY_MOUNT_MESH_NAMES.bolt);
@@ -221,7 +221,7 @@ describe("the plywood horn mount on the DIY horns", () => {
 
   for (const layout of LID_LAYOUTS)
     test(`${layout}: the base lies on the lid behind the upright, and the gusset stands on it against the upright`, () => {
-      for (const { horn } of meshed) {
+      for (const { horn } of meshedFor(N314T)) {
         const at = `${horn.id} ${layout}`;
         const g = scene({ horn, layout, hornMount: "ply" });
         const horns = hornsWithUprights(g);
@@ -302,7 +302,8 @@ function checkMount(horn: Horn, cd: Props["cd"], layout: PaLayout) {
   const at = `${horn.id} + ${JSON.stringify(cd.body.bolts)} ${layout}`;
   const g = scene({ horn, cd, layout, hornMount: "ply" });
   const parts = Object.values(PLY_MOUNT_MESH_NAMES).flatMap((n) => meshesNamed(g, n));
-  if (!plyMountFit(horn, cd, base.mid.box.w)) {
+  const fit = plyMountFit(horn, cd, base.mid.box.w);
+  if (!fit) {
     expect(parts, `${at}: no mount where it doesn't fit`).toHaveLength(0);
     expectFallback(g, horn, cd, at);
     return;
@@ -337,7 +338,7 @@ function checkMount(horn: Horn, cd: Props["cd"], layout: PaLayout) {
     // the upright: no horn surface in the ply round the saddle
     const u = uprightOutline(upright, axis);
     expect(u.top, at).toBeLessThanOrEqual(-PLY_MOUNT.belowAxis + 1e-6);
-    const holes = driverBolts(cd, "upright").filter((b) => b.y < u.top);
+    const holes = driverBolts(cd, fit.turn).filter((b) => b.y < u.top);
     for (const p of hornSamples(body, boxOf(upright))) {
       const [x, y] = [p.x - axis.x, p.y - axis.y];
       if (p.z <= u.zBack + CLEAR_IN || p.z >= u.zFront - CLEAR_IN) continue;
@@ -428,7 +429,8 @@ describe("two-bolt drivers on the plywood mount", () => {
   test("their bolts stand upright: the bottom one goes through the ply, centered, and the top one holds the flange", () => {
     expect(twoBolt.length).toBeGreaterThan(0);
     for (const cd of twoBolt.filter((c) => c.exit === rx28.exit)) {
-      const [bottom, top] = [...driverBolts(cd, "upright")].sort((a, b) => a.y - b.y);
+      expect(plyMountFit(rx28, cd, base.mid.box.w)?.turn, cd.id).toBeCloseTo(BOLT_TURNS.upright, 9);
+      const [bottom, top] = [...driverBolts(cd, BOLT_TURNS.upright)].sort((a, b) => a.y - b.y);
       expect(bottom.x, cd.id).toBeCloseTo(0, 9);
       expect(top.x, cd.id).toBeCloseTo(0, 9);
       expect(bottom.y, cd.id).toBeCloseTo(-cd.body.bolts.circle / 2, 9);
@@ -451,9 +453,14 @@ describe("two-bolt drivers on the plywood mount", () => {
     }
   });
 
-  test("with a four-bolt driver the bolts stay at 45°, as the flange's holes are", () => {
-    for (const cd of CD_OPTIONS.filter((c) => c.body.bolts.n === 4))
-      expect(driverBolts(cd, "upright"), cd.id).toEqual(driverBolts(cd));
+  test("with a four-bolt driver the bolts stay at 45°, as the flanges are drilled", () => {
+    for (const { horn, cds } of bolted)
+      for (const cd of cds.filter((c) => c.body.bolts.n === 4)) {
+        const fit = plyMountFit(horn, cd, base.mid.box.w);
+        if (!fit) continue;
+        const k = fit.turn / (Math.PI / 2) - 0.5;
+        expect(Math.abs(k - Math.round(k)), `${horn.id} ${cd.id}`).toBeLessThan(1e-6);
+      }
   });
 
   test("where no bolt has room for its washer on the ply (the DE360's 57 mm circle on the ST260), the mount can't be picked", () => {
@@ -480,12 +487,12 @@ describe("two-bolt drivers on the plywood mount", () => {
     if (!fit) throw new Error("no fit");
     const washerR = PLY_MOUNT.boltHole / 2 + PLY_MOUNT.washerPast;
     expect(fit.top).toBeLessThan(-PLY_MOUNT.belowAxis);
-    for (const b of driverBolts(cd, "upright"))
+    for (const b of driverBolts(cd, BOLT_TURNS.diagonal))
       expect(
         b.y + washerR <= fit.top + 1e-9 || b.y - washerR >= fit.top - 1e-9,
         `${b.x}, ${b.y}`,
       ).toBe(true);
-    const straddler = driverBolts(cd, "upright").find(
+    const straddler = driverBolts(cd, BOLT_TURNS.diagonal).find(
       (b) => Math.abs(b.y + 50 * MM_IN * Math.sin(Math.PI / 12)) < 1e-9,
     );
     expect(straddler).toBeDefined();
@@ -495,7 +502,7 @@ describe("two-bolt drivers on the plywood mount", () => {
 });
 
 describe("with the aluminum plate (the default)", () => {
-  test("no plywood mount is drawn (tests/horn-mount-off.test.ts pins the default scenes)", () => {
+  test("no plywood mount is drawn (tests/horn-mount-default.test.ts pins the default scenes)", () => {
     expect(HORN_MOUNT_DEFAULT).toBe("plate");
     expect(DEFAULT_PA.hornMount).toBe(HORN_MOUNT_DEFAULT);
     for (const layout of [...LID_LAYOUTS, "tower"] as const)

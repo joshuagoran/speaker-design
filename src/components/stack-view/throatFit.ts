@@ -30,6 +30,13 @@ const ON_PLANE_IN = 1e-4;
 const RIM_TOL_IN = 1 * MM_IN;
 /** A drawn horn whose back face reaches this much past its throat has a flange there, in. */
 const FLANGE_MIN_IN = 0.25;
+/**
+ * A drilled hole's edge: the flange's back-face points between the throat and the rim (by more than `RIM_TOL_IN`),
+ * linked into one hole while each is this close to another, in.
+ */
+const HOLE_LINK_IN = 4 * MM_IN;
+/** A driver bolt lands on a drilled hole when it is this close to the hole's center, in. */
+const HOLE_MATCH_IN = 2 * MM_IN;
 
 /** A point across the throat, in the axis' frame (x across, y up from the axis). */
 export interface XY {
@@ -41,6 +48,11 @@ export interface XY {
 export interface Throat {
   rim: number;
   front: number;
+  /**
+   * The flange's drilled holes, their centers, read off the back face; null when the drawing shows none (a horn without
+   * a CAD mesh: its holes aren't drawn, so any bolt pattern is taken to match them).
+   */
+  holes: XY[] | null;
   /**
    * The surface's points between `z0` and `z1`, leaving out what lies on `z0` itself (the flange's front face, which a
    * mount only touches): the vertices in that span and the edges' crossings of its two planes (a triangle's farthest
@@ -64,7 +76,8 @@ export function throatOf(horn: Horn, mouthW: number): Throat {
   const w = horn.rect ? mouthW : horn.size.w;
   const known = byW.get(w);
   if (known) return known;
-  const { body, shared } = hornBody(horn, w, new THREE.MeshBasicMaterial());
+  // a shared geometry is a CAD mesh's
+  const { body, shared: fromMesh } = hornBody(horn, w, new THREE.MeshBasicMaterial());
   body.updateMatrix();
   const pos = body.geometry.getAttribute("position");
   const pts: THREE.Vector3[] = [];
@@ -72,7 +85,7 @@ export function throatOf(horn: Horn, mouthW: number): Throat {
     pts.push(new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(body.matrix));
   const index = body.geometry.getIndex();
   const corners = index ? Array.from({ length: index.count }, (_, i) => index.getX(i)) : null;
-  if (!shared) body.geometry.dispose();
+  if (!fromMesh) body.geometry.dispose();
   const corner = (i: number) => pts[corners ? corners[i] : i];
   const n = corners ? corners.length : pts.length;
   const r = (p: THREE.Vector3) => Math.hypot(p.x, p.y);
@@ -83,6 +96,35 @@ export function throatOf(horn: Horn, mouthW: number): Throat {
   const front = flanged
     ? Math.min(...pts.filter((p) => p.z > ON_PLANE_IN && r(p) >= rim - RIM_TOL_IN).map((p) => p.z))
     : 0;
+  // the holes, on a CAD mesh only (a profile or flare drawing has none, and a profile stretched unevenly puts its own
+  // rim between the throat and the rim): the back face's points between the throat and the rim, each once (a vertex
+  // split at a crease has copies), linked into groups of near neighbors; each hole's center is the middle of its
+  // group's extent
+  const throatR = Math.min(...back);
+  const seen = new Set<string>();
+  const edge = pts.filter((p) => {
+    const key = `${p.x.toFixed(5)} ${p.y.toFixed(5)}`;
+    if (!fromMesh || !flanged || Math.abs(p.z) >= ON_PLANE_IN || seen.has(key)) return false;
+    seen.add(key);
+    return r(p) > throatR + RIM_TOL_IN && r(p) < rim - RIM_TOL_IN;
+  });
+  let groups: THREE.Vector3[][] = [];
+  for (const p of edge) {
+    const near = groups.filter((h) =>
+      h.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < HOLE_LINK_IN),
+    );
+    groups = [...groups.filter((h) => !near.includes(h)), [p, ...near.flat()]];
+  }
+  const holes = groups.length
+    ? groups.map((h) => {
+        const xs = h.map((p) => p.x);
+        const ys = h.map((p) => p.y);
+        return {
+          x: (Math.min(...xs) + Math.max(...xs)) / 2,
+          y: (Math.min(...ys) + Math.max(...ys)) / 2,
+        };
+      })
+    : null;
   const slab = (z0: number, z1: number) => {
     const lo = z0 + ON_PLANE_IN;
     const out: XY[] = [];
@@ -99,33 +141,54 @@ export function throatOf(horn: Horn, mouthW: number): Throat {
       }
     return out;
   };
-  const throat = { rim: flanged ? rim : 0, front, slab };
+  const throat = { rim: flanged ? rim : 0, front, holes, slab };
   byW.set(w, throat);
   return throat;
 }
 
-/** How a two-bolt driver's pair stands: across (0° and 180°), upright (90° and 270°) or at 45° like four bolts. */
-export type TwoBoltTurn = "across" | "upright" | "diagonal";
-
 /**
- * The driver's front-face bolts round its axis: `n` evenly spaced from 45° (the N314T's four at 45°, 135°, 225°, 315°,
- * as the horns' flanges are drilled); a two-bolt pair turned as `twoBolt` says.
+ * How a driver's bolt pattern is turned: its first bolt's angle, radians from across (+x) toward up. A pair across the
+ * throat (0° and 180°), upright (90° and 270°), or at 45° as four bolts stand (45°, 135°, 225°, 315°).
  */
+export const BOLT_TURNS = { across: 0, upright: Math.PI / 2, diagonal: Math.PI / 4 } as const;
+
+/** The driver's front-face bolts round its axis: `n` evenly spaced from the turn `turn` (default: at 45°). */
 export const driverBolts = (
   cd: Pick<CompressionDriver, "body">,
-  twoBolt: TwoBoltTurn = "diagonal",
+  turn: number = BOLT_TURNS.diagonal,
 ) =>
   Array.from({ length: cd.body.bolts.n }, (_, i): XY => {
-    const from =
-      cd.body.bolts.n !== 2 || twoBolt === "diagonal"
-        ? Math.PI / 4
-        : twoBolt === "upright"
-          ? Math.PI / 2
-          : 0;
-    const a = from + (2 * Math.PI * i) / cd.body.bolts.n;
+    const a = turn + (2 * Math.PI * i) / cd.body.bolts.n;
     const r = cd.body.bolts.circle / 2;
     return { x: r * Math.cos(a), y: r * Math.sin(a) };
   });
+
+/** Whether every bolt lands on one of the flange's drilled holes (`holes` null: the drawing shows none, so yes). */
+export const onHoles = (bolts: readonly XY[], holes: readonly XY[] | null) =>
+  !holes || bolts.every((b) => holes.some((h) => Math.hypot(h.x - b.x, h.y - b.y) < HOLE_MATCH_IN));
+
+/**
+ * The turns a mount tries for the driver's bolts, in order: `preferred` ones first, then any other, keeping only those
+ * whose every bolt lands on one of the flange's drilled holes. A drawing that shows no holes takes `preferred` as is.
+ * Turns that put the bolts in the same places are tried once.
+ */
+export function boltTurns(
+  cd: Pick<CompressionDriver, "body">,
+  holes: readonly XY[] | null,
+  preferred: readonly number[],
+): number[] {
+  if (!holes) return [...preferred];
+  const step = (2 * Math.PI) / cd.body.bolts.n;
+  const key = (turn: number) => {
+    const f = (((turn % step) + step) % step) / step;
+    return (f > 1 - 1e-6 ? 0 : f).toFixed(6);
+  };
+  const out: number[] = [];
+  for (const turn of [...preferred, ...holes.map((h) => Math.atan2(h.y, h.x))])
+    if (!out.some((t) => key(t) === key(turn)) && onHoles(driverBolts(cd, turn), holes))
+      out.push(turn);
+  return out;
+}
 
 /** The driver's body radius (its widest step), in: how far it hangs under the axis. */
 export const driverRadius = (cd: Pick<CompressionDriver, "body">) =>

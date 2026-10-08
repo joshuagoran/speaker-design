@@ -5,6 +5,8 @@ import { BRACKET, addBoltHead } from "./buildBracket";
 import {
   MOUNT_FIT,
   WASHER_R_IN,
+  BOLT_TURNS,
+  boltTurns,
   driverBolts,
   driverRadius,
   lidStop,
@@ -64,6 +66,8 @@ export interface PlyMountFit {
   saddleR: number;
   /** the throat flange's rim radius, 0 when the drawing has none */
   rim: number;
+  /** how the driver's bolt pattern is turned (`BOLT_TURNS`: its first bolt's angle) */
+  turn: number;
   /** the driver's bolts through the upright (holes and heads); at least one has room for its washer */
   through: XY[];
   /** whether the driver's lowest point clears the base's top by `driverGap` */
@@ -75,10 +79,11 @@ const FITS = new WeakMap<object, Map<string, PlyMountFit | null>>();
 
 /**
  * How the plywood mount fits a horn the driver bolts straight to, with the driver `cd`, read off the horn as drawn
- * (`mouthW`: the box's width for the full-width concept; see `throatOf`). See `buildPlyMount` for the parts. A
- * two-bolt driver stands its pair upright, so the bottom bolt goes through the ply and the top one holds the flange
- * alone, and the saddle keeps the pair from turning. A drawing without a flange (the generic flare) puts the upright on
- * the throat plane, as wide as the driver's bolts need.
+ * (`mouthW`: the box's width for the full-width concept; see `throatOf`). See `buildPlyMount` for the parts. The
+ * driver's bolts only stand where the flange is drilled (`boltTurns`; a drawing without holes takes any turn), each
+ * turn tried in order until one fits. A two-bolt driver stands its pair upright where it can, so the bottom bolt goes
+ * through the ply and the top one holds the flange alone, and the saddle keeps the pair from turning. A drawing without
+ * a flange (the generic flare) puts the upright on the throat plane, as wide as the driver's bolts need.
  */
 export function plyMountFit(
   horn: Horn,
@@ -93,40 +98,48 @@ export function plyMountFit(
   const throat = throatOf(horn, mouthW);
   const t = defaultPanelIn(HORN_MOUNT_PANEL, PLYWOOD_MATERIAL);
   const zBack = throat.front;
-  const bolts = driverBolts(cd, "upright");
   const w = Math.max(throat.rim, cd.body.bolts.circle / 2 + BRACKET.clampEdge);
   const bottom = ROUNDOVER_IN - HORN_LIFT_IN - hornAxisUp(horn);
-  // the top edge: under the axis, and lowered past any bolt whose washer it would cut (that bolt then holds the flange
-  // alone, above the ply)
-  let top = -PLY_MOUNT.belowAxis;
-  for (let straddled = true; straddled;) {
-    const b = bolts.find((p) => p.y - WASHER_R_IN < top && p.y + WASHER_R_IN > top);
-    straddled = !!b;
-    if (b) top = b.y - WASHER_R_IN;
-  }
-  const below = throat.slab(zBack, zBack + t).filter((p) => p.y < top);
-  const saddleR = Math.max(0, ...below.map((p) => Math.hypot(p.x, p.y))) + PLY_MOUNT.saddleGap;
   const holeR = PLY_MOUNT.boltHole / 2;
-  // the bolts through the upright: below its top edge and clear of the saddle (one inside the saddle passes free)
-  const through = bolts.filter((b) => b.y + holeR < top && Math.hypot(b.x, b.y) - holeR > saddleR);
-  const washerFits = (b: XY) =>
-    b.y + WASHER_R_IN <= top &&
-    b.y - WASHER_R_IN >= bottom &&
-    Math.abs(b.x) + WASHER_R_IN <= w &&
-    Math.hypot(b.x, b.y) - WASHER_R_IN >= saddleR;
-  const fit = through.some(washerFits)
-    ? {
-        t,
-        zBack,
-        w,
-        top,
-        bottom,
-        saddleR,
-        rim: throat.rim,
-        through,
-        baseClearsDriver: -driverRadius(cd) - (bottom + t) >= PLY_MOUNT.driverGap,
-      }
-    : null;
+  const tryTurn = (turn: number): PlyMountFit | null => {
+    const bolts = driverBolts(cd, turn);
+    // the top edge: under the axis, and lowered past any bolt whose washer it would cut (that bolt then holds the
+    // flange alone, above the ply)
+    let top = -PLY_MOUNT.belowAxis;
+    for (let straddled = true; straddled;) {
+      const b = bolts.find((p) => p.y - WASHER_R_IN < top && p.y + WASHER_R_IN > top);
+      straddled = !!b;
+      if (b) top = b.y - WASHER_R_IN;
+    }
+    const below = throat.slab(zBack, zBack + t).filter((p) => p.y < top);
+    const saddleR = Math.max(0, ...below.map((p) => Math.hypot(p.x, p.y))) + PLY_MOUNT.saddleGap;
+    // the bolts through the upright: below its top edge and clear of the saddle (one inside the saddle passes free)
+    const through = bolts.filter(
+      (b) => b.y + holeR < top && Math.hypot(b.x, b.y) - holeR > saddleR,
+    );
+    const washerFits = (b: XY) =>
+      b.y + WASHER_R_IN <= top &&
+      b.y - WASHER_R_IN >= bottom &&
+      Math.abs(b.x) + WASHER_R_IN <= w &&
+      Math.hypot(b.x, b.y) - WASHER_R_IN >= saddleR;
+    return through.some(washerFits)
+      ? {
+          t,
+          zBack,
+          w,
+          top,
+          bottom,
+          saddleR,
+          rim: throat.rim,
+          turn,
+          through,
+          baseClearsDriver: -driverRadius(cd) - (bottom + t) >= PLY_MOUNT.driverGap,
+        }
+      : null;
+  };
+  const preferred = cd.body.bolts.n === 2 ? [BOLT_TURNS.upright] : [BOLT_TURNS.diagonal];
+  let fit: PlyMountFit | null = null;
+  for (const turn of boltTurns(cd, throat.holes, preferred)) fit ??= tryTurn(turn);
   byKey.set(key, fit);
   return fit;
 }

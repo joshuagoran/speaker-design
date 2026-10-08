@@ -4,13 +4,12 @@ import * as THREE from "three";
 import { buildStackScene, type Props } from "../src/components/stack-view/buildStackScene";
 import { MM_IN } from "../src/components/stack-view/geometry";
 import { HORN_MESHES } from "../src/data/meshes";
-import { DIY_OS90X50, DIY_ROSSE110X50 } from "../src/data/catalog/horns";
 import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { DEFAULT_HARDWARE } from "../src/lib/pa/hardware";
 import { midHardwarePlan } from "../src/lib/pa/calc";
 import { SCENE_CASE_NAMES, sceneCases } from "./scene-cases";
-import type { PaLayout, PartMesh } from "../src/types";
+import type { CompressionDriver, PaLayout, PartMesh } from "../src/types";
 
 /** How close two faces count as touching, in (meshes are faceted, so a contact is never exact). */
 export const CONTACT_IN = 0.01;
@@ -108,12 +107,15 @@ export function meshFlange(mesh: PartMesh) {
   return { rim, front };
 }
 
-/** The DIY horns with their CAD meshes. */
-export const meshed = [DIY_OS90X50, DIY_ROSSE110X50].map((horn) => {
-  const mesh = HORN_MESHES[horn.id];
-  if (!mesh) throw new Error(`no mesh for ${horn.id}`);
-  return { horn, mesh };
+/** The horns drawn from their CAD meshes (`HORN_MESHES`), each with its mesh. */
+export const meshed = Object.entries(HORN_MESHES).flatMap(([id, mesh]) => {
+  const horn = HORN_OPTIONS.find((h) => h.id === id);
+  if (!horn) throw new Error(`a mesh for a horn not in the catalog: ${id}`);
+  return mesh ? [{ horn, mesh }] : [];
 });
+/** The meshed horns a driver fits (their throat is its exit). */
+export const meshedFor = (cd: Pick<CompressionDriver, "exit">) =>
+  meshed.filter(({ horn }) => horn.exit === cd.exit);
 
 /** Every horn the driver bolts straight to, with every driver that fits its throat. */
 export const bolted = HORN_OPTIONS.filter((h) => !h.adapter).map((horn) => ({

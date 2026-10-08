@@ -13,7 +13,7 @@ import {
   plateFit,
   type PlateFit,
 } from "../src/components/stack-view/buildPlate";
-import { WASHER_R_IN, driverBolts, type XY } from "../src/components/stack-view/throatFit";
+import { BOLT_TURNS, driverBolts, type XY } from "../src/components/stack-view/throatFit";
 import { HARDWARE_MESH_NAME } from "../src/components/stack-view/buildHardware";
 import { MM_IN } from "../src/components/stack-view/geometry";
 import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
@@ -36,7 +36,7 @@ import {
   hornSamples,
   inside,
   meshFlange,
-  meshed,
+  meshedFor,
   meshesNamed,
   overlaps,
   scene,
@@ -112,17 +112,28 @@ function checkPlate(horn: Horn, cd: Props["cd"], layout: PaLayout) {
         );
     }
   }
-  // a bolt that doesn't go through the plate holds the flange alone: its hole is clear of the plate's metal
-  for (const b of driverBolts(cd, fit.twoBolt).filter(
+  // a bolt that doesn't go through the plate holds the flange alone: its head (flange or washer) sits clear of the
+  // plate's metal, all of its disk
+  const headR = fit.head.flangeR;
+  for (const b of driverBolts(cd, fit.turn).filter(
     (p) => !fit.through.some((b) => Math.hypot(b.x - p.x, b.y - p.y) < 1e-9),
   ))
+    for (const r of [0, headR / 2, headR])
+      for (let i = 0; i < 16; i++) {
+        const a = (Math.PI * i) / 8;
+        expect(
+          inMetal(fit, b.x + r * Math.cos(a), b.y + r * Math.sin(a), 0),
+          `${at}: head of the bolt at ${b.x}, ${b.y} on the metal`,
+        ).toBe(false);
+      }
+  // each through bolt's head all on the metal, round its hole
+  for (const b of fit.through)
     for (let i = 0; i < 16; i++) {
       const a = (Math.PI * i) / 8;
-      const r = PLATE.boltHole / 2;
       expect(
-        inMetal(fit, b.x + r * Math.cos(a), b.y + r * Math.sin(a), 0),
-        `${at}: bolt at ${b.x}, ${b.y} through the metal`,
-      ).toBe(false);
+        inMetal(fit, b.x + headR * Math.cos(a), b.y + headR * Math.sin(a), -1e-9),
+        `${at}: head of the bolt at ${b.x}, ${b.y} off the metal`,
+      ).toBe(true);
     }
   for (const { body, axis, plate } of hornsWithPlates(g)) {
     const pb = boxOf(plate);
@@ -157,7 +168,7 @@ describe("the aluminum plate on the DIY horns with the N314T", () => {
   for (const layout of LID_LAYOUTS)
     test(`${layout}: the plate stands in front of the flange, slotted round the neck, its two lower bolts through it, its foot on the lid`, () => {
       expect(base.cd.body.bolts).toEqual(N314T.body.bolts);
-      for (const { horn, mesh } of meshed) {
+      for (const { horn, mesh } of meshedFor(N314T)) {
         const at = `${horn.id} ${layout}`;
         const fit = fitOf(horn, N314T);
         if (!fit) throw new Error(`${at}: no plate`);
@@ -260,7 +271,7 @@ describe("the aluminum plate on the DIY horns with the N314T", () => {
             expect(
               Math.max(...on.map((m) => (boxOf(m).max.x - boxOf(m).min.x) / 2)),
               at,
-            ).toBeCloseTo(WASHER_R_IN, 2);
+            ).toBeCloseTo(fit.head.flangeR, 2);
           }
           // the foot: bent back under the driver on the lid, 80 mm from the plate's back face
           const foot = meshesNamed(g, PLATE_MESH_NAMES.foot).find(
@@ -308,10 +319,13 @@ describe("the aluminum plate on every horn it applies to", () => {
       for (const cd of cds) {
         const fit = fitOf(horn, cd);
         if (!fit) continue;
-        const highest = Math.max(...fit.through.map((b: XY) => b.y + WASHER_R_IN));
-        expect(fit.top, `${horn.id} ${cd.id}`).toBeCloseTo(
-          Math.max(PLATE.minTop, highest + PLATE.aboveWasher),
-          9,
+        const highest = Math.max(...fit.through.map((b: XY) => b.y + fit.head.flangeR));
+        // at the rule's height, or lower to clear a bolt left out of the plate, but never into a through bolt's head
+        expect(fit.top, `${horn.id} ${cd.id}`).toBeLessThanOrEqual(
+          Math.max(PLATE.minTop, highest + PLATE.aboveWasher) + 1e-9,
+        );
+        expect(fit.top, `${horn.id} ${cd.id}`).toBeGreaterThanOrEqual(
+          highest + PLATE.aboveWasher - 1e-9,
         );
       }
   });
@@ -335,7 +349,7 @@ describe("two-bolt drivers on the plate", () => {
     const de250 = cdOf("de250");
     const fit = fitOf(rx28, de250);
     if (!fit) throw new Error("no plate");
-    expect(fit.twoBolt).toBe("across");
+    expect(fit.turn).toBeCloseTo(BOLT_TURNS.across, 9);
     const r = de250.body.bolts.circle / 2;
     expect(fit.through).toHaveLength(2);
     expect(fit.through.map((b) => b.x).sort((a, b) => a - b)).toEqual(
@@ -344,8 +358,8 @@ describe("two-bolt drivers on the plate", () => {
     for (const b of fit.through) expect(b.y).toBeCloseTo(0, 9);
     // both washers clear of the slot's sides and the plate's edges
     for (const b of fit.through) {
-      expect(Math.abs(b.x) - WASHER_R_IN).toBeGreaterThanOrEqual(fit.slotW);
-      expect(Math.abs(b.x) + WASHER_R_IN).toBeLessThanOrEqual(fit.w);
+      expect(Math.abs(b.x) - fit.head.flangeR).toBeGreaterThanOrEqual(fit.slotW);
+      expect(Math.abs(b.x) + fit.head.flangeR).toBeLessThanOrEqual(fit.w);
     }
     const g = scene({ horn: rx28, cd: de250 });
     const heads = meshesNamed(g, PLATE_MESH_NAMES.bolt).map((m) =>
@@ -360,24 +374,25 @@ describe("two-bolt drivers on the plate", () => {
   });
 
   test("where the neck leaves no room across, the pair stands upright, the bottom bolt through the plate", () => {
-    // the Iwata 600's neck, stretched with its mouth, is wider than it is tall
+    // the Iwata 600's neck, stretched with its mouth, is wider than it is tall: the DE360's 57 mm pair has no room
+    // beside it, but the bottom bolt clears it underneath
     const iwata = hornOf("iwata600");
-    const de250 = cdOf("de250");
-    const fit = fitOf(iwata, de250);
+    const de360 = cdOf("de360");
+    const fit = fitOf(iwata, de360);
     if (!fit) throw new Error("no plate");
-    expect(fit.twoBolt).toBe("upright");
+    expect(fit.turn).toBeCloseTo(BOLT_TURNS.upright, 9);
     expect(fit.through).toHaveLength(1);
     const [b] = fit.through;
     expect(b.x).toBeCloseTo(0, 9);
-    expect(b.y).toBeCloseTo(-de250.body.bolts.circle / 2, 9);
-    expect(-b.y - WASHER_R_IN).toBeGreaterThanOrEqual(fit.slotD);
+    expect(b.y).toBeCloseTo(-de360.body.bolts.circle / 2, 9);
+    expect(-b.y - fit.head.flangeR).toBeGreaterThanOrEqual(fit.slotD);
   });
 });
 
 describe("where no driver bolt can pass through the plate", () => {
-  test("the DE360's 57 mm circle on the ST260 and the Iwata 600: the clamped L-bracket holds the driver, and the setting says so", () => {
+  test("the DE360's 57 mm circle on the ST260: the clamped L-bracket holds the driver, and the setting says so", () => {
     const de360 = cdOf("de360");
-    for (const id of ["st260", "iwata600"]) {
+    for (const id of ["st260"]) {
       const horn = hornOf(id);
       expect(takesHornMount(horn, "stack"), id).toBe(true);
       expect(fitOf(horn, de360), id).toBeNull();
@@ -389,10 +404,10 @@ describe("where no driver bolt can pass through the plate", () => {
     expect(HORN_MOUNT_PLATE_FALLBACK).not.toBe(HORN_MOUNT_TIPS.plate);
   });
 
-  test("those are the only horn and driver pairs that fall back", () => {
+  test("that is the only horn and driver pair that falls back", () => {
     const fallbacks = bolted.flatMap(({ horn, cds }) =>
       cds.filter((cd) => !fitOf(horn, cd)).map((cd) => `${horn.id} + ${cd.id}`),
     );
-    expect(fallbacks.sort()).toEqual(["iwata600 + de360", "st260 + de360"]);
+    expect(fallbacks.sort()).toEqual(["st260 + de360"]);
   });
 });

@@ -82,12 +82,12 @@ const EXPECTED: Record<string, string> = {
   "default horn, pole": "44cef27cc010e72f", // main
   "default horn, satellite": "89eeb9bb141c260f", // main
   "default horn, tower": "f4d156923f4a41a0", // main
-  "diy_rosse110x50, stack": "532ac854ab397dd8", // the plate
-  "diy_os90x50, satellite": "c8e0642899b387f2", // the plate
-  "me45, pole": "35d1b88afe302528", // the plate
-  "athRect, stack": "a8f76cf230fdc5ef", // the plate
-  "iwata600, stack": "2958aff57bd6ca02", // the plate
-  "hf950, stack": "33140048f330737d", // the plate
+  "diy_rosse110x50, stack": "87cfcd8f08604366", // the plate
+  "diy_os90x50, satellite": "69cff82a581b3c8e", // the plate
+  "me45, pole": "6b5a0f9f0544d064", // the plate
+  "athRect, stack": "697ebebfd7a333bf", // the plate
+  "iwata600, stack": "de09d0ec1c68b10c", // the plate
+  "hf950, stack": "01b4f6fd3232a6e4", // the plate
   "st260 + de360, stack": "8d3b0ae33988dd70", // main
 };
 

@@ -4,6 +4,7 @@ import type { SceneContext } from "./sceneContext";
 import { buildBracket, buildClampedBracket, takesBracket } from "./buildBracket";
 import { buildPlyMount, plyMountFit } from "./buildPlyMount";
 import { buildPlate, plateFit } from "./buildPlate";
+import { HORN_MOUNT_PLY } from "../../constants/hornMount";
 import { hornBody } from "./hornBody";
 import { cdBodySteps } from "../../lib/data";
 import type { BodyStep, CompressionDriver, Dims3, Horn, HornMountId } from "../../types";
@@ -77,7 +78,7 @@ function addThroatParts(
   } else if (lidY !== null) {
     // the lid's flat top ends at the roundover on its back edge (boxes are centered on z = 0)
     const lidBackZ = -mount.d / 2 + ROUNDOVER_IN;
-    const ply = hornMount === "ply" ? plyMountFit(horn, cd, mount.w) : null;
+    const ply = hornMount === HORN_MOUNT_PLY ? plyMountFit(horn, cd, mount.w) : null;
     const plate = ply ? null : plateFit(horn, cd, mount.w);
     if (ply) buildPlyMount(ctx, ply, { cd, at, lidY, lidBackZ });
     else if (plate) buildPlate(ctx, plate, { at, lidY, lidBackZ });
