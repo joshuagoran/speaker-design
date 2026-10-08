@@ -27,7 +27,7 @@ import { SCENE_CASE_NAMES, defaultConfig, sceneCases, scenePropsOf } from "./sce
 import { HORN_COLOR_CATALOG } from "../src/constants/hornColor";
 import { pickedHornColor, savedHornColor } from "../src/lib/pa/hornColor";
 import { HORN_MESHES } from "../src/data/meshes";
-import { DIY_OS90X50, DIY_ROSSE110X50 } from "../src/data/catalog/horns";
+import { A460G2_14, DIY_OS90X50, DIY_ROSSE110X50 } from "../src/data/catalog/horns";
 import { MM_IN, partMeshGeometry, partMeshSilhouette } from "../src/components/stack-view/geometry";
 import type { PaLayout, PartMesh } from "../src/types";
 
@@ -92,6 +92,13 @@ describe("catalog sizes", () => {
     }
     const n314t = CD_OPTIONS.find((c) => c.id === "n314t");
     expect(n314t?.body).toMatchObject({ dia: 5.72, depth: 2.53, bolts: { n: 4, circle: 4 } });
+  });
+
+  test("the DIY horns' estimated price is the 460 mm ATH print's", () => {
+    for (const horn of [DIY_OS90X50, DIY_ROSSE110X50]) {
+      expect(horn.price, horn.id).toBe(A460G2_14.price);
+      expect(horn.src, horn.id).toMatch(/^Estimate/);
+    }
   });
 
   test("the A460G2 with its adapter is about 7.9 in deep", () => {

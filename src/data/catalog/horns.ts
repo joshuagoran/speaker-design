@@ -183,9 +183,9 @@ export const DIY_OS90X50: Horn = {
   // lowest crossover 1 kHz (LR24) from the BEM's loading, −3 dB there; loading −6 dB at 790 Hz (hornlab cutoff 785 Hz)
   hf: { covH: 90, covV: 50, minXo: 1000, lowHz: 790 },
   exit: 1.4,
-  // the owner's estimate: the 460 mm ATH print's price, not a vendor price
-  price: A460G2_14.price,
-  src: "Estimate: same as the 460 mm ATH printed horn (similar size and material); not a vendor price.",
+  // the owner's estimate, not a vendor price
+  price: 80,
+  src: "Estimate: same as the 460 mm ATH printed horn ($80; similar size and material); not a vendor price.",
   size: { w: 494 / 25.4, h: 319 / 25.4, d: 180 / 25.4 },
   driver:
     '1.4" exit, 4 × M6 or 1/4-20 on a 101.6 mm (4 in) circle at 45° (the Eminence N314T bolts straight on)',
@@ -206,9 +206,9 @@ export const DIY_ROSSE110X50: Horn = {
   // the BEM's −3 dB loading point, about 970 Hz, to the nearest 50 Hz; loading −6 dB at about 740 Hz
   hf: { covH: 110, covV: 50, minXo: 950, lowHz: 740 },
   exit: 1.4,
-  // the owner's estimate: the 460 mm ATH print's price, not a vendor price
-  price: A460G2_14.price,
-  src: "Estimate: same as the 460 mm ATH printed horn (similar size and material); not a vendor price.",
+  // the owner's estimate, not a vendor price
+  price: 80,
+  src: "Estimate: same as the 460 mm ATH printed horn ($80; similar size and material); not a vendor price.",
   size: { w: 500 / 25.4, h: 320 / 25.4, d: 176 / 25.4 },
   driver:
     '1.4" exit, 4 × M6 or 1/4-20 on a 101.6 mm (4 in) circle at 45° (the Eminence N314T bolts straight on)',
