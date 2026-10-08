@@ -330,6 +330,37 @@ test("planar ribbon on its own waveguide: flush-mounted, its coverage drives the
   chipOf(hifiChips(hifiSystem(W, r, low)!, W, r, low), "hifiTweeterMinXo", "warn");
 });
 
+test("compression driver on a waveguide: the higher of the two minimum crossovers holds, and the chip names its part", async () => {
+  const { HIFI_TWEETERS, ST260, waveguideSpecOf } = await import("../src/lib/data");
+  const { DIY_OS90X70 } = await import("../src/data/catalog/horns");
+  const de250 = HIFI_TWEETERS.find((o) => o.id === "de250");
+  if (!de250?.hf.minXo || DIY_OS90X70.hf.minXo === null) throw new Error("no minimums to test");
+  const tweeterMin = de250.hf.minXo;
+  const guideMin = DIY_OS90X70.hf.minXo;
+  assert.ok(guideMin > tweeterMin, "the waveguide's loading limits before the driver does");
+  const guide = waveguideSpecOf(DIY_OS90X70);
+  const at = (xo: number, g = guide) => {
+    const c = { ...cfg, guide: g, xo };
+    const s = hifiSystem(W, de250, c);
+    if (!s) throw new Error(`no system at ${xo} Hz`);
+    return findChip(hifiChips(s, W, de250, c), "hifiTweeterMinXo", "warn");
+  };
+  // 2000 Hz: above the DE250's 1600 Hz, below the waveguide's 2100 Hz, so it warns and names the waveguide
+  const warn = at(2000);
+  assert.ok(warn, "a warning at 2000 Hz");
+  assert.equal(warn[1], HIFI.MIN_XO_TITLE.waveguide);
+  assert.ok(warn[2].includes(DIY_OS90X70.name) && warn[2].includes(String(guideMin)), warn[2]);
+  assert.equal(HIFI.tweeterMinXo(de250, guide)?.hz, guideMin);
+  assert.ok(!at(guideMin), "none at the waveguide's minimum");
+  // on a waveguide without a minimum (the ST260), the driver's own minimum holds and the chip names the driver
+  const st260 = waveguideSpecOf(ST260);
+  assert.ok(!at(2000, st260));
+  const own = at(tweeterMin - 100, st260);
+  assert.ok(own, "a warning below the DE250's minimum");
+  assert.equal(own[1], HIFI.MIN_XO_TITLE.tweeter);
+  assert.ok(own[2].includes(de250.name), own[2]);
+});
+
 test("port toggle builds a fresh port with only its own shape's fields", () => {
   const round = { n: 1, dia: 3, len: 7, elbows: 1 } as const;
   const remembered = { dia: 2, h: 1 };

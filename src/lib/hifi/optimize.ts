@@ -702,7 +702,7 @@ export function optimizeHifiSpeaker(
         t,
         tt,
         onTop: !!(g && g.freestanding),
-        xoOk: xos.map((xo) => !belowTweeterMinXo(tt, xo) && !nearTweeterResonance(tt, xo)),
+        xoOk: xos.map((xo) => !belowTweeterMinXo(tt, g, xo) && !nearTweeterResonance(tt, xo)),
         tLevel: xos.map(
           (xo) => tweeterMaxLevel(tt, { xo, tAmpW: amps.tAmpW, guideGain: cur.guideGain }).tLevel,
         ),
