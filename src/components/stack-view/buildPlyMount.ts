@@ -2,14 +2,20 @@ import * as THREE from "three";
 import { HORN_LIFT_IN, ROUNDOVER_IN, hornAxisUp } from "./stackHeights";
 import { MM_IN } from "./geometry";
 import { BRACKET, addBoltHead } from "./buildBracket";
-import { HARDWARE_MESH_NAME } from "./buildHardware";
-import { hornBody } from "./hornBody";
+import {
+  MOUNT_FIT,
+  WASHER_R_IN,
+  driverBolts,
+  driverRadius,
+  lidStop,
+  throatOf,
+  type XY,
+} from "./throatFit";
 import type { SceneContext } from "./sceneContext";
 import type { HornAxis } from "./buildHorn";
 import { HORN_MOUNT_PANEL } from "../../constants/hornMount";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { defaultPanelIn } from "../../lib/panel";
-import { cdBodySteps, stepsDia } from "../../lib/data";
 import type { CompressionDriver, Horn } from "../../types";
 
 /** The plywood mount's meshes, by part. */
@@ -23,104 +29,22 @@ export const PLY_MOUNT_MESH_NAMES = {
 /**
  * The plywood horn mount (the owner's design, sized for the DIY horns' ⌀130 × 12 mm throat flange), in: an upright in
  * front of the throat flange, saddled under the neck; a base on the lid behind it; a 45° gusset between them. All three
- * are cut from `HORN_MOUNT_PANEL` ply.
+ * are cut from `HORN_MOUNT_PANEL` ply. The bolts' holes and washers and the clearances on the lid are the mounts'
+ * shared ones (`MOUNT_FIT`).
  */
 export const PLY_MOUNT = {
+  ...MOUNT_FIT,
   /** the upright's top edge below the horn's axis */
   belowAxis: 4 * MM_IN,
   /** the saddle's clearance round the neck */
   saddleGap: 1.5 * MM_IN,
   /** the base's depth behind the upright (about 102 mm) */
   baseDepth: 4,
-  /** how far the base stops short of a part on the lid behind it (the horn's binding posts) */
-  lidGap: 0.125,
   /** the gusset's legs, along the upright and along the base */
   gussetLeg: 90 * MM_IN,
   /** the gusset's top, cut flat, stays this far under the throat flange and the driver */
   gussetGap: 1.5 * MM_IN,
-  /** the clearance hole for the driver's bolts (M6 or 1/4-20): 9/32 in */
-  boltHole: 9 / 32,
-  /** how far a bolt's washer reaches past its hole: the ply round a hole needs this much room */
-  washerPast: 6 * MM_IN,
-  /** the base's top stays this far under the driver, else the base stops in front of the driver */
-  driverGap: 1 / 16,
 } as const;
-
-/** How close to the throat plane a vertex counts as on it, and how far off the flange's rim one counts as at it, in. */
-const ON_PLANE_IN = 1e-4;
-const RIM_TOL_IN = 1 * MM_IN;
-/** A drawn horn whose back face reaches this much past its throat has a flange there, in. */
-const FLANGE_MIN_IN = 0.25;
-
-/**
- * The drawn horn body's surface round its throat, in the axis' frame (x across, y up from the axis, z forward from the
- * throat plane): the throat flange's rim radius and front face (none when the drawing has no flange: the generic flare
- * starts at the throat), and the neck's outer radius over a span of z.
- */
-function throatOf(body: THREE.Mesh, at: HornAxis) {
-  body.updateMatrix();
-  const pos = body.geometry.getAttribute("position");
-  const pts: THREE.Vector3[] = [];
-  for (let i = 0; i < pos.count; i++)
-    pts.push(
-      new THREE.Vector3()
-        .fromBufferAttribute(pos, i)
-        .applyMatrix4(body.matrix)
-        .sub(new THREE.Vector3(at.x, at.y, at.throatZ)),
-    );
-  const index = body.geometry.getIndex();
-  const corner = (i: number) => pts[index ? index.getX(i) : i];
-  const corners = index ? index.count : pts.length;
-  const r = (p: THREE.Vector3) => Math.hypot(p.x, p.y);
-  const back = pts.filter((p) => Math.abs(p.z) < ON_PLANE_IN).map(r);
-  const rim = Math.max(...back);
-  const flanged = rim - Math.min(...back) > FLANGE_MIN_IN;
-  // the flange's front face: the nearest vertex in front of the throat plane on the rim's radius
-  const front = flanged
-    ? Math.min(...pts.filter((p) => p.z > ON_PLANE_IN && r(p) >= rim - RIM_TOL_IN).map((p) => p.z))
-    : 0;
-  /**
-   * The largest radius the surface reaches between `z0` and `z1` below `yMax`, leaving out what lies on `z0` itself (the
-   * flange's front face, which the upright only touches): the vertices in that span and the edges' crossings of its two
-   * planes (a triangle's farthest point from the axis in the span is one of them).
-   */
-  const neckR = (z0: number, z1: number, yMax: number) => {
-    const lo = z0 + ON_PLANE_IN;
-    let out = 0;
-    const take = (x: number, y: number) => {
-      if (y < yMax) out = Math.max(out, Math.hypot(x, y));
-    };
-    for (const p of pts) if (p.z > lo && p.z <= z1) take(p.x, p.y);
-    for (let t = 0; t + 2 < corners; t += 3)
-      for (let e = 0; e < 3; e++) {
-        const a = corner(t + e);
-        const b = corner(t + ((e + 1) % 3));
-        for (const z of [lo, z1])
-          if ((a.z - z) * (b.z - z) < 0) {
-            const k = (z - a.z) / (b.z - a.z);
-            take(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k);
-          }
-      }
-    return out;
-  };
-  return { rim: flanged ? rim : 0, front, neckR };
-}
-
-/**
- * The driver's front-face bolts round its axis: `n` evenly spaced from 45° (the N314T's four at 45°, 135°, 225°, 315°).
- * On the plywood mount (`onPly`) a driver with two turns them upright (90° and 270°), so the bottom one goes through
- * the ply and the top one holds the flange alone, and the saddle keeps the pair from turning.
- */
-export const driverBolts = (cd: Pick<CompressionDriver, "body">, onPly = false) =>
-  Array.from({ length: cd.body.bolts.n }, (_, i) => {
-    const from = onPly && cd.body.bolts.n === 2 ? Math.PI / 2 : Math.PI / 4;
-    const a = from + (2 * Math.PI * i) / cd.body.bolts.n;
-    const r = cd.body.bolts.circle / 2;
-    return { x: r * Math.cos(a), y: r * Math.sin(a) };
-  });
-
-/** A bolt hole's washer radius on the ply: the hole plus `PLY_MOUNT.washerPast`. */
-const WASHER_R_IN = PLY_MOUNT.boltHole / 2 + PLY_MOUNT.washerPast;
 
 /**
  * How the plywood mount fits one horn and driver, in the horn axis' frame (x across, y up from the axis, z forward
@@ -141,8 +65,8 @@ export interface PlyMountFit {
   /** the throat flange's rim radius, 0 when the drawing has none */
   rim: number;
   /** the driver's bolts through the upright (holes and heads); at least one has room for its washer */
-  through: { x: number; y: number }[];
-  /** whether the driver's lowest point clears the base's top by `PLY_MOUNT.driverGap` */
+  through: XY[];
+  /** whether the driver's lowest point clears the base's top by `driverGap` */
   baseClearsDriver: boolean;
 }
 
@@ -151,12 +75,10 @@ const FITS = new WeakMap<object, Map<string, PlyMountFit | null>>();
 
 /**
  * How the plywood mount fits a horn the driver bolts straight to, with the driver `cd`, read off the horn as drawn
- * (`mouthW`: the box's width for the full-width concept). See `buildPlyMount` for the parts.
- *
- * The saddle's radius is the neck's outer radius over the ply's depth plus `saddleGap`. For a horn with a CAD mesh that
- * is the real neck; any other horn's drawing has no modeled neck, so the saddle follows the drawn flare, which starts at
- * the catalog's throat (`exit`, the best throat size the catalog has) and the real part needs fitting. A drawing
- * without a flange (the generic flare) puts the upright on the throat plane, as wide as the driver's bolts need.
+ * (`mouthW`: the box's width for the full-width concept; see `throatOf`). See `buildPlyMount` for the parts. A
+ * two-bolt driver stands its pair upright, so the bottom bolt goes through the ply and the top one holds the flange
+ * alone, and the saddle keeps the pair from turning. A drawing without a flange (the generic flare) puts the upright on
+ * the throat plane, as wide as the driver's bolts need.
  */
 export function plyMountFit(
   horn: Horn,
@@ -168,16 +90,10 @@ export function plyMountFit(
   const key = `${JSON.stringify(cd.body)} ${horn.rect ? mouthW : ""}`;
   const known = byKey.get(key);
   if (known !== undefined) return known;
-  const { body, shared } = hornBody(
-    horn,
-    horn.rect ? mouthW : horn.size.w,
-    new THREE.MeshBasicMaterial(),
-  );
-  const throat = throatOf(body, { x: 0, y: 0, throatZ: 0 });
-  if (!shared) body.geometry.dispose();
+  const throat = throatOf(horn, mouthW);
   const t = defaultPanelIn(HORN_MOUNT_PANEL, PLYWOOD_MATERIAL);
   const zBack = throat.front;
-  const bolts = driverBolts(cd, true);
+  const bolts = driverBolts(cd, "upright");
   const w = Math.max(throat.rim, cd.body.bolts.circle / 2 + BRACKET.clampEdge);
   const bottom = ROUNDOVER_IN - HORN_LIFT_IN - hornAxisUp(horn);
   // the top edge: under the axis, and lowered past any bolt whose washer it would cut (that bolt then holds the flange
@@ -188,16 +104,16 @@ export function plyMountFit(
     straddled = !!b;
     if (b) top = b.y - WASHER_R_IN;
   }
-  const saddleR = throat.neckR(zBack, zBack + t, top) + PLY_MOUNT.saddleGap;
+  const below = throat.slab(zBack, zBack + t).filter((p) => p.y < top);
+  const saddleR = Math.max(0, ...below.map((p) => Math.hypot(p.x, p.y))) + PLY_MOUNT.saddleGap;
   const holeR = PLY_MOUNT.boltHole / 2;
   // the bolts through the upright: below its top edge and clear of the saddle (one inside the saddle passes free)
   const through = bolts.filter((b) => b.y + holeR < top && Math.hypot(b.x, b.y) - holeR > saddleR);
-  const washerFits = (b: { x: number; y: number }) =>
+  const washerFits = (b: XY) =>
     b.y + WASHER_R_IN <= top &&
     b.y - WASHER_R_IN >= bottom &&
     Math.abs(b.x) + WASHER_R_IN <= w &&
     Math.hypot(b.x, b.y) - WASHER_R_IN >= saddleR;
-  const cdR = stepsDia(cdBodySteps(cd.body)) / 2;
   const fit = through.some(washerFits)
     ? {
         t,
@@ -208,7 +124,7 @@ export function plyMountFit(
         saddleR,
         rim: throat.rim,
         through,
-        baseClearsDriver: -cdR - (bottom + t) >= PLY_MOUNT.driverGap,
+        baseClearsDriver: -driverRadius(cd) - (bottom + t) >= PLY_MOUNT.driverGap,
       }
     : null;
   byKey.set(key, fit);
@@ -267,20 +183,17 @@ export function buildPlyMount(
   for (const b of through)
     addBoltHead(ctx, at.x + b.x, at.y + b.y, at.throatZ + zBack + t, 1, PLY_MOUNT_MESH_NAMES.bolt);
 
-  // the base: back from the upright, stopping short of the lid's back edge, of the driver when it hangs too low over
-  // it, and of a part already on the lid behind it (the horn's binding posts, drawn with the mid box before the horn)
+  // the base: back from the upright, as far as the lid, the driver and the lid's parts leave room
   const baseFront = at.throatZ + zBack;
-  let baseBack = Math.max(baseFront - PLY_MOUNT.baseDepth, lidBackZ);
-  if (!fit.baseClearsDriver) baseBack = Math.max(baseBack, at.throatZ + PLY_MOUNT.driverGap);
-  const footprint = new THREE.Box3(
-    new THREE.Vector3(at.x - w, footY - ROUNDOVER_IN, baseBack),
-    new THREE.Vector3(at.x + w, footY + t, baseFront),
-  );
-  ctx.group.updateMatrixWorld(true);
-  ctx.group.traverse((o) => {
-    if (!(o instanceof THREE.Mesh) || o.name !== HARDWARE_MESH_NAME) return;
-    const part = new THREE.Box3().setFromObject(o);
-    if (part.intersectsBox(footprint)) baseBack = Math.max(baseBack, part.max.z + PLY_MOUNT.lidGap);
+  const baseBack = lidStop(ctx, {
+    at,
+    front: baseFront,
+    depth: PLY_MOUNT.baseDepth,
+    w,
+    footY,
+    topY: footY + t,
+    lidBackZ,
+    underDriver: fit.baseClearsDriver,
   });
   const depth = baseFront - baseBack;
   if (depth < t) return; // no room on the lid for a base
@@ -291,9 +204,8 @@ export function buildPlyMount(
 
   // the gusset's profile: u back from the upright, v up from the base; its top cut flat under the flange and driver
   const baseTop = bottom + t;
-  const cdR = stepsDia(cdBodySteps(cd.body)) / 2;
   const leg = Math.min(PLY_MOUNT.gussetLeg, depth);
-  const h = Math.min(leg, -Math.max(fit.rim, cdR) - PLY_MOUNT.gussetGap - baseTop);
+  const h = Math.min(leg, -Math.max(fit.rim, driverRadius(cd)) - PLY_MOUNT.gussetGap - baseTop);
   if (h < t) return; // no room for one under the driver (a horn this low has its driver just over the base)
   const profile = new THREE.Shape();
   profile.moveTo(0, 0);

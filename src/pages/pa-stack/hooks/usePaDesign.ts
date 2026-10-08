@@ -356,7 +356,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     if (c.baffleColor) setBaffleColor(c.baffleColor);
     // a save from before the horn color: the horn's catalog finish
     setHornColor(savedHornColor(c));
-    // a save from before the horn mount: the L-bracket
+    // a save from before the horn mount, or holding the retired L-bracket: the aluminum plate
     setHornMount(savedHornMount(c.hornMount));
     setCabinetFinish(c.cabFinish || DEFAULT_PA.cabFinish);
     setSpacerHeightIn(typeof c.spacerH === "number" ? c.spacerH : DEFAULT_PA.spacerH);

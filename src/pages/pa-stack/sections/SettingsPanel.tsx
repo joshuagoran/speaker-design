@@ -47,14 +47,17 @@ import { HardwareSettings } from "./HardwareSettings";
 import { boxTakesHardware, handlePart } from "../../../lib/pa/hardware";
 import { NO_HANDLES_LABEL } from "../../../constants/hardware";
 import {
+  CLAMPED_BRACKET_NAME,
   HORN_MOUNT_DEFAULT,
   HORN_MOUNT_LABEL,
   HORN_MOUNT_NAMES,
+  HORN_MOUNT_PLATE_FALLBACK,
   HORN_MOUNT_PLY_UNAVAILABLE,
   HORN_MOUNT_TIPS,
 } from "../../../constants/hornMount";
 import { takesHornMount } from "../../../lib/pa/hornMount";
 import { plyMountFit } from "../../../components/stack-view/buildPlyMount";
+import { plateFit } from "../../../components/stack-view/buildPlate";
 import {
   HORN_COLOR_CATALOG,
   HORN_COLOR_CATALOG_LABEL,
@@ -271,12 +274,18 @@ export function SettingsPanel({ planner }: Props) {
     ...braceNoteLines(PA_SETTINGS_TABS.sub, subBracing),
     ...(midBracing ? braceNoteLines(PA_SETTINGS_TABS.mid, midBracing) : []),
   ];
-  // the horn mount: offered where the clamped L-bracket was; the plywood mount only when the driver's bolts fit it (the
-  // 3D view falls back to the L-bracket otherwise, so the setting shows what it draws)
+  // the horn mount, for a driver bolted straight to its horn on a lid: the plywood mount only when the driver's bolts
+  // fit it, else the aluminum plate; the plate, when no bolt can pass through it, gives way to the clamped L-bracket.
+  // The 3D view draws the same, so the setting and the summary show what it draws.
   const hornMountShown = takesHornMount(hornOption, layout);
   const plyMountFits =
     hornMountShown && plyMountFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
+  const plateFits = plateFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
   const shownHornMount = plyMountFits ? hornMount : HORN_MOUNT_DEFAULT;
+  const hornMountTips = {
+    ...HORN_MOUNT_TIPS,
+    ...(plateFits ? {} : { plate: HORN_MOUNT_PLATE_FALLBACK }),
+  };
   const summaries: Record<PaSettingsSection, string> = {
     sub: [
       subDriver.name,
@@ -302,7 +311,11 @@ export function SettingsPanel({ planner }: Props) {
           (b) =>
             `${PA_SETTINGS_TABS[b]}: ${handlePart(hardware[b].model)?.name ?? NO_HANDLES_LABEL.toLowerCase()}`,
         ),
-      ...(hornMountShown ? [`${HORN_MOUNT_LABEL}: ${HORN_MOUNT_NAMES[shownHornMount]}`] : []),
+      ...(hornMountShown
+        ? [
+            `${HORN_MOUNT_LABEL}: ${shownHornMount === "plate" && !plateFits ? CLAMPED_BRACKET_NAME : HORN_MOUNT_NAMES[shownHornMount]}`,
+          ]
+        : []),
     ].join(", "),
   };
   const section = (id: PaSettingsSection, children: React.ReactNode) => (
@@ -788,7 +801,7 @@ export function SettingsPanel({ planner }: Props) {
                   plyMountFits ? undefined : { values: ["ply"], why: HORN_MOUNT_PLY_UNAVAILABLE }
                 }
                 options={keysOf(HORN_MOUNT_NAMES).map(
-                  (id) => [id, HORN_MOUNT_NAMES[id], HORN_MOUNT_TIPS[id]] as const,
+                  (id) => [id, HORN_MOUNT_NAMES[id], hornMountTips[id]] as const,
                 )}
                 className="mt-3"
               />

@@ -1,13 +1,15 @@
-// The horn mount setting off (the L-bracket, the default): the 3D scene is what it was before the setting existed.
-// Each case's hash below was generated on main before the plywood mount (9a26fa3) by hashing every mesh's name,
-// geometry, place and color; the setting must leave them all alone. A deliberate change to the scene rewrites them:
-//   SCENE_HASH_OUT=path vp test --run tests/horn-mount-off.test.ts   (writes the current hashes as JSON)
+// The horn mount setting at its default (the aluminum plate): the 3D scenes it draws, pinned. Each case's hash hashes
+// every mesh's name, geometry, place and color. The scenes the plate doesn't touch (a horn on its throat adapter's
+// L-bracket, and a horn and driver the plate can't hold, which keep the clamped L-bracket) keep the hashes made on main
+// before the horn mount (9a26fa3); the scenes that draw the plate were made when the plate replaced the clamped
+// L-bracket. A deliberate change to the scene rewrites them:
+//   SCENE_HASH_OUT=path vp test --run tests/horn-mount-default.test.ts   (writes the current hashes as JSON)
 import { expect, test } from "vite-plus/test";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 import * as THREE from "three";
 import { buildStackScene, type Props } from "../src/components/stack-view/buildStackScene";
-import { HORN_OPTIONS } from "../src/lib/data";
+import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
 import { SCENE_CASE_NAMES, sceneCases } from "./scene-cases";
 import type { PaLayout } from "../src/types";
 
@@ -22,7 +24,10 @@ const hornOf = (id: string) => {
   return horn;
 };
 
-/** Representative scenes: the default PA (a horn on its adapter's bracket), and horns clamped in the L-bracket. */
+/**
+ * Representative scenes: the default PA (a horn on its adapter's bracket), horns the driver bolts straight to (the
+ * plate), and a horn and driver the plate can't hold (the clamped L-bracket).
+ */
 const CASES: { name: string; props: Props }[] = [
   ...(["stack", "pole", "satellite", "tower"] as const satisfies readonly PaLayout[]).map(
     (layout) => ({
@@ -43,6 +48,11 @@ const CASES: { name: string; props: Props }[] = [
     name: `${id}, ${layout}`,
     props: { ...base, horn: hornOf(id), layout },
   })),
+  (() => {
+    const cd = CD_OPTIONS.find((c) => c.id === "de360");
+    if (!cd) throw new Error("no DE360");
+    return { name: "st260 + de360, stack", props: { ...base, horn: hornOf("st260"), cd } };
+  })(),
 ];
 
 /** A hash of every mesh in the scene, in order: its name, geometry type and vertices, world matrix and color. */
@@ -68,25 +78,26 @@ function sceneHash(g: THREE.Group) {
 }
 
 const EXPECTED: Record<string, string> = {
-  "default horn, stack": "4b5a6e5ea6e591d0",
-  "default horn, pole": "44cef27cc010e72f",
-  "default horn, satellite": "89eeb9bb141c260f",
-  "default horn, tower": "f4d156923f4a41a0",
-  "diy_rosse110x50, stack": "d01f1e760a46fce4",
-  "diy_os90x50, satellite": "7a4425420701e6f2",
-  "me45, pole": "5a32b13c27a2428c",
-  "athRect, stack": "6bebcdbfe2157fe7",
-  "iwata600, stack": "466b8d4c0a1df8f2",
-  "hf950, stack": "3f261b57e2494ac6",
+  "default horn, stack": "4b5a6e5ea6e591d0", // main
+  "default horn, pole": "44cef27cc010e72f", // main
+  "default horn, satellite": "89eeb9bb141c260f", // main
+  "default horn, tower": "f4d156923f4a41a0", // main
+  "diy_rosse110x50, stack": "532ac854ab397dd8", // the plate
+  "diy_os90x50, satellite": "c8e0642899b387f2", // the plate
+  "me45, pole": "35d1b88afe302528", // the plate
+  "athRect, stack": "a8f76cf230fdc5ef", // the plate
+  "iwata600, stack": "2958aff57bd6ca02", // the plate
+  "hf950, stack": "33140048f330737d", // the plate
+  "st260 + de360, stack": "8d3b0ae33988dd70", // main
 };
 
-test("with the horn mount off, every scene is the one main drew before the setting", () => {
+test("with the horn mount at its default, every scene is the pinned one", () => {
   const now = Object.fromEntries(CASES.map((c) => [c.name, sceneHash(buildStackScene(c.props))]));
   const out = process.env.SCENE_HASH_OUT;
   if (out) fs.writeFileSync(out, JSON.stringify(now, null, 2));
   // and the same with the setting saying so
   for (const c of CASES)
-    expect(sceneHash(buildStackScene({ ...c.props, hornMount: "bracket" })), c.name).toBe(
+    expect(sceneHash(buildStackScene({ ...c.props, hornMount: "plate" })), c.name).toBe(
       now[c.name],
     );
   expect(now).toEqual(EXPECTED);

@@ -3,6 +3,7 @@ import { HORN_LIFT_IN, ROUNDOVER_IN, hornAxisUp } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import { buildBracket, buildClampedBracket, takesBracket } from "./buildBracket";
 import { buildPlyMount, plyMountFit } from "./buildPlyMount";
+import { buildPlate, plateFit } from "./buildPlate";
 import { hornBody } from "./hornBody";
 import { cdBodySteps } from "../../lib/data";
 import type { BodyStep, CompressionDriver, Dims3, Horn, HornMountId } from "../../types";
@@ -48,10 +49,11 @@ export interface HornAxis {
 /**
  * The horn's throat adapter, when it has one, and the compression driver behind it: the adapter's front face on the
  * throat, the driver's front face on the adapter's back face (or on the throat). On a lid (`lidY`; the tower has none
- * under the driver) the L-bracket holds it: from the adapter's flange, or, without an adapter, clamped between
- * the throat and the driver; or, without an adapter and with `hornMount` "ply", the plywood mount in front of the
- * horn's throat flange, the driver on the flange, when the driver's bolts fit it (`plyMountFit`; else the L-bracket).
- * `mount` is the box under the horn: its width draws the full-width concept, and the mount's base stays on its lid.
+ * under the driver) a mount holds it. With an adapter, the L-bracket bolted to the adapter's flange. Without one, the
+ * driver on the throat flange and, in front of the flange, the plywood mount when `hornMount` is "ply" and the
+ * driver's bolts fit it (`plyMountFit`), else the aluminum plate when they fit that (`plateFit`), else the L-bracket
+ * clamped between the throat and the driver. `mount` is the box under the horn: its width draws the full-width
+ * concept, and a mount's foot or base stays on its lid.
  */
 function addThroatParts(
   ctx: SceneContext,
@@ -73,9 +75,12 @@ function addThroatParts(
     );
     if (lidY !== null && takesBracket(horn.adapter)) buildBracket(ctx, horn.adapter, at, lidY);
   } else if (lidY !== null) {
-    const fit = hornMount === "ply" ? plyMountFit(horn, cd, mount.w) : null;
     // the lid's flat top ends at the roundover on its back edge (boxes are centered on z = 0)
-    if (fit) buildPlyMount(ctx, fit, { cd, at, lidY, lidBackZ: -mount.d / 2 + ROUNDOVER_IN });
+    const lidBackZ = -mount.d / 2 + ROUNDOVER_IN;
+    const ply = hornMount === "ply" ? plyMountFit(horn, cd, mount.w) : null;
+    const plate = ply ? null : plateFit(horn, cd, mount.w);
+    if (ply) buildPlyMount(ctx, ply, { cd, at, lidY, lidBackZ });
+    else if (plate) buildPlate(ctx, plate, { at, lidY, lidBackZ });
     else cdFront = buildClampedBracket(ctx, cd, at, lidY);
   }
   addSteps(
@@ -113,7 +118,7 @@ export function buildHorn(
     xs?: number[];
     mount: Pick<Dims3, "w" | "d">;
     tower?: { cy: number; width: number; sectionH: number };
-    /** what holds a driver bolted straight to the horn on the lid; absent: the L-bracket */
+    /** what holds a driver bolted straight to the horn on the lid; absent: the aluminum plate */
     hornMount?: HornMountId;
   },
 ): { top: number; axes: HornAxis[] } {

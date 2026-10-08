@@ -1154,7 +1154,7 @@ export interface PaDesignConfig {
   baffleColor?: string;
   /** a paint color (hex) for the horn body over its catalog finish; absent: the finish (older saves have none) */
   hornColor?: string;
-  /** what holds a driver bolted straight to its horn on the mid box's lid; absent in older saves: the L-bracket */
+  /** what holds a driver bolted straight to its horn on the mid box's lid; absent in older saves: the aluminum plate */
   hornMount?: HornMountId;
   /** a `FinishId`, or a paint color as a hex string (`SwatchPicker` offers both) */
   cabFinish?: string;

@@ -35,7 +35,7 @@ export interface Props {
   baffleColor: string;
   /** a paint color (hex) for the horn body; absent or empty: the horn's catalog finish */
   hornColor?: string;
-  /** what holds a driver bolted straight to its horn on the mid box's lid; absent: the L-bracket */
+  /** what holds a driver bolted straight to its horn on the mid box's lid; absent: the aluminum plate */
   hornMount?: HornMountId;
   /** explicit vent geometry when the cabinet is custom */
   portGeom?: Partial<PaPortGeometry>;

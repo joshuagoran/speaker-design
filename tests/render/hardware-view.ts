@@ -1,6 +1,6 @@
 // The render check's page (tests/render-hardware.mjs bundles it): the default PA stack with its hardware, built as the
 // planner builds it, seen from the camera the URL asks for, so the handles, dishes and posts can be looked at close up.
-//   ?horn=<id> &cd=<id> &mount=bracket|ply &handle=H1105|30769|none &cutaway=1 &layout=stack|tower|pole|satellite &az=deg &el=deg &dist=in &tx= &ty= &tz= (look-at, in)
+//   ?horn=<id> &cd=<id> &mount=plate|ply &hide=horn &handle=H1105|30769|none &cutaway=1 &layout=stack|tower|pole|satellite &az=deg &el=deg &dist=in &tx= &ty= &tz= (look-at, in)
 import * as THREE from "three";
 import { buildStackScene } from "../../src/components/stack-view/buildStackScene";
 import { DEFAULT_PA } from "../../src/lib/defaults";
@@ -19,6 +19,7 @@ import { PA_LAYOUT_NAMES } from "../../src/constants/paLayouts";
 import { keysOf } from "../../src/lib/records";
 import { CD_OPTIONS, HORN_OPTIONS } from "../../src/lib/data";
 import { savedHornMount } from "../../src/lib/pa/hornMount";
+import { HORN_MESH_NAME } from "../../src/components/stack-view/buildHorn";
 
 const q = new URLSearchParams(location.search);
 const num = (k: string, d: number) => (q.has(k) ? Number(q.get(k)) : d);
@@ -85,6 +86,11 @@ scene.add(new THREE.HemisphereLight(stage.sky, stage.ground, stage.hemi));
 const key = new THREE.DirectionalLight(stage.sky, stage.key);
 key.position.set(40, 80, 30);
 scene.add(key);
+// hide=horn: the horn bodies left out, to see what stands in front of the throat flange
+if (q.get("hide") === HORN_MESH_NAME)
+  group.traverse((o) => {
+    if (o.name === HORN_MESH_NAME) o.visible = false;
+  });
 scene.add(group);
 const az = (num("az", 35) * Math.PI) / 180,
   el = (num("el", 20) * Math.PI) / 180,
