@@ -6,6 +6,9 @@ import { passiveRadiatorShape } from "./hifi";
 import type {
   Dims2,
   Dims3,
+  HifiConfig,
+  HifiTweeter,
+  HifiWoofer,
   PassiveRadiatorChoice,
   RadiatorPanel,
   RoundPort,
@@ -71,4 +74,57 @@ export function radiatorSpots(
     ...stack(outside).map((y) => ({ panel, side: -1 as const, y, shape })),
     ...stack(pr.n - outside).map((y) => ({ panel, side: 1 as const, y, shape })),
   ];
+}
+
+/**
+ * The smallest box width and height that hold the design's parts as the layout places them, inches:
+ * - across: the woofer (its nominal size and `wooferWidthIn`), the tweeter's faceplate or a waveguide set into the baffle
+ *   (with the walls and `faceplateWidthIn`; a waveguide on the box top needs no baffle), and radiators on the baffle or
+ *   back (as `passiveRadiatorFits` sizes them);
+ * - up: the tweeter (unless on the box top) and the woofer down from the top as `driverLayout` stacks them, the woofer's
+ *   bottom clear of the vent along the bottom of the baffle (a slot with its shelf, or round ports) or of radiators on
+ *   the baffle, and radiators stacked on the back.
+ * `tweeter` is the tweeter with its waveguide's mouth as the faceplate (`HifiDesign.tweeterWithWaveguide`).
+ */
+export function hifiBoxMin({
+  woofer,
+  tweeter,
+  onTop,
+  cfg,
+  wall,
+  radiatorPanel,
+}: {
+  woofer: Pick<HifiWoofer, "size">;
+  tweeter: Pick<HifiTweeter, "faceplate">;
+  onTop: boolean;
+  cfg: Pick<HifiConfig, "box" | "port" | "pr">;
+  wall: number;
+  radiatorPanel: RadiatorPanel;
+}): Dims2 {
+  const L = HIFI_BOX_LAYOUT;
+  const face = tweeter.faceplate;
+  const pr = cfg.box === "radiator" && cfg.pr ? cfg.pr : null;
+  const prShape = pr && passiveRadiatorShape(pr.drv);
+  const prStack = pr && prShape ? pr.n * (prShape.h + L.radiatorGapIn) : 0;
+  const prAcross =
+    prShape && radiatorPanel !== "side" ? prShape.w + L.radiatorWidthIn + 2 * wall : 0;
+  const w = Math.max(
+    woofer.size + L.wooferWidthIn,
+    onTop ? 0 : face.w + 2 * wall + L.faceplateWidthIn,
+    prAcross,
+  );
+  // what the woofer's bottom stands on: the slot and its shelf, round ports, or radiators stacked on the baffle
+  const port = cfg.box === "vented" ? cfg.port : null;
+  const below =
+    port?.shape === "slot"
+      ? port.h + wall
+      : port
+        ? port.dia + L.portLiftIn
+        : pr && radiatorPanel === "baffle"
+          ? wall + L.radiatorMarginIn + prStack
+          : 0;
+  const drivers =
+    L.topMarginIn + (onTop ? 0 : face.h + L.driverGapIn) + woofer.size + L.wooferFloorIn + below;
+  const h = Math.max(drivers, pr && radiatorPanel === "back" ? 2 * wall + prStack : 0);
+  return { w, h };
 }

@@ -11,10 +11,21 @@ interface Props {
   build: () => THREE.Group;
   /** how far back the camera sits for the scene (default: the PA stack's `fitFootprint`) */
   fit?: SceneFit;
+  /** where the camera starts: its turn and tilt, radians, and zoom (default: the view's own; the render tool sets it) */
+  start?: Partial<SceneStart>;
 }
 
+/** The camera's turn round the scene and tilt over it, radians, and its zoom (distance over the fit's). */
+export interface SceneStart {
+  rotY: number;
+  rotX: number;
+  zoom: number;
+}
+/** Where every view's camera starts. */
+const START: SceneStart = { rotY: 0.6, rotX: 0.35, zoom: 1 };
+
 /** A rotatable 3D view of whatever `build` returns, on the themed stage (floor, grid, lights). */
-export function SceneView3D({ buildKey, build, fit = fitFootprint }: Props) {
+export function SceneView3D({ buildKey, build, fit = fitFootprint, start }: Props) {
   const mount = useRef<HTMLDivElement>(null);
   // the stage (floor, grid, lights) follows the theme; the scene is rebuilt when it changes
   const theme = useThemeName();
@@ -25,7 +36,7 @@ export function SceneView3D({ buildKey, build, fit = fitFootprint }: Props) {
     lx: number;
     ly: number;
     zoom: number;
-  }>({ rotY: 0.6, rotX: 0.35, drag: false, lx: 0, ly: 0, zoom: 1 });
+  }>({ ...START, ...start, drag: false, lx: 0, ly: 0 });
   // the latest builder and fit, read when the key says the scene changed
   const latest = useRef({ build, fit });
   latest.current = { build, fit };

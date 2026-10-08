@@ -15,7 +15,10 @@ import {
 } from "../../../lib/data";
 import { byId } from "../../../lib/tables";
 import { DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../../../lib/defaults";
-import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
+import { HIGHPASS_ALIGNMENTS, midBoxMin } from "../../../lib/pa/calc";
+import { subBoxMin } from "../../../lib/pa/chips";
+import { boxSliderMins, fitBox } from "../../../lib/boxFit";
+import { PA_SLIDERS } from "../../../constants/paSliders";
 import { savedCutlist } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
 import { savedPortStyle } from "../../../constants/portStyles";
@@ -26,7 +29,14 @@ import { savedHornMount } from "../../../lib/pa/hornMount";
 import { musicBalanceToSave, savedMusicBalance } from "../../../lib/pa/musicBalance";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../../constants/panelSizes";
 import { isPanelNominal, panelFor, panelIn, savedPanelExactIn } from "../../../lib/panel";
-import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
+import type {
+  Dims2,
+  Dims3,
+  DispersionPlane,
+  MidDriver,
+  PaDesignConfig,
+  SubDriver,
+} from "../../../types";
 import { derivePaDesign } from "./paDesign";
 import type { PaDerivedDesign } from "./paDesign";
 import type { CabinetStyle } from "./useCabinetStyle";
@@ -51,6 +61,9 @@ export interface PaDesign
   subDriverChoices: SubDriver[];
   midDriverChoices: MidDriver[];
   subBox: Dims3;
+  /** each box's least width and height, in: what its parts need, up to its slider's step (lib/boxFit) */
+  subBoxMin: Dims2;
+  midBoxMin: Dims2;
   subWithBox: SubDriver & { box: Dims3 };
   /** set by `restore` so the mid size effect leaves a restored config's driver and box alone */
   skipSizeReset: React.RefObject<boolean>;
@@ -173,8 +186,6 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
   } = useCutlistOptions();
   const subDriverChoices = subDriversOfSize(format.sub);
   const midDriverChoices = midDriversOfSize(midSize);
-  const subBox = subBoxDims;
-  const subWithBox = { ...subDriver, box: subBox };
   /** Switching 12/15 picks that size's default driver and box; restoring a config sets them itself. */
   const skipSizeReset = useRef(true);
   useEffect(() => {
@@ -201,20 +212,38 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     () => ({ ...subVentState, div: ductDividerIn }),
     [subVentState, ductDividerIn],
   );
+  // each box's width and height start at what its parts need (each up to its slider's step): a box made too small by a
+  // driver, vent or wall change, or saved that way, is modeled, drawn and saved at that size, and its stored size
+  // follows (the effect below)
+  const subMins = boxSliderMins(subBoxMin(portStyle, subVentSpec, PT, subDriver.size), {
+    w: PA_SLIDERS.subW,
+    h: PA_SLIDERS.subH,
+  });
+  const midMins = boxSliderMins(midBoxMin(midDriver.size), {
+    w: PA_SLIDERS.midW,
+    h: PA_SLIDERS.midH,
+  });
+  const subBox = fitBox(subBoxDims, subMins);
+  const midBox = fitBox(midBoxDims, midMins);
+  useEffect(() => {
+    if (subBox !== subBoxDims) setSubBoxDims(subBox);
+    if (midBox !== midBoxDims) setMidBoxDims(midBox);
+  }, [subBox, subBoxDims, midBox, midBoxDims, setSubBoxDims, setMidBoxDims]);
+  const subWithBox = { ...subDriver, box: subBox };
   // derived once per change to the inputs below, not on every render of every tab (App holds this planner)
   const derived = useMemo(
     () =>
       derivePaDesign({
         subDriver,
         portStyle,
-        subBoxDims,
+        subBoxDims: subBox,
         subVentSpec,
         subHighpassHz,
         subHighpassType,
         subAmpWatts,
         maxPortAirSpeedMs,
         midDriver,
-        midBoxDims,
+        midBoxDims: midBox,
         midAmpWatts,
         hornOption,
         compressionDriver,
@@ -235,14 +264,14 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     [
       subDriver,
       portStyle,
-      subBoxDims,
+      subBox,
       subVentSpec,
       subHighpassHz,
       subHighpassType,
       subAmpWatts,
       maxPortAirSpeedMs,
       midDriver,
-      midBoxDims,
+      midBox,
       midAmpWatts,
       hornOption,
       compressionDriver,
@@ -273,13 +302,13 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     horn: hornOption.id,
     cabinet: cabinet.id,
     portStyle,
-    cDim: subBoxDims,
+    cDim: subBox,
     cVent: subVentSpec,
     hpf: subHighpassHz,
     hpType: subHighpassType,
     ampW: subAmpWatts,
     portMax: maxPortAirSpeedMs,
-    mDim: midBoxDims,
+    mDim: midBox,
     wall: wallThicknessIn,
     panel: wallPanel,
     divider: ductDividerPanel,
@@ -372,8 +401,9 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setSubDriver,
     portStyle,
     setPortStyle,
-    subBoxDims,
+    subBoxDims: subBox,
     setSubBoxDims,
+    subBoxMin: subMins,
     subVentSpec,
     setSubVentSpec,
     ductDividerPanel,
@@ -392,8 +422,9 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setMidDriver,
     midBoxPreset,
     setMidBoxPreset,
-    midBoxDims,
+    midBoxDims: midBox,
     setMidBoxDims,
+    midBoxMin: midMins,
     midAmpWatts,
     setMidAmpWatts,
     midBelowSubDb,

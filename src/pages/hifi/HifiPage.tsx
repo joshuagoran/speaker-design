@@ -80,13 +80,11 @@ import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { UI_TEXT } from "../../constants/uiText";
 import { HIFI_RESULT_HEADINGS } from "../../constants/hifiResults";
+import { HIFI_BOX_SLIDERS, HIFI_ROUNDOVER_CHOICES } from "../../constants/hifiLayout";
 
 interface Props {
   hifi: HifiPlanner;
 }
-
-/** The roundover radii on offer, inches (0: sharp edges); a router bit's usual sizes. */
-const ROUNDOVER_CHOICES = [0, 0.5, 0.75, 1, 1.5, 2] as const;
 
 /** The panel materials on offer: the material id and the button's label. */
 const MATERIAL_CHOICES = [
@@ -125,6 +123,7 @@ export function HifiPage({ hifi }: Props) {
     setBoxType,
     boxDims,
     setBoxDims,
+    boxMin,
     wallThicknessIn,
     wallPanel,
     setWallPanel,
@@ -673,9 +672,9 @@ export function HifiPage({ hifi }: Props) {
                 <Slider
                   label="Width"
                   value={boxDims.w}
-                  min={6}
-                  max={16}
-                  step={0.25}
+                  min={boxMin.w}
+                  max={Math.max(HIFI_BOX_SLIDERS.w.max, boxMin.w)}
+                  step={HIFI_BOX_SLIDERS.w.step}
                   unit="″"
                   onChange={(v) => setBoxDim("w", v)}
                   extra={renderDimensionLock("dim", "w", "Width")}
@@ -683,9 +682,9 @@ export function HifiPage({ hifi }: Props) {
                 <Slider
                   label="Height"
                   value={boxDims.h}
-                  min={9}
-                  max={44}
-                  step={0.25}
+                  min={boxMin.h}
+                  max={Math.max(HIFI_BOX_SLIDERS.h.max, boxMin.h)}
+                  step={HIFI_BOX_SLIDERS.h.step}
                   unit="″"
                   onChange={(v) => setBoxDim("h", v)}
                   extra={renderDimensionLock("dim", "h", "Height")}
@@ -693,9 +692,9 @@ export function HifiPage({ hifi }: Props) {
                 <Slider
                   label="Depth"
                   value={boxDims.d}
-                  min={6}
-                  max={16}
-                  step={0.25}
+                  min={HIFI_BOX_SLIDERS.d.min}
+                  max={HIFI_BOX_SLIDERS.d.max}
+                  step={HIFI_BOX_SLIDERS.d.step}
                   unit="″"
                   onChange={(v) => setBoxDim("d", v)}
                   extra={renderDimensionLock("dim", "d", "Depth")}
@@ -800,7 +799,7 @@ export function HifiPage({ hifi }: Props) {
               <Card className="mb-4">
                 <div className="text-sm text-stone-500 mb-1">Edge roundover</div>
                 <div className="grid grid-cols-6 gap-1 mb-3">
-                  {ROUNDOVER_CHOICES.map((r) => (
+                  {HIFI_ROUNDOVER_CHOICES.map((r) => (
                     <ToggleButton
                       key={r}
                       size="xs"

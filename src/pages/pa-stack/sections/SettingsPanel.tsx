@@ -92,6 +92,7 @@ interface Props {
     | "maxPortAirSpeedMs"
     | "setMaxPortAirSpeedMs"
     | "setSubBoxDim"
+    | "subBoxMin"
     | "setSubVentField"
     | "midDriver"
     | "setMidDriver"
@@ -101,6 +102,7 @@ interface Props {
     | "midBelowSubDb"
     | "setMidBelowSubDb"
     | "setMidBoxDim"
+    | "midBoxMin"
     | "midSize"
     | "setMidSize"
     | "hornOption"
@@ -183,6 +185,7 @@ export function SettingsPanel({ planner }: Props) {
     maxPortAirSpeedMs,
     setMaxPortAirSpeedMs,
     setSubBoxDim,
+    subBoxMin,
     setSubVentField,
     midDriver,
     setMidDriver,
@@ -192,6 +195,7 @@ export function SettingsPanel({ planner }: Props) {
     midBelowSubDb,
     setMidBelowSubDb,
     setMidBoxDim,
+    midBoxMin,
     midSize,
     setMidSize,
     hornOption,
@@ -362,8 +366,8 @@ export function SettingsPanel({ planner }: Props) {
               <Slider
                 label="Width"
                 value={subBoxDims.w}
-                min={PA_SLIDERS.subW.min}
-                max={PA_SLIDERS.subW.max}
+                min={subBoxMin.w}
+                max={Math.max(PA_SLIDERS.subW.max, subBoxMin.w)}
                 step={PA_SLIDERS.subW.step}
                 unit="″"
                 onChange={(v) => setSubBoxDim("w", v)}
@@ -372,8 +376,8 @@ export function SettingsPanel({ planner }: Props) {
               <Slider
                 label="Height"
                 value={subBoxDims.h}
-                min={PA_SLIDERS.subH.min}
-                max={PA_SLIDERS.subH.max}
+                min={subBoxMin.h}
+                max={Math.max(PA_SLIDERS.subH.max, subBoxMin.h)}
                 step={PA_SLIDERS.subH.step}
                 unit="″"
                 onChange={(v) => setSubBoxDim("h", v)}
@@ -552,8 +556,8 @@ export function SettingsPanel({ planner }: Props) {
                   <Slider
                     label="Width"
                     value={midBoxDims.w}
-                    min={PA_SLIDERS.midW.min}
-                    max={PA_SLIDERS.midW.max}
+                    min={midBoxMin.w}
+                    max={Math.max(PA_SLIDERS.midW.max, midBoxMin.w)}
                     step={PA_SLIDERS.midW.step}
                     unit="″"
                     onChange={(v) => setMidBoxDim("w", v)}
@@ -562,8 +566,8 @@ export function SettingsPanel({ planner }: Props) {
                   <Slider
                     label="Height"
                     value={midBoxDims.h}
-                    min={PA_SLIDERS.midH.min}
-                    max={PA_SLIDERS.midH.max}
+                    min={midBoxMin.h}
+                    max={Math.max(PA_SLIDERS.midH.max, midBoxMin.h)}
                     step={PA_SLIDERS.midH.step}
                     unit="″"
                     onChange={(v) => setMidBoxDim("h", v)}

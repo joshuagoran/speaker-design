@@ -9,7 +9,10 @@ import {
   portsDiffer,
   slotFor,
 } from "../src/lib/hifi/optimize";
-import { hifiBox, hifiGridTop, hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
+import { hifiBox, hifiGridTop, hifiSystem, hifiChips, RADIATOR_PANEL } from "../src/lib/hifi/hifi";
+import { hifiBoxMin } from "../src/lib/hifi/boxLayout";
+import { boxSliderMins } from "../src/lib/boxFit";
+import { HIFI_BOX_SLIDERS } from "../src/constants/hifiLayout";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, waveguideSpecOf } from "../src/lib/data";
 import { DIY_OS90X70 } from "../src/data/catalog/horns";
 import { chipOf } from "./helpers";
@@ -394,6 +397,19 @@ test("hi-fi optimizer: the first card is the best design on its grid, checked on
         const c = { ...cfg, xo, guide: space.guideOf(t) },
           sys = hifiSystem(w, tt, c);
         if (sys && sys.whoW === "radiator") radiatorLimited = true;
+        // a box the page would take: at least what its parts need (the page's sliders start there)
+        const need = boxSliderMins(
+          hifiBoxMin({
+            woofer: w,
+            tweeter: tt,
+            onTop: !!c.guide?.freestanding,
+            cfg: c,
+            wall: c.wall,
+            radiatorPanel: RADIATOR_PANEL,
+          }),
+          HIFI_BOX_SLIDERS,
+        );
+        if (c.dim.w < need.w - 1e-9 || c.dim.h < need.h - 1e-9) continue;
         if (!sys || hifiDesignProblems(sys, hifiChips(sys, w, tt, c)).length) continue;
         const price = space.priceOf(w, t, c);
         if (price > base.budget) continue;

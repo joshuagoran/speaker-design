@@ -17,6 +17,7 @@ import type {
   BoxHandles,
   BoxHardwarePlan,
   CogMass,
+  Dims2,
   Dims3,
   FillDriver,
   FillSystem,
@@ -1885,6 +1886,11 @@ export function sealedLitersForQtc(ts: BoxModelTS, qtc: number): number | null {
 }
 /** The baffle face a mid needs, in: the driver and a rim round it. */
 export const midBaffleNeedIn = (size: MidDriver["size"]) => size + 1.2;
+/** The smallest mid box face that holds its driver, in: the page's sliders and stored size start there (lib/boxFit). */
+export const midBoxMin = (size: MidDriver["size"]): Dims2 => ({
+  w: midBaffleNeedIn(size),
+  h: midBaffleNeedIn(size),
+});
 /** A size rounded up to its slider's step, in. */
 const upToStep = (x: number, s: Pick<SliderSpec, "min" | "step">) =>
   Math.max(s.min, Math.ceil(x / s.step - 1e-9) * s.step);

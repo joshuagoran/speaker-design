@@ -5,6 +5,8 @@ import { UI_TEXT } from "../../constants/uiText";
 interface Props {
   /** the card's size and position while it isn't full screen */
   boxClassName: string;
+  /** whether it opens in the cutaway (default: finished; the render tool sets it) */
+  startCutaway?: boolean;
   /** the 3D view, drawn finished or in the cutaway */
   children: (cutaway: boolean) => React.ReactNode;
 }
@@ -13,9 +15,9 @@ interface Props {
  * A 3D view's card, the PA stack's and the Hi-fi speaker's alike: the view with its buttons laid over it, the cutaway
  * and full screen. Both are how you look at the design, not part of it, so they live here and are never saved.
  */
-export function Viewer3DCard({ boxClassName, children }: Props) {
+export function Viewer3DCard({ boxClassName, startCutaway = false, children }: Props) {
   const [isFull, setIsFull] = useState(false);
-  const [cutaway, setCutaway] = useState(false);
+  const [cutaway, setCutaway] = useState(startCutaway);
   useEffect(() => {
     if (!isFull) return;
     const esc = (e: KeyboardEvent) => {

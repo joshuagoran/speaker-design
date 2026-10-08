@@ -1,4 +1,4 @@
-import { HIFI_TWEETERS, HIFI_WOOFERS, HORN_OPTIONS } from "../../lib/data";
+import { HIFI_TWEETERS, HIFI_WAVEGUIDES, HIFI_WOOFERS } from "../../lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PORT_SIZE } from "../../lib/defaults";
 import { portAfterToggle } from "../../lib/hifi/hifi";
 import { byId, byIdOrThrow } from "../../lib/tables";
@@ -83,10 +83,7 @@ export interface HifiPlanner
 
 /** The Hi-fi page's design, room and optimizer state. Held by App so it survives switching tabs. */
 export function useHifiPlanner(): HifiPlanner {
-  // boundary cast: the filter keeps only horns that have `hf`
-  const waveguideChoices = HORN_OPTIONS.filter(
-    (h) => h.exit === 1 && h.hf && h.hf.covH && h.size,
-  ) as HifiWaveguide[];
+  const waveguideChoices = [...HIFI_WAVEGUIDES];
   const [woofer, setWoofer] = useState<HifiWoofer>(DEFAULT_HIFI.woofer);
   const [tweeter, setTweeter] = useState<HifiTweeter>(DEFAULT_HIFI.tweeter);
   const [selectedWaveguide, setSelectedWaveguide] = useState<HifiWaveguide>(
@@ -142,7 +139,8 @@ export function useHifiPlanner(): HifiPlanner {
     woofer: woofer.id,
     tweeter: tweeter.id,
     box: boxType,
-    dim: boxDims,
+    // the box as modeled: at least what its parts need (deriveHifiDesign)
+    dim: design.speakerConfig.dim,
     port: portSpec,
     pr: boxType === "radiator" ? radiatorSelection : undefined,
     wall: wallThicknessIn,
@@ -171,7 +169,7 @@ export function useHifiPlanner(): HifiPlanner {
         tweeterOffset: tweeterOffsetIn,
         cabFinish: cabinetFinish,
         baffleColor,
-        summary: `${woofer.name} + ${tweeter.name} · ${boxDims.w}×${boxDims.h}×${boxDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}`,
+        summary: `${woofer.name} + ${tweeter.name} · ${fittedDims.w}×${fittedDims.h}×${fittedDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}`,
       }),
     );
   const applyDesign = (c: HifiCardConfig) => {
@@ -276,6 +274,12 @@ export function useHifiPlanner(): HifiPlanner {
       tweeterOffsetIn,
     ],
   );
+  // the box as modeled, which the page shows and saves; the stored size follows it up when a part, the walls or a
+  // loaded save leave it too small for its parts
+  const fittedDims = design.speakerConfig.dim;
+  useEffect(() => {
+    if (fittedDims !== boxDims) setBoxDims(fittedDims);
+  }, [fittedDims, boxDims]);
   const optimizer = useHifiOptimizer({
     snapshot,
     applyDesign,
@@ -328,6 +332,7 @@ export function useHifiPlanner(): HifiPlanner {
   };
   return {
     ...state,
+    boxDims: fittedDims,
     ...design,
     ...optimizer,
     setWoofer,

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { SceneContext } from "./sceneContext";
+import type { RadiatorSide } from "../../lib/hifi/boxLayout";
 import type { Dims3 } from "../../types";
 
 /** The Hi-fi cabinet's meshes: the painted front (its flat face and its edges) and the shell behind it. */
@@ -12,12 +13,13 @@ export const HIFI_CABINET_MESH_NAMES = {
 const ROUNDOVER_SEGMENTS = 10;
 /** With sharp edges, how far in the flat face stops: the edge band's front lip meets it there, so they don't overlap. */
 const SHARP_EDGE_LIP_IN = 0.02;
-/**
- * How far the flat face reaches under the edge band, so no crack opens at the seam, and how far it sits behind the
- * front plane, so the band in front of it hides its cut edge there.
- */
+/** How far the flat face reaches under the edge band, in its plane, so no crack opens at the seam. */
 const FACE_OVERLAP_IN = 0.005;
-const FACE_SET_BACK_IN = 0.01;
+/** How far inside the flat face's edge a hole is kept, and the points a clipped hole's outline is drawn with. */
+const HOLE_CLEAR_IN = 0.01;
+const HOLE_SEGMENTS = 48;
+/** The segments of the flat face's curved hole outlines. */
+const FACE_SEGMENTS = 32;
 /** How far inside the panels the dark inside lining sits, so it draws over their inner faces. */
 const LINING_GAP_IN = 0.05;
 
@@ -25,8 +27,8 @@ const LINING_GAP_IN = 0.05;
 export interface HifiCabinetHoles {
   baffle: THREE.Path[];
   back: THREE.Path[];
-  /** the side panels, by side: −1 the left (−x), +1 the right */
-  sides: Record<-1 | 1, THREE.Path[]>;
+  /** the side panels, by side: −1 the left (−x, the left speaker's outside), +1 the right */
+  sides: Record<RadiatorSide, THREE.Path[]>;
 }
 
 /**
@@ -34,6 +36,10 @@ export interface HifiCabinetHoles {
  * edges rounded over by `roundover` (sharp at 0), painted; the sides, top, bottom and back in the cabinet finish, and,
  * outside the cutaway, a dark lining inside so the openings look into a closed box. A roundover deeper than the baffle
  * is drawn on a front that thick (the Hi-fi page's fix: a doubled baffle).
+ *
+ * The model and the cutlist place the drivers and vents whatever the roundover (a round port low on the baffle, say),
+ * so a cutout can reach into the rounded edge, as it would in the build. The view keeps each baffle hole on the flat
+ * face, its outline clipped where it reaches the roundover, which then reads as solid there.
  *
  * Units: inches; the box centered on x = 0 and z = 0, its bottom on y = 0, the front face at z = d / 2. Holes: the
  * baffle's and the back's in (x, y), the sides' in (z, y).
@@ -52,8 +58,8 @@ export function buildHifiCabinet(
   const group = new THREE.Group();
   const { baffle, shell } = ctx.materials;
 
-  // the baffle's flat face, with the drivers' and vents' holes, painted through (its outer edge meets the edge band, so
-  // a sliver of it there must read as the band)
+  // the baffle's flat face, with the drivers' and vents' holes: its front, and each hole's cut edge through the baffle
+  // in bare ply (its outer edge isn't drawn: it lies under the edge band, and would show along their seam)
   const e = (r > 0 ? r : SHARP_EDGE_LIP_IN) - FACE_OVERLAP_IN;
   const face = new THREE.Shape();
   face.moveTo(-w / 2 + e, e);
@@ -61,12 +67,20 @@ export function buildHifiCabinet(
   face.lineTo(w / 2 - e, h - e);
   face.lineTo(-w / 2 + e, h - e);
   face.closePath();
-  face.holes.push(...holes.baffle);
-  const flat = new THREE.Mesh(
-    new THREE.ExtrudeGeometry(face, { depth: front, bevelEnabled: false, curveSegments: 32 }),
-    baffle,
-  );
-  flat.position.z = zf - front - FACE_SET_BACK_IN;
+  const c = e + HOLE_CLEAR_IN;
+  const cutEdge = ctx.cutaway ? baffle : ctx.materials.inner.clone();
+  cutEdge.side = THREE.DoubleSide;
+  for (const hole of holes.baffle) {
+    const kept = clipHole(hole, -w / 2 + c, c, w / 2 - c, h - c);
+    if (!kept) continue;
+    face.holes.push(kept);
+    const edge = new THREE.Mesh(holeEdge(kept.getPoints(FACE_SEGMENTS), front), cutEdge);
+    edge.position.z = zf;
+    edge.name = HIFI_CABINET_MESH_NAMES.baffle;
+    group.add(edge);
+  }
+  const flat = new THREE.Mesh(new THREE.ShapeGeometry(face, FACE_SEGMENTS), baffle);
+  flat.position.z = zf;
   flat.name = HIFI_CABINET_MESH_NAMES.baffle;
   group.add(flat);
 
@@ -228,5 +242,77 @@ function edgeBand(w: number, h: number, zf: number, r: number, front: number) {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute("normal", new THREE.Float32BufferAttribute(nrm, 3));
+  return geo;
+}
+
+/**
+ * A hole kept inside the rectangle (x0, y0)–(x1, y1): the path itself when it lies inside, else its outline clipped to
+ * the rectangle (Sutherland–Hodgman, one side at a time), or null when nothing of it is left.
+ */
+export function clipHole(
+  path: THREE.Path,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): THREE.Path | null {
+  const points = path.getPoints(HOLE_SEGMENTS);
+  const inside = (p: THREE.Vector2) => p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1;
+  if (points.every(inside)) return path;
+  // each side as the coordinate it bounds, its limit, and which side of it is kept
+  const sides = [
+    { k: "x", at: x0, keep: 1 },
+    { k: "x", at: x1, keep: -1 },
+    { k: "y", at: y0, keep: 1 },
+    { k: "y", at: y1, keep: -1 },
+  ] as const;
+  let poly = points;
+  for (const { k, at, keep } of sides) {
+    const kept = (p: THREE.Vector2) => (p[k] - at) * keep >= 0;
+    const cut = (a: THREE.Vector2, b: THREE.Vector2) =>
+      a.clone().lerp(b, (at - a[k]) / (b[k] - a[k]));
+    const out: THREE.Vector2[] = [];
+    poly.forEach((b, i) => {
+      const a = poly[(i + poly.length - 1) % poly.length];
+      if (kept(b)) {
+        if (!kept(a)) out.push(cut(a, b));
+        out.push(b);
+      } else if (kept(a)) out.push(cut(a, b));
+    });
+    poly = out;
+    if (poly.length < 3) return null;
+  }
+  return new THREE.Path(poly);
+}
+
+/** A hole's cut edge through the baffle: its outline drawn straight back `depth` from z = 0, as one band of quads. */
+function holeEdge(points: THREE.Vector2[], depth: number) {
+  const pos: number[] = [];
+  points.forEach((a, i) => {
+    const b = points[(i + 1) % points.length];
+    pos.push(
+      a.x,
+      a.y,
+      0,
+      b.x,
+      b.y,
+      0,
+      b.x,
+      b.y,
+      -depth,
+      a.x,
+      a.y,
+      0,
+      b.x,
+      b.y,
+      -depth,
+      a.x,
+      a.y,
+      -depth,
+    );
+  });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.computeVertexNormals();
   return geo;
 }

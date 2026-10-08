@@ -57,8 +57,6 @@ export const CHIP_IDS = {
     "hifiRadiatorFit",
     "hifiRadiatorSize",
     "hifiRadiatorMass",
-    "hifiWooferFit",
-    "hifiBaffleFit",
     "hifiRoundover",
     "hifiTweeterOffsetIgnored",
     "hifiTweeterOffsetEdge",

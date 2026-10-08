@@ -21,20 +21,24 @@ import { PLATE_MESH_NAMES, plateFit } from "../src/components/stack-view/buildPl
 import { hifiSceneProps } from "../src/pages/hifi/hifiSceneProps";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
-import { CD_OPTIONS, HIFI_TWEETERS, HORN_OPTIONS, cdBodySteps } from "../src/lib/data";
+import {
+  CD_OPTIONS,
+  HIFI_TWEETERS,
+  HIFI_WAVEGUIDES,
+  HORN_OPTIONS,
+  cdBodySteps,
+} from "../src/lib/data";
 import { needsWaveguide } from "../src/lib/hifi/hifi";
 import { radiatorSpots, roundPortSpots } from "../src/lib/hifi/boxLayout";
 import { HIFI_GENERIC_BODIES } from "../src/constants/hifiScene";
 import { HORN_MESHES } from "../src/data/meshes";
 import { byIdOrThrow } from "../src/lib/tables";
-import type { HifiDesignState, HifiWaveguide, Horn, RadiatorPanel } from "../src/types";
+import { HIFI_ROUNDOVER_CHOICES } from "../src/constants/hifiLayout";
+import type { HifiDesignState, HifiWaveguide, RadiatorPanel } from "../src/types";
 
 const EPS = 1e-6;
 
-/** The horns the Hi-fi page offers as waveguides (useHifiPlanner's list). */
-const isWaveguide = (h: Horn): h is HifiWaveguide =>
-  h.exit === 1 && !!h.hf && !!h.hf.covH && !!h.size;
-const WAVEGUIDES = HORN_OPTIONS.filter(isWaveguide);
+const WAVEGUIDES = HIFI_WAVEGUIDES;
 const waveguide = (id: string) => byIdOrThrow(WAVEGUIDES, id, "waveguides");
 const tweeter = (id: string) => byIdOrThrow(HIFI_TWEETERS, id, "tweeters");
 
@@ -68,7 +72,7 @@ describe("the box", () => {
   test("is the design's size, on the floor, centered, at every roundover", () => {
     for (const boxDims of [
       { w: 9, h: 15, d: 11 },
-      { w: 8, h: 11, d: 7 },
+      { w: 8, h: 15, d: 7 },
       { w: 16, h: 44, d: 16 },
     ])
       for (const roundoverIn of [0, 0.75, 2]) {
@@ -88,6 +92,65 @@ describe("the box", () => {
     const p = propsFor({});
     const woofer = boxOf(scene(p), HIFI_MESH_NAMES.woofer);
     expect(woofer.getCenter(new THREE.Vector3()).y).toBeCloseTo(p.lay.wooferIn, 6);
+  });
+});
+
+describe("the baffle's flat face", () => {
+  /** The flat face: its triangles' area, and its outline's less its holes' (as the geometry draws them). */
+  function faceAreas(g: THREE.Object3D) {
+    const [face] = named(g, HIFI_CABINET_MESH_NAMES.baffle).filter(
+      (o): o is THREE.Mesh<THREE.ShapeGeometry> =>
+        o instanceof THREE.Mesh && o.geometry instanceof THREE.ShapeGeometry,
+    );
+    if (!face) throw new Error("no flat face");
+    // three keeps what it triangulated on the geometry (its typings here don't list it)
+    const params: { shapes?: unknown; curveSegments?: number } = Reflect.get(
+      face.geometry,
+      "parameters",
+    );
+    const shape = Array.isArray(params.shapes) ? params.shapes[0] : params.shapes;
+    if (!(shape instanceof THREE.Shape)) throw new Error("no face shape");
+    const { shape: outline, holes } = shape.extractPoints(params.curveSegments ?? 12);
+    const area = (pts: THREE.Vector2[]) => Math.abs(THREE.ShapeUtils.area(pts));
+    const expected =
+      area(outline) - holes.reduce((sum: number, h: THREE.Vector2[]) => sum + area(h), 0);
+    const pos = face.geometry.getAttribute("position");
+    const index = face.geometry.getIndex();
+    if (!index) throw new Error("an unindexed face");
+    let drawn = 0;
+    for (let i = 0; i < index.count; i += 3) {
+      const [a, b, c] = [i, i + 1, i + 2].map((k) =>
+        new THREE.Vector3().fromBufferAttribute(pos, index.getX(k)),
+      );
+      drawn += Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) / 2;
+    }
+    return { drawn, expected };
+  }
+
+  test("triangulates to its outline less its holes at every roundover, with every vent and tweeter", () => {
+    const vents: Partial<HifiDesignState>[] = [
+      { boxType: "sealed" },
+      { boxType: "vented", portSpec: { n: 1, dia: 2, len: 6 } },
+      { boxType: "vented", portSpec: { n: 2, dia: 2, len: 6 } },
+      { boxType: "vented", portSpec: { shape: "slot", n: 1, h: 1, len: 6 } },
+      // radiators on the baffle (the page puts them on the back), under the drivers of a box tall enough for both
+      { boxType: "radiator", boxDims: { w: 12, h: 40, d: 11 } },
+    ];
+    const tweeters: Partial<HifiDesignState>[] = [
+      {},
+      { tweeter: tweeter("ft17h") },
+      { tweeter: tweeter("lt22") },
+      { tweeter: tweeter("de250"), selectedWaveguide: waveguide("diy_os90x70") },
+    ];
+    for (const roundoverIn of HIFI_ROUNDOVER_CHOICES)
+      for (const vent of vents)
+        for (const t of tweeters) {
+          const p = propsFor({ ...vent, ...t, roundoverIn }, { radiatorPanel: "baffle" });
+          const { drawn, expected } = faceAreas(scene(p));
+          const tag = `r ${roundoverIn} ${JSON.stringify(vent)} ${p.tweeter.type}`;
+          expect(expected, tag).toBeGreaterThan(0);
+          expect(drawn / expected, tag).toBeCloseTo(1, 6);
+        }
   });
 });
 
@@ -140,7 +203,7 @@ describe("the vent", () => {
     expect(b.max.x - b.min.x).toBeCloseTo(p.dim.w - 2 * p.wall, 6);
     expect(b.min.y).toBeCloseTo(p.wall + 1, 6); // its underside: the slot's height above the bottom panel
     expect(b.max.z).toBeCloseTo(p.dim.d / 2 - p.wall, 6); // from the baffle's back face
-    expect(b.min.z).toBeCloseTo(p.dim.d / 2 - 6, 6); // to the slot's length from the front
+    expect(b.min.z).toBeCloseTo(p.dim.d / 2 - p.wall - 6, 6); // the slot's length behind it
   });
 });
 

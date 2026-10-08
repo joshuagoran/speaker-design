@@ -20,12 +20,13 @@ import {
 import { ELBOW_COUNTS, MAX_ELBOWS, tubeElbows, tubeLegs } from "../../lib/tubeFold";
 import { HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../../constants/hifiScene";
+import type { Props as StackSceneProps } from "./buildStackScene";
 import type {
   CompressionDriver,
   Dims2,
   Dims3,
   DriverLayout,
-  HifiPort,
+  HifiConfig,
   HifiTweeter,
   HifiWaveguide,
   HifiWoofer,
@@ -54,31 +55,28 @@ export const HIFI_MESH_NAMES = {
   tweeterBody: "tweeterBody",
 } as const;
 
-export interface HifiSceneProps {
-  /** the box's outside size and its panels' thickness, inches */
-  dim: Dims3;
-  wall: number;
-  /** the baffle edges' roundover radius, inches (0: sharp) */
-  roundoverIn: number;
-  woofer: Pick<HifiWoofer, "size">;
-  /** the tweeter as chosen (not the copy with its waveguide's mouth as the faceplate) */
-  tweeter: Pick<HifiTweeter, "id" | "exit" | "faceplate" | "domeIn" | "type" | "ownGuide">;
-  lay: DriverLayout;
-  /** the tweeter's offset from the center line, inches, + toward the inside (the left speaker's: to the right) */
-  tweeterOffsetIn: number;
-  /** the vent, when the box is vented */
-  port: HifiPort | null;
-  /** the passive radiators, when the box has them, and the panel they go on */
-  radiators: Pick<PassiveRadiatorChoice, "drv" | "n"> | null;
-  radiatorPanel: RadiatorPanel;
-  /** the waveguide in use (a ribbon's own included), and the catalog horn behind it for a compression driver */
-  guide: Pick<WaveguideSpec, "w" | "h" | "freestanding"> | null;
-  waveguide: HifiWaveguide | null;
-  /** a `FinishId` or a paint color (hex), and the baffle's paint */
-  cabFinish: string;
-  baffleColor: string;
-  cutaway: boolean;
-}
+/**
+ * What the scene draws: the design as the model has it (`HifiConfig`: the box's outside size, its walls, roundover
+ * and tweeter offset, all inches; the vent, null unless vented), the drivers and their layout, the radiators and their
+ * panel, the waveguide, and the look and the cutaway as the PA scene takes them.
+ */
+export type HifiSceneProps = Pick<HifiConfig, "dim"> &
+  Required<Pick<HifiConfig, "wall" | "roundoverIn" | "tweeterOffsetIn">> &
+  Pick<StackSceneProps, "baffleColor" | "cutaway"> &
+  Required<Pick<StackSceneProps, "cabFinish">> & {
+    /** the vent, when the box is vented */
+    port: HifiConfig["port"] | null;
+    woofer: Pick<HifiWoofer, "size">;
+    /** the tweeter as chosen (not the copy with its waveguide's mouth as the faceplate) */
+    tweeter: Pick<HifiTweeter, "id" | "exit" | "faceplate" | "domeIn" | "type" | "ownGuide">;
+    lay: DriverLayout;
+    /** the passive radiators, when the box has them, and the panel they go on */
+    radiators: Pick<PassiveRadiatorChoice, "drv" | "n"> | null;
+    radiatorPanel: RadiatorPanel;
+    /** the waveguide in use (a ribbon's own included), and the catalog horn behind it for a compression driver */
+    guide: Pick<WaveguideSpec, "w" | "h" | "freestanding"> | null;
+    waveguide: HifiWaveguide | null;
+  };
 
 /**
  * The compression driver behind a waveguide: the PA catalogue's, where it lists the same driver (its body and bolts),
@@ -161,15 +159,10 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
   round.forEach((s) => holes.baffle.push(circlePath(s.x, s.y, s.r + HIFI_FRONT_PARTS.portWallIn)));
   const slot = p.port && p.port.shape === "slot" ? p.port : null;
   const slotHole = slot ? slotOpening(dim, T, slot) : null;
-  if (slotHole) {
-    // kept on the flat face (a hundredth inside it): a roundover deeper than the wall would cut into the slot's edges
-    const inset = p.roundoverIn + 0.01;
-    const w = Math.min(slotHole.w, dim.w - 2 * inset),
-      y0 = Math.max(slotHole.y, inset);
+  if (slotHole)
     holes.baffle.push(
-      roundedRectPath(0, (y0 + slotHole.y + slotHole.h) / 2, w, slotHole.y + slotHole.h - y0, 0.02),
+      roundedRectPath(0, slotHole.y + slotHole.h / 2, slotHole.w, slotHole.h, 0.02),
     );
-  }
 
   // the radiators' cutouts, on their panels
   const spots = p.radiators ? radiatorSpots(p.radiators, p.radiatorPanel, T) : [];
@@ -205,8 +198,9 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
   if (p.port && p.port.shape !== "slot")
     addRoundPorts(ctx, { spots: round, port: p.port, dim, zf });
   if (slot && slotHole) {
-    // the slot's roof: a shelf the opening's width from the baffle's back face to the slot's length
-    const len = Math.max(0.05, slot.len - (zf - shellFrontZ));
+    // the slot's roof: a shelf the opening's width running the slot's length back from the baffle's inside face, as
+    // the model and the cutlist take it
+    const len = slot.len;
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(slotHole.w, T, len), ctx.materials.inner);
     shelf.position.set(0, slotHole.y + slotHole.h + T / 2, shellFrontZ - len / 2);
     shelf.name = HIFI_MESH_NAMES.slotShelf;

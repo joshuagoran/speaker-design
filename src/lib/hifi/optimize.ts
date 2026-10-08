@@ -16,8 +16,7 @@ import {
   hifiGridTop,
   hifiWeightLb,
   tweeterMaxLevel,
-  driversFitBaffle,
-  driverLayout,
+  RADIATOR_PANEL,
   belowTweeterMinXo,
   nearTweeterResonance,
   hifiChips,
@@ -34,6 +33,9 @@ import {
   needsWaveguide,
 } from "./hifi";
 import { ampVoltage, ventTuning } from "../pa/calc";
+import { hifiBoxMin } from "./boxLayout";
+import { boxSliderMins } from "../boxFit";
+import { HIFI_BOX_SLIDERS } from "../../constants/hifiLayout";
 import { ELBOW_COUNTS, ownSpans, tubeElbows, tubeSpan } from "../tubeFold";
 import { throttledProgress } from "../optimizer/progress";
 import {
@@ -750,7 +752,19 @@ export function optimizeHifiSpeaker(
         const x = tws[ti];
         bPrice[ti] = priceOf(e.w, x.t, e.cfg);
         bLb[ti] = hifiWeightLb(e.w, x.tt, e.cfg, e.pr);
-        bFits[ti] = driversFitBaffle(driverLayout(e.w, x.tt, e.cfg.dim, x.onTop), e.w, e.cfg);
+        // the box holds the woofer and this tweeter: at least the page's slider minimums (lib/hifi/boxLayout)
+        const need = boxSliderMins(
+          hifiBoxMin({
+            woofer: e.w,
+            tweeter: x.tt,
+            onTop: x.onTop,
+            cfg: e.cfg,
+            wall: e.cfg.wall,
+            radiatorPanel: RADIATOR_PANEL,
+          }),
+          HIFI_BOX_SLIDERS,
+        );
+        bFits[ti] = e.cfg.dim.w >= need.w - 1e-9 && e.cfg.dim.h >= need.h - 1e-9;
       }
     }
     for (let ti = 0; ti < tws.length; ti++) {

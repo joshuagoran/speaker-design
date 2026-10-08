@@ -891,6 +891,8 @@ export interface HifiSpeakerModel {
 
 /** The Hi-fi design as the models read it, worked out from the planner's state. */
 export interface HifiDesign {
+  /** the box's least width and height, inches: what its parts need, up to the sliders' step (lib/hifi/boxLayout) */
+  boxMin: Dims2;
   /** the walls' exact thickness, inches (lib/panel): what the model, cutlist and weight are worked out at */
   wallThicknessIn: number;
   /** the waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded) */
