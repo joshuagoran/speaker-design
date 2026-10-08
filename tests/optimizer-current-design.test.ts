@@ -9,6 +9,7 @@ import {
   optimizePaStack,
   roomRequiredSpl,
   PA_OUTPUT_NAME,
+  ventSizesFor,
 } from "../src/lib/pa/optimize";
 import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
 import { DEFAULT_PA } from "../src/lib/defaults";
@@ -64,6 +65,12 @@ const owner: PaOptimizerInput = {
   locks: OWNER_LOCKS,
 };
 const curM = evaluateDesign(fireplace);
+// the fireplace box with two flared 3″ round tubes in place of its side duct: port-limited, so the amp comes down
+const fireplaceTubes: PaDesignConfig = {
+  ...fireplace,
+  portStyle: "round2",
+  cVent: { ...fireplace.cVent, nt: 2, dia: 3, len: 10.5 },
+};
 
 test("the fireplace design passes, and its own output sets the target (not the room's)", () => {
   assert.ok(curM, "it evaluates");
@@ -106,7 +113,7 @@ for (const goal of ["cheaper", "lighter", "lower", "louder"] as const satisfies 
     );
   });
 
-test("vent locked: your 1″ side duct is searched, though the grid's side ducts start at 1.5″", () => {
+test("vent locked: your 1″ side duct is searched", () => {
   const out = optimizePaStack({ ...owner, locks: { ...OWNER_LOCKS, vent: true } });
   neverBehind(out, "vent locked");
   assert.ok(out.stats.subs > 0, "your sub box is a candidate");
@@ -116,15 +123,58 @@ test("Fully optimize: never behind your design either", () => {
   neverBehind(optimizePaStackExact(owner), "exact");
 });
 
+/** The one-side duct cards of a result, loudest first. */
+const sideDuctCards = (out: PaOptimizerResult) =>
+  out.cards
+    .filter((k) => k.config.portStyle === "vslot1")
+    .sort((a, b) => b.metrics.out - a.metrics.out);
+
+test("an unlocked vent tries one side duct, from a 1″ throat", () => {
+  assert.equal(ventSizesFor("vslot1")[0].throat, 1);
+  // from the same box with round tubes, so your own side duct can't seed it: the grid itself finds one
+  const tubes = evaluateDesign(fireplaceTubes);
+  assert.ok(curM && tubes);
+  const input: PaOptimizerInput = { ...owner, cur: fireplaceTubes, goals: ["louder"] };
+  // Fully optimize (the port's own limit): a one-side duct at least as loud as the fireplace design's on the music
+  // limit, 40–90 Hz
+  const [exact] = sideDuctCards(optimizePaStackExact(input));
+  assert.ok(exact, "Fully optimize gives a one-side duct card");
+  assert.ok(
+    exact.metrics.out >= curM.out,
+    `Fully optimize ${exact.metrics.out.toFixed(2)} dB, the fireplace ${curM.out.toFixed(2)} dB`,
+  );
+  // Improve keeps a 10% air-speed margin, which the fireplace's 1″ duct uses up (it runs at 99% of the limit): its
+  // one-side duct beats the tubes and comes within half a dB of the fireplace
+  const [quick] = sideDuctCards(optimizePaStack(input));
+  assert.ok(quick, "Improve gives a one-side duct card");
+  assert.ok(quick.metrics.out > tubes.out, "louder than the tubes");
+  assert.ok(
+    quick.metrics.out >= curM.out - 0.5,
+    `Improve ${quick.metrics.out.toFixed(2)} dB, the fireplace ${curM.out.toFixed(2)} dB`,
+  );
+});
+
+// the tubes at 450 W, under the port's limit: a design that passes, short of what outdoors needs
+const quietTubes: PaDesignConfig = { ...fireplaceTubes, ampW: 450 };
+
 test("a design short of the room's need: the near miss names the metric and is never behind your design", () => {
-  // outdoors needs more than the fireplace design gives, so the target is the room's and your design misses it
-  const input: PaOptimizerInput = { ...owner, room: "outdoor", goals: ["cheaper"] };
-  assert.ok(curM && curM.out < roomRequiredSpl("outdoor"), "the design misses the room's need");
+  // outdoors needs more than the design gives, so the target is the room's and your design misses it. The tubes are
+  // locked: a one-side duct comes within the alternatives' reach of the target (a card, not the near miss)
+  const input: PaOptimizerInput = {
+    ...owner,
+    cur: quietTubes,
+    room: "outdoor",
+    goals: ["cheaper"],
+    locks: { ...OWNER_LOCKS, vent: true },
+  };
+  const m = evaluateDesign(quietTubes);
+  assert.ok(m && m.out < roomRequiredSpl("outdoor"), "the design misses the room's need");
+  assert.deepEqual(designProblems(m, input), [], "the design passes");
   const out = optimizePaStack(input);
   assert.equal(out.cards.length, 0);
   const near = out.nearMiss;
   assert.ok(near && near.closest, "a closest design");
-  assert.ok(near.closest.metrics.out >= curM.out - 1e-9, "not behind your design");
+  assert.ok(near.closest.metrics.out >= m.out - 1e-9, "not behind your design");
   assert.ok(
     near.blocking.some((b) => b.includes(PA_OUTPUT_NAME)),
     `names the metric: ${near.blocking.join("; ")}`,
@@ -133,11 +183,7 @@ test("a design short of the room's need: the near miss names the metric and is n
 
 test("a card's sub-bass 30–50 Hz is the planner's tile: at the vent's own air-speed limit (flared tubes)", () => {
   // the fireplace box with two flared round tubes, port-limited at the bottom of the band
-  const c: PaDesignConfig = {
-    ...fireplace,
-    portStyle: "round2",
-    cVent: { ...fireplace.cVent, nt: 2, dia: 3, len: 10.5 },
-  };
+  const c = fireplaceTubes;
   const m = evaluateDesign(c);
   assert.ok(m);
   const planner = derivePaDesign({

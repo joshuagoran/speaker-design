@@ -260,12 +260,23 @@ const VENT_SIZES: Record<PortStyle, Partial<VentSpec>[]> = {
   round4: tubesOf(4),
   slots: [2, 2.5, 3, 3.5, 4, 4.5, 5, 6].map((slotH) => ({ slotH })),
   vslots: [1, 1.25, 1.5, 1.75, 2, 2.5, 3].map((throat) => ({ throat })),
-  vslot1: [1.5, 2, 2.5, 3, 3.5, 4, 5].map((throat) => ({ throat })),
+  // one side duct: from a 1″ throat, as the pair's, since a narrow throat is what tunes a short box low
+  vslot1: [1, 1.25, 1.5, 2, 2.5, 3, 3.5, 4, 5].map((throat) => ({ throat })),
 };
 /** The vent sizes the search tries for a style, smallest area first. */
 export const ventSizesFor = (style: PortStyle) => VENT_SIZES[style];
 /** Every vent style. */
 export const VENT_STYLES = keysOf(VENT_SIZES);
+/**
+ * The vent styles an unlocked vent tries in the quick search: the bottom slots, the side ducts (a pair, and one) and
+ * the round tubes of every count ("round2"). The exact search tries every style (VENT_STYLES).
+ */
+const QUICK_VENT_STYLES = [
+  "slots",
+  "vslots",
+  "vslot1",
+  "round2",
+] as const satisfies readonly PortStyle[];
 
 // Clean output: the lowest music-limit level from 40 to 90 Hz, so a peak in the response can't win.
 export const SUB_BAND_HZ = [40, 90];
@@ -722,7 +733,7 @@ export function optimizePaStack(
     : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
   const walls = paOptimizerWalls(cur);
   const braceStyle = paSearchBraceStyle(cur);
-  const styles: PortStyle[] = locks.vent ? [cur.portStyle] : ["slots", "vslots", "round2"];
+  const styles: readonly PortStyle[] = locks.vent ? [cur.portStyle] : QUICK_VENT_STYLES;
   const xoLos = locks.xoLo ? [cur.xoLo] : XO_LO_OPTIONS;
   const xoHis = locks.xoHi ? [cur.xoHi] : XO_HI_OPTIONS;
   const sr = {
@@ -783,13 +794,23 @@ export function optimizePaStack(
 
   // 1. screening with an ideal vent (big, never limits), coarse grid
   const seeds: Seed[] = [];
+  // a box's inside, roughly net of the driver, the vent and the braces
+  const roughNet = (insideL: number) => insideL * 0.9 - 10;
+  // the ladder starts at the smallest box's inside; when not even the biggest box holds that net (a narrow range, as a
+  // box locked but for its depth), at the smallest box's rough net volume, so the ladder has volumes its boxes hold
+  const minInside = boxInternalLiters(sr.w[0], sr.h[0], sr.d[0], 0.75, cur.inset);
   const Vmax = boxInternalLiters(sr.w[1], sr.h[1], sr.d[1], 0.5, cur.inset),
-    Vmin = Math.max(40, boxInternalLiters(sr.w[0], sr.h[0], sr.d[0], 0.75, cur.inset));
+    Vmin = Math.max(
+      40,
+      minInside > roughNet(boxInternalLiters(sr.w[1], sr.h[1], sr.d[1], 0.75, cur.inset))
+        ? roughNet(minInside)
+        : minInside,
+    );
   const vols = [];
   if (allExact)
     vols.push(
-      Math.max(20, boxInternalLiters(sr.w[0], sr.h[0], sr.d[0], cur.wall, cur.inset) * 0.9 - 10),
-    ); // the one box, roughly net
+      Math.max(20, roughNet(boxInternalLiters(sr.w[0], sr.h[0], sr.d[0], cur.wall, cur.inset))),
+    ); // the one box
   else
     for (let i = 0; i < 10; i++)
       vols.push(Vmin * Math.pow(Math.max(Vmax * 0.85, Vmin * 1.01) / Vmin, i / 9));
@@ -811,7 +832,11 @@ export function optimizePaStack(
           evals++;
           if (!mdl) continue;
           const L = subwooferLimits(mdl, sub.ts, AMP_V, Infinity);
-          const sh = shapes(V + (sub.ts.disp || 10) + 0.08 * V + 3, 0.75, sub.lb, sub.size, 1)[0];
+          const G = V + (sub.ts.disp || 10) + 0.08 * V + 3;
+          const sh = shapes(G, 0.75, sub.lb, sub.size, 1)[0];
+          // a volume no box inside the limits holds (in ¾″ ply or the search's own) is no seed: it would take a
+          // seed's place and build nothing
+          if (!sh && !shapes(G, Math.min(...walls), sub.lb, sub.size, 1)[0]) continue;
           seeds.push({
             sub,
             V,
