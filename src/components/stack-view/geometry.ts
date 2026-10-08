@@ -200,10 +200,13 @@ const SILHOUETTES = new Map<PartMesh, THREE.Vector2[]>();
 /** How many directions round the axis a silhouette samples. */
 const SILHOUETTE_RAYS = 180;
 /**
- * A horn mesh's silhouette seen from the front, in inches round the model's origin (its axis): along each of
+ * A horn mesh's outline seen from the front, in inches round the model's origin (its axis): along each of
  * SILHOUETTE_RAYS directions, the farthest the mesh's triangles reach from the axis (the outside of the mouth's rim,
- * or of a rolled-back lip, or of a wall that stands proud of the rim). It is the outline of the hole the horn fits
- * through; every point inside it is in front of some part of the horn. Counterclockwise.
+ * or of a rolled-back lip, or of a wall that stands proud of the rim). The outline of the hole the horn fits through:
+ * no part of the horn reaches outside it (between the sampled directions, up to the chord's sag). It is star-shaped
+ * from the axis, so where the horn's real outline dents in at a place the axis can't see, the polygon spans the dent,
+ * and the points in it are not in front of the horn. The DIY horns' outlines are convex, so they have no such dents.
+ * Counterclockwise.
  */
 export function partMeshSilhouette(m: PartMesh): THREE.Vector2[] {
   const hit = SILHOUETTES.get(m);
