@@ -74,7 +74,8 @@ export interface PaOptimizer
   startOptimizerSearch: (over?: PaSearchOverrides, mode?: PaRunMode) => Promise<void>;
   /** runs again with these limits changed, in the mode that found the result shown (the near miss's options) */
   retryOptimizerSearch: (over: PaSearchOverrides) => Promise<void>;
-  loadOptimizerResult: (k: PaOptimizerCard) => Promise<void>;
+  /** loads a card; the design it replaces stays in memory for Undo and is never saved */
+  loadOptimizerResult: (k: PaOptimizerCard) => void;
   saveOptimizerResult: (k: PaOptimizerCard) => Promise<void>;
   /** every option for a part in your design as it is (the rest unchanged), checked against the optimizer's limits */
   compareDriverRows: (part: PaDriverPart) => PaDriverCompareRow[];
@@ -168,23 +169,10 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     );
   };
   const retryOptimizerSearch = (over: PaSearchOverrides) => startOptimizerSearch(over, resultMode);
-  const loadOptimizerResult = async (k: PaOptimizerCard) => {
-    const before = preview.loadOptimizerResult(k);
-    let msg = `Loaded "${k.label}".`;
-    const undoHint = " Undo brings your previous design back.";
-    if (db) {
-      const name = `Before optimizer, ${today()}`;
-      try {
-        await db
-          .collection("configs")
-          .doc()
-          .set({ ...before, name, savedAt: Date.now() });
-        msg += ` Your previous design was saved as "${name}".`;
-      } catch {
-        msg += undoHint;
-      }
-    } else msg += undoHint;
-    setToastMessage(msg);
+  // the design it replaces isn't saved (it may not be worth keeping): Undo brings it back from memory
+  const loadOptimizerResult = (k: PaOptimizerCard) => {
+    preview.loadOptimizerResult(k);
+    setToastMessage(`Loaded "${k.label}". Undo brings your previous design back.`);
   };
   const undoOptimizerLoad = () => {
     preview.undoOptimizerLoad();
