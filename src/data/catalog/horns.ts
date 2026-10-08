@@ -186,9 +186,10 @@ export const DIY_OS90X50: Horn = {
   price: null,
   src: "no vendor price: the owner's own design, self-printed",
   size: { w: 494 / 25.4, h: 319 / 25.4, d: 180 / 25.4 },
-  driver: '1.4" exit, 4 × M6 on a 101.6 mm circle at 45° (the Eminence N314T bolts straight on)',
+  driver:
+    '1.4" exit, 4 × M6 or 1/4-20 on a 101.6 mm (4 in) circle at 45° (the Eminence N314T bolts straight on)',
   xo: "from 1 kHz (LR24)",
-  note: "[hornlab.io design and BEM, 30 points, Oct 2026] The owner's oblate-spheroidal waveguide: 90° × 50°, 36 mm (1.4\") throat at 3.7°, k 2.5, superellipse n 3, 7 mm walls. Mouth 486 × 311 mm inside (494 × 319 outside), 180 mm deep including the throat flange; hornlab cutoff 785 Hz. Flange ⌀130 × 12 mm with 4 × ⌀6.6 mm holes on a 101.6 mm circle at 45°, so the N314T bolts straight on (no adapter). −6 dB beamwidth H/V: 84/104° at 1 kHz, 96/84° at 1.3 kHz, 108/108° at 1.8 kHz, 92/72° at 3 kHz, 80/58° at 5–6 kHz, 70/46° at 9–10 kHz. Loading is flat above 1.6 kHz, −3 dB at 1 kHz and −6 dB at 790 Hz, so cross from 1 kHz (LR24). Near 1.8 kHz both planes widen and the DI dips about 1 dB (mouth diffraction; the design has no rollback). Weight not measured: about 3.5 lb printed solid in PLA. Drawn from its STEP model.",
+  note: "[hornlab.io design and BEM, 30 points, Oct 2026] The owner's oblate-spheroidal waveguide: 90° × 50°, 36 mm (1.4\") throat at 3.7°, k 2.5, superellipse n 3, 7 mm walls. Mouth 486 × 311 mm inside (494 × 319 outside), 180 mm deep including the throat flange; hornlab cutoff 785 Hz. Flange ⌀130 × 12 mm with 4 × ⌀6.6 mm holes (M6 or 1/4-20) on a 101.6 mm (4 in) circle at 45°, so the N314T bolts straight on (no adapter). −6 dB beamwidth H/V: 84/104° at 1 kHz, 96/84° at 1.3 kHz, 108/108° at 1.8 kHz, 92/72° at 3 kHz, 80/58° at 5–6 kHz, 70/46° at 9–10 kHz. Loading is flat above 1.6 kHz, −3 dB at 1 kHz and −6 dB at 790 Hz, so cross from 1 kHz (LR24). Near 1.8 kHz both planes widen and the DI dips about 1 dB (mouth diffraction; the design has no rollback). Weight not measured: about 3.5 lb printed solid in PLA. Drawn from its STEP model.",
 };
 
 export const HORN_RAW: readonly Horn[] = [
