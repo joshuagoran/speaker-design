@@ -12,7 +12,8 @@ interface Options<Card, Config> {
 
 /**
  * Previewing, loading and undoing an optimizer card on the design. The design to go back to is the one from before
- * the first preview, however many cards are previewed in a row.
+ * the first preview, however many cards are previewed in a row; Undo after loads goes back to the one from before the
+ * first load, however many cards are loaded in a row (one Undo, kept in memory only).
  */
 export function useDesignPreview<Card extends { label: string }, Config>({
   snapshot,
@@ -32,18 +33,22 @@ export function useDesignPreview<Card extends { label: string }, Config>({
     if (designPreview) restore(designPreview.before);
     setDesignPreview(null);
   };
-  /** loads the card and returns the design it replaced */
+  /**
+   * loads the card; Undo puts back the design from before the first of the loads in a row (kept in memory only), so a
+   * later load keeps it
+   */
   const loadOptimizerResult = (card: Card) => {
     const before = baseDesign();
     applyCard(card);
     setDesignPreview(null);
-    setUndoSnapshot(before);
-    return before;
+    setUndoSnapshot((first) => first ?? before);
   };
   const undoOptimizerLoad = () => {
     if (undoSnapshot) restore(undoSnapshot);
     setUndoSnapshot(null);
   };
+  /** ends the loads in a row without undoing them (their Undo went away): the next load starts a new run */
+  const forgetOptimizerUndo = () => setUndoSnapshot(null);
   /** drops the preview and the undo (a restored saved design makes them stale) */
   const clearDesignPreview = () => {
     setDesignPreview(null);
@@ -57,6 +62,7 @@ export function useDesignPreview<Card extends { label: string }, Config>({
     exitPreview,
     loadOptimizerResult,
     undoOptimizerLoad,
+    forgetOptimizerUndo,
     clearDesignPreview,
   };
 }

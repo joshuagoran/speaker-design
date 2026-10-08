@@ -24,7 +24,7 @@ interface Props {
     | "designPreview"
     | "undoSnapshot"
     | "toastMessage"
-    | "setToastMessage"
+    | "dismissToast"
     | "startOptimizerSearch"
     | "retryOptimizerSearch"
     | "previewOptimizerResult"
@@ -58,7 +58,7 @@ export function OptimizerControls({ planner }: Props) {
     designPreview,
     undoSnapshot,
     toastMessage,
-    setToastMessage,
+    dismissToast,
     startOptimizerSearch,
     retryOptimizerSearch,
     previewOptimizerResult,
@@ -145,7 +145,7 @@ export function OptimizerControls({ planner }: Props) {
             </button>
           )}
           <button
-            onClick={() => setToastMessage("")}
+            onClick={dismissToast}
             aria-label="Dismiss"
             className="px-2 py-1.5 rounded border border-stone-900"
           >

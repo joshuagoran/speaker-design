@@ -2321,6 +2321,8 @@ export interface PaNearMissOption {
 export interface PaNearMiss {
   options: PaNearMissOption[];
   closest: PaOptimizerCard | null;
+  /** the closest design is your design as it is (the banner says so) */
+  closestIsYours: boolean;
   blocking: string[];
 }
 
@@ -2410,6 +2412,8 @@ export interface PaHornEntry {
   price: number;
   horn: number;
   same: boolean;
+  /** the warnings the pair carries at the crossover on its own (no mid in view): `hornOwnWarnings` */
+  w: number;
 }
 /** An evaluated PA design. */
 export interface PaPoolEntry {

@@ -3,7 +3,7 @@ import { Card } from "../ui/Card";
 import { SectionHeading } from "../ui/SectionHeading";
 import { NumberField } from "../ui/NumberField";
 import { Notice } from "../ui/Notice";
-import { formatDollars } from "../../lib/format";
+import { nearMissClosestText } from "../../lib/pa/nearMiss";
 import { toggled } from "../../lib/lists";
 import { OptimizerResultCard } from "./OptimizerResultCard";
 import { GoalPicker } from "./GoalPicker";
@@ -11,7 +11,7 @@ import { KeepDetails } from "./KeepDetails";
 import { RunRow } from "./RunRow";
 import { DriverCompare } from "./DriverCompare";
 import { ResultCards } from "./ResultCards";
-import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS } from "../../lib/pa/optimize";
+import { roomRequiredSpl, ROOMS, OPTIMIZER_GOALS, PA_OUTPUT_NAME } from "../../lib/pa/optimize";
 import { keepLines, PA_KEEP_WORDS } from "../../lib/optimizer/goalKeeps";
 import { OPTIMIZER_PANEL_TEXT, PA_RUN_LABELS } from "../../constants/optimizerText";
 import type {
@@ -171,7 +171,7 @@ export function OptimizerPanel({
           Target: {tgtText}
           {curOut != null && (
             <div className="text-xs text-stone-500 mt-0.5">
-              Music limit, 40–90 Hz. Yours: {curOut.toFixed(0)} dB ·{" "}
+              Compares the {PA_OUTPUT_NAME}. Yours: {curOut.toFixed(0)} dB ·{" "}
               {ROOMS[optIn.room] ? ROOMS[optIn.room].name : ""} needs about {need.toFixed(0)} dB
             </div>
           )}
@@ -234,9 +234,7 @@ export function OptimizerPanel({
               {OPTIMIZER_PANEL_TEXT.noFit}
             </h3>
             <div className="text-xs text-orange-900 mt-1">
-              {res.nearMiss.closest
-                ? `Closest: ${res.nearMiss.closest.names.sub}, ${res.nearMiss.closest.metrics.heaviest.toFixed(0)} lb, ${formatDollars(res.nearMiss.closest.metrics.price)} per stack, ${res.nearMiss.closest.metrics.out.toFixed(1)} dB. `
-                : ""}
+              {nearMissClosestText(res.nearMiss)}
               Blocked by: {res.nearMiss.blocking.join("; ")}.
             </div>
             {res.nearMiss.options.length > 0 && (
