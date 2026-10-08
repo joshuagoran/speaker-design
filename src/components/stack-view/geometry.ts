@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { PARTS_3D } from "../../styles/palette";
+import type { PartMesh } from "../../types";
 /** Rounded rectangle outline centered on the origin, as a THREE.Shape. */
 export function roundedRectShape(width: number, height: number, radius: number) {
   const x = width / 2,
@@ -150,4 +151,35 @@ export function createScaleFigure(heightIn: number) {
   head.absarc(0, 92.5 * u, 6 * u, 0, Math.PI * 2, false);
   figure.add(new THREE.Mesh(new THREE.ShapeGeometry(head), material));
   return figure;
+}
+
+/** Millimeters to the scene's inches. */
+export const MM_IN = 1 / 25.4;
+
+// each mesh's geometry built once
+const PART_MESH_GEOMETRY = new Map<PartMesh, THREE.BufferGeometry>();
+/**
+ * A part's CAD mesh (data/meshes) as geometry, in inches on the model's axes, centered on the origin in x and y, the
+ * model's z = 0 at z = 0. Flat: every triangle its own vertices, so a part's edges and corners stay crisp. Smooth:
+ * the vertices shared, so a curved face shades smooth; a mesh welded face by face (build/horn-mesh.mjs) still keeps
+ * the edges between its faces crisp.
+ */
+export function partMeshGeometry(m: PartMesh, shading: "flat" | "smooth") {
+  const hit = PART_MESH_GEOMETRY.get(m);
+  if (hit) return hit;
+  const k = m.unitMm * MM_IN;
+  const center = [(m.min[0] + m.max[0]) / 2, (m.min[1] + m.max[1]) / 2, 0].map((c) => c * MM_IN);
+  const at = (v: number, axis: number) => m.positions[3 * v + axis] * k - center[axis];
+  const g = new THREE.BufferGeometry();
+  // smooth: one vertex per position and the triangles as indices; flat: three vertices per triangle
+  const corners = shading === "smooth" ? m.positions.length / 3 : m.indices.length;
+  const vertex = (i: number) => (shading === "smooth" ? i : m.indices[i]);
+  const pos = new Float32Array(corners * 3);
+  for (let i = 0; i < corners; i++)
+    for (let axis = 0; axis < 3; axis++) pos[3 * i + axis] = at(vertex(i), axis);
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  if (shading === "smooth") g.setIndex([...m.indices]);
+  g.computeVertexNormals();
+  PART_MESH_GEOMETRY.set(m, g);
+  return g;
 }

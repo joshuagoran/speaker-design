@@ -13,7 +13,8 @@
 // ([radius, depth] points, in; the 3-D view stretches it to `size`), adapter (the throat adapter: name, steps
 // [diameter, length] front to back, body and driver bolt circles, in), rect for the full-width rectangular concept,
 // finish ("black" for a horn that ships painted, as cast Lavoce, B&C, RCF and Beyma horns do; omit it for a printed horn).
-// A horn without a profile is drawn as a rectangular flare at its mouth and depth.
+// A horn with a CAD mesh (HORN_MESHES in src/data/meshes) is drawn from it, at the mesh's size, which `size` must
+// match; a horn with neither a mesh nor a profile is drawn as a rectangular flare at its mouth and depth.
 import type { HifiWaveguide, Horn, HornAdapter, HornProfilePoint } from "../../types";
 
 export const ST260_PROFILE: readonly HornProfilePoint[] = [

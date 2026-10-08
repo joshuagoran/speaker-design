@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { rectangularHornGeometry } from "./geometry";
+import { partMeshGeometry, rectangularHornGeometry } from "./geometry";
+import { HORN_MESHES } from "../../data/meshes";
 import { HORN_LIFT_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import { buildBracket, buildClampedBracket, takesBracket } from "./buildBracket";
@@ -77,7 +78,8 @@ function addThroatParts(
 }
 
 /**
- * The horn, its throat adapter and its compression driver, one set per x. A horn with a profile is that profile turned
+ * The horn, its throat adapter and its compression driver, one set per x. A horn with a CAD mesh (data/meshes) is that
+ * mesh at its own size, its flange's back face on the throat plane; a horn with a profile is that profile turned
  * and stretched to its mouth and depth; the full-width concept (`rect`) is a rectangular flare as wide as the box; any
  * other horn is a rectangular flare at its own mouth and depth. `y` is the base of the horn (the top of the box below)
  * and `mount` the footprint it sits on (the mid box, or the tower's shell); the mouth plane is on its front plane. In
@@ -108,9 +110,13 @@ export function buildHorn(
   const throatZ = mount.d / 2 - hz.d;
   const cy = tower ? tower.cy : hornY + HORN_LIFT_IN + hz.h / 2;
   const axes = xs.map((x) => ({ x, y: cy, throatZ }));
+  const model = HORN_MESHES[horn.id];
   for (const at of axes) {
     let body: THREE.Mesh;
-    if (horn.profile) {
+    if (model) {
+      // its own mesh at its own size: the flange's back face on the throat plane, the mouth toward +z
+      body = new THREE.Mesh(partMeshGeometry(model, "smooth"), hornShell);
+    } else if (horn.profile) {
       // the profile stretched to the mouth's width and height and the body's depth
       const maxR = Math.max(...horn.profile.map(([r]) => r));
       const maxX = Math.max(...horn.profile.map(([, x]) => x));
