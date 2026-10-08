@@ -60,6 +60,7 @@ export default defineConfig({
     ignorePatterns: [
       "dist/**",
       "src/data/acoustics/slot-inner-end.ts",
+      "src/data/meshes/diy_os90x50.ts",
       "src/data/meshes/h1105.ts",
       "tests/golden.json",
       "tests/optimizer-dump.json",
