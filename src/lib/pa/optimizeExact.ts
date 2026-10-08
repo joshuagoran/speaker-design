@@ -34,6 +34,7 @@ import {
   highpassOptions,
   designProblems,
   evaluateDesign,
+  hornOwnWarnings,
   optimizePaStack,
   paSearchAmps,
   paSearchDesign,
@@ -45,7 +46,6 @@ import {
   hornResponse,
   isRoundPort,
   linkwitzRileyLowpass,
-  keeleFrequency,
   midBraceEstimate,
   midWeightLb,
   pistonBeamWidthDeg,
@@ -63,7 +63,6 @@ import {
   ductLenSliderMax,
   ductFits,
   subBaffleFits,
-  hornChips,
   subDriverClearanceNeededIn,
   KEEP_UP_SLACK_DB,
 } from "./chips";
@@ -95,7 +94,6 @@ import { MID_OPTIONS, SUB_OPTIONS } from "../data";
 import { byId } from "../tables";
 import { keepGap } from "../optimizer/shortfall";
 import { ampForGain, onSlider } from "../optimizer/ampSteps";
-import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import type {
   BraceStyleId,
   Dims3,
@@ -992,19 +990,15 @@ function exactHook(
     const hz: Partial<HornHf> = hp.h.hf || {};
     const hm = hornResponse(hp.cd.hf, hz, xoHi, c.amps.hfAmpW, c.cur.xoHiOrder);
     const n = hm
-      ? hornChips({
+      ? hornOwnWarnings({
           hf: hm.hf,
           hz,
           horn: hp.h,
           xoHi,
           hornModel: hm,
           hfAmpW: c.amps.hfAmpW,
-          midAtXoHi: null,
-          hornBelowMidDb: c.cur.hfTilt,
-          hornAtXo: null,
           midBeam: pistonBeamWidthDeg(m.ts.Sd, xoHi),
-          fK: hz.covH && hp.h.size ? keeleFrequency(hz.covH, hp.h.size.w) : null,
-        }).filter(([kind, , , id]) => kind === "warn" && !LIMIT_CHIP_IDS.has(id)).length
+        })
       : 0;
     hornModels.set(k, n);
     return n;

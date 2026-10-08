@@ -57,7 +57,6 @@ import type {
   Dims3,
   SliderSpec,
   DimensionLockMode,
-  Horn,
   HornChipsInput,
   HornHf,
   MidDriver,
@@ -634,30 +633,22 @@ export function paSearchDesign(input: Pick<PaOptimizerInput, "cur">): PaDesignCo
   };
 }
 /**
- * The warnings a compression driver on a horn carries at a crossover on its own (no mid in view): a crossover below the
- * recommended one, near the horn's cutoff, or past its rated coverage. The limit chips don't count.
+ * The warnings a compression driver on a horn carries at a crossover with no mid level in view: a crossover below the
+ * recommended one, near the horn's cutoff, or past its rated coverage, and, given the mid's beamwidth, a mid narrower or
+ * wider than the horn there. The limit chips don't count.
  */
 export const hornOwnWarnings = (
-  hf: HornChipsInput["hf"],
-  hz: Partial<HornHf>,
-  horn: Horn,
-  xoHi: number,
-  hornModel: HornChipsInput["hornModel"],
-  hfAmpW: number,
-  hornBelowMidDb: number,
+  s: Pick<HornChipsInput, "hf" | "hz" | "horn" | "xoHi" | "hornModel" | "hfAmpW"> &
+    Partial<Pick<HornChipsInput, "midBeam">>,
 ) =>
   hornChips({
-    hf,
-    hz,
-    horn,
-    xoHi,
-    hornModel,
-    hfAmpW,
+    ...s,
+    // no mid level: the keep-up chip, the only one these three feed, is left out
     midAtXoHi: null,
-    hornBelowMidDb,
     hornAtXo: null,
-    midBeam: null,
-    fK: hz.covH && horn.size ? keeleFrequency(hz.covH, horn.size.w) : null,
+    hornBelowMidDb: 0,
+    midBeam: s.midBeam ?? null,
+    fK: s.hz.covH ? keeleFrequency(s.hz.covH, s.horn.size.w) : null,
   }).filter(([kind, , , id]) => kind === "warn" && !LIMIT_CHIP_IDS.has(id)).length;
 
 /** The amps the search runs at: a locked amp as it is, an unlocked one at the top of its slider. */
@@ -1149,7 +1140,7 @@ export function optimizePaStack(
           price: cd.price || 0,
           horn: h.price || 0,
           same: cd.id === cur.cd && h.id === cur.horn,
-          w: hornOwnWarnings(cd.hf, hz, h, xoHi, hm, amps.hfAmpW, cur.hfTilt),
+          w: hornOwnWarnings({ hf: cd.hf, hz, horn: h, xoHi, hornModel: hm, hfAmpW: amps.hfAmpW }),
         });
       }
     hornTable[xoHi].sort((a, b) => a.price - b.price || a.horn - b.horn);
