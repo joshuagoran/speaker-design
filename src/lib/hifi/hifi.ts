@@ -941,7 +941,6 @@ export function hifiSystemFromBox(
       ...common,
       kind: "radiator",
       pr,
-      prFits: passiveRadiatorFits(dim, wall, pr),
       Fb: rM.Fb,
       Fp: rM.Fp,
       peakVel: null,
@@ -1302,13 +1301,7 @@ export function hifiChips(
       vdW = w.ts.Sd * w.ts.Xmax,
       vdP = p.n * p.drv.Sd * p.drv.Xmax,
       k = vdP / vdW;
-    if (!sys.prFits)
-      F.push([
-        "bad",
-        "Radiators won't fit",
-        `${p.n} on the back need about ${(passiveRadiatorShape(p.drv).w + 0.3 + 2 * (cfg.wall || 0.75)).toFixed(1)}″ of width and ${(p.n * (passiveRadiatorShape(p.drv).h + 0.5) + 2 * (cfg.wall || 0.75)).toFixed(1)}″ of height.`,
-        "hifiRadiatorFit",
-      ]);
+    // the radiators always fit their panel: the box starts at what they need (lib/hifi/boxLayout hifiBoxMin)
     F.push(
       k < 1.5
         ? [

@@ -36,6 +36,7 @@ import type {
   MidDriver,
   PaDesignConfig,
   SubDriver,
+  VentSpec,
 } from "../../../types";
 import { derivePaDesign } from "./paDesign";
 import type { PaDerivedDesign } from "./paDesign";
@@ -46,6 +47,21 @@ import type { HornDesign } from "./useHornDesign";
 import type { MidDesign } from "./useMidDesign";
 import type { SubwooferDesign } from "./useSubwooferDesign";
 import { useEffect, useMemo, useRef } from "react";
+
+/** A saved vent with every field a number: one an older save lacks (or holds as anything else) takes the default's. */
+export function savedVentSpec(v: Partial<VentSpec>): VentSpec {
+  const d = DEFAULT_PA.cVent;
+  const num = (x: number | undefined, fallback: number) =>
+    typeof x === "number" && Number.isFinite(x) ? x : fallback;
+  return {
+    ...v,
+    slotH: num(v.slotH, d.slotH),
+    nt: num(v.nt, d.nt),
+    dia: num(v.dia, d.dia),
+    throat: num(v.throat, d.throat),
+    len: num(v.len, d.len),
+  };
+}
 
 /** What `usePaDesign` returns: every design state and setter, plus the models and sizes derived from them. */
 export interface PaDesign
@@ -212,9 +228,9 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     () => ({ ...subVentState, div: ductDividerIn }),
     [subVentState, ductDividerIn],
   );
-  // each box's width and height start at what its parts need (each up to its slider's step): a box made too small by a
-  // driver, vent or wall change, or saved that way, is modeled, drawn and saved at that size, and its stored size
-  // follows (the effect below)
+  // each box's width and height start at what its parts need (each up to its slider's step): a box too small for its
+  // driver, vents or walls, or saved that way, is shown, modeled, drawn and saved at that size. The size the user set
+  // stays as set, so a bigger part or vent raises the box only while it is chosen; a slider sets a new size.
   const subMins = boxSliderMins(subBoxMin(portStyle, subVentSpec, PT, subDriver.size), {
     w: PA_SLIDERS.subW,
     h: PA_SLIDERS.subH,
@@ -224,11 +240,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     h: PA_SLIDERS.midH,
   });
   const subBox = fitBox(subBoxDims, subMins);
-  const midBox = fitBox(midBoxDims, midMins);
-  useEffect(() => {
-    if (subBox !== subBoxDims) setSubBoxDims(subBox);
-    if (midBox !== midBoxDims) setMidBoxDims(midBox);
-  }, [subBox, subBoxDims, midBox, midBoxDims, setSubBoxDims, setMidBoxDims]);
+  // (the tower has no mid box of its own: its chamber is the sub's footprint, so the mid box is kept as set)
+  const midBox = layout === "tower" ? midBoxDims : fitBox(midBoxDims, midMins);
   const subWithBox = { ...subDriver, box: subBox };
   // derived once per change to the inputs below, not on every render of every tab (App holds this planner)
   const derived = useMemo(
@@ -358,7 +371,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     if (c.cd) setCompressionDriver(byId(CD_OPTIONS, c.cd) ?? compressionDriver);
     if (c.horn) setHornOption(byId(HORN_OPTIONS, c.horn) ?? hornOption);
     if (c.cDim) setSubBoxDims(c.cDim);
-    if (c.cVent) setSubVentSpec(c.cVent);
+    if (c.cVent) setSubVentSpec(savedVentSpec(c.cVent));
     setDuctDividerPanel(isPanelNominal(c.divider) ? c.divider : DUCT_DIVIDER_DEFAULT);
     if (typeof c.hpf === "number") setSubHighpassHz(c.hpf);
     if (c.hpType && HIGHPASS_ALIGNMENTS[c.hpType]) setSubHighpassType(c.hpType);

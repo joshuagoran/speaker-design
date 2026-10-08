@@ -41,8 +41,7 @@ export const HIFI_FRONT_PARTS = {
   domeSurround: { rPerDome: 1.08, tubeIn: 0.06 },
   /** a waveguide set into the baffle: its cutout's corner radius for the mouth's smaller side */
   guideCornerPerSize: 0.15,
-  /** a round port: the tube's wall (its cutout is the tube's outside), and its flared lip's width on the baffle */
-  portWallIn: 0.1,
+  /** a round port's flared lip: its width on the baffle (its cutout is the tube's outside, HIFI_BOX_LAYOUT) */
   portFlangeIn: 0.3,
   /** a passive radiator's frame round its cone, inside its outline (the cutout is this much smaller) */
   radiatorFrameIn: 0.3,

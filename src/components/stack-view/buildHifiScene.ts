@@ -20,6 +20,7 @@ import {
 import { ELBOW_COUNTS, MAX_ELBOWS, tubeElbows, tubeLegs } from "../../lib/tubeFold";
 import { HIFI_DRIVER_CUTOUT_IN } from "../../data/catalog/driver-cutouts";
 import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../../constants/hifiScene";
+import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import type { Props as StackSceneProps } from "./buildStackScene";
 import type {
   CompressionDriver,
@@ -156,7 +157,9 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
   const wooferR = wooferCutoutR(p.woofer.size);
   holes.baffle.push(circlePath(0, lay.wooferIn, wooferR));
   const round = p.port && p.port.shape !== "slot" ? roundPortSpots(p.port) : [];
-  round.forEach((s) => holes.baffle.push(circlePath(s.x, s.y, s.r + HIFI_FRONT_PARTS.portWallIn)));
+  round.forEach((s) =>
+    holes.baffle.push(circlePath(s.x, s.y, s.r + HIFI_BOX_LAYOUT.portTubeWallIn)),
+  );
   const slot = p.port && p.port.shape === "slot" ? p.port : null;
   const slotHole = slot ? slotOpening(dim, T, slot) : null;
   if (slotHole)

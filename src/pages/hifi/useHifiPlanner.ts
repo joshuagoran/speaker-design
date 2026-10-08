@@ -274,12 +274,10 @@ export function useHifiPlanner(): HifiPlanner {
       tweeterOffsetIn,
     ],
   );
-  // the box as modeled, which the page shows and saves; the stored size follows it up when a part, the walls or a
-  // loaded save leave it too small for its parts
+  // The box as modeled (at least what its parts need): what the page shows, the sliders read and saves keep. The size
+  // the user set stays as set, so a bigger part raises the box only while it is chosen: switching back brings the box
+  // back. A slider sets a new size from the fitted one it shows.
   const fittedDims = design.speakerConfig.dim;
-  useEffect(() => {
-    if (fittedDims !== boxDims) setBoxDims(fittedDims);
-  }, [fittedDims, boxDims]);
   const optimizer = useHifiOptimizer({
     snapshot,
     applyDesign,

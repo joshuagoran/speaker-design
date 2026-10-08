@@ -54,7 +54,6 @@ export const CHIP_IDS = {
     "hifiSlotFit",
     "hifiPortFit",
     "hifiPortElbows",
-    "hifiRadiatorFit",
     "hifiRadiatorSize",
     "hifiRadiatorMass",
     "hifiRoundover",

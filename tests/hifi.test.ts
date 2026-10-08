@@ -20,7 +20,10 @@ import {
   grossVolumeLiters,
   portAfterToggle,
   listenerGeometry,
+  passiveRadiatorFits,
+  RADIATOR_PANEL,
 } from "../src/lib/hifi/hifi";
+import { hifiBoxMin } from "../src/lib/hifi/boxLayout";
 import type { HifiConfig, HifiTweeter, HifiWoofer, PassiveRadiator } from "../src/types";
 import { chipList, chipOf, close, findChip } from "./helpers";
 
@@ -287,8 +290,20 @@ test("passive radiators: tuning, notch, travel limit and checks", (t) => {
   chipOf(hifiChips(s, W, T, pc), "hifiRadiatorSize", "ok");
   chipOf(hifiChips(hifiSystem(W, T, one)!, W, T, one), "hifiRadiatorSize", "warn");
   const big = { ...pc, pr: { drv: { ...drv, size: 10 }, n: 2, addG: 0 } };
-  assert.ok(!findChip(hifiChips(hifiSystem(W, T, one)!, W, T, one), "hifiRadiatorFit"));
-  chipOf(hifiChips(hifiSystem(W, T, big)!, W, T, big), "hifiRadiatorFit", "bad");
+  // radiators too big for the box can't happen on the page: its box starts at what they need on their panel
+  const wall = cfg.wall ?? 0.75;
+  for (const c of [one, big]) {
+    const need = hifiBoxMin({
+      woofer: W,
+      tweeter: T,
+      onTop: false,
+      cfg: c,
+      wall,
+      radiatorPanel: RADIATOR_PANEL,
+    });
+    assert.ok(passiveRadiatorFits({ ...need, d: cfg.dim.d }, wall, c.pr));
+  }
+  assert.equal(RADIATOR_PANEL, "back", "the box's minimum sizes radiators on the back");
 });
 
 test("slot vent: tunes like a port of the same area and length, its shelf takes volume, and long slots are flagged", (t) => {

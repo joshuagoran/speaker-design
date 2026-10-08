@@ -4,7 +4,6 @@ import type {
   BoxBracing,
   BoxKeepOut,
   BoxModelTS,
-  SliderSpec,
   BoxRegion,
   BraceStyleId,
   CompressionHf,
@@ -57,6 +56,7 @@ import { defaultPanelIn, panelLbPerSqFt } from "../panel";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { PA_SLIDERS } from "../../constants/paSliders";
+import { boxSliderMins, upToStep } from "../boxFit";
 import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../../data/acoustics/slot-inner-end";
 import {
   modelTubeElbows,
@@ -1891,9 +1891,6 @@ export const midBoxMin = (size: MidDriver["size"]): Dims2 => ({
   w: midBaffleNeedIn(size),
   h: midBaffleNeedIn(size),
 });
-/** A size rounded up to its slider's step, in. */
-const upToStep = (x: number, s: Pick<SliderSpec, "min" | "step">) =>
-  Math.max(s.min, Math.ceil(x / s.step - 1e-9) * s.step);
 /** What sizes a mid box's volume besides its dimensions. */
 type MidBoxConfig = Pick<
   MidSystemConfig,
@@ -1924,10 +1921,9 @@ export function midSmallerBoxNetL(
 ): number | null {
   const effL = sealedLitersForQtc(mid.ts, SEALED_QTC_MIN);
   if (effL == null || cfg.layout === "tower") return null;
-  const need = midBaffleNeedIn(mid.size);
   const dims = {
-    w: upToStep(need, PA_SLIDERS.midW),
-    h: upToStep(need, PA_SLIDERS.midH),
+    // the face the page's sliders start at for this driver
+    ...boxSliderMins(midBoxMin(mid.size), { w: PA_SLIDERS.midW, h: PA_SLIDERS.midH }),
     d: upToStep(
       (mid.depthIn ?? MID_DEPTH_FALLBACK_IN[mid.size]) + DRIVER_CLEARANCE_IN + cfg.inset + cfg.wall,
       PA_SLIDERS.midD,

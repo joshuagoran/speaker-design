@@ -80,7 +80,11 @@ import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { UI_TEXT } from "../../constants/uiText";
 import { HIFI_RESULT_HEADINGS } from "../../constants/hifiResults";
-import { HIFI_BOX_SLIDERS, HIFI_ROUNDOVER_CHOICES } from "../../constants/hifiLayout";
+import {
+  HIFI_BOX_LABELS,
+  HIFI_BOX_SLIDERS,
+  HIFI_ROUNDOVER_CHOICES,
+} from "../../constants/hifiLayout";
 
 interface Props {
   hifi: HifiPlanner;
@@ -670,7 +674,7 @@ export function HifiPage({ hifi }: Props) {
               </div>
               <Card className="mb-4">
                 <Slider
-                  label="Width"
+                  label={HIFI_BOX_LABELS.w}
                   value={boxDims.w}
                   min={boxMin.w}
                   max={Math.max(HIFI_BOX_SLIDERS.w.max, boxMin.w)}
@@ -680,7 +684,7 @@ export function HifiPage({ hifi }: Props) {
                   extra={renderDimensionLock("dim", "w", "Width")}
                 />
                 <Slider
-                  label="Height"
+                  label={HIFI_BOX_LABELS.h}
                   value={boxDims.h}
                   min={boxMin.h}
                   max={Math.max(HIFI_BOX_SLIDERS.h.max, boxMin.h)}
@@ -690,7 +694,7 @@ export function HifiPage({ hifi }: Props) {
                   extra={renderDimensionLock("dim", "h", "Height")}
                 />
                 <Slider
-                  label="Depth"
+                  label={HIFI_BOX_LABELS.d}
                   value={boxDims.d}
                   min={HIFI_BOX_SLIDERS.d.min}
                   max={HIFI_BOX_SLIDERS.d.max}

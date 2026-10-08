@@ -729,7 +729,6 @@ export interface HifiVentedSystem extends HifiSystemBase {
 export interface HifiRadiatorSystem extends HifiSystemBase {
   kind: Extract<HifiBoxKind, "radiator">;
   pr: PassiveRadiatorChoice;
-  prFits: boolean;
   Fb: number;
   Fp: number;
   peakVel: null;
