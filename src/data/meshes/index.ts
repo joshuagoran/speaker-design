@@ -1,6 +1,7 @@
 // The parts drawn from their CAD models in the 3D view, by catalog id (data/catalog); every other part is drawn from
 // its listed sizes. Adding one: mesh its STEP file (build/handle-mesh.mjs for cabinet hardware, build/horn-mesh.mjs
-// for a horn; the STEP files stay out of the repo), commit the generated mesh and list it here.
+// for a horn; the STEP files stay out of the repo), commit the generated mesh and list it here (a horn also in
+// ./meshedHorns).
 import type { CabinetPart, HardwareMesh, Horn, PartMesh } from "../../types";
 import { DIY_OS90X50, DIY_OS90X70, DIY_ROSSE110X50 } from "../catalog/horns";
 import { DIY_OS90X50_MESH } from "./diy_os90x50";

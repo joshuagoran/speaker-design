@@ -48,6 +48,7 @@ import {
   linkwitzRileyLowpass,
   midBraceEstimate,
   midWeightLb,
+  towerMidWeightLb,
   pistonBeamWidthDeg,
   braceWoodEstimate,
   braceWoodIn3,
@@ -123,6 +124,7 @@ import type {
   SubDriver,
   VentSpec,
 } from "../../types";
+import { towerMidDims } from "./tower";
 
 // the most vent sizes any style has (a cache key's stride)
 const MAX_VENT_SIZES = Math.max(...VENT_STYLES.map((st) => ventSizesFor(st).length));
@@ -170,8 +172,6 @@ class PairCache<V extends { size: number }> {
     return this.floats;
   }
 }
-// the tower's mid box height, in (evaluateDesign's)
-const TOWER_MID_H = 15.5;
 const GOALS: readonly PaGoal[] = ["cheaper", "lighter", "lower", "louder"];
 const perGoal = <T>(f: (g: PaGoal) => T): Record<PaGoal, T> => ({
   cheaper: f("cheaper"),
@@ -361,7 +361,7 @@ const packPairs = (rows: number[]): Pairs => {
 const towerMidFails = (s: ExactSpace, box: Dims3, t: number) => {
   if (!s.tower) return false;
   const m = s.tower.mid;
-  const mb = { w: box.w, h: TOWER_MID_H, d: box.d };
+  const mb = towerMidDims(box);
   return (
     !m ||
     Math.min(mb.w, mb.h) < midBaffleNeedIn(m.size) ||
@@ -1011,6 +1011,8 @@ function exactHook(
     xoLo: number,
     boxes: (m: MidDriver) => { bx: Dims3; mDim: Dims3 }[],
     mids: readonly MidDriver[],
+    /** the tower's sub box: its cabinet over the box, with the horn in it, weighs in place of the mid box */
+    towerBox: Pick<Dims3, "w" | "d"> | null = null,
   ): UpperSet => {
     const all: Upper[] = [];
     const { cur, amps, locks } = c;
@@ -1033,10 +1035,15 @@ function exactHook(
             mm.at(midGridIndexNear(f, xoHi), xoLo, xoHi, cur.xoLoOrder, cur.xoHiOrder);
           const lo = at(xoLo),
             hi = at(xoHi);
-          const midLb =
-            midWeightLb(bx, t, midBraceEstimate(bx, t, cur.inset, cur.layout, s.braceStyle)) +
-            (m.lb || 0);
+          const boxLb = midWeightLb(
+            bx,
+            t,
+            midBraceEstimate(bx, t, cur.inset, cur.layout, s.braceStyle),
+          );
           for (const hp of c.hornTable[xoHi]) {
+            // in the tower, its cabinet over the sub box, which takes the horn's section
+            const midLb =
+              (towerBox ? towerMidWeightLb(towerBox, t, cur.inset, hp.h, m) : boxLb) + (m.lb || 0);
             const room = hp.at + cur.hfTilt + KEEP_UP_SLACK_DB;
             const mAmpW =
               hi.max <= room
@@ -1135,8 +1142,9 @@ function exactHook(
             c,
             t,
             xoLo,
-            () => [{ bx: { w: box.w, h: TOWER_MID_H, d: box.d }, mDim: s.cur.mDim }],
+            () => [{ bx: towerMidDims(box), mDim: s.cur.mDim }],
             s.tower?.mid ? [s.tower.mid] : [],
+            box,
           )
         : buildUppers(
             c,

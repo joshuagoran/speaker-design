@@ -66,6 +66,7 @@ import {
 } from "../../../constants/hornColor";
 import { cssHex, hornBodyColor, pickedHornColor } from "../../../lib/pa/hornColor";
 import { ON_DATA } from "../../../styles/palette";
+import { towerMidDims } from "../../../lib/pa/tower";
 
 interface Props {
   planner: Pick<
@@ -548,8 +549,8 @@ export function SettingsPanel({ planner }: Props) {
             <Card>
               {layout === "tower" ? (
                 <div className="text-xs text-stone-500">
-                  Tower: the mid chamber has the sub's footprint, {subBoxDims.w}″ × 15.5″ ×{" "}
-                  {subBoxDims.d}″.
+                  Tower: the mid chamber has the sub's footprint, {subBoxDims.w}″ ×{" "}
+                  {towerMidDims(subBoxDims).h}″ × {subBoxDims.d}″.
                 </div>
               ) : (
                 <>

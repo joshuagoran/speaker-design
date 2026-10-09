@@ -9,6 +9,7 @@ import {
   hornResponse,
   nearestPoint,
   midWeightLb,
+  towerMidWeightLb,
   subWeightLb,
   midBoxBracing,
   subBoxBracing,
@@ -16,6 +17,7 @@ import {
 import { FILL_OPTIONS } from "../src/lib/data";
 import { SEED_NAMES } from "./seeds";
 import { hardwareLb, savedHardware } from "../src/lib/pa/hardware";
+import { towerMidDims } from "../src/lib/pa/tower";
 import type {
   Dims3,
   FillBoxType,
@@ -78,7 +80,11 @@ const r2 = (x: number | null | undefined) => (x == null ? null : Math.round(x * 
 export function evaluate(c: GoldenConfig, withHardware = true): GoldenValues {
   const sub = SUB_OPTIONS.find((o) => o.id === c.sub)!,
     mid = MID_OPTIONS.find((o) => o.id === c.mid) || MID_OPTIONS[0];
-  const mDim = c.mDim || (MID_BOXES.find((b) => b.id === c.midBox) || MID_BOXES[0]).box;
+  // the tower's mid chamber is the sub's footprint, as the planner takes it (paDesign's effectiveMidBoxDims)
+  const mDim =
+    c.layout === "tower"
+      ? towerMidDims(c.cDim)
+      : c.mDim || (MID_BOXES.find((b) => b.id === c.midBox) || MID_BOXES[0]).box;
   const cfg: SubSystemConfig & { inset: number } = {
     subBox: c.cDim,
     midDims: mDim,
@@ -161,7 +167,11 @@ export function evaluate(c: GoldenConfig, withHardware = true): GoldenValues {
         hardwareLb(cfg.hardware, "sub", cfg.layout),
       ),
     ),
-    midLb: r2(midWeightLb(mDim, cfg.wall, midBracing, hardwareLb(cfg.hardware, "mid", cfg.layout))),
+    midLb: r2(
+      cfg.layout === "tower" && horn
+        ? towerMidWeightLb(cfg.subBox, cfg.wall, cfg.inset, horn, mid)
+        : midWeightLb(mDim, cfg.wall, midBracing, hardwareLb(cfg.hardware, "mid", cfg.layout)),
+    ),
   };
 }
 

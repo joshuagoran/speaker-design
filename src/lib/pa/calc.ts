@@ -42,6 +42,7 @@ import type {
   SubSystem,
   SubSystemConfig,
   ThieleSmall,
+  TowerHorn,
   VentedBoxModel,
   VentedPoint,
   VentGeometry,
@@ -95,6 +96,7 @@ import {
 import { hardwareKeepOut, hardwareLiters, mountedCutout, planBoxHardware } from "./hardware";
 import { INPUT_JACK } from "../../data/catalog/cabinet-hardware";
 import { HARDWARE_KIND_NAMES, hardwarePlaceWords } from "../../constants/hardware";
+import { towerHornCutout, towerSpec } from "./tower";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
 const ROUND_PORT: Record<PortStyle, boolean> = {
@@ -932,6 +934,17 @@ export const formatInches = (x: number) => {
 };
 export { formatThickness } from "../panel";
 
+/** The rabbet on a shell panel's rear edge that the back sits in. */
+const rearRabbetNote = (t: number) =>
+  `rabbet ${formatInches(t)} × ${formatInches(t / 2)} on rear edge for the back`;
+/** A side's joint at the `edges` it meets the top and bottom on, and its rear rabbet. */
+const sideJointNote = (joint: CornerJoint, t: number, edges: string) =>
+  joint === "rabbet"
+    ? `rabbet ${formatInches(t)} × ${formatInches(t / 2)} ${edges}; ${rearRabbetNote(t)}`
+    : joint === "miter"
+      ? `45° on ${edges}; ${rearRabbetNote(t)}`
+      : rearRabbetNote(t);
+
 export function boxParts(
   label: CutBoxId,
   W: number,
@@ -951,13 +964,8 @@ export function boxParts(
   const BT = 0.75,
     P: CutPart[] = [];
   const topW = joint === "butt" ? W - 2 * t : joint === "rabbet" ? W - t : W;
-  const rearNote = `rabbet ${formatInches(t)} × ${formatInches(t / 2)} on rear edge for the back`;
-  const sideNote =
-    joint === "rabbet"
-      ? `rabbet ${formatInches(t)} × ${formatInches(t / 2)} top and bottom edges; ${rearNote}`
-      : joint === "miter"
-        ? `45° on top and bottom edges; ${rearNote}`
-        : rearNote;
+  const rearNote = rearRabbetNote(t);
+  const sideNote = sideJointNote(joint, t, "top and bottom edges");
   const topNote = joint === "miter" ? `45° on both ends; ${rearNote}` : rearNote;
   const hw = extra.hardware ?? {};
   const withNote = (note: string, more: string | undefined) => (more ? `${note}; ${more}` : note);
@@ -1026,7 +1034,7 @@ const AXIS_FROM: Record<BoxAxis, string> = {
   y: "up from the bottom",
   z: "back from the baffle",
 };
-const atList = (at: number[]) => at.map((x) => `${formatInches(x)}″`).join(", ");
+const atList = (at: readonly number[]) => at.map((x) => `${formatInches(x)}″`).join(", ");
 /** A box's window braces and ribs as cutlist rows: each axis' window braces, then each panel's ribs. */
 export function braceParts(
   box: CutBoxId,
@@ -1255,6 +1263,126 @@ export function midHardwarePlan(
   return midHardwarePlacement(box, t, inset, mid, layout, handles, bracing);
 }
 
+/**
+ * The tower's cabinet as cutlist rows, from towerSpec as the 3D view builds it: one shell and one baffle over the sub's
+ * footprint at the cabinet's full height (the sub box, the mid chamber and the horn section), the baffle's mid and horn
+ * cutouts placed up from its bottom edge, the partitions under the mid chamber and the horn section, and the sub
+ * section's braces, laid out in the sub box and so measured from the cabinet's bottom as in a box of its own. With the
+ * arched top the sides stop at the arch's springline, a bent strip makes the top, and the back and baffle take its
+ * curve, which a straight guillotine cut can't make.
+ */
+export function towerCutParts(
+  subBox: Dims3,
+  t: number,
+  inset: number,
+  joint: CornerJoint,
+  horn: TowerHorn,
+  mid: Pick<MidDriver, "size">,
+  extra: {
+    band: number;
+    /** the sub driver's (and its tubes') cutout note */
+    cutNote: string;
+    bracing: BoxBracing | null;
+    hardware?: HardwareCutNotes;
+  },
+): CutPart[] {
+  const spec = towerSpec(subBox, t, horn);
+  const { w: W, d: D } = subBox,
+    H = spec.height,
+    band = extra.band;
+  // the baffle's bottom edge sits a wall (and the slot's band) up from the cabinet's bottom
+  const onBaffle = (y: number) => `${formatInches(y - t - band)}″ up from its bottom edge`;
+  const hc = towerHornCutout(subBox, t, horn);
+  const hornHole =
+    hc.shape === "circle"
+      ? `${formatInches(hc.w)}″ round`
+      : hc.shape === "outline"
+        ? `${formatInches(hc.w)}″ × ${formatInches(hc.h)}″ (trace the mouth's outline)`
+        : `${formatInches(hc.w)}″ × ${formatInches(hc.h)}″, ${formatInches(hc.r)}″ corners`;
+  const cutNote = [
+    `sub ${extra.cutNote}`,
+    `mid ${cutoutNote(DRIVER_CUTOUT_IN[mid.size])}, centered ${onBaffle(spec.midCenter)}`,
+    `horn cutout ${hornHole}, centered ${onBaffle(spec.hornCenter)}`,
+  ].join("; ");
+  const shell = boxParts("sub", W, H, D, t, inset, joint, {
+    band,
+    cutNote,
+    hardware: extra.hardware,
+  }).P;
+  const iw = W - 2 * t,
+    inD = D - inset - BAFFLE_PLY_IN - t;
+  const partitions: CutPart = {
+    box: "sub",
+    part: "partition",
+    qty: spec.partitions.length,
+    a: iw,
+    b: inD,
+    t,
+    note: `level, top faces ${atList(spec.partitions)} up from the bottom (the sub/mid floor, the mid/horn floor); notch the front corners 3/4″ square round the baffle cleats; glue and screw to the sides and back, the baffle to their front edges; seal each airtight`,
+  };
+  const braces = extra.bracing
+    ? braceParts("sub", extra.bracing, { x: iw, y: subBox.h - 2 * t, z: inD }, t)
+    : [];
+  if (!spec.archTop) return [...shell, partitions, ...braces];
+  // the arch: the outer radius is half the cabinet's width, its springline that far below the top
+  const R = W / 2,
+    spring = H - R;
+  const curve = (r: number) =>
+    `arched top, ${formatInches(r)}″ radius: cut the blank square, then the arch with a jigsaw or a router on a circle jig (not a straight guillotine cut)`;
+  const arched = shell.flatMap((p): CutPart[] => {
+    if (p.part === "side")
+      return [
+        {
+          ...p,
+          b: spring,
+          note: [
+            sideJointNote(joint, t, "the bottom edge"),
+            "top edge square, under the arched top's ends",
+            extra.hardware?.side,
+          ]
+            .filter(Boolean)
+            .join("; "),
+        },
+      ];
+    if (p.part === "topBottom") return [{ ...p, part: "bottom", qty: 1 }];
+    if (p.part === "back" || p.part === "baffle")
+      return [{ ...p, note: `${p.note}; ${curve(p.a / 2)}` }];
+    // the cleats: one across the bottom, and the uprights to the springline; glue blocks round the arch
+    if (p.part === "baffleCleat") return [];
+    return [p];
+  });
+  const cleats: CutPart[] = [
+    {
+      box: "sub",
+      part: "baffleCleat",
+      qty: 1,
+      a: 0.75,
+      b: iw,
+      t: BAFFLE_PLY_IN,
+      note: "glue and screw behind the baffle, across the bottom; glue blocks round the arch",
+    },
+    {
+      box: "sub",
+      part: "baffleCleat",
+      qty: 2,
+      a: 0.75,
+      b: spring - t - band - 0.75,
+      t: BAFFLE_PLY_IN,
+      note: "up to the arch's springline",
+    },
+  ];
+  const bent: CutPart = {
+    box: "sub",
+    part: "archTop",
+    qty: 1,
+    a: D,
+    b: Math.PI * (R - t / 2),
+    t,
+    note: `bent over the sides to a ${formatInches(R)}″ outer radius, its length on its centerline: kerf the inside face across it every 1/2″, or laminate bending ply to ${formatInches(t)}″; a curve, so only its blank comes off a straight guillotine cut`,
+  };
+  return [...arched, ...cleats, bent, partitions, ...braces];
+}
+
 export function cutParts({
   sub,
   mid,
@@ -1270,13 +1398,14 @@ export function cutParts({
   subOnly,
   noBraces,
   hardware,
+  horn,
 }: CutPartsConfig): { parts: CutPart[]; vent: string[] } {
   const t = wall,
     all: CutPart[] = [];
   const vent: string[] = [];
   // round tubes: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes)
   const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, inset, sub) : null;
-  const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
+  const subExtra = {
     bracing: noBraces
       ? null
       : subBoxBracing(subBox, t, inset, portStyle, cVent, sub, braceStyle, hardware?.sub),
@@ -1293,8 +1422,14 @@ export function cutParts({
       (kit
         ? `; ${cVent.nt} × ${formatInches(kit.pipe?.odIn ?? cVent.dia)}″ tube holes, rounded over ${formatInches(TUBE_FLARE_RADIUS_IN)}″`
         : ""),
-  });
-  all.push(...s.P);
+  };
+  // the tower's whole cabinet, unless only the sub box's parts are asked for (its volume reads no more)
+  if (layout === "tower" && !subOnly) {
+    if (!horn) throw new Error("the tower's cutlist needs its horn (towerSpec)");
+    all.push(...towerCutParts(subBox, t, inset, joint, horn, mid, subExtra));
+  } else all.push(...boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, subExtra).P);
+  const iw = subBox.w - 2 * t,
+    ih = subBox.h - 2 * t;
   if (portStyle === "slots") {
     const folded = slotFolds(subBox, cVent, t);
     const len = folded ? foldedShelfIn(subBox, cVent.slotH, t) : cVent.len;
@@ -1302,7 +1437,7 @@ export function cutParts({
       box: "sub",
       part: "ductShelf",
       qty: 1,
-      a: s.iw,
+      a: iw,
       b: len,
       t,
       note: "roof of the bottom slot",
@@ -1321,7 +1456,7 @@ export function cutParts({
         box: "sub",
         part: "ductRearWall",
         qty: 1,
-        a: s.iw,
+        a: iw,
         b: foldedRearWallIn(subBox, cVent, t),
         t,
         note: "rear channel, rises up the back",
@@ -1332,7 +1467,7 @@ export function cutParts({
       box: "sub",
       part: "sideDuctWall",
       qty: n,
-      a: s.ih,
+      a: ih,
       b: cVent.len,
       t,
       note: `${formatInches(cVent.throat)}″ throat; 20° chamfer both ends`,
@@ -1566,7 +1701,14 @@ export function ventGeometry(
 
 // Liters of wood inside a box: everything behind the baffle except the shell panels themselves.
 // Window braces keep ~2 in rails, so only their rails count.
-const SHELL: ReadonlySet<CutPartId> = new Set(["side", "topBottom", "back", "baffle"]);
+const SHELL: ReadonlySet<CutPartId> = new Set([
+  "side",
+  "topBottom",
+  "back",
+  "baffle",
+  "partition",
+  "archTop",
+]);
 export function internalWoodLiters(parts: CutPart[], box: CutBoxId) {
   let in3 = 0;
   for (const p of parts) {
@@ -1756,6 +1898,40 @@ export const midWeightLb = (
   braceLb(bracing, wall) +
   hardwareLb +
   MID_FIXINGS_LB;
+/**
+ * The tower's cabinet above its sub box, lb: its mid chamber and horn section (towerSpec), which the tower weighs in
+ * place of midWeightLb's mid box. The shell over them by its outer faces as subWeightLb weighs a box (the sides, the
+ * back, and the flat top or the arch's bent strip), the 3/4″ baffle less the mid's and the horn's cutouts, the
+ * partitions over the sub box (the sub/mid one is the sub box's top in subWeightLb), and MID_FIXINGS_LB. The chamber
+ * has no braces or hardware of its own.
+ */
+export function towerMidWeightLb(
+  subBox: Pick<Dims3, "w" | "d">,
+  wall: number,
+  inset: number,
+  horn: TowerHorn,
+  mid: Pick<MidDriver, "size">,
+) {
+  // what sits over the sub box doesn't depend on the box's height
+  const spec = towerSpec({ w: subBox.w, h: 0 }, wall, horn);
+  const { w: W, d: D } = subBox,
+    ext = spec.extH,
+    R = W / 2;
+  // the front and back over the sub box: a rectangle, or one to the arch's springline and a half disc
+  const face = spec.archTop ? W * (ext - R) + (Math.PI / 2) * R * R : W * ext;
+  const sides = 2 * D * (spec.archTop ? ext - R : ext);
+  const top = spec.archTop ? Math.PI * (R - wall / 2) * D : W * D;
+  const partitions =
+    (spec.partitions.length - 1) * (W - 2 * wall) * (D - inset - BAFFLE_PLY_IN - wall);
+  const cutouts =
+    (Math.PI / 4) * DRIVER_CUTOUT_IN[mid.size] ** 2 + towerHornCutout(subBox, wall, horn).area;
+  return (
+    ((face + sides + top + partitions) * plywoodLbPerSqFt(wall) +
+      (face - cutouts) * plywoodLbPerSqFt(BAFFLE_PLY_IN)) /
+      144 +
+    MID_FIXINGS_LB
+  );
+}
 
 // ---- the sub as the planner computes it ----
 // cfg: { subBox, midDims, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout }

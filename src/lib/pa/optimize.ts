@@ -20,6 +20,7 @@ import {
   subWeightLb,
   ventSpeedLimit,
   midWeightLb,
+  towerMidWeightLb,
   midBraceEstimate,
   midBoxBracing,
   midNetLiters,
@@ -118,6 +119,7 @@ import { panelFor, panelIn, panelNominalNear, savedPanelExactIn } from "../panel
 import { defaultBraceStyle } from "../bracing";
 import { savedStackBraceStyle } from "../../constants/bracing";
 import { PA_OPTIMIZER_PANEL } from "../../constants/optimizerPanels";
+import { towerMidDims, towerSpec } from "./tower";
 
 const r2 = (x: number, q = 0.5) => Math.round(x / q) * q;
 
@@ -352,7 +354,7 @@ export function evaluateDesign(
     horn = byId(HORN_OPTIONS, c.horn);
   if (!sub || !sub.ts || !mid || !mid.ts || !cd || !horn) return null;
   const braceStyle = paBraceStyle(c);
-  const midDims = c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim;
+  const midDims = c.layout === "tower" ? towerMidDims(c.cDim) : c.mDim;
   // boundary: a save from before the slope setting has no orders, and reads as LR24
   const xoLoOrder = savedCrossoverOrder(c.xoLoOrder),
     xoHiOrder = savedCrossoverOrder(c.xoHiOrder);
@@ -393,13 +395,15 @@ export function evaluateDesign(
         : subBoxBracing(c.cDim, c.wall, c.inset, c.portStyle, c.cVent, sub, braceStyle),
     ),
     midLb =
-      midWeightLb(
-        midDims,
-        c.wall,
-        braceEstimate
-          ? midBraceEstimate(midDims, c.wall, c.inset, c.layout, braceStyle)
-          : midBoxBracing(midDims, c.wall, c.inset, mid, c.layout, braceStyle),
-      ) + (mid.lb || 0);
+      (c.layout === "tower"
+        ? towerMidWeightLb(c.cDim, c.wall, c.inset, horn, mid)
+        : midWeightLb(
+            midDims,
+            c.wall,
+            braceEstimate
+              ? midBraceEstimate(midDims, c.wall, c.inset, c.layout, braceStyle)
+              : midBoxBracing(midDims, c.wall, c.inset, mid, c.layout, braceStyle),
+          )) + (mid.lb || 0);
   if (!s.mdl || !ms.mdl) return null; // a vent or box with no geometry has no model to evaluate
   const subMusic = subMusicOutputAt(s.mdl, s.lim, s.AMP_V, c.xoLo, xoLoOrder);
   const hz: Partial<HornHf> = horn.hf || {};
@@ -1862,8 +1866,8 @@ export function boxGeometry(c: PaDesignConfig): PaBoxGeometry {
     horn = byId(HORN_OPTIONS, c.horn);
   return {
     sub: c.cDim,
-    mid: c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim,
-    tower: c.layout === "tower",
+    mid: c.layout === "tower" ? towerMidDims(c.cDim) : c.mDim,
+    tower: c.layout === "tower" && horn ? towerSpec(c.cDim, c.wall, horn) : null,
     horn: horn && horn.size ? { w: horn.size.w, h: horn.size.h } : null,
     subSize: sub ? sub.size : 18,
     midSize: mid ? mid.size : 12,
@@ -1885,7 +1889,7 @@ function card(
     mid = byIdOrThrow(MID_OPTIONS, c.mid, CATALOG_TABLE_NAMES.mids),
     cd = byIdOrThrow(CD_OPTIONS, c.cd, CATALOG_TABLE_NAMES.compressionDrivers),
     horn = byIdOrThrow(HORN_OPTIONS, c.horn, CATALOG_TABLE_NAMES.horns);
-  const midDims = c.layout === "tower" ? { w: c.cDim.w, h: 15.5, d: c.cDim.d } : c.mDim;
+  const midDims = c.layout === "tower" ? towerMidDims(c.cDim) : c.mDim;
   const { parts } = cutParts({
     sub,
     mid,
@@ -1898,6 +1902,7 @@ function card(
     cVent: c.cVent,
     layout: c.layout,
     braceStyle: paBraceStyle(c),
+    horn,
   });
   // the quick packing only: the card asks the worker for the exact count afterwards (build.parts and build.cutlist)
   const sheets = layoutCutlist(parts, cl, { countsOnly: true }).groups.map((g) => ({
