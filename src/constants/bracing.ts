@@ -83,6 +83,17 @@ export const BACK_JOINT_SUMMARY = {
   screwed: "screwed back",
   glued: "glued back",
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
+/** The cutlist's back panel, by its joint: how it goes into the rear rabbet. */
+export const BACK_JOINT_CUT_NOTES = {
+  screwed: "screwed into the rear rabbet, no glue (it comes off): seal it with foam tape",
+  glued: "glued into the rear rabbet",
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
+/** How the tower's partitions meet its back, by the back's joint (their cutlist row). */
+export const BACK_JOINT_PARTITION_NOTES = {
+  screwed:
+    "glue and screw to the sides, the baffle to their front edges; the back screws to their rear edges (foam tape, no glue)",
+  glued: "glue and screw to the sides and back, the baffle to their front edges",
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /** A saved design's back joint: one of the ids, else absent (the default). */
 export const savedBackJoint = (s: unknown) => keysOf(BACK_JOINT_NAMES).find((k) => k === s);
 

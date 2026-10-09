@@ -81,6 +81,9 @@ import {
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import { ELBOW_WORDS } from "../../constants/portStyles";
 import {
+  BACK_JOINT_CUT_NOTES,
+  BACK_JOINT_PARTITION_NOTES,
+  BACK_JOINT_SUMMARY,
   BOX_AXIS_NAMES,
   BRACE_PANEL_NAMES,
   DEFAULT_BACK_JOINT,
@@ -1030,16 +1033,16 @@ export const formatInches = (x: number) => {
 };
 export { formatThickness } from "../panel";
 
-/** The rabbet on a shell panel's rear edge that the back sits in. */
-const rearRabbetNote = (t: number) =>
-  `rabbet ${formatInches(t)} × ${formatInches(t / 2)} on rear edge for the back`;
+/** The rabbet on a shell panel's rear edge that the back sits in, screwed or glued (`back`). */
+const rearRabbetNote = (t: number, back: BackJointId) =>
+  `rabbet ${formatInches(t)} × ${formatInches(t / 2)} on rear edge for the ${BACK_JOINT_SUMMARY[back]}`;
 /** A side's joint at the `edges` it meets the top and bottom on, and its rear rabbet. */
-const sideJointNote = (joint: CornerJoint, t: number, edges: string) =>
+const sideJointNote = (joint: CornerJoint, t: number, edges: string, back: BackJointId) =>
   joint === "rabbet"
-    ? `rabbet ${formatInches(t)} × ${formatInches(t / 2)} ${edges}; ${rearRabbetNote(t)}`
+    ? `rabbet ${formatInches(t)} × ${formatInches(t / 2)} ${edges}; ${rearRabbetNote(t, back)}`
     : joint === "miter"
-      ? `45° on ${edges}; ${rearRabbetNote(t)}`
-      : rearRabbetNote(t);
+      ? `45° on ${edges}; ${rearRabbetNote(t, back)}`
+      : rearRabbetNote(t, back);
 
 export function boxParts(
   label: CutBoxId,
@@ -1055,13 +1058,16 @@ export function boxParts(
     bracing?: BoxBracing | null;
     /** the hardware's cutout notes, by panel (hardwareCutNotes) */
     hardware?: HardwareCutNotes;
+    /** how the back goes on; absent: screwed (`DEFAULT_BACK_JOINT`) */
+    back?: BackJointId;
   } = {},
 ) {
   const BT = 0.75,
     P: CutPart[] = [];
+  const back = extra.back ?? DEFAULT_BACK_JOINT;
   const topW = joint === "butt" ? W - 2 * t : joint === "rabbet" ? W - t : W;
-  const rearNote = rearRabbetNote(t);
-  const sideNote = sideJointNote(joint, t, "top and bottom edges");
+  const rearNote = rearRabbetNote(t, back);
+  const sideNote = sideJointNote(joint, t, "top and bottom edges", back);
   const topNote = joint === "miter" ? `45° on both ends; ${rearNote}` : rearNote;
   const hw = extra.hardware ?? {};
   const withNote = (note: string, more: string | undefined) => (more ? `${note}; ${more}` : note);
@@ -1082,7 +1088,7 @@ export function boxParts(
     a: W - t,
     b: H - t,
     t,
-    note: withNote("sits in the rear rabbet", hw.back),
+    note: withNote(BACK_JOINT_CUT_NOTES[back], hw.back),
   });
   const iw = W - 2 * t,
     ih = H - 2 * t,
@@ -1389,9 +1395,12 @@ export function towerCutParts(
     cutNote: string;
     bracing: BoxBracing | null;
     hardware?: HardwareCutNotes;
+    /** how the back goes on (one tall back over the sub, the mid chamber and the horn section); absent: screwed */
+    back?: BackJointId;
   },
 ): CutPart[] {
   const spec = towerSpec(subBox, t, horn);
+  const back = extra.back ?? DEFAULT_BACK_JOINT;
   const { w: W, d: D } = subBox,
     H = spec.height,
     band = extra.band;
@@ -1413,6 +1422,7 @@ export function towerCutParts(
     band,
     cutNote,
     hardware: extra.hardware,
+    back,
   }).P;
   const iw = W - 2 * t,
     inD = D - inset - BAFFLE_PLY_IN - t;
@@ -1423,7 +1433,7 @@ export function towerCutParts(
     a: iw,
     b: inD,
     t,
-    note: `level, top faces ${atList(spec.partitions)} up from the bottom (the sub/mid floor, the mid/horn floor); notch the front corners 3/4″ square round the baffle cleats; glue and screw to the sides and back, the baffle to their front edges; seal each airtight`,
+    note: `level, top faces ${atList(spec.partitions)} up from the bottom (the sub/mid floor, the mid/horn floor); notch the front corners 3/4″ square round the baffle cleats; ${BACK_JOINT_PARTITION_NOTES[back]}; seal each airtight`,
   };
   const braces = extra.bracing
     ? braceParts("sub", extra.bracing, { x: iw, y: subBox.h - 2 * t, z: inD }, t)
@@ -1441,7 +1451,7 @@ export function towerCutParts(
           ...p,
           b: spring,
           note: [
-            sideJointNote(joint, t, "the bottom edge"),
+            sideJointNote(joint, t, "the bottom edge", back),
             "top edge square, under the arched top's ends",
             extra.hardware?.side,
           ]
@@ -1483,7 +1493,7 @@ export function towerCutParts(
     a: D,
     b: Math.PI * (R - t / 2),
     t,
-    note: `bent over the sides to a ${formatInches(R)}″ outer radius, its length on its centerline: kerf the inside face across it every 1/2″, or laminate bending ply to ${formatInches(t)}″; a curve, so only its blank comes off a straight guillotine cut; ${rearRabbetNote(t)}'s arch`,
+    note: `bent over the sides to a ${formatInches(R)}″ outer radius, its length on its centerline: kerf the inside face across it every 1/2″, or laminate bending ply to ${formatInches(t)}″; a curve, so only its blank comes off a straight guillotine cut; ${rearRabbetNote(t, back)}'s arch`,
   };
   return [...arched, ...cleats, bent, partitions, ...braces];
 }
@@ -1543,6 +1553,7 @@ export function cutParts({
         )
       : undefined,
     band: portStyle === "slots" ? cVent.slotH + t : 0,
+    back: backJoint,
     cutNote:
       cutoutNote(DRIVER_CUTOUT_IN[sub.size]) +
       (kit
@@ -1625,6 +1636,7 @@ export function cutParts({
       hardware &&
       midHardwarePlan(midDims, t, inset, mid, layout, braceStyle, hardware.mid, backJoint);
     const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
+      back: backJoint,
       bracing: midBoxBracing(midDims, t, inset, mid, layout, braceStyle, hardware?.mid, backJoint),
       hardware: midPlan ? hardwareCutNotes(midPlan, midDims, t) : undefined,
       cutNote: cutoutNote(DRIVER_CUTOUT_IN[mid.size]),
