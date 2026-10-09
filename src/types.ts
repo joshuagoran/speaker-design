@@ -893,6 +893,14 @@ export interface HifiMetrics {
   lb: number;
 }
 
+/**
+ * The metrics with whether the price is whole: false when a part has no US price (a coaxial's), so `price` sums only
+ * the known ones and the real one is higher (`UI_TEXT.partialPriceMark`), as the PA side's `priceKnown`.
+ */
+export interface HifiPricedMetrics extends HifiMetrics {
+  priceKnown: boolean;
+}
+
 /** The Hi-fi page's design and room, as the planner holds it. */
 export interface HifiDesignState {
   woofer: HifiWoofer;
@@ -975,6 +983,8 @@ export interface HifiDesign {
   /** the same distance in feet, as the page shows it */
   seatDistanceFt: number;
   pairCostUsd: number;
+  /** false when a part in it has no US price: `pairCostUsd` sums the known ones (`UI_TEXT.partialPriceMark`) */
+  pairCostKnown: boolean;
   /** null when the woofer can't be modeled (its parameters aren't published) */
   speakerModel: HifiSpeakerModel | null;
 }
@@ -1050,7 +1060,8 @@ export interface SavedHifiConfig
 
 /** A card's change from the current design. */
 export interface HifiMetricsDelta {
-  price: number;
+  /** null when either price isn't whole (`HifiPricedMetrics.priceKnown`): no difference can be told */
+  price: number | null;
   lb: number;
   level: number;
   f3: number;
@@ -1068,6 +1079,8 @@ export interface HifiOptimizerCard {
   tweeter: string;
   config: HifiCardConfig;
   metrics: HifiMetrics;
+  /** false when a part has no US price: `metrics.price` sums the known ones (`HifiPricedMetrics`) */
+  priceKnown: boolean;
   delta: HifiMetricsDelta | null;
   /** the warnings on this design (the checks it passes with a warning) */
   warnings: HifiChip[];
@@ -1091,7 +1104,7 @@ export interface HifiOptimizerResult {
   /** what fails in your design; empty when it passes or when no goal was given */
   curProblems: string[];
   // the fields below are absent when no goal was given
-  cur?: HifiMetrics | null;
+  cur?: HifiPricedMetrics | null;
   curCurve?: [number, number][] | null;
   goalMissing?: string | null;
 }

@@ -43,12 +43,9 @@ import { throttledProgress } from "../optimizer/progress";
 import {
   passiveRadiatorMassMax,
   ownGuideCfg,
-  HIFI_WOOFERS,
-  HIFI_TWEETERS,
   HIFI_PASSIVES,
   HIFI_COAXES,
-  HIFI_COAX_WOOFERS,
-  HIFI_COAX_TWEETERS,
+  hifiDriverById,
 } from "../data";
 import type {
   ChangeName,
@@ -61,6 +58,7 @@ import type {
   HifiGoal,
   HifiLockKey,
   HifiMetrics,
+  HifiPricedMetrics,
   HifiOptimizedField,
   HifiOptimizerCurrent,
   HifiOptimizerInput,
@@ -94,6 +92,7 @@ import {
   CARD_WHY,
   CHANGE_NAMES,
   DESIGN_PROBLEM_TEXT,
+  PRICE_UNKNOWN_TEXT,
   GOAL_SHORT_NAMES,
   SHARED_GOAL_NAMES,
 } from "../../constants/optimizerText";
@@ -185,7 +184,7 @@ interface PoolEntry {
   c: SearchConfig;
   sys: HifiSystem;
   chips: HifiChip[];
-  m: HifiMetrics;
+  m: HifiPricedMetrics;
 }
 
 // the PA planner's goals, in its order
@@ -236,14 +235,15 @@ export const HIFI_OPTIMIZED_FIELDS: readonly HifiOptimizedField[] = [
 export const HIFI_LOCK_KEYS: HifiLockKey[] = ["woofer", "tweeter", "box", "xo", "wAmpW", "tAmpW"];
 
 // a card's label must be true against your design by at least this much (PA: $ any, 3 lb, 2 Hz, 1 dB; the boxes are smaller here)
-const beats: Record<HifiGoal, (x: HifiMetrics, y: HifiMetrics) => boolean> = {
-  cheaper: (x, y) => x.price < y.price,
+// (a price that isn't whole can't be told cheaper or dearer: such a design never beats another on price, nor another it)
+const beats: Record<HifiGoal, (x: HifiPricedMetrics, y: HifiPricedMetrics) => boolean> = {
+  cheaper: (x, y) => x.priceKnown && y.priceKnown && x.price < y.price,
   lighter: (x, y) => x.lb <= y.lb - 1,
   lower: (x, y) => x.f3 <= y.f3 - 2,
   louder: (x, y) => x.level >= y.level + 1,
 };
-const obj: Record<HifiGoal, (x: HifiMetrics) => number> = {
-  cheaper: (x) => x.price,
+const obj: Record<HifiGoal, (x: HifiPricedMetrics) => number> = {
+  cheaper: (x) => (x.priceKnown ? x.price : Infinity),
   lighter: (x) => x.lb,
   lower: (x) => x.f3,
   louder: (x) => -x.level,
@@ -418,20 +418,17 @@ export function hifiSearchSpace(
   }
   // your drivers: from the lists the search uses, else from the full tables (a budget or size filter doesn't remove them
   // from your design), else from the coaxials
-  const W0 =
-      byId(woofers, cur.woofer) ??
-      byId(HIFI_WOOFERS, cur.woofer) ??
-      byId(HIFI_COAX_WOOFERS, cur.woofer),
-    T0 =
-      byId(tweeters, cur.tweeter) ??
-      byId(HIFI_TWEETERS, cur.tweeter) ??
-      byId(HIFI_COAX_TWEETERS, cur.tweeter);
+  const W0 = byId(woofers, cur.woofer) ?? hifiDriverById("woofer", cur.woofer),
+    T0 = byId(tweeters, cur.tweeter) ?? hifiDriverById("tweeter", cur.tweeter);
   if (!W0 || !T0) return { cur, W0, T0, space: null };
-  // a coaxial design searches the coaxials, each with its own HF only (one with no HF data, or no US price, enters only
-  // as yours); any other design the woofers and tweeters offered, never a coaxial
+  // a coaxial design searches the coaxials, each with its own HF only (one with no HF data, an HF figure unpublished
+  // or no US price enters only as yours: the search can't check or price it); any other design the woofers and
+  // tweeters offered, never a coaxial
   const coax = isCoax(W0, T0);
-  const coaxes = HIFI_COAXES.flatMap(({ woofer, tweeter }) =>
-    tweeter && (woofer.price != null || woofer.id === W0.id) ? [{ woofer, tweeter }] : [],
+  const coaxes = HIFI_COAXES.flatMap(({ woofer, tweeter, gaps }) =>
+    tweeter && ((woofer.price != null && !gaps.length) || woofer.id === W0.id)
+      ? [{ woofer, tweeter }]
+      : [],
   );
   const coaxLocked = coax && (!!locks.woofer || !!locks.tweeter);
   const dl: NonNullable<typeof locks.dim> = locks.dim || {};
@@ -443,6 +440,8 @@ export function hifiSearchSpace(
     c && c.box === "radiator" && c.pr && c.pr.drv ? c.pr.n * (c.pr.drv.price || 0) : 0;
   const priceOf = (w: HifiWoofer, t: HifiTweeter, c: HifiConfig) =>
     2 * ((w.price || 0) + (t.price || 0) + (needsWaveguide(t) ? gp : 0) + prPrice(c)); // a ribbon's own waveguide is in its price
+  // whether that price is whole: a woofer (a coaxial) without a US price leaves it short
+  const priceKnownOf = (w: HifiWoofer) => w.price != null;
   const guideOf = (t: HifiTweeter) => ownGuideCfg(t) || (needsWaveguide(t) ? guide : null);
   // unlocked amps: searched at the top of their sliders, trimmed per card at the end (a passive design has no tweeter
   // amp: its `tAmpW` is passed through as it is)
@@ -481,9 +480,13 @@ export function hifiSearchSpace(
     const tt = tweeterCfg(t);
     return tt ? [{ tt, onTop: !!guideOf(t)?.freestanding }] : [];
   });
+  // a coaxial's woofer is held with its own HF only
+  const heldByCoax = new Map(held.map((h) => [h.tt.id, [h]]));
+  /** The searched tweeters a woofer can play with: every one, or a coaxial's own HF. */
+  const heldFor = (w: HifiWoofer) => (coax ? (heldByCoax.get(w.id) ?? []) : held);
   /** Whether some searched tweeter fits this box (the cards' check, hifiScoreDesigns, rules out the rest). */
   const holdsSome = (w: HifiWoofer, cfg: Parameters<typeof boxHolds>[3]) =>
-    held.some(({ tt, onTop }) => boxHolds(w, tt, onTop, cfg));
+    heldFor(w).some(({ tt, onTop }) => boxHolds(w, tt, onTop, cfg));
   // a design's config from its box fields (the rest is yours, at the amps the search uses)
   const cfgOf = (box: HifiGridBox): SearchConfig => ({
     ...cur,
@@ -558,7 +561,7 @@ export function hifiSearchSpace(
     // widths from the page's rule (the narrowest box any searched tweeter fits) where it is wider than the search's own
     // start; heights as before, each box keeping only the vents a searched tweeter fits over
     const pageW = Math.min(
-      ...held.map(
+      ...heldFor(w).map(
         ({ tt, onTop }) =>
           hifiBoxMin({
             woofer: w,
@@ -639,6 +642,7 @@ export function hifiSearchSpace(
       tweeterCfg,
       guideOf,
       priceOf,
+      priceKnownOf,
       amps,
       wList,
       tList,
@@ -741,8 +745,19 @@ export function optimizeHifiSpeaker(
       goalMissing: null,
       stats: { evaluated: 0, ms: Date.now() - t0 },
     };
-  const { curPrMissing, coax, tweeterCfg, guideOf, priceOf, amps, wList, tList, xos, cfgOf } =
-    space;
+  const {
+    curPrMissing,
+    coax,
+    tweeterCfg,
+    guideOf,
+    priceOf,
+    priceKnownOf,
+    amps,
+    wList,
+    tList,
+    xos,
+    cfgOf,
+  } = space;
   let evals = 0;
   const run = (w: HifiWoofer, t: HifiTweeter, c: SearchConfig): RunResult | null => {
     evals++;
@@ -756,12 +771,13 @@ export function optimizeHifiSpeaker(
     r: Pick<RunResult, "sys" | "cfg">,
     w: HifiWoofer,
     t: HifiTweeter,
-  ): HifiMetrics => ({
+  ): HifiPricedMetrics => ({
     gross: r.sys.gross,
     f3: r.sys.f3,
     price: priceOf(w, t, r.cfg),
     level: levelOf(r.sys),
     lb: r.sys.lb,
+    priceKnown: priceKnownOf(w),
   });
 
   // a radiator box whose radiator isn't in any table has no model: say so instead of scoring it as if it had none
@@ -832,45 +848,51 @@ export function optimizeHifiSpeaker(
   // a design that can be a card: every one while your design fails (the fix and the closest are drawn from all), else
   // one that keeps the goals and beats yours on all of them (the first card, the smallest change) or keeps an
   // alternative's goal and beats yours on its axis (that alternative); the rest never reach the card selection
-  const canBeCard = (m: HifiMetrics) =>
+  const canBeCard = (m: HifiPricedMetrics) =>
     curFails ||
     !curM ||
     (meets(m) && goals.every((g) => beats[g](m, curM))) ||
     altAxes.some((g) => (!K || gapTo(K[g], m) === 0) && beats[g](m, curM));
   // two scratch metric records, refilled per call (the card selection compares at most two designs at once)
-  const va: HifiMetrics = { gross: 0, f3: 0, price: 0, level: 0, lb: 0 },
-    vb: HifiMetrics = { gross: 0, f3: 0, price: 0, level: 0, lb: 0 };
+  const va: HifiPricedMetrics = { gross: 0, f3: 0, price: 0, level: 0, lb: 0, priceKnown: true },
+    vb: HifiPricedMetrics = { gross: 0, f3: 0, price: 0, level: 0, lb: 0, priceKnown: true };
   // every design that passes and can be a card: a box at a crossover with a tweeter, its woofer amp and level (index
   // arrays; metrics read through them)
   const dRec: number[] = [],
     dTw: number[] = [],
     dPrice: number[] = [],
+    dKnown: boolean[] = [],
     dLb: number[] = [],
     dLevel: number[] = [],
     dWamp: number[] = [];
   const seatDb = 20 * Math.log10(seat) - 3,
     V0 = ampVoltage(amps.wAmpW);
-  let lastBi = -1;
+  let lastBi = -1,
+    bKnown = true,
+    bTws: readonly number[] = [];
   const bPrice: number[] = [],
     bLb: number[] = [],
     bFits: boolean[] = [];
+  // the tweeters a box's woofer plays with: every one, or a coaxial's own HF (by the woofer's id)
+  const allTws = tws.map((_, ti) => ti);
+  const ownHf = new Map(tws.map((x, ti) => [x.t.id, [ti]]));
   for (let ri = 0; ri < recs.length; ri++) {
     const r = recs[ri],
       e = boxList[r.bi];
     if (r.bi !== lastBi) {
       lastBi = r.bi;
-      for (let ti = 0; ti < tws.length; ti++) {
+      bKnown = priceKnownOf(e.w);
+      bTws = coax ? (ownHf.get(e.w.id) ?? []) : allTws;
+      for (const ti of bTws) {
         const x = tws[ti];
         bPrice[ti] = priceOf(e.w, x.t, e.cfg);
         bLb[ti] = hifiWeightLb(e.w, x.tt, e.cfg, e.pr);
         bFits[ti] = boxHolds(e.w, x.tt, x.onTop, e.cfg);
       }
     }
-    for (let ti = 0; ti < tws.length; ti++) {
+    for (const ti of bTws) {
       const x = tws[ti];
       if (!bFits[ti] || !x.xoOk[r.xi]) continue;
-      // a coaxial's woofer plays with its own HF only
-      if (coax && x.t.id !== e.w.id) continue;
       if (input.budget && bPrice[ti] > input.budget + 1e-9) continue;
       // the tweeter runs out first at the searched power: with the woofer amp free, the woofer comes down (slider
       // steps) until the tweeter keeps up, so the tweeter caps the level instead of ruling the design out. Below the
@@ -896,20 +918,23 @@ export function optimizeHifiSpeaker(
       va.price = bPrice[ti];
       va.level = wLevel - seatDb;
       va.lb = bLb[ti];
+      va.priceKnown = bKnown;
       if (!canBeCard(va)) continue;
       dRec.push(ri);
       dTw.push(ti);
       dPrice.push(va.price);
+      dKnown.push(bKnown);
       dLb.push(va.lb);
       dLevel.push(va.level);
       dWamp.push(wAmpW);
     }
   }
-  const metricsAt = (i: number, o: HifiMetrics = va): HifiMetrics => {
+  const metricsAt = (i: number, o: HifiPricedMetrics = va): HifiPricedMetrics => {
     const r = recs[dRec[i]];
     o.gross = boxList[r.bi].gross;
     o.f3 = r.f3;
     o.price = dPrice[i];
+    o.priceKnown = dKnown[i];
     o.level = dLevel[i];
     o.lb = dLb[i];
     return o;
@@ -1067,15 +1092,18 @@ export function optimizeHifiSpeaker(
     curProblems,
     curCurve: curR ? curveOf(curR.sys) : null,
     goalMissing:
-      picked.fixMisses && K && done[0]
-        ? outOfReachNotice(
-            goals.map((g) => K[g]),
-            { db: done[0].m.level, f3: done[0].m.f3 },
-            { level: "at the seat", f3: "an in-room F3", both: "level and bass" },
-          )
-        : picked.goalMissing
-          ? `Nothing ${goals.map((g) => g).join(" and ")} than your design passes the checks.`
-          : null,
+      // your design's price isn't whole: nothing can be told cheaper than it
+      curM && !curM.priceKnown && goals.includes("cheaper")
+        ? PRICE_UNKNOWN_TEXT.cheaper
+        : picked.fixMisses && K && done[0]
+          ? outOfReachNotice(
+              goals.map((g) => K[g]),
+              { db: done[0].m.level, f3: done[0].m.f3 },
+              { level: "at the seat", f3: "an in-room F3", both: "level and bass" },
+            )
+          : picked.goalMissing
+            ? `Nothing ${goals.map((g) => g).join(" and ")} than your design passes the checks.`
+            : null,
     cards: done.map((k) => ({
       label: k.label,
       why: k.why,
@@ -1097,10 +1125,12 @@ export function optimizeHifiSpeaker(
         wAmpW: k.c.wAmpW,
         tAmpW: k.c.tAmpW,
       },
-      metrics: k.m,
+      // the metrics without the price flag, which the card carries beside them
+      metrics: { gross: k.m.gross, f3: k.m.f3, price: k.m.price, level: k.m.level, lb: k.m.lb },
+      priceKnown: k.m.priceKnown,
       delta: curM
         ? {
-            price: k.m.price - curM.price,
+            price: k.m.priceKnown && curM.priceKnown ? k.m.price - curM.price : null,
             lb: k.m.lb - curM.lb,
             level: k.m.level - curM.level,
             f3: k.m.f3 - curM.f3,

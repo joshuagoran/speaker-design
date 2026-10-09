@@ -28,20 +28,22 @@ import {
 } from "../src/lib/hifi/hifi";
 import { hifiBoxMin } from "../src/lib/hifi/boxLayout";
 import { hifiSearchSpace, optimizeHifiSpeaker } from "../src/lib/hifi/optimize";
-import { CHANGE_NAMES } from "../src/constants/optimizerText";
+import { CHANGE_NAMES, PRICE_UNKNOWN_TEXT } from "../src/constants/optimizerText";
+import { useHifiPlanner, type HifiPlanner } from "../src/pages/hifi/useHifiPlanner";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import { HIFI_BOX_LAYOUT } from "../src/constants/hifiLayout";
 import { HIFI_COAX_DRIVE } from "../src/constants/hifiEngine";
 import { COAX_GAP, COAXIAL_TWEETER_TYPE } from "../src/constants/coax";
 import { byIdOrThrow } from "../src/lib/tables";
-import { chipOf } from "./helpers";
+import { chipOf, findChip } from "./helpers";
 import type {
   CoaxParts,
   HifiDesignState,
   HifiOptimizerCurrent,
   HifiTweeter,
   ListenerGeometry,
+  SavedHifiConfig,
 } from "../src/types";
 
 /** A coaxial with its HF section, by id. */
@@ -303,9 +305,12 @@ describe("the optimizer offers coaxials only to a coaxial design", () => {
     const { space } = hifiSearchSpace({ ...input, cur: coaxCur }, { withGrid: false });
     if (!space) throw new Error("no search space");
     expect(space.coax).toBe(true);
-    const expected = HIFI_COAXES.filter((c) => c.tweeter && c.woofer.price != null).map(
-      (c) => c.woofer.id,
-    );
+    // with an HF section, a US price and every HF figure published (yours, B&C 10CXN64, is all three)
+    const expected = HIFI_COAXES.filter(
+      (c) => c.tweeter && c.woofer.price != null && !c.gaps.length,
+    ).map((c) => c.woofer.id);
+    expect(expected).toContain(B10.woofer.id);
+    expect(expected.length).toBeLessThan(HIFI_COAXES.length);
     expect(space.wList.map((w) => w.id)).toEqual(expected);
     expect(space.tList.map((t) => t.id)).toEqual(expected);
     // a lock on either keeps yours
@@ -332,5 +337,161 @@ describe("the optimizer offers coaxials only to a coaxial design", () => {
     }
     // and the design itself models with the coincident layout
     expect(hifiSystem(B10.woofer, B10.tweeter, coaxCur)?.lay.coax).toBe(true);
+  });
+});
+
+/** A coaxial design as the optimizer takes it: `c` in the box the tests use, passive, at its HF's minimum crossover. */
+const optimizerCur = (c: CoaxParts & { tweeter: HifiTweeter }): HifiOptimizerCurrent => ({
+  woofer: c.woofer.id,
+  tweeter: c.tweeter.id,
+  box: "vented",
+  dim: { w: 12, h: 16, d: 11 },
+  wall: 0.75,
+  port: { n: 1, dia: 3, len: 4 },
+  xo: c.tweeter.hf.minXo ?? DEFAULT_HIFI.crossoverHz,
+  order: 4,
+  wAmpW: 300,
+  tAmpW: 50,
+  drive: HIFI_COAX_DRIVE,
+  guide: ownGuideCfg(c.tweeter),
+});
+const optimizerLists = { woofers: HIFI_WOOFERS, tweeters: HIFI_TWEETERS, seatM: 2.6 };
+
+describe("a coaxial without a US price", () => {
+  const unpriced = HIFI_COAXES.find((c) => c.woofer.price == null && c.tweeter && !c.gaps.length);
+  if (!unpriced?.tweeter) throw new Error("no unpriced coaxial with an HF section");
+  const U = { ...unpriced, tweeter: unpriced.tweeter };
+
+  test("the page's pair cost says it isn't whole", () => {
+    expect(deriveHifiDesign(coaxState(U)).pairCostKnown).toBe(false);
+    expect(deriveHifiDesign(coaxState()).pairCostKnown).toBe(true);
+    expect(deriveHifiDesign(DEFAULT_HIFI).pairCostKnown).toBe(true);
+  });
+
+  test("as your design: no card is called cheaper, no price difference is shown, and the notice says why", () => {
+    const res = optimizeHifiSpeaker({
+      ...optimizerLists,
+      cur: optimizerCur(U),
+      goals: ["cheaper"],
+    });
+    expect(res.cur?.priceKnown).toBe(false);
+    expect(res.goalMissing).toBe(PRICE_UNKNOWN_TEXT.cheaper);
+    for (const k of res.cards) {
+      expect(k.slot).not.toBe("cheaper");
+      expect(k.delta?.price ?? null).toBeNull();
+      // only your own coaxial can carry the unknown price
+      expect(k.priceKnown).toBe(k.woofer !== U.woofer.id);
+    }
+  });
+
+  test("a priced design's cards keep their price differences", () => {
+    const res = optimizeHifiSpeaker({
+      ...optimizerLists,
+      cur: optimizerCur(B10),
+      goals: ["louder"],
+    });
+    expect(res.cur?.priceKnown).toBe(true);
+    expect(res.cards.length).toBeGreaterThan(0);
+    for (const k of res.cards) {
+      expect(k.priceKnown).toBe(true);
+      expect(typeof k.delta?.price).toBe("number");
+    }
+  });
+});
+
+describe("a coaxial with an HF figure unpublished", () => {
+  const gapped = HIFI_COAXES.find((c) => c.tweeter && c.gaps.length);
+  if (!gapped?.tweeter) throw new Error("no coaxial with an HF gap");
+  const G = { ...gapped, tweeter: gapped.tweeter };
+
+  test("its design carries a warning naming the gap", () => {
+    const d = deriveHifiDesign(coaxState(G));
+    const sys = d.speakerModel?.speakerSystem;
+    if (!sys) throw new Error("the coaxial can't be modeled");
+    chipOf(
+      hifiChips(sys, G.woofer, d.tweeterWithWaveguide, d.speakerConfig),
+      "hifiCoaxGaps",
+      "warn",
+    );
+    // a coaxial with every figure has none
+    const full = deriveHifiDesign(coaxState());
+    const fullSys = full.speakerModel?.speakerSystem;
+    if (!fullSys) throw new Error("the coaxial can't be modeled");
+    expect(
+      findChip(
+        hifiChips(fullSys, B10.woofer, full.tweeterWithWaveguide, full.speakerConfig),
+        "hifiCoaxGaps",
+      ),
+    ).toBeUndefined();
+  });
+
+  test("the optimizer offers it only as your own design", () => {
+    const other = hifiSearchSpace(
+      { ...optimizerLists, cur: optimizerCur(B10) },
+      { withGrid: false },
+    );
+    expect(other.space?.wList.map((w) => w.id)).not.toContain(G.woofer.id);
+    const own = hifiSearchSpace({ ...optimizerLists, cur: optimizerCur(G) }, { withGrid: false });
+    expect(own.space?.wList.map((w) => w.id)).toContain(G.woofer.id);
+  });
+});
+
+/** Renders the planner once per step, each step's state updates rendering it again for the next. */
+function runSteps(steps: ((hook: HifiPlanner) => void)[]) {
+  let done = 0;
+  function Probe() {
+    const hook = useHifiPlanner();
+    if (done < steps.length) steps[done++](hook);
+    return null;
+  }
+  renderToString(createElement(Probe));
+  expect(done).toBe(steps.length);
+}
+
+describe("the page takes a coaxial from a card or a save", () => {
+  test("applying a coaxial card sets the coaxial as woofer and tweeter", () => {
+    const res = optimizeHifiSpeaker({
+      ...optimizerLists,
+      cur: optimizerCur(B10),
+      goals: ["louder"],
+    });
+    const card = res.cards[0];
+    if (!card) throw new Error("no card");
+    runSteps([
+      (h) => h.applyDesign(card.config),
+      (h) => {
+        expect(h.woofer.id).toBe(card.woofer);
+        expect(h.tweeter.id).toBe(card.tweeter);
+        expect(isCoax(h.woofer, h.tweeter)).toBe(true);
+        expect(h.speakerModel?.speakerSystem.lay.coax).toBe(true);
+      },
+    ]);
+  });
+
+  test("a coaxial design saves under its name once and restores whole", () => {
+    let saved: SavedHifiConfig | undefined;
+    runSteps([
+      (h) => {
+        h.setWoofer(B10.woofer);
+        h.setTweeter(B10.tweeter);
+      },
+      (h) => {
+        saved = h.savedConfigSnapshot();
+        expect(saved.woofer).toBe(B10.woofer.id);
+        expect(saved.tweeter).toBe(B10.tweeter.id);
+        expect(saved.summary.split(B10.woofer.name)).toHaveLength(2);
+      },
+    ]);
+    runSteps([
+      (h) => {
+        expect(h.woofer.id).toBe(DEFAULT_HIFI.woofer.id);
+        if (saved) h.restoreSavedConfig(saved);
+      },
+      (h) => {
+        expect(h.woofer).toBe(B10.woofer);
+        expect(h.tweeter).toBe(B10.tweeter);
+        expect(h.speakerModel?.speakerSystem.lay.coax).toBe(true);
+      },
+    ]);
   });
 });

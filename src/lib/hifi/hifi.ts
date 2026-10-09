@@ -69,6 +69,8 @@ import { crossoverSlopeName } from "../../constants/crossovers";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
 import { xmaxBandCurves } from "../xmax";
+import { coaxGaps } from "../data";
+import { COAX_GAP_NAMES } from "../../constants/coax";
 
 const C = 343,
   IN = 0.0254;
@@ -1345,11 +1347,12 @@ export function hifiChips(
     ka = ((2 * Math.PI * xo) / C) * a;
   const beam = ka <= 2.2 ? 180 : (2 * Math.asin(2.2 / ka) * 180) / Math.PI;
   const tCov = cfg.guide ? cfg.guide.covH : 160;
+  const coax = isCoax(w, t);
   if (beam < Math.min(tCov, 180) * 0.75)
     F.push([
       "warn",
       "Woofer narrower than the tweeter at the crossover",
-      `About ${Math.round(beam)}° against the tweeter's ${cfg.guide ? tCov + "°" : "wide dome"}: an off-axis dip below ${xo} Hz. Use a lower crossover.`,
+      `About ${Math.round(beam)}° against the tweeter's ${cfg.guide ? tCov + "°" : coax ? "unpublished coverage, taken as wide" : "wide dome"}: an off-axis dip below ${xo} Hz. Use a lower crossover.`,
       "hifiDispersion",
     ]);
   else
@@ -1366,6 +1369,16 @@ export function hifiChips(
       MIN_XO_TITLE[minXo.part],
       `${xo} Hz, below the ${minXo.hz} Hz recommended for the ${minXo.name}.`,
       "hifiTweeterMinXo",
+    ]);
+  // a coaxial whose maker leaves out an HF figure: the checks above can't read it (the optimizer offers such a coaxial
+  // only as your own design)
+  const gaps = coax ? coaxGaps(t.id) : [];
+  if (gaps.length)
+    F.push([
+      "warn",
+      "HF figures not published",
+      `The maker publishes no ${gaps.map((g) => COAX_GAP_NAMES[g]).join(" or ")} for the ${t.name}: check its data before setting the crossover.`,
+      "hifiCoaxGaps",
     ]);
   if (nearTweeterResonance(t, xo))
     F.push([

@@ -64,7 +64,7 @@ export function HifiFront({
       viewBox={`-4 -4 ${W + 8} ${H + 8}`}
       className={small ? "w-full h-auto max-h-40" : "h-40 w-auto"}
       role="img"
-      aria-label={`Front view, ${dim.w} × ${dim.h}″${lay.onTop ? ", waveguide on top" : ""}${lay.coax ? ", coaxial" : ""}${roundoverIn ? `, ${roundoverIn}″ roundover` : ""}${tweeterOffsetIn && !lay.onTop ? `, tweeter ${Math.abs(tweeterOffsetIn)}″ ${tweeterOffsetIn > 0 ? "inward" : "outward"}` : ""}`}
+      aria-label={`Front view, ${dim.w} × ${dim.h}″${lay.onTop ? ", waveguide on top" : ""}${lay.coax ? ", coaxial" : ""}${roundoverIn ? `, ${roundoverIn}″ roundover` : ""}${tweeterOffsetIn && !lay.onTop && !lay.coax ? `, tweeter ${Math.abs(tweeterOffsetIn)}″ ${tweeterOffsetIn > 0 ? "inward" : "outward"}` : ""}`}
     >
       <rect
         x={bx}

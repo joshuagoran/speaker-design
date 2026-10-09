@@ -29,7 +29,7 @@ import {
   panelWeightLb,
 } from "../src/lib/hifi/hifi";
 import { FILL_OPTIONS, coaxParts, ownGuideCfg } from "../src/lib/data";
-import { DEFAULT_FILL } from "../src/lib/defaults";
+import { DEFAULT_FILL, DEFAULT_HIFI } from "../src/lib/defaults";
 import { HIFI_COAX_DRIVE } from "../src/constants/hifiEngine";
 import { COAX_GAP } from "../src/constants/coax";
 import type {
@@ -55,7 +55,7 @@ const FILL_WALL_IN = 0.5;
 /** Fills' panel weight, lb/ft² (lib/pa/calc fillSystem: ½″ birch). */
 const FILL_PANEL_LB_PER_SQFT = 1.6;
 /** The crossover a coaxial is run at: its recommended minimum, else the Hi-fi page's default. */
-const XO_FALLBACK_HZ = 2000;
+const XO_FALLBACK_HZ = DEFAULT_HIFI.crossoverHz;
 
 /** The same design in the Hi-fi engine: ½″ ply, the Fills high-pass, amp and port limit, passive, no EQ or room. */
 function hifiCfg(f: FillSystemConfig, t: HifiTweeter | null): HifiConfig {
