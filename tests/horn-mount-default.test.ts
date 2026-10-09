@@ -2,7 +2,8 @@
 // every mesh's name, geometry, place and color. The scenes the plate doesn't touch (a horn on its throat adapter's
 // L-bracket, and a horn and driver the plate can't hold, which keep the clamped L-bracket) keep the hashes made on main
 // before the horn mount (9a26fa3); the scenes that draw the plate were made when the plate replaced the clamped
-// L-bracket. A deliberate change to the scene rewrites them:
+// L-bracket. All were rewritten when the rib planner's braces, ribs and slot fins changed (the horns, mounts and
+// cabinets hash the same with those meshes left out). A deliberate change to the scene rewrites them:
 //   SCENE_HASH_OUT=path vp test --run tests/horn-mount-default.test.ts   (writes the current hashes as JSON)
 import { expect, test } from "vite-plus/test";
 import fs from "node:fs";
@@ -78,17 +79,17 @@ function sceneHash(g: THREE.Group) {
 }
 
 const EXPECTED: Record<string, string> = {
-  "default horn, stack": "4b5a6e5ea6e591d0", // main
-  "default horn, pole": "44cef27cc010e72f", // main
-  "default horn, satellite": "89eeb9bb141c260f", // main
-  "default horn, tower": "f4d156923f4a41a0", // main
-  "diy_rosse110x50, stack": "87cfcd8f08604366", // the plate
-  "diy_os90x50, satellite": "69cff82a581b3c8e", // the plate
-  "me45, pole": "6b5a0f9f0544d064", // the plate
-  "athRect, stack": "697ebebfd7a333bf", // the plate
-  "iwata600, stack": "de09d0ec1c68b10c", // the plate
-  "hf950, stack": "01b4f6fd3232a6e4", // the plate
-  "st260 + de360, stack": "8d3b0ae33988dd70", // main
+  "default horn, stack": "483e2eb4ec97838f", // main
+  "default horn, pole": "631597be77e64b4a", // main
+  "default horn, satellite": "94a87e530841a444", // main
+  "default horn, tower": "07c3ab4b5773bb32", // main
+  "diy_rosse110x50, stack": "35414dec76aad20e", // the plate
+  "diy_os90x50, satellite": "6c1fa0399fff1d1f", // the plate
+  "me45, pole": "692ede87e1cfb898", // the plate
+  "athRect, stack": "cc66b6efe6f5b0bf", // the plate
+  "iwata600, stack": "7f198557f7114f6a", // the plate
+  "hf950, stack": "d6cf5d801eb1982b", // the plate
+  "st260 + de360, stack": "cbecc00d898042c4", // main
 };
 
 test("with the horn mount at its default, every scene is the pinned one", () => {
