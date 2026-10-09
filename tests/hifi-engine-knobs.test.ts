@@ -442,7 +442,11 @@ test("the seat floor is 1 m by default and a parameter below it", (t) => {
   );
   assert.ok(near.speakerModel && floored.speakerModel);
   const m = near.speakerModel;
-  close(t, m.maxLevelAtSeatDb, m.speakerSystem.maxLevel - 20 * Math.log10(0.3048) + 3, 1e-9);
+  // the woofer sets the level; this close its path counts its height under the ear (lib/hifi/nearField nearFieldPathM)
+  assert.strictEqual(m.speakerSystem.who, "woofer");
+  const off = (12 - m.speakerSystem.lay.wooferIn) * 0.0254,
+    wooferM = Math.hypot(0.3048, off) / Math.hypot(1, off);
+  close(t, m.maxLevelAtSeatDb, m.speakerSystem.wLevel - 20 * Math.log10(wooferM) + 3, 1e-9);
   // every curve and the map stay finite this close
   for (const c of [m.onAxisResponse, m.pairResponse, m.tweeterMaxCurve])
     for (const o of c) assert.ok(Number.isFinite(o.spl), `${o.f} Hz`);

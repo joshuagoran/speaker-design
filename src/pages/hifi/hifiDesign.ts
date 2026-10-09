@@ -5,7 +5,12 @@ import {
   waveguideSpecOf,
 } from "../../lib/data";
 import { METERS_PER_FOOT } from "../../constants/units";
-import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SEAT_FLOOR_M } from "../../constants/hifiEngine";
+import {
+  HIFI_DRIVE,
+  HIFI_NEAR_FIELD_M,
+  HIFI_PORT_MAX_MS,
+  HIFI_SEAT_FLOOR_M,
+} from "../../constants/hifiEngine";
 import { byId } from "../../lib/tables";
 import {
   hifiSystem,
@@ -13,6 +18,7 @@ import {
   hifiResponseAt,
   hifiDispersionMap,
   hifiEdgeRipple,
+  hifiSeatPaths,
   listenerGeometry,
   logSpacedFrequencies,
   linkwitzRileyFilter,
@@ -24,6 +30,7 @@ import { hifiBoxMin } from "../../lib/hifi/boxLayout";
 import { boxSliderMins, fitBox } from "../../lib/boxFit";
 import { HIFI_BOX_SLIDERS } from "../../constants/hifiLayout";
 import { rippleDb } from "../../lib/hifi/diffraction";
+import { hifiPairLevelDb } from "../../lib/hifi/nearField";
 import { panelIn } from "../../lib/panel";
 import type { HifiDesign, HifiDesignState, HifiSpeakerModel } from "../../types";
 
@@ -116,6 +123,15 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     rightGeometry = listenerGeometry(1, state);
   // floored (1 m by default) so a seat at the speakers (spacing 0, seat at the origin) can't send the level to infinity
   const seatDistanceM = Math.max(seatFloorM, (leftGeometry.distM + rightGeometry.distM) / 2);
+  // the nearer speaker, against the box and woofer sizes the far-field models assume small
+  const nearestM = Math.max(seatFloorM, Math.min(leftGeometry.distM, rightGeometry.distM)),
+    inchM = METERS_PER_FOOT / 12;
+  const nearField = {
+    distM: nearestM,
+    boxRatio: nearestM / (Math.max(speakerConfig.dim.w, speakerConfig.dim.h) * inchM),
+    wooferRatio: nearestM / (woofer.size * inchM),
+    near: nearestM < HIFI_NEAR_FIELD_M,
+  };
   const pairCostUsd =
     2 *
     ((woofer.price || 0) +
@@ -153,7 +169,25 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
       edgeRipple,
       edgeRippleDb: rippleDb(edgeRipple, 1000, 5000),
       warningChips: hifiChips(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig),
-      maxLevelAtSeatDb: speakerSystem.maxLevel - 20 * Math.log10(seatDistanceM) + 3,
+      // each speaker at its own distance (at least the seat floor), its drivers' paths counted close in
+      maxLevelAtSeatDb: hifiPairLevelDb(speakerSystem, [
+        hifiSeatPaths(
+          speakerSystem,
+          woofer,
+          tweeterWithWaveguide,
+          speakerConfig,
+          leftGeometry,
+          seatFloorM,
+        ),
+        hifiSeatPaths(
+          speakerSystem,
+          woofer,
+          tweeterWithWaveguide,
+          speakerConfig,
+          rightGeometry,
+          seatFloorM,
+        ),
+      ]),
       onAxisResponse: hifiResponseAt(
         speakerSystem,
         woofer,
@@ -198,6 +232,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     rightGeometry,
     seatDistanceM,
     seatDistanceFt: seatDistanceM / METERS_PER_FOOT,
+    nearField,
     pairCostUsd,
     speakerModel,
   };

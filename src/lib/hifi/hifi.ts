@@ -38,6 +38,7 @@ import type {
   HighpassType,
   HifiDispersionMap,
   HifiPlacement,
+  HifiSeatPaths,
   RoundPort,
   SizedSlotPort,
   SlotPort,
@@ -66,8 +67,16 @@ import {
 } from "../../constants/chartScales";
 import { formatInches } from "../format";
 import { crossoverSlopeName } from "../../constants/crossovers";
-import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_NEAR_FIELD_M, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
+import {
+  baffleEdgeShare,
+  boundaryShare,
+  driverPathFloorM,
+  nearBaffleStepGain,
+  nearBoundaryGain,
+  nearFieldPathM,
+} from "./nearField";
 import { xmaxBandCurves } from "../xmax";
 
 const C = 343,
@@ -137,6 +146,29 @@ export function boundaryGain(f: number, place: HifiPlacement, wallM: number) {
   const G = Math.pow(10, db / 20),
     x = f / (C / (4 * Math.max(0.1, wallM)));
   return Math.sqrt((G * G + x * x) / (1 + x * x));
+}
+/**
+ * The woofer's baffle step and boundary gain as a listener `distM` out hears them, over the far-field shelves the
+ * system is modeled with (`hifiWooferPrep`), as a gain at each frequency (lib/hifi/nearField): close in, the baffle looks
+ * infinite and the step shrinks, and the direct sound swamps the wall's. Null from HIFI_NEAR_FIELD_M out, where they
+ * are the far-field shelves. The step compensation stays: it is an EQ, so close in it over-boosts the bass.
+ */
+export function hifiNearFieldShelves(
+  sys: Pick<HifiSystem, "lay">,
+  cfg: Pick<HifiConfig, "dim" | "place" | "wallFt">,
+  distM: number,
+): ((f: number) => number) | null {
+  if (distM >= HIFI_NEAR_FIELD_M) return null;
+  const step = baffleEdgeShare(cfg.dim, { x: 0, y: sys.lay.wooferIn }, distM),
+    f3 = baffleStepF3(cfg.dim.w);
+  // as hifiWooferPrep reads the placement
+  const wallM = Math.max(0.1, (cfg.wallFt || 2) * 0.3048),
+    db = (SPEAKER_PLACEMENTS[cfg.place || "free"] || SPEAKER_PLACEMENTS.free).db,
+    farGain = Math.pow(10, db / 20),
+    room = boundaryShare(distM, wallM),
+    fWall = C / (4 * wallM);
+  return (f) =>
+    nearBaffleStepGain((0.707 * f) / f3, step) * nearBoundaryGain(f / fWall, farGain, room);
 }
 
 // ---- directivity ----
@@ -1129,6 +1161,8 @@ export function hifiEdgeRipple(
 // Response of one speaker at a point, relative to its on-axis response at 1 m; the DSP is time-aligned on the
 // tweeter axis at the listening distance. Returns [{ f, spl }] at 2.83 V-equivalent level (1 m on-axis scale).
 // Each driver's sound carries its baffle-edge diffraction at that point (roundover and tweeter offset from `cfg`).
+// Closer than HIFI_NEAR_FIELD_M the woofer's baffle step and boundary gain take their near-field forms
+// (hifiNearFieldShelves); each driver's path is at least its floor (lib/hifi/nearField driverPathFloorM).
 // room: { th (rad, horizontal off-axis), eyeIn (ear height above the box bottom, in), distM, side }, in the room: a
 // tilted box (`cfg.tiltDeg`) sees it lower on its baffle (boxFrameGeometry), unless it is already in the box's frame.
 export function hifiResponseAt(
@@ -1152,8 +1186,9 @@ export function hifiResponseAt(
     p = fieldPoint(geo, xT / IN),
     hW = Math.hypot(p.x * IN, p.z * IN), // woofer to listener, across the floor
     thW = Math.atan2(Math.abs(p.x * IN), p.z * IN);
-  const rW = Math.hypot(hW, dz(sys.lay.wooferIn)),
-    rT = Math.hypot(dist, dz(sys.lay.tweeterIn));
+  // each path at least its driver's floor, so a listener at a driver stays finite
+  const rW = Math.max(driverPathFloorM(a), Math.hypot(hW, dz(sys.lay.wooferIn))),
+    rT = Math.max(driverPathFloorM(dome), Math.hypot(dist, dz(sys.lay.tweeterIn)));
   const r0W = Math.hypot(Math.hypot(align, xT), (sys.lay.tweeterIn - sys.lay.wooferIn) * IN),
     r0T = align; // alignment point: tweeter axis
   const tvW = Math.atan2(dz(sys.lay.wooferIn), hW),
@@ -1166,6 +1201,8 @@ export function hifiResponseAt(
   };
   const trimG = Math.pow(10, sys.trim / 20);
   const edges = edgeRipples(sys, w, t, cfg, geo);
+  // the baffle step and boundary gain at the listening distance (null from HIFI_NEAR_FIELD_M out: as modeled)
+  const near = hifiNearFieldShelves(sys, cfg, align);
   return freqs.map((f) => {
     const k = (2 * Math.PI * f) / C;
     const dW = pistonDirectivity(f, a, offW),
@@ -1182,7 +1219,10 @@ export function hifiResponseAt(
         : pistonDirectivity(f, dome, offT);
     const pw = cmul(
       cmul(
-        cmul(linkwitzRileyFilter(f, xo, order, "lp"), cm(wAt(f) * dW * (1 / rW))),
+        cmul(
+          linkwitzRileyFilter(f, xo, order, "lp"),
+          cm((near ? wAt(f) * near(f) : wAt(f)) * dW * (1 / rW)),
+        ),
         cexp(-k * (rW - r0W)),
       ),
       edges.woofer(f),
@@ -1220,6 +1260,34 @@ export const listenerGeometry = (
     side: -sign * ang >= 0 ? 1 : -1,
   };
 };
+
+/**
+ * One speaker's woofer and tweeter paths to the seat at `room` for its level at the seat (lib/hifi/nearField
+ * hifiPairLevelDb), m: the speaker's distance, at least `floorM` (the seat floor), with each driver's height off the
+ * ear (in the box's frame) counted in the near field (nearFieldPathM), and each at least its driver's path floor.
+ */
+export function hifiSeatPaths(
+  sys: Pick<HifiSystem, "lay">,
+  w: Pick<HifiWoofer, "ts">,
+  t: Pick<HifiTweeter, "domeIn">,
+  cfg: Pick<HifiConfig, "tiltDeg">,
+  room: ListenerGeometry,
+  floorM = 0,
+): HifiSeatPaths {
+  const distM = Math.max(floorM, room.distM),
+    eyeIn = boxFrameGeometry({ ...room, distM }, cfg.tiltDeg).eyeIn;
+  const path = (driverIn: number, radiusM: number) =>
+    Math.max(driverPathFloorM(radiusM), nearFieldPathM(distM, (eyeIn - driverIn) * IN));
+  return {
+    wM: path(sys.lay.wooferIn, Math.sqrt(w.ts.Sd / 1e4 / Math.PI)),
+    tM: path(sys.lay.tweeterIn, (t.domeIn * IN) / 2),
+  };
+}
+/** A listener `distM` out on a speaker's tweeter axis: the optimizer's seat, which has no room. */
+export const tweeterAxisSeat = (
+  lay: Pick<DriverLayout, "tweeterIn">,
+  distM: number,
+): ListenerGeometry => ({ th: 0, eyeIn: lay.tweeterIn, distM, boxFrame: true });
 
 export const logSpacedFrequencies = (a: number, b: number, n: number) =>
   Array.from({ length: n }, (_, i) => a * Math.pow(b / a, i / (n - 1)));
