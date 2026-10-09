@@ -299,7 +299,8 @@ export function HifiPage({ hifi }: Props) {
               <>
                 Driver budget, pair{" "}
                 <span className="text-xs">
-                  (woofers + tweeters{waveguideSpec ? " + waveguides" : ""}, at the listed prices)
+                  (woofers + tweeters{waveguideSpec ? " + waveguides and their adapters" : ""}, at
+                  the listed prices)
                 </span>
               </>
             }

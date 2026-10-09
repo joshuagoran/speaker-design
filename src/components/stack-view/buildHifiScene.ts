@@ -8,7 +8,8 @@ import { buildHorn } from "./buildHorn";
 import { buildHifiCabinet, type HifiCabinetHoles } from "./buildHifiCabinet";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
 import { circlePath, roundedRectPath, roundedRectShape } from "./geometry";
-import { CD_OPTIONS } from "../../lib/data";
+import { CD_OPTIONS, driverMountKind, hornMountKind } from "../../lib/data";
+import { THREAD_MOUNT } from "../../constants/throatMounts";
 import { hifiTubeRoom } from "../../lib/hifi/hifi";
 import {
   radiatorSpots,
@@ -73,7 +74,10 @@ export type HifiSceneProps = Pick<HifiConfig, "dim"> &
     port: HifiConfig["port"] | null;
     woofer: Pick<HifiWoofer, "size">;
     /** the tweeter as chosen (not the copy with its waveguide's mouth as the faceplate) */
-    tweeter: Pick<HifiTweeter, "id" | "exit" | "faceplate" | "domeIn" | "type" | "ownGuide">;
+    tweeter: Pick<
+      HifiTweeter,
+      "id" | "exit" | "faceplate" | "domeIn" | "type" | "ownGuide" | "mount"
+    >;
     lay: DriverLayout;
     /** the passive radiators, when the box has them, and the panel they go on */
     radiators: Pick<PassiveRadiatorChoice, "drv" | "n"> | null;
@@ -85,7 +89,8 @@ export type HifiSceneProps = Pick<HifiConfig, "dim"> &
 
 /**
  * The compression driver behind a waveguide: the PA catalogue's, where it lists the same driver (its body and bolts),
- * else a GENERIC body (`HIFI_GENERIC_BODIES`) the Hi-fi table's diameter across.
+ * else a GENERIC body (`HIFI_GENERIC_BODIES`) the Hi-fi table's diameter across (on a screw-on driver its generic bolt
+ * pattern only sizes the bracket clamped at the throat).
  */
 export function hifiCompressionDriver(
   t: Pick<HifiTweeter, "id" | "exit" | "faceplate">,
@@ -227,8 +232,10 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
   // ribbon's plate, a horn-loaded tweeter's flare or a dome, each plate flush in the baffle
   if (horn && p.guide) {
     const cd = hifiCompressionDriver(t);
+    // a thread on either side (direct, or through an adapter): the clamped bracket holds the driver
+    const screwOn = driverMountKind(t) === THREAD_MOUNT || hornMountKind(horn) === THREAD_MOUNT;
     if (p.guide.freestanding)
-      buildHorn(ctx, { horn, cd, y: dim.h, xs: [0], mount: dim, backRoundover: 0 });
+      buildHorn(ctx, { horn, cd, y: dim.h, xs: [0], mount: dim, backRoundover: 0, screwOn });
     else
       buildHorn(ctx, {
         horn,

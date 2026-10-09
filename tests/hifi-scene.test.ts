@@ -28,6 +28,8 @@ import {
   HIFI_WAVEGUIDES,
   HORN_OPTIONS,
   cdBodySteps,
+  driverMountKind,
+  hornMountKind,
 } from "../src/lib/data";
 import { needsWaveguide } from "../src/lib/hifi/hifi";
 import { radiatorSpots, roundPortSpots } from "../src/lib/hifi/boxLayout";
@@ -35,6 +37,8 @@ import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../src/constants/hifiScen
 import { HORN_MESHES } from "../src/data/meshes";
 import { byIdOrThrow } from "../src/lib/tables";
 import { HIFI_ROUNDOVER_CHOICES } from "../src/constants/hifiLayout";
+import { PARTS_3D } from "../src/styles/palette";
+import { THREAD_MOUNT } from "../src/constants/throatMounts";
 import type { CoaxParts, HifiDesignState, HifiWaveguide, RadiatorPanel } from "../src/types";
 
 const EPS = 1e-6;
@@ -328,6 +332,54 @@ describe("the tweeter", () => {
     const [horn] = named(scene(p), HORN_MESH_NAME);
     expect(horn instanceof THREE.Mesh && horn.geometry.type).toBe("LatheGeometry");
   });
+
+  // every small Hi-fi-only waveguide, with a bolt-on driver (the DE250) and a screw-on one (the D220Ti)
+  const smallGuides = WAVEGUIDES.filter((h) => h.scope === "hifi");
+  const mountDrivers = [tweeter("de250"), tweeter("d220ti")];
+  test("the small Hi-fi-only waveguides are several, each without a mesh or profile", () => {
+    expect(smallGuides.length).toBeGreaterThanOrEqual(3);
+    for (const h of smallGuides) {
+      expect(HORN_MESHES[h.id], h.id).toBeUndefined();
+      expect(h.profile, h.id).toBeUndefined();
+    }
+  });
+  for (const small of smallGuides)
+    for (const t of mountDrivers)
+      test(`${small.name} with the ${t.name}: the generic flare at its catalogue size on the box top, mouth on the front plane, the driver held clear of the lid`, () => {
+        const p = propsFor({ tweeter: t, selectedWaveguide: small });
+        const g = scene(p);
+        expect(p.lay.onTop).toBe(true);
+        const [horn] = named(g, HORN_MESH_NAME);
+        if (!(horn instanceof THREE.Mesh)) throw new Error("no horn mesh");
+        expect(horn.geometry.type).not.toBe("LatheGeometry");
+        const hornBox = new THREE.Box3().setFromObject(horn);
+        const size = hornBox.getSize(new THREE.Vector3());
+        expect(size.x).toBeCloseTo(small.size.w, 2);
+        expect(size.y).toBeCloseTo(small.size.h, 2);
+        expect(size.z).toBeCloseTo(small.size.d, 2);
+        expect(size.x).toBeLessThan(p.dim.w);
+        expect(hornBox.min.y).toBeGreaterThan(p.dim.h);
+        expect(hornBox.max.z).toBeCloseTo(p.dim.d / 2, 4); // its mouth on the box's front plane
+        if (!(horn.material instanceof THREE.MeshStandardMaterial))
+          throw new Error("horn material");
+        expect(horn.material.color.getHex()).toBe(PARTS_3D.hornBlack);
+        // the driver's body behind the throat, clear of the lid
+        expect(named(g, CD_MESH_NAME).length).toBeGreaterThan(0);
+        expect(boxOf(g, CD_MESH_NAME).min.y).toBeGreaterThanOrEqual(p.dim.h - EPS);
+        const cd = hifiCompressionDriver(t);
+        const screwOn =
+          driverMountKind(t) === THREAD_MOUNT || hornMountKind(small) === THREAD_MOUNT;
+        if (screwOn) {
+          // a thread on either side: the bracket clamped at the throat holds it, no plate
+          expect(named(g, PLATE_MESH_NAMES.plate)).toHaveLength(0);
+          expect(named(g, BRACKET_MESH_NAME).length).toBeGreaterThan(0);
+        } else {
+          // bolted straight on: the aluminum plate fits the small throat and holds it
+          expect(plateFit(small, cd, p.dim.w)).not.toBeNull();
+          expect(named(g, PLATE_MESH_NAMES.plate).length).toBeGreaterThan(0);
+          expect(boxOf(g, PLATE_MESH_NAMES.foot).min.y).toBeGreaterThanOrEqual(p.dim.h - EPS);
+        }
+      });
 
   test("a compression driver the PA catalogue doesn't list gets the generic body, its own diameter across", () => {
     const t = tweeter("de10");

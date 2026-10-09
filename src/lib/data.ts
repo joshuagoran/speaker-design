@@ -24,6 +24,7 @@ import type {
   Horn,
   MidDriver,
   MakerId,
+  MountAdapter,
   MidSize,
   OwnGuide,
   PassiveRadiator,
@@ -31,6 +32,8 @@ import type {
   SubDriver,
   SubSize,
   ThieleSmall,
+  ThroatMountKind,
+  ThroatThread,
   WaveguideSpec,
 } from "../types";
 import { CABINET_FINISHES } from "../data/catalog/finishes";
@@ -48,6 +51,8 @@ import { DSP_UNITS } from "../data/catalog/dsp-units";
 import { MAINS_RACK, RACKS as RACK_TABLE } from "../data/catalog/racks";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
 import { COAX_GAP, COAX_HF_EXIT_IN, COAXIAL_TWEETER_TYPE } from "../constants/coax";
+import { MOUNT_ADAPTERS } from "../data/catalog/mount-adapters";
+import { BOLT_MOUNT, THREAD_MOUNT } from "../constants/throatMounts";
 import { byId, byIdOrThrow } from "./tables";
 
 // Tables the app reads as written.
@@ -59,6 +64,7 @@ export { FORMATS } from "../data/catalog/formats";
 export { A460G2_14, ST260, ST260_PROFILE } from "../data/catalog/horns";
 export { B15, B18, MID_BOXES } from "../data/catalog/mid-boxes";
 export { HORN_AMP_SAFETY_HPF_HZ } from "../data/catalog/racks";
+export { MOUNT_ADAPTERS };
 
 // Every driver table holds the maker's excursion figures; this adds the comparable Xmax the models read.
 const withTsXmax = <D extends { name: string; maker: MakerId; ts: RawTS<ThieleSmall> }>(d: D) => ({
@@ -85,7 +91,10 @@ export const midDriversOfSize = (size: MidSize) => MID_OPTIONS.filter((o) => o.s
 
 // Copies, so the sort below leaves the catalog tables as written.
 export const CD_OPTIONS: CompressionDriver[] = [...CD_RAW];
-export const HORN_OPTIONS: Horn[] = [...HORN_RAW];
+/** A horn the PA side offers (its picker, both optimizers, saves): every horn but the Hi-fi-only small waveguides. */
+const isPaHorn = (h: Horn) => h.scope !== "hifi";
+/** The PA horns. */
+export const HORN_OPTIONS: Horn[] = HORN_RAW.filter(isPaHorn);
 
 /** A turned part's length (its steps end to end), in. */
 export const stepsLength = (steps: readonly BodyStep[]) =>
@@ -129,8 +138,9 @@ export const sortedByName = <T extends { name: string }>(arr: readonly T[]): T[]
 );
 /** A horn the Hi-fi page offers as a waveguide: a 1-inch throat, with its coverage specs and size. */
 const isHifiWaveguide = (h: Horn): h is HifiWaveguide => h.exit === 1 && !!h.hf?.covH && !!h.size;
-/** The Hi-fi page's waveguides, in the horns' (A–Z) order. */
-export const HIFI_WAVEGUIDES: readonly HifiWaveguide[] = HORN_OPTIONS.filter(isHifiWaveguide);
+/** The Hi-fi page's waveguides, from every horn (the Hi-fi-only ones included), A–Z. */
+export const HIFI_WAVEGUIDES: readonly HifiWaveguide[] =
+  sortedByName(HORN_RAW).filter(isHifiWaveguide);
 
 export const BC10CXN64: FillDriver = withTsXmax(BC10CXN64_RAW);
 export const FILL_OPTIONS: readonly FillDriver[] = FILL_RAW.map((d) =>
@@ -264,7 +274,8 @@ export const ownGuideCfg = (
   t && t.ownGuide ? { ...t.ownGuide, freestanding: false } : null;
 /**
  * A picked waveguide (a horn with coverage specs) as the model's guide object: its coverage (V as H when unpublished),
- * mouth, name and lowest crossover; a round one stands free on the box top, the full-width rectangle sits in the baffle.
+ * mouth, name, lowest crossover and pattern-control limit; a round one stands free on the box top, the full-width
+ * rectangle sits in the baffle.
  */
 export const waveguideSpecOf = (h: HifiWaveguide): WaveguideSpec => ({
   covH: h.hf.covH,
@@ -274,7 +285,65 @@ export const waveguideSpecOf = (h: HifiWaveguide): WaveguideSpec => ({
   name: h.name,
   freestanding: !h.rect,
   minXo: h.hf.minXo,
+  lowHz: h.hf.lowHz,
+  ...(h.mount ? { mount: h.mount } : {}),
 });
+
+// ---- Throat mounts: how a compression driver meets its waveguide, and the adapter a mixed pair needs ----
+
+/** A driver's screw-on thread, or null for a bolt-on one. */
+const driverThread = ({ mount }: Pick<HifiTweeter, "mount">): ThroatThread | null =>
+  mount && "thread" in mount ? mount.thread : null;
+/** How a driver meets a horn's throat: screw-on when its mount is a thread, else bolt-on (the default). */
+export const driverMountKind = (t: Pick<HifiTweeter, "mount">): ThroatMountKind =>
+  driverThread(t) ? THREAD_MOUNT : BOLT_MOUNT;
+/** How a horn takes its driver: screw-on when it has a thread, else bolt-on (its throat flange). */
+export const hornMountKind = ({ mount }: Pick<WaveguideSpec, "mount">): ThroatMountKind =>
+  mount ? THREAD_MOUNT : BOLT_MOUNT;
+/**
+ * A compression driver on a waveguide: direct when both bolt on or both screw on with the same thread, else through the
+ * catalogue's adapter from the driver's mount to the horn's; null when nothing joins them (two different threads, or no
+ * adapter between the two kinds: the pair doesn't fit).
+ */
+export function throatJoin(
+  t: Pick<HifiTweeter, "mount">,
+  guide: Pick<WaveguideSpec, "mount">,
+  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
+): { adapter: MountAdapter | null } | null {
+  const driver = driverMountKind(t),
+    horn = hornMountKind(guide);
+  if (driver === horn)
+    return driver === BOLT_MOUNT || driverThread(t) === guide.mount?.thread
+      ? { adapter: null }
+      : null;
+  const adapter = adapters.find((a) => a.driver === driver && a.horn === horn);
+  return adapter ? { adapter } : null;
+}
+/**
+ * What the throat adds to one speaker's cost: the adapter's price when the driver sits on the catalogue waveguide
+ * `guide` (null: it doesn't, as a dome or a ribbon on its own) and the pair needs one; 0 for a direct pair or one that
+ * doesn't fit; null when the adapter it needs has no US price (the cost can't include it).
+ */
+export function throatAdapterPrice(
+  t: Pick<HifiTweeter, "mount">,
+  guide: Pick<WaveguideSpec, "mount"> | null,
+  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
+): number | null {
+  const adapter = guide && throatJoin(t, guide, adapters)?.adapter;
+  return adapter ? adapter.price : 0;
+}
+/**
+ * Whether the optimizer offers a driver on this waveguide: it fits, directly or through a priced adapter (the catalogue
+ * rule for unpriced parts: the search leaves them out unless you lock them).
+ */
+export function throatOffered(
+  t: Pick<HifiTweeter, "mount">,
+  guide: Pick<WaveguideSpec, "mount">,
+  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
+): boolean {
+  const join = throatJoin(t, guide, adapters);
+  return !!join && (!join.adapter || join.adapter.price != null);
+}
 export const passiveRadiatorMassMax = (p: PassiveRadiator): number =>
   Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
 

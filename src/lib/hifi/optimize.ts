@@ -43,6 +43,8 @@ import { throttledProgress } from "../optimizer/progress";
 import {
   passiveRadiatorMassMax,
   ownGuideCfg,
+  throatAdapterPrice,
+  throatOffered,
   HIFI_PASSIVES,
   HIFI_COAXES,
   hifiDriverById,
@@ -439,9 +441,15 @@ export function hifiSearchSpace(
   const prPrice = (c: HifiConfig) =>
     c && c.box === "radiator" && c.pr && c.pr.drv ? c.pr.n * (c.pr.drv.price || 0) : 0;
   const priceOf = (w: HifiWoofer, t: HifiTweeter, c: HifiConfig) =>
-    2 * ((w.price || 0) + (t.price || 0) + (needsWaveguide(t) ? gp : 0) + prPrice(c)); // a ribbon's own waveguide is in its price
-  // whether that price is whole: a woofer (a coaxial) without a US price leaves it short
-  const priceKnownOf = (w: HifiWoofer) => w.price != null;
+    2 *
+    ((w.price || 0) +
+      (t.price || 0) +
+      (needsWaveguide(t) ? gp + (throatAdapterPrice(t, guide) ?? 0) : 0) + // with the adapter a mixed pair needs
+      prPrice(c)); // a ribbon's own waveguide is in its price
+  // whether that price is whole: a woofer (a coaxial) without a US price, or an unpriced adapter the driver needs on
+  // the waveguide (yours, locked: the search offers no other), leaves it short
+  const priceKnownOf = (w: HifiWoofer, t: HifiTweeter) =>
+    w.price != null && !(needsWaveguide(t) && throatAdapterPrice(t, guide) === null);
   const guideOf = (t: HifiTweeter) => ownGuideCfg(t) || (needsWaveguide(t) ? guide : null);
   // unlocked amps: searched at the top of their sliders, trimmed per card at the end (a passive design has no tweeter
   // amp: its `tAmpW` is passed through as it is)
@@ -466,7 +474,14 @@ export function hifiSearchSpace(
       ? [T0]
       : coax
         ? coaxes.map((c) => c.tweeter)
-        : tweeters.filter((t) => t.hf && t.hf.sens != null && (!needsWaveguide(t) || guide));
+        : // a compression driver only on a waveguide its throat fits, directly or through a priced adapter (locked,
+          // yours stays whatever its adapter costs)
+          tweeters.filter(
+            (t) =>
+              t.hf &&
+              t.hf.sens != null &&
+              (!needsWaveguide(t) || (guide && throatOffered(t, guide))),
+          );
   const xos = locks.xo ? [cur.xo] : XOS.includes(cur.xo) ? XOS : [...XOS, cur.xo];
   // the tweeter's room on the baffle the box sizes start from: none on the box top or in a coaxial's woofer
   const face =
@@ -777,7 +792,7 @@ export function optimizeHifiSpeaker(
     price: priceOf(w, t, r.cfg),
     level: levelOf(r.sys),
     lb: r.sys.lb,
-    priceKnown: priceKnownOf(w),
+    priceKnown: priceKnownOf(w, t),
   });
 
   // a radiator box whose radiator isn't in any table has no model: say so instead of scoring it as if it had none
@@ -868,11 +883,11 @@ export function optimizeHifiSpeaker(
   const seatDb = 20 * Math.log10(seat) - 3,
     V0 = ampVoltage(amps.wAmpW);
   let lastBi = -1,
-    bKnown = true,
     bTws: readonly number[] = [];
   const bPrice: number[] = [],
     bLb: number[] = [],
-    bFits: boolean[] = [];
+    bFits: boolean[] = [],
+    bKnown: boolean[] = [];
   // the tweeters a box's woofer plays with: every one, or a coaxial's own HF (by the woofer's id)
   const allTws = tws.map((_, ti) => ti);
   const ownHf = new Map(tws.map((x, ti) => [x.t.id, [ti]]));
@@ -881,11 +896,11 @@ export function optimizeHifiSpeaker(
       e = boxList[r.bi];
     if (r.bi !== lastBi) {
       lastBi = r.bi;
-      bKnown = priceKnownOf(e.w);
       bTws = coax ? (ownHf.get(e.w.id) ?? []) : allTws;
       for (const ti of bTws) {
         const x = tws[ti];
         bPrice[ti] = priceOf(e.w, x.t, e.cfg);
+        bKnown[ti] = priceKnownOf(e.w, x.t);
         bLb[ti] = hifiWeightLb(e.w, x.tt, e.cfg, e.pr);
         bFits[ti] = boxHolds(e.w, x.tt, x.onTop, e.cfg);
       }
@@ -918,12 +933,12 @@ export function optimizeHifiSpeaker(
       va.price = bPrice[ti];
       va.level = wLevel - seatDb;
       va.lb = bLb[ti];
-      va.priceKnown = bKnown;
+      va.priceKnown = bKnown[ti];
       if (!canBeCard(va)) continue;
       dRec.push(ri);
       dTw.push(ti);
       dPrice.push(va.price);
-      dKnown.push(bKnown);
+      dKnown.push(bKnown[ti]);
       dLb.push(va.lb);
       dLevel.push(va.level);
       dWamp.push(wAmpW);

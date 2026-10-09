@@ -38,6 +38,9 @@ import type {
   HighpassType,
   HifiDispersionMap,
   HifiPlacement,
+  Horn,
+  MountAdapter,
+  WaveguideSpec,
   RoundPort,
   SizedSlotPort,
   SlotPort,
@@ -65,6 +68,8 @@ import {
   DISPERSION_FREQ_MIN_HZ,
 } from "../../constants/chartScales";
 import { formatInches } from "../format";
+import { MOUNT_ADAPTERS, throatJoin } from "../data";
+import { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "../../constants/throatMounts";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
@@ -657,6 +662,60 @@ export function tweeterMinXo(
   const guideHz = guide?.minXo || 0;
   if (guide && guideHz > own) return { hz: guideHz, part: "waveguide", name: guide.name };
   return own ? { hz: own, part: "tweeter", name: t.name } : null;
+}
+/**
+ * Where a catalogue waveguide starts holding its rated horizontal coverage, Hz (to the nearest 10): the higher of its
+ * loading limit (`lowHz`) and its mouth's control frequency (Keele, as the dispersion map widens it below), and which
+ * sets it. Null for a guide without a `lowHz` (a ribbon's own waveguide).
+ */
+export function guidePatternHz(
+  g: Pick<WaveguideSpec, "covH" | "w" | "lowHz">,
+): { hz: number; by: "mouth" | "loading" } | null {
+  if (!g.lowHz) return null;
+  const mouth = keeleFrequency(g.covH, g.w);
+  return mouth > g.lowHz
+    ? { hz: Math.round(mouth / 10) * 10, by: "mouth" }
+    : { hz: g.lowHz, by: "loading" };
+}
+/** A driver's or horn's throat as a check names it: bolt-on, or screw-on with its thread. */
+const mountName = (mount: Horn["mount"] | HifiTweeter["mount"]) =>
+  mount && "thread" in mount
+    ? `${THROAT_MOUNT_NAMES.thread} (${THROAT_THREAD_NAMES[mount.thread]})`
+    : THROAT_MOUNT_NAMES.bolts;
+/**
+ * The check on a compression driver's throat on its catalogue waveguide: none for a direct pair; the adapter a mixed
+ * pair takes, with its price and source (or that it has none, so the cost leaves it out); a failure when nothing joins
+ * them.
+ */
+export function guideMountChip(
+  t: Pick<HifiTweeter, "name" | "mount">,
+  guide: Pick<WaveguideSpec, "name" | "mount">,
+  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
+): HifiChip | null {
+  const join = throatJoin(t, guide, adapters);
+  const pair = `The ${t.name} is ${mountName(t.mount)} and the ${guide.name} ${mountName(guide.mount)}`;
+  if (!join)
+    return [
+      "bad",
+      "Driver doesn't fit the waveguide",
+      `${pair}, and nothing in the catalogue joins them.`,
+      "hifiGuideMount",
+    ];
+  if (!join.adapter) return null;
+  const { name, price, src } = join.adapter;
+  return price == null
+    ? [
+        "warn",
+        "Adapter needed, not priced",
+        `${pair}: the ${name} joins them, but no US vendor prices it, so the cost leaves it out. The 3-D view leaves out its length.`,
+        "hifiGuideMount",
+      ]
+    : [
+        "ok",
+        "Adapter in the cost",
+        `${pair}: the ${name} joins them, $${price.toFixed(2)} each (${src}), counted in the cost. The 3-D view leaves out its length.`,
+        "hifiGuideMount",
+      ];
 }
 /** The minimum-crossover warning's title, by the part that sets the minimum. */
 export const MIN_XO_TITLE: Record<NonNullable<ReturnType<typeof tweeterMinXo>>["part"], string> = {
@@ -1380,6 +1439,19 @@ export function hifiChips(
       `The maker publishes no ${gaps.map((g) => COAX_GAP_NAMES[g]).join(" or ")} for the ${t.name}: check its data before setting the crossover.`,
       "hifiCoaxGaps",
     ]);
+  // below where the waveguide holds its pattern the tweeter is wider than rated near the crossover (the dispersion map
+  // widens it there too); a crossover already under the minimum-crossover warning gets no second one
+  const pattern = cfg.guide ? guidePatternHz(cfg.guide) : null;
+  if (cfg.guide && pattern && xo < pattern.hz && !(minXo && xo < minXo.hz))
+    F.push([
+      "warn",
+      "Below the waveguide's pattern control",
+      `${xo} Hz, below the ${pattern.hz} Hz where the ${cfg.guide.name} starts holding its ${cfg.guide.covH}° (${pattern.by === "mouth" ? `its ${formatInches(cfg.guide.w)} mouth` : "its loading"}): near the crossover the tweeter spreads wider than rated, and the woofer's off-axis match suffers.`,
+      "hifiGuidePattern",
+    ]);
+  // the driver's throat on the catalogue waveguide's: direct, through an adapter (in the cost), or no fit
+  const mountChip = cfg.guide && needsWaveguide(t) && !t.ownGuide && guideMountChip(t, cfg.guide);
+  if (mountChip) F.push(mountChip);
   if (nearTweeterResonance(t, xo))
     F.push([
       "warn",
