@@ -1811,8 +1811,9 @@ export function optimizePaStack(
       return r && !r.fixMisses;
     });
     // fewest problems, then the least short of the goals (your design is one of them, so this is never behind it on the
-    // target's output), then the goal's own order
-    const nearest = [...pool, ...own].sort(
+    // target's output), then the goal's own order; your design first, so on a full tie it is the one named (the sort is
+    // stable)
+    const nearest = [...own, ...pool].sort(
       (a, b) =>
         designProblems(a.m, lim).length - designProblems(b.m, lim).length ||
         gapSum(metric(a)) - gapSum(metric(b)) ||

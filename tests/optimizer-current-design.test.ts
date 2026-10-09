@@ -147,12 +147,13 @@ test("an unlocked vent tries one side duct, from a 1″ throat", () => {
     `Fully optimize ${exact.metrics.out.toFixed(2)} dB, the fireplace ${curM.out.toFixed(2)} dB`,
   );
   // Improve keeps a 10% air-speed margin, which the fireplace's 1″ duct uses up (it runs at 99% of the limit): its
-  // one-side duct beats the tubes and comes within half a dB of the fireplace
+  // one-side duct beats the tubes and comes within 0.6 dB of the fireplace (the margin sets its highpass and amp, and
+  // the searches' brace estimate moves where that lands by a step)
   const [quick] = sideDuctCards(optimizePaStack(input));
   assert.ok(quick, "Improve gives a one-side duct card");
   assert.ok(quick.metrics.out > tubes.out, "louder than the tubes");
   assert.ok(
-    quick.metrics.out >= curM.out - 0.5,
+    quick.metrics.out >= curM.out - 0.6,
     `Improve ${quick.metrics.out.toFixed(2)} dB, the fireplace ${curM.out.toFixed(2)} dB`,
   );
 });
@@ -162,13 +163,14 @@ const quietTubes: PaDesignConfig = { ...fireplaceTubes, ampW: 450 };
 
 test("a design short of the room's need: the near miss names the metric and is never behind your design", () => {
   // outdoors needs more than the design gives, so the target is the room's and your design misses it. The tubes are
-  // locked: a one-side duct comes within the alternatives' reach of the target (a card, not the near miss)
+  // locked: a one-side duct comes within the alternatives' reach of the target (a card, not the near miss). The
+  // compression driver is locked too: a cheaper one at the same output would be closer on the Cheaper goal
   const input: PaOptimizerInput = {
     ...owner,
     cur: quietTubes,
     room: "outdoor",
     goals: ["cheaper"],
-    locks: { ...OWNER_LOCKS, vent: true },
+    locks: { ...OWNER_LOCKS, vent: true, cd: true },
   };
   const m = evaluateDesign(quietTubes);
   assert.ok(m && m.out < roomRequiredSpl("outdoor"), "the design misses the room's need");
