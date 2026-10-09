@@ -23,6 +23,7 @@ import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import {
   CD_OPTIONS,
+  HIFI_COAXES,
   HIFI_TWEETERS,
   HIFI_WAVEGUIDES,
   HORN_OPTIONS,
@@ -30,11 +31,11 @@ import {
 } from "../src/lib/data";
 import { needsWaveguide } from "../src/lib/hifi/hifi";
 import { radiatorSpots, roundPortSpots } from "../src/lib/hifi/boxLayout";
-import { HIFI_GENERIC_BODIES } from "../src/constants/hifiScene";
+import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../src/constants/hifiScene";
 import { HORN_MESHES } from "../src/data/meshes";
 import { byIdOrThrow } from "../src/lib/tables";
 import { HIFI_ROUNDOVER_CHOICES } from "../src/constants/hifiLayout";
-import type { HifiDesignState, HifiWaveguide, RadiatorPanel } from "../src/types";
+import type { CoaxParts, HifiDesignState, HifiWaveguide, RadiatorPanel } from "../src/types";
 
 const EPS = 1e-6;
 
@@ -408,5 +409,99 @@ describe("the cutaway", () => {
     expect(wooferParts(cut)).not.toBe(wooferParts(solid));
     // the box is the same size either way
     expect(cabinetBox(cut).equals(cabinetBox(solid))).toBe(true);
+  });
+});
+
+describe("a coaxial", () => {
+  /** The scene props for the default design on a coaxial (its woofer and its HF part), in a box that holds it. */
+  const coaxProps = (c: CoaxParts, over: Partial<HifiDesignState> = {}) =>
+    propsFor({
+      woofer: c.woofer,
+      tweeter: c.tweeter ?? DEFAULT_HIFI.tweeter,
+      boxDims: { w: 13, h: 16, d: 11 },
+      ...over,
+    });
+  const withHf = HIFI_COAXES.filter((c) => c.tweeter);
+  /** How many holes the baffle's flat face has. */
+  function baffleHoles(g: THREE.Object3D) {
+    const [face] = named(g, HIFI_CABINET_MESH_NAMES.baffle).filter(
+      (o): o is THREE.Mesh<THREE.ShapeGeometry> =>
+        o instanceof THREE.Mesh && o.geometry instanceof THREE.ShapeGeometry,
+    );
+    const params: { shapes?: unknown } = Reflect.get(face.geometry, "parameters");
+    const shape = Array.isArray(params.shapes) ? params.shapes[0] : params.shapes;
+    if (!(shape instanceof THREE.Shape)) throw new Error("no face shape");
+    return shape.holes.length;
+  }
+
+  test("its HF is a horn with a phase plug at the woofer's center, in front of the cone; no tweeter of its own", () => {
+    expect(withHf.length).toBeGreaterThan(0);
+    for (const c of withHf) {
+      const p = coaxProps(c, { boxType: "sealed", tweeterOffsetIn: 2 });
+      expect(p.lay.coax, c.woofer.id).toBe(true);
+      expect(p.tweeterOffsetIn, c.woofer.id).toBe(0);
+      const g = scene(p);
+      const center = new THREE.Vector3(0, p.lay.wooferIn, 0);
+      for (const name of [HIFI_MESH_NAMES.coaxHorn, HIFI_MESH_NAMES.coaxPlug]) {
+        const b = boxOf(g, name);
+        expect(b.isEmpty(), `${c.woofer.id} ${name}`).toBe(false);
+        const at = b.getCenter(new THREE.Vector3());
+        expect(at.x, `${c.woofer.id} ${name}`).toBeCloseTo(center.x, 6);
+        expect(at.y, `${c.woofer.id} ${name}`).toBeCloseTo(center.y, 6);
+        // inside the woofer's frame, not past the baffle by more than the frame
+        expect(b.max.z).toBeLessThan(p.dim.d / 2 + HIFI_FRONT_PARTS.wooferFrameIn);
+      }
+      // inside the woofer's cone
+      const horn = boxOf(g, HIFI_MESH_NAMES.coaxHorn);
+      const woofer = boxOf(g, HIFI_MESH_NAMES.woofer);
+      expect(horn.max.x - horn.min.x).toBeLessThan(woofer.max.x - woofer.min.x);
+      for (const name of [
+        HIFI_MESH_NAMES.faceplate,
+        HIFI_MESH_NAMES.dome,
+        HIFI_MESH_NAMES.flare,
+        HIFI_MESH_NAMES.ribbon,
+        HORN_MESH_NAME,
+        CD_MESH_NAME,
+      ])
+        expect(named(g, name), `${c.woofer.id} ${name}`).toHaveLength(0);
+      // one hole in the baffle: the woofer's
+      expect(baffleHoles(g), c.woofer.id).toBe(1);
+    }
+  });
+
+  test("the woofer sits at the model's height, at the top of the baffle", () => {
+    const c = withHf[0];
+    const p = coaxProps(c);
+    const woofer = boxOf(scene(p), HIFI_MESH_NAMES.woofer);
+    expect(woofer.getCenter(new THREE.Vector3()).y).toBeCloseTo(p.lay.wooferIn, 6);
+    expect(p.lay.tweeterIn).toBe(p.lay.wooferIn);
+  });
+
+  test("in the cutaway: no cone or horn, the HF driver behind the woofer's magnet", () => {
+    const c = withHf[0];
+    const p = coaxProps(c);
+    const solid = scene(p),
+      cut = scene({ ...p, cutaway: true });
+    expect(named(solid, HIFI_MESH_NAMES.coaxHfBody)).toHaveLength(0);
+    expect(named(cut, HIFI_MESH_NAMES.coaxHorn)).toHaveLength(0);
+    expect(named(cut, HIFI_MESH_NAMES.coaxPlug)).toHaveLength(0);
+    const [body] = named(cut, HIFI_MESH_NAMES.coaxHfBody);
+    expect(body).toBeDefined();
+    const b = boxOf(cut, HIFI_MESH_NAMES.coaxHfBody);
+    expect(b.getCenter(new THREE.Vector3()).y).toBeCloseTo(p.lay.wooferIn, 6);
+    // behind the woofer's body, inside the box
+    expect(b.max.z).toBeLessThan(p.dim.d / 2 - p.wall);
+    expect(b.min.z).toBeGreaterThan(-p.dim.d / 2);
+    expect(named(cut, HIFI_MESH_NAMES.tweeterBody)).toHaveLength(0);
+  });
+
+  test("a stacked design keeps its dust cap and draws no coaxial parts", () => {
+    const g = scene(propsFor({}));
+    for (const name of [
+      HIFI_MESH_NAMES.coaxHorn,
+      HIFI_MESH_NAMES.coaxPlug,
+      HIFI_MESH_NAMES.coaxHfBody,
+    ])
+      expect(named(g, name)).toHaveLength(0);
   });
 });

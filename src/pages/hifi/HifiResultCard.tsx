@@ -9,8 +9,14 @@ import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { WOOFER_LIMITED_BY } from "../../constants/limits";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import { STATS } from "../../components/optimizer/StatRow";
-import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
-import { byIdOrThrow } from "../../lib/tables";
+import {
+  HIFI_WOOFERS,
+  HIFI_TWEETERS,
+  HIFI_COAX_WOOFERS,
+  HIFI_COAX_TWEETERS,
+  ownGuideCfg,
+} from "../../lib/data";
+import { byId, byIdOrThrow } from "../../lib/tables";
 import { formatThickness } from "../../lib/panel";
 import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
 import { FONT } from "../../styles/fonts";
@@ -44,9 +50,13 @@ export function HifiResultCard({
   const config = result.config,
     metrics = result.metrics,
     deltas: Partial<HifiMetricsDelta> = result.delta || {};
-  // a card's driver ids come from these same lists (the optimizer searches them)
-  const woofer = byIdOrThrow(HIFI_WOOFERS, result.woofer, CATALOG_TABLE_NAMES.hifiWoofers),
-    tweeter = byIdOrThrow(HIFI_TWEETERS, result.tweeter, CATALOG_TABLE_NAMES.hifiTweeters);
+  // a card's driver ids come from these same lists (the optimizer searches them), or the coaxials' for a coaxial design
+  const woofer =
+      byId(HIFI_WOOFERS, result.woofer) ??
+      byIdOrThrow(HIFI_COAX_WOOFERS, result.woofer, CATALOG_TABLE_NAMES.hifiWoofers),
+    tweeter =
+      byId(HIFI_TWEETERS, result.tweeter) ??
+      byIdOrThrow(HIFI_COAX_TWEETERS, result.tweeter, CATALOG_TABLE_NAMES.hifiTweeters);
   const radiator = passiveRadiatorOf(config); // null unless the box is a radiator box with its radiator
   const tile = (label: string, v: string, delta: React.ReactNode) => (
     <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">

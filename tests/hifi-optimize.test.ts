@@ -225,7 +225,7 @@ test("hi-fi optimizer: radiator designs price their radiators and load back with
     );
     const p = HIFI_PASSIVES.find((o) => o.id === k.config.pr!.id);
     assert.ok(
-      k.metrics.price >= 2 * (w.price + tw.price + k.config.pr.n * p!.price) - 0.01,
+      k.metrics.price >= 2 * ((w.price ?? 0) + tw.price + k.config.pr.n * p!.price) - 0.01,
       "radiators are in the pair price",
     );
   }

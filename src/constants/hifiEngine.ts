@@ -14,6 +14,13 @@ export const HIFI_DRIVE = {
 } as const satisfies { [K in keyof typeof HIFI_DRIVE_NAMES]: K };
 
 /**
+ * How a coaxial is driven by default: one amp channel through a passive network, as the Fills page has it (its makers
+ * sell matching networks, and a passive coaxial needs no DSP); the network's pad sets the HF's power (lib/hifi
+ * tweeterAmpWatts).
+ */
+export const HIFI_COAX_DRIVE = HIFI_DRIVE.passive;
+
+/**
  * The least seat distance the Hi-fi level at the seat and the dispersion map are worked out at, m (pages/hifi
  * hifiDesign): a seat at the speakers can't send the level to infinity. A near-field use case passes less.
  */

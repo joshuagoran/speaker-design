@@ -32,6 +32,7 @@ import {
   slotWidth,
   slotMaxLength,
   needsWaveguide,
+  isCoax,
 } from "./hifi";
 import { ampVoltage, ventTuning } from "../pa/calc";
 import { hifiBoxMin } from "./boxLayout";
@@ -45,6 +46,9 @@ import {
   HIFI_WOOFERS,
   HIFI_TWEETERS,
   HIFI_PASSIVES,
+  HIFI_COAXES,
+  HIFI_COAX_WOOFERS,
+  HIFI_COAX_TWEETERS,
 } from "../data";
 import type {
   ChangeName,
@@ -100,8 +104,8 @@ import { ampForGain, type AmpSteps } from "../optimizer/ampSteps";
  * radiators as the page allows it: at least its sliders' minimums (lib/hifi/boxLayout hifiBoxMin).
  */
 function boxHolds(
-  w: Pick<HifiWoofer, "size">,
-  tt: Pick<HifiTweeter, "faceplate">,
+  w: Pick<HifiWoofer, "size" | "id">,
+  tt: Pick<HifiTweeter, "faceplate" | "id">,
   onTop: boolean,
   cfg: Pick<HifiConfig, "box" | "port" | "pr" | "dim"> & { wall: number },
 ) {
@@ -412,10 +416,24 @@ export function hifiSearchSpace(
     cur.pr = drv ? { ...cur.pr, drv } : undefined;
     curPrMissing = cur.box === "radiator" && !drv; // a sealed or vented design may carry a leftover id
   }
-  // your drivers: from the lists the search uses, else from the full tables (a budget or size filter doesn't remove them from your design)
-  const W0 = byId(woofers, cur.woofer) ?? byId(HIFI_WOOFERS, cur.woofer),
-    T0 = byId(tweeters, cur.tweeter) ?? byId(HIFI_TWEETERS, cur.tweeter);
+  // your drivers: from the lists the search uses, else from the full tables (a budget or size filter doesn't remove them
+  // from your design), else from the coaxials
+  const W0 =
+      byId(woofers, cur.woofer) ??
+      byId(HIFI_WOOFERS, cur.woofer) ??
+      byId(HIFI_COAX_WOOFERS, cur.woofer),
+    T0 =
+      byId(tweeters, cur.tweeter) ??
+      byId(HIFI_TWEETERS, cur.tweeter) ??
+      byId(HIFI_COAX_TWEETERS, cur.tweeter);
   if (!W0 || !T0) return { cur, W0, T0, space: null };
+  // a coaxial design searches the coaxials, each with its own HF only (one with no HF data, or no US price, enters only
+  // as yours); any other design the woofers and tweeters offered, never a coaxial
+  const coax = isCoax(W0, T0);
+  const coaxes = HIFI_COAXES.flatMap(({ woofer, tweeter }) =>
+    tweeter && (woofer.price != null || woofer.id === W0.id) ? [{ woofer, tweeter }] : [],
+  );
+  const coaxLocked = coax && (!!locks.woofer || !!locks.tweeter);
   const dl: NonNullable<typeof locks.dim> = locks.dim || {};
   const guide = cur.guide || null,
     gp = input.guidePrice || 0;
@@ -432,9 +450,10 @@ export function hifiSearchSpace(
     wAmpW: locks.wAmpW ? cur.wAmpW : HIFI_AMP_WATTS_MAX.wAmpW,
     tAmpW: tweeterAmpFixed(cur, locks) ? cur.tAmpW : HIFI_AMP_WATTS_MAX.tAmpW,
   };
-  const wList: HifiWoofer[] = locks.woofer
-    ? [W0]
-    : woofers.filter((o) => o.ts && o.ts.Fs && o.ts.Sd);
+  const wList: HifiWoofer[] =
+    locks.woofer || coaxLocked
+      ? [W0]
+      : (coax ? coaxes.map((c) => c.woofer) : woofers).filter((o) => o.ts && o.ts.Fs && o.ts.Sd);
   const passives = input.passives || [];
   const boxes: HifiBoxKind[] = locks.box
     ? [cur.box]
@@ -443,12 +462,20 @@ export function hifiSearchSpace(
       : ["sealed", "vented"];
   // the one plywood the search designs in, for now (HIFI_OPTIMIZER_PANEL), at its measured thickness
   const walls = [input.wall ?? defaultPanelIn(HIFI_OPTIMIZER_PANEL, cur.mat ?? PLYWOOD_MATERIAL)];
-  const tList: HifiTweeter[] = locks.tweeter
-    ? [T0]
-    : tweeters.filter((t) => t.hf && t.hf.sens != null && (!needsWaveguide(t) || guide));
+  const tList: HifiTweeter[] =
+    locks.tweeter || coaxLocked
+      ? [T0]
+      : coax
+        ? coaxes.map((c) => c.tweeter)
+        : tweeters.filter((t) => t.hf && t.hf.sens != null && (!needsWaveguide(t) || guide));
   const xos = locks.xo ? [cur.xo] : XOS.includes(cur.xo) ? XOS : [...XOS, cur.xo];
+  // the tweeter's room on the baffle the box sizes start from: none on the box top or in a coaxial's woofer
   const face =
-    needsWaveguide(T0) && guide ? (guide.freestanding ? { w: 0, h: -1 } : guide) : T0.faceplate;
+    coax || (needsWaveguide(T0) && guide?.freestanding)
+      ? { w: 0, h: -1 }
+      : needsWaveguide(T0) && guide
+        ? guide
+        : T0.faceplate;
   // each searched tweeter as the boxes hold it: its faceplate (its waveguide's mouth) and whether it sits on top
   const held = tList.flatMap((t) => {
     const tt = tweeterCfg(t);
@@ -607,6 +634,7 @@ export function hifiSearchSpace(
     T0,
     space: {
       curPrMissing,
+      coax,
       guide,
       tweeterCfg,
       guideOf,
@@ -713,7 +741,8 @@ export function optimizeHifiSpeaker(
       goalMissing: null,
       stats: { evaluated: 0, ms: Date.now() - t0 },
     };
-  const { curPrMissing, tweeterCfg, guideOf, priceOf, amps, wList, tList, xos, cfgOf } = space;
+  const { curPrMissing, coax, tweeterCfg, guideOf, priceOf, amps, wList, tList, xos, cfgOf } =
+    space;
   let evals = 0;
   const run = (w: HifiWoofer, t: HifiTweeter, c: SearchConfig): RunResult | null => {
     evals++;
@@ -840,6 +869,8 @@ export function optimizeHifiSpeaker(
     for (let ti = 0; ti < tws.length; ti++) {
       const x = tws[ti];
       if (!bFits[ti] || !x.xoOk[r.xi]) continue;
+      // a coaxial's woofer plays with its own HF only
+      if (coax && x.t.id !== e.w.id) continue;
       if (input.budget && bPrice[ti] > input.budget + 1e-9) continue;
       // the tweeter runs out first at the searched power: with the woofer amp free, the woofer comes down (slider
       // steps) until the tweeter keeps up, so the tweeter caps the level instead of ruling the design out. Below the
@@ -924,7 +955,7 @@ export function optimizeHifiSpeaker(
       // amps are trimmed afterwards
       changeCount: (i) =>
         boxOf(i).ch +
-        (tws[dTw[i]].t.id !== cur.tweeter ? 1 : 0) +
+        (tws[dTw[i]].t.id !== cur.tweeter && !coax ? 1 : 0) +
         (xos[recs[dRec[i]].xi] !== cur.xo ? 1 : 0),
       currentFails: curFails,
       hasCurrent: !!curM,
@@ -1104,7 +1135,8 @@ function changes(p: Pick<PoolEntry, "w" | "t" | "c">, cur: HifiOptimizerCurrent)
   const c = p.c,
     out: ChangeName[] = [];
   if (p.w.id !== cur.woofer) out.push(CHANGE_NAMES.woofer);
-  if (p.t.id !== cur.tweeter) out.push(CHANGE_NAMES.tweeter);
+  // another coaxial is one change: its HF comes with its woofer
+  if (p.t.id !== cur.tweeter && !isCoax(p.w, p.t)) out.push(CHANGE_NAMES.tweeter);
   if (c.box !== cur.box) out.push(CHANGE_NAMES.boxType);
   if (c.dim.w !== cur.dim.w || c.dim.h !== cur.dim.h || c.dim.d !== cur.dim.d)
     out.push(CHANGE_NAMES.boxSize);

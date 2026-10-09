@@ -56,14 +56,15 @@ export function HifiFront({
     y = (inch: number) => (dim.h + top - inch) * k,
     tx = W / 2 + (lay.onTop ? 0 : tweeterOffsetIn) * k,
     // the line where the roundover starts, kept inside the box when the radius is most of it
-    ro = Math.max(0, Math.min(roundoverIn, dim.w / 2 - 0.1, dim.h / 2 - 0.1));
+    ro = Math.max(0, Math.min(roundoverIn, dim.w / 2 - 0.1, dim.h / 2 - 0.1)),
+    wooferR = (w.size * HIFI_FRONT_PARTS.wooferFramePerSize * k) / 2;
   const slot = vented && port.shape === "slot" ? slotOpening(dim, wall, port) : null;
   return (
     <svg
       viewBox={`-4 -4 ${W + 8} ${H + 8}`}
       className={small ? "w-full h-auto max-h-40" : "h-40 w-auto"}
       role="img"
-      aria-label={`Front view, ${dim.w} × ${dim.h}″${lay.onTop ? ", waveguide on top" : ""}${roundoverIn ? `, ${roundoverIn}″ roundover` : ""}${tweeterOffsetIn && !lay.onTop ? `, tweeter ${Math.abs(tweeterOffsetIn)}″ ${tweeterOffsetIn > 0 ? "inward" : "outward"}` : ""}`}
+      aria-label={`Front view, ${dim.w} × ${dim.h}″${lay.onTop ? ", waveguide on top" : ""}${lay.coax ? ", coaxial" : ""}${roundoverIn ? `, ${roundoverIn}″ roundover` : ""}${tweeterOffsetIn && !lay.onTop ? `, tweeter ${Math.abs(tweeterOffsetIn)}″ ${tweeterOffsetIn > 0 ? "inward" : "outward"}` : ""}`}
     >
       <rect
         x={bx}
@@ -88,7 +89,7 @@ export function HifiFront({
           strokeDasharray="2 2"
         />
       )}
-      {lay.onTop ? (
+      {lay.coax ? null : lay.onTop ? (
         <g>
           <rect
             x={W / 2 - (face.w * k) / 8}
@@ -118,14 +119,29 @@ export function HifiFront({
           fill={pal.muted}
         />
       )}
-      <circle cx={tx} cy={y(lay.tweeterIn)} r={0.5 * k} fill={pal.edge} />
-      <circle
-        cx={W / 2}
-        cy={y(lay.wooferIn)}
-        r={(w.size * HIFI_FRONT_PARTS.wooferFramePerSize * k) / 2}
-        fill={pal.edge}
-        stroke={pal.muted}
-      />
+      {!lay.coax && <circle cx={tx} cy={y(lay.tweeterIn)} r={0.5 * k} fill={pal.edge} />}
+      <circle cx={W / 2} cy={y(lay.wooferIn)} r={wooferR} fill={pal.edge} stroke={pal.muted} />
+      {lay.coax && (
+        // the coaxial's HF in the woofer's center: its horn's mouth and the phase plug
+        <g>
+          <circle
+            cx={W / 2}
+            cy={y(lay.tweeterIn)}
+            r={wooferR * HIFI_FRONT_PARTS.coax.hornMouthPerCone}
+            fill={pal.muted}
+          />
+          <circle
+            cx={W / 2}
+            cy={y(lay.tweeterIn)}
+            r={
+              wooferR *
+              HIFI_FRONT_PARTS.coax.hornThroatPerCone *
+              HIFI_FRONT_PARTS.coax.plugPerThroat
+            }
+            fill={pal.edge}
+          />
+        </g>
+      )}
       {pr &&
         radiatorSpots(pr, RADIATOR_PANEL, wall).map(({ y: cy, shape: s }, i) => (
           <rect
