@@ -5,6 +5,7 @@ import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
 import type { BOX_AXIS_NAMES, BRACE_PANEL_NAMES, BRACE_STYLE_NAMES } from "./constants/bracing";
 import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
+import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { MAKER_NAMES } from "./data/catalog/makers";
@@ -541,6 +542,18 @@ export type PanelMaterial = "ply" | "mdf";
 export type CrossoverOrder = 4 | 8;
 
 /**
+ * A high-pass to a sub ahead of the woofer: a Linkwitz-Riley filter of `order` at `hz`, the woofer's half of the
+ * sub-to-speaker crossover. It takes the place of the automatic subsonic (lib/hifi hifiBox).
+ */
+export interface HifiHighpass {
+  hz: number;
+  order: CrossoverOrder;
+}
+
+/** How the speaker is driven, by id (`HIFI_DRIVE_NAMES`): an amp channel per driver behind a DSP crossover, or one amp channel and a passive network. */
+export type HifiDrive = keyof typeof HIFI_DRIVE_NAMES;
+
+/**
  * A round port. `n` is the number of equal openings, `dia` and `len` are in inches, `elbows` is how many bends it
  * takes to fit. The `?: undefined` fields are the slot's, so the two port kinds can be told apart by `shape` and read
  * without narrowing.
@@ -629,6 +642,15 @@ export interface HifiConfig {
   roundoverIn?: number;
   /** how far the tweeter sits off the baffle's center line, inches, + toward the inside of the pair (mirror-imaged); 0 when absent */
   tweeterOffsetIn?: number;
+  /** a high-pass to a sub, in place of the subsonic `hpf`; absent: none (the subsonic as before) */
+  hp?: HifiHighpass;
+  /**
+   * active (absent): the tweeter has its own amp, `tAmpW`; passive: one amp channel, `wAmpW`, feeds both drivers and
+   * the tweeter gets its power through the network's pad (`tAmpW` is not read)
+   */
+  drive?: HifiDrive;
+  /** the box's kick-back, degrees: its baffle tilted back so its axis points this far up; 0 when absent */
+  tiltDeg?: number;
 }
 
 /** Where the drivers sit on the baffle, inches from the box bottom. */
@@ -698,6 +720,8 @@ export interface HifiSystemBase {
   lay: DriverLayout;
   f3: number;
   hpf: number | null;
+  /** the high-pass to a sub in use (the subsonic `hpf` is then null); absent when the design has none */
+  hp?: HifiHighpass;
   xo: number;
   order: CrossoverOrder;
   bsF3: number;
@@ -759,6 +783,11 @@ export interface ListenerGeometry {
   side?: -1 | 1;
   /** the on-axis distance the drivers are time-aligned at, m; `distM` when absent (a map's arc keeps it while the listener moves round) */
   alignM?: number;
+  /**
+   * the point is already in the box's own frame (on its axis, or on a horizontal map's arc round it), so the box's
+   * tilt (`HifiConfig.tiltDeg`) is not applied to it; absent: the point is in the room, the box tilted under it
+   */
+  boxFrame?: true;
 }
 
 export interface FrequencyPoint {
@@ -869,6 +898,16 @@ export interface HifiDesignState {
   roundoverIn: number;
   /** tweeter offset from the baffle's center line, inches, + toward the inside of the pair */
   tweeterOffsetIn: number;
+  /** a high-pass to a sub (`HifiConfig.hp`); absent: none */
+  subHighpass?: HifiConfig["hp"];
+  /** active or passive drive (`HifiConfig.drive`); absent: active */
+  drive?: HifiConfig["drive"];
+  /** the box's kick-back, degrees (`HifiConfig.tiltDeg`); absent: 0 */
+  tiltDeg?: HifiConfig["tiltDeg"];
+  /** the least seat distance the level at the seat and the dispersion map are worked out at, m; absent: `HIFI_SEAT_FLOOR_M` */
+  seatFloorM?: number;
+  /** the port's air speed limit, m/s (`HifiConfig.portMax`); absent: `HIFI_PORT_MAX_MS` */
+  portMaxMs?: HifiConfig["portMax"];
 }
 
 /** What the model reads off a design that can be modeled: the system, and the curves and numbers worked out from it. */
@@ -905,7 +944,7 @@ export interface HifiDesign {
   /** each speaker's seat geometry: the left one at -spacing/2, the right at +spacing/2 */
   leftGeometry: ListenerGeometry;
   rightGeometry: ListenerGeometry;
-  /** the average distance to the seat, at least 1 m */
+  /** the average distance to the seat, at least the seat floor (`HifiDesignState.seatFloorM`, 1 m by default) */
   seatDistanceM: number;
   /** the same distance in feet, as the page shows it */
   seatDistanceFt: number;
@@ -2556,6 +2595,8 @@ export interface HifiScoredBox extends HifiGridBox {
    * levels the amp alone and the driver alone allow there (a lower power moves the first, never the second)
    */
   levels: ({ wLevel: number; ampDb: number; drvDb: number } | null)[];
+  /** the woofer's passband sensitivity at 2.83 V, dB (`HifiSystem.refW`): what a passive network pads the tweeter to */
+  refW: number;
 }
 /** A job for a Hi-fi optimizer worker: one share of the box step, or the rest of the search on every share. */
 export type HifiOptimizerJob =

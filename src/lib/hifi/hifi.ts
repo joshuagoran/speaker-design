@@ -34,6 +34,7 @@ import type {
   HifiChip,
   HifiConfig,
   HifiDesignState,
+  HifiHighpass,
   HifiPort,
   HighpassType,
   HifiDispersionMap,
@@ -65,6 +66,8 @@ import {
   DISPERSION_FREQ_MIN_HZ,
 } from "../../constants/chartScales";
 import { formatInches } from "../format";
+import { crossoverSlopeName } from "../../constants/crossovers";
+import { HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
 import { xmaxBandCurves } from "../xmax";
 
@@ -446,7 +449,7 @@ interface BoxModel {
 /** The fields of a design the box model reads (the crossover, tweeter and room come after it). */
 export type HifiBoxConfig = Pick<
   HifiConfig,
-  "box" | "port" | "pr" | "dim" | "wall" | "wAmpW" | "hpf" | "N"
+  "box" | "port" | "pr" | "dim" | "wall" | "wAmpW" | "hpf" | "hp" | "N"
 >;
 /** The woofer in its box, before the crossover, tweeter and room: volumes, the vent or radiators and the box's response. */
 export interface HifiBox {
@@ -458,7 +461,10 @@ export interface HifiBox {
   ventPort: RoundPort | SizedSlotPort | null;
   pr: PassiveRadiatorChoice | null;
   V: number;
+  /** the subsonic high-pass, Hz (BW24); null for none, or when a high-pass to a sub takes its place */
   hpf: number | null;
+  /** the high-pass to a sub in use (LR, `HifiConfig.hp`); null for none */
+  hp: HifiHighpass | null;
   /** points 15 Hz-2 kHz; the curve runs on at the same spacing to fTop */
   N: number;
   vM: VentedBoxModel | null;
@@ -507,39 +513,50 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
   const V = ampVoltage(cfg.wAmpW),
     N = cfg.N || GRID.N;
   const opts = { fmin: GRID.fmin, fmax: GRID.fmax, N, fTop };
+  // a high-pass to a sub takes the subsonic's place: it is the woofer's half of the sub crossover, an LR filter that has
+  // to sum with the sub's LR low-pass, so a subsonic in series would skew that sum with its phase; and at a sub
+  // crossover (well above 0.75 × Fb) it already unloads the cone below the tuning more than the subsonic did. One set
+  // below the subsonic's corner protects less, and the excursion and port limits read that.
+  const hp = cfg.hp ?? null;
   // a vented box unloads below its tuning; with DSP you'd highpass it there (default 0.75 × Fb, BW24)
-  const hpf =
-    cfg.hpf != null
+  const hpf = hp
+    ? null
+    : cfg.hpf != null
       ? cfg.hpf
       : ventPort
         ? Math.round(0.75 * ventTuning(net, pA, ventPort.len, ventPort.n, ec).Fb)
         : pr
           ? Math.round(0.75 * passiveRadiatorTuning(pr.drv, pr.n, pr.addG, net).Fb)
           : null;
+  // the filter the box models run: the high-pass to a sub, else the subsonic
+  const hpHz = hp ? hp.hz : hpf,
+    hpType: HighpassType = hp ? crossoverSlopeName(hp.order) : "BW24";
   const vM = ventPort
-    ? boxModel(ts, net, pA, ventPort.len, hpf || 1, V, "BW24", {
+    ? boxModel(ts, net, pA, ventPort.len, hpHz || 1, V, hpType, {
         ...opts,
         nPorts: ventPort.n,
         ecIn: ec,
       })
     : null;
-  const rM = pr ? passiveRadiatorBox(ts, net, pr, hpf || 1, V, "BW24", opts) : null;
-  // lightly stuffed; an LR24 highpass, and no lowpass here (the crossover's is applied in hifiSystemFromBox)
+  const rM = pr ? passiveRadiatorBox(ts, net, pr, hpHz || 1, V, hpType, opts) : null;
+  // lightly stuffed; an LR highpass (only with a high-pass to a sub), and no lowpass here (the crossover's is applied
+  // in hifiSystemFromBox)
   const sM =
     ventPort || pr
       ? null
-      : closedBox(ts, net * HIFI_STUFFING_GAIN, hpf || null, null, V, {
+      : closedBox(ts, net * HIFI_STUFFING_GAIN, hpHz || null, null, V, {
           ...opts,
-          hpOrder: 4,
+          hpOrder: hp ? hp.order : 4,
           lpOrder: 4,
         });
   const m: BoxModel | null = vM || rM || sM;
   if (!m) return null;
-  return { gross, net, disp, pVol, pA, ventPort, pr, V, hpf, N, vM, rM, sM, m };
+  return { gross, net, disp, pVol, pA, ventPort, pr, V, hpf, hp, N, vM, rM, sM, m };
 }
 
 // cfg: { box: "sealed"|"vented"|"radiator", pr: { drv, n, addG } (radiator), dim: {w,h,d} (in), wall (in), mat, port: {n, dia, len} (in), xo (Hz), order (4|8),
-//        wAmpW, tAmpW, bsc (dB), place, wallFt, portMax (m/s), hpf (Hz, optional subsonic for vented), guide (waveguide or null) }
+//        wAmpW, tAmpW, bsc (dB), place, wallFt, portMax (m/s), hpf (Hz, optional subsonic for vented), guide (waveguide or null),
+//        hp ({ hz, order }, a high-pass to a sub), drive ("active" | "passive"), tiltDeg (kick-back) }
 export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): HifiSystem | null {
   const b = hifiBox(w, cfg, hifiGridTop(cfg.xo));
   return b && hifiSystemFromBox(b, w, t, cfg);
@@ -559,7 +576,19 @@ export function tweeterMaxLevel(
   const tSens = hf.sens != null ? hf.sens + (cfg.guideGain || 0) : 90;
   return { imp, derate, pMax, tSens, tLevel: tSens + 10 * Math.log10(pMax) };
 }
-/** One speaker's weight, lb: the box, the drivers, a pound of hardware and the radiators with their added mass. */
+/**
+ * The power the tweeter gets, amp watts into 8 Ω (as `tAmpW`): its own amp's when active; when passive, the one amp
+ * channel's (`wAmpW`) through the network's pad, the level match `trim` dB (so `wAmpW` · 10^(trim / 10)). A tweeter
+ * quieter than the woofer (trim > 0) takes the full amp: a passive network can't add gain, so the woofer would be
+ * padded instead, and the tweeter's level then caps the speaker's, as `maxLevel` reads it. The Fills page's `hfLimW`
+ * (lib/pa/calc fillSystem) is this relation solved for the amp power that brings the HF to its program rating.
+ */
+export const tweeterAmpWatts = (
+  cfg: Pick<HifiConfig, "drive" | "wAmpW" | "tAmpW">,
+  trim: number,
+): HifiConfig["tAmpW"] =>
+  cfg.drive === "passive" ? cfg.wAmpW * Math.pow(10, Math.min(0, trim) / 10) : cfg.tAmpW;
+/** One speaker's weight, lb: the box, the drivers, a pound of hardware and the radiators with their added mass (no amps). */
 export const hifiWeightLb = (
   w: HifiWoofer,
   t: HifiTweeter,
@@ -712,7 +741,7 @@ export function hifiWooferPrep(
   );
   const V = b.V,
     vT = thermalVoltageLimit(w.ts.aes || 100),
-    portMax = cfg.portMax || 17,
+    portMax = cfg.portMax || HIFI_PORT_MAX_MS,
     pr = b.pr,
     xR = pr ? pr.drv.Xmax : 0;
   const raw = new Float64Array(n),
@@ -825,7 +854,7 @@ export function hifiSystemFromBox(
   const ts = w.ts,
     dim = cfg.dim,
     wall = cfg.wall || 0.75;
-  const { gross, net, disp, pVol, pA, ventPort, pr, V, hpf, vM, rM, sM } = b;
+  const { gross, net, disp, pVol, pA, ventPort, pr, V, hpf, hp, vM, rM, sM } = b;
   const order = cfg.order || 4,
     xo = cfg.xo;
   // the box's curve up to this crossover's grid top, and its F3 read on that (as the box model reads it)
@@ -874,11 +903,16 @@ export function hifiSystemFromBox(
   const { sMusic, whoW, wLevel } = hifiWooferLevel(b, prep, cfg);
 
   // tweeter: sensitivity and power, derated below the frequency its rating assumes, then the high-pass
-  const { imp, derate, pMax, tSens, tLevel } = tweeterMaxLevel(t, cfg);
+  const tOwn = tweeterMaxLevel(t, cfg);
   // level match: the woofer's passband level at 2.83 V (on-axis, above the baffle step)
   const refW = m.ref - 20 * Math.log10(V / 2.83);
-  const tSens283 = tSens + 10 * Math.log10(8 / imp);
-  const trim = refW - tSens283; // dB applied to the tweeter in the DSP (usually negative)
+  const tSens283 = tOwn.tSens + 10 * Math.log10(8 / tOwn.imp);
+  const trim = refW - tSens283; // dB applied to the tweeter in the DSP, or the passive network's pad (usually negative)
+  // passive: the one amp channel feeds the tweeter through that pad
+  const { derate, pMax, tSens, tLevel } =
+    cfg.drive === "passive"
+      ? tweeterMaxLevel(t, { ...cfg, tAmpW: tweeterAmpWatts(cfg, trim) })
+      : tOwn;
   const tweeterAt = (f: number, volts: number) =>
     tSens283 +
     20 * Math.log10(volts / 2.83) +
@@ -927,6 +961,7 @@ export function hifiSystemFromBox(
     bsF3: baffleStepF3(bw),
     tweeterAt,
     V,
+    ...(hp && { hp }),
   };
   if (vM && ventPort)
     return {
@@ -966,6 +1001,32 @@ export function tweeterOffset(
     x = cfg.tweeterOffsetIn || 0;
   return Math.max(-m, Math.min(m, x));
 }
+/**
+ * A listener in the room as the box's own frame sees it, the box tilted back `tiltDeg` (kick-back) about its bottom
+ * front edge so its axis points that far up: the point turns down the baffle by the tilt, at the same distance from that
+ * edge (its height and distance in front of the baffle change, its offset across doesn't), and the drivers stay
+ * time-aligned at the listening distance. Unchanged with no tilt, or for a point already in the box's frame.
+ */
+export function boxFrameGeometry(
+  geo: ListenerGeometry,
+  tiltDeg: HifiConfig["tiltDeg"],
+): ListenerGeometry {
+  if (!tiltDeg || geo.boxFrame) return geo;
+  const t = (tiltDeg * Math.PI) / 180,
+    across = geo.distM * Math.sin(geo.th),
+    out = geo.distM * Math.cos(geo.th),
+    up = geo.eyeIn * IN;
+  const out2 = out * Math.cos(t) + up * Math.sin(t),
+    up2 = up * Math.cos(t) - out * Math.sin(t);
+  return {
+    ...geo,
+    th: Math.atan2(Math.abs(across), out2),
+    eyeIn: up2 / IN,
+    distM: Math.hypot(across, out2),
+    alignM: geo.alignM ?? geo.distM,
+    boxFrame: true,
+  };
+}
 /** The listening point for `geo` in the baffle's inches (x across, + inward; y up from the box bottom; z out), on the axis of a driver at `x0` across. */
 function fieldPoint(geo: ListenerGeometry, x0: number): FieldPoint {
   const d = geo.distM / IN,
@@ -973,17 +1034,18 @@ function fieldPoint(geo: ListenerGeometry, x0: number): FieldPoint {
   return { x: x0 + (geo.side ?? 1) * d * Math.sin(th), y: geo.eyeIn, z: d * Math.cos(th) };
 }
 /**
- * Each driver's edge diffraction ripple for the listener at `geo`, as functions of frequency (a complex gain, 1 for
- * none). The tweeter's level toward the edges is its dome's (or waveguide's) at 90°, the woofer's its cone's; a
- * waveguide on the box top is off the baffle and gets none.
+ * Each driver's edge diffraction ripple for the listener at `room` (in the room: the box's tilt applies), as functions
+ * of frequency (a complex gain, 1 for none). The tweeter's level toward the edges is its dome's (or waveguide's) at
+ * 90°, the woofer's its cone's; a waveguide on the box top is off the baffle and gets none.
  */
 function edgeRipples(
   sys: Pick<HifiSystem, "lay">,
   w: HifiWoofer,
   t: HifiTweeter,
   cfg: HifiConfig,
-  geo: ListenerGeometry,
+  room: ListenerGeometry,
 ) {
+  const geo = boxFrameGeometry(room, cfg.tiltDeg);
   const r = cfg.roundoverIn || 0,
     a = Math.sqrt(w.ts.Sd / 1e4 / Math.PI),
     dome = (t.domeIn * IN) / 2,
@@ -1021,14 +1083,14 @@ function edgeRipples(
     },
   };
 }
-/** The edge diffraction ripple alone, dB, for the listener at `geo` (on axis at 1 m by default): each driver's, summed through the crossover. */
+/** The edge diffraction ripple alone, dB, for the listener at `geo` (on the box's axis at 1 m by default): each driver's, summed through the crossover. */
 export function hifiEdgeRipple(
   sys: Pick<HifiSystem, "lay">,
   w: HifiWoofer,
   t: HifiTweeter,
   cfg: HifiConfig,
   freqs: readonly number[],
-  geo: ListenerGeometry = { th: 0, eyeIn: sys.lay.tweeterIn, distM: 1 },
+  geo: ListenerGeometry = { th: 0, eyeIn: sys.lay.tweeterIn, distM: 1, boxFrame: true },
 ): FrequencyPoint[] {
   const er = edgeRipples(sys, w, t, cfg, geo),
     order = cfg.order || 4;
@@ -1043,15 +1105,17 @@ export function hifiEdgeRipple(
 // Response of one speaker at a point, relative to its on-axis response at 1 m; the DSP is time-aligned on the
 // tweeter axis at the listening distance. Returns [{ f, spl }] at 2.83 V-equivalent level (1 m on-axis scale).
 // Each driver's sound carries its baffle-edge diffraction at that point (roundover and tweeter offset from `cfg`).
-// geo: { th (rad, horizontal off-axis), eyeIn (ear height above the box bottom, in), distM, side }
+// room: { th (rad, horizontal off-axis), eyeIn (ear height above the box bottom, in), distM, side }, in the room: a
+// tilted box (`cfg.tiltDeg`) sees it lower on its baffle (boxFrameGeometry), unless it is already in the box's frame.
 export function hifiResponseAt(
   sys: HifiSystem,
   w: HifiWoofer,
   t: HifiTweeter,
   cfg: HifiConfig,
-  geo: ListenerGeometry,
+  room: ListenerGeometry,
   freqs = logSpacedFrequencies(60, 20000, 160),
 ): FrequencyPoint[] {
+  const geo = boxFrameGeometry(room, cfg.tiltDeg);
   const xo = cfg.xo,
     order = cfg.order || 4,
     a = Math.sqrt(w.ts.Sd / 1e4 / Math.PI);
@@ -1179,6 +1243,8 @@ const nearestF = (curve: WooferPoint[], f: number) => {
 // Dispersion map: level vs angle and frequency, normalized to on-axis, on the shared grid (−90..90°, 50 Hz-20 kHz).
 // plane "h" (horizontal, at the tweeter height, from the outside (−) to the inside (+) of the pair, so an offset
 // tweeter's two sides both show) or "v" (vertical, on an arc from below to above the tweeter axis).
+// A tilted box (`cfg.tiltDeg`): the reference stays on its own axis and the horizontal map in its own plane round that
+// axis, while the vertical map's angles are from the horizontal in the room, so its axis shows that far up.
 // Returns { angles, freqs, rows: [[dB]] }.
 export function hifiDispersionMap(
   sys: HifiSystem,
@@ -1189,12 +1255,25 @@ export function hifiDispersionMap(
   distM = 2,
 ): HifiDispersionMap {
   const { angles, freqs } = dispersionGrid();
-  const on = hifiResponseAt(sys, w, t, cfg, { th: 0, eyeIn: sys.lay.tweeterIn, distM }, freqs);
+  const on = hifiResponseAt(
+    sys,
+    w,
+    t,
+    cfg,
+    { th: 0, eyeIn: sys.lay.tweeterIn, distM, boxFrame: true },
+    freqs,
+  );
   const rows = angles.map((deg) => {
     const rad = (deg * Math.PI) / 180;
     const geo: ListenerGeometry =
       plane === "h"
-        ? { th: Math.abs(rad), eyeIn: sys.lay.tweeterIn, distM, side: deg < 0 ? -1 : 1 }
+        ? {
+            th: Math.abs(rad),
+            eyeIn: sys.lay.tweeterIn,
+            distM,
+            side: deg < 0 ? -1 : 1,
+            boxFrame: true,
+          }
         : verticalArcPoint(deg, sys.lay.tweeterIn, distM);
     const r = hifiResponseAt(sys, w, t, cfg, geo, freqs);
     return r.map((o, i) => o.spl - on[i].spl);
