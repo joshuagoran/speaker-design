@@ -376,6 +376,66 @@ test("compression driver on a waveguide: the higher of the two minimum crossover
   assert.ok(own[2].includes(de250.name), own[2]);
 });
 
+test("a crossover below where the waveguide holds its pattern warns once, naming it and the frequency; at or above it, none", async () => {
+  const { HIFI_TWEETERS, HIFI_WAVEGUIDES, ST260, ownGuideCfg, waveguideSpecOf } =
+    await import("../src/lib/data");
+  const { keeleFrequency } = await import("../src/lib/pa/calc");
+  const { DEFAULT_HIFI } = await import("../src/lib/defaults");
+  const de250 = HIFI_TWEETERS.find((o) => o.id === "de250");
+  const me10 = HIFI_WAVEGUIDES.find((h) => h.id === "me10");
+  const h07e = HIFI_WAVEGUIDES.find((h) => h.id === "h07e");
+  if (!de250?.hf.minXo || !me10 || !h07e) throw new Error("no DE250, ME10 or H07E to test");
+  const chipsAt = (xo: number, g: HifiConfig["guide"], t: HifiTweeter = de250) => {
+    const c = { ...cfg, guide: g, xo };
+    const s = hifiSystem(W, t, c);
+    if (!s) throw new Error(`no system at ${xo} Hz`);
+    return hifiChips(s, W, t, c);
+  };
+  const patternAt = (xo: number, g: HifiConfig["guide"], t?: HifiTweeter) =>
+    findChip(chipsAt(xo, g, t), "hifiGuidePattern", "warn");
+  // the ME10: a 1.5 kHz loading cutoff, but its 5.1 in mouth holds 90° only from about 2.16 kHz (Keele), and the map
+  // widens it below that too
+  const guide = waveguideSpecOf(me10);
+  assert.equal(guide.lowHz, me10.hf.lowHz, "the guide carries the catalogue's limit");
+  const pattern = HIFI.guidePatternHz(guide);
+  if (!pattern) throw new Error("no pattern limit");
+  assert.equal(pattern.by, "mouth");
+  assert.equal(pattern.hz, Math.round(keeleFrequency(me10.hf.covH, me10.size.w) / 10) * 10);
+  assert.ok(pattern.hz > me10.hf.lowHz);
+  const half = (f: number) =>
+    HIFI.waveguideHalfAngles(f, guide.covH, guide.covV, guide.w, guide.h)[0];
+  close(null, half(pattern.hz + 10), ((guide.covH / 2) * Math.PI) / 180, 1e-9);
+  assert.ok(half(pattern.hz - 100) > ((guide.covH / 2) * Math.PI) / 180, "wider below it");
+  // 2 kHz: above the DE250's 1.6 kHz minimum, below the ME10's pattern: one warning, naming both
+  const warn = patternAt(2000, guide);
+  assert.ok(warn, "a warning at 2000 Hz");
+  assert.ok(warn[2].includes(me10.name) && warn[2].includes(String(pattern.hz)), warn[2]);
+  assert.ok(!patternAt(pattern.hz, guide), "none at the limit");
+  assert.ok(!patternAt(3000, guide), "none above it");
+  // under the driver's minimum crossover the minimum-crossover warning stands alone
+  const low = chipsAt(de250.hf.minXo - 200, guide);
+  assert.ok(findChip(low, "hifiTweeterMinXo", "warn"));
+  assert.ok(!findChip(low, "hifiGuidePattern"), "no second warning");
+  // the H07E's maker minimum (2.2 kHz) is its limit too: below it only the minimum-crossover warning
+  const h = waveguideSpecOf(h07e);
+  assert.equal(HIFI.guidePatternHz(h)?.by, "loading");
+  const below = chipsAt(2000, h);
+  assert.ok(findChip(below, "hifiTweeterMinXo", "warn"));
+  assert.ok(!findChip(below, "hifiGuidePattern"));
+  // no waveguide the PA side also offers starts warning at the default crossover; a dome (no waveguide) and a ribbon's
+  // own waveguide (no limit) never warn
+  for (const g of HIFI_WAVEGUIDES.filter((w) => !w.scope)) {
+    const p = HIFI.guidePatternHz(waveguideSpecOf(g));
+    assert.ok(p && p.hz <= DEFAULT_HIFI.crossoverHz, `${g.id}: ${p?.hz} Hz`);
+  }
+  assert.ok(!patternAt(DEFAULT_HIFI.crossoverHz, waveguideSpecOf(ST260)));
+  assert.ok(!patternAt(800, null, T));
+  const ribbon = HIFI_TWEETERS.find((o) => o.ownGuide);
+  const own = ownGuideCfg(ribbon);
+  if (!ribbon || !own) throw new Error("no ribbon to test");
+  assert.ok(!patternAt(800, own, ribbon));
+});
+
 test("port toggle builds a fresh port with only its own shape's fields", () => {
   const round = { n: 1, dia: 3, len: 7, elbows: 1 } as const;
   const remembered = { dia: 2, h: 1 };

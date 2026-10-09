@@ -3,6 +3,7 @@ import {
   passiveRadiatorMassMax,
   ownGuideCfg,
   waveguideSpecOf,
+  throatAdapterPrice,
 } from "../../lib/data";
 import { METERS_PER_FOOT } from "../../constants/units";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SEAT_FLOOR_M } from "../../constants/hifiEngine";
@@ -120,7 +121,9 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     2 *
     ((woofer.price || 0) +
       (tweeter.price || 0) +
-      (waveguideSpec && !tweeter.ownGuide ? selectedWaveguide.price || 0 : 0) +
+      (waveguideSpec && !tweeter.ownGuide
+        ? (selectedWaveguide.price || 0) + (throatAdapterPrice(tweeter, compressionWaveguide) ?? 0)
+        : 0) +
       (boxType === "radiator" ? radiator.n * (radiatorDriver.price || 0) : 0));
   const speakerSystem = hifiSystem(woofer, tweeterWithWaveguide, speakerConfig);
   let speakerModel: HifiSpeakerModel | null = null;
