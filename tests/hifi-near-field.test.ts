@@ -21,8 +21,8 @@ import {
 import { hifiAxisWooferDb } from "../src/lib/hifi/optimize";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
-import { HIFI_TWEETERS, HIFI_WOOFERS } from "../src/lib/data";
-import { HIFI_NEAR_FIELD_M, HIFI_PAIR_SUM_DB } from "../src/constants/hifiEngine";
+import { HIFI_COAXES, HIFI_TWEETERS, HIFI_WOOFERS } from "../src/lib/data";
+import { HIFI_COAX_DRIVE, HIFI_NEAR_FIELD_M, HIFI_PAIR_SUM_DB } from "../src/constants/hifiEngine";
 import type { HifiDesignState } from "../src/types";
 import { close } from "./helpers";
 
@@ -377,4 +377,45 @@ test("a tilted box's drivers are where the tilt puts them in the room", (t) => {
   const flat = hifiSeatPaths(sys, DEFAULT_HIFI.woofer, d.tweeterWithWaveguide, {}, room);
   close(t, flat.tM, 0.4, 1e-15);
   assert.ok(p.tM > flat.tM, "tilted back, the tweeter leans away from the ear");
+});
+
+// ---- a coaxial ----
+
+test("a coaxial's coincident drivers share one path: no woofer offset close in, finite at the driver", (t) => {
+  const c = HIFI_COAXES.find((p) => p.woofer.id === "bc10cxn64");
+  assert.ok(c?.tweeter, "the coaxial has an HF section");
+  const state: HifiDesignState = {
+    ...DEFAULT_HIFI,
+    woofer: c.woofer,
+    tweeter: c.tweeter,
+    drive: HIFI_COAX_DRIVE,
+    crossoverHz: c.tweeter.hf.minXo ?? DEFAULT_HIFI.crossoverHz,
+    boxDims: { w: 12, h: 16, d: 11 },
+  };
+  const { d, m } = modelOf(state);
+  const sys = m.speakerSystem;
+  assert.strictEqual(sys.lay.spacingIn, 0);
+  for (const dM of [0.3, 0.5, 2]) {
+    const p = hifiSeatPaths(sys, c.woofer, d.tweeterWithWaveguide, d.speakerConfig, {
+      th: 0,
+      eyeIn: sys.lay.tweeterIn + 6,
+      distM: dM,
+    });
+    assert.strictEqual(p.wM, p.tM, `${dM} m`);
+    assert.strictEqual(
+      hifiAxisWooferDb(sys.lay, c.woofer, d.tweeterWithWaveguide, d.speakerConfig, dM),
+      0,
+    );
+  }
+  // at the driver with no seat floor: the woofer's floor, the larger, sets the path
+  const at = modelOf({
+    ...state,
+    speakerSpacingFt: 0,
+    listeningSeat: { x: 0, y: 0 },
+    earHeightIn: state.standHeightIn + sys.lay.tweeterIn,
+    seatFloorM: 0,
+  }).m;
+  const a = Math.sqrt(c.woofer.ts.Sd / 1e4 / Math.PI);
+  close(t, at.maxLevelAtSeatDb, sys.maxLevel - 20 * Math.log10(driverPathFloorM(a)) + 3, 1e-9);
+  for (const o of at.pairResponse) assert.ok(Number.isFinite(o.spl), `${o.f} Hz`);
 });

@@ -39,6 +39,9 @@ import type {
   HifiDispersionMap,
   HifiPlacement,
   HifiSeatPaths,
+  Horn,
+  MountAdapter,
+  WaveguideSpec,
   RoundPort,
   SizedSlotPort,
   SlotPort,
@@ -66,6 +69,8 @@ import {
   DISPERSION_FREQ_MIN_HZ,
 } from "../../constants/chartScales";
 import { formatInches } from "../format";
+import { MOUNT_ADAPTERS, throatJoin } from "../data";
+import { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "../../constants/throatMounts";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
@@ -79,6 +84,8 @@ import {
   nearFieldPathM,
 } from "./nearField";
 import { xmaxBandCurves } from "../xmax";
+import { coaxGaps } from "../data";
+import { COAX_GAP_NAMES } from "../../constants/coax";
 
 const C = 343,
   IN = 0.0254;
@@ -344,8 +351,14 @@ export function boxWeightLb(d: Dims3, t: number, mat: PanelMaterial | undefined)
   const ft2 = (2 * (d.w * d.h + d.w * d.d + d.h * d.d)) / 144;
   return ft2 * panelWeightLb(t, mat);
 }
+/**
+ * Whether the woofer and tweeter are one coaxial (lib/data coaxParts): both parts carry the coaxial's id. A design
+ * names a coaxial by giving it as both its woofer and its tweeter.
+ */
+export const isCoax = (w: Pick<HifiWoofer, "id">, t: Pick<HifiTweeter, "id">) => w.id === t.id;
 // where the drivers sit (inches from the box bottom): tweeter near the top, woofer just below it;
-// a freestanding waveguide sits on the box top, so the woofer moves up to the top of the baffle
+// a freestanding waveguide sits on the box top, so the woofer moves up to the top of the baffle;
+// a coaxial's HF is at its woofer's center, the woofer at the top of the baffle
 export function driverLayout(
   w: HifiWoofer,
   t: HifiTweeter,
@@ -354,6 +367,10 @@ export function driverLayout(
 ): DriverLayout {
   const face = t.faceplate;
   const { topMarginIn, driverGapIn } = HIFI_BOX_LAYOUT;
+  if (isCoax(w, t)) {
+    const wh = d.h - topMarginIn - w.size / 2;
+    return { tweeterIn: wh, wooferIn: wh, spacingIn: 0, coax: true };
+  }
   if (onTop) {
     const th = d.h + face.h / 2,
       wh = d.h - topMarginIn - w.size / 2;
@@ -526,7 +543,7 @@ export const hifiVentPort = (
       ? { ...cfg.port, n: 1, w: slotWidth(cfg.dim, cfg.wall || 0.75) }
       : cfg.port;
 /** A sealed box's effective volume over its net: light stuffing. */
-const HIFI_STUFFING_GAIN = 1.1;
+export const HIFI_STUFFING_GAIN = 1.1;
 /** The box alone, its curve run to fTop (Hz): xo-independent, so one box serves every crossover. */
 export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBox | null {
   const ts = w.ts,
@@ -659,7 +676,10 @@ export function tweeterLevelInBox(
       : own;
   return { ...level, tSens283, trim };
 }
-/** One speaker's weight, lb: the box, the drivers, a pound of hardware and the radiators with their added mass (no amps). */
+/**
+ * One speaker's weight, lb: the box, the drivers (a coaxial once: its woofer carries it), a pound of hardware and the
+ * radiators with their added mass (no amps).
+ */
 export const hifiWeightLb = (
   w: HifiWoofer,
   t: HifiTweeter,
@@ -668,7 +688,7 @@ export const hifiWeightLb = (
 ) =>
   boxWeightLb(cfg.dim, cfg.wall || 0.75, cfg.mat) +
   (w.lb || 5) +
-  (t.lb || 1.5) +
+  (isCoax(w, t) ? 0 : t.lb || 1.5) +
   1 +
   (pr ? pr.n * ((pr.drv.lb || 0.75) + (pr.addG || 0) / 454) : 0);
 /**
@@ -683,6 +703,60 @@ export function tweeterMinXo(
   const guideHz = guide?.minXo || 0;
   if (guide && guideHz > own) return { hz: guideHz, part: "waveguide", name: guide.name };
   return own ? { hz: own, part: "tweeter", name: t.name } : null;
+}
+/**
+ * Where a catalogue waveguide starts holding its rated horizontal coverage, Hz (to the nearest 10): the higher of its
+ * loading limit (`lowHz`) and its mouth's control frequency (Keele, as the dispersion map widens it below), and which
+ * sets it. Null for a guide without a `lowHz` (a ribbon's own waveguide).
+ */
+export function guidePatternHz(
+  g: Pick<WaveguideSpec, "covH" | "w" | "lowHz">,
+): { hz: number; by: "mouth" | "loading" } | null {
+  if (!g.lowHz) return null;
+  const mouth = keeleFrequency(g.covH, g.w);
+  return mouth > g.lowHz
+    ? { hz: Math.round(mouth / 10) * 10, by: "mouth" }
+    : { hz: g.lowHz, by: "loading" };
+}
+/** A driver's or horn's throat as a check names it: bolt-on, or screw-on with its thread. */
+const mountName = (mount: Horn["mount"] | HifiTweeter["mount"]) =>
+  mount && "thread" in mount
+    ? `${THROAT_MOUNT_NAMES.thread} (${THROAT_THREAD_NAMES[mount.thread]})`
+    : THROAT_MOUNT_NAMES.bolts;
+/**
+ * The check on a compression driver's throat on its catalogue waveguide: none for a direct pair; the adapter a mixed
+ * pair takes, with its price and source (or that it has none, so the cost leaves it out); a failure when nothing joins
+ * them.
+ */
+export function guideMountChip(
+  t: Pick<HifiTweeter, "name" | "mount">,
+  guide: Pick<WaveguideSpec, "name" | "mount">,
+  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
+): HifiChip | null {
+  const join = throatJoin(t, guide, adapters);
+  const pair = `The ${t.name} is ${mountName(t.mount)} and the ${guide.name} ${mountName(guide.mount)}`;
+  if (!join)
+    return [
+      "bad",
+      "Driver doesn't fit the waveguide",
+      `${pair}, and nothing in the catalogue joins them.`,
+      "hifiGuideMount",
+    ];
+  if (!join.adapter) return null;
+  const { name, price, src } = join.adapter;
+  return price == null
+    ? [
+        "warn",
+        "Adapter needed, not priced",
+        `${pair}: the ${name} joins them, but no US vendor prices it, so the cost leaves it out. The 3-D view leaves out its length.`,
+        "hifiGuideMount",
+      ]
+    : [
+        "ok",
+        "Adapter in the cost",
+        `${pair}: the ${name} joins them, $${price.toFixed(2)} each (${src}), counted in the cost. The 3-D view leaves out its length.`,
+        "hifiGuideMount",
+      ];
 }
 /** The minimum-crossover warning's title, by the part that sets the minimum. */
 export const MIN_XO_TITLE: Record<NonNullable<ReturnType<typeof tweeterMinXo>>["part"], string> = {
@@ -1050,13 +1124,16 @@ export const tweeterOffsetMax = (
   cfg: Pick<HifiConfig, "dim" | "roundoverIn">,
   t: Pick<HifiTweeter, "faceplate">,
 ) => Math.max(0, (cfg.dim.w - t.faceplate.w) / 2 - (cfg.roundoverIn || 0) - 0.25);
-/** The tweeter offset the model uses, inches (+ inward): the asked-for one, kept on the baffle; 0 for a waveguide on the box top. */
+/**
+ * The tweeter offset the model uses, inches (+ inward): the asked-for one, kept on the baffle; 0 for a waveguide on the
+ * box top or a coaxial's HF (at its woofer's center).
+ */
 export function tweeterOffset(
   cfg: Pick<HifiConfig, "dim" | "roundoverIn" | "tweeterOffsetIn">,
   t: Pick<HifiTweeter, "faceplate">,
-  lay: Pick<DriverLayout, "onTop">,
+  lay: Pick<DriverLayout, "onTop" | "coax">,
 ) {
-  if (lay.onTop) return 0;
+  if (lay.onTop || lay.coax) return 0;
   const m = tweeterOffsetMax(cfg, t),
     x = cfg.tweeterOffsetIn || 0;
   return Math.max(-m, Math.min(m, x));
@@ -1412,11 +1489,12 @@ export function hifiChips(
     ka = ((2 * Math.PI * xo) / C) * a;
   const beam = ka <= 2.2 ? 180 : (2 * Math.asin(2.2 / ka) * 180) / Math.PI;
   const tCov = cfg.guide ? cfg.guide.covH : 160;
+  const coax = isCoax(w, t);
   if (beam < Math.min(tCov, 180) * 0.75)
     F.push([
       "warn",
       "Woofer narrower than the tweeter at the crossover",
-      `About ${Math.round(beam)}° against the tweeter's ${cfg.guide ? tCov + "°" : "wide dome"}: an off-axis dip below ${xo} Hz. Use a lower crossover.`,
+      `About ${Math.round(beam)}° against the tweeter's ${cfg.guide ? tCov + "°" : coax ? "unpublished coverage, taken as wide" : "wide dome"}: an off-axis dip below ${xo} Hz. Use a lower crossover.`,
       "hifiDispersion",
     ]);
   else
@@ -1434,6 +1512,29 @@ export function hifiChips(
       `${xo} Hz, below the ${minXo.hz} Hz recommended for the ${minXo.name}.`,
       "hifiTweeterMinXo",
     ]);
+  // a coaxial whose maker leaves out an HF figure: the checks above can't read it (the optimizer offers such a coaxial
+  // only as your own design)
+  const gaps = coax ? coaxGaps(t.id) : [];
+  if (gaps.length)
+    F.push([
+      "warn",
+      "HF figures not published",
+      `The maker publishes no ${gaps.map((g) => COAX_GAP_NAMES[g]).join(" or ")} for the ${t.name}: check its data before setting the crossover.`,
+      "hifiCoaxGaps",
+    ]);
+  // below where the waveguide holds its pattern the tweeter is wider than rated near the crossover (the dispersion map
+  // widens it there too); a crossover already under the minimum-crossover warning gets no second one
+  const pattern = cfg.guide ? guidePatternHz(cfg.guide) : null;
+  if (cfg.guide && pattern && xo < pattern.hz && !(minXo && xo < minXo.hz))
+    F.push([
+      "warn",
+      "Below the waveguide's pattern control",
+      `${xo} Hz, below the ${pattern.hz} Hz where the ${cfg.guide.name} starts holding its ${cfg.guide.covH}° (${pattern.by === "mouth" ? `its ${formatInches(cfg.guide.w)} mouth` : "its loading"}): near the crossover the tweeter spreads wider than rated, and the woofer's off-axis match suffers.`,
+      "hifiGuidePattern",
+    ]);
+  // the driver's throat on the catalogue waveguide's: direct, through an adapter (in the cost), or no fit
+  const mountChip = cfg.guide && needsWaveguide(t) && !t.ownGuide && guideMountChip(t, cfg.guide);
+  if (mountChip) F.push(mountChip);
   if (nearTweeterResonance(t, xo))
     F.push([
       "warn",
@@ -1533,11 +1634,13 @@ export function hifiChips(
       "hifiRoundover",
     ]);
   const offAsked = cfg.tweeterOffsetIn || 0;
-  if (offAsked && sys.lay.onTop)
+  if (offAsked && (sys.lay.onTop || sys.lay.coax))
     F.push([
       "warn",
       "Tweeter offset ignored",
-      "The waveguide on top stays centered.",
+      sys.lay.coax
+        ? "A coaxial's HF sits at its woofer's center."
+        : "The waveguide on top stays centered.",
       "hifiTweeterOffsetIgnored",
     ]);
   else if (Math.abs(offAsked) > tweeterOffsetMax(cfg, t) + 1e-9)

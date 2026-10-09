@@ -22,6 +22,8 @@ export const HIFI_GENERIC_BODIES = {
   cutoutPerSize: 0.86,
   /** a dome, horn-loaded or ribbon tweeter's body behind its faceplate, drawn in the cutaway: per inch of faceplate width, and its depth */
   tweeter: { diaPerFace: 0.75, depthIn: 1.2 },
+  /** a coaxial's HF driver behind its woofer's magnet, drawn in the cutaway, per inch of the woofer's nominal size */
+  coaxHf: { diaPerSize: 0.32, depthPerSize: 0.22 },
 } as const;
 
 /** How the 3D view draws the drivers' fronts. */
@@ -50,4 +52,15 @@ export const HIFI_FRONT_PARTS = {
   flareThroat: 0.35,
   /** a ribbon's diaphragm in its plate: its width and height for the plate's, and how far back it sits */
   ribbon: { w: 0.12, h: 0.6, setBackIn: 0.35 },
+  /**
+   * a coaxial's HF in its woofer's center, in place of the dust cap (the 2D front drawing's too): its horn's mouth and
+   * throat for the cone's radius, how far it stands proud of the cone (its mouth stays behind the woofer's frame), and
+   * the phase plug's radius for the throat's (its tip at the horn's mouth)
+   */
+  coax: {
+    hornMouthPerCone: 0.34,
+    hornThroatPerCone: 0.14,
+    hornRisePerCone: 0.06,
+    plugPerThroat: 0.75,
+  },
 } as const;

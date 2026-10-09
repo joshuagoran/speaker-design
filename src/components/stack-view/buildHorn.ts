@@ -53,8 +53,8 @@ export interface HornAxis {
  * under the driver) a mount holds it. With an adapter, the L-bracket bolted to the adapter's flange. Without one, the
  * driver on the throat flange and, in front of the flange, the plywood mount when `hornMount` is "ply" and the
  * driver's bolts fit it (`plyMountFit`), else the aluminum plate when they fit that (`plateFit`), else the L-bracket
- * clamped between the throat and the driver. `mount` is the box under the horn: its width draws the full-width
- * concept, and a mount's foot or base stays on its lid.
+ * clamped between the throat and the driver (always, for a screw-on joint: `screwOn`). `mount` is the box under the
+ * horn: its width draws the full-width concept, and a mount's foot or base stays on its lid.
  */
 function addThroatParts(
   ctx: SceneContext,
@@ -65,6 +65,7 @@ function addThroatParts(
   mount: Pick<Dims3, "w" | "d">,
   hornMount: HornMountId | undefined,
   backRoundover: number,
+  screwOn: boolean,
 ) {
   let cdFront = at.throatZ;
   if (horn.adapter) {
@@ -79,8 +80,9 @@ function addThroatParts(
   } else if (lidY !== null) {
     // the lid's flat top ends at the roundover on its back edge (boxes are centered on z = 0)
     const lidBackZ = -mount.d / 2 + backRoundover;
-    const ply = hornMount === HORN_MOUNT_PLY ? plyMountFit(horn, cd, mount.w) : null;
-    const plate = ply ? null : plateFit(horn, cd, mount.w);
+    // a screw-on joint has no flange bolts for the plywood mount or the plate: the bracket clamped at the throat holds it
+    const ply = !screwOn && hornMount === HORN_MOUNT_PLY ? plyMountFit(horn, cd, mount.w) : null;
+    const plate = ply || screwOn ? null : plateFit(horn, cd, mount.w);
     if (ply) buildPlyMount(ctx, ply, { cd, at, lidY, lidBackZ });
     else if (plate) buildPlate(ctx, plate, { at, lidY, lidBackZ });
     else cdFront = buildClampedBracket(ctx, cd, at, lidY);
@@ -114,6 +116,7 @@ export function buildHorn(
     tower,
     hornMount,
     backRoundover = ROUNDOVER_IN,
+    screwOn = false,
   }: {
     horn: Horn;
     cd: Pick<CompressionDriver, "body" | "exit">;
@@ -125,6 +128,11 @@ export function buildHorn(
     hornMount?: HornMountId;
     /** the roundover on the lid's back edge, where its flat top ends (default: the PA frame's `ROUNDOVER_IN`) */
     backRoundover?: number;
+    /**
+     * the driver meets the horn on a thread (a screw-on driver or horn, or the adapter between them, whose length is
+     * not drawn): the L-bracket clamped at the throat holds it
+     */
+    screwOn?: boolean;
   },
 ): { top: number; axes: HornAxis[] } {
   const { hornShell } = ctx.materials;
@@ -138,7 +146,17 @@ export function buildHorn(
     body.position.set(at.x, at.y, at.throatZ);
     body.name = HORN_MESH_NAME;
     ctx.group.add(body);
-    addThroatParts(ctx, horn, cd, at, tower ? null : hornY, mount, hornMount, backRoundover);
+    addThroatParts(
+      ctx,
+      horn,
+      cd,
+      at,
+      tower ? null : hornY,
+      mount,
+      hornMount,
+      backRoundover,
+      screwOn,
+    );
   }
   return { top: hornY + (tower ? tower.sectionH : HORN_LIFT_IN + hz.h), axes };
 }
