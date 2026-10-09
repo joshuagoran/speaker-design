@@ -16,6 +16,7 @@ import {
   hifiGridTop,
   hifiWeightLb,
   tweeterMaxLevel,
+  tweeterLevelInBox,
   RADIATOR_PANEL,
   belowTweeterMinXo,
   nearTweeterResonance,
@@ -81,6 +82,7 @@ import { keysOf } from "../records";
 import { byId } from "../tables";
 import { defaultPanelIn } from "../panel";
 import { HIFI_OPTIMIZER_PANEL } from "../../constants/optimizerPanels";
+import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { selectCards } from "../optimizer/selectCards";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
@@ -119,6 +121,24 @@ function boxHolds(
   return cfg.dim.w >= need.w - 1e-9 && cfg.dim.h >= need.h - 1e-9;
 }
 
+/** Whether the search keeps the tweeter amp as it is: locked, or a passive design's (its tweeter runs off the woofer amp). */
+const tweeterAmpFixed = (
+  cur: Pick<HifiConfig, "drive">,
+  locks: Pick<NonNullable<HifiOptimizerInput["locks"]>, "tAmpW">,
+) => !!locks.tAmpW || cur.drive === HIFI_DRIVE.passive;
+
+/**
+ * The tweeter's clean level the search reads for a passive design: in a scored box (its woofer's sensitivity, `refW`)
+ * at crossover `xo` and woofer amp `wAmpW`, without modeling the speaker; what `hifiSystem(...).tLevel` gives for it.
+ */
+export const hifiSearchTweeterLevel = (
+  tt: HifiTweeter,
+  cur: Pick<HifiConfig, "drive" | "tAmpW" | "guideGain">,
+  box: Pick<HifiScoredBox, "refW">,
+  xo: number,
+  wAmpW: number,
+) => tweeterLevelInBox(tt, { ...cur, xo, wAmpW }, box.refW).tLevel;
+
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };
 interface RunResult {
@@ -134,6 +154,8 @@ interface BoxEntry {
   gross: number;
   pr: PassiveRadiatorChoice | null;
   ch: number;
+  /** the woofer's passband sensitivity at 2.83 V, dB (what a passive network pads the tweeter to) */
+  refW: number;
 }
 /** A box on the grid: its woofer, its config, a key that names it and its place in the grid's order. */
 interface GridEntry extends HifiGridBox {
@@ -410,10 +432,11 @@ export function hifiSearchSpace(
       (needsWaveguide(t) ? gp + throatAdapterPrice(t, guide) : 0) + // with the adapter a mixed pair needs
       prPrice(c)); // a ribbon's own waveguide is in its price
   const guideOf = (t: HifiTweeter) => ownGuideCfg(t) || (needsWaveguide(t) ? guide : null);
-  // unlocked amps: searched at the top of their sliders, trimmed per card at the end
+  // unlocked amps: searched at the top of their sliders, trimmed per card at the end (a passive design has no tweeter
+  // amp: its `tAmpW` is passed through as it is)
   const amps = {
     wAmpW: locks.wAmpW ? cur.wAmpW : HIFI_AMP_WATTS_MAX.wAmpW,
-    tAmpW: locks.tAmpW ? cur.tAmpW : HIFI_AMP_WATTS_MAX.tAmpW,
+    tAmpW: tweeterAmpFixed(cur, locks) ? cur.tAmpW : HIFI_AMP_WATTS_MAX.tAmpW,
   };
   const wList: HifiWoofer[] = locks.woofer
     ? [W0]
@@ -656,6 +679,7 @@ export function hifiScoreBoxes(
         (x) => x !== CHANGE_NAMES.ampPower,
       ).length,
       f3: prep.f3,
+      refW: b.m.ref - 20 * Math.log10(b.V / 2.83),
       levels: xos.map((xo) => {
         if (wooferPastRange(w, xo)) return null;
         const { wLevel, ampDb, drvDb, whoW } = hifiWooferLevel(b, prep, { ...cfg, xo });
@@ -749,13 +773,16 @@ export function optimizeHifiSpeaker(
       gross: x.gross,
       pr: x.box === "radiator" ? x.pr : null,
       ch: x.ch,
+      refW: x.refW,
     });
     x.levels.forEach((l, xi) => {
       if (l) recs.push({ bi, xi, f3: x.f3, ...l });
     });
   }
 
-  // 2. the tweeters' own checks per crossover: its limits and its clean level
+  // 2. the tweeters' own checks per crossover: its limits and its clean level (a passive design's depends on the box's
+  // sensitivity and the woofer amp too: tweeterLevel below)
+  const passive = cur.drive === HIFI_DRIVE.passive;
   const tws = tList.flatMap((t) => {
     const tt = tweeterCfg(t);
     if (!tt) return [];
@@ -772,6 +799,9 @@ export function optimizeHifiSpeaker(
       },
     ];
   });
+  // a tweeter's clean level in a box at a crossover and woofer amp: its own amp's (step 2), or through the passive pad
+  const tweeterLevel = (ti: number, e: BoxEntry, xi: number, wAmpW: number) =>
+    passive ? hifiSearchTweeterLevel(tws[ti].tt, cur, e, xos[xi], wAmpW) : tws[ti].tLevel[xi];
   // what the cards hold a design to: what the goals keep, and the axes the alternatives come from
   const K = curM ? keeps(curM) : null;
   const meets = (m: HifiMetrics) => !K || goals.every((g) => gapTo(K[g], m) === 0);
@@ -824,8 +854,9 @@ export function optimizeHifiSpeaker(
       // steps) until the tweeter keeps up, so the tweeter caps the level instead of ruling the design out. Below the
       // searched power the woofer's level is the lesser of its amp-limited level (1 dB per dB of power) and what the
       // driver allows (which doesn't move).
-      const tLevel = x.tLevel[r.xi];
-      let wAmpW = amps.wAmpW,
+      // A passive tweeter comes down with the woofer amp, so its level is read again at the lower power.
+      let tLevel = tweeterLevel(ti, e, r.xi, amps.wAmpW),
+        wAmpW = amps.wAmpW,
         wLevel = r.wLevel;
       if (tLevel < wLevel) {
         const w = locks.wAmpW
@@ -834,6 +865,7 @@ export function optimizeHifiSpeaker(
         if (w === null) continue;
         wAmpW = w;
         wLevel = Math.min(r.ampDb + 20 * Math.log10(ampVoltage(w) / V0), r.drvDb);
+        if (passive) tLevel = tweeterLevel(ti, e, r.xi, w);
         if (tLevel < wLevel) continue;
       }
       // a design that passes has the woofer setting the level
@@ -948,6 +980,10 @@ export function optimizeHifiSpeaker(
   });
 
   // trim unlocked amps: the least power (slider steps) that keeps the card's clean level and keeps the tweeter up
+  const ampFixed: Record<HifiAmpKey, boolean> = {
+    wAmpW: !!locks.wAmpW,
+    tAmpW: tweeterAmpFixed(cur, locks),
+  };
   const trim = (p: PoolEntry) => {
     let c = { ...p.c },
       r = { sys: p.sys, chips: p.chips };
@@ -955,7 +991,7 @@ export function optimizeHifiSpeaker(
       rr !== null && !hifiDesignProblems(rr.sys, rr.chips).length && levelOf(rr.sys) >= lvl - 0.01;
     const lowest = (keyName: HifiAmpKey, lvl: number) => {
       const { min: lo, step } = HIFI_AMP_WATTS_STEPS[keyName];
-      if (locks[keyName]) return;
+      if (ampFixed[keyName]) return;
       let a = lo,
         b = c[keyName];
       const at = (v: number) => run(p.w, p.t, { ...c, [keyName]: v });

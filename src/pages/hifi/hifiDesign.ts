@@ -6,6 +6,7 @@ import {
   throatAdapterPrice,
 } from "../../lib/data";
 import { METERS_PER_FOOT } from "../../constants/units";
+import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SEAT_FLOOR_M } from "../../constants/hifiEngine";
 import { byId } from "../../lib/tables";
 import {
   hifiSystem,
@@ -53,6 +54,11 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     dispersionPlane,
     roundoverIn,
     tweeterOffsetIn,
+    subHighpass,
+    drive,
+    tiltDeg,
+    seatFloorM = HIFI_SEAT_FLOOR_M,
+    portMaxMs = HIFI_PORT_MAX_MS,
   } = state;
   const compressionWaveguide = waveguideSpecOf(selectedWaveguide);
   const waveguideSpec = tweeter.ownGuide
@@ -97,16 +103,20 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     bsc: baffleStepCompensationDb,
     place: placement,
     wallFt: distanceToWallFt,
-    portMax: 17,
+    portMax: portMaxMs,
     guide: waveguideSpec,
     roundoverIn,
     tweeterOffsetIn,
+    // the engine options only when they change something, so a design without them is the same config as before
+    ...(subHighpass && { hp: subHighpass }),
+    ...(drive === HIFI_DRIVE.passive && { drive }),
+    ...(tiltDeg ? { tiltDeg } : {}),
   };
   // the seat, relative to each speaker (left at -spacing/2, toed in toward the middle)
   const leftGeometry = listenerGeometry(-1, state),
     rightGeometry = listenerGeometry(1, state);
-  // floored at 1 m so a seat at the speakers (spacing 0, seat at the origin) can't send the level to infinity
-  const seatDistanceM = Math.max(1, (leftGeometry.distM + rightGeometry.distM) / 2);
+  // floored (1 m by default) so a seat at the speakers (spacing 0, seat at the origin) can't send the level to infinity
+  const seatDistanceM = Math.max(seatFloorM, (leftGeometry.distM + rightGeometry.distM) / 2);
   const pairCostUsd =
     2 *
     ((woofer.price || 0) +
@@ -152,7 +162,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
         woofer,
         tweeterWithWaveguide,
         speakerConfig,
-        { th: 0, eyeIn: speakerSystem.lay.tweeterIn, distM: 1 },
+        { th: 0, eyeIn: speakerSystem.lay.tweeterIn, distM: 1, boxFrame: true },
         RESPONSE_FREQUENCIES,
       ),
       pairResponse: leftResponse.map((o, i) => ({
