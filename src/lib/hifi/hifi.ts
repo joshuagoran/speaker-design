@@ -67,12 +67,13 @@ import {
 } from "../../constants/chartScales";
 import { formatInches } from "../format";
 import { crossoverSlopeName } from "../../constants/crossovers";
-import { HIFI_DRIVE, HIFI_NEAR_FIELD_M, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
 import {
   baffleEdgeShare,
   boundaryShare,
   driverPathFloorM,
+  inFarField,
   nearBaffleStepGain,
   nearBoundaryGain,
   nearFieldPathM,
@@ -139,12 +140,21 @@ export const SPEAKER_PLACEMENTS: Record<HifiPlacement, { name: string; db: numbe
   wall: { name: "Wall", db: 3 },
   corner: { name: "Corner", db: 6 },
 };
+/** The placement and its wall distance, m, as the woofer's boundary gain reads a design: free-standing, 2 ft, when absent. */
+const placementOf = (cfg: Pick<HifiConfig, "place" | "wallFt">) => ({
+  place: cfg.place || "free",
+  wallM: (cfg.wallFt || 2) * METERS_PER_FOOT,
+});
+/** A placement's boundary gain well below its corner (pressure), and that corner, Hz: c / (4 · distance to the wall). */
+const placementGain = (place: HifiPlacement) =>
+  Math.pow(10, (SPEAKER_PLACEMENTS[place] || SPEAKER_PLACEMENTS.free).db / 20);
+const boundaryCornerHz = (wallM: number) => C / (4 * Math.max(0.1, wallM));
 // boundary reinforcement below ~ c / (4 · distance to the wall)
 export function boundaryGain(f: number, place: HifiPlacement, wallM: number) {
   const db = (SPEAKER_PLACEMENTS[place] || SPEAKER_PLACEMENTS.free).db;
   if (!db) return 1;
-  const G = Math.pow(10, db / 20),
-    x = f / (C / (4 * Math.max(0.1, wallM)));
+  const G = placementGain(place),
+    x = f / boundaryCornerHz(wallM);
   return Math.sqrt((G * G + x * x) / (1 + x * x));
 }
 /**
@@ -158,15 +168,14 @@ export function hifiNearFieldShelves(
   cfg: Pick<HifiConfig, "dim" | "place" | "wallFt">,
   distM: number,
 ): ((f: number) => number) | null {
-  if (distM >= HIFI_NEAR_FIELD_M) return null;
+  if (inFarField(distM)) return null;
   const step = baffleEdgeShare(cfg.dim, { x: 0, y: sys.lay.wooferIn }, distM),
     f3 = baffleStepF3(cfg.dim.w);
-  // as hifiWooferPrep reads the placement
-  const wallM = Math.max(0.1, (cfg.wallFt || 2) * 0.3048),
-    db = (SPEAKER_PLACEMENTS[cfg.place || "free"] || SPEAKER_PLACEMENTS.free).db,
-    farGain = Math.pow(10, db / 20),
-    room = boundaryShare(distM, wallM),
-    fWall = C / (4 * wallM);
+  // the placement as hifiWooferPrep reads it
+  const { place, wallM } = placementOf(cfg),
+    farGain = placementGain(place),
+    room = boundaryShare(distM, Math.max(0.1, wallM)),
+    fWall = boundaryCornerHz(wallM);
   return (f) =>
     nearBaffleStepGain((0.707 * f) / f3, step) * nearBoundaryGain(f / fWall, farGain, room);
 }
@@ -794,13 +803,8 @@ export function hifiWooferPrep(
 ): HifiWooferPrep {
   const c = b.m.curve,
     n = c.length;
-  const { e, gDb } = shelfOn(
-    b,
-    cfg.dim.w,
-    cfg.bsc || 0,
-    cfg.place || "free",
-    (cfg.wallFt || 2) * 0.3048,
-  );
+  const { place, wallM } = placementOf(cfg);
+  const { e, gDb } = shelfOn(b, cfg.dim.w, cfg.bsc || 0, place, wallM);
   const V = b.V,
     vT = thermalVoltageLimit(w.ts.aes || 100),
     portMax = cfg.portMax || HIFI_PORT_MAX_MS,
@@ -1201,8 +1205,10 @@ export function hifiResponseAt(
   };
   const trimG = Math.pow(10, sys.trim / 20);
   const edges = edgeRipples(sys, w, t, cfg, geo);
-  // the baffle step and boundary gain at the listening distance (null from HIFI_NEAR_FIELD_M out: as modeled)
-  const near = hifiNearFieldShelves(sys, cfg, align);
+  // the baffle step and boundary gain at the listener's distance from the speaker (its tweeter, which the angles and
+  // a map's arc are measured round; the true distance, tilted or not), whatever the alignment distance; null from
+  // HIFI_NEAR_FIELD_M out: as modeled
+  const near = hifiNearFieldShelves(sys, cfg, Math.hypot(dist, dz(sys.lay.tweeterIn)));
   return freqs.map((f) => {
     const k = (2 * Math.PI * f) / C;
     const dW = pistonDirectivity(f, a, offW),
@@ -1263,8 +1269,10 @@ export const listenerGeometry = (
 
 /**
  * One speaker's woofer and tweeter paths to the seat at `room` for its level at the seat (lib/hifi/nearField
- * hifiPairLevelDb), m: the speaker's distance, at least `floorM` (the seat floor), with each driver's height off the
- * ear (in the box's frame) counted in the near field (nearFieldPathM), and each at least its driver's path floor.
+ * hifiPairLevelDb), m: the speaker's distance, at least `floorM` (the seat floor), with each driver's place counted in
+ * the near field (nearFieldPathM), and each at least its driver's path floor. A driver `h` up the baffle of a box
+ * tilted back `t` about its bottom front edge sits h·sin t behind that edge and h·cos t up, in the room; a point
+ * already in the box's frame has no tilt to apply.
  */
 export function hifiSeatPaths(
   sys: Pick<HifiSystem, "lay">,
@@ -1275,9 +1283,16 @@ export function hifiSeatPaths(
   floorM = 0,
 ): HifiSeatPaths {
   const distM = Math.max(floorM, room.distM),
-    eyeIn = boxFrameGeometry({ ...room, distM }, cfg.tiltDeg).eyeIn;
+    tilt = room.boxFrame ? 0 : ((cfg.tiltDeg || 0) * Math.PI) / 180;
   const path = (driverIn: number, radiusM: number) =>
-    Math.max(driverPathFloorM(radiusM), nearFieldPathM(distM, (eyeIn - driverIn) * IN));
+    Math.max(
+      driverPathFloorM(radiusM),
+      nearFieldPathM(
+        distM,
+        (room.eyeIn - driverIn * Math.cos(tilt)) * IN,
+        driverIn * Math.sin(tilt) * IN,
+      ),
+    );
   return {
     wM: path(sys.lay.wooferIn, Math.sqrt(w.ts.Sd / 1e4 / Math.PI)),
     tM: path(sys.lay.tweeterIn, (t.domeIn * IN) / 2),

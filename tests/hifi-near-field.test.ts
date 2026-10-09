@@ -16,15 +16,14 @@ import {
   hifiNearFieldShelves,
   hifiResponseAt,
   hifiSeatPaths,
-  hifiSystem,
   tweeterAxisSeat,
 } from "../src/lib/hifi/hifi";
-import { optimizeHifiSpeaker } from "../src/lib/hifi/optimize";
+import { hifiAxisWooferDb } from "../src/lib/hifi/optimize";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import { HIFI_TWEETERS, HIFI_WOOFERS } from "../src/lib/data";
 import { HIFI_NEAR_FIELD_M, HIFI_PAIR_SUM_DB } from "../src/constants/hifiEngine";
-import type { HifiDesignState, HifiOptimizerCurrent } from "../src/types";
+import type { HifiDesignState } from "../src/types";
 import { close } from "./helpers";
 
 const FT = 0.3048,
@@ -48,7 +47,7 @@ const modelOf = (s: HifiDesignState) => {
 // ---- the pair's level ----
 
 test("an equal pair is one speaker's level plus 3 dB, exactly as the mean-distance formula gave", () => {
-  const levels = { wLevel: 100, tLevel: 104 };
+  const levels = { maxLevel: 100 };
   for (const dM of [1, 2.5, 3])
     assert.strictEqual(
       hifiPairLevelDb(levels, [
@@ -60,7 +59,7 @@ test("an equal pair is one speaker's level plus 3 dB, exactly as the mean-distan
 });
 
 test("an asymmetric pair adds the two speakers in power at their own distances, not at the mean distance", (t) => {
-  const levels = { wLevel: 100, tLevel: 104 },
+  const levels = { maxLevel: 100 },
     near = 1,
     far = 4;
   const got = hifiPairLevelDb(levels, [
@@ -84,13 +83,16 @@ test("an asymmetric pair adds the two speakers in power at their own distances, 
   close(t, alone, 100 + HIFI_PAIR_SUM_DB - 10 * Math.log10(2), 1e-9);
 });
 
-test("each speaker is limited by the lesser of its drivers at their own paths", (t) => {
-  // the tweeter 4 dB louder at 1 m, but a woofer twice as far loses 6 dB and the tweeter half as far gains 6
-  const levels = { wLevel: 100, tLevel: 96 },
+test("each speaker plays its 1 m level at one drive, so its farther driver sets the level at the seat", (t) => {
+  // the drivers are level-matched at 1 m on one drive: a nearer tweeter can't be pushed to its own limit, so the
+  // farther driver's band, the quieter one at the seat, sets the level
+  const levels = { maxLevel: 96 },
     p = { wM: 0.5, tM: 1 };
   close(t, hifiPairLevelDb(levels, [p, p]), 96 + 3, 1e-12);
   const q = { wM: 2, tM: 1 };
-  close(t, hifiPairLevelDb(levels, [q, q]), 100 - 20 * Math.log10(2) + 3, 1e-12);
+  close(t, hifiPairLevelDb(levels, [q, q]), 96 - 20 * Math.log10(2) + 3, 1e-12);
+  // a part with no limit leaves the level infinite, not NaN
+  assert.strictEqual(hifiPairLevelDb({ maxLevel: Infinity }, [p, q]), Infinity);
 });
 
 test("the page's level sums the speakers at their own distances", (t) => {
@@ -151,8 +153,10 @@ test("close in each driver's path counts its height off the ear; from 1 m out it
     1e-15,
   );
   assert.ok(20 * Math.log10(near.wM / near.tM) > 0.5, "over half a dB at 0.3 m for a 5″ spacing");
-  // the near-field path joins the far one at 1 m and grows with the offset
-  close(t, nearFieldPathM(HIFI_NEAR_FIELD_M - 1e-9, 0.2), HIFI_NEAR_FIELD_M, 1e-8);
+  // the near-field path joins the far one at 1 m (continuously; within a nanometer of it is 1 m) and grows with the
+  // offset
+  assert.strictEqual(nearFieldPathM(HIFI_NEAR_FIELD_M - 1e-10, 0.2), HIFI_NEAR_FIELD_M - 1e-10);
+  close(t, nearFieldPathM(HIFI_NEAR_FIELD_M - 1e-6, 0.2), HIFI_NEAR_FIELD_M, 1e-5);
   assert.ok(nearFieldPathM(0.3, 0.2) > nearFieldPathM(0.3, 0.1));
   close(t, nearFieldPathM(0, 0.2), 0.2 / Math.hypot(1, 0.2), 1e-15);
 });
@@ -216,21 +220,28 @@ test("the response close in: less baffle step lifts the bass, a corner's gain fa
   close(t, free(20000), 1, 1e-3);
   // a corner loses more of its 6 dB than the step gives back
   assert.ok(corner(20) < 1, `${corner(20)}`);
-  // and the response at 0.3 m on axis carries it: up at 40 Hz against the far-field shelves
-  const geo = tweeterAxisSeat(sys.lay, 0.3),
-    f = [40, 10000];
-  const nearR = hifiResponseAt(sys, DEFAULT_HIFI.woofer, d.tweeterWithWaveguide, cfg, geo, f);
-  const farR = hifiResponseAt(
-    sys,
-    DEFAULT_HIFI.woofer,
-    d.tweeterWithWaveguide,
-    cfg,
-    { ...geo, alignM: HIFI_NEAR_FIELD_M },
-    f,
+  // and the response on the tweeter's axis carries it: at 40 Hz (the woofer alone) 0.3 m is louder than 1 m, where the
+  // shelves are the far-field ones, by the woofer's two paths and the near shelves
+  const at = (dM: number, alignM?: number) =>
+    hifiResponseAt(
+      sys,
+      DEFAULT_HIFI.woofer,
+      d.tweeterWithWaveguide,
+      cfg,
+      { ...tweeterAxisSeat(sys.lay, dM), ...(alignM ? { alignM } : {}) },
+      [40],
+    )[0].spl;
+  const wooferM = (dM: number) => Math.hypot(dM, sys.lay.spacingIn * IN);
+  close(
+    t,
+    at(0.3) - at(1),
+    20 * Math.log10(wooferM(1) / wooferM(0.3)) + 20 * Math.log10(free(40)),
+    // the edge ripple's last trace at 40 Hz differs a little between the two seats
+    0.01,
   );
-  // (the alignment moves with it, which the tweeter barely hears at 40 Hz and the woofer at 10 kHz)
-  close(t, nearR[0].spl - farR[0].spl, 20 * Math.log10(free(40)), 1e-4);
-  close(t, nearR[1].spl, farR[1].spl, 0.05);
+  // the shelves follow the listener, not the distance the drivers are aligned at
+  close(t, at(0.5, 0.5), at(0.5, 2), 1e-4);
+  close(t, at(1.5, 1.5), at(1.5, 0.5), 1e-4);
 });
 
 // ---- floors ----
@@ -318,47 +329,52 @@ test("from 1 m out the level is the mean-distance formula's, to the bit, for an 
 
 // ---- the optimizer ----
 
-test("the optimizer reads the level at the seat with the page's rule: close in, the woofer's longer path counts", (t) => {
-  const cur: HifiOptimizerCurrent = {
-    woofer: "sb17nrx",
-    tweeter: "sb26stcn",
-    box: "vented",
-    dim: { w: 9, h: 15, d: 11 },
-    wall: 0.75,
-    port: { n: 1, dia: 2, len: 6 },
-    xo: 2000,
-    order: 4,
-    wAmpW: 100,
-    tAmpW: 50,
-    bsc: 3,
-    place: "free",
-    wallFt: 2,
-    portMax: 17,
-    guide: null,
-  };
-  const tweeters = HIFI_TWEETERS.filter((o) => ["sb26stcn", "rst28f"].includes(o.id));
-  const w = HIFI_WOOFERS.find((o) => o.id === cur.woofer),
-    tw = tweeters.find((o) => o.id === cur.tweeter);
-  assert.ok(w && tw);
-  const sys = hifiSystem(w, tw, cur);
-  assert.ok(sys);
-  const input = {
-    cur,
-    woofers: HIFI_WOOFERS,
-    tweeters,
-    budget: 800,
-    goals: ["louder" as const],
-    locks: { woofer: true, dim: { w: "exact" as const, h: "exact" as const } },
-  };
-  for (const seatM of [0.5, 2.6]) {
-    const out = optimizeHifiSpeaker({ ...input, seatM });
-    assert.ok(out.cur, "your design is modeled");
-    const p = hifiSeatPaths(sys, w, tw, cur, tweeterAxisSeat(sys.lay, seatM));
-    close(t, out.cur.level, hifiPairLevelDb(sys, [p, p]), 1e-9, `${seatM} m`);
-    const pointSource: number = sys.maxLevel - 20 * Math.log10(seatM) + 3;
-    if (seatM < HIFI_NEAR_FIELD_M)
-      assert.ok(out.cur.level < pointSource - 0.1, "the woofer is further");
-    else assert.strictEqual(out.cur.level, pointSource);
-    assert.ok(out.cards.length > 0, `${seatM} m: cards`);
-  }
+test("the optimizer's fast path reads the page's level: the woofer's 1 m level less its extra path on the axis", (t) => {
+  const tweeters = HIFI_TWEETERS.filter((o) => ["sb26stcn", "rst28f", "de250"].includes(o.id));
+  let checked = 0;
+  for (const w of HIFI_WOOFERS.slice(0, 8))
+    for (const tw of tweeters) {
+      const d = deriveHifiDesign({ ...DEFAULT_HIFI, woofer: w, tweeter: tw, tiltDeg: 5 });
+      const sys = d.speakerModel?.speakerSystem;
+      // the fast path's designs have the woofer setting the level
+      if (!sys || sys.who !== "woofer") continue;
+      for (const seatM of [0.3, 0.5, 0.8, 1, 2.6]) {
+        const p = hifiSeatPaths(
+          sys,
+          w,
+          d.tweeterWithWaveguide,
+          d.speakerConfig,
+          tweeterAxisSeat(sys.lay, seatM),
+        );
+        const levelOf = hifiPairLevelDb(sys, [p, p]);
+        const woofDb = hifiAxisWooferDb(sys.lay, w, d.tweeterWithWaveguide, d.speakerConfig, seatM);
+        const fast = sys.wLevel - woofDb - (20 * Math.log10(seatM) - HIFI_PAIR_SUM_DB);
+        close(t, fast, levelOf, 1e-9, `${w.id} + ${tw.id} at ${seatM} m`);
+        if (seatM >= HIFI_NEAR_FIELD_M) assert.strictEqual(woofDb, 0);
+        else assert.ok(woofDb > 0, "close in the woofer is further than the tweeter on its axis");
+        checked++;
+      }
+    }
+  assert.ok(checked > 20, `${checked} designs`);
+});
+
+test("a tilted box's drivers are where the tilt puts them in the room", (t) => {
+  const { d, m } = modelOf(DEFAULT_HIFI);
+  const sys = m.speakerSystem,
+    tiltDeg = 10,
+    tilt = (tiltDeg * Math.PI) / 180;
+  const room = { th: 0, eyeIn: sys.lay.tweeterIn, distM: 0.4 };
+  const p = hifiSeatPaths(sys, DEFAULT_HIFI.woofer, d.tweeterWithWaveguide, { tiltDeg }, room);
+  // each driver h up the baffle sits h·sin t back and h·cos t up; normalised by the same path at 1 m
+  const path = (h: number, dM: number) =>
+    Math.hypot(dM + h * IN * Math.sin(tilt), (room.eyeIn - h * Math.cos(tilt)) * IN);
+  for (const [got, h] of [
+    [p.wM, sys.lay.wooferIn],
+    [p.tM, sys.lay.tweeterIn],
+  ])
+    close(t, got, (path(h, 0.4) * HIFI_NEAR_FIELD_M) / path(h, HIFI_NEAR_FIELD_M), 1e-12);
+  // untilted, the same seat is the plain height offset
+  const flat = hifiSeatPaths(sys, DEFAULT_HIFI.woofer, d.tweeterWithWaveguide, {}, room);
+  close(t, flat.tM, 0.4, 1e-15);
+  assert.ok(p.tM > flat.tM, "tilted back, the tweeter leans away from the ear");
 });

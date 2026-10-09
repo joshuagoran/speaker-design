@@ -22,6 +22,7 @@ import {
   nearTweeterResonance,
   hifiChips,
   hifiSeatPaths,
+  hifiNearFieldShelves,
   tweeterAxisSeat,
   driverLayout,
   grossVolumeLiters,
@@ -37,7 +38,7 @@ import {
   needsWaveguide,
 } from "./hifi";
 import { ampVoltage, ventTuning } from "../pa/calc";
-import { hifiPairLevelDb } from "./nearField";
+import { hifiPairLevelDb, inFarField } from "./nearField";
 import { hifiBoxMin } from "./boxLayout";
 import { boxSliderMins } from "../boxFit";
 import { HIFI_BOX_SLIDERS } from "../../constants/hifiLayout";
@@ -55,6 +56,7 @@ import type {
   ChipId,
   Dims3,
   DimensionLockMode,
+  DriverLayout,
   HifiBoxKind,
   HifiChip,
   HifiConfig,
@@ -84,7 +86,7 @@ import { keysOf } from "../records";
 import { byId } from "../tables";
 import { defaultPanelIn } from "../panel";
 import { HIFI_OPTIMIZER_PANEL } from "../../constants/optimizerPanels";
-import { HIFI_DRIVE, HIFI_NEAR_FIELD_M } from "../../constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_PAIR_SUM_DB } from "../../constants/hifiEngine";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { selectCards } from "../optimizer/selectCards";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
@@ -691,6 +693,22 @@ export function hifiScoreBoxes(
   return out;
 }
 
+/**
+ * How much further the woofer is than the tweeter from a seat `seatM` out on the tweeter's axis, dB (the optimizer's
+ * seat, lib/hifi hifiSeatPaths): 0 from HIFI_NEAR_FIELD_M out. A design whose woofer sets its 1 m level has the pair's
+ * level at that seat (hifiPairLevelDb) of its woofer's 1 m level less this, less 20 log10 seatM, plus HIFI_PAIR_SUM_DB.
+ */
+export function hifiAxisWooferDb(
+  lay: DriverLayout,
+  w: HifiWoofer,
+  t: Pick<HifiTweeter, "domeIn">,
+  cfg: Pick<HifiConfig, "tiltDeg">,
+  seatM: number,
+) {
+  const p = hifiSeatPaths({ lay }, w, t, cfg, tweeterAxisSeat(lay, seatM));
+  return 20 * Math.log10(p.wM / p.tM);
+}
+
 /** The search; `scored` is the box step already done in parts (by workers), else it runs here. */
 export function optimizeHifiSpeaker(
   input: HifiOptimizerInput,
@@ -705,7 +723,7 @@ export function optimizeHifiSpeaker(
   const goal = goals[0],
     also = goals.slice(1);
   // the seat, on each speaker's tweeter axis (the search has no room): the pair's level there (lib/hifi/nearField), as
-  // the page reads it
+  // the page reads it. The box step's fast path reads the same level as the woofer's 1 m level less hifiAxisWooferDb.
   const seat = input.seatM || 2.5,
     seatPaths = (
       sys: Pick<HifiSystem, "lay">,
@@ -834,9 +852,9 @@ export function optimizeHifiSpeaker(
     dLb: number[] = [],
     dLevel: number[] = [],
     dWamp: number[] = [];
-  const seatDb = 20 * Math.log10(seat) - 3,
+  const seatDb = 20 * Math.log10(seat) - HIFI_PAIR_SUM_DB,
     V0 = ampVoltage(amps.wAmpW),
-    nearSeat = seat < HIFI_NEAR_FIELD_M;
+    nearSeat = !inFarField(seat);
   let lastBi = -1;
   const bPrice: number[] = [],
     bLb: number[] = [],
@@ -852,14 +870,10 @@ export function optimizeHifiSpeaker(
         bPrice[ti] = priceOf(e.w, x.t, e.cfg);
         bLb[ti] = hifiWeightLb(e.w, x.tt, e.cfg, e.pr);
         bFits[ti] = boxHolds(e.w, x.tt, x.onTop, e.cfg);
-        // how much further the woofer is than the tweeter from the seat on its axis, dB (seatPaths, as levelOf reads
-        // it): 0 from HIFI_NEAR_FIELD_M out
-        bWoofDb[ti] = 0;
-        if (nearSeat) {
-          const lay = driverLayout(e.w, x.tt, e.cfg.dim, x.onTop),
-            p = seatPaths({ lay }, e.w, x.tt, e.cfg);
-          bWoofDb[ti] = 20 * Math.log10(p.wM / p.tM);
-        }
+        // how much further the woofer is than the tweeter from the seat on its axis, dB: 0 from HIFI_NEAR_FIELD_M out
+        bWoofDb[ti] = nearSeat
+          ? hifiAxisWooferDb(driverLayout(e.w, x.tt, e.cfg.dim, x.onTop), e.w, x.tt, e.cfg, seat)
+          : 0;
       }
     }
     for (let ti = 0; ti < tws.length; ti++) {
@@ -1045,7 +1059,7 @@ export function optimizeHifiSpeaker(
     sys: HifiSystem,
     w: HifiWoofer,
     t: HifiTweeter,
-    c: Pick<HifiConfig, "tiltDeg">,
+    c: Pick<HifiConfig, "tiltDeg" | "dim" | "place" | "wallFt">,
   ): [number, number][] => {
     const xo = sys.xo,
       order = sys.order,
@@ -1055,15 +1069,17 @@ export function optimizeHifiSpeaker(
         Math.abs(Math.log(o.f / f)) < Math.abs(Math.log(b.f / f)) ? o : b,
       );
     const paths = seatPaths(sys, w, t, c),
-      wGain = paths.tM / paths.wM;
+      wGain = paths.tM / paths.wM,
+      // the woofer's baffle step and boundary gain at the seat, as the page's response has them (null from 1 m out)
+      near = hifiNearFieldShelves(sys, c, paths.tM);
     const tw = Math.pow(10, sys.ref / 20),
-      sc = 20 * Math.log10(sys.sMusic) - 20 * Math.log10(paths.tM) + 3;
+      sc = 20 * Math.log10(sys.sMusic) - 20 * Math.log10(paths.tM) + HIFI_PAIR_SUM_DB;
     return logSpacedFrequencies(15, 20000, 90).map((f) => {
       const raw = f > last.f ? last.raw : at(f).raw,
         lp = linkwitzRileyFilter(f, xo, order, "lp"),
         hp = linkwitzRileyFilter(f, xo, order, "hp");
-      const p =
-        Math.hypot(lp.re, lp.im) * Math.pow(10, raw / 20) * wGain + Math.hypot(hp.re, hp.im) * tw;
+      const wp = Math.hypot(lp.re, lp.im) * Math.pow(10, raw / 20) * wGain,
+        p = (near ? wp * near(f) : wp) + Math.hypot(hp.re, hp.im) * tw;
       return [+f.toFixed(1), +(20 * Math.log10(p) + sc).toFixed(2)];
     });
   };

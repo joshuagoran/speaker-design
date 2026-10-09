@@ -26,7 +26,7 @@ export const HIFI_SEAT_FLOOR_M = 1;
  * listening distance). Hi-fi seats are worked out at 1 m or more (the default seat floor), so from here out the model
  * is exactly as it was: the driver-height and baffle-size terms it leaves out are about 0.1 dB at 1 m and shrink as
  * 1 / distance² beyond. Closer in, the near-field forms take over, each relative to its value here, so they join the
- * far-field figures without a step.
+ * far-field figures continuously: no step in value, though the slope kinks a little at 1 m.
  */
 export const HIFI_NEAR_FIELD_M = 1;
 
