@@ -34,6 +34,7 @@ import {
   highpassOptions,
   designProblems,
   evaluateDesign,
+  hornOwnWarnings,
   optimizePaStack,
   paSearchAmps,
   paSearchDesign,
@@ -45,15 +46,18 @@ import {
   hornResponse,
   isRoundPort,
   linkwitzRileyLowpass,
-  keeleFrequency,
   midBraceEstimate,
   midWeightLb,
+  towerUpperLoadedLb,
+  heaviestLiftLb,
   pistonBeamWidthDeg,
   braceWoodEstimate,
   braceWoodIn3,
   subGeometry,
   subWeightLb,
   ventSpeedLimit,
+  midBaffleNeedIn,
+  SEALED_QTC_MIN,
 } from "./calc";
 import {
   ductFit,
@@ -61,7 +65,6 @@ import {
   ductLenSliderMax,
   ductFits,
   subBaffleFits,
-  hornChips,
   subDriverClearanceNeededIn,
   KEEP_UP_SLACK_DB,
 } from "./chips";
@@ -93,7 +96,6 @@ import { MID_OPTIONS, SUB_OPTIONS } from "../data";
 import { byId } from "../tables";
 import { keepGap } from "../optimizer/shortfall";
 import { ampForGain, onSlider } from "../optimizer/ampSteps";
-import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import type {
   BraceStyleId,
   Dims3,
@@ -123,6 +125,7 @@ import type {
   SubDriver,
   VentSpec,
 } from "../../types";
+import { towerMidDims } from "./tower";
 
 // the most vent sizes any style has (a cache key's stride)
 const MAX_VENT_SIZES = Math.max(...VENT_STYLES.map((st) => ventSizesFor(st).length));
@@ -170,8 +173,6 @@ class PairCache<V extends { size: number }> {
     return this.floats;
   }
 }
-// the tower's mid box height, in (evaluateDesign's)
-const TOWER_MID_H = 15.5;
 const GOALS: readonly PaGoal[] = ["cheaper", "lighter", "lower", "louder"];
 const perGoal = <T>(f: (g: PaGoal) => T): Record<PaGoal, T> => ({
   cheaper: f("cheaper"),
@@ -361,12 +362,12 @@ const packPairs = (rows: number[]): Pairs => {
 const towerMidFails = (s: ExactSpace, box: Dims3, t: number) => {
   if (!s.tower) return false;
   const m = s.tower.mid;
-  const mb = { w: box.w, h: TOWER_MID_H, d: box.d };
+  const mb = towerMidDims(box);
   return (
     !m ||
-    Math.min(mb.w, mb.h) < m.size + 1.2 ||
+    Math.min(mb.w, mb.h) < midBaffleNeedIn(m.size) ||
     sealedQtc(m, mb, t, s.cur.inset, { layout: s.cur.layout, braceStyle: s.braceStyle }) <
-      0.5 - 1e-9
+      SEALED_QTC_MIN - 1e-9
   );
 };
 // per sub, plywood and rung: every whole-inch pair that can hold the volume under the weight cap, lightest first
@@ -766,8 +767,8 @@ function exactHook(
       const v = { ...vent, len: sol.len };
       if (
         sol.len < s.grid.minDuctIn ||
-        sol.len > ductLenSliderMax(sol.box, style, v, t, sub) ||
-        !ductFits(ductFit(sol.box, style, v, t, sub).spans, sol.len)
+        sol.len > ductLenSliderMax(sol.box, style, v, t, s.cur.inset, sub) ||
+        !ductFits(ductFit(sol.box, style, v, t, s.cur.inset, sub).spans, sol.len)
       )
         continue;
       if (!subBaffleFits(sol.box, style, v, t, sub)) continue;
@@ -811,7 +812,10 @@ function exactHook(
       if (deepShapes.size >= 200_000) deepShapes.clear();
       // the end correction at the most it can be in this box, whatever the duct's length (straight or folded, for a
       // bottom slot; straight, its mouth nearest the back wall, for round tubes)
-      v = ventShape(style, dims, vent, s.walls[ti], sub, { folded: false, most: true });
+      v = ventShape(style, dims, vent, s.walls[ti], s.cur.inset, sub, {
+        folded: false,
+        most: true,
+      });
       deepShapes.set(k, v);
     }
     return v;
@@ -842,7 +846,7 @@ function exactHook(
       const lenHi = Leff / 0.0254 + bends;
       const lenLo = ductLengthFor(vs, Leff);
       if (lenHi < s.grid.minDuctIn) continue;
-      if (lenLo > ductFitMax(deepest, style, vent, t, sub)) continue;
+      if (lenLo > ductFitMax(deepest, style, vent, t, s.cur.inset, sub)) continue;
       const x = bareFree(
         s,
         dims,
@@ -987,19 +991,15 @@ function exactHook(
     const hz: Partial<HornHf> = hp.h.hf || {};
     const hm = hornResponse(hp.cd.hf, hz, xoHi, c.amps.hfAmpW, c.cur.xoHiOrder);
     const n = hm
-      ? hornChips({
+      ? hornOwnWarnings({
           hf: hm.hf,
           hz,
           horn: hp.h,
           xoHi,
           hornModel: hm,
           hfAmpW: c.amps.hfAmpW,
-          midAtXoHi: null,
-          hfTilt: c.cur.hfTilt,
-          hornAtXo: null,
           midBeam: pistonBeamWidthDeg(m.ts.Sd, xoHi),
-          fK: hz.covH && hp.h.size ? keeleFrequency(hz.covH, hp.h.size.w) : null,
-        }).filter(([kind, , , id]) => kind === "warn" && !LIMIT_CHIP_IDS.has(id)).length
+        })
       : 0;
     hornModels.set(k, n);
     return n;
@@ -1012,6 +1012,8 @@ function exactHook(
     xoLo: number,
     boxes: (m: MidDriver) => { bx: Dims3; mDim: Dims3 }[],
     mids: readonly MidDriver[],
+    /** the tower's sub box: its cabinet over the box, with the horn in it, weighs in place of the mid box */
+    towerBox: Pick<Dims3, "w" | "d"> | null = null,
   ): UpperSet => {
     const all: Upper[] = [];
     const { cur, amps, locks } = c;
@@ -1022,17 +1024,28 @@ function exactHook(
           layout: cur.layout,
           braceStyle: s.braceStyle,
         });
-        if (mm.Qtc < 0.5 || mm.Qtc > 0.8 || mm.f3 > xoLo || Math.min(bx.w, bx.h) < m.size + 1.2)
+        if (
+          mm.Qtc < SEALED_QTC_MIN ||
+          mm.Qtc > 0.8 ||
+          mm.f3 > xoLo ||
+          Math.min(bx.w, bx.h) < midBaffleNeedIn(m.size)
+        )
           continue;
         for (const xoHi of c.xoHis) {
           const at = (f: number) =>
             mm.at(midGridIndexNear(f, xoHi), xoLo, xoHi, cur.xoLoOrder, cur.xoHiOrder);
           const lo = at(xoLo),
             hi = at(xoHi);
-          const midLb =
-            midWeightLb(bx, t, midBraceEstimate(bx, t, cur.inset, cur.layout, s.braceStyle)) +
-            (m.lb || 0);
+          const boxLb = midWeightLb(
+            bx,
+            t,
+            midBraceEstimate(bx, t, cur.inset, cur.layout, s.braceStyle),
+          );
           for (const hp of c.hornTable[xoHi]) {
+            // in the tower, its cabinet over the sub box as carried, with the horn's section and the horn in it
+            const midLb = towerBox
+              ? towerUpperLoadedLb(towerBox, t, cur.inset, hp.h, m, hp.cd)
+              : boxLb + (m.lb || 0);
             const room = hp.at + cur.hfTilt + KEEP_UP_SLACK_DB;
             const mAmpW =
               hi.max <= room
@@ -1112,10 +1125,19 @@ function exactHook(
     };
   };
   const ZERO: PaMetric = { price: 0, heaviest: 0, out: 0, f3: 0, ch: 0, w: 0 };
-  const upperPart = (c: PaSearchContext, g: PaGoal, e: Upper) =>
-    c.obj[g]({ price: e.midP + e.cdP, heaviest: 0, out: 0, f3: 0, ch: e.chU, w: e.w }) -
-    c.obj[g](ZERO);
   const tower = () => s.cur.layout === "tower";
+  // in the tower the heaviest lift is the one cabinet, the sub and the upper together (heaviestLiftLb), so the upper's
+  // weight is part of its share; elsewhere the heavier box counts, which the bounds take from the sub's side
+  const upperLbPart = (e: Pick<Upper, "midLb">) => (tower() ? e.midLb : 0);
+  const upperPart = (c: PaSearchContext, g: PaGoal, e: Upper) =>
+    c.obj[g]({
+      price: e.midP + e.cdP,
+      heaviest: upperLbPart(e),
+      out: 0,
+      f3: 0,
+      ch: e.chU,
+      w: e.w,
+    }) - c.obj[g](ZERO);
   const curMid = byId(MID_OPTIONS, s.cur.mid);
   const uppers = (c: PaSearchContext, ti: number, xi: number, box: Dims3): UpperSet => {
     const t = s.walls[ti],
@@ -1131,8 +1153,9 @@ function exactHook(
             c,
             t,
             xoLo,
-            () => [{ bx: { w: box.w, h: TOWER_MID_H, d: box.d }, mDim: s.cur.mDim }],
+            () => [{ bx: towerMidDims(box), mDim: s.cur.mDim }],
             s.tower?.mid ? [s.tower.mid] : [],
+            box,
           )
         : buildUppers(
             c,
@@ -1206,15 +1229,17 @@ function exactHook(
       if (!a) continue;
       const m = {
         price: sp.price + us.minPrice - 1e-6,
-        heaviest: Math.max(sp.lb, us.minLb),
+        heaviest: heaviestLiftLb(s.cur.layout, sp.lb, us.minLb),
         out: Math.min(sp.out, us.loDesc[0] + over),
         f3: cs.f3,
         ch: sp.chS,
         w: 0,
       };
       if (fails(q.need, m)) continue;
+      // the cut: the sub's part (its own weight only in the tower, whose stair carries the uppers') and the stair
+      const subLb = tower() ? sp.lb : m.heaviest;
       const r: [number, number] = cut
-        ? [c.obj[q.axis]({ ...m, price: sp.price - 1e-6 }) + us.stair[a - 1], 0]
+        ? [c.obj[q.axis]({ ...m, price: sp.price - 1e-6, heaviest: subLb }) + us.stair[a - 1], 0]
         : q.rank(m);
       if (!best || before(r, best)) best = r;
     }
@@ -1379,7 +1404,7 @@ function exactHook(
               cap < q.need.outMin - EPS ||
               sd.chS + e.chU > q.need.chMax ||
               sub.price + e.midP + e.cdP > q.need.priceMax + EPS ||
-              e.midLb > q.need.heaviestMax + EPS ||
+              heaviestLiftLb(s.cur.layout, sd.lb, e.midLb) > q.need.heaviestMax + EPS ||
               banned.includes(e.mid.id)
             )
               continue;
@@ -1424,7 +1449,7 @@ function exactHook(
     const m = {
       // summed as evaluateDesign sums it: sub, mid, compression driver
       price: 0 + s.subs[sd.si].price + e.midP + e.cdP,
-      heaviest: Math.max(sd.lb, e.midLb),
+      heaviest: heaviestLiftLb(s.cur.layout, sd.lb, e.midLb),
       out,
       f3: sd.cs.f3,
       ch: sd.chS + e.chU,
@@ -1486,9 +1511,11 @@ function exactHook(
     ctx = c;
     for (const g of GOALS) {
       // the bounds split each objective into the sub's part and the upper's: that needs it to add up
+      // (in the tower the weight too: the upper's is part of its share)
+      const bLb = tower() ? 40 : 0;
       const a = { price: 400, heaviest: 80, out: 120, f3: 30, ch: 2, w: 0 },
-        b = { price: 300, heaviest: 0, out: 0, f3: 0, ch: 1, w: 1 };
-      const sum = { price: 700, heaviest: 80, out: 120, f3: 30, ch: 3, w: 1 };
+        b = { price: 300, heaviest: bLb, out: 0, f3: 0, ch: 1, w: 1 };
+      const sum = { price: 700, heaviest: 80 + bLb, out: 120, f3: 30, ch: 3, w: 1 };
       if (Math.abs(c.obj[g](sum) - (c.obj[g](a) + c.obj[g](b) - c.obj[g](ZERO))) > 1e-6)
         throw new Error(`the exact search needs the ${g} objective to add up over its parts`);
     }
@@ -1531,7 +1558,11 @@ function exactHook(
         braceStyle: s.braceStyle,
         braceEstimate: true,
       });
-      if (!(vent.len > 0) || !ductFits(ductFit(box, style, vent, t, sub).spans, vent.len)) return;
+      if (
+        !(vent.len > 0) ||
+        !ductFits(ductFit(box, style, vent, t, cur.inset, sub).spans, vent.len)
+      )
+        return;
       if (!subBaffleFits(box, style, vent, t, sub)) return;
       const lb = subWeightLb(box, t, sub.lb, braceWoodEstimate(box, t, cur.inset, s.braceStyle));
       if (lb > s.cap + 1e-9) return;
@@ -1587,7 +1618,7 @@ function exactHook(
     const box = s.cur.cDim;
     const tune = (len: number) => {
       const v = { ...vent, len };
-      const vs = ventShape(style, box, v, t, sub);
+      const vs = ventShape(style, box, v, t, s.cur.inset, sub);
       const V = subNetLiters(style, box, t, s.cur.inset, v, vs.area, sub.ts.disp, s.braceStyle);
 
       const Leff = (len + vs.ec) * 0.0254;
@@ -1596,12 +1627,12 @@ function exactHook(
     // the lengths that fit, one way at a time (a bottom slot straight, then folded, with the lengths that fit neither way
     // between; round tubes each elbow count apart, as each elbow steps the tuning), so the search takes the shortest
     // span that reaches the tuning, at the last way's shortest when even that tunes lower
-    const spans = ductFit(box, style, { ...vent, len: 0 }, t, sub)
+    const spans = ductFit(box, style, { ...vent, len: 0 }, t, s.cur.inset, sub)
       .tune.map(
         ([lo, hi]) =>
           [
             Math.max(lo, s.grid.minDuctIn),
-            Math.min(hi, ductLenSliderMax(box, style, vent, t, sub)),
+            Math.min(hi, ductLenSliderMax(box, style, vent, t, s.cur.inset, sub)),
           ] as const,
       )
       .filter(([lo, hi]) => hi >= lo);

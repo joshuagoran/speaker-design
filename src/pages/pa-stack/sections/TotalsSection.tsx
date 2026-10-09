@@ -3,6 +3,8 @@ import type { PaPlanner } from "../hooks/usePaPlanner";
 import { FONT } from "../../../styles/fonts";
 import { isRoundPort } from "../../../lib/pa/calc";
 import { subTubeKit } from "../../../lib/pa/tubes";
+import { priceTotal } from "../../../lib/pa/totals";
+import { towerSpec } from "../../../lib/pa/tower";
 
 /** The totals row for the boxes' hardware. */
 const HARDWARE_ROW = "Handles, input dishes, jacks and horn posts (weight in the boxes)";
@@ -25,8 +27,10 @@ interface Props {
     | "portStyle"
     | "subVentSpec"
     | "wallThicknessIn"
+    | "baffleInsetIn"
     | "subHardware"
     | "midHardware"
+    | "isTower"
   >;
 }
 
@@ -48,8 +52,10 @@ export function TotalsSection({ planner }: Props) {
     portStyle,
     subVentSpec,
     wallThicknessIn,
+    baffleInsetIn,
     subHardware,
     midHardware,
+    isTower,
   } = planner;
   return (
     <>
@@ -67,7 +73,16 @@ export function TotalsSection({ planner }: Props) {
             const midBoxLb = midCabinetLb; // same estimate as the mid-bass stats row
             const rows: [string, number | null, number, number, number][] = [
               ["Sub column", subDriver.price, subDriver.lb, subBoxLb, subBox.h],
-              ["Mid-bass box", midDriver.price, midDriver.lb, midBoxLb, effectiveMidBoxDims.h],
+              // the tower: its cabinet over the sub box, the mid chamber and the horn section
+              isTower
+                ? [
+                    "Mid and horn sections",
+                    midDriver.price,
+                    midDriver.lb,
+                    midBoxLb,
+                    towerSpec(subBox, wallThicknessIn, hornOption).extH,
+                  ]
+                : ["Mid-bass box", midDriver.price, midDriver.lb, midBoxLb, effectiveMidBoxDims.h],
               ["Compression driver", compressionDriver.price, compressionDriver.lb || 0, 0, 0],
               ["Horn", hornOption.price, (hornOption.lb || 0) + 1, 0, hornOption.size.h + 1],
             ];
@@ -75,14 +90,23 @@ export function TotalsSection({ planner }: Props) {
             if (isRoundPort(portStyle))
               rows.push([
                 "Port tubes and elbows",
-                subTubeKit(subBox, portStyle, subVentSpec, wallThicknessIn, subDriver).price,
+                subTubeKit(
+                  subBox,
+                  portStyle,
+                  subVentSpec,
+                  wallThicknessIn,
+                  baffleInsetIn,
+                  subDriver,
+                ).price,
                 0,
                 0,
                 0,
               ]);
             // the handles, input dishes, jacks and horn posts (their weight is in the boxes' rows)
             rows.push([HARDWARE_ROW, subHardware.price + (midHardware?.price ?? 0), 0, 0, 0]);
-            const sum = (i: 1 | 2 | 3) => rows.reduce((a, r) => a + (r[i] || 0), 0);
+            const sum = (i: 2 | 3) => rows.reduce((a, r) => a + (r[i] || 0), 0);
+            // a part with no price (null) leaves the totals short, and they carry the mark
+            const price = priceTotal(rows.map((r) => r[1]));
             const stackLb = sum(2) + sum(3) + (plinthHeightIn ? 6 : 0);
             return (
               <div className="overflow-x-auto max-w-3xl">
@@ -119,7 +143,8 @@ export function TotalsSection({ planner }: Props) {
                         One stack{plinthHeightIn ? ` + ${plinthHeightIn}" plinth` : ""}
                       </td>
                       <td className="py-1 pr-4 text-right tabular-nums">
-                        ${Math.round(sum(1)).toLocaleString()}
+                        ${Math.round(price.sum).toLocaleString()}
+                        {price.mark}
                       </td>
                       <td className="py-1 pr-4 text-right tabular-nums">{sum(2).toFixed(0)}</td>
                       <td className="py-1 pr-4 text-right tabular-nums">
@@ -131,7 +156,8 @@ export function TotalsSection({ planner }: Props) {
                     <tr className="font-medium text-stone-900">
                       <td className="py-1 pr-4">Pair</td>
                       <td className="py-1 pr-4 text-right tabular-nums">
-                        ${Math.round(2 * sum(1)).toLocaleString()}
+                        ${Math.round(2 * price.sum).toLocaleString()}
+                        {price.mark}
                       </td>
                       <td className="py-1 pr-4 text-right tabular-nums">
                         {(2 * sum(2)).toFixed(0)}
@@ -146,6 +172,11 @@ export function TotalsSection({ planner }: Props) {
                     </tr>
                   </tbody>
                 </table>
+                {price.mark && (
+                  <p className="text-xs text-stone-500 mt-1">
+                    {price.mark} Some parts have no price, so the real total is higher.
+                  </p>
+                )}
               </div>
             );
           })()}

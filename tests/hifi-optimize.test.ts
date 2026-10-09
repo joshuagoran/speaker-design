@@ -9,8 +9,12 @@ import {
   portsDiffer,
   slotFor,
 } from "../src/lib/hifi/optimize";
-import { hifiBox, hifiGridTop, hifiSystem, hifiChips } from "../src/lib/hifi/hifi";
-import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../src/lib/data";
+import { hifiBox, hifiGridTop, hifiSystem, hifiChips, RADIATOR_PANEL } from "../src/lib/hifi/hifi";
+import { hifiBoxMin } from "../src/lib/hifi/boxLayout";
+import { boxSliderMins } from "../src/lib/boxFit";
+import { HIFI_BOX_SLIDERS } from "../src/constants/hifiLayout";
+import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES, waveguideSpecOf } from "../src/lib/data";
+import { DIY_OS90X70 } from "../src/data/catalog/horns";
 import { chipOf } from "./helpers";
 import { HIFI_OPTIMIZER_PANEL } from "../src/constants/optimizerPanels";
 import { defaultPanelIn } from "../src/lib/panel";
@@ -116,6 +120,31 @@ for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
   });
 }
 
+test("hi-fi optimizer: a compression driver on the DIY OS 90×70 never crosses below the waveguide's minimum", () => {
+  const minXo = DIY_OS90X70.hf.minXo;
+  if (minXo === null) throw new Error("the waveguide has no minimum crossover");
+  const de250 = HIFI_TWEETERS.find((o) => o.id === "de250");
+  if (!de250) throw new Error("no DE250");
+  const onGuide: HifiOptimizerCurrent = {
+    ...cur,
+    tweeter: de250.id,
+    xo: 2200,
+    guide: waveguideSpecOf(DIY_OS90X70),
+  };
+  for (const goal of ["cheaper", "louder", "lower"] satisfies HifiGoal[]) {
+    // the tweeter held, so every card is the DE250 on this waveguide
+    const out = optimizeHifiSpeaker({
+      ...base,
+      cur: onGuide,
+      goals: [goal],
+      locks: { tweeter: true },
+    });
+    assert.ok(out.cards.length >= 1, `${goal}: cards to check`);
+    for (const k of out.cards)
+      assert.ok(k.config.xo >= minXo, `${goal} ${k.label}: ${k.config.xo} Hz`);
+  }
+});
+
 test("hi-fi optimizer: locked woofer and exact box stay put", (t) => {
   const out = optimizeHifiSpeaker({
     ...base,
@@ -196,7 +225,7 @@ test("hi-fi optimizer: radiator designs price their radiators and load back with
     );
     const p = HIFI_PASSIVES.find((o) => o.id === k.config.pr!.id);
     assert.ok(
-      k.metrics.price >= 2 * (w.price + tw.price + k.config.pr.n * p!.price) - 0.01,
+      k.metrics.price >= 2 * ((w.price ?? 0) + tw.price + k.config.pr.n * p!.price) - 0.01,
       "radiators are in the pair price",
     );
   }
@@ -368,6 +397,19 @@ test("hi-fi optimizer: the first card is the best design on its grid, checked on
         const c = { ...cfg, xo, guide: space.guideOf(t) },
           sys = hifiSystem(w, tt, c);
         if (sys && sys.whoW === "radiator") radiatorLimited = true;
+        // a box the page would take: at least what its parts need (the page's sliders start there)
+        const need = boxSliderMins(
+          hifiBoxMin({
+            woofer: w,
+            tweeter: tt,
+            onTop: !!c.guide?.freestanding,
+            cfg: c,
+            wall: c.wall,
+            radiatorPanel: RADIATOR_PANEL,
+          }),
+          HIFI_BOX_SLIDERS,
+        );
+        if (c.dim.w < need.w - 1e-9 || c.dim.h < need.h - 1e-9) continue;
         if (!sys || hifiDesignProblems(sys, hifiChips(sys, w, tt, c)).length) continue;
         const price = space.priceOf(w, t, c);
         if (price > base.budget) continue;

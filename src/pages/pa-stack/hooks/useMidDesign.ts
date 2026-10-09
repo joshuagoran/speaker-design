@@ -11,8 +11,8 @@ export interface MidDesign {
   setMidBoxDims: Setter<Dims3>;
   midAmpWatts: number;
   setMidAmpWatts: Setter<number>;
-  midBandTiltDb: number;
-  setMidBandTiltDb: Setter<number>;
+  midBelowSubDb: number;
+  setMidBelowSubDb: Setter<number>;
   setMidBoxDim: (k: keyof Dims3, v: number) => void;
   midSize: MidSize;
   setMidSize: Setter<MidSize>;
@@ -24,7 +24,7 @@ export function useMidDesign(): MidDesign {
   const [midBoxPreset, setMidBoxPreset] = useState(DEFAULT_PA.midBox); // last preset loaded
   const [midBoxDims, setMidBoxDims] = useState<Dims3>(DEFAULT_PA.mDim);
   const [midAmpWatts, setMidAmpWatts] = useState(DEFAULT_PA.mAmpW); // amp power per mid channel, into 8 Ω
-  const [midBandTiltDb, setMidBandTiltDb] = useState(DEFAULT_PA.tilt); // how much less the mid band needs than the sub band, dB
+  const [midBelowSubDb, setMidBelowSubDb] = useState(DEFAULT_PA.tilt); // the music balance: the mid band level below the sub, dB
   const setMidBoxDim = (k: keyof Dims3, v: number) => setMidBoxDims((p) => ({ ...p, [k]: v }));
   const [midSize, setMidSize] = useState<MidSize>(DEFAULT_PA.midSize);
   return {
@@ -36,8 +36,8 @@ export function useMidDesign(): MidDesign {
     setMidBoxDims,
     midAmpWatts,
     setMidAmpWatts,
-    midBandTiltDb,
-    setMidBandTiltDb,
+    midBelowSubDb,
+    setMidBelowSubDb,
     setMidBoxDim,
     midSize,
     setMidSize,

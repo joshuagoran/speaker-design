@@ -1,7 +1,7 @@
 import { buildSubwoofer } from "./buildSubwoofer";
 import { buildMid } from "./buildMid";
 import { buildHorn } from "./buildHorn";
-import { towerSpec, TOWER_MID_HEIGHT_IN } from "./stackHeights";
+import { towerMidDims, towerSpec, TOWER_HORN_WALL_GAP_IN } from "../../lib/pa/tower";
 import type { SceneContext } from "./sceneContext";
 import type { Props } from "./buildStackScene";
 
@@ -15,6 +15,7 @@ export function buildTower(
     sub,
     mid,
     horn,
+    cd,
     plinth,
     portStyle,
     portGeom,
@@ -26,6 +27,7 @@ export function buildTower(
     | "sub"
     | "mid"
     | "horn"
+    | "cd"
     | "plinth"
     | "portStyle"
     | "portGeom"
@@ -35,7 +37,7 @@ export function buildTower(
   >,
 ): { top: number } {
   const s = sub.box;
-  const { archTop, hornSectionH } = towerSpec(s, ctx.wall, horn);
+  const spec = towerSpec(s, ctx.wall, horn);
   const { top: subTop, baffleZ } = buildSubwoofer(ctx, {
     sub,
     box: s,
@@ -49,20 +51,20 @@ export function buildTower(
   });
   const { top: hornY } = buildMid(ctx, {
     mid,
-    box: { w: s.w, h: TOWER_MID_HEIGHT_IN, d: s.d },
+    box: towerMidDims(s),
     y: subTop,
     baffleZ,
   });
-  // the horn sits on the sub's footprint: center height, and the mouth flush with the shared baffle face
+  // the horn sits on the sub's footprint: its center height, and the mouth on the shell's front plane
   return buildHorn(ctx, {
     horn,
+    cd,
     y: hornY,
     mount: s,
     tower: {
-      cy: archTop ? hornY + (s.w / 2 - ctx.wall) : hornY + (horn.size.h + 2) / 2,
-      z: baffleZ - horn.size.d + 0.2,
-      width: s.w - 2 * ctx.wall - 1,
-      sectionH: hornSectionH,
+      cy: plinth + spec.hornCenter,
+      width: s.w - 2 * ctx.wall - 2 * TOWER_HORN_WALL_GAP_IN,
+      sectionH: spec.hornSectionH,
     },
   });
 }

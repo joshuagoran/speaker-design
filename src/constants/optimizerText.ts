@@ -33,6 +33,9 @@ export const CARD_LABELS = {
   nearMiss: "Closest",
 } as const;
 
+/** How the near miss names the closest design when it is your own design as it is ("Closest: your design (…)"). */
+export const NEAR_MISS_YOURS = "your design";
+
 /** The sentence under a card both optimizers word the same way. */
 export const CARD_WHY = {
   closest: "Passes the checks; closest to your goal.",
@@ -98,4 +101,9 @@ export const DESIGN_PROBLEM_TEXT = {
   missingWoofer: "woofer isn't in the driver tables",
   missingTweeter: "tweeter isn't in the driver tables",
   missingRadiator: "the passive radiator isn't in the driver tables",
+} as const;
+
+/** What the optimizer says when your design's price isn't whole (a part without a US price, `HifiPricedMetrics`). */
+export const PRICE_UNKNOWN_TEXT = {
+  cheaper: "Your design has a part without a US price, so nothing can be shown cheaper than it.",
 } as const;

@@ -75,9 +75,11 @@ export function hifiCutParts({ cfg, woofer, tweeter, joint, prPanel }: HifiCutPa
     `${formatInches(fromBoxBottom - edge)}″ above the bottom edge`;
   const lay = driverLayout(woofer, tweeter, cfg.dim, !!cfg.guide?.freestanding);
   const off = tweeterOffset(cfg, tweeter, lay);
-  const tweeterNote = lay.onTop
-    ? "no tweeter cutout: its waveguide sits on the box top"
-    : `tweeter: ${formatInches(tweeter.faceplate.w)} × ${formatInches(tweeter.faceplate.h)}″ cutout (faceplate; use the datasheet's), center ${up(lay.tweeterIn)}${off ? `, ${formatInches(Math.abs(off))}″ ${off > 0 ? "inward" : "outward"} of center (mirror the pair)` : ""}`;
+  const tweeterNote = lay.coax
+    ? "no tweeter cutout: the coaxial's HF is in the woofer"
+    : lay.onTop
+      ? "no tweeter cutout: its waveguide sits on the box top"
+      : `tweeter: ${formatInches(tweeter.faceplate.w)} × ${formatInches(tweeter.faceplate.h)}″ cutout (faceplate; use the datasheet's), center ${up(lay.tweeterIn)}${off ? `, ${formatInches(Math.abs(off))}″ ${off > 0 ? "inward" : "outward"} of center (mirror the pair)` : ""}`;
   const wooferNote = `woofer: ${sizedCutout(woofer.size)}, center ${up(lay.wooferIn)}`;
 
   const ventPort = hifiVentPort({ ...cfg, wall: t });

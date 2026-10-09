@@ -134,8 +134,9 @@ Two reviews: technical (search soundness, speed) and usability (inputs, results,
   weight, not only fit.
 - **Valid pruning only:** upper bound on SPL per driver (mass-line level at the thermal/amp cap), lower
   bounds on price and weight, driver-fit by max dimensions. Budget: 0.5–1 s laptop, stream on phones.
-- **Hard constraints added:** horn/driver exit match, mid "driver won't fit", minimum crossovers,
-  stack height and width; which "warn" chips are hard is listed explicitly.
+- **Hard constraints added:** horn/driver exit match, mid "driver won't fit", stack height and width;
+  which "warn" chips are hard is listed explicitly. The recommended crossovers (the driver's and the horn's
+  minimum, the horn's loading limit) are warnings on the card, never a reason to drop a design.
 - **Worker:** second esbuild entry, inlined as `<script type="text/plain">` (same `</script` guard), started
   from a Blob URL with a run id for cancellation; main-thread fallback where workers are blocked (test in
   the claude.ai artifact).
@@ -152,7 +153,8 @@ both crossovers, locks, owned/excluded drivers, outdoor target, "explain" view o
 Built: the Optimizer switch; lock icons on drivers, vent style, plywood, highpass, crossovers and the three amp powers (an unlocked amp is searched up to its slider maximum, then comes back at the least power that keeps the card's output and keeps each band up);
 unlocked / ≤ / = on each box dimension; room, weight, budget and goal inputs; three cards (the
 goal's winner, then alternatives that beat it on their own axis by any saving, or at least 3 lb, 1 dB or 2 Hz);
-Preview, Load (saves the previous design when signed in), Undo, Save as; the "nothing fits" message.
+Preview, Load, Undo (back to the design from before the first of the loads in a row, kept in memory, never saved), Save as;
+the "nothing fits" message.
 
 Changes from the plan: output is scored as the lowest clean music-limit level from 40 to 90 Hz (a response
 peak at 45 Hz could otherwise win); the layout, finish and amps are never changed; box dimensions step in

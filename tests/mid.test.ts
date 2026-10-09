@@ -12,8 +12,13 @@ import {
   LOWPASS_SKIRT_SPAN,
   STUFFING_VOLUME_GAIN,
   nearestPoint,
+  sealedLitersForQtc,
+  SEALED_QTC_MIN,
 } from "../src/lib/pa/calc";
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
+import { PA_SLIDERS } from "../src/constants/paSliders";
+import { DRIVER_CLEARANCE_IN } from "../src/lib/pa/bracing";
+import { MID_DEPTH_FALLBACK_IN } from "../src/data/catalog/driver-cutouts";
 import type { MidSystemConfig, SubSystemConfig } from "../src/types";
 import { close, db, LR24_ORDERS } from "./helpers";
 
@@ -36,6 +41,58 @@ test("midSystem volume: gross from boxL, less displacement, stuffed x1.15", (t) 
   close(t, m.netL, m.grossL - disp, 1e-9);
   close(t, m.effL, m.netL * STUFFING_VOLUME_GAIN, 1e-9);
   close(t, m.V, Math.sqrt(400 * 8), 1e-9);
+});
+test("sealedLitersForQtc: closedBox reads Qtc 0.5 in that volume (Qts sqrt(1 + Vas/Vb))", (t) => {
+  for (const m of MID_OPTIONS) {
+    const L = sealedLitersForQtc(m.ts, SEALED_QTC_MIN);
+    if (L == null) continue;
+    const mdl = closedBox(m.ts, L, null, null, 2.83, LR24_ORDERS);
+    assert.ok(mdl);
+    close(t, mdl.Qtc, SEALED_QTC_MIN, 1e-9, m.id);
+  }
+  // B&C 12CL76 (Qts 0.21, Vas 59 L): about 12.6 L after the stuffing, 11 L net
+  const cl76 = MID_OPTIONS.find((o) => o.id === "bc12cl76");
+  assert.ok(cl76);
+  close(t, sealedLitersForQtc(cl76.ts, SEALED_QTC_MIN) ?? 0, 12.6, 0.1);
+});
+test("smallerBoxNetL: named only where the smallest box the driver fits reaches Qtc 0.5", (t) => {
+  // the B&C 12CL76 in the smallest box the sliders give it (13.5 x 13.5 face; 6 in deep, 0.5 in clear, inset and
+  // back wall: 8 in): still under 0.5
+  const cl76 = MID_OPTIONS.find((o) => o.id === "bc12cl76");
+  assert.ok(cl76);
+  const small = midSystem(cl76, { ...cfg, midDims: { w: 13.5, h: 13.5, d: 8 } });
+  assert.ok(small.mdl && small.mdl.Qtc < SEALED_QTC_MIN, `Qtc ${small.mdl?.Qtc}`);
+  assert.equal(small.smallerBoxNetL, null);
+  // every mid in a big box: a volume named where, and only where, its smallest box reads Qtc 0.5 or more
+  const step = (x: number, s: { min: number; step: number }) =>
+    Math.max(s.min, Math.ceil(x / s.step - 1e-9) * s.step);
+  let named = 0;
+  for (const m of MID_OPTIONS) {
+    const big = midSystem(m, { ...cfg, midDims: { w: 22, h: 22, d: 22 } });
+    if (!big.mdl || big.mdl.Qtc >= SEALED_QTC_MIN) continue;
+    const face = step(m.size + 1.2, PA_SLIDERS.midW);
+    const d = step(
+      (m.depthIn ?? MID_DEPTH_FALLBACK_IN[m.size]) + DRIVER_CLEARANCE_IN + cfg.inset + cfg.wall,
+      PA_SLIDERS.midD,
+    );
+    const least = midSystem(m, { ...cfg, midDims: { w: face, h: face, d } });
+    assert.ok(least.mdl);
+    assert.equal(big.smallerBoxNetL != null, least.mdl.Qtc >= SEALED_QTC_MIN - 1e-9, m.id);
+    if (big.smallerBoxNetL == null) continue;
+    named++;
+    close(
+      t,
+      big.smallerBoxNetL * STUFFING_VOLUME_GAIN,
+      sealedLitersForQtc(m.ts, SEALED_QTC_MIN) ?? 0,
+      1e-9,
+      m.id,
+    );
+  }
+  assert.ok(named > 0, "some mid gets a volume");
+  // the tower's chamber follows the sub: no volume to name
+  const tower = midSystem(cl76, { ...cfg, layout: "tower", midDims: { w: 22, h: 15.5, d: 22 } });
+  assert.ok(tower.mdl && tower.mdl.Qtc < SEALED_QTC_MIN);
+  assert.equal(tower.smallerBoxNetL, null);
 });
 test("midSystem: displacement assumed 2.5 L (12 in) / 4 L (15 in) when unpublished", (t) => {
   const ts = { ...mid.ts, disp: null };

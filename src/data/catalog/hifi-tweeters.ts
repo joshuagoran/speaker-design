@@ -8,7 +8,8 @@
 // Pure data: no logic, no derived fields (src/lib/data.ts derives and sorts).
 // Fields: id, name, lb, price $, src, type (dome | horn-loaded | compression | ribbon), exit (diameter in, null for a
 // horn-loaded tweeter), faceplate ({ diameter } or { w, h } in, null when the maker gives no size), needsWaveguide,
-// note, optional ownGuide (a ribbon's own waveguide: covH / covV degrees, w / h in); hf: sens dB 1 W/1 m, aes W
+// note, optional ownGuide (a ribbon's own waveguide: covH / covV degrees, w / h in), optional mount (a compression
+// driver's throat: { thread } for a screw-on one; omit it for a bolt-on one); hf: sens dB 1 W/1 m, aes W
 // with a high-pass at aesXo Hz, minXo Hz (the maker's lowest crossover), imp Ω, fs Hz (null where unpublished).
 import type { HifiTweeterRaw } from "../../types";
 
@@ -217,7 +218,7 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
   },
   {
     id: "psd2002",
-    lb: 5.9,
+    lb: 4.7,
     name: "Eminence PSD:2002-8",
     price: 87.99,
     src: "parts-express.com, Sep 2026 (backorder)",
@@ -226,6 +227,51 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     exit: 1,
     faceplate: { diameter: 5.25 },
     needsWaveguide: true,
-    note: '[vendor: PE page, Eminence spec text] US brand. Titanium diaphragm, 2" voice coil, 1" exit. sens is 105 dB 1 W/1 m on an unnamed horn. aes is 80 W EIA-426B with a 1.6 kHz 18 dB high-pass. Crossover: 1.2 kHz at 18 dB/oct or 1.8 kHz at 12 dB/oct. Titanium can sound bright; plan on DSP EQ. lb is the PE shipping weight. Also sold in a screw-on version (PSD:2002S).',
+    note: '[vendor: PE page, Eminence spec text; weight: Eminence datasheet] US brand. Titanium diaphragm, 2" voice coil, 1" exit. sens is 105 dB 1 W/1 m on an unnamed horn. aes is 80 W EIA-426B with a 1.6 kHz 18 dB high-pass. Crossover: 1.2 kHz at 18 dB/oct or 1.8 kHz at 12 dB/oct. Titanium can sound bright; plan on DSP EQ. lb is the 4.7 lb net weight from the Eminence datasheet (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/PSD2002.pdf; 5.0 lb shipping; PE listed 5.9 lb shipping). Also sold in a screw-on version (PSD:2002S).',
+  },
+  // ---------- 1" screw-on compression drivers (1-3/8"-18 TPI; a bolt-on horn takes them through an adapter) ----------
+  {
+    id: "psd2002s",
+    // GUESS: the bolt-on PSD:2002's 4.7 lb net weight (Eminence datasheet); PE lists 6.3 lb shipping for this one
+    lb: 4.7,
+    name: "Eminence PSD:2002S-8",
+    price: 92.99,
+    src: "parts-express.com, Oct 2026 (back-ordered)",
+    hf: { sens: 105, aes: 80, aesXo: 1600, minXo: 1200, imp: 8, fs: 550 },
+    type: "compression",
+    exit: 1,
+    faceplate: { diameter: 5.25 },
+    needsWaveguide: true,
+    mount: { thread: "1-3/8-18" },
+    note: '[vendor: PE page, Eminence spec text] The screw-on PSD:2002: titanium diaphragm, 2" voice coil, 1" exit on a 1-3/8"-18 NEF outer thread. sens is 105 dB 1 W/1 m on an unnamed horn. aes is 80 W EIA-426B with a 1.6 kHz 18 dB high-pass. Crossover: 1.2 kHz at 18 dB/oct or 1.8 kHz at 12 dB/oct. 1.2–20 kHz. 5.25" across, 2.2" deep. Net weight not published for the screw-on model: the bolt-on one\'s 4.7 lb is assumed. Parts Express #290-446.',
+  },
+  {
+    id: "d220ti",
+    // GUESS: no net weight published; PE lists 4.0 lb shipping (24 oz ferrite magnet)
+    lb: 3,
+    name: "Selenium D220Ti-8",
+    price: 94.99,
+    src: "parts-express.com, Oct 2026",
+    hf: { sens: 109, aes: 80, aesXo: 2000, minXo: 2000, imp: 8, fs: null },
+    type: "compression",
+    exit: 1,
+    faceplate: { diameter: 4.53 },
+    needsWaveguide: true,
+    mount: { thread: "1-3/8-18" },
+    note: '[vendor: PE page, JBL Selenium spec text] Ferrite, 0.025 mm titanium diaphragm, 1.7" CCAW voice coil, 1" exit on a 1-3/8"-18 TPI screw-on nose. sens is 109 dB at 2.83 V/1 m (1 W into its 8 Ω) on an unnamed horn. aes is 80 W RMS (160 W program) with the recommended 2 kHz 12 dB/oct crossover. 1–21 kHz. 4.53" across, 2" deep (2.75" with the nose). Net weight and fs not published; about 3 lb is assumed from the 4.0 lb shipping weight. Fits the Selenium "-25" screw-on horns (the HM17-25) directly. Parts Express #264-270.',
+  },
+  {
+    id: "asd1001",
+    lb: 1.7,
+    name: "Eminence ASD:1001",
+    price: 43.99,
+    src: "parts-express.com, Oct 2026 (eminence.com also $43.99)",
+    hf: { sens: 104.4, aes: 50, aesXo: 2500, minXo: 2500, imp: 8, fs: 590 },
+    type: "compression",
+    exit: 1,
+    faceplate: { diameter: 3.5 },
+    needsWaveguide: true,
+    mount: { thread: "1-3/8-18" },
+    note: '[maker: eminence.com spec table, Oct 2026] US brand. Ferrite, titanium diaphragm, 1.3" (33 mm) aluminum-former voice coil, 1" exit on a 1-3/8"-18 outer thread. sens is 104.4 dB (PE: 2.83 V/1 m, so 1 W into 8 Ω) on an unnamed horn. aes is 50 W EIA-426A with the recommended 2.5 kHz 18 dB/oct crossover. 2.5–20 kHz. Re 6.7 Ω, minimum impedance 7.7 Ω at 3 kHz, resonance 590 Hz. 3.5" across, 2.45" deep, 1.7 lb. The cheapest compression driver on the list; a 2.5 kHz minimum suits the small waveguides. Parts Express #290-525.',
   },
 ];

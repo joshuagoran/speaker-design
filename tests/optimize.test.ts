@@ -12,6 +12,7 @@ import {
   ventSizesFor,
   PA_REACH_WORDS,
   paOptimizerWalls,
+  paSearchDesign,
 } from "../src/lib/pa/optimize";
 import { boxModel, subwooferLimits, ampVoltage } from "../src/lib/pa/calc";
 import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
@@ -259,13 +260,56 @@ test("a near-miss option, once applied, finds designs", (t) => {
   assert.ok(out.nearMiss!.blocking.length > 0 && out.nearMiss!.blocking.every((b) => b.length > 0));
 });
 
-test("no card carries 'Horn stops loading near the crossover' when the horn, driver or crossover is free", (t) => {
+// With the driver, horn and crossover free, the search keeps a pair with no warning: no card crosses below the
+// recommended crossover or near the horn's cutoff.
+test("with the driver, horn and crossover free, no card carries a crossover warning", () => {
+  const XO_WARNINGS: ChipId<"horn">[] = ["hornDriverMinXo", "hornMinXo", "hornLoading"];
   for (const goal of ["cheaper", "lighter", "lower", "louder"] as const) {
     const out = runs[goal] || optimizePaStack({ ...base, goal });
     for (const k of out.cards)
-      assert.ok(!k.warnings.some(([, , , id]) => id === "hornLoading"), `${goal}: ${k.label}`);
+      assert.ok(
+        !k.warnings.some(([, , , id]) => XO_WARNINGS.some((x) => x === id)),
+        `${goal}: ${k.label}`,
+      );
   }
 });
+
+// A crossover below the recommended one (the driver's minXo, the horn's minXo, or near the horn's cutoff) is a warning on
+// the card, never a reason to drop a design: with the driver, horn and crossover locked there, the search still finds
+// cards, each carries the warning, and your design doesn't fail on it.
+for (const { cd, horn, ids } of [
+  // a 1.4" driver recommended from 1200 Hz on a horn that loads to 400 Hz
+  { cd: "cd2514", horn: "hf950", ids: ["hornDriverMinXo"] },
+  // a 1" driver recommended from 1300 Hz on a horn specified from 1100 Hz that loads to 800 Hz
+  { cd: "hf108", horn: "rx28", ids: ["hornDriverMinXo", "hornMinXo", "hornLoading"] },
+] as const)
+  test(`a crossover below the recommended one warns and never blocks (${cd} on ${horn} at 900 Hz)`, () => {
+    const mine = { ...cur, cd, horn, xoHi: 900 };
+    const out = optimizePaStack({
+      ...base,
+      cur: mine,
+      goal: "cheaper",
+      locks: { cd: true, horn: true, xoHi: true },
+    });
+    const m = evaluateDesign(paSearchDesign({ cur: mine }));
+    for (const id of ids) {
+      assert.ok(
+        m?.chips.horn.some(([kind, , , i]) => kind === "warn" && i === id),
+        `your design warns: ${id}`,
+      );
+      assert.ok(!failsOn(m, base, id), `${id} doesn't make your design fail`);
+    }
+    assert.ok(out.cards.length >= 1, "the search finds cards");
+    for (const k of out.cards) {
+      assert.equal(k.config.cd, cd);
+      assert.equal(k.config.horn, horn);
+      for (const id of ids)
+        assert.ok(
+          k.warnings.some(([kind, , , i]) => kind === "warn" && i === id),
+          `${k.label} carries ${id}`,
+        );
+    }
+  });
 
 test("stacked goals: the main card beats the current design on every goal; the first goal ranks", (t) => {
   const beat: Record<PaGoal, (m: PaMetricsSummary, c: PaMetricsSummary) => boolean> = {
@@ -441,9 +485,10 @@ test("a locked sub, mid, driver or horn that isn't in the tables leaves nothing 
 });
 
 test("a failing design with nothing in reach: the closest design that passes, and a notice naming what's out of reach", () => {
-  // "blocky" under an $800 budget and 90 lb, with the vent kept to its bottom slot: nothing that passes keeps the
-  // design's output (round tubes with elbows keep the round-tube seeds' output for less, so they no longer get here)
-  const lim = { maxLb: 90, budget: 800 };
+  // "blocky" under a $750 budget and 90 lb, with the vent kept to its bottom slot: nothing that passes keeps the
+  // design's output (round tubes with elbows keep the round-tube seeds' output for less, so they no longer get here;
+  // and a driver below its minimum crossover only warns now, so $800 keeps it)
+  const lim = { maxLb: 90, budget: 750 };
   const out = optimizePaStack({
     ...base,
     ...lim,
@@ -464,13 +509,13 @@ test("a failing design with nothing in reach: the closest design that passes, an
 });
 
 test("with only a closest card, the near miss still offers the looser limit that reaches the goal", () => {
-  // "blocky" under an $800 budget and 95 lb, with the vent kept to its bottom slot, nothing that passes keeps the
-  // output; $880 does
+  // "blocky" under a $750 budget and 95 lb, with the vent kept to its bottom slot, nothing that passes keeps the
+  // output; $825 does
   const out = optimizePaStack({
     ...base,
     cur: pick(SEED_NAMES.blocky),
     maxLb: 95,
-    budget: 800,
+    budget: 750,
     goal: "cheaper",
     locks: { vent: true },
   });
@@ -478,7 +523,7 @@ test("with only a closest card, the near miss still offers the looser limit that
   assert.ok(out.cards.length > 0);
   const opts = out.nearMiss ? out.nearMiss.options : [];
   assert.ok(
-    opts.some((o) => o.set.budget === 880),
+    opts.some((o) => o.set.budget === 825),
     JSON.stringify(opts.map((o) => o.text)),
   );
 });
@@ -526,10 +571,16 @@ test("a horn that keeps up only below full mid power turns the mid down instead 
 
 test("a mid that keeps up only below full sub power turns the sub down instead of ruling the design out", () => {
   // a 150 W mid amp, locked, asked to match the sub flat out: the subs that go lowest outrun it at full power (the
-  // search used to stop at 41.7 Hz; turned down to where the mid keeps up, a 4018 reaches 36 Hz)
-  const c = { ...pick(SEED_NAMES.lightBlock), tilt: 0, mAmpW: 150 },
+  // search used to stop at 41.7 Hz; turned down to where the mid keeps up, a 4018 reaches 36 Hz). The sub is locked to
+  // the 4018: a low-sensitivity sub such as the Omega Pro-18A reaches as low without outrunning the mid at all.
+  const c = { ...pick(SEED_NAMES.lightBlock), sub: "em4018", tilt: 0, mAmpW: 150 },
     lim = { maxLb: base.maxLb, budget: base.budget };
-  const out = optimizePaStack({ ...base, cur: c, goals: ["lower"], locks: { mAmpW: true } });
+  const out = optimizePaStack({
+    ...base,
+    cur: c,
+    goals: ["lower"],
+    locks: { mAmpW: true, sub: true },
+  });
   const k = out.cards[0];
   assert.ok(k && k.slot.kind === "first", out.goalMissing ?? "no card");
   assert.deepEqual(designProblems(evaluateDesign(k.config), lim), [], "the card passes as it is");

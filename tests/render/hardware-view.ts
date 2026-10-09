@@ -1,6 +1,6 @@
 // The render check's page (tests/render-hardware.mjs bundles it): the default PA stack with its hardware, built as the
 // planner builds it, seen from the camera the URL asks for, so the handles, dishes and posts can be looked at close up.
-//   ?handle=H1105|30769|none &cutaway=1 &layout=stack|tower|pole|satellite &az=deg &el=deg &dist=in &tx= &ty= &tz= (look-at, in)
+//   ?horn=<id> &cd=<id> &mount=plate|ply &hide=horn &handle=H1105|30769|none &cutaway=1 &layout=stack|tower|pole|satellite &az=deg &el=deg &dist=in &tx= &ty= &tz= (look-at, in)
 import * as THREE from "three";
 import { buildStackScene } from "../../src/components/stack-view/buildStackScene";
 import { DEFAULT_PA } from "../../src/lib/defaults";
@@ -17,6 +17,9 @@ import { HANDLE_CHOICES } from "../../src/lib/pa/hardware";
 import type { BoxHandles, PaLayout } from "../../src/types";
 import { PA_LAYOUT_NAMES } from "../../src/constants/paLayouts";
 import { keysOf } from "../../src/lib/records";
+import { CD_OPTIONS, HORN_OPTIONS } from "../../src/lib/data";
+import { savedHornMount } from "../../src/lib/pa/hornMount";
+import { HORN_MESH_NAME } from "../../src/components/stack-view/buildHorn";
 
 const q = new URLSearchParams(location.search);
 const num = (k: string, d: number) => (q.has(k) ? Number(q.get(k)) : d);
@@ -29,7 +32,9 @@ const mDim = layout === "tower" ? { w: d.cDim.w, h: 15.5, d: d.cDim.d } : d.mDim
 const group = buildStackScene({
   sub: { ...d.sub, box: d.cDim },
   mid: { ...d.mid, box: d.mDim },
-  horn: d.horn,
+  horn: HORN_OPTIONS.find((h) => h.id === q.get("horn")) ?? d.horn,
+  cd: CD_OPTIONS.find((c) => c.id === q.get("cd")) ?? d.cd,
+  hornMount: savedHornMount(q.get("mount")),
   plinth: 3,
   cutaway,
   portStyle: d.portStyle,
@@ -81,6 +86,11 @@ scene.add(new THREE.HemisphereLight(stage.sky, stage.ground, stage.hemi));
 const key = new THREE.DirectionalLight(stage.sky, stage.key);
 key.position.set(40, 80, 30);
 scene.add(key);
+// hide=horn: the horn bodies left out, to see what stands in front of the throat flange
+if (q.get("hide") === HORN_MESH_NAME)
+  group.traverse((o) => {
+    if (o.name === HORN_MESH_NAME) o.visible = false;
+  });
 scene.add(group);
 const az = (num("az", 35) * Math.PI) / 180,
   el = (num("el", 20) * Math.PI) / 180,

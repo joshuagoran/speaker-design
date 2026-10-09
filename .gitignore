@@ -5,3 +5,9 @@ dist/
 serve/
 .vitest/
 tests/.optimizer-dump/
+
+# tools/horn-print: keep venvs and outputs out of the repo
+.venv/
+*.step
+*.stl
+horn-print-out/

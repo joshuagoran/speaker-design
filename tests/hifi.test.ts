@@ -20,7 +20,10 @@ import {
   grossVolumeLiters,
   portAfterToggle,
   listenerGeometry,
+  passiveRadiatorFits,
+  RADIATOR_PANEL,
 } from "../src/lib/hifi/hifi";
+import { hifiBoxMin } from "../src/lib/hifi/boxLayout";
 import type { HifiConfig, HifiTweeter, HifiWoofer, PassiveRadiator } from "../src/types";
 import { chipList, chipOf, close, findChip } from "./helpers";
 
@@ -168,6 +171,22 @@ test("the speaker: volume, tuning, levels and checks", (t) => {
   assert.ok(b.wLevel <= s.wLevel + 1e-9, "boost never adds clean output");
 });
 
+test("an overdamped sealed box names the net volume that gives Qtc 0.5", (t) => {
+  const big: HifiConfig = { ...cfg, box: "sealed", dim: { w: 16, h: 30, d: 20 } };
+  const s = hifiSystem(W, T, big);
+  assert.ok(s && s.kind === "sealed" && s.Qtc < 0.5, `Qtc ${s?.Qtc}`);
+  const text = chipOf(hifiChips(s, W, T, big), "hifiQtc", "warn")[2];
+  const m = /Qtc 0\.5 at ([\d.]+) L net/.exec(text);
+  assert.ok(m, text);
+  // a box of that net volume (the same face, less depth) reads Qtc 0.5
+  const netL = Number(m[1]),
+    faceIn2 = (big.dim.w - 1.5) * (big.dim.h - 1.5);
+  const d = (netL + s.disp) / 0.97 / 0.016387 / faceIn2 + 1.5;
+  const fit = hifiSystem(W, T, { ...big, dim: { ...big.dim, d } });
+  assert.ok(fit && fit.kind === "sealed");
+  close(t, fit.Qtc, 0.5, 0.01);
+});
+
 test("response at the seat: on axis matches the design axis; off axis and above the lobe lose level", (t) => {
   const s = hifiSystem(W, T, cfg)!,
     freqs = [500, 2200, 8000];
@@ -271,8 +290,20 @@ test("passive radiators: tuning, notch, travel limit and checks", (t) => {
   chipOf(hifiChips(s, W, T, pc), "hifiRadiatorSize", "ok");
   chipOf(hifiChips(hifiSystem(W, T, one)!, W, T, one), "hifiRadiatorSize", "warn");
   const big = { ...pc, pr: { drv: { ...drv, size: 10 }, n: 2, addG: 0 } };
-  assert.ok(!findChip(hifiChips(hifiSystem(W, T, one)!, W, T, one), "hifiRadiatorFit"));
-  chipOf(hifiChips(hifiSystem(W, T, big)!, W, T, big), "hifiRadiatorFit", "bad");
+  // radiators too big for the box can't happen on the page: its box starts at what they need on their panel
+  const wall = cfg.wall ?? 0.75;
+  for (const c of [one, big]) {
+    const need = hifiBoxMin({
+      woofer: W,
+      tweeter: T,
+      onTop: false,
+      cfg: c,
+      wall,
+      radiatorPanel: RADIATOR_PANEL,
+    });
+    assert.ok(passiveRadiatorFits({ ...need, d: cfg.dim.d }, wall, c.pr));
+  }
+  assert.equal(RADIATOR_PANEL, "back", "the box's minimum sizes radiators on the back");
 });
 
 test("slot vent: tunes like a port of the same area and length, its shelf takes volume, and long slots are flagged", (t) => {
@@ -312,6 +343,97 @@ test("planar ribbon on its own waveguide: flush-mounted, its coverage drives the
   const low = { ...c, xo: 1600 };
   assert.ok(!findChip(hifiChips(s, W, r, c), "hifiTweeterMinXo"));
   chipOf(hifiChips(hifiSystem(W, r, low)!, W, r, low), "hifiTweeterMinXo", "warn");
+});
+
+test("compression driver on a waveguide: the higher of the two minimum crossovers holds, and the chip names its part", async () => {
+  const { HIFI_TWEETERS, ST260, waveguideSpecOf } = await import("../src/lib/data");
+  const { DIY_OS90X70 } = await import("../src/data/catalog/horns");
+  const de250 = HIFI_TWEETERS.find((o) => o.id === "de250");
+  if (!de250?.hf.minXo || DIY_OS90X70.hf.minXo === null) throw new Error("no minimums to test");
+  const tweeterMin = de250.hf.minXo;
+  const guideMin = DIY_OS90X70.hf.minXo;
+  assert.ok(guideMin > tweeterMin, "the waveguide's loading limits before the driver does");
+  const guide = waveguideSpecOf(DIY_OS90X70);
+  const at = (xo: number, g = guide) => {
+    const c = { ...cfg, guide: g, xo };
+    const s = hifiSystem(W, de250, c);
+    if (!s) throw new Error(`no system at ${xo} Hz`);
+    return findChip(hifiChips(s, W, de250, c), "hifiTweeterMinXo", "warn");
+  };
+  // 2000 Hz: above the DE250's 1600 Hz, below the waveguide's 2100 Hz, so it warns and names the waveguide
+  const warn = at(2000);
+  assert.ok(warn, "a warning at 2000 Hz");
+  assert.equal(warn[1], HIFI.MIN_XO_TITLE.waveguide);
+  assert.ok(warn[2].includes(DIY_OS90X70.name) && warn[2].includes(String(guideMin)), warn[2]);
+  assert.equal(HIFI.tweeterMinXo(de250, guide)?.hz, guideMin);
+  assert.ok(!at(guideMin), "none at the waveguide's minimum");
+  // on a waveguide without a minimum (the ST260), the driver's own minimum holds and the chip names the driver
+  const st260 = waveguideSpecOf(ST260);
+  assert.ok(!at(2000, st260));
+  const own = at(tweeterMin - 100, st260);
+  assert.ok(own, "a warning below the DE250's minimum");
+  assert.equal(own[1], HIFI.MIN_XO_TITLE.tweeter);
+  assert.ok(own[2].includes(de250.name), own[2]);
+});
+
+test("a crossover below where the waveguide holds its pattern warns once, naming it and the frequency; at or above it, none", async () => {
+  const { HIFI_TWEETERS, HIFI_WAVEGUIDES, ST260, ownGuideCfg, waveguideSpecOf } =
+    await import("../src/lib/data");
+  const { keeleFrequency } = await import("../src/lib/pa/calc");
+  const { DEFAULT_HIFI } = await import("../src/lib/defaults");
+  const de250 = HIFI_TWEETERS.find((o) => o.id === "de250");
+  const me10 = HIFI_WAVEGUIDES.find((h) => h.id === "me10");
+  const h07e = HIFI_WAVEGUIDES.find((h) => h.id === "h07e");
+  if (!de250?.hf.minXo || !me10 || !h07e) throw new Error("no DE250, ME10 or H07E to test");
+  const chipsAt = (xo: number, g: HifiConfig["guide"], t: HifiTweeter = de250) => {
+    const c = { ...cfg, guide: g, xo };
+    const s = hifiSystem(W, t, c);
+    if (!s) throw new Error(`no system at ${xo} Hz`);
+    return hifiChips(s, W, t, c);
+  };
+  const patternAt = (xo: number, g: HifiConfig["guide"], t?: HifiTweeter) =>
+    findChip(chipsAt(xo, g, t), "hifiGuidePattern", "warn");
+  // the ME10: a 1.5 kHz loading cutoff, but its 5.1 in mouth holds 90° only from about 2.16 kHz (Keele), and the map
+  // widens it below that too
+  const guide = waveguideSpecOf(me10);
+  assert.equal(guide.lowHz, me10.hf.lowHz, "the guide carries the catalogue's limit");
+  const pattern = HIFI.guidePatternHz(guide);
+  if (!pattern) throw new Error("no pattern limit");
+  assert.equal(pattern.by, "mouth");
+  assert.equal(pattern.hz, Math.round(keeleFrequency(me10.hf.covH, me10.size.w) / 10) * 10);
+  assert.ok(pattern.hz > me10.hf.lowHz);
+  const half = (f: number) =>
+    HIFI.waveguideHalfAngles(f, guide.covH, guide.covV, guide.w, guide.h)[0];
+  close(null, half(pattern.hz + 10), ((guide.covH / 2) * Math.PI) / 180, 1e-9);
+  assert.ok(half(pattern.hz - 100) > ((guide.covH / 2) * Math.PI) / 180, "wider below it");
+  // 2 kHz: above the DE250's 1.6 kHz minimum, below the ME10's pattern: one warning, naming both
+  const warn = patternAt(2000, guide);
+  assert.ok(warn, "a warning at 2000 Hz");
+  assert.ok(warn[2].includes(me10.name) && warn[2].includes(String(pattern.hz)), warn[2]);
+  assert.ok(!patternAt(pattern.hz, guide), "none at the limit");
+  assert.ok(!patternAt(3000, guide), "none above it");
+  // under the driver's minimum crossover the minimum-crossover warning stands alone
+  const low = chipsAt(de250.hf.minXo - 200, guide);
+  assert.ok(findChip(low, "hifiTweeterMinXo", "warn"));
+  assert.ok(!findChip(low, "hifiGuidePattern"), "no second warning");
+  // the H07E's maker minimum (2.2 kHz) is its limit too: below it only the minimum-crossover warning
+  const h = waveguideSpecOf(h07e);
+  assert.equal(HIFI.guidePatternHz(h)?.by, "loading");
+  const below = chipsAt(2000, h);
+  assert.ok(findChip(below, "hifiTweeterMinXo", "warn"));
+  assert.ok(!findChip(below, "hifiGuidePattern"));
+  // no waveguide the PA side also offers starts warning at the default crossover; a dome (no waveguide) and a ribbon's
+  // own waveguide (no limit) never warn
+  for (const g of HIFI_WAVEGUIDES.filter((w) => !w.scope)) {
+    const p = HIFI.guidePatternHz(waveguideSpecOf(g));
+    assert.ok(p && p.hz <= DEFAULT_HIFI.crossoverHz, `${g.id}: ${p?.hz} Hz`);
+  }
+  assert.ok(!patternAt(DEFAULT_HIFI.crossoverHz, waveguideSpecOf(ST260)));
+  assert.ok(!patternAt(800, null, T));
+  const ribbon = HIFI_TWEETERS.find((o) => o.ownGuide);
+  const own = ownGuideCfg(ribbon);
+  if (!ribbon || !own) throw new Error("no ribbon to test");
+  assert.ok(!patternAt(800, own, ribbon));
 });
 
 test("port toggle builds a fresh port with only its own shape's fields", () => {

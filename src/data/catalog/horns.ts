@@ -1,16 +1,25 @@
 // PA horns and Hi-fi waveguides (one table: the Hi-fi page lists the horns with coverage specs as waveguides).
-// src/lib/data.ts sorts HORN_OPTIONS by name.
+// src/lib/data.ts derives the PA list (HORN_OPTIONS: every horn but the Hi-fi-only ones, by name) and the Hi-fi
+// waveguides (HIFI_WAVEGUIDES: every 1" horn with coverage specs, by name).
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
 // a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
 // class, tweeter type) is an error.
-// Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read.
+// Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read, or says why
+// there is none (price null); an owner's estimate for a part no vendor sells says "Estimate" in `src`.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
 // Pure data: no logic, no derived fields (src/lib/data.ts derives and sorts).
 // Fields: id, name, lb, exit (throat, in), price $, src, size {w, h, d} in (mouth and depth), driver (suggested
 // drivers), xo (suggested crossover, text), note; `hf` (omit when nothing is published): covH / covV degrees,
 // minXo Hz (the maker's lowest crossover, null if none), lowHz (pattern-control limit, Hz). Optional: profile
-// ([radius, depth] in points, in) with scale / scaleX / scaleY / scaleZ for the 3-D view, rect for a rectangular mouth.
-import type { HifiWaveguide, Horn, HornProfilePoint } from "../../types";
+// ([radius, depth] points, in; the 3-D view stretches it to `size`), adapter (the throat adapter: name, steps
+// [diameter, length] front to back, body and driver bolt circles, in), rect for the full-width rectangular concept,
+// finish ("black" for a horn that ships painted, as cast Lavoce, B&C, RCF and Beyma horns do; omit it for a printed horn),
+// scope ("hifi" for a small waveguide only the Hi-fi page lists; omit it for a horn every page offers), mount (a screw-on
+// throat's thread; omit it for a horn the driver bolts to; src/lib/data.ts picks the adapter a driver of the other kind
+// needs, which the Hi-fi cost adds and the 3-D view draws without its length).
+// A horn with a CAD mesh (HORN_MESHES in src/data/meshes) is drawn from it, at the mesh's size, which `size` must
+// match; a horn with neither a mesh nor a profile is drawn as a rectangular flare at its mouth and depth.
+import type { HifiWaveguide, Horn, HornAdapter, HornProfilePoint, ThreadMount } from "../../types";
 
 export const ST260_PROFILE: readonly HornProfilePoint[] = [
   [1.89, 0.0],
@@ -126,7 +135,23 @@ export const ST260: HifiWaveguide = {
   size: { w: 10.25, h: 10.25, d: 3.3 },
   driver: "Lavoce DF10.171K / Faital HF108",
   xo: "1200–1500 Hz",
-  note: "Round free-standing waveguide, ~110° coverage. No cabinet-width constraint.",
+  note: "Round free-standing waveguide, ~110° coverage. No cabinet-width constraint. Drawn from the ST260-19.stl cross-section (260 mm mouth).",
+};
+
+/** The 1-inch screw-on throat: a 1-3/8"-18 TPI thread. */
+const SCREW_ON_1: ThreadMount = { thread: "1-3/8-18" };
+
+/** The 1 in Gen2 throat adapter: 25.4 mm in, 61 mm long (at-horns.eu). */
+const T520_25_STD_1: HornAdapter = {
+  name: "T520-25-STD-1",
+  // GUESS: the front flange, neck and rear flange diameters and the split of the length.
+  steps: [
+    [5.6, 0.35],
+    [2.6, 61 / 25.4 - 0.85],
+    [4.0, 0.5],
+  ],
+  bodyBoltCircle: 102 / 25.4,
+  driverBoltCircle: 76 / 25.4,
 };
 
 /** The horn the PA planner starts on. */
@@ -137,13 +162,87 @@ export const A460G2_14: Horn = {
   hf: { covH: 100, covV: 100, minXo: null, lowHz: 580 },
   exit: 1.4,
   profile: ST260_PROFILE,
-  scale: 460 / 260,
+  adapter: {
+    name: "T520-36-STD-1",
+    // 41 mm long overall (at-horns.eu). GUESS: the front flange, neck and rear flange diameters and the split of the length.
+    steps: [
+      [5.6, 0.35],
+      [3.4, 0.6],
+      [5.0, 41 / 25.4 - 0.95],
+    ],
+    bodyBoltCircle: 102 / 25.4,
+    driverBoltCircle: 102 / 25.4,
+  },
   price: 80,
   src: "free STL from at-horns.eu; ~$80 filament, more via service",
-  size: { w: 18.1, h: 18.1, d: 5.8 },
+  size: { w: 18.1, h: 18.1, d: 160 / 25.4 },
   driver: "Eminence N314T-8 / SB Rosso-65CD-T / 18Sound ND3T",
   xo: "900\u20131000 Hz",
-  note: "Same print as the A460G2 with a 36 mm throat adapter. 18.1 in mouth controls pattern to about 750 Hz, so it supports a 900 Hz\u20131 kHz crossover. Adapter must match the driver's exit angle (7.3\u00b0 for the N314T-8); Bat\u00edk publishes them per driver.",
+  note: "Same print as the A460G2 with the T520-36-STD-1 throat adapter (36 mm in, 41 mm long, 4\u00d7M6 to the driver and 8\u00d7M6 to the body on a 102 mm circle; at-horns.eu). Body \u2300460 \u00d7 160 mm, so about 7.9 in deep with the adapter. Approx.: no Gen2 profile is published, so it is drawn as the ST260 profile stretched to that size. 18.1 in mouth controls pattern to about 750 Hz, so it supports a 900 Hz\u20131 kHz crossover. Adapter must match the driver's exit angle (7.3\u00b0 for the N314T-8); Bat\u00edk publishes them per driver.",
+};
+
+/** The owner's own OS waveguide for a 1.4 in driver, designed in hornlab.io and printed; drawn from its STEP model. */
+export const DIY_OS90X50: Horn = {
+  id: "diy_os90x50",
+  // GUESS: 1290 cm³ of solid PLA from the mesh; infill makes it lighter
+  lb: 3.5,
+  name: "DIY OS 90×50 (hornlab, 486 mm, printed)",
+  // lowest crossover 1 kHz (LR24) from the BEM's loading, −3 dB there; loading −6 dB at 790 Hz (hornlab cutoff 785 Hz)
+  hf: { covH: 90, covV: 50, minXo: 1000, lowHz: 790 },
+  exit: 1.4,
+  // the owner's estimate, not a vendor price
+  price: 80,
+  src: "Estimate: same as the 460 mm ATH printed horn ($80; similar size and material); not a vendor price.",
+  size: { w: 494 / 25.4, h: 319 / 25.4, d: 180 / 25.4 },
+  driver:
+    '1.4" exit, 4 × M6 or 1/4-20 on a 101.6 mm (4 in) circle at 45° (the Eminence N314T bolts straight on)',
+  xo: "from 1 kHz (LR24)",
+  note: "[hornlab.io design and BEM, 30 points, Oct 2026] The owner's oblate-spheroidal waveguide: 90° × 50°, 36 mm (1.4\") throat at 3.7°, k 2.5, superellipse n 3, 7 mm walls. Mouth 486 × 311 mm inside (494 × 319 outside), 180 mm deep including the throat flange; hornlab cutoff 785 Hz. Flange ⌀130 × 12 mm with 4 × ⌀6.6 mm holes (M6 or 1/4-20) on a 101.6 mm (4 in) circle at 45°, so the N314T bolts straight on (no adapter). −6 dB beamwidth H/V: 84/104° at 1 kHz, 96/84° at 1.3 kHz, 108/108° at 1.8 kHz, 92/72° at 3 kHz, 80/58° at 5–6 kHz, 70/46° at 9–10 kHz. Loading is flat above 1.6 kHz, −3 dB at 1 kHz and −6 dB at 790 Hz, so cross from 1 kHz (LR24). Near 1.8 kHz both planes widen and the DI dips about 1 dB (mouth diffraction; the design has no rollback). Weight not measured: about 3.5 lb printed solid in PLA. Drawn from its STEP model.",
+};
+
+/**
+ * The owner's preferred DIY horn: an R-OSSE waveguide for a 1.4 in driver, designed in hornlab.io and printed; drawn
+ * from its STEP model.
+ */
+export const DIY_ROSSE110X50: Horn = {
+  id: "diy_rosse110x50",
+  // GUESS: 1510 cm³ of solid PLA from the mesh; infill makes it lighter
+  lb: 4.1,
+  name: "DIY R-OSSE 110×50 (hornlab, 500 mm, printed)",
+  // the design target; the BEM narrows from about 108° at 0.9 kHz to 60° at 10 kHz (see the note). Lowest crossover:
+  // the BEM's −3 dB loading point, about 970 Hz, to the nearest 50 Hz; loading −6 dB at about 740 Hz
+  hf: { covH: 110, covV: 50, minXo: 950, lowHz: 740 },
+  exit: 1.4,
+  // the owner's estimate, not a vendor price
+  price: 80,
+  src: "Estimate: same as the 460 mm ATH printed horn ($80; similar size and material); not a vendor price.",
+  size: { w: 500 / 25.4, h: 320 / 25.4, d: 176 / 25.4 },
+  driver:
+    '1.4" exit, 4 × M6 or 1/4-20 on a 101.6 mm (4 in) circle at 45° (the Eminence N314T bolts straight on)',
+  xo: "from 950 Hz (LR24)",
+  note: "[hornlab.io design and BEM, 30 points, Oct 2026] The owner's preferred waveguide, an R-OSSE: 110° × 50° target, R 250 / R_V 160 mm, a 55° / a_V 25°, 36 mm (1.4\") spherical throat at 3.7°, k 2.5, q 3.5, superellipse n 2.75, 7 mm walls, rolled-back lip. Mouth 500 × 320 mm (the rollback is its outside), 176 mm deep including the throat flange; hornlab cutoff 805 Hz. Flange ⌀130 × 12 mm with 4 × ⌀6.6 mm holes (M6 or 1/4-20) on a 101.6 mm (4 in) circle at 45°, so the N314T bolts straight on (no adapter). Not constant directivity: the coverage narrows smoothly with frequency, with no bump. −6 dB beamwidth H/V: 108/132° at 0.9 kHz, 104/120° at 1 kHz, 92/96° at 1.45 kHz, 84–88/68–72° at 1.8–2.6 kHz, about 80/64° at 3–5 kHz, 60/48° at 10 kHz (DI 4.9 to 11 dB). The planner takes the coverage as a constant 110° × 50°, so expect about 80° at 3–5 kHz and 60° at 10 kHz. At a 900 Hz–1 kHz crossover its 104–108° matches a 12\" mid's width (the OS 90×50 gives 84°). Loading is flat above 1.4 kHz, −3 dB at about 970 Hz and −6 dB at about 740 Hz, so cross from 950 Hz (LR24). Weight not measured: about 4.1 lb printed solid in PLA. Drawn from its STEP model.",
+};
+
+/**
+ * The owner's own OS waveguide for a 1 in driver, for the Hi-fi page (and the PA horns), designed in hornlab.io and
+ * printed; drawn from its STEP model.
+ */
+export const DIY_OS90X70: HifiWaveguide = {
+  id: "diy_os90x70",
+  // GUESS: 410 cm³ of solid ASA from the STEP model, about 440 g; gyroid infill makes it about 300 g
+  lb: 1,
+  name: "DIY OS 90×70 (hornlab, 248 mm, printed)",
+  // lowest crossover 2.1 kHz (LR24) from the BEM's loading, −3 dB there; loading −6 dB at 1450 Hz (hornlab cutoff 1528 Hz)
+  hf: { covH: 90, covV: 70, minXo: 2100, lowHz: 1450 },
+  exit: 1,
+  // the owner's estimate, not a vendor price
+  price: 40,
+  src: "Estimate: same as the ATH ST260 printed waveguide ($40; similar size and material); not a vendor price.",
+  size: { w: 255 / 25.4, h: 207 / 25.4, d: 83 / 25.4 },
+  driver:
+    '1" exit; fits drivers with 2 bolts on a 76 mm circle, level, no adapter: B&C DE250 and DE550, FaitalPRO HF10AK and HF108, 18Sound ND1TP and ND1090, Eminence N151M',
+  xo: "2.3–2.4 kHz with a 6.5″ woofer (LR24); from 2.1 kHz",
+  note: "[hornlab.io design and BEM, 30 points, Oct 2026] The owner's oblate-spheroidal waveguide for 1″ drivers: 90° × 70°, 25.4 mm (1″) throat at 7.3° (half-angle, to match the DE250's 14.6° exit), superellipse n 2.5, 6 mm walls, flat mouth lip. Mouth 248 × 200 mm inside (255 × 207 outside), 83 mm deep including the throat flange; hornlab cutoff 1528 Hz. Flange ⌀120 × 10 mm with 2 × ⌀6.6 mm holes on a 76 mm circle, level, so the 2-bolt 1″ drivers bolt straight on (no adapter); the holes take M6, M5 (HF108) or 1/4-20 (N151M) bolts. −6 dB beamwidth H/V: 92/104° at 1.45 kHz, a horizontal waist of 76–84° from 1.8 to 2.3 kHz, then 84–100° H and 68–88° V from 2.6 to 10 kHz. The planner takes the coverage as a constant 90° × 70°. The outside is 255 mm (10 in) wide, wider than a 9 in box, so it stands free on the box top. Loading is flat above 3 kHz, −3 dB at about 2.1 kHz and −6 dB at about 1.45 kHz, so cross no lower than 2.1 kHz (LR24). With a 6.5″ woofer cross at 2.3–2.4 kHz: lower, the woofer is more than 1.4× as wide as the waist. Prints in one piece, throat down, on a 256 mm bed. Weight not measured: about 1 lb printed solid in ASA (410 cm³), about 0.7 lb with gyroid infill. Drawn from its STEP model.",
 };
 
 export const HORN_RAW: readonly Horn[] = [
@@ -158,7 +257,7 @@ export const HORN_RAW: readonly Horn[] = [
     size: { w: 13.3, h: 9.1, d: 6 },
     driver: "18Sound ND1TP-16 / 1095N / 1090",
     xo: "1100–1200 Hz",
-    note: 'Free-standing 1" horn for 10/12" woofers. Supporting cabinet must be ~34 cm (13.4") wide with a 4 mm roundover.',
+    note: 'Free-standing 1" horn for 10/12" woofers. Supporting cabinet must be ~34 cm (13.4") wide with a 4 mm roundover. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   {
     id: "me90",
@@ -166,12 +265,41 @@ export const HORN_RAW: readonly Horn[] = [
     name: "B&C ME90",
     hf: { covH: 80, covV: 60, minXo: null, lowHz: 900 },
     exit: 1.4,
+    finish: "black",
     price: 114.48,
     src: "usspeaker.com, Sep 2026",
-    size: { w: 10.6, h: 10.6, d: 5.5 },
+    size: { w: 10.6, h: 10.6, d: 138 / 25.4 },
     driver: '1.4" exit, e.g. Eminence N314T',
     xo: "1.2\u20131.3 kHz (900 Hz cutoff)",
-    note: 'Cast aluminum, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt. Cutoff 900 Hz, so cross about 1.2\u20131.3 kHz; the 10.6" mouth holds its pattern to about 1.2\u20131.4 kHz.',
+    note: 'Cast aluminum, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt. Cutoff 900 Hz, so cross about 1.2\u20131.3 kHz; the 10.6" mouth holds its pattern to about 1.2\u20131.4 kHz. [bcspeakers.com, Oct 2026] 270 × 270 × 138 mm, 1.45 kg. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "me45",
+    lb: 1.9,
+    name: "B&C ME45",
+    hf: { covH: 90, covV: 40, minXo: null, lowHz: 1000 },
+    exit: 1,
+    finish: "black",
+    price: 77.28,
+    src: "Parts Express, Oct 2026",
+    size: { w: 310 / 25.4, h: 140 / 25.4, d: 124 / 25.4 },
+    driver: '1" exit, 2-bolt on a 76 mm circle (fits the DE250, DE550 and HF10AK)',
+    xo: "1.4–1.5 kHz (1 kHz cutoff)",
+    note: '[bcspeakers.com datasheet, Oct 2026] Cast aluminum exponential horn (not constant directivity), 90° × 40° nominal, 1" (25 mm) throat, cutoff 1 kHz ("excellent loading down to 1 kHz"). 310 × 140 × 124 mm (12.2 × 5.6 × 4.9 in; the drawing shows the flange 143 mm tall), cutout 260 mm wide (the drawing gives the opening as 260 × 110 mm), 0.86 kg (1.9 lb). Driver bolts straight on with 2 × 6.5 mm holes on a 76 mm circle (⌀90 mm throat flange). B&C publishes no recommended crossover; about 1.4–1.5 kHz is assumed from the cutoff. Parts Express #294-622. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "me75",
+    lb: 5.9,
+    name: "B&C ME75",
+    hf: { covH: 90, covV: 40, minXo: null, lowHz: 500 },
+    exit: 2,
+    finish: "black",
+    price: 181.38,
+    src: "Parts Express, Oct 2026",
+    size: { w: 435 / 25.4, h: 268 / 25.4, d: 230 / 25.4 },
+    driver: '2" exit, 4-bolt on a 102 mm circle (fits the N320T)',
+    xo: "from about 800 Hz (500 Hz cutoff)",
+    note: '[bcspeakers.com datasheet, Oct 2026] Cast aluminum constant-directivity horn, 90° × 40° nominal, 2" (50 mm) throat, cutoff 500 Hz. 435 × 268 × 230 mm (17.2 × 10.5 × 9 in), 2.7 kg (5.9 lb). Driver bolts straight on with 4 × 6.5 mm holes on a 102 mm circle; the front flange has 6 × 6.5 mm holes. B&C publishes no recommended crossover or baffle cutout; from about 800 Hz is assumed from the cutoff and the 2" drivers\' 800 Hz minimum. Parts Express #294-6182. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   {
     id: "hf950",
@@ -179,12 +307,13 @@ export const HORN_RAW: readonly Horn[] = [
     name: "RCF HF950",
     hf: { covH: 90, covV: 50, minXo: null, lowHz: 400 },
     exit: 1.4,
+    finish: "black",
     price: 169,
     src: "usspeaker.com, Sep 2026",
     size: { w: 11.8, h: 11.8, d: 8.2 },
     driver: '1.4" exit, 4-bolt on a 4" circle (fits the N314T)',
     xo: "from about 800 Hz (loads to 400 Hz)",
-    note: '[rcf.it, usspeaker.com, Sep 2026] 90\u00b0 \u00d7 50\u00b0 constant directivity, 1.4" throat (1" adaptor available), 400 Hz cutoff, 11.8" square, 8.2" deep, 2.6 lb. Loads well below an 800 Hz crossover; the off-the-shelf alternative to printing an ATH horn.',
+    note: '[rcf.it, usspeaker.com, Sep 2026] 90\u00b0 \u00d7 50\u00b0 constant directivity, 1.4" throat (1" adaptor available), 400 Hz cutoff, 11.8" square, 8.2" deep, 2.6 lb. Loads well below an 800 Hz crossover; the off-the-shelf alternative to printing an ATH horn. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   {
     id: "hf94",
@@ -192,12 +321,13 @@ export const HORN_RAW: readonly Horn[] = [
     name: "RCF HF94",
     hf: { covH: 90, covV: 40, minXo: null, lowHz: 500 },
     exit: 1.4,
+    finish: "black",
     price: 159,
     src: "usspeaker.com, Sep 2026",
     size: { w: 9.84, h: 9.84, d: 5.6 },
     driver: '1.4" exit, 4-bolt on a 4" circle (fits the N314T)',
     xo: "from about 900 Hz (loads to 500 Hz)",
-    note: '[rcf.it, usspeaker.com, Sep 2026] 90\u00b0 \u00d7 40\u00b0, 1.4" throat with a removable 1" adaptor, 500 Hz cutoff, 9.84" square. Depth 5.3\u20135.9" and weight 2.5\u20132.9 lb depending on the source. Smaller than the HF950; vertical control weakens near 800 Hz.',
+    note: '[rcf.it, usspeaker.com, Sep 2026] 90\u00b0 \u00d7 40\u00b0, 1.4" throat with a removable 1" adaptor, 500 Hz cutoff, 9.84" square. Depth 5.3\u20135.9" and weight 2.5\u20132.9 lb depending on the source. Smaller than the HF950; vertical control weakens near 800 Hz. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   {
     id: "hd1403",
@@ -205,12 +335,27 @@ export const HORN_RAW: readonly Horn[] = [
     name: "Lavoce HD1403",
     hf: { covH: 80, covV: 60, minXo: null, lowHz: 900 },
     exit: 1.4,
+    finish: "black",
     price: 69,
     src: "parts-express.com, Sep 2026",
     size: { w: 11, h: 10.6, d: 4.5 },
     driver: '1.4" exit, e.g. Eminence N314T',
     xo: "1.2\u20131.3 kHz (900 Hz cutoff)",
-    note: 'Cast aluminum constant-directivity horn, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt, cutoff 900 Hz. 10.6" H \u00d7 11" W \u00d7 4.5" D; cutout 8.8" \u00d7 9.5". Weight not published; 3 lb assumed.',
+    note: 'Cast aluminum constant-directivity horn, 80\u00b0 \u00d7 60\u00b0, 1.4" throat, 4-bolt, cutoff 900 Hz. 10.6" H \u00d7 11" W \u00d7 4.5" D; cutout 8.8" \u00d7 9.5". Weight not published; 3 lb assumed. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "td385",
+    lb: 2.64,
+    name: "Beyma TD-385",
+    hf: { covH: 80, covV: 50, minXo: null, lowHz: 800 },
+    exit: 1.4,
+    finish: "black",
+    price: 70.5,
+    src: "Parts Express, Oct 2026",
+    size: { w: 235 / 25.4, h: 235 / 25.4, d: 120 / 25.4 },
+    driver: '1.4" exit, 4-bolt on a 101.6 mm circle (fits the N314T and CD-2514Fe/Ti)',
+    xo: "1.1–1.2 kHz (800 Hz cutoff)",
+    note: '[Beyma TD385 datasheet, Oct 2026] Cast aluminum constant-directivity horn, 80° × 50° (−6 dB; horizontal held 1–20 kHz, vertical 1.6–20 kHz), 1.4" (36 mm) throat, cutoff 800 Hz, Q 12.4 / DI 10.5 dB. 235 × 235 × 120 mm (9.25 × 9.25 × 4.72 in), cutout 204 × 202 mm, 1.2 kg (2.64 lb). Driver bolts straight on with 4 screws on a 101.6 mm circle. Beyma publishes no recommended crossover; about 1.1–1.2 kHz is assumed from the cutoff, and vertical control weakens below 1.6 kHz. Parts Express #253-175. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
   ST260,
   {
@@ -220,15 +365,18 @@ export const HORN_RAW: readonly Horn[] = [
     hf: { covH: 100, covV: 100, minXo: null, lowHz: 670 },
     exit: 1,
     profile: ST260_PROFILE,
-    scale: 400 / 260,
     price: 60,
     src: "free STL from at-horns.eu; ~$60 filament, more via service",
-    size: { w: 15.75, h: 15.75, d: 5.1 },
+    adapter: T520_25_STD_1,
+    size: { w: 15.75, h: 15.75, d: 130 / 25.4 },
     driver: "Faital HF108 / B&C DE360 / Lavoce DF10.171K",
     xo: "800–1000 Hz",
-    note: 'Shown as the ST260 profile scaled 1.54×; the real Gen2 profile is deeper. 15.7" round mouth.',
+    note: "Body ⌀400 × 130 mm (at-horns.eu Gen2). Approx.: no Gen2 profile is published, so it is drawn as the ST260 profile stretched to that size. Shown with the T520-25-STD-1 throat adapter (25.4 mm in, 61 mm long, 4×M6 on 76 mm and 3×M6 on 57 mm to the driver, 8×M6 on 102 mm to the body; STD-2 and STD-3 are 46 and 52 mm).",
   },
   A460G2_14,
+  DIY_OS90X50,
+  DIY_ROSSE110X50,
+  DIY_OS90X70,
   {
     id: "a460g2",
     lb: 3.5,
@@ -236,13 +384,13 @@ export const HORN_RAW: readonly Horn[] = [
     hf: { covH: 100, covV: 100, minXo: null, lowHz: 670 },
     exit: 1,
     profile: ST260_PROFILE,
-    scale: 460 / 260,
     price: 80,
     src: "free STL from at-horns.eu; ~$80 filament, more via service",
-    size: { w: 18.1, h: 18.1, d: 5.8 },
+    adapter: T520_25_STD_1,
+    size: { w: 18.1, h: 18.1, d: 160 / 25.4 },
     driver: '1" or 1.4" via adapter; measured pairings on at-horns.eu',
     xo: "600–800 Hz",
-    note: 'Shown as the ST260 profile scaled 1.77×; the real Gen2 profile is deeper. 18.1" round mouth, Marcel\'s pick for 1" drivers.',
+    note: "Body ⌀460 × 160 mm (at-horns.eu Gen2), Marcel's pick for 1\" drivers. Approx.: no Gen2 profile is published, so it is drawn as the ST260 profile stretched to that size. Shown with the T520-25-STD-1 throat adapter (25.4 mm in, 61 mm long, 4×M6 on 76 mm and 3×M6 on 57 mm to the driver; STD-2 and STD-3 are 46 and 52 mm).",
   },
   {
     id: "athRect",
@@ -263,14 +411,99 @@ export const HORN_RAW: readonly Horn[] = [
     name: "Iwata 600 (printed, approx.)",
     exit: 1,
     profile: ST260_PROFILE,
-    scaleX: 290 / 260,
-    scaleY: 185 / 260,
-    scaleZ: 245 / 83,
     price: 50,
     src: "STL on Cults3D; ~$50 filament",
     size: { w: 11.4, h: 7.3, d: 9.6 },
     driver: "B&C DE250 / Faital HF10AK",
     xo: "1200–1500 Hz",
-    note: 'Shown as the ST260 profile stretched to 290 × 185 × 245 mm deep; flare shape approximate. Elliptical 600 Hz horn, 1" throat.',
+    note: 'Approx.: drawn as the ST260 profile stretched to 290 × 185 × 245 mm deep (Cults3D listing); no profile published. Elliptical 600 Hz horn, 1" throat.',
+  },
+  // Small 1" waveguides (5–7" mouths) for the Hi-fi page only (scope "hifi"): a DJ monitor's 8" + 1" pair crossed at
+  // about 2.5–3 kHz, or a small fill. Their cutoffs (1–2.2 kHz) sit above the PA's 900 Hz–1 kHz crossovers, so the PA
+  // picker and optimizers leave them out. A mouth this small holds its rated coverage only above about
+  // 25,000 / (degrees × mouth width in m) Hz (Keele): about 1.7–2.6 kHz across these, higher in the narrow plane.
+  {
+    id: "me10",
+    lb: 0.37,
+    name: "B&C ME10",
+    hf: { covH: 90, covV: 60, minXo: null, lowHz: 1500 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    price: 21.96,
+    src: "Parts Express, Oct 2026",
+    size: { w: 130.5 / 25.4, h: 130.5 / 25.4, d: 90 / 25.4 },
+    driver:
+      '1" exit, 2-bolt on a 76 mm circle (also holes on 57.2 and 53 mm): the DE250, DE10, CDX1-1745, HF102 and the other 2-bolt 1" drivers bolt straight on',
+    xo: "from about 2.2 kHz (1.5 kHz cutoff)",
+    note: '[bcspeakers.com ME10V3 datasheet, Oct 2026] Molded ABS hyperbolic-cosine horn, 90° × 60° nominal, 1" (25 mm) throat, cutoff 1.5 kHz ("excellent loading down to 1.5 kHz"). 130.5 × 130.5 × 90 mm (5.1 × 5.1 × 3.5 in), baffle cutout ⌀104 mm, 0.17 kg (0.37 lb). The ⌀88 mm throat flange has 8 × ⌀6 mm holes on 76, 57.2 and 53 mm circles; the front flange 4 × ⌀5 mm on a 114 mm square. B&C publishes no recommended crossover; about 2.2 kHz is assumed from the cutoff. B&C\'s directivity map shows it about 150° wide (−6 dB) at 2 kHz, narrowing to 90° by about 5 kHz, so at a 2.5–3 kHz crossover it is wider than rated. The V3 replaces the ME10 and ME10v2 (two more driver holes). Parts Express #294-618. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "td8060",
+    lb: 0.29,
+    name: "Beyma TD-8060",
+    hf: { covH: 80, covV: 60, minXo: null, lowHz: 1500 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    price: 20.25,
+    src: "Parts Express, Oct 2026",
+    size: { w: 140 / 25.4, h: 140 / 25.4, d: 67.4 / 25.4 },
+    driver:
+      '1" exit, 2- or 3-bolt (Parts Express); the bolt circles were not in the sources read, so check them against the driver',
+    xo: "from about 2.2 kHz (1.5 kHz cutoff)",
+    note: '[Beyma TD-8060 datasheet as quoted by retailers, Oct 2026; the PDF itself could not be fetched] Polycarbonate constant-directivity horn, 80° × 60° (−6 dB, 2–16 kHz), 1" (25.4 mm) throat, cutoff 1.5 kHz, Q 10.3 / DI 7.7 dB. 140 × 140 × 67.4 mm (5.51 × 5.51 × 2.65 in), cutout 113 × 130 mm, 0.13 kg (0.29 lb). Beyma publishes no recommended crossover; about 2.2 kHz is assumed from the cutoff. The shallowest of the small horns. A UK retailer lists it as discontinued; Parts Express still stocks it (#253-171). Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "h07e",
+    // GUESS: Dayton publishes only the 0.68 lb shipping weight
+    lb: 0.5,
+    name: "Dayton Audio H07E",
+    hf: { covH: 80, covV: 50, minXo: 2200, lowHz: 2200 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    mount: SCREW_ON_1,
+    price: 11.98,
+    src: "Parts Express, Oct 2026 (back-ordered; $15.99 MSRP)",
+    size: { w: 5.875, h: 5.875, d: 3.75 },
+    driver:
+      '1-3/8"-18 TPI screw-on: a screw-on 1" driver threads straight in; a 2- or 3-bolt driver takes a 2/3-bolt to screw-on adapter (the Eminence B2S-A, in the Hi-fi cost)',
+    xo: "from 2.2 kHz (the maker's minimum)",
+    note: '[daytonaudio.com and Parts Express, Oct 2026] Molded plastic elliptical waveguide, 80° × 50° nominal, 1" throat on a 1-3/8" × 18 TPI thread, recommended minimum crossover 2.2 kHz ("useful acoustical loading down to 2,200 Hz"). 5-7/8 × 5-7/8 × 3-3/4 in. Weight not published: 0.68 lb shipping, so about 0.5 lb is assumed. Cutout, polar data and a datasheet are not published. Parts Express #270-316. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "hm1725",
+    // GUESS: no net weight published; Parts Express lists 0.35 lb shipping
+    lb: 0.3,
+    name: "Selenium HM17-25",
+    hf: { covH: 60, covV: 40, minXo: null, lowHz: 1500 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    mount: SCREW_ON_1,
+    price: 9.99,
+    src: "Parts Express, Oct 2026",
+    size: { w: 160 / 25.4, h: 145 / 25.4, d: 103 / 25.4 },
+    driver:
+      '1-3/8"-18 TPI screw-on: a screw-on 1" driver (e.g. the Selenium D220Ti) threads straight in; a 2- or 3-bolt driver takes a 2/3-bolt to screw-on adapter (the Eminence B2S-A, in the Hi-fi cost)',
+    xo: "from about 2.2 kHz (1.5 kHz limit)",
+    note: '[jblpro.com and Parts Express, Oct 2026] JBL Selenium plastic bi-radial horn, 60° × 40° nominal, 1" throat on a 1-3/8"-18 TPI thread, low-frequency limit 1.5 kHz. JBL gives 160 × 145 × 103 mm; Parts Express gives 6.34 × 5.16 × 4.16 in (161 × 131 × 106 mm) and a 4-1/2 × 4-1/2 in cutout; the maker\'s size is used. JBL lists it as discontinued; Parts Express still sells it (#264-308). Net weight not published: 0.35 lb shipping, so about 0.3 lb is assumed. No recommended crossover published; about 2.2 kHz is assumed from the limit. The narrowest of the small horns: at 60° its 160 mm mouth holds the pattern only above about 2.6 kHz (Keele). Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "sth100",
+    lb: 1.01,
+    name: "FaitalPRO STH100",
+    hf: { covH: 80, covV: 70, minXo: 1400, lowHz: 1000 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    price: 102.5,
+    src: "Parts Express, Oct 2026",
+    size: { w: 180 / 25.4, h: 120 / 25.4, d: 85.9 / 25.4 },
+    driver:
+      '1" exit, 2- or 3-bolt (Parts Express; the drawing shows 76 mm between the holes): the HF102, DE250, CDX1-1745 and the other 2-bolt 1" drivers',
+    xo: "from 1.4 kHz (the maker's recommendation)",
+    note: '[FaitalPRO STH100 datasheet, printed Feb 2024; Parts Express, Oct 2026] Cast aluminum elliptical tractrix waveguide, 80° × 70° (−6 dB, averaged 2–16 kHz), 1" (25.4 mm) throat, frequency range 1–20 kHz, recommended crossover 1.4 kHz, DI 8 dB. Mouth 180 × 120 mm (7.09 × 4.72 in), 85.9 mm deep, 4 × ⌀6.5 mm mouth holes, 460 g (1.01 lb). Beamwidth from the datasheet chart (read by eye): about 118° H × 145° V at 1.4 kHz, 100° × 130° at 2 kHz, about 80° H from 2.5 kHz and 90° V from about 3 kHz, narrowing to about 60° H × 40° V at 20 kHz. Faital says it is sold only with a FaitalPRO 1" driver; Parts Express sells it alone (#294-1040). The largest and dearest of the small horns. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
 ];

@@ -30,16 +30,28 @@ import type {
   PaDesignConfig,
   PlywoodSheetKind,
   PortMemory,
+  SavedHifiConfig,
   SubDriver,
 } from "../types";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
 import { DUCT_DIVIDER_DEFAULT } from "../constants/panelSizes";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
+import { HORN_MOUNT_DEFAULT } from "../constants/hornMount";
 
 /** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
 export type PaDefaults = Omit<
   Required<PaDesignConfig>,
-  "format" | "cabinet" | "summary" | "sub" | "mid" | "midBox" | "cd" | "horn" | "braceStyle"
+  // braceStyle and hornColor have no default: the plywood's style and the horn's catalog finish
+  | "format"
+  | "cabinet"
+  | "summary"
+  | "sub"
+  | "mid"
+  | "midBox"
+  | "cd"
+  | "horn"
+  | "braceStyle"
+  | "hornColor"
 > & {
   format: Format;
   cabinet: Cabinet;
@@ -89,7 +101,7 @@ export const DEFAULT_PA = {
   layout: "stack",
   hardware: DEFAULT_HARDWARE,
   backJoint: DEFAULT_BACK_JOINT,
-  cutaway: false,
+  hornMount: HORN_MOUNT_DEFAULT,
   baffleColor: "#4a5d4e",
   cabFinish: "birch",
   spacerH: 20,
@@ -138,6 +150,15 @@ export const DEFAULT_HIFI = {
   roundoverIn: 0,
   tweeterOffsetIn: 0,
 } satisfies HifiDesignState;
+
+/**
+ * The Hi-fi speaker's look in the 3D view: the PA stack's cabinet finish and baffle paint (the two pages share the
+ * pickers and the finishes; each design keeps its own choice). Designs saved before the look load with these.
+ */
+export const DEFAULT_HIFI_LOOK = {
+  cabFinish: DEFAULT_PA.cabFinish,
+  baffleColor: DEFAULT_PA.baffleColor,
+} satisfies Required<Pick<SavedHifiConfig, "cabFinish" | "baffleColor">>;
 
 /** The Fills page's starting design. */
 export const DEFAULT_FILL = {

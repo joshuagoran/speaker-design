@@ -1,5 +1,12 @@
-import { HIFI_PASSIVES, passiveRadiatorMassMax, ownGuideCfg } from "../../lib/data";
-import { METERS_PER_FOOT } from "../../constants/units";
+import {
+  HIFI_PASSIVES,
+  passiveRadiatorMassMax,
+  ownGuideCfg,
+  waveguideSpecOf,
+  throatAdapterPrice,
+} from "../../lib/data";
+import { METERS_PER_FOOT, METERS_PER_INCH } from "../../constants/units";
+import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SEAT_FLOOR_M } from "../../constants/hifiEngine";
 import { byId } from "../../lib/tables";
 import {
   hifiSystem,
@@ -7,13 +14,19 @@ import {
   hifiResponseAt,
   hifiDispersionMap,
   hifiEdgeRipple,
+  hifiSeatPaths,
   listenerGeometry,
   logSpacedFrequencies,
   linkwitzRileyFilter,
   cabs,
   needsWaveguide,
+  RADIATOR_PANEL,
 } from "../../lib/hifi/hifi";
+import { hifiBoxMin } from "../../lib/hifi/boxLayout";
+import { boxSliderMins, fitBox } from "../../lib/boxFit";
+import { HIFI_BOX_SLIDERS } from "../../constants/hifiLayout";
 import { rippleDb } from "../../lib/hifi/diffraction";
+import { hifiPairLevelDb, inFarField } from "../../lib/hifi/nearField";
 import { panelIn } from "../../lib/panel";
 import type { HifiDesign, HifiDesignState, HifiSpeakerModel } from "../../types";
 
@@ -43,15 +56,13 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     dispersionPlane,
     roundoverIn,
     tweeterOffsetIn,
+    subHighpass,
+    drive,
+    tiltDeg,
+    seatFloorM = HIFI_SEAT_FLOOR_M,
+    portMaxMs = HIFI_PORT_MAX_MS,
   } = state;
-  const compressionWaveguide = {
-    covH: selectedWaveguide.hf.covH,
-    covV: selectedWaveguide.hf.covV || selectedWaveguide.hf.covH,
-    w: selectedWaveguide.size.w,
-    h: selectedWaveguide.size.h,
-    name: selectedWaveguide.name,
-    freestanding: !selectedWaveguide.rect,
-  };
+  const compressionWaveguide = waveguideSpecOf(selectedWaveguide);
   const waveguideSpec = tweeter.ownGuide
     ? ownGuideCfg(tweeter)
     : needsWaveguide(tweeter)
@@ -64,9 +75,25 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     addG: Math.min(radiatorSelection.addG, passiveRadiatorMassMax(radiatorDriver)),
   };
   const wallThicknessIn = panelIn(wallPanel, panelMaterial, panelExactIn);
+  const tweeterWithWaveguide = waveguideSpec
+    ? { ...tweeter, faceplate: { w: waveguideSpec.w, h: waveguideSpec.h } }
+    : tweeter;
+  // the box's width and height start at what its parts need (each up to its slider's step): a design made too small
+  // by a part or wall change, or saved that way, is modeled, drawn and saved at that size
+  const boxMin = boxSliderMins(
+    hifiBoxMin({
+      woofer,
+      tweeter: tweeterWithWaveguide,
+      onTop: !!waveguideSpec?.freestanding,
+      cfg: { box: boxType, port: portSpec, pr: radiator },
+      wall: wallThicknessIn,
+      radiatorPanel: RADIATOR_PANEL,
+    }),
+    HIFI_BOX_SLIDERS,
+  );
   const speakerConfig = {
     box: boxType,
-    dim: boxDims,
+    dim: fitBox(boxDims, boxMin),
     wall: wallThicknessIn,
     mat: panelMaterial,
     port: portSpec,
@@ -78,25 +105,47 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     bsc: baffleStepCompensationDb,
     place: placement,
     wallFt: distanceToWallFt,
-    portMax: 17,
+    portMax: portMaxMs,
     guide: waveguideSpec,
     roundoverIn,
     tweeterOffsetIn,
+    // the engine options only when they change something, so a design without them is the same config as before
+    ...(subHighpass && { hp: subHighpass }),
+    ...(drive === HIFI_DRIVE.passive && { drive }),
+    ...(tiltDeg ? { tiltDeg } : {}),
   };
-  const tweeterWithWaveguide = waveguideSpec
-    ? { ...tweeter, faceplate: { w: waveguideSpec.w, h: waveguideSpec.h } }
-    : tweeter;
   // the seat, relative to each speaker (left at -spacing/2, toed in toward the middle)
   const leftGeometry = listenerGeometry(-1, state),
     rightGeometry = listenerGeometry(1, state);
-  // floored at 1 m so a seat at the speakers (spacing 0, seat at the origin) can't send the level to infinity
-  const seatDistanceM = Math.max(1, (leftGeometry.distM + rightGeometry.distM) / 2);
+  // One rule for every figure at the seat (the level, the pair's response, the map): each speaker is at least the seat
+  // floor away (1 m by default), so a seat at the speakers (spacing 0, seat at the origin) can't send the level to
+  // infinity, and the near-field forms (lib/hifi/nearField) only come in with a floor under 1 m, as `nearField.near`
+  // says.
+  const seatDistanceM = Math.max(seatFloorM, (leftGeometry.distM + rightGeometry.distM) / 2);
+  const flooredAt = (g: typeof leftGeometry) => ({ ...g, distM: Math.max(seatFloorM, g.distM) });
+  // the nearer speaker, against the box and woofer sizes the far-field models assume small
+  const nearestM = Math.max(seatFloorM, Math.min(leftGeometry.distM, rightGeometry.distM));
+  const nearField = {
+    distM: nearestM,
+    boxRatio: nearestM / (Math.max(speakerConfig.dim.w, speakerConfig.dim.h) * METERS_PER_INCH),
+    wooferRatio: nearestM / (woofer.size * METERS_PER_INCH),
+    near: !inFarField(nearestM),
+  };
+  const guideBought = !!waveguideSpec && !tweeter.ownGuide;
   const pairCostUsd =
     2 *
     ((woofer.price || 0) +
       (tweeter.price || 0) +
-      (waveguideSpec && !tweeter.ownGuide ? selectedWaveguide.price || 0 : 0) +
+      (guideBought
+        ? (selectedWaveguide.price || 0) + (throatAdapterPrice(tweeter, compressionWaveguide) ?? 0)
+        : 0) +
       (boxType === "radiator" ? radiator.n * (radiatorDriver.price || 0) : 0));
+  // whole only when every part bought has a US price (a coaxial's woofer, a waveguide or the throat adapter may not)
+  const pairCostKnown =
+    woofer.price != null &&
+    (!guideBought ||
+      (selectedWaveguide.price != null &&
+        throatAdapterPrice(tweeter, compressionWaveguide) !== null));
   const speakerSystem = hifiSystem(woofer, tweeterWithWaveguide, speakerConfig);
   let speakerModel: HifiSpeakerModel | null = null;
   if (speakerSystem) {
@@ -105,7 +154,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
         woofer,
         tweeterWithWaveguide,
         speakerConfig,
-        leftGeometry,
+        flooredAt(leftGeometry),
         RESPONSE_FREQUENCIES,
       ),
       rightResponse = hifiResponseAt(
@@ -113,7 +162,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
         woofer,
         tweeterWithWaveguide,
         speakerConfig,
-        rightGeometry,
+        flooredAt(rightGeometry),
         RESPONSE_FREQUENCIES,
       );
     const edgeRipple = hifiEdgeRipple(
@@ -128,13 +177,31 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
       edgeRipple,
       edgeRippleDb: rippleDb(edgeRipple, 1000, 5000),
       warningChips: hifiChips(speakerSystem, woofer, tweeterWithWaveguide, speakerConfig),
-      maxLevelAtSeatDb: speakerSystem.maxLevel - 20 * Math.log10(seatDistanceM) + 3,
+      // each speaker at its own distance (at least the seat floor), its drivers' paths counted close in
+      maxLevelAtSeatDb: hifiPairLevelDb(speakerSystem, [
+        hifiSeatPaths(
+          speakerSystem,
+          woofer,
+          tweeterWithWaveguide,
+          speakerConfig,
+          leftGeometry,
+          seatFloorM,
+        ),
+        hifiSeatPaths(
+          speakerSystem,
+          woofer,
+          tweeterWithWaveguide,
+          speakerConfig,
+          rightGeometry,
+          seatFloorM,
+        ),
+      ]),
       onAxisResponse: hifiResponseAt(
         speakerSystem,
         woofer,
         tweeterWithWaveguide,
         speakerConfig,
-        { th: 0, eyeIn: speakerSystem.lay.tweeterIn, distM: 1 },
+        { th: 0, eyeIn: speakerSystem.lay.tweeterIn, distM: 1, boxFrame: true },
         RESPONSE_FREQUENCIES,
       ),
       pairResponse: leftResponse.map((o, i) => ({
@@ -161,6 +228,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     };
   }
   return {
+    boxMin,
     wallThicknessIn,
     compressionWaveguide,
     waveguideSpec,
@@ -172,7 +240,9 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     rightGeometry,
     seatDistanceM,
     seatDistanceFt: seatDistanceM / METERS_PER_FOOT,
+    nearField,
     pairCostUsd,
+    pairCostKnown,
     speakerModel,
   };
 }

@@ -7,11 +7,15 @@ import type {
   PassiveRadiatorChoice,
 } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
-import { passiveRadiatorShape } from "../../lib/hifi/hifi";
+import { RADIATOR_PANEL } from "../../lib/hifi/hifi";
+import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
+import { radiatorSpots, roundPortSpots, slotOpening } from "../../lib/hifi/boxLayout";
 
 interface Props {
   /** the box's outside size, inches */
   dim: Dims2;
+  /** the panels' thickness, inches */
+  wall: number;
   w: HifiWoofer;
   t: HifiTweeter;
   lay: DriverLayout;
@@ -30,6 +34,7 @@ interface Props {
 /** Front view of the box and drivers, to scale. */
 export function HifiFront({
   dim,
+  wall,
   w,
   t,
   lay,
@@ -51,13 +56,15 @@ export function HifiFront({
     y = (inch: number) => (dim.h + top - inch) * k,
     tx = W / 2 + (lay.onTop ? 0 : tweeterOffsetIn) * k,
     // the line where the roundover starts, kept inside the box when the radius is most of it
-    ro = Math.max(0, Math.min(roundoverIn, dim.w / 2 - 0.1, dim.h / 2 - 0.1));
+    ro = Math.max(0, Math.min(roundoverIn, dim.w / 2 - 0.1, dim.h / 2 - 0.1)),
+    wooferR = (w.size * HIFI_FRONT_PARTS.wooferFramePerSize * k) / 2;
+  const slot = vented && port.shape === "slot" ? slotOpening(dim, wall, port) : null;
   return (
     <svg
       viewBox={`-4 -4 ${W + 8} ${H + 8}`}
       className={small ? "w-full h-auto max-h-40" : "h-40 w-auto"}
       role="img"
-      aria-label={`Front view, ${dim.w} × ${dim.h}″${lay.onTop ? ", waveguide on top" : ""}${roundoverIn ? `, ${roundoverIn}″ roundover` : ""}${tweeterOffsetIn && !lay.onTop ? `, tweeter ${Math.abs(tweeterOffsetIn)}″ ${tweeterOffsetIn > 0 ? "inward" : "outward"}` : ""}`}
+      aria-label={`Front view, ${dim.w} × ${dim.h}″${lay.onTop ? ", waveguide on top" : ""}${lay.coax ? ", coaxial" : ""}${roundoverIn ? `, ${roundoverIn}″ roundover` : ""}${tweeterOffsetIn && !lay.onTop && !lay.coax ? `, tweeter ${Math.abs(tweeterOffsetIn)}″ ${tweeterOffsetIn > 0 ? "inward" : "outward"}` : ""}`}
     >
       <rect
         x={bx}
@@ -82,7 +89,7 @@ export function HifiFront({
           strokeDasharray="2 2"
         />
       )}
-      {lay.onTop ? (
+      {lay.coax ? null : lay.onTop ? (
         <g>
           <rect
             x={W / 2 - (face.w * k) / 8}
@@ -112,51 +119,56 @@ export function HifiFront({
           fill={pal.muted}
         />
       )}
-      <circle cx={tx} cy={y(lay.tweeterIn)} r={0.5 * k} fill={pal.edge} />
-      <circle
-        cx={W / 2}
-        cy={y(lay.wooferIn)}
-        r={(w.size * 0.95 * k) / 2}
-        fill={pal.edge}
-        stroke={pal.muted}
-      />
+      {!lay.coax && <circle cx={tx} cy={y(lay.tweeterIn)} r={0.5 * k} fill={pal.edge} />}
+      <circle cx={W / 2} cy={y(lay.wooferIn)} r={wooferR} fill={pal.edge} stroke={pal.muted} />
+      {lay.coax && (
+        // the coaxial's HF in the woofer's center: its horn's mouth and the phase plug
+        <g>
+          <circle
+            cx={W / 2}
+            cy={y(lay.tweeterIn)}
+            r={wooferR * HIFI_FRONT_PARTS.coax.hornMouthPerCone}
+            fill={pal.muted}
+          />
+          <circle
+            cx={W / 2}
+            cy={y(lay.tweeterIn)}
+            r={
+              wooferR *
+              HIFI_FRONT_PARTS.coax.hornThroatPerCone *
+              HIFI_FRONT_PARTS.coax.plugPerThroat
+            }
+            fill={pal.edge}
+          />
+        </g>
+      )}
       {pr &&
-        Array.from({ length: pr.n }, (_, i) => {
-          const s = passiveRadiatorShape(pr.drv),
-            cy = H - (0.75 + 0.25 + (i + 0.5) * (s.h + 0.5)) * k;
-          return (
-            <rect
-              key={`r${i}`}
-              x={W / 2 - (s.w * k) / 2}
-              y={cy - (s.h * k) / 2}
-              width={s.w * k}
-              height={s.h * k}
-              rx={(s.w * k) / 2}
-              fill="none"
-              stroke={pal.muted}
-              strokeDasharray="3 2"
-            />
-          );
-        })}
-      {vented && port.shape === "slot" && (
+        radiatorSpots(pr, RADIATOR_PANEL, wall).map(({ y: cy, shape: s }, i) => (
+          <rect
+            key={`r${i}`}
+            x={W / 2 - (s.w * k) / 2}
+            y={y(cy) - (s.h * k) / 2}
+            width={s.w * k}
+            height={s.h * k}
+            rx={(s.w * k) / 2}
+            fill="none"
+            stroke={pal.muted}
+            strokeDasharray="3 2"
+          />
+        ))}
+      {slot && (
         <rect
-          x={bx + 0.75 * k}
-          y={H - (0.75 + port.h) * k}
-          width={(dim.w - 1.5) * k}
-          height={port.h * k}
+          x={W / 2 - (slot.w * k) / 2}
+          y={y(slot.y + slot.h)}
+          width={slot.w * k}
+          height={slot.h * k}
           fill={pal.ink}
         />
       )}
       {vented &&
         port.shape !== "slot" &&
-        Array.from({ length: port.n }, (_, i) => (
-          <circle
-            key={i}
-            cx={W / 2 + (i - (port.n - 1) / 2) * (port.dia + 0.6) * k}
-            cy={H - (port.dia / 2 + 1) * k}
-            r={(port.dia * k) / 2}
-            fill={pal.ink}
-          />
+        roundPortSpots(port).map((p, i) => (
+          <circle key={i} cx={W / 2 + p.x * k} cy={y(p.y)} r={p.r * k} fill={pal.ink} />
         ))}
     </svg>
   );

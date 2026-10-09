@@ -9,12 +9,12 @@ import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { WOOFER_LIMITED_BY } from "../../constants/limits";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
 import { STATS } from "../../components/optimizer/StatRow";
-import { HIFI_WOOFERS, HIFI_TWEETERS, ownGuideCfg } from "../../lib/data";
-import { byIdOrThrow } from "../../lib/tables";
+import { hifiDriverByIdOrThrow, ownGuideCfg } from "../../lib/data";
 import { formatThickness } from "../../lib/panel";
 import type { Dims2, HifiMetricsDelta, HifiOptimizerCard, HifiOptimizerResult } from "../../types";
 import { FONT } from "../../styles/fonts";
-import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
+import { Tooltip } from "../../components/ui/Tooltip";
+import { UI_TEXT } from "../../constants/uiText";
 
 interface Props {
   result: HifiOptimizerCard;
@@ -44,9 +44,9 @@ export function HifiResultCard({
   const config = result.config,
     metrics = result.metrics,
     deltas: Partial<HifiMetricsDelta> = result.delta || {};
-  // a card's driver ids come from these same lists (the optimizer searches them)
-  const woofer = byIdOrThrow(HIFI_WOOFERS, result.woofer, CATALOG_TABLE_NAMES.hifiWoofers),
-    tweeter = byIdOrThrow(HIFI_TWEETERS, result.tweeter, CATALOG_TABLE_NAMES.hifiTweeters);
+  // a card's driver ids come from the tables the optimizer searches (the coaxials' included)
+  const woofer = hifiDriverByIdOrThrow("woofer", result.woofer),
+    tweeter = hifiDriverByIdOrThrow("tweeter", result.tweeter);
   const radiator = passiveRadiatorOf(config); // null unless the box is a radiator box with its radiator
   const tile = (label: string, v: string, delta: React.ReactNode) => (
     <div className="bg-stone-50 border border-stone-300 rounded px-2 py-1.5">
@@ -69,6 +69,7 @@ export function HifiResultCard({
       <div className="grid grid-cols-[2fr_3fr] gap-2 items-end">
         <HifiFront
           dim={config.dim}
+          wall={config.wall}
           w={woofer}
           t={tweeter}
           lay={result.lay}
@@ -103,7 +104,7 @@ export function HifiResultCard({
       <div className="grid grid-cols-2 gap-1.5">
         {tile(
           "Drivers, pair",
-          formatDollars(metrics.price),
+          `${formatDollars(metrics.price)}${result.priceKnown ? "" : UI_TEXT.partialPriceMark}`,
           <Delta v={deltas.price} unit="$" lowerIsBetter />,
         )}
         {tile(
@@ -138,6 +139,11 @@ export function HifiResultCard({
       <div className="text-xs text-stone-500">
         Changes: {result.changed.length ? result.changed.join(", ") : "none"}
       </div>
+      {!result.priceKnown && (
+        <div className="text-xs text-stone-500">
+          <Tooltip tip={UI_TEXT.partialPricesTip}>{UI_TEXT.partialPrices}</Tooltip>
+        </div>
+      )}
       <div className="flex gap-1.5 mt-auto">
         <button
           onClick={onPreview}

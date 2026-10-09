@@ -18,6 +18,10 @@ export const formatInches = (v: number): string => {
 /** Formats a frequency in whole hertz: 900 Hz, 1150 Hz (never kHz: 1150 Hz reads better than 1.15 kHz). */
 export const formatHz = (f: number): string => `${Math.round(f)} Hz`;
 
+/** Formats watts: one decimal under 10 W, whole watts with thousands separators above, e.g. 4.2 W, 1,250 W. */
+export const formatWatts = (w: number): string =>
+  `${w < 10 ? w.toFixed(1) : Math.round(w).toLocaleString("en-US")} W`;
+
 /** Formats a box's outside size, width × height × depth, e.g. 22 × 30 × 20″. */
 export const formatDims = ({ w, h, d }: Dims3): string =>
   `${+w.toFixed(2)} × ${+h.toFixed(2)} × ${+d.toFixed(2)}″`;

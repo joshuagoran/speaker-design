@@ -2,8 +2,9 @@ import * as THREE from "three";
 import { roundedRectShape, roundedRectPath, circlePath } from "./geometry";
 import { buildCabinet } from "./buildCabinet";
 import { buildCone } from "./buildCone";
+import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
 import { towerBaffleHoles, buildTowerPartitions } from "./towerParts";
-import { towerSpec } from "./stackHeights";
+import { towerSpec } from "../../lib/pa/tower";
 import { modelTubeElbows, subTubeLegs, tubeLayout } from "../../lib/pa/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import {
@@ -140,7 +141,7 @@ export function buildSubwoofer(
     baffleBottom: bandH,
     parent: subGroup,
   }).baffleZ;
-  if (tower) buildTowerPartitions(ctx, { box: s, plinth: pl, parent: subGroup });
+  if (tower) buildTowerPartitions(ctx, { box: s, plinth: pl, horn: tower.horn, parent: subGroup });
   if (bracing) buildBraces(ctx, { bracing, box: s, y: pl, parent: subGroup });
   if (hardware) buildHardware(ctx, { plan: hardware, box: s, y: pl, parent: subGroup });
   if (keepOut)
@@ -216,8 +217,8 @@ export function buildSubwoofer(
   } else if (tubes) {
     // flared tubes behind the baffle: bell, straight run back, then (as the model folds them) an elbow up the back
     // wall and a second forward under the lid, and the inner bell at the mouth
-    const e = modelTubeElbows(s, portStyle, tubeVent, T, sub);
-    const legs = subTubeLegs(s, portStyle, tubeVent, T, sub, e);
+    const e = modelTubeElbows(s, portStyle, tubeVent, T, REVEAL, sub);
+    const legs = subTubeLegs(s, portStyle, tubeVent, T, REVEAL, sub, e);
     const RB = TUBE_FLARE_RADIUS_IN,
       seg = 10,
       bend = Math.min(portR * 1.5, legs.run / 2, legs.rise / 2); // the elbows' centerline radius
@@ -226,29 +227,16 @@ export function buildSubwoofer(
       const t = (i / seg) * (Math.PI / 2);
       prof.push(new THREE.Vector2(portR + RB * (1 - Math.cos(t)), RB * Math.sin(t)));
     }
-    // a straight length of tube from a to b (centerline points)
-    const pipe = (a: THREE.Vector3, b: THREE.Vector3) => {
-      const len = a.distanceTo(b);
-      if (len < 1e-3) return;
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(portR, portR, len, 32, 1, true), portMat);
-      m.position.copy(a).add(b).multiplyScalar(0.5);
-      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
-      m.name = VENT_MESH_NAME;
-      subGroup.add(m);
-    };
-    // a quarter-torus elbow about `c`, its arc from local +X to +Y laid on the world axes `ax`, `ay`
-    const elbow = (c: THREE.Vector3, ax: THREE.Vector3, ay: THREE.Vector3) => {
-      const m = new THREE.Mesh(new THREE.TorusGeometry(bend, portR, 16, 12, Math.PI / 2), portMat);
-      m.setRotationFromMatrix(new THREE.Matrix4().makeBasis(ax, ay, ax.clone().cross(ay)));
-      m.position.copy(c);
-      m.name = VENT_MESH_NAME;
-      subGroup.add(m);
-    };
-    // a quarter-round flare at a mouth, opening along `dir`
+    const tube: TubeStyle = { r: portR, material: portMat, name: VENT_MESH_NAME, parent: subGroup };
+    const pipe = (a: THREE.Vector3, b: THREE.Vector3) => addPipe(tube, a, b);
+    const elbow = (c: THREE.Vector3, ax: THREE.Vector3, ay: THREE.Vector3) =>
+      addElbow(tube, bend, c, ax, ay);
+    // a quarter-round flare whose lip is the mouth `at`, opening along `dir`: inside the tube's length, as the model
+    // counts it (its run is part of the centerline, lib/pa/tubes flareShortfall)
     const bell = (at: THREE.Vector3, dir: THREE.Vector3) => {
       const m = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), portMat);
       m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-      m.position.copy(at);
+      m.position.copy(at).addScaledVector(dir, -RB);
       m.name = VENT_MESH_NAME;
       subGroup.add(m);
     };
@@ -257,23 +245,23 @@ export function buildSubwoofer(
       const x = p.x,
         y = pl + T + p.y,
         zc = subZ - legs.run; // the first corner, behind the baffle face
-      bell(V(x, y, subZ), V(0, 0, 1));
+      bell(V(x, y, subZ), V(0, 0, 1)); // its lip flush with the baffle front
       if (e === 0) {
-        pipe(V(x, y, subZ), V(x, y, zc));
+        pipe(V(x, y, subZ - RB), V(x, y, zc + RB));
         bell(V(x, y, zc), V(0, 0, -1));
         return;
       }
-      pipe(V(x, y, subZ), V(x, y, zc + bend));
+      pipe(V(x, y, subZ - RB), V(x, y, zc + bend));
       elbow(V(x, y + bend, zc + bend), V(0, -1, 0), V(0, 0, -1));
       const top = y + legs.rise;
       if (e === 1) {
-        pipe(V(x, y + bend, zc), V(x, top, zc));
+        pipe(V(x, y + bend, zc), V(x, top - RB, zc));
         bell(V(x, top, zc), V(0, 1, 0));
         return;
       }
       pipe(V(x, y + bend, zc), V(x, top - bend, zc));
       elbow(V(x, top - bend, zc + bend), V(0, 0, -1), V(0, 1, 0));
-      pipe(V(x, top, zc + bend), V(x, top, zc + legs.back));
+      pipe(V(x, top, zc + bend), V(x, top, zc + legs.back - RB));
       bell(V(x, top, zc + legs.back), V(0, 0, 1));
     });
   }

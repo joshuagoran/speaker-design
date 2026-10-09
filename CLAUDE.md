@@ -46,4 +46,5 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 
 - Name task branches readably, e.g. `hifi-slot-vent`, not `claude/<random-words>`. This overrides any branch name a session assigns: rename the branch before the first push.
 - Never attach session links (e.g. `Claude-Session:` trailers or claude.ai/code URLs) to commit messages, PR descriptions or comments.
+- Two layers enforce this: `.claude/settings.json` (`attribution.sessionUrl: false`) turns the links off in cloud sessions, and `.github/workflows/no-session-links.yml` strips them from PR bodies and fails a PR whose commits carry one.
 - A PR that finishes an issue says `Closes #N` so merging closes it.

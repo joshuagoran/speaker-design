@@ -1,7 +1,9 @@
 import * as THREE from "three";
-import { cabinetFinishOf } from "../../lib/data";
+import { CABINET_FINISHES, cabinetFinishOf } from "../../lib/data";
+import { hornBodyColor } from "../../lib/pa/hornColor";
 import { PARTS_3D } from "../../styles/palette";
 import type { Props } from "./buildStackScene";
+import type { Horn } from "../../types";
 
 /** What the builders share: the group they add to, the materials, and the cabinet construction. */
 export interface SceneContext {
@@ -25,6 +27,12 @@ export interface SceneContext {
     hornShell: THREE.MeshStandardMaterial;
     /** handles, input dishes and horn posts */
     hardware: THREE.MeshStandardMaterial;
+    /** printed throat adapters */
+    adapter: THREE.MeshStandardMaterial;
+    /** the horn bracket */
+    aluminum: THREE.MeshStandardMaterial;
+    /** the horn's plywood mount: clear birch, whatever the cabinet's finish */
+    plywood: THREE.MeshStandardMaterial;
     /**
      * a part's hole in its panel (buildHardware): draws no color, only depth, just proud of the face, so the panel
      * behind it isn't drawn there
@@ -44,8 +52,13 @@ export function createSceneContext({
   cabFinish,
   baffleColor,
   cutaway,
-}: Pick<Props, "baffleColor" | "cutaway"> &
-  Required<Pick<Props, "wall" | "inset" | "cabFinish">>): SceneContext {
+  horn,
+  hornColor,
+}: Pick<Props, "baffleColor" | "cutaway" | "hornColor"> &
+  Required<Pick<Props, "wall" | "inset" | "cabFinish">> & {
+    /** the horn whose body color the context holds: only its catalog finish is read */
+    horn: Pick<Horn, "finish">;
+  }): SceneContext {
   const finish = cabinetFinishOf(cabFinish);
   const wood = new THREE.MeshStandardMaterial({
     color: finish ? finish.color : new THREE.Color(cabFinish),
@@ -91,7 +104,7 @@ export function createSceneContext({
       })
     : painted;
   const hornShell = new THREE.MeshStandardMaterial({
-    color: PARTS_3D.cream,
+    color: hornBodyColor(horn, hornColor),
     roughness: 0.55,
     side: THREE.DoubleSide,
   });
@@ -117,6 +130,16 @@ export function createSceneContext({
       brace,
       hornShell,
       hardware,
+      adapter: new THREE.MeshStandardMaterial({ color: PARTS_3D.adapter, roughness: 0.6 }),
+      aluminum: new THREE.MeshStandardMaterial({
+        color: PARTS_3D.aluminum,
+        roughness: 0.35,
+        metalness: 0.25,
+      }),
+      plywood: new THREE.MeshStandardMaterial({
+        color: CABINET_FINISHES.birch.color,
+        roughness: CABINET_FINISHES.birch.rough,
+      }),
       holeMask,
     },
     wall,

@@ -20,8 +20,6 @@ export type TubeDriver = Pick<SubDriver, "size" | "depthIn">;
 /** The tube fields a layout reads. */
 export type TubeVent = Pick<VentSpec, "nt" | "dia" | "len">;
 
-/** The baffle's front, inches behind the frame's (the inset ventGeometry's side ducts and the tubes are measured from). */
-export const TUBE_BAFFLE_INSET_IN = 0.75;
 // Clear baffle between a tube's flare and the walls' inside faces (the 3/4" baffle cleats behind are cleared by the
 // pipe's own wall and this), and between two flares or a flare and the driver's frame.
 const EDGE_IN = 0.25;
@@ -131,8 +129,8 @@ function tubeAxisTopY(
 }
 
 /**
- * What a sub's tubes are whatever their length, for one box, vent size, plywood and driver: the room their centerline
- * has (from the baffle front to the back wall and from the axis up to the lid, the driver's back as the stop; every
+ * What a sub's tubes are whatever their length, for one box, vent size, plywood, baffle inset and driver: the room their
+ * centerline has (from the baffle front, `inset` behind the frame front, to the back wall and from the axis up to the lid, the driver's back as the stop; every
  * tube of a row sits at one height, so one room serves them all), and the lengths each elbow count fits (the corner
  * tubes, `round4`, only run straight: two of them sit over the other two, so neither pair has a clear back wall to rise
  * up). The length solvers ask for it at every step, so the last one is kept; it needs no baffle layout, so the searches'
@@ -151,6 +149,7 @@ interface SetupKey {
   nt: number;
   dia: number;
   t: number;
+  inset: number;
   size: TubeDriver["size"];
   depthIn: TubeDriver["depthIn"];
 }
@@ -160,6 +159,7 @@ const sameSetup = (
   style: PortStyle,
   v: Pick<VentSpec, "nt" | "dia">,
   t: number,
+  inset: number,
   drv: TubeDriver,
 ) =>
   c.w === box.w &&
@@ -169,6 +169,7 @@ const sameSetup = (
   c.nt === v.nt &&
   c.dia === v.dia &&
   c.t === t &&
+  c.inset === inset &&
   c.size === drv.size &&
   c.depthIn === drv.depthIn;
 const setupKey = (
@@ -176,6 +177,7 @@ const setupKey = (
   style: PortStyle,
   v: Pick<VentSpec, "nt" | "dia">,
   t: number,
+  inset: number,
   drv: TubeDriver,
 ): SetupKey => ({
   w: box.w,
@@ -185,6 +187,7 @@ const setupKey = (
   nt: v.nt,
   dia: v.dia,
   t,
+  inset,
   size: drv.size,
   depthIn: drv.depthIn,
 });
@@ -194,19 +197,21 @@ function tubeSetup(
   style: PortStyle,
   v: Pick<VentSpec, "nt" | "dia">,
   t: number,
+  inset: number,
   drv: TubeDriver,
 ): TubeSetup {
-  if (lastSetup && sameSetup(lastSetup, box, style, v, t, drv)) return lastSetup.setup;
+  if (lastSetup && sameSetup(lastSetup, box, style, v, t, inset, drv)) return lastSetup.setup;
   const room = {
-    run: box.d - TUBE_BAFFLE_INSET_IN - t,
+    run: box.d - inset - t,
     rise: box.h - 2 * t - tubeAxisTopY(box, style, v, t),
     stop: subDriverDepthIn(drv),
+    flare: TUBE_FLARE_RADIUS_IN, // the inner mouth's flare clears the back wall and the lid
   };
   const spans = ELBOW_COUNTS.map((e) =>
     style === "round4" && e > 0 ? null : tubeSpan(room, v.dia, e),
   );
   const setup = { room, spans };
-  lastSetup = { ...setupKey(box, style, v, t, drv), setup };
+  lastSetup = { ...setupKey(box, style, v, t, inset, drv), setup };
   return setup;
 }
 
@@ -221,9 +226,10 @@ function tubeFixedEc(
   style: PortStyle,
   v: Pick<VentSpec, "nt" | "dia">,
   t: number,
+  inset: number,
   drv: TubeDriver,
 ) {
-  if (lastFixedEc && sameSetup(lastFixedEc, box, style, v, t, drv)) return lastFixedEc.ec;
+  if (lastFixedEc && sameSetup(lastFixedEc, box, style, v, t, inset, drv)) return lastFixedEc.ec;
   const { tubes } = tubeLayout(box, style, v, t, drv.size);
   const r = v.dia / 2,
     R = r + TUBE_FLARE_RADIUS_IN;
@@ -234,7 +240,7 @@ function tubeFixedEc(
     (0.85 + 0.61) * r * (r / R) -
     2 * flareShortfall(r) +
     (tubes.length ? ((r * r) / tubes.length) * near * (1 / 2 + 1 / 4) : 0);
-  lastFixedEc = { ...setupKey(box, style, v, t, drv), ec };
+  lastFixedEc = { ...setupKey(box, style, v, t, inset, drv), ec };
   return ec;
 }
 
@@ -244,8 +250,9 @@ export const tubeRoom = (
   style: PortStyle,
   v: Pick<VentSpec, "nt" | "dia">,
   t: number,
+  inset: number,
   drv: TubeDriver,
-): TubeRoom => tubeSetup(box, style, v, t, drv).room;
+): TubeRoom => tubeSetup(box, style, v, t, inset, drv).room;
 
 /** The lengths a sub's tubes fit with `e` elbows, or null (tubeSetup). */
 export const subTubeSpan = (
@@ -253,9 +260,10 @@ export const subTubeSpan = (
   style: PortStyle,
   v: Pick<VentSpec, "nt" | "dia">,
   t: number,
+  inset: number,
   drv: TubeDriver,
   e: ElbowCount,
-) => tubeSetup(box, style, v, t, drv).spans[e];
+) => tubeSetup(box, style, v, t, inset, drv).spans[e];
 
 // the fewest elbows whose span holds the length, as tubeElbows takes them
 const fittingCount = (spans: TubeSetup["spans"], len: number): ElbowCount | null =>
@@ -270,8 +278,9 @@ export const subTubeElbows = (
   style: PortStyle,
   v: TubeVent,
   t: number,
+  inset: number,
   drv: TubeDriver,
-): ElbowCount | null => fittingCount(tubeSetup(box, style, v, t, drv).spans, v.len);
+): ElbowCount | null => fittingCount(tubeSetup(box, style, v, t, inset, drv).spans, v.len);
 
 // the model's count from the spans: modelTubeElbows
 function modelCount(spans: TubeSetup["spans"], len: number): ElbowCount {
@@ -290,8 +299,9 @@ export const modelTubeElbows = (
   style: PortStyle,
   v: TubeVent,
   t: number,
+  inset: number,
   drv: TubeDriver,
-): ElbowCount => modelCount(tubeSetup(box, style, v, t, drv).spans, v.len);
+): ElbowCount => modelCount(tubeSetup(box, style, v, t, inset, drv).spans, v.len);
 
 /** The tubes' legs as built with `e` elbows. */
 export const subTubeLegs = (
@@ -299,9 +309,10 @@ export const subTubeLegs = (
   style: PortStyle,
   v: TubeVent,
   t: number,
+  inset: number,
   drv: TubeDriver,
   e: ElbowCount,
-): TubeLegs => tubeLegs(tubeRoom(box, style, v, t, drv), v.dia, v.len, e);
+): TubeLegs => tubeLegs(tubeRoom(box, style, v, t, inset, drv), v.dia, v.len, e);
 
 /**
  * The extra inner end correction of a tube mouth `gap` from a wall (inches, tube radius `r`): TUBE_WALL_END's solve,
@@ -349,14 +360,15 @@ export function subTubeEndCorrection(
   style: PortStyle,
   v: TubeVent,
   t: number,
+  inset: number,
   drv: TubeDriver,
   elbows?: ElbowCount,
 ) {
-  const { room, spans } = tubeSetup(box, style, v, t, drv);
+  const { room, spans } = tubeSetup(box, style, v, t, inset, drv);
   const e = elbows ?? modelCount(spans, v.len);
   const legs = tubeLegs(room, v.dia, v.len, e);
   return (
-    tubeFixedEc(box, style, v, t, drv) +
+    tubeFixedEc(box, style, v, t, inset, drv) +
     tubeWallEndCorrection(v.dia / 2, Math.max(legs.gap, 1e-9)) +
     e * SHARP_BEND_CORRECTION * v.dia
   );
@@ -385,11 +397,18 @@ export function sticksFor(pieces: readonly number[], stickIn: number) {
  * none), the elbows each tube takes, the pipe sticks its pieces (one per leg between elbows) are cut from, and the price,
  * or null where a part has no US price.
  */
-export function subTubeKit(box: Dims3, style: PortStyle, v: TubeVent, t: number, drv: TubeDriver) {
+export function subTubeKit(
+  box: Dims3,
+  style: PortStyle,
+  v: TubeVent,
+  t: number,
+  inset: number,
+  drv: TubeDriver,
+) {
   const pipe = PORT_PIPES.find((p) => p.dia === v.dia) ?? null,
     elbow = PORT_ELBOWS.find((p) => p.dia === v.dia) ?? null;
-  const elbows = modelTubeElbows(box, style, v, t, drv);
-  const legs = subTubeLegs(box, style, v, t, drv, elbows);
+  const elbows = modelTubeElbows(box, style, v, t, inset, drv);
+  const legs = subTubeLegs(box, style, v, t, inset, drv, elbows);
   const pieces = [legs.run, legs.rise, legs.back].filter((l) => l > 0);
   const sticks = pipe
     ? sticksFor(Array.from({ length: v.nt }, () => pieces).flat(), pipe.stickFt * 12)

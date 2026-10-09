@@ -5,6 +5,7 @@ import type {
   BoxHardwarePlan,
   Chip,
   ChipId,
+  Dims2,
   Dims3,
   FillChipsInput,
   HornChipsInput,
@@ -13,7 +14,15 @@ import type {
   SubChipsInput,
   VentSpec,
 } from "../../types";
-import { isRoundPort, maxFoldedSlotIn, maxStraightSlotIn, minFoldedSlotIn } from "./calc";
+import {
+  isRoundPort,
+  maxFoldedSlotIn,
+  maxStraightSlotIn,
+  midBaffleNeedIn,
+  minFoldedSlotIn,
+  SEALED_QTC_MIN,
+} from "./calc";
+import { qtcFloorAt } from "../../constants/qtcText";
 import { subTubeSpan, tubeLayout, type TubeDriver } from "./tubes";
 import { ELBOW_COUNTS, mergeSpans, ownSpans, type ElbowCount } from "../tubeFold";
 import { PA_SLIDERS } from "../../constants/paSliders";
@@ -33,13 +42,15 @@ import {
 // while it fits (maxStraight) and folds up the back wall past that, so it holds the longer of the two; a fold is never
 // shorter than its floor run plus the least rise (minFold), so the lengths between the two fit neither way, nor longer
 // than leaves a slot height under the lid (maxFold). Round tubes run straight, then take one elbow up the back wall and
-// a second forward under the lid (lib/pa/tubes), each count with its own lengths (`ways`, labeled for the chip).
+// a second forward under the lid (lib/pa/tubes), each count with its own lengths (`ways`, labeled for the chip); they run
+// from the baffle front, `inset` behind the frame front, where the slots and side ducts run from the frame front.
 // `spans` lists the lengths that fit, shortest first.
 export function ductFit(
   subBox: Dims3,
   portStyle: PortStyle,
   cVent: VentSpec,
   PT: number,
+  inset: number,
   drv: TubeDriver,
 ) {
   const inD = subBox.d - PT,
@@ -56,7 +67,7 @@ export function ductFit(
         ].filter(({ span: [a, b] }) => b >= a)
       : isRoundPort(portStyle)
         ? ELBOW_COUNTS.flatMap((e) => {
-            const span = subTubeSpan(subBox, portStyle, cVent, PT, drv, e);
+            const span = subTubeSpan(subBox, portStyle, cVent, PT, inset, drv, e);
             return span ? [{ span, what: TUBE_WAYS[e] }] : [];
           })
         : [{ span: [0, maxSide] as const, what: "a side duct" }];
@@ -66,7 +77,7 @@ export function ductFit(
   // a tube's counts are cut to where each is the fewest that fit (the model's count), a slider step past the fewer
   const tune: (readonly [number, number])[] = isRoundPort(portStyle)
     ? ownSpans(
-        ELBOW_COUNTS.map((e) => subTubeSpan(subBox, portStyle, cVent, PT, drv, e)),
+        ELBOW_COUNTS.map((e) => subTubeSpan(subBox, portStyle, cVent, PT, inset, drv, e)),
         PA_SLIDERS.ductLen.step,
       ).map((w) => w.span)
     : ways.map((w) => w.span);
@@ -81,6 +92,7 @@ export function ductFitMax(
   portStyle: PortStyle,
   cVent: VentSpec,
   PT: number,
+  inset: number,
   drv: TubeDriver,
 ) {
   if (portStyle === "slots") {
@@ -94,7 +106,7 @@ export function ductFitMax(
   if (!isRoundPort(portStyle)) return Math.max(0, subBox.d - PT - cVent.throat);
   let fit = 0;
   for (const e of ELBOW_COUNTS) {
-    const span = subTubeSpan(subBox, portStyle, cVent, PT, drv, e);
+    const span = subTubeSpan(subBox, portStyle, cVent, PT, inset, drv, e);
     if (span) fit = Math.max(fit, span[1]);
   }
   return fit;
@@ -114,24 +126,44 @@ export const ductLenSliderMax = (
   portStyle: PortStyle,
   cVent: VentSpec,
   PT: number,
+  inset: number,
   drv: TubeDriver,
 ) =>
   portStyle === "slots"
     ? Math.max(PA_SLIDERS.ductLen.max, maxFoldedSlotIn(subBox, cVent.slotH, PT))
     : isRoundPort(portStyle)
-      ? Math.max(PA_SLIDERS.ductLen.max, ductFit(subBox, portStyle, cVent, PT, drv).fit)
+      ? Math.max(PA_SLIDERS.ductLen.max, ductFit(subBox, portStyle, cVent, PT, inset, drv).fit)
       : PA_SLIDERS.ductLen.max;
 /** Whether a duct `len` long fits the layout: inside one of ductFit's spans. */
 export const ductFits = (spans: ReturnType<typeof ductFit>["spans"], len: number) =>
   spans.some(([a, b]) => len >= a - 1e-9 && len <= b + 1e-9);
 // Clear baffle a driver needs: the sub's cone plus its frame.
 export const subDriverClearanceNeededIn = (subSize: number) => subSize + 1.9;
-export function driverClearance(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
+/** What the vents take off the sub's baffle, in: side ducts across, a bottom slot and its shelf up. */
+const ventAllowance = (portStyle: PortStyle, cVent: VentSpec, PT: number): Dims2 => {
   const nSide = portStyle === "vslot1" ? 1 : portStyle === "vslots" ? 2 : 0;
   return {
-    clearW: subBox.w - nSide * (cVent.throat + 0.43 + PT),
-    clearH: subBox.h - (portStyle === "slots" ? cVent.slotH + PT : 0),
+    w: nSide * (cVent.throat + 0.43 + PT),
+    h: portStyle === "slots" ? cVent.slotH + PT : 0,
   };
+};
+export function driverClearance(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
+  const vents = ventAllowance(portStyle, cVent, PT);
+  return { clearW: subBox.w - vents.w, clearH: subBox.h - vents.h };
+}
+/**
+ * The smallest sub box face that holds its driver beside its vents (driverClearance turned round), in: the page's
+ * sliders and stored size start there (lib/boxFit). Round tubes' flares are a vent choice (their own chip).
+ */
+export function subBoxMin(
+  portStyle: PortStyle,
+  cVent: VentSpec,
+  PT: number,
+  subSize: number,
+): Dims2 {
+  const need = subDriverClearanceNeededIn(subSize);
+  const vents = ventAllowance(portStyle, cVent, PT);
+  return { w: need + vents.w, h: need + vents.h };
 }
 
 /**
@@ -166,8 +198,20 @@ const THERMALLY_LIMITED = "Thermally limited";
 
 // s: { subSize, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW }
 export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
-  const { subSize, subDepthIn, subBox, portStyle, cVent, PT, subLbLoaded, lim, peakXF, aes, ampW } =
-    s;
+  const {
+    subSize,
+    subDepthIn,
+    subBox,
+    portStyle,
+    cVent,
+    PT,
+    inset,
+    subLbLoaded,
+    lim,
+    peakXF,
+    aes,
+    ampW,
+  } = s;
   const sub = { size: subSize, depthIn: subDepthIn };
   const F: Chip<ChipId<"sub">>[] = [];
   const need = subDriverClearanceNeededIn(subSize);
@@ -179,7 +223,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
       `Needs ${need.toFixed(1)}″ of clear baffle. The vents leave ${clearW.toFixed(1)}″ × ${clearH.toFixed(1)}″.`,
       "subDriverFit",
     ]);
-  const { fit, spans, ways } = ductFit(subBox, portStyle, cVent, PT, sub);
+  const { fit, spans, ways } = ductFit(subBox, portStyle, cVent, PT, inset, sub);
   if (cVent.len > fit)
     F.push([
       "bad",
@@ -254,7 +298,7 @@ export function subChips(s: SubChipsInput): Chip<ChipId<"sub">>[] {
 }
 
 // s: { midSize, midDims, Qtc, f3, peakX, xoLo, ts (Xmax, aes), V (amp volts), useV, vTherm, mAmpW,
-//      subMusicAtXo (dB or null), tilt, midAtXo ({spl, who} of the mid max curve at xoLo) }
+//      subMusicAtXo (dB or null), midBelowSubDb, midAtXo ({spl, who} of the mid max curve at xoLo) }
 export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
   const {
     midSize,
@@ -263,17 +307,19 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
     f3,
     peakX,
     xoLo,
+    smallerBoxNetL,
+    isTower,
     ts,
     V,
     useV,
     vTherm,
     mAmpW,
     subMusicAtXo,
-    tilt,
+    midBelowSubDb,
     midAtXo,
   } = s;
   const F: Chip<ChipId<"mid">>[] = [];
-  const need = midSize + 1.2;
+  const need = midBaffleNeedIn(midSize);
   if (Math.min(midDims.w, midDims.h) < need)
     F.push([
       "bad",
@@ -281,12 +327,26 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
       `A ${midSize}″ driver needs about ${need.toFixed(1)}″ of baffle; the smallest face is ${Math.min(midDims.w, midDims.h)}″.`,
       "midDriverFit",
     ]);
+  // a low Qtc does no harm while the box is flat to the crossover: the highpass sets the low end there. Else it says
+  // what box fixes it, only where a box the driver fits gets there (in the tower, the sub sets the box).
+  const qtcHead = `Qtc ${Qtc.toFixed(2)}`;
   F.push(
     Qtc > 0.8
-      ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky and loose: box too small.", "midQtc"]
-      : Qtc < 0.5
-        ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Very damped. A smaller box works.", "midQtc"]
-        : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped.", "midQtc"],
+      ? ["warn", qtcHead, "Peaky and loose: box too small.", "midQtc"]
+      : Qtc >= SEALED_QTC_MIN
+        ? ["ok", qtcHead, "Well damped.", "midQtc"]
+        : f3 <= xoLo
+          ? ["ok", qtcHead, `Low Qtc. Fine above the ${xoLo} Hz crossover.`, "midQtc"]
+          : isTower
+            ? ["warn", qtcHead, "Very damped. The sub's footprint sets this box.", "midQtc"]
+            : smallerBoxNetL != null
+              ? [
+                  "warn",
+                  qtcHead,
+                  `Very damped. A smaller box works: ${qtcFloorAt(smallerBoxNetL)}`,
+                  "midQtc",
+                ]
+              : ["warn", qtcHead, "Very damped, even in the smallest box that fits.", "midQtc"],
   );
   if (f3 > xoLo)
     F.push([
@@ -319,7 +379,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
           ],
   );
   if (subMusicAtXo != null && midAtXo) {
-    const needDb = subMusicAtXo - tilt,
+    const needDb = subMusicAtXo - midBelowSubDb,
       m = midAtXo,
       gap = m.spl - needDb;
     // amp power that would close the gap, if the amp is what's short
@@ -329,7 +389,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
         ? [
             "warn",
             "Mid limits first",
-            `${(-gap).toFixed(1)} dB short at ${xoLo} Hz of the sub at its music limit, less ${tilt} dB for the mid band. ` +
+            `${(-gap).toFixed(1)} dB short at ${xoLo} Hz of the sub at its music limit, less ${midBelowSubDb} dB for the mid band. ` +
               (m.who === "amp"
                 ? wNeed <= 2 * ts.aes
                   ? `About ${Math.ceil(wNeed / 25) * 25} W per mid channel is enough.`
@@ -342,7 +402,7 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
         : [
             "ok",
             "Keeps up with the sub",
-            `${gap.toFixed(1)} dB to spare at ${xoLo} Hz against the sub at its music limit, less ${tilt} dB for the mid band.` +
+            `${gap.toFixed(1)} dB to spare at ${xoLo} Hz against the sub at its music limit, less ${midBelowSubDb} dB for the mid band.` +
               (m.who === "amp" && gap > 1
                 ? ` About ${Math.max(25, Math.ceil(wNeed / 25) * 25)} W per mid channel is still enough.`
                 : ""),
@@ -353,9 +413,21 @@ export function midChips(s: MidChipsInput): Chip<ChipId<"mid">>[] {
   return F;
 }
 
-// s: { hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi (dB or null), hfTilt, hornAtXo (dB), midBeam (deg or null), fK (Hz or null) }
+// s: { hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi (dB or null), hornBelowMidDb, hornAtXo (dB), midBeam (deg or null), fK (Hz or null) }
 export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
-  const { hf, hz, horn, xoHi, hornModel, hfAmpW, midAtXoHi, hfTilt, hornAtXo, midBeam, fK } = s;
+  const {
+    hf,
+    hz,
+    horn,
+    xoHi,
+    hornModel,
+    hfAmpW,
+    midAtXoHi,
+    hornBelowMidDb,
+    hornAtXo,
+    midBeam,
+    fK,
+  } = s;
   const F: Chip<ChipId<"horn">>[] = [];
   if (hf.minXo && xoHi < hf.minXo)
     F.push([
@@ -394,7 +466,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
         ],
   );
   if (midAtXoHi != null && hornAtXo != null) {
-    const need = midAtXoHi - hfTilt,
+    const need = midAtXoHi - hornBelowMidDb,
       gap = hornAtXo - need;
     const wNeed = hfAmpW * Math.pow(10, -gap / 10);
     F.push(
@@ -402,7 +474,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
         ? [
             "warn",
             "Horn limits first",
-            `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hfTilt} dB for the HF band. ` +
+            `${(-gap).toFixed(1)} dB short at ${xoHi} Hz of the mid at its limit, less ${hornBelowMidDb} dB for the HF band. ` +
               (hornModel.who === "amp" && (wNeed * 8) / hornModel.imp <= hornModel.pProg
                 ? `About ${Math.ceil(wNeed / 25) * 25} W per HF channel is enough.`
                 : "The driver's rating is the limit. Raise the crossover."),
@@ -411,7 +483,7 @@ export function hornChips(s: HornChipsInput): Chip<ChipId<"horn">>[] {
         : [
             "ok",
             "Keeps up with the mid",
-            `${gap.toFixed(1)} dB to spare at ${xoHi} Hz against the mid, less ${hfTilt} dB for the HF band.`,
+            `${gap.toFixed(1)} dB to spare at ${xoHi} Hz against the mid, less ${hornBelowMidDb} dB for the HF band.`,
             "hornKeepsUp",
           ],
     );
@@ -478,7 +550,7 @@ export function fillChips(s: FillChipsInput): Chip<ChipId<"fill">>[] {
     F.push(
       Qtc > 0.8
         ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Peaky. Use a bigger box.", "fillQtc"]
-        : Qtc < 0.5
+        : Qtc < SEALED_QTC_MIN
           ? ["warn", `Qtc ${Qtc.toFixed(2)}`, "Rolls off early. Suits a vented box.", "fillQtc"]
           : ["ok", `Qtc ${Qtc.toFixed(2)}`, "Well damped.", "fillQtc"],
     );

@@ -1,5 +1,5 @@
 // Props for the 3D scene tests: every golden config, the default PA and the other layouts.
-import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, HORN_OPTIONS } from "../src/lib/data";
+import { SUB_OPTIONS, MID_OPTIONS, MID_BOXES, HORN_OPTIONS, CD_OPTIONS } from "../src/lib/data";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import type { Props } from "../src/components/stack-view/buildStackScene";
 import type { PaDesignConfig } from "../src/types";
@@ -7,10 +7,14 @@ import { configs } from "./golden-configs";
 
 const PLINTH_IN = 3; // the planner's fixed plinth
 
-/** The scene props the planner would pass for a saved design, which can lack the fields an older save didn't have. */
+/**
+ * The scene props the planner would pass for a saved design, which can lack the fields an older save didn't have, and
+ * the 3D view's cutaway (the view's own toggle, not saved with the design).
+ */
 export function scenePropsOf(
   c: Pick<PaDesignConfig, "sub" | "mid" | "horn" | "portStyle" | "cDim" | "cVent"> &
-    Partial<PaDesignConfig>,
+    Partial<PaDesignConfig> &
+    Partial<Pick<Props, "cutaway">>,
 ): Props {
   const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
   const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
@@ -20,11 +24,14 @@ export function scenePropsOf(
     sub: { ...sub, box: c.cDim },
     mid: { ...mid, box: midBox },
     horn,
+    cd: CD_OPTIONS.find((o) => o.id === c.cd) ?? DEFAULT_PA.cd,
     plinth: PLINTH_IN,
     cutaway: c.cutaway ?? false,
     portStyle: c.portStyle,
     layout: c.layout ?? "stack",
     baffleColor: c.baffleColor ?? DEFAULT_PA.baffleColor,
+    hornColor: c.hornColor,
+    hornMount: c.hornMount,
     portGeom: {
       ductH: c.cVent.slotH,
       nPorts: c.cVent.nt,
@@ -39,7 +46,8 @@ export function scenePropsOf(
   };
 }
 
-const defaultConfig = {
+/** The default PA as a save from before the horn color (no `hornColor` key). */
+export const defaultConfig = {
   sub: DEFAULT_PA.sub.id,
   mid: DEFAULT_PA.mid.id,
   horn: DEFAULT_PA.horn.id,
@@ -57,7 +65,7 @@ const defaultConfig = {
 } satisfies Parameters<typeof scenePropsOf>[0];
 
 /** A horn drawn as a lathe profile and narrow enough for the tower's arched top. */
-const archedHorn = HORN_OPTIONS.find((h) => h.profile && !h.scaleX && h.size.w < 20);
+const archedHorn = HORN_OPTIONS.find((h) => h.profile && h.size.w === h.size.h && h.size.w < 20);
 
 /** The cases the scene tests pick by name. */
 export const SCENE_CASE_NAMES = {

@@ -4,7 +4,9 @@ import type {
   BraceStyleId,
   Cabinet,
   Format,
+  HornMountId,
   PaHardware,
+  PaDesignConfig,
   PaLayout,
   PanelNominal,
   Setter,
@@ -14,8 +16,6 @@ import { defaultBraceStyle } from "../../../lib/bracing";
 
 export interface CabinetStyle {
   plinthHeightIn: number;
-  cutaway: boolean;
-  setCutaway: Setter<boolean>;
   cabinet: Cabinet;
   layout: PaLayout;
   setLayout: Setter<PaLayout>;
@@ -35,6 +35,12 @@ export interface CabinetStyle {
   setBaffleInsetIn: Setter<number>;
   baffleColor: string;
   setBaffleColor: Setter<string>;
+  /** the horn body's picked color; undefined: the horn's catalog finish */
+  hornColor: PaDesignConfig["hornColor"];
+  setHornColor: Setter<PaDesignConfig["hornColor"]>;
+  /** what holds a driver bolted straight to its horn on the lid (lib/pa/hornMount `takesHornMount`) */
+  hornMount: HornMountId;
+  setHornMount: Setter<HornMountId>;
   /** a `FinishId` or a paint color (hex) */
   cabinetFinish: string;
   setCabinetFinish: Setter<string>;
@@ -48,20 +54,19 @@ export interface CabinetStyle {
 /** Cabinet construction and look: plywood, baffle inset, finish, layout and the fixed plinth. */
 export function useCabinetStyle(): CabinetStyle {
   const plinthHeightIn = 3; // fixed, matches the duct height
-  const [cutaway, setCutaway] = useState<boolean>(DEFAULT_PA.cutaway);
   const [layout, setLayout] = useState<PaLayout>(DEFAULT_PA.layout);
   const [wallPanel, setWallPanel] = useState<PanelNominal>(DEFAULT_PA.panel); // side/top/bottom/back ply
   const [braceStyle, setBraceStyle] = useState<BraceStyleId | undefined>(undefined);
   const [backJoint, setBackJoint] = useState<BackJointId>(DEFAULT_PA.backJoint);
   const [baffleInsetIn, setBaffleInsetIn] = useState(DEFAULT_PA.inset); // how far the baffles sit back from the frame front, in
   const [baffleColor, setBaffleColor] = useState(DEFAULT_PA.baffleColor);
+  const [hornColor, setHornColor] = useState<PaDesignConfig["hornColor"]>(undefined);
+  const [hornMount, setHornMount] = useState<HornMountId>(DEFAULT_PA.hornMount);
   const [cabinetFinish, setCabinetFinish] = useState(DEFAULT_PA.cabFinish);
   const [spacerHeightIn, setSpacerHeightIn] = useState(DEFAULT_PA.spacerH);
   const [hardware, setHardware] = useState<PaHardware>(DEFAULT_PA.hardware);
   return {
     plinthHeightIn,
-    cutaway,
-    setCutaway,
     cabinet: DEFAULT_PA.cabinet,
     layout,
     setLayout,
@@ -77,6 +82,10 @@ export function useCabinetStyle(): CabinetStyle {
     setBaffleInsetIn,
     baffleColor,
     setBaffleColor,
+    hornColor,
+    setHornColor,
+    hornMount,
+    setHornMount,
     cabinetFinish,
     setCabinetFinish,
     spacerHeightIn,

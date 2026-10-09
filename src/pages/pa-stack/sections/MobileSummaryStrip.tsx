@@ -4,12 +4,12 @@ import { LIMIT_NAMES } from "../../../constants/limits";
 import { FONT } from "../../../styles/fonts";
 
 interface Props {
-  planner: Pick<PaPlanner, "subModeled" | "subWeightLoadedLb">;
+  planner: Pick<PaPlanner, "subModeled" | "subLiftLb" | "isTower">;
 }
 
 /** Sticky strip of the four headline sub numbers, shown on phones. */
 export function MobileSummaryStrip({ planner }: Props) {
-  const { subModeled, subWeightLoadedLb } = planner;
+  const { subModeled, subLiftLb, isTower } = planner;
   return (
     <>
       {subModeled && (
@@ -20,7 +20,7 @@ export function MobileSummaryStrip({ planner }: Props) {
           {[
             ["Fb", `${subModeled.mdl.Fb.toFixed(1)}`, "Hz"],
             ["35 Hz", `${nearestPoint(subModeled.maxCurve, 35).spl.toFixed(0)}`, "dB"],
-            ["Sub", `${subWeightLoadedLb.toFixed(0)}`, "lb"],
+            [isTower ? "Tower" : "Sub", `${subLiftLb.toFixed(0)}`, "lb"],
             ["Limit", LIMIT_NAMES[subModeled.lim.who], ""],
           ].map(([k, v, u]) => (
             <div key={k}>

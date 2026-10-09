@@ -11,4 +11,5 @@ export const CATALOG_TABLE_NAMES = {
   cabinets: "cabinets",
   amps: "amps",
   dspUnits: "DSP units",
+  mountAdapters: "mount adapters",
 } as const;

@@ -6,13 +6,12 @@ import { SwatchPicker } from "../../../components/ui/SwatchPicker";
 import { Card } from "../../../components/ui/Card";
 import { SelectField } from "../../../components/ui/SelectField";
 import { Slider } from "../../../components/ui/Slider";
+import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, cabinetFinishName } from "../../../lib/data";
 import {
-  CD_OPTIONS,
-  HORN_OPTIONS,
-  PAINT_SWATCHES,
-  CABINET_FINISHES,
-  cabinetFinishOf,
-} from "../../../lib/data";
+  BaffleColorPicker,
+  CabinetFinishPicker,
+  PAINTED_PREFIX,
+} from "../../../components/ui/FinishPickers";
 import { HIGHPASS_ALIGNMENTS, isRoundPort, ventSpeedLimit } from "../../../lib/pa/calc";
 import { AMP_WATTS_MAX, AMP_WATTS_STEPS } from "../../../lib/pa/optimize";
 import { ductFit, ductLenSliderMax } from "../../../lib/pa/chips";
@@ -49,6 +48,28 @@ import { PANEL_NOMINAL_OPTIONS } from "../../../lib/panel";
 import { HardwareSettings } from "./HardwareSettings";
 import { boxTakesHardware, handlePart } from "../../../lib/pa/hardware";
 import { NO_HANDLES_LABEL } from "../../../constants/hardware";
+import {
+  CLAMPED_BRACKET_NAME,
+  HORN_MOUNT_DEFAULT,
+  HORN_MOUNT_LABEL,
+  HORN_MOUNT_NAMES,
+  HORN_MOUNT_PLATE,
+  HORN_MOUNT_PLATE_FALLBACK,
+  HORN_MOUNT_PLY,
+  HORN_MOUNT_PLY_UNAVAILABLE,
+  HORN_MOUNT_TIPS,
+} from "../../../constants/hornMount";
+import { takesHornMount } from "../../../lib/pa/hornMount";
+import { plyMountFit } from "../../../components/stack-view/buildPlyMount";
+import { plateFit } from "../../../components/stack-view/buildPlate";
+import {
+  HORN_COLOR_CATALOG,
+  HORN_COLOR_CATALOG_LABEL,
+  HORN_FINISH_NAMES,
+} from "../../../constants/hornColor";
+import { cssHex, hornBodyColor, pickedHornColor } from "../../../lib/pa/hornColor";
+import { ON_DATA } from "../../../styles/palette";
+import { towerMidDims } from "../../../lib/pa/tower";
 
 interface Props {
   planner: Pick<
@@ -75,15 +96,17 @@ interface Props {
     | "maxPortAirSpeedMs"
     | "setMaxPortAirSpeedMs"
     | "setSubBoxDim"
+    | "subBoxMin"
     | "setSubVentField"
     | "midDriver"
     | "setMidDriver"
     | "midBoxDims"
     | "midAmpWatts"
     | "setMidAmpWatts"
-    | "midBandTiltDb"
-    | "setMidBandTiltDb"
+    | "midBelowSubDb"
+    | "setMidBelowSubDb"
     | "setMidBoxDim"
+    | "midBoxMin"
     | "midSize"
     | "setMidSize"
     | "hornOption"
@@ -92,8 +115,8 @@ interface Props {
     | "setCompressionDriver"
     | "hornAmpWatts"
     | "setHornAmpWatts"
-    | "hornBandTiltDb"
-    | "setHornBandTiltDb"
+    | "hornBelowMidDb"
+    | "setHornBelowMidDb"
     | "subMidCrossoverHz"
     | "setSubMidCrossoverHz"
     | "midHornCrossoverHz"
@@ -102,8 +125,6 @@ interface Props {
     | "setSubMidCrossoverOrder"
     | "midHornCrossoverOrder"
     | "setMidHornCrossoverOrder"
-    | "cutaway"
-    | "setCutaway"
     | "layout"
     | "setLayout"
     | "wallThicknessIn"
@@ -123,6 +144,10 @@ interface Props {
     | "setBaffleInsetIn"
     | "baffleColor"
     | "setBaffleColor"
+    | "hornColor"
+    | "setHornColor"
+    | "hornMount"
+    | "setHornMount"
     | "cabinetFinish"
     | "setCabinetFinish"
     | "spacerHeightIn"
@@ -166,15 +191,17 @@ export function SettingsPanel({ planner }: Props) {
     maxPortAirSpeedMs,
     setMaxPortAirSpeedMs,
     setSubBoxDim,
+    subBoxMin,
     setSubVentField,
     midDriver,
     setMidDriver,
     midBoxDims,
     midAmpWatts,
     setMidAmpWatts,
-    midBandTiltDb,
-    setMidBandTiltDb,
+    midBelowSubDb,
+    setMidBelowSubDb,
     setMidBoxDim,
+    midBoxMin,
     midSize,
     setMidSize,
     hornOption,
@@ -183,8 +210,8 @@ export function SettingsPanel({ planner }: Props) {
     setCompressionDriver,
     hornAmpWatts,
     setHornAmpWatts,
-    hornBandTiltDb,
-    setHornBandTiltDb,
+    hornBelowMidDb,
+    setHornBelowMidDb,
     subMidCrossoverHz,
     setSubMidCrossoverHz,
     midHornCrossoverHz,
@@ -193,8 +220,6 @@ export function SettingsPanel({ planner }: Props) {
     setSubMidCrossoverOrder,
     midHornCrossoverOrder,
     setMidHornCrossoverOrder,
-    cutaway,
-    setCutaway,
     layout,
     setLayout,
     wallThicknessIn,
@@ -211,6 +236,10 @@ export function SettingsPanel({ planner }: Props) {
     setBaffleInsetIn,
     baffleColor,
     setBaffleColor,
+    hornColor,
+    setHornColor,
+    hornMount,
+    setHornMount,
     cabinetFinish,
     setCabinetFinish,
     spacerHeightIn,
@@ -231,13 +260,42 @@ export function SettingsPanel({ planner }: Props) {
   );
   // the duct lengths that fit: a bottom slot straight, then folded up the back wall; round tubes straight, then with one
   // or two elbows (the lengths between fit neither way, and the slider skips them)
-  const ductLens = ductFit(subBoxDims, portStyle, subVentSpec, wallThicknessIn, subDriver);
-  const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
+  const ductLens = ductFit(
+    subBoxDims,
+    portStyle,
+    subVentSpec,
+    wallThicknessIn,
+    baffleInsetIn,
+    subDriver,
+  );
+  const finishName = cabinetFinishName(cabinetFinish);
+  // the horn color picker: the horn's catalog finish as a preset that clears the picked color
+  const hornFinish = hornOption.finish ?? "printed";
+  const hornColorPresets = {
+    [HORN_COLOR_CATALOG]: {
+      name: HORN_COLOR_CATALOG_LABEL,
+      swatch: cssHex(hornBodyColor(hornOption)),
+      ink: hornOption.finish ? ON_DATA.white : ON_DATA.ink,
+    },
+  };
   // a note under the Bracing setting for each panel a box's bracing leaves under the target, naming the box and the panel
   const braceNotes = [
     ...braceNoteLines(PA_SETTINGS_TABS.sub, subBracing),
     ...(midBracing ? braceNoteLines(PA_SETTINGS_TABS.mid, midBracing) : []),
   ];
+  // the horn mount, for a driver bolted straight to its horn on a lid: the plywood mount only when the driver's bolts
+  // fit it, else the aluminum plate; the plate, when no bolt can pass through it, gives way to the clamped L-bracket.
+  // The 3D view draws the same, so the setting and the summary show what it draws.
+  const hornMountShown = takesHornMount(hornOption, layout);
+  const plyMountFits =
+    hornMountShown && plyMountFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
+  const plateFits =
+    hornMountShown && plateFit(hornOption, compressionDriver, effectiveMidBoxDims.w) !== null;
+  const shownHornMount = plyMountFits ? hornMount : HORN_MOUNT_DEFAULT;
+  const hornMountTips = {
+    ...HORN_MOUNT_TIPS,
+    ...(plateFits ? {} : { plate: HORN_MOUNT_PLATE_FALLBACK }),
+  };
   const summaries: Record<PaSettingsSection, string> = {
     sub: [
       subDriver.name,
@@ -263,6 +321,11 @@ export function SettingsPanel({ planner }: Props) {
           (b) =>
             `${PA_SETTINGS_TABS[b]}: ${handlePart(hardware[b].model)?.name ?? NO_HANDLES_LABEL.toLowerCase()}`,
         ),
+      ...(hornMountShown
+        ? [
+            `${HORN_MOUNT_LABEL}: ${shownHornMount === HORN_MOUNT_PLATE && !plateFits ? CLAMPED_BRACKET_NAME : HORN_MOUNT_NAMES[shownHornMount]}`,
+          ]
+        : []),
     ].join(", "),
   };
   const section = (id: PaSettingsSection, children: React.ReactNode) => (
@@ -311,8 +374,8 @@ export function SettingsPanel({ planner }: Props) {
               <Slider
                 label="Width"
                 value={subBoxDims.w}
-                min={PA_SLIDERS.subW.min}
-                max={PA_SLIDERS.subW.max}
+                min={subBoxMin.w}
+                max={Math.max(PA_SLIDERS.subW.max, subBoxMin.w)}
                 step={PA_SLIDERS.subW.step}
                 unit="″"
                 onChange={(v) => setSubBoxDim("w", v)}
@@ -321,8 +384,8 @@ export function SettingsPanel({ planner }: Props) {
               <Slider
                 label="Height"
                 value={subBoxDims.h}
-                min={PA_SLIDERS.subH.min}
-                max={PA_SLIDERS.subH.max}
+                min={subBoxMin.h}
+                max={Math.max(PA_SLIDERS.subH.max, subBoxMin.h)}
                 step={PA_SLIDERS.subH.step}
                 unit="″"
                 onChange={(v) => setSubBoxDim("h", v)}
@@ -441,6 +504,7 @@ export function SettingsPanel({ planner }: Props) {
                   portStyle,
                   subVentSpec,
                   wallThicknessIn,
+                  baffleInsetIn,
                   subDriver,
                 )}
                 step={PA_SLIDERS.ductLen.step}
@@ -492,16 +556,16 @@ export function SettingsPanel({ planner }: Props) {
             <Card>
               {layout === "tower" ? (
                 <div className="text-xs text-stone-500">
-                  Tower: the mid chamber has the sub's footprint, {subBoxDims.w}″ × 15.5″ ×{" "}
-                  {subBoxDims.d}″.
+                  Tower: the mid chamber has the sub's footprint, {subBoxDims.w}″ ×{" "}
+                  {towerMidDims(subBoxDims).h}″ × {subBoxDims.d}″.
                 </div>
               ) : (
                 <>
                   <Slider
                     label="Width"
                     value={midBoxDims.w}
-                    min={PA_SLIDERS.midW.min}
-                    max={PA_SLIDERS.midW.max}
+                    min={midBoxMin.w}
+                    max={Math.max(PA_SLIDERS.midW.max, midBoxMin.w)}
                     step={PA_SLIDERS.midW.step}
                     unit="″"
                     onChange={(v) => setMidBoxDim("w", v)}
@@ -510,8 +574,8 @@ export function SettingsPanel({ planner }: Props) {
                   <Slider
                     label="Height"
                     value={midBoxDims.h}
-                    min={PA_SLIDERS.midH.min}
-                    max={PA_SLIDERS.midH.max}
+                    min={midBoxMin.h}
+                    max={Math.max(PA_SLIDERS.midH.max, midBoxMin.h)}
                     step={PA_SLIDERS.midH.step}
                     unit="″"
                     onChange={(v) => setMidBoxDim("h", v)}
@@ -654,15 +718,15 @@ export function SettingsPanel({ planner }: Props) {
                 <Slider
                   label={
                     <Tooltip tip="Bass-heavy music has 6–10 dB less at 200 Hz–1 kHz than 40–60 Hz.">
-                      Music balance: mid band needs less by
+                      Music balance: mid level below the sub
                     </Tooltip>
                   }
-                  value={midBandTiltDb}
+                  value={midBelowSubDb}
                   min={0}
                   max={12}
                   step={1}
                   unit=" dB"
-                  onChange={setMidBandTiltDb}
+                  onChange={setMidBelowSubDb}
                 />
               </Card>
             </div>
@@ -682,13 +746,13 @@ export function SettingsPanel({ planner }: Props) {
                   extra={renderLockButton("hfAmpW", "the HF amp power")}
                 />
                 <Slider
-                  label="Music balance: HF band needs less by"
-                  value={hornBandTiltDb}
+                  label="Music balance: horn level below the mid"
+                  value={hornBelowMidDb}
                   min={0}
                   max={12}
                   step={1}
                   unit=" dB"
-                  onChange={setHornBandTiltDb}
+                  onChange={setHornBelowMidDb}
                 />
               </Card>
             </div>
@@ -748,36 +812,34 @@ export function SettingsPanel({ planner }: Props) {
                 onChange={setBaffleInsetIn}
               />
             </div>
+            {hornMountShown && (
+              <ToggleGroup
+                label={HORN_MOUNT_LABEL}
+                value={shownHornMount}
+                onChange={setHornMount}
+                disabled={
+                  plyMountFits
+                    ? undefined
+                    : { values: [HORN_MOUNT_PLY], why: HORN_MOUNT_PLY_UNAVAILABLE }
+                }
+                options={keysOf(HORN_MOUNT_NAMES).map(
+                  (id) => [id, HORN_MOUNT_NAMES[id], hornMountTips[id]] as const,
+                )}
+                className="mt-3"
+              />
+            )}
             <HardwareSettings planner={planner} />
           </div>
+          <CabinetFinishPicker value={cabinetFinish} onChange={setCabinetFinish} />
+          <BaffleColorPicker value={baffleColor} onChange={setBaffleColor} />
           <SwatchPicker
-            label="Cabinet finish"
-            value={cabinetFinish}
-            onChange={setCabinetFinish}
+            label="Horn color"
+            value={hornColor ?? HORN_COLOR_CATALOG}
+            onChange={(v) => setHornColor(pickedHornColor(v))}
             swatches={PAINT_SWATCHES}
-            presets={CABINET_FINISHES}
-            titlePrefix="Painted: "
-            note={finishName}
-          />
-          <SwatchPicker
-            label="Baffle color"
-            value={baffleColor}
-            onChange={setBaffleColor}
-            swatches={PAINT_SWATCHES}
-            note={baffleColor}
-          />
-          <ToggleGroup
-            label="View"
-            value={cutaway}
-            onChange={setCutaway}
-            options={
-              [
-                [false, "Finished"],
-                [true, "Cutaway"],
-              ] as const
-            }
-            wrap={false}
-            className="mb-5"
+            presets={hornColorPresets}
+            titlePrefix={PAINTED_PREFIX}
+            note={hornColor ?? `${HORN_COLOR_CATALOG_LABEL}: ${HORN_FINISH_NAMES[hornFinish]}`}
           />
           <div className="mb-5">
             <ToggleGroup

@@ -24,6 +24,7 @@ interface Props {
       | "hardware"
       | "subHardware"
       | "midHardware"
+      | "hornOption"
     >;
 }
 
@@ -43,6 +44,7 @@ export function PaCutlistPage({ planner }: Props) {
     braceStyle: planner.effectiveBraceStyle,
     backJoint: planner.backJoint,
     hardware: planner.hardware,
+    horn: planner.hornOption,
   });
   // the parts each box is fitted with, from the catalog (the panels' rows carry their cutouts)
   const fitted = [planner.subHardware, planner.midHardware].flatMap((plan) =>

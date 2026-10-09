@@ -8,6 +8,7 @@ import { Delta } from "./Delta";
 import { STATS } from "./StatRow";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
+import { UI_TEXT } from "../../constants/uiText";
 import { Ellipsis } from "../ui/Ellipsis";
 import { useCutlistLayout } from "../../hooks/useCutlistLayout";
 import type { PaMetricsDelta, PaOptimizerCard, PaOptimizerResult } from "../../types";
@@ -135,9 +136,7 @@ export function OptimizerResultCard({
       </div>
       {!result.priceKnown && (
         <div className="text-xs text-stone-500">
-          <Tooltip tip="Some drivers have no price; the real total is higher.">
-            Partial prices
-          </Tooltip>
+          <Tooltip tip={UI_TEXT.partialPricesTip}>{UI_TEXT.partialPrices}</Tooltip>
         </div>
       )}
       <div className="flex gap-1.5 mt-auto">

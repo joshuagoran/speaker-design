@@ -14,6 +14,7 @@ import type {
 } from "../src/types";
 import { chipList, chipOf, findChip } from "./helpers";
 import { crossoverSlopeName } from "../src/constants/crossovers";
+import { qtcFloorAt } from "../src/constants/qtcText";
 
 const kindOf = <I extends ChipId>(F: Chip<I>[], id: NoInfer<I>) => findChip(F, id)?.[0];
 /** whether the check's chip shows, at `kind` when one is given */
@@ -33,6 +34,7 @@ const subBase: SubChipsInput = {
   portStyle: "slots",
   cVent: { slotH: 3, nt: 2, len: 14, throat: 2, dia: 4 }, // nt: subChips ignores it
   PT: 0.75,
+  inset: 0.75,
   subLbLoaded: 110,
   lim: { who: "amp", W: 800 },
   peakXF: 40,
@@ -75,17 +77,19 @@ test("sub: duct fit per layout; a bottom slot folds past the straight run", (t) 
 test("sub: round tubes run straight, then take an elbow up the back wall, then one under the lid", (t) => {
   // 2 × 4″ in 24 × 30 × 22 behind an 18″ with no published depth (9.5″): from the baffle front (3/4″ in) to the back
   // wall is 22 - 0.75 - 0.75 = 20.5. Straight: a diameter short of it, 16.5. One elbow: the riser behind the driver
-  // (9.5 + r + a diameter = 15.5 at the shortest), up to a diameter under the lid: the row's axis sits a flare and a
-  // quarter inch up (2 + 0.75 + 0.25 = 3), so 20.5 - 2 + (28.5 - 3) - 4 = 40. Two elbows: the riser to the lid and the
-  // return leg's mouth a diameter behind the driver: 9.5 + 4 + 2 × 4 + (25.5 - 2) = 45 to 2 × 18.5 + 23.5 - 9.5 - 4 = 47.
+  // (9.5 + r + a diameter = 15.5 at the shortest), its axis a radius and a flare (2 + 0.75) off the back wall, up to a
+  // diameter under the lid: the row's axis sits a flare and a quarter inch up (2 + 0.75 + 0.25 = 3), so
+  // 20.5 - 2.75 + (28.5 - 3) - 4 = 39.25. Two elbows: the riser (a radius off the back wall, 18.5; no mouth on it)
+  // up to the return leg a radius and a flare under the lid (22.75), the return leg's mouth a diameter behind the
+  // driver: 9.5 + 4 + 2 × 4 + 22.75 = 44.25 to 2 × 18.5 + 22.75 - 9.5 - 4 = 46.25.
   const tube = (len: number) => sub({ portStyle: "round2", cVent: { len } });
   has(t, tube(16.5), "subDuctFit", false);
-  has(t, tube(40), "subDuctFit", false);
+  has(t, tube(39.25), "subDuctFit", false);
   has(t, tube(42), "subDuctFit", true, "bad");
-  assert.ok(chipOf(tube(42), "subDuctFit")[2].includes("short of the 45.0″"), chipList(tube(42)));
-  has(t, tube(46), "subDuctFit", false);
-  has(t, tube(47.5), "subDuctFit", true, "bad");
-  assert.ok(chipOf(tube(47.5), "subDuctFit")[2].includes("two elbows"));
+  assert.ok(chipOf(tube(42), "subDuctFit")[2].includes("short of the 44.3″"), chipList(tube(42)));
+  has(t, tube(46.25), "subDuctFit", false);
+  has(t, tube(46.5), "subDuctFit", true, "bad");
+  assert.ok(chipOf(tube(46.5), "subDuctFit")[2].includes("two elbows"));
   // the tubes' flares fit the baffle beside the driver, or the chip says they don't
   has(t, tube(20), "subTubeFit", false);
   has(
@@ -112,13 +116,15 @@ const midBase: MidChipsInput = {
   f3: 90,
   peakX: 4,
   xoLo: 120,
+  smallerBoxNetL: null,
+  isTower: false,
   ts,
   V: Math.sqrt(400 * 8),
   useV: Math.sqrt(400 * 8),
   vTherm: Math.sqrt(800 * 8),
   mAmpW: 400,
   subMusicAtXo: 120,
-  tilt: 6,
+  midBelowSubDb: 6,
   midAtXo: { spl: 115, who: "amp" },
 };
 const mid = (o: Partial<MidChipsInput>) => midChips({ ...midBase, ...o });
@@ -129,7 +135,24 @@ test("mid: Qtc bands 0.5 and 0.8", (t) => {
     [0.8, "ok"],
     [0.81, "warn"],
   ] as const)
-    assert.equal(kindOf(mid({ Qtc: q }), "midQtc"), k, `Qtc ${q}`);
+    assert.equal(kindOf(mid({ Qtc: q, f3: 150 }), "midQtc"), k, `Qtc ${q}`);
+});
+test("mid: a low Qtc is ok while the box is flat to the crossover", (t) => {
+  // flat to xoLo: the highpass sets the low end
+  const ok = mid({ Qtc: 0.3, f3: 120 });
+  assert.equal(kindOf(ok, "midQtc"), "ok");
+  assert.match(chipOf(ok, "midQtc")[2], /Fine above the 120 Hz crossover/);
+  // rolls off above it: a smaller box only where one the driver fits reaches Qtc 0.5
+  const fits = mid({ Qtc: 0.3, f3: 200, smallerBoxNetL: 11 });
+  assert.equal(kindOf(fits, "midQtc"), "warn");
+  assert.ok(chipOf(fits, "midQtc")[2].endsWith(qtcFloorAt(11)));
+  const none = mid({ Qtc: 0.3, f3: 200, smallerBoxNetL: null });
+  assert.equal(kindOf(none, "midQtc"), "warn");
+  assert.doesNotMatch(chipOf(none, "midQtc")[2], /smaller box works/);
+  // the tower's chamber follows the sub: no smaller box to name
+  const tower = mid({ Qtc: 0.3, f3: 200, smallerBoxNetL: null, isTower: true });
+  assert.equal(kindOf(tower, "midQtc"), "warn");
+  assert.match(chipOf(tower, "midQtc")[2], /sub's footprint/);
 });
 test("mid: driver fit needs size + 1.2 in", (t) => {
   has(t, mid({ midDims: { w: 13.2, h: 15, d: 15 } }), "midDriverFit", false);
@@ -168,7 +191,7 @@ const hornBase: HornChipsInput = {
   hornModel: { who: "amp", pAmp: 50, imp: 8, pProg: 100, derate: 1 },
   hfAmpW: 50,
   midAtXoHi: 118,
-  hfTilt: 6,
+  hornBelowMidDb: 6,
   hornAtXo: 115,
   midBeam: 90,
   fK: 1000,

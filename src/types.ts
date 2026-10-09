@@ -11,6 +11,8 @@ import type {
 } from "./constants/bracing";
 import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
+import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
+import type { COAX_GAP_NAMES } from "./constants/coax";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { MAKER_NAMES } from "./data/catalog/makers";
@@ -19,6 +21,8 @@ import type { DSP_UNITS } from "./data/catalog/dsp-units";
 import type { Keep } from "./lib/optimizer/shortfall";
 import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
+import type { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "./constants/throatMounts";
+import type { HORN_MOUNT_NAMES } from "./constants/hornMount";
 import type { SelectedCard } from "./lib/optimizer/selectCards";
 import type { HANDLES } from "./data/catalog/cabinet-hardware";
 import type {
@@ -137,11 +141,14 @@ export interface SubTS extends ThieleSmall {
   disp: number;
 }
 
-/** Hi-fi woofers also list inductance, 2.83 V sensitivity and nominal impedance (informational; no model reads them). */
+/**
+ * Hi-fi woofers also list inductance, 2.83 V sensitivity and nominal impedance (informational; no model reads them). A
+ * coaxial's woofer (lib/data coaxParts) has no inductance or LF impedance in its table, so those two are absent there.
+ */
 export interface HifiWooferTS extends ThieleSmall {
-  Le: number;
+  Le?: number;
   sens: number;
-  imp: number;
+  imp?: number;
 }
 
 // ---- PA stack ----
@@ -199,6 +206,53 @@ export interface CompressionDriver {
   hf?: CompressionHf;
   /** throat exit in inches */
   exit: number;
+  /** the body as the 3-D view draws it */
+  body: CompressionDriverBody;
+  price: number | null;
+  src: string;
+  note: string;
+}
+
+/** One step of a turned part (a throat adapter, a driver body), front to back: [diameter, length] in inches. */
+export type BodyStep = readonly [dia: number, len: number];
+
+/** A compression driver's body: its outside size and the bolts on its front face, in. */
+export interface CompressionDriverBody {
+  /** overall diameter and depth */
+  dia: number;
+  depth: number;
+  /** the tapped holes on the front face: how many, the thread, and the bolt circle */
+  bolts: { n: number; thread: string; circle: number };
+  /** the outline front to back, when a photo shows its steps; without it the view draws a generic stepped body */
+  steps?: readonly BodyStep[];
+}
+
+/** How a driver meets a horn's throat (`THROAT_MOUNT_NAMES`): bolts on a circle, or a screw-on thread. */
+export type ThroatMountKind = keyof typeof THROAT_MOUNT_NAMES;
+/** A screw-on throat thread (`THROAT_THREAD_NAMES`). */
+export type ThroatThread = keyof typeof THROAT_THREAD_NAMES;
+/** A screw-on throat: its thread. */
+export interface ThreadMount {
+  thread: ThroatThread;
+}
+/**
+ * How a compression driver meets a horn: its front-face bolts (the body's pattern, as the PA catalogue holds it) or a
+ * screw-on thread. The 3-D view draws a bolt-on driver with the PA catalogue's body for the same driver, else a
+ * generic one.
+ */
+export type DriverMount = Pick<CompressionDriverBody, "bolts"> | ThreadMount;
+
+/**
+ * An adapter between a driver and a horn whose throats meet differently (`MOUNT_ADAPTERS`): the driver side and the
+ * horn side it joins, its US price (null when no vendor sells it) and where the price was read.
+ */
+export interface MountAdapter {
+  id: string;
+  name: string;
+  lb: number;
+  /** the mount the driver has, and the mount the horn has, that it joins */
+  driver: ThroatMountKind;
+  horn: ThroatMountKind;
   price: number | null;
   src: string;
   note: string;
@@ -207,12 +261,31 @@ export interface CompressionDriver {
 /** One point of a horn's flare, [radius, depth] in inches. */
 export type HornProfilePoint = readonly [radius: number, depth: number];
 
+/** A throat adapter between a horn's throat and the compression driver. */
+export interface HornAdapter {
+  name: string;
+  /** the outline, front (horn side) to back (driver side); the lengths add up to the adapter's length */
+  steps: readonly BodyStep[];
+  /** the bolt circles on its front flange (to the horn body) and on its back face (to the driver), in */
+  bodyBoltCircle: number;
+  driverBoltCircle: number;
+}
+
 export interface HornHf {
   covH: number;
   covV: number | null;
   minXo: number | null;
   lowHz: number;
 }
+
+/** A horn's factory finish in the 3-D view (`HORN_FINISH_COLORS`). */
+export type HornFinish = "black";
+
+/**
+ * Where a horn is offered when not everywhere: "hifi" for a small waveguide only the Hi-fi page lists (the PA picker
+ * and optimizers leave it out; `HORN_OPTIONS` in src/lib/data.ts).
+ */
+export type HornScope = "hifi";
 
 export interface Horn {
   id: string;
@@ -221,16 +294,24 @@ export interface Horn {
   hf?: HornHf;
   /** throat exit in inches */
   exit: number;
-  /** the flare drawn in the 3-D view; a horn without one is drawn as a generic flare */
+  /**
+   * the flare drawn in the 3-D view, stretched to fit `size`; a horn without one is drawn as a generic flare
+   */
   profile?: readonly HornProfilePoint[];
-  scale?: number;
-  scaleX?: number;
-  scaleY?: number;
-  scaleZ?: number;
+  /** the throat adapter the driver bolts to, when the horn takes one; it adds its length behind the body */
+  adapter?: HornAdapter;
   /** a rectangular mouth */
   rect?: boolean;
-  price: number;
+  /** the factory finish of a horn that ships painted; absent: drawn in the printed cream */
+  finish?: HornFinish;
+  /** the one page that offers it; absent: every page (the PA horns, and the Hi-fi waveguides among them) */
+  scope?: HornScope;
+  /** a screw-on throat; absent: the driver bolts to the throat flange */
+  mount?: ThreadMount;
+  /** US dollars; null when no vendor sells it (the optimizers then leave it out unless it is locked) */
+  price: number | null;
   src: string;
+  /** the mouth's width and height and the body's depth (without the adapter), in */
   size: Dims3;
   driver: string;
   xo: string;
@@ -404,6 +485,22 @@ export interface FillDriver {
 
 // ---- Hi-fi ----
 
+/** An HF figure a coaxial's maker doesn't publish, by id (`COAX_GAP_NAMES`): the whole HF section, its crossover or its coverage. */
+export type CoaxGap = keyof typeof COAX_GAP_NAMES;
+
+/**
+ * A coaxial (a `FillDriver`) as the Hi-fi engine takes it (lib/data coaxParts): its woofer, and its HF section as a
+ * tweeter of type "coaxial" at the woofer's center, the cone its conical waveguide (`ownGuide`). Both carry the
+ * coaxial's id: a design whose woofer and tweeter ids are equal is a coaxial (lib/hifi isCoax). The woofer carries the
+ * coaxial's weight and price, the HF part none. `tweeter` is null where the maker publishes no HF section (the woofer
+ * alone can be modeled); `gaps` lists the HF figures that are missing.
+ */
+export interface CoaxParts {
+  woofer: HifiWoofer;
+  tweeter: HifiTweeter | null;
+  gaps: readonly CoaxGap[];
+}
+
 export interface HifiWoofer {
   id: string;
   size: number;
@@ -411,7 +508,8 @@ export interface HifiWoofer {
   name: string;
   /** who makes it (`MAKER_NAMES`): code reads this, never the start of `name` */
   maker: MakerId;
-  price: number;
+  /** US dollars; null for a coaxial with no US price (the optimizer then leaves it out unless it is your design's) */
+  price: number | null;
   src: string;
   ts: HifiWooferTS;
   /** highest usable frequency, Hz */
@@ -419,7 +517,8 @@ export interface HifiWoofer {
   note: string;
 }
 
-export type TweeterType = "dome" | "horn-loaded" | "compression" | "ribbon";
+/** A tweeter's kind; "coaxial" is a coaxial's HF section, at its woofer's center (lib/data coaxParts). */
+export type TweeterType = "dome" | "horn-loaded" | "compression" | "ribbon" | "coaxial";
 
 export interface TweeterHf {
   sens: number;
@@ -456,7 +555,13 @@ export interface HifiTweeter {
   note: string;
   /** radiating diameter in inches for the directivity: the exit, or the mouth of a horn-loaded tweeter */
   domeIn: number;
+  /** the tweeter's own waveguide: a ribbon's plate, or a coaxial's woofer cone round its HF */
   ownGuide?: OwnGuide;
+  /**
+   * a compression driver's throat mount: its bolts or a screw-on thread; absent: bolt-on, with the PA catalogue's
+   * pattern for the same driver, else a generic 2-bolt one
+   */
+  mount?: DriverMount;
 }
 
 /**
@@ -513,6 +618,19 @@ export type PanelMaterial = "ply" | "mdf";
 export type CrossoverOrder = 4 | 8;
 
 /**
+ * A high-pass to a sub ahead of the woofer: a Linkwitz-Riley filter of `order` at `hz`, the woofer's half of the
+ * sub-to-speaker crossover. At or above the automatic subsonic's corner it takes its place; below it the subsonic stays in
+ * series (lib/hifi hifiBox).
+ */
+export interface HifiHighpass {
+  hz: number;
+  order: CrossoverOrder;
+}
+
+/** How the speaker is driven, by id (`HIFI_DRIVE_NAMES`): an amp channel per driver behind a DSP crossover, or one amp channel and a passive network. */
+export type HifiDrive = keyof typeof HIFI_DRIVE_NAMES;
+
+/**
  * A round port. `n` is the number of equal openings, `dia` and `len` are in inches, `elbows` is how many bends it
  * takes to fit. The `?: undefined` fields are the slot's, so the two port kinds can be told apart by `shape` and read
  * without narrowing.
@@ -561,6 +679,12 @@ export interface WaveguideSpec {
   w: number;
   h: number;
   freestanding: boolean;
+  /** the waveguide's own lowest crossover, Hz (its loading); null or absent when it sets none */
+  minXo?: HornHf["minXo"];
+  /** where the waveguide stops holding its pattern and loading the driver, Hz; absent when it sets none */
+  lowHz?: HornHf["lowHz"];
+  /** a screw-on waveguide's thread; absent: the driver bolts on */
+  mount?: Horn["mount"];
 }
 
 /** The Hi-fi design the model works on (the Hi-fi page's state, with the units the lib uses: inches, Hz, watts, dB). */
@@ -599,6 +723,15 @@ export interface HifiConfig {
   roundoverIn?: number;
   /** how far the tweeter sits off the baffle's center line, inches, + toward the inside of the pair (mirror-imaged); 0 when absent */
   tweeterOffsetIn?: number;
+  /** a high-pass to a sub, in place of the subsonic `hpf` (in series with it below its corner); absent: none */
+  hp?: HifiHighpass;
+  /**
+   * active (absent): the tweeter has its own amp, `tAmpW`; passive: one amp channel, `wAmpW`, feeds both drivers and
+   * the tweeter gets its power through the network's pad (`tAmpW` is not read)
+   */
+  drive?: HifiDrive;
+  /** the box's kick-back, degrees: its baffle tilted back so its axis points this far up; 0 when absent */
+  tiltDeg?: number;
 }
 
 /** Where the drivers sit on the baffle, inches from the box bottom. */
@@ -608,6 +741,8 @@ export interface DriverLayout {
   spacingIn: number;
   /** the tweeter's waveguide sits on the box top */
   onTop?: true;
+  /** a coaxial: the tweeter is the woofer's own HF section, at its center (spacing 0) */
+  coax?: true;
 }
 
 /** What stops a level, by id (`LIMIT_NAMES` holds the word a chart label shows for it). */
@@ -668,6 +803,8 @@ export interface HifiSystemBase {
   lay: DriverLayout;
   f3: number;
   hpf: number | null;
+  /** the high-pass to a sub in use (`hpf` is null unless the subsonic stays in series below it); absent when the design has none */
+  hp?: HifiConfig["hp"];
   xo: number;
   order: CrossoverOrder;
   bsF3: number;
@@ -699,7 +836,6 @@ export interface HifiVentedSystem extends HifiSystemBase {
 export interface HifiRadiatorSystem extends HifiSystemBase {
   kind: Extract<HifiBoxKind, "radiator">;
   pr: PassiveRadiatorChoice;
-  prFits: boolean;
   Fb: number;
   Fp: number;
   peakVel: null;
@@ -730,6 +866,11 @@ export interface ListenerGeometry {
   side?: -1 | 1;
   /** the on-axis distance the drivers are time-aligned at, m; `distM` when absent (a map's arc keeps it while the listener moves round) */
   alignM?: number;
+  /**
+   * the point is already in the box's own frame (on its axis, or on a dispersion map's arc round it), so the box's
+   * tilt (`HifiConfig.tiltDeg`) is not applied to it; absent: the point is in the room, the box tilted under it
+   */
+  boxFrame?: true;
 }
 
 export interface FrequencyPoint {
@@ -809,6 +950,20 @@ export interface HifiMetrics {
   lb: number;
 }
 
+/** One speaker's paths to the seat for its level there, m: its woofer's and its tweeter's (lib/hifi hifiSeatPaths). */
+export interface HifiSeatPaths {
+  wM: number;
+  tM: number;
+}
+
+/**
+ * The metrics with whether the price is whole: false when a part has no US price (a coaxial's), so `price` sums only
+ * the known ones and the real one is higher (`UI_TEXT.partialPriceMark`), as the PA side's `priceKnown`.
+ */
+export interface HifiPricedMetrics extends HifiMetrics {
+  priceKnown: boolean;
+}
+
 /** The Hi-fi page's design and room, as the planner holds it. */
 export interface HifiDesignState {
   woofer: HifiWoofer;
@@ -840,13 +995,23 @@ export interface HifiDesignState {
   roundoverIn: number;
   /** tweeter offset from the baffle's center line, inches, + toward the inside of the pair */
   tweeterOffsetIn: number;
+  /** a high-pass to a sub (`HifiConfig.hp`); absent: none */
+  subHighpass?: HifiConfig["hp"];
+  /** active or passive drive (`HifiConfig.drive`); absent: active */
+  drive?: HifiConfig["drive"];
+  /** the box's kick-back, degrees (`HifiConfig.tiltDeg`); absent: 0 */
+  tiltDeg?: HifiConfig["tiltDeg"];
+  /** the least distance each speaker's level at the seat, and the dispersion map, are worked out at, m; absent: `HIFI_SEAT_FLOOR_M` */
+  seatFloorM?: number;
+  /** the port's air speed limit, m/s (`HifiConfig.portMax`); absent: `HIFI_PORT_MAX_MS` */
+  portMaxMs?: HifiConfig["portMax"];
 }
 
 /** What the model reads off a design that can be modeled: the system, and the curves and numbers worked out from it. */
 export interface HifiSpeakerModel {
   speakerSystem: HifiSystem;
   warningChips: HifiChip[];
-  /** both speakers' clean output at the seat, dB */
+  /** both speakers' clean output at the seat, dB: each at its own distance, its drivers' paths counted close in, added in power (lib/hifi/nearField hifiPairLevelDb) */
   maxLevelAtSeatDb: number;
   onAxisResponse: FrequencyPoint[];
   pairResponse: FrequencyPoint[];
@@ -859,8 +1024,26 @@ export interface HifiSpeakerModel {
   edgeRippleDb: number;
 }
 
+/**
+ * How near the seat is for the models that stay far-field close in (lib/hifi): the woofer's piston and the waveguide's
+ * directivity, the dispersion map drawn at the seat distance (its ±90° arc points close to the baffle) and the time
+ * alignment set at the listening distance (sensitive to the ear's height close in). The level, baffle step and boundary
+ * gain take their near-field forms below HIFI_NEAR_FIELD_M (lib/hifi/nearField).
+ */
+export interface HifiNearField {
+  /** the nearer speaker's distance to the seat, at least the seat floor (`HifiDesignState.seatFloorM`), m */
+  distM: number;
+  /** that over the baffle's longer side, and over the woofer's diameter */
+  boxRatio: number;
+  wooferRatio: number;
+  /** under HIFI_NEAR_FIELD_M (constants/hifiEngine), where the near-field forms are in use and the models above are approximate */
+  near: boolean;
+}
+
 /** The Hi-fi design as the models read it, worked out from the planner's state. */
 export interface HifiDesign {
+  /** the box's least width and height, inches: what its parts need, up to the sliders' step (lib/hifi/boxLayout) */
+  boxMin: Dims2;
   /** the walls' exact thickness, inches (lib/panel): what the model, cutlist and weight are worked out at */
   wallThicknessIn: number;
   /** the waveguide picked for compression drivers (the optimizer tries them on it even while a ribbon is loaded) */
@@ -874,11 +1057,15 @@ export interface HifiDesign {
   /** each speaker's seat geometry: the left one at -spacing/2, the right at +spacing/2 */
   leftGeometry: ListenerGeometry;
   rightGeometry: ListenerGeometry;
-  /** the average distance to the seat, at least 1 m */
+  /** the average distance to the seat, at least the seat floor (`HifiDesignState.seatFloorM`, 1 m by default) */
   seatDistanceM: number;
   /** the same distance in feet, as the page shows it */
   seatDistanceFt: number;
+  /** how near the seat is for the far-field models; a later chip reads it */
+  nearField: HifiNearField;
   pairCostUsd: number;
+  /** false when a part in it has no US price: `pairCostUsd` sums the known ones (`UI_TEXT.partialPriceMark`) */
+  pairCostKnown: boolean;
   /** null when the woofer can't be modeled (its parameters aren't published) */
   speakerModel: HifiSpeakerModel | null;
 }
@@ -929,7 +1116,8 @@ export type HifiOptimizedFields = Pick<HifiCardConfig, HifiOptimizedField>;
  * What the Hi-fi page saves: the fields a card applies and the rest of the design and room. The JSON round trip drops
  * undefined fields, so `pr` is absent unless the box has radiators.
  */
-export interface SavedHifiConfig extends Omit<HifiCardConfig, "pr"> {
+export interface SavedHifiConfig
+  extends Omit<HifiCardConfig, "pr">, Pick<PaDesignConfig, "cabFinish" | "baffleColor"> {
   pr?: RadiatorSelection;
   /** the walls' nominal size; absent in configs saved before the sizes (their `wall` names it) */
   panel?: PanelNominal;
@@ -953,7 +1141,8 @@ export interface SavedHifiConfig extends Omit<HifiCardConfig, "pr"> {
 
 /** A card's change from the current design. */
 export interface HifiMetricsDelta {
-  price: number;
+  /** null when either price isn't whole (`HifiPricedMetrics.priceKnown`): no difference can be told */
+  price: number | null;
   lb: number;
   level: number;
   f3: number;
@@ -971,6 +1160,8 @@ export interface HifiOptimizerCard {
   tweeter: string;
   config: HifiCardConfig;
   metrics: HifiMetrics;
+  /** false when a part has no US price: `metrics.price` sums the known ones (`HifiPricedMetrics`) */
+  priceKnown: boolean;
   delta: HifiMetricsDelta | null;
   /** the warnings on this design (the checks it passes with a warning) */
   warnings: HifiChip[];
@@ -994,7 +1185,7 @@ export interface HifiOptimizerResult {
   /** what fails in your design; empty when it passes or when no goal was given */
   curProblems: string[];
   // the fields below are absent when no goal was given
-  cur?: HifiMetrics | null;
+  cur?: HifiPricedMetrics | null;
   curCurve?: [number, number][] | null;
   goalMissing?: string | null;
 }
@@ -1116,16 +1307,19 @@ export interface PaDesignConfig {
   xoLoOrder: CrossoverOrder;
   xoHiOrder: CrossoverOrder;
   mAmpW: number;
-  /** how much less the mid band needs than the sub band, dB */
+  /** the music balance: how far the mid band's level sits below the sub's, dB (a level, not an angle; the saved key keeps its old name) */
   tilt: number;
   hfAmpW: number;
-  /** how much less the horn band needs than the mid band, dB */
+  /** the music balance: how far the horn band's level sits below the mid's, dB (a level, not an angle; the saved key keeps its old name) */
   hfTilt: number;
   layout: PaLayout;
   /** each box's handles and their offsets (lib/pa/hardware); absent in older saves: the defaults (`DEFAULT_PA`) */
   hardware?: PaHardware;
-  cutaway?: boolean;
   baffleColor?: string;
+  /** a paint color (hex) for the horn body over its catalog finish; absent: the finish (older saves have none) */
+  hornColor?: string;
+  /** what holds a driver bolted straight to its horn on the mid box's lid; absent in older saves: the aluminum plate */
+  hornMount?: HornMountId;
   /** a `FinishId`, or a paint color as a hex string (`SwatchPicker` offers both) */
   cabFinish?: string;
   spacerH?: number;
@@ -1341,6 +1535,8 @@ export interface MidSystemBase {
   effL: number;
   vTherm: number;
   useV: number;
+  /** under Qtc 0.5, the net volume, L, that gives Qtc 0.5, when a box the driver fits can be that small (midSmallerBoxNetL); else null */
+  smallerBoxNetL: number | null;
 }
 
 /** A mid with no model (the driver has no T/S): no response and no limit curve. */
@@ -1450,6 +1646,8 @@ export type FillSystem = FillSystemVented | FillSystemSealed;
 
 // ---- Bracing ----
 
+/** A horn mount's id (`HORN_MOUNT_NAMES` holds the name it shows). */
+export type HornMountId = keyof typeof HORN_MOUNT_NAMES;
 /** A bracing style's id (`BRACE_STYLE_NAMES` holds the name it shows). */
 export type BraceStyleId = keyof typeof BRACE_STYLE_NAMES;
 /** A box panel the bracing rule reads, by id (`BRACE_PANEL_NAMES` holds the name it shows). */
@@ -1630,19 +1828,24 @@ export interface CabinetPart {
   note: string;
 }
 /**
- * A part's shape from its maker's CAD model, as the 3D view draws it (data/meshes, generated by build/handle-mesh.mjs):
- * integer vertex positions in `unitMm` steps on the model's own axes (x across the part, y up the panel as mounted,
- * z out of the panel, the panel's face at z = 0), three per vertex, and triangles as three vertex indices each; `min`
- * and `max` are the model's bounds, mm.
+ * A part's shape from its CAD model, as the 3D view draws it (data/meshes, generated by build/step-mesh.mjs):
+ * integer vertex positions in `unitMm` steps on the model's own axes, three per vertex, and triangles as three vertex
+ * indices each; `min` and `max` are the model's bounds, mm.
  */
-export interface HardwareMesh {
+export interface PartMesh {
   unitMm: number;
   min: readonly [number, number, number];
   max: readonly [number, number, number];
-  /** the recess body's outline under the flange (x and y), mm: the hole the 3D view opens in the panel */
-  hole: { min: readonly [number, number]; max: readonly [number, number] };
   positions: readonly number[];
   indices: readonly number[];
+}
+/**
+ * A cabinet part's mesh (build/handle-mesh.mjs), on its axes: x across the part, y up the panel as mounted, z out of
+ * the panel, the panel's face at z = 0.
+ */
+export interface HardwareMesh extends PartMesh {
+  /** the recess body's outline under the flange (x and y), mm: the hole the 3D view opens in the panel */
+  hole: { min: readonly [number, number]; max: readonly [number, number] };
 }
 /** A handle model's id (data/catalog/cabinet-hardware HANDLES). */
 export type HandleId = (typeof HANDLES)[number]["id"];
@@ -1759,6 +1962,8 @@ export interface CutPartsConfig {
   noBraces?: boolean;
   /** each box's handles and plates, for the panels' cutout notes; absent: none */
   hardware?: PaHardware;
+  /** the tower's horn, which sets its cabinet's height and baffle (lib/pa/tower `towerSpec`); the tower needs it */
+  horn?: TowerHorn;
 }
 
 /** The panel a Hi-fi box's passive radiators are cut into. */
@@ -1894,6 +2099,7 @@ export interface SubChipsInput {
   cVent: VentSpec;
   /** plywood thickness */
   PT: number;
+  inset: PaDesignConfig["inset"];
   subLbLoaded: number;
   lim: Pick<SubLimits, "who" | "W">;
   /** frequency of the peak excursion, Hz */
@@ -1909,6 +2115,9 @@ export interface MidChipsInput {
   f3: number;
   peakX: number;
   xoLo: number;
+  smallerBoxNetL: MidSystemBase["smallerBoxNetL"];
+  /** the tower's mid chamber: the sub's footprint sets it */
+  isTower: boolean;
   ts: Pick<ThieleSmall, "Xmax" | "aes">;
   /** amp volts, the volts the driver can use, and the thermal limit in volts */
   V: number;
@@ -1917,7 +2126,8 @@ export interface MidChipsInput {
   mAmpW: number;
   /** the sub at its music limit at the crossover, dB; null where the sub has no model */
   subMusicAtXo: number | null;
-  tilt: number;
+  /** how far the mid band's level sits below the sub's (the music balance), dB */
+  midBelowSubDb: number;
   /** the mid's own limit at the crossover; null when `subMusicAtXo` is */
   midAtXo: Pick<PaMaxPoint, "spl" | "who"> | null;
 }
@@ -1931,7 +2141,8 @@ export interface HornChipsInput {
   hfAmpW: number;
   /** the mid at its limit at the horn crossover, dB; null where the mid has no model */
   midAtXoHi: number | null;
-  hfTilt: number;
+  /** how far the horn band's level sits below the mid's (the music balance), dB */
+  hornBelowMidDb: number;
   /** the horn's level at the crossover, dB; null where the horn has no model */
   hornAtXo: number | null;
   /** the mid's beamwidth at the crossover in degrees, null where it has no model */
@@ -2234,8 +2445,11 @@ export interface PaEvaluation {
   /** false when a driver has no published price */
   priceKnown: boolean;
   hornPrice: number;
+  /** the loaded sub box, lb */
   subLb: number;
+  /** the loaded mid box, lb; in the tower its cabinet over the sub box as carried (towerUpperLoadedLb) */
   midLb: number;
+  /** the heaviest single lift, lb (heaviestLiftLb): in the tower the whole cabinet */
   heaviest: number;
   /** the sub's clean music-limit level, 40 to 90 Hz, dB */
   out: number;
@@ -2280,11 +2494,36 @@ export interface PaMetricsDelta {
   f3: number;
 }
 
+/**
+ * The tower's cabinet over the sub's footprint (lib/pa/tower `towerSpec`), heights in inches up from the cabinet's
+ * bottom: the 3D view, the cutlist, the weights and the cards' front view all read it.
+ */
+export interface TowerSpec {
+  /** a semicircular top the full width of the cabinet (a round horn narrower than the cabinet) */
+  archTop: boolean;
+  /** the horn section's height over the mid chamber */
+  hornSectionH: number;
+  /** what the mid chamber and the horn section add over the sub box */
+  extH: number;
+  /** the cabinet's outer height: the sub box and `extH` */
+  height: number;
+  /** the internal partitions' top faces: the sub/mid floor, the mid/horn floor */
+  partitions: readonly number[];
+  /** the mid driver's center */
+  midCenter: number;
+  /** the horn's center */
+  hornCenter: number;
+}
+
+/** What the tower's cabinet reads of its horn: the section's height, the arched top and the baffle's cutout. */
+export type TowerHorn = Pick<Horn, "id" | "profile" | "rect" | "size">;
+
 /** What a card's front-view drawing needs. */
 export interface PaBoxGeometry {
   sub: Dims3;
   mid: Dims3;
-  tower: boolean;
+  /** the tower's cabinet; null in the other layouts */
+  tower: TowerSpec | null;
   horn: Dims2 | null;
   subSize: SubSize;
   midSize: MidSize;
@@ -2335,6 +2574,8 @@ export interface PaNearMissOption {
 export interface PaNearMiss {
   options: PaNearMissOption[];
   closest: PaOptimizerCard | null;
+  /** the closest design is your design as it is (the banner says so) */
+  closestIsYours: boolean;
   blocking: string[];
 }
 
@@ -2424,6 +2665,8 @@ export interface PaHornEntry {
   price: number;
   horn: number;
   same: boolean;
+  /** the warnings the pair carries at the crossover on its own (no mid in view): `hornOwnWarnings` */
+  w: number;
 }
 /** An evaluated PA design. */
 export interface PaPoolEntry {
@@ -2552,6 +2795,8 @@ export interface HifiScoredBox extends HifiGridBox {
    * levels the amp alone and the driver alone allow there (a lower power moves the first, never the second)
    */
   levels: ({ wLevel: number; ampDb: number; drvDb: number } | null)[];
+  /** the woofer's passband sensitivity at 2.83 V, dB (`HifiSystem.refW`): what a passive network pads the tweeter to */
+  refW: number;
 }
 /** A job for a Hi-fi optimizer worker: one share of the box step, or the rest of the search on every share. */
 export type HifiOptimizerJob =

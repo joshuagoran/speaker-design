@@ -22,11 +22,12 @@ interface Props {
     | "format"
     | "subBox"
     | "PT"
+    | "baffleInsetIn"
     | "port"
     | "subGrossLiters"
     | "subAmpVoltage"
     | "subModeled"
-    | "subWeightLoadedLb"
+    | "subLiftLb"
   >;
   /** shown first inside the fold (the system summary in one column, so it folds with Sub on phones) */
   summary?: React.ReactNode;
@@ -44,11 +45,12 @@ export function SubSection({ planner, summary }: Props) {
     format,
     subBox,
     PT,
+    baffleInsetIn,
     port,
     subGrossLiters,
     subAmpVoltage,
     subModeled,
-    subWeightLoadedLb,
+    subLiftLb,
   } = planner;
   return (
     <>
@@ -123,7 +125,8 @@ export function SubSection({ planner, summary }: Props) {
                 portStyle,
                 cVent: subVentSpec,
                 PT,
-                subLbLoaded: subWeightLoadedLb,
+                inset: baffleInsetIn,
+                subLbLoaded: subLiftLb,
                 lim: subModeled.lim,
                 peakXF: subModeled.mdl.peakXF,
                 aes: subDriver.ts.aes,

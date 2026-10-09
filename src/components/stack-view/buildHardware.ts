@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { ROUNDOVER_IN } from "./stackHeights";
+import { MM_IN, partMeshGeometry } from "./geometry";
 import type { SceneContext } from "./sceneContext";
 import type { BoxHardwarePlan, Dims3, PlacedHardware } from "../../types";
 import { mountedCutout, mountedFlange } from "../../lib/pa/hardware";
@@ -12,8 +13,6 @@ export const HARDWARE_MESH_NAME = "hardware";
 const FLANGE_T_IN = 0.08;
 /** How far the opening, grip, jacks and posts stand off the flange, in. */
 const PROUD_IN = 0.02;
-/** Millimeters to the scene's inches. */
-const MM_IN = 1 / 25.4;
 /** How far the hole's mask stands off the face, in (proud of it, inside the flange's 5 mm). */
 const MASK_PROUD_IN = 0.02;
 /** The model part draws first, then its hole's mask, then the rest of the scene (three sorts opaque meshes by these). */
@@ -72,28 +71,6 @@ function faceFrame(p: PlacedHardware, face: ReturnType<typeof faceOf>, at: THREE
   return new THREE.Matrix4().makeBasis(across, up, face.n).setPosition(at);
 }
 
-// each mesh's geometry built once, in inches, its flange centered on the origin and the panel's face at z = 0
-const MESH_GEOMETRY = new Map<HardwareMesh, THREE.BufferGeometry>();
-function meshGeometry(m: HardwareMesh) {
-  const hit = MESH_GEOMETRY.get(m);
-  if (hit) return hit;
-  const k = m.unitMm * MM_IN;
-  const cx = (m.min[0] + m.max[0]) / 2,
-    cy = (m.min[1] + m.max[1]) / 2;
-  const pos = new Float32Array(m.indices.length * 3);
-  m.indices.forEach((v, i) => {
-    pos[3 * i] = m.positions[3 * v] * k - cx * MM_IN;
-    pos[3 * i + 1] = m.positions[3 * v + 1] * k - cy * MM_IN;
-    pos[3 * i + 2] = m.positions[3 * v + 2] * k;
-  });
-  // unshared vertices: flat facets, so the flange's edges and the dish's corners stay crisp
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  g.computeVertexNormals();
-  MESH_GEOMETRY.set(m, g);
-  return g;
-}
-
 /**
  * A part drawn from its CAD model (data/meshes) on its face, and the hole it sits in: the cabinet's panels are solid,
  * so after the part a depth-only mask the size of the recess's outline (sceneContext's holeMask) goes on the face, and
@@ -108,7 +85,7 @@ function modelPart(
   mat: THREE.Material,
   mask: THREE.Material,
 ) {
-  const part = new THREE.Mesh(meshGeometry(m), mat);
+  const part = new THREE.Mesh(partMeshGeometry(m, { shading: "flat", place: "bounds" }), mat);
   part.applyMatrix4(faceFrame(p, face, face.at));
   part.name = HARDWARE_MESH_NAME;
   part.renderOrder = MODEL_RENDER_ORDER;

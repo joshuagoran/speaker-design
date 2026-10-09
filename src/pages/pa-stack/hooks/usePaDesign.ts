@@ -15,15 +15,29 @@ import {
 } from "../../../lib/data";
 import { byId } from "../../../lib/tables";
 import { DEFAULT_MID_BY_SIZE, DEFAULT_PA } from "../../../lib/defaults";
-import { HIGHPASS_ALIGNMENTS } from "../../../lib/pa/calc";
+import { HIGHPASS_ALIGNMENTS, midBoxMin } from "../../../lib/pa/calc";
+import { subBoxMin } from "../../../lib/pa/chips";
+import { boxSliderMins, fitBox } from "../../../lib/boxFit";
+import { PA_SLIDERS } from "../../../constants/paSliders";
 import { savedCutlist } from "../../../lib/pa/cutlist";
 import { savedCrossoverOrder } from "../../../constants/crossovers";
 import { savedPortStyle } from "../../../constants/portStyles";
 import { savedBackJoint, savedStackBraceStyle } from "../../../constants/bracing";
 import { savedHardware } from "../../../lib/pa/hardware";
+import { savedHornColor } from "../../../lib/pa/hornColor";
+import { savedHornMount } from "../../../lib/pa/hornMount";
+import { musicBalanceToSave, savedMusicBalance } from "../../../lib/pa/musicBalance";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../../constants/panelSizes";
 import { isPanelNominal, panelFor, panelIn, savedPanelExactIn } from "../../../lib/panel";
-import type { Dims3, DispersionPlane, MidDriver, PaDesignConfig, SubDriver } from "../../../types";
+import type {
+  Dims2,
+  Dims3,
+  DispersionPlane,
+  MidDriver,
+  PaDesignConfig,
+  SubDriver,
+  VentSpec,
+} from "../../../types";
 import { derivePaDesign } from "./paDesign";
 import type { PaDerivedDesign } from "./paDesign";
 import type { CabinetStyle } from "./useCabinetStyle";
@@ -33,6 +47,21 @@ import type { HornDesign } from "./useHornDesign";
 import type { MidDesign } from "./useMidDesign";
 import type { SubwooferDesign } from "./useSubwooferDesign";
 import { useEffect, useMemo, useRef } from "react";
+
+/** A saved vent with every field a number: one an older save lacks (or holds as anything else) takes the default's. */
+export function savedVentSpec(v: Partial<VentSpec>): VentSpec {
+  const d = DEFAULT_PA.cVent;
+  const num = (x: number | undefined, fallback: number) =>
+    typeof x === "number" && Number.isFinite(x) ? x : fallback;
+  return {
+    ...v,
+    slotH: num(v.slotH, d.slotH),
+    nt: num(v.nt, d.nt),
+    dia: num(v.dia, d.dia),
+    throat: num(v.throat, d.throat),
+    len: num(v.len, d.len),
+  };
+}
 
 /** What `usePaDesign` returns: every design state and setter, plus the models and sizes derived from them. */
 export interface PaDesign
@@ -48,6 +77,9 @@ export interface PaDesign
   subDriverChoices: SubDriver[];
   midDriverChoices: MidDriver[];
   subBox: Dims3;
+  /** each box's least width and height, in: what its parts need, up to its slider's step (lib/boxFit) */
+  subBoxMin: Dims2;
+  midBoxMin: Dims2;
   subWithBox: SubDriver & { box: Dims3 };
   /** set by `restore` so the mid size effect leaves a restored config's driver and box alone */
   skipSizeReset: React.RefObject<boolean>;
@@ -94,8 +126,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setMidBoxDims,
     midAmpWatts,
     setMidAmpWatts,
-    midBandTiltDb,
-    setMidBandTiltDb,
+    midBelowSubDb,
+    setMidBelowSubDb,
     setMidBoxDim,
     midSize,
     setMidSize,
@@ -107,8 +139,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setCompressionDriver,
     hornAmpWatts,
     setHornAmpWatts,
-    hornBandTiltDb,
-    setHornBandTiltDb,
+    hornBelowMidDb,
+    setHornBelowMidDb,
   } = useHornDesign();
   const {
     subMidCrossoverHz,
@@ -122,8 +154,6 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
   } = useCrossovers();
   const {
     plinthHeightIn,
-    cutaway,
-    setCutaway,
     cabinet,
     layout,
     setLayout,
@@ -139,6 +169,10 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setBaffleInsetIn,
     baffleColor,
     setBaffleColor,
+    hornColor,
+    setHornColor,
+    hornMount,
+    setHornMount,
     cabinetFinish,
     setCabinetFinish,
     spacerHeightIn,
@@ -170,8 +204,6 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
   } = useCutlistOptions();
   const subDriverChoices = subDriversOfSize(format.sub);
   const midDriverChoices = midDriversOfSize(midSize);
-  const subBox = subBoxDims;
-  const subWithBox = { ...subDriver, box: subBox };
   /** Switching 12/15 picks that size's default driver and box; restoring a config sets them itself. */
   const skipSizeReset = useRef(true);
   useEffect(() => {
@@ -198,20 +230,35 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     () => ({ ...subVentState, div: ductDividerIn }),
     [subVentState, ductDividerIn],
   );
+  // each box's width and height start at what its parts need (each up to its slider's step): a box too small for its
+  // driver, vents or walls, or saved that way, is shown, modeled, drawn and saved at that size. The size the user set
+  // stays as set, so a bigger part or vent raises the box only while it is chosen; a slider sets a new size.
+  const subMins = boxSliderMins(subBoxMin(portStyle, subVentSpec, PT, subDriver.size), {
+    w: PA_SLIDERS.subW,
+    h: PA_SLIDERS.subH,
+  });
+  const midMins = boxSliderMins(midBoxMin(midDriver.size), {
+    w: PA_SLIDERS.midW,
+    h: PA_SLIDERS.midH,
+  });
+  const subBox = fitBox(subBoxDims, subMins);
+  // (the tower has no mid box of its own: its chamber is the sub's footprint, so the mid box is kept as set)
+  const midBox = layout === "tower" ? midBoxDims : fitBox(midBoxDims, midMins);
+  const subWithBox = { ...subDriver, box: subBox };
   // derived once per change to the inputs below, not on every render of every tab (App holds this planner)
   const derived = useMemo(
     () =>
       derivePaDesign({
         subDriver,
         portStyle,
-        subBoxDims,
+        subBoxDims: subBox,
         subVentSpec,
         subHighpassHz,
         subHighpassType,
         subAmpWatts,
         maxPortAirSpeedMs,
         midDriver,
-        midBoxDims,
+        midBoxDims: midBox,
         midAmpWatts,
         hornOption,
         compressionDriver,
@@ -233,14 +280,14 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     [
       subDriver,
       portStyle,
-      subBoxDims,
+      subBox,
       subVentSpec,
       subHighpassHz,
       subHighpassType,
       subAmpWatts,
       maxPortAirSpeedMs,
       midDriver,
-      midBoxDims,
+      midBox,
       midAmpWatts,
       hornOption,
       compressionDriver,
@@ -272,13 +319,13 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     horn: hornOption.id,
     cabinet: cabinet.id,
     portStyle,
-    cDim: subBoxDims,
+    cDim: subBox,
     cVent: subVentSpec,
     hpf: subHighpassHz,
     hpType: subHighpassType,
     ampW: subAmpWatts,
     portMax: maxPortAirSpeedMs,
-    mDim: midBoxDims,
+    mDim: midBox,
     wall: wallThicknessIn,
     panel: wallPanel,
     divider: ductDividerPanel,
@@ -290,13 +337,13 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     xoLoOrder: subMidCrossoverOrder,
     xoHiOrder: midHornCrossoverOrder,
     mAmpW: midAmpWatts,
-    tilt: midBandTiltDb,
+    ...musicBalanceToSave(midBelowSubDb, hornBelowMidDb),
     hfAmpW: hornAmpWatts,
-    hfTilt: hornBandTiltDb,
     layout,
     hardware,
-    cutaway,
     baffleColor,
+    ...(hornColor ? { hornColor } : {}),
+    hornMount,
     cabFinish: cabinetFinish,
     spacerH: spacerHeightIn,
     joint: cornerJoint,
@@ -330,7 +377,7 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     if (c.cd) setCompressionDriver(byId(CD_OPTIONS, c.cd) ?? compressionDriver);
     if (c.horn) setHornOption(byId(HORN_OPTIONS, c.horn) ?? hornOption);
     if (c.cDim) setSubBoxDims(c.cDim);
-    if (c.cVent) setSubVentSpec(c.cVent);
+    if (c.cVent) setSubVentSpec(savedVentSpec(c.cVent));
     setDuctDividerPanel(isPanelNominal(c.divider) ? c.divider : DUCT_DIVIDER_DEFAULT);
     if (typeof c.hpf === "number") setSubHighpassHz(c.hpf);
     if (c.hpType && HIGHPASS_ALIGNMENTS[c.hpType]) setSubHighpassType(c.hpType);
@@ -343,14 +390,19 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setSubMidCrossoverOrder(savedCrossoverOrder(c.xoLoOrder));
     setMidHornCrossoverOrder(savedCrossoverOrder(c.xoHiOrder));
     if (typeof c.mAmpW === "number") setMidAmpWatts(c.mAmpW);
-    if (typeof c.tilt === "number") setMidBandTiltDb(c.tilt);
+    const balance = savedMusicBalance(c);
+    if (balance.midBelowSubDb !== null) setMidBelowSubDb(balance.midBelowSubDb);
     if (typeof c.hfAmpW === "number") setHornAmpWatts(c.hfAmpW);
-    if (typeof c.hfTilt === "number") setHornBandTiltDb(c.hfTilt);
-    if (typeof c.cutaway === "boolean") setCutaway(c.cutaway);
+    if (balance.hornBelowMidDb !== null) setHornBelowMidDb(balance.hornBelowMidDb);
+    // a save from before the cutaway moved onto the 3D view holds `cutaway`: a view, not part of the design, so ignored
     if (c.layout) setLayout(c.layout);
     // each box's handles; a save from before them: the defaults
     setHardware(savedHardware(c.hardware));
     if (c.baffleColor) setBaffleColor(c.baffleColor);
+    // a save from before the horn color: the horn's catalog finish
+    setHornColor(savedHornColor(c));
+    // a save from before the horn mount, or holding the retired L-bracket: the aluminum plate
+    setHornMount(savedHornMount(c.hornMount));
     setCabinetFinish(c.cabFinish || DEFAULT_PA.cabFinish);
     setSpacerHeightIn(typeof c.spacerH === "number" ? c.spacerH : DEFAULT_PA.spacerH);
     if (c.joint) setCornerJoint(c.joint);
@@ -368,8 +420,9 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setSubDriver,
     portStyle,
     setPortStyle,
-    subBoxDims,
+    subBoxDims: subBox,
     setSubBoxDims,
+    subBoxMin: subMins,
     subVentSpec,
     setSubVentSpec,
     ductDividerPanel,
@@ -388,12 +441,13 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setMidDriver,
     midBoxPreset,
     setMidBoxPreset,
-    midBoxDims,
+    midBoxDims: midBox,
     setMidBoxDims,
+    midBoxMin: midMins,
     midAmpWatts,
     setMidAmpWatts,
-    midBandTiltDb,
-    setMidBandTiltDb,
+    midBelowSubDb,
+    setMidBelowSubDb,
     setMidBoxDim,
     midSize,
     setMidSize,
@@ -403,8 +457,8 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setCompressionDriver,
     hornAmpWatts,
     setHornAmpWatts,
-    hornBandTiltDb,
-    setHornBandTiltDb,
+    hornBelowMidDb,
+    setHornBelowMidDb,
     subMidCrossoverHz,
     setSubMidCrossoverHz,
     midHornCrossoverHz,
@@ -414,8 +468,6 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     midHornCrossoverOrder,
     setMidHornCrossoverOrder,
     plinthHeightIn,
-    cutaway,
-    setCutaway,
     cabinet,
     layout,
     setLayout,
@@ -432,6 +484,10 @@ export function usePaDesign({ dispersionPlane }: { dispersionPlane: DispersionPl
     setBaffleInsetIn,
     baffleColor,
     setBaffleColor,
+    hornColor,
+    setHornColor,
+    hornMount,
+    setHornMount,
     cabinetFinish,
     setCabinetFinish,
     spacerHeightIn,

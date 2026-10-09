@@ -13,6 +13,7 @@ import type {
   BoxRegion,
   BackJointId,
   BraceStyleId,
+  CompressionDriver,
   CompressionHf,
   CornerJoint,
   CrossoverOrder,
@@ -23,12 +24,14 @@ import type {
   BoxHandles,
   BoxHardwarePlan,
   CogMass,
+  Dims2,
   Dims3,
   FillDriver,
   FillSystem,
   FillSystemConfig,
   FrequencyPoint,
   HighpassType,
+  Horn,
   HornHf,
   HornResponse,
   MidDriver,
@@ -49,6 +52,7 @@ import type {
   SubSystem,
   SubSystemConfig,
   ThieleSmall,
+  TowerHorn,
   VentedBoxModel,
   VentedPoint,
   VentGeometry,
@@ -62,6 +66,8 @@ import {
 import { defaultPanelIn, panelLbPerSqFt } from "../panel";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { crossoverSlopeName } from "../../constants/crossovers";
+import { PA_SLIDERS } from "../../constants/paSliders";
+import { boxSliderMins, upToStep } from "../boxFit";
 import { SHARP_BEND_CORRECTION, SLOT_INNER_END } from "../../data/acoustics/slot-inner-end";
 import {
   modelTubeElbows,
@@ -104,6 +110,7 @@ import {
 import { hardwareKeepOut, hardwareLiters, mountedCutout, planBoxHardware } from "./hardware";
 import { INPUT_JACK } from "../../data/catalog/cabinet-hardware";
 import { HARDWARE_KIND_NAMES, hardwarePlaceWords } from "../../constants/hardware";
+import { towerHornCutout, towerSpec } from "./tower";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
 const ROUND_PORT: Record<PortStyle, boolean> = {
@@ -510,6 +517,17 @@ export function closedBox(
 // Internal liters with walls of thickness t and a 3/4″ baffle recessed `inset` into the frame.
 export const boxInternalLiters = (w: number, h: number, d: number, t: number, inset = 0.75) =>
   ((w - 2 * t) * (h - 2 * t) * (d - inset - 0.75 - t) * 16.387) / 1000;
+/**
+ * A mid box's air before the driver, braces and hardware, L. The tower's chamber (towerMidDims) is bounded by the
+ * partitions (towerSpec), whose top faces stand its height apart: the sub/mid one lies under its floor line and only
+ * the mid/horn one comes out of it, so its clear height is the height less one wall, not two.
+ */
+export const midGrossLiters = (
+  dims: Dims3,
+  t: number,
+  inset: number,
+  layout: PaLayout | undefined,
+) => boxInternalLiters(dims.w, layout === "tower" ? dims.h + t : dims.h, dims.d, t, inset);
 // Plywood weight, lb/ft², at the wall's exact thickness (lib/panel).
 export const plywoodLbPerSqFt = (t: number) => panelLbPerSqFt(t, PLYWOOD_MATERIAL);
 
@@ -540,6 +558,12 @@ const paInside = (box: Dims3, t: number, inset: number, band = 0) => ({
   inD: box.d - inset - BAFFLE_PLY_IN - t,
   band,
 });
+/**
+ * The run (in) of a slot or side duct's shelf in the box's air, `len` from the frame front: behind the baffle (`inset`
+ * back, BAFFLE_PLY_IN thick), where the box's air starts, so the run and the gap behind the mouth add up to the box's
+ * inside depth (paInside), as SLOT_INNER_END's box takes them.
+ */
+const slotRunIn = (v: Pick<VentSpec, "len">, inset: number) => v.len - inset - BAFFLE_PLY_IN;
 /** A PA box's inside spans on the bracing's axes. */
 export const paInner = (box: Dims3, t: number, inset: number): Record<BoxAxis, number> => {
   const { iw, ih, inD } = paInside(box, t, inset);
@@ -577,7 +601,7 @@ export const ductFlagsOf = (
     foldedRearWallIn(box, v, t) >= DUCT_SUPPORT_MIN_SHARE * paInside(box, t, inset).ih,
   elbows:
     isRoundPort(style) &&
-    modelTubeElbows(box, style, { nt: v.nt, dia: v.dia, len: v.len }, t, drv) > 0,
+    modelTubeElbows(box, style, { nt: v.nt, dia: v.dia, len: v.len }, t, inset, drv) > 0,
 });
 /** Whether the sub's duct runs far enough back (DUCT_SUPPORT_MIN_SHARE of the depth) to hold the panels it runs along. */
 const ductHolds = (
@@ -589,7 +613,7 @@ const ductHolds = (
 ) => {
   const { inD } = paInside(box, t, inset);
   const len = style === "slots" && slotFolds(box, v, t) ? foldedShelfIn(box, v.slotH, t) : v.len;
-  return len - inset - BAFFLE_PLY_IN >= DUCT_SUPPORT_MIN_SHARE * inD;
+  return slotRunIn({ len }, inset) >= DUCT_SUPPORT_MIN_SHARE * inD;
 };
 /**
  * The lines the sub's vent parts run along on its panels, however short the vent (subBoxBracing takes them as
@@ -1006,6 +1030,17 @@ export const formatInches = (x: number) => {
 };
 export { formatThickness } from "../panel";
 
+/** The rabbet on a shell panel's rear edge that the back sits in. */
+const rearRabbetNote = (t: number) =>
+  `rabbet ${formatInches(t)} × ${formatInches(t / 2)} on rear edge for the back`;
+/** A side's joint at the `edges` it meets the top and bottom on, and its rear rabbet. */
+const sideJointNote = (joint: CornerJoint, t: number, edges: string) =>
+  joint === "rabbet"
+    ? `rabbet ${formatInches(t)} × ${formatInches(t / 2)} ${edges}; ${rearRabbetNote(t)}`
+    : joint === "miter"
+      ? `45° on ${edges}; ${rearRabbetNote(t)}`
+      : rearRabbetNote(t);
+
 export function boxParts(
   label: CutBoxId,
   W: number,
@@ -1025,13 +1060,8 @@ export function boxParts(
   const BT = 0.75,
     P: CutPart[] = [];
   const topW = joint === "butt" ? W - 2 * t : joint === "rabbet" ? W - t : W;
-  const rearNote = `rabbet ${formatInches(t)} × ${formatInches(t / 2)} on rear edge for the back`;
-  const sideNote =
-    joint === "rabbet"
-      ? `rabbet ${formatInches(t)} × ${formatInches(t / 2)} top and bottom edges; ${rearNote}`
-      : joint === "miter"
-        ? `45° on top and bottom edges; ${rearNote}`
-        : rearNote;
+  const rearNote = rearRabbetNote(t);
+  const sideNote = sideJointNote(joint, t, "top and bottom edges");
   const topNote = joint === "miter" ? `45° on both ends; ${rearNote}` : rearNote;
   const hw = extra.hardware ?? {};
   const withNote = (note: string, more: string | undefined) => (more ? `${note}; ${more}` : note);
@@ -1100,7 +1130,7 @@ const AXIS_FROM: Record<BoxAxis, string> = {
   y: "up from the bottom",
   z: "back from the baffle",
 };
-const atList = (at: number[]) => at.map((x) => `${formatInches(x)}″`).join(", ");
+const atList = (at: readonly number[]) => at.map((x) => `${formatInches(x)}″`).join(", ");
 /** A box's window braces and ribs as cutlist rows: each axis' window braces, then each panel's ribs. */
 export function braceParts(
   box: CutBoxId,
@@ -1338,6 +1368,126 @@ export function midHardwarePlan(
   return midHardwarePlacement(box, t, inset, mid, layout, handles, bracing);
 }
 
+/**
+ * The tower's cabinet as cutlist rows, from towerSpec as the 3D view builds it: one shell and one baffle over the sub's
+ * footprint at the cabinet's full height (the sub box, the mid chamber and the horn section), the baffle's mid and horn
+ * cutouts placed up from its bottom edge, the partitions under the mid chamber and the horn section, and the sub
+ * section's braces, laid out in the sub box and so measured from the cabinet's bottom as in a box of its own. With the
+ * arched top the sides stop at the arch's springline, a bent strip makes the top, and the back and baffle take its
+ * curve, which a straight guillotine cut can't make.
+ */
+export function towerCutParts(
+  subBox: Dims3,
+  t: number,
+  inset: number,
+  joint: CornerJoint,
+  horn: TowerHorn,
+  mid: Pick<MidDriver, "size">,
+  extra: {
+    band: number;
+    /** the sub driver's (and its tubes') cutout note */
+    cutNote: string;
+    bracing: BoxBracing | null;
+    hardware?: HardwareCutNotes;
+  },
+): CutPart[] {
+  const spec = towerSpec(subBox, t, horn);
+  const { w: W, d: D } = subBox,
+    H = spec.height,
+    band = extra.band;
+  // the baffle's bottom edge sits a wall (and the slot's band) up from the cabinet's bottom
+  const onBaffle = (y: number) => `${formatInches(y - t - band)}″ up from its bottom edge`;
+  const hc = towerHornCutout(subBox, t, horn);
+  const hornHole =
+    hc.shape === "circle"
+      ? `${formatInches(hc.w)}″ round`
+      : hc.shape === "outline"
+        ? `${formatInches(hc.w)}″ × ${formatInches(hc.h)}″ (trace the mouth's outline)`
+        : `${formatInches(hc.w)}″ × ${formatInches(hc.h)}″, ${formatInches(hc.r)}″ corners`;
+  const cutNote = [
+    `sub ${extra.cutNote}`,
+    `mid ${cutoutNote(DRIVER_CUTOUT_IN[mid.size])}, centered ${onBaffle(spec.midCenter)}`,
+    `horn cutout ${hornHole}, centered ${onBaffle(spec.hornCenter)}`,
+  ].join("; ");
+  const shell = boxParts("sub", W, H, D, t, inset, joint, {
+    band,
+    cutNote,
+    hardware: extra.hardware,
+  }).P;
+  const iw = W - 2 * t,
+    inD = D - inset - BAFFLE_PLY_IN - t;
+  const partitions: CutPart = {
+    box: "sub",
+    part: "partition",
+    qty: spec.partitions.length,
+    a: iw,
+    b: inD,
+    t,
+    note: `level, top faces ${atList(spec.partitions)} up from the bottom (the sub/mid floor, the mid/horn floor); notch the front corners 3/4″ square round the baffle cleats; glue and screw to the sides and back, the baffle to their front edges; seal each airtight`,
+  };
+  const braces = extra.bracing
+    ? braceParts("sub", extra.bracing, { x: iw, y: subBox.h - 2 * t, z: inD }, t)
+    : [];
+  if (!spec.archTop) return [...shell, partitions, ...braces];
+  // the arch: the outer radius is half the cabinet's width, its springline that far below the top
+  const R = W / 2,
+    spring = H - R;
+  const curve = (r: number) =>
+    `arched top, ${formatInches(r)}″ radius: cut the blank square, then the arch with a jigsaw or a router on a circle jig (not a straight guillotine cut)`;
+  const arched = shell.flatMap((p): CutPart[] => {
+    if (p.part === "side")
+      return [
+        {
+          ...p,
+          b: spring,
+          note: [
+            sideJointNote(joint, t, "the bottom edge"),
+            "top edge square, under the arched top's ends",
+            extra.hardware?.side,
+          ]
+            .filter(Boolean)
+            .join("; "),
+        },
+      ];
+    if (p.part === "topBottom") return [{ ...p, part: "bottom", qty: 1 }];
+    if (p.part === "back" || p.part === "baffle")
+      return [{ ...p, note: `${p.note}; ${curve(p.a / 2)}` }];
+    // the cleats: one across the bottom, and the uprights to the springline; glue blocks round the arch
+    if (p.part === "baffleCleat") return [];
+    return [p];
+  });
+  const cleats: CutPart[] = [
+    {
+      box: "sub",
+      part: "baffleCleat",
+      qty: 1,
+      a: 0.75,
+      b: iw,
+      t: BAFFLE_PLY_IN,
+      note: "glue and screw behind the baffle, across the bottom; glue blocks round the arch",
+    },
+    {
+      box: "sub",
+      part: "baffleCleat",
+      qty: 2,
+      a: 0.75,
+      b: spring - t - band - 0.75,
+      t: BAFFLE_PLY_IN,
+      note: "up to the arch's springline",
+    },
+  ];
+  const bent: CutPart = {
+    box: "sub",
+    part: "archTop",
+    qty: 1,
+    a: D,
+    b: Math.PI * (R - t / 2),
+    t,
+    note: `bent over the sides to a ${formatInches(R)}″ outer radius, its length on its centerline: kerf the inside face across it every 1/2″, or laminate bending ply to ${formatInches(t)}″; a curve, so only its blank comes off a straight guillotine cut; ${rearRabbetNote(t)}'s arch`,
+  };
+  return [...arched, ...cleats, bent, partitions, ...braces];
+}
+
 export function cutParts({
   sub,
   mid,
@@ -1354,13 +1504,14 @@ export function cutParts({
   subOnly,
   noBraces,
   hardware,
+  horn,
 }: CutPartsConfig): { parts: CutPart[]; vent: string[] } {
   const t = wall,
     all: CutPart[] = [];
   const vent: string[] = [];
   // round tubes: the stock pipe, its holes in the baffle and the elbows each takes (lib/pa/tubes)
-  const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, sub) : null;
-  const s = boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, {
+  const kit = isRoundPort(portStyle) ? subTubeKit(subBox, portStyle, cVent, t, inset, sub) : null;
+  const subExtra = {
     bracing: noBraces
       ? null
       : subBoxBracing(
@@ -1397,8 +1548,14 @@ export function cutParts({
       (kit
         ? `; ${cVent.nt} × ${formatInches(kit.pipe?.odIn ?? cVent.dia)}″ tube holes, rounded over ${formatInches(TUBE_FLARE_RADIUS_IN)}″`
         : ""),
-  });
-  all.push(...s.P);
+  };
+  // the tower's whole cabinet, unless only the sub box's parts are asked for (its volume reads no more)
+  if (layout === "tower" && !subOnly) {
+    if (!horn) throw new Error("the tower's cutlist needs its horn (towerSpec)");
+    all.push(...towerCutParts(subBox, t, inset, joint, horn, mid, subExtra));
+  } else all.push(...boxParts("sub", subBox.w, subBox.h, subBox.d, t, inset, joint, subExtra).P);
+  const iw = subBox.w - 2 * t,
+    ih = subBox.h - 2 * t;
   if (portStyle === "slots") {
     const folded = slotFolds(subBox, cVent, t);
     const len = folded ? foldedShelfIn(subBox, cVent.slotH, t) : cVent.len;
@@ -1406,7 +1563,7 @@ export function cutParts({
       box: "sub",
       part: "ductShelf",
       qty: 1,
-      a: s.iw,
+      a: iw,
       b: len,
       t,
       note: "roof of the bottom slot",
@@ -1427,7 +1584,7 @@ export function cutParts({
         box: "sub",
         part: "ductRearWall",
         qty: 1,
-        a: s.iw,
+        a: iw,
         b: foldedRearWallIn(subBox, cVent, t),
         t,
         note: "rear channel, rises up the back",
@@ -1438,7 +1595,7 @@ export function cutParts({
       box: "sub",
       part: "sideDuctWall",
       qty: n,
-      a: s.ih,
+      a: ih,
       b: cVent.len,
       t,
       note: `${formatInches(cVent.throat)}″ throat; 20° chamfer both ends`,
@@ -1546,12 +1703,9 @@ export function slotMouthCorrectionMost(h: number, span: number, t: number) {
  */
 export const ductDividerIn = (v: Pick<VentSpec, "div">) =>
   v.div ?? defaultPanelIn(DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL);
-// A sub's baffle, in: the box's air starts behind it, so a duct from the frame front runs this much less beside it (the
-// reveal's fraction of an inch more is left out: it moves the correction well under 1 %).
-const SUB_BAFFLE_IN = 0.75;
 /**
- * A bottom slot's inner end correction (in). Straight: its mouth on the floor, the back wall behind it, the box's inside
- * height across it. Folded up the back wall: the floor leg turns a sharp 90° into the rear channel (SHARP_BEND_CORRECTION
+ * A bottom slot's inner end correction (in), `inset` the baffle front behind the frame front. Straight: its mouth on the
+ * floor, the back wall behind it, the box's inside height across it. Folded up the back wall: the floor leg turns a sharp 90° into the rear channel (SHARP_BEND_CORRECTION
  * against the centerline the length is measured on), and the channel's mouth, under the lid, is the same kind of mouth
  * turned on its side: along the back panel, the rear wall its shelf (rising from the floor leg's roof), the lid the
  * facing wall, the box's inside depth across it. `most`: the most it can be in this box, straight or folded, whatever
@@ -1561,6 +1715,7 @@ export function slotInnerEndCorrection(
   box: Dims3,
   v: Pick<VentSpec, "slotH" | "len">,
   t: number,
+  inset: number,
   folded: boolean,
   most = false,
 ) {
@@ -1568,13 +1723,14 @@ export function slotInnerEndCorrection(
   if (most)
     return Math.max(
       slotMouthCorrectionMost(h, box.h - 2 * t, t),
-      SHARP_BEND_CORRECTION * h + slotMouthCorrectionMost(h, box.d - SUB_BAFFLE_IN - t, t),
+      SHARP_BEND_CORRECTION * h + slotMouthCorrectionMost(h, paInside(box, t, inset).inD, t),
     );
   // the slot runs from the frame front under the baffle (as maxStraightSlotIn, the 3D view and the cutlist take it), so
-  // its mouth is `d - t - len` from the back panel: a slot height at the longest straight run
+  // its mouth is `d - t - len` from the back panel: a slot height at the longest straight run; its shelf runs into the
+  // box's air from behind the baffle (slotRunIn)
   if (!folded)
-    return slotMouthCorrection(h, box.h - 2 * t, box.d - t - v.len, t, v.len - SUB_BAFFLE_IN);
-  const depth = box.d - SUB_BAFFLE_IN - t; // across the rear channel's mouth, the box's depth behind the baffle
+    return slotMouthCorrection(h, box.h - 2 * t, box.d - t - v.len, t, slotRunIn(v, inset));
+  const depth = paInside(box, t, inset).inD; // across the rear channel's mouth, the box's depth behind the baffle
   return (
     SHARP_BEND_CORRECTION * h +
     slotMouthCorrection(h, depth, foldedLidGapIn(box, v, t), t, foldedRearWallIn(box, v, t) - t)
@@ -1584,14 +1740,15 @@ export function slotInnerEndCorrection(
  * A side duct's end corrections (in), each duct's (`n` of them, one against each side wall for a pair). Outside, the
  * ground mirrors the bottom of its mouth (throat × open height). Inside, the same mouth as a bottom slot's, turned on its
  * side: the side wall its floor, the duct's inner wall (`t`, from the frame front as the cutlist and the 3D view take it)
- * its shelf, the back wall `d - t - len` behind the mouth, and across it the box's inside width (half of it for a pair:
- * the center line is a plane of symmetry). `most`: the most it can be in this box, whatever the length
+ * its shelf (its run in the box's air: slotRunIn), the back wall `d - t - len` behind the mouth, and across it the box's
+ * inside width (half of it for a pair: the center line is a plane of symmetry). `most`: the most it can be in this box, whatever the length
  * (slotMouthCorrectionMost).
  */
 export function sideDuctEndCorrection(
   box: Dims3,
   v: Pick<VentSpec, "throat" | "len" | "div">,
   t: number,
+  inset: number,
   n: 1 | 2,
   most = false,
 ) {
@@ -1602,17 +1759,19 @@ export function sideDuctEndCorrection(
     rectangleEndCorrection(th, 2 * open) +
     (most
       ? slotMouthCorrectionMost(th, span, t)
-      : slotMouthCorrection(th, span, box.d - t - v.len, t, v.len - SUB_BAFFLE_IN))
+      : slotMouthCorrection(th, span, box.d - t - v.len, t, slotRunIn(v, inset)))
   );
 }
 
-// Vent geometry for the sub. t is the wall (and fin) ply. n is the number of separate openings,
-// which sets the end correction in boxModel.
+// Vent geometry for the sub. t is the wall (and fin) ply, inset the baffle front behind the frame front (the tubes run
+// from it; the slots and side ducts, from the frame front, read it for their run behind it). n is the number of separate
+// openings, which sets the end correction in boxModel.
 export function ventGeometry(
   portStyle: PortStyle,
   box: Dims3,
   cVent: VentSpec,
   t: number,
+  inset: number,
   drv: TubeDriver,
 ): VentGeometry {
   const iw = box.w - 2 * t,
@@ -1627,7 +1786,7 @@ export function ventGeometry(
       n,
       area,
       len: cVent.len,
-      ec: sideDuctEndCorrection(box, cVent, t, n),
+      ec: sideDuctEndCorrection(box, cVent, t, inset, n),
       dh: (4 * (th * seg)) / (2 * (th + seg)),
       desc: `${n === 1 ? "one side duct" : "two side ducts"}, ${th.toFixed(2)}\u2033 throat \u00d7 ${ih.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long`,
     };
@@ -1644,7 +1803,9 @@ export function ventGeometry(
       n: 1,
       area,
       len: cVent.len,
-      ec: rectangleEndCorrection(2 * h, iw - 2 * t) + slotInnerEndCorrection(box, cVent, t, folded),
+      ec:
+        rectangleEndCorrection(2 * h, iw - 2 * t) +
+        slotInnerEndCorrection(box, cVent, t, inset, folded),
       dh: (4 * (h * seg)) / (2 * (h + seg)),
       desc:
         `letterbox, ${h.toFixed(2)}\u2033 \u00d7 ${iw.toFixed(1)}\u2033, ${cVent.len.toFixed(1)}\u2033 long` +
@@ -1653,12 +1814,12 @@ export function ventGeometry(
   }
   // round tubes: straight while they fit, then up the back wall and forward under the lid (lib/pa/tubes)
   const r = cVent.dia / 2;
-  const elbows = modelTubeElbows(box, portStyle, cVent, t, drv);
+  const elbows = modelTubeElbows(box, portStyle, cVent, t, inset, drv);
   return {
     n: cVent.nt,
     area: cVent.nt * Math.PI * r * r,
     len: cVent.len,
-    ec: subTubeEndCorrection(box, portStyle, cVent, t, drv, elbows),
+    ec: subTubeEndCorrection(box, portStyle, cVent, t, inset, drv, elbows),
     dh: cVent.dia,
     elbows,
     desc:
@@ -1669,7 +1830,14 @@ export function ventGeometry(
 
 // Liters of wood inside a box: everything behind the baffle except the shell panels themselves.
 // Window braces keep ~2 in rails, so only their rails count.
-const SHELL: ReadonlySet<CutPartId> = new Set(["side", "topBottom", "back", "baffle"]);
+const SHELL: ReadonlySet<CutPartId> = new Set([
+  "side",
+  "topBottom",
+  "back",
+  "baffle",
+  "partition",
+  "archTop",
+]);
 export function internalWoodLiters(parts: CutPart[], box: CutBoxId) {
   let in3 = 0;
   for (const p of parts) {
@@ -1859,12 +2027,71 @@ export const midWeightLb = (
   braceLb(bracing, wall) +
   hardwareLb +
   MID_FIXINGS_LB;
+/**
+ * The tower's cabinet above its sub box, lb: its mid chamber and horn section (towerSpec), which the tower weighs in
+ * place of midWeightLb's mid box. The shell over them by its outer faces as subWeightLb weighs a box (the sides, the
+ * back, and the flat top or the arch's bent strip), the 3/4″ baffle less the mid's and the horn's cutouts, the
+ * partitions over the sub box (the sub/mid one is the sub box's top in subWeightLb), and MID_FIXINGS_LB. The chamber
+ * has no braces or hardware of its own.
+ */
+export function towerMidWeightLb(
+  subBox: Pick<Dims3, "w" | "d">,
+  wall: number,
+  inset: number,
+  horn: TowerHorn,
+  mid: Pick<MidDriver, "size">,
+) {
+  // what sits over the sub box doesn't depend on the box's height
+  const spec = towerSpec({ w: subBox.w, h: 0 }, wall, horn);
+  const { w: W, d: D } = subBox,
+    ext = spec.extH,
+    R = W / 2;
+  // the front and back over the sub box: a rectangle, or one to the arch's springline and a half disc
+  const face = spec.archTop ? W * (ext - R) + (Math.PI / 2) * R * R : W * ext;
+  const sides = 2 * D * (spec.archTop ? ext - R : ext);
+  const top = spec.archTop ? Math.PI * (R - wall / 2) * D : W * D;
+  const partitions =
+    (spec.partitions.length - 1) * (W - 2 * wall) * (D - inset - BAFFLE_PLY_IN - wall);
+  const cutouts =
+    (Math.PI / 4) * DRIVER_CUTOUT_IN[mid.size] ** 2 + towerHornCutout(subBox, wall, horn).area;
+  return (
+    ((face + sides + top + partitions) * plywoodLbPerSqFt(wall) +
+      (face - cutouts) * plywoodLbPerSqFt(BAFFLE_PLY_IN)) /
+      144 +
+    MID_FIXINGS_LB
+  );
+}
+/**
+ * The tower's cabinet over the sub box as it is carried, lb: towerMidWeightLb with the mid driver, the horn and the
+ * compression driver in it (they mount in its baffle).
+ */
+export const towerUpperLoadedLb = (
+  subBox: Pick<Dims3, "w" | "d">,
+  wall: number,
+  inset: number,
+  horn: TowerHorn & Pick<Horn, "lb">,
+  mid: Pick<MidDriver, "size" | "lb">,
+  cd: Pick<CompressionDriver, "lb">,
+) =>
+  towerMidWeightLb(subBox, wall, inset, horn, mid) + (mid.lb || 0) + (horn.lb || 0) + (cd.lb || 0);
+/**
+ * What lifting the sub means, lb: the loaded sub box, or in the tower the one cabinet, the sub and everything over it
+ * (`upperLb`, towerUpperLoadedLb).
+ */
+export const subLiftLb = (layout: PaLayout | undefined, subLb: number, upperLb: number) =>
+  layout === "tower" ? subLb + upperLb : subLb;
+/**
+ * The heaviest single lift, lb, as the optimizers' weight limit and Lighter goal read it: the heavier of the sub and the
+ * mid box, or in the tower the whole cabinet (subLiftLb).
+ */
+export const heaviestLiftLb = (layout: PaLayout | undefined, subLb: number, midLb: number) =>
+  Math.max(subLiftLb(layout, subLb, midLb), midLb);
 
 // ---- the sub as the planner computes it ----
 // cfg: { subBox, midDims, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout }
 // Vent and volumes only (no model): what the optimizer's vent solver iterates on.
 export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConfig): SubGeometry {
-  const port = ventGeometry(cfg.portStyle, cfg.subBox, cfg.cVent, cfg.wall, sub);
+  const port = ventGeometry(cfg.portStyle, cfg.subBox, cfg.cVent, cfg.wall, cfg.inset, sub);
   const grossL = boxInternalLiters(cfg.subBox.w, cfg.subBox.h, cfg.subBox.d, cfg.wall, cfg.inset);
   const ductL = (port.area * port.len * 16.387) / 1000;
   const partsL = internalWoodLiters(
@@ -1973,40 +2200,90 @@ export const midNetLiters = (
   bracing: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null,
   recessL = 0,
 ) => Math.max(5, grossL - disp - (braceWoodIn3(bracing) * 16.387) / 1000 - recessL);
-export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
-  const V = ampVoltage(cfg.mAmpW);
-  const grossL = boxInternalLiters(
-    cfg.midDims.w,
-    cfg.midDims.h,
-    cfg.midDims.d,
-    cfg.wall,
-    cfg.inset,
-  );
-  const disp = mid.ts && mid.ts.disp != null ? mid.ts.disp : mid.size === 15 ? 4 : 2.5; // assumed where not published
-  const recessL = hardwareLiters(cfg.hardware, "mid", cfg.wall, cfg.layout);
-  const netL = midNetLiters(
-    grossL,
+/** The Qtc under which the checks call a sealed box overdamped. */
+export const SEALED_QTC_MIN = 0.5;
+/**
+ * The volume, L, that gives a sealed box Qtc `qtc`, as closedBox reads it (after the stuffing's gain): its own T/S
+ * arithmetic solved for the box, Qtc = Qts √(1 + Vas/Vb). Null when the driver's Qts is at or above `qtc` (no box gives it).
+ */
+export function sealedLitersForQtc(ts: BoxModelTS, qtc: number): number | null {
+  const Mms = ts.Mms / 1000,
+    Sd = ts.Sd / 10000;
+  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
+  const VasL = 1.18 * 343 * 343 * Cms * Sd * Sd * 1000;
+  const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl);
+  const Qts = (Qes * ts.Qms) / (Qes + ts.Qms);
+  return Qts >= qtc ? null : VasL / (Math.pow(qtc / Qts, 2) - 1);
+}
+/** The baffle face a mid needs, in: the driver and a rim round it. */
+export const midBaffleNeedIn = (size: MidDriver["size"]) => size + 1.2;
+/** The smallest mid box face that holds its driver, in: the page's sliders and stored size start there (lib/boxFit). */
+export const midBoxMin = (size: MidDriver["size"]): Dims2 => ({
+  w: midBaffleNeedIn(size),
+  h: midBaffleNeedIn(size),
+});
+/** What sizes a mid box's volume besides its dimensions. */
+type MidBoxConfig = Pick<
+  MidSystemConfig,
+  "wall" | "inset" | "layout" | "braceStyle" | "braceEstimate" | "hardware" | "backJoint"
+>;
+/** The mid box's braces and ribs as midSystem deducts them: the estimate, or the rule's own. */
+const midBracingOf = (mid: MidDriver, cfg: MidBoxConfig, dims: Dims3) =>
+  cfg.braceEstimate
+    ? midBraceEstimate(
+        dims,
+        cfg.wall,
+        cfg.inset,
+        cfg.layout,
+        cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
+      )
+    : midBoxBracing(
+        dims,
+        cfg.wall,
+        cfg.inset,
+        mid,
+        cfg.layout,
+        cfg.braceStyle,
+        cfg.hardware?.mid,
+        cfg.backJoint,
+      );
+/**
+ * The net volume, L, that gives the mid Qtc 0.5, when a box it fits can be that small; else null. The smallest box it
+ * fits has the face it needs (midBaffleNeedIn) and room behind for its mounting depth (from the baffle's front) with
+ * DRIVER_CLEARANCE_IN to spare, each up to the planner's slider step, with the same displacement, braces and hardware.
+ * Null in the tower: the sub's footprint sets the mid's chamber.
+ */
+export function midSmallerBoxNetL(
+  mid: MidDriver,
+  cfg: MidBoxConfig,
+  disp: number,
+  recessL: number,
+): number | null {
+  const effL = sealedLitersForQtc(mid.ts, SEALED_QTC_MIN);
+  if (effL == null || cfg.layout === "tower") return null;
+  const dims = {
+    // the face the page's sliders start at for this driver
+    ...boxSliderMins(midBoxMin(mid.size), { w: PA_SLIDERS.midW, h: PA_SLIDERS.midH }),
+    d: upToStep(
+      (mid.depthIn ?? MID_DEPTH_FALLBACK_IN[mid.size]) + DRIVER_CLEARANCE_IN + cfg.inset + cfg.wall,
+      PA_SLIDERS.midD,
+    ),
+  };
+  const fitNetL = midNetLiters(
+    boxInternalLiters(dims.w, dims.h, dims.d, cfg.wall, cfg.inset),
     disp,
-    cfg.braceEstimate
-      ? midBraceEstimate(
-          cfg.midDims,
-          cfg.wall,
-          cfg.inset,
-          cfg.layout,
-          cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
-        )
-      : midBoxBracing(
-          cfg.midDims,
-          cfg.wall,
-          cfg.inset,
-          mid,
-          cfg.layout,
-          cfg.braceStyle,
-          cfg.hardware?.mid,
-          cfg.backJoint,
-        ),
+    midBracingOf(mid, cfg, dims),
     recessL,
   );
+  const netL = effL / STUFFING_VOLUME_GAIN;
+  return netL >= fitNetL ? netL : null;
+}
+export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
+  const V = ampVoltage(cfg.mAmpW);
+  const grossL = midGrossLiters(cfg.midDims, cfg.wall, cfg.inset, cfg.layout);
+  const disp = mid.ts && mid.ts.disp != null ? mid.ts.disp : mid.size === 15 ? 4 : 2.5; // assumed where not published
+  const recessL = hardwareLiters(cfg.hardware, "mid", cfg.wall, cfg.layout);
+  const netL = midNetLiters(grossL, disp, midBracingOf(mid, cfg, cfg.midDims), recessL);
   const effL = netL * STUFFING_VOLUME_GAIN;
   // the curve runs on past 2 kHz when the lowpass sits above 800 Hz, so its skirt shows on the system chart
   const mdl = mid.ts
@@ -2020,9 +2297,23 @@ export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const vTherm = mid.ts ? thermalVoltageLimit(mid.ts.aes) : 0;
   const useV = Math.min(vTherm, V);
   if (!mid.ts || !mdl)
-    return { V, grossL, disp, recessL, netL, effL, vTherm, useV, mdl: null, max: null };
+    return {
+      V,
+      grossL,
+      disp,
+      recessL,
+      netL,
+      effL,
+      vTherm,
+      useV,
+      smallerBoxNetL: null,
+      mdl: null,
+      max: null,
+    };
   const max = maxOutputCurve(mdl.curve, mid.ts, V, Infinity); // no port: Xmax, thermal, amp
-  return { V, grossL, disp, recessL, netL, effL, vTherm, useV, mdl, max };
+  const smallerBoxNetL =
+    mdl.Qtc < SEALED_QTC_MIN ? midSmallerBoxNetL(mid, cfg, disp, recessL) : null;
+  return { V, grossL, disp, recessL, netL, effL, vTherm, useV, smallerBoxNetL, mdl, max };
 }
 
 // ---- passive coaxial fills ----
@@ -2053,9 +2344,11 @@ export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem |
     ? vM.f3
     : (m.curve.find((o) => o.spl >= m.ref - 3) || m.curve[m.curve.length - 1]).f;
   // HF through a passive network, padded down to the woofer: reaches its program rating (2 x AES)
-  // only at an amp power well above what the woofer sees
+  // only at an amp power well above what the woofer sees. The pad matches the two at the same amp voltage: both
+  // sensitivities are 1 W/1 m at their own impedance, so the HF's is moved to 2.83 V (a 16 ohm section gets half the
+  // power the 8 ohm woofer does), as the Hi-fi engine's level match does (lib/hifi hifiSystemFromBox)
   const hf = drv.hf;
-  const pad = hf ? Math.max(0, hf.sens - (drv.lfSens || sens)) : 0;
+  const pad = hf ? Math.max(0, hf.sens + 10 * Math.log10(8 / hf.imp) - (drv.lfSens || sens)) : 0;
   const hfLimW = hf ? ((2 * hf.aes * hf.imp) / 8) * Math.pow(10, pad / 10) : null; // amp watts (8 ohm rating)
   const lb = ((2 * (dim.w * dim.h + dim.w * dim.d + dim.h * dim.d)) / 144) * 1.6 + drv.lb + 1; // 1/2" birch ~1.6 lb/ft2
   const portLimited = vented && max.some((o) => o.who === "port");

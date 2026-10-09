@@ -18,8 +18,9 @@ interface Props {
     | "toggleSection"
     | "midDriver"
     | "midAmpWatts"
-    | "midBandTiltDb"
+    | "midBelowSubDb"
     | "midSize"
+    | "isTower"
     | "subMidCrossoverHz"
     | "effectiveMidBoxDims"
     | "midVoltage"
@@ -41,8 +42,9 @@ export function MidSection({ planner }: Props) {
     toggleSection,
     midDriver,
     midAmpWatts,
-    midBandTiltDb,
+    midBelowSubDb,
     midSize,
+    isTower,
     subMidCrossoverHz,
     effectiveMidBoxDims,
     midVoltage,
@@ -128,13 +130,15 @@ export function MidSection({ planner }: Props) {
                   f3: midModeled.mdl.f3,
                   peakX: midModeled.mdl.peakX,
                   xoLo: subMidCrossoverHz,
+                  smallerBoxNetL: midModeled.smallerBoxNetL,
+                  isTower,
                   ts: midDriver.ts,
                   V: midVoltage,
                   useV: midUsedVoltage,
                   vTherm: midThermalVoltage,
                   mAmpW: midAmpWatts,
                   subMusicAtXo: subMusicAtCrossover,
-                  tilt: midBandTiltDb,
+                  midBelowSubDb,
                   midAtXo:
                     subMusicAtCrossover != null
                       ? nearestPoint(midModeled.max, subMidCrossoverHz)
