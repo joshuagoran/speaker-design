@@ -27,7 +27,7 @@ interface Props {
     | "subGrossLiters"
     | "subAmpVoltage"
     | "subModeled"
-    | "subWeightLoadedLb"
+    | "subLiftLb"
   >;
   /** shown first inside the fold (the system summary in one column, so it folds with Sub on phones) */
   summary?: React.ReactNode;
@@ -50,7 +50,7 @@ export function SubSection({ planner, summary }: Props) {
     subGrossLiters,
     subAmpVoltage,
     subModeled,
-    subWeightLoadedLb,
+    subLiftLb,
   } = planner;
   return (
     <>
@@ -126,7 +126,7 @@ export function SubSection({ planner, summary }: Props) {
                 cVent: subVentSpec,
                 PT,
                 inset: baffleInsetIn,
-                subLbLoaded: subWeightLoadedLb,
+                subLbLoaded: subLiftLb,
                 lim: subModeled.lim,
                 peakXF: subModeled.mdl.peakXF,
                 aes: subDriver.ts.aes,

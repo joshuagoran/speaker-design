@@ -4,7 +4,7 @@ import { buildCabinet } from "./buildCabinet";
 import { buildCone } from "./buildCone";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
 import { towerBaffleHoles, buildTowerPartitions } from "./towerParts";
-import { towerSpec } from "./stackHeights";
+import { towerSpec } from "../../lib/pa/tower";
 import { modelTubeElbows, subTubeLegs, tubeLayout } from "../../lib/pa/tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import {
@@ -140,7 +140,7 @@ export function buildSubwoofer(
     baffleBottom: bandH,
     parent: subGroup,
   }).baffleZ;
-  if (tower) buildTowerPartitions(ctx, { box: s, plinth: pl, parent: subGroup });
+  if (tower) buildTowerPartitions(ctx, { box: s, plinth: pl, horn: tower.horn, parent: subGroup });
   if (bracing) buildBraces(ctx, { bracing, box: s, y: pl, parent: subGroup });
   if (hardware) buildHardware(ctx, { plan: hardware, box: s, y: pl, parent: subGroup });
   if (keepOut)

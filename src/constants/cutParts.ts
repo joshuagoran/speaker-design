@@ -18,6 +18,8 @@ export const CUT_PART_NAMES = {
   sideDuctWall: "Side duct wall",
   ductDivider: "Duct divider",
   slotShelf: "Slot shelf",
+  partition: "Partition",
+  archTop: "Arched top",
 } as const;
 
 /** Every box a cutlist part belongs to, by id (`CutPart.box`), and the name the cutlist shows for it. */

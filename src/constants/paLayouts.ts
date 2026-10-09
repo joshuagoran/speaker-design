@@ -7,3 +7,6 @@ export const PA_LAYOUT_NAMES = {
   tower: "Tower",
   satellite: "One sub + satellites",
 } as const satisfies Record<PaLayout, string>;
+
+/** The tower's mid chamber height, in: the chamber has the sub's footprint (lib/pa/tower `towerMidDims`). */
+export const TOWER_MID_HEIGHT_IN = 15.5;

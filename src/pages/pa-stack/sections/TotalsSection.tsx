@@ -4,6 +4,7 @@ import { FONT } from "../../../styles/fonts";
 import { isRoundPort } from "../../../lib/pa/calc";
 import { subTubeKit } from "../../../lib/pa/tubes";
 import { priceTotal } from "../../../lib/pa/totals";
+import { towerSpec } from "../../../lib/pa/tower";
 
 /** The totals row for the boxes' hardware. */
 const HARDWARE_ROW = "Handles, input dishes, jacks and horn posts (weight in the boxes)";
@@ -29,6 +30,7 @@ interface Props {
     | "baffleInsetIn"
     | "subHardware"
     | "midHardware"
+    | "isTower"
   >;
 }
 
@@ -53,6 +55,7 @@ export function TotalsSection({ planner }: Props) {
     baffleInsetIn,
     subHardware,
     midHardware,
+    isTower,
   } = planner;
   return (
     <>
@@ -70,7 +73,16 @@ export function TotalsSection({ planner }: Props) {
             const midBoxLb = midCabinetLb; // same estimate as the mid-bass stats row
             const rows: [string, number | null, number, number, number][] = [
               ["Sub column", subDriver.price, subDriver.lb, subBoxLb, subBox.h],
-              ["Mid-bass box", midDriver.price, midDriver.lb, midBoxLb, effectiveMidBoxDims.h],
+              // the tower: its cabinet over the sub box, the mid chamber and the horn section
+              isTower
+                ? [
+                    "Mid and horn sections",
+                    midDriver.price,
+                    midDriver.lb,
+                    midBoxLb,
+                    towerSpec(subBox, wallThicknessIn, hornOption).extH,
+                  ]
+                : ["Mid-bass box", midDriver.price, midDriver.lb, midBoxLb, effectiveMidBoxDims.h],
               ["Compression driver", compressionDriver.price, compressionDriver.lb || 0, 0, 0],
               ["Horn", hornOption.price, (hornOption.lb || 0) + 1, 0, hornOption.size.h + 1],
             ];

@@ -188,16 +188,16 @@
   "limitW": 1084.11,
   "spl35": 121.23,
   "spl45": 125.93,
-  "midFc": 88.58,
-  "midQtc": 0.55,
-  "midF3": 122.64,
+  "midFc": 67.95,
+  "midQtc": 0.42,
+  "midF3": 135.39,
   "midRef": 124.83,
-  "midMaxXo": 115.72,
-  "midMax300": 123.98,
+  "midMaxXo": 115.21,
+  "midMax300": 123.73,
   "subAtXo": 122.07,
   "hornFlat": 130.9,
   "subLb": 85.83,
-  "midLb": 22.06
+  "midLb": 57.89
  },
  "compact-ish stack": {
   "netL": 165.82,

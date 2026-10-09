@@ -8,6 +8,8 @@ import {
   hornBeamWidthDeg,
   subWeightLb,
   midWeightLb,
+  towerMidWeightLb,
+  subLiftLb,
   midSystem,
   subBoxBracing,
   midBoxBracing,
@@ -49,6 +51,7 @@ import type { HornDesign } from "./useHornDesign";
 import type { MidDesign } from "./useMidDesign";
 import type { SubwooferDesign } from "./useSubwooferDesign";
 import { xmaxBandCurves } from "../../../lib/xmax";
+import { towerMidDims } from "../../../lib/pa/tower";
 
 /** The design state the PA models read; the music balance, finish, colors and cutlist options don't enter them. */
 type PaDesignInputs = Pick<
@@ -130,6 +133,8 @@ export interface PaDerivedDesign {
   subMusicAtCrossover: number | null;
   portGeom: PaPortGeometry;
   subWeightLoadedLb: number;
+  /** what lifting the sub means (subLiftLb): the loaded sub box, or the whole tower with its drivers and horn */
+  subLiftLb: number;
   midBoxLiters: number;
   subTopHeightIn: number;
   isTower: boolean;
@@ -176,9 +181,8 @@ export function derivePaDesign({
   dispersionPlane,
 }: PaDesignInputs): PaDerivedDesign {
   const subBox = subBoxDims;
-  /** In the tower layout the mid chamber is the sub's footprint, 15.5 in tall. */
-  const effectiveMidBoxDims =
-    layout === "tower" ? { w: subBoxDims.w, h: 15.5, d: subBoxDims.d } : midBoxDims;
+  /** In the tower layout the mid chamber is the sub's footprint (towerMidDims). */
+  const effectiveMidBoxDims = layout === "tower" ? towerMidDims(subBoxDims) : midBoxDims;
   const subBracing = subBoxBracing(
     subBox,
     wallThicknessIn,
@@ -310,13 +314,15 @@ export function derivePaDesign({
         maxCurveOf(midModeled.mdl.curve, { ...midDriver.ts, Xmax }, midVoltage, Infinity),
       )
     : null;
-  /** 3/4" baffle at 2.3 lb/ft\u00b2, other panels, braces and ribs at the chosen ply, the catalog's hardware (handles, dish, jacks, horn posts) and MID_FIXINGS_LB of screws, glue, wiring and damping */
-  const midCabinetLb = midWeightLb(
-    effectiveMidBoxDims,
-    wallThicknessIn,
-    midBracing,
-    midHardware?.lb ?? 0,
-  );
+  /**
+   * 3/4" baffle at 2.3 lb/ft\u00b2, other panels, braces and ribs at the chosen ply, the catalog's hardware (handles,
+   * dish, jacks, horn posts) and MID_FIXINGS_LB of screws, glue, wiring and damping; in the tower, its cabinet over the
+   * sub box (towerMidWeightLb: the mid chamber and the horn section)
+   */
+  const midCabinetLb =
+    layout === "tower"
+      ? towerMidWeightLb(subBox, wallThicknessIn, baffleInsetIn, hornOption, midDriver)
+      : midWeightLb(effectiveMidBoxDims, wallThicknessIn, midBracing, midHardware?.lb ?? 0);
   const midWeightLoadedLb = midCabinetLb + (midDriver.lb || 0);
   // ---- horn + compression driver ----
   /**
@@ -384,6 +390,11 @@ export function derivePaDesign({
     subDriver.lb,
     subBracing,
     subHardware.lb,
+  );
+  const subLiftWeightLb = subLiftLb(
+    layout,
+    subWeightLoadedLb,
+    midWeightLoadedLb + (hornOption.lb || 0) + (compressionDriver.lb || 0),
   );
 
   const midBoxLiters = midGrossL;
@@ -460,6 +471,7 @@ export function derivePaDesign({
     subMusicAtCrossover,
     portGeom,
     subWeightLoadedLb,
+    subLiftLb: subLiftWeightLb,
     midBoxLiters,
     subTopHeightIn,
     isTower,
