@@ -1,5 +1,5 @@
-import { HIFI_TWEETERS, HIFI_WOOFERS, HORN_OPTIONS } from "../../lib/data";
-import { DEFAULT_HIFI, DEFAULT_PORT_SIZE } from "../../lib/defaults";
+import { HIFI_TWEETERS, HIFI_WAVEGUIDES, HIFI_WOOFERS } from "../../lib/data";
+import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PORT_SIZE } from "../../lib/defaults";
 import { portAfterToggle } from "../../lib/hifi/hifi";
 import { byId, byIdOrThrow } from "../../lib/tables";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
@@ -31,10 +31,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { useHifiCutlistOptions } from "../cutlist/useHifiCutlistOptions";
 import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
+import type { CabinetStyle } from "../pa-stack/hooks/useCabinetStyle";
 import { panelFor, panelIn, restoredPanel } from "../../lib/panel";
 
 /** Everything the Hi-fi page reads: the design state and its setters, the model derived from it, the optimizer, and saving. */
-export interface HifiPlanner extends HifiDesignState, HifiDesign, HifiOptimizer {
+export interface HifiPlanner
+  extends
+    HifiDesignState,
+    HifiDesign,
+    HifiOptimizer,
+    Pick<CabinetStyle, "cabinetFinish" | "setCabinetFinish" | "baffleColor" | "setBaffleColor"> {
   setWoofer: Setter<HifiWoofer>;
   setTweeter: Setter<HifiTweeter>;
   setSelectedWaveguide: Setter<HifiWaveguide>;
@@ -77,10 +83,7 @@ export interface HifiPlanner extends HifiDesignState, HifiDesign, HifiOptimizer 
 
 /** The Hi-fi page's design, room and optimizer state. Held by App so it survives switching tabs. */
 export function useHifiPlanner(): HifiPlanner {
-  // boundary cast: the filter keeps only horns that have `hf`
-  const waveguideChoices = HORN_OPTIONS.filter(
-    (h) => h.exit === 1 && h.hf && h.hf.covH && h.size,
-  ) as HifiWaveguide[];
+  const waveguideChoices = [...HIFI_WAVEGUIDES];
   const [woofer, setWoofer] = useState<HifiWoofer>(DEFAULT_HIFI.woofer);
   const [tweeter, setTweeter] = useState<HifiTweeter>(DEFAULT_HIFI.tweeter);
   const [selectedWaveguide, setSelectedWaveguide] = useState<HifiWaveguide>(
@@ -128,12 +131,16 @@ export function useHifiPlanner(): HifiPlanner {
   );
   const [roundoverIn, setRoundoverIn] = useState(DEFAULT_HIFI.roundoverIn);
   const [tweeterOffsetIn, setTweeterOffsetIn] = useState(DEFAULT_HIFI.tweeterOffsetIn);
+  // the 3D view's look (PA's pickers and finishes, this design's own choice); outside the model, so it isn't derived
+  const [cabinetFinish, setCabinetFinish] = useState<string>(DEFAULT_HIFI_LOOK.cabFinish);
+  const [baffleColor, setBaffleColor] = useState<string>(DEFAULT_HIFI_LOOK.baffleColor);
   const store = useConfigStore("hifiConfigs");
   const snapshot = (): HifiCardConfig => ({
     woofer: woofer.id,
     tweeter: tweeter.id,
     box: boxType,
-    dim: boxDims,
+    // the box as modeled: at least what its parts need (deriveHifiDesign)
+    dim: design.speakerConfig.dim,
     port: portSpec,
     pr: boxType === "radiator" ? radiatorSelection : undefined,
     wall: wallThicknessIn,
@@ -160,7 +167,9 @@ export function useHifiPlanner(): HifiPlanner {
         standIn: standHeightIn,
         roundover: roundoverIn,
         tweeterOffset: tweeterOffsetIn,
-        summary: `${woofer.name} + ${tweeter.name} · ${boxDims.w}×${boxDims.h}×${boxDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}`,
+        cabFinish: cabinetFinish,
+        baffleColor,
+        summary: `${woofer.name} + ${tweeter.name} · ${fittedDims.w}×${fittedDims.h}×${fittedDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}`,
       }),
     );
   const applyDesign = (c: HifiCardConfig) => {
@@ -265,6 +274,10 @@ export function useHifiPlanner(): HifiPlanner {
       tweeterOffsetIn,
     ],
   );
+  // The box as modeled (at least what its parts need): what the page shows, the sliders read and saves keep. The size
+  // the user set stays as set, so a bigger part raises the box only while it is chosen: switching back brings the box
+  // back. A slider sets a new size from the fitted one it shows.
+  const fittedDims = design.speakerConfig.dim;
   const optimizer = useHifiOptimizer({
     snapshot,
     applyDesign,
@@ -310,10 +323,14 @@ export function useHifiPlanner(): HifiPlanner {
     // configs saved before these existed had sharp edges and a centered tweeter
     setRoundoverIn(c.roundover ?? DEFAULT_HIFI.roundoverIn);
     setTweeterOffsetIn(c.tweeterOffset ?? DEFAULT_HIFI.tweeterOffsetIn);
+    // and before the look: the defaults
+    setCabinetFinish(c.cabFinish || DEFAULT_HIFI_LOOK.cabFinish);
+    setBaffleColor(c.baffleColor || DEFAULT_HIFI_LOOK.baffleColor);
     optimizer.clearOptimizerResults();
   };
   return {
     ...state,
+    boxDims: fittedDims,
     ...design,
     ...optimizer,
     setWoofer,
@@ -341,6 +358,10 @@ export function useHifiPlanner(): HifiPlanner {
     setDispersionPlane,
     setRoundoverIn,
     setTweeterOffsetIn,
+    cabinetFinish,
+    setCabinetFinish,
+    baffleColor,
+    setBaffleColor,
     waveguideChoices,
     store,
     cutlist,

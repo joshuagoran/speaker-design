@@ -16,6 +16,7 @@ import {
   sealedLitersForQtc,
 } from "../pa/calc";
 import { qtcFloorAt } from "../../constants/qtcText";
+import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { MAX_ELBOWS, tubeElbows, tubeMaxLength, type TubeRoom } from "../tubeFold";
 import { SHARP_BEND_CORRECTION } from "../../data/acoustics/slot-inner-end";
 import { panelLbPerSqFt } from "../panel";
@@ -309,13 +310,14 @@ export function driverLayout(
   onTop: boolean,
 ): DriverLayout {
   const face = t.faceplate;
+  const { topMarginIn, driverGapIn } = HIFI_BOX_LAYOUT;
   if (onTop) {
     const th = d.h + face.h / 2,
-      wh = d.h - 1 - w.size / 2;
+      wh = d.h - topMarginIn - w.size / 2;
     return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh, onTop: true };
   }
-  const th = d.h - 1 - face.h / 2;
-  const wh = th - face.h / 2 - 0.5 - w.size / 2;
+  const th = d.h - topMarginIn - face.h / 2;
+  const wh = th - face.h / 2 - driverGapIn - w.size / 2;
   return { tweeterIn: th, wooferIn: wh, spacingIn: th - wh };
 }
 
@@ -341,7 +343,8 @@ export function passiveRadiatorTuning(drv: PassiveRadiator, n: number, addG: num
 }
 /**
  * The panel the radiators go on: the back, stacked, each needing its size plus a little frame margin. The fit check
- * below sizes them against it, the front view draws them dashed (behind), and the cutlist puts their cutouts on it.
+ * below sizes them against it, the front view draws them dashed (behind), the 3D view on it (lib/hifi/boxLayout places
+ * them for both), and the cutlist puts their cutouts on it.
  */
 export const RADIATOR_PANEL: RadiatorPanel = "back";
 export const passiveRadiatorShape = (drv: PassiveRadiator) =>
@@ -352,7 +355,10 @@ export const passiveRadiatorFits = (
   pr: Pick<PassiveRadiatorChoice, "drv" | "n">,
 ) => {
   const s = passiveRadiatorShape(pr.drv);
-  return dim.w - 2 * wall >= s.w + 0.3 && dim.h - 2 * wall >= pr.n * (s.h + 0.5);
+  return (
+    dim.w - 2 * wall >= s.w + HIFI_BOX_LAYOUT.radiatorWidthIn &&
+    dim.h - 2 * wall >= pr.n * (s.h + HIFI_BOX_LAYOUT.radiatorGapIn)
+  );
 };
 // added mass (g, 5 g steps, ≥ 0) that tunes the box to Fb; null if Fb is above the radiator's as-shipped tuning
 export function passiveRadiatorMassFor(drv: PassiveRadiator, n: number, VbL: number, Fb: number) {
@@ -565,14 +571,6 @@ export const hifiWeightLb = (
   (t.lb || 1.5) +
   1 +
   (pr ? pr.n * ((pr.drv.lb || 0.75) + (pr.addG || 0) / 454) : 0);
-/** The woofer clears the bottom of the baffle (and a slot with its shelf along the bottom) by half an inch. */
-export const driversFitBaffle = (
-  lay: Pick<DriverLayout, "wooferIn">,
-  w: HifiWoofer,
-  cfg: Pick<HifiConfig, "box" | "port" | "wall">,
-) =>
-  lay.wooferIn - w.size / 2 >=
-  0.5 + (cfg.box === "vented" && cfg.port.shape === "slot" ? cfg.port.h + (cfg.wall || 0.75) : 0);
 /**
  * The lowest crossover the tweeter may take on its waveguide: the higher of the tweeter's own minimum and the
  * waveguide's (its loading), with the part that sets it; null when neither sets one.
@@ -619,7 +617,8 @@ export function hifiPortElbows(
   return tubeElbows(hifiTubeRoom(dim, wall), ventPort.dia, ventPort.len);
 }
 /** The woofer fits the baffle's width. */
-export const wooferFitsBaffle = (w: HifiWoofer, dim: Dims3) => dim.w >= w.size + 0.8;
+export const wooferFitsBaffle = (w: Pick<HifiWoofer, "size">, dim: Pick<Dims3, "w">) =>
+  dim.w >= w.size + HIFI_BOX_LAYOUT.wooferWidthIn;
 /** The crossover sits above the woofer's usable range. */
 export const wooferPastRange = (w: HifiWoofer, xo: number) => !!(w.fmax && xo > w.fmax);
 /** A sealed box's Qtc between overdamped and peaky. */
@@ -942,7 +941,6 @@ export function hifiSystemFromBox(
       ...common,
       kind: "radiator",
       pr,
-      prFits: passiveRadiatorFits(dim, wall, pr),
       Fb: rM.Fb,
       Fp: rM.Fp,
       peakVel: null,
@@ -1303,13 +1301,7 @@ export function hifiChips(
       vdW = w.ts.Sd * w.ts.Xmax,
       vdP = p.n * p.drv.Sd * p.drv.Xmax,
       k = vdP / vdW;
-    if (!sys.prFits)
-      F.push([
-        "bad",
-        "Radiators won't fit",
-        `${p.n} on the back need about ${(passiveRadiatorShape(p.drv).w + 0.3 + 2 * (cfg.wall || 0.75)).toFixed(1)}″ of width and ${(p.n * (passiveRadiatorShape(p.drv).h + 0.5) + 2 * (cfg.wall || 0.75)).toFixed(1)}″ of height.`,
-        "hifiRadiatorFit",
-      ]);
+    // the radiators always fit their panel: the box starts at what they need (lib/hifi/boxLayout hifiBoxMin)
     F.push(
       k < 1.5
         ? [
@@ -1333,23 +1325,8 @@ export function hifiChips(
         "hifiRadiatorMass",
       ]);
   }
-  const need = w.size + 0.8;
-  if (!wooferFitsBaffle(w, cfg.dim))
-    F.push([
-      "bad",
-      "Woofer won't fit",
-      `A ${w.size}″ woofer needs about ${need.toFixed(1)}″ of baffle width.`,
-      "hifiWooferFit",
-    ]);
-  const floor =
-    sys.kind === "vented" && cfg.port.shape === "slot" ? cfg.port.h + (cfg.wall || 0.75) : 0; // the slot and its shelf along the bottom
-  if (!driversFitBaffle(sys.lay, w, cfg))
-    F.push([
-      "bad",
-      "Drivers won't fit the baffle",
-      `The woofer and tweeter${floor ? " above the slot" : ""} need about ${(cfg.dim.h - sys.lay.wooferIn + w.size / 2 + 0.5 + floor).toFixed(1)}″ of height.`,
-      "hifiBaffleFit",
-    ]);
+  // the box always holds its drivers: the page's sliders and stored size start at what they need (lib/hifi/boxLayout
+  // hifiBoxMin), so no chip warns of a woofer wider than the baffle or drivers taller than it
   const wall = cfg.wall || 0.75,
     round = cfg.roundoverIn || 0;
   if (round > wall + 1e-9)

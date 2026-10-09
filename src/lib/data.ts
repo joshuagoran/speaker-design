@@ -113,6 +113,9 @@ const isFinishId = (value: string): value is FinishId => Object.hasOwn(CABINET_F
 export function cabinetFinishOf(value: string): CabinetFinish | undefined {
   return isFinishId(value) ? CABINET_FINISHES[value] : undefined;
 }
+/** A cabinet finish as the summaries name it: the named finish, or "painted" and the paint's hex color. */
+export const cabinetFinishName = (value: string) =>
+  cabinetFinishOf(value)?.name ?? `painted ${value}`;
 
 // Pickers list alphabetically.
 export const sortedByName = <T extends { name: string }>(arr: readonly T[]): T[] =>
@@ -122,6 +125,10 @@ export const sortedByName = <T extends { name: string }>(arr: readonly T[]): T[]
 [SUB_OPTIONS, MID_OPTIONS, CD_OPTIONS, HORN_OPTIONS].forEach((arr: { name: string }[]) =>
   arr.splice(0, arr.length, ...sortedByName(arr)),
 );
+/** A horn the Hi-fi page offers as a waveguide: a 1-inch throat, with its coverage specs and size. */
+const isHifiWaveguide = (h: Horn): h is HifiWaveguide => h.exit === 1 && !!h.hf?.covH && !!h.size;
+/** The Hi-fi page's waveguides, in the horns' (A–Z) order. */
+export const HIFI_WAVEGUIDES: readonly HifiWaveguide[] = HORN_OPTIONS.filter(isHifiWaveguide);
 
 export const BC10CXN64: FillDriver = withTsXmax(BC10CXN64_RAW);
 export const FILL_OPTIONS: readonly FillDriver[] = FILL_RAW.map((d) =>

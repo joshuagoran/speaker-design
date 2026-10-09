@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { roundedRectShape, roundedRectPath, circlePath } from "./geometry";
 import { buildCabinet } from "./buildCabinet";
 import { buildCone } from "./buildCone";
+import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
 import { towerBaffleHoles, buildTowerPartitions } from "./towerParts";
 import { towerSpec } from "./stackHeights";
 import { modelTubeElbows, subTubeLegs, tubeLayout } from "../../lib/pa/tubes";
@@ -225,24 +226,10 @@ export function buildSubwoofer(
       const t = (i / seg) * (Math.PI / 2);
       prof.push(new THREE.Vector2(portR + RB * (1 - Math.cos(t)), RB * Math.sin(t)));
     }
-    // a straight length of tube from a to b (centerline points)
-    const pipe = (a: THREE.Vector3, b: THREE.Vector3) => {
-      const len = a.distanceTo(b);
-      if (len < 1e-3) return;
-      const m = new THREE.Mesh(new THREE.CylinderGeometry(portR, portR, len, 32, 1, true), portMat);
-      m.position.copy(a).add(b).multiplyScalar(0.5);
-      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
-      m.name = VENT_MESH_NAME;
-      subGroup.add(m);
-    };
-    // a quarter-torus elbow about `c`, its arc from local +X to +Y laid on the world axes `ax`, `ay`
-    const elbow = (c: THREE.Vector3, ax: THREE.Vector3, ay: THREE.Vector3) => {
-      const m = new THREE.Mesh(new THREE.TorusGeometry(bend, portR, 16, 12, Math.PI / 2), portMat);
-      m.setRotationFromMatrix(new THREE.Matrix4().makeBasis(ax, ay, ax.clone().cross(ay)));
-      m.position.copy(c);
-      m.name = VENT_MESH_NAME;
-      subGroup.add(m);
-    };
+    const tube: TubeStyle = { r: portR, material: portMat, name: VENT_MESH_NAME, parent: subGroup };
+    const pipe = (a: THREE.Vector3, b: THREE.Vector3) => addPipe(tube, a, b);
+    const elbow = (c: THREE.Vector3, ax: THREE.Vector3, ay: THREE.Vector3) =>
+      addElbow(tube, bend, c, ax, ay);
     // a quarter-round flare whose lip is the mouth `at`, opening along `dir`: inside the tube's length, as the model
     // counts it (its run is part of the centerline, lib/pa/tubes flareShortfall)
     const bell = (at: THREE.Vector3, dir: THREE.Vector3) => {

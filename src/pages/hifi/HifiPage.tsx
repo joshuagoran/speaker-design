@@ -13,6 +13,7 @@ import {
   HIFI_TWEETERS_BY_TYPE,
 } from "./hifiDriverLists";
 import { HifiResultCard } from "./HifiResultCard";
+import { hifiSceneProps } from "./hifiSceneProps";
 import { ToggleButton } from "../../components/ui/ToggleButton";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { DispersionPlaneToggle } from "../../components/ui/DispersionPlaneToggle";
@@ -29,7 +30,9 @@ import { DetailsDropdown } from "../../components/ui/DetailsDropdown";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { DispersionMap } from "../../components/charts/DispersionMap";
 import { RoomView } from "../../components/drawings/RoomView";
-import { HifiFront } from "../../components/drawings/HifiFront";
+import { HifiView3D } from "../../components/stack-view/HifiView3D";
+import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
+import { BaffleColorPicker, CabinetFinishPicker } from "../../components/ui/FinishPickers";
 import { OptimizerBar } from "../../components/optimizer/OptimizerBar";
 import { HIFI_OPTIMIZER_PANEL, optimizerPanelNote } from "../../constants/optimizerPanels";
 import { GoalPicker } from "../../components/optimizer/GoalPicker";
@@ -38,7 +41,7 @@ import { RunRow } from "../../components/optimizer/RunRow";
 import { ResultCards } from "../../components/optimizer/ResultCards";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
-import { passiveRadiatorMassMax } from "../../lib/data";
+import { cabinetFinishName, passiveRadiatorMassMax } from "../../lib/data";
 import {
   SPEAKER_PLACEMENTS as HIFI_PLACES,
   hifiPanelResonances,
@@ -77,13 +80,15 @@ import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { UI_TEXT } from "../../constants/uiText";
 import { HIFI_RESULT_HEADINGS } from "../../constants/hifiResults";
+import {
+  HIFI_BOX_LABELS,
+  HIFI_BOX_SLIDERS,
+  HIFI_ROUNDOVER_CHOICES,
+} from "../../constants/hifiLayout";
 
 interface Props {
   hifi: HifiPlanner;
 }
-
-/** The roundover radii on offer, inches (0: sharp edges); a router bit's usual sizes. */
-const ROUNDOVER_CHOICES = [0, 0.5, 0.75, 1, 1.5, 2] as const;
 
 /** The panel materials on offer: the material id and the button's label. */
 const MATERIAL_CHOICES = [
@@ -122,6 +127,7 @@ export function HifiPage({ hifi }: Props) {
     setBoxType,
     boxDims,
     setBoxDims,
+    boxMin,
     wallThicknessIn,
     wallPanel,
     setWallPanel,
@@ -161,6 +167,10 @@ export function HifiPage({ hifi }: Props) {
     setRoundoverIn,
     tweeterOffsetIn,
     setTweeterOffsetIn,
+    cabinetFinish,
+    setCabinetFinish,
+    baffleColor,
+    setBaffleColor,
     speakerConfig,
     isOptimizerOn,
     optimizerGoals,
@@ -245,6 +255,7 @@ export function HifiPage({ hifi }: Props) {
       PORT_CHOICES.find(isPortChoiceOn)?.[3].toLowerCase(),
       `${PANEL_NOMINAL_NAMES[wallPanel].short} ${MATERIAL_CHOICES.find(([v]) => v === panelMaterial)?.[1]}`,
       edgesText,
+      cabinetFinishName(cabinetFinish),
     ]
       .filter(Boolean)
       .join(", "),
@@ -400,22 +411,21 @@ export function HifiPage({ hifi }: Props) {
           <div className="min-w-0 flex flex-col gap-8">
             <div ref={resultsGrid} className={resultsGridClass(wide)}>
               <div className={cell("col-start-1 row-start-1")}>
-                <div className={`${RESULT_MAX_WIDTH} flex gap-4 items-center`}>
-                  <div className="shrink-0">
-                    <HifiFront
-                      dim={boxDims}
-                      w={woofer}
-                      t={tweeterWithWaveguide}
-                      lay={speakerSystem.lay}
-                      vented={speakerSystem.kind === "vented"}
-                      port={portSpec}
-                      pr={speakerSystem.kind === "radiator" ? radiator : null}
-                      guide={waveguideSpec}
-                      roundoverIn={roundoverIn}
-                      tweeterOffsetIn={tweeterOffsetUsed}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+                <div className={`${RESULT_MAX_WIDTH} flex flex-col gap-4`}>
+                  <Viewer3DCard boxClassName="relative h-[280px] md:h-[clamp(300px,46vh,480px)]">
+                    {(cutaway) => (
+                      <HifiView3D
+                        {...hifiSceneProps(
+                          hifi,
+                          hifi,
+                          speakerSystem,
+                          { cabFinish: cabinetFinish, baffleColor },
+                          cutaway,
+                        )}
+                      />
+                    )}
+                  </Viewer3DCard>
+                  <div className="min-w-0 grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
                     {tile(STATS.netVolume, speakerSystem.net.toFixed(1), "L")}
                     {speakerSystem.kind === "sealed"
                       ? tile(STATS.qtc, speakerSystem.Qtc.toFixed(2), "")
@@ -664,31 +674,31 @@ export function HifiPage({ hifi }: Props) {
               </div>
               <Card className="mb-4">
                 <Slider
-                  label="Width"
+                  label={HIFI_BOX_LABELS.w}
                   value={boxDims.w}
-                  min={6}
-                  max={16}
-                  step={0.25}
+                  min={boxMin.w}
+                  max={Math.max(HIFI_BOX_SLIDERS.w.max, boxMin.w)}
+                  step={HIFI_BOX_SLIDERS.w.step}
                   unit="″"
                   onChange={(v) => setBoxDim("w", v)}
                   extra={renderDimensionLock("dim", "w", "Width")}
                 />
                 <Slider
-                  label="Height"
+                  label={HIFI_BOX_LABELS.h}
                   value={boxDims.h}
-                  min={9}
-                  max={44}
-                  step={0.25}
+                  min={boxMin.h}
+                  max={Math.max(HIFI_BOX_SLIDERS.h.max, boxMin.h)}
+                  step={HIFI_BOX_SLIDERS.h.step}
                   unit="″"
                   onChange={(v) => setBoxDim("h", v)}
                   extra={renderDimensionLock("dim", "h", "Height")}
                 />
                 <Slider
-                  label="Depth"
+                  label={HIFI_BOX_LABELS.d}
                   value={boxDims.d}
-                  min={6}
-                  max={16}
-                  step={0.25}
+                  min={HIFI_BOX_SLIDERS.d.min}
+                  max={HIFI_BOX_SLIDERS.d.max}
+                  step={HIFI_BOX_SLIDERS.d.step}
                   unit="″"
                   onChange={(v) => setBoxDim("d", v)}
                   extra={renderDimensionLock("dim", "d", "Depth")}
@@ -793,7 +803,7 @@ export function HifiPage({ hifi }: Props) {
               <Card className="mb-4">
                 <div className="text-sm text-stone-500 mb-1">Edge roundover</div>
                 <div className="grid grid-cols-6 gap-1 mb-3">
-                  {ROUNDOVER_CHOICES.map((r) => (
+                  {HIFI_ROUNDOVER_CHOICES.map((r) => (
                     <ToggleButton
                       key={r}
                       size="xs"
@@ -839,6 +849,8 @@ export function HifiPage({ hifi }: Props) {
                   )}
                 </div>
               </Card>
+              <CabinetFinishPicker value={cabinetFinish} onChange={setCabinetFinish} />
+              <BaffleColorPicker value={baffleColor} onChange={setBaffleColor} />
             </>,
           )}
           {section(

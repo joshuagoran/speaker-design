@@ -17,7 +17,11 @@ import {
   linkwitzRileyFilter,
   cabs,
   needsWaveguide,
+  RADIATOR_PANEL,
 } from "../../lib/hifi/hifi";
+import { hifiBoxMin } from "../../lib/hifi/boxLayout";
+import { boxSliderMins, fitBox } from "../../lib/boxFit";
+import { HIFI_BOX_SLIDERS } from "../../constants/hifiLayout";
 import { rippleDb } from "../../lib/hifi/diffraction";
 import { panelIn } from "../../lib/panel";
 import type { HifiDesign, HifiDesignState, HifiSpeakerModel } from "../../types";
@@ -62,9 +66,25 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     addG: Math.min(radiatorSelection.addG, passiveRadiatorMassMax(radiatorDriver)),
   };
   const wallThicknessIn = panelIn(wallPanel, panelMaterial, panelExactIn);
+  const tweeterWithWaveguide = waveguideSpec
+    ? { ...tweeter, faceplate: { w: waveguideSpec.w, h: waveguideSpec.h } }
+    : tweeter;
+  // the box's width and height start at what its parts need (each up to its slider's step): a design made too small
+  // by a part or wall change, or saved that way, is modeled, drawn and saved at that size
+  const boxMin = boxSliderMins(
+    hifiBoxMin({
+      woofer,
+      tweeter: tweeterWithWaveguide,
+      onTop: !!waveguideSpec?.freestanding,
+      cfg: { box: boxType, port: portSpec, pr: radiator },
+      wall: wallThicknessIn,
+      radiatorPanel: RADIATOR_PANEL,
+    }),
+    HIFI_BOX_SLIDERS,
+  );
   const speakerConfig = {
     box: boxType,
-    dim: boxDims,
+    dim: fitBox(boxDims, boxMin),
     wall: wallThicknessIn,
     mat: panelMaterial,
     port: portSpec,
@@ -81,9 +101,6 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     roundoverIn,
     tweeterOffsetIn,
   };
-  const tweeterWithWaveguide = waveguideSpec
-    ? { ...tweeter, faceplate: { w: waveguideSpec.w, h: waveguideSpec.h } }
-    : tweeter;
   // the seat, relative to each speaker (left at -spacing/2, toed in toward the middle)
   const leftGeometry = listenerGeometry(-1, state),
     rightGeometry = listenerGeometry(1, state);
@@ -159,6 +176,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     };
   }
   return {
+    boxMin,
     wallThicknessIn,
     compressionWaveguide,
     waveguideSpec,

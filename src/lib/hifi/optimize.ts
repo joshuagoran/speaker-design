@@ -16,8 +16,7 @@ import {
   hifiGridTop,
   hifiWeightLb,
   tweeterMaxLevel,
-  driversFitBaffle,
-  driverLayout,
+  RADIATOR_PANEL,
   belowTweeterMinXo,
   nearTweeterResonance,
   hifiChips,
@@ -34,6 +33,9 @@ import {
   needsWaveguide,
 } from "./hifi";
 import { ampVoltage, ventTuning } from "../pa/calc";
+import { hifiBoxMin } from "./boxLayout";
+import { boxSliderMins } from "../boxFit";
+import { HIFI_BOX_SLIDERS } from "../../constants/hifiLayout";
 import { ELBOW_COUNTS, ownSpans, tubeElbows, tubeSpan } from "../tubeFold";
 import { throttledProgress } from "../optimizer/progress";
 import {
@@ -90,6 +92,30 @@ import {
   SHARED_GOAL_NAMES,
 } from "../../constants/optimizerText";
 import { ampForGain, type AmpSteps } from "../optimizer/ampSteps";
+
+/**
+ * Whether a box holds its woofer, the tweeter `tt` (with its waveguide's mouth as the faceplate) and its vent or
+ * radiators as the page allows it: at least its sliders' minimums (lib/hifi/boxLayout hifiBoxMin).
+ */
+function boxHolds(
+  w: Pick<HifiWoofer, "size">,
+  tt: Pick<HifiTweeter, "faceplate">,
+  onTop: boolean,
+  cfg: Pick<HifiConfig, "box" | "port" | "pr" | "dim"> & { wall: number },
+) {
+  const need = boxSliderMins(
+    hifiBoxMin({
+      woofer: w,
+      tweeter: tt,
+      onTop,
+      cfg,
+      wall: cfg.wall,
+      radiatorPanel: RADIATOR_PANEL,
+    }),
+    HIFI_BOX_SLIDERS,
+  );
+  return cfg.dim.w >= need.w - 1e-9 && cfg.dim.h >= need.h - 1e-9;
+}
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };
@@ -400,6 +426,14 @@ export function hifiSearchSpace(
   const xos = locks.xo ? [cur.xo] : XOS.includes(cur.xo) ? XOS : [...XOS, cur.xo];
   const face =
     needsWaveguide(T0) && guide ? (guide.freestanding ? { w: 0, h: -1 } : guide) : T0.faceplate;
+  // each searched tweeter as the boxes hold it: its faceplate (its waveguide's mouth) and whether it sits on top
+  const held = tList.flatMap((t) => {
+    const tt = tweeterCfg(t);
+    return tt ? [{ tt, onTop: !!guideOf(t)?.freestanding }] : [];
+  });
+  /** Whether some searched tweeter fits this box (the cards' check, hifiScoreDesigns, rules out the rest). */
+  const holdsSome = (w: HifiWoofer, cfg: Parameters<typeof boxHolds>[3]) =>
+    held.some(({ tt, onTop }) => boxHolds(w, tt, onTop, cfg));
   // a design's config from its box fields (the rest is yours, at the amps the search uses)
   const cfgOf = (box: HifiGridBox): SearchConfig => ({
     ...cur,
@@ -471,7 +505,22 @@ export function hifiSearchSpace(
     if (!withGrid || i % parts !== part) continue;
     wi = i;
     li = 0;
-    const minW = Math.max(w.size + 1.5, face.w + 1),
+    // widths from the page's rule (the narrowest box any searched tweeter fits) where it is wider than the search's own
+    // start; heights as before, each box keeping only the vents a searched tweeter fits over
+    const pageW = Math.min(
+      ...held.map(
+        ({ tt, onTop }) =>
+          hifiBoxMin({
+            woofer: w,
+            tweeter: tt,
+            onTop,
+            cfg: { box: "sealed", port: cur.port },
+            wall: walls[0],
+            radiatorPanel: RADIATOR_PANEL,
+          }).w,
+      ),
+    );
+    const minW = Math.max(w.size + 1.5, face.w + 1, Number.isFinite(pageW) ? pageW : 0),
       minH = face.h + w.size + 3;
     const ws = range(
       dl.w,
@@ -495,12 +544,14 @@ export function hifiSearchSpace(
                   const Fb = w.ts.Fs * k;
                   // the smallest round port that fits (the shortest), the largest (the most air before it chuffs) and
                   // the largest slot: a box limited by its port's air speed always has its biggest port in the running
+                  // (of those a searched tweeter fits over: a box too short for the largest port tries smaller ones)
+                  const fits = (port: HifiPort) => holdsSome(w, { box, port, dim, wall });
                   const rounds = [1.5, 2, 2.5, 3]
                     .map((dia) => portFor(w, dim, wall, 1, dia, Fb))
-                    .filter((o) => o !== null);
+                    .filter((o) => o !== null && fits(o));
                   const slots = [0.75, 1, 1.5]
                     .map((h) => slotFor(w, dim, wall, h, Fb))
-                    .filter((o) => o !== null);
+                    .filter((o) => o !== null && fits(o));
                   for (const port of [
                     rounds[0],
                     rounds[rounds.length - 1],
@@ -510,9 +561,12 @@ export function hifiSearchSpace(
                 }
               else if (box === "radiator")
                 for (const k of [0.8, 1, 1.2])
-                  for (const pr of prsFor(w, dim, wall, passives, w.ts.Fs * k).slice(0, 1))
+                  for (const pr of prsFor(w, dim, wall, passives, w.ts.Fs * k)
+                    .filter((o) => holdsSome(w, { box, port: cur.port, pr: o, dim, wall }))
+                    .slice(0, 1))
                     add(w, dim, box, wall, null, pr, w.ts.Fs * k);
-              else add(w, dim, box, wall, null, null);
+              else if (holdsSome(w, { box, port: cur.port, dim, wall }))
+                add(w, dim, box, wall, null, null);
             }
   }
   // your box as it is: on the other plywood always (the smallest change for Lighter), and on yours when your woofer is
@@ -750,7 +804,7 @@ export function optimizeHifiSpeaker(
         const x = tws[ti];
         bPrice[ti] = priceOf(e.w, x.t, e.cfg);
         bLb[ti] = hifiWeightLb(e.w, x.tt, e.cfg, e.pr);
-        bFits[ti] = driversFitBaffle(driverLayout(e.w, x.tt, e.cfg.dim, x.onTop), e.w, e.cfg);
+        bFits[ti] = boxHolds(e.w, x.tt, x.onTop, e.cfg);
       }
     }
     for (let ti = 0; ti < tws.length; ti++) {

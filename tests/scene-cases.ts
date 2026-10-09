@@ -7,10 +7,14 @@ import { configs } from "./golden-configs";
 
 const PLINTH_IN = 3; // the planner's fixed plinth
 
-/** The scene props the planner would pass for a saved design, which can lack the fields an older save didn't have. */
+/**
+ * The scene props the planner would pass for a saved design, which can lack the fields an older save didn't have, and
+ * the 3D view's cutaway (the view's own toggle, not saved with the design).
+ */
 export function scenePropsOf(
   c: Pick<PaDesignConfig, "sub" | "mid" | "horn" | "portStyle" | "cDim" | "cVent"> &
-    Partial<PaDesignConfig>,
+    Partial<PaDesignConfig> &
+    Partial<Pick<Props, "cutaway">>,
 ): Props {
   const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
   const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];

@@ -25,4 +25,8 @@ export const UI_TEXT = {
   outdoors: "Outdoors",
   /** the summary line of the Details drop-downs (each page's written details, the optimizer's goal notes) */
   details: "Details",
+  /** the 3D view's buttons: full screen and back, and the cutaway (the cabinet as a ghost, the parts inside showing) */
+  fullScreen: "Full screen",
+  closeFullScreen: "Close full screen",
+  cutaway: "Cutaway",
 } as const;

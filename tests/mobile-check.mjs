@@ -5,13 +5,16 @@
 // request outside the page: everything is bundled in, so the page must work with the network blocked. Also drags a
 // toe-in handle on the Coverage map (desktop, mid band) and fails if the map doesn't follow or the layout moves.
 // Detail rows (label / value / caption): a caption must stay inside its row, right of the label, at every width
-// checked here and on a desktop window.
+// checked here and on a desktop window. On Hi-fi (desktop) a tweeter that needs a taller box raises the Height slider
+// only while it is chosen: switching back brings the box back (the size the user set is kept).
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
 import { PA_SETTINGS_TABS } from "../src/constants/paSettingsTabs.ts";
 import { COVERAGE_LAYOUT_KEY, COVERAGE_TEST_IDS } from "../src/constants/coverageTestIds.ts";
 import { STAT_ROW_TEST_IDS } from "../src/constants/statRowTestIds.ts";
+import { HIFI_BOX_LABELS } from "../src/constants/hifiLayout.ts";
+import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../src/data/catalog/hifi-tweeters.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const page = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -260,6 +263,34 @@ for (const width of [1024, 1600]) {
     if ((await top()) !== topBefore) failures.push("coverage: the map moved after a drag");
   }
   for (const e of errs) failures.push(`coverage drag: page error: ${e}`);
+  await ctx.close();
+}
+
+// Hi-fi box size, desktop: the tallest ribbon plate raises the box while chosen, and the starting dome brings it back.
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on("pageerror", (e) => errs.push(e.message));
+  await p.goto(page + "#hifi");
+  const height = p.getByLabel(HIFI_BOX_LABELS.h, { exact: true });
+  await height.waitFor({ timeout: 30000 });
+  const [ribbon] = HIFI_TWEETERS_RAW.filter((t) => t.ownGuide).sort(
+    (a, b) => b.ownGuide.h - a.ownGuide.h,
+  );
+  const pick = (id) => p.locator(`select:has(option[value="${id}"])`).selectOption(id);
+  const start = Number(await height.inputValue());
+  await pick(ribbon.id);
+  await p.waitForTimeout(300);
+  const raised = Number(await height.inputValue());
+  await pick(SB26STCN_RAW.id);
+  await p.waitForTimeout(300);
+  const back = Number(await height.inputValue());
+  if (!(raised > start))
+    failures.push(`hifi box: the ${ribbon.id} left the height at ${raised}″ (was ${start}″)`);
+  if (back !== start)
+    failures.push(`hifi box: switching back left the height at ${back}″, not ${start}″`);
+  for (const e of errs) failures.push(`hifi box: page error: ${e}`);
   await ctx.close();
 }
 await browser.close();

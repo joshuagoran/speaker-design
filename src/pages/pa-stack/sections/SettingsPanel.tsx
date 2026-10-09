@@ -6,13 +6,12 @@ import { SwatchPicker } from "../../../components/ui/SwatchPicker";
 import { Card } from "../../../components/ui/Card";
 import { SelectField } from "../../../components/ui/SelectField";
 import { Slider } from "../../../components/ui/Slider";
+import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, cabinetFinishName } from "../../../lib/data";
 import {
-  CD_OPTIONS,
-  HORN_OPTIONS,
-  PAINT_SWATCHES,
-  CABINET_FINISHES,
-  cabinetFinishOf,
-} from "../../../lib/data";
+  BaffleColorPicker,
+  CabinetFinishPicker,
+  PAINTED_PREFIX,
+} from "../../../components/ui/FinishPickers";
 import { HIGHPASS_ALIGNMENTS, isRoundPort, ventSpeedLimit } from "../../../lib/pa/calc";
 import { AMP_WATTS_MAX, AMP_WATTS_STEPS } from "../../../lib/pa/optimize";
 import { ductFit, ductLenSliderMax } from "../../../lib/pa/chips";
@@ -93,6 +92,7 @@ interface Props {
     | "maxPortAirSpeedMs"
     | "setMaxPortAirSpeedMs"
     | "setSubBoxDim"
+    | "subBoxMin"
     | "setSubVentField"
     | "midDriver"
     | "setMidDriver"
@@ -102,6 +102,7 @@ interface Props {
     | "midBelowSubDb"
     | "setMidBelowSubDb"
     | "setMidBoxDim"
+    | "midBoxMin"
     | "midSize"
     | "setMidSize"
     | "hornOption"
@@ -120,8 +121,6 @@ interface Props {
     | "setSubMidCrossoverOrder"
     | "midHornCrossoverOrder"
     | "setMidHornCrossoverOrder"
-    | "cutaway"
-    | "setCutaway"
     | "layout"
     | "setLayout"
     | "wallThicknessIn"
@@ -186,6 +185,7 @@ export function SettingsPanel({ planner }: Props) {
     maxPortAirSpeedMs,
     setMaxPortAirSpeedMs,
     setSubBoxDim,
+    subBoxMin,
     setSubVentField,
     midDriver,
     setMidDriver,
@@ -195,6 +195,7 @@ export function SettingsPanel({ planner }: Props) {
     midBelowSubDb,
     setMidBelowSubDb,
     setMidBoxDim,
+    midBoxMin,
     midSize,
     setMidSize,
     hornOption,
@@ -213,8 +214,6 @@ export function SettingsPanel({ planner }: Props) {
     setSubMidCrossoverOrder,
     midHornCrossoverOrder,
     setMidHornCrossoverOrder,
-    cutaway,
-    setCutaway,
     layout,
     setLayout,
     wallThicknessIn,
@@ -261,7 +260,7 @@ export function SettingsPanel({ planner }: Props) {
     baffleInsetIn,
     subDriver,
   );
-  const finishName = cabinetFinishOf(cabinetFinish)?.name ?? `painted ${cabinetFinish}`;
+  const finishName = cabinetFinishName(cabinetFinish);
   // the horn color picker: the horn's catalog finish as a preset that clears the picked color
   const hornFinish = hornOption.finish ?? "printed";
   const hornColorPresets = {
@@ -367,8 +366,8 @@ export function SettingsPanel({ planner }: Props) {
               <Slider
                 label="Width"
                 value={subBoxDims.w}
-                min={PA_SLIDERS.subW.min}
-                max={PA_SLIDERS.subW.max}
+                min={subBoxMin.w}
+                max={Math.max(PA_SLIDERS.subW.max, subBoxMin.w)}
                 step={PA_SLIDERS.subW.step}
                 unit="″"
                 onChange={(v) => setSubBoxDim("w", v)}
@@ -377,8 +376,8 @@ export function SettingsPanel({ planner }: Props) {
               <Slider
                 label="Height"
                 value={subBoxDims.h}
-                min={PA_SLIDERS.subH.min}
-                max={PA_SLIDERS.subH.max}
+                min={subBoxMin.h}
+                max={Math.max(PA_SLIDERS.subH.max, subBoxMin.h)}
                 step={PA_SLIDERS.subH.step}
                 unit="″"
                 onChange={(v) => setSubBoxDim("h", v)}
@@ -557,8 +556,8 @@ export function SettingsPanel({ planner }: Props) {
                   <Slider
                     label="Width"
                     value={midBoxDims.w}
-                    min={PA_SLIDERS.midW.min}
-                    max={PA_SLIDERS.midW.max}
+                    min={midBoxMin.w}
+                    max={Math.max(PA_SLIDERS.midW.max, midBoxMin.w)}
                     step={PA_SLIDERS.midW.step}
                     unit="″"
                     onChange={(v) => setMidBoxDim("w", v)}
@@ -567,8 +566,8 @@ export function SettingsPanel({ planner }: Props) {
                   <Slider
                     label="Height"
                     value={midBoxDims.h}
-                    min={PA_SLIDERS.midH.min}
-                    max={PA_SLIDERS.midH.max}
+                    min={midBoxMin.h}
+                    max={Math.max(PA_SLIDERS.midH.max, midBoxMin.h)}
                     step={PA_SLIDERS.midH.step}
                     unit="″"
                     onChange={(v) => setMidBoxDim("h", v)}
@@ -813,43 +812,16 @@ export function SettingsPanel({ planner }: Props) {
             )}
             <HardwareSettings planner={planner} />
           </div>
-          <SwatchPicker
-            label="Cabinet finish"
-            value={cabinetFinish}
-            onChange={setCabinetFinish}
-            swatches={PAINT_SWATCHES}
-            presets={CABINET_FINISHES}
-            titlePrefix="Painted: "
-            note={finishName}
-          />
-          <SwatchPicker
-            label="Baffle color"
-            value={baffleColor}
-            onChange={setBaffleColor}
-            swatches={PAINT_SWATCHES}
-            note={baffleColor}
-          />
+          <CabinetFinishPicker value={cabinetFinish} onChange={setCabinetFinish} />
+          <BaffleColorPicker value={baffleColor} onChange={setBaffleColor} />
           <SwatchPicker
             label="Horn color"
             value={hornColor ?? HORN_COLOR_CATALOG}
             onChange={(v) => setHornColor(pickedHornColor(v))}
             swatches={PAINT_SWATCHES}
             presets={hornColorPresets}
-            titlePrefix="Painted: "
+            titlePrefix={PAINTED_PREFIX}
             note={hornColor ?? `${HORN_COLOR_CATALOG_LABEL}: ${HORN_FINISH_NAMES[hornFinish]}`}
-          />
-          <ToggleGroup
-            label="View"
-            value={cutaway}
-            onChange={setCutaway}
-            options={
-              [
-                [false, "Finished"],
-                [true, "Cutaway"],
-              ] as const
-            }
-            wrap={false}
-            className="mb-5"
           />
           <div className="mb-5">
             <ToggleGroup

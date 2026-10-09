@@ -5,6 +5,7 @@ import type {
   BoxHardwarePlan,
   Chip,
   ChipId,
+  Dims2,
   Dims3,
   FillChipsInput,
   HornChipsInput,
@@ -138,12 +139,31 @@ export const ductFits = (spans: ReturnType<typeof ductFit>["spans"], len: number
   spans.some(([a, b]) => len >= a - 1e-9 && len <= b + 1e-9);
 // Clear baffle a driver needs: the sub's cone plus its frame.
 export const subDriverClearanceNeededIn = (subSize: number) => subSize + 1.9;
-export function driverClearance(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
+/** What the vents take off the sub's baffle, in: side ducts across, a bottom slot and its shelf up. */
+const ventAllowance = (portStyle: PortStyle, cVent: VentSpec, PT: number): Dims2 => {
   const nSide = portStyle === "vslot1" ? 1 : portStyle === "vslots" ? 2 : 0;
   return {
-    clearW: subBox.w - nSide * (cVent.throat + 0.43 + PT),
-    clearH: subBox.h - (portStyle === "slots" ? cVent.slotH + PT : 0),
+    w: nSide * (cVent.throat + 0.43 + PT),
+    h: portStyle === "slots" ? cVent.slotH + PT : 0,
   };
+};
+export function driverClearance(subBox: Dims3, portStyle: PortStyle, cVent: VentSpec, PT: number) {
+  const vents = ventAllowance(portStyle, cVent, PT);
+  return { clearW: subBox.w - vents.w, clearH: subBox.h - vents.h };
+}
+/**
+ * The smallest sub box face that holds its driver beside its vents (driverClearance turned round), in: the page's
+ * sliders and stored size start there (lib/boxFit). Round tubes' flares are a vent choice (their own chip).
+ */
+export function subBoxMin(
+  portStyle: PortStyle,
+  cVent: VentSpec,
+  PT: number,
+  subSize: number,
+): Dims2 {
+  const need = subDriverClearanceNeededIn(subSize);
+  const vents = ventAllowance(portStyle, cVent, PT);
+  return { w: need + vents.w, h: need + vents.h };
 }
 
 /**
