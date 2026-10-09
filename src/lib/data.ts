@@ -23,6 +23,7 @@ import type {
   Horn,
   MidDriver,
   MakerId,
+  MountAdapter,
   MidSize,
   OwnGuide,
   PassiveRadiator,
@@ -30,6 +31,7 @@ import type {
   SubDriver,
   SubSize,
   ThieleSmall,
+  ThroatMountKind,
   WaveguideSpec,
 } from "../types";
 import { CABINET_FINISHES } from "../data/catalog/finishes";
@@ -46,6 +48,7 @@ import { AMP_SERIES } from "../data/catalog/amps";
 import { DSP_UNITS } from "../data/catalog/dsp-units";
 import { MAINS_RACK, RACKS as RACK_TABLE } from "../data/catalog/racks";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
+import { MOUNT_ADAPTERS } from "../data/catalog/mount-adapters";
 import { byIdOrThrow } from "./tables";
 
 // Tables the app reads as written.
@@ -57,6 +60,7 @@ export { FORMATS } from "../data/catalog/formats";
 export { A460G2_14, ST260, ST260_PROFILE } from "../data/catalog/horns";
 export { B15, B18, MID_BOXES } from "../data/catalog/mid-boxes";
 export { HORN_AMP_SAFETY_HPF_HZ } from "../data/catalog/racks";
+export { MOUNT_ADAPTERS };
 
 // Every driver table holds the maker's excursion figures; this adds the comparable Xmax the models read.
 const withTsXmax = <D extends { name: string; maker: MakerId; ts: RawTS<ThieleSmall> }>(d: D) => ({
@@ -185,7 +189,41 @@ export const waveguideSpecOf = (h: HifiWaveguide): WaveguideSpec => ({
   freestanding: !h.rect,
   minXo: h.hf.minXo,
   lowHz: h.hf.lowHz,
+  ...(h.mount ? { mount: h.mount } : {}),
 });
+
+// ---- Throat mounts: how a compression driver meets its waveguide, and the adapter a mixed pair needs ----
+
+/** How a driver meets a horn's throat: screw-on when its mount is a thread, else bolt-on (the default). */
+export const driverMountKind = ({ mount }: Pick<HifiTweeter, "mount">): ThroatMountKind =>
+  mount && "thread" in mount ? "thread" : "bolts";
+/** How a horn takes its driver: screw-on when it has a thread, else bolt-on (its throat flange). */
+export const hornMountKind = ({ mount }: Pick<WaveguideSpec, "mount">): ThroatMountKind =>
+  mount ? "thread" : "bolts";
+/**
+ * A compression driver on a waveguide: direct when both screw on or both bolt on, else through the catalogue's adapter
+ * from the driver's mount to the horn's; null when no adapter joins them (the pair doesn't fit).
+ */
+export function throatJoin(
+  t: Pick<HifiTweeter, "mount">,
+  guide: Pick<WaveguideSpec, "mount">,
+  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
+): { adapter: MountAdapter | null } | null {
+  const driver = driverMountKind(t),
+    horn = hornMountKind(guide);
+  if (driver === horn) return { adapter: null };
+  const adapter = adapters.find((a) => a.driver === driver && a.horn === horn);
+  return adapter ? { adapter } : null;
+}
+/**
+ * What the throat adds to one speaker's cost: the adapter's price when the driver sits on the catalogue waveguide
+ * `guide` (null: it doesn't, as a dome or a ribbon on its own) and the pair needs one; else 0 (a direct pair, a pair
+ * that doesn't fit, or an unpriced adapter).
+ */
+export const throatAdapterPrice = (
+  t: Pick<HifiTweeter, "mount">,
+  guide: Pick<WaveguideSpec, "mount"> | null,
+): number => (guide && throatJoin(t, guide)?.adapter?.price) || 0;
 export const passiveRadiatorMassMax = (p: PassiveRadiator): number =>
   Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
 

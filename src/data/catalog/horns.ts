@@ -14,10 +14,12 @@
 // ([radius, depth] points, in; the 3-D view stretches it to `size`), adapter (the throat adapter: name, steps
 // [diameter, length] front to back, body and driver bolt circles, in), rect for the full-width rectangular concept,
 // finish ("black" for a horn that ships painted, as cast Lavoce, B&C, RCF and Beyma horns do; omit it for a printed horn),
-// scope ("hifi" for a small waveguide only the Hi-fi page lists; omit it for a horn every page offers).
+// scope ("hifi" for a small waveguide only the Hi-fi page lists; omit it for a horn every page offers), mount (a screw-on
+// throat's thread; omit it for a horn the driver bolts to; src/lib/data.ts picks the adapter a driver of the other kind
+// needs, which the Hi-fi cost adds and the 3-D view draws without its length).
 // A horn with a CAD mesh (HORN_MESHES in src/data/meshes) is drawn from it, at the mesh's size, which `size` must
 // match; a horn with neither a mesh nor a profile is drawn as a rectangular flare at its mouth and depth.
-import type { HifiWaveguide, Horn, HornAdapter, HornProfilePoint } from "../../types";
+import type { HifiWaveguide, Horn, HornAdapter, HornProfilePoint, ThreadMount } from "../../types";
 
 export const ST260_PROFILE: readonly HornProfilePoint[] = [
   [1.89, 0.0],
@@ -135,6 +137,9 @@ export const ST260: HifiWaveguide = {
   xo: "1200–1500 Hz",
   note: "Round free-standing waveguide, ~110° coverage. No cabinet-width constraint. Drawn from the ST260-19.stl cross-section (260 mm mouth).",
 };
+
+/** The 1-inch screw-on throat: a 1-3/8"-18 TPI thread. */
+const SCREW_ON_1: ThreadMount = { thread: "1-3/8-18" };
 
 /** The 1 in Gen2 throat adapter: 25.4 mm in, 61 mm long (at-horns.eu). */
 const T520_25_STD_1: HornAdapter = {
@@ -458,11 +463,12 @@ export const HORN_RAW: readonly Horn[] = [
     exit: 1,
     finish: "black",
     scope: "hifi",
+    mount: SCREW_ON_1,
     price: 11.98,
     src: "Parts Express, Oct 2026 (back-ordered; $15.99 MSRP)",
     size: { w: 5.875, h: 5.875, d: 3.75 },
     driver:
-      '1-3/8"-18 TPI screw-on: a screw-on 1" driver threads straight in; a 2- or 3-bolt driver (every Hi-fi compression driver here) needs a 2/3-bolt to screw-on adapter such as the Eminence B2S-A (Parts Express #290-563, $14.99, not in the price or the 3-D view)',
+      '1-3/8"-18 TPI screw-on: a screw-on 1" driver threads straight in; a 2- or 3-bolt driver takes a 2/3-bolt to screw-on adapter (the Eminence B2S-A, in the Hi-fi cost)',
     xo: "from 2.2 kHz (the maker's minimum)",
     note: '[daytonaudio.com and Parts Express, Oct 2026] Molded plastic elliptical waveguide, 80° × 50° nominal, 1" throat on a 1-3/8" × 18 TPI thread, recommended minimum crossover 2.2 kHz ("useful acoustical loading down to 2,200 Hz"). 5-7/8 × 5-7/8 × 3-3/4 in. Weight not published: 0.68 lb shipping, so about 0.5 lb is assumed. Cutout, polar data and a datasheet are not published. Parts Express #270-316. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
@@ -475,11 +481,12 @@ export const HORN_RAW: readonly Horn[] = [
     exit: 1,
     finish: "black",
     scope: "hifi",
+    mount: SCREW_ON_1,
     price: 9.99,
     src: "Parts Express, Oct 2026",
     size: { w: 160 / 25.4, h: 145 / 25.4, d: 103 / 25.4 },
     driver:
-      '1-3/8"-18 TPI screw-on: a screw-on 1" driver (e.g. the Selenium D220Ti) threads straight in; a 2- or 3-bolt driver needs a 2/3-bolt to screw-on adapter such as the Eminence B2S-A (Parts Express #290-563, $14.99, not in the price or the 3-D view)',
+      '1-3/8"-18 TPI screw-on: a screw-on 1" driver (e.g. the Selenium D220Ti) threads straight in; a 2- or 3-bolt driver takes a 2/3-bolt to screw-on adapter (the Eminence B2S-A, in the Hi-fi cost)',
     xo: "from about 2.2 kHz (1.5 kHz limit)",
     note: '[jblpro.com and Parts Express, Oct 2026] JBL Selenium plastic bi-radial horn, 60° × 40° nominal, 1" throat on a 1-3/8"-18 TPI thread, low-frequency limit 1.5 kHz. JBL gives 160 × 145 × 103 mm; Parts Express gives 6.34 × 5.16 × 4.16 in (161 × 131 × 106 mm) and a 4-1/2 × 4-1/2 in cutout; the maker\'s size is used. JBL lists it as discontinued; Parts Express still sells it (#264-308). Net weight not published: 0.35 lb shipping, so about 0.3 lb is assumed. No recommended crossover published; about 2.2 kHz is assumed from the limit. The narrowest of the small horns: at 60° its 160 mm mouth holds the pattern only above about 2.6 kHz (Keele). Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },

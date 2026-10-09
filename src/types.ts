@@ -13,6 +13,7 @@ import type { DSP_UNITS } from "./data/catalog/dsp-units";
 import type { Keep } from "./lib/optimizer/shortfall";
 import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
+import type { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "./constants/throatMounts";
 import type { HORN_MOUNT_NAMES } from "./constants/hornMount";
 import type { SelectedCard } from "./lib/optimizer/selectCards";
 import type { HANDLES } from "./data/catalog/cabinet-hardware";
@@ -215,6 +216,36 @@ export interface CompressionDriverBody {
   steps?: readonly BodyStep[];
 }
 
+/** How a driver meets a horn's throat (`THROAT_MOUNT_NAMES`): bolts on a circle, or a screw-on thread. */
+export type ThroatMountKind = keyof typeof THROAT_MOUNT_NAMES;
+/** A screw-on throat thread (`THROAT_THREAD_NAMES`). */
+export type ThroatThread = keyof typeof THROAT_THREAD_NAMES;
+/** A screw-on throat: its thread. */
+export interface ThreadMount {
+  thread: ThroatThread;
+}
+/**
+ * How a compression driver meets a horn: its front-face bolts (the body's pattern, as the PA catalogue holds it) or a
+ * screw-on thread.
+ */
+export type DriverMount = Pick<CompressionDriverBody, "bolts"> | ThreadMount;
+
+/**
+ * An adapter between a driver and a horn whose throats meet differently (`MOUNT_ADAPTERS`): the driver side and the
+ * horn side it joins, its US price (null when no vendor sells it) and where the price was read.
+ */
+export interface MountAdapter {
+  id: string;
+  name: string;
+  lb: number;
+  /** the mount the driver has, and the mount the horn has, that it joins */
+  driver: ThroatMountKind;
+  horn: ThroatMountKind;
+  price: number | null;
+  src: string;
+  note: string;
+}
+
 /** One point of a horn's flare, [radius, depth] in inches. */
 export type HornProfilePoint = readonly [radius: number, depth: number];
 
@@ -263,6 +294,8 @@ export interface Horn {
   finish?: HornFinish;
   /** the one page that offers it; absent: every page (the PA horns, and the Hi-fi waveguides among them) */
   scope?: HornScope;
+  /** a screw-on throat; absent: the driver bolts to the throat flange */
+  mount?: ThreadMount;
   /** US dollars; null when no vendor sells it (the optimizers then leave it out unless it is locked) */
   price: number | null;
   src: string;
@@ -493,6 +526,11 @@ export interface HifiTweeter {
   /** radiating diameter in inches for the directivity: the exit, or the mouth of a horn-loaded tweeter */
   domeIn: number;
   ownGuide?: OwnGuide;
+  /**
+   * a compression driver's throat mount: its bolts or a screw-on thread; absent: bolt-on, with the PA catalogue's
+   * pattern for the same driver, else a generic 2-bolt one
+   */
+  mount?: DriverMount;
 }
 
 /**
@@ -601,6 +639,8 @@ export interface WaveguideSpec {
   minXo?: HornHf["minXo"];
   /** where the waveguide stops holding its pattern and loading the driver, Hz; absent when it sets none */
   lowHz?: HornHf["lowHz"];
+  /** a screw-on waveguide's thread; absent: the driver bolts on */
+  mount?: Horn["mount"];
 }
 
 /** The Hi-fi design the model works on (the Hi-fi page's state, with the units the lib uses: inches, Hz, watts, dB). */

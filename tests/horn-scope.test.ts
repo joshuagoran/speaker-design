@@ -33,7 +33,7 @@ describe("the small Hi-fi-only waveguides", () => {
       if (h.hf.minXo !== null) expect(h.hf.minXo, h.id).toBeGreaterThanOrEqual(h.hf.lowHz);
       // a US vendor's price, and the month it was read
       expect(h.price ?? 0, h.id).toBeGreaterThan(0);
-      expect(h.src, h.id).toMatch(/Parts Express|Solen|US Speaker|usspeaker/i);
+      expect(h.src, h.id).toMatch(/Parts Express|US Speaker|usspeaker/i);
       expect(h.src, h.id).toMatch(/20\d\d/);
       expect(h.note.length, h.id).toBeGreaterThan(0);
     }

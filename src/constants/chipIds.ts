@@ -49,6 +49,7 @@ export const CHIP_IDS = {
     "hifiDispersion",
     "hifiTweeterMinXo",
     "hifiGuidePattern",
+    "hifiGuideMount",
     "hifiTweeterResonance",
     "hifiWooferRange",
     "hifiQtc",
