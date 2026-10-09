@@ -238,6 +238,12 @@ export interface HornHf {
 /** A horn's factory finish in the 3-D view (`HORN_FINISH_COLORS`). */
 export type HornFinish = "black";
 
+/**
+ * Where a horn is offered when not everywhere: "hifi" for a small waveguide only the Hi-fi page lists (the PA picker
+ * and optimizers leave it out; `HORN_OPTIONS` in src/lib/data.ts).
+ */
+export type HornScope = "hifi";
+
 export interface Horn {
   id: string;
   lb: number;
@@ -255,6 +261,8 @@ export interface Horn {
   rect?: boolean;
   /** the factory finish of a horn that ships painted; absent: drawn in the printed cream */
   finish?: HornFinish;
+  /** the one page that offers it; absent: every page (the PA horns, and the Hi-fi waveguides among them) */
+  scope?: HornScope;
   /** US dollars; null when no vendor sells it (the optimizers then leave it out unless it is locked) */
   price: number | null;
   src: string;
@@ -591,6 +599,8 @@ export interface WaveguideSpec {
   freestanding: boolean;
   /** the waveguide's own lowest crossover, Hz (its loading); null or absent when it sets none */
   minXo?: HornHf["minXo"];
+  /** where the waveguide stops holding its pattern and loading the driver, Hz; absent when it sets none */
+  lowHz?: HornHf["lowHz"];
 }
 
 /** The Hi-fi design the model works on (the Hi-fi page's state, with the units the lib uses: inches, Hz, watts, dB). */

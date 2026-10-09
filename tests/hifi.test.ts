@@ -376,6 +376,37 @@ test("compression driver on a waveguide: the higher of the two minimum crossover
   assert.ok(own[2].includes(de250.name), own[2]);
 });
 
+test("a crossover below the waveguide's pattern control warns, naming the waveguide and its limit; at or above it, none", async () => {
+  const { HIFI_TWEETERS, HIFI_WAVEGUIDES, ST260, ownGuideCfg, waveguideSpecOf } =
+    await import("../src/lib/data");
+  const de250 = HIFI_TWEETERS.find((o) => o.id === "de250");
+  const small = HIFI_WAVEGUIDES.find((h) => h.id === "h07e");
+  if (!de250 || !small) throw new Error("no DE250 or H07E to test");
+  const lowHz = small.hf.lowHz;
+  const chipAt = (xo: number, g: HifiConfig["guide"], t: HifiTweeter = de250) => {
+    const c = { ...cfg, guide: g, xo };
+    const s = hifiSystem(W, t, c);
+    if (!s) throw new Error(`no system at ${xo} Hz`);
+    return findChip(hifiChips(s, W, t, c), "hifiGuidePattern", "warn");
+  };
+  const guide = waveguideSpecOf(small);
+  assert.equal(guide.lowHz, lowHz, "the guide carries the catalogue's limit");
+  // the small horn's 2.2 kHz limit: a 2 kHz crossover warns, its limit and above don't
+  const warn = chipAt(lowHz - 200, guide);
+  assert.ok(warn, `a warning at ${lowHz - 200} Hz`);
+  assert.ok(warn[2].includes(small.name) && warn[2].includes(String(lowHz)), warn[2]);
+  assert.ok(!chipAt(lowHz, guide), "none at the limit");
+  assert.ok(!chipAt(3000, guide), "none above it");
+  // the default design (the ST260 at 2 kHz) stays quiet; a dome (no waveguide) and a ribbon's own waveguide (no limit)
+  // never warn
+  assert.ok(!chipAt(2000, waveguideSpecOf(ST260)));
+  assert.ok(!chipAt(800, null, T));
+  const ribbon = HIFI_TWEETERS.find((o) => o.ownGuide);
+  const own = ownGuideCfg(ribbon);
+  if (!ribbon || !own) throw new Error("no ribbon to test");
+  assert.ok(!chipAt(800, own, ribbon));
+});
+
 test("port toggle builds a fresh port with only its own shape's fields", () => {
   const round = { n: 1, dia: 3, len: 7, elbows: 1 } as const;
   const remembered = { dia: 2, h: 1 };

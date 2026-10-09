@@ -1238,6 +1238,15 @@ export function hifiChips(
       `${xo} Hz, below the ${minXo.hz} Hz recommended for the ${minXo.name}.`,
       "hifiTweeterMinXo",
     ]);
+  // the waveguide's pattern-control limit (a small horn's sits high): below it the coverage widens past its rating
+  const guideLowHz = cfg.guide?.lowHz;
+  if (cfg.guide && guideLowHz && xo < guideLowHz)
+    F.push([
+      "warn",
+      "Below the waveguide's pattern control",
+      `${xo} Hz, below the ${guideLowHz} Hz where the ${cfg.guide.name} stops holding its ${cfg.guide.covH}° pattern and loading the driver: near the crossover the tweeter spreads wider and its output sags.`,
+      "hifiGuidePattern",
+    ]);
   if (nearTweeterResonance(t, xo))
     F.push([
       "warn",

@@ -1,5 +1,6 @@
 // PA horns and Hi-fi waveguides (one table: the Hi-fi page lists the horns with coverage specs as waveguides).
-// src/lib/data.ts sorts HORN_OPTIONS by name.
+// src/lib/data.ts derives the PA list (HORN_OPTIONS: every horn but the Hi-fi-only ones, by name) and the Hi-fi
+// waveguides (HIFI_WAVEGUIDES: every 1" horn with coverage specs, by name).
 // To add an entry, append an object literal to the table. The type annotation makes the compiler check it exactly:
 // a misspelled, extra or missing field, a string where a number belongs or a value outside its union (maker id, size
 // class, tweeter type) is an error.
@@ -12,7 +13,8 @@
 // minXo Hz (the maker's lowest crossover, null if none), lowHz (pattern-control limit, Hz). Optional: profile
 // ([radius, depth] points, in; the 3-D view stretches it to `size`), adapter (the throat adapter: name, steps
 // [diameter, length] front to back, body and driver bolt circles, in), rect for the full-width rectangular concept,
-// finish ("black" for a horn that ships painted, as cast Lavoce, B&C, RCF and Beyma horns do; omit it for a printed horn).
+// finish ("black" for a horn that ships painted, as cast Lavoce, B&C, RCF and Beyma horns do; omit it for a printed horn),
+// scope ("hifi" for a small waveguide only the Hi-fi page lists; omit it for a horn every page offers).
 // A horn with a CAD mesh (HORN_MESHES in src/data/meshes) is drawn from it, at the mesh's size, which `size` must
 // match; a horn with neither a mesh nor a profile is drawn as a rectangular flare at its mouth and depth.
 import type { HifiWaveguide, Horn, HornAdapter, HornProfilePoint } from "../../types";
@@ -410,5 +412,91 @@ export const HORN_RAW: readonly Horn[] = [
     driver: "B&C DE250 / Faital HF10AK",
     xo: "1200–1500 Hz",
     note: 'Approx.: drawn as the ST260 profile stretched to 290 × 185 × 245 mm deep (Cults3D listing); no profile published. Elliptical 600 Hz horn, 1" throat.',
+  },
+  // Small 1" waveguides (5–7" mouths) for the Hi-fi page only (scope "hifi"): a DJ monitor's 8" + 1" pair crossed at
+  // about 2.5–3 kHz, or a small fill. Their cutoffs (1–2.2 kHz) sit above the PA's 900 Hz–1 kHz crossovers, so the PA
+  // picker and optimizers leave them out. A mouth this small holds its rated coverage only above about
+  // 25,000 / (degrees × mouth width in m) Hz (Keele): about 1.7–2.6 kHz across these, higher in the narrow plane.
+  {
+    id: "me10",
+    lb: 0.37,
+    name: "B&C ME10",
+    hf: { covH: 90, covV: 60, minXo: null, lowHz: 1500 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    price: 21.96,
+    src: "Parts Express, Oct 2026",
+    size: { w: 130.5 / 25.4, h: 130.5 / 25.4, d: 90 / 25.4 },
+    driver:
+      '1" exit, 2-bolt on a 76 mm circle (also holes on 57.2 and 53 mm): the DE250, DE10, CDX1-1745, HF102 and the other 2-bolt 1" drivers bolt straight on',
+    xo: "from about 2.2 kHz (1.5 kHz cutoff)",
+    note: '[bcspeakers.com ME10V3 datasheet, Oct 2026] Molded ABS hyperbolic-cosine horn, 90° × 60° nominal, 1" (25 mm) throat, cutoff 1.5 kHz ("excellent loading down to 1.5 kHz"). 130.5 × 130.5 × 90 mm (5.1 × 5.1 × 3.5 in), baffle cutout ⌀104 mm, 0.17 kg (0.37 lb). The ⌀88 mm throat flange has 8 × ⌀6 mm holes on 76, 57.2 and 53 mm circles; the front flange 4 × ⌀5 mm on a 114 mm square. B&C publishes no recommended crossover; about 2.2 kHz is assumed from the cutoff. B&C\'s directivity map shows it about 150° wide (−6 dB) at 2 kHz, narrowing to 90° by about 5 kHz, so at a 2.5–3 kHz crossover it is wider than rated. The V3 replaces the ME10 and ME10v2 (two more driver holes). Parts Express #294-618. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "td8060",
+    lb: 0.29,
+    name: "Beyma TD-8060",
+    hf: { covH: 80, covV: 60, minXo: null, lowHz: 1500 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    price: 20.25,
+    src: "Parts Express, Oct 2026",
+    size: { w: 140 / 25.4, h: 140 / 25.4, d: 67.4 / 25.4 },
+    driver:
+      '1" exit, 2- or 3-bolt (Parts Express); the bolt circles were not in the sources read, so check them against the driver',
+    xo: "from about 2.2 kHz (1.5 kHz cutoff)",
+    note: '[Beyma TD-8060 datasheet as quoted by retailers, Oct 2026; the PDF itself could not be fetched] Polycarbonate constant-directivity horn, 80° × 60° (−6 dB, 2–16 kHz), 1" (25.4 mm) throat, cutoff 1.5 kHz, Q 10.3 / DI 7.7 dB. 140 × 140 × 67.4 mm (5.51 × 5.51 × 2.65 in), cutout 113 × 130 mm, 0.13 kg (0.29 lb). Beyma publishes no recommended crossover; about 2.2 kHz is assumed from the cutoff. The shallowest of the small horns. A UK retailer lists it as discontinued; Parts Express still stocks it (#253-171). Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "h07e",
+    // GUESS: Dayton publishes only the 0.68 lb shipping weight
+    lb: 0.5,
+    name: "Dayton Audio H07E",
+    hf: { covH: 80, covV: 50, minXo: 2200, lowHz: 2200 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    price: 11.98,
+    src: "Parts Express, Oct 2026 (back-ordered; $15.99 MSRP)",
+    size: { w: 5.875, h: 5.875, d: 3.75 },
+    driver:
+      '1-3/8"-18 TPI screw-on: a screw-on 1" driver threads straight in; a 2- or 3-bolt driver (every Hi-fi compression driver here) needs a 2/3-bolt to screw-on adapter such as the Eminence B2S-A (Parts Express #290-563, $14.99, not in the price or the 3-D view)',
+    xo: "from 2.2 kHz (the maker's minimum)",
+    note: '[daytonaudio.com and Parts Express, Oct 2026] Molded plastic elliptical waveguide, 80° × 50° nominal, 1" throat on a 1-3/8" × 18 TPI thread, recommended minimum crossover 2.2 kHz ("useful acoustical loading down to 2,200 Hz"). 5-7/8 × 5-7/8 × 3-3/4 in. Weight not published: 0.68 lb shipping, so about 0.5 lb is assumed. Cutout, polar data and a datasheet are not published. Parts Express #270-316. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "hm1725",
+    // GUESS: no net weight published; Parts Express lists 0.35 lb shipping
+    lb: 0.3,
+    name: "Selenium HM17-25",
+    hf: { covH: 60, covV: 40, minXo: null, lowHz: 1500 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    price: 9.99,
+    src: "Parts Express, Oct 2026",
+    size: { w: 160 / 25.4, h: 145 / 25.4, d: 103 / 25.4 },
+    driver:
+      '1-3/8"-18 TPI screw-on: a screw-on 1" driver (e.g. the Selenium D220Ti) threads straight in; a 2- or 3-bolt driver needs a 2/3-bolt to screw-on adapter such as the Eminence B2S-A (Parts Express #290-563, $14.99, not in the price or the 3-D view)',
+    xo: "from about 2.2 kHz (1.5 kHz limit)",
+    note: '[jblpro.com and Parts Express, Oct 2026] JBL Selenium plastic bi-radial horn, 60° × 40° nominal, 1" throat on a 1-3/8"-18 TPI thread, low-frequency limit 1.5 kHz. JBL gives 160 × 145 × 103 mm; Parts Express gives 6.34 × 5.16 × 4.16 in (161 × 131 × 106 mm) and a 4-1/2 × 4-1/2 in cutout; the maker\'s size is used. JBL lists it as discontinued; Parts Express still sells it (#264-308). Net weight not published: 0.35 lb shipping, so about 0.3 lb is assumed. No recommended crossover published; about 2.2 kHz is assumed from the limit. The narrowest of the small horns: at 60° its 160 mm mouth holds the pattern only above about 2.6 kHz (Keele). Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "sth100",
+    lb: 1.01,
+    name: "FaitalPRO STH100",
+    hf: { covH: 80, covV: 70, minXo: 1400, lowHz: 1000 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    price: 102.5,
+    src: "Parts Express, Oct 2026",
+    size: { w: 180 / 25.4, h: 120 / 25.4, d: 85.9 / 25.4 },
+    driver:
+      '1" exit, 2- or 3-bolt (Parts Express; the drawing shows 76 mm between the holes): the HF102, DE250, CDX1-1745 and the other 2-bolt 1" drivers',
+    xo: "from 1.4 kHz (the maker's recommendation)",
+    note: '[FaitalPRO STH100 datasheet, printed Feb 2024; Parts Express, Oct 2026] Cast aluminum elliptical tractrix waveguide, 80° × 70° (−6 dB, averaged 2–16 kHz), 1" (25.4 mm) throat, frequency range 1–20 kHz, recommended crossover 1.4 kHz, DI 8 dB. Mouth 180 × 120 mm (7.09 × 4.72 in), 85.9 mm deep, 4 × ⌀6.5 mm mouth holes, 460 g (1.01 lb). Beamwidth from the datasheet chart (read by eye): about 118° H × 145° V at 1.4 kHz, 100° × 130° at 2 kHz, about 80° H from 2.5 kHz and 90° V from about 3 kHz, narrowing to about 60° H × 40° V at 20 kHz. Faital says it is sold only with a FaitalPRO 1" driver; Parts Express sells it alone (#294-1040). The largest and dearest of the small horns. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
 ];

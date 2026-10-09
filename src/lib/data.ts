@@ -83,7 +83,10 @@ export const midDriversOfSize = (size: MidSize) => MID_OPTIONS.filter((o) => o.s
 
 // Copies, so the sort below leaves the catalog tables as written.
 export const CD_OPTIONS: CompressionDriver[] = [...CD_RAW];
-export const HORN_OPTIONS: Horn[] = [...HORN_RAW];
+/** A horn the PA side offers (its picker, both optimizers, saves): every horn but the Hi-fi-only small waveguides. */
+const isPaHorn = (h: Horn) => h.scope !== "hifi";
+/** The PA horns. */
+export const HORN_OPTIONS: Horn[] = HORN_RAW.filter(isPaHorn);
 
 /** A turned part's length (its steps end to end), in. */
 export const stepsLength = (steps: readonly BodyStep[]) =>
@@ -127,8 +130,9 @@ export const sortedByName = <T extends { name: string }>(arr: readonly T[]): T[]
 );
 /** A horn the Hi-fi page offers as a waveguide: a 1-inch throat, with its coverage specs and size. */
 const isHifiWaveguide = (h: Horn): h is HifiWaveguide => h.exit === 1 && !!h.hf?.covH && !!h.size;
-/** The Hi-fi page's waveguides, in the horns' (A–Z) order. */
-export const HIFI_WAVEGUIDES: readonly HifiWaveguide[] = HORN_OPTIONS.filter(isHifiWaveguide);
+/** The Hi-fi page's waveguides, from every horn (the Hi-fi-only ones included), A–Z. */
+export const HIFI_WAVEGUIDES: readonly HifiWaveguide[] =
+  sortedByName(HORN_RAW).filter(isHifiWaveguide);
 
 export const BC10CXN64: FillDriver = withTsXmax(BC10CXN64_RAW);
 export const FILL_OPTIONS: readonly FillDriver[] = FILL_RAW.map((d) =>
@@ -169,7 +173,8 @@ export const ownGuideCfg = (
   t && t.ownGuide ? { ...t.ownGuide, freestanding: false } : null;
 /**
  * A picked waveguide (a horn with coverage specs) as the model's guide object: its coverage (V as H when unpublished),
- * mouth, name and lowest crossover; a round one stands free on the box top, the full-width rectangle sits in the baffle.
+ * mouth, name, lowest crossover and pattern-control limit; a round one stands free on the box top, the full-width
+ * rectangle sits in the baffle.
  */
 export const waveguideSpecOf = (h: HifiWaveguide): WaveguideSpec => ({
   covH: h.hf.covH,
@@ -179,6 +184,7 @@ export const waveguideSpecOf = (h: HifiWaveguide): WaveguideSpec => ({
   name: h.name,
   freestanding: !h.rect,
   minXo: h.hf.minXo,
+  lowHz: h.hf.lowHz,
 });
 export const passiveRadiatorMassMax = (p: PassiveRadiator): number =>
   Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;

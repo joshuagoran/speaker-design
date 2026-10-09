@@ -34,6 +34,7 @@ import { HIFI_GENERIC_BODIES } from "../src/constants/hifiScene";
 import { HORN_MESHES } from "../src/data/meshes";
 import { byIdOrThrow } from "../src/lib/tables";
 import { HIFI_ROUNDOVER_CHOICES } from "../src/constants/hifiLayout";
+import { PARTS_3D } from "../src/styles/palette";
 import type { HifiDesignState, HifiWaveguide, RadiatorPanel } from "../src/types";
 
 const EPS = 1e-6;
@@ -326,6 +327,34 @@ describe("the tweeter", () => {
     const p = propsFor({ tweeter: tweeter("de250"), selectedWaveguide: waveguide("st260") });
     const [horn] = named(scene(p), HORN_MESH_NAME);
     expect(horn instanceof THREE.Mesh && horn.geometry.type).toBe("LatheGeometry");
+  });
+
+  test("a small Hi-fi-only waveguide (the B&C ME10): the generic flare at its catalogue mouth and depth on the box top, factory black", () => {
+    const small = waveguide("me10");
+    expect(small.scope).toBe("hifi");
+    const p = propsFor({ tweeter: tweeter("de250"), selectedWaveguide: small });
+    const g = scene(p);
+    expect(p.lay.onTop).toBe(true);
+    const [horn] = named(g, HORN_MESH_NAME);
+    if (!(horn instanceof THREE.Mesh)) throw new Error("no horn mesh");
+    // neither a mesh nor a turned profile: the rectangular flare
+    expect(horn.geometry.type).not.toBe("LatheGeometry");
+    expect(HORN_MESHES[small.id]).toBeUndefined();
+    const hornBox = new THREE.Box3().setFromObject(horn);
+    const size = hornBox.getSize(new THREE.Vector3());
+    expect(size.x).toBeCloseTo(small.size.w, 2);
+    expect(size.y).toBeCloseTo(small.size.h, 2);
+    expect(size.z).toBeCloseTo(small.size.d, 2);
+    expect(hornBox.min.y).toBeGreaterThan(p.dim.h);
+    expect(hornBox.max.z).toBeCloseTo(p.dim.d / 2, 4); // its mouth on the box's front plane
+    // smaller than the box top: it stands inside the box's width, its driver held on the plate or the bracket
+    expect(size.x).toBeLessThan(p.dim.w);
+    expect(
+      named(g, PLATE_MESH_NAMES.plate).length + named(g, BRACKET_MESH_NAME).length,
+    ).toBeGreaterThan(0);
+    expect(named(g, CD_MESH_NAME).length).toBeGreaterThan(0);
+    if (!(horn.material instanceof THREE.MeshStandardMaterial)) throw new Error("horn material");
+    expect(horn.material.color.getHex()).toBe(PARTS_3D.hornBlack);
   });
 
   test("a compression driver the PA catalogue doesn't list gets the generic body, its own diameter across", () => {
