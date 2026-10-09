@@ -17,7 +17,7 @@ import {
   foldedRearWallIn,
   foldedShelfIn,
   slotInnerEndCorrection,
-  boxInternalLiters,
+  midGrossLiters,
   logGridCount,
   LOWPASS_SKIRT_SPAN,
   sideDuctEndCorrection,
@@ -266,7 +266,7 @@ function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: 
   const disp = ts.disp != null ? ts.disp : mid.size === 15 ? 4 : 2.5;
   const effL =
     midNetLiters(
-      boxInternalLiters(box.w, box.h, box.d, t, inset),
+      midGrossLiters(box, t, inset, brace.layout),
       disp,
       midBraceEstimate(box, t, inset, brace.layout, brace.braceStyle),
     ) * STUFFING_VOLUME_GAIN;

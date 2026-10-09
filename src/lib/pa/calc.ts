@@ -6,6 +6,7 @@ import type {
   BoxModelTS,
   BoxRegion,
   BraceStyleId,
+  CompressionDriver,
   CompressionHf,
   CornerJoint,
   CrossoverOrder,
@@ -23,6 +24,7 @@ import type {
   FillSystemConfig,
   FrequencyPoint,
   HighpassType,
+  Horn,
   HornHf,
   HornResponse,
   MidDriver,
@@ -498,6 +500,17 @@ export function closedBox(
 // Internal liters with walls of thickness t and a 3/4″ baffle recessed `inset` into the frame.
 export const boxInternalLiters = (w: number, h: number, d: number, t: number, inset = 0.75) =>
   ((w - 2 * t) * (h - 2 * t) * (d - inset - 0.75 - t) * 16.387) / 1000;
+/**
+ * A mid box's air before the driver, braces and hardware, L. The tower's chamber (towerMidDims) is bounded by the
+ * partitions (towerSpec), whose top faces stand its height apart: the sub/mid one lies under its floor line and only
+ * the mid/horn one comes out of it, so its clear height is the height less one wall, not two.
+ */
+export const midGrossLiters = (
+  dims: Dims3,
+  t: number,
+  inset: number,
+  layout: PaLayout | undefined,
+) => boxInternalLiters(dims.w, layout === "tower" ? dims.h + t : dims.h, dims.d, t, inset);
 // Plywood weight, lb/ft², at the wall's exact thickness (lib/panel).
 export const plywoodLbPerSqFt = (t: number) => panelLbPerSqFt(t, PLYWOOD_MATERIAL);
 
@@ -1378,7 +1391,7 @@ export function towerCutParts(
     a: D,
     b: Math.PI * (R - t / 2),
     t,
-    note: `bent over the sides to a ${formatInches(R)}″ outer radius, its length on its centerline: kerf the inside face across it every 1/2″, or laminate bending ply to ${formatInches(t)}″; a curve, so only its blank comes off a straight guillotine cut`,
+    note: `bent over the sides to a ${formatInches(R)}″ outer radius, its length on its centerline: kerf the inside face across it every 1/2″, or laminate bending ply to ${formatInches(t)}″; a curve, so only its blank comes off a straight guillotine cut; ${rearRabbetNote(t)}'s arch`,
   };
   return [...arched, ...cleats, bent, partitions, ...braces];
 }
@@ -1932,6 +1945,31 @@ export function towerMidWeightLb(
     MID_FIXINGS_LB
   );
 }
+/**
+ * The tower's cabinet over the sub box as it is carried, lb: towerMidWeightLb with the mid driver, the horn and the
+ * compression driver in it (they mount in its baffle).
+ */
+export const towerUpperLoadedLb = (
+  subBox: Pick<Dims3, "w" | "d">,
+  wall: number,
+  inset: number,
+  horn: TowerHorn & Pick<Horn, "lb">,
+  mid: Pick<MidDriver, "size" | "lb">,
+  cd: Pick<CompressionDriver, "lb">,
+) =>
+  towerMidWeightLb(subBox, wall, inset, horn, mid) + (mid.lb || 0) + (horn.lb || 0) + (cd.lb || 0);
+/**
+ * What lifting the sub means, lb: the loaded sub box, or in the tower the one cabinet, the sub and everything over it
+ * (`upperLb`, towerUpperLoadedLb).
+ */
+export const subLiftLb = (layout: PaLayout | undefined, subLb: number, upperLb: number) =>
+  layout === "tower" ? subLb + upperLb : subLb;
+/**
+ * The heaviest single lift, lb, as the optimizers' weight limit and Lighter goal read it: the heavier of the sub and the
+ * mid box, or in the tower the whole cabinet (subLiftLb).
+ */
+export const heaviestLiftLb = (layout: PaLayout | undefined, subLb: number, midLb: number) =>
+  Math.max(subLiftLb(layout, subLb, midLb), midLb);
 
 // ---- the sub as the planner computes it ----
 // cfg: { subBox, midDims, wall, inset, portStyle, cVent, hpf, hpType, ampW, portMax, layout }
@@ -2116,13 +2154,7 @@ export function midSmallerBoxNetL(
 }
 export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const V = ampVoltage(cfg.mAmpW);
-  const grossL = boxInternalLiters(
-    cfg.midDims.w,
-    cfg.midDims.h,
-    cfg.midDims.d,
-    cfg.wall,
-    cfg.inset,
-  );
+  const grossL = midGrossLiters(cfg.midDims, cfg.wall, cfg.inset, cfg.layout);
   const disp = mid.ts && mid.ts.disp != null ? mid.ts.disp : mid.size === 15 ? 4 : 2.5; // assumed where not published
   const recessL = hardwareLiters(cfg.hardware, "mid", cfg.wall, cfg.layout);
   const netL = midNetLiters(grossL, disp, midBracingOf(mid, cfg, cfg.midDims), recessL);

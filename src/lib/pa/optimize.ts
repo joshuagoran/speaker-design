@@ -20,7 +20,9 @@ import {
   subWeightLb,
   ventSpeedLimit,
   midWeightLb,
-  towerMidWeightLb,
+  towerUpperLoadedLb,
+  heaviestLiftLb,
+  subLiftLb,
   midBraceEstimate,
   midBoxBracing,
   midNetLiters,
@@ -395,15 +397,15 @@ export function evaluateDesign(
         : subBoxBracing(c.cDim, c.wall, c.inset, c.portStyle, c.cVent, sub, braceStyle),
     ),
     midLb =
-      (c.layout === "tower"
-        ? towerMidWeightLb(c.cDim, c.wall, c.inset, horn, mid)
+      c.layout === "tower"
+        ? towerUpperLoadedLb(c.cDim, c.wall, c.inset, horn, mid, cd)
         : midWeightLb(
             midDims,
             c.wall,
             braceEstimate
               ? midBraceEstimate(midDims, c.wall, c.inset, c.layout, braceStyle)
               : midBoxBracing(midDims, c.wall, c.inset, mid, c.layout, braceStyle),
-          )) + (mid.lb || 0);
+          ) + (mid.lb || 0);
   if (!s.mdl || !ms.mdl) return null; // a vent or box with no geometry has no model to evaluate
   const subMusic = subMusicOutputAt(s.mdl, s.lim, s.AMP_V, c.xoLo, xoLoOrder);
   const hz: Partial<HornHf> = horn.hf || {};
@@ -421,7 +423,7 @@ export function evaluateDesign(
       cVent: c.cVent,
       PT: c.wall,
       inset: c.inset,
-      subLbLoaded: subLb,
+      subLbLoaded: subLiftLb(c.layout, subLb, midLb),
       lim: s.lim,
       peakXF: s.mdl.peakXF,
       aes: sub.ts.aes,
@@ -469,7 +471,7 @@ export function evaluateDesign(
     hornPrice: horn.price || 0,
     subLb,
     midLb,
-    heaviest: Math.max(subLb, midLb),
+    heaviest: heaviestLiftLb(c.layout, subLb, midLb),
     out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
     spl45: s.lim.spl45,
     spl35: s.lim.spl35,
@@ -1403,7 +1405,16 @@ export function optimizePaStack(
               horn: hp.h.id,
             };
             const price = sc.sub.price + (e ? midPrice(e) : curMidPrice) + hp.price;
-            const heaviest = Math.max(sc.lb, e ? e.lb : 0);
+            // the tower's mid takes the sub's footprint and the horn sits in it: one cabinet, weighed per horn
+            const heaviest = e
+              ? heaviestLiftLb(cur.layout, sc.lb, e.lb)
+              : curMid
+                ? heaviestLiftLb(
+                    cur.layout,
+                    sc.lb,
+                    towerUpperLoadedLb(sc.c.cDim, sc.c.wall, sc.c.inset, hp.h, curMid, hp.cd),
+                  )
+                : sc.lb;
             combos.push({
               c,
               price,

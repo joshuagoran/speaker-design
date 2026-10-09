@@ -36,7 +36,9 @@ export function BoxFront({ g, cur }: Props) {
   // over the sub section and the horn section over that, the horn in its baffle
   const tall = (x: PaBoxGeometry) =>
     x.tower ? x.tower.height : x.sub.h + x.mid.h + (x.horn ? x.horn.h : 0);
-  const wide = (x: PaBoxGeometry) => Math.max(x.sub.w, x.mid.w, x.horn ? x.horn.w : 0);
+  // (the tower's horn is drawn inside its walls)
+  const wide = (x: PaBoxGeometry) =>
+    x.tower ? x.sub.w : Math.max(x.sub.w, x.mid.w, x.horn ? x.horn.w : 0);
   const k = Math.min(
     (H - 2 * pad) / Math.max(tall(g), cur ? tall(cur) : 0),
     (W - 2 * pad) / Math.max(wide(g), cur ? wide(cur) : 0),

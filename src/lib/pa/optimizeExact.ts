@@ -48,7 +48,8 @@ import {
   linkwitzRileyLowpass,
   midBraceEstimate,
   midWeightLb,
-  towerMidWeightLb,
+  towerUpperLoadedLb,
+  heaviestLiftLb,
   pistonBeamWidthDeg,
   braceWoodEstimate,
   braceWoodIn3,
@@ -1041,9 +1042,10 @@ function exactHook(
             midBraceEstimate(bx, t, cur.inset, cur.layout, s.braceStyle),
           );
           for (const hp of c.hornTable[xoHi]) {
-            // in the tower, its cabinet over the sub box, which takes the horn's section
-            const midLb =
-              (towerBox ? towerMidWeightLb(towerBox, t, cur.inset, hp.h, m) : boxLb) + (m.lb || 0);
+            // in the tower, its cabinet over the sub box as carried, with the horn's section and the horn in it
+            const midLb = towerBox
+              ? towerUpperLoadedLb(towerBox, t, cur.inset, hp.h, m, hp.cd)
+              : boxLb + (m.lb || 0);
             const room = hp.at + cur.hfTilt + KEEP_UP_SLACK_DB;
             const mAmpW =
               hi.max <= room
@@ -1123,10 +1125,19 @@ function exactHook(
     };
   };
   const ZERO: PaMetric = { price: 0, heaviest: 0, out: 0, f3: 0, ch: 0, w: 0 };
-  const upperPart = (c: PaSearchContext, g: PaGoal, e: Upper) =>
-    c.obj[g]({ price: e.midP + e.cdP, heaviest: 0, out: 0, f3: 0, ch: e.chU, w: e.w }) -
-    c.obj[g](ZERO);
   const tower = () => s.cur.layout === "tower";
+  // in the tower the heaviest lift is the one cabinet, the sub and the upper together (heaviestLiftLb), so the upper's
+  // weight is part of its share; elsewhere the heavier box counts, which the bounds take from the sub's side
+  const upperLbPart = (e: Pick<Upper, "midLb">) => (tower() ? e.midLb : 0);
+  const upperPart = (c: PaSearchContext, g: PaGoal, e: Upper) =>
+    c.obj[g]({
+      price: e.midP + e.cdP,
+      heaviest: upperLbPart(e),
+      out: 0,
+      f3: 0,
+      ch: e.chU,
+      w: e.w,
+    }) - c.obj[g](ZERO);
   const curMid = byId(MID_OPTIONS, s.cur.mid);
   const uppers = (c: PaSearchContext, ti: number, xi: number, box: Dims3): UpperSet => {
     const t = s.walls[ti],
@@ -1218,15 +1229,17 @@ function exactHook(
       if (!a) continue;
       const m = {
         price: sp.price + us.minPrice - 1e-6,
-        heaviest: Math.max(sp.lb, us.minLb),
+        heaviest: heaviestLiftLb(s.cur.layout, sp.lb, us.minLb),
         out: Math.min(sp.out, us.loDesc[0] + over),
         f3: cs.f3,
         ch: sp.chS,
         w: 0,
       };
       if (fails(q.need, m)) continue;
+      // the cut: the sub's part (its own weight only in the tower, whose stair carries the uppers') and the stair
+      const subLb = tower() ? sp.lb : m.heaviest;
       const r: [number, number] = cut
-        ? [c.obj[q.axis]({ ...m, price: sp.price - 1e-6 }) + us.stair[a - 1], 0]
+        ? [c.obj[q.axis]({ ...m, price: sp.price - 1e-6, heaviest: subLb }) + us.stair[a - 1], 0]
         : q.rank(m);
       if (!best || before(r, best)) best = r;
     }
@@ -1391,7 +1404,7 @@ function exactHook(
               cap < q.need.outMin - EPS ||
               sd.chS + e.chU > q.need.chMax ||
               sub.price + e.midP + e.cdP > q.need.priceMax + EPS ||
-              e.midLb > q.need.heaviestMax + EPS ||
+              heaviestLiftLb(s.cur.layout, sd.lb, e.midLb) > q.need.heaviestMax + EPS ||
               banned.includes(e.mid.id)
             )
               continue;
@@ -1436,7 +1449,7 @@ function exactHook(
     const m = {
       // summed as evaluateDesign sums it: sub, mid, compression driver
       price: 0 + s.subs[sd.si].price + e.midP + e.cdP,
-      heaviest: Math.max(sd.lb, e.midLb),
+      heaviest: heaviestLiftLb(s.cur.layout, sd.lb, e.midLb),
       out,
       f3: sd.cs.f3,
       ch: sd.chS + e.chU,
@@ -1498,9 +1511,11 @@ function exactHook(
     ctx = c;
     for (const g of GOALS) {
       // the bounds split each objective into the sub's part and the upper's: that needs it to add up
+      // (in the tower the weight too: the upper's is part of its share)
+      const bLb = tower() ? 40 : 0;
       const a = { price: 400, heaviest: 80, out: 120, f3: 30, ch: 2, w: 0 },
-        b = { price: 300, heaviest: 0, out: 0, f3: 0, ch: 1, w: 1 };
-      const sum = { price: 700, heaviest: 80, out: 120, f3: 30, ch: 3, w: 1 };
+        b = { price: 300, heaviest: bLb, out: 0, f3: 0, ch: 1, w: 1 };
+      const sum = { price: 700, heaviest: 80 + bLb, out: 120, f3: 30, ch: 3, w: 1 };
       if (Math.abs(c.obj[g](sum) - (c.obj[g](a) + c.obj[g](b) - c.obj[g](ZERO))) > 1e-6)
         throw new Error(`the exact search needs the ${g} objective to add up over its parts`);
     }

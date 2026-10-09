@@ -19,7 +19,8 @@ interface Props {
     | "midModeled"
     | "midMaxBand"
     | "hornModel"
-    | "subWeightLoadedLb"
+    | "subLiftLb"
+    | "isTower"
   >;
   className?: string;
 }
@@ -38,7 +39,8 @@ export function SystemSummary({ planner, className = "" }: Props) {
     midModeled,
     midMaxBand,
     hornModel,
-    subWeightLoadedLb,
+    subLiftLb,
+    isTower,
   } = planner;
   if (!subModeled) return null;
   return (
@@ -49,7 +51,7 @@ export function SystemSummary({ planner, className = "" }: Props) {
           [STATS.tuningFb, subModeled.mdl.Fb.toFixed(1), "Hz"],
           [STATS.systemF3, subModeled.mdl.f3.toFixed(0), "Hz"],
           [STATS.subBass, subBassLevel(subModeled.maxCurve).toFixed(1), "dB"],
-          ["Sub weight", subWeightLoadedLb.toFixed(0), "lb"],
+          [isTower ? "Tower weight" : "Sub weight", subLiftLb.toFixed(0), "lb"],
         ]}
       />
       <SectionHeading className="mb-3">{UI_TEXT.systemResponse}</SectionHeading>

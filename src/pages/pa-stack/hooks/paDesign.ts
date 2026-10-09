@@ -9,6 +9,7 @@ import {
   subWeightLb,
   midWeightLb,
   towerMidWeightLb,
+  subLiftLb,
   midSystem,
   subBoxBracing,
   midBoxBracing,
@@ -132,6 +133,8 @@ export interface PaDerivedDesign {
   subMusicAtCrossover: number | null;
   portGeom: PaPortGeometry;
   subWeightLoadedLb: number;
+  /** what lifting the sub means (subLiftLb): the loaded sub box, or the whole tower with its drivers and horn */
+  subLiftLb: number;
   midBoxLiters: number;
   subTopHeightIn: number;
   isTower: boolean;
@@ -388,6 +391,11 @@ export function derivePaDesign({
     subBracing,
     subHardware.lb,
   );
+  const subLiftWeightLb = subLiftLb(
+    layout,
+    subWeightLoadedLb,
+    midWeightLoadedLb + (hornOption.lb || 0) + (compressionDriver.lb || 0),
+  );
 
   const midBoxLiters = midGrossL;
   const isTower = layout === "tower";
@@ -463,6 +471,7 @@ export function derivePaDesign({
     subMusicAtCrossover,
     portGeom,
     subWeightLoadedLb,
+    subLiftLb: subLiftWeightLb,
     midBoxLiters,
     subTopHeightIn,
     isTower,

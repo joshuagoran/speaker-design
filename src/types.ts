@@ -2276,8 +2276,11 @@ export interface PaEvaluation {
   /** false when a driver has no published price */
   priceKnown: boolean;
   hornPrice: number;
+  /** the loaded sub box, lb */
   subLb: number;
+  /** the loaded mid box, lb; in the tower its cabinet over the sub box as carried (towerUpperLoadedLb) */
   midLb: number;
+  /** the heaviest single lift, lb (heaviestLiftLb): in the tower the whole cabinet */
   heaviest: number;
   /** the sub's clean music-limit level, 40 to 90 Hz, dB */
   out: number;
@@ -2322,7 +2325,6 @@ export interface PaMetricsDelta {
   f3: number;
 }
 
-/** What a card's front-view drawing needs. */
 /**
  * The tower's cabinet over the sub's footprint (lib/pa/tower `towerSpec`), heights in inches up from the cabinet's
  * bottom: the 3D view, the cutlist, the weights and the cards' front view all read it.
@@ -2347,6 +2349,7 @@ export interface TowerSpec {
 /** What the tower's cabinet reads of its horn: the section's height, the arched top and the baffle's cutout. */
 export type TowerHorn = Pick<Horn, "id" | "profile" | "rect" | "size">;
 
+/** What a card's front-view drawing needs. */
 export interface PaBoxGeometry {
   sub: Dims3;
   mid: Dims3;
