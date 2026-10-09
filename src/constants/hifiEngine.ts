@@ -7,6 +7,12 @@ export const HIFI_DRIVE_NAMES = {
   passive: "Passive, one amp channel",
 } as const;
 
+/** The drive ids, for code that decides on one. */
+export const HIFI_DRIVE = {
+  active: "active",
+  passive: "passive",
+} as const satisfies { [K in keyof typeof HIFI_DRIVE_NAMES]: K };
+
 /**
  * The least seat distance the Hi-fi level at the seat and the dispersion map are worked out at, m (pages/hifi
  * hifiDesign): a seat at the speakers can't send the level to infinity. A near-field use case passes less.

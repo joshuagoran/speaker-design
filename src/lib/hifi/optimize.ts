@@ -16,7 +16,7 @@ import {
   hifiGridTop,
   hifiWeightLb,
   tweeterMaxLevel,
-  tweeterAmpWatts,
+  tweeterLevelInBox,
   RADIATOR_PANEL,
   belowTweeterMinXo,
   nearTweeterResonance,
@@ -80,6 +80,7 @@ import { keysOf } from "../records";
 import { byId } from "../tables";
 import { defaultPanelIn } from "../panel";
 import { HIFI_OPTIMIZER_PANEL } from "../../constants/optimizerPanels";
+import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { selectCards } from "../optimizer/selectCards";
 import { keepGap, outOfReachNotice, type Keep } from "../optimizer/shortfall";
@@ -122,7 +123,19 @@ function boxHolds(
 const tweeterAmpFixed = (
   cur: Pick<HifiConfig, "drive">,
   locks: Pick<NonNullable<HifiOptimizerInput["locks"]>, "tAmpW">,
-) => !!locks.tAmpW || cur.drive === "passive";
+) => !!locks.tAmpW || cur.drive === HIFI_DRIVE.passive;
+
+/**
+ * The tweeter's clean level the search reads for a passive design: in a scored box (its woofer's sensitivity, `refW`)
+ * at crossover `xo` and woofer amp `wAmpW`, without modeling the speaker; what `hifiSystem(...).tLevel` gives for it.
+ */
+export const hifiSearchTweeterLevel = (
+  tt: HifiTweeter,
+  cur: Pick<HifiConfig, "drive" | "tAmpW" | "guideGain">,
+  box: Pick<HifiScoredBox, "refW">,
+  xo: number,
+  wAmpW: number,
+) => tweeterLevelInBox(tt, { ...cur, xo, wAmpW }, box.refW).tLevel;
 
 /** A design the search evaluates: the page's config with the wall and the tweeter amp set. */
 type SearchConfig = HifiConfig & { wall: number; tAmpW: number };
@@ -760,33 +773,26 @@ export function optimizeHifiSpeaker(
 
   // 2. the tweeters' own checks per crossover: its limits and its clean level (a passive design's depends on the box's
   // sensitivity and the woofer amp too: tweeterLevel below)
-  const passive = cur.drive === "passive";
+  const passive = cur.drive === HIFI_DRIVE.passive;
   const tws = tList.flatMap((t) => {
     const tt = tweeterCfg(t);
     if (!tt) return [];
     const g = guideOf(t);
-    const own = xos.map((xo) =>
-      tweeterMaxLevel(tt, { xo, tAmpW: amps.tAmpW, guideGain: cur.guideGain }),
-    );
     return [
       {
         t,
         tt,
         onTop: !!(g && g.freestanding),
         xoOk: xos.map((xo) => !belowTweeterMinXo(tt, g, xo) && !nearTweeterResonance(tt, xo)),
-        tLevel: own.map((o) => o.tLevel),
-        // its sensitivity at 2.83 V, which a passive network's pad is worked out from (as hifiSystemFromBox does)
-        tSens283: own.map((o) => o.tSens + 10 * Math.log10(8 / o.imp)),
+        tLevel: xos.map(
+          (xo) => tweeterMaxLevel(tt, { xo, tAmpW: amps.tAmpW, guideGain: cur.guideGain }).tLevel,
+        ),
       },
     ];
   });
   // a tweeter's clean level in a box at a crossover and woofer amp: its own amp's (step 2), or through the passive pad
-  const tweeterLevel = (ti: number, e: BoxEntry, xi: number, wAmpW: number) => {
-    const x = tws[ti];
-    if (!passive) return x.tLevel[xi];
-    const tAmpW = tweeterAmpWatts({ drive: cur.drive, wAmpW }, e.refW - x.tSens283[xi]);
-    return tweeterMaxLevel(x.tt, { xo: xos[xi], tAmpW, guideGain: cur.guideGain }).tLevel;
-  };
+  const tweeterLevel = (ti: number, e: BoxEntry, xi: number, wAmpW: number) =>
+    passive ? hifiSearchTweeterLevel(tws[ti].tt, cur, e, xos[xi], wAmpW) : tws[ti].tLevel[xi];
   // what the cards hold a design to: what the goals keep, and the axes the alternatives come from
   const K = curM ? keeps(curM) : null;
   const meets = (m: HifiMetrics) => !K || goals.every((g) => gapTo(K[g], m) === 0);

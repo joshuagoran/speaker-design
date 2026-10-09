@@ -2010,9 +2010,11 @@ export function fillSystem(drv: FillDriver, cfg: FillSystemConfig): FillSystem |
     ? vM.f3
     : (m.curve.find((o) => o.spl >= m.ref - 3) || m.curve[m.curve.length - 1]).f;
   // HF through a passive network, padded down to the woofer: reaches its program rating (2 x AES)
-  // only at an amp power well above what the woofer sees
+  // only at an amp power well above what the woofer sees. The pad matches the two at the same amp voltage: both
+  // sensitivities are 1 W/1 m at their own impedance, so the HF's is moved to 2.83 V (a 16 ohm section gets half the
+  // power the 8 ohm woofer does), as the Hi-fi engine's level match does (lib/hifi hifiSystemFromBox)
   const hf = drv.hf;
-  const pad = hf ? Math.max(0, hf.sens - (drv.lfSens || sens)) : 0;
+  const pad = hf ? Math.max(0, hf.sens + 10 * Math.log10(8 / hf.imp) - (drv.lfSens || sens)) : 0;
   const hfLimW = hf ? ((2 * hf.aes * hf.imp) / 8) * Math.pow(10, pad / 10) : null; // amp watts (8 ohm rating)
   const lb = ((2 * (dim.w * dim.h + dim.w * dim.d + dim.h * dim.d)) / 144) * 1.6 + drv.lb + 1; // 1/2" birch ~1.6 lb/ft2
   const portLimited = vented && max.some((o) => o.who === "port");

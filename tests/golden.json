@@ -464,8 +464,8 @@
   "max60": 107.06,
   "max100": 114.14,
   "who100": "Xmax",
-  "pad": 10,
-  "hfLimW": 2000,
+  "pad": 6.99,
+  "hfLimW": 1000,
   "lb": 21.91,
   "portLimited": false
  },
@@ -492,8 +492,8 @@
   "max60": 105.51,
   "max100": 119.71,
   "who100": "Xmax",
-  "pad": 7.5,
-  "hfLimW": 1124.68,
+  "pad": 4.49,
+  "hfLimW": 562.34,
   "lb": 23.01,
   "portLimited": true
  },
@@ -716,8 +716,8 @@
   "max60": 99.74,
   "max100": 110.33,
   "who100": "Xmax",
-  "pad": 10,
-  "hfLimW": 2000,
+  "pad": 6.99,
+  "hfLimW": 1000,
   "lb": 21.91,
   "portLimited": false
  },
@@ -744,8 +744,8 @@
   "max60": 104.33,
   "max100": 115.8,
   "who100": "Xmax",
-  "pad": 7.5,
-  "hfLimW": 1124.68,
+  "pad": 4.49,
+  "hfLimW": 562.34,
   "lb": 23.01,
   "portLimited": false
  },

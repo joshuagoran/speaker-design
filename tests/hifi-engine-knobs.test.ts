@@ -16,14 +16,20 @@ import {
   linkwitzRileyFilter,
   logSpacedFrequencies,
   tweeterAmpWatts,
-  tweeterMaxLevel,
+  tweeterLevelInBox,
 } from "../src/lib/hifi/hifi";
-import { hifiSearchSpace, optimizeHifiSpeaker, HIFI_AMP_WATTS_MAX } from "../src/lib/hifi/optimize";
-import { fillSystem } from "../src/lib/pa/calc";
+import {
+  hifiScoreBoxes,
+  hifiSearchSpace,
+  hifiSearchTweeterLevel,
+  optimizeHifiSpeaker,
+  HIFI_AMP_WATTS_MAX,
+} from "../src/lib/hifi/optimize";
+import { fillSystem, highpassGain } from "../src/lib/pa/calc";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_FILL, DEFAULT_HIFI } from "../src/lib/defaults";
 import { FILL_OPTIONS, HIFI_TWEETERS, HIFI_WOOFERS } from "../src/lib/data";
-import { HIFI_PORT_MAX_MS, HIFI_SEAT_FLOOR_M } from "../src/constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SEAT_FLOOR_M } from "../src/constants/hifiEngine";
 import { CHANGE_NAMES } from "../src/constants/optimizerText";
 import type {
   CrossoverOrder,
@@ -99,6 +105,29 @@ test("the high-pass to a sub is an LR filter of its order, in place of the subso
     }
 });
 
+test("a high-pass below the subsonic's corner keeps the subsonic in series", (t) => {
+  const plain = boxOf(cfg),
+    subsonic = plain.hpf;
+  assert.ok(subsonic != null && subsonic > 20, `a subsonic above 20 Hz: ${subsonic}`);
+  // at the corner it takes the subsonic's place; below it both filters run
+  assert.strictEqual(boxOf({ ...cfg, hp: sub(subsonic, 4) }).hpf, null);
+  const low = boxOf({ ...cfg, hp: sub(20, 4) });
+  assert.strictEqual(low.hpf, subsonic);
+  assert.deepStrictEqual(low.hp, sub(20, 4));
+  for (const o of low.m.curve.filter((p) => p.f < 200)) {
+    const want =
+      20 * Math.log10(cabs(linkwitzRileyFilter(o.f, 20, 4, "hp"))) +
+      20 * Math.log10(highpassGain(o.f, subsonic, "BW24"));
+    close(t, o.spl - o.raw, want, 1e-9, `${o.f.toFixed(1)} Hz`);
+  }
+  // so the cone below 30 Hz (where the level check doesn't look) travels no further than with the subsonic alone
+  const peak = (b: typeof plain) =>
+    Math.max(...b.m.curve.filter((o) => o.f < 30).map((o) => o.xmm));
+  assert.ok(peak(low) <= peak(plain), `${peak(low)} mm against ${peak(plain)} mm`);
+  // a sealed box has no subsonic to keep
+  assert.strictEqual(boxOf({ ...sealed, hp: sub(20, 4) }).hpf, null);
+});
+
 test("the high-pass reaches the response, the cone and port, the max output and the F3", () => {
   for (const base of [cfg, sealed]) {
     const off = sysOf(base),
@@ -139,15 +168,21 @@ test("the high-pass reaches the optimizer: every box it searches carries it, unc
 
 test("active drive gives the tweeter its own amp; passive the woofer amp through the pad", (t) => {
   assert.strictEqual(tweeterAmpWatts({ wAmpW: 100, tAmpW: 50 }, -10), 50);
-  assert.strictEqual(tweeterAmpWatts({ drive: "active", wAmpW: 100, tAmpW: 50 }, -10), 50);
-  close(t, tweeterAmpWatts({ drive: "passive", wAmpW: 100, tAmpW: 50 }, -10) ?? 0, 10, 1e-12);
-  close(t, tweeterAmpWatts({ drive: "passive", wAmpW: 100 }, -20) ?? 0, 1, 1e-12);
+  assert.strictEqual(tweeterAmpWatts({ drive: HIFI_DRIVE.active, wAmpW: 100, tAmpW: 50 }, -10), 50);
+  close(
+    t,
+    tweeterAmpWatts({ drive: HIFI_DRIVE.passive, wAmpW: 100, tAmpW: 50 }, -10) ?? 0,
+    10,
+    1e-12,
+  );
+  close(t, tweeterAmpWatts({ drive: HIFI_DRIVE.passive, wAmpW: 100 }, -20) ?? 0, 1, 1e-12);
   // a network can't add gain: a tweeter quieter than the woofer gets the whole amp
-  assert.strictEqual(tweeterAmpWatts({ drive: "passive", wAmpW: 100 }, 3), 100);
+  assert.strictEqual(tweeterAmpWatts({ drive: HIFI_DRIVE.passive, wAmpW: 100 }, 3), 100);
 });
 
-test("passive drive matches the Fills page: the HF reaches its program rating at hfLimW", (t) => {
-  let n = 0;
+test("passive drive matches the Fills page: the same pad, and the HF at its program rating at hfLimW", (t) => {
+  let n = 0,
+    ohm16 = 0;
   for (const drv of FILL_OPTIONS) {
     const hf = drv.hf;
     if (!hf) continue;
@@ -161,27 +196,29 @@ test("passive drive matches the Fills page: the HF reaches its program rating at
       portMax: DEFAULT_FILL.maxPortAirSpeedMs,
     });
     assert.ok(fill && fill.hfLimW != null, drv.id);
-    // the same compression section as a Hi-fi tweeter, behind the same pad (the Hi-fi trim is the pad, negated)
+    // the same compression section as a Hi-fi tweeter (its sensitivity 1 W/1 m at its own impedance, as both
+    // catalogs give it), level-matched as hifiSystemFromBox does it to the coax's woofer (lfSens: 1 W/1 m into its
+    // 8 Ω, so already at 2.83 V): the Hi-fi trim is the Fills pad, negated, 16 Ω sections included
     const tw: HifiTweeter = {
       ...tweeter,
       hf: { sens: hf.sens, aes: hf.aes, imp: hf.imp, aesXo: null, minXo: null, fs: null },
     };
     const at = (wAmpW: number) =>
-      tweeterMaxLevel(tw, {
-        xo: cfg.xo,
-        tAmpW: tweeterAmpWatts({ drive: "passive", wAmpW }, -fill.pad),
-      });
+      tweeterLevelInBox(tw, { xo: cfg.xo, drive: HIFI_DRIVE.passive, wAmpW }, drv.lfSens);
+    close(t, at(100).trim, -fill.pad, 1e-9, `${drv.id} pad`);
     // at hfLimW the amp just brings the HF to its program rating (2 × AES); below it the amp limits, above it the rating
     close(t, at(fill.hfLimW).pMax, 2 * hf.aes, 1e-9 * hf.aes, `${drv.id} at hfLimW`);
     close(t, at(fill.hfLimW / 2).pMax, hf.aes, 1e-9 * hf.aes, `${drv.id} at half`);
     close(t, at(fill.hfLimW * 2).pMax, 2 * hf.aes, 1e-9 * hf.aes, `${drv.id} at double`);
     n++;
+    if (hf.imp === 16) ohm16++;
   }
   assert.ok(n >= 2, "fills with an HF section were compared");
+  assert.ok(ohm16 >= 1, "a 16 Ω HF section among them");
 });
 
 test("a passive design's tweeter runs off the woofer amp through the trim, whatever tAmpW says", (t) => {
-  const passive: HifiConfig = { ...cfg, drive: "passive" };
+  const passive: HifiConfig = { ...cfg, drive: HIFI_DRIVE.passive };
   const a = sysOf(passive),
     b = sysOf({ ...passive, tAmpW: 5 });
   assert.ok(a.trim < 0, `the tweeter is padded down: ${a.trim}`);
@@ -198,8 +235,8 @@ test("a passive design's tweeter runs off the woofer amp through the trim, whate
 });
 
 test("weight and price count no amps, so passive drive changes neither", () => {
-  const passive = deriveHifiDesign({ ...DEFAULT_HIFI, drive: "passive" });
-  assert.strictEqual(passive.speakerConfig.drive, "passive");
+  const passive = deriveHifiDesign({ ...DEFAULT_HIFI, drive: HIFI_DRIVE.passive });
+  assert.strictEqual(passive.speakerConfig.drive, HIFI_DRIVE.passive);
   assert.strictEqual(passive.pairCostUsd, design.pairCostUsd);
   assert.ok(passive.speakerModel && design.speakerModel);
   assert.strictEqual(passive.speakerModel.speakerSystem.lb, design.speakerModel.speakerSystem.lb);
@@ -216,7 +253,7 @@ test("the optimizer passes the engine options through and leaves a passive desig
     tweeter: DEFAULT_HIFI.tweeter.id,
     tAmpW: DEFAULT_HIFI.tweeterAmpWatts,
     hp: sub(70, 8),
-    drive: "passive",
+    drive: HIFI_DRIVE.passive,
     tiltDeg: 8,
     portMax: 12,
   };
@@ -232,7 +269,7 @@ test("the optimizer passes the engine options through and leaves a passive desig
   );
   for (const e of space.grid) {
     assert.deepStrictEqual(e.cfg.hp, cur.hp);
-    assert.strictEqual(e.cfg.drive, "passive");
+    assert.strictEqual(e.cfg.drive, HIFI_DRIVE.passive);
     assert.strictEqual(e.cfg.tiltDeg, 8);
     assert.strictEqual(e.cfg.portMax, 12);
     assert.strictEqual(e.cfg.tAmpW, cur.tAmpW);
@@ -249,6 +286,45 @@ test("the optimizer passes the engine options through and leaves a passive desig
     assert.strictEqual(k.config.tAmpW, cur.tAmpW, k.label);
     assert.ok(!k.changed.includes(CHANGE_NAMES.ampPower) || k.config.wAmpW !== cur.wAmpW);
   }
+});
+
+test("the optimizer's passive shortcut reads the tweeter level the full model gives", (t) => {
+  const cur: HifiOptimizerCurrent = {
+    ...cfg,
+    woofer: woofer.id,
+    tweeter: DEFAULT_HIFI.tweeter.id,
+    tAmpW: DEFAULT_HIFI.tweeterAmpWatts,
+    drive: HIFI_DRIVE.passive,
+  };
+  const input = {
+    cur,
+    woofers: HIFI_WOOFERS,
+    tweeters: HIFI_TWEETERS,
+    locks: { tweeter: true, box: true },
+  };
+  const { space, W0, T0 } = hifiSearchSpace(input, { withGrid: false });
+  assert.ok(space && W0 && T0);
+  const tt = space.tweeterCfg(T0);
+  assert.ok(tt);
+  // a few boxes from the box step, several woofers among them
+  const scored = hifiScoreBoxes(input);
+  const picks = [0, 0.25, 0.5, 0.75, 1].map((q) => scored[Math.round(q * (scored.length - 1))]);
+  assert.ok(new Set(picks.map((x) => x.wId)).size >= 2, "boxes for more than one woofer");
+  let n = 0;
+  for (const x of picks) {
+    const w = HIFI_WOOFERS.find((o) => o.id === x.wId);
+    assert.ok(w, x.wId);
+    for (const xo of [1500, 2500])
+      for (const wAmpW of [20, 100, 500]) {
+        const c = { ...space.cfgOf(x), xo, wAmpW, guide: space.guideOf(T0) };
+        const sys = hifiSystem(w, tt, c);
+        assert.ok(sys, x.key);
+        const quick = hifiSearchTweeterLevel(tt, cur, x, xo, wAmpW);
+        close(t, quick, sys.tLevel, 1e-9, `${x.key} at ${xo} Hz, ${wAmpW} W`);
+        n++;
+      }
+  }
+  assert.strictEqual(n, 30);
 });
 
 // ---- tilt ----
@@ -325,15 +401,20 @@ test("the tilt moves the vertical map's axis up, and leaves the horizontal map a
     hifiEdgeRipple(sys, woofer, tweeter, tilted, [1000, 3000]),
     hifiEdgeRipple(sys, woofer, tweeter, cfg, [1000, 3000]),
   );
-  const v0 = hifiDispersionMap(sys, woofer, tweeter, cfg, "v", 2),
-    v1 = hifiDispersionMap(sys, woofer, tweeter, tilted, "v", 2);
-  // the row that matches the upright map's on-axis row best, over the top octaves, sits near +20°
-  const top = v0.freqs.flatMap((f, i) => (f > 4000 ? [i] : []));
-  const axis = v0.angles.indexOf(0);
-  const err = (row: number[]) =>
-    top.reduce((s, i) => s + Math.abs(row[i] - v0.rows[axis][i]), 0) / top.length;
-  const best = v1.rows.reduce((b, row, i) => (err(row) < err(v1.rows[b]) ? i : b), 0);
-  assert.ok(Math.abs(v1.angles[best] - 20) <= 5, `the axis at ${v1.angles[best]}°`);
+  // the vertical map is the upright one moved up by the tilt, row for row, measured round the tilted tweeter itself,
+  // close in as well as far; rows past the baffle's plane repeat its edge row
+  for (const tiltDeg of [20, 30])
+    for (const distM of [2, 0.5, 0.3]) {
+      const v0 = hifiDispersionMap(sys, woofer, tweeter, cfg, "v", distM),
+        v1 = hifiDispersionMap(sys, woofer, tweeter, { ...cfg, tiltDeg }, "v", distM);
+      const at = (deg: number) => v0.rows[v0.angles.indexOf(Math.max(-90, Math.min(90, deg)))];
+      v1.angles.forEach((deg, i) =>
+        assert.deepStrictEqual(v1.rows[i], at(deg - tiltDeg), `${tiltDeg}° at ${distM} m, ${deg}°`),
+      );
+      // the axis (0 dB through the top octaves) is the row at +tilt
+      const top = v1.freqs.flatMap((f, i) => (f > 4000 ? [i] : []));
+      for (const i of top) assert.strictEqual(v1.rows[v1.angles.indexOf(tiltDeg)][i], 0);
+    }
 });
 
 // ---- seat floor ----
@@ -410,7 +491,7 @@ test("the engine options at their defaults give byte-identical output to a desig
     const explicit = deriveHifiDesign({
       ...s,
       subHighpass: undefined,
-      drive: "active",
+      drive: HIFI_DRIVE.active,
       tiltDeg: 0,
       seatFloorM: HIFI_SEAT_FLOOR_M,
       portMaxMs: HIFI_PORT_MAX_MS,
@@ -419,7 +500,7 @@ test("the engine options at their defaults give byte-identical output to a desig
   }
   // and the system: an explicit active drive and no tilt are the same config
   const plain = sysOf(cfg),
-    named = sysOf({ ...cfg, drive: "active", tiltDeg: 0 });
+    named = sysOf({ ...cfg, drive: HIFI_DRIVE.active, tiltDeg: 0 });
   assert.strictEqual(JSON.stringify(named), JSON.stringify(plain));
   assert.deepStrictEqual(
     Object.keys(design.speakerConfig).filter((k) => ["hp", "drive", "tiltDeg"].includes(k)),

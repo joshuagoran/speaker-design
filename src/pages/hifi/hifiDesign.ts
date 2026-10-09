@@ -5,7 +5,7 @@ import {
   waveguideSpecOf,
 } from "../../lib/data";
 import { METERS_PER_FOOT } from "../../constants/units";
-import { HIFI_PORT_MAX_MS, HIFI_SEAT_FLOOR_M } from "../../constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SEAT_FLOOR_M } from "../../constants/hifiEngine";
 import { byId } from "../../lib/tables";
 import {
   hifiSystem,
@@ -108,7 +108,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     tweeterOffsetIn,
     // the engine options only when they change something, so a design without them is the same config as before
     ...(subHighpass && { hp: subHighpass }),
-    ...(drive === "passive" && { drive }),
+    ...(drive === HIFI_DRIVE.passive && { drive }),
     ...(tiltDeg ? { tiltDeg } : {}),
   };
   // the seat, relative to each speaker (left at -spacing/2, toed in toward the middle)

@@ -543,7 +543,8 @@ export type CrossoverOrder = 4 | 8;
 
 /**
  * A high-pass to a sub ahead of the woofer: a Linkwitz-Riley filter of `order` at `hz`, the woofer's half of the
- * sub-to-speaker crossover. It takes the place of the automatic subsonic (lib/hifi hifiBox).
+ * sub-to-speaker crossover. At or above the automatic subsonic's corner it takes its place; below it the subsonic stays in
+ * series (lib/hifi hifiBox).
  */
 export interface HifiHighpass {
   hz: number;
@@ -642,7 +643,7 @@ export interface HifiConfig {
   roundoverIn?: number;
   /** how far the tweeter sits off the baffle's center line, inches, + toward the inside of the pair (mirror-imaged); 0 when absent */
   tweeterOffsetIn?: number;
-  /** a high-pass to a sub, in place of the subsonic `hpf`; absent: none (the subsonic as before) */
+  /** a high-pass to a sub, in place of the subsonic `hpf` (in series with it below its corner); absent: none */
   hp?: HifiHighpass;
   /**
    * active (absent): the tweeter has its own amp, `tAmpW`; passive: one amp channel, `wAmpW`, feeds both drivers and
@@ -720,8 +721,8 @@ export interface HifiSystemBase {
   lay: DriverLayout;
   f3: number;
   hpf: number | null;
-  /** the high-pass to a sub in use (the subsonic `hpf` is then null); absent when the design has none */
-  hp?: HifiHighpass;
+  /** the high-pass to a sub in use (`hpf` is null unless the subsonic stays in series below it); absent when the design has none */
+  hp?: HifiConfig["hp"];
   xo: number;
   order: CrossoverOrder;
   bsF3: number;
@@ -784,7 +785,7 @@ export interface ListenerGeometry {
   /** the on-axis distance the drivers are time-aligned at, m; `distM` when absent (a map's arc keeps it while the listener moves round) */
   alignM?: number;
   /**
-   * the point is already in the box's own frame (on its axis, or on a horizontal map's arc round it), so the box's
+   * the point is already in the box's own frame (on its axis, or on a dispersion map's arc round it), so the box's
    * tilt (`HifiConfig.tiltDeg`) is not applied to it; absent: the point is in the room, the box tilted under it
    */
   boxFrame?: true;
