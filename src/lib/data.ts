@@ -13,6 +13,7 @@ import type {
   PriceRange,
   RackView,
   CabinetFinish,
+  CoaxParts,
   CompressionDriver,
   FillDriver,
   FinishId,
@@ -49,9 +50,10 @@ import { AMP_SERIES } from "../data/catalog/amps";
 import { DSP_UNITS } from "../data/catalog/dsp-units";
 import { MAINS_RACK, RACKS as RACK_TABLE } from "../data/catalog/racks";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
+import { COAX_GAP, COAX_HF_EXIT_IN, COAXIAL_TWEETER_TYPE } from "../constants/coax";
 import { MOUNT_ADAPTERS } from "../data/catalog/mount-adapters";
 import { BOLT_MOUNT, THREAD_MOUNT } from "../constants/throatMounts";
-import { byIdOrThrow } from "./tables";
+import { byId, byIdOrThrow } from "./tables";
 
 // Tables the app reads as written.
 export { CABINETS } from "../data/catalog/cabinets";
@@ -145,6 +147,68 @@ export const FILL_OPTIONS: readonly FillDriver[] = FILL_RAW.map((d) =>
   d === BC10CXN64_RAW ? BC10CXN64 : withTsXmax(d),
 ).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
 
+/** A cone's diameter from its area (Sd, cm²), inches. */
+const coneDiaIn = (sdCm2: number) => (2 * Math.sqrt(sdCm2 / Math.PI)) / 2.54;
+/**
+ * A coaxial from the fill catalogue as the Hi-fi engine takes it, both parts under the coaxial's id:
+ * - the woofer: its T/S, LF sensitivity, weight and price (the whole driver's: they count once);
+ * - the HF section as a coincident tweeter of type "coaxial": sensitivity, power and impedance from `hf`, its minimum
+ *   crossover the recommended one (its AES rating holds down to it), no weight or price of its own, and the woofer's
+ *   cone as its conical waveguide at the published coverage (the mouth the cone's diameter).
+ * A coaxial without HF data keeps its woofer, with the HF part null; `gaps` names what is missing.
+ */
+export function coaxParts(d: FillDriver): CoaxParts {
+  const { hf, ts } = d;
+  const cone = coneDiaIn(ts.Sd);
+  const woofer: HifiWoofer = {
+    id: d.id,
+    size: d.size,
+    lb: d.lb,
+    name: d.name,
+    maker: d.maker,
+    price: d.price,
+    src: d.src,
+    ts: { ...ts, sens: d.lfSens },
+    // the LF section's own top isn't published: its HF takes over at the crossover
+    fmax: null,
+    note: d.note,
+  };
+  if (!hf) return { woofer, tweeter: null, gaps: [COAX_GAP.hf] };
+  const tweeter: HifiTweeter = {
+    id: d.id,
+    lb: 0,
+    name: d.name,
+    price: 0,
+    src: d.src,
+    hf: { sens: hf.sens, aes: hf.aes, aesXo: hf.xo, minXo: hf.xo, imp: hf.imp, fs: null },
+    type: COAXIAL_TWEETER_TYPE,
+    exit: null,
+    faceplate: { w: cone, h: cone },
+    note: d.note,
+    domeIn: COAX_HF_EXIT_IN,
+    ...(hf.cov != null && {
+      ownGuide: { name: d.name, covH: hf.cov, covV: hf.cov, w: cone, h: cone },
+    }),
+  };
+  const gaps = [
+    ...(hf.xo == null ? [COAX_GAP.hfXo] : []),
+    ...(hf.cov == null ? [COAX_GAP.hfCov] : []),
+  ];
+  return { woofer, tweeter, gaps };
+}
+/** Every fill coaxial as Hi-fi parts, in the fills' (A–Z) order. No picker lists them yet: a design names one by id. */
+export const HIFI_COAXES: readonly CoaxParts[] = FILL_OPTIONS.map(coaxParts);
+/** The coaxials' woofers, and the HF parts of those that publish one. */
+export const HIFI_COAX_WOOFERS: readonly HifiWoofer[] = HIFI_COAXES.map((c) => c.woofer);
+export const HIFI_COAX_TWEETERS: readonly HifiTweeter[] = HIFI_COAXES.flatMap((c) =>
+  c.tweeter ? [c.tweeter] : [],
+);
+const COAX_GAPS_BY_ID: ReadonlyMap<string, CoaxParts["gaps"]> = new Map(
+  HIFI_COAXES.map((c) => [c.woofer.id, c.gaps]),
+);
+/** The HF figures a coaxial's maker doesn't publish, by its id; none for any other part. */
+export const coaxGaps = (id: string): CoaxParts["gaps"] => COAX_GAPS_BY_ID.get(id) ?? [];
+
 // Give every tweeter a faceplate size and radiating diameter the layout and directivity use.
 const withFaceplate = (t: HifiTweeterRaw): HifiTweeter => {
   const fp = t.faceplate;
@@ -171,8 +235,39 @@ export const HIFI_WOOFERS: readonly HifiWoofer[] = HIFI_WOOFERS_RAW.map((d) =>
   d === SB17NRX_RAW ? SB17NRX : withTsXmax(d),
 );
 
+/** The Hi-fi driver parts a design, card or save names by id. */
+interface HifiDriverParts {
+  woofer: HifiWoofer;
+  tweeter: HifiTweeter;
+}
+/** Each part's drivers: its table's, then the coaxials' (a coaxial design names its coaxial as both). */
+const HIFI_DRIVER_TABLES: { [P in keyof HifiDriverParts]: readonly HifiDriverParts[P][] } = {
+  woofer: [...HIFI_WOOFERS, ...HIFI_COAX_WOOFERS],
+  tweeter: [...HIFI_TWEETERS, ...HIFI_COAX_TWEETERS],
+};
+const HIFI_DRIVER_TABLE_NAMES = {
+  woofer: CATALOG_TABLE_NAMES.hifiWoofers,
+  tweeter: CATALOG_TABLE_NAMES.hifiTweeters,
+} as const satisfies Record<keyof HifiDriverParts, string>;
+/** A Hi-fi woofer or tweeter by id, the coaxials' parts included; undefined when there is none (a save's stale id). */
+export function hifiDriverById<P extends keyof HifiDriverParts>(
+  part: P,
+  id: string,
+): HifiDriverParts[P] | undefined {
+  const table: readonly HifiDriverParts[P][] = HIFI_DRIVER_TABLES[part];
+  return byId(table, id);
+}
+/** The same for an id the tables gave (a card's, the design's own): throws when there is none. */
+export function hifiDriverByIdOrThrow<P extends keyof HifiDriverParts>(
+  part: P,
+  id: string,
+): HifiDriverParts[P] {
+  const table: readonly HifiDriverParts[P][] = HIFI_DRIVER_TABLES[part];
+  return byIdOrThrow(table, id, HIFI_DRIVER_TABLE_NAMES[part]);
+}
+
 export const HIFI_PASSIVES: readonly PassiveRadiator[] = HIFI_PASSIVES_RAW.map(passiveWithXmax);
-// a ribbon's own waveguide as the model's guide object (flush-mounted)
+// a tweeter's own waveguide (a ribbon's plate, a coaxial's cone) as the model's guide object (flush-mounted)
 export const ownGuideCfg = (
   t: HifiTweeter | null | undefined,
 ): (OwnGuide & { freestanding: boolean }) | null =>

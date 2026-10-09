@@ -2,7 +2,7 @@
 // seen from the front: the left speaker's inside), y up from the box bottom. The 2D front drawing and the 3D view both
 // read these.
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
-import { passiveRadiatorShape } from "./hifi";
+import { isCoax, passiveRadiatorShape } from "./hifi";
 import type {
   Dims2,
   Dims3,
@@ -79,10 +79,10 @@ export function radiatorSpots(
 /**
  * The smallest box width and height that hold the design's parts as the layout places them, inches:
  * - across: the woofer (its nominal size and `wooferWidthIn`), the tweeter's faceplate or a waveguide set into the baffle
- *   (with the walls and `faceplateWidthIn`; a waveguide on the box top needs no baffle), the row of round ports as
+ *   (with the walls and `faceplateWidthIn`; a waveguide on the box top, or a coaxial's HF, needs none), the row of round ports as
  *   `roundPortSpots` places it (each cut to its tube's outside) inside the walls, and radiators on the baffle or back
  *   (as `passiveRadiatorFits` sizes them);
- * - up: the tweeter (unless on the box top) and the woofer down from the top as `driverLayout` stacks them, the woofer's
+ * - up: the tweeter (unless on the box top or a coaxial's) and the woofer down from the top as `driverLayout` stacks them, the woofer's
  *   bottom clear of the vent along the bottom of the baffle (a slot with its shelf, or round ports) or of radiators on
  *   the baffle, and radiators stacked on the back (or, on the sides, the outside's share of them: their depth isn't
  *   checked here).
@@ -96,15 +96,16 @@ export function hifiBoxMin({
   wall,
   radiatorPanel,
 }: {
-  woofer: Pick<HifiWoofer, "size">;
-  tweeter: Pick<HifiTweeter, "faceplate">;
+  woofer: Pick<HifiWoofer, "size" | "id">;
+  tweeter: Pick<HifiTweeter, "faceplate" | "id">;
   onTop: boolean;
   cfg: Pick<HifiConfig, "box" | "port" | "pr">;
   wall: number;
   radiatorPanel: RadiatorPanel;
 }): Dims2 {
   const L = HIFI_BOX_LAYOUT;
-  const face = tweeter.faceplate;
+  // a tweeter on the box top, or a coaxial's HF at its woofer's center, takes no room of its own on the baffle
+  const face = onTop || isCoax(woofer, tweeter) ? null : tweeter.faceplate;
   const pr = cfg.box === "radiator" && cfg.pr ? cfg.pr : null;
   const prShape = pr && passiveRadiatorShape(pr.drv);
   const prStack = pr && prShape ? pr.n * (prShape.h + L.radiatorGapIn) : 0;
@@ -119,7 +120,7 @@ export function hifiBoxMin({
     : 0;
   const w = Math.max(
     woofer.size + L.wooferWidthIn,
-    onTop ? 0 : face.w + 2 * wall + L.faceplateWidthIn,
+    face ? face.w + 2 * wall + L.faceplateWidthIn : 0,
     prAcross,
     portRow,
   );
@@ -132,7 +133,7 @@ export function hifiBoxMin({
           ? wall + L.radiatorMarginIn + prStack
           : 0;
   const drivers =
-    L.topMarginIn + (onTop ? 0 : face.h + L.driverGapIn) + woofer.size + L.wooferFloorIn + below;
+    L.topMarginIn + (face ? face.h + L.driverGapIn : 0) + woofer.size + L.wooferFloorIn + below;
   const prPanelH =
     pr && prShape
       ? radiatorPanel === "back"

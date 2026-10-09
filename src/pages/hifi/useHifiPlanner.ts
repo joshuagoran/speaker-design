@@ -1,7 +1,7 @@
-import { HIFI_TWEETERS, HIFI_WAVEGUIDES, HIFI_WOOFERS } from "../../lib/data";
+import { HIFI_WAVEGUIDES, hifiDriverById, hifiDriverByIdOrThrow } from "../../lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PORT_SIZE } from "../../lib/defaults";
-import { portAfterToggle } from "../../lib/hifi/hifi";
-import { byId, byIdOrThrow } from "../../lib/tables";
+import { isCoax, portAfterToggle } from "../../lib/hifi/hifi";
+import { byId } from "../../lib/tables";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
 import { deriveHifiDesign } from "./hifiDesign";
 import { useHifiOptimizer } from "./useHifiOptimizer";
@@ -28,7 +28,6 @@ import type {
   Setter,
 } from "../../types";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { useHifiCutlistOptions } from "../cutlist/useHifiCutlistOptions";
 import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
 import type { CabinetStyle } from "../pa-stack/hooks/useCabinetStyle";
@@ -169,13 +168,14 @@ export function useHifiPlanner(): HifiPlanner {
         tweeterOffset: tweeterOffsetIn,
         cabFinish: cabinetFinish,
         baffleColor,
-        summary: `${woofer.name} + ${tweeter.name} · ${fittedDims.w}×${fittedDims.h}×${fittedDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}`,
+        // a coaxial is one driver: its name once
+        summary: `${isCoax(woofer, tweeter) ? woofer.name : `${woofer.name} + ${tweeter.name}`} ·${fittedDims.w}×${fittedDims.h}×${fittedDims.d}″ · ${boxType === "radiator" ? "passive radiator" : boxType}`,
       }),
     );
   const applyDesign = (c: HifiCardConfig) => {
-    // a card's or snapshot's driver ids come from these lists
-    setWoofer(byIdOrThrow(HIFI_WOOFERS, c.woofer, CATALOG_TABLE_NAMES.hifiWoofers));
-    setTweeter(byIdOrThrow(HIFI_TWEETERS, c.tweeter, CATALOG_TABLE_NAMES.hifiTweeters));
+    // a card's or snapshot's driver ids come from these tables (a coaxial's both from the coaxials')
+    setWoofer(hifiDriverByIdOrThrow("woofer", c.woofer));
+    setTweeter(hifiDriverByIdOrThrow("tweeter", c.tweeter));
     setBoxType(c.box);
     setBoxDims(c.dim);
     if (c.port) setPortSpec(c.port);
@@ -294,8 +294,8 @@ export function useHifiPlanner(): HifiPlanner {
     const ok = <T>(set: Setter<T>, v: T | undefined) => {
       if (v !== undefined) set(v);
     };
-    ok(setWoofer, pick(HIFI_WOOFERS, c.woofer));
-    ok(setTweeter, pick(HIFI_TWEETERS, c.tweeter));
+    ok(setWoofer, c.woofer === undefined ? undefined : hifiDriverById("woofer", c.woofer));
+    ok(setTweeter, c.tweeter === undefined ? undefined : hifiDriverById("tweeter", c.tweeter));
     ok(setSelectedWaveguide, pick(waveguideChoices, c.guide));
     ok(setBoxType, c.box);
     ok(setBoxDims, c.dim);

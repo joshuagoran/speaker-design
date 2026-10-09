@@ -205,6 +205,7 @@ export function HifiPage({ hifi }: Props) {
     rightGeometry,
     seatDistanceFt,
     pairCostUsd,
+    pairCostKnown,
     speakerModel,
   } = hifi;
   const folds = useFolds("hifi.settingsFolds", keysOf(HIFI_SETTINGS_SECTIONS));
@@ -434,7 +435,11 @@ export function HifiPage({ hifi }: Props) {
                     {tile(STATS.f3InRoom, speakerSystem.f3.toFixed(0), "Hz")}
                     {tile(STATS.maxAtSeat, maxLevelAtSeatDb.toFixed(0), "dB")}
                     {tile("Weight", speakerSystem.lb.toFixed(0), "lb")}
-                    {tile(STATS.pairPrice, `$${Math.round(pairCostUsd)}`, "")}
+                    {tile(
+                      STATS.pairPrice,
+                      `$${Math.round(pairCostUsd)}${pairCostKnown ? "" : UI_TEXT.partialPriceMark}`,
+                      "",
+                    )}
                   </div>
                 </div>
               </div>

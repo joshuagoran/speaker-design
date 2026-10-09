@@ -3,7 +3,7 @@
 // the PA view's scene context, cone, horn, driver and horn mounts.
 import * as THREE from "three";
 import { createSceneContext, type SceneContext } from "./sceneContext";
-import { buildCone } from "./buildCone";
+import { buildCone, CONE_FACE_BACK_IN } from "./buildCone";
 import { buildHorn } from "./buildHorn";
 import { buildHifiCabinet, type HifiCabinetHoles } from "./buildHifiCabinet";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
@@ -55,6 +55,10 @@ export const HIFI_MESH_NAMES = {
   ribbon: "ribbonDiaphragm",
   /** a tweeter's body behind the baffle, in the cutaway */
   tweeterBody: "tweeterBody",
+  /** a coaxial's HF in its woofer's center: the horn's flare and its phase plug, and, in the cutaway, its driver */
+  coaxHorn: "coaxHorn",
+  coaxPlug: "coaxPhasePlug",
+  coaxHfBody: "coaxHfBody",
 } as const;
 
 /**
@@ -182,8 +186,9 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
     else holes[s.panel].push(ellipsePath(0, s.y, rx, ry));
   }
 
-  // the tweeter's hole: a waveguide set into the baffle, a ribbon's plate, or a faceplate
-  const face: Dims2 | null = horn ? null : (t.ownGuide ?? t.faceplate);
+  // the tweeter's hole: a waveguide set into the baffle, a ribbon's plate, or a faceplate; none for a coaxial's HF,
+  // which sits in its woofer
+  const face: Dims2 | null = horn || lay.coax ? null : (t.ownGuide ?? t.faceplate);
   if (horn && p.guide && !p.guide.freestanding)
     holes.baffle.push(
       roundedRectPath(
@@ -202,7 +207,14 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
     holes,
   });
 
-  addWoofer(ctx, { r: wooferR, size: p.woofer.size, y: lay.wooferIn, zf, shellFrontZ });
+  addWoofer(ctx, {
+    r: wooferR,
+    size: p.woofer.size,
+    y: lay.wooferIn,
+    zf,
+    shellFrontZ,
+    coax: !!lay.coax,
+  });
   if (p.port && p.port.shape !== "slot")
     addRoundPorts(ctx, { spots: round, port: p.port, dim, zf });
   if (slot && slotHole) {
@@ -238,7 +250,11 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
   return ctx.group;
 }
 
-/** The woofer: its frame on the baffle and cone (PA's), or, in the cutaway, the frame and a GENERIC body behind it. */
+/**
+ * The woofer: its frame on the baffle and cone (PA's), or, in the cutaway, the frame and a GENERIC body behind it. A
+ * coaxial's woofer has its HF in its center: a short horn with a phase plug in place of the dust cap, and, in the
+ * cutaway, the HF driver behind the magnet.
+ */
 function addWoofer(
   ctx: SceneContext,
   {
@@ -247,7 +263,8 @@ function addWoofer(
     y,
     zf,
     shellFrontZ,
-  }: { r: number; size: number; y: number; zf: number; shellFrontZ: number },
+    coax,
+  }: { r: number; size: number; y: number; zf: number; shellFrontZ: number; coax: boolean },
 ) {
   const g = new THREE.Group();
   g.name = HIFI_MESH_NAMES.woofer;
@@ -269,7 +286,8 @@ function addWoofer(
   const liner = holeLiner(ctx, r, zf - shellFrontZ);
   liner.position.set(0, y, zf - (zf - shellFrontZ) / 2);
   g.add(liner);
-  buildCone(ctx, { r, y, z: zf, parent: g });
+  buildCone(ctx, { r, y, z: zf, parent: g, cap: !coax });
+  if (coax && !ctx.cutaway) addCoaxHorn(ctx, { r, y, z: zf - CONE_FACE_BACK_IN, parent: g });
   if (!ctx.cutaway) return;
   const b = HIFI_GENERIC_BODIES.woofer;
   const depth = size * b.depthPerSize,
@@ -282,6 +300,45 @@ function addWoofer(
   const magnet = zCylinder(magnetR, magnetR, magnetLen, ctx.materials.black);
   magnet.position.set(0, y, shellFrontZ - basketLen - magnetLen / 2);
   g.add(magnet);
+  if (!coax) return;
+  const hf = HIFI_GENERIC_BODIES.coaxHf;
+  const hfR = (size * hf.diaPerSize) / 2,
+    hfLen = size * hf.depthPerSize;
+  const body = zCylinder(hfR, hfR, hfLen, ctx.materials.black);
+  body.position.set(0, y, shellFrontZ - basketLen - magnetLen - hfLen / 2);
+  body.name = HIFI_MESH_NAMES.coaxHfBody;
+  g.add(body);
+}
+
+/**
+ * A coaxial's HF in its woofer's center, in place of the dust cap: a short horn flaring from its throat on the cone
+ * (at `z`) toward the listener, and the phase plug in the throat (`HIFI_FRONT_PARTS.coax`, per cone radius `r`).
+ */
+function addCoaxHorn(
+  ctx: SceneContext,
+  { r, y, z, parent }: { r: number; y: number; z: number; parent: THREE.Object3D },
+) {
+  const P = HIFI_FRONT_PARTS.coax;
+  const mouthR = r * P.hornMouthPerCone,
+    throatR = r * P.hornThroatPerCone,
+    rise = r * P.hornRisePerCone;
+  // the flare's inside shows, so it is drawn both sides
+  const metal = ctx.materials.hardware.clone();
+  metal.side = THREE.DoubleSide;
+  const flare = zCylinder(mouthR, throatR, rise, metal, true);
+  flare.position.set(0, y, z + rise / 2);
+  flare.name = HIFI_MESH_NAMES.coaxHorn;
+  parent.add(flare);
+  const plugR = throatR * P.plugPerThroat;
+  const plug = new THREE.Mesh(
+    new THREE.SphereGeometry(plugR, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+    ctx.materials.aluminum,
+  );
+  plug.rotation.x = Math.PI / 2; // the plug's tip toward +z, at the horn's mouth
+  plug.scale.y = rise / plugR;
+  plug.position.set(0, y, z);
+  plug.name = HIFI_MESH_NAMES.coaxPlug;
+  parent.add(plug);
 }
 
 /** The round ports: each a flanged tube from the baffle front, folded as the model folds it (lib/tubeFold). */

@@ -6,6 +6,7 @@ import type { BOX_AXIS_NAMES, BRACE_PANEL_NAMES, BRACE_STYLE_NAMES } from "./con
 import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
+import type { COAX_GAP_NAMES } from "./constants/coax";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { MAKER_NAMES } from "./data/catalog/makers";
@@ -134,11 +135,14 @@ export interface SubTS extends ThieleSmall {
   disp: number;
 }
 
-/** Hi-fi woofers also list inductance, 2.83 V sensitivity and nominal impedance (informational; no model reads them). */
+/**
+ * Hi-fi woofers also list inductance, 2.83 V sensitivity and nominal impedance (informational; no model reads them). A
+ * coaxial's woofer (lib/data coaxParts) has no inductance or LF impedance in its table, so those two are absent there.
+ */
 export interface HifiWooferTS extends ThieleSmall {
-  Le: number;
+  Le?: number;
   sens: number;
-  imp: number;
+  imp?: number;
 }
 
 // ---- PA stack ----
@@ -475,6 +479,22 @@ export interface FillDriver {
 
 // ---- Hi-fi ----
 
+/** An HF figure a coaxial's maker doesn't publish, by id (`COAX_GAP_NAMES`): the whole HF section, its crossover or its coverage. */
+export type CoaxGap = keyof typeof COAX_GAP_NAMES;
+
+/**
+ * A coaxial (a `FillDriver`) as the Hi-fi engine takes it (lib/data coaxParts): its woofer, and its HF section as a
+ * tweeter of type "coaxial" at the woofer's center, the cone its conical waveguide (`ownGuide`). Both carry the
+ * coaxial's id: a design whose woofer and tweeter ids are equal is a coaxial (lib/hifi isCoax). The woofer carries the
+ * coaxial's weight and price, the HF part none. `tweeter` is null where the maker publishes no HF section (the woofer
+ * alone can be modeled); `gaps` lists the HF figures that are missing.
+ */
+export interface CoaxParts {
+  woofer: HifiWoofer;
+  tweeter: HifiTweeter | null;
+  gaps: readonly CoaxGap[];
+}
+
 export interface HifiWoofer {
   id: string;
   size: number;
@@ -482,7 +502,8 @@ export interface HifiWoofer {
   name: string;
   /** who makes it (`MAKER_NAMES`): code reads this, never the start of `name` */
   maker: MakerId;
-  price: number;
+  /** US dollars; null for a coaxial with no US price (the optimizer then leaves it out unless it is your design's) */
+  price: number | null;
   src: string;
   ts: HifiWooferTS;
   /** highest usable frequency, Hz */
@@ -490,7 +511,8 @@ export interface HifiWoofer {
   note: string;
 }
 
-export type TweeterType = "dome" | "horn-loaded" | "compression" | "ribbon";
+/** A tweeter's kind; "coaxial" is a coaxial's HF section, at its woofer's center (lib/data coaxParts). */
+export type TweeterType = "dome" | "horn-loaded" | "compression" | "ribbon" | "coaxial";
 
 export interface TweeterHf {
   sens: number;
@@ -527,6 +549,7 @@ export interface HifiTweeter {
   note: string;
   /** radiating diameter in inches for the directivity: the exit, or the mouth of a horn-loaded tweeter */
   domeIn: number;
+  /** the tweeter's own waveguide: a ribbon's plate, or a coaxial's woofer cone round its HF */
   ownGuide?: OwnGuide;
   /**
    * a compression driver's throat mount: its bolts or a screw-on thread; absent: bolt-on, with the PA catalogue's
@@ -712,6 +735,8 @@ export interface DriverLayout {
   spacingIn: number;
   /** the tweeter's waveguide sits on the box top */
   onTop?: true;
+  /** a coaxial: the tweeter is the woofer's own HF section, at its center (spacing 0) */
+  coax?: true;
 }
 
 /** What stops a level, by id (`LIMIT_NAMES` holds the word a chart label shows for it). */
@@ -919,6 +944,14 @@ export interface HifiMetrics {
   lb: number;
 }
 
+/**
+ * The metrics with whether the price is whole: false when a part has no US price (a coaxial's), so `price` sums only
+ * the known ones and the real one is higher (`UI_TEXT.partialPriceMark`), as the PA side's `priceKnown`.
+ */
+export interface HifiPricedMetrics extends HifiMetrics {
+  priceKnown: boolean;
+}
+
 /** The Hi-fi page's design and room, as the planner holds it. */
 export interface HifiDesignState {
   woofer: HifiWoofer;
@@ -1001,6 +1034,8 @@ export interface HifiDesign {
   /** the same distance in feet, as the page shows it */
   seatDistanceFt: number;
   pairCostUsd: number;
+  /** false when a part in it has no US price: `pairCostUsd` sums the known ones (`UI_TEXT.partialPriceMark`) */
+  pairCostKnown: boolean;
   /** null when the woofer can't be modeled (its parameters aren't published) */
   speakerModel: HifiSpeakerModel | null;
 }
@@ -1076,7 +1111,8 @@ export interface SavedHifiConfig
 
 /** A card's change from the current design. */
 export interface HifiMetricsDelta {
-  price: number;
+  /** null when either price isn't whole (`HifiPricedMetrics.priceKnown`): no difference can be told */
+  price: number | null;
   lb: number;
   level: number;
   f3: number;
@@ -1094,6 +1130,8 @@ export interface HifiOptimizerCard {
   tweeter: string;
   config: HifiCardConfig;
   metrics: HifiMetrics;
+  /** false when a part has no US price: `metrics.price` sums the known ones (`HifiPricedMetrics`) */
+  priceKnown: boolean;
   delta: HifiMetricsDelta | null;
   /** the warnings on this design (the checks it passes with a warning) */
   warnings: HifiChip[];
@@ -1117,7 +1155,7 @@ export interface HifiOptimizerResult {
   /** what fails in your design; empty when it passes or when no goal was given */
   curProblems: string[];
   // the fields below are absent when no goal was given
-  cur?: HifiMetrics | null;
+  cur?: HifiPricedMetrics | null;
   curCurve?: [number, number][] | null;
   goalMissing?: string | null;
 }
