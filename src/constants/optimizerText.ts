@@ -102,3 +102,8 @@ export const DESIGN_PROBLEM_TEXT = {
   missingTweeter: "tweeter isn't in the driver tables",
   missingRadiator: "the passive radiator isn't in the driver tables",
 } as const;
+
+/** What the optimizer says when your design's price isn't whole (a part without a US price, `HifiPricedMetrics`). */
+export const PRICE_UNKNOWN_TEXT = {
+  cheaper: "Your design has a part without a US price, so nothing can be shown cheaper than it.",
+} as const;

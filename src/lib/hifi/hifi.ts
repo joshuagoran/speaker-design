@@ -38,6 +38,10 @@ import type {
   HighpassType,
   HifiDispersionMap,
   HifiPlacement,
+  HifiSeatPaths,
+  Horn,
+  MountAdapter,
+  WaveguideSpec,
   RoundPort,
   SizedSlotPort,
   SlotPort,
@@ -65,10 +69,23 @@ import {
   DISPERSION_FREQ_MIN_HZ,
 } from "../../constants/chartScales";
 import { formatInches } from "../format";
+import { MOUNT_ADAPTERS, throatJoin } from "../data";
+import { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "../../constants/throatMounts";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
+import {
+  baffleEdgeShare,
+  boundaryShare,
+  driverPathFloorM,
+  inFarField,
+  nearBaffleStepGain,
+  nearBoundaryGain,
+  nearFieldPathM,
+} from "./nearField";
 import { xmaxBandCurves } from "../xmax";
+import { coaxGaps } from "../data";
+import { COAX_GAP_NAMES } from "../../constants/coax";
 
 const C = 343,
   IN = 0.0254;
@@ -130,13 +147,44 @@ export const SPEAKER_PLACEMENTS: Record<HifiPlacement, { name: string; db: numbe
   wall: { name: "Wall", db: 3 },
   corner: { name: "Corner", db: 6 },
 };
+/** The placement and its wall distance, m, as the woofer's boundary gain reads a design: free-standing, 2 ft, when absent. */
+const placementOf = (cfg: Pick<HifiConfig, "place" | "wallFt">) => ({
+  place: cfg.place || "free",
+  wallM: (cfg.wallFt || 2) * METERS_PER_FOOT,
+});
+/** A placement's boundary gain well below its corner (pressure), and that corner, Hz: c / (4 · distance to the wall). */
+const placementGain = (place: HifiPlacement) =>
+  Math.pow(10, (SPEAKER_PLACEMENTS[place] || SPEAKER_PLACEMENTS.free).db / 20);
+const boundaryCornerHz = (wallM: number) => C / (4 * Math.max(0.1, wallM));
 // boundary reinforcement below ~ c / (4 · distance to the wall)
 export function boundaryGain(f: number, place: HifiPlacement, wallM: number) {
   const db = (SPEAKER_PLACEMENTS[place] || SPEAKER_PLACEMENTS.free).db;
   if (!db) return 1;
-  const G = Math.pow(10, db / 20),
-    x = f / (C / (4 * Math.max(0.1, wallM)));
+  const G = placementGain(place),
+    x = f / boundaryCornerHz(wallM);
   return Math.sqrt((G * G + x * x) / (1 + x * x));
+}
+/**
+ * The woofer's baffle step and boundary gain as a listener `distM` out hears them, over the far-field shelves the
+ * system is modeled with (`hifiWooferPrep`), as a gain at each frequency (lib/hifi/nearField): close in, the baffle looks
+ * infinite and the step shrinks, and the direct sound swamps the wall's. Null from HIFI_NEAR_FIELD_M out, where they
+ * are the far-field shelves. The step compensation stays: it is an EQ, so close in it over-boosts the bass.
+ */
+export function hifiNearFieldShelves(
+  sys: Pick<HifiSystem, "lay">,
+  cfg: Pick<HifiConfig, "dim" | "place" | "wallFt">,
+  distM: number,
+): ((f: number) => number) | null {
+  if (inFarField(distM)) return null;
+  const step = baffleEdgeShare(cfg.dim, { x: 0, y: sys.lay.wooferIn }, distM),
+    f3 = baffleStepF3(cfg.dim.w);
+  // the placement as hifiWooferPrep reads it
+  const { place, wallM } = placementOf(cfg),
+    farGain = placementGain(place),
+    room = boundaryShare(distM, Math.max(0.1, wallM)),
+    fWall = boundaryCornerHz(wallM);
+  return (f) =>
+    nearBaffleStepGain((0.707 * f) / f3, step) * nearBoundaryGain(f / fWall, farGain, room);
 }
 
 // ---- directivity ----
@@ -303,8 +351,14 @@ export function boxWeightLb(d: Dims3, t: number, mat: PanelMaterial | undefined)
   const ft2 = (2 * (d.w * d.h + d.w * d.d + d.h * d.d)) / 144;
   return ft2 * panelWeightLb(t, mat);
 }
+/**
+ * Whether the woofer and tweeter are one coaxial (lib/data coaxParts): both parts carry the coaxial's id. A design
+ * names a coaxial by giving it as both its woofer and its tweeter.
+ */
+export const isCoax = (w: Pick<HifiWoofer, "id">, t: Pick<HifiTweeter, "id">) => w.id === t.id;
 // where the drivers sit (inches from the box bottom): tweeter near the top, woofer just below it;
-// a freestanding waveguide sits on the box top, so the woofer moves up to the top of the baffle
+// a freestanding waveguide sits on the box top, so the woofer moves up to the top of the baffle;
+// a coaxial's HF is at its woofer's center, the woofer at the top of the baffle
 export function driverLayout(
   w: HifiWoofer,
   t: HifiTweeter,
@@ -313,6 +367,10 @@ export function driverLayout(
 ): DriverLayout {
   const face = t.faceplate;
   const { topMarginIn, driverGapIn } = HIFI_BOX_LAYOUT;
+  if (isCoax(w, t)) {
+    const wh = d.h - topMarginIn - w.size / 2;
+    return { tweeterIn: wh, wooferIn: wh, spacingIn: 0, coax: true };
+  }
   if (onTop) {
     const th = d.h + face.h / 2,
       wh = d.h - topMarginIn - w.size / 2;
@@ -485,7 +543,7 @@ export const hifiVentPort = (
       ? { ...cfg.port, n: 1, w: slotWidth(cfg.dim, cfg.wall || 0.75) }
       : cfg.port;
 /** A sealed box's effective volume over its net: light stuffing. */
-const HIFI_STUFFING_GAIN = 1.1;
+export const HIFI_STUFFING_GAIN = 1.1;
 /** The box alone, its curve run to fTop (Hz): xo-independent, so one box serves every crossover. */
 export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBox | null {
   const ts = w.ts,
@@ -618,7 +676,10 @@ export function tweeterLevelInBox(
       : own;
   return { ...level, tSens283, trim };
 }
-/** One speaker's weight, lb: the box, the drivers, a pound of hardware and the radiators with their added mass (no amps). */
+/**
+ * One speaker's weight, lb: the box, the drivers (a coaxial once: its woofer carries it), a pound of hardware and the
+ * radiators with their added mass (no amps).
+ */
 export const hifiWeightLb = (
   w: HifiWoofer,
   t: HifiTweeter,
@@ -627,7 +688,7 @@ export const hifiWeightLb = (
 ) =>
   boxWeightLb(cfg.dim, cfg.wall || 0.75, cfg.mat) +
   (w.lb || 5) +
-  (t.lb || 1.5) +
+  (isCoax(w, t) ? 0 : t.lb || 1.5) +
   1 +
   (pr ? pr.n * ((pr.drv.lb || 0.75) + (pr.addG || 0) / 454) : 0);
 /**
@@ -642,6 +703,60 @@ export function tweeterMinXo(
   const guideHz = guide?.minXo || 0;
   if (guide && guideHz > own) return { hz: guideHz, part: "waveguide", name: guide.name };
   return own ? { hz: own, part: "tweeter", name: t.name } : null;
+}
+/**
+ * Where a catalogue waveguide starts holding its rated horizontal coverage, Hz (to the nearest 10): the higher of its
+ * loading limit (`lowHz`) and its mouth's control frequency (Keele, as the dispersion map widens it below), and which
+ * sets it. Null for a guide without a `lowHz` (a ribbon's own waveguide).
+ */
+export function guidePatternHz(
+  g: Pick<WaveguideSpec, "covH" | "w" | "lowHz">,
+): { hz: number; by: "mouth" | "loading" } | null {
+  if (!g.lowHz) return null;
+  const mouth = keeleFrequency(g.covH, g.w);
+  return mouth > g.lowHz
+    ? { hz: Math.round(mouth / 10) * 10, by: "mouth" }
+    : { hz: g.lowHz, by: "loading" };
+}
+/** A driver's or horn's throat as a check names it: bolt-on, or screw-on with its thread. */
+const mountName = (mount: Horn["mount"] | HifiTweeter["mount"]) =>
+  mount && "thread" in mount
+    ? `${THROAT_MOUNT_NAMES.thread} (${THROAT_THREAD_NAMES[mount.thread]})`
+    : THROAT_MOUNT_NAMES.bolts;
+/**
+ * The check on a compression driver's throat on its catalogue waveguide: none for a direct pair; the adapter a mixed
+ * pair takes, with its price and source (or that it has none, so the cost leaves it out); a failure when nothing joins
+ * them.
+ */
+export function guideMountChip(
+  t: Pick<HifiTweeter, "name" | "mount">,
+  guide: Pick<WaveguideSpec, "name" | "mount">,
+  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
+): HifiChip | null {
+  const join = throatJoin(t, guide, adapters);
+  const pair = `The ${t.name} is ${mountName(t.mount)} and the ${guide.name} ${mountName(guide.mount)}`;
+  if (!join)
+    return [
+      "bad",
+      "Driver doesn't fit the waveguide",
+      `${pair}, and nothing in the catalogue joins them.`,
+      "hifiGuideMount",
+    ];
+  if (!join.adapter) return null;
+  const { name, price, src } = join.adapter;
+  return price == null
+    ? [
+        "warn",
+        "Adapter needed, not priced",
+        `${pair}: the ${name} joins them, but no US vendor prices it, so the cost leaves it out. The 3-D view leaves out its length.`,
+        "hifiGuideMount",
+      ]
+    : [
+        "ok",
+        "Adapter in the cost",
+        `${pair}: the ${name} joins them, $${price.toFixed(2)} each (${src}), counted in the cost. The 3-D view leaves out its length.`,
+        "hifiGuideMount",
+      ];
 }
 /** The minimum-crossover warning's title, by the part that sets the minimum. */
 export const MIN_XO_TITLE: Record<NonNullable<ReturnType<typeof tweeterMinXo>>["part"], string> = {
@@ -762,13 +877,8 @@ export function hifiWooferPrep(
 ): HifiWooferPrep {
   const c = b.m.curve,
     n = c.length;
-  const { e, gDb } = shelfOn(
-    b,
-    cfg.dim.w,
-    cfg.bsc || 0,
-    cfg.place || "free",
-    (cfg.wallFt || 2) * 0.3048,
-  );
+  const { place, wallM } = placementOf(cfg);
+  const { e, gDb } = shelfOn(b, cfg.dim.w, cfg.bsc || 0, place, wallM);
   const V = b.V,
     vT = thermalVoltageLimit(w.ts.aes || 100),
     portMax = cfg.portMax || HIFI_PORT_MAX_MS,
@@ -1014,13 +1124,16 @@ export const tweeterOffsetMax = (
   cfg: Pick<HifiConfig, "dim" | "roundoverIn">,
   t: Pick<HifiTweeter, "faceplate">,
 ) => Math.max(0, (cfg.dim.w - t.faceplate.w) / 2 - (cfg.roundoverIn || 0) - 0.25);
-/** The tweeter offset the model uses, inches (+ inward): the asked-for one, kept on the baffle; 0 for a waveguide on the box top. */
+/**
+ * The tweeter offset the model uses, inches (+ inward): the asked-for one, kept on the baffle; 0 for a waveguide on the
+ * box top or a coaxial's HF (at its woofer's center).
+ */
 export function tweeterOffset(
   cfg: Pick<HifiConfig, "dim" | "roundoverIn" | "tweeterOffsetIn">,
   t: Pick<HifiTweeter, "faceplate">,
-  lay: Pick<DriverLayout, "onTop">,
+  lay: Pick<DriverLayout, "onTop" | "coax">,
 ) {
-  if (lay.onTop) return 0;
+  if (lay.onTop || lay.coax) return 0;
   const m = tweeterOffsetMax(cfg, t),
     x = cfg.tweeterOffsetIn || 0;
   return Math.max(-m, Math.min(m, x));
@@ -1129,6 +1242,8 @@ export function hifiEdgeRipple(
 // Response of one speaker at a point, relative to its on-axis response at 1 m; the DSP is time-aligned on the
 // tweeter axis at the listening distance. Returns [{ f, spl }] at 2.83 V-equivalent level (1 m on-axis scale).
 // Each driver's sound carries its baffle-edge diffraction at that point (roundover and tweeter offset from `cfg`).
+// Closer than HIFI_NEAR_FIELD_M the woofer's baffle step and boundary gain take their near-field forms
+// (hifiNearFieldShelves); each driver's path is at least its floor (lib/hifi/nearField driverPathFloorM).
 // room: { th (rad, horizontal off-axis), eyeIn (ear height above the box bottom, in), distM, side }, in the room: a
 // tilted box (`cfg.tiltDeg`) sees it lower on its baffle (boxFrameGeometry), unless it is already in the box's frame.
 export function hifiResponseAt(
@@ -1152,8 +1267,9 @@ export function hifiResponseAt(
     p = fieldPoint(geo, xT / IN),
     hW = Math.hypot(p.x * IN, p.z * IN), // woofer to listener, across the floor
     thW = Math.atan2(Math.abs(p.x * IN), p.z * IN);
-  const rW = Math.hypot(hW, dz(sys.lay.wooferIn)),
-    rT = Math.hypot(dist, dz(sys.lay.tweeterIn));
+  // each path at least its driver's floor, so a listener at a driver stays finite
+  const rW = Math.max(driverPathFloorM(a), Math.hypot(hW, dz(sys.lay.wooferIn))),
+    rT = Math.max(driverPathFloorM(dome), Math.hypot(dist, dz(sys.lay.tweeterIn)));
   const r0W = Math.hypot(Math.hypot(align, xT), (sys.lay.tweeterIn - sys.lay.wooferIn) * IN),
     r0T = align; // alignment point: tweeter axis
   const tvW = Math.atan2(dz(sys.lay.wooferIn), hW),
@@ -1166,6 +1282,10 @@ export function hifiResponseAt(
   };
   const trimG = Math.pow(10, sys.trim / 20);
   const edges = edgeRipples(sys, w, t, cfg, geo);
+  // the baffle step and boundary gain at the listener's distance from the speaker (its tweeter, which the angles and
+  // a map's arc are measured round; the true distance, tilted or not), whatever the alignment distance; null from
+  // HIFI_NEAR_FIELD_M out: as modeled
+  const near = hifiNearFieldShelves(sys, cfg, Math.hypot(dist, dz(sys.lay.tweeterIn)));
   return freqs.map((f) => {
     const k = (2 * Math.PI * f) / C;
     const dW = pistonDirectivity(f, a, offW),
@@ -1182,7 +1302,10 @@ export function hifiResponseAt(
         : pistonDirectivity(f, dome, offT);
     const pw = cmul(
       cmul(
-        cmul(linkwitzRileyFilter(f, xo, order, "lp"), cm(wAt(f) * dW * (1 / rW))),
+        cmul(
+          linkwitzRileyFilter(f, xo, order, "lp"),
+          cm((near ? wAt(f) * near(f) : wAt(f)) * dW * (1 / rW)),
+        ),
         cexp(-k * (rW - r0W)),
       ),
       edges.woofer(f),
@@ -1220,6 +1343,43 @@ export const listenerGeometry = (
     side: -sign * ang >= 0 ? 1 : -1,
   };
 };
+
+/**
+ * One speaker's woofer and tweeter paths to the seat at `room` for its level at the seat (lib/hifi/nearField
+ * hifiPairLevelDb), m: the speaker's distance, at least `floorM` (the seat floor), with each driver's place counted in
+ * the near field (nearFieldPathM), and each at least its driver's path floor. A driver `h` up the baffle of a box
+ * tilted back `t` about its bottom front edge sits h·sin t behind that edge and h·cos t up, in the room; a point
+ * already in the box's frame has no tilt to apply.
+ */
+export function hifiSeatPaths(
+  sys: Pick<HifiSystem, "lay">,
+  w: Pick<HifiWoofer, "ts">,
+  t: Pick<HifiTweeter, "domeIn">,
+  cfg: Pick<HifiConfig, "tiltDeg">,
+  room: ListenerGeometry,
+  floorM = 0,
+): HifiSeatPaths {
+  const distM = Math.max(floorM, room.distM),
+    tilt = room.boxFrame ? 0 : ((cfg.tiltDeg || 0) * Math.PI) / 180;
+  const path = (driverIn: number, radiusM: number) =>
+    Math.max(
+      driverPathFloorM(radiusM),
+      nearFieldPathM(
+        distM,
+        (room.eyeIn - driverIn * Math.cos(tilt)) * IN,
+        driverIn * Math.sin(tilt) * IN,
+      ),
+    );
+  return {
+    wM: path(sys.lay.wooferIn, Math.sqrt(w.ts.Sd / 1e4 / Math.PI)),
+    tM: path(sys.lay.tweeterIn, (t.domeIn * IN) / 2),
+  };
+}
+/** A listener `distM` out on a speaker's tweeter axis: the optimizer's seat, which has no room. */
+export const tweeterAxisSeat = (
+  lay: Pick<DriverLayout, "tweeterIn">,
+  distM: number,
+): ListenerGeometry => ({ th: 0, eyeIn: lay.tweeterIn, distM, boxFrame: true });
 
 export const logSpacedFrequencies = (a: number, b: number, n: number) =>
   Array.from({ length: n }, (_, i) => a * Math.pow(b / a, i / (n - 1)));
@@ -1329,11 +1489,12 @@ export function hifiChips(
     ka = ((2 * Math.PI * xo) / C) * a;
   const beam = ka <= 2.2 ? 180 : (2 * Math.asin(2.2 / ka) * 180) / Math.PI;
   const tCov = cfg.guide ? cfg.guide.covH : 160;
+  const coax = isCoax(w, t);
   if (beam < Math.min(tCov, 180) * 0.75)
     F.push([
       "warn",
       "Woofer narrower than the tweeter at the crossover",
-      `About ${Math.round(beam)}° against the tweeter's ${cfg.guide ? tCov + "°" : "wide dome"}: an off-axis dip below ${xo} Hz. Use a lower crossover.`,
+      `About ${Math.round(beam)}° against the tweeter's ${cfg.guide ? tCov + "°" : coax ? "unpublished coverage, taken as wide" : "wide dome"}: an off-axis dip below ${xo} Hz. Use a lower crossover.`,
       "hifiDispersion",
     ]);
   else
@@ -1351,6 +1512,29 @@ export function hifiChips(
       `${xo} Hz, below the ${minXo.hz} Hz recommended for the ${minXo.name}.`,
       "hifiTweeterMinXo",
     ]);
+  // a coaxial whose maker leaves out an HF figure: the checks above can't read it (the optimizer offers such a coaxial
+  // only as your own design)
+  const gaps = coax ? coaxGaps(t.id) : [];
+  if (gaps.length)
+    F.push([
+      "warn",
+      "HF figures not published",
+      `The maker publishes no ${gaps.map((g) => COAX_GAP_NAMES[g]).join(" or ")} for the ${t.name}: check its data before setting the crossover.`,
+      "hifiCoaxGaps",
+    ]);
+  // below where the waveguide holds its pattern the tweeter is wider than rated near the crossover (the dispersion map
+  // widens it there too); a crossover already under the minimum-crossover warning gets no second one
+  const pattern = cfg.guide ? guidePatternHz(cfg.guide) : null;
+  if (cfg.guide && pattern && xo < pattern.hz && !(minXo && xo < minXo.hz))
+    F.push([
+      "warn",
+      "Below the waveguide's pattern control",
+      `${xo} Hz, below the ${pattern.hz} Hz where the ${cfg.guide.name} starts holding its ${cfg.guide.covH}° (${pattern.by === "mouth" ? `its ${formatInches(cfg.guide.w)} mouth` : "its loading"}): near the crossover the tweeter spreads wider than rated, and the woofer's off-axis match suffers.`,
+      "hifiGuidePattern",
+    ]);
+  // the driver's throat on the catalogue waveguide's: direct, through an adapter (in the cost), or no fit
+  const mountChip = cfg.guide && needsWaveguide(t) && !t.ownGuide && guideMountChip(t, cfg.guide);
+  if (mountChip) F.push(mountChip);
   if (nearTweeterResonance(t, xo))
     F.push([
       "warn",
@@ -1450,11 +1634,13 @@ export function hifiChips(
       "hifiRoundover",
     ]);
   const offAsked = cfg.tweeterOffsetIn || 0;
-  if (offAsked && sys.lay.onTop)
+  if (offAsked && (sys.lay.onTop || sys.lay.coax))
     F.push([
       "warn",
       "Tweeter offset ignored",
-      "The waveguide on top stays centered.",
+      sys.lay.coax
+        ? "A coaxial's HF sits at its woofer's center."
+        : "The waveguide on top stays centered.",
       "hifiTweeterOffsetIgnored",
     ]);
   else if (Math.abs(offAsked) > tweeterOffsetMax(cfg, t) + 1e-9)

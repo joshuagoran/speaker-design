@@ -11,6 +11,9 @@ export const UI_TEXT = {
   closeSettings: "Close settings",
   /** after a price total when some part has no price, so the real total is higher */
   partialPriceMark: "+",
+  /** an optimizer card's line when some part has no price, and its tip */
+  partialPrices: "Partial prices",
+  partialPricesTip: "Some drivers have no price; the real total is higher.",
   /** the conditions a sensitivity figure is quoted at */
   splConditions: "2.83 V, half space, 1 m",
   /** the PA stack's sub, as its results section and the system response chart name it */

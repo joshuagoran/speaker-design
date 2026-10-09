@@ -23,18 +23,23 @@ import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import {
   CD_OPTIONS,
+  HIFI_COAXES,
   HIFI_TWEETERS,
   HIFI_WAVEGUIDES,
   HORN_OPTIONS,
   cdBodySteps,
+  driverMountKind,
+  hornMountKind,
 } from "../src/lib/data";
 import { needsWaveguide } from "../src/lib/hifi/hifi";
 import { radiatorSpots, roundPortSpots } from "../src/lib/hifi/boxLayout";
-import { HIFI_GENERIC_BODIES } from "../src/constants/hifiScene";
+import { HIFI_FRONT_PARTS, HIFI_GENERIC_BODIES } from "../src/constants/hifiScene";
 import { HORN_MESHES } from "../src/data/meshes";
 import { byIdOrThrow } from "../src/lib/tables";
 import { HIFI_ROUNDOVER_CHOICES } from "../src/constants/hifiLayout";
-import type { HifiDesignState, HifiWaveguide, RadiatorPanel } from "../src/types";
+import { PARTS_3D } from "../src/styles/palette";
+import { THREAD_MOUNT } from "../src/constants/throatMounts";
+import type { CoaxParts, HifiDesignState, HifiWaveguide, RadiatorPanel } from "../src/types";
 
 const EPS = 1e-6;
 
@@ -328,6 +333,54 @@ describe("the tweeter", () => {
     expect(horn instanceof THREE.Mesh && horn.geometry.type).toBe("LatheGeometry");
   });
 
+  // every small Hi-fi-only waveguide, with a bolt-on driver (the DE250) and a screw-on one (the D220Ti)
+  const smallGuides = WAVEGUIDES.filter((h) => h.scope === "hifi");
+  const mountDrivers = [tweeter("de250"), tweeter("d220ti")];
+  test("the small Hi-fi-only waveguides are several, each without a mesh or profile", () => {
+    expect(smallGuides.length).toBeGreaterThanOrEqual(3);
+    for (const h of smallGuides) {
+      expect(HORN_MESHES[h.id], h.id).toBeUndefined();
+      expect(h.profile, h.id).toBeUndefined();
+    }
+  });
+  for (const small of smallGuides)
+    for (const t of mountDrivers)
+      test(`${small.name} with the ${t.name}: the generic flare at its catalogue size on the box top, mouth on the front plane, the driver held clear of the lid`, () => {
+        const p = propsFor({ tweeter: t, selectedWaveguide: small });
+        const g = scene(p);
+        expect(p.lay.onTop).toBe(true);
+        const [horn] = named(g, HORN_MESH_NAME);
+        if (!(horn instanceof THREE.Mesh)) throw new Error("no horn mesh");
+        expect(horn.geometry.type).not.toBe("LatheGeometry");
+        const hornBox = new THREE.Box3().setFromObject(horn);
+        const size = hornBox.getSize(new THREE.Vector3());
+        expect(size.x).toBeCloseTo(small.size.w, 2);
+        expect(size.y).toBeCloseTo(small.size.h, 2);
+        expect(size.z).toBeCloseTo(small.size.d, 2);
+        expect(size.x).toBeLessThan(p.dim.w);
+        expect(hornBox.min.y).toBeGreaterThan(p.dim.h);
+        expect(hornBox.max.z).toBeCloseTo(p.dim.d / 2, 4); // its mouth on the box's front plane
+        if (!(horn.material instanceof THREE.MeshStandardMaterial))
+          throw new Error("horn material");
+        expect(horn.material.color.getHex()).toBe(PARTS_3D.hornBlack);
+        // the driver's body behind the throat, clear of the lid
+        expect(named(g, CD_MESH_NAME).length).toBeGreaterThan(0);
+        expect(boxOf(g, CD_MESH_NAME).min.y).toBeGreaterThanOrEqual(p.dim.h - EPS);
+        const cd = hifiCompressionDriver(t);
+        const screwOn =
+          driverMountKind(t) === THREAD_MOUNT || hornMountKind(small) === THREAD_MOUNT;
+        if (screwOn) {
+          // a thread on either side: the bracket clamped at the throat holds it, no plate
+          expect(named(g, PLATE_MESH_NAMES.plate)).toHaveLength(0);
+          expect(named(g, BRACKET_MESH_NAME).length).toBeGreaterThan(0);
+        } else {
+          // bolted straight on: the aluminum plate fits the small throat and holds it
+          expect(plateFit(small, cd, p.dim.w)).not.toBeNull();
+          expect(named(g, PLATE_MESH_NAMES.plate).length).toBeGreaterThan(0);
+          expect(boxOf(g, PLATE_MESH_NAMES.foot).min.y).toBeGreaterThanOrEqual(p.dim.h - EPS);
+        }
+      });
+
   test("a compression driver the PA catalogue doesn't list gets the generic body, its own diameter across", () => {
     const t = tweeter("de10");
     expect(CD_OPTIONS.some((c) => c.id === t.id)).toBe(false);
@@ -408,5 +461,99 @@ describe("the cutaway", () => {
     expect(wooferParts(cut)).not.toBe(wooferParts(solid));
     // the box is the same size either way
     expect(cabinetBox(cut).equals(cabinetBox(solid))).toBe(true);
+  });
+});
+
+describe("a coaxial", () => {
+  /** The scene props for the default design on a coaxial (its woofer and its HF part), in a box that holds it. */
+  const coaxProps = (c: CoaxParts, over: Partial<HifiDesignState> = {}) =>
+    propsFor({
+      woofer: c.woofer,
+      tweeter: c.tweeter ?? DEFAULT_HIFI.tweeter,
+      boxDims: { w: 13, h: 16, d: 11 },
+      ...over,
+    });
+  const withHf = HIFI_COAXES.filter((c) => c.tweeter);
+  /** How many holes the baffle's flat face has. */
+  function baffleHoles(g: THREE.Object3D) {
+    const [face] = named(g, HIFI_CABINET_MESH_NAMES.baffle).filter(
+      (o): o is THREE.Mesh<THREE.ShapeGeometry> =>
+        o instanceof THREE.Mesh && o.geometry instanceof THREE.ShapeGeometry,
+    );
+    const params: { shapes?: unknown } = Reflect.get(face.geometry, "parameters");
+    const shape = Array.isArray(params.shapes) ? params.shapes[0] : params.shapes;
+    if (!(shape instanceof THREE.Shape)) throw new Error("no face shape");
+    return shape.holes.length;
+  }
+
+  test("its HF is a horn with a phase plug at the woofer's center, in front of the cone; no tweeter of its own", () => {
+    expect(withHf.length).toBeGreaterThan(0);
+    for (const c of withHf) {
+      const p = coaxProps(c, { boxType: "sealed", tweeterOffsetIn: 2 });
+      expect(p.lay.coax, c.woofer.id).toBe(true);
+      expect(p.tweeterOffsetIn, c.woofer.id).toBe(0);
+      const g = scene(p);
+      const center = new THREE.Vector3(0, p.lay.wooferIn, 0);
+      for (const name of [HIFI_MESH_NAMES.coaxHorn, HIFI_MESH_NAMES.coaxPlug]) {
+        const b = boxOf(g, name);
+        expect(b.isEmpty(), `${c.woofer.id} ${name}`).toBe(false);
+        const at = b.getCenter(new THREE.Vector3());
+        expect(at.x, `${c.woofer.id} ${name}`).toBeCloseTo(center.x, 6);
+        expect(at.y, `${c.woofer.id} ${name}`).toBeCloseTo(center.y, 6);
+        // inside the woofer's frame, not past the baffle by more than the frame
+        expect(b.max.z).toBeLessThan(p.dim.d / 2 + HIFI_FRONT_PARTS.wooferFrameIn);
+      }
+      // inside the woofer's cone
+      const horn = boxOf(g, HIFI_MESH_NAMES.coaxHorn);
+      const woofer = boxOf(g, HIFI_MESH_NAMES.woofer);
+      expect(horn.max.x - horn.min.x).toBeLessThan(woofer.max.x - woofer.min.x);
+      for (const name of [
+        HIFI_MESH_NAMES.faceplate,
+        HIFI_MESH_NAMES.dome,
+        HIFI_MESH_NAMES.flare,
+        HIFI_MESH_NAMES.ribbon,
+        HORN_MESH_NAME,
+        CD_MESH_NAME,
+      ])
+        expect(named(g, name), `${c.woofer.id} ${name}`).toHaveLength(0);
+      // one hole in the baffle: the woofer's
+      expect(baffleHoles(g), c.woofer.id).toBe(1);
+    }
+  });
+
+  test("the woofer sits at the model's height, at the top of the baffle", () => {
+    const c = withHf[0];
+    const p = coaxProps(c);
+    const woofer = boxOf(scene(p), HIFI_MESH_NAMES.woofer);
+    expect(woofer.getCenter(new THREE.Vector3()).y).toBeCloseTo(p.lay.wooferIn, 6);
+    expect(p.lay.tweeterIn).toBe(p.lay.wooferIn);
+  });
+
+  test("in the cutaway: no cone or horn, the HF driver behind the woofer's magnet", () => {
+    const c = withHf[0];
+    const p = coaxProps(c);
+    const solid = scene(p),
+      cut = scene({ ...p, cutaway: true });
+    expect(named(solid, HIFI_MESH_NAMES.coaxHfBody)).toHaveLength(0);
+    expect(named(cut, HIFI_MESH_NAMES.coaxHorn)).toHaveLength(0);
+    expect(named(cut, HIFI_MESH_NAMES.coaxPlug)).toHaveLength(0);
+    const [body] = named(cut, HIFI_MESH_NAMES.coaxHfBody);
+    expect(body).toBeDefined();
+    const b = boxOf(cut, HIFI_MESH_NAMES.coaxHfBody);
+    expect(b.getCenter(new THREE.Vector3()).y).toBeCloseTo(p.lay.wooferIn, 6);
+    // behind the woofer's body, inside the box
+    expect(b.max.z).toBeLessThan(p.dim.d / 2 - p.wall);
+    expect(b.min.z).toBeGreaterThan(-p.dim.d / 2);
+    expect(named(cut, HIFI_MESH_NAMES.tweeterBody)).toHaveLength(0);
+  });
+
+  test("a stacked design keeps its dust cap and draws no coaxial parts", () => {
+    const g = scene(propsFor({}));
+    for (const name of [
+      HIFI_MESH_NAMES.coaxHorn,
+      HIFI_MESH_NAMES.coaxPlug,
+      HIFI_MESH_NAMES.coaxHfBody,
+    ])
+      expect(named(g, name)).toHaveLength(0);
   });
 });
