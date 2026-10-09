@@ -37,6 +37,7 @@ import { HORN_MESHES } from "../src/data/meshes";
 import { byIdOrThrow } from "../src/lib/tables";
 import { HIFI_ROUNDOVER_CHOICES } from "../src/constants/hifiLayout";
 import { PARTS_3D } from "../src/styles/palette";
+import { THREAD_MOUNT } from "../src/constants/throatMounts";
 import type { HifiDesignState, HifiWaveguide, RadiatorPanel } from "../src/types";
 
 const EPS = 1e-6;
@@ -365,7 +366,8 @@ describe("the tweeter", () => {
         expect(named(g, CD_MESH_NAME).length).toBeGreaterThan(0);
         expect(boxOf(g, CD_MESH_NAME).min.y).toBeGreaterThanOrEqual(p.dim.h - EPS);
         const cd = hifiCompressionDriver(t);
-        const screwOn = driverMountKind(t) === "thread" || hornMountKind(small) === "thread";
+        const screwOn =
+          driverMountKind(t) === THREAD_MOUNT || hornMountKind(small) === THREAD_MOUNT;
         if (screwOn) {
           // a thread on either side: the bracket clamped at the throat holds it, no plate
           expect(named(g, PLATE_MESH_NAMES.plate)).toHaveLength(0);

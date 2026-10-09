@@ -9,6 +9,7 @@ import { buildHifiCabinet, type HifiCabinetHoles } from "./buildHifiCabinet";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
 import { circlePath, roundedRectPath, roundedRectShape } from "./geometry";
 import { CD_OPTIONS, driverMountKind, hornMountKind } from "../../lib/data";
+import { THREAD_MOUNT } from "../../constants/throatMounts";
 import { hifiTubeRoom } from "../../lib/hifi/hifi";
 import {
   radiatorSpots,
@@ -84,18 +85,17 @@ export type HifiSceneProps = Pick<HifiConfig, "dim"> &
 
 /**
  * The compression driver behind a waveguide: the PA catalogue's, where it lists the same driver (its body and bolts),
- * else a GENERIC body (`HIFI_GENERIC_BODIES`) the Hi-fi table's diameter across, with the table's bolts when it gives
- * them (a screw-on driver: the generic pattern, which only sizes the bracket clamped at its throat).
+ * else a GENERIC body (`HIFI_GENERIC_BODIES`) the Hi-fi table's diameter across (on a screw-on driver its generic bolt
+ * pattern only sizes the bracket clamped at the throat).
  */
 export function hifiCompressionDriver(
-  t: Pick<HifiTweeter, "id" | "exit" | "faceplate" | "mount">,
+  t: Pick<HifiTweeter, "id" | "exit" | "faceplate">,
 ): Pick<CompressionDriver, "body" | "exit"> {
   const pa = CD_OPTIONS.find((c) => c.id === t.id);
   if (pa) return pa;
   const g = HIFI_GENERIC_BODIES.compressionDriver;
   const dia = t.faceplate.w;
-  const bolts = t.mount && "bolts" in t.mount ? t.mount.bolts : g.bolts;
-  return { exit: t.exit ?? 1, body: { dia, depth: dia * g.depthPerDia, bolts } };
+  return { exit: t.exit ?? 1, body: { dia, depth: dia * g.depthPerDia, bolts: g.bolts } };
 }
 
 /** A woofer's baffle cutout radius: its size class's typical cutout, else a GENERIC share of its size. */
@@ -221,7 +221,7 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
   if (horn && p.guide) {
     const cd = hifiCompressionDriver(t);
     // a thread on either side (direct, or through an adapter): the clamped bracket holds the driver
-    const screwOn = driverMountKind(t) === "thread" || hornMountKind(horn) === "thread";
+    const screwOn = driverMountKind(t) === THREAD_MOUNT || hornMountKind(horn) === THREAD_MOUNT;
     if (p.guide.freestanding)
       buildHorn(ctx, { horn, cd, y: dim.h, xs: [0], mount: dim, backRoundover: 0, screwOn });
     else

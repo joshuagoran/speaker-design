@@ -227,7 +227,8 @@ export interface ThreadMount {
 }
 /**
  * How a compression driver meets a horn: its front-face bolts (the body's pattern, as the PA catalogue holds it) or a
- * screw-on thread.
+ * screw-on thread. The 3-D view draws a bolt-on driver with the PA catalogue's body for the same driver, else a
+ * generic one.
  */
 export type DriverMount = Pick<CompressionDriverBody, "bolts"> | ThreadMount;
 

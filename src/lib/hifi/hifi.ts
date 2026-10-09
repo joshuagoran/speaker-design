@@ -38,6 +38,8 @@ import type {
   HighpassType,
   HifiDispersionMap,
   HifiPlacement,
+  Horn,
+  MountAdapter,
   WaveguideSpec,
   RoundPort,
   SizedSlotPort,
@@ -66,8 +68,8 @@ import {
   DISPERSION_FREQ_MIN_HZ,
 } from "../../constants/chartScales";
 import { formatInches } from "../format";
-import { driverMountKind, hornMountKind, throatJoin } from "../data";
-import { THROAT_MOUNT_NAMES } from "../../constants/throatMounts";
+import { MOUNT_ADAPTERS, throatJoin } from "../data";
+import { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "../../constants/throatMounts";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
@@ -659,6 +661,46 @@ export function guidePatternHz(
   return mouth > g.lowHz
     ? { hz: Math.round(mouth / 10) * 10, by: "mouth" }
     : { hz: g.lowHz, by: "loading" };
+}
+/** A driver's or horn's throat as a check names it: bolt-on, or screw-on with its thread. */
+const mountName = (mount: Horn["mount"] | HifiTweeter["mount"]) =>
+  mount && "thread" in mount
+    ? `${THROAT_MOUNT_NAMES.thread} (${THROAT_THREAD_NAMES[mount.thread]})`
+    : THROAT_MOUNT_NAMES.bolts;
+/**
+ * The check on a compression driver's throat on its catalogue waveguide: none for a direct pair; the adapter a mixed
+ * pair takes, with its price and source (or that it has none, so the cost leaves it out); a failure when nothing joins
+ * them.
+ */
+export function guideMountChip(
+  t: Pick<HifiTweeter, "name" | "mount">,
+  guide: Pick<WaveguideSpec, "name" | "mount">,
+  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
+): HifiChip | null {
+  const join = throatJoin(t, guide, adapters);
+  const pair = `The ${t.name} is ${mountName(t.mount)} and the ${guide.name} ${mountName(guide.mount)}`;
+  if (!join)
+    return [
+      "bad",
+      "Driver doesn't fit the waveguide",
+      `${pair}, and nothing in the catalogue joins them.`,
+      "hifiGuideMount",
+    ];
+  if (!join.adapter) return null;
+  const { name, price, src } = join.adapter;
+  return price == null
+    ? [
+        "warn",
+        "Adapter needed, not priced",
+        `${pair}: the ${name} joins them, but no US vendor prices it, so the cost leaves it out. The 3-D view leaves out its length.`,
+        "hifiGuideMount",
+      ]
+    : [
+        "ok",
+        "Adapter in the cost",
+        `${pair}: the ${name} joins them, $${price.toFixed(2)} each (${src}), counted in the cost. The 3-D view leaves out its length.`,
+        "hifiGuideMount",
+      ];
 }
 /** The minimum-crossover warning's title, by the part that sets the minimum. */
 export const MIN_XO_TITLE: Record<NonNullable<ReturnType<typeof tweeterMinXo>>["part"], string> = {
@@ -1379,26 +1421,8 @@ export function hifiChips(
       "hifiGuidePattern",
     ]);
   // the driver's throat on the catalogue waveguide's: direct, through an adapter (in the cost), or no fit
-  if (cfg.guide && needsWaveguide(t) && !t.ownGuide) {
-    const join = throatJoin(t, cfg.guide);
-    const pair = `The ${t.name} is ${THROAT_MOUNT_NAMES[driverMountKind(t)]} and the ${cfg.guide.name} ${THROAT_MOUNT_NAMES[hornMountKind(cfg.guide)]}`;
-    if (!join)
-      F.push([
-        "bad",
-        "Driver doesn't fit the waveguide",
-        `${pair}, and no adapter in the catalogue joins them.`,
-        "hifiGuideMount",
-      ]);
-    else if (join.adapter) {
-      const { name, price, src } = join.adapter;
-      F.push([
-        "ok",
-        "Adapter in the cost",
-        `${pair}: the ${name} joins them${price == null ? ", with no US price (not in the cost)" : `, $${price.toFixed(2)} each (${src}), counted in the cost`}. The 3-D view leaves out its length.`,
-        "hifiGuideMount",
-      ]);
-    }
-  }
+  const mountChip = cfg.guide && needsWaveguide(t) && !t.ownGuide && guideMountChip(t, cfg.guide);
+  if (mountChip) F.push(mountChip);
   if (nearTweeterResonance(t, xo))
     F.push([
       "warn",

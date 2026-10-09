@@ -43,7 +43,7 @@ import {
   passiveRadiatorMassMax,
   ownGuideCfg,
   throatAdapterPrice,
-  throatJoin,
+  throatOffered,
   HIFI_WOOFERS,
   HIFI_TWEETERS,
   HIFI_PASSIVES,
@@ -429,7 +429,7 @@ export function hifiSearchSpace(
     2 *
     ((w.price || 0) +
       (t.price || 0) +
-      (needsWaveguide(t) ? gp + throatAdapterPrice(t, guide) : 0) + // with the adapter a mixed pair needs
+      (needsWaveguide(t) ? gp + (throatAdapterPrice(t, guide) ?? 0) : 0) + // with the adapter a mixed pair needs
       prPrice(c)); // a ribbon's own waveguide is in its price
   const guideOf = (t: HifiTweeter) => ownGuideCfg(t) || (needsWaveguide(t) ? guide : null);
   // unlocked amps: searched at the top of their sliders, trimmed per card at the end (a passive design has no tweeter
@@ -451,9 +451,11 @@ export function hifiSearchSpace(
   const walls = [input.wall ?? defaultPanelIn(HIFI_OPTIMIZER_PANEL, cur.mat ?? PLYWOOD_MATERIAL)];
   const tList: HifiTweeter[] = locks.tweeter
     ? [T0]
-    : // a compression driver only on a waveguide its throat fits (direct or through an adapter)
+    : // a compression driver only on a waveguide its throat fits, directly or through a priced adapter (locked, yours
+      // stays whatever its adapter costs)
       tweeters.filter(
-        (t) => t.hf && t.hf.sens != null && (!needsWaveguide(t) || (guide && throatJoin(t, guide))),
+        (t) =>
+          t.hf && t.hf.sens != null && (!needsWaveguide(t) || (guide && throatOffered(t, guide))),
       );
   const xos = locks.xo ? [cur.xo] : XOS.includes(cur.xo) ? XOS : [...XOS, cur.xo];
   const face =

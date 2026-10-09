@@ -32,6 +32,7 @@ import type {
   SubSize,
   ThieleSmall,
   ThroatMountKind,
+  ThroatThread,
   WaveguideSpec,
 } from "../types";
 import { CABINET_FINISHES } from "../data/catalog/finishes";
@@ -49,6 +50,7 @@ import { DSP_UNITS } from "../data/catalog/dsp-units";
 import { MAINS_RACK, RACKS as RACK_TABLE } from "../data/catalog/racks";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
 import { MOUNT_ADAPTERS } from "../data/catalog/mount-adapters";
+import { BOLT_MOUNT, THREAD_MOUNT } from "../constants/throatMounts";
 import { byIdOrThrow } from "./tables";
 
 // Tables the app reads as written.
@@ -194,15 +196,19 @@ export const waveguideSpecOf = (h: HifiWaveguide): WaveguideSpec => ({
 
 // ---- Throat mounts: how a compression driver meets its waveguide, and the adapter a mixed pair needs ----
 
+/** A driver's screw-on thread, or null for a bolt-on one. */
+const driverThread = ({ mount }: Pick<HifiTweeter, "mount">): ThroatThread | null =>
+  mount && "thread" in mount ? mount.thread : null;
 /** How a driver meets a horn's throat: screw-on when its mount is a thread, else bolt-on (the default). */
-export const driverMountKind = ({ mount }: Pick<HifiTweeter, "mount">): ThroatMountKind =>
-  mount && "thread" in mount ? "thread" : "bolts";
+export const driverMountKind = (t: Pick<HifiTweeter, "mount">): ThroatMountKind =>
+  driverThread(t) ? THREAD_MOUNT : BOLT_MOUNT;
 /** How a horn takes its driver: screw-on when it has a thread, else bolt-on (its throat flange). */
 export const hornMountKind = ({ mount }: Pick<WaveguideSpec, "mount">): ThroatMountKind =>
-  mount ? "thread" : "bolts";
+  mount ? THREAD_MOUNT : BOLT_MOUNT;
 /**
- * A compression driver on a waveguide: direct when both screw on or both bolt on, else through the catalogue's adapter
- * from the driver's mount to the horn's; null when no adapter joins them (the pair doesn't fit).
+ * A compression driver on a waveguide: direct when both bolt on or both screw on with the same thread, else through the
+ * catalogue's adapter from the driver's mount to the horn's; null when nothing joins them (two different threads, or no
+ * adapter between the two kinds: the pair doesn't fit).
  */
 export function throatJoin(
   t: Pick<HifiTweeter, "mount">,
@@ -211,19 +217,38 @@ export function throatJoin(
 ): { adapter: MountAdapter | null } | null {
   const driver = driverMountKind(t),
     horn = hornMountKind(guide);
-  if (driver === horn) return { adapter: null };
+  if (driver === horn)
+    return driver === BOLT_MOUNT || driverThread(t) === guide.mount?.thread
+      ? { adapter: null }
+      : null;
   const adapter = adapters.find((a) => a.driver === driver && a.horn === horn);
   return adapter ? { adapter } : null;
 }
 /**
  * What the throat adds to one speaker's cost: the adapter's price when the driver sits on the catalogue waveguide
- * `guide` (null: it doesn't, as a dome or a ribbon on its own) and the pair needs one; else 0 (a direct pair, a pair
- * that doesn't fit, or an unpriced adapter).
+ * `guide` (null: it doesn't, as a dome or a ribbon on its own) and the pair needs one; 0 for a direct pair or one that
+ * doesn't fit; null when the adapter it needs has no US price (the cost can't include it).
  */
-export const throatAdapterPrice = (
+export function throatAdapterPrice(
   t: Pick<HifiTweeter, "mount">,
   guide: Pick<WaveguideSpec, "mount"> | null,
-): number => (guide && throatJoin(t, guide)?.adapter?.price) || 0;
+  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
+): number | null {
+  const adapter = guide && throatJoin(t, guide, adapters)?.adapter;
+  return adapter ? adapter.price : 0;
+}
+/**
+ * Whether the optimizer offers a driver on this waveguide: it fits, directly or through a priced adapter (the catalogue
+ * rule for unpriced parts: the search leaves them out unless you lock them).
+ */
+export function throatOffered(
+  t: Pick<HifiTweeter, "mount">,
+  guide: Pick<WaveguideSpec, "mount">,
+  adapters: readonly MountAdapter[] = MOUNT_ADAPTERS,
+): boolean {
+  const join = throatJoin(t, guide, adapters);
+  return !!join && (!join.adapter || join.adapter.price != null);
+}
 export const passiveRadiatorMassMax = (p: PassiveRadiator): number =>
   Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
 

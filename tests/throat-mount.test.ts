@@ -10,15 +10,23 @@ import {
   hornMountKind,
   throatAdapterPrice,
   throatJoin,
+  throatOffered,
   waveguideSpecOf,
 } from "../src/lib/data";
-import { hifiChips, hifiSystem } from "../src/lib/hifi/hifi";
+import { guideMountChip, hifiChips, hifiSystem } from "../src/lib/hifi/hifi";
+import { BOLT_MOUNT, THREAD_MOUNT } from "../src/constants/throatMounts";
 import { optimizeHifiSpeaker } from "../src/lib/hifi/optimize";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import { byIdOrThrow } from "../src/lib/tables";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
-import type { HifiOptimizerCurrent, HifiTweeter, HifiWaveguide } from "../src/types";
+import type {
+  HifiOptimizerCurrent,
+  HifiTweeter,
+  HifiWaveguide,
+  MountAdapter,
+  ThroatThread,
+} from "../src/types";
 
 const tweeter = (id: string) => byIdOrThrow(HIFI_TWEETERS, id, CATALOG_TABLE_NAMES.hifiTweeters);
 const guide = (id: string) => byIdOrThrow(HIFI_WAVEGUIDES, id, "waveguides");
@@ -27,7 +35,7 @@ const de250 = tweeter("de250"); // bolt-on
 const d220ti = tweeter("d220ti"); // screw-on
 const me10 = guide("me10"); // bolt-on
 const hm1725 = guide("hm1725"); // screw-on
-const screwOnDrivers = HIFI_TWEETERS.filter((t) => driverMountKind(t) === "thread");
+const screwOnDrivers = HIFI_TWEETERS.filter((t) => driverMountKind(t) === THREAD_MOUNT);
 
 describe("the parts", () => {
   test("two or three screw-on 1-inch compression drivers, priced at a US vendor, with the model's specs", () => {
@@ -44,21 +52,26 @@ describe("the parts", () => {
     }
   });
 
-  test("an adapter each way, priced at a US vendor", () => {
-    expect(adapter("b2sa")).toMatchObject({ driver: "bolts", horn: "thread" });
-    expect(adapter("s2ba")).toMatchObject({ driver: "thread", horn: "bolts" });
+  test("the adapter table: an adapter each way, unique ids, each priced at a US vendor with the month read", () => {
+    expect(adapter("b2sa")).toMatchObject({ driver: BOLT_MOUNT, horn: THREAD_MOUNT });
+    expect(adapter("s2ba")).toMatchObject({ driver: THREAD_MOUNT, horn: BOLT_MOUNT });
+    const ids = MOUNT_ADAPTERS.map((a) => a.id);
+    expect(new Set(ids).size).toBe(ids.length);
     for (const a of MOUNT_ADAPTERS) {
+      expect(a.driver, a.id).not.toBe(a.horn);
       expect(a.price ?? 0, a.id).toBeGreaterThan(0);
-      expect(a.src, a.id).toMatch(/Parts Express/);
+      expect(a.src, a.id).toMatch(/Parts Express|US Speaker|usspeaker/i);
+      expect(a.src, a.id).toMatch(/20\d\d/);
+      expect(a.lb, a.id).toBeGreaterThan(0);
     }
   });
 
   test("the screw-on horns and drivers read as screw-on; the rest bolt on", () => {
-    expect(hornMountKind(waveguideSpecOf(hm1725))).toBe("thread");
-    expect(hornMountKind(waveguideSpecOf(guide("h07e")))).toBe("thread");
-    expect(hornMountKind(waveguideSpecOf(me10))).toBe("bolts");
-    expect(driverMountKind(d220ti)).toBe("thread");
-    expect(driverMountKind(de250)).toBe("bolts");
+    expect(hornMountKind(waveguideSpecOf(hm1725))).toBe(THREAD_MOUNT);
+    expect(hornMountKind(waveguideSpecOf(guide("h07e")))).toBe(THREAD_MOUNT);
+    expect(hornMountKind(waveguideSpecOf(me10))).toBe(BOLT_MOUNT);
+    expect(driverMountKind(d220ti)).toBe(THREAD_MOUNT);
+    expect(driverMountKind(de250)).toBe(BOLT_MOUNT);
   });
 });
 
@@ -86,6 +99,34 @@ describe("the matching rule", () => {
     expect(throatJoin(de250, spec(hm1725), [adapter("s2ba")])).toBeNull();
     // matching pairs need none
     expect(throatJoin(de250, spec(me10), [])).toEqual({ adapter: null });
+    const chip = guideMountChip(d220ti, spec(me10), []);
+    expect(chip?.[0]).toBe("bad");
+    expect(chip?.[3]).toBe("hifiGuideMount");
+  });
+
+  test("two screw-on throats with different threads don't fit, adapter or not", () => {
+    // boundary: a thread no catalogue part has, so the comparison has a second thread to tell apart
+    const other = { thread: "2-16" as ThroatThread };
+    const otherDriver: Pick<HifiTweeter, "mount"> = { mount: other };
+    expect(throatJoin(otherDriver, spec(hm1725))).toBeNull();
+    expect(throatJoin(d220ti, { mount: other })).toBeNull();
+    expect(throatJoin(otherDriver, { mount: other })).toEqual({ adapter: null });
+    expect(throatAdapterPrice(otherDriver, spec(hm1725))).toBe(0);
+  });
+
+  test("an unpriced adapter is never $0: its price reads null, the optimizer leaves the pair out, and the check says so", () => {
+    const unpriced: MountAdapter = { ...adapter("s2ba"), id: "unpriced", price: null };
+    expect(throatAdapterPrice(d220ti, spec(me10), [unpriced])).toBeNull();
+    expect(throatOffered(d220ti, spec(me10), [unpriced])).toBe(false);
+    // the priced one, and direct pairs, are offered
+    expect(throatOffered(d220ti, spec(me10))).toBe(true);
+    expect(throatOffered(de250, spec(me10), [unpriced])).toBe(true);
+    const chip = guideMountChip(d220ti, spec(me10), [unpriced]);
+    if (!chip) throw new Error("no check");
+    expect(chip[0]).toBe("warn");
+    expect(chip[1]).not.toBe(guideMountChip(d220ti, spec(me10))?.[1]);
+    expect(chip[2]).toContain("leaves it out");
+    expect(chip[2]).not.toContain("counted in the cost");
   });
 
   test("a tweeter off the catalogue waveguide (null) adds nothing", () => {
@@ -178,7 +219,8 @@ describe("the Hi-fi optimizer", () => {
     for (const k of out.cards) {
       const t = byIdOrThrow(tweeters, k.tweeter, "tweeters");
       const want =
-        2 * ((woofer.price || 0) + t.price + gp + throatAdapterPrice(t, waveguideSpecOf(h07e)));
+        2 *
+        ((woofer.price || 0) + t.price + gp + (throatAdapterPrice(t, waveguideSpecOf(h07e)) ?? 0));
       expect(k.metrics.price, `${k.label}: ${t.id}`).toBeCloseTo(want, 6);
       expect(throatJoin(t, waveguideSpecOf(h07e)), t.id).not.toBeNull();
     }

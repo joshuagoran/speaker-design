@@ -122,7 +122,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     ((woofer.price || 0) +
       (tweeter.price || 0) +
       (waveguideSpec && !tweeter.ownGuide
-        ? (selectedWaveguide.price || 0) + throatAdapterPrice(tweeter, compressionWaveguide)
+        ? (selectedWaveguide.price || 0) + (throatAdapterPrice(tweeter, compressionWaveguide) ?? 0)
         : 0) +
       (boxType === "radiator" ? radiator.n * (radiatorDriver.price || 0) : 0));
   const speakerSystem = hifiSystem(woofer, tweeterWithWaveguide, speakerConfig);
