@@ -944,6 +944,12 @@ export interface HifiMetrics {
   lb: number;
 }
 
+/** One speaker's paths to the seat for its level there, m: its woofer's and its tweeter's (lib/hifi hifiSeatPaths). */
+export interface HifiSeatPaths {
+  wM: number;
+  tM: number;
+}
+
 /**
  * The metrics with whether the price is whole: false when a part has no US price (a coaxial's), so `price` sums only
  * the known ones and the real one is higher (`UI_TEXT.partialPriceMark`), as the PA side's `priceKnown`.
@@ -989,7 +995,7 @@ export interface HifiDesignState {
   drive?: HifiConfig["drive"];
   /** the box's kick-back, degrees (`HifiConfig.tiltDeg`); absent: 0 */
   tiltDeg?: HifiConfig["tiltDeg"];
-  /** the least seat distance the level at the seat and the dispersion map are worked out at, m; absent: `HIFI_SEAT_FLOOR_M` */
+  /** the least distance each speaker's level at the seat, and the dispersion map, are worked out at, m; absent: `HIFI_SEAT_FLOOR_M` */
   seatFloorM?: number;
   /** the port's air speed limit, m/s (`HifiConfig.portMax`); absent: `HIFI_PORT_MAX_MS` */
   portMaxMs?: HifiConfig["portMax"];
@@ -999,7 +1005,7 @@ export interface HifiDesignState {
 export interface HifiSpeakerModel {
   speakerSystem: HifiSystem;
   warningChips: HifiChip[];
-  /** both speakers' clean output at the seat, dB */
+  /** both speakers' clean output at the seat, dB: each at its own distance, its drivers' paths counted close in, added in power (lib/hifi/nearField hifiPairLevelDb) */
   maxLevelAtSeatDb: number;
   onAxisResponse: FrequencyPoint[];
   pairResponse: FrequencyPoint[];
@@ -1010,6 +1016,22 @@ export interface HifiSpeakerModel {
   edgeRipple: FrequencyPoint[];
   /** that ripple's ± spread from 1 to 5 kHz, dB */
   edgeRippleDb: number;
+}
+
+/**
+ * How near the seat is for the models that stay far-field close in (lib/hifi): the woofer's piston and the waveguide's
+ * directivity, the dispersion map drawn at the seat distance (its ±90° arc points close to the baffle) and the time
+ * alignment set at the listening distance (sensitive to the ear's height close in). The level, baffle step and boundary
+ * gain take their near-field forms below HIFI_NEAR_FIELD_M (lib/hifi/nearField).
+ */
+export interface HifiNearField {
+  /** the nearer speaker's distance to the seat, at least the seat floor (`HifiDesignState.seatFloorM`), m */
+  distM: number;
+  /** that over the baffle's longer side, and over the woofer's diameter */
+  boxRatio: number;
+  wooferRatio: number;
+  /** under HIFI_NEAR_FIELD_M (constants/hifiEngine), where the near-field forms are in use and the models above are approximate */
+  near: boolean;
 }
 
 /** The Hi-fi design as the models read it, worked out from the planner's state. */
@@ -1033,6 +1055,8 @@ export interface HifiDesign {
   seatDistanceM: number;
   /** the same distance in feet, as the page shows it */
   seatDistanceFt: number;
+  /** how near the seat is for the far-field models; a later chip reads it */
+  nearField: HifiNearField;
   pairCostUsd: number;
   /** false when a part in it has no US price: `pairCostUsd` sums the known ones (`UI_TEXT.partialPriceMark`) */
   pairCostKnown: boolean;
