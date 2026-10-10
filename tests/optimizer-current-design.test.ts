@@ -196,9 +196,11 @@ test("a design short of the room's need: the near miss names the metric and is n
   const other = nearMissClosestText({ ...near, closestIsYours: false });
   assert.ok(!other.includes(NEAR_MISS_YOURS), other);
   assert.ok(other.startsWith(`${CARD_LABELS.nearMiss}: ${near.closest.names.sub}, `), other);
-  // with the compression driver free, the closest is still never behind your design nor dearer; whether it is yours
-  // or your design with a cheaper driver at the same output turns on the searches' brace estimate (the near miss ranks
-  // the searched designs by it, yours by the rule), so either is named, and named truly
+  // with the compression driver free, the closest is still never behind your design nor dearer. Which one is named
+  // turns on the estimate/rule split: the near miss ranks the searched designs by the searches' brace estimate and
+  // yours by the rule, and for this 25 × 22 × 16 box the estimate counts 43 in³ of frames that the rule doesn't
+  // put in, so your design with the cheaper hf143n driver (the same 116.76 dB by the rule) reads 0.03 dB quieter and
+  // yours ranks first. Either way it is named truly
   const free = optimizePaStack({ ...input, locks: { ...OWNER_LOCKS, vent: true } }).nearMiss;
   assert.ok(free && free.closest, "a closest design with the compression driver free");
   assert.ok(free.closest.metrics.out >= m.out - 1e-9, "not behind your design");

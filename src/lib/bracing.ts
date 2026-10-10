@@ -14,8 +14,9 @@
 // 19.74 in Leissa's tables): the panel glued on across the joint bends with the edge and holds it as a rotational
 // spring (EDGE_FIXITY, a low estimate), so each bay's edges on the box's joints take their neighbors' springs, and its
 // edges on a rib, a brace or a duct part stay hinged (baysHz; lib/plateModes works the modes out). A screwed back's
-// joints hold nothing, but it is screwed to the window braces' rear rails, which hold it in a line as on a glued back
-// (their rails then carry no glued flange where they meet the next rail in the corner: railStiffness). The driver's cutout is cut out of the baffle's bay round it, the driver's weight hung on its
+// joints hold nothing, but it is screwed to the window braces' rear rails, which hold it in a line as on a glued back;
+// those rails work alone, with no glued flange of the back (bareStripBeam), as beams and where they meet the next rail
+// in the corner (railStiffness). The driver's cutout is cut out of the baffle's bay round it, the driver's weight hung on its
 // edge, and the bay reads no higher than without the hole; the duct's own stiffness and the air load are left out. No
 // finite elements.
 //
@@ -208,6 +209,22 @@ export function teeBeam(
   // the section modulus to the fiber farthest from the centroid (the rib's edge, mostly), m³
   const y = (b * h * (h / 2) + w * d * (h + d / 2)) / (b * h + w * d);
   return { EI, mu, Z: I / Math.max(y, h + d - y) };
+}
+/**
+ * A strip screwed, not glued, to a panel (a window brace's rail on a screwed back): the strip alone as a beam, its web
+ * `depth` in deep (I = t·d³/12, no flange), still carrying `tributary` in of the panel; EI, μ and Z as teeBeam's.
+ */
+export function bareStripBeam(
+  tributary: number,
+  panel: PlateStock,
+  web: PlateStock,
+  depth: number,
+) {
+  const w = web.t * IN_M,
+    d = depth * IN_M,
+    I = (w * d ** 3) / 12;
+  const mu = web.lbPerSqFt * LB_FT2_KG_M2 * d + panel.lbPerSqFt * LB_FT2_KG_M2 * tributary * IN_M;
+  return { EI: web.eWeak * I, mu, Z: I / (d / 2) };
 }
 /**
  * How far a rib or rail is held against turning where it meets one on the next panel round the same line (a ring of
@@ -872,9 +889,7 @@ export function braceBox({
     // along a loose (screwed) panel the rail is only screwed to it: it stands alone, no flange glued to it
     if (q.loose)
       return (
-        (RING_FIXITY * braceStock.eWeak * (braceStock.t * IN_M) * (WINDOW_RAIL_IN * IN_M) ** 3) /
-        12 /
-        (span * IN_M)
+        (RING_FIXITY * bareStripBeam(0, q.stock, braceStock, WINDOW_RAIL_IN).EI) / (span * IN_M)
       );
     const trib = widestGap(spanAcross(q, a), supportsAcross(q, a, w));
     const { EI } = teeBeam(span, trib, q.stock, braceStock, WINDOW_RAIL_IN);
@@ -947,7 +962,10 @@ export function braceBox({
       if (!rails.length) continue;
       const o = otherAxis(p, a);
       const sp = stripSpan(spanAcross(p, o), supportsAcross(p, o, w));
-      const { EI, mu, Z } = teeBeam(sp.len, gap(a), p.stock, braceStock, WINDOW_RAIL_IN);
+      // a rail screwed to a loose panel (a screwed back) works alone: no glued flange
+      const { EI, mu, Z } = p.loose
+        ? bareStripBeam(gap(a), p.stock, braceStock, WINDOW_RAIL_IN)
+        : teeBeam(sp.len, gap(a), p.stock, braceStock, WINDOW_RAIL_IN);
       strips.push({ span: sp.len, trib: gap(a), Z });
       // the frame's rail on the panel at each end of this one's run (none on the baffle where a notched frame opens)
       const ends = END_PANEL[o].map((id) => panelById.get(id));

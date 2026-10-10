@@ -34,9 +34,9 @@ export const DRIVER_CLEARANCE_IN = 0.5;
  */
 export const BRACE_ESTIMATE = {
   screwed: {
-    window: { span: 18.5, scale: 1.275 },
+    window: { span: 19.5, scale: 1.826 },
     ribs: { span: 17.5, scale: 1.087 },
-    both: { span: 21, scale: 3.626 },
+    both: { span: 18.5, scale: 2.274 },
   },
   glued: {
     window: { span: 24, scale: 3.861 },
