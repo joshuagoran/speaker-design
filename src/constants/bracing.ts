@@ -90,12 +90,18 @@ export const BACK_JOINT_CUT_NOTES = {
   glued: "glued into the rear rabbet",
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /**
+ * A screwed back's screws into each window brace's rear rail: their spacing along the rail (in) and their diameter
+ * (mm, a #8 wood screw). The cutlist's note names the spacing; the bracing rule's jointed rail (lib/bracing
+ * jointedTeeBeam) reads both.
+ */
+export const BACK_RAIL_SCREW_SPACING_IN = 6;
+export const BACK_RAIL_SCREW_DIAMETER_MM = 4.2;
+/**
  * The cutlist's back panel where window braces' rear rails meet it, by its joint: a screwed back screws into each rail
  * too (the rule counts the rails as holding it); a glued one needs no more than its row says.
  */
 export const BACK_JOINT_RAIL_NOTES = {
-  screwed:
-    "screw it into each window brace's rear rail too, about every 6″, with foam tape on the rails (no glue)",
+  screwed: `screw it into each window brace's rear rail too, about every ${BACK_RAIL_SCREW_SPACING_IN}″, with foam tape on the rails (no glue)`,
   glued: null,
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string | null>;
 /** How the tower's partitions meet its back, by the back's joint (their cutlist row). */

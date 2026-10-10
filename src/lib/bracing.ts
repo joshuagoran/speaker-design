@@ -15,8 +15,8 @@
 // spring (EDGE_FIXITY, a low estimate), so each bay's edges on the box's joints take their neighbors' springs, and its
 // edges on a rib, a brace or a duct part stay hinged (baysHz; lib/plateModes works the modes out). A screwed back's
 // joints hold nothing, but it is screwed to the window braces' rear rails, which hold it in a line as on a glued back;
-// those rails work alone, with no glued flange of the back (bareStripBeam), as beams and where they meet the next rail
-// in the corner (railStiffness). The driver's cutout is cut out of the baffle's bay round it, the driver's weight hung on its
+// each of those rails and the back beside it is a mechanically jointed T beam (Eurocode 5's gamma method:
+// jointedTeeBeam), as a beam and where it meets the next rail in the corner (railStiffness). The driver's cutout is cut out of the baffle's bay round it, the driver's weight hung on its
 // edge, and the bay reads no higher than without the hole; the duct's own stiffness and the air load are left out. No
 // finite elements.
 //
@@ -62,6 +62,7 @@ import type {
   PlateStock,
 } from "../types";
 import { LB_FT2_KG_M2 } from "../constants/units";
+import { BACK_RAIL_SCREW_DIAMETER_MM, BACK_RAIL_SCREW_SPACING_IN } from "../constants/bracing";
 import { panelNominalNear } from "./panel";
 import { beamHz, holedPlateHz, restrainedPlateHz } from "./plateModes";
 import { plateStressFactor } from "./strength";
@@ -210,21 +211,61 @@ export function teeBeam(
   const y = (b * h * (h / 2) + w * d * (h + d / 2)) / (b * h + w * d);
   return { EI, mu, Z: I / Math.max(y, h + d - y) };
 }
+/** A stock's mean density, kg/m³: its weight per area (the catalog's) over its thickness. */
+const densityOf = (s: Pick<PlateStock, "lbPerSqFt" | "t">) =>
+  (s.lbPerSqFt * LB_FT2_KG_M2) / (s.t * IN_M);
 /**
- * A strip screwed, not glued, to a panel (a window brace's rail on a screwed back): the strip alone as a beam, its web
- * `depth` in deep (I = t·d³/12, no flange), still carrying `tributary` in of the panel; EI, μ and Z as teeBeam's.
+ * A screw's slip modulus in a timber-to-timber joint, N/m per screw: EN 1995-1-1 §7.1, Table 7.1,
+ * K_ser = ρm^1.5 · d / 23 N/mm (ρm in kg/m³, d in mm), with ρm = √(ρm,1 ρm,2) for two members of different densities
+ * (§7.1 (2)). A panel's vibration is a serviceability case, so K_ser serves for it (K_u = ⅔ K_ser is for the ultimate
+ * limit state, §2.2.2 (2)).
  */
-export function bareStripBeam(
+export function screwSlipModulus(rho1: number, rho2: number, dMm: number) {
+  return ((Math.sqrt(rho1 * rho2) ** 1.5 * dMm) / 23) * 1000;
+}
+/**
+ * The gamma factor of a part fixed to a beam's web by fasteners: EN 1995-1-1 Annex B, (B.5),
+ * γ = 1 / (1 + π² E A s / (K L²)), E A the part's axial stiffness (N), s the fasteners' spacing (m), K each one's slip
+ * modulus (N/m), L the span (m); 1 glued rigid, toward 0 as the joint slips.
+ */
+export function gammaFactor(EA: number, s: number, K: number, L: number) {
+  return 1 / (1 + (Math.PI ** 2 * EA * s) / (K * L * L));
+}
+/**
+ * A strip screwed, not glued, to a panel (a window brace's rail on a screwed back, its screws `BACK_RAIL_SCREW_*` apart):
+ * a mechanically jointed T beam by EN 1995-1-1 Annex B. The rail is the web (γ₂ = 1), the panel's effective flange
+ * (ribFlangeIn, as teeBeam's) the part fixed to it by the screws (γ₁ by gammaFactor, their slip by screwSlipModulus);
+ * the neutral axis sits at a₂ = γ₁E₁A₁(h₁ + h₂)/2 / (γ₁E₁A₁ + E₂A₂) from the rail's center (B.6 for two parts),
+ * a₁ = (h₁ + h₂)/2 − a₂, and EI_ef = Σ(EᵢIᵢ + γᵢEᵢAᵢaᵢ²) (B.1). At γ₁ = 1 it is teeBeam's T section; the rail's fiber
+ * farthest out takes the stress, σ = E₂(a₂ + h₂/2) M / EI_ef (B.7, B.8). μ is teeBeam's; also returns γ₁.
+ */
+export function jointedTeeBeam(
+  span: number,
   tributary: number,
   panel: PlateStock,
   web: PlateStock,
   depth: number,
 ) {
-  const w = web.t * IN_M,
-    d = depth * IN_M,
-    I = (w * d ** 3) / 12;
-  const mu = web.lbPerSqFt * LB_FT2_KG_M2 * d + panel.lbPerSqFt * LB_FT2_KG_M2 * tributary * IN_M;
-  return { EI: web.eWeak * I, mu, Z: I / (d / 2) };
+  const b = ribFlangeIn(span, tributary, panel.t) * IN_M,
+    h1 = panel.t * IN_M,
+    w = web.t * IN_M,
+    h2 = depth * IN_M,
+    L = span * IN_M;
+  const E1 = panel.eWeak,
+    E2 = web.eWeak,
+    A1 = b * h1,
+    A2 = w * h2;
+  const K = screwSlipModulus(densityOf(panel), densityOf(web), BACK_RAIL_SCREW_DIAMETER_MM);
+  const gamma = gammaFactor(E1 * A1, BACK_RAIL_SCREW_SPACING_IN * IN_M, K, L);
+  const a2 = (gamma * E1 * A1 * (h1 + h2)) / 2 / (gamma * E1 * A1 + E2 * A2),
+    a1 = (h1 + h2) / 2 - a2;
+  const EI =
+    E1 * ((b * h1 ** 3) / 12) +
+    gamma * E1 * A1 * a1 ** 2 +
+    E2 * ((w * h2 ** 3) / 12) +
+    E2 * A2 * a2 ** 2;
+  const mu = web.lbPerSqFt * LB_FT2_KG_M2 * h2 + panel.lbPerSqFt * LB_FT2_KG_M2 * tributary * IN_M;
+  return { EI, mu, Z: EI / (E2 * (a2 + h2 / 2)), gamma };
 }
 /**
  * How far a rib or rail is held against turning where it meets one on the next panel round the same line (a ring of
@@ -886,13 +927,15 @@ export function braceBox({
   // a window brace's rail on `q` across `a`: its EI over its span, for the corner spring it gives the next rail
   const railStiffness = (q: BracePanel, a: BoxAxis, w: Counts) => {
     const span = spanAcross(q, otherAxis(q, a));
-    // along a loose (screwed) panel the rail is only screwed to it: it stands alone, no flange glued to it
-    if (q.loose)
-      return (
-        (RING_FIXITY * bareStripBeam(0, q.stock, braceStock, WINDOW_RAIL_IN).EI) / (span * IN_M)
-      );
     const trib = widestGap(spanAcross(q, a), supportsAcross(q, a, w));
-    const { EI } = teeBeam(span, trib, q.stock, braceStock, WINDOW_RAIL_IN);
+    // along a loose (screwed) panel the rail is screwed to it: a jointed T beam
+    const { EI } = (q.loose ? jointedTeeBeam : teeBeam)(
+      span,
+      trib,
+      q.stock,
+      braceStock,
+      WINDOW_RAIL_IN,
+    );
     return (RING_FIXITY * EI) / (span * IN_M);
   };
 
@@ -962,10 +1005,14 @@ export function braceBox({
       if (!rails.length) continue;
       const o = otherAxis(p, a);
       const sp = stripSpan(spanAcross(p, o), supportsAcross(p, o, w));
-      // a rail screwed to a loose panel (a screwed back) works alone: no glued flange
-      const { EI, mu, Z } = p.loose
-        ? bareStripBeam(gap(a), p.stock, braceStock, WINDOW_RAIL_IN)
-        : teeBeam(sp.len, gap(a), p.stock, braceStock, WINDOW_RAIL_IN);
+      // a rail screwed to a loose panel (a screwed back): a jointed T beam
+      const { EI, mu, Z } = (p.loose ? jointedTeeBeam : teeBeam)(
+        sp.len,
+        gap(a),
+        p.stock,
+        braceStock,
+        WINDOW_RAIL_IN,
+      );
       strips.push({ span: sp.len, trib: gap(a), Z });
       // the frame's rail on the panel at each end of this one's run (none on the baffle where a notched frame opens)
       const ends = END_PANEL[o].map((id) => panelById.get(id));

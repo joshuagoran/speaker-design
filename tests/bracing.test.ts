@@ -21,6 +21,10 @@ import {
   RIB_DEPTHS_IN,
   RIB_MIN_RUN_SHARE,
   ribRunAxis,
+  screwSlipModulus,
+  gammaFactor,
+  jointedTeeBeam,
+  teeBeam,
 } from "../src/lib/bracing";
 import {
   NO_SUPPORTS,
@@ -806,8 +810,9 @@ test("the optimizers' brace estimate stays near the rule over the golden boxes, 
       }
       // liters of wood: under a liter on the whole, a couple of liters at worst (a sub box holds 60 to 200); the
       // strict styles fit worst, since a frame-only or rib-only plan stops where its kind can do no more. Window braces
-      // on a screwed back fit worst of all: its rails, screwed on, work as bare beams, and light block's wide back takes
-      // five frames (8.4 L) to come near the target, which no linear estimate follows (1.25 L rms, 6.4 L at worst)
+      // on a screwed back fit worst of all: its rails, screwed on, are jointed T beams that hold little of it (γ about
+      // 0.05), so light block's wide back takes five frames (8.4 L) to clear the target, two glued, which no linear
+      // estimate follows (1.25 L rms, 6.4 L at worst)
       const bound =
         back === DEFAULT_BACK_JOINT && style === "window"
           ? { rms: 1.3, max: 6.5 }
@@ -971,9 +976,9 @@ test("the back panel setting: a saved choice reads back, anything else is screwe
   assert.ok(backHz(plan(GLUED_BACK)) > backHz(plan(DEFAULT_BACK_JOINT)));
 });
 
-test("a screwed back is screwed to the window braces' rear rails: they hold it in a line, as bare rails", () => {
+test("a screwed back is screwed to the window braces' rear rails: jointed T beams, between bare and glued", () => {
   // the default sub in ¾″ with Window braces: the same two level frames for either back. Glued, their rails work with
-  // the back as T beams and lift it; screwed, the rails work alone, and as beams they read no higher than its bare plate
+  // the back as T beams; screwed, as jointed T beams (Eurocode 5's gamma method), which lift it less
   const d = DEFAULT_PA;
   const plan = (back: BackJointId) =>
     subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, "window", undefined, back);
@@ -987,8 +992,11 @@ test("a screwed back is screwed to the window braces' rear rails: they hold it i
   assert.strictEqual(screwedPlan.windowIn3, gluedPlan.windowIn3);
   assert.ok(screwed.bareHz < glued.bareHz, "its own edges stay hinged");
   assert.ok(glued.hz > glued.bareHz + 25, `glued: ${glued.hz.toFixed(0)} Hz`);
-  assert.ok(Math.abs(screwed.hz - screwed.bareHz) < 1, `screwed: ${screwed.hz.toFixed(0)} Hz`);
-  // with more frames (light block's 30″-wide back) the bare rails carry less of it each and do lift it
+  assert.ok(
+    screwed.hz > screwed.bareHz + 15 && screwed.hz < glued.hz - 30,
+    `screwed: ${screwed.hz.toFixed(0)} Hz (bare ${screwed.bareHz.toFixed(0)}, glued ${glued.hz.toFixed(0)})`,
+  );
+  // with more frames (light block's 30″-wide back) each rail carries less of it, and they lift it further
   const c = configs.find((x) => x.name === "light block");
   assert.ok(c);
   const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
@@ -998,6 +1006,25 @@ test("a screwed back is screwed to the window braces' rear rails: they hold it i
     wideBack && wideBack.hz > wideBack.bareHz + 25,
     `light block: ${wideBack?.hz.toFixed(0)} Hz`,
   );
+});
+
+test("a screwed rail by Eurocode 5: the screws' slip modulus, the gamma factor and the jointed T beam", () => {
+  // K_ser = ρm^1.5 d / 23 N/mm (Table 7.1): 600 kg/m³, a 4.2 mm screw: 600^1.5 × 4.2 / 23 = 2683.79 N/mm
+  close(null, screwSlipModulus(600, 600, 4.2), 2683788.76, 0.01);
+  // two densities take their geometric mean
+  close(null, screwSlipModulus(400, 900, 4.2), screwSlipModulus(600, 600, 4.2), 1e-6);
+  // γ = 1 / (1 + π² E A s / (K L²)): E A = 1e7 N, s = 0.15 m, K = 2.5e6 N/m, L = 0.6 m: 1 / (1 + 16.4493) = 0.0573088
+  close(null, gammaFactor(1e7, 0.15, 2.5e6, 0.6), 0.0573088, 1e-6);
+  // the default sub's back rail (¾″ birch, 22.5″ span, a 3″ effective flange, #8 screws 6″ apart): ρ = 589.5 kg/m³,
+  // K = 2613.7 N/mm, E A = 7.452 GPa × 0.0762 × 0.01905 m² = 1.0817e7 N: γ = 1 / (1 + 19.06) = 0.0498
+  const st = paPanelStock(0.75);
+  const j = jointedTeeBeam(22.5, 18.35, st, st, WINDOW_RAIL_IN);
+  close(null, j.gamma, 0.0498, 5e-4);
+  // the jointed beam sits between the bare rail and the glued T section
+  const bare = (st.eWeak * (st.t * 0.0254) * (WINDOW_RAIL_IN * 0.0254) ** 3) / 12;
+  const glued = teeBeam(22.5, 18.35, st, st, WINDOW_RAIL_IN);
+  assert.ok(j.EI > bare && j.EI < glued.EI, `${j.EI} between ${bare} and ${glued.EI}`);
+  assert.strictEqual(j.mu, glued.mu);
 });
 
 test("rib depths: a long span takes deeper ribs where they lift it more for the wood", () => {

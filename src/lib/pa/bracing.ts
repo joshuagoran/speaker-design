@@ -36,7 +36,7 @@ export const BRACE_ESTIMATE = {
   screwed: {
     window: { span: 19.5, scale: 1.826 },
     ribs: { span: 17.5, scale: 1.087 },
-    both: { span: 18.5, scale: 2.274 },
+    both: { span: 21, scale: 3.762 },
   },
   glued: {
     window: { span: 24, scale: 3.861 },
@@ -85,9 +85,8 @@ export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], botto
  * A PA box's six panels on the box axes (x across from the left, y up from the bottom, z back from the baffle): the
  * sides, top, bottom and back at the wall stock, the baffle at its own (it starts above a bottom slot's band). Each edge
  * is held by the panel glued to it there (EdgeHold: its stock and its span away from the joint), except where nothing
- * is: a screwed back's joints (`back`; it is `loose`: screwed to the window braces' rear rails, which hold it, but with
- * no flange glued to them), the bottom's front edge over a
- * slot's mouth and the baffle's lower edge on the slot's shelf (left hinged, on the safe side).
+ * is: a screwed back's joints (`back`; it is `loose`: screwed to the window braces' rear rails, which hold it as
+ * jointed T beams, lib/bracing jointedTeeBeam), the bottom's front edge over a slot's mouth and the baffle's lower edge on the slot's shelf (left hinged, on the safe side).
  */
 export function paBoxPanels(
   { iw, ih, inD, band }: PaBoxInside,
