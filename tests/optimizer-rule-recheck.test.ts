@@ -5,10 +5,11 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { designProblems, evaluateDesign, optimizePaStack } from "../src/lib/pa/optimize";
+import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
 import { KEEP_UP_SLACK_DB } from "../src/lib/pa/chips";
 import { paCurrent } from "./optimizer-dump-cases";
 import { SEED_NAMES } from "./seeds";
-import type { PaOptimizerInput } from "../src/types";
+import type { PaGoal, PaOptimizerInput } from "../src/types";
 
 const input: PaOptimizerInput = {
   cur: paCurrent(SEED_NAMES.lightBlock),
@@ -62,5 +63,30 @@ test("every card and the near miss's closest design show the rule's numbers", ()
     }
     for (const k of out.cards)
       assert.deepEqual(designProblems(evaluateDesign(k.config), run), [], `${k.label} passes`);
+  }
+});
+
+test("with the sub, vent and height locked, every card both optimizers show passes by the rule", () => {
+  // light block's wide boxes: by the searches' brace estimate the loud and low ones sit just under the 125 lb limit, and
+  // by the rule several are over it (before the re-check, Fully optimize's Louder card was a 39 × 24 × 32 box at 129.5 lb,
+  // 117.7 lb by the estimate)
+  for (const goal of ["lower", "louder"] as const satisfies PaGoal[]) {
+    const run: PaOptimizerInput = {
+      ...input,
+      goals: [goal],
+      locks: { sub: true, vent: true, subDim: { h: "exact" } },
+    };
+    for (const [name, out] of [
+      ["Improve", optimizePaStack(run)],
+      ["Fully optimize", optimizePaStackExact(run)],
+    ] as const) {
+      assert.ok(out.cards.length, `${goal}, ${name}: cards`);
+      for (const k of out.cards)
+        assert.deepEqual(
+          designProblems(evaluateDesign(k.config), run),
+          [],
+          `${goal}, ${name}: ${k.label} (${k.metrics.heaviest.toFixed(1)} lb)`,
+        );
+    }
   }
 });

@@ -632,6 +632,12 @@ const PA_STEP_START: Record<PaStep, number> = { boxes: 0, mids: 0.5, combine: 0.
  * past a check or a rival can land the other side by the rule (issue #75).
  */
 export const PA_FINALISTS = { cards: 14, outside: 4, looser: 6, closest: 8 } as const;
+/**
+ * How many further batches of PA_FINALISTS.cards designs the goal's own card may draw, next by the estimate, when by the
+ * rule none of the finalists makes it: the estimate can weigh a family of boxes pounds light or heavy, so the design
+ * that wins by the rule can sit past the first batch (issue #75).
+ */
+export const PA_FINALIST_BATCHES = 4;
 /** How far under the target an alternative card's output may be, dB. */
 export const ALT_OUTPUT_DB = 1.5;
 /** Two designs on the same sub, vent style, mid and plywood are the same card unless their sub boxes' volumes differ by this share. */
@@ -1527,11 +1533,14 @@ export function optimizePaStack(
   // the finalists by the bracing rule, as the planner builds them: from here on every design the cards and the near
   // miss weigh (the pool, the slider rounding, the amps turned down) carries the rule's numbers (PA_FINALISTS)
   const pool: PoolEntry[] = [];
-  for (const [fi, x] of [...finalists.values()].entries()) {
-    stepAt("finalists", fi, finalists.size);
+  const toPool = (x: Combo) => {
     const m = evaluateDesign(x.c);
     evals++;
     if (m) pool.push({ c: x.c, m, ch: changes(x.c) });
+  };
+  for (const [fi, x] of [...finalists.values()].entries()) {
+    stepAt("finalists", fi, finalists.size);
+    toPool(x);
   }
   // your design itself, for the near miss only (never a card: it can't beat itself), so the closest design it names is
   // never behind yours
@@ -1641,6 +1650,39 @@ export function optimizePaStack(
     });
     return cards.length ? { cards, goalMissing, fixMisses } : null;
   };
+  // the goal's own card by the rule: while none of the finalists makes it (nothing passes that keeps the goals and beats
+  // your design), the next designs by the estimate join the pool, a batch at a time (PA_FINALIST_BATCHES); with no card
+  // after them, the fix, the closest or the goal-missing notice stands
+  const firstCandidates = combos
+    .filter(
+      (x) =>
+        inLimits(x) &&
+        goals.every((g) => goalOk(g, x)) &&
+        (!curMet || also.every((g) => beats[g](x, curMet))),
+    )
+    .sort((a, b) => obj[goal](a) - obj[goal](b));
+  // the rule moves a design only by its boxes' braces: a batch takes the best design of each pair of boxes not yet in
+  // the pool (many designs share a box and differ only in the parts the rule doesn't see)
+  const boxesOf = ({ c }: Combo) =>
+    JSON.stringify([c.sub, c.cDim, c.portStyle, c.cVent, c.wall, c.mid, c.mDim, c.layout]);
+  const pooledBoxes = new Set([...finalists.values()].map(boxesOf));
+  for (let batch = 0; batch < PA_FINALIST_BATCHES; batch++) {
+    const r = chooseFrom(lim, target);
+    if (r && r.cards[0].slot.kind === "first") break;
+    const next: Combo[] = [];
+    for (const x of firstCandidates) {
+      if (next.length >= PA_FINALISTS.cards) break;
+      const k = boxesOf(x);
+      if (pooledBoxes.has(k)) continue;
+      pooledBoxes.add(k);
+      next.push(x);
+    }
+    if (!next.length) break;
+    for (const x of next) {
+      finalists.set(JSON.stringify(x.c), x);
+      toPool(x);
+    }
+  }
   // the exact search adds designs to the pool until no design on its grid beats a pick
   const choose = exact
     ? exact.close(chooseFrom, {
@@ -1840,11 +1882,36 @@ export function optimizePaStack(
         obj[goal](metric(a)) - obj[goal](metric(b)),
     )[0];
     const closest = nearest && onSliders(nearest, goal);
+    // the lightest of the sub boxes by the estimate, weighed by the rule as the planner builds them
+    const lightestRuledLb = (list: SubCandidate[]) =>
+      Math.min(
+        ...[...list]
+          .sort((a, b) => a.lb - b.lb)
+          .slice(0, PA_FINALISTS.cards)
+          .map(({ c, sub }) =>
+            subWeightLb(
+              c.cDim,
+              c.wall,
+              sub.lb,
+              subBoxBracing(
+                c.cDim,
+                c.wall,
+                c.inset,
+                c.portStyle,
+                c.cVent,
+                sub,
+                braceStyle,
+                undefined,
+                backJoint,
+              ),
+            ),
+          ),
+      );
     // only when there is no closest design to name (the exact search's lightest box takes a long scan of the grid)
     const lightestLb = () =>
       [
         exact ? exact.lightestSubLb() : null,
-        subCands.length ? Math.min(...subCands.map((x) => x.lb)) : null,
+        subCands.length ? lightestRuledLb(subCands) : null,
       ].reduce<number | null>((a, b) => (a === null ? b : b === null ? a : Math.min(a, b)), null);
     nearMiss = {
       options: worked.map(({ text, set }) => ({ text, set })),
