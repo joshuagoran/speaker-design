@@ -114,6 +114,8 @@ About $550 used _(unverified)_. A discontinued install amp _(unverified)_.
 
 An external DSP adds system EQ, one master control, finer alignment and FIR. The planned system page
 ([speaker-designer-plan.md](speaker-designer-plan.md), L4) will model amps, channels and DSP per speaker.
+A mostly analog front end (mixer, dynamics, crossovers, delay) is an open option: see
+[front-end-handoff.md](front-end-handoff.md).
 
 ## Sources
 
