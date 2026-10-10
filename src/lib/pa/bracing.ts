@@ -30,7 +30,9 @@ export const DRIVER_CLEARANCE_IN = 0.5;
  * The optimizers' cursory brace estimate (lib/pa/calc braceWoodEstimate), by back joint and style: one window brace's
  * wood for every `span` inches of each inside span past the first, times `scale`. Least squares against the rule's wood
  * over the golden sub boxes in ¾″ ply with that back (their mid boxes need none, and neither does the estimate under
- * `span`), since the rule braces a screwed back (its edges hinged) apart from a glued one.
+ * `span`), since the rule braces a screwed back (its edges hinged) apart from a glued one. It sees only the box's
+ * dimensions, not the driver's and the vent's keep-outs, so the rule's frames can differ widely by vent style at one
+ * size (the idk and lil tower boxes, both 24 × 32 × 20: 3.6 L of frames and none); issue #75 re-checks shown cards.
  */
 export const BRACE_ESTIMATE = {
   screwed: {
@@ -86,7 +88,8 @@ export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], botto
  * sides, top, bottom and back at the wall stock, the baffle at its own (it starts above a bottom slot's band). Each edge
  * is held by the panel glued to it there (EdgeHold: its stock and its span away from the joint), except where nothing
  * is: a screwed back's joints (`back`; it is `loose`: screwed to the window braces' rear rails, which hold it as
- * jointed T beams, lib/bracing jointedTeeBeam), the bottom's front edge over a slot's mouth and the baffle's lower edge on the slot's shelf (left hinged, on the safe side).
+ * jointed T beams, lib/bracing jointedTeeBeam), the bottom's front edge over a slot's mouth and the baffle's lower
+ * edge on the slot's shelf (left hinged, on the safe side).
  */
 export function paBoxPanels(
   { iw, ih, inD, band }: PaBoxInside,

@@ -42,6 +42,7 @@ import type {
   CutPart,
   CutPartId,
   PaDesignConfig,
+  PaLayout,
   Dims3,
   Horn,
   PortStyle,
@@ -249,7 +250,7 @@ test("a screwed back screws into the window braces' rear rails where they meet i
   const rail = BACK_JOINT_RAIL_NOTES[DEFAULT_BACK_JOINT];
   assert.ok(rail);
   // the default sub in ¾″, Window braces: level frames, each with a rear rail on the back
-  const P = (layout: "stack" | "tower", backJoint?: BackJointId) =>
+  const P = (layout: Extract<PaLayout, "stack" | "tower">, backJoint?: BackJointId) =>
     cutParts({
       sub: DEFAULT_PA.sub,
       mid: DEFAULT_PA.mid,

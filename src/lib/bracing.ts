@@ -16,8 +16,9 @@
 // edges on a rib, a brace or a duct part stay hinged (baysHz; lib/plateModes works the modes out). A screwed back's
 // joints hold nothing, but it is screwed to the window braces' rear rails, which hold it in a line as on a glued back;
 // each of those rails and the back beside it is a mechanically jointed T beam (Eurocode 5's gamma method:
-// jointedTeeBeam), as a beam and where it meets the next rail in the corner (railStiffness). The driver's cutout is cut out of the baffle's bay round it, the driver's weight hung on its
-// edge, and the bay reads no higher than without the hole; the duct's own stiffness and the air load are left out. No
+// jointedTeeBeam), as a beam and where it meets the next rail in the corner (railStiffness). The driver's cutout is
+// cut out of the baffle's bay round it, the driver's weight hung on its edge, and the bay reads no higher than without
+// the hole; the duct's own stiffness and the air load are left out. No
 // finite elements.
 //
 // A window brace or a rib holds the panel in a line: a support like an edge. Each is also a beam, and its own first
@@ -236,8 +237,11 @@ export function gammaFactor(EA: number, s: number, K: number, L: number) {
  * a mechanically jointed T beam by EN 1995-1-1 Annex B. The rail is the web (γ₂ = 1), the panel's effective flange
  * (ribFlangeIn, as teeBeam's) the part fixed to it by the screws (γ₁ by gammaFactor, their slip by screwSlipModulus);
  * the neutral axis sits at a₂ = γ₁E₁A₁(h₁ + h₂)/2 / (γ₁E₁A₁ + E₂A₂) from the rail's center (B.6 for two parts),
- * a₁ = (h₁ + h₂)/2 − a₂, and EI_ef = Σ(EᵢIᵢ + γᵢEᵢAᵢaᵢ²) (B.1). At γ₁ = 1 it is teeBeam's T section; the rail's fiber
- * farthest out takes the stress, σ = E₂(a₂ + h₂/2) M / EI_ef (B.7, B.8). μ is teeBeam's; also returns γ₁.
+ * a₁ = (h₁ + h₂)/2 − a₂, and EI_ef = Σ(EᵢIᵢ + γᵢEᵢAᵢaᵢ²) (B.1). At γ₁ = 1 it is teeBeam's T section when the two
+ * stocks share their weaker modulus (teeBeam takes the lower of the two for both); the rail's fiber farthest out takes
+ * the stress, σ = E₂(a₂ + h₂/2) M / EI_ef (B.7, B.8). μ is teeBeam's; also returns γ₁. γ₁ takes the full span, Annex
+ * B's ℓ for a simply supported beam (B.2); its ~0.8 ℓ for a continuous one would lower γ₁ and EI_ef, the conservative
+ * side, an option left out.
  */
 export function jointedTeeBeam(
   span: number,

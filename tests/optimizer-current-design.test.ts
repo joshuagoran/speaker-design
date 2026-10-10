@@ -200,7 +200,9 @@ test("a design short of the room's need: the near miss names the metric and is n
   // turns on the estimate/rule split: the near miss ranks the searched designs by the searches' brace estimate and
   // yours by the rule, and for this 25 × 22 × 16 box the estimate counts 43 in³ of frames that the rule doesn't
   // put in, so your design with the cheaper hf143n driver (the same 116.76 dB by the rule) reads 0.03 dB quieter and
-  // yours ranks first. Either way it is named truly
+  // yours ranks first. Either way it is named truly. The estimate sees only the box's size, not the driver's and the
+  // vent's keep-outs, so it can't match the rule box by box; the fix is to re-check the shown cards by the rule (issue
+  // #75), when this can assert the cheaper driver again
   const free = optimizePaStack({ ...input, locks: { ...OWNER_LOCKS, vent: true } }).nearMiss;
   assert.ok(free && free.closest, "a closest design with the compression driver free");
   assert.ok(free.closest.metrics.out >= m.out - 1e-9, "not behind your design");
