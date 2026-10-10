@@ -572,11 +572,14 @@ test("a horn that keeps up only below full mid power turns the mid down instead 
 test("a mid that keeps up only below full sub power turns the sub down instead of ruling the design out", () => {
   // a 150 W mid amp, locked, asked to match the sub flat out: the subs that go lowest outrun it at full power (the
   // search used to stop at 41.7 Hz; turned down to where the mid keeps up, a 4018 reaches 36 Hz). The sub is locked to
-  // the 4018: a low-sensitivity sub such as the Omega Pro-18A reaches as low without outrunning the mid at all.
+  // the 4018: a low-sensitivity sub such as the Omega Pro-18A reaches as low without outrunning the mid at all. Held to
+  // 110 lb: under 125 lb by the bracing rule, a 28 × 34 × 32 box with two tubes reaches 28 Hz, port-limited before the mid
+  // runs out (the searches' brace estimate put it over 125 lb)
   const c = { ...pick(SEED_NAMES.lightBlock), sub: "em4018", tilt: 0, mAmpW: 150 },
-    lim = { maxLb: base.maxLb, budget: base.budget };
+    lim = { maxLb: 110, budget: base.budget };
   const out = optimizePaStack({
     ...base,
+    ...lim,
     cur: c,
     goals: ["lower"],
     locks: { mAmpW: true, sub: true },
@@ -617,18 +620,12 @@ test("the mids are chosen with the horn in view: a dearer mid the horn keeps up 
   assert.deepEqual(designProblems(evaluateDesign(k.config), lim), [], "the card passes as it is");
   assert.ok(k.metrics.out >= out.target - 0.5, "and keeps the target");
   assert.ok(out.curM, "the design evaluates");
-  // lighter by the label's 3 lb as the search counts the braces (an estimate); the card's own braces, by the rule, can
-  // weigh up to BRACE_ESTIMATE_SLACK_LB more
+  // lighter by the label's 3 lb, its braces by the rule as yours are (the cards are picked on the rule's numbers)
   assert.ok(
-    k.metrics.heaviest <= out.curM.heaviest - 3 + BRACE_ESTIMATE_SLACK_LB,
+    k.metrics.heaviest <= out.curM.heaviest - 3,
     `${k.metrics.heaviest.toFixed(2)} lb, the design ${out.curM.heaviest.toFixed(2)} lb`,
   );
 });
-/**
- * How far a card's weight with its braces by the rule may sit from the search's, with them by estimate, lb: the
- * estimate's largest error over the golden boxes in ¾″ ply (1.4 L of wood, tests/bracing.test.ts), at ¾″ birch.
- */
-const BRACE_ESTIMATE_SLACK_LB = 1.7;
 
 test("the PA optimizers design in their one plywood size, at its measured thickness, whatever your design's", () => {
   // your design in ½″, with ¾″ measured at 18 mm: every card, quick and exact, comes back in ¾″ at that thickness

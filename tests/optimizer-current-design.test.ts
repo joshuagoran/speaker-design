@@ -196,21 +196,15 @@ test("a design short of the room's need: the near miss names the metric and is n
   const other = nearMissClosestText({ ...near, closestIsYours: false });
   assert.ok(!other.includes(NEAR_MISS_YOURS), other);
   assert.ok(other.startsWith(`${CARD_LABELS.nearMiss}: ${near.closest.names.sub}, `), other);
-  // with the compression driver free, the closest is still never behind your design nor dearer. Which one is named
-  // turns on the estimate/rule split: the near miss ranks the searched designs by the searches' brace estimate and
-  // yours by the rule, and for this 25 × 22 × 16 box the estimate counts 43 in³ of frames that the rule doesn't
-  // put in, so your design with the cheaper hf143n driver (the same 116.76 dB by the rule) reads 0.03 dB quieter and
-  // yours ranks first. Either way it is named truly. The estimate sees only the box's size, not the driver's and the
-  // vent's keep-outs, so it can't match the rule box by box; the fix is to re-check the shown cards by the rule (issue
-  // #75), when this can assert the cheaper driver again
+  // with the compression driver free, a cheaper one at the same output is the closest: not yours. The near miss ranks
+  // the finalists by the bracing rule, as it does your design (by the searches' brace estimate, this box's frames read
+  // 43 in³ more than the rule puts in, and the cheaper driver 0.03 dB quieter than yours: issue #75)
   const free = optimizePaStack({ ...input, locks: { ...OWNER_LOCKS, vent: true } }).nearMiss;
   assert.ok(free && free.closest, "a closest design with the compression driver free");
+  assert.equal(free.closestIsYours, false);
+  assert.notEqual(free.closest.config.cd, quietTubes.cd, "another compression driver");
   assert.ok(free.closest.metrics.out >= m.out - 1e-9, "not behind your design");
-  assert.ok(
-    free.closest.metrics.price <= near.closest.metrics.price + 1e-9,
-    "no dearer than yours",
-  );
-  assert.equal(free.closestIsYours, sameOptimizedFields(free.closest.config, quietTubes));
+  assert.ok(free.closest.metrics.price < near.closest.metrics.price, "cheaper than yours");
 });
 
 test("a near miss whose closest design differs from yours doesn't call it yours", () => {
