@@ -30,13 +30,13 @@ export const DRIVER_CLEARANCE_IN = 0.5;
  * The optimizers' cursory brace estimate (lib/pa/calc braceWoodEstimate), by back joint and style: one window brace's
  * wood for every `span` inches of each inside span past the first, times `scale`. Least squares against the rule's wood
  * over the golden sub boxes in ¾″ ply with that back (their mid boxes need none, and neither does the estimate under
- * `span`), since the rule braces a screwed back (its edges hinged, no window brace holding it) apart from a glued one.
+ * `span`), since the rule braces a screwed back (its edges hinged) apart from a glued one.
  */
 export const BRACE_ESTIMATE = {
   screwed: {
-    window: { span: 25.5, scale: 4.813 },
+    window: { span: 18.5, scale: 1.275 },
     ribs: { span: 17.5, scale: 1.087 },
-    both: { span: 21, scale: 3.651 },
+    both: { span: 21, scale: 3.626 },
   },
   glued: {
     window: { span: 24, scale: 3.861 },
@@ -85,7 +85,8 @@ export const NO_SUPPORTS: PaBoxSupports = { sideL: [], sideR: [], top: [], botto
  * A PA box's six panels on the box axes (x across from the left, y up from the bottom, z back from the baffle): the
  * sides, top, bottom and back at the wall stock, the baffle at its own (it starts above a bottom slot's band). Each edge
  * is held by the panel glued to it there (EdgeHold: its stock and its span away from the joint), except where nothing
- * is: a screwed back's joints (`back`; the window braces don't hold it either: `loose`), the bottom's front edge over a
+ * is: a screwed back's joints (`back`; it is `loose`: screwed to the window braces' rear rails, which hold it, but with
+ * no flange glued to them), the bottom's front edge over a
  * slot's mouth and the baffle's lower edge on the slot's shelf (left hinged, on the safe side).
  */
 export function paBoxPanels(

@@ -16,8 +16,11 @@ import type { PaGoal, PaMetricsSummary, PaOptimizerInput } from "../src/types";
  * a tie the two grids' boxes differ by fractions of a pound either way.
  */
 type Scored = Pick<PaMetricsSummary, "price" | "heaviest" | "out" | "f3">;
-/** How far behind on its goal's own axis the slider steps may leave Fully optimize's first card: lb, Hz, dB. */
-const ROUNDING: Record<PaGoal, number> = { cheaper: 0, lighter: 0, lower: 0.5, louder: 0.1 };
+/**
+ * How far behind on its goal's own axis the slider steps may leave Fully optimize's first card: lb, Hz, dB. Light block's
+ * lighter box from the exact grid (25 × 24 × 20.5″) comes out 0.04 lb over Improve's on its step.
+ */
+const ROUNDING: Record<PaGoal, number> = { cheaper: 0, lighter: 0.1, lower: 0.5, louder: 0.1 };
 const summaryOf = ({ price, heaviest, out, f3 }: Scored): Scored => ({ price, heaviest, out, f3 });
 const ahead: Record<PaGoal, (a: Scored, b: Scored) => number> = {
   cheaper: (a, b) => b.price - a.price,

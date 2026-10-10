@@ -83,6 +83,7 @@ import { ELBOW_WORDS } from "../../constants/portStyles";
 import {
   BACK_JOINT_CUT_NOTES,
   BACK_JOINT_PARTITION_NOTES,
+  BACK_JOINT_RAIL_NOTES,
   BACK_JOINT_SUMMARY,
   BOX_AXIS_NAMES,
   BRACE_PANEL_NAMES,
@@ -1045,6 +1046,14 @@ export const formatInches = (x: number) => {
 };
 export { formatThickness } from "../panel";
 
+/** Whether a box's window braces have rails on its back: a frame across x or y has a rear rail; one across z stands parallel to it. */
+const railsOnBack = (b: Pick<BoxBracing, "windows"> | null | undefined) =>
+  !!b && b.windows.x.length + b.windows.y.length > 0;
+/** The back panel's cutlist note: how it goes into the rabbet, and onto the window braces' rear rails where they meet it. */
+const backNote = (back: BackJointId, rails: boolean) => {
+  const onRails = rails ? BACK_JOINT_RAIL_NOTES[back] : null;
+  return onRails ? `${BACK_JOINT_CUT_NOTES[back]}; ${onRails}` : BACK_JOINT_CUT_NOTES[back];
+};
 /** The rabbet on a shell panel's rear edge that the back sits in, screwed or glued (`back`). */
 const rearRabbetNote = (t: number, back: BackJointId) =>
   `rabbet ${formatInches(t)} × ${formatInches(t / 2)} on rear edge for the ${BACK_JOINT_SUMMARY[back]}`;
@@ -1072,6 +1081,8 @@ export function boxParts(
     hardware?: HardwareCutNotes;
     /** how the back goes on; absent: screwed (`DEFAULT_BACK_JOINT`) */
     back?: BackJointId;
+    /** whether window braces' rear rails meet the back; absent: whether `bracing`'s do (railsOnBack) */
+    backRails?: boolean;
   } = {},
 ) {
   const BT = 0.75,
@@ -1100,7 +1111,7 @@ export function boxParts(
     a: W - t,
     b: H - t,
     t,
-    note: withNote(BACK_JOINT_CUT_NOTES[back], hw.back),
+    note: withNote(backNote(back, extra.backRails ?? railsOnBack(extra.bracing)), hw.back),
   });
   const iw = W - 2 * t,
     ih = H - 2 * t,
@@ -1435,6 +1446,8 @@ export function towerCutParts(
     cutNote,
     hardware: extra.hardware,
     back,
+    // the sub box's braces stand behind the one tall back
+    backRails: railsOnBack(extra.bracing),
   }).P;
   const iw = W - 2 * t,
     inD = D - inset - BAFFLE_PLY_IN - t;

@@ -965,17 +965,26 @@ test("the back panel setting: a saved choice reads back, anything else is screwe
   assert.ok(backHz(plan(GLUED_BACK)) > backHz(plan(DEFAULT_BACK_JOINT)));
 });
 
-test("a screwed back: the window braces' rails don't hold it, and no rib ring is glued to it", () => {
+test("a screwed back is screwed to the window braces' rear rails: they hold it as they hold a glued one", () => {
+  // the default sub in ¾″ with Window braces: its edges hinged, the screwed back reads within a hair of the glued one
+  // (the rails, not its edges, set it), for the same frames
   const d = DEFAULT_PA;
   const plan = (back: BackJointId) =>
     subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, "window", undefined, back);
+  const screwedPlan = plan(DEFAULT_BACK_JOINT),
+    gluedPlan = plan(GLUED_BACK);
   const back = (b: BoxBracing) => b.panels.find((p) => p.id === "back");
-  const screwed = back(plan(DEFAULT_BACK_JOINT)),
-    glued = back(plan(GLUED_BACK));
+  const screwed = back(screwedPlan),
+    glued = back(gluedPlan);
   assert.ok(screwed && glued);
-  // the frames stand in the box either way, but only a glued back is held by them
-  assert.ok(Math.abs(screwed.hz - screwed.bareHz) < 1e-9, `${screwed.hz} vs ${screwed.bareHz}`);
-  assert.ok(glued.hz > glued.bareHz);
+  assert.ok(screwed.bareHz < glued.bareHz, "its own edges stay hinged");
+  assert.ok(screwed.hz > screwed.bareHz, `held by the frames: ${screwed.hz.toFixed(0)} Hz`);
+  assert.ok(
+    Math.abs(screwed.hz - glued.hz) < 1,
+    `${screwed.hz.toFixed(1)} Hz screwed, ${glued.hz.toFixed(1)} Hz glued`,
+  );
+  assert.deepStrictEqual(screwedPlan.windows, gluedPlan.windows);
+  assert.strictEqual(screwedPlan.windowIn3, gluedPlan.windowIn3);
 });
 
 test("rib depths: a long span takes deeper ribs where they lift it more for the wood", () => {

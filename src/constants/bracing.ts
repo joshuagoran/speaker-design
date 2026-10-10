@@ -71,12 +71,13 @@ export const BACK_JOINT_NAMES = {
 } as const;
 /** What each choice does, for its button's tooltip. */
 export const BACK_JOINT_TIPS = {
-  screwed: "Removable back: its edges count as hinged, so it takes more bracing.",
+  screwed:
+    "Removable back: screwed into the rabbet and the window braces' rails; its edges count as hinged.",
   glued: "Glued like the other panels: the joints hold its edges.",
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /** The back joint a design takes when none is chosen: screwed, the safe side. */
 export const DEFAULT_BACK_JOINT = "screwed" satisfies keyof typeof BACK_JOINT_NAMES;
-/** A glued back: its joints hold its edges, and the window braces hold it. */
+/** A glued back: its joints hold its edges (a screwed back's don't); the window braces hold either. */
 export const GLUED_BACK = "glued" satisfies keyof typeof BACK_JOINT_NAMES;
 /** Each choice in the Build fold's summary line. */
 export const BACK_JOINT_SUMMARY = {
@@ -88,6 +89,15 @@ export const BACK_JOINT_CUT_NOTES = {
   screwed: "screwed into the rear rabbet, no glue (it comes off): seal it with foam tape",
   glued: "glued into the rear rabbet",
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
+/**
+ * The cutlist's back panel where window braces' rear rails meet it, by its joint: a screwed back screws into each rail
+ * too (the rule counts the rails as holding it); a glued one needs no more than its row says.
+ */
+export const BACK_JOINT_RAIL_NOTES = {
+  screwed:
+    "screw it into each window brace's rear rail too, about every 6″, with foam tape on the rails (no glue)",
+  glued: null,
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string | null>;
 /** How the tower's partitions meet its back, by the back's joint (their cutlist row). */
 export const BACK_JOINT_PARTITION_NOTES = {
   screwed:

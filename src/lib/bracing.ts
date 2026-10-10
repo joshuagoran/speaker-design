@@ -14,7 +14,8 @@
 // 19.74 in Leissa's tables): the panel glued on across the joint bends with the edge and holds it as a rotational
 // spring (EDGE_FIXITY, a low estimate), so each bay's edges on the box's joints take their neighbors' springs, and its
 // edges on a rib, a brace or a duct part stay hinged (baysHz; lib/plateModes works the modes out). A screwed back's
-// joints hold nothing. The driver's cutout is cut out of the baffle's bay round it, the driver's weight hung on its
+// joints hold nothing, but it is screwed to the window braces' rear rails, which hold it in a line as on a glued back
+// (their rails then carry no glued flange where they meet the next rail in the corner: railStiffness). The driver's cutout is cut out of the baffle's bay round it, the driver's weight hung on its
 // edge, and the bay reads no higher than without the hole; the duct's own stiffness and the air load are left out. No
 // finite elements.
 //
@@ -622,9 +623,10 @@ export function braceBox({
     return out;
   };
   const winOrNone = (a: BoxAxis, n: number) => winAt(a, n) ?? [];
-  // the window braces' lines on a panel, in from its edge (a notched brace doesn't hold the baffle)
+  // the window braces' lines on a panel, in from its edge (a notched brace doesn't hold the baffle; a screwed back is
+  // screwed to their rear rails, so they hold it too)
   const onPanel = (p: BracePanel, axis: BoxAxis, n: number, off: number, span: number) =>
-    (p.loose ? [] : winOrNone(axis, n))
+    winOrNone(axis, n)
       .filter((x) => p.id !== "baffle" || !notched(axis, x))
       .map((x) => x - off)
       .filter((x) => x > EPS && x < span - EPS);
@@ -867,7 +869,7 @@ export function braceBox({
   // a window brace's rail on `q` across `a`: its EI over its span, for the corner spring it gives the next rail
   const railStiffness = (q: BracePanel, a: BoxAxis, w: Counts) => {
     const span = spanAcross(q, otherAxis(q, a));
-    // along a loose panel the rail stands alone, no flange glued to it
+    // along a loose (screwed) panel the rail is only screwed to it: it stands alone, no flange glued to it
     if (q.loose)
       return (
         (RING_FIXITY * braceStock.eWeak * (braceStock.t * IN_M) * (WINDOW_RAIL_IN * IN_M) ** 3) /
