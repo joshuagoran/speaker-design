@@ -2,7 +2,8 @@
 
 A brief for a research session. Explore a "front end" that sits between the sources and the amps: a line mixer,
 compression and EQ, crossovers and delay compensation, mostly analog. It can be one custom box, a rack of
-commercial units, or a mix. This is research and a recommendation, not a build. Nothing here is decided.
+commercial units, or a mix. The owner sees it as an analog alternative to the v1 plan, likely paired with class H amps (no DSP). This is
+research and a recommendation, not a build. Nothing here is decided.
 
 ## Context
 
@@ -10,6 +11,8 @@ commercial units, or a mix. This is research and a recommendation, not a build. 
   later. Planner defaults are in `src/lib/defaults.ts` (`DEFAULT_PA`).
 - **Amps today.** The v1 plan ([amp-dsp-v1.md](amp-dsp-v1.md)) runs a QSC PLD 4.2 and a QSC GXD4 with their
   built-in DSP. A front end could replace that DSP, or sit before it and leave the amps flat.
+- **Analog alternative.** Class H amps with no DSP (for example used QSC RMX or Crest CA series
+  _(unverified)_). The front end then does every crossover, delay and limit, horn protection included.
 - **Crossovers.** Sub to mid at the planner's sub crossover (default 120 Hz). Mid to horn at about 950 Hz–1 kHz
   (the DIY R-OSSE horn needs 950 Hz or more). Linkwitz-Riley 24 dB/oct. A BW24 subsonic high-pass near 31 Hz.
 - **Delays needed.**
@@ -57,6 +60,8 @@ From the owner's earlier discussion; verify the numbers.
   the PLD's limiter stay on?
 - How does each option patch into the PLD 4.2 and the GXD4? Can both amps then run flat?
 - What do fills need, and which options can feed them?
+- Which class H amps fit (power per band at 8 Ω, channel count, weight, US used prices), and what does the
+  analog rig cost and weigh against the v1 plan?
 
 ## Constraints
 
