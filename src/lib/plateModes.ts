@@ -18,10 +18,9 @@
 // A plate with a round hole (the driver's cutout) takes the full Ritz series: the whole plate's integrals exactly (by
 // Gauss's rule along each span), less the hole's (by Gauss's rule along its radius and evenly round it).
 import type { PlateHole, PlateStock } from "../types";
+import { LB_FT2_KG_M2 } from "../constants/units";
 
 const IN_M = 0.0254;
-/** lb/ft² to kg/m² */
-const LB_FT2_KG_M2 = 0.45359237 / 0.09290304;
 /** A spring stiff enough to stand for a fixed edge (ψ = kL / EI). */
 const PSI_FIXED = 1e7;
 /** Terms per span in the series: the beams' and the holed plate's (each holed plate solves BASIS_HOLE² of them). */
@@ -226,7 +225,7 @@ const HOLE_GAUSS = gaussLegendre(HOLE_RADIAL);
 /**
  * The first mode of an `a` × `b` in plate with a round hole, its edges held by `k`, Hz: the Ritz series over the
  * plate less the hole (header), with `ringKg` spread round the hole's edge (a driver's frame and motor; 0 for none).
- * The hole's part outside the plate, if any, is left out.
+ * The hole's part outside the plate, if any, is left out; the whole weight goes on the part of its edge inside.
  */
 export function holedPlateHz(
   a: number,
@@ -316,19 +315,21 @@ export function holedPlateHz(
         }
     }
   }
-  if (ringKg > 0)
-    for (let it = 0; it < HOLE_ROUND; it++) {
+  if (ringKg > 0) {
+    // the weight sits where the cutout's edge is on this plate, all of it: the share past its edges (on the panel's
+    // edge or a support beyond, where the bay ends) is spread over the rest rather than lost
+    const ring = Array.from({ length: HOLE_ROUND }, (_, it) => {
       const th = (2 * Math.PI * (it + 0.5)) / HOLE_ROUND;
-      const x = hole.cx + hole.r * Math.cos(th),
-        y = hole.cy + hole.r * Math.sin(th);
-      // the weight sits only where the cutout's edge is on this plate
-      if (x <= 0 || x >= a || y <= 0 || y >= b) continue;
+      return { x: hole.cx + hole.r * Math.cos(th), y: hole.cy + hole.r * Math.sin(th) };
+    }).filter(({ x, y }) => x > 0 && x < a && y > 0 && y < b);
+    for (const { x, y } of ring) {
       const X = basisAt(n, x / a),
         Y = basisAt(n, y / b);
       for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) w[i * n + j] = X.f[i] * Y.f[j];
       for (let r = 0; r < nb; r++)
-        for (let c = r; c < nb; c++) M[r][c] += (ringKg / HOLE_ROUND) * w[r] * w[c];
+        for (let c = r; c < nb; c++) M[r][c] += (ringKg / ring.length) * w[r] * w[c];
     }
+  }
   for (let r = 0; r < nb; r++)
     for (let c = 0; c < r; c++) {
       K[r][c] = K[c][r];

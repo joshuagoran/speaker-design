@@ -59,13 +59,12 @@ import type {
   PanelStrength,
   PlateStock,
 } from "../types";
+import { LB_FT2_KG_M2 } from "../constants/units";
 import { panelNominalNear } from "./panel";
 import { beamHz, holedPlateHz, restrainedPlateHz } from "./plateModes";
 import { plateStressFactor } from "./strength";
 
 const IN_M = 0.0254;
-/** lb/ft² to kg/m² */
-const LB_FT2_KG_M2 = 0.45359237 / 0.09290304;
 
 /**
  * Birch plywood's bending moduli, Pa: the mean values UPM gives for 18 mm, 13-ply WISA birch plywood at 10 ± 2 %

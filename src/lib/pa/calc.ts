@@ -114,6 +114,7 @@ import { hardwareKeepOut, hardwareLiters, mountedCutout, planBoxHardware } from 
 import { INPUT_JACK } from "../../data/catalog/cabinet-hardware";
 import { HARDWARE_KIND_NAMES, hardwarePlaceWords } from "../../constants/hardware";
 import { towerHornCutout, towerSpec } from "./tower";
+import { KG_PER_LB } from "../../constants/units";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
 const ROUND_PORT: Record<PortStyle, boolean> = {
@@ -824,8 +825,6 @@ const remember = (memo: Map<string, BoxBracing>, key: string, b: BoxBracing) => 
 };
 /** in² to m² */
 const IN2_M2 = 0.0254 ** 2;
-/** lb to kg */
-const LB_KG = 0.45359237;
 /**
  * A driver's cutout on the baffle: its center (in from the box's inside corner) less a slot's band below it, with the
  * driver's catalog weight hung round its edge (none where the entry has no weight).
@@ -838,7 +837,7 @@ const baffleCutout = (
   cx: center.x,
   cy: center.y - band,
   r: DRIVER_CUTOUT_IN[drv.size] / 2,
-  ringKg: (drv.lb || 0) * LB_KG,
+  ringKg: (drv.lb || 0) * KG_PER_LB,
 });
 function paBracing(
   box: Dims3,
