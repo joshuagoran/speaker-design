@@ -140,6 +140,10 @@ Each PR stands alone. Lowest risk first.
 - **L4 System page.** Sources by speaker id, amps and channels, DSP, crossovers between boxes, delay and
   level, and the coverage map generalized from `CoverageStack` to a list of sources. The PA page becomes a
   system preset.
+  - Amps and DSP start from the owner's v1 rig: [amp-dsp-v1.md](amp-dsp-v1.md).
+  - **Weight limit per box.** In the modular planner the weight limit becomes a manual setting on each box (it
+    replaces today's fixed 125 lb sub check in `src/lib/pa/chips.ts`). The user sets the limit for the box
+    they're working on; no automatic tower or layout rule sets it.
 
 ## Risks
 
