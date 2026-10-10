@@ -142,14 +142,24 @@ test("each bracing style gives only its own braces: ribs under Ribs, frames unde
   }
 });
 
-test("the cutout lifts a baffle: the rectangle sub's clears the target without a frame (155 Hz read whole)", () => {
+test("the driver's weight hangs on the baffle's cutout: the rectangle sub's baffle reads far lower with it", () => {
   const c = configs.find((x) => x.name === "rectangle sub");
   assert.ok(c, "the seed is there");
   const { sub, wall, inset } = partsOf(c);
+  const baffle = (lb: number, style: BraceStyleId) =>
+    subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, { ...sub, lb }, style).panels.find(
+      (p) => p.id === "baffle",
+    );
   for (const style of STYLES) {
-    const b = subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, style);
-    const baffle = b.panels.find((p) => p.id === "baffle");
-    assert.ok(baffle && baffle.hz >= b.targetHz, `${style}: baffle at ${baffle?.hz.toFixed(0)} Hz`);
+    const light = baffle(0, style),
+      heavy = baffle(sub.lb, style);
+    assert.ok(light && heavy, style);
+    // its 19.8 lb driver: the bare baffle at about half (106 Hz against 200), and no higher braced
+    assert.ok(
+      heavy.bareHz < 0.6 * light.bareHz,
+      `${style}: ${heavy.bareHz.toFixed(0)} Hz, ${light.bareHz.toFixed(0)} Hz without the weight`,
+    );
+    assert.ok(heavy.hz <= light.hz + 1e-9, `${style}: braced ${heavy.hz.toFixed(0)} Hz`);
   }
 });
 

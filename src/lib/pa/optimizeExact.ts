@@ -97,6 +97,7 @@ import { byId } from "../tables";
 import { keepGap } from "../optimizer/shortfall";
 import { ampForGain, onSlider } from "../optimizer/ampSteps";
 import type {
+  BackJointId,
   BraceStyleId,
   Dims3,
   HornHf,
@@ -126,6 +127,7 @@ import type {
   VentSpec,
 } from "../../types";
 import { towerMidDims } from "./tower";
+import { savedBackJoint } from "../../constants/bracing";
 
 // the most vent sizes any style has (a cache key's stride)
 const MAX_VENT_SIZES = Math.max(...VENT_STYLES.map((st) => ventSizesFor(st).length));
@@ -197,6 +199,8 @@ interface ExactSpace {
   walls: number[];
   /** the bracing style the boxes are designed with (paSearchBraceStyle) */
   braceStyle: BraceStyleId;
+  /** the back joint the boxes are braced for (savedBackJoint); absent: screwed */
+  backJoint?: BackJointId;
   styles: readonly PortStyle[];
   fbs: number[];
   /** per tuning, the highpasses tried */
@@ -262,6 +266,7 @@ function exactSpace(input: PaOptimizerInput, grid: PaExactGrid): ExactSpace {
     subs,
     walls,
     braceStyle: paSearchBraceStyle(cur),
+    backJoint: savedBackJoint(cur.backJoint),
     styles: locks.vent ? [cur.portStyle] : VENT_STYLES,
     fbs,
     hps,
@@ -328,7 +333,13 @@ function bareFree(
     b = at(hi);
   const root = (need: number) => (a >= need ? lo : lo + ((need - a) * (hi - lo)) / (b - a));
   if (b < V) return null; // the biggest box on the range can't hold it
-  const est = braceWoodEstimate({ ...fixedDims, [free]: root(V) }, t, s.cur.inset, s.braceStyle);
+  const est = braceWoodEstimate(
+    { ...fixedDims, [free]: root(V) },
+    t,
+    s.cur.inset,
+    s.braceStyle,
+    s.backJoint,
+  );
   const braced = V + (braceWoodIn3(est) * 16.387) / 1000;
   return b < braced ? null : root(braced);
 }
@@ -366,7 +377,11 @@ const towerMidFails = (s: ExactSpace, box: Dims3, t: number) => {
   return (
     !m ||
     Math.min(mb.w, mb.h) < midBaffleNeedIn(m.size) ||
-    sealedQtc(m, mb, t, s.cur.inset, { layout: s.cur.layout, braceStyle: s.braceStyle }) <
+    sealedQtc(m, mb, t, s.cur.inset, {
+      layout: s.cur.layout,
+      braceStyle: s.braceStyle,
+      backJoint: s.backJoint,
+    }) <
       SEALED_QTC_MIN - 1e-9
   );
 };
@@ -745,6 +760,7 @@ function exactHook(
       VbL: V,
       Fb: s.fbs[fi],
       braceStyle: s.braceStyle,
+      backJoint: s.backJoint,
     };
     const [lo, hi] = s.sr[free];
     while (g.next < pairCount(g.pairs)) {
@@ -776,7 +792,7 @@ function exactHook(
         sol.box,
         t,
         sub.lb,
-        braceWoodEstimate(sol.box, t, s.cur.inset, s.braceStyle),
+        braceWoodEstimate(sol.box, t, s.cur.inset, s.braceStyle, s.backJoint),
       );
       if (lb > s.cap + 1e-9) continue;
       if (!b || lb < b.lb) {
@@ -1023,6 +1039,7 @@ function exactHook(
         const mm = sealedMid(m, bx, t, cur.inset, amps.mAmpW, xoLo, {
           layout: cur.layout,
           braceStyle: s.braceStyle,
+          backJoint: s.backJoint,
         });
         if (
           mm.Qtc < SEALED_QTC_MIN ||
@@ -1039,7 +1056,7 @@ function exactHook(
           const boxLb = midWeightLb(
             bx,
             t,
-            midBraceEstimate(bx, t, cur.inset, cur.layout, s.braceStyle),
+            midBraceEstimate(bx, t, cur.inset, cur.layout, s.braceStyle, s.backJoint),
           );
           for (const hp of c.hornTable[xoHi]) {
             // in the tower, its cabinet over the sub box as carried, with the horn's section and the horn in it
@@ -1556,6 +1573,7 @@ function exactHook(
         cVent: vent,
         layout: cur.layout,
         braceStyle: s.braceStyle,
+        backJoint: s.backJoint,
         braceEstimate: true,
       });
       if (
@@ -1564,7 +1582,12 @@ function exactHook(
       )
         return;
       if (!subBaffleFits(box, style, vent, t, sub)) return;
-      const lb = subWeightLb(box, t, sub.lb, braceWoodEstimate(box, t, cur.inset, s.braceStyle));
+      const lb = subWeightLb(
+        box,
+        t,
+        sub.lb,
+        braceWoodEstimate(box, t, cur.inset, s.braceStyle, s.backJoint),
+      );
       if (lb > s.cap + 1e-9) return;
       const [cs] = ventedCurves(
         circuitOf(si),
@@ -1619,7 +1642,17 @@ function exactHook(
     const tune = (len: number) => {
       const v = { ...vent, len };
       const vs = ventShape(style, box, v, t, s.cur.inset, sub);
-      const V = subNetLiters(style, box, t, s.cur.inset, v, vs.area, sub.ts.disp, s.braceStyle);
+      const V = subNetLiters(
+        style,
+        box,
+        t,
+        s.cur.inset,
+        v,
+        vs.area,
+        sub.ts.disp,
+        s.braceStyle,
+        s.backJoint,
+      );
 
       const Leff = (len + vs.ec) * 0.0254;
       return (343 / (2 * Math.PI)) * Math.sqrt((vs.area * 0.00064516) / ((V / 1000) * Leff));

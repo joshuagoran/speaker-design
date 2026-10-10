@@ -14,8 +14,9 @@
 // 19.74 in Leissa's tables): the panel glued on across the joint bends with the edge and holds it as a rotational
 // spring (EDGE_FIXITY, a low estimate), so each bay's edges on the box's joints take their neighbors' springs, and its
 // edges on a rib, a brace or a duct part stay hinged (baysHz; lib/plateModes works the modes out). A screwed back's
-// joints hold nothing. The driver's cutout is cut out of the baffle's bay round it; the duct's own stiffness and the
-// air load are left out. No finite elements.
+// joints hold nothing. The driver's cutout is cut out of the baffle's bay round it, the driver's weight hung on its
+// edge, and the bay reads no higher than without the hole; the duct's own stiffness and the air load are left out. No
+// finite elements.
 //
 // A window brace or a rib holds the panel in a line: a support like an edge. Each is also a beam, and its own first
 // mode is checked against the target too: a rib (a strip of the panel's stock glued on edge, RIB_DEPTH_IN deep), and
@@ -435,10 +436,16 @@ interface Bay {
   /** the cutout in the bay's own coordinates, where it lies in this bay */
   hole: PlateHole | null;
 }
-const bayHz = (p: Pick<BracePanel, "stock">, bay: Bay) =>
-  bay.hole
-    ? holedPlateHz(bay.u.len, bay.v.len, p.stock, bay.springs, bay.hole)
-    : restrainedPlateHz(bay.u.len, bay.v.len, p.stock, bay.springs);
+const bayHz = (p: Pick<BracePanel, "stock">, bay: Bay) => {
+  const solid = restrainedPlateHz(bay.u.len, bay.v.len, p.stock, bay.springs);
+  // the holed bay never reads over the solid one: the driver's frame stiffening the cutout's edge isn't modeled yet
+  return bay.hole
+    ? Math.min(
+        solid,
+        holedPlateHz(bay.u.len, bay.v.len, p.stock, bay.springs, bay.hole, bay.hole.ringKg),
+      )
+    : solid;
+};
 /** A panel's bays between its supports, each with its edges' springs; bays alike are listed once (baysHz). */
 function panelBays(
   p: Pick<BracePanel, "spanU" | "spanV" | "edges" | "hole">,

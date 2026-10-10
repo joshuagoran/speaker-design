@@ -1676,11 +1676,15 @@ export type PanelEdge = "u0" | "u1" | "v0" | "v1";
  * in), or null where nothing does (a screwed joint, an open slot mouth): the edge is then hinged.
  */
 export type EdgeHold = { stock: PlateStock; span: number } | null;
-/** A round hole through a panel (a driver's cutout): its center and radius, in from the panel's corner (in). */
+/**
+ * A round hole through a panel (a driver's cutout): its center and radius, in from the panel's corner (in), and the
+ * weight hung round its edge (the driver's, kg; absent: none).
+ */
 export interface PlateHole {
   cx: number;
   cy: number;
   r: number;
+  ringKg?: number;
 }
 
 /** One panel for the bracing rule: its two in-plane axes and spans (in), its stock, and the supports it already has. */

@@ -334,8 +334,19 @@ test("the starting sub needs bracing, and the rule lifts it", () => {
     }
 });
 
+test("a cutout never lifts a bay over the same bay without it; the driver's weight on it lowers it", () => {
+  // a bare hole lifts a hinged plate a third (tests/plate-modes.test.ts), but the driver's frame fills it and its
+  // stiffness isn't modeled: the bay reads no higher than solid
+  const p = { spanU: 21, spanV: 27.5, stock: paPanelStock(0.75) };
+  const solid = baysHz(p, [], []);
+  const hole = { cx: 10.5, cy: 13.75, r: 8.3 };
+  assert.strictEqual(baysHz({ ...p, hole }, [], []), solid);
+  assert.ok(baysHz({ ...p, hole: { ...hole, ringKg: 9 } }, [], []) < 0.7 * solid);
+});
+
 test("a box whose panels already clear the target takes nothing", () => {
-  const b = midBoxBracing({ w: 15, h: 15, d: 15 }, 0.75, 0.75, MID_OPTIONS[0], "stack", undefined);
+  // a 13″ face: the 10″ mid's weight on its cutout still leaves the baffle over the target (at 15″ it falls under)
+  const b = midBoxBracing({ w: 13, h: 13, d: 15 }, 0.75, 0.75, MID_OPTIONS[0], "stack", undefined);
   assert.ok(b);
   assert.strictEqual(b.windowIn3 + b.ribIn3, 0);
   assert.ok(b.panels.every((p) => p.hz === p.bareHz && p.hz >= PA_PANEL_TARGET_HZ));
@@ -538,7 +549,7 @@ test("the starting sub's cutaway under each style: ribs, window braces and both 
         GLUED_BACK,
       );
       // each style puts in its own kind: ribs only under Ribs, frames only under Window braces, under Both whichever
-      // does more for the wood (here ribs alone: the cutout lifts the baffle over the target without a frame)
+      // does more for the wood (here the frames the baffle takes first, then ribs)
       const frames = b.windows.x.length + b.windows.y.length + b.windows.z.length;
       if (style === "ribs") assert.strictEqual(frames, 0, `${wall} ${style}: window braces`);
       if (style === "window") assert.strictEqual(b.ribs.length, 0, `${wall} ${style}: ribs`);
@@ -759,32 +770,49 @@ test("the starting sub under Ribs takes ribs: on the back at ¾″, and on the s
 });
 
 test("the optimizers' brace estimate stays near the rule over the golden boxes, in the optimizers' ¾″ ply", () => {
-  for (const style of STYLES) {
-    const err: number[] = [];
-    for (const c of configs) {
-      const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
-      const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
-      const mDim = c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box;
-      const inset = c.inset ?? 0.75;
-      const ruled = subBoxBracing(c.cDim, 0.75, inset, c.portStyle, c.cVent, sub, style);
-      err.push(
-        (braceWoodIn3(braceWoodEstimate(c.cDim, 0.75, inset, style)) - braceWoodIn3(ruled)) * IN3_L,
-      );
-      const mb = midBoxBracing(mDim, 0.75, inset, mid, c.layout ?? "stack", style);
-      if (mb)
-        err.push(
-          (braceWoodIn3(braceWoodEstimate(mDim, 0.75, inset, style)) - braceWoodIn3(mb)) * IN3_L,
+  // for each back joint, as the rule braces it
+  for (const back of [DEFAULT_BACK_JOINT, GLUED_BACK] as const)
+    for (const style of STYLES) {
+      const err: number[] = [];
+      for (const c of configs) {
+        const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
+        const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
+        const mDim = c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box;
+        const inset = c.inset ?? 0.75;
+        const ruled = subBoxBracing(
+          c.cDim,
+          0.75,
+          inset,
+          c.portStyle,
+          c.cVent,
+          sub,
+          style,
+          undefined,
+          back,
         );
+        const est = (box: Dims3) => braceWoodIn3(braceWoodEstimate(box, 0.75, inset, style, back));
+        err.push((est(c.cDim) - braceWoodIn3(ruled)) * IN3_L);
+        const mb = midBoxBracing(
+          mDim,
+          0.75,
+          inset,
+          mid,
+          c.layout ?? "stack",
+          style,
+          undefined,
+          back,
+        );
+        if (mb) err.push((est(mDim) - braceWoodIn3(mb)) * IN3_L);
+      }
+      // liters of wood: under a liter on the whole, a couple of liters at worst (a sub box holds 60 to 200); the
+      // strict styles fit worst, since a frame-only or rib-only plan stops where its kind can do no more
+      const rms = Math.sqrt(err.reduce((a, e) => a + e * e, 0) / err.length);
+      assert.ok(rms < 0.8, `${back} ${style}: ${rms.toFixed(3)} L rms`);
+      assert.ok(
+        Math.max(...err.map(Math.abs)) < 2.4,
+        `${back} ${style}: ${err.map((e) => e.toFixed(2)).join(" ")}`,
+      );
     }
-    // liters of wood: under a liter on the whole, a couple of liters at worst (a sub box holds 60 to 200); the strict
-    // styles fit worst, since a frame-only or rib-only plan stops where its kind can do no more
-    const rms = Math.sqrt(err.reduce((a, e) => a + e * e, 0) / err.length);
-    assert.ok(rms < 0.8, `${style}: ${rms.toFixed(3)} L rms`);
-    assert.ok(
-      Math.max(...err.map(Math.abs)) < 2.4,
-      `${style}: ${err.map((e) => e.toFixed(2)).join(" ")}`,
-    );
-  }
 });
 
 test("ribs: a first pick one way doesn't lock a panel out of the other way when that lifts it more", () => {

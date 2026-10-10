@@ -30,6 +30,7 @@ import {
   braceWoodIn3,
 } from "./calc";
 import type {
+  BackJointId,
   BraceStyleId,
   MidSystemConfig,
   CrossoverOrder,
@@ -259,8 +260,8 @@ export const musicAt = (
   20 * Math.log10(linkwitzRileyLowpass(fAtXo, xoLo, order)) +
   20 * Math.log10(lim.V / volts);
 
-/** What the mid's braces' estimate reads beyond the box (midBraceEstimate): the layout and the style. */
-export type MidBrace = Pick<MidSystemConfig, "layout"> & { braceStyle: BraceStyleId };
+/** What the mid's braces' estimate reads beyond the box (midBraceEstimate): the layout, the style and the back joint. */
+export type MidBrace = Pick<MidSystemConfig, "layout" | "backJoint"> & { braceStyle: BraceStyleId };
 /** The mid in a sealed box, as midSystem and closedBox set it up: the driver's and the box's acoustic parts, and the system's resonance. */
 function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: MidBrace) {
   const ts = mid.ts;
@@ -269,7 +270,7 @@ function sealedBox(mid: MidDriver, box: Dims3, t: number, inset: number, brace: 
     midNetLiters(
       midGrossLiters(box, t, inset, brace.layout),
       disp,
-      midBraceEstimate(box, t, inset, brace.layout, brace.braceStyle),
+      midBraceEstimate(box, t, inset, brace.layout, brace.braceStyle, brace.backJoint),
     ) * STUFFING_VOLUME_GAIN;
   const Sd = ts.Sd / 10000,
     Mms = ts.Mms / 1000,
@@ -457,12 +458,15 @@ export function subWoodIn3(
   inset: number,
   v: VentSpec,
   braceStyle: BraceStyleId | undefined,
+  back?: BackJointId,
 ) {
   const iw = box.w - 2 * t,
     ih = box.h - 2 * t;
   const band = style === "slots" ? v.slotH + t : 0;
   let in3 = 0.75 * iw * 0.75 * 2 + 0.75 * (ih - band - 1.5) * 0.75 * 2;
-  in3 += braceWoodIn3(braceWoodEstimate(box, t, inset, braceStyle ?? defaultBraceStyleNear(t)));
+  in3 += braceWoodIn3(
+    braceWoodEstimate(box, t, inset, braceStyle ?? defaultBraceStyleNear(t), back),
+  );
   if (style === "slots") {
     const folded = slotFolds(box, v, t);
     const len = folded ? foldedShelfIn(box, v.slotH, t) : v.len;
@@ -485,13 +489,14 @@ export const subNetLiters = (
   areaIn2: number,
   disp: number,
   braceStyle: BraceStyleId | undefined,
+  back?: BackJointId,
 ) =>
   Math.max(
     20,
     ((box.w - 2 * t) * (box.h - 2 * t) * (box.d - inset - 0.75 - t) * 16.387) / 1000 -
       disp -
       (areaIn2 * v.len * 16.387) / 1000 -
-      (subWoodIn3(style, box, t, inset, v, braceStyle) * 16.387) / 1000,
+      (subWoodIn3(style, box, t, inset, v, braceStyle, back) * 16.387) / 1000,
   );
 
 /**
@@ -508,6 +513,8 @@ export interface ShapeTarget {
   VbL: number;
   Fb: number;
   braceStyle: BraceStyleId;
+  /** absent: screwed (DEFAULT_BACK_JOINT) */
+  backJoint?: BackJointId;
 }
 /** A solved box: its outside size, its duct length, and its vent's area (in²). */
 export interface SolvedShape {
@@ -662,7 +669,7 @@ export function solveShape(
       ((box.w - 2 * t) * (box.h - 2 * t) * (box.d - inset - 0.75 - t) * 16.387) / 1000 -
       disp -
       (vs.area * len * 16.387) / 1000 -
-      subWoodIn3(style, box, t, inset, v, target.braceStyle) * IN3_TO_L;
+      subWoodIn3(style, box, t, inset, v, target.braceStyle, target.backJoint) * IN3_TO_L;
     const err = VbL - net;
     if (Math.abs(err) <= 1e-11 * VbL)
       return unreached ? null : { box: { ...box }, len, area: vs.area };

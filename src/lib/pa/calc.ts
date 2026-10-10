@@ -824,12 +824,22 @@ const remember = (memo: Map<string, BoxBracing>, key: string, b: BoxBracing) => 
 };
 /** in² to m² */
 const IN2_M2 = 0.0254 ** 2;
-/** A driver's cutout on the baffle: its center (in from the box's inside corner) less a slot's band below it. */
+/** lb to kg */
+const LB_KG = 0.45359237;
+/**
+ * A driver's cutout on the baffle: its center (in from the box's inside corner) less a slot's band below it, with the
+ * driver's catalog weight hung round its edge (none where the entry has no weight).
+ */
 const baffleCutout = (
   center: { x: number; y: number },
   band: number,
-  size: SubDriver["size"] | MidDriver["size"],
-): PlateHole => ({ cx: center.x, cy: center.y - band, r: DRIVER_CUTOUT_IN[size] / 2 });
+  drv: Pick<SubDriver | MidDriver, "size"> & Partial<Pick<SubDriver | MidDriver, "lb">>,
+): PlateHole => ({
+  cx: center.x,
+  cy: center.y - band,
+  r: DRIVER_CUTOUT_IN[drv.size] / 2,
+  ringKg: (drv.lb || 0) * LB_KG,
+});
 function paBracing(
   box: Dims3,
   t: number,
@@ -847,7 +857,7 @@ function paBracing(
   /** the driver's figures for the pressure it puts in the box (lib/strength); absent: no pressure checked */
   ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp"> | undefined,
 ): BoxBracing {
-  const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}|${hole.cx},${hole.cy},${hole.r}|${ts ? `${ts.Sd},${ts.Xmax},${ts.disp}` : ""}`;
+  const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}|${hole.cx},${hole.cy},${hole.r},${hole.ringKg ?? 0}|${ts ? `${ts.Sd},${ts.Xmax},${ts.disp}` : ""}`;
   const hit = BRACING_MEMO.get(key);
   if (hit) return hit;
   const inside = paInside(box, t, inset, band);
@@ -901,7 +911,7 @@ export function subBoxBracing(
     ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
     : [];
   const hwKey = regionsKey(recesses);
-  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${drv.ts ? `${drv.ts.Sd},${drv.ts.Xmax},${drv.ts.disp}` : ""}|${hwKey}`;
+  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${drv.lb ?? 0}|${drv.ts ? `${drv.ts.Sd},${drv.ts.Xmax},${drv.ts.disp}` : ""}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };
@@ -941,7 +951,7 @@ export function subBoxBracing(
       baffleCutout(
         subDriverCenter(box, t, style, v, drv.size),
         style === "slots" ? v.slotH + t : 0,
-        drv.size,
+        drv,
       ),
       drv.ts,
     ),
@@ -976,23 +986,25 @@ export function midBoxBracing(
     `${mid.size}|${mid.depthIn}|${regionsKey(recesses)}`,
     braceStyle ?? defaultBraceStyleNear(t),
     back,
-    baffleCutout({ x: iw / 2, y: ih / 2 }, 0, mid.size),
+    baffleCutout({ x: iw / 2, y: ih / 2 }, 0, mid),
     mid.ts,
   );
 }
 /**
  * The optimizers' cursory estimate of a PA box's braces' and ribs' wood (their searches run no rule): a window brace's
  * frame (windowWoodIn3) for each BRACE_ESTIMATE span of each inside span past the first, scaled, as window brace wood.
- * Fitted to the rule over the golden boxes in ¾″ ply, the optimizers' plywood (tests/bracing.test.ts holds its error).
+ * Fitted to the rule over the golden boxes in ¾″ ply, the optimizers' plywood, for each back joint as the rule takes
+ * it (`back`, screwed when absent, as in subBoxBracing; tests/bracing.test.ts holds its error).
  */
 export function braceWoodEstimate(
   box: Dims3,
   t: number,
   inset: number,
   style: BraceStyleId,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): Pick<BoxBracing, "windowIn3" | "ribIn3"> {
   const inner = paInner(box, t, inset),
-    { span, scale } = BRACE_ESTIMATE[style];
+    { span, scale } = BRACE_ESTIMATE[back][style];
   const frames = (ax: BoxAxis) => Math.max(0, inner[ax] / span - 1) * windowWoodIn3(inner, ax, t);
   return { windowIn3: scale * (frames("x") + frames("y") + frames("z")), ribIn3: 0 };
 }
@@ -1003,7 +1015,8 @@ export const midBraceEstimate = (
   inset: number,
   layout: PaLayout | undefined,
   style: BraceStyleId,
-) => (layout === "tower" ? null : braceWoodEstimate(box, t, inset, style));
+  back: BackJointId = DEFAULT_BACK_JOINT,
+) => (layout === "tower" ? null : braceWoodEstimate(box, t, inset, style, back));
 /** A box's braces' and ribs' wood, in³. */
 export const braceWoodIn3 = (b: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null | undefined) =>
   b ? b.windowIn3 + b.ribIn3 : 0;
@@ -2135,6 +2148,7 @@ export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConf
           cfg.wall,
           cfg.inset,
           cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
+          cfg.backJoint,
         ),
       ) *
         16.387) /
@@ -2248,6 +2262,7 @@ const midBracingOf = (mid: MidDriver, cfg: MidBoxConfig, dims: Dims3) =>
         cfg.inset,
         cfg.layout,
         cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
+        cfg.backJoint,
       )
     : midBoxBracing(
         dims,

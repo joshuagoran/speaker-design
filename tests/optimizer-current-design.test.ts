@@ -147,8 +147,9 @@ test("an unlocked vent tries one side duct, from a 1″ throat", () => {
     `Fully optimize ${exact.metrics.out.toFixed(2)} dB, the fireplace ${curM.out.toFixed(2)} dB`,
   );
   // Improve keeps a 10% air-speed margin, which the fireplace's 1″ duct uses up (it runs at 99% of the limit): its
-  // one-side duct beats the tubes and comes within 0.6 dB of the fireplace (the margin sets its highpass and amp, and
-  // the searches' brace estimate moves where that lands by a step)
+  // one-side duct beats the tubes and comes within 0.6 dB of the fireplace. The margin is what that costs: the card (a
+  // 1.5″ throat at 600 W, a 31 Hz highpass) runs its duct at 89% of the limit, and 850 W with a 37 Hz highpass would
+  // take it to 91% (this box takes no braces, so the searches' estimate and the rule give it the same tuning)
   const [quick] = sideDuctCards(optimizePaStack(input));
   assert.ok(quick, "Improve gives a one-side duct card");
   assert.ok(quick.metrics.out > tubes.out, "louder than the tubes");
@@ -195,6 +196,13 @@ test("a design short of the room's need: the near miss names the metric and is n
   const other = nearMissClosestText({ ...near, closestIsYours: false });
   assert.ok(!other.includes(NEAR_MISS_YOURS), other);
   assert.ok(other.startsWith(`${CARD_LABELS.nearMiss}: ${near.closest.names.sub}, `), other);
+  // with the compression driver free, a cheaper one at the same output is the closest: not yours
+  const free = optimizePaStack({ ...input, locks: { ...OWNER_LOCKS, vent: true } }).nearMiss;
+  assert.ok(free && free.closest, "a closest design with the compression driver free");
+  assert.equal(free.closestIsYours, false);
+  assert.notEqual(free.closest.config.cd, quietTubes.cd, "another compression driver");
+  assert.ok(free.closest.metrics.out >= m.out - 1e-9, "not behind your design");
+  assert.ok(free.closest.metrics.price < near.closest.metrics.price, "cheaper than yours");
 });
 
 test("a near miss whose closest design differs from yours doesn't call it yours", () => {

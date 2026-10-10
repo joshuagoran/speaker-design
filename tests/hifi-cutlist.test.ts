@@ -318,10 +318,12 @@ describe("PA cutlist unchanged", () => {
         ["S4", "baffle", 1, 22.5, 26.75],
         ["S5", "baffleCleat", 2, 0.75, 22.5],
         ["S6", "baffleCleat", 2, 0.75, 25.25],
-        // no window brace: ¾″ walls default to Window braces (frames only), and the one panel under the target is
-        // the back, which a frame can't hold while it is screwed on (the default)
-        ["S7", "ductShelf", 1, 14, 22.5],
-        ["S8", "ductFin", 2, 3, 17.25],
+        // ¾″ walls default to Window braces (frames only): two frames for the baffle, which the driver's weight on
+        // its cutout holds under the target; the back stays under it too, as no frame holds it while it is screwed
+        // on (the default)
+        ["S7", "windowBrace", 2, 15.75, 22.5],
+        ["S8", "ductShelf", 1, 14, 22.5],
+        ["S9", "ductFin", 2, 3, 17.25],
         ["M1", "side", 2, 15, 15],
         ["M2", "topBottom", 2, 13.5, 15],
         ["M3", "back", 1, 14.25, 14.25],

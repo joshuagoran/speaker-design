@@ -396,7 +396,7 @@ export function evaluateDesign(
       c.wall,
       sub.lb,
       braceEstimate
-        ? braceWoodEstimate(c.cDim, c.wall, c.inset, braceStyle)
+        ? braceWoodEstimate(c.cDim, c.wall, c.inset, braceStyle, backJoint)
         : subBoxBracing(
             c.cDim,
             c.wall,
@@ -416,7 +416,7 @@ export function evaluateDesign(
             midDims,
             c.wall,
             braceEstimate
-              ? midBraceEstimate(midDims, c.wall, c.inset, c.layout, braceStyle)
+              ? midBraceEstimate(midDims, c.wall, c.inset, c.layout, braceStyle, backJoint)
               : midBoxBracing(
                   midDims,
                   c.wall,
@@ -771,6 +771,7 @@ export function optimizePaStack(
     : subDriversOfSize(curSub ? curSub.size : 18).filter((o) => priced(o) && o.price <= budget);
   const walls = paOptimizerWalls(cur);
   const braceStyle = paSearchBraceStyle(cur);
+  const backJoint = savedBackJoint(cur.backJoint);
   const styles: readonly PortStyle[] = locks.vent ? [cur.portStyle] : QUICK_VENT_STYLES;
   const xoLos = locks.xoLo ? [cur.xoLo] : XO_LO_OPTIONS;
   const xoHis = locks.xoHi ? [cur.xoHi] : XO_HI_OPTIONS;
@@ -953,6 +954,7 @@ export function optimizePaStack(
               cVent,
               layout: cur.layout,
               braceStyle,
+              backJoint,
               braceEstimate: true,
             });
           let pushed = false,
@@ -1019,6 +1021,7 @@ export function optimizePaStack(
               portMax: cur.portMax,
               layout: cur.layout,
               braceStyle,
+              backJoint,
               braceEstimate: true,
             });
             evals++;
@@ -1033,7 +1036,12 @@ export function optimizePaStack(
               c,
               s,
               sub: sd.sub,
-              lb: subWeightLb(box, t, sd.sub.lb, braceWoodEstimate(box, t, cur.inset, braceStyle)),
+              lb: subWeightLb(
+                box,
+                t,
+                sd.sub.lb,
+                braceWoodEstimate(box, t, cur.inset, braceStyle, backJoint),
+              ),
               out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
             });
             pushed = true;
@@ -1064,6 +1072,7 @@ export function optimizePaStack(
                 portMax: cur.portMax,
                 layout: cur.layout,
                 braceStyle,
+                backJoint,
                 braceEstimate: true,
               });
               evals++;
@@ -1076,7 +1085,7 @@ export function optimizePaStack(
                     box,
                     t,
                     sd.sub.lb,
-                    braceWoodEstimate(box, t, cur.inset, braceStyle),
+                    braceWoodEstimate(box, t, cur.inset, braceStyle, backJoint),
                   ),
                   out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
                 });
@@ -1106,6 +1115,7 @@ export function optimizePaStack(
           portMax: cur.portMax,
           layout: cur.layout,
           braceStyle,
+          backJoint,
           braceEstimate: true,
         });
       let s = at(amps.ampW),
@@ -1125,7 +1135,7 @@ export function optimizePaStack(
           cur.cDim,
           t,
           curSub.lb,
-          braceWoodEstimate(cur.cDim, t, cur.inset, braceStyle),
+          braceWoodEstimate(cur.cDim, t, cur.inset, braceStyle, backJoint),
         ),
         out: bandOutputDb(s.mdl, s.lim, s.AMP_V),
       });
@@ -1161,7 +1171,11 @@ export function optimizePaStack(
             d = r2(D + cur.inset + 0.75 + t, 0.5);
           if (d < mr.d[0] || d > mr.d[1] || d < 6) continue;
           const bx = { w, h, d },
-            lb = midWeightLb(bx, t, midBraceEstimate(bx, t, cur.inset, cur.layout, braceStyle));
+            lb = midWeightLb(
+              bx,
+              t,
+              midBraceEstimate(bx, t, cur.inset, cur.layout, braceStyle, backJoint),
+            );
           if (!best || lb < best.lb) best = { bx, lb };
         }
       if (best && !out.some((o) => o.w === best.bx.w && o.h === best.bx.h && o.d === best.bx.d))
@@ -1236,7 +1250,7 @@ export function optimizePaStack(
         stepAt("mids", mi * walls.length + ti, mids.length * walls.length);
         if (!bx) continue;
         const disp = m.ts.disp != null ? m.ts.disp : m.size === 15 ? 4 : 2.5;
-        const bracing = midBraceEstimate(bx, t, cur.inset, cur.layout, braceStyle);
+        const bracing = midBraceEstimate(bx, t, cur.inset, cur.layout, braceStyle, backJoint);
         const eff =
           midNetLiters(boxInternalLiters(bx.w, bx.h, bx.d, t, cur.inset), disp, bracing) *
           STUFFING_VOLUME_GAIN;
