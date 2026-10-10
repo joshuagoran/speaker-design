@@ -1,6 +1,7 @@
 // Handles and input plates (lib/pa/hardware): the presets' fit checks, the liters their recesses take off the boxes,
 // the cutlist's cutout notes and the defaults older saves load with.
 import { test } from "vite-plus/test";
+import { RIB_DEPTH_IN } from "../src/lib/bracing";
 import assert from "node:assert";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import {
@@ -130,6 +131,7 @@ test("a handle that runs into the vent, an edge, a rib or the driver says so", (
       at: [z],
       from: 0,
       len: inner.y,
+      depth: RIB_DEPTH_IN,
     })),
     panels: [],
     windowIn3: 0,
@@ -349,7 +351,7 @@ test("a bottom slot's shelf, fins and folded rear wall pull the sub's handles do
         depthIn: subDriverDepthIn(d.sub),
       },
       bracing: subBoxBracing(d.cDim, t, d.inset, "slots", v, d.sub, undefined),
-      keepOut: subKeepOut(d.cDim, t, d.inset, "slots", v, d.sub),
+      keepOut: subKeepOut(d.cDim, t, d.inset, "slots", v, d.sub, undefined, true),
       ventMasses: masses ? subVentMasses(d.cDim, t, "slots", v) : [],
     });
   const slot = { ...vent, len: 12 };

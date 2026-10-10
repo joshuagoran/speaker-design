@@ -32,6 +32,18 @@ export const BRACE_STYLE_SUMMARY = {
 export const braceUnderNote = (panel: string, hz: string, target: string) =>
   `${panel}: ${hz}, under the ${target} target`;
 
+/** The strength checks' loads, as the notes name them (lib/strength). */
+export const STRENGTH_LOAD_NAMES = {
+  pressure: "the driver's pressure",
+  lid: "a load on the lid",
+} as const;
+/**
+ * The note under the Bracing setting for a panel over a strength limit: the panel's name with its cabinet, its stress,
+ * the limit and the load, already in words.
+ */
+export const strengthNote = (panel: string, stress: string, limit: string, load: string) =>
+  `${panel}: ${stress} under ${load}, over its ${limit} limit`;
+
 /** The end of a cutlist rib row whose rib crosses a window brace. */
 export const RIB_HALF_LAP_NOTE = "; half-lap it where it crosses a window brace";
 
@@ -48,6 +60,58 @@ export const BRACE_PANEL_NAMES = {
   back: "Back",
   baffle: "Baffle",
 } as const;
+
+/**
+ * How the back panel is fixed: glued, its edges held by the panels round it like the others', or screwed on (to take
+ * it off for the wiring), its edges hinged.
+ */
+export const BACK_JOINT_NAMES = {
+  screwed: "Screwed",
+  glued: "Glued",
+} as const;
+/** What each choice does, for its button's tooltip. */
+export const BACK_JOINT_TIPS = {
+  screwed:
+    "Removable back: screwed into the rabbet and the window braces' rails; its edges count as hinged.",
+  glued: "Glued like the other panels: the joints hold its edges.",
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
+/** The back joint a design takes when none is chosen: screwed, the safe side. */
+export const DEFAULT_BACK_JOINT = "screwed" satisfies keyof typeof BACK_JOINT_NAMES;
+/** A glued back: its joints hold its edges (a screwed back's don't); the window braces hold either. */
+export const GLUED_BACK = "glued" satisfies keyof typeof BACK_JOINT_NAMES;
+/** Each choice in the Build fold's summary line. */
+export const BACK_JOINT_SUMMARY = {
+  screwed: "screwed back",
+  glued: "glued back",
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
+/** The cutlist's back panel, by its joint: how it goes into the rear rabbet. */
+export const BACK_JOINT_CUT_NOTES = {
+  screwed: "screwed into the rear rabbet, no glue (it comes off): seal it with foam tape",
+  glued: "glued into the rear rabbet",
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
+/**
+ * A screwed back's screws into each window brace's rear rail: their spacing along the rail (in) and their diameter
+ * (mm, a #8 wood screw). The cutlist's note names the spacing; the bracing rule's jointed rail (lib/bracing
+ * jointedTeeBeam) reads both.
+ */
+export const BACK_RAIL_SCREW_SPACING_IN = 6;
+export const BACK_RAIL_SCREW_DIAMETER_MM = 4.2;
+/**
+ * The cutlist's back panel where window braces' rear rails meet it, by its joint: a screwed back screws into each rail
+ * too (the rule counts the rails as holding it); a glued one needs no more than its row says.
+ */
+export const BACK_JOINT_RAIL_NOTES = {
+  screwed: `screw it into each window brace's rear rail too, about every ${BACK_RAIL_SCREW_SPACING_IN}″, with foam tape on the rails (no glue)`,
+  glued: null,
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string | null>;
+/** How the tower's partitions meet its back, by the back's joint (their cutlist row). */
+export const BACK_JOINT_PARTITION_NOTES = {
+  screwed:
+    "glue and screw to the sides, the baffle to their front edges; the back screws to their rear edges (foam tape, no glue)",
+  glued: "glue and screw to the sides and back, the baffle to their front edges",
+} as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
+/** A saved design's back joint: one of the ids, else absent (the default). */
+export const savedBackJoint = (s: unknown) => keysOf(BACK_JOINT_NAMES).find((k) => k === s);
 
 /** The axes of a box, inches from its inside corner: across the width, up the height, back from the baffle. */
 export const BOX_AXIS_NAMES = {

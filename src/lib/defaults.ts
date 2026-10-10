@@ -35,6 +35,7 @@ import type {
 } from "../types";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
 import { DUCT_DIVIDER_DEFAULT } from "../constants/panelSizes";
+import { DEFAULT_BACK_JOINT } from "../constants/bracing";
 import { HORN_MOUNT_DEFAULT } from "../constants/hornMount";
 
 /** The PA design's starting state: a saved config with its driver, horn, box, format and cabinet ids replaced by the objects, plus the cutlist and mid size choices. */
@@ -99,6 +100,7 @@ export const DEFAULT_PA = {
   hfTilt: 3,
   layout: "stack",
   hardware: DEFAULT_HARDWARE,
+  backJoint: DEFAULT_BACK_JOINT,
   hornMount: HORN_MOUNT_DEFAULT,
   baffleColor: "#4a5d4e",
   cabFinish: "birch",

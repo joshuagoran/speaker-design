@@ -1,6 +1,7 @@
 // The bracing around the hardware (no rib or window brace over a handle's, the dish's or the posts' recess, so a panel
 // with a handle still takes its ribs beside it), and each bracing style giving its own braces, as the 3D view draws them.
 import { test } from "vite-plus/test";
+import { GLUED_BACK } from "../src/constants/bracing";
 import assert from "node:assert";
 import * as THREE from "three";
 import { bracingRegions, regionsOverlap } from "../src/lib/bracing";
@@ -141,14 +142,25 @@ test("each bracing style gives only its own braces: ribs under Ribs, frames unde
   }
 });
 
-test("Both keeps the baffle's window braces (the rectangle sub: ribs everywhere left the baffle at 155 Hz)", () => {
+test("the driver's weight hangs on the baffle's cutout: the rectangle sub's baffle reads far lower with it", () => {
   const c = configs.find((x) => x.name === "rectangle sub");
   assert.ok(c, "the seed is there");
   const { sub, wall, inset } = partsOf(c);
-  const both = subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, "both");
-  assert.ok(windowsOf(both) > 0);
-  const baffle = both.panels.find((p) => p.id === "baffle");
-  assert.ok(baffle && baffle.hz > 250, `baffle at ${baffle?.hz.toFixed(0)} Hz`);
+  const baffle = (lb: number, style: BraceStyleId) =>
+    subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, { ...sub, lb }, style).panels.find(
+      (p) => p.id === "baffle",
+    );
+  for (const style of STYLES) {
+    const light = baffle(0, style),
+      heavy = baffle(sub.lb, style);
+    assert.ok(light && heavy, style);
+    // its 19.8 lb driver: the bare baffle at about half (106 Hz against 200), and no higher braced
+    assert.ok(
+      heavy.bareHz < 0.6 * light.bareHz,
+      `${style}: ${heavy.bareHz.toFixed(0)} Hz, ${light.bareHz.toFixed(0)} Hz without the weight`,
+    );
+    assert.ok(heavy.hz <= light.hz + 1e-9, `${style}: braced ${heavy.hz.toFixed(0)} Hz`);
+  }
 });
 
 test("the 3D view draws the plan of the style chosen, every brace and rib of it", () => {
@@ -165,8 +177,9 @@ test("the 3D view draws the plan of the style chosen, every brace and rib of it"
         sub,
         style,
         handles,
+        GLUED_BACK,
       );
-      const midBracing = midBoxBracing(mDim, wall, inset, mid, layout, style, handles);
+      const midBracing = midBoxBracing(mDim, wall, inset, mid, layout, style, handles, GLUED_BACK);
       let n = 0;
       buildStackScene({
         ...scenePropsOf({ ...c, cutaway: true }),
@@ -213,8 +226,8 @@ test("a folded slot's rear channel wall holds the sides where it rises far enoug
     assert.ok(hz >= PA_PANEL_TARGET_HZ - 1e-9, `${side} at ${hz.toFixed(0)} Hz`);
   }
   assert.deepStrictEqual(clashes(b, plan, box, t, inset), []);
-  // the low wall neither holds the sides nor takes a rib's end: the sides read lower
+  // the low wall neither holds the sides nor takes a rib's end: the sides read lower before any rib
   const lowB = subBoxBracing(box, t, inset, "slots", low, sub, "ribs", handles);
-  const side = (x: BoxBracing) => x.panels.find((p) => p.id === "sideL")?.hz ?? 0;
+  const side = (x: BoxBracing) => x.panels.find((p) => p.id === "sideL")?.bareHz ?? 0;
   assert.ok(side(lowB) < side(b), `${side(lowB).toFixed(0)} vs ${side(b).toFixed(0)} Hz`);
 });

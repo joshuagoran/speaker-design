@@ -1,5 +1,6 @@
 import { DEFAULT_PA } from "../../../lib/defaults";
 import type {
+  BackJointId,
   BraceStyleId,
   Cabinet,
   Format,
@@ -27,6 +28,9 @@ export interface CabinetStyle {
   setBraceStyle: Setter<BraceStyleId | undefined>;
   /** the style both boxes are braced with: the one chosen, else the nominal plywood size's default */
   effectiveBraceStyle: BraceStyleId;
+  /** how both boxes' backs are fixed (glued, or screwed on) */
+  backJoint: BackJointId;
+  setBackJoint: Setter<BackJointId>;
   baffleInsetIn: number;
   setBaffleInsetIn: Setter<number>;
   baffleColor: string;
@@ -53,6 +57,7 @@ export function useCabinetStyle(): CabinetStyle {
   const [layout, setLayout] = useState<PaLayout>(DEFAULT_PA.layout);
   const [wallPanel, setWallPanel] = useState<PanelNominal>(DEFAULT_PA.panel); // side/top/bottom/back ply
   const [braceStyle, setBraceStyle] = useState<BraceStyleId | undefined>(undefined);
+  const [backJoint, setBackJoint] = useState<BackJointId>(DEFAULT_PA.backJoint);
   const [baffleInsetIn, setBaffleInsetIn] = useState(DEFAULT_PA.inset); // how far the baffles sit back from the frame front, in
   const [baffleColor, setBaffleColor] = useState(DEFAULT_PA.baffleColor);
   const [hornColor, setHornColor] = useState<PaDesignConfig["hornColor"]>(undefined);
@@ -71,6 +76,8 @@ export function useCabinetStyle(): CabinetStyle {
     braceStyle,
     setBraceStyle,
     effectiveBraceStyle: braceStyle ?? defaultBraceStyle(wallPanel),
+    backJoint,
+    setBackJoint,
     baffleInsetIn,
     setBaffleInsetIn,
     baffleColor,

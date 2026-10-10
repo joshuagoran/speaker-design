@@ -2,7 +2,13 @@ import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
-import type { BOX_AXIS_NAMES, BRACE_PANEL_NAMES, BRACE_STYLE_NAMES } from "./constants/bracing";
+import type {
+  BACK_JOINT_NAMES,
+  BOX_AXIS_NAMES,
+  BRACE_PANEL_NAMES,
+  BRACE_STYLE_NAMES,
+  STRENGTH_LOAD_NAMES,
+} from "./constants/bracing";
 import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
@@ -1292,6 +1298,8 @@ export interface PaDesignConfig {
   inset: number;
   /** how both boxes are braced; absent: the default for the plywood (`defaultBraceStyle`) */
   braceStyle?: BraceStyleId;
+  /** how both boxes' backs are fixed; absent: screwed (`DEFAULT_BACK_JOINT`) */
+  backJoint?: BackJointId;
   /** sub to mid and mid to horn crossovers, Hz */
   xoLo: number;
   xoHi: number;
@@ -1441,6 +1449,8 @@ export interface SubGeometryConfig {
   layout: PaLayout;
   /** absent: the plywood's default (`defaultBraceStyle`) */
   braceStyle?: BraceStyleId;
+  /** absent: screwed (`DEFAULT_BACK_JOINT`) */
+  backJoint?: BackJointId;
   /** an optimizer's search: the braces' wood by its cursory estimate (braceWoodEstimate), not the rule */
   braceEstimate?: boolean;
   /** the boxes' handles and plates, whose recesses take volume (lib/pa/hardware); absent: none */
@@ -1501,7 +1511,7 @@ export type SubSystem = SubSystemUnmodeled | SubSystemModeled;
 export interface MidSystemConfig
   extends
     Pick<SubGeometryConfig, "braceEstimate" | "hardware">,
-    Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder" | "braceStyle"> {
+    Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder" | "braceStyle" | "backJoint"> {
   /** the tower's mid chamber is part of the sub's cabinet and takes no braces of its own; absent: a box of its own */
   layout?: PaLayout;
   midDims: Dims3;
@@ -1657,6 +1667,26 @@ export interface PlateStock {
   nu: number;
 }
 
+/** How a box's back panel is fixed: glued like the other panels, or screwed on (`BACK_JOINT_NAMES` holds the names). */
+export type BackJointId = keyof typeof BACK_JOINT_NAMES;
+/** A panel's edge: across its u or v axis, at its start (0) or its end (1). */
+export type PanelEdge = "u0" | "u1" | "v0" | "v1";
+/**
+ * What holds a panel's edge against turning: the panel glued to it there (its stock, and its span away from the joint,
+ * in), or null where nothing does (a screwed joint, an open slot mouth): the edge is then hinged.
+ */
+export type EdgeHold = { stock: PlateStock; span: number } | null;
+/**
+ * A round hole through a panel (a driver's cutout): its center and radius, in from the panel's corner (in), and the
+ * weight hung round its edge (the driver's, kg; absent: none).
+ */
+export interface PlateHole {
+  cx: number;
+  cy: number;
+  r: number;
+  ringKg?: number;
+}
+
 /** One panel for the bracing rule: its two in-plane axes and spans (in), its stock, and the supports it already has. */
 export interface BracePanel {
   id: BracePanelId;
@@ -1670,6 +1700,8 @@ export interface BracePanel {
   stock: PlateStock;
   /** whether ribs can go on it (not the baffle: a rib can't cross the driver) */
   ribs: boolean;
+  /** the axes its ribs may divide (behind a bottom slot only those running with the air); absent: both */
+  ribAcross?: readonly BoxAxis[];
   /** the box's own parts that already hold it in a line across each axis (the vent shelf, duct walls), in from its edge */
   fixedU: number[];
   fixedV: number[];
@@ -1679,6 +1711,18 @@ export interface BracePanel {
    */
   stopU: number[];
   stopV: number[];
+  /** what holds each edge against turning; absent: every edge hinged */
+  edges?: Record<PanelEdge, EdgeHold>;
+  /** screwed on (a removable back): its edges are hinged, and the window braces' rails are screwed to it, unglued */
+  loose?: boolean;
+  /** the driver's cutout, in panel coordinates (the baffle) */
+  hole?: PlateHole;
+  /**
+   * the duct's fins glued along it over its whole run (a bottom slot's), in from its edge across `across`, `height` tall:
+   * supports (in `fixedU` / `fixedV` too) that also hold the end of a rib meeting one in a corner; the other panels'
+   * ribs across that axis line up on them where they are as many (C braces)
+   */
+  fins?: { across: BoxAxis; at: number[]; height: number };
 }
 
 /**
@@ -1691,6 +1735,8 @@ export interface PanelRibs {
   at: number[];
   from: number;
   len: number;
+  /** how far they stand off the panel, in (RIB_DEPTHS_IN) */
+  depth: number;
 }
 
 /** A box-shaped region inside a box, in from its inside corner on each axis (x across, y up, z back from the baffle). */
@@ -1707,17 +1753,29 @@ export interface BoxKeepOut {
   hardware?: readonly BoxRegion[];
 }
 
-/** A panel's first plate resonance with its own parts only, and with the braces and ribs, Hz. */
+/** A strength check's load (`STRENGTH_LOAD_NAMES` holds the words for it). */
+export type StrengthLoadId = keyof typeof STRENGTH_LOAD_NAMES;
+/** A panel's worst bending stress with its braces and ribs, under the load nearest its limit, Pa (lib/strength). */
+export interface PanelStrength {
+  load: StrengthLoadId;
+  stressPa: number;
+  limitPa: number;
+}
+/**
+ * A panel's first plate resonance with its own parts only, and with the braces and ribs, Hz; and its strength where the
+ * rule checks it (the PA boxes).
+ */
 export interface PanelResonance {
   id: BracePanelId;
   bareHz: number;
   hz: number;
+  strength?: PanelStrength;
 }
 
 /** The bracing rule's choice in counts, as it works: the window braces across each axis and the ribs on each panel. */
 export interface BracePlan {
   windows: Record<BoxAxis, number>;
-  ribs: Partial<Record<BracePanelId, { across: BoxAxis; n: number }>>;
+  ribs: Partial<Record<BracePanelId, { across: BoxAxis; n: number; depth: number }>>;
 }
 
 /** What the bracing rule picked for a box: the window braces on each axis, the ribs, the resonances and the wood. */
@@ -1900,6 +1958,8 @@ export interface CutPartsConfig {
   layout: PaLayout;
   /** absent: the plywood's default (`defaultBraceStyle`) */
   braceStyle?: BraceStyleId;
+  /** absent: screwed (`DEFAULT_BACK_JOINT`) */
+  backJoint?: BackJointId;
   /** the sub box's parts only (its volume reads no more): the mid box is left out */
   subOnly?: boolean;
   /** the sub's braces and ribs left out (an optimizer's search counts their wood by estimate instead) */

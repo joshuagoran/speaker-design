@@ -1,10 +1,17 @@
 // Calculation functions for the planner. Pure TS, no React, window or THREE.
+import {
+  driverPressurePa,
+  LID_STRESS_LIMIT_PA,
+  PRESSURE_STRESS_LIMIT_PA,
+  STACK_LOAD_N,
+} from "../strength";
 import type {
   BoxAxis,
   BoxBracing,
   BoxKeepOut,
   BoxModelTS,
   BoxRegion,
+  BackJointId,
   BraceStyleId,
   CompressionDriver,
   CompressionHf,
@@ -28,6 +35,7 @@ import type {
   HornHf,
   HornResponse,
   MidDriver,
+  PlateHole,
   MidSystem,
   MidSystemConfig,
   PaLayout,
@@ -72,13 +80,21 @@ import {
 } from "./tubes";
 import { TUBE_FLARE_RADIUS_IN } from "../../data/acoustics/tube-ends";
 import { ELBOW_WORDS } from "../../constants/portStyles";
-import { BOX_AXIS_NAMES, BRACE_PANEL_NAMES, RIB_HALF_LAP_NOTE } from "../../constants/bracing";
+import {
+  BACK_JOINT_CUT_NOTES,
+  BACK_JOINT_PARTITION_NOTES,
+  BACK_JOINT_RAIL_NOTES,
+  BACK_JOINT_SUMMARY,
+  BOX_AXIS_NAMES,
+  BRACE_PANEL_NAMES,
+  DEFAULT_BACK_JOINT,
+  RIB_HALF_LAP_NOTE,
+} from "../../constants/bracing";
 import {
   BIRCH_PLY_STIFFNESS,
   BOX_AXES,
   braceBox,
   defaultBraceStyleNear,
-  RIB_DEPTH_IN,
   ribRunAxis,
   WINDOW_RAIL_IN,
   windowWoodIn3,
@@ -99,6 +115,7 @@ import { hardwareKeepOut, hardwareLiters, mountedCutout, planBoxHardware } from 
 import { INPUT_JACK } from "../../data/catalog/cabinet-hardware";
 import { HARDWARE_KIND_NAMES, hardwarePlaceWords } from "../../constants/hardware";
 import { towerHornCutout, towerSpec } from "./tower";
+import { KG_PER_LB } from "../../constants/units";
 
 // Which sub vent layouts are round tubes; a record over every `PortStyle`, so a new layout must say which it is.
 const ROUND_PORT: Record<PortStyle, boolean> = {
@@ -127,6 +144,11 @@ export const slotFolds = (box: Pick<Dims3, "d">, v: Pick<VentSpec, "slotH" | "le
  */
 export const foldedShelfIn = (box: Pick<Dims3, "d">, slotH: number, t: number) =>
   maxStraightSlotIn(box, slotH, t) - t;
+/**
+ * A straight slot's fins' length, from the box's front to the back panel: they run on past the shelf as floor ribs
+ * (with the air), so the floor is held whatever the slot's length, and the back's and top's ribs line up on them.
+ */
+export const slotFinIn = (box: Pick<Dims3, "d">, t: number) => box.d - t;
 // The least the rear channel's wall rises from the floor leg's roof's underside, so the folded duct has a mouth to open
 // into.
 const FOLD_MIN_WALL_IN = 1;
@@ -557,7 +579,7 @@ export type BraceVent = Pick<VentSpec, "slotH" | "len" | "throat" | "div" | "nt"
 /**
  * Where the duct's length changes the sub's bracing: whether the duct runs far enough back to hold the panels it runs
  * along (ductHolds: then its parts' lines, subVentLines, are supports: a bottom slot's shelf across both sides and its
- * two fins along the bottom, a side duct's wall along the top and bottom and its dividers across its side), whether a
+ * two fins along the bottom (a straight slot's fins run on to the back, so they hold the floor at any length), a side duct's wall along the top and bottom and its dividers across its side), whether a
  * bottom slot folds up the back (and whether its rear channel wall rises far enough, DUCT_SUPPORT_MIN_SHARE of the
  * inside height, to hold the sides: `wallHolds`) and whether the tubes take elbows (subKeepOut).
  */
@@ -697,12 +719,31 @@ export function subDriverCenter(
   const band = v.slotH + t;
   return { x: iw / 2, y: band + (ih - band) / 2 };
 }
+/** The clear floor behind a bottom slot's inner end, in slot heights: room for the air to leave the duct. */
+const SLOT_CLEAR_HEIGHTS = 2;
 /**
- * What no brace or rib in the sub may enter: its driver (driverKeepOut), and its vent's parts and the air they hold,
- * over the whole depth whatever the duct's length (so the bracing, and with it the volume, holds while the duct's
- * length changes): a bottom slot under its shelf (folded, the rear channel up the back to the lid as well), a side duct
- * between its wall and the side (its flared ends a flare wider), and each round tube's run along the floor, up to the
- * lid where it takes elbows.
+ * How far back a bottom slot's room runs, in from the baffle: the duct and SLOT_CLEAR_HEIGHTS slot heights more, up to
+ * the next whole inch (so duct lengths a hair apart share their bracing), or the whole depth when it folds.
+ */
+const slotRoomIn = (
+  inD: number,
+  inset: number,
+  v: Pick<VentSpec, "len" | "slotH">,
+  folds: boolean,
+) =>
+  folds
+    ? inD
+    : Math.min(
+        inD,
+        Math.ceil(Math.max(0, v.len - inset - BAFFLE_PLY_IN) + SLOT_CLEAR_HEIGHTS * v.slotH),
+      );
+/**
+ * What no brace or rib in the sub may enter: its driver (driverKeepOut), and its vent's parts and the air they hold: a
+ * bottom slot under its shelf as far back as the duct runs and two slot heights more (room for the air at its inner end;
+ * folded, the whole floor and the rear channel up the back to the lid as well), a side duct between its wall and the
+ * side (its flared ends a flare wider) and each round tube's run along the floor (up to the lid where it takes
+ * elbows), these two over the whole depth. The optimizers' searches don't run the rule (braceWoodEstimate), so the
+ * slot's room may follow its length; the planner's volume moves with the ribs it lets in behind a short slot.
  */
 export function subKeepOut(
   box: Dims3,
@@ -713,6 +754,8 @@ export function subKeepOut(
   drv: TubeDriver,
   /** whether the slot folds and the tubes take elbows; absent: at the vent's length in this box */
   bends: Pick<DuctFlags, "folds" | "elbows"> = ductFlagsOf(box, t, inset, style, v, drv),
+  /** a bottom slot's room over the whole floor, whatever its length (the hardware's placement keeps to that) */
+  wholeFloor = false,
 ): BoxKeepOut {
   const { iw, ih, inD } = paInside(box, t, inset);
   const driver = driverKeepOut(
@@ -724,7 +767,8 @@ export function subKeepOut(
   const z: readonly [number, number] = [0, inD];
   if (style === "slots") {
     const band = v.slotH + t;
-    vent.push({ x: [0, iw], y: [0, band], z });
+    const slotEnd = wholeFloor ? inD : slotRoomIn(inD, inset, v, bends.folds);
+    vent.push({ x: [0, iw], y: [0, band], z: [0, slotEnd] });
     if (bends.folds) vent.push({ x: [0, iw], y: [0, ih], z: [inD - band, inD] });
   } else if (style === "vslots" || style === "vslot1") {
     // the duct to its flared ends' outer face
@@ -765,7 +809,7 @@ const BRACING_MEMO = new Map<string, BoxBracing>();
 const INPUT_MEMO = new Map<string, BoxBracing>();
 const BRACING_MEMO_MAX = 20000;
 const linesKey = (s: PaBoxSupports) =>
-  `${s.sideL.join()};${s.sideR.join()};${s.top.join()};${s.bottom.join()};${s.sideZ?.join() ?? ""}`;
+  `${s.sideL.join()};${s.sideR.join()};${s.top.join()};${s.bottom.join()};${s.sideZ?.join() ?? ""};${s.bottomZ?.join() ?? ""};${s.finIn ?? ""}`;
 /**
  * A folded slot's rear channel wall as a line on both sides, back from the baffle (inside): the channel's front wall,
  * a slot height and a wall in from the back, `t` thick, glued between the sides. Where it rises DUCT_SUPPORT_MIN_SHARE
@@ -780,6 +824,22 @@ const remember = (memo: Map<string, BoxBracing>, key: string, b: BoxBracing) => 
   memo.set(key, b);
   return b;
 };
+/** in² to m² */
+const IN2_M2 = 0.0254 ** 2;
+/**
+ * A driver's cutout on the baffle: its center (in from the box's inside corner) less a slot's band below it, with the
+ * driver's catalog weight hung round its edge (none where the entry has no weight).
+ */
+const baffleCutout = (
+  center: { x: number; y: number },
+  band: number,
+  drv: Pick<SubDriver | MidDriver, "size"> & Partial<Pick<SubDriver | MidDriver, "lb">>,
+): PlateHole => ({
+  cx: center.x,
+  cy: center.y - band,
+  r: DRIVER_CUTOUT_IN[drv.size] / 2,
+  ringKg: (drv.lb || 0) * KG_PER_LB,
+});
 function paBracing(
   box: Dims3,
   t: number,
@@ -791,22 +851,36 @@ function paBracing(
   /** what sets the keep-out besides the box and the plywood (the caller's inputs to it and its spans) */
   keepKey: string,
   style: BraceStyleId,
+  back: BackJointId,
+  /** the driver's cutout on the baffle, in from the baffle's corner */
+  hole: PlateHole,
+  /** the driver's figures for the pressure it puts in the box (lib/strength); absent: no pressure checked */
+  ts: Pick<ThieleSmall, "Sd" | "Xmax" | "disp"> | undefined,
 ): BoxBracing {
-  const key = `${style}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}`;
+  const key = `${style}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${band}|${linesKey(sup)}|${linesKey(stops)}|${keepKey}|${hole.cx},${hole.cy},${hole.r},${hole.ringKg ?? 0}|${ts ? `${ts.Sd},${ts.Xmax},${ts.disp}` : ""}`;
   const hit = BRACING_MEMO.get(key);
   if (hit) return hit;
   const inside = paInside(box, t, inset, band);
   const wall = paPanelStock(t);
+  // the strength checks' loads: the driver's pressure in the box's air, a lid's load spread over the lid
+  const insideL = (inside.iw * inside.ih * inside.inD * 16.387) / 1000;
+  const lidM2 = inside.iw * inside.inD * IN2_M2;
   return remember(
     BRACING_MEMO,
     key,
     braceBox({
       inner: { x: inside.iw, y: inside.ih, z: inside.inD },
-      panels: paBoxPanels(inside, wall, paPanelStock(BAFFLE_PLY_IN), sup, stops),
+      panels: paBoxPanels(inside, wall, paPanelStock(BAFFLE_PLY_IN), sup, stops, back, hole),
       targetHz: PA_PANEL_TARGET_HZ,
       style,
       braceStock: wall,
       keepOut,
+      loads: {
+        pressurePa: ts ? driverPressurePa(ts.Sd, ts.Xmax, insideL - (ts.disp ?? 0)) : 0,
+        pressureLimitPa: PRESSURE_STRESS_LIMIT_PA,
+        lidPa: STACK_LOAD_N / lidM2,
+        lidLimitPa: LID_STRESS_LIMIT_PA,
+      },
     }),
   );
 }
@@ -825,9 +899,10 @@ export function subBoxBracing(
   inset: number,
   style: PortStyle,
   v: BraceVent,
-  drv: TubeDriver & Partial<Pick<SubDriver, "lb">>,
+  drv: TubeDriver & Partial<Pick<SubDriver, "lb" | "ts">>,
   braceStyle: BraceStyleId | undefined,
   handles?: BoxHandles,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): BoxBracing {
   const bs = braceStyle ?? defaultBraceStyleNear(t);
   // the duct's length counts only where it changes the bracing (its flags)
@@ -836,7 +911,7 @@ export function subBoxBracing(
     ? hardwareKeepOut(subHardwarePlacement(box, t, inset, style, v, drv, handles))
     : [];
   const hwKey = regionsKey(recesses);
-  const key = `${bs}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${hwKey}`;
+  const key = `${bs}|${back}|${box.w}|${box.h}|${box.d}|${t}|${inset}|${style}|${style === "slots" ? slotRoomIn(paInside(box, t, inset).inD, inset, v, flags.folds) : ""}|${v.slotH}|${flags.holds}|${flags.folds}|${flags.wallHolds}|${flags.elbows}|${v.throat}|${v.div}|${v.nt}|${v.dia}|${drv.size}|${drv.depthIn}|${drv.lb ?? 0}|${drv.ts ? `${drv.ts.Sd},${drv.ts.Xmax},${drv.ts.disp}` : ""}|${hwKey}`;
   const hit = INPUT_MEMO.get(key);
   if (hit) return hit;
   const keepOut = { ...subKeepOut(box, t, inset, style, v, drv, flags), hardware: recesses };
@@ -852,17 +927,33 @@ export function subBoxBracing(
       style === "slots" ? v.slotH + t : 0,
       {
         ...(flags.holds ? subVentLines(box, t, style, v) : NO_SUPPORTS),
+        // a straight slot's fins run the whole depth, however short its shelf: they hold the floor
+        ...(style === "slots" && !flags.folds
+          ? { bottom: subVentLines(box, t, style, v).bottom, finIn: v.slotH }
+          : {}),
         // a folded slot's rear channel wall holds both sides where it rises far enough
         sideZ: flags.wallHolds ? [foldWallLine(box, t, inset, v)] : [],
       },
-      // and a side rib running back may stop on it there; on a lower wall it would end in the air over the channel
+      // and a side rib running back may stop on it there; on a lower wall it would end in the air over the channel; a
+      // floor rib behind a short slot starts where its clear floor ends
       {
         ...subVentStops(box, t, style, v),
         sideZ: flags.wallHolds ? [foldWallLine(box, t, inset, v)] : [],
+        bottomZ:
+          style === "slots" && !flags.folds
+            ? [slotRoomIn(paInside(box, t, inset).inD, inset, v, false)]
+            : [],
       },
       keepOut,
       keepKey,
       bs,
+      back,
+      baffleCutout(
+        subDriverCenter(box, t, style, v, drv.size),
+        style === "slots" ? v.slotH + t : 0,
+        drv,
+      ),
+      drv.ts,
     ),
   );
 }
@@ -874,14 +965,16 @@ export function midBoxBracing(
   box: Dims3,
   t: number,
   inset: number,
-  mid: Pick<MidDriver, "size" | "depthIn"> & Partial<Pick<MidDriver, "lb">>,
+  mid: Pick<MidDriver, "size" | "depthIn"> & Partial<Pick<MidDriver, "lb" | "ts">>,
   layout: PaLayout | undefined,
   braceStyle: BraceStyleId | undefined,
   handles?: BoxHandles,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): BoxBracing | null {
   if (layout === "tower") return null;
   const placed = handles && midHardwarePlacement(box, t, inset, mid, layout, handles);
   const recesses = placed ? hardwareKeepOut(placed) : [];
+  const { iw, ih } = paInside(box, t, 0);
   return paBracing(
     box,
     t,
@@ -892,21 +985,26 @@ export function midBoxBracing(
     { ...midKeepOut(box, t, mid), hardware: recesses },
     `${mid.size}|${mid.depthIn}|${regionsKey(recesses)}`,
     braceStyle ?? defaultBraceStyleNear(t),
+    back,
+    baffleCutout({ x: iw / 2, y: ih / 2 }, 0, mid),
+    mid.ts,
   );
 }
 /**
  * The optimizers' cursory estimate of a PA box's braces' and ribs' wood (their searches run no rule): a window brace's
  * frame (windowWoodIn3) for each BRACE_ESTIMATE span of each inside span past the first, scaled, as window brace wood.
- * Fitted to the rule over the golden boxes in ¾″ ply, the optimizers' plywood (tests/bracing.test.ts holds its error).
+ * Fitted to the rule over the golden boxes in ¾″ ply, the optimizers' plywood, for each back joint as the rule takes
+ * it (`back`, screwed when absent, as in subBoxBracing; tests/bracing.test.ts holds its error).
  */
 export function braceWoodEstimate(
   box: Dims3,
   t: number,
   inset: number,
   style: BraceStyleId,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): Pick<BoxBracing, "windowIn3" | "ribIn3"> {
   const inner = paInner(box, t, inset),
-    { span, scale } = BRACE_ESTIMATE[style];
+    { span, scale } = BRACE_ESTIMATE[back][style];
   const frames = (ax: BoxAxis) => Math.max(0, inner[ax] / span - 1) * windowWoodIn3(inner, ax, t);
   return { windowIn3: scale * (frames("x") + frames("y") + frames("z")), ribIn3: 0 };
 }
@@ -917,7 +1015,8 @@ export const midBraceEstimate = (
   inset: number,
   layout: PaLayout | undefined,
   style: BraceStyleId,
-) => (layout === "tower" ? null : braceWoodEstimate(box, t, inset, style));
+  back: BackJointId = DEFAULT_BACK_JOINT,
+) => (layout === "tower" ? null : braceWoodEstimate(box, t, inset, style, back));
 /** A box's braces' and ribs' wood, in³. */
 export const braceWoodIn3 = (b: Pick<BoxBracing, "windowIn3" | "ribIn3"> | null | undefined) =>
   b ? b.windowIn3 + b.ribIn3 : 0;
@@ -947,16 +1046,24 @@ export const formatInches = (x: number) => {
 };
 export { formatThickness } from "../panel";
 
-/** The rabbet on a shell panel's rear edge that the back sits in. */
-const rearRabbetNote = (t: number) =>
-  `rabbet ${formatInches(t)} × ${formatInches(t / 2)} on rear edge for the back`;
+/** Whether a box's window braces have rails on its back: a frame across x or y has a rear rail; one across z stands parallel to it. */
+const railsOnBack = (b: Pick<BoxBracing, "windows"> | null | undefined) =>
+  !!b && b.windows.x.length + b.windows.y.length > 0;
+/** The back panel's cutlist note: how it goes into the rabbet, and onto the window braces' rear rails where they meet it. */
+const backNote = (back: BackJointId, rails: boolean) => {
+  const onRails = rails ? BACK_JOINT_RAIL_NOTES[back] : null;
+  return onRails ? `${BACK_JOINT_CUT_NOTES[back]}; ${onRails}` : BACK_JOINT_CUT_NOTES[back];
+};
+/** The rabbet on a shell panel's rear edge that the back sits in, screwed or glued (`back`). */
+const rearRabbetNote = (t: number, back: BackJointId) =>
+  `rabbet ${formatInches(t)} × ${formatInches(t / 2)} on rear edge for the ${BACK_JOINT_SUMMARY[back]}`;
 /** A side's joint at the `edges` it meets the top and bottom on, and its rear rabbet. */
-const sideJointNote = (joint: CornerJoint, t: number, edges: string) =>
+const sideJointNote = (joint: CornerJoint, t: number, edges: string, back: BackJointId) =>
   joint === "rabbet"
-    ? `rabbet ${formatInches(t)} × ${formatInches(t / 2)} ${edges}; ${rearRabbetNote(t)}`
+    ? `rabbet ${formatInches(t)} × ${formatInches(t / 2)} ${edges}; ${rearRabbetNote(t, back)}`
     : joint === "miter"
-      ? `45° on ${edges}; ${rearRabbetNote(t)}`
-      : rearRabbetNote(t);
+      ? `45° on ${edges}; ${rearRabbetNote(t, back)}`
+      : rearRabbetNote(t, back);
 
 export function boxParts(
   label: CutBoxId,
@@ -972,13 +1079,18 @@ export function boxParts(
     bracing?: BoxBracing | null;
     /** the hardware's cutout notes, by panel (hardwareCutNotes) */
     hardware?: HardwareCutNotes;
+    /** how the back goes on; absent: screwed (`DEFAULT_BACK_JOINT`) */
+    back?: BackJointId;
+    /** whether window braces' rear rails meet the back; absent: whether `bracing`'s do (railsOnBack) */
+    backRails?: boolean;
   } = {},
 ) {
   const BT = 0.75,
     P: CutPart[] = [];
+  const back = extra.back ?? DEFAULT_BACK_JOINT;
   const topW = joint === "butt" ? W - 2 * t : joint === "rabbet" ? W - t : W;
-  const rearNote = rearRabbetNote(t);
-  const sideNote = sideJointNote(joint, t, "top and bottom edges");
+  const rearNote = rearRabbetNote(t, back);
+  const sideNote = sideJointNote(joint, t, "top and bottom edges", back);
   const topNote = joint === "miter" ? `45° on both ends; ${rearNote}` : rearNote;
   const hw = extra.hardware ?? {};
   const withNote = (note: string, more: string | undefined) => (more ? `${note}; ${more}` : note);
@@ -999,7 +1111,7 @@ export function boxParts(
     a: W - t,
     b: H - t,
     t,
-    note: withNote("sits in the rear rabbet", hw.back),
+    note: withNote(backNote(back, extra.backRails ?? railsOnBack(extra.bracing)), hw.back),
   });
   const iw = W - 2 * t,
     ih = H - 2 * t,
@@ -1083,7 +1195,7 @@ export function braceParts(
       box,
       part: "rib",
       qty: r.at.length,
-      a: RIB_DEPTH_IN,
+      a: r.depth,
       b: r.len,
       t,
       note: `${BRACE_PANEL_NAMES[r.panel]}, on edge, running ${BOX_AXIS_NAMES[run]}, ${atList(r.at)} ${AXIS_FROM[r.across]}${from}${lap}`,
@@ -1160,7 +1272,14 @@ export function subVentMasses(box: Dims3, t: number, style: PortStyle, v: BraceV
       : Math.min(v.len, maxStraightSlotIn(box, v.slotH, t));
     const out: CogMass[] = [
       { lb: ply(iw, len, t), y: t + v.slotH + t / 2, z: len / 2 },
-      { lb: 2 * ply(v.slotH, len, t), y: t + v.slotH / 2, z: len / 2 },
+      // a straight slot's fins run on to the back
+      folded
+        ? { lb: 2 * ply(v.slotH, len, t), y: t + v.slotH / 2, z: len / 2 }
+        : {
+            lb: 2 * ply(v.slotH, slotFinIn(box, t), t),
+            y: t + v.slotH / 2,
+            z: slotFinIn(box, t) / 2,
+          },
     ];
     if (folded) {
       const wallH = foldedRearWallIn(box, v, t);
@@ -1211,7 +1330,7 @@ function subHardwarePlacement(
       depthIn: subDriverDepthIn(drv),
     },
     bracing,
-    keepOut: subKeepOut(box, t, inset, style, v, drv),
+    keepOut: subKeepOut(box, t, inset, style, v, drv, undefined, true),
     ventMasses: subVentMasses(box, t, style, v),
   });
 }
@@ -1225,11 +1344,12 @@ export function subHardwarePlan(
   inset: number,
   style: PortStyle,
   v: BraceVent,
-  drv: TubeDriver & Pick<SubDriver, "lb">,
+  drv: TubeDriver & Pick<SubDriver, "lb"> & Partial<Pick<SubDriver, "ts">>,
   braceStyle: BraceStyleId | undefined,
   handles: BoxHandles,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): BoxHardwarePlan {
-  const bracing = subBoxBracing(box, t, inset, style, v, drv, braceStyle, handles);
+  const bracing = subBoxBracing(box, t, inset, style, v, drv, braceStyle, handles, back);
   return subHardwarePlacement(box, t, inset, style, v, drv, handles, bracing);
 }
 /** The mid box's hardware placed before its braces (as subHardwarePlacement); null in the tower. */
@@ -1267,12 +1387,13 @@ export function midHardwarePlan(
   box: Dims3,
   t: number,
   inset: number,
-  mid: Pick<MidDriver, "size" | "depthIn" | "lb">,
+  mid: Pick<MidDriver, "size" | "depthIn" | "lb"> & Partial<Pick<MidDriver, "ts">>,
   layout: PaLayout | undefined,
   braceStyle: BraceStyleId | undefined,
   handles: BoxHandles,
+  back: BackJointId = DEFAULT_BACK_JOINT,
 ): BoxHardwarePlan | null {
-  const bracing = midBoxBracing(box, t, inset, mid, layout, braceStyle, handles);
+  const bracing = midBoxBracing(box, t, inset, mid, layout, braceStyle, handles, back);
   return midHardwarePlacement(box, t, inset, mid, layout, handles, bracing);
 }
 
@@ -1297,9 +1418,12 @@ export function towerCutParts(
     cutNote: string;
     bracing: BoxBracing | null;
     hardware?: HardwareCutNotes;
+    /** how the back goes on (one tall back over the sub, the mid chamber and the horn section); absent: screwed */
+    back?: BackJointId;
   },
 ): CutPart[] {
   const spec = towerSpec(subBox, t, horn);
+  const back = extra.back ?? DEFAULT_BACK_JOINT;
   const { w: W, d: D } = subBox,
     H = spec.height,
     band = extra.band;
@@ -1321,6 +1445,9 @@ export function towerCutParts(
     band,
     cutNote,
     hardware: extra.hardware,
+    back,
+    // the sub box's braces stand behind the one tall back
+    backRails: railsOnBack(extra.bracing),
   }).P;
   const iw = W - 2 * t,
     inD = D - inset - BAFFLE_PLY_IN - t;
@@ -1331,7 +1458,7 @@ export function towerCutParts(
     a: iw,
     b: inD,
     t,
-    note: `level, top faces ${atList(spec.partitions)} up from the bottom (the sub/mid floor, the mid/horn floor); notch the front corners 3/4″ square round the baffle cleats; glue and screw to the sides and back, the baffle to their front edges; seal each airtight`,
+    note: `level, top faces ${atList(spec.partitions)} up from the bottom (the sub/mid floor, the mid/horn floor); notch the front corners 3/4″ square round the baffle cleats; ${BACK_JOINT_PARTITION_NOTES[back]}; seal each airtight`,
   };
   const braces = extra.bracing
     ? braceParts("sub", extra.bracing, { x: iw, y: subBox.h - 2 * t, z: inD }, t)
@@ -1349,7 +1476,7 @@ export function towerCutParts(
           ...p,
           b: spring,
           note: [
-            sideJointNote(joint, t, "the bottom edge"),
+            sideJointNote(joint, t, "the bottom edge", back),
             "top edge square, under the arched top's ends",
             extra.hardware?.side,
           ]
@@ -1391,7 +1518,7 @@ export function towerCutParts(
     a: D,
     b: Math.PI * (R - t / 2),
     t,
-    note: `bent over the sides to a ${formatInches(R)}″ outer radius, its length on its centerline: kerf the inside face across it every 1/2″, or laminate bending ply to ${formatInches(t)}″; a curve, so only its blank comes off a straight guillotine cut; ${rearRabbetNote(t)}'s arch`,
+    note: `bent over the sides to a ${formatInches(R)}″ outer radius, its length on its centerline: kerf the inside face across it every 1/2″, or laminate bending ply to ${formatInches(t)}″; a curve, so only its blank comes off a straight guillotine cut; ${rearRabbetNote(t, back)}'s arch`,
   };
   return [...arched, ...cleats, bent, partitions, ...braces];
 }
@@ -1408,6 +1535,7 @@ export function cutParts({
   cVent,
   layout,
   braceStyle,
+  backJoint,
   subOnly,
   noBraces,
   hardware,
@@ -1421,15 +1549,36 @@ export function cutParts({
   const subExtra = {
     bracing: noBraces
       ? null
-      : subBoxBracing(subBox, t, inset, portStyle, cVent, sub, braceStyle, hardware?.sub),
+      : subBoxBracing(
+          subBox,
+          t,
+          inset,
+          portStyle,
+          cVent,
+          sub,
+          braceStyle,
+          hardware?.sub,
+          backJoint,
+        ),
     hardware: hardware
       ? hardwareCutNotes(
-          subHardwarePlan(subBox, t, inset, portStyle, cVent, sub, braceStyle, hardware.sub),
+          subHardwarePlan(
+            subBox,
+            t,
+            inset,
+            portStyle,
+            cVent,
+            sub,
+            braceStyle,
+            hardware.sub,
+            backJoint,
+          ),
           subBox,
           t,
         )
       : undefined,
     band: portStyle === "slots" ? cVent.slotH + t : 0,
+    back: backJoint,
     cutNote:
       cutoutNote(DRIVER_CUTOUT_IN[sub.size]) +
       (kit
@@ -1460,9 +1609,11 @@ export function cutParts({
       part: "ductFin",
       qty: 2,
       a: cVent.slotH,
-      b: len,
+      b: folded ? len : slotFinIn(subBox, t),
       t,
-      note: "splits the slot in three",
+      note: folded
+        ? "splits the slot in three"
+        : "splits the slot in three; runs on to the back panel, a floor rib past the shelf",
     });
     if (folded)
       all.push({
@@ -1507,9 +1658,11 @@ export function cutParts({
   }
   if (layout !== "tower" && !subOnly) {
     const midPlan =
-      hardware && midHardwarePlan(midDims, t, inset, mid, layout, braceStyle, hardware.mid);
+      hardware &&
+      midHardwarePlan(midDims, t, inset, mid, layout, braceStyle, hardware.mid, backJoint);
     const m = boxParts("mid", midDims.w, midDims.h, midDims.d, t, inset, joint, {
-      bracing: midBoxBracing(midDims, t, inset, mid, layout, braceStyle, hardware?.mid),
+      back: backJoint,
+      bracing: midBoxBracing(midDims, t, inset, mid, layout, braceStyle, hardware?.mid, backJoint),
       hardware: midPlan ? hardwareCutNotes(midPlan, midDims, t) : undefined,
       cutNote: cutoutNote(DRIVER_CUTOUT_IN[mid.size]),
     });
@@ -1991,6 +2144,7 @@ export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConf
       cVent: cfg.cVent,
       layout: cfg.layout,
       braceStyle: cfg.braceStyle,
+      backJoint: cfg.backJoint,
       subOnly: true,
       noBraces: cfg.braceEstimate,
       // the ribs keep out of the recesses (subBoxBracing)
@@ -2006,6 +2160,7 @@ export function subGeometry(sub: SubDriver, mid: MidDriver, cfg: SubGeometryConf
           cfg.wall,
           cfg.inset,
           cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
+          cfg.backJoint,
         ),
       ) *
         16.387) /
@@ -2108,7 +2263,7 @@ export const midBoxMin = (size: MidDriver["size"]): Dims2 => ({
 /** What sizes a mid box's volume besides its dimensions. */
 type MidBoxConfig = Pick<
   MidSystemConfig,
-  "wall" | "inset" | "layout" | "braceStyle" | "braceEstimate" | "hardware"
+  "wall" | "inset" | "layout" | "braceStyle" | "braceEstimate" | "hardware" | "backJoint"
 >;
 /** The mid box's braces and ribs as midSystem deducts them: the estimate, or the rule's own. */
 const midBracingOf = (mid: MidDriver, cfg: MidBoxConfig, dims: Dims3) =>
@@ -2119,8 +2274,18 @@ const midBracingOf = (mid: MidDriver, cfg: MidBoxConfig, dims: Dims3) =>
         cfg.inset,
         cfg.layout,
         cfg.braceStyle ?? defaultBraceStyleNear(cfg.wall),
+        cfg.backJoint,
       )
-    : midBoxBracing(dims, cfg.wall, cfg.inset, mid, cfg.layout, cfg.braceStyle, cfg.hardware?.mid);
+    : midBoxBracing(
+        dims,
+        cfg.wall,
+        cfg.inset,
+        mid,
+        cfg.layout,
+        cfg.braceStyle,
+        cfg.hardware?.mid,
+        cfg.backJoint,
+      );
 /**
  * The net volume, L, that gives the mid Qtc 0.5, when a box it fits can be that small; else null. The smallest box it
  * fits has the face it needs (midBaffleNeedIn) and room behind for its mounting depth (from the baffle's front) with

@@ -120,7 +120,8 @@ test("internalWoodL: duct shelf + fins + brace rails + cleats, by hand", (t) => 
     ),
     "frames across the inside",
   );
-  const duct = iw * len * t0 + 2 * 3 * len * t0;
+  // the fins run on to the back panel
+  const duct = iw * len * t0 + 2 * 3 * (20 - t0) * t0;
   close(t, internalWoodLiters(parts, "sub"), (cleats + braces + duct) * IN3_L, 1e-9);
 });
 test("folded slot: the rear wall makes the centerline the set length, and the searches' wood volume matches the cutlist", (t) => {
