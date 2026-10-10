@@ -274,4 +274,18 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     mount: { thread: "1-3/8-18" },
     note: '[maker: eminence.com spec table, Oct 2026] US brand. Ferrite, titanium diaphragm, 1.3" (33 mm) aluminum-former voice coil, 1" exit on a 1-3/8"-18 outer thread. sens is 104.4 dB (PE: 2.83 V/1 m, so 1 W into 8 Ω) on an unnamed horn. aes is 50 W EIA-426A with the recommended 2.5 kHz 18 dB/oct crossover. 2.5–20 kHz. Re 6.7 Ω, minimum impedance 7.7 Ω at 3 kHz, resonance 590 Hz. 3.5" across, 2.45" deep, 1.7 lb. The cheapest compression driver on the list; a 2.5 kHz minimum suits the small waveguides. Parts Express #290-525.',
   },
+  {
+    id: "asd1001b",
+    // GUESS: no net weight found for the bolt-on; the screw-on ASD:1001's 1.7 lb (Eminence spec table) is assumed
+    lb: 1.7,
+    name: "Eminence ASD:1001B",
+    price: 43.99,
+    src: "parts-express.com, Oct 2026 (zzounds.com $39.99)",
+    hf: { sens: 104.1, aes: 50, aesXo: 2500, minXo: 2500, imp: 8, fs: null },
+    type: "compression",
+    exit: 1,
+    faceplate: { diameter: 3.5 },
+    needsWaveguide: true,
+    note: '[vendor: PE page, Eminence spec text] US brand. The 2-bolt ASD:1001: ferrite, titanium diaphragm, 1" exit, 2 × M6 on the usual 1" pattern. sens is 104.1 dB at 2.83 V/1 m (1 W into 8 Ω) on an unnamed horn, 0.3 dB under the screw-on version. aes is 50 W EIA-426B with the recommended 2.5 kHz 18 dB/oct crossover. 2.5–20 kHz. 3.5" across, 2" deep. fs, net weight and the bolt circle are not published on the retailer pages: the screw-on\'s 590 Hz is not assumed (fs null), its 1.7 lb is, and the circle is assumed to be the usual 76 mm. Parts Express #290-522.',
+  },
 ];
