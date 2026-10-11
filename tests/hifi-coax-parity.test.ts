@@ -259,7 +259,10 @@ describe("coaxials: the Hi-fi engine against the Fills model", () => {
   });
 
   test("a coaxial without HF data is modeled as its woofer alone, its gap marked", () => {
-    const bare = rows.filter(({ d }) => !d.hf);
+    // every catalogue coaxial has HF data now, so a copy of one without it stands in for a maker that publishes none
+    const bare = FILL_OPTIONS.slice(0, 1).flatMap((d) =>
+      BOXES.map((box) => parityRow({ ...d, hf: null }, box)),
+    );
     expect(bare.length).toBeGreaterThan(0);
     for (const { d, fill, h } of bare) {
       expect(h.tweeter).toBeNull();

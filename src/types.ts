@@ -30,6 +30,7 @@ import type {
 } from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
+import type { AMP_CLASSES, AMP_COLUMNS } from "./constants/ampColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
 import type { MAKER_NAMES } from "./data/catalog/makers";
 import type { AMP_SERIES } from "./data/catalog/amps";
@@ -444,31 +445,47 @@ export interface DspUnit {
 /** A price in US dollars as a range, low to high (equal for a single price). */
 export type PriceRange = Pick<XmaxBand, "lo" | "hi">;
 
-/** One amplifier model of a series: per-channel power, continuous with both channels driven. */
+/** An amp's output-stage class (`AMP_CLASSES`). */
+export type AmpClass = keyof typeof AMP_CLASSES;
+
+/** A column of the Notes page's amp table (`AMP_COLUMNS` holds their order and headers). */
+export type AmpColumn = keyof typeof AMP_COLUMNS;
+
+/** One amplifier model of a series: per-channel power, continuous with all channels driven. */
 export interface AmpModel {
   id: string;
   /** model name without the brand, as the notes write it (`GXD4`) */
   model: string;
+  /** output-stage class; null where the maker doesn't state it */
+  ampClass: AmpClass | null;
+  /** output channels, unbridged */
+  channels: number;
   /** watts per channel into 8 Ω and into 4 Ω */
   w8: number;
   w4: number;
-  /** voltage gain, dB */
-  gainDb: number;
-  /** the speaker-power range its limiter can be set to, watts */
-  limiterW: readonly [min: number, max: number];
+  /** voltage gain, dB; null where the maker publishes neither gain nor sensitivity */
+  gainDb: number | null;
+  /** the speaker-power range its limiter can be set to, watts; null where the limiter takes no speaker power */
+  limiterW: readonly [min: number, max: number] | null;
   /** a used one's price, US dollars, as the racks buy it */
   usedPrice: number;
+  /** the used price is an estimate: no US listing was found */
+  usedPriceEst?: true;
+  /** what sets this model apart from its series, or where a figure came from; display text */
+  note?: string;
 }
 
 /** An amplifier series and the DSP its models share, as the Notes page and the signal-path drawing describe it. */
 export interface AmpSeries {
   brand: string;
   models: readonly AmpModel[];
-  /** the DSP's crossover filters, display text */
+  /** whether the amps have DSP (crossovers, EQ, delay), not just fixed filters */
+  dsp: boolean;
+  /** the crossover filters (or, with no DSP, the fixed filters), display text */
   filters: string;
   /** the limiter's name and presets, display text */
   limiterModes: string;
-  /** what the DSP can't do, display text */
+  /** what the amp's processing can't do, display text */
   limits: string;
   /** where the figures come from: the maker's documents */
   src: readonly { name: string; url: string }[];
@@ -537,8 +554,11 @@ export interface HifiWoofer {
   note: string;
 }
 
-/** A tweeter's kind; "coaxial" is a coaxial's HF section, at its woofer's center (lib/data coaxParts). */
-export type TweeterType = "dome" | "horn-loaded" | "compression" | "ribbon" | "coaxial";
+/**
+ * A tweeter's kind; "amt" is an air motion transformer (a folded diaphragm behind a flat plate), "coaxial" a coaxial's
+ * HF section, at its woofer's center (lib/data coaxParts).
+ */
+export type TweeterType = "dome" | "horn-loaded" | "compression" | "ribbon" | "amt" | "coaxial";
 
 export interface TweeterHf {
   sens: number;
@@ -549,7 +569,7 @@ export interface TweeterHf {
   fs: number | null;
 }
 
-/** A ribbon's own waveguide: coverage in degrees and mouth size in inches. */
+/** A ribbon's own waveguide, or an AMT's plate: coverage in degrees and mouth size in inches. */
 export interface OwnGuide {
   name: string;
   covH: number;
@@ -570,12 +590,12 @@ export interface HifiTweeter {
   exit: number | null;
   /** the baffle cut-out the tweeter needs, inches; 3.5 in square where the maker gives no size, and a round faceplate is a square of its diameter */
   faceplate: Dims2;
-  /** absent on the ribbons, which come with their own */
+  /** absent on the ribbons and AMTs, which come with their own */
   needsWaveguide?: boolean;
   note: string;
   /** radiating diameter in inches for the directivity: the exit, or the mouth of a horn-loaded tweeter */
   domeIn: number;
-  /** the tweeter's own waveguide: a ribbon's plate, or a coaxial's woofer cone round its HF */
+  /** the tweeter's own waveguide: a ribbon's plate, an AMT's plate, or a coaxial's woofer cone round its HF */
   ownGuide?: OwnGuide;
   /**
    * a compression driver's throat mount: its bolts or a screw-on thread; absent: bolt-on, with the PA catalogue's

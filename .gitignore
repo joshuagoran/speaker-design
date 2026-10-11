@@ -11,3 +11,6 @@ tests/.optimizer-dump/
 *.step
 *.stl
 horn-print-out/
+
+# agent worktrees (Claude Code)
+.claude/worktrees/

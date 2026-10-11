@@ -3,10 +3,16 @@
 // price range it takes) or, for anything not in the catalog, [description, price $]. To add a line or a rack, append
 // to the table; the compiler checks the shape and the ids (Rack in src/types.ts).
 // Prices are US dollars, checked Sep 2026, single unit, before tax/shipping.
-import type { Rack } from "../../types";
+import type { Rack, RackTextItem } from "../../types";
 
 /** The safety high-pass in the horn amp, Hz: it catches a mis-recalled preset, which a level limiter cannot. */
 export const HORN_AMP_SAFETY_HPF_HZ = 500;
+
+/** The power conditioner, a line in more than one rack. */
+const POWER_CONDITIONER: RackTextItem = [
+  "Furman PL-8 / M-8x2 (used) — 1U 15 A power conditioner",
+  90,
+];
 
 /** The mains rack: the signal-path drawing names its processor. */
 export const MAINS_RACK: Rack = {
@@ -26,7 +32,7 @@ export const MAINS_RACK: Rack = {
       use: "horns",
       note: `gain trimmed, safety HPF ~${HORN_AMP_SAFETY_HPF_HZ} Hz in the amp`,
     },
-    ["Furman PL-8 / M-8x2 (used) — 1U 15 A power conditioner", 90],
+    POWER_CONDITIONER,
     ["Optional: GL.iNet travel router in the rack — PA2 app over its own Wi-Fi", 25],
     ["8U rack case, 6× XLR looms, 1U blank panel on the rear rail with 4× NL4MP sockets", 250],
   ],
@@ -34,6 +40,21 @@ export const MAINS_RACK: Rack = {
 
 export const RACKS: readonly Rack[] = [
   MAINS_RACK,
+  {
+    id: "v1",
+    name: "v1 rack",
+    note: "No external DSP: each amp's own DSP does the crossovers, EQ, delay and limiters (docs/amp-dsp-v1.md). Set the volume at the source.",
+    items: [
+      {
+        amp: "pld42",
+        use: "subs + horns",
+        rating: true,
+        note: "routes input 1/2 to all 4 outputs; horn limiter set in volts",
+      },
+      { amp: "gxd4", use: "mids", rating: true, note: "fed from the PLD's input loop-through" },
+      POWER_CONDITIONER,
+    ],
+  },
   {
     id: "battery",
     name: "Battery rack",

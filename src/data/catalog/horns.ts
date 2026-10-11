@@ -418,10 +418,11 @@ export const HORN_RAW: readonly Horn[] = [
     xo: "1200–1500 Hz",
     note: 'Approx.: drawn as the ST260 profile stretched to 290 × 185 × 245 mm deep (Cults3D listing); no profile published. Elliptical 600 Hz horn, 1" throat.',
   },
-  // Small 1" waveguides (5–7" mouths) for the Hi-fi page only (scope "hifi"): a DJ monitor's 8" + 1" pair crossed at
+  // Small 1" waveguides (4.5–7" mouths) for the Hi-fi page only (scope "hifi"): a DJ monitor's 8" + 1" pair crossed at
   // about 2.5–3 kHz, or a small fill. Their cutoffs (1–2.2 kHz) sit above the PA's 900 Hz–1 kHz crossovers, so the PA
   // picker and optimizers leave them out. A mouth this small holds its rated coverage only above about
-  // 25,000 / (degrees × mouth width in m) Hz (Keele): about 1.7–2.6 kHz across these, higher in the narrow plane.
+  // 25,000 / (degrees × mouth width in m) Hz (Keele): about 1.7–2.6 kHz across most of these (3.6 kHz for the 4.5"
+  // WG11-25), higher in the narrow plane.
   {
     id: "me10",
     lb: 0.37,
@@ -505,5 +506,54 @@ export const HORN_RAW: readonly Horn[] = [
       '1" exit, 2- or 3-bolt (Parts Express; the drawing shows 76 mm between the holes): the HF102, DE250, CDX1-1745 and the other 2-bolt 1" drivers',
     xo: "from 1.4 kHz (the maker's recommendation)",
     note: '[FaitalPRO STH100 datasheet, printed Feb 2024; Parts Express, Oct 2026] Cast aluminum elliptical tractrix waveguide, 80° × 70° (−6 dB, averaged 2–16 kHz), 1" (25.4 mm) throat, frequency range 1–20 kHz, recommended crossover 1.4 kHz, DI 8 dB. Mouth 180 × 120 mm (7.09 × 4.72 in), 85.9 mm deep, 4 × ⌀6.5 mm mouth holes, 460 g (1.01 lb). Beamwidth from the datasheet chart (read by eye): about 118° H × 145° V at 1.4 kHz, 100° × 130° at 2 kHz, about 80° H from 2.5 kHz and 90° V from about 3 kHz, narrowing to about 60° H × 40° V at 20 kHz. Faital says it is sold only with a FaitalPRO 1" driver; Parts Express sells it alone (#294-1040). The largest and dearest of the small horns. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "me20",
+    lb: 0.81,
+    name: "B&C ME20",
+    hf: { covH: 90, covV: 60, minXo: null, lowHz: 1500 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    price: 27.66,
+    src: "usspeaker.com, Oct 2026 (Parts Express #294-6180 also $27.66)",
+    size: { w: 145 / 25.4, h: 145 / 25.4, d: 90 / 25.4 },
+    driver:
+      '1" exit, 2 × M6 on a 76 mm (3 in) circle (usspeaker.com): the DE250, DE10, CDX1-1745, ASD:1001B and the other 2-bolt 1" drivers bolt straight on',
+    xo: "from about 2.2 kHz (1.5 kHz cutoff)",
+    note: '[bcspeakers.com ME20 datasheet, Oct 2026] Cast aluminum exponential horn, 90° × 60° nominal, 1" (25 mm) throat, cutoff 1.5 kHz ("excellent loading down to 1.5 kHz"). 145 × 145 × 90 mm (5.7 × 5.7 × 3.6 in), baffle cutout 118 mm (retailers: 118 × 113 mm), 0.37 kg (0.81 lb; usspeaker.com lists 1.0 lb). The cast sibling of the ME10, same coverage and cutoff, 15 mm wider. B&C publishes no recommended crossover; about 2.2 kHz is assumed from the cutoff. At 90° its 145 mm mouth holds the pattern only above about 1.9 kHz (Keele). Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "h17050",
+    lb: 1.5,
+    name: "Celestion H1-7050 'NoBell'",
+    hf: { covH: 70, covV: 50, minXo: null, lowHz: 1500 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    price: 45,
+    src: "amplifiedparts.com, Oct 2026 (special order; Parts Express #294-2942 lists it on clearance, price not read)",
+    size: { w: 180 / 25.4, h: 180 / 25.4, d: 90 / 25.4 },
+    driver:
+      '1" exit, 2 × M6 on a 76 mm circle (Celestion): the DE250, DE10, CDX1-1745, ASD:1001B and the other 2-bolt 1" drivers bolt straight on',
+    xo: "from about 2.2 kHz (1.5 kHz cutoff)",
+    note: '[Celestion H1-7050 datasheet, Oct 2026] Cast aluminum exponential horn with elastomer side panels to damp the bell resonances, 70° × 50°, 1" (25.4 mm) throat, cutoff 1.5 kHz. 180 × 180 × 90 mm (7 × 7 × 3.5 in), baffle cutout ⌀155 mm, 0.7 kg (1.5 lb). Celestion publishes no recommended crossover; about 2.2 kHz is assumed from the cutoff. At 70° its 180 mm mouth holds the pattern above about 2 kHz (Keele). Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
+  },
+  {
+    id: "wg1125",
+    lb: 0.18,
+    name: "PRV Audio WG11-25",
+    hf: { covH: 60, covV: 60, minXo: 1200, lowHz: 1200 },
+    exit: 1,
+    finish: "black",
+    scope: "hifi",
+    mount: SCREW_ON_1,
+    price: 6.91,
+    src: "Parts Express, Oct 2026 (#294-2842, $6.91 from the indexed listing; prvaudio.com also $6.91 black, $9.91 white)",
+    size: { w: 115 / 25.4, h: 115 / 25.4, d: 75 / 25.4 },
+    driver:
+      '1-3/8"-18 screw-on: a screw-on 1" driver (the ASD:1001, D220Ti, PSD:2002S) threads straight in; a 2- or 3-bolt driver takes a 2/3-bolt to screw-on adapter (the Eminence B2S-A, in the Hi-fi cost)',
+    xo: "from 1.2 kHz (PRV's minimum)",
+    note: '[PRV Audio WG11-25 datasheet, Rev 05/18; prvaudio.com] Molded ABS exponential horn, 60° × 60° nominal, 1" throat on a 1-3/8" screw-on thread; PRV says it loads down to 1.2 kHz and recommends a 1.2 kHz minimum crossover. 115 × 115 mm round-cornered square mouth, 75 mm deep (69 mm mount depth), baffle cutout 84 mm, 0.08 kg (0.18 lb). Parts Express (#294-2842) titles it 45° × 45°; the datasheet\'s 60° × 60° is used. The smallest and cheapest horn here: at 60° its 115 mm mouth holds the pattern only above about 3.6 kHz (Keele), so below that it is wider than rated. Drawn as a generic rectangular flare at this mouth and depth (no profile published).',
   },
 ];

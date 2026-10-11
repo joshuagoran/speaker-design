@@ -1,7 +1,7 @@
 import type { HifiBoxKind, HifiTweeter, RadiatorSelection } from "../../types";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../../lib/data";
 import { byIdOrThrow } from "../../lib/tables";
-import { isRibbon, needsWaveguide } from "../../lib/hifi/hifi";
+import { isAmt, isRibbon, needsWaveguide } from "../../lib/hifi/hifi";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 
 /** Woofers listed smallest first, grouped by size in the picker, A–Z within a size. */
@@ -29,20 +29,25 @@ export const passiveRadiatorOf = (
       }
     : null;
 
-/** Tweeter family for grouping: 0 domes, 1 planar ribbons (with their own waveguide), 2 compression drivers. */
-export const tweeterKind = (o: HifiTweeter) => (needsWaveguide(o) ? 2 : isRibbon(o) ? 1 : 0);
+/**
+ * Tweeter family for grouping: 0 domes, 1 planar ribbons (with their own waveguide), 2 AMTs (on their plate),
+ * 3 compression drivers.
+ */
+export const tweeterKind = (o: HifiTweeter) =>
+  needsWaveguide(o) ? 3 : isAmt(o) ? 2 : isRibbon(o) ? 1 : 0;
 
 /** Group headings in the tweeter picker, indexed by tweeterKind. */
 export const TWEETER_GROUP_LABELS = [
   "Dome tweeters",
   "Planar ribbons (with their waveguide)",
+  "AMTs (air motion transformers)",
   "Compression drivers (on a waveguide)",
 ];
 
 /** Short name of each tweeter family, indexed by tweeterKind. */
-export const TWEETER_KIND_LABELS = ["dome", "planar ribbon", "compression driver"];
+export const TWEETER_KIND_LABELS = ["dome", "planar ribbon", "AMT", "compression driver"];
 
-/** Tweeters grouped by family (domes, ribbons, compression drivers), A–Z within each. */
+/** Tweeters grouped by family (domes, ribbons, AMTs, compression drivers), A–Z within each. */
 export const HIFI_TWEETERS_BY_TYPE = HIFI_TWEETERS.slice().sort(
   (a, b) => tweeterKind(a) - tweeterKind(b) || a.name.localeCompare(b.name),
 );
