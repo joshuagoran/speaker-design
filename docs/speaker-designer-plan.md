@@ -232,7 +232,9 @@ Each PR stands alone. Lowest risk first.
       baffle-step EQ, the woofer's drive at its limit is within 0.2 dB from 30 Hz to a third of the crossover. The
       tweeter's power is exact. Above that range the engines differ: the Hi-fi divides the coil's rating by the
       lowpass, and the PA and the model do not.
-  - **Later in L3.** The 3D view and the optimizer; the horn settings; the tower with the horn on top (T1).
+  - **Later in L3.** The 3D view and the optimizer; the horn settings; the tower with the horn on top (T1); a "Place"
+    picker for each chamber (on top of, or beside, chamber N). Today the user types its position ("From left", "From
+    bottom").
 - **L4 Space page.** A separate page, later. Any saved speaker can be placed in a "Space": sources by speaker
   id, amps and channels, DSP, crossovers between boxes, delay and level, and the coverage map generalized
   from `CoverageStack` to a list of sources. The baffle step, the room and the positions of the drivers come

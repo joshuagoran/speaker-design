@@ -9,6 +9,8 @@ interface Props {
   min?: number;
   max?: number;
   step?: number;
+  /** shown grayed and read-only: a value worked out elsewhere */
+  disabled?: boolean;
   className?: string;
 }
 
@@ -21,6 +23,7 @@ export function NumberField({
   min,
   max,
   step,
+  disabled = false,
   className = "",
 }: Props) {
   const id = useId();
@@ -39,13 +42,14 @@ export function NumberField({
           min={min}
           max={max}
           step={step}
+          disabled={disabled}
           onChange={(e) => {
             setRaw(e.target.value);
             const n = parseFloat(e.target.value);
             if (Number.isFinite(n)) onChange(n);
           }}
           onBlur={() => setRaw(String(value))}
-          className="w-24 px-3 py-2 rounded border border-stone-300 bg-panel"
+          className={`w-24 px-3 py-2 rounded border border-stone-300 bg-panel${disabled ? " text-stone-500 opacity-70 cursor-not-allowed" : ""}`}
         />
         {unit}
       </div>
