@@ -64,11 +64,11 @@ A mid box has 2 cones. The planner's music balance sets what each band needs: th
 3 dB under the mids (`tilt`, `hfTilt`). So the HF needs the sub level less ~9 dB. Levels at a 120 Hz crossover, from
 the horn engine:
 
-| Per side | Sub     | Mids need | Mid boxes      | HF needs | HF      |
-| -------- | ------- | --------- | -------------- | -------- | ------- |
-| 1 × 18″  | ~132 dB | ~126 dB   | 1 (6 dB spare) | ~123 dB  | 1 N314T |
-| 2 × 18″  | ~138 dB | ~132 dB   | 1 (no spare)   | ~129 dB  | 1 N314T |
-| 4 × 18″  | ~144 dB | ~138 dB   | 2              | ~135 dB  | 2 N314T |
+| Per side | Sub     | Mids need | Mid boxes      | HF needs | HF             |
+| -------- | ------- | --------- | -------------- | -------- | -------------- |
+| 1 × 18″  | ~132 dB | ~126 dB   | 1 (6 dB spare) | ~123 dB  | 1 N314T        |
+| 2 × 18″  | ~138 dB | ~132 dB   | 1 (no spare)   | ~129 dB  | 1 N314T        |
+| 4 × 18″  | ~144 dB | ~138 dB   | 2              | ~135 dB  | 1, bigger horn |
 
 One N314T gives ~131 dB. The 1 × 18″ and 4 × 18″ rows are estimates from the 2 × 18″ model (−6 dB, +6 dB).
 
@@ -307,8 +307,8 @@ and more boxes for the same level.
 8″ figures assume ~220 cm² × 5.5 mm and ~250 W per driver _(typical, unverified)_.
 
 - **One bin alone** is little better than a vented box below 140 Hz, and it is bigger. Four bins load to ~70 Hz.
-- **The HF must grow.** Each doubling of subs adds ~6 dB. Add HF horns stacked and splayed (near and far throw), or
-  use a larger compression driver.
+- **The HF must grow.** Each doubling of subs adds ~6 dB. Keep one horn; see
+  [HF options](#hf-options-for-bigger-stacks).
 - **Layout.** Four bins in a floor row keep the HF ~2.5 m up. Stacked 2 × 2, they put it ~3.3 m up.
 - **Gap.** The catalog has no plain 8″ mid. Candidates: B&C 8NDL51, FaitalPRO 8PR200, 18Sound 8NMB420
   _(unverified)_.
@@ -420,17 +420,25 @@ With no DSP, a wrong patch or a turned knob can send full-range signal to the N3
 
 ## HF options for bigger stacks
 
-A 4 × 18″ stack needs ~6 dB more HF than one N314T.
+Use one HF horn per stack at every size, as Sunflower does over large sub stacks. A 4 × 18″ stack needs ~6 dB more HF
+than one N314T on the R-OSSE gives at the default balance. Close the gap three ways:
 
-| Option                            | Gain at the listener | Notes                                                        |
-| --------------------------------- | -------------------- | ------------------------------------------------------------ |
-| A bigger compression driver       | ~0 dB                | The N314T (~131 dB) is already the catalog's strongest       |
-| A narrower horn (90 × 40°)        | ~+2 dB on axis       | Less coverage; (110 × 50) / (90 × 40) ≈ 1.5                  |
-| 2 × N314T, stacked, same aim      | ~+6 dB               | Narrower vertical; lobing above ~1 kHz (horns ~320 mm apart) |
-| 2 × N314T, splayed near/far throw | ~+3 dB overall       | Each horn covers its own zone; +6 dB only where they overlap |
+| Step                               | Gain on axis | Notes                                                            |
+| ---------------------------------- | ------------ | ---------------------------------------------------------------- |
+| A larger, narrower horn (90 × 40°) | ~+2 dB       | 60 × 40° gives ~+3.6 dB. A bigger mouth loads 950 Hz better too. |
+| A 150 W compression driver         | ~+1.8 dB     | The N314T is the catalog's strongest; 2″ drivers rate 140–150 W  |
+| A bass-heavier balance             | ~+2 dB       | Raise `hfTilt` from 3 to ~5 dB: the sound-system style           |
 
-Use two N314T per side for a 4 × 18″ stack. Splay them near and far for a deep room; stack them for a wide, shallow
-one.
+Design the new horn in hornlab, as the R-OSSE was. Candidate drivers (makers measure sensitivity differently; compare
+them on the same horn):
+
+| Driver            | Exit | Power     | Sensitivity                                    | US price               |
+| ----------------- | ---- | --------- | ---------------------------------------------- | ---------------------- |
+| Celestion Axi2050 | 2″   | 150 W AES | 108 dB; 115–120 dB expected on a large 2″ horn | $1,000 (Parts Express) |
+| B&C DE1050        | 2″   | 140 W     | 109 dB                                         | not found              |
+| BMS 4594HE (coax) | 1.4″ | 150 W     | 118 dB on a horn _(unverified)_                | not found              |
+
+A super tweeter (below) takes the top octave, so the main driver needs no top-end boost.
 
 ## Super tweeter
 
