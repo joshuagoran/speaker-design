@@ -5,7 +5,7 @@ import { buildMid } from "./buildMid";
 import { buildHorn } from "./buildHorn";
 import { buildTower } from "./buildTower";
 import { buildPoleSpacer, buildSatelliteColumns, SATELLITE_COLUMN_D_IN } from "./buildSupports";
-import { MID_GAP_IN, SATELLITE_COLUMN_H_IN } from "./stackHeights";
+import { MID_GAP_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
 import { createScaleFigure } from "./geometry";
 import type {
   BoxBracing,

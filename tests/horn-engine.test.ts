@@ -20,6 +20,7 @@ import { AIR_DENSITY, SPEED_OF_SOUND } from "../src/constants/acoustics";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { boxModel, closedBox, highpassGain, ventTuning } from "../src/lib/pa/calc";
 import { DEFAULT_PA } from "../src/lib/defaults";
+import { GRAMS_PER_KG, SQ_CM_PER_SQ_M } from "../src/constants/units";
 import type { Complex, HornDesign, HornModel, HornPoint, HornSegment } from "../src/types";
 
 /** ρc: air's characteristic impedance, Pa·s/m (a plane wave's pressure over its particle speed). */
@@ -267,6 +268,7 @@ test("a lossless chain carries the same real power in and out", () => {
 /** The driver straight in its box: no horn, no throat chamber, half space. */
 const directRadiator = (driver: HornDesign["driver"], rear: HornDesign["rear"]): HornDesign => ({
   driver,
+  drivers: 1,
   count: 1,
   throatChamber: 0,
   segments: [],
@@ -442,4 +444,52 @@ test("a design with a zero size is not modeled", () => {
   );
   assert.strictEqual(hornModel({ ...good, count: 0 }, freqs, 10), null);
   assert.strictEqual(hornModel(good, [0], 10), null);
+});
+
+test("two drivers on one throat are one driver of twice the cone, each cone with its own air load", () => {
+  // the same bank as one driver: twice the area and half the coil, its moving mass set so that, with one air load
+  // of the doubled area taken off, it keeps two single cones' masses less their two air loads; its suspension and
+  // losses scaled to keep the cones' own (half the compliance's acoustic share, half the resistance)
+  const ts = DEFAULT_PA.sub.ts;
+  /** one side's air load on a piston of `cm2` cm², kg */
+  const airLoad = (cm2: number) =>
+    (8 / 3) * AIR_DENSITY * Math.pow(cm2 / SQ_CM_PER_SQ_M / Math.PI, 1.5);
+  const mms = ts.Mms / GRAMS_PER_KG;
+  const bankMms = 2 * (mms - airLoad(ts.Sd)) + airLoad(2 * ts.Sd);
+  /** one cone's suspension compliance, m/N; the bank's is half */
+  const cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * mms);
+  const bankFs = 1 / (2 * Math.PI * Math.sqrt(bankMms * (cms / 2)));
+  // Rms = 2πFs·Mms/Qms per cone, and twice that for the bank
+  const bankQms = (bankFs * bankMms) / (2 * ((ts.Fs * mms) / ts.Qms));
+  const rear = { liters: 200, port: { area: 600, length: 40 } };
+  const horn: HornDesign = {
+    ...directRadiator(ts, rear),
+    segments: [{ profile: HORN_PROFILE.exponential, s1: 2400, s2: 8000, length: 80 }],
+    portOffset: 20,
+  };
+  const freqs = hornGrid(20, 500, 40);
+  const pair = modelOf({ ...horn, drivers: 2 }, freqs, 10).curve;
+  const asOne = modelOf(
+    {
+      ...horn,
+      driver: {
+        ...ts,
+        Sd: 2 * ts.Sd,
+        Re: ts.Re / 2,
+        Mms: bankMms * GRAMS_PER_KG,
+        Fs: bankFs,
+        Qms: bankQms,
+      },
+    },
+    freqs,
+    10,
+  ).curve;
+  for (let i = 0; i < freqs.length; i++) {
+    assert.ok(Math.abs(pair[i].spl - asOne[i].spl) < 1e-9, `SPL at ${freqs[i]} Hz`);
+    assert.ok(Math.abs(pair[i].xmm - asOne[i].xmm) < 1e-9, `excursion at ${freqs[i]} Hz`);
+    // one voice coil of the pair: twice the pair's load in parallel
+    assert.ok(Math.abs(pair[i].ze - 2 * asOne[i].ze) < 1e-9, `impedance at ${freqs[i]} Hz`);
+  }
+  assert.strictEqual(hornModel({ ...horn, drivers: 0 }, freqs, 10), null);
+  assert.strictEqual(hornModel({ ...horn, drivers: 1.5 }, freqs, 10), null);
 });

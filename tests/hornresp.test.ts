@@ -30,14 +30,15 @@ const CC_PER_LITER = 1000;
  * near the cone and vent's cancellation notch; the circuit itself (Ze, excursion) still matches.
  */
 const CASES = [
-  { name: "sub-sealed-exp", spl: 0.02, boxes: 1 },
-  { name: "sub-bin-vented", spl: 0.02, boxes: 1 },
-  { name: "sub-bin-eighth", spl: 0.02, boxes: 1 },
-  { name: "sub-direct-vented", spl: 0.6, boxes: 1 },
-  { name: "mid-vented", spl: 0.02, boxes: 1 },
-  // Hornresp's record holds the two boxes as one composite driver and horn; the engine models them as two boxes side
-  // by side (count 2), so this checks the stacking by images too
-  { name: "mid-pair", spl: 0.02, boxes: 2 },
+  { name: "sub-sealed-exp", spl: 0.02, boxes: 1, drivers: 1 },
+  { name: "sub-bin-vented", spl: 0.02, boxes: 1, drivers: 1 },
+  { name: "sub-bin-eighth", spl: 0.02, boxes: 1, drivers: 1 },
+  { name: "sub-direct-vented", spl: 0.6, boxes: 1, drivers: 1 },
+  { name: "mid-vented", spl: 0.02, boxes: 1, drivers: 1 },
+  // Hornresp's record holds two drivers as one composite driver and horn. The engine reads it two ways: two boxes
+  // side by side (count 2, stacking by images), and two drivers on one throat (Hornresp's Nd)
+  { name: "mid-pair", spl: 0.02, boxes: 2, drivers: 1 },
+  { name: "mid-pair", spl: 0.02, boxes: 1, drivers: 2 },
 ] as const;
 /** Ze and excursion, relative */
 const CIRCUIT_TOLERANCE = 1e-3;
@@ -77,11 +78,12 @@ function segmentsOf(lines: ReturnType<typeof recordLines>): HornSegment[] {
 }
 
 /**
- * The engine's design, drive and losses for a Hornresp record, as `boxes` identical boxes side by side. Hornresp holds
- * them as one composite: its drivers in parallel (Sd, Mmd and Rms add, Cms and Re divide) and its areas and volumes
- * added. Each box takes 1/boxes of them.
+ * The engine's design, drive and losses for a Hornresp record, as `boxes` identical boxes side by side with `drivers`
+ * alike drivers on each throat. Hornresp holds them as one composite: its drivers in parallel (Sd, Mmd and Rms add,
+ * Cms and Re divide) and its areas and volumes added. Each cone takes 1/(boxes·drivers) of the driver, and each box
+ * 1/boxes of the areas and volumes.
  */
-function designOf(text: string, boxes: number) {
+function designOf(text: string, boxes: number, drivers: number) {
   const lines = recordLines(text);
   const num = (key: string) => Number(valueOf(lines, key));
   assert.strictEqual(
@@ -97,18 +99,20 @@ function designOf(text: string, boxes: number) {
   const angle = Number(valueOf(lines, "Ang").replace(" x Pi", ""));
   assert.ok(angle === 2 || angle === 1 || angle === 0.5, `unsupported angle ${angle}`);
   // the driver: Hornresp's mechanical values to the box models' Thiele/Small set
-  const Sd = num("Sd") / boxes,
-    Cms = num("Cms") * boxes,
-    Rms = num("Rms") / boxes;
+  /** cones in all */
+  const cones = boxes * drivers;
+  const Sd = num("Sd") / cones,
+    Cms = num("Cms") * cones,
+    Rms = num("Rms") / cones;
   /** one side's air load on the cone, kg: 8/3·ρa³, which the engine takes back off its Mms */
   const frontAirMass = (8 / 3) * AIR_DENSITY * Math.pow(Sd / SQ_CM_PER_SQ_M / Math.PI, 1.5);
-  const Mms = num("Mmd") / boxes / GRAMS_PER_KG + frontAirMass;
+  const Mms = num("Mmd") / cones / GRAMS_PER_KG + frontAirMass;
   /** the driver's free-air resonance, Hz */
   const Fs = 1 / (2 * Math.PI * Math.sqrt(Mms * Cms));
   const driver: BoxModelTS = {
     Sd,
     Bl: num("Bl"),
-    Re: num("Re") * boxes,
+    Re: num("Re") * cones,
     Mms: Mms * GRAMS_PER_KG,
     Fs,
     Qms: (2 * Math.PI * Fs * Mms) / Rms,
@@ -119,6 +123,7 @@ function designOf(text: string, boxes: number) {
   const design: HornDesign = {
     driver,
     count: boxes,
+    drivers,
     throatChamber: num("Vtc") / CC_PER_LITER / boxes,
     segments: segments.map((s) => ({ ...s, s1: s.s1 / boxes, s2: s.s2 / boxes })),
     rear: {
@@ -146,10 +151,11 @@ function resultsOf(text: string) {
 }
 
 for (const c of CASES) {
-  test(`horn engine matches Hornresp: ${c.name}`, () => {
+  test(`horn engine matches Hornresp: ${c.name}, ${c.boxes} box(es) of ${c.drivers} driver(s)`, () => {
     const { design, volts, losses } = designOf(
       fs.readFileSync(path.join(DIR, `${c.name}.txt`), "latin1"),
       c.boxes,
+      c.drivers,
     );
     const hornresp = resultsOf(fs.readFileSync(path.join(DIR, `${c.name}-results.txt`), "utf8"));
     const model = hornModel(
@@ -168,8 +174,8 @@ for (const c of CASES) {
       );
       assert.ok(
         // the engine's Ze is one driver's; Hornresp's is the composite's, the drivers in parallel
-        Math.abs(engine.ze / (expected.ze * c.boxes) - 1) <= CIRCUIT_TOLERANCE,
-        `${at}: Ze ${engine.ze} vs ${expected.ze * c.boxes}`,
+        Math.abs(engine.ze / (expected.ze * c.boxes * c.drivers) - 1) <= CIRCUIT_TOLERANCE,
+        `${at}: Ze ${engine.ze} vs ${expected.ze * c.boxes * c.drivers}`,
       );
       assert.ok(
         Math.abs(engine.xmm / expected.xmm - 1) <= CIRCUIT_TOLERANCE,

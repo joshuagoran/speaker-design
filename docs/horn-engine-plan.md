@@ -99,7 +99,7 @@ box models keep their own grids.
 3. **Published designs.** Skipped: the forums that post Hornresp inputs and plots block automated access. Step 4
    replaces it.
 4. **Hornresp golden files.** Done, with Hornresp 60.60 under Wine (see [Running Hornresp](#running-hornresp)).
-   `tests/hornresp.test.ts` compares six designs, 10 Hz–2 kHz (`tests/hornresp/`: each record and its results).
+   `tests/hornresp.test.ts` compares six designs (seven readings), 10 Hz–2 kHz (`tests/hornresp/`: each record and its results).
 5. **Measurement** of the built boxes with REW.
 
 ### Hornresp results
@@ -112,6 +112,7 @@ box models keep their own grids.
 | `sub-direct-vented` | Direct radiator, vented box, QL 7                        | < 0.6 dB  | < 0.1 %       |
 | `mid-vented`        | Exponential mid horn, throat chamber, vented rear        | < 0.01 dB | < 0.1 %       |
 | `mid-pair`          | Two boxes side by side (count 2) vs Hornresp's composite | < 0.01 dB | < 0.1 %       |
+| `mid-pair`          | Two drivers on one throat (`drivers: 2`), same record    | < 0.01 dB | < 0.1 %       |
 
 The first run found three differences. The engine now follows Hornresp in the first two:
 

@@ -10,3 +10,12 @@ export const PA_LAYOUT_NAMES = {
 
 /** The tower's mid chamber height, in: the chamber has the sub's footprint (lib/pa/tower `towerMidDims`). */
 export const TOWER_MID_HEIGHT_IN = 15.5;
+
+/** Gap between the sub's top and the mid box in the stack layout, in. */
+export const MID_GAP_IN = 0.4;
+
+/** Satellite layout: the stands' height, which is where the mid boxes sit, in. */
+export const SATELLITE_COLUMN_H_IN = 34;
+
+/** The plinth under the sub box (and the tower), in: fixed, it matches the duct height. */
+export const PLINTH_HEIGHT_IN = 3;
