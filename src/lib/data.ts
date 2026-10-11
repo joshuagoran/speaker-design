@@ -349,6 +349,11 @@ export const passiveRadiatorMassMax = (p: PassiveRadiator): number =>
 
 // ---- Racks: a line that names a catalog part takes that part's name (and, for an amp, its rating and price) ----
 
+/** Every amp in the catalog with its series, in catalog order: the Notes page's amp table. */
+export const AMPS: readonly { series: AmpSeries; model: AmpModel }[] = AMP_SERIES.flatMap(
+  (series) => series.models.map((model) => ({ series, model })),
+);
+
 /** An amp by id, with its series (for the brand). */
 export function ampById(id: AmpId): { series: AmpSeries; model: AmpModel } {
   for (const series of AMP_SERIES)
