@@ -320,6 +320,27 @@ describe("the tweeter", () => {
     expect(flare.max.z).toBeCloseTo(p.dim.d / 2, 6);
   });
 
+  test("an AMT: its flat plate flush in the baffle, a tall opening onto the folds across it, no ribbon slot or flare", () => {
+    const t = tweeter("amtpro4");
+    const p = propsFor({ tweeter: t });
+    const g = scene(p);
+    expect(p.guide?.freestanding).toBe(false);
+    expect(p.waveguide).toBeNull();
+    const plate = boxOf(g, HIFI_MESH_NAMES.faceplate);
+    expect(plate.max.x - plate.min.x).toBeCloseTo(t.ownGuide?.w ?? 0, 6);
+    expect(plate.max.y - plate.min.y).toBeCloseTo(t.ownGuide?.h ?? 0, 6);
+    expect(plate.max.z).toBeCloseTo(p.dim.d / 2, 6);
+    expect(named(g, HIFI_MESH_NAMES.ribbon)).toHaveLength(0);
+    expect(named(g, HIFI_MESH_NAMES.flare)).toHaveLength(0);
+    expect(named(g, HORN_MESH_NAME)).toHaveLength(0);
+    // the folded diaphragm behind the plate: taller than wide on this tall plate, many folds, all behind the face
+    const folds = named(g, HIFI_MESH_NAMES.amt);
+    expect(folds.length).toBeGreaterThan(10);
+    const dia = boxOf(g, HIFI_MESH_NAMES.amt);
+    expect(dia.max.y - dia.min.y).toBeGreaterThan(2 * (dia.max.x - dia.min.x));
+    expect(dia.max.z).toBeLessThan(p.dim.d / 2);
+  });
+
   test("the DIY OS 90×70 with the DE250: its mesh on the box top, on the aluminum plate, with the PA driver's body", () => {
     const p = propsFor({ tweeter: tweeter("de250"), selectedWaveguide: waveguide("diy_os90x70") });
     const g = scene(p);

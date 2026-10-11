@@ -56,3 +56,9 @@ export const HIFI_SUBSONIC_TYPE = "BW24" satisfies HighpassType;
  * `ownGuide`, which a coaxial's HF section carries too.
  */
 export const RIBBON_TWEETER_TYPE = "ribbon" as const satisfies TweeterType;
+
+/**
+ * The tweeter type of an AMT (air motion transformer): a folded diaphragm behind a flat plate with a tall opening. It is
+ * modeled as a ribbon is, on its plate as its own waveguide (`ownGuide`), but drawn and listed as its own kind.
+ */
+export const AMT_TWEETER_TYPE = "amt" as const satisfies TweeterType;

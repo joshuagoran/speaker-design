@@ -536,8 +536,11 @@ export interface HifiWoofer {
   note: string;
 }
 
-/** A tweeter's kind; "coaxial" is a coaxial's HF section, at its woofer's center (lib/data coaxParts). */
-export type TweeterType = "dome" | "horn-loaded" | "compression" | "ribbon" | "coaxial";
+/**
+ * A tweeter's kind; "amt" is an air motion transformer (a folded diaphragm behind a flat plate), "coaxial" a coaxial's
+ * HF section, at its woofer's center (lib/data coaxParts).
+ */
+export type TweeterType = "dome" | "horn-loaded" | "compression" | "ribbon" | "amt" | "coaxial";
 
 export interface TweeterHf {
   sens: number;
@@ -548,7 +551,7 @@ export interface TweeterHf {
   fs: number | null;
 }
 
-/** A ribbon's own waveguide: coverage in degrees and mouth size in inches. */
+/** A ribbon's own waveguide, or an AMT's plate: coverage in degrees and mouth size in inches. */
 export interface OwnGuide {
   name: string;
   covH: number;
@@ -569,12 +572,12 @@ export interface HifiTweeter {
   exit: number | null;
   /** the baffle cut-out the tweeter needs, inches; 3.5 in square where the maker gives no size, and a round faceplate is a square of its diameter */
   faceplate: Dims2;
-  /** absent on the ribbons, which come with their own */
+  /** absent on the ribbons and AMTs, which come with their own */
   needsWaveguide?: boolean;
   note: string;
   /** radiating diameter in inches for the directivity: the exit, or the mouth of a horn-loaded tweeter */
   domeIn: number;
-  /** the tweeter's own waveguide: a ribbon's plate, or a coaxial's woofer cone round its HF */
+  /** the tweeter's own waveguide: a ribbon's plate, an AMT's plate, or a coaxial's woofer cone round its HF */
   ownGuide?: OwnGuide;
   /**
    * a compression driver's throat mount: its bolts or a screw-on thread; absent: bolt-on, with the PA catalogue's

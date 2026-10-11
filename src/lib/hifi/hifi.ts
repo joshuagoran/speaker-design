@@ -80,6 +80,7 @@ import {
   HIFI_PORT_MAX_MS,
   HIFI_SUBSONIC_TYPE,
   RIBBON_TWEETER_TYPE,
+  AMT_TWEETER_TYPE,
 } from "../../constants/hifiEngine";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
 import {
@@ -254,12 +255,15 @@ export function waveguideDirectivity(
 /** Whether a tweeter is a planar ribbon on its own waveguide (a square plate with a slot). */
 export const isRibbon = (t: Pick<HifiTweeter, "type">): boolean => t.type === RIBBON_TWEETER_TYPE;
 
+/** Whether a tweeter is an AMT: a folded diaphragm behind a flat plate with a tall opening. */
+export const isAmt = (t: Pick<HifiTweeter, "type">): boolean => t.type === AMT_TWEETER_TYPE;
+
 /** Whether a tweeter has to be mounted on a waveguide or horn (a compression driver, or a dome made for one) rather than sit on the baffle. */
 export const needsWaveguide = (t: Pick<HifiTweeter, "type" | "needsWaveguide">): boolean =>
   t.type === "compression" || !!t.needsWaveguide;
 
 /**
- * The waveguide a tweeter plays through: its own (a ribbon's plate, a coaxial's cone), the picked one for a tweeter
+ * The waveguide a tweeter plays through: its own (a ribbon's or an AMT's plate, a coaxial's cone), the picked one for a tweeter
  * that needs one, else none.
  */
 export const waveguideFor = (tweeter: HifiTweeter, picked: HifiWaveguide): WaveguideSpec | null =>

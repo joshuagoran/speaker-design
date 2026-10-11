@@ -6,12 +6,12 @@
 // Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
 // Pure data: no logic, no derived fields (src/lib/data.ts derives and sorts).
-// Fields: id, name, lb, price $, src, type (dome | horn-loaded | compression | ribbon; an AMT is a ribbon), exit
+// Fields: id, name, lb, price $, src, type (dome | horn-loaded | compression | ribbon | amt), exit
 // (diameter in, null for a horn-loaded tweeter), faceplate ({ diameter } or { w, h } in, null when the maker gives no
-// size), needsWaveguide, note, optional ownGuide (a ribbon's own waveguide: covH / covV degrees, w / h in), optional
-// mount (a compression driver's throat: { thread } for a screw-on one; { bolts } for a bolt-on one whose pattern the
-// maker publishes; omit it for a bolt-on one without); hf: sens dB 1 W/1 m, aes W with a high-pass at aesXo Hz, minXo
-// Hz (the maker's lowest crossover), imp Ω, fs Hz (null where unpublished).
+// size), needsWaveguide, note, optional ownGuide (a ribbon's waveguide or an AMT's plate: covH / covV degrees, w / h
+// in), optional mount (a compression driver's throat: { thread } for a screw-on one; { bolts } for a bolt-on one whose
+// pattern the maker publishes; omit it for a bolt-on one without); hf: sens dB 1 W/1 m, aes W with a high-pass at
+// aesXo Hz, minXo Hz (the maker's lowest crossover), imp Ω, fs Hz (null where unpublished).
 import type { HifiTweeterRaw } from "../../types";
 
 /** The tweeter the Hi-fi planner starts on. */
@@ -215,7 +215,7 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     exit: null,
     faceplate: { w: 112 / 25.4, h: 112 / 25.4 },
     needsWaveguide: false,
-    note: '[maker: Ciare CT440 EN datasheet] 1¼" neodymium horn tweeter, planar Mylar diaphragm, aluminum coil, aluminum flange. sens is 110 dB at 2.83 V/1 m (1 W into 8 Ω). aes is 250 W AES2 (500 W program) per the sheet; the power test\'s high-pass is not given, so the 2 kHz recommended crossover is assumed. Check this: the sheet also gives a 1.75 in (44 mm) coil and nominal diameter, which conflicts with the 1¼" name, so its power and coil figures may be copied from the CT441. 2–20 kHz, Fs 1400 Hz, Re 4.5 Ω. 112 × 112 mm flange, 95 mm cutout, 68 mm deep, 4 × 4.5 mm holes on a 116 mm circle, 0.8 kg. Coverage not published. Parts Express gives 1.5–18 kHz.',
+    note: '[maker: Ciare CT440 EN datasheet] Neodymium horn tweeter with a 1.75" (44 mm) aluminum voice coil, planar Mylar diaphragm, aluminum flange. Ciare titles it a 1¼" horn tweeter, and Parts Express lists it as 1.25"; the coil is 1.75" (the 1.25" in the listing is a typo for the coil size). sens is 110 dB at 2.83 V/1 m (1 W into 8 Ω). aes is 250 W AES2 (500 W program); the power test\'s high-pass is not given, so the 2 kHz recommended crossover is assumed. 2–20 kHz, Fs 1400 Hz, Re 4.5 Ω. 112 × 112 mm flange, 95 mm cutout, 68 mm deep, 4 × 4.5 mm holes on a 116 mm circle, 0.8 kg. Coverage not published. Parts Express gives 1.5–18 kHz.',
   },
   // ---------- 1" compression drivers (need a waveguide) ----------
   {
@@ -395,7 +395,7 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     mount: { thread: "1-3/8-18" },
     note: '[maker: eminence.com spec table, Oct 2026] US brand. Ferrite, titanium diaphragm, 1.3" (33 mm) aluminum-former voice coil, 1" exit on a 1-3/8"-18 outer thread. sens is 104.4 dB (PE: 2.83 V/1 m, so 1 W into 8 Ω) on an unnamed horn. aes is 50 W EIA-426A with the recommended 2.5 kHz 18 dB/oct crossover. 2.5–20 kHz. Re 6.7 Ω, minimum impedance 7.7 Ω at 3 kHz, resonance 590 Hz. 3.5" across, 2.45" deep, 1.7 lb. The cheapest compression driver on the list; a 2.5 kHz minimum suits the small waveguides. Parts Express #290-525.',
   },
-  // ---------- AMTs (folded-diaphragm air motion transformers; the faceplate is the waveguide) ----------
+  // ---------- AMTs (type "amt": a folded diaphragm behind a flat plate; the plate is its own waveguide) ----------
   // Dayton publishes horizontal polars only (0–45°) and no coverage figures: covH is read from them at 10 kHz and covV
   // is estimated from the diaphragm's height, so both are guesses.
   {
@@ -405,7 +405,7 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     price: 109.98,
     src: "parts-express.com, Oct 2026 (#275-094; price from the indexed listing)",
     hf: { sens: 94, aes: 50, aesXo: null, minXo: 800, imp: 4, fs: null },
-    type: "ribbon",
+    type: "amt",
     exit: 1,
     faceplate: { w: 100 / 25.4, h: 200 / 25.4 },
     // GUESS: covH from Dayton's 0–45° curves (about −6 dB at 37° at 10 kHz); covV from the 160 mm tall slot
@@ -419,7 +419,7 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     price: 83.98,
     src: "parts-express.com, Oct 2026 (#275-093; price from the indexed listing)",
     hf: { sens: 90, aes: 25, aesXo: null, minXo: 1900, imp: 4, fs: 875 },
-    type: "ribbon",
+    type: "amt",
     exit: 1,
     faceplate: { w: 95 / 25.4, h: 130 / 25.4 },
     // GUESS: covH from Dayton's 0–45° curves (about −6 dB at 42° at 10 kHz); covV from the 113 mm tall cutout
@@ -434,7 +434,7 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     price: 89.98,
     src: "parts-express.com, Oct 2026 (#275-096; price from the indexed listing)",
     hf: { sens: 91, aes: 25, aesXo: null, minXo: 1800, imp: 4, fs: null },
-    type: "ribbon",
+    type: "amt",
     exit: 1,
     faceplate: { w: 110 / 25.4, h: 85 / 25.4 },
     // GUESS: covH from Dayton's 0–45° curves (about −7 dB at 45° at 10 kHz); covV from the short diaphragm
