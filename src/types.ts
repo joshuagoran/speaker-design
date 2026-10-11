@@ -2594,7 +2594,15 @@ export interface PaOptimizerResult {
   goals: PaGoal[];
   goalMissing: string | null;
   nearMiss: PaNearMiss | null;
-  stats: { evaluated: number; ms: number; subs: number; combos: number; pool: number };
+  stats: {
+    evaluated: number;
+    ms: number;
+    subs: number;
+    combos: number;
+    pool: number;
+    /** Fully optimize: the most grid rounds one card selection took (lib/pa/optimizeExact PA_EXACT_SLOT_ROUNDS) */
+    rounds?: number;
+  };
 }
 
 /** A check on the PA stack's sub, mid or horn. */

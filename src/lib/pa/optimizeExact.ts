@@ -18,11 +18,19 @@
 //      the port ignored, the lightest box that holds the volume, the cheapest mid and horn); the card selection runs on
 //      a pool that grows until no design on the grid beats one of its picks, and every pick is checked with the
 //      planner's own evaluateDesign (a design the fast path got wrong is set aside and the cards are picked again).
+//      The grid counts the braces by the searches' estimate, as the fast path does; a design joins the pool with them by
+//      the rule (lib/pa/optimize PA_FINALISTS), and the cards are picked and checked on the rule's numbers, so no card
+//      fails a check by the rule. Where the rule ranks a pick behind the estimate, the grid's designs ahead of it by the
+//      estimate join too (up to PA_EXACT_RULE_FALLBACKS a slot). The grid's thresholds (the limits, the target, your
+//      design's numbers, the picks') are the rule's, but it filters its own designs by the estimate against them, so
+//      it can pass over a design the rule would admit: the cards are the best the grid finds, not guaranteed best by
+//      the rule.
 import { PA_SLIDERS } from "../../constants/paSliders";
 import { throttledProgress } from "../optimizer/progress";
 import {
   ALT_OUTPUT_DB,
   AMP_WATTS_STEPS,
+  PA_FINALISTS,
   SUB_BAND_HZ,
   SAME_VOLUME,
   SUB_BOX_RANGE,
@@ -52,6 +60,7 @@ import {
   heaviestLiftLb,
   pistonBeamWidthDeg,
   braceWoodEstimate,
+  subBoxBracing,
   braceWoodIn3,
   subGeometry,
   subWeightLb,
@@ -127,6 +136,7 @@ import type {
   VentSpec,
 } from "../../types";
 import { towerMidDims } from "./tower";
+import type { CardSlot } from "../optimizer/selectCards";
 import { savedBackJoint } from "../../constants/bracing";
 
 // the most vent sizes any style has (a cache key's stride)
@@ -184,6 +194,23 @@ const perGoal = <T>(f: (g: PaGoal) => T): Record<PaGoal, T> => ({
 });
 // how much better a design must rank than a pick for the pool to take it (the fast path matches the planner to ~1e-12)
 const TOL = 1e-9;
+/**
+ * How many of the grid's designs a card slot takes in one selection that the bracing rule then puts behind the pool's
+ * pick for that slot, or rules out (a design joins the pool by the rule; the grid ranks by the estimate), counted by
+ * pairs of boxes with their drivers (the sub's and the mid's) and by designs: past either, the slot keeps the pool's
+ * pick, or none, as it stands. The rule can weigh a whole family of boxes heavier than the estimate does, and the grid
+ * would hand those over one by one (issue #75). A design the rule puts behind the pick isn't offered to that slot again
+ * in its other crossovers and horns while that pick stands: the rule moves a design only by its boxes' braces, and
+ * those are behind it by the estimate. Nor is a sub box, or a mid box with its driver, whose own weight by the rule is
+ * over what the slot allows: no other part brings it under. These bound the search, not the cards: a card past them is
+ * left out (the slot keeps the pool's pick, or none), never shown wrong.
+ */
+export const PA_EXACT_RULE_FALLBACKS = { pairs: 48, designs: 128 } as const;
+/**
+ * How many designs the grid hands one card slot in one selection: a bound on the rounds that never leaves a later slot
+ * unsearched (each slot has its own).
+ */
+export const PA_EXACT_SLOT_ROUNDS = 200;
 
 // ---- the grid ----
 
@@ -541,7 +568,16 @@ interface Query {
   ok: (m: PaMetric) => boolean;
   /** the cards a design has to differ from (selectCards' `differs`) */
   avoid: readonly PaPoolEntry[];
+  /** the card slot it fills (each slot's PA_EXACT_RULE_FALLBACKS count apart); null: the near miss's own search */
+  slot: CardSlot<PaGoal> | null;
 }
+/**
+ * A design the grid offers a card slot, with the slot's pick in the pool ranked by the rule (null: the pool has none)
+ * and named (its config; empty when none).
+ */
+type Offer = Found & { pickRank: [number, number] | null; pickId: string };
+const slotKey = (slot: CardSlot<PaGoal>) =>
+  slot.kind === "alt" ? `${slot.kind}|${slot.axis}` : slot.kind;
 const ANY: Need = {
   outMin: -Infinity,
   f3Max: Infinity,
@@ -619,7 +655,7 @@ function exactHook(
   scored: readonly (readonly PaExactScored[])[],
   onProgress: OptimizerProgressCallback | undefined,
   grid: PaExactGrid,
-): PaExactHook & { stats: () => { designs: number; subDesigns: number } } {
+): PaExactHook & { stats: () => { designs: number; subDesigns: number; rounds: number } } {
   const s = exactSpace(input, grid);
   const stride = ROW_HEAD + s.xoIdx.length;
   // the shares' curves, per sub, keyed by rung, tuning and highpass
@@ -653,6 +689,69 @@ function exactHook(
   const bareCache = new PairCache<{ pairs: Pairs; size: number }>();
   const groupCache = new PairCache<GroupState>();
   const rejected = new Set<string>();
+  // per card slot in this selection: the box pairs and the count of designs the rule has turned down
+  // (PA_EXACT_RULE_FALLBACKS) and the designs the grid has handed it (PA_EXACT_SLOT_ROUNDS)
+  let fallbacks = new Map<string, { pairs: Set<string>; designs: number }>();
+  // what a slot is never offered again, keyed by what makes it stand, as a slot's weight and pick can change within a
+  // selection (a heavier first card loosens a Lighter alternative's weight; a new first card can rule out an
+  // alternative's pick): the designs the rule put behind the slot's pick, by the slot and that pick (behindKey); the sub
+  // boxes and the mid boxes the rule put over the slot's weight by themselves, by the slot and that weight (weightKey)
+  const behindPick = new Map<string, Set<string>>();
+  const overWeight = new Map<string, Set<string>>();
+  // by weightKey, the most the rule has weighed a sub box over the estimate there: those searches weigh the sub boxes
+  // near the weight by the rule
+  const heavyByRule = new Map<string, number>();
+  const weightKey = (q: Query) => (q.slot ? `${slotKey(q.slot)}|${q.need.heaviestMax}` : null);
+  const behindKey = (q: Query, pickId: string) => (q.slot ? `${slotKey(q.slot)}|${pickId}` : null);
+  // a sub box's weight by the rule, as evaluateDesign weighs it (the bracing rule keeps its own memo)
+  const ruledLb = new Map<string, number>();
+  const ruledSubLb = (sd: SubDesign) => {
+    const hit = ruledLb.get(sd.key);
+    if (hit !== undefined) return hit;
+    const sub = s.subs[sd.si];
+    const lb = subWeightLb(
+      sd.box,
+      sd.t,
+      sub.lb,
+      subBoxBracing(
+        sd.box,
+        sd.t,
+        s.cur.inset,
+        sd.style,
+        sd.vent,
+        sub,
+        s.braceStyle,
+        undefined,
+        s.backJoint,
+      ),
+    );
+    ruledLb.set(sd.key, lb);
+    return lb;
+  };
+  let slotRounds = new Map<string, number>();
+  // the most rounds one selection has taken (the stats)
+  let maxRounds = 0;
+  // a mid box with its driver, as the rule weighs it (in the tower, the whole upper on the sub's box, horn and all)
+  const midBoxKey = (sd: SubDesign, u: Upper) =>
+    `${s.tower ? `${sd.key}|${u.hp.cd.id}|${u.hp.h.id}|` : ""}${u.mid.id}|${u.mDim.w}|${u.mDim.h}|${u.mDim.d}`;
+  // the sub's and the mid's boxes with their drivers (PA_EXACT_RULE_FALLBACKS counts these)
+  const pairKey = (sd: SubDesign, u: Upper) => `${sd.key}|${midBoxKey(sd, u)}`;
+  // a design but for its crossovers and horn: what the rule moves alike (the behind-pick skip)
+  const designKey = (sd: SubDesign, u: Upper) => `${pairKey(sd, u)}|${u.mAmpW}`;
+  // the slots the grid had nothing for in this selection, by the picks they were held to: the grid only loses designs as
+  // the rounds go (each it hands over is set aside), so they stay settled while the picks stand
+  const settled = new Set<string>();
+  // the pool's designs by the searches' brace estimate, as the grid ranks its own (the pool carries the rule's numbers)
+  const estimated = new WeakMap<PaPoolEntry, PaMetric>();
+  const estimateOf = (c: PaSearchContext, p: PaPoolEntry): PaMetric => {
+    const hit = estimated.get(p);
+    if (hit) return hit;
+    const m = evaluateDesign(p.c, true);
+    // a pool design evaluated by the rule evaluates by the estimate too (only the braces' wood differs)
+    const est = m ? c.metric({ ...p, m }) : c.metric(p);
+    estimated.set(p, est);
+    return est;
+  };
   // progress (the model step reports its own): each card slot an equal share, the slot being searched filled by the units
   // its search has settled. The selection runs the slots again each round and for the near miss, so this can go back;
   // the page's runner shows the furthest it has got.
@@ -1346,11 +1445,22 @@ function exactHook(
     q: Query,
     start: [number, number],
     first = false,
+    /** the slot's pick the search is held to (behindKey) */
+    pickId = "",
   ): Found | null => {
     let best: Found | null = null;
     let bestRank: [number, number] = start;
     const bestNow = () => bestRank;
     const cut = splits(q);
+    // what this slot skips, at its weight and pick (PA_EXACT_RULE_FALLBACKS)
+    const wk = weightKey(q),
+      bk = behindKey(q, pickId);
+    const heavy = wk === null ? undefined : overWeight.get(wk);
+    const behind = bk === null ? undefined : behindPick.get(bk);
+    // once the rule has put one of this slot's sub boxes over its weight, it weighs by the rule those the estimate puts
+    // within twice that box's gap of the weight (the rest go on as the estimate has them, and the rule checks them when
+    // they join the pool)
+    const heavyGap = wk === null ? undefined : heavyByRule.get(wk);
     // the units, each with its floor, best floor first
     const cand: { u: Unit; r: [number, number] }[] = [];
     for (const u of units) {
@@ -1377,6 +1487,13 @@ function exactHook(
           sd.box,
         );
         if (!fl || !before(fl, bestRank)) continue;
+        if (heavy !== undefined && heavy.has(sd.key)) continue;
+        if (
+          heavyGap !== undefined &&
+          sd.lb + 2 * heavyGap > q.need.heaviestMax &&
+          ruledSubLb(sd) > q.need.heaviestMax + EPS
+        )
+          continue;
         // the mids this design can't take: those of a card it is too like (same sub, vent style, plywood, volume)
         const banned = q.avoid
           .filter(
@@ -1422,7 +1539,9 @@ function exactHook(
               sd.chS + e.chU > q.need.chMax ||
               sub.price + e.midP + e.cdP > q.need.priceMax + EPS ||
               heaviestLiftLb(s.cur.layout, sd.lb, e.midLb) > q.need.heaviestMax + EPS ||
-              banned.includes(e.mid.id)
+              banned.includes(e.mid.id) ||
+              (heavy !== undefined && heavy.has(midBoxKey(sd, e))) ||
+              (behind !== undefined && behind.has(designKey(sd, e)))
             )
               continue;
             const f = design(c, sd, xi, e, q);
@@ -1481,7 +1600,11 @@ function exactHook(
   const bestText = (g: PaGoal, m: PaMetric) => BEST_WORDS[g](m);
 
   // ---- the design a card would carry, checked with the planner's own model ----
-  const materialize = (c: PaSearchContext, f: Found): PaPoolEntry | null => {
+  const materialize = (
+    c: PaSearchContext,
+    f: Found,
+    { pickRank, pickId }: Pick<Offer, "pickRank" | "pickId"> = { pickRank: null, pickId: "" },
+  ) => {
     const { sd, u } = f;
     const sub = s.subs[sd.si];
     const cfg: PaDesignConfig = {
@@ -1503,6 +1626,7 @@ function exactHook(
     };
     const m = evaluateDesign(cfg, true);
     const p = m && { c: cfg, m, ch: c.changes(cfg) };
+    // the fast path against the planner's model, both with the braces by the estimate
     const ok =
       p &&
       m &&
@@ -1513,14 +1637,50 @@ function exactHook(
       Math.abs(m.f3 - f.m.f3) < 1e-6 &&
       c.metric(p).w === f.m.w &&
       p.ch === f.m.ch;
-    if (!ok || !p) {
-      rejected.add(`${sd.key}|${f.xi}|${f.ui}`);
-      return null;
+    // the searches skip it from now on: it joins the pool (where another card may take it, or none, by the rule) or
+    // the fast path got it wrong; either way the next round would find it again
+    rejected.add(`${sd.key}|${f.xi}|${f.ui}`);
+    if (!ok || !p) return null;
+    // in the pool by the bracing rule, as the planner builds it (lib/pa/optimize PA_FINALISTS): the rule can rank it
+    // behind the pick it beat by the estimate, or fail a check it passed, and the next round tries the grid's next best
+    const ruled = evaluateDesign(cfg);
+    if (!ruled) return null;
+    const entry: PaPoolEntry = { ...p, m: ruled };
+    estimated.set(entry, c.metric(p));
+    // a fallback: the rule rules it out of the slot, or puts it no further ahead than the pool's pick
+    const rule = c.metric(entry);
+    const [r0, r1] = f.q.rank(rule);
+    const out =
+      !f.q.ok(rule) ||
+      (!!f.q.limits &&
+        (rule.price > f.q.limits.budget + 1e-9 || rule.heaviest > f.q.limits.maxLb + 1e-9)) ||
+      designProblems(ruled, { maxLb: Infinity, budget: Infinity, allow: c.lim.allow }).length > 0;
+    const behind =
+      !!pickRank &&
+      !(r0 < pickRank[0] - TOL || (r0 <= pickRank[0] + TOL && r1 < pickRank[1] - TOL));
+    if (f.q.slot && (out || behind)) {
+      const k = slotKey(f.q.slot);
+      const fb = fallbacks.get(k) ?? { pairs: new Set<string>(), designs: 0 };
+      fb.pairs.add(pairKey(sd, u));
+      fb.designs++;
+      fallbacks.set(k, fb);
+      // skipped from now on: the design behind the pick (while it stands), and a sub box or mid box over the slot's
+      // weight by itself (while the weight stands: the limit, or under your design or the first card for a lighter one)
+      const bk = behindKey(f.q, pickId),
+        wk = weightKey(f.q);
+      if (behind && bk !== null)
+        behindPick.set(bk, (behindPick.get(bk) ?? new Set<string>()).add(designKey(sd, u)));
+      const maxLb = f.q.need.heaviestMax;
+      if (wk !== null) {
+        const heavy = overWeight.get(wk) ?? new Set<string>();
+        if (ruled.subLb > maxLb + 1e-9) {
+          heavy.add(sd.key);
+          heavyByRule.set(wk, Math.max(heavyByRule.get(wk) ?? 0, ruled.subLb - sd.lb));
+        } else if (ruled.midLb > maxLb + 1e-9) heavy.add(midBoxKey(sd, u));
+        overWeight.set(wk, heavy);
+      }
     }
-    // the fast numbers can sit on a threshold the planner's land just past: the design still joins the pool (another
-    // card may take it) but the searches skip it from now on, or the next round would find it again
-    if (!f.q.ok(c.metric(p))) rejected.add(`${sd.key}|${f.xi}|${f.ui}`);
-    return p;
+    return entry;
   };
 
   // ---- setup on the first card selection ----
@@ -1686,7 +1846,15 @@ function exactHook(
     if (!ctx) setup(c);
     let closestAdded = false;
     return (L, tgt) => {
-      for (let round = 0; round < 200; round++) {
+      fallbacks = new Map();
+      behindPick.clear();
+      overWeight.clear();
+      heavyByRule.clear();
+      slotRounds = new Map();
+      settled.clear();
+      // each round hands a design to a slot, and each slot takes at most PA_EXACT_SLOT_ROUNDS: this ends
+      for (let round = 0; ; round++) {
+        maxRounds = Math.max(maxRounds, round);
         const r = choose(L, tgt);
         const add = missing(c, r, L, tgt);
         if (!add && !closestAdded && (!r || r.fixMisses)) {
@@ -1701,10 +1869,13 @@ function exactHook(
           report(true);
           return r;
         }
-        const p = materialize(c, add);
+        if (add.q.slot) {
+          const k = slotKey(add.q.slot);
+          slotRounds.set(k, (slotRounds.get(k) ?? 0) + 1);
+        }
+        const p = materialize(c, add, add);
         if (p) c.pool.push(p);
       }
-      return choose(L, tgt);
     };
   };
   // what each card slot asks of a design, as selectCards and lib/pa/optimize's choose ask it
@@ -1733,6 +1904,7 @@ function exactHook(
     limits: null,
     ok: () => true,
     avoid: [],
+    slot: null,
   });
   // the first slot that the grid fills better than the pool (or fills where the pool can't), as the design to add
   const missing = (c: PaSearchContext, r: PaChosen | null, L: PaProblemLimits, tgt: number) => {
@@ -1745,14 +1917,35 @@ function exactHook(
     // pick stands)
     // the slots this selection fills (up to three cards: the first, the smallest change, alternatives), for progress
     progress.slots = Math.min(3, 1 + (c.curMet ? 1 : 0) + c.altAxes.length);
-    const check = (q: Query, pick: PaPoolEntry | undefined, first = false) => {
+    // the selection the slots' queries are built from (their picks, what they must differ from and beat)
+    const picks = JSON.stringify(cards.map((k) => [k.slot, k.p.c]));
+    const check = (q: Query, pick: PaPoolEntry | undefined, first = false): Offer | null => {
       progress.slot = Math.min(taken.length, progress.slots - 1);
-      const pr = pick ? q.rank(c.metric(pick)) : null;
-      const f = search(c, q, pr ?? [Infinity, Infinity], first);
-      return f &&
+      if (q.slot) {
+        const k = slotKey(q.slot);
+        const fb = fallbacks.get(k);
+        if (
+          (fb &&
+            (fb.pairs.size >= PA_EXACT_RULE_FALLBACKS.pairs ||
+              fb.designs >= PA_EXACT_RULE_FALLBACKS.designs)) ||
+          (slotRounds.get(k) ?? 0) >= PA_EXACT_SLOT_ROUNDS
+        )
+          return null;
+      }
+      const done = q.slot ? `${slotKey(q.slot)}|${picks}` : null;
+      if (done && settled.has(done)) return null;
+      // the grid ranks by the estimate, so it is held to the pick's estimate (by the rule, the pick may rank lower: the
+      // designs between are added, and ranked by the rule)
+      const pr = pick ? q.rank(estimateOf(c, pick)) : null;
+      const pickId = pick ? JSON.stringify(pick.c) : "";
+      const f = search(c, q, pr ?? [Infinity, Infinity], first, pickId);
+      if (
+        f &&
         (!pr || f.rank[0] < pr[0] - TOL || (f.rank[0] <= pr[0] + TOL && f.rank[1] < pr[1] - TOL))
-        ? f
-        : null;
+      )
+        return { ...f, pickRank: pick ? q.rank(c.metric(pick)) : null, pickId };
+      if (done) settled.add(done);
+      return null;
     };
     let i = 0;
     const taken: PaPoolEntry[] = [];
@@ -1765,6 +1958,7 @@ function exactHook(
       limits: L,
       ok: (m) => meets(m) && beatsAll(m),
       avoid: [],
+      slot: { kind: "first" },
     };
     const f1 = check(qFirst, firstCard?.p, true);
     if (f1) return f1;
@@ -1780,6 +1974,7 @@ function exactHook(
         limits: L,
         ok: meets,
         avoid: [],
+        slot: { kind: "fix" },
       };
       const ff = check(qFix, fix?.p);
       if (ff) return ff;
@@ -1800,6 +1995,7 @@ function exactHook(
           limits: L,
           ok: () => true,
           avoid: [],
+          slot: { kind: "closest" },
         };
         const fc = check(qClose, close?.p);
         if (fc) return fc;
@@ -1819,6 +2015,7 @@ function exactHook(
         limits: L,
         ok: (m) => m.ch <= 1 && meets(m) && beatsAll(m),
         avoid,
+        slot: { kind: "smallest" },
       };
       const fs = check(qSmall, small?.p);
       if (fs) return fs;
@@ -1847,6 +2044,7 @@ function exactHook(
           (!c.curMet || c.beats[g](m, c.curMet)) &&
           (!firstM || c.beats[g](m, firstM)),
         avoid: [...taken],
+        slot: { kind: "alt", axis: g },
       };
       const fa = check(qAlt, alt?.p);
       if (fa) return fa;
@@ -1858,9 +2056,19 @@ function exactHook(
     return null;
   };
 
-  // the lightest sub box on the grid that works (fits its vent and driver), lightest bare box first
+  // the lightest sub box on the grid that works (fits its vent and driver): the lightest few by the estimate
+  // (PA_FINALISTS.cards), lightest bare box first, each weighed by the rule as the planner builds it
   const lightestSubLb = () => {
-    let best = Infinity;
+    type Light = Pick<SubDesign, "si" | "t" | "style" | "vent" | "box" | "lb">;
+    const few: Light[] = [];
+    // the estimate's weight a box must beat to be one of the few
+    const bar = () => (few.length < PA_FINALISTS.cards ? Infinity : few[few.length - 1].lb);
+    const keep = (x: Light) => {
+      if (x.lb >= bar()) return;
+      few.push(x);
+      few.sort((a, b) => a.lb - b.lb);
+      if (few.length > PA_FINALISTS.cards) few.pop();
+    };
     const order = units
       .map((u) => ({
         u,
@@ -1871,24 +2079,50 @@ function exactHook(
       .sort((a, b) => a.lb - b.lb);
     for (const { u } of order) {
       if (u.own) {
-        best = Math.min(best, u.own.lb);
+        keep(u.own);
         continue;
       }
       for (let ti = 0; ti < s.walls.length; ti++) {
-        const floor = lightestOf(bare(u.si, ti, u.ri));
-        if (floor >= best) continue;
-        for (let st = 0; st < s.styles.length; st++)
-          ventSizesFor(s.styles[st]).forEach((_, zi) => {
-            for (const sh of shapes(u.si, ti, st, zi, u.fi, u.ri)) best = Math.min(best, sh.lb);
+        if (lightestOf(bare(u.si, ti, u.ri)) >= bar()) continue;
+        for (let st = 0; st < s.styles.length; st++) {
+          const style = s.styles[st];
+          ventSizesFor(style).forEach((size, zi) => {
+            for (const sh of shapes(u.si, ti, st, zi, u.fi, u.ri))
+              if (sh.lb < bar()) {
+                const vent = { ...s.cur.cVent, ...size, len: sh.len };
+                keep({ si: u.si, t: s.walls[ti], style, vent, box: sh.box, lb: sh.lb });
+              }
           });
+        }
       }
     }
-    return best === Infinity ? null : best;
+    if (!few.length) return null;
+    return Math.min(
+      ...few.map(({ si, t, style, vent, box }) => {
+        const sub = s.subs[si];
+        return subWeightLb(
+          box,
+          t,
+          sub.lb,
+          subBoxBracing(
+            box,
+            t,
+            s.cur.inset,
+            style,
+            vent,
+            sub,
+            s.braceStyle,
+            undefined,
+            s.backJoint,
+          ),
+        );
+      }),
+    );
   };
   return {
     close,
     lightestSubLb,
-    stats: () => ({ designs, subDesigns }),
+    stats: () => ({ designs, subDesigns, rounds: maxRounds }),
   };
 }
 const BEST_WORDS: Record<PaGoal, (m: PaMetric) => string> = {
@@ -1932,6 +2166,7 @@ export function optimizePaStackExact(
       subs: st.subDesigns,
       combos: st.designs,
       pool: res.stats.pool,
+      rounds: st.rounds,
     },
   };
 }
