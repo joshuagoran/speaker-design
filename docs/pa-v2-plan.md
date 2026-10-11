@@ -60,19 +60,19 @@ taller, and its loading and lobing figures differ from the 2 × 10″ figures be
 
 ### Pairing subs and mids
 
-A mid box has 2 cones. Pick the mid count for the sub count, then set the sub/mid crossover where the mids keep up.
+A mid box has 2 cones. The planner's music balance sets what each band needs: the mids 6 dB under the subs, the HF
+3 dB under the mids (`tilt`, `hfTilt`). So the HF needs the sub level less ~9 dB. Levels at a 120 Hz crossover, from
+the horn engine:
 
-| Per side              | Sub/mid crossover | Level (model)    | HF horns            |
-| --------------------- | ----------------- | ---------------- | ------------------- |
-| 1 × 18″ + 1 mid box   | ~120–150 Hz       | ~131 dB _(est.)_ | 1                   |
-| 2 × 18″ + 1 mid box   | ~150–200 Hz       | ~134 dB          | 2                   |
-| 2 × 18″ + 2 mid boxes | ~120 Hz           | ~137 dB          | 2–3                 |
-| 4 × 18″ + 3 mid boxes | ~120–140 Hz       | ~142 dB _(est.)_ | 3–4, or a bigger CD |
+| Per side | Sub     | Mids need | Mid boxes      | HF needs | HF      |
+| -------- | ------- | --------- | -------------- | -------- | ------- |
+| 1 × 18″  | ~132 dB | ~126 dB   | 1 (6 dB spare) | ~123 dB  | 1 N314T |
+| 2 × 18″  | ~138 dB | ~132 dB   | 1 (no spare)   | ~129 dB  | 1 N314T |
+| 4 × 18″  | ~144 dB | ~138 dB   | 2              | ~135 dB  | 2 N314T |
 
-Levels come from the horn engine (see [Modeled with the horn engine](#modeled-with-the-horn-engine)). One N314T
-gives ~128–131 dB, so the HF count sets the stack's limit.
+One N314T gives ~131 dB. The 1 × 18″ and 4 × 18″ rows are estimates from the 2 × 18″ model (−6 dB, +6 dB).
 
-- Add a third mid box only with 4 × 18″. With fewer subs, the mids out-run the subs.
+- A third mid box is not needed with up to 4 × 18″.
 - Grow a stack in this order: a second mid box, then subs, then HF.
 - The front end steps the sub/mid crossover with the stack size (see [Scaling](#scaling)).
 
@@ -124,7 +124,8 @@ The sub is tuned to 35 Hz with a 30 Hz BW24 subsonic, applied in its figures.
 - **Vents.** The sub's slots (~760 mm) fold once along the back wall; the box stays 766 mm deep. The mid's slots
   (~180 mm) stay straight. The wedges beside the sub's flare join its rear chamber (~324 L net). The mid's are sealed.
 - **18TBX100.** It equals the 18NBX100 in this bin, within 0.3 dB. It costs $49 less and weighs 8 lb more per driver.
-- **The HF is the limit.** One N314T gives ~128–131 dB, 5–8 dB under the subs and mids.
+- **The HF keeps up.** One N314T (~131 dB) covers 2 × 18″ and 1 mid box at the planner's music balance, with
+  ~2 dB to spare.
 - **Little sub-to-top delay.** Both have ~3–5 ms group delay at 120–150 Hz.
 - **Limits.** The geometry is an estimate. Above ~350 Hz the mid results are approximate (1-D model).
 
@@ -417,15 +418,36 @@ With no DSP, a wrong patch or a turned knob can send full-range signal to the N3
 - **Class H:** about three 2-channel amps (for example used QSC RMX or Crest CA _(unverified)_). Much heavier than the
   class D v1 amps.
 
+## HF options for bigger stacks
+
+A 4 × 18″ stack needs ~6 dB more HF than one N314T.
+
+| Option                            | Gain at the listener | Notes                                                        |
+| --------------------------------- | -------------------- | ------------------------------------------------------------ |
+| A bigger compression driver       | ~0 dB                | The N314T (~131 dB) is already the catalog's strongest       |
+| A narrower horn (90 × 40°)        | ~+2 dB on axis       | Less coverage; (110 × 50) / (90 × 40) ≈ 1.5                  |
+| 2 × N314T, stacked, same aim      | ~+6 dB               | Narrower vertical; lobing above ~1 kHz (horns ~320 mm apart) |
+| 2 × N314T, splayed near/far throw | ~+3 dB overall       | Each horn covers its own zone; +6 dB only where they overlap |
+
+Use two N314T per side for a 4 × 18″ stack. Splay them near and far for a deep room; stack them for a wide, shallow
+one.
+
 ## Super tweeter
 
-The reference stacks add a bullet tweeter above the HF horn for the top octave, from ~8–10 kHz.
+The reference stacks add one above the HF horn for the top octave, from ~8–10 kHz. It does not raise the HF limit:
+that sits at 1–5 kHz, where most HF power goes.
 
-- **Adds:** top-octave level without EQ boost on the N314T, a top end wider than the R-OSSE's ~60° at 10 kHz.
-- **Costs:** another crossover at a 34 mm wavelength, so some comb filtering. Usually on the HF channel through a
-  series capacitor.
+- **Adds:** top-octave level without EQ boost on the N314T, and a wider top end than the R-OSSE's ~60° at 10 kHz.
+  Cutting that EQ boost saves the N314T some voltage on bright material.
+- **Costs:** another crossover at a 34 mm wavelength, so some comb filtering near it.
+
+| Type   | Strengths                                                                  | Limits                                                     |
+| ------ | -------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Bullet | Cheap, efficient (~105–110 dB), runs on the HF channel through a capacitor | Narrow-ish pattern; some sound harsh _(unverified)_        |
+| AMT    | Low distortion, smooth, wide horizontal and narrow vertical                | ~95–100 dB, so 2 or more per side; costlier _(unverified)_ |
+
 - **Plan:** skip it first. Measure the N314T on the R-OSSE. Add one if the top octave falls off or sounds dull
-  off-axis. Leave room above the horn.
+  off-axis. A bullet suits the reference stacks' sound. An AMT suits a smoother top. Leave room above the horn.
 
 ## Fills
 
