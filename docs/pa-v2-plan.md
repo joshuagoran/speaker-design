@@ -62,12 +62,15 @@ taller, and its loading and lobing figures differ from the 2 × 10″ figures be
 
 A mid box has 2 cones. Pick the mid count for the sub count, then set the sub/mid crossover where the mids keep up.
 
-| Per side                       | Sub/mid crossover | System level (rough)      |
-| ------------------------------ | ----------------- | ------------------------- |
-| 1 × 18″ + 1 mid box + 1 HF     | ~120 Hz           | ~125 dB, balanced         |
-| 2 × 18″ + 1 mid box + 1 HF     | ~150 Hz           | ~130 dB, mids and HF full |
-| 2 × 18″ + 2 mid boxes + 1–2 HF | ~110–120 Hz       | ~130 dB, with headroom    |
-| 4 × 18″ + 3 mid boxes + 2–3 HF | ~110–140 Hz       | ~137 dB, bass-heavy       |
+| Per side              | Sub/mid crossover | Level (model)    | HF horns            |
+| --------------------- | ----------------- | ---------------- | ------------------- |
+| 1 × 18″ + 1 mid box   | ~120–150 Hz       | ~131 dB _(est.)_ | 1                   |
+| 2 × 18″ + 1 mid box   | ~150–200 Hz       | ~134 dB          | 2                   |
+| 2 × 18″ + 2 mid boxes | ~120 Hz           | ~137 dB          | 2–3                 |
+| 4 × 18″ + 3 mid boxes | ~120–140 Hz       | ~142 dB _(est.)_ | 3–4, or a bigger CD |
+
+Levels come from the horn engine (see [Modeled with the horn engine](#modeled-with-the-horn-engine)). One N314T
+gives ~128–131 dB, so the HF count sets the stack's limit.
 
 - Add a third mid box only with 4 × 18″. With fewer subs, the mids out-run the subs.
 - Grow a stack in this order: a second mid box, then subs, then HF.
@@ -85,12 +88,37 @@ The second setup is cleaner at the crossover. It needs its own channel for the l
 
 ### Build notes
 
-- **Ports.** The mid ports move much air at 90–110 Hz. Make them large. Flare their ends.
+- **Ports.** Sub: ~600 cm² per driver. Mid: ~120 cm² per driver. Smaller ports limit the output. Flare their ends.
 - **Front chamber.** Start the flare at the cone. Leave no cavity in front of it.
 - **Drivers.** The 18NBX100, 4018LF and 3012HO suit vented chambers. The 10MB600 (Qts 0.22) suits sealed or horn
   loading. Vented, it gives a small chamber and a bump near tuning. A fixed shelf flattens the bump.
 - **Simulate first.** Model the chamber, ports and flare (Hornresp, or the planner's horn engine). Check the sum.
 - **Alignment.** All mouths are flush at the front. The acoustic centers sit at similar depths.
+
+### Modeled with the horn engine
+
+The planner's horn engine (`src/lib/acoustics/`, 1-D) modeled the boxes in the mock-up below. Values are maximum SPL
+at 1 m, half space. The limit is amp power (sub 800 W, mid 450 W per driver), Xmax or vent speed (23.5 m/s). There is
+no power compression.
+
+![Mock-up of the sub bin, mid box and HF](pa-v2-boxes.svg)
+
+| Frequency | Sub bin, 2 × 18NBX100 | Same, plain vented | Mid box, 2 × 10MB600 | Same, plain vented | 2 mid boxes |
+| --------- | --------------------- | ------------------ | -------------------- | ------------------ | ----------- |
+| 60 Hz     | 134 dB                | 133 dB             | 107 dB               | 109 dB             | 112 dB      |
+| 100 Hz    | 137 dB                | 132 dB             | 128 dB (vent)        | 128 dB (vent)      | 134 dB      |
+| 120 Hz    | 138 dB                | 132 dB             | 132 dB               | 130 dB             | 138 dB      |
+| 150 Hz    | 136 dB                | 132 dB             | 134 dB               | 129 dB             | 138 dB      |
+| 200 Hz    | 133 dB                | 132 dB             | 135 dB               | 129 dB             | 137 dB      |
+| 500 Hz    | —                     | —                  | 133 dB               | 130 dB             | 139 dB      |
+| 950 Hz    | —                     | —                  | 134 dB               | 131 dB             | 140 dB      |
+
+- **Horn gain.** The sub bin gains 4–6 dB from 80 to 150 Hz. The mid box gains 3–6 dB from 150 to 950 Hz.
+- **No folded vents.** Straight side slots fit: the sub's are ~480 mm long, the mid's ~180 mm. The wedges beside the
+  sub's flare join its rear chamber (~324 L net). The mid's wedges are sealed.
+- **The HF is the limit.** One N314T gives ~128–131 dB, 5–8 dB under the subs and mids.
+- **Little sub-to-top delay.** Both have ~3–5 ms group delay at 120–150 Hz.
+- **Limits.** The geometry is an estimate. Above ~350 Hz the mid results are approximate (1-D model).
 
 ## Alternative: 4-way with folded horn subs
 
