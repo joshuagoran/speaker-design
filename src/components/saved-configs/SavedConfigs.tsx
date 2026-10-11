@@ -40,6 +40,8 @@ export function SavedConfigs({
   const [sel, setSel] = useState("");
   /** the new name typed while renaming the picked one; null when not renaming */
   const [newName, setNewName] = useState<string | null>(null);
+  /** whether the row asks to confirm Save over (an inline step: a browser dialog can be blocked in the artifact host) */
+  const [confirming, setConfirming] = useState(false);
   if (saved === null) return null;
   const cur = saved.find((c) => c.id === sel);
   const nameToSave = (saveName ?? name).trim();
@@ -49,12 +51,13 @@ export function SavedConfigs({
       const id = await store.create(nameToSave, snapshot());
       if (id) setSel(id);
       setNewName(null);
+      setConfirming(false);
     } else if (await save(nameToSave, snapshot())) setName("");
   };
-  /** the picked one's data replaced by the current design, its name kept, once the viewer confirms which one */
+  /** the picked one's data replaced by the current design, its name kept (after the row's confirm step) */
   const doSaveOver = (target: SavedConfig) => {
-    if (window.confirm(`Replace the saved “${target.name}” with this design? Its name stays.`))
-      void store.overwrite(target.id, target.name, snapshot()); // `overwrite` shows its own failure message
+    setConfirming(false);
+    void store.overwrite(target.id, target.name, snapshot()); // `overwrite` shows its own failure message
   };
   const doRename = async () => {
     if (cur && newName?.trim() && (await store.rename(cur, newName.trim()))) setNewName(null);
@@ -127,6 +130,7 @@ export function SavedConfigs({
                 const c = saved.find((x) => x.id === e.target.value);
                 setSel(e.target.value);
                 setNewName(null);
+                setConfirming(false);
                 if (c) restore(c);
               }}
               className="px-2 py-1.5 rounded border border-stone-300 bg-panel text-sm min-w-0 max-w-full flex-1"
@@ -143,11 +147,22 @@ export function SavedConfigs({
                 </option>
               ))}
             </select>
-            {cur && manage && newName === null && (
+            {cur && manage && newName === null && confirming && (
+              <>
+                <span className="text-sm">Replace “{cur.name}” with this design?</span>
+                <Button size="xs" variant="dark" onClick={() => doSaveOver(cur)}>
+                  Yes
+                </Button>
+                <Button size="xs" onClick={() => setConfirming(false)}>
+                  Cancel
+                </Button>
+              </>
+            )}
+            {cur && manage && newName === null && !confirming && (
               <>
                 <Button
                   size="xs"
-                  onClick={() => doSaveOver(cur)}
+                  onClick={() => setConfirming(true)}
                   aria-label={`Save over ${cur.name}`}
                 >
                   Save over
@@ -187,6 +202,7 @@ export function SavedConfigs({
                   void remove(cur.id); // `remove` shows its own failure message
                   setSel("");
                   setNewName(null);
+                  setConfirming(false);
                 }}
                 aria-label={`Delete ${cur.name}`}
                 className="text-xs text-stone-500 hover:text-red-700 px-1"

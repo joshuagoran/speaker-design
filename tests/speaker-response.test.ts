@@ -723,3 +723,42 @@ test("speaker model: a chamber's stuffing reaches a horn's rear chamber as it do
   assert.ok(Math.abs(read.design.rear.liters - 10 * (1 + chamber.stuffingPct / 100)) < 1e-12);
   assert.equal(chamber.stuffingPct, 10, "the Hi-fi engine's 10%");
 });
+
+test("speaker model: a stuffed horn chamber reports its own net air and plays on the stuffed rear chamber", () => {
+  const sealed = speakerFromHifi(
+    { ...DEFAULT_HIFI, boxType: VENT_KIND.sealed },
+    DEFAULT_HIFI_LOOK,
+    { id: "hifi", name: "stuffed horn" },
+  );
+  const [chamber] = sealed.cabinet.chambers;
+  const horn: SpeakerChamber = {
+    ...chamber,
+    netLiters: 10,
+    stuffingPct: 20,
+    drivers: chamber.drivers.filter((d) => d.kind === "woofer"),
+    load: {
+      kind: CHAMBER_LOAD.horn,
+      horn: {
+        throatChamber: 0.5,
+        segments: [{ profile: HORN_PROFILE.exponential, s1: 150, s2: 600, length: 40 }],
+        portOffset: 0,
+        drive: { kind: HORN_DRIVE.front },
+        path: HORN_PATH.straight,
+      },
+    },
+  };
+  const spec: SpeakerSpec = {
+    ...sealed,
+    cabinet: { ...sealed.cabinet, chambers: [horn] },
+    bands: [{ id: SPEAKER_BAND.low, highpass: null, lowpass: null, levelDb: 0, drive: "active" }],
+  };
+  const response = speakerResponse(spec);
+  assert.equal(response.chambers[0].netLiters, 10, "the chamber's own net air, as a direct one");
+  const read = hornDesignOf(horn, { count: 1, angle: 2 });
+  assert.ok(read.ok);
+  assert.ok(Math.abs(read.design.rear.liters - 12) < 1e-12, "the engine's rear chamber: 20% more");
+  const model = hornModel(read.design, SPEAKER_RESPONSE_FREQUENCIES, SPEAKER_RESPONSE_VOLTS);
+  assert.ok(model);
+  const low = bandCurve(response, SPEAKER_BAND.low);
+  assert.ok(low.every((o, i) => Math.abs(o.spl - model.curve[i].spl) < 1e-9));
+});

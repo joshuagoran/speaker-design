@@ -132,7 +132,8 @@ function modelChamber(
     if (!model) return empty([SPEAKER_MODEL_GAP.noModel]);
     return {
       pressure: model.curve.map((o) => pressureOf(o.spl, o.phase)),
-      result: { netLiters: read.design.rear.liters, fb: model.fb, qtc: null, gaps: [] },
+      // the chamber's own net air, as a direct chamber reports it (the engine's rear chamber adds the stuffing)
+      result: { netLiters, fb: model.fb, qtc: null, gaps: [] },
     };
   }
   const ts = bank(parts, cones.count);

@@ -201,6 +201,7 @@ export function useConfigStore(collection: string) {
     fbUser,
     cfgMsg,
     setCfgMsg,
+    flash,
     signIn,
     signOut,
     save,

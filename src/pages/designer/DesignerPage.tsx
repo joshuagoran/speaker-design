@@ -50,6 +50,9 @@ interface Props {
   hifi: HifiPlanner;
 }
 
+/** The bands drawn dashed: the air band shares the high band's color. */
+const BAND_DASH: Partial<Record<BandId, string>> = { air: "6 4" };
+
 /** Every band id, low to high. */
 const BAND_IDS = keysOf(SPEAKER_BAND);
 
@@ -89,8 +92,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
     low: pal.muted,
     mid: pal.magenta,
     high: pal.cyan,
-    // the top octave in the brand's yellow accent: drawn under the sum, it reads by its legend
-    air: pal.yellow,
+    // the top octave: the high band's cyan, dashed (BAND_DASH)
+    air: pal.cyan,
   };
   const usedIds = spec.bands.map((b) => b.id);
   const nextBandId = BAND_IDS.find((id) => !usedIds.includes(id));
@@ -167,6 +170,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                   curve: b.curve.filter((o) => o.spl >= HIFI_BOT),
                   label: BAND_NAMES[b.id],
                   stroke: bandStroke[b.id],
+                  dash: BAND_DASH[b.id],
                   tint: "transparent",
                 })),
               ]}

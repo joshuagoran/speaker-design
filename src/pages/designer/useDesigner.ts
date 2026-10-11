@@ -103,7 +103,7 @@ export function useDesigner() {
     const saved: unknown = Reflect.get(c, "speaker");
     // a document without a speaker (written elsewhere): left closed, with a word on the library's row
     if (!isSavedSpeaker(saved)) {
-      store.setCfgMsg(MISSING_SPEAKER_TEXT);
+      store.flash(MISSING_SPEAKER_TEXT);
       return;
     }
     setSpec({ ...saved, id: c.id, name: c.name });
