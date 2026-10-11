@@ -562,9 +562,9 @@
   "max60": 107.27,
   "max100": 110.94,
   "who100": "Xmax",
-  "pad": 0,
-  "hfLimW": null,
-  "lb": 18.61,
+  "pad": 11.5,
+  "hfLimW": 1412.54,
+  "lb": 20.31,
   "portLimited": true
  },
  "fill: embeta10cx vented": {
@@ -576,9 +576,9 @@
   "max60": 105.44,
   "max100": 118.43,
   "who100": "Xmax",
-  "pad": 0,
-  "hfLimW": null,
-  "lb": 19.11,
+  "pad": 10.1,
+  "hfLimW": 1023.29,
+  "lb": 20.81,
   "portLimited": true
  },
  "fill: f8hx200 vented": {
@@ -814,9 +814,9 @@
   "max60": 98.39,
   "max100": 107.17,
   "who100": "Xmax",
-  "pad": 0,
-  "hfLimW": null,
-  "lb": 18.61,
+  "pad": 11.5,
+  "hfLimW": 1412.54,
+  "lb": 20.31,
   "portLimited": false
  },
  "fill: embeta10cx sealed": {
@@ -828,9 +828,9 @@
   "max60": 104.14,
   "max100": 114.59,
   "who100": "Xmax",
-  "pad": 0,
-  "hfLimW": null,
-  "lb": 19.11,
+  "pad": 10.1,
+  "hfLimW": 1023.29,
+  "lb": 20.81,
   "portLimited": false
  },
  "fill: f8hx200 sealed": {

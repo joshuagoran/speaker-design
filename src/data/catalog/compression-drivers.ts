@@ -254,7 +254,7 @@ export const CD_RAW: readonly CompressionDriver[] = [
     },
     price: 192.58,
     src: "Parts Express, Oct 2026",
-    note: "[preliminary datasheet, beyma.com, 01/23] Ferrite, 2.5 in CCAW coil on Nomex, titanium dome and surround, copper shorting cap. 80 W AES above 800 Hz / 100 W AES above 1.2 kHz (160 W / 200 W program), 108 dB 1 W/1 m averaged 1\u20137 kHz on the TD-385, 600 Hz\u201320 kHz, 7.7 lb (PE lists 7.95 lb). Beyma's minimum crossover is 800 Hz at 12 dB/oct, but the diaphragm resonance (impedance peak) sits near 1.1 kHz, so the catalog uses 1.2 kHz as the reliable minimum, with the 100 W rating. 4 \u00d7 M6 on a 101.6 mm circle, the N314T's pattern, so it bolts to the 1.4\u2033 horns here. 5.71 in across, 2.47 in deep. Exit flare angle not published, which an ATH throat adapter needs. Body: ⌀5.71 × 2.47 in, 4×M6 on a 101.6 mm circle (Beyma datasheet).",
+    note: "[preliminary datasheet, beyma.com, 01/23] Ferrite, 2.5 in CCAW coil on Nomex, titanium dome and surround, copper shorting cap. 80 W AES above 800 Hz / 100 W AES above 1.2 kHz (160 W / 200 W program), 108 dB 1 W/1 m averaged 1\u20137 kHz on the TD-385, 600 Hz\u201320 kHz, 7.7 lb (PE lists 7.95 lb). Beyma's minimum crossover is 800 Hz at 12 dB/oct, but Beyma's TD-385 curve shows the main impedance peak and the response knee at about 1.1 kHz (about −10 dB at 800 Hz, −3 dB at 1.2 kHz), so the catalog uses 1.2 kHz as the reliable minimum, with the 100 W rating. The 800 Hz rating is an AES2 survival figure (80 W), not a flat-output or low-distortion one. The real diaphragm resonance is probably the smaller peak near 530 Hz, damped by the horn (inferred; Beyma gives no Fs). Sources: the Fe/Ti, Fe/PT and Fe/PK datasheets (Preliminary, 01/23) on beyma.com; Vance Dickason's audioXpress Test Bench reviews of the CD-2514Nd/PT and Nd/PK (impedance with and without a horn, distortion). 4 \u00d7 M6 on a 101.6 mm circle, the N314T's pattern, so it bolts to the 1.4\u2033 horns here. 5.71 in across, 2.47 in deep. Exit flare angle not published, which an ATH throat adapter needs. Body: ⌀5.71 × 2.47 in, 4×M6 on a 101.6 mm circle (Beyma datasheet).",
   },
   {
     id: "de360",
@@ -350,5 +350,28 @@ export const CD_RAW: readonly CompressionDriver[] = [
     price: 252.99,
     src: "Parts Express, Oct 2026",
     note: "[Eminence datasheet, Oct 2026] (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/N320T8.pdf) The 2\u2033-exit sibling of the N314T: the same 3 in titanium diaphragm with D3, neodymium, copper shorting ring, 100 W AES at 800 Hz 12 dB/oct, recommended crossover 800 Hz / 12 dB, 800 Hz\u201320 kHz, 110.4 dB, 521 Hz resonance, 5.5 lb net (5.8 lb shipping). Eminence doesn't call it a 2\u2033 N314T; the shared specs and body say so. The sensitivity's horn or averaging band is not stated on the datasheet page. Exit flare angle not published. Pairs only with 2\u2033 horns (the B&C ME75 here). Body: \u23005.72 \u00d7 3.10 in, 2 in exit, 4\u00d7 1/4-20 on a 4.00 in circle (Eminence datasheet), the N314T's pattern; no photo-derived steps, so it is drawn as the generic stepped body.",
+  },
+  {
+    id: "axi2050",
+    lb: 16.5,
+    name: 'Celestion Axi2050 (2")',
+    hf: {
+      sens: 108,
+      sensRef:
+        'a "compatible horn" (Celestion\'s chart: the SEOS 30), 1 W/1 m on axis, 2π anechoic',
+      aes: 150,
+      aesXo: 500,
+      minXo: 500,
+      imp: 8,
+    },
+    exit: 2,
+    body: {
+      dia: 198 / 25.4,
+      depth: 111 / 25.4,
+      bolts: { n: 4, thread: "M6", circle: 102 / 25.4 },
+    },
+    price: 1100,
+    src: "parts-express.com, Oct 2026 (#294-2142; price from the indexed listing)",
+    note: "[celestion.com product page, Oct 2026] AxiPeriodic wide-band 2″-exit driver: neodymium, 5 in (125 mm) aluminum coil, titanium diaphragm. 150 W AES, 300 W continuous, 108 dB 1 W/1 m on a compatible horn, 300 Hz–20 kHz; Celestion says no midband crossover is needed. 198 mm across, 111 mm deep, 4 × M6 on a 102 mm circle (the N314T's and N320T's pattern), 7.5 kg (16.5 lb). Gaps: Celestion publishes no recommended crossover and no power-test high-pass; 500 Hz is assumed for both (GUESS, from the 300 Hz lower limit). No published body steps, so it is drawn as the generic stepped body. A PA v2 candidate for bigger stacks (docs/pa-v2-plan.md); at 16.5 lb it is over the planner's usual weight limit, and it pairs only with 2″ horns (the B&C ME75 here).",
   },
 ];

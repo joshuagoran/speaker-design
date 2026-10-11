@@ -6,8 +6,8 @@
 // Prices are US dollars from US vendors only; `src` names the vendor and the month the price was read.
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
 // Pure data: no logic, no derived fields (src/lib/data.ts derives and sorts).
-// Fields: id, name, lb, price $, src, type (dome | horn-loaded | compression | ribbon), exit (diameter in, null for a
-// horn-loaded tweeter), faceplate ({ diameter } or { w, h } in, null when the maker gives no size), needsWaveguide,
+// Fields: id, name, lb, price $, src, type (dome | horn-loaded | compression | ribbon; an AMT is a ribbon), exit
+// (diameter in, null for a horn-loaded tweeter), faceplate ({ diameter } or { w, h } in, null when the maker gives no size), needsWaveguide,
 // note, optional ownGuide (a ribbon's own waveguide: covH / covV degrees, w / h in), optional mount (a compression
 // driver's throat: { thread } for a screw-on one; omit it for a bolt-on one); hf: sens dB 1 W/1 m, aes W
 // with a high-pass at aesXo Hz, minXo Hz (the maker's lowest crossover), imp Ω, fs Hz (null where unpublished).
@@ -83,6 +83,60 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     needsWaveguide: false,
     note: "[maker: fostex.jp] 28 mm UFLC soft dome. sens is 90 dB/1 W. aes is 40 W music. Recommended crossover is 2 kHz or higher. The 90 × 78 mm faceplate is from an older Madisound Fostex catalog. lb is gross weight. fs not published. The FT48D is discontinued; this is the current Fostex dome.",
   },
+  {
+    id: "sb29rdac",
+    // GUESS: no weight found (SB's datasheet would not load); about 1 lb is assumed for a 104 mm ferrite ring dome
+    lb: 1,
+    name: "SB Acoustics SB29RDAC-C000-4",
+    price: 68.7,
+    src: "madisoundspeakerstore.com, Oct 2026 (out of stock)",
+    hf: { sens: 90, aes: 100, aesXo: null, minXo: null, imp: 4, fs: 600 },
+    type: "dome",
+    exit: 1.14,
+    faceplate: { diameter: 103.8 / 25.4 },
+    needsWaveguide: false,
+    note: "[vendor: Madisound page, Willys Hi-Fi and Falcon spec tables; SB's datasheet could not be fetched] 29 mm textile ring dome, ferrite, rear chamber. The RDAC is the SB29RDC with an improved aluminum faceplate (Madisound: the SB29RDC, $66.70, is superseded). sens is 93 dB at 2.83 V on 4 Ω, about 90 dB/1 W. aes is 100 W with no high-pass stated. Fs 600 Hz, Re 3.0 Ω, Qts 0.65. 103.8 mm faceplate, about 72 mm cutout. No minimum crossover published. Weight not found.",
+  },
+  {
+    id: "xt25tg30",
+    lb: 1.1,
+    name: "Peerless (Vifa) XT25TG30-04",
+    price: 35.59,
+    src: "parts-express.com, Oct 2026 (#264-1016; price from the indexed listing)",
+    hf: { sens: 87.8, aes: 110, aesXo: null, minXo: null, imp: 4, fs: 436 },
+    type: "dome",
+    exit: 1,
+    faceplate: { diameter: 104 / 25.4 },
+    needsWaveguide: false,
+    note: "[maker: Tymphany XT25TG30-04 datasheet, Rev 1.0, Sep 2009] Ring radiator with a central waveguide (phase plug), 25 mm coil, ferrite, rear chamber. sens is 90.8 dB at 2.83 V on 4 Ω, about 87.8 dB/1 W. aes is 110 W rated noise power (IEC 268-5 18.1); the test spectrum is 400 Hz–20 kHz at 12 dB/oct, so no useful high-pass is given. Fs 436 Hz, Re 3.0 Ω, Xmax 0.65 mm. 104 mm faceplate, 74 mm cutout (retailers). lb is the 0.5 kg unit mass. No minimum crossover published; retailers suggest 2.5 kHz at 12 dB/oct.",
+  },
+  {
+    id: "nd25fa",
+    lb: 0.2,
+    name: "Dayton Audio ND25FA-4",
+    price: 11.49,
+    src: "parts-express.com, Oct 2026 (#275-059; price from the indexed listing)",
+    hf: { sens: 87, aes: 20, aesXo: null, minXo: null, imp: 4, fs: 1350 },
+    type: "dome",
+    exit: 1,
+    faceplate: { diameter: 66 / 25.4 },
+    needsWaveguide: false,
+    note: '[maker: daytonaudio.com, Oct 2026] Budget 1" soft dome, neodymium, small round faceplate. sens is 90 dB at 2.83 V on 4 Ω, about 87 dB/1 W. aes is 20 W RMS (40 W max) with no high-pass stated. 2.5–20 kHz; Dayton says it is flat above 3 kHz, so plan on 3 kHz or higher (no minimum crossover published). Fs 1350 Hz, Re 3.2 Ω. 66 mm across, 45 mm cutout, 35.9 mm deep. The cheapest tweeter on the list.',
+  },
+  {
+    id: "d2905990",
+    // GUESS: Scan-Speak leaves the unit weight blank; about 1.3 lb is assumed for the machined aluminum faceplate
+    lb: 1.3,
+    name: "Scan-Speak Revelator D2905/990000",
+    price: 301.4,
+    src: "madisoundspeakerstore.com, Oct 2026 (out of stock)",
+    hf: { sens: 89.8, aes: 225, aesXo: 2800, minXo: null, imp: 6, fs: 500 },
+    type: "dome",
+    exit: 1.1,
+    faceplate: { diameter: 130 / 25.4 },
+    needsWaveguide: false,
+    note: '[maker: Scan-Speak datasheet, Feb 2011] The original Revelator: 1" treated textile dome (28 mm coil, 33 mm effective), SD-2 motor, large machined aluminum waveguide front. sens is 91 dB at 2.83 V on 6 Ω, about 89.8 dB/1 W. aes is 225 W (IEC 17.1, 100 h noise) with a 2.8 kHz 2nd-order Butterworth high-pass. Fs 500 Hz, Re 4.7 Ω, Xmax ±0.4 mm. 130 mm faceplate, 95 mm cutout (retailers). No minimum crossover published. Over the $250 cap: the premium dome for comparison.',
+  },
   // ---------- Horn-loaded (integral horn) ----------
   {
     id: "ft17h",
@@ -106,9 +160,62 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     hf: { sens: 106, aes: 50, aesXo: 7000, minXo: 7000, imp: 8, fs: null },
     type: "horn-loaded",
     exit: null,
+    faceplate: { diameter: 60 / 25.4 },
+    needsWaveguide: false,
+    note: "[maker: fostex.jp, T90A datasheet (t90arev.pdf)] Top-mount alnico horn super tweeter with a ring diaphragm in a thick-walled aluminum cylindrical horn. sens is 106 dB/1 W. aes is 50 W music. Cross at 7 kHz or higher at −12 dB/oct; cutoff is 3.6 kHz. 5–35 kHz. Body: a ⌀60 mm cylinder, 74.1 mm long, 87.8 mm with the terminals; it ships with a tweeter base and sits on top of the cabinet. faceplate is the ⌀60 mm horn front (it needs no baffle cutout); the Hi-fi layout still puts it on the baffle. Needs a heavy pad. Slightly over the $250 cap. lb is the 800 g (1.76 lb) net weight.",
+  },
+  {
+    id: "st400",
+    // GUESS: Parts Express's 3.13 lb is probably the shipping weight; no net weight found
+    lb: 3.13,
+    name: "Selenium ST400",
+    price: 89.99,
+    src: "parts-express.com, Oct 2026 (#264-450; price from the indexed brand page)",
+    hf: { sens: 111, aes: 150, aesXo: null, minXo: 5000, imp: 8, fs: null },
+    type: "horn-loaded",
+    exit: null,
     faceplate: null,
     needsWaveguide: false,
-    note: "[maker: fostex.jp] Top-mount alnico horn super tweeter with a ring diaphragm. sens is 106 dB/1 W. aes is 50 W music. Cross at 7 kHz or higher at −12 dB/oct; cutoff is 3.6 kHz. It sits on top of the cabinet, so there is no baffle faceplate (null). Needs a heavy pad. Slightly over the $250 cap. lb is gross weight.",
+    note: "[maker: jblpro.com ST400 BLK table; vendor: Parts Express] JBL Selenium bullet super tweeter, phenolic diaphragm, plastic housing. sens is 111 dB 1 W/1 m. aes is 150 W RMS (300 W program) per JBL; Parts Express lists 100 W RMS with a 12 dB/oct crossover above 5 kHz, used as minXo. 3–20 kHz (−10 dB), 40° × 40°. Gaps: faceplate size, net weight and fs not found (the 3.5 in default faceplate is used). JBL lists it as discontinued; Parts Express still sells it. A PA v2 super-tweeter candidate (docs/pa-v2-plan.md), on the HF channel through a capacitor.",
+  },
+  {
+    id: "fd371",
+    lb: 2.8,
+    name: "FaitalPRO FD371",
+    price: 222,
+    src: "parts-express.com, Oct 2026 (#294-1000; price from the indexed listing)",
+    hf: { sens: 107, aes: 35, aesXo: 2600, minXo: 2600, imp: 8, fs: null },
+    type: "horn-loaded",
+    exit: null,
+    faceplate: { diameter: 115.2 / 25.4 },
+    needsWaveguide: false,
+    note: "[maker: FaitalPRO FD371 datasheet, printed Feb 2024] Bullet super tweeter: 37 mm aluminum coil on Kapton, annular ketone polymer diaphragm, annular phase plug, ferrite ring. sens is 107 dB 1 W/1 m averaged over its range. aes is 35 W AES (70 W max) with a 12 dB/oct or steeper high-pass at the 2.6 kHz minimum crossover. 2.6–20 kHz, 40° dispersion. Re 5.5 Ω, minimum impedance 6.6 Ω. 115.2 / 102 mm across, bolt circle 107 mm, cutout 91 mm, 79 mm deep, 1.3 kg. fs not published. A PA v2 super-tweeter candidate.",
+  },
+  {
+    id: "de35",
+    lb: 1.21,
+    name: "B&C DE35-8",
+    price: 97.74,
+    src: "parts-express.com, Oct 2026 (#294-580; price from the indexed listing)",
+    hf: { sens: 108, aes: 25, aesXo: 5000, minXo: 5000, imp: 8, fs: null },
+    type: "horn-loaded",
+    exit: null,
+    faceplate: { diameter: 100 / 25.4 },
+    needsWaveguide: false,
+    note: "[maker: bcspeakers.com DE35 datasheet] Neodymium bullet tweeter, polyester (Mylar-type) diaphragm, 32 mm (1.25 in) aluminum coil, highly focused pattern. sens is 108 dB at 2.83 V (1 W into 8 Ω). aes is 25 W nominal (50 W continuous program) from the recommended crossover to 20 kHz; recommended crossover 5 kHz at 12 dB/oct or steeper. 3.5–18 kHz. Minimum impedance 7 Ω, Le 0.1 mH. 100 mm across, 46 mm deep, 0.55 kg (PE lists 1.5 lb). Coverage and fs not published. A PA v2 super-tweeter candidate.",
+  },
+  {
+    id: "ct440",
+    lb: 1.76,
+    name: "Ciare CT440",
+    price: 210.36,
+    src: "parts-express.com, Oct 2026 (#293-104; price from the indexed listing)",
+    hf: { sens: 110, aes: 250, aesXo: 2000, minXo: 2000, imp: 8, fs: 1400 },
+    type: "horn-loaded",
+    exit: null,
+    faceplate: { w: 112 / 25.4, h: 112 / 25.4 },
+    needsWaveguide: false,
+    note: '[maker: Ciare CT440 EN datasheet] 1¼" neodymium horn tweeter, planar Mylar diaphragm, aluminum coil, aluminum flange. sens is 110 dB at 2.83 V/1 m (1 W into 8 Ω). aes is 250 W AES2 (500 W program) per the sheet; the power test\'s high-pass is not given, so the 2 kHz recommended crossover is assumed. Check this: the sheet also gives a 1.75 in (44 mm) coil and nominal diameter, which conflicts with the 1¼" name, so its power and coil figures may be copied from the CT441. 2–20 kHz, Fs 1400 Hz, Re 4.5 Ω. 112 × 112 mm flange, 95 mm cutout, 68 mm deep, 4 × 4.5 mm holes on a 116 mm circle, 0.8 kg. Coverage not published. Parts Express gives 1.5–18 kHz.',
   },
   // ---------- 1" compression drivers (need a waveguide) ----------
   {
@@ -229,6 +336,20 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     needsWaveguide: true,
     note: '[vendor: PE page, Eminence spec text; weight: Eminence datasheet] US brand. Titanium diaphragm, 2" voice coil, 1" exit. sens is 105 dB 1 W/1 m on an unnamed horn. aes is 80 W EIA-426B with a 1.6 kHz 18 dB high-pass. Crossover: 1.2 kHz at 18 dB/oct or 1.8 kHz at 12 dB/oct. Titanium can sound bright; plan on DSP EQ. lb is the 4.7 lb net weight from the Eminence datasheet (https://cdn.shopify.com/s/files/1/0270/8665/1462/files/PSD2002.pdf; 5.0 lb shipping; PE listed 5.9 lb shipping). Also sold in a screw-on version (PSD:2002S).',
   },
+  {
+    id: "asd1001b",
+    lb: 1.7,
+    name: "Eminence ASD:1001B",
+    price: 43.99,
+    src: "parts-express.com, Oct 2026 (#290-522; eminence.com also $43.99)",
+    hf: { sens: 104.1, aes: 50, aesXo: 2500, minXo: 2500, imp: 8, fs: 590 },
+    type: "compression",
+    exit: 1,
+    faceplate: { diameter: 3.5 },
+    needsWaveguide: true,
+    mount: { bolts: { n: 2, thread: "M6", circle: 76.2 / 25.4 } },
+    note: '[maker: Eminence ASD:1001B datasheet and eminence.com spec table, Oct 2026] US brand. The 2-bolt ASD:1001: ferrite, titanium diaphragm, 1.3" (33 mm) aluminum-former voice coil, 1" exit, 2 × M6 on a 76.2 mm (3.00") circle. sens is 104.1 dB at 1 W/1 m (2.83 V into 8 Ω) averaged 2.5–20 kHz on axis on the Eminence H290S horn, 0.3 dB under the screw-on version. aes is 50 W EIA-426A with the recommended 2.5 kHz 18 dB/oct crossover (the datasheet footnote says the units were tested under EIA-426B). 2.5–20 kHz. Re 6.7 Ω, minimum impedance 7.7 Ω at 3 kHz (the web table says 7.6 Ω at 2.3 kHz), resonance 590 Hz. 3.5" across, 2" deep. Net weight 1.7 lb (0.8 kg) on the web table; the datasheet says 2 lb (0.91 kg). Parts Express #290-522.',
+  },
   // ---------- 1" screw-on compression drivers (1-3/8"-18 TPI; a bolt-on horn takes them through an adapter) ----------
   {
     id: "psd2002s",
@@ -274,18 +395,50 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     mount: { thread: "1-3/8-18" },
     note: '[maker: eminence.com spec table, Oct 2026] US brand. Ferrite, titanium diaphragm, 1.3" (33 mm) aluminum-former voice coil, 1" exit on a 1-3/8"-18 outer thread. sens is 104.4 dB (PE: 2.83 V/1 m, so 1 W into 8 Ω) on an unnamed horn. aes is 50 W EIA-426A with the recommended 2.5 kHz 18 dB/oct crossover. 2.5–20 kHz. Re 6.7 Ω, minimum impedance 7.7 Ω at 3 kHz, resonance 590 Hz. 3.5" across, 2.45" deep, 1.7 lb. The cheapest compression driver on the list; a 2.5 kHz minimum suits the small waveguides. Parts Express #290-525.',
   },
+  // ---------- AMTs (folded-diaphragm air motion transformers; the faceplate is the waveguide) ----------
+  // Dayton publishes horizontal polars only (0–45°) and no coverage figures: covH is read from them at 10 kHz and covV
+  // is estimated from the diaphragm's height, so both are guesses.
   {
-    id: "asd1001b",
-    // GUESS: no net weight found for the bolt-on; the screw-on ASD:1001's 1.7 lb (Eminence spec table) is assumed
-    lb: 1.7,
-    name: "Eminence ASD:1001B",
-    price: 43.99,
-    src: "parts-express.com, Oct 2026 (zzounds.com $39.99)",
-    hf: { sens: 104.1, aes: 50, aesXo: 2500, minXo: 2500, imp: 8, fs: null },
-    type: "compression",
+    id: "amtpro4",
+    lb: 2.65,
+    name: "Dayton Audio AMTPRO-4",
+    price: 109.98,
+    src: "parts-express.com, Oct 2026 (#275-094; price from the indexed listing)",
+    hf: { sens: 94, aes: 50, aesXo: null, minXo: 800, imp: 4, fs: null },
+    type: "ribbon",
     exit: 1,
-    faceplate: { diameter: 3.5 },
-    needsWaveguide: true,
-    note: '[vendor: PE page, Eminence spec text] US brand. The 2-bolt ASD:1001: ferrite, titanium diaphragm, 1" exit, 2 × M6 on the usual 1" pattern. sens is 104.1 dB at 2.83 V/1 m (1 W into 8 Ω) on an unnamed horn, 0.3 dB under the screw-on version. aes is 50 W EIA-426B with the recommended 2.5 kHz 18 dB/oct crossover. 2.5–20 kHz. 3.5" across, 2" deep. fs, net weight and the bolt circle are not published on the retailer pages: the screw-on\'s 590 Hz is not assumed (fs null), its 1.7 lb is, and the circle is assumed to be the usual 76 mm. Parts Express #290-522.',
+    faceplate: { w: 100 / 25.4, h: 200 / 25.4 },
+    // GUESS: covH from Dayton's 0–45° curves (about −6 dB at 37° at 10 kHz); covV from the 160 mm tall slot
+    ownGuide: { name: "AMTPRO-4 faceplate", covH: 90, covV: 30, w: 100 / 25.4, h: 200 / 25.4 },
+    note: '[maker: Dayton AMTPRO-4 spec sheet and daytonaudio.com] Pro AMT: folded Kapton diaphragm, neodymium, open back (dipole or chamber loading). sens is 94 dB 1 W/1 m (4 Ω). aes is 50 W RMS (100 W max) with no high-pass stated. 800 Hz–18 kHz; Dayton says it crosses "as low as 800 Hz" (minXo), with no slope. Re 3.96 Ω; fs not published. 100 × 200 mm plate, 72 × 172 mm cutout, 36 mm deep. Coverage not published (see the section note). A PA v2 super-tweeter candidate.',
+  },
+  {
+    id: "amt34",
+    lb: 1.45,
+    name: "Dayton Audio AMT3-4",
+    price: 83.98,
+    src: "parts-express.com, Oct 2026 (#275-093; price from the indexed listing)",
+    hf: { sens: 90, aes: 25, aesXo: null, minXo: null, imp: 4, fs: 875 },
+    type: "ribbon",
+    exit: 1,
+    faceplate: { w: 95 / 25.4, h: 130 / 25.4 },
+    // GUESS: covH from Dayton's 0–45° curves (about −6 dB at 42° at 10 kHz); covV from the 113 mm tall cutout
+    ownGuide: { name: "AMT3-4 faceplate", covH: 90, covV: 45, w: 95 / 25.4, h: 130 / 25.4 },
+    note: "[maker: Dayton AMT3-4 spec sheet and daytonaudio.com] Hi-fi AMT: folded Kapton diaphragm, neodymium. sens is 93 dB at 2.83 V on 4 Ω, about 90 dB/1 W. aes is 25 W RMS (50 W max) with no high-pass stated. 1.9–40 kHz; no minimum crossover published. Fs 875 Hz, Re 3.7 Ω. 95 × 130 mm plate, 68 × 113 mm cutout, 26.5 mm deep. Coverage not published (see the section note).",
+  },
+  {
+    id: "amthr4",
+    // GUESS: no weight published; about 1.5 lb is assumed, like the AMT3-4
+    lb: 1.5,
+    name: "Dayton Audio AMTHR-4",
+    price: 89.98,
+    src: "parts-express.com, Oct 2026 (#275-096; price from the indexed listing)",
+    hf: { sens: 91, aes: 25, aesXo: null, minXo: null, imp: 4, fs: null },
+    type: "ribbon",
+    exit: 1,
+    faceplate: { w: 110 / 25.4, h: 85 / 25.4 },
+    // GUESS: covH from Dayton's 0–45° curves (about −7 dB at 45° at 10 kHz); covV from the short diaphragm
+    ownGuide: { name: "AMTHR-4 faceplate", covH: 90, covV: 70, w: 110 / 25.4, h: 85 / 25.4 },
+    note: "[maker: Dayton AMTHR-4 spec sheet] Hi-res AMT with a sealed rear chamber (no box needed), neodymium. sens is 94 dB at 2.83 V on 4 Ω, about 91 dB/1 W. aes is 25 W RMS with no high-pass stated. 1.8–33 kHz; no minimum crossover published. Re 4.06 Ω; fs not published. 110 × 85 mm landscape plate, 82 × 61.6 mm rear body, 37 mm deep. Weight and coverage not published (see the section note).",
   },
 ];
