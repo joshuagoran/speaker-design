@@ -189,18 +189,19 @@ Each PR stands alone. Lowest risk first.
       from the engines.
     - Gaps: a Hi-fi design with a sub highpass keeps the box's subsonic in the spec (the Hi-fi engine drops
       it; see L4). Drivers of different models in one chamber are a named gap.
-  - **L3b 3D view and front drawing.** One scene builder for any spec (`buildSpeakerScene`,
-    `src/components/stack-view/`) from today's PA and Hi-fi parts, and a front drawing (`SpeakerFront`), both reading
-    one layout (`lib/speaker/speakerLayout`): the chambers at their `at` positions, the drivers at their positions with
-    their horns (in the baffle as the tower sets one, or on the top as the mid box carries one), and the port by its
-    engine's rule (the PA's letterbox, side ducts and flared tubes; the Hi-fi's round ports, slots and radiators).
-    - Chambers that fill one box of one depth share one shell and one baffle, with the shared walls inside (the
-      tower's); others are each their own box. The cabinet is the PA's frame when the spec has an inset, else the
-      Hi-fi box with its roundover.
-    - A horn-loaded chamber shows its mouth on the baffle and a flare from its segments; a folded path, or one longer
-      than the chamber is deep, is a straight placeholder with a note until its fold layout comes.
-    - Not drawn yet: the tower's arched top (the spec has no arch), the kick-back tilt, and the PA's plinth (a
-      system's pose).
+  - **L3b 3D view and front drawing.** One scene builder draws any spec: `buildSpeakerScene`
+    (`src/components/stack-view/`). A front drawing, `SpeakerFront`, draws the same parts in 2D.
+    - Both reuse the PA and Hi-fi parts. Both read one layout: `lib/speaker/speakerLayout`.
+    - Chambers sit at their `at` positions. Drivers sit at their positions, with their horns.
+    - A horn sits in the baffle (as in the tower) or on the top (as on the mid box).
+    - Each port follows its engine's rule. PA: the letterbox, side ducts and flared tubes. Hi-fi: round ports, slots
+      and radiators.
+    - Chambers that fill one box of one depth share one shell and one baffle. Their shared walls are inside. Other
+      chambers are each their own box.
+    - A spec with an inset gets the PA frame. Any other spec gets the Hi-fi box and its roundover.
+    - A horn-loaded chamber shows its mouth on the baffle and a flare from its segments.
+    - A folded path, or a path longer than the chamber, is a straight placeholder. A note says so.
+    - Not drawn yet: the tower's arched top (the spec has no arch), the tilt and the PA plinth.
   - **L3c Cutlist.** L3c works out the real bracing, vent walls and hardware displacement for each chamber and
     replaces the 3% allowance.
   - **Later in L3.** The limits and the optimizer; the horn settings; the tower with the horn
