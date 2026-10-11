@@ -10,7 +10,6 @@ import {
   linkwitzRileyHighpass,
   linkwitzRileyLowpass,
   thermalVoltageLimit,
-  rectangleEndCorrection,
   isRoundPort,
   maxStraightSlotIn,
   slotFolds,
@@ -29,6 +28,7 @@ import {
   braceWoodEstimate,
   braceWoodIn3,
 } from "./calc";
+import { rectangleEndCorrection } from "../acoustics/radiation";
 import type {
   BackJointId,
   BraceStyleId,

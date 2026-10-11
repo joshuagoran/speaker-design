@@ -1,10 +1,7 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
-  rectangleEndCorrectionIntegral,
-  rectangleEndCorrection,
   sideDuctEndCorrection,
-  BOTH_ENDS_CORRECTION_RATIO,
   cutParts,
   ventGeometry,
   boxModel,
@@ -14,6 +11,11 @@ import {
   maxStraightSlotIn,
   minFoldedSlotIn,
 } from "../src/lib/pa/calc";
+import {
+  BOTH_ENDS_CORRECTION_RATIO,
+  rectangleEndCorrection,
+  rectangleEndCorrectionIntegral,
+} from "../src/lib/acoustics/radiation";
 import { ductFit } from "../src/lib/pa/chips";
 import { SHARP_BEND_CORRECTION } from "../src/data/acoustics/slot-inner-end";
 import { SUB_OPTIONS, MID_OPTIONS } from "../src/lib/data";

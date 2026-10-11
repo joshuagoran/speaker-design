@@ -1,16 +1,19 @@
 // A speaker spec's driver as its catalog part: the figures the speaker model and the horn engine read. Each kind keeps
 // the rules of the engine its table comes from (the PA's subs and mids, the Hi-fi's woofers, tweeters and coaxials).
 // Pure.
-import type { BoxModelTS, DriverKind, SpeakerDriver } from "../../types";
+import type { DriverKind, HornDriverTS, SpeakerDriver } from "../../types";
 import { CD_OPTIONS, FILL_OPTIONS, MID_OPTIONS, SUB_OPTIONS, hifiDriverById } from "../data";
 import { byId } from "../tables";
 import { midDisplacementL } from "../pa/calc";
 import { hifiWooferDisplacementL } from "../hifi/hifi";
 import { DRIVER_KIND } from "../../constants/speakerSpec";
 
-/** A cone driver as the box models take it: its Thiele/Small parameters and its displacement, L. */
+/**
+ * A cone driver as the models take it: its Thiele/Small parameters (with the coil's inductance where published, which
+ * the horn engine reads and the box models leave out) and its displacement, L.
+ */
 export interface ConeParts {
-  ts: BoxModelTS;
+  ts: HornDriverTS;
   dispL: number;
 }
 

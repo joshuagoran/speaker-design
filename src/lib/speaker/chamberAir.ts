@@ -4,12 +4,8 @@
 // Symbols kept short are the established ones: t is the wall's thickness, in (as lib/pa/calc and lib/hifi name it).
 import type { Dims2, PortStyle, SpeakerCabinet, SpeakerChamber } from "../../types";
 import { HIFI_NET_SHARE, hifiRoundEndCorrection, hifiSlotEndCorrection } from "../hifi/hifi";
-import {
-  ductDividerIn,
-  rectangleEndCorrection,
-  sideDuctEndCorrection,
-  slotInnerEndCorrection,
-} from "../pa/calc";
+import { ductDividerIn, sideDuctEndCorrection, slotInnerEndCorrection } from "../pa/calc";
+import { rectangleEndCorrection } from "../acoustics/radiation";
 import { subTubeEndCorrection, type TubeDriver } from "../pa/tubes";
 import { ELBOW_COUNTS, type ElbowCount } from "../tubeFold";
 import { SUB_OPTIONS } from "../data";

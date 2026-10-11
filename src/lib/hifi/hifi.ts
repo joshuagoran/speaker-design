@@ -10,13 +10,13 @@ import {
   thermalVoltageLimit,
   keeleFrequency,
   highpassGain,
-  rectangleEndCorrection,
   slotMouthCorrection,
   logGridCount,
   SEALED_QTC_MIN,
   sealedLitersForQtc,
   unwrapRawPhase,
 } from "../pa/calc";
+import { rectangleEndCorrection } from "../acoustics/radiation";
 import { qtcFloorAt } from "../../constants/qtcText";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { MAX_ELBOWS, tubeElbows, tubeMaxLength, type TubeRoom } from "../tubeFold";

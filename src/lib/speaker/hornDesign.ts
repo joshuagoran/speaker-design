@@ -12,7 +12,7 @@ import type {
 import { coneParts } from "./driverParts";
 import { stuffedLiters } from "./chamberAir";
 import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
-import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../pa/calc";
+import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../acoustics/radiation";
 import { CM_PER_M, METERS_PER_INCH } from "../../constants/units";
 import {
   CHAMBER_LOAD,
@@ -45,9 +45,9 @@ const INNER_END_RATIO = BOTH_ENDS_CORRECTION_RATIO - 1;
 
 /**
  * The rear chamber's vent as the engine's port: none when sealed; round tubes or slots of a set width as their open
- * area and their path length plus the inner end's correction (the engine's radiation load adds the outer end's). Null:
- * a vent the engine doesn't take yet (side ducts, radiators, a slot whose width the box sets). The end corrections
- * are horn engine phase 2's to settle; the Hi-fi round-tube rule and the PA's flanged rectangle stand in.
+ * area and their path length plus the inner end's correction (the engine's radiation load adds the outer end's, a
+ * slot's from its opening's rectangle). Null: a vent the engine doesn't take yet (side ducts, radiators, a slot whose
+ * width the box sets). The inner ends follow the Hi-fi round-tube rule and the PA's flanged rectangle.
  */
 function rearPort(vent: ChamberVent): { port: HornPort | null } | null {
   if (vent.kind === VENT_KIND.sealed) return { port: null };
@@ -60,6 +60,8 @@ function rearPort(vent: ChamberVent): { port: HornPort | null } | null {
       port: {
         area: port.n * port.h * port.w * CM_PER_IN * CM_PER_IN,
         length: (port.len + INNER_END_RATIO * rectangleEndCorrection(port.h, port.w)) * CM_PER_IN,
+        // the exit's end correction is the opening's rectangle's
+        slot: { width: port.w * CM_PER_IN, height: port.h * CM_PER_IN },
       },
     };
   }
