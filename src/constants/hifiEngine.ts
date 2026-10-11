@@ -1,3 +1,5 @@
+import type { HighpassType } from "../types";
+
 /**
  * The Hi-fi engine's drive options, by id, and their names: an amp channel per driver behind a DSP crossover, or one
  * amp channel and a passive network (lib/hifi tweeterAmpWatts). A design that names none is active.
@@ -45,3 +47,6 @@ export const HIFI_PAIR_SUM_DB = 3;
 
 /** The port air speed the Hi-fi woofer's clean level stops at, m/s, sine peak (lib/hifi hifiWooferPrep). */
 export const HIFI_PORT_MAX_MS = 17;
+
+/** The automatic subsonic's alignment (lib/hifi hifiBox): a vented or radiator box's highpass at 0.75 × its tuning. */
+export const HIFI_SUBSONIC_TYPE = "BW24" satisfies HighpassType;

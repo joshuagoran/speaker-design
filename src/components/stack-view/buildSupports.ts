@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { SATELLITE_COLUMN_H_IN } from "./stackHeights";
+import { SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
 import type { SceneContext } from "./sceneContext";
 
 /** Column diameter and height of the satellite layout's stands, inches. */
