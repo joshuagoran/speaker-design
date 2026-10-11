@@ -37,7 +37,90 @@ Why they sound the way they do:
 - **Punch.** A horn-loaded mid-bass from about 150 to 400 Hz gives the impact you feel.
 - **More direct sound.** The horizontal flare sends less sound to the side walls.
 
-## Proposed small stack, per side
+## Lead option: front-loaded, vented modules
+
+The simplest system, and the closest match to the Sunflower stacks. Every box is a front-loaded 1-D horn with a
+vented rear chamber; the ports exit as slots on the front sides. It is 3-way: front-loaded bins cover sub and kick in
+one box.
+
+```
+          [ N314T + DIY R-OSSE 110×50 ]      HF: 950 Hz and up
+          [ mid box: 2 × 10″, 1-D horn ]     ~120–150 Hz → 950 Hz
+   [ sub bin: 1 or 2 × 18″, 1-D horn ]       ~35 Hz → ~120–150 Hz
+```
+
+### Modules
+
+| Module  | Contents                                                     | Port tuning | Horn loads from                  |
+| ------- | ------------------------------------------------------------ | ----------- | -------------------------------- |
+| Sub bin | 1 or 2 × 18″ (18NBX100 or 4018LF), front-loaded 1-D flare    | ~40–45 Hz   | ~140 Hz (1 × 18″), ~99 Hz (2 × 18″) |
+| Mid box | 2 × 10″ (10MB600 or 10PR320) or 2 × 12″ (3012HO) in one throat | ~90–100 Hz  | ~176 Hz (one box)                |
+| HF      | N314T on the DIY R-OSSE                                      | —           | —                                |
+
+### How the hybrid works
+
+- **Above the horn's loading point** the flare does the work: gain, horizontal pattern control, less excursion.
+- **Near the port tuning** the rear chamber and ports act as a vented box: the ports carry the output and the cone
+  moves less. This covers the band where the mouth is too small to load.
+- **Ports at the front sides** keep the port and the mouth in one plane, close together against the wavelength, so
+  they sum cleanly and the box can stand against a wall.
+- **The mid ports** add output and cut excursion around 100–130 Hz, so one mid box can cross near 120 Hz instead of
+  150 Hz.
+
+### Sizes
+
+| Per side                      | Crossovers        | System level (rough)                      |
+| ----------------------------- | ----------------- | ----------------------------------------- |
+| 1 × 18″ bin + 1 mid box + 1 HF | ~120 Hz, 950 Hz   | ~125 dB, every band balanced               |
+| 2 × 18″ bin + 1 mid box + 1 HF | ~150 Hz, 950 Hz   | ~130 dB; mids and HF near their limits     |
+| 2 × 18″ bin + 2 mid boxes + 1–2 HF | ~110–120 Hz, 950 Hz | ~130 dB with headroom                 |
+| 2 × (2 × 18″) + 3 mid boxes + 2–3 HF | ~110–140 Hz, 950 Hz | ~137 dB, bass-heavy                |
+
+Grow a stack in this order: a second mid box, then subs, then HF. The front end's stepped crossover switch moves
+the sub/mid crossover as the ratio changes.
+
+### Inside the mid box
+
+The two cones sit about 280 mm apart in one throat.
+
+| Setup                                                  | HF to mid center | First null at 950 Hz |
+| ------------------------------------------------------ | ---------------- | -------------------- |
+| Both cones to the crossover (one channel, 4 Ω)         | ~435 mm          | ~25°                 |
+| Upper cone to the crossover, lower cone to ~400–500 Hz | ~300 mm          | ~37°                 |
+
+The second is cleaner at the crossover; it needs a coil on the lower cone (about 2.5–3 mH for 8 Ω) or a second
+channel.
+
+### Things to get right
+
+- **Port velocity.** The mid ports carry a lot of air near 90–110 Hz: size them generously and flare their ends.
+- **Small front chamber.** Start the flare at the cone, with no cavity in front of it.
+- **Driver fit.** The 18NBX100, 4018LF and 3012HO suit vented chambers. The 10MB600 (Qts 0.22) is more of a sealed
+  or horn driver: vented, it gives a small chamber and a gentle bump near tuning that a fixed shelf can flatten.
+- **Simulate first.** Hornresp models front-loaded horns with a vented rear chamber: set the chamber, the ports and
+  the flare there, then check the summed response.
+- **Alignment.** Every mouth is flush at the front, so the acoustic centers sit at similar depths. Sub to mid needs
+  only the stepped all-pass on the top feed, if any.
+
+## Alternative: 4-way with folded horn subs
+
+Folded or tapped horn subs give real horn bass from one box, but fold resonances usually cap them near 100–120 Hz
+_(unverified per design)_. One 2 × 10″ mid box only keeps up from about 150 Hz. Either add a band or bring the mids
+down:
+
+- **Kick band (4-way).** Sub horn ~35–90 Hz, a front-loaded kick bin ~90–250 Hz (for example 1 × B&C 15NDL76),
+  mid box ~250 Hz–950 Hz, HF. The classic sound-system layout; one more box type, channel and front-end card per
+  side, and one more alignment step.
+- **Mids lower, still 3-way.** Vented 2 × 12″ (3012HO) mid boxes, 2 per side, crossed at about 110–120 Hz.
+- **Delay.** A 2–3 m folded path delays the sub by about 6–9 ms. Correct it with an all-pass on the full-range top
+  feed; it only needs to hold around the sub crossover:
+
+| Top-feed delay | 2 second-order stages        | 3 stages            |
+| -------------- | ---------------------------- | ------------------- |
+| 5 ms           | 0° at 100 Hz, 1° at 150 Hz   | 0°                  |
+| 8 ms           | 2° at 100 Hz, 26° at 150 Hz  | 0.2° / 6°           |
+
+## Alternative: 12″ small stack, per side
 
 ```
           [ N314T + DIY R-OSSE 110×50 ]   HF: 950 Hz and up
@@ -187,9 +270,10 @@ Per side, 2 × sub and 2 × mid:
 - **The HF and the subs set the limit together.** Keep the HF limiter conservative.
 - **One 18″ per side** pairs with 2 mids. A third mid only pays off with two 18″ per side or more.
 
-## Modular build-out: 8″ mids
+## Alternative: 8″ modular build-out
 
-An alternative to the small stack above, built from three module types that a stack adds as needs grow.
+The lead option with 2 × 8″ mid boxes and unvented 1 × 18″ bins. Lighter, but the 8″ mids need a ~150 Hz crossover
+and more boxes for the same level.
 
 | Module   | Contents                                       | Mouth (estimate) |
 | -------- | ---------------------------------------------- | ---------------- |
@@ -374,7 +458,7 @@ fills for this system or accept one small digital delay for them.
 
 ## Open questions
 
-1. 12″, 10″ or 8″ mids? The 8″ build-out scales furthest; the 12″ small stack needs the fewest boxes.
+1. 10″, 12″ or 8″ mids? The lead option uses 2 × 10″ per box; 8″ is lighter, 12″ crosses lowest per box.
 2. 18NBX100 or 4018LF subs, and vented boxes or short front-loaded bins?
 3. Sealed or vented mid horns?
 4. Mixer and compressor inside the front-end box, or separate units?
@@ -386,7 +470,9 @@ fills for this system or accept one small digital delay for them.
 The planner would need these to model v2 (later, with the system page in
 [speaker-designer-plan.md](speaker-designer-plan.md), L4):
 
-- Horn-loaded mids: a 1-D horn model, its loading and its rising response.
+- A 1-D horn engine (Hornresp-style): horn segments, front and rear chambers, ports and mouth radiation, for
+  front-loaded bins, mid horns and folded horns.
+- Horn-loaded mids: their loading and their rising response.
 - More than one driver per band, a 2.5-way roll-off and a tapered column.
 - A horn setback setting, for the 3D view and the alignment.
 - Short front-loaded sub bins, and their loading as bins stack.
