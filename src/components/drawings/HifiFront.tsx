@@ -7,9 +7,9 @@ import type {
   PassiveRadiatorChoice,
 } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
-import { RADIATOR_PANEL, isRibbon } from "../../lib/hifi/hifi";
+import { RADIATOR_PANEL, isAmt, isRibbon } from "../../lib/hifi/hifi";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
-import { radiatorSpots, roundPortSpots, slotOpening } from "../../lib/hifi/boxLayout";
+import { amtOpening, radiatorSpots, roundPortSpots, slotOpening } from "../../lib/hifi/boxLayout";
 
 interface Props {
   /** the box's outside size, inches */
@@ -89,6 +89,60 @@ function RibbonPlate({
   );
 }
 
+/**
+ * An AMT's flat plate from the front, centered on (cx, cy), `plate` inches at `k` px per inch: the plate, its opening
+ * onto the folded diaphragm and the folds across the opening's short side (`amtOpening`), as the 3D view draws it.
+ */
+function AmtPlate({ cx, cy, plate, k }: { cx: number; cy: number; plate: Dims2; k: number }) {
+  const pal = usePalette();
+  const open = amtOpening(plate);
+  const ow = open.w * k,
+    oh = open.h * k;
+  return (
+    <g>
+      <rect
+        x={cx - (plate.w * k) / 2}
+        y={cy - (plate.h * k) / 2}
+        width={plate.w * k}
+        height={plate.h * k}
+        rx={HIFI_FRONT_PARTS.plateCornerIn * k}
+        fill={pal.muted}
+      />
+      <rect
+        x={cx - ow / 2}
+        y={cy - oh / 2}
+        width={ow}
+        height={oh}
+        rx={HIFI_FRONT_PARTS.amt.openingCornerIn * k}
+        fill={pal.edge}
+      />
+      {open.folds.map((off) =>
+        open.tall ? (
+          <line
+            key={off}
+            x1={cx - ow / 2}
+            x2={cx + ow / 2}
+            y1={cy + off * k}
+            y2={cy + off * k}
+            stroke={pal.muted}
+            strokeWidth="0.5"
+          />
+        ) : (
+          <line
+            key={off}
+            x1={cx + off * k}
+            x2={cx + off * k}
+            y1={cy - oh / 2}
+            y2={cy + oh / 2}
+            stroke={pal.muted}
+            strokeWidth="0.5"
+          />
+        ),
+      )}
+    </g>
+  );
+}
+
 /** Front view of the box and drivers, to scale. */
 export function HifiFront({
   dim,
@@ -119,6 +173,8 @@ export function HifiFront({
   const slot = vented && port.shape === "slot" ? slotOpening(dim, wall, port) : null;
   // a ribbon on its own waveguide, set into the baffle: drawn as the square plate with its slot, not a round faceplate
   const ribbon = !lay.coax && !lay.onTop && isRibbon(t);
+  // an AMT on its own plate, set into the baffle: the flat plate with its opening onto the folds
+  const amt = !lay.coax && !lay.onTop && isAmt(t);
   return (
     <svg
       viewBox={`-4 -4 ${W + 8} ${H + 8}`}
@@ -177,6 +233,8 @@ export function HifiFront({
           h={face.h * k}
           corner={HIFI_FRONT_PARTS.plateCornerIn * k}
         />
+      ) : amt ? (
+        <AmtPlate cx={tx} cy={y(lay.tweeterIn)} plate={face} k={k} />
       ) : (
         <rect
           x={tx - (face.w * k) / 2}
@@ -187,7 +245,9 @@ export function HifiFront({
           fill={pal.muted}
         />
       )}
-      {!lay.coax && !ribbon && <circle cx={tx} cy={y(lay.tweeterIn)} r={0.5 * k} fill={pal.edge} />}
+      {!lay.coax && !ribbon && !amt && (
+        <circle cx={tx} cy={y(lay.tweeterIn)} r={0.5 * k} fill={pal.edge} />
+      )}
       <circle cx={W / 2} cy={y(lay.wooferIn)} r={wooferR} fill={pal.edge} stroke={pal.muted} />
       {lay.coax && (
         // the coaxial's HF in the woofer's center: its horn's mouth and the phase plug

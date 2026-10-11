@@ -267,7 +267,7 @@ export function hifiDriverByIdOrThrow<P extends keyof HifiDriverParts>(
 }
 
 export const HIFI_PASSIVES: readonly PassiveRadiator[] = HIFI_PASSIVES_RAW.map(passiveWithXmax);
-// a tweeter's own waveguide (a ribbon's plate, a coaxial's cone) as the model's guide object (flush-mounted)
+// a tweeter's own waveguide (a ribbon's or an AMT's plate, a coaxial's cone) as the model's guide object (flush-mounted)
 export const ownGuideCfg = (
   t: HifiTweeter | null | undefined,
 ): (OwnGuide & { freestanding: boolean }) | null =>
@@ -348,6 +348,11 @@ export const passiveRadiatorMassMax = (p: PassiveRadiator): number =>
   Math.round((p.maxAddG ?? 3 * p.Mms) / 5) * 5;
 
 // ---- Racks: a line that names a catalog part takes that part's name (and, for an amp, its rating and price) ----
+
+/** Every amp in the catalog with its series, in catalog order: the Notes page's amp table. */
+export const AMPS: readonly { series: AmpSeries; model: AmpModel }[] = AMP_SERIES.flatMap(
+  (series) => series.models.map((model) => ({ series, model })),
+);
 
 /** An amp by id, with its series (for the brand). */
 export function ampById(id: AmpId): { series: AmpSeries; model: AmpModel } {

@@ -16,8 +16,9 @@ import {
 } from "./geometry";
 import { CD_OPTIONS, driverMountKind, hornMountKind } from "../../lib/data";
 import { THREAD_MOUNT } from "../../constants/throatMounts";
-import { hifiTubeRoom, isRibbon } from "../../lib/hifi/hifi";
+import { hifiTubeRoom, isAmt, isRibbon } from "../../lib/hifi/hifi";
 import {
+  amtOpening,
   radiatorSpots,
   roundPortSpots,
   slotOpening,
@@ -59,6 +60,8 @@ export const HIFI_MESH_NAMES = {
   /** a horn-loaded tweeter's flare, or a ribbon's flared throat in its waveguide plate */
   flare: "tweeterFlare",
   ribbon: "ribbonDiaphragm",
+  /** an AMT's folded diaphragm (its backing and folds) behind its plate's opening */
+  amt: "amtDiaphragm",
   /** a tweeter's body behind the baffle, in the cutaway */
   tweeterBody: "tweeterBody",
   /** a coaxial's HF in its woofer's center: the horn's flare and its phase plug, and, in the cutaway, its driver */
@@ -121,9 +124,10 @@ const ellipsePath = (x: number, y: number, rx: number, ry: number) => {
 
 /**
  * Whether a tweeter's plate is round: a faceplate as tall as it is wide is a disc; a ribbon's waveguide plate is
- * square, and any other plate a rounded rectangle.
+ * square, an AMT's plate a rounded rectangle whatever its size, and any other plate a rounded rectangle.
  */
-const roundPlate = (t: Pick<HifiTweeter, "type">, face: Dims2) => !isRibbon(t) && face.w === face.h;
+const roundPlate = (t: Pick<HifiTweeter, "type">, face: Dims2) =>
+  !isRibbon(t) && !isAmt(t) && face.w === face.h;
 
 /** A tweeter's plate outline: a disc, or a rounded rectangle (`roundPlate`). */
 const plateShape = (t: Pick<HifiTweeter, "type">, face: Dims2) => {
@@ -198,7 +202,7 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
     else holes[s.panel].push(ellipsePath(0, s.y, rx, ry));
   }
 
-  // the tweeter's hole: a waveguide set into the baffle, a ribbon's plate, or a faceplate; none for a coaxial's HF,
+  // the tweeter's hole: a waveguide set into the baffle, a ribbon's or an AMT's plate, or a faceplate; none for a coaxial's HF,
   // which sits in its woofer
   const face: Dims2 | null = horn || lay.coax ? null : (t.ownGuide ?? t.faceplate);
   if (horn && p.guide && !p.guide.freestanding)
@@ -444,7 +448,8 @@ function addRadiator(
 
 /**
  * A tweeter without a waveguide horn, flush in the baffle: a ribbon's square waveguide plate with its flared throat
- * down to the diaphragm's slot, a horn-loaded tweeter's faceplate round its flare, or a dome's faceplate with the dome on it; and, in the
+ * down to the diaphragm's slot, an AMT's flat plate with its opening onto the folded diaphragm, a horn-loaded
+ * tweeter's faceplate round its flare, or a dome's faceplate with the dome on it; and, in the
  * cutaway, a GENERIC body behind (the catalogue gives no depth).
  */
 function addTweeter(
@@ -493,6 +498,25 @@ function addTweeter(
     );
     ribbon.position.set(x, y, zf - depth);
     bodyZ = zf - depth;
+  } else if (isAmt(t)) {
+    // a flat plate with an opening onto the folded diaphragm: a dark backing, the folds across the opening's short side
+    const A = P.amt;
+    const open = amtOpening(face);
+    shape.holes.push(roundedRectPath(0, 0, open.w, open.h, A.openingCornerIn));
+    const foldZ = zf - A.setBackIn - A.foldDepthIn / 2;
+    const backing = add(
+      new THREE.Mesh(new THREE.BoxGeometry(open.w, open.h, 0.02), ctx.materials.black),
+      HIFI_MESH_NAMES.amt,
+    );
+    backing.position.set(x, y, zf - A.setBackIn - A.foldDepthIn);
+    const foldGeo = open.tall
+      ? new THREE.BoxGeometry(open.w, A.foldWidthIn, A.foldDepthIn)
+      : new THREE.BoxGeometry(A.foldWidthIn, open.h, A.foldDepthIn);
+    for (const off of open.folds) {
+      const fold = add(new THREE.Mesh(foldGeo, ctx.materials.aluminum), HIFI_MESH_NAMES.amt);
+      fold.position.set(open.tall ? x : x + off, open.tall ? y + off : y, foldZ);
+    }
+    bodyZ = zf - A.setBackIn - A.foldDepthIn;
   } else if (t.type === "horn-loaded") {
     const mouthR = Math.min(t.domeIn / 2, Math.min(face.w, face.h) / 2 - P.plateCornerIn);
     shape.holes.push(circlePath(0, 0, mouthR));

@@ -65,6 +65,20 @@ export const HIFI_FRONT_PARTS = {
     flareSquareness: 6,
   },
   /**
+   * An AMT's flat plate (the 2D front drawing's too), from Dayton's AMTPRO-4, AMT3-4 and AMTHR-4 drawings: the opening
+   * onto the folded diaphragm leaves about the same margin, 21 mm, on every side of each plate, so a tall plate has a
+   * tall opening; the opening's corner radius. The diaphragm's folds run across the opening's short side, about
+   * 7.6 mm apart: each fold's width and depth, and how far the folds' front sits behind the plate's face.
+   */
+  amt: {
+    marginIn: 0.82,
+    openingCornerIn: 0.08,
+    foldPitchIn: 0.3,
+    foldWidthIn: 0.06,
+    foldDepthIn: 0.1,
+    setBackIn: 0.22,
+  },
+  /**
    * a coaxial's HF in its woofer's center, in place of the dust cap (the 2D front drawing's too): its horn's mouth and
    * throat for the cone's radius, how far it stands proud of the cone (its mouth stays behind the woofer's frame), and
    * the phase plug's radius for the throat's (its tip at the horn's mouth)

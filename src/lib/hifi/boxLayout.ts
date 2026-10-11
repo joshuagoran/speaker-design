@@ -2,6 +2,7 @@
 // seen from the front: the left speaker's inside), y up from the box bottom. The 2D front drawing and the 3D view both
 // read these.
 import { HIFI_BOX_LAYOUT, HIFI_BOX_SLIDERS } from "../../constants/hifiLayout";
+import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { isCoax, passiveRadiatorShape, RADIATOR_PANEL, tweeterOnGuide, waveguideFor } from "./hifi";
 import { HIFI_PASSIVES, passiveRadiatorMassMax } from "../data";
 import { byId } from "../tables";
@@ -42,6 +43,22 @@ export const slotOpening = (dim: Pick<Dims3, "w">, wall: number, { h }: Pick<Slo
   /** its bottom */
   y: wall,
 });
+
+/**
+ * An AMT's plate seen from the front (`HIFI_FRONT_PARTS.amt`): the opening onto its folded diaphragm, `margin` in from
+ * every edge of the `plate`, and the folds' centers along the opening's long side (each fold spans its short side),
+ * from its center.
+ */
+export function amtOpening(plate: Dims2) {
+  const A = HIFI_FRONT_PARTS.amt;
+  const w = Math.max(plate.w - 2 * A.marginIn, A.foldPitchIn),
+    h = Math.max(plate.h - 2 * A.marginIn, A.foldPitchIn);
+  const tall = h >= w,
+    long = tall ? h : w;
+  const n = Math.max(1, Math.floor(long / A.foldPitchIn));
+  const folds = Array.from({ length: n }, (_, i) => ((i + 0.5) * long) / n - long / 2);
+  return { w, h, tall, folds };
+}
 
 /** The side of the box a radiator on a side panel is on: the speaker's outside (−x) or inside (+x). */
 export type RadiatorSide = -1 | 1;
