@@ -17,7 +17,6 @@ export const GXD8 = {
   gainDb: 36.5,
   limiterW: [5, 800],
   usedPrice: 600,
-  note: "Mains rack: subs.",
 } as const satisfies AmpModel;
 
 /** The mid and horn amp. */
@@ -31,7 +30,7 @@ export const GXD4 = {
   gainDb: 33.5,
   limiterW: [5, 400],
   usedPrice: 400,
-  note: "Owned. v1 rack: mids. Fine delay steps (0.01 ms).",
+  note: "Delay in 0.01 ms steps.",
 } as const satisfies AmpModel;
 
 /** The GXD prices were checked Sep 2026. */
@@ -71,7 +70,7 @@ export const PLD42 = {
   gainDb: 34,
   limiterW: [10, 1250],
   usedPrice: 550,
-  note: "v1 rack: subs and horns. The 500 W/ch on the spec sheet is a 20 ms burst. Price: the owner's listing, Oct 2026.",
+  note: "The 500 W/ch on the spec sheet is a 20 ms burst. Price: a listing, Oct 2026.",
 } as const satisfies AmpModel;
 
 export const QSC_PLD = {
@@ -114,7 +113,7 @@ export const LAB_GRUPPEN_C_X = {
       limiterW: null,
       usedPrice: 700,
       usedPriceEst: true,
-      note: "The v1 plan’s rejected alternative. Phoenix inputs, screw-terminal outputs.",
+      note: "Phoenix inputs, screw-terminal outputs.",
     },
   ],
   dsp: false,
@@ -222,7 +221,6 @@ export const POWERSOFT_OTTOCANALI = {
       limiterW: null,
       usedPrice: 1500,
       usedPriceEst: true,
-      note: "The amp in the design notes.",
     },
   ],
   dsp: false,
