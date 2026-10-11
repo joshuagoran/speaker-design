@@ -1,7 +1,6 @@
 import {
   HIFI_PASSIVES,
   passiveRadiatorMassMax,
-  ownGuideCfg,
   waveguideSpecOf,
   throatAdapterPrice,
 } from "../../lib/data";
@@ -19,8 +18,9 @@ import {
   listenerGeometry,
   logSpacedFrequencies,
   linkwitzRileyFilter,
-  needsWaveguide,
   RADIATOR_PANEL,
+  tweeterOnGuide,
+  waveguideFor,
 } from "../../lib/hifi/hifi";
 import { hifiBoxMin } from "../../lib/hifi/boxLayout";
 import { boxSliderMins, fitBox } from "../../lib/boxFit";
@@ -63,11 +63,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     portMaxMs = HIFI_PORT_MAX_MS,
   } = state;
   const compressionWaveguide = waveguideSpecOf(selectedWaveguide);
-  const waveguideSpec = tweeter.ownGuide
-    ? ownGuideCfg(tweeter)
-    : needsWaveguide(tweeter)
-      ? compressionWaveguide
-      : null;
+  const waveguideSpec = waveguideFor(tweeter, selectedWaveguide);
   const radiatorDriver = byId(HIFI_PASSIVES, radiatorSelection.id) ?? HIFI_PASSIVES[0];
   const radiator = {
     drv: radiatorDriver,
@@ -75,9 +71,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
     addG: Math.min(radiatorSelection.addG, passiveRadiatorMassMax(radiatorDriver)),
   };
   const wallThicknessIn = panelIn(wallPanel, panelMaterial, panelExactIn);
-  const tweeterWithWaveguide = waveguideSpec
-    ? { ...tweeter, faceplate: { w: waveguideSpec.w, h: waveguideSpec.h } }
-    : tweeter;
+  const tweeterWithWaveguide = tweeterOnGuide(tweeter, waveguideSpec);
   // the box's width and height start at what its parts need (each up to its slider's step): a design made too small
   // by a part or wall change, or saved that way, is modeled, drawn and saved at that size
   const boxMin = boxSliderMins(

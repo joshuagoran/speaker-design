@@ -42,6 +42,7 @@ import type {
   HifiPlacement,
   HifiSeatPaths,
   Horn,
+  HifiWaveguide,
   MountAdapter,
   WaveguideSpec,
   RoundPort,
@@ -71,7 +72,7 @@ import {
   DISPERSION_FREQ_MIN_HZ,
 } from "../../constants/chartScales";
 import { formatInches } from "../format";
-import { MOUNT_ADAPTERS, throatJoin } from "../data";
+import { MOUNT_ADAPTERS, ownGuideCfg, throatJoin, waveguideSpecOf } from "../data";
 import { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "../../constants/throatMounts";
 import { crossoverSlopeName } from "../../constants/crossovers";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
@@ -248,6 +249,23 @@ export function waveguideDirectivity(
 /** Whether a tweeter has to be mounted on a waveguide or horn (a compression driver, or a dome made for one) rather than sit on the baffle. */
 export const needsWaveguide = (t: Pick<HifiTweeter, "type" | "needsWaveguide">): boolean =>
   t.type === "compression" || !!t.needsWaveguide;
+
+/**
+ * The waveguide a tweeter plays through: its own (a ribbon's plate, a coaxial's cone), the picked one for a tweeter
+ * that needs one, else none.
+ */
+export const waveguideFor = (tweeter: HifiTweeter, picked: HifiWaveguide): WaveguideSpec | null =>
+  tweeter.ownGuide
+    ? ownGuideCfg(tweeter)
+    : needsWaveguide(tweeter)
+      ? waveguideSpecOf(picked)
+      : null;
+
+/** The tweeter as the baffle takes it: on a waveguide, its cut-out is the waveguide's mouth. */
+export const tweeterOnGuide = (
+  tweeter: HifiTweeter,
+  guide: Pick<WaveguideSpec, "w" | "h"> | null,
+): HifiTweeter => (guide ? { ...tweeter, faceplate: { w: guide.w, h: guide.h } } : tweeter);
 
 // ---- box ----
 /** The fields the port length reads: a round port's `dia` and `elbows`, or a slot's `h`. */

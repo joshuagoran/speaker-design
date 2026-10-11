@@ -4,13 +4,10 @@ import type { Dims3, Horn, PaLayout } from "../../types";
 import { HORN_MESHES } from "../../data/meshes";
 import { MM_IN } from "./geometry";
 import { towerSpec } from "../../lib/pa/tower";
+import { MID_GAP_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
 
 /** Roundover on the cabinet frame's edges; it also pushes the frame's outline out by this much. */
 export const ROUNDOVER_IN = 0.25;
-/** Gap between the sub's top and the mid box in the stack layout. */
-export const MID_GAP_IN = 0.4;
-/** Satellite layout: the stands' height, which is where the mid boxes sit. */
-export const SATELLITE_COLUMN_H_IN = 34;
 /** The horn sits this far above the mid box (its axis = this + hornAxisUp). */
 export const HORN_LIFT_IN = 0.3;
 

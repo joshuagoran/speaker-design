@@ -137,8 +137,16 @@ Each PR stands alone. Lowest risk first.
     bands / filters, look; `hornPlacement` and `hornMount` per horn.
   - A `SystemSpec`: sources `{speakerId, role, pose, mirror, filters, delayMs | "auto", levelDb, amp channel}`,
     amps, DSP, venue.
-  - Migration is read-time adapters only (`speakerFromSavedHifi`, `systemFromSavedPa`). Stored docs are
-    never rewritten.
+  - **Old saves (owner policy).** Clean code comes first. Old saves can break. Read adapters map today's
+    in-memory designs (`systemFromPa`, `speakerFromHifi`, `systemFromHifi`, `speakerFromFill` in
+    `src/lib/speaker/`). Do not add code only to keep old saves working: no shims for old fields, no migration
+    branches for old save formats, no compatibility layers.
+  - **Horns.** A chamber's load is direct or a horn built into the box: the horn engine's throat chamber and
+    segments (`HornDesign`, PR #128). The chamber's net air and vent are the horn's rear chamber.
+    `hornDesignOf` maps a front-loaded chamber onto `HornDesign`. A folded path (a bass bin) has the same
+    segments; its fold layout comes later. A tapped horn has a front tap and a rear tap on the path; the
+    engine does not take it yet. A catalog horn on a compression driver is a `HornAttachment` with its
+    `placement` (baffle or top) and its `mount`.
   - New `speakers` and `systems` collections under `users/{uid}`, next to `configs` (PA) and `hifiConfigs`.
     `firestore.rules` already covers every collection there (`users/{uid}/{document=**}`); no rule change.
 - **L2 Speaker library.** Designer saves go to `speakers`, with import from old saves.
