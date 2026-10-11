@@ -83,3 +83,6 @@ From the owner's earlier discussion; verify the numbers.
 `docs/front-end-options.md`: an options table, a block diagram per option, a parts list with US prices, the
 all-pass delay math with part values, a patch plan into the current amps, and a recommendation. Later, the
 system page ([speaker-designer-plan.md](speaker-designer-plan.md), L4) could model the front end with the amps.
+
+The owner's v2 discussion (a modular horn stack with a fixed analog front end) continues in
+[pa-v2-plan.md](pa-v2-plan.md).
