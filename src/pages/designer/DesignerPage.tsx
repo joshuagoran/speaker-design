@@ -64,6 +64,9 @@ interface Props {
 /** The bands drawn dashed: the air band shares the high band's color. */
 const BAND_DASH: Partial<Record<BandId, string>> = { air: "6 4" };
 
+/** The sum's line width on the charts, px: it reads over its bands' (2 px). */
+const SUM_LINE_PX = 4;
+
 /** Every band id, low to high. */
 const BAND_IDS = keysOf(SPEAKER_BAND);
 
@@ -101,7 +104,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
     );
   /** each band's line color: the PA chart's (sub ink, mid-bass magenta, horn cyan); the sum in ink */
   const bandStroke: Record<BandId, string> = {
-    low: pal.muted,
+    low: pal.faint,
     mid: pal.magenta,
     high: pal.cyan,
     // the top octave: the high band's cyan, dashed (BAND_DASH)
@@ -189,6 +192,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                         curve: response.sum,
                         label: DESIGNER_TEXT.sum,
                         stroke: pal.ink,
+                        width: SUM_LINE_PX,
                         tint: alpha(pal.ink, 0.05),
                       },
                     ]
@@ -228,6 +232,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                     curve: limits.sum,
                     label: DESIGNER_TEXT.sum,
                     stroke: pal.ink,
+                    width: SUM_LINE_PX,
                     tint: alpha(pal.ink, 0.05),
                   },
                   ...limits.bands.map((b) => ({

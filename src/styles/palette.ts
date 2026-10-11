@@ -20,6 +20,8 @@ export interface Palette {
   /** cards, inputs and buttons on the page */
   panel: string;
   muted: string;
+  /** the lighter gray for a chart line beside the ink and the muted gray (3:1 on the page) */
+  faint: string;
   edge: string;
   magenta: string;
   cyan: string;
@@ -38,6 +40,7 @@ const LIGHT: Palette = {
   white: "#ffffff",
   panel: "#ffffff",
   muted: "#595959",
+  faint: "#8c8c8c",
   edge: "#e6e6e6",
   magenta: "#e5007e",
   cyan: "#0077b8",
@@ -61,6 +64,7 @@ const DARK: Palette = {
   white: "#141516",
   panel: "#1b1d1f",
   muted: "#a3a3a3",
+  faint: "#707070",
   edge: "#33373b",
   magenta: "#ff4fae",
   cyan: "#45b6f2",

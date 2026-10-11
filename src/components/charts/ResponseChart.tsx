@@ -19,6 +19,8 @@ interface Series {
   band?: BandCurves<FrequencyPoint> | null;
   /** a dashed line (its SVG dash pattern), for a curve that shares another's color; absent: solid */
   dash?: string;
+  /** the line's width, px; absent: 2 (a sum drawn over its parts takes more) */
+  width?: number;
 }
 
 /** A labeled vertical line at a frequency. */
@@ -232,7 +234,7 @@ export function ResponseChart({
             d={p.d}
             fill="none"
             stroke={p.stroke}
-            strokeWidth="2"
+            strokeWidth={p.width ?? 2}
             strokeDasharray={p.dash}
             strokeLinejoin="round"
             strokeLinecap="round"

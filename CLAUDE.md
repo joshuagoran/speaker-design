@@ -13,7 +13,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
   response charts and optimizer cards, the Designer's response chart) uses 50–120 dB (`HIFI_TOP` / `HIFI_BOT`).
   The coverage map colors the level against the target on a fixed −12 to +6 dB scale (`COVERAGE_MAP_DB`).
 - Colors: CMYK brand (cyan actions and horn/tweeter, magenta mid-bass/woofer, yellow accents) plus black, white and two
-  grays; status colors stay green / orange / red. The palette lives in `src/styles/palette.ts`; Tailwind's color names are remapped from it in `tailwind.config.js`.
+  grays (and a lighter gray, `faint`, for one chart line beside them); status colors stay green / orange / red. The palette lives in `src/styles/palette.ts`; Tailwind's color names are remapped from it in `tailwind.config.js`.
 - Light and dark themes (follows the device, with the header's System / Light / Dark switch): every color comes from the
   palette tokens and works in both. Classes switch through CSS variables (no `dark:` variants, no `bg-white`; cards use
   `bg-panel`); colors drawn from code read `usePalette()` (`src/hooks/useTheme.ts`). Data colors (`DISPERSION_SCALE`,
