@@ -81,19 +81,22 @@ Each PR stands alone. Lowest risk first.
   - `coaxParts` in `src/lib/data.ts` (derived from the fill catalog), a coincident layout in
     `driverLayout`, and a coax part in `buildHifiScene`.
   - A parity test against `fillSystem`, with documented tolerances.
-- **P4 Use-case selector (Hi-fi / Monitor).**
-  - Use-case presets in a new `src/constants/useCases.ts` set defaults, ranges, targets, chips and goals.
+- **P4 Starting templates (Hi-fi / Monitor).** No fixed roles (owner, Oct 2026): a template only sets a new
+  design's first values. Nothing saves a role, and every chip shows for every design.
+  - Templates in a new `src/constants/useCases.ts` set defaults and ranges.
   - Rename the project to "Speakers" (owner to confirm). Keep `#hifi`.
   - Split `HifiPage.tsx` (about 970 lines) into section components.
-  - New chips: target level, coverage, kick, HF headroom, near-field lobing.
-  - An optional `use` in saves. Old saves restore as Hi-fi.
+  - New chips: max level at a distance you set (no per-use target), coverage, kick, HF headroom, near-field
+    lobing.
+  - Drive: passive and active, both as options.
   - Monitors (DJ booth), two options:
-    - (a) a 10–12″ coax in a small box or wedge;
+    - (a) a 10–12″ coax in a small box;
     - (b) an 8″ and a 1″ compression driver on a small 4–6″ horn, crossed at about 2.5–3 kHz, mounted tight
       above the woofer. Physics caveat: an 8″ narrows to about 65° at 2.7 kHz, and a 5″ mouth only
       controls coverage above about 2.7 kHz, so it falls short of 90–100°.
-  - Monitor preset: 0.5–1.5 m away, a 105–115 dB target, a high-pass at 70 Hz LR24 (60–80 Hz), 90–100°
-    horizontal, a pair either side of the DJ.
+  - Monitor template: hung or pedestal-mounted (not floor wedges), 0.5–1.5 m away, a high-pass at 70 Hz LR24
+    (60–80 Hz), 90–100° horizontal, a pair either side of the DJ. No tilt or wedge for now; aiming comes
+    with the system page.
 - **P5 Fill use case.**
   - Map today's fill defaults (`DEFAULT_FILL` in `src/lib/defaults.ts`) onto the page and redirect
     `#fills`. Delete `FillsPage`, `useFillsPlanner` and `fillSystem` after the P3 parity test's reference
@@ -105,19 +108,21 @@ Each PR stands alone. Lowest risk first.
   - `kick` and `smaller` goals; SPL and coverage targets as filters.
   - Coax candidates in Fill and Monitor only; a crossover grid for monitor option (b).
   - The existing snapshot cards stay unchanged; new cases are added.
-- **P7 Wedge box.**
+- **P7 Wedge box.** Not needed for booth monitors; parked.
   - First, tilt / kick-back on a rectangular box.
   - Then a true wedge: trapezoid volume, layout, cutlist bevels, 3D and front drawing.
 - **P8 Optional printed DIY small horn.** Hornlab data and mesh, like `diy_os90x70`.
 - **T1 Tower with the horn freestanding on top.** A field, not a fifth layout:
   `hornPlacement: "baffle" | "top"`, defaulting to `"baffle"`, with a toggle shown only for Tower.
-  - **No mid volume change:** the horn already has its own section.
+  - **Mid chamber height adjustable** (owner, Oct 2026): today fixed at 15.5″ (`TOWER_MID_HEIGHT_IN`). With
+    the horn on top it becomes a setting, which changes the mid's volume and the tower's height.
+  - **Any horn can sit on top,** the full-width rectangular horns included.
   - **Heights:** `stackHeights` and `towerSpec` put the horn axis above the tower lid, with no arched top.
   - **Mount:** the horn sits on the PR #114 aluminum plate or ply mount. `takesHornMount` (which today is
     false for every tower) applies when the placement is `"top"`.
   - **3D:** `buildTower` and `buildStackScene` follow.
-  - **Unchanged:** alignment (the mouth stays on the front plane), the datasheet-based acoustics, the
-    optimizer, saves, goldens and the snapshot.
+  - **Unchanged by default:** alignment (the mouth stays on the front plane), the datasheet-based acoustics,
+    saves, goldens and the snapshot (the height defaults to 15.5″). The mid volume follows the height.
   - **Cutlist:** fold in the #92 tower cutlist fix.
   - **Mapping:** `hornPlacement` becomes a property of any box with a horn and maps onto the speaker spec.
     The Hi-fi `WaveguideSpec.freestanding` boolean later switches to the shared type.
@@ -154,18 +159,19 @@ Each PR stands alone. Lowest risk first.
 - Passive maker networks (3rd order) can't be expressed as `CrossoverOrder` (4 | 8).
 - The tall tower with a loose horn on top: tipping, and securing the horn.
 
+## Owner decisions (Oct 2026)
+
+- Monitor drive: passive and active, both as options.
+- No target level per use: show the max level at a distance you set.
+- No fixed roles: templates set first values only; no `use` is saved.
+- Booth monitors hang or sit on pedestals: no tilt or wedge for now; designed as a pair.
+- Tower with the horn on top: the mid chamber height is adjustable, and any horn can sit on top.
+
 ## Open questions for the owner
 
-1. Monitor drive: passive or active?
-2. Monitor SPL target: peak or continuous, one box or the pair? What is the fill target?
-3. Save the use case with each design? Recommended: yes.
-4. Is a tilted upright box enough before a true wedge?
-5. One monitor or a pair by default?
-6. Show coaxes in the Hi-fi use case?
-7. Name: "Speakers"?
-8. Coaxials with no published HF data: model the woofer only, with a chip, or hide them?
-9. Fill delay against the mains: wait for the system page, or add a small calculator now?
-10. Which small horns to research first?
-11. Tower with the horn on top: keep the mid chamber fixed at 15.5″ or make it adjustable? Allow the
-    full-width rectangular horn on top? Fix the tower weight too (it changes the "lil tower" golden)?
-12. Wording: "Tower" with a "Horn" toggle, or a separate "Tower, horn on top" picker entry?
+1. Show coaxes in the Hi-fi template?
+2. Name: "Speakers"?
+3. Coaxials with no published HF data: model the woofer only, with a chip, or hide them?
+4. Fill delay against the mains: wait for the system page, or add a small calculator now?
+5. Which small horns to research first?
+6. Wording: "Tower" with a "Horn" toggle, or a separate "Tower, horn on top" picker entry?
