@@ -1490,8 +1490,13 @@ export interface HornRearChamber {
  * horn's segments and a sealed or vented rear chamber. No segments make a direct radiator (the mouth is the cone).
  */
 export interface HornDesign {
-  /** the driver's Thiele/Small parameters, as the box models take them */
+  /** one driver's Thiele/Small parameters, as the box models take them */
   driver: BoxModelTS;
+  /**
+   * how many of that driver share the throat, wired in parallel, each on the full voltage (Hornresp's Nd); 1 for one.
+   * Each cone keeps its own air load.
+   */
+  drivers: number;
   /** identical boxes side by side, mouths touching: they load as one mouth `count` times the area */
   count: number;
   /** the air between the cone and the throat, L (Hornresp's Vtc); 0 for none */
@@ -1515,13 +1520,13 @@ export interface HornPoint {
   phase: number;
   /** group delay of the summed pressure, ms */
   delay: number;
-  /** cone excursion ("x" in mm), peak, mm */
+  /** each cone's excursion ("x" in mm), peak, mm */
   xmm: number;
   /** air speed in the vent, m/s, peak; 0 when sealed */
   portSpeed: number;
   /** air speed at the horn's throat (the cone's face for a direct radiator), m/s, peak */
   throatSpeed: number;
-  /** one driver's electrical impedance Ze (magnitude), ohms; no voice-coil inductance, as the box models */
+  /** one driver's electrical impedance Ze (magnitude), ohms, of the `drivers` in parallel; no voice-coil inductance, as the box models */
   ze: number;
 }
 

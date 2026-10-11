@@ -75,7 +75,7 @@ import { formatInches } from "../format";
 import { MOUNT_ADAPTERS, ownGuideCfg, throatJoin, waveguideSpecOf } from "../data";
 import { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "../../constants/throatMounts";
 import { crossoverSlopeName } from "../../constants/crossovers";
-import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
 import {
   baffleEdgeShare,
@@ -593,7 +593,7 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
   const hpf = hp && (subsonic == null || hp.hz >= subsonic) ? null : subsonic;
   // the filter the box models run: the high-pass to a sub, else the subsonic
   const hpHz = hp ? hp.hz : hpf,
-    hpType: HighpassType = hp ? crossoverSlopeName(hp.order) : "BW24";
+    hpType: HighpassType = hp ? crossoverSlopeName(hp.order) : HIFI_SUBSONIC_TYPE;
   const vM = ventPort
     ? boxModel(ts, net, pA, ventPort.len, hpHz || 1, V, hpType, {
         ...opts,
@@ -618,7 +618,7 @@ export function hifiBox(w: HifiWoofer, cfg: HifiBoxConfig, fTop: number): HifiBo
   // own peak figures, which nothing here reads, stay the high-pass's alone)
   if (hp && hpf)
     for (const o of m.curve) {
-      const g = highpassGain(o.f, hpf, "BW24");
+      const g = highpassGain(o.f, hpf, HIFI_SUBSONIC_TYPE);
       o.spl += 20 * Math.log10(g);
       o.xmm *= g;
       if (o.vel != null) o.vel *= g;

@@ -148,8 +148,9 @@ Each PR stands alone. Lowest risk first.
     fields, no migration branches for old save formats, no compatibility layers.
   - **Horns.** A chamber's load is direct or a horn built into the box: the horn engine's throat chamber and
     segments (`HornDesign`, PR #128). The chamber's net air and vent are the horn's rear chamber.
-    `hornDesignOf` maps a front-loaded chamber onto `HornDesign`. Alike drivers in one throat combine into
-    one equivalent driver (wired in parallel). A folded path (a bass bin) has the same segments; its fold
+    `hornDesignOf` maps a front-loaded chamber onto `HornDesign`. Alike drivers in one throat go to the engine
+    as one driver and a count (`drivers`, Hornresp's Nd). The engine wires them in parallel, and each cone
+    keeps its own air load. A folded path (a bass bin) has the same segments; its fold
     layout comes later. A back-loaded or tapped horn has its own drive; the engine does not take them yet. A
     catalog horn on a compression driver is a `HornAttachment` with its `placement` (baffle or top) and its
     `mount`.

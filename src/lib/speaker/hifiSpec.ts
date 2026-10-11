@@ -1,6 +1,7 @@
 // Read adapter: the Hi-fi page's design (HifiDesignState) as a speaker spec and a system spec (the pair at the seat).
 // Pure; nothing is written.
 import type {
+  BandFilter,
   ChamberVent,
   Dims3,
   HifiDesignState,
@@ -13,10 +14,10 @@ import type {
   SystemSource,
   SystemWithSpeakers,
 } from "../../types";
-import { driverLayout, hifiPortElbows, isCoax } from "../hifi/hifi";
+import { driverLayout, hifiBox, hifiGridTop, hifiPortElbows, isCoax } from "../hifi/hifi";
 import { hifiBoxFit } from "../hifi/boxLayout";
 import { MAX_ELBOWS } from "../tubeFold";
-import { HIFI_DRIVE } from "../../constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
 import {
   DRIVER_KIND,
   FRONT_END_KIND,
@@ -57,6 +58,7 @@ function hifiVent(state: HifiDesignState, dim: Dims3, wall: number): ChamberVent
  */
 function hifiDrivers(state: HifiDesignState, fit: ReturnType<typeof hifiBoxFit>): SpeakerDriver[] {
   const { woofer, tweeter, selectedWaveguide } = state;
+  /** the waveguide in use: the tweeter's own, the picked one, or none */
   const guide = fit.waveguideSpec;
   const layout = driverLayout(woofer, fit.tweeterWithWaveguide, fit.dim, !!guide?.freestanding);
   const wooferAt = { xIn: 0, yIn: layout.wooferIn };
@@ -101,8 +103,31 @@ function hifiDrivers(state: HifiDesignState, fit: ReturnType<typeof hifiBoxFit>)
 }
 
 /**
- * The Hi-fi design as a speaker spec: one chamber at the fitted size, and the 2-way crossover inside the box (the sub
- * highpass is the system's: `systemFromHifi`).
+ * The box's own subsonic, as the model works it out from the fitted box (a vented or radiator box's highpass at
+ * 0.75 × its tuning); null for a sealed box or one the model can't take.
+ */
+function hifiSubsonic(
+  state: HifiDesignState,
+  fit: ReturnType<typeof hifiBoxFit>,
+): BandFilter | null {
+  const box = hifiBox(
+    state.woofer,
+    {
+      box: state.boxType,
+      port: state.portSpec,
+      pr: fit.radiator,
+      dim: fit.dim,
+      wall: fit.wallThicknessIn,
+      wAmpW: state.wooferAmpWatts,
+    },
+    hifiGridTop(state.crossoverHz),
+  );
+  return box?.hpf ? { hz: box.hpf, type: HIFI_SUBSONIC_TYPE } : null;
+}
+
+/**
+ * The Hi-fi design as a speaker spec: one chamber at the fitted size, the 2-way crossover inside the box and the box's
+ * subsonic (the sub highpass is the system's: `systemFromHifi`).
  */
 export function speakerFromHifi(
   state: HifiDesignState,
@@ -110,6 +135,7 @@ export function speakerFromHifi(
   identity: SpecIdentity,
 ): SpeakerSpec {
   const { crossoverHz, crossoverOrder } = state;
+  /** the box as the model takes it (lib/hifi/boxLayout) */
   const fit = hifiBoxFit(state);
   const drive = state.drive ?? HIFI_DRIVE.active;
   const band = (id: SpeakerBand["id"], filters: Pick<SpeakerBand, "highpass" | "lowpass">) => ({
@@ -141,7 +167,10 @@ export function speakerFromHifi(
       tiltDeg: state.tiltDeg ?? 0,
     },
     bands: [
-      band(SPEAKER_BAND.low, { highpass: null, lowpass: lrFilter(crossoverHz, crossoverOrder) }),
+      band(SPEAKER_BAND.low, {
+        highpass: hifiSubsonic(state, fit),
+        lowpass: lrFilter(crossoverHz, crossoverOrder),
+      }),
       band(SPEAKER_BAND.high, { highpass: lrFilter(crossoverHz, crossoverOrder), lowpass: null }),
     ],
     look,
@@ -160,7 +189,8 @@ export function systemFromHifi(
   system: SpecIdentity,
 ): SystemWithSpeakers {
   const speaker = speakerFromHifi(state, look, speakerIdentity(system, SPEAKER_PART.speaker));
-  const passive = (state.drive ?? HIFI_DRIVE.active) === HIFI_DRIVE.passive;
+  /** one channel per speaker when its bands share a passive network */
+  const passive = speaker.bands.every((b) => b.drive === HIFI_DRIVE.passive);
   const { subHighpass } = state;
   const amps: SystemAmp[] = passive
     ? [{ id: SPEAKER_BAND.low, model: null, watts: state.wooferAmpWatts }]

@@ -45,27 +45,18 @@ function driverTs(driver: SpeakerDriver): BoxModelTS | null {
 }
 
 /**
- * The chamber's drivers as one equivalent driver, as Hornresp's Nd: `n` identical drivers wired in parallel, each on
- * the amp's full voltage (as the PA plans wire two 8 Ω subs to one 4 Ω channel, and as the engine's `volts` is "on
- * each driver"). The cone area and moving mass add (so the compliance divides), the coil resistance divides, and Bl,
- * Fs, Qms and Xmax stay. Null: no driver, drivers of more than one kind or id, or no Thiele/Small parameters.
+ * The chamber's drivers as the engine takes them: one driver's Thiele/Small parameters and how many share the throat
+ * (Hornresp's Nd; the engine wires them in parallel, each on the full voltage, as the PA plans wire two 8 Ω subs to
+ * one 4 Ω channel). Null: no driver, drivers of more than one kind or id, or no Thiele/Small parameters.
  */
-function equivalentDriver(drivers: readonly SpeakerDriver[]): BoxModelTS | null {
+function throatDrivers(
+  drivers: readonly SpeakerDriver[],
+): Pick<HornDesign, "driver" | "drivers"> | null {
   if (drivers.length === 0) return null;
   const [first] = drivers;
   if (drivers.some((d) => d.kind !== first.kind || d.driverId !== first.driverId)) return null;
   const ts = driverTs(first);
-  if (!ts) return null;
-  const n = drivers.reduce((sum, d) => sum + d.count, 0);
-  return {
-    Fs: ts.Fs,
-    Qms: ts.Qms,
-    Xmax: ts.Xmax,
-    Bl: ts.Bl,
-    Sd: n * ts.Sd,
-    Mms: n * ts.Mms,
-    Re: ts.Re / n,
-  };
+  return ts && { driver: ts, drivers: drivers.reduce((sum, d) => sum + d.count, 0) };
 }
 
 /**
@@ -105,8 +96,8 @@ const gap = (why: HornEngineGap): HornDesignResult => ({ ok: false, gap: why });
 /**
  * The chamber as a horn design, `at.count` boxes side by side radiating into `at.angle`, or the first gap that stops
  * it: a tapped or back-loaded horn; drivers of more than one kind, or none with Thiele/Small parameters; no net air
- * set; a vent the engine doesn't take. Several alike drivers combine into one (`equivalentDriver`). A direct chamber
- * is a design with no segments.
+ * set; a vent the engine doesn't take. Several alike drivers share the throat (`throatDrivers`). A direct chamber is
+ * a design with no segments.
  */
 export function hornDesignOf(
   chamber: SpeakerChamber,
@@ -115,16 +106,18 @@ export function hornDesignOf(
   const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
   if (horn?.drive.kind === HORN_DRIVE.tapped) return gap(HORN_ENGINE_GAP.tapped);
   if (horn?.drive.kind === HORN_DRIVE.back) return gap(HORN_ENGINE_GAP.backLoaded);
-  const driver = equivalentDriver(chamber.drivers);
-  if (!driver) return gap(HORN_ENGINE_GAP.driver);
+  /** the drivers on the throat */
+  const throat = throatDrivers(chamber.drivers);
+  if (!throat) return gap(HORN_ENGINE_GAP.driver);
   const { netLiters } = chamber;
   if (netLiters === null) return gap(HORN_ENGINE_GAP.netLiters);
+  /** the rear chamber's vent as the engine's port */
   const rear = rearPort(chamber.vent);
   if (!rear) return gap(HORN_ENGINE_GAP.vent);
   return {
     ok: true,
     design: {
-      driver,
+      ...throat,
       count: at.count,
       throatChamber: horn?.throatChamber ?? 0,
       segments: horn?.segments ?? [],

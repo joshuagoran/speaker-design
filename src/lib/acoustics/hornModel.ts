@@ -66,10 +66,11 @@ function unwrapFromTop(phases: number[]) {
     phases[i] -= 2 * Math.PI * Math.round((phases[i] - phases[i + 1]) / (2 * Math.PI));
 }
 
-/** The area (m²) the front radiates from: the last segment's mouth, or the cone itself with no segments. */
+/** The area (m²) the front radiates from: the last segment's mouth, or the cones themselves with no segments. */
 const mouthAreaOf = (design: HornDesign) =>
-  (design.segments.length ? design.segments[design.segments.length - 1].s2 : design.driver.Sd) /
-  SQ_CM_PER_SQ_M;
+  (design.segments.length
+    ? design.segments[design.segments.length - 1].s2
+    : design.driver.Sd * design.drivers) / SQ_CM_PER_SQ_M;
 
 /**
  * Everything in front of the cone at frequency `f` (Hz). With no segments the chain is the identity: the horn's input
@@ -127,6 +128,8 @@ function isModelable(design: HornDesign, freqs: readonly number[]) {
   return (
     positive(driver.Sd, driver.Mms, driver.Fs, driver.Qms, driver.Bl, driver.Re) &&
     positive(rear.liters, design.count) &&
+    Number.isInteger(design.drivers) &&
+    design.drivers >= 1 &&
     design.throatChamber >= 0 &&
     (!rear.port || positive(rear.port.area, rear.port.effectiveLength)) &&
     segments.every((s) => positive(s.s1, s.s2) && s.length >= 0) &&
@@ -146,12 +149,21 @@ export function hornModel(
 ): HornModel | null {
   if (!isModelable(design, freqs)) return null;
   const { radiationLoad = true } = opts;
-  const { driver, segments, count, angle } = design;
-  /** one side's air load on a piston of the cone's radius a: 8/3·ρa³, kg */
+  const { driver, drivers, segments, count, angle } = design;
+  /** one side's air load on a piston of one cone's radius a: 8/3·ρa³, kg */
   const frontAirMass = radiationLoad
     ? (8 / 3) * AIR_DENSITY * Math.pow(driver.Sd / SQ_CM_PER_SQ_M / Math.PI, 1.5)
     : 0;
-  const { Sd, Mas, Cas, Ras, Rae, Pg } = driverCircuit(driver, volts, frontAirMass);
+  /** one cone's circuit, its own air load off its moving mass */
+  const cone = driverCircuit(driver, volts, frontAirMass);
+  // the `drivers` cones in parallel on one throat, as one: their areas add, their impedances divide, the source stays
+  // (each driver has the full voltage). Sd, Mas, Cas, Ras and Rae are the bank's from here on.
+  const Sd = cone.Sd * drivers,
+    Mas = cone.Mas / drivers,
+    Cas = cone.Cas * drivers,
+    Ras = cone.Ras / drivers,
+    Rae = cone.Rae / drivers,
+    Pg = cone.Pg;
   /** the throat's area, m²: the first segment's start, or the cone with no segments */
   const throatArea = segments.length ? segments[0].s1 / SQ_CM_PER_SQ_M : Sd;
   /** the rear chamber's compliance, m³/Pa (Small's Cab: the box's air as acoustic compliance) */
@@ -202,13 +214,14 @@ export function hornModel(
       multiply(imaginary(omega * AIR_DENSITY), radiatedFlow),
       1 / (angle * Math.PI),
     );
-    // the voice coil's impedance Ze: Re plus the motional part, Bl²/Sd² over the acoustic load without Rae
-    /** the acoustic load the motor drives, without its own electrical damping */
-    const motionalLoad = subtract(totalImpedance, complex(Rae));
-    /** Ze, the voice coil's impedance, ohms */
+    // one voice coil's impedance Ze: Re plus the motional part, Bl²/Sd² (one cone's) over one cone's acoustic load
+    // without Rae: the bank's load times the number of cones, as each carries its share of the flow
+    /** the acoustic load one cone's motor drives, without its own electrical damping */
+    const motionalLoad = scale(subtract(totalImpedance, complex(Rae)), drivers);
+    /** Ze, one voice coil's impedance, ohms */
     const electrical = add(
       complex(driver.Re),
-      divide(complex((driver.Bl * driver.Bl) / (Sd * Sd)), motionalLoad),
+      divide(complex((driver.Bl * driver.Bl) / (cone.Sd * cone.Sd)), motionalLoad),
     );
     phases.push(arg(pressure));
     // volts are RMS: √2 turns RMS travel and air speed into sine peaks, as the box models do

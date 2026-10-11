@@ -26,7 +26,7 @@ import {
 } from "../src/lib/data";
 import { DEFAULT_FILL, DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
 import { crossoverSlopeName } from "../src/constants/crossovers";
-import { HIFI_DRIVE } from "../src/constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_SUBSONIC_TYPE } from "../src/constants/hifiEngine";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { HORN_MOUNT_DEFAULT } from "../src/constants/hornMount";
 import {
@@ -39,7 +39,6 @@ import { CM_PER_M, METERS_PER_INCH } from "../src/constants/units";
 import {
   CHAMBER_LOAD,
   DRIVER_KIND,
-  FIRST_ORDER_FILTER,
   FRONT_END_KIND,
   HORN_DRIVE,
   HORN_ENGINE_GAP,
@@ -61,7 +60,6 @@ import type {
   PaPlannerDesign,
   PortStyle,
   SourceChannel,
-  SpeakerBand,
   SpeakerChamber,
   SpeakerPart,
   SpeakerPort,
@@ -428,11 +426,15 @@ test("speaker spec: Hi-fi designs read in with their fitted box, drivers, wavegu
     const xo = { hz: state.crossoverHz, type: crossoverSlopeName(state.crossoverOrder) };
     assert.deepEqual(bandOf(spec, SPEAKER_BAND.low).lowpass, xo, name);
     assert.deepEqual(bandOf(spec, SPEAKER_BAND.high).highpass, xo, name);
-    assert.equal(
-      bandOf(spec, SPEAKER_BAND.low).highpass,
-      null,
-      `${name}: the sub highpass is the system's`,
-    );
+    // the box's own subsonic on the low band: the model's (a sub highpass, the system's, would take its place there)
+    const subsonic = bandOf(spec, SPEAKER_BAND.low).highpass;
+    if (state.boxType === VENT_KIND.sealed) assert.equal(subsonic, null, `${name}: no subsonic`);
+    else if (state.subHighpass) assert.ok(subsonic, `${name}: a subsonic`);
+    else {
+      const modeled = deriveHifiDesign(state).speakerModel?.speakerSystem.hpf;
+      assert.ok(modeled, name);
+      assert.deepEqual(subsonic, { hz: modeled, type: HIFI_SUBSONIC_TYPE }, name);
+    }
     const passive = state.drive === HIFI_DRIVE.passive;
     assert.ok(
       spec.bands.every((b) => b.drive === (passive ? HIFI_DRIVE.passive : HIFI_DRIVE.active)),
@@ -492,28 +494,6 @@ test("speaker spec: Hi-fi designs read in with their fitted box, drivers, wavegu
   }
 });
 
-test("speaker spec: a super tweeter rides the HF channel through a capacitor", () => {
-  // the HF band active on its channel; the air band passive on the same channel, a first-order highpass
-  const bands: SpeakerBand[] = [
-    {
-      id: SPEAKER_BAND.high,
-      highpass: { hz: 950, type: "LR24" },
-      lowpass: null,
-      levelDb: 0,
-      drive: HIFI_DRIVE.active,
-    },
-    {
-      id: SPEAKER_BAND.air,
-      highpass: { hz: 9000, type: FIRST_ORDER_FILTER },
-      lowpass: null,
-      levelDb: 0,
-      drive: HIFI_DRIVE.passive,
-    },
-  ];
-  const channel: SourceChannel = { amp: "hf", channel: 0, bands: bands.map((b) => b.id) };
-  assert.deepEqual(channel.bands, [SPEAKER_BAND.high, SPEAKER_BAND.air]);
-});
-
 /** The PA default sub (B&C 18NBX100: Sd 1210 cm², Re 5.2 Ω), `count` of them. */
 const subs = (count: number): SpeakerChamber["drivers"] => [
   {
@@ -558,16 +538,8 @@ test("speaker spec: a horn chamber reads into a horn design the engine models", 
   const result = hornDesignOf(bassBin, { count: 1, angle: 2 });
   assert.ok(result.ok, "a front-loaded horn with one driver, net air and round ports");
   const { design } = result;
-  const ts = DEFAULT_PA.sub.ts;
-  assert.deepEqual(design.driver, {
-    Fs: ts.Fs,
-    Qms: ts.Qms,
-    Xmax: ts.Xmax,
-    Bl: ts.Bl,
-    Sd: ts.Sd,
-    Mms: ts.Mms,
-    Re: ts.Re,
-  });
+  assert.equal(design.driver, DEFAULT_PA.sub.ts);
+  assert.equal(design.drivers, 1);
   assert.equal(design.rear.liters, 120);
   assert.ok(design.rear.port);
   // two 4″ tubes: 8π in²; 8″ long, plus 1.46 radii for both ends: 10.92″
@@ -587,7 +559,7 @@ test("speaker spec: a horn chamber reads into a horn design the engine models", 
   assert.ok(hornModel(direct.design, hornGrid(), 2.83));
 });
 
-test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, reads in as one equivalent driver", () => {
+test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, reads in as two drivers on one throat", () => {
   // the PA v2 plan's sub bin: ~600 cm² of slot per driver, ~760 mm long, folded once; the wedges join the rear chamber
   // (~324 L net); the flare starts at the two cones
   const slotH = 3;
@@ -618,10 +590,9 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
   const result = hornDesignOf(bin, { count: 1, angle: 2 });
   assert.ok(result.ok);
   const { design } = result;
-  // two in parallel: twice the cone (2 × 1210 cm²), half the coil (5.2 Ω / 2), the same Bl
-  assert.equal(design.driver.Sd, 2420);
-  assert.equal(design.driver.Re, 2.6);
-  assert.equal(design.driver.Bl, DEFAULT_PA.sub.ts.Bl);
+  // two of one driver on the throat: the engine wires them in parallel, each cone with its own air load
+  assert.equal(design.driver, DEFAULT_PA.sub.ts);
+  assert.equal(design.drivers, 2);
   assert.ok(design.rear.port && Math.abs(design.rear.port.area - 1200) < 1e-9, "1200 cm² of slot");
   const model = hornModel(design, hornGrid(), 2.83);
   assert.ok(model, "the engine takes it");
