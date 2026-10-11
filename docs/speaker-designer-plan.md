@@ -1,7 +1,7 @@
 # Speaker designer: plan (parent branch `designer`)
 
-One page, the Designer, designs any single box and saves it to a library. A later Space page places saved
-boxes in a real space. This plan
+One page, the Designer, designs any single box and saves it to a library. A later Stack page joins boxes in
+a fixed relationship, and a Space page places stacks and boxes in a real space. This plan
 gets there in small PRs: near-term phases on today's Hi-fi engine first, then the general model.
 
 ## Goal (owner's vision)
@@ -15,9 +15,11 @@ gets there in small PRs: near-term phases on today's Hi-fi engine first, then th
     horn, MTM and similar are one model.
   - **Today's kinds become starting templates, not hard-coded types:** PA sub, mid/high box, tower, hi-fi,
     fill, monitor.
-- **Space page (the system page).** It composes saved speakers freely: placement and pose, amps and channels, DSP, crossovers
-  between boxes, delay and level, and the coverage map.
-- **Today's PA page bundles both.** It eventually becomes a system preset.
+- **Stack page.** It joins saved speakers in a fixed relationship: relative positions, crossovers between boxes,
+  delays and levels.
+- **Space page.** It places stacks and speakers freely: the room, left and right pairs, amps and channels, DSP,
+  and the coverage and level model.
+- **Today's PA page bundles all three.** It eventually becomes a stack preset.
 
 ## Current state
 
@@ -211,13 +213,25 @@ Each PR stands alone. Lowest risk first.
     replaces the 3% allowance.
   - **Later in L3.** The limits and the optimizer; the horn settings; the tower with the horn
     on top (T1); the voice-coil inductance (after PR #133 adds `Le`).
-- **L4 Space page.** A separate page, later. Any saved speaker can be placed in a "Space": sources by speaker
-  id, amps and channels, DSP, crossovers between boxes, delay and level, and the coverage map generalized
-  from `CoverageStack` to a list of sources. The baffle step, the room and the positions of the drivers come
-  in here. The PA page becomes a system preset.
-  - **Sub highpass and subsonic.** When a sub highpass covers the box's subsonic, the box's subsonic is
-    dropped; below 0.75 × Fb both stay. This rule comes with the Space page.
-  - Amps and DSP start from the owner's v1 rig: [amp-dsp-v1.md](amp-dsp-v1.md).
+- **L4 Stack and Space.** The UI has three layers: Speaker, Stack and Space (see the owner decisions). L4 adds
+  the last two, in two phases. The name is "Stack", not "System".
+  - **Data.** L1's `SystemSpec` splits in two:
+    - `StackSpec`: its members with their relative poses, the filters between boxes, the delays and the levels.
+    - `SpaceSpec`: the placed stacks and speakers, the venue and the hardware.
+  - **L4a Stack.** Speakers in a fixed relationship, for example a sub, a mid-bass box and a horn.
+    - It sets their relative positions, the crossovers between boxes, the delays and the levels.
+    - It says what each box needs (filters, delays, levels). It assigns no hardware.
+    - A speaker in a stack takes its input range from the stack's crossover. Alone in the Designer, the user sets it.
+    - **Sub highpass and subsonic.** When a sub highpass covers the box's subsonic, the box's subsonic is
+      dropped; below 0.75 × Fb both stay. This rule comes with the crossovers between boxes.
+    - The PA page becomes a stack preset.
+  - **L4b Space.** Stacks or speakers placed freely: the room, left and right pairs, and the coverage and level
+    model.
+    - The coverage map grows from `CoverageStack` to a list of placed stacks and speakers.
+    - The baffle step, the room and the positions of the drivers come in here.
+    - It assigns the hardware that does what each stack needs: the front end and the amp channels. One rack
+      can drive several stacks.
+    - Amps and DSP start from the owner's v1 rig: [amp-dsp-v1.md](amp-dsp-v1.md).
   - **Weight limit per box.** In the modular planner the weight limit becomes a manual setting on each box (it
     replaces today's fixed 125 lb sub check in `src/lib/pa/chips.ts`). The user sets the limit for the box
     they're working on; no automatic tower or layout rule sets it.
@@ -239,6 +253,14 @@ Each PR stands alone. Lowest risk first.
 
 ## Owner decisions (Oct 2026)
 
+- The UI has three layers. The name of the middle one is "Stack", not "System".
+  - **Speaker:** one box, with its chambers, drivers and bands. The Designer page.
+  - **Stack:** speakers in a fixed relationship: relative positions, crossovers between boxes, delays, levels.
+    For example a sub, a mid-bass box and a horn.
+  - **Space:** stacks or speakers placed freely: the room, left and right pairs, the coverage and level model.
+- The Stack says what each box needs (filters, delays, levels). The Space assigns the hardware that does it
+  (front end, amp channels), because one rack can drive several stacks.
+- A speaker's input range comes from its stack's crossover. Alone in the Designer, the user sets it.
 - Monitor drive: the user can select passive or active.
 - No target level for each use. Show the maximum level at a distance that you set.
 - No fixed roles. A template sets only the first values. A save keeps no `use`.
@@ -256,7 +278,7 @@ Each PR stands alone. Lowest risk first.
   match the PA page exactly.
 - Stuffing is a visible setting on each chamber. The model has no hidden stuffing rule. The 3% bracing
   allowance stays until L3c.
-- The sub highpass and subsonic rule waits for the Space page. The voice-coil inductance waits for PR #133.
+- The sub highpass and subsonic rule waits for the Stack phase (L4a). The voice-coil inductance waits for PR #133.
 - The cabinet gets a top shape (`flat` or `arched`) with the templates step (L3e). The PA tower's arched top then
   draws and cuts correctly.
 - Aim is not drawn now. One aim model comes later, for all speakers:
