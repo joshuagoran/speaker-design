@@ -7,10 +7,11 @@
 // Never drop a part because a spec is missing: use null where the type allows it and say what is missing in `note`.
 // Pure data: no logic, no derived fields (src/lib/data.ts derives and sorts).
 // Fields: id, name, lb, price $, src, type (dome | horn-loaded | compression | ribbon; an AMT is a ribbon), exit
-// (diameter in, null for a horn-loaded tweeter), faceplate ({ diameter } or { w, h } in, null when the maker gives no size), needsWaveguide,
-// note, optional ownGuide (a ribbon's own waveguide: covH / covV degrees, w / h in), optional mount (a compression
-// driver's throat: { thread } for a screw-on one; omit it for a bolt-on one); hf: sens dB 1 W/1 m, aes W
-// with a high-pass at aesXo Hz, minXo Hz (the maker's lowest crossover), imp Ω, fs Hz (null where unpublished).
+// (diameter in, null for a horn-loaded tweeter), faceplate ({ diameter } or { w, h } in, null when the maker gives no
+// size), needsWaveguide, note, optional ownGuide (a ribbon's own waveguide: covH / covV degrees, w / h in), optional
+// mount (a compression driver's throat: { thread } for a screw-on one; { bolts } for a bolt-on one whose pattern the
+// maker publishes; omit it for a bolt-on one without); hf: sens dB 1 W/1 m, aes W with a high-pass at aesXo Hz, minXo
+// Hz (the maker's lowest crossover), imp Ω, fs Hz (null where unpublished).
 import type { HifiTweeterRaw } from "../../types";
 
 /** The tweeter the Hi-fi planner starts on. */
@@ -85,17 +86,16 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
   },
   {
     id: "sb29rdac",
-    // GUESS: no weight found (SB's datasheet would not load); about 1 lb is assumed for a 104 mm ferrite ring dome
-    lb: 1,
+    lb: 1.19,
     name: "SB Acoustics SB29RDAC-C000-4",
     price: 68.7,
     src: "madisoundspeakerstore.com, Oct 2026 (out of stock)",
-    hf: { sens: 90, aes: 100, aesXo: null, minXo: null, imp: 4, fs: 600 },
+    hf: { sens: 90, aes: 100, aesXo: 2600, minXo: null, imp: 4, fs: 600 },
     type: "dome",
     exit: 1.14,
     faceplate: { diameter: 103.8 / 25.4 },
     needsWaveguide: false,
-    note: "[vendor: Madisound page, Willys Hi-Fi and Falcon spec tables; SB's datasheet could not be fetched] 29 mm textile ring dome, ferrite, rear chamber. The RDAC is the SB29RDC with an improved aluminum faceplate (Madisound: the SB29RDC, $66.70, is superseded). sens is 93 dB at 2.83 V on 4 Ω, about 90 dB/1 W. aes is 100 W with no high-pass stated. Fs 600 Hz, Re 3.0 Ω, Qts 0.65. 103.8 mm faceplate, about 72 mm cutout. No minimum crossover published. Weight not found.",
+    note: "[maker: SB Acoustics SB29RDAC-C000-4 datasheet, REV.1 11.03.2024; price: Madisound] 29 mm textile ring dome, ferrite, dual compression chamber, damped rear chamber, cast aluminum faceplate. The RDAC is the SB29RDC with an improved faceplate (Madisound: the SB29RDC, $66.70, is superseded). sens is 93 dB at 2.83 V on 4 Ω, about 90 dB/1 W. aes is 100 W IEC 268-5 with a 2.6 kHz 12 dB/oct Butterworth high-pass (aesXo), as SB rates the SB26STCN; SB gives no separate minimum crossover, so minXo stays null. Fs 600 Hz, Re 3.0 Ω, Qts 0.64, Xmax 0.25 mm (0.5 mm p-p). 103.8 mm faceplate, ⌀70 mm cutout, about 37 mm deep, 0.54 kg net.",
   },
   {
     id: "xt25tg30",
@@ -108,7 +108,7 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     exit: 1,
     faceplate: { diameter: 104 / 25.4 },
     needsWaveguide: false,
-    note: "[maker: Tymphany XT25TG30-04 datasheet, Rev 1.0, Sep 2009] Ring radiator with a central waveguide (phase plug), 25 mm coil, ferrite, rear chamber. sens is 90.8 dB at 2.83 V on 4 Ω, about 87.8 dB/1 W. aes is 110 W rated noise power (IEC 268-5 18.1); the test spectrum is 400 Hz–20 kHz at 12 dB/oct, so no useful high-pass is given. Fs 436 Hz, Re 3.0 Ω, Xmax 0.65 mm. 104 mm faceplate, 74 mm cutout (retailers). lb is the 0.5 kg unit mass. No minimum crossover published; retailers suggest 2.5 kHz at 12 dB/oct.",
+    note: "[maker: Tymphany XT25TG30-04 datasheet, Rev 1.0, Sep 2009] Ring radiator with a central waveguide (phase plug), 25 mm coil, ferrite, rear chamber. sens is 90.8 dB at 2.83 V on 4 Ω, about 87.8 dB/1 W. aes is 110 W rated noise power (IEC 268-5 18.1); the test spectrum is 400 Hz–20 kHz at 12 dB/oct, so no useful high-pass is given. Fs 436 Hz, Re 3.0 Ω, Xmax 0.65 mm. 104 mm faceplate, 74 mm cutout (retailers). lb is the 0.5 kg unit mass. Tymphany's datasheet gives no recommended or minimum crossover, so minXo stays null; retailers suggest 2.5 kHz at 12 dB/oct.",
   },
   {
     id: "nd25fa",
@@ -116,12 +116,12 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     name: "Dayton Audio ND25FA-4",
     price: 11.49,
     src: "parts-express.com, Oct 2026 (#275-059; price from the indexed listing)",
-    hf: { sens: 87, aes: 20, aesXo: null, minXo: null, imp: 4, fs: 1350 },
+    hf: { sens: 87, aes: 20, aesXo: null, minXo: 2500, imp: 4, fs: 1350 },
     type: "dome",
     exit: 1,
     faceplate: { diameter: 66 / 25.4 },
     needsWaveguide: false,
-    note: '[maker: daytonaudio.com, Oct 2026] Budget 1" soft dome, neodymium, small round faceplate. sens is 90 dB at 2.83 V on 4 Ω, about 87 dB/1 W. aes is 20 W RMS (40 W max) with no high-pass stated. 2.5–20 kHz; Dayton says it is flat above 3 kHz, so plan on 3 kHz or higher (no minimum crossover published). Fs 1350 Hz, Re 3.2 Ω. 66 mm across, 45 mm cutout, 35.9 mm deep. The cheapest tweeter on the list.',
+    note: '[maker: daytonaudio.com, Oct 2026] Budget 1" soft dome, neodymium, small round faceplate. sens is 90 dB at 2.83 V on 4 Ω, about 87 dB/1 W. aes is 20 W RMS (40 W max) with no high-pass stated. 2.5–20 kHz; Dayton gives no crossover, so minXo is its stated 2.5 kHz lower limit. Dayton says it is flat above 3 kHz, so plan on 3 kHz or higher. Fs 1350 Hz, Re 3.2 Ω. 66 mm across, 45 mm cutout, 35.9 mm deep. The cheapest tweeter on the list.',
   },
   {
     id: "d2905990",
@@ -410,7 +410,7 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     faceplate: { w: 100 / 25.4, h: 200 / 25.4 },
     // GUESS: covH from Dayton's 0–45° curves (about −6 dB at 37° at 10 kHz); covV from the 160 mm tall slot
     ownGuide: { name: "AMTPRO-4 faceplate", covH: 90, covV: 30, w: 100 / 25.4, h: 200 / 25.4 },
-    note: '[maker: Dayton AMTPRO-4 spec sheet and daytonaudio.com] Pro AMT: folded Kapton diaphragm, neodymium, open back (dipole or chamber loading). sens is 94 dB 1 W/1 m (4 Ω). aes is 50 W RMS (100 W max) with no high-pass stated. 800 Hz–18 kHz; Dayton says it crosses "as low as 800 Hz" (minXo), with no slope. Re 3.96 Ω; fs not published. 100 × 200 mm plate, 72 × 172 mm cutout, 36 mm deep. Coverage not published (see the section note). A PA v2 super-tweeter candidate.',
+    note: '[maker: Dayton AMTPRO-4 spec sheet and daytonaudio.com] Pro AMT: folded Kapton diaphragm, neodymium, open back (dipole or chamber loading). sens is 94 dB as Dayton\'s spec sheet and product page label it: 1 W/1 m (2.0 V into 4 Ω, so about 97 dB at 2.83 V), unlike the other Dayton AMTs, rated at 2.83 V and converted here (−3 dB into 4 Ω). The plotted curve gives no drive level. aes is 50 W RMS (100 W max) with no high-pass stated. 800 Hz–18 kHz; Dayton says it crosses "as low as 800 Hz" (minXo), with no slope. Re 3.96 Ω; fs not published. 100 × 200 mm plate, 72 × 172 mm cutout, 36 mm deep. Coverage not published (see the section note). A PA v2 super-tweeter candidate.',
   },
   {
     id: "amt34",
@@ -418,13 +418,13 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     name: "Dayton Audio AMT3-4",
     price: 83.98,
     src: "parts-express.com, Oct 2026 (#275-093; price from the indexed listing)",
-    hf: { sens: 90, aes: 25, aesXo: null, minXo: null, imp: 4, fs: 875 },
+    hf: { sens: 90, aes: 25, aesXo: null, minXo: 1900, imp: 4, fs: 875 },
     type: "ribbon",
     exit: 1,
     faceplate: { w: 95 / 25.4, h: 130 / 25.4 },
     // GUESS: covH from Dayton's 0–45° curves (about −6 dB at 42° at 10 kHz); covV from the 113 mm tall cutout
     ownGuide: { name: "AMT3-4 faceplate", covH: 90, covV: 45, w: 95 / 25.4, h: 130 / 25.4 },
-    note: "[maker: Dayton AMT3-4 spec sheet and daytonaudio.com] Hi-fi AMT: folded Kapton diaphragm, neodymium. sens is 93 dB at 2.83 V on 4 Ω, about 90 dB/1 W. aes is 25 W RMS (50 W max) with no high-pass stated. 1.9–40 kHz; no minimum crossover published. Fs 875 Hz, Re 3.7 Ω. 95 × 130 mm plate, 68 × 113 mm cutout, 26.5 mm deep. Coverage not published (see the section note).",
+    note: "[maker: Dayton AMT3-4 spec sheet and daytonaudio.com] Hi-fi AMT: folded Kapton diaphragm, neodymium. sens is 93 dB at 2.83 V on 4 Ω, about 90 dB/1 W. aes is 25 W RMS (50 W max) with no high-pass stated. 1.9–40 kHz; Dayton gives no crossover, so minXo is its stated 1.9 kHz lower limit. Fs 875 Hz, Re 3.7 Ω. 95 × 130 mm plate, 68 × 113 mm cutout, 26.5 mm deep. Coverage not published (see the section note).",
   },
   {
     id: "amthr4",
@@ -433,12 +433,12 @@ export const HIFI_TWEETERS_RAW: readonly HifiTweeterRaw[] = [
     name: "Dayton Audio AMTHR-4",
     price: 89.98,
     src: "parts-express.com, Oct 2026 (#275-096; price from the indexed listing)",
-    hf: { sens: 91, aes: 25, aesXo: null, minXo: null, imp: 4, fs: null },
+    hf: { sens: 91, aes: 25, aesXo: null, minXo: 1800, imp: 4, fs: null },
     type: "ribbon",
     exit: 1,
     faceplate: { w: 110 / 25.4, h: 85 / 25.4 },
     // GUESS: covH from Dayton's 0–45° curves (about −7 dB at 45° at 10 kHz); covV from the short diaphragm
     ownGuide: { name: "AMTHR-4 faceplate", covH: 90, covV: 70, w: 110 / 25.4, h: 85 / 25.4 },
-    note: "[maker: Dayton AMTHR-4 spec sheet] Hi-res AMT with a sealed rear chamber (no box needed), neodymium. sens is 94 dB at 2.83 V on 4 Ω, about 91 dB/1 W. aes is 25 W RMS with no high-pass stated. 1.8–33 kHz; no minimum crossover published. Re 4.06 Ω; fs not published. 110 × 85 mm landscape plate, 82 × 61.6 mm rear body, 37 mm deep. Weight and coverage not published (see the section note).",
+    note: "[maker: Dayton AMTHR-4 spec sheet] Hi-res AMT with a sealed rear chamber (no box needed), neodymium. sens is 94 dB at 2.83 V on 4 Ω, about 91 dB/1 W. aes is 25 W RMS with no high-pass stated. 1.8–33 kHz; Dayton gives no crossover, so minXo is its stated 1.8 kHz lower limit. Re 4.06 Ω; fs not published (N/A on the sheet). 110 × 85 mm landscape plate, 82 × 61.6 mm rear body, 37 mm deep. Weight and coverage not published (see the section note).",
   },
 ];
