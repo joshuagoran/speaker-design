@@ -58,8 +58,8 @@ Stack / pole / tower / satellite (`PaLayout` in `src/types.ts`).
   `TOWER_MID_HEIGHT_IN` in `stackHeights.ts`, and `15.5` literals in `optimize.ts` and `optimizeExact.ts`).
   The horn has its own section above it, behind one continuous baffle with internal partitions
   (`towerSpec`).
-- Known tower bug, tracked in a comment on issue #92: `cutParts` skips the mid chamber and horn section
-  (it lists only the sub box), and `midWeightLb` leaves out the horn section.
+- The tower's cutlist and weight include the mid chamber and horn section (PR #122: `towerCutParts`,
+  `towerMidWeightLb`).
 
 ## Near-term phases
 
@@ -123,7 +123,7 @@ Each PR stands alone. Lowest risk first.
   - **3D:** `buildTower` and `buildStackScene` follow.
   - **Unchanged by default:** alignment (the mouth stays on the front plane), the datasheet-based acoustics,
     saves, goldens and the snapshot (the height defaults to 15.5″). The mid volume follows the height.
-  - **Cutlist:** fold in the #92 tower cutlist fix.
+  - **Cutlist:** `towerCutParts` follows the adjustable height.
   - **Mapping:** `hornPlacement` becomes a property of any box with a horn and maps onto the speaker spec.
     The Hi-fi `WaveguideSpec.freestanding` boolean later switches to the shared type.
 
