@@ -451,8 +451,8 @@ export interface AmpModel {
   id: string;
   /** model name without the brand, as the notes write it (`GXD4`) */
   model: string;
-  /** output-stage class */
-  ampClass: AmpClass;
+  /** output-stage class; null where the maker doesn't state it */
+  ampClass: AmpClass | null;
   /** output channels, unbridged */
   channels: number;
   /** watts per channel into 8 Ω and into 4 Ω */

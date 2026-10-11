@@ -131,14 +131,14 @@ export const LAB_GRUPPEN_C_X = {
   ],
 } as const satisfies AmpSeries;
 
-/** Lab.gruppen's 4-channel C Series touring amps; their figures are from the same manual's spec table. */
+/** Lab.gruppen's 4-channel C Series (class TD) touring amps; their figures are from the same manual's spec table. */
 export const LAB_GRUPPEN_C_4 = {
   brand: "Lab.gruppen",
   models: [
     {
       id: "c164",
       model: "C 16:4",
-      ampClass: "D",
+      ampClass: "TD",
       channels: 4,
       w8: 400,
       w4: 300,
@@ -151,7 +151,7 @@ export const LAB_GRUPPEN_C_4 = {
     {
       id: "c284",
       model: "C 28:4",
-      ampClass: "D",
+      ampClass: "TD",
       channels: 4,
       w8: 700,
       w4: 700,
@@ -163,7 +163,7 @@ export const LAB_GRUPPEN_C_4 = {
     {
       id: "c484",
       model: "C 48:4",
-      ampClass: "D",
+      ampClass: "TD",
       channels: 4,
       w8: 1000,
       w4: 1200,
@@ -175,7 +175,7 @@ export const LAB_GRUPPEN_C_4 = {
     {
       id: "c684",
       model: "C 68:4",
-      ampClass: "D",
+      ampClass: "TD",
       channels: 4,
       w8: 1200,
       w4: 1700,
@@ -187,7 +187,7 @@ export const LAB_GRUPPEN_C_4 = {
     {
       id: "c884",
       model: "C 88:4",
-      ampClass: "D",
+      ampClass: "TD",
       channels: 4,
       w8: 1250,
       w4: 2100,
@@ -356,7 +356,7 @@ export const CREST_CA = {
       gainDb: 35.7,
       limiterW: null,
       usedPrice: 200,
-      usedPriceEst: true,
+      note: "Price: Guitar Center asking $249.99; an eBay sale at $159.99 (date unknown).",
     },
     {
       id: "ca6",
@@ -429,6 +429,392 @@ export const CREST_CA = {
   ],
 } as const satisfies AmpSeries;
 
+/**
+ * Crown's 2-channel Macro-Tech: a linear "grounded bridge" output stage (AB+B per Crown's spec sheets, read only in
+ * search excerpts). Ratings are maximum average power, 20 Hz–20 kHz, 0.1% THD, both channels driven, 120 V units;
+ * gain is at the 1.4 V setting.
+ */
+export const CROWN_MACRO_TECH = {
+  brand: "Crown",
+  models: [
+    {
+      id: "ma600",
+      model: "MA-600",
+      ampClass: "ABB",
+      channels: 2,
+      w8: 210,
+      w4: 300,
+      gainDb: 30,
+      limiterW: null,
+      usedPrice: 250,
+      usedPriceEst: true,
+    },
+    {
+      id: "ma1200",
+      model: "MA-1200",
+      ampClass: "ABB",
+      channels: 2,
+      w8: 295,
+      w4: 450,
+      gainDb: 31,
+      limiterW: null,
+      usedPrice: 300,
+      usedPriceEst: true,
+    },
+    {
+      id: "ma2400",
+      model: "MA-2400",
+      ampClass: "ABB",
+      channels: 2,
+      w8: 505,
+      w4: 750,
+      gainDb: 33,
+      limiterW: null,
+      usedPrice: 400,
+      usedPriceEst: true,
+    },
+    {
+      id: "ma602",
+      model: "MA-602",
+      ampClass: "ABB",
+      channels: 2,
+      w8: 210,
+      w4: 300,
+      gainDb: 30,
+      limiterW: null,
+      usedPrice: 275,
+      usedPriceEst: true,
+    },
+    {
+      id: "ma1202",
+      model: "MA-1202",
+      ampClass: "ABB",
+      channels: 2,
+      w8: 295,
+      w4: 450,
+      gainDb: 31,
+      limiterW: null,
+      usedPrice: 325,
+      usedPriceEst: true,
+    },
+    {
+      id: "ma2402",
+      model: "MA-2402",
+      ampClass: "ABB",
+      channels: 2,
+      w8: 505,
+      w4: 750,
+      gainDb: 33,
+      limiterW: null,
+      usedPrice: 445,
+      note: "Price: an eBay asking price ($445 or best offer).",
+    },
+    {
+      id: "ma3600vz",
+      model: "MA-3600VZ",
+      ampClass: "ABB",
+      channels: 2,
+      w8: 1035,
+      w4: 1565,
+      gainDb: 36.8,
+      limiterW: null,
+      usedPrice: 600,
+      note: "Variable-impedance supply. The 4 Ω figure is at 1 kHz only. Price: an eBay buy-it-now.",
+    },
+    {
+      id: "ma5000vz",
+      model: "MA-5000VZ",
+      ampClass: "ABB",
+      channels: 2,
+      w8: 1090,
+      w4: 1775,
+      gainDb: 37,
+      limiterW: null,
+      usedPrice: 800,
+      usedPriceEst: true,
+      note: "Variable-impedance supply. 78 lb.",
+    },
+    {
+      id: "ma5002vz",
+      model: "MA-5002VZ",
+      ampClass: "ABB",
+      channels: 2,
+      w8: 1090,
+      w4: 1775,
+      gainDb: 37,
+      limiterW: null,
+      usedPrice: 1000,
+      note: "Variable-impedance supply. 78 lb. Price: under an eBay asking price of $1,124.99.",
+    },
+  ],
+  dsp: false,
+  filters: "No DSP and no built-in filters: optional PIP input modules add them.",
+  limiterModes:
+    "ODEP: cuts the drive as the output stage nears its thermal limit (not a speaker limiter)",
+  limits:
+    "No crossovers, EQ or delay: it needs an external DSP, and nothing in the amp protects a horn. Gain 26 dB fixed, or 0.775 V or 1.4 V sensitivity. Heavy: 40–78 lb. The 60x models have the same power as the 600/1200/2400.",
+  src: [
+    {
+      name: "Macro-Tech 600/1200/2400 reference manual",
+      url: "https://tcfurlong.com/wp-content/uploads/Crown-MA-1200-MA-2400-Rental-Manual.pdf",
+    },
+    {
+      name: "MA-602/1202/2402 operation manual",
+      url: "https://www.manualsdir.com/manuals/60112/crown-audio-1202-2402-macro-tech-602.html",
+    },
+    {
+      name: "MA-3600VZ spec sheet",
+      url: "https://www.fullcompass.com/common/files/2611-MA3600VZSpecSheet.pdf",
+    },
+    {
+      name: "MA-5000VZ reference manual",
+      url: "https://www.manualsdir.com/manuals/290447/crown-audio-macro-tech-ma-5000vz.html",
+    },
+    {
+      name: "MA-5002VZ operation manual",
+      url: "https://www.manualsdir.com/manuals/290427/crown-audio-macro-tech-ma5002vz.html",
+    },
+  ],
+} as const satisfies AmpSeries;
+
+/** Crown's 2-channel Macro-Tech i: class I (BCA). Ratings are guaranteed minimums, 20 Hz–20 kHz, 0.1% THD. Gain at 1.4 V. */
+export const CROWN_MACRO_TECH_I = {
+  brand: "Crown",
+  models: [
+    {
+      id: "ma5000i",
+      model: "MA-5000i",
+      ampClass: "I",
+      channels: 2,
+      w8: 1250,
+      w4: 2500,
+      gainDb: 37.1,
+      limiterW: null,
+      usedPrice: 1600,
+      usedPriceEst: true,
+      note: "Under an eBay asking price of $1,850.",
+    },
+    {
+      id: "ma9000i",
+      model: "MA-9000i",
+      ampClass: "I",
+      channels: 2,
+      w8: 1500,
+      w4: 3500,
+      gainDb: 37.9,
+      limiterW: null,
+      usedPrice: 1500,
+      note: "Price: listings at $1,400–1,696.",
+    },
+    {
+      id: "ma12000i",
+      model: "MA-12000i",
+      ampClass: "I",
+      channels: 2,
+      w8: 2100,
+      w4: 4500,
+      gainDb: 39.3,
+      limiterW: null,
+      usedPrice: 2150,
+      note: "Price: a buy-it-now listing.",
+    },
+  ],
+  dsp: false,
+  filters: "No filters listed.",
+  limiterModes:
+    "Input compressor/limiter, peak voltage limiter, average power limiter, clip eliminator and thermal limiter, all set over HiQnet System Architect",
+  limits:
+    "No crossovers, EQ or delay in the amp: it needs an external DSP. The limiters need a computer and HiQnet. 28 lb (one figure for the series). Gain 32 or 26 dB settings as well.",
+  src: [
+    {
+      name: "MA-i datasheet (2015)",
+      url: "https://adn.harmanpro.com/product_documents/documents/2138_1447271308/MAi_DataSheet_111115_Web_original.pdf",
+    },
+    {
+      name: "MA-i operation manual",
+      url: "https://adn.harmanpro.com/product_documents/documents/1994_1407852944/140579-3_08-13_MAi_dual-port_operation_original.pdf",
+    },
+  ],
+} as const satisfies AmpSeries;
+
+/**
+ * Crown's 2-channel XLS DriveCore 2 (class D). Ratings are maximum average power at 1 kHz, 0.5% THD (bandwidth and
+ * channels driven not stated); gain is computed at the 1.4 V setting.
+ */
+export const CROWN_XLS = {
+  brand: "Crown",
+  models: [
+    {
+      id: "xls1002",
+      model: "XLS 1002",
+      ampClass: "D",
+      channels: 2,
+      w8: 215,
+      w4: 350,
+      gainDb: 29.4,
+      limiterW: null,
+      usedPrice: 200,
+      usedPriceEst: true,
+    },
+    {
+      id: "xls1502",
+      model: "XLS 1502",
+      ampClass: "D",
+      channels: 2,
+      w8: 300,
+      w4: 525,
+      gainDb: 30.9,
+      limiterW: null,
+      usedPrice: 365,
+      note: "Price: a Reverb listing.",
+    },
+    {
+      id: "xls2002",
+      model: "XLS 2002",
+      ampClass: "D",
+      channels: 2,
+      w8: 375,
+      w4: 650,
+      gainDb: 31.9,
+      limiterW: null,
+      usedPrice: 450,
+      usedPriceEst: true,
+    },
+    {
+      id: "xls2502",
+      model: "XLS 2502",
+      ampClass: "D",
+      channels: 2,
+      w8: 440,
+      w4: 775,
+      gainDb: 32.6,
+      limiterW: null,
+      usedPrice: 550,
+      note: "Price: Reverb and Amazon used listings.",
+    },
+  ],
+  dsp: true,
+  filters:
+    "PureBand crossover per channel: Linkwitz-Riley 24 dB/oct low-pass, high-pass or band-pass, 30 Hz–3 kHz in 1/12-octave steps. No EQ and no delay.",
+  limiterModes: "PeakX: fixed, with no threshold, attack or release settings",
+  limits:
+    "No EQ or delay, and no voltage threshold to protect a horn. Light: 8.6–10.8 lb. The factory sensitivity (0.775 V or 1.4 V) isn't stated.",
+  src: [
+    {
+      name: "XLS DriveCore 2 manual",
+      url: "https://adn.harmanpro.com/product_documents/documents/2557_1431030087/5055568_XLSDC2_MNL_PRINT_050615_original.pdf",
+    },
+    {
+      name: "XLS DriveCore 2 datasheet",
+      url: "https://www.jbl.com/on/demandware.static/-/Sites-masterCatalog_Harman/default/dw1d21606b/pdfs/Crown_XLSDC2_DataSheet.pdf",
+    },
+  ],
+} as const satisfies AmpSeries;
+
+/**
+ * Yamaha's 2-channel P…S: EEEngine (a class AB output stage with a class D-driven supply, per Yamaha's catalog and a
+ * search excerpt of its EEEngine page). Ratings are 20 Hz–20 kHz, 0.1% THD+N; gain 32 dB.
+ */
+export const YAMAHA_P_S = {
+  brand: "Yamaha",
+  models: [
+    {
+      id: "p2500s",
+      model: "P2500S",
+      ampClass: "EEEngine",
+      channels: 2,
+      w8: 250,
+      w4: 310,
+      gainDb: 32,
+      limiterW: null,
+      usedPrice: 200,
+      usedPriceEst: true,
+    },
+    {
+      id: "p3500s",
+      model: "P3500S",
+      ampClass: "EEEngine",
+      channels: 2,
+      w8: 350,
+      w4: 450,
+      gainDb: 32,
+      limiterW: null,
+      usedPrice: 250,
+      usedPriceEst: true,
+    },
+    {
+      id: "p5000s",
+      model: "P5000S",
+      ampClass: "EEEngine",
+      channels: 2,
+      w8: 500,
+      w4: 700,
+      gainDb: 32,
+      limiterW: null,
+      usedPrice: 350,
+      usedPriceEst: true,
+    },
+    {
+      id: "p7000s",
+      model: "P7000S",
+      ampClass: "EEEngine",
+      channels: 2,
+      w8: 700,
+      w4: 950,
+      gainDb: 32,
+      limiterW: null,
+      usedPrice: 450,
+      usedPriceEst: true,
+      note: "650 W at 8 Ω on the European model.",
+    },
+  ],
+  dsp: false,
+  filters:
+    "No DSP. Per channel: off, a low-cut high-pass or a subwoofer low-pass, 25–150 Hz, 12 dB/oct.",
+  limiterModes: "Comp limiter at 0.5% THD or more; a VI limiter for loads of 1 Ω or less",
+  limits: "No EQ or delay, and only 12 dB/oct. The 4 Ω bridged figures are 20 ms bursts.",
+  src: [
+    {
+      name: "P7000S/P5000S/P3500S/P2500S owner's manual",
+      url: "https://usa.yamaha.com/files/download/other_assets/7/318527/p7000s_en_om_g0.pdf",
+    },
+    {
+      name: "P Series catalog",
+      url: "https://usa.yamaha.com/files/download/brochure/2/317232/p_series_catalog.pdf",
+    },
+  ],
+} as const satisfies AmpSeries;
+
+/** Yamaha's older 2-channel P4500. Ratings are 20 Hz–20 kHz, 0.05% THD. */
+export const YAMAHA_P = {
+  brand: "Yamaha",
+  models: [
+    {
+      id: "p4500",
+      model: "P4500",
+      ampClass: null,
+      channels: 2,
+      w8: 460,
+      w4: 620,
+      gainDb: 32.1,
+      limiterW: null,
+      usedPrice: 250,
+      usedPriceEst: true,
+      note: "Class not stated in the manual.",
+    },
+  ],
+  dsp: false,
+  filters: "No filters.",
+  limiterModes: "A protection limiter for loads of 1 Ω or less; no clip limiter",
+  limits: "No crossovers, EQ or delay: it needs an external DSP. Not rated bridged into 4 Ω.",
+  src: [
+    {
+      name: "P4500/P3200/P1600 owner's manual",
+      url: "https://usa.yamaha.com/files/download/other_assets/5/318565/P4500E.pdf",
+    },
+  ],
+} as const satisfies AmpSeries;
+
 /** Every amp series in the catalog; a rack's amp ids are the models listed here. */
 export const AMP_SERIES = [
   QSC_GXD,
@@ -438,4 +824,9 @@ export const AMP_SERIES = [
   POWERSOFT_OTTOCANALI,
   QSC_RMX,
   CREST_CA,
+  CROWN_MACRO_TECH,
+  CROWN_MACRO_TECH_I,
+  CROWN_XLS,
+  YAMAHA_P_S,
+  YAMAHA_P,
 ] as const;

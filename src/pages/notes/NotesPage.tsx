@@ -61,7 +61,7 @@ function ampCell(
     case "amp":
       return `${series.brand} ${model.model}`;
     case "ampClass":
-      return AMP_CLASSES[model.ampClass];
+      return model.ampClass ? AMP_CLASSES[model.ampClass] : "–";
     case "channels":
       return String(model.channels);
     case "w8":
@@ -246,7 +246,7 @@ export function NotesPage() {
                   {entriesOf(AMP_COLUMNS).map(([col, h]) => (
                     <th
                       key={col}
-                      className={`py-1 pr-4 font-normal ${col === "amp" ? "sticky left-0 bg-stone-50" : ""}`}
+                      className={`py-1 pr-4 font-normal whitespace-nowrap ${col === "amp" ? "sticky left-0 bg-stone-50" : ""}`}
                     >
                       {h}
                     </th>
@@ -259,7 +259,7 @@ export function NotesPage() {
                     {keysOf(AMP_COLUMNS).map((col) => (
                       <td
                         key={col}
-                        className={`py-1.5 pr-4 ${col === "amp" ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : col === "note" ? "min-w-[14rem]" : "tabular-nums"}`}
+                        className={`py-1.5 pr-4 ${col === "amp" ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : col === "note" ? "min-w-[14rem]" : "tabular-nums whitespace-nowrap"}`}
                       >
                         {col === "amp" ? (
                           <Tooltip

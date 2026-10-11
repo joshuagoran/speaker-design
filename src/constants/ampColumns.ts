@@ -1,9 +1,12 @@
 /** An amp's output-stage class, as the amps catalog and the Notes page's amp table name it. */
 export const AMP_CLASSES = {
   AB: "AB",
+  ABB: "AB+B",
   H: "H",
   D: "D",
+  TD: "TD",
   I: "I (BCA)",
+  EEEngine: "EEEngine",
 } as const;
 
 /**
