@@ -10,6 +10,9 @@
 // - "impedance" is acoustic impedance, Pa·s/m³: pressure over flow. Every impedance here is complex.
 // - "compliance" is an air volume's springiness, m³/Pa; "acoustic mass" is a column of air's (or the cone's) inertia,
 //   kg/m⁴. Both are the driver's or the box's mechanical values seen through the cone's area.
+//
+// Symbols kept short are the established ones, from Thiele and Small's papers and the box models; each is defined
+// where it is made. ω is the angular frequency 2πf (rad/s), and k = ω/c the wave number (rad/m).
 import type { Complex, HornDesign, HornModel, HornPoint } from "../../types";
 import { AIR_DENSITY, HORN_LEAK_Q, HORN_PORT_Q, SOUND_SPEED } from "../../constants/hornEngine";
 import { abs, add, arg, cx, div, exp, inv, jx, mul, scale, sub } from "./complex";
@@ -80,56 +83,63 @@ function frontLoad(design: HornDesign, f: number, radiationLoad: boolean) {
 }
 
 /**
- * The driver as an acoustic circuit, from its Thiele/Small parameters, in the box models' terms. All values are seen
- * through the cone's area: a mechanical value m becomes m/Sd² (masses, resistances) or m·Sd² (compliances).
+ * The driver as an acoustic circuit, from its Thiele/Small parameters (Fs, Qms, Mms, Bl, Re), in the box models'
+ * terms. Every value is seen through the cone's area Sd: a mechanical mass or resistance divides by Sd², a mechanical
+ * compliance multiplies by it.
  *
- * - `coneArea`: Sd, m².
- * - `acousticMass`: the cone's moving mass as acoustic mass (Mas), less the front air load when the radiation load
- *   carries it.
- * - `acousticCompliance`: the suspension's compliance as acoustic compliance (Cas).
- * - `suspensionLoss`: the suspension's mechanical loss as acoustic resistance (Ras), from Qms.
- * - `electricalDamping`: the voice coil's electrical damping as acoustic resistance (Rae = Bl²/(Re·Sd²)).
- * - `sourcePressure`: the amplifier's drive as a pressure source (Pg = V·Bl/(Re·Sd)).
+ * - `Sd`: the cone's effective area, m².
+ * - `Mas`: the cone's moving mass as acoustic mass, kg/m⁴. Without the radiation load it is Mms/Sd², as in the box
+ *   models; with it, Mmd/Sd², Mmd (Hornresp's name) being Mms less the front air load the radiation load now carries.
+ * - `Cas`: the suspension's compliance (Cms) as acoustic compliance, m³/Pa.
+ * - `Ras`: the suspension's mechanical loss (from Qms) as acoustic resistance, Pa·s/m³.
+ * - `Rae`: the voice coil's electrical damping as acoustic resistance, Bl²/(Re·Sd²), Pa·s/m³.
+ * - `Pg`: the amplifier's drive as a pressure source behind them all, V·Bl/(Re·Sd), Pa.
  */
 function driverCircuit(design: HornDesign, volts: number, radiationLoad: boolean) {
   const { driver } = design;
-  const coneArea = driver.Sd * CM2_TO_M2;
-  const movingMass = driver.Mms * GRAMS_TO_KG;
-  const frontAirMass = radiationLoad
-    ? (8 / 3) * AIR_DENSITY * Math.pow(coneArea / Math.PI, 1.5)
-    : 0;
-  const suspensionCompliance = 1 / (Math.pow(2 * Math.PI * driver.Fs, 2) * movingMass);
+  /** the cone's area, m² */
+  const Sd = driver.Sd * CM2_TO_M2;
+  /** the moving mass with its air load, kg (the datasheet's) */
+  const Mms = driver.Mms * GRAMS_TO_KG;
+  /** one side's air load on a piston of the cone's radius a: 8/3·ρa³, kg */
+  const frontAirMass = radiationLoad ? (8 / 3) * AIR_DENSITY * Math.pow(Sd / Math.PI, 1.5) : 0;
+  /** the moving mass without the front air load, kg */
+  const Mmd = Mms - frontAirMass;
+  /** the suspension's mechanical compliance, m/N, from Fs = 1/(2π·√(Mms·Cms)) */
+  const Cms = 1 / (Math.pow(2 * Math.PI * driver.Fs, 2) * Mms);
   return {
-    coneArea,
-    acousticMass: (movingMass - frontAirMass) / (coneArea * coneArea),
-    acousticCompliance: suspensionCompliance * coneArea * coneArea,
-    suspensionLoss: (2 * Math.PI * driver.Fs * movingMass) / driver.Qms / (coneArea * coneArea),
-    electricalDamping: (driver.Bl * driver.Bl) / driver.Re / (coneArea * coneArea),
-    sourcePressure: (volts * driver.Bl) / (driver.Re * coneArea),
+    Sd,
+    Mas: Mmd / (Sd * Sd),
+    Cas: Cms * Sd * Sd,
+    Ras: (2 * Math.PI * driver.Fs * Mms) / driver.Qms / (Sd * Sd),
+    Rae: (driver.Bl * driver.Bl) / driver.Re / (Sd * Sd),
+    Pg: (volts * driver.Bl) / (driver.Re * Sd),
   };
 }
 
 /**
- * The rear chamber's vent, when it has one, with the box model's losses.
+ * The rear chamber's vent, when it has one, with the box model's losses, in Small's vented-box symbols. `Cab` is the
+ * chamber's compliance, m³/Pa.
  *
- * - `area`: the vent's open area, m².
- * - `mass`: the air in the vent as acoustic mass, ρ·length/area.
- * - `tuning`: the chamber and vent's resonance, Hz (Fb).
- * - `leakResistance`: the chamber's leakage, as a resistance in parallel (Q of HORN_LEAK_Q at the tuning).
- * - `lossResistance`: the vent's friction and turbulence, in series with its mass (Q of HORN_PORT_Q at the tuning).
+ * - `Sp`: the vent's open area, m².
+ * - `Map`: the air in the vent as acoustic mass, ρ·(effective length)/Sp, kg/m⁴.
+ * - `Fb`: the chamber and vent's tuning, 1/(2π·√(Map·Cab)), Hz.
+ * - `Ral`: the chamber's leakage, a resistance in parallel with it, set by a Q of HORN_LEAK_Q at Fb, Pa·s/m³.
+ * - `Rap`: the vent's friction and turbulence, a resistance in series with Map, set by a Q of HORN_PORT_Q at Fb,
+ *   Pa·s/m³.
  */
-function ventOf(design: HornDesign, rearCompliance: number) {
+function ventOf(design: HornDesign, Cab: number) {
   const { port } = design.rear;
   if (!port) return null;
-  const area = port.area * CM2_TO_M2;
-  const mass = (AIR_DENSITY * port.effLength * CM_TO_M) / area;
-  const tuning = 1 / (2 * Math.PI * Math.sqrt(mass * rearCompliance));
+  const Sp = port.area * CM2_TO_M2;
+  const Map = (AIR_DENSITY * port.effLength * CM_TO_M) / Sp;
+  const Fb = 1 / (2 * Math.PI * Math.sqrt(Map * Cab));
   return {
-    area,
-    mass,
-    tuning,
-    leakResistance: HORN_LEAK_Q / (2 * Math.PI * tuning * rearCompliance),
-    lossResistance: (2 * Math.PI * tuning * mass) / HORN_PORT_Q,
+    Sp,
+    Map,
+    Fb,
+    Ral: HORN_LEAK_Q / (2 * Math.PI * Fb * Cab),
+    Rap: (2 * Math.PI * Fb * Map) / HORN_PORT_Q,
   };
 }
 
@@ -143,49 +153,50 @@ export function hornModel(
   const { radiationLoad = true } = opts;
   const { driver, segments, count, angle } = design;
   const circuit = driverCircuit(design, volts, radiationLoad);
-  const throatArea = segments.length ? segments[0].s1 * CM2_TO_M2 : circuit.coneArea;
-  const rearCompliance = (design.rear.liters * LITERS_TO_M3) / AIR_STIFFNESS;
-  const vent = ventOf(design, rearCompliance);
+  const throatArea = segments.length ? segments[0].s1 * CM2_TO_M2 : circuit.Sd;
+  /** the rear chamber's compliance, m³/Pa (Small's Cab: the box's air as acoustic compliance) */
+  const Cab = (design.rear.liters * LITERS_TO_M3) / AIR_STIFFNESS;
+  const vent = ventOf(design, Cab);
   const ventOffset = design.portOffset * CM_TO_M;
 
   const curve: HornPoint[] = [];
   const phases: number[] = [];
   for (const f of freqs) {
     const omega = 2 * Math.PI * f,
-      waveNumber = omega / SOUND_SPEED;
+      k = omega / SOUND_SPEED;
     // the driver's own impedance: its losses, plus its mass against its suspension
     const driverImpedance = cx(
-      circuit.suspensionLoss + circuit.electricalDamping,
-      omega * circuit.acousticMass - 1 / (omega * circuit.acousticCompliance),
+      circuit.Ras + circuit.Rae,
+      omega * circuit.Mas - 1 / (omega * circuit.Cas),
     );
     const front = frontLoad(design, f, radiationLoad);
     // the rear: the chamber's air, with the vent and the leak beside it when vented
-    const ventImpedance = vent ? cx(vent.lossResistance, omega * vent.mass) : null;
+    const ventImpedance = vent ? cx(vent.Rap, omega * vent.Map) : null;
     const rearAdmittance =
       vent && ventImpedance
-        ? add(cx(1 / vent.leakResistance, omega * rearCompliance), inv(ventImpedance))
-        : jx(omega * rearCompliance);
+        ? add(cx(1 / vent.Ral, omega * Cab), inv(ventImpedance))
+        : jx(omega * Cab);
     const rearImpedance = inv(rearAdmittance);
     // the cone's flow, and where it goes
     const totalImpedance = add(add(driverImpedance, front.frontImpedance), rearImpedance);
-    const coneFlow = div(cx(circuit.sourcePressure), totalImpedance);
+    const coneFlow = div(cx(circuit.Pg), totalImpedance);
     const throatFlow = div(coneFlow, front.throatSplit);
     const mouthFlow = segments.length
       ? mul(throatFlow, outputFlowRatio(front.chain, front.mouthLoad))
       : throatFlow;
     const chamberPressure = mul(coneFlow, rearImpedance);
     const ventFlow = vent && ventImpedance ? div(chamberPressure, ventImpedance) : cx(0);
-    const leakFlow = vent ? scale(chamberPressure, 1 / vent.leakResistance) : cx(0);
+    const leakFlow = vent ? scale(chamberPressure, 1 / vent.Ral) : cx(0);
     // the vent and leak radiate in antiphase to the cone's front, from `ventOffset` behind the mouth
-    const rearOut = mul(add(ventFlow, leakFlow), exp(cx(0, -waveNumber * ventOffset)));
+    const rearOut = mul(add(ventFlow, leakFlow), exp(cx(0, -k * ventOffset)));
     const radiatedFlow = scale(sub(mouthFlow, rearOut), count);
     // a small source's pressure at r = 1 m in a solid angle Ω = angle·π: p = jωρ·flow/(Ω·r)
     const pressure = scale(mul(jx(omega * AIR_DENSITY), radiatedFlow), 1 / (angle * Math.PI));
     // the voice coil's impedance: Re plus the motional part, Bl²/Sd² over the acoustic load without Rae
-    const motionalLoad = sub(totalImpedance, cx(circuit.electricalDamping));
+    const motionalLoad = sub(totalImpedance, cx(circuit.Rae));
     const electrical = add(
       cx(driver.Re),
-      div(cx((driver.Bl * driver.Bl) / (circuit.coneArea * circuit.coneArea)), motionalLoad),
+      div(cx((driver.Bl * driver.Bl) / (circuit.Sd * circuit.Sd)), motionalLoad),
     );
     phases.push(arg(pressure));
     // volts are RMS: √2 turns RMS travel and air speed into sine peaks, as the box models do
@@ -194,8 +205,8 @@ export function hornModel(
       spl: 20 * Math.log10(abs(pressure) / SPL_REFERENCE_PA),
       phase: 0,
       delay: 0,
-      xmm: Math.SQRT2 * (abs(coneFlow) / (omega * circuit.coneArea)) * 1000,
-      portVel: vent ? Math.SQRT2 * (abs(ventFlow) / vent.area) : 0,
+      xmm: Math.SQRT2 * (abs(coneFlow) / (omega * circuit.Sd)) * 1000,
+      portVel: vent ? Math.SQRT2 * (abs(ventFlow) / vent.Sp) : 0,
       throatVel: Math.SQRT2 * (abs(throatFlow) / throatArea),
       ze: abs(electrical),
     });
@@ -209,7 +220,7 @@ export function hornModel(
     const omegaSpan = 2 * Math.PI * (curve[after].f - curve[before].f);
     curve[i].delay = omegaSpan > 0 ? (-(phases[after] - phases[before]) / omegaSpan) * 1000 : 0;
   }
-  return { curve, fb: vent ? vent.tuning : null };
+  return { curve, fb: vent ? vent.Fb : null };
 }
 
 /**
