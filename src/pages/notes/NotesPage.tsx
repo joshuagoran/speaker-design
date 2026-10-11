@@ -74,6 +74,8 @@ function ampCell(
       return series.dsp ? "Yes" : "No";
     case "usedPrice":
       return `$${model.usedPrice.toLocaleString()}${model.usedPriceEst ? " (est.)" : ""}`;
+    case "note":
+      return model.note ?? "";
   }
 }
 
@@ -238,7 +240,7 @@ export function NotesPage() {
             amp for its filters and limiter. An estimated price had no US listing to check.
           </p>
           <div className="overflow-x-auto">
-            <table className="text-sm w-full min-w-[640px] border-collapse">
+            <table className="text-sm w-full min-w-[860px] border-collapse">
               <thead>
                 <tr className="text-stone-500 text-left border-b border-stone-300">
                   {entriesOf(AMP_COLUMNS).map(([col, h]) => (
@@ -257,7 +259,7 @@ export function NotesPage() {
                     {keysOf(AMP_COLUMNS).map((col) => (
                       <td
                         key={col}
-                        className={`py-1.5 pr-4 ${col === "amp" ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : "tabular-nums"}`}
+                        className={`py-1.5 pr-4 ${col === "amp" ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : col === "note" ? "min-w-[14rem]" : "tabular-nums"}`}
                       >
                         {col === "amp" ? (
                           <Tooltip

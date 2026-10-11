@@ -17,6 +17,7 @@ export const GXD8 = {
   gainDb: 36.5,
   limiterW: [5, 800],
   usedPrice: 600,
+  note: "Mains rack: subs.",
 } as const satisfies AmpModel;
 
 /** The mid and horn amp. */
@@ -30,6 +31,7 @@ export const GXD4 = {
   gainDb: 33.5,
   limiterW: [5, 400],
   usedPrice: 400,
+  note: "Owned. v1 rack: mids. Fine delay steps (0.01 ms).",
 } as const satisfies AmpModel;
 
 /** The GXD prices were checked Sep 2026. */
@@ -68,8 +70,8 @@ export const PLD42 = {
   w4: 400,
   gainDb: 34,
   limiterW: [10, 1250],
-  // the owner's listing, Oct 2026
   usedPrice: 550,
+  note: "v1 rack: subs and horns. The 500 W/ch on the spec sheet is a 20 ms burst. Price: the owner's listing, Oct 2026.",
 } as const satisfies AmpModel;
 
 export const QSC_PLD = {
@@ -112,6 +114,7 @@ export const LAB_GRUPPEN_C_X = {
       limiterW: null,
       usedPrice: 700,
       usedPriceEst: true,
+      note: "The v1 plan’s rejected alternative. Phoenix inputs, screw-terminal outputs.",
     },
   ],
   dsp: false,
@@ -143,6 +146,7 @@ export const LAB_GRUPPEN_C_4 = {
       limiterW: null,
       usedPrice: 500,
       usedPriceEst: true,
+      note: "Bridged into 4 Ω is not recommended.",
     },
     {
       id: "c284",
@@ -165,8 +169,8 @@ export const LAB_GRUPPEN_C_4 = {
       w4: 1200,
       gainDb: 35,
       limiterW: null,
-      // an eBay asking price, Aug 2025
       usedPrice: 1000,
+      note: "Price: an eBay asking price, Aug 2025.",
     },
     {
       id: "c684",
@@ -191,6 +195,7 @@ export const LAB_GRUPPEN_C_4 = {
       limiterW: null,
       usedPrice: 1700,
       usedPriceEst: true,
+      note: "Rated at a 141 V limit; the other :4 models at 100 V.",
     },
   ],
   dsp: false,
@@ -217,6 +222,7 @@ export const POWERSOFT_OTTOCANALI = {
       limiterW: null,
       usedPrice: 1500,
       usedPriceEst: true,
+      note: "The amp in the design notes.",
     },
   ],
   dsp: false,
@@ -276,6 +282,7 @@ export const QSC_RMX = {
       gainDb: 34,
       limiterW: null,
       usedPrice: 350,
+      note: "2-tier class H.",
     },
     {
       id: "rmx4050hd",
@@ -287,6 +294,7 @@ export const QSC_RMX = {
       gainDb: 36,
       limiterW: null,
       usedPrice: 750,
+      note: "3-tier class H. CE rating 650 W at 8 Ω.",
     },
     {
       id: "rmx5050",
@@ -299,6 +307,7 @@ export const QSC_RMX = {
       limiterW: null,
       usedPrice: 900,
       usedPriceEst: true,
+      note: "3-tier class H.",
     },
   ],
   dsp: false,
@@ -370,8 +379,8 @@ export const CREST_CA = {
       w4: 800,
       gainDb: 38.7,
       limiterW: null,
-      // an eBay sale, May 2025, before shipping
       usedPrice: 305,
+      note: "Price: an eBay sale, May 2025, before shipping.",
     },
     {
       id: "ca12",
@@ -396,6 +405,7 @@ export const CREST_CA = {
       limiterW: null,
       usedPrice: 600,
       usedPriceEst: true,
+      note: "Rear gain switch; the others use an internal jumper.",
     },
   ],
   dsp: false,

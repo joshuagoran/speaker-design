@@ -466,6 +466,8 @@ export interface AmpModel {
   usedPrice: number;
   /** the used price is an estimate: no US listing was found */
   usedPriceEst?: true;
+  /** what sets this model apart from its series, or where a figure came from; display text */
+  note?: string;
 }
 
 /** An amplifier series and the DSP its models share, as the Notes page and the signal-path drawing describe it. */

@@ -19,4 +19,5 @@ export const AMP_COLUMNS = {
   gain: "Gain",
   dsp: "DSP",
   usedPrice: "Used (US)",
+  note: "Notes",
 } as const;
