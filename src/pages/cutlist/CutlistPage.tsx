@@ -69,12 +69,11 @@ import {
   CUTLIST_SETTINGS_SECTIONS,
   type CutlistSettingsSection,
 } from "../../constants/settingsSections";
-import { CUTLIST_PROJECTS } from "../../constants/cutlistProjects";
-import type { ProjectId } from "../../constants/pages";
+import { CUTLIST_PROJECTS, type CutlistProjectId } from "../../constants/cutlistProjects";
 
 interface Props {
   /** whose boxes these are: the page's words and set choices follow it */
-  project: ProjectId;
+  project: CutlistProjectId;
   /** this project's cutlist choices */
   options: CutlistOptions;
   /** one set's parts (one stack, one speaker) */

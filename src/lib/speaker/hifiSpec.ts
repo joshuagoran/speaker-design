@@ -3,7 +3,6 @@
 import type {
   BandFilter,
   ChamberVent,
-  Dims3,
   HifiDesignState,
   SourcePose,
   SpeakerBand,
@@ -14,7 +13,14 @@ import type {
   SystemSource,
   SystemWithSpeakers,
 } from "../../types";
-import { driverLayout, hifiBox, hifiGridTop, hifiPortElbows, isCoax } from "../hifi/hifi";
+import {
+  driverLayout,
+  hifiBox,
+  hifiGridTop,
+  hifiPortElbows,
+  isCoax,
+  tweeterLevelInBox,
+} from "../hifi/hifi";
 import { hifiBoxFit } from "../hifi/boxLayout";
 import { MAX_ELBOWS } from "../tubeFold";
 import { HIFI_DRIVE, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
@@ -34,7 +40,10 @@ import { DIRECT_LOAD, channelCounter, lrFilter, speakerIdentity } from "./specPa
  * The box's vent, by box kind. A round port carries its elbows as the model works them out (the fewest that fit the
  * fitted box; a port too long for any takes the most).
  */
-function hifiVent(state: HifiDesignState, dim: Dims3, wall: number): ChamberVent {
+function hifiVent(
+  state: HifiDesignState,
+  { dim, wallThicknessIn: wall, radiator }: ReturnType<typeof hifiBoxFit>,
+): ChamberVent {
   switch (state.boxType) {
     case VENT_KIND.sealed:
       return { kind: VENT_KIND.sealed };
@@ -48,7 +57,11 @@ function hifiVent(state: HifiDesignState, dim: Dims3, wall: number): ChamberVent
           };
     }
     case VENT_KIND.radiator:
-      return { kind: VENT_KIND.radiator, radiators: state.radiatorSelection };
+      // the radiators as the model takes them: the added mass kept under the most allowed (hifiBoxFit)
+      return {
+        kind: VENT_KIND.radiator,
+        radiators: { id: radiator.drv.id, n: radiator.n, addG: radiator.addG },
+      };
   }
 }
 
@@ -103,13 +116,14 @@ function hifiDrivers(state: HifiDesignState, fit: ReturnType<typeof hifiBoxFit>)
 }
 
 /**
- * The box's own subsonic, as the model works it out from the fitted box (a vented or radiator box's highpass at
- * 0.75 × its tuning); null for a sealed box or one the model can't take.
+ * What the band filters and levels read from the model's box: its own subsonic (a vented or radiator box's highpass at
+ * 0.75 × its tuning; null for a sealed box) and the tweeter's level match (`tweeterLevelInBox` trim: the tweeter set to
+ * the woofer's passband level at 2.83 V). Both null and 0 for a box the model can't take.
  */
-function hifiSubsonic(
+function hifiBandParts(
   state: HifiDesignState,
   fit: ReturnType<typeof hifiBoxFit>,
-): BandFilter | null {
+): { subsonic: BandFilter | null; trimDb: number } {
   const box = hifiBox(
     state.woofer,
     {
@@ -122,7 +136,23 @@ function hifiSubsonic(
     },
     hifiGridTop(state.crossoverHz),
   );
-  return box?.hpf ? { hz: box.hpf, type: HIFI_SUBSONIC_TYPE } : null;
+  if (!box) return { subsonic: null, trimDb: 0 };
+  /** the woofer's passband level at 2.83 V, as hifiSystemFromBox reads it */
+  const refW = box.m.ref - 20 * Math.log10(box.V / 2.83);
+  const { trim } = tweeterLevelInBox(
+    state.tweeter,
+    {
+      xo: state.crossoverHz,
+      tAmpW: state.tweeterAmpWatts,
+      wAmpW: state.wooferAmpWatts,
+      drive: state.drive,
+    },
+    refW,
+  );
+  return {
+    subsonic: box.hpf ? { hz: box.hpf, type: HIFI_SUBSONIC_TYPE } : null,
+    trimDb: trim,
+  };
 }
 
 /**
@@ -138,12 +168,12 @@ export function speakerFromHifi(
   /** the box as the model takes it (lib/hifi/boxLayout) */
   const fit = hifiBoxFit(state);
   const drive = state.drive ?? HIFI_DRIVE.active;
-  const band = (id: SpeakerBand["id"], filters: Pick<SpeakerBand, "highpass" | "lowpass">) => ({
-    id,
-    ...filters,
-    levelDb: 0,
-    drive,
-  });
+  const { subsonic, trimDb } = hifiBandParts(state, fit);
+  const band = (
+    id: SpeakerBand["id"],
+    filters: Pick<SpeakerBand, "highpass" | "lowpass">,
+    levelDb: number,
+  ) => ({ id, ...filters, levelDb, drive });
   return {
     ...identity,
     cabinet: {
@@ -152,7 +182,7 @@ export function speakerFromHifi(
           at: { xIn: 0, yIn: 0 },
           dims: fit.dim,
           netLiters: null,
-          vent: hifiVent(state, fit.dim, fit.wallThicknessIn),
+          vent: hifiVent(state, fit),
           load: DIRECT_LOAD,
           drivers: hifiDrivers(state, fit),
         },
@@ -167,11 +197,16 @@ export function speakerFromHifi(
       tiltDeg: state.tiltDeg ?? 0,
     },
     bands: [
-      band(SPEAKER_BAND.low, {
-        highpass: hifiSubsonic(state, fit),
-        lowpass: lrFilter(crossoverHz, crossoverOrder),
-      }),
-      band(SPEAKER_BAND.high, { highpass: lrFilter(crossoverHz, crossoverOrder), lowpass: null }),
+      band(
+        SPEAKER_BAND.low,
+        { highpass: subsonic, lowpass: lrFilter(crossoverHz, crossoverOrder) },
+        0,
+      ),
+      band(
+        SPEAKER_BAND.high,
+        { highpass: lrFilter(crossoverHz, crossoverOrder), lowpass: null },
+        trimDb,
+      ),
     ],
     look,
   };

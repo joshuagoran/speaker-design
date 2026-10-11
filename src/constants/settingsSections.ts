@@ -30,3 +30,11 @@ export const CUTLIST_SETTINGS_SECTIONS = {
   cuts: "Cuts",
 } as const;
 export type CutlistSettingsSection = keyof typeof CUTLIST_SETTINGS_SECTIONS;
+
+/** The Designer settings column's fold sections, by id, and the name each shows. */
+export const DESIGNER_SETTINGS_SECTIONS = {
+  speaker: "Speaker",
+  chambers: "Chambers and drivers",
+  bands: "Bands and filters",
+} as const;
+export type DesignerSettingsSection = keyof typeof DESIGNER_SETTINGS_SECTIONS;

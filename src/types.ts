@@ -25,6 +25,7 @@ import type {
   PORT_SHAPE,
   SOURCE_ROLE,
   SPEAKER_BAND,
+  SPEAKER_MODEL_GAP,
   SPEAKER_PART,
 } from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
@@ -1966,7 +1967,10 @@ export interface SpeakerBand {
   id: BandId;
   highpass: BandFilter | null;
   lowpass: BandFilter | null;
-  /** against the speaker's other bands, dB, 0 or less */
+  /**
+   * against the speaker's other bands, dB: a pad (0 or less), or a DSP's gain where the Hi-fi level match lifts a tweeter
+   * quieter than its woofer
+   */
   levelDb: number;
   /**
    * active: its filters run in the front end and it has an amp channel of its own; passive: a network in the box, on
@@ -2078,6 +2082,46 @@ export type HornEngineGap = (typeof HORN_ENGINE_GAP)[keyof typeof HORN_ENGINE_GA
 
 /** A chamber as the horn engine takes it, or why it can't yet. */
 export type HornDesignResult = { ok: true; design: HornDesign } | { ok: false; gap: HornEngineGap };
+
+/** Why the speaker model leaves out a chamber or a driver (`SPEAKER_MODEL_GAP`, or the horn engine's gap). */
+export type SpeakerModelGap =
+  | (typeof SPEAKER_MODEL_GAP)[keyof typeof SPEAKER_MODEL_GAP]
+  | HornEngineGap;
+
+/** The filters ahead of a speaker: a system source's (`SystemSource.filters`), on every band. */
+export type SpeakerFeed = SystemSource["filters"];
+
+/** One band of a speaker as the speaker model works it out: its drivers through its filters and level. */
+export interface SpeakerBandResponse {
+  id: BandId;
+  curve: FrequencyPoint[];
+  /** its passband level, dB: the mean of its curve where it is within 3 dB of its highest point */
+  passbandDb: number;
+}
+
+/** One chamber as the speaker model works it out. */
+export interface SpeakerChamberResponse {
+  /** the air the box model takes, L: `SpeakerChamber.netLiters`, or worked out from the size */
+  netLiters: number;
+  /** the vent's or radiators' tuning, Hz; null when sealed or not modeled */
+  fb: number | null;
+  /** a sealed chamber's Qtc (its stuffing counted); null otherwise */
+  qtc: number | null;
+  /** what the model leaves out in this chamber, if anything */
+  gaps: readonly SpeakerModelGap[];
+}
+
+/**
+ * A speaker's response (lib/speaker/speakerResponse `speakerResponse`): on axis at 1 m in half space, at
+ * `SPEAKER_RESPONSE_VOLTS` on every band, the bands summed with their phase.
+ */
+export interface SpeakerResponse {
+  sum: FrequencyPoint[];
+  /** the bands a modeled driver feeds, in the spec's order */
+  bands: SpeakerBandResponse[];
+  /** one per chamber, in the spec's order */
+  chambers: SpeakerChamberResponse[];
+}
 
 // ---- Bracing ----
 
@@ -3280,6 +3324,14 @@ export type OptimizerMessage<R = PaOptimizerResult> =
 /** What a page hands to `save`: its snapshot of the design, with a one-line `summary` of it; the store adds `name` and `savedAt`. */
 export interface SavedConfigData {
   summary?: string;
+}
+
+/**
+ * A speaker as the library saves it (users/{uid}/speakers): the spec without its id and name, which are the document's
+ * id and the save's name.
+ */
+export interface SavedSpeakerData extends SavedConfigData {
+  speaker: Omit<SpeakerSpec, "id" | "name">;
 }
 
 /** A saved configuration as read back: the stored fields plus the document's id. */

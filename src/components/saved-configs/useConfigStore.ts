@@ -134,15 +134,21 @@ export function useConfigStore(collection: string) {
   const signOut = async () => {
     if (fb) await fb.signOut();
   };
-  const save = async (name: string, data: SavedConfigData): Promise<boolean> => {
+  /** writes `data` under `name` to the document `id`, or to a new one; false (and a message) when it fails */
+  const write = async (
+    id: string | undefined,
+    name: string,
+    data: SavedConfigData,
+    done: string,
+  ): Promise<boolean> => {
     if (!db || !name) return false;
     setCfgMsg("Saving…");
     try {
       await db
         .collection(collection)
-        .doc()
+        .doc(id)
         .set({ name, savedAt: Date.now(), ...data });
-      flash("Saved");
+      flash(done);
       return true;
     } catch (e) {
       flash(
@@ -154,6 +160,17 @@ export function useConfigStore(collection: string) {
       return false;
     }
   };
+  /** a new saved configuration */
+  const save = (name: string, data: SavedConfigData) => write(undefined, name, data, "Saved");
+  /** a saved configuration's data replaced by `data` (its name kept as given) */
+  const overwrite = (id: string, name: string, data: SavedConfigData) =>
+    write(id, name, data, "Saved");
+  /** a saved configuration under a new name, its data kept */
+  const rename = ({ id, name: _old, savedAt: _at, ...data }: SavedConfig, name: string) =>
+    write(id, name, data, "Renamed");
+  /** a copy of a saved configuration under `name` */
+  const duplicate = ({ id: _id, name: _old, savedAt: _at, ...data }: SavedConfig, name: string) =>
+    write(undefined, name, data, "Duplicated");
   const remove = async (id: string) => {
     if (!db) return;
     try {
@@ -162,7 +179,21 @@ export function useConfigStore(collection: string) {
       flash("Couldn't delete");
     }
   };
-  return { db, saved, fb, fbUser, cfgMsg, setCfgMsg, signIn, signOut, save, remove };
+  return {
+    db,
+    saved,
+    fb,
+    fbUser,
+    cfgMsg,
+    setCfgMsg,
+    signIn,
+    signOut,
+    save,
+    overwrite,
+    rename,
+    duplicate,
+    remove,
+  };
 }
 
 /** What `useConfigStore` returns: the saved-config list and the actions on it. */

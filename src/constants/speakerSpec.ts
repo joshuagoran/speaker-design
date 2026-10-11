@@ -121,3 +121,26 @@ export const HORN_ENGINE_GAP = {
 
 /** The Fills model's walls: ½″ ply (lib/pa/calc `fillSystem` takes an inch off each outside size). */
 export const FILL_PANEL = "1/2" satisfies PanelNominal;
+
+/**
+ * Why the speaker model (lib/speaker/speakerResponse) leaves out a chamber or a driver, by id. A horn chamber that the
+ * horn engine can't take gives its `HORN_ENGINE_GAP` instead.
+ */
+export const SPEAKER_MODEL_GAP = {
+  /** a driver id that isn't in its kind's catalog table */
+  unknownDriver: "unknownDriver",
+  /** cone drivers of more than one id, or feeding different bands, share the chamber's air */
+  mixedDrivers: "mixedDrivers",
+  /** a compression driver, tweeter or coaxial with no published HF sensitivity */
+  noHf: "noHf",
+  /** a passive radiator id that isn't in the catalog */
+  unknownRadiator: "unknownRadiator",
+  /** the box model can't run on these sizes (no port area or length, no air) */
+  noModel: "noModel",
+} as const;
+
+/** The drive the speaker model works at, V RMS: 2.83 V, 1 W into 8 Ω, as the Hi-fi response charts. */
+export const SPEAKER_RESPONSE_VOLTS = 2.83;
+
+/** The saved speakers' collection under users/{uid} (the speaker library, next to `configs` and `hifiConfigs`). */
+export const SPEAKERS_COLLECTION = "speakers";

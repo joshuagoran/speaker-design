@@ -1,6 +1,7 @@
-# Speaker designer: plan (branch `speaker-designer-plan`)
+# Speaker designer: plan (parent branch `designer`)
 
-One page designs any single box and saves it to a library. A system page composes saved boxes. This plan
+One page, the Designer, designs any single box and saves it to a library. A later Space page places saved
+boxes in a real space. This plan
 gets there in small PRs: near-term phases on today's Hi-fi engine first, then the general model.
 
 ## Goal (owner's vision)
@@ -14,7 +15,7 @@ gets there in small PRs: near-term phases on today's Hi-fi engine first, then th
     horn, MTM and similar are one model.
   - **Today's kinds become starting templates, not hard-coded types:** PA sub, mid/high box, tower, hi-fi,
     fill, monitor.
-- **System page.** It composes saved speakers freely: placement and pose, amps and channels, DSP, crossovers
+- **Space page (the system page).** It composes saved speakers freely: placement and pose, amps and channels, DSP, crossovers
   between boxes, delay and level, and the coverage map.
 - **Today's PA page bundles both.** It eventually becomes a system preset.
 
@@ -96,14 +97,14 @@ Each PR stands alone. Lowest risk first.
       controls coverage above about 2.7 kHz, so it falls short of 90–100°.
   - Monitor template: a pair, one on each side of the DJ. Each monitor hangs or sits on a pedestal. They are
     not floor wedges. Distance 0.5–1.5 m, a high-pass at 70 Hz LR24 (60–80 Hz), 90–100° horizontal. No tilt
-    and no wedge for now. The system page will add aiming.
+    and no wedge for now. The Space page will add aiming.
 - **P5 Fill use case.**
   - Map today's fill defaults (`DEFAULT_FILL` in `src/lib/defaults.ts`) onto the page and redirect
     `#fills`. Delete `FillsPage`, `useFillsPlanner` and `fillSystem` after the P3 parity test's reference
     numbers are captured.
   - Fill goldens (`fillConfigs` in `tests/golden-configs.ts`) are replaced on purpose. The box models
     differ: ½″ walls, displacement and stuffing. Show the old and new numbers side by side in the PR.
-  - Fill delay and level against the mains are new work for the system page.
+  - Fill delay and level against the mains are new work for the Space page.
 - **P6 Optimizer per use case.**
   - `kick` and `smaller` goals; SPL and coverage targets as filters.
   - Coax candidates in Fill and Monitor only; a crossover grid for monitor option (b).
@@ -156,16 +157,50 @@ Each PR stands alone. Lowest risk first.
     `mount`.
   - New `speakers` and `systems` collections under `users/{uid}`, next to `configs` (PA) and `hifiConfigs`.
     `firestore.rules` already covers every collection there (`users/{uid}/{document=**}`); no rule change.
-- **L2 Speaker library.** Designer saves go to `speakers`, with import from old saves.
-- **L3 PA sub and mid/high boxes become designer templates.** The general chamber / driver / band model
-  replaces the per-kind acoustic models step by step. This is the biggest step.
-- **L4 System page.** Sources by speaker id, amps and channels, DSP, crossovers between boxes, delay and
-  level, and the coverage map generalized from `CoverageStack` to a list of sources. The PA page becomes a
-  system preset.
+- **L2 Speaker library.** Designer saves go to `speakers`. No import from old saves (owner policy above).
+- **L3 Designer page.** One page, "Designer" for now (`#designer`), designs any single speaker. The PA sub and
+  mid/high boxes, the tower and the Hi-fi speaker become starting points, not layout pickers. The general
+  chamber / driver / band model replaces the per-kind acoustic models step by step. This is the biggest step.
+  - **L3a (this phase).** The page with `SettingsLayout`: the name; chambers (size or net liters, vent and port
+    size, position); drivers per chamber (a catalog driver by kind, count, horn); bands with their filters,
+    level and drive. A design starts empty, from a saved speaker, or from the current PA or Hi-fi design
+    through the L1 adapters. The library: the `speakers` collection under `users/{uid}` (save, open, rename,
+    duplicate, save over, delete). The model: `speakerResponse` in `src/lib/speaker/speakerResponse.ts`.
+    The results: one response chart at 2.83 V on fixed axes, the net air and Fb (or Qtc) of each chamber,
+    and the passband level of each band.
+  - **The model (L3a).** Each chamber goes through the box model of its kind: sealed and vented from
+    `lib/pa/calc`, passive radiators from `lib/hifi`, and a horn in the box through `hornDesignOf` and
+    `hornModel`. Each driver kind keeps the rules of the engine that its catalog table comes from (the PA
+    subs and mids, the Hi-fi woofers, tweeters and coaxials). Then each band's filters and level, and the
+    bands summed with their phase. The response is on axis at 1 m in half space. It does not include the
+    baffle step, diffraction, the room, directivity or the driver positions.
+  - **Parity (L3a).** `tests/speaker-response.test.ts` compares the model with today's engines.
+    - Hi-fi (8 designs): each band within 0.05 dB, the sum within 0.25 dB (the Hi-fi sum leaves out the box
+      phase), and the net air and Fb or Qtc exact.
+    - PA (every golden design), with the net air set to today's: the mid and horn bands within 0.05 dB; the
+      sub exact with side ducts. A bottom slot and round tubes use the Hi-fi port rules, because the spec's
+      port has no fins, fold or tube wall gap. This moves Fb by up to 10% and the sub curve by up to 2.5 dB.
+    - PA, with the net air from the size: the model takes 3% for bracing, where the PA counts its braces,
+      vent walls and hardware. The model stuffs a sealed box 10%, where the PA stuffs its mids 15%. The
+      difference is up to 2.5 dB.
+    - Gaps: a Hi-fi design with a sub highpass keeps the box's subsonic in the spec (the Hi-fi engine drops
+      it). Drivers of different models in one chamber are a named gap.
+  - **Later in L3.** The 3D view, the cutlist, the limits and the optimizer; the horn settings; the tower
+    with the horn on top (T1).
+- **L4 Space page.** A separate page, later. Any saved speaker can be placed in a "Space": sources by speaker
+  id, amps and channels, DSP, crossovers between boxes, delay and level, and the coverage map generalized
+  from `CoverageStack` to a list of sources. The baffle step, the room and the positions of the drivers come
+  in here. The PA page becomes a system preset.
   - Amps and DSP start from the owner's v1 rig: [amp-dsp-v1.md](amp-dsp-v1.md).
   - **Weight limit per box.** In the modular planner the weight limit becomes a manual setting on each box (it
     replaces today's fixed 125 lb sub check in `src/lib/pa/chips.ts`). The user sets the limit for the box
     they're working on; no automatic tower or layout rule sets it.
+
+## Branches
+
+- The revamp lives on the parent branch `designer`. Each phase is a sub-branch from `origin/designer` (for
+  example `designer-l3a`), and its PR has the base `designer`.
+- `main` must not break. `designer` merges into `main` only when the owner approves it.
 
 ## Risks
 
@@ -184,12 +219,14 @@ Each PR stands alone. Lowest risk first.
 - Booth monitors are a pair. They hang or sit on pedestals. No tilt and no wedge for now.
 - Tower with the horn on top: the mid chamber height is adjustable, and any horn can sit on top. Do this in
   L3, not before.
+- The page is called "Designer" for now, not "Speakers".
+- One Designer page designs all speakers. Templates (starting points) replace the layout pickers, so the
+  tower needs no "Horn" toggle or separate picker entry.
+- Simulation in a real space is a separate page later (the Space page). Any speaker can be placed there.
+- The fill delay against the mains belongs to the Space page.
 
 ## Open questions for the owner
 
-1. Show coaxials in the Hi-fi template?
-2. Name: "Speakers"?
-3. Coaxials with no published HF data: model the woofer only, with a chip, or hide them?
-4. Fill delay against the mains: wait for the system page, or add a small calculator now?
-5. Which small horns to research first?
-6. Wording: "Tower" with a "Horn" toggle, or a separate "Tower, horn on top" picker entry?
+1. Show coaxials in the Hi-fi starting point (template)?
+2. Coaxials with no published HF data: model the woofer only, with a chip, or hide them?
+3. Which small horns to research first?

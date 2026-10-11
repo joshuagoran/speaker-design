@@ -1,7 +1,6 @@
 // A speaker spec's chamber as the horn engine (lib/acoustics/hornModel) takes it: a front-loaded horn, or a direct
 // radiator (no segments), with the chamber's own net air and vent as the rear chamber. Pure.
 import type {
-  BoxModelTS,
   ChamberVent,
   HornDesign,
   HornDesignResult,
@@ -10,14 +9,12 @@ import type {
   SpeakerChamber,
   SpeakerDriver,
 } from "../../types";
-import { FILL_OPTIONS, MID_OPTIONS, SUB_OPTIONS, hifiDriverById } from "../data";
-import { byId } from "../tables";
+import { coneParts } from "./driverParts";
 import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
 import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../pa/calc";
 import { CM_PER_M, METERS_PER_INCH } from "../../constants/units";
 import {
   CHAMBER_LOAD,
-  DRIVER_KIND,
   HORN_DRIVE,
   HORN_ENGINE_GAP,
   PORT_SHAPE,
@@ -26,23 +23,6 @@ import {
 
 /** Centimeters in one inch: the spec's ports are in inches, the engine's in Hornresp's cm. */
 const CM_PER_IN = METERS_PER_INCH * CM_PER_M;
-
-/** A driver's Thiele/Small parameters from its catalog table; null for a kind with none (compression, tweeter). */
-function driverTs(driver: SpeakerDriver): BoxModelTS | null {
-  switch (driver.kind) {
-    case DRIVER_KIND.sub:
-      return byId(SUB_OPTIONS, driver.driverId)?.ts ?? null;
-    case DRIVER_KIND.mid:
-      return byId(MID_OPTIONS, driver.driverId)?.ts ?? null;
-    case DRIVER_KIND.woofer:
-      return hifiDriverById("woofer", driver.driverId)?.ts ?? null;
-    case DRIVER_KIND.coaxial:
-      return byId(FILL_OPTIONS, driver.driverId)?.ts ?? null;
-    case DRIVER_KIND.compression:
-    case DRIVER_KIND.tweeter:
-      return null;
-  }
-}
 
 /**
  * The chamber's drivers as the engine takes them: one driver's Thiele/Small parameters and how many share the throat
@@ -55,8 +35,8 @@ function throatDrivers(
   if (drivers.length === 0) return null;
   const [first] = drivers;
   if (drivers.some((d) => d.kind !== first.kind || d.driverId !== first.driverId)) return null;
-  const ts = driverTs(first);
-  return ts && { driver: ts, drivers: drivers.reduce((sum, d) => sum + d.count, 0) };
+  const ts = coneParts(first)?.ts;
+  return ts ? { driver: ts, drivers: drivers.reduce((sum, d) => sum + d.count, 0) } : null;
 }
 
 /** A free (inner) end's correction over a flanged (outer) one's: 0.61 r over 0.85 r. */
