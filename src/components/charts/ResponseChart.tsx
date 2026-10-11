@@ -17,6 +17,8 @@ interface Series {
   stroke: string;
   tint: string;
   band?: BandCurves<FrequencyPoint> | null;
+  /** a dashed line (its SVG dash pattern), for a curve that shares another's color; absent: solid */
+  dash?: string;
 }
 
 /** A labeled vertical line at a frequency. */
@@ -231,6 +233,7 @@ export function ResponseChart({
             fill="none"
             stroke={p.stroke}
             strokeWidth="2"
+            strokeDasharray={p.dash}
             strokeLinejoin="round"
             strokeLinecap="round"
           />
@@ -312,7 +315,10 @@ export function ResponseChart({
         >
           {paths.map((p) => (
             <span key={p.label} className="flex items-center gap-1.5">
-              <span className="inline-block w-4 h-0.5" style={{ background: p.stroke }} />
+              <span
+                className="inline-block w-4 h-0.5"
+                style={p.dash ? { borderTop: `2px dashed ${p.stroke}` } : { background: p.stroke }}
+              />
               {p.label}
             </span>
           ))}

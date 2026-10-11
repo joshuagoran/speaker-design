@@ -25,6 +25,7 @@ import type {
   PORT_SHAPE,
   SOURCE_ROLE,
   SPEAKER_BAND,
+  SPEAKER_MODEL_GAP,
   SPEAKER_PART,
 } from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
@@ -1877,10 +1878,32 @@ export interface SideDuctPort extends Pick<VentSpec, "throat" | "len" | "div"> {
 }
 
 /**
- * A vented chamber's port: round tubes or slots (the Hi-fi kinds), or side ducts. `len` is the path length: a folded
- * port is its path. A slot's `w` is its width; absent, the box sets it (the Hi-fi slot runs the full width).
+ * Round tubes, with the PA sub's details where they are its tubes: `flared` ends (the PA tube rule: the flares, the
+ * neighboring mouths, a wall facing the inner mouth, the sub driver's depth as the stop; lib/pa/tubes
+ * subTubeEndCorrection), in the baffle's `corners` round a centered driver (`round4`) or in a row along the bottom.
+ * Without `flared`, the Hi-fi round port rule.
  */
-export type SpeakerPort = HifiPort | SideDuctPort;
+export interface SpeakerRoundPort extends RoundPort {
+  flared?: boolean;
+  corners?: boolean;
+}
+
+/**
+ * A slot, with the PA sub's letterbox details where it is one: `fins` dividers of the wall's thickness across it, its
+ * mouth on the floor, running from the frame front, `folded` up the back wall when too long to run straight (the PA
+ * slot rule: lib/pa/calc ventGeometry). Without `fins`, the Hi-fi slot rule.
+ */
+export interface SpeakerSlotPort extends SlotPort {
+  fins?: number;
+  folded?: boolean;
+}
+
+/**
+ * A vented chamber's port: round tubes or slots (the Hi-fi kinds, with the PA's details where set), or side ducts.
+ * `len` is the path length: a folded port is its path. A slot's `w` is its width; absent, the box sets it (the slot
+ * runs the full width).
+ */
+export type SpeakerPort = SpeakerRoundPort | SpeakerSlotPort | SideDuctPort;
 
 /** A chamber's vent, by its kind (`VENT_KIND`). */
 export type ChamberVent =
@@ -1935,6 +1958,12 @@ export interface SpeakerChamber {
    * null: the models work it out from `dims`
    */
   netLiters: number | null;
+  /**
+   * how much more air the stuffing makes the box act like, %: the Hi-fi engine stuffs a sealed box 10%, the PA its
+   * mids and the Fills page its sealed boxes 15%; 0 for none. The model applies it to every chamber alike (a horn's
+   * rear chamber too).
+   */
+  stuffingPct: number;
   vent: ChamberVent;
   load: ChamberLoad;
   drivers: readonly SpeakerDriver[];
@@ -1976,7 +2005,10 @@ export interface SpeakerBand {
   id: BandId;
   highpass: BandFilter | null;
   lowpass: BandFilter | null;
-  /** against the speaker's other bands, dB, 0 or less */
+  /**
+   * against the speaker's other bands, dB: a pad (0 or less), or a DSP's gain where the Hi-fi level match lifts a tweeter
+   * quieter than its woofer
+   */
   levelDb: number;
   /**
    * active: its filters run in the front end and it has an amp channel of its own; passive: a network in the box, on
@@ -2088,6 +2120,48 @@ export type HornEngineGap = (typeof HORN_ENGINE_GAP)[keyof typeof HORN_ENGINE_GA
 
 /** A chamber as the horn engine takes it, or why it can't yet. */
 export type HornDesignResult = { ok: true; design: HornDesign } | { ok: false; gap: HornEngineGap };
+
+/** Why the speaker model leaves out a chamber or a driver (`SPEAKER_MODEL_GAP`, or the horn engine's gap). */
+export type SpeakerModelGap =
+  | (typeof SPEAKER_MODEL_GAP)[keyof typeof SPEAKER_MODEL_GAP]
+  | HornEngineGap;
+
+/** The filters ahead of a speaker: a system source's (`SystemSource.filters`), on every band. */
+export type SpeakerFeed = SystemSource["filters"];
+
+/** One band of a speaker as the speaker model works it out: its drivers through its filters and level. */
+export interface SpeakerBandResponse {
+  id: BandId;
+  curve: FrequencyPoint[];
+  /** its passband level, dB: the mean of its curve where it is within 3 dB of its highest point */
+  passbandDb: number;
+}
+
+/** One chamber as the speaker model works it out. */
+export interface SpeakerChamberResponse {
+  /** the air the box model takes, L: `SpeakerChamber.netLiters`, or worked out from the size */
+  netLiters: number;
+  /** the vent's or radiators' tuning, Hz; null when sealed or not modeled */
+  fb: number | null;
+  /** a sealed chamber's Qtc (its stuffing counted); null otherwise */
+  qtc: number | null;
+  /** what the model leaves out in this chamber, if anything */
+  gaps: readonly SpeakerModelGap[];
+}
+
+/**
+ * A speaker's response (lib/speaker/speakerResponse `speakerResponse`): on axis at 1 m in half space, at
+ * `SPEAKER_RESPONSE_VOLTS` on every band, the bands summed with their phase.
+ */
+export interface SpeakerResponse {
+  sum: FrequencyPoint[];
+  /** the bands a modeled driver feeds, in the spec's order */
+  bands: SpeakerBandResponse[];
+  /** one per chamber, in the spec's order */
+  chambers: SpeakerChamberResponse[];
+  /** what the model leaves out across the bands: a band (or the feed) whose filter corner isn't a positive frequency */
+  gaps: readonly SpeakerModelGap[];
+}
 
 // ---- Bracing ----
 
@@ -3290,6 +3364,14 @@ export type OptimizerMessage<R = PaOptimizerResult> =
 /** What a page hands to `save`: its snapshot of the design, with a one-line `summary` of it; the store adds `name` and `savedAt`. */
 export interface SavedConfigData {
   summary?: string;
+}
+
+/**
+ * A speaker as the library saves it (users/{uid}/speakers): the spec without its id and name, which are the document's
+ * id and the save's name.
+ */
+export interface SavedSpeakerData extends SavedConfigData {
+  speaker: Omit<SpeakerSpec, "id" | "name">;
 }
 
 /** A saved configuration as read back: the stored fields plus the document's id. */

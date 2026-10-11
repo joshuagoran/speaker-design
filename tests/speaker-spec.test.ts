@@ -11,7 +11,7 @@ import { chamberClearFace } from "../src/lib/speaker/chamberAir";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
 import { paSearchDesign } from "../src/lib/pa/optimize";
 import { towerMidDims, towerSpec } from "../src/lib/pa/tower";
-import { boxInternalLiters, midGrossLiters } from "../src/lib/pa/calc";
+import { boxInternalLiters, midGrossLiters, slotFolds } from "../src/lib/pa/calc";
 import { needsWaveguide } from "../src/lib/hifi/hifi";
 import { panelNominalNear } from "../src/lib/panel";
 import { hornGrid, hornModel } from "../src/lib/acoustics/hornModel";
@@ -44,6 +44,7 @@ import {
   HORN_ENGINE_GAP,
   HORN_PATH,
   HORN_PLACEMENT,
+  PA_SLOT_FINS,
   PORT_SHAPE,
   SPEAKER_BAND,
   SPEAKER_PART,
@@ -158,12 +159,20 @@ test("speaker spec: every golden PA design reads into a system with its boxes, d
     const port = subChamber.vent.port;
     assert.equal(port.shape, PA_PORT_SHAPE[cfg.portStyle], c.name);
     assert.equal(port.len, cfg.cVent.len, c.name);
-    if (port.shape === PORT_SHAPE.slot) assert.equal(port.h, cfg.cVent.slotH, c.name);
+    // the PA's port details: the letterbox's fins and fold, the tubes' flares and layout
+    if (port.shape === PORT_SHAPE.slot)
+      assert.deepEqual(
+        [port.h, port.fins, port.folded],
+        [cfg.cVent.slotH, PA_SLOT_FINS, slotFolds(cfg.cDim, cfg.cVent, cfg.wall)],
+        c.name,
+      );
     else if (port.shape === PORT_SHAPE.duct) assert.equal(port.throat, cfg.cVent.throat, c.name);
     else {
       assert.deepEqual([port.n, port.dia], [cfg.cVent.nt, cfg.cVent.dia], c.name);
       assert.equal(typeof port.elbows, "number", `${c.name}: the tubes carry their elbows`);
+      assert.deepEqual([port.flared, port.corners], [true, cfg.portStyle === "round4"], c.name);
     }
+    assert.equal(subChamber.stuffingPct, 0, `${c.name}: the sub is bare`);
     const [sub] = driversOf(subBox, DRIVER_KIND.sub);
     assert.deepEqual([sub.driverId, sub.count, sub.bands], [cfg.sub, 1, [SPEAKER_BAND.low]]);
     assert.ok(
@@ -175,6 +184,7 @@ test("speaker spec: every golden PA design reads into a system with its boxes, d
     // the mid chamber: sealed, the design's size (the tower's: the sub's footprint)
     const midChamber = chamberOf(topBox, DRIVER_KIND.mid);
     assert.equal(midChamber.vent.kind, VENT_KIND.sealed, c.name);
+    assert.equal(midChamber.stuffingPct, 15, `${c.name}: the PA stuffs its mids 15%`);
     assert.deepEqual(midChamber.dims, tower ? towerMidDims(cfg.cDim) : cfg.mDim, c.name);
     assert.equal(driversOf(topBox, DRIVER_KIND.mid)[0].driverId, cfg.mid, c.name);
 
@@ -511,6 +521,7 @@ const bassBin: SpeakerChamber = {
   at: { xIn: 0, yIn: 0 },
   dims: { w: 24, h: 32, d: 30 },
   netLiters: 120,
+  stuffingPct: 0,
   vent: { kind: VENT_KIND.vented, port: { shape: PORT_SHAPE.round, n: 2, dia: 4, len: 8 } },
   load: {
     kind: CHAMBER_LOAD.horn,
@@ -569,6 +580,7 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
     at: { xIn: 0, yIn: 0 },
     dims: { w: 48, h: 32, d: 30.2 },
     netLiters: 324,
+    stuffingPct: 0,
     vent: {
       kind: VENT_KIND.vented,
       port: { shape: PORT_SHAPE.slot, n: 2, h: slotH, w: slotW, len: 680 / (10 * CM_PER_IN) },

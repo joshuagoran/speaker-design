@@ -1,3 +1,4 @@
+import { FREQ_AXIS_MAX_HZ } from "../../constants/chartScales";
 import { useEffect, useId, useState } from "react";
 import { CoverageMap } from "../../components/charts/CoverageMap";
 import { ResponseChart } from "../../components/charts/ResponseChart";
@@ -245,7 +246,7 @@ export function CoveragePage({ planner }: Props) {
             {map.response.length > 0 && (
               <div className="mt-4">
                 <ResponseChart
-                  fmax={20000}
+                  fmax={FREQ_AXIS_MAX_HZ}
                   H={240}
                   yLabel="dB SPL at the listener"
                   series={[

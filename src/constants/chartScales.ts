@@ -4,7 +4,16 @@ export const PA_DB_TOP = 135;
 /** Bottom of the PA response chart and the PA optimizer cards, dB SPL. */
 export const PA_DB_BOT = 80;
 
-/** Top of every Hi-fi dB chart, so designs and charts compare by eye. */
+/** Low end of the frequency charts' axis, Hz: the PA stack's, which every frequency chart but the dispersion maps shares. */
+export const FREQ_AXIS_MIN_HZ = 15;
+
+/** High end of the frequency charts' axis, Hz. */
+export const FREQ_AXIS_MAX_HZ = 20000;
+
+/**
+ * Top of every Hi-fi dB chart, so designs and charts compare by eye; the Designer's response chart (2.83 V, 1 m) takes
+ * the same scale.
+ */
 export const HIFI_TOP = 130;
 
 /** Bottom of every Hi-fi dB chart. */

@@ -291,7 +291,7 @@ export function highpassPhase(f: number, fc: number, type: HighpassType = "BW24"
 }
 // A model curve's box phase made continuous: each point moved by whole turns to within half a turn of the next one
 // up, from the top of the curve down (the top keeps its own value: there a box's phase is near 0).
-function unwrapRawPhase(curve: Pick<VentedPoint | SealedPoint, "rawPhase">[]) {
+export function unwrapRawPhase(curve: { rawPhase?: number }[]) {
   for (let i = curve.length - 2; i >= 0; i--) {
     const p = curve[i].rawPhase ?? 0,
       up = curve[i + 1].rawPhase ?? 0;
@@ -2303,10 +2303,13 @@ export function midSmallerBoxNetL(
   const netL = effL / STUFFING_VOLUME_GAIN;
   return netL >= fitNetL ? netL : null;
 }
+/** A mid's displacement, L: its published one, else assumed by size (4 L for a 15″, 2.5 L for a smaller one). */
+export const midDisplacementL = (mid: Pick<MidDriver, "size" | "ts">) =>
+  mid.ts && mid.ts.disp != null ? mid.ts.disp : mid.size === 15 ? 4 : 2.5;
 export function midSystem(mid: MidDriver, cfg: MidSystemConfig): MidSystem {
   const V = ampVoltage(cfg.mAmpW);
   const grossL = midGrossLiters(cfg.midDims, cfg.wall, cfg.inset, cfg.layout);
-  const disp = mid.ts && mid.ts.disp != null ? mid.ts.disp : mid.size === 15 ? 4 : 2.5; // assumed where not published
+  const disp = midDisplacementL(mid);
   const recessL = hardwareLiters(cfg.hardware, "mid", cfg.wall, cfg.layout);
   const netL = midNetLiters(grossL, disp, midBracingOf(mid, cfg, cfg.midDims), recessL);
   const effL = netL * STUFFING_VOLUME_GAIN;

@@ -1,3 +1,4 @@
+import { FREQ_AXIS_MAX_HZ } from "../../../constants/chartScales";
 import { alpha } from "../../../styles/palette";
 import { usePalette } from "../../../hooks/useTheme";
 import { StatTileGrid } from "../../../components/stats/StatTileGrid";
@@ -56,7 +57,7 @@ export function SystemSummary({ planner, className = "" }: Props) {
       />
       <SectionHeading className="mb-3">{UI_TEXT.systemResponse}</SectionHeading>
       <ResponseChart
-        fmax={20000}
+        fmax={FREQ_AXIS_MAX_HZ}
         series={[
           {
             curve: subModeled.throughLowpass,

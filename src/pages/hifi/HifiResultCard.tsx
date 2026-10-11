@@ -4,7 +4,12 @@ import { OptimizerCurveChart } from "../../components/charts/OptimizerCurveChart
 import { HifiFront } from "../../components/drawings/HifiFront";
 import { formatDollars } from "../../lib/format";
 import { Delta } from "../../components/optimizer/Delta";
-import { HIFI_TOP, HIFI_BOT } from "../../constants/chartScales";
+import {
+  FREQ_AXIS_MAX_HZ,
+  FREQ_AXIS_MIN_HZ,
+  HIFI_BOT,
+  HIFI_TOP,
+} from "../../constants/chartScales";
 import { LIMIT_CHIP_IDS } from "../../constants/chipIds";
 import { WOOFER_LIMITED_BY } from "../../constants/limits";
 import { OPTIMIZER_PANEL_TEXT } from "../../constants/optimizerText";
@@ -82,8 +87,8 @@ export function HifiResultCard({
         <OptimizerCurveChart
           curve={result.curve}
           cur={currentCurve}
-          fmin={15}
-          fmax={20000}
+          fmin={FREQ_AXIS_MIN_HZ}
+          fmax={FREQ_AXIS_MAX_HZ}
           band={null}
           top={HIFI_TOP}
           bot={HIFI_BOT}

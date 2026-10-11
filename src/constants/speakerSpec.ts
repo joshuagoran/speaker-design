@@ -66,6 +66,9 @@ export const PORT_SHAPE = {
   duct: string;
 };
 
+/** The fins across the PA sub's letterbox slot (lib/pa/calc ventGeometry splits it in three). */
+export const PA_SLOT_FINS = 2;
+
 /** How a chamber's drivers meet the air, by id: straight (a direct radiator), or through a horn in the box. */
 export const CHAMBER_LOAD = {
   direct: "direct",
@@ -121,3 +124,31 @@ export const HORN_ENGINE_GAP = {
 
 /** The Fills model's walls: ½″ ply (lib/pa/calc `fillSystem` takes an inch off each outside size). */
 export const FILL_PANEL = "1/2" satisfies PanelNominal;
+
+/**
+ * Why the speaker model (lib/speaker/speakerResponse) leaves out a chamber or a driver, by id. A horn chamber that the
+ * horn engine can't take gives its `HORN_ENGINE_GAP` instead.
+ */
+export const SPEAKER_MODEL_GAP = {
+  /** a driver id that isn't in its kind's catalog table */
+  unknownDriver: "unknownDriver",
+  /** cone drivers of more than one id, or feeding different bands, share the chamber's air */
+  mixedDrivers: "mixedDrivers",
+  /** a compression driver, tweeter or coaxial with no published HF sensitivity */
+  noHf: "noHf",
+  /** a passive radiator id that isn't in the catalog */
+  unknownRadiator: "unknownRadiator",
+  /** the box model can't run on these sizes (no air, port area or length, cones or radiators) */
+  noModel: "noModel",
+  /** a band's filter corner (or the feed's) isn't a positive frequency */
+  badFilter: "badFilter",
+} as const;
+
+/** The voltage of 1 W into 8 Ω, V RMS: what datasheets quote a 1 W sensitivity at (the engines round √8 to it). */
+export const ONE_WATT_VOLTS = 2.83;
+
+/** The drive the speaker model works at, V RMS: 1 W into 8 Ω, as the Hi-fi response charts. */
+export const SPEAKER_RESPONSE_VOLTS = ONE_WATT_VOLTS;
+
+/** The saved speakers' collection under users/{uid} (the speaker library, next to `configs` and `hifiConfigs`). */
+export const SPEAKERS_COLLECTION = "speakers";

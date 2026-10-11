@@ -31,10 +31,19 @@ import type {
   PlywoodSheetKind,
   PortMemory,
   SavedHifiConfig,
+  DriverKind,
+  SpeakerBand,
+  SpeakerChamber,
+  SpeakerDriverParts,
+  SpeakerSpec,
   SubDriver,
 } from "../types";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
-import { DUCT_DIVIDER_DEFAULT } from "../constants/panelSizes";
+import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../constants/panelSizes";
+import { HIFI_DRIVE } from "../constants/hifiEngine";
+import { SPEAKER_BAND, VENT_KIND } from "../constants/speakerSpec";
+import { HIFI_STUFFING_GAIN } from "./hifi/hifi";
+import { DIRECT_LOAD, stuffingPctOf } from "./speaker/specParts";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
 import { HORN_MOUNT_DEFAULT } from "../constants/hornMount";
 
@@ -171,3 +180,51 @@ export const DEFAULT_FILL = {
   ampWatts: 300,
   maxPortAirSpeedMs: 20,
 } satisfies FillDesignState;
+
+/** The part each driver kind starts on when the Designer adds one: the PA, Hi-fi and Fills pages' starting parts. */
+export const DEFAULT_DRIVER_IDS = {
+  sub: DEFAULT_PA.sub.id,
+  mid: DEFAULT_PA.mid.id,
+  compression: DEFAULT_PA.cd.id,
+  woofer: DEFAULT_HIFI.woofer.id,
+  tweeter: DEFAULT_HIFI.tweeter.id,
+  coaxial: DEFAULT_FILL.driver.id,
+} as const satisfies { [K in DriverKind]: SpeakerDriverParts[K]["id"] };
+
+/**
+ * A chamber the Designer adds: sealed and stuffed as the Hi-fi engine stuffs one, the Hi-fi starting box's size, no
+ * drivers yet; its net air from the size.
+ */
+export const DEFAULT_SPEAKER_CHAMBER: SpeakerChamber = {
+  at: { xIn: 0, yIn: 0 },
+  dims: DEFAULT_HIFI.boxDims,
+  netLiters: null,
+  stuffingPct: stuffingPctOf(HIFI_STUFFING_GAIN),
+  vent: { kind: VENT_KIND.sealed },
+  load: DIRECT_LOAD,
+  drivers: [],
+};
+
+/** A band the Designer adds: no filters, at 0 dB, active. */
+export const DEFAULT_SPEAKER_BAND: Omit<SpeakerBand, "id"> = {
+  highpass: null,
+  lowpass: null,
+  levelDb: 0,
+  drive: HIFI_DRIVE.active,
+};
+
+/**
+ * The Designer's empty speaker: one chamber (DEFAULT_SPEAKER_CHAMBER) in the PA's ¾″ birch ply, flush and sharp-edged,
+ * and one low band with no filters; the PA's look.
+ */
+export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
+  cabinet: {
+    chambers: [DEFAULT_SPEAKER_CHAMBER],
+    panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: DEFAULT_PA.wall },
+    insetIn: 0,
+    roundoverIn: 0,
+    tiltDeg: 0,
+  },
+  bands: [{ id: SPEAKER_BAND.low, ...DEFAULT_SPEAKER_BAND }],
+  look: { cabFinish: DEFAULT_PA.cabFinish, baffleColor: DEFAULT_PA.baffleColor },
+};
