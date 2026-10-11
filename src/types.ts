@@ -12,6 +12,7 @@ import type {
 import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
+import type { HORN_PROFILE } from "./constants/hornEngine";
 import type { COAX_GAP_NAMES } from "./constants/coax";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
@@ -1391,7 +1392,37 @@ export interface SealedBoxModel {
   peakX: number;
 }
 
-/** A complex number, for the horn engine's acoustic two-ports (lib/acoustics). */
+/**
+ * A driver as an acoustic circuit (lib/acoustics/driverCircuit), in the box models' terms: a pressure source Pg behind
+ * Ras + Rae + j(ωMas − 1/(ωCas)). Mechanical values are seen through the cone's area Sd: a mass or resistance divides
+ * by Sd², a compliance multiplies by it. Symbols are Thiele and Small's.
+ */
+export interface DriverCircuit {
+  /** the cone's effective area, m² */
+  Sd: number;
+  /** the moving mass with its air load, as on the datasheet, kg */
+  Mms: number;
+  /** the moving mass as acoustic mass, kg/m⁴ (less any front air load the caller's radiation load carries) */
+  Mas: number;
+  /** the suspension's compliance as acoustic compliance, m³/Pa */
+  Cas: number;
+  /** the suspension's mechanical loss (from Qms) as acoustic resistance, Pa·s/m³ */
+  Ras: number;
+  /** the voice coil's electrical damping as acoustic resistance, Bl²/(Re·Sd²), Pa·s/m³ */
+  Rae: number;
+  /** the amplifier's drive as a pressure source, V·Bl/(Re·Sd), Pa */
+  Pg: number;
+}
+
+/** A vented box's losses as resistances (lib/acoustics/driverCircuit ventResistances), in Small's symbols. */
+export interface VentResistances {
+  /** the box's leakage, a resistance in parallel with its air, Pa·s/m³ */
+  Ral: number;
+  /** the vent's friction and turbulence, a resistance in series with its air mass, Pa·s/m³ */
+  Rap: number;
+}
+
+/** A complex number, the one type the planner's complex math uses (lib/acoustics/complex). */
 export interface Complex {
   /** the real part */
   re: number;
@@ -1405,8 +1436,8 @@ export interface Complex {
  */
 export type Matrix2 = readonly [Complex, Complex, Complex, Complex];
 
-/** A horn segment's flare law: "con" conical, "exp" exponential (constants/hornEngine HORN_PROFILE_NAMES). */
-export type HornProfile = "con" | "exp";
+/** A horn segment's flare law: "con" conical, "exp" exponential (constants/hornEngine HORN_PROFILE). */
+export type HornProfile = (typeof HORN_PROFILE)[keyof typeof HORN_PROFILE];
 
 /** The solid angle a horn mouth radiates into, in units of π (constants/hornEngine RADIATION_ANGLE_NAMES). */
 export type RadiationAngle = 2 | 1 | 0.5;
@@ -1430,7 +1461,7 @@ export interface HornPort {
   /** the total open area, cm² (all openings together) */
   area: number;
   /** the effective (acoustic) length, cm: the physical length plus both end corrections */
-  effLength: number;
+  effectiveLength: number;
 }
 
 /** A horn box's rear chamber: its net air, L, and its vent; sealed when the vent is null. */
@@ -1473,9 +1504,9 @@ export interface HornPoint {
   /** cone excursion ("x" in mm), peak, mm */
   xmm: number;
   /** air speed in the vent, m/s, peak; 0 when sealed */
-  portVel: number;
+  portSpeed: number;
   /** air speed at the horn's throat (the cone's face for a direct radiator), m/s, peak */
-  throatVel: number;
+  throatSpeed: number;
   /** one driver's electrical impedance Ze (magnitude), ohms; no voice-coil inductance, as the box models */
   ze: number;
 }

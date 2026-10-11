@@ -2,12 +2,13 @@
 // integral forms. The mouth's 2ka (twice the wave number times the mouth's radius) runs to about 60 for a 1.9 m² mouth
 // at 2 kHz, where power series lose their digits; the integrals stay accurate there and need no tables.
 
-/** Quadrature steps per unit of x, plus a floor: enough to resolve every oscillation of the integrand. */
+/** Quadrature steps per unit of x, on top of a base: enough to resolve every oscillation of the integrand. */
 const STEPS_PER_UNIT = 4,
-  MIN_STEPS = 96;
+  BASE_STEPS = 96;
 /** The number of quadrature steps for argument x: even, for Simpson's rule. */
 const stepsFor = (x: number) => {
-  const steps = Math.max(MIN_STEPS, Math.ceil(Math.abs(x) * STEPS_PER_UNIT) + MIN_STEPS);
+  /** the step count before rounding up to even */
+  const steps = Math.ceil(Math.abs(x) * STEPS_PER_UNIT) + BASE_STEPS;
   return steps + (steps % 2);
 };
 
@@ -16,6 +17,7 @@ const stepsFor = (x: number) => {
  * smooth and periodic, so the trapezoid rule converges exponentially.
  */
 export function besselJ(n: number, x: number): number {
+  // the number of steps, their width (radians), the integrand of τ, and the running trapezoid sum
   const steps = stepsFor(x),
     stepWidth = Math.PI / steps;
   const integrand = (tau: number) => Math.cos(n * tau - x * Math.sin(tau));
@@ -31,6 +33,7 @@ export function besselJ(n: number, x: number): number {
 export function struveH1(x: number): number {
   // Simpson's error falls as the step width to the fourth power but, unlike the periodic trapezoid above, not
   // exponentially: four times the steps
+  // the number of steps, their width (radians), the integrand of φ, and the running Simpson sum
   const steps = 4 * stepsFor(x),
     stepWidth = Math.PI / 2 / steps;
   const integrand = (phi: number) => Math.cos(phi) ** 2 * Math.sin(x * Math.sin(phi));

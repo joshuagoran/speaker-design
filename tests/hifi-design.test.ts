@@ -1,8 +1,9 @@
 import { test } from "vite-plus/test";
+import { abs } from "../src/lib/acoustics/complex";
 import assert from "node:assert";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
-import { cabs, linkwitzRileyFilter } from "../src/lib/hifi/hifi";
+import { linkwitzRileyFilter } from "../src/lib/hifi/hifi";
 import { close } from "./helpers";
 
 test("a seat at the speakers floors the seat distance at 1 m, so the level stays finite", (t) => {
@@ -57,7 +58,7 @@ test("the tweeter's maximum curve is its level plus the highpass magnitude at ea
   close(t, tweeterMaxCurve[219].f, 20000, 1e-6);
   for (const { f, spl } of tweeterMaxCurve) {
     const hp = linkwitzRileyFilter(f, DEFAULT_HIFI.crossoverHz, DEFAULT_HIFI.crossoverOrder, "hp");
-    close(t, spl, speakerSystem.tLevel + 20 * Math.log10(Math.max(1e-6, cabs(hp))), 1e-9);
+    close(t, spl, speakerSystem.tLevel + 20 * Math.log10(Math.max(1e-6, abs(hp))), 1e-9);
   }
 });
 

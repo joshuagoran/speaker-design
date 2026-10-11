@@ -1,9 +1,9 @@
 // A horn mouth's radiation impedance: a circular piston of the mouth's area in a baffle, in the design's solid angle,
 // with any boxes beside it. Impedances are acoustic, Pa·s/m³ (pressure over volume velocity).
 import type { Complex, RadiationAngle } from "../../types";
-import { AIR_DENSITY, SOUND_SPEED } from "../../constants/hornEngine";
+import { AIR_DENSITY, SPEED_OF_SOUND } from "../../constants/acoustics";
 import { besselJ, struveH1 } from "./bessel";
-import { cx } from "./complex";
+import { complex } from "./complex";
 
 /**
  * A rigid circular piston of area S (m²) in an infinite baffle (half space), at frequency `f` (Hz):
@@ -13,11 +13,13 @@ import { cx } from "./complex";
  * is the impedance of a plane wave across the same area, which the piston approaches when it is large (ka ≫ 1).
  */
 export function pistonImpedance(areaM2: number, f: number): Complex {
+  /** the piston's radius a, m */
   const radius = Math.sqrt(areaM2 / Math.PI),
-    ka = ((2 * Math.PI * f) / SOUND_SPEED) * radius;
-  const planeWave = (AIR_DENSITY * SOUND_SPEED) / areaM2;
-  if (ka < 1e-6) return cx(0);
-  return cx(planeWave * (1 - besselJ(1, 2 * ka) / ka), (planeWave * struveH1(2 * ka)) / ka);
+    ka = ((2 * Math.PI * f) / SPEED_OF_SOUND) * radius;
+  /** ρc/S, Pa·s/m³ */
+  const planeWave = (AIR_DENSITY * SPEED_OF_SOUND) / areaM2;
+  if (ka < 1e-6) return complex(0);
+  return complex(planeWave * (1 - besselJ(1, 2 * ka) / ka), (planeWave * struveH1(2 * ka)) / ka);
 }
 
 /**
@@ -37,6 +39,7 @@ export function mouthImpedance(
 ): Complex {
   // how many mouths, real and mirrored, move together as one piston
   const pistons = (2 / angle) * count;
+  /** the impedance of those mouths as one piston */
   const together = pistonImpedance(areaM2 * pistons, f);
-  return cx(together.re * pistons, together.im * pistons);
+  return complex(together.re * pistons, together.im * pistons);
 }

@@ -14,18 +14,19 @@ import {
   inputImpedance,
   outputFlowRatio,
 } from "../src/lib/acoustics/hornSegments";
-import { hornModel, hornGrid } from "../src/lib/acoustics/hornModel";
-import { abs, add, arg, cx, div, mul, sub } from "../src/lib/acoustics/complex";
-import { AIR_DENSITY, SOUND_SPEED } from "../src/constants/hornEngine";
+import { hornModel, hornGrid, hornFrontImpedance } from "../src/lib/acoustics/hornModel";
+import { abs, add, arg, complex, divide, multiply, subtract } from "../src/lib/acoustics/complex";
+import { AIR_DENSITY, SPEED_OF_SOUND } from "../src/constants/acoustics";
+import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { boxModel, closedBox, highpassGain, ventTuning } from "../src/lib/pa/calc";
 import { DEFAULT_PA } from "../src/lib/defaults";
-import type { Complex, HornDesign, HornPoint, HornSegment } from "../src/types";
+import type { Complex, HornDesign, HornModel, HornPoint, HornSegment } from "../src/types";
 
 /** ρc: air's characteristic impedance, Pa·s/m (a plane wave's pressure over its particle speed). */
-const AIR_IMPEDANCE = AIR_DENSITY * SOUND_SPEED;
+const AIR_IMPEDANCE = AIR_DENSITY * SPEED_OF_SOUND;
 const SQUARE_INCH_TO_CM2 = 6.4516,
   M_TO_CM = 100;
-const waveNumberAt = (f: number) => (2 * Math.PI * f) / SOUND_SPEED;
+const waveNumberAt = (f: number) => (2 * Math.PI * f) / SPEED_OF_SOUND;
 
 /** Asserts that two numbers differ by at most `tolerance`. */
 const near = (actual: number, expected: number, tolerance: number, what: string) =>
@@ -39,7 +40,7 @@ const showComplex = (z: Complex) => `${z.re}${z.im >= 0 ? "+" : ""}${z.im}j`;
 /** Asserts that two complex numbers differ by at most `relTolerance` of the expected one's size. */
 const nearComplex = (actual: Complex, expected: Complex, relTolerance: number, what: string) =>
   assert.ok(
-    abs(sub(actual, expected)) <= relTolerance * Math.max(abs(expected), 1e-12),
+    abs(subtract(actual, expected)) <= relTolerance * Math.max(abs(expected), 1e-12),
     `${what}: ${showComplex(actual)} vs ${showComplex(expected)}`,
   );
 
@@ -103,7 +104,7 @@ test("a baffled piston's radiation impedance has its textbook limits", () => {
   const area = 0.05;
   const radius = Math.sqrt(area / Math.PI);
   const planeWave = AIR_IMPEDANCE / area;
-  const atKa = (ka: number) => (ka * SOUND_SPEED) / (2 * Math.PI * radius);
+  const atKa = (ka: number) => (ka * SPEED_OF_SOUND) / (2 * Math.PI * radius);
   // small ka: resistance (ρc/S)·(ka)²/2, reactance (ρc/S)·8ka/(3π)
   const small = 0.05;
   const low = pistonImpedance(area, atKa(small));
@@ -115,7 +116,7 @@ test("a baffled piston's radiation impedance has its textbook limits", () => {
   const f = 120;
   nearComplex(
     mouthImpedance(area, f, 1, 1),
-    mul(cx(2), pistonImpedance(2 * area, f)),
+    multiply(complex(2), pistonImpedance(2 * area, f)),
     1e-12,
     "quarter space",
   );
@@ -124,25 +125,25 @@ test("a baffled piston's radiation impedance has its textbook limits", () => {
 
 test("a straight duct's matrix is the plane-wave one", () => {
   // 100 cm² and 1 m long
-  const duct: HornSegment = { profile: "con", s1: 100, s2: 100, length: 100 };
+  const duct: HornSegment = { profile: HORN_PROFILE.conical, s1: 100, s2: 100, length: 100 };
   const lengthM = 1,
     ductImpedance = AIR_IMPEDANCE / 0.01;
   for (const f of [20, 85.75, 300, 1234]) {
     const phase = waveNumberAt(f) * lengthM;
     const m = segmentMatrix(duct, f);
-    nearComplex(m[0], cx(Math.cos(phase)), 1e-9, `A at ${f}`);
-    nearComplex(m[1], cx(0, ductImpedance * Math.sin(phase)), 1e-9, `B at ${f}`);
-    nearComplex(m[2], cx(0, Math.sin(phase) / ductImpedance), 1e-9, `C at ${f}`);
-    nearComplex(m[3], cx(Math.cos(phase)), 1e-9, `D at ${f}`);
+    nearComplex(m[0], complex(Math.cos(phase)), 1e-9, `A at ${f}`);
+    nearComplex(m[1], complex(0, ductImpedance * Math.sin(phase)), 1e-9, `B at ${f}`);
+    nearComplex(m[2], complex(0, Math.sin(phase) / ductImpedance), 1e-9, `C at ${f}`);
+    nearComplex(m[3], complex(Math.cos(phase)), 1e-9, `D at ${f}`);
   }
   // closed at the far end it resonates at c/4L: the input impedance A/C passes through zero there
-  const quarterWave = segmentMatrix(duct, SOUND_SPEED / (4 * lengthM));
+  const quarterWave = segmentMatrix(duct, SPEED_OF_SOUND / (4 * lengthM));
   assert.ok(
-    abs(div(quarterWave[0], quarterWave[2])) < 1e-6 * ductImpedance,
+    abs(divide(quarterWave[0], quarterWave[2])) < 1e-6 * ductImpedance,
     "quarter-wave resonance",
   );
   // ended in its own impedance (no reflection), the flow comes out unchanged but delayed by L/c
-  const ratio = outputFlowRatio(segmentMatrix(duct, 200), cx(ductImpedance));
+  const ratio = outputFlowRatio(segmentMatrix(duct, 200), complex(ductImpedance));
   near(abs(ratio), 1, 1e-9, "matched duct: no loss");
   assert.ok(angleGap(arg(ratio), -waveNumberAt(200) * lengthM) < 1e-9, "matched duct: delay L/c");
 });
@@ -154,22 +155,25 @@ test("a straight duct's matrix is the plane-wave one", () => {
 const expForwardImpedance = (area: number, flareRate: number, f: number): Complex => {
   const k = waveNumberAt(f),
     squared = k * k - (flareRate * flareRate) / 4;
-  const gamma = squared >= 0 ? cx(Math.sqrt(squared)) : cx(0, -Math.sqrt(-squared));
-  return mul(cx(AIR_IMPEDANCE / area), div(cx(0, k), cx(flareRate / 2 - gamma.im, gamma.re)));
+  const gamma = squared >= 0 ? complex(Math.sqrt(squared)) : complex(0, -Math.sqrt(-squared));
+  return multiply(
+    complex(AIR_IMPEDANCE / area),
+    divide(complex(0, k), complex(flareRate / 2 - gamma.im, gamma.re)),
+  );
 };
 /** A conical flare's forward-wave (spherical-wave) impedance at area S (m²), x meters from the apex: (ρc/S)·jkx/(1 + jkx). */
 const conForwardImpedance = (area: number, apexDistance: number, f: number): Complex => {
   const kx = waveNumberAt(f) * apexDistance;
-  return mul(cx(AIR_IMPEDANCE / area), div(cx(0, kx), cx(1, kx)));
+  return multiply(complex(AIR_IMPEDANCE / area), divide(complex(0, kx), complex(1, kx)));
 };
 
 test("an exponential horn ended in its own forward wave shows the endless horn's throat impedance", () => {
   // 300 cm² to 4000 cm² over 47 cm
-  const horn: HornSegment = { profile: "exp", s1: 300, s2: 4000, length: 47 };
+  const horn: HornSegment = { profile: HORN_PROFILE.exponential, s1: 300, s2: 4000, length: 47 };
   const throatArea = 0.03,
     mouthArea = 0.4;
   const flareRate = Math.log(mouthArea / throatArea) / 0.47;
-  const cutoff = (flareRate * SOUND_SPEED) / (4 * Math.PI);
+  const cutoff = (flareRate * SPEED_OF_SOUND) / (4 * Math.PI);
   for (const f of [0.5, 0.9, 1.1, 2, 8].map((r) => r * cutoff)) {
     const throat = inputImpedance(
       segmentMatrix(horn, f),
@@ -188,9 +192,33 @@ test("an exponential horn ended in its own forward wave shows the endless horn's
   near(expForwardImpedance(throatArea, flareRate, 0.5 * cutoff).re, 0, 1e-9, "below the cutoff");
 });
 
+test("an exponential horn stays exact at its cutoff, where the two travelling waves merge", () => {
+  const horn: HornSegment = { profile: HORN_PROFILE.exponential, s1: 300, s2: 4000, length: 47 };
+  const throatArea = 0.03,
+    mouthArea = 0.4;
+  const flareRate = Math.log(mouthArea / throatArea) / 0.47;
+  const cutoff = (flareRate * SPEED_OF_SOUND) / (4 * Math.PI);
+  for (const f of [cutoff, cutoff * (1 + 1e-9), cutoff * (1 - 1e-9)]) {
+    const m = segmentMatrix(horn, f);
+    assert.ok(
+      m.every((z) => Number.isFinite(z.re) && Number.isFinite(z.im)),
+      `finite at ${f} Hz`,
+    );
+    const throat = inputImpedance(m, expForwardImpedance(mouthArea, flareRate, f));
+    nearComplex(throat, expForwardImpedance(throatArea, flareRate, f), 1e-6, `throat at ${f} Hz`);
+  }
+  // at the cutoff the endless horn's throat is a pure mass: j·ρc/S
+  nearComplex(
+    expForwardImpedance(throatArea, flareRate, cutoff),
+    complex(0, AIR_IMPEDANCE / throatArea),
+    1e-12,
+    "pure reactance at the cutoff",
+  );
+});
+
 test("a conical horn ended in its own forward wave shows the spherical wave's impedance", () => {
   // 200 cm² to 1800 cm² over 60 cm; the radius grows linearly, so the apex sits L·r₁/(r₂ − r₁) before the throat
-  const horn: HornSegment = { profile: "con", s1: 200, s2: 1800, length: 60 };
+  const horn: HornSegment = { profile: HORN_PROFILE.conical, s1: 200, s2: 1800, length: 60 };
   const throatRadius = Math.sqrt(0.02),
     mouthRadius = Math.sqrt(0.18);
   const apexToThroat = (0.6 * throatRadius) / (mouthRadius - throatRadius);
@@ -205,28 +233,28 @@ test("a conical horn ended in its own forward wave shows the spherical wave's im
 
 test("a lossless chain carries the same real power in and out", () => {
   const horn: HornSegment[] = [
-    { profile: "con", s1: 250, s2: 500, length: 20 },
-    { profile: "exp", s1: 500, s2: 3000, length: 45 },
-    { profile: "con", s1: 3000, s2: 2500, length: 10 }, // a narrowing segment
+    { profile: HORN_PROFILE.conical, s1: 250, s2: 500, length: 20 },
+    { profile: HORN_PROFILE.exponential, s1: 500, s2: 3000, length: 45 },
+    { profile: HORN_PROFILE.conical, s1: 3000, s2: 2500, length: 10 }, // a narrowing segment
   ];
   for (const f of [25, 90, 400, 1800]) {
     const m = chainMatrix(horn, f);
     // one unit of flow out of the mouth, into its radiation load: [p₁, U₁] = M·[p₂, U₂]
-    const flowOut = cx(1),
-      pressureOut = mul(mouthImpedance(0.25, f, 2, 1), flowOut);
-    const pressureIn = add(mul(m[0], pressureOut), mul(m[1], flowOut)),
-      flowIn = add(mul(m[2], pressureOut), mul(m[3], flowOut));
+    const flowOut = complex(1),
+      pressureOut = multiply(mouthImpedance(0.25, f, 2, 1), flowOut);
+    const pressureIn = add(multiply(m[0], pressureOut), multiply(m[1], flowOut)),
+      flowIn = add(multiply(m[2], pressureOut), multiply(m[3], flowOut));
     // real power: Re(p·U*)
     const powerIn = pressureIn.re * flowIn.re + pressureIn.im * flowIn.im;
     const powerOut = pressureOut.re * flowOut.re + pressureOut.im * flowOut.im;
     near(powerIn / powerOut, 1, 1e-8, `power at ${f} Hz`);
   }
   // splitting a segment in two changes nothing
-  const whole: HornSegment = { profile: "exp", s1: 400, s2: 3600, length: 60 };
+  const whole: HornSegment = { profile: HORN_PROFILE.exponential, s1: 400, s2: 3600, length: 60 };
   const middleArea = Math.sqrt(400 * 3600); // an exponential flare's area halfway along
   const halves: HornSegment[] = [
-    { profile: "exp", s1: 400, s2: middleArea, length: 30 },
-    { profile: "exp", s1: middleArea, s2: 3600, length: 30 },
+    { profile: HORN_PROFILE.exponential, s1: 400, s2: middleArea, length: 30 },
+    { profile: HORN_PROFILE.exponential, s1: middleArea, s2: 3600, length: 30 },
   ];
   for (const f of [30, 300]) {
     const one = segmentMatrix(whole, f),
@@ -247,6 +275,13 @@ const directRadiator = (driver: HornDesign["driver"], rear: HornDesign["rear"]):
   portOffset: 0,
 });
 
+/** The model's result, which must exist for a valid design. */
+const modelOf = (...args: Parameters<typeof hornModel>): HornModel => {
+  const result = hornModel(...args);
+  assert.ok(result, "the design should be modelable");
+  return result;
+};
+
 test("with no horn and no radiation load it is the sealed box model", () => {
   const driver = DEFAULT_PA.mid.ts;
   const liters = 30,
@@ -261,7 +296,7 @@ test("with no horn and no radiation load it is the sealed box model", () => {
   });
   assert.ok(sealed);
   const freqs = sealed.curve.map((p) => p.f);
-  const horn = hornModel(directRadiator(driver, { liters, port: null }), freqs, volts, {
+  const horn = modelOf(directRadiator(driver, { liters, port: null }), freqs, volts, {
     radiationLoad: false,
   });
   sealed.curve.forEach((box, i) => {
@@ -269,7 +304,7 @@ test("with no horn and no radiation load it is the sealed box model", () => {
     const at = `at ${box.f.toFixed(1)} Hz`;
     near(engine.spl, box.raw, 1e-9, `SPL ${at}`);
     near(engine.xmm, box.xmm, 1e-9, `excursion ${at}`);
-    assert.ok(angleGap(engine.phase, box.rawPhase ?? NaN) < 1e-9, `phase ${at}`);
+    near(engine.phase, box.rawPhase ?? NaN, 1e-9, `phase ${at}`);
   });
   assert.strictEqual(horn.fb, null);
 });
@@ -278,8 +313,8 @@ test("with the radiation load on, a direct radiator still matches the box model 
   // the air mass taken off the moving mass (8/3·ρa³) is the radiation reactance's mass at low ka: the two cancel there
   const design = directRadiator(DEFAULT_PA.mid.ts, { liters: 30, port: null });
   const freqs = [40, 70, 100, 150];
-  const loaded = hornModel(design, freqs, 10),
-    unloaded = hornModel(design, freqs, 10, { radiationLoad: false });
+  const loaded = modelOf(design, freqs, 10),
+    unloaded = modelOf(design, freqs, 10, { radiationLoad: false });
   loaded.curve.forEach((p, i) => near(p.spl, unloaded.curve[i].spl, 0.2, `SPL at ${p.f} Hz`));
 });
 
@@ -299,10 +334,10 @@ test("with no horn and no radiation load it is the vented box model", () => {
   const { Leff: effectiveLength } = ventTuning(liters, ventSquareInches, ventInches);
   const port = {
     area: ventSquareInches * SQUARE_INCH_TO_CM2,
-    effLength: effectiveLength * M_TO_CM,
+    effectiveLength: effectiveLength * M_TO_CM,
   };
   const freqs = vented.curve.map((p) => p.f);
-  const horn = hornModel(directRadiator(driver, { liters, port }), freqs, volts, {
+  const horn = modelOf(directRadiator(driver, { liters, port }), freqs, volts, {
     radiationLoad: false,
   });
   near(horn.fb ?? 0, vented.Fb, 1e-9, "tuning");
@@ -313,30 +348,27 @@ test("with no horn and no radiation load it is the vented box model", () => {
     const at = `at ${box.f.toFixed(1)} Hz`;
     near(engine.spl, box.raw, 1e-9, `SPL ${at}`);
     near(engine.xmm * highpass, box.xmm, 1e-9, `excursion ${at}`);
-    near(engine.portVel * highpass, box.vel, 1e-9, `vent speed ${at}`);
-    assert.ok(angleGap(engine.phase, box.rawPhase ?? NaN) < 1e-9, `phase ${at}`);
+    near(engine.portSpeed * highpass, box.vel, 1e-9, `vent speed ${at}`);
+    near(engine.phase, box.rawPhase ?? NaN, 1e-9, `phase ${at}`);
   });
 });
 
-test("boxes side by side add 6 dB each doubling, and load each other as one bigger mouth", () => {
+test("boxes side by side add 6 dB each doubling, and their mouths load each other", () => {
   const freqs = [60, 120, 250];
   const one = directRadiator(DEFAULT_PA.mid.ts, { liters: 30, port: null });
-  const single = hornModel(one, freqs, 10, { radiationLoad: false }),
-    pair = hornModel({ ...one, count: 2 }, freqs, 10, { radiationLoad: false });
+  const single = modelOf(one, freqs, 10, { radiationLoad: false }),
+    pair = modelOf({ ...one, count: 2 }, freqs, 10, { radiationLoad: false });
   single.curve.forEach((p, i) =>
     near(pair.curve[i].spl - p.spl, 20 * Math.log10(2), 1e-9, "no load"),
   );
-  // two horns side by side in half space are one horn and its mirror image in a quarter space: same loads and level
-  const horn: HornDesign = {
-    ...one,
-    segments: [{ profile: "exp", s1: 300, s2: 2000, length: 40 }],
-  };
-  const twoHorns = hornModel({ ...horn, count: 2 }, freqs, 10),
-    hornAndImage = hornModel({ ...horn, angle: 1 }, freqs, 10);
-  twoHorns.curve.forEach((p, i) => {
-    near(p.spl, hornAndImage.curve[i].spl, 1e-9, `level at ${p.f} Hz`);
-    near(p.xmm, hornAndImage.curve[i].xmm, 1e-12, `excursion at ${p.f} Hz`);
-  });
+  // mutual coupling, checked against the piston formula alone: at low ka a piston's radiation resistance is
+  // ρck²/(2π), whatever its area, so each of two touching mouths carries twice the resistance it has alone
+  const area = 0.2,
+    f = 30;
+  const alone = pistonImpedance(area, f).re,
+    besideAnother = mouthImpedance(area, f, 2, 2).re;
+  near(alone / ((AIR_IMPEDANCE * waveNumberAt(f) ** 2) / (2 * Math.PI)), 1, 0.01, "one mouth");
+  near(besideAnother / alone, 2, 0.02, "two touching mouths");
 });
 
 test("a front-loaded horn out-plays the same driver direct in its band, with less excursion", () => {
@@ -347,10 +379,10 @@ test("a front-loaded horn out-plays the same driver direct in its band, with les
   const horn: HornDesign = {
     ...directRadiator(driver, rear),
     throatChamber: 0.5,
-    segments: [{ profile: "exp", s1: 300, s2: 4000, length: 47 }],
+    segments: [{ profile: HORN_PROFILE.exponential, s1: 300, s2: 4000, length: 47 }],
   };
-  const withHorn = hornModel(horn, freqs, 10).curve,
-    without = hornModel(directRadiator(driver, rear), freqs, 10).curve;
+  const withHorn = modelOf(horn, freqs, 10).curve,
+    without = modelOf(directRadiator(driver, rear), freqs, 10).curve;
   const bandAverage = (curve: HornPoint[]) => {
     const band = curve.filter((p) => p.f >= 300 && p.f <= 800);
     return band.reduce((sum, p) => sum + p.spl, 0) / band.length;
@@ -362,4 +394,51 @@ test("a front-loaded horn out-plays the same driver direct in its band, with les
   assert.ok(nearest(withHorn, 300).xmm < nearest(without, 300).xmm, "less excursion at 300 Hz");
   // the electrical impedance never drops below the voice coil's resistance
   assert.ok(withHorn.every((p) => p.ze >= driver.Re - 1e-9));
+});
+
+test("the front load is the throat chamber in parallel with the horn's input", () => {
+  const driver = DEFAULT_PA.mid.ts;
+  const f = 400,
+    omega = 2 * Math.PI * f;
+  // no horn, no chamber: the cone sees the mouth's (here its own) radiation load
+  const bare = directRadiator(driver, { liters: 30, port: null });
+  nearComplex(
+    hornFrontImpedance(bare, f),
+    mouthImpedance(driver.Sd / 10_000, f, 2, 1),
+    1e-12,
+    "bare cone",
+  );
+  // a 1 L throat chamber: 1/(jωC + 1/Zhorn), with C = V/(ρc²)
+  const horn: HornDesign = {
+    ...bare,
+    segments: [{ profile: HORN_PROFILE.exponential, s1: 300, s2: 3000, length: 40 }],
+  };
+  const hornInput = hornFrontImpedance(horn, f);
+  const chamberCompliance = 0.001 / (AIR_IMPEDANCE * SPEED_OF_SOUND);
+  const expected = divide(
+    complex(1),
+    add(complex(0, omega * chamberCompliance), divide(complex(1), hornInput)),
+  );
+  nearComplex(hornFrontImpedance({ ...horn, throatChamber: 1 }, f), expected, 1e-9, "chamber");
+});
+
+test("a design with a zero size is not modeled", () => {
+  const good = directRadiator(DEFAULT_PA.mid.ts, { liters: 30, port: null });
+  const freqs = [100];
+  assert.ok(hornModel(good, freqs, 10));
+  assert.strictEqual(hornModel({ ...good, rear: { liters: 0, port: null } }, freqs, 10), null);
+  assert.strictEqual(
+    hornModel({ ...good, rear: { liters: 30, port: { area: 0, effectiveLength: 20 } } }, freqs, 10),
+    null,
+  );
+  assert.strictEqual(
+    hornModel(
+      { ...good, segments: [{ profile: HORN_PROFILE.conical, s1: 0, s2: 100, length: 10 }] },
+      freqs,
+      10,
+    ),
+    null,
+  );
+  assert.strictEqual(hornModel({ ...good, count: 0 }, freqs, 10), null);
+  assert.strictEqual(hornModel(good, [0], 10), null);
 });
