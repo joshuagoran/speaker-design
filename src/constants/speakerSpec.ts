@@ -1,28 +1,28 @@
 // The ids of the speaker designer's spec (SpeakerSpec, SystemSpec in src/types.ts; read adapters in lib/speaker).
-import type { DriverKind, HifiBoxKind, PanelNominal, SpeakerTemplate } from "../types";
+import type {
+  DriverKind,
+  HifiBoxKind,
+  PanelNominal,
+  RoundPort,
+  SlotPort,
+  SpeakerPart,
+} from "../types";
 
-/**
- * The templates a design starts from, by id. A template sets only the first values of a new design (owner, Oct 2026);
- * no model or check reads it.
- */
-export const SPEAKER_TEMPLATE = {
+/** The speakers of a system read from one design, by id: each speaker's id and name end with its part. */
+export const SPEAKER_PART = {
+  speaker: "speaker",
   sub: "sub",
   top: "top",
   tower: "tower",
-  hifi: "hifi",
-  fill: "fill",
-  monitor: "monitor",
 } as const;
 
-/** The name each template shows. */
-export const SPEAKER_TEMPLATE_NAMES = {
-  sub: "PA sub",
+/** The name each part adds to the system's name. */
+export const SPEAKER_PART_NAMES = {
+  speaker: "Speaker",
+  sub: "Sub",
   top: "Mid/high box",
   tower: "Tower",
-  hifi: "Hi-fi",
-  fill: "Fill",
-  monitor: "Monitor",
-} as const satisfies Record<SpeakerTemplate, string>;
+} as const satisfies Record<SpeakerPart, string>;
 
 /** The driver kinds, by id: each names the catalog table its driver id is in (`SpeakerDriverParts`). */
 export const DRIVER_KIND = {
@@ -34,11 +34,12 @@ export const DRIVER_KIND = {
   coaxial: "coaxial",
 } as const satisfies { [K in DriverKind]: K };
 
-/** A speaker's bands, by id, low to high. A 2-way uses low and high. */
+/** A speaker's bands, by id, low to high. A 2-way uses low and high; air is the top octave (a super tweeter). */
 export const SPEAKER_BAND = {
   low: "low",
   mid: "mid",
   high: "high",
+  air: "air",
 } as const;
 
 /** Where a horn sits, by id: in the baffle, or freestanding on the box top (T1, the Hi-fi round waveguides). */
@@ -54,12 +55,16 @@ export const VENT_KIND = {
   radiator: "radiator",
 } as const satisfies { [K in HifiBoxKind]: K };
 
-/** A port's shapes, by id: round tubes, a slot along the bottom, or ducts up the front sides (the PA side ducts). */
+/** A port's shapes, by id: round tubes or slots (the Hi-fi port shapes), or ducts up the front sides (the PA side ducts). */
 export const PORT_SHAPE = {
   round: "round",
   slot: "slot",
   duct: "duct",
-} as const;
+} as const satisfies {
+  round: NonNullable<RoundPort["shape"]>;
+  slot: SlotPort["shape"];
+  duct: string;
+};
 
 /** How a chamber's drivers meet the air, by id: straight (a direct radiator), or through a horn in the box. */
 export const CHAMBER_LOAD = {
@@ -67,12 +72,10 @@ export const CHAMBER_LOAD = {
   horn: "horn",
 } as const;
 
-/**
- * How a horn's driver drives its path, by id. Front: the cone's front at the throat, its rear into the chamber (a
- * front-loaded horn, the horn engine's case). Tapped: the cone's front and rear each at a point on the path.
- */
+/** How a horn's drivers drive its path, by id (`HornDrive`): front-loaded, back-loaded or tapped. */
 export const HORN_DRIVE = {
   front: "front",
+  back: "back",
   tapped: "tapped",
 } as const;
 
@@ -81,6 +84,9 @@ export const HORN_PATH = {
   straight: "straight",
   folded: "folded",
 } as const;
+
+/** A first-order filter's type (6 dB/oct): a series capacitor or coil, as a super tweeter on the HF channel. */
+export const FIRST_ORDER_FILTER = "1st";
 
 /** What a source does in a system, by id. */
 export const SOURCE_ROLE = {
@@ -93,15 +99,23 @@ export const SOURCE_ROLE = {
 /** A source's delay when the system aligns it (the PA sub against the tops). */
 export const AUTO_DELAY = "auto";
 
+/** How a system's front end processes, by id: fixed analog cards (PA v2), or a DSP. */
+export const FRONT_END_KIND = {
+  analog: "analog",
+  digital: "digital",
+} as const;
+
 /** Why a chamber has no horn-engine design yet, by id (lib/speaker/hornDesign `hornDesignOf`). */
 export const HORN_ENGINE_GAP = {
   /** a tapped horn: the engine models only a front-loaded one */
   tapped: "tapped",
-  /** not one driver with Thiele/Small parameters in the chamber */
+  /** a back-loaded horn: the engine models only a front-loaded one */
+  backLoaded: "backLoaded",
+  /** no driver, drivers of more than one kind or id, or a driver with no Thiele/Small parameters */
   driver: "driver",
   /** no net air set for the rear chamber */
   netLiters: "netLiters",
-  /** a vent the engine doesn't take yet: a slot, side ducts or radiators */
+  /** a vent the engine doesn't take yet: side ducts, radiators, or a slot whose width the box sets */
   vent: "vent",
 } as const;
 

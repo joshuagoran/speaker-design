@@ -132,21 +132,27 @@ Each PR stands alone. Lowest risk first.
 ## Long-term phases
 
 - **L1 Types and read adapters.** Pure and tested; no UI.
-  - A general `SpeakerSpec`: id, name, template / use, cabinet
-    `{chambers: [{dims or volume, vent, drivers: [{driverId, type, position, count}]}], shape: upright | wedge, tiltDeg, panel, material}`,
-    bands / filters, look; `hornPlacement` and `hornMount` per horn.
-  - A `SystemSpec`: sources `{speakerId, role, pose, mirror, filters, delayMs | "auto", levelDb, amp channel}`,
-    amps, DSP, venue.
+  - A general `SpeakerSpec`: id, name, cabinet
+    `{chambers: [{at, dims, netLiters, vent, load, drivers: [{kind, driverId, count, position, bands, horn}]}], panel, tiltDeg}`,
+    bands with their filters and drive, look. Each horn has its `placement` and `mount`. No template: a save
+    keeps no role (owner, Oct 2026).
+  - A `SystemSpec`: sources `{speakerId, role, pose, mirror, filters, delayMs | "auto", levelDb, channels}`,
+    amps, front end (analog or digital), venue.
+  - **Crossovers.** A band's filters are the box's own: the crossover inside the box and its protection. A
+    crossover to another box (the sub) is on the system's source.
+  - **Chambers.** Each chamber has a position in its cabinet, so chambers can sit side by side. Two chambers
+    that touch share one wall: the lower (or left) chamber's.
   - **Old saves (owner policy).** Clean code comes first. Old saves can break. Read adapters map today's
-    in-memory designs (`systemFromPa`, `speakerFromHifi`, `systemFromHifi`, `speakerFromFill` in
-    `src/lib/speaker/`). Do not add code only to keep old saves working: no shims for old fields, no migration
-    branches for old save formats, no compatibility layers.
+    in-memory designs (`systemFromPa`, `speakerFromHifi`, `systemFromHifi`, `speakerFromFill`,
+    `systemFromFill` in `src/lib/speaker/`). Do not add code only to keep old saves working: no shims for old
+    fields, no migration branches for old save formats, no compatibility layers.
   - **Horns.** A chamber's load is direct or a horn built into the box: the horn engine's throat chamber and
     segments (`HornDesign`, PR #128). The chamber's net air and vent are the horn's rear chamber.
-    `hornDesignOf` maps a front-loaded chamber onto `HornDesign`. A folded path (a bass bin) has the same
-    segments; its fold layout comes later. A tapped horn has a front tap and a rear tap on the path; the
-    engine does not take it yet. A catalog horn on a compression driver is a `HornAttachment` with its
-    `placement` (baffle or top) and its `mount`.
+    `hornDesignOf` maps a front-loaded chamber onto `HornDesign`. Alike drivers in one throat combine into
+    one equivalent driver (wired in parallel). A folded path (a bass bin) has the same segments; its fold
+    layout comes later. A back-loaded or tapped horn has its own drive; the engine does not take them yet. A
+    catalog horn on a compression driver is a `HornAttachment` with its `placement` (baffle or top) and its
+    `mount`.
   - New `speakers` and `systems` collections under `users/{uid}`, next to `configs` (PA) and `hifiConfigs`.
     `firestore.rules` already covers every collection there (`users/{uid}/{document=**}`); no rule change.
 - **L2 Speaker library.** Designer saves go to `speakers`, with import from old saves.

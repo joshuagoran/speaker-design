@@ -2,8 +2,10 @@
 // Pure; nothing is written.
 import type {
   ChamberVent,
+  Dims3,
   HifiDesignState,
   SourcePose,
+  SpeakerBand,
   SpeakerDriver,
   SpeakerSpec,
   SpecIdentity,
@@ -11,44 +13,52 @@ import type {
   SystemSource,
   SystemWithSpeakers,
 } from "../../types";
-import { driverLayout, isCoax, tweeterOnGuide, waveguideFor } from "../hifi/hifi";
-import { panelIn } from "../panel";
+import { driverLayout, hifiPortElbows, isCoax } from "../hifi/hifi";
+import { hifiBoxFit } from "../hifi/boxLayout";
+import { MAX_ELBOWS } from "../tubeFold";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import {
   DRIVER_KIND,
+  FRONT_END_KIND,
   HORN_PLACEMENT,
+  PORT_SHAPE,
   SOURCE_ROLE,
   SPEAKER_BAND,
-  SPEAKER_TEMPLATE,
+  SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-import { DIRECT_LOAD, NO_FILTERS, channelCounter, lrFilter, speakerIdentity } from "./specParts";
+import { DIRECT_LOAD, channelCounter, lrFilter, speakerIdentity } from "./specParts";
 
-/** The box's vent, by box kind. */
-function hifiVent(state: HifiDesignState): ChamberVent {
+/**
+ * The box's vent, by box kind. A round port carries its elbows as the model works them out (the fewest that fit the
+ * fitted box; a port too long for any takes the most).
+ */
+function hifiVent(state: HifiDesignState, dim: Dims3, wall: number): ChamberVent {
   switch (state.boxType) {
     case VENT_KIND.sealed:
       return { kind: VENT_KIND.sealed };
-    case VENT_KIND.vented:
-      return { kind: VENT_KIND.vented, port: state.portSpec };
+    case VENT_KIND.vented: {
+      const port = state.portSpec;
+      return port.shape === PORT_SHAPE.slot
+        ? { kind: VENT_KIND.vented, port }
+        : {
+            kind: VENT_KIND.vented,
+            port: { ...port, elbows: hifiPortElbows(dim, wall, port) ?? MAX_ELBOWS },
+          };
+    }
     case VENT_KIND.radiator:
       return { kind: VENT_KIND.radiator, radiators: state.radiatorSelection };
   }
 }
 
 /**
- * The drivers where `driverLayout` puts them: the woofer, and the tweeter above it or on the box top on its
- * freestanding waveguide; a coaxial is one driver that both bands feed.
+ * The drivers where `driverLayout` puts them on the fitted box: the woofer, and the tweeter above it or on the box
+ * top on its freestanding waveguide; a coaxial is one driver that both bands feed.
  */
-function hifiDrivers(state: HifiDesignState): SpeakerDriver[] {
-  const { woofer, tweeter, selectedWaveguide, boxDims } = state;
-  const guide = waveguideFor(tweeter, selectedWaveguide);
-  const layout = driverLayout(
-    woofer,
-    tweeterOnGuide(tweeter, guide),
-    boxDims,
-    !!guide?.freestanding,
-  );
+function hifiDrivers(state: HifiDesignState, fit: ReturnType<typeof hifiBoxFit>): SpeakerDriver[] {
+  const { woofer, tweeter, selectedWaveguide } = state;
+  const guide = fit.waveguideSpec;
+  const layout = driverLayout(woofer, fit.tweeterWithWaveguide, fit.dim, !!guide?.freestanding);
   const wooferAt = { xIn: 0, yIn: layout.wooferIn };
   if (isCoax(woofer, tweeter))
     return [
@@ -90,66 +100,68 @@ function hifiDrivers(state: HifiDesignState): SpeakerDriver[] {
   ];
 }
 
-/** The Hi-fi design as a speaker spec: one chamber, a 2-way crossover, the sub highpass where set. */
+/**
+ * The Hi-fi design as a speaker spec: one chamber at the fitted size, and the 2-way crossover inside the box (the sub
+ * highpass is the system's: `systemFromHifi`).
+ */
 export function speakerFromHifi(
   state: HifiDesignState,
   look: SpeakerSpec["look"],
   identity: SpecIdentity,
 ): SpeakerSpec {
-  const { crossoverHz, crossoverOrder, subHighpass } = state;
+  const { crossoverHz, crossoverOrder } = state;
+  const fit = hifiBoxFit(state);
+  const drive = state.drive ?? HIFI_DRIVE.active;
+  const band = (id: SpeakerBand["id"], filters: Pick<SpeakerBand, "highpass" | "lowpass">) => ({
+    id,
+    ...filters,
+    levelDb: 0,
+    drive,
+  });
   return {
     ...identity,
-    template: SPEAKER_TEMPLATE.hifi,
     cabinet: {
       chambers: [
         {
-          dims: state.boxDims,
+          at: { xIn: 0, yIn: 0 },
+          dims: fit.dim,
           netLiters: null,
-          vent: hifiVent(state),
+          vent: hifiVent(state, fit.dim, fit.wallThicknessIn),
           load: DIRECT_LOAD,
-          drivers: hifiDrivers(state),
+          drivers: hifiDrivers(state, fit),
         },
       ],
       panel: {
         nominal: state.wallPanel,
         material: state.panelMaterial,
-        thicknessIn: panelIn(state.wallPanel, state.panelMaterial, state.panelExactIn),
+        thicknessIn: fit.wallThicknessIn,
       },
       insetIn: 0,
       roundoverIn: state.roundoverIn,
       tiltDeg: state.tiltDeg ?? 0,
     },
     bands: [
-      {
-        id: SPEAKER_BAND.low,
-        highpass: subHighpass ? lrFilter(subHighpass.hz, subHighpass.order) : null,
-        lowpass: lrFilter(crossoverHz, crossoverOrder),
-        levelDb: 0,
-      },
-      {
-        id: SPEAKER_BAND.high,
-        highpass: lrFilter(crossoverHz, crossoverOrder),
-        lowpass: null,
-        levelDb: 0,
-      },
+      band(SPEAKER_BAND.low, { highpass: null, lowpass: lrFilter(crossoverHz, crossoverOrder) }),
+      band(SPEAKER_BAND.high, { highpass: lrFilter(crossoverHz, crossoverOrder), lowpass: null }),
     ],
-    drive: state.drive ?? HIFI_DRIVE.active,
     look,
   };
 }
 
 /**
  * The Hi-fi design as a system: the pair `speakerSpacingFt` apart, `distanceToWallFt` from the wall behind, toed in
- * toward the middle on their stands, the right one a mirror image; the seat as the listener. Active: a woofer amp and
- * a tweeter amp, a channel of each per speaker. Passive: one amp channel per speaker.
+ * toward the middle on their stands, the right one a mirror image; the seat as the listener. The sub highpass, where
+ * set, is each source's filter. Active: a woofer amp and a tweeter amp, a channel of each per speaker, behind a DSP.
+ * Passive: one amp channel per speaker, and a DSP only for a sub highpass.
  */
 export function systemFromHifi(
   state: HifiDesignState,
   look: SpeakerSpec["look"],
   system: SpecIdentity,
 ): SystemWithSpeakers {
-  const speaker = speakerFromHifi(state, look, speakerIdentity(system, SPEAKER_TEMPLATE.hifi));
-  const passive = speaker.drive === HIFI_DRIVE.passive;
+  const speaker = speakerFromHifi(state, look, speakerIdentity(system, SPEAKER_PART.speaker));
+  const passive = (state.drive ?? HIFI_DRIVE.active) === HIFI_DRIVE.passive;
+  const { subHighpass } = state;
   const amps: SystemAmp[] = passive
     ? [{ id: SPEAKER_BAND.low, model: null, watts: state.wooferAmpWatts }]
     : [
@@ -172,7 +184,10 @@ export function systemFromHifi(
       role: SOURCE_ROLE.main,
       pose,
       mirror: side === 1,
-      filters: NO_FILTERS,
+      filters: {
+        highpass: subHighpass ? lrFilter(subHighpass.hz, subHighpass.order) : null,
+        lowpass: null,
+      },
       delayMs: 0,
       levelDb: 0,
       channels: passive
@@ -189,7 +204,7 @@ export function systemFromHifi(
       ...system,
       sources: [source(-1), source(1)],
       amps,
-      dsp: null,
+      frontEnd: passive && !subHighpass ? null : { kind: FRONT_END_KIND.digital, dspId: null },
       venue: {
         placement: state.placement,
         // the seat is `listeningSeat.y` back from the speakers

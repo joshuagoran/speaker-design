@@ -12,6 +12,7 @@ import type {
   Setter,
 } from "../../../types";
 import { useState } from "react";
+import { PLINTH_HEIGHT_IN } from "../../../constants/paLayouts";
 import { defaultBraceStyle } from "../../../lib/bracing";
 
 export interface CabinetStyle {
@@ -53,7 +54,7 @@ export interface CabinetStyle {
 
 /** Cabinet construction and look: plywood, baffle inset, finish, layout and the fixed plinth. */
 export function useCabinetStyle(): CabinetStyle {
-  const plinthHeightIn = 3; // fixed, matches the duct height
+  const plinthHeightIn = PLINTH_HEIGHT_IN;
   const [layout, setLayout] = useState<PaLayout>(DEFAULT_PA.layout);
   const [wallPanel, setWallPanel] = useState<PanelNominal>(DEFAULT_PA.panel); // side/top/bottom/back ply
   const [braceStyle, setBraceStyle] = useState<BraceStyleId | undefined>(undefined);

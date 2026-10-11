@@ -13,6 +13,7 @@ import type {
 import { FILL_OPTIONS, MID_OPTIONS, SUB_OPTIONS, hifiDriverById } from "../data";
 import { byId } from "../tables";
 import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
+import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../pa/calc";
 import { CM_PER_M, METERS_PER_INCH } from "../../constants/units";
 import {
   CHAMBER_LOAD,
@@ -44,17 +45,55 @@ function driverTs(driver: SpeakerDriver): BoxModelTS | null {
 }
 
 /**
- * The rear chamber's vent as the engine's port: none when sealed; round tubes as their open area and their length
- * with both ends' corrections (lib/hifi `hifiRoundEndCorrection`). Null: a vent the engine doesn't take yet.
+ * The chamber's drivers as one equivalent driver, as Hornresp's Nd: `n` identical drivers wired in parallel, each on
+ * the amp's full voltage (as the PA plans wire two 8 Ω subs to one 4 Ω channel, and as the engine's `volts` is "on
+ * each driver"). The cone area and moving mass add (so the compliance divides), the coil resistance divides, and Bl,
+ * Fs, Qms and Xmax stay. Null: no driver, drivers of more than one kind or id, or no Thiele/Small parameters.
+ */
+function equivalentDriver(drivers: readonly SpeakerDriver[]): BoxModelTS | null {
+  if (drivers.length === 0) return null;
+  const [first] = drivers;
+  if (drivers.some((d) => d.kind !== first.kind || d.driverId !== first.driverId)) return null;
+  const ts = driverTs(first);
+  if (!ts) return null;
+  const n = drivers.reduce((sum, d) => sum + d.count, 0);
+  return {
+    Fs: ts.Fs,
+    Qms: ts.Qms,
+    Xmax: ts.Xmax,
+    Bl: ts.Bl,
+    Sd: n * ts.Sd,
+    Mms: n * ts.Mms,
+    Re: ts.Re / n,
+  };
+}
+
+/**
+ * The rear chamber's vent as the engine's port: none when sealed; round tubes or slots of a set width as their open
+ * area and their path length with both ends' corrections. Null: a vent the engine doesn't take yet (side ducts,
+ * radiators, a slot whose width the box sets). The end corrections are horn engine phase 2's to settle; the Hi-fi
+ * round-tube rule and the PA's flanged rectangle stand in.
  */
 function rearPort(vent: ChamberVent): { port: HornPort | null } | null {
   if (vent.kind === VENT_KIND.sealed) return { port: null };
   if (vent.kind === VENT_KIND.radiator) return null;
   const { port } = vent;
-  if (port.shape === PORT_SHAPE.slot || port.shape === PORT_SHAPE.duct) return null;
+  if (port.shape === PORT_SHAPE.duct) return null;
+  if (port.shape === PORT_SHAPE.slot) {
+    if (port.w === undefined) return null;
+    return {
+      port: {
+        area: port.n * port.h * port.w * CM_PER_IN * CM_PER_IN,
+        effectiveLength:
+          (port.len + BOTH_ENDS_CORRECTION_RATIO * rectangleEndCorrection(port.h, port.w)) *
+          CM_PER_IN,
+      },
+    };
+  }
   return {
     port: {
       area: portArea(port) * CM_PER_IN * CM_PER_IN,
+      // absent elbows: a straight tube (the read adapters store the elbows their models work out)
       effectiveLength: (port.len + hifiRoundEndCorrection(port, port.elbows ?? 0)) * CM_PER_IN,
     },
   };
@@ -65,8 +104,9 @@ const gap = (why: HornEngineGap): HornDesignResult => ({ ok: false, gap: why });
 
 /**
  * The chamber as a horn design, `at.count` boxes side by side radiating into `at.angle`, or the first gap that stops
- * it: a tapped horn; not exactly one driver (count 1) with Thiele/Small parameters; no net air set; a slot, side ducts
- * or radiators. A direct chamber is a design with no segments.
+ * it: a tapped or back-loaded horn; drivers of more than one kind, or none with Thiele/Small parameters; no net air
+ * set; a vent the engine doesn't take. Several alike drivers combine into one (`equivalentDriver`). A direct chamber
+ * is a design with no segments.
  */
 export function hornDesignOf(
   chamber: SpeakerChamber,
@@ -74,16 +114,17 @@ export function hornDesignOf(
 ): HornDesignResult {
   const horn = chamber.load.kind === CHAMBER_LOAD.horn ? chamber.load.horn : null;
   if (horn?.drive.kind === HORN_DRIVE.tapped) return gap(HORN_ENGINE_GAP.tapped);
-  const { drivers, netLiters } = chamber;
-  const ts = drivers.length === 1 && drivers[0].count === 1 ? driverTs(drivers[0]) : null;
-  if (!ts) return gap(HORN_ENGINE_GAP.driver);
+  if (horn?.drive.kind === HORN_DRIVE.back) return gap(HORN_ENGINE_GAP.backLoaded);
+  const driver = equivalentDriver(chamber.drivers);
+  if (!driver) return gap(HORN_ENGINE_GAP.driver);
+  const { netLiters } = chamber;
   if (netLiters === null) return gap(HORN_ENGINE_GAP.netLiters);
   const rear = rearPort(chamber.vent);
   if (!rear) return gap(HORN_ENGINE_GAP.vent);
   return {
     ok: true,
     design: {
-      driver: ts,
+      driver,
       count: at.count,
       throatChamber: horn?.throatChamber ?? 0,
       segments: horn?.segments ?? [],
