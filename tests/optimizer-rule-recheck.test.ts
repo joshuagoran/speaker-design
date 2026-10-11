@@ -5,11 +5,11 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { designProblems, evaluateDesign, optimizePaStack } from "../src/lib/pa/optimize";
-import { optimizePaStackExact } from "../src/lib/pa/optimizeExact";
+import { optimizePaStackExact, PA_EXACT_SLOT_ROUNDS } from "../src/lib/pa/optimizeExact";
 import { KEEP_UP_SLACK_DB } from "../src/lib/pa/chips";
 import { paCurrent } from "./optimizer-dump-cases";
 import { SEED_NAMES } from "./seeds";
-import type { PaGoal, PaOptimizerInput } from "../src/types";
+import type { Dims3, PaGoal, PaOptimizerInput } from "../src/types";
 
 const input: PaOptimizerInput = {
   cur: paCurrent(SEED_NAMES.lightBlock),
@@ -66,6 +66,9 @@ test("every card and the near miss's closest design show the rule's numbers", ()
   }
 });
 
+/** Light block with the sub, its vent and the box height locked: its wide boxes are where the estimate and the rule part. */
+const LOCKED: PaOptimizerInput["locks"] = { sub: true, vent: true, subDim: { h: "exact" } };
+
 test("with the sub, vent and height locked, every card both optimizers show passes by the rule", () => {
   // light block's wide boxes: by the searches' brace estimate the loud and low ones sit just under the 125 lb limit, and
   // by the rule several are over it (before the re-check, Fully optimize's Louder card was a 39 × 24 × 32 box at 129.5 lb,
@@ -74,7 +77,7 @@ test("with the sub, vent and height locked, every card both optimizers show pass
     const run: PaOptimizerInput = {
       ...input,
       goals: [goal],
-      locks: { sub: true, vent: true, subDim: { h: "exact" } },
+      locks: LOCKED,
     };
     for (const [name, out] of [
       ["Improve", optimizePaStack(run)],
@@ -89,4 +92,57 @@ test("with the sub, vent and height locked, every card both optimizers show pass
         );
     }
   }
+});
+
+test("Improve's further finalists: a Louder card the first batch by the estimate didn't hold", () => {
+  // light block, locked: every Louder finalist by the estimate is over 125 lb by the rule; the next box pairs by the
+  // estimate (PA_FINALIST_BATCHES) hold a 33 × 24 × 32 box that passes, 115.7 lb and 121.7 dB by the rule
+  const out = optimizePaStack({ ...input, locks: LOCKED });
+  const k = out.cards[0];
+  assert.ok(k && k.slot.kind === "first", out.goalMissing ?? "no Louder card");
+  assert.deepEqual(designProblems(evaluateDesign(k.config), input), [], "it passes by the rule");
+  assert.ok(k.metrics.heaviest <= input.maxLb, `${k.metrics.heaviest.toFixed(1)} lb`);
+  assert.ok(out.curM && k.metrics.out >= out.curM.out + 1, `${k.metrics.out.toFixed(2)} dB`);
+});
+
+test("Fully optimize at 110 lb, locked: the cards an unbounded re-check gives, in a few rounds", () => {
+  // by the estimate, scores of light block's wide boxes are under 110 lb that the rule puts over; once the rule puts one
+  // over, the slot weighs the boxes near the limit by the rule, so the grid doesn't hand them over one by one. The
+  // cards are those of the same run with no fallback or round limit (checked when this was written)
+  const box = (k: { config: { cDim: Dims3 } } | undefined) => k && JSON.stringify(k.config.cDim);
+  const run = (goals: PaGoal[]) => {
+    const r: PaOptimizerInput = { ...input, maxLb: 110, goals, locks: LOCKED };
+    const out = optimizePaStackExact(r);
+    for (const k of out.cards)
+      assert.deepEqual(
+        designProblems(evaluateDesign(k.config), r),
+        [],
+        `${goals.join(" + ")}: ${k.label}`,
+      );
+    const rounds = out.stats.rounds ?? Infinity;
+    assert.ok(rounds < PA_EXACT_SLOT_ROUNDS / 10, `${goals.join(" + ")}: ${rounds} rounds`);
+    return out;
+  };
+  const louder = run(["louder"]);
+  const first = louder.cards.find((k) => k.slot.kind === "first");
+  assert.equal(
+    box(first),
+    JSON.stringify({ w: 30, h: 24, d: 31.5 }),
+    "Louder: a 30 × 24 × 31.5 box",
+  );
+  const cheaper = louder.cards.find((k) => k.slot.kind === "alt" && k.slot.axis === "cheaper");
+  assert.equal(
+    box(cheaper),
+    JSON.stringify({ w: 25, h: 24, d: 17.5 }),
+    "Cheaper: a 25 × 24 × 17.5 box",
+  );
+  const lowerLighter = run(["lower", "lighter"]);
+  const lighter = lowerLighter.cards.find(
+    (k) => k.slot.kind === "alt" && k.slot.axis === "lighter",
+  );
+  assert.equal(
+    box(lighter),
+    JSON.stringify({ w: 25, h: 24, d: 18 }),
+    "Lighter: a 25 × 24 × 18 box",
+  );
 });
