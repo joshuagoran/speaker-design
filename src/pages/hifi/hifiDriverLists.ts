@@ -1,7 +1,7 @@
 import type { HifiBoxKind, HifiTweeter, RadiatorSelection } from "../../types";
 import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../../lib/data";
 import { byIdOrThrow } from "../../lib/tables";
-import { needsWaveguide } from "../../lib/hifi/hifi";
+import { isRibbon, needsWaveguide } from "../../lib/hifi/hifi";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 
 /** Woofers listed smallest first, grouped by size in the picker, A–Z within a size. */
@@ -30,8 +30,7 @@ export const passiveRadiatorOf = (
     : null;
 
 /** Tweeter family for grouping: 0 domes, 1 planar ribbons (with their own waveguide), 2 compression drivers. */
-export const tweeterKind = (o: HifiTweeter) =>
-  needsWaveguide(o) ? 2 : o.type === "ribbon" ? 1 : 0;
+export const tweeterKind = (o: HifiTweeter) => (needsWaveguide(o) ? 2 : isRibbon(o) ? 1 : 0);
 
 /** Group headings in the tweeter picker, indexed by tweeterKind. */
 export const TWEETER_GROUP_LABELS = [

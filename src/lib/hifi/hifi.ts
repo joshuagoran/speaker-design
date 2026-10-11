@@ -10,12 +10,12 @@ import {
   thermalVoltageLimit,
   keeleFrequency,
   highpassGain,
-  rectangleEndCorrection,
   slotMouthCorrection,
   logGridCount,
   SEALED_QTC_MIN,
   sealedLitersForQtc,
 } from "../pa/calc";
+import { rectangleEndCorrection } from "../acoustics/radiation";
 import { qtcFloorAt } from "../../constants/qtcText";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { MAX_ELBOWS, tubeElbows, tubeMaxLength, type TubeRoom } from "../tubeFold";
@@ -75,7 +75,12 @@ import { formatInches } from "../format";
 import { MOUNT_ADAPTERS, ownGuideCfg, throatJoin, waveguideSpecOf } from "../data";
 import { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "../../constants/throatMounts";
 import { crossoverSlopeName } from "../../constants/crossovers";
-import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
+import {
+  HIFI_DRIVE,
+  HIFI_PORT_MAX_MS,
+  HIFI_SUBSONIC_TYPE,
+  RIBBON_TWEETER_TYPE,
+} from "../../constants/hifiEngine";
 import { edgeSegments, edgeRipple, type BafflePoint, type FieldPoint } from "./diffraction";
 import {
   baffleEdgeShare,
@@ -245,6 +250,9 @@ export function waveguideDirectivity(
 ) {
   return waveguideGain(th, tv, waveguideHalfAngles(f, covH, covV, mouthWIn, mouthHIn));
 }
+
+/** Whether a tweeter is a planar ribbon on its own waveguide (a square plate with a slot). */
+export const isRibbon = (t: Pick<HifiTweeter, "type">): boolean => t.type === RIBBON_TWEETER_TYPE;
 
 /** Whether a tweeter has to be mounted on a waveguide or horn (a compression driver, or a dome made for one) rather than sit on the baffle. */
 export const needsWaveguide = (t: Pick<HifiTweeter, "type" | "needsWaveguide">): boolean =>
