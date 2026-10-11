@@ -19,6 +19,15 @@ export const HIFI_TOP = 130;
 /** Bottom of every Hi-fi dB chart. */
 export const HIFI_BOT = 50;
 
+/**
+ * Top of the Designer's maximum-output chart, dB SPL at 1 m: its own fixed scale, wide enough for any speaker it
+ * designs. A PA horn on its amp reaches about 131 dB at 1 m on the golden designs, a PA sub about 128 dB.
+ */
+export const MAX_OUTPUT_TOP = 140;
+
+/** Bottom of the Designer's maximum-output chart: a small Hi-fi woofer's deep bass at its limits, about 80 dB. */
+export const MAX_OUTPUT_BOT = 70;
+
 /** Every dispersion map spans −90° to +90° off axis, sampled every 5°. */
 export const DISPERSION_ANGLE_MAX_DEG = 90;
 

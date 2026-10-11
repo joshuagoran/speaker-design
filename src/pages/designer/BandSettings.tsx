@@ -7,6 +7,7 @@ import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
 import { BAND_NAMES, DRIVE_NAMES, FILTER_TYPE_NAMES } from "../../constants/designer";
+import { HIFI_DRIVE } from "../../constants/hifiEngine";
 
 /** The filter picker's first choice: no filter. */
 const NO_FILTER: SelectOption = { id: "", name: "None" };
@@ -34,7 +35,7 @@ interface Props {
   onRemove?: () => void;
 }
 
-/** One band's settings: its id, highpass and lowpass, level and drive. */
+/** One band's settings: its id, highpass and lowpass, level, drive and amp power. */
 export function BandSettings({ band, freeIds, newCornerHz, onEdit, onRename, onRemove }: Props) {
   const filterField = (side: "highpass" | "lowpass", label: string) => {
     const filter = band[side];
@@ -95,6 +96,15 @@ export function BandSettings({ band, freeIds, newCornerHz, onEdit, onRename, onR
         value={band.drive}
         onChange={(drive) => onEdit((b) => ({ ...b, drive }))}
         options={entriesOf(DRIVE_NAMES)}
+      />
+      <NumberField
+        // passive: the channel it shares
+        label={band.drive === HIFI_DRIVE.passive ? "Shared amp channel" : "Amp power"}
+        value={band.ampW}
+        min={1}
+        step={10}
+        unit="W"
+        onChange={(ampW) => onEdit((b) => ({ ...b, ampW }))}
       />
     </Card>
   );

@@ -22,13 +22,17 @@ import {
 import { DIRECT_LOAD, channelCounter, lrFilter, speakerIdentity, stuffingPctOf } from "./specParts";
 import { STUFFING_VOLUME_GAIN } from "../pa/calc";
 
-/** A band of the coaxial's passive network: the maker's network isn't modeled, so it carries no filters. */
-const networkBand = (id: SpeakerBand["id"]): SpeakerBand => ({
+/**
+ * A band of the coaxial's passive network: the maker's network isn't modeled, so it carries no filters; both bands
+ * share the fill's one amp channel.
+ */
+const networkBand = (id: SpeakerBand["id"], state: FillDesignState): SpeakerBand => ({
   id,
   highpass: null,
   lowpass: null,
   levelDb: 0,
   drive: HIFI_DRIVE.passive,
+  ampW: state.ampWatts,
 });
 
 /**
@@ -74,7 +78,7 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
       roundoverIn: 0,
       tiltDeg: 0,
     },
-    bands: [networkBand(SPEAKER_BAND.low), networkBand(SPEAKER_BAND.high)],
+    bands: [networkBand(SPEAKER_BAND.low, state), networkBand(SPEAKER_BAND.high, state)],
     look: {},
   };
 }

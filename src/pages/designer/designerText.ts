@@ -1,6 +1,6 @@
 // The Designer's one-line summaries, built from the spec and the catalog.
 import type { BandFilter, SpeakerBand, SpeakerChamber, SpeakerSpec } from "../../types";
-import { formatDims, formatHz } from "../../lib/format";
+import { formatDims, formatHz, formatWatts } from "../../lib/format";
 import { BAND_NAMES, PORT_SHAPE_NAMES, VENT_KIND_NAMES } from "../../constants/designer";
 import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 import { driverName } from "./designerParts";
@@ -30,7 +30,7 @@ export function chamberText(chamber: SpeakerChamber) {
     .join(", ");
 }
 
-/** A band in one line: its name, filters and level. */
+/** A band in one line: its name, filters, level and amp power. */
 export function bandText(band: SpeakerBand) {
   const filters = [
     band.highpass && `HP ${filterText(band.highpass)}`,
@@ -38,7 +38,7 @@ export function bandText(band: SpeakerBand) {
   ]
     .filter(Boolean)
     .join(", ");
-  return `${BAND_NAMES[band.id]}${filters ? ` ${filters}` : ""}${band.levelDb ? ` ${band.levelDb.toFixed(1)} dB` : ""}`;
+  return `${BAND_NAMES[band.id]}${filters ? ` ${filters}` : ""}${band.levelDb ? ` ${band.levelDb.toFixed(1)} dB` : ""} ${formatWatts(band.ampW)}`;
 }
 
 /** The speaker in one line, as the library lists it: its chambers and bands. */

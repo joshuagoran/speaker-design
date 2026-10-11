@@ -175,7 +175,8 @@ export function speakerFromHifi(
     id: SpeakerBand["id"],
     filters: Pick<SpeakerBand, "highpass" | "lowpass">,
     levelDb: number,
-  ) => ({ id, ...filters, levelDb, drive });
+    ampW: SpeakerBand["ampW"],
+  ): SpeakerBand => ({ id, ...filters, levelDb, drive, ampW });
   return {
     ...identity,
     cabinet: {
@@ -205,11 +206,14 @@ export function speakerFromHifi(
         SPEAKER_BAND.low,
         { highpass: subsonic, lowpass: lrFilter(crossoverHz, crossoverOrder) },
         0,
+        state.wooferAmpWatts,
       ),
       band(
         SPEAKER_BAND.high,
         { highpass: lrFilter(crossoverHz, crossoverOrder), lowpass: null },
         trimDb,
+        // passive: the woofer's channel, which it shares
+        drive === HIFI_DRIVE.passive ? state.wooferAmpWatts : state.tweeterAmpWatts,
       ),
     ],
     look,

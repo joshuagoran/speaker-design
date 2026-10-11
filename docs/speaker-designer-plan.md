@@ -196,6 +196,27 @@ Each PR stands alone. Lowest risk first.
       box models, the exact PA search and the horn engine. They share one rule, `coilFactor` in
       `src/lib/acoustics/driverCircuit.ts`: the coil is Re + jωLe, as in Hornresp. A driver with `Le` rolls off at the
       top. A driver without `Le` gives the same numbers as before.
+    - **Limits.** `speakerLimits` in `src/lib/speaker/speakerLimits.ts` works out each band's limits from the
+      response's chamber runs (no box model runs again). It uses the pages' own limit code:
+      - Cones: the PA's `sineLimitAt` (`maxOutputCurve` for each point): Xmax and the port air speed at each
+        frequency, and the program rating (2 × AES) and the amp across the whole drive. Radiators add their travel,
+        as the Hi-fi engine checks it.
+      - Datasheet drivers keep their engine's power rule: a compression driver the PA's `hornPower`, a tweeter and a
+        coaxial's HF section the Hi-fi's `tweeterMaxLevel`.
+      - Each band has its amp power (`SpeakerBand.ampW`). A passive band gets the channel it shares, through its pad.
+      - A band's maximum for music is one drive for the whole band, set where the band first meets a limit. The sum
+        takes one input for every band: at each frequency, the band with the least headroom sets it.
+      - A vent takes the Hi-fi engine's 17 m/s; flared PA tubes take the PA's 30/23.5 more.
+    - **Results.** A maximum-output chart on its own fixed scale (70–140 dB, `MAX_OUTPUT_TOP` / `MAX_OUTPUT_BOT`),
+      the maximum of each band and of the speaker, and chips: one list for each band (what sets its level, a
+      datasheet driver's power) and one for each chamber (Xmax, port speed and radiator travel at full power, and the
+      program rating).
+    - **Parity** (`tests/speaker-limits.test.ts`). With the net air set to the PA's, every golden PA design meets the
+      PA page's limits. The sub through its lowpass is within 0.06 dB, and the mid and horn within 0.01 dB. The horn's
+      power is exact. The sub's music limit is within 0.02 dB, with the same limit. On the Hi-fi designs with no
+      baffle-step EQ, the woofer's drive at its limit is within 0.2 dB from 30 Hz to a third of the crossover. The
+      tweeter's power is exact. Above that range the engines differ: the Hi-fi divides the coil's rating by the
+      lowpass, and the PA and the model do not.
   - **Later in L3.** The 3D view and the optimizer; the horn settings; the tower with the horn on top (T1).
 - **L4 Space page.** A separate page, later. Any saved speaker can be placed in a "Space": sources by speaker
   id, amps and channels, DSP, crossovers between boxes, delay and level, and the coverage map generalized
@@ -236,8 +257,8 @@ Each PR stands alone. Lowest risk first.
   tower needs no "Horn" toggle or separate picker entry.
 - Simulation in a real space is a separate page later (the Space page). Any speaker can be placed there.
 - The fill delay against the mains belongs to the Space page.
-- The Designer's response chart is a 2.83 V, 1 m sensitivity chart on the Hi-fi dB scale (50–130 dB). A later
-  maximum-output chart gets its own fixed scale.
+- The Designer's response chart is a 2.83 V, 1 m sensitivity chart on the Hi-fi dB scale (50–130 dB). Its
+  maximum-output chart has its own fixed scale (70–140 dB, L3d).
 - The spec's ports carry the PA port details (the letterbox's fins and fold, the flared tubes), so the PA subs
   match the PA page exactly.
 - Stuffing is a visible setting on each chamber. The model has no hidden stuffing rule. The 3% bracing

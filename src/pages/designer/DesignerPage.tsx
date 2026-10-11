@@ -10,6 +10,7 @@ import { Button } from "../../components/ui/Button";
 import { TextField } from "../../components/ui/TextField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
+import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
@@ -22,7 +23,11 @@ import {
   HIFI_TOP,
   FREQ_AXIS_MAX_HZ,
   FREQ_AXIS_MIN_HZ,
+  MAX_OUTPUT_BOT,
+  MAX_OUTPUT_TOP,
 } from "../../constants/chartScales";
+import { HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
+import { FLARED_PORT_SPEED_RATIO } from "../../lib/pa/calc";
 import {
   DESIGNER_SETTINGS_SECTIONS,
   type DesignerSettingsSection,
@@ -39,6 +44,7 @@ import { SPEAKER_BAND } from "../../constants/speakerSpec";
 import { ChamberSettings } from "./ChamberSettings";
 import { BandSettings } from "./BandSettings";
 import { bandText, chamberText, countText } from "./designerText";
+import { bandChips, chamberChips } from "./designerChips";
 import { paStarts, startSpeaker } from "./designerStarts";
 import type { Designer } from "./useDesigner";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
@@ -65,12 +71,13 @@ const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
 });
 
 /**
- * The Designer: one speaker from its chambers, drivers and bands, its response on fixed axes, and the speaker library.
- * A design starts empty, from a saved speaker, or from the current PA or Hi-fi design.
+ * The Designer: one speaker from its chambers, drivers and bands, its response and its maximum output on fixed axes
+ * with the limits' checks, and the speaker library. A design starts empty, from a saved speaker, or from the current PA
+ * or Hi-fi design.
  */
 export function DesignerPage({ designer, planner, hifi }: Props) {
   const pal = usePalette();
-  const { spec, response, store, snapshot, restore } = designer;
+  const { spec, response, limits, store, snapshot, restore } = designer;
   const folds = useFolds("designer.settingsFolds", keysOf(DESIGNER_SETTINGS_SECTIONS));
   const starts: DesignerStart[] = [
     DESIGNER_START.empty,
@@ -130,6 +137,16 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
       "dB",
     ]),
   ];
+  const maxTiles: StatTileItem[] = [
+    ...limits.bands.map((b): StatTileItem => [
+      `${BAND_NAMES[b.id]} max`,
+      b.musicDb.toFixed(0),
+      "dB",
+    ]),
+    ...(limits.musicDb !== null && limits.bands.length > 1
+      ? [[DESIGNER_TEXT.speakerMax, limits.musicDb.toFixed(0), "dB"] satisfies StatTileItem]
+      : []),
+  ];
   const fbMarks = response.chambers.flatMap((c, i) =>
     c.fb !== null ? [{ f: c.fb, label: one ? "Fb" : `Fb ${i + 1}` }] : [],
   );
@@ -185,6 +202,63 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
             <StatTileGrid tiles={tiles} className="mt-5 mb-3" />
             <p className={`${READING_WIDTH} text-sm text-stone-500`}>{DESIGNER_TEXT.modelNote}</p>
           </section>
+          {limits.bands.length > 0 && (
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
+              <SectionHeading className="mb-3">{DESIGNER_TEXT.maxOutput}</SectionHeading>
+              <ResponseChart
+                fmin={FREQ_AXIS_MIN_HZ}
+                fmax={FREQ_AXIS_MAX_HZ}
+                top={MAX_OUTPUT_TOP}
+                bot={MAX_OUTPUT_BOT}
+                step={10}
+                yLabel={DESIGNER_TEXT.maxYLabel}
+                series={[
+                  {
+                    curve: limits.sum,
+                    label: DESIGNER_TEXT.sum,
+                    stroke: pal.ink,
+                    tint: alpha(pal.ink, 0.05),
+                  },
+                  ...limits.bands.map((b) => ({
+                    curve: b.max.filter((o) => o.spl >= MAX_OUTPUT_BOT),
+                    label: BAND_NAMES[b.id],
+                    stroke: bandStroke[b.id],
+                    dash: BAND_DASH[b.id],
+                    tint: "transparent",
+                  })),
+                ]}
+                marks={fbMarks}
+              />
+              <StatTileGrid tiles={maxTiles} className="mt-5 mb-3" />
+              <div className="flex flex-col gap-3 mb-3">
+                {bandChips(spec, limits).map(({ id, chips }) => (
+                  <div key={id}>
+                    <h4 className="text-xs font-semibold text-stone-500 mb-1">
+                      {BAND_NAMES[id]} band
+                    </h4>
+                    <WarningChips chips={chips} />
+                  </div>
+                ))}
+                {limits.chambers.map(
+                  (c, i) =>
+                    c && (
+                      <div key={i}>
+                        <h4 className="text-xs font-semibold text-stone-500 mb-1">
+                          {DESIGNER_TEXT.chamber} {i + 1}
+                        </h4>
+                        <WarningChips chips={chamberChips(c)} />
+                      </div>
+                    ),
+                )}
+              </div>
+              <p className={`${READING_WIDTH} text-sm text-stone-500`}>
+                {DESIGNER_TEXT.maxNote(
+                  HIFI_PORT_MAX_MS,
+                  HIFI_PORT_MAX_MS * FLARED_PORT_SPEED_RATIO,
+                )}
+              </p>
+            </section>
+          )}
         </>
       }
       settings={

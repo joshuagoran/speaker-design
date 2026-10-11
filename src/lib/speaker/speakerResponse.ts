@@ -8,6 +8,7 @@
 // not read either.
 import type {
   BandId,
+  ChamberDrivePoint,
   Complex,
   FrequencyPoint,
   Horn,
@@ -86,8 +87,11 @@ interface ChamberCones {
   result: SpeakerChamberResponse;
 }
 
-/** The chamber's cone drivers: alike, feeding the same bands; null when it has none. */
-function chamberCones(chamber: SpeakerChamber) {
+/**
+ * The chamber's cone drivers: the first, whether all are alike (one model on one band), and how many; null when it
+ * has none.
+ */
+export function chamberCones(chamber: SpeakerChamber) {
   const cones = chamber.drivers.filter((d) => isConeKind(d.kind));
   if (cones.length === 0) return null;
   const [first] = cones;
@@ -116,7 +120,7 @@ function modelChamber(
   const netLiters = chamberNetLiters(cabinet, chamber, displacementL);
   const empty = (gaps: SpeakerModelGap[]): ChamberCones => ({
     pressure: null,
-    result: { netLiters, fb: null, qtc: null, gaps },
+    result: { netLiters, fb: null, qtc: null, gaps, drive: null },
   });
   if (!cones) return empty([]);
   if (!cones.alike) return empty([SPEAKER_MODEL_GAP.mixedDrivers]);
@@ -126,12 +130,18 @@ function modelChamber(
   if (!positive(netLiters) || !positive(airL) || !positive(cones.count))
     return empty([SPEAKER_MODEL_GAP.noModel]);
   const done = (
-    curve: readonly { raw: number; rawPhase?: number }[],
+    curve: readonly (ChamberDrivePoint & { raw: number; rawPhase?: number })[],
     fb: number | null,
     qtc: number | null,
   ): ChamberCones => ({
     pressure: curve.map((o) => pressureOf(o.raw, o.rawPhase)),
-    result: { netLiters, fb, qtc, gaps: [] },
+    result: {
+      netLiters,
+      fb,
+      qtc,
+      gaps: [],
+      drive: curve.map(({ xmm, vel, prx }) => ({ xmm, vel, prx })),
+    },
   });
   if (chamber.load.kind === CHAMBER_LOAD.horn) {
     const read = hornDesignOf(chamber, { count: 1, angle: 2 });
@@ -141,7 +151,16 @@ function modelChamber(
     return {
       pressure: model.curve.map((o) => pressureOf(o.spl, o.phase)),
       // the chamber's own net air, as a direct chamber reports it (the engine's rear chamber adds the stuffing)
-      result: { netLiters, fb: model.fb, qtc: null, gaps: [] },
+      result: {
+        netLiters,
+        fb: model.fb,
+        qtc: null,
+        gaps: [],
+        drive: model.curve.map((o) => ({
+          xmm: o.xmm,
+          vel: read.design.rear.port ? o.portSpeed : undefined,
+        })),
+      },
     };
   }
   const ts = bank(parts, cones.count);
@@ -213,6 +232,17 @@ function hfLevelAt(driver: SpeakerDriver, sens: number, imp: number, volts: numb
   return lowHz ? flat + 20 * Math.log10(Math.min(1, Math.pow(f / lowHz, 2))) : flat;
 }
 
+/**
+ * The band a datasheet driver feeds: a compression driver's or a tweeter's first, a coaxial's HF section its second
+ * (its first, with only one); null for a cone kind's cone or a driver on no band.
+ */
+export function hfBandOf(driver: SpeakerDriver): BandId | null {
+  if (isConeKind(driver.kind) && driver.kind !== DRIVER_KIND.coaxial) return null;
+  return (
+    (driver.kind === DRIVER_KIND.coaxial ? driver.bands[1] : undefined) ?? driver.bands[0] ?? null
+  );
+}
+
 /** Adds `pressure` (one per frequency) into the band's running sum. */
 function addTo(sums: Map<BandId, Complex[]>, band: BandId, pressure: readonly Complex[]) {
   const sum = sums.get(band);
@@ -220,7 +250,7 @@ function addTo(sums: Map<BandId, Complex[]>, band: BandId, pressure: readonly Co
 }
 
 /** The mean of a curve's levels where they are within PASSBAND_DB of its highest. */
-function passbandDb(curve: readonly FrequencyPoint[]) {
+export function passbandDb(curve: readonly FrequencyPoint[]) {
   const top = Math.max(...curve.map((o) => o.spl));
   const pass = curve.filter((o) => o.spl >= top - PASSBAND_DB);
   return pass.reduce((sum, o) => sum + o.spl, 0) / pass.length;
@@ -253,13 +283,8 @@ export function speakerResponse(
     if (pressure && cones) addTo(sums, cones.first.bands[0], pressure);
     const gaps = [...result.gaps];
     for (const driver of chamber.drivers) {
-      if (isConeKind(driver.kind) && driver.kind !== DRIVER_KIND.coaxial) continue;
-      // a coaxial's HF section feeds its second band (its first, with only one); a datasheet driver its first
-      const band =
-        driver.kind === DRIVER_KIND.coaxial
-          ? (driver.bands[1] ?? driver.bands[0])
-          : driver.bands[0];
-      if (band === undefined) continue;
+      const band = hfBandOf(driver);
+      if (band === null) continue;
       const hf = hfParts(driver);
       if (!hf) {
         gaps.push(SPEAKER_MODEL_GAP.noHf);

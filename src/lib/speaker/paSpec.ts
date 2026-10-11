@@ -182,23 +182,33 @@ const paCabinet = (cfg: PaPlannerDesign, chambers: SpeakerCabinet["chambers"]): 
   backJoint: cfg.backJoint,
 });
 
-/** An active band: its own amp channel, its filters in the DSP. */
+/** An active band: its own amp channel of `ampW`, its filters in the DSP. */
 const activeBand = (
   id: SpeakerBand["id"],
   filters: Pick<SpeakerBand, "highpass" | "lowpass">,
   levelDb: number,
-): SpeakerBand => ({ id, ...filters, levelDb, drive: HIFI_DRIVE.active });
+  ampW: SpeakerBand["ampW"],
+): SpeakerBand => ({ id, ...filters, levelDb, drive: HIFI_DRIVE.active, ampW });
 
-/** The sub band's own filter: the subsonic highpass. */
+/** The sub band's own filter: the subsonic highpass; on the sub amp. */
 const subBand = (cfg: PaPlannerDesign, lowpass: SpeakerBand["lowpass"]) =>
-  activeBand(SPEAKER_BAND.low, { highpass: { hz: cfg.hpf, type: cfg.hpType }, lowpass }, 0);
+  activeBand(
+    SPEAKER_BAND.low,
+    { highpass: { hz: cfg.hpf, type: cfg.hpType }, lowpass },
+    0,
+    cfg.ampW,
+  );
 
-/** The horn band: above the mid-to-horn crossover, `hfTilt` below the mid band, which is `midDb` below the box's top. */
+/**
+ * The horn band: above the mid-to-horn crossover, `hfTilt` below the mid band, which is `midDb` below the box's top; on
+ * the HF amp.
+ */
 const hornBand = (cfg: PaPlannerDesign, midDb: number) =>
   activeBand(
     SPEAKER_BAND.high,
     { highpass: lrFilter(cfg.xoHi, cfg.xoHiOrder), lowpass: null },
     -(midDb + cfg.hfTilt),
+    cfg.hfAmpW,
   );
 
 /** One PA box as a speaker spec. */
@@ -236,6 +246,7 @@ const topSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
         SPEAKER_BAND.mid,
         { highpass: null, lowpass: lrFilter(cfg.xoHi, cfg.xoHiOrder) },
         0,
+        cfg.mAmpW,
       ),
       hornBand(cfg, 0),
     ],
@@ -275,6 +286,7 @@ function towerSpeaker(cfg: PaPlannerDesign, system: SpecIdentity): SpeakerSpec {
           lowpass: lrFilter(cfg.xoHi, cfg.xoHiOrder),
         },
         -cfg.tilt,
+        cfg.mAmpW,
       ),
       hornBand(cfg, cfg.tilt),
     ],

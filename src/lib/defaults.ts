@@ -205,12 +205,13 @@ export const DEFAULT_SPEAKER_CHAMBER: SpeakerChamber = {
   drivers: [],
 };
 
-/** A band the Designer adds: no filters, at 0 dB, active. */
+/** A band the Designer adds: no filters, at 0 dB, active, on the Hi-fi woofer's amp power. */
 export const DEFAULT_SPEAKER_BAND: Omit<SpeakerBand, "id"> = {
   highpass: null,
   lowpass: null,
   levelDb: 0,
   drive: HIFI_DRIVE.active,
+  ampW: DEFAULT_HIFI.wooferAmpWatts,
 };
 
 /**

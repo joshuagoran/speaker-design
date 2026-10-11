@@ -1,6 +1,7 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { speakerResponse } from "../../lib/speaker/speakerResponse";
+import { speakerLimits } from "../../lib/speaker/speakerLimits";
 import { EMPTY_SPEAKER } from "../../lib/defaults";
 import { DESIGNER_START_SPEAKER_NAMES } from "../../constants/designer";
 import { SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
@@ -59,6 +60,11 @@ export function useDesigner() {
   const cabinet = useDeferredValue(spec.cabinet);
   const bands = useDeferredValue(spec.bands);
   const response = useMemo(() => speakerResponse({ cabinet, bands }), [cabinet, bands]);
+  // the limits read the response's chamber runs, so no box model runs again
+  const limits = useMemo(
+    () => speakerLimits({ cabinet, bands }, response),
+    [cabinet, bands, response],
+  );
   const store = useConfigStore(SPEAKERS_COLLECTION);
   const editCabinet = (edit: (cabinet: SpeakerCabinet) => SpeakerCabinet) =>
     setSpec((s) => ({ ...s, cabinet: edit(s.cabinet) }));
@@ -112,6 +118,7 @@ export function useDesigner() {
     spec,
     setSpec,
     response,
+    limits,
     store,
     snapshot,
     restore,

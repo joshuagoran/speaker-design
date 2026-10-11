@@ -111,4 +111,11 @@ export const DESIGNER_TEXT = {
   modelNote:
     "On axis at 1 m in half space, every band at 2.83 V; no baffle step, room or driver positions yet (the Space page will add them).",
   noBands: "No band has a modeled driver yet: add a driver to a chamber and pick its band.",
+  maxOutput: "Maximum output",
+  maxYLabel: "dB SPL on axis, 1 m, at the first limit",
+  speakerMax: "Speaker max",
+  /** the note under the maximum-output chart, with the vents' air-speed limits, m/s */
+  maxNote: (portMs: number, flaredMs: number) =>
+    `Each band at its amp's full power, up to its first limit: cone travel, port air speed, radiator travel, the driver's program rating (2 × AES) or the amp. A vent takes ${portMs.toFixed(0)} m/s (flared PA tubes ${flaredMs.toFixed(0)} m/s). A band's max is for music: one drive for the whole band. The sum and the speaker's max take one input for every band.`,
+  chamber: "Chamber",
 } as const;

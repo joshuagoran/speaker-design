@@ -45,6 +45,7 @@ import type {
   HifiSeatPaths,
   Horn,
   HifiWaveguide,
+  LimitId,
   MountAdapter,
   WaveguideSpec,
   RoundPort,
@@ -671,9 +672,12 @@ export function hifiSystem(w: HifiWoofer, t: HifiTweeter, cfg: HifiConfig): Hifi
   return b && hifiSystemFromBox(b, w, t, cfg);
 }
 
-/** A tweeter's clean maximum level at 1 m: its sensitivity and power, derated below the frequency its rating assumes. */
+/**
+ * A tweeter's clean maximum level at 1 m: its sensitivity and power, derated below the frequency its rating assumes,
+ * and what sets the power (the amp, or the program rating: "thermal").
+ */
 export function tweeterMaxLevel(
-  t: HifiTweeter,
+  t: Pick<HifiTweeter, "hf">,
   cfg: Pick<HifiConfig, "xo" | "tAmpW" | "guideGain">,
 ) {
   const hf: Partial<HifiTweeter["hf"]> = t.hf || {};
@@ -683,7 +687,8 @@ export function tweeterMaxLevel(
   const pProg = hf.aes ? 2 * hf.aes * derate : Infinity;
   const pMax = Math.min(pAmp, pProg);
   const tSens = hf.sens != null ? hf.sens + (cfg.guideGain || 0) : 90;
-  return { imp, derate, pMax, tSens, tLevel: tSens + 10 * Math.log10(pMax) };
+  const who: Extract<LimitId, "amp" | "thermal"> = pMax === pAmp ? "amp" : "thermal";
+  return { imp, derate, pMax, who, tSens, tLevel: tSens + 10 * Math.log10(pMax) };
 }
 /**
  * The power the tweeter gets, amp watts into 8 Ω (as `tAmpW`): its own amp's when active; when passive, the one amp

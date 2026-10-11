@@ -52,6 +52,7 @@ import type {
   SubGeometry,
   SubGeometryConfig,
   SubLimits,
+  SubLimitWho,
   SubSystem,
   SubSystemConfig,
   ThieleSmall,
@@ -1914,6 +1915,23 @@ export function subwooferLimits(
     spl45: mdl.spl45 + sc,
   };
 }
+/**
+ * A sine's limit at one point of a curve modeled at `AMP_V`: the amp output voltage where the first of the port's air
+ * speed, the cone's Xmax, the driver's program rating (thermal) and the amp gives out, and which. The point's
+ * excursion and air speed carry its filters; the program rating and the amp are ceilings on the whole drive.
+ */
+export function sineLimitAt(
+  o: { xmm: number; vel?: number },
+  ts: Pick<ThieleSmall, "aes" | "Xmax">,
+  AMP_V: number,
+  portMax: number,
+): { V: number; who: SubLimitWho } {
+  const vt = thermalVoltageLimit(ts.aes);
+  const vp = o.vel != null ? (AMP_V * portMax) / o.vel : Infinity,
+    vx = (AMP_V * ts.Xmax) / o.xmm;
+  const V = Math.min(vp, vx, vt, AMP_V);
+  return { V, who: V === vp ? "port" : V === vx ? "Xmax" : V === vt ? "thermal" : "amp" };
+}
 // Per-frequency sine limit: each frequency meets its own port and excursion limits.
 export function maxOutputCurve(
   curve: { f: number; spl: number; xmm: number; vel?: number }[],
@@ -1921,16 +1939,9 @@ export function maxOutputCurve(
   AMP_V: number,
   portMax: number,
 ): PaMaxPoint[] {
-  const vt = thermalVoltageLimit(ts.aes);
   return curve.map((o): PaMaxPoint => {
-    const vp = o.vel != null ? (AMP_V * portMax) / o.vel : Infinity,
-      vx = (AMP_V * ts.Xmax) / o.xmm;
-    const V = Math.min(vp, vx, vt, AMP_V);
-    return {
-      f: o.f,
-      spl: o.spl + 20 * Math.log10(V / AMP_V),
-      who: V === vp ? "port" : V === vx ? "Xmax" : V === vt ? "thermal" : "amp",
-    };
+    const { V, who } = sineLimitAt(o, ts, AMP_V, portMax);
+    return { f: o.f, spl: o.spl + 20 * Math.log10(V / AMP_V), who };
   });
 }
 // The sub-bass band, Hz: the low end the sub's readout averages, an absolute level to compare designs by (F3 is relative
@@ -1981,6 +1992,22 @@ export function subMusicOutputAt(
 // highpass at the crossover and 12 dB/oct below the horn's loading limit. Power: amp voltage into
 // the driver's impedance, capped at program (2 x AES), derated 6 dB/oct below the frequency AES
 // was rated at.
+/**
+ * The power a compression driver takes, W: the amp's (`hfAmpW` into 8 Ω, moved to the driver's impedance) or its
+ * program rating (2 × AES, derated 6 dB/oct below the frequency AES was rated at when crossed at `xoHi`), the lower.
+ */
+export function hornPower(
+  hf: Pick<CompressionHf, "aes" | "aesXo" | "imp">,
+  xoHi: number,
+  hfAmpW: number,
+): Pick<HornResponse, "P" | "pAmp" | "pProg" | "derate" | "imp" | "who"> {
+  const imp = hf.imp || 8;
+  const pAmp = (hfAmpW * 8) / imp;
+  const derate = hf.aesXo && xoHi < hf.aesXo ? Math.pow(xoHi / hf.aesXo, 2) : 1;
+  const pProg = 2 * hf.aes * derate;
+  const P = Math.min(pAmp, pProg);
+  return { P, pAmp, pProg, derate, imp, who: P === pAmp ? "amp" : "thermal" };
+}
 export function hornResponse(
   hf: CompressionHf | undefined,
   hz: Partial<HornHf>,
@@ -1989,11 +2016,8 @@ export function hornResponse(
   order: CrossoverOrder,
 ): HornResponse | null {
   if (!hf || hf.sens == null || !hf.aes) return null;
-  const imp = hf.imp || 8;
-  const pAmp = (hfAmpW * 8) / imp;
-  const derate = hf.aesXo && xoHi < hf.aesXo ? Math.pow(xoHi / hf.aesXo, 2) : 1;
-  const pProg = 2 * hf.aes * derate;
-  const P = Math.min(pAmp, pProg);
+  const power = hornPower(hf, xoHi, hfAmpW);
+  const { P } = power;
   const low = (hz && hz.lowHz) || 0;
   const curve: FrequencyPoint[] = [];
   for (let i = 0; i < 300; i++) {
@@ -2001,17 +2025,7 @@ export function hornResponse(
     const g = linkwitzRileyHighpass(f, xoHi, order) * (low ? Math.min(1, Math.pow(f / low, 2)) : 1);
     curve.push({ f, spl: hf.sens + 10 * Math.log10(P) + 20 * Math.log10(g) });
   }
-  return {
-    hf,
-    curve,
-    P,
-    pAmp,
-    pProg,
-    derate,
-    imp,
-    who: P === pAmp ? "amp" : "thermal",
-    flat: hf.sens + 10 * Math.log10(P),
-  };
+  return { ...power, hf, curve, flat: hf.sens + 10 * Math.log10(P) };
 }
 
 // ---- directivity ----

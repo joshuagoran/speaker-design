@@ -16,7 +16,14 @@ import {
   MID_OPTIONS,
   SUB_OPTIONS,
 } from "../src/lib/data";
-import { DEFAULT_PA } from "../src/lib/defaults";
+import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
+import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
+import { systemFromPa } from "../src/lib/speaker/paSpec";
+import { speakerResponse } from "../src/lib/speaker/speakerResponse";
+import { speakerLimits } from "../src/lib/speaker/speakerLimits";
+import { bandChips, chamberChips } from "../src/pages/designer/designerChips";
+import { configs } from "./golden-configs";
+import { STACKS, paDesign } from "./speaker-cases";
 import { keysOf } from "../src/lib/records";
 import type {
   Chip,
@@ -149,6 +156,21 @@ const hardwareLists = paDesigns.slice(0, 10).flatMap((c) => {
   return [[hardwareChip(s), ...(m ? [hardwareChip(m)] : [])]];
 });
 
+// the Designer's lists, one per band and one per chamber: the Hi-fi boxes of each kind and the golden PA towers and tops
+const designerSpecs = [
+  ...(["sealed", "vented", "radiator"] as const).map((boxType) =>
+    speakerFromHifi({ ...DEFAULT_HIFI, boxType }, DEFAULT_HIFI_LOOK, { id: "hifi", name: boxType }),
+  ),
+  ...configs.flatMap((c) => systemFromPa(paDesign(c), { id: "pa", name: c.name }, STACKS).speakers),
+];
+const designerLists = designerSpecs.flatMap((spec) => {
+  const limits = speakerLimits(spec, speakerResponse(spec));
+  return [
+    ...bandChips(spec, limits).map((b) => b.chips),
+    ...limits.chambers.flatMap((c) => (c ? [chamberChips(c)] : [])),
+  ];
+});
+
 const lists: [ChipSection, Chip[][]][] = [
   ["sub", paEvals.map((m) => m.chips.sub)],
   ["mid", paEvals.map((m) => m.chips.mid)],
@@ -156,6 +178,7 @@ const lists: [ChipSection, Chip[][]][] = [
   ["fill", fillLists],
   ["hifi", hifiLists],
   ["hardware", hardwareLists],
+  ["designer", designerLists],
 ];
 
 test("every chip carries an id of its own section, and a list has one chip per check", () => {
