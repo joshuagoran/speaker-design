@@ -13,9 +13,25 @@ import { Notice } from "../../components/ui/Notice";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
+import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
+import { SpeakerView3D } from "../../components/stack-view/SpeakerView3D";
+import { SpeakerFront } from "../../components/drawings/SpeakerFront";
+import {
+  BaffleColorPicker,
+  CabinetFinishPicker,
+  HornColorPicker,
+} from "../../components/ui/FinishPickers";
+import { cabinetFinishName } from "../../lib/data";
+import { HORN_COLOR_CATALOG_LABEL } from "../../constants/hornColor";
+import { driverHorn, hornFlare, speakerLayout } from "../../lib/speaker/speakerLayout";
 import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
-import { DEFAULT_HIFI, DEFAULT_SPEAKER_BAND, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
+import {
+  DEFAULT_HIFI,
+  DEFAULT_PA,
+  DEFAULT_SPEAKER_BAND,
+  DEFAULT_SPEAKER_CHAMBER,
+} from "../../lib/defaults";
 import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
 import {
   HIFI_BOT,
@@ -52,6 +68,9 @@ interface Props {
 
 /** The bands drawn dashed: the air band shares the high band's color. */
 const BAND_DASH: Partial<Record<BandId, string>> = { air: "6 4" };
+
+/** The 3D view's and the front drawing's height, as the Hi-fi page's 3D view. */
+const VIEW_HEIGHT = "h-[280px] md:h-[clamp(300px,46vh,480px)]";
 
 /** Every band id, low to high. */
 const BAND_IDS = keysOf(SPEAKER_BAND);
@@ -98,10 +117,17 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
   const usedIds = spec.bands.map((b) => b.id);
   const nextBandId = BAND_IDS.find((id) => !usedIds.includes(id));
   const { chambers } = spec.cabinet;
+  const cabFinish = spec.look.cabFinish ?? DEFAULT_PA.cabFinish;
+  const baffleColor = spec.look.baffleColor ?? DEFAULT_PA.baffleColor;
+  /** the first catalog horn the drivers take: the horn color picker shows its catalog finish */
+  const firstHorn = chambers.flatMap((c) => c.drivers.map(driverHorn)).find((h) => h !== null);
+  const layout = speakerLayout(spec.cabinet);
+  const hornPlaceholder = layout.chambers.some((c) => hornFlare(spec.cabinet, c)?.placeholder);
   const summaries: Record<DesignerSettingsSection, string> = {
     speaker: `${spec.name} · ${countText(chambers.length, "chamber", "chambers")} · ${countText(spec.bands.length, "band", "bands")}`,
     chambers: chambers.map(chamberText).join("; "),
     bands: spec.bands.map(bandText).join(" · "),
+    look: `${cabinetFinishName(cabFinish)} · baffle ${baffleColor}${firstHorn ? ` · horn ${spec.look.hornColor ?? HORN_COLOR_CATALOG_LABEL}` : ""}`,
   };
   const section = (id: DesignerSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -145,6 +171,30 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
             saveName={spec.name}
             manage
           />
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
+            <SectionHeading className="mb-3">{DESIGNER_TEXT.views}</SectionHeading>
+            <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
+              <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`}>
+                {(cutaway) => (
+                  <SpeakerView3D
+                    spec={{ cabinet: spec.cabinet, look: spec.look }}
+                    cutaway={cutaway}
+                  />
+                )}
+              </Viewer3DCard>
+              <figure
+                className={`rounded-lg border border-stone-300 bg-panel p-3 flex flex-col ${VIEW_HEIGHT}`}
+              >
+                <div className="flex-1 min-h-0">
+                  <SpeakerFront spec={spec} />
+                </div>
+                <figcaption className="text-xs text-stone-500 mt-2">
+                  {DESIGNER_TEXT.front}
+                </figcaption>
+              </figure>
+            </div>
+            {hornPlaceholder && <Notice>{DESIGNER_TEXT.hornPlaceholder}</Notice>}
+          </section>
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
             <SectionHeading className="mb-3">{DESIGNER_TEXT.response}</SectionHeading>
             <ResponseChart
@@ -270,6 +320,26 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 >
                   Add band
                 </Button>
+              )}
+            </>,
+          )}
+          {section(
+            "look",
+            <>
+              <CabinetFinishPicker
+                value={cabFinish}
+                onChange={(v) => designer.editLook({ cabFinish: v })}
+              />
+              <BaffleColorPicker
+                value={baffleColor}
+                onChange={(v) => designer.editLook({ baffleColor: v })}
+              />
+              {firstHorn && (
+                <HornColorPicker
+                  value={spec.look.hornColor}
+                  onChange={(hornColor) => designer.editLook({ hornColor })}
+                  horn={firstHorn}
+                />
               )}
             </>,
           )}

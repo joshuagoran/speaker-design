@@ -1,8 +1,9 @@
-// GPU memory check for the 3D views (the PA stack's and the Hi-fi speaker's), run in CI after the build (not part of
-// `vp test`).
+// GPU memory check for the 3D views (the PA stack's, the Hi-fi speaker's and the Designer's), run in CI after the build
+// (not part of `vp test`).
 //   node tests/three-memory-check.mjs [page]        default: dist/stack-planner.html
 // Env: PW_MODULE, PW_CHROMIUM as for tests/mobile-check.mjs.
-// On each page, rebuilds its 3D view many times (the first slider stepped up and back) and fails if the live geometry
+// On each page, rebuilds its 3D view many times (its first slider, or the Designer's first number field, stepped up and
+// back) and fails if the live geometry
 // or texture count (three.js renderer.info.memory, which the viewer, SceneView3D, writes on its mount as
 // data-geometries / data-textures, with data-rebuilds counting its rebuilds) grows, or if the view holds more than one
 // canvas (one WebGL renderer for the component's life).
@@ -10,10 +11,19 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const REBUILDS = 30;
-/** The pages with a 3D view: the PA stack (the default view) and Hi-fi. */
+/** The pages with a 3D view: the PA stack (the default view), Hi-fi and the Designer, and the control each steps. */
+const SLIDER = { control: 'input[type="range"]', up: "ArrowRight", down: "ArrowLeft" };
 const VIEWS = [
-  { name: "PA", hash: "" },
-  { name: "Hi-fi", hash: "#hifi" },
+  { name: "PA", hash: "", ...SLIDER },
+  { name: "Hi-fi", hash: "#hifi", ...SLIDER },
+  // the first chamber's width
+  {
+    name: "Designer",
+    hash: "#designer",
+    control: 'input[type="number"]',
+    up: "ArrowUp",
+    down: "ArrowDown",
+  },
 ];
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const url = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -23,7 +33,7 @@ const browser = await chromium.launch({
 });
 const failures = [];
 const results = [];
-for (const { name, hash } of VIEWS) {
+for (const { name, hash, control, up, down } of VIEWS) {
   const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -36,8 +46,8 @@ for (const { name, hash } of VIEWS) {
       textures: Number(el.dataset.textures),
       canvases: el.querySelectorAll("canvas").length,
     }));
-  const slider = page.locator('input[type="range"]').first();
-  /** Steps the slider and waits for the rebuild it starts (after the viewer's 120 ms throttle). */
+  const slider = page.locator(control).first();
+  /** Steps the control and waits for the rebuild it starts (after the viewer's 120 ms throttle). */
   const step = async (key) => {
     const before = await view.evaluate((el) => Number(el.dataset.rebuilds));
     await slider.press(key);
@@ -51,7 +61,7 @@ for (const { name, hash } of VIEWS) {
   const first = await read();
   const counts = [];
   for (let i = 0; i < REBUILDS; i++) {
-    await step(i % 2 ? "ArrowLeft" : "ArrowRight");
+    await step(i % 2 ? down : up);
     counts.push(await read());
   }
   await page.close();

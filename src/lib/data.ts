@@ -95,6 +95,8 @@ export const CD_OPTIONS: CompressionDriver[] = [...CD_RAW];
 const isPaHorn = (h: Horn) => h.scope !== "hifi";
 /** The PA horns. */
 export const HORN_OPTIONS: Horn[] = HORN_RAW.filter(isPaHorn);
+/** Any catalog horn by id, the Hi-fi-only waveguides included; undefined when there is none (a save's stale id). */
+export const hornById = (id: string): Horn | undefined => byId(HORN_RAW, id);
 
 /** A turned part's length (its steps end to end), in. */
 export const stepsLength = (steps: readonly BodyStep[]) =>

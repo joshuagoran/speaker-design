@@ -103,6 +103,10 @@ export const DESIGNER_START_SPEAKER_NAMES = {
 
 /** The Designer's results headings and chart labels. */
 export const DESIGNER_TEXT = {
+  views: "The speaker",
+  front: "Front",
+  hornPlaceholder:
+    "A folded horn path, or one longer than its chamber is deep, is drawn straight and shortened to fit for now (its fold layout comes later).",
   response: "Response",
   chambers: "Chambers",
   bands: "Bands",

@@ -116,6 +116,9 @@ export function useDesigner() {
     snapshot,
     restore,
     setName: (name: string) => setSpec((s) => ({ ...s, name })),
+    /** sets part of the look (the cabinet finish, the baffle and horn colors) */
+    editLook: (look: Partial<SpeakerSpec["look"]>) =>
+      setSpec((s) => ({ ...s, look: { ...s.look, ...look } })),
     editCabinet,
     editChambers,
     editChamber,

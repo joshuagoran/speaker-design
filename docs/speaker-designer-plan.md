@@ -189,9 +189,21 @@ Each PR stands alone. Lowest risk first.
       from the engines.
     - Gaps: a Hi-fi design with a sub highpass keeps the box's subsonic in the spec (the Hi-fi engine drops
       it; see L4). Drivers of different models in one chamber are a named gap.
+  - **L3b 3D view and front drawing.** One scene builder for any spec (`buildSpeakerScene`,
+    `src/components/stack-view/`) from today's PA and Hi-fi parts, and a front drawing (`SpeakerFront`), both reading
+    one layout (`lib/speaker/speakerLayout`): the chambers at their `at` positions, the drivers at their positions with
+    their horns (in the baffle as the tower sets one, or on the top as the mid box carries one), and the port by its
+    engine's rule (the PA's letterbox, side ducts and flared tubes; the Hi-fi's round ports, slots and radiators).
+    - Chambers that fill one box of one depth share one shell and one baffle, with the shared walls inside (the
+      tower's); others are each their own box. The cabinet is the PA's frame when the spec has an inset, else the
+      Hi-fi box with its roundover.
+    - A horn-loaded chamber shows its mouth on the baffle and a flare from its segments; a folded path, or one longer
+      than the chamber is deep, is a straight placeholder with a note until its fold layout comes.
+    - Not drawn yet: the tower's arched top (the spec has no arch), the kick-back tilt, and the PA's plinth (a
+      system's pose).
   - **L3c Cutlist.** L3c works out the real bracing, vent walls and hardware displacement for each chamber and
     replaces the 3% allowance.
-  - **Later in L3.** The 3D view, the limits and the optimizer; the horn settings; the tower with the horn
+  - **Later in L3.** The limits and the optimizer; the horn settings; the tower with the horn
     on top (T1); the voice-coil inductance (after PR #133 adds `Le`).
 - **L4 Space page.** A separate page, later. Any saved speaker can be placed in a "Space": sources by speaker
   id, amps and channels, DSP, crossovers between boxes, delay and level, and the coverage map generalized
