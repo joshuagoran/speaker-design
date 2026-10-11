@@ -50,8 +50,20 @@ export const HIFI_FRONT_PARTS = {
   /** a horn-loaded tweeter's flare: its depth behind the faceplate, and its throat for its mouth */
   flareDepthIn: 0.6,
   flareThroat: 0.35,
-  /** a ribbon's diaphragm in its plate: its width and height for the plate's, and how far back it sits */
-  ribbon: { w: 0.12, h: 0.6, setBackIn: 0.35 },
+  /**
+   * A ribbon's own waveguide (the 2D front drawing's too), from the Radian LT3-WG datasheet photo: a square plate with
+   * a flared rectangular throat, wider than tall (the wider horizontal coverage), down to a tall, narrow slot over the
+   * ribbon. Each size is for the plate's: the slot, the throat's mouth on the plate's face, and the flare's depth from
+   * the face to the slot (41 mm behind a 170 mm plate); the flare's cross-section squareness (a superellipse exponent).
+   * The depth is the waveguide's alone, about 1.6″ on the LT3.2-WG: the catalog's "2.5″ deep" for it likely counts
+   * the driver on its back too (the cutaway draws that as the GENERIC tweeter body behind the slot).
+   */
+  ribbon: {
+    slot: { w: 0.1, h: 0.35 },
+    mouth: { w: 0.78, h: 0.7 },
+    depthPerPlate: 0.24,
+    flareSquareness: 6,
+  },
   /**
    * a coaxial's HF in its woofer's center, in place of the dust cap (the 2D front drawing's too): its horn's mouth and
    * throat for the cone's radius, how far it stands proud of the cone (its mouth stays behind the woofer's frame), and
