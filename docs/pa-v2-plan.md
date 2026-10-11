@@ -187,6 +187,61 @@ Per side, 2 × sub and 2 × mid:
 - **The HF and the subs set the limit together.** Keep the HF limiter conservative.
 - **One 18″ per side** pairs with 2 mids. A third mid only pays off with two 18″ per side or more.
 
+## Modular build-out: 8″ mids
+
+An alternative to the small stack above, built from three module types that a stack adds as needs grow.
+
+| Module   | Contents                                       | Mouth (estimate) |
+| -------- | ---------------------------------------------- | ---------------- |
+| Sub bin  | 1 × 18″ in a front-loaded 1-D horn             | ~600 × 800 mm    |
+| Mid box  | 2 × 8″ stacked in one 1-D horn throat          | ~500 × 450 mm    |
+| HF       | 1 × compression driver on its horn             | —                |
+
+### Loading grows with the count
+
+| Sub bins | Loads from | Mid boxes | Loads from |
+| -------- | ---------- | --------- | ---------- |
+| 1        | ~140 Hz    | 1         | ~204 Hz    |
+| 2        | ~99 Hz     | 2         | ~144 Hz    |
+| 4        | ~70 Hz     | 3         | ~118 Hz    |
+
+A single bin is little better than a vented box below 140 Hz, and it is bigger. Its value comes when the bins stack:
+four bins load down to about 70 Hz. Pick the bin from the start, so a grown stack uses one sub type.
+
+### Balance at each size
+
+Rough, as in [Balance](#balance). 8″ mids assume about 220 cm² × 5.5 mm and about 250 W per driver _(typical,
+unverified)_.
+
+| Per side                | Subs (18NBX100, 800 W each) | Mids at 150 Hz | HF needed                 |
+| ----------------------- | --------------------------- | -------------- | ------------------------- |
+| 1 bin, 1 mid box (2×8″) | ~125.5 dB                   | ~123 dB        | 1 CD (~128–131 dB), spare |
+| 2 bins, 2 mid boxes     | ~131.5 dB                   | ~129 dB        | 1 CD at its limit, or 2   |
+| 4 bins, 3 mid boxes     | ~137.5 dB                   | ~133 dB        | 2–3 CDs                   |
+
+- **Cross subs to mids at about 150 Hz.** Two 8″ cones fall short at 120 Hz (about 119 dB). A front-loaded bin
+  reaches 150 Hz easily.
+- **The 8″ mids reach the HF crossover easily.** An 8″ cone is still wide at 950 Hz (ka ≈ 1.5).
+- **The HF must grow too.** Each doubling of subs adds about 6 dB, and one N314T does not. Plan the HF as a module:
+  add horns stacked vertically and splayed (near and far throw), so each covers its own slice and they overlap only
+  at the edges. Or move to a larger compression driver.
+- **A grown stack is bass-heavy** (subs about 4 dB above the mids). That suits the sound-system style; the front
+  end's stepped trims set the final balance.
+
+### Layout as it grows
+
+- **Mid column.** 1 box: both 8″ run to the crossover. 2–3 boxes: a tapered column, one amp channel per box (two
+  8 Ω cones in parallel, 4 Ω). Top box to the crossover, the next to about 500 Hz, the lowest to about 250–300 Hz.
+- **Subs.** Four bins 2 wide × 2 high put the HF about 3.3 m up. A row of four on the floor keeps the same mouth
+  area, uses the floor as a mirror, and keeps the HF about 2.5 m up.
+- **Amps.** About 3 channels per side for the smallest stack; about 7 for the largest (2 sub channels at 4 Ω,
+  3 mid channels, 1–2 HF).
+
+### Gaps
+
+- The catalog has no plain 8″ mid drivers yet, only 8″ coaxials for fills. Candidates to add: B&C 8NDL51,
+  FaitalPRO 8PR200, 18Sound 8NMB420 _(all unverified)_.
+
 ## Alignment
 
 The compression driver sits deep in its horn. The mid cone now also sits deep in its horn, so the two acoustic
@@ -319,7 +374,7 @@ fills for this system or accept one small digital delay for them.
 
 ## Open questions
 
-1. 12″ or 10″ mids?
+1. 12″, 10″ or 8″ mids? The 8″ build-out scales furthest; the 12″ small stack needs the fewest boxes.
 2. 18NBX100 or 4018LF subs, and vented boxes or short front-loaded bins?
 3. Sealed or vented mid horns?
 4. Mixer and compressor inside the front-end box, or separate units?
@@ -334,8 +389,34 @@ The planner would need these to model v2 (later, with the system page in
 - Horn-loaded mids: a 1-D horn model, its loading and its rising response.
 - More than one driver per band, a 2.5-way roll-off and a tapered column.
 - A horn setback setting, for the 3D view and the alignment.
-- Short front-loaded sub bins.
+- Short front-loaded sub bins, and their loading as bins stack.
+- Plain 8″ mid drivers in the catalog.
+- More than one HF horn per side.
 - A vented mid box.
+
+## Compared: HOQS Paraflex mid-tops
+
+Paraflex (High Order Quarterwave Society) is a different principle: two parallel quarter-wave resonators, a
+low-tuned and a high-tuned path, merge into one mouth. Gain comes from resonance near each tuning, not from a flare.
+
+| Point            | 1-D horn mids (SBS / Sunflower)                 | Paraflex mid-top (e.g. PF-212, 2 × 8″ plan)              |
+| ---------------- | ----------------------------------------------- | -------------------------------------------------------- |
+| Range            | ~120–150 Hz to ~1 kHz                           | 80–600 Hz; ~900 Hz with phase plugs (PF-212, Fb 70 Hz)   |
+| Sub crossover    | ~120–150 Hz                                     | 80–90 Hz                                                 |
+| HF crossover     | 950 Hz suits the R-OSSE                         | 800–900 Hz at most: tight for the R-OSSE's 950 Hz        |
+| Pattern          | Horizontal control from the flare               | Little mid control; forward-biased cardioid, per HOQS    |
+| Alignment        | Mostly geometric: align physically with the CD  | Delay varies with frequency near the tunings: wants DSP  |
+| Tuning and build | Mouth size and depth; curved side walls         | Two resonators tuned and phase-aligned; stuffing, Helmholtz dampers |
+
+- **For this plan, the horn mids fit better:** they reach the HF crossover, control the pattern and align without
+  DSP.
+- **Paraflex suits a small, light two-box system** (a 2 × 8″ top plus a sub, crossed at 80–90 Hz) with DSP. It
+  could be a separate small-gig top, not a module of this stack.
+- HOQS also has a coaxial (CX) variant with the HF horn in the mouth.
+
+Sources: [PF-212 MK1 mid-top](https://github.com/High-Order-Quarterwave-Society/PF-212-MK1-mid-top),
+[Paraflex FAQ](https://github.com/High-Order-Quarterwave-Society/About-Paraflex-systems-FAQ),
+[HOQS store](https://hoqs.org/), [HOQS Australia projects](https://www.hoqs.com.au/projects).
 
 ## Reference stacks
 
