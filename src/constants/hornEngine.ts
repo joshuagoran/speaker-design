@@ -23,9 +23,9 @@ export const RADIATION_ANGLE_NAMES = {
   0.5: "Eighth space (π/2)",
 } as const satisfies Record<RadiationAngle, string>;
 
-/** The angle a horn model radiates into when its design names none: half space, as the box models. */
-export const DEFAULT_RADIATION_ANGLE: RadiationAngle = 2;
-
-/** Rear-chamber leakage and port losses, as Q at the port tuning: the box model's defaults (lib/pa/calc boxModel). */
+/**
+ * The rear chamber's leakage and the vent's losses, each as a quality factor Q at the vent's tuning: the box model's
+ * defaults (lib/pa/calc boxModel's QL and Qp). A lower Q means more loss.
+ */
 export const HORN_LEAK_Q = 7;
 export const HORN_PORT_Q = 50;

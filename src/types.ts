@@ -1393,14 +1393,19 @@ export interface SealedBoxModel {
 
 /** A complex number, for the horn engine's acoustic two-ports (lib/acoustics). */
 export interface Complex {
+  /** the real part */
   re: number;
+  /** the imaginary part */
   im: number;
 }
 
-/** A 2 × 2 complex matrix, row by row: [[a, b], [c, d]]: an acoustic two-port's transfer matrix. */
+/**
+ * A 2 × 2 complex matrix, row by row: [[A, B], [C, D]] as [A, B, C, D]. As an acoustic two-port's transfer matrix it
+ * gives the input's pressure and volume velocity from the output's: p₁ = A·p₂ + B·U₂, U₁ = C·p₂ + D·U₂.
+ */
 export type Matrix2 = readonly [Complex, Complex, Complex, Complex];
 
-/** A horn segment's flare law: conical or exponential (constants/hornEngine HORN_PROFILE_NAMES). */
+/** A horn segment's flare law: "con" conical, "exp" exponential (constants/hornEngine HORN_PROFILE_NAMES). */
 export type HornProfile = "con" | "exp";
 
 /** The solid angle a horn mouth radiates into, in units of π (constants/hornEngine RADIATION_ANGLE_NAMES). */
@@ -1412,19 +1417,25 @@ export type RadiationAngle = 2 | 1 | 0.5;
  */
 export interface HornSegment {
   profile: HornProfile;
+  /** the area at the segment's throat end, cm² (Hornresp's S1, S2, … for each segment's start) */
   s1: number;
+  /** the area at the segment's mouth end, cm² (Hornresp's S2, S3, …) */
   s2: number;
+  /** the segment's length along its axis, cm (Hornresp's L12, L23, …) */
   length: number;
 }
 
-/** A rear-chamber vent: its total open area, cm², and its acoustic length with both end corrections, cm. */
+/** A rear-chamber vent. */
 export interface HornPort {
+  /** the total open area, cm² (all openings together) */
   area: number;
+  /** the effective (acoustic) length, cm: the physical length plus both end corrections */
   effLength: number;
 }
 
 /** A horn box's rear chamber: its net air, L, and its vent; sealed when the vent is null. */
 export interface HornRearChamber {
+  /** the chamber's net air, L (Hornresp's Vrc) */
   liters: number;
   port: HornPort | null;
 }
@@ -1434,13 +1445,16 @@ export interface HornRearChamber {
  * horn's segments and a sealed or vented rear chamber. No segments make a direct radiator (the mouth is the cone).
  */
 export interface HornDesign {
+  /** the driver's Thiele/Small parameters, as the box models take them */
   driver: BoxModelTS;
   /** identical boxes side by side, mouths touching: they load as one mouth `count` times the area */
   count: number;
   /** the air between the cone and the throat, L (Hornresp's Vtc); 0 for none */
   throatChamber: number;
+  /** the horn, throat first; empty for a direct radiator */
   segments: readonly HornSegment[];
   rear: HornRearChamber;
+  /** the solid angle the mouth radiates into, in units of π: 2 is half space */
   angle: RadiationAngle;
   /** how far the vent's exit sits behind the mouth's plane, cm: the path offset in the sum */
   portOffset: number;
@@ -1448,6 +1462,7 @@ export interface HornDesign {
 
 /** One point of a horn model's response, before any crossover. */
 export interface HornPoint {
+  /** frequency, Hz */
   f: number;
   /** SPL at 1 m in the design's solid angle, all boxes together, dB */
   spl: number;
@@ -1455,19 +1470,21 @@ export interface HornPoint {
   phase: number;
   /** group delay of the summed pressure, ms */
   delay: number;
-  /** cone excursion, mm, peak */
+  /** cone excursion ("x" in mm), peak, mm */
   xmm: number;
   /** air speed in the vent, m/s, peak; 0 when sealed */
   portVel: number;
   /** air speed at the horn's throat (the cone's face for a direct radiator), m/s, peak */
   throatVel: number;
-  /** one driver's electrical impedance, ohms (no voice-coil inductance, as the box models) */
+  /** one driver's electrical impedance Ze (magnitude), ohms; no voice-coil inductance, as the box models */
   ze: number;
 }
 
+/** A horn model's result (lib/acoustics/hornModel). */
 export interface HornModel {
+  /** one point per frequency asked for */
   curve: HornPoint[];
-  /** the rear chamber's vent tuning on its own, Hz; null when sealed */
+  /** Fb: the rear chamber and vent's tuning on their own, Hz; null when sealed */
   fb: number | null;
 }
 

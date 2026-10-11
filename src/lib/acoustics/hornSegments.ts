@@ -1,6 +1,14 @@
-// A horn segment's transfer matrix from the 1-D horn (Webster) equation's wave solutions. Each flare law has two
-// waves, a and b; T(x) maps (a, b) to the pressure and volume velocity at x, and the segment's matrix is
-// T(x₁)·T(x₂)⁻¹: [p₁, U₁] = M·[p₂, U₂]. One construction serves every flare law, so each needs only its two waves.
+// A horn segment's transfer matrix, from the wave solutions of the 1-D horn (Webster) equation.
+//
+// Inside a segment, the pressure is the sum of two waves: a forward one and a backward one, with unknown amplitudes
+// (a, b). At any point x, a 2 × 2 "wave matrix" W(x) maps (a, b) to the pressure p and the flow U there. So the
+// segment's transfer matrix, which maps the far end's (p₂, U₂) to the near end's (p₁, U₁), is W(x₁)·W(x₂)⁻¹. One
+// construction serves every flare law: each needs only its two waves and their slopes.
+//
+// Words used below:
+// - "flow" (U) is volume velocity, m³/s; "impedance" is acoustic impedance, Pa·s/m³.
+// - `waveNumber` is k = ω/c = 2πf/c, radians per meter.
+// - A transfer matrix [[A, B], [C, D]] gives p₁ = A·p₂ + B·U₂ and U₁ = C·p₂ + D·U₂ (stored row by row as Matrix2).
 import type { Complex, HornSegment, Matrix2 } from "../../types";
 import { AIR_DENSITY, SOUND_SPEED } from "../../constants/hornEngine";
 import { add, cx, div, exp, invertMatrix, mul, mulMatrix, scale, IDENTITY } from "./complex";
@@ -10,92 +18,112 @@ const CM2_TO_M2 = 1e-4,
 /** Areas within this ratio of each other make a straight duct: the flare laws divide by the flare there. */
 const STRAIGHT_RATIO = 1e-4;
 
-/** The two waves' pressure and its slope at x: p = Σ wᵢ, dp/dx = Σ w'ᵢ. */
+/** A segment's two waves at one point: each one's pressure, and its pressure's slope dp/dx (Pa/m). */
 interface WavePair {
-  p: readonly [Complex, Complex];
-  dp: readonly [Complex, Complex];
-}
-
-/** T(x) from the waves and the area at x: U = S·u, u = −(1/(jωρ))·dp/dx. */
-function waveMatrix(w: WavePair, areaM2: number, omega: number): Matrix2 {
-  // −S/(jωρ) = j·S/(ωρ)
-  const k = cx(0, areaM2 / (omega * AIR_DENSITY));
-  return [w.p[0], w.p[1], mul(k, w.dp[0]), mul(k, w.dp[1])];
-}
-
-/** Plane waves in a straight duct: p = a·e^(−jkx) + b·e^(jkx). */
-function ductWaves(k: number, x: number): WavePair {
-  const fwd = exp(cx(0, -k * x)),
-    back = exp(cx(0, k * x));
-  return { p: [fwd, back], dp: [mul(cx(0, -k), fwd), mul(cx(0, k), back)] };
+  pressure: readonly [Complex, Complex];
+  slope: readonly [Complex, Complex];
 }
 
 /**
- * Exponential flare S = S₁·e^(mx): p = e^(−mx/2)·(a·e^(−jγx) + b·e^(jγx)), γ = √(k² − m²/4). Below the cutoff
- * (k < m/2) γ is imaginary and the first wave decays along the horn.
+ * The wave matrix W(x) from the two waves and the area at x (m²). The flow follows from the slope by Euler's equation:
+ * U = S·u with u = −(1/(jωρ))·dp/dx.
  */
-function expWaves(k: number, m: number, x: number): WavePair {
-  const d = k * k - (m * m) / 4;
-  const g = d >= 0 ? cx(Math.sqrt(d)) : cx(0, -Math.sqrt(-d));
-  const env = Math.exp((-m * x) / 2);
-  const fwd = scale(exp(mul(cx(0, -x), g)), env),
-    back = scale(exp(mul(cx(0, x), g)), env);
-  const half = cx(-m / 2);
+function waveMatrix(waves: WavePair, areaM2: number, omega: number): Matrix2 {
+  // −S/(jωρ) = j·S/(ωρ)
+  const slopeToFlow = cx(0, areaM2 / (omega * AIR_DENSITY));
+  return [
+    waves.pressure[0],
+    waves.pressure[1],
+    mul(slopeToFlow, waves.slope[0]),
+    mul(slopeToFlow, waves.slope[1]),
+  ];
+}
+
+/** Plane waves in a straight duct: p = a·e^(−jkx) + b·e^(jkx). */
+function ductWaves(waveNumber: number, x: number): WavePair {
+  const forward = exp(cx(0, -waveNumber * x)),
+    backward = exp(cx(0, waveNumber * x));
   return {
-    p: [fwd, back],
-    dp: [mul(add(half, mul(cx(0, -1), g)), fwd), mul(add(half, mul(cx(0, 1), g)), back)],
+    pressure: [forward, backward],
+    slope: [mul(cx(0, -waveNumber), forward), mul(cx(0, waveNumber), backward)],
   };
 }
 
-/** Conical flare, x from the apex (S ∝ x²): p = (a·e^(−jkx) + b·e^(jkx))/x. */
-function conWaves(k: number, x: number): WavePair {
-  const fwd = exp(cx(0, -k * x)),
-    back = exp(cx(0, k * x));
-  const ix = 1 / x;
+/**
+ * Exponential flare, S = S₁·e^(m·x), m the `flareRate` (1/m): p = e^(−mx/2)·(a·e^(−jγx) + b·e^(jγx)).
+ *
+ * γ (`propagation`) = √(k² − m²/4) is the wave number the flare leaves. Above the cutoff (k > m/2) it is real and the
+ * waves travel; below it, it is imaginary and the forward wave dies away along the horn.
+ */
+function expWaves(waveNumber: number, flareRate: number, x: number): WavePair {
+  const squared = waveNumber * waveNumber - (flareRate * flareRate) / 4;
+  const propagation = squared >= 0 ? cx(Math.sqrt(squared)) : cx(0, -Math.sqrt(-squared));
+  const envelope = Math.exp((-flareRate * x) / 2);
+  const forward = scale(exp(mul(cx(0, -x), propagation)), envelope),
+    backward = scale(exp(mul(cx(0, x), propagation)), envelope);
+  // d/dx of e^(−mx/2)·e^(∓jγx) = e^(−mx/2)·e^(∓jγx)·(−m/2 ∓ jγ)
+  const halfFlare = cx(-flareRate / 2);
   return {
-    p: [scale(fwd, ix), scale(back, ix)],
+    pressure: [forward, backward],
+    slope: [
+      mul(add(halfFlare, mul(cx(0, -1), propagation)), forward),
+      mul(add(halfFlare, mul(cx(0, 1), propagation)), backward),
+    ],
+  };
+}
+
+/** Conical flare, x the distance from the cone's apex (S ∝ x²): p = (a·e^(−jkx) + b·e^(jkx))/x, spherical waves. */
+function conWaves(waveNumber: number, x: number): WavePair {
+  const forward = exp(cx(0, -waveNumber * x)),
+    backward = exp(cx(0, waveNumber * x));
+  const inverseX = 1 / x;
+  return {
+    pressure: [scale(forward, inverseX), scale(backward, inverseX)],
     // d/dx of e^(∓jkx)/x = e^(∓jkx)·(∓jk/x − 1/x²)
-    dp: [mul(fwd, cx(-ix * ix, -k * ix)), mul(back, cx(-ix * ix, k * ix))],
+    slope: [
+      mul(forward, cx(-inverseX * inverseX, -waveNumber * inverseX)),
+      mul(backward, cx(-inverseX * inverseX, waveNumber * inverseX)),
+    ],
   };
 }
 
-/** The segment's matrix at frequency f (Hz), [p₁, U₁] = M·[p₂, U₂], in SI acoustic units. */
-export function segmentMatrix(seg: HornSegment, f: number): Matrix2 {
+/** The segment's transfer matrix at frequency `f` (Hz): [p₁, U₁] = M·[p₂, U₂], in SI acoustic units. */
+export function segmentMatrix(segment: HornSegment, f: number): Matrix2 {
   const omega = 2 * Math.PI * f,
-    k = omega / SOUND_SPEED;
-  const s1 = seg.s1 * CM2_TO_M2,
-    s2 = seg.s2 * CM2_TO_M2,
-    L = seg.length * CM_TO_M;
-  if (L <= 0) return IDENTITY;
-  const straight = Math.abs(s2 / s1 - 1) < STRAIGHT_RATIO;
-  let t1: Matrix2, t2: Matrix2;
+    waveNumber = omega / SOUND_SPEED;
+  const startArea = segment.s1 * CM2_TO_M2,
+    endArea = segment.s2 * CM2_TO_M2,
+    length = segment.length * CM_TO_M;
+  if (length <= 0) return IDENTITY;
+  const straight = Math.abs(endArea / startArea - 1) < STRAIGHT_RATIO;
+  let atStart: Matrix2, atEnd: Matrix2;
   if (straight) {
-    t1 = waveMatrix(ductWaves(k, 0), s1, omega);
-    t2 = waveMatrix(ductWaves(k, L), s2, omega);
-  } else if (seg.profile === "exp") {
-    const m = Math.log(s2 / s1) / L;
-    t1 = waveMatrix(expWaves(k, m, 0), s1, omega);
-    t2 = waveMatrix(expWaves(k, m, L), s2, omega);
+    atStart = waveMatrix(ductWaves(waveNumber, 0), startArea, omega);
+    atEnd = waveMatrix(ductWaves(waveNumber, length), endArea, omega);
+  } else if (segment.profile === "exp") {
+    const flareRate = Math.log(endArea / startArea) / length;
+    atStart = waveMatrix(expWaves(waveNumber, flareRate, 0), startArea, omega);
+    atEnd = waveMatrix(expWaves(waveNumber, flareRate, length), endArea, omega);
   } else {
-    // the radius grows linearly: the apex sits x₁ = L·r₁/(r₂ − r₁) before the throat (behind the mouth when the cone
-    // narrows, where x is negative; S ∝ x² holds either way)
-    const r1 = Math.sqrt(s1),
-      r2 = Math.sqrt(s2);
-    const x1 = (L * r1) / (r2 - r1);
-    t1 = waveMatrix(conWaves(k, x1), s1, omega);
-    t2 = waveMatrix(conWaves(k, x1 + L), s2, omega);
+    // the radius grows linearly, so the apex sits L·r₁/(r₂ − r₁) before the start. When the cone narrows that distance
+    // is negative (the apex lies past the end); S ∝ x² holds either way.
+    const startRadius = Math.sqrt(startArea),
+      endRadius = Math.sqrt(endArea);
+    const apexDistance = (length * startRadius) / (endRadius - startRadius);
+    atStart = waveMatrix(conWaves(waveNumber, apexDistance), startArea, omega);
+    atEnd = waveMatrix(conWaves(waveNumber, apexDistance + length), endArea, omega);
   }
-  return mulMatrix(t1, invertMatrix(t2));
+  return mulMatrix(atStart, invertMatrix(atEnd));
 }
 
-/** The chain's matrix, throat to mouth. */
+/** The whole horn's transfer matrix, throat to mouth: its segments' matrices multiplied in order. */
 export const chainMatrix = (segments: readonly HornSegment[], f: number): Matrix2 =>
-  segments.reduce<Matrix2>((m, s) => mulMatrix(m, segmentMatrix(s, f)), IDENTITY);
+  segments.reduce<Matrix2>((m, segment) => mulMatrix(m, segmentMatrix(segment, f)), IDENTITY);
 
-/** What a two-port's input sees with `load` on its output: (A·Z + B)/(C·Z + D). */
+/** The impedance a two-port's input shows with `load` on its output: (A·Z + B)/(C·Z + D), Z the load. */
 export const inputImpedance = (m: Matrix2, load: Complex): Complex =>
   div(add(mul(m[0], load), m[1]), add(mul(m[2], load), m[3]));
 
-/** The output volume velocity per unit input volume velocity, with `load` on the output: 1/(C·Z + D). */
+/** The flow out of a two-port per unit of flow in, with `load` on its output: U₂/U₁ = 1/(C·Z + D). */
 export const outputFlowRatio = (m: Matrix2, load: Complex): Complex =>
   div(cx(1), add(mul(m[2], load), m[3]));
