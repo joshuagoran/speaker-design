@@ -50,6 +50,7 @@ export function mouthImpedance(
  * area integral of 1/distance over the piston (the closed form below). A circle gives the familiar 0.85 r.
  */
 export function rectangleEndCorrectionIntegral(a: number, b: number) {
+  /** the rectangle's diagonal */
   const d = Math.hypot(a, b);
   return (
     (2 / 3) * (a ** 3 + b ** 3 - d ** 3) +

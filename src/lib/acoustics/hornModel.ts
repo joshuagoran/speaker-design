@@ -41,7 +41,7 @@ import { chainMatrix, inputImpedance, outputFlowRatio, segmentMatrix } from "./h
 const AIR_STIFFNESS = AIR_DENSITY * SPEED_OF_SOUND * SPEED_OF_SOUND;
 /** The reference pressure for SPL, Pa (0 dB SPL). */
 const SPL_REFERENCE_PA = 2e-5;
-/** Millimeters per meter, and milliseconds per second. */
+/** Millimeters per meter, milliseconds per second, and millihenries per henry. */
 const MILLI = 1000;
 /** The vent's tuning search (duct vent): from this frequency, Hz, up in steps of this ratio, to the ceiling. */
 const TUNING_SEARCH = { from: 1, step: 1.01, ceiling: 20000 } as const;
@@ -131,7 +131,10 @@ const ventDuct = (area: number, length: number) => ({
  * acoustic mass. Losses come from QL and Qp at the tuning, as in the box models.
  *
  * A slot's exit is a round exit of the same total area with its reactance scaled to the rectangle's end correction
- * (each opening's): exact at low frequency, where a vent works. Its resistance does not depend on the shape there.
+ * (each opening's): exact at low frequency, where a vent works, for openings apart from each other in half space with
+ * one box. Its resistance does not depend on the shape there. With images (quarter or eighth space) or boxes side by
+ * side, the scaling applies to the merged round exit: an approximation, as the images' geometry depends on how the
+ * slot faces the walls.
  *
  * - `Sp`: the vent's open area, m².
  * - `Fb`: the tuning, Hz: where the vent's reactance cancels the chamber's, 1/(ωCab). Lumped: 1/(2π·√(Map·Cab)).
@@ -164,6 +167,7 @@ function ventOf(design: HornDesign, Cab: number, radiationLoad: boolean, QL: num
       };
     }
     const duct = segmentMatrix(ventDuct(port.area, port.length), f);
+    /** the exit's load as a round piston of the vent's area, with its images and the other boxes' exits */
     const roundExit = mouthImpedance(Sp, f, design.angle, design.count);
     const exitLoad = complex(roundExit.re, roundExit.im * exitReactanceRatio);
     return {
@@ -222,6 +226,7 @@ function isModelable(design: HornDesign, freqs: readonly number[]) {
   const positive = (...values: number[]) => values.every((v) => Number.isFinite(v) && v > 0);
   return (
     positive(driver.Sd, driver.Mms, driver.Fs, driver.Qms, driver.Bl, driver.Re) &&
+    (driver.Le === undefined || (Number.isFinite(driver.Le) && driver.Le >= 0)) &&
     positive(rear.liters, design.count) &&
     Number.isInteger(design.drivers) &&
     design.drivers >= 1 &&

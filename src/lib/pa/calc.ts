@@ -1672,12 +1672,6 @@ export function cutParts({
   return { parts: all, vent };
 }
 
-// ---- end correction of a rectangular opening: lib/acoustics/radiation, shared with the horn engine ----
-export {
-  BOTH_ENDS_CORRECTION_RATIO,
-  rectangleEndCorrection,
-  rectangleEndCorrectionIntegral,
-} from "../acoustics/radiation";
 // Where `x` falls on an ascending axis: the cell's lower index and the fraction across it, clamped to the axis' ends.
 function axisCell(axis: readonly number[], x: number) {
   const last = axis.length - 1;

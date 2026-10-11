@@ -1486,7 +1486,8 @@ export interface HornPort {
   length: number;
   /**
    * a slot's opening, cm: one opening's sides (`area` is all of them together). Its exit takes the rectangle's end
-   * correction, smaller than a round exit's of the same area. Absent: round.
+   * correction, smaller than a round exit's of the same area. Several openings count as apart, each with its own
+   * correction; slots split only by a fin radiate as one wider opening, so give that one. Absent: round.
    */
   slot?: { width: number; height: number };
 }
