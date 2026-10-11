@@ -112,7 +112,9 @@ Each PR stands alone. Lowest risk first.
   - First, tilt / kick-back on a rectangular box.
   - Then a true wedge: trapezoid volume, layout, cutlist bevels, 3D and front drawing.
 - **P8 Optional printed DIY small horn.** Hornlab data and mesh, like `diy_os90x70`.
-- **T1 Tower with the horn freestanding on top.** A field, not a fifth layout:
+- **T1 Tower with the horn freestanding on top.** Deferred into L3 (owner, Oct 2026): build nothing here that
+  the modular box model would replace. The notes below are the spec for the tower template there. A field,
+  not a fifth layout:
   `hornPlacement: "baffle" | "top"`, defaulting to `"baffle"`, with a toggle shown only for Tower.
   - **Mid chamber height adjustable** (owner, Oct 2026): today fixed at 15.5″ (`TOWER_MID_HEIGHT_IN`). With
     the horn on top it becomes a setting, which changes the mid's volume and the tower's height.
@@ -165,7 +167,8 @@ Each PR stands alone. Lowest risk first.
 - No target level per use: show the max level at a distance you set.
 - No fixed roles: templates set first values only; no `use` is saved.
 - Booth monitors hang or sit on pedestals: no tilt or wedge for now; designed as a pair.
-- Tower with the horn on top: the mid chamber height is adjustable, and any horn can sit on top.
+- Tower with the horn on top: the mid chamber height is adjustable, and any horn can sit on top. Built as
+  part of L3, not before it.
 
 ## Open questions for the owner
 
