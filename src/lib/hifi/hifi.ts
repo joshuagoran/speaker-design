@@ -1,5 +1,6 @@
 // Hi-fi 2-way model: woofer (sealed or vented) + tweeter, active crossover, baffle step, placement, and the
 // response at a listening position (off-axis, crossover lobing). Pure functions, no DOM.
+import { abs, add, complex, divide, multiply, phasor } from "../acoustics/complex";
 import {
   boxModel,
   butterworth,
@@ -23,6 +24,7 @@ import { panelLbPerSqFt } from "../panel";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { BIRCH_PLY_STIFFNESS, MDF_STIFFNESS, plateFirstModeHz } from "../bracing";
 import type {
+  Complex,
   BracePanelId,
   PanelResonance,
   BoxModelTS,
@@ -90,21 +92,6 @@ import { COAX_GAP_NAMES } from "../../constants/coax";
 const C = 343,
   IN = 0.0254;
 
-// ---- small complex helpers (local: the crossover sum needs phase) ----
-export interface Complex {
-  re: number;
-  im: number;
-}
-const cm = (re: number, im = 0): Complex => ({ re, im });
-const cmul = (a: Complex, b: Complex) => cm(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
-const cadd = (a: Complex, b: Complex) => cm(a.re + b.re, a.im + b.im);
-const cdiv = (a: Complex, b: Complex) => {
-  const d = b.re * b.re + b.im * b.im;
-  return cm((a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d);
-};
-export const cabs = (a: Complex) => Math.hypot(a.re, a.im);
-const cexp = (ph: number) => cm(Math.cos(ph), Math.sin(ph));
-
 // Linkwitz-Riley low/high pass as complex transfer functions: LR(2n) = Butterworth(n) squared.
 // order 4 (24 dB/oct) or 8 (48 dB/oct). The pair sums flat in magnitude and in phase.
 export function linkwitzRileyFilter(
@@ -113,14 +100,14 @@ export function linkwitzRileyFilter(
   order = 4,
   kind: "lp" | "hp" = "lp",
 ): Complex {
-  const s = cm(0, f / fc),
+  const s = complex(0, f / fc),
     n = order / 2,
     d = butterworth(s, n),
-    d2 = cmul(d, d);
-  if (kind === "lp") return cdiv(cm(1), d2);
-  let sn = cm(1);
-  for (let i = 0; i < order; i++) sn = cmul(sn, s);
-  return cdiv(sn, d2);
+    d2 = multiply(d, d);
+  if (kind === "lp") return divide(complex(1), d2);
+  let sn = complex(1);
+  for (let i = 0; i < order; i++) sn = multiply(sn, s);
+  return divide(sn, d2);
 }
 
 // ---- baffle step, placement, compensation (magnitude shelves; the baffle step also with its phase) ----
@@ -133,7 +120,7 @@ export function baffleStepGain(f: number, baffleWIn: number) {
 // the same step with its phase: the first-order shelf 0.5 (1 + 2jx) / (1 + jx), whose magnitude is baffleStepGain
 export function baffleStepShelf(f: number, baffleWIn: number): Complex {
   const x = (0.707 * f) / baffleStepF3(baffleWIn);
-  return cdiv(cm(0.5, x), cm(1, x));
+  return divide(complex(0.5, x), complex(1, x));
 }
 // DSP compensation: a low shelf of `db` at the same corner (costs that much headroom at low frequencies)
 export function baffleStepCompensation(f: number, baffleWIn: number, db: number) {
@@ -827,7 +814,7 @@ function lowpassOn(b: HifiBox, n: number, xo: number, order: CrossoverOrder) {
   let lp = lowpassCache.get(key);
   if (!lp) {
     lp = new Float64Array(n);
-    for (let i = 0; i < n; i++) lp[i] = cabs(linkwitzRileyFilter(b.m.curve[i].f, xo, order, "lp"));
+    for (let i = 0; i < n; i++) lp[i] = abs(linkwitzRileyFilter(b.m.curve[i].f, xo, order, "lp"));
     if (lowpassCache.size > 64) lowpassCache.clear();
     lowpassCache.set(key, lp);
   }
@@ -1050,7 +1037,7 @@ export function hifiSystemFromBox(
   const tweeterAt = (f: number, volts: number) =>
     tSens283 +
     20 * Math.log10(volts / 2.83) +
-    20 * Math.log10(cabs(linkwitzRileyFilter(f, xo, order, "hp")));
+    20 * Math.log10(abs(linkwitzRileyFilter(f, xo, order, "hp")));
   // clean max level, flat target: the woofer's music level in its passband vs the tweeter's max (both at 1 m)
   const maxLevel = Math.min(wLevel, tLevel);
 
@@ -1198,10 +1185,10 @@ function edgeRipples(
     woofer: (f: number): Complex => {
       const g = pistonPattern(kOf(f) * a);
       const [re, im] = edgeRipple(wSegs, f, r, () => g);
-      return cm(re, im);
+      return complex(re, im);
     },
     tweeter: (f: number): Complex => {
-      if (!tSegs.length) return cm(1);
+      if (!tSegs.length) return complex(1);
       let toward: (ux: number, uy: number) => number;
       if (guide) {
         // the waveguide model puts −6 dB at its coverage edge; once that edge reaches 90° the baffle edge gets it all
@@ -1216,7 +1203,7 @@ function edgeRipples(
         toward = () => g;
       }
       const [re, im] = edgeRipple(tSegs, f, r, toward);
-      return cm(re, im);
+      return complex(re, im);
     },
   };
 }
@@ -1234,8 +1221,8 @@ export function hifiEdgeRipple(
   return freqs.map((f) => {
     const lp = linkwitzRileyFilter(f, cfg.xo, order, "lp"),
       hp = linkwitzRileyFilter(f, cfg.xo, order, "hp");
-    const r = cdiv(cadd(cmul(lp, er.woofer(f)), cmul(hp, er.tweeter(f))), cadd(lp, hp));
-    return { f, spl: 20 * Math.log10(cabs(r)) };
+    const r = divide(add(multiply(lp, er.woofer(f)), multiply(hp, er.tweeter(f))), add(lp, hp));
+    return { f, spl: 20 * Math.log10(abs(r)) };
   });
 }
 
@@ -1300,25 +1287,25 @@ export function hifiResponseAt(
             tvT,
           )
         : pistonDirectivity(f, dome, offT);
-    const pw = cmul(
-      cmul(
-        cmul(
+    const pw = multiply(
+      multiply(
+        multiply(
           linkwitzRileyFilter(f, xo, order, "lp"),
-          cm((near ? wAt(f) * near(f) : wAt(f)) * dW * (1 / rW)),
+          complex((near ? wAt(f) * near(f) : wAt(f)) * dW * (1 / rW)),
         ),
-        cexp(-k * (rW - r0W)),
+        phasor(-k * (rW - r0W)),
       ),
       edges.woofer(f),
     );
-    const tOn = Math.pow(10, (sys.tSens283 + 20 * Math.log10(cabs(cm(1)))) / 20);
-    const pt = cmul(
-      cmul(
-        cmul(linkwitzRileyFilter(f, xo, order, "hp"), cm(tOn * trimG * dT * (1 / rT))),
-        cexp(-k * (rT - r0T)),
+    const tOn = Math.pow(10, (sys.tSens283 + 20 * Math.log10(abs(complex(1)))) / 20);
+    const pt = multiply(
+      multiply(
+        multiply(linkwitzRileyFilter(f, xo, order, "hp"), complex(tOn * trimG * dT * (1 / rT))),
+        phasor(-k * (rT - r0T)),
       ),
       edges.tweeter(f),
     );
-    return { f, spl: 20 * Math.log10(Math.max(1e-9, cabs(cadd(pw, pt)))) };
+    return { f, spl: 20 * Math.log10(Math.max(1e-9, abs(add(pw, pt)))) };
   });
 }
 /** The seat relative to one speaker: the left one sits at -spacing/2 (`sign` -1), the right at +spacing/2 (1), each toed in toward the middle. */

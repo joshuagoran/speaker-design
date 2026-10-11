@@ -32,6 +32,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - Narrowest type, derived from an existing one (`Pick`, `Omit`, indexed access); never redeclare a shape, grep `src/types.ts` first.
 - Avoid `!`: fix the type at its source or use existing narrowing; a last-resort `!` carries a one-line reason.
 - No `any` (lint errors), no `@ts-ignore`, `@ts-expect-error` needs a reason; `as` only as `as const` or a commented boundary cast.
+- Names: shorthand only for a fully established acoustics or physics symbol (Sd, Mas, Fb, ω, k); otherwise a descriptive name. Define every one, shorthand or not, in a JSDoc or comment where it is made.
 - A string used once and not for logic may stay inline; any string compared in code or tests, or used in more than one place, is defined once (ids in `src/constants/`, label maps for display) and imported.
 
 ## Project conventions

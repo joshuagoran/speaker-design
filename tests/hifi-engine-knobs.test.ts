@@ -1,10 +1,10 @@
 // The Hi-fi engine options the Monitor and Fill use cases will set (no UI yet): a high-pass to a sub, passive drive,
 // box tilt, the seat floor and the port speed limit. Unset, each leaves the model exactly as it was.
+import { abs } from "../src/lib/acoustics/complex";
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import {
   boxFrameGeometry,
-  cabs,
   hifiBox,
   hifiDispersionMap,
   hifiEdgeRipple,
@@ -90,7 +90,7 @@ test("the high-pass to a sub is an LR filter of its order, in place of the subso
       // the box's own response is the same; the filter is all that's added, at each frequency
       for (const f of [20, 40, 60, 80, 120, 160, 400]) {
         const o = at(f),
-          want = 20 * Math.log10(cabs(linkwitzRileyFilter(o.f, 80, order, "hp")));
+          want = 20 * Math.log10(abs(linkwitzRileyFilter(o.f, 80, order, "hp")));
         close(t, o.spl - o.raw, want, 1e-9, `${base.box} LR${order * 6} at ${o.f.toFixed(1)} Hz`);
       }
       // −6 dB at the corner, and the order's slope an octave or more below it
@@ -116,7 +116,7 @@ test("a high-pass below the subsonic's corner keeps the subsonic in series", (t)
   assert.deepStrictEqual(low.hp, sub(20, 4));
   for (const o of low.m.curve.filter((p) => p.f < 200)) {
     const want =
-      20 * Math.log10(cabs(linkwitzRileyFilter(o.f, 20, 4, "hp"))) +
+      20 * Math.log10(abs(linkwitzRileyFilter(o.f, 20, 4, "hp"))) +
       20 * Math.log10(highpassGain(o.f, subsonic, "BW24"));
     close(t, o.spl - o.raw, want, 1e-9, `${o.f.toFixed(1)} Hz`);
   }

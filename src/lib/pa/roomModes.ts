@@ -10,7 +10,7 @@
 // each reflection as its surface reflects it (an open side: nothing). The rest, the room's ringing, stays modal.
 // The modal sum stops at a highest mode, which smooths the field within about a wavelength of that mode around each
 // driver; the swapped terms don't change that.
-import type { Complex } from "../hifi/hifi";
+import type { Complex } from "../../types";
 import type { StackBand } from "./dispersion";
 
 const C = 343;

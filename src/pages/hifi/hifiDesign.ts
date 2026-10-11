@@ -5,6 +5,7 @@ import {
   waveguideSpecOf,
   throatAdapterPrice,
 } from "../../lib/data";
+import { abs } from "../../lib/acoustics/complex";
 import { METERS_PER_FOOT, METERS_PER_INCH } from "../../constants/units";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SEAT_FLOOR_M } from "../../constants/hifiEngine";
 import { byId } from "../../lib/tables";
@@ -18,7 +19,6 @@ import {
   listenerGeometry,
   logSpacedFrequencies,
   linkwitzRileyFilter,
-  cabs,
   needsWaveguide,
   RADIATOR_PANEL,
 } from "../../lib/hifi/hifi";
@@ -214,7 +214,7 @@ export function deriveHifiDesign(state: HifiDesignState): HifiDesign {
           speakerSystem.tLevel +
           20 *
             Math.log10(
-              Math.max(1e-6, cabs(linkwitzRileyFilter(f, crossoverHz, crossoverOrder, "hp"))),
+              Math.max(1e-6, abs(linkwitzRileyFilter(f, crossoverHz, crossoverOrder, "hp"))),
             ),
       })),
       dispersion: hifiDispersionMap(

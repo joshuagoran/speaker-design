@@ -43,7 +43,8 @@ import {
   LEGACY_LEVEL_MODE,
 } from "../src/constants/coverageLevel";
 import { LISTENER_TARGET_DB } from "../src/lib/pa/optimize";
-import { baffleStepGain, logSpacedFrequencies, type Complex } from "../src/lib/hifi/hifi";
+import { baffleStepGain, logSpacedFrequencies } from "../src/lib/hifi/hifi";
+import type { Complex } from "../src/types";
 import { METERS_PER_FOOT as FT } from "../src/constants/units";
 import type {
   CoverageLayout,

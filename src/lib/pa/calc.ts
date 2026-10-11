@@ -1,4 +1,6 @@
 // Calculation functions for the planner. Pure TS, no React, window or THREE.
+import { driverCircuit, ventResistances } from "../acoustics/driverCircuit";
+import { AIR_DENSITY, BOX_LEAK_Q, BOX_PORT_Q, SPEED_OF_SOUND } from "../../constants/acoustics";
 import {
   driverPressurePa,
   LID_STRESS_LIMIT_PA,
@@ -361,24 +363,28 @@ export function boxModel(
   opts: BoxModelOptions = {},
 ): VentedBoxModel | null {
   if (!ts || !VbL || !SpIn2 || LpIn <= 0) return null;
-  const { nPorts = 1, QL = 7, Qp = 50, ecIn, N = 420, fmin = 12, fmax = 300, fTop, phase } = opts;
-  const rho = 1.18,
-    c = 343;
-  const Sd = ts.Sd / 10000; // cm^2 -> m^2
-  const Mms = ts.Mms / 1000; // g -> kg
+  const {
+    nPorts = 1,
+    QL = BOX_LEAK_Q,
+    Qp = BOX_PORT_Q,
+    ecIn,
+    N = 420,
+    fmin = 12,
+    fmax = 300,
+    fTop,
+    phase,
+  } = opts;
+  const rho = AIR_DENSITY,
+    c = SPEED_OF_SOUND;
+  // the driver's circuit (lib/acoustics/driverCircuit, shared with the horn engine)
+  const { Sd, Mms, Mas, Cas, Ras, Rae, Pg } = driverCircuit(ts, volts);
   const Vb = VbL / 1000;
-  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
-  const Mas = Mms / (Sd * Sd);
-  const Cas = Cms * Sd * Sd;
-  const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
-  const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
   const Cab = Vb / (rho * c * c);
   const Sp = SpIn2 * 0.00064516;
   const { Leff, Fb } = ventTuning(VbL, SpIn2, LpIn, nPorts, ecIn);
   const Map = (rho * Leff) / Sp;
-  const Ral = QL / (2 * Math.PI * Fb * Cab);
-  const Rap = Number.isFinite(Qp) ? (2 * Math.PI * Fb * Map) / Qp : 0; // port friction and turbulence
-  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
+  // leakage, and the port's friction and turbulence
+  const { Ral, Rap } = ventResistances(Fb, Cab, Map, QL, Qp);
 
   const out: VentedPoint[] = [];
   const count = logGridCount(N, fmin, fmax, fTop);
@@ -469,18 +475,12 @@ export function closedBox(
 ): SealedBoxModel | null {
   const { N = 420, fmin = 20, fmax = 2000, fTop, phase, hpOrder, lpOrder } = opts;
   if (!ts || !VbL || VbL <= 0) return null;
-  const rho = 1.18,
-    c = 343;
-  const Sd = ts.Sd / 10000,
-    Mms = ts.Mms / 1000,
-    Vb = VbL / 1000;
-  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
-  const Mas = Mms / (Sd * Sd),
-    Cas = Cms * Sd * Sd;
-  const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
-  const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
+  const rho = AIR_DENSITY,
+    c = SPEED_OF_SOUND;
+  // the driver's circuit (lib/acoustics/driverCircuit, shared with the horn engine)
+  const { Sd, Mms, Mas, Cas, Ras, Rae, Pg } = driverCircuit(ts, volts);
+  const Vb = VbL / 1000;
   const Cab = Vb / (rho * c * c);
-  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
   const Ctot = (Cas * Cab) / (Cas + Cab);
   const Fc = 1 / (2 * Math.PI * Math.sqrt(Mas * Ctot));
   const Qes = (2 * Math.PI * ts.Fs * Mms * ts.Re) / (ts.Bl * ts.Bl);

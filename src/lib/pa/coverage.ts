@@ -10,15 +10,15 @@
 //   reverberant field from everything the boxes radiate, the same everywhere. The two hand over in a crossfade.
 // Below COHERENT_BELOW_HZ the image paths sum with phase, so the two stacks interfere; above it a band average adds
 // the separate paths (each box, each reflection) by power, as their comb filtering averages out across a band.
+import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import {
   baffleStepShelf,
-  cabs,
   logSpacedFrequencies,
   pistonPattern,
   waveguideGain,
   waveguideHalfAngles,
-  type Complex,
 } from "../hifi/hifi";
+import { abs } from "../acoustics/complex";
 import { METERS_PER_FOOT as FT } from "../../constants/units";
 import { COVERAGE_EDGE_DB } from "../../constants/coverageLevel";
 import { paStackSources, type StackBand, type StackSource } from "./dispersion";
@@ -43,6 +43,7 @@ import {
   type RoomModes,
 } from "./roomModes";
 import type {
+  Complex,
   CoverageBand,
   CoverageBox,
   CoverageGrid,
@@ -64,8 +65,6 @@ import type {
   VentedPoint,
 } from "../../types";
 
-/** speed of sound, m/s (20 °C) */
-export const SPEED_OF_SOUND = 343;
 const C = SPEED_OF_SOUND,
   IN = 0.0254;
 
@@ -490,7 +489,7 @@ function bandOutputs(
       // the sub's and mid's curves are half-space (on the floor); in the open a box radiates into full space below
       // its baffle step, and the floor image puts the floor back
       const shelf = bandShelf(stack, o.band, f);
-      mag = Math.pow(10, at.spl / 20) * cabs(shelf);
+      mag = Math.pow(10, at.spl / 20) * abs(shelf);
       ph += Math.atan2(shelf.im, shelf.re) + at.phase;
     }
     if (o.band === "sub") ph -= (2 * Math.PI * f * stack.subDelayMs) / 1000;
