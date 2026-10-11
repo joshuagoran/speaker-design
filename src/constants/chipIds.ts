@@ -66,7 +66,7 @@ export const CHIP_IDS = {
     "hifiWooferLimit",
   ],
   hardware: ["subHardwareFit", "midHardwareFit"],
-  /** the Designer's limits: one list per band, one per chamber (lib/speaker/speakerChips) */
+  /** the Designer's limits: one list per band, one per chamber (src/pages/designer/designerChips.ts) */
   designer: [
     "designerBandLimit",
     "designerHfPower",

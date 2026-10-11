@@ -1932,10 +1932,17 @@ export interface SpeakerSlotPort extends SlotPort {
  */
 export type SpeakerPort = SpeakerRoundPort | SpeakerSlotPort | SideDuctPort;
 
-/** A chamber's vent, by its kind (`VENT_KIND`). */
+/**
+ * A chamber's vent, by its kind (`VENT_KIND`). A vented chamber's `maxSpeedMs` is the most air speed its vent takes,
+ * m/s (sine peak): the PA design's setting (more for flared tubes, as the PA takes them), the Hi-fi's or the fill's.
+ */
 export type ChamberVent =
   | { kind: Extract<HifiBoxKind, "sealed"> }
-  | { kind: Extract<HifiBoxKind, "vented">; port: SpeakerPort }
+  | {
+      kind: Extract<HifiBoxKind, "vented">;
+      port: SpeakerPort;
+      maxSpeedMs: PaDesignConfig["portMax"];
+    }
   | { kind: Extract<HifiBoxKind, "radiator">; radiators: RadiatorSelection };
 
 /**

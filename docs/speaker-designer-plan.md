@@ -204,9 +204,15 @@ Each PR stands alone. Lowest risk first.
       - Datasheet drivers keep their engine's power rule: a compression driver the PA's `hornPower`, a tweeter and a
         coaxial's HF section the Hi-fi's `tweeterMaxLevel`.
       - Each band has its amp power (`SpeakerBand.ampW`). A passive band gets the channel it shares, through its pad.
-      - A band's maximum for music is one drive for the whole band, set where the band first meets a limit. The sum
-        takes one input for every band: at each frequency, the band with the least headroom sets it.
-      - A vent takes the Hi-fi engine's 17 m/s; flared PA tubes take the PA's 30/23.5 more.
+      - A band's maximum for music is one drive for the whole band, set where the band first meets a limit. Each
+        band's own curve takes the program rating and the amp on the whole drive, as the PA does.
+      - The sum takes one input for every band: at each frequency, the band with the least headroom sets it. A band
+        limits the sum only where it carries signal. The program rating takes the band's filtered drive. The amp of
+        an active band also takes the filtered drive, because the filters are ahead of the amp. The amp of a passive
+        band is the channel it shares, ahead of the network, so the network's filters do not change it.
+      - Each vent carries its own air-speed limit (`maxSpeedMs`). The PA adapter sets the design's setting, with more
+        for flared tubes, as the PA page does. The Hi-fi adapter sets the Hi-fi's 17 m/s, and the fill adapter sets
+        the fill's setting. The chamber settings show it.
     - **Results.** A maximum-output chart on its own fixed scale (70–140 dB, `MAX_OUTPUT_TOP` / `MAX_OUTPUT_BOT`),
       the maximum of each band and of the speaker, and chips: one list for each band (what sets its level, a
       datasheet driver's power) and one for each chamber (Xmax, port speed and radiator travel at full power, and the

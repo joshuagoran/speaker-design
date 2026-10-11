@@ -9,7 +9,13 @@
 //   the band's highpass sits there.
 // - A band's drive: its amp's voltage into 8 Ω (`ampW`), through a passive band's pad. Its level for music is one
 //   drive for the whole band, set where the band first meets a limit (as the PA sub's music limit and the Hi-fi
-//   woofer's). The sum takes one input for every band: at each frequency the first band to meet a limit sets it.
+//   woofer's). Each band's own curve takes the amp and the program rating on the whole drive, as the PA does.
+// - The sum takes one input for every band: at each frequency the first band to meet a limit sets it. There a band can
+//   only limit where it carries signal: the program rating takes the band's filtered drive, and so does the amp of an
+//   active band (its filters run ahead of the amp). A passive band's amp is the channel it shares, ahead of the
+//   network: it takes the feed's filters only, the same ceiling for every band on the channel (the amp is a voltage
+//   ceiling, √(8 W), as both engines take it, so the summed load doesn't move it).
+// - Each vent takes its own air-speed limit (`maxSpeedMs`, set by the spec).
 import type {
   BandId,
   LimitId,
@@ -24,7 +30,7 @@ import type {
   SpeakerSpec,
 } from "../../types";
 import { abs } from "../acoustics/complex";
-import { FLARED_PORT_SPEED_RATIO, ampVoltage, hornPower, sineLimitAt } from "../pa/calc";
+import { ampVoltage, hornPower, sineLimitAt } from "../pa/calc";
 import { tweeterMaxLevel } from "../hifi/hifi";
 import { CD_OPTIONS, HIFI_PASSIVES, hifiDriverById } from "../data";
 import { byId } from "../tables";
@@ -38,14 +44,9 @@ import {
   passbandDb,
   type SpeakerResponseOptions,
 } from "./speakerResponse";
-import { HIFI_DRIVE, HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
+import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { DRIVER_KIND, SPEAKER_RESPONSE_VOLTS, VENT_KIND } from "../../constants/speakerSpec";
-
-/** The limits' options: the filters ahead of the speaker (as the response's), and the vents' air-speed limit. */
-export interface SpeakerLimitsOptions extends SpeakerResponseOptions {
-  /** the most air speed a vent takes, m/s (sine peak): the Hi-fi engine's 17; flared PA tubes take more */
-  portMaxMs?: number;
-}
+import { LIMIT_NAMES } from "../../constants/limits";
 
 /**
  * A band's drive with the amp at full power, V RMS: the amp's voltage into 8 Ω, through a passive band's pad (a
@@ -55,12 +56,9 @@ export const bandDriveVolts = (band: Pick<SpeakerBand, "ampW" | "drive" | "level
   ampVoltage(band.ampW) *
   (band.drive === HIFI_DRIVE.passive ? Math.pow(10, Math.min(0, band.levelDb) / 20) : 1);
 
-/** The most air speed the chamber's vent takes, m/s: `portMaxMs`, more for flared PA tubes; null without a vent. */
-function ventSpeedMax(chamber: SpeakerChamber, portMaxMs: number): number | null {
-  if (chamber.vent.kind !== VENT_KIND.vented) return null;
-  const { port } = chamber.vent;
-  return "flared" in port && port.flared ? portMaxMs * FLARED_PORT_SPEED_RATIO : portMaxMs;
-}
+/** The most air speed the chamber's vent takes, m/s; null without a vent. */
+const ventSpeedMax = (chamber: SpeakerChamber) =>
+  chamber.vent.kind === VENT_KIND.vented ? chamber.vent.maxSpeedMs : null;
 
 /** The radiators' Xmax, mm; null without radiators (or with an id the catalog doesn't have). */
 const radiatorXmax = (chamber: SpeakerChamber) =>
@@ -68,7 +66,10 @@ const radiatorXmax = (chamber: SpeakerChamber) =>
     ? (byId(HIFI_PASSIVES, chamber.vent.radiators.id)?.Xmax ?? null)
     : null;
 
-/** A datasheet driver's power at a band's drive, by its engine's rule, and its impedance, Ω; null with no HF data. */
+/**
+ * A datasheet driver's power at a band's drive, by its engine's rule, its impedance, Ω, and its program rating (derated),
+ * W; null with no HF data.
+ */
 function driverPower(driver: SpeakerDriver, band: SpeakerBand, driveV: number) {
   // no highpass: the rating as published (a coaxial's own network, which the spec doesn't model)
   const xo = band.highpass?.hz ?? Infinity;
@@ -79,14 +80,14 @@ function driverPower(driver: SpeakerDriver, band: SpeakerBand, driveV: number) {
       const hf = byId(CD_OPTIONS, driver.driverId)?.hf;
       if (!hf) return null;
       const p = hornPower(hf, xo, ampW);
-      return { watts: p.P, who: p.who, derate: p.derate, imp: p.imp };
+      return { watts: p.P, who: p.who, derate: p.derate, imp: p.imp, programW: p.pProg };
     }
     case DRIVER_KIND.tweeter:
     case DRIVER_KIND.coaxial: {
       const tweeter = hifiDriverById("tweeter", driver.driverId);
       if (!tweeter) return null;
       const p = tweeterMaxLevel(tweeter, { xo, tAmpW: ampW });
-      return { watts: p.pMax, who: p.who, derate: p.derate, imp: p.imp };
+      return { watts: p.pMax, who: p.who, derate: p.derate, imp: p.imp, programW: p.pProg };
     }
     case DRIVER_KIND.sub:
     case DRIVER_KIND.mid:
@@ -119,7 +120,7 @@ const raise = (p: LimitPeak | null, level: number | undefined, hz: number) => {
 export function speakerLimits(
   spec: Pick<SpeakerSpec, "cabinet" | "bands">,
   response: SpeakerResponse,
-  { feed = NO_FILTERS, portMaxMs = HIFI_PORT_MAX_MS }: SpeakerLimitsOptions = {},
+  { feed = NO_FILTERS }: SpeakerResponseOptions = {},
 ): SpeakerLimits {
   const freqs = SPEAKER_RESPONSE_FREQUENCIES;
   const volts = SPEAKER_RESPONSE_VOLTS;
@@ -128,10 +129,12 @@ export function speakerLimits(
   const bandById = new Map(
     spec.bands.filter((b) => modeled.has(b.id) && bandDriveVolts(b) > 0).map((b) => [b.id, b]),
   );
+  /** each band's scales: its own (the PA's whole-drive ceilings) and the sum's (where it carries signal) */
   const scales = new Map<BandId, BandScale>();
-  const scaleOf = (id: BandId) => {
-    let sc = scales.get(id);
-    if (!sc) scales.set(id, (sc = { s: new Float64Array(freqs.length), who: [] }));
+  const sumScales = new Map<BandId, BandScale>();
+  const scaleIn = (map: Map<BandId, BandScale>, id: BandId) => {
+    let sc = map.get(id);
+    if (!sc) map.set(id, (sc = { s: new Float64Array(freqs.length), who: [] }));
     return sc;
   };
   /** lowers the band's scale at point `i` to `s` when that is lower, with its limit */
@@ -141,13 +144,17 @@ export function speakerLimits(
       sc.who[i] = who;
     }
   };
-  /** each band's filters and the feed's, as a gain at each frequency */
+  /** the feed's filters as a gain at each frequency; and each band's filters with the feed's */
+  const feedGain = freqs.map((f) => abs(filtersTransfer(f, feed)));
   const gains = new Map(
     [...bandById].map(([id, band]) => [
       id,
-      freqs.map((f) => abs(filtersTransfer(f, band)) * abs(filtersTransfer(f, feed))),
+      freqs.map((f, i) => abs(filtersTransfer(f, band)) * feedGain[i]),
     ]),
   );
+  /** the gain the band's amp sees at point `i`: its filters and the feed's when active, the feed's alone when passive */
+  const ampGain = (band: SpeakerBand, gain: readonly number[], i: number) =>
+    band.drive === HIFI_DRIVE.passive ? feedGain[i] : gain[i];
   const drivers: SpeakerDriverPower[] = [];
   const chambers = spec.cabinet.chambers.map((chamber, k): SpeakerChamberLimits | null => {
     for (const driver of chamber.drivers) {
@@ -157,11 +164,28 @@ export function speakerLimits(
       const driveV = bandDriveVolts(band);
       const power = driverPower(driver, band, driveV);
       if (!power) continue;
-      drivers.push({ band: id, driver, ...power });
+      const { programW, ...rest } = power;
+      drivers.push({ band: id, driver, ...rest });
       // the most voltage it takes, against the band's drive: the same at every frequency (a power ceiling)
       const s = Math.sqrt(power.watts * power.imp) / driveV;
-      const sc = scaleOf(id);
-      for (let i = 0; i < freqs.length; i++) lower(sc, i, s, power.who);
+      /** the voltage its program rating allows */
+      const vProgram = Math.sqrt(programW * power.imp);
+      const gain = gains.get(id);
+      const sc = scaleIn(scales, id),
+        sumSc = scaleIn(sumScales, id);
+      for (let i = 0; i < freqs.length; i++) {
+        lower(sc, i, s, power.who);
+        if (!gain) continue;
+        // in the sum, both ceilings on the drive it carries at this frequency
+        const amp = driveV / ampGain(band, gain, i),
+          program = vProgram / gain[i];
+        lower(
+          sumSc,
+          i,
+          Math.min(amp, program) / driveV,
+          program < amp ? LIMIT_NAMES.thermal : LIMIT_NAMES.amp,
+        );
+      }
     }
     const drive = response.chambers[k]?.drive;
     const cones = chamberCones(chamber);
@@ -173,12 +197,13 @@ export function speakerLimits(
     const driveV = bandDriveVolts(band);
     /** from the model's drive to the band's, before the filters */
     const toDrive = driveV / volts;
-    const portMax = ventSpeedMax(chamber, portMaxMs);
+    const portMax = ventSpeedMax(chamber);
     const xR = radiatorXmax(chamber);
     const excursion = startPeak(parts.ts.Xmax);
     const port = portMax === null ? null : startPeak(portMax);
     const radiator = xR === null ? null : startPeak(xR);
-    const sc = scaleOf(id);
+    const sc = scaleIn(scales, id),
+      sumSc = scaleIn(sumScales, id);
     drive.forEach((d, i) => {
       const g = toDrive * gain[i];
       const point = {
@@ -189,7 +214,17 @@ export function speakerLimits(
       const cone = sineLimitAt(point, parts.ts, driveV, portMax ?? Infinity);
       // the radiators' travel, as the Hi-fi engine reads it
       const vr = xR !== null && point.prx ? (driveV * xR) / point.prx : Infinity;
-      lower(sc, i, Math.min(cone.V, vr) / driveV, vr < cone.V ? "radiator" : cone.who);
+      lower(sc, i, Math.min(cone.V, vr) / driveV, vr < cone.V ? LIMIT_NAMES.radiator : cone.who);
+      // in the sum: the program rating on the drive it carries here, and the amp on what it sees
+      const limits: [LimitId, number][] = [
+        [LIMIT_NAMES.port, cone.vp],
+        [LIMIT_NAMES.Xmax, cone.vx],
+        [LIMIT_NAMES.radiator, vr],
+        [LIMIT_NAMES.thermal, cone.vt / gain[i]],
+        [LIMIT_NAMES.amp, driveV / ampGain(band, gain, i)],
+      ];
+      const [who, v] = limits.reduce((a, b) => (b[1] < a[1] ? b : a));
+      lower(sumSc, i, v / driveV, who);
       raise(excursion, point.xmm, freqs[i]);
       raise(port, point.vel, freqs[i]);
       raise(radiator, point.prx, freqs[i]);
@@ -203,8 +238,8 @@ export function speakerLimits(
       programW: 2 * parts.ts.aes,
     };
   });
-  /** each band's headroom over the response at each frequency, dB, for the sum */
-  const headroom = new Map<BandId, Float64Array>();
+  /** each band's headroom over the response at each frequency, dB, and what sets it, for the sum */
+  const headroom = new Map<BandId, { room: Float64Array; who: (i: number) => LimitId }>();
   const bands = response.bands.flatMap((rb) => {
     const band = bandById.get(rb.id);
     if (!band) return [];
@@ -212,9 +247,13 @@ export function speakerLimits(
     // the response's band at 2.83 V (its level in it) moved to the amp's full drive
     const toFull = 20 * Math.log10(bandDriveVolts(band) / volts) - band.levelDb;
     const sAt = (i: number) => (sc ? sc.s[i] : 1);
-    const whoAt = (i: number): LimitId => sc?.who[i] ?? "amp";
+    const whoAt = (i: number): LimitId => sc?.who[i] ?? LIMIT_NAMES.amp;
     const room = Float64Array.from(freqs, (_, i) => toFull + 20 * Math.log10(sAt(i)));
-    headroom.set(rb.id, room);
+    const sumSc = sumScales.get(rb.id);
+    headroom.set(rb.id, {
+      room: Float64Array.from(freqs, (_, i) => toFull + 20 * Math.log10(sumSc ? sumSc.s[i] : 1)),
+      who: (i: number) => sumSc?.who[i] ?? LIMIT_NAMES.amp,
+    });
     let worst = 0;
     for (let i = 1; i < freqs.length; i++) if (sAt(i) < sAt(worst)) worst = i;
     return [
@@ -231,13 +270,12 @@ export function speakerLimits(
   // the whole speaker on one input: at each frequency the band with the least headroom sets it
   const sum = bands.length
     ? response.sum.map((o, i) => {
-        const first = bands.reduce((a, b) =>
-          (headroom.get(b.id)?.[i] ?? Infinity) < (headroom.get(a.id)?.[i] ?? Infinity) ? b : a,
-        );
+        const roomOf = (id: BandId) => headroom.get(id)?.room[i] ?? Infinity;
+        const first = bands.reduce((a, b) => (roomOf(b.id) < roomOf(a.id) ? b : a));
         return {
           f: o.f,
-          spl: o.spl + (headroom.get(first.id)?.[i] ?? 0),
-          who: first.max[i].who,
+          spl: o.spl + roomOf(first.id),
+          who: headroom.get(first.id)?.who(i) ?? LIMIT_NAMES.amp,
           band: first.id,
         };
       })

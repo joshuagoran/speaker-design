@@ -1917,20 +1917,22 @@ export function subwooferLimits(
 }
 /**
  * A sine's limit at one point of a curve modeled at `AMP_V`: the amp output voltage where the first of the port's air
- * speed, the cone's Xmax, the driver's program rating (thermal) and the amp gives out, and which. The point's
- * excursion and air speed carry its filters; the program rating and the amp are ceilings on the whole drive.
+ * speed, the cone's Xmax, the driver's program rating (thermal) and the amp gives out, and which; with each limit's
+ * own voltage (`vp`, `vx`, `vt`). The point's excursion and air speed carry its filters; the program rating and the
+ * amp are ceilings on the whole drive.
  */
 export function sineLimitAt(
   o: { xmm: number; vel?: number },
   ts: Pick<ThieleSmall, "aes" | "Xmax">,
   AMP_V: number,
   portMax: number,
-): { V: number; who: SubLimitWho } {
+): { V: number; who: SubLimitWho; vp: number; vx: number; vt: number } {
   const vt = thermalVoltageLimit(ts.aes);
   const vp = o.vel != null ? (AMP_V * portMax) / o.vel : Infinity,
     vx = (AMP_V * ts.Xmax) / o.xmm;
   const V = Math.min(vp, vx, vt, AMP_V);
-  return { V, who: V === vp ? "port" : V === vx ? "Xmax" : V === vt ? "thermal" : "amp" };
+  const who = V === vp ? "port" : V === vx ? "Xmax" : V === vt ? "thermal" : "amp";
+  return { V, who, vp, vx, vt };
 }
 // Per-frequency sine limit: each frequency meets its own port and excursion limits.
 export function maxOutputCurve(

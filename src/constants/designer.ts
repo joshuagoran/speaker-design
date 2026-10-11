@@ -114,8 +114,7 @@ export const DESIGNER_TEXT = {
   maxOutput: "Maximum output",
   maxYLabel: "dB SPL on axis, 1 m, at the first limit",
   speakerMax: "Speaker max",
-  /** the note under the maximum-output chart, with the vents' air-speed limits, m/s */
-  maxNote: (portMs: number, flaredMs: number) =>
-    `Each band at its amp's full power, up to its first limit: cone travel, port air speed, radiator travel, the driver's program rating (2 × AES) or the amp. A vent takes ${portMs.toFixed(0)} m/s (flared PA tubes ${flaredMs.toFixed(0)} m/s). A band's max is for music: one drive for the whole band. The sum and the speaker's max take one input for every band.`,
+  maxNote:
+    "Each band at its amp's full power, up to its first limit: cone travel, port air speed (each vent's own limit, set in its chamber), radiator travel, the driver's program rating (2 × AES) or the amp. A band's max is for music: one drive for the whole band. The sum takes one input for every band, and a band limits it only where the band carries signal.",
   chamber: "Chamber",
 } as const;

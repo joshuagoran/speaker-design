@@ -5,7 +5,6 @@ import type {
   BandId,
   Chip,
   ChipId,
-  LimitId,
   LimitPeak,
   SpeakerChamberLimits,
   SpeakerLimits,
@@ -13,14 +12,11 @@ import type {
 } from "../../types";
 import { formatHz, formatWatts } from "../../lib/format";
 import { BAND_NAMES } from "../../constants/designer";
-import { DRIVER_LIMIT_NAMES } from "../../constants/limits";
+import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
 import { driverName } from "./designerParts";
 
 /** A Designer check. */
 type DesignerChip = Chip<ChipId<"designer">>;
-
-/** The limits a cone or vent can pass at full power: the per-frequency ones, which a warning names. */
-const MECHANICAL: ReadonlySet<LimitId> = new Set<LimitId>(["Xmax", "port", "radiator"]);
 
 /** The impedance an amp's power is rated into, Ω (as both engines take the amp). */
 const RATED_OHMS = 8;
@@ -37,7 +33,7 @@ export function bandChips(
     const band = spec.bands.find((s) => s.id === b.id);
     const amp = band ? ` from the ${formatWatts(band.ampW)} amp` : "";
     // a cone or vent limit is at one frequency; the program rating and the amp hold across the band
-    const mechanical = MECHANICAL.has(b.who);
+    const mechanical = PER_FREQUENCY_LIMITS.has(b.who);
     const where = mechanical
       ? ` The first limit is at ${formatHz(b.whoHz)}.${band?.highpass ? "" : " Add a highpass to the band to protect the cone."}`
       : "";
@@ -58,7 +54,7 @@ export function bandChips(
           ? `, derated ${(-10 * Math.log10(hf.derate)).toFixed(1)} dB for the ${formatHz(band.highpass.hz)} highpass`
           : "";
       chips.push(
-        hf.who === "amp"
+        hf.who === LIMIT_NAMES.amp
           ? [
               "ok",
               "Amp-limited",

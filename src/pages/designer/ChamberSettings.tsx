@@ -74,7 +74,8 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
   const setDim = (k: keyof Dims3, v: number) =>
     onEdit((c) => ({ ...c, dims: { ...c.dims, [k]: v } }));
   const setVent = (v: ChamberVent) => onEdit((c) => ({ ...c, vent: v }));
-  const setPort = (port: SpeakerPort) => setVent({ kind: VENT_KIND.vented, port });
+  const setPort = (port: SpeakerPort) =>
+    setVent(vent.kind === VENT_KIND.vented ? { ...vent, port } : { ...DEFAULT_VENTS.vented, port });
   const editDriver = (i: number, edit: (d: SpeakerDriver) => SpeakerDriver) =>
     onEdit((c) => ({ ...c, drivers: c.drivers.map((d, k) => (k === i ? edit(d) : d)) }));
   const firstBand = bands[0]?.id;
@@ -181,6 +182,14 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
             options={entriesOf(PORT_SHAPE_NAMES)}
           />
           <PortFields port={vent.port} onChange={setPort} />
+          <NumberField
+            label="Air speed limit"
+            value={vent.maxSpeedMs}
+            min={1}
+            step={0.5}
+            unit="m/s"
+            onChange={(maxSpeedMs) => setVent({ ...vent, maxSpeedMs })}
+          />
         </>
       )}
       {vent.kind === VENT_KIND.radiator && (

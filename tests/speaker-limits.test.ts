@@ -24,7 +24,13 @@ import { abs } from "../src/lib/acoustics/complex";
 import { ampVoltage, hornResponse, subThroughLowpass, ventSpeedLimit } from "../src/lib/pa/calc";
 import { CD_OPTIONS, HORN_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
-import { SPEAKER_BAND, SPEAKER_PART, SPEAKER_RESPONSE_VOLTS } from "../src/constants/speakerSpec";
+import {
+  DRIVER_KIND,
+  SPEAKER_BAND,
+  SPEAKER_PART,
+  SPEAKER_RESPONSE_VOLTS,
+} from "../src/constants/speakerSpec";
+import { LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../src/constants/limits";
 import type {
   BandId,
   LimitId,
@@ -35,9 +41,9 @@ import type {
 } from "../src/types";
 
 /** The spec's response and its limits, with the same feed. */
-function modelOf(spec: SpeakerSpec, feed: SpeakerFeed, portMaxMs?: number) {
+function modelOf(spec: SpeakerSpec, feed: SpeakerFeed) {
   const response = speakerResponse(spec, { feed });
-  return { response, limits: speakerLimits(spec, response, { feed, portMaxMs }) };
+  return { response, limits: speakerLimits(spec, response, { feed }) };
 }
 
 /** A band's limits, which the design has. */
@@ -94,14 +100,14 @@ test("speaker limits: the golden PA designs meet the PA page's limits (sub, mid,
     const topSide = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.top);
     const subChamber = subSide.spec.cabinet.chambers[0];
     const midChamber = topSide.spec.cabinet.chambers.find((ch) =>
-      ch.drivers.some((d) => d.kind === "mid"),
+      ch.drivers.some((d) => d.kind === DRIVER_KIND.mid),
     );
     assert.ok(midChamber, c.name);
     // the boxes with today's net air, the vents at the design's air-speed setting
     const subSpec = withNet(subSide.spec, subChamber, models.s.netL);
-    const subModel = modelOf(subSpec, subSide.feed, cfg.portMax);
+    const subModel = modelOf(subSpec, subSide.feed);
     const topSpec = withNet(tower ? subSpec : topSide.spec, midChamber, models.m.netL);
-    const topModel = modelOf(topSpec, topSide.feed, cfg.portMax);
+    const topModel = modelOf(topSpec, topSide.feed);
     // the sub through its lowpass, each frequency at its own limit (the PA system chart's curve)
     const subRef = subThroughLowpass(
       models.sub,
@@ -132,7 +138,7 @@ test("speaker limits: the golden PA designs meet the PA page's limits (sub, mid,
     assert.equal(power.who, h.who, `${c.name}: what sets the horn's power`);
     // the sub's music limit: the sub box alone (the tower's low band carries its lowpass, which the PA's leaves out)
     if (tower) continue;
-    const alone = modelOf(subSpec, NO_FILTERS, cfg.portMax);
+    const alone = modelOf(subSpec, NO_FILTERS);
     const lim = models.s.lim;
     assert.ok(lim);
     const worst = Math.min(...scaleDb(subSpec, alone, SPEAKER_BAND.low).map((o) => o.spl));
@@ -156,7 +162,9 @@ const HIFI_WOOFER_DB = 0.2;
 
 /** Whether two limits are the same, or both a ceiling on the whole drive met at the amp's full power (a tie). */
 const sameLimit = (a: LimitId, b: LimitId, scale: number) =>
-  a === b || (Math.abs(scale) < 1e-9 && [a, b].every((w) => w === "amp" || w === "thermal"));
+  a === b ||
+  (Math.abs(scale) < 1e-9 &&
+    [a, b].every((w) => w === LIMIT_NAMES.amp || w === LIMIT_NAMES.thermal));
 
 test("speaker limits: the Hi-fi designs meet the Hi-fi page's limits (woofer, tweeter)", () => {
   for (const { name, state: given } of hifiCases) {
@@ -188,22 +196,72 @@ test("speaker limits: the Hi-fi designs meet the Hi-fi page's limits (woofer, tw
   }
 });
 
-test("speaker limits: one input for every band, the band with the least headroom sets the sum", () => {
-  const spec = speakerFromHifi(DEFAULT_HIFI, DEFAULT_HIFI_LOOK, { id: "hifi", name: "sum" });
+/** The sum's headroom over the response at each point, dB, and its band's own (the band alone, whole-drive ceilings). */
+function sumRooms(spec: SpeakerSpec) {
   const { response, limits } = modelOf(spec, NO_FILTERS);
-  const headroom = (id: BandId, i: number) =>
+  const own = (id: BandId, i: number) =>
     bandOf(limits, id).max[i].spl - responseOf(response, id).curve[i].spl;
-  response.sum.forEach((o, i) => {
-    const room = Math.min(...limits.bands.map((b) => headroom(b.id, i)));
-    const point = limits.sum[i];
-    assert.ok(Math.abs(point.spl - o.spl - room) < 1e-9, `sum at ${o.f.toFixed(0)} Hz`);
-    assert.ok(Math.abs(headroom(point.band, i) - room) < 1e-9, "the band that sets it");
+  return { response, limits, own, room: (i: number) => limits.sum[i].spl - response.sum[i].spl };
+}
+
+/** A Hi-fi case by name. */
+const hifiCase = (name: string) => {
+  const found = hifiCases.find((c) => c.name === name);
+  assert.ok(found, name);
+  return speakerFromHifi(found.state, DEFAULT_HIFI_LOOK, { id: "hifi", name });
+};
+
+test("speaker limits: a band limits the sum only where it carries signal (a compression driver up top)", () => {
+  // active: the woofer's program rating and amp take its lowpassed drive, so above the crossover the tweeter sets the sum
+  const spec = hifiCase("compression driver on a round waveguide");
+  const { limits, own, room } = sumRooms(spec);
+  const top = limits.sum.filter((o) => o.f >= 3000 && o.f <= 8000);
+  assert.ok(top.length > 5);
+  for (const o of top)
+    assert.equal(o.band, SPEAKER_BAND.high, `the tweeter sets the sum at ${o.f.toFixed(0)} Hz`);
+  // an octave and more above the crossover the highpass passes the drive whole: the sum reaches the tweeter's own ceiling
+  limits.sum.forEach((o, i) => {
+    if (o.f < 8000) return;
+    assert.ok(
+      Math.abs(room(i) - own(SPEAKER_BAND.high, i)) < 0.05,
+      `the tweeter's ceiling at ${o.f.toFixed(0)} Hz`,
+    );
   });
-  // for music: the band whose music limit leaves the least headroom over its passband, on the sum's
-  const musicRoom = limits.bands.map((b) => b.musicDb - responseOf(response, b.id).passbandDb);
-  const band = limits.bands[musicRoom.indexOf(Math.min(...musicRoom))];
-  assert.equal(limits.band, band.id);
-  assert.ok(limits.musicDb !== null);
+});
+
+test("speaker limits: the sum is never below a band's own ceiling, and a cone or vent limit is the same in both", () => {
+  for (const name of ["DEFAULT_HIFI", "radiator", "compression driver on a round waveguide"]) {
+    const { limits, own, room } = sumRooms(hifiCase(name));
+    limits.sum.forEach((o, i) => {
+      const least = Math.min(...limits.bands.map((b) => own(b.id, i)));
+      assert.ok(
+        room(i) >= least - 1e-9,
+        `${name} at ${o.f.toFixed(0)} Hz: dividing the ceilings only raises them`,
+      );
+      const { who } = bandOf(limits, o.band).max[i];
+      if (PER_FREQUENCY_LIMITS.has(who))
+        assert.ok(
+          Math.abs(room(i) - own(o.band, i)) < 1e-9,
+          `${name} at ${o.f.toFixed(0)} Hz: ${o.who}`,
+        );
+    });
+    // for music: the band whose music limit leaves the least headroom over its passband, on the sum's
+    const { response } = modelOf(hifiCase(name), NO_FILTERS);
+    const musicRoom = limits.bands.map((b) => b.musicDb - responseOf(response, b.id).passbandDb);
+    assert.equal(limits.band, limits.bands[musicRoom.indexOf(Math.min(...musicRoom))].id, name);
+  }
+});
+
+test("speaker limits: a passive speaker's shared amp limits the sum before the network, the same for every band", () => {
+  const spec = hifiCase("passive");
+  const { limits, room } = sumRooms(spec);
+  const low = spec.bands.find((b) => b.id === SPEAKER_BAND.low);
+  assert.ok(low);
+  // the channel's ceiling: its full voltage on the input, which no network filter lifts
+  const channel = 20 * Math.log10(ampVoltage(low.ampW) / SPEAKER_RESPONSE_VOLTS);
+  limits.sum.forEach((o, i) =>
+    assert.ok(room(i) <= channel + 1e-9, `${o.f.toFixed(0)} Hz: ${room(i)} over ${channel} dB`),
+  );
 });
 
 test("speaker limits: a passive band rides its channel through its pad; a band with no amp has no limits", () => {

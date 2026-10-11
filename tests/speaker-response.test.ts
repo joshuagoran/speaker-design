@@ -39,6 +39,7 @@ import {
   DEFAULT_SPEAKER_BAND,
 } from "../src/lib/defaults";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
+import { HIFI_PORT_MAX_MS } from "../src/constants/hifiEngine";
 import { hornModel } from "../src/lib/acoustics/hornModel";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import {
@@ -331,7 +332,11 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
     dims: { w: 24, h: 32, d: 30 },
     netLiters: 120,
     stuffingPct: 0,
-    vent: { kind: VENT_KIND.vented, port: { shape: PORT_SHAPE.round, n: 2, dia: 4, len: 8 } },
+    vent: {
+      kind: VENT_KIND.vented,
+      port: { shape: PORT_SHAPE.round, n: 2, dia: 4, len: 8 },
+      maxSpeedMs: HIFI_PORT_MAX_MS,
+    },
     load: {
       kind: CHAMBER_LOAD.horn,
       horn: {

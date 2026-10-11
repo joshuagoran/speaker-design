@@ -13,6 +13,16 @@ export const LIMIT_NAMES = {
   amp: "amp",
 } as const;
 
+/**
+ * The limits a cone or a vent meets at one frequency (the filters in the drive), as opposed to the program rating and
+ * the amp, which hold on the whole drive.
+ */
+export const PER_FREQUENCY_LIMITS: ReadonlySet<LimitId> = new Set<LimitId>([
+  LIMIT_NAMES.Xmax,
+  LIMIT_NAMES.port,
+  LIMIT_NAMES.radiator,
+]);
+
 /** What stops a level, in words: a Designer band's limit (and, without the radiator, the sub's). */
 export const DRIVER_LIMIT_NAMES: Record<LimitId, string> = {
   port: "port air speed",

@@ -24,7 +24,7 @@ import {
 } from "../hifi/hifi";
 import { hifiBoxFit } from "../hifi/boxLayout";
 import { MAX_ELBOWS } from "../tubeFold";
-import { HIFI_DRIVE, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
 import {
   DRIVER_KIND,
   FRONT_END_KIND,
@@ -51,11 +51,14 @@ function hifiVent(
       return { kind: VENT_KIND.sealed };
     case VENT_KIND.vented: {
       const port = state.portSpec;
+      // the Hi-fi page's air-speed limit
+      const maxSpeedMs = state.portMaxMs ?? HIFI_PORT_MAX_MS;
       return port.shape === PORT_SHAPE.slot
-        ? { kind: VENT_KIND.vented, port }
+        ? { kind: VENT_KIND.vented, port, maxSpeedMs }
         : {
             kind: VENT_KIND.vented,
             port: { ...port, elbows: hifiPortElbows(dim, wall, port) ?? MAX_ELBOWS },
+            maxSpeedMs,
           };
     }
     case VENT_KIND.radiator:

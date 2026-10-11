@@ -27,7 +27,7 @@ import type {
 } from "../../types";
 import { HORN_OPTIONS, SUB_OPTIONS, mainsDsp } from "../data";
 import { byIdOrThrow } from "../tables";
-import { STUFFING_VOLUME_GAIN, slotFolds, subDriverCenter } from "../pa/calc";
+import { STUFFING_VOLUME_GAIN, slotFolds, subDriverCenter, ventSpeedLimit } from "../pa/calc";
 import { modelTubeElbows } from "../pa/tubes";
 import { towerMidDims, towerSpec } from "../pa/tower";
 import { takesHornMount } from "../pa/hornMount";
@@ -105,7 +105,12 @@ function subChamber(cfg: PaPlannerDesign): SpeakerChamber {
     dims: cfg.cDim,
     netLiters: null,
     stuffingPct: 0,
-    vent: { kind: VENT_KIND.vented, port: PA_PORTS[cfg.portStyle](cfg, sub) },
+    vent: {
+      kind: VENT_KIND.vented,
+      port: PA_PORTS[cfg.portStyle](cfg, sub),
+      // the design's setting, more for flared tubes (as the PA page takes it)
+      maxSpeedMs: ventSpeedLimit(cfg.portStyle, cfg.portMax),
+    },
     load: DIRECT_LOAD,
     drivers: [
       {

@@ -53,7 +53,11 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
           stuffingPct: state.boxType === VENT_KIND.vented ? 0 : stuffingPctOf(STUFFING_VOLUME_GAIN),
           vent:
             state.boxType === VENT_KIND.vented
-              ? { kind: VENT_KIND.vented, port: { shape: PORT_SHAPE.round, ...portSpec } }
+              ? {
+                  kind: VENT_KIND.vented,
+                  port: { shape: PORT_SHAPE.round, ...portSpec },
+                  maxSpeedMs: state.maxPortAirSpeedMs,
+                }
               : { kind: VENT_KIND.sealed },
           load: DIRECT_LOAD,
           drivers: [

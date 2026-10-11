@@ -26,8 +26,6 @@ import {
   MAX_OUTPUT_BOT,
   MAX_OUTPUT_TOP,
 } from "../../constants/chartScales";
-import { HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
-import { FLARED_PORT_SPEED_RATIO } from "../../lib/pa/calc";
 import {
   DESIGNER_SETTINGS_SECTIONS,
   type DesignerSettingsSection,
@@ -251,12 +249,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                     ),
                 )}
               </div>
-              <p className={`${READING_WIDTH} text-sm text-stone-500`}>
-                {DESIGNER_TEXT.maxNote(
-                  HIFI_PORT_MAX_MS,
-                  HIFI_PORT_MAX_MS * FLARED_PORT_SPEED_RATIO,
-                )}
-              </p>
+              <p className={`${READING_WIDTH} text-sm text-stone-500`}>{DESIGNER_TEXT.maxNote}</p>
             </section>
           )}
         </>

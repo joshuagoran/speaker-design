@@ -688,7 +688,7 @@ export function tweeterMaxLevel(
   const pMax = Math.min(pAmp, pProg);
   const tSens = hf.sens != null ? hf.sens + (cfg.guideGain || 0) : 90;
   const who: Extract<LimitId, "amp" | "thermal"> = pMax === pAmp ? "amp" : "thermal";
-  return { imp, derate, pMax, who, tSens, tLevel: tSens + 10 * Math.log10(pMax) };
+  return { imp, derate, pMax, pProg, who, tSens, tLevel: tSens + 10 * Math.log10(pMax) };
 }
 /**
  * The power the tweeter gets, amp watts into 8 Ω (as `tAmpW`): its own amp's when active; when passive, the one amp
