@@ -372,7 +372,12 @@ const exactly = (price: number): PriceRange => ({ lo: price, hi: price });
 function rackLine(item: RackItem): RackView["items"][number] {
   if ("amp" in item) {
     const { series, model } = ampById(item.amp);
-    const what = [item.use, item.rating && `${model.w8} W/ch at 8 Ω`, item.note].filter(Boolean);
+    const what = [
+      item.use,
+      item.rating &&
+        (model.ch2 ? `${model.w8} + ${model.ch2.w8} W at 8 Ω` : `${model.w8} W/ch at 8 Ω`),
+      item.note,
+    ].filter(Boolean);
     return {
       label: `${series.brand} ${model.model} (used) — ${what.join(", ")}`,
       price: exactly(model.usedPrice),
