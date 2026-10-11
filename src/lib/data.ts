@@ -267,7 +267,7 @@ export function hifiDriverByIdOrThrow<P extends keyof HifiDriverParts>(
 }
 
 export const HIFI_PASSIVES: readonly PassiveRadiator[] = HIFI_PASSIVES_RAW.map(passiveWithXmax);
-// a tweeter's own waveguide (a ribbon's plate, a coaxial's cone) as the model's guide object (flush-mounted)
+// a tweeter's own waveguide (a ribbon's or an AMT's plate, a coaxial's cone) as the model's guide object (flush-mounted)
 export const ownGuideCfg = (
   t: HifiTweeter | null | undefined,
 ): (OwnGuide & { freestanding: boolean }) | null =>

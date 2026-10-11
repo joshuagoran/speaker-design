@@ -451,7 +451,7 @@ export function hifiSearchSpace(
     ((w.price || 0) +
       (t.price || 0) +
       (needsWaveguide(t) ? gp + (throatAdapterPrice(t, guide) ?? 0) : 0) + // with the adapter a mixed pair needs
-      prPrice(c)); // a ribbon's own waveguide is in its price
+      prPrice(c)); // a ribbon's or an AMT's own plate is in its price
   // whether that price is whole: a woofer (a coaxial) without a US price, or an unpriced adapter the driver needs on
   // the waveguide (yours, locked: the search offers no other), leaves it short
   const priceKnownOf = (w: HifiWoofer, t: HifiTweeter) =>

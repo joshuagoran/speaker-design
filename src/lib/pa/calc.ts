@@ -1,5 +1,6 @@
 // Calculation functions for the planner. Pure TS, no React, window or THREE.
 import { driverCircuit, ventResistances } from "../acoustics/driverCircuit";
+import { rectangleEndCorrection } from "../acoustics/radiation";
 import { AIR_DENSITY, BOX_LEAK_Q, BOX_PORT_Q, SPEED_OF_SOUND } from "../../constants/acoustics";
 import {
   driverPressurePa,
@@ -1671,21 +1672,6 @@ export function cutParts({
   return { parts: all, vent };
 }
 
-// ---- end correction of a rectangular opening ----
-// Low-frequency radiation mass of a uniform rectangular piston a x b in an infinite baffle is
-// rho*I/(2*pi*S^2), I = the double area integral of 1/distance (closed form below). As a length:
-// end correction = I/(2*pi*a*b). A circle gives the familiar 0.85 r.
-export function rectangleEndCorrectionIntegral(a: number, b: number) {
-  const d = Math.hypot(a, b);
-  return (
-    (2 / 3) * (a ** 3 + b ** 3 - d ** 3) +
-    2 * a * b * (a * Math.log((b + d) / a) + b * Math.log((a + d) / b))
-  );
-}
-export const rectangleEndCorrection = (a: number, b: number) =>
-  rectangleEndCorrectionIntegral(a, b) / (2 * Math.PI * a * b);
-// Flanged + free end, as the 1.46 r (0.85 r + 0.61 r) used for round tubes.
-export const BOTH_ENDS_CORRECTION_RATIO = 1 + 0.61 / 0.85;
 // Where `x` falls on an ascending axis: the cell's lower index and the fraction across it, clamped to the axis' ends.
 function axisCell(axis: readonly number[], x: number) {
   const last = axis.length - 1;

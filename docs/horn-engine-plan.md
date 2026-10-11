@@ -22,17 +22,17 @@ Hornresp uses the same driver model. It adds a chain of acoustic two-ports betwe
 Each element is a 2 × 2 complex matrix. It maps the pressure and volume velocity at its output to those at its input.
 The chain multiplies them per frequency.
 
-| Element                    | Model                                                                                          |
-| -------------------------- | ---------------------------------------------------------------------------------------------- |
-| Straight duct              | Plane-wave tube: cos(kL), j·Z0·sin(kL), Z0 = ρc/S                                              |
-| Conical segment            | Wave solution of the horn (Webster) equation, spherical waves                                  |
-| Exponential segment        | Wave solution of the horn equation; exact at and near its cutoff                               |
-| Hyperbolic-exponential (T) | Later, if a design needs it                                                                    |
-| Curved walls, tractrix     | Several short conical segments                                                                 |
-| Throat (front) chamber     | Shunt compliance V/(ρc²), between the cone and the throat                                      |
-| Rear chamber               | Shunt compliance, as the vented box today                                                      |
-| Port                       | Straight duct ended in its exit's radiation impedance; lumped mass with the radiation load off |
-| Mouth                      | Radiation impedance of a baffled piston (half space); other angles by images                   |
+| Element                    | Model                                                                                                          |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Straight duct              | Plane-wave tube: cos(kL), j·Z0·sin(kL), Z0 = ρc/S                                                              |
+| Conical segment            | Wave solution of the horn (Webster) equation, spherical waves                                                  |
+| Exponential segment        | Wave solution of the horn equation; exact at and near its cutoff                                               |
+| Hyperbolic-exponential (T) | Later, if a design needs it                                                                                    |
+| Curved walls, tractrix     | Several short conical segments                                                                                 |
+| Throat (front) chamber     | Shunt compliance V/(ρc²), between the cone and the throat                                                      |
+| Rear chamber               | Shunt compliance, as the vented box today                                                                      |
+| Port                       | Straight duct ended in its exit's radiation impedance (round or slot); lumped mass with the radiation load off |
+| Mouth                      | Radiation impedance of a baffled piston (half space); other angles by images                                   |
 
 - **Below its cutoff,** an endless exponential horn takes no real power. A finite one still passes some, because the
   mouth reflects. The model gives both.
@@ -43,8 +43,9 @@ The chain multiplies them per frequency.
 - **Losses.** Leakage (QL) and vent loss (Qp), as options. The defaults are the box models' 7 and 50. Hornresp's
   horn rear chamber is lossless. Add absorption if a reference design needs it.
 - **Vent.** A duct, not a lumped mass: its own air acts as a spring, so a long vent tunes lower. Its exit's radiation
-  load adds the outer end correction, as for a round port. A thin slot's outer correction is smaller; size slots with
-  the planner's slot corrections.
+  load adds the outer end correction. A slot's exit (`HornPort.slot`) takes its opening's rectangle correction, smaller
+  than a round exit's.
+- **Voice coil.** Re + jωLe when the driver lists Le (Hornresp's plain model). No semi-inductance or lossy model.
 - **Shared code.** The engine and the box models use one driver circuit and one set of loss constants
   (`lib/acoustics/driverCircuit`, `constants/acoustics`).
 
@@ -99,7 +100,7 @@ box models keep their own grids.
 3. **Published designs.** Skipped: the forums that post Hornresp inputs and plots block automated access. Step 4
    replaces it.
 4. **Hornresp golden files.** Done, with Hornresp 60.60 under Wine (see [Running Hornresp](#running-hornresp)).
-   `tests/hornresp.test.ts` compares six designs (seven readings), 10 Hz–2 kHz (`tests/hornresp/`: each record and its results).
+   `tests/hornresp.test.ts` compares nine designs (eleven readings), 10 Hz–2 kHz (`tests/hornresp/`: each record and its results).
 5. **Measurement** of the built boxes with REW.
 
 ### Hornresp results
@@ -113,6 +114,9 @@ box models keep their own grids.
 | `mid-vented`        | Exponential mid horn, throat chamber, vented rear        | < 0.01 dB | < 0.1 %       |
 | `mid-pair`          | Two boxes side by side (count 2) vs Hornresp's composite | < 0.01 dB | < 0.1 %       |
 | `mid-pair`          | Two drivers on one throat (`drivers: 2`), same record    | < 0.01 dB | < 0.1 %       |
+| `sub-bin-le`        | The sub bin with Le 1.6 mH                               | < 0.01 dB | < 0.1 %       |
+| `mid-le`            | The mid horn with Le 0.6 mH                              | < 0.01 dB | < 0.1 %       |
+| `mid-pair-le`       | Two drivers with Le, on one throat and as two boxes      | < 0.01 dB | < 0.1 %       |
 
 The first run found three differences. The engine now follows Hornresp in the first two:
 
@@ -128,8 +132,9 @@ Not compared:
 
 - **Path length.** Hornresp's acoustic path length is not the engine's `portOffset` (a setback on axis). The cases
   use 0.
-- **Voice-coil inductance.** The engine has no Le; the cases set it to 0.
 - **Chamber resonances.** Hornresp masked them (lumped chambers, as the engine).
+- **Slot exits.** Hornresp has round ports only. `tests/horn-engine.test.ts` checks round and slot exits against the
+  duct's tuning equation, k·tan(k·(L + Δ)) = S/V.
 - **Air.** Hornresp ran with the planner's air: c = 343 m/s, ρ = 1.18 kg/m³. With its defaults (344, 1.205) its SPL
   reads ~0.15 dB higher.
 
@@ -161,7 +166,8 @@ cloud session (Ubuntu 24.04):
    the prefix's `windows/Fonts` works.
 4. Start `Xvfb :99`, then `wine Hornresp.exe` with `DISPLAY=:99`. Drive it with `xdotool` and check it with
    screenshots.
-5. Set the air: Ctrl+F5 on the input window, 343 m/s and 1.18 kg/m³.
+5. Set the air: click the input window, then Ctrl+F5: 343 m/s and 1.18 kg/m³. The window's title then shows them.
+   A new container starts with Hornresp's defaults, so set the air each time.
 6. Per case: put the record in `Import`, then File > Import > Hornresp Record. Calculate, and answer "Yes" to mask the
    chamber resonances. On the Acoustical Power chart, File > Export > All Chart Data. Use a short file name.
 7. Keep frequency, SPL, Ze and Xd up to 2 kHz in `tests/hornresp/<case>-results.txt`.

@@ -109,18 +109,18 @@ is amp power (sub 800 W, mid 450 W per driver), Xmax or vent speed (23.5 m/s). T
 | 35 Hz     | 128 dB                | 128 dB             | —                    | —                  | —           |
 | 40 Hz     | 130 dB                | 130 dB             | —                    | —                  | —           |
 | 60 Hz     | 132 dB (Xmax)         | 131 dB (Xmax)      | 107 dB (Xmax)        | 109 dB (Xmax)      | 113 dB      |
-| 100 Hz    | 136 dB                | 132 dB             | 129 dB (vent)        | 129 dB (vent)      | 135 dB      |
-| 120 Hz    | 138 dB                | 132 dB             | 132 dB               | 130 dB             | 137 dB      |
-| 150 Hz    | 137 dB                | 132 dB             | 133 dB               | 129 dB             | 138 dB      |
-| 200 Hz    | 135 dB                | 133 dB             | 136 dB               | 129 dB             | 138 dB      |
-| 500 Hz    | —                     | —                  | 135 dB               | 130 dB             | 141 dB      |
-| 950 Hz    | —                     | —                  | 137 dB               | 131 dB             | 143 dB      |
+| 100 Hz    | 137 dB                | 133 dB             | 129 dB (vent)        | 129 dB (vent)      | 135 dB      |
+| 120 Hz    | 138 dB                | 133 dB             | 132 dB               | 130 dB             | 137 dB      |
+| 150 Hz    | 138 dB                | 133 dB             | 134 dB               | 130 dB             | 139 dB      |
+| 200 Hz    | 136 dB                | 134 dB             | 136 dB               | 130 dB             | 139 dB      |
+| 500 Hz    | —                     | —                  | 136 dB               | 131 dB             | 142 dB      |
+| 950 Hz    | —                     | —                  | 132 dB               | 127 dB             | 138 dB      |
 
 The sub is tuned to 35 Hz with a 30 Hz BW24 subsonic, applied in its figures.
 
-- **Horn gain.** On axis, the sub bin gains 4–6 dB from 100 to 150 Hz. The mid box gains 4–7 dB from 150 to 950 Hz.
+- **Horn gain.** On axis, the sub bin gains 4–5 dB from 100 to 150 Hz. The mid box gains 4–6 dB from 150 to 950 Hz.
 - **On axis vs power.** The table is on axis, each mouth a point source. Hornresp shows the power response, which
-  leaves out directivity. Above ~300 Hz it reads lower: the mid box gives 130 dB at 500 Hz and 125 dB at 950 Hz. The
+  leaves out directivity. Above ~300 Hz it reads lower: the mid box gives 130 dB at 500 Hz and 121 dB at 950 Hz. The
   real on-axis level lies between and depends on the horn's coverage. Above ~500 Hz the mid horn's gain is mostly
   directivity: its radiated power equals the plain box's.
 - **Sub tuning.** 35 Hz is the textbook alignment for 162 L per driver. Against 42 Hz it gains 6 dB at 30–35 Hz and
@@ -128,6 +128,8 @@ The sub is tuned to 35 Hz with a 30 Hz BW24 subsonic, applied in its figures.
 - **Vents.** The sub's slots (~680 mm) fold once along the back wall; the box stays 766 mm deep. The mid's slots
   (~165 mm) stay straight. A long vent's own air acts as a spring and lowers the tuning. So these are shorter than the
   simple (lumped) formula gives: ~760 and ~180 mm would tune to ~33 and ~93 Hz.
+- **Voice-coil inductance.** The 10MB600's Le is 1.6 mH. It costs ~4 dB at 950 Hz and little below 500 Hz. The
+  10PR320 (Le 0.57 mH) gives ~1.5 dB more at 950 Hz and ~1 dB more at 120–150 Hz, with ~0.5 dB less below 60 Hz.
 - **Wedges.** The wedges beside the sub's flare join its rear chamber (~324 L net). The mid's are sealed.
 - **18TBX100.** It equals the 18NBX100 in this bin, within 0.3 dB. It costs $49 less and weighs 8 lb more per driver.
 - **The HF keeps up.** One N314T (~131 dB) covers 2 × 18″ and 1 mid box at the planner's music balance, with

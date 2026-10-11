@@ -292,7 +292,7 @@ describe("the tweeter", () => {
     expect(named(g, HIFI_MESH_NAMES.dome)).toHaveLength(0);
   });
 
-  test("a ribbon: its own waveguide's plate flush in the baffle, the diaphragm in its throat", () => {
+  test("a ribbon: its own waveguide's square plate flush in the baffle, its flared throat down to the diaphragm's slot", () => {
     const t = tweeter("lt32");
     const p = propsFor({ tweeter: t });
     const g = scene(p);
@@ -303,6 +303,42 @@ describe("the tweeter", () => {
     expect(plate.max.z).toBeCloseTo(p.dim.d / 2, 6);
     expect(named(g, HIFI_MESH_NAMES.ribbon)).toHaveLength(1);
     expect(named(g, HORN_MESH_NAME)).toHaveLength(0);
+    // a square plate, not a disc: its corners reach out along the diagonal past a circle's √2 (|x| + |y| for its half
+    // width)
+    const [plateMesh] = named(g, HIFI_MESH_NAMES.faceplate);
+    if (!(plateMesh instanceof THREE.Mesh)) throw new Error("no plate mesh");
+    const pos = plateMesh.geometry.getAttribute("position");
+    let reach = 0;
+    for (let i = 0; i < pos.count; i++)
+      reach = Math.max(reach, Math.abs(pos.getX(i)) + Math.abs(pos.getY(i)));
+    expect(reach / ((t.ownGuide?.w ?? 0) / 2)).toBeGreaterThan(1.8);
+    // its flared throat: wider than tall at the mouth, down to a tall, narrow slot over the ribbon
+    const flare = boxOf(g, HIFI_MESH_NAMES.flare),
+      ribbon = boxOf(g, HIFI_MESH_NAMES.ribbon);
+    expect(flare.max.x - flare.min.x).toBeGreaterThan(flare.max.y - flare.min.y);
+    expect(ribbon.max.y - ribbon.min.y).toBeGreaterThan(3 * (ribbon.max.x - ribbon.min.x));
+    expect(flare.max.z).toBeCloseTo(p.dim.d / 2, 6);
+  });
+
+  test("an AMT: its flat plate flush in the baffle, a tall opening onto the folds across it, no ribbon slot or flare", () => {
+    const t = tweeter("amtpro4");
+    const p = propsFor({ tweeter: t });
+    const g = scene(p);
+    expect(p.guide?.freestanding).toBe(false);
+    expect(p.waveguide).toBeNull();
+    const plate = boxOf(g, HIFI_MESH_NAMES.faceplate);
+    expect(plate.max.x - plate.min.x).toBeCloseTo(t.ownGuide?.w ?? 0, 6);
+    expect(plate.max.y - plate.min.y).toBeCloseTo(t.ownGuide?.h ?? 0, 6);
+    expect(plate.max.z).toBeCloseTo(p.dim.d / 2, 6);
+    expect(named(g, HIFI_MESH_NAMES.ribbon)).toHaveLength(0);
+    expect(named(g, HIFI_MESH_NAMES.flare)).toHaveLength(0);
+    expect(named(g, HORN_MESH_NAME)).toHaveLength(0);
+    // the folded diaphragm behind the plate: taller than wide on this tall plate, many folds, all behind the face
+    const folds = named(g, HIFI_MESH_NAMES.amt);
+    expect(folds.length).toBeGreaterThan(10);
+    const dia = boxOf(g, HIFI_MESH_NAMES.amt);
+    expect(dia.max.y - dia.min.y).toBeGreaterThan(2 * (dia.max.x - dia.min.x));
+    expect(dia.max.z).toBeLessThan(p.dim.d / 2);
   });
 
   test("the DIY OS 90×70 with the DE250: its mesh on the box top, on the aluminum plate, with the PA driver's body", () => {

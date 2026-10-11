@@ -21,10 +21,10 @@ import {
   braceWoodIn3,
   SUB_FIXINGS_LB,
   MID_FIXINGS_LB,
-  rectangleEndCorrection,
   sideDuctEndCorrection,
   slotMouthCorrection,
 } from "../src/lib/pa/calc";
+import { rectangleEndCorrection } from "../src/lib/acoustics/radiation";
 import { defaultBraceStyleNear } from "../src/lib/bracing";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { ductFit } from "../src/lib/pa/chips";

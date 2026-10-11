@@ -7,7 +7,12 @@
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { besselJ, struveH1 } from "../src/lib/acoustics/bessel";
-import { pistonImpedance, mouthImpedance } from "../src/lib/acoustics/radiation";
+import {
+  FLANGED_CIRCLE_END_RATIO,
+  mouthImpedance,
+  pistonImpedance,
+  rectangleEndCorrection,
+} from "../src/lib/acoustics/radiation";
 import {
   segmentMatrix,
   chainMatrix,
@@ -28,6 +33,8 @@ const AIR_IMPEDANCE = AIR_DENSITY * SPEED_OF_SOUND;
 const SQUARE_INCH_TO_CM2 = 6.4516,
   M_TO_CM = 100;
 const waveNumberAt = (f: number) => (2 * Math.PI * f) / SPEED_OF_SOUND;
+/** A driver with its voice coil's inductance off: the box models have none, so checks against them need it off. */
+const noInductance = (ts: HornDesign["driver"]): HornDesign["driver"] => ({ ...ts, Le: 0 });
 
 /** Asserts that two numbers differ by at most `tolerance`. */
 const near = (actual: number, expected: number, tolerance: number, what: string) =>
@@ -285,7 +292,7 @@ const modelOf = (...args: Parameters<typeof hornModel>): HornModel => {
 };
 
 test("with no horn and no radiation load it is the sealed box model", () => {
-  const driver = DEFAULT_PA.mid.ts;
+  const driver = noInductance(DEFAULT_PA.mid.ts);
   const liters = 30,
     volts = 20;
   const sealed = closedBox(driver, liters, null, null, volts, {
@@ -313,7 +320,7 @@ test("with no horn and no radiation load it is the sealed box model", () => {
 
 test("with the radiation load on, a direct radiator still matches the box model low down", () => {
   // the air mass taken off the moving mass (8/3·ρa³) is the radiation reactance's mass at low ka: the two cancel there
-  const design = directRadiator(DEFAULT_PA.mid.ts, { liters: 30, port: null });
+  const design = directRadiator(noInductance(DEFAULT_PA.mid.ts), { liters: 30, port: null });
   const freqs = [40, 70, 100, 150];
   const loaded = modelOf(design, freqs, 10),
     unloaded = modelOf(design, freqs, 10, { radiationLoad: false });
@@ -321,7 +328,7 @@ test("with the radiation load on, a direct radiator still matches the box model 
 });
 
 test("with no horn and no radiation load it is the vented box model", () => {
-  const driver = DEFAULT_PA.sub.ts;
+  const driver = noInductance(DEFAULT_PA.sub.ts);
   const liters = 180,
     ventSquareInches = 40,
     ventInches = 14,
@@ -358,7 +365,7 @@ test("with no horn and no radiation load it is the vented box model", () => {
 
 test("boxes side by side add 6 dB each doubling, and their mouths load each other", () => {
   const freqs = [60, 120, 250];
-  const one = directRadiator(DEFAULT_PA.mid.ts, { liters: 30, port: null });
+  const one = directRadiator(noInductance(DEFAULT_PA.mid.ts), { liters: 30, port: null });
   const single = modelOf(one, freqs, 10, { radiationLoad: false }),
     pair = modelOf({ ...one, count: 2 }, freqs, 10, { radiationLoad: false });
   single.curve.forEach((p, i) =>
@@ -375,7 +382,7 @@ test("boxes side by side add 6 dB each doubling, and their mouths load each othe
 });
 
 test("a front-loaded horn out-plays the same driver direct in its band, with less excursion", () => {
-  const driver = DEFAULT_PA.mid.ts;
+  const driver = noInductance(DEFAULT_PA.mid.ts);
   const rear = { liters: 25, port: null };
   const freqs = hornGrid(100, 1000, 60);
   // exponential, 300 cm² to 4000 cm² over 47 cm: a cutoff near 150 Hz
@@ -400,7 +407,7 @@ test("a front-loaded horn out-plays the same driver direct in its band, with les
 });
 
 test("the front load is the throat chamber in parallel with the horn's input", () => {
-  const driver = DEFAULT_PA.mid.ts;
+  const driver = noInductance(DEFAULT_PA.mid.ts);
   const f = 400,
     omega = 2 * Math.PI * f;
   // no horn, no chamber: the cone sees the mouth's (here its own) radiation load
@@ -426,7 +433,7 @@ test("the front load is the throat chamber in parallel with the horn's input", (
 });
 
 test("a design with a zero size is not modeled", () => {
-  const good = directRadiator(DEFAULT_PA.mid.ts, { liters: 30, port: null });
+  const good = directRadiator(noInductance(DEFAULT_PA.mid.ts), { liters: 30, port: null });
   const freqs = [100];
   assert.ok(hornModel(good, freqs, 10));
   assert.strictEqual(hornModel({ ...good, rear: { liters: 0, port: null } }, freqs, 10), null);
@@ -450,7 +457,7 @@ test("two drivers on one throat are one driver of twice the cone, each cone with
   // the same bank as one driver: twice the area and half the coil, its moving mass set so that, with one air load
   // of the doubled area taken off, it keeps two single cones' masses less their two air loads; its suspension and
   // losses scaled to keep the cones' own (half the compliance's acoustic share, half the resistance)
-  const ts = DEFAULT_PA.sub.ts;
+  const ts = noInductance(DEFAULT_PA.sub.ts);
   /** one side's air load on a piston of `cm2` cm², kg */
   const airLoad = (cm2: number) =>
     (8 / 3) * AIR_DENSITY * Math.pow(cm2 / SQ_CM_PER_SQ_M / Math.PI, 1.5);
@@ -492,4 +499,53 @@ test("two drivers on one throat are one driver of twice the cone, each cone with
   }
   assert.strictEqual(hornModel({ ...horn, drivers: 0 }, freqs, 10), null);
   assert.strictEqual(hornModel({ ...horn, drivers: 1.5 }, freqs, 10), null);
+});
+
+test("a vent tunes where its duct, end-corrected at the exit, cancels the chamber: round and slot exits", () => {
+  // A duct of length L and area S, open into an exit of end correction Δ, on a chamber of volume V: the reactances
+  // cancel where k·tan(k·(L + Δ)) = S/V (the duct's own air, a transmission line). The exit's radiation resistance
+  // is tiny at a vent's tuning, so this holds to a fraction of a percent.
+  const liters = 162,
+    length = 60;
+  /** the tuning that root gives, Hz, by bisection below the duct's quarter wave */
+  const ductTuning = (areaCm2: number, endCorrectionCm: number) => {
+    const ratio = areaCm2 / SQ_CM_PER_SQ_M / (liters / 1000),
+      acoustic = (length + endCorrectionCm) / 100;
+    let below = 1,
+      above = SPEED_OF_SOUND / (4 * acoustic) - 1e-6;
+    for (let i = 0; i < 80; i++) {
+      const middle = (below + above) / 2,
+        k = waveNumberAt(middle);
+      if (k * Math.tan(k * acoustic) < ratio) below = middle;
+      else above = middle;
+    }
+    return below;
+  };
+  const tuningOf = (port: NonNullable<HornDesign["rear"]["port"]>) =>
+    modelOf(directRadiator(DEFAULT_PA.sub.ts, { liters, port }), [50], 1).fb ?? 0;
+  // a round exit of 600 cm²: Δ = 8/(3π)·r
+  const roundArea = 600;
+  const roundCorrection = FLANGED_CIRCLE_END_RATIO * Math.sqrt(roundArea / Math.PI);
+  const round = tuningOf({ area: roundArea, length });
+  near(round / ductTuning(roundArea, roundCorrection), 1, 0.005, "round exit");
+  // two 6.5 × 46 cm slots, the same 598 cm²: each opening's rectangle sets Δ, much less than the round exit's
+  const slot = { width: 6.5, height: 46 };
+  const slotArea = 2 * slot.width * slot.height;
+  const slotCorrection = rectangleEndCorrection(slot.width, slot.height);
+  assert.ok(slotCorrection < roundCorrection, "a thin slot's exit has a smaller end correction");
+  const slotted = tuningOf({ area: slotArea, length, slot });
+  near(slotted / ductTuning(slotArea, slotCorrection), 1, 0.005, "slot exit");
+  assert.ok(slotted > round, "the slot tunes higher than a round vent of the same area and length");
+});
+
+test("a driver with a negative or non-finite inductance is not modeled", () => {
+  const good = directRadiator(noInductance(DEFAULT_PA.mid.ts), { liters: 30, port: null });
+  const freqs = hornGrid(20, 200, 10);
+  assert.ok(hornModel({ ...good, driver: { ...good.driver, Le: 0.5 } }, freqs, 10));
+  for (const Le of [-0.1, Number.NaN, Infinity])
+    assert.strictEqual(
+      hornModel({ ...good, driver: { ...good.driver, Le } }, freqs, 10),
+      null,
+      `Le ${Le}`,
+    );
 });
