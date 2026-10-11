@@ -42,11 +42,11 @@ with a vented rear chamber. The ports exit as slots on the front sides. The sub 
 
 ### Modules
 
-| Module  | Contents                                                  | Port tuning | Horn loads from                     |
-| ------- | --------------------------------------------------------- | ----------- | ----------------------------------- |
-| Sub bin | 1 or 2 × 18″ (18NBX100 or 4018LF), front-loaded 1-D flare | ~40–45 Hz   | ~140 Hz (1 × 18″), ~99 Hz (2 × 18″) |
-| Mid box | 2 × 10″ (10MB600 or 10PR320) in one throat, ~280 mm apart | ~90–100 Hz  | ~176 Hz (one box)                   |
-| HF      | N314T on the DIY R-OSSE                                   | —           | —                                   |
+| Module  | Contents                                                    | Port tuning            | Horn loads from                     |
+| ------- | ----------------------------------------------------------- | ---------------------- | ----------------------------------- |
+| Sub bin | 1 or 2 × 18″ (18NBX100 or 18TBX100), front-loaded 1-D flare | ~35 Hz, 30 Hz subsonic | ~140 Hz (1 × 18″), ~99 Hz (2 × 18″) |
+| Mid box | 2 × 10″ (10MB600 or 10PR320) in one throat, ~280 mm apart   | ~90–100 Hz             | ~176 Hz (one box)                   |
+| HF      | N314T on the DIY R-OSSE                                     | —                      | —                                   |
 
 A 2 × 12″ mid box (3012HO) needs its cones at least ~330 mm apart: a 12″ frame is ~310–320 mm wide. Its box is
 taller, and its loading and lobing figures differ from the 2 × 10″ figures below.
@@ -60,16 +60,19 @@ taller, and its loading and lobing figures differ from the 2 × 10″ figures be
 
 ### Pairing subs and mids
 
-A mid box has 2 cones. Pick the mid count for the sub count, then set the sub/mid crossover where the mids keep up.
+A mid box has 2 cones. The planner's music balance sets what each band needs: the mids 6 dB under the subs, the HF
+3 dB under the mids (`tilt`, `hfTilt`). So the HF needs the sub level less ~9 dB. Levels at a 120 Hz crossover, from
+the horn engine:
 
-| Per side                       | Sub/mid crossover | System level (rough)      |
-| ------------------------------ | ----------------- | ------------------------- |
-| 1 × 18″ + 1 mid box + 1 HF     | ~120 Hz           | ~125 dB, balanced         |
-| 2 × 18″ + 1 mid box + 1 HF     | ~150 Hz           | ~130 dB, mids and HF full |
-| 2 × 18″ + 2 mid boxes + 1–2 HF | ~110–120 Hz       | ~130 dB, with headroom    |
-| 4 × 18″ + 3 mid boxes + 2–3 HF | ~110–140 Hz       | ~137 dB, bass-heavy       |
+| Per side | Sub     | Mids need | Mid boxes      | HF needs | HF             |
+| -------- | ------- | --------- | -------------- | -------- | -------------- |
+| 1 × 18″  | ~132 dB | ~126 dB   | 1 (6 dB spare) | ~123 dB  | 1 N314T        |
+| 2 × 18″  | ~138 dB | ~132 dB   | 1 (no spare)   | ~129 dB  | 1 N314T        |
+| 4 × 18″  | ~144 dB | ~138 dB   | 2              | ~135 dB  | 1, bigger horn |
 
-- Add a third mid box only with 4 × 18″. With fewer subs, the mids out-run the subs.
+One N314T gives ~131 dB. The 1 × 18″ and 4 × 18″ rows are estimates from the 2 × 18″ model (−6 dB, +6 dB).
+
+- A third mid box is not needed with up to 4 × 18″.
 - Grow a stack in this order: a second mid box, then subs, then HF.
 - The front end steps the sub/mid crossover with the stack size (see [Scaling](#scaling)).
 
@@ -85,12 +88,46 @@ The second setup is cleaner at the crossover. It needs its own channel for the l
 
 ### Build notes
 
-- **Ports.** The mid ports move much air at 90–110 Hz. Make them large. Flare their ends.
+- **Ports.** Sub: ~600 cm² per driver, ~760 mm long, folded once along the back wall. Mid: ~120 cm² per driver,
+  ~180 mm, straight. Smaller ports limit the output. Flare their ends.
 - **Front chamber.** Start the flare at the cone. Leave no cavity in front of it.
 - **Drivers.** The 18NBX100, 4018LF and 3012HO suit vented chambers. The 10MB600 (Qts 0.22) suits sealed or horn
   loading. Vented, it gives a small chamber and a bump near tuning. A fixed shelf flattens the bump.
 - **Simulate first.** Model the chamber, ports and flare (Hornresp, or the planner's horn engine). Check the sum.
 - **Alignment.** All mouths are flush at the front. The acoustic centers sit at similar depths.
+
+### Modeled with the horn engine
+
+The planner's horn engine (`src/lib/acoustics/`, 1-D) modeled the boxes in the mock-up below. Values are maximum SPL
+at 1 m, half space. The limit is amp power (sub 800 W, mid 450 W per driver), Xmax or vent speed (23.5 m/s). There is
+no power compression.
+
+![Top sections of the sub bin and the mid box](pa-v2-boxes.svg)
+
+| Frequency | Sub bin, 2 × 18NBX100 | Same, plain vented | Mid box, 2 × 10MB600 | Same, plain vented | 2 mid boxes |
+| --------- | --------------------- | ------------------ | -------------------- | ------------------ | ----------- |
+| 35 Hz     | 127 dB                | 127 dB             | —                    | —                  | —           |
+| 40 Hz     | 130 dB                | 129 dB             | —                    | —                  | —           |
+| 60 Hz     | 132 dB (Xmax)         | 130 dB (Xmax)      | 107 dB               | 109 dB             | 112 dB      |
+| 100 Hz    | 137 dB                | 131 dB             | 128 dB (vent)        | 128 dB (vent)      | 134 dB      |
+| 120 Hz    | 138 dB                | 131 dB             | 132 dB               | 130 dB             | 138 dB      |
+| 150 Hz    | 136 dB                | 131 dB             | 134 dB               | 129 dB             | 138 dB      |
+| 200 Hz    | 133 dB                | 132 dB             | 135 dB               | 129 dB             | 137 dB      |
+| 500 Hz    | —                     | —                  | 133 dB               | 130 dB             | 139 dB      |
+| 950 Hz    | —                     | —                  | 134 dB               | 131 dB             | 140 dB      |
+
+The sub is tuned to 35 Hz with a 30 Hz BW24 subsonic, applied in its figures.
+
+- **Horn gain.** The sub bin gains 4–6 dB from 80 to 150 Hz. The mid box gains 3–6 dB from 150 to 950 Hz.
+- **Sub tuning.** 35 Hz is the textbook alignment for 162 L per driver. Against 42 Hz it gains 6 dB at 30–35 Hz and
+  loses 1–3 dB at 45–60 Hz, where the cone reaches Xmax. Above 70 Hz the two are equal.
+- **Vents.** The sub's slots (~760 mm) fold once along the back wall; the box stays 766 mm deep. The mid's slots
+  (~180 mm) stay straight. The wedges beside the sub's flare join its rear chamber (~324 L net). The mid's are sealed.
+- **18TBX100.** It equals the 18NBX100 in this bin, within 0.3 dB. It costs $49 less and weighs 8 lb more per driver.
+- **The HF keeps up.** One N314T (~131 dB) covers 2 × 18″ and 1 mid box at the planner's music balance, with
+  ~2 dB to spare.
+- **Little sub-to-top delay.** Both have ~3–5 ms group delay at 120–150 Hz.
+- **Limits.** The geometry is an estimate. Above ~350 Hz the mid results are approximate (1-D model).
 
 ## Alternative: 4-way with folded horn subs
 
@@ -210,9 +247,11 @@ All are in the catalog (`src/data/catalog/`).
 | Driver          | Fs / Qts  | Sd × Xmax | Sensitivity | Weight | Price |
 | --------------- | --------- | --------- | ----------- | ------ | ----- |
 | B&C 18NBX100    | 35 / 0.38 | 1.21 L    | 96.5 dB     | 20 lb  | $449  |
+| B&C 18TBX100    | 34 / 0.35 | 1.09 L    | 97 dB       | 28 lb  | $400  |
 | Eminence 4018LF | 30 / 0.34 | 1.02 L    | 94.9 dB     | 24 lb  | $329  |
 
-- **18NBX100:** ~1.5 dB more output, 4 lb lighter.
+- **18NBX100:** ~1.5 dB more output than the 4018LF, 4 lb lighter.
+- **18TBX100:** equal to the 18NBX100 in the bin (ferrite). $49 less, 8 lb heavier.
 - **4018LF:** deeper (Fs 30 Hz), a better bin driver (lower Qts, Bl 26.8), ~$480 less for four. Needs a bigger box
   (Vas 255 L).
 
@@ -268,8 +307,8 @@ and more boxes for the same level.
 8″ figures assume ~220 cm² × 5.5 mm and ~250 W per driver _(typical, unverified)_.
 
 - **One bin alone** is little better than a vented box below 140 Hz, and it is bigger. Four bins load to ~70 Hz.
-- **The HF must grow.** Each doubling of subs adds ~6 dB. Add HF horns stacked and splayed (near and far throw), or
-  use a larger compression driver.
+- **The HF must grow.** Each doubling of subs adds ~6 dB. Keep one horn; see
+  [HF options](#hf-options-for-bigger-stacks).
 - **Layout.** Four bins in a floor row keep the HF ~2.5 m up. Stacked 2 × 2, they put it ~3.3 m up.
 - **Gap.** The catalog has no plain 8″ mid. Candidates: B&C 8NDL51, FaitalPRO 8PR200, 18Sound 8NMB420
   _(unverified)_.
@@ -379,15 +418,44 @@ With no DSP, a wrong patch or a turned knob can send full-range signal to the N3
 - **Class H:** about three 2-channel amps (for example used QSC RMX or Crest CA _(unverified)_). Much heavier than the
   class D v1 amps.
 
+## HF options for bigger stacks
+
+Use one HF horn per stack at every size, as Sunflower does over large sub stacks. A 4 × 18″ stack needs ~6 dB more HF
+than one N314T on the R-OSSE gives at the default balance. Close the gap three ways:
+
+| Step                               | Gain on axis | Notes                                                            |
+| ---------------------------------- | ------------ | ---------------------------------------------------------------- |
+| A larger, narrower horn (90 × 40°) | ~+2 dB       | 60 × 40° gives ~+3.6 dB. A bigger mouth loads 950 Hz better too. |
+| A 150 W compression driver         | ~+1.8 dB     | The N314T is the catalog's strongest; 2″ drivers rate 140–150 W  |
+| A bass-heavier balance             | ~+2 dB       | Raise `hfTilt` from 3 to ~5 dB: the sound-system style           |
+
+Design the new horn in hornlab, as the R-OSSE was. Candidate drivers (makers measure sensitivity differently; compare
+them on the same horn):
+
+| Driver            | Exit | Power     | Sensitivity                                    | US price               |
+| ----------------- | ---- | --------- | ---------------------------------------------- | ---------------------- |
+| Celestion Axi2050 | 2″   | 150 W AES | 108 dB; 115–120 dB expected on a large 2″ horn | $1,000 (Parts Express) |
+| B&C DE1050        | 2″   | 140 W     | 109 dB                                         | not found              |
+| BMS 4594HE (coax) | 1.4″ | 150 W     | 118 dB on a horn _(unverified)_                | not found              |
+
+A super tweeter (below) takes the top octave, so the main driver needs no top-end boost.
+
 ## Super tweeter
 
-The reference stacks add a bullet tweeter above the HF horn for the top octave, from ~8–10 kHz.
+The reference stacks add one above the HF horn for the top octave, from ~8–10 kHz. It does not raise the HF limit:
+that sits at 1–5 kHz, where most HF power goes.
 
-- **Adds:** top-octave level without EQ boost on the N314T, a top end wider than the R-OSSE's ~60° at 10 kHz.
-- **Costs:** another crossover at a 34 mm wavelength, so some comb filtering. Usually on the HF channel through a
-  series capacitor.
+- **Adds:** top-octave level without EQ boost on the N314T, and a wider top end than the R-OSSE's ~60° at 10 kHz.
+  Cutting that EQ boost saves the N314T some voltage on bright material.
+- **Costs:** another crossover at a 34 mm wavelength, so some comb filtering near it.
+
+| Type   | Strengths                                                                  | Limits                                                     |
+| ------ | -------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Bullet | Cheap, efficient (~105–110 dB), runs on the HF channel through a capacitor | Narrow-ish pattern; some sound harsh _(unverified)_        |
+| AMT    | Low distortion, smooth, wide horizontal and narrow vertical                | ~95–100 dB, so 2 or more per side; costlier _(unverified)_ |
+
 - **Plan:** skip it first. Measure the N314T on the R-OSSE. Add one if the top octave falls off or sounds dull
-  off-axis. Leave room above the horn.
+  off-axis. A bullet suits the reference stacks' sound. An AMT suits a smoother top. Leave room above the horn.
 
 ## Fills
 
@@ -396,7 +464,7 @@ An analog box cannot delay a full-range signal. Drop fills, or add one small dig
 ## Open questions
 
 1. 10″ or 12″ mids? 8″ is lighter; 12″ crosses lowest per box.
-2. 18NBX100 or 4018LF subs?
+2. 18NBX100, 18TBX100 or 4018LF subs?
 3. Vented or sealed mid horns?
 4. Mixer and compressor in the front-end box, or separate?
 5. Fills: drop them, or add a digital delay?
