@@ -471,7 +471,7 @@ The planner would need these to model v2 (later, with the system page in
 [speaker-designer-plan.md](speaker-designer-plan.md), L4):
 
 - A 1-D horn engine (Hornresp-style): horn segments, front and rear chambers, ports and mouth radiation, for
-  front-loaded bins, mid horns and folded horns.
+  front-loaded bins, mid horns and folded horns. See [horn-engine-plan.md](horn-engine-plan.md).
 - Horn-loaded mids: their loading and their rising response.
 - More than one driver per band, a 2.5-way roll-off and a tapered column.
 - A horn setback setting, for the 3D view and the alignment.
