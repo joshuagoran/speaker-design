@@ -84,7 +84,7 @@ export function NotesPage() {
     <main className={`${PAGE_WIDTH} pb-16`}>
       <div className={`${READING_WIDTH} flex flex-col gap-2`}>
         <section
-          className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6"
+          className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
           style={{ fontFamily: FONT }}
         >
           {RACKS.map((r) => {
