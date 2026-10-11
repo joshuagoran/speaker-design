@@ -207,8 +207,12 @@ Each PR stands alone. Lowest risk first.
     - A folded path, or a path longer than the chamber, is a straight placeholder. A note says so.
     - A mouth larger than the clear face is drawn at the clear face. A note says so.
     - Not drawn yet: the tower's arched top (L3e adds it), the aim (see the owner decisions) and the PA plinth.
-  - **L3e Templates.** The templates step adds a cabinet top shape: `flat` or `arched`. Then the PA tower's
-    arched top draws and cuts correctly.
+  - **L3e Templates.** The templates step adds these cabinet settings:
+    - A top shape: `flat` or `arched`. Then the PA tower's arched top draws and cuts correctly.
+    - A "Construction" setting: "Frame and inset baffle" (the PA style) or "Flush box" (the Hi-fi style). Today
+      the inset alone sets the style, so a PA box with no inset draws as a Hi-fi box. This setting replaces that
+      rule.
+    - Movable ports and driver openings (see the owner decisions).
   - **L3c Cutlist.** L3c works out the real bracing, vent walls and hardware displacement for each chamber and
     replaces the 3% allowance.
   - **Later in L3.** The limits and the optimizer; the horn settings; the tower with the horn
