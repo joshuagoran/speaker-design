@@ -10,6 +10,7 @@ import type {
   SpeakerDriver,
 } from "../../types";
 import { coneParts } from "./driverParts";
+import { stuffedLiters } from "./chamberAir";
 import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
 import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../pa/calc";
 import { CM_PER_M, METERS_PER_INCH } from "../../constants/units";
@@ -107,7 +108,8 @@ export function hornDesignOf(
       count: at.count,
       throatChamber: horn?.throatChamber ?? 0,
       segments: horn?.segments ?? [],
-      rear: { liters: netLiters, port: rear.port },
+      // the rear chamber's air with its stuffing, as a direct chamber's
+      rear: { liters: stuffedLiters(chamber, netLiters), port: rear.port },
       angle: at.angle,
       portOffset: horn?.portOffset ?? 0,
     },

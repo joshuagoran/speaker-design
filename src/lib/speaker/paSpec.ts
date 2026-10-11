@@ -27,7 +27,7 @@ import type {
 } from "../../types";
 import { HORN_OPTIONS, SUB_OPTIONS, mainsDsp } from "../data";
 import { byIdOrThrow } from "../tables";
-import { subDriverCenter } from "../pa/calc";
+import { STUFFING_VOLUME_GAIN, slotFolds, subDriverCenter } from "../pa/calc";
 import { modelTubeElbows } from "../pa/tubes";
 import { towerMidDims, towerSpec } from "../pa/tower";
 import { takesHornMount } from "../pa/hornMount";
@@ -40,13 +40,21 @@ import {
   DRIVER_KIND,
   FRONT_END_KIND,
   HORN_PLACEMENT,
+  PA_SLOT_FINS,
   PORT_SHAPE,
   SOURCE_ROLE,
   SPEAKER_BAND,
   SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-import { DIRECT_LOAD, NO_FILTERS, channelCounter, lrFilter, speakerIdentity } from "./specParts";
+import {
+  DIRECT_LOAD,
+  NO_FILTERS,
+  channelCounter,
+  lrFilter,
+  speakerIdentity,
+  stuffingPctOf,
+} from "./specParts";
 
 /** The sub's round tubes as a round port: `nt` tubes of `dia`, `len` long, with the elbows the model takes. */
 const roundTubes = (cfg: PaPlannerDesign, sub: SubDriver): SpeakerPort => ({
@@ -55,6 +63,8 @@ const roundTubes = (cfg: PaPlannerDesign, sub: SubDriver): SpeakerPort => ({
   dia: cfg.cVent.dia,
   len: cfg.cVent.len,
   elbows: modelTubeElbows(cfg.cDim, cfg.portStyle, cfg.cVent, cfg.wall, cfg.inset, sub),
+  flared: true,
+  corners: cfg.portStyle === "round4",
 });
 
 /** The sub's side ducts: `n` of them, each `throat` wide and `len` long, with their dividers. */
@@ -68,7 +78,15 @@ const sideDucts = (cfg: PaPlannerDesign, n: 1 | 2): SpeakerPort => ({
 
 /** The sub's vent as a chamber's port, by port style. */
 const PA_PORTS: Record<PortStyle, (cfg: PaPlannerDesign, sub: SubDriver) => SpeakerPort> = {
-  slots: (cfg) => ({ shape: PORT_SHAPE.slot, n: 1, h: cfg.cVent.slotH, len: cfg.cVent.len }),
+  // the letterbox: split by its fins, folded up the back wall when too long to run straight
+  slots: (cfg) => ({
+    shape: PORT_SHAPE.slot,
+    n: 1,
+    h: cfg.cVent.slotH,
+    len: cfg.cVent.len,
+    fins: PA_SLOT_FINS,
+    folded: slotFolds(cfg.cDim, cfg.cVent, cfg.wall),
+  }),
   vslots: (cfg) => sideDucts(cfg, 2),
   vslot1: (cfg) => sideDucts(cfg, 1),
   round1: roundTubes,
@@ -86,6 +104,7 @@ function subChamber(cfg: PaPlannerDesign): SpeakerChamber {
     at: { xIn: 0, yIn: 0 },
     dims: cfg.cDim,
     netLiters: null,
+    stuffingPct: 0,
     vent: { kind: VENT_KIND.vented, port: PA_PORTS[cfg.portStyle](cfg, sub) },
     load: DIRECT_LOAD,
     drivers: [
@@ -132,7 +151,10 @@ function hornDriver(
   };
 }
 
-/** A sealed chamber at `at` in its cabinet, of `dims`, with these drivers. */
+/**
+ * A sealed chamber at `at` in its cabinet, of `dims`, with these drivers: stuffed as the PA stuffs its mids where it
+ * holds the mid, else bare (the horn section).
+ */
 const sealedChamber = (
   at: SpeakerChamber["at"],
   dims: SpeakerChamber["dims"],
@@ -141,6 +163,9 @@ const sealedChamber = (
   at,
   dims,
   netLiters: null,
+  stuffingPct: drivers.some((d) => d.kind === DRIVER_KIND.mid)
+    ? stuffingPctOf(STUFFING_VOLUME_GAIN)
+    : 0,
   vent: { kind: VENT_KIND.sealed },
   load: DIRECT_LOAD,
   drivers,

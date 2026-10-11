@@ -1868,10 +1868,32 @@ export interface SideDuctPort extends Pick<VentSpec, "throat" | "len" | "div"> {
 }
 
 /**
- * A vented chamber's port: round tubes or slots (the Hi-fi kinds), or side ducts. `len` is the path length: a folded
- * port is its path. A slot's `w` is its width; absent, the box sets it (the Hi-fi slot runs the full width).
+ * Round tubes, with the PA sub's details where they are its tubes: `flared` ends (the PA tube rule: the flares, the
+ * neighboring mouths, a wall facing the inner mouth, the sub driver's depth as the stop; lib/pa/tubes
+ * subTubeEndCorrection), in the baffle's `corners` round a centered driver (`round4`) or in a row along the bottom.
+ * Without `flared`, the Hi-fi round port rule.
  */
-export type SpeakerPort = HifiPort | SideDuctPort;
+export interface SpeakerRoundPort extends RoundPort {
+  flared?: boolean;
+  corners?: boolean;
+}
+
+/**
+ * A slot, with the PA sub's letterbox details where it is one: `fins` dividers of the wall's thickness across it, its
+ * mouth on the floor, running from the frame front, `folded` up the back wall when too long to run straight (the PA
+ * slot rule: lib/pa/calc ventGeometry). Without `fins`, the Hi-fi slot rule.
+ */
+export interface SpeakerSlotPort extends SlotPort {
+  fins?: number;
+  folded?: boolean;
+}
+
+/**
+ * A vented chamber's port: round tubes or slots (the Hi-fi kinds, with the PA's details where set), or side ducts.
+ * `len` is the path length: a folded port is its path. A slot's `w` is its width; absent, the box sets it (the slot
+ * runs the full width).
+ */
+export type SpeakerPort = SpeakerRoundPort | SpeakerSlotPort | SideDuctPort;
 
 /** A chamber's vent, by its kind (`VENT_KIND`). */
 export type ChamberVent =
@@ -1926,6 +1948,12 @@ export interface SpeakerChamber {
    * null: the models work it out from `dims`
    */
   netLiters: number | null;
+  /**
+   * how much more air the stuffing makes the box act like, %: the Hi-fi engine stuffs a sealed box 10%, the PA its
+   * mids and the Fills page its sealed boxes 15%; 0 for none. The model applies it to every chamber alike (a horn's
+   * rear chamber too).
+   */
+  stuffingPct: number;
   vent: ChamberVent;
   load: ChamberLoad;
   drivers: readonly SpeakerDriver[];
@@ -2121,6 +2149,8 @@ export interface SpeakerResponse {
   bands: SpeakerBandResponse[];
   /** one per chamber, in the spec's order */
   chambers: SpeakerChamberResponse[];
+  /** what the model leaves out across the bands: a band (or the feed) whose filter corner isn't a positive frequency */
+  gaps: readonly SpeakerModelGap[];
 }
 
 // ---- Bracing ----

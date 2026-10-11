@@ -1,5 +1,6 @@
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { TextField } from "../ui/TextField";
 import { useState } from "react";
 import type { ConfigStore } from "./useConfigStore";
 import type { SavedConfig, SavedConfigData } from "../../types";
@@ -43,7 +44,17 @@ export function SavedConfigs({
   const cur = saved.find((c) => c.id === sel);
   const nameToSave = (saveName ?? name).trim();
   const doSave = async () => {
-    if (await save(nameToSave, snapshot())) setName("");
+    if (manage) {
+      // the library: the new one is picked, so its own actions (save over, rename) act on it
+      const id = await store.create(nameToSave, snapshot());
+      if (id) setSel(id);
+      setNewName(null);
+    } else if (await save(nameToSave, snapshot())) setName("");
+  };
+  /** the picked one's data replaced by the current design, its name kept, once the viewer confirms which one */
+  const doSaveOver = (target: SavedConfig) => {
+    if (window.confirm(`Replace the saved “${target.name}” with this design? Its name stays.`))
+      void store.overwrite(target.id, target.name, snapshot()); // `overwrite` shows its own failure message
   };
   const doRename = async () => {
     if (cur && newName?.trim() && (await store.rename(cur, newName.trim()))) setNewName(null);
@@ -61,16 +72,16 @@ export function SavedConfigs({
           {db ? (
             <>
               {saveName === undefined && (
-                <input
-                  aria-label={namePrompt}
+                <TextField
+                  ariaLabel={namePrompt}
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={setName}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") void doSave(); // `save` shows its own failure message
                   }}
                   placeholder={namePrompt}
                   maxLength={60}
-                  className="px-3 py-1.5 rounded border border-stone-300 bg-panel text-sm w-56"
+                  className="py-1.5 w-56"
                 />
               )}
               <Button variant="dark" onClick={doSave} disabled={!nameToSave}>
@@ -136,8 +147,7 @@ export function SavedConfigs({
               <>
                 <Button
                   size="xs"
-                  // the picked one's data replaced by the current design, under the name the page gives it
-                  onClick={() => void store.overwrite(cur.id, nameToSave || cur.name, snapshot())}
+                  onClick={() => doSaveOver(cur)}
                   aria-label={`Save over ${cur.name}`}
                 >
                   Save over
@@ -152,16 +162,16 @@ export function SavedConfigs({
             )}
             {cur && manage && newName !== null && (
               <>
-                <input
-                  aria-label={`New name for ${cur.name}`}
+                <TextField
+                  ariaLabel={`New name for ${cur.name}`}
                   value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
+                  onChange={setNewName}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") void doRename(); // `rename` shows its own failure message
                     if (e.key === "Escape") setNewName(null);
                   }}
                   maxLength={60}
-                  className="px-3 py-1 rounded border border-stone-300 bg-panel text-sm w-48"
+                  className="py-1 w-48 max-w-full"
                 />
                 <Button size="xs" variant="dark" onClick={doRename} disabled={!newName.trim()}>
                   Rename

@@ -19,6 +19,9 @@ export const lrFilter = (hz: number, order: CrossoverOrder): BandFilter => ({
   type: crossoverSlopeName(order),
 });
 
+/** A box model's stuffing gain (its effective air over its net) as a chamber's `stuffingPct`. */
+export const stuffingPctOf = (gain: number) => Math.round((gain - 1) * 100);
+
 /** A chamber whose drivers radiate straight out. */
 export const DIRECT_LOAD: ChamberLoad = { kind: CHAMBER_LOAD.direct };
 

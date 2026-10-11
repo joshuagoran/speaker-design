@@ -161,36 +161,44 @@ Each PR stands alone. Lowest risk first.
 - **L3 Designer page.** One page, "Designer" for now (`#designer`), designs any single speaker. The PA sub and
   mid/high boxes, the tower and the Hi-fi speaker become starting points, not layout pickers. The general
   chamber / driver / band model replaces the per-kind acoustic models step by step. This is the biggest step.
-  - **L3a (this phase).** The page with `SettingsLayout`: the name; chambers (size or net liters, vent and port
-    size, position); drivers per chamber (a catalog driver by kind, count, horn); bands with their filters,
-    level and drive. A design starts empty, from a saved speaker, or from the current PA or Hi-fi design
-    through the L1 adapters. The library: the `speakers` collection under `users/{uid}` (save, open, rename,
-    duplicate, save over, delete). The model: `speakerResponse` in `src/lib/speaker/speakerResponse.ts`.
-    The results: one response chart at 2.83 V on fixed axes, the net air and Fb (or Qtc) of each chamber,
-    and the passband level of each band.
+  - **L3a (this phase).** The page with `SettingsLayout`: the name; chambers (size or net liters, stuffing,
+    vent and port size, position); drivers per chamber (a catalog driver by kind, count, horn); bands with
+    their filters, level and drive. A design starts empty, from a saved speaker, or from the current PA or
+    Hi-fi design through the L1 adapters. The library: the `speakers` collection under `users/{uid}` (save,
+    open, rename, duplicate, save over, delete). The model: `speakerResponse` in
+    `src/lib/speaker/speakerResponse.ts`. The results: one response chart at 2.83 V and 1 m on fixed axes (the
+    Hi-fi dB scale), the net air and Fb (or Qtc) of each chamber, and the passband level of each band.
   - **The model (L3a).** Each chamber goes through the box model of its kind: sealed and vented from
     `lib/pa/calc`, passive radiators from `lib/hifi`, and a horn in the box through `hornDesignOf` and
     `hornModel`. Each driver kind keeps the rules of the engine that its catalog table comes from (the PA
-    subs and mids, the Hi-fi woofers, tweeters and coaxials). Then each band's filters and level, and the
-    bands summed with their phase. The response is on axis at 1 m in half space. It does not include the
-    baffle step, diffraction, the room, directivity or the driver positions.
+    subs and mids, the Hi-fi woofers, tweeters and coaxials). Each port keeps the rules of its engine: a PA
+    letterbox slot has its fins and fold, PA tubes are flared, and a Hi-fi slot or port has neither. The
+    stuffing is a setting on each chamber (`stuffingPct`); the adapters set it from each page's own rule
+    (Hi-fi sealed 10%, PA mids 15%). The model applies it to every chamber in the same way, including a
+    horn's rear chamber. Then each band's filters and level, and the bands summed with their phase. The
+    response is on axis at 1 m in half space. It does not include the baffle step, diffraction, the room,
+    directivity or the driver positions.
   - **Parity (L3a).** `tests/speaker-response.test.ts` compares the model with today's engines.
-    - Hi-fi (8 designs): each band within 0.05 dB, the sum within 0.25 dB (the Hi-fi sum leaves out the box
+    - Hi-fi (8 designs): each band within 0.05 dB, the sum within 0.1 dB (the Hi-fi sum leaves out the box
       phase), and the net air and Fb or Qtc exact.
-    - PA (every golden design), with the net air set to today's: the mid and horn bands within 0.05 dB; the
-      sub exact with side ducts. A bottom slot and round tubes use the Hi-fi port rules, because the spec's
-      port has no fins, fold or tube wall gap. This moves Fb by up to 10% and the sub curve by up to 2.5 dB.
-    - PA, with the net air from the size: the model takes 3% for bracing, where the PA counts its braces,
-      vent walls and hardware. The model stuffs a sealed box 10%, where the PA stuffs its mids 15%. The
-      difference is up to 2.5 dB.
+    - PA (every golden design), with the net air set to today's: every band within 0.05 dB, Fb and the mid's
+      Qtc exact (slots, tubes and side ducts).
+    - PA, with the net air from the size: the model takes a 3% bracing allowance, where the PA counts its
+      braces, vent walls and hardware. The difference is up to 0.5 dB on the sub and 0.35 dB on the mid.
+    - The PA top box and the tower sum their bands with phase round each crossover, the same as a sum built
+      from the engines.
     - Gaps: a Hi-fi design with a sub highpass keeps the box's subsonic in the spec (the Hi-fi engine drops
-      it). Drivers of different models in one chamber are a named gap.
-  - **Later in L3.** The 3D view, the cutlist, the limits and the optimizer; the horn settings; the tower
-    with the horn on top (T1).
+      it; see L4). Drivers of different models in one chamber are a named gap.
+  - **L3c Cutlist.** L3c works out the real bracing, vent walls and hardware displacement for each chamber and
+    replaces the 3% allowance.
+  - **Later in L3.** The 3D view, the limits and the optimizer; the horn settings; the tower with the horn
+    on top (T1); the voice-coil inductance (after PR #133 adds `Le`).
 - **L4 Space page.** A separate page, later. Any saved speaker can be placed in a "Space": sources by speaker
   id, amps and channels, DSP, crossovers between boxes, delay and level, and the coverage map generalized
   from `CoverageStack` to a list of sources. The baffle step, the room and the positions of the drivers come
   in here. The PA page becomes a system preset.
+  - **Sub highpass and subsonic.** When a sub highpass covers the box's subsonic, the box's subsonic is
+    dropped; below 0.75 × Fb both stay. This rule comes with the Space page.
   - Amps and DSP start from the owner's v1 rig: [amp-dsp-v1.md](amp-dsp-v1.md).
   - **Weight limit per box.** In the modular planner the weight limit becomes a manual setting on each box (it
     replaces today's fixed 125 lb sub check in `src/lib/pa/chips.ts`). The user sets the limit for the box
@@ -224,6 +232,13 @@ Each PR stands alone. Lowest risk first.
   tower needs no "Horn" toggle or separate picker entry.
 - Simulation in a real space is a separate page later (the Space page). Any speaker can be placed there.
 - The fill delay against the mains belongs to the Space page.
+- The Designer's response chart is a 2.83 V, 1 m sensitivity chart on the Hi-fi dB scale (50–130 dB). A later
+  maximum-output chart gets its own fixed scale.
+- The spec's ports carry the PA port details (the letterbox's fins and fold, the flared tubes), so the PA subs
+  match the PA page exactly.
+- Stuffing is a visible setting on each chamber. The model has no hidden stuffing rule. The 3% bracing
+  allowance stays until L3c.
+- The sub highpass and subsonic rule waits for the Space page. The voice-coil inductance waits for PR #133.
 
 ## Open questions for the owner
 

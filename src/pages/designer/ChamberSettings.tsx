@@ -47,8 +47,14 @@ const KIND_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_KIND_NAMES).map((
   name,
 }));
 
-/** A 3-column row of number fields. */
-const ROW = "grid grid-cols-3 gap-x-3";
+/** A row of number fields that wraps onto more lines where the pane is narrow. */
+const ROW = "flex flex-wrap gap-x-3 gap-y-3 mb-3";
+
+/** Where a chamber's net air comes from: worked out from its size, or set. */
+const NET_AIR = {
+  size: "size",
+  set: "set",
+} as const;
 
 interface Props {
   index: number;
@@ -112,22 +118,22 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
       <ToggleGroup
         label="Net air"
         className="mb-2"
-        value={chamber.netLiters === null ? "size" : "set"}
+        value={chamber.netLiters === null ? NET_AIR.size : NET_AIR.set}
         onChange={(v) =>
           onEdit((c) => ({
             ...c,
-            netLiters: v === "size" ? null : Math.round((result?.netLiters ?? 20) * 10) / 10,
+            netLiters: v === NET_AIR.size ? null : Math.round((result?.netLiters ?? 20) * 10) / 10,
           }))
         }
         options={[
-          ["size", "From the size"],
-          ["set", "Set it"],
+          [NET_AIR.size, "From the size"],
+          [NET_AIR.set, "Set it"],
         ]}
       />
       {chamber.netLiters === null ? (
         <p className="text-sm text-stone-500 mb-4">
-          {result ? `${result.netLiters.toFixed(1)} L` : "—"} (walls, 3% bracing, drivers and vent
-          taken off)
+          {result ? `${result.netLiters.toFixed(1)} L` : "—"} (the walls, a 3% bracing allowance,
+          the drivers and the vent taken off)
         </p>
       ) : (
         <NumberField
@@ -139,6 +145,15 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
           onChange={(netLiters) => onEdit((c) => ({ ...c, netLiters }))}
         />
       )}
+      <NumberField
+        label="Stuffing, % more air"
+        value={chamber.stuffingPct}
+        min={0}
+        step={5}
+        unit="%"
+        onChange={(stuffingPct) => onEdit((c) => ({ ...c, stuffingPct }))}
+        className="mb-3"
+      />
       {chamber.load.kind === CHAMBER_LOAD.horn && (
         <p className="text-sm text-stone-500 mb-3">
           Horn loaded: {countText(chamber.load.horn.segments.length, "segment", "segments")} (its

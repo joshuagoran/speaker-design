@@ -22,6 +22,7 @@ export function chamberText(chamber: SpeakerChamber) {
   return [
     formatDims(chamber.dims),
     ventText,
+    chamber.stuffingPct ? `stuffed ${chamber.stuffingPct}%` : null,
     chamber.load.kind === CHAMBER_LOAD.horn ? "horn loaded" : null,
     drivers || "no drivers",
   ]

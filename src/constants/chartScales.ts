@@ -10,20 +10,14 @@ export const FREQ_AXIS_MIN_HZ = 15;
 /** High end of the frequency charts' axis, Hz. */
 export const FREQ_AXIS_MAX_HZ = 20000;
 
-/** Top of every Hi-fi dB chart, so designs and charts compare by eye. */
+/**
+ * Top of every Hi-fi dB chart, so designs and charts compare by eye; the Designer's response chart (2.83 V, 1 m) takes
+ * the same scale.
+ */
 export const HIFI_TOP = 130;
 
 /** Bottom of every Hi-fi dB chart. */
 export const HIFI_BOT = 50;
-
-/**
- * The Designer's response chart, dB SPL at 2.83 V: the Hi-fi response chart's scale, as it shows the same quantity (the
- * PA's 80–135 dB is for its max-output chart: at 2.83 V it would cut off a hi-fi woofer's whole low end).
- */
-export const DESIGNER_DB_TOP = HIFI_TOP;
-
-/** Bottom of the Designer's response chart, dB SPL at 2.83 V. */
-export const DESIGNER_DB_BOT = HIFI_BOT;
 
 /** Every dispersion map spans −90° to +90° off axis, sampled every 5°. */
 export const DISPERSION_ANGLE_MAX_DEG = 90;

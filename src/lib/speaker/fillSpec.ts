@@ -19,7 +19,8 @@ import {
   SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-import { DIRECT_LOAD, channelCounter, lrFilter, speakerIdentity } from "./specParts";
+import { DIRECT_LOAD, channelCounter, lrFilter, speakerIdentity, stuffingPctOf } from "./specParts";
+import { STUFFING_VOLUME_GAIN } from "../pa/calc";
 
 /** A band of the coaxial's passive network: the maker's network isn't modeled, so it carries no filters. */
 const networkBand = (id: SpeakerBand["id"]): SpeakerBand => ({
@@ -44,6 +45,8 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
           at: { xIn: 0, yIn: 0 },
           dims: boxDims,
           netLiters: null,
+          // the Fills model stuffs only a sealed box (fillSystem)
+          stuffingPct: state.boxType === VENT_KIND.vented ? 0 : stuffingPctOf(STUFFING_VOLUME_GAIN),
           vent:
             state.boxType === VENT_KIND.vented
               ? { kind: VENT_KIND.vented, port: { shape: PORT_SHAPE.round, ...portSpec } }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { EMPTY_SPEAKER } from "../../lib/defaults";
@@ -26,6 +26,24 @@ export const emptySpeaker = (): SpeakerSpec => ({
   ...EMPTY_SPEAKER,
 });
 
+/** What the library's row says when a document holds no speaker. */
+const MISSING_SPEAKER_TEXT = "That save holds no speaker";
+
+/**
+ * Whether a library document's `speaker` reads as a spec: an object with a cabinet of chambers and a list of bands.
+ * Its fields are trusted from there: `snapshot` wrote them.
+ */
+function isSavedSpeaker(value: unknown): value is SavedSpeakerData["speaker"] {
+  if (typeof value !== "object" || value === null) return false;
+  const cabinet: unknown = Reflect.get(value, "cabinet");
+  return (
+    typeof cabinet === "object" &&
+    cabinet !== null &&
+    Array.isArray(Reflect.get(cabinet, "chambers")) &&
+    Array.isArray(Reflect.get(value, "bands"))
+  );
+}
+
 /** A list with item `i` replaced by `edit(item)`. */
 const editAt = <T>(list: readonly T[], i: number, edit: (item: T) => T): T[] =>
   list.map((item, k) => (k === i ? edit(item) : item));
@@ -36,7 +54,11 @@ const editAt = <T>(list: readonly T[], i: number, edit: (item: T) => T): T[] =>
  */
 export function useDesigner() {
   const [spec, setSpec] = useState<SpeakerSpec>(emptySpeaker);
-  const response = useMemo(() => speakerResponse(spec), [spec]);
+  // the model reads only the cabinet and the bands (a name edit doesn't run it), a step behind the typing: a horn
+  // chamber takes tens of ms, so the settings stay responsive
+  const cabinet = useDeferredValue(spec.cabinet);
+  const bands = useDeferredValue(spec.bands);
+  const response = useMemo(() => speakerResponse({ cabinet, bands }), [cabinet, bands]);
   const store = useConfigStore(SPEAKERS_COLLECTION);
   const editCabinet = (edit: (cabinet: SpeakerCabinet) => SpeakerCabinet) =>
     setSpec((s) => ({ ...s, cabinet: edit(s.cabinet) }));
@@ -78,8 +100,12 @@ export function useDesigner() {
   };
   /** opens a saved speaker: the document's id and name, and its spec */
   const restore = (c: SavedConfig) => {
-    // boundary: the library's documents come from `snapshot`, so they carry the spec under `speaker`
-    const saved = Reflect.get(c, "speaker") as SavedSpeakerData["speaker"];
+    const saved: unknown = Reflect.get(c, "speaker");
+    // a document without a speaker (written elsewhere): left closed, with a word on the library's row
+    if (!isSavedSpeaker(saved)) {
+      store.setCfgMsg(MISSING_SPEAKER_TEXT);
+      return;
+    }
     setSpec({ ...saved, id: c.id, name: c.name });
   };
   return {

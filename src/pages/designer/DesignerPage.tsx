@@ -7,7 +7,7 @@ import { SettingsLayout } from "../../components/ui/SettingsLayout";
 import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsColumn";
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Button } from "../../components/ui/Button";
-import { FormField } from "../../components/ui/FormField";
+import { TextField } from "../../components/ui/TextField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
 import { ResponseChart } from "../../components/charts/ResponseChart";
@@ -18,8 +18,8 @@ import { keysOf } from "../../lib/records";
 import { DEFAULT_HIFI, DEFAULT_SPEAKER_BAND, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
 import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
 import {
-  DESIGNER_DB_BOT,
-  DESIGNER_DB_TOP,
+  HIFI_BOT,
+  HIFI_TOP,
   FREQ_AXIS_MAX_HZ,
   FREQ_AXIS_MIN_HZ,
 } from "../../constants/chartScales";
@@ -32,6 +32,7 @@ import {
   DESIGNER_START,
   DESIGNER_START_NAMES,
   DESIGNER_TEXT,
+  MODEL_GAP_TEXT,
   type DesignerStart,
 } from "../../constants/designer";
 import { SPEAKER_BAND } from "../../constants/speakerSpec";
@@ -88,7 +89,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
     low: pal.muted,
     mid: pal.magenta,
     high: pal.cyan,
-    air: pal.cyan,
+    // the top octave in the brand's yellow accent: drawn under the sum, it reads by its legend
+    air: pal.yellow,
   };
   const usedIds = spec.bands.map((b) => b.id);
   const nextBandId = BAND_IDS.find((id) => !usedIds.includes(id));
@@ -145,8 +147,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
             <ResponseChart
               fmin={FREQ_AXIS_MIN_HZ}
               fmax={FREQ_AXIS_MAX_HZ}
-              top={DESIGNER_DB_TOP}
-              bot={DESIGNER_DB_BOT}
+              top={HIFI_TOP}
+              bot={HIFI_BOT}
               step={10}
               yLabel={DESIGNER_TEXT.yLabel}
               series={[
@@ -162,7 +164,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                   : []),
                 ...response.bands.map((b) => ({
                   // a band drawn only where it is on the chart: below the floor it would run along the axis
-                  curve: b.curve.filter((o) => o.spl >= DESIGNER_DB_BOT),
+                  curve: b.curve.filter((o) => o.spl >= HIFI_BOT),
                   label: BAND_NAMES[b.id],
                   stroke: bandStroke[b.id],
                   tint: "transparent",
@@ -171,6 +173,11 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
               marks={fbMarks}
             />
             {response.bands.length === 0 && <Notice>{DESIGNER_TEXT.noBands}</Notice>}
+            {response.gaps.length > 0 && (
+              <Notice>
+                Not modeled: {[...new Set(response.gaps)].map((g) => MODEL_GAP_TEXT[g]).join("; ")}.
+              </Notice>
+            )}
             <StatTileGrid tiles={tiles} className="mt-5 mb-3" />
             <p className={`${READING_WIDTH} text-sm text-stone-500`}>{DESIGNER_TEXT.modelNote}</p>
           </section>
@@ -181,15 +188,12 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
           {section(
             "speaker",
             <>
-              <FormField label="Name" htmlFor="designer-name">
-                <input
-                  id="designer-name"
-                  value={spec.name}
-                  maxLength={60}
-                  onChange={(e) => designer.setName(e.target.value)}
-                  className="w-full px-3 py-2 rounded border border-stone-300 bg-panel text-sm"
-                />
-              </FormField>
+              <TextField
+                label="Name"
+                value={spec.name}
+                maxLength={60}
+                onChange={designer.setName}
+              />
               <SelectField
                 label="Start from"
                 options={startOptions}

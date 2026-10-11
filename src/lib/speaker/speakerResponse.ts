@@ -24,10 +24,10 @@ import type {
 import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
 import { hornModel } from "../acoustics/hornModel";
 import { boxModel, closedBox } from "../pa/calc";
-import { HIFI_STUFFING_GAIN, logSpacedFrequencies, passiveRadiatorBox } from "../hifi/hifi";
+import { logSpacedFrequencies, passiveRadiatorBox } from "../hifi/hifi";
 import { HIFI_PASSIVES, HIFI_WAVEGUIDES, HORN_OPTIONS, passiveRadiatorMassMax } from "../data";
 import { byId } from "../tables";
-import { chamberNetLiters, chamberVentModel } from "./chamberAir";
+import { chamberNetLiters, chamberVentModel, stuffedLiters } from "./chamberAir";
 import { hornDesignOf } from "./hornDesign";
 import { coneParts, hfParts, isConeKind, type ConeParts } from "./driverParts";
 import { filtersTransfer } from "./bandFilter";
@@ -36,6 +36,7 @@ import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales"
 import {
   CHAMBER_LOAD,
   DRIVER_KIND,
+  ONE_WATT_VOLTS,
   SPEAKER_MODEL_GAP,
   SPEAKER_RESPONSE_VOLTS,
   VENT_KIND,
@@ -56,9 +57,6 @@ const GRID = { fmin: FREQ_AXIS_MIN_HZ, fmax: FREQ_AXIS_MAX_HZ, N: POINTS };
 
 /** A band's level, dB: the mean of its curve where it is within this much of its highest point. */
 const PASSBAND_DB = 3;
-
-/** The voltage the datasheets' 1 W sensitivity is at: 1 W into 8 Ω. */
-const ONE_WATT_VOLTS = 2.83;
 
 /** A pressure as a complex number from its level, dB, and its phase, radians. */
 const pressureOf = (db: number, phase = 0): Complex => scale(phasor(phase), Math.pow(10, db / 20));
@@ -91,9 +89,13 @@ function chamberCones(chamber: SpeakerChamber) {
   return { first, alike, count: cones.reduce((sum, d) => sum + d.count, 0) };
 }
 
+/** Whether a size or frequency the models divide by is a positive number. */
+const positive = (x: number) => Number.isFinite(x) && x > 0;
+
 /**
- * The chamber's cones through its box model at `volts`: sealed (lightly stuffed, as the Hi-fi box), vented, passive
- * radiators, or the horn engine for a horn built into the box. The net air and the tuning come with it.
+ * The chamber's cones through its box model at `volts`: sealed, vented, passive radiators, or the horn engine for a
+ * horn built into the box, each on the chamber's air with its stuffing. The net air and the tuning come with it. A
+ * size the models can't run on (no air, no port area or length, no cones) is the `noModel` gap.
  */
 function modelChamber(
   cabinet: SpeakerCabinet,
@@ -111,6 +113,10 @@ function modelChamber(
   if (!cones) return empty([]);
   if (!cones.alike) return empty([SPEAKER_MODEL_GAP.mixedDrivers]);
   if (!parts) return empty([SPEAKER_MODEL_GAP.unknownDriver]);
+  /** the air the box acts like: the net air and the stuffing */
+  const airL = stuffedLiters(chamber, netLiters);
+  if (!positive(netLiters) || !positive(airL) || !positive(cones.count))
+    return empty([SPEAKER_MODEL_GAP.noModel]);
   const done = (
     curve: readonly { raw: number; rawPhase?: number }[],
     fb: number | null,
@@ -133,7 +139,7 @@ function modelChamber(
   const { vent } = chamber;
   switch (vent.kind) {
     case VENT_KIND.sealed: {
-      const m = closedBox(ts, netLiters * HIFI_STUFFING_GAIN, null, null, volts, {
+      const m = closedBox(ts, airL, null, null, volts, {
         ...GRID,
         hpOrder: 4,
         lpOrder: 4,
@@ -143,28 +149,36 @@ function modelChamber(
     }
     case VENT_KIND.vented: {
       const port = chamberVentModel(cabinet, chamber);
+      if (
+        !port ||
+        !positive(port.areaIn2) ||
+        !positive(port.lenIn) ||
+        !positive(port.openings) ||
+        !Number.isFinite(port.endCorrectionIn)
+      )
+        return empty([SPEAKER_MODEL_GAP.noModel]);
       // no filter here: the band's filters come after (a 1 Hz corner leaves `spl` as `raw`; only `raw` is read)
-      const m =
-        port &&
-        boxModel(ts, netLiters, port.areaIn2, port.lenIn, 1, volts, undefined, {
-          ...GRID,
-          nPorts: port.openings,
-          ecIn: port.endCorrectionIn,
-          phase: true,
-        });
+      const m = boxModel(ts, airL, port.areaIn2, port.lenIn, 1, volts, undefined, {
+        ...GRID,
+        nPorts: port.openings,
+        ecIn: port.endCorrectionIn,
+        phase: true,
+      });
       return m ? done(m.curve, m.Fb, null) : empty([SPEAKER_MODEL_GAP.noModel]);
     }
     case VENT_KIND.radiator: {
       const { radiators } = vent;
       const drv = byId(HIFI_PASSIVES, radiators.id);
       if (!drv) return empty([SPEAKER_MODEL_GAP.unknownRadiator]);
+      if (!positive(radiators.n) || !(radiators.addG >= 0))
+        return empty([SPEAKER_MODEL_GAP.noModel]);
       // the added mass kept under the most the radiator takes, as the Hi-fi page keeps it (lib/hifi/boxLayout)
       const pr = {
         drv,
         n: radiators.n,
         addG: Math.min(radiators.addG, passiveRadiatorMassMax(drv)),
       };
-      const m = passiveRadiatorBox(ts, netLiters, pr, 1, volts, undefined, {
+      const m = passiveRadiatorBox(ts, airL, pr, 1, volts, undefined, {
         ...GRID,
         phase: true,
       });
@@ -203,6 +217,10 @@ function passbandDb(curve: readonly FrequencyPoint[]) {
   return pass.reduce((sum, o) => sum + o.spl, 0) / pass.length;
 }
 
+/** Whether a band's (or a feed's) filter corners are positive frequencies. */
+const filtersOk = ({ highpass, lowpass }: SpeakerFeed) =>
+  (!highpass || positive(highpass.hz)) && (!lowpass || positive(lowpass.hz));
+
 /** Options: the filters ahead of the speaker (a system source's, the sub crossover), on every band. */
 export interface SpeakerResponseOptions {
   feed?: SpeakerFeed;
@@ -238,6 +256,10 @@ export function speakerResponse(
         gaps.push(SPEAKER_MODEL_GAP.noHf);
         continue;
       }
+      if (!positive(driver.count) || !positive(hf.imp)) {
+        gaps.push(SPEAKER_MODEL_GAP.noModel);
+        continue;
+      }
       addTo(
         sums,
         band,
@@ -249,11 +271,19 @@ export function speakerResponse(
     return { ...result, gaps };
   });
   const bands: SpeakerBandResponse[] = [];
+  const gaps: SpeakerModelGap[] = [];
   /** the bands' pressures summed */
   let total = freqs.map(() => complex(0));
+  // the feed's filters reach every band: a corner that isn't a positive frequency leaves them all out
+  const feedOk = filtersOk(feed);
+  if (!feedOk) gaps.push(SPEAKER_MODEL_GAP.badFilter);
   for (const band of spec.bands) {
     const drivers = sums.get(band.id);
-    if (!drivers) continue;
+    if (!drivers || !feedOk) continue;
+    if (!filtersOk(band) || !Number.isFinite(band.levelDb)) {
+      gaps.push(SPEAKER_MODEL_GAP.badFilter);
+      continue;
+    }
     const gain = Math.pow(10, band.levelDb / 20);
     const out = drivers.map((p, i) =>
       scale(
@@ -269,5 +299,6 @@ export function speakerResponse(
     sum: total.map((p, i) => ({ f: freqs[i], spl: levelOf(p) })),
     bands,
     chambers,
+    gaps,
   };
 }

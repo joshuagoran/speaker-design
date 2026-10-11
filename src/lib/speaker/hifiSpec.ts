@@ -15,6 +15,7 @@ import type {
 } from "../../types";
 import {
   driverLayout,
+  HIFI_STUFFING_GAIN,
   hifiBox,
   hifiGridTop,
   hifiPortElbows,
@@ -28,13 +29,14 @@ import {
   DRIVER_KIND,
   FRONT_END_KIND,
   HORN_PLACEMENT,
+  ONE_WATT_VOLTS,
   PORT_SHAPE,
   SOURCE_ROLE,
   SPEAKER_BAND,
   SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-import { DIRECT_LOAD, channelCounter, lrFilter, speakerIdentity } from "./specParts";
+import { DIRECT_LOAD, channelCounter, lrFilter, speakerIdentity, stuffingPctOf } from "./specParts";
 
 /**
  * The box's vent, by box kind. A round port carries its elbows as the model works them out (the fewest that fit the
@@ -138,7 +140,7 @@ function hifiBandParts(
   );
   if (!box) return { subsonic: null, trimDb: 0 };
   /** the woofer's passband level at 2.83 V, as hifiSystemFromBox reads it */
-  const refW = box.m.ref - 20 * Math.log10(box.V / 2.83);
+  const refW = box.m.ref - 20 * Math.log10(box.V / ONE_WATT_VOLTS);
   const { trim } = tweeterLevelInBox(
     state.tweeter,
     {
@@ -182,6 +184,8 @@ export function speakerFromHifi(
           at: { xIn: 0, yIn: 0 },
           dims: fit.dim,
           netLiters: null,
+          // the Hi-fi engine stuffs only a sealed box (hifiBox)
+          stuffingPct: state.boxType === VENT_KIND.sealed ? stuffingPctOf(HIFI_STUFFING_GAIN) : 0,
           vent: hifiVent(state, fit),
           load: DIRECT_LOAD,
           drivers: hifiDrivers(state, fit),

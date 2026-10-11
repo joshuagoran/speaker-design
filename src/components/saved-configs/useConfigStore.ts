@@ -26,6 +26,16 @@ const rememberSignedIn = (yes: boolean) => {
   }
 };
 
+/** The characters and length of a new document id, as Firestore's own auto ids. */
+const DOC_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const DOC_ID_LENGTH = 20;
+/** A new document id, random as Firestore's auto ids (both stores take any id). */
+const newDocId = () =>
+  Array.from(
+    crypto.getRandomValues(new Uint8Array(DOC_ID_LENGTH)),
+    (b) => DOC_ID_CHARS[b % DOC_ID_CHARS.length],
+  ).join("");
+
 /** What the UI holds before Firebase is fetched: the same sign-in calls, plus a prefetch for the sign-in button. */
 export interface FirebaseLoader {
   prefetch: () => void;
@@ -162,7 +172,12 @@ export function useConfigStore(collection: string) {
   };
   /** a new saved configuration */
   const save = (name: string, data: SavedConfigData) => write(undefined, name, data, "Saved");
-  /** a saved configuration's data replaced by `data` (its name kept as given) */
+  /** a new saved configuration under an id made here, so the caller can pick it: that id, or null when it fails */
+  const create = async (name: string, data: SavedConfigData) => {
+    const id = newDocId();
+    return (await write(id, name, data, "Saved")) ? id : null;
+  };
+  /** a saved configuration's data replaced by `data`, under `name` */
   const overwrite = (id: string, name: string, data: SavedConfigData) =>
     write(id, name, data, "Saved");
   /** a saved configuration under a new name, its data kept */
@@ -189,6 +204,7 @@ export function useConfigStore(collection: string) {
     signIn,
     signOut,
     save,
+    create,
     overwrite,
     rename,
     duplicate,

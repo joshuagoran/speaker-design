@@ -7,6 +7,7 @@
 // Detail rows (label / value / caption): a caption must stay inside its row, right of the label, at every width
 // checked here and on a desktop window. On Hi-fi (desktop) a tweeter that needs a taller box raises the Height slider
 // only while it is chosen: switching back brings the box back (the size the user set is kept).
+// On the Designer (360 px, a tablet, a desktop), every fold open: nothing past the settings pane's edge.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
@@ -202,6 +203,57 @@ for (const width of [1024, 1600]) {
     for (const s of m.captions) failures.push(`${name} ${v || "#planner"}: detail caption ${s}`);
   }
   if (!notes) failures.push(`${name}: no detail-row captions to check`);
+  for (const e of errs) failures.push(`${name}: page error: ${e}`);
+  await ctx.close();
+}
+
+// The Designer started from the PA design's mid/high box (or tower), every fold open: nothing past the settings
+// pane's edge and no sideways page scroll, on a 360 px phone, a tablet (the two panes from md up) and a desktop.
+for (const [width, phone] of [
+  [360, true],
+  [768, true],
+  [1024, false],
+]) {
+  const name = `designer ${width}`;
+  const ctx = await browser.newContext({
+    viewport: { width, height: 900 },
+    isMobile: phone,
+    hasTouch: phone,
+  });
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on("pageerror", (e) => errs.push(e.message));
+  await p.goto(page + "#designer");
+  await p.waitForFunction(() => document.querySelector("aside"), null, { timeout: 30000 });
+  const closed = p.locator("aside button[aria-expanded=false]");
+  for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().click();
+  const start = p.getByLabel("Start from");
+  const options = await start.locator("option").allTextContents();
+  const many = options.find((o) => /tower|mid\/high/i.test(o));
+  if (many) {
+    await start.selectOption({ label: many });
+    await p.getByRole("button", { name: "Start over from this" }).click();
+  }
+  await p.waitForTimeout(600);
+  const m = await p.evaluate(() => {
+    const aside = document.querySelector("aside");
+    const edge = aside ? aside.getBoundingClientRect().right : Infinity;
+    const past = aside
+      ? [...aside.querySelectorAll("input, select, button")]
+          .filter((e) => e.getBoundingClientRect().right > edge + 0.5)
+          .map(
+            (e) =>
+              `${e.tagName.toLowerCase()} "${(e.getAttribute("aria-label") || e.textContent || e.id).trim().slice(0, 30)}"`,
+          )
+      : [];
+    return {
+      sw: document.documentElement.scrollWidth,
+      iw: window.innerWidth,
+      past,
+    };
+  });
+  if (m.sw > m.iw) failures.push(`${name}: page scrolls sideways (${m.sw} > ${m.iw} px)`);
+  for (const s of m.past) failures.push(`${name}: past the settings pane's edge: ${s}`);
   for (const e of errs) failures.push(`${name}: page error: ${e}`);
   await ctx.close();
 }

@@ -2,11 +2,20 @@
 // share one wall, the lower (or left) chamber's; and its air and vent as the box models take them. Pure.
 //
 // Symbols kept short are the established ones: t is the wall's thickness, in (as lib/pa/calc and lib/hifi name it).
-import type { Dims2, SpeakerCabinet, SpeakerChamber } from "../../types";
+import type { Dims2, PortStyle, SpeakerCabinet, SpeakerChamber } from "../../types";
 import { HIFI_NET_SHARE, hifiRoundEndCorrection, hifiSlotEndCorrection } from "../hifi/hifi";
-import { ductDividerIn, sideDuctEndCorrection } from "../pa/calc";
+import {
+  ductDividerIn,
+  rectangleEndCorrection,
+  sideDuctEndCorrection,
+  slotInnerEndCorrection,
+} from "../pa/calc";
+import { subTubeEndCorrection, type TubeDriver } from "../pa/tubes";
+import { ELBOW_COUNTS, type ElbowCount } from "../tubeFold";
+import { SUB_OPTIONS } from "../data";
+import { byId } from "../tables";
 import { LITERS_PER_CUBIC_IN } from "../../constants/units";
-import { PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
+import { DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 
 /** How close two edges count as touching, in. */
 const TOUCH_IN = 1e-9;
@@ -42,6 +51,20 @@ export function chamberClearFace(
   return { w: dims.w - (left ? 1 : 2) * t, h: dims.h - (below ? 1 : 2) * t };
 }
 
+/** The PA port styles the tube rule reads: tubes in the baffle's corners, or in a row along the bottom. */
+const PA_CORNER_TUBES = "round4" satisfies PortStyle;
+const PA_ROW_TUBES = "round2" satisfies PortStyle;
+
+/** The chamber's PA sub, as the tube rule reads it (its size and depth); null when its cone isn't a PA sub. */
+function tubeDriverOf(chamber: SpeakerChamber): TubeDriver | null {
+  const driver = chamber.drivers.find((d) => d.kind === DRIVER_KIND.sub);
+  return (driver && byId(SUB_OPTIONS, driver.driverId)) ?? null;
+}
+
+/** A stored elbow count as the tube rule takes it: the nearest it knows. */
+const elbowCountOf = (elbows: number): ElbowCount =>
+  ELBOW_COUNTS.reduce((best, e) => (Math.abs(e - elbows) < Math.abs(best - elbows) ? e : best));
+
 /** The parts of a cabinet the air and vent rules read. */
 type CabinetAir = Pick<SpeakerCabinet, "chambers" | "panel" | "insetIn">;
 
@@ -60,10 +83,11 @@ export interface ChamberVentModel {
 }
 
 /**
- * A vented chamber's vent, null for any other: each port shape by the rule of the engine it comes from.
- * - Round tubes (Hi-fi): 1.46 r and a sharp bend's correction per elbow (absent elbows: straight).
- * - A slot (Hi-fi): one opening along the bottom, as wide as the chamber's clear face unless it sets its own width; its
- *   shelf takes air too.
+ * A vented chamber's vent, null for any other: each port by the rule of the engine it comes from.
+ * - Round tubes: the Hi-fi rule (1.46 r and a sharp bend's correction per elbow; absent elbows: straight), or the PA
+ *   tube rule for `flared` tubes in a PA sub's chamber (lib/pa/tubes subTubeEndCorrection).
+ * - A slot: one opening along the bottom, as wide as the chamber's clear face unless it sets its own width; its shelf
+ *   takes air too. The Hi-fi rule, or the PA letterbox's where it has `fins`.
  * - Side ducts (PA): `n` ducts up the front edges, the dividers' height off each; their inner walls take air too.
  */
 export function chamberVentModel(
@@ -78,12 +102,34 @@ export function chamberVentModel(
   switch (port.shape) {
     case PORT_SHAPE.slot: {
       const w = port.w ?? face.w;
+      /** the shelf over it takes air too */
+      const volumeL = (port.h + t) * w * port.len * LITERS_PER_CUBIC_IN;
+      if (port.fins !== undefined) {
+        // the PA letterbox (lib/pa/calc ventGeometry): its fins take their thickness off the width; its mouth on the
+        // floor (which mirrors it), its inner end as the PA slot's, straight or folded
+        const open = w - port.fins * t;
+        return {
+          areaIn2: port.h * open,
+          lenIn: port.len,
+          openings: 1,
+          endCorrectionIn:
+            rectangleEndCorrection(2 * port.h, open) +
+            slotInnerEndCorrection(
+              dims,
+              { slotH: port.h, len: port.len },
+              t,
+              cabinet.insetIn,
+              !!port.folded,
+            ),
+          volumeL,
+        };
+      }
       return {
         areaIn2: port.h * w,
         lenIn: port.len,
         openings: 1,
         endCorrectionIn: hifiSlotEndCorrection(dims, t, { h: port.h, w, len: port.len }),
-        volumeL: (port.h + t) * w * port.len * LITERS_PER_CUBIC_IN,
+        volumeL,
       };
     }
     case PORT_SHAPE.duct: {
@@ -98,12 +144,25 @@ export function chamberVentModel(
       };
     }
     default: {
-      const areaIn2 = port.n * Math.PI * Math.pow(port.dia / 2, 2);
+      // no area for a diameter that is not positive (its square would hide it)
+      const areaIn2 = port.dia > 0 ? port.n * Math.PI * Math.pow(port.dia / 2, 2) : 0;
+      /** the sub whose depth stops a flared tube's run (the PA tube rule reads it) */
+      const sub = port.flared ? tubeDriverOf(chamber) : null;
       return {
         areaIn2,
         lenIn: port.len,
         openings: port.n,
-        endCorrectionIn: hifiRoundEndCorrection(port, port.elbows ?? 0),
+        endCorrectionIn: sub
+          ? subTubeEndCorrection(
+              dims,
+              port.corners ? PA_CORNER_TUBES : PA_ROW_TUBES,
+              { nt: port.n, dia: port.dia, len: port.len },
+              t,
+              cabinet.insetIn,
+              sub,
+              elbowCountOf(port.elbows ?? 0),
+            )
+          : hifiRoundEndCorrection(port, port.elbows ?? 0),
         volumeL: areaIn2 * port.len * LITERS_PER_CUBIC_IN,
       };
     }
@@ -128,3 +187,7 @@ export function chamberNetLiters(
   const ventL = chamberVentModel(cabinet, chamber)?.volumeL ?? 0;
   return Math.max(1, clearL * HIFI_NET_SHARE - displacementL - ventL);
 }
+
+/** The air the box models take for a chamber of `netLiters`: its stuffing makes it act `stuffingPct` % bigger. */
+export const stuffedLiters = (chamber: Pick<SpeakerChamber, "stuffingPct">, netLiters: number) =>
+  netLiters * (1 + chamber.stuffingPct / 100);

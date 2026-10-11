@@ -66,6 +66,9 @@ export const PORT_SHAPE = {
   duct: string;
 };
 
+/** The fins across the PA sub's letterbox slot (lib/pa/calc ventGeometry splits it in three). */
+export const PA_SLOT_FINS = 2;
+
 /** How a chamber's drivers meet the air, by id: straight (a direct radiator), or through a horn in the box. */
 export const CHAMBER_LOAD = {
   direct: "direct",
@@ -135,12 +138,17 @@ export const SPEAKER_MODEL_GAP = {
   noHf: "noHf",
   /** a passive radiator id that isn't in the catalog */
   unknownRadiator: "unknownRadiator",
-  /** the box model can't run on these sizes (no port area or length, no air) */
+  /** the box model can't run on these sizes (no air, port area or length, cones or radiators) */
   noModel: "noModel",
+  /** a band's filter corner (or the feed's) isn't a positive frequency */
+  badFilter: "badFilter",
 } as const;
 
-/** The drive the speaker model works at, V RMS: 2.83 V, 1 W into 8 Ω, as the Hi-fi response charts. */
-export const SPEAKER_RESPONSE_VOLTS = 2.83;
+/** The voltage of 1 W into 8 Ω, V RMS: what datasheets quote a 1 W sensitivity at (the engines round √8 to it). */
+export const ONE_WATT_VOLTS = 2.83;
+
+/** The drive the speaker model works at, V RMS: 1 W into 8 Ω, as the Hi-fi response charts. */
+export const SPEAKER_RESPONSE_VOLTS = ONE_WATT_VOLTS;
 
 /** The saved speakers' collection under users/{uid} (the speaker library, next to `configs` and `hifiConfigs`). */
 export const SPEAKERS_COLLECTION = "speakers";

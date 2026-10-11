@@ -39,7 +39,11 @@ import type {
   SubDriver,
 } from "../types";
 import { CATALOG_TABLE_NAMES } from "../constants/catalogTables";
-import { DUCT_DIVIDER_DEFAULT } from "../constants/panelSizes";
+import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../constants/panelSizes";
+import { HIFI_DRIVE } from "../constants/hifiEngine";
+import { SPEAKER_BAND, VENT_KIND } from "../constants/speakerSpec";
+import { HIFI_STUFFING_GAIN } from "./hifi/hifi";
+import { DIRECT_LOAD, stuffingPctOf } from "./speaker/specParts";
 import { DEFAULT_BACK_JOINT } from "../constants/bracing";
 import { HORN_MOUNT_DEFAULT } from "../constants/hornMount";
 
@@ -187,13 +191,17 @@ export const DEFAULT_DRIVER_IDS = {
   coaxial: DEFAULT_FILL.driver.id,
 } as const satisfies { [K in DriverKind]: SpeakerDriverParts[K]["id"] };
 
-/** A chamber the Designer adds: sealed, the Hi-fi starting box's size, no drivers yet; its net air from the size. */
+/**
+ * A chamber the Designer adds: sealed and stuffed as the Hi-fi engine stuffs one, the Hi-fi starting box's size, no
+ * drivers yet; its net air from the size.
+ */
 export const DEFAULT_SPEAKER_CHAMBER: SpeakerChamber = {
   at: { xIn: 0, yIn: 0 },
   dims: DEFAULT_HIFI.boxDims,
   netLiters: null,
-  vent: { kind: "sealed" },
-  load: { kind: "direct" },
+  stuffingPct: stuffingPctOf(HIFI_STUFFING_GAIN),
+  vent: { kind: VENT_KIND.sealed },
+  load: DIRECT_LOAD,
   drivers: [],
 };
 
@@ -202,7 +210,7 @@ export const DEFAULT_SPEAKER_BAND: Omit<SpeakerBand, "id"> = {
   highpass: null,
   lowpass: null,
   levelDb: 0,
-  drive: "active",
+  drive: HIFI_DRIVE.active,
 };
 
 /**
@@ -212,11 +220,11 @@ export const DEFAULT_SPEAKER_BAND: Omit<SpeakerBand, "id"> = {
 export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
   cabinet: {
     chambers: [DEFAULT_SPEAKER_CHAMBER],
-    panel: { nominal: DEFAULT_PA.panel, material: "ply", thicknessIn: DEFAULT_PA.wall },
+    panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: DEFAULT_PA.wall },
     insetIn: 0,
     roundoverIn: 0,
     tiltDeg: 0,
   },
-  bands: [{ id: "low", ...DEFAULT_SPEAKER_BAND }],
+  bands: [{ id: SPEAKER_BAND.low, ...DEFAULT_SPEAKER_BAND }],
   look: { cabFinish: DEFAULT_PA.cabFinish, baffleColor: DEFAULT_PA.baffleColor },
 };
