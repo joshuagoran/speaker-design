@@ -108,7 +108,7 @@ test("Improve's further finalists: a Louder card the first batch by the estimate
 // about 24 s alone; the full suite runs files in parallel, so it needs room past the 30 s default
 test(
   "Fully optimize at 110 lb, locked: the cards an unbounded re-check gives, in a few rounds",
-  { timeout: 90_000 },
+  { timeout: 60_000 },
   () => {
     // by the estimate, scores of light block's wide boxes are under 110 lb that the rule puts over; once the rule puts one
     // over, the slot weighs the boxes near the limit by the rule, so the grid doesn't hand them over one by one. The
