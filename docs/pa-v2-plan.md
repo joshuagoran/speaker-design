@@ -101,7 +101,7 @@ The planner's horn engine (`src/lib/acoustics/`, 1-D) modeled the boxes in the m
 at 1 m, half space. The limit is amp power (sub 800 W, mid 450 W per driver), Xmax or vent speed (23.5 m/s). There is
 no power compression.
 
-![Mock-up of the sub bin, mid box and HF](pa-v2-boxes.svg)
+![Top sections of the sub bin and the mid box](pa-v2-boxes.svg)
 
 | Frequency | Sub bin, 2 × 18NBX100 | Same, plain vented | Mid box, 2 × 10MB600 | Same, plain vented | 2 mid boxes |
 | --------- | --------------------- | ------------------ | -------------------- | ------------------ | ----------- |
