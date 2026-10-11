@@ -1456,12 +1456,16 @@ export interface HornSegment {
   length: number;
 }
 
-/** A rear-chamber vent. */
+/** A rear-chamber vent: a straight duct from the chamber to its exit. */
 export interface HornPort {
-  /** the total open area, cm² (all openings together) */
+  /** the total open area, cm² (all openings together; Hornresp's Ap) */
   area: number;
-  /** the effective (acoustic) length, cm: the physical length plus both end corrections */
-  effectiveLength: number;
+  /**
+   * the vent's length, cm: its physical length plus the inner end's correction (Hornresp's Lpt with its end correction
+   * off). The exit's radiation load adds the outer end's. With the radiation load off (the box models' mode) nothing
+   * adds it, so pass the full effective length there: physical length plus both end corrections.
+   */
+  length: number;
 }
 
 /** A horn box's rear chamber: its net air, L, and its vent; sealed when the vent is null. */
@@ -1495,8 +1499,14 @@ export interface HornDesign {
 export interface HornPoint {
   /** frequency, Hz */
   f: number;
-  /** SPL at 1 m in the design's solid angle, all boxes together, dB */
+  /** SPL at 1 m in the design's solid angle, all boxes together, dB: on axis, each source a point source */
   spl: number;
+  /**
+   * SPL at 1 m as Hornresp shows it, dB: each source's radiated power spread evenly over the solid angle (no
+   * directivity). It equals `spl` while the mouth is small against the wavelength; above that it falls below by the
+   * mouth's directivity index. Equal to `spl` with the radiation load off.
+   */
+  powerSpl: number;
   /** the phase of the summed pressure, radians, unwrapped */
   phase: number;
   /** group delay of the summed pressure, ms */
@@ -1515,7 +1525,7 @@ export interface HornPoint {
 export interface HornModel {
   /** one point per frequency asked for */
   curve: HornPoint[];
-  /** Fb: the rear chamber and vent's tuning on their own, Hz; null when sealed */
+  /** Fb: the rear chamber and vent's tuning on their own (where the vent's reactance cancels the chamber's), Hz; null when sealed */
   fb: number | null;
 }
 

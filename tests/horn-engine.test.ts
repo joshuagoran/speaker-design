@@ -330,11 +330,12 @@ test("with no horn and no radiation load it is the vented box model", () => {
     N: 160,
   });
   assert.ok(vented);
-  // the box model's effective vent length (m), end corrections included
+  // the box model's effective vent length (m), both end corrections included: with the radiation load off the vent is
+  // lumped, and nothing adds the outer end's
   const { Leff: effectiveLength } = ventTuning(liters, ventSquareInches, ventInches);
   const port = {
     area: ventSquareInches * SQUARE_INCH_TO_CM2,
-    effectiveLength: effectiveLength * M_TO_CM,
+    length: effectiveLength * M_TO_CM,
   };
   const freqs = vented.curve.map((p) => p.f);
   const horn = modelOf(directRadiator(driver, { liters, port }), freqs, volts, {
@@ -428,7 +429,7 @@ test("a design with a zero size is not modeled", () => {
   assert.ok(hornModel(good, freqs, 10));
   assert.strictEqual(hornModel({ ...good, rear: { liters: 0, port: null } }, freqs, 10), null);
   assert.strictEqual(
-    hornModel({ ...good, rear: { liters: 30, port: { area: 0, effectiveLength: 20 } } }, freqs, 10),
+    hornModel({ ...good, rear: { liters: 30, port: { area: 0, length: 20 } } }, freqs, 10),
     null,
   );
   assert.strictEqual(
