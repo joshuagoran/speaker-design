@@ -117,4 +117,8 @@ export const DESIGNER_TEXT = {
   maxNote:
     "Each band at its amp's full power, up to its first limit: cone travel, port air speed (each vent's own limit, set in its chamber), radiator travel, the driver's program rating (2 × AES) or the amp. A band's max is for music: one drive for the whole band. The sum takes one input for every band, and a band limits it only where the band carries signal.",
   chamber: "Chamber",
+  noFilter: "None",
+  inputRange: "Input range",
+  inputHint: "From the system, e.g. the crossover to a sub. Not part of the box.",
+  inputOff: "Off",
 } as const;

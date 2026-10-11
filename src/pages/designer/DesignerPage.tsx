@@ -16,7 +16,13 @@ import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTile
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
-import { DEFAULT_HIFI, DEFAULT_SPEAKER_BAND, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
+import {
+  DEFAULT_HIFI,
+  DEFAULT_PA,
+  DEFAULT_SPEAKER_BAND,
+  DEFAULT_SPEAKER_CHAMBER,
+} from "../../lib/defaults";
+import { Card } from "../../components/ui/Card";
 import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
 import {
   HIFI_BOT,
@@ -41,7 +47,8 @@ import {
 import { SPEAKER_BAND } from "../../constants/speakerSpec";
 import { ChamberSettings } from "./ChamberSettings";
 import { BandSettings } from "./BandSettings";
-import { bandText, chamberText, countText } from "./designerText";
+import { FilterFields } from "./FilterFields";
+import { bandText, chamberText, countText, inputText } from "./designerText";
 import { bandChips, chamberChips } from "./designerChips";
 import { paStarts, startSpeaker } from "./designerStarts";
 import type { Designer } from "./useDesigner";
@@ -106,7 +113,13 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
   const summaries: Record<DesignerSettingsSection, string> = {
     speaker: `${spec.name} · ${countText(chambers.length, "chamber", "chambers")} · ${countText(spec.bands.length, "band", "bands")}`,
     chambers: chambers.map(chamberText).join("; "),
-    bands: spec.bands.map(bandText).join(" · "),
+    bands: [
+      countText(spec.bands.length, "band", "bands"),
+      inputText(spec.input),
+      ...spec.bands.map(bandText),
+    ]
+      .filter(Boolean)
+      .join(" · "),
   };
   const section = (id: DesignerSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -314,6 +327,17 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
           {section(
             "bands",
             <>
+              <Card className="mb-3">
+                <h4 className="font-semibold mb-1">{DESIGNER_TEXT.inputRange}</h4>
+                <p className="text-xs text-stone-500 mb-2">{DESIGNER_TEXT.inputHint}</p>
+                <FilterFields
+                  filters={spec.input}
+                  // a new corner at the PA's crossover to its subs
+                  newCornerHz={DEFAULT_PA.xoLo}
+                  offName={DESIGNER_TEXT.inputOff}
+                  onEdit={designer.editInput}
+                />
+              </Card>
               {spec.bands.map((band, i) => (
                 <BandSettings
                   key={band.id}

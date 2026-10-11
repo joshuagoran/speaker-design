@@ -30,6 +30,18 @@ export function chamberText(chamber: SpeakerChamber) {
     .join(", ");
 }
 
+/**
+ * The input range in a few words, as the bands fold's summary says it: "input 120 Hz LR24 up", "input up to 120 Hz
+ * LR24", "input 120 Hz LR24 to 2000 Hz LR24"; null when it is the full range.
+ */
+export function inputText({ highpass, lowpass }: SpeakerSpec["input"]) {
+  if (highpass && lowpass)
+    return `input ${formatHz(highpass.hz)} ${highpass.type} to ${formatHz(lowpass.hz)} ${lowpass.type}`;
+  if (highpass) return `input ${formatHz(highpass.hz)} ${highpass.type} up`;
+  if (lowpass) return `input up to ${formatHz(lowpass.hz)} ${lowpass.type}`;
+  return null;
+}
+
 /** A band in one line: its name, filters, level and amp power. */
 export function bandText(band: SpeakerBand) {
   const filters = [

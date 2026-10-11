@@ -36,7 +36,14 @@ import {
   SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-import { DIRECT_LOAD, channelCounter, lrFilter, speakerIdentity, stuffingPctOf } from "./specParts";
+import {
+  DIRECT_LOAD,
+  NO_FILTERS,
+  channelCounter,
+  lrFilter,
+  speakerIdentity,
+  stuffingPctOf,
+} from "./specParts";
 
 /**
  * The box's vent, by box kind. A round port carries its elbows as the model works them out (the fewest that fit the
@@ -219,6 +226,8 @@ export function speakerFromHifi(
         drive === HIFI_DRIVE.passive ? state.wooferAmpWatts : state.tweeterAmpWatts,
       ),
     ],
+    // the Hi-fi page's sub highpass is the system's (systemFromHifi): the input range starts off
+    input: NO_FILTERS,
     look,
   };
 }

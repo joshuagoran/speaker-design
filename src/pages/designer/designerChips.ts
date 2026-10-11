@@ -11,7 +11,7 @@ import type {
   SpeakerSpec,
 } from "../../types";
 import { formatHz, formatWatts } from "../../lib/format";
-import { BAND_NAMES } from "../../constants/designer";
+import { BAND_NAMES, DESIGNER_TEXT } from "../../constants/designer";
 import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
 import { driverName } from "./designerParts";
 
@@ -26,7 +26,7 @@ const pctOf = (p: LimitPeak) => Math.round((100 * p.peak) / p.limit);
 
 /** Each band's checks, in the spec's order: what sets its level, and a datasheet driver's power. */
 export function bandChips(
-  spec: Pick<SpeakerSpec, "bands">,
+  spec: Pick<SpeakerSpec, "bands" | "input">,
   limits: SpeakerLimits,
 ): { id: BandId; chips: DesignerChip[] }[] {
   return limits.bands.map((b) => {
@@ -35,7 +35,7 @@ export function bandChips(
     // a cone or vent limit is at one frequency; the program rating and the amp hold across the band
     const mechanical = PER_FREQUENCY_LIMITS.has(b.who);
     const where = mechanical
-      ? ` The first limit is at ${formatHz(b.whoHz)}.${band?.highpass ? "" : " Add a highpass to the band to protect the cone."}`
+      ? ` The first limit is at ${formatHz(b.whoHz)}.${band?.highpass || spec.input.highpass ? "" : ` Add a highpass to the band, or set the ${DESIGNER_TEXT.inputRange}, to protect the cone.`}`
       : "";
     const chips: DesignerChip[] = [
       [

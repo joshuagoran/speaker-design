@@ -2062,6 +2062,12 @@ export interface SpeakerSpec {
   name: string;
   cabinet: SpeakerCabinet;
   bands: readonly SpeakerBand[];
+  /**
+   * the input range: the filters the system puts ahead of the box on every band (the crossover to a sub). Not part of
+   * the box; the Designer models the speaker with it (`speakerResponse`'s and `speakerLimits`' feed), and the Space
+   * page can later take it as the source's default crossover (`SystemSource.filters`).
+   */
+  input: Pick<SpeakerBand, "highpass" | "lowpass">;
   look: Pick<PaDesignConfig, "cabFinish" | "baffleColor" | "hornColor">;
 }
 

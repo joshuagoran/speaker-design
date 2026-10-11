@@ -19,7 +19,14 @@ import {
   SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-import { DIRECT_LOAD, channelCounter, lrFilter, speakerIdentity, stuffingPctOf } from "./specParts";
+import {
+  DIRECT_LOAD,
+  NO_FILTERS,
+  channelCounter,
+  lrFilter,
+  speakerIdentity,
+  stuffingPctOf,
+} from "./specParts";
 import { STUFFING_VOLUME_GAIN } from "../pa/calc";
 
 /**
@@ -83,6 +90,8 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
       tiltDeg: 0,
     },
     bands: [networkBand(SPEAKER_BAND.low, state), networkBand(SPEAKER_BAND.high, state)],
+    // the highpass to the subs is the system's (systemFromFill): the input range starts off
+    input: NO_FILTERS,
     look: {},
   };
 }

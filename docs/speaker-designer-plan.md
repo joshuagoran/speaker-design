@@ -207,16 +207,25 @@ Each PR stands alone. Lowest risk first.
       - A band's maximum for music is one drive for the whole band, set where the band first meets a limit. Each
         band's own curve takes the program rating and the amp on the whole drive, as the PA does.
       - The sum takes one input for every band: at each frequency, the band with the least headroom sets it. A band
-        limits the sum only where it carries signal. The program rating takes the band's filtered drive. The amp of
-        an active band also takes the filtered drive, because the filters are ahead of the amp. The amp of a passive
-        band is the channel it shares, ahead of the network, so the network's filters do not change it.
+        limits the sum only where it carries signal. The program rating takes the drive that the band's own filters
+        leave it. The amp of an active band also takes that drive, because the filters are ahead of the amp. The amp
+        of a passive band is the channel it shares, ahead of the network, so the network's filters do not change it.
+        The input range shapes the signal itself: the sum follows it.
       - Each vent carries its own air-speed limit (`maxSpeedMs`). The PA adapter sets the design's setting, with more
         for flared tubes, as the PA page does. The Hi-fi adapter sets the Hi-fi's 17 m/s, and the fill adapter sets
         the fill's setting. The chamber settings show it.
-    - **Results.** A maximum-output chart on its own fixed scale (70–140 dB, `MAX_OUTPUT_TOP` / `MAX_OUTPUT_BOT`),
-      the maximum of each band and of the speaker, and chips: one list for each band (what sets its level, a
-      datasheet driver's power) and one for each chamber (Xmax, port speed and radiator travel at full power, and the
-      program rating).
+    - **Input range** (owner, Oct 2026). `SpeakerSpec.input` is the high-pass and low-pass that the system puts
+      ahead of the box, for example the crossover to a sub. It is not part of the box, and it is saved with the
+      speaker. The Designer models the speaker with it (the feed of `speakerResponse` and `speakerLimits`).
+      - The PA top starts with a high-pass at the PA's sub crossover. The PA sub starts with a low-pass there (its
+        own subsonic stays in its band). The tower, the Hi-fi speaker, the fill and the empty speaker start with both
+        off.
+      - The setting is the first row of the "Bands and filters" fold.
+      - Later, the Space page can use it as the source's default system crossover (`SystemSource.filters`).
+    - **Results.** A maximum-output chart on its own fixed scale (70–140 dB, `MAX_OUTPUT_TOP` / `MAX_OUTPUT_BOT`), the
+      maximum of each band and of the speaker, and chips: one list for each band (what sets its level, a datasheet
+      driver's power) and one for each chamber (Xmax, port speed and radiator travel at full power, and the program
+      rating).
     - **Parity** (`tests/speaker-limits.test.ts`). With the net air set to the PA's, every golden PA design meets the
       PA page's limits. The sub through its lowpass is within 0.06 dB, and the mid and horn within 0.01 dB. The horn's
       power is exact. The sub's music limit is within 0.02 dB, with the same limit. On the Hi-fi designs with no

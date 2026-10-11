@@ -11,10 +11,11 @@
 //   drive for the whole band, set where the band first meets a limit (as the PA sub's music limit and the Hi-fi
 //   woofer's). Each band's own curve takes the amp and the program rating on the whole drive, as the PA does.
 // - The sum takes one input for every band: at each frequency the first band to meet a limit sets it. There a band can
-//   only limit where it carries signal: the program rating takes the band's filtered drive, and so does the amp of an
-//   active band (its filters run ahead of the amp). A passive band's amp is the channel it shares, ahead of the
-//   network: it takes the feed's filters only, the same ceiling for every band on the channel (the amp is a voltage
-//   ceiling, √(8 W), as both engines take it, so the summed load doesn't move it).
+//   only limit where it carries signal: the program rating takes the drive the band's own filters leave it, and so
+//   does the amp of an active band (its filters run ahead of the amp). A passive band's amp is the channel it shares,
+//   ahead of the network: the same ceiling for every band on the channel (the amp is a voltage ceiling, √(8 W), as
+//   both engines take it, so the summed load doesn't move it). The feed (the speaker's input range) shapes the signal
+//   itself: the sum follows it, and nothing is pushed harder outside it.
 // - Each vent takes its own air-speed limit (`maxSpeedMs`, set by the spec).
 import type {
   BandId,
@@ -144,17 +145,24 @@ export function speakerLimits(
       sc.who[i] = who;
     }
   };
-  /** the feed's filters as a gain at each frequency; and each band's filters with the feed's */
-  const feedGain = freqs.map((f) => abs(filtersTransfer(f, feed)));
+  /** each band's own filters as a gain at each frequency */
+  const bandGains = new Map(
+    [...bandById].map(([id, band]) => [id, freqs.map((f) => abs(filtersTransfer(f, band)))]),
+  );
+  /** each band's filters with the feed's: what the drivers get */
   const gains = new Map(
-    [...bandById].map(([id, band]) => [
+    [...bandGains].map(([id, g]) => [
       id,
-      freqs.map((f, i) => abs(filtersTransfer(f, band)) * feedGain[i]),
+      g.map((x, i) => x * abs(filtersTransfer(freqs[i], feed))),
     ]),
   );
-  /** the gain the band's amp sees at point `i`: its filters and the feed's when active, the feed's alone when passive */
-  const ampGain = (band: SpeakerBand, gain: readonly number[], i: number) =>
-    band.drive === HIFI_DRIVE.passive ? feedGain[i] : gain[i];
+  /**
+   * What lifts a band's ceilings in the sum at point `i`: its own filters (the feed is the input range, which shapes
+   * the signal itself). The program rating takes them always; the amp only when active (a passive network is after it).
+   */
+  const ceilingGain = (id: BandId, i: number) => bandGains.get(id)?.[i] ?? 1;
+  const ampGain = (band: SpeakerBand, i: number) =>
+    band.drive === HIFI_DRIVE.passive ? 1 : ceilingGain(band.id, i);
   const drivers: SpeakerDriverPower[] = [];
   const chambers = spec.cabinet.chambers.map((chamber, k): SpeakerChamberLimits | null => {
     for (const driver of chamber.drivers) {
@@ -170,15 +178,13 @@ export function speakerLimits(
       const s = Math.sqrt(power.watts * power.imp) / driveV;
       /** the voltage its program rating allows */
       const vProgram = Math.sqrt(programW * power.imp);
-      const gain = gains.get(id);
       const sc = scaleIn(scales, id),
         sumSc = scaleIn(sumScales, id);
       for (let i = 0; i < freqs.length; i++) {
         lower(sc, i, s, power.who);
-        if (!gain) continue;
-        // in the sum, both ceilings on the drive it carries at this frequency
-        const amp = driveV / ampGain(band, gain, i),
-          program = vProgram / gain[i];
+        // in the sum, both ceilings on the drive its own filters leave it here
+        const amp = driveV / ampGain(band, i),
+          program = vProgram / ceilingGain(id, i);
         lower(
           sumSc,
           i,
@@ -215,13 +221,13 @@ export function speakerLimits(
       // the radiators' travel, as the Hi-fi engine reads it
       const vr = xR !== null && point.prx ? (driveV * xR) / point.prx : Infinity;
       lower(sc, i, Math.min(cone.V, vr) / driveV, vr < cone.V ? LIMIT_NAMES.radiator : cone.who);
-      // in the sum: the program rating on the drive it carries here, and the amp on what it sees
+      // in the sum: the program rating on the drive its own filters leave it here, and the amp on what it sees
       const limits: [LimitId, number][] = [
         [LIMIT_NAMES.port, cone.vp],
         [LIMIT_NAMES.Xmax, cone.vx],
         [LIMIT_NAMES.radiator, vr],
-        [LIMIT_NAMES.thermal, cone.vt / gain[i]],
-        [LIMIT_NAMES.amp, driveV / ampGain(band, gain, i)],
+        [LIMIT_NAMES.thermal, cone.vt / ceilingGain(id, i)],
+        [LIMIT_NAMES.amp, driveV / ampGain(band, i)],
       ];
       const [who, v] = limits.reduce((a, b) => (b[1] < a[1] ? b : a));
       lower(sumSc, i, v / driveV, who);

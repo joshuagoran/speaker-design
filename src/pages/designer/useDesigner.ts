@@ -55,15 +55,20 @@ const editAt = <T>(list: readonly T[], i: number, edit: (item: T) => T): T[] =>
  */
 export function useDesigner() {
   const [spec, setSpec] = useState<SpeakerSpec>(emptySpeaker);
-  // the model reads only the cabinet and the bands (a name edit doesn't run it), a step behind the typing: a horn
-  // chamber takes tens of ms, so the settings stay responsive
+  // the model reads only the cabinet, the bands and the input range (a name edit doesn't run it), a step behind the
+  // typing: a horn chamber takes tens of ms, so the settings stay responsive
   const cabinet = useDeferredValue(spec.cabinet);
   const bands = useDeferredValue(spec.bands);
-  const response = useMemo(() => speakerResponse({ cabinet, bands }), [cabinet, bands]);
+  /** the input range: the filters the system puts ahead of the box, the models' feed */
+  const feed = useDeferredValue(spec.input);
+  const response = useMemo(
+    () => speakerResponse({ cabinet, bands }, { feed }),
+    [cabinet, bands, feed],
+  );
   // the limits read the response's chamber runs, so no box model runs again
   const limits = useMemo(
-    () => speakerLimits({ cabinet, bands }, response),
-    [cabinet, bands, response],
+    () => speakerLimits({ cabinet, bands }, response, { feed }),
+    [cabinet, bands, feed, response],
   );
   const store = useConfigStore(SPEAKERS_COLLECTION);
   const editCabinet = (edit: (cabinet: SpeakerCabinet) => SpeakerCabinet) =>
@@ -123,6 +128,8 @@ export function useDesigner() {
     snapshot,
     restore,
     setName: (name: string) => setSpec((s) => ({ ...s, name })),
+    editInput: (edit: (input: SpeakerSpec["input"]) => SpeakerSpec["input"]) =>
+      setSpec((s) => ({ ...s, input: edit(s.input) })),
     editCabinet,
     editChambers,
     editChamber,

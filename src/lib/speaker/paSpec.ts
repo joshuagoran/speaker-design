@@ -223,16 +223,37 @@ const paSpeaker = (
   part: SpeakerPart,
   cabinet: SpeakerCabinet,
   bands: SpeakerSpec["bands"],
+  input: SpeakerSpec["input"],
 ): SpeakerSpec => ({
   ...speakerIdentity(system, part),
   cabinet,
   bands,
+  input,
   look: { cabFinish: cfg.cabFinish, baffleColor: cfg.baffleColor, hornColor: cfg.hornColor },
+});
+
+/** The sub box's input range: below the crossover to the tops (its own subsonic stays in its band). */
+const subInput = (cfg: PaPlannerDesign): SpeakerSpec["input"] => ({
+  highpass: null,
+  lowpass: lrFilter(cfg.xoLo, cfg.xoLoOrder),
+});
+
+/** The mid/high box's input range: above the crossover to the subs. */
+const topInput = (cfg: PaPlannerDesign): SpeakerSpec["input"] => ({
+  highpass: lrFilter(cfg.xoLo, cfg.xoLoOrder),
+  lowpass: null,
 });
 
 /** The sub box of the stack, pole and satellite layouts. */
 const subSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
-  paSpeaker(cfg, system, SPEAKER_PART.sub, paCabinet(cfg, [subChamber(cfg)]), [subBand(cfg, null)]);
+  paSpeaker(
+    cfg,
+    system,
+    SPEAKER_PART.sub,
+    paCabinet(cfg, [subChamber(cfg)]),
+    [subBand(cfg, null)],
+    subInput(cfg),
+  );
 
 /** The mid/high box: the mid in a sealed box, the horn on its lid, crossed inside the box. */
 const topSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
@@ -255,6 +276,7 @@ const topSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
       ),
       hornBand(cfg, 0),
     ],
+    topInput(cfg),
   );
 
 /**
@@ -295,6 +317,8 @@ function towerSpeaker(cfg: PaPlannerDesign, system: SpecIdentity): SpeakerSpec {
       ),
       hornBand(cfg, cfg.tilt),
     ],
+    // every crossover is inside the tower
+    NO_FILTERS,
   );
 }
 
@@ -341,7 +365,7 @@ export function systemFromPa(
     role: SOURCE_ROLE.sub,
     pose,
     mirror,
-    filters: { highpass: null, lowpass: lrFilter(cfg.xoLo, cfg.xoLoOrder) },
+    filters: subInput(cfg),
     delayMs: AUTO_DELAY,
     levelDb: 0,
     channels: [channel(SPEAKER_BAND.low, [SPEAKER_BAND.low])],
@@ -351,7 +375,7 @@ export function systemFromPa(
     role: SOURCE_ROLE.main,
     pose,
     mirror,
-    filters: { highpass: lrFilter(cfg.xoLo, cfg.xoLoOrder), lowpass: null },
+    filters: topInput(cfg),
     delayMs: 0,
     levelDb: -cfg.tilt,
     channels: [
