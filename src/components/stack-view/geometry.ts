@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { PARTS_3D } from "../../styles/palette";
-import type { PartMesh } from "../../types";
+import type { Dims2, PartMesh } from "../../types";
 /** Rounded rectangle outline centered on the origin, as a THREE.Shape. */
 export function roundedRectShape(width: number, height: number, radius: number) {
   const x = width / 2,
@@ -81,6 +81,30 @@ export function rectangularHornGeometry(
   depth: number,
   throatRadius = 0.5,
 ) {
+  return flareGeometry({
+    throat: { w: 2 * throatRadius, h: 2 * throatRadius },
+    mouth: { w: mouthWidth, h: mouthHeight },
+    depth,
+    squareness: (t) => 2 + 7 * Math.pow(t, 1.4), // circle -> squarish
+  });
+}
+
+/**
+ * A flare as a mesh geometry, open at both ends: superellipse sections growing along z over `depth` from the `throat`
+ * (at z = 0) to the `mouth` (at z = depth), widening fastest toward the mouth; `squareness(t)` is the sections'
+ * exponent from throat (t = 0) to mouth (t = 1): 2 a circle or ellipse, higher a squarer rectangle.
+ */
+export function flareGeometry({
+  throat,
+  mouth,
+  depth,
+  squareness,
+}: {
+  throat: Dims2;
+  mouth: Dims2;
+  depth: number;
+  squareness: (t: number) => number;
+}) {
   const NS = 40,
     NP = 112,
     pos: number[] = [],
@@ -88,9 +112,9 @@ export function rectangularHornGeometry(
   for (let i = 0; i <= NS; i++) {
     const t = i / NS,
       g = Math.pow(t, 1.7);
-    const a = throatRadius + (mouthWidth / 2 - throatRadius) * g,
-      b = throatRadius + (mouthHeight / 2 - throatRadius) * g;
-    const n = 2 + 7 * Math.pow(t, 1.4); // superellipse exponent: circle -> squarish
+    const a = throat.w / 2 + (mouth.w / 2 - throat.w / 2) * g,
+      b = throat.h / 2 + (mouth.h / 2 - throat.h / 2) * g;
+    const n = squareness(t);
     for (let j = 0; j < NP; j++) {
       const th = (j / NP) * Math.PI * 2,
         c = Math.cos(th),

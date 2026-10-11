@@ -31,6 +31,64 @@ interface Props {
   tweeterOffsetIn?: number;
 }
 
+/**
+ * A ribbon's own waveguide from the front, centered on (cx, cy), `w` by `h` px: the square plate, its flared
+ * rectangular throat (the mouth's outline and the creases from its corners) and the tall, narrow slot over the ribbon,
+ * sized from `HIFI_FRONT_PARTS.ribbon` as the 3D view draws it.
+ */
+function RibbonPlate({
+  cx,
+  cy,
+  w,
+  h,
+  corner,
+}: {
+  cx: number;
+  cy: number;
+  w: number;
+  h: number;
+  /** the plate's corner radius, px */
+  corner: number;
+}) {
+  const pal = usePalette();
+  const R = HIFI_FRONT_PARTS.ribbon;
+  const mw = w * R.mouth.w,
+    mh = h * R.mouth.h,
+    mr = Math.min(mw, mh) * HIFI_FRONT_PARTS.guideCornerPerSize,
+    sw = w * R.slot.w,
+    sh = h * R.slot.h;
+  // each crease runs from the mouth's rounded corner (its arc's middle) to the slot's corner
+  const inset = mr * (1 - Math.SQRT1_2);
+  const corners = [-1, 1].flatMap((sx) => [-1, 1].map((sy) => [sx, sy] as const));
+  return (
+    <g>
+      <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={corner} fill={pal.muted} />
+      {corners.map(([sx, sy]) => (
+        <line
+          key={`${sx}${sy}`}
+          x1={cx + sx * (mw / 2 - inset)}
+          y1={cy + sy * (mh / 2 - inset)}
+          x2={cx + (sx * sw) / 2}
+          y2={cy + (sy * sh) / 2}
+          stroke={pal.edge}
+          strokeWidth="0.6"
+        />
+      ))}
+      <rect
+        x={cx - mw / 2}
+        y={cy - mh / 2}
+        width={mw}
+        height={mh}
+        rx={mr}
+        fill="none"
+        stroke={pal.edge}
+        strokeWidth="0.8"
+      />
+      <rect x={cx - sw / 2} y={cy - sh / 2} width={sw} height={sh} fill={pal.edge} />
+    </g>
+  );
+}
+
 /** Front view of the box and drivers, to scale. */
 export function HifiFront({
   dim,
@@ -59,6 +117,8 @@ export function HifiFront({
     ro = Math.max(0, Math.min(roundoverIn, dim.w / 2 - 0.1, dim.h / 2 - 0.1)),
     wooferR = (w.size * HIFI_FRONT_PARTS.wooferFramePerSize * k) / 2;
   const slot = vented && port.shape === "slot" ? slotOpening(dim, wall, port) : null;
+  // a ribbon on its own waveguide, set into the baffle: drawn as the square plate with its slot, not a round faceplate
+  const ribbon = !lay.coax && !lay.onTop && !!t.ownGuide;
   return (
     <svg
       viewBox={`-4 -4 ${W + 8} ${H + 8}`}
@@ -109,6 +169,14 @@ export function HifiFront({
             strokeWidth="1"
           />
         </g>
+      ) : ribbon ? (
+        <RibbonPlate
+          cx={tx}
+          cy={y(lay.tweeterIn)}
+          w={face.w * k}
+          h={face.h * k}
+          corner={HIFI_FRONT_PARTS.plateCornerIn * k}
+        />
       ) : (
         <rect
           x={tx - (face.w * k) / 2}
@@ -119,7 +187,7 @@ export function HifiFront({
           fill={pal.muted}
         />
       )}
-      {!lay.coax && <circle cx={tx} cy={y(lay.tweeterIn)} r={0.5 * k} fill={pal.edge} />}
+      {!lay.coax && !ribbon && <circle cx={tx} cy={y(lay.tweeterIn)} r={0.5 * k} fill={pal.edge} />}
       <circle cx={W / 2} cy={y(lay.wooferIn)} r={wooferR} fill={pal.edge} stroke={pal.muted} />
       {lay.coax && (
         // the coaxial's HF in the woofer's center: its horn's mouth and the phase plug

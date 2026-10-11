@@ -7,7 +7,7 @@ import { buildCone, CONE_FACE_BACK_IN } from "./buildCone";
 import { buildHorn } from "./buildHorn";
 import { buildHifiCabinet, type HifiCabinetHoles } from "./buildHifiCabinet";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
-import { circlePath, roundedRectPath, roundedRectShape } from "./geometry";
+import { circlePath, flareGeometry, roundedRectPath, roundedRectShape } from "./geometry";
 import { CD_OPTIONS, driverMountKind, hornMountKind } from "../../lib/data";
 import { THREAD_MOUNT } from "../../constants/throatMounts";
 import { hifiTubeRoom } from "../../lib/hifi/hifi";
@@ -50,7 +50,7 @@ export const HIFI_MESH_NAMES = {
   /** a tweeter's faceplate, or a ribbon's waveguide plate, flush in the baffle */
   faceplate: "tweeterFaceplate",
   dome: "tweeterDome",
-  /** a horn-loaded tweeter's flare */
+  /** a horn-loaded tweeter's flare, or a ribbon's flared throat in its waveguide plate */
   flare: "tweeterFlare",
   ribbon: "ribbonDiaphragm",
   /** a tweeter's body behind the baffle, in the cutaway */
@@ -113,17 +113,24 @@ const ellipsePath = (x: number, y: number, rx: number, ry: number) => {
   return p;
 };
 
-/** A faceplate's outline: a disc when it is as tall as it is wide, else a rounded rectangle. */
-const plateShape = (face: Dims2) => {
-  if (face.w === face.h) {
+/**
+ * Whether a tweeter's plate is round: a faceplate as tall as it is wide is a disc; a ribbon's waveguide plate is
+ * square, and any other plate a rounded rectangle.
+ */
+const roundPlate = (t: Pick<HifiTweeter, "ownGuide">, face: Dims2) =>
+  !t.ownGuide && face.w === face.h;
+
+/** A tweeter's plate outline: a disc, or a rounded rectangle (`roundPlate`). */
+const plateShape = (t: Pick<HifiTweeter, "ownGuide">, face: Dims2) => {
+  if (roundPlate(t, face)) {
     const s = new THREE.Shape();
     s.absarc(0, 0, face.w / 2, 0, Math.PI * 2, false);
     return s;
   }
   return roundedRectShape(face.w, face.h, HIFI_FRONT_PARTS.plateCornerIn);
 };
-const plateHole = (x: number, y: number, face: Dims2) =>
-  face.w === face.h
+const plateHole = (t: Pick<HifiTweeter, "ownGuide">, x: number, y: number, face: Dims2) =>
+  roundPlate(t, face)
     ? circlePath(x, y, face.w / 2)
     : roundedRectPath(x, y, face.w, face.h, HIFI_FRONT_PARTS.plateCornerIn);
 
@@ -199,7 +206,7 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
         Math.min(p.guide.w, p.guide.h) * HIFI_FRONT_PARTS.guideCornerPerSize,
       ),
     );
-  else if (face) holes.baffle.push(plateHole(tx, ty, face));
+  else if (face) holes.baffle.push(plateHole(t, tx, ty, face));
 
   const { shellFrontZ } = buildHifiCabinet(ctx, {
     dim,
@@ -431,8 +438,8 @@ function addRadiator(
 }
 
 /**
- * A tweeter without a waveguide horn, flush in the baffle: a ribbon's waveguide plate with its diaphragm in its
- * throat, a horn-loaded tweeter's faceplate round its flare, or a dome's faceplate with the dome on it; and, in the
+ * A tweeter without a waveguide horn, flush in the baffle: a ribbon's square waveguide plate with its flared throat
+ * down to the diaphragm's slot, a horn-loaded tweeter's faceplate round its flare, or a dome's faceplate with the dome on it; and, in the
  * cutaway, a GENERIC body behind (the catalogue gives no depth).
  */
 function addTweeter(
@@ -451,16 +458,34 @@ function addTweeter(
     ctx.group.add(m);
     return m;
   };
-  const shape = plateShape(face);
+  const shape = plateShape(t, face);
+  // the cutaway's body sits behind the plate, or behind a ribbon's flare
+  let bodyZ = zf - P.faceplateIn;
   if (t.ownGuide) {
-    const sw = face.w * P.ribbon.w,
-      sh = face.h * P.ribbon.h;
-    shape.holes.push(roundedRectPath(0, 0, sw, sh, 0.02));
+    const R = P.ribbon;
+    const slot = { w: face.w * R.slot.w, h: face.h * R.slot.h },
+      mouth = { w: face.w * R.mouth.w, h: face.h * R.mouth.h },
+      depth = face.w * R.depthPerPlate;
+    shape.holes.push(
+      roundedRectPath(0, 0, mouth.w, mouth.h, Math.min(mouth.w, mouth.h) * P.guideCornerPerSize),
+    );
+    // the flare's inside shows, so it is drawn both sides
+    const throughBlack = ctx.materials.black.clone();
+    throughBlack.side = THREE.DoubleSide;
+    const flare = add(
+      new THREE.Mesh(
+        flareGeometry({ throat: slot, mouth, depth, squareness: () => R.flareSquareness }),
+        throughBlack,
+      ),
+      HIFI_MESH_NAMES.flare,
+    );
+    flare.position.set(x, y, zf - depth);
     const ribbon = add(
-      new THREE.Mesh(new THREE.BoxGeometry(sw, sh, 0.02), ctx.materials.aluminum),
+      new THREE.Mesh(new THREE.BoxGeometry(slot.w, slot.h, 0.02), ctx.materials.aluminum),
       HIFI_MESH_NAMES.ribbon,
     );
-    ribbon.position.set(x, y, zf - P.ribbon.setBackIn);
+    ribbon.position.set(x, y, zf - depth);
+    bodyZ = zf - depth;
   } else if (t.type === "horn-loaded") {
     const mouthR = Math.min(t.domeIn / 2, Math.min(face.w, face.h) / 2 - P.plateCornerIn);
     shape.holes.push(circlePath(0, 0, mouthR));
@@ -516,5 +541,5 @@ function addTweeter(
     ),
     HIFI_MESH_NAMES.tweeterBody,
   );
-  body.position.set(x, y, zf - P.faceplateIn - b.depthIn / 2);
+  body.position.set(x, y, bodyZ - b.depthIn / 2);
 }
