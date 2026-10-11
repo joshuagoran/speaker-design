@@ -47,7 +47,10 @@ import {
 } from "./speakerResponse";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { DRIVER_KIND, SPEAKER_RESPONSE_VOLTS, VENT_KIND } from "../../constants/speakerSpec";
-import { LIMIT_NAMES } from "../../constants/limits";
+import { INPUT_RANGE_LIMIT, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
+
+/** Where the input range ends, as a gain: its filters −6 dB down (a Linkwitz-Riley filter's corner). */
+const INPUT_EDGE_GAIN = 0.5;
 
 /**
  * A band's drive with the amp at full power, V RMS: the amp's voltage into 8 Ω, through a passive band's pad (a
@@ -149,13 +152,10 @@ export function speakerLimits(
   const bandGains = new Map(
     [...bandById].map(([id, band]) => [id, freqs.map((f) => abs(filtersTransfer(f, band)))]),
   );
+  /** the feed's filters (the input range) as a gain at each frequency */
+  const feedGain = freqs.map((f) => abs(filtersTransfer(f, feed)));
   /** each band's filters with the feed's: what the drivers get */
-  const gains = new Map(
-    [...bandGains].map(([id, g]) => [
-      id,
-      g.map((x, i) => x * abs(filtersTransfer(freqs[i], feed))),
-    ]),
-  );
+  const gains = new Map([...bandGains].map(([id, g]) => [id, g.map((x, i) => x * feedGain[i])]));
   /**
    * What lifts a band's ceilings in the sum at point `i`: its own filters (the feed is the input range, which shapes
    * the signal itself). The program rating takes them always; the amp only when active (a passive network is after it).
@@ -274,6 +274,9 @@ export function speakerLimits(
     ];
   });
   // the whole speaker on one input: at each frequency the band with the least headroom sets it
+  // outside the input range a ceiling on the whole drive (the amp, the program rating) is far off: the range sets it
+  const sumWho = (who: LimitId, i: number): SpeakerLimits["sum"][number]["who"] =>
+    feedGain[i] < INPUT_EDGE_GAIN && !PER_FREQUENCY_LIMITS.has(who) ? INPUT_RANGE_LIMIT : who;
   const sum = bands.length
     ? response.sum.map((o, i) => {
         const roomOf = (id: BandId) => headroom.get(id)?.room[i] ?? Infinity;
@@ -281,7 +284,7 @@ export function speakerLimits(
         return {
           f: o.f,
           spl: o.spl + roomOf(first.id),
-          who: headroom.get(first.id)?.who(i) ?? LIMIT_NAMES.amp,
+          who: sumWho(headroom.get(first.id)?.who(i) ?? LIMIT_NAMES.amp, i),
           band: first.id,
         };
       })

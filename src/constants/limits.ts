@@ -14,6 +14,12 @@ export const LIMIT_NAMES = {
 } as const;
 
 /**
+ * What sets the speaker's sum outside its input range: the system's filters ahead of the box (`SpeakerSpec.input`), not
+ * a limit of the box (lib/speaker/speakerLimits).
+ */
+export const INPUT_RANGE_LIMIT = "input";
+
+/**
  * The limits a cone or a vent meets at one frequency (the filters in the drive), as opposed to the program rating and
  * the amp, which hold on the whole drive.
  */

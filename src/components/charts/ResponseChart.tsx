@@ -12,6 +12,8 @@ import { RESULT_MAX_WIDTH } from "../../styles/layout";
  * high ends of an estimated Xmax (see `lib/xmax`); null or absent when the driver's Xmax is exact.
  */
 interface Series {
+  /** a stable key where labels can repeat (user-named bands); absent: the label */
+  id?: string;
   curve: readonly FrequencyPoint[];
   label: string;
   stroke: string;
@@ -221,16 +223,21 @@ export function ResponseChart({
             </g>
           ))}
         {paths.map((p) => (
-          <path key={p.label + "f"} d={p.fill} fill={p.tint} />
+          <path key={(p.id ?? p.label) + "f"} d={p.fill} fill={p.tint} />
         ))}
         {paths.map((p) =>
           p.bandD ? (
-            <path key={p.label + "b"} d={p.bandD} fill={alpha(p.stroke, 0.18)} stroke="none" />
+            <path
+              key={(p.id ?? p.label) + "b"}
+              d={p.bandD}
+              fill={alpha(p.stroke, 0.18)}
+              stroke="none"
+            />
           ) : null,
         )}
         {paths.map((p) => (
           <path
-            key={p.label}
+            key={p.id ?? p.label}
             d={p.d}
             fill="none"
             stroke={p.stroke}
@@ -316,7 +323,7 @@ export function ResponseChart({
           style={{ fontFamily: FONT }}
         >
           {paths.map((p) => (
-            <span key={p.label} className="flex items-center gap-1.5">
+            <span key={p.id ?? p.label} className="flex items-center gap-1.5">
               <span
                 className="inline-block w-4 h-0.5"
                 style={p.dash ? { borderTop: `2px dashed ${p.stroke}` } : { background: p.stroke }}

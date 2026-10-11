@@ -65,6 +65,9 @@ interface Props {
   hifi: HifiPlanner;
 }
 
+/** The sum's key on the charts: no band id takes it (the adapters' are band words, the Designer's "band1"…). */
+const SUM_SERIES_ID = "sum";
+
 /** The sum's line width on the charts, px: it reads over its bands' (2 px). */
 const SUM_LINE_PX = 4;
 
@@ -164,10 +167,16 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
       `${nameOf(b.id)} band`,
       b.passbandDb.toFixed(1),
       "dB",
+      `band:${b.id}`,
     ]),
   ];
   const maxTiles: StatTileItem[] = [
-    ...limits.bands.map((b): StatTileItem => [`${nameOf(b.id)} max`, b.musicDb.toFixed(0), "dB"]),
+    ...limits.bands.map((b): StatTileItem => [
+      `${nameOf(b.id)} max`,
+      b.musicDb.toFixed(0),
+      "dB",
+      `max:${b.id}`,
+    ]),
     ...(limits.musicDb !== null && limits.bands.length > 1
       ? [[DESIGNER_TEXT.speakerMax, limits.musicDb.toFixed(0), "dB"] satisfies StatTileItem]
       : []),
@@ -224,6 +233,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                   ? [
                       {
                         curve: response.sum,
+                        id: SUM_SERIES_ID,
                         label: DESIGNER_TEXT.sum,
                         stroke: pal.ink,
                         width: SUM_LINE_PX,
@@ -234,6 +244,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 ...response.bands.map((b) => ({
                   // a band drawn only where it is on the chart: below the floor it would run along the axis
                   curve: b.curve.filter((o) => o.spl >= HIFI_BOT),
+                  id: b.id,
                   label: nameOf(b.id),
                   ...lineOf(b.id),
                   tint: "transparent",
@@ -263,6 +274,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 series={[
                   {
                     curve: limits.sum,
+                    id: SUM_SERIES_ID,
                     label: DESIGNER_TEXT.sum,
                     stroke: pal.ink,
                     width: SUM_LINE_PX,
@@ -270,6 +282,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                   },
                   ...limits.bands.map((b) => ({
                     curve: b.max.filter((o) => o.spl >= MAX_OUTPUT_BOT),
+                    id: b.id,
                     label: nameOf(b.id),
                     ...lineOf(b.id),
                     tint: "transparent",

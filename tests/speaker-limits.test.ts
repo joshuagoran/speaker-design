@@ -34,7 +34,7 @@ import {
   SPEAKER_PART,
   SPEAKER_RESPONSE_VOLTS,
 } from "../src/constants/speakerSpec";
-import { LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../src/constants/limits";
+import { INPUT_RANGE_LIMIT, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../src/constants/limits";
 import type {
   BandId,
   LimitId,
@@ -315,6 +315,11 @@ test("speaker limits: a PA start brings its input range (the top above the sub c
     assert.ok(
       above.length > 0 && above.every((o) => o.spl < peak - 30),
       `${c.name}: the sub's sum`,
+    );
+    // there the input range, not the amp or the program rating, sets it
+    assert.ok(
+      above.every((o) => o.who === INPUT_RANGE_LIMIT || PER_FREQUENCY_LIMITS.has(o.who)),
+      `${c.name}: the input range names it`,
     );
   }
 });

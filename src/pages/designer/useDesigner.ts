@@ -103,16 +103,17 @@ export function useDesigner() {
       drivers: c.drivers.map((d) => ({ ...d, bands: d.bands.map((b) => (b === from ? to : b)) })),
     })),
   });
-  /** adds a band at the top, under a generated id and a name of its place ("Band 3") */
+  /** adds a band at the top, under a generated id and a name no band has ("Band 3") */
   const addBand = () =>
-    editBands((list) => [
-      ...list,
-      {
-        id: newBandId(list),
-        name: DESIGNER_TEXT.newBandName(list.length + 1),
-        ...DEFAULT_SPEAKER_BAND,
-      },
-    ]);
+    editBands((list) => {
+      const names = new Set(list.map((b) => b.name));
+      let n = list.length + 1;
+      while (names.has(DESIGNER_TEXT.newBandName(n))) n++;
+      return [
+        ...list,
+        { id: newBandId(list), name: DESIGNER_TEXT.newBandName(n), ...DEFAULT_SPEAKER_BAND },
+      ];
+    });
   /** removes a band; its drivers move to the first band left */
   const removeBand = (id: BandId) =>
     setSpec((s) => {

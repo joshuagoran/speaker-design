@@ -9,7 +9,7 @@ import type {
   BRACE_STYLE_NAMES,
   STRENGTH_LOAD_NAMES,
 } from "./constants/bracing";
-import type { LIMIT_NAMES } from "./constants/limits";
+import type { INPUT_RANGE_LIMIT, LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
 import type { HORN_PROFILE } from "./constants/hornEngine";
@@ -2297,7 +2297,11 @@ export interface SpeakerLimits {
    * the speaker with one input for every band, at each frequency where the first band meets its first limit, and which
    * band; empty with no modeled band
    */
-  sum: (SpeakerMaxPoint & { band: BandId })[];
+  sum: (Omit<SpeakerMaxPoint, "who"> & {
+    /** the first limit; outside the input range (the feed below −6 dB), the input range itself when a ceiling on the whole drive sets it */
+    who: LimitId | typeof INPUT_RANGE_LIMIT;
+    band: BandId;
+  })[];
   /** the speaker's level for music, dB at 1 m: its passband level where the first band reaches its music limit */
   musicDb: number | null;
   /** the band that sets it */
