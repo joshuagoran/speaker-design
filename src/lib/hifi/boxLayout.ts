@@ -1,12 +1,17 @@
 // Where a Hi-fi speaker's vent and passive radiators sit, inches: x across from the box's center line (+ to the right
 // seen from the front: the left speaker's inside), y up from the box bottom. The 2D front drawing and the 3D view both
 // read these.
-import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
-import { isCoax, passiveRadiatorShape } from "./hifi";
+import { HIFI_BOX_LAYOUT, HIFI_BOX_SLIDERS } from "../../constants/hifiLayout";
+import { isCoax, passiveRadiatorShape, RADIATOR_PANEL, tweeterOnGuide, waveguideFor } from "./hifi";
+import { HIFI_PASSIVES, passiveRadiatorMassMax } from "../data";
+import { byId } from "../tables";
+import { panelIn } from "../panel";
+import { boxSliderMins, fitBox } from "../boxFit";
 import type {
   Dims2,
   Dims3,
   HifiConfig,
+  HifiDesignState,
   HifiTweeter,
   HifiWoofer,
   PassiveRadiatorChoice,
@@ -144,4 +149,58 @@ export function hifiBoxMin({
       : 0;
   const h = Math.max(drivers, prPanelH);
   return { w, h };
+}
+
+/** The page's state the box fit reads. */
+type HifiBoxFitState = Pick<
+  HifiDesignState,
+  | "woofer"
+  | "tweeter"
+  | "selectedWaveguide"
+  | "boxType"
+  | "boxDims"
+  | "wallPanel"
+  | "panelExactIn"
+  | "panelMaterial"
+  | "portSpec"
+  | "radiatorSelection"
+>;
+
+/**
+ * The box as the Hi-fi model takes it, from the page's state: the waveguide in use and the tweeter on it, the
+ * radiators (their added mass kept under the most allowed), the walls' exact thickness, and the size the user set fitted
+ * to at least what the parts need (each up to its slider's step). A design made too small by a part or wall change, or
+ * saved that way, is modeled, drawn and saved at the fitted size. The page (pages/hifi/hifiDesign) and the speaker spec
+ * (lib/speaker/hifiSpec) both read it.
+ */
+export function hifiBoxFit(state: HifiBoxFitState) {
+  const { woofer, tweeter, selectedWaveguide, boxType, boxDims, radiatorSelection } = state;
+  const waveguideSpec = waveguideFor(tweeter, selectedWaveguide);
+  const radiatorDriver = byId(HIFI_PASSIVES, radiatorSelection.id) ?? HIFI_PASSIVES[0];
+  const radiator: PassiveRadiatorChoice = {
+    drv: radiatorDriver,
+    n: radiatorSelection.n,
+    addG: Math.min(radiatorSelection.addG, passiveRadiatorMassMax(radiatorDriver)),
+  };
+  const wallThicknessIn = panelIn(state.wallPanel, state.panelMaterial, state.panelExactIn);
+  const tweeterWithWaveguide = tweeterOnGuide(tweeter, waveguideSpec);
+  const boxMin = boxSliderMins(
+    hifiBoxMin({
+      woofer,
+      tweeter: tweeterWithWaveguide,
+      onTop: !!waveguideSpec?.freestanding,
+      cfg: { box: boxType, port: state.portSpec, pr: radiator },
+      wall: wallThicknessIn,
+      radiatorPanel: RADIATOR_PANEL,
+    }),
+    HIFI_BOX_SLIDERS,
+  );
+  return {
+    waveguideSpec,
+    radiator,
+    wallThicknessIn,
+    tweeterWithWaveguide,
+    boxMin,
+    dim: fitBox(boxDims, boxMin),
+  };
 }

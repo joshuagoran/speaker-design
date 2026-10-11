@@ -2,10 +2,31 @@ import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
-import type { BOX_AXIS_NAMES, BRACE_PANEL_NAMES, BRACE_STYLE_NAMES } from "./constants/bracing";
+import type {
+  BACK_JOINT_NAMES,
+  BOX_AXIS_NAMES,
+  BRACE_PANEL_NAMES,
+  BRACE_STYLE_NAMES,
+  STRENGTH_LOAD_NAMES,
+} from "./constants/bracing";
 import type { LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
+import type { HORN_PROFILE } from "./constants/hornEngine";
+import type {
+  AUTO_DELAY,
+  CHAMBER_LOAD,
+  FIRST_ORDER_FILTER,
+  FRONT_END_KIND,
+  HORN_DRIVE,
+  HORN_ENGINE_GAP,
+  HORN_PATH,
+  HORN_PLACEMENT,
+  PORT_SHAPE,
+  SOURCE_ROLE,
+  SPEAKER_BAND,
+  SPEAKER_PART,
+} from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
@@ -1292,6 +1313,8 @@ export interface PaDesignConfig {
   inset: number;
   /** how both boxes are braced; absent: the default for the plywood (`defaultBraceStyle`) */
   braceStyle?: BraceStyleId;
+  /** how both boxes' backs are fixed; absent: screwed (`DEFAULT_BACK_JOINT`) */
+  backJoint?: BackJointId;
   /** sub to mid and mid to horn crossovers, Hz */
   xoLo: number;
   xoHi: number;
@@ -1383,6 +1406,148 @@ export interface SealedBoxModel {
   peakX: number;
 }
 
+/**
+ * A driver as an acoustic circuit (lib/acoustics/driverCircuit), in the box models' terms: a pressure source Pg behind
+ * Ras + Rae + j(ωMas − 1/(ωCas)). Mechanical values are seen through the cone's area Sd: a mass or resistance divides
+ * by Sd², a compliance multiplies by it. Symbols are Thiele and Small's.
+ */
+export interface DriverCircuit {
+  /** the cone's effective area, m² */
+  Sd: number;
+  /** the moving mass with its air load, as on the datasheet, kg */
+  Mms: number;
+  /** the moving mass as acoustic mass, kg/m⁴ (less any front air load the caller's radiation load carries) */
+  Mas: number;
+  /** the suspension's compliance as acoustic compliance, m³/Pa */
+  Cas: number;
+  /** the suspension's mechanical loss (from Qms) as acoustic resistance, Pa·s/m³ */
+  Ras: number;
+  /** the voice coil's electrical damping as acoustic resistance, Bl²/(Re·Sd²), Pa·s/m³ */
+  Rae: number;
+  /** the amplifier's drive as a pressure source, V·Bl/(Re·Sd), Pa */
+  Pg: number;
+}
+
+/** A vented box's losses as resistances (lib/acoustics/driverCircuit ventResistances), in Small's symbols. */
+export interface VentResistances {
+  /** the box's leakage, a resistance in parallel with its air, Pa·s/m³ */
+  Ral: number;
+  /** the vent's friction and turbulence, a resistance in series with its air mass, Pa·s/m³ */
+  Rap: number;
+}
+
+/** A complex number, the one type the planner's complex math uses (lib/acoustics/complex). */
+export interface Complex {
+  /** the real part */
+  re: number;
+  /** the imaginary part */
+  im: number;
+}
+
+/**
+ * A 2 × 2 complex matrix, row by row: [[A, B], [C, D]] as [A, B, C, D]. As an acoustic two-port's transfer matrix it
+ * gives the input's pressure and volume velocity from the output's: p₁ = A·p₂ + B·U₂, U₁ = C·p₂ + D·U₂.
+ */
+export type Matrix2 = readonly [Complex, Complex, Complex, Complex];
+
+/** A horn segment's flare law: "con" conical, "exp" exponential (constants/hornEngine HORN_PROFILE). */
+export type HornProfile = (typeof HORN_PROFILE)[keyof typeof HORN_PROFILE];
+
+/** The solid angle a horn mouth radiates into, in units of π (constants/hornEngine RADIATION_ANGLE_NAMES). */
+export type RadiationAngle = 2 | 1 | 0.5;
+
+/**
+ * One horn segment, throat side first, in Hornresp's units: areas in cm², length in cm. Equal areas make a straight
+ * duct whatever the profile.
+ */
+export interface HornSegment {
+  profile: HornProfile;
+  /** the area at the segment's throat end, cm² (Hornresp's S1, S2, … for each segment's start) */
+  s1: number;
+  /** the area at the segment's mouth end, cm² (Hornresp's S2, S3, …) */
+  s2: number;
+  /** the segment's length along its axis, cm (Hornresp's L12, L23, …) */
+  length: number;
+}
+
+/** A rear-chamber vent: a straight duct from the chamber to its exit. */
+export interface HornPort {
+  /** the total open area, cm² (all openings together; Hornresp's Ap) */
+  area: number;
+  /**
+   * the vent's length, cm: its physical length plus the inner end's correction (Hornresp's Lpt with its end correction
+   * off). The exit's radiation load adds the outer end's. With the radiation load off (the box models' mode) nothing
+   * adds it, so pass the full effective length there: physical length plus both end corrections.
+   */
+  length: number;
+}
+
+/** A horn box's rear chamber: its net air, L, and its vent; sealed when the vent is null. */
+export interface HornRearChamber {
+  /** the chamber's net air, L (Hornresp's Vrc) */
+  liters: number;
+  port: HornPort | null;
+}
+
+/**
+ * A front-loaded horn box as the horn engine (lib/acoustics/hornModel) takes it: the driver, a throat chamber, the
+ * horn's segments and a sealed or vented rear chamber. No segments make a direct radiator (the mouth is the cone).
+ */
+export interface HornDesign {
+  /** one driver's Thiele/Small parameters, as the box models take them */
+  driver: BoxModelTS;
+  /**
+   * how many of that driver share the throat, wired in parallel, each on the full voltage (Hornresp's Nd); 1 for one.
+   * Each cone keeps its own air load.
+   */
+  drivers: number;
+  /** identical boxes side by side, mouths touching: they load as one mouth `count` times the area */
+  count: number;
+  /** the air between the cone and the throat, L (Hornresp's Vtc); 0 for none */
+  throatChamber: number;
+  /** the horn, throat first; empty for a direct radiator */
+  segments: readonly HornSegment[];
+  rear: HornRearChamber;
+  /** the solid angle the mouth radiates into, in units of π: 2 is half space */
+  angle: RadiationAngle;
+  /** how far the vent's exit sits behind the mouth's plane, cm: the path offset in the sum */
+  portOffset: number;
+}
+
+/** One point of a horn model's response, before any crossover. */
+export interface HornPoint {
+  /** frequency, Hz */
+  f: number;
+  /** SPL at 1 m in the design's solid angle, all boxes together, dB: on axis, each source a point source */
+  spl: number;
+  /**
+   * SPL at 1 m as Hornresp shows it, dB: each source's radiated power spread evenly over the solid angle (no
+   * directivity). It equals `spl` while the mouth is small against the wavelength; above that it falls below by the
+   * mouth's directivity index. Equal to `spl` with the radiation load off.
+   */
+  powerSpl: number;
+  /** the phase of the summed pressure, radians, unwrapped */
+  phase: number;
+  /** group delay of the summed pressure, ms */
+  delay: number;
+  /** each cone's excursion ("x" in mm), peak, mm */
+  xmm: number;
+  /** air speed in the vent, m/s, peak; 0 when sealed */
+  portSpeed: number;
+  /** air speed at the horn's throat (the cone's face for a direct radiator), m/s, peak */
+  throatSpeed: number;
+  /** one driver's electrical impedance Ze (magnitude), ohms, of the `drivers` in parallel; no voice-coil inductance, as the box models */
+  ze: number;
+}
+
+/** A horn model's result (lib/acoustics/hornModel). */
+export interface HornModel {
+  /** one point per frequency asked for */
+  curve: HornPoint[];
+  /** Fb: the rear chamber and vent's tuning on their own (where the vent's reactance cancels the chamber's), Hz; null when sealed */
+  fb: number | null;
+}
+
 /** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator). */
 export type SubLimitWho = Exclude<LimitId, "radiator">;
 
@@ -1441,6 +1606,8 @@ export interface SubGeometryConfig {
   layout: PaLayout;
   /** absent: the plywood's default (`defaultBraceStyle`) */
   braceStyle?: BraceStyleId;
+  /** absent: screwed (`DEFAULT_BACK_JOINT`) */
+  backJoint?: BackJointId;
   /** an optimizer's search: the braces' wood by its cursory estimate (braceWoodEstimate), not the rule */
   braceEstimate?: boolean;
   /** the boxes' handles and plates, whose recesses take volume (lib/pa/hardware); absent: none */
@@ -1501,7 +1668,7 @@ export type SubSystem = SubSystemUnmodeled | SubSystemModeled;
 export interface MidSystemConfig
   extends
     Pick<SubGeometryConfig, "braceEstimate" | "hardware">,
-    Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder" | "braceStyle"> {
+    Pick<PaDesignConfig, "xoLoOrder" | "xoHiOrder" | "braceStyle" | "backJoint"> {
   /** the tower's mid chamber is part of the sub's cabinet and takes no braces of its own; absent: a box of its own */
   layout?: PaLayout;
   midDims: Dims3;
@@ -1634,6 +1801,284 @@ export interface FillSystemSealed extends FillSystemBase {
 /** `fillSystem`'s result: check `boxType`, or `vM` or `sM`, and the other model's type follows. */
 export type FillSystem = FillSystemVented | FillSystemSealed;
 
+// ---- Speaker designer spec (lib/speaker) ----
+//
+// One model for any box (`SpeakerSpec`) and for a system of boxes (`SystemSpec`): docs/speaker-designer-plan.md, L1.
+// Sizes are in inches, as the design pages have them, except a horn's segments, which keep the horn engine's
+// (Hornresp's) cm and cm².
+
+/** Each driver kind's catalog part: `SpeakerDriver.driverId` names a row of that kind's table (lib/data). */
+export interface SpeakerDriverParts {
+  sub: SubDriver;
+  mid: MidDriver;
+  compression: CompressionDriver;
+  woofer: HifiWoofer;
+  /** a dome, ribbon, compression tweeter, AMT or bullet (a super tweeter) */
+  tweeter: HifiTweeter;
+  coaxial: FillDriver;
+}
+
+/** A driver's kind, by id (`DRIVER_KIND`): the catalog table its id is in. */
+export type DriverKind = keyof SpeakerDriverParts;
+
+/** A speaker's band, by id (`SPEAKER_BAND`). */
+export type BandId = (typeof SPEAKER_BAND)[keyof typeof SPEAKER_BAND];
+
+/** Where a horn sits, by id (`HORN_PLACEMENT`): in the baffle, or freestanding on the box top. */
+export type HornPlacement = (typeof HORN_PLACEMENT)[keyof typeof HORN_PLACEMENT];
+
+/** A catalog horn on a driver (a compression driver, a Hi-fi tweeter on a waveguide): the horn's own datasheet. */
+export interface HornAttachment {
+  hornId: Horn["id"];
+  placement: HornPlacement;
+  /** what holds the driver on the lid; null where no mount applies (lib/pa/hornMount `takesHornMount`) */
+  mount: HornMountId | null;
+}
+
+/** A point on a face, in: each use says where it is measured from. */
+export interface FacePoint {
+  xIn: number;
+  yIn: number;
+}
+
+/** What every driver entry has, whatever its kind. */
+interface SpeakerDriverBase {
+  count: number;
+  /**
+   * the group's center: on the baffle, `xIn` across from the center line (+ toward the inside of a pair) and `yIn` up
+   * from the chamber's bottom; for a horn on the top, `yIn` back from the baffle's front
+   */
+  position: FacePoint;
+  /** the bands that feed it: one, or a coaxial's two (its woofer's band, then its HF's) */
+  bands: readonly BandId[];
+  /** the catalog horn it drives; null for none (a cone, a dome, a coaxial, a ribbon on its own plate) */
+  horn: HornAttachment | null;
+}
+
+/** One driver, or `count` alike at one spot, in a chamber; its id names a row of its kind's table. */
+export type SpeakerDriver = {
+  [K in DriverKind]: SpeakerDriverBase & { kind: K; driverId: SpeakerDriverParts[K]["id"] };
+}[DriverKind];
+
+/** Side ducts up the front edges of the baffle (the PA sub's `vslots` and `vslot1`): the throat and length of each. */
+export interface SideDuctPort extends Pick<VentSpec, "throat" | "len" | "div"> {
+  shape: (typeof PORT_SHAPE)["duct"];
+  n: 1 | 2;
+}
+
+/**
+ * A vented chamber's port: round tubes or slots (the Hi-fi kinds), or side ducts. `len` is the path length: a folded
+ * port is its path. A slot's `w` is its width; absent, the box sets it (the Hi-fi slot runs the full width).
+ */
+export type SpeakerPort = HifiPort | SideDuctPort;
+
+/** A chamber's vent, by its kind (`VENT_KIND`). */
+export type ChamberVent =
+  | { kind: Extract<HifiBoxKind, "sealed"> }
+  | { kind: Extract<HifiBoxKind, "vented">; port: SpeakerPort }
+  | { kind: Extract<HifiBoxKind, "radiator">; radiators: RadiatorSelection };
+
+/**
+ * How a horn's drivers drive its path (`HORN_DRIVE`).
+ * - Front: the cones' fronts at the throat (through the throat chamber), their rears into the chamber.
+ * - Back: the fronts radiate from the baffle, the rears drive the throat through the throat chamber (a Lowther-style
+ *   back-loaded horn).
+ * - Tapped: the front and the rear each at a segment boundary, 0 the throat and `segments.length` the mouth.
+ */
+export type HornDrive =
+  | { kind: (typeof HORN_DRIVE)["front"] }
+  | { kind: (typeof HORN_DRIVE)["back"] }
+  | { kind: (typeof HORN_DRIVE)["tapped"]; frontTap: number; rearTap: number };
+
+/**
+ * How a horn's path runs in the box (`HORN_PATH`). A folded path (a bass bin) has the same segments as a straight one;
+ * its fold layout, for the cutlist and the 3D view, comes later (horn engine plan, phase 3).
+ */
+export type HornPath = (typeof HORN_PATH)[keyof typeof HORN_PATH];
+
+/**
+ * A horn built into the box: the horn engine's throat chamber, segments and vent offset (`HornDesign`). The chamber's
+ * own net air and vent are the horn's rear chamber.
+ */
+export interface SpeakerHorn extends Pick<HornDesign, "throatChamber" | "segments" | "portOffset"> {
+  drive: HornDrive;
+  path: HornPath;
+}
+
+/** How a chamber's drivers meet the air (`CHAMBER_LOAD`): straight, or through a horn built into the box. */
+export type ChamberLoad =
+  | { kind: (typeof CHAMBER_LOAD)["direct"] }
+  | { kind: (typeof CHAMBER_LOAD)["horn"]; horn: SpeakerHorn };
+
+/** One air space of a cabinet: where it sits, its size and air, its vent, its load and its drivers. */
+export interface SpeakerChamber {
+  /** its lower-left corner in the cabinet's front view, in from the cabinet's lower-left */
+  at: FacePoint;
+  /**
+   * its outside size as its own box. Two chambers that touch share one wall: the partition is the lower chamber's top
+   * wall (or the left chamber's right wall), inside that chamber's size; the other chamber has no wall of its own
+   * there (lib/speaker/chamberAir `chamberClearFace`).
+   */
+  dims: Dims3;
+  /**
+   * its net air, L, set for shapes the box models can't work out (a horn's rear chamber, the wedges beside a flare);
+   * null: the models work it out from `dims`
+   */
+  netLiters: number | null;
+  vent: ChamberVent;
+  load: ChamberLoad;
+  drivers: readonly SpeakerDriver[];
+}
+
+/** A cabinet's panels: the nominal size, the material and the exact thickness the models use. */
+export interface SpeakerPanel {
+  nominal: PanelNominal;
+  material: PanelMaterial;
+  thicknessIn: PaDesignConfig["wall"];
+}
+
+/** A cabinet: its chambers, panels and shape. Bracing and back joint as the PA boxes take them (absent: the defaults). */
+export interface SpeakerCabinet extends Pick<PaDesignConfig, "braceStyle" | "backJoint"> {
+  chambers: readonly SpeakerChamber[];
+  panel: SpeakerPanel;
+  /** how far the baffle sits behind the frame's front, in; 0 flush */
+  insetIn: PaDesignConfig["inset"];
+  /** the baffle edges' roundover radius, in; 0 sharp */
+  roundoverIn: HifiDesignState["roundoverIn"];
+  /** the kick-back: the baffle tilted back so the axis points this far up, degrees */
+  tiltDeg: NonNullable<HifiConfig["tiltDeg"]>;
+}
+
+/** A filter's alignment and slope: Butterworth or Linkwitz-Riley at 24 or 48 dB/oct, or first order (a capacitor). */
+export type FilterType = HighpassType | typeof FIRST_ORDER_FILTER;
+
+/** A filter: its corner, Hz, and its type. */
+export interface BandFilter {
+  hz: number;
+  type: FilterType;
+}
+
+/**
+ * A band of a speaker. Its filters are the box's own: the crossover inside the box and its protection (a subsonic).
+ * A crossover to another box (the sub) is the system's, on the source (`SystemSource.filters`).
+ */
+export interface SpeakerBand {
+  id: BandId;
+  highpass: BandFilter | null;
+  lowpass: BandFilter | null;
+  /** against the speaker's other bands, dB, 0 or less */
+  levelDb: number;
+  /**
+   * active: its filters run in the front end and it has an amp channel of its own; passive: a network in the box, on
+   * a channel it shares (`SourceChannel.bands`), as a super tweeter on the HF channel through a capacitor
+   */
+  drive: HifiDrive;
+}
+
+/** Any single box: its cabinet, drivers, bands and look. */
+export interface SpeakerSpec {
+  id: string;
+  name: string;
+  cabinet: SpeakerCabinet;
+  bands: readonly SpeakerBand[];
+  look: Pick<PaDesignConfig, "cabFinish" | "baffleColor" | "hornColor">;
+}
+
+/** A spec's identity, as a read adapter takes it. */
+export type SpecIdentity = Pick<SpeakerSpec, "id" | "name">;
+
+/** A speaker of a system read from one design, by id (`SPEAKER_PART`): it names the speaker's id and name. */
+export type SpeakerPart = (typeof SPEAKER_PART)[keyof typeof SPEAKER_PART];
+
+/** The PA design as the planner holds it: every field set (a save can lack the later ones). */
+export type PaPlannerDesign = PaDesignConfig &
+  Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH">>;
+
+/** What a source does in a system, by id (`SOURCE_ROLE`). */
+export type SourceRole = (typeof SOURCE_ROLE)[keyof typeof SOURCE_ROLE];
+
+/**
+ * Where a source stands: its spot and aim on the floor, and what it stands on. Sources stack in chains (sub bins, mid
+ * boxes, an HF horn on top), each on the one below it.
+ */
+export interface SourcePose extends FloorPlacement {
+  /** the source it stands on, as an index into the system's sources; null: the floor */
+  on: number | null;
+  /** the gap under it, in: a plinth, a spacer, a stand, or 0 */
+  liftIn: number;
+}
+
+/** An amplifier in a system: its catalog model where one is picked, and its power per channel, W. */
+export interface SystemAmp {
+  id: string;
+  model: AmpId | null;
+  watts: number;
+}
+
+/** One amp channel a source takes, and the speaker's bands it feeds (passive bands share it). */
+export interface SourceChannel {
+  amp: SystemAmp["id"];
+  channel: number;
+  bands: readonly BandId[];
+}
+
+/** One placed speaker in a system. */
+export interface SystemSource {
+  speakerId: SpeakerSpec["id"];
+  role: SourceRole;
+  pose: SourcePose;
+  /** a mirror image of the speaker (a tweeter offset to the other side) */
+  mirror: boolean;
+  /** the front end's filters on this source's feed: the crossovers between boxes (to the sub) */
+  filters: Pick<SpeakerBand, "highpass" | "lowpass">;
+  /** the front end's delay, ms, or its own alignment */
+  delayMs: number | typeof AUTO_DELAY;
+  /** the front end's level, against the system's other sources, dB */
+  levelDb: number;
+  channels: readonly SourceChannel[];
+}
+
+/** How a front end processes, by id (`FRONT_END_KIND`): fixed analog cards, or a DSP. */
+export type FrontEndKind = (typeof FRONT_END_KIND)[keyof typeof FRONT_END_KIND];
+
+/** The processing ahead of the amps: the sources' filters, delays and levels run in it, analog or digital. */
+export interface SystemFrontEnd {
+  kind: FrontEndKind;
+  /** the DSP unit (`DSP_UNITS`), where a digital front end names one */
+  dspId: DspUnit["id"] | null;
+}
+
+/** Where a system plays: the boxes' boundary (their distance to it is in their poses) and the listener. */
+export interface SystemVenue {
+  placement: HifiPlacement;
+  listener: FloorPoint;
+  earIn: HifiDesignState["earHeightIn"];
+}
+
+/** Saved speakers composed: sources, amps, front end and venue. */
+export interface SystemSpec {
+  id: string;
+  name: string;
+  sources: readonly SystemSource[];
+  amps: readonly SystemAmp[];
+  /** null: none (passive speakers straight off the amps) */
+  frontEnd: SystemFrontEnd | null;
+  /** null where the design sets none (the PA page's room is the coverage page's) */
+  venue: SystemVenue | null;
+}
+
+/** A system and the speakers its sources name, as a read adapter returns them. */
+export interface SystemWithSpeakers {
+  system: SystemSpec;
+  speakers: readonly SpeakerSpec[];
+}
+
+/** Why a chamber has no horn-engine design yet, by id (`HORN_ENGINE_GAP`). */
+export type HornEngineGap = (typeof HORN_ENGINE_GAP)[keyof typeof HORN_ENGINE_GAP];
+
+/** A chamber as the horn engine takes it, or why it can't yet. */
+export type HornDesignResult = { ok: true; design: HornDesign } | { ok: false; gap: HornEngineGap };
+
 // ---- Bracing ----
 
 /** A horn mount's id (`HORN_MOUNT_NAMES` holds the name it shows). */
@@ -1657,6 +2102,26 @@ export interface PlateStock {
   nu: number;
 }
 
+/** How a box's back panel is fixed: glued like the other panels, or screwed on (`BACK_JOINT_NAMES` holds the names). */
+export type BackJointId = keyof typeof BACK_JOINT_NAMES;
+/** A panel's edge: across its u or v axis, at its start (0) or its end (1). */
+export type PanelEdge = "u0" | "u1" | "v0" | "v1";
+/**
+ * What holds a panel's edge against turning: the panel glued to it there (its stock, and its span away from the joint,
+ * in), or null where nothing does (a screwed joint, an open slot mouth): the edge is then hinged.
+ */
+export type EdgeHold = { stock: PlateStock; span: number } | null;
+/**
+ * A round hole through a panel (a driver's cutout): its center and radius, in from the panel's corner (in), and the
+ * weight hung round its edge (the driver's, kg; absent: none).
+ */
+export interface PlateHole {
+  cx: number;
+  cy: number;
+  r: number;
+  ringKg?: number;
+}
+
 /** One panel for the bracing rule: its two in-plane axes and spans (in), its stock, and the supports it already has. */
 export interface BracePanel {
   id: BracePanelId;
@@ -1670,6 +2135,8 @@ export interface BracePanel {
   stock: PlateStock;
   /** whether ribs can go on it (not the baffle: a rib can't cross the driver) */
   ribs: boolean;
+  /** the axes its ribs may divide (behind a bottom slot only those running with the air); absent: both */
+  ribAcross?: readonly BoxAxis[];
   /** the box's own parts that already hold it in a line across each axis (the vent shelf, duct walls), in from its edge */
   fixedU: number[];
   fixedV: number[];
@@ -1679,6 +2146,18 @@ export interface BracePanel {
    */
   stopU: number[];
   stopV: number[];
+  /** what holds each edge against turning; absent: every edge hinged */
+  edges?: Record<PanelEdge, EdgeHold>;
+  /** screwed on (a removable back): its edges are hinged, and the window braces' rails are screwed to it, unglued */
+  loose?: boolean;
+  /** the driver's cutout, in panel coordinates (the baffle) */
+  hole?: PlateHole;
+  /**
+   * the duct's fins glued along it over its whole run (a bottom slot's), in from its edge across `across`, `height` tall:
+   * supports (in `fixedU` / `fixedV` too) that also hold the end of a rib meeting one in a corner; the other panels'
+   * ribs across that axis line up on them where they are as many (C braces)
+   */
+  fins?: { across: BoxAxis; at: number[]; height: number };
 }
 
 /**
@@ -1691,6 +2170,8 @@ export interface PanelRibs {
   at: number[];
   from: number;
   len: number;
+  /** how far they stand off the panel, in (RIB_DEPTHS_IN) */
+  depth: number;
 }
 
 /** A box-shaped region inside a box, in from its inside corner on each axis (x across, y up, z back from the baffle). */
@@ -1707,17 +2188,29 @@ export interface BoxKeepOut {
   hardware?: readonly BoxRegion[];
 }
 
-/** A panel's first plate resonance with its own parts only, and with the braces and ribs, Hz. */
+/** A strength check's load (`STRENGTH_LOAD_NAMES` holds the words for it). */
+export type StrengthLoadId = keyof typeof STRENGTH_LOAD_NAMES;
+/** A panel's worst bending stress with its braces and ribs, under the load nearest its limit, Pa (lib/strength). */
+export interface PanelStrength {
+  load: StrengthLoadId;
+  stressPa: number;
+  limitPa: number;
+}
+/**
+ * A panel's first plate resonance with its own parts only, and with the braces and ribs, Hz; and its strength where the
+ * rule checks it (the PA boxes).
+ */
 export interface PanelResonance {
   id: BracePanelId;
   bareHz: number;
   hz: number;
+  strength?: PanelStrength;
 }
 
 /** The bracing rule's choice in counts, as it works: the window braces across each axis and the ribs on each panel. */
 export interface BracePlan {
   windows: Record<BoxAxis, number>;
-  ribs: Partial<Record<BracePanelId, { across: BoxAxis; n: number }>>;
+  ribs: Partial<Record<BracePanelId, { across: BoxAxis; n: number; depth: number }>>;
 }
 
 /** What the bracing rule picked for a box: the window braces on each axis, the ribs, the resonances and the wood. */
@@ -1900,6 +2393,8 @@ export interface CutPartsConfig {
   layout: PaLayout;
   /** absent: the plywood's default (`defaultBraceStyle`) */
   braceStyle?: BraceStyleId;
+  /** absent: screwed (`DEFAULT_BACK_JOINT`) */
+  backJoint?: BackJointId;
   /** the sub box's parts only (its volume reads no more): the mid box is left out */
   subOnly?: boolean;
   /** the sub's braces and ribs left out (an optimizer's search counts their wood by estimate instead) */
@@ -2534,7 +3029,15 @@ export interface PaOptimizerResult {
   goals: PaGoal[];
   goalMissing: string | null;
   nearMiss: PaNearMiss | null;
-  stats: { evaluated: number; ms: number; subs: number; combos: number; pool: number };
+  stats: {
+    evaluated: number;
+    ms: number;
+    subs: number;
+    combos: number;
+    pool: number;
+    /** Fully optimize: the most grid rounds one card selection took (lib/pa/optimizeExact PA_EXACT_SLOT_ROUNDS) */
+    rounds?: number;
+  };
 }
 
 /** A check on the PA stack's sub, mid or horn. */

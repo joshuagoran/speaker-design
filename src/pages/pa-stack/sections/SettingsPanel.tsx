@@ -34,6 +34,9 @@ import type { PaSettingsSection } from "../../../constants/settingsSections";
 import { SLOT_LAYOUT_NAMES } from "../../../constants/portStyles";
 import { UI_TEXT } from "../../../constants/uiText";
 import {
+  BACK_JOINT_NAMES,
+  BACK_JOINT_SUMMARY,
+  BACK_JOINT_TIPS,
   BRACE_STYLE_NAMES,
   BRACE_STYLE_SUMMARY,
   BRACE_STYLE_TIPS,
@@ -128,6 +131,8 @@ interface Props {
     | "wallPanel"
     | "effectiveBraceStyle"
     | "setBraceStyle"
+    | "backJoint"
+    | "setBackJoint"
     | "subBracing"
     | "midBracing"
     | "hardware"
@@ -221,6 +226,8 @@ export function SettingsPanel({ planner }: Props) {
     wallPanel,
     effectiveBraceStyle,
     setBraceStyle,
+    backJoint,
+    setBackJoint,
     subBracing,
     midBracing,
     hardware,
@@ -307,7 +314,7 @@ export function SettingsPanel({ planner }: Props) {
       `amps ${subAmpWatts} / ${midAmpWatts} / ${hornAmpWatts} W`,
     ].join(" · "),
     build: [
-      `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${PANEL_NOMINAL_NAMES[wallPanel].short} ply, braced with ${BRACE_STYLE_SUMMARY[effectiveBraceStyle]}`,
+      `${PA_LAYOUT_NAMES[layout]}, ${finishName}, ${PANEL_NOMINAL_NAMES[wallPanel].short} ply, braced with ${BRACE_STYLE_SUMMARY[effectiveBraceStyle]}, ${BACK_JOINT_SUMMARY[backJoint]}`,
       ...keysOf(hardware)
         .filter((b) => boxTakesHardware(b, layout))
         .map(
@@ -768,6 +775,16 @@ export function SettingsPanel({ planner }: Props) {
               onChange={setWallPanel}
               options={PANEL_NOMINAL_OPTIONS}
             />
+            <div className="mt-3">
+              <ToggleGroup
+                label="Back panel"
+                value={backJoint}
+                onChange={setBackJoint}
+                options={keysOf(BACK_JOINT_NAMES).map(
+                  (id) => [id, BACK_JOINT_NAMES[id], BACK_JOINT_TIPS[id]] as const,
+                )}
+              />
+            </div>
             <div className="mt-3">
               <ToggleGroup
                 label="Bracing"

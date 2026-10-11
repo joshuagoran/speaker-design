@@ -58,8 +58,8 @@ Stack / pole / tower / satellite (`PaLayout` in `src/types.ts`).
   `TOWER_MID_HEIGHT_IN` in `stackHeights.ts`, and `15.5` literals in `optimize.ts` and `optimizeExact.ts`).
   The horn has its own section above it, behind one continuous baffle with internal partitions
   (`towerSpec`).
-- Known tower bug, tracked in a comment on issue #92: `cutParts` skips the mid chamber and horn section
-  (it lists only the sub box), and `midWeightLb` leaves out the horn section.
+- The tower's cutlist and weight include the mid chamber and horn section (PR #122: `towerCutParts`,
+  `towerMidWeightLb`).
 
 ## Near-term phases
 
@@ -81,19 +81,22 @@ Each PR stands alone. Lowest risk first.
   - `coaxParts` in `src/lib/data.ts` (derived from the fill catalog), a coincident layout in
     `driverLayout`, and a coax part in `buildHifiScene`.
   - A parity test against `fillSystem`, with documented tolerances.
-- **P4 Use-case selector (Hi-fi / Monitor).**
-  - Use-case presets in a new `src/constants/useCases.ts` set defaults, ranges, targets, chips and goals.
+- **P4 Starting templates (Hi-fi / Monitor).** No fixed roles (owner, Oct 2026). A template sets only the first
+  values of a new design. A save keeps no role. Every chip shows for every design.
+  - Templates in a new `src/constants/useCases.ts` set defaults and ranges.
   - Rename the project to "Speakers" (owner to confirm). Keep `#hifi`.
   - Split `HifiPage.tsx` (about 970 lines) into section components.
-  - New chips: target level, coverage, kick, HF headroom, near-field lobing.
-  - An optional `use` in saves. Old saves restore as Hi-fi.
+  - New chips: the maximum level at a distance that you set, coverage, kick, HF headroom, near-field lobing.
+    No chip compares the level with a target for each use.
+  - Drive: the user can select passive or active.
   - Monitors (DJ booth), two options:
-    - (a) a 10–12″ coax in a small box or wedge;
+    - (a) a 10–12″ coax in a small box;
     - (b) an 8″ and a 1″ compression driver on a small 4–6″ horn, crossed at about 2.5–3 kHz, mounted tight
       above the woofer. Physics caveat: an 8″ narrows to about 65° at 2.7 kHz, and a 5″ mouth only
       controls coverage above about 2.7 kHz, so it falls short of 90–100°.
-  - Monitor preset: 0.5–1.5 m away, a 105–115 dB target, a high-pass at 70 Hz LR24 (60–80 Hz), 90–100°
-    horizontal, a pair either side of the DJ.
+  - Monitor template: a pair, one on each side of the DJ. Each monitor hangs or sits on a pedestal. They are
+    not floor wedges. Distance 0.5–1.5 m, a high-pass at 70 Hz LR24 (60–80 Hz), 90–100° horizontal. No tilt
+    and no wedge for now. The system page will add aiming.
 - **P5 Fill use case.**
   - Map today's fill defaults (`DEFAULT_FILL` in `src/lib/defaults.ts`) onto the page and redirect
     `#fills`. Delete `FillsPage`, `useFillsPlanner` and `fillSystem` after the P3 parity test's reference
@@ -105,33 +108,52 @@ Each PR stands alone. Lowest risk first.
   - `kick` and `smaller` goals; SPL and coverage targets as filters.
   - Coax candidates in Fill and Monitor only; a crossover grid for monitor option (b).
   - The existing snapshot cards stay unchanged; new cases are added.
-- **P7 Wedge box.**
+- **P7 Wedge box.** Booth monitors do not need it. Stop work on it for now.
   - First, tilt / kick-back on a rectangular box.
   - Then a true wedge: trapezoid volume, layout, cutlist bevels, 3D and front drawing.
 - **P8 Optional printed DIY small horn.** Hornlab data and mesh, like `diy_os90x70`.
-- **T1 Tower with the horn freestanding on top.** A field, not a fifth layout:
+- **T1 Tower with the horn freestanding on top.** Do this in L3, not before (owner, Oct 2026). Do not build
+  parts that the modular box model will replace. The notes below are the spec for the tower template in L3.
+  It is a field, not a fifth layout:
   `hornPlacement: "baffle" | "top"`, defaulting to `"baffle"`, with a toggle shown only for Tower.
-  - **No mid volume change:** the horn already has its own section.
+  - **Adjustable mid chamber height** (owner, Oct 2026). Today the height is 15.5″ (`TOWER_MID_HEIGHT_IN`).
+    With the horn on top, the height becomes a setting. It changes the mid's volume and the tower's height.
+  - **Any horn can sit on top.** This includes the full-width rectangular horns.
   - **Heights:** `stackHeights` and `towerSpec` put the horn axis above the tower lid, with no arched top.
   - **Mount:** the horn sits on the PR #114 aluminum plate or ply mount. `takesHornMount` (which today is
     false for every tower) applies when the placement is `"top"`.
   - **3D:** `buildTower` and `buildStackScene` follow.
-  - **Unchanged:** alignment (the mouth stays on the front plane), the datasheet-based acoustics, the
-    optimizer, saves, goldens and the snapshot.
-  - **Cutlist:** fold in the #92 tower cutlist fix.
+  - **No change at the default height of 15.5″:** alignment (the mouth stays on the front plane), the
+    datasheet-based acoustics, saves, goldens and the snapshot. The mid volume follows the height.
+  - **Cutlist:** `towerCutParts` follows the adjustable height.
   - **Mapping:** `hornPlacement` becomes a property of any box with a horn and maps onto the speaker spec.
     The Hi-fi `WaveguideSpec.freestanding` boolean later switches to the shared type.
 
 ## Long-term phases
 
 - **L1 Types and read adapters.** Pure and tested; no UI.
-  - A general `SpeakerSpec`: id, name, template / use, cabinet
-    `{chambers: [{dims or volume, vent, drivers: [{driverId, type, position, count}]}], shape: upright | wedge, tiltDeg, panel, material}`,
-    bands / filters, look; `hornPlacement` and `hornMount` per horn.
-  - A `SystemSpec`: sources `{speakerId, role, pose, mirror, filters, delayMs | "auto", levelDb, amp channel}`,
-    amps, DSP, venue.
-  - Migration is read-time adapters only (`speakerFromSavedHifi`, `systemFromSavedPa`). Stored docs are
-    never rewritten.
+  - A general `SpeakerSpec`: id, name, cabinet
+    `{chambers: [{at, dims, netLiters, vent, load, drivers: [{kind, driverId, count, position, bands, horn}]}], panel, tiltDeg}`,
+    bands with their filters and drive, look. Each horn has its `placement` and `mount`. No template: a save
+    keeps no role (owner, Oct 2026).
+  - A `SystemSpec`: sources `{speakerId, role, pose, mirror, filters, delayMs | "auto", levelDb, channels}`,
+    amps, front end (analog or digital), venue.
+  - **Crossovers.** A band's filters are the box's own: the crossover inside the box and its protection. A
+    crossover to another box (the sub) is on the system's source.
+  - **Chambers.** Each chamber has a position in its cabinet, so chambers can sit side by side. Two chambers
+    that touch share one wall: the lower (or left) chamber's.
+  - **Old saves (owner policy).** Clean code comes first. Old saves can break. Read adapters map today's
+    in-memory designs (`systemFromPa`, `speakerFromHifi`, `systemFromHifi`, `speakerFromFill`,
+    `systemFromFill` in `src/lib/speaker/`). Do not add code only to keep old saves working: no shims for old
+    fields, no migration branches for old save formats, no compatibility layers.
+  - **Horns.** A chamber's load is direct or a horn built into the box: the horn engine's throat chamber and
+    segments (`HornDesign`, PR #128). The chamber's net air and vent are the horn's rear chamber.
+    `hornDesignOf` maps a front-loaded chamber onto `HornDesign`. Alike drivers in one throat go to the engine
+    as one driver and a count (`drivers`, Hornresp's Nd). The engine wires them in parallel, and each cone
+    keeps its own air load. A folded path (a bass bin) has the same segments; its fold
+    layout comes later. A back-loaded or tapped horn has its own drive; the engine does not take them yet. A
+    catalog horn on a compression driver is a `HornAttachment` with its `placement` (baffle or top) and its
+    `mount`.
   - New `speakers` and `systems` collections under `users/{uid}`, next to `configs` (PA) and `hifiConfigs`.
     `firestore.rules` already covers every collection there (`users/{uid}/{document=**}`); no rule change.
 - **L2 Speaker library.** Designer saves go to `speakers`, with import from old saves.
@@ -140,6 +162,10 @@ Each PR stands alone. Lowest risk first.
 - **L4 System page.** Sources by speaker id, amps and channels, DSP, crossovers between boxes, delay and
   level, and the coverage map generalized from `CoverageStack` to a list of sources. The PA page becomes a
   system preset.
+  - Amps and DSP start from the owner's v1 rig: [amp-dsp-v1.md](amp-dsp-v1.md).
+  - **Weight limit per box.** In the modular planner the weight limit becomes a manual setting on each box (it
+    replaces today's fixed 125 lb sub check in `src/lib/pa/chips.ts`). The user sets the limit for the box
+    they're working on; no automatic tower or layout rule sets it.
 
 ## Risks
 
@@ -150,18 +176,20 @@ Each PR stands alone. Lowest risk first.
 - Passive maker networks (3rd order) can't be expressed as `CrossoverOrder` (4 | 8).
 - The tall tower with a loose horn on top: tipping, and securing the horn.
 
+## Owner decisions (Oct 2026)
+
+- Monitor drive: the user can select passive or active.
+- No target level for each use. Show the maximum level at a distance that you set.
+- No fixed roles. A template sets only the first values. A save keeps no `use`.
+- Booth monitors are a pair. They hang or sit on pedestals. No tilt and no wedge for now.
+- Tower with the horn on top: the mid chamber height is adjustable, and any horn can sit on top. Do this in
+  L3, not before.
+
 ## Open questions for the owner
 
-1. Monitor drive: passive or active?
-2. Monitor SPL target: peak or continuous, one box or the pair? What is the fill target?
-3. Save the use case with each design? Recommended: yes.
-4. Is a tilted upright box enough before a true wedge?
-5. One monitor or a pair by default?
-6. Show coaxes in the Hi-fi use case?
-7. Name: "Speakers"?
-8. Coaxials with no published HF data: model the woofer only, with a chip, or hide them?
-9. Fill delay against the mains: wait for the system page, or add a small calculator now?
-10. Which small horns to research first?
-11. Tower with the horn on top: keep the mid chamber fixed at 15.5″ or make it adjustable? Allow the
-    full-width rectangular horn on top? Fix the tower weight too (it changes the "lil tower" golden)?
-12. Wording: "Tower" with a "Horn" toggle, or a separate "Tower, horn on top" picker entry?
+1. Show coaxials in the Hi-fi template?
+2. Name: "Speakers"?
+3. Coaxials with no published HF data: model the woofer only, with a chip, or hide them?
+4. Fill delay against the mains: wait for the system page, or add a small calculator now?
+5. Which small horns to research first?
+6. Wording: "Tower" with a "Horn" toggle, or a separate "Tower, horn on top" picker entry?

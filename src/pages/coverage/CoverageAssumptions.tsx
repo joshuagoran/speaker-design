@@ -6,9 +6,9 @@ import {
   BOX_SHADOW_HZ,
   COHERENT_BELOW_HZ,
   COVERAGE_BANDS,
-  SPEED_OF_SOUND,
   STATS_CLEARANCE_FT,
 } from "../../lib/pa/coverage";
+import { SPEED_OF_SOUND } from "../../constants/acoustics";
 import {
   CROWD_BOUNCE,
   FLOOR_REFLECTION,

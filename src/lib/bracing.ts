@@ -1,9 +1,7 @@
 // Bracing by rule, for any box (lib/pa/bracing lays out the PA boxes' panels; the Hi-fi page reads the plate model).
 //
-// The plate: each panel, and each bay of it between supports, is a thin (Kirchhoff) plate SIMPLY SUPPORTED on all four
-// edges. Glued edges sit between simply supported and clamped (a clamped square's first mode is 1.82 × the simply
-// supported one's, 36 against 19.74 in Leissa's tables), so this reads low: the safe side for a rule that adds braces.
-// Its first mode (m = n = 1) is the orthotropic rectangular plate's,
+// The plate: each panel, and each bay of it between supports, is a thin (Kirchhoff) plate. Hinged (simply supported)
+// on all four edges, its first mode (m = n = 1) is the orthotropic rectangular plate's,
 //     ω² ρh = π⁴ [D₁/a⁴ + 2H/(a²b²) + D₂/b⁴]
 // (A. W. Leissa, "Vibration of Plates", NASA SP-160, 1969, the chapter on anisotropic plates), with Huber's
 // approximation H = √(D₁D₂) for plywood (M. T. Huber, 1923; as in S. G. Lekhnitskii, "Anisotropic Plates", 1968),
@@ -12,14 +10,29 @@
 // An isotropic panel (MDF, E₁ = E₂) gives the familiar f₁₁ = (π/2) √(D/ρh) (1/a² + 1/b²). The weaker modulus is taken
 // across the shorter span (the span that sets the mode), so the face grain's direction on the box never reads high.
 // ρh is the panel's weight per area from the catalog (lib/panel), the same number the box weights use.
-// Holes (the driver's cutout), the duct's own stiffness and the air load are left out. No finite elements.
+// A glued edge sits between hinged and clamped (a clamped square's first mode is 1.82 × the hinged one's, 36 against
+// 19.74 in Leissa's tables): the panel glued on across the joint bends with the edge and holds it as a rotational
+// spring (EDGE_FIXITY, a low estimate), so each bay's edges on the box's joints take their neighbors' springs, and its
+// edges on a rib, a brace or a duct part stay hinged (baysHz; lib/plateModes works the modes out). A screwed back's
+// joints hold nothing, but it is screwed to the window braces' rear rails, which hold it in a line as on a glued back;
+// each of those rails and the back beside it is a mechanically jointed T beam (Eurocode 5's gamma method:
+// jointedTeeBeam), as a beam and where it meets the next rail in the corner (railStiffness). The driver's cutout is
+// cut out of the baffle's bay round it, the driver's weight hung on its edge, and the bay reads no higher than without
+// the hole; the duct's own stiffness and the air load are left out. No
+// finite elements.
 //
-// A window brace or a rib holds the panel in a line: a support like an edge. A window brace (a frame across the box
-// with its center cut out, rails WINDOW_RAIL_IN wide) is stiff in its plane and holds the four walls it touches. A rib
-// (a strip of the panel's stock glued on edge, RIB_DEPTH_IN deep) is a beam: its own first mode, simply supported over
-// the bay it bridges and carrying its share of the panel, f = (π/2) √(EI/μ) / L², is checked against the target too,
-// and the panel reads the lower of the two. The glued panel beside the rib works with it as a flange, so EI is the
-// T section's (Eurocode 5's effective flange width, the parallel-axis theorem: ribFirstModeHz).
+// A window brace or a rib holds the panel in a line: a support like an edge. Each is also a beam, and its own first
+// mode is checked against the target too: a rib (a strip of the panel's stock glued on edge, RIB_DEPTH_IN deep), and
+// each rail of a window brace (a frame across the box with its center cut out, rails WINDOW_RAIL_IN wide, one along
+// each wall it touches), over the bay it bridges and carrying its share of the panel, f = (π/2) √(EI/μ) / L² hinged.
+// The glued panel beside it works with it as a flange, so EI is the T section's (Eurocode 5's effective flange width,
+// the parallel-axis theorem: teeBeam, ribFirstModeHz). A strip's end is held where it meets one on the next panel in
+// the corner (RING_FIXITY): a frame's rails always, ribs when the next panel's ribs stand on the same lines (a ring).
+// The panel reads the lowest of its bays and its strips, and never under its bare plate.
+//
+// Strength (lib/strength): where the box gives its loads (the driver's pressure, a load on the lid), each bay, rib and
+// rail is checked in bending against the load's limit too, and a panel over it counts as short as one under the
+// target does, so the rule adds ribs for either.
 //
 // No brace or rib goes through the driver, the vent or the hardware: the box's keep-out (BoxKeepOut) holds the
 // driver's basket and magnet with a clearance, the vent's parts and air, and the recesses of the handles, the input
@@ -27,7 +40,10 @@
 // off the driver, either way across the panel. A window brace goes where its frame clears them all, nearest
 // the even spacing; one across x whose plane crosses the driver leaves its front rail out round it (the frame opens to
 // the baffle), so it holds the top, bottom and back but not the baffle. A rib must clear them over its whole run, or
-// stop at a duct part that holds the panel (a slot's shelf). A panel nothing can reach is reported under the target.
+// stop at a duct part that holds the panel (a slot's shelf), or stop short of one, at most RIB_FREE_END_IN short of
+// the edge or part it would reach (behind the driver's basket ring); a rib that stops short still counts as a line
+// across the whole panel, a little high for the bays at its free end, so it must run RIB_MIN_RUN_SHARE of it at
+// least. A panel nothing can reach is reported under the target.
 import type {
   BoxAxis,
   BoxBracing,
@@ -37,16 +53,22 @@ import type {
   BracePanelId,
   BracePlan,
   BraceStyleId,
+  EdgeHold,
+  PanelEdge,
   PanelNominal,
+  PlateHole,
   PanelResonance,
   PanelRibs,
+  PanelStrength,
   PlateStock,
 } from "../types";
+import { LB_FT2_KG_M2 } from "../constants/units";
+import { BACK_RAIL_SCREW_DIAMETER_MM, BACK_RAIL_SCREW_SPACING_IN } from "../constants/bracing";
 import { panelNominalNear } from "./panel";
+import { beamHz, holedPlateHz, restrainedPlateHz } from "./plateModes";
+import { plateStressFactor } from "./strength";
 
 const IN_M = 0.0254;
-/** lb/ft² to kg/m² */
-const LB_FT2_KG_M2 = 0.45359237 / 0.09290304;
 
 /**
  * Birch plywood's bending moduli, Pa: the mean values UPM gives for 18 mm, 13-ply WISA birch plywood at 10 ± 2 %
@@ -74,8 +96,23 @@ export const MDF_STIFFNESS: Pick<PlateStock, "eStrong" | "eWeak" | "nu"> = {
 
 /** A window brace's rails, inches: the frame left round the cut-out center. */
 export const WINDOW_RAIL_IN = 2;
-/** A rib's depth off the panel, inches; its width is the panel's stock. */
+/** A rib's depth off the panel, inches, the shallowest the rule offers; its width is the panel's stock. */
 export const RIB_DEPTH_IN = 2.5;
+/**
+ * The depths the rule offers a panel's ribs, inches (a 1×3, 1×4 and 1×6's width): a long rib needs depth more than a
+ * short one, so each panel takes the one that lifts it most for the wood.
+ */
+export const RIB_DEPTHS_IN = [RIB_DEPTH_IN, 4, 5.5] as const;
+/**
+ * The farthest a rib may stop short of the edge or duct part its run would reach, to clear the keep-out (the driver's
+ * basket ring beside a side), inches; its end there is free.
+ */
+export const RIB_FREE_END_IN = 4;
+/**
+ * The least share of a panel a rib must run along to count: a rib counts as a line across the whole panel, so a short
+ * one would read far too high (the same share lib/pa/bracing asks of a duct part, DUCT_SUPPORT_MIN_SHARE).
+ */
+export const RIB_MIN_RUN_SHARE = 2 / 3;
 /** The narrowest bay a window brace or rib may leave, inches (room to glue and clamp it). */
 export const MIN_BAY_IN = 4;
 /** The most moves the rule makes on one box. */
@@ -149,14 +186,98 @@ export function teeSecondMoment(b: number, h: number, w: number, d: number) {
  * I = t·d³/12) reads about half the frequency for a box's ribs: a ¾″ rib 2½″ deep with a 3″ flange is 3.9 × as stiff.
  */
 export function ribFirstModeHz(span: number, tributary: number, s: PlateStock): number {
-  const w = s.t * IN_M,
-    d = RIB_DEPTH_IN * IN_M,
-    L = span * IN_M,
-    b = ribFlangeIn(span, tributary, s.t) * IN_M;
-  const kgM2 = s.lbPerSqFt * LB_FT2_KG_M2;
-  const mu = kgM2 * d + kgM2 * tributary * IN_M; // the rib's own mass and the panel strip it carries, kg/m
-  return ((Math.PI / 2) * Math.sqrt((s.eWeak * teeSecondMoment(b, w, w, d)) / mu)) / L ** 2;
+  const { EI, mu } = teeBeam(span, tributary, s, s, RIB_DEPTH_IN);
+  return ((Math.PI / 2) * Math.sqrt(EI / mu)) / (span * IN_M) ** 2;
 }
+/**
+ * A strip glued on edge to a panel (a rib, or a window brace's rail): its web of `web` stock standing `depth` in off the
+ * panel and the panel's effective flange (ribFlangeIn) as one T section over `span` in, carrying `tributary` in of the
+ * panel beside it: its EI (N·m², at the weaker modulus) and its mass per length μ (kg/m), as ribFirstModeHz reads them.
+ */
+export function teeBeam(
+  span: number,
+  tributary: number,
+  panel: PlateStock,
+  web: PlateStock,
+  depth: number,
+) {
+  const w = web.t * IN_M,
+    d = depth * IN_M,
+    b = ribFlangeIn(span, tributary, panel.t) * IN_M;
+  const h = panel.t * IN_M,
+    I = teeSecondMoment(b, h, w, d);
+  const EI = Math.min(panel.eWeak, web.eWeak) * I;
+  const mu = web.lbPerSqFt * LB_FT2_KG_M2 * d + panel.lbPerSqFt * LB_FT2_KG_M2 * tributary * IN_M;
+  // the section modulus to the fiber farthest from the centroid (the rib's edge, mostly), m³
+  const y = (b * h * (h / 2) + w * d * (h + d / 2)) / (b * h + w * d);
+  return { EI, mu, Z: I / Math.max(y, h + d - y) };
+}
+/** A stock's mean density, kg/m³: its weight per area (the catalog's) over its thickness. */
+const densityOf = (s: Pick<PlateStock, "lbPerSqFt" | "t">) =>
+  (s.lbPerSqFt * LB_FT2_KG_M2) / (s.t * IN_M);
+/**
+ * A screw's slip modulus in a timber-to-timber joint, N/m per screw: EN 1995-1-1 §7.1, Table 7.1,
+ * K_ser = ρm^1.5 · d / 23 N/mm (ρm in kg/m³, d in mm), with ρm = √(ρm,1 ρm,2) for two members of different densities
+ * (§7.1 (2)). A panel's vibration is a serviceability case, so K_ser serves for it (K_u = ⅔ K_ser is for the ultimate
+ * limit state, §2.2.2 (2)).
+ */
+export function screwSlipModulus(rho1: number, rho2: number, dMm: number) {
+  return ((Math.sqrt(rho1 * rho2) ** 1.5 * dMm) / 23) * 1000;
+}
+/**
+ * The gamma factor of a part fixed to a beam's web by fasteners: EN 1995-1-1 Annex B, (B.5),
+ * γ = 1 / (1 + π² E A s / (K L²)), E A the part's axial stiffness (N), s the fasteners' spacing (m), K each one's slip
+ * modulus (N/m), L the span (m); 1 glued rigid, toward 0 as the joint slips.
+ */
+export function gammaFactor(EA: number, s: number, K: number, L: number) {
+  return 1 / (1 + (Math.PI ** 2 * EA * s) / (K * L * L));
+}
+/**
+ * A strip screwed, not glued, to a panel (a window brace's rail on a screwed back, its screws `BACK_RAIL_SCREW_*` apart):
+ * a mechanically jointed T beam by EN 1995-1-1 Annex B. The rail is the web (γ₂ = 1), the panel's effective flange
+ * (ribFlangeIn, as teeBeam's) the part fixed to it by the screws (γ₁ by gammaFactor, their slip by screwSlipModulus);
+ * the neutral axis sits at a₂ = γ₁E₁A₁(h₁ + h₂)/2 / (γ₁E₁A₁ + E₂A₂) from the rail's center (B.6 for two parts),
+ * a₁ = (h₁ + h₂)/2 − a₂, and EI_ef = Σ(EᵢIᵢ + γᵢEᵢAᵢaᵢ²) (B.1). At γ₁ = 1 it is teeBeam's T section when the two
+ * stocks share their weaker modulus (teeBeam takes the lower of the two for both); the rail's fiber farthest out takes
+ * the stress, σ = E₂(a₂ + h₂/2) M / EI_ef (B.7, B.8). μ is teeBeam's; also returns γ₁. γ₁ takes the full span, Annex
+ * B's ℓ for a simply supported beam (B.2); its ~0.8 ℓ for a continuous one would lower γ₁ and EI_ef, the conservative
+ * side, an option left out.
+ */
+export function jointedTeeBeam(
+  span: number,
+  tributary: number,
+  panel: PlateStock,
+  web: PlateStock,
+  depth: number,
+) {
+  const b = ribFlangeIn(span, tributary, panel.t) * IN_M,
+    h1 = panel.t * IN_M,
+    w = web.t * IN_M,
+    h2 = depth * IN_M,
+    L = span * IN_M;
+  const E1 = panel.eWeak,
+    E2 = web.eWeak,
+    A1 = b * h1,
+    A2 = w * h2;
+  const K = screwSlipModulus(densityOf(panel), densityOf(web), BACK_RAIL_SCREW_DIAMETER_MM);
+  const gamma = gammaFactor(E1 * A1, BACK_RAIL_SCREW_SPACING_IN * IN_M, K, L);
+  const a2 = (gamma * E1 * A1 * (h1 + h2)) / 2 / (gamma * E1 * A1 + E2 * A2),
+    a1 = (h1 + h2) / 2 - a2;
+  const EI =
+    E1 * ((b * h1 ** 3) / 12) +
+    gamma * E1 * A1 * a1 ** 2 +
+    E2 * ((w * h2 ** 3) / 12) +
+    E2 * A2 * a2 ** 2;
+  const mu = web.lbPerSqFt * LB_FT2_KG_M2 * h2 + panel.lbPerSqFt * LB_FT2_KG_M2 * tributary * IN_M;
+  return { EI, mu, Z: EI / (E2 * (a2 + h2 / 2)), gamma };
+}
+/**
+ * How far a rib or rail is held against turning where it meets one on the next panel round the same line (a ring of
+ * ribs, a window brace's frame): the other bends with it, so it resists as a beam over its span with its far end
+ * hinged, 3EI/L (the lower of the textbook end cases, as EDGE_FIXITY). A rib ending on a bare panel's face is left
+ * hinged: the panel's bending holds a T section that stiff by under 1 % (worked out for the 18 Sound kit's side ribs).
+ */
+export const RING_FIXITY = 3;
 
 // ---- the geometry: regions inside a box, and the braces' and ribs' own ----
 
@@ -241,12 +362,12 @@ export const ribRunAxis = (panel: BracePanelId, across: BoxAxis): BoxAxis =>
 /** One rib's region: on `panel`, across `across` at `at`, from `from` along its run for `len`, `t` thick. */
 export function ribRegion(
   inner: Record<BoxAxis, number>,
-  r: Pick<PanelRibs, "panel" | "across" | "from" | "len">,
+  r: Pick<PanelRibs, "panel" | "across" | "from" | "len" | "depth">,
   at: number,
   t: number,
 ): BoxRegion {
   const n = PANEL_NORMAL[r.panel];
-  const off: Span = n.far ? [inner[n.axis] - RIB_DEPTH_IN, inner[n.axis]] : [0, RIB_DEPTH_IN];
+  const off: Span = n.far ? [inner[n.axis] - r.depth, inner[n.axis]] : [0, r.depth];
   return regionOf(n.axis, off, r.across, [at - t / 2, at + t / 2], ribRunAxis(r.panel, r.across), [
     r.from,
     r.from + r.len,
@@ -339,6 +460,101 @@ const nearestIn = (spans: readonly Span[], p: number) => {
   return best;
 };
 
+/**
+ * How far a glued joint holds a panel's edge against turning: a strip of the panel across the joint, its far edge
+ * hinged, resists with 3D/L per unit length (D its bending stiffness at the weaker modulus, L its span away from the
+ * joint): the lower of the beam's two textbook end cases (3EI/L far end hinged, 4EI/L fixed), so the spring reads
+ * low. The panels' own ribs and braces are left out of that strip, on the same side.
+ */
+export const EDGE_FIXITY = 3;
+/** The spring a glued neighbor gives a panel's edge, N·m/rad per m of edge; 0 where nothing holds it. */
+export const edgeSpring = (hold: EdgeHold | undefined) =>
+  hold
+    ? (EDGE_FIXITY * hold.stock.eWeak * (hold.stock.t * IN_M) ** 3) / 12 / (hold.span * IN_M)
+    : 0;
+/** The lines dividing a span: its ends and the supports inside it, in order. */
+const spanLines = (span: number, pts: readonly number[]) => [
+  0,
+  ...pts.filter((p) => p > EPS && p < span - EPS).sort((a, b) => a - b),
+  span,
+];
+/**
+ * A panel's plate resonance between its supports (`acrossU`, `acrossV`: ribs, braces and duct parts), Hz: the lowest
+ * of its bays, each a plate whose edges on the panel's own edges take the glued neighbors' springs (`edges`) and whose
+ * edges on a rib, brace or duct part are hinged (bays either side of a support move in turn about it, as a plate
+ * continuous over hinged lines does), the bay with the driver's cutout read with it (lib/plateModes).
+ */
+export function baysHz(
+  p: Pick<BracePanel, "spanU" | "spanV" | "stock" | "edges" | "hole">,
+  acrossU: readonly number[],
+  acrossV: readonly number[],
+): number {
+  return Math.min(...panelBays(p, acrossU, acrossV).map((bay) => bayHz(p, bay)));
+}
+interface Bay {
+  u: { from: number; len: number };
+  v: { from: number; len: number };
+  springs: { x0: number; x1: number; y0: number; y1: number };
+  /** the cutout in the bay's own coordinates, where it lies in this bay */
+  hole: PlateHole | null;
+}
+const bayHz = (p: Pick<BracePanel, "stock">, bay: Bay) => {
+  const solid = restrainedPlateHz(bay.u.len, bay.v.len, p.stock, bay.springs);
+  // the holed bay never reads over the solid one: the driver's frame stiffening the cutout's edge isn't modeled yet
+  return bay.hole
+    ? Math.min(
+        solid,
+        holedPlateHz(bay.u.len, bay.v.len, p.stock, bay.springs, bay.hole, bay.hole.ringKg),
+      )
+    : solid;
+};
+/** A panel's bays between its supports, each with its edges' springs; bays alike are listed once (baysHz). */
+function panelBays(
+  p: Pick<BracePanel, "spanU" | "spanV" | "edges" | "hole">,
+  acrossU: readonly number[],
+  acrossV: readonly number[],
+): Bay[] {
+  const k = {
+    u0: edgeSpring(p.edges?.u0),
+    u1: edgeSpring(p.edges?.u1),
+    v0: edgeSpring(p.edges?.v0),
+    v1: edgeSpring(p.edges?.v1),
+  };
+  const spans = (lines: number[], k0: number, k1: number) => {
+    const seen = new Map<string, { from: number; len: number; k0: number; k1: number }>();
+    for (let i = 1; i < lines.length; i++) {
+      const b = {
+        from: lines[i - 1],
+        len: lines[i] - lines[i - 1],
+        k0: i === 1 ? k0 : 0,
+        k1: i === lines.length - 1 ? k1 : 0,
+      };
+      // bays alike ring alike: one of each (the hole's bay is told apart by where it starts)
+      const key = `${b.len.toFixed(6)}|${b.k0}|${b.k1}${p.hole ? `|${b.from}` : ""}`;
+      if (b.len > EPS && !seen.has(key)) seen.set(key, b);
+    }
+    return [...seen.values()];
+  };
+  const h = p.hole;
+  return spans(spanLines(p.spanU, acrossU), k.u0, k.u1).flatMap((a) =>
+    spans(spanLines(p.spanV, acrossV), k.v0, k.v1).map((b) => ({
+      u: a,
+      v: b,
+      springs: { x0: a.k0, x1: a.k1, y0: b.k0, y1: b.k1 },
+      hole:
+        h && h.cx > a.from && h.cx < a.from + a.len && h.cy > b.from && h.cy < b.from + b.len
+          ? { ...h, cx: h.cx - a.from, cy: h.cy - b.from }
+          : null,
+    })),
+  );
+}
+
+/** The panels a box's bracing leaves over a strength limit (lib/strength), each with its stress, limit and load. */
+export const strengthShortfalls = (b: Pick<BoxBracing, "panels">) =>
+  b.panels.flatMap((p) =>
+    p.strength && p.strength.stressPa > p.strength.limitPa ? [{ id: p.id, ...p.strength }] : [],
+  );
+
 /** The panels a box's bracing leaves under its target, each with its first mode (the UI names the box and words them). */
 export const braceShortfalls = (b: Pick<BoxBracing, "panels" | "targetHz">): PanelResonance[] =>
   b.panels.filter((p) => p.hz < b.targetHz - 1e-9);
@@ -353,6 +569,16 @@ export interface BraceBoxInput {
   style: BraceStyleId;
   braceStock: PlateStock;
   keepOut: BoxKeepOut;
+  /**
+   * the strength checks' loads (lib/strength): the driver's pressure on every panel and a load on the top, each in Pa
+   * with its stress limit; absent: none checked
+   */
+  loads?: { pressurePa: number; pressureLimitPa: number; lidPa: number; lidLimitPa: number };
+}
+/** A panel as the rule weighs it: its first resonance, and its worst stress against its limit where loads are given. */
+interface PanelEval {
+  hz: number;
+  strength: PanelStrength | null;
 }
 type RibState = BracePlan["ribs"];
 type Counts = BracePlan["windows"];
@@ -370,6 +596,11 @@ const RING_RANK: Record<BracePanelId, number> = {
   back: 1,
   baffle: 0,
 };
+/** A panel's edges at the start and end of a run along its u or v axis. */
+const RUN_EDGE: Record<"u" | "v", readonly [PanelEdge, PanelEdge]> = {
+  u: ["u0", "u1"],
+  v: ["v0", "v1"],
+};
 /** The panel at each end of a run along an axis. */
 const END_PANEL: Record<BoxAxis, readonly [BracePanelId, BracePanelId]> = {
   x: ["sideL", "sideR"],
@@ -379,9 +610,10 @@ const END_PANEL: Record<BoxAxis, readonly [BracePanelId, BracePanelId]> = {
 
 /**
  * The braces a box takes by rule, one move at a time, until every panel's first resonance clears `targetHz` (or
- * nothing more fits or helps). Each move adds the window brace, or the ribs on one panel, that most cuts the panels'
- * summed shortfall under the target per inch³ of wood. Window braces and Ribs keep to their own kind; a panel that
- * kind can't lift stays under the target (braceShortfalls lists it). By style:
+ * nothing more fits or helps). Each move adds the window brace, or sets the ribs on one panel (more of the same, or
+ * ribs the other way in their place), that most cuts the panels' summed shortfall under the target per inch³ of wood.
+ * Window braces and Ribs keep to their own kind; a panel that kind can't lift stays under the target (braceShortfalls
+ * lists it). By style:
  * - window: window braces only (none lifts a panel the driver or the vent keeps every frame off);
  * - ribs: ribs only, on the panels that take them (not the baffle: no rib can cross the driver);
  * - both: the window braces the baffle needs first (no rib can hold it, and once ribs stand where a frame would go no
@@ -396,6 +628,7 @@ export function braceBox({
   style,
   braceStock,
   keepOut,
+  loads,
 }: BraceBoxInput): BoxBracing {
   const t = braceStock.t;
   const hardware = keepOut.hardware ?? [];
@@ -452,7 +685,8 @@ export function braceBox({
     return out;
   };
   const winOrNone = (a: BoxAxis, n: number) => winAt(a, n) ?? [];
-  // the window braces' lines on a panel, in from its edge (a notched brace doesn't hold the baffle)
+  // the window braces' lines on a panel, in from its edge (a notched brace doesn't hold the baffle; a screwed back is
+  // screwed to their rear rails, so they hold it too)
   const onPanel = (p: BracePanel, axis: BoxAxis, n: number, off: number, span: number) =>
     winOrNone(axis, n)
       .filter((x) => p.id !== "baffle" || !notched(axis, x))
@@ -471,8 +705,8 @@ export function braceBox({
     string,
     { L: number; boxes: { across: Span; run: Span }[]; starts: number[]; ends: number[] }
   >();
-  const ribBand = (p: BracePanel, across: BoxAxis) => {
-    const k = p.id + across;
+  const ribBand = (p: BracePanel, across: BoxAxis, depth: number) => {
+    const k = p.id + across + depth;
     const hit = bandMemo.get(k);
     if (hit) return hit;
     const alongU = across === p.u;
@@ -481,7 +715,7 @@ export function braceBox({
       offR = alongU ? p.offV : p.offU;
     const runAxis = ribRunAxis(p.id, across);
     const n = PANEL_NORMAL[p.id];
-    const band: Span = n.far ? [inner[n.axis] - RIB_DEPTH_IN, inner[n.axis]] : [0, RIB_DEPTH_IN];
+    const band: Span = n.far ? [inner[n.axis] - depth, inner[n.axis]] : [0, depth];
     const boxes = keep
       .filter(
         (o) =>
@@ -495,17 +729,22 @@ export function braceBox({
         run: [o[runAxis][0] - offR, o[runAxis][1] - offR] as const,
       }));
     const sup = alongU ? [...p.fixedV, ...p.stopV] : [...p.fixedU, ...p.stopU];
+    const starts = [0, ...sup.map((s) => s + t / 2)],
+      ends = [L, ...sup.map((s) => s - t / 2)];
+    // or just past a keep-out box, RIB_FREE_END_IN at most from where the rib would have started or ended
+    const near = (xs: number[], x: number) =>
+      x > EPS && x < L - EPS && xs.some((y) => Math.abs(y - x) <= RIB_FREE_END_IN + EPS);
     const out = {
       L,
       boxes,
-      starts: [0, ...sup.map((s) => s + t / 2)],
-      ends: [L, ...sup.map((s) => s - t / 2)],
+      starts: [...starts, ...boxes.map((o) => o.run[1]).filter((x) => near(starts, x))],
+      ends: [...ends, ...boxes.map((o) => o.run[0]).filter((x) => near(ends, x))],
     };
     bandMemo.set(k, out);
     return out;
   };
-  const ribRun = (p: BracePanel, across: BoxAxis, at: number): Span | null => {
-    const { L, boxes, starts, ends } = ribBand(p, across);
+  const ribRun = (p: BracePanel, across: BoxAxis, at: number, depth: number): Span | null => {
+    const { L, boxes, starts, ends } = ribBand(p, across, depth);
     const blocked = boxes
       .filter((o) => o.across[0] < at + t / 2 - EPS && at - t / 2 < o.across[1] - EPS)
       .map((o) => o.run);
@@ -524,15 +763,15 @@ export function braceBox({
   // where on `p` a rib across `across` can stand (ribRun finds it a run): the spans between the keep-out's edges whose
   // middle it can, so ribs move off the driver and the vent as window braces do
   const ribRoom = new Map<string, Span[]>();
-  const ribClear = (p: BracePanel, across: BoxAxis): Span[] => {
-    const k = p.id + across;
+  const ribClear = (p: BracePanel, across: BoxAxis, depth: number): Span[] => {
+    const k = p.id + across + depth;
     const hit = ribRoom.get(k);
     if (hit) return hit;
     const alongU = across === p.u;
     const span = alongU ? p.spanU : p.spanV,
       offA = alongU ? p.offU : p.offV;
     const n = PANEL_NORMAL[p.id];
-    const band: Span = n.far ? [inner[n.axis] - RIB_DEPTH_IN, inner[n.axis]] : [0, RIB_DEPTH_IN];
+    const band: Span = n.far ? [inner[n.axis] - depth, inner[n.axis]] : [0, depth];
     const cuts = keep
       .filter((o) => o[n.axis][0] < band[1] - EPS && band[0] < o[n.axis][1] - EPS)
       .flatMap((o) => [o[across][0] - offA - t / 2, o[across][1] - offA + t / 2])
@@ -541,7 +780,7 @@ export function braceBox({
     const out: Span[] = [];
     for (let i = 1; i < edges.length; i++) {
       const [a, b] = [edges[i - 1], edges[i]];
-      if (b - a > EPS && ribRun(p, across, (a + b) / 2)) {
+      if (b - a > EPS && ribRun(p, across, (a + b) / 2, depth)) {
         const last = out[out.length - 1];
         if (last && Math.abs(last[1] - a) < EPS) out[out.length - 1] = [last[0], b];
         else out.push([a, b]);
@@ -550,73 +789,271 @@ export function braceBox({
     ribRoom.set(k, out);
     return out;
   };
-  // a panel's `n` ribs across `across` with the window braces `w`: each nearest its spot in the panel's widest bays
-  // (fillGaps) where it can stand, every bay still MIN_BAY_IN or more; where they go and run, or null if they can't
+  // the fins' lines (BracePanel fins) in box coordinates, by the axis they divide
+  const finLines: Partial<Record<BoxAxis, number[]>> = {};
+  for (const p of panels)
+    if (p.fins) {
+      const off = p.fins.across === p.u ? p.offU : p.offV;
+      finLines[p.fins.across] = p.fins.at.map((x) => x + off);
+    }
+  // a panel's `n` ribs across `across` with the window braces `w`: in line with the fins when there are as many (C
+  // braces) and they can stand there, else each nearest its spot in the panel's widest bays (fillGaps) where it can
+  // stand; every bay still MIN_BAY_IN or more. Where they go and run, or null if they can't
   const ribMemo = new Map<string, PlacedRibs | null>();
-  const ribsAt = (p: BracePanel, across: BoxAxis, n: number, w: Counts): PlacedRibs | null => {
-    const k = `${p.id}${across}${n}|${w[across]}`;
+  const ribsAt = (
+    p: BracePanel,
+    across: BoxAxis,
+    n: number,
+    w: Counts,
+    depth: number,
+  ): PlacedRibs | null => {
+    const k = `${p.id}${across}${n}|${w[across]}|${depth}`;
     const hit = ribMemo.get(k);
     if (hit !== undefined) return hit;
     const span = across === p.u ? p.spanU : p.spanV;
     const sup = supportsAcross(p, across, w);
-    const clear = ribClear(p, across);
-    const at = clear.length
-      ? fillGaps(span, sup, n)
-          .at.map((x) => nearestIn(clear, x))
-          .sort((a, b) => a - b)
-      : [];
+    const clear = ribClear(p, across, depth);
     const lines = [0, span, ...sup.filter((s) => s > EPS && s < span - EPS)];
-    const spaced =
-      at.length === n &&
-      at.every(
-        (x, i) =>
-          (i === 0 || x - at[i - 1] >= MIN_BAY_IN - EPS) &&
-          lines.every((s) => Math.abs(x - s) >= MIN_BAY_IN - EPS),
-      );
-    const runs: Span[] = [];
-    let out: PlacedRibs | null = spaced ? { at, runs } : null;
-    for (const x of spaced ? at : []) {
-      const r = ribRun(p, across, x);
-      if (!r) {
-        out = null;
-        break;
+    const place = (at: number[]): PlacedRibs | null => {
+      const spaced =
+        at.length === n &&
+        at.every(
+          (x, i) =>
+            (i === 0 || x - at[i - 1] >= MIN_BAY_IN - EPS) &&
+            lines.every((s) => Math.abs(x - s) >= MIN_BAY_IN - EPS),
+        );
+      if (!spaced) return null;
+      const runs: Span[] = [];
+      for (const x of at) {
+        const r = ribRun(p, across, x, depth);
+        if (!r || r[1] - r[0] < RIB_MIN_RUN_SHARE * ribBand(p, across, depth).L - EPS) return null;
+        runs.push(r);
       }
-      runs.push(r);
-    }
+      return { at, runs };
+    };
+    const off = across === p.u ? p.offU : p.offV;
+    const fins = p.fins ? undefined : finLines[across]?.map((x) => x - off);
+    const onFins =
+      fins?.length === n && fins.every((x) => clear.some(([a, b]) => x >= a - EPS && x <= b + EPS))
+        ? place(fins)
+        : null;
+    const out =
+      onFins ??
+      (clear.length
+        ? place(
+            fillGaps(span, sup, n)
+              .at.map((x) => nearestIn(clear, x))
+              .sort((a, b) => a - b),
+          )
+        : null);
     ribMemo.set(k, out);
     return out;
   };
   const ribsFit = (w: Counts, r: RibState) =>
     panels.every((p) => {
       const s = r[p.id];
-      return !s || ribsAt(p, s.across, s.n, w) !== null;
+      return !s || ribsAt(p, s.across, s.n, w, s.depth) !== null;
     });
 
-  // a panel's resonance depends on its own ribs and the window braces across its two axes: each case worked out once
-  const evalMemo = new Map<string, number>();
-  const evalPanel = (p: BracePanel, w: Counts, r: RibState) => {
+  const panelById = new Map(panels.map((p) => [p.id, p]));
+  const otherAxis = (p: BracePanel, a: BoxAxis) => (a === p.u ? p.v : p.u);
+  const spanAcross = (p: BracePanel, a: BoxAxis) => (a === p.u ? p.spanU : p.spanV);
+  const offAcross = (p: BracePanel, a: BoxAxis) => (a === p.u ? p.offU : p.offV);
+  /**
+   * A strip's span between the supports crossing it (`sup` along `L`): its widest gap, and whether that gap reaches
+   * the panel's start and end (where a corner may hold it).
+   */
+  const stripSpan = (L: number, sup: readonly number[]) => {
+    const lines = spanLines(L, sup);
+    let i = 1;
+    for (let j = 2; j < lines.length; j++)
+      if (lines[j] - lines[j - 1] > lines[i] - lines[i - 1] + EPS) i = j;
+    return { len: lines[i] - lines[i - 1], start: i === 1, end: i === lines.length - 1 };
+  };
+  // a rib's T on `q` across `a` with the braces `w` and its ribs `n`: its EI over its span, for the corner spring it gives
+  const ribStiffness = (q: BracePanel, a: BoxAxis, n: number, w: Counts, depth: number) => {
+    const placed = ribsAt(q, a, n, w, depth);
+    if (!placed) return 0;
+    const span = stripSpan(
+      spanAcross(q, otherAxis(q, a)),
+      supportsAcross(q, otherAxis(q, a), w),
+    ).len;
+    const trib = widestGap(spanAcross(q, a), [...supportsAcross(q, a, w), ...placed.at]);
+    return (RING_FIXITY * teeBeam(span, trib, q.stock, q.stock, depth).EI) / (span * IN_M);
+  };
+  // the spring at one end of `p`'s rib at `x` (panel coordinates) running from `run`: the next panel's rib on the same
+  // line, glued to it in the corner (layRibs butts one into the other), else none
+  const ringSpring = (
+    p: BracePanel,
+    a: BoxAxis,
+    x: number,
+    run: Span,
+    end: 0 | 1,
+    w: Counts,
+    r: RibState,
+  ) => {
+    const R = ribRunAxis(p.id, a);
+    const o = otherAxis(p, a);
+    const L = spanAcross(p, o);
+    if (end === 0 ? run[0] > EPS : run[1] < L - EPS) return 0;
+    // the joint there must be glued for the two ribs to be (a screwed back's isn't)
+    if (p.edges && p.edges[RUN_EDGE[o === p.u ? "u" : "v"][end]] === null) return 0;
+    const q = panelById.get(END_PANEL[R][end]);
+    // a fin on the next panel on this line, running to this panel's wall: the rib butts onto it (a C brace)
+    if (
+      q?.fins &&
+      q.fins.across === a &&
+      ribRunAxis(q.id, a) === PANEL_NORMAL[p.id].axis &&
+      q.fins.at.some((y) => Math.abs(offAcross(q, a) + y - (offAcross(p, a) + x)) < t - EPS)
+    ) {
+      const span = spanAcross(q, otherAxis(q, a));
+      const trib = widestGap(spanAcross(q, a), supportsAcross(q, a, w));
+      const { EI } = teeBeam(span, trib, q.stock, q.stock, q.fins.height);
+      return (RING_FIXITY * EI) / (span * IN_M);
+    }
+    const s = q && r[q.id];
+    if (!q || !s || s.across !== a) return 0;
+    const placed = ribsAt(q, a, s.n, w, s.depth);
+    const n = PANEL_NORMAL[p.id];
+    const at = offAcross(p, a) + x;
+    const meets = placed?.at.some((y, i) => {
+      const qr = placed.runs[i],
+        qL = spanAcross(q, otherAxis(q, a)),
+        qOff = otherAxis(q, a) === q.u ? q.offU : q.offV;
+      // the other rib reaches this panel's wall
+      const reaches = n.far ? qOff + qr[1] >= inner[n.axis] - EPS : qOff + qr[0] <= EPS;
+      return (
+        Math.abs(offAcross(q, a) + y - at) < t - EPS && reaches && qr[1] - qr[0] > EPS && qL > EPS
+      );
+    });
+    return meets ? ribStiffness(q, a, s.n, w, s.depth) : 0;
+  };
+  // a window brace's rail on `q` across `a`: its EI over its span, for the corner spring it gives the next rail
+  const railStiffness = (q: BracePanel, a: BoxAxis, w: Counts) => {
+    const span = spanAcross(q, otherAxis(q, a));
+    const trib = widestGap(spanAcross(q, a), supportsAcross(q, a, w));
+    // along a loose (screwed) panel the rail is screwed to it: a jointed T beam
+    const { EI } = (q.loose ? jointedTeeBeam : teeBeam)(
+      span,
+      trib,
+      q.stock,
+      braceStock,
+      WINDOW_RAIL_IN,
+    );
+    return (RING_FIXITY * EI) / (span * IN_M);
+  };
+
+  // a panel's resonance and strength depend on the window braces, its own ribs and the ribs of the panels its ribs run
+  // into (a ring): each case worked out once
+  const evalMemo = new Map<string, PanelEval>();
+  const ribTag = (r: RibState, id: BracePanelId) => {
+    const s = r[id];
+    return s ? `${s.across}${s.n}d${s.depth}` : "";
+  };
+  const evalPanel = (p: BracePanel, w: Counts, r: RibState): PanelEval => {
     const rib = r[p.id];
-    const k = `${p.id}|${w[p.u]},${w[p.v]}|${rib ? rib.across + rib.n : ""}`;
+    const ends = rib ? END_PANEL[ribRunAxis(p.id, rib.across)].map((id) => ribTag(r, id)) : [];
+    const k = `${p.id}|${w.x},${w.y},${w.z}|${ribTag(r, p.id)}|${ends.join()}`;
     const hit = evalMemo.get(k);
     if (hit !== undefined) return hit;
-    const hz = panelHz(p, w, r);
-    evalMemo.set(k, hz);
-    return hz;
+    const e = panelEval(p, w, r);
+    evalMemo.set(k, e);
+    return e;
   };
-  const panelHz = (p: BracePanel, w: Counts, r: RibState) => {
+  // the loads on a panel: the driver's pressure on every one, and on the top the lid's load
+  const panelLoads = (p: BracePanel) =>
+    loads
+      ? [
+          { load: "pressure" as const, pa: loads.pressurePa, limitPa: loads.pressureLimitPa },
+          ...(p.id === "top"
+            ? [{ load: "lid" as const, pa: loads.lidPa, limitPa: loads.lidLimitPa }]
+            : []),
+        ].filter((l) => l.pa > 0)
+      : [];
+  /**
+   * A panel's first resonance: the lowest of its bays (baysHz), its ribs as beams and its window braces' rails as
+   * beams. A rib or rail bridges the widest gap between the supports that cross it, carrying the widest bay of panel
+   * beside it; its ends are held where a rib or rail on the next panel meets it (RING_FIXITY), else hinged. And its
+   * strength under each load (lib/strength): the worst of its bays, ribs and rails against the load's limit.
+   */
+  const panelEval = (p: BracePanel, w: Counts, r: RibState): PanelEval => {
+    // a strip adds stiffness for little mass, so no panel reads under its bare plate (the strips' beam check leaves
+    // out the plate's own two-way bending beside them, so on its own it can)
+    const bare = baysHz(p, p.fixedU, p.fixedV);
     const supU = supportsAcross(p, p.u, w),
       supV = supportsAcross(p, p.v, w);
     const rib = r[p.id];
-    const placed = rib ? ribsAt(p, rib.across, rib.n, w) : null;
+    const placed = rib ? ribsAt(p, rib.across, rib.n, w, rib.depth) : null;
     const ribU = rib && placed && rib.across === p.u ? placed.at : [],
       ribV = rib && placed && rib.across === p.v ? placed.at : [];
-    const gu = widestGap(p.spanU, [...supU, ...ribU]),
-      gv = widestGap(p.spanV, [...supV, ...ribV]);
-    let hz = plateFirstModeHz(gu, gv, p.stock);
-    // a rib bridges the widest bay of the supports that cross it, carrying the widest bay of panel beside it
-    if (ribU.length) hz = Math.min(hz, ribFirstModeHz(widestGap(p.spanV, supV), gu, p.stock));
-    if (ribV.length) hz = Math.min(hz, ribFirstModeHz(widestGap(p.spanU, supU), gv, p.stock));
-    return hz;
+    let hz = baysHz(p, [...supU, ...ribU], [...supV, ...ribV]);
+    const gap = (a: BoxAxis) =>
+      a === p.u ? widestGap(p.spanU, [...supU, ...ribU]) : widestGap(p.spanV, [...supV, ...ribV]);
+    // each strip as a beam: its span, the panel it carries and its section modulus (the strength check's)
+    const strips: { span: number; trib: number; Z: number }[] = [];
+    if (rib && placed) {
+      const a = rib.across,
+        o = otherAxis(p, a);
+      const sp = stripSpan(spanAcross(p, o), supportsAcross(p, o, w));
+      const trib = gap(a);
+      const { EI, mu, Z } = teeBeam(sp.len, trib, p.stock, p.stock, rib.depth);
+      strips.push({ span: sp.len, trib, Z });
+      placed.at.forEach((x, i) => {
+        const k0 = sp.start ? ringSpring(p, a, x, placed.runs[i], 0, w, r) : 0,
+          k1 = sp.end ? ringSpring(p, a, x, placed.runs[i], 1, w, r) : 0;
+        hz = Math.min(hz, beamHz(EI, mu, sp.len, k0, k1));
+      });
+    }
+    for (const a of [p.u, p.v]) {
+      const rails = onPanel(p, a, w[a], offAcross(p, a), spanAcross(p, a));
+      if (!rails.length) continue;
+      const o = otherAxis(p, a);
+      const sp = stripSpan(spanAcross(p, o), supportsAcross(p, o, w));
+      // a rail screwed to a loose panel (a screwed back): a jointed T beam
+      const { EI, mu, Z } = (p.loose ? jointedTeeBeam : teeBeam)(
+        sp.len,
+        gap(a),
+        p.stock,
+        braceStock,
+        WINDOW_RAIL_IN,
+      );
+      strips.push({ span: sp.len, trib: gap(a), Z });
+      // the frame's rail on the panel at each end of this one's run (none on the baffle where a notched frame opens)
+      const ends = END_PANEL[o].map((id) => panelById.get(id));
+      for (const x of rails) {
+        const at = offAcross(p, a) + x;
+        const k = ends.map((q, e) =>
+          q && (e === 0 ? sp.start : sp.end) && !(q.id === "baffle" && notched(a, at))
+            ? railStiffness(q, a, w)
+            : 0,
+        );
+        hz = Math.min(hz, beamHz(EI, mu, sp.len, k[0], k[1]));
+      }
+    }
+    // the strength: each bay a plate under the load, each strip a beam carrying its strip of panel
+    let strength: PanelStrength | null = null;
+    const loadsOn = panelLoads(p);
+    if (loadsOn.length) {
+      const h = p.stock.t * IN_M;
+      const bays = panelBays(p, [...supU, ...ribU], [...supV, ...ribV]);
+      for (const l of loadsOn) {
+        let stress = 0;
+        for (const bay of bays) {
+          const b = Math.min(bay.u.len, bay.v.len) * IN_M;
+          stress = Math.max(
+            stress,
+            (plateStressFactor(bay.u.len, bay.v.len) * l.pa * b * b) / (h * h),
+          );
+        }
+        for (const st of strips) {
+          const L = st.span * IN_M;
+          stress = Math.max(stress, (l.pa * st.trib * IN_M * L * L) / 8 / st.Z);
+        }
+        if (!strength || stress / l.limitPa > strength.stressPa / strength.limitPa)
+          strength = { load: l.load, stressPa: stress, limitPa: l.limitPa };
+      }
+    }
+    return { hz: Math.max(hz, bare), strength };
   };
 
   const windows: Counts = { x: 0, y: 0, z: 0 };
@@ -625,7 +1062,8 @@ export function braceBox({
 
   type Move =
     | { kind: "window"; axis: BoxAxis }
-    | { kind: "rib"; p: BracePanel; across: BoxAxis; k: number };
+    | { kind: "rib"; p: BracePanel; across: BoxAxis; n: number; depth: number }
+    | { kind: "ring"; axis: BoxAxis; n: number; depth: number; on: readonly BracePanel[] };
   const windowMoves = (scope: readonly BracePanel[]): Move[] =>
     BOX_AXES.filter((a) => {
       if (!scope.some((p) => p.u === a || p.v === a) || !winAt(a, windows[a] + 1)) return false;
@@ -633,63 +1071,115 @@ export function braceBox({
     }).map((axis) => ({ kind: "window", axis }));
   // a panel's rib moves depend on its own ribs and the window braces across the axis they divide: listed once each
   const movesMemo = new Map<string, Move[]>();
-  // (only on panels under the target: ribs on one already over it gain nothing)
-  const ribMoves = (on: readonly BracePanel[]): Move[] =>
-    on.flatMap((p) =>
-      !p.ribs || evalPanel(p, windows, ribs) >= targetHz - 1e-9
+  // (only on panels under the target: ribs on one already over it gain nothing). A move sets the panel's ribs: more of
+  // those it has, or ribs the other way or of another depth (RIB_DEPTHS_IN) in their place, so a first pick never locks
+  // a panel out of the ribs that lift it more.
+  const ribMoves = (on: readonly BracePanel[]): Move[] => [
+    ...on.flatMap((p) =>
+      !p.ribs || short(evalPanel(p, windows, ribs)) <= 0
         ? []
-        : [p.u, p.v].flatMap((across): Move[] => {
-            const cur = ribs[p.id];
-            if (cur && cur.across !== across) return [];
-            const key = `${p.id}${across}${cur?.n ?? 0}|${windows[across]}`;
-            const hit = movesMemo.get(key);
-            if (hit) return hit;
-            const span = across === p.u ? p.spanU : p.spanV;
-            const fixed = supportsAcross(p, across, windows);
-            const out: Move[] = [];
-            for (let k = 1; k <= RIB_BATCH_MAX; k++) {
-              const n = (cur?.n ?? 0) + k;
-              if (fillGaps(span, fixed, n).narrowest < MIN_BAY_IN - EPS) break;
-              if (ribsAt(p, across, n, windows)) out.push({ kind: "rib", p, across, k });
-            }
-            movesMemo.set(key, out);
-            return out;
-          }),
-    );
+        : [p.u, p.v]
+            .filter((a) => !p.ribAcross || p.ribAcross.includes(a))
+            .flatMap((across) => RIB_DEPTHS_IN.map((depth) => ({ across, depth })))
+            .flatMap(({ across, depth }): Move[] => {
+              const cur = ribs[p.id];
+              const from = cur && cur.across === across && cur.depth === depth ? cur.n : 0;
+              const key = `${p.id}${across}${depth}|${from}|${windows[across]}`;
+              const hit = movesMemo.get(key);
+              if (hit) return hit;
+              const span = across === p.u ? p.spanU : p.spanV;
+              const fixed = supportsAcross(p, across, windows);
+              const out: Move[] = [];
+              for (let n = from + 1; n <= from + RIB_BATCH_MAX; n++) {
+                if (fillGaps(span, fixed, n).narrowest < MIN_BAY_IN - EPS) break;
+                if (ribsAt(p, across, n, windows, depth))
+                  out.push({ kind: "rib", p, across, n, depth });
+              }
+              movesMemo.set(key, out);
+              return out;
+            }),
+    ),
+    ...ringMoves(on),
+  ];
+  /**
+   * Rings: ribs on every panel round an axis that takes them, `n` on each at the same places, so each meets the next
+   * in the corners and they hold each other's ends (RING_FIXITY). Offered when a panel round the axis is under the
+   * target and the panels' ribs line up (the same supports across the axis, the keep-out clear of them all).
+   */
+  const ringMemo = new Map<string, Move[]>();
+  const ringMoves = (scope: readonly BracePanel[]): Move[] =>
+    BOX_AXES.flatMap((a) => {
+      // a panel with fins across the axis has them in the ring's place (a C brace)
+      const on = panels.filter(
+        (p) =>
+          p.ribs &&
+          (p.u === a || p.v === a) &&
+          (!p.ribAcross || p.ribAcross.includes(a)) &&
+          p.fins?.across !== a,
+      );
+      if (
+        on.length < 2 ||
+        !on.some((p) => scope.includes(p) && short(evalPanel(p, windows, ribs)) > 0)
+      )
+        return [];
+      const key = `${a}|${windows[a]}`;
+      const hit = ringMemo.get(key);
+      if (hit) return hit;
+      const out: Move[] = [];
+      for (const depth of RIB_DEPTHS_IN)
+        for (let n = 1; n <= RIB_BATCH_MAX; n++) {
+          const placed = on.map((p) => ribsAt(p, a, n, windows, depth));
+          if (placed.some((pl) => !pl)) continue;
+          const ats = placed.map((pl, i) => (pl?.at ?? []).map((x) => x + offAcross(on[i], a)));
+          if (ats.every((xs) => xs.every((x, j) => Math.abs(x - ats[0][j]) < t - EPS)))
+            out.push({ kind: "ring", axis: a, n, depth, on });
+        }
+      ringMemo.set(key, out);
+      return out;
+    });
   const apply = (m: Move, w: Counts, r: RibState) => {
     if (m.kind === "window") w[m.axis]++;
-    else r[m.p.id] = { across: m.across, n: (r[m.p.id]?.n ?? 0) + m.k };
+    else if (m.kind === "rib") r[m.p.id] = { across: m.across, n: m.n, depth: m.depth };
+    else for (const p of m.on) r[p.id] = { across: m.axis, n: m.n, depth: m.depth };
   };
-  const short = (hz: number) => Math.max(0, 1 - hz / targetHz);
-  const touches = (m: Move, p: BracePanel) =>
-    m.kind === "window" ? p.u === m.axis || p.v === m.axis : m.p === p;
+  // how far a panel falls short: of the target, and of the strength (its stress over the limit, as a share of the
+  // stress), summed
+  const short = (e: PanelEval) =>
+    Math.max(0, 1 - e.hz / targetHz) +
+    (e.strength ? Math.max(0, 1 - e.strength.limitPa / e.strength.stressPa) : 0);
+  const ribWood = (p: BracePanel, s: RibState[BracePanelId]) =>
+    s ? s.n * p.stock.t * s.depth * ribLen(p, s.across) : 0;
+  // the wood a move adds; a switch that saves wood counts as almost none, so any gain from it wins
   const wood = (m: Move) =>
     m.kind === "window"
       ? windowWoodIn3(inner, m.axis, t)
-      : m.k * m.p.stock.t * RIB_DEPTH_IN * ribLen(m.p, m.across);
+      : m.kind === "rib"
+        ? Math.max(EPS, ribWood(m.p, m) - ribWood(m.p, ribs[m.p.id]))
+        : Math.max(
+            EPS,
+            m.on.reduce(
+              (sum, p) =>
+                sum +
+                ribWood(p, { across: m.axis, n: m.n, depth: m.depth }) -
+                ribWood(p, ribs[p.id]),
+              0,
+            ),
+          );
   const phase = (moves: () => Move[], scope: readonly BracePanel[]) => {
     for (let step = 0; step < MAX_BRACE_STEPS; step++) {
-      // each panel's resonance now; a move changes only the panels it touches
+      // each panel's resonance now; a move can change its own panels and those whose ribs meet theirs
       const now = scope.map((p) => evalPanel(p, windows, ribs));
       if (now.every((hz) => short(hz) <= 0)) return;
       let best: Move | null = null,
         bestRate = 0;
       for (const m of moves()) {
+        const w = { ...windows },
+          r = { ...ribs };
+        apply(m, w, r);
         let gain = 0;
-        if (m.kind === "rib") {
-          // only its own panel changes
-          const i = scope.indexOf(m.p);
-          if (i >= 0) {
-            const n = (ribs[m.p.id]?.n ?? 0) + m.k;
-            gain =
-              short(now[i]) - short(evalPanel(m.p, windows, { [m.p.id]: { across: m.across, n } }));
-          }
-        } else {
-          const w = { ...windows, [m.axis]: windows[m.axis] + 1 };
-          scope.forEach((p, i) => {
-            if (touches(m, p)) gain += short(now[i]) - short(evalPanel(p, w, ribs));
-          });
-        }
+        scope.forEach((p, i) => {
+          gain += short(now[i]) - short(evalPanel(p, w, r));
+        });
         const rate = gain / wood(m);
         if (gain > 1e-12 && rate > bestRate) {
           best = m;
@@ -710,12 +1200,22 @@ export function braceBox({
   }
 
   const none: Counts = { x: 0, y: 0, z: 0 };
-  const res: PanelResonance[] = panels.map((p) => ({
-    id: p.id,
-    bareHz: evalPanel(p, none, {}),
-    hz: evalPanel(p, windows, ribs),
-  }));
-  const ribList = layRibs(inner, panels, ribs, (p, s) => ribsAt(p, s.across, s.n, windows), t);
+  const res: PanelResonance[] = panels.map((p) => {
+    const e = evalPanel(p, windows, ribs);
+    return {
+      id: p.id,
+      bareHz: evalPanel(p, none, {}).hz,
+      hz: e.hz,
+      ...(e.strength ? { strength: e.strength } : {}),
+    };
+  });
+  const ribList = layRibs(
+    inner,
+    panels,
+    ribs,
+    (p, s) => ribsAt(p, s.across, s.n, windows, s.depth),
+    t,
+  );
   const win = {
     x: winOrNone("x", windows.x),
     y: winOrNone("y", windows.y),
@@ -732,25 +1232,27 @@ export function braceBox({
     windowIn3: BOX_AXES.reduce((a, ax) => a + windows[ax] * windowWoodIn3(inner, ax, t), 0),
     ribIn3: ribList.reduce((a, r) => {
       const p = panels.find((q) => q.id === r.panel);
-      return a + (p ? p.stock.t * RIB_DEPTH_IN * r.len * r.at.length : 0);
+      return a + (p ? p.stock.t * r.depth * r.len * r.at.length : 0);
     }, 0),
-    meets: res.every((p) => p.hz >= targetHz - 1e-9),
+    meets: res.every(
+      (p) => p.hz >= targetHz - 1e-9 && (!p.strength || p.strength.stressPa <= p.strength.limitPa),
+    ),
   };
 }
 
 /**
  * The ribs as built: each panel's, in box coordinates, with a rib that meets another panel's in a corner (the same
- * line round the box) stopping RIB_DEPTH_IN short there, butting into it (RING_RANK says which gives way); a panel's
- * ribs grouped by their run.
+ * line round the box) stopping its depth short there, butting into it (RING_RANK says which gives way), or a fin's
+ * height short, standing on it; a panel's ribs grouped by their run.
  */
 function layRibs(
   inner: Record<BoxAxis, number>,
   panels: readonly BracePanel[],
   ribs: RibState,
-  placed: (p: BracePanel, s: { across: BoxAxis; n: number }) => PlacedRibs | null,
+  placed: (p: BracePanel, s: NonNullable<RibState[BracePanelId]>) => PlacedRibs | null,
   t: number,
 ): PanelRibs[] {
-  type One = { panel: BracePanelId; across: BoxAxis; at: number; from: number; to: number };
+  type One = Omit<PanelRibs, "at" | "len"> & { at: number; to: number };
   const all: One[] = [];
   for (const p of panels) {
     const s = ribs[p.id];
@@ -765,9 +1267,26 @@ function layRibs(
         at: offA + x,
         from: offR + pl.runs[i][0],
         to: offR + pl.runs[i][1],
+        depth: s.depth,
       }),
     );
   }
+  // the fins (BracePanel fins) a rib may butt onto as onto another rib: their whole run, as tall as they are
+  const fins: One[] = panels.flatMap((p) => {
+    const f = p.fins;
+    if (!f) return [];
+    const offA = f.across === p.u ? p.offU : p.offV,
+      offR = f.across === p.u ? p.offV : p.offU,
+      L = f.across === p.u ? p.spanV : p.spanU;
+    return f.at.map((x) => ({
+      panel: p.id,
+      across: f.across,
+      at: offA + x,
+      from: offR,
+      to: offR + L,
+      depth: f.height,
+    }));
+  });
   const reaches = (o: One, axis: BoxAxis, far: boolean) =>
     far ? o.to >= inner[axis] - EPS : o.from <= EPS;
   const laid = all.map((o) => {
@@ -777,7 +1296,7 @@ function layRibs(
       if (!reaches(o, run, far)) return;
       const q = END_PANEL[run][end];
       const n = PANEL_NORMAL[o.panel];
-      const meets = all.some(
+      const meets = [...all, ...fins].find(
         (m) =>
           m.panel === q &&
           m.across === o.across &&
@@ -785,16 +1304,17 @@ function layRibs(
           RING_RANK[q] > RING_RANK[o.panel] &&
           reaches(m, n.axis, n.far),
       );
+      // it stops short by the depth of the rib it butts into
       if (meets) {
-        if (far) to -= RIB_DEPTH_IN;
-        else from += RIB_DEPTH_IN;
+        if (far) to -= meets.depth;
+        else from += meets.depth;
       }
     });
     return { ...o, from, to };
   });
   const groups = new Map<string, PanelRibs>();
   for (const o of laid) {
-    const k = `${o.panel}|${o.across}|${o.from}|${o.to}`;
+    const k = `${o.panel}|${o.across}|${o.from}|${o.to}|${o.depth}`;
     const g = groups.get(k);
     if (g) g.at.push(o.at);
     else
@@ -804,6 +1324,7 @@ function layRibs(
         at: [o.at],
         from: o.from,
         len: o.to - o.from,
+        depth: o.depth,
       });
   }
   return [...groups.values()];

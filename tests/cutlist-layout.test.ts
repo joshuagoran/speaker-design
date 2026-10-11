@@ -105,6 +105,18 @@ describe("layoutCutlist", () => {
     assert.deepEqual(a, b);
   });
 
+  test("the quick search tries every sorted order: the rabbeted pair fits on 3 sheets of 4 × 8", () => {
+    // regression: keeping half the quick search's runs for the rip-first search cut its sorted orders to the first
+    // three, and this pair took a 4th sheet
+    const L = layoutCutlist(parts("rabbet"), settings({ joint: "rabbet", stacks: 2 }), {
+      countsOnly: true,
+    });
+    assert.equal(
+      L.groups.reduce((a, g) => a + g.sheets.length, 0),
+      3,
+    );
+  });
+
   test("the longer search never needs more sheets than the quick one", () => {
     for (const stacks of [1, 2, 4]) {
       const n = (runs?: number) =>

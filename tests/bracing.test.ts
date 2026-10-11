@@ -8,14 +8,27 @@ import {
   defaultBraceStyle,
   defaultBraceStyleNear,
   plateFirstModeHz,
+  baysHz,
+  braceBox,
   regionsOverlap,
   braceShortfalls,
   ribFirstModeHz,
   ribFlangeIn,
   teeSecondMoment,
   WINDOW_RAIL_IN,
+  RIB_FREE_END_IN,
+  RIB_DEPTH_IN,
+  RIB_DEPTHS_IN,
+  RIB_MIN_RUN_SHARE,
+  ribRunAxis,
+  screwSlipModulus,
+  gammaFactor,
+  jointedTeeBeam,
+  teeBeam,
 } from "../src/lib/bracing";
 import {
+  NO_SUPPORTS,
+  paBoxPanels,
   DRIVER_CLEARANCE_IN,
   PA_BRACING_CROSSOVER_HZ,
   PA_PANEL_TARGET_HZ,
@@ -25,6 +38,7 @@ import { PA_OPTIMIZER_PANEL } from "../src/constants/optimizerPanels";
 import {
   DRIVER_CUTOUT_IN,
   cutParts,
+  subVentLines,
   internalWoodLiters,
   midBoxBracing,
   midKeepOut,
@@ -41,6 +55,9 @@ import { subWoodIn3 } from "../src/lib/pa/exactSub";
 import {
   RIB_HALF_LAP_NOTE,
   braceUnderNote,
+  savedBackJoint,
+  GLUED_BACK,
+  DEFAULT_BACK_JOINT,
   LEGACY_SUB_BRACE_STYLE_KEY,
   bracePanelName,
   savedBraceStyle,
@@ -67,7 +84,9 @@ import type {
   BoxRegion,
   BraceStyleId,
   CornerJoint,
+  BackJointId,
   Dims3,
+  PanelResonance,
   PortStyle,
 } from "../src/types";
 
@@ -292,6 +311,7 @@ test("the rule is deterministic and every style only lifts panels", () => {
 });
 
 test("the starting sub needs bracing, and the rule lifts it", () => {
+  // its back glued, so window braces can hold it too (a screwed back's test is below)
   for (const wall of [0.75, 0.5])
     for (const style of STYLES) {
       const b = subBoxBracing(
@@ -302,6 +322,8 @@ test("the starting sub needs bracing, and the rule lifts it", () => {
         DEFAULT_PA.cVent,
         DEFAULT_PA.sub,
         style,
+        undefined,
+        GLUED_BACK,
       );
       const tag = `${wall} ${style}`;
       assert.ok(
@@ -316,8 +338,19 @@ test("the starting sub needs bracing, and the rule lifts it", () => {
     }
 });
 
+test("a cutout never lifts a bay over the same bay without it; the driver's weight on it lowers it", () => {
+  // a bare hole lifts a hinged plate a third (tests/plate-modes.test.ts), but the driver's frame fills it and its
+  // stiffness isn't modeled: the bay reads no higher than solid
+  const p = { spanU: 21, spanV: 27.5, stock: paPanelStock(0.75) };
+  const solid = baysHz(p, [], []);
+  const hole = { cx: 10.5, cy: 13.75, r: 8.3 };
+  assert.strictEqual(baysHz({ ...p, hole }, [], []), solid);
+  assert.ok(baysHz({ ...p, hole: { ...hole, ringKg: 9 } }, [], []) < 0.7 * solid);
+});
+
 test("a box whose panels already clear the target takes nothing", () => {
-  const b = midBoxBracing({ w: 15, h: 15, d: 15 }, 0.75, 0.75, MID_OPTIONS[0], "stack", undefined);
+  // a 13″ face: the 10″ mid's weight on its cutout still leaves the baffle over the target (at 15″ it falls under)
+  const b = midBoxBracing({ w: 13, h: 13, d: 15 }, 0.75, 0.75, MID_OPTIONS[0], "stack", undefined);
   assert.ok(b);
   assert.strictEqual(b.windowIn3 + b.ribIn3, 0);
   assert.ok(b.panels.every((p) => p.hz === p.bareHz && p.hz >= PA_PANEL_TARGET_HZ));
@@ -429,15 +462,29 @@ type CutawayCase = Parameters<typeof scenePropsOf>[0] & { name: string };
  * The cutaway of design `c` under `style`: no brace or rib meets a driver or the vent's parts as drawn, and every brace
  * and rib is drawn. Returns how many rib and brace meshes it drew.
  */
-function checkCutaway(c: CutawayCase, style: BraceStyleId | undefined) {
+function checkCutaway(
+  c: CutawayCase,
+  style: BraceStyleId | undefined,
+  back: BackJointId = DEFAULT_BACK_JOINT,
+) {
   const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
   const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
   const mDim = c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box;
   const wall = c.wall ?? 0.75,
     inset = c.inset ?? 0.75,
     layout = c.layout ?? "stack";
-  const subBracing = subBoxBracing(c.cDim, wall, inset, c.portStyle, c.cVent, sub, style);
-  const midBracing = midBoxBracing(mDim, wall, inset, mid, layout, style);
+  const subBracing = subBoxBracing(
+    c.cDim,
+    wall,
+    inset,
+    c.portStyle,
+    c.cVent,
+    sub,
+    style,
+    undefined,
+    back,
+  );
+  const midBracing = midBoxBracing(mDim, wall, inset, mid, layout, style, undefined, back);
   const g = buildStackScene({
     ...scenePropsOf({ ...c, cutaway: true }),
     subBracing,
@@ -494,12 +541,24 @@ test("the starting sub's cutaway under each style: ribs, window braces and both 
         wall,
         inset: d.inset,
       };
-      const b = subBoxBracing(d.cDim, wall, d.inset, d.portStyle, d.cVent, d.sub, style);
-      // each style puts in its own kind: ribs under Ribs and Both, frames under Window braces and Both
+      const b = subBoxBracing(
+        d.cDim,
+        wall,
+        d.inset,
+        d.portStyle,
+        d.cVent,
+        d.sub,
+        style,
+        undefined,
+        GLUED_BACK,
+      );
+      // each style puts in its own kind: ribs only under Ribs, frames only under Window braces, under Both whichever
+      // does more for the wood (here the frames the baffle takes first, then ribs)
       const frames = b.windows.x.length + b.windows.y.length + b.windows.z.length;
-      assert.strictEqual(b.ribs.length > 0, style !== "window", `${wall} ${style}: ribs`);
-      assert.strictEqual(frames > 0, style !== "ribs", `${wall} ${style}: window braces`);
-      assert.ok(checkCutaway(c, style) > 0);
+      if (style === "ribs") assert.strictEqual(frames, 0, `${wall} ${style}: window braces`);
+      if (style === "window") assert.strictEqual(b.ribs.length, 0, `${wall} ${style}: ribs`);
+      assert.ok(frames + b.ribs.length > 0, `${wall} ${style}: braced`);
+      assert.ok(checkCutaway(c, style, GLUED_BACK) > 0);
     }
 });
 
@@ -556,11 +615,20 @@ test("rib: the panel beside it is a flange (Eurocode 5's effective width), so th
 });
 
 test("the notes under the Bracing setting name the cabinet and each panel left under the target", () => {
-  const d = DEFAULT_PA;
-  const b = subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, "ribs");
+  // a 30″-wide box under Ribs: no rib can cross the driver, so its wide baffle stays bare and under the target
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  assert.ok(sub);
+  const b = subBoxBracing(
+    { w: 30, h: 32, d: 18 },
+    0.5,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 4 },
+    sub,
+    "ribs",
+  );
   const notes = braceNoteLines(PA_SETTINGS_TABS.sub, b);
   const under = braceShortfalls(b);
-  // the starting sub under Ribs: no rib crosses the driver, so the baffle stays bare and under the target
   assert.ok(under.some((p) => p.id === "baffle"));
   assert.deepStrictEqual(
     notes,
@@ -573,6 +641,7 @@ test("the notes under the Bracing setting name the cabinet and each panel left u
     ),
   );
   // a box that needs nothing has no note
+  const d = DEFAULT_PA;
   const mid = midBoxBracing(d.mDim, 0.75, d.inset, d.mid, "stack", "ribs");
   assert.ok(mid);
   assert.deepStrictEqual(braceNoteLines(PA_SETTINGS_TABS.mid, mid), []);
@@ -591,25 +660,29 @@ test("braceShortfalls: exactly the panels under the target, with their first mod
   }
 });
 
-test("the strict styles give the starting sub three different plans, each of its own kind", () => {
+test("the strict styles keep a ½″ sub to their own kind, and Both takes either", () => {
   const d = DEFAULT_PA;
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  if (!sub) throw new Error("the B&C 18NW100 is in the catalog");
+  const box = { w: 22, h: 32, d: 18 },
+    slot = { ...d.cVent, len: 4 };
   for (const handles of [undefined, d.hardware.sub]) {
-    const plan = (style: BraceStyleId) =>
-      subBoxBracing(d.cDim, d.wall, d.inset, d.portStyle, d.cVent, d.sub, style, handles);
+    const plan = (style: BraceStyleId): BoxBracing =>
+      subBoxBracing(box, 0.5, d.inset, d.portStyle, slot, sub, style, handles);
     const ribs = plan("ribs"),
       win = plan("window"),
       both = plan("both");
     const frames = (b: BoxBracing) => b.windows.x.length + b.windows.y.length + b.windows.z.length;
     const tag = handles ? "with hardware" : "bare";
-    // Ribs: ribs only; Window braces: frames only; Both: the two together
+    // Ribs: ribs only; Window braces: frames only; Both: whichever does more for the wood
     assert.strictEqual(frames(ribs), 0, tag);
     assert.ok(ribs.ribs.length > 0, tag);
     assert.ok(frames(win) > 0, tag);
     assert.deepStrictEqual(win.ribs, [], tag);
-    assert.ok(frames(both) > 0 && both.ribs.length > 0, tag);
-    // and no two alike
+    assert.ok(frames(both) + both.ribs.length > 0, tag);
+    // the strict plans differ
     const key = (b: BoxBracing) => JSON.stringify([b.windows, b.ribs]);
-    assert.strictEqual(new Set([ribs, win, both].map(key)).size, 3, tag);
+    assert.notStrictEqual(key(ribs), key(win), tag);
   }
   // the cutlist's rib rows say to half-lap a rib only where it crosses a window brace
   const lapped = (style: BraceStyleId) =>
@@ -628,7 +701,7 @@ test("the strict styles give the starting sub three different plans, each of its
     })
       .parts.filter((p) => p.box === "sub" && p.part === "rib")
       .map((p) => (p.note ?? "").endsWith(RIB_HALF_LAP_NOTE));
-  // Ribs has no window brace; under Both the back's rib runs across, level like the two level frames, so it crosses none
+  // Ribs has no window brace, and under Both the starting sub takes ribs alone, so no rib crosses one
   for (const style of ["ribs", "both"] as const) {
     assert.ok(lapped(style).length > 0, style);
     assert.ok(
@@ -648,9 +721,9 @@ test("cutlist: a rib row says to half-lap only where its rib crosses a window br
     windows: { x: [10], y: [], z: [] },
     notch: null,
     ribs: [
-      { panel: "top", across: "z", at: [8], from: 0, len: 20 },
-      { panel: "top", across: "z", at: [16], from: 12, len: 8 },
-      { panel: "back", across: "x", at: [10], from: 0, len: 20 },
+      { panel: "top", across: "z", at: [8], from: 0, len: 20, depth: RIB_DEPTH_IN },
+      { panel: "top", across: "z", at: [16], from: 12, len: 8, depth: RIB_DEPTH_IN },
+      { panel: "back", across: "x", at: [10], from: 0, len: 20, depth: RIB_DEPTH_IN },
     ],
   };
   const notes = braceParts("sub", b, { x: 20, y: 20, z: 20 }, d.wall)
@@ -701,30 +774,347 @@ test("the starting sub under Ribs takes ribs: on the back at ¾″, and on the s
 });
 
 test("the optimizers' brace estimate stays near the rule over the golden boxes, in the optimizers' ¾″ ply", () => {
-  for (const style of STYLES) {
-    const err: number[] = [];
-    for (const c of configs) {
-      const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
-      const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
-      const mDim = c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box;
-      const inset = c.inset ?? 0.75;
-      const ruled = subBoxBracing(c.cDim, 0.75, inset, c.portStyle, c.cVent, sub, style);
-      err.push(
-        (braceWoodIn3(braceWoodEstimate(c.cDim, 0.75, inset, style)) - braceWoodIn3(ruled)) * IN3_L,
-      );
-      const mb = midBoxBracing(mDim, 0.75, inset, mid, c.layout ?? "stack", style);
-      if (mb)
-        err.push(
-          (braceWoodIn3(braceWoodEstimate(mDim, 0.75, inset, style)) - braceWoodIn3(mb)) * IN3_L,
+  // for each back joint, as the rule braces it
+  for (const back of [DEFAULT_BACK_JOINT, GLUED_BACK] as const)
+    for (const style of STYLES) {
+      const err: number[] = [];
+      for (const c of configs) {
+        const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
+        const mid = MID_OPTIONS.find((o) => o.id === c.mid) ?? MID_OPTIONS[0];
+        const mDim = c.mDim ?? (MID_BOXES.find((b) => b.id === c.midBox) ?? MID_BOXES[0]).box;
+        const inset = c.inset ?? 0.75;
+        const ruled = subBoxBracing(
+          c.cDim,
+          0.75,
+          inset,
+          c.portStyle,
+          c.cVent,
+          sub,
+          style,
+          undefined,
+          back,
         );
+        const est = (box: Dims3) => braceWoodIn3(braceWoodEstimate(box, 0.75, inset, style, back));
+        err.push((est(c.cDim) - braceWoodIn3(ruled)) * IN3_L);
+        const mb = midBoxBracing(
+          mDim,
+          0.75,
+          inset,
+          mid,
+          c.layout ?? "stack",
+          style,
+          undefined,
+          back,
+        );
+        if (mb) err.push((est(mDim) - braceWoodIn3(mb)) * IN3_L);
+      }
+      // liters of wood: under a liter on the whole, a couple of liters at worst (a sub box holds 60 to 200); the
+      // strict styles fit worst, since a frame-only or rib-only plan stops where its kind can do no more. Window braces
+      // on a screwed back fit worst of all: its rails, screwed on, are jointed T beams that hold little of it (γ about
+      // 0.05), so light block's wide back takes five frames (8.4 L) to clear the target, two glued, which no linear
+      // estimate follows (1.25 L rms, 6.4 L at worst)
+      const bound =
+        back === DEFAULT_BACK_JOINT && style === "window"
+          ? { rms: 1.3, max: 6.5 }
+          : { rms: 0.8, max: 2.4 };
+      const rms = Math.sqrt(err.reduce((a, e) => a + e * e, 0) / err.length);
+      assert.ok(rms < bound.rms, `${back} ${style}: ${rms.toFixed(3)} L rms`);
+      assert.ok(
+        Math.max(...err.map(Math.abs)) < bound.max,
+        `${back} ${style}: ${err.map((e) => e.toFixed(2)).join(" ")}`,
+      );
     }
-    // liters of wood: under a liter on the whole, a couple of liters at worst (a sub box holds 60 to 200); the strict
-    // styles fit worst, since a frame-only or rib-only plan stops where its kind can do no more
-    const rms = Math.sqrt(err.reduce((a, e) => a + e * e, 0) / err.length);
-    assert.ok(rms < 0.8, `${style}: ${rms.toFixed(3)} L rms`);
-    assert.ok(
-      Math.max(...err.map(Math.abs)) < 2.4,
-      `${style}: ${err.map((e) => e.toFixed(2)).join(" ")}`,
+});
+
+test("ribs: a first pick one way doesn't lock a panel out of the other way when that lifts it more", () => {
+  // ⅝″ walls, an 18″ sub in a short, deep box: one rib across the height leaves the sides at 261 Hz and the driver's
+  // basket keeps a second off them; one rib up the side (across the depth) clears the target
+  const sub = SUB_OPTIONS.find((s) => s.id === "es18lw2420");
+  assert.ok(sub);
+  const b = subBoxBracing(
+    { w: 20, h: 24, d: 22 },
+    0.625,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 14 },
+    sub,
+    "ribs",
+  );
+  for (const id of ["sideL", "sideR"] as const) {
+    assert.ok((b.panels.find((p) => p.id === id)?.hz ?? 0) >= b.targetHz, `${id}: over the target`);
+    assert.deepEqual(
+      b.ribs.filter((r) => r.panel === id).map((r) => r.across),
+      ["z"],
+      `${id}: ribs up the side`,
     );
   }
+});
+
+test("glued edges: the joints hold a panel's edges, so it rings over the hinged plate; a screwed back's don't", () => {
+  const d = DEFAULT_PA;
+  const panels = (back: BackJointId) =>
+    subBoxBracing(d.cDim, 0.5, d.inset, d.portStyle, d.cVent, d.sub, "ribs", undefined, back)
+      .panels;
+  const bare = (ps: PanelResonance[], id: BracePanelId) =>
+    ps.find((p) => p.id === id)?.bareHz ?? NaN;
+  const screwed = panels(DEFAULT_BACK_JOINT),
+    glued = panels(GLUED_BACK);
+  const stock = paPanelStock(0.5);
+  const inner = paInner(d.cDim, 0.5, d.inset);
+  // the top: glued on all four edges but the back's
+  assert.ok(bare(screwed, "top") > plateFirstModeHz(inner.x, inner.z, stock) * 1.1);
+  // the back: hinged when screwed (the plate model's own number), held when glued
+  assert.ok(Math.abs(bare(screwed, "back") - plateFirstModeHz(inner.x, inner.y, stock)) < 0.5);
+  assert.ok(bare(glued, "back") > bare(screwed, "back") * 1.2);
+});
+
+test("window rails are beams: a frame's rail along a tall wall holds less than a rigid line would", () => {
+  // a deep, tall box where only frames across its depth fit (a part along the left side and across the floor keeps the
+  // others off): their rails run up the 31″ sides
+  const stock = paPanelStock(0.5);
+  const panels = paBoxPanels({ iw: 21, ih: 31, inD: 30, band: 0 }, stock, stock, NO_SUPPORTS);
+  const b = braceBox({
+    inner: { x: 21, y: 31, z: 30 },
+    panels,
+    targetHz: 280,
+    style: "window",
+    braceStock: stock,
+    keepOut: {
+      driver: [],
+      vent: [
+        { x: [0, 2], y: [0, 31], z: [10, 12] },
+        { x: [0, 21], y: [0, 2], z: [10, 12] },
+      ],
+    },
+  });
+  assert.ok(
+    b.windows.z.length >= 1 && !b.windows.x.length && !b.windows.y.length,
+    JSON.stringify(b.windows),
+  );
+  const side = panels.find((p) => p.id === "sideL");
+  assert.ok(side);
+  const hz = b.panels.find((p) => p.id === "sideL")?.hz ?? NaN;
+  const bays = baysHz(side, b.windows.z, b.windows.y);
+  assert.ok(hz < bays * 0.8, `side ${hz.toFixed(0)} Hz, its bays ${bays.toFixed(0)} Hz`);
+});
+
+test("rib rings: with a glued back, the back's rib lines up with the sides' and each clears the target", () => {
+  const sub = SUB_OPTIONS.find((s) => s.id === "es18lw2420");
+  assert.ok(sub);
+  const b = subBoxBracing(
+    { w: 22, h: 24, d: 22 },
+    0.5,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 4 },
+    sub,
+    "ribs",
+    undefined,
+    GLUED_BACK,
+  );
+  const at = (id: BracePanelId) => b.ribs.filter((r) => r.panel === id).flatMap((r) => r.at);
+  assert.ok(at("back").length >= 1);
+  assert.deepEqual(at("back"), at("sideL"));
+  assert.deepEqual(at("back"), at("sideR"));
+  for (const id of ["back", "sideL", "sideR"] as const)
+    assert.ok((b.panels.find((p) => p.id === id)?.hz ?? 0) >= b.targetHz, id);
+});
+
+test("short ribs and a short slot: the basket no longer keeps ribs off the sides; the fins hold the floor behind it", () => {
+  // ½″ walls, 22 × 32 × 18: the basket ring comes within 2″ of the sides at the baffle, the slot runs 4″ back
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  assert.ok(sub);
+  const box = { w: 22, h: 32, d: 18 };
+  const b = subBoxBracing(
+    box,
+    0.5,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 4 },
+    sub,
+    "ribs",
+  );
+  const keep = subKeepOut(
+    box,
+    0.5,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 4 },
+    sub,
+  );
+  const ring = keep.driver[0];
+  // a side rib at the driver's height starts behind the basket's ring, at most RIB_FREE_END_IN off the baffle
+  const side = b.ribs.filter((r) => r.panel === "sideL");
+  assert.ok(
+    side.some(
+      (r) =>
+        r.at.some((y) => y > ring.y[0] && y < ring.y[1]) &&
+        r.from >= ring.z[1] - 1e-9 &&
+        r.from <= RIB_FREE_END_IN,
+    ),
+    JSON.stringify(side),
+  );
+  // the slot's fins run on to the back past its 4″ shelf: they hold the floor, which takes no rib and clears the
+  // target, as every other panel but the baffle does
+  assert.ok(!b.ribs.some((r) => r.panel === "bottom"));
+  for (const p of b.panels) if (p.id !== "baffle") assert.ok(p.hz >= b.targetHz, `${p.id} ${p.hz}`);
+  // the slot's room ends two slot heights behind the duct, not at the back
+  const slot = keep.vent[0];
+  assert.ok(slot.z[1] < paInner(box, 0.5, DEFAULT_PA.inset).z - 1);
+});
+
+test("the back panel setting: a saved choice reads back, anything else is screwed; glued never takes more", () => {
+  assert.equal(savedBackJoint(GLUED_BACK), GLUED_BACK);
+  assert.equal(savedBackJoint(DEFAULT_BACK_JOINT), DEFAULT_BACK_JOINT);
+  assert.equal(savedBackJoint("nailed"), undefined);
+  assert.equal(DEFAULT_PA.backJoint, DEFAULT_BACK_JOINT);
+  const d = DEFAULT_PA;
+  const plan = (back: BackJointId) =>
+    subBoxBracing(d.cDim, 0.5, d.inset, d.portStyle, d.cVent, d.sub, "ribs", undefined, back);
+  const backHz = (b: BoxBracing) => b.panels.find((p) => p.id === "back")?.bareHz ?? NaN;
+  assert.ok(braceWoodIn3(plan(GLUED_BACK)) <= braceWoodIn3(plan(DEFAULT_BACK_JOINT)));
+  assert.ok(backHz(plan(GLUED_BACK)) > backHz(plan(DEFAULT_BACK_JOINT)));
+});
+
+test("a screwed back is screwed to the window braces' rear rails: jointed T beams, between bare and glued", () => {
+  // the default sub in ¾″ with Window braces: the same two level frames for either back. Glued, their rails work with
+  // the back as T beams; screwed, as jointed T beams (Eurocode 5's gamma method), which lift it less
+  const d = DEFAULT_PA;
+  const plan = (back: BackJointId) =>
+    subBoxBracing(d.cDim, 0.75, d.inset, d.portStyle, d.cVent, d.sub, "window", undefined, back);
+  const screwedPlan = plan(DEFAULT_BACK_JOINT),
+    gluedPlan = plan(GLUED_BACK);
+  const back = (b: BoxBracing) => b.panels.find((p) => p.id === "back");
+  const screwed = back(screwedPlan),
+    glued = back(gluedPlan);
+  assert.ok(screwed && glued);
+  assert.deepStrictEqual(screwedPlan.windows, gluedPlan.windows);
+  assert.strictEqual(screwedPlan.windowIn3, gluedPlan.windowIn3);
+  assert.ok(screwed.bareHz < glued.bareHz, "its own edges stay hinged");
+  assert.ok(glued.hz > glued.bareHz + 25, `glued: ${glued.hz.toFixed(0)} Hz`);
+  assert.ok(
+    screwed.hz > screwed.bareHz + 15 && screwed.hz < glued.hz - 30,
+    `screwed: ${screwed.hz.toFixed(0)} Hz (bare ${screwed.bareHz.toFixed(0)}, glued ${glued.hz.toFixed(0)})`,
+  );
+  // with more frames (light block's 30″-wide back) each rail carries less of it, and they lift it further
+  const c = configs.find((x) => x.name === "light block");
+  assert.ok(c);
+  const sub = SUB_OPTIONS.find((o) => o.id === c.sub) ?? SUB_OPTIONS[0];
+  const wide = subBoxBracing(c.cDim, 0.75, c.inset ?? 0.75, c.portStyle, c.cVent, sub, "window");
+  const wideBack = back(wide);
+  assert.ok(
+    wideBack && wideBack.hz > wideBack.bareHz + 25,
+    `light block: ${wideBack?.hz.toFixed(0)} Hz`,
+  );
+});
+
+test("a screwed rail by Eurocode 5: the screws' slip modulus, the gamma factor and the jointed T beam", () => {
+  // K_ser = ρm^1.5 d / 23 N/mm (Table 7.1): 600 kg/m³, a 4.2 mm screw: 600^1.5 × 4.2 / 23 = 2683.79 N/mm
+  close(null, screwSlipModulus(600, 600, 4.2), 2683788.76, 0.01);
+  // two densities take their geometric mean
+  close(null, screwSlipModulus(400, 900, 4.2), screwSlipModulus(600, 600, 4.2), 1e-6);
+  // γ = 1 / (1 + π² E A s / (K L²)): E A = 1e7 N, s = 0.15 m, K = 2.5e6 N/m, L = 0.6 m: 1 / (1 + 16.4493) = 0.0573088
+  close(null, gammaFactor(1e7, 0.15, 2.5e6, 0.6), 0.0573088, 1e-6);
+  // the default sub's back rail (¾″ birch, 22.5″ span, a 3″ effective flange, #8 screws 6″ apart): ρ = 589.5 kg/m³,
+  // K = 2613.7 N/mm, E A = 7.452 GPa × 0.0762 × 0.01905 m² = 1.0817e7 N: γ = 1 / (1 + 19.06) = 0.0498
+  const st = paPanelStock(0.75);
+  const j = jointedTeeBeam(22.5, 18.35, st, st, WINDOW_RAIL_IN);
+  close(null, j.gamma, 0.0498, 5e-4);
+  // the jointed beam sits between the bare rail and the glued T section
+  const bare = (st.eWeak * (st.t * 0.0254) * (WINDOW_RAIL_IN * 0.0254) ** 3) / 12;
+  const glued = teeBeam(22.5, 18.35, st, st, WINDOW_RAIL_IN);
+  assert.ok(j.EI > bare && j.EI < glued.EI, `${j.EI} between ${bare} and ${glued.EI}`);
+  assert.strictEqual(j.mu, glued.mu);
+});
+
+test("rib depths: a long span takes deeper ribs where they lift it more for the wood", () => {
+  // a 30″-wide box in ½″: two 5½″ ribs hold its back, where 2½″ ones need a ring with the sides and more wood
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  assert.ok(sub);
+  const b = subBoxBracing(
+    { w: 30, h: 32, d: 18 },
+    0.5,
+    DEFAULT_PA.inset,
+    "slots",
+    { ...DEFAULT_PA.cVent, len: 4 },
+    sub,
+    "ribs",
+    undefined,
+    GLUED_BACK,
+  );
+  const back = b.ribs.filter((r) => r.panel === "back");
+  assert.ok(
+    back.length > 0 && back.every((r) => r.depth === RIB_DEPTHS_IN[2]),
+    JSON.stringify(back),
+  );
+  assert.ok((b.panels.find((p) => p.id === "back")?.hz ?? 0) >= b.targetHz);
+  // every rib takes one of the offered depths, and the cutlist cuts each to its own
+  for (const r of b.ribs) assert.ok(RIB_DEPTHS_IN.some((d) => d === r.depth));
+});
+
+test("a rib counts only where it runs most of the panel: none shorter than RIB_MIN_RUN_SHARE of it", () => {
+  const sub = SUB_OPTIONS.find((s) => s.id === "bc18nw");
+  assert.ok(sub);
+  for (const len of [4, 10, 14])
+    for (const t of [0.5, 0.625]) {
+      const box = { w: 22, h: 32, d: 18 };
+      const b = subBoxBracing(
+        box,
+        t,
+        DEFAULT_PA.inset,
+        "slots",
+        { ...DEFAULT_PA.cVent, len },
+        sub,
+        "ribs",
+      );
+      const inner = paInner(box, t, DEFAULT_PA.inset);
+      for (const r of b.ribs) {
+        const run = ribRunAxis(r.panel, r.across);
+        // a rib butting into another in a corner gives up that one's depth there
+        assert.ok(
+          r.len + 2 * RIB_DEPTHS_IN[2] >= RIB_MIN_RUN_SHARE * inner[run],
+          `${len} ${t} ${JSON.stringify(r)}`,
+        );
+      }
+    }
+});
+
+test("a straight slot's fins run to the back, and the back's and top's ribs line up on them (C braces)", () => {
+  const sub = SUB_OPTIONS.find((s) => s.id === "es18lw2420");
+  assert.ok(sub);
+  const t = 0.5,
+    cVent = { ...DEFAULT_PA.cVent, len: 8 };
+  // the fins' lines, in from the left side (subVentLines' bottom)
+  const fins = (box: { w: number; h: number; d: number }) =>
+    subVentLines(box, t, "slots", cVent).bottom;
+  const near = (xs: number[], ys: number[]) =>
+    xs.length === ys.length && xs.every((x, i) => Math.abs(x - ys[i]) < 1e-9);
+  // 30 × 24 × 22: the back's two ribs stand on the fins, up from them
+  const wide = { w: 30, h: 24, d: 22 };
+  const b = subBoxBracing(wide, t, DEFAULT_PA.inset, "slots", cVent, sub, "ribs");
+  const back = b.ribs.filter((r) => r.panel === "back");
+  assert.ok(back.length === 1 && back[0].across === "x", JSON.stringify(back));
+  assert.ok(near(back[0].at, fins(wide)), JSON.stringify(back[0].at));
+  assert.ok(Math.abs(back[0].from - cVent.slotH) < 1e-9, `starts ${back[0].from}″ up`);
+  // 30 × 34 × 22: the top's two ribs run front to back over the fins
+  const tall = { w: 30, h: 34, d: 22 };
+  const top = subBoxBracing(tall, t, DEFAULT_PA.inset, "slots", cVent, sub, "ribs").ribs.filter(
+    (r) => r.panel === "top",
+  );
+  assert.ok(top.length === 1 && top[0].across === "x", JSON.stringify(top));
+  assert.ok(near(top[0].at, fins(tall)), JSON.stringify(top[0].at));
+  // and the cutlist's fins run from the front to the back panel
+  const fin = cutParts({
+    sub,
+    mid: DEFAULT_PA.mid,
+    subBox: wide,
+    midDims: DEFAULT_PA.mDim,
+    wall: t,
+    inset: DEFAULT_PA.inset,
+    joint: "butt",
+    portStyle: "slots",
+    cVent,
+    layout: DEFAULT_PA.layout,
+  }).parts.find((p) => p.part === "ductFin");
+  assert.equal(fin?.b, wide.d - t);
 });

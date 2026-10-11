@@ -195,7 +195,11 @@ interface Run<R> {
 export interface PackOptions {
   /** squared off each edge, inches */
   trim?: number;
-  /** how many packing runs to try: the first `DETERMINISTIC_RUNS` are the sorted orders, the rest a seeded random search */
+  /**
+   * how many packing runs to try: the first `DETERMINISTIC_RUNS` are the sorted orders, the rest a seeded random search;
+   * a free (not rip-first) search runs every sorted order and keeps half the runs (any past the sorted orders) and half
+   * of `capMs` for a rip-first search when it ends over the bound
+   */
   runs?: number;
   /** a safety stop for the main thread, ms; without one (as in the worker) the result depends only on the input */
   capMs?: number;
@@ -400,20 +404,26 @@ export function packSheets<R extends PackRect>(
     }
   };
   const t0 = now();
+  // a free search left over the bound tries rip first as well (below): it runs every sorted order, and keeps half the
+  // random restarts' runs and half the time for the rip-first search
+  const ownRuns = ripFirst ? maxRuns : Math.max(DETERMINISTIC_RUNS, maxRuns - DETERMINISTIC_RUNS),
+    ownMs = ripFirst ? capMs : (capMs * ownRuns) / maxRuns;
   let runs = 0;
   const sorted = ORDERS.map((o) => items.slice().sort(o));
   done: for (const order of sorted)
     for (const fit of FITS)
       for (const split of SPLITS)
         for (const bestSheet of [false, true]) {
-          if (runs++ >= maxRuns) break done;
+          if (runs >= maxRuns) break done;
+          runs++;
           tryRun(order, fit, split, bestSheet);
         }
   // randomized restarts until the budget: mostly a few swaps in the best order so far (a local search), sometimes a
   // fresh order with its sort key jittered and random rules
   const rnd = mulberry32(seed);
   const pick = <T>(xs: readonly T[]) => xs[Math.floor(rnd() * xs.length)];
-  while (bestScore && bestRules && bestScore[0] > bound && runs++ < maxRuns && now() - t0 < capMs) {
+  while (bestScore && bestRules && bestScore[0] > bound && now() - t0 < ownMs && runs < ownRuns) {
+    runs++;
     // boundary cast: TypeScript can't see the assignment inside the tryRun closure, so it narrows these to never
     const [order0, fit0, split0, sheet0] = bestRules as [Item<R>[], FitRule, SplitRule, boolean];
     if (rnd() < 0.8 && items.length > 1) {
@@ -439,7 +449,19 @@ export function packSheets<R extends PackRect>(
   }
   // boundary cast: TypeScript can't see the assignment inside the tryRun closure, so it narrows `best` to null
   const won = best as Run<R> | null;
-  return { sheets: won ? won.sheets.map((s) => ({ items: s.items })) : [], tooBig };
+  const out = { sheets: won ? won.sheets.map((s) => ({ items: s.items })) : [], tooBig };
+  // a rip-first layout is a layout too, and its strips sometimes pack tighter: while over the bound, the free search
+  // takes the rip-first search's when it needs fewer sheets, the rip-first search on the runs and time left
+  const ripRuns = maxRuns - runs;
+  if (ripFirst || out.sheets.length <= bound || ripRuns < 1) return out;
+  const rip = packSheets(rects, sheet, kerf, {
+    trim,
+    runs: ripRuns,
+    capMs: capMs - (now() - t0),
+    seed,
+    ripFirst: true,
+  });
+  return rip.sheets.length < out.sheets.length ? rip : out;
 }
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 

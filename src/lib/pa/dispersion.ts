@@ -8,9 +8,10 @@ import {
   waveguideDirectivity,
   dispersionGrid,
   verticalArcPoint,
-  type Complex,
 } from "../hifi/hifi";
+import { abs, add, complex, multiply, phasor } from "../acoustics/complex";
 import type {
+  Complex,
   DispersionPlane,
   FrequencyPoint,
   HifiDispersionMap,
@@ -20,11 +21,6 @@ import type {
 
 const C = 343,
   IN = 0.0254;
-const cm = (re: number, im = 0): Complex => ({ re, im });
-const cmul = (a: Complex, b: Complex) => cm(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
-const cadd = (a: Complex, b: Complex) => cm(a.re + b.re, a.im + b.im);
-const cabs = (a: Complex) => Math.hypot(a.re, a.im);
-const cexp = (ph: number) => cm(Math.cos(ph), Math.sin(ph));
 
 /** Which part of the stack a driver is. */
 export type StackBand = "sub" | "mid" | "horn";
@@ -51,7 +47,7 @@ export function paStackSources(s: PaStackGeometry): StackSource[] {
       z: s.mid.zIn,
       a: Math.sqrt(s.mid.Sd / 1e4 / Math.PI),
       filt: (f) =>
-        cmul(
+        multiply(
           linkwitzRileyFilter(f, s.xoLo, orderLo, "hp"),
           linkwitzRileyFilter(f, s.xoHi, orderHi, "lp"),
         ),
@@ -100,12 +96,12 @@ export function paResponseAt(
   });
   return freqs.map((f) => {
     const k = (2 * Math.PI * f) / C;
-    let p = cm(0);
+    let p = complex(0);
     for (const { o, r, r0, tv } of src) {
       const d = stackSourceDirectivity(s, o, f, geo.th, tv);
-      p = cadd(p, cmul(cmul(o.filt(f), cm((d * align) / r)), cexp(-k * (r - r0))));
+      p = add(p, multiply(multiply(o.filt(f), complex((d * align) / r)), phasor(-k * (r - r0))));
     }
-    return { f, spl: 20 * Math.log10(Math.max(1e-9, cabs(p))) };
+    return { f, spl: 20 * Math.log10(Math.max(1e-9, abs(p))) };
   });
 }
 

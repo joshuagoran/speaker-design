@@ -20,6 +20,7 @@ interface Props {
       | "subVentSpec"
       | "layout"
       | "effectiveBraceStyle"
+      | "backJoint"
       | "hardware"
       | "subHardware"
       | "midHardware"
@@ -41,6 +42,7 @@ export function PaCutlistPage({ planner }: Props) {
     cVent: planner.subVentSpec,
     layout: planner.layout,
     braceStyle: planner.effectiveBraceStyle,
+    backJoint: planner.backJoint,
     hardware: planner.hardware,
     horn: planner.hornOption,
   });

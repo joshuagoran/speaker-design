@@ -21,6 +21,14 @@ import {
 import { towerHornCutout, towerMidDims, towerSpec } from "../src/lib/pa/tower";
 import { boxGeometry, evaluateDesign } from "../src/lib/pa/optimize";
 import { TOWER_MID_HEIGHT_IN } from "../src/constants/paLayouts";
+import {
+  BACK_JOINT_CUT_NOTES,
+  BACK_JOINT_PARTITION_NOTES,
+  BACK_JOINT_RAIL_NOTES,
+  BACK_JOINT_SUMMARY,
+  DEFAULT_BACK_JOINT,
+  GLUED_BACK,
+} from "../src/constants/bracing";
 import { CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { BoxFront } from "../src/components/drawings/BoxFront";
 import { close, vent } from "./helpers";
@@ -29,10 +37,12 @@ import { HORN_MESHES } from "../src/data/meshes";
 import { MESHED_HORN_IDS } from "../src/data/meshes/meshedHorns";
 import { MM_IN } from "../src/components/stack-view/geometry";
 import type {
+  BackJointId,
   CornerJoint,
   CutPart,
   CutPartId,
   PaDesignConfig,
+  PaLayout,
   Dims3,
   Horn,
   PortStyle,
@@ -60,6 +70,7 @@ const parts = (
   joint: CornerJoint = "butt",
   portStyle: PortStyle = "slots",
   cVent: VentSpec = SLOTS,
+  backJoint?: BackJointId,
 ) =>
   cutParts({
     sub: SUB,
@@ -72,6 +83,7 @@ const parts = (
     portStyle,
     cVent,
     layout,
+    backJoint,
     horn: h,
   }).parts;
 const one = (P: CutPart[], id: CutPartId) => {
@@ -211,12 +223,68 @@ test("tower cutlist: the arched top is a bent strip, the sides stop at the sprin
   assert.equal(bent.a, BOX.d);
   assert.match(bent.note, /guillotine/);
   // the back's arch seats in a rabbet on the strip, as the straight edges' do on the sides
-  assert.match(bent.note, /rabbet 3\/4 × 3\/8 on rear edge for the back's arch/);
+  assert.match(bent.note, /rabbet 3\/4 × 3\/8 on rear edge for the screwed back's arch/);
   for (const id of ["back", "baffle"] as const) assert.match(one(P, id).note, /guillotine/);
   // the side's rabbet is on its bottom edge only; the bent top sits on its square top edge
   assert.match(side.note, /the bottom edge/);
   assert.doesNotMatch(side.note, /top and bottom edges/);
   assert.equal(one(P, "partition").qty, 2);
+});
+
+test("tower cutlist: the back, its rabbets and the partitions follow the back setting", () => {
+  for (const back of [DEFAULT_BACK_JOINT, GLUED_BACK] as const) {
+    const P = parts("tower", ROUND, "rabbet", "slots", SLOTS, back);
+    const rabbet = `on rear edge for the ${BACK_JOINT_SUMMARY[back]}`;
+    assert.ok(one(P, "back").note.startsWith(BACK_JOINT_CUT_NOTES[back]), back);
+    assert.ok(one(P, "archTop").note.includes(`${rabbet}'s arch`), back);
+    assert.ok(one(P, "side").note.includes(rabbet), back);
+    assert.ok(one(P, "partition").note.includes(BACK_JOINT_PARTITION_NOTES[back]), back);
+  }
+  // absent, the back is screwed (DEFAULT_BACK_JOINT)
+  assert.ok(
+    one(parts("tower", FLAT), "back").note.startsWith(BACK_JOINT_CUT_NOTES[DEFAULT_BACK_JOINT]),
+  );
+});
+
+test("a screwed back screws into the window braces' rear rails where they meet it, in a stack's boxes and the tower", () => {
+  const rail = BACK_JOINT_RAIL_NOTES[DEFAULT_BACK_JOINT];
+  assert.ok(rail);
+  // the default sub in ¾″, Window braces: level frames, each with a rear rail on the back
+  const P = (layout: Extract<PaLayout, "stack" | "tower">, backJoint?: BackJointId) =>
+    cutParts({
+      sub: DEFAULT_PA.sub,
+      mid: DEFAULT_PA.mid,
+      subBox: DEFAULT_PA.cDim,
+      midDims: layout === "tower" ? towerMidDims(DEFAULT_PA.cDim) : DEFAULT_PA.mDim,
+      wall: T,
+      inset: INSET,
+      joint: "butt",
+      portStyle: DEFAULT_PA.portStyle,
+      cVent: DEFAULT_PA.cVent,
+      layout,
+      braceStyle: "window",
+      backJoint,
+      horn: ROUND,
+    }).parts;
+  const backOf = (parts: CutPart[], box: CutPart["box"]) => {
+    const row = parts.find((p) => p.box === box && p.part === "back");
+    assert.ok(row, `${box}: a back`);
+    return row.note;
+  };
+  for (const layout of ["stack", "tower"] as const) {
+    const screwed = P(layout);
+    assert.ok(
+      screwed.some((p) => p.box === "sub" && p.part === "windowBrace"),
+      layout,
+    );
+    assert.ok(backOf(screwed, "sub").includes(rail), `${layout}: ${backOf(screwed, "sub")}`);
+    // a glued back takes no screws
+    assert.ok(!backOf(P(layout, GLUED_BACK), "sub").includes(rail), layout);
+  }
+  // the stack's mid box takes no window brace: nothing to screw into
+  const stack = P("stack");
+  assert.ok(!stack.some((p) => p.box === "mid" && p.part === "windowBrace"));
+  assert.ok(!backOf(stack, "mid").includes(rail));
 });
 
 test("a stack's cutlist has no partitions or arched top, and the sub's volume reads the sub box alone in the tower", () => {

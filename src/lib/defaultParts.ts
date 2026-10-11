@@ -51,6 +51,7 @@ export const DEFAULT_SUB_WEIGHTS = PANEL_NOMINALS.map((n) => {
     d.sub,
     undefined,
     d.hardware.sub,
+    d.backJoint,
   );
   return {
     t: PANEL_NOMINAL_NAMES[n].short,
