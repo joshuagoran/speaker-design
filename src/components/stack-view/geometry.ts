@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { PARTS_3D } from "../../styles/palette";
-import type { PartMesh } from "../../types";
+import type { Dims2, PartMesh } from "../../types";
 /** Rounded rectangle outline centered on the origin, as a THREE.Shape. */
 export function roundedRectShape(width: number, height: number, radius: number) {
   const x = width / 2,
@@ -81,25 +81,72 @@ export function rectangularHornGeometry(
   depth: number,
   throatRadius = 0.5,
 ) {
+  return flareGeometry({
+    throat: { w: 2 * throatRadius, h: 2 * throatRadius },
+    mouth: { w: mouthWidth, h: mouthHeight },
+    depth,
+    squareness: (t) => 2 + 7 * Math.pow(t, 1.4), // circle -> squarish
+  });
+}
+
+/** How many points go round each of a flare's sections (and its mouth's outline, `flareMouthPath`). */
+const FLARE_SECTION_POINTS = 112;
+
+/** The `j`th of a flare section's points: on the superellipse of half axes `a`, `b` and exponent `n`. */
+function superellipsePoint(a: number, b: number, n: number, j: number) {
+  const th = (j / FLARE_SECTION_POINTS) * Math.PI * 2,
+    c = Math.cos(th),
+    sn = Math.sin(th);
+  return [
+    a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n),
+    b * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / n),
+  ] as const;
+}
+
+/**
+ * A flare's mouth outline as a hole centered on (centerX, centerY): the same points as `flareGeometry`'s last section
+ * for that `mouth` and mouth `squareness`, so a plate cut with it meets the flare with no gap.
+ */
+export function flareMouthPath(centerX: number, centerY: number, mouth: Dims2, squareness: number) {
+  const p = new THREE.Path();
+  for (let j = 0; j < FLARE_SECTION_POINTS; j++) {
+    const [px, py] = superellipsePoint(mouth.w / 2, mouth.h / 2, squareness, j);
+    if (j === 0) p.moveTo(centerX + px, centerY + py);
+    else p.lineTo(centerX + px, centerY + py);
+  }
+  p.closePath();
+  return p;
+}
+
+/**
+ * A flare as a mesh geometry, open at both ends: superellipse sections growing along z over `depth` from the `throat`
+ * (at z = 0) to the `mouth` (at z = depth), widening fastest toward the mouth; `squareness(t)` is the sections'
+ * exponent from throat (t = 0) to mouth (t = 1): 2 a circle or ellipse, higher a squarer rectangle.
+ */
+export function flareGeometry({
+  throat,
+  mouth,
+  depth,
+  squareness,
+}: {
+  throat: Dims2;
+  mouth: Dims2;
+  depth: number;
+  squareness: (t: number) => number;
+}) {
   const NS = 40,
-    NP = 112,
+    NP = FLARE_SECTION_POINTS,
     pos: number[] = [],
     idx: number[] = [];
   for (let i = 0; i <= NS; i++) {
     const t = i / NS,
       g = Math.pow(t, 1.7);
-    const a = throatRadius + (mouthWidth / 2 - throatRadius) * g,
-      b = throatRadius + (mouthHeight / 2 - throatRadius) * g;
-    const n = 2 + 7 * Math.pow(t, 1.4); // superellipse exponent: circle -> squarish
+    const a = throat.w / 2 + (mouth.w / 2 - throat.w / 2) * g,
+      b = throat.h / 2 + (mouth.h / 2 - throat.h / 2) * g;
+    const n = squareness(t);
     for (let j = 0; j < NP; j++) {
-      const th = (j / NP) * Math.PI * 2,
-        c = Math.cos(th),
-        sn = Math.sin(th);
-      pos.push(
-        a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n),
-        b * Math.sign(sn) * Math.pow(Math.abs(sn), 2 / n),
-        depth * t,
-      );
+      const [px, py] = superellipsePoint(a, b, n, j);
+      pos.push(px, py, depth * t);
     }
   }
   for (let i = 0; i < NS; i++)
