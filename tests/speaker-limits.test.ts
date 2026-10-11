@@ -27,7 +27,7 @@ import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_SPEAKER_BAND } from "../src/li
 import { startSpeaker } from "../src/pages/designer/designerStarts";
 import { newBandId } from "../src/pages/designer/useDesigner";
 import { PALETTES, bandLine } from "../src/styles/palette";
-import { DESIGNER_START } from "../src/constants/designer";
+import { DESIGNER_START } from "../src/constants/designerStarts";
 import {
   DRIVER_KIND,
   SPEAKER_BAND,

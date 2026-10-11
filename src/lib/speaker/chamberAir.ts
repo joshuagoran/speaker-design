@@ -14,21 +14,20 @@ import { LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 
 /** How close two edges count as touching, in. */
-const TOUCH_IN = 1e-9;
+export const TOUCH_IN = 1e-9;
 
 /** Whether the spans [a0, a1] and [b0, b1] overlap by more than a point. */
 const overlaps = (a0: number, a1: number, b0: number, b1: number) => a0 < b1 && b0 < a1;
 
 /**
- * The chamber's clear width and height, in: its size less a wall on each side, except where another chamber of the
- * cabinet stands right under it or right left of it (that chamber's top or right wall is the partition). Any overlap
+ * Which of the chamber's walls another chamber of the cabinet gives it: `below`, one stands right under it (its top
+ * wall is this one's floor); `left`, one stands right left of it (its right wall is this one's left side). Any overlap
  * along the touching edge counts as a shared wall, a partial one too (a narrower box stacked in the same shell).
  */
-export function chamberClearFace(
-  cabinet: Pick<SpeakerCabinet, "chambers" | "panel">,
+export function sharedWalls(
+  cabinet: Pick<SpeakerCabinet, "chambers">,
   chamber: SpeakerChamber,
-): Dims2 {
-  const t = cabinet.panel.thicknessIn;
+): { below: boolean; left: boolean } {
   const { at, dims } = chamber;
   /** the cabinet's other chambers */
   const others = cabinet.chambers.filter((c) => c !== chamber);
@@ -44,6 +43,20 @@ export function chamberClearFace(
       Math.abs(c.at.xIn + c.dims.w - at.xIn) < TOUCH_IN &&
       overlaps(c.at.yIn, c.at.yIn + c.dims.h, at.yIn, at.yIn + dims.h),
   );
+  return { below, left };
+}
+
+/**
+ * The chamber's clear width and height, in: its size less a wall on each side, except where another chamber of the
+ * cabinet gives it one (`sharedWalls`: that chamber's top or right wall is the partition).
+ */
+export function chamberClearFace(
+  cabinet: Pick<SpeakerCabinet, "chambers" | "panel">,
+  chamber: SpeakerChamber,
+): Dims2 {
+  const t = cabinet.panel.thicknessIn;
+  const { below, left } = sharedWalls(cabinet, chamber);
+  const { dims } = chamber;
   return { w: dims.w - (left ? 1 : 2) * t, h: dims.h - (below ? 1 : 2) * t };
 }
 

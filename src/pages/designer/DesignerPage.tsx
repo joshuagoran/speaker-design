@@ -14,10 +14,21 @@ import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
+import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
+import { SpeakerView3D } from "../../components/stack-view/SpeakerView3D";
+import { SpeakerFront } from "../../components/drawings/SpeakerFront";
+import {
+  BaffleColorPicker,
+  CabinetFinishPicker,
+  HornColorPicker,
+} from "../../components/ui/FinishPickers";
+import { cabinetFinishName, paintName } from "../../lib/data";
+import { Card } from "../../components/ui/Card";
+import { HORN_COLOR_CATALOG_LABEL } from "../../constants/hornColor";
+import { driverHorn, hornFlare, speakerLayout } from "../../lib/speaker/speakerLayout";
 import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
 import { DEFAULT_HIFI, DEFAULT_PA, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
-import { Card } from "../../components/ui/Card";
 import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
 import {
   HIFI_BOT,
@@ -31,13 +42,13 @@ import {
   DESIGNER_SETTINGS_SECTIONS,
   type DesignerSettingsSection,
 } from "../../constants/settingsSections";
+import { DESIGNER_TEXT, MODEL_GAP_TEXT } from "../../constants/designer";
 import {
   DESIGNER_START,
   DESIGNER_START_NAMES,
-  DESIGNER_TEXT,
-  MODEL_GAP_TEXT,
+  DESIGNER_START_TEXT,
   type DesignerStart,
-} from "../../constants/designer";
+} from "../../constants/designerStarts";
 import { ChamberSettings } from "./ChamberSettings";
 import { BandSettings } from "./BandSettings";
 import { FilterFields } from "./FilterFields";
@@ -56,6 +67,9 @@ interface Props {
 
 /** The sum's line width on the charts, px: it reads over its bands' (2 px). */
 const SUM_LINE_PX = 4;
+
+/** The 3D view's and the front drawing's height, as the Hi-fi page's 3D view. */
+const VIEW_HEIGHT = "h-[280px] md:h-[clamp(300px,46vh,480px)]";
 
 /** The PA design as the planner holds it, every field set. */
 const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
@@ -99,6 +113,13 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
   /** each band's name, by id */
   const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
   const { chambers } = spec.cabinet;
+  const cabFinish = spec.look.cabFinish ?? DEFAULT_PA.cabFinish;
+  const baffleColor = spec.look.baffleColor ?? DEFAULT_PA.baffleColor;
+  /** the first catalog horn the drivers take: the horn color picker shows its catalog finish */
+  const firstHorn = chambers.flatMap((c) => c.drivers.map(driverHorn)).find((h) => h !== null);
+  const layout = speakerLayout(spec.cabinet);
+  /** the horns built into the chambers, as the views draw them */
+  const flares = layout.chambers.flatMap((c) => hornFlare(spec.cabinet, c) ?? []);
   const summaries: Record<DesignerSettingsSection, string> = {
     speaker: `${spec.name} · ${countText(chambers.length, "chamber", "chambers")} · ${countText(spec.bands.length, "band", "bands")}`,
     chambers: chambers.map(chamberText).join("; "),
@@ -106,6 +127,14 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
       countText(spec.bands.length, "band", "bands"),
       inputText(spec.input),
       ...spec.bands.map(bandText),
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    look: [
+      cabinetFinishName(cabFinish),
+      `baffle ${paintName(baffleColor)}`,
+      firstHorn &&
+        `horn ${spec.look.hornColor ? paintName(spec.look.hornColor) : HORN_COLOR_CATALOG_LABEL.toLowerCase()}`,
     ]
       .filter(Boolean)
       .join(" · "),
@@ -158,6 +187,29 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
             saveName={spec.name}
             manage
           />
+          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
+            <SectionHeading className="mb-3">{DESIGNER_TEXT.views}</SectionHeading>
+            <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
+              <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`}>
+                {(cutaway) => (
+                  <SpeakerView3D
+                    spec={{ cabinet: spec.cabinet, look: spec.look }}
+                    cutaway={cutaway}
+                  />
+                )}
+              </Viewer3DCard>
+              <Card className={`flex flex-col ${VIEW_HEIGHT}`}>
+                <div className="flex-1 min-h-0">
+                  <SpeakerFront spec={spec} />
+                </div>
+                <p className="text-xs text-stone-500 mt-2">{DESIGNER_TEXT.front}</p>
+              </Card>
+            </div>
+            {flares.some((f) => f.placeholder) && <Notice>{DESIGNER_TEXT.hornPlaceholder}</Notice>}
+            {flares.some((f) => f.mouthClipped) && (
+              <Notice>{DESIGNER_TEXT.hornMouthClipped}</Notice>
+            )}
+          </section>
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
             <SectionHeading className="mb-3">{DESIGNER_TEXT.response}</SectionHeading>
             <ResponseChart
@@ -262,13 +314,13 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 onChange={designer.setName}
               />
               <SelectField
-                label="Start from"
+                label={DESIGNER_START_TEXT.startFrom}
                 options={startOptions}
                 value={byId(startOptions, start)}
                 onChange={(o) => setStart(starts.find((s) => s === o.id) ?? DESIGNER_START.empty)}
               />
               <Button onClick={startFrom} className="mb-2">
-                Start over from this
+                {DESIGNER_START_TEXT.startOver}
               </Button>
               <p className="text-xs text-stone-500 mb-2">
                 Starting over replaces this design; open a saved speaker from the library above.
@@ -333,6 +385,26 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
               <Button className="mb-2" onClick={designer.addBand}>
                 Add band
               </Button>
+            </>,
+          )}
+          {section(
+            "look",
+            <>
+              <CabinetFinishPicker
+                value={cabFinish}
+                onChange={(v) => designer.editLook({ cabFinish: v })}
+              />
+              <BaffleColorPicker
+                value={baffleColor}
+                onChange={(v) => designer.editLook({ baffleColor: v })}
+              />
+              {firstHorn && (
+                <HornColorPicker
+                  value={spec.look.hornColor}
+                  onChange={(hornColor) => designer.editLook({ hornColor })}
+                  horn={firstHorn}
+                />
+              )}
             </>,
           )}
         </SettingsColumn>

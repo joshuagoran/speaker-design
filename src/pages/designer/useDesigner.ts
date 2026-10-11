@@ -3,7 +3,8 @@ import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { speakerLimits } from "../../lib/speaker/speakerLimits";
 import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
-import { DESIGNER_START_SPEAKER_NAMES, DESIGNER_TEXT } from "../../constants/designer";
+import { DESIGNER_TEXT } from "../../constants/designer";
+import { DESIGNER_START_SPEAKER_NAMES } from "../../constants/designerStarts";
 import { SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { speakerSummary } from "./designerText";
 import type {
@@ -144,6 +145,9 @@ export function useDesigner() {
     setName: (name: string) => setSpec((s) => ({ ...s, name })),
     editInput: (edit: (input: SpeakerSpec["input"]) => SpeakerSpec["input"]) =>
       setSpec((s) => ({ ...s, input: edit(s.input) })),
+    /** sets part of the look (the cabinet finish, the baffle and horn colors) */
+    editLook: (look: Partial<SpeakerSpec["look"]>) =>
+      setSpec((s) => ({ ...s, look: { ...s.look, ...look } })),
     editCabinet,
     editChambers,
     editChamber,

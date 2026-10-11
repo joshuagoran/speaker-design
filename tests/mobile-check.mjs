@@ -16,6 +16,7 @@ import { COVERAGE_LAYOUT_KEY, COVERAGE_TEST_IDS } from "../src/constants/coverag
 import { STAT_ROW_TEST_IDS } from "../src/constants/statRowTestIds.ts";
 import { HIFI_BOX_LABELS } from "../src/constants/hifiLayout.ts";
 import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../src/data/catalog/hifi-tweeters.ts";
+import { DESIGNER_START_TEXT } from "../src/constants/designerStarts.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const page = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -227,12 +228,12 @@ for (const [width, phone] of [
   await p.waitForFunction(() => document.querySelector("aside"), null, { timeout: 30000 });
   const closed = p.locator("aside button[aria-expanded=false]");
   for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().click();
-  const start = p.getByLabel("Start from");
+  const start = p.getByLabel(DESIGNER_START_TEXT.startFrom);
   const options = await start.locator("option").allTextContents();
   const many = options.find((o) => /tower|mid\/high/i.test(o));
   if (many) {
     await start.selectOption({ label: many });
-    await p.getByRole("button", { name: "Start over from this" }).click();
+    await p.getByRole("button", { name: DESIGNER_START_TEXT.startOver }).click();
   }
   await p.waitForTimeout(600);
   const m = await p.evaluate(() => {

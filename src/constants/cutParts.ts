@@ -64,3 +64,10 @@ export const GRAIN_LOOK_NAMES = {
   any: "Any",
 } as const;
 export type GrainLook = keyof typeof GRAIN_LOOK_NAMES;
+
+/** The panels a driver, a vent or a passive radiator is cut into, by id (their cutlist part ids). */
+export const PANEL = {
+  baffle: "baffle",
+  back: "back",
+  side: "side",
+} as const satisfies Record<string, keyof typeof CUT_PART_NAMES>;

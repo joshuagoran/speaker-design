@@ -13,7 +13,7 @@ import { coneParts } from "./driverParts";
 import { stuffedLiters } from "./chamberAir";
 import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
 import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../acoustics/radiation";
-import { CM_PER_M, METERS_PER_INCH } from "../../constants/units";
+import { CM_PER_IN } from "../../constants/units";
 import {
   CHAMBER_LOAD,
   HORN_DRIVE,
@@ -21,9 +21,6 @@ import {
   PORT_SHAPE,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-
-/** Centimeters in one inch: the spec's ports are in inches, the engine's in Hornresp's cm. */
-const CM_PER_IN = METERS_PER_INCH * CM_PER_M;
 
 /**
  * The chamber's drivers as the engine takes them: one driver's Thiele/Small parameters and how many share the throat
