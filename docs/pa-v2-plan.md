@@ -42,11 +42,11 @@ with a vented rear chamber. The ports exit as slots on the front sides. The sub 
 
 ### Modules
 
-| Module  | Contents                                                  | Port tuning | Horn loads from                     |
-| ------- | --------------------------------------------------------- | ----------- | ----------------------------------- |
-| Sub bin | 1 or 2 × 18″ (18NBX100 or 4018LF), front-loaded 1-D flare | ~40–45 Hz   | ~140 Hz (1 × 18″), ~99 Hz (2 × 18″) |
-| Mid box | 2 × 10″ (10MB600 or 10PR320) in one throat, ~280 mm apart | ~90–100 Hz  | ~176 Hz (one box)                   |
-| HF      | N314T on the DIY R-OSSE                                   | —           | —                                   |
+| Module  | Contents                                                    | Port tuning            | Horn loads from                     |
+| ------- | ----------------------------------------------------------- | ---------------------- | ----------------------------------- |
+| Sub bin | 1 or 2 × 18″ (18NBX100 or 18TBX100), front-loaded 1-D flare | ~35 Hz, 30 Hz subsonic | ~140 Hz (1 × 18″), ~99 Hz (2 × 18″) |
+| Mid box | 2 × 10″ (10MB600 or 10PR320) in one throat, ~280 mm apart   | ~90–100 Hz             | ~176 Hz (one box)                   |
+| HF      | N314T on the DIY R-OSSE                                     | —                      | —                                   |
 
 A 2 × 12″ mid box (3012HO) needs its cones at least ~330 mm apart: a 12″ frame is ~310–320 mm wide. Its box is
 taller, and its loading and lobing figures differ from the 2 × 10″ figures below.
@@ -88,7 +88,8 @@ The second setup is cleaner at the crossover. It needs its own channel for the l
 
 ### Build notes
 
-- **Ports.** Sub: ~600 cm² per driver. Mid: ~120 cm² per driver. Smaller ports limit the output. Flare their ends.
+- **Ports.** Sub: ~600 cm² per driver, ~760 mm long, folded once along the back wall. Mid: ~120 cm² per driver,
+  ~180 mm, straight. Smaller ports limit the output. Flare their ends.
 - **Front chamber.** Start the flare at the cone. Leave no cavity in front of it.
 - **Drivers.** The 18NBX100, 4018LF and 3012HO suit vented chambers. The 10MB600 (Qts 0.22) suits sealed or horn
   loading. Vented, it gives a small chamber and a bump near tuning. A fixed shelf flattens the bump.
@@ -105,17 +106,24 @@ no power compression.
 
 | Frequency | Sub bin, 2 × 18NBX100 | Same, plain vented | Mid box, 2 × 10MB600 | Same, plain vented | 2 mid boxes |
 | --------- | --------------------- | ------------------ | -------------------- | ------------------ | ----------- |
-| 60 Hz     | 134 dB                | 133 dB             | 107 dB               | 109 dB             | 112 dB      |
-| 100 Hz    | 137 dB                | 132 dB             | 128 dB (vent)        | 128 dB (vent)      | 134 dB      |
-| 120 Hz    | 138 dB                | 132 dB             | 132 dB               | 130 dB             | 138 dB      |
-| 150 Hz    | 136 dB                | 132 dB             | 134 dB               | 129 dB             | 138 dB      |
+| 35 Hz     | 127 dB                | 127 dB             | —                    | —                  | —           |
+| 40 Hz     | 130 dB                | 129 dB             | —                    | —                  | —           |
+| 60 Hz     | 132 dB (Xmax)         | 130 dB (Xmax)      | 107 dB               | 109 dB             | 112 dB      |
+| 100 Hz    | 137 dB                | 131 dB             | 128 dB (vent)        | 128 dB (vent)      | 134 dB      |
+| 120 Hz    | 138 dB                | 131 dB             | 132 dB               | 130 dB             | 138 dB      |
+| 150 Hz    | 136 dB                | 131 dB             | 134 dB               | 129 dB             | 138 dB      |
 | 200 Hz    | 133 dB                | 132 dB             | 135 dB               | 129 dB             | 137 dB      |
 | 500 Hz    | —                     | —                  | 133 dB               | 130 dB             | 139 dB      |
 | 950 Hz    | —                     | —                  | 134 dB               | 131 dB             | 140 dB      |
 
+The sub is tuned to 35 Hz with a 30 Hz BW24 subsonic, applied in its figures.
+
 - **Horn gain.** The sub bin gains 4–6 dB from 80 to 150 Hz. The mid box gains 3–6 dB from 150 to 950 Hz.
-- **No folded vents.** Straight side slots fit: the sub's are ~480 mm long, the mid's ~180 mm. The wedges beside the
-  sub's flare join its rear chamber (~324 L net). The mid's wedges are sealed.
+- **Sub tuning.** 35 Hz is the textbook alignment for 162 L per driver. Against 42 Hz it gains 6 dB at 30–35 Hz and
+  loses 1–3 dB at 45–60 Hz, where the cone reaches Xmax. Above 70 Hz the two are equal.
+- **Vents.** The sub's slots (~760 mm) fold once along the back wall; the box stays 766 mm deep. The mid's slots
+  (~180 mm) stay straight. The wedges beside the sub's flare join its rear chamber (~324 L net). The mid's are sealed.
+- **18TBX100.** It equals the 18NBX100 in this bin, within 0.3 dB. It costs $49 less and weighs 8 lb more per driver.
 - **The HF is the limit.** One N314T gives ~128–131 dB, 5–8 dB under the subs and mids.
 - **Little sub-to-top delay.** Both have ~3–5 ms group delay at 120–150 Hz.
 - **Limits.** The geometry is an estimate. Above ~350 Hz the mid results are approximate (1-D model).
@@ -238,9 +246,11 @@ All are in the catalog (`src/data/catalog/`).
 | Driver          | Fs / Qts  | Sd × Xmax | Sensitivity | Weight | Price |
 | --------------- | --------- | --------- | ----------- | ------ | ----- |
 | B&C 18NBX100    | 35 / 0.38 | 1.21 L    | 96.5 dB     | 20 lb  | $449  |
+| B&C 18TBX100    | 34 / 0.35 | 1.09 L    | 97 dB       | 28 lb  | $400  |
 | Eminence 4018LF | 30 / 0.34 | 1.02 L    | 94.9 dB     | 24 lb  | $329  |
 
-- **18NBX100:** ~1.5 dB more output, 4 lb lighter.
+- **18NBX100:** ~1.5 dB more output than the 4018LF, 4 lb lighter.
+- **18TBX100:** equal to the 18NBX100 in the bin (ferrite). $49 less, 8 lb heavier.
 - **4018LF:** deeper (Fs 30 Hz), a better bin driver (lower Qts, Bl 26.8), ~$480 less for four. Needs a bigger box
   (Vas 255 L).
 
@@ -424,7 +434,7 @@ An analog box cannot delay a full-range signal. Drop fills, or add one small dig
 ## Open questions
 
 1. 10″ or 12″ mids? 8″ is lighter; 12″ crosses lowest per box.
-2. 18NBX100 or 4018LF subs?
+2. 18NBX100, 18TBX100 or 4018LF subs?
 3. Vented or sealed mid horns?
 4. Mixer and compressor in the front-end box, or separate?
 5. Fills: drop them, or add a digital delay?
