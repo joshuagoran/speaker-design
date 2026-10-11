@@ -40,6 +40,7 @@ checks with `vp check`, tests with `vp test` (Vite+; `pnpm exec vp …` without 
 - The parts catalog (drivers, horns, waveguides, passive radiators, port tubes, amps, makers, cabinets, racks, DSP units, plywood, driver cutouts) lives in `src/data/catalog/<kind>.ts`, and the acoustics tables (room materials, air absorption, the generated slot inner-end table) in `src/data/acoustics/`, as typed pure data; adding a part is a data edit there, never in code (`src/lib/data.ts` only derives).
 - UI text that names parts or defaults (Notes, racks, signal path) reads them from the catalog and the defaults (`src/lib/defaults.ts`), never hardcoded.
 - Optimizer tests: `tests/optimizer-snapshot.test.ts` (normal suite) checks the cards both optimizers pick for a few fixed designs; when an optimizer change is meant to change them, rewrite the file with `vp run optimizer-snapshot`. The full optimizer dump, `tests/optimizer-dump.json` (`vp run optimizer-dump`, or `optimizer-dump:pa` / `optimizer-dump:hifi`; parallel shards, minutes), is there to compare a change's cards over many more designs when that helps; it isn't required.
+- Docs (`docs/`) use ASD-STE100 style: short sentences (20 words max), one idea each, active voice, plain verbs, no filler. Prefer tables and lists to prose.
 - Never push straight to `main` (it deploys via GitHub Actions). Every change goes through a PR; don't ask.
 
 ## Commits and PRs
