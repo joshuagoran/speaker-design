@@ -21,7 +21,8 @@ import {
   CabinetFinishPicker,
   HornColorPicker,
 } from "../../components/ui/FinishPickers";
-import { cabinetFinishName } from "../../lib/data";
+import { cabinetFinishName, paintName } from "../../lib/data";
+import { Card } from "../../components/ui/Card";
 import { HORN_COLOR_CATALOG_LABEL } from "../../constants/hornColor";
 import { driverHorn, hornFlare, speakerLayout } from "../../lib/speaker/speakerLayout";
 import { byId } from "../../lib/tables";
@@ -43,14 +44,13 @@ import {
   DESIGNER_SETTINGS_SECTIONS,
   type DesignerSettingsSection,
 } from "../../constants/settingsSections";
+import { BAND_NAMES, DESIGNER_TEXT, MODEL_GAP_TEXT } from "../../constants/designer";
 import {
-  BAND_NAMES,
   DESIGNER_START,
   DESIGNER_START_NAMES,
-  DESIGNER_TEXT,
-  MODEL_GAP_TEXT,
+  DESIGNER_START_TEXT,
   type DesignerStart,
-} from "../../constants/designer";
+} from "../../constants/designerStarts";
 import { SPEAKER_BAND } from "../../constants/speakerSpec";
 import { ChamberSettings } from "./ChamberSettings";
 import { BandSettings } from "./BandSettings";
@@ -122,12 +122,20 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
   /** the first catalog horn the drivers take: the horn color picker shows its catalog finish */
   const firstHorn = chambers.flatMap((c) => c.drivers.map(driverHorn)).find((h) => h !== null);
   const layout = speakerLayout(spec.cabinet);
-  const hornPlaceholder = layout.chambers.some((c) => hornFlare(spec.cabinet, c)?.placeholder);
+  /** the horns built into the chambers, as the views draw them */
+  const flares = layout.chambers.flatMap((c) => hornFlare(spec.cabinet, c) ?? []);
   const summaries: Record<DesignerSettingsSection, string> = {
     speaker: `${spec.name} · ${countText(chambers.length, "chamber", "chambers")} · ${countText(spec.bands.length, "band", "bands")}`,
     chambers: chambers.map(chamberText).join("; "),
     bands: spec.bands.map(bandText).join(" · "),
-    look: `${cabinetFinishName(cabFinish)} · baffle ${baffleColor}${firstHorn ? ` · horn ${spec.look.hornColor ?? HORN_COLOR_CATALOG_LABEL}` : ""}`,
+    look: [
+      cabinetFinishName(cabFinish),
+      `baffle ${paintName(baffleColor)}`,
+      firstHorn &&
+        `horn ${spec.look.hornColor ? paintName(spec.look.hornColor) : HORN_COLOR_CATALOG_LABEL.toLowerCase()}`,
+    ]
+      .filter(Boolean)
+      .join(" · "),
   };
   const section = (id: DesignerSettingsSection, children: React.ReactNode) => (
     <SettingsSection
@@ -182,18 +190,17 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                   />
                 )}
               </Viewer3DCard>
-              <figure
-                className={`rounded-lg border border-stone-300 bg-panel p-3 flex flex-col ${VIEW_HEIGHT}`}
-              >
+              <Card className={`flex flex-col ${VIEW_HEIGHT}`}>
                 <div className="flex-1 min-h-0">
                   <SpeakerFront spec={spec} />
                 </div>
-                <figcaption className="text-xs text-stone-500 mt-2">
-                  {DESIGNER_TEXT.front}
-                </figcaption>
-              </figure>
+                <p className="text-xs text-stone-500 mt-2">{DESIGNER_TEXT.front}</p>
+              </Card>
             </div>
-            {hornPlaceholder && <Notice>{DESIGNER_TEXT.hornPlaceholder}</Notice>}
+            {flares.some((f) => f.placeholder) && <Notice>{DESIGNER_TEXT.hornPlaceholder}</Notice>}
+            {flares.some((f) => f.mouthClipped) && (
+              <Notice>{DESIGNER_TEXT.hornMouthClipped}</Notice>
+            )}
           </section>
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
             <SectionHeading className="mb-3">{DESIGNER_TEXT.response}</SectionHeading>
@@ -249,13 +256,13 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 onChange={designer.setName}
               />
               <SelectField
-                label="Start from"
+                label={DESIGNER_START_TEXT.startFrom}
                 options={startOptions}
                 value={byId(startOptions, start)}
                 onChange={(o) => setStart(starts.find((s) => s === o.id) ?? DESIGNER_START.empty)}
               />
               <Button onClick={startFrom} className="mb-2">
-                Start over from this
+                {DESIGNER_START_TEXT.startOver}
               </Button>
               <p className="text-xs text-stone-500 mb-2">
                 Starting over replaces this design; open a saved speaker from the library above.

@@ -3,12 +3,13 @@
 //   node tests/three-memory-check.mjs [page]        default: dist/stack-planner.html
 // Env: PW_MODULE, PW_CHROMIUM as for tests/mobile-check.mjs.
 // On each page, rebuilds its 3D view many times (its first slider, or the Designer's first number field, stepped up and
-// back) and fails if the live geometry
-// or texture count (three.js renderer.info.memory, which the viewer, SceneView3D, writes on its mount as
+// back) and fails if the live geometry or texture count (three.js renderer.info.memory, which the viewer, SceneView3D, writes on its mount as
 // data-geometries / data-textures, with data-rebuilds counting its rebuilds) grows, or if the view holds more than one
 // canvas (one WebGL renderer for the component's life).
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { PA_LAYOUT_NAMES } from "../src/constants/paLayouts.ts";
+import { DESIGNER_START_NAMES, DESIGNER_START_TEXT } from "../src/constants/designerStarts.ts";
 
 const REBUILDS = 30;
 /** The pages with a 3D view: the PA stack (the default view), Hi-fi and the Designer, and the control each steps. */
@@ -16,13 +17,28 @@ const SLIDER = { control: 'input[type="range"]', up: "ArrowRight", down: "ArrowL
 const VIEWS = [
   { name: "PA", hash: "", ...SLIDER },
   { name: "Hi-fi", hash: "#hifi", ...SLIDER },
-  // the first chamber's width
+  // the PA tower started in the Designer (horns, a vent, shared walls), its first chamber's width stepped: one shell, then a
+  // stepped one
   {
     name: "Designer",
-    hash: "#designer",
+    hash: "",
     control: 'input[type="number"]',
     up: "ArrowUp",
     down: "ArrowDown",
+    prepare: async (page) => {
+      await page.getByRole("button", { name: PA_LAYOUT_NAMES.tower, exact: true }).first().click();
+      await page.evaluate(() => (location.hash = "#designer"));
+      await page
+        .getByLabel(DESIGNER_START_TEXT.startFrom)
+        .selectOption({ label: DESIGNER_START_NAMES.paTower });
+      await page.getByRole("button", { name: DESIGNER_START_TEXT.startOver }).click();
+      // built empty when the page opens, then as the tower
+      await page.waitForFunction(
+        () => Number(document.querySelector("[data-geometries]")?.dataset.rebuilds) >= 2,
+        null,
+        { timeout: 30_000 },
+      );
+    },
   },
 ];
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
@@ -33,13 +49,14 @@ const browser = await chromium.launch({
 });
 const failures = [];
 const results = [];
-for (const { name, hash, control, up, down } of VIEWS) {
+for (const { name, hash, control, up, down, prepare } of VIEWS) {
   const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(url + hash);
   const view = page.locator("[data-geometries]");
   await view.waitFor({ timeout: 60_000 });
+  if (prepare) await prepare(page);
   const read = () =>
     view.evaluate((el) => ({
       geometries: Number(el.dataset.geometries),

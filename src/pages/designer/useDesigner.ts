@@ -2,7 +2,7 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { EMPTY_SPEAKER } from "../../lib/defaults";
-import { DESIGNER_START_SPEAKER_NAMES } from "../../constants/designer";
+import { DESIGNER_START_SPEAKER_NAMES } from "../../constants/designerStarts";
 import { SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { speakerSummary } from "./designerText";
 import type {

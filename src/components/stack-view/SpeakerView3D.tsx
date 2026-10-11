@@ -1,4 +1,4 @@
-import { buildSpeakerScene, type SpeakerSceneProps } from "./buildSpeakerScene";
+import { buildSpeakerScene, speakerSceneKey, type SpeakerSceneProps } from "./buildSpeakerScene";
 import { SceneView3D, type SceneStart } from "./SceneView3D";
 import { fitSphere } from "./sceneFraming";
 
@@ -10,10 +10,10 @@ export function SpeakerView3D({
   /** where the camera starts (default: the view's own) */
   start?: Partial<SceneStart>;
 }) {
-  // the parent recreates these objects every render; the view rebuilds only when their JSON changes
+  // the parent recreates these objects every render; the view rebuilds only when what the scene reads changes
   return (
     <SceneView3D
-      buildKey={JSON.stringify(props)}
+      buildKey={speakerSceneKey(props)}
       build={() => buildSpeakerScene(props)}
       fit={fitSphere}
       start={start}

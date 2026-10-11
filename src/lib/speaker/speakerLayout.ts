@@ -2,7 +2,8 @@
 // walls two of them share (`sharedWalls`, the lower or left chamber's), each driver entry's drivers, the port by the
 // rule of the engine it comes from, and a horn-loaded chamber's mouth. The 3D view (stack-view/buildSpeakerScene) and
 // the front drawing (drawings/SpeakerFront) both read it. x is across from the cabinet's center line (+ to the right
-// seen from the front), y up from the cabinet's bottom. Pure.
+// seen from the front), y up from the cabinet's bottom. Both views draw the left speaker of a pair, so a driver's
+// `xIn` (+ toward the pair's inside) is + to the right, as the Hi-fi page draws it. Pure.
 import type {
   Dims2,
   Dims3,
@@ -29,7 +30,7 @@ import {
 } from "../data";
 import { byId } from "../tables";
 import { DEFAULT_PA } from "../defaults";
-import { sharedWalls } from "./chamberAir";
+import { sharedWalls, TOUCH_IN } from "./chamberAir";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { CM_PER_IN } from "../../constants/units";
 import { PORT_STYLE } from "../../constants/portStyles";
@@ -45,13 +46,19 @@ import {
 
 /** How far apart a driver entry's alike drivers sit, edge to edge, in. */
 const DRIVER_GAP_IN = 0.5;
-/** How close two edges count as touching, in (as `sharedWalls` takes them). */
-const TOUCH_IN = 1e-9;
 
 /** A rectangle in the front view: its lower-left corner and size. */
 export interface FaceRect extends Dims2 {
   x: number;
   y: number;
+}
+
+/**
+ * One of a chamber's walls in the front view, a wall thick: `shared` where another chamber stands on it or against it
+ * (a partition, the lower or left chamber's), else an outside wall.
+ */
+export interface ChamberWall extends FaceRect {
+  shared: boolean;
 }
 
 /** A chamber as its cabinet places it. */
@@ -64,6 +71,14 @@ export interface PlacedChamber {
   dims: Dims3;
   /** its clear face inside its walls, a shared wall counted once (lib/speaker/chamberAir `chamberClearFace`) */
   clear: FaceRect;
+  /**
+   * the walls it builds (`SpeakerChamber.dims`): its top and right walls whole, the partitions where a chamber stands on
+   * or right of it among them; its floor and left side where no chamber gives it one (an overhang past the chamber
+   * under it keeps its own floor there, so the box stays closed)
+   */
+  walls: ChamberWall[];
+  /** another chamber touches it (shares a wall with it) */
+  touches: boolean;
 }
 
 /** A cabinet's chambers placed, and the walls they share. */
@@ -72,22 +87,38 @@ export interface SpeakerLayout {
   size: Dims3;
   /**
    * the chambers fill one box of one depth: one shell round them all and one baffle, the walls they share inside it
-   * (as the PA tower is built); otherwise each chamber is its own box
+   * (as the PA tower is built); otherwise chambers that touch form a stepped shell, and any other is its own box
    */
   oneShell: boolean;
   chambers: PlacedChamber[];
   /** each shared wall in the front view: the lower chamber's top wall, or the left chamber's right wall, where they meet */
-  partitions: FaceRect[];
+  partitions: ChamberWall[];
 }
 
+/** A span along an edge. */
+type Span = readonly [number, number];
+
 /** The overlap of [a0, a1] and [b0, b1], or null when they only touch or miss. */
-function overlap(a0: number, a1: number, b0: number, b1: number): [number, number] | null {
+function overlap(a0: number, a1: number, b0: number, b1: number): Span | null {
   const lo = Math.max(a0, b0),
     hi = Math.min(a1, b1);
   return hi - lo > TOUCH_IN ? [lo, hi] : null;
 }
 
-/** The cabinet's chambers placed in its front view, with the walls they share. */
+/** `span` cut at the `marks` (sorted, inside it): each piece, and whether it lies in one of them. */
+function splitSpan(span: Span, marks: readonly Span[]): { span: Span; marked: boolean }[] {
+  const out: { span: Span; marked: boolean }[] = [];
+  let at = span[0];
+  for (const [lo, hi] of [...marks].sort((a, b) => a[0] - b[0])) {
+    if (lo - at > TOUCH_IN) out.push({ span: [at, lo], marked: false });
+    out.push({ span: [lo, hi], marked: true });
+    at = hi;
+  }
+  if (span[1] - at > TOUCH_IN) out.push({ span: [at, span[1]], marked: false });
+  return out;
+}
+
+/** The cabinet's chambers placed in its front view, with the walls they build and share. */
 export function speakerLayout(cabinet: Pick<SpeakerCabinet, "chambers" | "panel">): SpeakerLayout {
   const t = cabinet.panel.thicknessIn;
   const list = cabinet.chambers;
@@ -98,49 +129,78 @@ export function speakerLayout(cabinet: Pick<SpeakerCabinet, "chambers" | "panel"
     minY = Math.min(...list.map((c) => c.at.yIn)),
     maxY = Math.max(...list.map((c) => c.at.yIn + c.dims.h));
   const size = { w: maxX - minX, h: maxY - minY, d: Math.max(...list.map((c) => c.dims.d)) };
-  const chambers = list.map((chamber): PlacedChamber => {
-    const { dims } = chamber;
-    const x0 = chamber.at.xIn - minX - size.w / 2,
-      y0 = chamber.at.yIn - minY;
+  const boxes = list.map((chamber) => ({
+    chamber,
+    x0: chamber.at.xIn - minX - size.w / 2,
+    y0: chamber.at.yIn - minY,
+    ...chamber.dims,
+  }));
+  type Box = (typeof boxes)[number];
+  /** where `b` stands on `a` (a's top), across; where `b` stands right of `a` (a's right side), up */
+  const onTopOf = (a: Box, b: Box) =>
+    Math.abs(a.y0 + a.h - b.y0) < TOUCH_IN ? overlap(a.x0, a.x0 + a.w, b.x0, b.x0 + b.w) : null;
+  const rightOf = (a: Box, b: Box) =>
+    Math.abs(a.x0 + a.w - b.x0) < TOUCH_IN ? overlap(a.y0, a.y0 + a.h, b.y0, b.y0 + b.h) : null;
+  const marks = (spans: (Span | null)[]) => spans.filter((s): s is Span => s !== null);
+  const chambers = boxes.map((box): PlacedChamber => {
+    const { chamber, x0, y0, w, h } = box;
+    const others = boxes.filter((b) => b !== box);
     const { below, left } = sharedWalls(cabinet, chamber);
     const lo = { x: left ? 0 : t, y: below ? 0 : t };
+    const above = marks(others.map((b) => onTopOf(box, b)));
+    const under = marks(others.map((b) => onTopOf(b, box)));
+    const right = marks(others.map((b) => rightOf(box, b)));
+    const leftOf = marks(others.map((b) => rightOf(b, box)));
+    const walls: ChamberWall[] = [];
+    const across = (y: number, spans: { span: Span; marked: boolean }[], keep: boolean) =>
+      spans.forEach(({ span: [a, b], marked }) => {
+        if (keep || !marked) walls.push({ x: a, y, w: b - a, h: t, shared: keep && marked });
+      });
+    const up = (x: number, spans: { span: Span; marked: boolean }[], keep: boolean) =>
+      spans.forEach(({ span: [a, b], marked }) => {
+        if (keep || !marked) walls.push({ x, y: a, w: t, h: b - a, shared: keep && marked });
+      });
+    // the top wall and the floor run the whole width; the sides fit between them
+    across(y0 + h - t, splitSpan([x0, x0 + w], above), true);
+    const floor = splitSpan([x0, x0 + w], under);
+    across(y0, floor, false);
+    /** whether its own floor reaches the corner at `x` */
+    const floorAt = (x: number) =>
+      floor.some(({ span: [a, b], marked }) => !marked && a - TOUCH_IN <= x && x <= b + TOUCH_IN);
+    const sides = (x: number) => [y0 + (floorAt(x) ? t : 0), y0 + h - t] as const;
+    up(x0 + w - t, splitSpan(sides(x0 + w), right), true);
+    up(x0, splitSpan(sides(x0), leftOf), false);
     return {
       chamber,
       x0,
       y0,
-      cx: x0 + dims.w / 2,
-      dims,
-      clear: { x: x0 + lo.x, y: y0 + lo.y, w: dims.w - lo.x - t, h: dims.h - lo.y - t },
+      cx: x0 + w / 2,
+      dims: chamber.dims,
+      clear: { x: x0 + lo.x, y: y0 + lo.y, w: w - lo.x - t, h: h - lo.y - t },
+      walls,
+      touches: above.length + under.length + right.length + leftOf.length > 0,
     };
   });
-  const partitions: FaceRect[] = [];
-  for (const a of chambers)
-    for (const b of chambers) {
-      if (a === b) continue;
-      // b stands on a: a's top wall
-      const across = overlap(a.x0, a.x0 + a.dims.w, b.x0, b.x0 + b.dims.w);
-      if (across && Math.abs(a.y0 + a.dims.h - b.y0) < TOUCH_IN)
-        partitions.push({ x: across[0], y: b.y0 - t, w: across[1] - across[0], h: t });
-      // b stands right of a: a's right wall
-      const up = overlap(a.y0, a.y0 + a.dims.h, b.y0, b.y0 + b.dims.h);
-      if (up && Math.abs(a.x0 + a.dims.w - b.x0) < TOUCH_IN)
-        partitions.push({ x: b.x0 - t, y: up[0], w: t, h: up[1] - up[0] });
-    }
   const area = list.reduce((sum, c) => sum + c.dims.w * c.dims.h, 0);
-  const disjoint = chambers.every((a, i) =>
-    chambers
+  const disjoint = boxes.every((a, i) =>
+    boxes
       .slice(i + 1)
       .every(
         (b) =>
-          !overlap(a.x0, a.x0 + a.dims.w, b.x0, b.x0 + b.dims.w) ||
-          !overlap(a.y0, a.y0 + a.dims.h, b.y0, b.y0 + b.dims.h),
+          !overlap(a.x0, a.x0 + a.w, b.x0, b.x0 + b.w) ||
+          !overlap(a.y0, a.y0 + a.h, b.y0, b.y0 + b.h),
       ),
   );
   const oneShell =
     disjoint &&
     Math.abs(area - size.w * size.h) < 1e-6 &&
     list.every((c) => Math.abs(c.dims.d - size.d) < TOUCH_IN);
-  return { size, oneShell, chambers, partitions };
+  return {
+    size,
+    oneShell,
+    chambers,
+    partitions: chambers.flatMap((c) => c.walls.filter((w) => w.shared)),
+  };
 }
 
 /** A driver entry's horn from the catalog (a PA horn or a Hi-fi waveguide); null for none or a stale id. */
@@ -274,6 +334,8 @@ export interface HornFlare {
    * chamber is deep, shortened to fit
    */
   placeholder: boolean;
+  /** the mouth is larger than the clear face: drawn at the clear face, every section shrunk alike */
+  mouthClipped: boolean;
 }
 
 /** An area of `areaIn2` in the shape of `like` (its width over its height), in. */
@@ -285,7 +347,7 @@ const shaped = (areaIn2: number, like: Dims2): Dims2 => {
 /**
  * The flare of a chamber's horn (its segments' areas and lengths, Hornresp's cm² and cm), throat at the back, mouth on
  * the baffle: the mouth as square as its area allows inside the clear face (it runs the clear width when wider than
- * that), each section the mouth's shape; the path at most the chamber's clear depth (as the model takes it: less the
+ * that, and is cut to the clear face when larger than it), each section the mouth's shape; the path at most the chamber's clear depth (as the model takes it: less the
  * back, the baffle and the inset). Null for a chamber with no horn or no segments.
  */
 export function hornFlare(
@@ -300,6 +362,8 @@ export function hornFlare(
   const mouthArea = areaIn2(horn.segments[horn.segments.length - 1].s2);
   const w = Math.min(clear.w, Math.sqrt(mouthArea));
   const h = Math.min(clear.h, mouthArea / w);
+  /** what the clear face leaves of the mouth's area: every section is drawn that much smaller */
+  const fit = (w * h) / mouthArea;
   const mouth = { x: clear.x + (clear.w - w) / 2, y: clear.y + (clear.h - h) / 2, w, h };
   const pathIn = horn.segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
   const depthIn = placed.dims.d - 2 * cabinet.panel.thicknessIn - cabinet.insetIn;
@@ -308,10 +372,11 @@ export function hornFlare(
   return {
     mouth,
     segments: horn.segments.map((s) => ({
-      throat: shaped(areaIn2(s.s1), mouth),
-      mouth: shaped(areaIn2(s.s2), mouth),
+      throat: shaped(areaIn2(s.s1) * fit, mouth),
+      mouth: shaped(areaIn2(s.s2) * fit, mouth),
       length: (s.length / CM_PER_IN) * scale,
     })),
     placeholder,
+    mouthClipped: fit < 1 - 1e-9,
   };
 }

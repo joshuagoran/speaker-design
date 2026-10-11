@@ -196,11 +196,14 @@ Each PR stands alone. Lowest risk first.
     - A horn sits in the baffle (as in the tower) or on the top (as on the mid box).
     - Each port follows its engine's rule. PA: the letterbox, side ducts and flared tubes. Hi-fi: round ports, slots
       and radiators.
-    - Chambers that fill one box of one depth share one shell and one baffle. Their shared walls are inside. Other
-      chambers are each their own box.
+    - Chambers that fill one box of one depth share one shell and one baffle. Their shared walls are inside.
+    - Other chambers that touch form a stepped shell. Each builds only its own walls: the lower (or left) chamber's
+      wall is the one partition. An overhang keeps its own floor past the chamber under it.
+    - A chamber that touches no other is its own box.
     - A spec with an inset gets the PA frame. Any other spec gets the Hi-fi box and its roundover.
     - A horn-loaded chamber shows its mouth on the baffle and a flare from its segments.
     - A folded path, or a path longer than the chamber, is a straight placeholder. A note says so.
+    - A mouth larger than the clear face is drawn at the clear face. A note says so.
     - Not drawn yet: the tower's arched top (the spec has no arch), the tilt and the PA plinth.
   - **L3c Cutlist.** L3c works out the real bracing, vent walls and hardware displacement for each chamber and
     replaces the 3% allowance.

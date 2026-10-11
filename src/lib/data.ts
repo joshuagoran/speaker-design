@@ -36,7 +36,7 @@ import type {
   ThroatThread,
   WaveguideSpec,
 } from "../types";
-import { CABINET_FINISHES } from "../data/catalog/finishes";
+import { CABINET_FINISHES, PAINT_SWATCHES } from "../data/catalog/finishes";
 import { CD_RAW } from "../data/catalog/compression-drivers";
 import { BC10CXN64_RAW, FILL_RAW } from "../data/catalog/fills";
 import { HIFI_PASSIVES_RAW } from "../data/catalog/passive-radiators";
@@ -126,9 +126,14 @@ const isFinishId = (value: string): value is FinishId => Object.hasOwn(CABINET_F
 export function cabinetFinishOf(value: string): CabinetFinish | undefined {
   return isFinishId(value) ? CABINET_FINISHES[value] : undefined;
 }
-/** A cabinet finish as the summaries name it: the named finish, or "painted" and the paint's hex color. */
+/** A paint color as the summaries name it: its swatch's name, lower case, or its hex color when it is a custom one. */
+export const paintName = (hex: string) =>
+  PAINT_SWATCHES.find(
+    ([swatch]) => swatch.toLowerCase() === hex.toLowerCase(),
+  )?.[1].toLowerCase() ?? hex;
+/** A cabinet finish as the summaries name it: the named finish, or "painted" and the paint's name. */
 export const cabinetFinishName = (value: string) =>
-  cabinetFinishOf(value)?.name ?? `painted ${value}`;
+  cabinetFinishOf(value)?.name ?? `painted ${paintName(value)}`;
 
 // Pickers list alphabetically.
 export const sortedByName = <T extends { name: string }>(arr: readonly T[]): T[] =>

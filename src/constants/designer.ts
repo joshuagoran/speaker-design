@@ -73,40 +73,14 @@ export const MODEL_GAP_TEXT = {
   vent: "the horn engine doesn't take this vent yet",
 } as const satisfies Record<SpeakerModelGap, string>;
 
-/** Where a new design starts, by id. */
-export const DESIGNER_START = {
-  empty: "empty",
-  hifi: "hifi",
-  paSub: "paSub",
-  paTop: "paTop",
-  paTower: "paTower",
-} as const;
-export type DesignerStart = (typeof DESIGNER_START)[keyof typeof DESIGNER_START];
-
-/** What each start shows. */
-export const DESIGNER_START_NAMES = {
-  empty: "Empty speaker",
-  hifi: "The Hi-fi design",
-  paSub: "The PA design's sub",
-  paTop: "The PA design's mid/high box",
-  paTower: "The PA design's tower",
-} as const satisfies Record<DesignerStart, string>;
-
-/** The name a new design takes, by start (a saved speaker keeps its own). */
-export const DESIGNER_START_SPEAKER_NAMES = {
-  empty: "New speaker",
-  hifi: "Hi-fi speaker",
-  paSub: "PA sub",
-  paTop: "PA mid/high box",
-  paTower: "PA tower",
-} as const satisfies Record<DesignerStart, string>;
-
 /** The Designer's results headings and chart labels. */
 export const DESIGNER_TEXT = {
   views: "The speaker",
   front: "Front",
   hornPlaceholder:
     "A folded horn path, or one longer than its chamber is deep, is drawn straight and shortened to fit for now (its fold layout comes later).",
+  hornMouthClipped:
+    "A horn mouth larger than its chamber's clear face is drawn at the clear face, its flare shrunk to match.",
   response: "Response",
   chambers: "Chambers",
   bands: "Bands",

@@ -14,7 +14,7 @@ import { LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 
 /** How close two edges count as touching, in. */
-const TOUCH_IN = 1e-9;
+export const TOUCH_IN = 1e-9;
 
 /** Whether the spans [a0, a1] and [b0, b1] overlap by more than a point. */
 const overlaps = (a0: number, a1: number, b0: number, b1: number) => a0 < b1 && b0 < a1;

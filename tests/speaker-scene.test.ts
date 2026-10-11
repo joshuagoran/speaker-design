@@ -7,6 +7,7 @@ import { describe, expect, test, vi } from "vite-plus/test";
 import * as THREE from "three";
 import {
   buildSpeakerScene,
+  speakerSceneKey,
   SPEAKER_GROUP_NAMES,
   SPEAKER_MESH_NAMES,
 } from "../src/components/stack-view/buildSpeakerScene";
@@ -16,6 +17,7 @@ import { VENT_MESH_NAME } from "../src/components/stack-view/buildBraces";
 import { ROUNDOVER_IN } from "../src/components/stack-view/stackHeights";
 import {
   driverSpots,
+  hornFlare,
   onTop,
   speakerLayout,
   type PlacedChamber,
@@ -36,6 +38,7 @@ import {
   HORN_PATH,
   HORN_PLACEMENT,
   SPEAKER_PART,
+  VENT_KIND,
 } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { configs, type GoldenConfig } from "./golden-configs";
@@ -327,13 +330,13 @@ describe("horns", () => {
     const sub = paSpeaker(defaultPa, SPEAKER_PART.sub);
     const [base] = sub.cabinet.chambers;
     const segments = [
-      { profile: HORN_PROFILE.exponential, s1: 500, s2: 1500, length: 30 },
-      { profile: HORN_PROFILE.conical, s1: 1500, s2: 3000, length: 20 },
+      { profile: HORN_PROFILE.exponential, s1: 500, s2: 1500, length: 20 },
+      { profile: HORN_PROFILE.conical, s1: 1500, s2: 2000, length: 10 },
     ];
     const hornChamber = (path: (typeof HORN_PATH)[keyof typeof HORN_PATH]): SpeakerChamber => ({
       ...base,
       netLiters: 40,
-      vent: { kind: "sealed" },
+      vent: { kind: VENT_KIND.sealed },
       load: {
         kind: CHAMBER_LOAD.horn,
         horn: {
@@ -358,7 +361,31 @@ describe("horns", () => {
       expect(
         named(buildSpeakerScene({ spec, cutaway: true }), SPEAKER_MESH_NAMES.hornDriver),
       ).toHaveLength(1);
+      const [placed] = speakerLayout(spec.cabinet).chambers;
+      expect(hornFlare(spec.cabinet, placed)?.placeholder).toBe(path === HORN_PATH.folded);
+      expect(hornFlare(spec.cabinet, placed)?.mouthClipped).toBe(false);
     }
+    // a mouth larger than the clear face: cut to it, flagged, the flare shrunk to meet it
+    const big = hornChamber(HORN_PATH.straight);
+    if (big.load.kind !== CHAMBER_LOAD.horn) throw new Error("no horn");
+    const huge = {
+      ...big,
+      load: {
+        ...big.load,
+        horn: { ...big.load.horn, segments: [{ ...segments[0], s2: 40_000 }] },
+      },
+    };
+    const spec = { ...sub, cabinet: { ...sub.cabinet, chambers: [huge] } };
+    const [placed] = speakerLayout(spec.cabinet).chambers;
+    const flare = hornFlare(spec.cabinet, placed);
+    expect(flare?.mouthClipped).toBe(true);
+    expect(flare?.mouth.w).toBeLessThanOrEqual(placed.clear.w + EPS);
+    expect(flare?.mouth.h).toBeLessThanOrEqual(placed.clear.h + EPS);
+    const end = flare?.segments[0].mouth;
+    expect((end?.w ?? 0) * (end?.h ?? 0)).toBeCloseTo(
+      (flare?.mouth.w ?? 0) * (flare?.mouth.h ?? 0),
+      6,
+    );
   });
 });
 
@@ -376,18 +403,89 @@ test("the tower's chambers share their walls: one shell, a partition at each cha
     expect(w.max.y).toBeCloseTo(floors[i], 6);
     expect(w.min.y).toBeCloseTo(floors[i] - T, 6);
   });
-  // chambers that don't fill one box are each their own
+});
+
+describe("chambers that touch but don't fill one box: a stepped shell", () => {
+  const tower = CASES.find((c) => c.name === "PA tower");
+  if (!tower) throw new Error("no tower case");
   const [sub, mid] = tower.spec.cabinet.chambers;
-  const offset = {
+  const T = tower.spec.cabinet.panel.thicknessIn;
+  const withChambers = (chambers: SpeakerChamber[]): SpeakerSpec => ({
     ...tower.spec,
-    cabinet: {
-      ...tower.spec.cabinet,
-      chambers: [sub, { ...mid, dims: { ...mid.dims, w: mid.dims.w - 4 } }],
-    },
-  };
-  const apart = buildSpeakerScene({ spec: offset, cutaway: true });
-  expect(named(apart, SPEAKER_GROUP_NAMES.shell)).toHaveLength(2);
-  expect(named(apart, SPEAKER_MESH_NAMES.partition)).toHaveLength(0);
+    cabinet: { ...tower.spec.cabinet, chambers },
+  });
+  /** the walls a chamber builds, as the layout gives them */
+  const wallsOf = (spec: SpeakerSpec, i: number) => speakerLayout(spec.cabinet).chambers[i].walls;
+
+  test("a narrower box on a wider one: one shared wall (the lower one's top), the upper builds none there", () => {
+    const spec = withChambers([sub, { ...mid, dims: { ...mid.dims, w: mid.dims.w - 4 } }]);
+    const g = buildSpeakerScene({ spec, cutaway: true });
+    const [lower, upper] = named(g, SPEAKER_GROUP_NAMES.shell);
+    const partitions = named(g, SPEAKER_MESH_NAMES.partition);
+    expect(partitions).toHaveLength(1);
+    // the lower chamber's: its top wall where the upper one stands
+    expect(named(lower, SPEAKER_MESH_NAMES.partition)).toHaveLength(1);
+    const p = boxOf(partitions[0]);
+    expect(p.max.y).toBeCloseTo(sub.dims.h, 6);
+    expect(p.min.y).toBeCloseTo(sub.dims.h - T, 6);
+    expect(p.max.x - p.min.x).toBeCloseTo(mid.dims.w - 4, 6);
+    // nothing of the upper chamber's own sits on that wall: no floor of its own
+    for (const w of named(upper, SPEAKER_MESH_NAMES.wall))
+      expect(boxOf(w).min.y, "the upper chamber's floor").toBeGreaterThan(sub.dims.h - EPS);
+    const floor = wallsOf(spec, 1).filter((w) => Math.abs(w.y - sub.dims.h) < EPS && w.w > w.h);
+    expect(floor).toHaveLength(0);
+  });
+
+  test("side by side: the right chamber has no left wall; the left chamber's right wall is the partition", () => {
+    const right = { ...mid, at: { xIn: sub.dims.w, yIn: 0 }, dims: { ...mid.dims, h: sub.dims.h } };
+    const spec = withChambers([sub, right]);
+    const left = wallsOf(spec, 0).filter((w) => w.h > w.w);
+    expect(left.filter((w) => w.shared)).toHaveLength(1);
+    const placed = speakerLayout(spec.cabinet).chambers[1];
+    expect(wallsOf(spec, 1).some((w) => w.h > w.w && Math.abs(w.x - placed.x0) < EPS)).toBe(false);
+    // its clear face reaches the partition, as the model's (chamberClearFace) does
+    expect(placed.clear.x).toBeCloseTo(placed.x0, 6);
+    expect(
+      named(buildSpeakerScene({ spec, cutaway: true }), SPEAKER_MESH_NAMES.partition),
+    ).toHaveLength(1);
+  });
+
+  test("a wider box on a narrower one keeps its own floor only past the one under it", () => {
+    const spec = withChambers([
+      { ...sub, dims: { ...sub.dims, w: sub.dims.w - 6 }, at: { xIn: 3, yIn: 0 } },
+      { ...mid, at: { xIn: 0, yIn: sub.dims.h } },
+    ]);
+    const floor = wallsOf(spec, 1).filter((w) => w.w > w.h && Math.abs(w.y - sub.dims.h) < EPS);
+    expect(floor.map((w) => w.w)).toEqual([3, 3]);
+    expect(floor.every((w) => !w.shared)).toBe(true);
+  });
+
+  test("chambers that don't touch are each their own box", () => {
+    const spec = withChambers([sub, { ...mid, at: { xIn: 0, yIn: sub.dims.h + 2 } }]);
+    const g = buildSpeakerScene({ spec, cutaway: true });
+    expect(named(g, SPEAKER_GROUP_NAMES.shell)).toHaveLength(2);
+    expect(named(g, SPEAKER_MESH_NAMES.partition)).toHaveLength(0);
+    expect(named(g, SPEAKER_MESH_NAMES.wall)).toHaveLength(0);
+  });
+});
+
+test("the 3D view's key changes with what the scene draws, not with the model's own inputs", () => {
+  const tower = CASES.find((c) => c.name === "PA tower");
+  if (!tower) throw new Error("no tower case");
+  const key = (spec: SpeakerSpec) => speakerSceneKey({ spec, cutaway: false });
+  const editChamber = (edit: (c: SpeakerChamber) => SpeakerChamber): SpeakerSpec => ({
+    ...tower.spec,
+    cabinet: { ...tower.spec.cabinet, chambers: tower.spec.cabinet.chambers.map(edit) },
+  });
+  const base = key(tower.spec);
+  expect(key(editChamber((c) => ({ ...c, stuffingPct: c.stuffingPct + 10, netLiters: 50 })))).toBe(
+    base,
+  );
+  expect(key({ ...tower.spec, bands: [] })).toBe(base);
+  expect(key(editChamber((c) => ({ ...c, dims: { ...c.dims, d: c.dims.d + 1 } })))).not.toBe(base);
+  expect(key({ ...tower.spec, look: { ...tower.spec.look, baffleColor: "#000000" } })).not.toBe(
+    base,
+  );
 });
 
 test("every geometry a build makes is in the scene, so the view frees it (three-memory pattern)", () => {

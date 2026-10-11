@@ -36,8 +36,10 @@ import {
   PORT_RULE,
   portRule,
   speakerLayout,
+  type FaceRect,
   type PlacedChamber,
 } from "../../lib/speaker/speakerLayout";
+import { PANEL } from "../../constants/cutParts";
 import {
   CD_OPTIONS,
   FILL_OPTIONS,
@@ -61,17 +63,19 @@ import { MID_DEPTH_FALLBACK_IN } from "../../data/catalog/driver-cutouts";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { THREAD_MOUNT } from "../../constants/throatMounts";
-import { DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
+import { CHAMBER_LOAD, DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 import type { BoxRegion, Horn, RadiatorPanel, SpeakerDriver, SpeakerSpec } from "../../types";
 
 /** The Designer scene's own meshes (every reused part keeps its builder's names). */
 export const SPEAKER_MESH_NAMES = {
-  /** a wall two chambers share, inside one shell */
+  /** a wall two chambers share: inside one shell, or the lower (or left) chamber's in a stepped shell */
   partition: "chamberPartition",
   /** a horn-loaded chamber's flare, one mesh per segment */
   hornFlare: "chamberHornFlare",
   /** a front-loaded or tapped horn's driver inside the chamber, drawn in the cutaway */
   hornDriver: "chamberHornDriver",
+  /** a chamber's own panel in a stepped shell: an outside wall, its back or its baffle */
+  wall: "chamberWall",
 } as const;
 
 /** The groups the scene puts each shell, chamber and driver in, so a check can find where it placed them. */
@@ -97,6 +101,53 @@ const SAME_IN = 1e-9;
 export interface SpeakerSceneProps {
   spec: Pick<SpeakerSpec, "cabinet" | "look">;
   cutaway: boolean;
+}
+
+/**
+ * What the scene reads of its props, as a key that changes exactly when the scene does: the panels' thickness, inset
+ * and roundover; each chamber's place, size, vent (a port's sizes, the radiators' part and count), drivers (part,
+ * count, position, horn) and horn path (its drive, path and segments' areas and lengths); the look and the cutaway.
+ * The model's own inputs (stuffing, net air, bands, a port's elbows, a horn's profiles and throat chamber) are left out.
+ */
+export function speakerSceneKey({ spec, cutaway }: SpeakerSceneProps): string {
+  const { cabinet, look } = spec;
+  return JSON.stringify({
+    cutaway,
+    look,
+    wall: cabinet.panel.thicknessIn,
+    inset: cabinet.insetIn,
+    roundover: cabinet.roundoverIn,
+    chambers: cabinet.chambers.map(({ at, dims, vent, drivers, load }) => ({
+      at,
+      dims,
+      vent:
+        vent.kind === VENT_KIND.vented
+          ? {
+              kind: vent.kind,
+              // the views fold a port as its engine does: its elbows don't change them
+              port:
+                vent.port.shape === PORT_SHAPE.duct ? vent.port : { ...vent.port, elbows: null },
+            }
+          : vent.kind === VENT_KIND.radiator
+            ? { kind: vent.kind, id: vent.radiators.id, n: vent.radiators.n }
+            : { kind: vent.kind },
+      drivers: drivers.map(({ kind, driverId, count, position, horn }) => ({
+        kind,
+        driverId,
+        count,
+        position,
+        horn,
+      })),
+      horn:
+        load.kind === CHAMBER_LOAD.horn
+          ? {
+              drive: load.horn.drive.kind,
+              path: load.horn.path,
+              segments: load.horn.segments.map(({ s1, s2, length }) => [s1, s2, length]),
+            }
+          : null,
+    })),
+  });
 }
 
 /** A chamber's holes in a panel, drawn once its origin (center line, bottom) is known in the panel's coordinates. */
@@ -140,9 +191,25 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
     horn: {},
   });
   const layout = speakerLayout(cabinet);
+  // one shell round chambers that fill one box; else a stepped shell of the chambers that touch (each building only
+  // the walls it owns), and a box of its own for any other
   const shells = layout.oneShell
-    ? [{ x0: -layout.size.w / 2, y0: 0, dims: layout.size, members: layout.chambers }]
-    : layout.chambers.map((c) => ({ x0: c.x0, y0: c.y0, dims: c.dims, members: [c] }));
+    ? [
+        {
+          x0: -layout.size.w / 2,
+          y0: 0,
+          dims: layout.size,
+          members: layout.chambers,
+          stepped: false,
+        },
+      ]
+    : layout.chambers.map((c) => ({
+        x0: c.x0,
+        y0: c.y0,
+        dims: c.dims,
+        members: [c],
+        stepped: c.touches,
+      }));
   for (const shell of shells) {
     const { dims } = shell;
     const cx = shell.x0 + dims.w / 2;
@@ -158,33 +225,42 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
       group.add(g);
       return { placed, g, parts: chamberParts({ ...ctx, group: g }, placed, cabinet, look) };
     });
-    const band = frame
-      ? members.find(
-          ({ placed, parts }) =>
-            parts.slotBand &&
-            Math.abs(placed.y0 - shell.y0) < SAME_IN &&
-            Math.abs(placed.dims.w - dims.w) < SAME_IN,
-        )
-      : undefined;
+    const band =
+      frame && !shell.stepped
+        ? members.find(
+            ({ placed, parts }) =>
+              parts.slotBand &&
+              Math.abs(placed.y0 - shell.y0) < SAME_IN &&
+              Math.abs(placed.dims.w - dims.w) < SAME_IN,
+          )
+        : undefined;
     const baffleBottom = band?.parts.slotBand?.h ?? 0;
     /** every chamber's holes in a panel whose origin is `y0` up from the shell's bottom, on its center line */
-    const holes = (y0: number, panel: "baffle" | "back") =>
+    const holes = (y0: number, panel: typeof PANEL.baffle | typeof PANEL.back) =>
       members.flatMap((m) => {
         const { g, parts } = m;
         const slot =
-          panel === "baffle" && m !== band && parts.slotBand ? [parts.slotBand.hole] : [];
+          panel === PANEL.baffle && m !== band && parts.slotBand ? [parts.slotBand.hole] : [];
         return [...parts[panel], ...slot].flatMap((h) => h(g.position.x, g.position.y - y0));
       });
     let at: BaffleAt;
-    if (frame) {
+    if (shell.stepped) {
+      const [placed] = shell.members;
+      at = buildSteppedPanels(
+        { ...ctx, group },
+        placed,
+        { baffle: holes(0, PANEL.baffle), back: holes(0, PANEL.back) },
+        frame,
+      );
+    } else if (frame) {
       // the frame's baffle holes are centered on the baffle, its back's on the box
       const baffleCy = T + baffleBottom + (dims.h - 2 * T - baffleBottom) / 2;
       const zf = buildCabinet(
         { ...ctx, group },
         {
           dims,
-          baffleHoles: holes(baffleCy, "baffle"),
-          backHoles: holes(dims.h / 2, "back"),
+          baffleHoles: holes(baffleCy, PANEL.baffle),
+          backHoles: holes(dims.h / 2, PANEL.back),
           y: 0,
           baffleBottom,
         },
@@ -196,7 +272,11 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
         {
           dim: dims,
           roundover: cabinet.roundoverIn,
-          holes: { baffle: holes(0, "baffle"), back: holes(0, "back"), sides: { [-1]: [], 1: [] } },
+          holes: {
+            baffle: holes(0, PANEL.baffle),
+            back: holes(0, PANEL.back),
+            sides: { [-1]: [], 1: [] },
+          },
         },
       );
       at = { zf: built.frontZ, innerZ: built.shellFrontZ };
@@ -221,6 +301,64 @@ export function buildSpeakerScene({ spec, cutaway }: SpeakerSceneProps): THREE.G
     }
   }
   return ctx.group;
+}
+
+/**
+ * A chamber's own panels in a stepped shell (`ctx.group`: its center line at x = 0, its bottom at y = 0): the walls it
+ * builds (lib/speaker/speakerLayout `PlacedChamber.walls`: a partition where another chamber stands on it or right of it,
+ * none where another gives it one), each the chamber's depth; its back and its baffle over its clear face, the baffle set
+ * back by the frame's inset, ¾″ in the PA's frame and a wall thick in the Hi-fi box. Returns where its baffle is.
+ */
+function buildSteppedPanels(
+  ctx: SceneContext,
+  placed: PlacedChamber,
+  holes: { baffle: THREE.Path[]; back: THREE.Path[] },
+  frame: boolean,
+): BaffleAt {
+  const T = ctx.wall;
+  const { d } = placed.dims;
+  const local = (r: FaceRect) => ({
+    x: r.x + r.w / 2 - placed.cx,
+    y: r.y + r.h / 2 - placed.y0,
+  });
+  for (const w of placed.walls) {
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(w.w, w.h, d),
+      w.shared ? ctx.materials.inner : ctx.materials.shell,
+    );
+    const at = local(w);
+    m.position.set(at.x, at.y, 0);
+    m.name = w.shared ? SPEAKER_MESH_NAMES.partition : SPEAKER_MESH_NAMES.wall;
+    ctx.group.add(m);
+  }
+  const { clear } = placed;
+  const c = local(clear);
+  /** a panel over the clear face, `depth` thick from `z` back, with its holes */
+  const panel = (cut: THREE.Path[], depth: number, z: number, materials: THREE.Material[]) => {
+    const shape = new THREE.Shape([
+      new THREE.Vector2(c.x - clear.w / 2, c.y - clear.h / 2),
+      new THREE.Vector2(c.x + clear.w / 2, c.y - clear.h / 2),
+      new THREE.Vector2(c.x + clear.w / 2, c.y + clear.h / 2),
+      new THREE.Vector2(c.x - clear.w / 2, c.y + clear.h / 2),
+    ]);
+    shape.holes.push(...cut);
+    const m = new THREE.Mesh(
+      new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 48 }),
+      materials,
+    );
+    m.position.z = z - depth;
+    m.name = SPEAKER_MESH_NAMES.wall;
+    ctx.group.add(m);
+  };
+  panel(holes.back, T, -d / 2 + T, [ctx.materials.shell]);
+  const thick = frame ? BAFFLE_THICKNESS_IN : T;
+  const zf = d / 2 - ctx.inset;
+  // its faces painted, its cut edges bare ply (as the PA's baffle)
+  panel(holes.baffle, thick, zf, [
+    ctx.materials.baffle,
+    ctx.cutaway ? ctx.materials.baffle : ctx.materials.inner,
+  ]);
+  return { zf, innerZ: zf - thick };
 }
 
 /**
@@ -496,8 +634,8 @@ function chamberParts(
       spots
         .filter((s) => s.panel === panel)
         .map((s) => ellipsePath(ox, oy + s.y, s.shape.w / 2 - k, s.shape.h / 2 - k));
-    baffle.push(on("baffle"));
-    back.push(on("back"));
+    baffle.push(on(PANEL.baffle));
+    back.push(on(PANEL.back));
     builds.push(({ zf, innerZ }) => {
       const sideZ = (-dims.d / 2 + innerZ) / 2;
       for (const s of spots) addRadiator(ctx, s, { dim: dims, zf, sideZ });

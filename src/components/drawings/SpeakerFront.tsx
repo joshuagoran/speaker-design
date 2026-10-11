@@ -25,9 +25,9 @@ import {
 import { byId } from "../../lib/tables";
 import { isAmt, isRibbon, RADIATOR_PANEL } from "../../lib/hifi/hifi";
 import { radiatorSpots, roundPortSpots, slotOpening } from "../../lib/hifi/boxLayout";
-import { tubeLayout } from "../../lib/pa/tubes";
-import { towerHornCutout } from "../../lib/pa/tower";
-import { PORT_STYLE } from "../../constants/portStyles";
+import { subVentHoles, subVentPlan } from "../stack-view/buildSubwoofer";
+import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
+import { HORN_CUTOUT_SHAPE, towerHornCutout } from "../../lib/pa/tower";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 
@@ -35,6 +35,8 @@ interface Props {
   spec: Pick<SpeakerSpec, "cabinet">;
 }
 
+/** The points a curved vent opening is drawn with. */
+const HOLE_POINTS = 24;
 /** The drawing's size, px, and its margin. */
 const VIEW_PX = 150;
 const PAD_PX = 4;
@@ -74,12 +76,23 @@ export function SpeakerFront({ spec }: Props) {
   const px = (x: number) => PAD_PX + (x - minX) * k,
     py = (y: number) => PAD_PX + (maxY - y) * k;
   /** a rectangle by its center and size, inches */
-  const rect = (key: string, cx: number, cy: number, w: number, h: number, props: object) => (
+  const rect = (
+    key: string,
+    cx: number,
+    cy: number,
+    w: number,
+    h: number,
+    props: React.SVGProps<SVGRectElement>,
+  ) => (
     <rect key={key} x={px(cx - w / 2)} y={py(cy + h / 2)} width={w * k} height={h * k} {...props} />
   );
-  const circle = (key: string, cx: number, cy: number, r: number, props: object) => (
-    <circle key={key} cx={px(cx)} cy={py(cy)} r={r * k} {...props} />
-  );
+  const circle = (
+    key: string,
+    cx: number,
+    cy: number,
+    r: number,
+    props: React.SVGProps<SVGCircleElement>,
+  ) => <circle key={key} cx={px(cx)} cy={py(cy)} r={r * k} {...props} />;
   const opening = { fill: pal.ink };
   const cone = { fill: pal.edge, stroke: pal.muted, strokeWidth: 1 };
 
@@ -94,46 +107,27 @@ export function SpeakerFront({ spec }: Props) {
         const o = slotOpening(dims, t, port);
         return [rect(`v${i}`, cx, y0 + o.y + o.h / 2, o.w, o.h, opening)];
       }
+      // each cut to its tube's outside, as the 3D view cuts it
       return roundPortSpots(port).map((s, j) =>
-        circle(`v${i}.${j}`, cx + s.x, y0 + s.y, s.r, opening),
+        circle(`v${i}.${j}`, cx + s.x, y0 + s.y, s.r + HIFI_BOX_LAYOUT.portTubeWallIn, opening),
       );
     }
-    // the PA's, as its front view draws them: the letterbox along the bottom, the ducts up the sides, the tubes
-    const g = rule.portGeom;
-    switch (rule.portStyle) {
-      case PORT_STYLE.slot: {
-        const h = g.ductH ?? 0;
-        return [rect(`v${i}`, cx, y0 + t + h / 2, dims.w - 2 * t, h, opening)];
-      }
-      case PORT_STYLE.twoDucts:
-      case PORT_STYLE.oneDuct: {
-        const throat = g.throat ?? 0;
-        const sides = rule.portStyle === PORT_STYLE.twoDucts ? [-1, 1] : [1];
-        return sides.map((side) =>
-          rect(
-            `v${i}.${side}`,
-            cx + side * (dims.w / 2 - t - throat / 2),
-            y0 + dims.h / 2,
-            throat,
-            dims.h - 2 * t,
-            opening,
-          ),
-        );
-      }
-      default: {
-        const dia = 2 * (g.portR ?? 0);
-        const tubes = tubeLayout(
-          dims,
-          rule.portStyle,
-          { nt: g.nPorts ?? 0, dia },
-          t,
-          rule.sub.size,
-        );
-        return tubes.tubes.map((p, j) =>
-          circle(`v${i}.${j}`, cx + p.x, y0 + t + p.y, dia / 2, opening),
-        );
-      }
-    }
+    // the PA's, as the 3D view cuts them (stack-view/buildSubwoofer): the tubes' or the side ducts' openings, and the
+    // letterbox's mouth under its shelf
+    const plan = subVentPlan(rule.sub, dims, rule.portStyle, rule.portGeom, t);
+    const holes = subVentHoles(plan, dims, t, { x: cx, plinth: y0, baffleCy: 0 }).map((h, j) => (
+      <path
+        key={`v${i}.${j}`}
+        d={`${h
+          .getPoints(HOLE_POINTS)
+          .map((q, n) => `${n ? "L" : "M"}${px(q.x)},${py(q.y)}`)
+          .join("")}Z`}
+        {...opening}
+      />
+    ));
+    return plan.bandH > 0
+      ? [...holes, rect(`v${i}`, cx, y0 + t + plan.ductH / 2, plan.innerW, plan.ductH, opening)]
+      : holes;
   };
 
   /** one driver at (x, y): on the baffle, or its horn standing on the top */
@@ -218,7 +212,7 @@ export function SpeakerFront({ spec }: Props) {
           const cut = towerHornCutout({ w: placed.clear.w + 2 * t }, t, horn);
           return [
             rect(key, x, y, cut.w, cut.h, {
-              rx: (cut.shape === "rect" ? cut.r : Math.min(cut.w, cut.h) / 2) * k,
+              rx: (cut.shape === HORN_CUTOUT_SHAPE.rect ? cut.r : Math.min(cut.w, cut.h) / 2) * k,
               fill: pal.muted,
               stroke: pal.ink,
               strokeWidth: 1.2,

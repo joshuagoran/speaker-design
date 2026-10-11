@@ -2,7 +2,12 @@ import * as THREE from "three";
 import { roundedRectPath, circlePath, partMeshSilhouette, polygonPath } from "./geometry";
 import { paConeRadius } from "./buildCone";
 import { HORN_MESHES } from "../../data/meshes";
-import { towerHornCutout, towerSpec, TOWER_HORN_WALL_GAP_IN } from "../../lib/pa/tower";
+import {
+  HORN_CUTOUT_SHAPE,
+  towerHornCutout,
+  towerSpec,
+  TOWER_HORN_WALL_GAP_IN,
+} from "../../lib/pa/tower";
 import type { SceneContext } from "./sceneContext";
 import type { Dims3, Horn, MidDriver } from "../../types";
 
@@ -48,7 +53,7 @@ export function hornBaffleHole(
           (p) => new THREE.Vector2(THREE.MathUtils.clamp(p.x, -halfW, halfW), p.y),
         ),
       )
-    : cut.shape === "circle"
+    : cut.shape === HORN_CUTOUT_SHAPE.circle
       ? circlePath(x, y, cut.w / 2)
       : roundedRectPath(x, y, cut.w, cut.h, cut.r);
 }
