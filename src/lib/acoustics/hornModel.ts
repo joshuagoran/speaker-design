@@ -1,10 +1,11 @@
 // The horn engine: a front-loaded horn box as Hornresp models one.
 //
 // The driver is the box models' acoustic circuit (lib/acoustics/driverCircuit, shared with lib/pa/calc boxModel and
-// closedBox): a pressure source Pg behind the driver's own impedance. Its front drives a throat chamber and the horn's
-// segments into the mouth's radiation impedance; its rear drives a sealed or vented chamber. The vent is a straight
-// duct ended in its exit's radiation impedance, as in Hornresp. With no segments, no throat chamber and no radiation
-// load it is exactly those box models, lumped vent included (tests/horn-engine.test.ts checks this).
+// closedBox): a pressure source Pg behind the driver's own impedance, with the voice coil's inductance when the driver
+// lists one (Re + jωLe, as Hornresp). Its front drives a throat chamber and the horn's segments into the mouth's
+// radiation impedance; its rear drives a sealed or vented chamber. The vent is a straight duct ended in its exit's
+// radiation impedance, as in Hornresp. With no segments, no throat chamber, no radiation load and no inductance it is
+// exactly those box models, lumped vent included (tests/horn-engine.test.ts checks this).
 //
 // Words used below:
 // - "flow" is volume velocity, m³/s: air speed times area.
@@ -33,7 +34,7 @@ import {
   subtract,
 } from "./complex";
 import { driverCircuit, ventResistances } from "./driverCircuit";
-import { mouthImpedance } from "./radiation";
+import { FLANGED_CIRCLE_END_RATIO, mouthImpedance, rectangleEndCorrection } from "./radiation";
 import { chainMatrix, inputImpedance, outputFlowRatio, segmentMatrix } from "./hornSegments";
 
 /** ρc²: an air volume V has compliance V/(ρc²). */
@@ -129,6 +130,9 @@ const ventDuct = (area: number, length: number) => ({
  * radiation impedance, which adds the outer end's correction. With it off (the box models' mode) it is a lumped
  * acoustic mass. Losses come from QL and Qp at the tuning, as in the box models.
  *
+ * A slot's exit is a round exit of the same total area with its reactance scaled to the rectangle's end correction
+ * (each opening's): exact at low frequency, where a vent works. Its resistance does not depend on the shape there.
+ *
  * - `Sp`: the vent's open area, m².
  * - `Fb`: the tuning, Hz: where the vent's reactance cancels the chamber's, 1/(ωCab). Lumped: 1/(2π·√(Map·Cab)).
  * - `Ral`, `Rap`: the leakage and the vent's losses (see VentResistances).
@@ -139,6 +143,15 @@ function ventOf(design: HornDesign, Cab: number, radiationLoad: boolean, QL: num
   const { port } = design.rear;
   if (!port) return null;
   const Sp = port.area / SQ_CM_PER_SQ_M;
+  /**
+   * The exit's reactance over a round exit's: a slot opening's end correction over a circle's of the vent's whole area
+   * (cm over cm). n openings side by side each carry their own correction, so their mass is the opening's correction
+   * over the total area. 1 for a round vent.
+   */
+  const exitReactanceRatio = port.slot
+    ? rectangleEndCorrection(port.slot.width, port.slot.height) /
+      (FLANGED_CIRCLE_END_RATIO * Math.sqrt(port.area / Math.PI))
+    : 1;
   /** the lossless vent at frequency f: impedance from the chamber, exit flow per flow in, and the exit's load */
   const lossless = (f: number) => {
     if (!radiationLoad) {
@@ -151,7 +164,8 @@ function ventOf(design: HornDesign, Cab: number, radiationLoad: boolean, QL: num
       };
     }
     const duct = segmentMatrix(ventDuct(port.area, port.length), f);
-    const exitLoad = mouthImpedance(Sp, f, design.angle, design.count);
+    const roundExit = mouthImpedance(Sp, f, design.angle, design.count);
+    const exitLoad = complex(roundExit.re, roundExit.im * exitReactanceRatio);
     return {
       impedance: inputImpedance(duct, exitLoad),
       flowOut: outputFlowRatio(duct, exitLoad),
@@ -212,7 +226,9 @@ function isModelable(design: HornDesign, freqs: readonly number[]) {
     Number.isInteger(design.drivers) &&
     design.drivers >= 1 &&
     design.throatChamber >= 0 &&
-    (!rear.port || positive(rear.port.area, rear.port.length)) &&
+    (!rear.port ||
+      (positive(rear.port.area, rear.port.length) &&
+        (!rear.port.slot || positive(rear.port.slot.width, rear.port.slot.height)))) &&
     segments.every((s) => positive(s.s1, s.s2) && s.length >= 0) &&
     freqs.every((f) => positive(f))
   );
@@ -238,13 +254,15 @@ export function hornModel(
   /** one cone's circuit, its own air load off its moving mass */
   const cone = driverCircuit(driver, volts, frontAirMass);
   // the `drivers` cones in parallel on one throat, as one: their areas add, their impedances divide, the source stays
-  // (each driver has the full voltage). Sd, Mas, Cas, Ras and Rae are the bank's from here on.
+  // (each driver has the full voltage). Sd, Mas, Cas and Ras are the bank's from here on.
   const Sd = cone.Sd * drivers,
     Mas = cone.Mas / drivers,
     Cas = cone.Cas * drivers,
-    Ras = cone.Ras / drivers,
-    Rae = cone.Rae / drivers,
-    Pg = cone.Pg;
+    Ras = cone.Ras / drivers;
+  /** the voice coil's inductance, H (Le, given in mH); 0 when the driver lists none */
+  const coilInductance = (driver.Le ?? 0) / MILLI;
+  /** Bl/Sd for one cone, N/(m²·A): turns the coil's current into pressure on the cone */
+  const forcePerArea = driver.Bl / cone.Sd;
   /** the throat's area, m²: the first segment's start, or the cone with no segments */
   const throatArea = segments.length ? segments[0].s1 / SQ_CM_PER_SQ_M : Sd;
   /** the rear chamber's compliance, m³/Pa (Small's Cab: the box's air as acoustic compliance) */
@@ -262,14 +280,23 @@ export function hornModel(
   // Per frequency, the impedances (Pa·s/m³) the cone drives, then the flows (m³/s) they set:
   // - ventAt (the vent's impedance, exit flow and exit load), rearAdmittance (the rear's parts beside each other),
   //   rearImpedance: the rear chamber;
-  // - totalImpedance: everything in series with the source Pg (driver, front, rear);
+  // - totalImpedance: everything in series with the motor's source (driver, front, rear);
   // - coneFlow: the cone's; throatFlow: into the horn; mouthFlow: out of it; ventFlow: into the vent; ventExitFlow:
   //   out of it; leakFlow: out of the leak.
   for (const f of freqs) {
     const omega = 2 * Math.PI * f,
       k = omega / SPEED_OF_SOUND;
-    // the driver's own impedance: its losses, plus its mass against its suspension
-    const driverImpedance = complex(Ras + Rae, omega * Mas - 1 / (omega * Cas));
+    // The voice coil's blocked impedance, Re + jωLe (Hornresp's plain inductance). The motor is a source
+    // volts·(Bl/Sd)/coil behind the electrical damping (Bl/Sd)²/coil (the box models' Pg and Rae, which are real with no
+    // inductance); the bank's damping divides by the number of cones.
+    const coil = complex(driver.Re, omega * coilInductance);
+    const source = divide(complex(volts * forcePerArea), coil);
+    const electricalDamping = scale(
+      divide(complex(forcePerArea * forcePerArea), coil),
+      1 / drivers,
+    );
+    // the driver's own impedance: its losses and electrical damping, plus its mass against its suspension
+    const driverImpedance = add(complex(Ras, omega * Mas - 1 / (omega * Cas)), electricalDamping);
     /** the load in front of the cone (see frontLoad) */
     const front = frontLoad(design, f, radiationLoad);
     // the rear: the chamber's air, with the vent and the leak beside it when vented
@@ -283,7 +310,7 @@ export function hornModel(
     const rearImpedance = reciprocal(rearAdmittance);
     // the cone's flow, and where it goes
     const totalImpedance = add(add(driverImpedance, front.frontImpedance), rearImpedance);
-    const coneFlow = divide(complex(Pg), totalImpedance);
+    const coneFlow = divide(source, totalImpedance);
     const throatFlow = divide(coneFlow, front.throatSplit);
     const mouthFlow = multiply(throatFlow, outputFlowRatio(front.chain, front.mouthLoad));
     /** the rear chamber's pressure, Pa */
@@ -312,15 +339,12 @@ export function hornModel(
           leakPressure,
         )
       : pressure;
-    // one voice coil's impedance Ze: Re plus the motional part, Bl²/Sd² (one cone's) over one cone's acoustic load
-    // without Rae: the bank's load times the number of cones, as each carries its share of the flow
+    // one voice coil's impedance Ze: the coil plus the motional part, (Bl/Sd)² (one cone's) over one cone's acoustic
+    // load without its electrical damping: the bank's load times the number of cones, as each carries its share
     /** the acoustic load one cone's motor drives, without its own electrical damping */
-    const motionalLoad = scale(subtract(totalImpedance, complex(Rae)), drivers);
+    const motionalLoad = scale(subtract(totalImpedance, electricalDamping), drivers);
     /** Ze, one voice coil's impedance, ohms */
-    const electrical = add(
-      complex(driver.Re),
-      divide(complex((driver.Bl * driver.Bl) / (cone.Sd * cone.Sd)), motionalLoad),
-    );
+    const electrical = add(coil, divide(complex(forcePerArea * forcePerArea), motionalLoad));
     phases.push(arg(pressure));
     // volts are RMS: √2 turns RMS travel and air speed into sine peaks, as the box models do
     curve.push({

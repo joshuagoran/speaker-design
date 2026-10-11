@@ -131,6 +131,8 @@ export interface ThieleSmall {
   Hvc?: number;
   Hg?: number;
   Re: number;
+  /** voice-coil inductance, mH, where the maker publishes it; only the horn engine reads it (none when absent) */
+  Le?: number;
   Bl: number;
   Mms: number;
   aes: number;
@@ -150,6 +152,8 @@ export type RawDriver<D extends { ts: ThieleSmall }> = Omit<D, "ts"> & { ts: Raw
 
 /** The Thiele-Small fields the box models read (`boxModel`, `closedBox`, `passiveRadiatorBox`); `closedBox` and `passiveRadiatorBox` leave `Xmax` alone. */
 export type BoxModelTS = Pick<ThieleSmall, "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms">;
+/** The Thiele-Small fields the horn engine reads (lib/acoustics/hornModel): the box models' and the voice coil's inductance. */
+export type HornDriverTS = BoxModelTS & Pick<ThieleSmall, "Le">;
 
 /** Subs always list a displacement. */
 export interface SubTS extends ThieleSmall {
@@ -157,11 +161,11 @@ export interface SubTS extends ThieleSmall {
 }
 
 /**
- * Hi-fi woofers also list inductance, 2.83 V sensitivity and nominal impedance (informational; no model reads them). A
- * coaxial's woofer (lib/data coaxParts) has no inductance or LF impedance in its table, so those two are absent there.
+ * Hi-fi woofers also list 2.83 V sensitivity and nominal impedance (informational; no model reads them), and their
+ * inductance (ThieleSmall's Le). A coaxial's woofer (lib/data coaxParts) has no inductance or LF impedance in its table,
+ * so those two are absent there.
  */
 export interface HifiWooferTS extends ThieleSmall {
-  Le?: number;
   sens: number;
   imp?: number;
 }
@@ -1480,6 +1484,11 @@ export interface HornPort {
    * adds it, so pass the full effective length there: physical length plus both end corrections.
    */
   length: number;
+  /**
+   * a slot's opening, cm: one opening's sides (`area` is all of them together). Its exit takes the rectangle's end
+   * correction, smaller than a round exit's of the same area. Absent: round.
+   */
+  slot?: { width: number; height: number };
 }
 
 /** A horn box's rear chamber: its net air, L, and its vent; sealed when the vent is null. */
@@ -1494,8 +1503,8 @@ export interface HornRearChamber {
  * horn's segments and a sealed or vented rear chamber. No segments make a direct radiator (the mouth is the cone).
  */
 export interface HornDesign {
-  /** one driver's Thiele/Small parameters, as the box models take them */
-  driver: BoxModelTS;
+  /** one driver's Thiele/Small parameters, as the box models take them, and its voice coil's inductance */
+  driver: HornDriverTS;
   /**
    * how many of that driver share the throat, wired in parallel, each on the full voltage (Hornresp's Nd); 1 for one.
    * Each cone keeps its own air load.

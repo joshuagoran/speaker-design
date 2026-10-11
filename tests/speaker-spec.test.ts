@@ -595,6 +595,8 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
   assert.equal(design.driver, DEFAULT_PA.sub.ts);
   assert.equal(design.drivers, 2);
   assert.ok(design.rear.port && Math.abs(design.rear.port.area - 1200) < 1e-9, "1200 cm² of slot");
+  // the exit is each opening's rectangle, in cm
+  assert.deepEqual(design.rear.port.slot, { width: slotW * CM_PER_IN, height: slotH * CM_PER_IN });
   const model = hornModel(design, hornGrid(), 2.83);
   assert.ok(model, "the engine takes it");
   assert.ok(model.fb !== null && model.curve.every((p) => Number.isFinite(p.spl)));

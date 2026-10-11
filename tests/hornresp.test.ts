@@ -16,7 +16,7 @@ import { hornModel } from "../src/lib/acoustics/hornModel";
 import { AIR_DENSITY, BOX_LEAK_Q } from "../src/constants/acoustics";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { GRAMS_PER_KG, SQ_CM_PER_SQ_M } from "../src/constants/units";
-import type { BoxModelTS, HornDesign, HornSegment, RadiationAngle } from "../src/types";
+import type { HornDriverTS, HornDesign, HornSegment, RadiationAngle } from "../src/types";
 
 const DIR = path.join(import.meta.dirname, "hornresp");
 /** Hornresp gives the throat chamber in cc */
@@ -39,9 +39,14 @@ const CASES = [
   // side by side (count 2, stacking by images), and two drivers on one throat (Hornresp's Nd)
   { name: "mid-pair", spl: 0.02, boxes: 2, drivers: 1 },
   { name: "mid-pair", spl: 0.02, boxes: 1, drivers: 2 },
+  // the voice coil's inductance (Le 1.6 mH on the sub, 0.6 mH on the mid)
+  { name: "sub-bin-le", spl: 0.02, boxes: 1, drivers: 1 },
+  { name: "mid-le", spl: 0.02, boxes: 1, drivers: 1 },
 ] as const;
 /** Ze and excursion, relative */
 const CIRCUIT_TOLERANCE = 1e-3;
+/** Hornresp exports excursion to 6 decimals (mm): half a step is its rounding, which tiny excursions show */
+const EXCURSION_ROUNDING_MM = 5e-7;
 
 /** A record's "Key = value" lines, in order (keys repeat: S2 ends one segment and starts the next). */
 const recordLines = (text: string) =>
@@ -109,10 +114,12 @@ function designOf(text: string, boxes: number, drivers: number) {
   const Mms = num("Mmd") / cones / GRAMS_PER_KG + frontAirMass;
   /** the driver's free-air resonance, Hz */
   const Fs = 1 / (2 * Math.PI * Math.sqrt(Mms * Cms));
-  const driver: BoxModelTS = {
+  const driver: HornDriverTS = {
     Sd,
     Bl: num("Bl"),
     Re: num("Re") * cones,
+    // the record's first Le is the plain inductance (a later one belongs to the semi-inductance model)
+    Le: num("Le") * cones,
     Mms: Mms * GRAMS_PER_KG,
     Fs,
     Qms: (2 * Math.PI * Fs * Mms) / Rms,
@@ -178,7 +185,8 @@ for (const c of CASES) {
         `${at}: Ze ${engine.ze} vs ${expected.ze * c.boxes * c.drivers}`,
       );
       assert.ok(
-        Math.abs(engine.xmm / expected.xmm - 1) <= CIRCUIT_TOLERANCE,
+        Math.abs(engine.xmm - expected.xmm) <=
+          CIRCUIT_TOLERANCE * expected.xmm + EXCURSION_ROUNDING_MM,
         `${at}: excursion ${engine.xmm} vs ${expected.xmm}`,
       );
     });

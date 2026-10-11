@@ -43,3 +43,22 @@ export function mouthImpedance(
   const together = pistonImpedance(areaM2 * pistons, f);
   return complex(together.re * pistons, together.im * pistons);
 }
+
+/**
+ * The end correction of a rectangular opening a × b in a baffle (any length unit; the result is in the same unit): the
+ * low-frequency radiation mass of a uniform rectangular piston, ρ·I/(2π·S²), as a length I/(2π·a·b). I is the double
+ * area integral of 1/distance over the piston (the closed form below). A circle gives the familiar 0.85 r.
+ */
+export function rectangleEndCorrectionIntegral(a: number, b: number) {
+  const d = Math.hypot(a, b);
+  return (
+    (2 / 3) * (a ** 3 + b ** 3 - d ** 3) +
+    2 * a * b * (a * Math.log((b + d) / a) + b * Math.log((a + d) / b))
+  );
+}
+export const rectangleEndCorrection = (a: number, b: number) =>
+  rectangleEndCorrectionIntegral(a, b) / (2 * Math.PI * a * b);
+/** Both ends' correction over a flanged end's: a flanged outer end plus a free inner end, 1.46 r = 0.85 r + 0.61 r. */
+export const BOTH_ENDS_CORRECTION_RATIO = 1 + 0.61 / 0.85;
+/** A flanged circular piston's end correction over its radius: 8/(3π) ≈ 0.85 (the low-frequency radiation mass). */
+export const FLANGED_CIRCLE_END_RATIO = 8 / (3 * Math.PI);
