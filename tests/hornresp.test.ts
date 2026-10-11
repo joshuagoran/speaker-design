@@ -42,6 +42,9 @@ const CASES = [
   // the voice coil's inductance (Le 1.6 mH on the sub, 0.6 mH on the mid)
   { name: "sub-bin-le", spl: 0.02, boxes: 1, drivers: 1 },
   { name: "mid-le", spl: 0.02, boxes: 1, drivers: 1 },
+  // two drivers with Le (0.6 mH each; the composite's 0.3 mH), read both ways
+  { name: "mid-pair-le", spl: 0.02, boxes: 1, drivers: 2 },
+  { name: "mid-pair-le", spl: 0.02, boxes: 2, drivers: 1 },
 ] as const;
 /** Ze and excursion, relative */
 const CIRCUIT_TOLERANCE = 1e-3;
@@ -85,7 +88,7 @@ function segmentsOf(lines: ReturnType<typeof recordLines>): HornSegment[] {
 /**
  * The engine's design, drive and losses for a Hornresp record, as `boxes` identical boxes side by side with `drivers`
  * alike drivers on each throat. Hornresp holds them as one composite: its drivers in parallel (Sd, Mmd and Rms add,
- * Cms and Re divide) and its areas and volumes added. Each cone takes 1/(boxes·drivers) of the driver, and each box
+ * Cms, Re and Le divide) and its areas and volumes added. Each cone takes 1/(boxes·drivers) of the driver, and each box
  * 1/boxes of the areas and volumes.
  */
 function designOf(text: string, boxes: number, drivers: number) {

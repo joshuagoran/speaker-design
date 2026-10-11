@@ -594,6 +594,16 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
   // two of one driver on the throat: the engine wires them in parallel, each cone with its own air load
   assert.equal(design.driver, DEFAULT_PA.sub.ts);
   assert.equal(design.drivers, 2);
+  // the catalog's voice-coil inductance rides along to the engine, and the engine uses it
+  assert.ok(DEFAULT_PA.sub.ts.Le, "the default sub lists Le");
+  assert.equal(design.driver.Le, DEFAULT_PA.sub.ts.Le);
+  const [withLe] = hornModel(design, [1000], 2.83)?.curve ?? [];
+  const [withoutLe] =
+    hornModel({ ...design, driver: { ...design.driver, Le: 0 } }, [1000], 2.83)?.curve ?? [];
+  assert.ok(
+    withLe && withoutLe && withLe.ze > withoutLe.ze + 5,
+    "Le raises the coil's impedance at 1 kHz",
+  );
   assert.ok(design.rear.port && Math.abs(design.rear.port.area - 1200) < 1e-9, "1200 cm² of slot");
   // the exit is each opening's rectangle, in cm
   assert.deepEqual(design.rear.port.slot, { width: slotW * CM_PER_IN, height: slotH * CM_PER_IN });
