@@ -145,7 +145,7 @@ export const LAB_GRUPPEN_C_4 = {
       limiterW: null,
       usedPrice: 500,
       usedPriceEst: true,
-      note: "Bridged into 4 Ω is not recommended.",
+      note: "Bridged pairs give 800 W into 16 Ω and 600 W into 8 Ω. Into 4 Ω bridged works, but Lab.gruppen don't recommend it: it gives no more power than one channel. 115 V model: 15 A plug (NEMA 5-15P).",
     },
     {
       id: "c284",
@@ -202,7 +202,7 @@ export const LAB_GRUPPEN_C_4 = {
   limiterModes:
     "Voltage peak limiter by switch: 141, 118, 100, 85, 71, 59, 50 or 42 V peak, Hard or Soft; plus current and average-power limiters",
   limits:
-    "No crossovers, EQ or delay: it needs an external DSP. Gain 23–44 dB in 3 dB steps (35 dB as shipped). No power sharing between channels; the average-power limiter can cut the total to protect the supply or the breaker. The C 88:4 is rated at a 141 V limit, the others at 100 V. The C 16:4 should not be bridged into 4 Ω.",
+    "No crossovers, EQ or delay: it needs an external DSP. Gain 23–44 dB in 3 dB steps (35 dB as shipped). No power sharing between channels; the average-power limiter can cut the total to protect the supply or the breaker. The C 88:4 is rated at a 141 V limit, the others at 100 V. Every channel pair (A+B, C+D) bridges. The 115 V models need a 20 A outlet (NEMA 5-20P), the C 88:4 a 30 A twist-lock.",
   src: LAB_GRUPPEN_C_X.src,
 } as const satisfies AmpSeries;
 
