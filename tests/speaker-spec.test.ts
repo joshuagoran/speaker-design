@@ -542,9 +542,10 @@ test("speaker spec: a horn chamber reads into a horn design the engine models", 
   assert.equal(design.drivers, 1);
   assert.equal(design.rear.liters, 120);
   assert.ok(design.rear.port);
-  // two 4″ tubes: 8π in²; 8″ long, plus 1.46 radii for both ends: 10.92″
+  // two 4″ tubes: 8π in²; 8″ long, plus 0.61 radii for the inner end (the engine's radiation load adds the outer
+  // end): 9.22″
   assert.ok(Math.abs(design.rear.port.area - 8 * Math.PI * CM_PER_IN * CM_PER_IN) < 1e-9);
-  assert.ok(Math.abs(design.rear.port.effectiveLength - 10.92 * CM_PER_IN) < 1e-9);
+  assert.ok(Math.abs(design.rear.port.length - 9.22 * CM_PER_IN) < 1e-9);
   assert.equal(design.segments, hornOf(bassBin).segments);
   const model = hornModel(design, hornGrid(), 2.83);
   assert.ok(model, "the engine takes it");
@@ -560,7 +561,7 @@ test("speaker spec: a horn chamber reads into a horn design the engine models", 
 });
 
 test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, reads in as two drivers on one throat", () => {
-  // the PA v2 plan's sub bin: ~600 cm² of slot per driver, ~760 mm long, folded once; the wedges join the rear chamber
+  // the PA v2 plan's sub bin: ~600 cm² of slot per driver, ~680 mm long, folded once; the wedges join the rear chamber
   // (~324 L net); the flare starts at the two cones
   const slotH = 3;
   const slotW = 600 / (CM_PER_IN * CM_PER_IN) / slotH;
@@ -570,7 +571,7 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
     netLiters: 324,
     vent: {
       kind: VENT_KIND.vented,
-      port: { shape: PORT_SHAPE.slot, n: 2, h: slotH, w: slotW, len: 760 / (10 * CM_PER_IN) },
+      port: { shape: PORT_SHAPE.slot, n: 2, h: slotH, w: slotW, len: 680 / (10 * CM_PER_IN) },
     },
     load: {
       kind: CHAMBER_LOAD.horn,

@@ -332,11 +332,12 @@ test("with no horn and no radiation load it is the vented box model", () => {
     N: 160,
   });
   assert.ok(vented);
-  // the box model's effective vent length (m), end corrections included
+  // the box model's effective vent length (m), both end corrections included: with the radiation load off the vent is
+  // lumped, and nothing adds the outer end's
   const { Leff: effectiveLength } = ventTuning(liters, ventSquareInches, ventInches);
   const port = {
     area: ventSquareInches * SQUARE_INCH_TO_CM2,
-    effectiveLength: effectiveLength * M_TO_CM,
+    length: effectiveLength * M_TO_CM,
   };
   const freqs = vented.curve.map((p) => p.f);
   const horn = modelOf(directRadiator(driver, { liters, port }), freqs, volts, {
@@ -430,7 +431,7 @@ test("a design with a zero size is not modeled", () => {
   assert.ok(hornModel(good, freqs, 10));
   assert.strictEqual(hornModel({ ...good, rear: { liters: 0, port: null } }, freqs, 10), null);
   assert.strictEqual(
-    hornModel({ ...good, rear: { liters: 30, port: { area: 0, effectiveLength: 20 } } }, freqs, 10),
+    hornModel({ ...good, rear: { liters: 30, port: { area: 0, length: 20 } } }, freqs, 10),
     null,
   );
   assert.strictEqual(
@@ -460,7 +461,7 @@ test("two drivers on one throat are one driver of twice the cone, each cone with
   const bankFs = 1 / (2 * Math.PI * Math.sqrt(bankMms * (cms / 2)));
   // Rms = 2πFs·Mms/Qms per cone, and twice that for the bank
   const bankQms = (bankFs * bankMms) / (2 * ((ts.Fs * mms) / ts.Qms));
-  const rear = { liters: 200, port: { area: 600, effectiveLength: 40 } };
+  const rear = { liters: 200, port: { area: 600, length: 40 } };
   const horn: HornDesign = {
     ...directRadiator(ts, rear),
     segments: [{ profile: HORN_PROFILE.exponential, s1: 2400, s2: 8000, length: 80 }],

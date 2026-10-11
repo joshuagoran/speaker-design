@@ -88,8 +88,8 @@ The second setup is cleaner at the crossover. It needs its own channel for the l
 
 ### Build notes
 
-- **Ports.** Sub: ~600 cm² per driver, ~760 mm long, folded once along the back wall. Mid: ~120 cm² per driver,
-  ~180 mm, straight. Smaller ports limit the output. Flare their ends.
+- **Ports.** Sub: ~600 cm² per driver, ~680 mm long, folded once along the back wall. Mid: ~120 cm² per driver,
+  ~165 mm, straight. Smaller ports limit the output. Flare their ends.
 - **Front chamber.** Start the flare at the cone. Leave no cavity in front of it.
 - **Drivers.** The 18NBX100, 4018LF and 3012HO suit vented chambers. The 10MB600 (Qts 0.22) suits sealed or horn
   loading. Vented, it gives a small chamber and a bump near tuning. A fixed shelf flattens the bump.
@@ -98,31 +98,37 @@ The second setup is cleaner at the crossover. It needs its own channel for the l
 
 ### Modeled with the horn engine
 
-The planner's horn engine (`src/lib/acoustics/`, 1-D) modeled the boxes in the mock-up below. Values are maximum SPL
-at 1 m, half space. The limit is amp power (sub 800 W, mid 450 W per driver), Xmax or vent speed (23.5 m/s). There is
-no power compression.
+The planner's horn engine (`src/lib/acoustics/`, 1-D) modeled the boxes in the mock-up below. It matches Hornresp (see
+[horn-engine-plan.md](horn-engine-plan.md#validation)). Values are maximum SPL at 1 m, half space, on axis. The limit
+is amp power (sub 800 W, mid 450 W per driver), Xmax or vent speed (23.5 m/s). There is no power compression.
 
 ![Top sections of the sub bin and the mid box](pa-v2-boxes.svg)
 
 | Frequency | Sub bin, 2 × 18NBX100 | Same, plain vented | Mid box, 2 × 10MB600 | Same, plain vented | 2 mid boxes |
 | --------- | --------------------- | ------------------ | -------------------- | ------------------ | ----------- |
-| 35 Hz     | 127 dB                | 127 dB             | —                    | —                  | —           |
-| 40 Hz     | 130 dB                | 129 dB             | —                    | —                  | —           |
-| 60 Hz     | 132 dB (Xmax)         | 130 dB (Xmax)      | 107 dB               | 109 dB             | 112 dB      |
-| 100 Hz    | 137 dB                | 131 dB             | 128 dB (vent)        | 128 dB (vent)      | 134 dB      |
-| 120 Hz    | 138 dB                | 131 dB             | 132 dB               | 130 dB             | 138 dB      |
-| 150 Hz    | 136 dB                | 131 dB             | 134 dB               | 129 dB             | 138 dB      |
-| 200 Hz    | 133 dB                | 132 dB             | 135 dB               | 129 dB             | 137 dB      |
-| 500 Hz    | —                     | —                  | 133 dB               | 130 dB             | 139 dB      |
-| 950 Hz    | —                     | —                  | 134 dB               | 131 dB             | 140 dB      |
+| 35 Hz     | 128 dB                | 128 dB             | —                    | —                  | —           |
+| 40 Hz     | 130 dB                | 130 dB             | —                    | —                  | —           |
+| 60 Hz     | 132 dB (Xmax)         | 131 dB (Xmax)      | 107 dB (Xmax)        | 109 dB (Xmax)      | 113 dB      |
+| 100 Hz    | 136 dB                | 132 dB             | 129 dB (vent)        | 129 dB (vent)      | 135 dB      |
+| 120 Hz    | 138 dB                | 132 dB             | 132 dB               | 130 dB             | 137 dB      |
+| 150 Hz    | 137 dB                | 132 dB             | 133 dB               | 129 dB             | 138 dB      |
+| 200 Hz    | 135 dB                | 133 dB             | 136 dB               | 129 dB             | 138 dB      |
+| 500 Hz    | —                     | —                  | 135 dB               | 130 dB             | 141 dB      |
+| 950 Hz    | —                     | —                  | 137 dB               | 131 dB             | 143 dB      |
 
 The sub is tuned to 35 Hz with a 30 Hz BW24 subsonic, applied in its figures.
 
-- **Horn gain.** The sub bin gains 4–6 dB from 80 to 150 Hz. The mid box gains 3–6 dB from 150 to 950 Hz.
+- **Horn gain.** On axis, the sub bin gains 4–6 dB from 100 to 150 Hz. The mid box gains 4–7 dB from 150 to 950 Hz.
+- **On axis vs power.** The table is on axis, each mouth a point source. Hornresp shows the power response, which
+  leaves out directivity. Above ~300 Hz it reads lower: the mid box gives 130 dB at 500 Hz and 125 dB at 950 Hz. The
+  real on-axis level lies between and depends on the horn's coverage. Above ~500 Hz the mid horn's gain is mostly
+  directivity: its radiated power equals the plain box's.
 - **Sub tuning.** 35 Hz is the textbook alignment for 162 L per driver. Against 42 Hz it gains 6 dB at 30–35 Hz and
   loses 1–3 dB at 45–60 Hz, where the cone reaches Xmax. Above 70 Hz the two are equal.
-- **Vents.** The sub's slots (~760 mm) fold once along the back wall; the box stays 766 mm deep. The mid's slots
-  (~180 mm) stay straight. The wedges beside the sub's flare join its rear chamber (~324 L net). The mid's are sealed.
+- **Vents.** The sub's slots (~680 mm) fold once along the back wall; the box stays 766 mm deep. The mid's slots
+  (~165 mm) stay straight. A long vent's own air acts as a spring and lowers the tuning. So these are shorter than the
+  simple (lumped) formula gives: ~760 and ~180 mm would tune to ~33 and ~93 Hz.
+- **Wedges.** The wedges beside the sub's flare join its rear chamber (~324 L net). The mid's are sealed.
 - **18TBX100.** It equals the 18NBX100 in this bin, within 0.3 dB. It costs $49 less and weighs 8 lb more per driver.
 - **The HF keeps up.** One N314T (~131 dB) covers 2 × 18″ and 1 mid box at the planner's music balance, with
   ~2 dB to spare.

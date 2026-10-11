@@ -59,11 +59,14 @@ function throatDrivers(
   return ts && { driver: ts, drivers: drivers.reduce((sum, d) => sum + d.count, 0) };
 }
 
+/** A free (inner) end's correction over a flanged (outer) one's: 0.61 r over 0.85 r. */
+const INNER_END_RATIO = BOTH_ENDS_CORRECTION_RATIO - 1;
+
 /**
  * The rear chamber's vent as the engine's port: none when sealed; round tubes or slots of a set width as their open
- * area and their path length with both ends' corrections. Null: a vent the engine doesn't take yet (side ducts,
- * radiators, a slot whose width the box sets). The end corrections are horn engine phase 2's to settle; the Hi-fi
- * round-tube rule and the PA's flanged rectangle stand in.
+ * area and their path length plus the inner end's correction (the engine's radiation load adds the outer end's). Null:
+ * a vent the engine doesn't take yet (side ducts, radiators, a slot whose width the box sets). The end corrections
+ * are horn engine phase 2's to settle; the Hi-fi round-tube rule and the PA's flanged rectangle stand in.
  */
 function rearPort(vent: ChamberVent): { port: HornPort | null } | null {
   if (vent.kind === VENT_KIND.sealed) return { port: null };
@@ -75,17 +78,20 @@ function rearPort(vent: ChamberVent): { port: HornPort | null } | null {
     return {
       port: {
         area: port.n * port.h * port.w * CM_PER_IN * CM_PER_IN,
-        effectiveLength:
-          (port.len + BOTH_ENDS_CORRECTION_RATIO * rectangleEndCorrection(port.h, port.w)) *
-          CM_PER_IN,
+        length: (port.len + INNER_END_RATIO * rectangleEndCorrection(port.h, port.w)) * CM_PER_IN,
       },
     };
   }
   return {
     port: {
       area: portArea(port) * CM_PER_IN * CM_PER_IN,
-      // absent elbows: a straight tube (the read adapters store the elbows their models work out)
-      effectiveLength: (port.len + hifiRoundEndCorrection(port, port.elbows ?? 0)) * CM_PER_IN,
+      // both ends and the elbows, less the flanged outer end (1.46 r / BOTH_ENDS_CORRECTION_RATIO = 0.85 r); absent
+      // elbows: a straight tube (the read adapters store the elbows their models work out)
+      length:
+        (port.len +
+          hifiRoundEndCorrection(port, port.elbows ?? 0) -
+          hifiRoundEndCorrection(port, 0) / BOTH_ENDS_CORRECTION_RATIO) *
+        CM_PER_IN,
     },
   };
 }
