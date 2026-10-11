@@ -36,5 +36,6 @@ export const DESIGNER_SETTINGS_SECTIONS = {
   speaker: "Speaker",
   chambers: "Chambers and drivers",
   bands: "Bands and filters",
+  look: "Look",
 } as const;
 export type DesignerSettingsSection = keyof typeof DESIGNER_SETTINGS_SECTIONS;

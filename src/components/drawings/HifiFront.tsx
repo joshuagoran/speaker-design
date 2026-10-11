@@ -36,7 +36,7 @@ interface Props {
  * rectangular throat (the mouth's outline and the creases from its corners) and the tall, narrow slot over the ribbon,
  * sized from `HIFI_FRONT_PARTS.ribbon` as the 3D view draws it.
  */
-function RibbonPlate({
+export function RibbonPlate({
   cx,
   cy,
   w,
@@ -93,7 +93,17 @@ function RibbonPlate({
  * An AMT's flat plate from the front, centered on (cx, cy), `plate` inches at `k` px per inch: the plate, its opening
  * onto the folded diaphragm and the folds across the opening's short side (`amtOpening`), as the 3D view draws it.
  */
-function AmtPlate({ cx, cy, plate, k }: { cx: number; cy: number; plate: Dims2; k: number }) {
+export function AmtPlate({
+  cx,
+  cy,
+  plate,
+  k,
+}: {
+  cx: number;
+  cy: number;
+  plate: Dims2;
+  k: number;
+}) {
   const pal = usePalette();
   const open = amtOpening(plate);
   const ow = open.w * k,

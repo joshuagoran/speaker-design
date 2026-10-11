@@ -4,12 +4,14 @@ import { ROUNDOVER_IN } from "./stackHeights";
 import type { SceneContext } from "./sceneContext";
 import type { Dims3 } from "../../types";
 
-const BAFFLE_THICKNESS_IN = 0.75;
+/** The baffle's thickness, in: ¾″ ply, whatever the walls are. */
+export const BAFFLE_THICKNESS_IN = 0.75;
 
 /**
  * A cabinet: four perimeter panels (wall ply) with 1/4" roundovers front and back, a 3/4" baffle set back by the inset on
  * cleats, painted, and a back panel. With `archTop` the top is a semicircle the full width of the cabinet. `baffleHoles`
- * are in the baffle's centered coordinates; `baffleBottom` leaves that much of the baffle's lower edge open.
+ * are in the baffle's centered coordinates; `baffleBottom` leaves that much of the baffle's lower edge open. `backHoles`
+ * (a passive radiator's cutout) are in the box's centered front-view coordinates, on a flat-topped cabinet.
  * Returns the z of the baffle face and the y of the top.
  */
 export function buildCabinet(
@@ -20,6 +22,7 @@ export function buildCabinet(
     y,
     archTop = false,
     baffleBottom = 0,
+    backHoles = [],
     x = 0,
     parent = ctx.group,
   }: {
@@ -28,6 +31,7 @@ export function buildCabinet(
     y: number;
     archTop?: boolean;
     baffleBottom?: number;
+    backHoles?: THREE.Path[];
     x?: number;
     parent?: THREE.Object3D;
   },
@@ -96,9 +100,26 @@ export function buildCabinet(
     );
     baffle.position.set(x, y + T + baffleBottom + ih / 2, d / 2 - REVEAL - BT);
     parent.add(baffle);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(iw, h - 2 * T, T), shell);
-    back.position.set(x, y + h / 2, -d / 2 + T / 2);
-    parent.add(back);
+    if (backHoles.length) {
+      const bh = (h - 2 * T) / 2;
+      const bk = new THREE.Shape([
+        new THREE.Vector2(-iw / 2, -bh),
+        new THREE.Vector2(iw / 2, -bh),
+        new THREE.Vector2(iw / 2, bh),
+        new THREE.Vector2(-iw / 2, bh),
+      ]);
+      backHoles.forEach((hp) => bk.holes.push(hp));
+      const back = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(bk, { depth: T, bevelEnabled: false, curveSegments: 48 }),
+        shell,
+      );
+      back.position.set(x, y + h / 2, -d / 2);
+      parent.add(back);
+    } else {
+      const back = new THREE.Mesh(new THREE.BoxGeometry(iw, h - 2 * T, T), shell);
+      back.position.set(x, y + h / 2, -d / 2 + T / 2);
+      parent.add(back);
+    }
   }
   return { baffleZ: d / 2 - REVEAL, top: y + h };
 }

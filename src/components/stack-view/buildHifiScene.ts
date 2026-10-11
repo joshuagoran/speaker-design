@@ -112,11 +112,11 @@ export function hifiCompressionDriver(
 }
 
 /** A woofer's baffle cutout radius: its size class's typical cutout, else a GENERIC share of its size. */
-const wooferCutoutR = (size: number) =>
+export const wooferCutoutR = (size: number) =>
   (HIFI_DRIVER_CUTOUT_IN[size] ?? size * HIFI_GENERIC_BODIES.cutoutPerSize) / 2;
 
 /** An ellipse hole (a circle when `rx` = `ry`) centered on (x, y). */
-const ellipsePath = (x: number, y: number, rx: number, ry: number) => {
+export const ellipsePath = (x: number, y: number, rx: number, ry: number) => {
   const p = new THREE.Path();
   p.absellipse(x, y, rx, ry, 0, Math.PI * 2, true, 0);
   return p;
@@ -138,7 +138,7 @@ const plateShape = (t: Pick<HifiTweeter, "type">, face: Dims2) => {
   }
   return roundedRectShape(face.w, face.h, HIFI_FRONT_PARTS.plateCornerIn);
 };
-const plateHole = (t: Pick<HifiTweeter, "type">, x: number, y: number, face: Dims2) =>
+export const plateHole = (t: Pick<HifiTweeter, "type">, x: number, y: number, face: Dims2) =>
   roundPlate(t, face)
     ? circlePath(x, y, face.w / 2)
     : roundedRectPath(x, y, face.w, face.h, HIFI_FRONT_PARTS.plateCornerIn);
@@ -233,15 +233,7 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
   });
   if (p.port && p.port.shape !== "slot")
     addRoundPorts(ctx, { spots: round, port: p.port, dim, zf });
-  if (slot && slotHole) {
-    // the slot's roof: a shelf the opening's width running the slot's length back from the baffle's inside face, as
-    // the model and the cutlist take it
-    const len = slot.len;
-    const shelf = new THREE.Mesh(new THREE.BoxGeometry(slotHole.w, T, len), ctx.materials.inner);
-    shelf.position.set(0, slotHole.y + slotHole.h + T / 2, shellFrontZ - len / 2);
-    shelf.name = HIFI_MESH_NAMES.slotShelf;
-    ctx.group.add(shelf);
-  }
+  if (slot && slotHole) addSlotShelf(ctx, { opening: slotHole, len: slot.len, shellFrontZ });
   for (const s of spots) addRadiator(ctx, s, { dim, zf, sideZ });
 
   // the tweeter: a waveguide with its compression driver (on the box top on its mount, or set into the baffle), a
@@ -271,7 +263,7 @@ export function buildHifiScene(p: HifiSceneProps): THREE.Group {
  * coaxial's woofer has its HF in its center: a short horn with a phase plug in place of the dust cap, and, in the
  * cutaway, the HF driver behind the magnet.
  */
-function addWoofer(
+export function addWoofer(
   ctx: SceneContext,
   {
     r,
@@ -357,8 +349,27 @@ function addCoaxHorn(
   parent.add(plug);
 }
 
+/**
+ * The slot's roof: a shelf the opening's width running the slot's `len` back from the baffle's inside face
+ * (`shellFrontZ`), as the model and the cutlist take it.
+ */
+export function addSlotShelf(
+  ctx: SceneContext,
+  {
+    opening,
+    len,
+    shellFrontZ,
+  }: { opening: ReturnType<typeof slotOpening>; len: number; shellFrontZ: number },
+) {
+  const T = ctx.wall;
+  const shelf = new THREE.Mesh(new THREE.BoxGeometry(opening.w, T, len), ctx.materials.inner);
+  shelf.position.set(0, opening.y + opening.h + T / 2, shellFrontZ - len / 2);
+  shelf.name = HIFI_MESH_NAMES.slotShelf;
+  ctx.group.add(shelf);
+}
+
 /** The round ports: each a flanged tube from the baffle front, folded as the model folds it (lib/tubeFold). */
-function addRoundPorts(
+export function addRoundPorts(
   ctx: SceneContext,
   { spots, port, dim, zf }: { spots: RoundSpot[]; port: RoundPort; dim: Dims3; zf: number },
 ) {
@@ -403,7 +414,7 @@ function addRoundPorts(
 }
 
 /** A passive radiator on its panel: its frame on the outside and the PA cone in its cutout (an oval one stretched). */
-function addRadiator(
+export function addRadiator(
   ctx: SceneContext,
   s: RadiatorSpot,
   { dim, zf, sideZ }: { dim: Dims3; zf: number; sideZ: number },
@@ -452,7 +463,7 @@ function addRadiator(
  * tweeter's faceplate round its flare, or a dome's faceplate with the dome on it; and, in the
  * cutaway, a GENERIC body behind (the catalogue gives no depth).
  */
-function addTweeter(
+export function addTweeter(
   ctx: SceneContext,
   {
     t,

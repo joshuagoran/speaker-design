@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { roundedRectShape, roundedRectPath, circlePath } from "./geometry";
 import { buildCabinet } from "./buildCabinet";
-import { buildCone } from "./buildCone";
+import { buildCone, paConeRadius } from "./buildCone";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
 import { towerBaffleHoles, buildTowerPartitions } from "./towerParts";
 import { towerSpec } from "../../lib/pa/tower";
@@ -31,6 +31,92 @@ import type {
 import { buildBraces, buildDriverBody, VENT_MESH_NAME } from "./buildBraces";
 import { buildHardware } from "./buildHardware";
 import { DRIVER_CLEARANCE_IN } from "../../lib/pa/bracing";
+
+/**
+ * The sub's vent as the scene builds it, from the port style and the design's vent geometry (defaults where a custom
+ * cabinet leaves one out): the side ducts, the round tubes where the model and the cutlist place them (lib/pa/tubes), or
+ * the bottom slot's band, and the duct sizes the parts behind the baffle read.
+ */
+export function subVentPlan(
+  sub: Pick<SubDriver, "size">,
+  box: Dims3,
+  portStyle: PortStyle,
+  portGeom: Props["portGeom"],
+  T: number,
+) {
+  const vSlot = portStyle === "vslots" || portStyle === "vslot1";
+  const sides = portStyle === "vslot1" ? [1] : [-1, 1]; // side ducts: one wall or both
+  const s = box;
+  const pg = portGeom || {}; // explicit vent geometry when the cabinet is custom
+  // sub column: driver cutout high on the baffle, three duct cutouts across the bottom
+  const ductH = pg.ductH != null ? pg.ductH : 3,
+    innerW = s.w - 2 * T,
+    ductW = (innerW - 2 * T) / 3;
+  const round = isRoundPort(portStyle); // round-tube ports only
+  const corners = portStyle === "round4";
+  const nPorts = pg.nPorts != null ? pg.nPorts : portStyle === "round1" ? 1 : corners ? 4 : 2;
+  const portR =
+    pg.portR != null
+      ? pg.portR
+      : (portStyle === "round1" ? 8 : corners ? (sub.size >= 18 ? 4 : 3.5) : 5) / 2;
+  // round tubes: where they sit on the baffle and how they fold, as the model and the cutlist take them (lib/pa/tubes)
+  const tubeVent = {
+    nt: nPorts,
+    dia: 2 * portR,
+    len: pg.tubeLen != null ? pg.tubeLen : portStyle === "round1" ? 11 : corners ? 11.5 : 9.8,
+  };
+  const tubes = round ? tubeLayout(s, portStyle, tubeVent, T, sub.size) : null;
+  const bandH = round || vSlot ? 0 : ductH + T; // slots: baffle starts above the duct shelf
+  const vThroat =
+    pg.throat != null
+      ? pg.throat
+      : Math.round(((sub.size >= 18 ? 66 : 54) / (2 * (s.h - 2 * T))) * 100) / 100;
+  return {
+    portStyle,
+    pg,
+    vSlot,
+    sides,
+    ductH,
+    innerW,
+    ductW,
+    round,
+    portR,
+    tubeVent,
+    tubes,
+    bandH,
+    vThroat,
+  };
+}
+
+/** What `subVentPlan` returns. */
+export type SubVentPlan = ReturnType<typeof subVentPlan>;
+
+/**
+ * The sub vent's openings in the baffle: the round tubes' mouths, or the side ducts' full-height mouths against the side
+ * walls; in the baffle's coordinates, the box's center line at `x`, its bottom at `plinth` and the baffle's center at
+ * `baffleCy`. (The bottom slot leaves the baffle's bottom edge open instead: `bandH`.)
+ */
+export function subVentHoles(
+  { tubes, portR, vSlot, vThroat, innerW, sides }: SubVentPlan,
+  s: Dims3,
+  T: number,
+  { x, plinth: pl, baffleCy }: { x: number; plinth: number; baffleCy: number },
+): THREE.Path[] {
+  const holes: THREE.Path[] = [];
+  if (tubes)
+    tubes.tubes.forEach((p) => holes.push(circlePath(x + p.x, pl + T + p.y - baffleCy, portR)));
+  if (vSlot) {
+    // full-height ducts using the side walls as their outer face
+    const slotH = s.h - 2 * T;
+    const throat = vThroat;
+    const mouth = throat + 0.43; // flat strip set at 20 deg: 0.43 in rise
+    const sx = innerW / 2 - mouth / 2;
+    sides.forEach((k) =>
+      holes.push(roundedRectPath(x + k * sx, pl + s.h / 2 - baffleCy, mouth, slotH, 0.12)),
+    );
+  }
+  return holes;
+}
 
 /**
  * The sub column: the plinth, the cabinet with its driver and vent cutouts, and the ducts or port tubes behind the baffle.
@@ -64,42 +150,20 @@ export function buildSubwoofer(
     tower?: { mid: Pick<MidDriver, "size">; horn: Horn };
   },
 ): { top: number; baffleZ: number; group: THREE.Group } {
-  const { wood: birch, inner: plyIn, port: portMat, shell: shellMat } = ctx.materials;
-  const T = ctx.wall,
-    REVEAL = ctx.inset;
+  const T = ctx.wall;
   const subGroup = new THREE.Group();
   ctx.group.add(subGroup);
-  // plinth / toe-kick, inset so the column appears to float
-  const vSlot = portStyle === "vslots" || portStyle === "vslot1";
-  const sides = portStyle === "vslot1" ? [1] : [-1, 1]; // side ducts: one wall or both
+  const vent = subVentPlan(sub, box, portStyle, portGeom, T);
+  const { vSlot, sides, tubes, bandH, vThroat } = vent;
   const s = box;
-  const pg = portGeom || {}; // explicit vent geometry when the cabinet is custom
   const pl = plinth || 0;
+  // plinth / toe-kick, inset so the column appears to float
   if (pl > 0) {
-    const p = new THREE.Mesh(new THREE.BoxGeometry(s.w - 3, pl, s.d - 3), birch);
+    const p = new THREE.Mesh(new THREE.BoxGeometry(s.w - 3, pl, s.d - 3), ctx.materials.wood);
     p.position.set(0, pl / 2, 0);
     subGroup.add(p);
   }
-  // sub column: driver cutout high on the baffle, three duct cutouts across the bottom
-  const ductH = pg.ductH != null ? pg.ductH : 3,
-    innerW = s.w - 2 * T,
-    ductW = (innerW - 2 * T) / 3;
-  const drvR = sub.size / 2 - 0.9;
-  const round = isRoundPort(portStyle); // round-tube ports only
-  const corners = portStyle === "round4";
-  const nPorts = pg.nPorts != null ? pg.nPorts : portStyle === "round1" ? 1 : corners ? 4 : 2;
-  const portR =
-    pg.portR != null
-      ? pg.portR
-      : (portStyle === "round1" ? 8 : corners ? (sub.size >= 18 ? 4 : 3.5) : 5) / 2;
-  // round tubes: where they sit on the baffle and how they fold, as the model and the cutlist take them (lib/pa/tubes)
-  const tubeVent = {
-    nt: nPorts,
-    dia: 2 * portR,
-    len: pg.tubeLen != null ? pg.tubeLen : portStyle === "round1" ? 11 : corners ? 11.5 : 9.8,
-  };
-  const tubes = round ? tubeLayout(s, portStyle, tubeVent, T, sub.size) : null;
-  const bandH = round || vSlot ? 0 : ductH + T; // slots: baffle starts above the duct shelf
+  const drvR = paConeRadius(sub.size);
   // Tower: one shell and one continuous baffle; sections are divided internally.
   const { archTop, extH } = tower ? towerSpec(s, T, tower.horn) : { archTop: false, extH: 0 };
   const baffleH = s.h + extH - 2 * T - bandH;
@@ -110,25 +174,12 @@ export function buildSubwoofer(
     : vSlot
       ? pl + s.h / 2
       : pl + T + bandH + (s.h - 2 * T - bandH) / 2;
-  const vThroat =
-    pg.throat != null
-      ? pg.throat
-      : Math.round(((sub.size >= 18 ? 66 : 54) / (2 * (s.h - 2 * T))) * 100) / 100;
   // a single side duct pushes the driver into the middle of the remaining baffle
   const drvX = sides.length === 1 && vSlot ? (-sides[0] * (vThroat + 0.43 + T)) / 2 : 0;
-  const holes = [circlePath(drvX, drvAbsY - baffleCy, drvR)];
-  if (tubes)
-    tubes.tubes.forEach((p) => holes.push(circlePath(p.x, pl + T + p.y - baffleCy, portR)));
-  if (vSlot) {
-    // full-height ducts using the side walls as their outer face
-    const slotH = s.h - 2 * T;
-    const throat = vThroat;
-    const mouth = throat + 0.43; // flat strip set at 20 deg: 0.43 in rise
-    const sx = innerW / 2 - mouth / 2;
-    sides.forEach((k) =>
-      holes.push(roundedRectPath(k * sx, pl + s.h / 2 - baffleCy, mouth, slotH, 0.12)),
-    );
-  }
+  const holes = [
+    circlePath(drvX, drvAbsY - baffleCy, drvR),
+    ...subVentHoles(vent, s, T, { x: 0, plinth: pl, baffleCy }),
+  ];
   if (tower)
     holes.push(
       ...towerBaffleHoles(ctx, { box: s, plinth: pl, mid: tower.mid, horn: tower.horn, baffleCy }),
@@ -152,6 +203,52 @@ export function buildSubwoofer(
       parent: subGroup,
       clearance: DRIVER_CLEARANCE_IN,
     });
+  buildSubVent(ctx, vent, { sub, box: s, plinth: pl, baffleZ: subZ, parent: subGroup });
+  buildCone(ctx, { r: drvR, y: drvAbsY, z: subZ, x: drvX, parent: subGroup });
+  buildSubSlotShelf(ctx, vent, { box: s, plinth: pl, parent: subGroup });
+  return { top: pl + s.h, baffleZ: subZ, group: subGroup };
+}
+
+/**
+ * The sub vent's parts behind the baffle (`plan`, for the box `box` whose bottom is at `plinth` and baffle face at
+ * `baffleZ`): the side ducts' walls and dividers, the nose round the slot's mouths, or the flared tubes, folded as the
+ * model folds them.
+ */
+export function buildSubVent(
+  ctx: SceneContext,
+  plan: SubVentPlan,
+  {
+    sub,
+    box: s,
+    plinth: pl,
+    baffleZ: subZ,
+    parent: subGroup,
+  }: {
+    sub: Pick<SubDriver, "size" | "depthIn">;
+    box: Dims3;
+    plinth: number;
+    baffleZ: number;
+    parent: THREE.Object3D;
+  },
+) {
+  const { inner: plyIn, port: portMat, shell: shellMat } = ctx.materials;
+  const T = ctx.wall,
+    REVEAL = ctx.inset;
+  const {
+    portStyle,
+    pg,
+    vSlot,
+    sides,
+    ductH,
+    innerW,
+    ductW,
+    round,
+    portR,
+    tubeVent,
+    tubes,
+    bandH,
+    vThroat,
+  } = plan;
   if (vSlot) {
     // Full-height duct against each side wall. The inner wall is a constant
     // thickness panel chamfered 20 deg at both ends, so the duct runs a
@@ -265,7 +362,20 @@ export function buildSubwoofer(
       bell(V(x, top, zc + legs.back), V(0, 0, 1));
     });
   }
-  buildCone(ctx, { r: drvR, y: drvAbsY, z: subZ, x: drvX, parent: subGroup });
+}
+
+/**
+ * The bottom slot's shelf and fins (`plan`, in the box `box` whose bottom is at `plinth`): straight from the frame face
+ * back, or, too long to run straight, the floor leg's roof and fins and the rear channel's wall up the back.
+ */
+export function buildSubSlotShelf(
+  ctx: SceneContext,
+  plan: SubVentPlan,
+  { box: s, plinth: pl, parent: subGroup }: { box: Dims3; plinth: number; parent: THREE.Object3D },
+) {
+  const plyIn = ctx.materials.inner;
+  const T = ctx.wall;
+  const { portStyle, pg, ductH, innerW, ductW } = plan;
   // duct structure inside: top shelf, two fins (slot version only)
   const wantLen = pg.tubeLen != null ? pg.tubeLen : s.d - T - 3;
   const ductLen = Math.max(2, Math.min(wantLen, maxStraightSlotIn(s, ductH, T))); // from the frame face back, open gap behind
@@ -311,5 +421,4 @@ export function buildSubwoofer(
       subGroup.add(fin);
     });
   }
-  return { top: pl + s.h, baffleZ: subZ, group: subGroup };
 }

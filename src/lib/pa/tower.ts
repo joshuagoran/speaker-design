@@ -38,6 +38,9 @@ export function towerSpec(
   };
 }
 
+/** A horn's baffle cutout's shapes, by id (`towerHornCutout`). */
+export const HORN_CUTOUT_SHAPE = { outline: "outline", rect: "rect", circle: "circle" } as const;
+
 /** The corner radius of a rectangular horn's baffle cutout in the tower, in. */
 const TOWER_RECT_HORN_RADIUS_IN = 1.2;
 /** The corner radius of a horn's cutout drawn at its listed mouth size, in. */
@@ -57,27 +60,33 @@ export function towerHornCutout(
   box: Pick<Dims3, "w">,
   wall: number,
   horn: TowerHorn,
-): { shape: "outline" | "rect" | "circle"; w: number; h: number; r: number; area: number } {
+): {
+  shape: (typeof HORN_CUTOUT_SHAPE)[keyof typeof HORN_CUTOUT_SHAPE];
+  w: number;
+  h: number;
+  r: number;
+  area: number;
+} {
   const innerW = box.w - 2 * wall;
   const rounded = (w: number, h: number, r: number) => w * h - (4 - Math.PI) * r * r;
   if (MESHED_HORN_IDS.has(horn.id)) {
     const w = Math.min(horn.size.w, innerW - 2 * TOWER_HORN_WALL_GAP_IN),
       h = horn.size.h;
-    return { shape: "outline", w, h, r: 0, area: (Math.PI / 4) * w * h };
+    return { shape: HORN_CUTOUT_SHAPE.outline, w, h, r: 0, area: (Math.PI / 4) * w * h };
   }
   if (horn.rect) {
     const w = innerW - 2 * TOWER_HORN_WALL_GAP_IN,
       h = horn.size.h,
       r = TOWER_RECT_HORN_RADIUS_IN;
-    return { shape: "rect", w, h, r, area: rounded(w, h, r) };
+    return { shape: HORN_CUTOUT_SHAPE.rect, w, h, r, area: rounded(w, h, r) };
   }
   if (horn.profile) {
     const d = Math.min(horn.size.w, horn.size.h) - 2 * TOWER_ROUND_HORN_INSET_IN;
-    return { shape: "circle", w: d, h: d, r: d / 2, area: (Math.PI / 4) * d * d };
+    return { shape: HORN_CUTOUT_SHAPE.circle, w: d, h: d, r: d / 2, area: (Math.PI / 4) * d * d };
   }
   const r = TOWER_HORN_RADIUS_IN;
   return {
-    shape: "rect",
+    shape: HORN_CUTOUT_SHAPE.rect,
     w: horn.size.w,
     h: horn.size.h,
     r,

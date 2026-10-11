@@ -35,7 +35,7 @@ import {
   SATELLITE_COLUMN_H_IN,
   TOWER_MID_HEIGHT_IN,
 } from "../src/constants/paLayouts";
-import { CM_PER_M, METERS_PER_INCH } from "../src/constants/units";
+import { CM_PER_IN } from "../src/constants/units";
 import {
   CHAMBER_LOAD,
   DRIVER_KIND,
@@ -67,9 +67,6 @@ import type {
   SpeakerSpec,
   SystemWithSpeakers,
 } from "../src/types";
-
-/** Centimeters in one inch. */
-const CM_PER_IN = METERS_PER_INCH * CM_PER_M;
 
 /** The coverage page's stack spots, left then right (its default layout's). */
 const STACKS: CoverageLayout["stacks"] = [

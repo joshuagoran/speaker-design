@@ -15,7 +15,7 @@ import {
   DESIGNER_START,
   DESIGNER_START_SPEAKER_NAMES,
   type DesignerStart,
-} from "../../constants/designer";
+} from "../../constants/designerStarts";
 import { SPEAKER_PART } from "../../constants/speakerSpec";
 import { DRAFT_SPEAKER_ID, emptySpeaker } from "./useDesigner";
 
