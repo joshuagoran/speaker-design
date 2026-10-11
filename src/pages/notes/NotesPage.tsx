@@ -232,9 +232,7 @@ export function NotesPage() {
         </section>
 
         <section className="mt-8" style={{ fontFamily: FONT }}>
-          <SectionHeading className="mb-3">
-            Amps: the racks' and the others considered
-          </SectionHeading>
+          <SectionHeading className="mb-3">Amps</SectionHeading>
           <p className="text-sm text-stone-900 mb-3 max-w-3xl">
             Power is per channel, continuous, all channels driven, as each maker rates it. Hover an
             amp for its filters and limiter. An estimated price had no US listing to check.
