@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import { bracingRegions } from "../../lib/bracing";
+import { BAFFLE_THICKNESS_IN } from "./buildCabinet";
 import type { SceneContext } from "./sceneContext";
 import type { BoxBracing, BoxKeepOut, BoxRegion, Dims3 } from "../../types";
 
-const BAFFLE_THICKNESS_IN = 0.75;
 /** The name the brace and rib meshes carry, so a check can find them in the scene. */
 export const BRACE_MESH_NAME = "brace";
 /** The name the driver bodies drawn in the cutaway carry. */

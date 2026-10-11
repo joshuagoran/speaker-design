@@ -2,15 +2,14 @@ import { PA_SLIDERS, PA_THROAT_MAX_VSLOT1 } from "../../../constants/paSliders";
 import { ToggleButton } from "../../../components/ui/ToggleButton";
 import { ToggleGroup } from "../../../components/ui/ToggleGroup";
 import { Tooltip } from "../../../components/ui/Tooltip";
-import { SwatchPicker } from "../../../components/ui/SwatchPicker";
 import { Card } from "../../../components/ui/Card";
 import { SelectField } from "../../../components/ui/SelectField";
 import { Slider } from "../../../components/ui/Slider";
-import { CD_OPTIONS, HORN_OPTIONS, PAINT_SWATCHES, cabinetFinishName } from "../../../lib/data";
+import { CD_OPTIONS, HORN_OPTIONS, cabinetFinishName } from "../../../lib/data";
 import {
   BaffleColorPicker,
   CabinetFinishPicker,
-  PAINTED_PREFIX,
+  HornColorPicker,
 } from "../../../components/ui/FinishPickers";
 import { HIGHPASS_ALIGNMENTS, isRoundPort, ventSpeedLimit } from "../../../lib/pa/calc";
 import { AMP_WATTS_MAX, AMP_WATTS_STEPS } from "../../../lib/pa/optimize";
@@ -62,13 +61,6 @@ import {
 import { takesHornMount } from "../../../lib/pa/hornMount";
 import { plyMountFit } from "../../../components/stack-view/buildPlyMount";
 import { plateFit } from "../../../components/stack-view/buildPlate";
-import {
-  HORN_COLOR_CATALOG,
-  HORN_COLOR_CATALOG_LABEL,
-  HORN_FINISH_NAMES,
-} from "../../../constants/hornColor";
-import { cssHex, hornBodyColor, pickedHornColor } from "../../../lib/pa/hornColor";
-import { ON_DATA } from "../../../styles/palette";
 import { towerMidDims } from "../../../lib/pa/tower";
 
 interface Props {
@@ -269,15 +261,6 @@ export function SettingsPanel({ planner }: Props) {
     subDriver,
   );
   const finishName = cabinetFinishName(cabinetFinish);
-  // the horn color picker: the horn's catalog finish as a preset that clears the picked color
-  const hornFinish = hornOption.finish ?? "printed";
-  const hornColorPresets = {
-    [HORN_COLOR_CATALOG]: {
-      name: HORN_COLOR_CATALOG_LABEL,
-      swatch: cssHex(hornBodyColor(hornOption)),
-      ink: hornOption.finish ? ON_DATA.white : ON_DATA.ink,
-    },
-  };
   // a note under the Bracing setting for each panel a box's bracing leaves under the target, naming the box and the panel
   const braceNotes = [
     ...braceNoteLines(PA_SETTINGS_TABS.sub, subBracing),
@@ -832,15 +815,7 @@ export function SettingsPanel({ planner }: Props) {
           </div>
           <CabinetFinishPicker value={cabinetFinish} onChange={setCabinetFinish} />
           <BaffleColorPicker value={baffleColor} onChange={setBaffleColor} />
-          <SwatchPicker
-            label="Horn color"
-            value={hornColor ?? HORN_COLOR_CATALOG}
-            onChange={(v) => setHornColor(pickedHornColor(v))}
-            swatches={PAINT_SWATCHES}
-            presets={hornColorPresets}
-            titlePrefix={PAINTED_PREFIX}
-            note={hornColor ?? `${HORN_COLOR_CATALOG_LABEL}: ${HORN_FINISH_NAMES[hornFinish]}`}
-          />
+          <HornColorPicker value={hornColor} onChange={setHornColor} horn={hornOption} />
           <div className="mb-5">
             <ToggleGroup
               label="Layout"

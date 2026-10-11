@@ -27,3 +27,6 @@ export const GRAMS_PER_KG = 1000;
 
 /** Liters in one cubic inch (the box models' 16.387 cm³). */
 export const LITERS_PER_CUBIC_IN = 16.387 / 1000;
+
+/** Centimeters in one inch: the spec's sizes are in inches, the horn engine's (Hornresp's) in cm. */
+export const CM_PER_IN = METERS_PER_INCH * CM_PER_M;
