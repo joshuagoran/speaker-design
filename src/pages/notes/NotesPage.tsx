@@ -8,6 +8,7 @@ import { SignalPath } from "../../components/drawings/SignalPath";
 import { HANDLES, HORN_POSTS, INPUT_JACK, INPUT_PLATE } from "../../data/catalog/cabinet-hardware";
 import { HARDWARE_KIND_NAMES, HARDWARE_SECTION_TITLE } from "../../constants/hardware";
 import {
+  AMPS,
   DSP_UNITS,
   HORN_AMP_SAFETY_HPF_HZ,
   RACK_DSP_IDS,
@@ -18,11 +19,12 @@ import {
   rackTotal,
 } from "../../lib/data";
 import { STATS } from "../../components/optimizer/StatRow";
-import { GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
+import { AMP_SERIES, GXD4, GXD8, QSC_GXD } from "../../data/catalog/amps";
 import { FONT } from "../../styles/fonts";
 import { PAGE_WIDTH, READING_WIDTH } from "../../styles/layout";
-import type { DspColumn, DspUnit, DspUnitId } from "../../types";
+import type { AmpColumn, AmpModel, AmpSeries, DspColumn, DspUnit, DspUnitId } from "../../types";
 import { DSP_COLUMNS } from "../../constants/dspColumns";
+import { AMP_CLASSES, AMP_COLUMNS } from "../../constants/ampColumns";
 import { entriesOf, keysOf } from "../../lib/records";
 import {
   DEFAULT_CD,
@@ -48,6 +50,33 @@ function dspCell(u: DspUnit & { id: DspUnitId }, col: DspColumn): string {
   if (col === "unit" && RACK_DSP_IDS.has(u.id)) return `${text} (current)`;
   if (col === "priceUs" && u.usedPrice) return `${text}, ${formatPriceRange(u.usedPrice)} used`;
   return text;
+}
+
+/** An amp table cell; an estimated used price says so. */
+function ampCell(
+  { series, model }: { series: AmpSeries; model: AmpModel },
+  col: AmpColumn,
+): string {
+  switch (col) {
+    case "amp":
+      return `${series.brand} ${model.model}`;
+    case "ampClass":
+      return AMP_CLASSES[model.ampClass];
+    case "channels":
+      return String(model.channels);
+    case "w8":
+      return model.w8.toLocaleString();
+    case "w4":
+      return model.w4.toLocaleString();
+    case "gain":
+      return model.gainDb == null ? "–" : `${model.gainDb} dB`;
+    case "dsp":
+      return series.dsp ? "Yes" : "No";
+    case "usedPrice":
+      return `$${model.usedPrice.toLocaleString()}${model.usedPriceEst ? " (est.)" : ""}`;
+    case "note":
+      return model.note ?? "";
+  }
 }
 
 /** How far a sensitivity claim may sit from the T/S figure, either way, and still count as agreeing with it, dB. */
@@ -84,7 +113,7 @@ export function NotesPage() {
     <main className={`${PAGE_WIDTH} pb-16`}>
       <div className={`${READING_WIDTH} flex flex-col gap-2`}>
         <section
-          className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6"
+          className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
           style={{ fontFamily: FONT }}
         >
           {RACKS.map((r) => {
@@ -191,6 +220,66 @@ export function NotesPage() {
             Xmax marks distortion, not damage (usually 2–3× further). After listening, 1.2–1.4× the
             Xmax voltage is common. Sources:{" "}
             {QSC_GXD.src.map((d, i) => (
+              <Fragment key={d.url}>
+                {i > 0 && ", "}
+                <a className="underline" href={d.url}>
+                  {d.name}
+                </a>
+              </Fragment>
+            ))}
+            .
+          </p>
+        </section>
+
+        <section className="mt-8" style={{ fontFamily: FONT }}>
+          <SectionHeading className="mb-3">
+            Amps: the racks' and the others considered
+          </SectionHeading>
+          <p className="text-sm text-stone-900 mb-3 max-w-3xl">
+            Power is per channel, continuous, all channels driven, as each maker rates it. Hover an
+            amp for its filters and limiter. An estimated price had no US listing to check.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="text-sm w-full min-w-[860px] border-collapse">
+              <thead>
+                <tr className="text-stone-500 text-left border-b border-stone-300">
+                  {entriesOf(AMP_COLUMNS).map(([col, h]) => (
+                    <th
+                      key={col}
+                      className={`py-1 pr-4 font-normal ${col === "amp" ? "sticky left-0 bg-stone-50" : ""}`}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {AMPS.map((a) => (
+                  <tr key={a.model.id} className="border-b border-stone-300 align-top">
+                    {keysOf(AMP_COLUMNS).map((col) => (
+                      <td
+                        key={col}
+                        className={`py-1.5 pr-4 ${col === "amp" ? "font-medium min-w-[8rem] sm:whitespace-nowrap sticky left-0 bg-stone-50" : col === "note" ? "min-w-[14rem]" : "tabular-nums"}`}
+                      >
+                        {col === "amp" ? (
+                          <Tooltip
+                            tip={`${a.series.filters} Limiter: ${a.series.limiterModes}. ${a.series.limits}`}
+                          >
+                            {ampCell(a, col)}
+                          </Tooltip>
+                        ) : (
+                          ampCell(a, col)
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-stone-500 mt-2 max-w-3xl">
+            Sources:{" "}
+            {AMP_SERIES.flatMap((s): AmpSeries["src"] => s.src).map((d, i) => (
               <Fragment key={d.url}>
                 {i > 0 && ", "}
                 <a className="underline" href={d.url}>
