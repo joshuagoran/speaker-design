@@ -7,10 +7,16 @@ import { buildCone, CONE_FACE_BACK_IN } from "./buildCone";
 import { buildHorn } from "./buildHorn";
 import { buildHifiCabinet, type HifiCabinetHoles } from "./buildHifiCabinet";
 import { addElbow, addPipe, type TubeStyle } from "./tubeParts";
-import { circlePath, flareGeometry, roundedRectPath, roundedRectShape } from "./geometry";
+import {
+  circlePath,
+  flareGeometry,
+  flareMouthPath,
+  roundedRectPath,
+  roundedRectShape,
+} from "./geometry";
 import { CD_OPTIONS, driverMountKind, hornMountKind } from "../../lib/data";
 import { THREAD_MOUNT } from "../../constants/throatMounts";
-import { hifiTubeRoom } from "../../lib/hifi/hifi";
+import { hifiTubeRoom, isRibbon } from "../../lib/hifi/hifi";
 import {
   radiatorSpots,
   roundPortSpots,
@@ -117,11 +123,10 @@ const ellipsePath = (x: number, y: number, rx: number, ry: number) => {
  * Whether a tweeter's plate is round: a faceplate as tall as it is wide is a disc; a ribbon's waveguide plate is
  * square, and any other plate a rounded rectangle.
  */
-const roundPlate = (t: Pick<HifiTweeter, "ownGuide">, face: Dims2) =>
-  !t.ownGuide && face.w === face.h;
+const roundPlate = (t: Pick<HifiTweeter, "type">, face: Dims2) => !isRibbon(t) && face.w === face.h;
 
 /** A tweeter's plate outline: a disc, or a rounded rectangle (`roundPlate`). */
-const plateShape = (t: Pick<HifiTweeter, "ownGuide">, face: Dims2) => {
+const plateShape = (t: Pick<HifiTweeter, "type">, face: Dims2) => {
   if (roundPlate(t, face)) {
     const s = new THREE.Shape();
     s.absarc(0, 0, face.w / 2, 0, Math.PI * 2, false);
@@ -129,7 +134,7 @@ const plateShape = (t: Pick<HifiTweeter, "ownGuide">, face: Dims2) => {
   }
   return roundedRectShape(face.w, face.h, HIFI_FRONT_PARTS.plateCornerIn);
 };
-const plateHole = (t: Pick<HifiTweeter, "ownGuide">, x: number, y: number, face: Dims2) =>
+const plateHole = (t: Pick<HifiTweeter, "type">, x: number, y: number, face: Dims2) =>
   roundPlate(t, face)
     ? circlePath(x, y, face.w / 2)
     : roundedRectPath(x, y, face.w, face.h, HIFI_FRONT_PARTS.plateCornerIn);
@@ -458,24 +463,26 @@ function addTweeter(
     ctx.group.add(m);
     return m;
   };
+  // a flare's inside shows, so it is drawn both sides
+  const flareMaterial = () => {
+    const m = ctx.materials.black.clone();
+    m.side = THREE.DoubleSide;
+    return m;
+  };
   const shape = plateShape(t, face);
   // the cutaway's body sits behind the plate, or behind a ribbon's flare
   let bodyZ = zf - P.faceplateIn;
-  if (t.ownGuide) {
+  if (isRibbon(t)) {
     const R = P.ribbon;
     const slot = { w: face.w * R.slot.w, h: face.h * R.slot.h },
       mouth = { w: face.w * R.mouth.w, h: face.h * R.mouth.h },
       depth = face.w * R.depthPerPlate;
-    shape.holes.push(
-      roundedRectPath(0, 0, mouth.w, mouth.h, Math.min(mouth.w, mouth.h) * P.guideCornerPerSize),
-    );
-    // the flare's inside shows, so it is drawn both sides
-    const throughBlack = ctx.materials.black.clone();
-    throughBlack.side = THREE.DoubleSide;
+    // the plate's hole is the flare's own mouth outline, so the two meet
+    shape.holes.push(flareMouthPath(0, 0, mouth, R.flareSquareness));
     const flare = add(
       new THREE.Mesh(
         flareGeometry({ throat: slot, mouth, depth, squareness: () => R.flareSquareness }),
-        throughBlack,
+        flareMaterial(),
       ),
       HIFI_MESH_NAMES.flare,
     );
@@ -489,11 +496,8 @@ function addTweeter(
   } else if (t.type === "horn-loaded") {
     const mouthR = Math.min(t.domeIn / 2, Math.min(face.w, face.h) / 2 - P.plateCornerIn);
     shape.holes.push(circlePath(0, 0, mouthR));
-    // the flare's inside shows, so it is drawn both sides
-    const throughBlack = ctx.materials.black.clone();
-    throughBlack.side = THREE.DoubleSide;
     const flare = add(
-      zCylinder(mouthR, mouthR * P.flareThroat, P.flareDepthIn, throughBlack, true),
+      zCylinder(mouthR, mouthR * P.flareThroat, P.flareDepthIn, flareMaterial(), true),
       HIFI_MESH_NAMES.flare,
     );
     flare.position.set(x, y, zf - P.flareDepthIn / 2);

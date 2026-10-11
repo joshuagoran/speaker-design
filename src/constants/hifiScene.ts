@@ -55,6 +55,8 @@ export const HIFI_FRONT_PARTS = {
    * a flared rectangular throat, wider than tall (the wider horizontal coverage), down to a tall, narrow slot over the
    * ribbon. Each size is for the plate's: the slot, the throat's mouth on the plate's face, and the flare's depth from
    * the face to the slot (41 mm behind a 170 mm plate); the flare's cross-section squareness (a superellipse exponent).
+   * The depth is the waveguide's alone, about 1.6″ on the LT3.2-WG: the catalog's "2.5″ deep" for it likely counts
+   * the driver on its back too (the cutaway draws that as the GENERIC tweeter body behind the slot).
    */
   ribbon: {
     slot: { w: 0.1, h: 0.35 },

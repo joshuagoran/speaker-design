@@ -7,7 +7,7 @@ import type {
   PassiveRadiatorChoice,
 } from "../../types";
 import { usePalette } from "../../hooks/useTheme";
-import { RADIATOR_PANEL } from "../../lib/hifi/hifi";
+import { RADIATOR_PANEL, isRibbon } from "../../lib/hifi/hifi";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { radiatorSpots, roundPortSpots, slotOpening } from "../../lib/hifi/boxLayout";
 
@@ -118,7 +118,7 @@ export function HifiFront({
     wooferR = (w.size * HIFI_FRONT_PARTS.wooferFramePerSize * k) / 2;
   const slot = vented && port.shape === "slot" ? slotOpening(dim, wall, port) : null;
   // a ribbon on its own waveguide, set into the baffle: drawn as the square plate with its slot, not a round faceplate
-  const ribbon = !lay.coax && !lay.onTop && !!t.ownGuide;
+  const ribbon = !lay.coax && !lay.onTop && isRibbon(t);
   return (
     <svg
       viewBox={`-4 -4 ${W + 8} ${H + 8}`}
