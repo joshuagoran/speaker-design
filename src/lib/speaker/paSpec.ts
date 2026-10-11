@@ -5,6 +5,7 @@
 // the horn in the baffle. The crossover between the sub and the tops is the system's; the one inside a box is the
 // box's.
 import type {
+  AdapterBandId,
   CoverageLayout,
   FacePoint,
   HornPlacement,
@@ -44,6 +45,7 @@ import {
   PORT_SHAPE,
   SOURCE_ROLE,
   SPEAKER_BAND,
+  SPEAKER_BAND_NAMES,
   SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
@@ -189,11 +191,18 @@ const paCabinet = (cfg: PaPlannerDesign, chambers: SpeakerCabinet["chambers"]): 
 
 /** An active band: its own amp channel of `ampW`, its filters in the DSP. */
 const activeBand = (
-  id: SpeakerBand["id"],
+  id: AdapterBandId,
   filters: Pick<SpeakerBand, "highpass" | "lowpass">,
   levelDb: number,
   ampW: SpeakerBand["ampW"],
-): SpeakerBand => ({ id, ...filters, levelDb, drive: HIFI_DRIVE.active, ampW });
+): SpeakerBand => ({
+  id,
+  name: SPEAKER_BAND_NAMES[id],
+  ...filters,
+  levelDb,
+  drive: HIFI_DRIVE.active,
+  ampW,
+});
 
 /** The sub band's own filter: the subsonic highpass; on the sub amp. */
 const subBand = (cfg: PaPlannerDesign, lowpass: SpeakerBand["lowpass"]) =>

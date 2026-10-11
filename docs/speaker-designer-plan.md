@@ -222,6 +222,11 @@ Each PR stands alone. Lowest risk first.
         off.
       - The setting is the first row of the "Bands and filters" fold.
       - Later, the Space page can use it as the source's default system crossover (`SystemSource.filters`).
+    - **Bands are a free list** (owner, Oct 2026). A speaker has any number of bands, each with a name that the
+      user sets ("Sub", "Low mid", "Horn"), so a 4-way box works. Drivers name their bands by id. The read adapters
+      keep their ids (`SPEAKER_BAND`) and names (`SPEAKER_BAND_NAMES`); a band added in the Designer takes a
+      generated id. On the charts a band's color follows its place: the lowest in the lighter gray, the highest in
+      cyan, the ones between in magenta (`bandLine`).
     - **Results.** A maximum-output chart on the shared maximum-output scale (80–140 dB, `MAX_OUTPUT_TOP` /
       `MAX_OUTPUT_BOT`, as the PA and Hi-fi maximum-output charts), the maximum of each band and of the speaker, and chips: one list for each band (what sets its level, a datasheet
       driver's power) and one for each chamber (Xmax, port speed and radiator travel at full power, and the program

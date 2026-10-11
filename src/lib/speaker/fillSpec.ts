@@ -1,5 +1,6 @@
 // Read adapter: the Fills page's design (FillDesignState) as a speaker spec and a system spec. Pure; nothing is written.
 import type {
+  AdapterBandId,
   FillDesignState,
   SpeakerBand,
   SpeakerSpec,
@@ -16,6 +17,7 @@ import {
   PORT_SHAPE,
   SOURCE_ROLE,
   SPEAKER_BAND,
+  SPEAKER_BAND_NAMES,
   SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
@@ -33,8 +35,9 @@ import { STUFFING_VOLUME_GAIN } from "../pa/calc";
  * A band of the coaxial's passive network: the maker's network isn't modeled, so it carries no filters; both bands
  * share the fill's one amp channel.
  */
-const networkBand = (id: SpeakerBand["id"], state: FillDesignState): SpeakerBand => ({
+const networkBand = (id: AdapterBandId, state: FillDesignState): SpeakerBand => ({
   id,
+  name: SPEAKER_BAND_NAMES[id],
   highpass: null,
   lowpass: null,
   levelDb: 0,

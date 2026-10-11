@@ -11,7 +11,7 @@ import type {
   SpeakerSpec,
 } from "../../types";
 import { formatHz, formatWatts } from "../../lib/format";
-import { BAND_NAMES, DESIGNER_TEXT } from "../../constants/designer";
+import { DESIGNER_TEXT } from "../../constants/designer";
 import { DRIVER_LIMIT_NAMES, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../constants/limits";
 import { driverName } from "./designerParts";
 
@@ -73,10 +73,10 @@ export function bandChips(
   });
 }
 
-/** A chamber's checks: its cones at the amp's full power through their band's filters. */
-export function chamberChips(c: SpeakerChamberLimits): DesignerChip[] {
+/** A chamber's checks: its cones at the amp's full power through their band's (named `bandName`) filters. */
+export function chamberChips(c: SpeakerChamberLimits, bandName: string): DesignerChip[] {
   const { excursion, port, radiator } = c;
-  const band = `${BAND_NAMES[c.band].toLowerCase()} band`;
+  const band = `${bandName} band`;
   const chips: DesignerChip[] = [
     excursion.peak > excursion.limit
       ? [

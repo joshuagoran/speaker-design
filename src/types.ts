@@ -1859,8 +1859,14 @@ export interface SpeakerDriverParts {
 /** A driver's kind, by id (`DRIVER_KIND`): the catalog table its id is in. */
 export type DriverKind = keyof SpeakerDriverParts;
 
-/** A speaker's band, by id (`SPEAKER_BAND`). */
-export type BandId = (typeof SPEAKER_BAND)[keyof typeof SPEAKER_BAND];
+/**
+ * A speaker's band, by id: any number of bands, each with its own name (`SpeakerBand.name`). The read adapters use
+ * `SPEAKER_BAND`'s ids; the Designer gives a new band a generated one. Drivers name their bands by id.
+ */
+export type BandId = string;
+
+/** A band the read adapters give, by id (`SPEAKER_BAND`, its name in `SPEAKER_BAND_NAMES`). */
+export type AdapterBandId = keyof typeof SPEAKER_BAND;
 
 /** Where a horn sits, by id (`HORN_PLACEMENT`): in the baffle, or freestanding on the box top. */
 export type HornPlacement = (typeof HORN_PLACEMENT)[keyof typeof HORN_PLACEMENT];
@@ -2037,6 +2043,8 @@ export interface BandFilter {
  */
 export interface SpeakerBand {
   id: BandId;
+  /** what the user calls it: "Sub", "Low mid", "Horn" */
+  name: string;
   highpass: BandFilter | null;
   lowpass: BandFilter | null;
   /**

@@ -1,7 +1,7 @@
 // The Designer's one-line summaries, built from the spec and the catalog.
 import type { BandFilter, SpeakerBand, SpeakerChamber, SpeakerSpec } from "../../types";
 import { formatDims, formatHz, formatWatts } from "../../lib/format";
-import { BAND_NAMES, PORT_SHAPE_NAMES, VENT_KIND_NAMES } from "../../constants/designer";
+import { PORT_SHAPE_NAMES, VENT_KIND_NAMES } from "../../constants/designer";
 import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 import { driverName } from "./designerParts";
 
@@ -50,7 +50,7 @@ export function bandText(band: SpeakerBand) {
   ]
     .filter(Boolean)
     .join(", ");
-  return `${BAND_NAMES[band.id]}${filters ? ` ${filters}` : ""}${band.levelDb ? ` ${band.levelDb.toFixed(1)} dB` : ""} ${formatWatts(band.ampW)}`;
+  return `${band.name}${filters ? ` ${filters}` : ""}${band.levelDb ? ` ${band.levelDb.toFixed(1)} dB` : ""} ${formatWatts(band.ampW)}`;
 }
 
 /** The speaker in one line, as the library lists it: its chambers and bands. */

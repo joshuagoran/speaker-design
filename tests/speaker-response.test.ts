@@ -51,6 +51,7 @@ import {
   HORN_PATH,
   PORT_SHAPE,
   SPEAKER_BAND,
+  SPEAKER_BAND_NAMES,
   SPEAKER_MODEL_GAP,
   SPEAKER_PART,
   SPEAKER_RESPONSE_VOLTS,
@@ -365,7 +366,7 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
   const binSpec: SpeakerSpec = {
     ...spec,
     cabinet: { ...spec.cabinet, chambers: [bin] },
-    bands: [{ id: SPEAKER_BAND.low, ...DEFAULT_SPEAKER_BAND }],
+    bands: [{ id: SPEAKER_BAND.low, name: SPEAKER_BAND_NAMES.low, ...DEFAULT_SPEAKER_BAND }],
   };
   const response = speakerResponse(binSpec);
   const read = hornDesignOf(bin, { count: 1, angle: 2 });
@@ -586,7 +587,7 @@ test("speaker model: a stuffed horn chamber reports its own net air and plays on
   const spec: SpeakerSpec = {
     ...sealed,
     cabinet: { ...sealed.cabinet, chambers: [horn] },
-    bands: [{ id: SPEAKER_BAND.low, ...DEFAULT_SPEAKER_BAND }],
+    bands: [{ id: SPEAKER_BAND.low, name: SPEAKER_BAND_NAMES.low, ...DEFAULT_SPEAKER_BAND }],
   };
   const response = speakerResponse(spec);
   assert.equal(response.chambers[0].netLiters, 10, "the chamber's own net air, as a direct one");

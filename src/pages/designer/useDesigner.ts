@@ -2,8 +2,8 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { speakerLimits } from "../../lib/speaker/speakerLimits";
-import { EMPTY_SPEAKER } from "../../lib/defaults";
-import { DESIGNER_START_SPEAKER_NAMES } from "../../constants/designer";
+import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
+import { DESIGNER_START_SPEAKER_NAMES, DESIGNER_TEXT } from "../../constants/designer";
 import { SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { speakerSummary } from "./designerText";
 import type {
@@ -43,6 +43,17 @@ function isSavedSpeaker(value: unknown): value is SavedSpeakerData["speaker"] {
     Array.isArray(Reflect.get(cabinet, "chambers")) &&
     Array.isArray(Reflect.get(value, "bands"))
   );
+}
+
+/** The prefix of the ids the Designer gives the bands it adds. */
+const NEW_BAND_ID = "band";
+
+/** A band id no band in `bands` has: "band1", "band2", ... (the adapters' ids are words, so they never clash). */
+export function newBandId(bands: readonly Pick<SpeakerBand, "id">[]): BandId {
+  const used = new Set(bands.map((b) => b.id));
+  let n = 1;
+  while (used.has(`${NEW_BAND_ID}${n}`)) n++;
+  return `${NEW_BAND_ID}${n}`;
 }
 
 /** A list with item `i` replaced by `edit(item)`. */
@@ -91,13 +102,16 @@ export function useDesigner() {
       drivers: c.drivers.map((d) => ({ ...d, bands: d.bands.map((b) => (b === from ? to : b)) })),
     })),
   });
-  /** gives a band another id; its drivers follow */
-  const renameBand = (from: BandId, to: BandId) =>
-    setSpec((s) => ({
-      ...s,
-      cabinet: moveDrivers(s, from, to),
-      bands: s.bands.map((b) => (b.id === from ? { ...b, id: to } : b)),
-    }));
+  /** adds a band at the top, under a generated id and a name of its place ("Band 3") */
+  const addBand = () =>
+    editBands((list) => [
+      ...list,
+      {
+        id: newBandId(list),
+        name: DESIGNER_TEXT.newBandName(list.length + 1),
+        ...DEFAULT_SPEAKER_BAND,
+      },
+    ]);
   /** removes a band; its drivers move to the first band left */
   const removeBand = (id: BandId) =>
     setSpec((s) => {
@@ -136,7 +150,7 @@ export function useDesigner() {
     editDriver,
     editBands,
     editBand,
-    renameBand,
+    addBand,
     removeBand,
   };
 }

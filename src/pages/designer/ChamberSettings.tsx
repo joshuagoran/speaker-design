@@ -19,7 +19,6 @@ import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
 import { HIFI_PASSIVES_BY_SIZE } from "../hifi/hifiDriverLists";
 import {
-  BAND_NAMES,
   DRIVER_KIND_NAMES,
   MODEL_GAP_TEXT,
   PORT_SHAPE_NAMES,
@@ -74,7 +73,7 @@ interface Props {
 /** One chamber's settings: size, air, place, vent and drivers. */
 export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemove }: Props) {
   const { vent } = chamber;
-  const bandOptions = bands.map((b): readonly [BandId, string] => [b.id, BAND_NAMES[b.id]]);
+  const bandOptions = bands.map((b): readonly [BandId, string] => [b.id, b.name]);
   const setDim = (k: keyof Dims3, v: number) =>
     onEdit((c) => ({ ...c, dims: { ...c.dims, [k]: v } }));
   const setVent = (v: ChamberVent) => onEdit((c) => ({ ...c, vent: v }));

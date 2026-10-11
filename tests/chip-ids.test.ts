@@ -167,7 +167,7 @@ const designerLists = designerSpecs.flatMap((spec) => {
   const limits = speakerLimits(spec, speakerResponse(spec));
   return [
     ...bandChips(spec, limits).map((b) => b.chips),
-    ...limits.chambers.flatMap((c) => (c ? [chamberChips(c)] : [])),
+    ...limits.chambers.flatMap((c) => (c ? [chamberChips(c, c.band)] : [])),
   ];
 });
 

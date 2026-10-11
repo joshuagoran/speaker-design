@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { BandId, PaPlannerDesign } from "../../types";
-import { alpha } from "../../styles/palette";
+import { alpha, bandLine } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
@@ -16,12 +16,7 @@ import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTile
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
-import {
-  DEFAULT_HIFI,
-  DEFAULT_PA,
-  DEFAULT_SPEAKER_BAND,
-  DEFAULT_SPEAKER_CHAMBER,
-} from "../../lib/defaults";
+import { DEFAULT_HIFI, DEFAULT_PA, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
 import { Card } from "../../components/ui/Card";
 import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
 import {
@@ -37,14 +32,12 @@ import {
   type DesignerSettingsSection,
 } from "../../constants/settingsSections";
 import {
-  BAND_NAMES,
   DESIGNER_START,
   DESIGNER_START_NAMES,
   DESIGNER_TEXT,
   MODEL_GAP_TEXT,
   type DesignerStart,
 } from "../../constants/designer";
-import { SPEAKER_BAND } from "../../constants/speakerSpec";
 import { ChamberSettings } from "./ChamberSettings";
 import { BandSettings } from "./BandSettings";
 import { FilterFields } from "./FilterFields";
@@ -61,14 +54,8 @@ interface Props {
   hifi: HifiPlanner;
 }
 
-/** The bands drawn dashed: the air band shares the high band's color. */
-const BAND_DASH: Partial<Record<BandId, string>> = { air: "6 4" };
-
 /** The sum's line width on the charts, px: it reads over its bands' (2 px). */
 const SUM_LINE_PX = 4;
-
-/** Every band id, low to high. */
-const BAND_IDS = keysOf(SPEAKER_BAND);
 
 /** The PA design as the planner holds it, every field set. */
 const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
@@ -102,16 +89,15 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
         hifiLook: { cabFinish: hifi.cabinetFinish, baffleColor: hifi.baffleColor },
       }),
     );
-  /** each band's line color: the PA chart's (sub ink, mid-bass magenta, horn cyan); the sum in ink */
-  const bandStroke: Record<BandId, string> = {
-    low: pal.faint,
-    mid: pal.magenta,
-    high: pal.cyan,
-    // the top octave: the high band's cyan, dashed (BAND_DASH)
-    air: pal.cyan,
-  };
-  const usedIds = spec.bands.map((b) => b.id);
-  const nextBandId = BAND_IDS.find((id) => !usedIds.includes(id));
+  /** each band's line, by its place in the spec (lighter gray, magenta, cyan); the sum in ink */
+  const lineOf = (id: BandId) =>
+    bandLine(
+      pal,
+      spec.bands.findIndex((b) => b.id === id),
+      spec.bands.length,
+    );
+  /** each band's name, by id */
+  const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
   const { chambers } = spec.cabinet;
   const summaries: Record<DesignerSettingsSection, string> = {
     speaker: `${spec.name} · ${countText(chambers.length, "chamber", "chambers")} · ${countText(spec.bands.length, "band", "bands")}`,
@@ -146,17 +132,13 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
       ];
     }),
     ...response.bands.map((b): StatTileItem => [
-      `${BAND_NAMES[b.id]} band`,
+      `${nameOf(b.id)} band`,
       b.passbandDb.toFixed(1),
       "dB",
     ]),
   ];
   const maxTiles: StatTileItem[] = [
-    ...limits.bands.map((b): StatTileItem => [
-      `${BAND_NAMES[b.id]} max`,
-      b.musicDb.toFixed(0),
-      "dB",
-    ]),
+    ...limits.bands.map((b): StatTileItem => [`${nameOf(b.id)} max`, b.musicDb.toFixed(0), "dB"]),
     ...(limits.musicDb !== null && limits.bands.length > 1
       ? [[DESIGNER_TEXT.speakerMax, limits.musicDb.toFixed(0), "dB"] satisfies StatTileItem]
       : []),
@@ -200,9 +182,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 ...response.bands.map((b) => ({
                   // a band drawn only where it is on the chart: below the floor it would run along the axis
                   curve: b.curve.filter((o) => o.spl >= HIFI_BOT),
-                  label: BAND_NAMES[b.id],
-                  stroke: bandStroke[b.id],
-                  dash: BAND_DASH[b.id],
+                  label: nameOf(b.id),
+                  ...lineOf(b.id),
                   tint: "transparent",
                 })),
               ]}
@@ -237,9 +218,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                   },
                   ...limits.bands.map((b) => ({
                     curve: b.max.filter((o) => o.spl >= MAX_OUTPUT_BOT),
-                    label: BAND_NAMES[b.id],
-                    stroke: bandStroke[b.id],
-                    dash: BAND_DASH[b.id],
+                    label: nameOf(b.id),
+                    ...lineOf(b.id),
                     tint: "transparent",
                   })),
                 ]}
@@ -249,9 +229,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
               <div className="flex flex-col gap-3 mb-3">
                 {bandChips(spec, limits).map(({ id, chips }) => (
                   <div key={id}>
-                    <h4 className="text-xs font-semibold text-stone-500 mb-1">
-                      {BAND_NAMES[id]} band
-                    </h4>
+                    <h4 className="text-xs font-semibold text-stone-500 mb-1">{nameOf(id)}</h4>
                     <WarningChips chips={chips} />
                   </div>
                 ))}
@@ -262,7 +240,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                         <h4 className="text-xs font-semibold text-stone-500 mb-1">
                           {DESIGNER_TEXT.chamber} {i + 1}
                         </h4>
-                        <WarningChips chips={chamberChips(c)} />
+                        <WarningChips chips={chamberChips(c, nameOf(c.band))} />
                       </div>
                     ),
                 )}
@@ -347,26 +325,14 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 <BandSettings
                   key={band.id}
                   band={band}
-                  freeIds={BAND_IDS.filter((id) => id === band.id || !usedIds.includes(id))}
                   newCornerHz={DEFAULT_HIFI.crossoverHz}
                   onEdit={(edit) => designer.editBand(i, edit)}
-                  onRename={(id) => designer.renameBand(band.id, id)}
                   onRemove={spec.bands.length > 1 ? () => designer.removeBand(band.id) : undefined}
                 />
               ))}
-              {nextBandId && (
-                <Button
-                  className="mb-2"
-                  onClick={() =>
-                    designer.editBands((list) => [
-                      ...list,
-                      { id: nextBandId, ...DEFAULT_SPEAKER_BAND },
-                    ])
-                  }
-                >
-                  Add band
-                </Button>
-              )}
+              <Button className="mb-2" onClick={designer.addBand}>
+                Add band
+              </Button>
             </>,
           )}
         </SettingsColumn>

@@ -1,6 +1,7 @@
 // Read adapter: the Hi-fi page's design (HifiDesignState) as a speaker spec and a system spec (the pair at the seat).
 // Pure; nothing is written.
 import type {
+  AdapterBandId,
   BandFilter,
   ChamberVent,
   HifiDesignState,
@@ -33,6 +34,7 @@ import {
   PORT_SHAPE,
   SOURCE_ROLE,
   SPEAKER_BAND,
+  SPEAKER_BAND_NAMES,
   SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
@@ -182,11 +184,11 @@ export function speakerFromHifi(
   const drive = state.drive ?? HIFI_DRIVE.active;
   const { subsonic, trimDb } = hifiBandParts(state, fit);
   const band = (
-    id: SpeakerBand["id"],
+    id: AdapterBandId,
     filters: Pick<SpeakerBand, "highpass" | "lowpass">,
     levelDb: number,
     ampW: SpeakerBand["ampW"],
-  ): SpeakerBand => ({ id, ...filters, levelDb, drive, ampW });
+  ): SpeakerBand => ({ id, name: SPEAKER_BAND_NAMES[id], ...filters, levelDb, drive, ampW });
   return {
     ...identity,
     cabinet: {

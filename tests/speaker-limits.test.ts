@@ -23,8 +23,10 @@ import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { abs } from "../src/lib/acoustics/complex";
 import { ampVoltage, hornResponse, subThroughLowpass, ventSpeedLimit } from "../src/lib/pa/calc";
 import { CD_OPTIONS, HORN_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
-import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
+import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_SPEAKER_BAND } from "../src/lib/defaults";
 import { startSpeaker } from "../src/pages/designer/designerStarts";
+import { newBandId } from "../src/pages/designer/useDesigner";
+import { PALETTES, bandLine } from "../src/styles/palette";
 import { DESIGNER_START } from "../src/constants/designer";
 import {
   DRIVER_KIND,
@@ -315,4 +317,65 @@ test("speaker limits: a PA start brings its input range (the top above the sub c
       `${c.name}: the sub's sum`,
     );
   }
+});
+
+test("speaker limits: bands are a free list: a 4-way box, with a band the user names", () => {
+  const tower = configs.find((g) => g.layout === "tower");
+  assert.ok(tower);
+  const spec = startSpeaker(DESIGNER_START.paTower, {
+    pa: paDesign(tower),
+    hifi: DEFAULT_HIFI,
+    hifiLook: DEFAULT_HIFI_LOOK,
+  });
+  // a super tweeter on a band of its own, above the horn, in the horn section
+  const id = newBandId(spec.bands);
+  const four: SpeakerSpec = {
+    ...spec,
+    cabinet: {
+      ...spec.cabinet,
+      chambers: spec.cabinet.chambers.map((c, i, all) =>
+        i === all.length - 1
+          ? {
+              ...c,
+              drivers: [
+                ...c.drivers,
+                {
+                  kind: DRIVER_KIND.tweeter,
+                  driverId: DEFAULT_HIFI.tweeter.id,
+                  count: 1,
+                  position: { xIn: 0, yIn: 2 },
+                  bands: [id],
+                  horn: null,
+                },
+              ],
+            }
+          : c,
+      ),
+    },
+    bands: [
+      ...spec.bands,
+      {
+        id,
+        name: "Air",
+        ...DEFAULT_SPEAKER_BAND,
+        highpass: lrFilter(12000, 4),
+        levelDb: -6,
+      },
+    ],
+  };
+  assert.ok(!spec.bands.some((b) => b.id === id), "a new id");
+  const { response, limits } = modelOf(four, four.input);
+  assert.deepEqual(
+    response.bands.map((b) => b.id),
+    four.bands.map((b) => b.id),
+  );
+  assert.equal(limits.bands.length, 4);
+  assert.ok(limits.sum.every((o) => Number.isFinite(o.spl)));
+  assert.ok(
+    limits.drivers.some((d) => d.band === id),
+    "the super tweeter's power",
+  );
+  // each band its own line on the charts
+  const lines = four.bands.map((_, i) => JSON.stringify(bandLine(PALETTES.light, i, 4)));
+  assert.equal(new Set(lines).size, 4);
 });

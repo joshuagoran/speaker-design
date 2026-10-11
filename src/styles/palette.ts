@@ -82,6 +82,24 @@ const DARK: Palette = {
 
 export const PALETTES: Record<ThemeName, Palette> = { light: LIGHT, dark: DARK };
 
+/** The dash pattern that tells two neighboring bands of one color apart on a chart. */
+const BAND_DASH = "6 4";
+
+/**
+ * A band's line on a chart, by its place among `count` bands, low to high: the lowest in the lighter gray (a sub, a
+ * woofer alone), the highest in cyan (horn and tweeter), the ones between in magenta (mid-bass and woofer), every second
+ * one of those dashed. A single band is the lowest.
+ */
+export function bandLine(
+  p: Pick<Palette, "faint" | "magenta" | "cyan">,
+  index: number,
+  count: number,
+): { stroke: string; dash?: string } {
+  if (index === 0) return { stroke: p.faint };
+  if (index === count - 1) return { stroke: p.cyan };
+  return index % 2 === 0 ? { stroke: p.magenta, dash: BAND_DASH } : { stroke: p.magenta };
+}
+
 /** Colors drawn on data colors that stay the same in both themes (the dispersion and coverage maps' scales, the
  * cabinet finishes): the light palette's, so lines, marks and labels on them read the same in either theme. */
 export const ON_DATA: Pick<Palette, "ink" | "white" | "muted" | "edge" | "magenta" | "cyan"> =
