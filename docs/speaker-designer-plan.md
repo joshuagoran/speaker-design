@@ -81,22 +81,22 @@ Each PR stands alone. Lowest risk first.
   - `coaxParts` in `src/lib/data.ts` (derived from the fill catalog), a coincident layout in
     `driverLayout`, and a coax part in `buildHifiScene`.
   - A parity test against `fillSystem`, with documented tolerances.
-- **P4 Starting templates (Hi-fi / Monitor).** No fixed roles (owner, Oct 2026): a template only sets a new
-  design's first values. Nothing saves a role, and every chip shows for every design.
+- **P4 Starting templates (Hi-fi / Monitor).** No fixed roles (owner, Oct 2026). A template sets only the first
+  values of a new design. A save keeps no role. Every chip shows for every design.
   - Templates in a new `src/constants/useCases.ts` set defaults and ranges.
   - Rename the project to "Speakers" (owner to confirm). Keep `#hifi`.
   - Split `HifiPage.tsx` (about 970 lines) into section components.
-  - New chips: max level at a distance you set (no per-use target), coverage, kick, HF headroom, near-field
-    lobing.
-  - Drive: passive and active, both as options.
+  - New chips: the maximum level at a distance that you set, coverage, kick, HF headroom, near-field lobing.
+    No chip compares the level with a target for each use.
+  - Drive: the user can select passive or active.
   - Monitors (DJ booth), two options:
     - (a) a 10–12″ coax in a small box;
     - (b) an 8″ and a 1″ compression driver on a small 4–6″ horn, crossed at about 2.5–3 kHz, mounted tight
       above the woofer. Physics caveat: an 8″ narrows to about 65° at 2.7 kHz, and a 5″ mouth only
       controls coverage above about 2.7 kHz, so it falls short of 90–100°.
-  - Monitor template: hung or pedestal-mounted (not floor wedges), 0.5–1.5 m away, a high-pass at 70 Hz LR24
-    (60–80 Hz), 90–100° horizontal, a pair either side of the DJ. No tilt or wedge for now; aiming comes
-    with the system page.
+  - Monitor template: a pair, one on each side of the DJ. Each monitor hangs or sits on a pedestal. They are
+    not floor wedges. Distance 0.5–1.5 m, a high-pass at 70 Hz LR24 (60–80 Hz), 90–100° horizontal. No tilt
+    and no wedge for now. The system page will add aiming.
 - **P5 Fill use case.**
   - Map today's fill defaults (`DEFAULT_FILL` in `src/lib/defaults.ts`) onto the page and redirect
     `#fills`. Delete `FillsPage`, `useFillsPlanner` and `fillSystem` after the P3 parity test's reference
@@ -108,23 +108,23 @@ Each PR stands alone. Lowest risk first.
   - `kick` and `smaller` goals; SPL and coverage targets as filters.
   - Coax candidates in Fill and Monitor only; a crossover grid for monitor option (b).
   - The existing snapshot cards stay unchanged; new cases are added.
-- **P7 Wedge box.** Not needed for booth monitors; parked.
+- **P7 Wedge box.** Booth monitors do not need it. Stop work on it for now.
   - First, tilt / kick-back on a rectangular box.
   - Then a true wedge: trapezoid volume, layout, cutlist bevels, 3D and front drawing.
 - **P8 Optional printed DIY small horn.** Hornlab data and mesh, like `diy_os90x70`.
-- **T1 Tower with the horn freestanding on top.** Deferred into L3 (owner, Oct 2026): build nothing here that
-  the modular box model would replace. The notes below are the spec for the tower template there. A field,
-  not a fifth layout:
+- **T1 Tower with the horn freestanding on top.** Do this in L3, not before (owner, Oct 2026). Do not build
+  parts that the modular box model will replace. The notes below are the spec for the tower template in L3.
+  It is a field, not a fifth layout:
   `hornPlacement: "baffle" | "top"`, defaulting to `"baffle"`, with a toggle shown only for Tower.
-  - **Mid chamber height adjustable** (owner, Oct 2026): today fixed at 15.5″ (`TOWER_MID_HEIGHT_IN`). With
-    the horn on top it becomes a setting, which changes the mid's volume and the tower's height.
-  - **Any horn can sit on top,** the full-width rectangular horns included.
+  - **Adjustable mid chamber height** (owner, Oct 2026). Today the height is 15.5″ (`TOWER_MID_HEIGHT_IN`).
+    With the horn on top, the height becomes a setting. It changes the mid's volume and the tower's height.
+  - **Any horn can sit on top.** This includes the full-width rectangular horns.
   - **Heights:** `stackHeights` and `towerSpec` put the horn axis above the tower lid, with no arched top.
   - **Mount:** the horn sits on the PR #114 aluminum plate or ply mount. `takesHornMount` (which today is
     false for every tower) applies when the placement is `"top"`.
   - **3D:** `buildTower` and `buildStackScene` follow.
-  - **Unchanged by default:** alignment (the mouth stays on the front plane), the datasheet-based acoustics,
-    saves, goldens and the snapshot (the height defaults to 15.5″). The mid volume follows the height.
+  - **No change at the default height of 15.5″:** alignment (the mouth stays on the front plane), the
+    datasheet-based acoustics, saves, goldens and the snapshot. The mid volume follows the height.
   - **Cutlist:** `towerCutParts` follows the adjustable height.
   - **Mapping:** `hornPlacement` becomes a property of any box with a horn and maps onto the speaker spec.
     The Hi-fi `WaveguideSpec.freestanding` boolean later switches to the shared type.
@@ -163,16 +163,16 @@ Each PR stands alone. Lowest risk first.
 
 ## Owner decisions (Oct 2026)
 
-- Monitor drive: passive and active, both as options.
-- No target level per use: show the max level at a distance you set.
-- No fixed roles: templates set first values only; no `use` is saved.
-- Booth monitors hang or sit on pedestals: no tilt or wedge for now; designed as a pair.
-- Tower with the horn on top: the mid chamber height is adjustable, and any horn can sit on top. Built as
-  part of L3, not before it.
+- Monitor drive: the user can select passive or active.
+- No target level for each use. Show the maximum level at a distance that you set.
+- No fixed roles. A template sets only the first values. A save keeps no `use`.
+- Booth monitors are a pair. They hang or sit on pedestals. No tilt and no wedge for now.
+- Tower with the horn on top: the mid chamber height is adjustable, and any horn can sit on top. Do this in
+  L3, not before.
 
 ## Open questions for the owner
 
-1. Show coaxes in the Hi-fi template?
+1. Show coaxials in the Hi-fi template?
 2. Name: "Speakers"?
 3. Coaxials with no published HF data: model the woofer only, with a chip, or hide them?
 4. Fill delay against the mains: wait for the system page, or add a small calculator now?
