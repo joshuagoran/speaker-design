@@ -1,8 +1,12 @@
-/** Top of the PA response chart and the PA optimizer cards, dB SPL. */
-export const PA_DB_TOP = 135;
+/**
+ * Top of every maximum-output chart, dB SPL: the PA response chart, the PA optimizer cards, the Hi-fi page's
+ * maximum-output chart and the Designer's. A PA horn on its amp reaches about 131 dB at 1 m on the golden designs, a
+ * Hi-fi compression driver on a waveguide about 126 dB.
+ */
+export const MAX_OUTPUT_TOP = 140;
 
-/** Bottom of the PA response chart and the PA optimizer cards, dB SPL. */
-export const PA_DB_BOT = 80;
+/** Bottom of every maximum-output chart, dB SPL. */
+export const MAX_OUTPUT_BOT = 80;
 
 /** Low end of the frequency charts' axis, Hz: the PA stack's, which every frequency chart but the dispersion maps shares. */
 export const FREQ_AXIS_MIN_HZ = 15;
@@ -11,22 +15,13 @@ export const FREQ_AXIS_MIN_HZ = 15;
 export const FREQ_AXIS_MAX_HZ = 20000;
 
 /**
- * Top of every Hi-fi dB chart, so designs and charts compare by eye; the Designer's response chart (2.83 V, 1 m) takes
- * the same scale.
+ * Top of every sensitivity and response chart (the Hi-fi page's response charts and its optimizer cards, the
+ * Designer's 2.83 V, 1 m response), so designs and charts compare by eye.
  */
-export const HIFI_TOP = 130;
+export const HIFI_TOP = 120;
 
-/** Bottom of every Hi-fi dB chart. */
+/** Bottom of every sensitivity and response chart. */
 export const HIFI_BOT = 50;
-
-/**
- * Top of the Designer's maximum-output chart, dB SPL at 1 m: its own fixed scale, wide enough for any speaker it
- * designs. A PA horn on its amp reaches about 131 dB at 1 m on the golden designs, a PA sub about 128 dB.
- */
-export const MAX_OUTPUT_TOP = 140;
-
-/** Bottom of the Designer's maximum-output chart: a small Hi-fi woofer's deep bass at its limits, about 80 dB. */
-export const MAX_OUTPUT_BOT = 70;
 
 /** Every dispersion map spans −90° to +90° off axis, sampled every 5°. */
 export const DISPERSION_ANGLE_MAX_DEG = 90;

@@ -1,6 +1,6 @@
 import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
-import { PA_DB_BOT, PA_DB_TOP } from "../../constants/chartScales";
+import { MAX_OUTPUT_BOT, MAX_OUTPUT_TOP } from "../../constants/chartScales";
 import { useState } from "react";
 
 /** One curve point: frequency in Hz, level in dB. */
@@ -15,7 +15,7 @@ interface Props {
   fmax?: number;
   /** shaded band, Hz; null for none (the Hi-fi cards) */
   band?: readonly [number, number] | null;
-  /** fixed dB axis: defaults to the PA optimizer cards' 80-135 dB; the Hi-fi cards pass HIFI_TOP / HIFI_BOT */
+  /** fixed dB axis: defaults to the maximum-output scale (the PA cards'); the Hi-fi cards pass HIFI_TOP / HIFI_BOT */
   top?: number;
   bot?: number;
 }
@@ -27,8 +27,8 @@ export function OptimizerCurveChart({
   fmin = 20,
   fmax = 200,
   band = [40, 90],
-  top = PA_DB_TOP,
-  bot = PA_DB_BOT,
+  top = MAX_OUTPUT_TOP,
+  bot = MAX_OUTPUT_BOT,
 }: Props) {
   const pal = usePalette();
   const [hover, setHover] = useState<number | null>(null);

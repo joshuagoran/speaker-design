@@ -1,5 +1,5 @@
 import type { BandCurves, FrequencyPoint } from "../../types";
-import { PA_DB_BOT, PA_DB_TOP } from "../../constants/chartScales";
+import { MAX_OUTPUT_BOT, MAX_OUTPUT_TOP } from "../../constants/chartScales";
 import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
@@ -34,7 +34,7 @@ interface Props {
   span?: { lo: number; hi: number };
   fmax?: number;
   fmin?: number;
-  /** fixed y axis, dB (or degrees for a beamwidth chart): defaults to the PA stack's 80-135 dB; the Hi-fi charts pass HIFI_TOP / HIFI_BOT */
+  /** fixed y axis, dB (or degrees for a beamwidth chart): defaults to the maximum-output scale (MAX_OUTPUT_TOP / MAX_OUTPUT_BOT); a response chart passes HIFI_TOP / HIFI_BOT */
   top?: number;
   bot?: number;
   /** gridline spacing on the y axis */
@@ -46,15 +46,15 @@ interface Props {
   H?: number;
 }
 
-/** Max-SPL chart: one or more curves ({f, spl}), fixed 80-135 dB so setups compare directly. */
+/** Max-SPL chart: one or more curves ({f, spl}), on a fixed scale so setups compare directly. */
 export function ResponseChart({
   series,
   marks = [],
   span,
   fmax = 200,
   fmin = 15,
-  top = PA_DB_TOP,
-  bot = PA_DB_BOT,
+  top = MAX_OUTPUT_TOP,
+  bot = MAX_OUTPUT_BOT,
   step = 5,
   yLabel = "max dB SPL @ 1 m",
   unit = " dB",

@@ -222,8 +222,8 @@ Each PR stands alone. Lowest risk first.
         off.
       - The setting is the first row of the "Bands and filters" fold.
       - Later, the Space page can use it as the source's default system crossover (`SystemSource.filters`).
-    - **Results.** A maximum-output chart on its own fixed scale (70–140 dB, `MAX_OUTPUT_TOP` / `MAX_OUTPUT_BOT`), the
-      maximum of each band and of the speaker, and chips: one list for each band (what sets its level, a datasheet
+    - **Results.** A maximum-output chart on the shared maximum-output scale (80–140 dB, `MAX_OUTPUT_TOP` /
+      `MAX_OUTPUT_BOT`, as the PA and Hi-fi maximum-output charts), the maximum of each band and of the speaker, and chips: one list for each band (what sets its level, a datasheet
       driver's power) and one for each chamber (Xmax, port speed and radiator travel at full power, and the program
       rating).
     - **Parity** (`tests/speaker-limits.test.ts`). With the net air set to the PA's, every golden PA design meets the
@@ -272,8 +272,8 @@ Each PR stands alone. Lowest risk first.
   tower needs no "Horn" toggle or separate picker entry.
 - Simulation in a real space is a separate page later (the Space page). Any speaker can be placed there.
 - The fill delay against the mains belongs to the Space page.
-- The Designer's response chart is a 2.83 V, 1 m sensitivity chart on the Hi-fi dB scale (50–130 dB). Its
-  maximum-output chart has its own fixed scale (70–140 dB, L3d).
+- Chart scales (owner, Oct 2026): every maximum-output chart (PA, Hi-fi, Designer) uses 80–140 dB, and every
+  sensitivity or response chart (Hi-fi, the Designer's 2.83 V, 1 m response) uses 50–120 dB.
 - The spec's ports carry the PA port details (the letterbox's fins and fold, the flared tubes), so the PA subs
   match the PA page exactly.
 - Stuffing is a visible setting on each chamber. The model has no hidden stuffing rule. The 3% bracing
