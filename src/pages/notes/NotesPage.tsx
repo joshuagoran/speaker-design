@@ -64,11 +64,15 @@ function ampCell(
       return model.ampClass ? AMP_CLASSES[model.ampClass] : "–";
     case "channels":
       return String(model.channels);
+    case "w16":
     case "w8":
     case "w4":
-      return [model[col], model.ch2?.[col]]
-        .flatMap((w) => (w == null ? [] : [w.toLocaleString()]))
-        .join(" / ");
+    case "w2": {
+      const watts = [model[col], model.ch2?.[col]].flatMap((w) =>
+        w == null ? [] : [w.toLocaleString()],
+      );
+      return watts.length ? watts.join(" / ") : "–";
+    }
     case "gain":
       return model.gainDb == null ? "–" : `${model.gainDb} dB`;
     case "dsp":
@@ -236,11 +240,11 @@ export function NotesPage() {
           <SectionHeading className="mb-3">Amps</SectionHeading>
           <p className="text-sm text-stone-900 mb-3 max-w-3xl">
             Power is per channel, continuous, all channels driven, as each maker rates it; two
-            figures are channel 1 / channel 2. Hover an amp for its filters and limiter. An
-            estimated price had no US listing to check.
+            figures are channel 1 / channel 2, and a dash is a load the maker does not rate. Hover
+            an amp for its filters and limiter. An estimated price had no US listing to check.
           </p>
           <div className="overflow-x-auto">
-            <table className="text-sm w-full min-w-[860px] border-collapse">
+            <table className="text-sm w-full min-w-[1000px] border-collapse">
               <thead>
                 <tr className="text-stone-500 text-left border-b border-stone-300">
                   {entriesOf(AMP_COLUMNS).map(([col, h]) => (
