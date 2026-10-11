@@ -191,8 +191,12 @@ Each PR stands alone. Lowest risk first.
       it; see L4). Drivers of different models in one chamber are a named gap.
   - **L3c Cutlist.** L3c works out the real bracing, vent walls and hardware displacement for each chamber and
     replaces the 3% allowance.
-  - **Later in L3.** The 3D view, the limits and the optimizer; the horn settings; the tower with the horn
-    on top (T1); the voice-coil inductance (after PR #133 adds `Le`).
+  - **L3d Inductance, limits and chips.**
+    - **Voice-coil inductance.** Every T/S model reads the catalog's `Le`: the sealed, vented and passive-radiator
+      box models, the exact PA search and the horn engine. They share one rule, `coilFactor` in
+      `src/lib/acoustics/driverCircuit.ts`: the coil is Re + jωLe, as in Hornresp. A driver with `Le` rolls off at the
+      top. A driver without `Le` gives the same numbers as before.
+  - **Later in L3.** The 3D view and the optimizer; the horn settings; the tower with the horn on top (T1).
 - **L4 Space page.** A separate page, later. Any saved speaker can be placed in a "Space": sources by speaker
   id, amps and channels, DSP, crossovers between boxes, delay and level, and the coverage map generalized
   from `CoverageStack` to a list of sources. The baffle step, the room and the positions of the drivers come
@@ -238,7 +242,7 @@ Each PR stands alone. Lowest risk first.
   match the PA page exactly.
 - Stuffing is a visible setting on each chamber. The model has no hidden stuffing rule. The 3% bracing
   allowance stays until L3c.
-- The sub highpass and subsonic rule waits for the Space page. The voice-coil inductance waits for PR #133.
+- The sub highpass and subsonic rule waits for the Space page.
 
 ## Open questions for the owner
 

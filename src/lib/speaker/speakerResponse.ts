@@ -66,11 +66,19 @@ const levelOf = (p: Complex) => 20 * Math.log10(Math.max(1e-9, abs(p)));
 
 /**
  * `count` alike cones in parallel, each on the full voltage, as one cone for the box models: the areas and moving
- * masses add and the coil resistance divides, so the circuit's elements are the bank's (as the horn engine wires its
- * `drivers`, Hornresp's Nd).
+ * masses add and the coil's resistance and inductance divide, so the circuit's elements are the bank's (as the horn
+ * engine wires its `drivers`, Hornresp's Nd).
  */
-const bank = ({ ts }: ConeParts, count: number) =>
-  count === 1 ? ts : { ...ts, Sd: ts.Sd * count, Mms: ts.Mms * count, Re: ts.Re / count };
+const bank = ({ ts }: ConeParts, count: number): ConeParts["ts"] =>
+  count === 1
+    ? ts
+    : {
+        ...ts,
+        Sd: ts.Sd * count,
+        Mms: ts.Mms * count,
+        Re: ts.Re / count,
+        ...(ts.Le !== undefined && { Le: ts.Le / count }),
+      };
 
 /** One chamber's cones on the grid: a pressure per frequency; or a gap. */
 interface ChamberCones {

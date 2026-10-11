@@ -551,9 +551,9 @@ test("hi-fi optimizer: the first worker's kept share (or, if lost, its share sco
 });
 
 test("hi-fi optimizer: no card costs more than the budget, even when the best design without one does", () => {
-  // only the drivers searched: Go lower's best pair costs more than $300, so the budget is what keeps it off the cards
+  // only the drivers searched: one card's pair costs more than $250 without a budget, so the budget is what keeps it off
   const opts = { ...base, goals: ["lower" as const], locks: { ...tight } };
-  const budget = 300;
+  const budget = 250;
   const free = optimizeHifiSpeaker({ ...opts, budget: undefined });
   assert.ok(
     free.cards.some((k) => k.metrics.price > budget),

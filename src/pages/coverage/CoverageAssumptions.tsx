@@ -65,7 +65,7 @@ export function CoverageAssumptions({ room, planner, target, level }: Props) {
       "Stacks",
       [
         `Drivers at each box's center and real height, time-aligned ${ALIGN_DISTANCE_M} m out at horn height.`,
-        `Linkwitz-Riley crossovers (${slopes}) with phase, plus each band's own: vented sub and highpass, sealed mid (no voice-coil inductance), first-order baffle-step shelf.`,
+        `Linkwitz-Riley crossovers (${slopes}) with phase, plus each band's own: vented sub and highpass, sealed mid (with its voice-coil inductance where listed), first-order baffle-step shelf.`,
         "Sub delay: in phase with the mid at the crossover on axis, one for all subs.",
         `Sub and mid: rigid pistons, behind the box −3 dB at ${BOX_SHADOW_HZ} Hz and 6 dB/octave above.`,
         "Horn: rated coverage (−6 dB at the edges) above its control frequency, wider below, at most 40 dB down.",

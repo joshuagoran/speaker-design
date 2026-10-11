@@ -133,7 +133,10 @@ export interface ThieleSmall {
   Hvc?: number;
   Hg?: number;
   Re: number;
-  /** voice-coil inductance, mH, where the maker publishes it; only the horn engine reads it (none when absent) */
+  /**
+   * voice-coil inductance, mH, where the maker publishes it: every T/S model reads it (lib/acoustics/driverCircuit
+   * `coilFactor`), so the top rolls off; none when absent, and the models take the coil as Re alone
+   */
   Le?: number;
   Bl: number;
   Mms: number;
@@ -152,10 +155,14 @@ export type RawTS<T extends ThieleSmall> = Omit<T, "Xmax" | "xmax">;
 /** A driver as its table holds it. */
 export type RawDriver<D extends { ts: ThieleSmall }> = Omit<D, "ts"> & { ts: RawTS<D["ts"]> };
 
-/** The Thiele-Small fields the box models read (`boxModel`, `closedBox`, `passiveRadiatorBox`); `closedBox` and `passiveRadiatorBox` leave `Xmax` alone. */
-export type BoxModelTS = Pick<ThieleSmall, "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms">;
-/** The Thiele-Small fields the horn engine reads (lib/acoustics/hornModel): the box models' and the voice coil's inductance. */
-export type HornDriverTS = BoxModelTS & Pick<ThieleSmall, "Le">;
+/**
+ * The Thiele-Small fields the box models (`boxModel`, `closedBox`, `passiveRadiatorBox`) and the horn engine read, the
+ * voice coil's inductance where listed; `closedBox` and `passiveRadiatorBox` leave `Xmax` alone.
+ */
+export type BoxModelTS = Pick<
+  ThieleSmall,
+  "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms" | "Le"
+>;
 
 /** Subs always list a displacement. */
 export interface SubTS extends ThieleSmall {
@@ -1525,8 +1532,8 @@ export interface HornRearChamber {
  * horn's segments and a sealed or vented rear chamber. No segments make a direct radiator (the mouth is the cone).
  */
 export interface HornDesign {
-  /** one driver's Thiele/Small parameters, as the box models take them, and its voice coil's inductance */
-  driver: HornDriverTS;
+  /** one driver's Thiele/Small parameters, as the box models take them (its voice coil's inductance with them) */
+  driver: BoxModelTS;
   /**
    * how many of that driver share the throat, wired in parallel, each on the full voltage (Hornresp's Nd); 1 for one.
    * Each cone keeps its own air load.
@@ -1567,7 +1574,7 @@ export interface HornPoint {
   portSpeed: number;
   /** air speed at the horn's throat (the cone's face for a direct radiator), m/s, peak */
   throatSpeed: number;
-  /** one driver's electrical impedance Ze (magnitude), ohms, of the `drivers` in parallel; no voice-coil inductance, as the box models */
+  /** one driver's electrical impedance Ze (magnitude), ohms, of the `drivers` in parallel, its coil's inductance included */
   ze: number;
 }
 

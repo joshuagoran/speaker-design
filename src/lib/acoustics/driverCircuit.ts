@@ -1,11 +1,42 @@
-// The driver and the vented box's losses as acoustic circuit elements: the one derivation the PA box models
-// (lib/pa/calc boxModel, closedBox) and the horn engine (lib/acoustics/hornModel) share, so the two cannot drift apart.
+// The driver and the vented box's losses as acoustic circuit elements: the one derivation the box models (lib/pa/calc
+// boxModel and closedBox, lib/hifi passiveRadiatorBox, the exact PA search's lib/pa/exactSub) and the horn engine
+// (lib/acoustics/hornModel) share, so they cannot drift apart. That includes the voice coil's inductance (`coilFactor`).
 // Symbols are Thiele and Small's; each is defined in the DriverCircuit and VentResistances types (src/types.ts).
-import type { BoxModelTS, DriverCircuit, VentResistances } from "../../types";
+import type { BoxModelTS, Complex, DriverCircuit, VentResistances } from "../../types";
 import { GRAMS_PER_KG, SQ_CM_PER_SQ_M } from "../../constants/units";
 
+/** Millihenries per henry: datasheets give the coil's inductance Le in mH. */
+const MH_PER_H = 1000;
+
+/** The coil's factor with no inductance: exactly 1, so the motor reads as Re alone gives it. */
+const NO_INDUCTANCE: Complex = Object.freeze({ re: 1, im: 0 });
+
 /**
- * The driver's acoustic circuit at `volts` RMS. `frontAirMass` (kg) comes off the moving mass when the caller's own
+ * The voice coil's blocked impedance at angular frequency `omega` (rad/s), ohms: Re + jωLe (Hornresp's plain
+ * inductance, no semi-inductance or eddy losses). Just Re for a driver that lists no Le.
+ */
+export const coilImpedance = (ts: Pick<BoxModelTS, "Re" | "Le">, omega: number): Complex => ({
+  re: ts.Re,
+  im: (omega * (ts.Le ?? 0)) / MH_PER_H,
+});
+
+/**
+ * What the coil's inductance does to the motor at angular frequency `omega` (rad/s): the factor Re/(Re + jωLe). The
+ * source Pg and the electrical damping Rae (`driverCircuit`) are real with Re alone; through Re + jωLe each takes this
+ * factor, so the drive falls and turns in phase toward the top. Exactly 1 (no arithmetic changes) for a driver that
+ * lists no Le, so its models read as before.
+ */
+export function coilFactor(ts: Pick<BoxModelTS, "Re" | "Le">, omega: number): Complex {
+  if (!ts.Le) return NO_INDUCTANCE;
+  const coil = coilImpedance(ts, omega);
+  /** |Re + jωLe|² */
+  const norm = coil.re * coil.re + coil.im * coil.im;
+  return { re: (coil.re * coil.re) / norm, im: (-coil.re * coil.im) / norm };
+}
+
+/**
+ * The driver's acoustic circuit at `volts` RMS, with Re alone (the inductance enters per frequency: `coilFactor`).
+ * `frontAirMass` (kg) comes off the moving mass when the caller's own
  * radiation load carries the front's air load (the horn engine); the box models leave it at 0.
  */
 export function driverCircuit(ts: BoxModelTS, volts: number, frontAirMass = 0): DriverCircuit {

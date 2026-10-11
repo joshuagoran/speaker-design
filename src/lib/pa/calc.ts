@@ -1,5 +1,5 @@
 // Calculation functions for the planner. Pure TS, no React, window or THREE.
-import { driverCircuit, ventResistances } from "../acoustics/driverCircuit";
+import { coilFactor, driverCircuit, ventResistances } from "../acoustics/driverCircuit";
 import { rectangleEndCorrection } from "../acoustics/radiation";
 import { AIR_DENSITY, BOX_LEAK_Q, BOX_PORT_Q, SPEED_OF_SOUND } from "../../constants/acoustics";
 import {
@@ -393,9 +393,11 @@ export function boxModel(
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
     // the same circuit in plain real arithmetic (no complex objects: this loop runs millions of times in the optimizers)
     const w = 2 * Math.PI * f;
-    // Zd = Ras + Rae + j(w Mas - 1/(w Cas)); 1/Zc = j w Cab; 1/Zp = 1/(Rap + j w Map); 1/Ral
-    const dRe = Ras + Rae,
-      dIm = w * Mas - 1 / (w * Cas);
+    // the coil's inductance on the motor, k = Re/(Re + jωLe): exactly 1 without Le
+    const k = coilFactor(ts, w);
+    // Zd = Ras + Rae·k + j(w Mas - 1/(w Cas)); 1/Zc = j w Cab; 1/Zp = 1/(Rap + j w Map); 1/Ral
+    const dRe = Ras + Rae * k.re,
+      dIm = w * Mas - 1 / (w * Cas) + Rae * k.im;
     const pIm = w * Map,
       pM = Rap * Rap + pIm * pIm,
       ypRe = Rap / pM,
@@ -408,8 +410,10 @@ export function boxModel(
     const tRe = dRe + bRe,
       tIm = dIm + bIm,
       tM = tRe * tRe + tIm * tIm;
-    const uRe = (Pg * tRe) / tM,
-      uIm = (-Pg * tIm) / tM; // Ud = Pg / (Zd + Zbox)
+    const gRe = Pg * k.re,
+      gIm = Pg * k.im;
+    const uRe = (gRe * tRe + gIm * tIm) / tM,
+      uIm = (gIm * tRe - gRe * tIm) / tM; // Ud = Pg·k / (Zd + Zbox)
     const vRe = uRe * bRe - uIm * bIm,
       vIm = uRe * bIm + uIm * bRe; // Ud Zbox: box pressure
     const pv = Math.sqrt(vRe * vRe + vIm * vIm),
@@ -459,8 +463,8 @@ export function boxModel(
 // ---------------------------------------------------------------
 // Sealed-box model for the mid-bass: the same driver circuit with the box
 // compliance in series and no port. hp and lp are the crossover corners,
-// Linkwitz-Riley of the orders opts gives (hpOrder, lpOrder). Voice-coil inductance is not
-// modeled, so the top octave reads a little high. Excursion is the sine peak, as in boxModel; opts.phase gives each
+// Linkwitz-Riley of the orders opts gives (hpOrder, lpOrder). The voice coil's inductance, where the driver lists one,
+// rolls the top off (as in boxModel). Excursion is the sine peak, as in boxModel; opts.phase gives each
 // point the box's phase (without the crossover's), as boxModel does.
 // ---------------------------------------------------------------
 export function closedBox(
@@ -491,13 +495,14 @@ export function closedBox(
   const count = logGridCount(N, fmin, fmax, fTop);
   for (let i = 0; i < count; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
-    // Z = Ras + Rae + j(w Mas - 1/(w Cas) - 1/(w Cab)), in plain real arithmetic (the optimizers run this loop millions
-    // of times); Uc = Pg / Z
+    // Z = Ras + Rae·k + j(w Mas - 1/(w Cas) - 1/(w Cab)), in plain real arithmetic (the optimizers run this loop
+    // millions of times); Uc = Pg·k / Z, k the coil's factor (exactly 1 without Le)
     const w = 2 * Math.PI * f,
-      zRe = Ras + Rae,
-      zIm = w * Mas - 1 / (w * Cas) - 1 / (w * Cab),
+      k = coilFactor(ts, w),
+      zRe = Ras + Rae * k.re,
+      zIm = w * Mas - 1 / (w * Cas) - 1 / (w * Cab) + Rae * k.im,
       zM = zRe * zRe + zIm * zIm;
-    const U = Pg / Math.sqrt(zM);
+    const U = (Pg * Math.hypot(k.re, k.im)) / Math.sqrt(zM);
     const g =
       (hp ? linkwitzRileyHighpass(f, hp, hpOrder) : 1) *
       (lp ? linkwitzRileyLowpass(f, lp, lpOrder) : 1);
@@ -508,8 +513,12 @@ export function closedBox(
       spl: raw + 20 * Math.log10(g),
       xmm: Math.SQRT2 * (U / (w * Sd)) * g * 1000,
     };
-    // the radiated pressure is jω × the cone's flow: in phase with jU
-    if (phase) pt.rawPhase = Math.atan2((Pg * zRe) / zM, (Pg * zIm) / zM);
+    // the radiated pressure is jω × the cone's flow: in phase with jU = j·Pg·k·conj(Z)/|Z|²
+    if (phase)
+      pt.rawPhase = Math.atan2(
+        (Pg * (k.re * zRe + k.im * zIm)) / zM,
+        (Pg * (k.re * zIm - k.im * zRe)) / zM,
+      );
     out.push(pt);
   }
   if (phase) unwrapRawPhase(out);

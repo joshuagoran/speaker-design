@@ -33,8 +33,13 @@ const AIR_IMPEDANCE = AIR_DENSITY * SPEED_OF_SOUND;
 const SQUARE_INCH_TO_CM2 = 6.4516,
   M_TO_CM = 100;
 const waveNumberAt = (f: number) => (2 * Math.PI * f) / SPEED_OF_SOUND;
-/** A driver with its voice coil's inductance off: the box models have none, so checks against them need it off. */
+/**
+ * A driver with its voice coil's inductance off, for checks whose reference leaves the coil out (the piston formulas,
+ * a bank built by hand).
+ */
 const noInductance = (ts: HornDesign["driver"]): HornDesign["driver"] => ({ ...ts, Le: 0 });
+/** The inductances the checks against the box models run with, mH: none, and a coil like a 12″ mid's. */
+const BOX_MODEL_INDUCTANCES = [0, 1.5];
 
 /** Asserts that two numbers differ by at most `tolerance`. */
 const near = (actual: number, expected: number, tolerance: number, what: string) =>
@@ -291,8 +296,12 @@ const modelOf = (...args: Parameters<typeof hornModel>): HornModel => {
   return result;
 };
 
-test("with no horn and no radiation load it is the sealed box model", () => {
-  const driver = noInductance(DEFAULT_PA.mid.ts);
+test("with no horn and no radiation load it is the sealed box model, the coil's inductance included", () => {
+  for (const Le of BOX_MODEL_INDUCTANCES) sealedMatches({ ...DEFAULT_PA.mid.ts, Le });
+});
+
+/** The engine with no horn and no radiation load against closedBox, for one driver. */
+function sealedMatches(driver: HornDesign["driver"]) {
   const liters = 30,
     volts = 20;
   const sealed = closedBox(driver, liters, null, null, volts, {
@@ -316,7 +325,7 @@ test("with no horn and no radiation load it is the sealed box model", () => {
     near(engine.phase, box.rawPhase ?? NaN, 1e-9, `phase ${at}`);
   });
   assert.strictEqual(horn.fb, null);
-});
+}
 
 test("with the radiation load on, a direct radiator still matches the box model low down", () => {
   // the air mass taken off the moving mass (8/3·ρa³) is the radiation reactance's mass at low ka: the two cancel there
@@ -327,8 +336,12 @@ test("with the radiation load on, a direct radiator still matches the box model 
   loaded.curve.forEach((p, i) => near(p.spl, unloaded.curve[i].spl, 0.2, `SPL at ${p.f} Hz`));
 });
 
-test("with no horn and no radiation load it is the vented box model", () => {
-  const driver = noInductance(DEFAULT_PA.sub.ts);
+test("with no horn and no radiation load it is the vented box model, the coil's inductance included", () => {
+  for (const Le of BOX_MODEL_INDUCTANCES) ventedMatches({ ...DEFAULT_PA.sub.ts, Le });
+});
+
+/** The engine with no horn and no radiation load against boxModel, for one driver. */
+function ventedMatches(driver: HornDesign["driver"]) {
   const liters = 180,
     ventSquareInches = 40,
     ventInches = 14,
@@ -361,7 +374,7 @@ test("with no horn and no radiation load it is the vented box model", () => {
     near(engine.portSpeed * highpass, box.vel, 1e-9, `vent speed ${at}`);
     near(engine.phase, box.rawPhase ?? NaN, 1e-9, `phase ${at}`);
   });
-});
+}
 
 test("boxes side by side add 6 dB each doubling, and their mouths load each other", () => {
   const freqs = [60, 120, 250];

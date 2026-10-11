@@ -17,6 +17,7 @@ import {
   unwrapRawPhase,
 } from "../pa/calc";
 import { rectangleEndCorrection } from "../acoustics/radiation";
+import { coilFactor, driverCircuit } from "../acoustics/driverCircuit";
 import { qtcFloorAt } from "../../constants/qtcText";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { MAX_ELBOWS, tubeElbows, tubeMaxLength, type TubeRoom } from "../tubeFold";
@@ -466,19 +467,13 @@ export function passiveRadiatorBox(
   const { QL = 7, N = 420, fmin = 12, fmax = 300, fTop, phase } = opts;
   const { drv, n } = pr;
   if (!ts || !VbL || !drv || !n) return null;
-  const rho = 1.18,
-    Sd = ts.Sd / 1e4,
-    Mms = ts.Mms / 1000;
-  const Cms = 1 / (Math.pow(2 * Math.PI * ts.Fs, 2) * Mms);
-  const Mas = Mms / (Sd * Sd),
-    Cas = Cms * Sd * Sd;
-  const Ras = (2 * Math.PI * ts.Fs * Mms) / ts.Qms / (Sd * Sd);
-  const Rae = (ts.Bl * ts.Bl) / ts.Re / (Sd * Sd);
+  const rho = 1.18;
+  // the driver's circuit (lib/acoustics/driverCircuit, shared with the PA box models and the horn engine)
+  const { Sd, Mms, Mas, Cas, Ras, Rae, Pg } = driverCircuit(ts, volts);
   const { Map, Cap, Cab, Fb, Fp } = passiveRadiatorTuning(drv, n, pr.addG, VbL);
   const Sp = drv.Sd / 1e4;
   const Rap = (2 * Math.PI * drv.Fs * (drv.Mms / 1000)) / (drv.Qms || 5) / (Sp * Sp) / n;
   const Ral = QL / (2 * Math.PI * Fb * Cab);
-  const Pg = (volts * ts.Bl) / (ts.Re * Sd);
   const out: {
     f: number;
     raw: number;
@@ -490,11 +485,13 @@ export function passiveRadiatorBox(
   const count = logGridCount(N, fmin, fmax, fTop);
   for (let i = 0; i < count; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
-    // the same circuit in plain real arithmetic (the optimizer runs this loop for every radiator box it tries):
-    // Zd = Ras + Rae + j(w Mas - 1/(w Cas)); 1/Zc = j w Cab; Zp = Rap + j(w Map - 1/(w Cap)); Zbox = 1 / (1/Zc + 1/Zp + 1/Ral)
+    // the same circuit in plain real arithmetic (the optimizer runs this loop for every radiator box it tries), the
+    // coil's inductance on the motor as boxModel takes it (k = Re/(Re + jωLe), exactly 1 without Le):
+    // Zd = Ras + Rae·k + j(w Mas - 1/(w Cas)); 1/Zc = j w Cab; Zp = Rap + j(w Map - 1/(w Cap)); Zbox = 1 / (1/Zc + 1/Zp + 1/Ral)
     const w = 2 * Math.PI * f;
-    const dRe = Ras + Rae,
-      dIm = w * Mas - 1 / (w * Cas);
+    const k = coilFactor(ts, w);
+    const dRe = Ras + Rae * k.re,
+      dIm = w * Mas - 1 / (w * Cas) + Rae * k.im;
     const pRe = Rap,
       pIm = w * Map - 1 / (w * Cap),
       pM = pRe * pRe + pIm * pIm;
@@ -506,8 +503,10 @@ export function passiveRadiatorBox(
     const tRe = dRe + bRe,
       tIm = dIm + bIm,
       tM = tRe * tRe + tIm * tIm;
-    const uRe = (Pg * tRe) / tM,
-      uIm = (-Pg * tIm) / tM; // Ud = Pg / (Zd + Zbox)
+    const gRe = Pg * k.re,
+      gIm = Pg * k.im;
+    const uRe = (gRe * tRe + gIm * tIm) / tM,
+      uIm = (gIm * tRe - gRe * tIm) / tM; // Ud = Pg·k / (Zd + Zbox)
     const vRe = uRe * bRe - uIm * bIm,
       vIm = uRe * bIm + uIm * bRe; // Ud Zbox
     const pv = Math.sqrt(vRe * vRe + vIm * vIm);
