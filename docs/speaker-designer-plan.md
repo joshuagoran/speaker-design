@@ -204,7 +204,9 @@ Each PR stands alone. Lowest risk first.
     - A horn-loaded chamber shows its mouth on the baffle and a flare from its segments.
     - A folded path, or a path longer than the chamber, is a straight placeholder. A note says so.
     - A mouth larger than the clear face is drawn at the clear face. A note says so.
-    - Not drawn yet: the tower's arched top (the spec has no arch), the tilt and the PA plinth.
+    - Not drawn yet: the tower's arched top (L3e adds it), the aim (see the owner decisions) and the PA plinth.
+  - **L3e Templates.** The templates step adds a cabinet top shape: `flat` or `arched`. Then the PA tower's
+    arched top draws and cuts correctly.
   - **L3c Cutlist.** L3c works out the real bracing, vent walls and hardware displacement for each chamber and
     replaces the 3% allowance.
   - **Later in L3.** The limits and the optimizer; the horn settings; the tower with the horn
@@ -255,6 +257,14 @@ Each PR stands alone. Lowest risk first.
 - Stuffing is a visible setting on each chamber. The model has no hidden stuffing rule. The 3% bracing
   allowance stays until L3c.
 - The sub highpass and subsonic rule waits for the Space page. The voice-coil inductance waits for PR #133.
+- The cabinet gets a top shape (`flat` or `arched`) with the templates step (L3e). The PA tower's arched top then
+  draws and cuts correctly.
+- Aim is not drawn now. One aim model comes later, for all speakers:
+  - It covers a Hi-fi box's kick-back (tilt up) and PA tops angled down.
+  - Today the Hi-fi spec has `tiltDeg`. PA tops angled down must fit the same model.
+  - The 3D view and the Space page's coverage and levels both use it.
+- Ports and driver openings become settings you can move, like the drivers' positions. This comes with the
+  templates step or later. Today the vent rules place the ports.
 
 ## Open questions for the owner
 
