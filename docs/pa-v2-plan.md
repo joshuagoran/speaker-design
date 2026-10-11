@@ -51,11 +51,11 @@ one box.
 
 ### Modules
 
-| Module  | Contents                                                     | Port tuning | Horn loads from                  |
-| ------- | ------------------------------------------------------------ | ----------- | -------------------------------- |
-| Sub bin | 1 or 2 × 18″ (18NBX100 or 4018LF), front-loaded 1-D flare    | ~40–45 Hz   | ~140 Hz (1 × 18″), ~99 Hz (2 × 18″) |
-| Mid box | 2 × 10″ (10MB600 or 10PR320) or 2 × 12″ (3012HO) in one throat | ~90–100 Hz  | ~176 Hz (one box)                |
-| HF      | N314T on the DIY R-OSSE                                      | —           | —                                |
+| Module  | Contents                                                       | Port tuning | Horn loads from                     |
+| ------- | -------------------------------------------------------------- | ----------- | ----------------------------------- |
+| Sub bin | 1 or 2 × 18″ (18NBX100 or 4018LF), front-loaded 1-D flare      | ~40–45 Hz   | ~140 Hz (1 × 18″), ~99 Hz (2 × 18″) |
+| Mid box | 2 × 10″ (10MB600 or 10PR320) or 2 × 12″ (3012HO) in one throat | ~90–100 Hz  | ~176 Hz (one box)                   |
+| HF      | N314T on the DIY R-OSSE                                        | —           | —                                   |
 
 ### How the hybrid works
 
@@ -69,12 +69,12 @@ one box.
 
 ### Sizes
 
-| Per side                      | Crossovers        | System level (rough)                      |
-| ----------------------------- | ----------------- | ----------------------------------------- |
-| 1 × 18″ bin + 1 mid box + 1 HF | ~120 Hz, 950 Hz   | ~125 dB, every band balanced               |
-| 2 × 18″ bin + 1 mid box + 1 HF | ~150 Hz, 950 Hz   | ~130 dB; mids and HF near their limits     |
-| 2 × 18″ bin + 2 mid boxes + 1–2 HF | ~110–120 Hz, 950 Hz | ~130 dB with headroom                 |
-| 2 × (2 × 18″) + 3 mid boxes + 2–3 HF | ~110–140 Hz, 950 Hz | ~137 dB, bass-heavy                |
+| Per side                             | Crossovers          | System level (rough)                   |
+| ------------------------------------ | ------------------- | -------------------------------------- |
+| 1 × 18″ bin + 1 mid box + 1 HF       | ~120 Hz, 950 Hz     | ~125 dB, every band balanced           |
+| 2 × 18″ bin + 1 mid box + 1 HF       | ~150 Hz, 950 Hz     | ~130 dB; mids and HF near their limits |
+| 2 × 18″ bin + 2 mid boxes + 1–2 HF   | ~110–120 Hz, 950 Hz | ~130 dB with headroom                  |
+| 2 × (2 × 18″) + 3 mid boxes + 2–3 HF | ~110–140 Hz, 950 Hz | ~137 dB, bass-heavy                    |
 
 Grow a stack in this order: a second mid box, then subs, then HF. The front end's stepped crossover switch moves
 the sub/mid crossover as the ratio changes.
@@ -115,10 +115,10 @@ down:
 - **Delay.** A 2–3 m folded path delays the sub by about 6–9 ms. Correct it with an all-pass on the full-range top
   feed; it only needs to hold around the sub crossover:
 
-| Top-feed delay | 2 second-order stages        | 3 stages            |
-| -------------- | ---------------------------- | ------------------- |
-| 5 ms           | 0° at 100 Hz, 1° at 150 Hz   | 0°                  |
-| 8 ms           | 2° at 100 Hz, 26° at 150 Hz  | 0.2° / 6°           |
+| Top-feed delay | 2 second-order stages       | 3 stages  |
+| -------------- | --------------------------- | --------- |
+| 5 ms           | 0° at 100 Hz, 1° at 150 Hz  | 0°        |
+| 8 ms           | 2° at 100 Hz, 26° at 150 Hz | 0.2° / 6° |
 
 ## Alternative: 12″ small stack, per side
 
@@ -154,11 +154,11 @@ Below the loading point the cone acts as a normal direct radiator.
 
 ### Horn types considered
 
-| Type                                     | Flare      | Depth    | Compression            | Verdict                                 |
-| ---------------------------------------- | ---------- | -------- | ---------------------- | --------------------------------------- |
-| Shallow OS waveguide, lip over surround  | Both       | ~150 mm  | None                   | Compact; directivity match, little gain |
-| **Front-loaded 1-D horn (the stacks)**   | Sides only | Deep     | None or little         | **v2 pick**: plywood-friendly           |
-| Compression horn with a phase plug       | Both       | Medium   | 1.5–3:1                | Most gain; hardest to design            |
+| Type                                    | Flare      | Depth   | Compression    | Verdict                                 |
+| --------------------------------------- | ---------- | ------- | -------------- | --------------------------------------- |
+| Shallow OS waveguide, lip over surround | Both       | ~150 mm | None           | Compact; directivity match, little gain |
+| **Front-loaded 1-D horn (the stacks)**  | Sides only | Deep    | None or little | **v2 pick**: plywood-friendly           |
+| Compression horn with a phase plug      | Both       | Medium  | 1.5–3:1        | Most gain; hardest to design            |
 
 A compression horn needs a phase plug at this crossover. The air between the cone and a narrowed throat is a
 low-pass filter, f ≈ c·S_throat / (2π·V_chamber). For a 12″ at 2:1, the cone's dish alone (about 1.5 L) puts it near
@@ -176,13 +176,13 @@ low-pass filter, f ≈ c·S_throat / (2π·V_chamber). For a 12″ at 2:1, the c
 
 ### Options
 
-| Layout                           | Coupling, 150–300 Hz | Lobing at the crossover        | Channels per side       |
-| -------------------------------- | -------------------- | ------------------------------ | ----------------------- |
-| 10–horn–10 (HF between the mids) | Partial              | None (symmetric)               | 3                       |
-| **Mids stacked, as a 2.5-way**   | **Full**             | **About as today (~325 mm)**   | **4, or 3 + a coil**    |
-| Tapered column, 3 mids           | Full, lowest loading | About as today                 | 4–5                     |
-| Shared mouth, HF in its middle   | Full                 | None                           | 3; hard to build        |
-| 2 × 10″ in one box (Sunflower)   | Full, one mouth      | Set by the two cones' spacing  | 3–4                     |
+| Layout                           | Coupling, 150–300 Hz | Lobing at the crossover       | Channels per side    |
+| -------------------------------- | -------------------- | ----------------------------- | -------------------- |
+| 10–horn–10 (HF between the mids) | Partial              | None (symmetric)              | 3                    |
+| **Mids stacked, as a 2.5-way**   | **Full**             | **About as today (~325 mm)**  | **4, or 3 + a coil** |
+| Tapered column, 3 mids           | Full, lowest loading | About as today                | 4–5                  |
+| Shared mouth, HF in its middle   | Full                 | None                          | 3; hard to build     |
+| 2 × 10″ in one box (Sunflower)   | Full, one mouth      | Set by the two cones' spacing | 3–4                  |
 
 Coupling of two mid mouths (load factor 1 + sin(kd)/kd; 2.0 is full coupling):
 
@@ -225,10 +225,10 @@ All from the catalog (`src/data/catalog/`).
 
 ### Subs
 
-| Driver           | Fs / Qts  | Sd × Xmax | Sensitivity | Weight | Price |
-| ---------------- | --------- | --------- | ----------- | ------ | ----- |
-| B&C 18NBX100     | 35 / 0.38 | 1.21 L    | 96.5 dB     | 20 lb  | $449  |
-| Eminence 4018LF  | 30 / 0.34 | 1.02 L    | 94.9 dB     | 24 lb  | $329  |
+| Driver          | Fs / Qts  | Sd × Xmax | Sensitivity | Weight | Price |
+| --------------- | --------- | --------- | ----------- | ------ | ----- |
+| B&C 18NBX100    | 35 / 0.38 | 1.21 L    | 96.5 dB     | 20 lb  | $449  |
+| Eminence 4018LF | 30 / 0.34 | 1.02 L    | 94.9 dB     | 24 lb  | $329  |
 
 - **18NBX100:** about 1.5 dB more output and 4 lb lighter.
 - **4018LF:** deeper (Fs 30 Hz), better suited to a short front-loaded bin (lower Qts, Bl 26.8), and about $480
@@ -236,12 +236,12 @@ All from the catalog (`src/data/catalog/`).
 
 ### Mids
 
-| Driver               | Fs / Qts    | Sd × Xmax  | Power / sensitivity     | Price |
-| -------------------- | ----------- | ---------- | ----------------------- | ----- |
-| FaitalPRO 12PR300    | 50 / 0.36   | 241 cm³    | 300 W AES / 99 dB       | $290  |
-| Eminence 3012HO      | 51.5 / 0.32 | 330 cm³    | 400 W / 100.5 dB claimed | $250  |
-| 18Sound 10MB600      | 58 / 0.22   | 228 cm³    | 450 W AES / 98 dB       | $250  |
-| FaitalPRO 10PR320    | 48 / 0.29   | 237 cm³    | 300 W AES / 96 dB       | $285  |
+| Driver            | Fs / Qts    | Sd × Xmax | Power / sensitivity      | Price |
+| ----------------- | ----------- | --------- | ------------------------ | ----- |
+| FaitalPRO 12PR300 | 50 / 0.36   | 241 cm³   | 300 W AES / 99 dB        | $290  |
+| Eminence 3012HO   | 51.5 / 0.32 | 330 cm³   | 400 W / 100.5 dB claimed | $250  |
+| 18Sound 10MB600   | 58 / 0.22   | 228 cm³   | 450 W AES / 98 dB        | $250  |
+| FaitalPRO 10PR320 | 48 / 0.29   | 237 cm³   | 300 W AES / 96 dB        | $285  |
 
 - **3012HO is the pick for the 12″ stack.** About +3 dB more excursion headroom than the 12PR300 closes the
   120–160 Hz gap. Its low Qts suits horn loading. Check its response and breakup up to 950 Hz on the datasheet, and
@@ -275,11 +275,11 @@ Per side, 2 × sub and 2 × mid:
 The lead option with 2 × 8″ mid boxes and unvented 1 × 18″ bins. Lighter, but the 8″ mids need a ~150 Hz crossover
 and more boxes for the same level.
 
-| Module   | Contents                                       | Mouth (estimate) |
-| -------- | ---------------------------------------------- | ---------------- |
-| Sub bin  | 1 × 18″ in a front-loaded 1-D horn             | ~600 × 800 mm    |
-| Mid box  | 2 × 8″ stacked in one 1-D horn throat          | ~500 × 450 mm    |
-| HF       | 1 × compression driver on its horn             | —                |
+| Module  | Contents                              | Mouth (estimate) |
+| ------- | ------------------------------------- | ---------------- |
+| Sub bin | 1 × 18″ in a front-loaded 1-D horn    | ~600 × 800 mm    |
+| Mid box | 2 × 8″ stacked in one 1-D horn throat | ~500 × 450 mm    |
+| HF      | 1 × compression driver on its horn    | —                |
 
 ### Loading grows with the count
 
@@ -338,13 +338,13 @@ centers land much closer than in v1.
 - **Avoid an overhang.** A horn that sticks out past the stack gets into the crowd space and shadows the mid.
 - **Electrical trim, if needed.** Analog all-pass delay holds well at low frequencies. Phase error at the crossover:
 
-| Target                      | Circuit                         | Phase error  |
-| --------------------------- | ------------------------------- | ------------ |
-| 0.6 ms at 1 kHz             | 4 × first-order                 | 14°          |
-| 0.6 ms at 1 kHz             | 2 × second-order Bessel         | 0.2°         |
-| 0.3 ms at 1 kHz             | 1 × second-order Bessel         | ~1.5°        |
-| Sub-to-top, 1 ms at 120 Hz  | 1 × first-order                 | 2°           |
-| Sub-to-top, 3 ms at 120 Hz  | 1 × second-order                | 3°           |
+| Target                     | Circuit                 | Phase error |
+| -------------------------- | ----------------------- | ----------- |
+| 0.6 ms at 1 kHz            | 4 × first-order         | 14°         |
+| 0.6 ms at 1 kHz            | 2 × second-order Bessel | 0.2°        |
+| 0.3 ms at 1 kHz            | 1 × second-order Bessel | ~1.5°       |
+| Sub-to-top, 1 ms at 120 Hz | 1 × first-order         | 2°          |
+| Sub-to-top, 3 ms at 120 Hz | 1 × second-order        | 3°          |
 
 Put the sub-to-top delay on the full-range top feed, before the mid/HF split, so the mid and HF get the same phase
 shift.
@@ -371,13 +371,13 @@ Clubs split the job the same way: the analog stages shape the sound, and a separ
 
 ### Crossover box
 
-| Output    | Filter                                   | Setting                      |
-| --------- | ---------------------------------------- | ---------------------------- |
-| Subs      | BW24 high-pass, LR24 low-pass            | 31 Hz fixed, 120 Hz stepped  |
-| Upper mid | LR24 band-pass                           | 120 Hz to 950 Hz             |
-| Lower mid | LR24 high-pass, 12 dB/oct low-pass       | 120 Hz to ~300 Hz, stepped   |
-| 3rd mid   | LR24 high-pass, 12 dB/oct low-pass       | Big stack only: ~500 Hz      |
-| HF        | LR24 high-pass, fixed shelf, limiter     | 950 Hz stepped               |
+| Output    | Filter                               | Setting                     |
+| --------- | ------------------------------------ | --------------------------- |
+| Subs      | BW24 high-pass, LR24 low-pass        | 31 Hz fixed, 120 Hz stepped |
+| Upper mid | LR24 band-pass                       | 120 Hz to 950 Hz            |
+| Lower mid | LR24 high-pass, 12 dB/oct low-pass   | 120 Hz to ~300 Hz, stepped  |
+| 3rd mid   | LR24 high-pass, 12 dB/oct low-pass   | Big stack only: ~500 Hz     |
+| HF        | LR24 high-pass, fixed shelf, limiter | 950 Hz stepped              |
 
 - **Fixed or stepped values.** Fix what the cabinets set (subsonic, delay, horn EQ). Use stepped switches or socketed
   resistors where a measurement may move the value (the HF crossover, the lower mid's roll-off).
@@ -399,13 +399,13 @@ The boxes stay the same types, so most of the front end stays the same from a sm
 
 **Changes with the stack size:**
 
-| What                        | Why                                                         | How the box handles it                         |
-| --------------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
-| Band levels                 | More boxes in a band add level and coupling                 | Stepped level trim per output, in 1 dB steps   |
-| Low-mid shelf               | More stacked mids raise the low end of the mid band         | A stack-size switch picks the shelf            |
-| Mid roll-offs               | 2.5-way (2 mids) or a tapered column (3 mids)               | One output per mid position; unused ones off   |
-| Sub-to-top delay            | Sub count and placement move the subs' acoustic center      | Stepped all-pass on the top feed               |
-| Number of amp feeds         | A big stack drives more amps per band                       | Balanced outputs strong enough for several amps |
+| What                | Why                                                    | How the box handles it                          |
+| ------------------- | ------------------------------------------------------ | ----------------------------------------------- |
+| Band levels         | More boxes in a band add level and coupling            | Stepped level trim per output, in 1 dB steps    |
+| Low-mid shelf       | More stacked mids raise the low end of the mid band    | A stack-size switch picks the shelf             |
+| Mid roll-offs       | 2.5-way (2 mids) or a tapered column (3 mids)          | One output per mid position; unused ones off    |
+| Sub-to-top delay    | Sub count and placement move the subs' acoustic center | Stepped all-pass on the top feed                |
+| Number of amp feeds | A big stack drives more amps per band                  | Balanced outputs strong enough for several amps |
 
 Design rules that follow:
 
@@ -429,12 +429,12 @@ With no DSP, a wrong patch or a turned knob can send full-range signal to the N3
 
 ## Amps and wiring
 
-| Band      | Load                       | Channel                                            |
-| --------- | -------------------------- | -------------------------------------------------- |
-| Subs      | 2 × 8 Ω in parallel = 4 Ω  | 1 per side; needs real power at 4 Ω                |
-| Upper mid | 8 Ω                        | 1 per side                                         |
-| Lower mid | 8 Ω                        | Own channel, or share with a coil (~4.2 mH, 300 Hz) |
-| HF        | 8 Ω                        | 1 per side, with the limiter                       |
+| Band      | Load                      | Channel                                             |
+| --------- | ------------------------- | --------------------------------------------------- |
+| Subs      | 2 × 8 Ω in parallel = 4 Ω | 1 per side; needs real power at 4 Ω                 |
+| Upper mid | 8 Ω                       | 1 per side                                          |
+| Lower mid | 8 Ω                       | Own channel, or share with a coil (~4.2 mH, 300 Hz) |
+| HF        | 8 Ω                       | 1 per side, with the limiter                        |
 
 That is 3–4 channels per side, 6–8 in total. The PLD 4.2 and GXD4 give 6, so the coil option fits. The analog route
 needs about three 2-channel class H amps (for example used QSC RMX or Crest CA _(unverified)_). Class H amps are much
@@ -485,14 +485,14 @@ The planner would need these to model v2 (later, with the system page in
 Paraflex (High Order Quarterwave Society) is a different principle: two parallel quarter-wave resonators, a
 low-tuned and a high-tuned path, merge into one mouth. Gain comes from resonance near each tuning, not from a flare.
 
-| Point            | 1-D horn mids (SBS / Sunflower)                 | Paraflex mid-top (e.g. PF-212, 2 × 8″ plan)              |
-| ---------------- | ----------------------------------------------- | -------------------------------------------------------- |
-| Range            | ~120–150 Hz to ~1 kHz                           | 80–600 Hz; ~900 Hz with phase plugs (PF-212, Fb 70 Hz)   |
-| Sub crossover    | ~120–150 Hz                                     | 80–90 Hz                                                 |
-| HF crossover     | 950 Hz suits the R-OSSE                         | 800–900 Hz at most: tight for the R-OSSE's 950 Hz        |
-| Pattern          | Horizontal control from the flare               | Little mid control; forward-biased cardioid, per HOQS    |
-| Alignment        | Mostly geometric: align physically with the CD  | Delay varies with frequency near the tunings: wants DSP  |
-| Tuning and build | Mouth size and depth; curved side walls         | Two resonators tuned and phase-aligned; stuffing, Helmholtz dampers |
+| Point            | 1-D horn mids (SBS / Sunflower)                | Paraflex mid-top (e.g. PF-212, 2 × 8″ plan)                         |
+| ---------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
+| Range            | ~120–150 Hz to ~1 kHz                          | 80–600 Hz; ~900 Hz with phase plugs (PF-212, Fb 70 Hz)              |
+| Sub crossover    | ~120–150 Hz                                    | 80–90 Hz                                                            |
+| HF crossover     | 950 Hz suits the R-OSSE                        | 800–900 Hz at most: tight for the R-OSSE's 950 Hz                   |
+| Pattern          | Horizontal control from the flare              | Little mid control; forward-biased cardioid, per HOQS               |
+| Alignment        | Mostly geometric: align physically with the CD | Delay varies with frequency near the tunings: wants DSP             |
+| Tuning and build | Mouth size and depth; curved side walls        | Two resonators tuned and phase-aligned; stuffing, Helmholtz dampers |
 
 - **For this plan, the horn mids fit better:** they reach the HF crossover, control the pattern and align without
   DSP.

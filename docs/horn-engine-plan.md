@@ -23,17 +23,17 @@ Hornresp uses the same driver model. What it adds is a chain of acoustic two-por
 Each element is a 2 × 2 complex matrix that maps pressure and volume velocity at its input to its output. The chain
 multiplies them per frequency.
 
-| Element                     | Model                                                                                     |
-| --------------------------- | ----------------------------------------------------------------------------------------- |
-| Straight duct               | Plane-wave tube: cos(kL), j·Z0·sin(kL), with Z0 = ρc/S                                     |
-| Conical segment             | Closed-form solution of the horn (Webster) equation for a conical flare                    |
-| Exponential segment         | Closed-form solution for an exponential flare; below its cutoff it passes no real power    |
-| Hyperbolic-exponential (T)  | Later, if a design needs it                                                                |
-| Curved walls, tractrix      | Several short conical segments                                                             |
-| Throat (front) chamber      | Shunt compliance V/(ρc²), between the cone and the throat                                  |
-| Rear chamber                | Shunt compliance, as the vented box today                                                  |
-| Port                        | Series acoustic mass with end corrections and losses, reusing the vent-shape code         |
-| Mouth                       | Radiation impedance of a piston, in a chosen solid angle (4π, 2π, π, π/2)                  |
+| Element                    | Model                                                                                   |
+| -------------------------- | --------------------------------------------------------------------------------------- |
+| Straight duct              | Plane-wave tube: cos(kL), j·Z0·sin(kL), with Z0 = ρc/S                                  |
+| Conical segment            | Closed-form solution of the horn (Webster) equation for a conical flare                 |
+| Exponential segment        | Closed-form solution for an exponential flare; below its cutoff it passes no real power |
+| Hyperbolic-exponential (T) | Later, if a design needs it                                                             |
+| Curved walls, tractrix     | Several short conical segments                                                          |
+| Throat (front) chamber     | Shunt compliance V/(ρc²), between the cone and the throat                               |
+| Rear chamber               | Shunt compliance, as the vented box today                                               |
+| Port                       | Series acoustic mass with end corrections and losses, reusing the vent-shape code       |
+| Mouth                      | Radiation impedance of a piston, in a chosen solid angle (4π, 2π, π, π/2)               |
 
 - **Radiation impedance.** A piston in a baffle needs the Bessel J1 and the Struve H1 function. Use a published
   closed-form approximation of H1 (for example Aarts and Janssen, 2003) rather than a series.
@@ -41,12 +41,12 @@ multiplies them per frequency.
 
 ### Topologies
 
-| Topology                         | Chain                                                                     | Phase |
-| -------------------------------- | ------------------------------------------------------------------------- | ----- |
-| Front-loaded horn, sealed rear   | rear chamber ‖ cone → throat chamber → segments → mouth                   | 1     |
-| Front-loaded horn, vented rear   | as above, with a port on the rear chamber; port and mouth outputs summed  | 1     |
-| Folded horn                      | the same chain; folds are not modeled, only the path                      | 3     |
-| Tapped horn                      | both sides of the cone drive one path at two points                       | later |
+| Topology                       | Chain                                                                    | Phase |
+| ------------------------------ | ------------------------------------------------------------------------ | ----- |
+| Front-loaded horn, sealed rear | rear chamber ‖ cone → throat chamber → segments → mouth                  | 1     |
+| Front-loaded horn, vented rear | as above, with a port on the rear chamber; port and mouth outputs summed | 1     |
+| Folded horn                    | the same chain; folds are not modeled, only the path                     | 3     |
+| Tapped horn                    | both sides of the cone drive one path at two points                      | later |
 
 ### Outputs
 
