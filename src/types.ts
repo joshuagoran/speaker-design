@@ -1391,6 +1391,86 @@ export interface SealedBoxModel {
   peakX: number;
 }
 
+/** A complex number, for the horn engine's acoustic two-ports (lib/acoustics). */
+export interface Complex {
+  re: number;
+  im: number;
+}
+
+/** A 2 × 2 complex matrix, row by row: [[a, b], [c, d]]: an acoustic two-port's transfer matrix. */
+export type Matrix2 = readonly [Complex, Complex, Complex, Complex];
+
+/** A horn segment's flare law: conical or exponential (constants/hornEngine HORN_PROFILE_NAMES). */
+export type HornProfile = "con" | "exp";
+
+/** The solid angle a horn mouth radiates into, in units of π (constants/hornEngine RADIATION_ANGLE_NAMES). */
+export type RadiationAngle = 2 | 1 | 0.5;
+
+/**
+ * One horn segment, throat side first, in Hornresp's units: areas in cm², length in cm. Equal areas make a straight
+ * duct whatever the profile.
+ */
+export interface HornSegment {
+  profile: HornProfile;
+  s1: number;
+  s2: number;
+  length: number;
+}
+
+/** A rear-chamber vent: its total open area, cm², and its acoustic length with both end corrections, cm. */
+export interface HornPort {
+  area: number;
+  effLength: number;
+}
+
+/** A horn box's rear chamber: its net air, L, and its vent; sealed when the vent is null. */
+export interface HornRearChamber {
+  liters: number;
+  port: HornPort | null;
+}
+
+/**
+ * A front-loaded horn box as the horn engine (lib/acoustics/hornModel) takes it: the driver, a throat chamber, the
+ * horn's segments and a sealed or vented rear chamber. No segments make a direct radiator (the mouth is the cone).
+ */
+export interface HornDesign {
+  driver: BoxModelTS;
+  /** identical boxes side by side, mouths touching: they load as one mouth `count` times the area */
+  count: number;
+  /** the air between the cone and the throat, L (Hornresp's Vtc); 0 for none */
+  throatChamber: number;
+  segments: readonly HornSegment[];
+  rear: HornRearChamber;
+  angle: RadiationAngle;
+  /** how far the vent's exit sits behind the mouth's plane, cm: the path offset in the sum */
+  portOffset: number;
+}
+
+/** One point of a horn model's response, before any crossover. */
+export interface HornPoint {
+  f: number;
+  /** SPL at 1 m in the design's solid angle, all boxes together, dB */
+  spl: number;
+  /** the phase of the summed pressure, radians, unwrapped */
+  phase: number;
+  /** group delay of the summed pressure, ms */
+  delay: number;
+  /** cone excursion, mm, peak */
+  xmm: number;
+  /** air speed in the vent, m/s, peak; 0 when sealed */
+  portVel: number;
+  /** air speed at the horn's throat (the cone's face for a direct radiator), m/s, peak */
+  throatVel: number;
+  /** one driver's electrical impedance, ohms (no voice-coil inductance, as the box models) */
+  ze: number;
+}
+
+export interface HornModel {
+  curve: HornPoint[];
+  /** the rear chamber's vent tuning on its own, Hz; null when sealed */
+  fb: number | null;
+}
+
 /** What stops a PA box's drive level, for the whole band or a sine at one frequency (no radiator). */
 export type SubLimitWho = Exclude<LimitId, "radiator">;
 
