@@ -5,6 +5,9 @@
 export const HOVER_TRANSITION =
   "transition-[color,background-color,border-color,opacity] duration-150 ease-out motion-reduce:transition-none";
 
+/** A pressed toggle, icon button or sheet tab: brand cyan, the color of actions. */
+export const PRESSED_CLASSES = "border-cmy-c bg-cmy-c text-stone-50";
+
 /** Shared controls: one look for toggle (segment) buttons and for action buttons */
 export const BUTTON_SIZE_CLASSES = { md: "px-3 py-2 text-sm", xs: "px-2.5 py-1 text-xs" };
 
