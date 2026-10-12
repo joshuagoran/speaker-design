@@ -473,6 +473,9 @@ Each PR stands alone. Lowest risk first.
       box models, the exact PA search and the horn engine. They share one rule, `coilFactor` in
       `src/lib/acoustics/driverCircuit.ts`: the coil is Re + jωLe, as in Hornresp. A driver with `Le` rolls off at the
       top. A driver without `Le` gives the same numbers as before.
+    - **Every driver uses its datasheet `Le`** (owner decision, since Oct 2026). The models read the catalog's
+      `Le` for every driver: the PA subs, mids and fills and the Hi-fi drivers. It is a plain inductance, so the
+      drivers compare with the same rule. The lossy coil model refines it later. See "Lossy voice-coil model" below.
     - **Limits.** `speakerLimits` in `src/lib/speaker/speakerLimits.ts` works out each band's limits from the
       response's chamber runs (no box model runs again). It uses the pages' own limit code:
       - Cones: the PA's `sineLimitAt` (`maxOutputCurve` for each point): Xmax and the port air speed at each
@@ -558,6 +561,23 @@ Each PR stands alone. Lowest risk first.
     rule. Old saves can break. This step can go with the movable ports and driver openings work, or earlier.
   - **Later in L3.** The optimizer; a "Place" picker for
     each chamber (on top of, or beside, chamber N). Today the user types its position ("From left", "From bottom").
+  - **Lossy voice-coil model** (planned). Today the coil is Re + jωLe, a plain inductance. A datasheet gives `Le` at
+    about 1 kHz. Near 200 Hz a plain `Le` of that value removes too much level, because the real coil has eddy-current
+    losses and its inductance falls as the frequency increases.
+    - Use the Thorborg-Futtrup semi-inductance model (Re', Leb, Le, Ke, Rss) in `coilFactor`
+      (`src/lib/acoustics/driverCircuit.ts`). Hornresp and Boundary Lab use this model, so our results can be compared
+      with both tools.
+    - A datasheet gives only `Le`. The model needs default values for Leb, Ke and Rss, or a fit from a measured
+      impedance curve.
+    - The model applies to every driver at the same time. Then write the golden values again (`vp run golden`), the
+      optimizer snapshot (`vp run optimizer-snapshot`) and the preset Levels (`vp run preset-levels`).
+  - **One driver catalog** (owner, Oct 2026; planned). Today the drivers are in separate tables by group: PA subs, PA
+    mids, fills, Hi-fi woofers and Hi-fi tweeters. Each table has its own fields, so the groups do not
+    always get the same model inputs.
+    - Merge the tables into one table for each kind: woofers (by size), compression drivers and tweeters. Every
+      driver has the same fields and the same model rules.
+    - The Speaker page's woofer picker already shows one list (#156). This item does the same in the catalog data.
+    - Do this item with the lossy coil model, or immediately after it.
 - **L4 Stack and Space.** The UI has three layers: Speaker, Stack and Space (see the owner decisions). L4 adds
   the last two, in two phases. The name is "Stack", not "System".
   - **Data.** L1's `SystemSpec` splits in two:

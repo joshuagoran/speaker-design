@@ -8,8 +8,8 @@ import type { PaBandLevels } from "../../lib/speaker/paBalance";
 import type { PaLayout } from "../../types";
 
 export const PA_PRESET_BAND_LEVELS: Record<PaLayout, PaBandLevels> = {
-  stack: { low: 0, mid: -3.847, high: -19.909 },
-  pole: { low: 0, mid: -3.847, high: -19.909 },
-  tower: { low: 0, mid: -3.26, high: -19.353 },
-  satellite: { low: 0, mid: -3.847, high: -19.909 },
+  stack: { low: 0, mid: -4.023, high: -20.333 },
+  pole: { low: 0, mid: -4.023, high: -20.333 },
+  tower: { low: 0, mid: -3.476, high: -19.819 },
+  satellite: { low: 0, mid: -4.023, high: -20.333 },
 };
