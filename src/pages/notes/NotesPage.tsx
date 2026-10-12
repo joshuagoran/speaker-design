@@ -73,6 +73,8 @@ function ampCell(
       );
       return watts.length ? watts.join(" / ") : "–";
     }
+    case "lb":
+      return `${model.lb} lb`;
     case "gain":
       return model.gainDb == null ? "–" : `${model.gainDb} dB`;
     case "dsp":
