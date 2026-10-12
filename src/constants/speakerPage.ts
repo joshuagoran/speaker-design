@@ -208,6 +208,12 @@ export const SPEAKER_TEXT = {
   insetTip: "How far the baffle is behind the front edge of the frame.",
   braceStyle: "Bracing",
   backJoint: "Back panel",
+  wallPanel: "Wall panels",
+  /** the wall panels' tooltip, with the frame box's baffle thickness in words */
+  wallPanelTip: (baffle: string) =>
+    `The panel size of the sides, top, bottom and back. On a frame box, the baffle stays ${baffle}. On a flush box, the baffle is this size too. Thinner walls get more braces.`,
+  /** the construction summary's wall panels, by their thickness in words */
+  wallPanelSummary: (t: string) => `${t} walls`,
   braceTarget: "Bracing target",
   /** the target's tooltip, with the PA boxes' target in words */
   braceTargetTip: (pa: string) =>
