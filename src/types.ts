@@ -2792,8 +2792,17 @@ export type CutPartId = keyof typeof CUT_PART_NAMES;
 export type NamedCutBoxId = keyof typeof CUT_BOX_NAMES;
 /** A Speaker-page chamber's cutlist box, by its place in the cabinet (`chamberCutBox`: "chamber1", "chamber2" …). */
 export type ChamberCutBoxId = `chamber${number}`;
-/** The box a cutlist part belongs to: a named one, or a Speaker-page chamber (`cutBoxName` gives the name it shows). */
-export type CutBoxId = NamedCutBoxId | ChamberCutBoxId;
+/** A box of one speaker: a named one (a Speaker-page shell) or a Speaker-page chamber. */
+export type SpeakerCutBoxId = NamedCutBoxId | ChamberCutBoxId;
+/**
+ * A Stack-page member's box, by the member's number and its speaker's box (`memberCutBox`: "m2.chamber1", "m1.shell").
+ */
+export type MemberCutBoxId = `m${number}.${SpeakerCutBoxId}`;
+/**
+ * The box a cutlist part belongs to: a named one, a Speaker-page chamber, or a Stack-page member's box (`cutBoxName`
+ * gives the name it shows).
+ */
+export type CutBoxId = SpeakerCutBoxId | MemberCutBoxId;
 
 /** Which of a part's dimensions runs along the grain (the sheet's length): `a`, `b`, or either. */
 export type GrainDir = "a" | "b" | "any";

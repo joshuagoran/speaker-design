@@ -6,6 +6,7 @@ import { FillsPage } from "./pages/fills/FillsPage";
 import { PaCutlistPage } from "./pages/cutlist/PaCutlistPage";
 import { HifiCutlistPage } from "./pages/cutlist/HifiCutlistPage";
 import { SpeakerCutlistPage } from "./pages/cutlist/SpeakerCutlistPage";
+import { StackCutlistPage } from "./pages/cutlist/StackCutlistPage";
 import { HifiPage } from "./pages/hifi/HifiPage";
 import { CoveragePage } from "./pages/coverage/CoveragePage";
 import { useHifiPlanner } from "./pages/hifi/useHifiPlanner";
@@ -131,6 +132,8 @@ export function App() {
           <SpeakerCutlistPage speakerPage={speakerPage} />
         ) : view === "stack" ? (
           <StackPage stack={stack} speakerPage={speakerPage} planner={planner} />
+        ) : view === "stackCutlist" ? (
+          <StackCutlistPage stack={stack} />
         ) : view === "space" ? (
           <SpacePage space={space} stack={stack} speakerPage={speakerPage} planner={planner} />
         ) : view === "coverage" ? (

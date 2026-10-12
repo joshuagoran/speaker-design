@@ -1,4 +1,10 @@
-import type { ChamberCutBoxId, CutBoxId, NamedCutBoxId } from "../types";
+import type {
+  ChamberCutBoxId,
+  CutBoxId,
+  MemberCutBoxId,
+  NamedCutBoxId,
+  SpeakerCutBoxId,
+} from "../types";
 
 /**
  * Every cutlist part's id and the name the cutlist shows for it. Parts carry the id (`CutPart.part`), so code decides
@@ -80,25 +86,60 @@ const isNamedBox = (box: CutBoxId): box is NamedCutBoxId => Object.hasOwn(CUT_BO
 /** A Speaker-page chamber box id's index in the cabinet. */
 const chamberIndexOf = (box: ChamberCutBoxId) => Number(box.slice(CHAMBER_CUT_BOX.length)) - 1;
 
-/** The name the cutlist shows for a box: a named box's, or "Chamber 2". */
-export const cutBoxName = (box: CutBoxId): string =>
-  isNamedBox(box) ? CUT_BOX_NAMES[box] : `Chamber ${chamberIndexOf(box) + 1}`;
-/** A box's heading over its rows in the cutlist: a named box's, or "Chamber 2". */
+/** Whether a box id is a Speaker-page chamber's ("chamber2"). */
+const isChamberBox = (box: string): box is ChamberCutBoxId => /^chamber\d+$/.test(box);
+/** Whether a box id is one speaker's own (a named box or a chamber), not a stack member's. */
+export const isSpeakerCutBox = (box: string): box is SpeakerCutBoxId =>
+  Object.hasOwn(CUT_BOX_NAMES, box) || isChamberBox(box);
+
+/** The prefix of a Stack-page member's box id, before its number, and what parts the number from its speaker's box. */
+const MEMBER_CUT_BOX = { prefix: "m", sep: "." } as const;
+
+/** The cutlist box id of member number `n` (from 1) of a stack, for its speaker's box `box`. */
+export const memberCutBox = (n: number, box: SpeakerCutBoxId): MemberCutBoxId =>
+  `${MEMBER_CUT_BOX.prefix}${n}${MEMBER_CUT_BOX.sep}${box}`;
+/** A member's box id read back: the member's number (from 1) and its speaker's box (the shell where it reads as none). */
+function memberOf(box: MemberCutBoxId): { n: number; box: SpeakerCutBoxId } {
+  const at = box.indexOf(MEMBER_CUT_BOX.sep);
+  const inner = box.slice(at + 1);
+  return {
+    n: Number(box.slice(MEMBER_CUT_BOX.prefix.length, at)),
+    box: isSpeakerCutBox(inner) ? inner : SHELL_CUT_BOX,
+  };
+}
+
+/** The name the cutlist shows for a box: a named box's, "Chamber 2", or a member's ("Member 2, chamber 1"). */
+export function cutBoxName(box: CutBoxId): string {
+  if (isNamedBox(box)) return CUT_BOX_NAMES[box];
+  if (isChamberBox(box)) return `Chamber ${chamberIndexOf(box) + 1}`;
+  const member = memberOf(box);
+  return `Member ${member.n}, ${cutBoxName(member.box).toLowerCase()}`;
+}
+/** A box's heading over its rows in the cutlist: a named box's, "Chamber 2", or a member's. */
 export const cutBoxHeading = (box: CutBoxId): string =>
   isNamedBox(box) ? CUT_BOX_HEADINGS[box] : cutBoxName(box);
-/** The letter a box's rows are tagged with: a named box's, or its chamber's (A, B …; past J, its number and a dot). */
+/**
+ * The letter a box's rows are tagged with: a named box's, or its chamber's (A, B …; past J, its number and a dot); a
+ * member's box, its member's number first ("2A").
+ */
 export function cutBoxTag(box: CutBoxId): string {
   if (isNamedBox(box)) return CUT_BOX_TAGS[box];
-  const i = chamberIndexOf(box);
-  return CHAMBER_TAG_LETTERS[i] ?? `${i + 1}.`;
+  if (isChamberBox(box)) {
+    const i = chamberIndexOf(box);
+    return CHAMBER_TAG_LETTERS[i] ?? `${i + 1}.`;
+  }
+  const member = memberOf(box);
+  return `${member.n}${cutBoxTag(member.box)}`;
 }
-/** The tint a box's tags and pieces take: a named box's, or the chambers' in turn (the mid's, then the sub's). */
-export const cutBoxTint = (box: CutBoxId): (typeof CUT_BOX_TINTS)[NamedCutBoxId] =>
-  isNamedBox(box)
-    ? CUT_BOX_TINTS[box]
-    : chamberIndexOf(box) % 2 === 0
-      ? CUT_BOX_TINTS.mid
-      : CUT_BOX_TINTS.sub;
+/**
+ * The tint a box's tags and pieces take: a named box's, or the chambers' in turn (the mid's, then the sub's); a member's
+ * boxes the members' in turn, so each member reads apart on the sheets.
+ */
+export function cutBoxTint(box: CutBoxId): (typeof CUT_BOX_TINTS)[NamedCutBoxId] {
+  if (isNamedBox(box)) return CUT_BOX_TINTS[box];
+  const turn = isChamberBox(box) ? chamberIndexOf(box) : memberOf(box).n - 1;
+  return turn % 2 === 0 ? CUT_BOX_TINTS.mid : CUT_BOX_TINTS.sub;
+}
 
 /** Each panel material's names on the Cutlist page: in a sentence, after a thickness (3/4″ ply), and as a column head. */
 export const PANEL_MATERIAL_NAMES = {
