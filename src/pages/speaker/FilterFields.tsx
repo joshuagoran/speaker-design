@@ -3,7 +3,7 @@ import { NumberField } from "../../components/ui/NumberField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
-import { FILTER_TYPE_NAMES } from "../../constants/designer";
+import { FILTER_TYPE_NAMES } from "../../constants/speakerPage";
 
 /** The filter types, as the picker lists them after its first choice. */
 const TYPE_OPTIONS: readonly SelectOption[] = entriesOf(FILTER_TYPE_NAMES).map(([id, name]) => ({

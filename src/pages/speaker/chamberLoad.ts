@@ -1,4 +1,4 @@
-// A chamber's load as the Designer's Load setting switches it: Direct, or Horn with a starting horn made from the
+// A chamber's load as the Speaker page's Load setting switches it: Direct, or Horn with a starting horn made from the
 // chamber's cones and size. Pure.
 import type {
   ChamberLoad,
@@ -16,7 +16,7 @@ import type { PlacedChamber } from "../../lib/speaker/speakerLayout";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../../constants/speakerSpec";
 import { HORN_PROFILE } from "../../constants/hornEngine";
 import { CM_PER_IN, CM2_PER_IN2, LITERS_PER_CUBIC_IN } from "../../constants/units";
-import { shownTenth } from "./designerFields";
+import { shownTenth } from "./speakerFields";
 
 /** The shortest path a starting horn takes, in: where the cones fill the chamber's depth. */
 const MIN_PATH_IN = 1;

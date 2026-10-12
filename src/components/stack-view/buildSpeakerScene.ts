@@ -77,7 +77,7 @@ import {
 } from "../../constants/speakerSpec";
 import type { BoxRegion, Horn, RadiatorPanel, SpeakerDriver, SpeakerSpec } from "../../types";
 
-/** The Designer scene's own meshes (every reused part keeps its builder's names). */
+/** The speaker scene's own meshes (every reused part keeps its builder's names). */
 export const SPEAKER_MESH_NAMES = {
   /** a wall two chambers share: inside one shell, or the lower (or left) chamber's in a stepped shell */
   partition: "chamberPartition",

@@ -7,10 +7,10 @@ import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { entriesOf, keysOf } from "../../lib/records";
 import { HORN_PROFILE_NAMES } from "../../constants/hornEngine";
-import { DESIGNER_TEXT, HORN_DRIVE_NAMES, HORN_PATH_NAMES } from "../../constants/designer";
+import { SPEAKER_TEXT, HORN_DRIVE_NAMES, HORN_PATH_NAMES } from "../../constants/speakerPage";
 import { HORN_DRIVE } from "../../constants/speakerSpec";
-import { FIELD_ROW, shownIn } from "./designerFields";
-import { hornText } from "./designerText";
+import { FIELD_ROW, shownIn } from "./speakerFields";
+import { hornText } from "./speakerText";
 import {
   joinsNext,
   shownIn2,
@@ -31,15 +31,15 @@ const DRIVES_NOT_MODELED = keysOf(HORN_DRIVE_NAMES).filter((k) => k !== HORN_DRI
 
 /** Each size field of a section: its spec field, its label and its step. */
 const SECTION_FIELDS: readonly { size: HornSectionSize; label: string; step: number }[] = [
-  { size: "s1", label: DESIGNER_TEXT.hornStart, step: 1 },
-  { size: "s2", label: DESIGNER_TEXT.hornEnd, step: 1 },
-  { size: "length", label: DESIGNER_TEXT.portLength, step: 0.25 },
+  { size: "s1", label: SPEAKER_TEXT.hornStart, step: 1 },
+  { size: "s2", label: SPEAKER_TEXT.hornEnd, step: 1 },
+  { size: "length", label: SPEAKER_TEXT.portLength, step: 0.25 },
 ];
 
 /** The Steps setting's choices: off (smooth) or on. */
 const STEPS_OPTIONS = [
-  [false, DESIGNER_TEXT.hornStepsOff],
-  [true, DESIGNER_TEXT.hornStepsOn],
+  [false, SPEAKER_TEXT.hornStepsOff],
+  [true, SPEAKER_TEXT.hornStepsOn],
 ] as const;
 
 /** A section's size as its field shows it: an area in in², a length in in. */
@@ -75,21 +75,21 @@ export function HornSettings({ horn, onEdit }: Props) {
     });
   return (
     <section className="border-t border-stone-300 pt-3 mb-3">
-      <h5 className="text-sm font-semibold">{DESIGNER_TEXT.horn}</h5>
+      <h5 className="text-sm font-semibold">{SPEAKER_TEXT.horn}</h5>
       <p className="text-xs text-stone-500 mb-2">{hornText(horn)}</p>
-      <div className="text-sm text-stone-500 mb-1">{DESIGNER_TEXT.hornSections}</div>
+      <div className="text-sm text-stone-500 mb-1">{SPEAKER_TEXT.hornSections}</div>
       {segments.map((s, i) => (
         <div key={i} className="rounded border border-stone-300 px-3 pt-2 mb-2">
           <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-sm font-semibold">{DESIGNER_TEXT.hornSection(i + 1)}</span>
+            <span className="text-sm font-semibold">{SPEAKER_TEXT.hornSection(i + 1)}</span>
             {segments.length > 1 && (
               <Button size="xs" onClick={() => editSegments((list) => withSectionRemoved(list, i))}>
-                {DESIGNER_TEXT.removeSection}
+                {SPEAKER_TEXT.removeSection}
               </Button>
             )}
           </div>
           <ToggleGroup
-            label={DESIGNER_TEXT.hornProfile}
+            label={SPEAKER_TEXT.hornProfile}
             className="mb-2"
             value={s.profile}
             onChange={(profile) => editSegments((list) => withSectionProfile(list, i, profile))}
@@ -133,22 +133,20 @@ export function HornSettings({ horn, onEdit }: Props) {
             )}
           </div>
           {stepsIn(segments, i) && (
-            <p className="text-xs text-stone-500 mb-2">{DESIGNER_TEXT.hornStep(i + 1)}</p>
+            <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.hornStep(i + 1)}</p>
           )}
         </div>
       ))}
       <Button size="xs" className="mb-3" onClick={() => editSegments(withSectionAdded)}>
-        {DESIGNER_TEXT.addSection}
+        {SPEAKER_TEXT.addSection}
       </Button>
       <AnimatedDetails
-        summary={`${DESIGNER_TEXT.hornAdvanced} · ${DESIGNER_TEXT.hornSteps(steps)}`}
+        summary={`${SPEAKER_TEXT.hornAdvanced} · ${SPEAKER_TEXT.hornSteps(steps)}`}
         className="mb-3 text-sm rounded border border-stone-300 px-3 py-2"
         summaryClassName="cursor-pointer py-1"
       >
         <ToggleGroup
-          label={
-            <Tooltip tip={DESIGNER_TEXT.hornStepsTip}>{DESIGNER_TEXT.hornStepsSetting}</Tooltip>
-          }
+          label={<Tooltip tip={SPEAKER_TEXT.hornStepsTip}>{SPEAKER_TEXT.hornStepsSetting}</Tooltip>}
           className="mt-2 mb-1"
           value={stepsOn}
           onChange={(on) => {
@@ -160,7 +158,7 @@ export function HornSettings({ horn, onEdit }: Props) {
         />
       </AnimatedDetails>
       <NumberField
-        label={<Tooltip tip={DESIGNER_TEXT.hornThroatTip}>{DESIGNER_TEXT.hornThroat}</Tooltip>}
+        label={<Tooltip tip={SPEAKER_TEXT.hornThroatTip}>{SPEAKER_TEXT.hornThroat}</Tooltip>}
         value={shownIn(horn.throatChamber)}
         min={0}
         step={0.1}
@@ -169,14 +167,14 @@ export function HornSettings({ horn, onEdit }: Props) {
         className="mb-3"
       />
       <ToggleGroup
-        label={<Tooltip tip={DESIGNER_TEXT.hornPathTip}>{DESIGNER_TEXT.hornPath}</Tooltip>}
+        label={<Tooltip tip={SPEAKER_TEXT.hornPathTip}>{SPEAKER_TEXT.hornPath}</Tooltip>}
         className="mb-3"
         value={horn.path}
         onChange={(path) => onEdit((h) => ({ ...h, path }))}
         options={entriesOf(HORN_PATH_NAMES)}
       />
       <ToggleGroup
-        label={DESIGNER_TEXT.hornDrive}
+        label={SPEAKER_TEXT.hornDrive}
         className="mb-1"
         value={horn.drive.kind}
         // only a front-loaded horn can be picked: the engine takes no other drive yet
@@ -184,9 +182,9 @@ export function HornSettings({ horn, onEdit }: Props) {
           if (kind === HORN_DRIVE.front) onEdit((h) => ({ ...h, drive: { kind } }));
         }}
         options={entriesOf(HORN_DRIVE_NAMES)}
-        disabled={{ values: DRIVES_NOT_MODELED, why: DESIGNER_TEXT.hornDriveNote }}
+        disabled={{ values: DRIVES_NOT_MODELED, why: SPEAKER_TEXT.hornDriveNote }}
       />
-      <p className="text-xs text-stone-500 mb-3">{DESIGNER_TEXT.hornDriveNote}</p>
+      <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.hornDriveNote}</p>
     </section>
   );
 }

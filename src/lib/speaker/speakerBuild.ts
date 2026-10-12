@@ -138,7 +138,7 @@ import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES } from "../../constants/b
 import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
 import { KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
-import { DESIGNER_TEXT, DRIVER_KIND_NAMES } from "../../constants/designer";
+import { SPEAKER_TEXT, DRIVER_KIND_NAMES } from "../../constants/speakerPage";
 import { HARDWARE_BOX } from "../../constants/hardware";
 import {
   CABINET_CONSTRUCTION,
@@ -817,7 +817,7 @@ function ventParts(cabinet: SpeakerCabinet, f: ChamberFrame): { parts: CutPart[]
           box,
           { ...port, w: port.w ?? f.inside.iw },
           t,
-          fits ? null : port.folded ? DESIGNER_TEXT.slotTooLongFolded : DESIGNER_TEXT.slotTooLong,
+          fits ? null : port.folded ? SPEAKER_TEXT.slotTooLongFolded : SPEAKER_TEXT.slotTooLong,
         ),
       ],
       vent: [],
@@ -825,7 +825,7 @@ function ventParts(cabinet: SpeakerCabinet, f: ChamberFrame): { parts: CutPart[]
   }
   return {
     parts: [],
-    vent: [roundPortLine(port, hifiPortElbows(chamber.dims, t, port), DESIGNER_TEXT.portTooLong)],
+    vent: [roundPortLine(port, hifiPortElbows(chamber.dims, t, port), SPEAKER_TEXT.portTooLong)],
   };
 }
 
@@ -886,7 +886,7 @@ export function chamberNetLiters(
 
 // ---- the cutlist ----
 
-/** A driver entry's name in a baffle note: its kind as the Designer names it. */
+/** A driver entry's name in a baffle note: its kind as the Speaker page names it. */
 const kindWord = (driver: SpeakerDriver) => DRIVER_KIND_NAMES[driver.kind];
 
 /**
@@ -943,7 +943,7 @@ function chamberNotes(
       if (f.paSub && driver.kind === DRIVER_KIND.sub) continue;
       const horn = driverHorn(driver);
       if (!hornFitsWhereSet(placed, driver)) {
-        baffle.push(`${kindWord(driver)}: ${DESIGNER_TEXT.hornNoFitNote}`);
+        baffle.push(`${kindWord(driver)}: ${SPEAKER_TEXT.hornNoFitNote}`);
         continue;
       }
       if (onTop(driver)) {

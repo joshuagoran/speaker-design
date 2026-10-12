@@ -146,7 +146,7 @@ export function chamberVentModel(
             ),
         };
       }
-      // the Hi-fi page's slot is one (n 1); the Designer's can be more, alike
+      // the Hi-fi page's slot is one (n 1); the Speaker page's can be more, alike
       return {
         areaIn2: port.n * port.h * w,
         lenIn: port.len,

@@ -12,7 +12,7 @@ interface Props {
 }
 
 /**
- * A 3D view's card, the PA stack's, the Hi-fi speaker's and the Designer's alike: the view with its buttons laid over
+ * A 3D view's card, the PA stack's, the Hi-fi speaker's and the Speaker page's alike: the view with its buttons laid over
  * it, the cutaway and full screen. Both are how you look at the design, not part of it, so they live here and are never
  * saved.
  */

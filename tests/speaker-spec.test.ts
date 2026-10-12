@@ -1,4 +1,4 @@
-// The speaker designer's spec (lib/speaker): every golden design reads into it with its key facts (boxes, drivers,
+// The speaker spec (lib/speaker): every golden design reads into it with its key facts (boxes, drivers,
 // vents, crossovers, layout), and horn chambers read into designs the horn engine models.
 import { PA_FLOOR } from "./speaker-cases";
 import { SPACE_SEAT_AREA } from "../src/constants/space";

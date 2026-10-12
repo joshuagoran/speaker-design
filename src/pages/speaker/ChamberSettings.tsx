@@ -23,7 +23,7 @@ import { entriesOf, keysOf } from "../../lib/records";
 import { HIFI_PASSIVES_BY_SIZE } from "../hifi/hifiDriverLists";
 import {
   CHAMBER_LOAD_NAMES,
-  DESIGNER_TEXT,
+  SPEAKER_TEXT,
   DRIVER_KIND_NAMES,
   HORN_PLACEMENT_NAMES,
   HORN_PLACEMENT_NO_FIT,
@@ -33,7 +33,7 @@ import {
   SET_BY_NAMES,
   VENT_KIND_NAMES,
   VENT_PANEL_NAMES,
-} from "../../constants/designer";
+} from "../../constants/speakerPage";
 import {
   CHAMBER_LOAD,
   DRIVER_KIND,
@@ -48,11 +48,11 @@ import {
   NO_HORN,
   driverOfKind,
   hornOptions,
-} from "./designerParts";
-import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./designerPlaces";
+} from "./speakerParts";
+import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./speakerPlaces";
 import { PlaceFields } from "./PlaceFields";
 import { HornSettings } from "./HornSettings";
-import { FIELD_ROW, shownIn, shownTenth } from "./designerFields";
+import { FIELD_ROW, shownIn, shownTenth } from "./speakerFields";
 import { hornRoom, startingHorn, withChamberLoad } from "./chamberLoad";
 import {
   defaultHornPlacement,
@@ -189,14 +189,14 @@ export function ChamberSettings({
         className="mb-3"
       />
       <ToggleGroup
-        label={<Tooltip tip={DESIGNER_TEXT.loadTip}>{DESIGNER_TEXT.load}</Tooltip>}
+        label={<Tooltip tip={SPEAKER_TEXT.loadTip}>{SPEAKER_TEXT.load}</Tooltip>}
         className="mb-3"
         value={chamber.load.kind}
         onChange={(kind) => onEdit((c) => withChamberLoad(c, kind, room, result?.netLiters))}
         options={entriesOf(CHAMBER_LOAD_NAMES)}
         disabled={
           chamber.load.kind === CHAMBER_LOAD.direct && !startingHorn(chamber, room)
-            ? { values: [CHAMBER_LOAD.horn], why: DESIGNER_TEXT.loadNoCone }
+            ? { values: [CHAMBER_LOAD.horn], why: SPEAKER_TEXT.loadNoCone }
             : undefined
         }
       />
@@ -214,7 +214,7 @@ export function ChamberSettings({
       )}
       {mouth && (
         <PlaceFields
-          label={DESIGNER_TEXT.mouthPlace}
+          label={SPEAKER_TEXT.mouthPlace}
           value={mouth.position}
           auto={mouth.auto}
           widthIn={chamber.dims.w}
@@ -242,7 +242,7 @@ export function ChamberSettings({
             options={entriesOf(PORT_SHAPE_NAMES)}
           />
           <PortFields port={vent.port} onChange={setPort} />
-          {!vents && <p className="text-xs text-stone-500 mb-3">{DESIGNER_TEXT.ventFixed}</p>}
+          {!vents && <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.ventFixed}</p>}
           <NumberField
             label="Air speed limit"
             value={vent.maxSpeedMs}
@@ -283,9 +283,7 @@ export function ChamberSettings({
       {vents && (
         <PlaceFields
           label={
-            vents.what === VENT_KIND.radiator
-              ? DESIGNER_TEXT.radiatorPlace
-              : DESIGNER_TEXT.portPlace
+            vents.what === VENT_KIND.radiator ? SPEAKER_TEXT.radiatorPlace : SPEAKER_TEXT.portPlace
           }
           value={vents.position}
           auto={vents.auto}
@@ -294,7 +292,7 @@ export function ChamberSettings({
         >
           {vents.position && (
             <ToggleGroup
-              label={DESIGNER_TEXT.panel}
+              label={SPEAKER_TEXT.panel}
               className="mb-2"
               value={vents.position.panel}
               onChange={(panel) =>
@@ -365,7 +363,7 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
           onChange={(n) => onChange({ ...port, n: Math.max(1, Math.round(n)) })}
         />
         <NumberField
-          label={DESIGNER_TEXT.slotNarrow}
+          label={SPEAKER_TEXT.slotNarrow}
           value={shownIn(port.h)}
           min={0.25}
           step={0.125}
@@ -373,7 +371,7 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
         />
         {port.w !== undefined && (
           <NumberField
-            label={DESIGNER_TEXT.slotLong}
+            label={SPEAKER_TEXT.slotLong}
             value={shownIn(port.w)}
             min={0.25}
             step={0.25}
@@ -381,7 +379,7 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
           />
         )}
         <NumberField
-          label={DESIGNER_TEXT.portLength}
+          label={SPEAKER_TEXT.portLength}
           value={shownIn(port.len)}
           min={0.5}
           step={0.5}
@@ -411,7 +409,7 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
             onChange={(throat) => onChange({ ...port, throat })}
           />
           <NumberField
-            label={DESIGNER_TEXT.portLength}
+            label={SPEAKER_TEXT.portLength}
             value={shownIn(port.len)}
             min={0.5}
             step={0.5}
@@ -437,7 +435,7 @@ function PortFields({ port, onChange }: { port: SpeakerPort; onChange: (p: Speak
         onChange={(dia) => onChange({ ...port, dia })}
       />
       <NumberField
-        label={DESIGNER_TEXT.portLength}
+        label={SPEAKER_TEXT.portLength}
         value={shownIn(port.len)}
         min={0.5}
         step={0.5}
@@ -510,7 +508,7 @@ function DriverFields({ driver, widthIn, placed, bandOptions, onEdit, onRemove }
       <div className={FIELD_ROW}>
         {/* the group's center (`SpeakerDriver.position`): across from the center line, shown from the left side */}
         <NumberField
-          label={DESIGNER_TEXT.fromLeft}
+          label={SPEAKER_TEXT.fromLeft}
           value={shownIn(driver.position.xIn + widthIn / 2)}
           step={0.25}
           onChange={(v) =>
@@ -519,7 +517,7 @@ function DriverFields({ driver, widthIn, placed, bandOptions, onEdit, onRemove }
         />
         <NumberField
           // a horn on the top: back from the baffle's front
-          label={onTop(driver) ? DESIGNER_TEXT.backFromFront : DESIGNER_TEXT.fromBottom}
+          label={onTop(driver) ? SPEAKER_TEXT.backFromFront : SPEAKER_TEXT.fromBottom}
           value={shownIn(driver.position.yIn)}
           step={0.25}
           onChange={(yIn) => onEdit((d) => ({ ...d, position: { ...d.position, yIn } }))}

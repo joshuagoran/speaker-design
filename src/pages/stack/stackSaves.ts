@@ -7,7 +7,7 @@ import type {
   StackDesign,
   StackMember,
 } from "../../types";
-import { isSavedSpeaker } from "../designer/useDesigner";
+import { isSavedSpeaker } from "../speaker/useSpeakerPage";
 import { STACK_TEXT } from "../../constants/stack";
 
 /** The id a stack has until the library saves it (then it takes the document's). */

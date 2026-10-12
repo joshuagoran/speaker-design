@@ -1,19 +1,19 @@
-// The Designer chamber's Load setting (src/pages/designer/chamberLoad): Horn starts a horn from the chamber's cones
+// The Load setting of a chamber on the Speaker page (src/pages/speaker/chamberLoad): Horn starts a horn from the chamber's cones
 // and size that models and draws; Direct removes it; a chamber without a cone can't take a horn.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { templateSpeaker } from "../src/pages/designer/designerTemplates";
+import { templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import {
   flareLiters,
   hornRoom,
   startingHorn,
   withChamberLoad,
-} from "../src/pages/designer/chamberLoad";
+} from "../src/pages/speaker/chamberLoad";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
 import { coneParts } from "../src/lib/speaker/driverParts";
 import { coneDepthIn } from "../src/lib/speaker/speakerBuild";
-import { DESIGNER_TEMPLATE, type DesignerTemplate } from "../src/constants/designerStarts";
+import { SPEAKER_TEMPLATE, type SpeakerTemplate } from "../src/constants/speakerStarts";
 import { CHAMBER_LOAD, HORN_DRIVE, HORN_PATH } from "../src/constants/speakerSpec";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { CM_PER_IN, CM2_PER_IN2 } from "../src/constants/units";
@@ -37,13 +37,13 @@ function switched(spec: SpeakerSpec, i: number, kind: ChamberLoad["kind"]) {
 }
 
 /** Templates with a chamber of cones alone and a vent the horn engine takes, by the chamber's place. */
-const MODELED: readonly [DesignerTemplate, number][] = [
-  [DESIGNER_TEMPLATE.monitorCoax, 0],
-  [DESIGNER_TEMPLATE.fill, 0],
-  [DESIGNER_TEMPLATE.paTowerBaffleHorn, 1],
+const MODELED: readonly [SpeakerTemplate, number][] = [
+  [SPEAKER_TEMPLATE.monitorCoax, 0],
+  [SPEAKER_TEMPLATE.fill, 0],
+  [SPEAKER_TEMPLATE.paTowerBaffleHorn, 1],
 ];
 
-test("designer horn load: Horn starts one conical section from the cones to the clear face", () => {
+test("speaker horn load: Horn starts one conical section from the cones to the clear face", () => {
   for (const [template, i] of MODELED) {
     const spec = templateSpeaker(template);
     const chamber = spec.cabinet.chambers[i];
@@ -90,7 +90,7 @@ test("designer horn load: Horn starts one conical section from the cones to the 
   }
 });
 
-test("designer horn load: Direct removes the horn and sets the net air back to Auto", () => {
+test("speaker horn load: Direct removes the horn and sets the net air back to Auto", () => {
   for (const [template, i] of MODELED) {
     const spec = templateSpeaker(template);
     const back = switched(switched(spec, i, CHAMBER_LOAD.horn), i, CHAMBER_LOAD.direct);
@@ -101,23 +101,23 @@ test("designer horn load: Direct removes the horn and sets the net air back to A
     assert.deepEqual(responseOf(back).sum, responseOf(spec).sum);
   }
   // a template's horn chamber goes direct too, and still models
-  const bin = switched(templateSpeaker(DESIGNER_TEMPLATE.paV2SubBinOne), 0, CHAMBER_LOAD.direct);
+  const bin = switched(templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinOne), 0, CHAMBER_LOAD.direct);
   assert.equal(bin.cabinet.chambers[0].load.kind, CHAMBER_LOAD.direct);
   assert.deepEqual(responseOf(bin).chambers[0].gaps, []);
 });
 
-test("designer horn load: a chamber without a cone can't take a horn; the same load changes nothing", () => {
-  const tower = templateSpeaker(DESIGNER_TEMPLATE.paTowerBaffleHorn);
+test("speaker horn load: a chamber without a cone can't take a horn; the same load changes nothing", () => {
+  const tower = templateSpeaker(SPEAKER_TEMPLATE.paTowerBaffleHorn);
   // the horn section: a compression driver on its catalog horn, no cone
   const hf = tower.cabinet.chambers[2];
   const room = hornRoom(tower.cabinet, hf, speakerLayout(tower.cabinet).chambers[2]);
   assert.equal(startingHorn(hf, room), null);
   assert.equal(withChamberLoad(hf, CHAMBER_LOAD.horn, room, 10), hf);
-  const bin = templateSpeaker(DESIGNER_TEMPLATE.paV2SubBinOne).cabinet.chambers[0];
+  const bin = templateSpeaker(SPEAKER_TEMPLATE.paV2SubBinOne).cabinet.chambers[0];
   assert.equal(withChamberLoad(bin, CHAMBER_LOAD.horn, room, 10), bin, "already a horn");
 });
 
-test("designer horn load: the flare's air follows each section's flare law", () => {
+test("speaker horn load: the flare's air follows each section's flare law", () => {
   const section = { s1: 100, s2: 400, length: 50 };
   const con = flareLiters({ segments: [{ ...section, profile: HORN_PROFILE.conical }] });
   const exp = flareLiters({ segments: [{ ...section, profile: HORN_PROFILE.exponential }] });

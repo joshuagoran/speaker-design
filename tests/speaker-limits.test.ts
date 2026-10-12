@@ -25,10 +25,10 @@ import { abs } from "../src/lib/acoustics/complex";
 import { ampVoltage, hornResponse, subThroughLowpass, ventSpeedLimit } from "../src/lib/pa/calc";
 import { CD_OPTIONS, HORN_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_SPEAKER_BAND } from "../src/lib/defaults";
-import { startSpeaker } from "../src/pages/designer/designerStarts";
-import { newBandId } from "../src/pages/designer/useDesigner";
+import { startSpeaker } from "../src/pages/speaker/speakerStarts";
+import { newBandId } from "../src/pages/speaker/useSpeakerPage";
 import { PALETTES, bandLine } from "../src/styles/palette";
-import { DESIGNER_START } from "../src/constants/designerStarts";
+import { SPEAKER_START } from "../src/constants/speakerStarts";
 import {
   DRIVER_KIND,
   SPEAKER_BAND,
@@ -109,7 +109,7 @@ test("speaker limits: the golden PA designs meet the PA page's limits (sub, mid,
     );
     assert.ok(midChamber, c.name);
     // the boxes with today's net air, the vents at the design's air-speed setting
-    // each speaker's input range is its source's filters, and the Designer models it with that range
+    // each speaker's input range is its source's filters, and the Speaker page models it with that range
     assert.deepEqual(subSide.spec.input, subSide.feed, `${c.name}: the sub's input range`);
     assert.deepEqual(topSide.spec.input, topSide.feed, `${c.name}: the top's input range`);
     const subSpec = withNet(subSide.spec, subChamber, models.s.netL);
@@ -305,14 +305,14 @@ test("speaker limits: a PA start brings its input range (the top above the sub c
     const pa = paDesign(c);
     const sources = { pa, hifi: DEFAULT_HIFI, hifiLook: DEFAULT_HIFI_LOOK };
     // the top: the mid meets its amp or rating below its band, not Xmax (the input range's highpass protects it)
-    const top = startSpeaker(DESIGNER_START.paTop, sources);
+    const top = startSpeaker(SPEAKER_START.paTop, sources);
     assert.deepEqual(top.input.highpass, lrFilter(pa.xoLo, pa.xoLoOrder), c.name);
     const mid = bandOf(modelOf(top, top.input).limits, SPEAKER_BAND.mid);
     for (const o of mid.max.filter((p) => p.f >= 38 && p.f <= 52))
       assert.notEqual(o.who, LIMIT_NAMES.Xmax, `${c.name}: the mid at ${o.f.toFixed(0)} Hz`);
     assert.notEqual(mid.who, LIMIT_NAMES.Xmax, `${c.name}: the mid's music limit`);
     // the sub: the sum stops above the crossover (its own subsonic stays in its band)
-    const sub = startSpeaker(DESIGNER_START.paSub, sources);
+    const sub = startSpeaker(SPEAKER_START.paSub, sources);
     assert.deepEqual(sub.input.lowpass, lrFilter(pa.xoLo, pa.xoLoOrder), c.name);
     const { limits } = modelOf(sub, sub.input);
     const peak = Math.max(...limits.sum.map((o) => o.spl));
@@ -332,7 +332,7 @@ test("speaker limits: a PA start brings its input range (the top above the sub c
 test("speaker limits: bands are a free list: a 4-way box, with a band the user names", () => {
   const tower = configs.find((g) => g.layout === "tower");
   assert.ok(tower);
-  const spec = startSpeaker(DESIGNER_START.paTower, {
+  const spec = startSpeaker(SPEAKER_START.paTower, {
     pa: paDesign(tower),
     hifi: DEFAULT_HIFI,
     hifiLook: DEFAULT_HIFI_LOOK,

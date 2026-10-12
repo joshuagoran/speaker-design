@@ -1,4 +1,4 @@
-// The Designer page's names and choices (src/pages/designer): the spec's ids as the page shows them.
+// The Speaker page's names and choices (src/pages/speaker): the spec's ids as the page shows them.
 import type {
   ChamberLoad,
   DriverKind,
@@ -14,7 +14,7 @@ import type {
 } from "../types";
 import { FIRST_ORDER_FILTER } from "./speakerSpec";
 
-/** Each driver kind as the Designer names it: the catalog table it picks from. */
+/** Each driver kind as the Speaker page names it: the catalog table it picks from. */
 export const DRIVER_KIND_NAMES = {
   sub: "PA sub",
   mid: "PA mid-bass",
@@ -24,14 +24,14 @@ export const DRIVER_KIND_NAMES = {
   coaxial: "Coaxial",
 } as const satisfies Record<DriverKind, string>;
 
-/** Each vent kind as the Designer names it. */
+/** Each vent kind as the Speaker page names it. */
 export const VENT_KIND_NAMES = {
   sealed: "Sealed",
   vented: "Ported",
   radiator: "Passive radiator",
 } as const satisfies Record<HifiBoxKind, string>;
 
-/** Each port shape as the Designer names it. */
+/** Each port shape as the Speaker page names it. */
 export const PORT_SHAPE_NAMES = {
   round: "Round",
   slot: "Slot",
@@ -59,13 +59,13 @@ export const SET_BY_NAMES = {
   custom: "Custom",
 } as const satisfies Record<keyof typeof SET_BY, string>;
 
-/** The panels a vent can be cut into, as the Designer names them. */
+/** The panels a vent can be cut into, as the Speaker page names them. */
 export const VENT_PANEL_NAMES = {
   baffle: "Baffle",
   back: "Back",
 } as const satisfies Record<VentPanel, string>;
 
-/** Each place a horn on a driver can sit, as the Designer names it (`HORN_PLACEMENT`). */
+/** Each place a horn on a driver can sit, as the Speaker page names it (`HORN_PLACEMENT`). */
 export const HORN_PLACEMENT_NAMES = {
   baffle: "In the baffle",
   top: "Freestanding on top",
@@ -96,7 +96,7 @@ export const HORN_DRIVE_NAMES = {
   back: "Back-loaded",
 } as const satisfies Record<HornDrive["kind"], string>;
 
-/** Each band drive as the Designer names it. */
+/** Each band drive as the Speaker page names it. */
 export const DRIVE_NAMES = {
   active: "Active",
   passive: "Passive",
@@ -118,8 +118,8 @@ export const MODEL_GAP_TEXT = {
   vent: "the horn engine doesn't take this vent yet",
 } as const satisfies Record<SpeakerModelGap, string>;
 
-/** The Designer's results headings and chart labels. */
-export const DESIGNER_TEXT = {
+/** The Speaker page's results headings and chart labels. */
+export const SPEAKER_TEXT = {
   views: "The speaker",
   front: "Front",
   hornPlaceholder:

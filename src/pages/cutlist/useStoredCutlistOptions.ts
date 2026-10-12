@@ -15,7 +15,7 @@ import { savedPanelExactIn } from "../../lib/panel";
 /** Where this browser keeps each project's cutlist choices (the Hi-fi key is the one its saves already carry). */
 const STORE_KEYS = {
   hifi: "hifi.cutlist",
-  designer: "designer.cutlist",
+  speaker: "speaker.cutlist",
 } as const satisfies Record<StoredCutlistProject, string>;
 
 /** What this browser keeps: the cutlist's settings and the measured thickness of each nominal panel size. */
@@ -46,7 +46,7 @@ const fromStored =
   };
 
 /**
- * A project's cutlist choices (the Hi-fi page's, the Designer's), kept apart from the PA stack's and remembered in this
+ * A project's cutlist choices (the Hi-fi page's, the Speaker page's), kept apart from the PA stack's and remembered in this
  * browser (the design itself isn't saved with them).
  */
 export function useStoredCutlistOptions(project: StoredCutlistProject): CutlistOptions {

@@ -1,12 +1,12 @@
-# Speaker designer: plan (parent branch `designer`)
+# Speaker page: plan (parent branch `designer`)
 
-One page, the Designer, designs any single box and saves it to a library. A later Stack page joins boxes in
+One page, the Speaker page, designs any single box and saves it to a library. A later Stack page joins boxes in
 a fixed relationship, and a Space page places stacks and boxes in a real space. This plan
 gets there in small PRs: near-term phases on today's Hi-fi engine first, then the general model.
 
 ## Goal (owner's vision)
 
-- **Speaker designer.** One page designs any single box and saves it to a library.
+- **Speaker page.** One page designs any single box and saves it to a library.
   - **Drivers combine freely in a cab.** A cabinet is one or more chambers, each with its own volume and
     vent (sealed, ported, slot, passive radiator). Each chamber holds any number of drivers of any type:
     woofer, mid, horn or waveguide on a compression driver, tweeter, coaxial. Each driver has a position on
@@ -28,7 +28,7 @@ gets there in small PRs: near-term phases on today's Hi-fi engine first, then th
 `src/pages/fills/FillsPage.tsx`, `useFillsPlanner.ts`, `fillSystem` in `src/lib/pa/calc.ts`, `fillChips` in
 `src/lib/pa/chips.ts`, drivers in `src/data/catalog/fills.ts`.
 
-- A single-box coaxial designer only: vented or sealed, ½″ walls, a "Highpass to the subs" setting (LR24 or
+- A single-box coaxial design only: vented or sealed, ½″ walls, a "Highpass to the subs" setting (LR24 or
   LR48), one amp channel per box.
 - HF is a pad and a power limit only (`pad`, `hfLimW` in `fillSystem`).
 - No delay, level, placement or coverage link to the PA. No saves: the state lives in `useFillsPlanner`
@@ -159,8 +159,8 @@ Each PR stands alone. Lowest risk first.
     `mount`.
   - New `speakers` and `stacks` collections under `users/{uid}`, next to `configs` (PA) and `hifiConfigs`.
     `firestore.rules` already covers every collection there (`users/{uid}/{document=**}`); no rule change.
-- **L2 Speaker library.** Designer saves go to `speakers`. No import from old saves (owner policy above).
-- **L3 Designer page.** One page, "Designer" for now (`#designer`), designs any single speaker. The PA sub and
+- **L2 Speaker library.** Speaker page saves go to `speakers`. No import from old saves (owner policy above).
+- **L3 Speaker page.** One page, "Speaker" (`#speaker`), designs any single speaker. The PA sub and
   mid/high boxes, the tower and the Hi-fi speaker become starting points, not layout pickers. The general
   chamber / driver / band model replaces the per-kind acoustic models step by step. This is the biggest step.
   - **L3a (this phase).** The page with `SettingsLayout`: the name; chambers (size or net liters, stuffing,
@@ -223,7 +223,7 @@ Each PR stands alone. Lowest risk first.
     - Movable ports and driver openings (see the owner decisions).
     - **Templates (done).** The "Start from" picker lists the templates first, then the designs you have now (the
       current Hi-fi design, the PA design's sub and mid/high box, or its tower). A template builds a new spec from the
-      catalog and the defaults (`src/pages/designer/designerTemplates.ts`). It sets only the first values. The spec
+      catalog and the defaults (`src/pages/speaker/speakerTemplates.ts`). It sets only the first values. The spec
       keeps no template or role.
       - PA sub, PA mid/high box: the PA page's starting design (`DEFAULT_PA`) through `layersFromPa`.
       - PA tower, horn in the baffle: the PA page's tower, with its arched top.
@@ -295,12 +295,12 @@ Each PR stands alone. Lowest risk first.
       and the arched top (`archedShellParts`, the tower's) where the views draw one on a frame. Any other chamber is a
       box of its own, less the walls another chamber gives it. A frame cuts as the PA boxes (`boxParts`), a flush box
       as the Hi-fi box (`flushBoxPanels`). Every driver, horn mouth, port and radiator is noted at its position.
-      The Designer's Cutlist tab lays the rows out on sheets as the PA and Hi-fi tabs do (the shared Cutlist page:
+      The Speaker page's Cutlist tab lays the rows out on sheets as the PA and Hi-fi tabs do (the shared Cutlist page:
       `layoutCutlist`, which packs them with `packSheets`).
     - **Weight.** A frame takes the PA rule: the lowest chamber of a shell weighs as a box of its own, and each chamber
       over or beside it adds what it builds (the tower's cabinet over its sub box). A flush box takes the Hi-fi rule.
       Each chamber adds its drivers with their horns, its radiators and its hardware.
-    - **UI.** The Designer's Cutlist tab (the shared Cutlist page), and a "Weight and bracing" section: the speaker's
+    - **UI.** The Speaker page's Cutlist tab (the shared Cutlist page), and a "Weight and bracing" section: the speaker's
       weight, each chamber's weight and braces, and each panel left under the target.
     - **Parity** (`tests/speaker-build.test.ts`). On every golden PA design: the sub's bracing, net air and weight
       exact, the mid box's bracing and weight exact, and the same cut pieces for every joint. The tower's mid
@@ -347,7 +347,7 @@ Each PR stands alone. Lowest risk first.
         the fill's setting. The chamber settings show it.
     - **Input range** (owner, Oct 2026). `SpeakerSpec.input` is the high-pass and low-pass that the system puts
       ahead of the box, for example the crossover to a sub. It is not part of the box, and it is saved with the
-      speaker. The Designer models the speaker with it (the feed of `speakerResponse` and `speakerLimits`).
+      speaker. The Speaker page models the speaker with it (the feed of `speakerResponse` and `speakerLimits`).
       - The PA top starts with a high-pass at the PA's sub crossover. The PA sub starts with a low-pass there (its
         own subsonic stays in its band). The tower, the Hi-fi speaker, the fill and the empty speaker start with both
         off.
@@ -355,7 +355,7 @@ Each PR stands alone. Lowest risk first.
       - Later, a speaker in a stack (L4a) takes its input range from the stack's crossover.
     - **Bands are a free list** (owner, Oct 2026). A speaker has any number of bands, each with a name that the
       user sets ("Sub", "Low mid", "Horn"), so a 4-way box works. Drivers name their bands by id. The read adapters
-      keep their ids (`SPEAKER_BAND`) and names (`SPEAKER_BAND_NAMES`); a band added in the Designer takes a
+      keep their ids (`SPEAKER_BAND`) and names (`SPEAKER_BAND_NAMES`); a band added on the Speaker page takes a
       generated id. On the charts a band's color follows its place: the lowest in the lighter gray, the highest in
       cyan, the ones between in magenta (`bandLine`).
     - **Results.** A maximum-output chart on the shared maximum-output scale (80–140 dB, `MAX_OUTPUT_TOP` /
@@ -372,7 +372,7 @@ Each PR stands alone. Lowest risk first.
     summary (drive, sections, path length, path):
     - The flare sections: profile (conical or exponential), start area, end area and length, in in² and in. The areas
       show to 0.1 in² and the lengths to 0.01 in; two areas at most 0.05 in² apart are the same joint. The spec
-      keeps the engine's cm² and cm; `src/pages/designer/hornSections.ts` converts in one place. Add and remove
+      keeps the engine's cm² and cm; `src/pages/speaker/hornSections.ts` converts in one place. Add and remove
       sections (at least one stays). The sections chain: a new section starts at the last end area, a new end area
       moves the next start with it, and a removed section's next one starts where the removed one did. A start area
       typed apart from the previous end is a step, and a note says so.
@@ -388,7 +388,7 @@ Each PR stands alone. Lowest risk first.
     - A size that is not positive and finite (an area, a length or the throat chamber) is the `noModel` gap, and the
       views draw no flare: never NaN (`isSizedSegment`, the horn engine's and `hornFlare`'s check).
     - The load (done, owner Oct 2026): each chamber has a "Load" setting, "Direct" or "Horn"
-      (`src/pages/designer/chamberLoad.ts`). Horn starts a horn from the chamber's cones: one conical section from
+      (`src/pages/speaker/chamberLoad.ts`). Horn starts a horn from the chamber's cones: one conical section from
       the cones' total Sd to a mouth the size of the clear face, as long as the clear depth less the deepest cone. It
       has no throat chamber, a straight path and a front-loaded drive. The net air becomes the rear chamber's: the
       chamber's net air less the flare's air. Direct removes the horn and sets the net air back to Auto. A chamber
@@ -420,10 +420,17 @@ Each PR stands alone. Lowest risk first.
   - **L4a Stack.** Speakers in a fixed relationship, for example a sub, a mid-bass box and a horn.
     - It sets their relative positions, the crossovers between boxes, the delays and the levels.
     - It says what each box needs (filters, delays, levels). It assigns no hardware.
-    - A speaker in a stack takes its input range from the stack's crossover. Alone in the Designer, the user sets it.
+    - A speaker in a stack takes its input range from the stack's crossover. Alone on the Speaker page, the user sets it.
     - **Sub highpass and subsonic.** When a sub highpass covers the box's subsonic, the box's subsonic is
       dropped; below 0.75 × Fb both stay. This rule comes with the crossovers between boxes.
     - The PA page becomes a stack preset.
+      - **L3f owner decisions** (Oct 2026, #150).
+        - The PA and Hi-fi optimizers stay. They become an "Optimize" button that works only on the PA and Hi-fi
+          presets. They stay until an optimizer for any speaker exists.
+        - The Space page replaces the Coverage page. The parity tests show the same results.
+        - The Fills and Cutlist tabs go away. Fills become Speaker presets. The Speaker page has its own cutlist.
+        - Old PA and Hi-fi saves open through a read adapter, as speakers and a stack.
+        - Order: first the rename to the Speaker page (done), then L3f and the #150 UI fixes in parallel.
       - **Band levels in the preset** (owner decision). The PA page goes away, so it is not the source of the levels.
         Today `paSpec` sets each band's Level to 0 dB (the horn takes the tilt), from a 2.83 V input. This is not the
         PA page's music balance: on the Space page the horn plays 11.3 dB and the mid 1.8 dB away from it. When the PA
@@ -512,30 +519,30 @@ Each PR stands alone. Lowest risk first.
 ## Owner decisions (Oct 2026)
 
 - The UI has three layers. The name of the middle one is "Stack", not "System".
-  - **Speaker:** one box, with its chambers, drivers and bands. The Designer page.
+  - **Speaker:** one box, with its chambers, drivers and bands. The Speaker page.
   - **Stack:** speakers in a fixed relationship: relative positions, crossovers between boxes, delays, levels.
     For example a sub, a mid-bass box and a horn.
   - **Space:** stacks or speakers placed freely: the room, left and right pairs, the coverage and level model.
 - The Stack says what each box needs (filters, delays, levels). The Space assigns the hardware that does it
   (front end, amp channels), because one rack can drive several stacks.
-- A speaker's input range comes from its stack's crossover. Alone in the Designer, the user sets it.
+- A speaker's input range comes from its stack's crossover. Alone on the Speaker page, the user sets it.
 - Monitor drive: the user can select passive or active.
 - No target level for each use. Show the maximum level at a distance that you set.
 - No fixed roles. A template sets only the first values. A save keeps no `use`.
 - Booth monitors are a pair. They hang or sit on pedestals. No tilt and no wedge for now.
 - Tower with the horn on top: the mid chamber height is adjustable, and any horn can sit on top. Do this in
   L3, not before.
-- The page is called "Designer" for now, not "Speakers".
-- One Designer page designs all speakers. Templates (starting points) replace the layout pickers, so the
+- The page is called "Speaker" (owner, Oct 2026, #150), not "Speakers".
+- One Speaker page designs all speakers. Templates (starting points) replace the layout pickers, so the
   tower needs no "Horn" toggle or separate picker entry.
 - Simulation in a real space is a separate page later (the Space page). Any speaker can be placed there.
 - The fill delay against the mains belongs to the Space page.
-- Chart scales (owner, Oct 2026): every maximum-output chart (PA, Hi-fi, Designer) uses 80–140 dB, and every
-  sensitivity or response chart (Hi-fi, the Designer's 2.83 V, 1 m response) uses 50–120 dB.
+- Chart scales (owner, Oct 2026): every maximum-output chart (PA, Hi-fi, Speaker) uses 80–140 dB, and every
+  sensitivity or response chart (Hi-fi, the Speaker page's 2.83 V, 1 m response) uses 50–120 dB.
 - The spec's ports carry the PA port details (the letterbox's fins and fold, the flared tubes), so the PA subs
   match the PA page exactly.
 - Stuffing is a visible setting on each chamber. The model has no hidden stuffing rule. The 3% bracing
-  allowance is gone from the Designer (L3c): the net air counts the real braces.
+  allowance is gone from the Speaker page (L3c): the net air counts the real braces.
 - The sub highpass and subsonic rule waits for the Stack phase (L4a).
 - The cabinet gets a top shape (`flat` or `arched`) with the templates step (L3e). The PA tower's arched top then
   draws and cuts correctly.

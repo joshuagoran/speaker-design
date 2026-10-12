@@ -11,7 +11,7 @@ import type {
   SpeakerSpec,
   StackSpec,
 } from "../../types";
-import { isSavedSpeaker } from "../designer/useDesigner";
+import { isSavedSpeaker } from "../speaker/useSpeakerPage";
 import { paVenue } from "../../lib/speaker/paSpec";
 import { DEFAULT_COVERAGE_LAYOUT } from "../coverage/useCoverageLayout";
 import { SPACE_ITEM } from "../../constants/speakerSpec";

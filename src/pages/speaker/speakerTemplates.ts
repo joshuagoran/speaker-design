@@ -1,4 +1,4 @@
-// The Designer's templates: each builds a new speaker from the catalog and the defaults (lib/defaults), through the L1
+// The Speaker page's templates: each builds a new speaker from the catalog and the defaults (lib/defaults), through the L1
 // read adapters where a page already designs that box. A template sets only the first values: the spec keeps no
 // template or role (docs/speaker-designer-plan.md, owner decisions). Pure.
 import type {
@@ -56,11 +56,11 @@ import {
   VENT_KIND,
 } from "../../constants/speakerSpec";
 import {
-  DESIGNER_TEMPLATE,
-  DESIGNER_START_SPEAKER_NAMES,
-  type DesignerTemplate,
-} from "../../constants/designerStarts";
-import { DRAFT_SPEAKER_ID, emptySpeaker } from "./useDesigner";
+  SPEAKER_TEMPLATE,
+  SPEAKER_START_SPEAKER_NAMES,
+  type SpeakerTemplate,
+} from "../../constants/speakerStarts";
+import { DRAFT_SPEAKER_ID, emptySpeaker } from "./useSpeakerPage";
 
 /** The PA layout with the tower's one speaker. */
 const TOWER = "tower" satisfies PaLayout;
@@ -408,7 +408,7 @@ function paV2MidBox(identity: SpecIdentity): SpeakerSpec {
 }
 
 /** Each template's speaker, from its identity. */
-const TEMPLATES: Record<DesignerTemplate, (identity: SpecIdentity) => SpeakerSpec> = {
+const TEMPLATES: Record<SpeakerTemplate, (identity: SpecIdentity) => SpeakerSpec> = {
   empty: (identity) => ({ ...emptySpeaker(), ...identity }),
   paSubBox: (identity) => paSpeaker(DEFAULT_PA.layout, SPEAKER_PART.sub, identity),
   paMidHighBox: (identity) => paSpeaker(DEFAULT_PA.layout, SPEAKER_PART.top, identity),
@@ -424,8 +424,8 @@ const TEMPLATES: Record<DesignerTemplate, (identity: SpecIdentity) => SpeakerSpe
 };
 
 /** The templates in the picker's order. */
-export const DESIGNER_TEMPLATES: readonly DesignerTemplate[] = Object.values(DESIGNER_TEMPLATE);
+export const SPEAKER_TEMPLATES: readonly SpeakerTemplate[] = Object.values(SPEAKER_TEMPLATE);
 
 /** A template's speaker, as a draft under the template's name. */
-export const templateSpeaker = (template: DesignerTemplate): SpeakerSpec =>
-  TEMPLATES[template]({ id: DRAFT_SPEAKER_ID, name: DESIGNER_START_SPEAKER_NAMES[template] });
+export const templateSpeaker = (template: SpeakerTemplate): SpeakerSpec =>
+  TEMPLATES[template]({ id: DRAFT_SPEAKER_ID, name: SPEAKER_START_SPEAKER_NAMES[template] });

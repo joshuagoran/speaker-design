@@ -10,7 +10,7 @@ import {
   type CoverageInputs,
 } from "../src/pages/coverage/useCoverageMap";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/pages/coverage/useCoverageLayout";
-import { defaultPaDesign } from "../src/pages/designer/designerTemplates";
+import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import {
   autoSubDelayMs,
   computeCoverageGrid,

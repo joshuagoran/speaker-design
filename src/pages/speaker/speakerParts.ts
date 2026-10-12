@@ -1,4 +1,4 @@
-// The Designer's pickers: each driver kind's catalog, the horns a driver can take, and the passive radiators; and the
+// The Speaker page's pickers: each driver kind's catalog, the horns a driver can take, and the passive radiators; and the
 // driver entries the settings build. Read from the catalog (src/lib/data) and the defaults.
 import type { ChamberVent, DriverKind, Horn, SpeakerDriver, SpeakerPort } from "../../types";
 import type { SelectOption } from "../../components/ui/SelectField";

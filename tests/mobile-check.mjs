@@ -7,7 +7,7 @@
 // Detail rows (label / value / caption): a caption must stay inside its row, right of the label, at every width
 // checked here and on a desktop window. On Hi-fi (desktop) a tweeter that needs a taller box raises the Height slider
 // only while it is chosen: switching back brings the box back (the size the user set is kept).
-// On the Designer (360 px, a tablet, a desktop), every fold open: nothing past the settings pane's edge.
+// On the Speaker page (360 px, a tablet, a desktop), every fold open: nothing past the settings pane's edge.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { PA_RUN_LABELS } from "../src/constants/optimizerText.ts";
@@ -16,7 +16,7 @@ import { COVERAGE_LAYOUT_KEY, COVERAGE_TEST_IDS } from "../src/constants/coverag
 import { STAT_ROW_TEST_IDS } from "../src/constants/statRowTestIds.ts";
 import { HIFI_BOX_LABELS } from "../src/constants/hifiLayout.ts";
 import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../src/data/catalog/hifi-tweeters.ts";
-import { DESIGNER_START_NAMES, DESIGNER_START_TEXT } from "../src/constants/designerStarts.ts";
+import { SPEAKER_START_NAMES, SPEAKER_START_TEXT } from "../src/constants/speakerStarts.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const page = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -45,8 +45,8 @@ const views = [
   "#hifi",
   "#hifi-cutlist",
   "#notes",
-  "#designer",
-  "#designer-cutlist",
+  "#speaker",
+  "#speaker-cutlist",
   "#stack",
   "#space",
 ];
@@ -211,17 +211,17 @@ for (const width of [1024, 1600]) {
   await ctx.close();
 }
 
-// The Designer started from the PA design's mid/high box (or tower), and from the PA v2 sub bin (its Horn settings),
+// The Speaker page started from the PA design's mid/high box (or tower), and from the PA v2 sub bin (its Horn settings),
 // every fold open: nothing past the settings pane's edge and no sideways page scroll, on a 360 px phone, a tablet (the
 // two panes from md up) and a desktop.
 for (const [width, phone, startName] of [
   [360, true, null],
   [768, true, null],
   [1024, false, null],
-  [360, true, DESIGNER_START_NAMES.paV2SubBinTwo],
-  [1024, false, DESIGNER_START_NAMES.paV2SubBinTwo],
+  [360, true, SPEAKER_START_NAMES.paV2SubBinTwo],
+  [1024, false, SPEAKER_START_NAMES.paV2SubBinTwo],
 ]) {
-  const name = `designer ${width}${startName ? ` (${startName})` : ""}`;
+  const name = `speaker ${width}${startName ? ` (${startName})` : ""}`;
   const ctx = await browser.newContext({
     viewport: { width, height: 900 },
     isMobile: phone,
@@ -230,16 +230,16 @@ for (const [width, phone, startName] of [
   const p = await ctx.newPage();
   const errs = [];
   p.on("pageerror", (e) => errs.push(e.message));
-  await p.goto(page + "#designer");
+  await p.goto(page + "#speaker");
   await p.waitForFunction(() => document.querySelector("aside"), null, { timeout: 30000 });
   const closed = p.locator("aside button[aria-expanded=false]");
   for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().click();
-  const start = p.getByLabel(DESIGNER_START_TEXT.startFrom);
+  const start = p.getByLabel(SPEAKER_START_TEXT.startFrom);
   const options = await start.locator("option").allTextContents();
   const many = startName ?? options.find((o) => /tower|mid\/high/i.test(o));
   if (many) {
     await start.selectOption({ label: many });
-    await p.getByRole("button", { name: DESIGNER_START_TEXT.startOver }).click();
+    await p.getByRole("button", { name: SPEAKER_START_TEXT.startOver }).click();
   }
   await p.waitForTimeout(600);
   const m = await p.evaluate(() => {

@@ -4,10 +4,10 @@ import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { speakerLimits } from "../../lib/speaker/speakerLimits";
 import { cabinetBuild } from "../../lib/speaker/speakerBuild";
 import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
-import { DESIGNER_TEXT } from "../../constants/designer";
-import { DESIGNER_START_SPEAKER_NAMES } from "../../constants/designerStarts";
+import { SPEAKER_TEXT } from "../../constants/speakerPage";
+import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
 import { SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
-import { speakerSummary } from "./designerText";
+import { speakerSummary } from "./speakerText";
 import type {
   BandId,
   SavedConfig,
@@ -25,7 +25,7 @@ export const DRAFT_SPEAKER_ID = "draft";
 /** The empty speaker, named as a new one. */
 export const emptySpeaker = (): SpeakerSpec => ({
   id: DRAFT_SPEAKER_ID,
-  name: DESIGNER_START_SPEAKER_NAMES.empty,
+  name: SPEAKER_START_SPEAKER_NAMES.empty,
   ...EMPTY_SPEAKER,
 });
 
@@ -47,7 +47,7 @@ export function isSavedSpeaker(value: unknown): value is SavedSpeakerData["speak
   );
 }
 
-/** The prefix of the ids the Designer gives the bands it adds. */
+/** The prefix of the ids the Speaker page gives the bands it adds. */
 const NEW_BAND_ID = "band";
 
 /** A band id no band in `bands` has: "band1", "band2", ... (the adapters' ids are words, so they never clash). */
@@ -63,10 +63,10 @@ const editAt = <T>(list: readonly T[], i: number, edit: (item: T) => T): T[] =>
   list.map((item, k) => (k === i ? edit(item) : item));
 
 /**
- * The Designer's state: the speaker being designed, its response, the edits the settings make and the library (the
+ * The Speaker page's state: the speaker being designed, its response, the edits the settings make and the library (the
  * signed-in user's `speakers`). Held in App, so the design survives switching pages.
  */
-export function useDesigner() {
+export function useSpeakerPage() {
   const [spec, setSpec] = useState<SpeakerSpec>(emptySpeaker);
   /**
    * how many times the chamber list was replaced (a start, a saved speaker opened) or lost a chamber: each chamber's
@@ -126,10 +126,10 @@ export function useDesigner() {
     editBands((list) => {
       const names = new Set(list.map((b) => b.name));
       let n = list.length + 1;
-      while (names.has(DESIGNER_TEXT.newBandName(n))) n++;
+      while (names.has(SPEAKER_TEXT.newBandName(n))) n++;
       return [
         ...list,
-        { id: newBandId(list), name: DESIGNER_TEXT.newBandName(n), ...DEFAULT_SPEAKER_BAND },
+        { id: newBandId(list), name: SPEAKER_TEXT.newBandName(n), ...DEFAULT_SPEAKER_BAND },
       ];
     });
   /** removes a band; its drivers move to the first band left */
@@ -182,5 +182,5 @@ export function useDesigner() {
   };
 }
 
-/** What `useDesigner` returns. */
-export type Designer = ReturnType<typeof useDesigner>;
+/** What `useSpeakerPage` returns. */
+export type SpeakerPageState = ReturnType<typeof useSpeakerPage>;

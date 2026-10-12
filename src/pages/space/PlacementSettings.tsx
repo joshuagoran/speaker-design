@@ -12,7 +12,7 @@ import {
   SPACE_TEXT,
   SPACE_YAW_DEG,
 } from "../../constants/space";
-import { FIELD_ROW, shownIn } from "../designer/designerFields";
+import { FIELD_ROW, shownIn } from "../speaker/speakerFields";
 
 interface Props {
   index: number;

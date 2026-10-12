@@ -66,7 +66,7 @@ export const DRIVER_MOTOR_DIA_IN: Record<SubSize | MidSize, number> = {
 
 /**
  * A Hi-fi cone's motor diameter as a share of its cutout, where the catalog lists none: about the PA size classes'
- * (DRIVER_MOTOR_DIA_IN over DRIVER_CUTOUT_IN runs 0.60 to 0.65). The Designer's braces keep clear of the basket
+ * (DRIVER_MOTOR_DIA_IN over DRIVER_CUTOUT_IN runs 0.60 to 0.65). The Speaker page's braces keep clear of the basket
  * narrowing to it.
  */
 export const HIFI_MOTOR_CUTOUT_SHARE = 0.65;

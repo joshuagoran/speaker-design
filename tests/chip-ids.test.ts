@@ -21,7 +21,7 @@ import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
-import { bandChips, chamberChips } from "../src/pages/designer/designerChips";
+import { bandChips, chamberChips } from "../src/pages/speaker/speakerChips";
 import { configs } from "./golden-configs";
 import { PA_FLOOR, paDesign } from "./speaker-cases";
 import { keysOf } from "../src/lib/records";
@@ -156,8 +156,8 @@ const hardwareLists = paDesigns.slice(0, 10).flatMap((c) => {
   return [[hardwareChip(s), ...(m ? [hardwareChip(m)] : [])]];
 });
 
-// the Designer's lists, one per band and one per chamber: the Hi-fi boxes of each kind and the golden PA towers and tops
-const designerSpecs = [
+// the Speaker page's lists, one per band and one per chamber: the Hi-fi boxes of each kind and the golden PA towers and tops
+const speakerSpecs = [
   ...(["sealed", "vented", "radiator"] as const).map((boxType) =>
     speakerFromHifi({ ...DEFAULT_HIFI, boxType }, DEFAULT_HIFI_LOOK, { id: "hifi", name: boxType }),
   ),
@@ -165,7 +165,7 @@ const designerSpecs = [
     (c) => layersFromPa(paDesign(c), { id: "pa", name: c.name }, PA_FLOOR).speakers,
   ),
 ];
-const designerLists = designerSpecs.flatMap((spec) => {
+const speakerLists = speakerSpecs.flatMap((spec) => {
   const limits = speakerLimits(spec, speakerResponse(spec));
   return [
     ...bandChips(spec, limits).map((b) => b.chips),
@@ -180,7 +180,7 @@ const lists: [ChipSection, Chip[][]][] = [
   ["fill", fillLists],
   ["hifi", hifiLists],
   ["hardware", hardwareLists],
-  ["designer", designerLists],
+  ["speaker", speakerLists],
 ];
 
 test("every chip carries an id of its own section, and a list has one chip per check", () => {

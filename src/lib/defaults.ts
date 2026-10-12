@@ -199,7 +199,7 @@ export const DEFAULT_FILL = {
   maxPortAirSpeedMs: 20,
 } satisfies FillDesignState;
 
-/** The part each driver kind starts on when the Designer adds one: the PA, Hi-fi and Fills pages' starting parts. */
+/** The part each driver kind starts on when the Speaker page adds one: the PA, Hi-fi and Fills pages' starting parts. */
 export const DEFAULT_DRIVER_IDS = {
   sub: DEFAULT_PA.sub.id,
   mid: DEFAULT_PA.mid.id,
@@ -210,7 +210,7 @@ export const DEFAULT_DRIVER_IDS = {
 } as const satisfies { [K in DriverKind]: SpeakerDriverParts[K]["id"] };
 
 /**
- * A chamber the Designer adds: sealed and stuffed as the Hi-fi engine stuffs one, the Hi-fi starting box's size, no
+ * A chamber the Speaker page adds: sealed and stuffed as the Hi-fi engine stuffs one, the Hi-fi starting box's size, no
  * drivers yet; its net air from the size.
  */
 export const DEFAULT_SPEAKER_CHAMBER: SpeakerChamber = {
@@ -223,7 +223,7 @@ export const DEFAULT_SPEAKER_CHAMBER: SpeakerChamber = {
   drivers: [],
 };
 
-/** A band the Designer adds: no filters, at 0 dB, active, on the Hi-fi woofer's amp power. */
+/** A band the Speaker page adds: no filters, at 0 dB, active, on the Hi-fi woofer's amp power. */
 export const DEFAULT_SPEAKER_BAND: Omit<SpeakerBand, "id" | "name"> = {
   highpass: null,
   lowpass: null,
@@ -233,7 +233,7 @@ export const DEFAULT_SPEAKER_BAND: Omit<SpeakerBand, "id" | "name"> = {
 };
 
 /**
- * The Designer's empty speaker: one chamber (DEFAULT_SPEAKER_CHAMBER) in the PA's ¾″ birch ply, a flush box with a
+ * The Speaker page's empty speaker: one chamber (DEFAULT_SPEAKER_CHAMBER) in the PA's ¾″ birch ply, a flush box with a
  * flat top and sharp edges, one low band with no filters and the full input range; the PA's look.
  */
 export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
@@ -255,7 +255,7 @@ export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
 type StartBox = Pick<HifiDesignState, "boxDims" | "portSpec">;
 
 /**
- * The Designer's DJ booth monitor templates (docs/speaker-designer-plan.md P4 and the owner decisions): a pair, one on
+ * The Speaker page's DJ booth monitor templates (docs/speaker-designer-plan.md P4 and the owner decisions): a pair, one on
  * each side of the DJ, hung or on pedestals (not floor wedges), 0.5–1.5 m away, 90–100° wide, crossed to the subs at
  * 70 Hz LR24 (60–80 Hz). Two options:
  * - a coaxial in a small vented box: the Celestion FTX1025 (10″, 100°) in the Fills page's box and port with ½″ walls,

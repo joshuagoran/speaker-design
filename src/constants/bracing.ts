@@ -77,7 +77,7 @@ export const BACK_JOINT_TIPS = {
 } as const satisfies Record<keyof typeof BACK_JOINT_NAMES, string>;
 /** The back joint a design takes when none is chosen: screwed, the safe side. */
 export const DEFAULT_BACK_JOINT = "screwed" satisfies keyof typeof BACK_JOINT_NAMES;
-/** The range a Designer cabinet's bracing target takes, Hz (`SpeakerCabinet.braceTargetHz`). */
+/** The range a Speaker-page cabinet's bracing target takes, Hz (`SpeakerCabinet.braceTargetHz`). */
 export const BRACE_TARGET_RANGE_HZ = { min: 50, max: 1000 } as const;
 /** A glued back: its joints hold its edges (a screwed back's don't); the window braces hold either. */
 export const GLUED_BACK = "glued" satisfies keyof typeof BACK_JOINT_NAMES;

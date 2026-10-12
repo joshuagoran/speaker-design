@@ -1842,7 +1842,7 @@ export interface FillSystemSealed extends FillSystemBase {
 /** `fillSystem`'s result: check `boxType`, or `vM` or `sM`, and the other model's type follows. */
 export type FillSystem = FillSystemVented | FillSystemSealed;
 
-// ---- Speaker designer spec (lib/speaker) ----
+// ---- Speaker spec (lib/speaker) ----
 //
 // One model for any box (`SpeakerSpec`), for boxes in a fixed relationship (`StackSpec`) and for a placed space
 // (`SpaceSpec`): docs/speaker-designer-plan.md, L1 and L4.
@@ -1865,7 +1865,7 @@ export type DriverKind = keyof SpeakerDriverParts;
 
 /**
  * A speaker's band, by id: any number of bands, each with its own name (`SpeakerBand.name`). The read adapters use
- * `SPEAKER_BAND`'s ids; the Designer gives a new band a generated one. Drivers name their bands by id.
+ * `SPEAKER_BAND`'s ids; the Speaker page gives a new band a generated one. Drivers name their bands by id.
  */
 export type BandId = string;
 
@@ -2131,7 +2131,7 @@ export interface SpeakerSpec {
   bands: readonly SpeakerBand[];
   /**
    * the input range: the filters the front end puts ahead of the box on every band (the crossover to a sub). Not part
-   * of the box; the Designer models the speaker with it (`speakerResponse`'s and `speakerLimits`' feed). In a stack,
+   * of the box; the Speaker page models the speaker with it (`speakerResponse`'s and `speakerLimits`' feed). In a stack,
    * the member's crossover takes its place (`StackMember.crossover`).
    */
   input: Pick<SpeakerBand, "highpass" | "lowpass">;
@@ -2765,9 +2765,9 @@ export interface BoxHardwarePlan {
 export type CutPartId = keyof typeof CUT_PART_NAMES;
 /** A named box a cutlist part belongs to, by id (`CUT_BOX_NAMES` holds the name it shows). */
 export type NamedCutBoxId = keyof typeof CUT_BOX_NAMES;
-/** A Designer chamber's cutlist box, by its place in the cabinet (`chamberCutBox`: "chamber1", "chamber2" …). */
+/** A Speaker-page chamber's cutlist box, by its place in the cabinet (`chamberCutBox`: "chamber1", "chamber2" …). */
 export type ChamberCutBoxId = `chamber${number}`;
-/** The box a cutlist part belongs to: a named one, or a Designer chamber (`cutBoxName` gives the name it shows). */
+/** The box a cutlist part belongs to: a named one, or a Speaker-page chamber (`cutBoxName` gives the name it shows). */
 export type CutBoxId = NamedCutBoxId | ChamberCutBoxId;
 
 /** Which of a part's dimensions runs along the grain (the sheet's length): `a`, `b`, or either. */
@@ -2936,7 +2936,7 @@ export interface CutlistLayout {
 // ---- Warning chips (lib/pa/chips) ----
 
 export type ChipSeverity = "ok" | "warn" | "bad";
-/** The sections that carry checks: the PA stack's sub, mid and horn, the fills, the Hi-fi speaker and the Designer. */
+/** The sections that carry checks: the PA stack's sub, mid and horn, the fills, the Hi-fi speaker and the Speaker page. */
 export type ChipSection = keyof typeof CHIP_IDS;
 /** A check's stable id (`CHIP_IDS`), of one section or of any. */
 export type ChipId<S extends ChipSection = ChipSection> = (typeof CHIP_IDS)[S][number];

@@ -1,6 +1,6 @@
 /**
  * Top of every maximum-output chart, dB SPL: the PA response chart, the PA optimizer cards, the Hi-fi page's
- * maximum-output chart and the Designer's. A PA horn on its amp reaches about 131 dB at 1 m on the golden designs, a
+ * maximum-output chart and the Speaker page's. A PA horn on its amp reaches about 131 dB at 1 m on the golden designs, a
  * Hi-fi compression driver on a waveguide about 126 dB.
  */
 export const MAX_OUTPUT_TOP = 140;
@@ -16,7 +16,7 @@ export const FREQ_AXIS_MAX_HZ = 20000;
 
 /**
  * Top of every sensitivity and response chart (the Hi-fi page's response charts and its optimizer cards, the
- * Designer's 2.83 V, 1 m response), so designs and charts compare by eye.
+ * Speaker page's 2.83 V, 1 m response), so designs and charts compare by eye.
  */
 export const HIFI_TOP = 120;
 
