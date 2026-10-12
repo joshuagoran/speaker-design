@@ -17,7 +17,6 @@ import {
 } from "../src/lib/acoustics/complex";
 import { AIR_DENSITY, BOX_LEAK_Q, BOX_PORT_Q, SPEED_OF_SOUND } from "../src/constants/acoustics";
 import { HIFI_PASSIVES, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
-import { SUB_RAW } from "../src/data/catalog/subs";
 import type { BoxModelTS, Complex } from "../src/types";
 import { massLineSPL, near } from "./helpers";
 
@@ -76,12 +75,10 @@ test("voice coil: with Le the box models roll off at the top and keep the bass",
 
 // An independent reference for the coil: the plain series circuit in the mechanical domain, i = V/(Re + jωLe + Bl²/Zm),
 // v = Bl·i/Zm, with Zm the cone's mechanical impedance and the box's air on its back, Sd²·Zbox (half space, 1 m).
-// The catalog's Le, read from its table: the models leave the PA tables' Le out for now (lib/data paDriver).
 const sub = SUB_OPTIONS.find((o) => o.id === "f18fh500");
-const listedLe = SUB_RAW.find((o) => o.id === "f18fh500")?.ts.Le;
-assert.ok(sub && listedLe, "the catalog's f18fh500 lists Le");
-const { Le: _modelLe, ...fh500Bare } = sub.ts;
-const fh500 = { ...fh500Bare, Le: listedLe };
+assert.ok(sub?.ts.Le, "the catalog's f18fh500 lists Le");
+const fh500 = sub.ts;
+const { Le: _subLe, ...fh500Bare } = fh500;
 const VbL = 150;
 const Cab = VbL / 1000 / (AIR_DENSITY * SPEED_OF_SOUND ** 2);
 /** The sealed box's acoustic impedance, 1/(jωCab). */
