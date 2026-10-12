@@ -11,6 +11,7 @@ import { entriesOf } from "../../lib/records";
 import { SET_BY, SET_BY_NAMES } from "../../constants/designer";
 import { AUTO_DELAY } from "../../constants/speakerSpec";
 import { STACK_TEXT } from "../../constants/stack";
+import { FIELD_ROW, shownIn } from "../designer/designerFields";
 
 interface Props {
   index: number;
@@ -49,26 +50,23 @@ export function MemberSettings({ index, member, names, delayMs, onEdit, onRemove
         value={pose.on === null ? base : byId(under, String(pose.on))}
         onChange={(o) => setPose({ on: o.id === BASE_ID ? null : Number(o.id) })}
       />
-      <div className="grid grid-cols-3 gap-x-3">
+      <div className={FIELD_ROW}>
         <NumberField
           label={<Tooltip tip={STACK_TEXT.acrossTip}>{STACK_TEXT.across}</Tooltip>}
-          value={pose.xIn}
+          value={shownIn(pose.xIn)}
           step={0.5}
-          unit="in"
           onChange={(xIn) => setPose({ xIn })}
         />
         <NumberField
           label={<Tooltip tip={STACK_TEXT.upTip}>{STACK_TEXT.up}</Tooltip>}
-          value={pose.yIn}
+          value={shownIn(pose.yIn)}
           step={0.5}
-          unit="in"
           onChange={(yIn) => setPose({ yIn })}
         />
         <NumberField
           label={<Tooltip tip={STACK_TEXT.backTip}>{STACK_TEXT.back}</Tooltip>}
-          value={pose.zIn}
+          value={shownIn(pose.zIn)}
           step={0.5}
-          unit="in"
           onChange={(zIn) => setPose({ zIn })}
         />
       </div>

@@ -33,13 +33,13 @@ export const STACK_TEXT = {
   remove: "Remove",
   standsOn: "Stands on",
   base: "The base",
-  across: "Across",
+  across: "Across, in",
   acrossTip:
     "Its center line from the stack's, or from the member under it. + is to the right, seen from the front.",
-  up: "Up",
+  up: "Up, in",
   upTip:
     "Its bottom above the base, or above the top of the member under it (a gap, a spacer, a stand).",
-  back: "Back",
+  back: "Back, in",
   backTip: "Its front behind the stack's front, or behind the front of the member under it.",
   mirror: "Mirror image",
   level: "Level",
