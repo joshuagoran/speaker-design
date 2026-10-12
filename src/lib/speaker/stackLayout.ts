@@ -31,32 +31,40 @@ export interface PlacedMember {
 }
 
 /**
- * Each band's center in its speaker's front view, in (x from the cabinet's center line, y up from its bottom): the mean
- * of its drivers' spots on the baffle (a horn on the top at its mouth's middle, half its height above the lid); a
- * horn-loaded chamber's drivers at the middle of its mouth. A coaxial feeds both its bands from its center.
+ * Each driver entry's spots in its speaker's front view, in (x from the cabinet's center line, y up from its bottom):
+ * where its drivers are on the baffle (a horn on the top at its mouth's middle, half its height above the lid); a
+ * horn-loaded chamber's drivers at the middle of its mouth (`mouth`, its size; null on the baffle).
  */
-export function bandCenters(spec: Pick<SpeakerSpec, "cabinet">) {
+export function driverSpotsIn(spec: Pick<SpeakerSpec, "cabinet">) {
   const layout = speakerLayout(spec.cabinet);
-  const spots = new Map<BandId, { x: number; y: number }[]>();
-  const add = (band: BandId, x: number, y: number) => {
-    const list = spots.get(band);
-    if (list) list.push({ x, y });
-    else spots.set(band, [{ x, y }]);
-  };
-  for (const placed of layout.chambers) {
+  return layout.chambers.flatMap((placed) => {
     const flare = hornFlare(spec.cabinet, placed);
-    for (const driver of placed.chamber.drivers) {
+    return placed.chamber.drivers.map((driver) => {
       const horn = driverHorn(driver);
-      const points =
-        driversOnBaffle(placed.chamber) || onTop(driver) || !flare
+      const onBaffle = driversOnBaffle(placed.chamber) || onTop(driver) || !flare;
+      return {
+        chamber: placed.chamber,
+        driver,
+        points: onBaffle
           ? driverSpots(placed, driver).map((s) => ({
               x: s.xIn,
               y: s.yIn + (horn && onTop(driver) ? horn.size.h / 2 : 0),
             }))
-          : [{ x: flare.mouth.x + flare.mouth.w / 2, y: flare.mouth.y + flare.mouth.h / 2 }];
-      for (const band of driver.bands) for (const p of points) add(band, p.x, p.y);
-    }
-  }
+          : [{ x: flare.mouth.x + flare.mouth.w / 2, y: flare.mouth.y + flare.mouth.h / 2 }],
+        mouth: onBaffle ? null : { w: flare.mouth.w, h: flare.mouth.h },
+      };
+    });
+  });
+}
+
+/**
+ * Each band's center in its speaker's front view, in (x from the cabinet's center line, y up from its bottom): the mean
+ * of its drivers' spots (`driverSpotsIn`). A coaxial feeds both its bands from its center.
+ */
+export function bandCenters(spec: Pick<SpeakerSpec, "cabinet">) {
+  const spots = new Map<BandId, { x: number; y: number }[]>();
+  for (const { driver, points } of driverSpotsIn(spec))
+    for (const band of driver.bands) spots.set(band, [...(spots.get(band) ?? []), ...points]);
   return [...spots].map(([id, list]) => ({
     id,
     x: list.reduce((sum, p) => sum + p.x, 0) / list.length,

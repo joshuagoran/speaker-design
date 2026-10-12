@@ -26,6 +26,12 @@ export const SPACE_HOME_MARGIN_FT = 4;
 /** The level a living room's listening area should get, dB SPL: loud music at home. */
 export const SPACE_HOME_TARGET_DB = 90;
 
+/** Which part of a driver entry radiates, by id: its cone (in its chamber's air) or its HF section. */
+export const DRIVER_PART = {
+  cone: "cone",
+  hf: "hf",
+} as const;
+
 /** A seat's listening area, ft: a sofa's width, a little deep. */
 export const SPACE_SEAT_AREA = { widthFt: 6, lengthFt: 4 } as const;
 

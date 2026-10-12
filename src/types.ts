@@ -31,6 +31,7 @@ import type {
   SPEAKER_PART,
 } from "./constants/speakerSpec";
 import type { COAX_GAP_NAMES } from "./constants/coax";
+import type { DRIVER_PART } from "./constants/space";
 import type { DSP_COLUMNS } from "./constants/dspColumns";
 import type { AMP_CLASSES, AMP_COLUMNS } from "./constants/ampColumns";
 import type { CardSlot } from "./lib/optimizer/selectCards";
@@ -2255,6 +2256,9 @@ export interface SpaceFrontEnd {
   /** the DSP unit (`DSP_UNITS`), where a digital front end names one */
   dspId: DspUnit["id"] | null;
 }
+
+/** Which part of a driver entry radiates, by id (`DRIVER_PART`): its cone or its HF section. */
+export type DriverPart = (typeof DRIVER_PART)[keyof typeof DRIVER_PART];
 
 /** The floor the space's level stats count: a rectangle, its center and its size, ft. */
 export interface ListeningArea extends FloorPoint {
