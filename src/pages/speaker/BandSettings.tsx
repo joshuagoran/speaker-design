@@ -1,3 +1,4 @@
+import { Tooltip } from "../../components/ui/Tooltip";
 import type { SpeakerBand } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -48,7 +49,7 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
         onEdit={(edit) => onEdit((b) => ({ ...b, ...edit(b) }))}
       />
       <NumberField
-        label="Level"
+        label={<Tooltip tip={SPEAKER_TEXT.levelTip}>Level</Tooltip>}
         // shown to 0.1 dB (the Hi-fi level match is exact)
         value={Math.round(band.levelDb * 10) / 10}
         step={0.5}
@@ -57,7 +58,7 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
         className="mb-4"
       />
       <ToggleGroup
-        label="Drive"
+        label={<Tooltip tip={SPEAKER_TEXT.driveTip}>Drive</Tooltip>}
         value={band.drive}
         onChange={(drive) => onEdit((b) => ({ ...b, drive }))}
         options={entriesOf(DRIVE_NAMES)}
@@ -65,7 +66,11 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
       />
       <NumberField
         // passive: the channel it shares
-        label={band.drive === HIFI_DRIVE.passive ? "Shared amp channel" : "Amp power"}
+        label={
+          <Tooltip tip={SPEAKER_TEXT.ampTip}>
+            {band.drive === HIFI_DRIVE.passive ? "Shared amp channel" : "Amp power"}
+          </Tooltip>
+        }
         value={band.ampW}
         min={1}
         step={10}

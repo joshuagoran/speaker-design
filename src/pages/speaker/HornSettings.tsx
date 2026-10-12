@@ -31,10 +31,15 @@ import {
 const DRIVES_NOT_MODELED = keysOf(HORN_DRIVE_NAMES).filter((k) => k !== HORN_DRIVE.front);
 
 /** Each size field of a section: its spec field, its label and its step. */
-const SECTION_FIELDS: readonly { size: HornSectionSize; label: string; step: number }[] = [
-  { size: "s1", label: SPEAKER_TEXT.hornStart, step: 1 },
-  { size: "s2", label: SPEAKER_TEXT.hornEnd, step: 1 },
-  { size: "length", label: SPEAKER_TEXT.portLength, step: 0.25 },
+const SECTION_FIELDS: readonly {
+  size: HornSectionSize;
+  label: string;
+  tip: string;
+  step: number;
+}[] = [
+  { size: "s1", label: SPEAKER_TEXT.hornStart, tip: SPEAKER_TEXT.hornStartTip, step: 1 },
+  { size: "s2", label: SPEAKER_TEXT.hornEnd, tip: SPEAKER_TEXT.hornEndTip, step: 1 },
+  { size: "length", label: SPEAKER_TEXT.portLength, tip: SPEAKER_TEXT.hornLengthTip, step: 0.25 },
 ];
 
 /** The Steps setting's choices: off (smooth) or on. */
@@ -78,7 +83,9 @@ export function HornSettings({ horn, onEdit }: Props) {
     <section className="border-t border-stone-300 pt-3 mb-3">
       <CardHeading sub>{SPEAKER_TEXT.horn}</CardHeading>
       <p className="text-xs text-stone-500 mb-2">{hornText(horn)}</p>
-      <div className="text-sm font-label text-stone-500 mb-1">{SPEAKER_TEXT.hornSections}</div>
+      <div className="text-sm font-label text-stone-500 mb-1">
+        <Tooltip tip={SPEAKER_TEXT.hornPathSectionsTip}>{SPEAKER_TEXT.hornSections}</Tooltip>
+      </div>
       {segments.map((s, i) => (
         <div key={i} className="rounded border border-stone-300 px-3 pt-2 mb-2">
           <CardHeading
@@ -98,7 +105,7 @@ export function HornSettings({ horn, onEdit }: Props) {
             {SPEAKER_TEXT.hornSection(i + 1)}
           </CardHeading>
           <ToggleGroup
-            label={SPEAKER_TEXT.hornProfile}
+            label={<Tooltip tip={SPEAKER_TEXT.hornProfileTip}>{SPEAKER_TEXT.hornProfile}</Tooltip>}
             className="mb-2"
             value={s.profile}
             onChange={(profile) => editSegments((list) => withSectionProfile(list, i, profile))}
@@ -107,7 +114,7 @@ export function HornSettings({ horn, onEdit }: Props) {
           <div className={FIELD_ROW}>
             {/* a smooth horn's starts follow the previous ends: only the throat's shows */}
             {SECTION_FIELDS.filter(({ size }) => stepsOn || i === 0 || size !== "s1").map(
-              ({ size, label, step }) => (
+              ({ size, label, tip, step }) => (
                 // `contents`: the wrapper only hears the field's focus, the row lays out the field
                 <div
                   key={size}
@@ -120,7 +127,7 @@ export function HornSettings({ horn, onEdit }: Props) {
                   }}
                 >
                   <NumberField
-                    label={label}
+                    label={<Tooltip tip={tip}>{label}</Tooltip>}
                     value={shownSize(s, size)}
                     min={0}
                     step={step}

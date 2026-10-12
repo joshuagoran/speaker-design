@@ -1,9 +1,10 @@
+import { Tooltip } from "../../components/ui/Tooltip";
 import type { BandFilter, FilterType, SpeakerBand } from "../../types";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
-import { FILTER_TYPE_NAMES } from "../../constants/speakerPage";
+import { FILTER_TYPE_NAMES, SPEAKER_TEXT } from "../../constants/speakerPage";
 
 /** The filter types, as the picker lists them after its first choice. */
 const TYPE_OPTIONS: readonly SelectOption[] = entriesOf(FILTER_TYPE_NAMES).map(([id, name]) => ({
@@ -50,7 +51,7 @@ export function FilterFields({ filters, newCornerHz, offName, onEdit }: Props) {
         />
         {filter && (
           <NumberField
-            label="Corner"
+            label={<Tooltip tip={SPEAKER_TEXT.cornerTip}>Corner</Tooltip>}
             value={filter.hz}
             min={10}
             step={10}

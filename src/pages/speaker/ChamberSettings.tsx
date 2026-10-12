@@ -75,9 +75,6 @@ const KIND_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_KIND_NAMES).map((
 /** Where a chamber's net air comes from: worked out from its size (Auto), or typed in (Custom). */
 const NET_AIR = SET_BY;
 
-/** What the net air's Auto value takes off the inside volume. */
-const NET_AIR_TIP = "Inside volume less walls, bracing, drivers and vent.";
-
 interface Props {
   index: number;
   chamber: SpeakerChamber;
@@ -165,7 +162,7 @@ export function ChamberSettings({
         </div>
       </SettingsFold>
       <ToggleGroup
-        label={<Tooltip tip={NET_AIR_TIP}>Net air</Tooltip>}
+        label={<Tooltip tip={SPEAKER_TEXT.netAirTip}>Net air</Tooltip>}
         className="mb-2"
         value={chamber.netLiters === null ? NET_AIR.auto : NET_AIR.custom}
         onChange={(v) =>
@@ -177,22 +174,17 @@ export function ChamberSettings({
         options={entriesOf(SET_BY_NAMES)}
       />
       <NumberField
-        label={<Tooltip tip={NET_AIR_TIP}>Liters</Tooltip>}
+        label="Volume, L"
         // Auto: the model's value, read-only
         value={chamber.netLiters ?? shownTenth(result?.netLiters ?? 0)}
         disabled={chamber.netLiters === null}
         min={0.5}
         step={0.5}
-        unit="L"
         onChange={(netLiters) => onEdit((c) => ({ ...c, netLiters }))}
         className="mb-3"
       />
       <NumberField
-        label={
-          <Tooltip tip="Fill makes the box act larger. 10% is normal. 15% is heavy.">
-            Stuffing (%)
-          </Tooltip>
-        }
+        label={<Tooltip tip={SPEAKER_TEXT.stuffingTip}>Stuffing, %</Tooltip>}
         value={chamber.stuffingPct}
         min={0}
         step={5}
@@ -255,7 +247,7 @@ export function ChamberSettings({
           <PortFields port={vent.port} onChange={setPort} />
           {!vents && <p className="text-xs text-stone-500 mb-3">{SPEAKER_TEXT.ventFixed}</p>}
           <NumberField
-            label="Air speed limit"
+            label={<Tooltip tip={SPEAKER_TEXT.airSpeedTip}>Air speed limit</Tooltip>}
             value={vent.maxSpeedMs}
             min={1}
             step={0.5}
@@ -282,7 +274,7 @@ export function ChamberSettings({
               onChange={(n) => setVent({ ...vent, radiators: { ...vent.radiators, n } })}
             />
             <NumberField
-              label="Added mass, g"
+              label={<Tooltip tip={SPEAKER_TEXT.radiatorMassTip}>Added mass, g</Tooltip>}
               value={vent.radiators.addG}
               min={0}
               step={5}
@@ -554,7 +546,7 @@ function DriverFields({ driver, widthIn, placed, bandOptions, onEdit, onRemove }
       )}
       {horns.length > 0 && (
         <SelectField
-          label="Horn or waveguide"
+          label={<Tooltip tip={SPEAKER_TEXT.driverHornTip}>Horn or waveguide</Tooltip>}
           options={horns}
           value={driver.horn ? byId(horns, driver.horn.hornId) : NO_HORN}
           onChange={(o) =>
@@ -572,7 +564,7 @@ function DriverFields({ driver, widthIn, placed, bandOptions, onEdit, onRemove }
       )}
       {driver.horn && (
         <ToggleGroup
-          label="Horn mounting"
+          label={<Tooltip tip={SPEAKER_TEXT.hornMountTip}>Horn mounting</Tooltip>}
           className="mb-3"
           value={driver.horn.placement}
           onChange={(placement) =>

@@ -450,9 +450,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               <Button onClick={startFrom} className="mb-2">
                 {SPEAKER_START_TEXT.startOver}
               </Button>
-              <p className="text-xs text-stone-500 mb-2">
-                Starting over replaces this design; open a saved speaker from the library above.
-              </p>
+              <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.startOverHint}</p>
             </>,
           )}
           {section(
@@ -568,7 +566,9 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             "bands",
             <>
               <Card className="mb-3">
-                <CardHeading className="mb-1">{SPEAKER_TEXT.inputRange}</CardHeading>
+                <CardHeading className="mb-1">
+                  <Tooltip tip={SPEAKER_TEXT.inputTip}>{SPEAKER_TEXT.inputRange}</Tooltip>
+                </CardHeading>
                 <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.inputHint}</p>
                 <FilterFields
                   filters={spec.input}

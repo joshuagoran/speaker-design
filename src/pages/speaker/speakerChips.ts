@@ -37,7 +37,7 @@ export function bandChips(
     const where = mechanical
       ? ` The first limit is at ${formatHz(b.whoHz)}.${band?.highpass || spec.input.highpass ? "" : ` Add a highpass to the band, or set the ${SPEAKER_TEXT.inputRange}, to protect the cone.`}`
       : "";
-    const bandText = `Clean up to ${b.musicDb.toFixed(0)} dB at 1 m with one drive for the whole band${amp}.${where}`;
+    const bandText = `The band plays clean up to ${b.musicDb.toFixed(0)} dB at 1 m, with one drive for the whole band${amp}.${where}`;
     // the band's first datasheet driver (a compression driver, a tweeter, a coaxial's HF section)
     const hf = limits.drivers.find((d) => d.band === b.id);
     const hfChip = ((): SpeakerChip | null => {
@@ -57,7 +57,7 @@ export function bandChips(
         : [
             "ok",
             "Program-limited",
-            `The ${name} is capped at ${formatWatts(hf.watts)}: its program rating (2 × AES)${derated}.`,
+            `Its program rating (2 × AES) limits the ${name} to ${formatWatts(hf.watts)}${derated}.`,
             "speakerHfPower",
           ];
     })();
