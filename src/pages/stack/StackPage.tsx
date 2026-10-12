@@ -11,6 +11,8 @@ import { Card } from "../../components/ui/Card";
 import { TextField } from "../../components/ui/TextField";
 import { SelectField } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
+import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
+import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
@@ -315,6 +317,14 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                   onRemove={() => stack.removeMember(k)}
                 />
               ))}
+              {members.length > 0 && (
+                <AutoBalanceButton
+                  className="mb-3"
+                  balance={stack.balance}
+                  onApply={stack.applyBalance}
+                  tipExtra={AUTO_BALANCE_TEXT.stackTip}
+                />
+              )}
               {picked ? (
                 <>
                   <SelectField

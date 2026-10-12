@@ -29,7 +29,7 @@ import { curveLevelAt } from "../pa/coverage";
 import { passbandCenterHz } from "./speakerResponse";
 import { DEFAULT_PA } from "../defaults";
 import { PA_SLIDERS } from "../../constants/paSliders";
-import { AUTO_BALANCE_STATUS } from "../../constants/autoBalance";
+import { AUTO_BALANCE_STATUS, AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 
 /** The music tilt: how far a band sits below the band under it at their crossover, dB (the PA page's saved keys). */
 export type MusicTilt = Pick<MusicBalance, "tilt" | "hfTilt">;
@@ -107,19 +107,22 @@ const highestHz = (filters: readonly (BandFilter | null)[]) => {
 const fedBands = (spec: Pick<SpeakerSpec, "cabinet">) =>
   new Set(spec.cabinet.chambers.flatMap((c) => c.drivers.flatMap((d) => d.bands)));
 
-/** A speaker's bands as the balance reads them, from its response; and the fed bands the response has no model for. */
+/**
+ * A speaker's bands as the balance reads them, from its response; and the fed bands the response has no model for (a
+ * driver with no data, a filter corner that is not a positive frequency).
+ */
 function speakerBands(
   spec: Pick<SpeakerSpec, "cabinet" | "bands" | "input">,
   response: Pick<SpeakerResponse, "bands">,
 ) {
   const fed = fedBands(spec);
   const bands: BalanceBand<BandId>[] = [];
-  const unmodeled: BandId[] = [];
+  const unmodeled: SpeakerBand[] = [];
   for (const band of spec.bands) {
     if (!fed.has(band.id)) continue;
     const modeled = response.bands.find((b) => b.id === band.id);
     if (!modeled) {
-      unmodeled.push(band.id);
+      unmodeled.push(band);
       continue;
     }
     bands.push({
@@ -136,7 +139,11 @@ function speakerBands(
 export type AutoBalance<L> =
   | { status: typeof AUTO_BALANCE_STATUS.balanced; levels: L }
   | { status: typeof AUTO_BALANCE_STATUS.oneBand }
-  | { status: typeof AUTO_BALANCE_STATUS.unmodeled; bands: BandId[] };
+  | {
+      status: typeof AUTO_BALANCE_STATUS.unmodeled;
+      /** the bands the model leaves out, by name (in a stack, with their speaker's name) */
+      names: string[];
+    };
 
 /** A speaker's balanced Levels, by band id. */
 export type SpeakerLevels = Record<BandId, SpeakerBand["levelDb"]>;
@@ -151,7 +158,8 @@ export function autoBalanceSpeaker(
   tilt: MusicTilt = DEFAULT_MUSIC_TILT,
 ): AutoBalance<SpeakerLevels> {
   const { bands, unmodeled } = speakerBands(spec, response);
-  if (unmodeled.length) return { status: AUTO_BALANCE_STATUS.unmodeled, bands: unmodeled };
+  if (unmodeled.length)
+    return { status: AUTO_BALANCE_STATUS.unmodeled, names: unmodeled.map((b) => b.name) };
   const chain = chainLevels(bands, tilt);
   if (!chain) return { status: AUTO_BALANCE_STATUS.oneBand };
   return {
@@ -194,7 +202,7 @@ export function autoBalanceStack(
   tilt: MusicTilt = DEFAULT_MUSIC_TILT,
 ): AutoBalance<StackLevels> {
   const bands: BalanceBand<StackBandKey>[] = [];
-  const unmodeled: BandId[] = [];
+  const unmodeled: string[] = [];
   const seen = new Set<SpeakerSpec["id"]>();
   design.stack.members.forEach((member, k) => {
     if (seen.has(member.speakerId)) return;
@@ -202,14 +210,15 @@ export function autoBalanceStack(
     const run = response.members[k];
     const speaker = design.speakers.find((s) => s.id === member.speakerId);
     if (!run || !speaker) {
-      unmodeled.push(member.speakerId);
+      unmodeled.push(speaker?.name ?? member.speakerId);
       return;
     }
     const own = speakerBands({ ...speaker, input: member.crossover }, run.response);
-    unmodeled.push(...own.unmodeled);
+    for (const b of own.unmodeled)
+      unmodeled.push(AUTO_BALANCE_TEXT.memberBand(speaker.name, b.name));
     for (const b of own.bands) bands.push({ ...b, key: { speakerId: speaker.id, band: b.key } });
   });
-  if (unmodeled.length) return { status: AUTO_BALANCE_STATUS.unmodeled, bands: unmodeled };
+  if (unmodeled.length) return { status: AUTO_BALANCE_STATUS.unmodeled, names: unmodeled };
   const chain = chainLevels(bands, tilt);
   if (!chain) return { status: AUTO_BALANCE_STATUS.oneBand };
   const levels: StackLevels = {};

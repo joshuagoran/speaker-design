@@ -76,6 +76,7 @@ import {
 } from "../../constants/speakerStarts";
 import { ChamberSettings } from "./ChamberSettings";
 import { BandSettings } from "./BandSettings";
+import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
 import { FilterFields } from "./FilterFields";
 import { bandText, bracingText, chamberText, countText, inputText } from "./speakerText";
 import { braceNoteLines } from "../../lib/bracingNotes";
@@ -590,9 +591,14 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   }
                 />
               ))}
-              <Button variant="primary" className="mb-2" onClick={speakerPage.addBand}>
+              <Button variant="primary" className="mb-3" onClick={speakerPage.addBand}>
                 Add band
               </Button>
+              <AutoBalanceButton
+                className="mb-2"
+                balance={speakerPage.balance}
+                onApply={speakerPage.applyBalance}
+              />
             </>,
           )}
           {section(

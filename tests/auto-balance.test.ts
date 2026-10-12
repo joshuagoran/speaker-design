@@ -193,7 +193,9 @@ test("auto balance: one band, or a band the model cannot work out, leaves the Le
   const balance = balanceOf(bad);
   assert.equal(balance.status, AUTO_BALANCE_STATUS.unmodeled);
   if (balance.status === AUTO_BALANCE_STATUS.unmodeled)
-    assert.deepStrictEqual(balance.bands, [SPEAKER_BAND.high]);
+    assert.deepStrictEqual(balance.names, [
+      top.bands.find((b) => b.id === SPEAKER_BAND.high)?.name,
+    ]);
 });
 
 test("auto balance: a stack balances across its members, every member at 0 dB", () => {

@@ -3,6 +3,11 @@ import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { speakerLimits } from "../../lib/speaker/speakerLimits";
 import { cabinetBuild } from "../../lib/speaker/speakerBuild";
+import {
+  autoBalanceSpeaker,
+  withSpeakerLevels,
+  type SpeakerLevels,
+} from "../../lib/speaker/autoBalance";
 import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
@@ -93,6 +98,11 @@ export function useSpeakerPage() {
     () => speakerLimits({ cabinet, bands }, response, { feed }),
     [cabinet, bands, feed, response],
   );
+  // the band Levels for music, from the same response (lib/speaker/autoBalance)
+  const balance = useMemo(
+    () => autoBalanceSpeaker({ cabinet, bands, input: feed }, response),
+    [cabinet, bands, feed, response],
+  );
   // each chamber's braces, hardware and weight (the response's net air reads the same build)
   const build = useMemo(() => cabinetBuild(cabinet), [cabinet]);
   const store = useConfigStore(SPEAKERS_COLLECTION);
@@ -160,6 +170,9 @@ export function useSpeakerPage() {
     chamberKey: (i: number) => `${chamberRound}:${i}`,
     response,
     limits,
+    balance,
+    /** sets the band Levels auto balance gives: one band edit, as any other */
+    applyBalance: (levels: SpeakerLevels) => setSpec((s) => withSpeakerLevels(s, levels)),
     build,
     store,
     snapshot,
