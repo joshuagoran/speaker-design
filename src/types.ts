@@ -2,6 +2,7 @@ import type { AmpSteps } from "./lib/optimizer/ampSteps";
 import type { Dispatch, SetStateAction } from "react";
 import type { CHIP_IDS } from "./constants/chipIds";
 import type { CUT_BOX_NAMES, CUT_PART_NAMES } from "./constants/cutParts";
+import type { PURCHASED_PART_NAMES } from "./constants/purchasedParts";
 import type {
   BACK_JOINT_NAMES,
   BOX_AXIS_NAMES,
@@ -2805,6 +2806,21 @@ export interface CutPart {
   grain?: GrainDir;
   /** a waterfall strip: the panels' lengths along `b`, in cut order */
   pieces?: number[];
+}
+
+/** What a bought part is, by id (`PURCHASED_PART_NAMES` holds the name the cutlist shows). */
+export type PurchasedPartKind = keyof typeof PURCHASED_PART_NAMES;
+
+/** A part bought for a speaker, as the Cutlist page's purchased parts table and its CSV list it. */
+export interface PurchasedPart {
+  kind: PurchasedPartKind;
+  /** the maker and model, as the catalog names it */
+  model: string;
+  count: number;
+  /** US dollars each; null where no US vendor price is known */
+  unit: number | null;
+  /** the US vendor the price comes from; null where none is known */
+  vendor: string | null;
 }
 
 /** What the cutlist needs for a sub and mid pair. */

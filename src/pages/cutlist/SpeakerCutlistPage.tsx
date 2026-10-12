@@ -1,7 +1,7 @@
 import type { PanelExactIn, Setter } from "../../types";
 import type { SpeakerPageState } from "../speaker/useSpeakerPage";
 import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
-import { speakerCutParts } from "../../lib/speaker/speakerBuild";
+import { speakerCutParts, speakerPurchasedParts } from "../../lib/speaker/speakerBuild";
 import { defaultPanelIn } from "../../lib/panel";
 import { CutlistPage } from "./CutlistPage";
 import { useStoredCutlistOptions } from "./useStoredCutlistOptions";
@@ -35,13 +35,17 @@ export function SpeakerCutlistPage({ speakerPage }: Props) {
     }));
   };
   const options: CutlistOptions = { ...stored, panelExactIn: exactIn, setPanelExactIn };
-  const { parts, also } = speakerCutParts(cabinet, options.cornerJoint);
+  const { parts, vent } = speakerCutParts(cabinet, options.cornerJoint);
+  const purchased = speakerPurchasedParts(cabinet);
   return (
     <CutlistPage
       project={CUTLIST_PROJECT.speaker}
       options={options}
       parts={parts}
-      also={also}
+      // the vent's lines under the purchased parts (the hardware is in the table)
+      also={vent}
+      purchased={purchased}
+      csvName={`${speakerPage.spec.name || "speaker"} cutlist.csv`}
       wall={panel.thicknessIn}
       panel={panel.nominal}
       material={panel.material}

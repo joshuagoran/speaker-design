@@ -90,3 +90,45 @@ export function hfParts(driver: SpeakerDriver): HfParts | null {
       return null;
   }
 }
+
+/** A driver's catalog listing: its name (maker and model), US price (null where none is known) and price source. */
+export function driverListing(
+  driver: Pick<SpeakerDriver, "kind" | "driverId">,
+): { name: string; price: number | null; src: string } | null {
+  switch (driver.kind) {
+    case DRIVER_KIND.sub:
+      return byId(SUB_OPTIONS, driver.driverId) ?? null;
+    case DRIVER_KIND.mid:
+      return byId(MID_OPTIONS, driver.driverId) ?? null;
+    case DRIVER_KIND.compression:
+      return byId(CD_OPTIONS, driver.driverId) ?? null;
+    case DRIVER_KIND.woofer:
+      return hifiDriverById("woofer", driver.driverId) ?? null;
+    case DRIVER_KIND.tweeter:
+      return hifiDriverById("tweeter", driver.driverId) ?? null;
+    case DRIVER_KIND.coaxial:
+      return byId(FILL_OPTIONS, driver.driverId) ?? null;
+  }
+}
+
+/** What a price source that is an estimate (no vendor) shows as its vendor. */
+export const ESTIMATE_VENDOR = "Estimate";
+
+/**
+ * The vendor in a catalog price source (free text): a link's site ("pvcfittingsonline.com"), an estimate's word, else
+ * the text before its date or remark, without a part number ("Parts Express" from "Parts Express 260-705, Oct 2026").
+ */
+export const vendorOf = (src: string): string => {
+  if (/^https?:\/\//.test(src)) {
+    try {
+      return new URL(src).hostname.replace(/^www\./, "");
+    } catch {
+      return src;
+    }
+  }
+  if (/^estimate/i.test(src)) return ESTIMATE_VENDOR;
+  return src
+    .split(/[,;:(]/)[0]
+    .replace(/\s+\d[\d-]*$/, "")
+    .trim();
+};
