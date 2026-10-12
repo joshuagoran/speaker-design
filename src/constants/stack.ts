@@ -4,7 +4,7 @@ import { STACK_LISTEN_DISTANCE_M, type OldSaveKind } from "./speakerSpec";
 export const STACK_TEXT = {
   /** the name a new stack starts with */
   newName: "New stack",
-  views: "Front view",
+  views: "Views",
   front:
     "The members as the stack places them, to scale. A mirrored member is drawn flipped. The dashed line is the listening axis.",
   response: "Response at the listening point",

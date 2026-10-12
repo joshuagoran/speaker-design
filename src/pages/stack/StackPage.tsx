@@ -21,6 +21,8 @@ import { PURCHASED_PARTIAL_NOTE } from "../../constants/purchasedParts";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
 import { StackFront } from "../../components/drawings/StackFront";
+import { Viewer3DCard } from "../../components/stack-view/Viewer3DCard";
+import { MembersView3D } from "../../components/stack-view/MembersView3D";
 import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
 import { formatHz } from "../../lib/format";
@@ -181,16 +183,27 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
           />
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
             <SectionHeading className="mb-3">{STACK_TEXT.views}</SectionHeading>
-            <Card className={`flex flex-col ${VIEW_HEIGHT}`}>
-              <div className="flex-1 min-h-0">
-                <StackFront
-                  stack={design.stack}
-                  speakers={design.speakers}
-                  listenHeightIn={response.listenHeightIn}
-                />
-              </div>
-              <p className="text-xs text-stone-500 mt-2">{STACK_TEXT.front}</p>
-            </Card>
+            <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
+              <Viewer3DCard boxClassName={`relative ${VIEW_HEIGHT}`}>
+                {(cutaway) => (
+                  <MembersView3D
+                    stack={design.stack}
+                    speakers={design.speakers}
+                    cutaway={cutaway}
+                  />
+                )}
+              </Viewer3DCard>
+              <Card className={`flex flex-col ${VIEW_HEIGHT}`}>
+                <div className="flex-1 min-h-0">
+                  <StackFront
+                    stack={design.stack}
+                    speakers={design.speakers}
+                    listenHeightIn={response.listenHeightIn}
+                  />
+                </div>
+                <p className="text-xs text-stone-500 mt-2">{STACK_TEXT.front}</p>
+              </Card>
+            </div>
             {members.length > 0 && (
               <>
                 <StatTileGrid tiles={totalTiles} className="mt-5 mb-3" />
