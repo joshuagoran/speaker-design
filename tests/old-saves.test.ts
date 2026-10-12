@@ -12,6 +12,7 @@ import {
 } from "../src/pages/stack/oldSaves";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
+import { paBalancedLayers } from "../src/lib/speaker/paBalance";
 import { layersFromHifi } from "../src/lib/speaker/hifiSpec";
 import { stackResponse } from "../src/lib/speaker/stackResponse";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
@@ -231,11 +232,15 @@ test("old saves: every seed design opens as a stack whose members are all modele
   }
 });
 
-test("old saves: a PA save opens as layersFromPa reads its design", () => {
+test("old saves: a PA save opens as layersFromPa reads its design, with its music balance", () => {
   const design = startingPa("satellite");
   const opened = stackFromOldSave({ kind: OLD_SAVE_KIND.pa, doc: doc(design, "Sat") });
-  const read = layersFromPa(design, { id: DRAFT_STACK_ID, name: "Sat" }, DEFAULT_COVERAGE_LAYOUT);
+  const identity = { id: DRAFT_STACK_ID, name: "Sat" };
+  const read = paBalancedLayers(design, layersFromPa(design, identity, DEFAULT_COVERAGE_LAYOUT));
   assert.deepStrictEqual(opened, { stack: read.stack, speakers: read.speakers });
+  // the balance moved the Levels off the adapter's own (the horn well under the sub)
+  const levels = opened?.speakers.flatMap((s) => s.bands.map((b) => b.levelDb)) ?? [];
+  assert.ok(Math.min(...levels) < -10, String(levels));
 });
 
 test("old saves: a save that doesn't read as its page's opens as nothing, not a broken stack", () => {

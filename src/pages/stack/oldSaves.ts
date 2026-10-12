@@ -46,7 +46,7 @@ import {
   restoredPanel,
   savedPanelExactIn,
 } from "../../lib/panel";
-import { layersFromPa } from "../../lib/speaker/paSpec";
+import { paLayers } from "./stackPresets";
 import { layersFromHifi } from "../../lib/speaker/hifiSpec";
 import { savedCrossoverOrder } from "../../constants/crossovers";
 import { savedPortStyle } from "../../constants/portStyles";
@@ -245,7 +245,7 @@ const readsAs = (kind: OldSaveKind, doc: SavedConfig) =>
 
 /**
  * An old save opened as a new, unsaved stack named as the save: the PA design's speakers and stack (on the PA floor's
- * starting layout), or the Hi-fi speaker in a stack of one. Null for a document that doesn't read as its page's save
+ * starting layout, with its music balance in the band Levels), or the Hi-fi speaker in a stack of one. Null for a document that doesn't read as its page's save
  * (a layout or box kind it can't have, a size that isn't numbers), or that the adapters can't read in.
  */
 export function stackFromOldSave({ kind, doc }: Pick<OldSave, "kind" | "doc">): StackDesign | null {
@@ -253,7 +253,8 @@ export function stackFromOldSave({ kind, doc }: Pick<OldSave, "kind" | "doc">): 
   const identity = { id: DRAFT_STACK_ID, name: doc.name };
   try {
     if (kind === OLD_SAVE_KIND.pa) {
-      const { stack, speakers } = layersFromPa(
+      // the music balance worked out once, now, and saved in the band Levels (as the current PA design is)
+      const { stack, speakers } = paLayers(
         paDesignFromSaved(doc),
         identity,
         DEFAULT_COVERAGE_LAYOUT,
