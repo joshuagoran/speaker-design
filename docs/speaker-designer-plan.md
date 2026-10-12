@@ -357,7 +357,21 @@ Each PR stands alone. Lowest risk first.
       baffle-step EQ, the woofer's drive at its limit is within 0.2 dB from 30 Hz to a third of the crossover. The
       tweeter's power is exact. Above that range the engines differ: the Hi-fi divides the coil's rating by the
       lowpass, and the PA and the model do not.
-  - **Later in L3.** The optimizer; the horn settings; a "Place" picker for
+  - **Horn settings (done).** A horn-loaded chamber shows a "Horn" section in its chamber settings, with a one-line
+    summary (drive, sections, path length, path):
+    - The flare sections: profile (conical or exponential), start area, end area and length, in in² and in. The spec
+      keeps the engine's cm² and cm; `src/pages/designer/hornSections.ts` converts in one place. Add and remove
+      sections (at least one stays). The sections chain: a new section starts at the last end area, a new end area
+      moves the next start with it, and a removed section's next one starts where the removed one did. A start area
+      typed apart from the previous end is a step, and a note says so.
+    - The throat chamber, L (as the net air). The path: straight or folded.
+    - The drive: front-loaded can be picked; tapped and back-loaded show, but cannot be picked, with a note that the
+      horn engine takes only a front-loaded horn today.
+    - A size that is not positive and finite (an area, a length or the throat chamber) is the `noModel` gap, and the
+      views draw no flare: never NaN (`isSizedSegment`, the horn engine's and `hornFlare`'s check).
+    - Not yet: a "Direct / Horn" load setting to make a chamber horn-loaded (today only a template or a PA v2 save
+      starts one), and the taps of a tapped horn.
+  - **Later in L3.** The optimizer; a "Place" picker for
     each chamber (on top of, or beside, chamber N). Today the user types its position ("From left", "From bottom").
 - **L4 Stack and Space.** The UI has three layers: Speaker, Stack and Space (see the owner decisions). L4 adds
   the last two, in two phases. The name is "Stack", not "System".
