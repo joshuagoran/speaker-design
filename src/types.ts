@@ -471,6 +471,8 @@ export interface AmpModel {
   gainDb: number | null;
   /** the speaker-power range its limiter can be set to, watts; null where the limiter takes no speaker power */
   limiterW: readonly [min: number, max: number] | null;
+  /** net weight, pounds, as the maker lists it */
+  lb: number;
   /** a used one's price, US dollars, as the racks buy it */
   usedPrice: number;
   /** the used price is an estimate: no US listing was found */

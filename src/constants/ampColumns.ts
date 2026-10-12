@@ -21,6 +21,7 @@ export const AMP_COLUMNS = {
   w8: "W/ch 8 Ω",
   w4: "W/ch 4 Ω",
   w2: "W/ch 2 Ω",
+  lb: "Weight",
   gain: "Gain",
   dsp: "DSP",
   usedPrice: "Used (US)",

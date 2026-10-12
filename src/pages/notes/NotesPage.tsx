@@ -73,6 +73,8 @@ function ampCell(
       );
       return watts.length ? watts.join(" / ") : "–";
     }
+    case "lb":
+      return `${model.lb} lb`;
     case "gain":
       return model.gainDb == null ? "–" : `${model.gainDb} dB`;
     case "dsp":
@@ -240,8 +242,9 @@ export function NotesPage() {
           <SectionHeading className="mb-3">Amps</SectionHeading>
           <p className="text-sm text-stone-900 mb-3 max-w-3xl">
             Power is per channel, continuous, all channels driven, as each maker rates it; two
-            figures are channel 1 / channel 2, and a dash is a load the maker does not rate. Hover
-            an amp for its filters and limiter. An estimated price had no US listing to check.
+            figures are channel 1 / channel 2, and a dash is a load the maker does not rate. Weight
+            is the net weight, or the one figure a maker prints. Hover an amp for its filters and
+            limiter. An estimated price had no US listing to check.
           </p>
           <div className="overflow-x-auto">
             <table className="text-sm w-full min-w-[1000px] border-collapse">
