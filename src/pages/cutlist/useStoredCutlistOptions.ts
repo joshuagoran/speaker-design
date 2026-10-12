@@ -1,6 +1,6 @@
 import type { SetStateAction } from "react";
 import type { CutlistSettings, PanelExactIn, Setter } from "../../types";
-import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
+import type { CutlistOptions } from "./useCutlistOptions";
 import { useStoredStateFrom } from "../../hooks/useStoredState";
 import { CUTLIST_DEFAULTS, savedCutlist } from "../../lib/pa/cutlist";
 import { PLYWOOD_SHEETS } from "../../lib/pa/calc";

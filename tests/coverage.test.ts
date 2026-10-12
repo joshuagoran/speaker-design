@@ -30,13 +30,8 @@ import {
 import { MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { paResponseAt, paStackSources } from "../src/lib/pa/dispersion";
 import { materialAlpha, surfaceReflection } from "../src/lib/pa/roomAcoustics";
-import {
-  DEFAULT_COVERAGE_LAYOUT,
-  boxReach,
-  fitted,
-  fromStored,
-  stackInRoom,
-} from "../src/pages/coverage/useCoverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
+import { boxReach, fitted, fromStored, stackInRoom } from "../src/pages/coverage/useCoverageLayout";
 import {
   COVERAGE_LEVEL_REF,
   COVERAGE_TARGET_DB,

@@ -26,7 +26,7 @@ import {
   HIFI_AMP_WATTS_MAX,
 } from "../src/lib/hifi/optimize";
 import { fillSystem, highpassGain } from "../src/lib/pa/calc";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_FILL, DEFAULT_HIFI } from "../src/lib/defaults";
 import { FILL_OPTIONS, HIFI_TWEETERS, HIFI_WOOFERS } from "../src/lib/data";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SEAT_FLOOR_M } from "../src/constants/hifiEngine";

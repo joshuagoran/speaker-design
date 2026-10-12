@@ -13,7 +13,7 @@ import {
 } from "../src/lib/pa/cutlist";
 import { hifiCutParts, settingsForMaterial } from "../src/lib/hifi/cutlist";
 import { RADIATOR_PANEL, driverLayout } from "../src/lib/hifi/hifi";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI, DEFAULT_PA } from "../src/lib/defaults";
 import { CUT_BOX_TAGS } from "../src/constants/cutParts";
 import type {

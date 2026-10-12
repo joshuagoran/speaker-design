@@ -1,5 +1,5 @@
-import { waveguideSpecOf, throatAdapterPrice } from "../../lib/data";
-import { abs } from "../../lib/acoustics/complex";
+import { waveguideSpecOf, throatAdapterPrice } from "../data";
+import { abs } from "../acoustics/complex";
 import { METERS_PER_FOOT, METERS_PER_INCH } from "../../constants/units";
 import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SEAT_FLOOR_M } from "../../constants/hifiEngine";
 import {
@@ -12,10 +12,10 @@ import {
   listenerGeometry,
   logSpacedFrequencies,
   linkwitzRileyFilter,
-} from "../../lib/hifi/hifi";
-import { hifiBoxFit } from "../../lib/hifi/boxLayout";
-import { rippleDb } from "../../lib/hifi/diffraction";
-import { hifiPairLevelDb, inFarField } from "../../lib/hifi/nearField";
+} from "./hifi";
+import { hifiBoxFit } from "./boxLayout";
+import { rippleDb } from "./diffraction";
+import { hifiPairLevelDb, inFarField } from "./nearField";
 import type { HifiDesign, HifiDesignState, HifiSpeakerModel } from "../../types";
 
 /** The frequencies every Hi-fi response is worked out at: the charts' 15 Hz to 20 kHz axis. */

@@ -19,7 +19,7 @@ import {
 import { BRACKET_MESH_NAME } from "../src/components/stack-view/buildBracket";
 import { PLATE_MESH_NAMES, plateFit } from "../src/components/stack-view/buildPlate";
 import { hifiSceneProps } from "../src/pages/hifi/hifiSceneProps";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK } from "../src/lib/defaults";
 import {
   CD_OPTIONS,

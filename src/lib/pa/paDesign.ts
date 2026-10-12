@@ -21,70 +21,82 @@ import {
   subMusicOutputAt,
   phasedCurve,
   ductDividerIn,
-} from "../../../lib/pa/calc";
-import { paDispersionMap, firstNullAngleDeg } from "../../../lib/pa/dispersion";
+} from "./calc";
+import { paDispersionMap, firstNullAngleDeg } from "./dispersion";
 import type {
+  BackJointId,
   BandCurves,
   BoxBracing,
   BoxHardwarePlan,
   BoxKeepOut,
+  BraceStyleId,
+  CompressionDriver,
+  CrossoverOrder,
   Dims3,
   DispersionPlane,
   FrequencyPoint,
   HifiDispersionMap,
+  HighpassType,
+  Horn,
   HornHf,
   HornResponse,
+  MidDriver,
   MidSystemModeled,
+  PaHardware,
+  PaLayout,
   PaMaxPoint,
   PaPortGeometry,
   PaStackGeometry,
   PhasedModel,
+  PortStyle,
   SealedBoxModel,
+  SubDriver,
   SubSystemModeled,
   VentedBoxModel,
   VentGeometry,
-} from "../../../types";
-import { stackHeights } from "../../../components/stack-view/stackHeights";
-import type { CabinetStyle } from "./useCabinetStyle";
-import type { Crossovers } from "./useCrossovers";
-import type { HornDesign } from "./useHornDesign";
-import type { MidDesign } from "./useMidDesign";
-import type { SubwooferDesign } from "./useSubwooferDesign";
-import { xmaxBandCurves } from "../../../lib/xmax";
-import { towerMidDims } from "../../../lib/pa/tower";
+  VentSpec,
+} from "../../types";
+import { stackHeights } from "../../components/stack-view/stackHeights";
+import { xmaxBandCurves } from "../xmax";
+import { towerMidDims } from "./tower";
 
-/** The design state the PA models read; the music balance, finish, colors and cutlist options don't enter them. */
-type PaDesignInputs = Pick<
-  SubwooferDesign,
-  | "subDriver"
-  | "portStyle"
-  | "subBoxDims"
-  | "subVentSpec"
-  | "subHighpassHz"
-  | "subHighpassType"
-  | "subAmpWatts"
-  | "maxPortAirSpeedMs"
-> &
-  Pick<MidDesign, "midDriver" | "midBoxDims" | "midAmpWatts"> &
-  Pick<HornDesign, "hornOption" | "compressionDriver" | "hornAmpWatts"> &
-  Pick<
-    Crossovers,
-    "subMidCrossoverHz" | "midHornCrossoverHz" | "subMidCrossoverOrder" | "midHornCrossoverOrder"
-  > &
-  Pick<
-    CabinetStyle,
-    | "plinthHeightIn"
-    | "layout"
-    | "baffleInsetIn"
-    | "spacerHeightIn"
-    | "braceStyle"
-    | "backJoint"
-    | "hardware"
-  > & {
-    dispersionPlane: DispersionPlane;
-    /** the walls' exact thickness, in (lib/panel) */
-    wallThicknessIn: number;
-  };
+/**
+ * The PA design state the models read (the PA page's hooks hold it, a part each); the music balance, finish, colors
+ * and cutlist options don't enter them.
+ */
+export interface PaDesignInputs {
+  subDriver: SubDriver;
+  portStyle: PortStyle;
+  subBoxDims: Dims3;
+  subVentSpec: VentSpec;
+  subHighpassHz: number;
+  subHighpassType: HighpassType;
+  subAmpWatts: number;
+  maxPortAirSpeedMs: number;
+  midDriver: MidDriver;
+  midBoxDims: Dims3;
+  midAmpWatts: number;
+  hornOption: Horn;
+  compressionDriver: CompressionDriver;
+  hornAmpWatts: number;
+  subMidCrossoverHz: number;
+  midHornCrossoverHz: number;
+  subMidCrossoverOrder: CrossoverOrder;
+  midHornCrossoverOrder: CrossoverOrder;
+  plinthHeightIn: number;
+  layout: PaLayout;
+  baffleInsetIn: number;
+  spacerHeightIn: number;
+  /** the boxes' bracing style as chosen (one for the stack); absent: the plywood's default (`defaultBraceStyle`) */
+  braceStyle: BraceStyleId | undefined;
+  /** how both boxes' backs are fixed (glued, or screwed on) */
+  backJoint: BackJointId;
+  /** each box's handles and their offsets (lib/pa/hardware) */
+  hardware: PaHardware;
+  dispersionPlane: DispersionPlane;
+  /** the walls' exact thickness, in (lib/panel) */
+  wallThicknessIn: number;
+}
 
 /** What the PA models and sizes work out from the design state. */
 export interface PaDerivedDesign {

@@ -33,7 +33,7 @@ import {
   type StackSettingsSection,
 } from "../../constants/settingsSections";
 import { STACK_TEXT } from "../../constants/stack";
-import { DEFAULT_COVERAGE_LAYOUT } from "../coverage/useCoverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { FilterFields } from "../speaker/FilterFields";
 import { inputText } from "../speaker/speakerText";
 import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage";

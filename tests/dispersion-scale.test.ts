@@ -2,7 +2,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { paDispersionMap } from "../src/lib/pa/dispersion";
 import { dispersionGrid, logSpacedFrequencies } from "../src/lib/hifi/hifi";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import {
   CONTOUR_STEP_DB,

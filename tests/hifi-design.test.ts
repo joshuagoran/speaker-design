@@ -1,7 +1,7 @@
 import { test } from "vite-plus/test";
 import { abs } from "../src/lib/acoustics/complex";
 import assert from "node:assert";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import { linkwitzRileyFilter } from "../src/lib/hifi/hifi";
 import { close } from "./helpers";

@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { highpassPhase, subMusicThroughLowpass } from "../../lib/pa/calc";
 import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
+import { balancedLevelsOf, coverageGeometry, musicBalanceOf } from "../../lib/pa/musicBalance";
 import {
   audienceAverage,
   autoSubDelayMs,
-  balanceLevels,
   balancedTarget,
   bandTarget,
   coverageBoxes,
@@ -14,7 +13,6 @@ import {
   coverageStats,
   COVERAGE_GRID_COLS,
   oneMeterSpot,
-  withOwnPhase,
 } from "../../lib/pa/coverage";
 import { runCoverageGrid } from "../../lib/pa/runCoverage";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
@@ -117,61 +115,6 @@ function pointRefAtLimit(
     return (a + b) / 2;
   }
   return null;
-}
-
-/** The planner's music balance: its crossovers, and each band's level under the one below. */
-export const musicBalanceOf = (p: CoverageInputs): MusicBalance => ({
-  xoLo: p.subMidCrossoverHz,
-  xoHi: p.midHornCrossoverHz,
-  tilt: p.midBelowSubDb,
-  hfTilt: p.hornBelowMidDb,
-});
-
-/** The stack the map places, but for its sub delay: the dispersion model's, the sub's footprint, the mid box's width. */
-export const coverageGeometry = (
-  p: Pick<CoverageInputs, "stackGeometry" | "subBox" | "effectiveMidBoxDims">,
-): Omit<CoverageStack, "subDelayMs"> | null =>
-  p.stackGeometry
-    ? {
-        ...p.stackGeometry,
-        footprint: { w: p.subBox.w, d: p.subBox.d },
-        midW: p.effectiveMidBoxDims.w,
-      }
-    : null;
-
-/**
- * Each band at the planner's own limit (the sub at its music limit through its lowpass, the mid and horn as the system
- * chart draws them), with the sub's and mid's own phase, then balanced: the weakest band sets the level. Null without
- * a mid model or a stack.
- */
-export function balancedLevelsOf(
-  p: CoverageInputs,
-  geometry: Omit<CoverageStack, "subDelayMs"> | null,
-  balance: MusicBalance,
-): BalancedLevels | null {
-  const { subModeled, midModeled, hornModel } = p;
-  if (!midModeled || !geometry) return null;
-  return balanceLevels(
-    {
-      sub: subModeled
-        ? withOwnPhase(
-            subMusicThroughLowpass(
-              subModeled.mdl,
-              subModeled.lim,
-              p.subAmpVoltage,
-              p.subMidCrossoverHz,
-              geometry.orderLo,
-            ),
-            subModeled.mdl.curve,
-            (f) => highpassPhase(f, p.subHighpassHz, p.subHighpassType),
-          )
-        : null,
-      mid: withOwnPhase(midModeled.max, midModeled.mdl.curve),
-      horn: hornModel ? hornModel.curve : [],
-    },
-    balance,
-    geometry,
-  );
 }
 
 /**

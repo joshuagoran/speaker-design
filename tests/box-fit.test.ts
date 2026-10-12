@@ -8,7 +8,7 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { useHifiPlanner, type HifiPlanner } from "../src/pages/hifi/useHifiPlanner";
 import { usePaDesign, type PaDesign } from "../src/pages/pa-stack/hooks/usePaDesign";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI, DEFAULT_PA } from "../src/lib/defaults";
 import { savedVentSpec } from "../src/pages/pa-stack/hooks/usePaDesign";
 import { HIFI_TWEETERS, HIFI_WOOFERS, midDriversOfSize } from "../src/lib/data";

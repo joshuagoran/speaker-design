@@ -36,7 +36,7 @@ gets there in small PRs: near-term phases on today's Hi-fi engine first, then th
 
 ### Hi-fi model
 
-`src/lib/hifi/hifi.ts`, `src/pages/hifi/hifiDesign.ts`.
+`src/lib/hifi/hifi.ts`, `src/lib/hifi/hifiDesign.ts`.
 
 - **Has:** compression drivers on waveguides (`HIFI_WAVEGUIDES`, the 1″-exit horns in `horns.ts`), pro 8″
   woofers, sealed / vented / slot / radiator boxes, an active LR24 / LR48 crossover with separate woofer and

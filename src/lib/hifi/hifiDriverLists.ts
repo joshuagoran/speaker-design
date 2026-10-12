@@ -1,7 +1,7 @@
 import type { HifiBoxKind, HifiTweeter, RadiatorSelection } from "../../types";
-import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../../lib/data";
-import { byIdOrThrow } from "../../lib/tables";
-import { isAmt, isRibbon, needsWaveguide } from "../../lib/hifi/hifi";
+import { HIFI_WOOFERS, HIFI_TWEETERS, HIFI_PASSIVES } from "../data";
+import { byIdOrThrow } from "../tables";
+import { isAmt, isRibbon, needsWaveguide } from "./hifi";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 
 /** Woofers listed smallest first, grouped by size in the picker, A–Z within a size. */

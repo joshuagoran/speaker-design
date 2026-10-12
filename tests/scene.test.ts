@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 import * as THREE from "three";
 import { buildStackScene, type Props } from "../src/components/stack-view/buildStackScene";
-import { derivePaDesign } from "../src/pages/pa-stack/hooks/paDesign";
+import { derivePaDesign } from "../src/lib/pa/paDesign";
 import { DEFAULT_PA } from "../src/lib/defaults";
 import { SCENE_CASE_NAMES, sceneCases, scenePropsOf } from "./scene-cases";
 import { VENT_MESH_NAME } from "../src/components/stack-view/buildBraces";

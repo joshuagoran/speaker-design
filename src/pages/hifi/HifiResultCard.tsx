@@ -1,4 +1,4 @@
-import { passiveRadiatorOf } from "./hifiDriverLists";
+import { passiveRadiatorOf } from "../../lib/hifi/hifiDriverLists";
 import { Button } from "../../components/ui/Button";
 import { OptimizerCurveChart } from "../../components/charts/OptimizerCurveChart";
 import { HifiFront } from "../../components/drawings/HifiFront";

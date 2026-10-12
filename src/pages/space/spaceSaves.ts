@@ -13,7 +13,7 @@ import type {
 } from "../../types";
 import { isSavedSpeaker } from "../speaker/useSpeakerPage";
 import { paVenue } from "../../lib/speaker/paSpec";
-import { DEFAULT_COVERAGE_LAYOUT } from "../coverage/useCoverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { SPACE_ITEM } from "../../constants/speakerSpec";
 import { SPACE_TEXT } from "../../constants/space";
 

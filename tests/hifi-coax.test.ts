@@ -30,7 +30,7 @@ import { hifiBoxMin } from "../src/lib/hifi/boxLayout";
 import { hifiSearchSpace, optimizeHifiSpeaker } from "../src/lib/hifi/optimize";
 import { CHANGE_NAMES, PRICE_UNKNOWN_TEXT } from "../src/constants/optimizerText";
 import { useHifiPlanner, type HifiPlanner } from "../src/pages/hifi/useHifiPlanner";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import { HIFI_BOX_LAYOUT } from "../src/constants/hifiLayout";
 import { HIFI_COAX_DRIVE } from "../src/constants/hifiEngine";
