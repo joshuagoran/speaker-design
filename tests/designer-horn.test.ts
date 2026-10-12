@@ -10,12 +10,16 @@ import {
   shownIn2,
   shownInOfCm,
   specSize,
+  stepCount,
   stepsIn,
+  stepsLatched,
   withSectionAdded,
   withSectionProfile,
   withSectionRemoved,
   withSectionSize,
+  withStepsSmoothed,
 } from "../src/pages/designer/hornSections";
+import { DESIGNER_TEXT } from "../src/constants/designer";
 import { hornText } from "../src/pages/designer/designerText";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { hornFlare, speakerLayout } from "../src/lib/speaker/speakerLayout";
@@ -140,10 +144,10 @@ test("designer horn: editing a section changes the response, the 3D flare and th
   assert.equal(flareOf(folded)?.placeholder, true);
 });
 
-test("designer horn: a shown area typed back in keeps the joint (the PA v2 bin's 630.08 in²)", () => {
+test("designer horn: a shown area typed back in keeps the joint (the PA v2 bin's 630.1 in²)", () => {
   const segments = hornOf(BIN).segments;
   const shown = shownIn2(segments[0].s2);
-  assert.equal(shown, 630.08, "the bin's first joint as the field shows it");
+  assert.equal(shown, 630.1, "the bin's first joint as the field shows it, to the tenth");
   // typed into the second section's start: no step, and it snaps to the first section's end
   const start = withSectionSize(segments, 1, "s1", shown);
   assert.ok(!stepsIn(start, 1));
@@ -154,8 +158,8 @@ test("designer horn: a shown area typed back in keeps the joint (the PA v2 bin's
   assert.equal(end[1].s1, end[0].s2);
   const moved = withSectionSize(end, 0, "s2", 700);
   assert.equal(moved[1].s1, specSize("s2", 700), "still chained after the retype");
-  // a real step (0.01 in² apart) stays a step
-  assert.ok(stepsIn(withSectionSize(segments, 1, "s1", shown + 0.01), 1));
+  // a real step (0.1 in² apart, the fields' last digit) stays a step
+  assert.ok(stepsIn(withSectionSize(segments, 1, "s1", shown + 0.1), 1));
 });
 
 test("designer horn: typing an end area keystroke by keystroke doesn't join a stepped pair", () => {
@@ -214,10 +218,12 @@ test("designer horn: sections chain as they are edited, added and removed", () =
 });
 
 test("designer horn: in² and in round-trip to the spec's cm² and cm, and the spec survives a save", () => {
-  for (const typed of [0.25, 12.5, 178.37, 1234.56]) {
+  // areas show to the tenth, lengths to the hundredth
+  for (const typed of [0.3, 12.5, 178.4, 1234.6])
     assert.equal(shownIn2(specSize("s1", typed)), typed);
+  assert.equal(shownIn2(specSize("s1", 178.37)), 178.4);
+  for (const typed of [0.25, 12.5, 178.37, 1234.56])
     assert.equal(shownInOfCm(specSize("length", typed)), typed);
-  }
   assert.equal(specSize("length", 1), CM_PER_IN);
   assert.equal(specSize("s2", 1), CM_PER_IN * CM_PER_IN);
   const edited = withSegments(BIN, (s) =>
@@ -262,4 +268,59 @@ test("designer horn: a drive other than front-loaded is the engine's named gap",
   assert.deepEqual(responseOf(tapped).chambers[0].gaps, [HORN_ENGINE_GAP.tapped]);
   assert.ok(finiteResponse(tapped));
   assert.match(hornText(hornOf(BIN)), /^front-loaded horn, \d+ sections, [\d.]+ in, straight$/);
+});
+
+test("designer horn: smooth by default; Steps off snaps each start area back to the previous end", () => {
+  // the templates and a new section have no steps
+  for (const template of [
+    DESIGNER_TEMPLATE.paV2SubBinOne,
+    DESIGNER_TEMPLATE.paV2SubBinTwo,
+    DESIGNER_TEMPLATE.paV2MidBox,
+  ])
+    assert.equal(stepCount(hornOf(templateSpeaker(template)).segments), 0, template);
+  const segments = hornOf(BIN).segments;
+  assert.equal(stepCount(withSectionAdded(segments) ?? []), 0, "a new section starts smooth");
+  // two steps made with Steps on
+  const stepped = withSectionSize(withSectionSize(segments, 1, "s1", 100), 3, "s1", 900);
+  assert.equal(stepCount(stepped), 2);
+  assert.equal(DESIGNER_TEXT.hornSteps(stepCount(stepped)), "Steps: 2");
+  // Steps off: every start back to the previous end, the ends as they were
+  const smooth = withStepsSmoothed(stepped);
+  assert.equal(stepCount(smooth), 0);
+  assert.equal(DESIGNER_TEXT.hornSteps(stepCount(smooth)), "Steps: none");
+  smooth.forEach((s, i) => {
+    assert.equal(s.s2, stepped[i].s2);
+    if (i > 0) assert.equal(s.s1, smooth[i - 1].s2);
+  });
+  assert.equal(smooth[0].s1, segments[0].s1, "the throat stays");
+  assert.deepEqual(withStepsSmoothed(segments), segments, "a smooth horn stays as it is");
+  assert.deepEqual(responseOf(withSegments(BIN, () => smooth)).sum, responseOf(BIN).sum);
+});
+
+test("designer horn: a step shows a note that names the two sections", () => {
+  const stepped = withSectionSize(hornOf(BIN).segments, 1, "s1", 100);
+  const notes = stepped.flatMap((_, i) =>
+    stepsIn(stepped, i) ? [DESIGNER_TEXT.hornStep(i + 1)] : [],
+  );
+  assert.deepEqual(notes, [
+    "Section 2 starts at a different area than section 1 ends. This makes a step in the horn.",
+  ]);
+  assert.equal(stepsIn(withStepsSmoothed(stepped), 1), false, "no note once smooth");
+});
+
+test("designer horn: Steps stays on when a step is typed back to smooth; only Off turns it off", () => {
+  const segments = hornOf(BIN).segments;
+  // smooth and never turned on: off
+  assert.equal(stepsLatched(false, segments), false);
+  // a step: on, whatever it was
+  const stepped = withSectionSize(segments, 1, "s1", 100);
+  let on = stepsLatched(false, stepped);
+  assert.equal(on, true);
+  // the start area typed back down to the previous end: no step, but Steps stays on (the field stays)
+  const typedBack = withSectionSize(stepped, 1, "s1", shownIn2(segments[0].s2));
+  assert.equal(stepCount(typedBack), 0);
+  on = stepsLatched(on, typedBack);
+  assert.equal(on, true);
+  // the user's Off: off, and the sections smooth
+  assert.equal(stepsLatched(false, withStepsSmoothed(typedBack)), false);
 });

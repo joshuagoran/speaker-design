@@ -211,6 +211,10 @@ Each PR stands alone. Lowest risk first.
     - Not drawn yet: the aim (see the owner decisions) and the PA plinth. The arched top draws in 3D on a PA frame
       with one shell, over a top chamber that runs the full width and is at least half the width tall
       (`drawsArchedTop`, L3e). The front drawing and the Hi-fi box draw it flat.
+    - Known issue: a horn-loaded chamber's vent draws in the wrong place. The vent rules place its ports and slots as
+      for a direct box, for example a slot across the bottom that runs through the horn's mouth. The vent of a horn
+      chamber goes where the rear chamber is (for example slots in the sides). "Horn bin construction" (below) fixes
+      it.
   - **L3e Templates.** The templates step adds these cabinet settings:
     - A top shape: `flat` or `arched`. Then the PA tower's arched top draws and cuts correctly.
     - A "Construction" setting: "Frame and inset baffle" (the PA style) or "Flush box" (the Hi-fi style). Before,
@@ -366,18 +370,31 @@ Each PR stands alone. Lowest risk first.
       lowpass, and the PA and the model do not.
   - **Horn settings (done).** A horn-loaded chamber shows a "Horn" section in its chamber settings, with a one-line
     summary (drive, sections, path length, path):
-    - The flare sections: profile (conical or exponential), start area, end area and length, in in² and in. The spec
+    - The flare sections: profile (conical or exponential), start area, end area and length, in in² and in. The areas
+      show to 0.1 in² and the lengths to 0.01 in; two areas at most 0.05 in² apart are the same joint. The spec
       keeps the engine's cm² and cm; `src/pages/designer/hornSections.ts` converts in one place. Add and remove
       sections (at least one stays). The sections chain: a new section starts at the last end area, a new end area
       moves the next start with it, and a removed section's next one starts where the removed one did. A start area
       typed apart from the previous end is a step, and a note says so.
+    - Steps (owner, Oct 2026): a horn is smooth by default. Each section's start area is the previous section's end
+      area, and only the first section shows its start area. Templates and new sections have no steps. An "Advanced"
+      fold (`AnimatedDetails`; its summary says "Steps: none" or "Steps: 2") holds a "Steps" setting. Only when it is
+      on does each section after the first show its start area, so a step can be made. A step turns it on, and it stays
+      on until the user turns it off (`stepsLatched`). A step shows a note: "Section 2 starts at a different area than section 1 ends. This makes a step in the
+      horn." Turning it off sets each start area back to the previous end area (`withStepsSmoothed`).
     - The throat chamber, L (as the net air). The path: straight or folded.
     - The drive: front-loaded can be picked; tapped and back-loaded show, but cannot be picked, with a note that the
       horn engine takes only a front-loaded horn today.
     - A size that is not positive and finite (an area, a length or the throat chamber) is the `noModel` gap, and the
       views draw no flare: never NaN (`isSizedSegment`, the horn engine's and `hornFlare`'s check).
-    - Not yet: a "Direct / Horn" load setting to make a chamber horn-loaded (today only a template or a PA v2 save
-      starts one), and the taps of a tapped horn.
+    - The load (done, owner Oct 2026): each chamber has a "Load" setting, "Direct" or "Horn"
+      (`src/pages/designer/chamberLoad.ts`). Horn starts a horn from the chamber's cones: one conical section from
+      the cones' total Sd to a mouth the size of the clear face, as long as the clear depth less the deepest cone. It
+      has no throat chamber, a straight path and a front-loaded drive. The net air becomes the rear chamber's: the
+      chamber's net air less the flare's air. Direct removes the horn and sets the net air back to Auto. A chamber
+      with no cone driver cannot take a horn. The vent stays as it was: a vent the horn engine does not take (a slot
+      the box sets the width of, side ducts, radiators) stays a named gap.
+    - Not yet: the taps of a tapped horn.
   - **Horn bin construction** (owner, Oct 2026; planned, no fixed start). Build the flare of a horn-loaded chamber
     from flat plywood panels: the flare boards at their angles, the wedges beside the flare and the slot boards. Then
     use these panels for:
@@ -385,7 +402,14 @@ Each PR stands alone. Lowest risk first.
     2. The cutlist: each flare board, wedge and slot board is a cut part, with its angle.
     3. The bracing: the flare boards count as braces (see "Bracing in horn-loaded chambers" in L3c).
     4. The net air: from the real wedges and the rear chamber, not an estimate.
+    5. The vents: today the vent rules place a horn chamber's ports and slots as for a direct box (for example a slot
+       across the bottom, through the mouth). Draw and cut them where the rear chamber is, for example side slots,
+       and keep them clear of the flare.
     - Later in the same item: folded paths. They replace the straight placeholder of today.
+  - **Positioning** (owner, Oct 2026; planned). All positions use one rule: x from the center line (0 = centered, +
+    to the right in the front view), y up from the bottom. This applies to chambers (in the cabinet), driver groups,
+    vents, horn mouths and later movable parts. Today chamber `at` is the lower-left corner, and that changes to this
+    rule. Old saves can break. This step can go with the movable ports and driver openings work, or earlier.
   - **Later in L3.** The optimizer; a "Place" picker for
     each chamber (on top of, or beside, chamber N). Today the user types its position ("From left", "From bottom").
 - **L4 Stack and Space.** The UI has three layers: Speaker, Stack and Space (see the owner decisions). L4 adds
@@ -491,6 +515,10 @@ Each PR stands alone. Lowest risk first.
   - The 3D view and the Space page's coverage and levels both use it.
 - Ports and driver openings become settings you can move, like the drivers' positions. The spec fields and the
   settings are in (L3e).
+- Positioning: all positions use one rule: x from the center line (0 = centered, + to the right in the front view),
+  y up from the bottom. This applies to chambers (in the cabinet), driver groups, vents, horn mouths and later movable
+  parts. Today chamber `at` is the lower-left corner, and that changes to this rule. Old saves can break. Planned:
+  see "Positioning" in L3.
 
 ## Open questions for the owner
 

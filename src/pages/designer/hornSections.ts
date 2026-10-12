@@ -1,26 +1,23 @@
 // A horn's flare sections as the Designer's Horn settings show and edit them: areas in in² and lengths in in, the
 // spec's own cm² and cm (the horn engine's, Hornresp's) converted here only. Pure.
 import type { HornSegment, SpeakerHorn } from "../../types";
-import { CM_PER_IN } from "../../constants/units";
-import { shownIn } from "./designerFields";
-
-/** Square centimeters in one square inch. */
-const CM2_PER_IN2 = CM_PER_IN * CM_PER_IN;
+import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
+import { shownIn, shownTenth } from "./designerFields";
 
 /** A new section's end area over its start area: it doubles, as a flare step. */
 const NEW_SECTION_AREA_RATIO = 2;
 
 /**
- * Two areas this close, in², are one joint: half the fields' last digit (they show the hundredth), so a shown value
- * typed back in meets the area it came from.
+ * Two areas this close, in², are one joint: half the area fields' last digit (they show the tenth, `shownIn2`), so a
+ * shown value typed back in meets the area it came from.
  */
-const SAME_AREA_IN2 = 0.005;
+const SAME_AREA_IN2 = 0.05;
 
 /** A section's size the settings edit, by the spec's field: start area, end area, length. */
 export type HornSectionSize = keyof Pick<HornSegment, "s1" | "s2" | "length">;
 
-/** An area in cm² (the spec's) as a field shows it, in², to the hundredth. */
-export const shownIn2 = (cm2: number) => shownIn(cm2 / CM2_PER_IN2);
+/** An area in cm² (the spec's) as a field shows it, in², to the tenth. */
+export const shownIn2 = (cm2: number) => shownTenth(cm2 / CM2_PER_IN2);
 
 /** A length in cm (the spec's) as a field shows it, in, to the hundredth. */
 export const shownInOfCm = (cm: number) => shownIn(cm / CM_PER_IN);
@@ -111,6 +108,24 @@ export const stepsIn = (segments: readonly HornSegment[], i: number) => {
   const s = segments[i];
   return !!before && !!s && !sameArea(s.s1, before.s2);
 };
+
+/** How many sections start with a step (`stepsIn`). */
+export const stepCount = (segments: readonly HornSegment[]) =>
+  segments.filter((_, i) => stepsIn(segments, i)).length;
+
+/**
+ * Whether Steps is on, given whether it was on and the sections now: once on it stays on (a step typed back to the
+ * previous end keeps its start area field), and a step turns it on. Only the user turns it off.
+ */
+export const stepsLatched = (on: boolean, segments: readonly HornSegment[]) =>
+  on || stepCount(segments) > 0;
+
+/** The sections smooth: each start area after the first set to the previous section's end area, so no step is left. */
+export const withStepsSmoothed = (segments: readonly HornSegment[]): HornSegment[] =>
+  segments.map((s, i) => {
+    const before = segments[i - 1];
+    return before && s.s1 !== before.s2 ? { ...s, s1: before.s2 } : s;
+  });
 
 /** The horn's path length, in, as the summary shows it: every section's length together. */
 export const pathIn = (horn: Pick<SpeakerHorn, "segments">) =>
