@@ -213,37 +213,44 @@ export function SpacePage({ space, stack, designer, planner }: Props) {
               />
             </div>
           </section>
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-            <SectionHeading className="mb-3">{SPACE_TEXT.levels}</SectionHeading>
-            {tiles.length > 0 && <StatTileGrid tiles={tiles} className="mb-2" />}
-            {view && (
-              <p className="text-sm text-stone-500 tabular-nums">
-                {view.atLimit !== null && view.atLimit < venue.targetDb - 0.05
-                  ? SPACE_TEXT.cannotReach(venue.targetDb, view.atLimit)
-                  : SPACE_TEXT.turnedDown(-view.gain, venue.targetDb)}
-                {listenerRel !== null && (
-                  <>
-                    {" "}
-                    {SPACE_TEXT.listenerVs}{" "}
-                    <span className={relClass(listenerRel)}>{formatSigned(listenerRel)} dB</span>.
-                  </>
+          {placements.length > 0 && (
+            <>
+              <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
+                <SectionHeading className="mb-3">{SPACE_TEXT.levels}</SectionHeading>
+                {tiles.length > 0 && <StatTileGrid tiles={tiles} className="mb-2" />}
+                {view && (
+                  <p className="text-sm text-stone-500 tabular-nums">
+                    {view.atLimit !== null && view.atLimit < venue.targetDb - 0.05
+                      ? SPACE_TEXT.cannotReach(venue.targetDb, view.atLimit)
+                      : SPACE_TEXT.turnedDown(-view.gain, venue.targetDb)}
+                    {listenerRel !== null && (
+                      <>
+                        {" "}
+                        {SPACE_TEXT.listenerVs}{" "}
+                        <span className={relClass(listenerRel)}>
+                          {formatSigned(listenerRel)} dB
+                        </span>
+                        .
+                      </>
+                    )}
+                  </p>
                 )}
-              </p>
-            )}
-          </section>
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-            <SectionHeading className="mb-3">{SPACE_TEXT.side}</SectionHeading>
-            <Card>
-              <SpaceSide
-                items={model.placements.map((p) => p.item)}
-                room={venue.room}
-                listener={venue.listener}
-                earFt={venue.earFt}
-                area={area}
-              />
-              <p className="text-xs text-stone-500 mt-2">{SPACE_TEXT.sideNote}</p>
-            </Card>
-          </section>
+              </section>
+              <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
+                <SectionHeading className="mb-3">{SPACE_TEXT.side}</SectionHeading>
+                <Card>
+                  <SpaceSide
+                    items={model.placements.map((p) => p.item)}
+                    room={venue.room}
+                    listener={venue.listener}
+                    earFt={venue.earFt}
+                    area={area}
+                  />
+                  <p className="text-xs text-stone-500 mt-2">{SPACE_TEXT.sideNote}</p>
+                </Card>
+              </section>
+            </>
+          )}
           {space.response.length > 0 && (
             <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
               <SectionHeading className="mb-3">{SPACE_TEXT.response}</SectionHeading>

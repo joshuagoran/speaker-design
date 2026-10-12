@@ -418,6 +418,31 @@ Each PR stands alone. Lowest risk first.
     - It assigns the hardware that does what each stack needs: the front end and the amp channels. One rack
       can drive several stacks.
     - Amps and DSP start from the owner's v1 rig: [amp-dsp-v1.md](amp-dsp-v1.md).
+    - **Done (L4b).**
+      - **Types.** A `SpacePlacement` has a spot (its base's front center), a lift, an aim (`SpaceAim`: yaw and pitch), a
+        mirror image, `follows` (a mirror pair: it takes an earlier placement's item, spot, lift and aim, x and yaw turned
+        over), the front end's level and delay on its feed, and its amp channels. `StackPose.pitchDeg` tilts a member in
+        its stack. The venue is the room (`CoverageRoom`), the listener, the ear height, a listening area and the target.
+      - **One aim model** (`lib/speaker/spaceLayout`). A member tilts about its bottom front edge by its cabinet's kick-back
+        and its tilt in the stack; the placement tilts the whole stack about its base's front center, lifts it, turns it
+        and sets it on its spot. Each driver spot points along its member's front. The model and both views use it. What
+        stands on a tilted member doesn't follow its tilt. The 3D view doesn't draw the aim yet.
+      - **Model** (`lib/speaker/spaceCoverage`). The coverage engine (`lib/pa/coverage`) now sums voices (a pattern each:
+        a piston or a horn's coverage) and drivers with yaw and pitch; the PA page builds its scene from them, unchanged.
+        A space plays each placement's stack response at the amp power its channels assign, each driver spot with its
+        band's share, its own coverage and, for a cone band, its baffle step. The whole space plays from one input at its
+        music limit; the page turns it down until the listening area's average gets the target.
+      - **Parity** (`tests/space-coverage.test.ts`). The PA design's space on the coverage page's floor: the sub plays
+        within 0.5 dB of the page; the map's shape (each cell less the map's mean) within 0.4 dB mean and 0.8 dB at the
+        90th percentile in every band. With the page's band levels moved to the space's, the same engine: within 0.15 dB
+        mean and 0.3 dB at the 90th percentile, indoors and outdoors. Tilting a lifted stack down moves its hot spot closer;
+        lifting it above the ears makes it quieter close in.
+      - **Page** (`#space`). Placements from the stack and speaker libraries or the current PA design; the room, the
+        listening area and the target; the front end and the amp channels; the coverage map on its fixed scale (with the
+        listening area), the levels at the listening area, a side view of the heights and tilts, and the response at the
+        listener. Saves go to `spaces` with copies of the stacks and speakers.
+      - **Not yet.** The 3D view of a space; per-band level matching of the PA stack (its horn plays 11 dB over the PA
+        page's music balance, so the stack's own levels, not the page's, set the space's balance).
   - **Weight limit per box.** In the modular planner the weight limit becomes a manual setting on each box (it
     replaces today's fixed 125 lb sub check in `src/lib/pa/chips.ts`). The user sets the limit for the box
     they're working on; no automatic tower or layout rule sets it.
@@ -467,10 +492,10 @@ Each PR stands alone. Lowest risk first.
 - The sub highpass and subsonic rule waits for the Stack phase (L4a).
 - The cabinet gets a top shape (`flat` or `arched`) with the templates step (L3e). The PA tower's arched top then
   draws and cuts correctly.
-- Aim is not drawn now. One aim model comes later, for all speakers:
-  - It covers a Hi-fi box's kick-back (tilt up) and PA tops angled down.
-  - Today the Hi-fi spec has `tiltDeg`. PA tops angled down must fit the same model.
-  - The 3D view and the Space page's coverage and levels both use it.
+- One aim model for all speakers (in since L4b, `lib/speaker/spaceLayout`):
+  - It covers a Hi-fi box's kick-back (tilt up, the cabinet's `tiltDeg`) and PA tops angled down (a stack member's
+    `pitchDeg`), with a placement's yaw and pitch.
+  - The Space page's coverage, levels and side view use it. The 3D view doesn't draw it yet.
 - Ports and driver openings become settings you can move, like the drivers' positions. The spec fields and the
   settings are in (L3e).
 

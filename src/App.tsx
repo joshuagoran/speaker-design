@@ -77,7 +77,11 @@ export function App() {
             <h1 className="text-3xl md:text-4xl leading-tight font-extrabold tracking-tight">
               SpeakNow
             </h1>
-            <nav className="flex gap-1" style={{ fontFamily: FONT }} aria-label="Projects">
+            <nav
+              className="flex flex-wrap gap-1"
+              style={{ fontFamily: FONT }}
+              aria-label="Projects"
+            >
               {entriesOf(PROJECT_NAMES).map(([p, label]) => {
                 const home = PROJECT_PAGES[p][0][0],
                   on = p === project;
@@ -87,7 +91,7 @@ export function App() {
                     href={PAGE_HASHES[home]}
                     aria-current={on ? "page" : undefined}
                     onClick={navigateTo(home, PAGE_HASHES[home])}
-                    className={`px-4 py-2 rounded border-2 text-base font-semibold ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}
+                    className={`px-4 max-sm:px-2.5 py-2 whitespace-nowrap rounded border-2 text-base font-semibold ${on ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 hover:border-stone-500"}`}
                   >
                     {label}
                   </a>
