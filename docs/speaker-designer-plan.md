@@ -378,6 +378,14 @@ Each PR stands alone. Lowest risk first.
       views draw no flare: never NaN (`isSizedSegment`, the horn engine's and `hornFlare`'s check).
     - Not yet: a "Direct / Horn" load setting to make a chamber horn-loaded (today only a template or a PA v2 save
       starts one), and the taps of a tapped horn.
+  - **Horn bin construction** (owner, Oct 2026; planned, no fixed start). Build the flare of a horn-loaded chamber
+    from flat plywood panels: the flare boards at their angles, the wedges beside the flare and the slot boards. Then
+    use these panels for:
+    1. The 3D view and the cutaway: flat boards, not a smooth flare.
+    2. The cutlist: each flare board, wedge and slot board is a cut part, with its angle.
+    3. The bracing: the flare boards count as braces (see "Bracing in horn-loaded chambers" in L3c).
+    4. The net air: from the real wedges and the rear chamber, not an estimate.
+    - Later in the same item: folded paths. They replace the straight placeholder of today.
   - **Later in L3.** The optimizer; a "Place" picker for
     each chamber (on top of, or beside, chamber N). Today the user types its position ("From left", "From bottom").
 - **L4 Stack and Space.** The UI has three layers: Speaker, Stack and Space (see the owner decisions). L4 adds
