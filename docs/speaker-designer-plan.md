@@ -359,6 +359,9 @@ Each PR stands alone. Lowest risk first.
       For each PA preset, the price is the PA page's (`lib/pa/totals` `paTotals`). The weight and the height have these
       differences only: the PA page adds the plinth (6 lb, 3 in) and 1 lb for the horn's fixings, and it leaves out
       the braces in the tower's mid chamber.
+      - Owner decisions (Oct 2026): the Stack page's height and weight do not include the plinth, for now. The plinth
+        stands under the stack on the Space page, and the totals note says so. The Speaker page's weight does not add
+        the PA page's 1 lb for the horn's fixings.
 
     - **Feature parity: the Hi-fi page.**
 
