@@ -52,6 +52,8 @@ import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage
 import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { MemberSettings } from "./MemberSettings";
 import { stackKeepUpChips } from "./stackChips";
+import { stackSummary } from "./stackSummary";
+import { SummaryStrip } from "../../components/ui/SummaryStrip";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { DRAFT_STACK_ID, emptyStack } from "./stackSaves";
 import { STACK_STARTS, startGroup, startLayers } from "./stackPresets";
@@ -177,6 +179,8 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
       modeled.length ? stackDispersionMap(design.stack, design.speakers, response, plane) : null,
     [design, response, plane, modeled.length],
   );
+  /** the phone strip's headline figures */
+  const summary = stackSummary(response, limits, totals.lb);
   /** keep-up at each crossover between members */
   const keepUps = stackKeepUpChips(design.stack, response, limits, names);
   return (
@@ -191,6 +195,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
             saveName={name}
             manage
           />
+          {summary && <SummaryStrip items={summary} />}
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
             <SectionHeading className="mb-3">{STACK_TEXT.views}</SectionHeading>
             <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
