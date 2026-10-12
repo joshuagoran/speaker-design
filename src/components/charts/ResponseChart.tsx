@@ -168,7 +168,10 @@ export function ResponseChart({
   const hits = hf
     ? (paths
         .map((p) => {
-          const pts = p.curve.filter((o) => o.f >= fmin && o.f <= fmax);
+          // a curve clipped at the floor reads nothing where it is not drawn
+          const pts = p.curve.filter(
+            (o) => o.f >= fmin && o.f <= fmax && (!p.clipAtFloor || o.spl >= BOT),
+          );
           const o = pts.length
             ? pts.reduce((b, q) =>
                 Math.abs(Math.log(q.f / hf)) < Math.abs(Math.log(b.f / hf)) ? q : b,
@@ -264,6 +267,8 @@ export function ResponseChart({
               d={p.bandD}
               fill={alpha(p.stroke, 0.18)}
               stroke="none"
+              style={{ opacity: faded(p) }}
+              className={HOVER_TRANSITION}
             />
           ) : null,
         )}
@@ -359,9 +364,13 @@ export function ResponseChart({
           {paths.map((p) => (
             <span
               key={p.id ?? p.label}
-              className={`flex items-center gap-1.5 cursor-default hover:text-stone-900 ${HOVER_TRANSITION}`}
+              // a pointer over it or keyboard focus on it brings its curve forward
+              tabIndex={0}
+              className={`flex items-center gap-1.5 cursor-default rounded hover:text-stone-900 focus-visible:text-stone-900 ${HOVER_TRANSITION}`}
               onMouseEnter={() => setHot(keyOf(p))}
               onMouseLeave={() => setHot(null)}
+              onFocus={() => setHot(keyOf(p))}
+              onBlur={() => setHot(null)}
             >
               <span
                 className="inline-block w-4 h-0.5"
