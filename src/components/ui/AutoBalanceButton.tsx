@@ -1,33 +1,63 @@
 import { Button } from "./Button";
 import { Notice } from "./Notice";
 import { Tooltip } from "./Tooltip";
+import { ToggleGroup, type ToggleOption } from "./ToggleGroup";
 import {
-  DEFAULT_MUSIC_TILT,
+  PA_MUSIC_TILT,
   SUB_CROSSOVER_MAX_HZ,
   type AutoBalance,
 } from "../../lib/speaker/autoBalance";
-import { AUTO_BALANCE_STATUS, AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
+import {
+  AUTO_BALANCE_MODE,
+  AUTO_BALANCE_MODE_LABEL,
+  AUTO_BALANCE_STATUS,
+  AUTO_BALANCE_TEXT,
+  type AutoBalanceMode,
+} from "../../constants/autoBalance";
 
 interface Props<L> {
-  /** the balance the design takes now (lib/speaker/autoBalance) */
+  /** the balance the design takes now, for the picked option (lib/speaker/autoBalance) */
   balance: AutoBalance<L>;
   /** sets the balanced Levels: one edit, as any other */
   onApply: (levels: L) => void;
+  /** the picked option: flat (the default) or the PA music tilt */
+  mode: AutoBalanceMode;
+  onMode: (mode: AutoBalanceMode) => void;
   /** what the tooltip adds for this page (the Stack page: the member levels) */
   tipExtra?: string;
   className?: string;
 }
 
-/**
- * The Speaker and Stack pages' "Auto balance": sets the band Levels for music. Off, with a word why, when there is one
- * band or less to balance, or when the model cannot calculate a band (then the Levels stay).
- */
-export function AutoBalanceButton<L>({ balance, onApply, tipExtra, className = "" }: Props<L>) {
-  const tip = AUTO_BALANCE_TEXT.tip(
-    DEFAULT_MUSIC_TILT.tilt,
-    DEFAULT_MUSIC_TILT.hfTilt,
+/** Each option's tooltip. */
+const MODE_TIP: Record<AutoBalanceMode, string> = {
+  [AUTO_BALANCE_MODE.flat]: AUTO_BALANCE_TEXT.flatTip,
+  [AUTO_BALANCE_MODE.paMusic]: AUTO_BALANCE_TEXT.paMusicTip(
+    PA_MUSIC_TILT.tilt,
+    PA_MUSIC_TILT.hfTilt,
     SUB_CROSSOVER_MAX_HZ,
-  );
+  ),
+};
+
+/** The toggle's options, flat first (the default). */
+const MODE_OPTIONS: readonly ToggleOption<AutoBalanceMode>[] = [
+  AUTO_BALANCE_MODE.flat,
+  AUTO_BALANCE_MODE.paMusic,
+].map((m) => [m, AUTO_BALANCE_MODE_LABEL[m], MODE_TIP[m]] as const);
+
+/**
+ * The Speaker and Stack pages' "Auto balance": sets the band Levels, flat or with the PA music tilt (the toggle next to
+ * it). Off, with a word why, when there is one band or less to balance, or when the model cannot calculate a band (then
+ * the Levels stay).
+ */
+export function AutoBalanceButton<L>({
+  balance,
+  onApply,
+  mode,
+  onMode,
+  tipExtra,
+  className = "",
+}: Props<L>) {
+  const tip = MODE_TIP[mode];
   return (
     <div className={className}>
       <div className="flex flex-wrap items-center gap-3">
@@ -40,6 +70,7 @@ export function AutoBalanceButton<L>({ balance, onApply, tipExtra, className = "
         >
           {AUTO_BALANCE_TEXT.button}
         </Button>
+        <ToggleGroup size="xs" value={mode} onChange={onMode} options={MODE_OPTIONS} />
         <Tooltip tip={tipExtra ? `${tip} ${tipExtra}` : tip} className="text-xs text-stone-500">
           {AUTO_BALANCE_TEXT.what}
         </Tooltip>

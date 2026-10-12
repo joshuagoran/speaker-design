@@ -598,6 +598,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 className="mb-2"
                 balance={speakerPage.balance}
                 onApply={speakerPage.applyBalance}
+                mode={speakerPage.balanceMode}
+                onMode={speakerPage.setBalanceMode}
               />
             </>,
           )}

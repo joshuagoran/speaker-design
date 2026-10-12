@@ -4,10 +4,12 @@ import { speakerResponse } from "../../lib/speaker/speakerResponse";
 import { speakerLimits } from "../../lib/speaker/speakerLimits";
 import { cabinetBuild } from "../../lib/speaker/speakerBuild";
 import {
+  AUTO_BALANCE_TILT,
   autoBalanceSpeaker,
   withSpeakerLevels,
   type SpeakerLevels,
 } from "../../lib/speaker/autoBalance";
+import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
 import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
@@ -98,10 +100,12 @@ export function useSpeakerPage() {
     () => speakerLimits({ cabinet, bands }, response, { feed }),
     [cabinet, bands, feed, response],
   );
-  // the band Levels for music, from the same response (lib/speaker/autoBalance)
+  // the band Levels auto balance sets, flat or with the PA music tilt, from the same response (lib/speaker/autoBalance)
+  const [balanceMode, setBalanceMode] = useState<AutoBalanceMode>(AUTO_BALANCE_MODE.flat);
   const balance = useMemo(
-    () => autoBalanceSpeaker({ cabinet, bands, input: feed }, response),
-    [cabinet, bands, feed, response],
+    () =>
+      autoBalanceSpeaker({ cabinet, bands, input: feed }, response, AUTO_BALANCE_TILT[balanceMode]),
+    [cabinet, bands, feed, response, balanceMode],
   );
   // each chamber's braces, hardware and weight (the response's net air reads the same build)
   const build = useMemo(() => cabinetBuild(cabinet), [cabinet]);
@@ -171,6 +175,8 @@ export function useSpeakerPage() {
     response,
     limits,
     balance,
+    balanceMode,
+    setBalanceMode,
     /** sets the band Levels auto balance gives: one band edit, as any other */
     applyBalance: (levels: SpeakerLevels) => setSpec((s) => withSpeakerLevels(s, levels)),
     build,

@@ -1,18 +1,21 @@
-// Auto balance: band Levels for music, for any speaker or stack (docs/speaker-designer-plan.md, L3f "Auto balance").
-// It is the PA page's music balance (lib/pa/musicBalance), made general for any number and order of bands:
+// Auto balance: band Levels for any speaker or stack, flat or with the PA music tilt (docs/speaker-designer-plan.md, L3f
+// "Auto balance").
+// By default the bands meet flat; the PA music tilt option is the PA page's music balance (lib/pa/musicBalance), made
+// general for any number and order of bands:
 //
 // - The bands go in order of their passband (the middle of where each is within 3 dB of its highest point).
 // - Each pair of bands next to each other meets at their crossover: the lower band's lowpass and the upper band's
-//   highpass (the geometric mean of the corners that are there). There the upper band is set the music tilt below the
-//   lower one: `tilt` dB at a crossover up to the PA's highest sub crossover (the mid below the sub), `hfTilt` dB above
-//   it (the horn below the mid). Two bands with no filter between them (they overlap) meet at equal level, at the middle
-//   of their passbands.
+//   highpass (the geometric mean of the corners that are there). There the upper band is set the tilt below the lower
+//   one. Flat (the default): 0 dB, the same level. PA music tilt: `tilt` dB at a crossover up to the PA's highest sub
+//   crossover (the mid below the sub), `hfTilt` dB above it (the horn below the mid). Two bands with no filter between
+//   them (they overlap) meet at equal level, at the middle of their passbands.
 // - The Levels are then moved together so that the highest is 0 dB.
 //
 // Each band is read on its own response at 2.83 V with its Level taken out (lib/speaker/speakerResponse; in a stack,
 // each member's speaker through its crossover, lib/speaker/stackResponse). One input drives every band, so a band's
-// limit sets only how loud the whole design can play, not where its bands sit against each other: the PA page's
-// balance at the bands' limits comes to the same Levels (tests/auto-balance.test.ts checks it on the PA presets).
+// limit sets only how loud the whole design can play, not where its bands sit against each other: with the PA music tilt,
+// the PA page's balance at the bands' limits comes to the same Levels (tests/auto-balance.test.ts checks it on the PA
+// presets).
 // Pure.
 import type {
   BandFilter,
@@ -29,19 +32,33 @@ import { curveLevelAt } from "../pa/coverage";
 import { passbandCenterHz } from "./speakerResponse";
 import { DEFAULT_PA } from "../defaults";
 import { PA_SLIDERS } from "../../constants/paSliders";
-import { AUTO_BALANCE_STATUS, AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
+import {
+  AUTO_BALANCE_MODE,
+  AUTO_BALANCE_STATUS,
+  AUTO_BALANCE_TEXT,
+  type AutoBalanceMode,
+} from "../../constants/autoBalance";
 
-/** The music tilt: how far a band sits below the band under it at their crossover, dB (the PA page's saved keys). */
+/** The tilt: how far a band sits below the band under it at their crossover, dB (the PA page's saved keys). */
 export type MusicTilt = Pick<MusicBalance, "tilt" | "hfTilt">;
 
-/** The PA page's starting music balance: the mid 6 dB below the sub, the horn 3 dB below the mid. */
-export const DEFAULT_MUSIC_TILT: MusicTilt = { tilt: DEFAULT_PA.tilt, hfTilt: DEFAULT_PA.hfTilt };
+/** Flat (the default): every band at the same level at each crossover. */
+export const FLAT_TILT: MusicTilt = { tilt: 0, hfTilt: 0 };
+
+/** The PA music tilt, the PA page's starting music balance: the mid 6 dB below the sub, the horn 3 dB below the mid. */
+export const PA_MUSIC_TILT: MusicTilt = { tilt: DEFAULT_PA.tilt, hfTilt: DEFAULT_PA.hfTilt };
+
+/** The tilt each auto balance option sets. */
+export const AUTO_BALANCE_TILT: Record<AutoBalanceMode, MusicTilt> = {
+  [AUTO_BALANCE_MODE.flat]: FLAT_TILT,
+  [AUTO_BALANCE_MODE.paMusic]: PA_MUSIC_TILT,
+};
 
 /** The highest crossover that takes `tilt` (a crossover to a sub), Hz: the PA page's highest sub-to-mid crossover. */
 export const SUB_CROSSOVER_MAX_HZ = PA_SLIDERS.xoLo.max;
 
 /** How far the band above a crossover at `hz` sits below the band under it, dB. */
-export const tiltAt = (hz: number, tilt: MusicTilt = DEFAULT_MUSIC_TILT) =>
+export const tiltAt = (hz: number, tilt: MusicTilt) =>
   hz <= SUB_CROSSOVER_MAX_HZ ? tilt.tilt : tilt.hfTilt;
 
 /** One band as the balance reads it: its response with its Level taken out, and the corners it plays between. */
@@ -70,7 +87,7 @@ function meetingPoint<K>(lower: BalanceBand<K>, upper: BalanceBand<K>) {
  */
 export function chainLevels<K>(
   bands: readonly BalanceBand<K>[],
-  tilt: MusicTilt = DEFAULT_MUSIC_TILT,
+  tilt: MusicTilt = FLAT_TILT,
 ): { key: K; levelDb: number }[] | null {
   if (bands.length < 2) return null;
   const ordered = bands
@@ -149,13 +166,13 @@ export type AutoBalance<L> =
 export type SpeakerLevels = Record<BandId, SpeakerBand["levelDb"]>;
 
 /**
- * The speaker's bands balanced for music, from its response (`speakerResponse` with its input range as the feed). The
+ * The speaker's bands balanced (flat unless a tilt is given), from its response (`speakerResponse` with its input range as the feed). The
  * Levels stay when it has fewer than two modeled bands, or when a band a driver feeds has no model.
  */
 export function autoBalanceSpeaker(
   spec: Pick<SpeakerSpec, "cabinet" | "bands" | "input">,
   response: Pick<SpeakerResponse, "bands">,
-  tilt: MusicTilt = DEFAULT_MUSIC_TILT,
+  tilt: MusicTilt = FLAT_TILT,
 ): AutoBalance<SpeakerLevels> {
   const { bands, unmodeled } = speakerBands(spec, response);
   if (unmodeled.length)
@@ -190,7 +207,7 @@ interface StackBandKey {
 }
 
 /**
- * The stack's bands balanced for music across its members, from its response (`stackResponse`): every band of every
+ * The stack's bands balanced across its members (flat unless a tilt is given), from its response (`stackResponse`): every band of every
  * member in one chain, each read on its member's speaker through the member's crossover. The balance goes in the band
  * Levels (a member's level can't set its bands against each other), so every member's level goes to 0 dB
  * (`withStackLevels`). A speaker two members share takes the first member's crossover. The Levels stay when there are
@@ -199,7 +216,7 @@ interface StackBandKey {
 export function autoBalanceStack(
   design: Pick<StackDesign, "speakers"> & { stack: Pick<StackDesign["stack"], "members"> },
   response: Pick<StackResponse, "members">,
-  tilt: MusicTilt = DEFAULT_MUSIC_TILT,
+  tilt: MusicTilt = FLAT_TILT,
 ): AutoBalance<StackLevels> {
   const bands: BalanceBand<StackBandKey>[] = [];
   const unmodeled: string[] = [];

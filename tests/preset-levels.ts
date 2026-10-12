@@ -1,7 +1,7 @@
 // The PA presets' band Levels as src/data/presets/pa-band-levels.ts saves them: `vp run preset-levels` writes the file
 // (tests/update-preset-levels.ts), and tests/stack-presets.test.ts checks that a rewrite would not change it.
 import type { PaBandLevels } from "../src/lib/speaker/paBalance";
-import { autoBalanceStack } from "../src/lib/speaker/autoBalance";
+import { PA_MUSIC_TILT, autoBalanceStack } from "../src/lib/speaker/autoBalance";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { stackResponse } from "../src/lib/speaker/stackResponse";
 import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
@@ -20,16 +20,20 @@ const PER_DB = 1000;
 const saved = (db: number) => Math.round(db * PER_DB) / PER_DB || 0;
 
 /**
- * Each PA layout's preset Levels, worked out now from the PA page's starting design by auto balance (lib/speaker/autoBalance,
- * the default music tilt: the PA page's starting balance), as the file saves them. It gives the PA page's own balance
- * (lib/speaker/paBalance `paBandLevels`) to within 0.01 dB (tests/auto-balance.test.ts).
+ * Each PA layout's preset Levels, worked out now from the PA page's starting design by auto balance
+ * (lib/speaker/autoBalance) with the PA music tilt option, not the flat default, as the file saves them. It gives the
+ * PA page's own balance (lib/speaker/paBalance `paBandLevels`) to within 0.01 dB (tests/auto-balance.test.ts).
  */
 export function presetLevels(): Record<PaLayout, PaBandLevels> {
   const out = {} as Record<PaLayout, PaBandLevels>; // boundary: filled for every layout just below
   for (const layout of keysOf(PA_LAYOUT_NAMES)) {
     const cfg = defaultPaDesign(layout);
     const layers = layersFromPa(cfg, { id: "preset", name: "Preset" }, DEFAULT_COVERAGE_LAYOUT);
-    const balance = autoBalanceStack(layers, stackResponse(layers.stack, layers.speakers));
+    const balance = autoBalanceStack(
+      layers,
+      stackResponse(layers.stack, layers.speakers),
+      PA_MUSIC_TILT,
+    );
     if (balance.status !== AUTO_BALANCE_STATUS.balanced)
       throw new Error(`Auto balance can't balance the PA starting design in the ${layout} layout`);
     // the PA band ids are one per stack, so each speaker's Levels go in one record

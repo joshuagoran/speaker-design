@@ -2,7 +2,13 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { stackLimits, stackResponse } from "../../lib/speaker/stackResponse";
 import { BASE_POSE } from "../../lib/speaker/specParts";
-import { autoBalanceStack, withStackLevels, type StackLevels } from "../../lib/speaker/autoBalance";
+import {
+  AUTO_BALANCE_TILT,
+  autoBalanceStack,
+  withStackLevels,
+  type StackLevels,
+} from "../../lib/speaker/autoBalance";
+import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
 import { STACKS_COLLECTION } from "../../constants/speakerSpec";
 import { emptyStack, stackFromSaved, stackSnapshot } from "./stackSaves";
 import { STACK_TEXT } from "../../constants/stack";
@@ -61,10 +67,13 @@ export function useStack() {
   const speakers = useDeferredValue(design.speakers);
   const response = useMemo(() => stackResponse({ members }, speakers), [members, speakers]);
   const limits = useMemo(() => stackLimits({ members }, response), [members, response]);
-  // the band Levels for music across the members, from the same response (lib/speaker/autoBalance)
+  // the band Levels auto balance sets across the members, flat or with the PA music tilt, from the same response
+  // (lib/speaker/autoBalance)
+  const [balanceMode, setBalanceMode] = useState<AutoBalanceMode>(AUTO_BALANCE_MODE.flat);
   const balance = useMemo(
-    () => autoBalanceStack({ stack: { members }, speakers }, response),
-    [members, speakers, response],
+    () =>
+      autoBalanceStack({ stack: { members }, speakers }, response, AUTO_BALANCE_TILT[balanceMode]),
+    [members, speakers, response, balanceMode],
   );
   const store = useConfigStore(STACKS_COLLECTION);
   const editStack = (edit: (stack: StackSpec) => StackSpec) =>
@@ -77,6 +86,8 @@ export function useStack() {
     response,
     limits,
     balance,
+    balanceMode,
+    setBalanceMode,
     /** sets the band Levels auto balance gives in the stack's speakers, every member's level 0 dB: one edit */
     applyBalance: (levels: StackLevels) => setDesign((d) => withStackLevels(d, levels)),
     store,

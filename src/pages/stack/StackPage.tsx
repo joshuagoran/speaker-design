@@ -322,6 +322,8 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                   className="mb-3"
                   balance={stack.balance}
                   onApply={stack.applyBalance}
+                  mode={stack.balanceMode}
+                  onMode={stack.setBalanceMode}
                   tipExtra={AUTO_BALANCE_TEXT.stackTip}
                 />
               )}
