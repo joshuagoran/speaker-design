@@ -18,7 +18,7 @@ export const GXD8 = {
   w16: null,
   gainDb: 36.5,
   limiterW: [5, 800],
-  lb: 13,
+  lb: 13.2,
   usedPrice: 600,
 } as const satisfies AmpModel;
 
@@ -34,7 +34,7 @@ export const GXD4 = {
   w16: null,
   gainDb: 33.5,
   limiterW: [5, 400],
-  lb: 11,
+  lb: 11.3,
   usedPrice: 400,
   note: "Delay in 0.01 ms steps.",
 } as const satisfies AmpModel;
@@ -229,7 +229,7 @@ export const LAB_GRUPPEN_C_4 = {
   limiterModes:
     "Voltage peak limiter by switch: 141, 118, 100, 85, 71, 59, 50 or 42 V peak, Hard or Soft; plus current and average-power limiters",
   limits:
-    "No crossovers, EQ or delay: it needs an external DSP. Gain 23–44 dB in 3 dB steps (35 dB as shipped). No power sharing between channels; the average-power limiter can cut the total to protect the supply or the breaker. The C 88:4 is rated at a 141 V limit, the others at 100 V. Every channel pair (A+B, C+D) bridges. The 115 V models need a 20 A outlet (NEMA 5-20P), the C 88:4 a 30 A twist-lock.",
+    "No crossovers, EQ or delay: it needs an external DSP. Gain 23–44 dB in 3 dB steps (35 dB as shipped). No power sharing between channels; the average-power limiter can cut the total to protect the supply or the breaker. The C 88:4 is rated at a 141 V limit, the others at 100 V. The manual gives one weight (12 kg) for all five models. Every channel pair (A+B, C+D) bridges. The 115 V models need a 20 A outlet (NEMA 5-20P), the C 88:4 a 30 A twist-lock.",
   src: LAB_GRUPPEN_C_X.src,
 } as const satisfies AmpSeries;
 
@@ -605,7 +605,7 @@ export const CROWN_MACRO_TECH = {
       limiterW: null,
       lb: 54.3,
       usedPrice: 600,
-      note: "Variable-impedance supply. The 4 Ω figure is at 1 kHz only. Price: an eBay buy-it-now. 2 Ω: at 1 kHz.",
+      note: "Variable-impedance supply. The 4 Ω figure is at 1 kHz only. Price: an eBay buy-it-now. 2 Ω: at 1 kHz. Weight: the net figure is from the operation manual; the spec sheet gives shipping weight only (63.6 lb).",
     },
     {
       id: "ma5000vz",
@@ -667,7 +667,7 @@ export const CROWN_MACRO_TECH = {
       ch2: { w8: 310, w4: 480, w2: 675, w16: null },
       gainDb: 36.6,
       limiterW: null,
-      lb: 54.7,
+      lb: 50,
       usedPrice: 550,
       usedPriceEst: true,
       note: "Dual-level bi-amp amp, with a variable-impedance supply. Rated at 1 kHz only (minimum guaranteed, 120 V). Gain computed for channel 1 at 1.4 V; at the 0.775 V setting, 42 dB (ch 1) and 36 dB (ch 2).",
@@ -969,7 +969,7 @@ export const YAMAHA_P = {
       lb: 35.3,
       usedPrice: 250,
       usedPriceEst: true,
-      note: "Class not stated in the manual. 2 Ω: only a 20 ms burst (1300 W); Yamaha give 4 Ω as the minimum stereo load.",
+      note: "Class not stated in the manual. 2 Ω: only a 20 ms burst (1300 W); Yamaha give 4 Ω as the minimum stereo load. Weight: the manual gives 16 kg.",
     },
   ],
   dsp: false,
