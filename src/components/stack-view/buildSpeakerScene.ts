@@ -42,6 +42,7 @@ import {
   speakerLayout,
   type FaceRect,
   type PlacedChamber,
+  slotOpeningsAt,
 } from "../../lib/speaker/speakerLayout";
 import { baffleInsetIn } from "../../lib/speaker/chamberAir";
 import { PANEL } from "../../constants/cutParts";
@@ -61,7 +62,6 @@ import { subDriverDepthIn } from "../../lib/pa/tubes";
 import { DRIVER_CLEARANCE_IN } from "../../lib/pa/bracing";
 import { hornBodyColor } from "../../lib/pa/hornColor";
 import { TOWER_HORN_WALL_GAP_IN } from "../../lib/pa/tower";
-import { slotOpening } from "../../lib/hifi/boxLayout";
 import { MID_DEPTH_FALLBACK_IN } from "../../data/catalog/driver-cutouts";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
@@ -627,12 +627,17 @@ function chamberParts(
   } else if (rule?.rule === PORT_RULE.hifi) {
     const { port } = rule;
     if (port.shape === PORT_SHAPE.slot) {
-      const opening = slotOpening(dims, T, port);
-      baffle.push((ox, oy) => [
-        roundedRectPath(ox, oy + opening.y + opening.h / 2, opening.w, opening.h, SLOT_CORNER_IN),
-      ]);
+      // each of the stacked slots, under its own shelf
+      const openings = slotOpeningsAt(placed, port, T);
+      baffle.push((ox, oy) =>
+        openings.map((o) =>
+          roundedRectPath(ox + o.x, oy + o.y + o.h / 2, o.w, o.h, SLOT_CORNER_IN),
+        ),
+      );
       builds.push(({ innerZ }) =>
-        addSlotShelf(ctx, { opening, len: port.len, shellFrontZ: innerZ }),
+        openings.forEach((opening) =>
+          addSlotShelf(ctx, { opening, len: port.len, shellFrontZ: innerZ }),
+        ),
       );
     } else {
       // on the baffle, or on the back: there the tubes run in from the back's outer face (a group turned to face back,

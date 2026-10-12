@@ -367,6 +367,26 @@ export function portRule(chamber: SpeakerChamber): PortRule | null {
   }
 }
 
+/**
+ * A Hi-fi slot's openings on its chamber's baffle: `n` alike stacked from the clear face's floor up, each under its
+ * own shelf a wall thick, each its own width where set (else the clear face's) and centered across the clear face. In
+ * the chamber's own coordinates: `x` from its center line, `y` (an opening's bottom) up from its bottom.
+ */
+export function slotOpeningsAt(
+  placed: Pick<PlacedChamber, "clear" | "cx" | "y0">,
+  port: Pick<SpeakerSlotPort, "n" | "h" | "w">,
+  t: number,
+): { x: number; y: number; w: number; h: number }[] {
+  const { clear } = placed;
+  const w = port.w ?? clear.w;
+  return Array.from({ length: Math.max(1, port.n) }, (_, k) => ({
+    x: clear.x + clear.w / 2 - placed.cx,
+    y: clear.y - placed.y0 + k * (port.h + t),
+    w,
+    h: port.h,
+  }));
+}
+
 /** How far a set position may be off before the layout counts it as moved, in. */
 const MOVED_IN = 1e-9;
 

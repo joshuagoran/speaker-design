@@ -54,36 +54,56 @@ export const offsetWords = (off: number) =>
 /** A tweeter's faceplate cutout note, at its center (`at`, words) and offset across (`off`, in). */
 export const tweeterCutoutNote = (faceplate: Dims2, at: string, off: number) =>
   `tweeter: ${formatInches(faceplate.w)} × ${formatInches(faceplate.h)}″ cutout (faceplate; use the datasheet's), center ${at}${offsetWords(off)}`;
-/** The words for a port too long to fit its box. */
-const TOO_LONG = "too long for this box (see the Hi-fi page)";
-/** A slot's openings on the baffle, at the floor (`at`, words): one, or `n` alike (the Hi-fi page's slot is one). */
-export const slotOpeningNote = (port: Pick<SizedSlotPort, "w" | "h" | "n">, at: string) =>
-  `${port.n > 1 ? `${port.n} × ` : ""}slot: ${formatInches(port.w)} × ${formatInches(port.h)}″ opening, centered, ${at}`;
-/** A slot's shelves as a cutlist row of `box`: each its slot's roof, running back from the baffle; `fits` false when too long. */
+/** The Hi-fi page's words for a port too long to fit its box. */
+export const HIFI_TOO_LONG = "too long for this box (see the Hi-fi page)";
+/**
+ * A slot's openings on the baffle: one, or `n` alike stacked, each under its own shelf; `bottoms` each opening's bottom
+ * in words, from the lowest (the Hi-fi page's slot is one).
+ */
+export const slotOpeningNote = (
+  port: Pick<SizedSlotPort, "w" | "h" | "n">,
+  bottoms: readonly string[],
+) =>
+  port.n > 1
+    ? `${port.n} × slot, stacked: ${formatInches(port.w)} × ${formatInches(port.h)}″ openings, centered, bottoms ${bottoms.join(", ")}`
+    : `slot: ${formatInches(port.w)} × ${formatInches(port.h)}″ opening, centered, ${bottoms[0]}`;
+/**
+ * A slot's shelves as a cutlist row of `box`: each its slot's roof, running back from the baffle, the slots stacked from
+ * the bottom panel up, a slot and a shelf apart; `tooLong`: the words where the slot is too long, else null.
+ */
 export const slotShelfPart = (
   box: CutBoxId,
   port: Pick<SizedSlotPort, "w" | "h" | "len" | "n">,
   t: number,
-  fits: boolean,
-): CutPart => ({
-  box,
-  part: "slotShelf",
-  qty: port.n,
-  a: port.w,
-  b: port.len,
-  t,
-  note: joinNotes([
-    `roof of the slot: underside ${formatInches(port.h)}″ above the bottom panel`,
-    "runs back from the baffle",
-    !fits && TOO_LONG,
-  ]),
-});
+  tooLong: string | null,
+): CutPart => {
+  const undersides = Array.from({ length: port.n }, (_, k) => port.h + k * (port.h + t));
+  return {
+    box,
+    part: "slotShelf",
+    qty: port.n,
+    a: port.w,
+    b: port.len,
+    t,
+    note: joinNotes([
+      port.n > 1
+        ? `roofs of the ${port.n} stacked slots: undersides ${undersides.map((u) => `${formatInches(u)}″`).join(", ")} above the bottom panel`
+        : `roof of the slot: underside ${formatInches(port.h)}″ above the bottom panel`,
+      "runs back from the baffle",
+      tooLong,
+    ]),
+  };
+};
 /** A round port's holes on its panel. */
 export const roundPortHoleNote = (port: Pick<RoundPort, "n" | "dia">) =>
   `port: ${port.n} × hole for the ${formatInches(port.dia)}″ tube (size it to the tube's outside)`;
-/** A round port's tubes as bought, with the elbows each takes (null: too long for the box). */
-export const roundPortLine = (port: Pick<RoundPort, "n" | "dia" | "len">, elbows: number | null) =>
-  `${port.n} × ${formatInches(port.dia)}″ port tube per speaker, ${formatInches(port.len)}″ long (buy, flared)${elbows == null ? `; ${TOO_LONG}` : elbows ? `, with ${elbows} elbow${elbows > 1 ? "s" : ""}` : ""}`;
+/** A round port's tubes as bought, with the elbows each takes (null: too long for the box, in the `tooLong` words). */
+export const roundPortLine = (
+  port: Pick<RoundPort, "n" | "dia" | "len">,
+  elbows: number | null,
+  tooLong: string,
+) =>
+  `${port.n} × ${formatInches(port.dia)}″ port tube per speaker, ${formatInches(port.len)}″ long (buy, flared)${elbows == null ? `; ${tooLong}` : elbows ? `, with ${elbows} elbow${elbows > 1 ? "s" : ""}` : ""}`;
 /** The radiators' cutouts, on the panel they mount on (a side panel: split between the two, mirrored for a pair). */
 export function radiatorCutoutNote(
   pr: Pick<PassiveRadiatorChoice, "drv" | "n">,
@@ -210,11 +230,11 @@ export function hifiCutParts({ cfg, woofer, tweeter, joint, prPanel }: HifiCutPa
   const elbows = ventPort ? hifiPortElbows(cfg.dim, t, ventPort) : 0;
   if (ventPort?.shape === "slot") {
     // the slot runs from the bottom panel's inside face (t up the box) to the shelf
-    portNote = slotOpeningNote(ventPort, up(t));
-    extra.push(slotShelfPart(box, ventPort, t, elbows != null));
+    portNote = slotOpeningNote(ventPort, [up(t)]);
+    extra.push(slotShelfPart(box, ventPort, t, elbows == null ? HIFI_TOO_LONG : null));
   } else if (ventPort) {
     portNote = roundPortHoleNote(ventPort);
-    also.push(roundPortLine(ventPort, elbows));
+    also.push(roundPortLine(ventPort, elbows, HIFI_TOO_LONG));
   }
 
   // the radiators' cutouts, on the panel they mount on

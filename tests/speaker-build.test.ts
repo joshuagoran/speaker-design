@@ -9,7 +9,12 @@ import { systemFromPa } from "../src/lib/speaker/paSpec";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { cabinetBuild, speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
-import { defaultHornPlacement, hornFits, speakerLayout } from "../src/lib/speaker/speakerLayout";
+import {
+  defaultHornPlacement,
+  hornFits,
+  slotOpeningsAt,
+  speakerLayout,
+} from "../src/lib/speaker/speakerLayout";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { hifiCutParts } from "../src/lib/hifi/cutlist";
 import { RADIATOR_PANEL } from "../src/lib/hifi/hifi";
@@ -364,6 +369,15 @@ test("speaker build: every slot of a chamber is cut and takes its air", () => {
       (p) => p.part === "baffle" && /2 × slot/.test(p.note),
     ),
   );
+  // stacked from the floor, a slot and a shelf apart, as the cutlist, the 3D view and the front drawing all take them
+  const [placed] = speakerLayout(two.cabinet).chambers;
+  const port = { n: 2, h: 1, w: 10 };
+  const tw = two.cabinet.panel.thicknessIn;
+  assert.deepEqual(
+    slotOpeningsAt(placed, port, tw).map((o) => o.y - (placed.clear.y - placed.y0)),
+    [0, 1 + tw],
+  );
+  assert.ok(shelves[0].note.includes("undersides 1″"), shelves[0].note);
   const [b1] = cabinetBuild(one.cabinet).chambers;
   const [b2] = cabinetBuild(two.cabinet).chambers;
   const t = one.cabinet.panel.thicknessIn;

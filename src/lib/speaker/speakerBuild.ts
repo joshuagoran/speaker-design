@@ -57,6 +57,7 @@ import {
   hornCutoutWords,
   internalWoodLiters,
   isRoundPort,
+  maxFoldedSlotIn,
   paConeBody,
   partitionNote,
   railsOnBack,
@@ -76,7 +77,13 @@ import { hardwareKeepOut, planBoxHardware } from "../pa/hardware";
 import { DRIVER_CLEARANCE_IN, NO_SUPPORTS, type PaBoxSupports } from "../pa/bracing";
 import { MIN_BAY_IN, panelStock } from "../bracing";
 import { panelLbPerSqFt } from "../panel";
-import { HIFI_FALLBACK_LB, HIFI_FIXINGS_LB, hifiPortElbows, radiatorsLb } from "../hifi/hifi";
+import {
+  HIFI_FALLBACK_LB,
+  HIFI_FIXINGS_LB,
+  hifiPortElbows,
+  radiatorsLb,
+  slotMaxLength,
+} from "../hifi/hifi";
 import {
   aboveBaffleEdge,
   flushBoxPanels,
@@ -113,6 +120,7 @@ import {
   portRule,
   radiatorsAt,
   roundPortsAt,
+  slotOpeningsAt,
   speakerLayout,
   type PlacedChamber,
   type SpeakerLayout,
@@ -128,7 +136,7 @@ import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES } from "../../constants/b
 import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
 import { KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
-import { DRIVER_KIND_NAMES } from "../../constants/designer";
+import { DESIGNER_TEXT, DRIVER_KIND_NAMES } from "../../constants/designer";
 import { HARDWARE_BOX } from "../../constants/hardware";
 import {
   CABINET_CONSTRUCTION,
@@ -785,17 +793,27 @@ function ventParts(cabinet: SpeakerCabinet, f: ChamberFrame): { parts: CutPart[]
     return subVentParts(box, f.box, t, rule.portStyle, vent, kit);
   }
   const { port } = rule;
-  const elbows = hifiPortElbows(
-    chamber.dims,
-    t,
-    port.shape === PORT_SHAPE.slot ? { ...port, w: port.w ?? f.inside.iw } : port,
-  );
-  if (port.shape === PORT_SHAPE.slot)
+  if (port.shape === PORT_SHAPE.slot) {
+    // a folded slot runs up the back (the PA slot's fold), a straight one along the floor (the Hi-fi rule)
+    const fits = port.folded
+      ? port.len <= maxFoldedSlotIn(chamber.dims, port.h, t)
+      : port.len <= slotMaxLength(chamber.dims, t, port);
     return {
-      parts: [slotShelfPart(box, { ...port, w: port.w ?? f.inside.iw }, t, elbows != null)],
+      parts: [
+        slotShelfPart(
+          box,
+          { ...port, w: port.w ?? f.inside.iw },
+          t,
+          fits ? null : port.folded ? DESIGNER_TEXT.slotTooLongFolded : DESIGNER_TEXT.slotTooLong,
+        ),
+      ],
       vent: [],
     };
-  return { parts: [], vent: [roundPortLine(port, elbows)] };
+  }
+  return {
+    parts: [],
+    vent: [roundPortLine(port, hifiPortElbows(chamber.dims, t, port), DESIGNER_TEXT.portTooLong)],
+  };
 }
 
 /** The build of each cabinet the page asked for (a spec's cabinet doesn't change in place). */
@@ -978,7 +996,12 @@ function chamberNotes(
   if (rule?.rule === PORT_RULE.hifi) {
     const { port } = rule;
     if (port.shape === PORT_SHAPE.slot)
-      baffle.push(slotOpeningNote({ ...port, w: port.w ?? f.inside.iw }, marks.up(placed.clear.y)));
+      baffle.push(
+        slotOpeningNote(
+          { ...port, w: port.w ?? f.inside.iw },
+          slotOpeningsAt(placed, port, t).map((o) => marks.up(placed.y0 + o.y)),
+        ),
+      );
     else {
       const tubes = roundPortsAt(placed, port);
       const note = port.position

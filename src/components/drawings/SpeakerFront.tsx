@@ -13,13 +13,13 @@ import {
   roundPortsAt,
   speakerLayout,
   type PlacedChamber,
+  slotOpeningsAt,
 } from "../../lib/speaker/speakerLayout";
 import { paConeRadius } from "../stack-view/buildCone";
 import { HORN_LIFT_IN } from "../stack-view/stackHeights";
 import { CD_OPTIONS, FILL_OPTIONS, hifiDriverById, MID_OPTIONS, SUB_OPTIONS } from "../../lib/data";
 import { byId } from "../../lib/tables";
 import { isAmt, isRibbon } from "../../lib/hifi/hifi";
-import { slotOpening } from "../../lib/hifi/boxLayout";
 import { PANEL } from "../../constants/cutParts";
 import { subVentHoles, subVentPlan } from "../stack-view/buildSubwoofer";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
@@ -102,10 +102,11 @@ export function SpeakerFront({ spec }: Props) {
     if (!rule) return [];
     if (rule.rule === PORT_RULE.hifi) {
       const { port } = rule;
-      if (port.shape === PORT_SHAPE.slot) {
-        const o = slotOpening(dims, t, port);
-        return [rect(`v${i}`, cx, y0 + o.y + o.h / 2, o.w, o.h, opening)];
-      }
+      if (port.shape === PORT_SHAPE.slot)
+        // each of the stacked slots
+        return slotOpeningsAt(placed, port, t).map((o, j) =>
+          rect(`v${i}.${j}`, cx + o.x, y0 + o.y + o.h / 2, o.w, o.h, opening),
+        );
       // each cut to its tube's outside, as the 3D view cuts it
       const { panel, spots } = roundPortsAt(placed, port);
       return spots.map((s, j) =>
