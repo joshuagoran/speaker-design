@@ -16,7 +16,7 @@ import {
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { bandDriveVolts, speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
-import { systemFromPa } from "../src/lib/speaker/paSpec";
+import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { NO_FILTERS, lrFilter } from "../src/lib/speaker/specParts";
 import { filterTransfer } from "../src/lib/speaker/bandFilter";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
@@ -94,7 +94,7 @@ test("speaker limits: the golden PA designs meet the PA page's limits (sub, mid,
   for (const c of configs) {
     const cfg = paDesign(c);
     const tower = cfg.layout === "tower";
-    const read = systemFromPa(cfg, { id: "pa", name: c.name }, STACKS);
+    const read = layersFromPa(cfg, { id: "pa", name: c.name }, STACKS);
     const models = paModels(cfg);
     const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
     const cd = CD_OPTIONS.find((o) => o.id === cfg.cd);

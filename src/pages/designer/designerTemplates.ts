@@ -15,7 +15,7 @@ import type {
   SpeakerSpec,
   SpecIdentity,
 } from "../../types";
-import { systemFromPa } from "../../lib/speaker/paSpec";
+import { layersFromPa } from "../../lib/speaker/paSpec";
 import { speakerFromHifi } from "../../lib/speaker/hifiSpec";
 import { speakerFromFill } from "../../lib/speaker/fillSpec";
 import { lrFilter, speakerIdentity } from "../../lib/speaker/specParts";
@@ -94,7 +94,7 @@ export function defaultPaDesign(layout: PaLayout = DEFAULT_PA.layout): PaPlanner
 /** One speaker of the PA page's starting design in `layout`, under the template's identity. */
 function paSpeaker(layout: PaLayout, part: SpeakerPart, identity: SpecIdentity): SpeakerSpec {
   // the speakers alone are read: where the stacks stand (the coverage page's) does not change them
-  const read = systemFromPa(defaultPaDesign(layout), identity, DEFAULT_COVERAGE_LAYOUT.stacks);
+  const read = layersFromPa(defaultPaDesign(layout), identity, DEFAULT_COVERAGE_LAYOUT.stacks);
   const id = speakerIdentity(identity, part).id;
   const found = read.speakers.find((s) => s.id === id);
   if (!found) throw new Error(`The PA ${layout} layout has no ${part} speaker`);

@@ -18,7 +18,7 @@ import {
 } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
-import { systemFromPa } from "../src/lib/speaker/paSpec";
+import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
 import { speakerLimits } from "../src/lib/speaker/speakerLimits";
 import { bandChips, chamberChips } from "../src/pages/designer/designerChips";
@@ -161,7 +161,7 @@ const designerSpecs = [
   ...(["sealed", "vented", "radiator"] as const).map((boxType) =>
     speakerFromHifi({ ...DEFAULT_HIFI, boxType }, DEFAULT_HIFI_LOOK, { id: "hifi", name: boxType }),
   ),
-  ...configs.flatMap((c) => systemFromPa(paDesign(c), { id: "pa", name: c.name }, STACKS).speakers),
+  ...configs.flatMap((c) => layersFromPa(paDesign(c), { id: "pa", name: c.name }, STACKS).speakers),
 ];
 const designerLists = designerSpecs.flatMap((spec) => {
   const limits = speakerLimits(spec, speakerResponse(spec));

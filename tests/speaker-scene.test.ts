@@ -29,7 +29,7 @@ import {
 import { chamberNetLiters } from "../src/lib/speaker/chamberAir";
 import { PANEL } from "../src/constants/cutParts";
 import { HIFI_BOX_LAYOUT } from "../src/constants/hifiLayout";
-import { systemFromPa } from "../src/lib/speaker/paSpec";
+import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { speakerIdentity } from "../src/lib/speaker/specParts";
 import { paSearchDesign } from "../src/lib/pa/optimize";
@@ -83,7 +83,7 @@ function paDesign(c: GoldenConfig): PaPlannerDesign {
 }
 /** A PA design's speaker of `part`, read through the adapter. */
 function paSpeaker(c: GoldenConfig, part: SpeakerPart): SpeakerSpec {
-  const read = systemFromPa(paDesign(c), IDENTITY, STACKS);
+  const read = layersFromPa(paDesign(c), IDENTITY, STACKS);
   const id = speakerIdentity(IDENTITY, part).id;
   const found = read.speakers.find((s) => s.id === id);
   if (!found) throw new Error(`no ${part} in ${c.name}`);

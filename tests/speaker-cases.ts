@@ -32,12 +32,12 @@ import {
 import type {
   BandId,
   CoverageLayout,
+  DesignLayers,
   FrequencyPoint,
   HifiDesignState,
   PaPlannerDesign,
   SpeakerChamber,
   SpeakerSpec,
-  SystemWithSpeakers,
 } from "../src/types";
 
 /** A level relative to the model's drive: the engines run at the amp's voltage, the model at 2.83 V. */
@@ -134,16 +134,16 @@ export function paDesign(c: GoldenConfig): PaPlannerDesign {
   };
 }
 
-/** A speaker of the system by part, with the filters its source feeds it. */
+/** A speaker of the design by part, with the crossover its stack feeds it. */
 export function speakerAndFeed(
-  read: SystemWithSpeakers,
+  read: DesignLayers,
   part: (typeof SPEAKER_PART)[keyof typeof SPEAKER_PART],
 ) {
-  const id = speakerIdentity(read.system, part).id;
+  const id = speakerIdentity(read.stack, part).id;
   const spec = read.speakers.find((s) => s.id === id);
-  const source = read.system.sources.find((s) => s.speakerId === id);
-  assert.ok(spec && source, part);
-  return { spec, feed: source.filters };
+  const member = read.stack.members.find((m) => m.speakerId === id);
+  assert.ok(spec && member, part);
+  return { spec, feed: member.crossover };
 }
 
 /** The spec with one chamber's net air set. */

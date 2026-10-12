@@ -113,7 +113,8 @@ export const DESIGNER_TEXT = {
   /** a band the user adds, by its place among the bands */
   newBandName: (n: number) => `Band ${n}`,
   inputRange: "Input range",
-  inputHint: "From the system, e.g. the crossover to a sub. Not part of the box.",
+  inputHint:
+    "In a stack, its crossover sets this, e.g. the crossover to a sub. Not part of the box.",
   inputOff: "Off",
   construction: "Construction",
   top: "Top",

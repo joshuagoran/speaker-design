@@ -25,7 +25,7 @@ import type {
   HORN_PATH,
   HORN_PLACEMENT,
   PORT_SHAPE,
-  SOURCE_ROLE,
+  SPACE_ITEM,
   SPEAKER_BAND,
   SPEAKER_MODEL_GAP,
   SPEAKER_PART,
@@ -2086,7 +2086,7 @@ export interface BandFilter {
 
 /**
  * A band of a speaker. Its filters are the box's own: the crossover inside the box and its protection (a subsonic).
- * A crossover to another box (the sub) is the system's, on the source (`SystemSource.filters`).
+ * A crossover to another box (the sub) is the stack's (`StackMember.crossover`).
  */
 export interface SpeakerBand {
   id: BandId;
@@ -2101,14 +2101,14 @@ export interface SpeakerBand {
   levelDb: number;
   /**
    * active: its filters run in the front end and it has an amp channel of its own; passive: a network in the box, on
-   * a channel it shares (`SourceChannel.bands`), as a super tweeter on the HF channel through a capacitor
+   * a channel it shares (`SpaceChannel.bands`), as a super tweeter on the HF channel through a capacitor
    */
   drive: HifiDrive;
   /**
    * the power of the amp channel that drives it, W into 8 Ω: its own channel's when active; when passive, the channel
    * it shares (the same figure as the band it shares it with). The limits read it (lib/speaker/speakerLimits).
    */
-  ampW: SystemAmp["watts"];
+  ampW: SpaceAmp["watts"];
 }
 
 /** Any single box: its cabinet, drivers, bands and look. */
@@ -2118,9 +2118,9 @@ export interface SpeakerSpec {
   cabinet: SpeakerCabinet;
   bands: readonly SpeakerBand[];
   /**
-   * the input range: the filters the system puts ahead of the box on every band (the crossover to a sub). Not part of
-   * the box; the Designer models the speaker with it (`speakerResponse`'s and `speakerLimits`' feed), and the Space
-   * page can later take it as the source's default crossover (`SystemSource.filters`).
+   * the input range: the filters the front end puts ahead of the box on every band (the crossover to a sub). Not part
+   * of the box; the Designer models the speaker with it (`speakerResponse`'s and `speakerLimits`' feed). In a stack,
+   * the member's crossover takes its place (`StackMember.crossover`).
    */
   input: Pick<SpeakerBand, "highpass" | "lowpass">;
   look: Pick<PaDesignConfig, "cabFinish" | "baffleColor" | "hornColor">;
@@ -2129,90 +2129,120 @@ export interface SpeakerSpec {
 /** A spec's identity, as a read adapter takes it. */
 export type SpecIdentity = Pick<SpeakerSpec, "id" | "name">;
 
-/** A speaker of a system read from one design, by id (`SPEAKER_PART`): it names the speaker's id and name. */
+/** A speaker read from one design, by id (`SPEAKER_PART`): it names the speaker's id and name. */
 export type SpeakerPart = (typeof SPEAKER_PART)[keyof typeof SPEAKER_PART];
 
 /** The PA design as the planner holds it: every field set (a save can lack the later ones). */
 export type PaPlannerDesign = PaDesignConfig &
   Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH">>;
 
-/** What a source does in a system, by id (`SOURCE_ROLE`). */
-export type SourceRole = (typeof SOURCE_ROLE)[keyof typeof SOURCE_ROLE];
-
 /**
- * Where a source stands: its spot and aim on the floor, and what it stands on. Sources stack in chains (sub bins, mid
- * boxes, an HF horn on top), each on the one below it.
+ * Where a member stands in its stack, in: from the stack's origin (the middle of its base, at its front), or on top of
+ * an earlier member.
  */
-export interface SourcePose extends FloorPlacement {
-  /** the source it stands on, as an index into the system's sources; null: the floor */
+export interface StackPose {
+  /** across: its center line from the stack's, + to the right seen from the front */
+  xIn: number;
+  /** up: its bottom above the stack's base, or above the top of the member it stands on (a gap, a spacer, a stand) */
+  yIn: number;
+  /** back: its front behind the stack's front */
+  zIn: number;
+  /** the member it stands on, as an index into the stack's members (an earlier one); null: the stack's base */
   on: number | null;
-  /** the gap under it, in: a plinth, a spacer, a stand, or 0 */
-  liftIn: number;
 }
 
-/** An amplifier in a system: its catalog model where one is picked, and its power per channel, W. */
-export interface SystemAmp {
+/** One speaker in a stack: where it stands, and what the front end does to its feed. */
+export interface StackMember {
+  speakerId: SpeakerSpec["id"];
+  pose: StackPose;
+  /** a mirror image of the speaker (a tweeter offset to the other side) */
+  mirror: boolean;
+  /** the crossover between boxes on its feed (to the sub, to the tops): the speaker's input range in the stack */
+  crossover: SpeakerSpec["input"];
+  /** the front end's level, against the stack's other members, dB */
+  levelDb: number;
+  /** the front end's delay, ms, or the stack's own alignment (lib/speaker/stackResponse) */
+  delayMs: number | typeof AUTO_DELAY;
+}
+
+/**
+ * Speakers in a fixed relationship (a sub, a mid-bass box and a horn): their places, the crossovers between them, their
+ * delays and levels. It says what each box needs; the Space assigns the hardware that does it.
+ */
+export interface StackSpec {
+  id: string;
+  name: string;
+  members: readonly StackMember[];
+  notes: string;
+}
+
+/** An amplifier in a space: its catalog model where one is picked, and its power per channel, W. */
+export interface SpaceAmp {
   id: string;
   model: AmpId | null;
   watts: number;
 }
 
-/** One amp channel a source takes, and the speaker's bands it feeds (passive bands share it). */
-export interface SourceChannel {
-  amp: SystemAmp["id"];
+/** One amp channel a placement takes: the member it feeds (0 for a speaker alone) and that member's bands. */
+export interface SpaceChannel {
+  amp: SpaceAmp["id"];
   channel: number;
+  member: number;
+  /** the bands it feeds: one active band, or every band of a passive network */
   bands: readonly BandId[];
 }
 
-/** One placed speaker in a system. */
-export interface SystemSource {
-  speakerId: SpeakerSpec["id"];
-  role: SourceRole;
-  pose: SourcePose;
-  /** a mirror image of the speaker (a tweeter offset to the other side) */
+/** What a space places, by id (`SPACE_ITEM`): a stack, or a speaker alone on its own input range. */
+export type SpaceItemKind = (typeof SPACE_ITEM)[keyof typeof SPACE_ITEM];
+
+/**
+ * A stack or a speaker placed in a space: its spot and aim on the floor, the gap under it (a plinth, a stand), a
+ * mirror image, and the amp channels it takes.
+ */
+export interface SpacePlacement extends FloorPlacement {
+  item:
+    | { kind: typeof SPACE_ITEM.stack; id: StackSpec["id"] }
+    | { kind: typeof SPACE_ITEM.speaker; id: SpeakerSpec["id"] };
+  /** the gap under it, in: a plinth, a stand, or 0 */
+  liftIn: number;
   mirror: boolean;
-  /** the front end's filters on this source's feed: the crossovers between boxes (to the sub) */
-  filters: Pick<SpeakerBand, "highpass" | "lowpass">;
-  /** the front end's delay, ms, or its own alignment */
-  delayMs: number | typeof AUTO_DELAY;
-  /** the front end's level, against the system's other sources, dB */
-  levelDb: number;
-  channels: readonly SourceChannel[];
+  channels: readonly SpaceChannel[];
 }
 
 /** How a front end processes, by id (`FRONT_END_KIND`): fixed analog cards, or a DSP. */
 export type FrontEndKind = (typeof FRONT_END_KIND)[keyof typeof FRONT_END_KIND];
 
-/** The processing ahead of the amps: the sources' filters, delays and levels run in it, analog or digital. */
-export interface SystemFrontEnd {
+/** The processing ahead of the amps: the stacks' crossovers, delays and levels run in it, analog or digital. */
+export interface SpaceFrontEnd {
   kind: FrontEndKind;
   /** the DSP unit (`DSP_UNITS`), where a digital front end names one */
   dspId: DspUnit["id"] | null;
 }
 
-/** Where a system plays: the boxes' boundary (their distance to it is in their poses) and the listener. */
-export interface SystemVenue {
+/** Where a space plays: the boxes' boundary (their distance to it is in their placements) and the listener. */
+export interface SpaceVenue {
   placement: HifiPlacement;
   listener: FloorPoint;
   earIn: HifiDesignState["earHeightIn"];
 }
 
-/** Saved speakers composed: sources, amps, front end and venue. */
-export interface SystemSpec {
+/** Stacks and speakers placed in a real space, with the hardware that drives them (docs/speaker-designer-plan.md, L4b). */
+export interface SpaceSpec {
   id: string;
   name: string;
-  sources: readonly SystemSource[];
-  amps: readonly SystemAmp[];
+  placements: readonly SpacePlacement[];
+  amps: readonly SpaceAmp[];
   /** null: none (passive speakers straight off the amps) */
-  frontEnd: SystemFrontEnd | null;
+  frontEnd: SpaceFrontEnd | null;
   /** null where the design sets none (the PA page's room is the coverage page's) */
-  venue: SystemVenue | null;
+  venue: SpaceVenue | null;
 }
 
-/** A system and the speakers its sources name, as a read adapter returns them. */
-export interface SystemWithSpeakers {
-  system: SystemSpec;
+/** One design read in all three layers (lib/speaker read adapters): its speakers, its stack, and its space. */
+export interface DesignLayers {
   speakers: readonly SpeakerSpec[];
+  stack: StackSpec;
+  space: SpaceSpec;
 }
 
 /** Why a chamber has no horn-engine design yet, by id (`HORN_ENGINE_GAP`). */
@@ -2226,8 +2256,8 @@ export type SpeakerModelGap =
   | (typeof SPEAKER_MODEL_GAP)[keyof typeof SPEAKER_MODEL_GAP]
   | HornEngineGap;
 
-/** The filters ahead of a speaker: a system source's (`SystemSource.filters`), on every band. */
-export type SpeakerFeed = SystemSource["filters"];
+/** The filters ahead of a speaker on every band: its input range (in a stack, its member's crossover). */
+export type SpeakerFeed = SpeakerSpec["input"];
 
 /** One band of a speaker as the speaker model works it out: its drivers through its filters and level. */
 export interface SpeakerBandResponse {

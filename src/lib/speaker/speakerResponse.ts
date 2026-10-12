@@ -260,7 +260,7 @@ export function passbandDb(curve: readonly FrequencyPoint[]) {
 const filtersOk = ({ highpass, lowpass }: SpeakerFeed) =>
   (!highpass || positive(highpass.hz)) && (!lowpass || positive(lowpass.hz));
 
-/** Options: the filters ahead of the speaker (a system source's, the sub crossover), on every band. */
+/** Options: the filters ahead of the speaker on every band (its input range; in a stack, its crossover). */
 export interface SpeakerResponseOptions {
   feed?: SpeakerFeed;
 }
