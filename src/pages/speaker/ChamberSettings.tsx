@@ -57,6 +57,7 @@ import {
   hornOptions,
   isWooferKind,
   withWoofer,
+  wooferClearIn,
   wooferFor,
   wooferSizeOf,
 } from "./speakerParts";
@@ -130,8 +131,13 @@ export function ChamberSettings({
   const firstBand = bands[0]?.id;
   /** the room a starting horn fills */
   const room = hornRoom(cabinet, chamber, placed);
-  /** the chamber's clear width, in: a new woofer's size fits it */
-  const clearIn = chamber.dims.w - 2 * cabinet.panel.thicknessIn;
+  /** the chamber's clear room, in: a new woofer's size fits it */
+  const clearIn = wooferClearIn(chamber, cabinet.panel.thicknessIn);
+  /**
+   * how many times a driver was removed: each driver's fields take it with their index as their key, so no field state
+   * (the woofer size filter) carries over to the next driver
+   */
+  const [driverRound, setDriverRound] = useState(0);
   return (
     <Card className="mb-3">
       <CardHeading
@@ -332,14 +338,17 @@ export function ChamberSettings({
       </CardHeading>
       {chamber.drivers.map((driver, i) => (
         <DriverFields
-          key={i}
+          key={`${driverRound}:${i}`}
           driver={driver}
           widthIn={chamber.dims.w}
           clearIn={clearIn}
           placed={placed}
           bandOptions={bandOptions}
           onEdit={(edit) => editDriver(i, edit)}
-          onRemove={() => onEdit((c) => ({ ...c, drivers: c.drivers.filter((_, k) => k !== i) }))}
+          onRemove={() => {
+            setDriverRound((r) => r + 1);
+            onEdit((c) => ({ ...c, drivers: c.drivers.filter((_, k) => k !== i) }));
+          }}
         />
       ))}
       {firstBand && (
@@ -477,7 +486,7 @@ interface DriverProps {
   driver: SpeakerDriver;
   /** its chamber's width: the position shows from its left side */
   widthIn: number;
-  /** its chamber's clear width, in: a woofer picked by type fits it */
+  /** its chamber's clear room, in (`wooferClearIn`): a woofer picked by type fits it */
   clearIn: number;
   /** its chamber as the layout places it: which places its horn fits */
   placed: PlacedChamber | undefined;

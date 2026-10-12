@@ -1,6 +1,13 @@
 // The Speaker page's pickers: each driver kind's catalog, the horns a driver can take, and the passive radiators; and the
 // driver entries the settings build. Read from the catalog (src/lib/data) and the defaults.
-import type { ChamberVent, DriverKind, Horn, SpeakerDriver, SpeakerPort } from "../../types";
+import type {
+  ChamberVent,
+  DriverKind,
+  Horn,
+  SpeakerChamber,
+  SpeakerDriver,
+  SpeakerPort,
+} from "../../types";
 import type { SelectOption } from "../../components/ui/SelectField";
 import {
   CD_OPTIONS,
@@ -146,3 +153,10 @@ export function wooferFor(clearIn: number): WooferOption {
   const ofSize = WOOFER_OPTIONS.filter((o) => o.size === size);
   return ofSize.find((o) => o.id === DEFAULT_DRIVER_IDS[o.kind]) ?? ofSize[0];
 }
+
+/**
+ * The clear room a new woofer's size must fit in a chamber, in: the smaller of its clear width and height (a wide,
+ * short chamber takes no driver taller than it is).
+ */
+export const wooferClearIn = (chamber: Pick<SpeakerChamber, "dims">, wallIn: number) =>
+  Math.min(chamber.dims.w, chamber.dims.h) - 2 * wallIn;

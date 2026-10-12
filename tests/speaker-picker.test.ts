@@ -5,6 +5,7 @@ import {
   WOOFER_OPTIONS,
   WOOFER_SIZES,
   withWoofer,
+  wooferClearIn,
   wooferFor,
   wooferSizeOf,
 } from "../src/pages/speaker/speakerParts";
@@ -49,4 +50,13 @@ test("driver picker: a woofer from the list sets its catalog kind and keeps the 
   assert.equal(d.count, 2);
   assert.deepEqual(d.position, coax.position);
   assert.deepEqual(d.bands, ["low"]);
+});
+
+test("driver picker: a wide, short chamber takes no woofer taller than it is", () => {
+  const wall = 0.75;
+  const room = wooferClearIn({ dims: { w: 24, h: 10, d: 16 } }, wall);
+  assert.equal(room, 10 - 2 * wall);
+  const fit = wooferFor(room);
+  assert.ok(fit.size <= room, `${fit.size} in in a ${room} in clear height`);
+  assert.notEqual(fit.size, 18);
 });
