@@ -1,6 +1,8 @@
+import { Tooltip } from "../../components/ui/Tooltip";
 import type { SpeakerBand } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import { CardHeading } from "../../components/ui/CardHeading";
 import { NumberField } from "../../components/ui/NumberField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { TextField } from "../../components/ui/TextField";
@@ -22,14 +24,18 @@ interface Props {
 export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
   return (
     <Card className="mb-3">
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <h4 className="font-semibold">{band.name}</h4>
-        {onRemove && (
-          <Button size="xs" onClick={onRemove}>
-            Remove band
-          </Button>
-        )}
-      </div>
+      <CardHeading
+        className="mb-3"
+        action={
+          onRemove && (
+            <Button size="xs" onClick={onRemove}>
+              Remove band
+            </Button>
+          )
+        }
+      >
+        {band.name}
+      </CardHeading>
       <TextField
         label="Name"
         value={band.name}
@@ -43,22 +49,28 @@ export function BandSettings({ band, newCornerHz, onEdit, onRemove }: Props) {
         onEdit={(edit) => onEdit((b) => ({ ...b, ...edit(b) }))}
       />
       <NumberField
-        label="Level"
+        label={<Tooltip tip={SPEAKER_TEXT.levelTip}>Level</Tooltip>}
         // shown to 0.1 dB (the Hi-fi level match is exact)
         value={Math.round(band.levelDb * 10) / 10}
         step={0.5}
         unit="dB"
         onChange={(levelDb) => onEdit((b) => ({ ...b, levelDb }))}
+        className="mb-4"
       />
       <ToggleGroup
-        label="Drive"
+        label={<Tooltip tip={SPEAKER_TEXT.driveTip}>Drive</Tooltip>}
         value={band.drive}
         onChange={(drive) => onEdit((b) => ({ ...b, drive }))}
         options={entriesOf(DRIVE_NAMES)}
+        className="mb-4"
       />
       <NumberField
         // passive: the channel it shares
-        label={band.drive === HIFI_DRIVE.passive ? "Shared amp channel" : "Amp power"}
+        label={
+          <Tooltip tip={SPEAKER_TEXT.ampTip}>
+            {band.drive === HIFI_DRIVE.passive ? "Shared amp channel" : "Amp power"}
+          </Tooltip>
+        }
         value={band.ampW}
         min={1}
         step={10}

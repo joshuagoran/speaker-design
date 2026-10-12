@@ -1,3 +1,4 @@
+import { PRESSED_CLASSES } from "./buttonStyles";
 import { UI_TEXT } from "../../constants/uiText";
 
 /** A `SettingsColumn`'s classes that make it the phone settings sheet: pinned to the bottom of the screen below md. */
@@ -43,7 +44,7 @@ export function SettingsSheetTabs<Id extends string>({
           role="tab"
           aria-selected={open && active === t}
           onClick={() => (open && active === t ? onClose() : onOpen(t))}
-          className={`flex-1 px-2 py-2 rounded border text-sm ${open && active === t ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-stone-50"}`}
+          className={`flex-1 px-2 py-2 rounded border text-sm ${open && active === t ? PRESSED_CLASSES : "border-stone-300 bg-stone-50"}`}
         >
           {label}
         </button>

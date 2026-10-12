@@ -1,6 +1,7 @@
+import { CardHeading } from "../../components/ui/CardHeading";
 import { useRef, useState } from "react";
 import type { HornSegment, SpeakerHorn } from "../../types";
-import { AnimatedDetails } from "../../components/ui/AnimatedDetails";
+import { SettingsFold } from "../../components/ui/SettingsFold";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
@@ -30,10 +31,15 @@ import {
 const DRIVES_NOT_MODELED = keysOf(HORN_DRIVE_NAMES).filter((k) => k !== HORN_DRIVE.front);
 
 /** Each size field of a section: its spec field, its label and its step. */
-const SECTION_FIELDS: readonly { size: HornSectionSize; label: string; step: number }[] = [
-  { size: "s1", label: SPEAKER_TEXT.hornStart, step: 1 },
-  { size: "s2", label: SPEAKER_TEXT.hornEnd, step: 1 },
-  { size: "length", label: SPEAKER_TEXT.portLength, step: 0.25 },
+const SECTION_FIELDS: readonly {
+  size: HornSectionSize;
+  label: string;
+  tip: string;
+  step: number;
+}[] = [
+  { size: "s1", label: SPEAKER_TEXT.hornStart, tip: SPEAKER_TEXT.hornStartTip, step: 1 },
+  { size: "s2", label: SPEAKER_TEXT.hornEnd, tip: SPEAKER_TEXT.hornEndTip, step: 1 },
+  { size: "length", label: SPEAKER_TEXT.portLength, tip: SPEAKER_TEXT.hornLengthTip, step: 0.25 },
 ];
 
 /** The Steps setting's choices: off (smooth) or on. */
@@ -75,21 +81,31 @@ export function HornSettings({ horn, onEdit }: Props) {
     });
   return (
     <section className="border-t border-stone-300 pt-3 mb-3">
-      <h5 className="text-sm font-semibold">{SPEAKER_TEXT.horn}</h5>
+      <CardHeading sub>{SPEAKER_TEXT.horn}</CardHeading>
       <p className="text-xs text-stone-500 mb-2">{hornText(horn)}</p>
-      <div className="text-sm text-stone-500 mb-1">{SPEAKER_TEXT.hornSections}</div>
+      <div className="text-sm font-label text-stone-500 mb-1">
+        <Tooltip tip={SPEAKER_TEXT.hornPathSectionsTip}>{SPEAKER_TEXT.hornSections}</Tooltip>
+      </div>
       {segments.map((s, i) => (
         <div key={i} className="rounded border border-stone-300 px-3 pt-2 mb-2">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-sm font-semibold">{SPEAKER_TEXT.hornSection(i + 1)}</span>
-            {segments.length > 1 && (
-              <Button size="xs" onClick={() => editSegments((list) => withSectionRemoved(list, i))}>
-                {SPEAKER_TEXT.removeSection}
-              </Button>
-            )}
-          </div>
+          <CardHeading
+            sub
+            className="mb-2"
+            action={
+              segments.length > 1 && (
+                <Button
+                  size="xs"
+                  onClick={() => editSegments((list) => withSectionRemoved(list, i))}
+                >
+                  {SPEAKER_TEXT.removeSection}
+                </Button>
+              )
+            }
+          >
+            {SPEAKER_TEXT.hornSection(i + 1)}
+          </CardHeading>
           <ToggleGroup
-            label={SPEAKER_TEXT.hornProfile}
+            label={<Tooltip tip={SPEAKER_TEXT.hornProfileTip}>{SPEAKER_TEXT.hornProfile}</Tooltip>}
             className="mb-2"
             value={s.profile}
             onChange={(profile) => editSegments((list) => withSectionProfile(list, i, profile))}
@@ -98,7 +114,7 @@ export function HornSettings({ horn, onEdit }: Props) {
           <div className={FIELD_ROW}>
             {/* a smooth horn's starts follow the previous ends: only the throat's shows */}
             {SECTION_FIELDS.filter(({ size }) => stepsOn || i === 0 || size !== "s1").map(
-              ({ size, label, step }) => (
+              ({ size, label, tip, step }) => (
                 // `contents`: the wrapper only hears the field's focus, the row lays out the field
                 <div
                   key={size}
@@ -111,7 +127,7 @@ export function HornSettings({ horn, onEdit }: Props) {
                   }}
                 >
                   <NumberField
-                    label={label}
+                    label={<Tooltip tip={tip}>{label}</Tooltip>}
                     value={shownSize(s, size)}
                     min={0}
                     step={step}
@@ -137,17 +153,18 @@ export function HornSettings({ horn, onEdit }: Props) {
           )}
         </div>
       ))}
-      <Button size="xs" className="mb-3" onClick={() => editSegments(withSectionAdded)}>
+      <Button
+        variant="primary"
+        size="xs"
+        className="mb-3"
+        onClick={() => editSegments(withSectionAdded)}
+      >
         {SPEAKER_TEXT.addSection}
       </Button>
-      <AnimatedDetails
-        summary={`${SPEAKER_TEXT.hornAdvanced} · ${SPEAKER_TEXT.hornSteps(steps)}`}
-        className="mb-3 text-sm rounded border border-stone-300 px-3 py-2"
-        summaryClassName="cursor-pointer py-1"
-      >
+      <SettingsFold title={SPEAKER_TEXT.advanced} summary={SPEAKER_TEXT.hornSteps(steps)}>
         <ToggleGroup
           label={<Tooltip tip={SPEAKER_TEXT.hornStepsTip}>{SPEAKER_TEXT.hornStepsSetting}</Tooltip>}
-          className="mt-2 mb-1"
+          className="mb-1"
           value={stepsOn}
           onChange={(on) => {
             setStepsOn(on);
@@ -156,7 +173,7 @@ export function HornSettings({ horn, onEdit }: Props) {
           }}
           options={STEPS_OPTIONS}
         />
-      </AnimatedDetails>
+      </SettingsFold>
       <NumberField
         label={<Tooltip tip={SPEAKER_TEXT.hornThroatTip}>{SPEAKER_TEXT.hornThroat}</Tooltip>}
         value={shownIn(horn.throatChamber)}

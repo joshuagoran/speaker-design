@@ -17,6 +17,8 @@
 //   the fixings; a chamber over another adds what it builds, as the tower's cabinet over its sub box), the Hi-fi's on a
 //   flush box; the drivers with their horns, the radiators and the hardware.
 import type {
+  PurchasedPart,
+  BraceStyleId,
   BoxBracing,
   BoxHandles,
   BoxHardwarePlan,
@@ -75,7 +77,7 @@ import { subDriverDepthIn, subTubeKit } from "../pa/tubes";
 import { towerHornCutout } from "../pa/tower";
 import { hardwareKeepOut, planBoxHardware } from "../pa/hardware";
 import { DRIVER_CLEARANCE_IN, NO_SUPPORTS, type PaBoxSupports } from "../pa/bracing";
-import { MIN_BAY_IN, panelStock } from "../bracing";
+import { MIN_BAY_IN, braceShortfalls, defaultBraceStyleNear, panelStock } from "../bracing";
 import { panelLbPerSqFt } from "../panel";
 import {
   HIFI_FALLBACK_LB,
@@ -108,6 +110,7 @@ import {
 } from "../data";
 import { byId } from "../tables";
 import { TOUCH_IN, baffleInsetIn, chamberVentModel, sharedWalls } from "./chamberAir";
+import { driverListing, sourceOf } from "./driverParts";
 import {
   PORT_RULE,
   driverAcrossIn,
@@ -134,12 +137,18 @@ import {
   HIFI_MOTOR_CUTOUT_SHARE,
   MID_DEPTH_FALLBACK_IN,
 } from "../../data/catalog/driver-cutouts";
-import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES } from "../../constants/bracing";
+import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES, NO_BRACING } from "../../constants/bracing";
 import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
 import { KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
 import { SPEAKER_TEXT, DRIVER_KIND_NAMES } from "../../constants/speakerPage";
 import { HARDWARE_BOX } from "../../constants/hardware";
+import {
+  PURCHASED_PART,
+  purchasedElbowName,
+  purchasedPipeName,
+  purchasedTubeName,
+} from "../../constants/purchasedParts";
 import {
   CABINET_CONSTRUCTION,
   CHAMBER_LOAD,
@@ -559,16 +568,43 @@ function bracedShell(shell: BraceShell, inputs: BraceInputs): BoxBracing {
 /**
  * A chamber's braces and ribs and its hardware. The hardware is placed first (the handles at the center of gravity,
  * the dish low on the back, the horn's posts on a top with a horn on it), then the braces round its recesses, then the
- * hardware checked against them, as the PA boxes do.
+ * hardware checked against them, as the PA boxes do. A cabinet with no bracing (`NO_BRACING`) takes none: its panels'
+ * modes are the bare shell's, held against its target.
  */
 function chamberBracing(
   cabinet: SpeakerCabinet,
   f: ChamberFrame,
   handles: BoxHandles | null,
 ): Pick<ChamberBuild, "bracing" | "hardware"> {
+  if (cabinet.braceStyle !== NO_BRACING)
+    return chamberBracingAs(cabinet, cabinet.braceStyle, cabinet.braceTargetHz, f, handles);
+  // the rule to no target adds nothing (and anything a strength check adds is taken off): the bare shell
+  const t = cabinet.panel.thicknessIn;
+  const bare = chamberBracingAs(cabinet, defaultBraceStyleNear(t), 0, f, handles);
+  const bracing: BoxBracing = {
+    ...bare.bracing,
+    windows: { x: [], y: [], z: [] },
+    notch: null,
+    ribs: [],
+    windowIn3: 0,
+    ribIn3: 0,
+    targetHz: cabinet.braceTargetHz,
+  };
+  bracing.meets = braceShortfalls(bracing).length === 0;
+  return { bracing, hardware: bare.hardware };
+}
+
+/** A chamber's braces and ribs in `style` to `targetHz`, and its hardware (`chamberBracing`). */
+function chamberBracingAs(
+  cabinet: SpeakerCabinet,
+  style: BraceStyleId,
+  targetHz: number,
+  f: ChamberFrame,
+  handles: BoxHandles | null,
+): Pick<ChamberBuild, "bracing" | "hardware"> {
   const t = cabinet.panel.thicknessIn;
   const inset = baffleInsetIn(cabinet);
-  const { braceStyle: style, backJoint: back, braceTargetHz: targetHz } = cabinet;
+  const { backJoint: back } = cabinet;
   const { chamber } = f.placed;
   if (f.paSub) {
     const { sub, style: portStyle, vent } = f.paSub;
@@ -1131,11 +1167,13 @@ const hardwareLine = (box: CutBoxId, plan: BoxHardwarePlan) =>
  * (`SpeakerLayout.oneShell`) share one shell: its sides, top and bottom (or an arched top), back and baffle under
  * `SHELL_CUT_BOX`, every chamber's cutouts on the one baffle, and each chamber's partitions, braces and vent parts
  * under its own box. Any other chamber is a box of its own (`chamberCutBox`), less the walls another chamber gives it.
+ * `also` is the lines under the list (the bought vent parts and the hardware, as the PA and Hi-fi pages give them);
+ * `vent` is the vent's lines alone, the notes under the purchased parts table (`speakerPurchasedParts`).
  */
 export function speakerCutParts(
   cabinet: SpeakerCabinet,
   joint: CornerJoint,
-): { parts: CutPart[]; also: string[] } {
+): { parts: CutPart[]; also: string[]; vent: string[] } {
   const layout = speakerLayout(cabinet);
   const frames = chamberFrames(cabinet, layout);
   const build = cabinetBuild(cabinet);
@@ -1149,12 +1187,14 @@ export function speakerCutParts(
   const arched = cutsArchedTop(cabinet, layout);
   const roundover = frame ? false : roundoverNote(cabinet.roundoverIn, t, joint);
   const parts: CutPart[] = [],
-    also: string[] = [];
+    also: string[] = [],
+    ventLines: string[] = [];
   /** a chamber's braces, vent parts and bought vent parts */
   const insideParts = (f: ChamberFrame) => {
     const { bracing } = build.chambers[f.index];
     const vent = ventParts(cabinet, f);
     also.push(...vent.vent);
+    ventLines.push(...vent.vent);
     return [
       ...(bracing ? braceParts(chamberCutBox(f.index), bracing, insideAxes(f), t) : []),
       ...vent.parts,
@@ -1229,7 +1269,7 @@ export function speakerCutParts(
       }
       parts.push(...insideParts(f));
     }
-    return { parts, also };
+    return { parts, also, vent: ventLines };
   }
   for (const f of frames) {
     const box = chamberCutBox(f.index);
@@ -1269,11 +1309,103 @@ export function speakerCutParts(
     if (frame) parts.push(...ventPartsOf(f));
     else parts.push(...insideParts(f));
   }
-  return { parts, also };
+  return { parts, also, vent: ventLines };
 
   function ventPartsOf(f: ChamberFrame) {
     const vent = ventParts(cabinet, f);
     also.push(...vent.vent);
+    ventLines.push(...vent.vent);
     return vent.parts;
   }
+}
+
+/**
+ * The parts bought for the speaker, as the Cutlist page's purchased parts table lists them: the drivers, their horns,
+ * the passive radiators, the port tubes (a PA port's stock pipe and elbows; a Hi-fi round port's flared tubes, with no
+ * catalog price) and the hardware. The same part in more than one place is one row.
+ */
+export function speakerPurchasedParts(cabinet: SpeakerCabinet): PurchasedPart[] {
+  const rows: PurchasedPart[] = [];
+  const add = (row: PurchasedPart) => {
+    if (row.count <= 0) return;
+    const same = rows.find(
+      (r) => r.kind === row.kind && r.model === row.model && r.unit === row.unit,
+    );
+    if (same) same.count += row.count;
+    else rows.push({ ...row });
+  };
+  const listed = (
+    kind: PurchasedPart["kind"],
+    listing: { name: string; price: number | null; src: string },
+    count: number,
+  ) =>
+    add({
+      kind,
+      model: listing.name,
+      count,
+      unit: listing.price,
+      source: listing.price === null ? null : sourceOf(listing.src),
+    });
+  const layout = speakerLayout(cabinet);
+  const frames = chamberFrames(cabinet, layout);
+  const t = cabinet.panel.thicknessIn;
+  for (const f of frames) {
+    const { chamber } = f.placed;
+    for (const d of chamber.drivers) {
+      const listing = driverListing(d);
+      if (listing) listed(PURCHASED_PART.driver, listing, d.count);
+      const horn = driverHorn(d);
+      // a horn that does not fit where it is mounted is left out, as the views and the cutlist leave it out
+      if (horn && hornFitsWhereSet(f.placed, d)) listed(PURCHASED_PART.horn, horn, d.count);
+    }
+    const { vent } = chamber;
+    if (vent.kind === VENT_KIND.radiator) {
+      const drv = byId(HIFI_PASSIVES, vent.radiators.id);
+      if (drv) listed(PURCHASED_PART.radiator, drv, vent.radiators.n);
+      continue;
+    }
+    const rule = portRule(chamber);
+    if (!rule || vent.kind !== VENT_KIND.vented) continue;
+    if (rule.rule === PORT_RULE.pa) {
+      if (!isRoundPort(rule.portStyle)) continue;
+      const tube = paVentOf(vent.port);
+      const kit = subTubeKit(f.box, rule.portStyle, tube, t, baffleInsetIn(cabinet), rule.sub);
+      if (kit.pipe)
+        add({
+          kind: PURCHASED_PART.portTube,
+          model: purchasedPipeName(kit.pipe),
+          count: kit.sticks,
+          unit: kit.pipe.price,
+          source: sourceOf(kit.pipe.src),
+        });
+      if (kit.elbow && kit.elbows)
+        add({
+          kind: PURCHASED_PART.portElbow,
+          model: purchasedElbowName(kit.elbow.dia),
+          count: tube.nt * kit.elbows,
+          unit: kit.elbow.price,
+          source: kit.elbow.src === null ? null : sourceOf(kit.elbow.src),
+        });
+      continue;
+    }
+    const { port } = rule;
+    if (port.shape === PORT_SHAPE.slot) continue;
+    add({
+      kind: PURCHASED_PART.portTube,
+      model: purchasedTubeName(port.dia, port.len),
+      count: port.n,
+      unit: null,
+      source: null,
+    });
+  }
+  for (const c of cabinetBuild(cabinet).chambers)
+    for (const { part, qty } of c.hardware?.bought ?? [])
+      add({
+        kind: PURCHASED_PART.hardware,
+        model: part.name,
+        count: qty,
+        unit: part.price,
+        source: sourceOf(part.src),
+      });
+  return rows;
 }

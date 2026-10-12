@@ -89,6 +89,19 @@ export const CABINET_TOP_NAMES = {
   arched: "Arched",
 } as const satisfies Record<CabinetTop, string>;
 
+/**
+ * Why an arched top is drawn and cut flat, by id (lib/speaker `archBlock`): the first condition the cabinet misses. A
+ * frame, one shell, one chamber at the top, that chamber the full width, and at least half as tall as the cabinet is
+ * wide.
+ */
+export const ARCH_BLOCK = {
+  frame: "frame",
+  shell: "shell",
+  topChambers: "topChambers",
+  width: "width",
+  height: "height",
+} as const;
+
 /** A chamber's vent kinds, by id: the Hi-fi box kinds. A vented chamber's port is round, a slot or side ducts. */
 export const VENT_KIND = {
   sealed: "sealed",
@@ -203,3 +216,18 @@ export const STACKS_COLLECTION = "stacks";
 
 /** The saved spaces' collection under users/{uid}, next to the speaker library and the stacks. */
 export const SPACES_COLLECTION = "spaces";
+
+/**
+ * The PA and Hi-fi pages' saves under users/{uid}. Those pages go away at L3f; the Stack page opens their saves through
+ * the one read adapter (src/pages/stack/oldSaves).
+ */
+export const OLD_SAVE_COLLECTIONS = {
+  pa: "configs",
+  hifi: "hifiConfigs",
+} as const;
+/** Which page an old save is from. */
+export type OldSaveKind = keyof typeof OLD_SAVE_COLLECTIONS;
+export const OLD_SAVE_KIND = { pa: "pa", hifi: "hifi" } as const satisfies Record<
+  OldSaveKind,
+  OldSaveKind
+>;

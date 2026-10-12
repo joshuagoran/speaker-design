@@ -12,7 +12,7 @@ export function FormField({ label, htmlFor, extra, className = "mb-4", children 
     <div className={className}>
       <label
         htmlFor={htmlFor}
-        className="text-sm text-stone-500 mb-1 flex items-center justify-between gap-2"
+        className="text-sm font-label text-stone-500 mb-1 flex items-center justify-between gap-2"
       >
         <span>{label}</span>
         {extra}

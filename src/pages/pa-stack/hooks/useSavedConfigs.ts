@@ -1,4 +1,5 @@
 import { useConfigStore, type ConfigStore } from "../../../components/saved-configs/useConfigStore";
+import { OLD_SAVE_COLLECTIONS } from "../../../constants/speakerSpec";
 import type { SavedConfig } from "../../../types";
 
 export interface SavedConfigs {
@@ -16,7 +17,7 @@ export interface SavedConfigs {
 
 /** Saved configurations, backed by the artifact's document store, plus the one-time import of the seed configs. */
 export function useSavedConfigs(): SavedConfigs {
-  const store = useConfigStore("configs");
+  const store = useConfigStore(OLD_SAVE_COLLECTIONS.pa);
   const { db, saved, fb, fbUser, cfgMsg, setCfgMsg, signIn, signOut } = store;
   /** One-time copy of the configs saved in the claude.ai artifact (data/configs-seed.json). */
   const importSeed = async () => {
@@ -28,7 +29,7 @@ export function useSavedConfigs(): SavedConfigs {
       let n = 0;
       for (const { id, ...c } of rows) {
         if (have.has(c.name)) continue;
-        await db.collection("configs").doc(id).set(c);
+        await db.collection(OLD_SAVE_COLLECTIONS.pa).doc(id).set(c);
         n++;
       }
       setCfgMsg(n ? `Imported ${n}` : "Nothing new to import");

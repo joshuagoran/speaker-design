@@ -90,3 +90,37 @@ export function hfParts(driver: SpeakerDriver): HfParts | null {
       return null;
   }
 }
+
+/** A driver's catalog listing: its name (maker and model), US price (null where none is known) and price source. */
+export function driverListing(
+  driver: Pick<SpeakerDriver, "kind" | "driverId">,
+): { name: string; price: number | null; src: string } | null {
+  switch (driver.kind) {
+    case DRIVER_KIND.sub:
+      return byId(SUB_OPTIONS, driver.driverId) ?? null;
+    case DRIVER_KIND.mid:
+      return byId(MID_OPTIONS, driver.driverId) ?? null;
+    case DRIVER_KIND.compression:
+      return byId(CD_OPTIONS, driver.driverId) ?? null;
+    case DRIVER_KIND.woofer:
+      return hifiDriverById("woofer", driver.driverId) ?? null;
+    case DRIVER_KIND.tweeter:
+      return hifiDriverById("tweeter", driver.driverId) ?? null;
+    case DRIVER_KIND.coaxial:
+      return byId(FILL_OPTIONS, driver.driverId) ?? null;
+  }
+}
+
+/**
+ * A catalog price source as the purchased parts table's Source column shows it: a link as its site
+ * ("pvcfittingsonline.com"), any other text as written. It is free text (a vendor, an estimate, a print service), not
+ * always a vendor.
+ */
+export const sourceOf = (src: string): string => {
+  if (!/^https?:\/\//.test(src)) return src;
+  try {
+    return new URL(src).hostname.replace(/^www\./, "");
+  } catch {
+    return src;
+  }
+};

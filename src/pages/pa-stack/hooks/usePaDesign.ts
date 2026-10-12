@@ -36,9 +36,9 @@ import type {
   MidDriver,
   PaDesignConfig,
   SubDriver,
-  VentSpec,
 } from "../../../types";
 import { derivePaDesign } from "../../../lib/pa/paDesign";
+import { savedVentSpec } from "../../stack/oldSaves";
 import type { PaDerivedDesign } from "../../../lib/pa/paDesign";
 import type { CabinetStyle } from "./useCabinetStyle";
 import type { Crossovers } from "./useCrossovers";
@@ -47,21 +47,6 @@ import type { HornDesign } from "./useHornDesign";
 import type { MidDesign } from "./useMidDesign";
 import type { SubwooferDesign } from "./useSubwooferDesign";
 import { useEffect, useMemo, useRef } from "react";
-
-/** A saved vent with every field a number: one an older save lacks (or holds as anything else) takes the default's. */
-export function savedVentSpec(v: Partial<VentSpec>): VentSpec {
-  const d = DEFAULT_PA.cVent;
-  const num = (x: number | undefined, fallback: number) =>
-    typeof x === "number" && Number.isFinite(x) ? x : fallback;
-  return {
-    ...v,
-    slotH: num(v.slotH, d.slotH),
-    nt: num(v.nt, d.nt),
-    dia: num(v.dia, d.dia),
-    throat: num(v.throat, d.throat),
-    len: num(v.len, d.len),
-  };
-}
 
 /** What `usePaDesign` returns: every design state and setter, plus the models and sizes derived from them. */
 export interface PaDesign

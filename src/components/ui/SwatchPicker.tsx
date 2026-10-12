@@ -28,7 +28,7 @@ export function SwatchPicker({
   const ring = (on: boolean) => (on ? "border-stone-900" : "border-stone-300");
   return (
     <div className="mb-5">
-      <div id={id} className="text-sm text-stone-500 mb-1">
+      <div id={id} className="text-sm font-label text-stone-500 mb-1">
         {label}
       </div>
       <div role="group" aria-labelledby={id} className="flex flex-wrap gap-1.5 items-center">

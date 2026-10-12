@@ -27,9 +27,10 @@ import {
 } from "../../components/ui/FinishPickers";
 import { cabinetFinishName, paintName } from "../../lib/data";
 import { Card } from "../../components/ui/Card";
+import { CardHeading } from "../../components/ui/CardHeading";
 import { HORN_COLOR_CATALOG_LABEL } from "../../constants/hornColor";
 import {
-  drawsArchedTop,
+  archBlock,
   driverHorn,
   hornFlare,
   speakerLayout,
@@ -40,7 +41,14 @@ import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
 import { formatInches } from "../../lib/format";
 import { DEFAULT_HIFI, DEFAULT_PA, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
-import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
+import {
+  RESULT_MAX_WIDTH,
+  READING_WIDTH,
+  RESULTS_TWO_COLUMN_PX,
+  resultsCellClass,
+  resultsGridClass,
+} from "../../styles/layout";
+import { useWidthAtLeast } from "../../hooks/useElementWidth";
 import {
   HIFI_BOT,
   HIFI_TOP,
@@ -53,7 +61,7 @@ import {
   SPEAKER_SETTINGS_SECTIONS,
   type SpeakerSettingsSection,
 } from "../../constants/settingsSections";
-import { SPEAKER_TEXT, MODEL_GAP_TEXT } from "../../constants/speakerPage";
+import { ARCH_BLOCK_TEXT, SPEAKER_TEXT, MODEL_GAP_TEXT } from "../../constants/speakerPage";
 import {
   CABINET_CONSTRUCTION,
   CABINET_CONSTRUCTION_NAMES,
@@ -77,10 +85,11 @@ import {
   BACK_JOINT_NAMES,
   BACK_JOINT_SUMMARY,
   BACK_JOINT_TIPS,
-  BRACE_STYLE_NAMES,
+  NO_BRACING,
+  SPEAKER_BRACE_STYLE_NAMES,
+  SPEAKER_BRACE_STYLE_TIPS,
   BRACE_TARGET_RANGE_HZ,
   BRACE_STYLE_SUMMARY,
-  BRACE_STYLE_TIPS,
 } from "../../constants/bracing";
 import { bandChips, chamberChips } from "./speakerChips";
 import { speakerStarts, startGroup, startSpeaker } from "./speakerStarts";
@@ -148,11 +157,15 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
   const { chambers, construction, top, insetIn, braceStyle, braceTargetHz, backJoint } =
     spec.cabinet;
   const framed = construction === CABINET_CONSTRUCTION.frameInset;
+  /** no bracing: the panels are left unbraced */
+  const unbraced = braceStyle === NO_BRACING;
   const cabFinish = spec.look.cabFinish ?? DEFAULT_PA.cabFinish;
   const baffleColor = spec.look.baffleColor ?? DEFAULT_PA.baffleColor;
   /** the first catalog horn the drivers take: the horn color picker shows its catalog finish */
   const firstHorn = chambers.flatMap((c) => c.drivers.map(driverHorn)).find((h) => h !== null);
   const layout = speakerLayout(spec.cabinet);
+  /** why an arched top stays flat; null when it applies */
+  const arch = archBlock(spec.cabinet, layout);
   /** the horns built into the chambers, as the views draw them */
   const flares = layout.chambers.flatMap((c) => hornFlare(spec.cabinet, c) ?? []);
   const summaries: Record<SpeakerSettingsSection, string> = {
@@ -160,7 +173,9 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
     construction: [
       `${CABINET_CONSTRUCTION_NAMES[construction]}${framed ? `, inset ${formatInches(insetIn)}` : ""}`,
       `${CABINET_TOP_NAMES[top].toLowerCase()} top`,
-      `braced with ${BRACE_STYLE_SUMMARY[braceStyle]} to ${formatHz(braceTargetHz)}`,
+      braceStyle === NO_BRACING
+        ? SPEAKER_TEXT.notBracedSummary
+        : `braced with ${BRACE_STYLE_SUMMARY[braceStyle]} to ${formatHz(braceTargetHz)}`,
       BACK_JOINT_SUMMARY[backJoint],
     ].join(" · "),
     chambers: chambers.map(chamberText).join("; "),
@@ -229,6 +244,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
           "lb",
         ])),
   ];
+  const [resultsGrid, wide] = useWidthAtLeast(RESULTS_TWO_COLUMN_PX);
+  const cell = (place: string) => resultsCellClass(wide, place);
   const fbMarks = response.chambers.flatMap((c, i) =>
     c.fb !== null ? [{ f: c.fb, label: one ? "Fb" : `Fb ${i + 1}` }] : [],
   );
@@ -272,94 +289,34 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               <Notice>{SPEAKER_TEXT.ventMoved}</Notice>
             )}
           </section>
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>
-            <SectionHeading className="mb-3">{SPEAKER_TEXT.response}</SectionHeading>
-            <ResponseChart
-              fmin={FREQ_AXIS_MIN_HZ}
-              fmax={FREQ_AXIS_MAX_HZ}
-              top={HIFI_TOP}
-              bot={HIFI_BOT}
-              step={10}
-              yLabel={SPEAKER_TEXT.yLabel}
-              series={[
-                ...(response.bands.length
-                  ? [
-                      {
-                        curve: response.sum,
-                        id: SUM_SERIES_ID,
-                        label: SPEAKER_TEXT.sum,
-                        stroke: pal.ink,
-                        width: SUM_LINE_PX,
-                        tint: alpha(pal.ink, 0.05),
-                      },
-                    ]
-                  : []),
-                ...response.bands.map((b) => ({
-                  // a band drawn only where it is on the chart: below the floor it would run along the axis
-                  curve: b.curve.filter((o) => o.spl >= HIFI_BOT),
-                  id: b.id,
-                  label: nameOf(b.id),
-                  ...lineOf(b.id),
-                  tint: "transparent",
-                })),
-              ]}
-              marks={fbMarks}
-            />
-            {response.bands.length === 0 && <Notice>{SPEAKER_TEXT.noBands}</Notice>}
-            {response.gaps.length > 0 && (
-              <Notice>
-                Not modeled: {[...new Set(response.gaps)].map((g) => MODEL_GAP_TEXT[g]).join("; ")}.
-              </Notice>
-            )}
-            <StatTileGrid tiles={tiles} className="mt-5 mb-3" />
-            <p className={`${READING_WIDTH} text-sm text-stone-500`}>{SPEAKER_TEXT.modelNote}</p>
-          </section>
-          <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
-            <SectionHeading className="mb-3">{SPEAKER_TEXT.build}</SectionHeading>
-            <StatTileGrid tiles={buildTiles} className="mb-3" />
-            <ul className="text-sm mb-3">
-              {build.chambers.map((c, i) => (
-                <li key={c.box}>
-                  {SPEAKER_TEXT.chamber} {i + 1}: {bracingText(c.bracing)}
-                </li>
-              ))}
-            </ul>
-            {build.chambers.flatMap((c, i) => {
-              const lines = braceNoteLines(`${SPEAKER_TEXT.chamber} ${i + 1}`, c.bracing);
-              return lines.length
-                ? [
-                    <Notice key={`under${i}`}>
-                      {SPEAKER_TEXT.underTarget(i + 1, formatHz(braceTargetHz))}
-                    </Notice>,
-                    ...lines.map((line) => <Notice key={line}>{line}</Notice>),
-                  ]
-                : [];
-            })}
-            <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
-              {SPEAKER_TEXT.buildNote(formatHz(braceTargetHz))}
-            </p>
-          </section>
-          {limits.bands.length > 0 && (
-            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
-              <SectionHeading className="mb-3">{SPEAKER_TEXT.maxOutput}</SectionHeading>
+          {/* Response beside Maximum output (and Weight and bracing under Response) once the pane is wide enough */}
+          <div ref={resultsGrid} className={`${RESULT_MAX_WIDTH} mt-5 ${resultsGridClass(wide)}`}>
+            <section className={cell("col-start-1 row-start-1")}>
+              <SectionHeading className="mb-3">{SPEAKER_TEXT.response}</SectionHeading>
               <ResponseChart
                 fmin={FREQ_AXIS_MIN_HZ}
                 fmax={FREQ_AXIS_MAX_HZ}
-                top={MAX_OUTPUT_TOP}
-                bot={MAX_OUTPUT_BOT}
+                top={HIFI_TOP}
+                bot={HIFI_BOT}
                 step={10}
-                yLabel={SPEAKER_TEXT.maxYLabel}
+                yLabel={SPEAKER_TEXT.yLabel}
                 series={[
-                  {
-                    curve: limits.sum,
-                    id: SUM_SERIES_ID,
-                    label: SPEAKER_TEXT.sum,
-                    stroke: pal.ink,
-                    width: SUM_LINE_PX,
-                    tint: alpha(pal.ink, 0.05),
-                  },
-                  ...limits.bands.map((b) => ({
-                    curve: b.max.filter((o) => o.spl >= MAX_OUTPUT_BOT),
+                  ...(response.bands.length
+                    ? [
+                        {
+                          curve: response.sum,
+                          id: SUM_SERIES_ID,
+                          label: SPEAKER_TEXT.sum,
+                          stroke: pal.ink,
+                          width: SUM_LINE_PX,
+                          tint: alpha(pal.ink, 0.05),
+                          clipAtFloor: true,
+                        },
+                      ]
+                    : []),
+                  ...response.bands.map((b) => ({
+                    curve: b.curve,
+                    clipAtFloor: true,
                     id: b.id,
                     label: nameOf(b.id),
                     ...lineOf(b.id),
@@ -368,29 +325,108 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 ]}
                 marks={fbMarks}
               />
-              <StatTileGrid tiles={maxTiles} className="mt-5 mb-3" />
-              <div className="flex flex-col gap-3 mb-3">
-                {bandChips(spec, limits).map(({ id, chips }) => (
-                  <div key={id}>
-                    <h4 className="text-xs font-semibold text-stone-500 mb-1">{nameOf(id)}</h4>
-                    <WarningChips chips={chips} />
-                  </div>
-                ))}
-                {limits.chambers.map(
-                  (c, i) =>
-                    c && (
-                      <div key={i}>
-                        <h4 className="text-xs font-semibold text-stone-500 mb-1">
-                          {SPEAKER_TEXT.chamber} {i + 1}
-                        </h4>
-                        <WarningChips chips={chamberChips(c, nameOf(c.band))} />
-                      </div>
-                    ),
-                )}
-              </div>
-              <p className={`${READING_WIDTH} text-sm text-stone-500`}>{SPEAKER_TEXT.maxNote}</p>
+              {response.bands.length === 0 && <Notice>{SPEAKER_TEXT.noBands}</Notice>}
+              {response.gaps.length > 0 && (
+                <Notice>
+                  Not modeled:{" "}
+                  {[...new Set(response.gaps)].map((g) => MODEL_GAP_TEXT[g]).join("; ")}.
+                </Notice>
+              )}
+              <StatTileGrid tiles={tiles} className="mt-5 mb-3" />
+              <p className={`${READING_WIDTH} text-sm text-stone-500`}>{SPEAKER_TEXT.modelNote}</p>
             </section>
-          )}
+            <section
+              className={cell(
+                limits.bands.length > 0 ? "col-start-1 row-start-2" : "col-start-2 row-start-1",
+              )}
+            >
+              <SectionHeading className="mb-3">{SPEAKER_TEXT.build}</SectionHeading>
+              <StatTileGrid tiles={buildTiles} className="mb-3" />
+              {unbraced ? (
+                <Notice>{SPEAKER_TEXT.notBraced}</Notice>
+              ) : (
+                <ul className="text-sm mb-3">
+                  {build.chambers.map((c, i) => (
+                    <li key={c.box}>
+                      {SPEAKER_TEXT.chamber} {i + 1}: {bracingText(c.bracing)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!unbraced &&
+                build.chambers.flatMap((c, i) => {
+                  const lines = braceNoteLines(`${SPEAKER_TEXT.chamber} ${i + 1}`, c.bracing);
+                  return lines.length
+                    ? [
+                        <Notice key={`under${i}`}>
+                          {SPEAKER_TEXT.underTarget(i + 1, formatHz(braceTargetHz))}
+                        </Notice>,
+                        ...lines.map((line) => <Notice key={line}>{line}</Notice>),
+                      ]
+                    : [];
+                })}
+              <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
+                {unbraced
+                  ? SPEAKER_TEXT.buildNoteUnbraced
+                  : SPEAKER_TEXT.buildNote(formatHz(braceTargetHz))}
+              </p>
+            </section>
+            {limits.bands.length > 0 && (
+              <section className={cell("col-start-2 row-start-1 row-span-2")}>
+                <SectionHeading className="mb-3">{SPEAKER_TEXT.maxOutput}</SectionHeading>
+                <ResponseChart
+                  fmin={FREQ_AXIS_MIN_HZ}
+                  fmax={FREQ_AXIS_MAX_HZ}
+                  top={MAX_OUTPUT_TOP}
+                  bot={MAX_OUTPUT_BOT}
+                  step={10}
+                  yLabel={SPEAKER_TEXT.maxYLabel}
+                  series={[
+                    {
+                      curve: limits.sum,
+                      id: SUM_SERIES_ID,
+                      label: SPEAKER_TEXT.sum,
+                      stroke: pal.ink,
+                      width: SUM_LINE_PX,
+                      tint: alpha(pal.ink, 0.05),
+                      // below the floor it would run along the axis as if it were data
+                      clipAtFloor: true,
+                    },
+                    ...limits.bands.map((b) => ({
+                      curve: b.max,
+                      clipAtFloor: true,
+                      id: b.id,
+                      label: nameOf(b.id),
+                      ...lineOf(b.id),
+                      tint: "transparent",
+                    })),
+                  ]}
+                  marks={fbMarks}
+                />
+                <StatTileGrid tiles={maxTiles} className="mt-5 mb-3" />
+                <div className={`${READING_WIDTH} flex flex-col gap-3 mb-3`}>
+                  {bandChips(spec, limits).map(({ id, chips }) => (
+                    <div key={id}>
+                      <h4 className="text-xs font-semibold text-stone-500 mb-1">{nameOf(id)}</h4>
+                      <WarningChips chips={chips} />
+                    </div>
+                  ))}
+                  {limits.chambers.map(
+                    (c, i) =>
+                      c && (
+                        <div key={i}>
+                          <h4 className="text-xs font-semibold text-stone-500 mb-1">
+                            {SPEAKER_TEXT.chamber} {i + 1}
+                          </h4>
+                          <WarningChips chips={chamberChips(c, nameOf(c.band))} />
+                        </div>
+                      ),
+                  )}
+                </div>
+                <p className={`${READING_WIDTH} text-sm text-stone-500`}>{SPEAKER_TEXT.maxNote}</p>
+              </section>
+            )}
+          </div>
         </>
       }
       settings={
@@ -411,12 +447,10 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 onChange={(o) => setStart(o.id)}
                 group={(o) => o.group}
               />
-              <Button onClick={startFrom} className="mb-2">
+              <Button variant="primary" onClick={startFrom} className="mb-2">
                 {SPEAKER_START_TEXT.startOver}
               </Button>
-              <p className="text-xs text-stone-500 mb-2">
-                Starting over replaces this design; open a saved speaker from the library above.
-              </p>
+              <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.startOverHint}</p>
             </>,
           )}
           {section(
@@ -446,8 +480,12 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, top: v }))}
                 options={entriesOf(CABINET_TOP_NAMES)}
               />
-              {top === CABINET_TOP.arched && !drawsArchedTop(spec.cabinet, layout) && (
-                <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.archNotDrawn}</p>
+              {top === CABINET_TOP.arched && arch !== null && (
+                <div className="mb-3">
+                  <Notice>
+                    {SPEAKER_TEXT.archFlat} {ARCH_BLOCK_TEXT[arch]}
+                  </Notice>
+                </div>
               )}
               <ToggleGroup
                 label={SPEAKER_TEXT.backJoint}
@@ -463,32 +501,35 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 className="mb-3"
                 value={braceStyle}
                 onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, braceStyle: v }))}
-                options={keysOf(BRACE_STYLE_NAMES).map(
-                  (id) => [id, BRACE_STYLE_NAMES[id], BRACE_STYLE_TIPS[id]] as const,
+                options={keysOf(SPEAKER_BRACE_STYLE_NAMES).map(
+                  (id) =>
+                    [id, SPEAKER_BRACE_STYLE_NAMES[id], SPEAKER_BRACE_STYLE_TIPS[id]] as const,
                 )}
               />
-              <NumberField
-                label={
-                  <Tooltip tip={SPEAKER_TEXT.braceTargetTip(formatHz(PA_PANEL_TARGET_HZ))}>
-                    {SPEAKER_TEXT.braceTarget}
-                  </Tooltip>
-                }
-                value={braceTargetHz}
-                min={BRACE_TARGET_RANGE_HZ.min}
-                max={BRACE_TARGET_RANGE_HZ.max}
-                step={10}
-                unit="Hz"
-                onChange={(v) =>
-                  speakerPage.editCabinet((c) => ({
-                    ...c,
-                    braceTargetHz: Math.min(
-                      BRACE_TARGET_RANGE_HZ.max,
-                      Math.max(BRACE_TARGET_RANGE_HZ.min, v),
-                    ),
-                  }))
-                }
-                className="mb-3"
-              />
+              {!unbraced && (
+                <NumberField
+                  label={
+                    <Tooltip tip={SPEAKER_TEXT.braceTargetTip(formatHz(PA_PANEL_TARGET_HZ))}>
+                      {SPEAKER_TEXT.braceTarget}
+                    </Tooltip>
+                  }
+                  value={braceTargetHz}
+                  min={BRACE_TARGET_RANGE_HZ.min}
+                  max={BRACE_TARGET_RANGE_HZ.max}
+                  step={10}
+                  unit="Hz"
+                  onChange={(v) =>
+                    speakerPage.editCabinet((c) => ({
+                      ...c,
+                      braceTargetHz: Math.min(
+                        BRACE_TARGET_RANGE_HZ.max,
+                        Math.max(BRACE_TARGET_RANGE_HZ.min, v),
+                      ),
+                    }))
+                  }
+                  className="mb-3"
+                />
+              )}
             </>,
           )}
           {section(
@@ -508,6 +549,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 />
               ))}
               <Button
+                variant="primary"
                 className="mb-2"
                 onClick={() =>
                   speakerPage.editChambers((list) => {
@@ -525,7 +567,9 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             "bands",
             <>
               <Card className="mb-3">
-                <h4 className="font-semibold mb-1">{SPEAKER_TEXT.inputRange}</h4>
+                <CardHeading className="mb-1">
+                  <Tooltip tip={SPEAKER_TEXT.inputTip}>{SPEAKER_TEXT.inputRange}</Tooltip>
+                </CardHeading>
                 <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.inputHint}</p>
                 <FilterFields
                   filters={spec.input}
@@ -546,7 +590,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   }
                 />
               ))}
-              <Button className="mb-2" onClick={speakerPage.addBand}>
+              <Button variant="primary" className="mb-2" onClick={speakerPage.addBand}>
                 Add band
               </Button>
             </>,
