@@ -45,9 +45,32 @@ is built yet.
 ## Versions
 
 - `version` is a whole number. It changes only when a spec type changes in a way an old reader cannot read.
-- The app reads only the current version. It rejects other versions with a clear message: "This file comes from a
-  different version of SpeakNow." No migration code, per the owner policy.
+- Version 1 has no older files, so the first PR reads only version 1. A newer file gets a clear message: "This
+  file comes from a newer version of SpeakNow."
 - A test pins the current version to the spec types, so a type change without a version change fails the build.
+
+### Backward compatibility path (draft)
+
+Exported files live outside the app, so they need a way forward. This applies to files only. Saves in the database
+still follow the owner policy: clean code first, no migration code for them.
+
+- **One step per version.** When the version goes from N to N + 1, the same PR adds one pure function,
+  `upgradeVN(file): FileVN1`. It changes only what the new version changed: rename a field, set a new field to its
+  default, split or join a value.
+- **A chain.** `parseFile` reads the version, then runs the steps in order up to the current version. Then it runs
+  the normal checks. The rest of the app sees only current specs.
+- **One place.** All steps live in `src/lib/io/upgrade/`, one file per step, with the old file shape typed there.
+  No other code knows about old versions.
+- **Fixtures.** Each version keeps a few sample files in `tests/io-fixtures/vN/`: a speaker, a stack, a space and a
+  bundle, exported from the app at that version. A test upgrades every fixture to the current version and checks the
+  result against the current types and the model (no gaps beyond the ones the file had).
+- **Defaults are visible.** When a step fills a new field with a default, the import preview says so ("Bracing
+  target set to 280 Hz").
+- **Loss is visible.** When a step must drop or approximate a value, the preview lists it. The import never fails
+  silently.
+- **Support window.** The app reads every version back to 1. If a step becomes too costly, the owner decides to drop
+  the oldest versions; the message then names the oldest version the app reads.
+- **Export is always current.** The app never writes an old version.
 
 ## Export
 
@@ -114,9 +137,12 @@ The file is untrusted data.
 - 3D export: STL or glTF of the cabinet, for a visual or a print.
 - Share links with the same format, packed and compressed into the URL.
 
+## Owner decisions (Oct 2026)
+
+- A file holds catalog ids only. It does not copy catalog parts.
+- The PA and Hi-fi pages get no Export.
+- Exported files get a backward compatibility path (above). Database saves do not.
+
 ## Open questions
 
-1. Should a file also copy the catalog parts it uses, so a shared design opens in an older or newer catalog? This
-   spec says no: ids only.
-2. Is 1 MB enough? A test should measure a large space with many stacks before this limit is final.
-3. Should the PA and Hi-fi pages also get Export, before L3f removes or changes them? This spec says no.
+1. Is 1 MB enough? A test should measure a large space with many stacks before this limit is final.
