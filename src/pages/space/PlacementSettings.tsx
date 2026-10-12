@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { SpacePlacement, SpaceVenue } from "../../types";
+import { Notice } from "../../components/ui/Notice";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { NumberField } from "../../components/ui/NumberField";
@@ -26,6 +28,8 @@ interface Props {
   onFollows: (follows: SpacePlacement["follows"]) => void;
   onRemove: () => void;
   onMirrorPair: () => void;
+  /** sets its delay and level to play with the mains at the listener; false when there is nothing to align to */
+  onAlign: () => boolean;
 }
 
 /** The picker's id for a placement on its own (a placement's index for one it follows). */
@@ -50,7 +54,10 @@ export function PlacementSettings({
   onFollows,
   onRemove,
   onMirrorPair,
+  onAlign,
 }: Props) {
+  /** the last alignment found nothing to align to */
+  const [alignFailed, setAlignFailed] = useState(false);
   const alone: SelectOption = { id: ALONE_ID, name: SPACE_TEXT.followsNone };
   // it can follow an earlier placement only
   const leads = [alone, ...names.slice(0, index).map((name, i) => ({ id: String(i), name }))];
@@ -145,6 +152,18 @@ export function PlacementSettings({
           onChange={(delayMs) => onEdit((p) => ({ ...p, delayMs }))}
         />
       </div>
+      {index > 0 && (
+        <div className="mb-3">
+          <Button size="xs" onClick={() => setAlignFailed(!onAlign())}>
+            <Tooltip tip={SPACE_TEXT.alignFillTip}>{SPACE_TEXT.alignFill}</Tooltip>
+          </Button>
+          {alignFailed && (
+            <div className="mt-2">
+              <Notice>{SPACE_TEXT.alignFillNone}</Notice>
+            </div>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

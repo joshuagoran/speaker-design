@@ -1,5 +1,5 @@
 // The Space page's figures and words (src/pages/space; the model in lib/speaker/spaceLayout and spaceCoverage).
-import type { CoverageRoom } from "../types";
+import type { CoverageBand, CoverageRoom } from "../types";
 
 /**
  * A living room for a design that names no room (the Hi-fi pair, a fill): 16 × 22 ft, a 9 ft ceiling, drywall all
@@ -61,6 +61,15 @@ export const SPACE_LIFT_MAX_IN = 240;
 /** An amp by its number in the space (1 up). */
 const ampName = (n: number) => `Amp ${n}`;
 
+/** The band a fill's level is matched to the mains in (lib/speaker/fillAlign): the voice range a fill is there for. */
+export const FILL_ALIGN_BAND = "mid" satisfies CoverageBand;
+
+/**
+ * How much later than the mains a fill arrives at the listener, ms, so the sound still seems to come from the mains (the
+ * precedence effect: a few ms is the usual setting).
+ */
+export const FILL_PRECEDENCE_MS = 5;
+
 export const SPACE_TEXT = {
   /** the name a new space starts with */
   newName: "New space",
@@ -106,6 +115,10 @@ export const SPACE_TEXT = {
   mirror: "Mirror image",
   level: "Level, dB",
   delay: "Delay, ms",
+  alignFill: "Align to the mains",
+  alignFillTip:
+    "For a fill: sets this placement's delay and level for the listener. The sound arrives just after the mains, at the level of the mains in the mid band. Move the listener to the area the fill covers first.",
+  alignFillNone: "Nothing to align to: place the mains first, with a modeled speaker.",
   feedTip:
     "The front end's level and delay on this placement's feed (a fill under, and after, the mains).",
   amps: "Amps",

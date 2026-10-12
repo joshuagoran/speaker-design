@@ -30,6 +30,7 @@ import { startLayers } from "../stack/stackPresets";
 import { STACK_START_DESIGN_NAMES, type StackStart } from "../../constants/stackPresets";
 import { spacePlacement } from "../../lib/speaker/specParts";
 import { withSubPlacement } from "../../lib/speaker/subPlacement";
+import { fillAlignment } from "../../lib/speaker/fillAlign";
 import { SUB_PLACEMENT } from "../../constants/subPlacement";
 import { readStoredJson } from "../../lib/storage";
 import { withSpeaker } from "../stack/useStack";
@@ -486,6 +487,15 @@ export function useSpace() {
       }));
     },
     moveListener: (p: FloorPoint) => editVenue((v) => ({ ...v, listener: onFloor(p, v.room) })),
+    /**
+     * sets placement `k`'s delay and level to play with the mains at the listener (lib/speaker/fillAlign); false when
+     * there is nothing to align to
+     */
+    alignToMains: (k: number) => {
+      const aligned = fillAlignment(model, venue, space.placements, k);
+      if (aligned) editPlacement(k, (p) => ({ ...p, ...aligned }));
+      return aligned !== null;
+    },
     /** the room's settings (`RoomFields`) */
     room: {
       // a smaller room keeps what it holds inside

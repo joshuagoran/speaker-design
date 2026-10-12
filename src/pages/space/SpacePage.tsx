@@ -430,6 +430,7 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                   onFollows={(follows) => space.setFollows(k, follows)}
                   onRemove={() => space.removePlacement(k)}
                   onMirrorPair={() => space.addMirrorPair(k)}
+                  onAlign={() => space.alignToMains(k)}
                 />
               ))}
               {pickedStack && (
