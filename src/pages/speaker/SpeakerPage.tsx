@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { BandId, PaPlannerDesign } from "../../types";
+import type { BandId, DispersionPlane, PaPlannerDesign } from "../../types";
 import { alpha, bandLine } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
@@ -16,6 +16,9 @@ import { SelectField } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
+import { DispersionBlock } from "../../components/charts/DispersionBlock";
+import { speakerDispersionMap } from "../../lib/speaker/stackDispersion";
+import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { STATS } from "../../components/optimizer/StatRow";
 import { priceText, speakerPrice } from "../../lib/speaker/speakerTotals";
@@ -66,6 +69,7 @@ import {
   FREQ_AXIS_MIN_HZ,
   MAX_OUTPUT_BOT,
   MAX_OUTPUT_TOP,
+  DISPERSION_DISTANCE_M,
 } from "../../constants/chartScales";
 import {
   SPEAKER_SETTINGS_SECTIONS,
@@ -267,6 +271,11 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
       : []),
   ];
   const price = useMemo(() => speakerPrice(spec.cabinet), [spec.cabinet]);
+  const [plane, setPlane] = useState<DispersionPlane>(DISPERSION_START_PLANE);
+  const dispersion = useMemo(
+    () => (response.bands.length ? speakerDispersionMap(spec, response, plane) : null),
+    [spec, response, plane],
+  );
   const buildTiles: StatTileItem[] = [
     [STATS.partsPrice, priceText(price), ""],
     [SPEAKER_TEXT.weight, build.lb.toFixed(0), "lb"],
@@ -480,6 +489,18 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
               </section>
             )}
           </div>
+          {dispersion && (
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
+              <SectionHeading className="mb-3">{DISPERSION_HEADING}</SectionHeading>
+              <DispersionBlock
+                map={dispersion}
+                plane={plane}
+                onPlane={setPlane}
+                distM={DISPERSION_DISTANCE_M}
+                axis="listening"
+              />
+            </section>
+          )}
         </>
       }
       settings={

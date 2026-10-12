@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { SpeakerSpec } from "../../types";
+import { useMemo, useState } from "react";
+import type { DispersionPlane, SpeakerSpec } from "../../types";
 import { alpha, bandLine } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
@@ -14,6 +14,9 @@ import { Notice } from "../../components/ui/Notice";
 import { AutoBalanceButton } from "../../components/ui/AutoBalanceButton";
 import { AUTO_BALANCE_TEXT } from "../../constants/autoBalance";
 import { ResponseChart } from "../../components/charts/ResponseChart";
+import { DispersionBlock } from "../../components/charts/DispersionBlock";
+import { stackDispersionMap } from "../../lib/speaker/stackDispersion";
+import { DISPERSION_HEADING, DISPERSION_START_PLANE } from "../../constants/dispersionPlanes";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { STATS } from "../../components/optimizer/StatRow";
 import { priceText } from "../../lib/speaker/speakerTotals";
@@ -35,6 +38,7 @@ import {
   HIFI_TOP,
   MAX_OUTPUT_BOT,
   MAX_OUTPUT_TOP,
+  DISPERSION_DISTANCE_M,
 } from "../../constants/chartScales";
 import {
   STACK_SETTINGS_SECTIONS,
@@ -167,6 +171,12 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
     [STATS.stackHeight, totals.heightIn.toFixed(0), "in"],
   ];
   const gaps = modeled.some(({ m }) => m.response.gaps.length > 0);
+  const [plane, setPlane] = useState<DispersionPlane>(DISPERSION_START_PLANE);
+  const dispersion = useMemo(
+    () =>
+      modeled.length ? stackDispersionMap(design.stack, design.speakers, response, plane) : null,
+    [design, response, plane, modeled.length],
+  );
   /** keep-up at each crossover between members */
   const keepUps = stackKeepUpChips(design.stack, response, limits, names);
   return (
@@ -297,6 +307,18 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 </div>
               )}
               <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>{STACK_TEXT.maxNote}</p>
+            </section>
+          )}
+          {dispersion && (
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
+              <SectionHeading className="mb-3">{DISPERSION_HEADING}</SectionHeading>
+              <DispersionBlock
+                map={dispersion}
+                plane={plane}
+                onPlane={setPlane}
+                distM={DISPERSION_DISTANCE_M}
+                axis="listening"
+              />
             </section>
           )}
         </>
