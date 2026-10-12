@@ -21,6 +21,7 @@ import {
 import { abs, add, complex } from "../src/lib/acoustics/complex";
 import { SPEAKER_BAND } from "../src/constants/speakerSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
+import { paBalancedLayers } from "../src/lib/speaker/paBalance";
 import {
   computeSpaceGrid,
   spaceGridRequest,
@@ -141,6 +142,13 @@ function paSpace(layout: CoverageLayout): SpaceDesign {
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };
 }
 
+/** The starting PA design read in as a space on `layout`, its music balance in the band Levels (the PA preset's). */
+function balancedPaSpace(layout: CoverageLayout): SpaceDesign {
+  const cfg = defaultPaDesign();
+  const read = paBalancedLayers(cfg, layersFromPa(cfg, { id: "pa", name: "PA" }, layout));
+  return { space: read.space, stacks: [read.stack], speakers: read.speakers };
+}
+
 /** Each cell less the grid's mean over cells, dB: the map's shape. */
 const shape = (g: CoverageGrid) => {
   const mean = g.db.reduce((a, b) => a + b, 0) / g.db.length;
@@ -168,7 +176,8 @@ type ShapeTolerance = Record<Exclude<CoverageBand, "one">, ReturnType<typeof sha
  *
  * - The sub plays at its music limit in both: within SUB_GAP_DB. The stack's top plays louder than the page's balance
  *   (the PA stack's band levels are gains on each box's 2.83 V response, not the page's balance at the limits): on the
- *   starting design the mid −1.8 dB at 400 Hz and the horn +11.3 dB at 4 kHz.
+ *   starting design the mid −1.8 dB at 400 Hz and the horn +11.3 dB at 4 kHz. The PA presets put the page's balance
+ *   in the band Levels (lib/speaker/paBalance; the last test).
  * - The map's shape (each cell less the map's mean, so each band's level drops out) on the page's default floor,
  *   indoors (PAGE_SHAPE_DB): on the starting design (Oct 2026) sub mean 0.05, p90 0.08; kick 0.10, 0.19; mid 0.28, 0.58;
  *   high 0.00, 0.00 (the concrete room's diffuse field evens the high band out).
@@ -307,4 +316,22 @@ test("space model: a stack lifted above the ears is quieter right in front of it
   // its horn 8 ft higher: far off its axis 6 ft out, almost on it 40 ft out
   assert.ok(levelOn(lifted, 6) < levelOn(floor, 6) - 2, "quieter close in");
   assert.ok(Math.abs(levelOn(lifted, 40) - levelOn(floor, 40)) < 1, "about the same far away");
+});
+
+/**
+ * How far apart the bands' gaps (space against page) may be, dB, with the music balance in the band Levels: on the
+ * starting design (Oct 2026) every band plays 0.37 dB over the page, within 0.002 dB of the others (without it, the mid
+ * −1.8 dB and the horn +11.3 dB).
+ */
+const BALANCE_GAP_DB = 0.05;
+
+test("space model: with the music balance in its band Levels, the PA design's space plays each band as the page does", () => {
+  const layout = FLOORS.indoors;
+  const gaps = bandGapsDb(layout, spaceModel(balancedPaSpace(layout)));
+  const sub = gaps.sub ?? Infinity;
+  assert.ok(Math.abs(sub) < SUB_GAP_DB, `sub ${sub} dB`);
+  for (const band of ["mid", "horn"] as const) {
+    const gap = gaps[band] ?? Infinity;
+    assert.ok(Math.abs(gap - sub) < BALANCE_GAP_DB, `${band} ${gap} dB, sub ${sub} dB`);
+  }
 });

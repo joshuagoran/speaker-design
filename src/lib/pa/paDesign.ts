@@ -45,6 +45,7 @@ import type {
   PaHardware,
   PaLayout,
   PaMaxPoint,
+  PaPlannerDesign,
   PaPortGeometry,
   PaStackGeometry,
   PhasedModel,
@@ -59,6 +60,15 @@ import type {
 import { stackHeights } from "../../components/stack-view/stackHeights";
 import { xmaxBandCurves } from "../xmax";
 import { towerMidDims } from "./tower";
+import { CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../data";
+import { byIdOrThrow } from "../tables";
+import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
+import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
+import { DISPERSION_PLANES } from "../../constants/dispersionPlanes";
+import { PLINTH_HEIGHT_IN } from "../../constants/paLayouts";
+
+/** The horizontal dispersion plane: the first in the planes list. */
+const HORIZONTAL_PLANE = DISPERSION_PLANES[0][0];
 
 /**
  * The PA design state the models read (the PA page's hooks hold it, a part each); the music balance, finish, colors
@@ -168,6 +178,40 @@ export interface PaDerivedDesign {
   midHornGapIn: number;
   midHornNullAngleDeg: number | null;
 }
+
+/**
+ * A saved PA design (its parts by id) as the models take it: the parts from the catalog, the plinth, and the horizontal
+ * dispersion plane (the map's plane changes no model or level).
+ */
+export const paDesignInputsOf = (cfg: PaPlannerDesign): PaDesignInputs => ({
+  subDriver: byIdOrThrow(SUB_OPTIONS, cfg.sub, CATALOG_TABLE_NAMES.subs),
+  portStyle: cfg.portStyle,
+  subBoxDims: cfg.cDim,
+  subVentSpec: cfg.cVent,
+  subHighpassHz: cfg.hpf,
+  subHighpassType: cfg.hpType,
+  subAmpWatts: cfg.ampW,
+  maxPortAirSpeedMs: cfg.portMax,
+  midDriver: byIdOrThrow(MID_OPTIONS, cfg.mid, CATALOG_TABLE_NAMES.mids),
+  midBoxDims: cfg.mDim,
+  midAmpWatts: cfg.mAmpW,
+  hornOption: byIdOrThrow(HORN_OPTIONS, cfg.horn, CATALOG_TABLE_NAMES.horns),
+  compressionDriver: byIdOrThrow(CD_OPTIONS, cfg.cd, CATALOG_TABLE_NAMES.compressionDrivers),
+  hornAmpWatts: cfg.hfAmpW,
+  subMidCrossoverHz: cfg.xoLo,
+  midHornCrossoverHz: cfg.xoHi,
+  subMidCrossoverOrder: cfg.xoLoOrder,
+  midHornCrossoverOrder: cfg.xoHiOrder,
+  plinthHeightIn: PLINTH_HEIGHT_IN,
+  layout: cfg.layout,
+  baffleInsetIn: cfg.inset,
+  spacerHeightIn: cfg.spacerH,
+  braceStyle: cfg.braceStyle,
+  backJoint: cfg.backJoint ?? DEFAULT_BACK_JOINT,
+  hardware: cfg.hardware,
+  dispersionPlane: HORIZONTAL_PLANE,
+  wallThicknessIn: cfg.wall,
+});
 
 /** The PA models (sub, mid, horn), beamwidths, dispersion map, weights and stack heights for a design. Pure in its inputs. */
 export function derivePaDesign({

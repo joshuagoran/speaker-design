@@ -4,8 +4,6 @@ import { STACK_LISTEN_DISTANCE_M, type OldSaveKind } from "./speakerSpec";
 export const STACK_TEXT = {
   /** the name a new stack starts with */
   newName: "New stack",
-  /** the name a stack read from the PA design takes */
-  paName: "PA design",
   views: "Front view",
   front:
     "The members as the stack places them, to scale. A mirrored member is drawn flipped. The dashed line is the listening axis.",
@@ -19,12 +17,12 @@ export const STACK_TEXT = {
   modelNote: `Each member is its speaker in the Speaker page's model, fed through its crossover, then its level and delay. The sum is ${STACK_LISTEN_DISTANCE_M} m in front of the stack, level with the highest band, moved back to 1 m. Each band's path to that point sets its time and level. An auto delay puts a member in phase with the member it crosses, at their crossover. If that member would have to play early, the others wait instead, so no delay is less than 0. Not modeled: the room, the baffle step, and coverage off axis.`,
   maxNote:
     "One input drives the whole stack. At each frequency, the member with the least headroom sets the level, and every member plays at that input. The crossovers are in the front end, ahead of the amps.",
-  noMembers: "Add a saved speaker, or start from the current PA design.",
+  noMembers: "Add a saved speaker, or start from a preset.",
   missing: "A member's speaker is missing from this stack, so the model leaves it out.",
   gaps: "The model leaves out part of a member's speaker. Open that speaker on the Speaker page to see which part.",
   fullRange: "full range",
-  fromPa: "From the current PA design",
-  fromPaHint: "Both replace this stack; open a saved stack from the library above.",
+  startHint:
+    "Both replace this stack. A PA start sets each band's level to the PA page's music balance. Open a saved stack from the library above.",
   clear: "Start empty",
   oldSave: "PA or Hi-fi page save",
   oldSaveBad: "This save does not open. Some of its fields are not valid.",

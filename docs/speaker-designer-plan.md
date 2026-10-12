@@ -629,8 +629,21 @@ Each PR stands alone. Lowest risk first.
         listening area and the target; the front end and the amp channels; the coverage map on its fixed scale (with the
         listening area), the levels at the listening area, a side view of the heights and tilts, and the response at the
         listener. Saves go to `spaces` with copies of the stacks and speakers.
-      - **Not yet.** The 3D view of a space; per-band level matching of the PA stack (its horn plays 11 dB over the PA
-        page's music balance, so the stack's own levels, not the page's, set the space's balance).
+      - **Not yet.** The 3D view of a space.
+      - **Music balance (L3f).** The Stack and Space pages start from presets (`src/pages/stack/stackPresets`): the PA
+        page's starting design in each layout, the Hi-fi pair, and the current PA design. A PA start keeps the PA page's
+        music balance in its band Levels (`lib/speaker/paBalance`): each band's Level is the page's balanced level less
+        its own 2.83 V response, read inside its passband, the highest 0 dB; every member and placement is at 0 dB.
+        - The PA presets' Levels are saved data: `src/data/presets/pa-band-levels.ts`, one row per layout, calculated
+          once from the PA page's starting design. `vp run preset-levels` writes the file again after a change to the
+          starting design or the models. `tests/stack-presets.test.ts` fails when a new run would change it. The
+          presets read the file; they calculate nothing.
+        - The current PA design and an old PA save have no saved Levels. Their balance is calculated once, when they
+          are read in, and saved in their band Levels. Nothing calculates it again after an edit.
+        - When the page cannot balance every band (for example a horn it cannot model), no band takes a balanced Level.
+          The adapter's Levels stay, so the Levels never mix two scales.
+        - On the starting design the space then plays every band 0.37 dB over the page (before: the mid −1.8 dB and
+          the horn +11.3 dB). Old PA saves opened on the Stack page take the same balance.
   - **Weight limit per box** (owner, Oct 2026). There is no weight check on a page. The fixed 125 lb sub check in
     `src/lib/pa/chips.ts` goes with the PA page. A maximum weight per box is only a limit of the optimizer (see
     "Optimizer rethink" in L3f): the user sets it, and no tower or layout rule sets it.
