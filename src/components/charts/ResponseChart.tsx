@@ -1,5 +1,5 @@
 import type { BandCurves, FrequencyPoint } from "../../types";
-import { PA_DB_BOT, PA_DB_TOP } from "../../constants/chartScales";
+import { MAX_OUTPUT_BOT, MAX_OUTPUT_TOP } from "../../constants/chartScales";
 import { alpha } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useElementWidth } from "../../hooks/useElementWidth";
@@ -12,6 +12,8 @@ import { RESULT_MAX_WIDTH } from "../../styles/layout";
  * high ends of an estimated Xmax (see `lib/xmax`); null or absent when the driver's Xmax is exact.
  */
 interface Series {
+  /** a stable key where labels can repeat (user-named bands); absent: the label */
+  id?: string;
   curve: readonly FrequencyPoint[];
   label: string;
   stroke: string;
@@ -19,6 +21,8 @@ interface Series {
   band?: BandCurves<FrequencyPoint> | null;
   /** a dashed line (its SVG dash pattern), for a curve that shares another's color; absent: solid */
   dash?: string;
+  /** the line's width, px; absent: 2 (a sum drawn over its parts takes more) */
+  width?: number;
 }
 
 /** A labeled vertical line at a frequency. */
@@ -34,7 +38,7 @@ interface Props {
   span?: { lo: number; hi: number };
   fmax?: number;
   fmin?: number;
-  /** fixed y axis, dB (or degrees for a beamwidth chart): defaults to the PA stack's 80-135 dB; the Hi-fi charts pass HIFI_TOP / HIFI_BOT */
+  /** fixed y axis, dB (or degrees for a beamwidth chart): defaults to the maximum-output scale (MAX_OUTPUT_TOP / MAX_OUTPUT_BOT); a response chart passes HIFI_TOP / HIFI_BOT */
   top?: number;
   bot?: number;
   /** gridline spacing on the y axis */
@@ -46,15 +50,15 @@ interface Props {
   H?: number;
 }
 
-/** Max-SPL chart: one or more curves ({f, spl}), fixed 80-135 dB so setups compare directly. */
+/** Max-SPL chart: one or more curves ({f, spl}), on a fixed scale so setups compare directly. */
 export function ResponseChart({
   series,
   marks = [],
   span,
   fmax = 200,
   fmin = 15,
-  top = PA_DB_TOP,
-  bot = PA_DB_BOT,
+  top = MAX_OUTPUT_TOP,
+  bot = MAX_OUTPUT_BOT,
   step = 5,
   yLabel = "max dB SPL @ 1 m",
   unit = " dB",
@@ -219,20 +223,25 @@ export function ResponseChart({
             </g>
           ))}
         {paths.map((p) => (
-          <path key={p.label + "f"} d={p.fill} fill={p.tint} />
+          <path key={(p.id ?? p.label) + "f"} d={p.fill} fill={p.tint} />
         ))}
         {paths.map((p) =>
           p.bandD ? (
-            <path key={p.label + "b"} d={p.bandD} fill={alpha(p.stroke, 0.18)} stroke="none" />
+            <path
+              key={(p.id ?? p.label) + "b"}
+              d={p.bandD}
+              fill={alpha(p.stroke, 0.18)}
+              stroke="none"
+            />
           ) : null,
         )}
         {paths.map((p) => (
           <path
-            key={p.label}
+            key={p.id ?? p.label}
             d={p.d}
             fill="none"
             stroke={p.stroke}
-            strokeWidth="2"
+            strokeWidth={p.width ?? 2}
             strokeDasharray={p.dash}
             strokeLinejoin="round"
             strokeLinecap="round"
@@ -314,7 +323,7 @@ export function ResponseChart({
           style={{ fontFamily: FONT }}
         >
           {paths.map((p) => (
-            <span key={p.label} className="flex items-center gap-1.5">
+            <span key={p.id ?? p.label} className="flex items-center gap-1.5">
               <span
                 className="inline-block w-4 h-0.5"
                 style={p.dash ? { borderTop: `2px dashed ${p.stroke}` } : { background: p.stroke }}

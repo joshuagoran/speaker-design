@@ -66,6 +66,15 @@ export const CHIP_IDS = {
     "hifiWooferLimit",
   ],
   hardware: ["subHardwareFit", "midHardwareFit"],
+  /** the Designer's limits: one list per band, one per chamber (src/pages/designer/designerChips.ts) */
+  designer: [
+    "designerBandLimit",
+    "designerHfPower",
+    "designerExcursion",
+    "designerPortSpeed",
+    "designerRadiatorTravel",
+    "designerPower",
+  ],
 } as const;
 
 /** The checks that name what sets a section's level; a result card says that in its "Limited by" line instead. */

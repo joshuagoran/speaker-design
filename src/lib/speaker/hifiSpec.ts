@@ -1,6 +1,7 @@
 // Read adapter: the Hi-fi page's design (HifiDesignState) as a speaker spec and a system spec (the pair at the seat).
 // Pure; nothing is written.
 import type {
+  AdapterBandId,
   BandFilter,
   ChamberVent,
   HifiDesignState,
@@ -24,7 +25,7 @@ import {
 } from "../hifi/hifi";
 import { hifiBoxFit } from "../hifi/boxLayout";
 import { MAX_ELBOWS } from "../tubeFold";
-import { HIFI_DRIVE, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SUBSONIC_TYPE } from "../../constants/hifiEngine";
 import {
   DRIVER_KIND,
   FRONT_END_KIND,
@@ -33,10 +34,18 @@ import {
   PORT_SHAPE,
   SOURCE_ROLE,
   SPEAKER_BAND,
+  SPEAKER_BAND_NAMES,
   SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-import { DIRECT_LOAD, channelCounter, lrFilter, speakerIdentity, stuffingPctOf } from "./specParts";
+import {
+  DIRECT_LOAD,
+  NO_FILTERS,
+  channelCounter,
+  lrFilter,
+  speakerIdentity,
+  stuffingPctOf,
+} from "./specParts";
 
 /**
  * The box's vent, by box kind. A round port carries its elbows as the model works them out (the fewest that fit the
@@ -51,11 +60,14 @@ function hifiVent(
       return { kind: VENT_KIND.sealed };
     case VENT_KIND.vented: {
       const port = state.portSpec;
+      // the Hi-fi page's air-speed limit
+      const maxSpeedMs = state.portMaxMs ?? HIFI_PORT_MAX_MS;
       return port.shape === PORT_SHAPE.slot
-        ? { kind: VENT_KIND.vented, port }
+        ? { kind: VENT_KIND.vented, port, maxSpeedMs }
         : {
             kind: VENT_KIND.vented,
             port: { ...port, elbows: hifiPortElbows(dim, wall, port) ?? MAX_ELBOWS },
+            maxSpeedMs,
           };
     }
     case VENT_KIND.radiator:
@@ -172,10 +184,11 @@ export function speakerFromHifi(
   const drive = state.drive ?? HIFI_DRIVE.active;
   const { subsonic, trimDb } = hifiBandParts(state, fit);
   const band = (
-    id: SpeakerBand["id"],
+    id: AdapterBandId,
     filters: Pick<SpeakerBand, "highpass" | "lowpass">,
     levelDb: number,
-  ) => ({ id, ...filters, levelDb, drive });
+    ampW: SpeakerBand["ampW"],
+  ): SpeakerBand => ({ id, name: SPEAKER_BAND_NAMES[id], ...filters, levelDb, drive, ampW });
   return {
     ...identity,
     cabinet: {
@@ -205,13 +218,18 @@ export function speakerFromHifi(
         SPEAKER_BAND.low,
         { highpass: subsonic, lowpass: lrFilter(crossoverHz, crossoverOrder) },
         0,
+        state.wooferAmpWatts,
       ),
       band(
         SPEAKER_BAND.high,
         { highpass: lrFilter(crossoverHz, crossoverOrder), lowpass: null },
         trimDb,
+        // passive: the woofer's channel, which it shares
+        drive === HIFI_DRIVE.passive ? state.wooferAmpWatts : state.tweeterAmpWatts,
       ),
     ],
+    // the Hi-fi page's sub highpass is the system's (systemFromHifi): the input range starts off
+    input: NO_FILTERS,
     look,
   };
 }

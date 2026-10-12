@@ -5,6 +5,7 @@
 // the horn in the baffle. The crossover between the sub and the tops is the system's; the one inside a box is the
 // box's.
 import type {
+  AdapterBandId,
   CoverageLayout,
   FacePoint,
   HornPlacement,
@@ -27,7 +28,7 @@ import type {
 } from "../../types";
 import { HORN_OPTIONS, SUB_OPTIONS, mainsDsp } from "../data";
 import { byIdOrThrow } from "../tables";
-import { STUFFING_VOLUME_GAIN, slotFolds, subDriverCenter } from "../pa/calc";
+import { STUFFING_VOLUME_GAIN, slotFolds, subDriverCenter, ventSpeedLimit } from "../pa/calc";
 import { modelTubeElbows } from "../pa/tubes";
 import { towerMidDims, towerSpec } from "../pa/tower";
 import { takesHornMount } from "../pa/hornMount";
@@ -44,6 +45,7 @@ import {
   PORT_SHAPE,
   SOURCE_ROLE,
   SPEAKER_BAND,
+  SPEAKER_BAND_NAMES,
   SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
@@ -105,7 +107,12 @@ function subChamber(cfg: PaPlannerDesign): SpeakerChamber {
     dims: cfg.cDim,
     netLiters: null,
     stuffingPct: 0,
-    vent: { kind: VENT_KIND.vented, port: PA_PORTS[cfg.portStyle](cfg, sub) },
+    vent: {
+      kind: VENT_KIND.vented,
+      port: PA_PORTS[cfg.portStyle](cfg, sub),
+      // the design's setting, more for flared tubes (as the PA page takes it)
+      maxSpeedMs: ventSpeedLimit(cfg.portStyle, cfg.portMax),
+    },
     load: DIRECT_LOAD,
     drivers: [
       {
@@ -182,23 +189,40 @@ const paCabinet = (cfg: PaPlannerDesign, chambers: SpeakerCabinet["chambers"]): 
   backJoint: cfg.backJoint,
 });
 
-/** An active band: its own amp channel, its filters in the DSP. */
+/** An active band: its own amp channel of `ampW`, its filters in the DSP. */
 const activeBand = (
-  id: SpeakerBand["id"],
+  id: AdapterBandId,
   filters: Pick<SpeakerBand, "highpass" | "lowpass">,
   levelDb: number,
-): SpeakerBand => ({ id, ...filters, levelDb, drive: HIFI_DRIVE.active });
+  ampW: SpeakerBand["ampW"],
+): SpeakerBand => ({
+  id,
+  name: SPEAKER_BAND_NAMES[id],
+  ...filters,
+  levelDb,
+  drive: HIFI_DRIVE.active,
+  ampW,
+});
 
-/** The sub band's own filter: the subsonic highpass. */
+/** The sub band's own filter: the subsonic highpass; on the sub amp. */
 const subBand = (cfg: PaPlannerDesign, lowpass: SpeakerBand["lowpass"]) =>
-  activeBand(SPEAKER_BAND.low, { highpass: { hz: cfg.hpf, type: cfg.hpType }, lowpass }, 0);
+  activeBand(
+    SPEAKER_BAND.low,
+    { highpass: { hz: cfg.hpf, type: cfg.hpType }, lowpass },
+    0,
+    cfg.ampW,
+  );
 
-/** The horn band: above the mid-to-horn crossover, `hfTilt` below the mid band, which is `midDb` below the box's top. */
+/**
+ * The horn band: above the mid-to-horn crossover, `hfTilt` below the mid band, which is `midDb` below the box's top; on
+ * the HF amp.
+ */
 const hornBand = (cfg: PaPlannerDesign, midDb: number) =>
   activeBand(
     SPEAKER_BAND.high,
     { highpass: lrFilter(cfg.xoHi, cfg.xoHiOrder), lowpass: null },
     -(midDb + cfg.hfTilt),
+    cfg.hfAmpW,
   );
 
 /** One PA box as a speaker spec. */
@@ -208,16 +232,37 @@ const paSpeaker = (
   part: SpeakerPart,
   cabinet: SpeakerCabinet,
   bands: SpeakerSpec["bands"],
+  input: SpeakerSpec["input"],
 ): SpeakerSpec => ({
   ...speakerIdentity(system, part),
   cabinet,
   bands,
+  input,
   look: { cabFinish: cfg.cabFinish, baffleColor: cfg.baffleColor, hornColor: cfg.hornColor },
+});
+
+/** The sub box's input range: below the crossover to the tops (its own subsonic stays in its band). */
+const subInput = (cfg: PaPlannerDesign): SpeakerSpec["input"] => ({
+  highpass: null,
+  lowpass: lrFilter(cfg.xoLo, cfg.xoLoOrder),
+});
+
+/** The mid/high box's input range: above the crossover to the subs. */
+const topInput = (cfg: PaPlannerDesign): SpeakerSpec["input"] => ({
+  highpass: lrFilter(cfg.xoLo, cfg.xoLoOrder),
+  lowpass: null,
 });
 
 /** The sub box of the stack, pole and satellite layouts. */
 const subSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
-  paSpeaker(cfg, system, SPEAKER_PART.sub, paCabinet(cfg, [subChamber(cfg)]), [subBand(cfg, null)]);
+  paSpeaker(
+    cfg,
+    system,
+    SPEAKER_PART.sub,
+    paCabinet(cfg, [subChamber(cfg)]),
+    [subBand(cfg, null)],
+    subInput(cfg),
+  );
 
 /** The mid/high box: the mid in a sealed box, the horn on its lid, crossed inside the box. */
 const topSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
@@ -236,9 +281,11 @@ const topSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
         SPEAKER_BAND.mid,
         { highpass: null, lowpass: lrFilter(cfg.xoHi, cfg.xoHiOrder) },
         0,
+        cfg.mAmpW,
       ),
       hornBand(cfg, 0),
     ],
+    topInput(cfg),
   );
 
 /**
@@ -275,9 +322,12 @@ function towerSpeaker(cfg: PaPlannerDesign, system: SpecIdentity): SpeakerSpec {
           lowpass: lrFilter(cfg.xoHi, cfg.xoHiOrder),
         },
         -cfg.tilt,
+        cfg.mAmpW,
       ),
       hornBand(cfg, cfg.tilt),
     ],
+    // every crossover is inside the tower
+    NO_FILTERS,
   );
 }
 
@@ -324,7 +374,7 @@ export function systemFromPa(
     role: SOURCE_ROLE.sub,
     pose,
     mirror,
-    filters: { highpass: null, lowpass: lrFilter(cfg.xoLo, cfg.xoLoOrder) },
+    filters: subInput(cfg),
     delayMs: AUTO_DELAY,
     levelDb: 0,
     channels: [channel(SPEAKER_BAND.low, [SPEAKER_BAND.low])],
@@ -334,7 +384,7 @@ export function systemFromPa(
     role: SOURCE_ROLE.main,
     pose,
     mirror,
-    filters: { highpass: lrFilter(cfg.xoLo, cfg.xoLoOrder), lowpass: null },
+    filters: topInput(cfg),
     delayMs: 0,
     levelDb: -cfg.tilt,
     channels: [

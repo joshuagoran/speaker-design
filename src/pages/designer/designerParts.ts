@@ -19,6 +19,7 @@ import {
 } from "../../lib/defaults";
 import { HIFI_TWEETERS_BY_TYPE, HIFI_WOOFERS_BY_SIZE } from "../hifi/hifiDriverLists";
 import { DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
+import { HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 
 /** Each driver kind's catalog, as its picker lists it. */
 export const DRIVER_OPTIONS: Record<DriverKind, readonly SelectOption[]> = {
@@ -63,10 +64,10 @@ export const DEFAULT_PORTS = {
   },
 } as const satisfies Record<NonNullable<SpeakerPort["shape"]>, SpeakerPort>;
 
-/** The vent each kind starts at: the round port, or the Hi-fi page's radiators. */
+/** The vent each kind starts at: the round port at the Hi-fi page's air-speed limit, or the Hi-fi page's radiators. */
 export const DEFAULT_VENTS = {
   sealed: { kind: VENT_KIND.sealed },
-  vented: { kind: VENT_KIND.vented, port: DEFAULT_PORTS.round },
+  vented: { kind: VENT_KIND.vented, port: DEFAULT_PORTS.round, maxSpeedMs: HIFI_PORT_MAX_MS },
   radiator: { kind: VENT_KIND.radiator, radiators: DEFAULT_HIFI.radiatorSelection },
 } as const satisfies { [K in ChamberVent["kind"]]: Extract<ChamberVent, { kind: K }> };
 

@@ -45,6 +45,8 @@ import {
   FREQ_AXIS_MIN_HZ,
   HIFI_BOT,
   HIFI_TOP,
+  MAX_OUTPUT_BOT,
+  MAX_OUTPUT_TOP,
 } from "../../constants/chartScales";
 import { cabinetFinishName, passiveRadiatorMassMax } from "../../lib/data";
 import {
@@ -486,8 +488,8 @@ export function HifiPage({ hifi }: Props) {
                 <ResponseChart
                   fmin={FREQ_AXIS_MIN_HZ}
                   fmax={FREQ_AXIS_MAX_HZ}
-                  top={HIFI_TOP}
-                  bot={HIFI_BOT}
+                  top={MAX_OUTPUT_TOP}
+                  bot={MAX_OUTPUT_BOT}
                   step={10}
                   series={[
                     {

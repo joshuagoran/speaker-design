@@ -20,6 +20,8 @@ export interface Palette {
   /** cards, inputs and buttons on the page */
   panel: string;
   muted: string;
+  /** the lighter gray for a chart line beside the ink and the muted gray (3:1 on the page) */
+  faint: string;
   edge: string;
   magenta: string;
   cyan: string;
@@ -38,6 +40,7 @@ const LIGHT: Palette = {
   white: "#ffffff",
   panel: "#ffffff",
   muted: "#595959",
+  faint: "#8c8c8c",
   edge: "#e6e6e6",
   magenta: "#e5007e",
   cyan: "#0077b8",
@@ -61,6 +64,7 @@ const DARK: Palette = {
   white: "#141516",
   panel: "#1b1d1f",
   muted: "#a3a3a3",
+  faint: "#707070",
   edge: "#33373b",
   magenta: "#ff4fae",
   cyan: "#45b6f2",
@@ -77,6 +81,24 @@ const DARK: Palette = {
 };
 
 export const PALETTES: Record<ThemeName, Palette> = { light: LIGHT, dark: DARK };
+
+/** The dash pattern that tells two neighboring bands of one color apart on a chart. */
+const BAND_DASH = "6 4";
+
+/**
+ * A band's line on a chart, by its place among `count` bands, low to high: the lowest in the lighter gray (a sub, a
+ * woofer alone), the highest in cyan (horn and tweeter), the ones between in magenta (mid-bass and woofer), every second
+ * one of those dashed. A single band is the lowest.
+ */
+export function bandLine(
+  p: Pick<Palette, "faint" | "magenta" | "cyan">,
+  index: number,
+  count: number,
+): { stroke: string; dash?: string } {
+  if (index === 0) return { stroke: p.faint };
+  if (index === count - 1) return { stroke: p.cyan };
+  return index % 2 === 0 ? { stroke: p.magenta, dash: BAND_DASH } : { stroke: p.magenta };
+}
 
 /** Colors drawn on data colors that stay the same in both themes (the dispersion and coverage maps' scales, the
  * cabinet finishes): the light palette's, so lines, marks and labels on them read the same in either theme. */

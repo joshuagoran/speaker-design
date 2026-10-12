@@ -34,13 +34,24 @@ export const DRIVER_KIND = {
   coaxial: "coaxial",
 } as const satisfies { [K in DriverKind]: K };
 
-/** A speaker's bands, by id, low to high. A 2-way uses low and high; air is the top octave (a super tweeter). */
+/**
+ * The bands the read adapters give a speaker, by id, low to high. A 2-way uses low and high; air is the top octave (a
+ * super tweeter). The Designer adds bands of its own with generated ids.
+ */
 export const SPEAKER_BAND = {
   low: "low",
   mid: "mid",
   high: "high",
   air: "air",
 } as const;
+
+/** The name the read adapters give each of their bands. */
+export const SPEAKER_BAND_NAMES = {
+  low: "Low",
+  mid: "Mid",
+  high: "High",
+  air: "Air",
+} as const satisfies Record<keyof typeof SPEAKER_BAND, string>;
 
 /** Where a horn sits, by id: in the baffle, or freestanding on the box top (T1, the Hi-fi round waveguides). */
 export const HORN_PLACEMENT = {

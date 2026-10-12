@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { BandId, PaPlannerDesign } from "../../types";
-import { alpha } from "../../styles/palette";
+import { alpha, bandLine } from "../../styles/palette";
 import { usePalette } from "../../hooks/useTheme";
 import { useFolds } from "../../hooks/useFolds";
 import { SettingsLayout } from "../../components/ui/SettingsLayout";
@@ -10,6 +10,7 @@ import { Button } from "../../components/ui/Button";
 import { TextField } from "../../components/ui/TextField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
+import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
 import { StatTileGrid, type StatTileItem } from "../../components/stats/StatTileGrid";
 import { SavedConfigs } from "../../components/saved-configs/SavedConfigs";
@@ -27,34 +28,32 @@ import { HORN_COLOR_CATALOG_LABEL } from "../../constants/hornColor";
 import { driverHorn, hornFlare, speakerLayout } from "../../lib/speaker/speakerLayout";
 import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
-import {
-  DEFAULT_HIFI,
-  DEFAULT_PA,
-  DEFAULT_SPEAKER_BAND,
-  DEFAULT_SPEAKER_CHAMBER,
-} from "../../lib/defaults";
+import { DEFAULT_HIFI, DEFAULT_PA, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
 import { RESULT_MAX_WIDTH, READING_WIDTH } from "../../styles/layout";
 import {
   HIFI_BOT,
   HIFI_TOP,
   FREQ_AXIS_MAX_HZ,
   FREQ_AXIS_MIN_HZ,
+  MAX_OUTPUT_BOT,
+  MAX_OUTPUT_TOP,
 } from "../../constants/chartScales";
 import {
   DESIGNER_SETTINGS_SECTIONS,
   type DesignerSettingsSection,
 } from "../../constants/settingsSections";
-import { BAND_NAMES, DESIGNER_TEXT, MODEL_GAP_TEXT } from "../../constants/designer";
+import { DESIGNER_TEXT, MODEL_GAP_TEXT } from "../../constants/designer";
 import {
   DESIGNER_START,
   DESIGNER_START_NAMES,
   DESIGNER_START_TEXT,
   type DesignerStart,
 } from "../../constants/designerStarts";
-import { SPEAKER_BAND } from "../../constants/speakerSpec";
 import { ChamberSettings } from "./ChamberSettings";
 import { BandSettings } from "./BandSettings";
-import { bandText, chamberText, countText } from "./designerText";
+import { FilterFields } from "./FilterFields";
+import { bandText, chamberText, countText, inputText } from "./designerText";
+import { bandChips, chamberChips } from "./designerChips";
 import { paStarts, startSpeaker } from "./designerStarts";
 import type { Designer } from "./useDesigner";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
@@ -66,14 +65,14 @@ interface Props {
   hifi: HifiPlanner;
 }
 
-/** The bands drawn dashed: the air band shares the high band's color. */
-const BAND_DASH: Partial<Record<BandId, string>> = { air: "6 4" };
+/** The sum's key on the charts: no band id takes it (the adapters' are band words, the Designer's "band1"…). */
+const SUM_SERIES_ID = "sum";
+
+/** The sum's line width on the charts, px: it reads over its bands' (2 px). */
+const SUM_LINE_PX = 4;
 
 /** The 3D view's and the front drawing's height, as the Hi-fi page's 3D view. */
 const VIEW_HEIGHT = "h-[280px] md:h-[clamp(300px,46vh,480px)]";
-
-/** Every band id, low to high. */
-const BAND_IDS = keysOf(SPEAKER_BAND);
 
 /** The PA design as the planner holds it, every field set. */
 const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
@@ -84,12 +83,13 @@ const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
 });
 
 /**
- * The Designer: one speaker from its chambers, drivers and bands, its response on fixed axes, and the speaker library.
- * A design starts empty, from a saved speaker, or from the current PA or Hi-fi design.
+ * The Designer: one speaker from its chambers, drivers and bands, its response and its maximum output on fixed axes
+ * with the limits' checks, and the speaker library. A design starts empty, from a saved speaker, or from the current PA
+ * or Hi-fi design.
  */
 export function DesignerPage({ designer, planner, hifi }: Props) {
   const pal = usePalette();
-  const { spec, response, store, snapshot, restore } = designer;
+  const { spec, response, limits, store, snapshot, restore } = designer;
   const folds = useFolds("designer.settingsFolds", keysOf(DESIGNER_SETTINGS_SECTIONS));
   const starts: DesignerStart[] = [
     DESIGNER_START.empty,
@@ -106,16 +106,15 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
         hifiLook: { cabFinish: hifi.cabinetFinish, baffleColor: hifi.baffleColor },
       }),
     );
-  /** each band's line color: the PA chart's (sub ink, mid-bass magenta, horn cyan); the sum in ink */
-  const bandStroke: Record<BandId, string> = {
-    low: pal.muted,
-    mid: pal.magenta,
-    high: pal.cyan,
-    // the top octave: the high band's cyan, dashed (BAND_DASH)
-    air: pal.cyan,
-  };
-  const usedIds = spec.bands.map((b) => b.id);
-  const nextBandId = BAND_IDS.find((id) => !usedIds.includes(id));
+  /** each band's line, by its place in the spec (lighter gray, magenta, cyan); the sum in ink */
+  const lineOf = (id: BandId) =>
+    bandLine(
+      pal,
+      spec.bands.findIndex((b) => b.id === id),
+      spec.bands.length,
+    );
+  /** each band's name, by id */
+  const nameOf = (id: BandId) => spec.bands.find((b) => b.id === id)?.name ?? id;
   const { chambers } = spec.cabinet;
   const cabFinish = spec.look.cabFinish ?? DEFAULT_PA.cabFinish;
   const baffleColor = spec.look.baffleColor ?? DEFAULT_PA.baffleColor;
@@ -127,7 +126,13 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
   const summaries: Record<DesignerSettingsSection, string> = {
     speaker: `${spec.name} · ${countText(chambers.length, "chamber", "chambers")} · ${countText(spec.bands.length, "band", "bands")}`,
     chambers: chambers.map(chamberText).join("; "),
-    bands: spec.bands.map(bandText).join(" · "),
+    bands: [
+      countText(spec.bands.length, "band", "bands"),
+      inputText(spec.input),
+      ...spec.bands.map(bandText),
+    ]
+      .filter(Boolean)
+      .join(" · "),
     look: [
       cabinetFinishName(cabFinish),
       `baffle ${paintName(baffleColor)}`,
@@ -159,10 +164,22 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
       ];
     }),
     ...response.bands.map((b): StatTileItem => [
-      `${BAND_NAMES[b.id]} band`,
+      `${nameOf(b.id)} band`,
       b.passbandDb.toFixed(1),
       "dB",
+      `band:${b.id}`,
     ]),
+  ];
+  const maxTiles: StatTileItem[] = [
+    ...limits.bands.map((b): StatTileItem => [
+      `${nameOf(b.id)} max`,
+      b.musicDb.toFixed(0),
+      "dB",
+      `max:${b.id}`,
+    ]),
+    ...(limits.musicDb !== null && limits.bands.length > 1
+      ? [[DESIGNER_TEXT.speakerMax, limits.musicDb.toFixed(0), "dB"] satisfies StatTileItem]
+      : []),
   ];
   const fbMarks = response.chambers.flatMap((c, i) =>
     c.fb !== null ? [{ f: c.fb, label: one ? "Fb" : `Fb ${i + 1}` }] : [],
@@ -216,8 +233,10 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                   ? [
                       {
                         curve: response.sum,
+                        id: SUM_SERIES_ID,
                         label: DESIGNER_TEXT.sum,
                         stroke: pal.ink,
+                        width: SUM_LINE_PX,
                         tint: alpha(pal.ink, 0.05),
                       },
                     ]
@@ -225,9 +244,9 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 ...response.bands.map((b) => ({
                   // a band drawn only where it is on the chart: below the floor it would run along the axis
                   curve: b.curve.filter((o) => o.spl >= HIFI_BOT),
-                  label: BAND_NAMES[b.id],
-                  stroke: bandStroke[b.id],
-                  dash: BAND_DASH[b.id],
+                  id: b.id,
+                  label: nameOf(b.id),
+                  ...lineOf(b.id),
                   tint: "transparent",
                 })),
               ]}
@@ -242,6 +261,58 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
             <StatTileGrid tiles={tiles} className="mt-5 mb-3" />
             <p className={`${READING_WIDTH} text-sm text-stone-500`}>{DESIGNER_TEXT.modelNote}</p>
           </section>
+          {limits.bands.length > 0 && (
+            <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-6`}>
+              <SectionHeading className="mb-3">{DESIGNER_TEXT.maxOutput}</SectionHeading>
+              <ResponseChart
+                fmin={FREQ_AXIS_MIN_HZ}
+                fmax={FREQ_AXIS_MAX_HZ}
+                top={MAX_OUTPUT_TOP}
+                bot={MAX_OUTPUT_BOT}
+                step={10}
+                yLabel={DESIGNER_TEXT.maxYLabel}
+                series={[
+                  {
+                    curve: limits.sum,
+                    id: SUM_SERIES_ID,
+                    label: DESIGNER_TEXT.sum,
+                    stroke: pal.ink,
+                    width: SUM_LINE_PX,
+                    tint: alpha(pal.ink, 0.05),
+                  },
+                  ...limits.bands.map((b) => ({
+                    curve: b.max.filter((o) => o.spl >= MAX_OUTPUT_BOT),
+                    id: b.id,
+                    label: nameOf(b.id),
+                    ...lineOf(b.id),
+                    tint: "transparent",
+                  })),
+                ]}
+                marks={fbMarks}
+              />
+              <StatTileGrid tiles={maxTiles} className="mt-5 mb-3" />
+              <div className="flex flex-col gap-3 mb-3">
+                {bandChips(spec, limits).map(({ id, chips }) => (
+                  <div key={id}>
+                    <h4 className="text-xs font-semibold text-stone-500 mb-1">{nameOf(id)}</h4>
+                    <WarningChips chips={chips} />
+                  </div>
+                ))}
+                {limits.chambers.map(
+                  (c, i) =>
+                    c && (
+                      <div key={i}>
+                        <h4 className="text-xs font-semibold text-stone-500 mb-1">
+                          {DESIGNER_TEXT.chamber} {i + 1}
+                        </h4>
+                        <WarningChips chips={chamberChips(c, nameOf(c.band))} />
+                      </div>
+                    ),
+                )}
+              </div>
+              <p className={`${READING_WIDTH} text-sm text-stone-500`}>{DESIGNER_TEXT.maxNote}</p>
+            </section>
+          )}
         </>
       }
       settings={
@@ -304,30 +375,29 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
           {section(
             "bands",
             <>
+              <Card className="mb-3">
+                <h4 className="font-semibold mb-1">{DESIGNER_TEXT.inputRange}</h4>
+                <p className="text-xs text-stone-500 mb-2">{DESIGNER_TEXT.inputHint}</p>
+                <FilterFields
+                  filters={spec.input}
+                  // a new corner at the PA's crossover to its subs
+                  newCornerHz={DEFAULT_PA.xoLo}
+                  offName={DESIGNER_TEXT.inputOff}
+                  onEdit={designer.editInput}
+                />
+              </Card>
               {spec.bands.map((band, i) => (
                 <BandSettings
                   key={band.id}
                   band={band}
-                  freeIds={BAND_IDS.filter((id) => id === band.id || !usedIds.includes(id))}
                   newCornerHz={DEFAULT_HIFI.crossoverHz}
                   onEdit={(edit) => designer.editBand(i, edit)}
-                  onRename={(id) => designer.renameBand(band.id, id)}
                   onRemove={spec.bands.length > 1 ? () => designer.removeBand(band.id) : undefined}
                 />
               ))}
-              {nextBandId && (
-                <Button
-                  className="mb-2"
-                  onClick={() =>
-                    designer.editBands((list) => [
-                      ...list,
-                      { id: nextBandId, ...DEFAULT_SPEAKER_BAND },
-                    ])
-                  }
-                >
-                  Add band
-                </Button>
-              )}
+              <Button className="mb-2" onClick={designer.addBand}>
+                Add band
+              </Button>
             </>,
           )}
           {section(

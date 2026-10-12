@@ -1,7 +1,9 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
 import { speakerResponse } from "../../lib/speaker/speakerResponse";
-import { EMPTY_SPEAKER } from "../../lib/defaults";
+import { speakerLimits } from "../../lib/speaker/speakerLimits";
+import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
+import { DESIGNER_TEXT } from "../../constants/designer";
 import { DESIGNER_START_SPEAKER_NAMES } from "../../constants/designerStarts";
 import { SPEAKERS_COLLECTION } from "../../constants/speakerSpec";
 import { speakerSummary } from "./designerText";
@@ -44,6 +46,17 @@ function isSavedSpeaker(value: unknown): value is SavedSpeakerData["speaker"] {
   );
 }
 
+/** The prefix of the ids the Designer gives the bands it adds. */
+const NEW_BAND_ID = "band";
+
+/** A band id no band in `bands` has: "band1", "band2", ... (the adapters' ids are words, so they never clash). */
+export function newBandId(bands: readonly Pick<SpeakerBand, "id">[]): BandId {
+  const used = new Set(bands.map((b) => b.id));
+  let n = 1;
+  while (used.has(`${NEW_BAND_ID}${n}`)) n++;
+  return `${NEW_BAND_ID}${n}`;
+}
+
 /** A list with item `i` replaced by `edit(item)`. */
 const editAt = <T>(list: readonly T[], i: number, edit: (item: T) => T): T[] =>
   list.map((item, k) => (k === i ? edit(item) : item));
@@ -54,11 +67,21 @@ const editAt = <T>(list: readonly T[], i: number, edit: (item: T) => T): T[] =>
  */
 export function useDesigner() {
   const [spec, setSpec] = useState<SpeakerSpec>(emptySpeaker);
-  // the model reads only the cabinet and the bands (a name edit doesn't run it), a step behind the typing: a horn
-  // chamber takes tens of ms, so the settings stay responsive
+  // the model reads only the cabinet, the bands and the input range (a name edit doesn't run it), a step behind the
+  // typing: a horn chamber takes tens of ms, so the settings stay responsive
   const cabinet = useDeferredValue(spec.cabinet);
   const bands = useDeferredValue(spec.bands);
-  const response = useMemo(() => speakerResponse({ cabinet, bands }), [cabinet, bands]);
+  /** the input range: the filters the system puts ahead of the box, the models' feed */
+  const feed = useDeferredValue(spec.input);
+  const response = useMemo(
+    () => speakerResponse({ cabinet, bands }, { feed }),
+    [cabinet, bands, feed],
+  );
+  // the limits read the response's chamber runs, so no box model runs again
+  const limits = useMemo(
+    () => speakerLimits({ cabinet, bands }, response, { feed }),
+    [cabinet, bands, feed, response],
+  );
   const store = useConfigStore(SPEAKERS_COLLECTION);
   const editCabinet = (edit: (cabinet: SpeakerCabinet) => SpeakerCabinet) =>
     setSpec((s) => ({ ...s, cabinet: edit(s.cabinet) }));
@@ -80,13 +103,17 @@ export function useDesigner() {
       drivers: c.drivers.map((d) => ({ ...d, bands: d.bands.map((b) => (b === from ? to : b)) })),
     })),
   });
-  /** gives a band another id; its drivers follow */
-  const renameBand = (from: BandId, to: BandId) =>
-    setSpec((s) => ({
-      ...s,
-      cabinet: moveDrivers(s, from, to),
-      bands: s.bands.map((b) => (b.id === from ? { ...b, id: to } : b)),
-    }));
+  /** adds a band at the top, under a generated id and a name no band has ("Band 3") */
+  const addBand = () =>
+    editBands((list) => {
+      const names = new Set(list.map((b) => b.name));
+      let n = list.length + 1;
+      while (names.has(DESIGNER_TEXT.newBandName(n))) n++;
+      return [
+        ...list,
+        { id: newBandId(list), name: DESIGNER_TEXT.newBandName(n), ...DEFAULT_SPEAKER_BAND },
+      ];
+    });
   /** removes a band; its drivers move to the first band left */
   const removeBand = (id: BandId) =>
     setSpec((s) => {
@@ -112,10 +139,13 @@ export function useDesigner() {
     spec,
     setSpec,
     response,
+    limits,
     store,
     snapshot,
     restore,
     setName: (name: string) => setSpec((s) => ({ ...s, name })),
+    editInput: (edit: (input: SpeakerSpec["input"]) => SpeakerSpec["input"]) =>
+      setSpec((s) => ({ ...s, input: edit(s.input) })),
     /** sets part of the look (the cabinet finish, the baffle and horn colors) */
     editLook: (look: Partial<SpeakerSpec["look"]>) =>
       setSpec((s) => ({ ...s, look: { ...s.look, ...look } })),
@@ -125,7 +155,7 @@ export function useDesigner() {
     editDriver,
     editBands,
     editBand,
-    renameBand,
+    addBand,
     removeBand,
   };
 }

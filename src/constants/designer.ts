@@ -1,6 +1,5 @@
 // The Designer page's names and choices (src/pages/designer): the spec's ids as the page shows them.
 import type {
-  BandId,
   DriverKind,
   FilterType,
   HifiBoxKind,
@@ -19,14 +18,6 @@ export const DRIVER_KIND_NAMES = {
   tweeter: "Tweeter",
   coaxial: "Coaxial",
 } as const satisfies Record<DriverKind, string>;
-
-/** Each band as the Designer names it. */
-export const BAND_NAMES = {
-  low: "Low",
-  mid: "Mid",
-  high: "High",
-  air: "Air",
-} as const satisfies Record<BandId, string>;
 
 /** Each vent kind as the Designer names it. */
 export const VENT_KIND_NAMES = {
@@ -89,4 +80,16 @@ export const DESIGNER_TEXT = {
   modelNote:
     "On axis at 1 m in half space, every band at 2.83 V; no baffle step, room or driver positions yet (the Space page will add them).",
   noBands: "No band has a modeled driver yet: add a driver to a chamber and pick its band.",
+  maxOutput: "Maximum output",
+  maxYLabel: "dB SPL on axis, 1 m, at the first limit",
+  speakerMax: "Speaker max",
+  maxNote:
+    "Each band at its amp's full power, up to its first limit: cone travel, port air speed (each vent's own limit, set in its chamber), radiator travel, the driver's program rating (2 × AES) or the amp. A band's max is for music: one drive for the whole band. The sum takes one input for every band, and a band limits it only where the band carries signal.",
+  chamber: "Chamber",
+  noFilter: "None",
+  /** a band the user adds, by its place among the bands */
+  newBandName: (n: number) => `Band ${n}`,
+  inputRange: "Input range",
+  inputHint: "From the system, e.g. the crossover to a sub. Not part of the box.",
+  inputOff: "Off",
 } as const;

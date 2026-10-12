@@ -2,11 +2,23 @@
 // read through the L1 adapters, give the same curves, net air and tuning as the Hi-fi and PA models.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs, type GoldenConfig } from "./golden-configs";
+import { configs } from "./golden-configs";
+import {
+  STACKS,
+  atModelVolts,
+  bandCurve,
+  hifiCases,
+  levelAt,
+  maxDiff,
+  paDesign,
+  paModels,
+  speakerAndFeed,
+  withNet,
+} from "./speaker-cases";
 import { speakerResponse, SPEAKER_RESPONSE_FREQUENCIES } from "../src/lib/speaker/speakerResponse";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { systemFromPa } from "../src/lib/speaker/paSpec";
-import { lrFilter, speakerIdentity } from "../src/lib/speaker/specParts";
+import { lrFilter } from "../src/lib/speaker/specParts";
 import { filterTransfer, filtersTransfer } from "../src/lib/speaker/bandFilter";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
 import { hifiBox, hifiGridTop, linkwitzRileyFilter } from "../src/lib/hifi/hifi";
@@ -14,32 +26,20 @@ import {
   boxModel,
   closedBox,
   highpassGain,
-  hornResponse,
   linkwitzRileyHighpass,
   linkwitzRileyLowpass,
-  midSystem,
-  subSystem,
 } from "../src/lib/pa/calc";
-import { paSearchDesign } from "../src/lib/pa/optimize";
-import { towerMidDims } from "../src/lib/pa/tower";
-import { savedHardware } from "../src/lib/pa/hardware";
-import { panelNominalNear } from "../src/lib/panel";
 import { abs, add, complex, multiply, phasor, scale } from "../src/lib/acoustics/complex";
 import { chamberVentModel } from "../src/lib/speaker/chamberAir";
+import { CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import {
-  CD_OPTIONS,
-  HIFI_COAXES,
-  HIFI_TWEETERS,
-  HIFI_WAVEGUIDES,
-  HORN_OPTIONS,
-  MID_BOXES,
-  MID_OPTIONS,
-  SUB_OPTIONS,
-} from "../src/lib/data";
-import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
-import { needsWaveguide } from "../src/lib/hifi/hifi";
-import { HORN_MOUNT_DEFAULT } from "../src/constants/hornMount";
+  DEFAULT_HIFI,
+  DEFAULT_HIFI_LOOK,
+  DEFAULT_PA,
+  DEFAULT_SPEAKER_BAND,
+} from "../src/lib/defaults";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
+import { HIFI_PORT_MAX_MS } from "../src/constants/hifiEngine";
 import { hornModel } from "../src/lib/acoustics/hornModel";
 import { hornDesignOf } from "../src/lib/speaker/hornDesign";
 import {
@@ -51,67 +51,13 @@ import {
   HORN_PATH,
   PORT_SHAPE,
   SPEAKER_BAND,
+  SPEAKER_BAND_NAMES,
   SPEAKER_MODEL_GAP,
   SPEAKER_PART,
   SPEAKER_RESPONSE_VOLTS,
   VENT_KIND,
 } from "../src/constants/speakerSpec";
-import type {
-  BandId,
-  Complex,
-  CoverageLayout,
-  FrequencyPoint,
-  HifiDesignState,
-  PaPlannerDesign,
-  SpeakerChamber,
-  SpeakerSpec,
-  SystemWithSpeakers,
-} from "../src/types";
-
-/** A level relative to the model's drive: the engines run at the amp's voltage, the model at 2.83 V. */
-const atModelVolts = (volts: number) => 20 * Math.log10(volts / SPEAKER_RESPONSE_VOLTS);
-
-/** A curve's level at `f`, read between its points on a log-frequency axis; null outside it. */
-function levelAt(curve: readonly FrequencyPoint[], f: number): number | null {
-  if (f < curve[0].f || f > curve[curve.length - 1].f) return null;
-  const i = Math.max(
-    1,
-    curve.findIndex((o) => o.f >= f),
-  );
-  const a = curve[i - 1],
-    b = curve[i];
-  const k = b.f === a.f ? 0 : Math.log(f / a.f) / Math.log(b.f / a.f);
-  return a.spl + k * (b.spl - a.spl);
-}
-
-/** How far below a reference curve's highest point the comparison still reads, dB: deeper, only the skirts are left. */
-const WINDOW_DB = 30;
-
-/**
- * The largest difference between the model's curve and a reference, dB: over the model's frequencies inside the
- * reference's span (and `fmax`), where the reference is within WINDOW_DB of its highest point.
- */
-function maxDiff(
-  model: readonly FrequencyPoint[],
-  ref: readonly FrequencyPoint[],
-  fmax = Infinity,
-) {
-  const top = Math.max(...ref.map((o) => o.spl));
-  let most = 0;
-  for (const o of model) {
-    if (o.f > fmax) continue;
-    const r = levelAt(ref, o.f);
-    if (r === null || r < top - WINDOW_DB) continue;
-    most = Math.max(most, Math.abs(o.spl - r));
-  }
-  return most;
-}
-
-function bandCurve(response: ReturnType<typeof speakerResponse>, id: BandId) {
-  const band = response.bands.find((b) => b.id === id);
-  assert.ok(band, `a ${id} band`);
-  return band.curve;
-}
+import type { BandId, Complex, SpeakerChamber, SpeakerSpec } from "../src/types";
 
 test("speaker model: a band filter's magnitude is the box models' highpass and Linkwitz-Riley gains", () => {
   for (const f of [20, 63, 120, 400, 2500]) {
@@ -150,45 +96,15 @@ test("speaker model: a band filter's magnitude is the box models' highpass and L
 
 // ---- Hi-fi ----
 
-const waveguideTweeter = HIFI_TWEETERS.find((t) => needsWaveguide(t) && !t.ownGuide);
-const roundGuide = HIFI_WAVEGUIDES.find((h) => !h.rect);
-const coax = HIFI_COAXES.find((c) => c.tweeter);
-assert.ok(waveguideTweeter && roundGuide && coax?.tweeter, "the catalog has each case");
-
-/** Hi-fi designs covering each box kind, port shape, a waveguide, a coaxial, LR48 and passive drive. */
-const hifiCases: { name: string; state: HifiDesignState }[] = [
-  { name: "DEFAULT_HIFI", state: DEFAULT_HIFI },
-  { name: "sealed", state: { ...DEFAULT_HIFI, boxType: VENT_KIND.sealed } },
-  { name: "radiator", state: { ...DEFAULT_HIFI, boxType: VENT_KIND.radiator } },
-  {
-    name: "slot",
-    state: { ...DEFAULT_HIFI, portSpec: { shape: PORT_SHAPE.slot, n: 1, h: 1, len: 6 } },
-  },
-  {
-    name: "two ports, LR48",
-    state: { ...DEFAULT_HIFI, portSpec: { n: 2, dia: 1.5, len: 5 }, crossoverOrder: 8 },
-  },
-  {
-    name: "compression driver on a round waveguide",
-    state: {
-      ...DEFAULT_HIFI,
-      tweeter: waveguideTweeter,
-      selectedWaveguide: roundGuide,
-      crossoverHz: 1600,
-    },
-  },
-  { name: "coaxial", state: { ...DEFAULT_HIFI, woofer: coax.woofer, tweeter: coax.tweeter } },
-  { name: "passive", state: { ...DEFAULT_HIFI, drive: "passive" } },
-];
-
 /**
  * Tolerances for the Hi-fi parity, dB. Each band runs the engine's own arithmetic on the model's grid, so it differs
  * only by reading the engine's curve between its points (196 points over 15 Hz–2 kHz): 0.05 dB. The sum also takes
  * each box's own phase and the subsonic's, which the Hi-fi engine leaves out of its sum (it multiplies the woofer's
- * level by the crossover alone): a few degrees at a 1.6–2 kHz crossover, 0.1 dB at most.
+ * level by the crossover alone): a few degrees at a 1.6–2 kHz crossover, more where the woofer's voice-coil inductance
+ * turns its phase there: up to 0.12 dB on these designs (Oct 2026).
  */
 const HIFI_BAND_DB = 0.05;
-const HIFI_SUM_DB = 0.1;
+const HIFI_SUM_DB = 0.15;
 
 test("speaker model: the Hi-fi designs match the Hi-fi engine before the room (bands, sum, net air, tuning)", () => {
   for (const { name, state } of hifiCases) {
@@ -241,89 +157,6 @@ test("speaker model: the Hi-fi designs match the Hi-fi engine before the room (b
 });
 
 // ---- PA ----
-
-/** The coverage page's stack spots, left then right (they don't move the speakers' responses). */
-const STACKS: CoverageLayout["stacks"] = [
-  { x: -9, y: 3, aim: 12 },
-  { x: 9, y: 3, aim: -12 },
-];
-
-/** A golden PA design as the planner holds it (as tests/speaker-spec.test.ts reads it). */
-function paDesign(c: GoldenConfig): PaPlannerDesign {
-  const cfg = paSearchDesign({ cur: c });
-  return {
-    ...cfg,
-    mDim: c.mDim || (MID_BOXES.find((b) => b.id === c.midBox) || MID_BOXES[0]).box,
-    panel: c.panel ?? panelNominalNear(cfg.wall),
-    hornMount: c.hornMount ?? HORN_MOUNT_DEFAULT,
-    spacerH: c.spacerH ?? DEFAULT_PA.spacerH,
-  };
-}
-
-/** A speaker of the system by part, with the filters its source feeds it. */
-function speakerAndFeed(
-  read: SystemWithSpeakers,
-  part: (typeof SPEAKER_PART)[keyof typeof SPEAKER_PART],
-) {
-  const id = speakerIdentity(read.system, part).id;
-  const spec = read.speakers.find((s) => s.id === id);
-  const source = read.system.sources.find((s) => s.speakerId === id);
-  assert.ok(spec && source, part);
-  return { spec, feed: source.filters };
-}
-
-/** The spec with one chamber's net air set. */
-const withNet = (spec: SpeakerSpec, chamber: SpeakerChamber, netLiters: number): SpeakerSpec => ({
-  ...spec,
-  cabinet: {
-    ...spec.cabinet,
-    chambers: spec.cabinet.chambers.map((c) => (c === chamber ? { ...c, netLiters } : c)),
-  },
-});
-
-/** Today's PA models of a design: the sub, mid and horn as the planner runs them (the golden evaluation's configs). */
-function paModels(cfg: PaPlannerDesign) {
-  const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);
-  const mid = MID_OPTIONS.find((o) => o.id === cfg.mid);
-  const cd = CD_OPTIONS.find((o) => o.id === cfg.cd);
-  const horn = HORN_OPTIONS.find((o) => o.id === cfg.horn);
-  assert.ok(sub && mid && cd?.hf && horn?.hf);
-  const midDims = cfg.layout === "tower" ? towerMidDims(cfg.cDim) : cfg.mDim;
-  const hardware = savedHardware(cfg.hardware);
-  const s = subSystem(sub, mid, {
-    subBox: cfg.cDim,
-    midDims,
-    wall: cfg.wall,
-    inset: cfg.inset,
-    portStyle: cfg.portStyle,
-    cVent: cfg.cVent,
-    hpf: cfg.hpf,
-    hpType: cfg.hpType,
-    ampW: cfg.ampW,
-    portMax: cfg.portMax,
-    layout: cfg.layout,
-    braceStyle: cfg.braceStyle,
-    hardware,
-    xoLo: cfg.xoLo,
-  });
-  const m = midSystem(mid, {
-    layout: cfg.layout,
-    braceStyle: cfg.braceStyle,
-    hardware,
-    midDims,
-    wall: cfg.wall,
-    inset: cfg.inset,
-    xoLo: cfg.xoLo,
-    xoHi: cfg.xoHi,
-    xoLoOrder: cfg.xoLoOrder,
-    xoHiOrder: cfg.xoHiOrder,
-    mAmpW: cfg.mAmpW,
-  });
-  // the horn at 1 W into 8 Ω: 2.83 V
-  const h = hornResponse(cd.hf, horn.hf, cfg.xoHi, 1, cfg.xoHiOrder);
-  assert.ok(s.mdl && m.mdl && h);
-  return { s, sub: s.mdl, m, mid: m.mdl, horn: h };
-}
 
 /** Each golden PA design's differences from today's models, dB and %. */
 interface PaRow {
@@ -500,7 +333,11 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
     dims: { w: 24, h: 32, d: 30 },
     netLiters: 120,
     stuffingPct: 0,
-    vent: { kind: VENT_KIND.vented, port: { shape: PORT_SHAPE.round, n: 2, dia: 4, len: 8 } },
+    vent: {
+      kind: VENT_KIND.vented,
+      port: { shape: PORT_SHAPE.round, n: 2, dia: 4, len: 8 },
+      maxSpeedMs: HIFI_PORT_MAX_MS,
+    },
     load: {
       kind: CHAMBER_LOAD.horn,
       horn: {
@@ -529,7 +366,7 @@ test("speaker model: a horn built into the box runs through the horn engine; a t
   const binSpec: SpeakerSpec = {
     ...spec,
     cabinet: { ...spec.cabinet, chambers: [bin] },
-    bands: [{ id: SPEAKER_BAND.low, highpass: null, lowpass: null, levelDb: 0, drive: "active" }],
+    bands: [{ id: SPEAKER_BAND.low, name: SPEAKER_BAND_NAMES.low, ...DEFAULT_SPEAKER_BAND }],
   };
   const response = speakerResponse(binSpec);
   const read = hornDesignOf(bin, { count: 1, angle: 2 });
@@ -750,7 +587,7 @@ test("speaker model: a stuffed horn chamber reports its own net air and plays on
   const spec: SpeakerSpec = {
     ...sealed,
     cabinet: { ...sealed.cabinet, chambers: [horn] },
-    bands: [{ id: SPEAKER_BAND.low, highpass: null, lowpass: null, levelDb: 0, drive: "active" }],
+    bands: [{ id: SPEAKER_BAND.low, name: SPEAKER_BAND_NAMES.low, ...DEFAULT_SPEAKER_BAND }],
   };
   const response = speakerResponse(spec);
   assert.equal(response.chambers[0].netLiters, 10, "the chamber's own net air, as a direct one");

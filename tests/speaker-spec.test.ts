@@ -26,7 +26,7 @@ import {
 } from "../src/lib/data";
 import { DEFAULT_FILL, DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PA } from "../src/lib/defaults";
 import { crossoverSlopeName } from "../src/constants/crossovers";
-import { HIFI_DRIVE, HIFI_SUBSONIC_TYPE } from "../src/constants/hifiEngine";
+import { HIFI_DRIVE, HIFI_PORT_MAX_MS, HIFI_SUBSONIC_TYPE } from "../src/constants/hifiEngine";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { HORN_MOUNT_DEFAULT } from "../src/constants/hornMount";
 import {
@@ -519,7 +519,11 @@ const bassBin: SpeakerChamber = {
   dims: { w: 24, h: 32, d: 30 },
   netLiters: 120,
   stuffingPct: 0,
-  vent: { kind: VENT_KIND.vented, port: { shape: PORT_SHAPE.round, n: 2, dia: 4, len: 8 } },
+  vent: {
+    kind: VENT_KIND.vented,
+    port: { shape: PORT_SHAPE.round, n: 2, dia: 4, len: 8 },
+    maxSpeedMs: HIFI_PORT_MAX_MS,
+  },
   load: {
     kind: CHAMBER_LOAD.horn,
     horn: {
@@ -581,6 +585,7 @@ test("speaker spec: a PA v2 bin, 2 × 18″ in one flare with folded slots, read
     vent: {
       kind: VENT_KIND.vented,
       port: { shape: PORT_SHAPE.slot, n: 2, h: slotH, w: slotW, len: 680 / (10 * CM_PER_IN) },
+      maxSpeedMs: HIFI_PORT_MAX_MS,
     },
     load: {
       kind: CHAMBER_LOAD.horn,
@@ -659,7 +664,7 @@ test("speaker spec: chambers the horn engine can't take yet say why", () => {
   );
   const vented = (port: SpeakerPort): SpeakerChamber => ({
     ...bassBin,
-    vent: { kind: VENT_KIND.vented, port },
+    vent: { kind: VENT_KIND.vented, port, maxSpeedMs: HIFI_PORT_MAX_MS },
   });
   assert.equal(
     gapOf(vented({ shape: PORT_SHAPE.slot, n: 1, h: 2, len: 10 })),

@@ -16,7 +16,7 @@ import { hornModel } from "../src/lib/acoustics/hornModel";
 import { AIR_DENSITY, BOX_LEAK_Q } from "../src/constants/acoustics";
 import { HORN_PROFILE } from "../src/constants/hornEngine";
 import { GRAMS_PER_KG, SQ_CM_PER_SQ_M } from "../src/constants/units";
-import type { HornDriverTS, HornDesign, HornSegment, RadiationAngle } from "../src/types";
+import type { BoxModelTS, HornDesign, HornSegment, RadiationAngle } from "../src/types";
 
 const DIR = path.join(import.meta.dirname, "hornresp");
 /** Hornresp gives the throat chamber in cc */
@@ -117,7 +117,7 @@ function designOf(text: string, boxes: number, drivers: number) {
   const Mms = num("Mmd") / cones / GRAMS_PER_KG + frontAirMass;
   /** the driver's free-air resonance, Hz */
   const Fs = 1 / (2 * Math.PI * Math.sqrt(Mms * Cms));
-  const driver: HornDriverTS = {
+  const driver: BoxModelTS = {
     Sd,
     Bl: num("Bl"),
     Re: num("Re") * cones,

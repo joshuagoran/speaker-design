@@ -14,11 +14,11 @@ import { Card } from "../../components/ui/Card";
 import { NumberField } from "../../components/ui/NumberField";
 import { SelectField, type SelectOption } from "../../components/ui/SelectField";
 import { ToggleGroup } from "../../components/ui/ToggleGroup";
+import { Tooltip } from "../../components/ui/Tooltip";
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
 import { HIFI_PASSIVES_BY_SIZE } from "../hifi/hifiDriverLists";
 import {
-  BAND_NAMES,
   DRIVER_KIND_NAMES,
   MODEL_GAP_TEXT,
   PORT_SHAPE_NAMES,
@@ -50,11 +50,14 @@ const KIND_OPTIONS: readonly SelectOption[] = entriesOf(DRIVER_KIND_NAMES).map((
 /** A row of number fields that wraps onto more lines where the pane is narrow. */
 const ROW = "flex flex-wrap gap-x-3 gap-y-3 mb-3";
 
-/** Where a chamber's net air comes from: worked out from its size, or set. */
+/** Where a chamber's net air comes from: worked out from its size (Auto), or typed in (Custom). */
 const NET_AIR = {
-  size: "size",
-  set: "set",
+  auto: "auto",
+  custom: "custom",
 } as const;
+
+/** What the net air's Auto value takes off the inside volume. */
+const NET_AIR_TIP = "Inside volume less walls, bracing, drivers and vent.";
 
 interface Props {
   index: number;
@@ -70,11 +73,12 @@ interface Props {
 /** One chamber's settings: size, air, place, vent and drivers. */
 export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemove }: Props) {
   const { vent } = chamber;
-  const bandOptions = bands.map((b): readonly [BandId, string] => [b.id, BAND_NAMES[b.id]]);
+  const bandOptions = bands.map((b): readonly [BandId, string] => [b.id, b.name]);
   const setDim = (k: keyof Dims3, v: number) =>
     onEdit((c) => ({ ...c, dims: { ...c.dims, [k]: v } }));
   const setVent = (v: ChamberVent) => onEdit((c) => ({ ...c, vent: v }));
-  const setPort = (port: SpeakerPort) => setVent({ kind: VENT_KIND.vented, port });
+  const setPort = (port: SpeakerPort) =>
+    setVent(vent.kind === VENT_KIND.vented ? { ...vent, port } : { ...DEFAULT_VENTS.vented, port });
   const editDriver = (i: number, edit: (d: SpeakerDriver) => SpeakerDriver) =>
     onEdit((c) => ({ ...c, drivers: c.drivers.map((d, k) => (k === i ? edit(d) : d)) }));
   const firstBand = bands[0]?.id;
@@ -100,57 +104,57 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
           />
         ))}
       </div>
-      <div className="text-sm text-stone-500 mb-1">Lower-left corner in the cabinet</div>
+      <div className="text-sm text-stone-500 mb-1">Position</div>
       <div className={ROW}>
+        {/* the chamber's lower-left corner, in from the cabinet's (`SpeakerChamber.at`) */}
         <NumberField
-          label="x, in"
+          label="From left, in"
           value={chamber.at.xIn}
           step={0.25}
           onChange={(xIn) => onEdit((c) => ({ ...c, at: { ...c.at, xIn } }))}
         />
         <NumberField
-          label="y, in"
+          label="From bottom, in"
           value={chamber.at.yIn}
           step={0.25}
           onChange={(yIn) => onEdit((c) => ({ ...c, at: { ...c.at, yIn } }))}
         />
       </div>
       <ToggleGroup
-        label="Net air"
+        label={<Tooltip tip={NET_AIR_TIP}>Net air</Tooltip>}
         className="mb-2"
-        value={chamber.netLiters === null ? NET_AIR.size : NET_AIR.set}
+        value={chamber.netLiters === null ? NET_AIR.auto : NET_AIR.custom}
         onChange={(v) =>
           onEdit((c) => ({
             ...c,
-            netLiters: v === NET_AIR.size ? null : Math.round((result?.netLiters ?? 20) * 10) / 10,
+            netLiters: v === NET_AIR.auto ? null : Math.round((result?.netLiters ?? 20) * 10) / 10,
           }))
         }
         options={[
-          [NET_AIR.size, "From the size"],
-          [NET_AIR.set, "Set it"],
+          [NET_AIR.auto, "Auto"],
+          [NET_AIR.custom, "Custom"],
         ]}
       />
-      {chamber.netLiters === null ? (
-        <p className="text-sm text-stone-500 mb-4">
-          {result ? `${result.netLiters.toFixed(1)} L` : "—"} (the walls, a 3% bracing allowance,
-          the drivers and the vent taken off)
-        </p>
-      ) : (
-        <NumberField
-          label="Net air"
-          value={chamber.netLiters}
-          min={0.5}
-          step={0.5}
-          unit="L"
-          onChange={(netLiters) => onEdit((c) => ({ ...c, netLiters }))}
-        />
-      )}
       <NumberField
-        label="Stuffing, % more air"
+        label={<Tooltip tip={NET_AIR_TIP}>Liters</Tooltip>}
+        // Auto: the model's value, read-only
+        value={chamber.netLiters ?? Math.round((result?.netLiters ?? 0) * 10) / 10}
+        disabled={chamber.netLiters === null}
+        min={0.5}
+        step={0.5}
+        unit="L"
+        onChange={(netLiters) => onEdit((c) => ({ ...c, netLiters }))}
+        className="mb-3"
+      />
+      <NumberField
+        label={
+          <Tooltip tip="Fill makes the box act larger. 10% is normal. 15% is heavy.">
+            Stuffing (%)
+          </Tooltip>
+        }
         value={chamber.stuffingPct}
         min={0}
         step={5}
-        unit="%"
         onChange={(stuffingPct) => onEdit((c) => ({ ...c, stuffingPct }))}
         className="mb-3"
       />
@@ -181,6 +185,14 @@ export function ChamberSettings({ index, chamber, result, bands, onEdit, onRemov
             options={entriesOf(PORT_SHAPE_NAMES)}
           />
           <PortFields port={vent.port} onChange={setPort} />
+          <NumberField
+            label="Air speed limit"
+            value={vent.maxSpeedMs}
+            min={1}
+            step={0.5}
+            unit="m/s"
+            onChange={(maxSpeedMs) => setVent({ ...vent, maxSpeedMs })}
+          />
         </>
       )}
       {vent.kind === VENT_KIND.radiator && (

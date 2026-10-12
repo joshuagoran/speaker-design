@@ -9,7 +9,7 @@ import type {
   BRACE_STYLE_NAMES,
   STRENGTH_LOAD_NAMES,
 } from "./constants/bracing";
-import type { LIMIT_NAMES } from "./constants/limits";
+import type { INPUT_RANGE_LIMIT, LIMIT_NAMES } from "./constants/limits";
 import type { CHANGE_NAMES } from "./constants/optimizerText";
 import type { HIFI_DRIVE_NAMES } from "./constants/hifiEngine";
 import type { HORN_PROFILE } from "./constants/hornEngine";
@@ -133,7 +133,10 @@ export interface ThieleSmall {
   Hvc?: number;
   Hg?: number;
   Re: number;
-  /** voice-coil inductance, mH, where the maker publishes it; only the horn engine reads it (none when absent) */
+  /**
+   * voice-coil inductance, mH, where the maker publishes it: every T/S model reads it (lib/acoustics/driverCircuit
+   * `coilFactor`), so the top rolls off; none when absent, and the models take the coil as Re alone
+   */
   Le?: number;
   Bl: number;
   Mms: number;
@@ -152,10 +155,14 @@ export type RawTS<T extends ThieleSmall> = Omit<T, "Xmax" | "xmax">;
 /** A driver as its table holds it. */
 export type RawDriver<D extends { ts: ThieleSmall }> = Omit<D, "ts"> & { ts: RawTS<D["ts"]> };
 
-/** The Thiele-Small fields the box models read (`boxModel`, `closedBox`, `passiveRadiatorBox`); `closedBox` and `passiveRadiatorBox` leave `Xmax` alone. */
-export type BoxModelTS = Pick<ThieleSmall, "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms">;
-/** The Thiele-Small fields the horn engine reads (lib/acoustics/hornModel): the box models' and the voice coil's inductance. */
-export type HornDriverTS = BoxModelTS & Pick<ThieleSmall, "Le">;
+/**
+ * The Thiele-Small fields the box models (`boxModel`, `closedBox`, `passiveRadiatorBox`) and the horn engine read, the
+ * voice coil's inductance where listed; `closedBox` and `passiveRadiatorBox` leave `Xmax` alone.
+ */
+export type BoxModelTS = Pick<
+  ThieleSmall,
+  "Fs" | "Qms" | "Sd" | "Xmax" | "Bl" | "Re" | "Mms" | "Le"
+>;
 
 /** Subs always list a displacement. */
 export interface SubTS extends ThieleSmall {
@@ -1525,8 +1532,8 @@ export interface HornRearChamber {
  * horn's segments and a sealed or vented rear chamber. No segments make a direct radiator (the mouth is the cone).
  */
 export interface HornDesign {
-  /** one driver's Thiele/Small parameters, as the box models take them, and its voice coil's inductance */
-  driver: HornDriverTS;
+  /** one driver's Thiele/Small parameters, as the box models take them (its voice coil's inductance with them) */
+  driver: BoxModelTS;
   /**
    * how many of that driver share the throat, wired in parallel, each on the full voltage (Hornresp's Nd); 1 for one.
    * Each cone keeps its own air load.
@@ -1567,7 +1574,7 @@ export interface HornPoint {
   portSpeed: number;
   /** air speed at the horn's throat (the cone's face for a direct radiator), m/s, peak */
   throatSpeed: number;
-  /** one driver's electrical impedance Ze (magnitude), ohms, of the `drivers` in parallel; no voice-coil inductance, as the box models */
+  /** one driver's electrical impedance Ze (magnitude), ohms, of the `drivers` in parallel, its coil's inductance included */
   ze: number;
 }
 
@@ -1852,8 +1859,14 @@ export interface SpeakerDriverParts {
 /** A driver's kind, by id (`DRIVER_KIND`): the catalog table its id is in. */
 export type DriverKind = keyof SpeakerDriverParts;
 
-/** A speaker's band, by id (`SPEAKER_BAND`). */
-export type BandId = (typeof SPEAKER_BAND)[keyof typeof SPEAKER_BAND];
+/**
+ * A speaker's band, by id: any number of bands, each with its own name (`SpeakerBand.name`). The read adapters use
+ * `SPEAKER_BAND`'s ids; the Designer gives a new band a generated one. Drivers name their bands by id.
+ */
+export type BandId = string;
+
+/** A band the read adapters give, by id (`SPEAKER_BAND`, its name in `SPEAKER_BAND_NAMES`). */
+export type AdapterBandId = keyof typeof SPEAKER_BAND;
 
 /** Where a horn sits, by id (`HORN_PLACEMENT`): in the baffle, or freestanding on the box top. */
 export type HornPlacement = (typeof HORN_PLACEMENT)[keyof typeof HORN_PLACEMENT];
@@ -1925,10 +1938,17 @@ export interface SpeakerSlotPort extends SlotPort {
  */
 export type SpeakerPort = SpeakerRoundPort | SpeakerSlotPort | SideDuctPort;
 
-/** A chamber's vent, by its kind (`VENT_KIND`). */
+/**
+ * A chamber's vent, by its kind (`VENT_KIND`). A vented chamber's `maxSpeedMs` is the most air speed its vent takes,
+ * m/s (sine peak): the PA design's setting (more for flared tubes, as the PA takes them), the Hi-fi's or the fill's.
+ */
 export type ChamberVent =
   | { kind: Extract<HifiBoxKind, "sealed"> }
-  | { kind: Extract<HifiBoxKind, "vented">; port: SpeakerPort }
+  | {
+      kind: Extract<HifiBoxKind, "vented">;
+      port: SpeakerPort;
+      maxSpeedMs: PaDesignConfig["portMax"];
+    }
   | { kind: Extract<HifiBoxKind, "radiator">; radiators: RadiatorSelection };
 
 /**
@@ -2023,6 +2043,8 @@ export interface BandFilter {
  */
 export interface SpeakerBand {
   id: BandId;
+  /** what the user calls it: "Sub", "Low mid", "Horn" */
+  name: string;
   highpass: BandFilter | null;
   lowpass: BandFilter | null;
   /**
@@ -2035,6 +2057,11 @@ export interface SpeakerBand {
    * a channel it shares (`SourceChannel.bands`), as a super tweeter on the HF channel through a capacitor
    */
   drive: HifiDrive;
+  /**
+   * the power of the amp channel that drives it, W into 8 Ω: its own channel's when active; when passive, the channel
+   * it shares (the same figure as the band it shares it with). The limits read it (lib/speaker/speakerLimits).
+   */
+  ampW: SystemAmp["watts"];
 }
 
 /** Any single box: its cabinet, drivers, bands and look. */
@@ -2043,6 +2070,12 @@ export interface SpeakerSpec {
   name: string;
   cabinet: SpeakerCabinet;
   bands: readonly SpeakerBand[];
+  /**
+   * the input range: the filters the system puts ahead of the box on every band (the crossover to a sub). Not part of
+   * the box; the Designer models the speaker with it (`speakerResponse`'s and `speakerLimits`' feed), and the Space
+   * page can later take it as the source's default crossover (`SystemSource.filters`).
+   */
+  input: Pick<SpeakerBand, "highpass" | "lowpass">;
   look: Pick<PaDesignConfig, "cabFinish" | "baffleColor" | "hornColor">;
 }
 
@@ -2167,7 +2200,18 @@ export interface SpeakerChamberResponse {
   qtc: number | null;
   /** what the model leaves out in this chamber, if anything */
   gaps: readonly SpeakerModelGap[];
+  /**
+   * its cones' drive at each of the response's frequencies, at `SPEAKER_RESPONSE_VOLTS` and before the band's filters;
+   * null when its cones aren't modeled (or it has none). The limits scale it (lib/speaker/speakerLimits).
+   */
+  drive: ChamberDrivePoint[] | null;
 }
+
+/**
+ * A chamber's cones at one frequency (sine peaks): each cone's excursion, mm, the vent's air speed, m/s, and the
+ * radiators' travel, mm, where the box has a vent or radiators.
+ */
+export type ChamberDrivePoint = Pick<WooferPoint, "xmm"> & { vel?: number; prx?: number };
 
 /**
  * A speaker's response (lib/speaker/speakerResponse `speakerResponse`): on axis at 1 m in half space, at
@@ -2181,6 +2225,87 @@ export interface SpeakerResponse {
   chambers: SpeakerChamberResponse[];
   /** what the model leaves out across the bands: a band (or the feed) whose filter corner isn't a positive frequency */
   gaps: readonly SpeakerModelGap[];
+}
+
+/** One frequency of a speaker at its limit: the level where the first limit gives out, dB at 1 m, and which limit. */
+export type SpeakerMaxPoint = FrequencyPoint & { who: LimitId };
+
+/**
+ * One band at its limits (lib/speaker/speakerLimits): its drivers at the amp's full power, through the band's filters,
+ * up to the first of cone travel, port air speed, radiator travel, the program rating (thermal) and the amp.
+ */
+export interface SpeakerBandLimits {
+  id: BandId;
+  /** the drivers' voltage with the amp at full power, V RMS: the amp's, through a passive band's pad */
+  driveVolts: number;
+  /** the band alone, a sine at each of the response's frequencies, at its first limit */
+  max: SpeakerMaxPoint[];
+  /**
+   * the band's level for music, dB at 1 m: one drive for the whole band, set where the band first meets a limit
+   * (`who`, at `whoHz`), on its passband level
+   */
+  musicDb: number;
+  who: LimitId;
+  whoHz: number;
+}
+
+/** A level against a limit at the amp's full power, before any limit acts: the peak and its frequency, and the limit. */
+export interface LimitPeak {
+  peak: number;
+  hz: number;
+  limit: number;
+}
+
+/**
+ * One chamber's cones at the amp's full power through their band's filters (lib/speaker/speakerLimits): the cone's
+ * excursion against Xmax, mm; the vent's air speed against its limit, m/s; the radiators' travel against theirs, mm;
+ * and the drive's power against the cones' program rating, W.
+ */
+export interface SpeakerChamberLimits {
+  band: BandId;
+  excursion: LimitPeak;
+  /** null without a vent */
+  port: LimitPeak | null;
+  /** null without radiators */
+  radiator: LimitPeak | null;
+  /** the drive's power into 8 Ω, W, and the cones' program rating (2 × AES), W */
+  driveW: number;
+  programW: number;
+}
+
+/** A datasheet driver (a compression driver, a tweeter, a coaxial's HF) at its power limit. */
+export interface SpeakerDriverPower {
+  band: BandId;
+  driver: SpeakerDriver;
+  /** the power it takes, W, into its impedance `imp`, Ω: the amp's or its program rating (`who`), derated below its rating's frequency */
+  watts: number;
+  imp: number;
+  who: Extract<LimitId, "amp" | "thermal">;
+  /** the program rating's derating at the band's highpass (1 = none) */
+  derate: number;
+}
+
+/** A speaker at its limits (lib/speaker/speakerLimits `speakerLimits`). */
+export interface SpeakerLimits {
+  /** the bands the response models, in its order */
+  bands: SpeakerBandLimits[];
+  /** one per chamber, in the spec's order; null where its cones aren't modeled */
+  chambers: (SpeakerChamberLimits | null)[];
+  /** each datasheet driver with a published HF section, in the spec's order */
+  drivers: SpeakerDriverPower[];
+  /**
+   * the speaker with one input for every band, at each frequency where the first band meets its first limit, and which
+   * band; empty with no modeled band
+   */
+  sum: (Omit<SpeakerMaxPoint, "who"> & {
+    /** the first limit; outside the input range (the feed below −6 dB), the input range itself when a ceiling on the whole drive sets it */
+    who: LimitId | typeof INPUT_RANGE_LIMIT;
+    band: BandId;
+  })[];
+  /** the speaker's level for music, dB at 1 m: its passband level where the first band reaches its music limit */
+  musicDb: number | null;
+  /** the band that sets it */
+  band: BandId | null;
 }
 
 // ---- Bracing ----
@@ -2621,7 +2746,7 @@ export interface CutlistLayout {
 // ---- Warning chips (lib/pa/chips) ----
 
 export type ChipSeverity = "ok" | "warn" | "bad";
-/** The sections that carry checks: the PA stack's sub, mid and horn, the fills and the Hi-fi speaker. */
+/** The sections that carry checks: the PA stack's sub, mid and horn, the fills, the Hi-fi speaker and the Designer. */
 export type ChipSection = keyof typeof CHIP_IDS;
 /** A check's stable id (`CHIP_IDS`), of one section or of any. */
 export type ChipId<S extends ChipSection = ChipSection> = (typeof CHIP_IDS)[S][number];

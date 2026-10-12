@@ -1,5 +1,6 @@
 // Read adapter: the Fills page's design (FillDesignState) as a speaker spec and a system spec. Pure; nothing is written.
 import type {
+  AdapterBandId,
   FillDesignState,
   SpeakerBand,
   SpeakerSpec,
@@ -16,19 +17,32 @@ import {
   PORT_SHAPE,
   SOURCE_ROLE,
   SPEAKER_BAND,
+  SPEAKER_BAND_NAMES,
   SPEAKER_PART,
   VENT_KIND,
 } from "../../constants/speakerSpec";
-import { DIRECT_LOAD, channelCounter, lrFilter, speakerIdentity, stuffingPctOf } from "./specParts";
+import {
+  DIRECT_LOAD,
+  NO_FILTERS,
+  channelCounter,
+  lrFilter,
+  speakerIdentity,
+  stuffingPctOf,
+} from "./specParts";
 import { STUFFING_VOLUME_GAIN } from "../pa/calc";
 
-/** A band of the coaxial's passive network: the maker's network isn't modeled, so it carries no filters. */
-const networkBand = (id: SpeakerBand["id"]): SpeakerBand => ({
+/**
+ * A band of the coaxial's passive network: the maker's network isn't modeled, so it carries no filters; both bands
+ * share the fill's one amp channel.
+ */
+const networkBand = (id: AdapterBandId, state: FillDesignState): SpeakerBand => ({
   id,
+  name: SPEAKER_BAND_NAMES[id],
   highpass: null,
   lowpass: null,
   levelDb: 0,
   drive: HIFI_DRIVE.passive,
+  ampW: state.ampWatts,
 });
 
 /**
@@ -49,7 +63,11 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
           stuffingPct: state.boxType === VENT_KIND.vented ? 0 : stuffingPctOf(STUFFING_VOLUME_GAIN),
           vent:
             state.boxType === VENT_KIND.vented
-              ? { kind: VENT_KIND.vented, port: { shape: PORT_SHAPE.round, ...portSpec } }
+              ? {
+                  kind: VENT_KIND.vented,
+                  port: { shape: PORT_SHAPE.round, ...portSpec },
+                  maxSpeedMs: state.maxPortAirSpeedMs,
+                }
               : { kind: VENT_KIND.sealed },
           load: DIRECT_LOAD,
           drivers: [
@@ -74,7 +92,9 @@ export function speakerFromFill(state: FillDesignState, identity: SpecIdentity):
       roundoverIn: 0,
       tiltDeg: 0,
     },
-    bands: [networkBand(SPEAKER_BAND.low), networkBand(SPEAKER_BAND.high)],
+    bands: [networkBand(SPEAKER_BAND.low, state), networkBand(SPEAKER_BAND.high, state)],
+    // the highpass to the subs is the system's (systemFromFill): the input range starts off
+    input: NO_FILTERS,
     look: {},
   };
 }

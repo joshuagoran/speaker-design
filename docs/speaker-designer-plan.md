@@ -215,8 +215,54 @@ Each PR stands alone. Lowest risk first.
     - Movable ports and driver openings (see the owner decisions).
   - **L3c Cutlist.** L3c works out the real bracing, vent walls and hardware displacement for each chamber and
     replaces the 3% allowance.
-  - **Later in L3.** The limits and the optimizer; the horn settings; the tower with the horn
-    on top (T1); the voice-coil inductance (after PR #133 adds `Le`).
+  - **L3d Inductance, limits and chips.**
+    - **Voice-coil inductance.** Every T/S model reads the catalog's `Le`: the sealed, vented and passive-radiator
+      box models, the exact PA search and the horn engine. They share one rule, `coilFactor` in
+      `src/lib/acoustics/driverCircuit.ts`: the coil is Re + jωLe, as in Hornresp. A driver with `Le` rolls off at the
+      top. A driver without `Le` gives the same numbers as before.
+    - **Limits.** `speakerLimits` in `src/lib/speaker/speakerLimits.ts` works out each band's limits from the
+      response's chamber runs (no box model runs again). It uses the pages' own limit code:
+      - Cones: the PA's `sineLimitAt` (`maxOutputCurve` for each point): Xmax and the port air speed at each
+        frequency, and the program rating (2 × AES) and the amp across the whole drive. Radiators add their travel,
+        as the Hi-fi engine checks it.
+      - Datasheet drivers keep their engine's power rule: a compression driver the PA's `hornPower`, a tweeter and a
+        coaxial's HF section the Hi-fi's `tweeterMaxLevel`.
+      - Each band has its amp power (`SpeakerBand.ampW`). A passive band gets the channel it shares, through its pad.
+      - A band's maximum for music is one drive for the whole band, set where the band first meets a limit. Each
+        band's own curve takes the program rating and the amp on the whole drive, as the PA does.
+      - The sum takes one input for every band: at each frequency, the band with the least headroom sets it. A band
+        limits the sum only where it carries signal. The program rating takes the drive that the band's own filters
+        leave it. The amp of an active band also takes that drive, because the filters are ahead of the amp. The amp
+        of a passive band is the channel it shares, ahead of the network, so the network's filters do not change it.
+        The input range shapes the signal itself: the sum follows it.
+      - Each vent carries its own air-speed limit (`maxSpeedMs`). The PA adapter sets the design's setting, with more
+        for flared tubes, as the PA page does. The Hi-fi adapter sets the Hi-fi's 17 m/s, and the fill adapter sets
+        the fill's setting. The chamber settings show it.
+    - **Input range** (owner, Oct 2026). `SpeakerSpec.input` is the high-pass and low-pass that the system puts
+      ahead of the box, for example the crossover to a sub. It is not part of the box, and it is saved with the
+      speaker. The Designer models the speaker with it (the feed of `speakerResponse` and `speakerLimits`).
+      - The PA top starts with a high-pass at the PA's sub crossover. The PA sub starts with a low-pass there (its
+        own subsonic stays in its band). The tower, the Hi-fi speaker, the fill and the empty speaker start with both
+        off.
+      - The setting is the first row of the "Bands and filters" fold.
+      - Later, a speaker in a stack (L4a) takes its input range from the stack's crossover.
+    - **Bands are a free list** (owner, Oct 2026). A speaker has any number of bands, each with a name that the
+      user sets ("Sub", "Low mid", "Horn"), so a 4-way box works. Drivers name their bands by id. The read adapters
+      keep their ids (`SPEAKER_BAND`) and names (`SPEAKER_BAND_NAMES`); a band added in the Designer takes a
+      generated id. On the charts a band's color follows its place: the lowest in the lighter gray, the highest in
+      cyan, the ones between in magenta (`bandLine`).
+    - **Results.** A maximum-output chart on the shared maximum-output scale (80–140 dB, `MAX_OUTPUT_TOP` /
+      `MAX_OUTPUT_BOT`, as the PA and Hi-fi maximum-output charts), the maximum of each band and of the speaker, and chips: one list for each band (what sets its level, a datasheet
+      driver's power) and one for each chamber (Xmax, port speed and radiator travel at full power, and the program
+      rating).
+    - **Parity** (`tests/speaker-limits.test.ts`). With the net air set to the PA's, every golden PA design meets the
+      PA page's limits. The sub through its lowpass is within 0.06 dB, and the mid and horn within 0.01 dB. The horn's
+      power is exact. The sub's music limit is within 0.02 dB, with the same limit. On the Hi-fi designs with no
+      baffle-step EQ, the woofer's drive at its limit is within 0.2 dB from 30 Hz to a third of the crossover. The
+      tweeter's power is exact. Above that range the engines differ: the Hi-fi divides the coil's rating by the
+      lowpass, and the PA and the model do not.
+  - **Later in L3.** The optimizer; the horn settings; the tower with the horn on top (T1); a "Place" picker for
+    each chamber (on top of, or beside, chamber N). Today the user types its position ("From left", "From bottom").
 - **L4 Stack and Space.** The UI has three layers: Speaker, Stack and Space (see the owner decisions). L4 adds
   the last two, in two phases. The name is "Stack", not "System".
   - **Data.** L1's `SystemSpec` splits in two:
@@ -276,13 +322,13 @@ Each PR stands alone. Lowest risk first.
   tower needs no "Horn" toggle or separate picker entry.
 - Simulation in a real space is a separate page later (the Space page). Any speaker can be placed there.
 - The fill delay against the mains belongs to the Space page.
-- The Designer's response chart is a 2.83 V, 1 m sensitivity chart on the Hi-fi dB scale (50–130 dB). A later
-  maximum-output chart gets its own fixed scale.
+- Chart scales (owner, Oct 2026): every maximum-output chart (PA, Hi-fi, Designer) uses 80–140 dB, and every
+  sensitivity or response chart (Hi-fi, the Designer's 2.83 V, 1 m response) uses 50–120 dB.
 - The spec's ports carry the PA port details (the letterbox's fins and fold, the flared tubes), so the PA subs
   match the PA page exactly.
 - Stuffing is a visible setting on each chamber. The model has no hidden stuffing rule. The 3% bracing
   allowance stays until L3c.
-- The sub highpass and subsonic rule waits for the Stack phase (L4a). The voice-coil inductance waits for PR #133.
+- The sub highpass and subsonic rule waits for the Stack phase (L4a).
 - The cabinet gets a top shape (`flat` or `arched`) with the templates step (L3e). The PA tower's arched top then
   draws and cuts correctly.
 - Aim is not drawn now. One aim model comes later, for all speakers:

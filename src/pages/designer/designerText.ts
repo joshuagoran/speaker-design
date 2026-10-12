@@ -1,7 +1,7 @@
 // The Designer's one-line summaries, built from the spec and the catalog.
 import type { BandFilter, SpeakerBand, SpeakerChamber, SpeakerSpec } from "../../types";
-import { formatDims, formatHz } from "../../lib/format";
-import { BAND_NAMES, PORT_SHAPE_NAMES, VENT_KIND_NAMES } from "../../constants/designer";
+import { formatDims, formatHz, formatWatts } from "../../lib/format";
+import { PORT_SHAPE_NAMES, VENT_KIND_NAMES } from "../../constants/designer";
 import { CHAMBER_LOAD, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 import { driverName } from "./designerParts";
 
@@ -30,7 +30,19 @@ export function chamberText(chamber: SpeakerChamber) {
     .join(", ");
 }
 
-/** A band in one line: its name, filters and level. */
+/**
+ * The input range in a few words, as the bands fold's summary says it: "input 120 Hz LR24 up", "input up to 120 Hz
+ * LR24", "input 120 Hz LR24 to 2000 Hz LR24"; null when it is the full range.
+ */
+export function inputText({ highpass, lowpass }: SpeakerSpec["input"]) {
+  if (highpass && lowpass)
+    return `input ${formatHz(highpass.hz)} ${highpass.type} to ${formatHz(lowpass.hz)} ${lowpass.type}`;
+  if (highpass) return `input ${formatHz(highpass.hz)} ${highpass.type} up`;
+  if (lowpass) return `input up to ${formatHz(lowpass.hz)} ${lowpass.type}`;
+  return null;
+}
+
+/** A band in one line: its name, filters, level and amp power. */
 export function bandText(band: SpeakerBand) {
   const filters = [
     band.highpass && `HP ${filterText(band.highpass)}`,
@@ -38,7 +50,7 @@ export function bandText(band: SpeakerBand) {
   ]
     .filter(Boolean)
     .join(", ");
-  return `${BAND_NAMES[band.id]}${filters ? ` ${filters}` : ""}${band.levelDb ? ` ${band.levelDb.toFixed(1)} dB` : ""}`;
+  return `${band.name}${filters ? ` ${filters}` : ""}${band.levelDb ? ` ${band.levelDb.toFixed(1)} dB` : ""} ${formatWatts(band.ampW)}`;
 }
 
 /** The speaker in one line, as the library lists it: its chambers and bands. */

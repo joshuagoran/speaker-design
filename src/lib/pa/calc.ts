@@ -1,5 +1,5 @@
 // Calculation functions for the planner. Pure TS, no React, window or THREE.
-import { driverCircuit, ventResistances } from "../acoustics/driverCircuit";
+import { coilFactor, driverCircuit, ventResistances } from "../acoustics/driverCircuit";
 import { rectangleEndCorrection } from "../acoustics/radiation";
 import { AIR_DENSITY, BOX_LEAK_Q, BOX_PORT_Q, SPEED_OF_SOUND } from "../../constants/acoustics";
 import {
@@ -52,6 +52,7 @@ import type {
   SubGeometry,
   SubGeometryConfig,
   SubLimits,
+  SubLimitWho,
   SubSystem,
   SubSystemConfig,
   ThieleSmall,
@@ -393,9 +394,11 @@ export function boxModel(
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
     // the same circuit in plain real arithmetic (no complex objects: this loop runs millions of times in the optimizers)
     const w = 2 * Math.PI * f;
-    // Zd = Ras + Rae + j(w Mas - 1/(w Cas)); 1/Zc = j w Cab; 1/Zp = 1/(Rap + j w Map); 1/Ral
-    const dRe = Ras + Rae,
-      dIm = w * Mas - 1 / (w * Cas);
+    // the coil's inductance on the motor, k = Re/(Re + jωLe): exactly 1 without Le
+    const k = coilFactor(ts, w);
+    // Zd = Ras + Rae·k + j(w Mas - 1/(w Cas)); 1/Zc = j w Cab; 1/Zp = 1/(Rap + j w Map); 1/Ral
+    const dRe = Ras + Rae * k.re,
+      dIm = w * Mas - 1 / (w * Cas) + Rae * k.im;
     const pIm = w * Map,
       pM = Rap * Rap + pIm * pIm,
       ypRe = Rap / pM,
@@ -408,8 +411,10 @@ export function boxModel(
     const tRe = dRe + bRe,
       tIm = dIm + bIm,
       tM = tRe * tRe + tIm * tIm;
-    const uRe = (Pg * tRe) / tM,
-      uIm = (-Pg * tIm) / tM; // Ud = Pg / (Zd + Zbox)
+    const gRe = Pg * k.re,
+      gIm = Pg * k.im;
+    const uRe = (gRe * tRe + gIm * tIm) / tM,
+      uIm = (gIm * tRe - gRe * tIm) / tM; // Ud = Pg·k / (Zd + Zbox)
     const vRe = uRe * bRe - uIm * bIm,
       vIm = uRe * bIm + uIm * bRe; // Ud Zbox: box pressure
     const pv = Math.sqrt(vRe * vRe + vIm * vIm),
@@ -459,8 +464,8 @@ export function boxModel(
 // ---------------------------------------------------------------
 // Sealed-box model for the mid-bass: the same driver circuit with the box
 // compliance in series and no port. hp and lp are the crossover corners,
-// Linkwitz-Riley of the orders opts gives (hpOrder, lpOrder). Voice-coil inductance is not
-// modeled, so the top octave reads a little high. Excursion is the sine peak, as in boxModel; opts.phase gives each
+// Linkwitz-Riley of the orders opts gives (hpOrder, lpOrder). The voice coil's inductance, where the driver lists one,
+// rolls the top off (as in boxModel). Excursion is the sine peak, as in boxModel; opts.phase gives each
 // point the box's phase (without the crossover's), as boxModel does.
 // ---------------------------------------------------------------
 export function closedBox(
@@ -491,13 +496,14 @@ export function closedBox(
   const count = logGridCount(N, fmin, fmax, fTop);
   for (let i = 0; i < count; i++) {
     const f = fmin * Math.pow(fmax / fmin, i / (N - 1));
-    // Z = Ras + Rae + j(w Mas - 1/(w Cas) - 1/(w Cab)), in plain real arithmetic (the optimizers run this loop millions
-    // of times); Uc = Pg / Z
+    // Z = Ras + Rae·k + j(w Mas - 1/(w Cas) - 1/(w Cab)), in plain real arithmetic (the optimizers run this loop
+    // millions of times); Uc = Pg·k / Z, k the coil's factor (exactly 1 without Le)
     const w = 2 * Math.PI * f,
-      zRe = Ras + Rae,
-      zIm = w * Mas - 1 / (w * Cas) - 1 / (w * Cab),
+      k = coilFactor(ts, w),
+      zRe = Ras + Rae * k.re,
+      zIm = w * Mas - 1 / (w * Cas) - 1 / (w * Cab) + Rae * k.im,
       zM = zRe * zRe + zIm * zIm;
-    const U = Pg / Math.sqrt(zM);
+    const U = (Pg * Math.hypot(k.re, k.im)) / Math.sqrt(zM);
     const g =
       (hp ? linkwitzRileyHighpass(f, hp, hpOrder) : 1) *
       (lp ? linkwitzRileyLowpass(f, lp, lpOrder) : 1);
@@ -508,8 +514,12 @@ export function closedBox(
       spl: raw + 20 * Math.log10(g),
       xmm: Math.SQRT2 * (U / (w * Sd)) * g * 1000,
     };
-    // the radiated pressure is jω × the cone's flow: in phase with jU
-    if (phase) pt.rawPhase = Math.atan2((Pg * zRe) / zM, (Pg * zIm) / zM);
+    // the radiated pressure is jω × the cone's flow: in phase with jU = j·Pg·k·conj(Z)/|Z|²
+    if (phase)
+      pt.rawPhase = Math.atan2(
+        (Pg * (k.re * zRe + k.im * zIm)) / zM,
+        (Pg * (k.re * zIm - k.im * zRe)) / zM,
+      );
     out.push(pt);
   }
   if (phase) unwrapRawPhase(out);
@@ -1905,6 +1915,25 @@ export function subwooferLimits(
     spl45: mdl.spl45 + sc,
   };
 }
+/**
+ * A sine's limit at one point of a curve modeled at `AMP_V`: the amp output voltage where the first of the port's air
+ * speed, the cone's Xmax, the driver's program rating (thermal) and the amp gives out, and which; with each limit's
+ * own voltage (`vp`, `vx`, `vt`). The point's excursion and air speed carry its filters; the program rating and the
+ * amp are ceilings on the whole drive.
+ */
+export function sineLimitAt(
+  o: { xmm: number; vel?: number },
+  ts: Pick<ThieleSmall, "aes" | "Xmax">,
+  AMP_V: number,
+  portMax: number,
+): { V: number; who: SubLimitWho; vp: number; vx: number; vt: number } {
+  const vt = thermalVoltageLimit(ts.aes);
+  const vp = o.vel != null ? (AMP_V * portMax) / o.vel : Infinity,
+    vx = (AMP_V * ts.Xmax) / o.xmm;
+  const V = Math.min(vp, vx, vt, AMP_V);
+  const who = V === vp ? "port" : V === vx ? "Xmax" : V === vt ? "thermal" : "amp";
+  return { V, who, vp, vx, vt };
+}
 // Per-frequency sine limit: each frequency meets its own port and excursion limits.
 export function maxOutputCurve(
   curve: { f: number; spl: number; xmm: number; vel?: number }[],
@@ -1912,16 +1941,9 @@ export function maxOutputCurve(
   AMP_V: number,
   portMax: number,
 ): PaMaxPoint[] {
-  const vt = thermalVoltageLimit(ts.aes);
   return curve.map((o): PaMaxPoint => {
-    const vp = o.vel != null ? (AMP_V * portMax) / o.vel : Infinity,
-      vx = (AMP_V * ts.Xmax) / o.xmm;
-    const V = Math.min(vp, vx, vt, AMP_V);
-    return {
-      f: o.f,
-      spl: o.spl + 20 * Math.log10(V / AMP_V),
-      who: V === vp ? "port" : V === vx ? "Xmax" : V === vt ? "thermal" : "amp",
-    };
+    const { V, who } = sineLimitAt(o, ts, AMP_V, portMax);
+    return { f: o.f, spl: o.spl + 20 * Math.log10(V / AMP_V), who };
   });
 }
 // The sub-bass band, Hz: the low end the sub's readout averages, an absolute level to compare designs by (F3 is relative
@@ -1972,6 +1994,22 @@ export function subMusicOutputAt(
 // highpass at the crossover and 12 dB/oct below the horn's loading limit. Power: amp voltage into
 // the driver's impedance, capped at program (2 x AES), derated 6 dB/oct below the frequency AES
 // was rated at.
+/**
+ * The power a compression driver takes, W: the amp's (`hfAmpW` into 8 Ω, moved to the driver's impedance) or its
+ * program rating (2 × AES, derated 6 dB/oct below the frequency AES was rated at when crossed at `xoHi`), the lower.
+ */
+export function hornPower(
+  hf: Pick<CompressionHf, "aes" | "aesXo" | "imp">,
+  xoHi: number,
+  hfAmpW: number,
+): Pick<HornResponse, "P" | "pAmp" | "pProg" | "derate" | "imp" | "who"> {
+  const imp = hf.imp || 8;
+  const pAmp = (hfAmpW * 8) / imp;
+  const derate = hf.aesXo && xoHi < hf.aesXo ? Math.pow(xoHi / hf.aesXo, 2) : 1;
+  const pProg = 2 * hf.aes * derate;
+  const P = Math.min(pAmp, pProg);
+  return { P, pAmp, pProg, derate, imp, who: P === pAmp ? "amp" : "thermal" };
+}
 export function hornResponse(
   hf: CompressionHf | undefined,
   hz: Partial<HornHf>,
@@ -1980,11 +2018,8 @@ export function hornResponse(
   order: CrossoverOrder,
 ): HornResponse | null {
   if (!hf || hf.sens == null || !hf.aes) return null;
-  const imp = hf.imp || 8;
-  const pAmp = (hfAmpW * 8) / imp;
-  const derate = hf.aesXo && xoHi < hf.aesXo ? Math.pow(xoHi / hf.aesXo, 2) : 1;
-  const pProg = 2 * hf.aes * derate;
-  const P = Math.min(pAmp, pProg);
+  const power = hornPower(hf, xoHi, hfAmpW);
+  const { P } = power;
   const low = (hz && hz.lowHz) || 0;
   const curve: FrequencyPoint[] = [];
   for (let i = 0; i < 300; i++) {
@@ -1992,17 +2027,7 @@ export function hornResponse(
     const g = linkwitzRileyHighpass(f, xoHi, order) * (low ? Math.min(1, Math.pow(f / low, 2)) : 1);
     curve.push({ f, spl: hf.sens + 10 * Math.log10(P) + 20 * Math.log10(g) });
   }
-  return {
-    hf,
-    curve,
-    P,
-    pAmp,
-    pProg,
-    derate,
-    imp,
-    who: P === pAmp ? "amp" : "thermal",
-    flat: hf.sens + 10 * Math.log10(P),
-  };
+  return { ...power, hf, curve, flat: hf.sens + 10 * Math.log10(P) };
 }
 
 // ---- directivity ----

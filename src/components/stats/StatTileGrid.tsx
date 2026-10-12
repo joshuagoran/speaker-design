@@ -2,8 +2,13 @@ import { StatTile } from "./StatTile";
 import { statLabel, type StatName } from "../optimizer/StatRow";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
 
-/** One headline number: label, value and unit. */
-export type StatTileItem = [label: StatName, value: React.ReactNode, unit?: React.ReactNode];
+/** One headline number: label, value and unit, and a stable key where labels can repeat (absent: the label). */
+export type StatTileItem = [
+  label: StatName,
+  value: React.ReactNode,
+  unit?: React.ReactNode,
+  key?: string,
+];
 
 interface Props {
   tiles: StatTileItem[];
@@ -17,8 +22,8 @@ export function StatTileGrid({ tiles, className = "mb-4" }: Props) {
     <div
       className={`${RESULT_MAX_WIDTH} ${className} grid gap-px rounded-lg overflow-hidden border border-stone-300 bg-stone-300 grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(112px,1fr))] [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1`}
     >
-      {tiles.map(([label, value, unit]) => (
-        <StatTile key={statLabel(label)} label={label} value={value} unit={unit} />
+      {tiles.map(([label, value, unit, key]) => (
+        <StatTile key={key ?? statLabel(label)} label={label} value={value} unit={unit} />
       ))}
     </div>
   );
