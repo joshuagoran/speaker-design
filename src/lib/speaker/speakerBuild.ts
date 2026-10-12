@@ -17,6 +17,7 @@
 //   the fixings; a chamber over another adds what it builds, as the tower's cabinet over its sub box), the Hi-fi's on a
 //   flush box; the drivers with their horns, the radiators and the hardware.
 import type {
+  BraceStyleId,
   BoxBracing,
   BoxHandles,
   BoxHardwarePlan,
@@ -75,7 +76,7 @@ import { subDriverDepthIn, subTubeKit } from "../pa/tubes";
 import { towerHornCutout } from "../pa/tower";
 import { hardwareKeepOut, planBoxHardware } from "../pa/hardware";
 import { DRIVER_CLEARANCE_IN, NO_SUPPORTS, type PaBoxSupports } from "../pa/bracing";
-import { MIN_BAY_IN, panelStock } from "../bracing";
+import { MIN_BAY_IN, braceShortfalls, defaultBraceStyleNear, panelStock } from "../bracing";
 import { panelLbPerSqFt } from "../panel";
 import {
   HIFI_FALLBACK_LB,
@@ -134,7 +135,7 @@ import {
   HIFI_MOTOR_CUTOUT_SHARE,
   MID_DEPTH_FALLBACK_IN,
 } from "../../data/catalog/driver-cutouts";
-import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES } from "../../constants/bracing";
+import { BACK_JOINT_FLUSH_NOTES, BACK_JOINT_RAIL_NOTES, NO_BRACING } from "../../constants/bracing";
 import { HORN_MOUNT_NAMES } from "../../constants/hornMount";
 import { KG_PER_LB, LITERS_PER_CUBIC_IN } from "../../constants/units";
 import { PANEL, SHELL_CUT_BOX, chamberCutBox, cutBoxName } from "../../constants/cutParts";
@@ -559,16 +560,43 @@ function bracedShell(shell: BraceShell, inputs: BraceInputs): BoxBracing {
 /**
  * A chamber's braces and ribs and its hardware. The hardware is placed first (the handles at the center of gravity,
  * the dish low on the back, the horn's posts on a top with a horn on it), then the braces round its recesses, then the
- * hardware checked against them, as the PA boxes do.
+ * hardware checked against them, as the PA boxes do. A cabinet with no bracing (`NO_BRACING`) takes none: its panels'
+ * modes are the bare shell's, held against its target.
  */
 function chamberBracing(
   cabinet: SpeakerCabinet,
   f: ChamberFrame,
   handles: BoxHandles | null,
 ): Pick<ChamberBuild, "bracing" | "hardware"> {
+  if (cabinet.braceStyle !== NO_BRACING)
+    return chamberBracingAs(cabinet, cabinet.braceStyle, cabinet.braceTargetHz, f, handles);
+  // the rule to no target adds nothing (and anything a strength check adds is taken off): the bare shell
+  const t = cabinet.panel.thicknessIn;
+  const bare = chamberBracingAs(cabinet, defaultBraceStyleNear(t), 0, f, handles);
+  const bracing: BoxBracing = {
+    ...bare.bracing,
+    windows: { x: [], y: [], z: [] },
+    notch: null,
+    ribs: [],
+    windowIn3: 0,
+    ribIn3: 0,
+    targetHz: cabinet.braceTargetHz,
+  };
+  bracing.meets = braceShortfalls(bracing).length === 0;
+  return { bracing, hardware: bare.hardware };
+}
+
+/** A chamber's braces and ribs in `style` to `targetHz`, and its hardware (`chamberBracing`). */
+function chamberBracingAs(
+  cabinet: SpeakerCabinet,
+  style: BraceStyleId,
+  targetHz: number,
+  f: ChamberFrame,
+  handles: BoxHandles | null,
+): Pick<ChamberBuild, "bracing" | "hardware"> {
   const t = cabinet.panel.thicknessIn;
   const inset = baffleInsetIn(cabinet);
-  const { braceStyle: style, backJoint: back, braceTargetHz: targetHz } = cabinet;
+  const { backJoint: back } = cabinet;
   const { chamber } = f.placed;
   if (f.paSub) {
     const { sub, style: portStyle, vent } = f.paSub;

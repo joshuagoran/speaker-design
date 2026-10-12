@@ -165,6 +165,12 @@ export const SPEAKER_TEXT = {
   buildNote: (target: string) =>
     `Each chamber is braced by the PA bracing rule, to the bracing target: every panel above ${target}. The panels that still miss it are listed above. Each chamber's net air counts the braces, the vent's walls, the baffle cleats and the hardware. The weight counts the panels, braces, drivers with their horns, radiators and hardware. The Cutlist tab lists every part.`,
   noBraces: "no braces",
+  /** the Build notice and summary when the cabinet has no bracing (`NO_BRACING`) */
+  notBraced:
+    "The panels are not braced. The cutlist, the weight and the net air have no braces. Brace the box later, or from the outside.",
+  notBracedSummary: "not braced",
+  buildNoteUnbraced:
+    "Each chamber's net air counts the vent's walls, the baffle cleats and the hardware. The weight counts the panels, the drivers with their horns, the radiators and the hardware. The Cutlist tab lists every part.",
   hornNoFit:
     "A horn does not fit where it is mounted: another chamber stands on its top, or its mouth is larger than its chamber's baffle. Pick the other mounting in its driver's settings. Until then the views and the cutlist leave it out.",
   hornNoFitNote: "its horn does not fit where it is mounted; no cutout until its mounting changes",

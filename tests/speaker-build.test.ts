@@ -45,6 +45,7 @@ import {
   BACK_JOINT_NAMES,
   BACK_JOINT_PARTITION_NOTES,
   GLUED_BACK,
+  NO_BRACING,
 } from "../src/constants/bracing";
 import { hornById, CD_OPTIONS, HORN_OPTIONS, MID_OPTIONS, SUB_OPTIONS } from "../src/lib/data";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, EMPTY_SPEAKER } from "../src/lib/defaults";
@@ -595,4 +596,23 @@ test("speaker build: the net air counts the braces; the build is worked out once
   // the default Hi-fi box needs none
   const hifi = speakerFromHifi(DEFAULT_HIFI, DEFAULT_HIFI_LOOK, { id: "hifi", name: "hifi" });
   assert.equal(cabinetBuild(hifi.cabinet).chambers[0].woodL, 0);
+});
+
+test("speaker build: no bracing leaves the braces and ribs out of the cutlist, the weight and the net air", () => {
+  const big = chamberAt({ xIn: 0, yIn: 0 }, { w: 24, h: 36, d: 20 });
+  const braced = withCabinet({ chambers: [big] });
+  const bare = withCabinet({ chambers: [big], braceStyle: NO_BRACING });
+  const braceRows = (spec: SpeakerSpec) =>
+    speakerCutParts(spec.cabinet, "butt").parts.filter(
+      (p) => p.part === "windowBrace" || p.part === "rib",
+    );
+  assert.ok(braceRows(braced).length > 0, "the braced box takes braces");
+  assert.deepEqual(braceRows(bare), []);
+  const [withBraces] = cabinetBuild(braced.cabinet).chambers;
+  const [without] = cabinetBuild(bare.cabinet).chambers;
+  assert.deepEqual(without.bracing.windows, { x: [], y: [], z: [] });
+  assert.deepEqual(without.bracing.ribs, []);
+  assert.ok(without.lb.wood < withBraces.lb.wood, "lighter without braces");
+  assert.ok(without.woodL < withBraces.woodL, "more net air without braces");
+  assert.equal(without.bracing.targetHz, bare.cabinet.braceTargetHz);
 });

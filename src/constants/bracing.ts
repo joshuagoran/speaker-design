@@ -18,6 +18,24 @@ export const BRACE_STYLE_TIPS = {
   both: "Frames and ribs, whichever adds more stiffness per wood.",
 } as const satisfies Record<keyof typeof BRACE_STYLE_NAMES, string>;
 
+/**
+ * A Speaker cabinet's choice to leave its panels unbraced (to brace it later, or from the outside): no braces or ribs in
+ * the cutlist, the weight or the net air. The PA stack has no such choice.
+ */
+export const NO_BRACING = "none";
+
+/** The Speaker page's bracing choices: the styles, then no bracing. */
+export const SPEAKER_BRACE_STYLE_NAMES = {
+  ...BRACE_STYLE_NAMES,
+  [NO_BRACING]: "None",
+} as const;
+
+/** What each Speaker bracing choice does, for its button's tooltip. */
+export const SPEAKER_BRACE_STYLE_TIPS = {
+  ...BRACE_STYLE_TIPS,
+  [NO_BRACING]: "No braces or ribs. Use this to brace the box later, or from the outside.",
+} as const satisfies Record<keyof typeof SPEAKER_BRACE_STYLE_NAMES, string>;
+
 /** Each style in a folded settings section's summary line ("braced with …"). */
 export const BRACE_STYLE_SUMMARY = {
   ribs: "ribs",

@@ -85,10 +85,11 @@ import {
   BACK_JOINT_NAMES,
   BACK_JOINT_SUMMARY,
   BACK_JOINT_TIPS,
-  BRACE_STYLE_NAMES,
+  NO_BRACING,
+  SPEAKER_BRACE_STYLE_NAMES,
+  SPEAKER_BRACE_STYLE_TIPS,
   BRACE_TARGET_RANGE_HZ,
   BRACE_STYLE_SUMMARY,
-  BRACE_STYLE_TIPS,
 } from "../../constants/bracing";
 import { bandChips, chamberChips } from "./speakerChips";
 import { speakerStarts, startGroup, startSpeaker } from "./speakerStarts";
@@ -156,6 +157,8 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
   const { chambers, construction, top, insetIn, braceStyle, braceTargetHz, backJoint } =
     spec.cabinet;
   const framed = construction === CABINET_CONSTRUCTION.frameInset;
+  /** no bracing: the panels are left unbraced */
+  const unbraced = braceStyle === NO_BRACING;
   const cabFinish = spec.look.cabFinish ?? DEFAULT_PA.cabFinish;
   const baffleColor = spec.look.baffleColor ?? DEFAULT_PA.baffleColor;
   /** the first catalog horn the drivers take: the horn color picker shows its catalog finish */
@@ -170,7 +173,9 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
     construction: [
       `${CABINET_CONSTRUCTION_NAMES[construction]}${framed ? `, inset ${formatInches(insetIn)}` : ""}`,
       `${CABINET_TOP_NAMES[top].toLowerCase()} top`,
-      `braced with ${BRACE_STYLE_SUMMARY[braceStyle]} to ${formatHz(braceTargetHz)}`,
+      braceStyle === NO_BRACING
+        ? SPEAKER_TEXT.notBracedSummary
+        : `braced with ${BRACE_STYLE_SUMMARY[braceStyle]} to ${formatHz(braceTargetHz)}`,
       BACK_JOINT_SUMMARY[backJoint],
     ].join(" · "),
     chambers: chambers.map(chamberText).join("; "),
@@ -337,26 +342,33 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
             >
               <SectionHeading className="mb-3">{SPEAKER_TEXT.build}</SectionHeading>
               <StatTileGrid tiles={buildTiles} className="mb-3" />
-              <ul className="text-sm mb-3">
-                {build.chambers.map((c, i) => (
-                  <li key={c.box}>
-                    {SPEAKER_TEXT.chamber} {i + 1}: {bracingText(c.bracing)}
-                  </li>
-                ))}
-              </ul>
-              {build.chambers.flatMap((c, i) => {
-                const lines = braceNoteLines(`${SPEAKER_TEXT.chamber} ${i + 1}`, c.bracing);
-                return lines.length
-                  ? [
-                      <Notice key={`under${i}`}>
-                        {SPEAKER_TEXT.underTarget(i + 1, formatHz(braceTargetHz))}
-                      </Notice>,
-                      ...lines.map((line) => <Notice key={line}>{line}</Notice>),
-                    ]
-                  : [];
-              })}
+              {unbraced ? (
+                <Notice>{SPEAKER_TEXT.notBraced}</Notice>
+              ) : (
+                <ul className="text-sm mb-3">
+                  {build.chambers.map((c, i) => (
+                    <li key={c.box}>
+                      {SPEAKER_TEXT.chamber} {i + 1}: {bracingText(c.bracing)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!unbraced &&
+                build.chambers.flatMap((c, i) => {
+                  const lines = braceNoteLines(`${SPEAKER_TEXT.chamber} ${i + 1}`, c.bracing);
+                  return lines.length
+                    ? [
+                        <Notice key={`under${i}`}>
+                          {SPEAKER_TEXT.underTarget(i + 1, formatHz(braceTargetHz))}
+                        </Notice>,
+                        ...lines.map((line) => <Notice key={line}>{line}</Notice>),
+                      ]
+                    : [];
+                })}
               <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
-                {SPEAKER_TEXT.buildNote(formatHz(braceTargetHz))}
+                {unbraced
+                  ? SPEAKER_TEXT.buildNoteUnbraced
+                  : SPEAKER_TEXT.buildNote(formatHz(braceTargetHz))}
               </p>
             </section>
             {limits.bands.length > 0 && (
@@ -491,32 +503,35 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 className="mb-3"
                 value={braceStyle}
                 onChange={(v) => speakerPage.editCabinet((c) => ({ ...c, braceStyle: v }))}
-                options={keysOf(BRACE_STYLE_NAMES).map(
-                  (id) => [id, BRACE_STYLE_NAMES[id], BRACE_STYLE_TIPS[id]] as const,
+                options={keysOf(SPEAKER_BRACE_STYLE_NAMES).map(
+                  (id) =>
+                    [id, SPEAKER_BRACE_STYLE_NAMES[id], SPEAKER_BRACE_STYLE_TIPS[id]] as const,
                 )}
               />
-              <NumberField
-                label={
-                  <Tooltip tip={SPEAKER_TEXT.braceTargetTip(formatHz(PA_PANEL_TARGET_HZ))}>
-                    {SPEAKER_TEXT.braceTarget}
-                  </Tooltip>
-                }
-                value={braceTargetHz}
-                min={BRACE_TARGET_RANGE_HZ.min}
-                max={BRACE_TARGET_RANGE_HZ.max}
-                step={10}
-                unit="Hz"
-                onChange={(v) =>
-                  speakerPage.editCabinet((c) => ({
-                    ...c,
-                    braceTargetHz: Math.min(
-                      BRACE_TARGET_RANGE_HZ.max,
-                      Math.max(BRACE_TARGET_RANGE_HZ.min, v),
-                    ),
-                  }))
-                }
-                className="mb-3"
-              />
+              {!unbraced && (
+                <NumberField
+                  label={
+                    <Tooltip tip={SPEAKER_TEXT.braceTargetTip(formatHz(PA_PANEL_TARGET_HZ))}>
+                      {SPEAKER_TEXT.braceTarget}
+                    </Tooltip>
+                  }
+                  value={braceTargetHz}
+                  min={BRACE_TARGET_RANGE_HZ.min}
+                  max={BRACE_TARGET_RANGE_HZ.max}
+                  step={10}
+                  unit="Hz"
+                  onChange={(v) =>
+                    speakerPage.editCabinet((c) => ({
+                      ...c,
+                      braceTargetHz: Math.min(
+                        BRACE_TARGET_RANGE_HZ.max,
+                        Math.max(BRACE_TARGET_RANGE_HZ.min, v),
+                      ),
+                    }))
+                  }
+                  className="mb-3"
+                />
+              )}
             </>,
           )}
           {section(

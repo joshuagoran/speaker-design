@@ -7,6 +7,7 @@ import type {
   BOX_AXIS_NAMES,
   BRACE_PANEL_NAMES,
   BRACE_STYLE_NAMES,
+  SPEAKER_BRACE_STYLE_NAMES,
   STRENGTH_LOAD_NAMES,
 } from "./constants/bracing";
 import type { INPUT_RANGE_LIMIT, LIMIT_NAMES } from "./constants/limits";
@@ -2063,7 +2064,9 @@ export type ArchBlock = (typeof ARCH_BLOCK)[keyof typeof ARCH_BLOCK];
  * A cabinet: its chambers, panels and shape, and its bracing as the PA boxes take it: the style (ribs, window braces or
  * both), how the back is fixed (glued or screwed), and the target every panel's first mode should clear.
  */
-export interface SpeakerCabinet extends Required<Pick<PaDesignConfig, "braceStyle" | "backJoint">> {
+export interface SpeakerCabinet extends Required<Pick<PaDesignConfig, "backJoint">> {
+  /** the bracing style, or none: the panels unbraced */
+  braceStyle: SpeakerBraceStyle;
   chambers: readonly SpeakerChamber[];
   panel: SpeakerPanel;
   /** every panel's first mode should clear it, Hz: the PA boxes' PA_PANEL_TARGET_HZ by default (lib/pa/bracing) */
@@ -2504,6 +2507,8 @@ export interface StackLimits {
 export type HornMountId = keyof typeof HORN_MOUNT_NAMES;
 /** A bracing style's id (`BRACE_STYLE_NAMES` holds the name it shows). */
 export type BraceStyleId = keyof typeof BRACE_STYLE_NAMES;
+/** A Speaker cabinet's bracing: a style, or none (`NO_BRACING`). */
+export type SpeakerBraceStyle = keyof typeof SPEAKER_BRACE_STYLE_NAMES;
 /** A box panel the bracing rule reads, by id (`BRACE_PANEL_NAMES` holds the name it shows). */
 export type BracePanelId = keyof typeof BRACE_PANEL_NAMES;
 /** A box axis, from the inside corner: x across, y up, z back from the baffle. */
