@@ -16,7 +16,7 @@ export const STACK_TEXT = {
   sum: "Stack",
   stackMax: "Stack max",
   listenHeight: "Listening axis",
-  modelNote: `Each member is its speaker in the Designer's model, fed through its crossover, then its level and delay. The sum is ${STACK_LISTEN_DISTANCE_M} m in front of the stack, level with the highest band, moved back to 1 m. Each band's path to that point sets its time and level. An auto delay lines a member up with the latest member that has a set delay; it is never less than 0. Not modeled: the room, the baffle step, and coverage off axis.`,
+  modelNote: `Each member is its speaker in the Designer's model, fed through its crossover, then its level and delay. The sum is ${STACK_LISTEN_DISTANCE_M} m in front of the stack, level with the highest band, moved back to 1 m. Each band's path to that point sets its time and level. An auto delay puts a member in phase with the member it crosses, at their crossover. If that member would have to play early, the others wait instead, so no delay is less than 0. Not modeled: the room, the baffle step, and coverage off axis.`,
   maxNote:
     "One input drives the whole stack. At each frequency, the member with the least headroom sets the level, and every member plays at that input. The crossovers are in the front end, ahead of the amps.",
   noMembers: "Add a saved speaker, or start from the current PA design.",
@@ -47,4 +47,6 @@ export const STACK_TEXT = {
   crossoverHint:
     "The filters ahead of this member, between boxes. In the stack they are the speaker's input range.",
   noFilter: "None",
+  /** a library speaker's newer copy beside the one the stack's members already name */
+  copyName: (name: string, n: number) => `${name} (copy ${n})`,
 } as const;

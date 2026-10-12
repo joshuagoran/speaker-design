@@ -5,13 +5,20 @@
 //
 // The listening point is STACK_LISTEN_DISTANCE_M in front of the stack's front, on its center line, level with the
 // highest band's center (on the horn's or tweeter's axis). A band's path there sets its delay and its level against the
-// distance (1/r); the levels are moved back to 1 m, so a stack reads on the same axes as a speaker. An auto delay lines
-// a member's path up with the latest member that has a delay set (all auto: the farthest); it never goes below 0.
+// distance (1/r); the levels are moved back to 1 m, so a stack reads on the same axes as a speaker.
+//
+// An auto delay puts the member in phase with the member it crosses (one's lowpass and the other's highpass within an
+// octave) at their crossover, at the listening point, as the coverage page aligns the PA sub with the mid
+// (lib/pa/coverage autoSubDelayMs): the crossovers' share wrapped to a turn, each crossing band's own phase unwrapped
+// from its loudest point, and the paths. It solves for the relative delay; where the auto member would have to play
+// early, the others wait instead (every delay moves up together), so no delay is below 0.
 //
 // Not modeled here (the Space page's): the room, the baffle step and diffraction, directivity off axis.
 import type {
   Complex,
   FrequencyPoint,
+  SpeakerBandResponse,
+  SpeakerResponse,
   SpeakerSpec,
   StackLimits,
   StackMember,
@@ -19,7 +26,8 @@ import type {
   StackResponse,
   StackSpec,
 } from "../../types";
-import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
+import { abs, add, complex, divide, multiply, phasor, scale } from "../acoustics/complex";
+import { filtersTransfer } from "./bandFilter";
 import { SPEAKER_RESPONSE_FREQUENCIES, passbandDb, speakerResponse } from "./speakerResponse";
 import { speakerLimits } from "./speakerLimits";
 import { stackLayout, type StackPoint } from "./stackLayout";
@@ -38,6 +46,151 @@ export const memberSpeaker = (member: Pick<StackMember, "crossover">, speaker: S
   ...speaker,
   input: member.crossover,
 });
+
+/** How far apart one member's lowpass and another's highpass can be, octaves, and still be a crossover between them. */
+const CROSSOVER_OCTAVES = 1;
+
+/** An angle wrapped to ±π. */
+const wrapAngle = (a: number) => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
+
+/** A complex number's angle, radians. */
+const angleOf = (p: Complex) => Math.atan2(p.im, p.re);
+
+/**
+ * Where two members cross, Hz: one's lowpass and the other's highpass within CROSSOVER_OCTAVES, at the middle of the
+ * two corners; null where they don't.
+ */
+export function crossoverHz(
+  a: Pick<StackMember, "crossover">,
+  b: Pick<StackMember, "crossover">,
+): number | null {
+  const pair = (
+    lp: StackMember["crossover"]["lowpass"],
+    hp: StackMember["crossover"]["highpass"],
+  ) =>
+    lp && hp && Math.abs(Math.log2(lp.hz / hp.hz)) <= CROSSOVER_OCTAVES
+      ? Math.sqrt(lp.hz * hp.hz)
+      : null;
+  return (
+    pair(a.crossover.lowpass, b.crossover.highpass) ??
+    pair(b.crossover.lowpass, a.crossover.highpass)
+  );
+}
+
+/** A value of `ys` (one per grid frequency) read at `f` between grid points on a log-frequency axis. */
+function atFrequency(ys: readonly number[], f: number) {
+  const freqs = SPEAKER_RESPONSE_FREQUENCIES;
+  const i = Math.min(
+    freqs.length - 1,
+    Math.max(
+      1,
+      freqs.findIndex((x) => x >= f),
+    ),
+  );
+  const k = Math.log(f / freqs[i - 1]) / Math.log(freqs[i] / freqs[i - 1]);
+  return ys[i - 1] + k * (ys[i] - ys[i - 1]);
+}
+
+/**
+ * A band's own phase at each grid frequency, radians: its box and its own filters (the member's crossover taken out),
+ * unwrapped along the grid from its loudest point, where it is taken within ±π.
+ */
+function ownPhase(band: SpeakerBandResponse, crossover: StackMember["crossover"]) {
+  const freqs = SPEAKER_RESPONSE_FREQUENCIES;
+  const own = band.pressure.map((p, i) => divide(p, filtersTransfer(freqs[i], crossover)));
+  let top = 0;
+  for (let i = 1; i < own.length; i++) if (abs(own[i]) > abs(own[top])) top = i;
+  const out = own.map(() => 0);
+  out[top] = angleOf(own[top]);
+  for (let i = top + 1; i < own.length; i++)
+    out[i] = out[i - 1] + wrapAngle(angleOf(own[i]) - angleOf(own[i - 1]));
+  for (let i = top - 1; i >= 0; i--)
+    out[i] = out[i + 1] + wrapAngle(angleOf(own[i]) - angleOf(own[i + 1]));
+  return out;
+}
+
+/** One member as the alignment reads it: its response through its crossover, and each band's path, m. */
+interface MemberModel {
+  response: SpeakerResponse;
+  paths: Map<SpeakerBandResponse["id"], number>;
+}
+
+/**
+ * How much later member `a` must play than member `b` to be in phase with it at their crossover `f0` at the listening
+ * point, ms (negative: `b` waits): from the band of each that carries the most there (the mid at the sub crossover),
+ * the crossovers' share wrapped to a turn, the bands' own phases and their paths. Null where either is silent there.
+ */
+function alignMs(
+  a: { member: StackMember; model: MemberModel },
+  b: { member: StackMember; model: MemberModel },
+  f0: number,
+): number | null {
+  const freqs = SPEAKER_RESPONSE_FREQUENCIES;
+  const near = freqs.reduce(
+    (best, f, i) => (Math.abs(Math.log(f / f0)) < Math.abs(Math.log(freqs[best] / f0)) ? i : best),
+    0,
+  );
+  const phase = ({ member, model }: typeof a) => {
+    const band = model.response.bands.reduce<SpeakerBandResponse | null>(
+      (best, x) => (!best || abs(x.pressure[near]) > abs(best.pressure[near]) ? x : best),
+      null,
+    );
+    if (!band || abs(band.pressure[near]) === 0) return null;
+    const path = model.paths.get(band.id) ?? STACK_LISTEN_DISTANCE_M;
+    return {
+      crossover: angleOf(filtersTransfer(f0, member.crossover)),
+      rest:
+        atFrequency(ownPhase(band, member.crossover), f0) -
+        (2 * Math.PI * f0 * (path - STACK_LISTEN_DISTANCE_M)) / SPEED_OF_SOUND,
+    };
+  };
+  const pa = phase(a),
+    pb = phase(b);
+  if (!pa || !pb) return null;
+  const lead = wrapAngle(pa.crossover - pb.crossover) + pa.rest - pb.rest;
+  return (lead / (2 * Math.PI * f0)) * MS_PER_S;
+}
+
+/**
+ * Each member's delay, ms: its own, or an auto one in phase with a member it crosses whose delay is known (set, or
+ * worked out first); an auto member that crosses none takes 0. Then every delay moves up together until none is below
+ * 0 (the others wait for an auto member that has to play early). Null for a member that isn't modeled.
+ */
+function memberDelays(
+  members: readonly StackMember[],
+  models: readonly (MemberModel | null)[],
+): (number | null)[] {
+  const delays = members.map((m, k) => (models[k] && m.delayMs !== AUTO_DELAY ? m.delayMs : null));
+  const pending = new Set(
+    members.flatMap((m, k) => (models[k] && m.delayMs === AUTO_DELAY ? [k] : [])),
+  );
+  while (pending.size) {
+    let done = false;
+    for (const k of pending) {
+      const model = models[k];
+      if (!model) continue;
+      for (const [j, other] of models.entries()) {
+        const known = delays[j];
+        const f0 = crossoverHz(members[k], members[j]);
+        if (!other || known === null || j === k || f0 === null) continue;
+        const ms = alignMs({ member: members[k], model }, { member: members[j], model: other }, f0);
+        if (ms === null) continue;
+        delays[k] = known + ms;
+        pending.delete(k);
+        done = true;
+        break;
+      }
+    }
+    // none crosses a member with a known delay: the first left starts at 0, and the rest align to it
+    if (!done) {
+      const [first] = pending;
+      delays[first] = 0;
+      pending.delete(first);
+    }
+  }
+  const lowest = Math.min(0, ...delays.filter((d) => d !== null));
+  return delays.map((d) => (d === null ? null : d - lowest));
+}
 
 /** A point's path to the listening point, m. */
 const pathM = (p: StackPoint, listenHeightIn: number) => {
@@ -62,26 +215,14 @@ export function stackResponse(
     const speaker = memberSpeaker(stack.members[k], m.speaker);
     const response = speakerResponse(speaker, { feed: speaker.input });
     const paths = new Map(m.bands.map((b) => [b.id, pathM(b.center, listenHeightIn)]));
-    const modeled = response.bands.flatMap((b) => paths.get(b.id) ?? []);
-    const mean = modeled.length
-      ? modeled.reduce((sum, p) => sum + p, 0) / modeled.length
-      : STACK_LISTEN_DISTANCE_M;
-    return { speaker, response, paths, pathM: mean };
+    return { speaker, response, paths };
   });
-  // the auto delays: each such member's path lined up with the latest set one's (all auto: the farthest)
-  const arrivalMs = (pathM: number) => (pathM / SPEED_OF_SOUND) * MS_PER_S;
-  const set = models.flatMap((m, k) => {
-    const delay = stack.members[k].delayMs;
-    return m && delay !== AUTO_DELAY ? [arrivalMs(m.pathM) + delay] : [];
-  });
-  const target = set.length
-    ? Math.max(...set)
-    : Math.max(0, ...models.flatMap((m) => (m ? [arrivalMs(m.pathM)] : [])));
+  const delays = memberDelays(stack.members, models);
   let total = freqs.map(() => complex(0));
   const members = models.map((m, k): StackMemberResponse | null => {
-    if (!m) return null;
-    const { levelDb, delayMs: delay } = stack.members[k];
-    const delayMs = delay === AUTO_DELAY ? Math.max(0, target - arrivalMs(m.pathM)) : delay;
+    const delayMs = delays[k];
+    if (!m || delayMs === null) return null;
+    const { levelDb } = stack.members[k];
     const gain = Math.pow(10, levelDb / 20);
     let pressure = freqs.map(() => complex(0));
     for (const band of m.response.bands) {
@@ -136,24 +277,16 @@ export function stackLimits(
   /** a member's headroom over the stack's input at point `i`, dB: its own, less its level */
   const roomOf = (r: Run, i: number) =>
     (r.limits.sum[i]?.spl ?? Infinity) - (r.m.response.sum[i]?.spl ?? 0) - r.levelDb;
-  const sum: StackLimits["sum"] = [];
-  for (const [i, o] of response.sum.entries()) {
-    const first = live.reduce<Run | null>(
-      (a, b) => (a && roomOf(a, i) <= roomOf(b, i) ? a : b),
-      null,
-    );
-    const point = first?.limits.sum[i];
-    if (!first || !point) continue;
-    sum.push({
-      f: o.f,
-      spl: o.spl + roomOf(first, i),
-      who: point.who,
-      member: first.k,
-      band: point.band,
-    });
-  }
-  /** the stack's headroom at point `i`, dB */
-  const stackRoom = (i: number) => (sum[i]?.spl ?? 0) - (response.sum[i]?.spl ?? 0);
+  /** at each of the response's points: the member with the least headroom, and the stack's headroom, dB */
+  const points = live.length
+    ? response.sum.map((o, i) => {
+        const first = live.reduce((a, b) => (roomOf(b, i) < roomOf(a, i) ? b : a));
+        return { o, first, room: roomOf(first, i), limit: first.limits.sum[i] };
+      })
+    : [];
+  const sum: StackLimits["sum"] = points.flatMap(({ o, first, room, limit }) =>
+    limit ? [{ f: o.f, spl: o.spl + room, who: limit.who, member: first.k, band: limit.band }] : [],
+  );
   // for music: each member's bands, their music limit over their passband, less the member's level
   const music = live.flatMap((r) =>
     r.limits.bands.map((b) => ({
@@ -170,9 +303,11 @@ export function stackLimits(
       r
         ? {
             limits: r.limits,
-            atLimit: sum.length
-              ? r.m.curve.map((o, i): FrequencyPoint => ({ f: o.f, spl: o.spl + stackRoom(i) }))
-              : [],
+            // every member at the stack's input: its curve and the stack's headroom, point by point
+            atLimit: points.map((p, i): FrequencyPoint => ({
+              f: p.o.f,
+              spl: (r.m.curve[i]?.spl ?? 0) + p.room,
+            })),
           }
         : null,
     ),

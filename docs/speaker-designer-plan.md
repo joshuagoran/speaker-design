@@ -338,13 +338,18 @@ Each PR stands alone. Lowest risk first.
         midway). Hi-fi and fill: a stack of one, the sub highpass as its crossover.
       - **Model** (`lib/speaker/stackResponse`, `stackLayout`). Each member runs through `speakerResponse` with its
         crossover as its input range, then its level, delay and each band's path to a point
-        `STACK_LISTEN_DISTANCE_M` (4 m) out, level with the highest band; the levels are moved back to 1 m. An auto
-        delay lines a member's path up with the latest member that has a set delay, never below 0. `stackLimits` takes
-        each member's `speakerLimits` with `stackCrossover` (the crossover is ahead of the amps, so it lifts the amp and
-        program ceilings in the sum) on one input.
+        `STACK_LISTEN_DISTANCE_M` (4 m) out, level with the highest band; the levels are moved back to 1 m.
+      - **Auto delay.** It puts a member in phase with the member it crosses (one's lowpass and the other's highpass
+        within an octave), at their crossover and at the listening point. The rule is the coverage page's
+        (`autoSubDelayMs`): the crossovers' share wrapped to a turn, the crossing bands' own phases (the mid at the sub
+        crossover), and their paths. It solves for the relative delay. Where the auto member would have to play early,
+        the others wait instead, so no delay is below 0. On the PA goldens the sub waits 0.3–1.1 ms and is within 3°
+        of the mid at the crossover; the sum there holds or improves on no delay.
+      - **Limits.** `stackLimits` takes each member's `speakerLimits` with `stackCrossover` (the crossover is ahead of
+        the amps, so it lifts the amp and program ceilings in the sum) on one input.
       - **Parity** (`tests/stack-response.test.ts`). A golden PA design's stack meets the PA page's system chart: the
-        sub within 0.06 dB, the mid and horn within 0.01 dB. Its sum is within 0.4 dB of the members summed on one axis
-        (the paths: the sub stands about 1 m below the horn's axis).
+        sub within 0.06 dB, the mid and horn within 0.01 dB. Its sum is within 0.4 dB of the members summed with their
+        delays on one axis (the paths: the sub stands about 1 m below the horn's axis).
       - **Page** (`#stack`). Members from the speaker library or the current PA design; pose, mirror, level, delay;
         crossovers; the response (50–120 dB) and maximum output (80–140 dB) with each member's curve; a stacked front
         drawing from `SpeakerFront`. Saves go to `stacks` with a copy of each member's speaker, so a stack opens as

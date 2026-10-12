@@ -2402,10 +2402,11 @@ export interface StackMemberResponse {
    */
   curve: FrequencyPoint[];
   pressure: Complex[];
-  /** the delay it plays with, ms: its own, or the stack's alignment worked out */
+  /**
+   * the delay it plays with, ms: its own, or the stack's alignment worked out; all moved up together where an auto
+   * member has to play early
+   */
   delayMs: number;
-  /** its path to the listening point, m: the mean of its bands' paths */
-  pathM: number;
 }
 
 /** A stack's response at its listening point, moved to 1 m (lib/speaker/stackResponse `stackResponse`). */
@@ -2428,7 +2429,10 @@ export interface StackLimits {
     member: number;
     band: BandId;
   })[];
-  /** one per member: its limits alone on its crossover (as the Designer shows them), and the member at the stack's limit */
+  /**
+   * one per member: its limits on its crossover, worked out with the crossover ahead of its amps (`stackCrossover`),
+   * and the member at the stack's limit
+   */
   members: ({ limits: SpeakerLimits; atLimit: FrequencyPoint[] } | null)[];
   /** the stack's level for music, dB at 1 m: its passband level where the first band of a member reaches its music limit */
   musicDb: number | null;
