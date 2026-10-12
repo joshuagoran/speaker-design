@@ -25,6 +25,23 @@ export const DRIVER_KIND_NAMES = {
   coaxial: "Coaxial",
 } as const satisfies Record<DriverKind, string>;
 
+/**
+ * The driver picker's types: one woofer list for the three woofer kinds (PA sub, PA mid-bass, Hi-fi woofer), with
+ * their size as a filter, then the other kinds.
+ */
+export const DRIVER_TYPE_NAMES = {
+  woofer: "Woofer",
+  compression: "Compression driver",
+  tweeter: "Tweeter",
+  coaxial: "Coaxial",
+} as const satisfies Partial<Record<DriverKind, string>>;
+
+/** The woofer size filter's first choice: every size. */
+export const ALL_SIZES = "All sizes";
+
+/** A woofer size as the size filter and the list's groups name it. */
+export const wooferSizeName = (size: number) => `${size} in`;
+
 /** Each vent kind as the Speaker page names it. */
 export const VENT_KIND_NAMES = {
   sealed: "Sealed",
