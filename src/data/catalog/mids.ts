@@ -967,7 +967,6 @@ export const MID_RAW: readonly RawDriver<MidDriver>[] = [
   },
   {
     id: "em3012",
-    leInModels: true,
     size: 12,
     lb: 7.1,
     name: "Eminence KappaLite 3012HO",
@@ -1339,7 +1338,6 @@ export const MID_RAW: readonly RawDriver<MidDriver>[] = [
   },
   {
     id: "f10pr320",
-    leInModels: true,
     size: 10,
     lb: 5.6,
     name: "FaitalPRO 10PR320",
@@ -1372,7 +1370,6 @@ export const MID_RAW: readonly RawDriver<MidDriver>[] = [
   },
   {
     id: "es10mb600",
-    leInModels: true,
     size: 10,
     lb: 15.9,
     name: "18Sound 10MB600",

@@ -15,7 +15,6 @@ import type { RawDriver, SubDriver } from "../../types";
 /** The sub the planner starts on. */
 export const BC18NBX_RAW: RawDriver<SubDriver> = {
   id: "bc18nbx",
-  leInModels: true,
   lb: 20,
   name: "B&C 18NBX100",
   maker: "bc",
@@ -118,7 +117,6 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
   },
   {
     id: "em4018",
-    leInModels: true,
     lb: 24,
     name: "Eminence Definimax 4018LF",
     maker: "eminence",
@@ -183,7 +181,6 @@ export const SUB_RAW: readonly RawDriver<SubDriver>[] = [
   },
   {
     id: "bc18tbx",
-    leInModels: true,
     lb: 28,
     name: "B&C 18TBX100",
     maker: "bc",
