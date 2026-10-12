@@ -20,7 +20,7 @@ import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { NO_FILTERS, lrFilter } from "../src/lib/speaker/specParts";
 import { filterTransfer } from "../src/lib/speaker/bandFilter";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { abs } from "../src/lib/acoustics/complex";
 import { ampVoltage, hornResponse, subThroughLowpass, ventSpeedLimit } from "../src/lib/pa/calc";
 import { CD_OPTIONS, HORN_OPTIONS, SUB_OPTIONS } from "../src/lib/data";

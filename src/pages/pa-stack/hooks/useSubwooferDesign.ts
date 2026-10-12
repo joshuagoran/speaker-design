@@ -8,27 +8,30 @@ import type {
   Setter,
   VentSpec,
 } from "../../../types";
+import type { PaDesignInputs } from "../../../lib/pa/paDesign";
 import { useState } from "react";
 
-export interface SubwooferDesign {
-  subDriver: SubDriver;
+export interface SubwooferDesign extends Pick<
+  PaDesignInputs,
+  | "subDriver"
+  | "portStyle"
+  | "subBoxDims"
+  | "subVentSpec"
+  | "subHighpassHz"
+  | "subHighpassType"
+  | "subAmpWatts"
+  | "maxPortAirSpeedMs"
+> {
   setSubDriver: Setter<SubDriver>;
-  portStyle: PortStyle;
   setPortStyle: Setter<PortStyle>;
-  subBoxDims: Dims3;
   setSubBoxDims: Setter<Dims3>;
-  subVentSpec: VentSpec;
   setSubVentSpec: Setter<VentSpec>;
   /** the side ducts' dividers' nominal size (their exact thickness is the Cutlist page's, `subVentSpec.div`) */
   ductDividerPanel: PanelNominal;
   setDuctDividerPanel: Setter<PanelNominal>;
-  subHighpassHz: number;
   setSubHighpassHz: Setter<number>;
-  subHighpassType: HighpassType;
   setSubHighpassType: Setter<HighpassType>;
-  subAmpWatts: number;
   setSubAmpWatts: Setter<number>;
-  maxPortAirSpeedMs: number;
   setMaxPortAirSpeedMs: Setter<number>;
   setSubBoxDim: (k: keyof Dims3, v: number) => void;
   setSubVentField: (k: Exclude<keyof VentSpec, "div">, v: number) => void;

@@ -1,5 +1,5 @@
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
-import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
+import type { CutlistOptions } from "./useCutlistOptions";
 import { cutParts } from "../../lib/pa/calc";
 import { CutlistPage } from "./CutlistPage";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";

@@ -10,7 +10,7 @@ import type {
 import { layersFromPa } from "../../lib/speaker/paSpec";
 import { speakerFromHifi } from "../../lib/speaker/hifiSpec";
 import { speakerIdentity } from "../../lib/speaker/specParts";
-import { DEFAULT_COVERAGE_LAYOUT } from "../coverage/useCoverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import {
   SPEAKER_CURRENT_START,
   SPEAKER_START,

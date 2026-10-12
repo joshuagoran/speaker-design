@@ -1,4 +1,4 @@
-import { DEFAULT_PA } from "../../../lib/defaults";
+import { DEFAULT_PA } from "../../lib/defaults";
 import type {
   CornerJoint,
   CutStyle,
@@ -7,7 +7,7 @@ import type {
   PanelExactIn,
   PlywoodSheetKind,
   Setter,
-} from "../../../types";
+} from "../../types";
 import { useState } from "react";
 
 export interface CutlistOptions {

@@ -3,7 +3,7 @@ import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PORT_SIZE } from "../../lib/de
 import { isCoax, portAfterToggle } from "../../lib/hifi/hifi";
 import { byId } from "../../lib/tables";
 import { useConfigStore, type ConfigStore } from "../../components/saved-configs/useConfigStore";
-import { deriveHifiDesign } from "./hifiDesign";
+import { deriveHifiDesign } from "../../lib/hifi/hifiDesign";
 import { useHifiOptimizer } from "./useHifiOptimizer";
 import type { HifiOptimizer } from "./useHifiOptimizer";
 import type {
@@ -30,7 +30,7 @@ import type {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStoredCutlistOptions } from "../cutlist/useStoredCutlistOptions";
 import { CUTLIST_PROJECT } from "../../constants/cutlistProjects";
-import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
+import type { CutlistOptions } from "../cutlist/useCutlistOptions";
 import type { CabinetStyle } from "../pa-stack/hooks/useCabinetStyle";
 import { panelFor, panelIn, restoredPanel } from "../../lib/panel";
 

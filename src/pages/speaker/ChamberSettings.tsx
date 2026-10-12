@@ -23,7 +23,7 @@ import { ToggleGroup } from "../../components/ui/ToggleGroup";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
-import { HIFI_PASSIVES_BY_SIZE } from "../hifi/hifiDriverLists";
+import { HIFI_PASSIVES_BY_SIZE } from "../../lib/hifi/hifiDriverLists";
 import {
   CHAMBER_LOAD_NAMES,
   SPEAKER_TEXT,

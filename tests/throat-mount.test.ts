@@ -16,7 +16,7 @@ import {
 import { guideMountChip, hifiChips, hifiSystem } from "../src/lib/hifi/hifi";
 import { BOLT_MOUNT, THREAD_MOUNT } from "../src/constants/throatMounts";
 import { optimizeHifiSpeaker } from "../src/lib/hifi/optimize";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { DEFAULT_HIFI } from "../src/lib/defaults";
 import { byIdOrThrow } from "../src/lib/tables";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";

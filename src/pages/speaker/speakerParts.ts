@@ -25,7 +25,7 @@ import {
   DEFAULT_PA,
   DEFAULT_PORT_SIZE,
 } from "../../lib/defaults";
-import { HIFI_TWEETERS_BY_TYPE, HIFI_WOOFERS_BY_SIZE } from "../hifi/hifiDriverLists";
+import { HIFI_TWEETERS_BY_TYPE, HIFI_WOOFERS_BY_SIZE } from "../../lib/hifi/hifiDriverLists";
 import { DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
 import { HIFI_PORT_MAX_MS } from "../../constants/hifiEngine";
 

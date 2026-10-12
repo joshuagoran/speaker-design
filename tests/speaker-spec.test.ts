@@ -20,7 +20,7 @@ import { savedHardware } from "../src/lib/pa/hardware";
 import { byIdOrThrow } from "../src/lib/tables";
 import { CATALOG_TABLE_NAMES } from "../src/constants/catalogTables";
 import { hornGrid, hornModel } from "../src/lib/acoustics/hornModel";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import {
   FILL_OPTIONS,
   HIFI_COAXES,

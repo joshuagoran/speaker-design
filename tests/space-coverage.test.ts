@@ -2,14 +2,14 @@
 // a space on the coverage page's floor maps the floor as the page does; height and tilt move the levels as they should.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { derivePaDesign } from "../src/pages/pa-stack/hooks/paDesign";
+import { derivePaDesign } from "../src/lib/pa/paDesign";
 import {
   balancedLevelsOf,
   coverageGeometry,
   musicBalanceOf,
-  type CoverageInputs,
-} from "../src/pages/coverage/useCoverageMap";
-import { DEFAULT_COVERAGE_LAYOUT } from "../src/pages/coverage/useCoverageLayout";
+  type PaBalanceInputs,
+} from "../src/lib/pa/musicBalance";
+import { DEFAULT_COVERAGE_LAYOUT } from "../src/lib/pa/coverageLayout";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import {
   autoSubDelayMs,
@@ -42,7 +42,7 @@ import type {
 } from "../src/types";
 
 /** The PA coverage page's inputs for the starting design, as the planner derives them. */
-function paInputs(): CoverageInputs {
+function paInputs(): PaBalanceInputs {
   const d = DEFAULT_PA;
   const derived = derivePaDesign({
     subDriver: d.sub,
@@ -77,10 +77,8 @@ function paInputs(): CoverageInputs {
     ...derived,
     subBox: d.cDim,
     subMidCrossoverHz: d.xoLo,
-    subMidCrossoverOrder: d.xoLoOrder,
     subHighpassHz: d.hpf,
     subHighpassType: d.hpType,
-    midHornCrossoverOrder: d.xoHiOrder,
     midHornCrossoverHz: d.xoHi,
     midBelowSubDb: d.tilt,
     hornBelowMidDb: d.hfTilt,

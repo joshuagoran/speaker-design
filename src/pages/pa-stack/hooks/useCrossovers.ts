@@ -1,15 +1,15 @@
 import { DEFAULT_PA } from "../../../lib/defaults";
 import { useState } from "react";
 import type { CrossoverOrder, Setter } from "../../../types";
+import type { PaDesignInputs } from "../../../lib/pa/paDesign";
 
-export interface Crossovers {
-  subMidCrossoverHz: number;
+export interface Crossovers extends Pick<
+  PaDesignInputs,
+  "subMidCrossoverHz" | "midHornCrossoverHz" | "subMidCrossoverOrder" | "midHornCrossoverOrder"
+> {
   setSubMidCrossoverHz: Setter<number>;
-  midHornCrossoverHz: number;
   setMidHornCrossoverHz: Setter<number>;
-  subMidCrossoverOrder: CrossoverOrder;
   setSubMidCrossoverOrder: Setter<CrossoverOrder>;
-  midHornCrossoverOrder: CrossoverOrder;
   setMidHornCrossoverOrder: Setter<CrossoverOrder>;
 }
 

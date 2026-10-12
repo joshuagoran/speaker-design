@@ -34,7 +34,7 @@ import {
   PA_V2_MID_BOX,
   PA_V2_SUB_BIN,
 } from "../../lib/defaults";
-import { DEFAULT_COVERAGE_LAYOUT } from "../coverage/useCoverageLayout";
+import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { CATALOG_TABLE_NAMES } from "../../constants/catalogTables";
 import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";

@@ -17,7 +17,7 @@ import {
   slotOpeningsAt,
   speakerLayout,
 } from "../src/lib/speaker/speakerLayout";
-import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
+import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
 import { SPEAKER_TEMPLATES, templateSpeaker } from "../src/pages/speaker/speakerTemplates";
 import { SPEAKER_TEXT } from "../src/constants/speakerPage";
 import { hifiCutParts } from "../src/lib/hifi/cutlist";

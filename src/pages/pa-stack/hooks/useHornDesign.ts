@@ -1,13 +1,14 @@
 import { DEFAULT_PA } from "../../../lib/defaults";
 import type { CompressionDriver, Horn, Setter } from "../../../types";
+import type { PaDesignInputs } from "../../../lib/pa/paDesign";
 import { useState } from "react";
 
-export interface HornDesign {
-  hornOption: Horn;
+export interface HornDesign extends Pick<
+  PaDesignInputs,
+  "hornOption" | "compressionDriver" | "hornAmpWatts"
+> {
   setHornOption: Setter<Horn>;
-  compressionDriver: CompressionDriver;
   setCompressionDriver: Setter<CompressionDriver>;
-  hornAmpWatts: number;
   setHornAmpWatts: Setter<number>;
   hornBelowMidDb: number;
   setHornBelowMidDb: Setter<number>;

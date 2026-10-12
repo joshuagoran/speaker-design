@@ -13,7 +13,7 @@ import type {
   PanelNominal,
   PurchasedPart,
 } from "../../types";
-import type { CutlistOptions } from "../pa-stack/hooks/useCutlistOptions";
+import type { CutlistOptions } from "./useCutlistOptions";
 import { Tooltip } from "../../components/ui/Tooltip";
 import { Button } from "../../components/ui/Button";
 import { NumberField } from "../../components/ui/NumberField";
