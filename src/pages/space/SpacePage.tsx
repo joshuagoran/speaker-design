@@ -50,6 +50,7 @@ import type { StackPlanner } from "../stack/useStack";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import { PlacementSettings } from "./PlacementSettings";
 import { HardwareSettings } from "./HardwareSettings";
+import { SpaceAssumptions } from "./SpaceAssumptions";
 import { emptySpace, itemName } from "./spaceSaves";
 import { spaceFromStart, type SpacePlanner } from "./useSpace";
 import { STACK_STARTS, startGroup } from "../stack/stackPresets";
@@ -215,6 +216,14 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 onBand={space.setBand}
                 onFreqHz={space.setFreqHz}
                 oneNote={SPACE_TEXT.oneNote(SINGLE_FREQ_RANGE[1])}
+              />
+            </div>
+            <div className={`${READING_WIDTH} mt-3`}>
+              <SpaceAssumptions
+                venue={venue}
+                levelRef={space.levelRef}
+                balance={space.balance}
+                target={space.target}
               />
             </div>
           </section>
