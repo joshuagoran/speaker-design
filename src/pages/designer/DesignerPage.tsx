@@ -8,7 +8,7 @@ import { SettingsColumn, SettingsSection } from "../../components/ui/SettingsCol
 import { SectionHeading } from "../../components/ui/SectionHeading";
 import { Button } from "../../components/ui/Button";
 import { TextField } from "../../components/ui/TextField";
-import { SelectField, type SelectOption } from "../../components/ui/SelectField";
+import { SelectField } from "../../components/ui/SelectField";
 import { Notice } from "../../components/ui/Notice";
 import { WarningChips } from "../../components/chips/WarningChips";
 import { ResponseChart } from "../../components/charts/ResponseChart";
@@ -54,7 +54,7 @@ import { BandSettings } from "./BandSettings";
 import { FilterFields } from "./FilterFields";
 import { bandText, chamberText, countText, inputText } from "./designerText";
 import { bandChips, chamberChips } from "./designerChips";
-import { paStarts, startSpeaker } from "./designerStarts";
+import { designerStarts, startGroup, startSpeaker } from "./designerStarts";
 import type { Designer } from "./useDesigner";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 import type { HifiPlanner } from "../hifi/useHifiPlanner";
@@ -84,19 +84,19 @@ const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
 
 /**
  * The Designer: one speaker from its chambers, drivers and bands, its response and its maximum output on fixed axes
- * with the limits' checks, and the speaker library. A design starts empty, from a saved speaker, or from the current PA
- * or Hi-fi design.
+ * with the limits' checks, and the speaker library. A design starts from a template (empty, the PA, Hi-fi, monitor,
+ * fill and PA v2 boxes), from a saved speaker, or from the current PA or Hi-fi design.
  */
 export function DesignerPage({ designer, planner, hifi }: Props) {
   const pal = usePalette();
   const { spec, response, limits, store, snapshot, restore } = designer;
   const folds = useFolds("designer.settingsFolds", keysOf(DESIGNER_SETTINGS_SECTIONS));
-  const starts: DesignerStart[] = [
-    DESIGNER_START.empty,
-    DESIGNER_START.hifi,
-    ...paStarts(planner.layout),
-  ];
-  const startOptions: SelectOption[] = starts.map((id) => ({ id, name: DESIGNER_START_NAMES[id] }));
+  const starts = designerStarts(planner.layout);
+  const startOptions = starts.map((id) => ({
+    id,
+    name: DESIGNER_START_NAMES[id],
+    group: startGroup(id),
+  }));
   const [start, setStart] = useState<DesignerStart>(DESIGNER_START.empty);
   const startFrom = () =>
     designer.setSpec(
@@ -334,7 +334,8 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 label={DESIGNER_START_TEXT.startFrom}
                 options={startOptions}
                 value={byId(startOptions, start)}
-                onChange={(o) => setStart(starts.find((s) => s === o.id) ?? DESIGNER_START.empty)}
+                onChange={(o) => setStart(o.id)}
+                group={(o) => o.group}
               />
               <Button onClick={startFrom} className="mb-2">
                 {DESIGNER_START_TEXT.startOver}

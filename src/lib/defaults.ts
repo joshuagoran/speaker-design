@@ -8,7 +8,13 @@ import {
   BC18NBX,
   CABINETS,
   F12PR300,
+  FILL_OPTIONS,
   FORMATS,
+  HIFI_TWEETERS,
+  HIFI_WAVEGUIDES,
+  HIFI_WOOFERS,
+  HORN_OPTIONS,
+  MID_OPTIONS,
   N314T,
   SB17NRX,
   SB26STCN,
@@ -18,11 +24,18 @@ import { byIdOrThrow } from "./tables";
 import { CUTLIST_DEFAULTS } from "./pa/cutlist";
 import { DEFAULT_HARDWARE } from "./pa/hardware";
 import type {
+  BandFilter,
   Cabinet,
   CompressionDriver,
+  CrossoverOrder,
   FillDesignState,
+  FillDriver,
   Format,
   HifiDesignState,
+  HifiPort,
+  HifiTweeter,
+  HifiWaveguide,
+  HifiWoofer,
   Horn,
   MidBox,
   MidDriver,
@@ -229,4 +242,100 @@ export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
   bands: [{ id: SPEAKER_BAND.low, name: SPEAKER_BAND_NAMES.low, ...DEFAULT_SPEAKER_BAND }],
   input: NO_FILTERS,
   look: { cabFinish: DEFAULT_PA.cabFinish, baffleColor: DEFAULT_PA.baffleColor },
+};
+
+/** A vented box's starting size and round port, as the Hi-fi page takes them. */
+interface StartBox {
+  dims: HifiDesignState["boxDims"];
+  port: HifiPort;
+}
+
+/**
+ * The Designer's DJ booth monitor templates (docs/speaker-designer-plan.md P4 and the owner decisions): a pair, one on
+ * each side of the DJ, hung or on pedestals (not floor wedges), 0.5–1.5 m away, 90–100° wide, crossed to the subs at
+ * 70 Hz LR24 (60–80 Hz). Two options:
+ * - a coaxial in a small vented box: the Celestion FTX1025 (10″, 100°) in the Fills page's box and port with ½″ walls,
+ *   crossed at its HF section's recommended minimum;
+ * - an 8″ and a 1″ compression driver on a small 4–6″ horn mounted tight above it, crossed at about 2.5–3 kHz (the low
+ *   end: an 8″ narrows to about 65° at 2.7 kHz): the FaitalPRO 8PR200 (published to 5 kHz) and the B&C DE250 on the
+ *   B&C ME20 (90° × 60°, holds its pattern above about 1.9 kHz), in a vented ¾″ box.
+ */
+export const DEFAULT_MONITOR = {
+  highpass: { hz: 70, order: 4 },
+  coax: byIdOrThrow(FILL_OPTIONS, "celftx1025", CATALOG_TABLE_NAMES.fills),
+  coaxBox: { dims: DEFAULT_FILL.boxDims, port: { shape: "round", ...DEFAULT_FILL.portSpec } },
+  woofer: byIdOrThrow(HIFI_WOOFERS, "f8pr200", CATALOG_TABLE_NAMES.hifiWoofers),
+  tweeter: byIdOrThrow(HIFI_TWEETERS, "de250", CATALOG_TABLE_NAMES.hifiTweeters),
+  waveguide: byIdOrThrow(HIFI_WAVEGUIDES, "me20", CATALOG_TABLE_NAMES.horns),
+  crossoverHz: 2500,
+  hornBox: { dims: { w: 11, h: 18, d: 12 }, port: { shape: "round", n: 1, dia: 3, len: 6 } },
+} satisfies {
+  highpass: { hz: BandFilter["hz"]; order: CrossoverOrder };
+  coax: FillDriver;
+  coaxBox: StartBox;
+  woofer: HifiWoofer;
+  tweeter: HifiTweeter;
+  waveguide: HifiWaveguide;
+  crossoverHz: number;
+  hornBox: StartBox;
+};
+
+/**
+ * The PA v2 sub bin (docs/pa-v2-plan.md, the lead option and its mock-up; the horn engine's Hornresp case
+ * tests/hornresp/sub-bin-vented holds one driver's share): 18″ subs stacked in one throat, front-loaded on a straight
+ * 1-D flare from the cones, a vented rear chamber with one slot on each front side, folded once along the back wall,
+ * tuned to ~35 Hz with a 30 Hz BW24 subsonic, on the PA's 800 W. The sizes are each driver's share; the template takes
+ * them once per driver.
+ */
+export const PA_V2_SUB_BIN = {
+  sub: BC18NBX,
+  /** the box's outside width and depth, mm (its height: the drivers' openings and two walls) */
+  widthMm: 1182,
+  depthMm: 766,
+  /** each driver's share of the throat's and the mouth's height, mm: two 18″ fill the 920 mm mouth */
+  openingMm: 460,
+  /** the flare: from the cone's area to each driver's share of the mouth, cm², over its length, cm, in conical steps */
+  mouthCm2: 4500,
+  flareCm: 50,
+  flareSteps: 4,
+  /** each driver's share of the rear chamber's net air, L: the wedges beside the flare join it (~324 L for two) */
+  rearLiters: 162,
+  /** the slots: this wide and the mouth's height, mm (~600 cm² per driver), and their folded length */
+  slotWidthMm: 65,
+  slotLengthMm: 680,
+  subsonic: { hz: 30, type: "BW24" },
+} satisfies {
+  sub: SubDriver;
+  subsonic: BandFilter;
+  [figure: string]: number | SubDriver | BandFilter;
+};
+
+/**
+ * The PA v2 mid box (docs/pa-v2-plan.md, the lead option and its mock-up; the Hornresp case tests/hornresp/mid-pair):
+ * two 10″ in one throat, ~280 mm apart, a 1 L throat chamber, an exponential 1-D flare, a vented rear chamber (~34 L,
+ * the wedges sealed) with a straight slot on each front side, tuned to ~95 Hz, on 450 W per driver. It crosses to the
+ * HF (the N314T on the DIY R-OSSE, its own box) at the R-OSSE's lowest crossover.
+ */
+export const PA_V2_MID_BOX = {
+  mid: byIdOrThrow(MID_OPTIONS, "es10mb600", CATALOG_TABLE_NAMES.mids),
+  drivers: 2,
+  hfHorn: byIdOrThrow(HORN_OPTIONS, "diy_rosse110x50", CATALOG_TABLE_NAMES.horns),
+  /** the box's outside width and depth, mm (its height: the opening and two walls) */
+  widthMm: 614,
+  depthMm: 526,
+  /** the throat's and the mouth's height, mm, and the cones' spacing in it */
+  openingMm: 560,
+  coneSpacingMm: 280,
+  throatChamberL: 1,
+  throatCm2: 800,
+  mouthCm2: 2800,
+  flareCm: 35,
+  rearLiters: 34,
+  slotWidthMm: 21,
+  slotLengthMm: 165,
+  ampW: 450,
+} satisfies {
+  mid: MidDriver;
+  hfHorn: Horn;
+  [figure: string]: number | MidDriver | Horn;
 };
