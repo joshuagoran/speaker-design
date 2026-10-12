@@ -32,7 +32,7 @@ import {
   STACK_SETTINGS_SECTIONS,
   type StackSettingsSection,
 } from "../../constants/settingsSections";
-import { STACK_TEXT } from "../../constants/stack";
+import { OLD_SAVE_GROUP_NAMES, STACK_TEXT } from "../../constants/stack";
 import { DEFAULT_COVERAGE_LAYOUT } from "../../lib/pa/coverageLayout";
 import { FilterFields } from "../speaker/FilterFields";
 import { inputText } from "../speaker/speakerText";
@@ -40,6 +40,8 @@ import { isSavedSpeaker, type SpeakerPageState } from "../speaker/useSpeakerPage
 import { paPlannerDesign } from "../speaker/SpeakerPage";
 import { MemberSettings } from "./MemberSettings";
 import { DRAFT_STACK_ID, emptyStack } from "./stackSaves";
+import { stackFromOldSave, type OldSave } from "./oldSaves";
+import { useOldSaves } from "./useOldSaves";
 import type { StackPlanner } from "./useStack";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 
@@ -76,6 +78,17 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
   });
   const [pick, setPick] = useState<string>("");
   const picked = library.find((o) => o.id === pick) ?? library[0];
+  /** the PA and Hi-fi pages' saves, which open as stacks */
+  const oldSaves = useOldSaves();
+  const [oldPick, setOldPick] = useState<string>("");
+  const oldPicked = oldSaves.find((o) => o.id === oldPick) ?? oldSaves[0];
+  /** whether the save last opened doesn't read as its page's (it opens as nothing, and a notice says so) */
+  const [oldSaveBad, setOldSaveBad] = useState(false);
+  const openOldSave = (save: OldSave) => {
+    const opened = stackFromOldSave(save);
+    setOldSaveBad(!opened);
+    if (opened) stack.setDesign(opened);
+  };
   /** each member's name: its speaker's, numbered */
   const names = members.map(
     (m, k) => `${k + 1}. ${design.speakers.find((s) => s.id === m.speakerId)?.name ?? m.speakerId}`,
@@ -245,6 +258,25 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 <Button onClick={() => stack.setDesign(emptyStack())}>{STACK_TEXT.clear}</Button>
               </div>
               <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.fromPaHint}</p>
+              {oldPicked && (
+                <>
+                  <SelectField
+                    label={STACK_TEXT.oldSave}
+                    options={oldSaves}
+                    value={oldPicked}
+                    onChange={(o) => {
+                      setOldPick(o.id);
+                      setOldSaveBad(false);
+                    }}
+                    group={(o) => OLD_SAVE_GROUP_NAMES[o.kind]}
+                  />
+                  <Button className="mb-2" onClick={() => openOldSave(oldPicked)}>
+                    {STACK_TEXT.openOldSave}
+                  </Button>
+                  {oldSaveBad && <Notice>{STACK_TEXT.oldSaveBad}</Notice>}
+                  <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.oldSaveHint}</p>
+                </>
+              )}
             </>,
           )}
           {section(

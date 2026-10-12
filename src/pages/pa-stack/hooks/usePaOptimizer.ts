@@ -1,4 +1,5 @@
 import { LOCK_KEYS } from "../../../constants/lockKeys";
+import { OLD_SAVE_COLLECTIONS } from "../../../constants/speakerSpec";
 import { pickDefined } from "../../../lib/records";
 import { PA_RUNNERS } from "../../../lib/pa/runOptimizer";
 import { compareDrivers } from "../../../lib/pa/compareDrivers";
@@ -195,7 +196,7 @@ export function usePaOptimizer({ snapshot, restore, db, cutlist }: Props): PaOpt
     const m = k.metrics;
     try {
       await db
-        .collection("configs")
+        .collection(OLD_SAVE_COLLECTIONS.pa)
         .doc()
         .set({
           ...snapshot(),

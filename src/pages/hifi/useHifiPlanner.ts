@@ -1,4 +1,5 @@
 import { HIFI_WAVEGUIDES, hifiDriverById, hifiDriverByIdOrThrow } from "../../lib/data";
+import { OLD_SAVE_COLLECTIONS } from "../../constants/speakerSpec";
 import { DEFAULT_HIFI, DEFAULT_HIFI_LOOK, DEFAULT_PORT_SIZE } from "../../lib/defaults";
 import { isCoax, portAfterToggle } from "../../lib/hifi/hifi";
 import { byId } from "../../lib/tables";
@@ -134,7 +135,7 @@ export function useHifiPlanner(): HifiPlanner {
   // the 3D view's look (PA's pickers and finishes, this design's own choice); outside the model, so it isn't derived
   const [cabinetFinish, setCabinetFinish] = useState<string>(DEFAULT_HIFI_LOOK.cabFinish);
   const [baffleColor, setBaffleColor] = useState<string>(DEFAULT_HIFI_LOOK.baffleColor);
-  const store = useConfigStore("hifiConfigs");
+  const store = useConfigStore(OLD_SAVE_COLLECTIONS.hifi);
   const snapshot = (): HifiCardConfig => ({
     woofer: woofer.id,
     tweeter: tweeter.id,

@@ -216,3 +216,18 @@ export const STACKS_COLLECTION = "stacks";
 
 /** The saved spaces' collection under users/{uid}, next to the speaker library and the stacks. */
 export const SPACES_COLLECTION = "spaces";
+
+/**
+ * The PA and Hi-fi pages' saves under users/{uid}. Those pages go away at L3f; the Stack page opens their saves through
+ * the one read adapter (src/pages/stack/oldSaves).
+ */
+export const OLD_SAVE_COLLECTIONS = {
+  pa: "configs",
+  hifi: "hifiConfigs",
+} as const;
+/** Which page an old save is from. */
+export type OldSaveKind = keyof typeof OLD_SAVE_COLLECTIONS;
+export const OLD_SAVE_KIND = { pa: "pa", hifi: "hifi" } as const satisfies Record<
+  OldSaveKind,
+  OldSaveKind
+>;
