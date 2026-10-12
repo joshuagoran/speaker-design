@@ -277,20 +277,143 @@ Each PR stands alone. Lowest risk first.
         part of the PA tube rule), and a Hi-fi slot (the model takes it along the bottom, with one shelf).
   - **L3f Switch-over** (owner decisions, Oct 2026, #150). The PA page becomes a stack preset and the Hi-fi page
     goes away. Then `designer` merges into `main`.
-    - The PA and Hi-fi optimizers stay. They become an "Optimize" button that works only on the PA and Hi-fi
-      presets. They stay until an optimizer for any speaker exists.
+    - **Parity rule** (owner, Oct 2026). `designer` does not merge into `main` until the Speaker, Stack and Space
+      pages do everything the PA page and the Hi-fi page do (the two parity tables below). The PA page goes last,
+      after parity. Every feature with no home moves before the merge: each open row of both tables blocks it.
+    - **Optimizer** (owner, Oct 2026): "maybe we need to rethink the optimizer overall". There is no "Optimize"
+      button on the presets and no `origin` field for now. The PA and Hi-fi optimizers stay on their pages until the
+      rethink (see "Optimizer rethink" below) gives them a new home.
     - The Space page replaces the Coverage page. `tests/space-coverage.test.ts` checks the Space page against the
       Coverage page (see "Parity" in L4b).
     - The PA project's Fills and Cutlist tabs go away, and the Hi-fi cutlist goes with the Hi-fi page. Fills become
       Speaker presets. The Speaker project keeps its Cutlist tab.
     - Old PA and Hi-fi saves open through one read adapter, as speakers and a stack (the exception in L1's "Old
-      saves").
+      saves"). The Stack page lists them.
     - **Band levels in the preset** (owner decision). The PA page goes away, so it is not the source of the levels.
       Today `paSpec` sets each band's Level to 0 dB (the horn takes the tilt), from a 2.83 V input. This is not the
       PA page's music balance: on the Space page the horn plays 11.3 dB and the mid 1.8 dB away from it. When the PA
       design becomes a preset, calculate the music balance once and save it in each band's Level in the preset
       data. Later, an "Auto balance" button on the Stack page can set the band Levels for music, for any stack.
+    - **First page** (owner, Oct 2026). When the PA page goes, the app opens on the Stack page with the PA preset.
+    - **Notes** (owner, Oct 2026). The Notes page becomes a static "Notes" tab in the Space project. Later, the Space
+      gets a rich-text notes field.
+    - **Weight check** (owner, Oct 2026). The fixed 125 lb sub check goes with the PA page. A weight limit stays only
+      as an optimizer limit ("optimize up to a maximum weight").
+    - **Sub-PRs.** (1) Move the pure PA and Hi-fi code into `lib` (#154). (2) The old-save read adapter and its list
+      on the Stack page. (3) The music balance in the PA preset's band Levels, the Stack presets (PA stack, pole,
+      satellite, tower; Hi-fi pair), and the Space page reads the preset. Then one PR for each parity row or group,
+      in the table's order. Last: remove the Hi-fi, Fills, Coverage and PA pages, open on the Stack page, and merge
+      into `main`.
     - Order: first the rename to the Speaker page (done), then L3f and the #150 UI fixes in parallel.
+    - **Feature parity: the PA page.** "Home" is the page that takes the feature. Status: done, partial or to do.
+
+      | Feature (today)                                                    | Home                                                                                           | Status                                                                            |
+      | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+      | Layouts: stack, pole, satellite, tower                             | Stack presets (and Speaker templates for the boxes)                                            | Templates done; presets in sub-PR 3                                               |
+      | Sub, mid, horn settings (driver, box, vent, highpass, amp)         | Speaker: chambers, drivers, bands                                                              | Done                                                                              |
+      | Crossovers (sub to mid, mid to horn)                               | Speaker bands (in the box), Stack crossovers (between boxes)                                   | Done                                                                              |
+      | Music balance (mid below sub, horn below mid)                      | Band Levels in the preset; Stack "Auto balance" later                                          | Preset in sub-PR 3; Auto balance to do                                            |
+      | Build: bracing, back joint, inset, top                             | Speaker "Construction" fold                                                                    | Done                                                                              |
+      | Plywood size of the walls (the baffles stay 3/4 in)                | Speaker "Construction" fold (the spec has `cabinet.panel`)                                     | To do: no setting yet                                                             |
+      | Plywood size of the side ducts' dividers                           | Speaker chamber vent settings                                                                  | To do: no setting yet                                                             |
+      | Warning: the horn's throat and the driver's exit differ            | Speaker driver chips                                                                           | To do: the Speaker page has no such check                                         |
+      | Handles, input dish, horn posts                                    | Speaker "Construction" fold (the spec has `cabinet.hardware`)                                  | Spec done; settings to do                                                         |
+      | Look: finish, baffle color, horn color                             | Speaker "Look" fold                                                                            | Done                                                                              |
+      | Horn mount (aluminum plate or ply)                                 | Speaker horn settings                                                                          | Partial: the spec keeps the mount; no setting yet                                 |
+      | Response and maximum output (sub, mid, horn)                       | Speaker charts                                                                                 | Done                                                                              |
+      | System chart (the bands summed)                                    | Stack response and maximum output                                                              | Done                                                                              |
+      | Chips: Xmax, port speed, power, keep-up at the crossovers          | Speaker band and chamber chips; Stack for the crossovers between boxes                         | Partial: keep-up between boxes to do                                              |
+      | Chips: duct fit, hardware fit                                      | Speaker chamber chips                                                                          | To do                                                                             |
+      | 125 lb sub check                                                   | Dropped (owner): a weight limit only as an optimizer limit                                     | Dropped                                                                           |
+      | 3D stack view (cutaway, full screen)                               | Stack: a 3D view of the members                                                                | To do (Speaker has a 3D view of one box)                                          |
+      | Dispersion map                                                     | Speaker (one box) and Stack (the members together)                                             | To do                                                                             |
+      | Totals: price, weight, stack height                                | Speaker: price and weight; Stack: the sum and the height                                       | Partial: Speaker weight done; price with the #150 parts table; Stack totals to do |
+      | Details: bracing per box, panels under the target                  | Speaker "Weight and bracing"                                                                   | Done                                                                              |
+      | Saved designs                                                      | Stack library (`stacks`); old saves through the adapter                                        | Library done; adapter in sub-PR 2                                                 |
+      | Seed import (`data/configs-seed.json`)                             | Dropped with the PA page: a seed a user imported is in `configs` and opens through the adapter | Sub-PR 2                                                                          |
+      | Optimizer: goals, limits, locks, cards, driver compare             | See "Optimizer rethink"                                                                        | Stays on the PA page until the rethink                                            |
+      | Phone summary strip                                                | Stack page on phones                                                                           | To do                                                                             |
+      | Coverage map: stacks, toe-in, listener, bands                      | Space                                                                                          | Done                                                                              |
+      | Target level                                                       | Space                                                                                          | Done                                                                              |
+      | "Measured at" (listener, 1 m from the stacks, audience)            | Space: the listening area today; add the listener and 1 m                                      | Partial                                                                           |
+      | Subs in the stacks, center pair, one center sub                    | Space: a sub placement or a preset that places them                                            | To do (Space can place subs by hand)                                              |
+      | Mirror pair, ear height, room, materials, crowd                    | Space                                                                                          | Done                                                                              |
+      | Sub delay to the mids                                              | Stack auto delay                                                                               | Done                                                                              |
+      | Listener response with the music-balance target curve              | Space listener response, with the target curve                                                 | Partial: the target curve to do                                                   |
+      | "Turned down to balance" (each band's pad)                         | Space levels (each band's level at the listening area)                                         | To do                                                                             |
+      | Amp power table (power each channel needs)                         | Space "Hardware" fold                                                                          | To do                                                                             |
+      | Assumptions list                                                   | Space, below the map                                                                           | To do                                                                             |
+      | Cutlist of one box                                                 | Speaker Cutlist tab                                                                            | Done                                                                              |
+      | Cutlist of the whole stack (both boxes on the same sheets)         | Stack: a Cutlist tab that packs every member's parts                                           | To do                                                                             |
+      | Bought parts                                                       | Speaker Cutlist parts table (#150)                                                             | With #150                                                                         |
+      | Fills page (coaxial fill box)                                      | Speaker "Fill" template                                                                        | Done                                                                              |
+      | Fill chips (HF pad and power limit)                                | Speaker band chips                                                                             | To do                                                                             |
+      | Fill delay and level to the mains                                  | Space                                                                                          | To do (plan P5)                                                                   |
+      | Notes: racks, signal path, amps, DSP, passive crossover, materials | Space "Notes" tab (static); rich text later                                                    | To do                                                                             |
+
+    - **Feature parity: the Hi-fi page.**
+
+      | Feature (today)                                           | Home                                                    | Status                                            |
+      | --------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------- |
+      | Woofer, tweeter, waveguide, coaxial, box, vent, radiators | Speaker                                                 | Done                                              |
+      | Crossover (frequency and order), amps                     | Speaker bands                                           | Done                                              |
+      | Roundover, tweeter offset                                 | Speaker cabinet and driver positions                    | Done                                              |
+      | Sensitivity and maximum output charts                     | Speaker                                                 | Done                                              |
+      | Baffle-step compensation (`bsc`, a shelf)                 | Speaker: a shelf filter on a band                       | To do (`speakerFromHifi` drops it)                |
+      | Baffle diffraction ripple                                 | Speaker response (the model has no baffle step yet)     | To do                                             |
+      | Near-field results at the seat                            | Space listener response (baffle step, driver positions) | Partial                                           |
+      | Placement, wall distance, spacing, toe-in, seat           | Space (from the Hi-fi preset)                           | Model done (`layersFromHifi`); preset in sub-PR 3 |
+      | Dispersion map                                            | Speaker                                                 | To do                                             |
+      | 3D view                                                   | Speaker                                                 | Done                                              |
+      | Chips (waveguide pattern, coverage, HF headroom)          | Speaker band chips                                      | Partial                                           |
+      | Cutlist                                                   | Speaker Cutlist tab                                     | Done                                              |
+      | Saved designs                                             | Old saves through the adapter                           | Sub-PR 2                                          |
+      | Optimizer                                                 | See "Optimizer rethink"                                 | Stays on the Hi-fi page until the rethink         |
+
+    - **Optimizer rethink** (owner, Oct 2026; planned).
+      - **Today: the PA optimizer** (`lib/pa/optimize`, `optimizeExact`; `docs/optimizer-plan.md`).
+        - Inputs. It starts from the current PA design. The user taps goals in order: cheaper, lighter, lower,
+          louder. A room size (500, 750 or 1000 sq ft, or outdoors) sets the output target. The limits are a maximum
+          weight per box and a budget. Locks hold 11 parts and settings. Each box size has a lock per axis: free,
+          exact or a maximum.
+        - Search: a quick search (screen sub, volume, tuning and highpass; build real boxes and vents; add mids,
+          crossovers and horn pairs; check the finalists with the page's own code) and a full search over a stated
+          grid ("Fully optimize").
+        - Outputs. It shows up to three cards: the best for the first goal, and alternatives. Each card is better
+          than your design on its label. Near-miss notes say how close a design came. A driver comparison lists the
+          options for one part. A card sets only the fields the search changes.
+        - Limits: it knows only the PA shape (one sub box, one mid box or a tower, one horn). It cannot search a
+          template, a horn-loaded chamber, more bands, or the Stack and the Space. Its output target is a rule of
+          thumb (`ROOMS`), not the Space model.
+      - **Today: the Hi-fi optimizer** (`lib/hifi/optimize`).
+        - Inputs: the current Hi-fi design, goals (cheaper, lighter, lower, louder), a budget, locks (woofer,
+          tweeter, box type, crossover, amps, each box size), the seat distance and the waveguide.
+        - Search: woofer × box × tuning × plywood, then tweeter × crossover, scored as the page scores them.
+        - Outputs: cards like the PA's. It knows only the Hi-fi 2-way shape.
+      - **Options in the new model.**
+        - (a) **Per speaker.** On the Speaker page. It varies the parts and sizes that the user leaves unlocked:
+          drivers of the same kind and size range, chamber sizes, vents, crossovers, amps. Goals: cheaper, lighter,
+          smaller, lower, louder. Limits: budget, maximum weight, maximum size, the target level at 1 m. One
+          search engine for every spec (through `speakerResponse`, `speakerLimits`, `speakerBuild`). The kind of
+          each chamber (direct, horn) and the band count stay fixed.
+        - (b) **Per stack.** On the Stack page. It runs (a) on each member and also varies the crossovers between
+          boxes and the levels, with the stack's sum as the score. Goals and limits as in (a), for the stack.
+        - (c) **Per space.** On the Space page. The goal is the target level and coverage at the listening area, with
+          the fewest or cheapest speakers and amps. It varies the stacks' members and the amp channels. This is the
+          biggest and slowest search.
+      - **Recommendation.** Build (a) first, with the PA and Hi-fi searches as its first rules, then (b) on top.
+        Keep (c) for later. Show the result as cards, as today. Keep the PA and Hi-fi pages' optimizers until (a) and
+        (b) cover the PA and Hi-fi presets. The weight limit is a limit of the search, not a page check.
+      - **Owner decisions (Oct 2026).**
+        1. The Speaker page gets the optimizer first. The Stack page gets it next.
+        2. The optimizer changes only the parts and sizes that the user leaves unlocked. It never changes the chamber
+           kind or the band count (for now).
+        3. The level goal is one "Target level" that the user can edit, at a fixed 1 m. The optimizer compares it with
+           the maximum output of the speaker or the stack (both are at 1 m). There is no distance field and there are no
+           room sizes. The user allows for the distance. The Space page shows the real level in the room. The PA
+           optimizer's room rule of thumb (`ROOMS`) goes with the PA optimizer.
+        4. The limits are the budget, the maximum weight per box and the maximum size per box, as today.
+        5. The PA and Hi-fi pages keep their optimizers until the new optimizer covers their presets.
   - **L3c Cutlist, weight and bracing (done).** `lib/speaker/speakerBuild` builds any spec, chamber by chamber. It
     reuses the PA and Hi-fi code.
     - **Bracing** (owner, Oct 2026). Each chamber is braced as its own box by the PA rule (`braceShell` in
@@ -508,9 +631,9 @@ Each PR stands alone. Lowest risk first.
         listener. Saves go to `spaces` with copies of the stacks and speakers.
       - **Not yet.** The 3D view of a space; per-band level matching of the PA stack (its horn plays 11 dB over the PA
         page's music balance, so the stack's own levels, not the page's, set the space's balance).
-  - **Weight limit per box.** In the modular planner the weight limit becomes a manual setting on each box (it
-    replaces today's fixed 125 lb sub check in `src/lib/pa/chips.ts`). The user sets the limit for the box
-    they're working on; no automatic tower or layout rule sets it.
+  - **Weight limit per box** (owner, Oct 2026). There is no weight check on a page. The fixed 125 lb sub check in
+    `src/lib/pa/chips.ts` goes with the PA page. A maximum weight per box is only a limit of the optimizer (see
+    "Optimizer rethink" in L3f): the user sets it, and no tower or layout rule sets it.
 
 ## Branches
 
@@ -567,6 +690,10 @@ Each PR stands alone. Lowest risk first.
   y up from the bottom. This applies to chambers (in the cabinet), driver groups, vents, horn mouths and later movable
   parts. Today chamber `at` is the lower-left corner, and that changes to this rule. Old saves can break. Planned:
   see "Positioning" in L3.
+- L3f (Oct 2026): no merge into `main` until the Speaker, Stack and Space pages reach parity with the PA page; the
+  PA page goes last. The optimizer gets a rethink; no "Optimize" button on the presets for now. Notes become a static
+  tab in the Space project, with rich text later. A weight limit stays only as an optimizer limit. See "L3f
+  Switch-over".
 
 ## Open questions for the owner
 
