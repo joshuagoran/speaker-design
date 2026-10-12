@@ -20,8 +20,24 @@ const input: PaOptimizerInput = {
   locks: {},
 };
 
+/**
+ * Light block's Louder card before datasheet Le (Oct 2026): its sub, the 30 × 25 × 31 box and its side ducts, locked.
+ * With Le the search picks a narrower box with slots there, where the estimate and the rule read the mid's gap alike.
+ */
+const WIDE_BOX: PaOptimizerInput = {
+  ...input,
+  cur: {
+    ...input.cur,
+    sub: "emnsw4018",
+    cDim: { w: 30, h: 25, d: 31 },
+    portStyle: "vslots",
+    cVent: { dia: 4, len: 19, nt: 2, slotH: 3, throat: 3 },
+  },
+  locks: { sub: true, vent: true, subDim: { w: "exact", h: "exact", d: "exact" } },
+};
+
 test("a shown card keeps the mid up with the sub by the bracing rule, not only by the estimate", () => {
-  const out = optimizePaStack(input);
+  const out = optimizePaStack(WIDE_BOX);
   const k = out.cards[0];
   assert.ok(k, out.goalMissing ?? "no card");
   // a wide box with a screwed back and a side duct each side: the rule's window frames (jointed rails on a 28″+ back)
@@ -34,14 +50,14 @@ test("a shown card keeps the mid up with the sub by the bracing rule, not only b
   // the card shows the rule's numbers and passes every check by them
   assert.equal(k.metrics.out, rule.out);
   assert.equal(k.metrics.heaviest, rule.heaviest);
-  assert.deepEqual(designProblems(rule, input), [], "the card passes by the rule");
+  assert.deepEqual(designProblems(rule, WIDE_BOX), [], "the card passes by the rule");
   assert.ok(
     rule.midGap >= -KEEP_UP_SLACK_DB,
     `the mid keeps up by the rule: ${rule.midGap.toFixed(2)} dB`,
   );
   // the estimate reads the mid's gap over a tenth of a dB kinder: picked and turned down by it, a card can sit past the
   // check's slack by the rule (with the estimate before its wide-back fit, PR #102, a card here read -0.40 dB by the
-  // estimate and -0.56 dB by the rule)
+  // estimate and -0.56 dB by the rule; with Le this card reads -0.12 dB by the estimate and -0.29 dB by the rule)
   assert.ok(
     estimate.midGap > rule.midGap + 0.1,
     `estimate ${estimate.midGap.toFixed(2)} dB, rule ${rule.midGap.toFixed(2)} dB`,
