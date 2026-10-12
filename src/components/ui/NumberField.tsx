@@ -1,4 +1,5 @@
 import { FormField } from "./FormField";
+import { HOVER_TRANSITION } from "./buttonStyles";
 import { useEffect, useId, useState } from "react";
 
 interface Props {
@@ -49,7 +50,7 @@ export function NumberField({
             if (Number.isFinite(n)) onChange(n);
           }}
           onBlur={() => setRaw(String(value))}
-          className={`w-24 px-3 py-2 font-value rounded border border-stone-300 bg-panel${disabled ? " text-stone-500 cursor-not-allowed" : ""}`}
+          className={`w-24 px-3 py-2 font-value rounded border border-stone-300 bg-panel ${HOVER_TRANSITION} ${disabled ? "text-stone-500 cursor-not-allowed" : "hover:border-stone-500"}`}
         />
         {unit}
       </div>

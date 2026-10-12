@@ -1,3 +1,10 @@
+/**
+ * The short color change on hover and focus that every shared control takes (buttons, toggles, folds, fields, cards,
+ * chart legends): 150 ms, and none when the device asks for reduced motion.
+ */
+export const HOVER_TRANSITION =
+  "transition-[color,background-color,border-color,opacity] duration-150 ease-out motion-reduce:transition-none";
+
 /** Shared controls: one look for toggle (segment) buttons and for action buttons */
 export const BUTTON_SIZE_CLASSES = { md: "px-3 py-2 text-sm", xs: "px-2.5 py-1 text-xs" };
 

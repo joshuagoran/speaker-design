@@ -1,3 +1,5 @@
+import { HOVER_TRANSITION } from "./buttonStyles";
+
 interface Props {
   /** what it does, as screen readers hear it and its tooltip shows it */
   label: string;
@@ -17,7 +19,7 @@ export function IconButton({ label, onClick, pressed, children }: Props) {
       aria-label={label}
       aria-pressed={pressed}
       title={label}
-      className={`w-9 h-9 inline-flex items-center justify-center rounded border ${pressed ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-panel/90 hover:border-stone-500"}`}
+      className={`w-9 h-9 inline-flex items-center justify-center rounded border ${HOVER_TRANSITION} ${pressed ? "border-stone-900 bg-stone-900 text-stone-50" : "border-stone-300 bg-panel/90 hover:border-stone-500"}`}
     >
       {children}
     </button>

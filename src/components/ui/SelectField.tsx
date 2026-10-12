@@ -1,4 +1,5 @@
 import { FormField } from "./FormField";
+import { HOVER_TRANSITION } from "./buttonStyles";
 import { useId } from "react";
 import { byId } from "../../lib/tables";
 
@@ -53,7 +54,7 @@ export function SelectField<T extends SelectOption>({
           if (picked) onChange(picked);
         }}
         // the same height as a text or number field, so a select and a field side by side line up
-        className="w-full h-[38px] px-3 py-2 font-value rounded border border-stone-300 bg-panel text-sm hover:border-stone-500"
+        className={`w-full h-[38px] px-3 py-2 font-value rounded border border-stone-300 bg-panel text-sm hover:border-stone-500 ${HOVER_TRANSITION}`}
       >
         {groups
           ? groups.map(({ heading, items }) => (

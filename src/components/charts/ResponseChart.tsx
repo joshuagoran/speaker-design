@@ -6,6 +6,7 @@ import { useElementWidth } from "../../hooks/useElementWidth";
 import { useState } from "react";
 import { SVG_FONT, FONT } from "../../styles/fonts";
 import { RESULT_MAX_WIDTH } from "../../styles/layout";
+import { HOVER_TRANSITION } from "../ui/buttonStyles";
 
 /**
  * One curve on the chart: its points, legend label, line color and fill color. `band` shades the curve at the low and
@@ -132,6 +133,11 @@ export function ResponseChart({
       </text>,
     );
   });
+  /** the curve whose legend item is under the pointer: the other curves fade back */
+  const [hot, setHot] = useState<string | null>(null);
+  const keyOf = (p: Pick<Series, "id" | "label">) => p.id ?? p.label;
+  /** a curve's opacity: full, or faded while another curve's legend item is under the pointer */
+  const faded = (p: Pick<Series, "id" | "label">) => (hot !== null && hot !== keyOf(p) ? 0.2 : 1);
   // hover / drag: a crosshair with each curve's value at that frequency
   const [hf, setHf] = useState<number | null>(null);
   const move = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -223,7 +229,13 @@ export function ResponseChart({
             </g>
           ))}
         {paths.map((p) => (
-          <path key={(p.id ?? p.label) + "f"} d={p.fill} fill={p.tint} />
+          <path
+            key={(p.id ?? p.label) + "f"}
+            d={p.fill}
+            fill={p.tint}
+            style={{ opacity: faded(p) }}
+            className={HOVER_TRANSITION}
+          />
         ))}
         {paths.map((p) =>
           p.bandD ? (
@@ -245,6 +257,8 @@ export function ResponseChart({
             strokeDasharray={p.dash}
             strokeLinejoin="round"
             strokeLinecap="round"
+            style={{ opacity: faded(p) }}
+            className={HOVER_TRANSITION}
           />
         ))}
         {hf && (
@@ -323,7 +337,12 @@ export function ResponseChart({
           style={{ fontFamily: FONT }}
         >
           {paths.map((p) => (
-            <span key={p.id ?? p.label} className="flex items-center gap-1.5">
+            <span
+              key={p.id ?? p.label}
+              className={`flex items-center gap-1.5 cursor-default hover:text-stone-900 ${HOVER_TRANSITION}`}
+              onMouseEnter={() => setHot(keyOf(p))}
+              onMouseLeave={() => setHot(null)}
+            >
               <span
                 className="inline-block w-4 h-0.5"
                 style={p.dash ? { borderTop: `2px dashed ${p.stroke}` } : { background: p.stroke }}
