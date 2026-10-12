@@ -553,7 +553,7 @@ export function CutlistPage({
           <div>
             <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
               <SectionHeading>Cutlist</SectionHeading>
-              <Button size="xs" onClick={exportCsv}>
+              <Button variant="primary" size="xs" onClick={exportCsv}>
                 Export CSV
               </Button>
             </div>

@@ -153,7 +153,12 @@ export function HornSettings({ horn, onEdit }: Props) {
           )}
         </div>
       ))}
-      <Button size="xs" className="mb-3" onClick={() => editSegments(withSectionAdded)}>
+      <Button
+        variant="primary"
+        size="xs"
+        className="mb-3"
+        onClick={() => editSegments(withSectionAdded)}
+      >
         {SPEAKER_TEXT.addSection}
       </Button>
       <SettingsFold title={SPEAKER_TEXT.advanced} summary={SPEAKER_TEXT.hornSteps(steps)}>

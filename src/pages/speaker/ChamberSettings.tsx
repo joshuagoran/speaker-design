@@ -353,6 +353,7 @@ export function ChamberSettings({
       ))}
       {firstBand && (
         <Button
+          variant="primary"
           size="xs"
           onClick={() =>
             onEdit((c) => ({

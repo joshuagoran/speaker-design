@@ -447,7 +447,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 onChange={(o) => setStart(o.id)}
                 group={(o) => o.group}
               />
-              <Button onClick={startFrom} className="mb-2">
+              <Button variant="primary" onClick={startFrom} className="mb-2">
                 {SPEAKER_START_TEXT.startOver}
               </Button>
               <p className="text-xs text-stone-500 mb-2">{SPEAKER_TEXT.startOverHint}</p>
@@ -549,6 +549,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                 />
               ))}
               <Button
+                variant="primary"
                 className="mb-2"
                 onClick={() =>
                   speakerPage.editChambers((list) => {
@@ -589,7 +590,7 @@ export function SpeakerPage({ speakerPage, planner, hifi }: Props) {
                   }
                 />
               ))}
-              <Button className="mb-2" onClick={speakerPage.addBand}>
+              <Button variant="primary" className="mb-2" onClick={speakerPage.addBand}>
                 Add band
               </Button>
             </>,

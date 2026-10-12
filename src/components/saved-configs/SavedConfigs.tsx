@@ -87,7 +87,7 @@ export function SavedConfigs({
                   className="py-1.5 w-56"
                 />
               )}
-              <Button variant="dark" onClick={doSave} disabled={!nameToSave}>
+              <Button variant="primary" onClick={doSave} disabled={!nameToSave}>
                 {saveName === undefined ? "Save current" : "Save as new"}
               </Button>
               {cfgMsg && <span className="text-xs text-stone-500">{cfgMsg}</span>}
@@ -103,7 +103,7 @@ export function SavedConfigs({
           ) : fb ? (
             <>
               <Button
-                variant="dark"
+                variant="primary"
                 onClick={signIn}
                 // start fetching Firebase as soon as the pointer or focus heads here: the sign-in popup must open soon
                 // after the click or browsers block it
@@ -150,7 +150,7 @@ export function SavedConfigs({
             {cur && manage && newName === null && confirming && (
               <>
                 <span className="text-sm">Replace “{cur.name}” with this design?</span>
-                <Button size="xs" variant="dark" onClick={() => doSaveOver(cur)}>
+                <Button size="xs" variant="primary" onClick={() => doSaveOver(cur)}>
                   Yes
                 </Button>
                 <Button size="xs" onClick={() => setConfirming(false)}>
@@ -188,7 +188,7 @@ export function SavedConfigs({
                   maxLength={60}
                   className="py-1 w-48 max-w-full"
                 />
-                <Button size="xs" variant="dark" onClick={doRename} disabled={!newName.trim()}>
+                <Button size="xs" variant="primary" onClick={doRename} disabled={!newName.trim()}>
                   Rename
                 </Button>
                 <Button size="xs" onClick={() => setNewName(null)}>

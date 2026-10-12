@@ -1,6 +1,6 @@
 // Tailwind, compiled at build time (it used to run in the browser from the Play CDN). The color names are mapped onto the
 // palette: stone = the grays; panel = cards and inputs; green / orange (amber) / red = status; cmy-* = brand (cmy-a = actions
-// and focus, ink today; cmy-c = cyan (pressed toggles, the current page tab); cmy-y = yellow accents (section headings),
+// and focus, ink today; cmy-c = cyan (action buttons, the current page tab); cmy-y = yellow accents (section headings),
 // cmy-m = magenta (goal rank badges); chart colors are read from the palette
 // in the app code, usePalette()); 4 px corners, 6 px for large ones.
 //
