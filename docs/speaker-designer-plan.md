@@ -376,8 +376,14 @@ Each PR stands alone. Lowest risk first.
       horn engine takes only a front-loaded horn today.
     - A size that is not positive and finite (an area, a length or the throat chamber) is the `noModel` gap, and the
       views draw no flare: never NaN (`isSizedSegment`, the horn engine's and `hornFlare`'s check).
-    - Not yet: a "Direct / Horn" load setting to make a chamber horn-loaded (today only a template or a PA v2 save
-      starts one), and the taps of a tapped horn.
+    - The load (done, owner Oct 2026): each chamber has a "Load" setting, "Direct" or "Horn"
+      (`src/pages/designer/chamberLoad.ts`). Horn starts a horn from the chamber's cones: one conical section from
+      the cones' total Sd to a mouth the size of the clear face, as long as the clear depth less the deepest cone. It
+      has no throat chamber, a straight path and a front-loaded drive. The net air becomes the rear chamber's: the
+      chamber's net air less the flare's air. Direct removes the horn and sets the net air back to Auto. A chamber
+      with no cone driver cannot take a horn. The vent stays as it was: a vent the horn engine does not take (a slot
+      the box sets the width of, side ducts, radiators) stays a named gap.
+    - Not yet: the taps of a tapped horn.
   - **Horn bin construction** (owner, Oct 2026; planned, no fixed start). Build the flare of a horn-loaded chamber
     from flat plywood panels: the flare boards at their angles, the wedges beside the flare and the slot boards. Then
     use these panels for:

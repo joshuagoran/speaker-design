@@ -149,7 +149,7 @@ import {
 } from "../../constants/speakerSpec";
 
 /** The least air the build gives a chamber, L (the Hi-fi box model's floor). */
-const MIN_NET_L = 1;
+export const MIN_NET_L = 1;
 /** The joint the build cuts a chamber with to count the wood inside it (the joint doesn't move the inside). */
 const COUNT_JOINT: CornerJoint = "butt";
 /** in² to ft² */
@@ -320,6 +320,9 @@ function coneBuild(driver: SpeakerDriver): ConeBuild | null {
       return null;
   }
 }
+
+/** A cone driver's depth behind the baffle's front, in (its catalog's, or the Hi-fi estimate); null for another kind. */
+export const coneDepthIn = (driver: SpeakerDriver) => coneBuild(driver)?.depthIn ?? null;
 
 /** One driver's weight, lb: its catalog weight (the Hi-fi fallbacks where a Hi-fi part lists none) and its horn's. */
 function driverLb(driver: SpeakerDriver): number {

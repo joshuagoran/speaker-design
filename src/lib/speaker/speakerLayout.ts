@@ -36,7 +36,7 @@ import {
 import { byId } from "../tables";
 import { MESHED_HORN_IDS } from "../../data/meshes/meshedHorns";
 import { DEFAULT_PA } from "../defaults";
-import { baffleInsetIn, sharedWalls, TOUCH_IN } from "./chamberAir";
+import { clearDepthIn, sharedWalls, TOUCH_IN } from "./chamberAir";
 import { RADIATOR_PANEL } from "../hifi/hifi";
 import {
   radiatorSpots,
@@ -612,7 +612,7 @@ export function hornFlare(
   const [center] = set?.spots ?? [{ x: clear.x + clear.w / 2, y: clear.y + clear.h / 2 }];
   const mouth = { x: center.x - w / 2, y: center.y - h / 2, w, h };
   const pathIn = horn.segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
-  const depthIn = placed.dims.d - 2 * cabinet.panel.thicknessIn - baffleInsetIn(cabinet);
+  const depthIn = clearDepthIn(cabinet, placed.dims);
   const placeholder = horn.path === HORN_PATH.folded || pathIn > depthIn;
   const scale = placeholder && pathIn > 0 ? Math.min(1, depthIn / pathIn) : 1;
   return {

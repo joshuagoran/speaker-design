@@ -69,6 +69,15 @@ export function chamberClearFace(
 export const baffleInsetIn = (cabinet: Pick<SpeakerCabinet, "construction" | "insetIn">) =>
   cabinet.construction === CABINET_CONSTRUCTION.frameInset ? cabinet.insetIn : 0;
 
+/**
+ * The chamber's clear depth behind the baffle, in, as the horn engine's path takes it: its depth less the back, the
+ * baffle and the baffle's inset (lib/speaker/speakerLayout `hornFlare`).
+ */
+export const clearDepthIn = (
+  cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
+  dims: Pick<SpeakerChamber["dims"], "d">,
+) => dims.d - 2 * cabinet.panel.thicknessIn - baffleInsetIn(cabinet);
+
 /** The PA port styles the tube rule reads: tubes in the baffle's corners, or in a row along the bottom. */
 const PA_CORNER_TUBES = "round4" satisfies PortStyle;
 const PA_ROW_TUBES = "round2" satisfies PortStyle;

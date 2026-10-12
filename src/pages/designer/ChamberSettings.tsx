@@ -22,6 +22,7 @@ import { byId } from "../../lib/tables";
 import { entriesOf, keysOf } from "../../lib/records";
 import { HIFI_PASSIVES_BY_SIZE } from "../hifi/hifiDriverLists";
 import {
+  CHAMBER_LOAD_NAMES,
   DESIGNER_TEXT,
   DRIVER_KIND_NAMES,
   HORN_PLACEMENT_NAMES,
@@ -51,7 +52,8 @@ import {
 import { mouthPlace, ventPlace, withMouthPosition, withVentPosition } from "./designerPlaces";
 import { PlaceFields } from "./PlaceFields";
 import { HornSettings } from "./HornSettings";
-import { FIELD_ROW, shownIn } from "./designerFields";
+import { FIELD_ROW, shownIn, shownTenth } from "./designerFields";
+import { hornRoom, startingHorn, withChamberLoad } from "./chamberLoad";
 import {
   defaultHornPlacement,
   hornFits,
@@ -111,6 +113,8 @@ export function ChamberSettings({
   const editDriver = (i: number, edit: (d: SpeakerDriver) => SpeakerDriver) =>
     onEdit((c) => ({ ...c, drivers: c.drivers.map((d, k) => (k === i ? edit(d) : d)) }));
   const firstBand = bands[0]?.id;
+  /** the room a starting horn fills */
+  const room = hornRoom(cabinet, chamber, placed);
   return (
     <Card className="mb-3">
       <div className="flex items-center justify-between gap-2 mb-3">
@@ -156,7 +160,7 @@ export function ChamberSettings({
         onChange={(v) =>
           onEdit((c) => ({
             ...c,
-            netLiters: v === NET_AIR.auto ? null : Math.round((result?.netLiters ?? 20) * 10) / 10,
+            netLiters: v === NET_AIR.auto ? null : shownTenth(result?.netLiters ?? 20),
           }))
         }
         options={entriesOf(SET_BY_NAMES)}
@@ -164,7 +168,7 @@ export function ChamberSettings({
       <NumberField
         label={<Tooltip tip={NET_AIR_TIP}>Liters</Tooltip>}
         // Auto: the model's value, read-only
-        value={chamber.netLiters ?? Math.round((result?.netLiters ?? 0) * 10) / 10}
+        value={chamber.netLiters ?? shownTenth(result?.netLiters ?? 0)}
         disabled={chamber.netLiters === null}
         min={0.5}
         step={0.5}
@@ -183,6 +187,18 @@ export function ChamberSettings({
         step={5}
         onChange={(stuffingPct) => onEdit((c) => ({ ...c, stuffingPct }))}
         className="mb-3"
+      />
+      <ToggleGroup
+        label={<Tooltip tip={DESIGNER_TEXT.loadTip}>{DESIGNER_TEXT.load}</Tooltip>}
+        className="mb-3"
+        value={chamber.load.kind}
+        onChange={(kind) => onEdit((c) => withChamberLoad(c, kind, room, result?.netLiters))}
+        options={entriesOf(CHAMBER_LOAD_NAMES)}
+        disabled={
+          chamber.load.kind === CHAMBER_LOAD.direct && !startingHorn(chamber, room)
+            ? { values: [CHAMBER_LOAD.horn], why: DESIGNER_TEXT.loadNoCone }
+            : undefined
+        }
       />
       {chamber.load.kind === CHAMBER_LOAD.horn && (
         <HornSettings

@@ -1,5 +1,6 @@
 // The Designer page's names and choices (src/pages/designer): the spec's ids as the page shows them.
 import type {
+  ChamberLoad,
   DriverKind,
   FilterType,
   HifiBoxKind,
@@ -75,6 +76,12 @@ export const HORN_PLACEMENT_NO_FIT = {
   baffle: "The horn's mouth is larger than the chamber's clear face.",
   top: "Another chamber stands on this chamber's top.",
 } as const satisfies Record<HornPlacement, string>;
+
+/** How a chamber's drivers meet the air, as the chamber's Load setting names it (`CHAMBER_LOAD`). */
+export const CHAMBER_LOAD_NAMES = {
+  direct: "Direct",
+  horn: "Horn",
+} as const satisfies Record<ChamberLoad["kind"], string>;
 
 /** How a horn's path runs, as the Horn settings name it (`HORN_PATH`). */
 export const HORN_PATH_NAMES = {
@@ -185,6 +192,10 @@ export const DESIGNER_TEXT = {
   slotLong: "Opening, long side, in",
   portLength: "Length, in",
   ventFixed: "This port's place comes from its shape (the PA port rule or the slot rule).",
+  load: "Load",
+  loadTip:
+    "Direct: the cones radiate from the baffle. Horn: a horn in the box. Horn starts with one conical section from the cones to the clear face, and sets the net air to the rear chamber.",
+  loadNoCone: "A horn needs a cone driver with Thiele/Small parameters in this chamber.",
   horn: "Horn",
   hornSections: "Flare sections",
   hornSection: (n: number) => `Section ${n}`,
