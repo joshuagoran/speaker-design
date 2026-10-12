@@ -14,12 +14,13 @@ import {
   AUTO_BALANCE_TEXT,
   type AutoBalanceMode,
 } from "../../constants/autoBalance";
+import { FREQ_AXIS_MAX_HZ, FREQ_AXIS_MIN_HZ } from "../../constants/chartScales";
 
 interface Props<L> {
-  /** the balance the design takes now, for the picked option (lib/speaker/autoBalance) */
+  /** the balance the design takes now, for the picked option (lib/speaker/autoBalance): whether it can balance, and why not */
   balance: AutoBalance<L>;
-  /** sets the balanced Levels: one edit, as any other */
-  onApply: (levels: L) => void;
+  /** sets the balanced Levels, worked out from the design as it is at the click: one edit, as any other */
+  onApply: () => void;
   /** the picked option: flat (the default) or the PA music tilt */
   mode: AutoBalanceMode;
   onMode: (mode: AutoBalanceMode) => void;
@@ -47,7 +48,7 @@ const MODE_OPTIONS: readonly ToggleOption<AutoBalanceMode>[] = [
 /**
  * The Speaker and Stack pages' "Auto balance": sets the band Levels, flat or with the PA music tilt (the toggle next to
  * it). Off, with a word why, when there is one band or less to balance, or when the model cannot calculate a band (then
- * the Levels stay).
+ * the Levels stay), or when a crossover is outside the model's frequency range.
  */
 export function AutoBalanceButton<L>({
   balance,
@@ -64,9 +65,7 @@ export function AutoBalanceButton<L>({
         <Button
           variant="primary"
           disabled={balance.status !== AUTO_BALANCE_STATUS.balanced}
-          onClick={() => {
-            if (balance.status === AUTO_BALANCE_STATUS.balanced) onApply(balance.levels);
-          }}
+          onClick={onApply}
         >
           {AUTO_BALANCE_TEXT.button}
         </Button>
@@ -80,6 +79,9 @@ export function AutoBalanceButton<L>({
       )}
       {balance.status === AUTO_BALANCE_STATUS.unmodeled && (
         <Notice>{AUTO_BALANCE_TEXT.unmodeled(balance.names)}</Notice>
+      )}
+      {balance.status === AUTO_BALANCE_STATUS.outOfRange && (
+        <Notice>{AUTO_BALANCE_TEXT.outOfRange(FREQ_AXIS_MIN_HZ, FREQ_AXIS_MAX_HZ)}</Notice>
       )}
     </div>
   );

@@ -6,9 +6,12 @@ import {
   AUTO_BALANCE_TILT,
   autoBalanceStack,
   withStackLevels,
-  type StackLevels,
 } from "../../lib/speaker/autoBalance";
-import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
+import {
+  AUTO_BALANCE_MODE,
+  AUTO_BALANCE_STATUS,
+  type AutoBalanceMode,
+} from "../../constants/autoBalance";
 import { STACKS_COLLECTION } from "../../constants/speakerSpec";
 import { emptyStack, stackFromSaved, stackSnapshot } from "./stackSaves";
 import { STACK_TEXT } from "../../constants/stack";
@@ -88,8 +91,22 @@ export function useStack() {
     balance,
     balanceMode,
     setBalanceMode,
-    /** sets the band Levels auto balance gives in the stack's speakers, every member's level 0 dB: one edit */
-    applyBalance: (levels: StackLevels) => setDesign((d) => withStackLevels(d, levels)),
+    /**
+     * sets the band Levels auto balance gives in the stack's speakers, every member's level 0 dB: one edit. Worked out
+     * from the design as it is now, since `balance` reads the deferred values, which can lag a step behind an edit.
+     */
+    applyBalance: () => {
+      const now =
+        design.stack.members === members && design.speakers === speakers
+          ? balance
+          : autoBalanceStack(
+              design,
+              stackResponse(design.stack, design.speakers),
+              AUTO_BALANCE_TILT[balanceMode],
+            );
+      if (now.status === AUTO_BALANCE_STATUS.balanced)
+        setDesign((d) => withStackLevels(d, now.levels));
+    },
     store,
     snapshot: () => stackSnapshot(design),
     /** opens a saved stack: the document's id and name, its members and its speakers */

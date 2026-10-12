@@ -7,9 +7,12 @@ import {
   AUTO_BALANCE_TILT,
   autoBalanceSpeaker,
   withSpeakerLevels,
-  type SpeakerLevels,
 } from "../../lib/speaker/autoBalance";
-import { AUTO_BALANCE_MODE, type AutoBalanceMode } from "../../constants/autoBalance";
+import {
+  AUTO_BALANCE_MODE,
+  AUTO_BALANCE_STATUS,
+  type AutoBalanceMode,
+} from "../../constants/autoBalance";
 import { DEFAULT_SPEAKER_BAND, EMPTY_SPEAKER } from "../../lib/defaults";
 import { SPEAKER_TEXT } from "../../constants/speakerPage";
 import { SPEAKER_START_SPEAKER_NAMES } from "../../constants/speakerStarts";
@@ -177,8 +180,23 @@ export function useSpeakerPage() {
     balance,
     balanceMode,
     setBalanceMode,
-    /** sets the band Levels auto balance gives: one band edit, as any other */
-    applyBalance: (levels: SpeakerLevels) => setSpec((s) => withSpeakerLevels(s, levels)),
+    /**
+     * sets the band Levels auto balance gives: one band edit, as any other. Worked out from the spec as it is now, since
+     * `balance` reads the deferred values, which can lag a step behind an edit.
+     */
+    applyBalance: () => {
+      const current = { cabinet: spec.cabinet, bands: spec.bands, input: spec.input };
+      const now =
+        current.cabinet === cabinet && current.bands === bands && current.input === feed
+          ? balance
+          : autoBalanceSpeaker(
+              current,
+              speakerResponse(current, { feed: current.input }),
+              AUTO_BALANCE_TILT[balanceMode],
+            );
+      if (now.status === AUTO_BALANCE_STATUS.balanced)
+        setSpec((s) => withSpeakerLevels(s, now.levels));
+    },
     build,
     store,
     snapshot,

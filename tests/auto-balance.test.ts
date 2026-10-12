@@ -73,15 +73,35 @@ function stepAt(
   return levelAt(balanced, lowerId, xo) - levelAt(balanced, upperId, xo);
 }
 
-/** A flat curve at `db` with the shape of an ideal band between two corners: 0 inside, falling 24 dB/oct outside. */
-const bandCurve = (db: number, lo: number | null, hi: number | null) =>
+/** 24 dB/oct, as dB per decade. */
+const DB_PER_DECADE_24 = 80;
+
+/**
+ * A flat curve at `db` with the shape of an ideal band between two corners: 0 inside, falling `perDecade` dB per decade
+ * outside (24 dB/oct unless given).
+ */
+const bandCurve = (
+  db: number,
+  lo: number | null,
+  hi: number | null,
+  perDecade = DB_PER_DECADE_24,
+) =>
   [10, 20, 40, 80, 160, 320, 640, 1280, 2560, 5120, 10240, 20480].map((f) => ({
     f,
     spl:
       db -
-      (lo && f < lo ? 80 * Math.log10(lo / f) : 0) -
-      (hi && f > hi ? 80 * Math.log10(f / hi) : 0),
+      (lo && f < lo ? perDecade * Math.log10(lo / f) : 0) -
+      (hi && f > hi ? perDecade * Math.log10(f / hi) : 0),
   }));
+
+/** The Hi-fi two-way with its two bands edited. */
+function twoWay(
+  edit: (band: SpeakerSpec["bands"][number], i: number) => SpeakerSpec["bands"][number],
+  input?: SpeakerSpec["input"],
+): SpeakerSpec {
+  const spec = templateSpeaker(SPEAKER_TEMPLATE.hifiTwoWay);
+  return { ...spec, input: input ?? spec.input, bands: spec.bands.map(edit) };
+}
 
 test("auto balance: flat has no tilt; the PA music tilt is 6 dB at a crossover to a sub and 3 dB above", () => {
   assert.equal(tiltAt(120, FLAT_TILT), 0);
@@ -307,4 +327,87 @@ test("auto balance: with the PA music tilt, on every PA preset it gives the PA p
         `${layout} ${band}: ${levels[band]} against ${want}`,
       );
   }
+});
+
+test("auto balance: a protective input highpass is not a crossover; the bands meet at the woofer's lowpass", () => {
+  // the tweeter's highpass removed, the woofer's lowpass at 2 kHz, a 30 Hz highpass on the input (on every band)
+  const xoHz = 2000;
+  const spec = twoWay(
+    (b, i) => (i === 0 ? { ...b, lowpass: { hz: xoHz, type: "LR24" } } : { ...b, highpass: null }),
+    { highpass: { hz: 30, type: "LR24" }, lowpass: null },
+  );
+  const [woofer, tweeter] = spec.bands;
+  for (const [tilt, want] of [
+    [FLAT_TILT, 0],
+    [PA_MUSIC_TILT, PA_MUSIC_TILT.hfTilt],
+  ] as const) {
+    const balanced = withSpeakerLevels(spec, levelsOf(spec, tilt));
+    const step = levelAt(balanced, woofer.id, xoHz) - levelAt(balanced, tweeter.id, xoHz);
+    assert.ok(Math.abs(step - want) < 1e-3, `${step} against ${want}`);
+  }
+});
+
+test("auto balance: a feed filter counts as a crossover where it cuts into the band next to it", () => {
+  // two stack members crossing over at 160 Hz on their feeds (the members' crossovers) only
+  const xoHz = 160;
+  const bands: BalanceBand<string>[] = [
+    {
+      key: "sub",
+      curve: bandCurve(98, null, xoHz),
+      lowpassHz: null,
+      highpassHz: null,
+      feedLowpassHz: xoHz,
+    },
+    {
+      key: "top",
+      curve: bandCurve(96, xoHz, null),
+      lowpassHz: null,
+      highpassHz: null,
+      feedHighpassHz: xoHz,
+    },
+  ];
+  const flat = chainLevels(bands);
+  assert.ok(flat);
+  const by = Object.fromEntries(flat.map((o) => [o.key, o.levelDb]));
+  assert.ok(Math.abs(98 + by.sub - (96 + by.top)) < CLOSE_DB);
+  // with the PA music tilt, it is a crossover to a sub: the top 6 dB down
+  const tilted = chainLevels(bands, PA_MUSIC_TILT);
+  assert.ok(tilted);
+  const t = Object.fromEntries(tilted.map((o) => [o.key, o.levelDb]));
+  assert.ok(Math.abs(98 + t.sub - PA_MUSIC_TILT.tilt - (96 + t.top)) < CLOSE_DB);
+});
+
+test("auto balance: a gapped crossover reads each band at its own corner, not between them", () => {
+  // the lower band falls 24 dB/oct above 320 Hz, the upper 12 dB/oct below 2560 Hz: at the mean they'd read unequal
+  const lowHz = 320,
+    highHz = 2560;
+  const out = chainLevels([
+    { key: "lower", curve: bandCurve(90, null, lowHz), lowpassHz: lowHz, highpassHz: null },
+    {
+      key: "upper",
+      curve: bandCurve(100, highHz, null, DB_PER_DECADE_24 / 2),
+      lowpassHz: null,
+      highpassHz: highHz,
+    },
+  ]);
+  assert.ok(out);
+  const by = Object.fromEntries(out.map((o) => [o.key, o.levelDb]));
+  assert.ok(Math.abs(90 + by.lower - (100 + by.upper)) < CLOSE_DB);
+  // the Hi-fi two-way with its woofer's lowpass at 400 Hz and its tweeter's highpass at 3 kHz
+  const wooferHz = 400,
+    tweeterHz = 3000;
+  const spec = twoWay((b, i) =>
+    i === 0
+      ? { ...b, lowpass: { hz: wooferHz, type: "LR24" } }
+      : { ...b, highpass: { hz: tweeterHz, type: "LR24" } },
+  );
+  const [woofer, tweeter] = spec.bands;
+  const balanced = withSpeakerLevels(spec, levelsOf(spec));
+  const step = levelAt(balanced, woofer.id, wooferHz) - levelAt(balanced, tweeter.id, tweeterHz);
+  assert.ok(Math.abs(step) < 1e-3, `${step}`);
+});
+
+test("auto balance: a crossover outside the model's frequency range leaves the Levels, with its own status", () => {
+  const spec = twoWay((b, i) => (i === 0 ? b : { ...b, highpass: { hz: 22000, type: "LR24" } }));
+  assert.equal(balanceOf(spec).status, AUTO_BALANCE_STATUS.outOfRange);
 });

@@ -9,6 +9,8 @@ export const AUTO_BALANCE_STATUS = {
   oneBand: "oneBand",
   /** a band a driver feeds has no model: the Levels stay */
   unmodeled: "unmodeled",
+  /** a crossover is outside the model's frequency range, so a band has no level there: the Levels stay */
+  outOfRange: "outOfRange",
 } as const;
 
 /** The auto balance options, by id: flat (the default) or the PA music tilt. */
@@ -42,6 +44,9 @@ export const AUTO_BALANCE_TEXT = {
   /** the bands that stop it: bands a driver feeds that the model cannot calculate */
   unmodeled: (names: readonly string[]) =>
     `Auto balance did not change the levels. The model cannot calculate: ${names.join(", ")}.`,
+  /** a crossover outside the model's frequency range (the frequency charts' axis), Hz */
+  outOfRange: (minHz: number, maxHz: number) =>
+    `Auto balance did not change the levels. A crossover is out of the range of the model: ${minHz} Hz to ${maxHz} Hz.`,
   /** a band of a stack member's speaker, as the notice names it */
   memberBand: (speaker: string, band: string) => `${speaker} (${band})`,
 } as const;

@@ -650,6 +650,10 @@ Each PR stands alone. Lowest risk first.
         - The rule: put the bands in order of their passband. At each crossover between two bands next to each other
           (the lower band's lowpass and the upper band's highpass), set the upper band against the lower band. Then
           move all the Levels together, so that the highest Level is 0 dB.
+        - The crossover corners: a band's own filters count. A feed filter (the input range; in a stack, the member's
+          crossover) counts only when it cuts into the band next to it. Thus a protective highpass on the input (for
+          example 30 Hz) is not a crossover. Each band is read at its own corner (at the other band's corner when it
+          has none), so a gapped crossover (400 Hz and 3 kHz) reads each band where it still plays.
         - Flat (owner, Oct 2026: the default): every band is at the same level at each crossover. No tilt.
         - PA music tilt (an option): the upper band goes below the lower band by 6 dB at a crossover of 250 Hz or less
           (the mid below the sub), and by 3 dB above it (the horn below the mid). This is the PA page's music balance.
@@ -665,7 +669,8 @@ Each PR stands alone. Lowest risk first.
         - A stack puts the balance in the band Levels of its speakers, and sets each member's level to 0 dB, as the PA
           presets do. A member level cannot set the bands of a two-band box against each other.
         - Edge cases: one band, or no band that plays, changes nothing. A band that a driver feeds but the model cannot
-          calculate changes nothing, and a notice names it. Two bands with no filter between them meet at the same level,
+          calculate changes nothing, and a notice names it. A crossover outside the model's range (15 Hz to 20 kHz)
+          changes nothing, and a notice says so. Two bands with no filter between them meet at the same level,
           with no tilt, at the middle of their passbands. A band with no driver keeps its Level.
         - UI: one shared button with its toggle (`src/components/ui/AutoBalanceButton`), in the Speaker page's "Bands"
           fold and the Stack page's "Members" fold. It is one edit, as any other, and one Undo step (see "Undo and
