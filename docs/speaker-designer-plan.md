@@ -473,10 +473,9 @@ Each PR stands alone. Lowest risk first.
       box models, the exact PA search and the horn engine. They share one rule, `coilFactor` in
       `src/lib/acoustics/driverCircuit.ts`: the coil is Re + jωLe, as in Hornresp. A driver with `Le` rolls off at the
       top. A driver without `Le` gives the same numbers as before.
-    - **The PA tables' `Le` is off for now** (owner, Oct 2026). `main` added the datasheet `Le` to the sub, mid and
-      fill tables (#137). The models do not read it yet: `paDriver` in `src/lib/data.ts` removes it from the model
-      input. The tables keep the value. The six PA v2 drivers that the horn engine checks against Hornresp keep
-      their `Le` (`leInModels` on their rows). The Hi-fi drivers keep their `Le`. See "Lossy voice-coil model" below.
+    - **Every driver uses its datasheet `Le`** (owner decision, since Oct 2026). The models read the catalog's
+      `Le` for every driver: the PA subs, mids and fills and the Hi-fi drivers. It is a plain inductance, so the
+      drivers compare with the same rule. The lossy coil model refines it later. See "Lossy voice-coil model" below.
     - **Limits.** `speakerLimits` in `src/lib/speaker/speakerLimits.ts` works out each band's limits from the
       response's chamber runs (no box model runs again). It uses the pages' own limit code:
       - Cones: the PA's `sineLimitAt` (`maxOutputCurve` for each point): Xmax and the port air speed at each
@@ -570,13 +569,11 @@ Each PR stands alone. Lowest risk first.
       with both tools.
     - A datasheet gives only `Le`. The model needs default values for Leb, Ke and Rss, or a fit from a measured
       impedance curve.
-    - The model applies to every driver at the same time. Then:
-      1. Turn on the PA tables' `Le`: remove `paDriver`'s filter in `src/lib/data.ts` and the `leInModels` flags.
-      2. Write the golden values again (`vp run golden`), the optimizer snapshot (`vp run optimizer-snapshot`) and
-         the preset Levels (`vp run preset-levels`).
+    - The model applies to every driver at the same time. Then write the golden values again (`vp run golden`), the
+      optimizer snapshot (`vp run optimizer-snapshot`) and the preset Levels (`vp run preset-levels`).
   - **One driver catalog** (owner, Oct 2026; planned). Today the drivers are in separate tables by group: PA subs, PA
-    mids, fills, Hi-fi woofers and Hi-fi tweeters. The model treats the groups differently. For example, `Le` is on
-    for the Hi-fi drivers and off for the PA tables until the lossy coil model is in.
+    mids, fills, Hi-fi woofers and Hi-fi tweeters. Each table has its own fields, so the groups do not
+    always get the same model inputs.
     - Merge the tables into one table for each kind: woofers (by size), compression drivers and tweeters. Every
       driver has the same fields and the same model rules.
     - The Speaker page's woofer picker already shows one list (#156). This item does the same in the catalog data.
