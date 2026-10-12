@@ -269,10 +269,19 @@ Each PR stands alone. Lowest risk first.
         part of the PA tube rule), and a Hi-fi slot (the model takes it along the bottom, with one shelf).
   - **L3c Cutlist, weight and bracing (done).** `lib/speaker/speakerBuild` builds any spec, chamber by chamber. It
     reuses the PA and Hi-fi code.
-    - **Bracing.** Each chamber of direct radiators is braced as its own box by the PA rule (`braceShell` in
-      `lib/pa/calc`: every panel over 280 Hz, with the cabinet's style and back joint). The rule keeps clear of the
-      drivers at their positions, the vent and the hardware. A chamber with a PA sub and a PA port in a frame runs the
-      PA sub box's own rule (`subBoxBracing`). A horn-loaded chamber takes no braces.
+    - **Bracing** (owner, Oct 2026). Each chamber is braced as its own box by the PA rule (`braceShell` in
+      `lib/pa/calc`), to the cabinet's bracing target (`SpeakerCabinet.braceTargetHz`, default `PA_PANEL_TARGET_HZ`,
+      280 Hz), with its style and back joint. The rule keeps clear of the drivers at their positions, the vent and the
+      hardware. A chamber with a PA sub and a PA port in a frame runs the PA sub box's own rule (`subBoxBracing`). A
+      horn-loaded chamber's walls are braced too; its flare is kept clear and holds itself. The "Weight and bracing"
+      section lists each panel that still misses the target.
+    - **Construction fold** (owner, Oct 2026): the back joint ("Glued" / "Screwed"; a flush box starts glued, a PA
+      design keeps the PA page's), the bracing style and the bracing target. The bracing and the cutlist notes follow
+      them.
+    - **Horn mounting** (owner, Oct 2026). A horn on a driver sits "In the baffle" or "Freestanding on top", in each
+      driver's settings, for any horn the geometry allows (`hornFits`), small round horns too. The catalog's `rect`
+      flag only sets the first choice (`defaultHornPlacement`). A horn on a top takes its mount where it applies
+      (`takesHornMountAt`); the model, the layout, the 3D view and the cutlist read the placement.
     - **Hardware.** `SpeakerCabinet.hardware` holds the PA handles. With it, each shell's lowest chamber takes the
       handles, the input dish and, under a horn on its top, the binding posts. The PA adapter sets the PA page's
       handles. Null: no hardware (the Hi-fi box, the fill, the empty speaker).
@@ -294,9 +303,14 @@ Each PR stands alone. Lowest risk first.
       chamber adds the rule's braces (one window brace, 3.6 lb on "lil tower"), which the PA page leaves out. On the
       Hi-fi designs: the same cut pieces and bought parts for every joint, and the Hi-fi weight plus the waveguide's
       (the Hi-fi page leaves it out).
-    - **Not yet.** A PA sub with a PA port keeps the PA rule's place for its bracing and hardware, even where its
-      position is moved. A double baffle (a laminate count on the baffle, read by the bracing and the cutlist) is
-      the next item. The Hi-fi page keeps its own 3% allowance. No setting edits the handles yet.
+    - **Next.**
+      - Double baffle: the next bracing item. A laminate count on the baffle, which the bracing (a stiffer baffle) and
+        the cutlist read.
+      - Handles: a setting in the Construction fold, when it makes sense (owner, Oct 2026). The spec field is in
+        (`SpeakerCabinet.hardware`); the PA adapter sets it.
+      - A PA sub with a PA port keeps the PA rule's place for its bracing and hardware, even where its position is
+        moved.
+      - The Hi-fi page keeps its own 3% allowance.
   - **L3d Inductance, limits and chips.**
     - **Voice-coil inductance.** Every T/S model reads the catalog's `Le`: the sealed, vented and passive-radiator
       box models, the exact PA search and the horn engine. They share one rule, `coilFactor` in
