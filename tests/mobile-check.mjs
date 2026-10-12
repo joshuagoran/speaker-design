@@ -16,7 +16,7 @@ import { COVERAGE_LAYOUT_KEY, COVERAGE_TEST_IDS } from "../src/constants/coverag
 import { STAT_ROW_TEST_IDS } from "../src/constants/statRowTestIds.ts";
 import { HIFI_BOX_LABELS } from "../src/constants/hifiLayout.ts";
 import { HIFI_TWEETERS_RAW, SB26STCN_RAW } from "../src/data/catalog/hifi-tweeters.ts";
-import { DESIGNER_START_TEXT } from "../src/constants/designerStarts.ts";
+import { DESIGNER_START_NAMES, DESIGNER_START_TEXT } from "../src/constants/designerStarts.ts";
 
 const { chromium } = await import(process.env.PW_MODULE || "playwright");
 const page = pathToFileURL(path.resolve(process.argv[2] || "dist/stack-planner.html")).href;
@@ -211,14 +211,17 @@ for (const width of [1024, 1600]) {
   await ctx.close();
 }
 
-// The Designer started from the PA design's mid/high box (or tower), every fold open: nothing past the settings
-// pane's edge and no sideways page scroll, on a 360 px phone, a tablet (the two panes from md up) and a desktop.
-for (const [width, phone] of [
-  [360, true],
-  [768, true],
-  [1024, false],
+// The Designer started from the PA design's mid/high box (or tower), and from the PA v2 sub bin (its Horn settings),
+// every fold open: nothing past the settings pane's edge and no sideways page scroll, on a 360 px phone, a tablet (the
+// two panes from md up) and a desktop.
+for (const [width, phone, startName] of [
+  [360, true, null],
+  [768, true, null],
+  [1024, false, null],
+  [360, true, DESIGNER_START_NAMES.paV2SubBinTwo],
+  [1024, false, DESIGNER_START_NAMES.paV2SubBinTwo],
 ]) {
-  const name = `designer ${width}`;
+  const name = `designer ${width}${startName ? ` (${startName})` : ""}`;
   const ctx = await browser.newContext({
     viewport: { width, height: 900 },
     isMobile: phone,
@@ -233,7 +236,7 @@ for (const [width, phone] of [
   for (let i = 0; i < 10 && (await closed.count()); i++) await closed.first().click();
   const start = p.getByLabel(DESIGNER_START_TEXT.startFrom);
   const options = await start.locator("option").allTextContents();
-  const many = options.find((o) => /tower|mid\/high/i.test(o));
+  const many = startName ?? options.find((o) => /tower|mid\/high/i.test(o));
   if (many) {
     await start.selectOption({ label: many });
     await p.getByRole("button", { name: DESIGNER_START_TEXT.startOver }).click();

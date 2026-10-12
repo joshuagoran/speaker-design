@@ -36,3 +36,6 @@ export const CM_PER_IN = METERS_PER_INCH * CM_PER_M;
 
 /** Inches in one foot. */
 export const INCHES_PER_FOOT = 12;
+
+/** Square centimeters in one square inch: the spec's areas in in², the horn engine's (Hornresp's) in cm². */
+export const CM2_PER_IN2 = CM_PER_IN * CM_PER_IN;

@@ -36,7 +36,7 @@ import {
 import { byId } from "../tables";
 import { MESHED_HORN_IDS } from "../../data/meshes/meshedHorns";
 import { DEFAULT_PA } from "../defaults";
-import { baffleInsetIn, sharedWalls, TOUCH_IN } from "./chamberAir";
+import { clearDepthIn, sharedWalls, TOUCH_IN } from "./chamberAir";
 import { RADIATOR_PANEL } from "../hifi/hifi";
 import {
   radiatorSpots,
@@ -47,7 +47,8 @@ import {
 import { PANEL } from "../../constants/cutParts";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
-import { CM_PER_IN } from "../../constants/units";
+import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
+import { isSizedSegment } from "../acoustics/hornSegments";
 import { PORT_STYLE } from "../../constants/portStyles";
 import {
   CABINET_TOP,
@@ -581,8 +582,8 @@ const shaped = (areaIn2: number, like: Dims2): Dims2 => {
  * the baffle: the mouth as square as its area allows inside the clear face (wider than square where a square would be
  * taller than the face, the clear width at most; cut to the clear face when larger than it), each section the mouth's shape; the mouth centered at the
  * horn's `mouthPosition` (kept inside the clear face), else on the clear face; the path at most the chamber's clear
- * depth (as the model takes it: less the back, the baffle and the baffle's inset). Null for a chamber with no horn or
- * no segments.
+ * depth (as the model takes it: less the back, the baffle and the baffle's inset). Null for a chamber with no horn, no
+ * segments, or a segment with a size that is not positive and finite.
  */
 export function hornFlare(
   cabinet: Pick<SpeakerCabinet, "panel" | "construction" | "insetIn">,
@@ -590,8 +591,10 @@ export function hornFlare(
 ): HornFlare | null {
   const { load } = placed.chamber;
   if (load.kind !== CHAMBER_LOAD.horn || !load.horn.segments.length) return null;
+  // a zero, negative or missing size draws nothing (the model names it a gap), never a NaN flare
+  if (!load.horn.segments.every(isSizedSegment)) return null;
   const horn: SpeakerHorn = load.horn;
-  const areaIn2 = (cm2: number) => cm2 / (CM_PER_IN * CM_PER_IN);
+  const areaIn2 = (cm2: number) => cm2 / CM2_PER_IN2;
   const { clear } = placed;
   const mouthArea = areaIn2(horn.segments[horn.segments.length - 1].s2);
   // as square as it fits: wider than square where a square would be taller than the clear face
@@ -609,7 +612,7 @@ export function hornFlare(
   const [center] = set?.spots ?? [{ x: clear.x + clear.w / 2, y: clear.y + clear.h / 2 }];
   const mouth = { x: center.x - w / 2, y: center.y - h / 2, w, h };
   const pathIn = horn.segments.reduce((sum, s) => sum + s.length, 0) / CM_PER_IN;
-  const depthIn = placed.dims.d - 2 * cabinet.panel.thicknessIn - baffleInsetIn(cabinet);
+  const depthIn = clearDepthIn(cabinet, placed.dims);
   const placeholder = horn.path === HORN_PATH.folded || pathIn > depthIn;
   const scale = placeholder && pathIn > 0 ? Math.min(1, depthIn / pathIn) : 1;
   return {

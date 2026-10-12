@@ -27,6 +27,13 @@ import {
 
 /** Areas within this ratio of each other make a straight duct: the conical law divides by the flare there. */
 const STRAIGHT_RATIO = 1e-4;
+/**
+ * Whether a segment's sizes can be modeled and drawn: both areas and its length positive and finite (a zero, negative
+ * or missing size is a gap, never NaN).
+ */
+export const isSizedSegment = (segment: HornSegment) =>
+  [segment.s1, segment.s2, segment.length].every((v) => Number.isFinite(v) && v > 0);
+
 /** Below this |(γx)²| the exponential solutions use their series form (see expSolutions). */
 const SERIES_LIMIT = 1e-8;
 

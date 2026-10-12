@@ -13,7 +13,7 @@ import { coneParts } from "./driverParts";
 import { stuffedLiters } from "./chamberAir";
 import { hifiRoundEndCorrection, portArea } from "../hifi/hifi";
 import { BOTH_ENDS_CORRECTION_RATIO, rectangleEndCorrection } from "../acoustics/radiation";
-import { CM_PER_IN } from "../../constants/units";
+import { CM_PER_IN, CM2_PER_IN2 } from "../../constants/units";
 import {
   CHAMBER_LOAD,
   HORN_DRIVE,
@@ -55,7 +55,7 @@ function rearPort(vent: ChamberVent): { port: HornPort | null } | null {
     if (port.w === undefined) return null;
     return {
       port: {
-        area: port.n * port.h * port.w * CM_PER_IN * CM_PER_IN,
+        area: port.n * port.h * port.w * CM2_PER_IN2,
         length: (port.len + INNER_END_RATIO * rectangleEndCorrection(port.h, port.w)) * CM_PER_IN,
         // the exit's end correction is the opening's rectangle's
         slot: { width: port.w * CM_PER_IN, height: port.h * CM_PER_IN },
@@ -64,7 +64,7 @@ function rearPort(vent: ChamberVent): { port: HornPort | null } | null {
   }
   return {
     port: {
-      area: portArea(port) * CM_PER_IN * CM_PER_IN,
+      area: portArea(port) * CM2_PER_IN2,
       // both ends and the elbows, less the flanged outer end (1.46 r / BOTH_ENDS_CORRECTION_RATIO = 0.85 r); absent
       // elbows: a straight tube (the read adapters store the elbows their models work out)
       length:

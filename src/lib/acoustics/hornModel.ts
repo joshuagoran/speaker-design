@@ -35,7 +35,13 @@ import {
 } from "./complex";
 import { coilFactor, coilImpedance, driverCircuit, ventResistances } from "./driverCircuit";
 import { FLANGED_CIRCLE_END_RATIO, mouthImpedance, rectangleEndCorrection } from "./radiation";
-import { chainMatrix, inputImpedance, outputFlowRatio, segmentMatrix } from "./hornSegments";
+import {
+  chainMatrix,
+  inputImpedance,
+  isSizedSegment,
+  outputFlowRatio,
+  segmentMatrix,
+} from "./hornSegments";
 
 /** ρc²: an air volume V has compliance V/(ρc²). */
 const AIR_STIFFNESS = AIR_DENSITY * SPEED_OF_SOUND * SPEED_OF_SOUND;
@@ -220,7 +226,10 @@ function ventOf(design: HornDesign, Cab: number, radiationLoad: boolean, QL: num
 const powerScale = (resistance: number, omega: number, solidAngle: number, count: number) =>
   Math.sqrt((SPEED_OF_SOUND * solidAngle * resistance) / (AIR_DENSITY * count)) / omega;
 
-/** Whether every size the model divides by is positive: the driver, the chambers, the vent and every segment. */
+/**
+ * Whether every size the model divides by is positive and finite: the driver, the chambers, the vent and every segment
+ * (each segment's length too: a zero-length segment is a gap, not a skipped one).
+ */
 function isModelable(design: HornDesign, freqs: readonly number[]) {
   const { driver, rear, segments } = design;
   const positive = (...values: number[]) => values.every((v) => Number.isFinite(v) && v > 0);
@@ -230,11 +239,12 @@ function isModelable(design: HornDesign, freqs: readonly number[]) {
     positive(rear.liters, design.count) &&
     Number.isInteger(design.drivers) &&
     design.drivers >= 1 &&
+    Number.isFinite(design.throatChamber) &&
     design.throatChamber >= 0 &&
     (!rear.port ||
       (positive(rear.port.area, rear.port.length) &&
         (!rear.port.slot || positive(rear.port.slot.width, rear.port.slot.height)))) &&
-    segments.every((s) => positive(s.s1, s.s2) && s.length >= 0) &&
+    segments.every(isSizedSegment) &&
     freqs.every((f) => positive(f))
   );
 }
