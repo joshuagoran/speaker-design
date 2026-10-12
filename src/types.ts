@@ -3648,6 +3648,18 @@ export interface SavedSpeakerData extends SavedConfigData {
   speaker: Omit<SpeakerSpec, "id" | "name">;
 }
 
+/** A stack and the speakers its members name, as the Stack page holds them. */
+export type StackDesign = Pick<DesignLayers, "stack" | "speakers">;
+
+/**
+ * A saved stack: the stack without its id and name (the document's), and a copy of each speaker its members name (by
+ * the speaker's id), so it opens as it was saved.
+ */
+export interface SavedStackData extends SavedConfigData {
+  stack: Omit<StackSpec, "id" | "name">;
+  speakers: readonly SpeakerSpec[];
+}
+
 /** A saved configuration as read back: the stored fields plus the document's id. */
 export interface SavedConfig {
   id: string;

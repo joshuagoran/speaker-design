@@ -46,6 +46,7 @@ const views = [
   "#hifi-cutlist",
   "#notes",
   "#designer",
+  "#stack",
 ];
 const failures = [];
 

@@ -35,7 +35,7 @@ const MISSING_SPEAKER_TEXT = "That save holds no speaker";
  * Whether a library document's `speaker` reads as a spec: an object with a cabinet of chambers and a list of bands.
  * Its fields are trusted from there: `snapshot` wrote them.
  */
-function isSavedSpeaker(value: unknown): value is SavedSpeakerData["speaker"] {
+export function isSavedSpeaker(value: unknown): value is SavedSpeakerData["speaker"] {
   if (typeof value !== "object" || value === null) return false;
   const cabinet: unknown = Reflect.get(value, "cabinet");
   return (

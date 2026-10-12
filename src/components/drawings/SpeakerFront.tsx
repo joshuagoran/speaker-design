@@ -38,18 +38,11 @@ const VIEW_PX = 150;
 const PAD_PX = 4;
 
 /**
- * Front view of any speaker spec, to scale, as its layout places the parts (lib/speaker/speakerLayout, the 3D view's
- * too): each chamber's outline, the drivers (a PA cone, a Hi-fi woofer's frame with a coaxial's HF in it, a tweeter's
- * plate, a ribbon's or an AMT's own, a horn's mouth in the baffle or on the top), the port by its engine's rule (the
- * PA's as its front view draws it, the Hi-fi's), the radiators, and a horn-loaded chamber's mouth. A Hi-fi port or a
- * radiator on the back is drawn dashed (behind). The top is drawn flat (an arched top too, for now).
+ * What the front drawing spans, in: across from the cabinet's center line and up from its bottom, the horns standing
+ * on its top included, and its margin at the drawing's scale (a drawing placed among others lines up with them).
  */
-export function SpeakerFront({ spec }: Props) {
-  const pal = usePalette();
-  const { cabinet } = spec;
-  const t = cabinet.panel.thicknessIn;
+export function speakerFrontFrame(cabinet: Pick<SpeakerSpec["cabinet"], "chambers" | "panel">) {
   const layout = speakerLayout(cabinet);
-  if (!layout.chambers.length) return null;
   // the horns on the top stand above the cabinet: the drawing's bounds take them in
   const topHorns = layout.chambers.flatMap((placed) =>
     placed.chamber.drivers.flatMap((d) => {
@@ -67,7 +60,24 @@ export function SpeakerFront({ spec }: Props) {
   const minX = Math.min(-layout.size.w / 2, ...topHorns.map((h) => h.x - h.w / 2)),
     maxX = Math.max(layout.size.w / 2, ...topHorns.map((h) => h.x + h.w / 2)),
     maxY = Math.max(layout.size.h, ...topHorns.map((h) => h.y + HORN_LIFT_IN + h.h));
+  /** px per inch */
   const k = (VIEW_PX - 2 * PAD_PX) / Math.max(maxX - minX, maxY);
+  return { layout, minX, maxX, maxY, k, padIn: PAD_PX / k };
+}
+
+/**
+ * Front view of any speaker spec, to scale, as its layout places the parts (lib/speaker/speakerLayout, the 3D view's
+ * too): each chamber's outline, the drivers (a PA cone, a Hi-fi woofer's frame with a coaxial's HF in it, a tweeter's
+ * plate, a ribbon's or an AMT's own, a horn's mouth in the baffle or on the top), the port by its engine's rule (the
+ * PA's as its front view draws it, the Hi-fi's), the radiators, and a horn-loaded chamber's mouth. A Hi-fi port or a
+ * radiator on the back is drawn dashed (behind). The top is drawn flat (an arched top too, for now).
+ */
+export function SpeakerFront({ spec }: Props) {
+  const pal = usePalette();
+  const { cabinet } = spec;
+  const t = cabinet.panel.thicknessIn;
+  const { layout, minX, maxX, maxY, k } = speakerFrontFrame(cabinet);
+  if (!layout.chambers.length) return null;
   const W = (maxX - minX) * k + 2 * PAD_PX,
     H = maxY * k + 2 * PAD_PX;
   const px = (x: number) => PAD_PX + (x - minX) * k,
