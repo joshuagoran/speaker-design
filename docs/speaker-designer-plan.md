@@ -507,9 +507,18 @@ Each PR stands alone. Lowest risk first.
       - **Music balance (L3f).** The Stack and Space pages start from presets (`src/pages/stack/stackPresets`): the PA
         page's starting design in each layout, the Hi-fi pair, and the current PA design. A PA start keeps the PA page's
         music balance in its band Levels (`lib/speaker/paBalance`): each band's Level is the page's balanced level less
-        its own 2.83 V response, read inside its passband, the highest 0 dB; every member and placement is at 0 dB. On
-        the starting design the space then plays every band 0.37 dB over the page (before: the mid −1.8 dB and the horn
-        +11.3 dB). Old PA saves opened on the Stack page take the same balance once that list is in (sub-PR 2).
+        its own 2.83 V response, read inside its passband, the highest 0 dB; every member and placement is at 0 dB.
+        - The PA presets' Levels are saved data: `src/data/presets/pa-band-levels.ts`, one row per layout, calculated
+          once from the PA page's starting design. `vp run preset-levels` writes the file again after a change to the
+          starting design or the models. `tests/stack-presets.test.ts` fails when a new run would change it. The
+          presets read the file; they calculate nothing.
+        - The current PA design and an old PA save have no saved Levels. Their balance is calculated once, when they
+          are read in, and saved in their band Levels. Nothing calculates it again after an edit.
+        - When the page cannot balance every band (for example a horn it cannot model), no band takes a balanced Level.
+          The adapter's Levels stay, so the Levels never mix two scales.
+        - On the starting design the space then plays every band 0.37 dB over the page (before: the mid −1.8 dB and
+          the horn +11.3 dB). Old PA saves opened on the Stack page take the same balance once that list is in
+          (sub-PR 2).
   - **Weight limit per box.** In the modular planner the weight limit becomes a manual setting on each box (it
     replaces today's fixed 125 lb sub check in `src/lib/pa/chips.ts`). The user sets the limit for the box
     they're working on; no automatic tower or layout rule sets it.

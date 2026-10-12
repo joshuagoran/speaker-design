@@ -12,7 +12,7 @@ import { resolvedPlacement } from "../../lib/speaker/spaceLayout";
 import { numberChannels } from "../../lib/speaker/spaceHardware";
 import { runSpaceGrid } from "../../lib/speaker/runSpace";
 import { startLayers } from "../stack/stackPresets";
-import { STACK_START_NAMES, type StackStart } from "../../constants/stackPresets";
+import { STACK_START_DESIGN_NAMES, type StackStart } from "../../constants/stackPresets";
 import { spacePlacement } from "../../lib/speaker/specParts";
 import { readStoredJson } from "../../lib/storage";
 import { withSpeaker } from "../stack/useStack";
@@ -167,7 +167,7 @@ export function spaceFromStart(start: StackStart, pa: PaPlannerDesign): SpaceDes
   const floor = fromStored(readStoredJson<StoredCoverageLayout>(COVERAGE_LAYOUT_KEY, {}));
   const read = startLayers(
     start,
-    { id: DRAFT_SPACE_ID, name: STACK_START_NAMES[start] },
+    { id: DRAFT_SPACE_ID, name: STACK_START_DESIGN_NAMES[start] },
     { pa, floor },
   );
   return { space: read.space, stacks: [read.stack], speakers: read.speakers };

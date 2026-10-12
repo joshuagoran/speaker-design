@@ -1,5 +1,8 @@
 // Where a new stack (Stack page) or space (Space page) starts: a preset, or the current PA design
-// (src/pages/stack/stackPresets). The PA page becomes these presets at L3f (docs/speaker-designer-plan.md).
+// (src/pages/stack/stackPresets). The PA page becomes these presets at L3f (docs/speaker-designer-plan.md). The picker's
+// label, button and "current designs" group are the Speaker page's start picker's (SPEAKER_START_TEXT,
+// SPEAKER_START_GROUPS).
+import { SPEAKER_START_GROUPS } from "./speakerStarts";
 
 /** The presets, by id: the PA page's starting design in each layout, and the Hi-fi page's pair. */
 export const STACK_PRESET = {
@@ -15,7 +18,7 @@ export type StackPreset = (typeof STACK_PRESET)[keyof typeof STACK_PRESET];
 export const STACK_START = { ...STACK_PRESET, paCurrent: "paCurrent" } as const;
 export type StackStart = (typeof STACK_START)[keyof typeof STACK_START];
 
-/** What each start shows in the picker, and the name the new stack or space takes. */
+/** What each start shows in the picker. */
 export const STACK_START_NAMES = {
   paStack: "PA stack: the top on the sub",
   paPole: "PA on a pole: the top on a pole over the sub",
@@ -25,14 +28,18 @@ export const STACK_START_NAMES = {
   paCurrent: "The current PA design",
 } as const satisfies Record<StackStart, string>;
 
+/** The name a new stack or space takes, by start (its speakers' names start with it). */
+export const STACK_START_DESIGN_NAMES = {
+  paStack: "PA stack",
+  paPole: "PA on a pole",
+  paSatellite: "PA satellites",
+  paTower: "PA tower",
+  hifiPair: "Hi-fi pair",
+  paCurrent: "PA design",
+} as const satisfies Record<StackStart, string>;
+
 /** The picker's groups. */
 export const STACK_START_GROUPS = {
   presets: "Presets",
-  current: "Your current designs",
-} as const;
-
-/** The start picker's label and its button. */
-export const STACK_START_TEXT = {
-  startFrom: "Start from",
-  startOver: "Start over from this",
+  current: SPEAKER_START_GROUPS.current,
 } as const;

@@ -67,7 +67,7 @@ import { DEFAULT_BACK_JOINT } from "../../constants/bracing";
 import { DISPERSION_PLANES } from "../../constants/dispersionPlanes";
 import { PLINTH_HEIGHT_IN } from "../../constants/paLayouts";
 
-/** The horizontal dispersion plane, the first the planes list. */
+/** The horizontal dispersion plane: the first in the planes list. */
 const HORIZONTAL_PLANE = DISPERSION_PLANES[0][0];
 
 /**

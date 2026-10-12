@@ -2,8 +2,10 @@
 // page balances its bands at their limits: the mid `tilt` dB under the sub, the horn `hfTilt` dB under the mid, the
 // weakest band setting the level (lib/pa/musicBalance `balancedLevelsOf`). A stack plays every band from one input, each
 // at its Level on its 2.83 V response. So each band's Level is what puts it where the page puts it: the page's balanced
-// level less the band's own response, read inside the band's passband, the highest Level 0 dB. It is worked out once,
-// when a PA design becomes speakers and a stack, and saved in the bands; nothing works it out again after an edit. Pure.
+// level less the band's own response, read inside the band's passband, the highest Level 0 dB. It is worked out once
+// and saved in the bands: for the PA presets ahead of time, in their data (src/data/presets/pa-band-levels.ts, `vp run
+// preset-levels`); for the current PA design or an old save when it is read in. Nothing works it out again after an
+// edit. Pure.
 import type { AdapterBandId, DesignLayers, PaPlannerDesign, SpeakerSpec } from "../../types";
 import { derivePaDesign, paDesignInputsOf } from "../pa/paDesign";
 import { balancedLevelsOf, coverageGeometry, musicBalanceOf } from "../pa/musicBalance";
@@ -52,14 +54,18 @@ function stackBandLevels(
   return out;
 }
 
+/** Each PA band's Level, dB, by band id: the music balance as the bands save it. */
+export type PaBandLevels = Partial<Record<PaBand, number>>;
+
 /**
- * Each PA band's Level for the design's music balance, dB, the highest 0; null when the page can't balance the design
- * (no mid model, or no stack geometry). A band the page leaves out (a sub or horn it can't model) gets none.
+ * Each PA band's Level for the design's music balance, dB, the highest 0. Null when the page can't balance the design
+ * (no mid model, or no stack geometry) or leaves out a band the layers have (a sub or horn it can't model, or a band no
+ * modeled driver plays): then no band takes a balanced Level, so the Levels never mix two scales.
  */
 export function paBandLevels(
   cfg: PaPlannerDesign,
   layers: Pick<DesignLayers, "stack" | "speakers">,
-): Partial<Record<PaBand, number>> | null {
+): PaBandLevels | null {
   const design = derivePaDesign(paDesignInputsOf(cfg));
   const geometry = coverageGeometry({ ...design, subBox: cfg.cDim });
   const balanced = balancedLevelsOf(
@@ -81,29 +87,31 @@ export function paBandLevels(
   const skirts = bandSkirts(geometry);
   const points = bandPoints(cfg);
   const stack = stackBandLevels(layers, points);
-  const raw: Partial<Record<PaBand, number>> = {};
-  for (const band of [SPEAKER_BAND.low, SPEAKER_BAND.mid, SPEAKER_BAND.high] as const) {
+  const bands = new Set(layers.speakers.flatMap((s) => s.bands.map((b) => b.id).filter(isPaBand)));
+  const raw: PaBandLevels = {};
+  for (const band of bands) {
     const pageBand = PA_BANDS[band];
     const curve = balanced.levels[pageBand];
     const page = curve && curveLevelAt(curve, points[band], skirts[pageBand]);
     const own = stack[band];
-    if (page !== null && page !== undefined && own !== undefined) raw[band] = page - own;
+    if (page === null || page === undefined || own === undefined) return null;
+    raw[band] = page - own;
   }
   const top = Math.max(...Object.values(raw));
   if (!Number.isFinite(top)) return null;
-  const out: Partial<Record<PaBand, number>> = {};
-  for (const [band, db] of Object.entries(raw)) if (isPaBand(band)) out[band] = db - top;
+  const out: PaBandLevels = {};
+  for (const band of bands) {
+    const db = raw[band];
+    if (db !== undefined) out[band] = db - top;
+  }
   return out;
 }
 
 /**
- * The PA design's layers with its music balance in the band Levels: each PA band at its Level (`paBandLevels`), and
- * every member's and placement's own level 0 (the balance is in the bands now). Unchanged where the page can't balance
- * the design.
+ * The layers with these Levels in their PA bands, and every member's and placement's own level 0 (the balance is in the
+ * bands now). A band without a Level keeps its own.
  */
-export function paBalancedLayers(cfg: PaPlannerDesign, layers: DesignLayers): DesignLayers {
-  const levels = paBandLevels(cfg, layers);
-  if (!levels) return layers;
+export function withBandLevels(layers: DesignLayers, levels: PaBandLevels): DesignLayers {
   const speaker = (s: SpeakerSpec): SpeakerSpec => ({
     ...s,
     bands: s.bands.map((b) => {
@@ -119,4 +127,14 @@ export function paBalancedLayers(cfg: PaPlannerDesign, layers: DesignLayers): De
       placements: layers.space.placements.map((p) => ({ ...p, levelDb: 0 })),
     },
   };
+}
+
+/**
+ * The PA design's layers with its music balance worked out now and saved in the band Levels (`paBandLevels`,
+ * `withBandLevels`): for a design read in once (the current PA design, an old save). Unchanged where the page can't
+ * balance every band.
+ */
+export function paBalancedLayers(cfg: PaPlannerDesign, layers: DesignLayers): DesignLayers {
+  const levels = paBandLevels(cfg, layers);
+  return levels ? withBandLevels(layers, levels) : layers;
 }

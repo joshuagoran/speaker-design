@@ -44,12 +44,8 @@ import { HardwareSettings } from "./HardwareSettings";
 import { emptySpace, itemName } from "./spaceSaves";
 import { spaceFromStart, type SpacePlanner } from "./useSpace";
 import { STACK_STARTS, startGroup } from "../stack/stackPresets";
-import {
-  STACK_START,
-  STACK_START_NAMES,
-  STACK_START_TEXT,
-  type StackStart,
-} from "../../constants/stackPresets";
+import { STACK_START, STACK_START_NAMES, type StackStart } from "../../constants/stackPresets";
+import { SPEAKER_START_TEXT } from "../../constants/speakerStarts";
 import { byId } from "../../lib/tables";
 
 interface Props {
@@ -284,7 +280,7 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
             <>
               <TextField label="Name" value={name} maxLength={60} onChange={space.setName} />
               <SelectField
-                label={STACK_START_TEXT.startFrom}
+                label={SPEAKER_START_TEXT.startFrom}
                 options={startOptions}
                 value={byId(startOptions, start)}
                 onChange={(o) => setStart(o.id)}
@@ -294,7 +290,7 @@ export function SpacePage({ space, stack, speakerPage, planner }: Props) {
                 <Button
                   onClick={() => space.setDesign(spaceFromStart(start, paPlannerDesign(planner)))}
                 >
-                  {STACK_START_TEXT.startOver}
+                  {SPEAKER_START_TEXT.startOver}
                 </Button>
                 <Button onClick={() => space.setDesign(emptySpace())}>{SPACE_TEXT.clear}</Button>
               </div>

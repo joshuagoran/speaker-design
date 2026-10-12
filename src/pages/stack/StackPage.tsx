@@ -43,10 +43,11 @@ import { DRAFT_STACK_ID, emptyStack } from "./stackSaves";
 import { STACK_STARTS, startGroup, startLayers } from "./stackPresets";
 import {
   STACK_START,
+  STACK_START_DESIGN_NAMES,
   STACK_START_NAMES,
-  STACK_START_TEXT,
   type StackStart,
 } from "../../constants/stackPresets";
+import { SPEAKER_START_TEXT } from "../../constants/speakerStarts";
 import type { StackPlanner } from "./useStack";
 import type { PaPlanner } from "../pa-stack/hooks/usePaPlanner";
 
@@ -98,7 +99,7 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
   const startFrom = () => {
     const { stack: started, speakers } = startLayers(
       start,
-      { id: DRAFT_STACK_ID, name: STACK_START_NAMES[start] },
+      { id: DRAFT_STACK_ID, name: STACK_START_DESIGN_NAMES[start] },
       { pa: paPlannerDesign(planner), floor: DEFAULT_COVERAGE_LAYOUT },
     );
     stack.setDesign({ stack: started, speakers });
@@ -255,14 +256,14 @@ export function StackPage({ stack, speakerPage, planner }: Props) {
                 onChange={stack.setNotes}
               />
               <SelectField
-                label={STACK_START_TEXT.startFrom}
+                label={SPEAKER_START_TEXT.startFrom}
                 options={startOptions}
                 value={byId(startOptions, start)}
                 onChange={(o) => setStart(o.id)}
                 group={(o) => o.group}
               />
               <div className="flex flex-wrap gap-2 mb-2">
-                <Button onClick={startFrom}>{STACK_START_TEXT.startOver}</Button>
+                <Button onClick={startFrom}>{SPEAKER_START_TEXT.startOver}</Button>
                 <Button onClick={() => stack.setDesign(emptyStack())}>{STACK_TEXT.clear}</Button>
               </div>
               <p className="text-xs text-stone-500 mb-2">{STACK_TEXT.startHint}</p>
