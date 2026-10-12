@@ -25,7 +25,7 @@ import {
 import { cabinetFinishName, paintName } from "../../lib/data";
 import { Card } from "../../components/ui/Card";
 import { HORN_COLOR_CATALOG_LABEL } from "../../constants/hornColor";
-import { driverHorn, hornFlare, speakerLayout } from "../../lib/speaker/speakerLayout";
+import { driverHorn, hornFlare, speakerLayout, ventMoved } from "../../lib/speaker/speakerLayout";
 import { byId } from "../../lib/tables";
 import { keysOf } from "../../lib/records";
 import { DEFAULT_HIFI, DEFAULT_PA, DEFAULT_SPEAKER_CHAMBER } from "../../lib/defaults";
@@ -217,6 +217,10 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
             {flares.some((f) => f.placeholder) && <Notice>{DESIGNER_TEXT.hornPlaceholder}</Notice>}
             {flares.some((f) => f.mouthClipped) && (
               <Notice>{DESIGNER_TEXT.hornMouthClipped}</Notice>
+            )}
+            {flares.some((f) => f.mouthMoved) && <Notice>{DESIGNER_TEXT.hornMouthMoved}</Notice>}
+            {layout.chambers.some((c) => ventMoved(spec.cabinet, c)) && (
+              <Notice>{DESIGNER_TEXT.ventMoved}</Notice>
             )}
           </section>
           <section className={`${RESULT_MAX_WIDTH} min-w-0 mt-5`}>

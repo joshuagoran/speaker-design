@@ -202,17 +202,38 @@ Each PR stands alone. Lowest risk first.
     - Other chambers that touch form a stepped shell. Each builds only its own walls: the lower (or left) chamber's
       wall is the one partition. An overhang keeps its own floor past the chamber under it.
     - A chamber that touches no other is its own box.
-    - A spec with an inset gets the PA frame. Any other spec gets the Hi-fi box and its roundover.
+    - The cabinet's construction sets the style (L3e): the PA frame, or the Hi-fi box and its roundover.
     - A horn-loaded chamber shows its mouth on the baffle and a flare from its segments.
     - A folded path, or a path longer than the chamber, is a straight placeholder. A note says so.
     - A mouth larger than the clear face is drawn at the clear face. A note says so.
-    - Not drawn yet: the tower's arched top (L3e adds it), the aim (see the owner decisions) and the PA plinth.
+    - Not drawn yet: the aim (see the owner decisions) and the PA plinth. The arched top draws in 3D on a PA frame
+      with one shell, over a top chamber that runs the full width and is at least half the width tall
+      (`drawsArchedTop`, L3e). The front drawing and the Hi-fi box draw it flat.
   - **L3e Templates.** The templates step adds these cabinet settings:
     - A top shape: `flat` or `arched`. Then the PA tower's arched top draws and cuts correctly.
-    - A "Construction" setting: "Frame and inset baffle" (the PA style) or "Flush box" (the Hi-fi style). Today
-      the inset alone sets the style, so a PA box with no inset draws as a Hi-fi box. This setting replaces that
+    - A "Construction" setting: "Frame and inset baffle" (the PA style) or "Flush box" (the Hi-fi style). Before,
+      the inset alone set the style, so a PA box with no inset drew as a Hi-fi box. This setting replaces that
       rule.
     - Movable ports and driver openings (see the owner decisions).
+    - **The spec fields (done).** The settings UI comes later.
+      - `SpeakerCabinet.construction` (`CABINET_CONSTRUCTION`): `frameInset` or `flushBox`. The 3D view reads it,
+        not the inset. A flush box has no inset (`baffleInsetIn`), in the model and the views.
+      - `SpeakerCabinet.top` (`CABINET_TOP`): `flat` or `arched`. The arch is a semicircle the full width, as
+        `towerSpec` builds it.
+      - A Hi-fi round port and a radiator vent can have a `position`: a panel (baffle or back) and the center of the
+        group, as a driver's position. Absent: the vent rule places it. Flared PA tubes cannot have one (the type
+        forbids it).
+      - A horn in the box can have a `mouthPosition` on the baffle. Absent: the mouth is on the center of the clear
+        face. A back-loaded horn needs it, because its drivers are on the baffle too.
+      - A set position past the clear face moves inside it, to the nearest place that fits. The page shows a notice.
+      - A port at a set position folds inside its chamber. In the upper half, its riser goes down. On the back, it
+        runs from the back to the inside face of the baffle. The model's elbow count still uses the Hi-fi rule's row
+        along the bottom.
+      - The PA adapter gives `frameInset` (an inset of 0 too). The tower's top is `arched` where `towerSpec` arches
+        it. The Hi-fi and fill adapters and the empty speaker give `flushBox` and a flat top. No adapter sets a
+        position: every page places its vents by a rule.
+      - Not movable: side ducts and the PA letterbox (their place is their shape), flared PA tubes (their place is
+        part of the PA tube rule), and a Hi-fi slot (the model takes it along the bottom, with one shelf).
   - **L3c Cutlist.** L3c works out the real bracing, vent walls and hardware displacement for each chamber and
     replaces the 3% allowance.
   - **L3d Inductance, limits and chips.**
@@ -336,7 +357,7 @@ Each PR stands alone. Lowest risk first.
   - Today the Hi-fi spec has `tiltDeg`. PA tops angled down must fit the same model.
   - The 3D view and the Space page's coverage and levels both use it.
 - Ports and driver openings become settings you can move, like the drivers' positions. This comes with the
-  templates step or later. Today the vent rules place the ports.
+  templates step or later. The spec fields are in (L3e); the settings UI comes later.
 
 ## Open questions for the owner
 

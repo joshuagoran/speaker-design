@@ -9,27 +9,23 @@ import {
   onTop,
   PORT_RULE,
   portRule,
+  radiatorsAt,
+  roundPortsAt,
   speakerLayout,
   type PlacedChamber,
 } from "../../lib/speaker/speakerLayout";
 import { paConeRadius } from "../stack-view/buildCone";
 import { HORN_LIFT_IN } from "../stack-view/stackHeights";
-import {
-  CD_OPTIONS,
-  FILL_OPTIONS,
-  HIFI_PASSIVES,
-  hifiDriverById,
-  MID_OPTIONS,
-  SUB_OPTIONS,
-} from "../../lib/data";
+import { CD_OPTIONS, FILL_OPTIONS, hifiDriverById, MID_OPTIONS, SUB_OPTIONS } from "../../lib/data";
 import { byId } from "../../lib/tables";
-import { isAmt, isRibbon, RADIATOR_PANEL } from "../../lib/hifi/hifi";
-import { radiatorSpots, roundPortSpots, slotOpening } from "../../lib/hifi/boxLayout";
+import { isAmt, isRibbon } from "../../lib/hifi/hifi";
+import { slotOpening } from "../../lib/hifi/boxLayout";
+import { PANEL } from "../../constants/cutParts";
 import { subVentHoles, subVentPlan } from "../stack-view/buildSubwoofer";
 import { HIFI_BOX_LAYOUT } from "../../constants/hifiLayout";
 import { HORN_CUTOUT_SHAPE, towerHornCutout } from "../../lib/pa/tower";
 import { HIFI_FRONT_PARTS } from "../../constants/hifiScene";
-import { DRIVER_KIND, PORT_SHAPE, VENT_KIND } from "../../constants/speakerSpec";
+import { DRIVER_KIND, PORT_SHAPE } from "../../constants/speakerSpec";
 
 interface Props {
   spec: Pick<SpeakerSpec, "cabinet">;
@@ -45,7 +41,8 @@ const PAD_PX = 4;
  * Front view of any speaker spec, to scale, as its layout places the parts (lib/speaker/speakerLayout, the 3D view's
  * too): each chamber's outline, the drivers (a PA cone, a Hi-fi woofer's frame with a coaxial's HF in it, a tweeter's
  * plate, a ribbon's or an AMT's own, a horn's mouth in the baffle or on the top), the port by its engine's rule (the
- * PA's as its front view draws it, the Hi-fi's), the radiators on the back dashed, and a horn-loaded chamber's mouth.
+ * PA's as its front view draws it, the Hi-fi's), the radiators, and a horn-loaded chamber's mouth. A Hi-fi port or a
+ * radiator on the back is drawn dashed (behind). The top is drawn flat (an arched top too, for now).
  */
 export function SpeakerFront({ spec }: Props) {
   const pal = usePalette();
@@ -95,6 +92,8 @@ export function SpeakerFront({ spec }: Props) {
   ) => <circle key={key} cx={px(cx)} cy={py(cy)} r={r * k} {...props} />;
   const opening = { fill: pal.ink };
   const cone = { fill: pal.edge, stroke: pal.muted, strokeWidth: 1 };
+  /** a part on the back, behind the baffle */
+  const behind = { fill: "none", stroke: pal.muted, strokeDasharray: "3 2" };
 
   /** a chamber's port by its engine's rule */
   const vent = (placed: PlacedChamber, i: number) => {
@@ -108,8 +107,15 @@ export function SpeakerFront({ spec }: Props) {
         return [rect(`v${i}`, cx, y0 + o.y + o.h / 2, o.w, o.h, opening)];
       }
       // each cut to its tube's outside, as the 3D view cuts it
-      return roundPortSpots(port).map((s, j) =>
-        circle(`v${i}.${j}`, cx + s.x, y0 + s.y, s.r + HIFI_BOX_LAYOUT.portTubeWallIn, opening),
+      const { panel, spots } = roundPortsAt(placed, port);
+      return spots.map((s, j) =>
+        circle(
+          `v${i}.${j}`,
+          cx + s.x,
+          y0 + s.y,
+          s.r + HIFI_BOX_LAYOUT.portTubeWallIn,
+          panel === PANEL.back ? behind : opening,
+        ),
       );
     }
     // the PA's, as the 3D view cuts them (stack-view/buildSubwoofer): the tubes' or the side ducts' openings, and the
@@ -281,21 +287,15 @@ export function SpeakerFront({ spec }: Props) {
               fill={pal.ink}
             />,
           );
-        // the passive radiators on the back, dashed
-        if (chamber.vent.kind === VENT_KIND.radiator) {
-          const drv = byId(HIFI_PASSIVES, chamber.vent.radiators.id);
-          if (drv)
-            radiatorSpots({ drv, n: chamber.vent.radiators.n }, RADIATOR_PANEL, t).forEach((s, j) =>
-              parts.push(
-                rect(`p${i}.${j}`, placed.cx, placed.y0 + s.y, s.shape.w, s.shape.h, {
-                  rx: (s.shape.w * k) / 2,
-                  fill: "none",
-                  stroke: pal.muted,
-                  strokeDasharray: "3 2",
-                }),
-              ),
-            );
-        }
+        // the passive radiators: on the baffle as a cone, on the back dashed
+        radiatorsAt(cabinet, placed).spots.forEach((s, j) =>
+          parts.push(
+            rect(`p${i}.${j}`, placed.cx + s.x, placed.y0 + s.y, s.shape.w, s.shape.h, {
+              rx: (s.shape.w * k) / 2,
+              ...(s.panel === PANEL.baffle ? cone : behind),
+            }),
+          ),
+        );
         // the drivers on the baffle (a front-loaded horn's sit inside, at its throat) and the horns on the top
         chamber.drivers.forEach((d, j) => {
           if (!driversOnBaffle(chamber) && !onTop(d)) return;

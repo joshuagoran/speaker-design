@@ -5,13 +5,19 @@ import type {
   ChamberLoad,
   CrossoverOrder,
   SourceChannel,
+  SpeakerCabinet,
   SpeakerPart,
   SpecIdentity,
   SystemAmp,
   SystemSource,
 } from "../../types";
 import { crossoverSlopeName } from "../../constants/crossovers";
-import { CHAMBER_LOAD, SPEAKER_PART_NAMES } from "../../constants/speakerSpec";
+import {
+  CABINET_CONSTRUCTION,
+  CABINET_TOP,
+  CHAMBER_LOAD,
+  SPEAKER_PART_NAMES,
+} from "../../constants/speakerSpec";
 
 /** A Linkwitz-Riley filter of `order` at `hz` (the PA and Hi-fi crossovers). */
 export const lrFilter = (hz: number, order: CrossoverOrder): BandFilter => ({
@@ -24,6 +30,13 @@ export const stuffingPctOf = (gain: number) => Math.round((gain - 1) * 100);
 
 /** A chamber whose drivers radiate straight out. */
 export const DIRECT_LOAD: ChamberLoad = { kind: CHAMBER_LOAD.direct };
+
+/** A flush box with a flat top (the Hi-fi box, the fill's, the Designer's empty speaker): its baffle is its front. */
+export const FLUSH_BOX: Pick<SpeakerCabinet, "construction" | "top" | "insetIn"> = {
+  construction: CABINET_CONSTRUCTION.flushBox,
+  top: CABINET_TOP.flat,
+  insetIn: 0,
+};
 
 /** A source's feed with no filters of the system's own. */
 export const NO_FILTERS: SystemSource["filters"] = { highpass: null, lowpass: null };

@@ -38,6 +38,8 @@ import { MID_GAP_IN, PLINTH_HEIGHT_IN, SATELLITE_COLUMN_H_IN } from "../../const
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import {
   AUTO_DELAY,
+  CABINET_CONSTRUCTION,
+  CABINET_TOP,
   DRIVER_KIND,
   FRONT_END_KIND,
   HORN_PLACEMENT,
@@ -178,10 +180,20 @@ const sealedChamber = (
   drivers,
 });
 
-/** The plywood shell: the design's panels, inset and bracing; the PA boxes stand upright with sharp-edged baffles. */
-const paCabinet = (cfg: PaPlannerDesign, chambers: SpeakerCabinet["chambers"]): SpeakerCabinet => ({
+/**
+ * The plywood shell: the PA's frame with its inset baffle (an inset of 0 too), the design's panels, inset and bracing,
+ * and the `top` given (flat but on the tower, whose horn can arch it); the PA boxes stand upright with sharp-edged
+ * baffles.
+ */
+const paCabinet = (
+  cfg: PaPlannerDesign,
+  chambers: SpeakerCabinet["chambers"],
+  top: SpeakerCabinet["top"] = CABINET_TOP.flat,
+): SpeakerCabinet => ({
   chambers,
   panel: { nominal: cfg.panel, material: PLYWOOD_MATERIAL, thicknessIn: cfg.wall },
+  construction: CABINET_CONSTRUCTION.frameInset,
+  top,
   insetIn: cfg.inset,
   roundoverIn: 0,
   tiltDeg: 0,
@@ -290,7 +302,8 @@ const topSpeaker = (cfg: PaPlannerDesign, system: SpecIdentity) =>
 
 /**
  * The tower: the sub, the mid chamber and the horn section stacked in one shell, all three bands crossed inside it.
- * Each partition is the top wall of the chamber below it (`SpeakerChamber.dims`), as `towerSpec` builds them.
+ * Each partition is the top wall of the chamber below it (`SpeakerChamber.dims`), as `towerSpec` builds them, and the
+ * top is arched where `towerSpec` arches it (a round horn narrower than the cabinet).
  */
 function towerSpeaker(cfg: PaPlannerDesign, system: SpecIdentity): SpeakerSpec {
   const horn = byIdOrThrow(HORN_OPTIONS, cfg.horn, CATALOG_TABLE_NAMES.horns);
@@ -302,17 +315,21 @@ function towerSpeaker(cfg: PaPlannerDesign, system: SpecIdentity): SpeakerSpec {
     cfg,
     system,
     SPEAKER_PART.tower,
-    paCabinet(cfg, [
-      subChamber(cfg),
-      sealedChamber({ xIn: 0, yIn: cfg.cDim.h }, midDims, [
-        midDriver(cfg, tower.midCenter - cfg.cDim.h),
-      ]),
-      sealedChamber(
-        { xIn: 0, yIn: hornFloor },
-        { w: cfg.cDim.w, h: tower.hornSectionH, d: cfg.cDim.d },
-        [hornDriver(cfg, HORN_PLACEMENT.baffle, { xIn: 0, yIn: tower.hornCenter - hornFloor })],
-      ),
-    ]),
+    paCabinet(
+      cfg,
+      [
+        subChamber(cfg),
+        sealedChamber({ xIn: 0, yIn: cfg.cDim.h }, midDims, [
+          midDriver(cfg, tower.midCenter - cfg.cDim.h),
+        ]),
+        sealedChamber(
+          { xIn: 0, yIn: hornFloor },
+          { w: cfg.cDim.w, h: tower.hornSectionH, d: cfg.cDim.d },
+          [hornDriver(cfg, HORN_PLACEMENT.baffle, { xIn: 0, yIn: tower.hornCenter - hornFloor })],
+        ),
+      ],
+      tower.archTop ? CABINET_TOP.arched : CABINET_TOP.flat,
+    ),
     [
       subBand(cfg, lrFilter(cfg.xoLo, cfg.xoLoOrder)),
       activeBand(
