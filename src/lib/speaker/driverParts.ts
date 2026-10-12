@@ -1,8 +1,22 @@
 // A speaker spec's driver as its catalog part: the figures the speaker model and the horn engine read. Each kind keeps
 // the rules of the engine its table comes from (the PA's subs and mids, the Hi-fi's woofers, tweeters and coaxials).
 // Pure.
-import type { BoxModelTS, DriverKind, SpeakerDriver, ThieleSmall } from "../../types";
-import { CD_OPTIONS, FILL_OPTIONS, MID_OPTIONS, SUB_OPTIONS, hifiDriverById } from "../data";
+import type {
+  BoxModelTS,
+  CompressionDriver,
+  DriverKind,
+  Horn,
+  SpeakerDriver,
+  ThieleSmall,
+} from "../../types";
+import {
+  CD_OPTIONS,
+  FILL_OPTIONS,
+  MID_OPTIONS,
+  SUB_OPTIONS,
+  hifiDriverById,
+  hornById,
+} from "../data";
 import { byId } from "../tables";
 import { midDisplacementL } from "../pa/calc";
 import { hifiWooferDisplacementL } from "../hifi/hifi";
@@ -89,6 +103,25 @@ export function hfParts(driver: SpeakerDriver): HfParts | null {
     case DRIVER_KIND.woofer:
       return null;
   }
+}
+
+/** Whether a horn's throat and a compression driver's exit differ in size (the PA page's and the Speaker page's check). */
+export const hornExitsDiffer = (
+  horn: Pick<Horn, "exit">,
+  driver: Pick<CompressionDriver, "exit">,
+): boolean => horn.exit !== driver.exit;
+
+/**
+ * A compression driver and its catalog horn when the horn's throat and the driver's exit differ; null for another
+ * kind, no horn, an unknown id, or a matched pair.
+ */
+export function mismatchedHornExit(
+  driver: SpeakerDriver,
+): { horn: Horn; driver: CompressionDriver } | null {
+  if (driver.kind !== DRIVER_KIND.compression || !driver.horn) return null;
+  const cd = byId(CD_OPTIONS, driver.driverId);
+  const horn = hornById(driver.horn.hornId);
+  return cd && horn && hornExitsDiffer(horn, cd) ? { horn, driver: cd } : null;
 }
 
 /** A driver's catalog listing: its name (maker and model), US price (null where none is known) and price source. */

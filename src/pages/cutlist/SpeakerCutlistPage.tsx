@@ -3,6 +3,7 @@ import type { SpeakerPageState } from "../speaker/useSpeakerPage";
 import type { CutlistOptions } from "./useCutlistOptions";
 import { speakerCutParts, speakerPurchasedParts } from "../../lib/speaker/speakerBuild";
 import { defaultPanelIn } from "../../lib/panel";
+import { withMeasuredWalls } from "../../lib/speaker/cabinetPanels";
 import { CutlistPage } from "./CutlistPage";
 import { useStoredCutlistOptions } from "./useStoredCutlistOptions";
 import { CUTLIST_PROJECT } from "../../constants/cutlistProjects";
@@ -14,7 +15,8 @@ interface Props {
 /**
  * The Speaker Cutlist page: the speaker's parts, chamber by chamber (lib/speaker/speakerBuild), with the Speaker page's
  * own cutlist choices. The measured wall thickness is the speaker's own panel thickness, so the model and the cutlist
- * read the same walls.
+ * read the same walls. Side-duct dividers of the walls' size take the measurement too; dividers of another size keep
+ * their default thickness.
  */
 export function SpeakerCutlistPage({ speakerPage }: Props) {
   const stored = useStoredCutlistOptions(CUTLIST_PROJECT.speaker);
@@ -26,13 +28,13 @@ export function SpeakerCutlistPage({ speakerPage }: Props) {
     panel.thicknessIn === defaultIn ? {} : { [panel.nominal]: panel.thicknessIn };
   const setPanelExactIn: Setter<PanelExactIn> = (v) => {
     const next = typeof v === "function" ? v(exactIn) : v;
-    speakerPage.editCabinet((c) => ({
-      ...c,
-      panel: {
-        ...c.panel,
-        thicknessIn: next[c.panel.nominal] ?? defaultPanelIn(c.panel.nominal, c.panel.material),
-      },
-    }));
+    // the dividers of the walls' size take the same thickness (lib/speaker/cabinetPanels)
+    speakerPage.editCabinet((c) =>
+      withMeasuredWalls(
+        c,
+        next[c.panel.nominal] ?? defaultPanelIn(c.panel.nominal, c.panel.material),
+      ),
+    );
   };
   const options: CutlistOptions = { ...stored, panelExactIn: exactIn, setPanelExactIn };
   const { parts, vent } = speakerCutParts(cabinet, options.cornerJoint);

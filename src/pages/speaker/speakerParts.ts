@@ -69,6 +69,7 @@ export const DEFAULT_PORTS = {
     n: 2,
     throat: DEFAULT_PA.cVent.throat,
     len: DEFAULT_PA.cVent.len,
+    divider: DEFAULT_PA.divider,
   },
 } as const satisfies Record<NonNullable<SpeakerPort["shape"]>, SpeakerPort>;
 

@@ -24,7 +24,7 @@ import {
   settingsSheetBodyClass,
 } from "../../../components/ui/SettingsSheetTabs";
 import { useFolds } from "../../../hooks/useFolds";
-import { formatDims, formatHz } from "../../../lib/format";
+import { formatDims, formatHz, formatInches } from "../../../lib/format";
 import { crossoverSlopeName } from "../../../constants/crossovers";
 import { PA_LAYOUT_NAMES } from "../../../constants/paLayouts";
 import { PA_SETTINGS_RENAMED, PA_SETTINGS_SECTIONS } from "../../../constants/settingsSections";
@@ -445,11 +445,7 @@ export function SettingsPanel({ planner }: Props) {
                     onChange={(v) => setSubVentField("throat", v)}
                   />
                   <ToggleGroup
-                    label={
-                      <Tooltip tip="Two per duct. Thicker dividers shrink the vent, so it tunes lower.">
-                        Dividers
-                      </Tooltip>
-                    }
+                    label={<Tooltip tip={UI_TEXT.ductDividersTip}>{UI_TEXT.ductDividers}</Tooltip>}
                     value={ductDividerPanel}
                     onChange={setDuctDividerPanel}
                     options={PANEL_NOMINAL_OPTIONS}
@@ -599,8 +595,10 @@ export function SettingsPanel({ planner }: Props) {
           />
           {hornExitMismatch && (
             <div className="text-sm text-red-700 mb-4">
-              Horn throat and driver exit don't match ({hornOption.exit}″ vs{" "}
-              {compressionDriver.exit}″).
+              {UI_TEXT.hornExitMismatch(
+                formatInches(hornOption.exit),
+                formatInches(compressionDriver.exit),
+              )}
             </div>
           )}
         </div>,
