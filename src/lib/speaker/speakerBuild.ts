@@ -1070,6 +1070,19 @@ function withoutGivenWalls(
   const faceCut = !frame && joint === "butt" ? t : t / 2;
   const left = shared.left ? 1 : 0,
     below = shared.below ? 1 : 0;
+  /** a side's joint words without the bottom edge it no longer has (a frame's and a flush box's wording) */
+  const sideNote = (note: string) =>
+    shared.below
+      ? note
+          .replace("top and bottom edges", "top edge")
+          .replace(
+            "all four edges, for the top, bottom, baffle and back",
+            "the top, front and rear edges, for the top, baffle and back",
+          )
+      : note;
+  /** a mitered top's joint words without the left end it no longer has */
+  const topNote = (note: string) =>
+    shared.left ? note.replace("45° on both ends", "45° on the right end") : note;
   return parts.map((p): CutPart => {
     switch (p.part) {
       case "side":
@@ -1080,7 +1093,7 @@ function withoutGivenWalls(
           note: joinNotes([
             shared.left && "right side only: its left side is the chamber beside it's right side",
             shared.below && "stands on the chamber below's top",
-            p.note,
+            sideNote(p.note),
           ]),
         };
       case "topBottom":
@@ -1091,7 +1104,7 @@ function withoutGivenWalls(
           note: joinNotes([
             shared.below && "top only: its floor is the chamber below's top",
             shared.left && "left end square on the chamber beside it",
-            p.note,
+            topNote(p.note),
           ]),
         };
       case "back":

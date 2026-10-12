@@ -318,6 +318,9 @@ test("speaker build: a chamber beside or on another is sized to itself, for ever
       for (const [i, c] of [lower, upper].entries())
         for (const side of rowsOf(stack, i, "side"))
           assert.equal(side.b, c.dims.h, `${at}: side ${i}`);
+      // its joints only where it has its own walls: no bottom edge on the upper chamber's sides, no left end on the top
+      for (const side of rowsOf(stack, 1, "side"))
+        assert.ok(!/bottom/.test(side.note), `${at}: ${side.note}`);
       const beside = withCabinet({ chambers: [left, right], construction, insetIn: 0.75 });
       const row = speakerCutParts(beside.cabinet, joint).parts;
       assert.deepEqual(
@@ -328,6 +331,8 @@ test("speaker build: a chamber beside or on another is sized to itself, for ever
       for (const [i, c] of [left, right].entries())
         for (const side of rowsOf(row, i, "side"))
           assert.equal(side.b, c.dims.h, `${at}: side ${i}`);
+      for (const top of rowsOf(row, 1, "topBottom"))
+        assert.ok(!/both ends/.test(top.note), `${at}: ${top.note}`);
       if (construction === CABINET_CONSTRUCTION.flushBox && joint === "butt") {
         // a butt-jointed flush box's fronts cover the cabinet's front, edge to edge, and no more
         const front = (parts: readonly CutPart[], i: number) => rowsOf(parts, i, "baffle")[0];

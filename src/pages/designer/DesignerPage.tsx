@@ -78,6 +78,7 @@ import {
   BACK_JOINT_SUMMARY,
   BACK_JOINT_TIPS,
   BRACE_STYLE_NAMES,
+  BRACE_TARGET_RANGE_HZ,
   BRACE_STYLE_SUMMARY,
   BRACE_STYLE_TIPS,
 } from "../../constants/bracing";
@@ -475,13 +476,17 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                   </Tooltip>
                 }
                 value={braceTargetHz}
-                min={DESIGNER_TEXT.braceTargetMinHz}
+                min={BRACE_TARGET_RANGE_HZ.min}
+                max={BRACE_TARGET_RANGE_HZ.max}
                 step={10}
                 unit="Hz"
                 onChange={(v) =>
                   designer.editCabinet((c) => ({
                     ...c,
-                    braceTargetHz: Math.max(DESIGNER_TEXT.braceTargetMinHz, v),
+                    braceTargetHz: Math.min(
+                      BRACE_TARGET_RANGE_HZ.max,
+                      Math.max(BRACE_TARGET_RANGE_HZ.min, v),
+                    ),
                   }))
                 }
                 className="mb-3"
