@@ -53,7 +53,8 @@ export const CUT_BOX_TINTS = {
   sub: "subTint",
   mid: "midTint",
   hifi: "subTint",
-  shell: "subTint",
+  // the Designer's shell in the light gray, apart from its chambers' tints
+  shell: "edge",
 } as const satisfies Record<keyof typeof CUT_BOX_NAMES, string>;
 
 /** Each named box's heading over its rows in the cutlist. */

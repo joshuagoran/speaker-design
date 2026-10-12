@@ -2075,9 +2075,9 @@ export interface SpeakerCabinet extends Pick<PaDesignConfig, "braceStyle" | "bac
   tiltDeg: NonNullable<HifiConfig["tiltDeg"]>;
   /**
    * the PA boxes' hardware (lib/pa/hardware): these handles, the input dish with its two jacks, and the horn's binding
-   * posts on a chamber whose horn stands on its top; in each shell's lowest chamber. Absent: none (the Hi-fi box).
+   * posts on a chamber whose horn stands on its top; in each shell's lowest chamber. Null: none (the Hi-fi box).
    */
-  hardware?: BoxHandles;
+  hardware: BoxHandles | null;
 }
 
 /** A filter's alignment and slope: Butterworth or Linkwitz-Riley at 24 or 48 dB/oct, or first order (a capacitor). */

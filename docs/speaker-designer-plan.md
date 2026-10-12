@@ -244,14 +244,15 @@ Each PR stands alone. Lowest risk first.
       PA sub box's own rule (`subBoxBracing`). A horn-loaded chamber takes no braces.
     - **Hardware.** `SpeakerCabinet.hardware` holds the PA handles. With it, each shell's lowest chamber takes the
       handles, the input dish and, under a horn on its top, the binding posts. The PA adapter sets the PA page's
-      handles. Absent: no hardware (the Hi-fi box, the empty speaker).
+      handles. Null: no hardware (the Hi-fi box, the fill, the empty speaker).
     - **Net air (Auto).** The clear volume less the drivers, the vent's air, the wood inside (braces, ribs, vent
       walls, a frame's baffle cleats) and the hardware's recesses. The 3% allowance is gone.
     - **Cutlist.** Chambers that fill one box of one depth share one shell (the `Shell` group) with partitions inside,
       and the arched top (`archedShellParts`, the tower's) where the views draw one on a frame. Any other chamber is a
       box of its own, less the walls another chamber gives it. A frame cuts as the PA boxes (`boxParts`), a flush box
       as the Hi-fi box (`flushBoxPanels`). Every driver, horn mouth, port and radiator is noted at its position.
-      `packSheets` lays them out on the Designer's Cutlist tab.
+      The Designer's Cutlist tab lays the rows out on sheets as the PA and Hi-fi tabs do (the shared Cutlist page:
+      `layoutCutlist`, which packs them with `packSheets`).
     - **Weight.** A frame takes the PA rule: the lowest chamber of a shell weighs as a box of its own, and each chamber
       over or beside it adds what it builds (the tower's cabinet over its sub box). A flush box takes the Hi-fi rule.
       Each chamber adds its drivers with their horns, its radiators and its hardware.

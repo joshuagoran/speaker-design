@@ -182,8 +182,8 @@ const sealedChamber = (
 
 /**
  * The plywood shell: the PA's frame with its inset baffle (an inset of 0 too), the design's panels, inset and bracing,
- * the box's `hardware` (its handles, as the PA page sets them), and the `top` given (flat but on the tower, whose horn can arch it); the PA boxes stand upright with sharp-edged
- * baffles.
+ * the box's `hardware` (its handles, as the PA page sets them), and the `top` given (flat but on the tower, whose horn
+ * can arch it); the PA boxes stand upright with sharp-edged baffles.
  */
 const paCabinet = (
   cfg: PaPlannerDesign,

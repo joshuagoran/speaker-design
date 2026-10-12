@@ -724,11 +724,7 @@ export function cabinetBuild(cabinet: SpeakerCabinet): CabinetBuild {
   const bases = shellBases(cabinet.chambers);
   const chambers = frames.map((f): ChamberBuild => {
     const isBase = bases[f.index] === f.index;
-    const { bracing, hardware } = chamberBracing(
-      cabinet,
-      f,
-      isBase && cabinet.hardware ? cabinet.hardware : null,
-    );
+    const { bracing, hardware } = chamberBracing(cabinet, f, isBase ? cabinet.hardware : null);
     const { chamber } = f.placed;
     const vent = chamberVentModel(cabinet, chamber);
     const radiators = chamberRadiatorsLb(chamber);

@@ -54,6 +54,8 @@ import { BandSettings } from "./BandSettings";
 import { FilterFields } from "./FilterFields";
 import { bandText, bracingText, chamberText, countText, inputText } from "./designerText";
 import { braceNoteLines } from "../../lib/bracingNotes";
+import { formatHz } from "../../lib/format";
+import { PA_PANEL_TARGET_HZ } from "../../lib/pa/bracing";
 import { bandChips, chamberChips } from "./designerChips";
 import { paStarts, startSpeaker } from "./designerStarts";
 import type { Designer } from "./useDesigner";
@@ -295,7 +297,7 @@ export function DesignerPage({ designer, planner, hifi }: Props) {
                 : [],
             )}
             <p className={`${READING_WIDTH} text-sm text-stone-500 mt-3`}>
-              {DESIGNER_TEXT.buildNote}
+              {DESIGNER_TEXT.buildNote(formatHz(PA_PANEL_TARGET_HZ))}
             </p>
           </section>
           {limits.bands.length > 0 && (

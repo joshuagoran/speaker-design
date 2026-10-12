@@ -223,6 +223,7 @@ export const EMPTY_SPEAKER: Omit<SpeakerSpec, "id" | "name"> = {
     chambers: [DEFAULT_SPEAKER_CHAMBER],
     panel: { nominal: DEFAULT_PA.panel, material: PLYWOOD_MATERIAL, thicknessIn: DEFAULT_PA.wall },
     ...FLUSH_BOX,
+    hardware: null,
     roundoverIn: 0,
     tiltDeg: 0,
   },
