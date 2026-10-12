@@ -12,7 +12,6 @@ import type {
   BandId,
   DispersionPlane,
   HifiDispersionMap,
-  SpeakerBand,
   SpeakerSpec,
   StackMemberResponse,
   StackResponse,
@@ -23,7 +22,7 @@ import { patternDirectivity } from "../pa/dispersion";
 import { abs, add, complex, multiply, phasor, scale } from "../acoustics/complex";
 import { bandOfPart, driverPattern, pressureAt } from "./spaceCoverage";
 import { layStack, placementFrame } from "./spaceLayout";
-import { crossoverHz } from "./stackResponse";
+import { stackCrossoversHz } from "./stackResponse";
 import { bandCenters } from "./stackLayout";
 import { stackMember } from "./specParts";
 import { SPEED_OF_SOUND } from "../../constants/acoustics";
@@ -46,37 +45,6 @@ const OWN_FRAME = placementFrame({
 export type DispersionModel = Pick<StackResponse, "listenHeightIn"> & {
   members: readonly (Pick<StackMemberResponse, "response" | "delayMs"> | null)[];
 };
-
-/**
- * Where the map marks a crossover, Hz, low to high: every pair of bands in a speaker, or of members in the stack, whose
- * lowpass and highpass meet (lib/speaker/stackResponse crossoverHz), once each.
- */
-export function dispersionCrossovers(
-  stack: Pick<StackSpec, "members">,
-  speakers: readonly Pick<SpeakerSpec, "id" | "bands">[],
-): number[] {
-  const asFilter = (b: Pick<SpeakerBand, "highpass" | "lowpass">) => ({
-    crossover: { highpass: b.highpass, lowpass: b.lowpass },
-  });
-  const lists = [
-    stack.members,
-    ...[...new Set(stack.members.map((m) => m.speakerId))].map(
-      (id) => speakers.find((s) => s.id === id)?.bands.map(asFilter) ?? [],
-    ),
-  ];
-  const out = new Set<number>();
-  for (const list of lists)
-    for (const a of list)
-      for (const b of list) {
-        if (a === b || !a.crossover.lowpass || !b.crossover.highpass) continue;
-        const hz = crossoverHz(
-          { crossover: { lowpass: a.crossover.lowpass, highpass: null } },
-          { crossover: { lowpass: null, highpass: b.crossover.highpass } },
-        );
-        if (hz !== null) out.add(Math.round(hz));
-      }
-  return [...out].sort((x, y) => x - y);
-}
 
 /**
  * The map of a stack (a speaker alone is a stack of one on its input range), from its model (`stackResponse`, or the
@@ -145,7 +113,7 @@ export function stackDispersionMap(
   };
   const on = levelsAt(0);
   const rows = angles.map((deg) => (deg === 0 ? on : levelsAt(deg)).map((v, i) => v - on[i]));
-  return { angles, freqs, rows, crossovers: dispersionCrossovers(stack, speakers) };
+  return { angles, freqs, rows, crossovers: stackCrossoversHz(stack, speakers) };
 }
 
 /**

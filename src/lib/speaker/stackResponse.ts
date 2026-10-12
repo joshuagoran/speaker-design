@@ -17,6 +17,7 @@
 import type {
   Complex,
   FrequencyPoint,
+  SpeakerBand,
   SpeakerBandResponse,
   SpeakerResponse,
   SpeakerSpec,
@@ -75,6 +76,38 @@ export function crossoverHz(
     pair(a.crossover.lowpass, b.crossover.highpass) ??
     pair(b.crossover.lowpass, a.crossover.highpass)
   );
+}
+
+/**
+ * A stack's crossovers, Hz, low to high: every pair of bands in a member's speaker, or of members, whose lowpass and
+ * highpass meet (`crossoverHz`), once each (rounded to 1 Hz). The dispersion maps mark them; the Space's music balance
+ * steps at them.
+ */
+export function stackCrossoversHz(
+  stack: Pick<StackSpec, "members">,
+  speakers: readonly Pick<SpeakerSpec, "id" | "bands">[],
+): number[] {
+  const asFilter = (b: Pick<SpeakerBand, "highpass" | "lowpass">) => ({
+    crossover: { highpass: b.highpass, lowpass: b.lowpass },
+  });
+  const lists = [
+    stack.members,
+    ...[...new Set(stack.members.map((m) => m.speakerId))].map(
+      (id) => speakers.find((s) => s.id === id)?.bands.map(asFilter) ?? [],
+    ),
+  ];
+  const out = new Set<number>();
+  for (const list of lists)
+    for (const a of list)
+      for (const b of list) {
+        if (a === b || !a.crossover.lowpass || !b.crossover.highpass) continue;
+        const hz = crossoverHz(
+          { crossover: { lowpass: a.crossover.lowpass, highpass: null } },
+          { crossover: { lowpass: null, highpass: b.crossover.highpass } },
+        );
+        if (hz !== null) out.add(Math.round(hz));
+      }
+  return [...out].sort((x, y) => x - y);
 }
 
 /** A value of `ys` (one per grid frequency) read at `f` between grid points on a log-frequency axis. */

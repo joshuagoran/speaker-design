@@ -491,11 +491,13 @@ export function balanceLevels(
 export const balancedTarget = (target: number, f: number, b: MusicBalance) =>
   f < b.xoLo ? target : f < b.xoHi ? target - b.tilt : target - b.tilt - b.hfTilt;
 
+/** A band's center, Hz, where its target is read (the one frequency for "one"). */
+export const bandCenterHz = (band: CoverageBand, freqHz: number) =>
+  band === "one" ? freqHz : Math.sqrt(COVERAGE_BANDS[band].lo * COVERAGE_BANDS[band].hi);
+
 /** A band's target: the balanced target at the band's center (or at the one frequency). */
-export function bandTarget(target: number, band: CoverageBand, freqHz: number, b: MusicBalance) {
-  const f = band === "one" ? freqHz : Math.sqrt(COVERAGE_BANDS[band].lo * COVERAGE_BANDS[band].hi);
-  return balancedTarget(target, f, b);
-}
+export const bandTarget = (target: number, band: CoverageBand, freqHz: number, b: MusicBalance) =>
+  balancedTarget(target, bandCenterHz(band, freqHz), b);
 
 /**
  * A piston's directivity factor Q (on-axis intensity over the mean over all directions) as levelAtPoint radiates it:

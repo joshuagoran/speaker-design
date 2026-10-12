@@ -46,6 +46,7 @@ import type { THEME_CHOICES, THEME_SYSTEM } from "./constants/themes";
 import type { PANEL_NOMINAL_NAMES } from "./constants/panelSizes";
 import type { THROAT_MOUNT_NAMES, THROAT_THREAD_NAMES } from "./constants/throatMounts";
 import type { HORN_MOUNT_NAMES } from "./constants/hornMount";
+import type { AutoBalanceMode } from "./constants/autoBalance";
 import type { SelectedCard } from "./lib/optimizer/selectCards";
 import type { HANDLES } from "./data/catalog/cabinet-hardware";
 import type {
@@ -2297,10 +2298,20 @@ export interface SpaceVenue {
   earFt: CoverageLayout["earFt"];
   area: ListeningArea;
   /**
-   * the level the listening area's average should get, dB SPL, the same in every band: the space is turned down to it,
-   * never past its limit
+   * the level the reference (`levelRef`) should get in the lowest band, dB SPL; each band above it the music balance
+   * (`balance`) less: the space is turned down to it, never past its limit
    */
   targetDb: CoverageLayout["targetDb"];
+  /**
+   * where the target is measured: the listening area's average, the listener, or 1 m in front of each placement
+   * (averaged). Absent in saves from before it: the listening area (`venueLevelRef`).
+   */
+  levelRef?: CoverageLevelRef;
+  /**
+   * the music balance the target follows across the bands, as the auto balance's options: flat (the same in every band)
+   * or the PA music tilt (lib/speaker/autoBalance). Absent in saves from before it: flat (`venueBalance`).
+   */
+  balance?: AutoBalanceMode;
 }
 
 /** Stacks and speakers placed in a real space, with the hardware that drives them (docs/speaker-designer-plan.md, L4b). */

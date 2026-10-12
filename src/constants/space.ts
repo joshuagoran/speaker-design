@@ -130,7 +130,19 @@ export const SPACE_TEXT = {
   areaLength: "Area length, ft",
   areaCenter: "Area center from the front wall, ft",
   ear: "Ear height, ft",
-  target: "Target at the listening area",
+  target: "Target level, lowest band",
+  measuredAt: "Measured at",
+  /** the map's caption: the band, its target, dB (already formatted), and where it is measured */
+  mapCaption: (band: string, target: string, place: string) =>
+    `${band}, ${target} dB target at ${place}. The dashed box is the listening area.`,
+  balance: "Music balance",
+  balanceTip:
+    "The target in each band. Flat: the same target in every band. PA music tilt: as the PA page, each band above a crossover is lower (the auto balance steps).",
+  /** the band levels' heading: each band at the middle of the listening area */
+  bandLevels: "Each band at the middle of the listening area, at this level:",
+  /** one band's level and target there, dB (already formatted) */
+  bandLevel: (band: string, db: string, target: string) => `${band} ${db} dB (target ${target})`,
+  targetCurve: "Target, music balance",
   listenerHint:
     "The dashed box on the map is the listening area. Tap the map, or drag the cyan dot, to move the listener.",
   mapHint:
@@ -144,11 +156,12 @@ export const SPACE_TEXT = {
   areaAtLeast: (db: string) => `Area ≥ ${db} dB`,
   spread: "Spread, 10–90 %",
   responseY: "dB SPL at the listener",
-  cannotReach: (target: number, atLimit: number) =>
-    `It cannot reach ${target} dB at the listening area in this band: ${atLimit.toFixed(1)} dB at its limit.`,
-  turnedDown: (db: number, target: number) =>
-    `Turned down ${db.toFixed(1)} dB so the listening area gets ${target} dB in this band.`,
+  /** the reference can't get the band's target: where it is measured (`COVERAGE_LEVEL_REF_PLACE`), dB */
+  cannotReach: (place: string, target: number, atLimit: number) =>
+    `It cannot reach ${target.toFixed(0)} dB at ${place} in this band: ${atLimit.toFixed(1)} dB at its limit.`,
+  turnedDown: (db: number, place: string, target: number) =>
+    `Turned down ${db.toFixed(1)} dB so ${place} gets ${target.toFixed(0)} dB in this band.`,
   listenerVs: "The listener against the target:",
   modelNote:
-    "Each placement plays its stack's response (each member's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room as on the PA Coverage page: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the listening area's average gets the target.",
+    "Each placement plays its stack's response (each member's speaker through its crossover, level and delay), with each driver's coverage at its own place and aim, and the room as on the PA Coverage page: the floor bounce, the walls and ceiling by their materials, and the room's modes in the low end. Each cone band has its baffle step. The whole space plays from one input: at its music limit, the placement with the least headroom sets the level, then the space is turned down until the reference (the listening area's average, the listener, or 1 m in front of the placements) gets the target in the band on show. The target is the lowest band's; with the PA music tilt, each band above a crossover is lower.",
 } as const;

@@ -1,6 +1,21 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useConfigStore } from "../../components/saved-configs/useConfigStore";
-import { audienceAverage, coverageStats, COVERAGE_GRID_COLS } from "../../lib/pa/coverage";
+import {
+  audienceAverage,
+  bandCenterHz,
+  coverageStats,
+  COVERAGE_BANDS,
+  COVERAGE_GRID_COLS,
+} from "../../lib/pa/coverage";
+import {
+  oneMeterSpots,
+  spaceCrossoversHz,
+  spaceTargetAt,
+  venueBalance,
+  venueLevelRef,
+} from "../../lib/speaker/spaceBalance";
+import { COVERAGE_LEVEL_REF } from "../../constants/coverageLevel";
+import { keysOf } from "../../lib/records";
 import {
   spaceGridRequest,
   spaceLevelAt,
@@ -247,27 +262,88 @@ export function useSpace() {
     pump();
   }, [req, placed]);
 
-  // the grid on show, with the gain that brings its listening area to the target
+  // where the target is measured, and the music balance it follows across the bands (lib/speaker/spaceBalance)
+  const levelRef = venueLevelRef(venue);
+  const balance = venueBalance(venue);
+  const crossovers = useMemo(
+    () => spaceCrossoversHz({ space: { ...space, placements }, stacks, speakers }),
+    // the crossovers read only these
+    [placements, stacks, speakers],
+  );
+  /** the target in the band on show */
+  const target = spaceTargetAt(venue.targetDb, bandCenterHz(band, freqHz), crossovers, balance);
+  const listenerAtLimit = useMemo(
+    () => (placed ? spaceLevelAt(req, venue.listener) : null),
+    [placed, req, venue.listener],
+  );
+  /** the mean of the levels 1 m in front of each placement, at the limit, when that is the reference */
+  const stacksAtLimit = useMemo(() => {
+    if (!placed || levelRef !== COVERAGE_LEVEL_REF.stacks) return null;
+    const levels = oneMeterSpots({ space: { ...space, placements } }, room).map((p) =>
+      spaceLevelAt(req, p),
+    );
+    return levels.reduce((a, b) => a + b, 0) / levels.length;
+    // the spots read the placements and the room
+  }, [placed, levelRef, placements, room, req]);
+  // the grid on show: the listening area's average at the limit, and the gain that brings the reference to the target
+  const areaAtLimit = useMemo(
+    () => (shown && placed ? audienceAverage(shown.grid, shown.req.room, spots, venue.area) : null),
+    [shown, placed, spots, venue.area],
+  );
+  const refAtLimit =
+    levelRef === COVERAGE_LEVEL_REF.audience
+      ? areaAtLimit
+      : levelRef === COVERAGE_LEVEL_REF.listener
+        ? listenerAtLimit
+        : stacksAtLimit;
   const view = useMemo<CoverageGridView | null>(() => {
     if (!shown || !placed) return null;
-    const atLimit = audienceAverage(shown.grid, shown.req.room, spots, venue.area);
-    const gain = systemGain(venue.targetDb, atLimit);
+    const gain = systemGain(target, refAtLimit);
     return {
       grid: shown.grid,
       room: shown.req.room,
-      target: venue.targetDb - gain,
+      target: target - gain,
       gain,
-      atLimit,
+      atLimit: refAtLimit,
     };
-  }, [shown, placed, spots, venue.area, venue.targetDb]);
+  }, [shown, placed, target, refAtLimit]);
   const stats = useMemo(
     () => (view ? coverageStats(view.grid, view.room, spots, view.target, venue.area) : null),
     [view, spots, venue.area],
   );
   const gain = view ? view.gain : 0;
-  const listenerAtLimit = useMemo(
-    () => (placed ? spaceLevelAt(req, venue.listener) : null),
-    [placed, req, venue.listener],
+  /** each band's level at the middle of the listening area at the space's level, and its target */
+  const bandLevels = useMemo(
+    () =>
+      placed
+        ? keysOf(COVERAGE_BANDS).map((b) => ({
+            band: b,
+            db:
+              spaceLevelAt(
+                spaceGridRequest(
+                  model,
+                  { room, earFt: venue.earFt },
+                  b,
+                  freqHz,
+                  COVERAGE_GRID_COLS,
+                ),
+                venue.area,
+              ) + gain,
+            target: spaceTargetAt(venue.targetDb, bandCenterHz(b, freqHz), crossovers, balance),
+          }))
+        : [],
+    [
+      placed,
+      model,
+      room,
+      venue.earFt,
+      venue.area,
+      venue.targetDb,
+      freqHz,
+      gain,
+      crossovers,
+      balance,
+    ],
   );
   const responseAtLimit = useMemo(
     () => (placed ? spaceResponse(model, venue, venue.listener) : []),
@@ -277,6 +353,15 @@ export function useSpace() {
   const response = useMemo(
     () => responseAtLimit.map((o) => ({ f: o.f, spl: o.spl + gain })),
     [responseAtLimit, gain],
+  );
+  /** the target across the response chart's frequencies, under the music balance */
+  const targetCurve = useMemo(
+    () =>
+      response.map((o) => ({
+        f: o.f,
+        spl: spaceTargetAt(venue.targetDb, o.f, crossovers, balance),
+      })),
+    [response, venue.targetDb, crossovers, balance],
   );
   const store = useConfigStore(SPACES_COLLECTION);
 
@@ -321,7 +406,17 @@ export function useSpace() {
     isPending: placed && !(failed && failed.req === req) && (!shown || shown.req !== req),
     error: failed ? failed.message : "",
     listenerDb: listenerAtLimit !== null ? listenerAtLimit + gain : null,
+    /** the listening area's average at the space's level (null until a grid arrives) */
+    areaDb: areaAtLimit !== null ? areaAtLimit + gain : null,
+    areaAtLimit,
+    /** the target in the band on show, where it is measured, and the reference's level at the space's level */
+    target,
+    levelRef,
+    balance,
+    refDb: refAtLimit !== null ? refAtLimit + gain : null,
+    bandLevels,
     response,
+    targetCurve,
     store,
     snapshot: () => spaceSnapshot(design),
     /** opens a saved space: the document's id and name, its placements, hardware, venue, stacks and speakers */

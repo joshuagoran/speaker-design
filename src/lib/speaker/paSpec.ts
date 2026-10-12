@@ -43,6 +43,7 @@ import { PLYWOOD_MATERIAL } from "../../constants/panelSizes";
 import { MID_GAP_IN, PLINTH_HEIGHT_IN, SATELLITE_COLUMN_H_IN } from "../../constants/paLayouts";
 import { HIFI_DRIVE } from "../../constants/hifiEngine";
 import { SPACE_AUDIENCE_GAP_FT } from "../../constants/space";
+import { AUTO_BALANCE_MODE } from "../../constants/autoBalance";
 import {
   AUTO_DELAY,
   CABINET_CONSTRUCTION,
@@ -409,7 +410,7 @@ function paStack(cfg: PaPlannerDesign, design: SpecIdentity): StackSpec {
 /** The coverage page's floor as the PA design's space takes it: where the stacks stand, the room and the listener. */
 export type PaFloor = Pick<
   CoverageLayout,
-  "stacks" | "mirror" | "room" | "listener" | "earFt" | "targetDb"
+  "stacks" | "mirror" | "room" | "listener" | "earFt" | "targetDb" | "levelRef"
 >;
 
 /**
@@ -433,6 +434,9 @@ export function paVenue(floor: PaFloor): SpaceVenue {
       lengthFt: room.lengthFt - front,
     },
     targetDb: floor.targetDb,
+    // as the coverage page: its target in the sub band, measured where it measures it, under the PA music balance
+    levelRef: floor.levelRef,
+    balance: AUTO_BALANCE_MODE.paMusic,
   };
 }
 
