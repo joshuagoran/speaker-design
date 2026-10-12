@@ -926,28 +926,59 @@ function withNotes(
 }
 
 /**
- * A chamber's own box less the walls other chambers give it (its box carries a wall there for the inside): its floor
- * where it stands on a chamber (the top alone is cut), its left side where it stands beside one.
+ * A chamber's own box less the walls other chambers give it. Its box (ChamberFrame `box`) carries a wall on each given
+ * side so the inside is the chamber's clear face; the panels on that side are then sized to the chamber itself:
+ * - its floor given (it stands on a chamber): the top alone is cut, and the sides run the chamber's height, standing on
+ *   the chamber below's top;
+ * - its left side given (it stands beside a chamber): the right side alone is cut, the top and bottom end square on the
+ *   neighbor's wall (a butt joint already does; a rabbeted one loses its t/2 tongue, a mitered one its wall);
+ * - the back (and a flush box's baffle) stops at the neighbor's wall on a given side: a frame's back, and a flush box's
+ *   rabbeted or mitered faces, lose the t/2 they would set into a rabbet there; a flush box's butt-jointed faces, which
+ *   cover the edges, lose the whole wall. A frame's baffle and cleats already fit the clear face.
  */
-function withoutGivenWalls(parts: CutPart[], shared: ChamberFrame["shared"]): CutPart[] {
-  return parts.map((p) =>
-    shared.below && p.part === "topBottom"
-      ? {
+function withoutGivenWalls(
+  parts: CutPart[],
+  shared: ChamberFrame["shared"],
+  joint: CornerJoint,
+  t: number,
+  frame: boolean,
+): CutPart[] {
+  const topCut = { butt: 0, rabbet: t / 2, miter: t }[joint];
+  const faceCut = !frame && joint === "butt" ? t : t / 2;
+  const left = shared.left ? 1 : 0,
+    below = shared.below ? 1 : 0;
+  return parts.map((p): CutPart => {
+    switch (p.part) {
+      case "side":
+        return {
           ...p,
-          qty: p.qty - 1,
-          note: joinNotes(["top only: its floor is the chamber below's top", p.note]),
-        }
-      : shared.left && p.part === "side"
-        ? {
-            ...p,
-            qty: p.qty - 1,
-            note: joinNotes([
-              "right side only: its left side is the chamber beside it's right side",
-              p.note,
-            ]),
-          }
-        : p,
-  );
+          qty: p.qty - left,
+          b: p.b - below * t,
+          note: joinNotes([
+            shared.left && "right side only: its left side is the chamber beside it's right side",
+            shared.below && "stands on the chamber below's top",
+            p.note,
+          ]),
+        };
+      case "topBottom":
+        return {
+          ...p,
+          qty: p.qty - below,
+          b: p.b - left * topCut,
+          note: joinNotes([
+            shared.below && "top only: its floor is the chamber below's top",
+            shared.left && "left end square on the chamber beside it",
+            p.note,
+          ]),
+        };
+      case "back":
+        return { ...p, a: p.a - left * faceCut, b: p.b - below * faceCut };
+      case "baffle":
+        return frame ? p : { ...p, a: p.a - left * faceCut, b: p.b - below * faceCut };
+      default:
+        return p;
+    }
+  });
 }
 
 /** The hardware's parts as bought, for the line under the list. */
@@ -1077,7 +1108,7 @@ export function speakerCutParts(
           baffle: [...notes.baffle, roundover],
           back: hw.back,
         });
-    const walls = withoutGivenWalls(own, shared);
+    const walls = withoutGivenWalls(own, shared, joint, t, frame);
     parts.push(
       ...(arched && frames.length === 1
         ? archedShellParts(walls, box, f.box, t, joint, {

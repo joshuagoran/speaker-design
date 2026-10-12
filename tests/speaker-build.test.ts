@@ -277,6 +277,55 @@ test("speaker build: chambers that fill one box share one shell; a stepped one b
   assert.equal(build.chambers[1].inside.ih, 12 - t);
 });
 
+/** One chamber's rows of a part. */
+const rowsOf = (parts: readonly CutPart[], i: number, part: CutPart["part"]) =>
+  parts.filter((p) => p.box === chamberCutBox(i) && p.part === part && p.qty > 0);
+
+test("speaker build: a chamber beside or on another is sized to itself, for every joint and construction", () => {
+  const lower = chamberAt({ xIn: 0, yIn: 0 }, { w: 16, h: 20, d: 14 });
+  const upper = chamberAt({ xIn: 2, yIn: 20 }, { w: 12, h: 12, d: 14 });
+  const left = chamberAt({ xIn: 0, yIn: 0 }, { w: 10, h: 20, d: 14 });
+  const right = chamberAt({ xIn: 10, yIn: 0 }, { w: 12, h: 16, d: 14 });
+  for (const construction of [CABINET_CONSTRUCTION.flushBox, CABINET_CONSTRUCTION.frameInset])
+    for (const joint of ["butt", "rabbet", "miter"] as const) {
+      const at = `${construction}, ${joint}`;
+      const stepped = withCabinet({ chambers: [lower, upper], construction, insetIn: 0.75 });
+      const stack = speakerCutParts(stepped.cabinet, joint).parts;
+      // the sides run each chamber's own height, the upper one's standing on the lower one's top
+      for (const [i, c] of [lower, upper].entries())
+        for (const side of rowsOf(stack, i, "side"))
+          assert.equal(side.b, c.dims.h, `${at}: side ${i}`);
+      const beside = withCabinet({ chambers: [left, right], construction, insetIn: 0.75 });
+      const row = speakerCutParts(beside.cabinet, joint).parts;
+      assert.deepEqual(
+        [0, 1].map((i) => rowsOf(row, i, "side").reduce((a, p) => a + p.qty, 0)),
+        [2, 1],
+        `${at}: the right chamber's left side is the left one's right side`,
+      );
+      for (const [i, c] of [left, right].entries())
+        for (const side of rowsOf(row, i, "side"))
+          assert.equal(side.b, c.dims.h, `${at}: side ${i}`);
+      if (construction === CABINET_CONSTRUCTION.flushBox && joint === "butt") {
+        // a butt-jointed flush box's fronts cover the cabinet's front, edge to edge, and no more
+        const front = (parts: readonly CutPart[], i: number) => rowsOf(parts, i, "baffle")[0];
+        assert.equal(front(stack, 0).b + front(stack, 1).b, 32, "the fronts stack to the cabinet");
+        assert.equal(front(stack, 1).a, upper.dims.w);
+        assert.equal(
+          front(row, 0).a + front(row, 1).a,
+          22,
+          "the fronts side by side make its width",
+        );
+        assert.equal(rowsOf(row, 1, "back")[0].a, right.dims.w);
+      }
+      if (construction === CABINET_CONSTRUCTION.frameInset) {
+        // a frame's back stops at the neighbor's wall: the clear face and the one rabbet left
+        const t = beside.cabinet.panel.thicknessIn;
+        assert.equal(rowsOf(row, 1, "back")[0].a, right.dims.w - t + t / 2, `${at}: back`);
+        assert.equal(rowsOf(row, 1, "baffle")[0].a, right.dims.w - t, `${at}: baffle`);
+      }
+    }
+});
+
 test("speaker build: an arched top cuts on a frame only, and a horn-loaded chamber takes no braces", () => {
   const lower = chamberAt({ xIn: 0, yIn: 0 }, { w: 20, h: 24, d: 16 });
   const top = chamberAt({ xIn: 0, yIn: 24 }, { w: 20, h: 14, d: 16 });
