@@ -327,7 +327,7 @@ export function speakerResponse(
     );
     total = total.map((p, i) => add(p, out[i]));
     const curve = out.map((p, i) => ({ f: freqs[i], spl: levelOf(p) }));
-    bands.push({ id: band.id, curve, passbandDb: passbandDb(curve) });
+    bands.push({ id: band.id, curve, pressure: out, passbandDb: passbandDb(curve) });
   }
   return {
     sum: total.map((p, i) => ({ f: freqs[i], spl: levelOf(p) })),

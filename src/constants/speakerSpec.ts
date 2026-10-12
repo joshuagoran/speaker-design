@@ -189,6 +189,12 @@ export const ONE_WATT_VOLTS = 2.83;
 /** The drive the speaker model works at, V RMS: 1 W into 8 Ω, as the Hi-fi response charts. */
 export const SPEAKER_RESPONSE_VOLTS = ONE_WATT_VOLTS;
 
+/**
+ * How far in front of a stack its response is worked out, m: there the members' paths differ as a listener hears them
+ * (lib/speaker/stackResponse).
+ */
+export const STACK_LISTEN_DISTANCE_M = 4;
+
 /** The saved speakers' collection under users/{uid} (the speaker library, next to `configs` and `hifiConfigs`). */
 export const SPEAKERS_COLLECTION = "speakers";
 

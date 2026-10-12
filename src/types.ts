@@ -2137,15 +2137,15 @@ export type PaPlannerDesign = PaDesignConfig &
   Required<Pick<PaDesignConfig, "panel" | "hornMount" | "spacerH">>;
 
 /**
- * Where a member stands in its stack, in: from the stack's origin (the middle of its base, at its front), or on top of
- * an earlier member.
+ * Where a member stands in its stack, in: from the stack's origin (the middle of its base, at its front), or from the
+ * member it stands on (an earlier one: its center line, its top and its front).
  */
 export interface StackPose {
-  /** across: its center line from the stack's, + to the right seen from the front */
+  /** across: its center line from the origin's (or the one under it), + to the right seen from the front */
   xIn: number;
   /** up: its bottom above the stack's base, or above the top of the member it stands on (a gap, a spacer, a stand) */
   yIn: number;
-  /** back: its front behind the stack's front */
+  /** back: its front behind the stack's front (or the front of the one under it) */
   zIn: number;
   /** the member it stands on, as an index into the stack's members (an earlier one); null: the stack's base */
   on: number | null;
@@ -2263,6 +2263,8 @@ export type SpeakerFeed = SpeakerSpec["input"];
 export interface SpeakerBandResponse {
   id: BandId;
   curve: FrequencyPoint[];
+  /** its pressure at each of the curve's frequencies, with its phase (a stack sums its members' bands with it) */
+  pressure: Complex[];
   /** its passband level, dB: the mean of its curve where it is within 3 dB of its highest point */
   passbandDb: number;
 }
@@ -2382,6 +2384,56 @@ export interface SpeakerLimits {
   /** the speaker's level for music, dB at 1 m: its passband level where the first band reaches its music limit */
   musicDb: number | null;
   /** the band that sets it */
+  band: BandId | null;
+}
+
+/**
+ * One member of a stack as the stack model works it out (lib/speaker/stackResponse): its speaker fed through the
+ * member's crossover, and the member in the stack at the listening point.
+ */
+export interface StackMemberResponse {
+  /** the speaker as the stack feeds it: its input range is the member's crossover */
+  speaker: SpeakerSpec;
+  /** the speaker alone, on its own axis at 1 m, through its crossover */
+  response: SpeakerResponse;
+  /**
+   * the member in the stack: with its level and delay, and its bands' paths to the listening point, moved to 1 m (the
+   * level at the listening distance plus the spreading loss to it)
+   */
+  curve: FrequencyPoint[];
+  pressure: Complex[];
+  /** the delay it plays with, ms: its own, or the stack's alignment worked out */
+  delayMs: number;
+  /** its path to the listening point, m: the mean of its bands' paths */
+  pathM: number;
+}
+
+/** A stack's response at its listening point, moved to 1 m (lib/speaker/stackResponse `stackResponse`). */
+export interface StackResponse {
+  sum: FrequencyPoint[];
+  /** one per member, in the stack's order; null where the speakers given lack its speaker */
+  members: (StackMemberResponse | null)[];
+  /** the listening point's height above the stack's base, in: level with the highest band's center */
+  listenHeightIn: number;
+}
+
+/** A stack at its limits with one input (lib/speaker/stackResponse `stackLimits`). */
+export interface StackLimits {
+  /**
+   * the stack at each frequency where the first member meets its first limit, moved to 1 m as the response; which
+   * member, which of its bands and which limit; empty with no modeled member
+   */
+  sum: (FrequencyPoint & {
+    who: SpeakerLimits["sum"][number]["who"];
+    member: number;
+    band: BandId;
+  })[];
+  /** one per member: its limits alone on its crossover (as the Designer shows them), and the member at the stack's limit */
+  members: ({ limits: SpeakerLimits; atLimit: FrequencyPoint[] } | null)[];
+  /** the stack's level for music, dB at 1 m: its passband level where the first band of a member reaches its music limit */
+  musicDb: number | null;
+  /** the member and the band that set it */
+  member: number | null;
   band: BandId | null;
 }
 

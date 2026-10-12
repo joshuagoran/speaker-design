@@ -15,7 +15,8 @@
 //   does the amp of an active band (its filters run ahead of the amp). A passive band's amp is the channel it shares,
 //   ahead of the network: the same ceiling for every band on the channel (the amp is a voltage ceiling, √(8 W), as
 //   both engines take it, so the summed load doesn't move it). The feed (the speaker's input range) shapes the signal
-//   itself: the sum follows it, and nothing is pushed harder outside it.
+//   itself: the sum follows it, and nothing is pushed harder outside it. In a stack the feed is the member's crossover,
+//   ahead of every amp: it lifts the sum's ceilings as an active band's own filters do (`stackCrossover`).
 // - Each vent takes its own air-speed limit (`maxSpeedMs`, set by the spec).
 import type {
   BandId,
@@ -51,6 +52,16 @@ import { INPUT_RANGE_LIMIT, LIMIT_NAMES, PER_FREQUENCY_LIMITS } from "../../cons
 
 /** Where the input range ends, as a gain: its filters −6 dB down (a Linkwitz-Riley filter's corner). */
 const INPUT_EDGE_GAIN = 0.5;
+
+/** Options: the feed (as the response's), and whether it is a stack's crossover. */
+export interface SpeakerLimitsOptions extends SpeakerResponseOptions {
+  /**
+   * the feed is a stack member's crossover: in the front end ahead of every amp, it lifts the amp's and the program
+   * rating's ceilings in the sum as an active band's own filters do (the stack's other members carry the signal outside
+   * it). Alone, the feed is the input range, which shapes the signal itself: the sum follows it.
+   */
+  stackCrossover?: boolean;
+}
 
 /**
  * A band's drive with the amp at full power, V RMS: the amp's voltage into 8 Ω, through a passive band's pad (a
@@ -117,14 +128,14 @@ const raise = (p: LimitPeak | null, level: number | undefined, hz: number) => {
 };
 
 /**
- * The speaker at its limits, from its response (`speakerResponse` with the same options): each band alone at each
+ * The speaker at its limits, from its response (`speakerResponse` with the same feed): each band alone at each
  * frequency and for music, each chamber's cones and each datasheet driver at full power, and the whole speaker on one
  * input. A band whose amp gives no voltage has no limits.
  */
 export function speakerLimits(
   spec: Pick<SpeakerSpec, "cabinet" | "bands">,
   response: SpeakerResponse,
-  { feed = NO_FILTERS }: SpeakerResponseOptions = {},
+  { feed = NO_FILTERS, stackCrossover = false }: SpeakerLimitsOptions = {},
 ): SpeakerLimits {
   const freqs = SPEAKER_RESPONSE_FREQUENCIES;
   const volts = SPEAKER_RESPONSE_VOLTS;
@@ -156,13 +167,16 @@ export function speakerLimits(
   const feedGain = freqs.map((f) => abs(filtersTransfer(f, feed)));
   /** each band's filters with the feed's: what the drivers get */
   const gains = new Map([...bandGains].map(([id, g]) => [id, g.map((x, i) => x * feedGain[i])]));
+  /** what of the feed is ahead of the amps in the sum at point `i`: a stack's crossover; none of the input range */
+  const aheadGain = (i: number) => (stackCrossover ? feedGain[i] : 1);
   /**
-   * What lifts a band's ceilings in the sum at point `i`: its own filters (the feed is the input range, which shapes
-   * the signal itself). The program rating takes them always; the amp only when active (a passive network is after it).
+   * What lifts a band's ceilings in the sum at point `i`: its own filters, and a stack's crossover (the input range
+   * shapes the signal itself). The program rating takes them always; the amp takes a band's own filters only when
+   * active (a passive network is after it).
    */
-  const ceilingGain = (id: BandId, i: number) => bandGains.get(id)?.[i] ?? 1;
+  const ceilingGain = (id: BandId, i: number) => (bandGains.get(id)?.[i] ?? 1) * aheadGain(i);
   const ampGain = (band: SpeakerBand, i: number) =>
-    band.drive === HIFI_DRIVE.passive ? 1 : ceilingGain(band.id, i);
+    band.drive === HIFI_DRIVE.passive ? aheadGain(i) : ceilingGain(band.id, i);
   const drivers: SpeakerDriverPower[] = [];
   const chambers = spec.cabinet.chambers.map((chamber, k): SpeakerChamberLimits | null => {
     for (const driver of chamber.drivers) {
@@ -276,7 +290,9 @@ export function speakerLimits(
   // the whole speaker on one input: at each frequency the band with the least headroom sets it
   // outside the input range a ceiling on the whole drive (the amp, the program rating) is far off: the range sets it
   const sumWho = (who: LimitId, i: number): SpeakerLimits["sum"][number]["who"] =>
-    feedGain[i] < INPUT_EDGE_GAIN && !PER_FREQUENCY_LIMITS.has(who) ? INPUT_RANGE_LIMIT : who;
+    !stackCrossover && feedGain[i] < INPUT_EDGE_GAIN && !PER_FREQUENCY_LIMITS.has(who)
+      ? INPUT_RANGE_LIMIT
+      : who;
   const sum = bands.length
     ? response.sum.map((o, i) => {
         const roomOf = (id: BandId) => headroom.get(id)?.room[i] ?? Infinity;
