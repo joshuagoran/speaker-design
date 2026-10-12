@@ -17,7 +17,7 @@ import {
 } from "./speaker-cases";
 import { speakerResponse, SPEAKER_RESPONSE_FREQUENCIES } from "../src/lib/speaker/speakerResponse";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
-import { systemFromPa } from "../src/lib/speaker/paSpec";
+import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { lrFilter } from "../src/lib/speaker/specParts";
 import { filterTransfer, filtersTransfer } from "../src/lib/speaker/bandFilter";
 import { deriveHifiDesign } from "../src/pages/hifi/hifiDesign";
@@ -206,7 +206,7 @@ test("speaker model: the golden PA designs match the PA models (sub, mid and hor
   for (const c of configs) {
     const cfg = paDesign(c);
     const tower = cfg.layout === "tower";
-    const read = systemFromPa(cfg, { id: "pa", name: c.name }, STACKS);
+    const read = layersFromPa(cfg, { id: "pa", name: c.name }, STACKS);
     const models = paModels(cfg);
     const subSide = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.sub);
     const topSide = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.top);
@@ -427,7 +427,7 @@ test("speaker model: the PA top and tower sum their chambers' cones and the horn
   for (const seed of [stack, towerSeed]) {
     const cfg = paDesign(seed);
     const tower = cfg.layout === "tower";
-    const read = systemFromPa(cfg, { id: "pa", name: seed.name }, STACKS);
+    const read = layersFromPa(cfg, { id: "pa", name: seed.name }, STACKS);
     const { spec, feed } = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.top);
     const models = paModels(cfg);
     const sub = SUB_OPTIONS.find((o) => o.id === cfg.sub);

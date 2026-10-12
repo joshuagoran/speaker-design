@@ -158,7 +158,8 @@ export const DESIGNER_TEXT = {
   underTarget: (n: number, target: string) =>
     `Chamber ${n} does not meet the ${target} bracing target: the rule cannot fit enough braces round its drivers, vent and horn. These panels still miss the target, or a strength limit:`,
   inputRange: "Input range",
-  inputHint: "From the system, e.g. the crossover to a sub. Not part of the box.",
+  inputHint:
+    "In a stack, its crossover sets this, e.g. the crossover to a sub. Not part of the box.",
   inputOff: "Off",
   construction: "Construction",
   top: "Top",

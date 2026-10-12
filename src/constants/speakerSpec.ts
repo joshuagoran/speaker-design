@@ -1,4 +1,5 @@
-// The ids of the speaker designer's spec (SpeakerSpec, SystemSpec in src/types.ts; read adapters in lib/speaker).
+// The ids of the speaker designer's spec (SpeakerSpec, StackSpec, SpaceSpec in src/types.ts; read adapters in
+// lib/speaker).
 import type {
   CabinetConstruction,
   CabinetTop,
@@ -10,7 +11,7 @@ import type {
   SpeakerPart,
 } from "../types";
 
-/** The speakers of a system read from one design, by id: each speaker's id and name end with its part. */
+/** The speakers read from one design, by id: each speaker's id and name end with its part. */
 export const SPEAKER_PART = {
   speaker: "speaker",
   sub: "sub",
@@ -18,7 +19,7 @@ export const SPEAKER_PART = {
   tower: "tower",
 } as const;
 
-/** The name each part adds to the system's name. */
+/** The name each part adds to the design's name. */
 export const SPEAKER_PART_NAMES = {
   speaker: "Speaker",
   sub: "Sub",
@@ -131,18 +132,16 @@ export const HORN_PATH = {
 /** A first-order filter's type (6 dB/oct): a series capacitor or coil, as a super tweeter on the HF channel. */
 export const FIRST_ORDER_FILTER = "1st";
 
-/** What a source does in a system, by id. */
-export const SOURCE_ROLE = {
-  main: "main",
-  sub: "sub",
-  fill: "fill",
-  monitor: "monitor",
-} as const;
-
-/** A source's delay when the system aligns it (the PA sub against the tops). */
+/** A stack member's delay when the stack aligns it (the PA sub against the tops). */
 export const AUTO_DELAY = "auto";
 
-/** How a system's front end processes, by id: fixed analog cards (PA v2), or a DSP. */
+/** What a space places, by id: a stack, or a speaker alone on its own input range. */
+export const SPACE_ITEM = {
+  stack: "stack",
+  speaker: "speaker",
+} as const;
+
+/** How a space's front end processes, by id: fixed analog cards (PA v2), or a DSP. */
 export const FRONT_END_KIND = {
   analog: "analog",
   digital: "digital",
@@ -190,5 +189,14 @@ export const ONE_WATT_VOLTS = 2.83;
 /** The drive the speaker model works at, V RMS: 1 W into 8 Ω, as the Hi-fi response charts. */
 export const SPEAKER_RESPONSE_VOLTS = ONE_WATT_VOLTS;
 
+/**
+ * How far in front of a stack its response is worked out, m: there the members' paths differ as a listener hears them
+ * (lib/speaker/stackResponse).
+ */
+export const STACK_LISTEN_DISTANCE_M = 4;
+
 /** The saved speakers' collection under users/{uid} (the speaker library, next to `configs` and `hifiConfigs`). */
 export const SPEAKERS_COLLECTION = "speakers";
+
+/** The saved stacks' collection under users/{uid}, next to the speaker library. */
+export const STACKS_COLLECTION = "stacks";

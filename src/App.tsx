@@ -11,6 +11,8 @@ import { useHifiPlanner } from "./pages/hifi/useHifiPlanner";
 import { useFillsPlanner } from "./pages/fills/useFillsPlanner";
 import { DesignerPage } from "./pages/designer/DesignerPage";
 import { useDesigner } from "./pages/designer/useDesigner";
+import { StackPage } from "./pages/stack/StackPage";
+import { useStack } from "./pages/stack/useStack";
 import { useEffect, useState, type MouseEvent } from "react";
 import { FONT } from "./styles/fonts";
 import { PAGE_WIDTH } from "./styles/layout";
@@ -47,8 +49,9 @@ export function App() {
   const hifi = useHifiPlanner();
   const fills = useFillsPlanner();
   const designer = useDesigner();
+  const stack = useStack();
   const project = projectOf(view);
-  // two levels: the project (PA stack, Hi-fi or Designer), then its own pages
+  // two levels: the project (PA stack, Hi-fi, Designer or Stack), then its own pages
   const navigateTo = (v: AppPage, href: string) => (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
@@ -118,6 +121,8 @@ export function App() {
           <DesignerPage designer={designer} planner={planner} hifi={hifi} />
         ) : view === "designerCutlist" ? (
           <DesignerCutlistPage designer={designer} />
+        ) : view === "stack" ? (
+          <StackPage stack={stack} designer={designer} planner={planner} />
         ) : view === "coverage" ? (
           <CoveragePage planner={planner} />
         ) : (

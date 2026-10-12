@@ -5,7 +5,7 @@ import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { configs } from "./golden-configs";
 import { STACKS, hifiCases, paDesign, speakerAndFeed } from "./speaker-cases";
-import { systemFromPa } from "../src/lib/speaker/paSpec";
+import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { speakerFromHifi } from "../src/lib/speaker/hifiSpec";
 import { cabinetBuild, speakerCutParts } from "../src/lib/speaker/speakerBuild";
 import { speakerResponse } from "../src/lib/speaker/speakerResponse";
@@ -176,7 +176,7 @@ test("speaker build: the golden PA designs match the PA page (bracing, net air, 
   for (const c of configs) {
     const cfg = paDesign(c);
     const tower = cfg.layout === "tower";
-    const read = systemFromPa(cfg, { id: "pa", name: c.name }, STACKS);
+    const read = layersFromPa(cfg, { id: "pa", name: c.name }, STACKS);
     const subSpec = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.sub).spec;
     const topSpec = speakerAndFeed(read, tower ? SPEAKER_PART.tower : SPEAKER_PART.top).spec;
     const subBuild = cabinetBuild(subSpec.cabinet);
@@ -419,7 +419,7 @@ test("speaker build: a horn that no longer fits where it is mounted is left out,
   const specs = [
     ...DESIGNER_TEMPLATES.map(templateSpeaker),
     ...configs.flatMap(
-      (c) => systemFromPa(paDesign(c), { id: "pa", name: c.name }, STACKS).speakers,
+      (c) => layersFromPa(paDesign(c), { id: "pa", name: c.name }, STACKS).speakers,
     ),
   ];
   for (const spec of specs)
@@ -428,7 +428,7 @@ test("speaker build: a horn that no longer fits where it is mounted is left out,
   // the PA top box with a chamber stacked on its lid: its horn can't stand there any more
   const cfg = paDesign(configs[0]);
   const top = speakerAndFeed(
-    systemFromPa(cfg, { id: "pa", name: "pa" }, STACKS),
+    layersFromPa(cfg, { id: "pa", name: "pa" }, STACKS),
     SPEAKER_PART.top,
   ).spec;
   const [mid] = top.cabinet.chambers;

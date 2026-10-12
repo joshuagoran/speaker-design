@@ -47,6 +47,7 @@ const views = [
   "#notes",
   "#designer",
   "#designer-cutlist",
+  "#stack",
 ];
 const failures = [];
 

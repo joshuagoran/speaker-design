@@ -40,3 +40,11 @@ export const DESIGNER_SETTINGS_SECTIONS = {
   look: "Look",
 } as const;
 export type DesignerSettingsSection = keyof typeof DESIGNER_SETTINGS_SECTIONS;
+
+/** The Stack settings column's fold sections, by id, and the name each shows. */
+export const STACK_SETTINGS_SECTIONS = {
+  stack: "Stack",
+  members: "Members",
+  crossovers: "Crossovers",
+} as const;
+export type StackSettingsSection = keyof typeof STACK_SETTINGS_SECTIONS;

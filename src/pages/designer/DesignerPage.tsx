@@ -104,7 +104,7 @@ const SUM_LINE_PX = 4;
 const VIEW_HEIGHT = "h-[280px] md:h-[clamp(300px,46vh,480px)]";
 
 /** The PA design as the planner holds it, every field set. */
-const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
+export const paPlannerDesign = (planner: PaPlanner): PaPlannerDesign => ({
   ...planner.snapshot(),
   panel: planner.wallPanel,
   hornMount: planner.hornMount,
