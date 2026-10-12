@@ -4,11 +4,7 @@ import { closedBox } from "../src/lib/pa/calc";
 import { MID_OPTIONS } from "../src/lib/data";
 import { tsModel, massLineSPL, f3SecondOrder, near, close, rel, db, LR24_ORDERS } from "./helpers";
 
-// the driver without its coil inductance: these tests check Small's Le-free closed forms (voice-coil.test.ts covers Le)
-const drv = (id: string) => {
-  const { Le: _listed, ...bare } = MID_OPTIONS.find((o) => o.id === id)!.ts;
-  return bare;
-};
+const drv = (id: string) => MID_OPTIONS.find((o) => o.id === id)!.ts;
 const cases: [string, number][] = [
   ["bc12ndl76", 45],
   ["bc12ndl76", 15],

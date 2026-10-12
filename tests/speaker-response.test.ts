@@ -21,13 +21,7 @@ import { layersFromPa } from "../src/lib/speaker/paSpec";
 import { lrFilter } from "../src/lib/speaker/specParts";
 import { filterTransfer, filtersTransfer } from "../src/lib/speaker/bandFilter";
 import { deriveHifiDesign } from "../src/lib/hifi/hifiDesign";
-import {
-  HIFI_NET_SHARE,
-  hifiBox,
-  hifiGridTop,
-  isCoax,
-  linkwitzRileyFilter,
-} from "../src/lib/hifi/hifi";
+import { HIFI_NET_SHARE, hifiBox, hifiGridTop, linkwitzRileyFilter } from "../src/lib/hifi/hifi";
 import {
   boxModel,
   closedBox,
@@ -157,10 +151,7 @@ test("speaker model: the Hi-fi designs match the Hi-fi engine before the room (b
     const sumDiff = maxDiff(response.sum, sumRef);
     assert.ok(lowDiff <= HIFI_BAND_DB, `${name}: woofer band off by ${lowDiff.toFixed(3)} dB`);
     assert.ok(highDiff <= HIFI_BAND_DB, `${name}: tweeter band off by ${highDiff.toFixed(3)} dB`);
-    // A coaxial's bands only: its woofer's datasheet inductance (Le 1.1 mH on the B&C 10CXN64) turns its phase at
-    // the crossover, which the speaker model's sum takes and the Hi-fi engine's sum leaves out (about 1.2 dB).
-    if (!isCoax(state.woofer, state.tweeter))
-      assert.ok(sumDiff <= HIFI_SUM_DB, `${name}: sum off by ${sumDiff.toFixed(3)} dB`);
+    assert.ok(sumDiff <= HIFI_SUM_DB, `${name}: sum off by ${sumDiff.toFixed(3)} dB`);
     const [chamber] = response.chambers;
     assert.ok(Math.abs(chamber.netLiters - box.net) < 1e-9 * box.net, `${name}: net air`);
     if (sys.kind === "sealed")

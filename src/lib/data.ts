@@ -71,16 +71,32 @@ const withTsXmax = <D extends { name: string; maker: MakerId; ts: RawTS<ThieleSm
   ...d,
   ts: withXmax(d.ts, d.maker, d.name),
 });
+/**
+ * A PA table's driver (subs, mids, fills) as the models take it: `withTsXmax`, with the table's Le left out unless the
+ * row sets `leInModels` (the PA v2 drivers, checked against Hornresp with their Le). A plain Le, measured near 1 kHz,
+ * overstates the coil's effect near 200 Hz; the rest wait for the lossy coil model (docs/speaker-designer-plan.md,
+ * "Lossy voice-coil model"). The tables keep the figure.
+ */
+const paDriver = <
+  D extends { name: string; maker: MakerId; ts: RawTS<ThieleSmall>; leInModels?: true },
+>(
+  d: D,
+) => {
+  const driver = withTsXmax(d);
+  if (d.leInModels) return driver;
+  const { Le: _waits, ...ts } = driver.ts;
+  return { ...driver, ts };
+};
 
-export const BC18NBX: SubDriver = withTsXmax(BC18NBX_RAW);
+export const BC18NBX: SubDriver = paDriver(BC18NBX_RAW);
 export const SUB_OPTIONS: SubDriver[] = SUB_RAW.map((d) =>
-  d === BC18NBX_RAW ? BC18NBX : withTsXmax(d),
+  d === BC18NBX_RAW ? BC18NBX : paDriver(d),
 );
 
-export const F12PR300: MidDriver = withTsXmax(F12PR300_RAW);
-export const BC15NDL76: MidDriver = withTsXmax(BC15NDL76_RAW);
+export const F12PR300: MidDriver = paDriver(F12PR300_RAW);
+export const BC15NDL76: MidDriver = paDriver(BC15NDL76_RAW);
 export const MID_OPTIONS: MidDriver[] = MID_RAW.map((d) =>
-  d === F12PR300_RAW ? F12PR300 : d === BC15NDL76_RAW ? BC15NDL76 : withTsXmax(d),
+  d === F12PR300_RAW ? F12PR300 : d === BC15NDL76_RAW ? BC15NDL76 : paDriver(d),
 );
 
 /** The sub drivers for a sub size class (15 or 18 in). */
@@ -149,9 +165,9 @@ const isHifiWaveguide = (h: Horn): h is HifiWaveguide => h.exit === 1 && !!h.hf?
 export const HIFI_WAVEGUIDES: readonly HifiWaveguide[] =
   sortedByName(HORN_RAW).filter(isHifiWaveguide);
 
-export const BC10CXN64: FillDriver = withTsXmax(BC10CXN64_RAW);
+export const BC10CXN64: FillDriver = paDriver(BC10CXN64_RAW);
 export const FILL_OPTIONS: readonly FillDriver[] = FILL_RAW.map((d) =>
-  d === BC10CXN64_RAW ? BC10CXN64 : withTsXmax(d),
+  d === BC10CXN64_RAW ? BC10CXN64 : paDriver(d),
 ).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
 
 /** A cone's diameter from its area (Sd, cm²), inches. */

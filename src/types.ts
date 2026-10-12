@@ -141,7 +141,8 @@ export interface ThieleSmall {
   Re: number;
   /**
    * voice-coil inductance, mH, where the maker publishes it: every T/S model reads it (lib/acoustics/driverCircuit
-   * `coilFactor`), so the top rolls off; none when absent, and the models take the coil as Re alone
+   * `coilFactor`), so the top rolls off; none when absent, and the models take the coil as Re alone. The PA tables'
+   * (subs, mids, fills) Le stays out of the models for now, but on rows that set `leInModels` (lib/data `paDriver`)
    */
   Le?: number;
   Bl: number;
@@ -177,8 +178,8 @@ export interface SubTS extends ThieleSmall {
 
 /**
  * Hi-fi woofers also list 2.83 V sensitivity and nominal impedance (informational; no model reads them), and their
- * inductance (ThieleSmall's Le). A coaxial's woofer (lib/data coaxParts) takes its inductance from the fill table where
- * the maker publishes it, but that table has no LF impedance, so `imp` is absent there.
+ * inductance (ThieleSmall's Le). A coaxial's woofer (lib/data coaxParts) has neither: the fill table's Le stays out of
+ * the models for now (lib/data `paDriver`), and that table has no LF impedance.
  */
 export interface HifiWooferTS extends ThieleSmall {
   sens: number;
@@ -200,6 +201,11 @@ export interface SubDriver {
   src: string;
   size: SubSize;
   ts: SubTS;
+  /**
+   * its datasheet Le reaches the models (the PA v2 drivers, checked against Hornresp with it); without it the models
+   * leave the table's Le out for now (lib/data `paDriver`)
+   */
+  leInModels?: true;
   /** the maker's published sensitivity, dB at 1 m (informational: the models use the T/S); absent where not entered */
   sens?: number;
   /** mounting depth in inches, from the maker's datasheet; absent where it isn't published (a gap the Notes page words around) */
@@ -217,6 +223,11 @@ export interface MidDriver {
   price: number | null;
   src: string;
   ts: ThieleSmall;
+  /**
+   * its datasheet Le reaches the models (the PA v2 drivers, checked against Hornresp with it); without it the models
+   * leave the table's Le out for now (lib/data `paDriver`)
+   */
+  leInModels?: true;
   /** mounting depth in inches, from the maker's datasheet; absent where not entered (MID_DEPTH_FALLBACK_IN stands in) */
   depthIn?: number;
   note: string;

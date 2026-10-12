@@ -3,7 +3,7 @@
 // boxes do, but for the paths to the listening point.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
-import { configs, FIFTEEN_MID_CASE } from "./golden-configs";
+import { configs } from "./golden-configs";
 import { PA_FLOOR, maxDiff, paDesign, paModels } from "./speaker-cases";
 import { stackLimits, stackResponse } from "../src/lib/speaker/stackResponse";
 import { SPEAKER_RESPONSE_FREQUENCIES, speakerResponse } from "../src/lib/speaker/speakerResponse";
@@ -55,18 +55,13 @@ function bandMax(limits: StackLimits, id: BandId) {
  * (the PA's own limit arithmetic, read between its points): PA_SUB_DB on the sub, PA_BAND_DB on the mid and the horn.
  * The sum against the members summed with their delays on one axis at one distance: STACK_PATH_DB, the paths to the
  * listening point (the sub stands about a meter below the horn's axis, 4 m out: about 0.25 dB farther, and its phase
- * with it). With the drivers' voice-coil inductance (Le) the sum reaches about 0.40 dB: Le's phase lag moves the
- * rectangle sub's auto delay (0.88 to 0.73 ms); the geometry is unchanged. The 15 in mid's design takes its own limit,
- * STACK_PATH_15_MID_DB: the mid's Le (1.5 mH) turns its phase at the 900 Hz crossover with the horn, so the mid and the
- * horn's own paths in the top box move the sum near 750 Hz by about 0.80 dB (0.35 dB without Le).
+ * with it).
  *
- * On the goldens (Oct 2026): the sub within 0.011 dB, the mid 0.001 dB, the horn 0.005 dB, the sum 0.40 dB (0.80 dB
- * on the 15 in mid).
+ * On the goldens (Oct 2026): the sub within 0.048 dB, the mid 0.001 dB, the horn 0.005 dB, the sum 0.34 dB.
  */
 const PA_SUB_DB = 0.06;
 const PA_BAND_DB = 0.01;
-const STACK_PATH_DB = 0.45;
-const STACK_PATH_15_MID_DB = 0.85;
+const STACK_PATH_DB = 0.4;
 
 test("stack model: a PA design's stack meets the PA page's system chart and sums as its boxes do", () => {
   for (const c of configs) {
@@ -125,8 +120,7 @@ test("stack model: a PA design's stack meets the PA page's system chart and sums
     assert.ok(subDb <= PA_SUB_DB, `${c.name}: sub at its limits off by ${subDb.toFixed(3)} dB`);
     assert.ok(midDb <= PA_BAND_DB, `${c.name}: mid at its limits off by ${midDb.toFixed(3)} dB`);
     assert.ok(hornDb <= PA_BAND_DB, `${c.name}: horn at its power off by ${hornDb.toFixed(3)} dB`);
-    const pathDb = c.name === FIFTEEN_MID_CASE ? STACK_PATH_15_MID_DB : STACK_PATH_DB;
-    assert.ok(sumDb <= pathDb, `${c.name}: the sum off by ${sumDb.toFixed(3)} dB`);
+    assert.ok(sumDb <= STACK_PATH_DB, `${c.name}: the sum off by ${sumDb.toFixed(3)} dB`);
   }
 });
 
