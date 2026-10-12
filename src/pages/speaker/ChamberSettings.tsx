@@ -76,6 +76,9 @@ import { hornById } from "../../lib/data";
 import { takesHornMountAt } from "../../lib/pa/hornMount";
 import { HORN_MOUNT_DEFAULT } from "../../constants/hornMount";
 import { UI_TEXT } from "../../constants/uiText";
+import { Notice } from "../../components/ui/Notice";
+import { formatInches } from "../../lib/format";
+import { mismatchedHornExit } from "../../lib/speaker/driverParts";
 import { PANEL_NOMINAL_OPTIONS } from "../../lib/panel";
 import { ductDividerOf, withDuctDivider } from "../../lib/speaker/cabinetPanels";
 
@@ -528,6 +531,8 @@ function DriverFields({
   const coaxial = driver.kind === DRIVER_KIND.coaxial;
   const horns = hornOptions(driver.kind);
   const horn = driver.horn && hornById(driver.horn.hornId);
+  /** a compression driver and its horn whose throat and exit differ */
+  const exitGap = mismatchedHornExit(driver);
   /** the places its horn doesn't fit */
   const noFit = keysOf(HORN_PLACEMENT_NAMES).filter(
     (p) => horn && placed && !hornFits(horn, placed, p),
@@ -655,6 +660,16 @@ function DriverFields({
             })
           }
         />
+      )}
+      {exitGap && (
+        <div className="mb-3">
+          <Notice>
+            {UI_TEXT.hornExitMismatch(
+              formatInches(exitGap.horn.exit),
+              formatInches(exitGap.driver.exit),
+            )}
+          </Notice>
+        </div>
       )}
       {driver.horn && (
         <ToggleGroup

@@ -35,4 +35,7 @@ export const UI_TEXT = {
   /** the side ducts' dividers' size, on the PA page's vent and the Speaker page's side ducts, and its tip */
   ductDividers: "Dividers",
   ductDividersTip: "Two per duct. Thicker dividers make the vent smaller, so it tunes lower.",
+  /** under a compression driver's horn when the horn's throat and the driver's exit differ, by their sizes in words */
+  hornExitMismatch: (horn: string, driver: string) =>
+    `The horn throat (${horn}) and the driver exit (${driver}) are not the same size.`,
 } as const;

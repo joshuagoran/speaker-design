@@ -1,6 +1,6 @@
-// The Speaker page's build settings from the PA page: the wall panels' size and the side ducts' dividers' size. A PA
-// design's speaker (and an old PA save's) carries the PA page's choices, and the Speaker page's settings build the
-// same box as the PA page's.
+// The Speaker page's build settings from the PA page: the wall panels' size and the side ducts' dividers' size, and
+// the horn exit check. A PA design's speaker (and an old PA save's) carries the PA page's choices, and the Speaker
+// page's settings build the same box as the PA page's.
 import { test } from "vite-plus/test";
 import assert from "node:assert";
 import { PA_FLOOR, speakerAndFeed } from "./speaker-cases";
@@ -13,8 +13,23 @@ import { stackFromOldSave } from "../src/pages/stack/oldSaves";
 import { defaultPaDesign } from "../src/pages/speaker/speakerTemplates";
 import { panelIn } from "../src/lib/panel";
 import { DUCT_DIVIDER_DEFAULT, PLYWOOD_MATERIAL } from "../src/constants/panelSizes";
-import { OLD_SAVE_KIND, PORT_SHAPE, SPEAKER_PART, VENT_KIND } from "../src/constants/speakerSpec";
-import type { PaPlannerDesign, PanelNominal, SideDuctPort, SpeakerSpec } from "../src/types";
+import {
+  DRIVER_KIND,
+  HORN_PLACEMENT,
+  OLD_SAVE_KIND,
+  PORT_SHAPE,
+  SPEAKER_PART,
+  VENT_KIND,
+} from "../src/constants/speakerSpec";
+import { hornExitsDiffer, mismatchedHornExit } from "../src/lib/speaker/driverParts";
+import { CD_OPTIONS, HORN_OPTIONS } from "../src/lib/data";
+import type {
+  PaPlannerDesign,
+  PanelNominal,
+  SideDuctPort,
+  SpeakerDriver,
+  SpeakerSpec,
+} from "../src/types";
 
 /** The PA page's starting design at a wall size, its bracing style set (else it follows the walls). */
 const paAt = (panel: PanelNominal, more: Partial<PaPlannerDesign> = {}): PaPlannerDesign => ({
@@ -124,4 +139,24 @@ test("build settings: an old PA save opens with its wall and divider sizes", () 
   });
   assert.equal(ductsOf(sub).divider, "3/4");
   assert.equal(ductsOf(sub).div, panelIn("3/4", PLYWOOD_MATERIAL, {}));
+});
+
+test("build settings: the horn exit check fires on a compression driver whose horn's throat differs", () => {
+  const cd = CD_OPTIONS[0];
+  const matched = HORN_OPTIONS.find((h) => h.exit === cd.exit);
+  const other = HORN_OPTIONS.find((h) => h.exit !== cd.exit);
+  assert.ok(matched && other, "the catalog has a matched and a mismatched horn");
+  const on = (hornId: string): SpeakerDriver => ({
+    kind: DRIVER_KIND.compression,
+    driverId: cd.id,
+    count: 1,
+    position: { xIn: 0, yIn: 0 },
+    bands: ["horn"],
+    horn: { hornId, placement: HORN_PLACEMENT.top, mount: null },
+  });
+  assert.equal(hornExitsDiffer(other, cd), true);
+  assert.equal(hornExitsDiffer(matched, cd), false);
+  assert.deepStrictEqual(mismatchedHornExit(on(other.id)), { horn: other, driver: cd });
+  assert.equal(mismatchedHornExit(on(matched.id)), null);
+  assert.equal(mismatchedHornExit({ ...on(other.id), horn: null }), null);
 });
